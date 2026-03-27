@@ -245,6 +245,121 @@ public class ProductionProcessTrackingOrchestrator {
         return count;
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
+    public int appendProcessTracking(String productionOrderId, List<CuttingBundle> bundles) {
+        if (!StringUtils.hasText(productionOrderId) || CollectionUtils.isEmpty(bundles)) {
+            return 0;
+        }
+        ProductionOrder order = productionOrderService.getById(productionOrderId);
+        if (order == null) {
+            throw new BusinessException("订单不存在：" + productionOrderId);
+        }
+        List<CuttingBundle> targets = bundles.stream()
+                .filter(bundle -> bundle != null && StringUtils.hasText(bundle.getId()))
+                .filter(bundle -> CollectionUtils.isEmpty(trackingService.getByBundleId(bundle.getId())))
+                .collect(Collectors.toList());
+        if (targets.isEmpty()) {
+            return 0;
+        }
+        List<Map<String, Object>> processNodes = parseProcessNodes(order);
+        if (CollectionUtils.isEmpty(processNodes)) {
+            return 0;
+        }
+        boolean hasCuttingNode = processNodes.stream()
+                .anyMatch(n -> "裁剪".equals(getStringValue(n, "name", ""))
+                        || "裁剪".equals(getStringValue(n, "progressStage", "")));
+        BigDecimal cuttingUnitPrice = BigDecimal.ZERO;
+        if (!hasCuttingNode) {
+            try {
+                Map<String, BigDecimal> prices = templateLibraryService.resolveProcessUnitPrices(order.getStyleNo());
+                if (prices != null) {
+                    BigDecimal price = prices.get("裁剪");
+                    if (price != null && price.compareTo(BigDecimal.ZERO) > 0) {
+                        cuttingUnitPrice = price;
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("获取裁剪单价失败: styleNo={}", order.getStyleNo(), e);
+            }
+            Map<String, Object> cuttingNode = new HashMap<>();
+            cuttingNode.put("name", "裁剪");
+            cuttingNode.put("progressStage", "裁剪");
+            cuttingNode.put("unitPrice", cuttingUnitPrice);
+            cuttingNode.put("_isCuttingAutoNode", true);
+            processNodes.add(0, cuttingNode);
+        }
+        Map<String, CuttingTask> taskBySizeKey = new HashMap<>();
+        CuttingTask anyReceivedTask = null;
+        try {
+            List<CuttingTask> allTasks = cuttingTaskService.lambdaQuery()
+                    .eq(CuttingTask::getProductionOrderId, productionOrderId)
+                    .list();
+            for (CuttingTask task : allTasks) {
+                String key = (task.getColor() == null ? "" : task.getColor().trim())
+                        + "|" + (task.getSize() == null ? "" : task.getSize().trim());
+                if (!taskBySizeKey.containsKey(key) || StringUtils.hasText(task.getReceiverName())) {
+                    taskBySizeKey.put(key, task);
+                }
+                if (StringUtils.hasText(task.getReceiverName()) && anyReceivedTask == null) {
+                    anyReceivedTask = task;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("查询裁剪任务失败: orderId={}", productionOrderId, e);
+        }
+        List<ProductionProcessTracking> trackingRecords = new ArrayList<>();
+        String currentUser = UserContext.username() != null ? UserContext.username() : "system";
+        for (CuttingBundle bundle : targets) {
+            String bundleKey = (bundle.getColor() == null ? "" : bundle.getColor().trim())
+                    + "|" + (bundle.getSize() == null ? "" : bundle.getSize().trim());
+            CuttingTask matchedTask = taskBySizeKey.getOrDefault(bundleKey, anyReceivedTask);
+            for (int i = 0; i < processNodes.size(); i++) {
+                Map<String, Object> node = processNodes.get(i);
+                ProductionProcessTracking tracking = new ProductionProcessTracking();
+                tracking.setId(java.util.UUID.randomUUID().toString().replace("-", ""));
+                tracking.setProductionOrderId(order.getId());
+                tracking.setProductionOrderNo(order.getOrderNo());
+                tracking.setCuttingBundleId(bundle.getId());
+                tracking.setBundleNo(bundle.getBundleNo());
+                tracking.setSku(bundle.getStyleNo() + "-" + bundle.getColor() + "-" + bundle.getSize());
+                tracking.setColor(bundle.getColor());
+                tracking.setSize(bundle.getSize());
+                tracking.setQuantity(bundle.getQuantity());
+                String processName = getStringValue(node, "name", "工序" + (i + 1));
+                tracking.setProcessCode(processName);
+                tracking.setProcessName(processName);
+                tracking.setProcessOrder(i + 1);
+                tracking.setUnitPrice(getBigDecimalValue(node, "unitPrice", BigDecimal.ZERO));
+                boolean isCuttingProcess = "裁剪".equals(processName) || Boolean.TRUE.equals(node.get("_isCuttingAutoNode"));
+                if (isCuttingProcess) {
+                    tracking.setScanStatus("scanned");
+                    if (matchedTask != null) {
+                        tracking.setScanTime(matchedTask.getBundledTime() != null ? matchedTask.getBundledTime() : LocalDateTime.now());
+                        tracking.setOperatorName(StringUtils.hasText(matchedTask.getReceiverName()) ? matchedTask.getReceiverName() : currentUser);
+                        tracking.setOperatorId(matchedTask.getReceiverId());
+                    } else {
+                        tracking.setScanTime(LocalDateTime.now());
+                        tracking.setOperatorName(currentUser);
+                    }
+                    if (tracking.getUnitPrice() != null && tracking.getQuantity() != null
+                            && tracking.getUnitPrice().compareTo(BigDecimal.ZERO) > 0) {
+                        tracking.setSettlementAmount(tracking.getUnitPrice().multiply(new BigDecimal(tracking.getQuantity())));
+                    }
+                } else {
+                    tracking.setScanStatus("pending");
+                }
+                tracking.setIsSettled(false);
+                tracking.setCreator(currentUser);
+                tracking.setTenantId(UserContext.tenantId());
+                trackingRecords.add(tracking);
+            }
+        }
+        if (trackingRecords.isEmpty()) {
+            return 0;
+        }
+        return trackingService.batchInsert(trackingRecords);
+    }
+
     /**
      * 更新扫码记录（扫码时调用）
      *

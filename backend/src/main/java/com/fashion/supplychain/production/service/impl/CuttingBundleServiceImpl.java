@@ -12,6 +12,7 @@ import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.CuttingBundleMapper;
 import com.fashion.supplychain.production.service.CuttingBundleService;
+import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +43,9 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
 
     @Autowired
     private CuttingTaskService cuttingTaskService;
+
+    @Autowired
+    private MaterialPurchaseService materialPurchaseService;
 
     // NOTE [架构债务] Service不应调用Orchestrator
     // generateBundles()中的processTrackingOrchestrator调用+订单状态更新应迁移到CuttingBundleOrchestrator
@@ -99,39 +103,47 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
         }
         log.info("generateBundles: 找到订单, orderNo={}, orderId={}", order.getOrderNo(), order.getId());
 
-        int materialArrivalRate = order.getMaterialArrivalRate() == null ? 0 : order.getMaterialArrivalRate();
-        if (materialArrivalRate < 100) {
-            throw new IllegalStateException("物料未到齐，无法生成裁剪单");
+        boolean materialReady = materialPurchaseService.hasConfirmedQuantityByOrderId(order.getId(), true);
+        if (!materialReady) {
+            Integer rate = order.getMaterialArrivalRate();
+            materialReady = rate != null && rate >= 100;
+        }
+        if (!materialReady) {
+            materialReady = order.getProcurementManuallyCompleted() != null
+                    && order.getProcurementManuallyCompleted() == 1;
+        }
+        if (!materialReady && StringUtils.hasText(order.getOrderNo())) {
+            materialReady = order.getOrderNo().trim().toUpperCase().startsWith("CUT");
+        }
+        if (!materialReady) {
+            throw new IllegalStateException("主面料尚未完成可裁确认，无法生成裁剪单");
         }
 
         CuttingTask task = cuttingTaskService.createTaskIfAbsent(order);
         if (task == null) {
             throw new NoSuchElementException("未找到裁剪任务");
         }
-        if (!"received".equals(task.getStatus())) {
-            if ("bundled".equals(task.getStatus())) {
-                // 如果已生成过，先删除旧的菲号，允许重新生成
-                log.info("订单已生成裁剪单，删除旧菲号重新生成: orderId={}", orderId);
-                this.remove(new LambdaQueryWrapper<CuttingBundle>()
-                        .eq(CuttingBundle::getProductionOrderId, order.getId()));
-                // 重置任务状态为已领取，允许重新生成
-                task.setStatus("received");
-                cuttingTaskService.updateById(task);
-            } else {
-                throw new IllegalStateException("请先在裁剪任务中领取后再生成裁剪单");
-            }
+        String taskStatus = task.getStatus() == null ? "" : task.getStatus().trim();
+        if (!"received".equals(taskStatus) && !"bundled".equals(taskStatus)) {
+            throw new IllegalStateException("请先在裁剪任务中领取后再生成裁剪单");
         }
 
-        // 再次检查是否已存在菲号（防止并发）
         Long existingCount = this.count(new LambdaQueryWrapper<CuttingBundle>()
                 .eq(CuttingBundle::getProductionOrderId, order.getId()));
-        if (existingCount != null && existingCount > 0) {
-            log.warn("订单菲号在生成过程中被创建: orderId={}", orderId);
-        }
+        int existingBundleCount = existingCount == null ? 0 : existingCount.intValue();
 
         List<CuttingBundle> result = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
         int bundleIndex = 1;
+        CuttingBundle lastBundleNo = this.baseMapper.selectOne(
+                new LambdaQueryWrapper<CuttingBundle>()
+                        .select(CuttingBundle::getBundleNo)
+                        .eq(CuttingBundle::getProductionOrderId, order.getId())
+                        .orderByDesc(CuttingBundle::getBundleNo)
+                        .last("LIMIT 1"));
+        if (lastBundleNo != null && lastBundleNo.getBundleNo() != null && lastBundleNo.getBundleNo() > 0) {
+            bundleIndex = lastBundleNo.getBundleNo() + 1;
+        }
 
         // ✅ 自动分配床号：
         // 优先复用同一订单已有的床号（同一订单多个尺码属于同一次裁剪），
@@ -149,11 +161,9 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
 
         int nextBedNo;
         if (sameOrderBundle != null && sameOrderBundle.getBedNo() != null && sameOrderBundle.getBedNo() > 0) {
-            // 同订单已有其他尺码的bundles → 复用同一床号（同一次裁剪）
-            nextBedNo = sameOrderBundle.getBedNo();
-            log.info("复用同订单床号: orderId={}, bedNo={}", order.getId(), nextBedNo);
+            nextBedNo = sameOrderBundle.getBedNo() + 1;
+            log.info("追加新床号: orderId={}, bedNo={}", order.getId(), nextBedNo);
         } else {
-            // 订单首次生成bundles → 取全局最大床号+1（开始新一床）
             CuttingBundle lastBundle = this.baseMapper.selectOne(
                 new LambdaQueryWrapper<CuttingBundle>()
                     .select(CuttingBundle::getBedNo)
@@ -231,16 +241,16 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
             this.saveBatch(result);
             cuttingTaskService.markBundledByOrderId(order.getId());
 
-            registerProcessTrackingInitialization(order.getId(), result.size());
+            registerProcessTrackingInitialization(order.getId(), result);
 
             // 更新订单进度到下一阶段（车缝/缝制）
             try {
                 order.setCurrentProcessName("车缝");
-                order.setCuttingBundleCount(result.size());
+                order.setCuttingBundleCount(existingBundleCount + result.size());
                 order.setUpdateTime(LocalDateTime.now());
                 productionOrderService.updateById(order);
                 log.info("裁剪菲号生成完成，订单进度已更新到车缝: orderId={}, orderNo={}, bundleCount={}",
-                        order.getId(), order.getOrderNo(), result.size());
+                        order.getId(), order.getOrderNo(), existingBundleCount + result.size());
             } catch (Exception e) {
                 log.warn("Failed to update order progress to sewing: orderId={}", order.getId(), e);
             }
@@ -255,10 +265,11 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
         return result;
     }
 
-    private void registerProcessTrackingInitialization(String orderId, int bundleCount) {
+    private void registerProcessTrackingInitialization(String orderId, List<CuttingBundle> bundles) {
+        int bundleCount = bundles == null ? 0 : bundles.size();
         Runnable action = () -> {
             try {
-                processTrackingOrchestrator.initializeProcessTracking(orderId);
+                processTrackingOrchestrator.appendProcessTracking(orderId, bundles);
                 log.info("工序跟踪记录初始化成功: orderId={}, bundleCount={}", orderId, bundleCount);
             } catch (Exception e) {
                 log.warn("工序跟踪记录初始化失败: orderId={}", orderId, e);

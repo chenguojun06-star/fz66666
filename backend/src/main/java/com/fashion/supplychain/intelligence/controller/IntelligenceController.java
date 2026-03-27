@@ -37,6 +37,9 @@ public class IntelligenceController {
     private com.fashion.supplychain.intelligence.orchestration.AiAgentOrchestrator aiAgentOrchestrator;
 
     @Autowired
+    private AiAdvisorChatResponseOrchestrator aiAdvisorChatResponseOrchestrator;
+
+    @Autowired
     private AiMemoryOrchestrator aiMemoryOrchestrator;
 
     @Autowired
@@ -491,25 +494,14 @@ public class IntelligenceController {
 
     /** AI 顾问问答 — 优先本地规则引擎，无法回答时调用 DeepSeek */
     @PostMapping("/ai-advisor/chat")
-    public Result<?> aiAdvisorChat(@RequestBody java.util.Map<String, String> body) {
+    public Result<AiAdvisorChatResponse> aiAdvisorChat(@RequestBody java.util.Map<String, String> body) {
         String question = body.getOrDefault("question", "");
         if (question == null || question.isBlank()) {
             return Result.fail("问题不能为空");
         }
         Result<String> agentResult = aiAgentOrchestrator.executeAgent(question);
         String commandId = aiAgentOrchestrator.consumeLastCommandId();
-        if (!Integer.valueOf(200).equals(agentResult.getCode())) {
-            return Result.success(java.util.Map.of(
-                    "answer", agentResult.getMessage(),
-                    "source", "error",
-                    "commandId", commandId
-            ));
-        }
-        return Result.success(java.util.Map.of(
-                "answer", agentResult.getData(),
-                "source", "ai",
-                "commandId", commandId
-        ));
+        return Result.success(aiAdvisorChatResponseOrchestrator.build(question, commandId, agentResult));
     }
 
     /** AI 顾问流式问答 — SSE 实时推送思考/工具调用/回答事件 */

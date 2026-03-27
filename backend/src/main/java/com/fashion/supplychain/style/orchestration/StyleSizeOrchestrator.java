@@ -38,9 +38,6 @@ public class StyleSizeOrchestrator {
         if (styleSize == null || styleSize.getStyleId() == null) {
             throw new IllegalArgumentException("styleId不能为空");
         }
-        if (styleInfoService.isPatternLocked(styleSize.getStyleId())) {
-            throw new IllegalStateException("纸样已完成，无法修改，请先回退");
-        }
         if (styleSize.getCreateTime() == null) {
             styleSize.setCreateTime(LocalDateTime.now());
         }
@@ -64,9 +61,6 @@ public class StyleSizeOrchestrator {
         if (current == null) {
             throw new NoSuchElementException("记录不存在");
         }
-        if (styleInfoService.isPatternLocked(current.getStyleId())) {
-            throw new IllegalStateException("纸样已完成，无法修改，请先回退");
-        }
         styleSize.setStyleId(current.getStyleId());
         styleSize.setUpdateTime(LocalDateTime.now());
         boolean ok = styleSizeService.updateNullableFieldsById(styleSize);
@@ -84,9 +78,6 @@ public class StyleSizeOrchestrator {
         StyleSize current = styleSizeService.getById(id);
         if (current == null) {
             throw new NoSuchElementException("记录不存在");
-        }
-        if (styleInfoService.isPatternLocked(current.getStyleId())) {
-            throw new IllegalStateException("纸样已完成，无法修改，请先回退");
         }
         boolean ok = styleSizeService.removeById(id);
         if (!ok) {

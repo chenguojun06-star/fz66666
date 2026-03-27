@@ -9,24 +9,25 @@ import dayjs from 'dayjs';
 
 import { LoginLog, LoginLogQueryParams } from '@/types/system';
 import { OperationLog, OperationLogQueryParams } from '@/types/operation-log';
+import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE_OPTIONS, readPageSizeByKey, savePageSizeByKey } from '@/utils/pageSizeStore';
+import { usePersistentState } from '@/hooks/usePersistentState';
 
 import './styles.css';
 import { message } from '@/utils/antdStatic';
 
 const SystemLogs: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'login' | 'operation'>('login');
+  const [activeTab, setActiveTab] = usePersistentState<'login' | 'operation'>('system-logs-active-tab', 'login');
   const { modal } = App.useApp();
 
   // ==================== 登录日志 ====================
   const [loginQueryParams, setLoginQueryParams] = useState<LoginLogQueryParams>(() => {
     let page = 1;
-    let pageSize = 10;
+    let pageSize = readPageSizeByKey('system-loginlog-pagination:size', DEFAULT_PAGE_SIZE);
     try {
       const raw = typeof window !== 'undefined' ? localStorage.getItem('system-loginlog-pagination') : null;
       if (raw) {
         const obj = JSON.parse(raw || '{}');
         if (Number.isFinite(Number(obj?.page))) page = Number(obj.page);
-        if (Number.isFinite(Number(obj?.pageSize))) pageSize = Number(obj.pageSize);
       }
     } catch {}
     return { page, pageSize } as LoginLogQueryParams;
@@ -95,13 +96,12 @@ const SystemLogs: React.FC = () => {
   // ==================== 操作日志 ====================
   const [operationQueryParams, setOperationQueryParams] = useState<OperationLogQueryParams>(() => {
     let page = 1;
-    let pageSize = 10;
+    let pageSize = readPageSizeByKey('system-operationlog-pagination:size', DEFAULT_PAGE_SIZE);
     try {
       const raw = typeof window !== 'undefined' ? localStorage.getItem('system-operationlog-pagination') : null;
       if (raw) {
         const obj = JSON.parse(raw || '{}');
         if (Number.isFinite(Number(obj?.page))) page = Number(obj.page);
-        if (Number.isFinite(Number(obj?.pageSize))) pageSize = Number(obj.pageSize);
       }
     } catch {}
     return { page, pageSize } as OperationLogQueryParams;
@@ -335,9 +335,10 @@ const SystemLogs: React.FC = () => {
                       showSizeChanger: true,
                       showQuickJumper: true,
                       showTotal: (t) => `共 ${t} 条`,
-                      pageSizeOptions: ['10', '20', '50', '100'],
+                      pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
                       onChange: (page, pageSize) => {
-                        try { if (typeof window !== 'undefined') localStorage.setItem('system-loginlog-pagination', JSON.stringify({ page, pageSize })); } catch {}
+                        try { if (typeof window !== 'undefined') localStorage.setItem('system-loginlog-pagination', JSON.stringify({ page })); } catch {}
+                        savePageSizeByKey('system-loginlog-pagination:size', pageSize);
                         setLoginQueryParams((prev) => ({ ...prev, page, pageSize }));
                       },
                     }}
@@ -452,9 +453,10 @@ const SystemLogs: React.FC = () => {
                       showSizeChanger: true,
                       showQuickJumper: true,
                       showTotal: (t) => `共 ${t} 条`,
-                      pageSizeOptions: ['10', '20', '50', '100'],
+                      pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
                       onChange: (page, pageSize) => {
-                        try { if (typeof window !== 'undefined') localStorage.setItem('system-operationlog-pagination', JSON.stringify({ page, pageSize })); } catch {}
+                        try { if (typeof window !== 'undefined') localStorage.setItem('system-operationlog-pagination', JSON.stringify({ page })); } catch {}
+                        savePageSizeByKey('system-operationlog-pagination:size', pageSize);
                         setOperationQueryParams((prev) => ({ ...prev, page, pageSize }));
                       },
                     }}

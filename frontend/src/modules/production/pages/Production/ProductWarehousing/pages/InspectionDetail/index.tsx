@@ -22,6 +22,7 @@ import StyleSizeTab from '@/modules/basic/pages/StyleInfo/components/StyleSizeTa
 import { qualityAiApi } from '@/services/production/productionApi';
 import type { QualityAiSuggestionResult } from '@/services/production/productionApi';
 import { message } from '@/utils/antdStatic';
+import { useWarehouseLocationOptions } from '@/hooks/useWarehouseLocationOptions';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -83,20 +84,7 @@ const InspectionDetail: React.FC = () => {
   const [warehousingLoading, setWarehousingLoading] = useState(false);
   const [showWarehousingModal, setShowWarehousingModal] = useState(false);
   const [markingRepairBundleId, setMarkingRepairBundleId] = useState<string | null>(null);
-  const [warehouseOptions, setWarehouseOptions] = useState<string[]>(['A仓', 'B仓', 'C仓', '成品仓', '面辅料仓', '次品仓']);
-
-  // 动态加载字典中配置的仓库列表
-  useEffect(() => {
-    api.get<{ code: number; data: { records?: { dictLabel: string }[] } | { dictLabel: string }[] }>(
-      '/system/dict/list', { params: { dictType: 'warehouse_location', page: 1, pageSize: 100 } }
-    ).then(res => {
-      if (res.code === 200) {
-        const list = Array.isArray(res.data) ? res.data : (res.data as any)?.records || [];
-        const labels = list.map((d: any) => String(d.dictLabel || '').trim()).filter(Boolean);
-        if (labels.length) setWarehouseOptions(labels);
-      }
-    }).catch(() => { /* 静默失败，保留默认值 */ });
-  }, []);
+  const { warehouseOptions } = useWarehouseLocationOptions();
 
   /* ---- 内联质检表单 ---- */
   const formHook = useWarehousingForm(

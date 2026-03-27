@@ -73,17 +73,14 @@ public class MaterialPickupController {
         return Result.success(pickupOrchestrator.paymentCenterList(params));
     }
 
-    /** 标记收款（将待核算的记录标记为已核算） */
+    /** 标记收款（工厂回款给租户） */
     @PostMapping("/payment-center/settle")
     public Result<Void> paymentCenterSettle(@RequestBody Map<String, Object> body) {
         @SuppressWarnings("unchecked")
         List<String> ids = (List<String>) body.get("ids");
         String remark = body.get("remark") != null ? String.valueOf(body.get("remark")) : null;
-        Map<String, Object> settleBody = Map.of("remark", remark != null ? remark : "");
         if (ids == null || ids.isEmpty()) throw new IllegalArgumentException("请传入要结算的记录ID");
-        for (String id : ids) {
-            pickupOrchestrator.financeSettle(id, settleBody);
-        }
+        pickupOrchestrator.markPaymentReceived(ids, remark);
         return Result.success(null);
     }
 }

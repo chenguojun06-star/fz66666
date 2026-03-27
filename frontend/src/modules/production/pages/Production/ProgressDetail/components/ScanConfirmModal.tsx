@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from 'antd';
-import ResizableModal from '@/components/common/ResizableModal';
+import SmallModal from '@/components/common/SmallModal';
 
 type ScanConfirmDetail = {
   scanCode?: string;
@@ -31,9 +31,8 @@ const ScanConfirmModal: React.FC<ScanConfirmModalProps> = ({
   onCancel,
   onSubmit,
 }) => (
-  <ResizableModal
+  <SmallModal
     title="扫码确认"
-    width="30vw"
     open={open}
     onCancel={onCancel}
     footer={[
@@ -59,7 +58,7 @@ const ScanConfirmModal: React.FC<ScanConfirmModalProps> = ({
         <div>尺码：{detail.size || '-'}</div>
       </div>
     )}
-  </ResizableModal>
+  </SmallModal>
 );
 
 export default ScanConfirmModal;

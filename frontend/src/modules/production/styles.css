@@ -220,6 +220,67 @@
   transition: background-color 0.25s ease;
 }
 
+.production-progress-list-table .ant-table-container,
+.production-progress-list-table .ant-table-content,
+.production-progress-list-table .ant-table,
+.production-progress-list-table .ant-table-wrapper,
+.production-progress-list-table .ant-spin-nested-loading {
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.production-progress-list-table table {
+  border-collapse: collapse !important;
+  border-spacing: 0 !important;
+}
+
+.production-progress-list-table .ant-table-thead > tr > th,
+.production-progress-list-table .ant-table-tbody > tr > td {
+  border: none !important;
+  border-right: none !important;
+  border-inline-end: none !important;
+  border-bottom-color: transparent !important;
+  border-right-color: transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.production-progress-list-table .ant-table-thead > tr > th,
+.production-progress-list-table .ant-table-cell,
+.production-progress-list-table .ant-table-tbody > tr > th,
+.production-progress-list-table .ant-table-cell-scrollbar {
+  border: none !important;
+  border-right: none !important;
+  border-inline-end: none !important;
+  border-left: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.production-progress-list-table .ant-table-container::before,
+.production-progress-list-table .ant-table-container::after,
+.production-progress-list-table .ant-table-ping-left .ant-table-container::before,
+.production-progress-list-table .ant-table-ping-right .ant-table-container::after,
+.production-progress-list-table .ant-table-cell-fix-left,
+.production-progress-list-table .ant-table-cell-fix-right,
+.production-progress-list-table .ant-table-fixed-column-sorters::after,
+.production-progress-list-table .ant-table-column-sorters::after,
+.production-progress-list-table .ant-table-tbody > tr > td::before,
+.production-progress-list-table .ant-table-tbody > tr::after,
+.production-progress-list-table .ant-table-thead > tr > th::before,
+.production-progress-list-table .ant-table-thead > tr::after,
+.production-progress-list-table .ant-table-cell::after,
+.production-progress-list-table .ant-table-cell-fix-left-last::after,
+.production-progress-list-table .ant-table-cell-fix-right-first::after {
+  display: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  content: none !important;
+}
+
 .order-flow-summary-top {
   display: flex;
   align-items: flex-start;
@@ -760,12 +821,14 @@
 .cutting-entry-label {
   font-size: var(--font-size-sm);
   color: rgba(0, 0, 0, 0.45);
+  line-height: 1.4;
 }
 
 .cutting-entry-value {
   font-size: var(--font-size-base);
   font-weight: 700;
   color: rgba(0, 0, 0, 0.88);
+  line-height: 1.5;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -814,16 +877,30 @@
   padding: 6px 0 0;
 }
 
+.cutting-entry-purchase-card > .ant-card-head {
+  min-height: 44px;
+}
+
+.cutting-entry-purchase-card > .ant-card-head .ant-card-head-title {
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.cutting-entry-purchase-card > .ant-card-body {
+  padding-top: 12px;
+}
+
 .cutting-entry-footer {
   border: 1px solid #f0f0f0;
   background: #fff;
-  padding: 12px;
+  padding: 14px 12px;
 }
 
 .cutting-entry-footer-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px 12px;
+  gap: 12px 16px;
 }
 
 @media (max-width: 768px) {

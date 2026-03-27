@@ -1,18 +1,17 @@
-import React, { useMemo } from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import dayjs from 'dayjs';
-import { useNavigate } from 'react-router-dom';
-import { Popover, Tag, Tooltip } from 'antd';
-import { ShareAltOutlined } from '@ant-design/icons';
+import { Badge, Button, Popover, Tag, Tooltip } from 'antd';
+import { ExclamationCircleOutlined, ShareAltOutlined } from '@ant-design/icons';
 import type { DeliveryRiskItem } from '@/services/intelligence/intelligenceApi';
+import OrderInfoGrid from '@/components/common/OrderInfoGrid';
+import { createOrderColorSizeMatrixInfoItems } from '@/components/common/OrderColorSizeMatrix';
 import { SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
 import LiquidProgressLottie from '@/components/common/LiquidProgressLottie';
-import RowActions from '@/components/common/RowActions';
 import SmartOrderHoverCard from '../components/SmartOrderHoverCard';
 import DefectTracePopover from '../components/DefectTracePopover';
-import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import { StyleCoverThumb } from '@/components/StyleAssets';
 import { isDirectCuttingOrder, isOrderFrozenByStatus } from '@/utils/api';
-import { formatDateTime } from '@/utils/datetime';
+import { parseProductionOrderLines } from '@/utils/api/production';
 import { getRemainingDaysDisplay } from '@/utils/progressColor';
 import { stageAliasMap } from '@/utils/productionStage';
 import { ProductionOrder } from '@/types/production';
@@ -41,9 +40,7 @@ function calcHealthScore(record: ProductionOrder): { score: number; level: 'good
 }
 import {
   stripWarehousingNode,
-  formatTime,
   getOrderShipTime,
-  getQuotationUnitPriceForOrder,
   resolveNodesForListOrder,
   defaultNodes,
 } from '../utils';
@@ -82,6 +79,13 @@ const getNodeColor = (expectedShipDate: any, isColor2 = false): string => {
   return isColor2 ? '#95de64' : '#52c41a';
 };
 
+const colorWithAlpha = (hex: string, alpha: number): string => {
+  const matched = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!matched) return hex;
+  const [, r, g, b] = matched;
+  return `rgba(${parseInt(r, 16)}, ${parseInt(g, 16)}, ${parseInt(b, 16)}, ${alpha})`;
+};
+
 interface UseProgressColumnsParams {
   orderSortField: string;
   orderSortOrder: 'asc' | 'desc';
@@ -100,6 +104,7 @@ interface UseProgressColumnsParams {
   isSupervisorOrAbove: boolean;
   handleCloseOrder: (order: ProductionOrder) => void;
   setPrintingRecord: (record: ProductionOrder) => void;
+  handlePrintLabel: (record: ProductionOrder) => void | Promise<void>;
   setQuickEditRecord: (record: ProductionOrder | null) => void;
   setQuickEditVisible: (v: boolean) => void;
   setRemarkPopoverId: (id: string | null) => void;
@@ -127,6 +132,7 @@ export const useProgressColumns = ({
   isSupervisorOrAbove,
   handleCloseOrder,
   setPrintingRecord,
+  handlePrintLabel,
   setQuickEditRecord,
   setQuickEditVisible,
   setRemarkPopoverId,
@@ -136,239 +142,209 @@ export const useProgressColumns = ({
   onShareOrder,
   canManageOrderLifecycle = false,
 }: UseProgressColumnsParams) => {
-  const navigate = useNavigate();
   const { getPredictHint, triggerPredict } = usePredictFinishHint(formatCompletionTime);
 
   const columns = useMemo<any[]>(() => [
     {
-      title: '图片',
-      key: 'cover',
-      width: 90,
-      render: (_: any, record: ProductionOrder) => (
-        <StyleCoverThumb
-          styleId={record.styleId}
-          styleNo={record.styleNo}
-          src={(record as any).styleCover || null}
-          size={68}
-          borderRadius={6}
-        />
-      ),
-    },
-    {
-      title: '订单号',
-      dataIndex: 'orderNo',
-      key: 'orderNo',
-      width: 160,
-      render: (v: any, record: ProductionOrder) => (
-        <Popover
-          content={<SmartOrderHoverCard order={record} />}
-          trigger="hover"
-          placement="rightTop"
-          mouseEnterDelay={0.3}
-          overlayStyle={{ width: SMART_CARD_OVERLAY_WIDTH, maxWidth: SMART_CARD_OVERLAY_WIDTH }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', cursor: 'default' }}>
-            <span className="order-no-wrap">{String(v || '').trim() || '-'}</span>
-            {record.urgencyLevel === 'urgent' && (
-              <Tag color="red" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>急</Tag>
-            )}
-            {String(record.plateType || '').toUpperCase() === 'FIRST' && (
-              <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>首</Tag>
-            )}
-            {String(record.plateType || '').toUpperCase() === 'REORDER' && (
-              <Tag color="gold" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>翻</Tag>
-            )}
-            {(() => {
-              const { score, level } = calcHealthScore(record);
-              if (level === 'good') return null;
-              return (
-                <Tooltip title={`健康度 ${score}分`} placement="top">
-                  <Tag
-                    color={level === 'warn' ? 'orange' : 'red'}
-                    style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}
-                  >
-                    {level === 'warn' ? '注' : '危'}
-                  </Tag>
-                </Tooltip>
-              );
-            })()}
-          </div>
-        </Popover>
-      ),
-    },
-
-    {
-      title: 'SKC',
-      dataIndex: 'skc',
-      key: 'skc',
-      width: 160,
-      render: (v: any) => <span className="order-no-wrap">{String(v || '').trim() || '-'}</span>,
-    },
-    {
-      title: (
-        <Tooltip title="款式报价单单价（BOM+工序成本合计含利润）">
-          <span>单价</span>
-        </Tooltip>
-      ),
-      key: 'quotationUnitPrice',
-      width: 100,
-      align: 'right' as const,
+      title: '',
+      key: 'orderSummary',
+      width: 490,
+      align: 'left' as const,
       render: (_: any, record: ProductionOrder) => {
-        const v = getQuotationUnitPriceForOrder(record);
-        return v > 0 ? (
-          <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>¥{v.toFixed(2)}</span>
-        ) : (
-          <span style={{ color: 'var(--neutral-text-secondary)' }}>未报价</span>
-        );
-      },
-    },
-    {
-      title: '入库数量',
-      key: 'warehousingQualifiedQuantity',
-      width: 110,
-      align: 'right' as const,
-      render: (_: any, record: ProductionOrder) => Number((record as Record<string, unknown>).warehousingQualifiedQuantity) || 0,
-    },
-    {
-      title: '备注',
-      dataIndex: 'remarks',
-      key: 'remarks',
-      width: 150,
-      ellipsis: true,
-      render: (v: any) => v || '-',
-    },
-    {
-      title: (
-        <SortableColumnTitle
-          title="预计出货"
-          fieldName="expectedShipDate"
-          onSort={handleOrderSort}
-          sortField={orderSortField}
-          sortOrder={orderSortOrder}
-        />
-      ),
-      dataIndex: 'expectedShipDate',
-      key: 'expectedShipDate',
-      width: 120,
-      render: (v: any) => v ? formatDateTime(v) : '-',
-    },
-    {
-      title: (
-        <SortableColumnTitle
-          title="订单交期"
-          fieldName="plannedEndDate"
-          onSort={handleOrderSort}
-          sortField={orderSortField}
-          sortOrder={orderSortOrder}
-        />
-      ),
-      key: 'shipTime',
-      width: 170,
-      render: (_: any, record: ProductionOrder) => {
-        const dateStr = formatTime(getOrderShipTime(record));
-        const { text, color } = getRemainingDaysDisplay(record.plannedEndDate, record.createTime, record.actualEndDate, record.status);
-        // 进度风险标签：综合 daysLeft + productionProgress 给出预警
-        const s = record.status;
-        const prog = Number(record.productionProgress) || 0;
-        const planEnd = record.plannedEndDate ? dayjs(record.plannedEndDate) : null;
-        const dLeft = planEnd ? planEnd.diff(dayjs(), 'day') : null;
-        let riskTag: { text: string; color: string } | null = null;
-        if (s !== 'completed' && dLeft !== null && prog < 100) {
-          if (dLeft < 0)                     riskTag = { text: '🔴 已逾期',    color: '#ff4d4f' };
-          else if (dLeft <= 3  && prog < 80) riskTag = { text: '🔴 严重偏慢', color: '#ff4d4f' };
-          else if (dLeft <= 7  && prog < 50) riskTag = { text: '🟡 进度偏慢', color: '#fa8c16' };
-          else if (dLeft <= 14 && prog < 30) riskTag = { text: '🟡 需关注',  color: '#faad14' };
-          else if (prog >= 80 && dLeft >= 3) riskTag = { text: '🟢 顺利',    color: '#52c41a' };
-        }
-        // AI 交期风险 badge
-        const aiRisk = deliveryRiskMap?.get(String(record.orderNo || ''));
-        let aiRiskTag: { text: string; color: string; tip: string } | null = null;
-        if (aiRisk && record.status !== 'completed') {
-          const tip = [aiRisk.riskDescription, aiRisk.predictedEndDate ? `预测完成：${aiRisk.predictedEndDate}` : ''].filter(Boolean).join(' · ');
-          if (aiRisk.riskLevel === 'overdue')        aiRiskTag = { text: '🤖 AI预测逾期', color: '#cf1322', tip };
-          else if (aiRisk.riskLevel === 'danger')    aiRiskTag = { text: '🤖 AI预测偏慢', color: '#d46b08', tip };
-          else if (aiRisk.riskLevel === 'warning')   aiRiskTag = { text: '🤖 需关注',     color: '#d48806', tip };
-          else if (aiRisk.riskLevel === 'safe')      aiRiskTag = { text: '🤖 AI按时',      color: '#389e0d', tip };
-        }
-        return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ fontSize: 12 }}>{dateStr}</span>
-            <span style={{ fontSize: 11, fontWeight: 600, color }}>{text}</span>
-            {riskTag && (
-              <span style={{ fontSize: 10, fontWeight: 700, color: riskTag.color }}>
-                {riskTag.text}
-              </span>
-            )}
-            {aiRiskTag && (
-              <Tooltip title={aiRiskTag.tip}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: aiRiskTag.color, cursor: 'help' }}>
-                  {aiRiskTag.text}
-                </span>
-              </Tooltip>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
-      width: 110,
-      render: (value: ProductionOrder['status'], record: ProductionOrder) => {
-        const map: any = {
-          pending: { color: 'default', label: '待开始' },
-          production: { color: 'success', label: '生产中' },
-          completed: { color: 'default', label: '已完成' },
-          delayed: { color: 'warning', label: '延期' },
+        const statusMap: Record<string, { color: string; label: string }> = {
+          pending: { color: 'default', label: '未开始' },
+          production: { color: 'processing', label: '生产中' },
+          completed: { color: 'success', label: '已完成' },
+          delayed: { color: 'warning', label: '已延期' },
+          scrapped: { color: 'error', label: '已报废' },
+          cancelled: { color: 'default', label: '已取消' },
         };
-        const t = map[value] || { color: 'default', label: value };
+        const status = statusMap[String(record.status || '').trim()] || { color: 'default', label: String(record.status || '未知') };
         const stagnantDays = stagnantOrderIds?.get(String(record.id));
+        const shipTimeValue = getOrderShipTime(record);
+        const shipDate = shipTimeValue ? dayjs(shipTimeValue).format('YYYY-MM-DD') : '-';
+        const createDate = record.createTime ? dayjs(record.createTime).format('YYYY-MM-DD') : '-';
+        const quantity = Number(record.orderQuantity || 0);
+        const { text, color } = getRemainingDaysDisplay(record.plannedEndDate, record.createTime, record.actualEndDate, record.status);
+        const aiRisk = deliveryRiskMap?.get(String(record.orderNo || ''));
+        const colorText = String(record.color || '').trim() || '-';
+        const sizeText = String(record.size || '').trim() || '-';
+        const factoryName = String(record.factoryName || '').trim() || '-';
+        const factoryTypeText = record.factoryType === 'INTERNAL' ? '内部' : record.factoryType === 'EXTERNAL' ? '外发' : '';
+        const merchandiserName = String((record as Record<string, unknown>).merchandiser || '').trim();
+        const customerName = String((record as Record<string, unknown>).company || '').trim();
+        const remark = String((record as Record<string, unknown>).remarks || '').trim();
+        const orderId = String(record.id || '');
+        const tsMatch = remark.match(/^\[(\d{2}-\d{2} \d{2}:\d{2})\]\s*/);
+        const remarkBody = tsMatch ? remark.slice(tsMatch[0].length) : remark;
+        const expectedShipDateRaw = (record as Record<string, unknown>).expectedShipDate;
+        const expectedShipDate = expectedShipDateRaw ? dayjs(String(expectedShipDateRaw)).format('YYYY-MM-DD') : '-';
+        const orderLines = parseProductionOrderLines(record);
+        const softTagBaseStyle: CSSProperties = {
+          margin: 0,
+          fontSize: 11,
+          border: 'none',
+        };
+        const softTagStyle = (background: string, foreground: string): CSSProperties => ({
+          ...softTagBaseStyle,
+          background,
+          color: foreground,
+        });
+        const metaLabelStyle: CSSProperties = {
+          color: 'var(--neutral-text-light, #98a2b3)',
+          whiteSpace: 'nowrap',
+        };
+        const metaValueStyle: CSSProperties = {
+          color: 'var(--neutral-text, #111827)',
+          fontWeight: 600,
+          textAlign: 'left',
+          whiteSpace: 'nowrap',
+        };
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <Tag color={t.color} style={{ margin: 0 }}>{t.label}</Tag>
-            {stagnantDays !== undefined && (
-              <div className="stagnant-pulse-badge" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span className="stagnant-pulse-dot" />
-                <span>停滞 {stagnantDays} 天</span>
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={e => {
-                    e.stopPropagation();
-                    const q = encodeURIComponent(`订单${record.orderNo}已停滞${stagnantDays}天无扫码，工厂可能出现问题，请分析原因并给出催单建议`);
-                    navigate(`/intelligence/center?q=${q}`);
-                  }}
-                  onKeyDown={e => e.key === 'Enter' && e.currentTarget.click()}
-                  style={{
-                    color: '#fa8c16', fontSize: 10, cursor: 'pointer',
-                    textDecoration: 'underline', lineHeight: 1,
-                  }}
-                >
-                  催→AI
-                </span>
+          <Popover
+            content={<SmartOrderHoverCard order={record} />}
+            trigger="hover"
+            placement="rightTop"
+            mouseEnterDelay={0.3}
+            styles={{ root: { width: SMART_CARD_OVERLAY_WIDTH, maxWidth: SMART_CARD_OVERLAY_WIDTH } }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 168, paddingRight: 6, paddingTop: 6, paddingBottom: 6, textAlign: 'left' }}>
+              <div style={{ width: 162, minWidth: 162, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-start', gap: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', minHeight: 24 }}>
+                  <Tag color={status.color} style={{ margin: 0, fontSize: 11 }}>{status.label}</Tag>
+                  {record.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 11 }}>急单</Tag>}
+                  {String(record.plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 11 }}>首单</Tag>}
+                  {String(record.plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 11 }}>翻单</Tag>}
+                  {(() => {
+                    const { score, level } = calcHealthScore(record);
+                    if (level === 'good') return null;
+                    return <Tag color={level === 'warn' ? 'orange' : 'red'} style={{ margin: 0, fontSize: 11 }}>{level === 'warn' ? `关注 ${score}` : `风险 ${score}`}</Tag>;
+                  })()}
+                  {stagnantDays !== undefined ? <Tag color="orange" style={{ margin: 0, fontSize: 11 }}>停滞 {stagnantDays} 天</Tag> : null}
+                </div>
+                <StyleCoverThumb
+                  styleId={record.styleId}
+                  styleNo={record.styleNo}
+                  src={(record as any).styleCover || null}
+                  size={148}
+                  borderRadius={14}
+                />
               </div>
-            )}
-          </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%', minWidth: 0, paddingTop: 2, textAlign: 'left' }}>
+                <OrderInfoGrid
+                  fontSize={12}
+                  items={[
+                    {
+                      label: '生产方',
+                      labelStyle: metaLabelStyle,
+                      value: (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <span style={{ ...metaValueStyle }}>{factoryName}</span>
+                          {factoryTypeText ? <Tag color={record.factoryType === 'INTERNAL' ? 'blue' : 'purple'} style={record.factoryType === 'INTERNAL' ? softTagStyle('#edf3fb', '#6283a8') : softTagStyle('#f2edf9', '#8c78b1')}>{factoryTypeText}</Tag> : null}
+                          {merchandiserName ? (
+                            <Tooltip title={remark ? `备注：${remark}` : '点击添加备注'} placement="top">
+                              <div
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  setRemarkPopoverId(orderId);
+                                  setRemarkText(remarkBody);
+                                }}
+                              >
+                                <span style={metaLabelStyle}>跟单员</span>
+                                <span style={metaValueStyle}>{merchandiserName}</span>
+                                {remark ? (
+                                  <Badge dot color="#ef4444" offset={[-2, 2]}>
+                                    <ExclamationCircleOutlined style={{ fontSize: 12, color: '#ef4444' }} />
+                                  </Badge>
+                                ) : null}
+                              </div>
+                            </Tooltip>
+                          ) : null}
+                          {customerName ? (
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              <span style={metaLabelStyle}>客户</span>
+                              <span style={metaValueStyle}>{customerName}</span>
+                            </div>
+                          ) : null}
+                        </div>
+                      ),
+                    },
+                    {
+                      label: '订单号',
+                      value: String(record.orderNo || '').trim() || '-',
+                      labelStyle: metaLabelStyle,
+                      valueStyle: metaValueStyle,
+                    },
+                    {
+                      label: '款号',
+                      value: String(record.styleNo || '').trim() || '-',
+                      labelStyle: metaLabelStyle,
+                      valueStyle: metaValueStyle,
+                    },
+                    {
+                      label: 'SKC',
+                      value: String((record as any).skc || '').trim() || '-',
+                      labelStyle: metaLabelStyle,
+                      valueStyle: metaValueStyle,
+                    },
+                    ...createOrderColorSizeMatrixInfoItems({
+                      items: orderLines.map((item) => ({
+                        color: String(item.color || '').trim(),
+                        size: String(item.size || '').trim(),
+                        quantity: Number(item.quantity || 0),
+                      })),
+                      fallbackColor: colorText === '-' ? '' : colorText,
+                      fallbackSize: sizeText === '-' ? '' : sizeText,
+                      fallbackQuantity: quantity,
+                      totalSuffix: '件',
+                      columnMinWidth: 28,
+                      gap: 12,
+                      fontSize: 12,
+                      labelStyle: metaLabelStyle,
+                      valueStyle: metaValueStyle,
+                    }),
+                    {
+                      label: '下单日期',
+                      value: createDate,
+                      labelStyle: { ...metaLabelStyle, fontWeight: 500 },
+                      valueStyle: metaValueStyle,
+                    },
+                    {
+                      label: '交货日期',
+                      value: shipDate,
+                      labelStyle: { ...metaLabelStyle, fontWeight: 500 },
+                      valueStyle: metaValueStyle,
+                    },
+                    {
+                      label: '预计交期',
+                      value: expectedShipDate,
+                      labelStyle: { ...metaLabelStyle, fontWeight: 500 },
+                      valueStyle: metaValueStyle,
+                    },
+                  ]}
+                />
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span style={{ color, fontWeight: 700 }}>{text}</span>
+                  {aiRisk ? (
+                    <Tooltip title={[aiRisk.riskDescription, aiRisk.predictedEndDate ? `预测完成：${aiRisk.predictedEndDate}` : ''].filter(Boolean).join(' · ')}>
+                      <Tag color={aiRisk.riskLevel === 'overdue' ? 'error' : aiRisk.riskLevel === 'danger' ? 'volcano' : aiRisk.riskLevel === 'warning' ? 'warning' : 'success'} style={aiRisk.riskLevel === 'overdue' ? softTagStyle('#f8ecec', '#b17a7a') : aiRisk.riskLevel === 'danger' ? softTagStyle('#f8efea', '#b08773') : aiRisk.riskLevel === 'warning' ? softTagStyle('#f7f1e8', '#a88a66') : softTagStyle('#edf6f0', '#66907b')}>
+                        {aiRisk.riskLevel === 'overdue' ? 'AI预测逾期' : aiRisk.riskLevel === 'danger' ? 'AI预测偏慢' : aiRisk.riskLevel === 'warning' ? 'AI需关注' : 'AI按时'}
+                      </Tag>
+                    </Tooltip>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </Popover>
         );
       },
     },
     {
-      title: '关单时间',
-      key: 'actualEndDate',
-      width: 130,
-      render: (_: any, record: ProductionOrder) =>
-        record.actualEndDate ? (
-          <span style={{ color: '#52c41a', fontSize: 12 }}>
-            {formatTime(record.actualEndDate)}
-          </span>
-        ) : <span style={{ color: '#ccc' }}>-</span>,
-    },
-    {
-      title: '生产进度',
+      title: '',
       key: 'progressNodes',
-      width: 900,
-      align: 'center' as const,
+      align: 'left' as const,
       render: (_: any, record: ProductionOrder) => {
         const frozen = isOrderFrozenByStatus(record);
         // 仅关单/报废才显示灰色球；completed等其他状态保留正常颜色
@@ -377,6 +353,8 @@ export const useProgressColumns = ({
         const totalQty = Number(record.cuttingQuantity || record.orderQuantity) || 0;
         const nodeDoneMap = boardStatsByOrder[String(record.id || '')];
         const nodeTimeMap = boardTimesByOrder[String(record.id || '')];
+        const progressPercent = Math.max(0, Math.min(100, Number(record.productionProgress || 0)));
+        const progressTrackMinWidth = Math.max(ns.length * 92, 420);
 
         if (!ns || ns.length === 0) {
           return (
@@ -386,98 +364,22 @@ export const useProgressColumns = ({
           );
         }
 
-        // ★ 模板无采购节点但有采购到货时间 → 在进度球上方显示到货 Badge
-        const procurementTime = nodeTimeMap?.['__procurement__'] || '';
-        const hasProcureNodeInTemplate = ns.some((n: ProgressNode) =>
-          /采购|物料|备料|辅料|面料/.test(n.name || '')
-        );
-        const merchandiserName = String((record as any).merchandiser || '').trim();
-        const creatorName = String((record as any).createdByName || '').trim();
-        const styleNameStr = String(record.styleName || '').trim();
-        const styleNoStr = String(record.styleNo || '').trim();
-        const createTimeStr = formatTime(record.createTime);
-        const factory = String(record.factoryName || '').trim();
-        const factoryType = (record as any).factoryType as string | undefined;
-
         return (
           <div style={{
             display: 'flex',
-            flexDirection: 'column',
-            gap: 4,
-            alignItems: 'flex-start',
+            alignItems: 'center',
+            justifyContent: 'flex-start',
             width: '100%',
           }}>
             <div style={{
               display: 'flex',
-              width: '100%',
+              gap: 0,
+              alignItems: 'stretch',
               justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '3px 6px',
-              flexWrap: 'wrap',
-              gap: 4,
-              minHeight: 22,
-              background: 'transparent',
-              borderRadius: 5,
-              border: '1px solid rgba(0,0,0,0.06)',
+              padding: '14px 12px 14px 12px',
+              width: '100%',
+              minWidth: progressTrackMinWidth,
             }}>
-              {/* 左侧：各字段间用 · 分隔 */}
-              <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0 }}>
-                {((): React.ReactNode[] => {
-                  const sep = <span style={{ color: '#c0c4cc', fontSize: 12, padding: '0 5px', userSelect: 'none', fontWeight: 300 }}>|</span>;
-                  const items: React.ReactNode[] = [];
-                  if (procurementTime && !hasProcureNodeInTemplate) items.push(
-                    <span key="procurement" style={{ fontSize: 11, color: '#059669', fontWeight: 600, background: 'rgba(5,150,105,0.08)', padding: '0 5px', borderRadius: 3, whiteSpace: 'nowrap' }}>
-                      面料到货 {formatCompletionTime(procurementTime)}
-                    </span>
-                  );
-                  if (styleNameStr || styleNoStr) items.push(
-                    <span key="styleName" style={{ fontSize: 11, color: '#111827', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                      {styleNameStr}{styleNameStr && styleNoStr ? <span style={{ color: '#374151', fontWeight: 600, marginLeft: 4 }}>({styleNoStr})</span> : styleNoStr}
-                    </span>
-                  );
-                  if (createTimeStr) items.push(
-                    <span key="create" style={{ fontSize: 11, color: '#4b5563', fontWeight: 500, whiteSpace: 'nowrap' }}>
-                      下单 {createTimeStr}
-                    </span>
-                  );
-                  if (factory) items.push(
-                    <span key="factory" style={{ fontSize: 11, color: '#1f2937', fontWeight: 500, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                      {factoryType === 'INTERNAL' && <Tag color="blue" style={{ margin: 0, fontSize: 9, padding: '0 3px', lineHeight: '14px', height: 14 }}>内</Tag>}
-                      {factoryType === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 9, padding: '0 3px', lineHeight: '14px', height: 14 }}>外</Tag>}
-                      {factory}
-                    </span>
-                  );
-                  return items.flatMap((item, i) => i === 0 ? [item] : [<React.Fragment key={`sep-${i}`}>{sep}</React.Fragment>, item]);
-                })()}
-              </div>
-              {/* 右侧：竖线 + 跟单员 + 下单人 */}
-              {(merchandiserName || creatorName) && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                  <div style={{ width: 1, height: 14, background: '#c0c4cc', flexShrink: 0 }} />
-                  {merchandiserName && (
-                    <span style={{ fontSize: 11, color: '#1f2937', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                      跟单员：{merchandiserName}
-                    </span>
-                  )}
-                  {merchandiserName && creatorName && (
-                    <span style={{ color: '#c0c4cc', fontSize: 12, userSelect: 'none', fontWeight: 300, padding: '0 2px' }}>|</span>
-                  )}
-                  {creatorName && (
-                    <span style={{ fontSize: 11, color: '#1f2937', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                      下单人：{creatorName}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          <div style={{
-            display: 'flex',
-            gap: 0,
-            alignItems: 'flex-start',
-            justifyContent: 'space-evenly',
-            padding: '12px 8px',
-            width: '100%',
-          }}>
             {ns.map((node: ProgressNode, index: number) => {
               const nodeName = node.name || '-';
               const completedQty = nodeDoneMap?.[nodeName] || 0;
@@ -495,133 +397,163 @@ export const useProgressColumns = ({
                 || NODE_TYPE_MAP[nodeName]
                 || nodeName.toLowerCase();
               const predictHint = getPredictHint(String(record.id || ''), nodeName, percent);
+              const segmentProgress = ns.length > 1
+                ? Math.max(0, Math.min(1, (progressPercent / 100) * (ns.length - 1) - index))
+                : 0;
+              const nodePrimaryColor = isClosed ? '#9ca3af' : getNodeColor(record.expectedShipDate || record.plannedEndDate);
+              const nodeSecondaryColor = isClosed ? '#d1d5db' : getNodeColor(record.expectedShipDate || record.plannedEndDate, true);
 
               return (
                 <div
                   key={node.id || index}
                   style={{
                     display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 2,
-                    flex: 1,
-                    cursor: frozen ? 'default' : 'pointer',
-                    padding: 4,
-                    opacity: isClosed ? 0.6 : percent >= 100 ? 0.75 : 1,
+                    alignItems: 'flex-start',
+                    flex: index === ns.length - 1 ? '0 0 auto' : '1 1 0',
                   }}
-                  onClick={() => !frozen && openNodeDetail(
-                    record,
-                    nodeType,
-                    nodeName,
-                    { done: completedQty, total: totalQty, percent, remaining },
-                    node.unitPrice,
-                    ns.map(n => ({
-                      id: String(n.id || '').trim() || undefined,
-                      processCode: String(n.id || '').trim() || undefined,
-                      name: n.name,
-                      unitPrice: n.unitPrice,
-                    }))
-                  )}
-                  onMouseEnter={() => {
-                    if (frozen) return;
-                    void triggerPredict({
-                      orderId: String(record.id || '').trim(),
-                      orderNo: String(record.orderNo || '').trim() || undefined,
-                      stageName: nodeName,
-                      currentProgress: percent,
-                    });
-                  }}
-                  title={completionTime
-                    ? `${nodeName} 完成时间：${completionTime}${predictHint ? `\n预计完成：${predictHint}` : ''}\n点击查看详情`
-                    : `${predictHint ? `预计完成：${predictHint}\n` : ''}点击查看 ${nodeName} 详情`}
                 >
-                  {completionTime ? (
-                    <div style={{
-                      fontSize: 10,
-                      color: percent >= 100 ? '#10b981' : '#6b7280',
-                      fontWeight: percent >= 100 ? 600 : 400,
-                      lineHeight: 1.2,
-                      textAlign: 'center',
-                      whiteSpace: 'nowrap',
-                      marginBottom: 2,
-                    }}>
-                      {formatCompletionTime(completionTime)}
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: 10, color: '#d1d5db', lineHeight: 1.2, marginBottom: 2 }}>--</div>
-                  )}
-                  {(nodeType === 'quality' || nodeType === 'warehousing') ? (
-                    <DefectTracePopover
-                      orderId={String(record.id || '')}
-                      hasDefects={Number(record.unqualifiedQuantity) > 0}
-                    >
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 2,
+                      width: 76,
+                      flex: '0 0 auto',
+                      justifyContent: 'flex-start',
+                      cursor: frozen ? 'default' : 'pointer',
+                      padding: 4,
+                      opacity: isClosed ? 0.6 : percent >= 100 ? 0.75 : 1,
+                      position: 'relative',
+                      zIndex: 1,
+                    }}
+                    onClick={() => !frozen && openNodeDetail(
+                      record,
+                      nodeType,
+                      nodeName,
+                      { done: completedQty, total: totalQty, percent, remaining },
+                      node.unitPrice,
+                      ns.map(n => ({
+                        id: String(n.id || '').trim() || undefined,
+                        processCode: String(n.id || '').trim() || undefined,
+                        name: n.name,
+                        unitPrice: n.unitPrice,
+                      }))
+                    )}
+                    onMouseEnter={() => {
+                      if (frozen) return;
+                      void triggerPredict({
+                        orderId: String(record.id || '').trim(),
+                        orderNo: String(record.orderNo || '').trim() || undefined,
+                        stageName: nodeName,
+                        currentProgress: percent,
+                      });
+                    }}
+                    title={completionTime
+                      ? `${nodeName} 完成时间：${completionTime}${predictHint ? `\n预计完成：${predictHint}` : ''}\n点击查看详情`
+                      : `${predictHint ? `预计完成：${predictHint}\n` : ''}点击查看 ${nodeName} 详情`}
+                  >
+                    {completionTime ? (
+                      <div style={{
+                        fontSize: 12,
+                        color: percent >= 100 ? '#10b981' : '#6b7280',
+                        fontWeight: percent >= 100 ? 600 : 400,
+                        lineHeight: 1.25,
+                        textAlign: 'center',
+                        whiteSpace: 'nowrap',
+                        marginBottom: 3,
+                        minHeight: 15,
+                      }}>
+                        {formatCompletionTime(completionTime)}
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 12, color: '#d1d5db', lineHeight: 1.25, marginBottom: 3, minHeight: 15 }}>--</div>
+                    )}
+                    {(nodeType === 'quality' || nodeType === 'warehousing') ? (
+                      <DefectTracePopover
+                        orderId={String(record.id || '')}
+                        hasDefects={Number(record.unqualifiedQuantity) > 0}
+                      >
+                        <LiquidProgressLottie
+                          progress={percent}
+                          size={68}
+                          nodeName={nodeName}
+                          text={isProcureNode ? (completedQty > 0 ? '✓' : '') : `${completedQty}/${totalQty}`}
+                          paused={frozen}
+                          color1={nodePrimaryColor}
+                          color2={nodeSecondaryColor}
+                        />
+                      </DefectTracePopover>
+                    ) : (
                       <LiquidProgressLottie
                         progress={percent}
-                        size={60}
+                        size={68}
                         nodeName={nodeName}
                         text={isProcureNode ? (completedQty > 0 ? '✓' : '') : `${completedQty}/${totalQty}`}
                         paused={frozen}
-                        color1={isClosed ? '#9ca3af' : getNodeColor(record.expectedShipDate || record.plannedEndDate)}
-                        color2={isClosed ? '#d1d5db' : getNodeColor(record.expectedShipDate || record.plannedEndDate, true)}
+                        color1={nodePrimaryColor}
+                        color2={nodeSecondaryColor}
                       />
-                    </DefectTracePopover>
-                  ) : (
-                    <LiquidProgressLottie
-                      progress={percent}
-                      size={60}
-                      nodeName={nodeName}
-                      text={isProcureNode ? (completedQty > 0 ? '✓' : '') : `${completedQty}/${totalQty}`}
-                      paused={frozen}
-                      color1={isClosed ? '#9ca3af' : getNodeColor(record.expectedShipDate || record.plannedEndDate)}
-                      color2={isClosed ? '#d1d5db' : getNodeColor(record.expectedShipDate || record.plannedEndDate, true)}
-                    />
-                  )}
+                    )}
+                  </div>
+                  {index < ns.length - 1 ? (
+                    <div style={{ flex: 1, paddingTop: 50, paddingLeft: 2, paddingRight: 2 }}>
+                      <div
+                        style={{
+                          position: 'relative',
+                          height: 2,
+                          borderRadius: 999,
+                          background: colorWithAlpha(nodeSecondaryColor, 0.28),
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: `${segmentProgress * 100}%`,
+                            height: '100%',
+                            borderRadius: 999,
+                            background: nodePrimaryColor,
+                            transition: 'width 0.25s ease',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               );
             })}
-          </div>
+            </div>
           </div>
         );
       },
     },
     {
-      title: '操作',
+      title: '',
       key: 'action',
-      fixed: 'right' as const,
-      width: 100,
+      width: 72,
       align: 'center' as const,
       render: (_: any, record: ProductionOrder) => {
         const frozen = isOrderFrozenByStatus(record);
         return (
-          <RowActions
-            actions={[
-              {
-                key: 'print',
-                label: '打印',
-                primary: true,
-                title: frozen ? '打印（订单已关单）' : '打印',
-                disabled: frozen,
-                onClick: () => setPrintingRecord(record),
-              },
-              {
-                key: 'edit',
-                label: '编辑',
-                title: frozen ? '编辑（订单已关单）' : '编辑',
-                disabled: frozen,
-                onClick: () => { setQuickEditRecord(record); setQuickEditVisible(true); },
-              },
-              ...(canManageOrderLifecycle
-                ? [{ key: 'close', label: '关单', disabled: frozen, onClick: () => handleCloseOrder(record) }]
-                : []),
-              {
-                key: 'share',
-                label: (
-                  <span><ShareAltOutlined style={{ marginRight: 4 }} />分享</span>
-                ),
-                onClick: () => onShareOrder?.(record),
-              },
-            ]}
-          />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 8, minWidth: 82 }}>
+            <Button size="small" shape="round" onClick={() => { setQuickEditRecord(record); setQuickEditVisible(true); }}>
+              编辑
+            </Button>
+            <Button size="small" shape="round" disabled={frozen} onClick={() => setPrintingRecord(record)}>
+              打印
+            </Button>
+            <Button size="small" shape="round" disabled={frozen} onClick={() => { void handlePrintLabel(record); }}>
+              标签打印
+            </Button>
+            {canManageOrderLifecycle ? (
+              <Button size="small" shape="round" danger disabled={frozen} onClick={() => handleCloseOrder(record)}>
+                关单
+              </Button>
+            ) : null}
+            <Button size="small" shape="round" icon={<ShareAltOutlined />} onClick={() => onShareOrder?.(record)}>
+              分享
+            </Button>
+          </div>
         );
       },
     },
@@ -630,7 +562,7 @@ export const useProgressColumns = ({
     orderSortField, orderSortOrder, handleOrderSort,
     boardStatsByOrder, boardTimesByOrder, progressNodesByStyleNo,
     openNodeDetail, isSupervisorOrAbove, handleCloseOrder,
-    setPrintingRecord, setQuickEditRecord, setQuickEditVisible,
+    setPrintingRecord, handlePrintLabel, setQuickEditRecord, setQuickEditVisible,
     setRemarkPopoverId, setRemarkText,
     getPredictHint, triggerPredict,
     deliveryRiskMap, onShareOrder,

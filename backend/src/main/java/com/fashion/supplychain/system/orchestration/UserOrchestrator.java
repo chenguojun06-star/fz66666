@@ -1,11 +1,12 @@
 package com.fashion.supplychain.system.orchestration;
 
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.auth.AuthTokenService;
 import com.fashion.supplychain.auth.TokenSubject;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.util.TextUtils;
+import com.fashion.supplychain.integration.config.TencentSmsProperties;
 import com.fashion.supplychain.system.entity.LoginLog;
 import com.fashion.supplychain.system.entity.Role;
 import com.fashion.supplychain.system.entity.User;
@@ -14,22 +15,34 @@ import com.fashion.supplychain.system.service.LoginLogService;
 import com.fashion.supplychain.system.service.RoleService;
 import com.fashion.supplychain.system.service.TenantService;
 import com.fashion.supplychain.system.service.UserService;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import com.tencentcloudapi.common.Credential;
+import com.tencentcloudapi.common.exception.TencentCloudSDKException;
+import com.tencentcloudapi.common.profile.ClientProfile;
+import com.tencentcloudapi.common.profile.HttpProfile;
+import com.tencentcloudapi.sms.v20210111.SmsClient;
+import com.tencentcloudapi.sms.v20210111.models.SendSmsRequest;
+import com.tencentcloudapi.sms.v20210111.models.SendSmsResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.time.Duration;
+import java.util.HexFormat;
 import java.util.Locale;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.util.StringUtils;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.util.StringUtils;
 
 @Service
 @Slf4j
@@ -43,6 +56,9 @@ public class UserOrchestrator {
     private static final long LOGIN_WINDOW_SECONDS = Duration.ofMinutes(10).getSeconds();
     private static final String REDIS_LOGIN_FAIL_PREFIX = "fashion:ratelimit:login:fail:";
     private static final String REDIS_LOGIN_LOCK_PREFIX = "fashion:ratelimit:login:lock:";
+    private static final String REDIS_SMS_LOGIN_CODE_PREFIX = "fashion:auth:sms-login:code:";
+    private static final String REDIS_SMS_LOGIN_SEND_PREFIX = "fashion:auth:sms-login:send:";
+    private static final String PHONE_PATTERN = "^1[3-9]\\d{9}$";
 
     @Autowired
     private UserService userService;
@@ -64,6 +80,21 @@ public class UserOrchestrator {
 
     @Autowired(required = false)
     private StringRedisTemplate stringRedisTemplate;
+
+    @Autowired
+    private TencentSmsProperties tencentSmsProperties;
+
+    @org.springframework.beans.factory.annotation.Value("${app.auth.sms-login.code-ttl-seconds:300}")
+    private long smsLoginCodeTtlSeconds;
+
+    @org.springframework.beans.factory.annotation.Value("${app.auth.sms-login.send-interval-seconds:60}")
+    private long smsLoginSendIntervalSeconds;
+
+    @org.springframework.beans.factory.annotation.Value("${app.auth.sms-login.expose-code-in-response:false}")
+    private boolean smsLoginExposeCodeInResponse;
+
+    private final Map<String, ExpiringValue> smsLoginCodeFallbackStore = new ConcurrentHashMap<>();
+    private final Map<String, ExpiringValue> smsLoginSendFallbackStore = new ConcurrentHashMap<>();
 
     public Page<User> list(Long page, Long pageSize, String username, String name, String roleName, String status) {
         return list(page, pageSize, username, name, roleName, status, null);
@@ -234,21 +265,56 @@ public class UserOrchestrator {
         if (user == null) {
             throw new IllegalStateException("用户名或密码错误");
         }
+        return buildLoginPayload(user, "PC登录");
+    }
 
-        // 检查审批状态
-        String approvalStatus = user.getApprovalStatus();
-        if (approvalStatus != null && !"approved".equals(approvalStatus)) {
-            if ("pending".equals(approvalStatus)) {
-                throw new IllegalStateException("您的账号正在审批中，请耐心等待管理员审核");
-            } else if ("rejected".equals(approvalStatus)) {
-                throw new IllegalStateException("您的账号已被拒绝，原因：" +
-                    (user.getApprovalRemark() != null ? user.getApprovalRemark() : "管理员拒绝"));
-            }
+    public Map<String, Object> sendLoginSmsCode(String phone, Long tenantId) {
+        String normalizedPhone = normalizePhone(phone);
+        validatePhone(normalizedPhone);
+        User user = userService.findLoginUserByPhone(normalizedPhone, tenantId);
+        if (user == null) {
+            throw new IllegalStateException("该手机号未绑定可登录账号");
         }
+        assertApprovalStatus(user);
+        assertSmsLoginCodeCanSend(normalizedPhone, tenantId);
+        String code = generateSmsCode();
+        try {
+            dispatchSmsLoginCode(normalizedPhone, code);
+            saveSmsLoginCode(normalizedPhone, tenantId, code);
+        } catch (RuntimeException e) {
+            clearSmsLoginCode(normalizedPhone, tenantId);
+            throw e;
+        }
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("expiresInSeconds", smsLoginCodeTtlSeconds);
+        payload.put("cooldownSeconds", smsLoginSendIntervalSeconds);
+        payload.put("gatewayConfigured", tencentSmsProperties != null && tencentSmsProperties.isConfigured());
+        if (smsLoginExposeCodeInResponse) {
+            payload.put("debugCode", code);
+        }
+        return payload;
+    }
+
+    public Map<String, Object> loginWithPhoneCode(String phone, String code, Long tenantId) {
+        String normalizedPhone = normalizePhone(phone);
+        String normalizedCode = safeTrim(code);
+        validatePhone(normalizedPhone);
+        if (!StringUtils.hasText(normalizedCode)) {
+            throw new IllegalStateException("请输入验证码");
+        }
+        User user = userService.findLoginUserByPhone(normalizedPhone, tenantId);
+        if (user == null || !verifySmsLoginCode(normalizedPhone, tenantId, normalizedCode)) {
+            throw new IllegalStateException("手机号或验证码错误");
+        }
+        clearSmsLoginCode(normalizedPhone, tenantId);
+        return buildLoginPayload(user, "手机号验证码登录");
+    }
+
+    private Map<String, Object> buildLoginPayload(User user, String scene) {
+        assertApprovalStatus(user);
 
         sanitizeUser(user);
 
-        // 注入租户名称（非数据库字段，登录时主动赋就供前端个性化显示）
         if (user.getTenantId() != null && tenantService != null) {
             Tenant tenant = tenantService.getById(user.getTenantId());
             if (tenant != null && StringUtils.hasText(tenant.getTenantName())) {
@@ -258,46 +324,35 @@ public class UserOrchestrator {
 
         TokenSubject subject = new TokenSubject();
         subject.setUserId(user.getId() == null ? null : String.valueOf(user.getId()));
-        // 统一逻辑：优先存真实姓名（name），没有才存登录账号（username）
-        // 与小程序端保持一致，使 creator_name/operator_name 显示真实姓名
         subject.setUsername(StringUtils.hasText(user.getName()) ? user.getName() : user.getUsername());
         subject.setRoleId(user.getRoleId() == null ? null : String.valueOf(user.getRoleId()));
         subject.setRoleName(user.getRoleName());
-        // 设置数据权限范围
-        // 规则：租户主/管理角色/无工厂绑定的办公账号 → "all"（可查看全局生产数据）
-        //       绑定了 factory_id 的工厂工人 → "own"（只看自己的扫码记录）
         String permRange = user.getPermissionRange();
         if (!StringUtils.hasText(permRange)) {
             if (Boolean.TRUE.equals(user.getIsTenantOwner())
                     || isAdminRole(user.getRoleName())
                     || !StringUtils.hasText(user.getFactoryId())) {
-                // 未绑定工厂的 PC 端账号（跟单员、财务、采购等）默认看全部
                 permRange = "all";
             } else {
-                // 绑定工厂的工人账号默认只看自己
                 permRange = "own";
             }
         }
-        // 安全兜底：租户主/管理角色必须拥有 "all" 权限，防止 DB 脏数据导致数据不可见
-        // 与小程序端 WeChatMiniProgramAuthOrchestrator 保持一致
         if (Boolean.TRUE.equals(user.getIsTenantOwner()) || isAdminRole(user.getRoleName())) {
             if (!"all".equals(permRange)) {
-                log.warn("[PC登录] 租户主/管理员权限范围异常 userId={}, dbPermRange={}, 强制覆盖为 all",
+                log.warn("[{}] 租户主/管理员权限范围异常 userId={}, dbPermRange={}, 强制覆盖为 all",
+                        scene,
                         user.getId(), permRange);
                 permRange = "all";
-                persistPermissionRangeIfNeeded(user, permRange, "PC登录");
+                persistPermissionRangeIfNeeded(user, permRange, scene);
             }
         }
         subject.setPermissionRange(permRange);
-        // 设置工厂ID（工厂工人账号隔离，与小程序端 WeChatMiniProgramAuthOrchestrator 保持一致）
         if (StringUtils.hasText(user.getFactoryId())) {
             subject.setFactoryId(user.getFactoryId());
         }
-        // 设置租户信息
         subject.setTenantId(user.getTenantId());
         subject.setTenantOwner(Boolean.TRUE.equals(user.getIsTenantOwner()));
         subject.setSuperAdmin(Boolean.TRUE.equals(user.getIsSuperAdmin()));
-        // 读取当前密码版本号，嵌入 JWT（尤如改密则旧令牌失效）
         long pwdVersion = 0L;
         if (stringRedisTemplate != null && user.getId() != null) {
             try {
@@ -318,6 +373,213 @@ public class UserOrchestrator {
         payload.put("token", token);
         payload.put("user", user);
         return payload;
+    }
+
+    private void assertApprovalStatus(User user) {
+        if (user == null) {
+            throw new IllegalStateException("账号不存在");
+        }
+        String approvalStatus = safeTrim(user.getApprovalStatus());
+        if (!StringUtils.hasText(approvalStatus) || "approved".equalsIgnoreCase(approvalStatus)) {
+            return;
+        }
+        if ("pending".equalsIgnoreCase(approvalStatus)) {
+            throw new IllegalStateException("您的账号正在审批中，请耐心等待管理员审核");
+        }
+        if ("rejected".equalsIgnoreCase(approvalStatus)) {
+            throw new IllegalStateException("您的账号已被拒绝，原因：" +
+                    (user.getApprovalRemark() != null ? user.getApprovalRemark() : "管理员拒绝"));
+        }
+        throw new IllegalStateException("账号状态异常，请联系管理员");
+    }
+
+    private void validatePhone(String phone) {
+        if (!StringUtils.hasText(phone)) {
+            throw new IllegalStateException("请输入手机号");
+        }
+        if (!phone.matches(PHONE_PATTERN)) {
+            throw new IllegalStateException("请输入正确的手机号");
+        }
+    }
+
+    private String normalizePhone(String phone) {
+        return safeTrim(phone);
+    }
+
+    private void assertSmsLoginCodeCanSend(String phone, Long tenantId) {
+        String cacheKey = smsLoginCacheKey(phone, tenantId);
+        String redisKey = REDIS_SMS_LOGIN_SEND_PREFIX + cacheKey;
+        if (stringRedisTemplate != null) {
+            try {
+                if (Boolean.TRUE.equals(stringRedisTemplate.hasKey(redisKey))) {
+                    throw new IllegalStateException("验证码发送过于频繁，请稍后再试");
+                }
+                return;
+            } catch (IllegalStateException e) {
+                throw e;
+            } catch (Exception e) {
+                log.warn("[SmsLogin] Redis发送频控检查失败，使用本地缓存: {}", e.getMessage());
+            }
+        }
+        ExpiringValue localValue = smsLoginSendFallbackStore.get(cacheKey);
+        if (localValue != null && !localValue.expired()) {
+            throw new IllegalStateException("验证码发送过于频繁，请稍后再试");
+        }
+        smsLoginSendFallbackStore.remove(cacheKey);
+    }
+
+    private String generateSmsCode() {
+        return String.format("%06d", ThreadLocalRandom.current().nextInt(100000, 1000000));
+    }
+
+    private void dispatchSmsLoginCode(String phone, String code) {
+        if (tencentSmsProperties == null || !tencentSmsProperties.isConfigured()) {
+            log.warn("[SmsLogin] 未配置腾讯云短信，验证码仅写入日志 phone={}, code={}", maskPhone(phone), code);
+            return;
+        }
+        try {
+            Credential credential = new Credential(
+                    tencentSmsProperties.getSecretId().trim(),
+                    tencentSmsProperties.getSecretKey().trim());
+            HttpProfile httpProfile = new HttpProfile();
+            httpProfile.setReqMethod("POST");
+            httpProfile.setEndpoint(tencentSmsProperties.getEndpoint().trim());
+            httpProfile.setConnTimeout(tencentSmsProperties.getConnectTimeoutSeconds());
+            httpProfile.setReadTimeout(tencentSmsProperties.getReadTimeoutSeconds());
+            httpProfile.setWriteTimeout(tencentSmsProperties.getWriteTimeoutSeconds());
+
+            ClientProfile clientProfile = new ClientProfile();
+            clientProfile.setSignMethod("TC3-HMAC-SHA256");
+            clientProfile.setHttpProfile(httpProfile);
+
+            SmsClient client = new SmsClient(credential, tencentSmsProperties.getRegion().trim(), clientProfile);
+            SendSmsRequest request = new SendSmsRequest();
+            request.setSmsSdkAppId(tencentSmsProperties.getSdkAppId().trim());
+            request.setSignName(tencentSmsProperties.getSignName().trim());
+            request.setTemplateId(tencentSmsProperties.getTemplateId().trim());
+            request.setPhoneNumberSet(new String[] { toTencentPhoneNumber(phone) });
+            request.setTemplateParamSet(new String[] { code });
+            request.setSessionContext("pc-login:" + maskPhone(phone));
+
+            SendSmsResponse response = client.SendSms(request);
+            if (response == null || response.getSendStatusSet() == null || response.getSendStatusSet().length == 0) {
+                throw new IllegalStateException("短信发送失败，请稍后重试");
+            }
+            String sendCode = safeTrim(response.getSendStatusSet()[0].getCode());
+            if (!"Ok".equalsIgnoreCase(sendCode)) {
+                String sendMessage = safeTrim(response.getSendStatusSet()[0].getMessage());
+                log.error("[SmsLogin] 腾讯云短信发送失败 code={}, message={}, requestId={}",
+                        sendCode, sendMessage, response.getRequestId());
+                throw new IllegalStateException("短信发送失败，请稍后重试");
+            }
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (TencentCloudSDKException e) {
+            log.error("[SmsLogin] 腾讯云短信发送异常 phone={}, err={}", maskPhone(phone), e.getMessage(), e);
+            throw new IllegalStateException("短信发送失败，请稍后重试");
+        } catch (Exception e) {
+            log.error("[SmsLogin] 短信发送异常 phone={}, err={}", maskPhone(phone), e.getMessage(), e);
+            throw new IllegalStateException("短信发送失败，请稍后重试");
+        }
+    }
+
+    private void saveSmsLoginCode(String phone, Long tenantId, String code) {
+        String cacheKey = smsLoginCacheKey(phone, tenantId);
+        String hashedCode = String.valueOf(hashSmsLoginCode(phone, tenantId, code));
+        if (stringRedisTemplate != null) {
+            try {
+                stringRedisTemplate.opsForValue().set(
+                        REDIS_SMS_LOGIN_CODE_PREFIX + cacheKey,
+                        hashedCode,
+                        smsLoginCodeTtlSeconds,
+                        TimeUnit.SECONDS);
+                stringRedisTemplate.opsForValue().set(
+                        REDIS_SMS_LOGIN_SEND_PREFIX + cacheKey,
+                        "1",
+                        smsLoginSendIntervalSeconds,
+                        TimeUnit.SECONDS);
+                return;
+            } catch (Exception e) {
+                log.warn("[SmsLogin] Redis写入失败，使用本地缓存: {}", e.getMessage());
+            }
+        }
+        long now = System.currentTimeMillis();
+        smsLoginCodeFallbackStore.put(cacheKey, new ExpiringValue(hashedCode, now + smsLoginCodeTtlSeconds * 1000));
+        smsLoginSendFallbackStore.put(cacheKey, new ExpiringValue("1", now + smsLoginSendIntervalSeconds * 1000));
+    }
+
+    private boolean verifySmsLoginCode(String phone, Long tenantId, String code) {
+        String cacheKey = smsLoginCacheKey(phone, tenantId);
+        String expectedHash = hashSmsLoginCode(phone, tenantId, code);
+        String storedHash = null;
+        if (stringRedisTemplate != null) {
+            try {
+                storedHash = stringRedisTemplate.opsForValue().get(REDIS_SMS_LOGIN_CODE_PREFIX + cacheKey);
+            } catch (Exception e) {
+                log.warn("[SmsLogin] Redis读取失败，使用本地缓存: {}", e.getMessage());
+            }
+        }
+        if (!StringUtils.hasText(storedHash)) {
+            ExpiringValue localValue = smsLoginCodeFallbackStore.get(cacheKey);
+            if (localValue != null && !localValue.expired()) {
+                storedHash = localValue.value();
+            } else {
+                smsLoginCodeFallbackStore.remove(cacheKey);
+            }
+        }
+        if (!StringUtils.hasText(storedHash)) {
+            return false;
+        }
+        String verifiedHash = storedHash;
+        return MessageDigest.isEqual(
+                verifiedHash.getBytes(StandardCharsets.UTF_8),
+                expectedHash.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private void clearSmsLoginCode(String phone, Long tenantId) {
+        String cacheKey = smsLoginCacheKey(phone, tenantId);
+        smsLoginCodeFallbackStore.remove(cacheKey);
+        if (stringRedisTemplate == null) {
+            return;
+        }
+        try {
+            stringRedisTemplate.delete(REDIS_SMS_LOGIN_CODE_PREFIX + cacheKey);
+        } catch (Exception e) {
+            log.warn("[SmsLogin] Redis删除验证码失败: {}", e.getMessage());
+        }
+    }
+
+    private String smsLoginCacheKey(String phone, Long tenantId) {
+        return (tenantId == null ? "platform" : String.valueOf(tenantId)) + ":" + phone;
+    }
+
+    private String hashSmsLoginCode(String phone, Long tenantId, String code) {
+        String raw = smsLoginCacheKey(phone, tenantId) + ":" + safeTrim(code);
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(raw.getBytes(StandardCharsets.UTF_8)));
+        } catch (Exception e) {
+            throw new IllegalStateException("验证码处理失败");
+        }
+    }
+
+    private String maskPhone(String phone) {
+        String normalizedPhone = normalizePhone(phone);
+        if (!StringUtils.hasText(normalizedPhone) || normalizedPhone.length() < 7) {
+            return "******";
+        }
+        return normalizedPhone.substring(0, 3) + "****" + normalizedPhone.substring(normalizedPhone.length() - 4);
+    }
+
+    private String toTencentPhoneNumber(String phone) {
+        String normalizedPhone = normalizePhone(phone);
+        if (!StringUtils.hasText(normalizedPhone)) {
+            return phone;
+        }
+        if (normalizedPhone.startsWith("+")) {
+            return normalizedPhone;
+        }
+        return "+86" + normalizedPhone;
     }
 
     private void persistPermissionRangeIfNeeded(User user, String targetPermRange, String scene) {
@@ -793,6 +1055,12 @@ public class UserOrchestrator {
         }
         saveOperationLog("user", String.valueOf(target.getId()), target.getUsername(),
                 "ADMIN_RESET_PASSWORD", "管理员重置工厂成员密码");
+    }
+
+    private record ExpiringValue(String value, long expireAtMillis) {
+        private boolean expired() {
+            return System.currentTimeMillis() >= expireAtMillis;
+        }
     }
 
 }

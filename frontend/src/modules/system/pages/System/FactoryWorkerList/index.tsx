@@ -5,6 +5,7 @@ import { ArrowLeftOutlined, UserAddOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import { paths } from '@/routeConfig';
 import ResizableModal from '@/components/common/ResizableModal';
+import SmallModal from '@/components/common/SmallModal';
 import RowActions from '@/components/common/RowActions';
 import ResizableTable from '@/components/common/ResizableTable';
 import { useAuth } from '@/utils/AuthContext';
@@ -313,11 +314,9 @@ const FactoryWorkerList: React.FC = () => {
       )}
 
       {/* 创建工厂登录账号弹窗（管理员使用） */}
-      <ResizableModal
+      <SmallModal
         open={accountModal.visible}
         title={`创建账号 — ${factoryNameFromUrl || '外发工厂'}`}
-        width="30vw"
-        destroyOnHidden
         onCancel={() => { accountModal.close(); accountForm.resetFields(); }}
         footer={
           <div className="modal-footer-actions">
@@ -355,7 +354,7 @@ const FactoryWorkerList: React.FC = () => {
             <Input placeholder="可选" />
           </Form.Item>
         </Form>
-      </ResizableModal>
+      </SmallModal>
     </Layout>
   );
 };

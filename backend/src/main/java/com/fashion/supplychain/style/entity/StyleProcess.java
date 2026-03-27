@@ -50,6 +50,11 @@ public class StyleProcess {
     private String difficulty;
 
     /**
+     * 工序描述
+     */
+    private String description;
+
+    /**
      * 标准工时(秒)
      */
     private Integer standardTime;

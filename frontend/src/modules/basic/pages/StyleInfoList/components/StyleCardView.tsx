@@ -1,13 +1,17 @@
 import React from 'react';
-import { Tag, Pagination } from 'antd';
+import { Tag } from 'antd';
 
+import { createCardSpecFieldGroups } from '@/components/common/CardSizeQuantityFieldGroups';
 import UniversalCardView from '@/components/common/UniversalCardView';
+import StandardPagination from '@/components/common/StandardPagination';
 import SmartStyleHoverCard from './SmartStyleHoverCard';
 import { StyleInfo } from '@/types/style';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { withQuery } from '@/utils/api';
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
+import { getStyleCardColorText, getStyleCardQuantityText, getStyleCardSizeQuantityItems, getStyleCardSizeText } from '@/utils/cardSizeQuantity';
+import { DEFAULT_PAGE_SIZE_OPTIONS } from '@/utils/pageSizeStore';
 import { getStyleSourceText } from '@/utils/styleSource';
 import { useCardGridLayout } from '@/hooks/useCardGridLayout';
 
@@ -49,68 +53,16 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
   const { columns: cardColumns } = useCardGridLayout(10);
   const isSupervisorOrAbove = isSupervisorOrAboveUser(user);
 
-  const parseSizeColorConfig = (raw: unknown): { sizes: string[]; colors: string[]; quantities: number[] } => {
-    try {
-      const parsed = typeof raw === 'string' ? JSON.parse(raw || '{}') : (raw || {});
-      return {
-        sizes: Array.isArray((parsed as any)?.sizes) ? (parsed as any).sizes.map((item: unknown) => String(item || '').trim()).filter(Boolean) : [],
-        colors: Array.isArray((parsed as any)?.colors) ? (parsed as any).colors.map((item: unknown) => String(item || '').trim()).filter(Boolean) : [],
-        quantities: Array.isArray((parsed as any)?.quantities) ? (parsed as any).quantities.map((item: unknown) => Number(item || 0)) : [],
-      };
-    } catch {
-      return { sizes: [], colors: [], quantities: [] };
-    }
-  };
-
-  const buildConfiguredSpecPairs = (record: StyleInfo) => {
-    const config = parseSizeColorConfig((record as any).sizeColorConfig);
-    const directColor = String((record as any).color || '').trim() || config.colors.find(Boolean) || '';
-    const parsed = typeof (record as any).sizeColorConfig === 'string' ? (() => {
-      try {
-        return JSON.parse((record as any).sizeColorConfig || '{}') as { matrixRows?: Array<{ color?: string; quantities?: unknown[] }>; sizes?: string[] };
-      } catch {
-        return {};
-      }
-    })() : (((record as any).sizeColorConfig as { matrixRows?: Array<{ color?: string; quantities?: unknown[] }>; sizes?: string[] }) || {});
-    const matrixSizes = Array.isArray(parsed?.sizes) ? parsed.sizes.map((item) => String(item || '').trim()).filter(Boolean) : config.sizes;
-    const matrixRows = Array.isArray(parsed?.matrixRows) ? parsed.matrixRows : [];
-    const matrixPairs = matrixRows.flatMap((row) => {
-      const rowColor = String(row?.color || '').trim();
-      const quantities = Array.isArray(row?.quantities) ? row.quantities : [];
-      return matrixSizes
-        .map((size, index) => ({ color: rowColor, size, quantity: Number(quantities[index] || 0) }))
-        .filter((item) => item.color && item.size && item.quantity > 0);
-    });
-    if (matrixPairs.length) {
-      return matrixPairs;
-    }
-    const topLevelPairs = config.sizes
-      .map((size, index) => ({ color: directColor, size, quantity: Number(config.quantities[index] || 0) }))
-      .filter((item) => item.size && item.quantity > 0);
-    if (topLevelPairs.length) {
-      return topLevelPairs;
-    }
-    const fallbackSizes = String((record as any).size || '').split(/[/,，\s]+/).map((item) => item.trim()).filter(Boolean);
-    const fallbackQuantity = Number((record as any).sampleQuantity || 0);
-    if (directColor && fallbackSizes.length === 1 && fallbackQuantity > 0) {
-      return [{ color: directColor, size: fallbackSizes[0], quantity: fallbackQuantity }];
-    }
-    return [];
-  };
-
   const resolveDisplayColor = (record: StyleInfo) => {
-    const pairs = buildConfiguredSpecPairs(record);
-    return pairs.length ? Array.from(new Set(pairs.map((item) => item.color).filter(Boolean))).join(' / ') : '';
+    return getStyleCardColorText(record);
   };
 
   const resolveDisplaySize = (record: StyleInfo) => {
-    const pairs = buildConfiguredSpecPairs(record);
-    return pairs.length ? pairs.map((item) => item.size).join(' / ') : '';
+    return getStyleCardSizeText(record);
   };
 
   const resolveDisplayQuantity = (record: StyleInfo) => {
-    const pairs = buildConfiguredSpecPairs(record);
-    return pairs.length ? pairs.map((item) => `${item.quantity}`).join(' / ') : '';
+    return getStyleCardQuantityText(record);
   };
 
   const isStageDoneRow = (record: StyleInfo) => {
@@ -145,10 +97,24 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
       subtitleField="styleName"
       fields={[]}
       fieldGroups={[
-        [{ label: '颜色', key: 'color', render: (_val, record) => resolveDisplayColor(record as StyleInfo) || '-' }, { label: '码数', key: 'sizeColorConfig', render: (_val, record) => resolveDisplaySize(record as StyleInfo) || '-' }],
-        [{ label: '数量', key: 'sampleQuantity', render: (_val, record) => { const qty = resolveDisplayQuantity(record as StyleInfo); return qty && qty !== '0' ? `${qty}件` : '-'; } }, { label: '来源', key: 'developmentSourceType', render: (_val, record) => renderSourceText(record as StyleInfo) }],
-        [{ label: '品类', key: 'category', render: (val) => val || '-' }, { label: '交板', key: 'deliveryDate', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' }],
-        [{ label: '创建', key: 'createTime', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '状态', key: 'latestPatternStatus', render: (_val, record) => isStageDoneRow(record as StyleInfo) ? '已入库' : '待入库' }],
+        ...createCardSpecFieldGroups<StyleInfo>({
+          colorKey: 'styleCardColorLine',
+          sizeKey: 'styleCardSizeLine',
+          quantityKey: 'styleCardQuantityLine',
+          getItems: (record) => getStyleCardSizeQuantityItems(record),
+          getFallbackColor: (record) => resolveDisplayColor(record),
+          getFallbackSize: (record) => resolveDisplaySize(record),
+          getFallbackQuantity: (record) => {
+            const directQuantity = resolveDisplayQuantity(record);
+            if (directQuantity && !directQuantity.includes('/')) {
+              return Number(directQuantity) || Number(record.sampleQuantity) || Number((record as any).quantity) || 0;
+            }
+            return Number(record.sampleQuantity) || Number((record as any).quantity) || 0;
+          },
+        }),
+        [{ label: '来源', key: 'developmentSourceType', render: (_val, record) => renderSourceText(record as StyleInfo) }, { label: '品类', key: 'category', render: (val) => val || '-' }],
+        [{ label: '交板', key: 'deliveryDate', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '创建', key: 'createTime', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' }],
+        [{ label: '状态', key: 'latestPatternStatus', render: (_val, record) => isStageDoneRow(record as StyleInfo) ? '已入库' : '待入库' }],
       ]}
       progressConfig={{
         show: true,
@@ -279,22 +245,17 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
         onChange: onPageChange,
         showSizeChanger: true,
         showQuickJumper: true,
-        showTotal: (total) => `共 ${total} 条`,
-        pageSizeOptions: ['10', '20', '50', '100'],
+        showTotal: (total: number) => `共 ${total} 条`,
+        pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
       }}
     />
-    <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 0 4px' }}>
-      <Pagination
-        current={currentPage}
-        pageSize={pageSize}
-        total={total}
-        showTotal={(t) => `共 ${t} 条`}
-        showSizeChanger
-        showQuickJumper
-        pageSizeOptions={['10', '20', '50', '100']}
-        onChange={onPageChange}
-      />
-    </div>
+    <StandardPagination
+      current={currentPage}
+      pageSize={pageSize}
+      total={total}
+      wrapperStyle={{ paddingTop: 12, paddingBottom: 4 }}
+      onChange={onPageChange}
+    />
     </>
   );
 };

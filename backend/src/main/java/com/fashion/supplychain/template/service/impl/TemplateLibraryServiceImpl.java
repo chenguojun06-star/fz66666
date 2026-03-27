@@ -497,6 +497,9 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
 
                         // 读取机器类型
                         String machineType = step.hasNonNull("machineType") ? step.get("machineType").asText("") : "";
+                        String description = step.hasNonNull("description")
+                                ? step.get("description").asText("")
+                                : (step.hasNonNull("remark") ? step.get("remark").asText("") : "");
 
                         // 读取标准工时
                         Integer standardTime = null;
@@ -515,6 +518,9 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
                         item.put("progressStage", progressStage.trim());
                         if (StringUtils.hasText(machineType)) {
                             item.put("machineType", machineType);
+                        }
+                        if (StringUtils.hasText(description)) {
+                            item.put("description", description.trim());
                         }
                         if (standardTime != null && standardTime > 0) {
                             item.put("standardTime", standardTime);
@@ -583,6 +589,12 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
                     item.put("id", id);
                     item.put("name", name);
                     item.put("unitPrice", up.setScale(2, RoundingMode.HALF_UP));
+                    String description = n.hasNonNull("description")
+                            ? n.get("description").asText("")
+                            : (n.hasNonNull("remark") ? n.get("remark").asText("") : "");
+                    if (StringUtils.hasText(description)) {
+                        item.put("description", description.trim());
+                    }
                     out.add(item);
                 }
             }
@@ -640,6 +652,10 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
             node.put("name", processName);
             node.put("unitPrice", unitPrice.setScale(2, RoundingMode.HALF_UP));
             node.put("progressStage", progressStage);
+            String description = String.valueOf(item.getOrDefault("description", item.getOrDefault("remark", ""))).trim();
+            if (StringUtils.hasText(description)) {
+                node.put("description", description);
+            }
 
             String machineType = String.valueOf(item.getOrDefault("machineType", "")).trim();
             if (StringUtils.hasText(machineType)) {

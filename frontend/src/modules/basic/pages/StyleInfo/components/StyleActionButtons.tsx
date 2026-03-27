@@ -41,14 +41,25 @@ const StyleActionButtons: React.FC<StyleActionButtonsProps> = ({
     paddingInline: 12,
   };
 
+  const disabledButtonStyle: React.CSSProperties = {
+    ...primaryButtonStyle,
+    backgroundColor: 'var(--neutral-border)',
+    borderColor: 'var(--neutral-border)',
+    color: 'var(--neutral-text-secondary)',
+  };
+
   const sampleButtonStyle: React.CSSProperties = {
     ...primaryButtonStyle,
     backgroundColor: sampleCompleted ? 'var(--neutral-border)' : 'var(--color-success)',
     borderColor: sampleCompleted ? 'var(--neutral-border)' : 'var(--color-success)',
   };
 
+  const unlockDisabled = !isNewPage && editLocked && sampleCompleted;
+  const saveDisabled = !isNewPage && !editLocked && sampleCompleted;
+
   // 推送到下单管理需要：样衣开发完成 + 有工序数据 + 未推送
   const canPushToOrder = sampleCompleted && hasProcessData && !pushedToOrder;
+  const pushDisabled = !canPushToOrder;
   const pushToOrderTitle = !sampleCompleted
     ? '请先标记样衣开发完成'
     : !hasProcessData
@@ -56,6 +67,8 @@ const StyleActionButtons: React.FC<StyleActionButtonsProps> = ({
     : pushedToOrder
     ? '已推送'
     : undefined;
+  const saveButtonTitle = unlockDisabled || saveDisabled ? '样衣完成后需先点击维护，才可重新编辑' : undefined;
+  const sampleButtonTitle = sampleCompleted ? '样衣已完成，如需重新操作请先点击维护' : undefined;
 
   const saveButtonText = isNewPage
     ? '创建款式'
@@ -75,9 +88,11 @@ const StyleActionButtons: React.FC<StyleActionButtonsProps> = ({
       <Button
         type="primary"
         loading={saving}
+        disabled={unlockDisabled || saveDisabled}
         onClick={handleSaveOrUnlock}
-        style={primaryButtonStyle}
+        style={unlockDisabled || saveDisabled ? disabledButtonStyle : primaryButtonStyle}
         size="small"
+        title={saveButtonTitle}
       >
         {saveButtonText}
       </Button>
@@ -91,6 +106,7 @@ const StyleActionButtons: React.FC<StyleActionButtonsProps> = ({
           style={sampleButtonStyle}
           onClick={onCompleteSample}
           size="small"
+          title={sampleButtonTitle}
         >
           {sampleCompleted ? '开发已完成' : '标记开发完成'}
         </Button>
@@ -101,9 +117,9 @@ const StyleActionButtons: React.FC<StyleActionButtonsProps> = ({
         <Button
           type="primary"
           loading={pushingToOrder}
-          disabled={!canPushToOrder}
+          disabled={pushDisabled}
           onClick={onPushToOrder}
-          style={primaryButtonStyle}
+          style={pushDisabled ? disabledButtonStyle : primaryButtonStyle}
           size="small"
           title={pushToOrderTitle}
         >

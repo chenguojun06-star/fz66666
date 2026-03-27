@@ -86,6 +86,8 @@ interface AuthContextType {
   isAuthenticated: boolean;
   loading: boolean;
   login: (username: string, password: string, tenantId?: number) => Promise<{ success: boolean; user?: UserInfo }>;
+  loginWithSms: (phone: string, code: string, tenantId?: number) => Promise<{ success: boolean; user?: UserInfo }>;
+  sendLoginSmsCode: (phone: string, tenantId?: number) => Promise<Record<string, unknown>>;
   updateUser: (patch: Partial<UserInfo>) => void;
   logout: () => void;
   /** 便捷方法：是否管理员 */
@@ -106,6 +108,8 @@ const fallbackAuthContext: AuthContextType = {
   isAuthenticated: false,
   loading: false,
   login: async () => ({ success: false }),
+  loginWithSms: async () => ({ success: false }),
+  sendLoginSmsCode: async () => ({}),
   updateUser: () => {
   },
   logout: () => {
@@ -271,95 +275,123 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // 登录函数
+  const completeLogin = async (
+    response: {
+      code?: number;
+      data?: Record<string, unknown> & { token?: unknown; user?: Record<string, unknown> };
+    },
+    defaultErrorMessage: string,
+  ): Promise<{ success: boolean; user?: UserInfo }> => {
+    const token = String(response?.data?.token || '').trim();
+    const u = response?.data?.user || response?.data || null;
+    if (response?.code === 200 && token && u) {
+      const keysToRemove = [tokenStorageKey, userStorageKey, 'user-storage', 'userId'];
+      keysToRemove.forEach(k => {
+        try { localStorage.removeItem(k); } catch { /* ignore */ }
+      });
+      window.dispatchEvent(new Event('user-logout'));
+
+      const baseUser: UserInfo = {
+        id: String(u.id || ''),
+        username: String(u.username || ''),
+        name: String(u.name || ''),
+        role: String(u.roleName || u.role || 'admin'),
+        roleId: u.roleId != null ? String(u.roleId) : undefined,
+        permissions: ['all'],
+        permissionRange: toPermissionRange(u.permissionRange),
+        phone: u.phone != null ? String(u.phone) : undefined,
+        email: u.email != null ? String(u.email) : undefined,
+        avatarUrl: u.avatarUrl != null ? String(u.avatarUrl) : u.avatar != null ? String(u.avatar) : u.headUrl != null ? String(u.headUrl) : undefined,
+        tenantId: u.tenantId != null ? String(u.tenantId) : undefined,
+        tenantName: u.tenantName != null ? String(u.tenantName) : undefined,
+        isTenantOwner: u.isTenantOwner === true,
+        isSuperAdmin: u.isSuperAdmin === true,
+        factoryId: u.factoryId != null ? String(u.factoryId) : undefined,
+        tenantType: u.tenantType != null ? (u.tenantType as 'SELF_FACTORY' | 'HYBRID' | 'BRAND') : undefined,
+        tenantModules: (() => {
+          try {
+            const raw = u.tenantEnabledModules;
+            if (!raw) return undefined;
+            const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+            return Array.isArray(parsed) && parsed.length > 0 ? (parsed as string[]) : undefined;
+          } catch { return undefined; }
+        })(),
+      };
+
+      localStorage.setItem(tokenStorageKey, token);
+      localStorage.setItem(userStorageKey, JSON.stringify(baseUser));
+      setUser(baseUser);
+      setIsAuthenticated(true);
+
+      await loadTenantSmartFlags();
+
+      try {
+        const userThemeKey = `app.theme.user.${baseUser.id}`;
+        const userTheme = localStorage.getItem(userThemeKey) || fallbackTheme;
+        localStorage.setItem('app.theme', userTheme);
+        applyThemeValue(userTheme);
+        window.dispatchEvent(new CustomEvent('user-login', { detail: { userId: baseUser.id } }));
+      } catch {
+      }
+
+      try {
+        const rid = baseUser.roleId;
+        if (rid != null) {
+          const pRes = (await api.get('/system/user/permissions', {
+            params: { roleId: rid },
+          })) as { code?: number; data?: unknown };
+          if (pRes?.code === 200 && Array.isArray(pRes.data) && pRes.data.length) {
+            updateUser({ permissions: pRes.data as string[] });
+          }
+        }
+      } catch {
+      }
+
+      window.location.href = '/';
+      return { success: true, user: baseUser };
+    }
+    throw new Error(defaultErrorMessage);
+  };
+
   const login = async (username: string, password: string, tenantId?: number): Promise<{ success: boolean; user?: UserInfo }> => {
     try {
       const response = (await api.post('/system/user/login', { username, password, tenantId })) as {
         code?: number;
         data?: Record<string, unknown> & { token?: unknown; user?: Record<string, unknown> };
       };
-      const token = String(response?.data?.token || '').trim();
-      const u = response?.data?.user || response?.data || null;
-      if (response?.code === 200 && token && u) {
-        // 🔐 登录成功：先清除所有旧账号数据，防止跨账号数据残留
-        const keysToRemove = [tokenStorageKey, userStorageKey, 'user-storage', 'userId'];
-        keysToRemove.forEach(k => {
-          try { localStorage.removeItem(k); } catch { /* ignore */ }
-        });
-        // 通知业务组件清理旧数据
-        window.dispatchEvent(new Event('user-logout'));
-
-        const baseUser: UserInfo = {
-          id: String(u.id || ''),
-          username: String(u.username || ''),
-          name: String(u.name || ''),
-          role: String(u.roleName || u.role || 'admin'),
-          roleId: u.roleId != null ? String(u.roleId) : undefined,
-          permissions: ['all'],
-          permissionRange: toPermissionRange(u.permissionRange),
-          phone: u.phone != null ? String(u.phone) : undefined,
-          email: u.email != null ? String(u.email) : undefined,
-          avatarUrl: u.avatarUrl != null ? String(u.avatarUrl) : u.avatar != null ? String(u.avatar) : u.headUrl != null ? String(u.headUrl) : undefined,
-          tenantId: u.tenantId != null ? String(u.tenantId) : undefined,
-          tenantName: u.tenantName != null ? String(u.tenantName) : undefined,
-          isTenantOwner: u.isTenantOwner === true,
-          isSuperAdmin: u.isSuperAdmin === true,
-          factoryId: u.factoryId != null ? String(u.factoryId) : undefined,
-          tenantType: u.tenantType != null ? (u.tenantType as 'SELF_FACTORY' | 'HYBRID' | 'BRAND') : undefined,
-          tenantModules: (() => {
-            try {
-              const raw = u.tenantEnabledModules;
-              if (!raw) return undefined;
-              const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-              return Array.isArray(parsed) && parsed.length > 0 ? (parsed as string[]) : undefined;
-            } catch { return undefined; }
-          })(),
-        };
-
-        localStorage.setItem(tokenStorageKey, token);
-        localStorage.setItem(userStorageKey, JSON.stringify(baseUser));
-        setUser(baseUser);
-        setIsAuthenticated(true);
-
-        await loadTenantSmartFlags();
-
-        // 恢复用户主题设置
-        try {
-          const userThemeKey = `app.theme.user.${baseUser.id}`;
-          const userTheme = localStorage.getItem(userThemeKey) || fallbackTheme;
-          localStorage.setItem('app.theme', userTheme);
-          applyThemeValue(userTheme);
-          // 触发用户登录事件
-          window.dispatchEvent(new CustomEvent('user-login', { detail: { userId: baseUser.id } }));
-        } catch {
-          // Intentionally empty
-          // 忽略错误
-        }
-
-        try {
-          const rid = baseUser.roleId;
-          if (rid != null) {
-            const pRes = (await api.get('/system/user/permissions', {
-              params: { roleId: rid },
-            })) as { code?: number; data?: unknown };
-            if (pRes?.code === 200 && Array.isArray(pRes.data) && pRes.data.length) {
-              updateUser({ permissions: pRes.data as string[] });
-            }
-          }
-        } catch {
-          // Intentionally empty
-          // 忽略错误
-        }
-
-        // 🔐 强制刷新页面，清空所有 React 组件状态（防止跨租户数据残留）
-        // 这是最可靠的方式：unmount 所有组件 → 重新 mount → 每个组件重新请求数据
-        window.location.href = '/';
-        return { success: true, user: baseUser };
-      }
-      return { success: false };
+      return await completeLogin(response, '登录失败，请检查用户名和密码');
     } catch (e: unknown) {
-      // 把后端真实错误消息作为 Error 抛出，让调用方展示
       const msg = (e instanceof Error ? e.message : String((e as any)?.message || '')) || '登录失败，请检查用户名和密码';
+      throw new Error(msg);
+    }
+  };
+
+  const loginWithSms = async (phone: string, code: string, tenantId?: number): Promise<{ success: boolean; user?: UserInfo }> => {
+    try {
+      const response = (await api.post('/system/user/login/sms', { phone, code, tenantId })) as {
+        code?: number;
+        data?: Record<string, unknown> & { token?: unknown; user?: Record<string, unknown> };
+      };
+      return await completeLogin(response, '登录失败，请检查手机号和验证码');
+    } catch (e: unknown) {
+      const msg = (e instanceof Error ? e.message : String((e as any)?.message || '')) || '登录失败，请检查手机号和验证码';
+      throw new Error(msg);
+    }
+  };
+
+  const sendLoginSmsCode = async (phone: string, tenantId?: number): Promise<Record<string, unknown>> => {
+    try {
+      const response = (await api.post('/system/user/login/sms-code', { phone, tenantId })) as {
+        code?: number;
+        data?: Record<string, unknown>;
+        message?: string;
+      };
+      if (response?.code === 200) {
+        return response.data || {};
+      }
+      throw new Error(String(response?.message || '验证码发送失败，请稍后重试'));
+    } catch (e: unknown) {
+      const msg = (e instanceof Error ? e.message : String((e as any)?.message || '')) || '验证码发送失败，请稍后重试';
       throw new Error(msg);
     }
   };
@@ -415,6 +447,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       isAuthenticated,
       loading,
       login,
+      loginWithSms,
+      sendLoginSmsCode,
       updateUser,
       logout,
       isAdmin: isAdmin(user),

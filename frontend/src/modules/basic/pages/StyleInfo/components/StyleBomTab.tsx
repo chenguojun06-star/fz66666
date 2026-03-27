@@ -7,7 +7,15 @@ import RowActions from '@/components/common/RowActions';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
+import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { getMaterialSortWeight, getMaterialTypeLabel, normalizeMaterialType } from '@/utils/materialType';
+import {
+  DEFAULT_PAGE_SIZE,
+  DEFAULT_PAGE_SIZE_OPTIONS,
+  buildPageSizeStorageKey,
+  readPageSizeByKey,
+  savePageSizeByKey,
+} from '@/utils/pageSizeStore';
 import { useViewport } from '@/utils/useViewport';
 import StyleStageControlBar from './StyleStageControlBar';
 import { useBomColumns } from './hooks/useBomColumns';
@@ -41,6 +49,9 @@ const sortBomRows = (rows: StyleBom[]) => {
   return list;
 };
 
+const MATERIAL_SELECT_STORAGE_KEY = 'style-bom-material-select';
+const MATERIAL_SELECT_PAGE_SIZE_KEY = buildPageSizeStorageKey(MATERIAL_SELECT_STORAGE_KEY);
+
 const normalizeUniqueValues = (values?: string[]) => {
   const seen = new Set<string>();
   return (Array.isArray(values) ? values : [])
@@ -50,6 +61,30 @@ const normalizeUniqueValues = (values?: string[]) => {
       seen.add(item);
       return true;
     });
+};
+
+const isZipperMaterial = (record: Partial<StyleBom>) => /拉链/.test(String(record.materialName || '').trim());
+const isCountLikeUnit = (unit?: string) => /^(个|套|条|只|双|粒|枚|包|张|件|根|片|台|桶|卷)$/.test(String(unit || '').trim());
+const resolvePatternUnit = (record: Partial<StyleBom>) => {
+  const patternUnit = String(record.patternUnit || '').trim();
+  const unit = String(record.unit || '').trim();
+  const materialType = String(record.materialType || '').trim().toLowerCase();
+  const materialName = String(record.materialName || '').trim();
+  const specification = String(record.specification || '').trim();
+  if (patternUnit && patternUnit !== '米') {
+    return patternUnit;
+  }
+  if (!isZipperMaterial(record) && (
+    unit === '米'
+    || (!isCountLikeUnit(unit) && (
+      materialType.startsWith('fabric')
+      || materialType.startsWith('lining')
+      || /松紧|织带|绳|带|滚条|包边|魔术贴/.test(`${materialName} ${specification}`)
+    ))
+  )) {
+    return '米';
+  }
+  return unit || patternUnit || '';
 };
 
 const StyleBomTab: React.FC<Props> = ({
@@ -88,6 +123,7 @@ const StyleBomTab: React.FC<Props> = ({
   const [materialList, setMaterialList] = useState<any[]>([]);
   const [materialTotal, setMaterialTotal] = useState(0);
   const [materialPage, setMaterialPage] = useState(1);
+  const [materialPageSize, setMaterialPageSize] = useState(() => readPageSizeByKey(MATERIAL_SELECT_PAGE_SIZE_KEY, DEFAULT_PAGE_SIZE));
   const [materialKeyword, setMaterialKeyword] = useState('');
   const [materialTargetRowId, setMaterialTargetRowId] = useState('');
   const activeSizes = normalizeUniqueValues(sizeColorConfig?.sizes);
@@ -124,9 +160,7 @@ const StyleBomTab: React.FC<Props> = ({
   const [checkingStock, setCheckingStock] = useState(false);
   const [productionQty, setProductionQty] = useState(1);
 
-  // 未开始时禁止编辑（需先点击「开始BOM清单」）
-  const notStarted = !bomStartTime && !bomCompletedTime;
-  const locked = Boolean(readOnly) || notStarted;
+  const locked = Boolean(readOnly);
 
   const isSupervisorOrAbove = isSupervisorOrAboveUser(user);
 
@@ -421,15 +455,16 @@ const StyleBomTab: React.FC<Props> = ({
     return rid;
   };
 
-  const fetchMaterials = async (page: number, keyword?: string) => {
+  const fetchMaterials = async (page: number, keyword?: string, pageSizeOverride?: number) => {
     const p = Number(page) || 1;
     const kw = String(keyword ?? '').trim();
+    const nextPageSize = pageSizeOverride ?? materialPageSize;
     setMaterialLoading(true);
     try {
       const res = await api.get<{ code: number; data: { records: any[]; total: number } }>('/material/database/list', {
         params: {
           page: p,
-          pageSize: 10,
+          pageSize: nextPageSize,
           materialCode: kw,
           materialName: kw,
         },
@@ -447,6 +482,16 @@ const StyleBomTab: React.FC<Props> = ({
     } finally {
       setMaterialLoading(false);
     }
+  };
+
+  const handleMaterialPageChange = (page: number, pageSize: number) => {
+    if (pageSize !== materialPageSize) {
+      savePageSizeByKey(MATERIAL_SELECT_PAGE_SIZE_KEY, pageSize);
+      setMaterialPageSize(pageSize);
+      void fetchMaterials(1, materialKeyword, pageSize);
+      return;
+    }
+    void fetchMaterials(page, materialKeyword);
   };
 
   const _openMaterialModal = () => {
@@ -690,7 +735,7 @@ const StyleBomTab: React.FC<Props> = ({
         const rawSizeUsageMap = activeSizes.length
           ? Object.fromEntries(activeSizes.map((size) => [size, Number(row?.sizeUsageMapObject?.[size] ?? item.usageAmount ?? newItem.usageAmount ?? 0)]))
           : parseNumberMap(item.patternSizeUsageMap || item.sizeUsageMap);
-        newItem.patternUnit = '米';
+        newItem.patternUnit = resolvePatternUnit(newItem);
         newItem.conversionRate = conversionRate;
         newItem.patternSizeUsageMap = activeSizes.length ? JSON.stringify(rawSizeUsageMap) : item.patternSizeUsageMap;
         newItem.sizeUsageMap = activeSizes.length ? JSON.stringify(rawSizeUsageMap) : item.sizeUsageMap;
@@ -812,7 +857,7 @@ const StyleBomTab: React.FC<Props> = ({
         const rawSizeUsageMap = activeSizes.length
           ? Object.fromEntries(activeSizes.map((size) => [size, Number(row?.sizeUsageMapObject?.[size] ?? item.usageAmount ?? newItem.usageAmount ?? 0)]))
           : parseNumberMap(item.patternSizeUsageMap || item.sizeUsageMap);
-        newItem.patternUnit = '米';
+        newItem.patternUnit = resolvePatternUnit(newItem);
         newItem.conversionRate = conversionRate;
         newItem.patternSizeUsageMap = activeSizes.length ? JSON.stringify(rawSizeUsageMap) : item.patternSizeUsageMap;
         newItem.sizeUsageMap = activeSizes.length ? JSON.stringify(rawSizeUsageMap) : item.sizeUsageMap;
@@ -1328,18 +1373,19 @@ const StyleBomTab: React.FC<Props> = ({
                     </Button>
                   </div>
                   <ResizableTable
-                    storageKey="style-bom-material-select"
+                    storageKey={MATERIAL_SELECT_STORAGE_KEY}
                     size="small"
                     loading={materialLoading}
                     dataSource={materialList}
                     rowKey={(r) => String((r as Record<string, unknown>)?.id || (r as Record<string, unknown>)?.materialCode || `material-${Math.random()}`)}
                     pagination={{
                       current: materialPage,
-                      pageSize: 10,
+                      pageSize: materialPageSize,
                       total: materialTotal,
                       showTotal: (total) => `共 ${total} 条`,
-                      onChange: (p) => fetchMaterials(p, materialKeyword),
-                      showSizeChanger: false,
+                      onChange: handleMaterialPageChange,
+                      showSizeChanger: true,
+                      pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
                     }}
                     onRow={(record) => ({
                       onDoubleClick: async () => {
@@ -1355,7 +1401,7 @@ const StyleBomTab: React.FC<Props> = ({
                         render: (v: unknown) => {
                           const raw = String(v || '').trim();
                           if (!raw) return null;
-                          const url = raw.startsWith('http') ? raw : `/api${raw.startsWith('/') ? '' : '/'}${raw}`;
+                          const url = getFullAuthedFileUrl(raw.startsWith('http') ? raw : `/api${raw.startsWith('/') ? '' : '/'}${raw}`);
                           return (
                             <Image
                               src={url}
@@ -1376,7 +1422,7 @@ const StyleBomTab: React.FC<Props> = ({
                       { title: '类型', dataIndex: 'materialType', width: 90,
                         render: (v: unknown) => getMaterialTypeLabel(v) },
                       { title: '颜色', dataIndex: 'color', width: 90, ellipsis: true },
-                      { title: '规格', dataIndex: 'specifications', width: 120, ellipsis: true },
+                      { title: '规格/幅宽', dataIndex: 'specifications', width: 120, ellipsis: true },
                       { title: '单位', dataIndex: 'unit', width: 70 },
                       { title: '供应商', dataIndex: 'supplierName', width: 140, ellipsis: true },
                       {

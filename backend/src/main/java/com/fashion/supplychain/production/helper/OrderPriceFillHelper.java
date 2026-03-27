@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
+import com.fashion.supplychain.production.util.OrderPricingSnapshotUtils;
 import com.fashion.supplychain.style.entity.SecondaryProcess;
 import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleProcess;
@@ -244,6 +245,11 @@ public class OrderPriceFillHelper {
 
         for (ProductionOrder o : records) {
             if (o == null) continue;
+            BigDecimal snapshotPrice = OrderPricingSnapshotUtils.resolveQuotationUnitPrice(o.getOrderDetails());
+            if (snapshotPrice.compareTo(BigDecimal.ZERO) > 0) {
+                o.setQuotationUnitPrice(snapshotPrice.setScale(2, RoundingMode.HALF_UP));
+                continue;
+            }
             BigDecimal unitPrice = BigDecimal.ZERO;
             String sidRaw = o.getStyleId();
             if (StringUtils.hasText(sidRaw)) {

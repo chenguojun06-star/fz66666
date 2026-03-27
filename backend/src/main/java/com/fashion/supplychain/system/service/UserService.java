@@ -67,6 +67,8 @@ public interface UserService extends IService<User> {
      */
     User login(String username, String password, Long tenantId);
 
+    User findLoginUserByPhone(String phone, Long tenantId);
+
     /**
      * 根据姓名查找用户（精确匹配，用于验证人员字段）
      * @param name 用户姓名

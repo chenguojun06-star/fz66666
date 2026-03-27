@@ -1,10 +1,13 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { App, AutoComplete, Button, Card, Col, Form, Input, InputNumber, Pagination, Row, Segmented, Select, Space, Tabs, Tag, Tooltip } from 'antd';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { App, Button, Card, Col, Form, Input, Row, Select, Space, Tabs, Tag, Tooltip } from 'antd';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
-import { QuestionCircleOutlined, AppstoreOutlined, UnorderedListOutlined, BulbOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import { useSync } from '@/utils/syncManager';
+import { createCardSpecFieldGroups } from '@/components/common/CardSizeQuantityFieldGroups';
 import UniversalCardView from '@/components/common/UniversalCardView';
 import StylePrintModal from '@/components/common/StylePrintModal';
+import StandardPagination from '@/components/common/StandardPagination';
+import { usePersistentState } from '@/hooks/usePersistentState';
 
 import dayjs from 'dayjs';
 import Layout from '@/components/Layout';
@@ -15,10 +18,11 @@ import { ProductionOrder } from '@/types/production';
 import { formatDateTime } from '@/utils/datetime';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
-import { readPageSize } from '@/utils/pageSizeStore';
+import { DEFAULT_PAGE_SIZE_OPTIONS, readPageSize, savePageSize } from '@/utils/pageSizeStore';
 import RowActions from '@/components/common/RowActions';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
+import StyleCoverGallery from '@/components/common/StyleCoverGallery';
 import { getMaterialTypeCategory } from '@/utils/materialType';
 import { CATEGORY_CODE_OPTIONS, normalizeCategoryQuery, toCategoryCn } from '@/utils/styleCategory';
 import { useDictOptions } from '@/hooks/useDictOptions';
@@ -26,12 +30,21 @@ import { useViewport } from '@/utils/useViewport';
 import { useCardGridLayout } from '@/hooks/useCardGridLayout';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 import { productionOrderApi, FactoryCapacityItem, intelligenceApi, DeliveryDateSuggestionResponse } from '@/services/production/productionApi';
-import { SchedulingSuggestionResponse, SchedulePlan } from '@/services/intelligence/intelligenceApi';
+import { SchedulingSuggestionResponse } from '@/services/intelligence/intelligenceApi';
 import { generateUniqueId } from '@/utils/idGenerator';
+import { getStyleCardSizeQuantityItems } from '@/utils/cardSizeQuantity';
 import { getStyleSourceMeta, getStyleSourceText } from '@/utils/styleSource';
 import OrderRankingDashboard from './components/OrderRankingDashboard';
-import SmartStyleInsightCard from './components/SmartStyleInsightCard';
+import OrderFactorySelector from './components/OrderFactorySelector';
+import OrderInfoSummary from './components/OrderInfoSummary';
+import InlineField from './components/InlineField';
+import OrderLearningInsightCard from './components/OrderLearningInsightCard';
+import MultiColorOrderEditor from './components/MultiColorOrderEditor';
+import OrderPricingMaterialPanel from './components/OrderPricingMaterialPanel';
+import OrderSidebarInsights from './components/OrderSidebarInsights';
+import { buildOrderColorSummary, buildStyleSampleColorSummary } from './components/orderInfoSummaryOrchestrator';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
+import { computeReferenceKilograms } from '@/modules/production/pages/Production/MaterialPurchase/utils';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
@@ -40,6 +53,11 @@ import StyleQuotePopover from './StyleQuotePopover';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { OrderLine, PricingProcess, ProgressNode, defaultProgressNodes } from './types';
+import { buildOrderQtyStats, calcBomRequirementQty, getMatchedOrderQty, normalizeMatchKey } from './utils/orderBomMetrics';
+import { buildOrderSubmitPayload } from './utils/buildOrderSubmitPayload';
+import { analyzeOrderOrchestration, computeProcessBasedUnitPrice, SizePriceRecord } from './utils/orderIntelligence';
+import { orderLearningApi } from '@/services/intelligence/orderLearningApi';
+import type { OrderLearningRecommendationResponse } from '@/services/intelligence/orderLearningApi';
 
 const OrderManagement: React.FC = () => {
   const { modal, message } = App.useApp();
@@ -75,6 +93,7 @@ const OrderManagement: React.FC = () => {
     page: 1,
     pageSize: readPageSize(10),
     onlyCompleted: true,
+    pushedToOrderOnly: true,
     keyword: ''
   });
   const [styles, setStyles] = useState<StyleInfo[]>([]);
@@ -95,10 +114,7 @@ const OrderManagement: React.FC = () => {
   const [form] = Form.useForm();
 
   // 视图切换状态（持久化）
-  const [viewMode, setViewMode] = useState<'table' | 'card'>(() => {
-    const saved = localStorage.getItem('viewMode_orderManagement');
-    return saved === 'card' ? 'card' : 'table';
-  });
+  const [viewMode, setViewMode] = usePersistentState<'table' | 'card'>('order-management-view-mode', 'table');
 
   // ===== 打印弹窗状态 =====
   const [printModalVisible, setPrintModalVisible] = useState(false);
@@ -110,9 +126,13 @@ const OrderManagement: React.FC = () => {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailRows, setDetailRows] = useState<any[]>([]);
 
-  const [activeTabKey, setActiveTabKey] = useState('base');
+  const [activeTabKey, setActiveTabKey] = usePersistentState<string>('order-management-active-tab', 'base');
   const [bomLoading, setBomLoading] = useState(false);
   const [bomList, setBomList] = useState<StyleBom[]>([]);
+  const [sizePriceRows, setSizePriceRows] = useState<SizePriceRecord[]>([]);
+  const [sizePriceLoading, setSizePriceLoading] = useState(false);
+  const [pricingModeTouched, setPricingModeTouched] = useState(false);
+  const [scatterPricingModeTouched, setScatterPricingModeTouched] = useState(false);
   const [createdOrder, setCreatedOrder] = useState<any>(null);
 
   const [orderLines, setOrderLines] = useState<OrderLine[]>([]);
@@ -128,36 +148,9 @@ const OrderManagement: React.FC = () => {
 
   const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
-  const normalizeMatchKey = (v: unknown) => String(v || '').trim().replace(/\s+/g, ' ').toLowerCase();
-
-  const buildOptionSet = (raw: any) => {
-    const list = splitOptions(String(raw || '')).map(normalizeMatchKey).filter(Boolean);
-    return list.length ? new Set(list) : null;
-  };
-
-  const orderQtyStats = useMemo(() => {
-    const byColor = new Map<string, number>();
-    const bySize = new Map<string, number>();
-    const byColorSize = new Map<string, number>();
-    let total = 0;
-
-    for (const l of orderLines) {
-      const c = normalizeMatchKey(l.color);
-      const s = normalizeMatchKey(l.size);
-      const q = Number(l.quantity) || 0;
-      if (!q) continue;
-      total += q;
-
-      if (c) byColor.set(c, (byColor.get(c) || 0) + q);
-      if (s) bySize.set(s, (bySize.get(s) || 0) + q);
-      if (c && s) {
-        const key = `${c}|${s}`;
-        byColorSize.set(key, (byColorSize.get(key) || 0) + q);
-      }
-    }
-
-    return { total, byColor, bySize, byColorSize };
-  }, [orderLines]);
+  const normalizeSizeKey = (v: unknown) => String(v || '').trim().toUpperCase().replace(/\s+/g, '');
+  const displaySizeLabel = (v: unknown) => normalizeSizeKey(v) || '-';
+  const orderQtyStats = useMemo(() => buildOrderQtyStats(orderLines), [orderLines]);
 
 
   const fetchOrderDetailRows = async (styleNo: string) => {
@@ -368,85 +361,10 @@ const OrderManagement: React.FC = () => {
   }, [routeStyleNo, detailQuery.page, detailQuery.pageSize]);
 
   const getMatchedQty = (colorRaw: any, sizeRaw: any) => {
-    const { total, byColor, bySize, byColorSize } = orderQtyStats;
-
-    const intersect = (source: Set<string> | null, allowed: Iterable<string>) => {
-      if (!source) return null;
-      const allowedSet = new Set<string>();
-      for (const a of allowed) allowedSet.add(a);
-      const next = new Set<string>();
-      for (const v of source) {
-        if (allowedSet.has(v)) next.add(v);
-      }
-      return next.size ? next : null;
-    };
-
-    let colorSet = buildOptionSet(colorRaw);
-    let sizeSet = buildOptionSet(sizeRaw);
-
-    colorSet = intersect(colorSet, byColor.keys());
-    sizeSet = intersect(sizeSet, bySize.keys());
-
-    if (!colorSet && !sizeSet) return total;
-
-    if (colorSet && !sizeSet) {
-      let sum = 0;
-      for (const c of colorSet) sum += byColor.get(c) || 0;
-      return sum;
-    }
-
-    if (!colorSet && sizeSet) {
-      let sum = 0;
-      for (const s of sizeSet) sum += bySize.get(s) || 0;
-      return sum;
-    }
-
-    let sum = 0;
-    for (const c of colorSet!) {
-      for (const s of sizeSet!) {
-        sum += byColorSize.get(`${c}|${s}`) || 0;
-      }
-    }
-    return sum;
+    return getMatchedOrderQty(orderQtyStats, colorRaw, sizeRaw);
   };
 
-  const calcBomBudgetQty = (record: StyleBom) => {
-    const loss = Number((record as Record<string, unknown>).lossRate) || 0;
-    const rawMap = (record as Record<string, unknown>).sizeUsageMap as string | undefined;
-    // 优先使用码数用量配比（来自纸样设置），按每个码分别匹配订单数量
-    if (rawMap) {
-      try {
-        const usageMap = JSON.parse(rawMap) as Record<string, number>;
-        const { byColorSize, bySize: bySizeMap, byColor } = orderQtyStats;
-        const colorRaw = (record as Record<string, unknown>).color;
-        // 预判BOM颜色是否存在于订单颜色集中：
-        // 若不存在（如白色里料配蓝色外套），说明是辅料自身颜色，应忽略颜色差异、按码数全量匹配
-        const colorOpts = colorRaw ? buildOptionSet(colorRaw) : null;
-        const bomColorInOrder = colorOpts ? Array.from(colorOpts).some(c => byColor.has(c)) : false;
-        let total = 0;
-        for (const [szRaw, usage] of Object.entries(usageMap)) {
-          // ⚠️ 必须normalize：byColorSize/bySize的key全部是小写，JSON里的码数key可能是"XS"大写
-          const sz = normalizeMatchKey(szRaw);
-          let qty = 0;
-          if (colorOpts && bomColorInOrder) {
-            // BOM颜色存在于订单颜色中（如蓝色面料只匹配蓝色订单），精确颜色+码数匹配
-            for (const c of colorOpts) qty += byColorSize.get(`${c}|${sz}`) || 0;
-          } else {
-            // BOM颜色不在订单颜色中（里料/辅料颜色与成品颜色不同），或无颜色约束，按码数汇总
-            qty = bySizeMap.get(sz) || 0;
-          }
-          total += usage * (1 + loss / 100) * qty;
-        }
-        if (total > 0 && Number.isFinite(total)) return Number(total.toFixed(4));
-      } catch { /* fall through */ }
-    }
-    // 兜底：使用平均单件用量
-    const matchedQty = getMatchedQty((record as Record<string, unknown>).color, (record as Record<string, unknown>).size);
-    const usage = Number((record as Record<string, unknown>).usageAmount) || 0;
-    const required = usage * (1 + loss / 100) * matchedQty;
-    if (!Number.isFinite(required)) return 0;
-    return Number(required.toFixed(4));
-  };
+  const calcBomBudgetQty = (record: StyleBom) => calcBomRequirementQty(record, orderQtyStats);
 
   const calcBomTotalPrice = (record: StyleBom) => {
     const unitPrice = Number((record as Record<string, unknown>).unitPrice) || 0;
@@ -457,9 +375,8 @@ const OrderManagement: React.FC = () => {
 
   const calcBomReferenceKg = (record: StyleBom) => {
     const meters = calcBomBudgetQty(record);
-    const conversionRate = Number((record as Record<string, unknown>).conversionRate) || 0;
-    if (!Number.isFinite(meters) || meters <= 0 || conversionRate <= 0) return null;
-    return Number((meters / conversionRate).toFixed(4));
+    if (!Number.isFinite(meters) || meters <= 0) return null;
+    return computeReferenceKilograms(meters, (record as Record<string, unknown>).conversionRate, '米');
   };
 
   const bomColumns = [
@@ -552,8 +469,21 @@ const OrderManagement: React.FC = () => {
     return { fabric, lining, accessory };
   }, [bomList]);
 
-  const _watchedOrderNo = Form.useWatch('orderNo', form) as string | undefined;
+  const orderOrchestration = useMemo(() => analyzeOrderOrchestration({
+    bomMaterialRows: [...bomByType.fabric, ...bomByType.lining],
+    orderLines,
+    sizePriceRows,
+    selectedStyle,
+    normalizeSizeKey,
+    displaySizeLabel,
+    processBasedUnitPrice: computeProcessBasedUnitPrice(progressNodes),
+  }), [bomByType.fabric, bomByType.lining, displaySizeLabel, normalizeSizeKey, orderLines, progressNodes, selectedStyle, sizePriceRows]);
+
   const watchedFactoryId = Form.useWatch('factoryId', form) as string | undefined;
+  const watchedPricingMode = (Form.useWatch('pricingMode', form) as 'PROCESS' | 'SIZE' | 'COST' | 'QUOTE' | 'MANUAL' | undefined) || 'PROCESS';
+  const watchedScatterPricingMode = (Form.useWatch('scatterPricingMode', form) as 'FOLLOW_ORDER' | 'MANUAL' | undefined) || 'FOLLOW_ORDER';
+  const watchedManualOrderUnitPrice = Number(Form.useWatch('manualOrderUnitPrice', form) || 0);
+  const watchedManualScatterUnitPrice = Number(Form.useWatch('manualScatterUnitPrice', form) || 0);
 
   // 当前选中工厂的产能信息（下单时即时显示）
   const selectedFactoryStat = useMemo(() => {
@@ -566,11 +496,16 @@ const OrderManagement: React.FC = () => {
   // 交货期智能建议
   const [deliverySuggestion, setDeliverySuggestion] = useState<DeliveryDateSuggestionResponse | null>(null);
   const [suggestionLoading, setSuggestionLoading] = useState(false);
+  const [quoteReference, setQuoteReference] = useState<{ currentQuotation: number; totalCost: number; suggestedPrice: number } | null>(null);
+  const quotationUnitPrice = Number(quoteReference?.currentQuotation || 0);
+  const totalCostUnitPrice = Number(quoteReference?.totalCost || 0);
+  const suggestedQuotationUnitPrice = Number(quoteReference?.suggestedPrice || 0);
+  const [orderLearningLoading, setOrderLearningLoading] = useState(false);
+  const [orderLearningRecommendation, setOrderLearningRecommendation] = useState<OrderLearningRecommendationResponse | null>(null);
 
   // AI 排产建议状态
   const [schedulingResult, setSchedulingResult] = useState<SchedulingSuggestionResponse | null>(null);
   const [schedulingLoading, setSchedulingLoading] = useState(false);
-  const [showSchedulingPanel, setShowSchedulingPanel] = useState(false);
 
   const fetchDeliverySuggestion = React.useCallback(async (factoryName?: string, qty?: number) => {
     if (!factoryName && !qty) return;
@@ -597,6 +532,22 @@ const OrderManagement: React.FC = () => {
       .filter(Boolean);
   }
 
+  const mergeDistinctOptions = (...groups: Array<string[] | undefined>) => {
+    const result: string[] = [];
+    const seen = new Set<string>();
+    groups.forEach((group) => {
+      (group || []).forEach((item) => {
+        const text = String(item || '').trim();
+        if (!text) return;
+        const key = normalizeMatchKey(text);
+        if (seen.has(key)) return;
+        seen.add(key);
+        result.push(text);
+      });
+    });
+    return result;
+  };
+
   const parseSizeColorConfig = (raw: unknown): { sizes: string[]; colors: string[] } => {
     const text = String(raw || '').trim();
     if (!text) return { sizes: [], colors: [] };
@@ -614,62 +565,6 @@ const OrderManagement: React.FC = () => {
     }
   };
 
-  const buildCommonFiveSizes = () => {
-    const preset = ['S', 'M', 'L', 'XL', 'XXL'];
-    const fromStyle = selectableSizes.filter(Boolean);
-    const unique: string[] = [];
-    const seen = new Set<string>();
-    const push = (v: string) => {
-      const s = String(v || '').trim();
-      if (!s) return;
-      const key = normalizeMatchKey(s);
-      if (seen.has(key)) return;
-      seen.add(key);
-      unique.push(s);
-    };
-
-    fromStyle.forEach(push);
-    preset.forEach(push);
-    return unique.slice(0, 5);
-  };
-
-  const importCommonSizeTemplate = () => {
-    const sizes = buildCommonFiveSizes();
-    if (!sizes.length) {
-      message.error('未找到可导入的尺码');
-      return;
-    }
-
-    const colorFromLine = String(orderLines?.[0]?.color || '').trim();
-    const colorFromStyle = splitOptions(String(selectedStyle?.color || ''))[0] || '';
-    const color = colorFromLine || colorFromStyle;
-    const colorKey = normalizeMatchKey(color);
-
-    setOrderLines((prev) => {
-      const existingSizeKeys = new Set(
-        prev
-          .filter((l) => normalizeMatchKey(l.color) === colorKey)
-          .map((l) => normalizeMatchKey(l.size))
-          .filter(Boolean)
-      );
-
-      const additions = sizes
-        .filter((s) => !existingSizeKeys.has(normalizeMatchKey(s)))
-        .map((s, idx) => ({
-          id: String(Date.now() + idx),
-          color,
-          size: s,
-          quantity: 1,
-        }));
-
-      if (!additions.length) {
-        return prev;
-      }
-
-      return [...prev, ...additions];
-    });
-  };
-
   const totalOrderQuantity = useMemo(() => {
     return orderLines.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0);
   }, [orderLines]);
@@ -679,13 +574,11 @@ const OrderManagement: React.FC = () => {
     const qty = totalOrderQuantity;
     const deadline = form.getFieldValue('plannedEndDate');
     if (!qty || qty <= 0) {
-      message.warning('请先填写订单数量');
       return;
     }
     const deadlineStr = deadline ? (deadline.format?.('YYYY-MM-DD') ?? String(deadline)) : '';
     const productCategory = form.getFieldValue('productCategory') || selectedStyle?.category || '';
     setSchedulingLoading(true);
-    setShowSchedulingPanel(true);
     try {
       const res = await intelligenceApi.suggestScheduling({ styleNo, quantity: qty, deadline: deadlineStr, productCategory });
       if ((res as any).code === 200 && (res as any).data) {
@@ -695,6 +588,188 @@ const OrderManagement: React.FC = () => {
       setSchedulingLoading(false);
     }
   }, [selectedStyle, totalOrderQuantity, form, message]);
+
+  useEffect(() => {
+    if (!visible || !selectedStyle?.styleNo || totalOrderQuantity <= 0) {
+      return;
+    }
+    void fetchSchedulingSuggestion();
+  }, [visible, selectedStyle?.styleNo, totalOrderQuantity, fetchSchedulingSuggestion]);
+
+  useEffect(() => {
+    if (!visible || !selectedStyle?.styleNo) {
+      setQuoteReference(null);
+      return;
+    }
+    let cancelled = false;
+    Promise.all([
+      intelligenceApi.getStyleQuoteSuggestion(selectedStyle.styleNo).catch(() => null),
+      selectedStyle?.id ? api.get(`/style/quotation?styleId=${selectedStyle.id}`).catch(() => null) : Promise.resolve(null),
+    ]).then(([quoteSuggestionRes, quotationRes]: any[]) => {
+      if (cancelled) return;
+      const suggestion = quoteSuggestionRes?.data || {};
+      const quotation = quotationRes?.data || {};
+      const derivedQuotationTotalCost = Number(quotation?.totalCost)
+        || (Number(quotation?.materialCost || 0) + Number(quotation?.processCost || 0) + Number(quotation?.otherCost || 0))
+        || 0;
+      const fallbackTotalCost = Number(suggestion?.totalCost)
+        || derivedQuotationTotalCost
+        || Number((selectedStyle as any)?.totalCost)
+        || 0;
+      const fallbackQuotationPrice = Number(quotation?.totalPrice)
+        || Number(suggestion?.currentQuotation)
+        || Number((selectedStyle as any)?.totalPrice)
+        || Number(selectedStyle?.price)
+        || 0;
+      setQuoteReference({
+        currentQuotation: fallbackQuotationPrice,
+        totalCost: fallbackTotalCost,
+        suggestedPrice: Number(suggestion?.suggestedPrice) || 0,
+      });
+    }).catch(() => {
+      if (!cancelled) setQuoteReference(null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, selectedStyle]);
+
+  const processBasedUnitPrice = useMemo(() => {
+    const total = progressNodes.reduce((sum, node) => {
+      const nodeTotal = (Array.isArray(node.processes) ? node.processes : []).reduce((nodeSum, process) => {
+        return nodeSum + (Number(process?.unitPrice) || 0);
+      }, 0);
+      return sum + nodeTotal;
+    }, 0);
+    return Number(total.toFixed(2));
+  }, [progressNodes]);
+
+  const sizePriceBySize = useMemo(() => {
+    const grouped = new Map<string, number>();
+    for (const row of sizePriceRows) {
+      const sizeKey = normalizeSizeKey(row.size);
+      if (!sizeKey) continue;
+      grouped.set(sizeKey, (grouped.get(sizeKey) || 0) + (Number(row.price) || 0));
+    }
+    return grouped;
+  }, [normalizeSizeKey, sizePriceRows]);
+
+  const sizeBasedUnitPrice = useMemo(() => {
+    const effectiveLines = orderLines.filter((line) => (Number(line.quantity) || 0) > 0);
+    const totalQty = effectiveLines.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0);
+    if (!totalQty) return 0;
+    const totalAmount = effectiveLines.reduce((sum, line) => {
+      const lineQty = Number(line.quantity) || 0;
+      const linePrice = sizePriceBySize.get(normalizeSizeKey(line.size)) || 0;
+      return sum + (linePrice * lineQty);
+    }, 0);
+    return Number((totalAmount / totalQty).toFixed(2));
+  }, [normalizeSizeKey, orderLines, sizePriceBySize]);
+
+  const resolvedOrderUnitPrice = useMemo(() => {
+    if (watchedPricingMode === 'MANUAL') {
+      return Number(watchedManualOrderUnitPrice.toFixed(2));
+    }
+    if (watchedPricingMode === 'COST') {
+      return Number(totalCostUnitPrice.toFixed(2));
+    }
+    if (watchedPricingMode === 'QUOTE') {
+      return Number(quotationUnitPrice.toFixed(2));
+    }
+    if (watchedPricingMode === 'SIZE') {
+      return Number(sizeBasedUnitPrice.toFixed(2));
+    }
+    return Number(processBasedUnitPrice.toFixed(2));
+  }, [processBasedUnitPrice, quotationUnitPrice, sizeBasedUnitPrice, totalCostUnitPrice, watchedManualOrderUnitPrice, watchedPricingMode]);
+
+  const resolvedScatterUnitPrice = useMemo(() => {
+    if (watchedScatterPricingMode === 'MANUAL') {
+      return Number(watchedManualScatterUnitPrice.toFixed(2));
+    }
+    return Number(resolvedOrderUnitPrice.toFixed(2));
+  }, [resolvedOrderUnitPrice, watchedManualScatterUnitPrice, watchedScatterPricingMode]);
+  const lastOrderLearningRequestKeyRef = useRef('');
+
+  useEffect(() => {
+    if (!visible || !selectedStyle?.styleNo) {
+      lastOrderLearningRequestKeyRef.current = '';
+      setOrderLearningRecommendation(null);
+      return;
+    }
+    const requestKey = JSON.stringify({
+      styleNo: selectedStyle.styleNo,
+      orderQuantity: totalOrderQuantity || null,
+      factoryMode: factoryMode || null,
+      pricingMode: watchedPricingMode || null,
+      currentUnitPrice: resolvedOrderUnitPrice || null,
+    });
+    if (lastOrderLearningRequestKeyRef.current === requestKey) {
+      return;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      lastOrderLearningRequestKeyRef.current = requestKey;
+      setOrderLearningLoading(true);
+      orderLearningApi.getRecommendation({
+        styleNo: selectedStyle.styleNo,
+        orderQuantity: totalOrderQuantity || undefined,
+        factoryMode,
+        pricingMode: watchedPricingMode,
+        currentUnitPrice: resolvedOrderUnitPrice || undefined,
+      }).then((res: any) => {
+        if (!cancelled) {
+          setOrderLearningRecommendation(res?.data || null);
+        }
+      }).catch(() => {
+        if (!cancelled) {
+          setOrderLearningRecommendation(null);
+        }
+      }).finally(() => {
+        if (!cancelled) {
+          setOrderLearningLoading(false);
+        }
+      });
+    }, 250);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [visible, selectedStyle?.styleNo, totalOrderQuantity, factoryMode, watchedPricingMode, resolvedOrderUnitPrice]);
+
+  const preferredPricingMode = useMemo<'PROCESS' | 'SIZE' | 'COST' | 'QUOTE' | 'MANUAL'>(() => {
+    if (factoryMode === 'EXTERNAL' && totalCostUnitPrice > 0) {
+      return 'COST';
+    }
+    if (processBasedUnitPrice > 0) {
+      return 'PROCESS';
+    }
+    if (quotationUnitPrice > 0) {
+      return 'QUOTE';
+    }
+    if (totalCostUnitPrice > 0) {
+      return 'COST';
+    }
+    if (sizeBasedUnitPrice > 0) {
+      return 'SIZE';
+    }
+    return 'MANUAL';
+  }, [factoryMode, processBasedUnitPrice, quotationUnitPrice, sizeBasedUnitPrice, totalCostUnitPrice]);
+
+  useEffect(() => {
+    if (!visible || pricingModeTouched) {
+      return;
+    }
+    form.setFieldValue('pricingMode', preferredPricingMode);
+  }, [form, preferredPricingMode, pricingModeTouched, visible]);
+
+  useEffect(() => {
+    if (!visible || scatterPricingModeTouched) {
+      return;
+    }
+    form.setFieldValue('scatterPricingMode', 'FOLLOW_ORDER');
+  }, [form, scatterPricingModeTouched, visible]);
+
+  const schedulingPlans = schedulingResult?.plans || [];
 
   // 工厂或数量变化时自动重新计算交货期建议
   useEffect(() => {
@@ -708,9 +783,41 @@ const OrderManagement: React.FC = () => {
   const confirmPricingReady = () =>
     new Promise<boolean>((resolve) => {
       modal.confirm({
-        width: '30vw',
+        width: 560,
         title: '下单提醒',
-        content: '请确认单价维护已完成。',
+        content: (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ color: '#595959' }}>请在提交前确认价格编排与面辅料编排都已核对完成。</div>
+            <div style={{ padding: 12, borderRadius: 10, border: '1px solid #d9d9d9', background: '#fafafa' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
+                <span style={{ fontWeight: 600 }}>价格编排</span>
+                <Tag color={orderOrchestration.pricingStatus === 'error' ? 'error' : orderOrchestration.pricingStatus === 'warning' ? 'warning' : orderOrchestration.pricingStatus === 'success' ? 'success' : 'default'}>
+                  {watchedPricingMode === 'MANUAL'
+                    ? '手动单价'
+                    : watchedPricingMode === 'SIZE'
+                      ? '尺码单价'
+                      : watchedPricingMode === 'COST'
+                        ? '整件成本价'
+                        : watchedPricingMode === 'QUOTE'
+                          ? '报价单价'
+                          : '工序单价'}
+                </Tag>
+              </div>
+              <div style={{ fontSize: 12, color: '#595959' }}>{orderOrchestration.pricingSummary}</div>
+              <div style={{ marginTop: 6, fontSize: 12, color: '#1677ff' }}>下单锁定单价：¥{resolvedOrderUnitPrice.toFixed(2)} / 件</div>
+            </div>
+            <div style={{ padding: 12, borderRadius: 10, border: '1px solid #d9d9d9', background: '#fafafa' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
+                <span style={{ fontWeight: 600 }}>面辅料编排</span>
+                <Tag color={orderOrchestration.scatterStatus === 'error' ? 'error' : orderOrchestration.scatterStatus === 'warning' ? 'warning' : 'success'}>
+                  {orderOrchestration.scatterMode}
+                </Tag>
+              </div>
+              <div style={{ fontSize: 12, color: '#595959' }}>{orderOrchestration.scatterSummary}</div>
+              <div style={{ marginTop: 6, fontSize: 12, color: '#d48806' }}>散剪单价：¥{resolvedScatterUnitPrice.toFixed(2)} / 件</div>
+            </div>
+          </div>
+        ),
         okText: '确认下单',
         cancelText: '取消',
         onOk: () => resolve(true),
@@ -826,13 +933,6 @@ const OrderManagement: React.FC = () => {
     });
   };
 
-  const setTotalQuantity = (value: number) => {
-    const nextQty = Number(value) || 0;
-    if (orderLines.length === 1) {
-      setOrderLines([{ ...orderLines[0], quantity: nextQty }]);
-    }
-  };
-
   const orderLineColors = useMemo(() => {
     const set = new Set(orderLines.map(l => (l.color || '').trim()).filter(Boolean));
     return Array.from(set);
@@ -843,31 +943,13 @@ const OrderManagement: React.FC = () => {
     return Array.from(set);
   }, [orderLines]);
 
-  const styleColorText = useMemo(() => {
-    const raw = String(selectedStyle?.color || '').trim();
-    if (raw) {
-      return splitOptions(raw).join('、') || raw;
-    }
-    const parsed = parseSizeColorConfig((selectedStyle as any)?.sizeColorConfig);
-    return parsed.colors.length ? parsed.colors.join('、') : '-';
-  }, [selectedStyle?.color, (selectedStyle as any)?.sizeColorConfig]);
-
-  const styleSizeText = useMemo(() => {
-    const raw = String(selectedStyle?.size || '').trim();
-    if (raw) {
-      return splitOptions(raw).join('、') || raw;
-    }
-    const parsed = parseSizeColorConfig((selectedStyle as any)?.sizeColorConfig);
-    return parsed.sizes.length ? parsed.sizes.join('、') : '-';
-  }, [selectedStyle?.size, (selectedStyle as any)?.sizeColorConfig]);
-
-  const orderColorText = useMemo(() => {
-    return orderLineColors.length ? orderLineColors.join('、') : '-';
-  }, [orderLineColors]);
-
-  const orderSizeText = useMemo(() => {
-    return orderLineSizes.length ? orderLineSizes.join('、') : '-';
-  }, [orderLineSizes]);
+  const orderSummary = useMemo(() => buildOrderColorSummary(orderLines), [orderLines]);
+  const styleSampleSummary = useMemo(() => buildStyleSampleColorSummary({
+    sizeColorConfig: (selectedStyle as any)?.sizeColorConfig,
+    fallbackSizeText: selectedStyle?.size,
+    fallbackColorText: selectedStyle?.color,
+    sampleQuantity: (selectedStyle as any)?.sampleQuantity,
+  }), [(selectedStyle as any)?.sampleQuantity, selectedStyle?.color, selectedStyle?.size, (selectedStyle as any)?.sizeColorConfig]);
 
   useEffect(() => {
     form.setFieldsValue({ orderQuantity: totalOrderQuantity });
@@ -1003,52 +1085,14 @@ const OrderManagement: React.FC = () => {
   }, []);
 
   const selectableColors = useMemo(() => {
-    const fromColor = splitOptions(selectedStyle?.color);
-    if (fromColor.length) return fromColor;
-    return parseSizeColorConfig((selectedStyle as any)?.sizeColorConfig).colors;
+    const parsed = parseSizeColorConfig((selectedStyle as any)?.sizeColorConfig);
+    return mergeDistinctOptions(splitOptions(selectedStyle?.color), parsed.colors);
   }, [selectedStyle?.color, (selectedStyle as any)?.sizeColorConfig]);
 
   const selectableSizes = useMemo(() => {
-    const fromSize = splitOptions(selectedStyle?.size);
-    if (fromSize.length) return fromSize;
-    return parseSizeColorConfig((selectedStyle as any)?.sizeColorConfig).sizes;
+    const parsed = parseSizeColorConfig((selectedStyle as any)?.sizeColorConfig);
+    return mergeDistinctOptions(splitOptions(selectedStyle?.size), parsed.sizes);
   }, [selectedStyle?.size, (selectedStyle as any)?.sizeColorConfig]);
-
-  // 智能添加订单行，自动填充颜色和尺码
-  const addOrderLine = () => {
-    let nextColor = selectableColors[0] || '';
-    let nextSize = '';
-
-    // 如果已有订单行，智能填充下一行
-    if (orderLines.length > 0) {
-      const lastLine = orderLines[orderLines.length - 1];
-      nextColor = lastLine.color; // 自动填充上一行的颜色
-
-      // 查找上一行尺码在可选尺码中的索引
-      const lastSizeIndex = selectableSizes.indexOf(lastLine.size);
-      // 自动循环填充下一个尺码
-      nextSize = selectableSizes[(lastSizeIndex + 1) % selectableSizes.length] || '';
-    } else {
-      // 第一行，使用默认值
-      nextSize = selectableSizes[0] || '';
-    }
-
-    const next: OrderLine = {
-      id: `${Date.now()}-${Math.random()}`,
-      color: nextColor,
-      size: nextSize,
-      quantity: 1,
-    };
-    setOrderLines(prev => [...prev, next]);
-  };
-
-  const updateOrderLine = (id: string, patch: Partial<OrderLine>) => {
-    setOrderLines(prev => prev.map(l => (l.id === id ? { ...l, ...patch } : l)));
-  };
-
-  const removeOrderLine = (id: string) => {
-    setOrderLines(prev => prev.filter(l => l.id !== id));
-  };
 
   const generateOrderNo = async () => {
     try {
@@ -1080,6 +1124,24 @@ const OrderManagement: React.FC = () => {
     }
   };
 
+  const fetchSizePrices = async (styleId: string | number) => {
+    setSizePriceLoading(true);
+    try {
+      const res = await api.get<{ code: number; data: SizePriceRecord[] }>('/style/size-price/list', {
+        params: { styleId },
+      });
+      if (res.code === 200) {
+        setSizePriceRows(Array.isArray(res.data) ? res.data : []);
+      } else {
+        setSizePriceRows([]);
+      }
+    } catch {
+      setSizePriceRows([]);
+    } finally {
+      setSizePriceLoading(false);
+    }
+  };
+
   const openCreate = (style: StyleInfo) => {
     setSelectedStyle(style);
     setVisible(true);
@@ -1089,21 +1151,30 @@ const OrderManagement: React.FC = () => {
     void loadProgressNodesForStyle(String(style.styleNo || '').trim());
     if (style.id !== undefined && style.id !== null && String(style.id)) {
       fetchBom(style.id);
+      fetchSizePrices(style.id);
     } else {
       setBomList([]);
+      setSizePriceRows([]);
     }
+    setSchedulingResult(null);
 
     const parsedConfig = parseSizeColorConfig((style as any)?.sizeColorConfig);
-    const initColor = splitOptions(style.color)[0] || style.color || parsedConfig.colors[0] || '';
-    const initSize = splitOptions(style.size)[0] || style.size || parsedConfig.sizes[0] || '';
-    setOrderLines([
-      {
-        id: String(Date.now()),
-        color: initColor,
-        size: initSize,
-        quantity: 1,
-      }
-    ]);
+    const initColors = mergeDistinctOptions(splitOptions(style.color), parsedConfig.colors);
+    const initSizes = mergeDistinctOptions(splitOptions(style.size), parsedConfig.sizes);
+    if (initColors.length && initSizes.length) {
+      setOrderLines([]);
+    } else {
+      const initColor = splitOptions(style.color)[0] || style.color || parsedConfig.colors[0] || '';
+      const initSize = splitOptions(style.size)[0] || style.size || parsedConfig.sizes[0] || '';
+      setOrderLines([
+        {
+          id: String(Date.now()),
+          color: initColor,
+          size: initSize,
+          quantity: 1,
+        },
+      ]);
+    }
     // 智能设置默认计划时间
     const today = dayjs();
     // 默认计划周期为7天
@@ -1119,9 +1190,15 @@ const OrderManagement: React.FC = () => {
       productCategory: normalizeCategoryQuery(style.category) || undefined, // 从样衣开发带入品类
       patternMaker: style.sampleSupplier || undefined, // 从样衣开发带入纸样师
       orderQuantity: 1,
+      pricingMode: 'PROCESS',
+      manualOrderUnitPrice: undefined,
+      scatterPricingMode: 'FOLLOW_ORDER',
+      manualScatterUnitPrice: undefined,
       plannedStartDate: plannedStartDate,
       plannedEndDate: plannedEndDate
     });
+    setPricingModeTouched(false);
+    setScatterPricingModeTouched(false);
     generateOrderNo();
   };
 
@@ -1130,10 +1207,14 @@ const OrderManagement: React.FC = () => {
     setSelectedStyle(null);
     setCreatedOrder(null);
     setBomList([]);
+    setSizePriceRows([]);
+    setSchedulingResult(null);
     setActiveTabKey('base');
     setOrderLines([]);
     setProgressNodes(defaultProgressNodes);
     setFactoryMode('INTERNAL');
+    setPricingModeTouched(false);
+    setScatterPricingModeTouched(false);
     form.resetFields();
   };
 
@@ -1161,6 +1242,24 @@ const OrderManagement: React.FC = () => {
       if (computedQty <= 0) {
         message.error('订单总数量必须大于0');
         setActiveTabKey('detail');
+        return;
+      }
+
+      if (watchedPricingMode === 'SIZE' && orderOrchestration.missingPriceRecords.length > 0) {
+        message.error('当前选择了尺码单价，但还有码价缺失，请补齐或改为工序单价/手动单价');
+        setActiveTabKey('base');
+        return;
+      }
+
+      if (resolvedOrderUnitPrice <= 0) {
+        message.error('下单单价必须大于0');
+        setActiveTabKey('base');
+        return;
+      }
+
+      if (watchedScatterPricingMode === 'MANUAL' && resolvedScatterUnitPrice <= 0) {
+        message.error('散剪单价必须大于0');
+        setActiveTabKey('base');
         return;
       }
 
@@ -1197,40 +1296,32 @@ const OrderManagement: React.FC = () => {
         message.error('物料价格来源必须为物料采购系统');
         return;
       }
-      const orderDetails = JSON.stringify(orderLines.map(l => ({
-        color: l.color,
-        size: l.size,
-        quantity: l.quantity,
+      const { payload } = buildOrderSubmitPayload({
+        values,
+        selectedStyle,
+        ensuredOrderNo,
+        colorLabel,
+        sizeLabel,
+        resolvedFactoryId,
+        resolvedFactoryName,
+        resolvedOrgUnitId,
+        factoryMode,
+        orderLines,
+        computedQty,
+        orderOrchestration,
         materialPriceSource,
         materialPriceAcquiredAt,
         materialPriceVersion,
-      })));
-
-      const payload: any = {
-        orderNo: ensuredOrderNo,
-        styleId: String(selectedStyle.id ?? ''),
-        styleNo: selectedStyle.styleNo,
-        styleName: selectedStyle.styleName,
-        plateType: values.plateType || null,
-        color: colorLabel,
-        size: sizeLabel,
-        factoryId: resolvedFactoryId,
-        factoryName: resolvedFactoryName,
-        orgUnitId: resolvedOrgUnitId,
-        factoryType: factoryMode,
-        merchandiser: values.merchandiser || null, // ✅ 修复: 使用null而非undefined
-        company: values.company || null, // ✅ 修复: 使用null而非undefined
-        productCategory: values.productCategory || null, // ✅ 修复: 使用null而非undefined
-        patternMaker: values.patternMaker || null, // ✅ 修复: 使用null而非undefined
-        urgencyLevel: values.urgencyLevel || 'normal',
-        orderBizType: values.orderBizType || null,
-        skc: selectedStyle?.skc || null,
-        orderQuantity: computedQty,
-        orderDetails,
-        plannedStartDate: values.plannedStartDate ? values.plannedStartDate.format('YYYY-MM-DDTHH:mm:ss') : null,
-        plannedEndDate: values.plannedEndDate ? values.plannedEndDate.format('YYYY-MM-DDTHH:mm:ss') : null,
-        progressWorkflowJson: buildProgressWorkflowJson(progressNodes),
-      };
+        processBasedUnitPrice,
+        sizeBasedUnitPrice,
+        totalCostUnitPrice,
+        quotationUnitPrice,
+        suggestedQuotationUnitPrice,
+        resolvedOrderUnitPrice,
+        resolvedScatterUnitPrice,
+        buildProgressWorkflowJson,
+        progressNodes,
+      });
       const response = await api.post<{ code: number; message: string; data: ProductionOrder }>('/production/order', payload);
       if (response.code === 200) {
         setCreatedOrder(response.data || payload);
@@ -1399,7 +1490,7 @@ const OrderManagement: React.FC = () => {
               total: detailTotal,
               showTotal: (total) => `共 ${total} 条`,
               showSizeChanger: true,
-              pageSizeOptions: ['10', '20', '50', '100'],
+              pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
               onChange: (page, pageSize) => setDetailQuery({ page, pageSize }),
             }}
             columns={[
@@ -1470,7 +1561,6 @@ const OrderManagement: React.FC = () => {
                   onClick={() => {
                     const next = viewMode === 'table' ? 'card' : 'table';
                     setViewMode(next);
-                    localStorage.setItem('viewMode_orderManagement', next);
                     if (next === 'card') {
                       setQueryParams((prev) => ({ ...prev, page: 1 }));
                     }
@@ -1499,7 +1589,7 @@ const OrderManagement: React.FC = () => {
               total,
               showTotal: (total) => `共 ${total} 条`,
               showSizeChanger: true,
-              pageSizeOptions: ['10', '20', '50', '100'],
+              pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
               onChange: (page, pageSize) => setQueryParams(prev => ({ ...prev, page, pageSize })),
             }}
           />
@@ -1514,7 +1604,15 @@ const OrderManagement: React.FC = () => {
             subtitleField="styleName"
             fields={[]}
             fieldGroups={[
-              [{ label: '码数', key: 'size', render: (val) => val || '-' }, { label: '数量', key: 'sampleQuantity', render: (val, record) => { const qty = Number(val) || Number(record?.quantity) || 0; return qty > 0 ? `${qty}件` : '-'; } }],
+              ...createCardSpecFieldGroups<StyleInfo>({
+                colorKey: 'orderStyleCardColorLine',
+                sizeKey: 'orderStyleCardSizeLine',
+                quantityKey: 'orderStyleCardQuantityLine',
+                getItems: (record) => getStyleCardSizeQuantityItems(record),
+                getFallbackColor: (record) => String(record.color || '').trim(),
+                getFallbackSize: (record) => String(record.size || '').trim(),
+                getFallbackQuantity: (record) => Number(record.sampleQuantity) || Number((record as any).quantity) || 0,
+              }),
               [{ label: '来源', key: 'developmentSourceType', render: (_val, record) => getStyleSourceText(record as StyleInfo) }, { label: '品类', key: 'category', render: (val) => val || '-' }],
               [{ label: '下单', key: 'latestOrderTime', render: (val) => val ? dayjs(val).format('MM-DD') : '-' }, { label: '下单人', key: 'latestOrderCreator', render: (val) => val || '-' }],
             ]}
@@ -1527,17 +1625,17 @@ const OrderManagement: React.FC = () => {
               },
             ]}
           />
-          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 0 4px' }}>
-            <Pagination
-              current={queryParams.page}
-              pageSize={queryParams.pageSize}
-              total={total}
-              showTotal={(t) => `共 ${t} 条`}
-              showSizeChanger
-              pageSizeOptions={['10', '20', '50', '100']}
-              onChange={(page, pageSize) => setQueryParams((prev) => ({ ...prev, page, pageSize }))}
-            />
-          </div>
+          <StandardPagination
+            current={queryParams.page}
+            pageSize={queryParams.pageSize}
+            total={total}
+            wrapperStyle={{ paddingTop: 12, paddingBottom: 4 }}
+            showQuickJumper={false}
+            onChange={(page, pageSize) => {
+              savePageSize(pageSize);
+              setQueryParams((prev) => ({ ...prev, page, pageSize }));
+            }}
+          />
           </>
         )}
       </Card>
@@ -1573,13 +1671,15 @@ const OrderManagement: React.FC = () => {
                       <div style={{ fontWeight: 600 }}>图片</div>
                       <StyleQuotePopover styleNo={selectedStyle?.styleNo || ''}>
                         <div>
-                          <StyleCoverThumb
-                            styleId={selectedStyle?.id}
-                            styleNo={selectedStyle?.styleNo}
-                            src={selectedStyle?.cover || null}
-                            size={isMobile ? 160 : isTablet ? 200 : 240}
-
-                          />
+                          <div style={{ width: isMobile ? 160 : isTablet ? 200 : 240, maxWidth: '100%' }}>
+                            <StyleCoverGallery
+                              styleId={selectedStyle?.id}
+                              styleNo={selectedStyle?.styleNo}
+                              src={selectedStyle?.cover || null}
+                              fit="cover"
+                              borderRadius={8}
+                            />
+                          </div>
                           <div style={{ fontSize: 11, color: '#8c8c8c', textAlign: 'center', marginTop: 4 }}>
                             💰 悬停查看报价参考
                           </div>
@@ -1593,16 +1693,21 @@ const OrderManagement: React.FC = () => {
                           modalTitle={selectedStyle?.styleNo ? `纸样附件（${selectedStyle.styleNo}）` : '纸样附件'}
                         />
                       </div>
-                      {/* 智能下单分析卡 — 下单频率、爆单风险、AI建议 */}
-                      {selectedStyle?.styleNo && (
-                        <SmartStyleInsightCard
-                          styleNo={selectedStyle.styleNo}
-                          factoryName={factories.find(
-                            f => String(f.id) === String(watchedFactoryId)
-                          )?.factoryName}
-                          capacityData={selectedFactoryStat}
-                        />
-                      )}
+                      <OrderSidebarInsights
+                        styleNo={selectedStyle?.styleNo}
+                        factoryName={factories.find(
+                          f => String(f.id) === String(watchedFactoryId)
+                        )?.factoryName}
+                        capacityData={selectedFactoryStat}
+                        schedulingLoading={schedulingLoading}
+                        schedulingPlans={schedulingPlans}
+                        selectedFactoryId={watchedFactoryId}
+                        factories={factories}
+                        onSelectFactory={(factoryId) => {
+                          setFactoryMode('EXTERNAL');
+                          form.setFieldValue('factoryId', factoryId);
+                        }}
+                      />
                     </div>
 
                     <div style={{ minWidth: 0 }}>
@@ -1625,376 +1730,157 @@ const OrderManagement: React.FC = () => {
                           </div>
                         </Col>
                         <Col xs={24} sm={12}>
-                          <Form.Item
-                            label={
-                              <Space size={4}>
-                                <span>生产方</span>
-                                <Tooltip
-                                  color={tooltipTheme.background}
-                                  title={
-                                    <div style={{ fontSize: "var(--font-size-sm)", color: tooltipTheme.text }}>
-                                      <div style={{ marginBottom: 8, fontWeight: 600, color: tooltipTheme.text }}>📋 生产方式说明</div>
-                                      <div style={{ marginBottom: 6 }}>
-                                        <span style={{ color: 'var(--primary-color-light)' }}>● 内部自产：</span>
-                                        选择内部车间/部门，由内部工序团队完成。数据流向<strong>工序结算</strong>（按员工工序扫码统计工资）
-                                      </div>
-                                      <div>
-                                        <span style={{ color: 'var(--error-color-light)' }}>● 外发加工：</span>
-                                        选择外发工厂，委托外厂生产。数据流向<strong>订单结算</strong>（按工厂整单结算加工费）
-                                      </div>
-                                      <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${tooltipTheme.divider}`, fontSize: "var(--font-size-xs)", opacity: 0.9 }}>
-                                        💡 所有数据最终在"订单结算数据看板"统一查看
-                                      </div>
-                                    </div>
-                                  }
-                                  styles={{
-                                    root: { maxWidth: 380 },
-                                    body: { background: tooltipTheme.background, color: tooltipTheme.text, border: `1px solid ${tooltipTheme.border}` },
-                                  } as any}
-                                >
-                                  <QuestionCircleOutlined style={{ color: 'var(--primary-color)', cursor: 'help' }} />
-                                </Tooltip>
-                              </Space>
-                            }
-                          >
-                            <Segmented
-                              value={factoryMode}
-                              onChange={(v) => {
-                                setFactoryMode(v as 'INTERNAL' | 'EXTERNAL');
-                                form.setFieldValue('factoryId', undefined);
-                                form.setFieldValue('orgUnitId', undefined);
-                              }}
-                              options={[
-                                { label: '内部自产', value: 'INTERNAL' },
-                                { label: '外发加工', value: 'EXTERNAL' },
-                              ]}
-                              block
-                              style={{ marginBottom: 6 }}
-                            />
-                            {factoryMode === 'INTERNAL' ? (
-                              <Form.Item name="orgUnitId" noStyle rules={[{ required: true, message: '请选择生产车间/部门' }]}>
-                                <Select
-                                  placeholder="请选择内部生产车间/部门"
-                                  options={departments.map(d => ({ value: d.id, label: d.pathNames || d.nodeName }))}
-                                  showSearch
-                                  optionFilterProp="label"
-                                  allowClear
-                                />
-                              </Form.Item>
-                            ) : (
-                              <Form.Item name="factoryId" noStyle rules={[{ required: true, message: '请选择外发工厂' }]}>
-                                <Select
-                                  placeholder="请选择外发工厂（工厂须先完成入驻）"
-                                  options={factories.map(f => ({ value: f.id!, label: `${f.factoryName}（${f.factoryCode}）` }))}
-                                  showSearch
-                                  optionFilterProp="label"
-                                  allowClear
-                                />
-                              </Form.Item>
-                            )}
-                          </Form.Item>
-                          {/* 选中外发工厂后显示当前负荷（在制单数/产能数据/货期完成率/高风险数） */}
-                          {factoryMode === 'EXTERNAL' && selectedFactoryStat && (
-                            <div style={{
-                              marginTop: -12, marginBottom: 8, padding: '6px 10px',
-                              background: 'var(--color-bg-container, #fafafa)',
-                              border: '1px solid var(--color-border, #e8e8e8)',
-                              borderRadius: 6, fontSize: 12, lineHeight: '20px',
-                              color: 'var(--color-text-secondary, #888)',
-                            }}>
-                              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                                <span>在制 <b style={{ color: '#333' }}>{selectedFactoryStat.totalOrders}</b> 单</span>
-                                <span>共 <b style={{ color: '#333' }}>{selectedFactoryStat.totalQuantity?.toLocaleString() || 0}</b> 件</span>
-                                <span>货期完成率&nbsp;
-                                  <b style={{ color: selectedFactoryStat.deliveryOnTimeRate < 0 ? '#888' : selectedFactoryStat.deliveryOnTimeRate >= 80 ? '#52c41a' : selectedFactoryStat.deliveryOnTimeRate >= 60 ? '#fa8c16' : '#ff4d4f' }}>
-                                    {selectedFactoryStat.deliveryOnTimeRate < 0 ? '暂无' : `${selectedFactoryStat.deliveryOnTimeRate}%`}
-                                  </b>
-                                </span>
-                                {selectedFactoryStat.atRiskCount > 0 && (
-                                  <span style={{ color: '#fa8c16' }}>⚠ 高风险 <b>{selectedFactoryStat.atRiskCount}</b> 单</span>
-                                )}
-                                {selectedFactoryStat.overdueCount > 0 && (
-                                  <span style={{ color: '#ff4d4f' }}>逾期 <b>{selectedFactoryStat.overdueCount}</b> 单</span>
-                                )}
-                              </div>
-                              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4, paddingTop: 4, borderTop: '1px dashed var(--color-border, #e8e8e8)' }}>
-                                {(selectedFactoryStat.activeWorkers > 0 || selectedFactoryStat.avgDailyOutput > 0) ? (
-                                  <>
-                                    {selectedFactoryStat.activeWorkers > 0 && (
-                                      <span>👷 生产人数 <b style={{ color: '#333' }}>{selectedFactoryStat.activeWorkers}</b> 人</span>
-                                    )}
-                                    {selectedFactoryStat.avgDailyOutput > 0 && (
-                                      <span>⚡ 日均产量 <b style={{ color: '#1890ff' }}>{selectedFactoryStat.avgDailyOutput}</b> 件/天</span>
-                                    )}
-                                    {selectedFactoryStat.estimatedCompletionDays > 0 && (
-                                      <span>⏱ 预计 <b style={{ color: selectedFactoryStat.estimatedCompletionDays > 30 ? '#ff4d4f' : selectedFactoryStat.estimatedCompletionDays > 15 ? '#fa8c16' : '#52c41a' }}>
-                                        {selectedFactoryStat.estimatedCompletionDays}
-                                      </b> 天可完工</span>
-                                    )}
-                                  </>
-                                ) : (
-                                  <span style={{ color: '#bbb', fontStyle: 'italic' }}>暂无产能数据（该工厂近30天无扫码记录）</span>
-                                )}
-                              </div>
-                            </div>
-                          )}
+                          <OrderFactorySelector
+                            factoryMode={factoryMode}
+                            setFactoryMode={setFactoryMode}
+                            form={form}
+                            departments={departments}
+                            factories={factories}
+                            selectedFactoryStat={selectedFactoryStat}
+                            tooltipTheme={tooltipTheme}
+                          />
                         </Col>
                       </Row>
 
-                      {/* AI 排产建议区域 */}
-                      <Row gutter={16} style={{ marginBottom: 8 }}>
-                        <Col xs={24}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: showSchedulingPanel ? 8 : 0 }}>
-                            <Button
-                              icon={<BulbOutlined />}
-                              size="small"
-                              type="dashed"
-                              loading={schedulingLoading}
-                              onClick={() => {
-                                if (showSchedulingPanel && schedulingResult) {
-                                  setShowSchedulingPanel(false);
-                                } else {
-                                  fetchSchedulingSuggestion();
-                                }
-                              }}
-                              style={{ color: '#1890ff', borderColor: '#1890ff' }}
+                      <OrderPricingMaterialPanel
+                        sizePriceLoading={sizePriceLoading}
+                        sizePriceCount={sizePriceRows.length}
+                        processBasedUnitPrice={processBasedUnitPrice}
+                        sizeBasedUnitPrice={sizeBasedUnitPrice}
+                        totalCostUnitPrice={totalCostUnitPrice}
+                        quotationUnitPrice={quotationUnitPrice}
+                        suggestedQuotationUnitPrice={suggestedQuotationUnitPrice}
+                        factoryMode={factoryMode}
+                        watchedPricingMode={watchedPricingMode}
+                        watchedScatterPricingMode={watchedScatterPricingMode}
+                        resolvedOrderUnitPrice={resolvedOrderUnitPrice}
+                        resolvedScatterUnitPrice={resolvedScatterUnitPrice}
+                        onPricingModeChange={() => setPricingModeTouched(true)}
+                        onScatterPricingModeChange={() => setScatterPricingModeTouched(true)}
+                        orchestration={orderOrchestration}
+                      />
+                      <OrderLearningInsightCard
+                        loading={orderLearningLoading}
+                        data={orderLearningRecommendation}
+                      />
+
+                      <Row gutter={[15, 15]} style={{ marginBottom: 15 }}>
+                        <Col xs={24} sm={8}>
+                          <InlineField label="公司">
+                            <Form.Item name="company" style={{ marginBottom: 0 }}>
+                              <SupplierSelect
+                                placeholder="请选择或输入公司名称（选填）"
+                                allowClear
+                              />
+                            </Form.Item>
+                          </InlineField>
+                        </Col>
+                        <Col xs={24} sm={8}>
+                          <InlineField label="急单">
+                            <Form.Item name="urgencyLevel" initialValue="normal" style={{ marginBottom: 0 }}>
+                              <Select
+                                placeholder="普通"
+                                allowClear
+                                options={[
+                                  { label: '🔴 急单', value: 'urgent' },
+                                  { label: '普通', value: 'normal' },
+                                ]}
+                              />
+                            </Form.Item>
+                          </InlineField>
+                        </Col>
+                        <Col xs={24} sm={8}>
+                          <InlineField label="品类">
+                            <Form.Item name="productCategory" style={{ marginBottom: 0 }}>
+                              <Select
+                                placeholder="请选择品类（选填）"
+                                allowClear
+                                showSearch
+                                optionFilterProp="label"
+                                style={{ width: '100%' }}
+                                options={categoryOptions}
+                              />
+                            </Form.Item>
+                          </InlineField>
+                        </Col>
+                      </Row>
+
+                      <Row gutter={[15, 15]} style={{ marginBottom: 15 }}>
+                        <Col xs={24} sm={8}>
+                          <InlineField label="单型">
+                            <Form.Item name="plateType" style={{ marginBottom: 0 }}>
+                              <Select
+                                placeholder="不填自动判断"
+                                allowClear
+                                options={[
+                                  { label: '首单', value: 'FIRST' },
+                                  { label: '翻单', value: 'REORDER' },
+                                ]}
+                              />
+                            </Form.Item>
+                          </InlineField>
+                        </Col>
+                        <Col xs={24} sm={8}>
+                          <InlineField label="下单类型">
+                            <Form.Item name="orderBizType" style={{ marginBottom: 0 }}>
+                              <Select
+                                placeholder="选填（FOB/ODM/OEM/CMT）"
+                                allowClear
+                                options={[
+                                  { label: 'FOB — 离岸价交货', value: 'FOB' },
+                                  { label: 'ODM — 原创设计制造', value: 'ODM' },
+                                  { label: 'OEM — 代工贴牌', value: 'OEM' },
+                                  { label: 'CMT — 纯加工', value: 'CMT' },
+                                ]}
+                              />
+                            </Form.Item>
+                          </InlineField>
+                        </Col>
+                        <Col xs={24} sm={8}>
+                          <InlineField label="纸样师">
+                            <Form.Item name="patternMaker" style={{ marginBottom: 0 }}>
+                              <Select
+                                placeholder="请选择纸样师（选填）"
+                                allowClear
+                                showSearch
+                                optionFilterProp="label"
+                                options={users.filter(u => u.name || u.username).map(u => ({ value: u.name || u.username, label: u.name || u.username }))}
+                              />
+                            </Form.Item>
+                          </InlineField>
+                        </Col>
+                      </Row>
+
+                      <Row gutter={[15, 15]} style={{ marginBottom: 15 }}>
+                        <Col xs={24} sm={8}>
+                          <InlineField label="跟单员">
+                            <Form.Item name="merchandiser" style={{ marginBottom: 0 }}>
+                              <Select
+                                placeholder="请选择跟单员（选填）"
+                                allowClear
+                                showSearch
+                                optionFilterProp="label"
+                                options={users.filter(u => u.name || u.username).map(u => ({ value: u.name || u.username, label: u.name || u.username }))}
+                              />
+                            </Form.Item>
+                          </InlineField>
+                        </Col>
+                        <Col xs={24} sm={8}>
+                          <InlineField label="计划开始">
+                            <Form.Item
+                              name="plannedStartDate"
+                              rules={[{ required: true, message: '请选择计划开始时间' }]}
+                              style={{ marginBottom: 0 }}
                             >
-                              {showSchedulingPanel && schedulingResult ? '收起排产建议' : 'AI 排产建议'}
-                            </Button>
-                            {!showSchedulingPanel && (
-                              <span style={{ fontSize: 12, color: '#999' }}>
-                                根据各工厂当前负载，智能推荐最优排产方案
-                              </span>
-                            )}
-                          </div>
-
-                          {showSchedulingPanel && (
-                            <div style={{ border: '1px solid #e8e8e8', borderRadius: 6, padding: '10px 12px', background: '#fafcff' }}>
-                              {schedulingLoading ? (
-                                <div style={{ textAlign: 'center', padding: '20px 0', color: '#999', fontSize: 13 }}>⏳ 正在计算排产方案…</div>
-                              ) : !schedulingResult?.plans?.length ? (
-                                <div style={{ textAlign: 'center', padding: '16px 0', color: '#bbb', fontSize: 13 }}>暂无可用工厂数据</div>
-                              ) : (
-                                <>
-                                  <div style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>
-                                    共 {schedulingResult.plans.length} 个工厂方案，按匹配度排序：
-                                  </div>
-                                  {/* 无真实数据时显示全局提示 */}
-                                  {schedulingResult.plans.every(p => !p.hasRealData) && (
-                                    <div style={{
-                                      background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 4,
-                                      padding: '6px 10px', marginBottom: 8, fontSize: 12, color: '#ad6800',
-                                      display: 'flex', alignItems: 'center', gap: 6,
-                                    }}>
-                                      ⚠️ 当前无历史完成订单，以下评分均为估算参考值，请结合实际情况选择工厂
-                                    </div>
-                                  )}
-                                  {schedulingResult.plans.map((plan: SchedulePlan, idx: number) => {
-                                    const capacitySource = plan.capacitySource ?? 'default';
-                                    const isFullReal = capacitySource === 'real' && plan.hasRealData;
-                                    const isRealCap = capacitySource === 'real';
-                                    const isEstimated = capacitySource === 'default';
-                                    const scoreColor = isEstimated ? '#d4b106'
-                                      : isFullReal ? (plan.matchScore >= 70 ? '#52c41a' : plan.matchScore >= 50 ? '#fa8c16' : '#ff4d4f')
-                                      : '#1677ff';
-                                    const badgeLabel = isEstimated ? '估算' : isFullReal ? 'AI推荐' : '实测';
-                                    const totalGanttDays = plan.ganttItems?.reduce((s, g) => s + g.days, 0) || plan.estimatedDays || 1;
-                                    return (
-                                      <div key={idx} style={{
-                                        marginBottom: idx < schedulingResult.plans.length - 1 ? 8 : 0,
-                                        padding: '8px 10px',
-                                        background: '#fff',
-                                        border: '1px solid #e8e8e8',
-                                        borderRadius: 6,
-                                        position: 'relative',
-                                      }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                            <span style={{ fontWeight: 600, fontSize: 13 }}>{idx + 1}. {plan.factoryName}</span>
-                                            <span style={{
-                                              fontSize: 11, fontWeight: 700, padding: '1px 6px',
-                                              borderRadius: 10, color: '#fff', background: scoreColor,
-                                            }}>
-                                              {badgeLabel} {plan.matchScore}分
-                                            </span>
-                                            <span style={{ fontSize: 11, color: '#888' }}>
-                                              在制 {plan.currentLoad} 件 · 可用 {plan.availableCapacity.toLocaleString()} 件产能
-                                              {isRealCap && plan.realDailyCapacity ? (
-                                                <span style={{ color: '#52c41a', marginLeft: 3 }}>(实测{plan.realDailyCapacity}件/天)</span>
-                                              ) : capacitySource === 'configured' ? (
-                                                <span style={{ color: '#1677ff', marginLeft: 3 }}>(已配置)</span>
-                                              ) : (
-                                                <span style={{ color: '#faad14', marginLeft: 3 }}>(估算)</span>
-                                              )}
-                                            </span>
-                                          </div>
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                            <span style={{ fontSize: 11, color: '#555' }}>
-                                              建议 {plan.suggestedStart} 开始，约 <b style={{ color: '#1890ff' }}>{plan.estimatedDays}</b> 天
-                                            </span>
-                                            <Button
-                                              size="small"
-                                              type="primary"
-                                              ghost
-                                              icon={<CheckCircleOutlined />}
-                                              style={{ fontSize: 11, height: 22 }}
-                                              onClick={() => {
-                                                const factory = factories.find(f => f.factoryName === plan.factoryName);
-                                                if (factory) {
-                                                  form.setFieldValue('factoryId', factory.id);
-                                                  message.success(`已选择 ${plan.factoryName}`);
-                                                  setShowSchedulingPanel(false);
-                                                } else {
-                                                  message.warning('请先在系统中维护该工厂');
-                                                }
-                                              }}
-                                            >选此工厂</Button>
-                                          </div>
-                                        </div>
-                                        {/* 甘特条 */}
-                                        {plan.ganttItems?.length > 0 && (
-                                          <div style={{ display: 'flex', height: 13, borderRadius: 4, overflow: 'hidden', gap: 1 }}>
-                                            {plan.ganttItems.map((g, gi) => {
-                                              const pct = Math.round((g.days / totalGanttDays) * 100);
-                                              const colors = ['#1890ff', '#52c41a', '#fa8c16', '#722ed1', '#eb2f96', '#faad14'];
-                                              return (
-                                                <Tooltip key={gi} title={`${g.stage}: ${g.startDate} ~ ${g.endDate} (${g.days}天)`}>
-                                                  <div style={{
-                                                    width: `${pct}%`, background: colors[gi % colors.length],
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                    fontSize: 10, color: '#fff', overflow: 'hidden', whiteSpace: 'nowrap',
-                                                    minWidth: 20, fontWeight: 600,
-                                                  }}>
-                                                    {pct > 8 ? g.stage : ''}
-                                                  </div>
-                                                </Tooltip>
-                                              );
-                                            })}
-                                          </div>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                                </>
-                              )}
-                            </div>
-                          )}
-                        </Col>
-                      </Row>
-
-                      <Row gutter={16}>
-                        <Col xs={24} sm={8}>
-                          <Form.Item name="merchandiser" label="跟单员">
-                            <Select
-                              placeholder="请选择跟单员（选填）"
-                              allowClear
-                              showSearch
-                              optionFilterProp="label"
-                              options={users.filter(u => u.name || u.username).map(u => ({ value: u.name || u.username, label: u.name || u.username }))}
-                            />
-                          </Form.Item>
+                              <UnifiedDatePicker showTime />
+                            </Form.Item>
+                          </InlineField>
                         </Col>
                         <Col xs={24} sm={8}>
-                          <Form.Item name="company" label="公司">
-                            <SupplierSelect
-                              placeholder="请选择或输入公司名称（选填）"
-                              allowClear
-                            />
-                          </Form.Item>
-                        </Col>
-                        <Col xs={24} sm={8}>
-                          <Form.Item name="urgencyLevel" label="急单" initialValue="normal">
-                            <Select
-                              placeholder="普通"
-                              allowClear
-                              options={[
-                                { label: '🔴 急单', value: 'urgent' },
-                                { label: '普通', value: 'normal' },
-                              ]}
-                            />
-                          </Form.Item>
-                        </Col>
-                      </Row>
-
-                      <Row gutter={16}>
-                        <Col xs={24} sm={8}>
-                          <Form.Item name="plateType" label="单型">
-                            <Select
-                              placeholder="不填自动判断"
-                              allowClear
-                              options={[
-                                { label: '首单', value: 'FIRST' },
-                                { label: '翻单', value: 'REORDER' },
-                              ]}
-                            />
-                          </Form.Item>
-                        </Col>
-                        <Col xs={24} sm={8}>
-                          <Form.Item name="orderBizType" label="下单类型">
-                            <Select
-                              placeholder="选填（FOB/ODM/OEM/CMT）"
-                              allowClear
-                              options={[
-                                { label: 'FOB — 离岸价交货', value: 'FOB' },
-                                { label: 'ODM — 原创设计制造', value: 'ODM' },
-                                { label: 'OEM — 代工贴牌', value: 'OEM' },
-                                { label: 'CMT — 纯加工', value: 'CMT' },
-                              ]}
-                            />
-                          </Form.Item>
-                        </Col>
-                        <Col xs={24} sm={8}>
-                          <Form.Item name="productCategory" label="品类">
-                            <Select
-                              placeholder="请选择品类（选填）"
-                              allowClear
-                              showSearch
-                              optionFilterProp="label"
-                              style={{ width: '100%' }}
-                              options={categoryOptions}
-                            />
-                          </Form.Item>
-                        </Col>
-                        <Col xs={24} sm={8}>
-                          <Form.Item name="patternMaker" label="纸样师">
-                            <Select
-                              placeholder="请选择纸样师（选填）"
-                              allowClear
-                              showSearch
-                              optionFilterProp="label"
-                              options={users.filter(u => u.name || u.username).map(u => ({ value: u.name || u.username, label: u.name || u.username }))}
-                            />
-                          </Form.Item>
-                        </Col>
-                      </Row>
-
-                      <Row gutter={16}>
-                        <Col xs={24} sm={8}>
-                          <Form.Item label="订单总数量">
-                            <InputNumber
-                              min={1}
-                              style={{ width: '100%' }}
-                              value={totalOrderQuantity}
-                              disabled={orderLines.length !== 1}
-                              onChange={(v) => setTotalQuantity(Number(v) || 0)}
-                            />
-                          </Form.Item>
-                        </Col>
-                        <Col xs={24} sm={8}>
-                          <Form.Item
-                            name="plannedStartDate"
-                            label="计划开始时间"
-                            rules={[{ required: true, message: '请选择计划开始时间' }]}
-                          >
-                            <UnifiedDatePicker showTime />
-                          </Form.Item>
-                        </Col>
-                        <Col xs={24} sm={8}>
-                          <Form.Item
-                            name="plannedEndDate"
+                          <InlineField
                             label={
                               <span>
-                                计划完成时间
+                                计划完成
                                 {deliverySuggestion && !suggestionLoading && (
                                   <Tooltip title={deliverySuggestion.reason}>
                                     <Tag
@@ -2005,37 +1891,31 @@ const OrderManagement: React.FC = () => {
                                         form.setFieldValue('plannedEndDate', d);
                                       }}
                                     >
-                                      💡 建议{deliverySuggestion.recommendedDays}天
+                                      建议
                                     </Tag>
                                   </Tooltip>
                                 )}
-                                {suggestionLoading && <span style={{ marginLeft: 4, color: '#1677ff', fontSize: 11 }}>⏳</span>}
                               </span>
                             }
-                            rules={[{ required: true, message: '请选择计划完成时间' }]}
                           >
-                            <UnifiedDatePicker showTime />
-                          </Form.Item>
+                            <Form.Item
+                              name="plannedEndDate"
+                              rules={[{ required: true, message: '请选择计划完成时间' }]}
+                              style={{ marginBottom: 0 }}
+                            >
+                              <UnifiedDatePicker showTime />
+                            </Form.Item>
+                          </InlineField>
                         </Col>
                       </Row>
 
-                      <div style={{ border: '1px solid var(--table-border-color)', padding: 12 }}>
-                        <div style={{ fontWeight: 600, marginBottom: 10 }}>信息</div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '72px 1fr', rowGap: 8, columnGap: 8, color: 'var(--neutral-text-light)' }}>
-                          <div>款号</div>
-                          <div style={{ color: 'var(--neutral-text)' }}>{selectedStyle?.styleNo || '-'}</div>
-                          <div>款名</div>
-                          <div style={{ color: 'var(--neutral-text)' }}>{selectedStyle?.styleName || '-'}</div>
-                          <div>颜色</div>
-                          <div style={{ color: 'var(--neutral-text)' }}>{styleColorText}</div>
-                          <div>码数</div>
-                          <div style={{ color: 'var(--neutral-text)' }}>{styleSizeText}</div>
-                          <div>下单色</div>
-                          <div style={{ color: 'var(--neutral-text)' }}>{orderColorText}</div>
-                          <div>下单码</div>
-                          <div style={{ color: 'var(--neutral-text)' }}>{orderSizeText}</div>
-                        </div>
-                      </div>
+                      <OrderInfoSummary
+                        styleNo={selectedStyle?.styleNo || ''}
+                        styleName={selectedStyle?.styleName || ''}
+                        sampleSummary={styleSampleSummary}
+                        orderSummary={orderSummary}
+                        totalOrderQuantity={totalOrderQuantity}
+                      />
 
                     </div>
                   </div>
@@ -2045,96 +1925,14 @@ const OrderManagement: React.FC = () => {
                 key: 'detail',
                 label: '订单明细',
                 children: (
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                      <div style={{ color: 'var(--neutral-text-light)' }}>
-                        总数量：<span style={{ fontWeight: 600 }}>{totalOrderQuantity}</span>
-                      </div>
-                      <Space>
-                        <Button onClick={importCommonSizeTemplate}>一键导入通用模板(5码)</Button>
-                        <Button onClick={addOrderLine}>新增明细</Button>
-                      </Space>
-                    </div>
-
-                    <ResizableTable
-                      rowKey={(r) => r.id}
-                      dataSource={orderLines}
-                      pagination={false}
-                      scroll={{ x: 'max-content' }}
-                      size={isMobile ? 'small' : 'middle'}
-                      columns={[
-                        {
-                          title: '颜色',
-                          key: 'color',
-                          width: isMobile ? 160 : 220,
-                          render: (_: any, record: OrderLine) => {
-                            return (
-                              <AutoComplete
-                                value={record.color}
-                                options={selectableColors.map(v => ({ value: v }))}
-                                style={{ width: '100%' }}
-                                onChange={(v) => updateOrderLine(record.id, { color: String(v || '') })}
-                                placeholder="例如：黑色"
-                                filterOption={(inputValue, option) =>
-                                  String(option?.value || '').toLowerCase().includes(String(inputValue || '').toLowerCase())
-                                }
-                              />
-                            );
-                          }
-                        },
-                        {
-                          title: '码数',
-                          key: 'size',
-                          width: isMobile ? 160 : 220,
-                          render: (_: any, record: OrderLine) => {
-                            return (
-                              <AutoComplete
-                                value={record.size}
-                                options={selectableSizes.map(v => ({ value: v }))}
-                                style={{ width: '100%' }}
-                                onChange={(v) => updateOrderLine(record.id, { size: String(v || '') })}
-                                placeholder="例如：S"
-                                filterOption={(inputValue, option) =>
-                                  String(option?.value || '').toLowerCase().includes(String(inputValue || '').toLowerCase())
-                                }
-                              />
-                            );
-                          }
-                        },
-                        {
-                          title: '数量',
-                          key: 'quantity',
-                          width: isMobile ? 120 : 160,
-                          render: (_: any, record: OrderLine) => (
-                            <InputNumber
-                              min={1}
-                              style={{ width: '100%' }}
-                              value={record.quantity}
-                              onChange={(v) => updateOrderLine(record.id, { quantity: Number(v) || 0 })}
-                            />
-                          )
-                        },
-                        {
-                          title: '操作',
-                          key: 'action',
-                          width: isMobile ? 90 : 120,
-                          render: (_: any, record: OrderLine) => (
-                            <RowActions
-                              actions={[
-                                {
-                                  key: 'delete',
-                                  label: '删除',
-                                  danger: true,
-                                  disabled: orderLines.length <= 1,
-                                  onClick: () => removeOrderLine(record.id)
-                                }
-                              ]}
-                            />
-                          )
-                        }
-                      ]}
-                    />
-                  </div>
+                  <MultiColorOrderEditor
+                    availableColors={selectableColors}
+                    availableSizes={selectableSizes}
+                    orderLines={orderLines}
+                    totalQuantity={totalOrderQuantity}
+                    isMobile={isMobile}
+                    onChange={setOrderLines}
+                  />
                 )
               },
               {

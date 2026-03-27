@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.Result;
-import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.dto.MaterialBatchDetailDto;
 import com.fashion.supplychain.production.dto.MaterialStockAlertDto;
 import com.fashion.supplychain.production.dto.MaterialTransactionDto;
@@ -15,7 +14,6 @@ import com.fashion.supplychain.production.mapper.MaterialInboundMapper;
 import com.fashion.supplychain.production.mapper.MaterialOutboundLogMapper;
 import com.fashion.supplychain.production.orchestration.MaterialStockOrchestrator;
 import com.fashion.supplychain.production.service.MaterialStockService;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -93,50 +91,21 @@ public class MaterialStockController {
      * 手动出库（仓库页面直接扣减库存，并写入出库日志）
      */
     @PostMapping("/manual-outbound")
-    public Result<Void> manualOutbound(@RequestBody java.util.Map<String, Object> body) {
-        String stockId = body.get("stockId") != null ? String.valueOf(body.get("stockId")) : null;
-        int quantity = body.get("quantity") != null ? Integer.parseInt(String.valueOf(body.get("quantity"))) : 0;
-        if (!org.springframework.util.StringUtils.hasText(stockId)) {
-            return Result.fail("stockId 不能为空");
-        }
-        if (quantity <= 0) {
-            return Result.fail("出库数量必须大于0");
-        }
-        materialStockService.decreaseStockById(stockId, quantity);
-
-        // ── 写出库日志 ──
-        try {
-            MaterialStock stock = materialStockService.getById(stockId);
-            String operatorName = body.get("operatorName") != null ? String.valueOf(body.get("operatorName")) : null;
-            String reason = body.get("reason") != null ? String.valueOf(body.get("reason")) : "手动出库";
-            if (!org.springframework.util.StringUtils.hasText(operatorName)) {
-                operatorName = UserContext.username();
-            }
-            MaterialOutboundLog log = new MaterialOutboundLog();
-            log.setStockId(stockId);
-            log.setMaterialCode(stock != null ? stock.getMaterialCode() : "");
-            log.setMaterialName(stock != null ? stock.getMaterialName() : "");
-            log.setQuantity(quantity);
-            log.setOperatorId(UserContext.userId());
-            log.setOperatorName(operatorName);
-            log.setWarehouseLocation(stock != null ? stock.getLocation() : null);
-            log.setRemark(reason);
-            log.setOutboundTime(LocalDateTime.now());
-            log.setCreateTime(LocalDateTime.now());
-            log.setDeleteFlag(0);
-            materialOutboundLogMapper.insert(log);
-
-            // 同步更新 t_material_stock.last_outbound_date
-            MaterialStock toUpdate = new MaterialStock();
-            toUpdate.setId(stockId);
-            toUpdate.setLastOutboundDate(LocalDateTime.now());
-            materialStockService.updateById(toUpdate);
-        } catch (Exception e) {
-            // 日志写入失败不影响出库主流程
-            org.slf4j.LoggerFactory.getLogger(getClass()).warn("写出库日志失败: {}", e.getMessage());
-        }
-
-        return Result.success(null);
+    public Result<Map<String, String>> manualOutbound(@RequestBody ManualOutboundRequest body) {
+        String outboundNo = materialStockOrchestrator.manualOutbound(
+                body.getStockId(),
+                body.getQuantity(),
+                body.getReason(),
+                body.getOrderNo(),
+                body.getStyleNo(),
+                body.getFactoryId(),
+                body.getFactoryName(),
+                body.getFactoryType(),
+                body.getReceiverId(),
+                body.getReceiverName(),
+                body.getPickupType(),
+                body.getUsageType());
+        return Result.success(Map.of("outboundNo", outboundNo));
     }
 
     /**
@@ -280,5 +249,116 @@ public class MaterialStockController {
                 Objects.toString(materialCode, ""),
                 Objects.toString(color, ""),
                 Objects.toString(size, ""));
+    }
+
+    public static class ManualOutboundRequest {
+        private String stockId;
+        private Integer quantity;
+        private String reason;
+        private String orderNo;
+        private String styleNo;
+        private String factoryId;
+        private String factoryName;
+        private String factoryType;
+        private String receiverId;
+        private String receiverName;
+        private String pickupType;
+        private String usageType;
+
+        public String getStockId() {
+            return stockId;
+        }
+
+        public void setStockId(String stockId) {
+            this.stockId = stockId;
+        }
+
+        public Integer getQuantity() {
+            return quantity;
+        }
+
+        public void setQuantity(Integer quantity) {
+            this.quantity = quantity;
+        }
+
+        public String getReason() {
+            return reason;
+        }
+
+        public void setReason(String reason) {
+            this.reason = reason;
+        }
+
+        public String getOrderNo() {
+            return orderNo;
+        }
+
+        public void setOrderNo(String orderNo) {
+            this.orderNo = orderNo;
+        }
+
+        public String getStyleNo() {
+            return styleNo;
+        }
+
+        public void setStyleNo(String styleNo) {
+            this.styleNo = styleNo;
+        }
+
+        public String getFactoryId() {
+            return factoryId;
+        }
+
+        public void setFactoryId(String factoryId) {
+            this.factoryId = factoryId;
+        }
+
+        public String getFactoryName() {
+            return factoryName;
+        }
+
+        public void setFactoryName(String factoryName) {
+            this.factoryName = factoryName;
+        }
+
+        public String getFactoryType() {
+            return factoryType;
+        }
+
+        public void setFactoryType(String factoryType) {
+            this.factoryType = factoryType;
+        }
+
+        public String getReceiverId() {
+            return receiverId;
+        }
+
+        public void setReceiverId(String receiverId) {
+            this.receiverId = receiverId;
+        }
+
+        public String getReceiverName() {
+            return receiverName;
+        }
+
+        public void setReceiverName(String receiverName) {
+            this.receiverName = receiverName;
+        }
+
+        public String getPickupType() {
+            return pickupType;
+        }
+
+        public void setPickupType(String pickupType) {
+            this.pickupType = pickupType;
+        }
+
+        public String getUsageType() {
+            return usageType;
+        }
+
+        public void setUsageType(String usageType) {
+            this.usageType = usageType;
+        }
     }
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Alert, App, Button, Col, Form, Image, Input, InputNumber, Popover, Row, Select, Space, Tag, Tooltip, Upload } from 'antd';
-import { CameraOutlined, PaperClipOutlined, PlusOutlined } from '@ant-design/icons';
+import { CameraOutlined, PaperClipOutlined, PlusOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
@@ -12,15 +12,45 @@ import { downloadFile, getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { useViewport } from '@/utils/useViewport';
 import { formatDateTime } from '@/utils/datetime';
 import { useModal } from '@/hooks';
+import { useAuth } from '@/utils/AuthContext';
 import type { ColumnsType } from 'antd/es/table';
 
 const { Option } = Select;
+
+const helpTooltipStyles = {
+  root: { maxWidth: 320, zIndex: 4000 },
+  body: {
+    color: 'var(--neutral-text)',
+    background: 'var(--component-bg, #ffffff)',
+    border: '1px solid var(--neutral-border, #d9d9d9)',
+    boxShadow: '0 10px 28px rgba(15, 23, 42, 0.18)',
+  },
+} as const;
+
+const renderFieldLabel = (label: string, tooltip?: string) => {
+  if (!tooltip) return label;
+  return (
+    <Space size={4}>
+      <span>{label}</span>
+      <Tooltip title={tooltip} styles={helpTooltipStyles}>
+        <QuestionCircleOutlined style={{ color: 'var(--text-secondary, #8c8c8c)', cursor: 'help' }} />
+      </Tooltip>
+    </Space>
+  );
+};
+
+const getCurrentDateTimeText = () => {
+  const now = new Date();
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+};
 
 interface SecondaryProcess {
   id?: number | string;
   styleId?: number | string;
   processType?: string;
   processName?: string;
+  description?: string;
   quantity?: number;
   unitPrice?: number;
   totalPrice?: number;
@@ -192,10 +222,12 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
 }) => {
   const { message, modal } = App.useApp();
   const { isMobile, modalWidth } = useViewport();
+  const { user } = useAuth();
   const processModal = useModal<SecondaryProcess>();
   const [dataSource, setDataSource] = useState<SecondaryProcess[]>([]);
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
+  const currentOperatorName = String(user?.name || user?.username || secondaryAssignee || '').trim();
 
   // 状态选项
   const statusOptions = [
@@ -232,7 +264,6 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
     fetchData();
   }, [styleId]);
 
-  // 未开始时不允许编辑
   const notStarted = !secondaryStartTime && !secondaryCompletedTime;
 
   // 无二次工艺处理
@@ -242,7 +273,6 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
       return;
     }
     try {
-      // 使用统一 stage-action 端点（stage=secondary&action=skip）
       await api.post(`/style/info/${styleId}/stage-action?stage=secondary&action=skip`);
       message.success('已标记为无二次工艺');
       if (onRefresh) onRefresh();
@@ -258,7 +288,9 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
     form.setFieldsValue({
       processType: '二次工艺', // 默认工艺类型为"二次工艺"
       status: 'pending',
-      quantity: sampleQuantity || 0 // 自动填充样衣数量
+      quantity: sampleQuantity || 0,
+      assignee: currentOperatorName || undefined,
+      completedTime: undefined,
     });
   };
 
@@ -267,6 +299,7 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
     processModal.open(record);
     form.setFieldsValue({
       ...record,
+      assignee: record.assignee || currentOperatorName || undefined,
       totalPrice: record.quantity && record.unitPrice
         ? toNumberSafe(record.quantity) * toNumberSafe(record.unitPrice)
         : 0
@@ -276,7 +309,10 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
   // 查看
   const handleView = (record: SecondaryProcess) => {
     processModal.open(record);
-    form.setFieldsValue(record);
+    form.setFieldsValue({
+      ...record,
+      assignee: record.assignee || currentOperatorName || undefined,
+    });
   };
 
   // 删除
@@ -301,9 +337,16 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
+      const normalizedStatus = String(values.status || 'pending').trim().toLowerCase();
+      const assignee = String(processModal.data?.assignee || values.assignee || currentOperatorName || '').trim() || undefined;
+      const completedTime = normalizedStatus === 'completed'
+        ? String(processModal.data?.completedTime || values.completedTime || '').trim() || getCurrentDateTimeText()
+        : null;
       const data = {
         ...values,
-        styleId
+        styleId,
+        assignee,
+        completedTime,
       };
 
       if (processModal.data?.id) {
@@ -356,6 +399,14 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
       dataIndex: 'processName',
       key: 'processName',
       width: 140,
+      ellipsis: true,
+      render: (text: string) => text || '-'
+    },
+    {
+      title: '工艺描述',
+      dataIndex: 'description',
+      key: 'description',
+      width: 180,
       ellipsis: true,
       render: (text: string) => text || '-'
     },
@@ -547,10 +598,9 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
 
             <Col xs={24} sm={12}>
               <Form.Item
-                label="工艺名称"
+                label={renderFieldLabel('工艺名称', '具体的工艺描述')}
                 name="processName"
                 rules={[{ required: true, message: '请输入工艺名称' }]}
-                tooltip="具体的工艺描述"
               >
                 <DictAutoComplete
                   dictType="process_name"
@@ -559,15 +609,27 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
                 />
               </Form.Item>
             </Col>
+
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="工艺描述"
+                name="description"
+              >
+                <DictAutoComplete
+                  dictType="process_description"
+                  autoCollect
+                  placeholder="请输入工艺描述"
+                />
+              </Form.Item>
+            </Col>
           </Row>
 
           <Row gutter={16}>
             <Col xs={24} sm={8}>
               <Form.Item
-                label="数量"
+                label={renderFieldLabel('数量', '新建时自动填充为样衣数量，可手动修改')}
                 name="quantity"
                 rules={[{ required: true, message: '请输入数量' }]}
-                tooltip="新建时自动填充为样衣数量，可手动修改"
               >
                 <InputNumber
                   placeholder="请输入数量"
@@ -622,6 +684,12 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
               <Form.Item name="factoryContactPhone" hidden>
                 <Input />
               </Form.Item>
+              <Form.Item name="assignee" hidden>
+                <Input />
+              </Form.Item>
+              <Form.Item name="completedTime" hidden>
+                <Input />
+              </Form.Item>
               <Form.Item
                 label="加工厂"
                 name="factoryName"
@@ -645,27 +713,10 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
           <Row gutter={16}>
             <Col xs={24} sm={8}>
               <Form.Item
-                label="领取人"
-                name="assignee"
-              >
-                <Input id="assignee" placeholder="请输入领取人姓名" />
-              </Form.Item>
-            </Col>
-
-            <Col xs={24} sm={8}>
-              <Form.Item
-                label="完成时间"
-                name="completedTime"
-              >
-                <Input id="completedTime" placeholder="例如：2026-01-28 14:30:00" />
-              </Form.Item>
-            </Col>
-
-            <Col xs={24} sm={8}>
-              <Form.Item
                 label="状态"
                 name="status"
                 rules={[{ required: true, message: '请选择状态' }]}
+                extra="领取人与完成时间由系统按当前操作人和完成动作自动记录"
               >
                 <Select id="status" placeholder="请选择状态">
                   {statusOptions.map(opt => (

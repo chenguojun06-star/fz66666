@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { App, Button, Input, InputNumber, Space, Tag } from 'antd';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
+import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 
 interface StyleColorSizeTableProps {
   // 码数状态
@@ -419,7 +420,7 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                           }}
                         >
                           {row.imageUrl ? (
-                            <img src={row.imageUrl} alt={row.color} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <img src={getFullAuthedFileUrl(row.imageUrl)} alt={row.color} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           ) : (
                             <span style={{ fontSize: 11, color: '#94a3b8' }}>图</span>
                           )}

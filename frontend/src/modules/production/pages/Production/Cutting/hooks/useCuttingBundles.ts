@@ -32,6 +32,13 @@ interface CuttingQueryParams {
   pageSize: number;
 }
 
+type EntryOrderLine = {
+  color: string;
+  size: string;
+  quantity: number;
+  skuNo?: string;
+};
+
 interface UseCuttingBundlesOptions {
   message: any;
   modal: any;
@@ -81,6 +88,7 @@ export function useCuttingBundles({
   const [entryOrderDetailLoading, setEntryOrderDetailLoading] = useState(false);
   const [entryColorText, setEntryColorText] = useState('');
   const [entrySizeItems, setEntrySizeItems] = useState<Array<{ size: string; quantity: number }>>([]);
+  const [entryOrderLines, setEntryOrderLines] = useState<EntryOrderLine[]>([]);
 
   const activeOrderNo = useMemo(() => String((activeTask as unknown as any)?.productionOrderNo ?? '').trim(), [activeTask]);
 
@@ -335,10 +343,14 @@ export function useCuttingBundles({
   // 加载款式 BOM 纸样用量（sizeUsageMap）
   useEffect(() => {
     if (!isEntryPage) return;
-    const styleId = String((activeTask as unknown as any)?.styleId || '').trim();
+    const styleRef = String((activeTask as unknown as any)?.styleId || '').trim();
+    const styleNo = String((activeTask as unknown as any)?.styleNo || '').trim();
     const seq = (entryBomReqSeq.current += 1);
-    if (!styleId) { setEntrySizeUsageMap({}); return; }
-    void api.get<{ code: number; data: StyleBom[] }>(`/style/bom/list?styleId=${styleId}`)
+    const bomQuery = styleRef
+      ? (/^\d+$/.test(styleRef) ? `styleId=${styleRef}` : `styleNo=${encodeURIComponent(styleRef)}`)
+      : (styleNo ? `styleNo=${encodeURIComponent(styleNo)}` : '');
+    if (!bomQuery) { setEntrySizeUsageMap({}); return; }
+    void api.get<{ code: number; data: StyleBom[] }>(`/style/bom/list?${bomQuery}`)
       .then((res) => {
         if (seq !== entryBomReqSeq.current) return;
         if (res.code !== 200) { setEntrySizeUsageMap({}); return; }
@@ -385,11 +397,17 @@ export function useCuttingBundles({
   // 加载订单明细
   useEffect(() => {
     if (!isEntryPage) return;
-    const oid = String(orderId || (activeTask as unknown as any)?.productionOrderId || '').trim();
-    if (!oid) {
+    const detailKey = String(
+      orderId
+      || (activeTask as unknown as any)?.productionOrderId
+      || (activeTask as unknown as any)?.productionOrderNo
+      || ''
+    ).trim();
+    if (!detailKey) {
       setEntryOrderDetailLoading(false);
       setEntryColorText('');
       setEntrySizeItems([]);
+      setEntryOrderLines([]);
       return;
     }
 
@@ -397,7 +415,7 @@ export function useCuttingBundles({
     setEntryOrderDetailLoading(true);
     void (async () => {
       try {
-        const detail = await fetchProductionOrderDetail(oid, { acceptAnyData: false });
+        const detail = await fetchProductionOrderDetail(detailKey, { acceptAnyData: false });
         if (cancelled) return;
         const lines = detail ? parseProductionOrderLines(detail).slice() : [];
         lines.sort((a: any, b: any) => {
@@ -409,18 +427,20 @@ export function useCuttingBundles({
           }
           return compareSizeAsc(String(a?.size || ''), String(b?.size || ''));
         });
-        const activeColor = String((activeTask as unknown as any)?.color || '').trim();
         const uniqueColors = Array.from(
           new Set(lines.map((x: any) => String(x?.color || '').trim()).filter(Boolean))
         );
         const derivedColor = uniqueColors.length ? uniqueColors.join(' / ') : String((detail as any)?.color || '').trim();
-        setEntryColorText(activeColor || derivedColor);
+        setEntryColorText(derivedColor);
+        setEntryOrderLines(lines.map((line) => ({
+          color: String(line?.color || '').trim(),
+          size: String(line?.size || '').trim(),
+          quantity: Number(line?.quantity || 0) || 0,
+          skuNo: String(line?.skuNo || '').trim(),
+        })));
 
-        const filtered = activeColor
-          ? lines.filter((x: any) => String(x?.color || '').trim() === activeColor)
-          : lines;
         const sizeMap = new Map<string, number>();
-        for (const l of filtered) {
+        for (const l of lines) {
           const size = String((l as any)?.size || '').trim();
           if (!size) continue;
           const qty = Number((l as any)?.quantity ?? 0) || 0;
@@ -434,13 +454,14 @@ export function useCuttingBundles({
         if (cancelled) return;
         setEntryColorText('');
         setEntrySizeItems([]);
+        setEntryOrderLines([]);
       } finally {
         if (!cancelled) setEntryOrderDetailLoading(false);
       }
     })();
 
     return () => { cancelled = true; };
-  }, [isEntryPage, orderId, activeTask?.id, (activeTask as unknown as any)?.color]);
+  }, [isEntryPage, orderId, activeTask?.id, (activeTask as unknown as any)?.productionOrderId, (activeTask as unknown as any)?.productionOrderNo]);
 
   // 滚动到编辑区域
   useEffect(() => {
@@ -471,13 +492,15 @@ export function useCuttingBundles({
     // 面辅料采购
     entryPurchaseLoading, entryPurchases,
     // 订单明细
-    entryOrderDetailLoading, entryColorText, entrySizeItems,
+    entryOrderDetailLoading, entryColorText, entrySizeItems, entryOrderLines,
     // 纸样用量
     entrySizeUsageMap,
     // 主面料已到货量（m），由采购记录汇总
     entryMainFabricArrived: entryPurchases
       .filter((p: any) => String((p as any)?.materialType || '').startsWith('fabric'))
-      .reduce((sum: number, p: any) => sum + (Number((p as any).arrivedQuantity) || 0), 0),
+      .reduce((sum: number, p: any) => sum + (Number((p as any)?.returnConfirmed || 0) === 1
+        ? (Number((p as any)?.returnQuantity) || 0)
+        : 0), 0),
   };
 }
 

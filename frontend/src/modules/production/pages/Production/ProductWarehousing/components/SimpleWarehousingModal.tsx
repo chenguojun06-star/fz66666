@@ -1,6 +1,6 @@
 import React from 'react';
 import { Form, Input, Row, Col } from 'antd';
-import ResizableModal from '@/components/common/ResizableModal';
+import SmallModal from '@/components/common/SmallModal';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 
 interface SimpleWarehousingModalProps {
@@ -35,7 +35,7 @@ const SimpleWarehousingModal: React.FC<SimpleWarehousingModalProps> = ({
   width: _width,
 }) => {
   return (
-    <ResizableModal
+    <SmallModal
       title="入库"
       open={open}
       onCancel={onClose}
@@ -43,10 +43,6 @@ const SimpleWarehousingModal: React.FC<SimpleWarehousingModalProps> = ({
       okText="入库"
       cancelText="取消"
       confirmLoading={loading}
-      width="30vw"
-      initialHeight={400}
-      autoFontSize={false}
-      destroyOnHidden
     >
       <Form layout="vertical">
         <Row gutter={16}>
@@ -93,7 +89,7 @@ const SimpleWarehousingModal: React.FC<SimpleWarehousingModalProps> = ({
           </Col>
         </Row>
       </Form>
-    </ResizableModal>
+    </SmallModal>
   );
 };
 

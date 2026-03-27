@@ -22,6 +22,8 @@ import { PrinterOutlined } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { WorkerEfficiencyItem } from '@/services/intelligence/intelligenceApi';
 import { readPageSize } from '@/utils/pageSizeStore';
+import { usePersistentSort } from '@/hooks/usePersistentSort';
+import { usePersistentState } from '@/hooks/usePersistentState';
 import * as XLSX from 'xlsx';
 
 // 工具函数：创建可排序的数字列配置
@@ -75,7 +77,7 @@ const createSortableTimeColumn = (
 const PayrollOperatorSummary: React.FC = () => {
     const { message } = App.useApp();
     const [searchParams] = useSearchParams();
-    const [activeTab, setActiveTab] = useState('detail');
+    const [activeTab, setActiveTab] = usePersistentState<string>('payroll-operator-active-tab', 'detail');
     const [orderNo, setOrderNo] = useState('');
     const [styleNo, setStyleNo] = useState('');
     const [operatorName, setOperatorName] = useState('');
@@ -132,10 +134,20 @@ const PayrollOperatorSummary: React.FC = () => {
         });
     };
 
-    const [sortField, setSortField] = useState<string>('totalAmount'); // 当前排序字段
-    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc'); // 排序方向
-    const [detailSortField, setDetailSortField] = useState<string>('startTime'); // 明细表排序字段
-    const [detailSortOrder, setDetailSortOrder] = useState<'asc' | 'desc'>('desc'); // 明细表排序方向
+    const { sortField, sortOrder, handleSort } = usePersistentSort<string, 'asc' | 'desc'>({
+        storageKey: 'payroll-operator-summary',
+        defaultField: 'totalAmount',
+        defaultOrder: 'desc',
+    });
+    const {
+        sortField: detailSortField,
+        sortOrder: detailSortOrder,
+        handleSort: handleDetailSort,
+    } = usePersistentSort<string, 'asc' | 'desc'>({
+        storageKey: 'payroll-operator-detail',
+        defaultField: 'startTime',
+        defaultOrder: 'desc',
+    });
 
     const toNumberOrZero = (v: unknown) => {
         const n = typeof v === 'number' ? v : Number(v);
@@ -534,18 +546,6 @@ const PayrollOperatorSummary: React.FC = () => {
             console.error('批量终审失败:', error);
             message.error(error?.message || '批量终审失败，请稍后重试');
         }
-    };
-
-    // 排序回调函数
-    const handleSort = (field: string, order: 'asc' | 'desc') => {
-        setSortField(field);
-        setSortOrder(order);
-    };
-
-    // 明细表排序回调函数
-    const handleDetailSort = (field: string, order: 'asc' | 'desc') => {
-        setDetailSortField(field);
-        setDetailSortOrder(order);
     };
 
     // 工资汇总表格列定义

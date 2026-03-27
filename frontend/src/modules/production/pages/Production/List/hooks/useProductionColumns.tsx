@@ -247,12 +247,12 @@ export function useProductionColumns({
       align: 'right' as const,
     },
     {
-      title: '单价',
-      key: 'quotationUnitPrice',
+      title: '下单单价',
+      key: 'factoryUnitPrice',
       width: 90,
       align: 'right' as const,
       render: (_: any, record: any) => {
-        const v = Number(record?.quotationUnitPrice);
+        const v = Number(record?.factoryUnitPrice);
         return (Number.isFinite(v) && v > 0)
           ? <span style={{ color: '#1677ff', fontWeight: 500 }}>¥{v.toFixed(2)}</span>
           : <span style={{ color: '#bfbfbf' }}>-</span>;
@@ -723,7 +723,7 @@ export function useProductionColumns({
               {
                 key: 'share',
                 label: '🔗 分享',
-                title: '生成客户查看链接（1小时有效）',
+                title: '生成客户查看链接（30天有效）',
                 onClick: () => handleShareOrder(record),
               },
             ]}

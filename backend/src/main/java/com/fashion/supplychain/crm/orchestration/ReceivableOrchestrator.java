@@ -7,6 +7,7 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.crm.entity.Customer;
 import com.fashion.supplychain.crm.entity.Receivable;
+import com.fashion.supplychain.crm.entity.ReceivableReceiptLog;
 import com.fashion.supplychain.crm.service.CustomerService;
 import com.fashion.supplychain.crm.service.ReceivableService;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +38,9 @@ public class ReceivableOrchestrator {
     @Autowired
     private CustomerService customerService;
 
+    @Autowired
+    private ReceivableReceiptOrchestrator receivableReceiptOrchestrator;
+
     private static final DateTimeFormatter NO_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     // ─── 查询 ────────────────────────────────────────────────────────────────
@@ -46,6 +50,9 @@ public class ReceivableOrchestrator {
         int pageSize  = parseInt(params.get("pageSize"), 20);
         String customerId = (String) params.get("customerId");
         String status     = (String) params.get("status");
+        String keyword = strOf(params.get("keyword"));
+        String sourceBizType = strOf(params.get("sourceBizType"));
+        String sourceBizNo = strOf(params.get("sourceBizNo"));
 
         Long tenantId = UserContext.tenantId();
 
@@ -54,6 +61,13 @@ public class ReceivableOrchestrator {
                 .eq(tenantId != null, Receivable::getTenantId, tenantId)
                 .eq(StringUtils.hasText(customerId), Receivable::getCustomerId, customerId)
                 .eq(StringUtils.hasText(status), Receivable::getStatus, status)
+                .eq(StringUtils.hasText(sourceBizType), Receivable::getSourceBizType, sourceBizType)
+                .like(StringUtils.hasText(sourceBizNo), Receivable::getSourceBizNo, sourceBizNo)
+                .and(StringUtils.hasText(keyword), q -> q
+                        .like(Receivable::getReceivableNo, keyword)
+                        .or().like(Receivable::getCustomerName, keyword)
+                        .or().like(Receivable::getOrderNo, keyword)
+                        .or().like(Receivable::getSourceBizNo, keyword))
                 .orderByDesc(Receivable::getCreateTime);
 
         return receivableService.page(new Page<>(page, pageSize), qw);
@@ -61,6 +75,18 @@ public class ReceivableOrchestrator {
 
     public Receivable getById(String id) {
         return receivableService.getById(id);
+    }
+
+    public Map<String, Object> getDetail(String id) {
+        Receivable receivable = getById(id);
+        if (receivable == null) {
+            throw new RuntimeException("应收单不存在");
+        }
+        List<ReceivableReceiptLog> receiptLogs = receivableReceiptOrchestrator.listByReceivableId(id);
+        Map<String, Object> result = new HashMap<>();
+        result.put("receivable", receivable);
+        result.put("receiptLogs", receiptLogs);
+        return result;
     }
 
     /**
@@ -158,6 +184,11 @@ public class ReceivableOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public Receivable markReceived(String id, BigDecimal paymentAmount) {
+        return markReceived(id, paymentAmount, null);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Receivable markReceived(String id, BigDecimal paymentAmount, String remark) {
         TenantAssert.assertTenantContext();
         Receivable r = receivableService.getById(id);
         if (r == null) throw new RuntimeException("应收单不存在");
@@ -174,6 +205,7 @@ public class ReceivableOrchestrator {
         }
 
         receivableService.updateById(r);
+        receivableReceiptOrchestrator.recordReceipt(r, paymentAmount, remark);
         log.info("[ReceivableOrchestrator] 应收单 {} 登记到账 {}，状态更新为 {}", id, paymentAmount, r.getStatus());
         return r;
     }
@@ -213,5 +245,13 @@ public class ReceivableOrchestrator {
     private int parseInt(Object val, int def) {
         if (val == null) return def;
         try { return Integer.parseInt(val.toString()); } catch (Exception e) { return def; }
+    }
+
+    private String strOf(Object val) {
+        if (val == null) {
+            return null;
+        }
+        String text = String.valueOf(val).trim();
+        return text.isEmpty() ? null : text;
     }
 }

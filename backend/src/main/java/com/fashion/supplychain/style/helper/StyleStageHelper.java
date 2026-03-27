@@ -1,7 +1,12 @@
 package com.fashion.supplychain.style.helper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.production.entity.PatternProduction;
+import com.fashion.supplychain.production.service.PatternProductionService;
+import com.fashion.supplychain.stock.entity.SampleStock;
+import com.fashion.supplychain.stock.mapper.SampleStockMapper;
 import com.fashion.supplychain.style.entity.SecondaryProcess;
 import com.fashion.supplychain.style.entity.StyleAttachment;
 import com.fashion.supplychain.style.entity.StyleBom;
@@ -12,7 +17,6 @@ import com.fashion.supplychain.style.service.StyleBomService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.template.orchestration.TemplateLibraryOrchestrator;
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -49,6 +53,12 @@ public class StyleStageHelper {
     @Autowired
     private TemplateLibraryOrchestrator templateLibraryOrchestrator;
 
+    @Autowired
+    private PatternProductionService patternProductionService;
+
+    @Autowired
+    private SampleStockMapper sampleStockMapper;
+
     // ==================== Production Requirements ====================
 
     public boolean updateProductionRequirements(Long id, Map<String, Object> body) {
@@ -57,21 +67,22 @@ public class StyleStageHelper {
             throw new NoSuchElementException("款号不存在");
         }
 
-        // 锁定检查：必须被管理员退回（descriptionLocked=0）才允许编辑
-        Integer locked = current.getDescriptionLocked();
-        if (locked == null || locked == 1) {
-            throw new IllegalStateException("生产制单已锁定，请联系管理员退回后编辑");
-        }
-
         String desc = body == null ? null
                 : (body.get("description") == null ? null : String.valueOf(body.get("description")));
+        LocalDateTime now = LocalDateTime.now();
+        String currentUser = UserContext.username();
         boolean ok = styleInfoService.lambdaUpdate()
                 .eq(StyleInfo::getId, id)
                 .set(StyleInfo::getDescription, desc)
-                .set(StyleInfo::getDescriptionLocked, 1)           // 保存后自动重新锁定
-                .set(StyleInfo::getDescriptionReturnComment, null) // 清除退回备注
-                .set(StyleInfo::getUpdateTime, LocalDateTime.now())
-                .set(StyleInfo::getUpdateBy, UserContext.username())
+                .set(StyleInfo::getDescriptionLocked, 0)
+                .set(StyleInfo::getDescriptionReturnComment, null)
+                .set(StyleInfo::getDescriptionReturnBy, null)
+                .set(StyleInfo::getDescriptionReturnTime, null)
+                .set(current.getProductionStartTime() == null, StyleInfo::getProductionStartTime, now)
+                .set(!StringUtils.hasText(current.getProductionAssignee()), StyleInfo::getProductionAssignee, currentUser)
+                .set(current.getProductionCompletedTime() != null, StyleInfo::getProductionCompletedTime, null)
+                .set(StyleInfo::getUpdateTime, now)
+                .set(StyleInfo::getUpdateBy, currentUser)
                 .update();
 
         if (ok) {
@@ -332,6 +343,7 @@ public class StyleStageHelper {
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
+        ensureStyleFullyCompletedBeforeMaintenance(current);
         Object reasonValue = body == null ? null : body.get("reason");
         String reason = reasonValue == null ? "" : String.valueOf(reasonValue).trim();
         String remark = StringUtils.hasText(reason) ? reason : "";
@@ -348,6 +360,8 @@ public class StyleStageHelper {
                 .set(StyleInfo::getSampleCompletedTime, null)
                 // 维护后允许再次推送：清除推送标志
                 .set(StyleInfo::getOrderType, null)
+                .set(StyleInfo::getPushedToOrder, 0)
+                .set(StyleInfo::getPushedToOrderTime, null)
                 .set(StyleInfo::getUpdateTime, LocalDateTime.now())
                 .update();
         if (ok) {
@@ -445,36 +459,12 @@ public class StyleStageHelper {
             log.info("样衣完成兜底：自动完成BOM配置");
         }
 
-        // 2. 纸样开发
-        if (current.getPatternCompletedTime() == null) {
-            updateChain.set(StyleInfo::getPatternStatus, "COMPLETED")
-                      .set(StyleInfo::getPatternAssignee, currentUser)
-                      .set(StyleInfo::getPatternCompletedTime, now);
-            log.info("样衣完成兜底：自动完成纸样开发");
-        }
-
-        // 3. 尺寸表
-        if (current.getSizeCompletedTime() == null) {
-            updateChain.set(StyleInfo::getSizeAssignee, currentUser)
-                      .set(StyleInfo::getSizeStartTime, current.getSizeStartTime() != null ? current.getSizeStartTime() : now)
-                      .set(StyleInfo::getSizeCompletedTime, now);
-            log.info("样衣完成兜底：自动完成尺寸表");
-        }
-
         // 4. 工序配置
         if (current.getProcessCompletedTime() == null) {
             updateChain.set(StyleInfo::getProcessAssignee, currentUser)
                       .set(StyleInfo::getProcessStartTime, current.getProcessStartTime() != null ? current.getProcessStartTime() : now)
                       .set(StyleInfo::getProcessCompletedTime, now);
             log.info("样衣完成兜底：自动完成工序配置");
-        }
-
-        // 5. 生产制单（样板生产）
-        if (current.getProductionCompletedTime() == null) {
-            updateChain.set(StyleInfo::getProductionAssignee, currentUser)
-                      .set(StyleInfo::getProductionStartTime, current.getProductionStartTime() != null ? current.getProductionStartTime() : now)
-                      .set(StyleInfo::getProductionCompletedTime, now);
-            log.info("样衣完成兜底：自动完成生产制单");
         }
 
         // 6. 二次工艺
@@ -494,8 +484,8 @@ public class StyleStageHelper {
         boolean ok = updateChain.update();
 
         if (ok) {
-            styleLogHelper.saveSampleLog(id, "SAMPLE_COMPLETED", "点击样衣完成（含兜底逻辑）");
-            log.info("样衣完成成功：styleId={}, 已自动补全所有未完成步骤", id);
+            styleLogHelper.saveSampleLog(id, "SAMPLE_COMPLETED", "点击样衣完成");
+            log.info("样衣完成成功：styleId={}, 保持纸样开发/尺寸表/生产制单独立状态", id);
 
             // [修改于2026-03-09]: 根据最新业务逻辑，不再在这里自动推送到单价维护或资料中心
             // 这些流转操作已移动到 "推送到下单" (OrderManagementOrchestrator.createFromStyle) 时手动触发
@@ -512,6 +502,7 @@ public class StyleStageHelper {
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
+        ensureStyleFullyCompletedBeforeMaintenance(current);
         Object reasonValue = body == null ? null : body.get("reason");
         String reason = reasonValue == null ? "" : String.valueOf(reasonValue).trim();
         String remark = StringUtils.hasText(reason) ? reason : "";
@@ -525,6 +516,8 @@ public class StyleStageHelper {
                 .set(StyleInfo::getSampleCompletedTime, null)
                 // 维护后允许再次推送：清除推送标志（orderType存储跨单员和已推送展示）
                 .set(StyleInfo::getOrderType, null)
+                .set(StyleInfo::getPushedToOrder, 0)
+                .set(StyleInfo::getPushedToOrderTime, null)
                 .set(StyleInfo::getUpdateTime, LocalDateTime.now())
                 .update();
         if (ok) {
@@ -943,6 +936,83 @@ public class StyleStageHelper {
     }
 
     // ==================== Utility ====================
+
+    private void ensureStyleFullyCompletedBeforeMaintenance(StyleInfo current) {
+        if (!isStyleFullyCompleted(current)) {
+            throw new IllegalStateException("只有款式全部完成后，再次修改才算维护");
+        }
+    }
+
+    private boolean isStyleFullyCompleted(StyleInfo current) {
+        if (current == null) {
+            return false;
+        }
+
+        boolean developmentCompleted = current.getBomCompletedTime() != null
+                && current.getSizeCompletedTime() != null
+                && current.getProcessCompletedTime() != null
+                && current.getProductionCompletedTime() != null;
+        boolean patternCompleted = current.getPatternCompletedTime() != null || isCompleted(current.getPatternStatus());
+        boolean sampleCompleted = current.getSampleCompletedTime() != null || isCompleted(current.getSampleStatus());
+
+        boolean hasSizePriceStage = current.getSizePriceStartTime() != null
+                || current.getSizePriceCompletedTime() != null
+                || StringUtils.hasText(current.getSizePriceAssignee());
+        boolean sizePriceCompleted = !hasSizePriceStage || current.getSizePriceCompletedTime() != null;
+
+        boolean hasSecondaryStage = current.getSecondaryStartTime() != null
+                || current.getSecondaryCompletedTime() != null
+                || StringUtils.hasText(current.getSecondaryAssignee())
+                || String.valueOf(current.getProgressNode() == null ? "" : current.getProgressNode()).contains("二次工艺");
+        boolean secondaryCompleted = !hasSecondaryStage || current.getSecondaryCompletedTime() != null;
+
+        boolean reviewPassed = isPassedReview(current.getSampleReviewStatus());
+        boolean inboundCompleted = isInboundCompleted(current);
+
+        return developmentCompleted
+                && patternCompleted
+                && sizePriceCompleted
+                && secondaryCompleted
+                && sampleCompleted
+                && reviewPassed
+                && inboundCompleted;
+    }
+
+    private boolean isPassedReview(String reviewStatus) {
+        String normalized = String.valueOf(reviewStatus == null ? "" : reviewStatus).trim().toUpperCase();
+        return "PASS".equals(normalized) || "APPROVED".equals(normalized);
+    }
+
+    private boolean isInboundCompleted(StyleInfo current) {
+        if (current == null || current.getId() == null) {
+            return false;
+        }
+
+        String styleId = String.valueOf(current.getId());
+        String color = current.getColor();
+        PatternProduction latestPattern = patternProductionService.lambdaQuery()
+                .eq(PatternProduction::getStyleId, styleId)
+                .eq(StringUtils.hasText(color), PatternProduction::getColor, color)
+                .eq(PatternProduction::getDeleteFlag, 0)
+                .orderByDesc(PatternProduction::getUpdateTime)
+                .orderByDesc(PatternProduction::getCreateTime)
+                .last("limit 1")
+                .one();
+        if (latestPattern != null && "COMPLETED".equalsIgnoreCase(String.valueOf(latestPattern.getStatus()).trim())) {
+            return true;
+        }
+
+        QueryWrapper<SampleStock> stockQuery = new QueryWrapper<SampleStock>()
+                .eq("sample_type", "development")
+                .eq("delete_flag", 0)
+                .and(wrapper -> wrapper.eq("style_id", styleId)
+                        .or()
+                        .eq(StringUtils.hasText(current.getStyleNo()), "style_no", current.getStyleNo()));
+        if (StringUtils.hasText(color)) {
+            stockQuery.eq("color", color);
+        }
+        return sampleStockMapper.selectCount(stockQuery) > 0;
+    }
 
     private boolean isCompleted(String status) {
         String s = String.valueOf(status == null ? "" : status).trim();

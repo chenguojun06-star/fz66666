@@ -40,6 +40,7 @@ interface PurchaseModalProps {
   onReceive: (record: MaterialPurchaseType) => void;
   onConfirmReturn: (record: MaterialPurchaseType) => void;
   onReturnReset: (record: MaterialPurchaseType) => void;
+  onQualityIssue: (record: MaterialPurchaseType) => void;
   onReceiveAll: () => void;
   onBatchReturn: () => void;
   isSamplePurchase: boolean;
@@ -76,6 +77,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
   onReceive,
   onConfirmReturn,
   onReturnReset,
+  onQualityIssue,
   onReceiveAll,
   onBatchReturn,
   isSamplePurchase,
@@ -198,6 +200,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
           onReceive={onReceive}
           onConfirmReturn={onConfirmReturn}
           onReturnReset={onReturnReset}
+          onQualityIssue={onQualityIssue}
           onReceiveAll={onReceiveAll}
           onBatchReturn={onBatchReturn}
           isSamplePurchase={isSamplePurchase}

@@ -26,7 +26,7 @@ export interface StatCard {
   onClick?: () => void;
   /** 选中时的高亮颜色（如 '#2D7FF9' 或 'var(--color-primary)'），仅在可点击时生效 */
   activeColor?: string;
-  /** @deprecated 不再使用，已改用基于 activeColor 的半透明背景以适配深浅主题 */
+  /** 选中时的背景色 */
   activeBg?: string;
 }
 
@@ -78,14 +78,12 @@ const BORDER_COLOR = 'var(--border-color)';
  *       ],
  *       onClick: () => setFilter('all'),
  *       activeColor: 'var(--color-primary)',
- *       activeBg: 'rgba(45, 127, 249, 0.1)',
  *     },
  *     {
  *       key: 'pending',
  *       items: { label: '待处理', value: 23, unit: '个', color: 'var(--color-warning)' },
  *       onClick: () => setFilter('pending'),
  *       activeColor: 'var(--color-warning)',
- *       activeBg: '#fff7e6',
  *     },
  *   ]}
  * />

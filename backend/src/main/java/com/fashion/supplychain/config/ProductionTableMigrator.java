@@ -359,13 +359,13 @@ public class ProductionTableMigrator {
             dbHelper.execSilently("ALTER TABLE t_cutting_bundle ADD COLUMN operator_name VARCHAR(100) DEFAULT NULL COMMENT '操作人姓名'");
         }
         if (!dbHelper.columnExists("t_cutting_bundle", "root_bundle_id")) {
-            dbHelper.execSilently("ALTER TABLE t_cutting_bundle ADD COLUMN root_bundle_id VARCHAR(32) NULL COMMENT '主菲号ID'");
+            dbHelper.execSilently("ALTER TABLE t_cutting_bundle ADD COLUMN root_bundle_id VARCHAR(64) NULL COMMENT '主菲号ID'");
         }
         if (!dbHelper.columnExists("t_cutting_bundle", "parent_bundle_id")) {
-            dbHelper.execSilently("ALTER TABLE t_cutting_bundle ADD COLUMN parent_bundle_id VARCHAR(32) NULL COMMENT '父菲号ID'");
+            dbHelper.execSilently("ALTER TABLE t_cutting_bundle ADD COLUMN parent_bundle_id VARCHAR(64) NULL COMMENT '父菲号ID'");
         }
         if (!dbHelper.columnExists("t_cutting_bundle", "source_bundle_id")) {
-            dbHelper.execSilently("ALTER TABLE t_cutting_bundle ADD COLUMN source_bundle_id VARCHAR(32) NULL COMMENT '拆分来源菲号ID'");
+            dbHelper.execSilently("ALTER TABLE t_cutting_bundle ADD COLUMN source_bundle_id VARCHAR(64) NULL COMMENT '拆分来源菲号ID'");
         }
         if (!dbHelper.columnExists("t_cutting_bundle", "bundle_label")) {
             dbHelper.execSilently("ALTER TABLE t_cutting_bundle ADD COLUMN bundle_label VARCHAR(64) NULL COMMENT '执行菲号标签'");
@@ -376,6 +376,9 @@ public class ProductionTableMigrator {
         if (!dbHelper.columnExists("t_cutting_bundle", "split_seq")) {
             dbHelper.execSilently("ALTER TABLE t_cutting_bundle ADD COLUMN split_seq INT NOT NULL DEFAULT 0 COMMENT '拆分序号'");
         }
+        dbHelper.execSilently("ALTER TABLE t_cutting_bundle MODIFY COLUMN root_bundle_id VARCHAR(64) NULL COMMENT '主菲号ID'");
+        dbHelper.execSilently("ALTER TABLE t_cutting_bundle MODIFY COLUMN parent_bundle_id VARCHAR(64) NULL COMMENT '父菲号ID'");
+        dbHelper.execSilently("ALTER TABLE t_cutting_bundle MODIFY COLUMN source_bundle_id VARCHAR(64) NULL COMMENT '拆分来源菲号ID'");
         dbHelper.execSilently(
                 "UPDATE t_cutting_bundle cb "
                         + "JOIN t_production_order po ON ("
@@ -396,24 +399,24 @@ public class ProductionTableMigrator {
     private void ensureCuttingBundleSplitLogTable() {
         if (!dbHelper.tableExists("t_cutting_bundle_split_log")) {
             dbHelper.execSilently("CREATE TABLE t_cutting_bundle_split_log ("
-                    + "id VARCHAR(32) NOT NULL PRIMARY KEY, "
+                    + "id VARCHAR(64) NOT NULL PRIMARY KEY, "
                     + "tenant_id BIGINT DEFAULT NULL, "
-                    + "root_bundle_id VARCHAR(32) NOT NULL, "
-                    + "source_bundle_id VARCHAR(32) NOT NULL, "
+                    + "root_bundle_id VARCHAR(64) NOT NULL, "
+                    + "source_bundle_id VARCHAR(64) NOT NULL, "
                     + "source_bundle_no INT DEFAULT NULL, "
                     + "source_bundle_label VARCHAR(64) DEFAULT NULL, "
                     + "source_quantity INT NOT NULL, "
                     + "completed_quantity INT NOT NULL, "
                     + "transfer_quantity INT NOT NULL, "
                     + "current_process_name VARCHAR(64) NOT NULL, "
-                    + "from_worker_id VARCHAR(32) DEFAULT NULL, "
+                    + "from_worker_id VARCHAR(64) DEFAULT NULL, "
                     + "from_worker_name VARCHAR(100) DEFAULT NULL, "
-                    + "to_worker_id VARCHAR(32) DEFAULT NULL, "
+                    + "to_worker_id VARCHAR(64) DEFAULT NULL, "
                     + "to_worker_name VARCHAR(100) DEFAULT NULL, "
                     + "reason VARCHAR(255) DEFAULT NULL, "
-                    + "completed_bundle_id VARCHAR(32) DEFAULT NULL, "
+                    + "completed_bundle_id VARCHAR(64) DEFAULT NULL, "
                     + "completed_bundle_label VARCHAR(64) DEFAULT NULL, "
-                    + "transfer_bundle_id VARCHAR(32) DEFAULT NULL, "
+                    + "transfer_bundle_id VARCHAR(64) DEFAULT NULL, "
                     + "transfer_bundle_label VARCHAR(64) DEFAULT NULL, "
                     + "rollback_time DATETIME DEFAULT NULL, "
                     + "rollback_by VARCHAR(50) DEFAULT NULL, "
@@ -433,6 +436,13 @@ public class ProductionTableMigrator {
         if (!dbHelper.columnExists("t_cutting_bundle_split_log", "rollback_reason")) {
             dbHelper.execSilently("ALTER TABLE t_cutting_bundle_split_log ADD COLUMN rollback_reason VARCHAR(255) DEFAULT NULL");
         }
+        dbHelper.execSilently("ALTER TABLE t_cutting_bundle_split_log MODIFY COLUMN id VARCHAR(64) NOT NULL");
+        dbHelper.execSilently("ALTER TABLE t_cutting_bundle_split_log MODIFY COLUMN root_bundle_id VARCHAR(64) NOT NULL");
+        dbHelper.execSilently("ALTER TABLE t_cutting_bundle_split_log MODIFY COLUMN source_bundle_id VARCHAR(64) NOT NULL");
+        dbHelper.execSilently("ALTER TABLE t_cutting_bundle_split_log MODIFY COLUMN from_worker_id VARCHAR(64) DEFAULT NULL");
+        dbHelper.execSilently("ALTER TABLE t_cutting_bundle_split_log MODIFY COLUMN to_worker_id VARCHAR(64) DEFAULT NULL");
+        dbHelper.execSilently("ALTER TABLE t_cutting_bundle_split_log MODIFY COLUMN completed_bundle_id VARCHAR(64) DEFAULT NULL");
+        dbHelper.execSilently("ALTER TABLE t_cutting_bundle_split_log MODIFY COLUMN transfer_bundle_id VARCHAR(64) DEFAULT NULL");
         dbHelper.addIndexIfAbsent("t_cutting_bundle_split_log", "idx_cbsl_root_bundle_id", "root_bundle_id");
         dbHelper.addIndexIfAbsent("t_cutting_bundle_split_log", "idx_cbsl_source_bundle_id", "source_bundle_id");
     }

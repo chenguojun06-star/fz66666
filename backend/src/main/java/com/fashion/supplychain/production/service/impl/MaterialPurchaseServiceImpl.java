@@ -74,6 +74,9 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         String materialType = (String) safeParams.getOrDefault("materialType", "");
         String sourceType = (String) safeParams.getOrDefault("sourceType", "");
         String factoryType = (String) safeParams.getOrDefault("factoryType", "");
+        String factoryName = (String) safeParams.getOrDefault("factoryName", "");
+        String receiverId = (String) safeParams.getOrDefault("receiverId", "");
+        String receiverName = (String) safeParams.getOrDefault("receiverName", "");
 
         final List<String> keywordMatchedOrderIds = StringUtils.hasText(orderNo)
             ? productionOrderService.list(
@@ -115,6 +118,8 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                 .like(StringUtils.hasText(materialCode) && !StringUtils.hasText(orderNo), MaterialPurchase::getMaterialCode, materialCode)
                 .like(StringUtils.hasText(materialName) && !StringUtils.hasText(orderNo), MaterialPurchase::getMaterialName, materialName)
                 .like(StringUtils.hasText(styleNo), MaterialPurchase::getStyleNo, styleNo)
+                .eq(StringUtils.hasText(receiverId), MaterialPurchase::getReceiverId, receiverId)
+                .like(StringUtils.hasText(receiverName), MaterialPurchase::getReceiverName, receiverName)
                 .eq(StringUtils.hasText(status), MaterialPurchase::getStatus, status)
                 .orderByDesc(MaterialPurchase::getCreateTime);
 
@@ -161,6 +166,11 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             wrapper.apply("(order_id IS NULL OR order_id = '' OR order_id IN " +
                     "(SELECT id FROM t_production_order WHERE factory_type = {0} AND (delete_flag IS NULL OR delete_flag = 0) AND status <> 'scrapped'))",
                     factoryType.trim().toUpperCase());
+        }
+        if (StringUtils.hasText(factoryName)) {
+            wrapper.apply("(order_id IS NULL OR order_id = '' OR order_id IN " +
+                    "(SELECT id FROM t_production_order WHERE factory_name LIKE CONCAT('%', {0}, '%') AND (delete_flag IS NULL OR delete_flag = 0) AND status <> 'scrapped'))",
+                    factoryName.trim());
         }
 
         // 工厂账号隔离（由 MaterialPurchaseOrchestratorHelper 注入 _factoryOrderIds）
@@ -419,9 +429,44 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         }
 
         int aq = Math.max(0, arrivedQty);
-        int clampedArrived = Math.min(aq, purchaseQty);
-        int threshold = MaterialPurchaseHelper.calcArrivedCompleteThreshold(purchaseQty);
-        return (threshold > 0 && aq >= threshold) ? purchaseQty : clampedArrived;
+        return Math.min(aq, purchaseQty);
+    }
+
+    @Override
+    public int sumConfirmedQuantityByOrderId(String orderId, boolean fabricOnly) {
+        String oid = StringUtils.hasText(orderId) ? orderId.trim() : null;
+        if (!StringUtils.hasText(oid)) {
+            return 0;
+        }
+        List<MaterialPurchase> purchases = this.list(new LambdaQueryWrapper<MaterialPurchase>()
+                .eq(MaterialPurchase::getOrderId, oid)
+                .eq(MaterialPurchase::getDeleteFlag, 0));
+        int total = 0;
+        for (MaterialPurchase purchase : purchases) {
+            if (purchase == null) {
+                continue;
+            }
+            String status = StringUtils.hasText(purchase.getStatus()) ? purchase.getStatus().trim() : "";
+            if ("cancelled".equalsIgnoreCase(status)) {
+                continue;
+            }
+            if (fabricOnly) {
+                String type = MaterialPurchaseHelper.normalizeMaterialType(purchase.getMaterialType());
+                if (!type.startsWith(MaterialConstants.TYPE_FABRIC)) {
+                    continue;
+                }
+            }
+            if (purchase.getReturnConfirmed() == null || purchase.getReturnConfirmed() != 1) {
+                continue;
+            }
+            total += Math.max(0, purchase.getReturnQuantity() == null ? 0 : purchase.getReturnQuantity());
+        }
+        return total;
+    }
+
+    @Override
+    public boolean hasConfirmedQuantityByOrderId(String orderId, boolean fabricOnly) {
+        return sumConfirmedQuantityByOrderId(orderId, fabricOnly) > 0;
     }
 
     @Override
@@ -696,10 +741,6 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             return false;
         }
         if (existed.getDeleteFlag() != null && existed.getDeleteFlag() != 0) {
-            return false;
-        }
-
-        if (existed.getReturnConfirmed() != null && existed.getReturnConfirmed() == 1) {
             return false;
         }
 

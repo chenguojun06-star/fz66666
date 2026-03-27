@@ -5,6 +5,7 @@ import { useSync } from '@/utils/syncManager';
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
 import type { CuttingTask } from '@/types/production';
 import type { Dayjs } from 'dayjs';
+import { usePersistentSort } from '@/hooks/usePersistentSort';
 
 const CUTTING_TASK_QUERY_STORAGE_KEY = 'Cutting.taskQuery';
 
@@ -73,12 +74,15 @@ export function useCuttingTasks({ message, isEntryPage }: UseCuttingTasksOptions
   const [pendingRollbackTask, setPendingRollbackTask] = useState<{ task: CuttingTask; onRolledBack?: () => void } | null>(null);
 
   // 排序
-  const [cuttingSortField, setCuttingSortField] = useState<string>('receivedTime');
-  const [cuttingSortOrder, setCuttingSortOrder] = useState<'asc' | 'desc'>('desc');
-  const handleCuttingSort = (field: string, order: 'asc' | 'desc') => {
-    setCuttingSortField(field);
-    setCuttingSortOrder(order);
-  };
+  const {
+    sortField: cuttingSortField,
+    sortOrder: cuttingSortOrder,
+    handleSort: handleCuttingSort,
+  } = usePersistentSort<string, 'asc' | 'desc'>({
+    storageKey: 'cutting-task-list',
+    defaultField: 'receivedTime',
+    defaultOrder: 'desc',
+  });
 
   // 统计
   const [cuttingStats, setCuttingStats] = useState<{

@@ -97,7 +97,7 @@ public class MaterialStock {
     private java.math.BigDecimal unitPrice;
 
     /**
-     * 换算值：几米一公斤（参考值）
+     * 米重换算值（米/公斤，参考值）
      */
     private java.math.BigDecimal conversionRate;
 

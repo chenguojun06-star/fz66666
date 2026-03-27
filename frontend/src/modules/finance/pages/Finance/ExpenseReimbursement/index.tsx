@@ -31,6 +31,7 @@ import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { readPageSize } from '@/utils/pageSizeStore';
+import { usePersistentState } from '@/hooks/usePersistentState';
 
 const { TextArea } = Input;
 
@@ -81,7 +82,7 @@ const ExpenseReimbursementPage: React.FC = () => {
   const [selectedDocIndex, setSelectedDocIndex] = useState(0);
 
   // ── 视图切换：my=我的报销  all=全部（审批人视角） ──
-  const [viewMode, setViewMode] = useState<'my' | 'all'>('my');
+  const [viewMode, setViewMode] = usePersistentState<'my' | 'all'>('expense-reimbursement-view-mode', 'my');
 
   // ── 统计 ──
   const [stats, setStats] = useState({ pending: 0, totalAmount: 0, paidAmount: 0 });

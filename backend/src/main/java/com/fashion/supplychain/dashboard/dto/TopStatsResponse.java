@@ -8,6 +8,8 @@ public class TopStatsResponse {
     private TimeRangeStats bulkOrder;          // 大货下单
     private TimeRangeStats cutting;            // 裁剪
     private TimeRangeStats warehousing;        // 出入库
+    private TimeRangeStats warehousingInbound; // 入库
+    private TimeRangeStats warehousingOutbound; // 出库
 
     public TimeRangeStats getSampleDevelopment() {
         return sampleDevelopment;
@@ -39,6 +41,22 @@ public class TopStatsResponse {
 
     public void setWarehousing(TimeRangeStats warehousing) {
         this.warehousing = warehousing;
+    }
+
+    public TimeRangeStats getWarehousingInbound() {
+        return warehousingInbound;
+    }
+
+    public void setWarehousingInbound(TimeRangeStats warehousingInbound) {
+        this.warehousingInbound = warehousingInbound;
+    }
+
+    public TimeRangeStats getWarehousingOutbound() {
+        return warehousingOutbound;
+    }
+
+    public void setWarehousingOutbound(TimeRangeStats warehousingOutbound) {
+        this.warehousingOutbound = warehousingOutbound;
     }
 
     /**

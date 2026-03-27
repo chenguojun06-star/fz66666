@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
-import { Form, Input, Button, Card, Typography, App, Segmented, Alert, AutoComplete } from 'antd';
+import { Form, Input, Button, Typography, App, Segmented, Alert, AutoComplete } from 'antd';
 import { UserOutlined, LockOutlined, PhoneOutlined, ShopOutlined, IdcardOutlined, BankOutlined } from '@ant-design/icons';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import tenantService from '../../services/tenantService';
@@ -144,18 +144,114 @@ const Register: React.FC = () => {
   };
 
   return (
-    <div className="login-page">
-      <div className="login-bg" aria-hidden="true" />
-      <div className="login-constellation" aria-hidden="true" />
-      <Card className="login-card" variant="borderless">
-        <div className="login-header">
-          <Title level={2} className="login-title">
-            云裳智链
-          </Title>
-          <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.7)', marginTop: 8 }}>
-            {isApplyMode ? '工厂注册申请' : '工厂员工注册'}
-          </p>
+    <div className="login-page modern-login-page">
+      <div className="login-left-pane">
+        <div className="tech-bg" aria-hidden="true">
+          <div className="tech-grid" />
+          <div className="tech-world-map" />
+          <div className="tech-glow-left" />
+          <div className="tech-glow-right" />
+          <div className="tech-arc tech-arc-1" />
+          <div className="tech-arc tech-arc-2" />
+          <div className="tech-arc tech-arc-3" />
+          <span className="tech-node tech-node-1" />
+          <span className="tech-node tech-node-2" />
+          <span className="tech-node tech-node-3" />
+          <span className="tech-node tech-node-4" />
+          <span className="tech-node tech-node-5" />
+          <span className="tech-node tech-node-6" />
         </div>
+        <section className="login-showcase">
+          <div className="login-showcase-shell">
+            <div className="login-showcase-copy">
+              <div className="login-kicker">MARS｜注册引导</div>
+              <Title level={2} className="login-showcase-title">
+                {isApplyMode ? '提交工厂入驻申请' : '创建工厂员工账号'}
+              </Title>
+              <div className="login-showcase-desc">
+                {isApplyMode ? '填写工厂与联系人信息，审批通过后即可启用正式账号。' : '选择所属工厂后完成员工注册，审核通过即可登录系统。'}
+              </div>
+            </div>
+            <div className="login-showcase-visual">
+              <div className="tech-core-container">
+                <div className="tech-ring ring-1"></div>
+                <div className="tech-ring ring-2"></div>
+                <div className="tech-ring ring-3"></div>
+                <div className="tech-orbit orbit-a"></div>
+                <div className="tech-orbit orbit-b"></div>
+                <div className="tech-orbit orbit-c"></div>
+                <div className="tech-halo"></div>
+                <div className="tech-axis tech-axis-x"></div>
+                <div className="tech-axis tech-axis-y"></div>
+                <div className="signal-node signal-node-1"></div>
+                <div className="signal-node signal-node-2"></div>
+                <div className="signal-node signal-node-3"></div>
+                <div className="signal-node signal-node-4"></div>
+                <div className="tech-float-card tech-float-card-top">
+                  <span className="tech-float-label">审批流程</span>
+                  <strong className="tech-float-value">在线跟踪</strong>
+                </div>
+                <div className="tech-float-card tech-float-card-left">
+                  <span className="tech-float-label">员工注册</span>
+                  <strong className="tech-float-value">按工厂归属</strong>
+                </div>
+                <div className="tech-float-card tech-float-card-right">
+                  <span className="tech-float-label">登录切换</span>
+                  <strong className="tech-float-value">租户隔离</strong>
+                </div>
+                <div className="tech-core tech-core--cloud">
+                  <div className="tech-cloud-glow" />
+                  <div className="tech-cloud">
+                    <span className="tech-cloud__part tech-cloud__part--left" />
+                    <span className="tech-cloud__part tech-cloud__part--center" />
+                    <span className="tech-cloud__part tech-cloud__part--right" />
+                    <span className="tech-cloud__base" />
+                    <span className="tech-cloud__eye tech-cloud__eye--left">
+                      <span className="tech-cloud__eye-highlight tech-cloud__eye-highlight--left" />
+                    </span>
+                    <span className="tech-cloud__eye tech-cloud__eye--right">
+                      <span className="tech-cloud__eye-highlight tech-cloud__eye-highlight--right" />
+                    </span>
+                    <span className="tech-cloud__smile" />
+                    <span className="tech-cloud__spark tech-cloud__spark--left" />
+                    <span className="tech-cloud__spark tech-cloud__spark--right" />
+                  </div>
+                </div>
+                <div className="small-ai-badge">AI</div>
+              </div>
+            </div>
+          </div>
+          <div className="login-showcase-highlights">
+            <div className="showcase-highlight-card">
+              <span className="highlight-label">注册模式</span>
+              <strong className="highlight-value">{isApplyMode ? '工厂入驻申请' : '工厂员工注册'}</strong>
+            </div>
+            <div className="showcase-highlight-card">
+              <span className="highlight-label">流程特点</span>
+              <strong className="highlight-value">审核通过后启用</strong>
+            </div>
+            <div className="showcase-highlight-card">
+              <span className="highlight-label">系统目标</span>
+              <strong className="highlight-value">账号归属清晰 · 登录切换准确</strong>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div className="login-right-pane">
+        <div className="login-panel-glow" aria-hidden="true" />
+        <div className="login-form-wrapper">
+          <div className="login-form-card">
+            <div className="login-card-accent login-card-accent-top" aria-hidden="true" />
+            <div className="login-card-accent login-card-accent-bottom" aria-hidden="true" />
+            <div className="login-header">
+              <Title level={2} className="login-title">
+                云裳智链
+              </Title>
+              <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.7)', marginTop: 8 }}>
+                {isApplyMode ? '工厂注册申请' : '工厂员工注册'}
+              </p>
+            </div>
 
         {/* 注册模式切换 */}
         {!urlTenantCode && (
@@ -442,26 +538,28 @@ const Register: React.FC = () => {
             </Button>
           </Form.Item>
         </Form>
-        <div className="login-footer">© {year} 云裳智链</div>
-        <div className="login-footer" style={{ marginTop: 2, fontSize: 11 }}>
-          部署版本：{buildCommit} · 构建时间：{buildTimeText}
-        </div>
-        <div className="login-footer" style={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <img src="/police.png" alt="公安备案图标" style={{ width: 14, height: 14, marginRight: 4 }} />
-              <a href="https://beian.mps.gov.cn/#/query/webSearch?code=44011302005352" target="_blank" rel="noopener noreferrer"
-                 style={{ color: 'rgba(255,255,255,0.45)' }}>
-                粤公网安备44011302005352号
-              </a>
+            <div className="login-footer">© {year} 云裳智链</div>
+            <div className="login-footer" style={{ marginTop: 2, fontSize: 11 }}>
+              部署版本：{buildCommit} · 构建时间：{buildTimeText}
             </div>
-            <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer"
-               style={{ color: 'rgba(255,255,255,0.45)' }}>
-              粤ICP备2026026776号-1
-            </a>
+            <div className="login-footer" style={{ marginTop: 8, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <img src="/police.png" alt="公安备案图标" style={{ width: 14, height: 14, marginRight: 4 }} />
+                  <a href="https://beian.mps.gov.cn/#/query/webSearch?code=44011302005352" target="_blank" rel="noopener noreferrer"
+                    style={{ color: 'rgba(255,255,255,0.45)' }}>
+                    粤公网安备44011302005352号
+                  </a>
+                </div>
+                <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer"
+                  style={{ color: 'rgba(255,255,255,0.45)' }}>
+                  粤ICP备2026026776号-1
+                </a>
+              </div>
+            </div>
           </div>
         </div>
-      </Card>
+      </div>
     </div>
   );
 };

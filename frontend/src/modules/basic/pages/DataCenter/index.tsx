@@ -6,6 +6,7 @@ import PageStatCards from '@/components/common/PageStatCards';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
+import SmallModal from '@/components/common/SmallModal';
 import RowActions from '@/components/common/RowActions';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import StandardToolbar from '@/components/common/StandardToolbar';
@@ -430,7 +431,11 @@ const DataCenter: React.FC = () => {
     try {
       setEditSaving(true);
       const values = await editForm.validateFields();
-      const res = await api.put<{ code: number; message: string }>(`/style/info/${editingRecord.id}/production-requirements`, {
+      const res = await api.put<{ code: number; message: string }>('/style/info', {
+        id: editingRecord.id,
+        styleNo: editingRecord.styleNo,
+        styleName: editingRecord.styleName,
+        category: editingRecord.category,
         description: values.description,
       });
       if (res.code === 200) {
@@ -811,10 +816,9 @@ const DataCenter: React.FC = () => {
       </ResizableModal>
 
       {/* 退回生产制单弹窗 */}
-      <ResizableModal
+      <SmallModal
         open={returnDescModalVisible}
         title={`退回生产制单 - ${returnDescRecord?.styleNo || ''}`}
-        width="30vw"
         onCancel={() => { setReturnDescModalVisible(false); returnDescForm.resetFields(); }}
         footer={
           <Space>
@@ -837,13 +841,12 @@ const DataCenter: React.FC = () => {
             <Input.TextArea rows={4} placeholder="请说明退回原因，将记录到操作日志" />
           </Form.Item>
         </Form>
-      </ResizableModal>
+      </SmallModal>
 
       {/* 退回纸样修改弹窗 */}
-      <ResizableModal
+      <SmallModal
         open={returnPatternModalVisible}
         title={`退回纸样修改 - ${returnPatternRecord?.styleNo || ''}`}
-        width="30vw"
         onCancel={() => { setReturnPatternModalVisible(false); returnPatternForm.resetFields(); }}
         footer={
           <Space>
@@ -866,7 +869,7 @@ const DataCenter: React.FC = () => {
             <Input.TextArea rows={4} placeholder="请说明退回原因，将记录到操作日志" />
           </Form.Item>
         </Form>
-      </ResizableModal>
+      </SmallModal>
 
       {/* 纸样修改弹窗 */}
       <ResizableModal

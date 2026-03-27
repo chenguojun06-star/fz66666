@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, App, Button, Card, Form, Input, Modal, Pagination, Select, Space, Tag } from 'antd';
+import { Alert, App, Button, Card, Form, Input, Modal, Select, Space, Tag } from 'antd';
 import type { InputRef } from 'antd';
 import { AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -8,12 +8,15 @@ import PageStatCards from '@/components/common/PageStatCards';
 import SmartPredictionStrip from '@/components/common/SmartPredictionStrip';
 import UniversalCardView from '@/components/common/UniversalCardView';
 import ResizableTable from '@/components/common/ResizableTable';
+import StandardPagination from '@/components/common/StandardPagination';
+import { createOrderColorSizeGridFieldGroups } from '@/components/common/CardSizeQuantityFieldGroups';
 import QuickEditModal from '@/components/common/QuickEditModal';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import LabelPrintModal from '../List/components/LabelPrintModal';
 import NodeDetailModal from '@/components/common/NodeDetailModal';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
+import SmallModal from '@/components/common/SmallModal';
 import api, { generateRequestId, hasProcurementStage, isDuplicateScanMessage, parseProductionOrderLines, isApiSuccess, isOrderFrozenByStatus, isOrderTerminal } from '@/utils/api';
 import { isSupervisorOrAboveUser as isSupervisorOrAboveUserFn, useAuth } from '@/utils/AuthContext';
 import { formatDateTimeCompact } from '@/utils/datetime';
@@ -24,6 +27,8 @@ import type { TemplateLibrary } from '@/types/style';
 import { productionCuttingApi, productionOrderApi, productionScanApi, type ProductionOrderListParams } from '@/services/production/productionApi';
 import { getStyleInfoByRef } from '@/services/style/styleApi';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
+import { DEFAULT_PAGE_SIZE_OPTIONS, savePageSize } from '@/utils/pageSizeStore';
+import '../../../styles.css';
 
 import {
   defaultNodes,
@@ -59,6 +64,7 @@ import { useRemarkModal } from './hooks/useRemarkModal';
 import { useQuickEdit } from './hooks/useQuickEdit';
 import { useProgressFilters } from './hooks/useProgressFilters';
 import { useProgressColumns } from './hooks/useProgressColumns';
+import { useShareOrderDialog } from './hooks/useShareOrderDialog';
 import { useStagnantDetection } from './hooks/useStagnantDetection';
 import { useCardGridLayout } from '@/hooks/useCardGridLayout';
 import { useDeliveryRiskMap } from './hooks/useDeliveryRiskMap';
@@ -69,6 +75,7 @@ import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { BottleneckItem } from '@/services/intelligence/intelligenceApi';
+import { getOrderCardSizeQuantityItems } from '@/utils/cardSizeQuantity';
 import {
   fetchScanHistory as fetchScanHistoryHelper,
   fetchCuttingBundles as fetchCuttingBundlesHelper,
@@ -98,6 +105,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const [focusedOrderNos, setFocusedOrderNos] = useState<string[]>([]);
   const focusClearTimerRef = useRef<number | null>(null);
   const focusedOrderNosRef = useRef<string[]>([]);
+  const { handleShareOrder, shareOrderDialog } = useShareOrderDialog({ message });
 
   const getOrderDomKey = useCallback((record: Partial<ProductionOrder> | null | undefined) => {
     return String(record?.id || record?.orderNo || '').trim();
@@ -824,7 +832,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     }
   };
 
-  const _openScan = useOpenScan({
+  useOpenScan({
     isOrderFrozenByStatus,
     message,
     fetchOrderDetail,
@@ -845,18 +853,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     findPricingProcessForStage,
     scanInputRef,
   });
-
-  const _closeScan = () => {
-    closeScanConfirm(true);
-    setScanOpen(false);
-    setScanSubmitting(false);
-    scanSubmittingRef.current = false;
-    lastFailedRequestRef.current = null;
-    scanForm.resetFields();
-    setCuttingBundles([]);
-    setScanBundlesExpanded(false);
-    setBundleSelectedQr('');
-  };
 
   const watchScanCode = Form.useWatch('scanCode', scanForm);
   const watchProgressStage = Form.useWatch('progressStage', scanForm);
@@ -913,7 +909,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     setBundleSelectedQr,
   });
 
-  const _submitScan = useSubmitScan({
+  useSubmitScan({
     activeOrder,
     user,
     scanForm,
@@ -991,41 +987,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const hasActiveOrders = orders.some(o => o.status !== 'completed');
   const deliveryRiskMap = useDeliveryRiskMap(hasActiveOrders);
 
-  // ── 分享订单给客户追踪链接（1天有效）─────────────────────────────────
-  const handleShareOrder = useCallback(async (order: ProductionOrder) => {
-    if (!order.id) return;
-    try {
-      const res = await productionOrderApi.generateShareToken(String(order.id));
-      const token = (res as any)?.token || (res as any)?.data?.token;
-      const shareUrl = token ? `${window.location.origin}/share/${token}` : '';
-      if (!shareUrl) { message.error('生成分享链接失败'); return; }
-      Modal.info({
-        title: '👤 客户订单追踪链接',
-        content: (
-          <div>
-            <p style={{ marginBottom: 8, color: '#555', fontSize: 13 }}>
-              发送以下链接给客户，客户无需登录即可实时查看订单生产进度（1天有效）：
-            </p>
-            <Input.TextArea value={shareUrl} autoSize={{ minRows: 2 }} readOnly
-              style={{ fontSize: 12, background: '#f5f5f5', cursor: 'text' }}
-            />
-            <Button
-              type="primary"
-              size="small"
-              style={{ marginTop: 8 }}
-              onClick={() => { navigator.clipboard.writeText(shareUrl); message.success('链接已复制到剪贴板'); }}
-            >
-              复制链接
-            </Button>
-          </div>
-        ),
-        width: 540,
-      });
-    } catch {
-      message.error('生成分享链接失败，请重试');
-    }
-  }, [message]);
-
+  // ── 分享订单给客户追踪链接（30天有效）────────────────────────────────
   const clearSmartFocus = useCallback(() => {
     setFocusedOrderId(null);
     setPendingScrollOrderId(null);
@@ -1134,7 +1096,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     orderSortField, orderSortOrder, handleOrderSort,
     boardStatsByOrder, boardTimesByOrder, progressNodesByStyleNo,
     openNodeDetail, isSupervisorOrAbove, handleCloseOrder,
-    setPrintingRecord, setQuickEditRecord, setQuickEditVisible,
+    setPrintingRecord, handlePrintLabel, setQuickEditRecord, setQuickEditVisible,
     setRemarkPopoverId, setRemarkText,
     stagnantOrderIds,
     deliveryRiskMap,
@@ -1142,6 +1104,28 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     canManageOrderLifecycle,
   });
   const { columns: cardColumns } = useCardGridLayout(10);
+  const productionCardFieldGroups = useMemo(() => [
+    ...createOrderColorSizeGridFieldGroups<ProductionOrder>({
+      gridKey: 'cardColorSizeGrid',
+      getItems: (record) => getOrderCardSizeQuantityItems(record),
+      getFallbackColor: (record) => String(record.color || '').trim(),
+      getFallbackSize: (record) => String(record.size || '').trim(),
+      getFallbackQuantity: (record) => Number(record.orderQuantity) || 0,
+    }),
+    [
+      { label: '下单', key: 'createTime', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' },
+      { label: '交期', key: 'plannedEndDate', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' },
+      { label: '剩', key: 'remainingDays', render: (_val: any, record: any) => { const { text, color } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string, record?.actualEndDate as string, record?.status as string); return <span style={{ color, fontWeight: 600, fontSize: '10px' }}>{text}</span>; } },
+    ],
+  ], []);
+  const productionCardProgressConfig = useMemo(() => ({
+    calculate: calcCardProgress,
+    getStatus: (record: ProductionOrder) => (isOrderFrozenByStatus(record) ? 'default' : getProgressColorStatus(record.plannedEndDate)),
+    isCompleted: (record: ProductionOrder) => record.status === 'completed',
+    minVisiblePercent: (record: ProductionOrder) => String(record.status || '').trim().toLowerCase() === 'in_progress' ? 5 : 0,
+    show: true,
+    type: 'liquid' as const,
+  }), [calcCardProgress, isOrderFrozenByStatus]);
 
 
   const pageContent = (
@@ -1228,8 +1212,11 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               <Alert
                 type={bottleneckItems.some(i => i.severity === 'critical') ? 'error' : 'warning'}
                 showIcon
-                closable
-                onClose={() => setBottleneckBannerVisible(false)}
+                action={(
+                  <Button size="small" type="text" onClick={() => setBottleneckBannerVisible(false)}>
+                    关闭
+                  </Button>
+                )}
                 title={<span>⚠️ 工序瓶颈：{bottleneckItems.length} 个阶段存在积压风险</span>}
                 description={
                   <ul style={{ margin: 0, paddingLeft: 18 }}>
@@ -1251,10 +1238,12 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
           {viewMode === 'list' ? (
             <ResizableTable
+              className="production-progress-list-table"
               rowKey={(r: ProductionOrder) => String(r.id || r.orderNo)}
               loading={loading && orders.length === 0}
               columns={columns}
               dataSource={orders}
+              resizableColumns={false}
               maxColumnWidth={1600}
               pagination={{
                 current: queryParams.page,
@@ -1262,8 +1251,11 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 total,
                 showTotal: (total) => `共 ${total} 条`,
                 showSizeChanger: true,
-                pageSizeOptions: ['10', '20', '50', '100'],
-                onChange: (page: number, pageSize: number) => setQueryParams((prev) => ({ ...prev, page, pageSize })),
+                pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
+                onChange: (page: number, pageSize: number) => {
+                  savePageSize(pageSize);
+                  setQueryParams((prev) => ({ ...prev, page, pageSize }));
+                },
               }}
               scroll={{ x: 3000 }}
             />
@@ -1277,18 +1269,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               titleField="orderNo"
               subtitleField="styleNo"
               fields={[]}
-              fieldGroups={[
-                [{ label: '码数', key: 'size', render: (val: any) => val || '-' }, { label: '数量', key: 'orderQuantity', render: (val: any) => { const qty = Number(val) || 0; return qty > 0 ? `${qty}件` : '-'; } }],
-                [{ label: '下单', key: 'createTime', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '交期', key: 'plannedEndDate', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '剩', key: 'remainingDays', render: (val: any, record: any) => { const { text, color } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string, record?.actualEndDate as string, record?.status as string); return <span style={{ color, fontWeight: 600, fontSize: '10px' }}>{text}</span>; } }]
-              ]}
-              progressConfig={{
-                calculate: calcCardProgress,
-                getStatus: (record: ProductionOrder) => (isOrderFrozenByStatus(record) ? 'default' : getProgressColorStatus(record.plannedEndDate)),
-                isCompleted: (record: ProductionOrder) => record.status === 'completed',
-                minVisiblePercent: (record: ProductionOrder) => String(record.status || '').trim().toLowerCase() === 'in_progress' ? 5 : 0,
-                show: true,
-                type: 'liquid',
-              }}
+              fieldGroups={productionCardFieldGroups}
+              progressConfig={productionCardProgressConfig}
               actions={(record: ProductionOrder) => {
                 const frozen = isOrderFrozenByStatus(record);
                 const frozenTitle = '订单已关单/报废/完成，无法操作';
@@ -1337,17 +1319,17 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 </>
               )}
             />
-            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 0 4px' }}>
-              <Pagination
-                current={queryParams.page}
-                pageSize={queryParams.pageSize}
-                total={total}
-                showTotal={(t) => `共 ${t} 条`}
-                showSizeChanger
-                pageSizeOptions={['10', '20', '50', '100']}
-                onChange={(page, pageSize) => setQueryParams((prev) => ({ ...prev, page, pageSize }))}
-              />
-            </div>
+            <StandardPagination
+              current={queryParams.page}
+              pageSize={queryParams.pageSize}
+              total={total}
+              wrapperStyle={{ paddingTop: 12, paddingBottom: 4 }}
+              showQuickJumper={false}
+              onChange={(page, pageSize) => {
+                savePageSize(pageSize);
+                setQueryParams((prev) => ({ ...prev, page, pageSize }));
+              }}
+            />
             </>
           )}
         </>
@@ -1369,7 +1351,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 ],
                 onClick: () => handleStatClick('production'),
                 activeColor: 'var(--color-primary)',
-                activeBg: 'rgba(45, 127, 249, 0.1)',
               },
               {
                 key: 'delayed',
@@ -1379,7 +1360,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 ],
                 onClick: () => handleStatClick('delayed'),
                 activeColor: 'var(--color-danger)',
-                activeBg: 'rgba(239, 68, 68, 0.1)',
               },
               {
                 key: 'today',
@@ -1389,7 +1369,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 ],
                 onClick: () => handleStatClick('today'),
                 activeColor: 'var(--color-primary)',
-                activeBg: 'rgba(45, 127, 249, 0.1)',
               },
             ]}
           />
@@ -1488,8 +1467,11 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               <Alert
                 type={bottleneckItems.some(i => i.severity === 'critical') ? 'error' : 'warning'}
                 showIcon
-                closable
-                onClose={() => setBottleneckBannerVisible(false)}
+                action={(
+                  <Button size="small" type="text" onClick={() => setBottleneckBannerVisible(false)}>
+                    关闭
+                  </Button>
+                )}
                 title={<span>⚠️ 工序瓶颈：{bottleneckItems.length} 个阶段存在积压风险</span>}
                 description={
                   <ul style={{ margin: 0, paddingLeft: 18 }}>
@@ -1509,10 +1491,13 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
           {viewMode === 'list' ? (
             <ResizableTable
+              className="production-progress-list-table"
               rowKey={(r: ProductionOrder) => String(r.id || r.orderNo)}
               loading={loading && orders.length === 0}
               columns={columns}
               dataSource={smartQueueOrders}
+              showHeader={false}
+              resizableColumns={false}
               maxColumnWidth={1600}
               rowClassName={(record: ProductionOrder) => getOrderDomKey(record) === focusedOrderId ? 'smart-order-focus-row' : ''}
               pagination={{
@@ -1521,10 +1506,13 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 total,
                 showTotal: (total) => `共 ${total} 条`,
                 showSizeChanger: true,
-                pageSizeOptions: ['10', '20', '50', '100'],
-                onChange: (page: number, pageSize: number) => setQueryParams((prev) => ({ ...prev, page, pageSize })),
+                pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
+                onChange: (page: number, pageSize: number) => {
+                  savePageSize(pageSize);
+                  setQueryParams((prev) => ({ ...prev, page, pageSize }));
+                },
               }}
-              scroll={{ x: 3000 }}
+              scroll={{ x: 'max-content' }}
             />
           ) : (
             <>
@@ -1537,18 +1525,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               titleField="orderNo"
               subtitleField="styleNo"
               fields={[]}
-              fieldGroups={[
-                [{ label: '码数', key: 'size', render: (val: any) => val || '-' }, { label: '数量', key: 'orderQuantity', render: (val: any) => { const qty = Number(val) || 0; return qty > 0 ? `${qty}件` : '-'; } }],
-                [{ label: '下单', key: 'createTime', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '交期', key: 'plannedEndDate', render: (val: any) => val ? dayjs(val as string).format('MM-DD') : '-' }, { label: '剩', key: 'remainingDays', render: (val: any, record: any) => { const { text, color } = getRemainingDaysDisplay(record?.plannedEndDate as string, record?.createTime as string, record?.actualEndDate as string, record?.status as string); return <span style={{ color, fontWeight: 600, fontSize: '10px' }}>{text}</span>; } }]
-              ]}
-              progressConfig={{
-                calculate: calcCardProgress,
-                getStatus: (record: ProductionOrder) => (isOrderFrozenByStatus(record) ? 'default' : getProgressColorStatus(record.plannedEndDate)),
-                isCompleted: (record: ProductionOrder) => record.status === 'completed',
-                minVisiblePercent: (record: ProductionOrder) => String(record.status || '').trim().toLowerCase() === 'in_progress' ? 5 : 0,
-                show: true,
-                type: 'liquid',
-              }}
+              fieldGroups={productionCardFieldGroups}
+              progressConfig={productionCardProgressConfig}
               getCardId={(record) => `progress-order-card-${getOrderDomKey(record as ProductionOrder)}`}
               getCardStyle={(record) => getOrderDomKey(record as ProductionOrder) === focusedOrderId ? {
                 boxShadow: '0 0 0 2px rgba(24, 144, 255, 0.28), 0 10px 24px rgba(24, 144, 255, 0.18)',
@@ -1608,17 +1586,17 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 </>
               )}
             />
-            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 0 4px' }}>
-              <Pagination
-                current={queryParams.page}
-                pageSize={queryParams.pageSize}
-                total={total}
-                showTotal={(t) => `共 ${t} 条`}
-                showSizeChanger
-                pageSizeOptions={['10', '20', '50', '100']}
-                onChange={(page, pageSize) => setQueryParams((prev) => ({ ...prev, page, pageSize }))}
-              />
-            </div>
+            <StandardPagination
+              current={queryParams.page}
+              pageSize={queryParams.pageSize}
+              total={total}
+              wrapperStyle={{ paddingTop: 12, paddingBottom: 4 }}
+              showQuickJumper={false}
+              onChange={(page, pageSize) => {
+                savePageSize(pageSize);
+                setQueryParams((prev) => ({ ...prev, page, pageSize }));
+              }}
+            />
             </>
           )}
         </Card>
@@ -1633,8 +1611,10 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         onSubmit={submitConfirmedScan}
       />
 
+      {shareOrderDialog}
+
       {/* 备注异常 Modal */}
-      <Modal
+      <SmallModal
         title={<><ExclamationCircleOutlined style={{ color: '#f59e0b', marginRight: 8 }} />备注异常</>}
         open={remarkPopoverId !== null}
         onCancel={() => { setRemarkPopoverId(null); setRemarkText(''); }}
@@ -1642,8 +1622,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         okText="保存"
         cancelText="取消"
         confirmLoading={remarkSaving}
-        width="30vw"
-        destroyOnHidden
       >
         <Input.TextArea
           value={remarkText}
@@ -1654,7 +1632,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           placeholder="请输入异常备注..."
           style={{ marginTop: 8 }}
         />
-      </Modal>
+      </SmallModal>
 
       {/* 快速编辑弹窗 */}
       <QuickEditModal

@@ -46,6 +46,8 @@ export interface StyleInfo extends Record<string, unknown> {
   latestOrderTime?: string;
   latestOrderCreator?: string;
   firstOrderTime?: string;
+  pushedToOrder?: number | boolean;
+  pushedToOrderTime?: string;
 
   // 码数颜色配置（JSON字符串）
   sizeColorConfig?: string;
@@ -111,7 +113,7 @@ export interface StyleBom extends Record<string, unknown> {
   sizeSpecMap?: string;
   /** 纸样录入单位 */
   patternUnit?: string;
-  /** 换算系数：1个纸样录入单位 = x个BOM单位 */
+  /** 米重换算值：每公斤对应的米数（米/公斤） */
   conversionRate?: number;
   lossRate: number;
   unitPrice?: number;
@@ -159,7 +161,7 @@ export interface StyleProcess extends Record<string, unknown> {
   progressStage?: string; // 进度节点：采购/裁剪/车缝/尾部/入库
   machineType: string;
   difficulty?: string; // 工序难度：易/中/难
-  description?: string; // 制作描述
+  description?: string; // 工序描述
   standardTime: number;
   price: number;
   sortOrder: number;
@@ -198,6 +200,7 @@ export interface StyleQueryParams {
   category?: string;
   keyword?: string;
   onlyCompleted?: boolean | number;
+  pushedToOrderOnly?: boolean | number;
   progressNode?: string;
   page: number;
   pageSize: number;

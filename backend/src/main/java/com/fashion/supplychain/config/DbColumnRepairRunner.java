@@ -56,11 +56,11 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             repaired += ensureColumn(conn, schema, "t_material_purchase", "invoice_urls",
                     "TEXT DEFAULT NULL COMMENT '发票/单据图片URL列表(JSON数组)，用于财务留底'");
             repaired += ensureColumn(conn, schema, "t_material_purchase", "conversion_rate",
-                    "DECIMAL(10,4) DEFAULT NULL COMMENT '换算值：几米一公斤（参考值）'");
+                    "DECIMAL(10,4) DEFAULT NULL COMMENT '米重换算值（米/公斤，参考值）'");
             repaired += ensureColumn(conn, schema, "t_material_database", "conversion_rate",
-                    "DECIMAL(10,4) DEFAULT NULL COMMENT '换算值：几米一公斤（参考值）'");
+                    "DECIMAL(10,4) DEFAULT NULL COMMENT '米重换算值（米/公斤，参考值）'");
             repaired += ensureColumn(conn, schema, "t_material_stock", "conversion_rate",
-                    "DECIMAL(10,4) DEFAULT NULL COMMENT '换算值：几米一公斤（参考值）'");
+                    "DECIMAL(10,4) DEFAULT NULL COMMENT '米重换算值（米/公斤，参考值）'");
                 repaired += ensureColumn(conn, schema, "t_material_purchase", "audit_status",
                     "VARCHAR(32) DEFAULT NULL COMMENT '初审状态: pending_audit=待初审 passed=初审通过 rejected=初审驳回'");
                 repaired += ensureColumn(conn, schema, "t_material_purchase", "audit_reason",
@@ -161,6 +161,66 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                     "varchar", "MODIFY COLUMN `id` VARCHAR(64) NOT NULL COMMENT '主键ID（UUID）'");
 
             int repairedTables = 0;
+                repairedTables += ensureTable(conn, schema,
+                        "t_intelligence_audit_log",
+                        "CREATE TABLE IF NOT EXISTS `t_intelligence_audit_log` ("
+                        + "`id` VARCHAR(32) NOT NULL COMMENT '审计日志ID',"
+                        + "`tenant_id` BIGINT NOT NULL COMMENT '租户ID',"
+                        + "`command_id` VARCHAR(64) DEFAULT NULL COMMENT '命令ID（关联命令）',"
+                        + "`action` VARCHAR(100) DEFAULT NULL COMMENT '命令类型，如 order:hold',"
+                        + "`target_id` VARCHAR(100) DEFAULT NULL COMMENT '目标对象ID，如订单号',"
+                        + "`executor_id` VARCHAR(64) DEFAULT NULL COMMENT '执行人ID',"
+                        + "`status` VARCHAR(32) DEFAULT 'EXECUTING' COMMENT '执行状态 EXECUTING/SUCCESS/FAILED/CANCELLED',"
+                        + "`reason` VARCHAR(500) DEFAULT NULL COMMENT '命令原始理由',"
+                        + "`risk_level` INT DEFAULT NULL COMMENT '风险等级 1-5',"
+                        + "`result_data` TEXT DEFAULT NULL COMMENT '执行结果JSON',"
+                        + "`error_message` TEXT DEFAULT NULL COMMENT '错误信息（失败时）',"
+                        + "`duration_ms` BIGINT DEFAULT NULL COMMENT '执行耗时（毫秒）',"
+                        + "`remark` VARCHAR(500) DEFAULT NULL COMMENT '备注',"
+                        + "`created_at` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',"
+                        + "`requires_approval` TINYINT(1) DEFAULT 0 COMMENT '是否需要人工审批',"
+                        + "`approved_by` VARCHAR(64) DEFAULT NULL COMMENT '审批人ID',"
+                        + "`approved_at` DATETIME DEFAULT NULL COMMENT '审批时间',"
+                        + "`approval_remark` VARCHAR(500) DEFAULT NULL COMMENT '审批备注',"
+                        + "PRIMARY KEY (`id`),"
+                        + "KEY `idx_audit_tenant_status` (`tenant_id`, `status`),"
+                        + "KEY `idx_audit_command_id` (`command_id`),"
+                        + "KEY `idx_audit_created_at` (`tenant_id`, `created_at`)"
+                        + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='智能执行审计日志'");
+                repaired += ensureColumn(conn, schema, "t_intelligence_audit_log", "created_at",
+                        "DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'");
+                repaired += ensureColumn(conn, schema, "t_intelligence_audit_log", "tenant_id",
+                        "BIGINT NOT NULL DEFAULT 0 COMMENT '租户ID'");
+                repaired += ensureColumn(conn, schema, "t_intelligence_audit_log", "command_id",
+                        "VARCHAR(64) DEFAULT NULL COMMENT '命令ID（关联命令）'");
+                repaired += ensureColumn(conn, schema, "t_intelligence_audit_log", "action",
+                        "VARCHAR(100) DEFAULT NULL COMMENT '命令类型，如 order:hold'");
+                repaired += ensureColumn(conn, schema, "t_intelligence_audit_log", "target_id",
+                        "VARCHAR(100) DEFAULT NULL COMMENT '目标对象ID，如订单号'");
+                repaired += ensureColumn(conn, schema, "t_intelligence_audit_log", "executor_id",
+                        "VARCHAR(64) DEFAULT NULL COMMENT '执行人ID'");
+                repaired += ensureColumn(conn, schema, "t_intelligence_audit_log", "status",
+                        "VARCHAR(32) DEFAULT 'EXECUTING' COMMENT '执行状态 EXECUTING/SUCCESS/FAILED/CANCELLED'");
+                repaired += ensureColumn(conn, schema, "t_intelligence_audit_log", "reason",
+                        "VARCHAR(500) DEFAULT NULL COMMENT '命令原始理由'");
+                repaired += ensureColumn(conn, schema, "t_intelligence_audit_log", "risk_level",
+                        "INT DEFAULT NULL COMMENT '风险等级 1-5'");
+                repaired += ensureColumn(conn, schema, "t_intelligence_audit_log", "result_data",
+                        "TEXT DEFAULT NULL COMMENT '执行结果JSON'");
+                repaired += ensureColumn(conn, schema, "t_intelligence_audit_log", "error_message",
+                        "TEXT DEFAULT NULL COMMENT '错误信息（失败时）'");
+                repaired += ensureColumn(conn, schema, "t_intelligence_audit_log", "duration_ms",
+                        "BIGINT DEFAULT NULL COMMENT '执行耗时（毫秒）'");
+                repaired += ensureColumn(conn, schema, "t_intelligence_audit_log", "remark",
+                        "VARCHAR(500) DEFAULT NULL COMMENT '备注'");
+                repaired += ensureColumn(conn, schema, "t_intelligence_audit_log", "requires_approval",
+                        "TINYINT(1) DEFAULT 0 COMMENT '是否需要人工审批'");
+                repaired += ensureColumn(conn, schema, "t_intelligence_audit_log", "approved_by",
+                        "VARCHAR(64) DEFAULT NULL COMMENT '审批人ID'");
+                repaired += ensureColumn(conn, schema, "t_intelligence_audit_log", "approved_at",
+                        "DATETIME DEFAULT NULL COMMENT '审批时间'");
+                repaired += ensureColumn(conn, schema, "t_intelligence_audit_log", "approval_remark",
+                        "VARCHAR(500) DEFAULT NULL COMMENT '审批备注'");
                 repairedTables += ensureTable(conn, schema,
                         "t_agent_meeting",
                         "CREATE TABLE IF NOT EXISTS `t_agent_meeting` ("

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Button, Input, Space, Modal, Form, Select, Tag } from 'antd';
+import { Button, Input, Space, Form, Select, Tag } from 'antd';
 import api from '@/utils/api';
 import { buildProductionSheetHtml } from '../../DataCenter';
 
 import { safePrint } from '@/utils/safePrint';
+import SmallModal from '@/components/common/SmallModal';
 import StyleStageControlBar from './StyleStageControlBar';
 import { message } from '@/utils/antdStatic';
 
@@ -273,7 +274,7 @@ const StyleProductionTab: React.FC<Props> = ({
       <Input.TextArea
         value={allRequirements}
         onChange={handleTextChange}
-        disabled={productionReqLocked || (!productionStartTime && !productionCompletedTime)}
+        disabled={productionReqLocked}
         placeholder="请输入生产要求，每行一条&#10;例如：&#10;1. 裁剪前需松布和缩水，确认布号、正反面及染布，裁剪按照合同订单数量明细裁剪；&#10;2. 针织面料需松布24小时可裁剪，拉布经纬纱向要求经直纬平，注意避开布匹瑕疵和色差；"
         rows={15}
         style={{
@@ -285,7 +286,7 @@ const StyleProductionTab: React.FC<Props> = ({
       />
 
       {/* 样衣审核 Modal */}
-      <Modal
+      <SmallModal
         title="记录样衣审核结论"
         open={reviewModalVisible}
         onCancel={() => setReviewModalVisible(false)}
@@ -293,8 +294,6 @@ const StyleProductionTab: React.FC<Props> = ({
         confirmLoading={reviewSaving}
         okText="保存结论"
         cancelText="取消"
-        width="40vw"
-        destroyOnHidden
       >
         <Form form={reviewForm} layout="vertical" style={{ marginTop: 8 }}>
           <Form.Item
@@ -316,7 +315,7 @@ const StyleProductionTab: React.FC<Props> = ({
             />
           </Form.Item>
         </Form>
-      </Modal>
+      </SmallModal>
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Layout from '@/components/Layout';
 import ResizableModal from '@/components/common/ResizableModal';
+import SmallModal from '@/components/common/SmallModal';
 import { organizationApi } from '@/services/system/organizationApi';
 import { factoryApi } from '@/services/system/factoryApi';
 import tenantService from '@/services/tenantService';
@@ -9,10 +10,11 @@ import type { OrganizationUnit, User } from '@/types/system';
 import { useAuth } from '@/utils/AuthContext';
 import {
   App, Avatar, Button, Card, Checkbox, Col, Descriptions, Empty, Form, Input,
-  InputNumber, Modal, QRCode, Row, Select, Space, Tag, Typography,
+  InputNumber, QRCode, Row, Select, Space, Tag, Typography,
 } from 'antd';
 import type { TableColumnsType } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
+import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE_OPTIONS } from '@/utils/pageSizeStore';
 import {
   ApartmentOutlined, BankOutlined, CrownFilled,
   LockOutlined, PlusOutlined, QrcodeOutlined,
@@ -414,11 +416,15 @@ const OrganizationTreePage: React.FC = () => {
                     ))}
                   </div>
                   <ResizableTable<User>
+                    storageKey={isExternalSelected ? 'organization-tree-external-members' : 'organization-tree-members'}
                     size="small"
                     rowKey={r => String(r.id ?? r.username)}
                     columns={isExternalSelected ? readOnlyMemberColumns : memberColumns}
                     dataSource={displayedMembers}
-                    pagination={displayedMembers.length > 10 ? { pageSize: 10, showSizeChanger: false } : false}
+                    pagination={displayedMembers.length > DEFAULT_PAGE_SIZE ? {
+                      showSizeChanger: true,
+                      pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
+                    } : false}
                     locale={{ emptyText: isExternalSelected ? '外发工厂成员通过扫码二维码注册' : '暂无成员，点击「添加成员」分配' }}
                   />
                 </>
@@ -709,7 +715,7 @@ const OrganizationTreePage: React.FC = () => {
       </ResizableModal>
 
       {/* 成员资料 mini 弹窗 */}
-      <Modal
+      <SmallModal
         open={!!profileUser}
         onCancel={() => { setProfileUser(null); setResetPwdVisible(false); setResetPwdValue(''); }}
         footer={null}
@@ -770,7 +776,7 @@ const OrganizationTreePage: React.FC = () => {
             )}
           </div>
         )}
-      </Modal>
+      </SmallModal>
     </Layout>
   );
 };

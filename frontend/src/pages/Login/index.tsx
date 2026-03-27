@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Form, Input, Button, Typography, App, AutoComplete } from 'antd';
-import { UserOutlined, LockOutlined, SearchOutlined } from '@ant-design/icons';
+import { UserOutlined, LockOutlined, SearchOutlined, PhoneOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../utils/AuthContext';
 import { getDefaultRouteForUser } from '../../routeConfig';
@@ -19,12 +19,17 @@ interface TenantOption {
   tenantName: string;
 }
 
+type LoginMode = 'password' | 'sms';
+
 const Login: React.FC = () => {
   const navigate = useNavigate();
   const [form] = Form.useForm();
-  const { login } = useAuth();
+  const { login, loginWithSms, sendLoginSmsCode } = useAuth();
   const { language } = useAppLanguage();
   const [submitting, setSubmitting] = useState(false);
+  const [loginMode, setLoginMode] = useState<LoginMode>('password');
+  const [smsSending, setSmsSending] = useState(false);
+  const [smsCountdown, setSmsCountdown] = useState(0);
   const { message } = App.useApp();
 
   const year = useMemo(() => new Date().getFullYear(), []);
@@ -87,6 +92,22 @@ const Login: React.FC = () => {
     loadTenants();
   }, [loadTenants]);
 
+  useEffect(() => {
+    if (smsCountdown <= 0) {
+      return undefined;
+    }
+    const timer = window.setInterval(() => {
+      setSmsCountdown((current) => {
+        if (current <= 1) {
+          window.clearInterval(timer);
+          return 0;
+        }
+        return current - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [smsCountdown]);
+
   // AutoComplete 搜索过滤
   const [searchOptions, setSearchOptions] = useState<{ value: string; label: React.ReactNode; key: number }[]>([]);
 
@@ -118,7 +139,49 @@ const Login: React.FC = () => {
   }, [form]);
 
   // 登录表单提交处理
-  const handleLogin = async (values: { tenantId: number; companySearch: string; username: string; password: string }) => {
+  const handleSendSmsCode = useCallback(async () => {
+    if (smsSending || smsCountdown > 0) return;
+    if (!selectedTenant) {
+      message.error(t('login.companySelectRequired', language));
+      return;
+    }
+    try {
+      await form.validateFields(['companySearch', 'phone']);
+    } catch {
+      return;
+    }
+    const phone = String(form.getFieldValue('phone') || '').trim();
+    setSmsSending(true);
+    try {
+      const result = await sendLoginSmsCode(phone, selectedTenant.id);
+      const cooldown = Number(result.cooldownSeconds || 60);
+      setSmsCountdown(Number.isFinite(cooldown) && cooldown > 0 ? cooldown : 60);
+      if (typeof result.debugCode === 'string' && result.debugCode) {
+        form.setFieldValue('smsCode', result.debugCode);
+      }
+      if (result.gatewayConfigured === false) {
+        message.warning(typeof result.debugCode === 'string' && result.debugCode
+          ? `当前环境未配置短信网关，调试验证码：${result.debugCode}`
+          : '当前环境未配置短信网关，验证码已写入服务日志');
+      } else {
+        message.success('验证码已发送，请注意查收');
+      }
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : '验证码发送失败，请稍后重试';
+      message.error(msg);
+    } finally {
+      setSmsSending(false);
+    }
+  }, [form, language, message, selectedTenant, sendLoginSmsCode, smsCountdown, smsSending]);
+
+  const handleLogin = async (values: {
+    tenantId: number;
+    companySearch: string;
+    username?: string;
+    password?: string;
+    phone?: string;
+    smsCode?: string;
+  }) => {
     if (submitting) return;
     if (!selectedTenant) {
       message.error(t('login.companySelectRequired', language));
@@ -126,7 +189,10 @@ const Login: React.FC = () => {
     }
     setSubmitting(true);
     try {
-      const { success, user } = await login(values.username, values.password, selectedTenant.id);
+      const authResult = loginMode === 'password'
+        ? await login(String(values.username || '').trim(), String(values.password || '').trim(), selectedTenant.id)
+        : await loginWithSms(String(values.phone || '').trim(), String(values.smsCode || '').trim(), selectedTenant.id);
+      const { success, user } = authResult;
       if (success) {
         message.success(t('login.loginSuccess', language));
         navigate(getDefaultRouteForUser(user));
@@ -164,10 +230,10 @@ const Login: React.FC = () => {
             <div className="login-showcase-copy">
               <div className="login-kicker">MARS｜云裳协同管理</div>
               <Title level={2} className="login-showcase-title">
-                云裳服装供应链｜让订单交付更轻松
+                云裳智链多端协同
               </Title>
               <div className="login-showcase-desc">
-                在线协同・智能预警・提升履约确定性。
+                多厂协同管理, 实时数据看板 ,让交付变得更轻松.
               </div>
             </div>
             <div className="login-showcase-visual">
@@ -244,11 +310,27 @@ const Login: React.FC = () => {
             <div className="login-card-accent login-card-accent-bottom" aria-hidden="true" />
             <div className="login-header">
               <Title level={2} className="login-title">
-                欢迎使用
+                云裳智链
               </Title>
               <div className="login-subtitle">
-                在线协同・智能预警・提升履约确定性。
+                有问题找小云｜多端协同更轻松
               </div>
+            </div>
+            <div className="login-mode-switch" role="tablist" aria-label="登录方式">
+              <button
+                type="button"
+                className={`login-mode-switch__item${loginMode === 'password' ? ' is-active' : ''}`}
+                onClick={() => setLoginMode('password')}
+              >
+                账号密码登录
+              </button>
+              <button
+                type="button"
+                className={`login-mode-switch__item${loginMode === 'sms' ? ' is-active' : ''}`}
+                onClick={() => setLoginMode('sms')}
+              >
+                手机验证码登录
+              </button>
             </div>
             <Form
               form={form}
@@ -298,38 +380,91 @@ const Login: React.FC = () => {
                   />
                 </AutoComplete>
               </Form.Item>
-              <Form.Item
-                name="username"
-                rules={[{ required: true, message: t('login.usernamePlaceholder', language) }]}
-                label={t('login.username', language)}
-                htmlFor="login_username"
-              >
-                <Input
-                  id="login_username"
-                  prefix={<UserOutlined className="site-form-item-icon" />}
-                  size="large"
-                  placeholder={t('login.usernamePlaceholder', language)}
-                  autoFocus
-                  allowClear
-                  disabled={submitting}
-                  autoComplete="username"
-                />
-              </Form.Item>
-              <Form.Item
-                name="password"
-                rules={[{ required: true, message: t('login.passwordPlaceholder', language) }]}
-                label={t('login.password', language)}
-                htmlFor="login_password"
-              >
-                <Input.Password
-                  id="login_password"
-                  prefix={<LockOutlined className="site-form-item-icon" />}
-                  placeholder={t('login.passwordPlaceholder', language)}
-                  size="large"
-                  disabled={submitting}
-                  autoComplete="current-password"
-                />
-              </Form.Item>
+              {loginMode === 'password' ? (
+                <>
+                  <Form.Item
+                    name="username"
+                    rules={[{ required: true, message: t('login.usernamePlaceholder', language) }]}
+                    label={t('login.username', language)}
+                    htmlFor="login_username"
+                  >
+                    <Input
+                      id="login_username"
+                      prefix={<UserOutlined className="site-form-item-icon" />}
+                      size="large"
+                      placeholder={t('login.usernamePlaceholder', language)}
+                      autoFocus
+                      allowClear
+                      disabled={submitting}
+                      autoComplete="username"
+                    />
+                  </Form.Item>
+                  <Form.Item
+                    name="password"
+                    rules={[{ required: true, message: t('login.passwordPlaceholder', language) }]}
+                    label={t('login.password', language)}
+                    htmlFor="login_password"
+                  >
+                    <Input.Password
+                      id="login_password"
+                      prefix={<LockOutlined className="site-form-item-icon" />}
+                      placeholder={t('login.passwordPlaceholder', language)}
+                      size="large"
+                      disabled={submitting}
+                      autoComplete="current-password"
+                    />
+                  </Form.Item>
+                </>
+              ) : (
+                <>
+                  <Form.Item
+                    name="phone"
+                    rules={[
+                      { required: true, message: '请输入手机号' },
+                      { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号' },
+                    ]}
+                    label="手机号"
+                    htmlFor="login_phone"
+                  >
+                    <Input
+                      id="login_phone"
+                      prefix={<PhoneOutlined className="site-form-item-icon" />}
+                      size="large"
+                      placeholder="请输入手机号"
+                      autoFocus
+                      allowClear
+                      disabled={submitting}
+                      autoComplete="tel"
+                    />
+                  </Form.Item>
+                  <Form.Item
+                    name="smsCode"
+                    rules={[{ required: true, message: '请输入验证码' }]}
+                    label="验证码"
+                    htmlFor="login_sms_code"
+                  >
+                    <div className="login-code-row">
+                      <Input
+                        id="login_sms_code"
+                        prefix={<LockOutlined className="site-form-item-icon" />}
+                        size="large"
+                        placeholder="请输入验证码"
+                        disabled={submitting}
+                        autoComplete="one-time-code"
+                      />
+                      <Button
+                        type="default"
+                        className="login-code-button"
+                        onClick={handleSendSmsCode}
+                        loading={smsSending}
+                        disabled={submitting || smsSending || smsCountdown > 0}
+                      >
+                        {smsCountdown > 0 ? `${smsCountdown}s 后重试` : '获取验证码'}
+                      </Button>
+                    </div>
+                  </Form.Item>
+                </>
+              )}
               <Form.Item wrapperCol={{ span: 24 }}>
                 <Button
                   type="primary"
@@ -338,7 +473,7 @@ const Login: React.FC = () => {
                   size="large"
                   loading={submitting}
                 >
-                  {t('login.submit', language)}
+                  {loginMode === 'password' ? t('login.submit', language) : '验证码登录'}
                 </Button>
               </Form.Item>
               <Form.Item wrapperCol={{ span: 24 }} style={{ marginBottom: 0 }}>

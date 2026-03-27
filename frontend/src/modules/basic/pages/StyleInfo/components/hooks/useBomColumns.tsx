@@ -1,4 +1,4 @@
-import { Form, Input, Button, Select, InputNumber, Tag, Modal, Space, Image } from 'antd';
+import { App, Form, Input, Button, Select, InputNumber, Tag, Space, Image } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import { StyleBom } from '@/types/style';
 import RowActions from '@/components/common/RowActions';
@@ -74,6 +74,7 @@ export function useBomColumns({
   onApplyPickup,
   activeSizes = [],
 }: UseBomColumnsProps) {
+  const { modal } = App.useApp();
   const parseSizeUsageMap = (value?: string) => {
     try {
       const parsed = JSON.parse(String(value || '{}'));
@@ -81,6 +82,15 @@ export function useBomColumns({
     } catch {
       return {};
     }
+  };
+  const normalizeUnitText = (value?: string) => String(value || '').trim().toLowerCase();
+  const isMeterUnit = (value?: string) => {
+    const unit = normalizeUnitText(value);
+    return unit === '米' || unit === 'm' || unit === 'meter' || unit === 'meters';
+  };
+  const isKilogramUnit = (value?: string) => {
+    const unit = normalizeUnitText(value);
+    return unit === 'kg' || unit === '公斤' || unit === '千克' || unit === 'kilogram' || unit === 'kilograms';
   };
   const isZipperRow = (record: StyleBom) => /拉链/.test(String(record.materialName || ''));
   const computeAverageMeterUsage = (record: StyleBom) => {
@@ -96,9 +106,11 @@ export function useBomColumns({
   };
   const computeConvertedUsage = (record: StyleBom) => {
     const row = form.getFieldValue(String(record.id)) || {};
+    const bomUnit = String(row.unit ?? record.unit ?? '').trim();
+    const patternUnit = String(row.patternUnit ?? record.patternUnit ?? '米').trim();
     const conversionRate = Number(row.conversionRate ?? record.conversionRate ?? 1) || 1;
     const meterValue = computeAverageMeterUsage(record);
-    if (conversionRate <= 0) {
+    if (!isKilogramUnit(bomUnit) || !isMeterUnit(patternUnit) || conversionRate <= 0) {
       return { unit: '公斤', value: null as number | null };
     }
     return { unit: '公斤', value: Number((meterValue / conversionRate).toFixed(4)) };
@@ -262,7 +274,7 @@ export function useBomColumns({
       }
     },
     {
-      title: '规格(cm)',
+      title: '规格/幅宽',
       dataIndex: 'specification',
       key: 'specification',
       width: 120,
@@ -389,14 +401,18 @@ export function useBomColumns({
       }
     },
     {
-      title: '几米一公斤',
+      title: '每公斤米数(米/公斤)',
       dataIndex: 'conversionRate',
       key: 'conversionRate',
       width: 220,
       render: (text: number, record: StyleBom) => {
         const value = Number(text ?? 1) || 1;
-        const formulaText = '填写 1公斤对应多少米';
-        const exampleText = '示例：3米=1公斤，就填 3';
+        const formulaText = '填写每公斤对应的米数';
+        const exampleText = '示例：3米=1公斤，则填 3';
+        const row = form.getFieldValue(String(record.id)) || {};
+        const bomUnit = String(row.unit ?? record.unit ?? '').trim();
+        const patternUnit = String(row.patternUnit ?? record.patternUnit ?? '米').trim();
+        const canConvertToKg = isKilogramUnit(bomUnit) && isMeterUnit(patternUnit);
         if (!locked && (tableEditable || isEditing(record))) {
           return (
             <div style={{ display: 'grid', gap: 4 }}>
@@ -407,12 +423,15 @@ export function useBomColumns({
                 <InputNumber min={0} step={0.01} style={{ width: '100%' }} />
               </Form.Item>
               <div style={{ fontSize: 11, color: '#8c8c8c', lineHeight: 1.4 }}>
-                {`${exampleText}；系统会用“米数 ÷ 几米一公斤”算出公斤数`}
+                {canConvertToKg
+                  ? `${exampleText}；系统会用“米数 ÷ 每公斤米数”算出公斤数`
+                  : '仅在纸样录入单位为米、BOM单位为公斤时参与换算'}
               </div>
             </div>
           );
         }
-        return value > 0 ? `1公斤 = ${value}米` : '-';
+        if (!canConvertToKg) return '-';
+        return value > 0 ? `${value} 米/公斤` : '-';
       }
     },
     {
@@ -618,7 +637,7 @@ export function useBomColumns({
                   title: '删除',
                   danger: true,
                   onClick: () => {
-                    Modal.confirm({
+                    modal.confirm({
                       width: '30vw',
                       title: '确定删除?',
                       onOk: () => handleDelete(record.id!),
@@ -651,7 +670,7 @@ export function useBomColumns({
                 label: '取消',
                 title: '取消',
                 onClick: () => {
-                  Modal.confirm({
+                  modal.confirm({
                     width: '30vw',
                     title: '确定取消?',
                     onOk: cancel,
@@ -686,7 +705,7 @@ export function useBomColumns({
                 danger: true,
                 disabled: editingKey !== '',
                 onClick: () => {
-                  Modal.confirm({
+                  modal.confirm({
                     width: '30vw',
                     title: '确定删除?',
                     onOk: () => handleDelete(record.id!),

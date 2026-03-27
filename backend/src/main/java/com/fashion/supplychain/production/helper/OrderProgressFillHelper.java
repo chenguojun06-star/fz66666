@@ -5,6 +5,7 @@ import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
+import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
 import java.time.LocalDateTime;
@@ -39,6 +40,9 @@ public class OrderProgressFillHelper {
 
     @Autowired
     private TemplateLibraryService templateLibraryService;
+
+    @Autowired
+    private MaterialPurchaseService materialPurchaseService;
 
     public void fillCurrentProcessName(List<ProductionOrder> records) {
         if (records == null || records.isEmpty()) {
@@ -270,13 +274,15 @@ public class OrderProgressFillHelper {
             Integer manuallyCompleted = order.getProcurementManuallyCompleted();
             boolean isManuallyConfirmed = (manuallyCompleted != null && manuallyCompleted == 1);
             boolean directCuttingOrder = isDirectCuttingOrder(order);
+            boolean hasConfirmedFabric = StringUtils.hasText(order.getId())
+                    && materialPurchaseService.hasConfirmedQuantityByOrderId(order.getId(), true);
 
             // 采购完成判断规则：
-            // 1. 物料到货率=100%：自动认为采购完成
-            // 2. 物料到货率≥50%且已人工确认：可以进入下一步
-            // 3. 物料到货率<50%：必须停留在采购阶段，不允许人工确认
+            // 1. 直裁订单可直接跳过采购阶段
+            // 2. 已人工确认可裁主面料：允许进入下一步
+            // 3. 订单人工确认采购完成：允许进入下一步
             boolean procurementComplete = directCuttingOrder;
-            if (!procurementComplete && materialArrivalRate != null && materialArrivalRate >= 100) {
+            if (!procurementComplete && hasConfirmedFabric) {
                 procurementComplete = true;
             } else if (!procurementComplete && materialArrivalRate != null && materialArrivalRate >= 50 && isManuallyConfirmed) {
                 procurementComplete = true;

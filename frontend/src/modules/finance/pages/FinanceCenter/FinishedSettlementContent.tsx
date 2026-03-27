@@ -9,6 +9,7 @@ import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import RowActions from '@/components/common/RowActions';
 import StandardModal from '@/components/common/StandardModal';
+import SmallModal from '@/components/common/SmallModal';
 import dayjs from 'dayjs';
 import styles from './FinishedSettlementContent.module.css';
 import type { Dayjs } from 'dayjs';
@@ -30,7 +31,7 @@ interface FinishedSettlementRow {
   parentOrgUnitName?: string;
   orgPath?: string;
   orderQuantity: number;
-  styleFinalPrice: number;    // 销售单价（含利润率），来自 t_style_quotation.total_price
+  styleFinalPrice: number;
   targetProfitRate?: number;  // 目标利润率(%)，来自报价单设定值
   warehousedQuantity: number;
   defectQuantity: number;
@@ -231,8 +232,8 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
     },
     {
       title: (
-        <Tooltip title="款式报价单单价（BOM+工序成本合计含利润）">
-          <span>单价</span>
+        <Tooltip title="下单时锁定的加工单价">
+          <span>下单锁定单价</span>
         </Tooltip>
       ),
       dataIndex: 'styleFinalPrice',
@@ -666,14 +667,13 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
       </Card>
 
       {/* 备注编辑弹窗 */}
-      <StandardModal
+      <SmallModal
         title="编辑备注"
         open={remarkModalVisible}
         onOk={saveRemark}
         onCancel={() => setRemarkModalVisible(false)}
         okText="保存"
         cancelText="取消"
-        size="sm"
       >
         <div style={{ marginBottom: 8, fontSize: 14, color: 'var(--neutral-text-secondary)' }}>
           备注内容
@@ -686,7 +686,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
           maxLength={500}
           showCount
         />
-      </StandardModal>
+      </SmallModal>
 
       {/* 操作日志弹窗 */}
       <StandardModal

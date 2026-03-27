@@ -17,6 +17,7 @@ import tenantService from '@/services/tenantService';
 import { appStoreService } from '@/services/system/appStore';
 import type { MyAppInfo } from '@/services/system/appStore';
 import ResizableTable from '@/components/common/ResizableTable';
+import { DEFAULT_PAGE_SIZE } from '@/utils/pageSizeStore';
 
 const { Text } = Typography;
 
@@ -375,11 +376,12 @@ const MyBillingTab: React.FC = () => {
           }
         >
           <ResizableTable
+            storageKey="profile-my-apps"
             rowKey="subscriptionId"
             dataSource={myApps}
             columns={appColumns}
             loading={loading}
-            pagination={myApps.length > 10 ? { pageSize: 10, size: 'small' } : false}
+            pagination={myApps.length > DEFAULT_PAGE_SIZE ? { size: 'small' } : false}
             size="small"
             locale={{ emptyText: <Empty description="暂无已开通应用" /> }}
           />

@@ -13,6 +13,7 @@ import { paths } from '@/routeConfig';
 import { appStoreService } from '@/services/system/appStore';
 import { useAuth } from '@/utils/AuthContext';
 import ResizableModal from '@/components/common/ResizableModal';
+import SmallModal from '@/components/common/SmallModal';
 import { ModalFieldRow } from '@/components/common/ModalContentLayout';
 import invoiceApi from '@/services/finance/invoiceApi';
 import type { InvoiceStatus, InvoiceType } from '@/services/finance/invoiceApi';
@@ -555,7 +556,7 @@ const PayableTab: React.FC = () => {
         </Form>
       </ResizableModal>
       {/* 部分付款弹窗 */}
-      <Modal
+      <SmallModal
         title={`部分付款 — ${payRecord?.supplierName || ''}`}
         open={!!payRecord}
         onCancel={() => setPayRecord(null)}
@@ -564,7 +565,6 @@ const PayableTab: React.FC = () => {
           handleMarkPaid(payRecord.id, payAmount);
         }}
         okText="确认付款"
-        width="30vw"
       >
         <div style={{ padding: '12px 0' }}>
           <p style={{ marginBottom: 4 }}>应付金额：<strong>{payRecord?.amount?.toFixed(2)}</strong> 元</p>
@@ -584,7 +584,7 @@ const PayableTab: React.FC = () => {
             <span style={{ marginLeft: 8, color: '#888' }}>元</span>
           </div>
         </div>
-      </Modal>
+      </SmallModal>
     </>
   );
 };

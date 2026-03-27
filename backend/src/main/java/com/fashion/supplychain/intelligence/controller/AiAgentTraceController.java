@@ -3,6 +3,9 @@ package com.fashion.supplychain.intelligence.controller;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.intelligence.orchestration.AiAgentTraceOrchestrator;
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -21,13 +24,17 @@ public class AiAgentTraceController {
     private AiAgentTraceOrchestrator aiAgentTraceOrchestrator;
 
     @GetMapping("/traces/recent")
-    public Result<?> recent(@RequestParam(defaultValue = "20") int limit,
-                            @RequestParam(required = false) String toolName,
-                            @RequestParam(required = false) String status,
-                            @RequestParam(required = false) String executorKeyword,
-                            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTime,
-                            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTime) {
-        return Result.success(aiAgentTraceOrchestrator.listRecentRequests(limit, toolName, status, executorKeyword, startTime, endTime));
+    public Result<List<Map<String, Object>>> recent(@RequestParam(defaultValue = "20") int limit,
+                                                    @RequestParam(required = false) String toolName,
+                                                    @RequestParam(required = false) String status,
+                                                    @RequestParam(required = false) String executorKeyword,
+                                                    @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTime,
+                                                    @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTime) {
+        try {
+            return Result.success(aiAgentTraceOrchestrator.listRecentRequestSummaries(limit, toolName, status, executorKeyword, startTime, endTime));
+        } catch (Exception e) {
+            return Result.success(Collections.emptyList());
+        }
     }
 
     @GetMapping("/traces/{commandId}")

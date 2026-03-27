@@ -6,6 +6,7 @@ import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardModal from '@/components/common/StandardModal';
+import StandardPagination from '@/components/common/StandardPagination';
 import PageStatCards from '@/components/common/PageStatCards';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
@@ -78,7 +79,6 @@ const _FinishedInventory: React.FC = () => {
 
   // ===== 使用 useTablePagination 管理分页 =====
   const pagination = useTablePagination(20);
-  const currentPageSize = pagination.pagination.pageSize;
 
   // ===== 使用 useModal 管理弹窗 =====
   const outboundModal = useModal<FinishedInventory>();
@@ -196,7 +196,6 @@ const _FinishedInventory: React.FC = () => {
   }, [rawDataSource, searchText, selectedFactoryType, statusValue]);
 
   const totalRecords = dataSource.length;
-  const totalPages = Math.max(1, Math.ceil(totalRecords / currentPageSize));
 
   // 打开出库模态框，从数据中筛选该款式的所有SKU明细
   const handleOutbound = (record: FinishedInventory) => {
@@ -681,7 +680,6 @@ const _FinishedInventory: React.FC = () => {
               ],
               onClick: () => setStatusValue(''),
               activeColor: 'var(--color-primary)',
-              activeBg: 'rgba(45, 127, 249, 0.1)',
             },
             {
               key: 'available',
@@ -690,7 +688,6 @@ const _FinishedInventory: React.FC = () => {
               ],
               onClick: () => setStatusValue('available'),
               activeColor: 'var(--color-success)',
-              activeBg: '#f6ffed',
             },
             {
               key: 'defect',
@@ -699,7 +696,6 @@ const _FinishedInventory: React.FC = () => {
               ],
               onClick: () => setStatusValue('defect'),
               activeColor: 'var(--color-danger)',
-              activeBg: '#fff1f0',
             }
           ]}
         />
@@ -757,14 +753,14 @@ const _FinishedInventory: React.FC = () => {
             loading={loading}
             rowKey="id"
             scroll={{ x: 1400 }}
-            pagination={{
-              ...pagination.pagination,
-              total: totalRecords,
-              simple: false,
-              showTotal: (total, range) => `第 ${pagination.pagination.current}/${totalPages} 页 · 第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
-              pageSizeOptions: ['20', '50', '100', '200'],
-              onChange: pagination.onChange,
-            }}
+            pagination={false}
+          />
+          <StandardPagination
+            current={pagination.pagination.current}
+            pageSize={pagination.pagination.pageSize}
+            total={totalRecords}
+            wrapperStyle={{ paddingTop: 12 }}
+            onChange={pagination.onChange}
           />
         </Card>
 

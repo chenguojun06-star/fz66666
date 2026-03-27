@@ -5,6 +5,7 @@ import { QrcodeOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
+import SmallModal from '@/components/common/SmallModal';
 import { useUserListColumns } from './hooks/useUserListColumns';
 import PaymentAccountManager from '@/components/common/PaymentAccountManager';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
@@ -1107,12 +1108,11 @@ const UserList: React.FC = () => {
         />
 
         {/* 邀请员工二维码弹窗 */}
-        <ResizableModal
+        <SmallModal
           title="邀请员工扫码绑定微信"
           open={inviteQr.open}
           onCancel={() => setInviteQr({ open: false, loading: false })}
           footer={null}
-          width="30vw"
         >
           <div style={{ textAlign: 'center', padding: '16px 0' }}>
             {inviteQr.loading ? (
@@ -1139,7 +1139,7 @@ const UserList: React.FC = () => {
               <div style={{ color: '#999', padding: '24px 0' }}>二维码生成失败，请重试</div>
             )}
           </div>
-        </ResizableModal>
+        </SmallModal>
 
       <RejectReasonModal
         open={remarkModalState?.open === true}

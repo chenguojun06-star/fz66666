@@ -291,6 +291,35 @@ public class ProductionOrderController {
         return success ? Result.success("更新成功") : Result.fail("更新失败");
     }
 
+    @PostMapping("/urge")
+    public Result<?> urge(@RequestBody Map<String, Object> payload) {
+        String orderId = payload == null ? null : String.valueOf(payload.getOrDefault("orderId", "")).trim();
+        if (!StringUtils.hasText(orderId)) {
+            return Result.fail("缺少orderId参数");
+        }
+
+        ProductionOrder order = productionOrderService.getById(orderId);
+        if (order == null) {
+            return Result.fail("订单不存在");
+        }
+        TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "订单");
+
+        if (!StringUtils.hasText(order.getMerchandiser())) {
+            return Result.fail("该订单未设置跟单员，无法发送催单通知");
+        }
+
+        try {
+            sysNoticeOrchestrator.send(order.getOrderNo(), "urge_order");
+            return Result.successMessage("催单通知已发送");
+        } catch (IllegalArgumentException e) {
+            log.warn("[urge] 催单失败 orderId={} msg={}", orderId, e.getMessage());
+            return Result.fail(e.getMessage());
+        } catch (Exception e) {
+            log.error("[urge] 催单异常 orderId={}", orderId, e);
+            return Result.fail("催单通知发送失败");
+        }
+    }
+
     /**
      * 批量查询订单健康度评分（0-100，三维度加权：进度/交期/物料）
      */

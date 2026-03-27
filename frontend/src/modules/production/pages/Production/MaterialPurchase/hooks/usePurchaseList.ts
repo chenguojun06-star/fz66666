@@ -9,6 +9,7 @@ import type { MaterialPurchase as MaterialPurchaseType, MaterialQueryParams } fr
 import { DEFAULT_PAGE_SIZE } from '@/constants/business';
 import { PURCHASE_QUERY_STORAGE_KEY, type MaterialPurchaseTabKey } from '../types';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import { usePersistentSort } from '@/hooks/usePersistentSort';
 
 const getPurchaseQueryStorage = () => {
   if (typeof window === 'undefined') return null;
@@ -42,10 +43,24 @@ export function usePurchaseList({
   const [purchaseList, setPurchaseList] = useState<MaterialPurchaseType[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
-  const [sortField, setSortField] = useState('createTime');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const [purchaseSortField, setPurchaseSortField] = useState('createTime');
-  const [purchaseSortOrder, setPurchaseSortOrder] = useState<'asc' | 'desc'>('desc');
+  const {
+    sortField,
+    sortOrder,
+    handleSort,
+  } = usePersistentSort<string, 'asc' | 'desc'>({
+    storageKey: 'material-purchase-list',
+    defaultField: 'createTime',
+    defaultOrder: 'desc',
+  });
+  const {
+    sortField: purchaseSortField,
+    sortOrder: purchaseSortOrder,
+    handleSort: handlePurchaseSort,
+  } = usePersistentSort<string, 'asc' | 'desc'>({
+    storageKey: 'material-purchase-dialog',
+    defaultField: 'createTime',
+    defaultOrder: 'desc',
+  });
   const [purchaseStats, setPurchaseStats] = useState<PurchaseStats>(EMPTY_STATS);
   const [activeStatFilter, setActiveStatFilter] = useState<'all' | 'pending' | 'received' | 'partial' | 'completed' | 'overdue'>('all');
 
@@ -139,9 +154,6 @@ export function usePurchaseList({
       message.error('获取物料采购列表失败');
     } finally { setLoading(false); }
   }, [filterOutMissingOrders, queryParams, showSmartErrorNotice, setSmartError, message]);
-
-  const handleSort = (field: string, order: 'asc' | 'desc') => { setSortField(field); setSortOrder(order); };
-  const handlePurchaseSort = (field: string, order: 'asc' | 'desc') => { setPurchaseSortField(field); setPurchaseSortOrder(order); };
 
   const handleStatClick = (type: 'all' | 'pending' | 'received' | 'partial' | 'completed' | 'overdue') => {
     setActiveStatFilter(type);

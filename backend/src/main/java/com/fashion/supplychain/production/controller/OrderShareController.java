@@ -1,13 +1,24 @@
 package com.fashion.supplychain.production.controller;
 
+import com.fashion.supplychain.common.CosService;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.production.dto.OrderShareResponse;
 import com.fashion.supplychain.production.orchestration.OrderShareOrchestrator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Map;
 
 /**
@@ -28,6 +39,12 @@ public class OrderShareController {
 
     @Autowired
     private OrderShareOrchestrator orderShareOrchestrator;
+
+    @Autowired
+    private CosService cosService;
+
+    @Value("${fashion.upload-path:./uploads/}")
+    private String uploadPath;
 
     /**
      * 为指定订单生成分享令牌（30 天有效）
@@ -53,8 +70,66 @@ public class OrderShareController {
      * 通过分享令牌获取订单公开摘要（无需登录）
      * 此接口在 SecurityConfig 中已配置 .antMatchers("/api/public/**").permitAll()
      */
-    @GetMapping("/api/public/share/order/{token}")
+    @GetMapping("/api/public/share/order/{token:.+}")
     public Result<OrderShareResponse> getSharedOrder(@PathVariable("token") String token) {
         return orderShareOrchestrator.resolveShareOrder(token);
+    }
+
+    @GetMapping("/api/public/share/order/{token:.+}/style-cover")
+    public ResponseEntity<Resource> getSharedOrderStyleCover(@PathVariable("token") String token) {
+        String fileUrl = orderShareOrchestrator.resolveSharedStyleCover(token);
+        if (fileUrl == null || fileUrl.isBlank()) {
+            return ResponseEntity.notFound().build();
+        }
+        try {
+            if (fileUrl.startsWith("http://") || fileUrl.startsWith("https://")) {
+                return ResponseEntity.status(302).location(URI.create(fileUrl)).build();
+            }
+            String prefix = "/api/file/tenant-download/";
+            if (!fileUrl.startsWith(prefix)) {
+                String redirectUrl = fileUrl.startsWith("/")
+                        ? ServletUriComponentsBuilder.fromCurrentContextPath().path(fileUrl).toUriString()
+                        : fileUrl;
+                return ResponseEntity.status(302).location(URI.create(redirectUrl)).build();
+            }
+
+            String rest = fileUrl.substring(prefix.length());
+            int slashIndex = rest.indexOf('/');
+            if (slashIndex <= 0) {
+                return ResponseEntity.notFound().build();
+            }
+            Long tenantId = Long.parseLong(rest.substring(0, slashIndex));
+            String fileName = rest.substring(slashIndex + 1);
+
+            if (cosService.isEnabled()) {
+                return ResponseEntity.status(302).location(URI.create(cosService.getPresignedUrl(tenantId, fileName))).build();
+            }
+
+            Path baseDir = Path.of(uploadPath).toAbsolutePath().normalize();
+            Path filePath = baseDir.resolve("tenants").resolve(String.valueOf(tenantId)).resolve(fileName).normalize();
+            if (!filePath.startsWith(baseDir)) {
+                return ResponseEntity.notFound().build();
+            }
+            Resource resource = new UrlResource(filePath.toUri());
+            if (!resource.exists()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            String contentType = Files.probeContentType(filePath);
+            MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
+            if (contentType != null && !contentType.isBlank()) {
+                try {
+                    mediaType = MediaType.parseMediaType(contentType);
+                } catch (Exception ignored) {
+                }
+            }
+            return ResponseEntity.ok()
+                    .contentType(mediaType)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
+                    .body(resource);
+        } catch (Exception e) {
+            log.warn("公开分享款式图读取失败 token={}", token, e);
+            return ResponseEntity.notFound().build();
+        }
     }
 }

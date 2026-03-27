@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { message as antdMessage } from 'antd';
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
 import { useViewport } from '@/utils/useViewport';
@@ -107,6 +107,18 @@ export function useMaterialPurchase() {
     return list.isOrderFrozenForRecord(rec);
   }, [detail.detailOrder, currentPurchase, list.isOrderFrozenForRecord]);
   const submitLoading = dialog.submitLoading || batchSubmitLoading;
+  const reloadCurrentDetail = useCallback(async () => {
+    const orderNo = String(currentPurchase?.orderNo || '').trim();
+    if (orderNo && orderNo !== '-') {
+      await detail.loadDetailByOrderNo(orderNo);
+      return;
+    }
+    const styleNo = String(currentPurchase?.styleNo || '').trim();
+    const purchaseNo = String(currentPurchase?.purchaseNo || '').trim();
+    if (styleNo || purchaseNo) {
+      await detail.loadDetailByStyleNo(styleNo, purchaseNo);
+    }
+  }, [currentPurchase?.orderNo, currentPurchase?.purchaseNo, currentPurchase?.styleNo, detail]);
 
   void setActiveTabKey; // suppress unused-variable warning (consumed via activeTabKey)
 
@@ -132,6 +144,7 @@ export function useMaterialPurchase() {
     overdueCount: list.overdueCount,
     smartError, showSmartErrorNotice, showPurchaseAI,
     fetchMaterialPurchaseList: list.fetchMaterialPurchaseList,
+    reloadCurrentDetail,
     isOrderFrozenForRecord: list.isOrderFrozenForRecord,
     handleExport: actions.handleExport,
     location,

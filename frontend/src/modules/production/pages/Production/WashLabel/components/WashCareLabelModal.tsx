@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Alert, Radio, Button, Spin } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
+import { parseProductionOrderLines } from '@/utils/api';
 import type { ProductionOrder } from '@/types/production';
 import { buildWashLabelSections, getDisplayWashCareCodes } from '@/utils/washLabel';
 import { getStyleInfoByRef } from '@/services/style/styleApi';
@@ -112,6 +113,17 @@ export default function WashCareLabelModal({ open, onCancel, order }: Props) {
 
   const noInfo = !styleData.fabricComposition && !styleData.fabricCompositionParts && !styleData.washInstructions;
   const paper  = PAPER_OPTS.find(p => p.value === paperSize)!;
+  const colorSummary = order
+    ? (() => {
+        const colors = Array.from(new Set(
+          parseProductionOrderLines(order)
+            .map((item) => String(item.color || '').trim())
+            .filter(Boolean),
+        ));
+        if (colors.length > 0) return colors.join(' / ');
+        return String(order.color || '').trim() || '-';
+      })()
+    : '-';
 
   const handlePrint = () => {
     if (!order) return;
@@ -203,7 +215,7 @@ html,body{width:${w}mm;min-height:${h}mm;font-family:Arial,"Microsoft YaHei",san
             <div style={{ fontSize: 12, fontWeight: 600, color: '#666', marginBottom: 4 }}>款式信息</div>
             <div style={{ fontSize: 13 }}>
               款号：{order.styleNo || '-'}&nbsp;&nbsp;
-              颜色：{order.color  || '-'}
+              颜色：{colorSummary}
             </div>
             {buildWashLabelSections(styleData.fabricCompositionParts, styleData.fabricComposition).map(section => (
               <div key={section.key} style={{ fontSize: 12, color: '#555', marginTop: 4 }}>

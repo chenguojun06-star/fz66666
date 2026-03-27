@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Switch, Space, Alert } from 'antd';
-import { InfoCircleOutlined } from '@ant-design/icons';
+import { Form, Input, Switch, Space, Alert, Tooltip } from 'antd';
+import { InfoCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 
 interface OperatorSelectorProps {
   /**
@@ -56,6 +56,23 @@ export const OperatorSelector: React.FC<OperatorSelectorProps> = ({
   showSwitch = true
 }) => {
   const [isOutsourced, setIsOutsourced] = useState(false);
+  const tooltipStyles = {
+    root: { maxWidth: 320, zIndex: 4000 },
+    body: {
+      color: 'var(--neutral-text)',
+      background: 'var(--component-bg, #ffffff)',
+      border: '1px solid var(--neutral-border, #d9d9d9)',
+      boxShadow: '0 10px 28px rgba(15, 23, 42, 0.18)',
+    },
+  } as const;
+  const renderLabel = (label: string, tooltip: string) => (
+    <Space size={4}>
+      <span>{label}</span>
+      <Tooltip title={tooltip} styles={tooltipStyles}>
+        <QuestionCircleOutlined style={{ color: 'var(--text-secondary, #8c8c8c)', cursor: 'help' }} />
+      </Tooltip>
+    </Space>
+  );
 
   // 外协工厂关键字列表
   const OUTSOURCED_KEYWORDS = ['外协', '外发', '外包', '代工', '外厂', 'outsource'];
@@ -124,10 +141,9 @@ export const OperatorSelector: React.FC<OperatorSelectorProps> = ({
       {/* 外协模式开关（可选） */}
       {showSwitch && (
         <Form.Item
-          label="外协模式"
+          label={renderLabel('外协模式', '外协工厂的操作人可能没有系统账号，开启后允许手动填写')}
           name="isOutsourced"
           valuePropName="checked"
-          tooltip="外协工厂的操作人可能没有系统账号，开启后允许手动填写"
         >
           <Switch
             checked={isOutsourced}
@@ -142,13 +158,12 @@ export const OperatorSelector: React.FC<OperatorSelectorProps> = ({
       {/* 外协模式：手动填写操作人 */}
       {isOutsourced ? (
         <Form.Item
-          label="操作人"
+          label={renderLabel('操作人', '外协工厂员工的真实姓名')}
           name="manualOperatorName"
           rules={[
             { required: true, message: '请输入外协工厂操作人姓名' },
             { max: 50, message: '操作人姓名不能超过50个字符' }
           ]}
-          tooltip="外协工厂员工的真实姓名"
         >
           <Input
             placeholder="请输入外协工厂操作人姓名（如：张三）"
@@ -159,8 +174,7 @@ export const OperatorSelector: React.FC<OperatorSelectorProps> = ({
       ) : (
         /* 正常模式：显示自动记录 */
         <Form.Item
-          label="操作人"
-          tooltip="系统将自动记录当前登录用户"
+          label={renderLabel('操作人', '系统将自动记录当前登录用户')}
         >
           <Input
             value="✅ 系统自动记录当前登录用户"

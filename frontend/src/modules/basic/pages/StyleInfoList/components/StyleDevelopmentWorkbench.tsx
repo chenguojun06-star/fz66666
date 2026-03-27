@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { App, Button, Skeleton, Tag } from 'antd';
 import dayjs from 'dayjs';
 import api from '@/utils/api';
@@ -19,7 +19,7 @@ interface Props {
   record: StyleInfo;
   onClose: () => void;
   initialSection?: WorkbenchSection;
-  onSync?: () => void;
+  onSync?: () => void | Promise<void>;
 }
 
 interface WorkbenchData {
@@ -62,6 +62,7 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
   const [loading, setLoading] = useState(false);
   const [activeSection, setActiveSection] = useState<WorkbenchSection>('bom');
   const [productionSaving, setProductionSaving] = useState(false);
+  const viewportRef = useRef<{ x: number; y: number } | null>(null);
   const [productionReqRows, setProductionReqRows] = useState<string[]>(() => Array.from({ length: 15 }).map(() => ''));
   const [data, setData] = useState<WorkbenchData>({
     detail: null,
@@ -92,10 +93,27 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
     return list.join('\n');
   }, []);
 
-  const loadWorkbenchData = useCallback(async () => {
-    if (!record.id) return;
+  const captureViewport = useCallback(() => {
+    viewportRef.current = { x: window.scrollX, y: window.scrollY };
+  }, []);
 
-    setLoading(true);
+  const restoreViewport = useCallback(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    requestAnimationFrame(() => {
+      window.scrollTo({ left: viewport.x, top: viewport.y, behavior: 'auto' });
+      requestAnimationFrame(() => {
+        window.scrollTo({ left: viewport.x, top: viewport.y, behavior: 'auto' });
+      });
+    });
+  }, []);
+
+  const loadWorkbenchData = useCallback(async (options?: { preserveSection?: boolean; silent?: boolean }) => {
+    if (!record.id) return;
+    const preserveSection = Boolean(options?.preserveSection);
+    const silent = Boolean(options?.silent);
+
+    if (!silent) setLoading(true);
     try {
       const [detailRes, bomRes, sizeRes, processRes, attachmentRes, quotationRes] = await Promise.all([
         api.get(`/style/info/${record.id}`),
@@ -116,9 +134,11 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
         quotation: (quotationRes as any)?.code === 200 ? (quotationRes as any).data || null : null,
       });
       setProductionReqRows(parseProductionReqRows((detailData as any)?.productionRequirements || (detailData as any)?.description));
-      setActiveSection(initialSection || resolvePreferredSection(detailData));
+      if (!preserveSection) {
+        setActiveSection(initialSection || resolvePreferredSection(detailData));
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [initialSection, parseProductionReqRows, record.id]);
 
@@ -139,10 +159,16 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
       return { sizes: [], colors: [], matrixRows: [] };
     }
   }, [detail]);
+  const refreshWorkbenchView = useCallback(async () => {
+    captureViewport();
+    await loadWorkbenchData({ preserveSection: true, silent: true });
+    await Promise.resolve(onSync?.());
+    restoreViewport();
+  }, [captureViewport, loadWorkbenchData, onSync, restoreViewport]);
+
   const handleSectionRefresh = useCallback(() => {
-    void loadWorkbenchData();
-    onSync?.();
-  }, [loadWorkbenchData, onSync]);
+    void refreshWorkbenchView();
+  }, [refreshWorkbenchView]);
 
   const stageCards = useMemo(() => {
     const bomMeta = resolveStageMeta(Boolean((detail as any).bomCompletedTime), Boolean((detail as any).bomStartTime));
@@ -172,19 +198,21 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
     setProductionSaving(true);
     try {
       const content = serializeProductionReqRows(productionReqRows);
-      await api.put(`/style/info/${record.id}/production-requirements`, {
+      await api.put('/style/info', {
+        id: record.id,
+        styleNo: record.styleNo,
+        styleName: record.styleName,
+        category: record.category,
         description: content,
-        productionRequirements: content,
       });
       message.success('生产制单保存成功');
-      await loadWorkbenchData();
-      onSync?.();
+      await refreshWorkbenchView();
     } catch (error: any) {
       message.error(error?.response?.data?.message || error?.message || '生产制单保存失败');
     } finally {
       setProductionSaving(false);
     }
-  }, [loadWorkbenchData, message, onSync, productionReqRows, record.id, serializeProductionReqRows]);
+  }, [message, productionReqRows, record.category, record.id, record.styleName, record.styleNo, refreshWorkbenchView, serializeProductionReqRows]);
 
   const content = (() => {
     if (loading) {

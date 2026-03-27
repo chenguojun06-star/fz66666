@@ -280,7 +280,7 @@ public class ProductionOrder {
     @TableField(exist = false)
     private Integer inStockQuantity;
 
-    @TableField(exist = false)
+    @TableField("factory_unit_price")
     private BigDecimal factoryUnitPrice;
 
     @TableField(exist = false)
@@ -553,6 +553,24 @@ public class ProductionOrder {
      * 下单业务类型：FOB=离岸价交货, ODM=原创设计制造, OEM=代工贴牌, CMT=纯加工
      */
     private String orderBizType;
+
+    /**
+     * 下单单价模式：PROCESS=工序单价，SIZE=尺码单价，MANUAL=手动单价
+     */
+    @TableField("pricing_mode")
+    private String pricingMode;
+
+    /**
+     * 散剪单价模式：FOLLOW_ORDER=跟随下单单价，MANUAL=手动散剪单价
+     */
+    @TableField("scatter_pricing_mode")
+    private String scatterPricingMode;
+
+    /**
+     * 散剪单价快照（元/件）
+     */
+    @TableField("scatter_cutting_unit_price")
+    private BigDecimal scatterCuttingUnitPrice;
 
     /**
      * 乐观锁版本号（并发状态更新防覆盖）

@@ -10,7 +10,7 @@ import RowActions from '@/components/common/RowActions';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import { StyleCoverThumb } from '@/components/StyleAssets';
 import { MaterialPurchase as MaterialPurchaseType, MaterialQueryParams } from '@/types/production';
-import { getMaterialTypeCategory, getMaterialTypeLabel } from '@/utils/materialType';
+import { formatMaterialSpecWidth, getMaterialTypeCategory, getMaterialTypeLabel } from '@/utils/materialType';
 import { analyzePurchase, renderPurchaseTooltip } from '../utils/purchaseIntelligence';
 import { formatDateTime } from '@/utils/datetime';
 import { MATERIAL_TYPES } from '@/constants/business';
@@ -241,18 +241,11 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       ellipsis: true,
     },
     {
-      title: '规格',
-      dataIndex: 'specifications',
-      key: 'specifications',
-      width: 120,
+      title: '规格/幅宽',
+      key: 'specWidth',
+      width: 150,
       ellipsis: true,
-    },
-    {
-      title: '幅宽',
-      dataIndex: 'fabricWidth',
-      key: 'fabricWidth',
-      width: 90,
-      ellipsis: true,
+      render: (_: unknown, record: MaterialPurchaseType) => formatMaterialSpecWidth(record.specifications, record.fabricWidth),
     },
     {
       title: '克重',
@@ -289,7 +282,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       width: 110,
       align: 'right' as const,
       render: (_: unknown, record: MaterialPurchaseType) =>
-        formatReferenceKilograms(record.purchaseQuantity, record.conversionRate),
+        formatReferenceKilograms(record.purchaseQuantity, record.conversionRate, record.unit),
     },
     {
       title: '到货数量',

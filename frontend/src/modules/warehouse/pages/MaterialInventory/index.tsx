@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Card,
   Table,
@@ -6,6 +7,7 @@ import {
   Button,
   Space,
   Input,
+  AutoComplete,
   Tag,
   Form,
   Select,
@@ -25,15 +27,19 @@ import {
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import SupplierSelect from '@/components/common/SupplierSelect';
-import { getBaseMaterialTypeLabel, getMaterialTypeCategory } from '@/utils/materialType';
+import { formatMaterialSpecWidth, getBaseMaterialTypeLabel, getMaterialTypeCategory } from '@/utils/materialType';
 import MaterialAlertRanking from './components/MaterialAlertRanking';
 import MaterialInventoryAISummary from './components/MaterialInventoryAISummary';
+import MaterialOutboundPrintModal from './components/MaterialOutboundPrintModal';
 import './MaterialInventory.css';
 import StandardModal from '@/components/common/StandardModal';
+import SmallModal from '@/components/common/SmallModal';
+import StandardPagination from '@/components/common/StandardPagination';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import PageStatCards from '@/components/common/PageStatCards';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import { paths } from '@/routeConfig';
 import { useMaterialInventoryColumns } from './hooks/useMaterialInventoryColumns';
 import { useMaterialInventoryData } from './hooks/useMaterialInventoryData';
 import { useMaterialPickupData } from './hooks/useMaterialPickupData';
@@ -44,11 +50,13 @@ import type { MaterialBatchDetail } from './hooks/useMaterialInventoryData';
 const { Option } = Select;
 
 const _MaterialInventory: React.FC = () => {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const {
     loading, dataSource, smartError, showSmartErrorNotice, showMaterialAI,
     stats, pagination, user,
     searchText, setSearchText, selectedType, setSelectedType, dateRange, setDateRange,
-    detailModal, inboundModal, outboundModal, rollModal,
+    detailModal, inboundModal, outboundModal, rollModal, printModal,
     inboundForm, outboundForm, rollForm, instructionForm,
     txLoading, txList,
     batchDetails, setBatchDetails, generatingRolls,
@@ -64,15 +72,31 @@ const _MaterialInventory: React.FC = () => {
     handleEditSafetyStock, handleSafetyStockSave,
     handleViewDetail, handleInbound, handleInboundConfirm,
     handleGenerateRollLabels,
+    factoryOptions, outboundOrderOptions,
+    handleOutboundFactoryInput, handleOutboundOrderInput, handleOutboundOrderSelect,
+    autoMatchOutboundContext,
     handleOutbound, handleBatchQtyChange, handleOutboundConfirm,
-    handlePrintOutbound,
+    handlePrintOutbound, handlePendingPickingPrint,
   } = useMaterialInventoryData();
 
   const pickupData = useMaterialPickupData();
+  const jumpToReceivableDetail = React.useCallback((receivableId?: string, receivableNo?: string) => {
+    if (!receivableId) {
+      return;
+    }
+    const next = new URLSearchParams();
+    next.set('sourceBizType', 'MATERIAL_PICKUP');
+    next.set('receivableId', receivableId);
+    if (receivableNo) {
+      next.set('keyword', receivableNo);
+    }
+    navigate(`${paths.crmReceivables}?${next.toString()}`);
+  }, [navigate]);
   const pickupColumns = useMaterialPickupColumns({
     onAudit:   pickupData.auditModal.open,
     onFinance: pickupData.financeModal.open,
     onCancel:  pickupData.handleCancel,
+    onOpenReceivable: (record) => jumpToReceivableDetail(record.receivableId, record.receivableNo),
   });
 
   const columns = useMaterialInventoryColumns({
@@ -89,10 +113,62 @@ const _MaterialInventory: React.FC = () => {
 
   const inventoryPageSize = pagination.pagination.pageSize;
   const inventoryCurrent = pagination.pagination.current;
-  const inventoryTotalPages = Math.max(1, Math.ceil((pagination.pagination.total || 0) / inventoryPageSize));
+  const _inventoryTotalPages = Math.max(1, Math.ceil((pagination.pagination.total || 0) / inventoryPageSize));
   const pickupPageSize = pickupData.pagination.pagination.pageSize;
   const pickupCurrent = pickupData.pagination.pagination.current;
-  const pickupTotalPages = Math.max(1, Math.ceil((pickupData.pagination.pagination.total || 0) / pickupPageSize));
+  const paymentPageSize = pickupData.paymentPagination.pagination.pageSize;
+  const paymentCurrent = pickupData.paymentPagination.pagination.current;
+  const paymentTotal = pickupData.paymentPagination.pagination.total || pickupData.paymentCenterData.length;
+  const paymentCenterPagedData = React.useMemo(() => {
+    const start = Math.max(0, (paymentCurrent - 1) * paymentPageSize);
+    return pickupData.paymentCenterData.slice(start, start + paymentPageSize);
+  }, [paymentCurrent, paymentPageSize, pickupData.paymentCenterData]);
+  const tabParam = searchParams.get('tab') || 'overview';
+  const pickupNoParam = searchParams.get('pickupNo') || '';
+  const factoryNameParam = searchParams.get('factoryName') || '';
+  const [activeTab, setActiveTab] = React.useState(tabParam);
+
+  React.useEffect(() => {
+    const tab = tabParam;
+    setActiveTab(tab);
+    if (tab === 'pickup') {
+      if (pickupNoParam && pickupData.keyword !== pickupNoParam) {
+        pickupData.setKeyword(pickupNoParam);
+      }
+      if (factoryNameParam && pickupData.factoryName !== factoryNameParam) {
+        pickupData.setFactoryName(factoryNameParam);
+      }
+    }
+    if (tab === 'payment') {
+      void pickupData.fetchPaymentCenter(factoryNameParam ? { factoryName: factoryNameParam } : {});
+    }
+  }, [factoryNameParam, pickupData.factoryName, pickupData.fetchPaymentCenter, pickupData.keyword, pickupData.setFactoryName, pickupData.setKeyword, pickupNoParam, tabParam]);
+
+  const handleTabChange = (key: string) => {
+    setActiveTab(key);
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', key);
+    if (key !== 'pickup') {
+      next.delete('pickupNo');
+    }
+    if (key !== 'payment') {
+      next.delete('factoryName');
+    }
+    setSearchParams(next);
+    if (key === 'payment') {
+      const factoryName = next.get('factoryName') || '';
+      void pickupData.fetchPaymentCenter(factoryName ? { factoryName } : {});
+    }
+  };
+
+  const jumpToReceivableCenter = (factoryName?: string) => {
+    const next = new URLSearchParams();
+    next.set('sourceBizType', 'MATERIAL_PICKUP');
+    if (factoryName) {
+      next.set('keyword', factoryName);
+    }
+    navigate(`${paths.crmReceivables}?${next.toString()}`);
+  };
 
   return (
     <Layout>
@@ -129,7 +205,6 @@ const _MaterialInventory: React.FC = () => {
               ],
               onClick: () => setSelectedType(''),
               activeColor: 'var(--color-primary)',
-              activeBg: 'rgba(45, 127, 249, 0.1)',
             },
             {
               key: 'low',
@@ -139,7 +214,6 @@ const _MaterialInventory: React.FC = () => {
               ],
               onClick: () => setSelectedType('low'),
               activeColor: 'var(--color-danger)',
-              activeBg: '#fff1f0',
             },
             {
               key: 'today',
@@ -149,13 +223,12 @@ const _MaterialInventory: React.FC = () => {
               ],
               onClick: () => setSelectedType('today'),
               activeColor: 'var(--color-success)',
-              activeBg: '#f6ffed',
             }
           ]}
         />
 
         <Tabs
-          defaultActiveKey="overview"
+          activeKey={activeTab}
           style={{ marginTop: 8 }}
           items={[
             {
@@ -210,13 +283,14 @@ const _MaterialInventory: React.FC = () => {
             loading={loading}
             rowKey="id"
             scroll={{ x: 1600 }}
-            pagination={{
-              ...pagination.pagination,
-              simple: false,
-              showTotal: (total, range) => `第 ${inventoryCurrent}/${inventoryTotalPages} 页 · 第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
-              pageSizeOptions: ['20', '50', '100', '200'],
-              onChange: pagination.onChange,
-            }}
+            pagination={false}
+          />
+          <StandardPagination
+            current={inventoryCurrent}
+            pageSize={inventoryPageSize}
+            total={pagination.pagination.total}
+            wrapperStyle={{ paddingTop: 12 }}
+            onChange={pagination.onChange}
           />
         </Card>
 
@@ -278,7 +352,67 @@ const _MaterialInventory: React.FC = () => {
                 { title: '领料单号', dataIndex: 'pickingNo', width: 180 },
                 { title: '订单号', dataIndex: 'orderNo', width: 160 },
                 { title: '款号', dataIndex: 'styleNo', width: 130 },
-                { title: '申请人', dataIndex: 'pickerName', width: 100 },
+                {
+                  title: '工厂',
+                  dataIndex: 'factoryName',
+                  width: 220,
+                  render: (value, record) => {
+                    const text = value || '-';
+                    const factoryTypeTag = record.factoryType === 'EXTERNAL'
+                      ? <Tag color="blue" style={{ marginInlineEnd: 0 }}>外部工厂</Tag>
+                      : record.factoryType === 'INTERNAL'
+                        ? <Tag color="green" style={{ marginInlineEnd: 0 }}>内部工厂</Tag>
+                        : null;
+                    return (
+                      <Space size={[6, 6]} wrap>
+                        <span>{text}</span>
+                        {factoryTypeTag}
+                      </Space>
+                    );
+                  },
+                },
+                { title: '领取人', dataIndex: 'pickerName', width: 100 },
+                {
+                  title: '出库类型',
+                  dataIndex: 'pickupType',
+                  width: 100,
+                  render: (value) => value === 'EXTERNAL' ? <Tag color="blue">外部</Tag> : <Tag color="green">内部</Tag>,
+                },
+                {
+                  title: '用料场景',
+                  dataIndex: 'usageType',
+                  width: 120,
+                  render: (value) => {
+                    const tagMap: Record<string, { text: string; color: string }> = {
+                      BULK: { text: '大货用料', color: 'orange' },
+                      SAMPLE: { text: '样衣用料', color: 'purple' },
+                      STOCK: { text: '备库/补库', color: 'gold' },
+                      OTHER: { text: '其他', color: 'default' },
+                    };
+                    const matched = tagMap[value] || null;
+                    if (!matched) {
+                      return value || '-';
+                    }
+                    return <Tag color={matched.color}>{matched.text}</Tag>;
+                  },
+                },
+                {
+                  title: '领取来源',
+                  key: 'pickupSource',
+                  width: 120,
+                  render: (_, record) => {
+                    if (record.usageType === 'SAMPLE') {
+                      return <Tag color="magenta">样衣开发</Tag>;
+                    }
+                    if (record.usageType === 'BULK') {
+                      return <Tag color="cyan">生产领料</Tag>;
+                    }
+                    if (record.usageType === 'STOCK') {
+                      return <Tag color="gold">备库领料</Tag>;
+                    }
+                    return <Tag>其他来源</Tag>;
+                  },
+                },
                 {
                   title: '申请时间',
                   dataIndex: 'createTime',
@@ -296,24 +430,29 @@ const _MaterialInventory: React.FC = () => {
                 {
                   title: '操作',
                   key: 'actions',
-                  width: 120,
+                  width: 200,
                   render: (_, record) => (
-                    <Popconfirm
-                      title="确认出库"
-                      description={`确认后将实际扣减库存，不可撤销。`}
-                      onConfirm={() => void handleConfirmOutbound(record.id)}
-                      okText="确认出库"
-                      cancelText="取消"
-                    >
-                      <Button
-                        type="primary"
-                        size="small"
-                        icon={<CheckCircleOutlined />}
-                        loading={confirmingPickingId === record.id}
-                      >
-                        确认出库
+                    <Space>
+                      <Button size="small" onClick={() => handlePendingPickingPrint(record)}>
+                        打印
                       </Button>
-                    </Popconfirm>
+                      <Popconfirm
+                        title="确认出库"
+                        description="确认后将实际扣减库存，不可撤销。"
+                        onConfirm={() => void handleConfirmOutbound(record)}
+                        okText="确认出库"
+                        cancelText="取消"
+                      >
+                        <Button
+                          type="primary"
+                          size="small"
+                          icon={<CheckCircleOutlined />}
+                          loading={confirmingPickingId === record.id}
+                        >
+                          确认出库
+                        </Button>
+                      </Popconfirm>
+                    </Space>
                   ),
                 },
               ]}
@@ -370,8 +509,8 @@ const _MaterialInventory: React.FC = () => {
                           value={pickupData.financeStatus}
                           onChange={pickupData.setFinanceStatus}
                         >
-                          <Option value="PENDING">待核算</Option>
-                          <Option value="SETTLED">已核算</Option>
+                          <Option value="PENDING">待入账</Option>
+                          <Option value="SETTLED">已入账</Option>
                         </Select>
                         <Input
                           placeholder="订单号"
@@ -387,6 +526,23 @@ const _MaterialInventory: React.FC = () => {
                           value={pickupData.styleNo}
                           onChange={(e) => pickupData.setStyleNo(e.target.value)}
                         />
+                        <Input
+                          placeholder="工厂"
+                          allowClear
+                          style={{ width: 160 }}
+                          value={pickupData.factoryName}
+                          onChange={(e) => pickupData.setFactoryName(e.target.value)}
+                        />
+                        <Select
+                          placeholder="工厂内外"
+                          allowClear
+                          style={{ width: 120 }}
+                          value={pickupData.factoryType}
+                          onChange={pickupData.setFactoryType}
+                        >
+                          <Option value="INTERNAL">内部工厂</Option>
+                          <Option value="EXTERNAL">外部工厂</Option>
+                        </Select>
                       </Space>
                     )}
                     right={(
@@ -398,12 +554,6 @@ const _MaterialInventory: React.FC = () => {
                             批量审核（{pickupData.selectedRowKeys.length}）
                           </Button>
                         )}
-                        <Button
-                          type="primary"
-                          onClick={() => pickupData.createModal.open(null)}
-                        >
-                          新建领取记录
-                        </Button>
                       </Space>
                     )}
                   />
@@ -414,13 +564,7 @@ const _MaterialInventory: React.FC = () => {
                     loading={pickupData.loading}
                     rowKey="id"
                     scroll={{ x: 1600 }}
-                    pagination={{
-                      ...pickupData.pagination.pagination,
-                      simple: false,
-                      showTotal: (total, range) => `第 ${pickupCurrent}/${pickupTotalPages} 页 · 第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
-                      pageSizeOptions: ['20', '50', '100', '200'],
-                      onChange: pickupData.pagination.onChange,
-                    }}
+                    pagination={false}
                     rowSelection={{
                       type: 'checkbox',
                       selectedRowKeys: pickupData.selectedRowKeys,
@@ -429,6 +573,13 @@ const _MaterialInventory: React.FC = () => {
                         disabled: record.auditStatus !== 'PENDING',
                       }),
                     }}
+                  />
+                  <StandardPagination
+                    current={pickupCurrent}
+                    pageSize={pickupPageSize}
+                    total={pickupData.pagination.pagination.total}
+                    wrapperStyle={{ paddingTop: 12 }}
+                    onChange={pickupData.pagination.onChange}
                   />
                 </Card>
               ),
@@ -439,9 +590,9 @@ const _MaterialInventory: React.FC = () => {
               children: (
                 <Card>
                   <div style={{ marginBottom: 16 }}>
-                    <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, marginBottom: 4 }}>💰 工厂应付款汇总</div>
+                    <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, marginBottom: 4 }}>💰 面辅料领取应收汇总</div>
                     <div style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)' }}>
-                      以下为已审核通过的领取记录，按工厂汇总待收款金额（工厂欠租户的货款）
+                      领取记录审核通过后会自动生成应收账单，这里按工厂汇总待收/已收金额，并推动到收款中心登记回款。
                     </div>
                   </div>
                   <div style={{ marginBottom: 12 }}>
@@ -451,12 +602,16 @@ const _MaterialInventory: React.FC = () => {
                     storageKey="material-payment-center"
                     rowKey="factoryName"
                     loading={pickupData.paymentCenterLoading}
-                    dataSource={pickupData.paymentCenterData}
+                    dataSource={paymentCenterPagedData}
                     columns={[
                       { title: '工厂名称', dataIndex: 'factoryName', width: 200 },
                       {
                         title: '工厂类型', dataIndex: 'factoryType', width: 100,
-                        render: (v: string) => v ? <Tag color="blue">{v}</Tag> : '-',
+                        render: (v: string) => v === 'INTERNAL'
+                          ? <Tag color="green">内部工厂</Tag>
+                          : v === 'EXTERNAL'
+                            ? <Tag color="blue">外部工厂</Tag>
+                            : '-',
                       },
                       {
                         title: '待收款金额', dataIndex: 'pendingAmount', width: 140,
@@ -480,34 +635,50 @@ const _MaterialInventory: React.FC = () => {
                           `${r.pendingCount} / ${r.settledCount} / ${r.totalCount}`,
                       },
                       {
-                        title: '操作', key: 'actions', width: 130,
+                        title: '操作', key: 'actions', width: 220,
                         render: (_: unknown, record: PaymentCenterItem) => {
-                          if (record.pendingCount === 0) return <Tag color="green">已全部收款</Tag>;
                           const pendingIds = (record.records || [])
-                            .filter((r) => r.financeStatus === 'PENDING')
+                            .filter((r) => r.receivableStatus !== 'PAID')
                             .map((r) => r.id);
                           return (
-                            <Button
-                              type="primary"
-                              size="small"
-                              loading={pickupData.paymentSettling}
-                              onClick={() => void pickupData.handlePaymentSettle(pendingIds)}
-                            >
-                              标记已收款
-                            </Button>
+                            <Space size={6}>
+                              <Button
+                                size="small"
+                                onClick={() => jumpToReceivableCenter(record.factoryName)}
+                              >
+                                查看应收单
+                              </Button>
+                              {record.pendingCount === 0 ? (
+                                <Tag color="green">已全部收款</Tag>
+                              ) : (
+                                <Button
+                                  type="primary"
+                                  size="small"
+                                  loading={pickupData.paymentSettling}
+                                  onClick={() => void pickupData.handlePaymentSettle(pendingIds)}
+                                >
+                                  登记收款
+                                </Button>
+                              )}
+                            </Space>
                           );
                         },
                       },
                     ]}
                     pagination={false}
                   />
+                  <StandardPagination
+                    current={paymentCurrent}
+                    pageSize={paymentPageSize}
+                    total={paymentTotal}
+                    wrapperStyle={{ paddingTop: 12 }}
+                    onChange={pickupData.paymentPagination.onChange}
+                  />
                 </Card>
               ),
             },
           ]}
-          onChange={(key) => {
-            if (key === 'payment') void pickupData.fetchPaymentCenter();
-          }}
+          onChange={handleTabChange}
         />
 
       <StandardModal
@@ -580,8 +751,8 @@ const _MaterialInventory: React.FC = () => {
                 </div>
                 <Space orientation="vertical" size={8} style={{ width: '100%' }}>
                   <div style={{ fontSize: 'var(--font-size-sm)' }}>
-                    <span style={{ color: 'var(--neutral-text-disabled)' }}>幅宽：</span>
-                    <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{instructionTarget?.fabricWidth || '-'}</span>
+                    <span style={{ color: 'var(--neutral-text-disabled)' }}>规格/幅宽：</span>
+                    <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{formatMaterialSpecWidth((instructionTarget as any)?.specification, instructionTarget?.fabricWidth)}</span>
                   </div>
                   <div style={{ fontSize: 'var(--font-size-sm)' }}>
                     <span style={{ color: 'var(--neutral-text-disabled)' }}>克重：</span>
@@ -640,7 +811,7 @@ const _MaterialInventory: React.FC = () => {
       </StandardModal>
 
       {/* 安全库存编辑弹窗 */}
-      <StandardModal
+      <SmallModal
         title="设置安全库存"
         open={safetyStockVisible}
         onCancel={() => setSafetyStockVisible(false)}
@@ -650,7 +821,6 @@ const _MaterialInventory: React.FC = () => {
             保存
           </Button>,
         ]}
-        size="sm"
       >
         {safetyStockTarget && (
           <div>
@@ -676,7 +846,7 @@ const _MaterialInventory: React.FC = () => {
             </div>
           </div>
         )}
-      </StandardModal>
+      </SmallModal>
 
       {/* 详情模态框 - 出入库记录 */}
       <StandardModal
@@ -937,8 +1107,8 @@ const _MaterialInventory: React.FC = () => {
                       <span style={{ fontWeight: 600 }}>{outboundModal.data.color || '-'}</span>
                     </div>
                     <div style={{ fontSize: 'var(--font-size-sm)' }}>
-                      <span style={{ color: 'var(--neutral-text-disabled)' }}>规格：</span>
-                      <span style={{ fontWeight: 600 }}>{outboundModal.data.specification || '-'}</span>
+                      <span style={{ color: 'var(--neutral-text-disabled)' }}>规格/幅宽：</span>
+                      <span style={{ fontWeight: 600 }}>{formatMaterialSpecWidth(outboundModal.data.specification, outboundModal.data.fabricWidth)}</span>
                     </div>
                     <div style={{ fontSize: 'var(--font-size-sm)', gridColumn: '1 / -1' }}>
                       <span style={{ color: 'var(--neutral-text-disabled)' }}>供应商：</span>
@@ -952,10 +1122,6 @@ const _MaterialInventory: React.FC = () => {
                   <Col span={11} style={{ paddingLeft: 16 }}>
                     <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--primary-color)', marginBottom: 10 }}>🧵 面料属性</div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px' }}>
-                      <div style={{ fontSize: 'var(--font-size-sm)' }}>
-                        <span style={{ color: 'var(--neutral-text-disabled)' }}>幅宽：</span>
-                        <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{outboundModal.data.fabricWidth || '-'}</span>
-                      </div>
                       <div style={{ fontSize: 'var(--font-size-sm)' }}>
                         <span style={{ color: 'var(--neutral-text-disabled)' }}>克重：</span>
                         <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{outboundModal.data.fabricWeight || '-'}</span>
@@ -972,6 +1138,143 @@ const _MaterialInventory: React.FC = () => {
                   </Col>
                 )}
               </Row>
+            </Card>
+
+            <Card size="small" title="出库流转信息">
+              <Form form={outboundForm} layout="vertical">
+                <div style={{ marginBottom: 12, color: 'var(--color-text-secondary)', fontSize: 12 }}>
+                  生产订单/样衣开发领料形成的待出库单会自动带出订单、款号、工厂、内外部和用料场景；这里只是给单独出库补完整业务信息。
+                </div>
+                <Row gutter={12}>
+                  <Col span={6}>
+                    <Form.Item
+                      label="出库类型"
+                      name="pickupType"
+                      rules={[{ required: true, message: '请选择出库类型' }]}
+                    >
+                      <Select placeholder="请选择">
+                        <Option value="INTERNAL">内部</Option>
+                        <Option value="EXTERNAL">外部</Option>
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                  <Col span={6}>
+                    <Form.Item
+                      label="用料场景"
+                      name="usageType"
+                      rules={[{ required: true, message: '请选择用料场景' }]}
+                    >
+                      <Select placeholder="请选择">
+                        <Option value="BULK">大货用料</Option>
+                        <Option value="SAMPLE">样衣用料</Option>
+                        <Option value="STOCK">备库/补库</Option>
+                        <Option value="OTHER">其他</Option>
+                      </Select>
+                    </Form.Item>
+                  </Col>
+                  <Col span={6}>
+                    <Form.Item
+                      label="关联订单"
+                      name="orderNo"
+                      rules={[{ required: true, message: '请填写关联订单' }]}
+                    >
+                      <AutoComplete
+                        placeholder="按工厂自动匹配或手填订单号"
+                        options={outboundOrderOptions}
+                        filterOption={(inputValue, option) => String(option?.label || '').toLowerCase().includes(inputValue.toLowerCase())}
+                        onSearch={(value) => {
+                          void handleOutboundOrderInput(value);
+                        }}
+                        onSelect={(value) => handleOutboundOrderSelect(String(value))}
+                        onChange={(value) => {
+                          outboundForm.setFieldValue('orderNo', value);
+                        }}
+                      />
+                    </Form.Item>
+                  </Col>
+                  <Col span={6}>
+                    <Form.Item
+                      label="关联款号"
+                      name="styleNo"
+                      rules={[{ required: true, message: '请填写关联款号' }]}
+                    >
+                      <Input placeholder="必须关联款号" />
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item
+                      label="领取人"
+                      name="receiverId"
+                      rules={[{ required: true, message: '请选择领取人' }]}
+                    >
+                      <Select
+                        showSearch
+                        placeholder="请选择领取人"
+                        options={receiverOptions}
+                        optionFilterProp="label"
+                        onChange={(value) => {
+                          const matched = receiverOptions.find((item) => item.value === value);
+                          outboundForm.setFieldValue('receiverName', matched?.name || '');
+                          if (outboundModal.data) {
+                            void autoMatchOutboundContext(outboundModal.data, {
+                              receiverId: String(value || ''),
+                              receiverName: matched?.name || '',
+                            });
+                          }
+                        }}
+                      />
+                    </Form.Item>
+                    <Form.Item name="receiverName" hidden>
+                      <Input />
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item
+                      label="关联工厂"
+                      name="factoryName"
+                      rules={[{ required: true, message: '请选择或填写关联工厂' }]}
+                    >
+                      <AutoComplete
+                        placeholder="可筛选选择，也可直接手填工厂"
+                        options={factoryOptions}
+                        filterOption={(inputValue, option) => String(option?.label || '').toLowerCase().includes(inputValue.toLowerCase())}
+                        onSearch={(value) => {
+                          void handleOutboundFactoryInput(value);
+                        }}
+                        onSelect={(value) => {
+                          void handleOutboundFactoryInput(String(value));
+                          if (outboundModal.data) {
+                            const matched = factoryOptions.find((item) => item.value === String(value));
+                            void autoMatchOutboundContext(outboundModal.data, {
+                              factoryName: String(value),
+                              factoryType: matched?.factoryType,
+                            });
+                          }
+                        }}
+                        onChange={(value) => {
+                          outboundForm.setFieldValue('factoryName', value);
+                        }}
+                      />
+                    </Form.Item>
+                    <Form.Item name="factoryId" hidden>
+                      <Input />
+                    </Form.Item>
+                    <Form.Item name="factoryType" hidden>
+                      <Input />
+                    </Form.Item>
+                  </Col>
+                  <Col span={8}>
+                    <Form.Item label="出库人" name="issuerName">
+                      <Input disabled />
+                    </Form.Item>
+                  </Col>
+                  <Col span={24}>
+                    <Form.Item label="出库说明" name="reason">
+                      <Input placeholder="如：车间补料 / 大货首批发料" />
+                    </Form.Item>
+                  </Col>
+                </Row>
+              </Form>
             </Card>
 
             {/* 批次明细表格 */}
@@ -1102,11 +1405,10 @@ const _MaterialInventory: React.FC = () => {
       </StandardModal>
 
       {/* 料卷/箱标签生成弹窗 */}
-      <StandardModal
+      <SmallModal
         title="生成料卷/箱二维码标签"
         open={rollModal.visible}
         onCancel={rollModal.close}
-        size="sm"
         footer={[
           <Button key="cancel" onClick={rollModal.close}>取消</Button>,
           <Button
@@ -1155,132 +1457,22 @@ const _MaterialInventory: React.FC = () => {
             </p>
           </div>
         )}
-      </StandardModal>
+      </SmallModal>
 
-      {/* ===== 领取记录：新建弹窗 ===== */}
-      <StandardModal
-        title="新建面辅料领取记录"
-        open={pickupData.createModal.visible}
-        onCancel={pickupData.createModal.close}
-        onOk={() => pickupData.handleCreate()}
-        confirmLoading={pickupData.creating}
-        okText="提交"
-        centered
-        size="md"
-      >
-        <Form form={pickupData.createForm} layout="vertical">
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="pickupType" label="领取类型" rules={[{ required: true }]}>
-                <Select placeholder="请选择">
-                  <Option value="INTERNAL">内部领取</Option>
-                  <Option value="EXTERNAL">外部领取</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="pickupTime" label="领取时间">
-                <Input type="datetime-local" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="orderNo" label="关联订单号">
-                <Input placeholder="选填" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="styleNo" label="款号">
-                <Input placeholder="选填" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="materialCode" label="物料编号" rules={[{ required: true, message: '请填写物料编号' }]}>
-                <Input id="materialCode" placeholder="如 FA-0001" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="materialName" label="物料名称" rules={[{ required: true, message: '请填写物料名称' }]}>
-                <Input id="materialName" placeholder="如 纯棉布料" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="materialType" label="物料类型">
-                <Input id="materialType" placeholder="如：面料/辅料/里料" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="color" label="颜色">
-                <Input id="color" placeholder="选填" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="specification" label="规格">
-                <Input id="specification" placeholder="如：150cm/200g" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="fabricWidth" label="幅宽">
-                <Input id="fabricWidth" placeholder="如：150cm" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="fabricWeight" label="克重">
-                <Input id="fabricWeight" placeholder="如：200g/m²" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="fabricComposition" label="成分">
-                <Input placeholder="如：棉95%聚酯5%" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="quantity" label="数量" rules={[{ required: true, message: '请填写数量' }]}>
-                <InputNumber id="quantity" min={0.01} style={{ width: '100%' }} placeholder="如 100" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="unit" label="单位" initialValue="件">
-                <Select id="unit">
-                  <Option value="件">件</Option>
-                  <Option value="米">米</Option>
-                  <Option value="kg">kg</Option>
-                  <Option value="码">码</Option>
-                  <Option value="卷">卷</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="unitPrice" label="单价(元)">
-                <InputNumber id="unitPrice" min={0} precision={2} style={{ width: '100%' }} placeholder="选填" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item name="remark" label="备注">
-            <Input.TextArea id="remark" rows={2} placeholder="选填" />
-          </Form.Item>
-        </Form>
-      </StandardModal>
+      <MaterialOutboundPrintModal
+        open={printModal.visible}
+        data={printModal.data}
+        onClose={() => printModal.close()}
+      />
 
       {/* ===== 领取记录：审核弹窗 ===== */}
-      <StandardModal
+      <SmallModal
         title={`审核领取单 ${pickupData.auditModal.data?.pickupNo ?? ''}`}
         open={pickupData.auditModal.visible}
         onCancel={pickupData.auditModal.close}
         onOk={() => pickupData.handleAudit()}
         confirmLoading={pickupData.auditing}
         okText="提交审核"
-        centered
-        size="sm"
       >
         <Form form={pickupData.auditForm} layout="vertical">
           <Form.Item name="action" label="审核结果" rules={[{ required: true, message: '请选择审核结果' }]}>
@@ -1293,35 +1485,33 @@ const _MaterialInventory: React.FC = () => {
             <Input.TextArea rows={3} placeholder="选填，拒绝时建议填写原因" />
           </Form.Item>
         </Form>
-      </StandardModal>
+      </SmallModal>
 
-      {/* ===== 领取记录：财务核算弹窗 ===== */}
-      <StandardModal
-        title={`财务核算 — ${pickupData.financeModal.data?.pickupNo ?? ''}`}
+      {/* ===== 领取记录：账单补录弹窗 ===== */}
+      <SmallModal
+        title={`账单补录 — ${pickupData.financeModal.data?.pickupNo ?? ''}`}
         open={pickupData.financeModal.visible}
         onCancel={pickupData.financeModal.close}
         onOk={() => pickupData.handleFinanceSettle()}
         confirmLoading={pickupData.settling}
-        okText="确认核算"
-        centered
-        size="sm"
+        okText="确认入账"
       >
         <Form form={pickupData.financeForm} layout="vertical">
           <Form.Item
             label="核实单价(元)"
             name="unitPrice"
-            extra="如单价有变动可在此修正，金额将自动重算"
+            extra="一般审核通过后会自动生成应收账单；这里只用于补录或修正金额"
           >
             <InputNumber min={0} precision={2} style={{ width: '100%' }} placeholder="不填则保持原单价" />
           </Form.Item>
-          <Form.Item name="remark" label="财务备注">
+          <Form.Item name="remark" label="入账备注">
             <Input.TextArea rows={3} placeholder="选填" />
           </Form.Item>
         </Form>
-      </StandardModal>
+      </SmallModal>
 
       {/* ===== 领取记录：批量审核弹窗 ===== */}
-      <StandardModal
+      <SmallModal
         title={`批量审核（已选 ${pickupData.selectedRowKeys.length} 条）`}
         open={pickupData.batchAuditModal.visible}
         onCancel={() => {
@@ -1331,8 +1521,6 @@ const _MaterialInventory: React.FC = () => {
         onOk={() => pickupData.handleBatchAudit()}
         confirmLoading={pickupData.batchAuditing}
         okText="确认审核"
-        centered
-        size="sm"
       >
         <Form form={pickupData.batchAuditForm} layout="vertical">
           <Form.Item name="action" label="审核结果" rules={[{ required: true, message: '请选择审核结果' }]}>
@@ -1345,7 +1533,7 @@ const _MaterialInventory: React.FC = () => {
             <Input.TextArea rows={3} placeholder="可选，拒绝时建议填写原因" />
           </Form.Item>
         </Form>
-      </StandardModal>
+      </SmallModal>
     </Layout>
   );
 };

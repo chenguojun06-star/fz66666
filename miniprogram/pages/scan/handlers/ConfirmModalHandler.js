@@ -42,6 +42,8 @@ function showConfirmModal(ctx, data) {
     _buildConfirmModalData(data, isProcurement);
 
   const sizeDetails = _buildSizeDetails(skuList);
+  const sizeSummaryGroups = _buildSizeSummaryGroups(skuList);
+  const sizeSummaryMatrix = _buildSizeSummaryMatrix(skuList);
   const cuttingTasks = _buildCuttingTasks(data);
 
   const cuttingRatio = (data.progressStage === '裁剪' && data.skuItems)
@@ -52,12 +54,13 @@ function showConfirmModal(ctx, data) {
     scanConfirm: {
       visible: true,
       loading: false,
-      detail: { ...data, isProcurement, sizeDetails },
+      detail: { ...data, isProcurement, sizeDetails, sizeSummaryGroups, sizeSummaryMatrix },
       skuList: formItems,
       summary: summary,
       cuttingTasks: cuttingTasks,
       cuttingRatio: cuttingRatio,
       materialPurchases: materialPurchases,
+      procurementRemark: '',
       bomFallback: data.bomFallback || false,
       fromMyTasks: data.fromMyTasks || false,
       aiTipLoading: true,
@@ -152,6 +155,51 @@ function _buildSizeDetails(skuList) {
     .join('，');
 }
 
+function _buildSizeSummaryGroups(skuList) {
+  if (!Array.isArray(skuList) || skuList.length === 0) return [];
+  const groupMap = new Map();
+  skuList.forEach((item) => {
+    const color = String(item.color || '').trim() || '默认';
+    const size = String(item.size || '').trim() || '均码';
+    const quantity = Number(item.totalQuantity || item.quantity || 0);
+    if (!groupMap.has(color)) {
+      groupMap.set(color, []);
+    }
+    groupMap.get(color).push({ size, quantity });
+  });
+  return Array.from(groupMap.entries()).map(([color, entries]) => ({
+    color,
+    entries,
+  }));
+}
+
+function _buildSizeSummaryMatrix(skuList) {
+  if (!Array.isArray(skuList) || skuList.length === 0) {
+    return { sizes: [], rows: [] };
+  }
+  const sizeSet = new Set();
+  const colorMap = new Map();
+  skuList.forEach((item) => {
+    const color = String(item.color || '').trim() || '默认';
+    const size = String(item.size || '').trim() || '均码';
+    const quantity = Number(item.totalQuantity || item.quantity || 0);
+    sizeSet.add(size);
+    if (!colorMap.has(color)) {
+      colorMap.set(color, new Map());
+    }
+    colorMap.get(color).set(size, quantity);
+  });
+  const sizes = Array.from(sizeSet);
+  const rows = Array.from(colorMap.entries()).map(([color, qtyMap]) => ({
+    color,
+    cells: sizes.map((size) => ({
+      size,
+      quantity: Number(qtyMap.get(size) || 0),
+    })),
+  }));
+  return { sizes, rows };
+}
+
 /**
  * 构建裁剪任务列表
  * @param {Object} data - 弹窗原始数据
@@ -199,58 +247,6 @@ function _buildCuttingTasks(data) {
  */
 function onCancelScan(ctx) {
   ctx.setData({ 'scanConfirm.visible': false });
-}
-
-/**
- * 异常呼救（一键SOS）
- * @param {Object} ctx - Page 上下文
- */
-function onOpenSosModal(ctx) {
-  const detail = ctx.data.scanConfirm && ctx.data.scanConfirm.detail;
-  if (!detail || !detail.orderNo) {
-    wx.showToast({ title: '缺少订单信息，无法呼救', icon: 'none' });
-    return;
-  }
-
-  const options = [
-    { label: '🪡 缺面辅料(物料短缺)', value: 'MATERIAL_SHORTAGE' },
-    { label: '⚙️ 机器故障(设备异常)', value: 'MACHINE_FAULT' },
-    { label: '🆘 需指导协助(疑难求助)', value: 'NEED_HELP' }
-  ];
-
-  wx.showActionSheet({
-    itemList: options.map(o => o.label),
-    success: (res) => {
-      const selected = options[res.tapIndex];
-      wx.showModal({
-        title: '确认提交异常呼救?',
-        content: `上报类型：${selected.label}\n订单号：${detail.orderNo}\n工序：${detail.processName || detail.progressStage}`,
-        editable: true,
-        placeholderText: '可填写详细描述（选填）',
-        success: (mRes) => {
-          if (mRes.confirm) {
-            ctx.setData({ 'scanConfirm.loading': true });
-            const description = mRes.content || '';
-            api.production.reportException({
-              orderNo: detail.orderNo,
-              processName: detail.processName || detail.progressStage,
-              exceptionType: selected.value,
-              description: description
-            }).then(() => {
-              wx.showToast({ title: '呼救成功,已通知', icon: 'success' });
-              ctx.setData({
-                'scanConfirm.loading': false,
-                'scanConfirm.visible': false
-              });
-            }).catch(err => {
-              ctx.setData({ 'scanConfirm.loading': false });
-              wx.showToast({ title: err.message || '提交失败', icon: 'none' });
-            });
-          }
-        }
-      });
-    }
-  });
 }
 
 /**
@@ -380,7 +376,6 @@ async function processSKUSubmit(ctx, { detail, skuList }) {
 module.exports = {
   showConfirmModal,
   onCancelScan,
-  onOpenSosModal,
   onModalSkuInput,
   onConfirmScan,
   processSKUSubmit,

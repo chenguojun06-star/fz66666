@@ -8,6 +8,7 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
+import com.fashion.supplychain.production.util.OrderPricingSnapshotUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Collections;
@@ -74,21 +75,17 @@ public class ProfitEstimationOrchestrator {
 
         // 核心修复：单价在系统中是动态计算的（来自款式BOM和工序评估），数据库不直存，需要手动填充
         orderPriceFillHelper.fillFactoryUnitPrice(Collections.singletonList(order));
-        orderPriceFillHelper.fillQuotationUnitPrice(Collections.singletonList(order));
-
         resp.setOrderId(order.getId());
         resp.setOrderNo(order.getOrderNo());
         int qty = order.getOrderQuantity() != null ? order.getOrderQuantity() : 0;
 
-        // 客户报价总额
-        BigDecimal quoteUnit = order.getQuotationUnitPrice() != null
-                ? order.getQuotationUnitPrice() : BigDecimal.ZERO;
-        BigDecimal quotationTotal = quoteUnit.multiply(BigDecimal.valueOf(qty));
+        BigDecimal lockedUnitPrice = OrderPricingSnapshotUtils.resolveLockedOrderUnitPrice(
+                order.getFactoryUnitPrice(),
+                order.getOrderDetails());
+        BigDecimal quotationTotal = lockedUnitPrice.multiply(BigDecimal.valueOf(qty));
         resp.setQuotationTotal(quotationTotal);
 
-        // 工厂成本
-        BigDecimal factoryUnit = order.getFactoryUnitPrice() != null
-                ? order.getFactoryUnitPrice() : BigDecimal.ZERO;
+        BigDecimal factoryUnit = lockedUnitPrice;
         BigDecimal factoryCost = factoryUnit.multiply(BigDecimal.valueOf(qty));
         resp.setFactoryCost(factoryCost);
 

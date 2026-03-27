@@ -242,13 +242,26 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
             </div>
             <Row gutter={[16, 0]}>
               <Col xs={24} md={6}>
-                <Form.Item name="createTime" label="下板时间">
+                <Form.Item name="createTime" label="创建时间">
                   <UnifiedDatePicker
                     id="createTime"
-                    disabled={editLocked}
-                    allowClear
+                    disabled
+                    allowClear={false}
                     showTime
-                    placeholder="请选择下板时间"
+                    placeholder="系统自动生成"
+                    format="YYYY-MM-DD HH:mm"
+                    style={{ width: '100%' }}
+                  />
+                </Form.Item>
+              </Col>
+              <Col xs={24} md={6}>
+                <Form.Item name="completedTime" label="完成时间">
+                  <UnifiedDatePicker
+                    id="completedTime"
+                    disabled
+                    allowClear={false}
+                    showTime
+                    placeholder="全部环节入库完成后自动生成"
                     format="YYYY-MM-DD HH:mm"
                     style={{ width: '100%' }}
                   />
@@ -272,6 +285,8 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
                   <InputNumber id="cycle" style={{ width: '100%' }} min={0} disabled={isFieldLocked(currentStyle?.cycle)} />
                 </Form.Item>
               </Col>
+            </Row>
+            <Row gutter={[16, 0]}>
               <Col xs={24} md={6}>
                 <Form.Item name="remark" label="备注">
                   <Input.TextArea id="remark" rows={1} placeholder="请输入备注" disabled={isFieldLocked((currentStyle as any)?.remark)} />

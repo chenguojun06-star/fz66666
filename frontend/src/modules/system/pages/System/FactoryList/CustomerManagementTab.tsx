@@ -3,8 +3,10 @@ import { App, Button, Card, Form, Input, Select, Space, Tag } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
+import StandardPagination from '@/components/common/StandardPagination';
 import { useViewport } from '@/utils/useViewport';
 import { formatDateTime } from '@/utils/datetime';
+import { DEFAULT_PAGE_SIZE, readPageSize } from '@/utils/pageSizeStore';
 import { customerApi, type Customer, type CustomerListParams } from '@/services/crm/customerApi';
 
 type DialogMode = 'create' | 'edit' | 'view';
@@ -48,7 +50,7 @@ const CustomerManagementTab: React.FC<Props> = ({ active }) => {
   const [total, setTotal] = useState(0);
   const [queryParams, setQueryParams] = useState<CustomerListParams & { page: number; pageSize: number }>({
     page: 1,
-    pageSize: 10,
+    pageSize: readPageSize(DEFAULT_PAGE_SIZE),
     keyword: '',
     status: '',
     customerLevel: '',
@@ -297,17 +299,15 @@ const CustomerManagementTab: React.FC<Props> = ({ active }) => {
         columns={columns as any}
         dataSource={customers}
         loading={loading}
-        pagination={{
-          current: queryParams.page,
-          pageSize: queryParams.pageSize,
-          total,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (value) => `共 ${value} 条`,
-          pageSizeOptions: ['10', '20', '50', '100'],
-          onChange: (page, pageSize) => setQueryParams((prev) => ({ ...prev, page, pageSize })),
-        }}
+        pagination={false}
         scroll={{ x: 'max-content' }}
+      />
+      <StandardPagination
+        current={queryParams.page}
+        pageSize={queryParams.pageSize}
+        total={total}
+        wrapperStyle={{ paddingTop: 12 }}
+        onChange={(page, pageSize) => setQueryParams((prev) => ({ ...prev, page, pageSize }))}
       />
 
       <ResizableModal

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Progress, Tag, Spin, Alert } from 'antd';
+import OrderInfoGrid from '@/components/common/OrderInfoGrid';
 
 interface StageProgress {
   stageName: string;
@@ -151,6 +152,8 @@ const ShareOrderPage: React.FC = () => {
     : ai?.riskLevel
       ? { label: RISK_LABEL[ai.riskLevel], color: RISK_COLOR[ai.riskLevel] }
       : { label: '跟踪中', color: '#00e5ff' };
+  const shareInfoLabelStyle: React.CSSProperties = { color: '#79a8c7', fontSize: 11 };
+  const shareInfoValueStyle: React.CSSProperties = { color: '#dff3ff', fontSize: 13, fontWeight: 600 };
 
   return (
     <div style={{
@@ -186,24 +189,27 @@ const ShareOrderPage: React.FC = () => {
               {pageRiskTone.label}
             </Tag>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 24px' }}>
-            <div>
-              <div style={{ fontSize: 11, color: '#79a8c7', marginBottom: 2 }}>款式名称</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#dff3ff' }}>{data.styleName || '—'}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: '#79a8c7', marginBottom: 2 }}>生产工厂</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#dff3ff' }}>{data.factoryName || '—'}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: '#79a8c7', marginBottom: 2 }}>预计交期</div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#dff3ff' }}>{formatDate(data.plannedEndDate)}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: 11, color: '#79a8c7', marginBottom: 2 }}>总体进度</div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#00e5ff' }}>{data.productionProgress ?? 0}%</div>
-            </div>
-          </div>
+          <OrderInfoGrid
+            gap={12}
+            rowGap={8}
+            fontSize={13}
+            items={[
+              { label: '款式名称', value: data.styleName || '—', labelStyle: shareInfoLabelStyle, valueStyle: shareInfoValueStyle },
+              { label: '款号', value: data.styleNo || '—', labelStyle: shareInfoLabelStyle, valueStyle: shareInfoValueStyle },
+              { label: '生产工厂', value: data.factoryName || '—', labelStyle: shareInfoLabelStyle, valueStyle: shareInfoValueStyle },
+              { label: '颜色', value: data.color || '—', labelStyle: shareInfoLabelStyle, valueStyle: shareInfoValueStyle },
+              { label: '码数', value: data.size || '—', labelStyle: shareInfoLabelStyle, valueStyle: shareInfoValueStyle },
+              { label: '下单数量', value: data.orderQuantity != null ? `${data.orderQuantity}` : '—', labelStyle: shareInfoLabelStyle, valueStyle: shareInfoValueStyle },
+              { label: '完成数量', value: data.completedQuantity != null ? `${data.completedQuantity}` : '—', labelStyle: shareInfoLabelStyle, valueStyle: shareInfoValueStyle },
+              { label: '预计交期', value: formatDate(data.plannedEndDate), labelStyle: shareInfoLabelStyle, valueStyle: shareInfoValueStyle },
+              {
+                label: '总体进度',
+                value: <span style={{ color: '#00e5ff', fontWeight: 700 }}>{data.productionProgress ?? 0}%</span>,
+                labelStyle: shareInfoLabelStyle,
+                valueStyle: shareInfoValueStyle,
+              },
+            ]}
+          />
         </div>
 
         <div style={{ background: 'rgba(8,20,40,0.78)', borderRadius: 16, padding: '18px 24px', marginBottom: 16, boxShadow: '0 8px 24px rgba(0,0,0,0.18)', border: '1px solid rgba(57,255,20,0.14)' }}>

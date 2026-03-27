@@ -13,6 +13,7 @@ import { useAuth } from '@/utils/AuthContext';
 import { canViewPrice } from '@/utils/sensitiveDataMask';
 import type { CuttingTask, MaterialPurchase } from '@/types/production';
 import { ProductionOrderHeader, StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
+import StyleCoverGallery from '@/components/common/StyleCoverGallery';
 import { formatDateTime } from '@/utils/datetime';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { getMaterialTypeLabel } from '@/utils/materialType';
@@ -21,6 +22,7 @@ import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import CuttingSheetPrintModal from '@/components/common/CuttingSheetPrintModal';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
+import { formatReferenceKilograms } from '../MaterialPurchase/utils';
 
 import '../../../styles.css';
 
@@ -217,12 +219,7 @@ const CuttingManagement: React.FC = () => {
           key: 'referenceKilograms',
           width: 110,
           align: 'right' as const,
-          render: (_: unknown, record: MaterialPurchase) => {
-            const meters = Number(record.purchaseQuantity ?? 0);
-            const rate = Number(record.conversionRate ?? 0);
-            if (!rate || rate <= 0) return '-';
-            return `${(meters / rate).toFixed(2)} 公斤`;
-          },
+          render: (_: unknown, record: MaterialPurchase) => formatReferenceKilograms(record.purchaseQuantity, record.conversionRate, record.unit),
         },
         {
           title: '单价(元)',
@@ -350,28 +347,24 @@ const CuttingManagement: React.FC = () => {
                     ],
                     onClick: () => tasks.handleStatClick('all'),
                     activeColor: 'var(--color-primary)',
-                    activeBg: 'rgba(45, 127, 249, 0.1)',
                   },
                   {
                     key: 'pending',
                     items: [{ label: '待领取', value: tasks.cuttingStats.pendingCount, unit: '条', color: 'var(--color-warning)' }],
                     onClick: () => tasks.handleStatClick('pending'),
                     activeColor: 'var(--color-warning)',
-                    activeBg: '#fff7e6',
                   },
                   {
                     key: 'received',
                     items: [{ label: '已领取', value: tasks.cuttingStats.receivedCount, unit: '条', color: 'var(--color-primary)' }],
                     onClick: () => tasks.handleStatClick('received'),
                     activeColor: 'var(--color-primary)',
-                    activeBg: 'rgba(45, 127, 249, 0.1)',
                   },
                   {
                     key: 'bundled',
                     items: [{ label: '已完成', value: tasks.cuttingStats.bundledCount, unit: '条', color: 'var(--color-success)' }],
                     onClick: () => tasks.handleStatClick('bundled'),
                     activeColor: 'var(--color-success)',
-                    activeBg: 'rgba(34, 197, 94, 0.15)',
                   },
                 ]}
               />
@@ -408,7 +401,7 @@ const CuttingManagement: React.FC = () => {
                       onSearch={() => tasks.fetchTasks()}
                       showResetButton
                       onReset={() => {
-                        tasks.setTaskQuery({ page: 1, pageSize: 10, status: '', orderNo: '', styleNo: '', orgUnitId: '', factoryType: '' });
+                        tasks.setTaskQuery((prev) => ({ page: 1, pageSize: prev.pageSize, status: '', orderNo: '', styleNo: '', orgUnitId: '', factoryType: '' }));
                         tasks.setTaskDateRange(null);
                       }}
                     />
@@ -639,14 +632,29 @@ const CuttingManagement: React.FC = () => {
                       orderNo={String(activeTask.productionOrderNo || '').trim()}
                       styleNo={String(activeTask.styleNo || '').trim()}
                       styleName={String(activeTask.styleName || '').trim()}
+                      orderLines={bundles.entryOrderLines}
                       styleId={activeTask?.styleId}
                       styleCover={activeTask?.styleCover || null}
+                      coverNode={(
+                        <div style={{ width: 160, maxWidth: '100%' }}>
+                          <StyleCoverGallery
+                            styleId={activeTask?.styleId}
+                            styleNo={String(activeTask.styleNo || '').trim()}
+                            src={activeTask?.styleCover || null}
+                            fit="cover"
+                            borderRadius={8}
+                          />
+                        </div>
+                      )}
                       color={String(bundles.entryColorText || activeTask.color || '').trim()}
                       sizeItems={bundles.entryOrderDetailLoading ? [] : bundles.entrySizeItems.map((x) => ({ size: x.size, quantity: Number(x.quantity || 0) || 0 }))}
                       totalQuantity={bundles.entrySizeItems.length
                         ? bundles.entrySizeItems.reduce((s, x) => s + (Number(x.quantity || 0) || 0), 0)
                         : (Number(activeTask?.orderQuantity ?? 0) || 0)}
                       coverSize={160}
+                      matrixColumnMinWidth={36}
+                      matrixGap={10}
+                      matrixFontSize={13}
                     />
                   </div>
 
@@ -665,29 +673,32 @@ const CuttingManagement: React.FC = () => {
                     ) : null}
 
                     <Form layout="vertical">
-                      {activeTask?.status === 'bundled' ? null : (
-                        <CuttingRatioPanel
-                          entryColorText={bundles.entryColorText || String(activeTask?.color || '').trim()}
-                          entrySizeItems={bundles.entrySizeItems}
-                          defaultTotalQty={Number(activeTask?.orderQuantity ?? 0) || 0}
-                          sizeUsageMap={bundles.entrySizeUsageMap}
-                          arrivedFabricM={bundles.entryMainFabricArrived}
-                          generating={bundles.generateLoading}
-                          disabled={bundles.importLocked}
-                          onConfirm={(rows) => {
-                            bundles.setBundlesInput(rows);
-                            // 等 state 落定后触发生成
-                            setTimeout(() => bundles.handleGenerate(), 0);
-                          }}
-                          onClear={() => {
-                            bundles.setImportLocked(false);
-                            bundles.setBundlesInput([{ skuNo: '', color: '', size: '', quantity: 0 }]);
-                          }}
-                        />
-                      )}
+                      <CuttingRatioPanel
+                        entryColorText={bundles.entryColorText || String(activeTask?.color || '').trim()}
+                        entrySizeItems={bundles.entrySizeItems}
+                        defaultTotalQty={Number(activeTask?.orderQuantity ?? 0) || 0}
+                        sizeUsageMap={bundles.entrySizeUsageMap}
+                        arrivedFabricM={bundles.entryMainFabricArrived}
+                        generating={bundles.generateLoading}
+                        disabled={bundles.importLocked}
+                        onConfirm={(rows) => {
+                          bundles.setBundlesInput(rows);
+                          setTimeout(() => bundles.handleGenerate(), 0);
+                        }}
+                        onClear={() => {
+                          bundles.setImportLocked(false);
+                          bundles.setBundlesInput([{ skuNo: '', color: '', size: '', quantity: 0 }]);
+                        }}
+                      />
                     </Form>
 
-                    <Card size="small" title="面辅料采购明细" style={{ marginTop: 12 }} loading={bundles.entryPurchaseLoading}>
+                    <Card
+                      size="small"
+                      title="面辅料采购明细"
+                      className="cutting-entry-purchase-card"
+                      style={{ marginTop: 12 }}
+                      loading={bundles.entryPurchaseLoading}
+                    >
                       <ResizableTable<MaterialPurchase>
                         storageKey="cutting-entry-purchase-table"
                         columns={purchaseColumns}

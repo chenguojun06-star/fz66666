@@ -15,7 +15,6 @@ import {
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import api from '@/utils/api';
-import MiniDataDashboard from '../../components/MiniDataDashboard';
 import TopStats from '../../components/TopStats';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import OrderCuttingChart from '../../components/OrderCuttingChart';
@@ -338,9 +337,6 @@ const Dashboard: React.FC = () => {
 
         {/* 顶部4个统计看板 */}
         <TopStats />
-
-        {/* 质检数据看板 */}
-        <MiniDataDashboard />
 
         {/* 数据分析区域 */}
         <div className="dashboard-analysis-section">

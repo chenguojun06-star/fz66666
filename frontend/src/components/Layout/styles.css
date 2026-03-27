@@ -349,14 +349,17 @@
   line-height: 42px;
   transition: all 0.2s;
   font-size: var(--font-size-md);
-}
-
-.sidebar-menu.ant-menu .ant-menu-submenu-title {
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .sidebar-menu.ant-menu .ant-menu-sub .ant-menu-item {
   font-size: var(--font-size-sm);
+}
+
+.sidebar-menu.ant-menu .ant-menu-item .ant-menu-title-content,
+.sidebar-menu.ant-menu .ant-menu-submenu-title .ant-menu-title-content,
+.sidebar-menu.ant-menu .ant-menu-item a {
+  font-weight: inherit;
 }
 
 .sidebar-menu.ant-menu .ant-menu-item:hover,
@@ -369,10 +372,16 @@
 .sidebar-menu.ant-menu .ant-menu-item-active {
   background: var(--sidebar-item-bg-active) !important;
   color: var(--sidebar-text-strong) !important;
+  font-weight: 600;
 }
 
 .sidebar-menu.ant-menu .ant-menu-item-selected::after {
   display: none;
+}
+
+.sidebar-menu.ant-menu .ant-menu-submenu-selected > .ant-menu-submenu-title,
+.sidebar-menu.ant-menu .ant-menu-submenu-open > .ant-menu-submenu-title {
+  font-weight: 600;
 }
 
 .sidebar-menu.ant-menu .ant-menu-submenu-arrow {

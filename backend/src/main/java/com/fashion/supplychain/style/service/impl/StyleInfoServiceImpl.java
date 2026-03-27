@@ -85,6 +85,13 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
             onlyCompleted = "1".equals(s) || "true".equalsIgnoreCase(s) || "yes".equalsIgnoreCase(s);
         }
 
+        boolean pushedToOrderOnly = false;
+        Object pushedToOrderOnlyRaw = params.get("pushedToOrderOnly");
+        if (pushedToOrderOnlyRaw != null) {
+            String s = String.valueOf(pushedToOrderOnlyRaw).trim();
+            pushedToOrderOnly = "1".equals(s) || "true".equalsIgnoreCase(s) || "yes".equalsIgnoreCase(s);
+        }
+
         // 使用条件构造器进行查询
         com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<StyleInfo> wrapper =
             new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<StyleInfo>()
@@ -98,6 +105,7 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                     .or()
                     .like(StyleInfo::getCategory, keyword))
                 .eq(onlyCompleted, StyleInfo::getSampleStatus, "COMPLETED")
+                .eq(pushedToOrderOnly, StyleInfo::getPushedToOrder, 1)
                 .and(w -> w.eq(StyleInfo::getStatus, STYLE_STATUS_ENABLED)
                     .or()
                     .eq(StyleInfo::getStatus, STYLE_STATUS_SCRAPPED));

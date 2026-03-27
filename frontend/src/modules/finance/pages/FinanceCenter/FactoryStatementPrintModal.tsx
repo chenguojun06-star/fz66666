@@ -178,7 +178,7 @@ const FactoryStatementPrintModal: React.FC<FactoryStatementPrintModalProps> = ({
                                             <th>款号</th>
                                             <th>交货日期</th>
                                             <th>入库数</th>
-                                            <th>加工单价(元)</th>
+                                            <th>下单锁定单价(元)</th>
                                             <th>金额(元)</th>
                                         </tr>
                                     </thead>

@@ -6,6 +6,7 @@ import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.util.OrderPricingSnapshotUtils;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -31,7 +32,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -135,39 +135,27 @@ public class OrderProfitOrchestrator {
         BigDecimal shipmentRevenue = shipmentAmounts[0];
         BigDecimal shipmentRevenueTotal = shipmentAmounts[1];
 
-        // 7. 报价信息
+        // 7. 下游统一使用下单锁定价
         Long styleId = resolveStyleId(order);
         StyleQuotation styleQuotation = styleId != null ? styleQuotationService.getByStyleId(styleId) : null;
         BigDecimal quotationUnitCost = BigDecimal.ZERO;
-        BigDecimal quotationUnitPrice = BigDecimal.ZERO;
+        BigDecimal lockedOrderUnitPrice = OrderPricingSnapshotUtils.resolveLockedOrderUnitPrice(
+                order == null ? null : order.getFactoryUnitPrice(),
+                order == null ? null : order.getOrderDetails());
 
-        // 实时从 BOM + 工序 + 二次工艺计算真实成本（不依赖报价单中可能过时的 material_cost/total_price）
         if (styleId != null) {
-            BigDecimal profitRate = (styleQuotation != null && styleQuotation.getProfitRate() != null)
-                    ? styleQuotation.getProfitRate() : BigDecimal.ZERO;
             BigDecimal freshCost = computeLiveFreshCost(styleId);
             if (freshCost.compareTo(BigDecimal.ZERO) > 0) {
                 quotationUnitCost = freshCost;
-                BigDecimal multiplier = BigDecimal.ONE.add(profitRate.movePointLeft(2));
-                quotationUnitPrice = freshCost.multiply(multiplier).setScale(2, java.math.RoundingMode.HALF_UP);
             } else if (styleQuotation != null) {
-                // 降级：使用报价单存储值（BOM 为空时的兜底）
                 if (styleQuotation.getTotalCost() != null) {
                     quotationUnitCost = nonNeg(styleQuotation.getTotalCost());
-                }
-                if (styleQuotation.getTotalPrice() != null) {
-                    quotationUnitPrice = nonNeg(styleQuotation.getTotalPrice());
                 }
             }
         }
 
-        // 报价回退：从模板库获取
-        if (quotationUnitPrice.compareTo(BigDecimal.ZERO) <= 0 && styleId != null) {
-            quotationUnitPrice = resolveFallbackUnitPrice(styleId, order);
-        }
-
-        // 8. 加工成本
-        boolean hasQuotationPrice = quotationUnitPrice.compareTo(BigDecimal.ZERO) > 0;
+        // 8. 加工成本 / 收入口径统一走下单锁定价
+        boolean hasLockedOrderPrice = lockedOrderUnitPrice.compareTo(BigDecimal.ZERO) > 0;
         boolean hasWarehousing = warehousingQty > 0;
         String calcBasis = hasWarehousing ? "warehousing" : "order";
         int baseQty = hasWarehousing ? warehousingQty : Math.max(0, orderQty);
@@ -177,11 +165,11 @@ public class OrderProfitOrchestrator {
         BigDecimal processingCostPaid = BigDecimal.ZERO;
 
         // 9. 收入与利润计算
-        BigDecimal warehousingRevenue = hasQuotationPrice
-                ? quotationUnitPrice.multiply(BigDecimal.valueOf(Math.max(0, warehousingQty)))
+        BigDecimal warehousingRevenue = hasLockedOrderPrice
+                ? lockedOrderUnitPrice.multiply(BigDecimal.valueOf(Math.max(0, warehousingQty)))
                 : BigDecimal.ZERO;
-        BigDecimal revenue = (hasQuotationPrice && baseQty > 0)
-                ? quotationUnitPrice.multiply(BigDecimal.valueOf(baseQty))
+        BigDecimal revenue = (hasLockedOrderPrice && baseQty > 0)
+                ? lockedOrderUnitPrice.multiply(BigDecimal.valueOf(baseQty))
                 : BigDecimal.ZERO;
 
         BigDecimal profit = revenue.subtract(materialPlannedCost).subtract(processingCost);
@@ -194,15 +182,15 @@ public class OrderProfitOrchestrator {
         }
 
         BigDecimal quotationTotalCost = quotationUnitCost.multiply(BigDecimal.valueOf(Math.max(0, baseQty)));
-        BigDecimal quotationTotalPrice = quotationUnitPrice.multiply(BigDecimal.valueOf(Math.max(0, baseQty)));
+        BigDecimal quotationTotalPrice = lockedOrderUnitPrice.multiply(BigDecimal.valueOf(Math.max(0, baseQty)));
         BigDecimal unitCost = quotationUnitCost.compareTo(BigDecimal.ZERO) > 0 ? quotationUnitCost : actualUnitCost;
         BigDecimal incurredCost = materialArrivedCost.add(processingCostPaid);
 
         // 10. 时间轴
         List<Map<String, Object>> timeline = buildTimeline(
                 purchases, warehousings, order,
-                processingCost, quotationUnitPrice,
-                hasWarehousing, hasQuotationPrice, orderQty);
+                processingCost, lockedOrderUnitPrice,
+                hasWarehousing, hasLockedOrderPrice, orderQty);
 
         // 11. 组装返回数据
         Map<String, Object> orderInfo = buildOrderInfo(order, orderQty, warehousingQty);
@@ -232,7 +220,7 @@ public class OrderProfitOrchestrator {
         summary.put("marginPercent", marginPercent);
         summary.put("quotationUnitCost", scale2(quotationUnitCost));
         summary.put("quotationTotalCost", scale2(quotationTotalCost));
-        summary.put("quotationUnitPrice", scale2(quotationUnitPrice));
+        summary.put("quotationUnitPrice", scale2(lockedOrderUnitPrice));
         summary.put("quotationTotalPrice", scale2(quotationTotalPrice));
 
         Map<String, Object> data = new HashMap<>();
@@ -380,36 +368,11 @@ public class OrderProfitOrchestrator {
         return total.setScale(2, java.math.RoundingMode.HALF_UP);
     }
 
-    private BigDecimal resolveFallbackUnitPrice(Long styleId, ProductionOrder order) {
-        try {
-            Set<Long> one = new HashSet<>();
-            one.add(styleId);
-            Map<Long, String> styleNoByStyleId = new HashMap<>();
-            String styleNo = order.getStyleNo() == null ? null : order.getStyleNo().trim();
-            if (styleNo != null && !styleNo.isEmpty()) {
-                styleNoByStyleId.put(styleId, styleNo);
-            }
-            BigDecimal fallback = styleQuotationService.resolveFinalUnitPriceByStyleIds(one, styleNoByStyleId)
-                    .get(styleId);
-            if (fallback != null && fallback.compareTo(BigDecimal.ZERO) > 0) {
-                return nonNeg(fallback);
-            }
-        } catch (Exception ignored) {
-        }
-        return BigDecimal.ZERO;
-    }
-
     private BigDecimal resolveProcessingUnitPrice(ProductionOrder order) {
-        try {
-            if (templateLibraryService != null && order.getStyleNo() != null && !order.getStyleNo().trim().isEmpty()) {
-                BigDecimal v = templateLibraryService.resolveTotalUnitPriceFromProgressTemplate(order.getStyleNo().trim());
-                if (v != null && v.compareTo(BigDecimal.ZERO) > 0) {
-                    return v;
-                }
-            }
-        } catch (Exception ignored) {
+        if (order == null) {
+            return BigDecimal.ZERO;
         }
-        return BigDecimal.ZERO;
+        return nonNeg(OrderPricingSnapshotUtils.resolveLockedOrderUnitPrice(order.getFactoryUnitPrice(), order.getOrderDetails()));
     }
 
     private List<Map<String, Object>> buildTimeline(

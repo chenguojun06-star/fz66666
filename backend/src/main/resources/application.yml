@@ -161,6 +161,22 @@ app:
   auth:
     jwt-secret: ${APP_AUTH_JWT_SECRET:}
     header-auth-enabled: ${APP_AUTH_HEADER_AUTH_ENABLED:false}
+    sms-login:
+      code-ttl-seconds: ${APP_AUTH_SMS_LOGIN_CODE_TTL_SECONDS:300}
+      send-interval-seconds: ${APP_AUTH_SMS_LOGIN_SEND_INTERVAL_SECONDS:60}
+      expose-code-in-response: ${APP_AUTH_SMS_LOGIN_EXPOSE_CODE_IN_RESPONSE:false}
+      tencent:
+        enabled: ${APP_AUTH_SMS_LOGIN_TENCENT_ENABLED:false}
+        secret-id: ${APP_AUTH_SMS_LOGIN_TENCENT_SECRET_ID:}
+        secret-key: ${APP_AUTH_SMS_LOGIN_TENCENT_SECRET_KEY:}
+        sdk-app-id: ${APP_AUTH_SMS_LOGIN_TENCENT_SDK_APP_ID:}
+        sign-name: ${APP_AUTH_SMS_LOGIN_TENCENT_SIGN_NAME:云裳服装供应链}
+        template-id: ${APP_AUTH_SMS_LOGIN_TENCENT_TEMPLATE_ID:}
+        region: ${APP_AUTH_SMS_LOGIN_TENCENT_REGION:ap-guangzhou}
+        endpoint: ${APP_AUTH_SMS_LOGIN_TENCENT_ENDPOINT:sms.tencentcloudapi.com}
+        connect-timeout-seconds: ${APP_AUTH_SMS_LOGIN_TENCENT_CONNECT_TIMEOUT_SECONDS:10}
+        read-timeout-seconds: ${APP_AUTH_SMS_LOGIN_TENCENT_READ_TIMEOUT_SECONDS:10}
+        write-timeout-seconds: ${APP_AUTH_SMS_LOGIN_TENCENT_WRITE_TIMEOUT_SECONDS:10}
   security:
     trusted-ips:
       - "127.0.0.1"

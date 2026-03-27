@@ -1,12 +1,14 @@
 import React from 'react';
 import { Button, Col, Row, Space, Tag, Tooltip } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
 
 import api, { parseProductionOrderLines, sortSizeNames, toNumberSafe, ProductionOrderLine } from '../utils/api';
 import { StyleAttachment } from '../types/style';
+import type { CardSizeQuantityItem } from '@/utils/cardSizeQuantity';
 import ResizableModal, {
   useResizableModalTableScrollY,
 } from './common/ResizableModal';
+import OrderInfoGrid from './common/OrderInfoGrid';
+import { createOrderColorSizeMatrixInfoItems } from './common/OrderColorSizeMatrix';
 import ResizableTable from './common/ResizableTable';
 import { useAuth } from '../utils/AuthContext';
 import { getFullAuthedFileUrl } from '../utils/fileUrl';
@@ -77,37 +79,44 @@ export const StyleCoverThumb: React.FC<{
   const isFill = size === 'fill';
   // NaN 守卫：只有合法正数才使用，否则回退到默认值 40
   const numSize = (!isFill && typeof size === 'number' && !isNaN(size) && size > 0) ? size : 40;
-  // 图片链接状态
-  const resolvePreferredUrl = React.useCallback(() => {
+  const preferredUrl = React.useMemo(() => {
     const override = getStyleCoverOverride(styleId, styleNo);
     if (override !== null) {
       return override || null;
     }
     return src || null;
   }, [src, styleId, styleNo]);
-  const [url, setUrl] = React.useState<string | null>(resolvePreferredUrl);
+  const overrideKeys = React.useMemo(() => getStyleCoverOverrideKeys(styleId, styleNo), [styleId, styleNo]);
+  const [url, setUrl] = React.useState<string | null>(preferredUrl);
   // 加载状态
   const [loading, setLoading] = React.useState(false);
   // src URL 是否已加载失败（用于触发 fallback 附件查询）
   const [srcFailed, setSrcFailed] = React.useState(false);
+  // fallback 附件 URL 是否已失败，避免进入无限重试
+  const [fallbackFailed, setFallbackFailed] = React.useState(false);
 
   // 当src变化时更新链接并重置失败状态
   React.useEffect(() => {
-    setUrl(resolvePreferredUrl());
+    setUrl((prev) => prev === preferredUrl ? prev : preferredUrl);
     setSrcFailed(false);
-  }, [resolvePreferredUrl]);
+    setFallbackFailed(false);
+  }, [preferredUrl]);
 
   React.useEffect(() => {
     const handler = (event: StorageEvent) => {
-      if (!event.key || !getStyleCoverOverrideKeys(styleId, styleNo).includes(event.key)) return;
-      setUrl(event.newValue === EMPTY_COVER_OVERRIDE ? null : (event.newValue || src || null));
+      if (!event.key || !overrideKeys.includes(event.key)) return;
+      const nextUrl = event.newValue === EMPTY_COVER_OVERRIDE ? null : (event.newValue || src || null);
+      setUrl((prev) => prev === nextUrl ? prev : nextUrl);
       setSrcFailed(false);
+      setFallbackFailed(false);
     };
     const customHandler = (event: Event) => {
       const detail = (event as CustomEvent<{ keys?: string[]; url?: string | null }>).detail;
-      if (!detail?.keys?.some((key) => getStyleCoverOverrideKeys(styleId, styleNo).includes(key))) return;
-      setUrl(detail.url || null);
+      if (!detail?.keys?.some((key) => overrideKeys.includes(key))) return;
+      const nextUrl = detail.url || null;
+      setUrl((prev) => prev === nextUrl ? prev : nextUrl);
       setSrcFailed(false);
+      setFallbackFailed(false);
     };
     window.addEventListener('storage', handler);
     window.addEventListener(STYLE_COVER_OVERRIDE_EVENT, customHandler as any);
@@ -115,7 +124,7 @@ export const StyleCoverThumb: React.FC<{
       window.removeEventListener('storage', handler);
       window.removeEventListener(STYLE_COVER_OVERRIDE_EVENT, customHandler as any);
     };
-  }, [src, styleId, styleNo]);
+  }, [overrideKeys, src]);
 
   // 加载款号封面图片
   // - src 有值且未失败时：直接使用 src，不查附件 API
@@ -123,8 +132,9 @@ export const StyleCoverThumb: React.FC<{
   // - src 有值但加载失败（srcFailed=true）时：查附件 API 作为 fallback
   React.useEffect(() => {
     let mounted = true;
-    // src 有效且未加载失败时，跳过附件查询
-    if (url && !srcFailed) return () => { mounted = false; };
+    if (fallbackFailed) return () => { mounted = false; };
+    // src/override 有效且未加载失败时，跳过附件查询
+    if (preferredUrl && !srcFailed) return () => { mounted = false; };
     if (!styleId && !styleNo) return () => { mounted = false; };
 
     (async () => {
@@ -137,16 +147,20 @@ export const StyleCoverThumb: React.FC<{
           const images = (res.data || []).filter((f: any) => String(f.fileType || '').includes('image'));
           // 取第一张图片作为封面
           const first = (images[0] as any)?.fileUrl || null;
-          if (mounted) setUrl(first);
+          if (mounted) {
+            setUrl((prev) => prev === first ? prev : first);
+          }
         }
       } catch {
-        if (mounted) setUrl(null);
+        if (mounted) {
+          setUrl((prev) => prev === null ? prev : null);
+        }
       } finally {
         if (mounted) setLoading(false);
       }
     })();
     return () => { mounted = false; };
-  }, [styleId, styleNo, url, srcFailed]);
+  }, [fallbackFailed, preferredUrl, srcFailed, styleId, styleNo]);
 
   return (
     <div
@@ -184,12 +198,11 @@ export const StyleCoverThumb: React.FC<{
           }}
           onError={() => {
             // 判断当前是 src prop 直接给的URL，还是 fallback 附件 API 查出的URL
-            if (url === (src || null) && src && !srcFailed) {
-              // src URL 加载失败 → 标记并触发 fallback 查询附件
+            if (url === preferredUrl && preferredUrl && !srcFailed) {
               setSrcFailed(true);
               setUrl(null);
             } else {
-              // fallback 附件 URL 也失败 → 直接显示"无图"
+              setFallbackFailed(true);
               setUrl(null);
             }
           }}
@@ -207,6 +220,7 @@ type OrderHeaderSizeItem = {
 };
 
 type OrderHeaderCuttingSizeItem = {
+  color?: string;
   size: string;
   quantity: number;
 };
@@ -229,12 +243,16 @@ export const ProductionOrderHeader: React.FC<{
   styleId?: IdLike;
   styleCover?: string | null;
   coverSize?: number;
+  coverNode?: React.ReactNode;
   className?: string;
   extraFields?: OrderHeaderField[];
   showOrderNo?: boolean;
   showColor?: boolean;
   hideEmptyColor?: boolean;
   hideSizeBlockWhenNoRealSize?: boolean;
+  matrixColumnMinWidth?: number;
+  matrixGap?: number;
+  matrixFontSize?: number;
 }> = ({
   order,
   orderLines,
@@ -248,32 +266,54 @@ export const ProductionOrderHeader: React.FC<{
   styleId,
   styleCover,
   coverSize = 160,
+  coverNode,
   className,
   extraFields,
   showOrderNo = true,
   showColor = true,
   hideEmptyColor = false,
   hideSizeBlockWhenNoRealSize = false,
+  matrixColumnMinWidth = 0,
+  matrixGap = 4,
+  matrixFontSize = 12,
 }) => {
     const resolvedOrderNo = String(orderNo ?? (order as any)?.orderNo ?? (order as any)?.productionOrderNo ?? '').trim();
     const resolvedStyleNo = String(styleNo ?? (order as any)?.styleNo ?? '').trim();
     const resolvedStyleName = String(styleName ?? (order as any)?.styleName ?? '').trim();
     const resolvedStyleId = (styleId ?? (order as any)?.styleId) as IdLike | undefined;
     const resolvedCover = (styleCover ?? (order as any)?.styleCover ?? null) as string | null;
-    const resolvedColor = String(color ?? (order as any)?.color ?? '').trim();
+    const normalizedOrderLines = React.useMemo(
+      () => (orderLines ?? parseProductionOrderLines(order)).filter((line) => {
+        const size = String(line?.size || '').trim();
+        return !!size;
+      }),
+      [orderLines, order],
+    );
+
+    const resolvedColor = React.useMemo(() => {
+      const lineColors = Array.from(new Set(
+        normalizedOrderLines
+          .map((line) => String(line?.color || '').trim())
+          .filter(Boolean),
+      ));
+      if (lineColors.length > 1) {
+        return `${lineColors.length}色：${lineColors.join(' / ')}`;
+      }
+      if (lineColors.length === 1) return lineColors[0];
+      return String(color ?? (order as any)?.color ?? '').trim();
+    }, [color, normalizedOrderLines, order]);
 
     const computedSizeItems = React.useMemo(() => {
       if (sizeItems) return sizeItems;
-      const lines = orderLines ?? parseProductionOrderLines(order);
       const map = new Map<string, number>();
-      lines.forEach((l) => {
+      normalizedOrderLines.forEach((l) => {
         const s = String(l.size || '').trim();
         if (!s) return;
         map.set(s, (map.get(s) || 0) + toNumberSafe(l.quantity));
       });
       const sizes = sortSizeNames(Array.from(map.keys()));
       return sizes.map((s) => ({ size: s, quantity: map.get(s) || 0 }));
-    }, [sizeItems, orderLines, order]);
+    }, [sizeItems, normalizedOrderLines]);
 
     const computedTotal = React.useMemo(() => {
       if (typeof totalQuantity === 'number') return totalQuantity;
@@ -283,13 +323,46 @@ export const ProductionOrderHeader: React.FC<{
       return toNumberSafe((order as any)?.orderQuantity);
     }, [totalQuantity, computedSizeItems, order]);
 
+    const matrixItems = React.useMemo<CardSizeQuantityItem[]>(() => {
+      if (normalizedOrderLines.length) {
+        return normalizedOrderLines.map((line) => ({
+          color: String(line?.color || '').trim(),
+          size: String(line?.size || '').trim(),
+          quantity: toNumberSafe(line?.quantity),
+        }));
+      }
+      return computedSizeItems.map((item) => ({
+        color: resolvedColor,
+        size: String(item?.size || '').trim(),
+        quantity: toNumberSafe(item?.quantity),
+      }));
+    }, [computedSizeItems, normalizedOrderLines, resolvedColor]);
+
+    const cuttingMatrixItems = React.useMemo<CardSizeQuantityItem[]>(
+      () => (cuttingSizeItems || []).map((item) => ({
+        color: String(item?.color || '').trim() || '裁剪',
+        size: String(item?.size || '').trim(),
+        quantity: toNumberSafe(item?.quantity),
+      })),
+      [cuttingSizeItems],
+    );
+
     const fields: OrderHeaderField[] = [
       ...(showOrderNo ? [{ label: '订单号', value: <span className="order-no-compact">{resolvedOrderNo || '-'}</span> }] : []),
       { label: '款号', value: resolvedStyleNo || '-' },
       { label: '款名', value: resolvedStyleName || '-' },
       ...(showColor && (!hideEmptyColor || !!resolvedColor) ? [{ label: '颜色', value: resolvedColor || '-' }] : []),
+      { label: '下单数量', value: computedTotal > 0 ? `${computedTotal}` : '-' },
       ...(extraFields || []),
     ];
+    const infoLabelStyle: React.CSSProperties = { fontSize: 'var(--font-size-sm)' };
+    const infoValueStyle: React.CSSProperties = {
+      fontSize: 'var(--font-size-md, 15px)',
+      fontWeight: 600,
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap',
+    };
 
     const hasRealSizeItems = computedSizeItems.some((item) => {
       const sizeText = String(item?.size || '').trim();
@@ -300,107 +373,57 @@ export const ProductionOrderHeader: React.FC<{
       <Row gutter={16} className={`purchase-detail-top${className ? ` ${className}` : ''}`}>
         <Col xs={24} md={8} lg={6}>
           <div className="purchase-detail-right">
-            <StyleCoverThumb
-              styleId={resolvedStyleId}
-              styleNo={resolvedStyleNo}
-              src={resolvedCover}
-              size={coverSize}
-              borderRadius={8}
-            />
+            {coverNode || (
+              <StyleCoverThumb
+                styleId={resolvedStyleId}
+                styleNo={resolvedStyleNo}
+                src={resolvedCover}
+                size={coverSize}
+                borderRadius={8}
+              />
+            )}
           </div>
         </Col>
         <Col xs={24} md={16} lg={18}>
           <div className="purchase-detail-left">
-            <Row gutter={16}>
-              {fields.map((field, idx) => (
-                <Col key={`${field.label}-${idx}`} xs={24} sm={12} lg={8}>
-                  <div className="purchase-detail-field">
-                    <div className="purchase-detail-label">{field.label}</div>
-                    <div className="purchase-detail-value">{field.value}</div>
-                  </div>
-                </Col>
-              ))}
-            </Row>
-
-            {(!hideSizeBlockWhenNoRealSize || hasRealSizeItems) ? (
-              <div className="purchase-detail-size-block">
-                <div className="purchase-detail-size-table-wrap">
-                  {(() => {
-                  const sizeArray = computedSizeItems.length
-                    ? computedSizeItems.map((x) => String(x.size || '').trim()).filter(Boolean)
-                    : ['-'];
-                  const sizeQuantityMap = computedSizeItems.reduce<Record<string, number>>((acc, item) => {
-                    const key = String(item.size || '').trim();
-                    if (key) acc[key] = toNumberSafe(item.quantity);
-                    return acc;
-                  }, {});
-
-                  // 计算裁剪数量（如果有传入裁剪数据）
-                  const cuttingQuantityMap = (cuttingSizeItems || []).reduce<Record<string, number>>((acc, item) => {
-                    const key = String(item.size || '').trim();
-                    if (key) acc[key] = toNumberSafe(item.quantity);
-                    return acc;
-                  }, {});
-                  const hasCuttingData = cuttingSizeItems && cuttingSizeItems.length > 0;
-                  const cuttingTotalQty = hasCuttingData
-                    ? cuttingSizeItems.reduce((sum, item) => sum + toNumberSafe(item.quantity), 0)
-                    : 0;
-
-                  const totalText = `总下单数：${toNumberSafe(computedTotal)}`;
-                    return (
-                      <ResizableTable
-                      storageKey="style-assets"
-                      dataSource={[
-                        { key: 'size', type: '码数', ...sizeArray.reduce((acc, s) => ({ ...acc, [s]: s }), {}), total: totalText } as any,
-                        { key: 'qty', type: '数量', ...sizeArray.reduce((acc, s) => ({ ...acc, [s]: sizeQuantityMap[s] || 0 }), {}), total: '' } as any,
-                        ...(hasCuttingData ? [
-                          { key: 'cutting', type: '裁剪数量', ...sizeArray.reduce((acc, s) => ({ ...acc, [s]: cuttingQuantityMap[s] || 0 }), {}), total: `${cuttingTotalQty}` } as any
-                        ] : [])
-                      ]}
-                      columns={[
-                        {
-                          title: '',
-                          dataIndex: 'type',
-                          key: 'type',
-                          width: 150,
-                          align: 'center',
-                          render: (text: string) => (
-                            <div style={{ fontWeight: 600, fontSize: 'var(--font-size-base)', color: 'var(--neutral-text)' }}>{text}</div>
-                          )
-                        },
-                        ...sizeArray.map((size) => ({
-                          title: size,
-                          dataIndex: size,
-                          key: size,
-                          width: 100,
-                          align: 'center' as const,
-                          render: (value: string | number) => (
-                            <div style={{ fontSize: 'var(--font-size-md)', fontWeight: 700, color: 'var(--neutral-text)' }}>
-                              {value}
-                            </div>
-                          )
-                        })),
-                        {
-                          title: '',
-                          dataIndex: 'total',
-                          key: 'total',
-                          align: 'right',
-                          render: (text: string, record: { key: string }) => record.key === 'size' ? (
-                            <div style={{ fontWeight: 700, fontSize: 'var(--font-size-base)', color: 'var(--neutral-text)', whiteSpace: 'nowrap' }}>{text}</div>
-                          ) : null
-                        }
-                      ] as ColumnsType<OrderHeaderSizeItem>}
-                      size="small"
-                      pagination={false}
-                      showHeader={false}
-                      bordered
-                      rowKey="key"
-                      />
-                    );
-                  })()}
-                </div>
-              </div>
-            ) : null}
+            <OrderInfoGrid
+              fontSize={14}
+              rowGap={8}
+              gap={12}
+              items={[
+                ...fields.map((field) => ({
+                  label: field.label,
+                  value: field.value,
+                  labelStyle: infoLabelStyle,
+                  valueStyle: infoValueStyle,
+                })),
+                ...((!hideSizeBlockWhenNoRealSize || hasRealSizeItems)
+                  ? createOrderColorSizeMatrixInfoItems({
+                      items: matrixItems,
+                      fallbackColor: resolvedColor,
+                      fallbackSize: computedSizeItems.map((item) => String(item?.size || '').trim()).filter(Boolean).join('/'),
+                      fallbackQuantity: computedTotal,
+                      totalLabel: '总下单数',
+                      columnMinWidth: matrixColumnMinWidth,
+                      gap: matrixGap,
+                      fontSize: matrixFontSize,
+                      labelStyle: infoLabelStyle,
+                      valueStyle: infoValueStyle,
+                    })
+                  : []),
+                ...(cuttingMatrixItems.length
+                  ? createOrderColorSizeMatrixInfoItems({
+                      items: cuttingMatrixItems,
+                      totalLabel: '裁剪总数',
+                      columnMinWidth: matrixColumnMinWidth,
+                      gap: matrixGap,
+                      fontSize: matrixFontSize,
+                      labelStyle: infoLabelStyle,
+                      valueStyle: infoValueStyle,
+                    })
+                  : []),
+              ]}
+            />
           </div>
         </Col>
       </Row>

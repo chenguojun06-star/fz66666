@@ -3,6 +3,7 @@ import { Alert, Button, Card, Empty, Input, Modal, Select, Space } from 'antd';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
+import SmallModal from '@/components/common/SmallModal';
 import { User } from '@/types/system';
 import api from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
@@ -335,7 +336,7 @@ const UserApproval: React.FC = () => {
           </div>
         </Modal>
 
-        <Modal
+        <SmallModal
           title="拒绝用户"
           open={rejectModalVisible}
           onOk={confirmReject}
@@ -347,7 +348,6 @@ const UserApproval: React.FC = () => {
           okText="确定拒绝"
           cancelText="取消"
           okButtonProps={{ danger: true, type: 'default' }}
-          width="30vw"
         >
           <div style={{ marginBottom: 16 }}>
             <p>
@@ -363,7 +363,7 @@ const UserApproval: React.FC = () => {
             maxLength={200}
             showCount
           />
-        </Modal>
+        </SmallModal>
     </Layout>
   );
 };

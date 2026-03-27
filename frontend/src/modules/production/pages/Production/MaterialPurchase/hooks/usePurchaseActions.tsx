@@ -346,7 +346,7 @@ export function usePurchaseActions({
       item.specifications || '-',
       item.supplierName || '-',
       formatMaterialQuantity(item.purchaseQuantity),
-      formatReferenceKilograms(item.purchaseQuantity, item.conversionRate),
+      formatReferenceKilograms(item.purchaseQuantity, item.conversionRate, item.unit),
       formatMaterialQuantity(item.arrivedQuantity),
       formatMaterialQuantity(subtractMaterialQuantity(item.purchaseQuantity, item.arrivedQuantity)),
       item.unitPrice ?? '-',

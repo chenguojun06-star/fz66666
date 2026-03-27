@@ -5,11 +5,12 @@ import dayjs from 'dayjs';
 import { useModal, useTablePagination } from '@/hooks';
 import { useAuth, isSupervisorOrAbove, isAdmin as isAdminUser } from '@/utils/AuthContext';
 import api from '@/utils/api';
-import { safePrint } from '@/utils/safePrint';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import factoryApi from '@/services/system/factoryApi';
 import type { MaterialInventory } from '../types';
 import type { MaterialStockAlertItem } from '../components/MaterialAlertRanking';
+import type { MaterialOutboundPrintPayload } from '../components/MaterialOutboundPrintModal';
 import QRCode from 'qrcode';
 import { message } from '@/utils/antdStatic';
 
@@ -31,7 +32,12 @@ export interface PendingPicking {
   pickingNo: string;
   orderNo: string;
   styleNo: string;
+  factoryId?: string;
+  factoryName?: string;
+  factoryType?: string;
   pickerName: string;
+  pickupType?: string;
+  usageType?: string;
   createTime: string;
   status: string;
   remark?: string;
@@ -44,6 +50,24 @@ export interface PendingPicking {
     quantity: number;
     unit?: string;
   }>;
+}
+
+interface OutboundFactoryOption {
+  value: string;
+  label: string;
+  factoryId?: string;
+  factoryName: string;
+  factoryType?: string;
+}
+
+interface OutboundOrderOption {
+  value: string;
+  label: string;
+  orderNo: string;
+  styleNo?: string;
+  factoryId?: string;
+  factoryName?: string;
+  factoryType?: string;
 }
 
 export function useMaterialInventoryData() {
@@ -59,7 +83,7 @@ export function useMaterialInventoryData() {
     setSmartError({ title, reason, code, actionText: '刷新重试' });
   };
 
-  const pagination = useTablePagination(20);
+  const pagination = useTablePagination(20, 'material-inventory-main');
   const [searchText, setSearchText] = useState('');
   const [selectedType, setSelectedType] = useState<string>('');
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
@@ -67,6 +91,7 @@ export function useMaterialInventoryData() {
   const detailModal = useModal<MaterialInventory>();
   const inboundModal = useModal<MaterialInventory>();
   const outboundModal = useModal<MaterialInventory>();
+  const printModal = useModal<MaterialOutboundPrintPayload>();
 
   const [txLoading, setTxLoading] = useState(false);
   const [txList, setTxList] = useState<Array<{
@@ -89,6 +114,8 @@ export function useMaterialInventoryData() {
   const [instructionSubmitting, setInstructionSubmitting] = useState(false);
   const [instructionTarget, setInstructionTarget] = useState<MaterialStockAlertItem | null>(null);
   const [receiverOptions, setReceiverOptions] = useState<Array<{ label: string; value: string; name: string; roleName?: string }>>([]);
+  const [factoryOptions, setFactoryOptions] = useState<OutboundFactoryOption[]>([]);
+  const [outboundOrderOptions, setOutboundOrderOptions] = useState<OutboundOrderOption[]>([]);
   const [instructionForm] = Form.useForm();
 
   const [safetyStockVisible, setSafetyStockVisible] = useState(false);
@@ -148,6 +175,12 @@ export function useMaterialInventoryData() {
   };
 
   useEffect(() => {
+    if (pagination.pagination.pageSize < 20) {
+      pagination.setPageSize(20);
+    }
+  }, [pagination, pagination.pagination.pageSize]);
+
+  useEffect(() => {
     fetchData();
   }, [pagination.pagination.current, pagination.pagination.pageSize, searchText, selectedType, dateRange]);
 
@@ -198,6 +231,73 @@ export function useMaterialInventoryData() {
   const [pendingPickingsLoading, setPendingPickingsLoading] = useState(false);
   const [confirmingPickingId, setConfirmingPickingId] = useState<string | null>(null);
 
+  const openPrintModal = (payload: MaterialOutboundPrintPayload) => {
+    printModal.open(payload);
+  };
+
+  const buildManualOutboundPrintPayload = (
+    record: MaterialInventory,
+    values: Record<string, any>,
+    outboundNo: string,
+  ): MaterialOutboundPrintPayload => {
+    const selectedBatches = batchDetails.filter((item) => (item.outboundQty || 0) > 0);
+    return {
+      outboundNo,
+      outboundTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+      materialCode: record.materialCode,
+      materialName: record.materialName,
+      materialType: record.materialType,
+      specification: record.specification,
+      color: record.color,
+      unit: record.unit,
+      supplierName: record.supplierName,
+      orderNo: values.orderNo,
+      styleNo: values.styleNo,
+      factoryName: values.factoryName,
+      factoryType: values.factoryType || values.pickupType,
+      pickupType: values.pickupType,
+      usageType: values.usageType,
+      receiverName: values.receiverName,
+      issuerName: user?.name || user?.username || '系统',
+      warehouseLocation: record.warehouseLocation,
+      remark: values.reason || '手动出库',
+      items: selectedBatches.map((item) => ({
+        batchNo: item.batchNo,
+        warehouseLocation: item.warehouseLocation,
+        quantity: item.outboundQty || 0,
+        unit: record.unit,
+        materialName: record.materialName,
+        specification: record.specification,
+      })),
+    };
+  };
+
+  const buildPickingPrintPayload = (record: PendingPicking): MaterialOutboundPrintPayload => ({
+    outboundNo: record.pickingNo,
+    outboundTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+    materialCode: record.items?.[0]?.materialCode || '-',
+    materialName: record.items?.[0]?.materialName || '面辅料',
+    specification: record.items?.[0]?.size,
+    color: record.items?.[0]?.color,
+    orderNo: record.orderNo,
+    styleNo: record.styleNo,
+    factoryName: record.factoryName,
+    factoryType: record.factoryType,
+    pickupType: record.pickupType,
+    usageType: record.usageType,
+    receiverName: record.pickerName,
+    issuerName: user?.name || user?.username || '系统',
+    remark: record.remark,
+    items: (record.items || []).map((item) => ({
+      batchNo: '',
+      warehouseLocation: '',
+      quantity: item.quantity,
+      unit: item.unit,
+      materialName: item.materialName,
+      specification: item.size,
+    })),
+  });
+
   const fetchPendingPickings = useCallback(async () => {
     setPendingPickingsLoading(true);
     try {
@@ -227,11 +327,12 @@ export function useMaterialInventoryData() {
     void fetchPendingPickings();
   }, [fetchPendingPickings]);
 
-  const handleConfirmOutbound = async (pickingId: string) => {
-    setConfirmingPickingId(pickingId);
+  const handleConfirmOutbound = async (record: PendingPicking) => {
+    setConfirmingPickingId(record.id);
     try {
-      await api.post(`/production/picking/${pickingId}/confirm-outbound`);
+      await api.post(`/production/picking/${record.id}/confirm-outbound`);
       message.success('出库确认成功！库存已扣减。');
+      openPrintModal(buildPickingPrintPayload(record));
       void fetchPendingPickings();
       void fetchData();
     } catch (e: any) {
@@ -292,6 +393,166 @@ export function useMaterialInventoryData() {
       message.error('加载接收人失败');
     }
   };
+
+  const loadFactories = useCallback(async () => {
+    try {
+      const res = await factoryApi.list({ page: 1, pageSize: 200, status: 'active' });
+      const records = res?.data?.records || [];
+      const nextOptions: OutboundFactoryOption[] = records.map((item: any) => {
+        const factoryName = String(item.factoryName || '').trim();
+        const factoryCode = String(item.factoryCode || '').trim();
+        const factoryType = String(item.factoryType || '').trim().toUpperCase();
+        return {
+          value: factoryName,
+          label: factoryCode ? `${factoryName}（${factoryCode}）` : factoryName,
+          factoryId: String(item.id || '').trim() || undefined,
+          factoryName,
+          factoryType: factoryType || undefined,
+        };
+      }).filter((item: OutboundFactoryOption) => item.factoryName);
+      setFactoryOptions(nextOptions);
+    } catch {
+      message.error('加载工厂列表失败');
+    }
+  }, []);
+
+  const searchOutboundOrders = useCallback(async (factoryName?: string, factoryType?: string, keyword?: string) => {
+    if (!factoryName && !keyword) {
+      setOutboundOrderOptions([]);
+      return [];
+    }
+    try {
+      const res = await api.get('/production/orders/list', {
+        params: {
+          page: 1,
+          pageSize: 50,
+          factoryName: factoryName || undefined,
+          factoryType: factoryType || undefined,
+          orderNo: keyword || undefined,
+          excludeTerminal: true,
+        },
+      });
+      const records = res?.data?.records || res?.records || [];
+      const options: OutboundOrderOption[] = records.map((item: any) => ({
+        value: String(item.orderNo || ''),
+        label: `${item.orderNo || '-'} / ${item.styleNo || '-'} / ${item.factoryName || factoryName || '-'}`,
+        orderNo: String(item.orderNo || ''),
+        styleNo: String(item.styleNo || ''),
+        factoryId: item.factoryId ? String(item.factoryId) : undefined,
+        factoryName: item.factoryName ? String(item.factoryName) : factoryName,
+        factoryType: item.factoryType ? String(item.factoryType).toUpperCase() : factoryType,
+      })).filter((item: OutboundOrderOption) => item.orderNo);
+      setOutboundOrderOptions(options);
+      return options;
+    } catch {
+      setOutboundOrderOptions([]);
+      return [];
+    }
+  }, []);
+
+  const handleOutboundFactoryInput = async (factoryName: string) => {
+    const trimmedName = factoryName.trim();
+    const matched = factoryOptions.find((item) => item.factoryName === trimmedName);
+    const currentOrderNo = outboundForm.getFieldValue('orderNo');
+    outboundForm.setFieldsValue({
+      factoryName,
+      factoryId: matched?.factoryId,
+      factoryType: matched?.factoryType,
+      pickupType: matched?.factoryType || outboundForm.getFieldValue('pickupType') || 'INTERNAL',
+    });
+    if (trimmedName) {
+      await searchOutboundOrders(trimmedName, matched?.factoryType, currentOrderNo);
+    } else {
+      setOutboundOrderOptions([]);
+    }
+  };
+
+  const handleOutboundOrderInput = async (orderNo: string) => {
+    outboundForm.setFieldValue('orderNo', orderNo);
+    const factoryName = outboundForm.getFieldValue('factoryName');
+    const factoryType = outboundForm.getFieldValue('factoryType');
+    await searchOutboundOrders(factoryName, factoryType, orderNo.trim());
+  };
+
+  const handleOutboundOrderSelect = (orderNo: string) => {
+    const matched = outboundOrderOptions.find((item) => item.orderNo === orderNo);
+    if (!matched) {
+      outboundForm.setFieldValue('orderNo', orderNo);
+      return;
+    }
+    outboundForm.setFieldsValue({
+      orderNo: matched.orderNo,
+      styleNo: matched.styleNo,
+      factoryId: matched.factoryId,
+      factoryName: matched.factoryName,
+      factoryType: matched.factoryType,
+      pickupType: matched.factoryType || outboundForm.getFieldValue('pickupType') || 'INTERNAL',
+    });
+  };
+
+  const autoMatchOutboundContext = useCallback(async (record: MaterialInventory, extra?: {
+    receiverId?: string;
+    receiverName?: string;
+    factoryName?: string;
+    factoryType?: string;
+  }) => {
+    try {
+      const factoryName = extra?.factoryName || outboundForm.getFieldValue('factoryName') || '';
+      const factoryType = extra?.factoryType || outboundForm.getFieldValue('factoryType') || '';
+      const receiverId = extra?.receiverId || outboundForm.getFieldValue('receiverId') || '';
+      const receiverName = extra?.receiverName || outboundForm.getFieldValue('receiverName') || '';
+
+      if (factoryName) {
+        await searchOutboundOrders(factoryName, factoryType);
+      }
+
+      const res = await api.get('/production/material/list', {
+        params: {
+          page: 1,
+          pageSize: 20,
+          materialCode: record.materialCode,
+          receiverId: receiverId || undefined,
+          receiverName: receiverName || undefined,
+          factoryName: factoryName || undefined,
+          factoryType: factoryType || undefined,
+        },
+      });
+      const records = res?.data?.records || res?.records || [];
+      const candidates = records.filter((item: any) => item?.orderNo || item?.styleNo);
+      if (candidates.length === 0) {
+        return;
+      }
+      const sameFactoryCandidates = factoryName
+        ? candidates.filter((item: any) => String(item.factoryName || '').trim() === String(factoryName).trim())
+        : candidates;
+      const sameReceiverCandidates = receiverId
+        ? sameFactoryCandidates.filter((item: any) => String(item.receiverId || '').trim() === String(receiverId).trim())
+        : sameFactoryCandidates;
+      const picked = sameReceiverCandidates[0] || sameFactoryCandidates[0] || candidates[0];
+      if (!picked) {
+        return;
+      }
+      const resolvedFactoryType = String(picked.factoryType || factoryType || '').trim().toUpperCase();
+      const resolvedFactoryName = String(picked.factoryName || factoryName || '').trim();
+      const matchedFactory = factoryOptions.find((item) => item.factoryName === resolvedFactoryName);
+      const resolvedUsageType = picked.sourceType === 'sample'
+        ? 'SAMPLE'
+        : picked.sourceType === 'stock'
+          ? 'STOCK'
+          : 'BULK';
+      outboundForm.setFieldsValue({
+        orderNo: picked.orderNo || outboundForm.getFieldValue('orderNo'),
+        styleNo: picked.styleNo || outboundForm.getFieldValue('styleNo'),
+        factoryId: matchedFactory?.factoryId || outboundForm.getFieldValue('factoryId'),
+        factoryName: resolvedFactoryName || outboundForm.getFieldValue('factoryName'),
+        factoryType: resolvedFactoryType || outboundForm.getFieldValue('factoryType'),
+        pickupType: resolvedFactoryType || outboundForm.getFieldValue('pickupType') || 'INTERNAL',
+        usageType: outboundForm.getFieldValue('usageType') || resolvedUsageType,
+      });
+    } catch {
+      // silent
+    }
+  }, [factoryOptions, outboundForm, searchOutboundOrders]);
 
   const openInstruction = (alert: MaterialStockAlertItem) => {
     if (!isSupervisorOrAbove(user) && !isAdminUser(user)) {
@@ -669,8 +930,26 @@ export function useMaterialInventoryData() {
       materialCode: record.materialCode,
       materialName: record.materialName,
       availableQty: record.availableQty,
+      pickupType: 'INTERNAL',
+      usageType: 'BULK',
+      issuerName: user?.name || user?.username || '系统',
+      factoryName: '',
+      factoryId: undefined,
+      factoryType: undefined,
+      orderNo: '',
+      styleNo: '',
+      receiverId: undefined,
+      receiverName: '',
     });
     outboundModal.open(record);
+    if (receiverOptions.length === 0) {
+      void loadReceivers();
+    }
+    if (factoryOptions.length === 0) {
+      void loadFactories();
+    }
+    setOutboundOrderOptions([]);
+    void autoMatchOutboundContext(record);
     try {
       const res = await api.get('/production/material/stock/batches', {
         params: {
@@ -708,35 +987,48 @@ export function useMaterialInventoryData() {
   };
 
   const handleOutboundConfirm = async () => {
-    const selectedBatches = batchDetails.filter(item => (item.outboundQty || 0) > 0);
-    if (selectedBatches.length === 0) {
-      message.warning('请至少输入一个批次的出库数量');
-      return;
-    }
-    const invalidBatches = selectedBatches.filter(item => (item.outboundQty || 0) > item.availableQty);
-    if (invalidBatches.length > 0) {
-      message.error(`批次 ${invalidBatches[0].batchNo} 的出库数量超过可用库存`);
-      return;
-    }
-    const totalQty = selectedBatches.reduce((sum, item) => sum + (item.outboundQty || 0), 0);
-    const stockId = outboundModal.data?.id;
-    if (!stockId) {
-      message.error('库存记录ID缺失，无法出库');
-      return;
-    }
     try {
+      const values = await outboundForm.validateFields();
+      const selectedBatches = batchDetails.filter(item => (item.outboundQty || 0) > 0);
+      if (selectedBatches.length === 0) {
+        message.warning('请至少输入一个批次的出库数量');
+        return;
+      }
+      const invalidBatches = selectedBatches.filter(item => (item.outboundQty || 0) > item.availableQty);
+      if (invalidBatches.length > 0) {
+        message.error(`批次 ${invalidBatches[0].batchNo} 的出库数量超过可用库存`);
+        return;
+      }
+      const totalQty = selectedBatches.reduce((sum, item) => sum + (item.outboundQty || 0), 0);
+      const stockId = outboundModal.data?.id;
+      if (!stockId) {
+        message.error('库存记录ID缺失，无法出库');
+        return;
+      }
       const res = await api.post('/production/material/stock/manual-outbound', {
         stockId,
         quantity: totalQty,
-        reason: outboundForm.getFieldValue('reason') || '手动出库',
-        operatorName: user?.name || user?.username || '系统',
+        reason: values.reason || '手动出库',
+        orderNo: values.orderNo,
+        styleNo: values.styleNo,
+        factoryId: values.factoryId,
+        factoryName: values.factoryName,
+        factoryType: values.factoryType || values.pickupType,
+        receiverId: values.receiverId,
+        receiverName: values.receiverName,
+        pickupType: values.pickupType,
+        usageType: values.usageType,
       });
       if (res?.code === 200 || res?.data?.code === 200) {
+        const outboundNo = res?.data?.outboundNo || `MOB-${Date.now()}`;
         message.success(`成功出库 ${totalQty} ${outboundModal.data?.unit || '件'}`);
+        if (outboundModal.data) {
+          openPrintModal(buildManualOutboundPrintPayload(outboundModal.data, values, outboundNo));
+        }
         outboundModal.close();
         setBatchDetails([]);
         outboundForm.resetFields();
-        fetchData();
+        void fetchData();
       } else {
         message.error(res?.message || res?.data?.message || '出库失败');
       }
@@ -746,46 +1038,34 @@ export function useMaterialInventoryData() {
   };
 
   const handlePrintOutbound = (record: MaterialInventory) => {
-    const printContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>物料出库单</title>
-        <style>
-          body { font-family: SimHei, Arial; padding: 40px; }
-          .header { text-align: center; margin-bottom: 30px; }
-          .header h1 { margin: 0; font-size: 28px; }
-          .info { margin: 20px 0; }
-          .info-row { display: flex; margin: 10px 0; }
-          .info-label { width: 120px; font-weight: bold; }
-          .table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-          .table th, .table td { border: 1px solid #000; padding: 8px; text-align: left; }
-          .table th { background: #f0f0f0; font-weight: bold; }
-          .footer { margin-top: 40px; }
-          .signature { display: flex; justify-content: space-between; margin-top: 60px; }
-          .signature div { width: 200px; border-bottom: 1px solid #000; text-align: center; padding-top: 80px; }
-        </style>
-      </head>
-      <body>
-        <div class="header"><h1>物料出库单</h1></div>
-        <div class="info">
-          <div class="info-row"><span class="info-label">出库单号：</span><span>OUT${new Date().getTime()}</span></div>
-          <div class="info-row"><span class="info-label">出库日期：</span><span>${dayjs().format('YYYY-MM-DD HH:mm')}</span></div>
-          <div class="info-row"><span class="info-label">物料编号：</span><span>${record.materialCode}</span></div>
-          <div class="info-row"><span class="info-label">物料名称：</span><span>${record.materialName}</span></div>
-          <div class="info-row"><span class="info-label">规格型号：</span><span>${record.specification}</span></div>
-          <div class="info-row"><span class="info-label">供应商：</span><span>${record.supplierName}</span></div>
-        </div>
-        <table class="table">
-          <thead><tr><th>序号</th><th>物料名称</th><th>规格</th><th>单位</th><th>库存数量</th><th>出库数量</th><th>库位</th><th>备注</th></tr></thead>
-          <tbody><tr><td>1</td><td>${record.materialName}</td><td>${record.specification}</td><td>${record.unit}</td><td>${record.availableQty}</td><td>___________</td><td>${record.warehouseLocation}</td><td></td></tr></tbody>
-        </table>
-        <div class="footer"><div class="info-row"><span class="info-label">备注：</span><span>_________________________________________</span></div></div>
-        <div class="signature"><div>仓库管理员：</div><div>领料人：</div><div>审核人：</div></div>
-      </body></html>`;
-    const success = safePrint(printContent, '物料出库单');
-    if (!success) message.error('浏览器拦截了新窗口');
+    openPrintModal({
+      outboundNo: `PREVIEW-${dayjs().format('YYYYMMDDHHmmss')}`,
+      outboundTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+      materialCode: record.materialCode,
+      materialName: record.materialName,
+      materialType: record.materialType,
+      specification: record.specification,
+      color: record.color,
+      unit: record.unit,
+      supplierName: record.supplierName,
+      receiverName: '',
+      issuerName: user?.name || user?.username || '系统',
+      warehouseLocation: record.warehouseLocation,
+      remark: '请先执行正式出库后再打印正式单据',
+      items: [
+        {
+          quantity: record.availableQty,
+          unit: record.unit,
+          materialName: record.materialName,
+          specification: record.specification,
+          warehouseLocation: record.warehouseLocation,
+        },
+      ],
+    });
+  };
+
+  const handlePendingPickingPrint = (record: PendingPicking) => {
+    openPrintModal(buildPickingPrintPayload(record));
   };
 
   return {
@@ -795,7 +1075,7 @@ export function useMaterialInventoryData() {
     // search filters
     searchText, setSearchText, selectedType, setSelectedType, dateRange, setDateRange,
     // modals
-    detailModal, inboundModal, outboundModal, rollModal,
+    detailModal, inboundModal, outboundModal, rollModal, printModal,
     // forms
     inboundForm, outboundForm, rollForm, instructionForm,
     // tx
@@ -819,7 +1099,10 @@ export function useMaterialInventoryData() {
     handleEditSafetyStock, handleSafetyStockSave,
     handleViewDetail, handleInbound, handleInboundConfirm,
     handleGenerateRollLabels,
+    factoryOptions, outboundOrderOptions,
+    handleOutboundFactoryInput, handleOutboundOrderInput, handleOutboundOrderSelect,
+    autoMatchOutboundContext,
     handleOutbound, handleBatchQtyChange, handleOutboundConfirm,
-    handlePrintOutbound,
+    handlePrintOutbound, handlePendingPickingPrint,
   };
 }

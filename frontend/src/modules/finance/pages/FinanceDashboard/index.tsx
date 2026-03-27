@@ -10,6 +10,7 @@ import { useRequest } from '@/hooks';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import { usePersistentState } from '@/hooks/usePersistentState';
 
 const { RangePicker } = DatePicker;
 
@@ -48,7 +49,7 @@ interface RankData {
 type TimeRangeType = 'today' | 'week' | 'month' | 'year' | 'custom';
 
 const FinanceDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'amount' | 'count'>('amount');
+  const [activeTab, setActiveTab] = usePersistentState<'amount' | 'count'>('finance-dashboard-active-tab', 'amount');
   const [timeRange, setTimeRange] = useState<TimeRangeType>('year');
   const [customRange, setCustomRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);

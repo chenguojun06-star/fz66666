@@ -45,6 +45,20 @@ function mapFactoryTypeLabel(factoryType) {
   return '';
 }
 
+function sortSizes(sizes) {
+  const order = ['XXS', 'XS', 'S', 'M', 'L', 'XL', '2XL', 'XXL', '3XL', 'XXXL', '4XL', '5XL'];
+  return [...sizes].sort((a, b) => {
+    const left = normalizeText(a).toUpperCase();
+    const right = normalizeText(b).toUpperCase();
+    const leftIndex = order.indexOf(left);
+    const rightIndex = order.indexOf(right);
+    if (leftIndex !== -1 && rightIndex !== -1) return leftIndex - rightIndex;
+    if (leftIndex !== -1) return -1;
+    if (rightIndex !== -1) return 1;
+    return left.localeCompare(right, 'zh-CN', { numeric: true });
+  });
+}
+
 /**
  * 判断订单是否为已关闭状态
  * @param {string} status - 订单状态
@@ -83,6 +97,41 @@ function buildSizeMeta(order) {
   const sizeQtyList = sizes.map(size => sizeMap.get(size));
 
   return { sizeList: sizes, sizeQtyList, sizeTotal: total };
+}
+
+function buildColorSizeMeta(order) {
+  const lines = parseProductionOrderLines(order);
+  if (!lines.length) {
+    return [];
+  }
+
+  const colorMap = new Map();
+
+  lines.forEach(line => {
+    const color = normalizeText(line && line.color);
+    const size = normalizeText(line && line.size);
+    const qty = Number(line && line.quantity) || 0;
+    if (!color || !size || qty <= 0) {
+      return;
+    }
+
+    if (!colorMap.has(color)) {
+      colorMap.set(color, { color, sizeMap: new Map(), total: 0 });
+    }
+    const current = colorMap.get(color);
+    current.sizeMap.set(size, (current.sizeMap.get(size) || 0) + qty);
+    current.total += qty;
+  });
+
+  return Array.from(colorMap.values()).map(group => {
+    const sizeList = sortSizes(Array.from(group.sizeMap.keys()));
+    return {
+      color: group.color,
+      sizeList,
+      sizeQtyList: sizeList.map(size => group.sizeMap.get(size) || 0),
+      total: group.total,
+    };
+  });
 }
 
 /**
@@ -200,6 +249,7 @@ function transformOrderData(r) {
   const validated = validateAndNormalizeOrder(r);
   const source = validated || r || {};
   const sizeMeta = buildSizeMeta(source);
+  const colorGroups = buildColorSizeMeta(source);
   const delivery = calcDeliveryInfo(source);
   const urgencyTagText = mapUrgencyLabel(source.urgencyLevel || source.urgency_level);
   const plateTypeTagText = mapPlateTypeLabel(source.plateType || source.plate_type);
@@ -220,6 +270,7 @@ function transformOrderData(r) {
     sizeList: sizeMeta.sizeList,
     sizeQtyList: sizeMeta.sizeQtyList,
     sizeTotal: sizeMeta.sizeTotal,
+    colorGroups,
     deliveryDateStr: delivery.deliveryDateStr,
     remainDays: delivery.remainDays,
     remainDaysText: delivery.remainDaysText,

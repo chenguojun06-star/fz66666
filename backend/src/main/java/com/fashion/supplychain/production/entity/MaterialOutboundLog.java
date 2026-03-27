@@ -24,6 +24,32 @@ public class MaterialOutboundLog {
     /** 关联库存记录ID */
     private String stockId;
 
+    private String outboundNo;
+
+    private String sourceType;
+
+    private String pickupType;
+
+    private String usageType;
+
+    private String orderId;
+
+    private String orderNo;
+
+    private String styleId;
+
+    private String styleNo;
+
+    private String factoryId;
+
+    private String factoryName;
+
+    private String factoryType;
+
+    private String pickingId;
+
+    private String pickingNo;
+
     /** 物料编码 */
     private String materialCode;
 
@@ -38,6 +64,10 @@ public class MaterialOutboundLog {
 
     /** 操作人姓名 */
     private String operatorName;
+
+    private String receiverId;
+
+    private String receiverName;
 
     /** 仓位 */
     private String warehouseLocation;

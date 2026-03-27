@@ -6,7 +6,7 @@ import type { FormInstance } from 'antd/es/form';
 import RowActions from '@/components/common/RowActions';
 import { canViewPrice } from '@/utils/sensitiveDataMask';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
-import { getBaseMaterialTypeLabel, getMaterialTypeCategory } from '@/utils/materialType';
+import { formatMaterialSpecWidth, getBaseMaterialTypeLabel, getMaterialTypeCategory } from '@/utils/materialType';
 import type { UserInfo } from '@/utils/AuthContext';
 import type { MaterialInventory } from '../types';
 
@@ -21,6 +21,31 @@ interface UseMaterialInventoryColumnsProps {
   handleViewDetail: (record: MaterialInventory) => void;
   handleEditSafetyStock: (record: MaterialInventory) => void;
 }
+
+const compactInfoRowStyle: React.CSSProperties = {
+  display: 'flex',
+  fontSize: 'var(--font-size-sm)',
+  lineHeight: '22px',
+  minHeight: '22px',
+};
+
+const compactInfoLabelStyle: React.CSSProperties = {
+  color: 'var(--neutral-text-disabled)',
+  width: '72px',
+  textAlign: 'right',
+  flexShrink: 0,
+  whiteSpace: 'nowrap',
+};
+
+const normalizeUnit = (value?: string) => String(value || '').trim().toLowerCase();
+const isMeterUnit = (value?: string) => {
+  const unit = normalizeUnit(value);
+  return unit === '米' || unit === 'm' || unit === 'meter' || unit === 'meters';
+};
+const isKilogramUnit = (value?: string) => {
+  const unit = normalizeUnit(value);
+  return unit === 'kg' || unit === '公斤' || unit === '千克' || unit === 'kilogram' || unit === 'kilograms';
+};
 
 export function useMaterialInventoryColumns({
   user,
@@ -102,22 +127,22 @@ export function useMaterialInventoryColumns({
 
         return (
           <Space orientation="vertical" size={4} style={{ width: '100%' }}>
-            <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px' }}>
-              <span style={{ color: 'var(--neutral-text-disabled)', width: '60px', textAlign: 'right', flexShrink: 0 }}>幅宽：</span>
-              <span style={{ fontWeight: 600, marginLeft: '8px' }}>{record.fabricWidth || '-'}</span>
+            <div style={compactInfoRowStyle}>
+              <span style={compactInfoLabelStyle}>规格/幅宽：</span>
+              <span style={{ fontWeight: 600, marginLeft: '8px' }}>{formatMaterialSpecWidth(record.specification, record.fabricWidth)}</span>
             </div>
-            <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px' }}>
-              <span style={{ color: 'var(--neutral-text-disabled)', width: '60px', textAlign: 'right', flexShrink: 0 }}>克重：</span>
+            <div style={compactInfoRowStyle}>
+              <span style={compactInfoLabelStyle}>克重：</span>
               <span style={{ fontWeight: 600, marginLeft: '8px' }}>{record.fabricWeight || '-'}</span>
             </div>
-            <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px' }}>
-              <span style={{ color: 'var(--neutral-text-disabled)', width: '60px', textAlign: 'right', flexShrink: 0 }}>成分：</span>
+            <div style={compactInfoRowStyle}>
+              <span style={compactInfoLabelStyle}>成分：</span>
               <span style={{ fontWeight: 600, marginLeft: '8px' }} title={record.fabricComposition || '-'}>
                 {record.fabricComposition || '-'}
               </span>
             </div>
-            <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px' }}>
-              <span style={{ color: 'var(--neutral-text-disabled)', width: '60px', textAlign: 'right', flexShrink: 0 }}>单位：</span>
+            <div style={compactInfoRowStyle}>
+              <span style={compactInfoLabelStyle}>单位：</span>
               <span style={{ fontWeight: 600, marginLeft: '8px' }}>{record.unit || '-'}</span>
             </div>
           </Space>
@@ -134,7 +159,11 @@ export function useMaterialInventoryColumns({
         const lockedQty = record.lockedQty ?? 0;
         const safetyStock = record.safetyStock ?? 0;
         const conversionRate = Number(record.conversionRate ?? 0);
-        const referenceKg = conversionRate > 0 ? Number((availableQty / conversionRate).toFixed(2)) : null;
+        const referenceKg = isKilogramUnit(record.unit)
+          ? Number(availableQty.toFixed(2))
+          : isMeterUnit(record.unit) && conversionRate > 0
+            ? Number((availableQty / conversionRate).toFixed(2))
+            : null;
         const isLow = availableQty < safetyStock;
         return (
           <Space orientation="vertical" size={10} style={{ width: '100%' }}>
@@ -180,7 +209,7 @@ export function useMaterialInventoryColumns({
             }}>
               <span style={{ color: 'var(--neutral-text-disabled)' }}>参考公斤数:</span> {referenceKg == null ? '-' : `${referenceKg} kg`}
               <span style={{ margin: '0 8px', color: 'var(--neutral-border)' }}>|</span>
-              <span style={{ color: 'var(--neutral-text-disabled)' }}>几米一公斤:</span> {conversionRate > 0 ? conversionRate : '-'}
+              <span style={{ color: 'var(--neutral-text-disabled)' }}>每公斤米数:</span> {conversionRate > 0 ? `${conversionRate} 米/公斤` : '-'}
             </div>
             {isLow && (
               <div style={{

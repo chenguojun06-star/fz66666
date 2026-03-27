@@ -77,6 +77,9 @@ public class MaterialPurchaseOrchestrator {
     @Autowired
     private MaterialPickupRecordMapper materialPickupRecordMapper;
 
+    @Autowired
+    private MaterialQualityIssueOrchestrator materialQualityIssueOrchestrator;
+
     public IPage<MaterialPurchase> list(Map<String, Object> params) {
         return materialPurchaseService.queryPage(params);
     }
@@ -484,13 +487,13 @@ public class MaterialPurchaseOrchestrator {
             throw new NoSuchElementException("采购任务不存在");
         }
 
+        if (materialQualityIssueOrchestrator.hasOpenIssue(purchaseId)) {
+            throw new IllegalStateException("当前采购仍有未处理的品质异常，处理完成后才能确认回料");
+        }
+
         String status = purchase.getStatus() == null ? "" : purchase.getStatus().trim();
         if (MaterialConstants.STATUS_CANCELLED.equals(status)) {
             throw new IllegalStateException("该采购任务已取消，无法回料确认");
-        }
-
-        if (purchase.getReturnConfirmed() != null && purchase.getReturnConfirmed() == 1) {
-            throw new IllegalStateException("该采购任务已回料确认，无法重复确认");
         }
 
         if (returnQuantity == null) {
@@ -663,20 +666,6 @@ public class MaterialPurchaseOrchestrator {
         }
         MaterialPurchase updated = materialPurchaseService.getById(purchaseId);
         if (updated != null) {
-            // 自动回料确认：更新到货数量时同步标记为已回料，避免PC端再次手动确认
-            if (arrivedQuantity != null && arrivedQuantity > 0
-                    && (updated.getReturnConfirmed() == null || updated.getReturnConfirmed() != 1)) {
-                UserContext ctx = UserContext.get();
-                String confirmerId = ctx != null ? ctx.getUserId() : null;
-                String confirmerName = ctx != null ? ctx.getUsername() : null;
-                if (confirmerName == null || confirmerName.trim().isEmpty()) {
-                    confirmerName = "系统自动";
-                }
-                materialPurchaseService.confirmReturnPurchase(
-                        purchaseId, confirmerId, confirmerName.trim(), arrivedQuantity);
-                // 重新获取最新状态
-                updated = materialPurchaseService.getById(purchaseId);
-            }
             syncAfterPurchaseChanged(updated);
         }
         return true;
@@ -1239,6 +1228,8 @@ public class MaterialPurchaseOrchestrator {
         picking.setStyleNo(purchase.getStyleNo());
         picking.setPickerId(receiverId);
         picking.setPickerName(receiverName);
+        picking.setPickupType(resolvePickupType(purchase));
+        picking.setUsageType(resolveUsageType(purchase));
         picking.setPickTime(LocalDateTime.now());
         picking.setStatus("pending");  // 仓库待确认出库
         // 存储 purchaseId，仓库确认出库时用于回写采购单状态
@@ -1286,24 +1277,6 @@ public class MaterialPurchaseOrchestrator {
         purchase.setReceiverName(receiverName);
         purchase.setUpdateTime(LocalDateTime.now());
         materialPurchaseService.updateById(purchase);
-
-        // 🔥 关键修复：创建出库日志记录 → 作为推送给仓库系统的指令凭证
-        for (MaterialPickingItem item : items) {
-            MaterialOutboundLog outboundLog = new MaterialOutboundLog();
-            outboundLog.setMaterialCode(item.getMaterialCode());
-            outboundLog.setMaterialName(item.getMaterialName());
-            outboundLog.setQuantity(item.getQuantity());
-            outboundLog.setOperatorId(receiverId);
-            outboundLog.setOperatorName(receiverName);
-            // 出库原因：关联到出库单ID，便于迁移追溯
-            outboundLog.setRemark("SMART_RECEIVE_OUTBOUND|pickingId=" + pickingId + "|purchaseId=" + purchase.getId());
-            outboundLog.setOutboundTime(LocalDateTime.now());
-            outboundLog.setCreateTime(LocalDateTime.now());
-            outboundLog.setDeleteFlag(0);
-            materialOutboundLogMapper.insert(outboundLog);
-            log.info("✅ 出库日志创建（推送给仓库）: material={}, qty={}, pickingId={}",
-                item.getMaterialCode(), item.getQuantity(), pickingId);
-        }
 
         log.info("✅ 智能一键领取出库单完成：pickingId={}, materialCode={}, qty={}, 已推送仓库系统",
             pickingId, purchase.getMaterialCode(), pickQty);
@@ -1477,6 +1450,8 @@ public class MaterialPurchaseOrchestrator {
         picking.setStyleNo(purchase.getStyleNo());
         picking.setPickerId(receiverId);
         picking.setPickerName(receiverName);
+        picking.setPickupType(resolvePickupType(purchase));
+        picking.setUsageType(resolveUsageType(purchase));
         picking.setPickTime(LocalDateTime.now());
         picking.setStatus("pending");  // 待仓库确认出库
         // 存储 purchaseId，仓库确认出库时用于回写采购单状态
@@ -1577,21 +1552,17 @@ public class MaterialPurchaseOrchestrator {
         picking.setUpdateTime(LocalDateTime.now());
         materialPickingService.updateById(picking);
 
-        // 3. 更新关联采购单状态为 completed
-        // remark 格式: "WAREHOUSE_PICK|purchaseId=xxx"
+        MaterialPurchase purchase = null;
         String remark = picking.getRemark();
         if (StringUtils.hasText(remark) && remark.contains("purchaseId=")) {
             String associatedPurchaseId = remark.substring(remark.indexOf("purchaseId=") + "purchaseId=".length()).trim();
             if (StringUtils.hasText(associatedPurchaseId)) {
-                MaterialPurchase purchase = materialPurchaseService.getById(associatedPurchaseId);
+                purchase = materialPurchaseService.getById(associatedPurchaseId);
                 if (purchase != null) {
                     purchase.setStatus(MaterialConstants.STATUS_COMPLETED);
                     purchase.setReceivedTime(LocalDateTime.now());
                     purchase.setUpdateTime(LocalDateTime.now());
                     materialPurchaseService.updateById(purchase);
-
-                    // 自动同步到面辅料领取记录，供进销存按内部/外部/样衣等分类查看。
-                    syncPickupRecordAfterOutbound(picking, purchase, pickedTotalQty);
 
                     // 同步订单面料到货率
                     try {
@@ -1605,35 +1576,58 @@ public class MaterialPurchaseOrchestrator {
             }
         }
 
+        syncPickupRecordAfterOutbound(picking, purchase, items, pickedTotalQty);
+
         log.info("✅ 仓库确认出库完成: pickingId={}, itemCount={}", pickingId, items.size());
     }
 
-    private void syncPickupRecordAfterOutbound(MaterialPicking picking, MaterialPurchase purchase, int pickedTotalQty) {
-        if (picking == null || purchase == null || pickedTotalQty <= 0) {
+    private void syncPickupRecordAfterOutbound(
+            MaterialPicking picking,
+            MaterialPurchase purchase,
+            List<MaterialPickingItem> items,
+            int pickedTotalQty) {
+        if (picking == null || pickedTotalQty <= 0 || items == null || items.isEmpty()) {
             return;
         }
 
         String syncRemark = buildPickupRemark(picking, purchase);
         if (existsAutoSyncedPickupRecord(syncRemark)) {
             log.info("syncPickupRecordAfterOutbound: 跳过重复同步, pickingId={}, purchaseId={}",
-                    picking.getId(), purchase.getId());
+                    picking.getId(), purchase != null ? purchase.getId() : null);
             return;
         }
 
+        MaterialPickingItem firstItem = items.get(0);
+        FactorySnapshot factorySnapshot = resolveFactorySnapshot(purchase, picking);
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("pickupType", resolvePickupType(purchase));
-        body.put("orderNo", purchase.getOrderNo());
-        body.put("styleNo", purchase.getStyleNo());
-        body.put("materialId", purchase.getMaterialId());
-        body.put("materialCode", purchase.getMaterialCode());
-        body.put("materialName", purchase.getMaterialName());
-        body.put("materialType", purchase.getMaterialType());
-        body.put("color", purchase.getColor());
-        body.put("specification", purchase.getSpecifications());
-        body.put("fabricComposition", purchase.getFabricComposition());
-        body.put("unit", purchase.getUnit());
+        body.put("pickupType", resolvePickupType(purchase, picking));
+        body.put("movementType", "OUTBOUND");
+        body.put("sourceType", "PICKING_OUTBOUND");
+        body.put("usageType", resolveUsageType(purchase, picking));
+        body.put("sourceRecordId", picking.getId());
+        body.put("sourceDocumentNo", picking.getPickingNo());
+        body.put("factoryId", factorySnapshot.factoryId);
+        body.put("factoryName", factorySnapshot.factoryName);
+        body.put("factoryType", factorySnapshot.factoryType);
+        body.put("orderNo", purchase != null ? purchase.getOrderNo() : picking.getOrderNo());
+        body.put("styleNo", purchase != null ? purchase.getStyleNo() : picking.getStyleNo());
+        body.put("materialId", purchase != null ? purchase.getMaterialId() : firstItem.getMaterialId());
+        body.put("materialCode", purchase != null ? purchase.getMaterialCode() : firstItem.getMaterialCode());
+        body.put("materialName", purchase != null ? purchase.getMaterialName() : firstItem.getMaterialName());
+        body.put("materialType", purchase != null ? purchase.getMaterialType() : null);
+        body.put("color", purchase != null ? purchase.getColor() : firstItem.getColor());
+        body.put("specification", purchase != null ? purchase.getSpecifications() : firstItem.getSize());
+        body.put("fabricComposition", purchase != null ? purchase.getFabricComposition() : null);
+        body.put("fabricWidth", null);
+        body.put("fabricWeight", null);
+        body.put("unit", purchase != null ? purchase.getUnit() : firstItem.getUnit());
         body.put("quantity", pickedTotalQty);
-        body.put("unitPrice", purchase.getUnitPrice());
+        body.put("unitPrice", purchase != null ? purchase.getUnitPrice() : null);
+        body.put("receiverId", picking.getPickerId());
+        body.put("receiverName", picking.getPickerName());
+        body.put("issuerId", UserContext.userId());
+        body.put("issuerName", UserContext.username());
+        body.put("warehouseLocation", resolveWarehouseLocation(items));
         body.put("remark", syncRemark);
 
         materialPickupOrchestrator.create(body);
@@ -1650,7 +1644,10 @@ public class MaterialPurchaseOrchestrator {
         return count != null && count > 0;
     }
 
-    private String resolvePickupType(MaterialPurchase purchase) {
+    private String resolvePickupType(MaterialPurchase purchase, MaterialPicking picking) {
+        if (picking != null && StringUtils.hasText(picking.getPickupType())) {
+            return picking.getPickupType().trim();
+        }
         if (purchase == null) {
             return "INTERNAL";
         }
@@ -1666,6 +1663,31 @@ public class MaterialPurchaseOrchestrator {
         return StringUtils.hasText(factoryType) && "EXTERNAL".equalsIgnoreCase(factoryType.trim())
                 ? "EXTERNAL"
                 : "INTERNAL";
+    }
+
+    private String resolvePickupType(MaterialPurchase purchase) {
+        return resolvePickupType(purchase, null);
+    }
+
+    private String resolveUsageType(MaterialPurchase purchase, MaterialPicking picking) {
+        if (picking != null && StringUtils.hasText(picking.getUsageType())) {
+            return picking.getUsageType().trim();
+        }
+        if (purchase == null || !StringUtils.hasText(purchase.getSourceType())) {
+            return "BULK";
+        }
+        String sourceType = purchase.getSourceType().trim().toLowerCase();
+        if ("sample".equals(sourceType)) {
+            return "SAMPLE";
+        }
+        if ("stock".equals(sourceType)) {
+            return "STOCK";
+        }
+        return "BULK";
+    }
+
+    private String resolveUsageType(MaterialPurchase purchase) {
+        return resolveUsageType(purchase, null);
     }
 
     private String buildPickupRemark(MaterialPicking picking, MaterialPurchase purchase) {
@@ -1697,13 +1719,29 @@ public class MaterialPurchaseOrchestrator {
     }
 
     private void recordOutboundLog(MaterialPicking picking, MaterialPickingItem item, MaterialStock stock, LocalDateTime outboundTime) {
+        FactorySnapshot factorySnapshot = resolveFactorySnapshot(null, picking);
         MaterialOutboundLog log = new MaterialOutboundLog();
         log.setStockId(stock != null ? stock.getId() : item.getMaterialStockId());
+        log.setOutboundNo(picking.getPickingNo());
+        log.setSourceType("PICKING_OUTBOUND");
+        log.setPickupType(resolvePickupType(null, picking));
+        log.setUsageType(resolveUsageType(null, picking));
+        log.setOrderId(picking.getOrderId());
+        log.setOrderNo(picking.getOrderNo());
+        log.setStyleId(picking.getStyleId());
+        log.setStyleNo(picking.getStyleNo());
+        log.setFactoryId(factorySnapshot.factoryId);
+        log.setFactoryName(factorySnapshot.factoryName);
+        log.setFactoryType(factorySnapshot.factoryType);
+        log.setPickingId(picking.getId());
+        log.setPickingNo(picking.getPickingNo());
         log.setMaterialCode(stock != null ? stock.getMaterialCode() : item.getMaterialCode());
         log.setMaterialName(stock != null ? stock.getMaterialName() : item.getMaterialName());
         log.setQuantity(item.getQuantity());
         log.setOperatorId(StringUtils.hasText(UserContext.userId()) ? UserContext.userId() : picking.getPickerId());
         log.setOperatorName(StringUtils.hasText(UserContext.username()) ? UserContext.username() : picking.getPickerName());
+        log.setReceiverId(picking.getPickerId());
+        log.setReceiverName(picking.getPickerName());
         log.setWarehouseLocation(stock != null ? stock.getLocation() : null);
         log.setRemark("仓库确认出库|pickingNo=" + picking.getPickingNo());
         log.setOutboundTime(outboundTime);
@@ -1718,6 +1756,70 @@ public class MaterialPurchaseOrchestrator {
             patch.setUpdateTime(outboundTime);
             materialStockService.updateById(patch);
         }
+    }
+
+    private FactorySnapshot resolveFactorySnapshot(MaterialPurchase purchase, MaterialPicking picking) {
+        FactorySnapshot snapshot = new FactorySnapshot();
+        if (purchase != null) {
+            snapshot.factoryName = purchase.getFactoryName();
+            snapshot.factoryType = purchase.getFactoryType();
+        }
+        String orderId = purchase != null ? purchase.getOrderId() : null;
+        String orderNo = purchase != null ? purchase.getOrderNo() : null;
+        if (picking != null) {
+            if (!StringUtils.hasText(orderId)) {
+                orderId = picking.getOrderId();
+            }
+            if (!StringUtils.hasText(orderNo)) {
+                orderNo = picking.getOrderNo();
+            }
+        }
+        ProductionOrder order = null;
+        if (StringUtils.hasText(orderId)) {
+            order = productionOrderService.getById(orderId.trim());
+        }
+        if (order == null && StringUtils.hasText(orderNo)) {
+            order = productionOrderService.lambdaQuery()
+                    .eq(ProductionOrder::getOrderNo, orderNo.trim())
+                    .eq(ProductionOrder::getDeleteFlag, 0)
+                    .last("LIMIT 1")
+                    .one();
+        }
+        if (order != null) {
+            snapshot.factoryId = order.getFactoryId();
+            if (!StringUtils.hasText(snapshot.factoryName)) {
+                snapshot.factoryName = order.getFactoryName();
+            }
+            if (!StringUtils.hasText(snapshot.factoryType)) {
+                snapshot.factoryType = order.getFactoryType();
+            }
+        }
+        if (!StringUtils.hasText(snapshot.factoryType) && purchase != null && StringUtils.hasText(purchase.getFactoryType())) {
+            snapshot.factoryType = purchase.getFactoryType().trim();
+        }
+        if (!StringUtils.hasText(snapshot.factoryName) && purchase != null && StringUtils.hasText(purchase.getFactoryName())) {
+            snapshot.factoryName = purchase.getFactoryName().trim();
+        }
+        return snapshot;
+    }
+
+    private String resolveWarehouseLocation(List<MaterialPickingItem> items) {
+        return items.stream()
+                .map(MaterialPickingItem::getMaterialStockId)
+                .filter(StringUtils::hasText)
+                .map(materialStockService::getById)
+                .filter(Objects::nonNull)
+                .map(MaterialStock::getLocation)
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .distinct()
+                .collect(Collectors.joining("、"));
+    }
+
+    private static class FactorySnapshot {
+        private String factoryId;
+        private String factoryName;
+        private String factoryType;
     }
 
     /**

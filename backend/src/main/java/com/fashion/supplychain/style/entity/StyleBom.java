@@ -89,7 +89,7 @@ public class StyleBom {
     private String patternUnit;
 
     /**
-     * 换算系数：1个纸样录入单位 = x个BOM单位
+     * 米重换算值：每公斤对应的米数（米/公斤）
      */
     private BigDecimal conversionRate;
 

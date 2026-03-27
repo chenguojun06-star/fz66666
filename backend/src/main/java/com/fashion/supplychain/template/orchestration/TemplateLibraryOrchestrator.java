@@ -377,6 +377,11 @@ public class TemplateLibraryOrchestrator {
                 step.put("machineType", machineType);
             }
 
+            String description = String.valueOf(rawStep.getOrDefault("description", rawStep.getOrDefault("remark", ""))).trim();
+            if (StringUtils.hasText(description)) {
+                step.put("description", description);
+            }
+
             String difficulty = String.valueOf(rawStep.getOrDefault("difficulty", "")).trim();
             if (StringUtils.hasText(difficulty)) {
                 step.put("difficulty", difficulty);

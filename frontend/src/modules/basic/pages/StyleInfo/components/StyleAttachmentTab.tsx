@@ -428,7 +428,6 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
         loading={loading}
         pagination={false}
         size="small"
-        tableLayout="fixed"
       />
     </div>
   );

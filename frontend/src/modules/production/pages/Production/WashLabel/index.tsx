@@ -14,16 +14,58 @@ import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import { productionOrderApi } from '@/services/production/productionApi';
-import api from '@/utils/api';
+import api, { parseProductionOrderLines, sortSizeNames } from '@/utils/api';
 import type { ProductionOrder } from '@/types/production';
 import type { ColumnsType } from 'antd/es/table';
 import WashLabelBatchPrintModal, { WashLabelItem } from './components/WashLabelBatchPrintModal';
 
 const { Option } = Select;
 
-/** 默认 U 编码规则：款号-颜色-码数-订单号后6位 */
-function genUCode(order: ProductionOrder): string {
-  const parts = [order.styleNo, order.color, order.size].filter(Boolean);
+type ParsedOrderLine = {
+  color?: string;
+  size?: string;
+  quantity?: number;
+};
+
+function getOrderLines(order: ProductionOrder): ParsedOrderLine[] {
+  return parseProductionOrderLines(order).filter((line) => {
+    const color = String(line?.color || '').trim();
+    const size = String(line?.size || '').trim();
+    return !!color && !!size;
+  });
+}
+
+function getDisplayColors(order: ProductionOrder): string[] {
+  return Array.from(new Set(
+    getOrderLines(order).map((line) => String(line?.color || '').trim()).filter(Boolean),
+  ));
+}
+
+function getDisplaySizes(order: ProductionOrder): string[] {
+  return sortSizeNames(Array.from(new Set(
+    getOrderLines(order).map((line) => String(line?.size || '').trim()).filter(Boolean),
+  )));
+}
+
+function getDisplayColorText(order: ProductionOrder): string {
+  const colors = getDisplayColors(order);
+  if (colors.length > 1) return `${colors.length}色：${colors.join(' / ')}`;
+  if (colors.length === 1) return colors[0];
+  return String(order.color || '').trim() || '-';
+}
+
+function getDisplaySizeText(order: ProductionOrder): string {
+  const sizes = getDisplaySizes(order);
+  if (sizes.length > 0) return sizes.join(' / ');
+  return String(order.size || '').trim() || '-';
+}
+
+function genUCode(order: ProductionOrder, line?: ParsedOrderLine): string {
+  const parts = [
+    order.styleNo,
+    String(line?.color || order.color || '').trim(),
+    String(line?.size || order.size || '').trim(),
+  ].filter(Boolean);
   const suffix = String(order.orderNo || '').slice(-6);
   return parts.length ? `${parts.join('-')}-${suffix}` : order.orderNo || '';
 }
@@ -118,7 +160,6 @@ const WashLabelPage: React.FC = () => {
 
   useEffect(() => { void fetchOrders(); }, [fetchOrders]);
 
-  /** 最终 U 编码：本地覆盖 > 款式侧 uCode > 自动生成 */
   const getUCode = (order: ProductionOrder): string => {
     if (order.id && uCodeOverrides[order.id]) return uCodeOverrides[order.id];
     const cached = styleCache.current[order.styleId];
@@ -126,27 +167,28 @@ const WashLabelPage: React.FC = () => {
     return genUCode(order);
   };
 
-  /** 构建打印项列表（顺便触发未缓存款式的懒加载） */
   const buildPrintItems = useCallback(async (targetOrders: ProductionOrder[]): Promise<WashLabelItem[]> => {
     await fetchStyleInfoForOrders(targetOrders);
-    return targetOrders.map(o => {
+    return targetOrders.flatMap(o => {
       const cached = styleCache.current[o.styleId] ?? {};
-      return {
+      const lines = getOrderLines(o);
+      const fallbackLine = lines.length ? lines : [{ color: o.color, size: o.size, quantity: o.orderQuantity }];
+      return fallbackLine.map((line) => ({
         orderNo: o.orderNo,
         styleNo: o.styleNo,
         styleName: o.styleName,
-        color: o.color,
-        size: o.size,
+        color: String(line?.color || o.color || '').trim(),
+        size: String(line?.size || o.size || '').trim(),
         fabricComposition: cached.fabricComposition,
         fabricCompositionParts: cached.fabricCompositionParts,
         washInstructions: cached.washInstructions,
-        uCode: getUCode(o),
+        uCode: cached.uCode || (lines.length <= 1 ? getUCode(o) : genUCode(o, line)),
         washTempCode: cached.washTempCode,
         bleachCode: cached.bleachCode,
         tumbleDryCode: cached.tumbleDryCode,
         ironCode: cached.ironCode,
         dryCleanCode: cached.dryCleanCode,
-      };
+      }));
     });
   }, [fetchStyleInfoForOrders]);
 
@@ -190,12 +232,14 @@ const WashLabelPage: React.FC = () => {
       dataIndex: 'color',
       key: 'color',
       width: 80,
+      render: (_: unknown, record: ProductionOrder) => getDisplayColorText(record),
     },
     {
       title: '码数',
       dataIndex: 'size',
       key: 'size',
-      width: 70,
+      width: 120,
+      render: (_: unknown, record: ProductionOrder) => getDisplaySizeText(record),
     },
     {
       title: (
@@ -239,15 +283,21 @@ const WashLabelPage: React.FC = () => {
       ),
       key: 'uCode',
       width: 200,
-      render: (_: unknown, record: ProductionOrder) => (
-        <Input
-          size="small"
-          value={record.id ? (uCodeOverrides[record.id] ?? getUCode(record)) : getUCode(record)}
-          onChange={e => record.id && setUCodeOverrides(prev => ({ ...prev, [record.id!]: e.target.value }))}
-          style={{ width: 185 }}
-          placeholder="自动生成"
-        />
-      ),
+      render: (_: unknown, record: ProductionOrder) => {
+        const lineCount = getOrderLines(record).length;
+        if (lineCount > 1) {
+          return <span style={{ color: '#1677ff', fontWeight: 600 }}>{`按SKU生成 ${lineCount} 条`}</span>;
+        }
+        return (
+          <Input
+            size="small"
+            value={record.id ? (uCodeOverrides[record.id] ?? getUCode(record)) : getUCode(record)}
+            onChange={e => record.id && setUCodeOverrides(prev => ({ ...prev, [record.id!]: e.target.value }))}
+            style={{ width: 185 }}
+            placeholder="自动生成"
+          />
+        );
+      },
     },
     {
       title: '操作',

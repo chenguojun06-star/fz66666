@@ -330,10 +330,6 @@ Page({
     ConfirmModalHandler.onCancelScan(this);
   },
 
-  onOpenSosModal() {
-    ConfirmModalHandler.onOpenSosModal(this);
-  },
-
   /**
    * 确认弹窗 - SKU输入
    * @param {Object} e - 事件对象

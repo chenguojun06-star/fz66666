@@ -1,4 +1,4 @@
-import { formatDateTime, formatDateTimeCompact } from '@/utils/datetime';
+import { formatDateTime } from '@/utils/datetime';
 import { ProductionOrder, ScanRecord, CuttingBundle } from '@/types/production';
 import { StyleProcess } from '@/types/style';
 import { ProgressNode } from './types';
@@ -296,13 +296,6 @@ export const clampPercent = (value: number) => {
 export const formatTime = (value?: string) => formatDateTime(value);
 
 /**
- * 格式化时间为紧凑格式（MM-DD HH:mm）
- * @param value 时间字符串
- * @returns 格式化后的时间字符串
- */
-export const formatTimeCompact = (value?: string) => formatDateTimeCompact(value);
-
-/**
  * 获取订单发货时间
  * @param order 生产订单对象
  * @returns 发货时间字符串
@@ -321,50 +314,6 @@ export const getNodeIndexFromProgress = (nodes: ProgressNode[], progress: number
   if (nodes.length <= 1) return 0;
   const idx = Math.round((clampPercent(progress) / 100) * (nodes.length - 1));
   return Math.max(0, Math.min(nodes.length - 1, idx));
-};
-
-export const getProgressLabelForTable = (
-  order: ProductionOrder,
-  progressNodesByStyleNo: Record<string, ProgressNode[]>,
-  defaultNodes: ProgressNode[],
-) => {
-  const cp = String(order.currentProcessName || '').trim();
-  const progress = clampPercent(Number(order.productionProgress) || 0);
-  const ns = stripWarehousingNode(resolveNodesForListOrder(order, progressNodesByStyleNo, defaultNodes));
-  const idx = getNodeIndexFromProgress(ns, progress);
-  const derived = ns[idx]?.name || '生产';
-  if (!cp) return derived;
-  const cpInNodes = ns.some((n) => String(n?.name || '').trim() === cp);
-  return cpInNodes ? cp : derived;
-};
-
-export const getProgressPercentForTable = (
-  order: ProductionOrder,
-  nodes: ProgressNode[],
-) => {
-  const raw = Number((order as any)?.productionProgress);
-  const direct = clampPercent(Number.isFinite(raw) ? raw : 0);
-  if (direct > 0) return direct;
-
-  const cp = String((order as any)?.currentProcessName || '').trim();
-  if (cp && Array.isArray(nodes) && nodes.length) {
-    const idx = nodes.findIndex((n) => String(n?.name || '').trim() === cp);
-    if (idx >= 0) {
-      return clampPercent(getProgressFromNodeIndex(nodes, idx));
-    }
-  }
-
-  const rate = clampPercent(Number((order as any)?.materialArrivalRate) || 0);
-  const base = 5 + Math.round((15 * rate) / 100);
-  return clampPercent(base);
-};
-
-export const getQuotationUnitPriceForOrder = (order: ProductionOrder) => {
-  const v = Number((order as any)?.quotationUnitPrice);
-  if (Number.isFinite(v) && v > 0) {
-    return v;
-  }
-  return 0;
 };
 
 export const getCloseMinRequired = (cuttingQuantity: number) => {
@@ -390,30 +339,6 @@ export const getCurrentWorkflowNodeForOrder = (
     return { id: '', name: '', unitPrice: 0 } as ProgressNode;
   }
   return picked;
-};
-
-export const calcCuttingTotalQty = (
-  order: ProductionOrder | null,
-  cuttingBundles: CuttingBundle[],
-): number => {
-  const oid = String(order?.id || '').trim();
-  const ono = String(order?.orderNo || '').trim();
-  const bundlesForOrder = (cuttingBundles || []).filter(
-    (b) => String((b as any)?.productionOrderId || '').trim() === oid || String((b as any)?.productionOrderNo || '').trim() === ono
-  );
-  return bundlesForOrder.reduce((s, b) => s + (Number((b as any)?.quantity) || 0), 0);
-};
-
-/**
- * 根据节点索引获取对应的进度百分比
- * @param nodes 节点列表
- * @param index 节点索引
- * @returns 进度百分比
- */
-export const getProgressFromNodeIndex = (nodes: ProgressNode[], index: number) => {
-  if (nodes.length <= 1) return 0;
-  const idx = Math.max(0, Math.min(nodes.length - 1, index));
-  return clampPercent((idx / (nodes.length - 1)) * 100);
 };
 
 export const parseProgressNodes = (raw: string): ProgressNode[] => {

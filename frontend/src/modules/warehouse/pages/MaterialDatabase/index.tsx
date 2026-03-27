@@ -17,7 +17,7 @@ import { MaterialDatabase, MaterialDatabaseQueryParams } from '@/types/productio
 import api, { unwrapApiData } from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { formatDateTime } from '@/utils/datetime';
-import { getBaseMaterialType, getBaseMaterialTypeLabel, getMaterialTypeCategory } from '@/utils/materialType';
+import { formatMaterialSpecWidth, getBaseMaterialType, getBaseMaterialTypeLabel, getMaterialTypeCategory } from '@/utils/materialType';
 import { useViewport } from '@/utils/useViewport';
 import { useModal, useRequest, useTablePagination } from '@/hooks';
 import type { Dayjs } from 'dayjs';
@@ -359,18 +359,11 @@ const MaterialDatabasePage: React.FC = () => {
       ellipsis: true,
     },
     {
-      title: '规格',
-      dataIndex: 'specifications',
-      key: 'specifications',
-      width: 100,
+      title: '规格/幅宽',
+      key: 'specWidth',
+      width: 140,
       ellipsis: true,
-    },
-    {
-      title: '幅宽',
-      dataIndex: 'fabricWidth',
-      key: 'fabricWidth',
-      width: 90,
-      ellipsis: true,
+      render: (_: unknown, record: MaterialDatabase) => formatMaterialSpecWidth(record.specifications, record.fabricWidth),
     },
     {
       title: '克重',
@@ -408,14 +401,14 @@ const MaterialDatabasePage: React.FC = () => {
       render: (value: unknown) => renderMaskedNumber(value, user),
     },
     {
-      title: '几米一公斤',
+      title: '每公斤米数',
       dataIndex: 'conversionRate',
       key: 'conversionRate',
-      width: 110,
+      width: 130,
       align: 'right' as const,
       render: (value: unknown) => {
         const num = Number(value);
-        return Number.isFinite(num) && num > 0 ? num : '-';
+        return Number.isFinite(num) && num > 0 ? `${num} 米/公斤` : '-';
       },
     },
     {
@@ -729,7 +722,7 @@ const MaterialDatabasePage: React.FC = () => {
                 </Form.Item>
               </Col>
               <Col xs={24} sm={8} md={6} lg={4} xl={4}>
-                <Form.Item name="conversionRate" label="几米一公斤">
+                <Form.Item name="conversionRate" label="每公斤米数(米/公斤)">
                   <InputNumber
                     placeholder="如：3"
                     style={{ width: '100%' }}

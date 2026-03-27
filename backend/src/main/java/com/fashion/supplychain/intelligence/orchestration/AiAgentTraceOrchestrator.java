@@ -7,6 +7,7 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.entity.IntelligenceAuditLog;
 import com.fashion.supplychain.intelligence.mapper.IntelligenceAuditLogMapper;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,13 +69,19 @@ public class AiAgentTraceOrchestrator {
     }
 
     public Map<String, Object> queryTrace(String commandId) {
-        QueryWrapper<IntelligenceAuditLog> query = new QueryWrapper<>();
-        query.eq("command_id", commandId).eq("tenant_id", UserContext.tenantId()).orderByAsc("created_at");
-        List<IntelligenceAuditLog> logs = auditLogMapper.selectList(query);
         Map<String, Object> result = new HashMap<>();
         result.put("commandId", commandId);
-        result.put("logs", logs);
-        result.put("count", logs.size());
+        try {
+            QueryWrapper<IntelligenceAuditLog> query = new QueryWrapper<>();
+            query.eq("command_id", commandId).eq("tenant_id", UserContext.tenantId()).orderByAsc("created_at");
+            List<IntelligenceAuditLog> logs = auditLogMapper.selectList(query);
+            result.put("logs", logs);
+            result.put("count", logs.size());
+        } catch (Exception e) {
+            log.warn("[AI_TRACE] 查询轨迹详情失败 commandId={}：{}", commandId, e.getMessage());
+            result.put("logs", java.util.Collections.emptyList());
+            result.put("count", 0);
+        }
         return result;
     }
 
@@ -84,18 +91,51 @@ public class AiAgentTraceOrchestrator {
 
     public List<IntelligenceAuditLog> listRecentRequests(int limit, String toolName, String status, String executorKeyword,
                                                          LocalDateTime startTime, LocalDateTime endTime) {
-        QueryWrapper<IntelligenceAuditLog> query = new QueryWrapper<>();
-        query.eq("tenant_id", UserContext.tenantId()).eq("action", "ai-agent:request");
-        query.like(toolName != null && !toolName.isBlank(), "remark", toolName.trim());
-        query.eq(status != null && !status.isBlank(), "status", status.trim());
-        query.and(executorKeyword != null && !executorKeyword.isBlank(), wrapper -> wrapper
-                .like("executor_id", executorKeyword.trim())
-                .or()
-                .like("target_id", executorKeyword.trim()));
-        query.ge(startTime != null, "created_at", startTime);
-        query.le(endTime != null, "created_at", endTime);
-        query.orderByDesc("created_at").last("LIMIT " + Math.max(limit, 1));
-        return auditLogMapper.selectList(query);
+        try {
+            String normalizedToolName = toolName == null ? "" : toolName.trim();
+            String normalizedStatus = status == null ? "" : status.trim();
+            String normalizedExecutorKeyword = executorKeyword == null ? "" : executorKeyword.trim();
+            Long tenantId = UserContext.tenantId();
+            QueryWrapper<IntelligenceAuditLog> query = new QueryWrapper<>();
+            query.eq("action", "ai-agent:request");
+            if (tenantId != null) {
+                query.eq("tenant_id", tenantId);
+            }
+            query.like(!normalizedToolName.isBlank(), "remark", normalizedToolName);
+            query.eq(!normalizedStatus.isBlank(), "status", normalizedStatus);
+            query.and(!normalizedExecutorKeyword.isBlank(), wrapper -> wrapper
+                    .like("executor_id", normalizedExecutorKeyword)
+                    .or()
+                    .like("target_id", normalizedExecutorKeyword));
+            query.ge(startTime != null, "created_at", startTime);
+            query.le(endTime != null, "created_at", endTime);
+            query.orderByDesc("created_at").last("LIMIT " + Math.max(limit, 1));
+            return auditLogMapper.selectList(query);
+        } catch (Exception e) {
+            log.warn("[AI_TRACE] 查询最近轨迹失败（表或字段可能未就绪）: {}", e.getMessage());
+            return java.util.Collections.emptyList();
+        }
+    }
+
+    public List<Map<String, Object>> listRecentRequestSummaries(int limit, String toolName, String status, String executorKeyword,
+                                                                LocalDateTime startTime, LocalDateTime endTime) {
+        List<Map<String, Object>> rows = new ArrayList<>();
+        for (IntelligenceAuditLog logRow : listRecentRequests(limit, toolName, status, executorKeyword, startTime, endTime)) {
+            Map<String, Object> row = new HashMap<>();
+            row.put("id", logRow.getId());
+            row.put("tenantId", logRow.getTenantId());
+            row.put("commandId", logRow.getCommandId());
+            row.put("action", logRow.getAction());
+            row.put("targetId", logRow.getTargetId());
+            row.put("executorId", logRow.getExecutorId());
+            row.put("status", logRow.getStatus());
+            row.put("durationMs", logRow.getDurationMs());
+            row.put("remark", logRow.getRemark());
+            row.put("errorMessage", logRow.getErrorMessage());
+            row.put("createdAt", logRow.getCreatedAt());
+            rows.add(row);
+        }
+        return rows;
     }
 
     private void updateRequestToolSummary(String commandId, String toolName, boolean success, String targetId) {

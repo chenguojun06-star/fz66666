@@ -6,10 +6,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
-import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.CuttingBundleService;
+import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -88,6 +88,26 @@ public class CuttingTaskOrchestrator {
 
     @Autowired
     private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
+
+    @Autowired
+    private MaterialPurchaseService materialPurchaseService;
+
+    private boolean hasCuttingMaterialReady(ProductionOrder order, CuttingTask task) {
+        if (isDirectCuttingOrder(order, task)) {
+            return true;
+        }
+        if (order == null || !StringUtils.hasText(order.getId())) {
+            return false;
+        }
+        if (materialPurchaseService.hasConfirmedQuantityByOrderId(order.getId(), true)) {
+            return true;
+        }
+        Integer rate = order.getMaterialArrivalRate();
+        if (rate != null && rate >= 100) {
+            return true;
+        }
+        return order.getProcurementManuallyCompleted() != null && order.getProcurementManuallyCompleted() == 1;
+    }
 
     public IPage<CuttingTask> queryPage(Map<String, Object> params) {
         // 工厂账号隔离：只能查看本工厂订单的裁剪任务
@@ -550,19 +570,8 @@ public class CuttingTaskOrchestrator {
         String orderId = task.getProductionOrderId();
         if (StringUtils.hasText(orderId)) {
             ProductionOrder order = productionOrderService.getById(orderId.trim());
-            int rate = order == null || order.getMaterialArrivalRate() == null ? 0 : order.getMaterialArrivalRate();
-
-            // 裁剪入口直下单不经过采购回料链路，领取裁剪任务时直接放行。
-            boolean materialReady = isDirectCuttingOrder(order, task);
-            if (!materialReady && rate >= 100) {
-                materialReady = true;
-            } else if (!materialReady && order != null && order.getProcurementManuallyCompleted() != null
-                    && order.getProcurementManuallyCompleted() == 1) {
-                materialReady = true;
-            }
-
-            if (!materialReady) {
-                throw new IllegalStateException("物料未到齐，无法领取裁剪任务");
+            if (!hasCuttingMaterialReady(order, task)) {
+                throw new IllegalStateException("主面料尚未完成可裁确认，无法领取裁剪任务");
             }
         }
 

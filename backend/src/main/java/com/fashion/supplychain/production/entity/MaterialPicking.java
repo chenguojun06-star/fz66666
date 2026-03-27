@@ -20,6 +20,8 @@ public class MaterialPicking {
     private String styleNo;
     private String pickerId;
     private String pickerName;
+    private String pickupType;
+    private String usageType;
     private LocalDateTime pickTime;
     private String status;
     private String remark;
@@ -29,4 +31,13 @@ public class MaterialPicking {
 
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
+
+    @TableField(exist = false)
+    private String factoryId;
+
+    @TableField(exist = false)
+    private String factoryName;
+
+    @TableField(exist = false)
+    private String factoryType;
 }

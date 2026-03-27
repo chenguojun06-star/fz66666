@@ -206,14 +206,20 @@ export const createApiClient = (): ApiClient => {
   client.interceptors.response.use(
     response => response.data,
     async error => {
-      const config = error.config;
+      const config = error.config as (AxiosRequestConfig & {
+        retry?: number;
+        __retryCount?: number;
+      }) | undefined;
 
-      // 自动重试机制：仅针对幂等请求（GET）或网络超时
-      if (!config || !config.retry) {
+      const status = Number(error?.response?.status || 0);
+      const shouldRetryError = !error?.response || status === 408 || status === 429 || status >= 500;
+
+      // 自动重试机制：仅针对幂等 GET 且属于网络/超时/限流/5xx 错误
+      if (config && !config.retry) {
         config.retry = 2; // 默认重试2次
       }
 
-      if (config.__retryCount < config.retry) {
+      if (config && shouldRetryError && (config.__retryCount || 0) < (config.retry || 0)) {
         config.__retryCount = (config.__retryCount || 0) + 1;
 
         // 仅重试 GET 请求（幂等）；POST/PUT/DELETE 哪怕网络错误也不重试，防止重复创建/结算

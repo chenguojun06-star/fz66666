@@ -263,7 +263,7 @@ const MaterialPurchaseDetail: React.FC = () => {
       key: 'referenceKilograms',
       width: 110,
       align: 'right',
-      render: (_: unknown, record: MaterialPurchaseType) => formatReferenceKilograms(record.purchaseQuantity, record.conversionRate),
+      render: (_: unknown, record: MaterialPurchaseType) => formatReferenceKilograms(record.purchaseQuantity, record.conversionRate, record.unit),
     },
     {
       title: '到货数量',

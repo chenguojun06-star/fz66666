@@ -5,17 +5,31 @@
 }
 
 .scan-result-info {
-  padding: 6px 0;
+  padding: 4px 0;
 }
 
 .result-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 10px;
-  margin-bottom: 4px;
+  min-height: 36px;
+  padding: 6px 10px;
+  margin-bottom: 3px;
   background: #f8f9fa;
   border-radius: 6px;
+  box-sizing: border-box;
+}
+
+.result-item-row {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 3px;
+}
+
+.result-item-half {
+  flex: 1;
+  min-width: 0;
+  margin-bottom: 0;
 }
 
 /* === 工序滚动选择器（基于 inline-selector 通用样式 + 价格扩展） === */
@@ -31,13 +45,13 @@
 }
 
 .process-scroll-title {
-  font-size: 12px;
+  font-size: 11px;
   color: #64748b;
   font-weight: 600;
 }
 
 .process-scroll-hint {
-  font-size: var(--font-size-xs);
+  font-size: 10px;
   color: #94a3b8;
 }
 
@@ -46,11 +60,49 @@
   padding: 0 6px 6px;
 }
 
+.process-selected-summary {
+  margin: 0 8px 6px;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.process-selected-title {
+  display: block;
+  font-size: 11px;
+  color: #475569;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.process-selected-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.process-selected-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 600;
+}
+
 /* 价格标签（工序选择器专有） */
 .process-item-price {
-  font-size: 14px;
+  font-size: 12px;
   color: #10b981;
   font-weight: 700;
+}
+
+.process-scroll-selector .inline-selector-label {
+  font-size: 13px;
 }
 
 .inline-selector-item.active .process-item-price {
@@ -58,13 +110,13 @@
 }
 
 .item-label {
-  font-size: 12px;
+  font-size: 11px;
   color: #64748b;
   font-weight: 500;
 }
 
 .item-value {
-  font-size: var(--font-size-sm);
+  font-size: 13px;
   color: #1e293b;
   font-weight: 600;
 }

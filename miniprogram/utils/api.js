@@ -36,9 +36,6 @@ const dashboard = {
 };
 
 const production = {
-  reportException(payload) {
-    return ok('/api/production/exception/report', 'POST', payload || {});
-  },
   listOrders(params) {
     return ok('/api/production/order/list', 'GET', params || {});
   },
@@ -240,6 +237,9 @@ const material = {
 };
 
 const system = {
+  login(payload) {
+    return raw('/api/system/user/login', 'POST', payload || {}, { skipAuthRedirect: true });
+  },
   getMe() {
     return ok('/api/system/user/me', 'GET', {});
   },
@@ -513,4 +513,3 @@ module.exports.intelligence = intelligence;
 module.exports.common = common;
 module.exports.factoryWorker = factoryWorker;
 module.exports.notice = notice;
-

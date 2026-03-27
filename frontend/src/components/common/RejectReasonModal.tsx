@@ -1,5 +1,6 @@
 import React from 'react';
-import { Form, Input, Modal } from 'antd';
+import { Form, Input } from 'antd';
+import SmallModal from './SmallModal';
 
 export interface RejectReasonModalProps {
   /** 是否显示 */
@@ -64,11 +65,9 @@ const RejectReasonModal: React.FC<RejectReasonModalProps> = ({
   };
 
   return (
-    <Modal
+    <SmallModal
       open={open}
       title={title}
-      width="30vw"
-      style={{ minWidth: 380 }}
       okText={okText}
       cancelText={cancelText}
       okButtonProps={{ danger: okDanger, type: 'default', loading }}
@@ -97,7 +96,7 @@ const RejectReasonModal: React.FC<RejectReasonModalProps> = ({
           />
         </Form.Item>
       </Form>
-    </Modal>
+    </SmallModal>
   );
 };
 

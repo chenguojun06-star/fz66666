@@ -11,11 +11,13 @@
  */
 
 const KEY_PREFIX = 'ps:';
+const TABLE_KEY_PREFIX = 'ps:table:';
 export const DEFAULT_PAGE_SIZE = 20;
 export const DEFAULT_PAGE_SIZE_OPTIONS = ['20', '50', '100', '200'] as const;
+const ALLOWED_PAGE_SIZES = DEFAULT_PAGE_SIZE_OPTIONS.map((item) => Number(item));
 
 function resolveDefaultPageSize(defaultVal: number): number {
-  return Number.isFinite(defaultVal) && defaultVal > 0
+  return Number.isFinite(defaultVal) && ALLOWED_PAGE_SIZES.includes(defaultVal)
     ? defaultVal
     : DEFAULT_PAGE_SIZE;
 }
@@ -23,6 +25,9 @@ function resolveDefaultPageSize(defaultVal: number): number {
 export function normalizePageSize(size: number, defaultVal = DEFAULT_PAGE_SIZE): number {
   const fallback = resolveDefaultPageSize(defaultVal);
   if (!Number.isFinite(size) || size <= 0) {
+    return fallback;
+  }
+  if (!ALLOWED_PAGE_SIZES.includes(size)) {
     return fallback;
   }
   return size;
@@ -36,19 +41,31 @@ function getKey(): string {
   }
 }
 
-/**
- * 读取当前页面保存的每页条数
- * @param defaultVal 默认每页条数（用户首次访问时使用）
- */
-export function readPageSize(defaultVal: number): number {
+export function buildPageSizeStorageKey(storageKey: string): string {
+  return `${TABLE_KEY_PREFIX}${storageKey}`;
+}
+
+function readPageSizeFromKey(storageKey: string, defaultVal: number): number {
   const fallback = resolveDefaultPageSize(defaultVal);
   try {
-    const raw = localStorage.getItem(getKey());
+    const raw = localStorage.getItem(storageKey);
     const n = raw ? parseInt(raw, 10) : NaN;
     return normalizePageSize(n, fallback);
   } catch {
     return fallback;
   }
+}
+
+/**
+ * 读取当前页面保存的每页条数
+ * @param defaultVal 默认每页条数（用户首次访问时使用）
+ */
+export function readPageSize(defaultVal: number): number {
+  return readPageSizeFromKey(getKey(), defaultVal);
+}
+
+export function readPageSizeByKey(storageKey: string, defaultVal = DEFAULT_PAGE_SIZE): number {
+  return readPageSizeFromKey(storageKey, defaultVal);
 }
 
 /**
@@ -58,6 +75,14 @@ export function readPageSize(defaultVal: number): number {
 export function savePageSize(size: number): void {
   try {
     localStorage.setItem(getKey(), String(normalizePageSize(size)));
+  } catch {
+    // localStorage 不可用时静默忽略
+  }
+}
+
+export function savePageSizeByKey(storageKey: string, size: number): void {
+  try {
+    localStorage.setItem(storageKey, String(normalizePageSize(size)));
   } catch {
     // localStorage 不可用时静默忽略
   }

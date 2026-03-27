@@ -3,6 +3,8 @@ package com.fashion.supplychain.production.orchestration;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.intelligence.orchestration.OrderDecisionCaptureOrchestrator;
+import com.fashion.supplychain.intelligence.orchestration.OrderLearningOutcomeOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderQueryService;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.CuttingTaskService;
@@ -144,6 +146,12 @@ public class ProductionOrderOrchestrator {
     @Lazy
     @Autowired(required = false)
     private com.fashion.supplychain.system.orchestration.ChangeApprovalOrchestrator changeApprovalOrchestrator;
+
+    @Autowired(required = false)
+    private OrderDecisionCaptureOrchestrator orderDecisionCaptureOrchestrator;
+
+    @Autowired(required = false)
+    private OrderLearningOutcomeOrchestrator orderLearningOutcomeOrchestrator;
 
     public IPage<ProductionOrder> queryPage(Map<String, Object> params) {
         IPage<ProductionOrder> page = productionOrderQueryService.queryPage(params);
@@ -367,6 +375,26 @@ public class ProductionOrderOrchestrator {
                                 log.info("CRM 闭环 - 主事务提交后异步/独立生成应收款，订单号: {}", productionOrder.getOrderNo());
                             } catch (Exception e) {
                                 log.error("主事务后独立生成应收款失败，已隔离异常，不响主流程: orderId={}", productionOrder.getId(), e);
+                            }
+                        }
+                    }
+                );
+            }
+
+            if (orderDecisionCaptureOrchestrator != null || orderLearningOutcomeOrchestrator != null) {
+                org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                    new org.springframework.transaction.support.TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            try {
+                                if (orderDecisionCaptureOrchestrator != null) {
+                                    orderDecisionCaptureOrchestrator.captureByOrderId(productionOrder.getId());
+                                }
+                                if (orderLearningOutcomeOrchestrator != null) {
+                                    orderLearningOutcomeOrchestrator.refreshByOrderId(productionOrder.getId());
+                                }
+                            } catch (Exception ex) {
+                                log.warn("order learning afterCommit sync failed, orderId={}", productionOrder.getId(), ex);
                             }
                         }
                     }
@@ -625,6 +653,25 @@ public class ProductionOrderOrchestrator {
             }
         } catch (Exception e) {
             log.warn("记录订单关闭操作日志失败: orderId={}", id, e);
+        }
+        if (result != null && (orderDecisionCaptureOrchestrator != null || orderLearningOutcomeOrchestrator != null)) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                new org.springframework.transaction.support.TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        try {
+                            if (orderDecisionCaptureOrchestrator != null) {
+                                orderDecisionCaptureOrchestrator.captureByOrderId(result.getId());
+                            }
+                            if (orderLearningOutcomeOrchestrator != null) {
+                                orderLearningOutcomeOrchestrator.refreshByOrderId(result.getId());
+                            }
+                        } catch (Exception ex) {
+                            log.warn("order learning close afterCommit sync failed, orderId={}", result.getId(), ex);
+                        }
+                    }
+                }
+            );
         }
         return result;
     }

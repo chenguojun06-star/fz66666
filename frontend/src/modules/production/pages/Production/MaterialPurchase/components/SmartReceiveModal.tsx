@@ -877,7 +877,6 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
             key: 'stock',
             items: { label: '库存状态', value: stockStatusText, color: stockStatusColor },
             activeColor: stockStatusColor,
-            activeBg: stockStatusColor === 'var(--color-success)' ? '#f6ffed' : stockStatusColor === 'var(--color-danger)' ? '#fff2f0' : '#fffbe6',
           },
           {
             key: 'picking',

@@ -70,11 +70,13 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
   const [processTrackingRecords, setProcessTrackingRecords] = useState<any[]>([]);
   const [trackingLoading, setTrackingLoading] = useState(false);
   const [templatePriceMap, setTemplatePriceMap] = useState<Map<string, number>>(new Map());
+  const [styleProcessDescriptionMap, setStyleProcessDescriptionMap] = useState<Map<string, string>>(new Map());
+  const [secondaryProcessDescriptionMap, setSecondaryProcessDescriptionMap] = useState<Map<string, string>>(new Map());
   /**
    * 从模板库 API 返回的完整节点列表（含 progressStage 字段）
    * 作为 workflowNodesByStage 的主数据源，支持任意自定义工序名精确归类
    */
-  const [templateNodesList, setTemplateNodesList] = useState<{ name: string; processCode?: string; progressStage?: string }[]>([]);
+  const [templateNodesList, setTemplateNodesList] = useState<{ name: string; processCode?: string; progressStage?: string; description?: string }[]>([]);
 
   /**
    * 将模板节点按阶段分组，传给 ProcessTrackingTable.processList
@@ -107,14 +109,18 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
         // 存价格 Map
         const pm = new Map<string, number>();
         // 存完整节点列表（含 progressStage）
-        const nl: { name: string; processCode?: string; progressStage?: string }[] = [];
+        const nl: { name: string; processCode?: string; progressStage?: string; description?: string }[] = [];
         rows.forEach((n: any) => {
           const name = String(n?.name || '').trim();
           if (!name) return;
           const price = Number(n?.unitPrice);
           if (Number.isFinite(price) && price > 0) pm.set(name, price);
-          // id 字段即 processCode（见后端 resolveProgressNodeUnitPrices: item.put("id", processCode)）
-          nl.push({ name, processCode: String(n?.id || n?.processCode || name).trim(), progressStage: String(n?.progressStage || '').trim() });
+          nl.push({
+            name,
+            processCode: String(n?.id || n?.processCode || name).trim(),
+            progressStage: String(n?.progressStage || '').trim(),
+            description: String(n?.description || '').trim(),
+          });
         });
         setTemplatePriceMap(pm);
         setTemplateNodesList(nl);
@@ -123,6 +129,47 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
       }
     })();
   }, [visible, record]);
+
+  useEffect(() => {
+    if (!visible || !record?.styleId) {
+      setStyleProcessDescriptionMap(new Map());
+      setSecondaryProcessDescriptionMap(new Map());
+      return;
+    }
+    const styleId = String(record.styleId).trim();
+    if (!styleId) {
+      setStyleProcessDescriptionMap(new Map());
+      setSecondaryProcessDescriptionMap(new Map());
+      return;
+    }
+    (async () => {
+      try {
+        const [processRes, secondaryRes] = await Promise.all([
+          api.get(`/style/process/list?styleId=${styleId}`),
+          api.get(`/style/secondary-process/list?styleId=${styleId}`),
+        ]);
+        const processRows = Array.isArray((processRes as any)?.data) ? (processRes as any).data : [];
+        const secondaryRows = Array.isArray((secondaryRes as any)?.data) ? (secondaryRes as any).data : [];
+        const nextProcessMap = new Map<string, string>();
+        const nextSecondaryMap = new Map<string, string>();
+        processRows.forEach((item: any) => {
+          const name = String(item?.processName || item?.name || '').trim();
+          const description = String(item?.description || '').trim();
+          if (name && description) nextProcessMap.set(name, description);
+        });
+        secondaryRows.forEach((item: any) => {
+          const name = String(item?.processName || item?.name || '').trim();
+          const description = String(item?.description || '').trim();
+          if (name && description) nextSecondaryMap.set(name, description);
+        });
+        setStyleProcessDescriptionMap(nextProcessMap);
+        setSecondaryProcessDescriptionMap(nextSecondaryMap);
+      } catch {
+        setStyleProcessDescriptionMap(new Map());
+        setSecondaryProcessDescriptionMap(new Map());
+      }
+    })();
+  }, [visible, record?.styleId]);
 
   // 加载裁剪数据
   useEffect(() => {
@@ -435,6 +482,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
       id: item.processCode || item.name,
       name: item.name,
       progressStage: item.progressStage || '',
+      description: item.description || '',
       machineType: '',
       standardTime: 0,
       unitPrice: templatePriceMap.get(item.name) ?? 0,
@@ -605,6 +653,8 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
             if (processes.length === 0) return null;
 
             const stageTotal = processes.reduce((sum: number, p: any) => sum + (Number(p.unitPrice) || 0), 0);
+            const descriptionTitle = stage.key === 'secondaryProcess' ? '工艺描述' : '工序描述';
+            const descriptionMap = stage.key === 'secondaryProcess' ? secondaryProcessDescriptionMap : styleProcessDescriptionMap;
 
             return (
               <div key={stage.key} style={{
@@ -734,7 +784,11 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                 {/* 工序列表表格 */}
                 <ResizableTable
                   storageKey="process-detail-list"
-                  dataSource={processes.map((p: any, idx: number) => ({ ...p, key: idx }))}
+                  dataSource={processes.map((p: any, idx: number) => ({
+                    ...p,
+                    key: idx,
+                    description: p.description || descriptionMap.get(String(p.name || '').trim()) || '',
+                  }))}
                   columns={[
                     {
                       title: '序号',
@@ -755,6 +809,14 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                       dataIndex: 'name',
                       key: 'name',
                       render: (v: string) => <span style={{ fontWeight: 600 }}>{v}</span>,
+                    },
+                    {
+                      title: descriptionTitle,
+                      dataIndex: 'description',
+                      key: 'description',
+                      width: 180,
+                      ellipsis: true,
+                      render: (v: string) => v || '-',
                     },
                     {
                       title: '机器类型',
@@ -794,7 +856,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                   size="small"
                   summary={() => (
                     <ResizableTable.Summary.Row style={{ background: 'var(--color-bg-container)' }}>
-                      <ResizableTable.Summary.Cell index={0} colSpan={4} align="right">
+                      <ResizableTable.Summary.Cell index={0} colSpan={5} align="right">
                         <span style={{ fontWeight: 600 }}>合计</span>
                       </ResizableTable.Summary.Cell>
                       <ResizableTable.Summary.Cell index={1} align="right">
@@ -850,6 +912,8 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                 <ProcessTrackingTable
                   records={Array.isArray(processTrackingRecords) ? processTrackingRecords : []}
                   loading={trackingLoading}
+                  orderId={record?.id}
+                  orderNo={record?.orderNo}
                   processType={processType}
                   nodeName={{ procurement: '采购', cutting: '裁剪', carSewing: '车缝', secondaryProcess: '二次工艺', tailProcess: '尾部', warehousing: '入库' }[processType] || processType}
                   orderStatus={record?.status}

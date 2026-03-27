@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { App, Button, Card, InputNumber, Space, Spin, Table, Typography } from 'antd';
+import { App, Button, Card, InputNumber, Space, Spin, Typography } from 'antd';
 import api from '@/utils/api';
+import ResizableTable from '@/components/common/ResizableTable';
 
 import type { StyleBom, StyleAttachment } from '@/types/style';
 import StyleAttachmentTab from './StyleAttachmentTab';
@@ -35,19 +36,31 @@ interface Props {
   sizeColorConfig?: SizeColorConfigInput;
 }
 
-/** 单位为「米」的物料需要在纸样开发中录入各码用量和损耗率 */
-const isMeterUnit = (unit?: string) => String(unit || '').trim() === '米';
-const shouldIncludePatternMaterial = (bom: StyleBom) => {
+const isZipperMaterial = (bom: StyleBom) => /拉链/.test(String(bom.materialName || '').trim());
+const isCountLikeUnit = (unit?: string) => /^(个|套|条|只|双|粒|枚|包|张|件|根|片|台|桶|卷)$/.test(String(unit || '').trim());
+const isMeterPatternMaterial = (bom: StyleBom) => {
   const unit = String(bom.unit || '').trim();
   const materialType = String(bom.materialType || '').trim().toLowerCase();
   const materialName = String(bom.materialName || '').trim();
-  return isMeterUnit(unit)
-    || materialType.startsWith('fabric')
+  const specification = String(bom.specification || '').trim();
+  if (isZipperMaterial(bom)) return false;
+  if (unit === '米') return true;
+  if (isCountLikeUnit(unit)) return false;
+  return materialType.startsWith('fabric')
     || materialType.startsWith('lining')
-    || materialType.startsWith('accessory')
-    || /拉链|纽扣|魔术贴|松紧|织带|绳|扣|辅料/.test(materialName);
+    || /松紧|织带|绳|带|滚条|包边|魔术贴/.test(`${materialName} ${specification}`);
 };
-const isZipperMaterial = (bom: StyleBom) => /拉链/.test(String(bom.materialName || '').trim());
+const resolvePatternUnit = (bom: StyleBom) => {
+  const patternUnit = String(bom.patternUnit || '').trim();
+  const bomUnit = String(bom.unit || '').trim();
+  if (patternUnit && patternUnit !== '米') {
+    return patternUnit;
+  }
+  if (isMeterPatternMaterial(bom)) {
+    return '米';
+  }
+  return bomUnit || patternUnit || '';
+};
 const parseNumberMap = (value?: string) => {
   try {
     const parsed = JSON.parse(String(value || '{}'));
@@ -101,32 +114,20 @@ const StylePatternTab: React.FC<Props> = ({
     checkPatternComplete();
   }, [checkPatternComplete, patternFiles]);
 
-  // 获取 BOM 列表（仅面料/里料类，用于各码用量录入）
+  // 获取 BOM 列表（与 BOM 清单保持一致顺序，纸样实际用量直接按 BOM 行录入）
   const fetchBomList = useCallback(async () => {
     if (!styleId) return;
     setBomLoading(true);
     try {
       const res = await api.get<StyleBom[]>(`/style/bom/list?styleId=${styleId}`);
       const list = Array.isArray(res) ? res : (res as any)?.data ?? [];
-      const sortOrder = (t?: string) => {
-        if (!t) return 9;
-        if (t.startsWith('fabric')) return 1;
-        if (t.startsWith('lining')) return 2;
-        return 5;
-      };
-      const fabricBoms = list
-        .filter((b: StyleBom) => shouldIncludePatternMaterial(b))
-        .sort((a: StyleBom, b: StyleBom) => {
-          const d = sortOrder(a.materialType) - sortOrder(b.materialType);
-          if (d !== 0) return d;
-          return String(a.materialName || '').localeCompare(String(b.materialName || ''), 'zh');
-        });
-      setBomList(fabricBoms);
+      const patternBoms = list.filter((b: StyleBom) => Boolean(String(b.materialName || b.materialCode || '').trim()));
+      setBomList(patternBoms);
       // 从已保存的 sizeUsageMap 和 lossRate 初始化编辑状态
       const initEdits: Record<string | number, Record<string, number | null>> = {};
       const initSpecEdits: Record<string | number, Record<string, number | null>> = {};
       const initLoss: Record<string | number, number | null> = {};
-      for (const b of fabricBoms) {
+      for (const b of patternBoms) {
         if (!b.id) continue;
         const parsed: Record<string, number | null> = {};
         const sourceMap = parseNumberMap(b.patternSizeUsageMap || b.sizeUsageMap);
@@ -157,9 +158,7 @@ const StylePatternTab: React.FC<Props> = ({
   }, [fetchBomList]);
 
   const locked = useMemo(() => String(patternStatus || '').trim().toUpperCase() === 'COMPLETED', [patternStatus]);
-  // 未开始时禁止编辑（需先点击「开始纸样开发」）
-  const notStarted = !patternStartTime && !patternCompletedTime;
-  const childReadOnly = useMemo(() => Boolean(readOnly) || locked || notStarted, [readOnly, locked, notStarted]);
+  const childReadOnly = useMemo(() => Boolean(readOnly) || locked, [readOnly, locked]);
 
   const hasValidPatternFile = useMemo(() => {
     const list = Array.isArray(patternFiles) ? patternFiles : [];
@@ -254,7 +253,7 @@ const StylePatternTab: React.FC<Props> = ({
               sizeUsageMap: newMapJson || null,
               patternSizeUsageMap: rawMapJson || null,
               sizeSpecMap: newSpecJson || null,
-              patternUnit: '米',
+              patternUnit: resolvePatternUnit(bom) || null,
               conversionRate,
               lossRate: newLoss,
               ...(avgUsage !== null ? { usageAmount: avgUsage } : {}),
@@ -296,7 +295,7 @@ const StylePatternTab: React.FC<Props> = ({
         title: '单位',
         key: 'unit',
         width: 72,
-        render: (_: unknown, record: PatternMaterialRow) => record.mode === 'spec' ? 'cm' : (record.bom.patternUnit || record.bom.unit || '-'),
+        render: (_: unknown, record: PatternMaterialRow) => record.mode === 'spec' ? 'cm' : (resolvePatternUnit(record.bom) || '-'),
       },
       {
         title: '规格/幅宽',
@@ -471,16 +470,14 @@ const StylePatternTab: React.FC<Props> = ({
           )
         }
       >
-        {notStarted ? (
-          <Text type="secondary">请先点击「开始纸样开发」后填写各码用量</Text>
-        ) : activeSizes.length === 0 ? (
+        {activeSizes.length === 0 ? (
           <Text type="secondary">款式未配置码数，请先在基本信息中填写码数配置</Text>
         ) : (
           <Spin spinning={bomLoading}>
             {bomList.length === 0 && !bomLoading ? (
               <Text type="secondary">BOM清单中暂无面料/里料，请先在BOM清单中添加面辅料</Text>
             ) : (
-              <Table<PatternMaterialRow>
+              <ResizableTable<PatternMaterialRow>
                 size="small"
                 rowKey={(r) => r.id}
                 dataSource={patternRows}

@@ -36,6 +36,7 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
   const watchedStyleCover = Form.useWatch('styleCover', form);
   const watchedPurchaseQuantity = Form.useWatch('purchaseQuantity', form);
   const watchedConversionRate = Form.useWatch('conversionRate', form);
+  const watchedUnit = Form.useWatch('unit', form);
 
   // Stock check
   const watchedMaterialCode = Form.useWatch('materialCode', form);
@@ -436,14 +437,14 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
           </Form.Item>
         </Col>
         <Col xs={24} md={6}>
-          <Form.Item name="conversionRate" label="几米一公斤">
+          <Form.Item name="conversionRate" label="每公斤米数(米/公斤)">
             <InputNumber style={{ width: '100%' }} min={0} step={0.01} precision={4} placeholder="如：3" />
           </Form.Item>
         </Col>
         <Col xs={24} md={6}>
           <Form.Item label="参考公斤数">
             <Input
-              value={formatReferenceKilograms(watchedPurchaseQuantity, watchedConversionRate)}
+              value={formatReferenceKilograms(watchedPurchaseQuantity, watchedConversionRate, watchedUnit)}
               readOnly
               placeholder="-"
             />

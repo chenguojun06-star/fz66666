@@ -293,10 +293,19 @@ export interface SchedulePlan {
   reason?: string;
   matchScore: number;
   currentLoad: number;
+  dailyCapacity?: number;
   availableCapacity: number;
   suggestedStart: string;
   estimatedEnd: string;
   estimatedDays: number;
+  fastestDays?: number;
+  slowestDays?: number;
+  earliestEnd?: string;
+  latestEnd?: string;
+  capacityScore?: number;
+  timeScore?: number;
+  categoryScore?: number;
+  qualityScore?: number;
   ganttItems: GanttItem[];
   // 数据质量标记
   hasRealData?: boolean;       // false = 评分全为估算默认值（无历史完成订单）
@@ -1193,7 +1202,14 @@ export const intelligenceApi = {
 
   /** AI顾问问答 — 优先本地规则引擎，无法回答时走 DeepSeek */
   aiAdvisorChat: (question: string) =>
-    api.post<{ code: number; data: { answer: string; source: 'local' | 'ai' | 'none' | 'error'; commandId?: string } }>(
+    api.post<{ code: number; data: {
+      answer: string;
+      displayAnswer?: string;
+      source: 'local' | 'ai' | 'none' | 'error';
+      commandId?: string;
+      suggestions?: string[];
+      cards?: Array<Record<string, unknown>>;
+    } }>(
       '/intelligence/ai-advisor/chat',
       { question },
       { timeout: 90000 },

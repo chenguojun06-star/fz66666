@@ -1,9 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Card, Spin } from 'antd';
 import { ColumnsType } from 'antd/es/table';
-import { CaretUpOutlined, CaretDownOutlined } from '@ant-design/icons';
-import api from '@/utils/api';
+import api, { getApiMessage, isApiSuccess } from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
+import { StyleCoverThumb } from '@/components/StyleAssets';
+import { DEFAULT_PAGE_SIZE_OPTIONS } from '@/utils/pageSizeStore';
+import SortableColumnTitle from '@/components/common/SortableColumnTitle';
+import { usePersistentSort } from '@/hooks/usePersistentSort';
 import './styles.css';
 import { message } from '@/utils/antdStatic';
 
@@ -20,9 +23,13 @@ interface OverdueOrder {
 const OverdueOrderTable: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [dataSource, setDataSource] = useState<OverdueOrder[]>([]);
-  const [sortField, setSortField] = useState<'deliveryDate' | 'overdueDays' | null>(null);
-  const [sortOrder, setSortOrder] = useState<'ascend' | 'descend' | null>(null);
+  const { sortField, sortOrder, handleSort } = usePersistentSort<'deliveryDate' | 'overdueDays', 'asc' | 'desc'>({
+    storageKey: 'dashboard-overdue-orders',
+    defaultField: 'deliveryDate',
+    defaultOrder: 'desc',
+  });
   const [urgedIds, setUrgedIds] = useState<Set<string>>(new Set());
+  const [urgingId, setUrgingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -54,109 +61,67 @@ const OverdueOrderTable: React.FC = () => {
     }
   };
 
-  const handleSort = (field: 'deliveryDate' | 'overdueDays') => {
-    let newOrder: 'ascend' | 'descend' = 'ascend';
-
-    if (sortField === field) {
-      if (sortOrder === 'ascend') {
-        newOrder = 'descend';
-      } else if (sortOrder === 'descend') {
-        // 第三次点击取消排序
-        setSortField(null);
-        setSortOrder(null);
-        return;
+  const sortedDataSource = useMemo(() => {
+    const sorted = [...dataSource];
+    sorted.sort((a, b) => {
+      if (sortField === 'deliveryDate') {
+        const dateA = new Date(a.deliveryDate).getTime();
+        const dateB = new Date(b.deliveryDate).getTime();
+        return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
       }
-    }
-
-    setSortField(field);
-    setSortOrder(newOrder);
-  };
-
-  const renderSortIcon = (field: 'deliveryDate' | 'overdueDays') => {
-    if (sortField !== field) {
-      return (
-        <span className="sort-icon-container">
-          <CaretUpOutlined className="sort-icon sort-icon-inactive" />
-          <CaretDownOutlined className="sort-icon sort-icon-inactive" />
-        </span>
-      );
-    }
-
-    return (
-      <span className="sort-icon-container">
-        <CaretUpOutlined
-          className={`sort-icon ${sortOrder === 'ascend' ? 'sort-icon-active' : 'sort-icon-inactive'}`}
-        />
-        <CaretDownOutlined
-          className={`sort-icon ${sortOrder === 'descend' ? 'sort-icon-active' : 'sort-icon-inactive'}`}
-        />
-      </span>
-    );
-  };
+      const diff = a.overdueDays - b.overdueDays;
+      return sortOrder === 'desc' ? -diff : diff;
+    });
+    return sorted;
+  }, [dataSource, sortField, sortOrder]);
 
   const columns: ColumnsType<OverdueOrder> = [
+    {
+      title: '款式图',
+      dataIndex: 'styleNo',
+      key: 'styleCover',
+      width: 72,
+      align: 'center',
+      render: (_value: string, record: OverdueOrder) => (
+        <div className="overdue-order-cover-cell">
+          <StyleCoverThumb styleNo={record.styleNo} size={40} borderRadius={8} fit="contain" />
+        </div>
+      ),
+    },
     {
       title: '订单号',
       dataIndex: 'orderNo',
       key: 'orderNo',
-      width: '25%',
+      width: 132,
       ellipsis: true,
     },
     {
       title: '款号',
       dataIndex: 'styleNo',
       key: 'styleNo',
-      width: '20%',
+      width: 112,
       ellipsis: true,
     },
     {
       title: '数量',
       dataIndex: 'quantity',
       key: 'quantity',
-      width: '15%',
+      width: 72,
       align: 'right',
       render: (value: number) => value.toLocaleString(),
     },
     {
-      title: (
-        <div
-          className="sortable-header"
-          onClick={() => handleSort('deliveryDate')}
-        >
-          <span>交货日期</span>
-          {renderSortIcon('deliveryDate')}
-        </div>
-      ),
+      title: <SortableColumnTitle title="交货日期" fieldName="deliveryDate" sortField={sortField} sortOrder={sortOrder} onSort={handleSort} align="left" />,
       dataIndex: 'deliveryDate',
       key: 'deliveryDate',
-      width: '20%',
-      sorter: sortField === 'deliveryDate' ? {
-        compare: (a, b) => {
-          const dateA = new Date(a.deliveryDate).getTime();
-          const dateB = new Date(b.deliveryDate).getTime();
-          return dateA - dateB;
-        },
-      } : undefined,
-      sortOrder: sortField === 'deliveryDate' ? sortOrder : null,
+      width: 104,
     },
     {
-      title: (
-        <div
-          className="sortable-header"
-          onClick={() => handleSort('overdueDays')}
-        >
-          <span>延期天数</span>
-          {renderSortIcon('overdueDays')}
-        </div>
-      ),
+      title: <SortableColumnTitle title="延期天数" fieldName="overdueDays" sortField={sortField} sortOrder={sortOrder} onSort={handleSort} align="right" />,
       dataIndex: 'overdueDays',
       key: 'overdueDays',
-      width: '20%',
+      width: 84,
       align: 'right',
-      sorter: sortField === 'overdueDays' ? {
-        compare: (a, b) => a.overdueDays - b.overdueDays,
-      } : undefined,
-      sortOrder: sortField === 'overdueDays' ? sortOrder : null,
       render: (value: number) => (
         <span className="overdue-days">{value} 天</span>
       ),
@@ -165,31 +130,42 @@ const OverdueOrderTable: React.FC = () => {
       title: '工厂',
       dataIndex: 'factoryName',
       key: 'factoryName',
-      width: '15%',
+      width: 132,
       ellipsis: true,
       render: (value: string) => value || '-',
     },
     {
       title: '催单',
       key: 'urge',
-      width: '12%',
+      width: 70,
       align: 'center' as const,
       render: (_: unknown, record: OverdueOrder) => {
         const urged = urgedIds.has(record.id);
+        const urging = urgingId === record.id;
         return (
           <Button
             size="small"
             type="default"
             danger={!urged}
-            disabled={urged}
+            disabled={urged || urging}
+            loading={urging}
             onClick={async () => {
               try {
-                await api.post('/production/order/urge', { orderId: record.id, remark: '催单' });
-              } catch (_err) {
-                // 接口不存在时忽略，乐观更新 UI
+                setUrgingId(record.id);
+                const result = await api.post('/production/order/urge', {
+                  orderId: record.id,
+                  remark: '仪表盘延期订单催单',
+                });
+                if (!isApiSuccess(result)) {
+                  throw new Error(getApiMessage(result, '催单失败'));
+                }
+                setUrgedIds(prev => new Set([...Array.from(prev), record.id]));
+                message.success(`已发送催单通知：${record.orderNo}`);
+              } catch (err: any) {
+                message.error(err?.message || err?.response?.data?.message || '催单失败');
+              } finally {
+                setUrgingId(null);
               }
-              setUrgedIds(prev => new Set([...Array.from(prev), record.id]));
-              message.success(`已催单：${record.orderNo}`);
             }}
           >
             {urged ? '已催' : '催单'}
@@ -207,16 +183,17 @@ const OverdueOrderTable: React.FC = () => {
     >
       <Spin spinning={loading}>
         <ResizableTable
-          storageKey="overdue-order"
+          storageKey="overdue-order-dashboard-v2"
           columns={columns}
-          dataSource={dataSource}
+          dataSource={sortedDataSource}
           rowKey="id"
-          scroll={{ x: '100%' }}
+          resizableColumns={false}
+          scroll={{ y: 520 }}
           pagination={{
-            pageSize: 10,
-            showSizeChanger: false,
+            defaultPageSize: 10,
+            showSizeChanger: true,
             showTotal: (total) => `共 ${total} 条`,
-            pageSizeOptions: ['10', '20', '50', '100'],
+            pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
           }}
           size="middle"
           className="overdue-order-table"

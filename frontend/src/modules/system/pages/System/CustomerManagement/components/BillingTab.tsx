@@ -3,6 +3,7 @@ import { Button, Tag, Space, message, Form, Input, InputNumber, Modal, Select, T
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
+import SmallModal from '@/components/common/SmallModal';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
 import { useModal } from '@/hooks';
@@ -544,15 +545,13 @@ const BillingTab: React.FC = () => {
       </ResizableModal>
 
       {/* 开票弹窗 */}
-      <Modal
+      <SmallModal
         open={!!pendingIssueInvoiceBill}
         title={`确认开票 - ${pendingIssueInvoiceBill?.billingNo || ''}`}
         onOk={handleIssueInvoiceConfirm}
         onCancel={() => setPendingIssueInvoiceBill(null)}
         okText="确认开票"
         confirmLoading={issueInvoiceLoading}
-        width="30vw"
-        destroyOnHidden
       >
         <p>租户：{pendingIssueInvoiceBill?.tenantName}，金额：¥{pendingIssueInvoiceBill?.totalAmount}</p>
         <p>抬头：{(pendingIssueInvoiceBill as any)?.invoiceTitle || '—'}</p>
@@ -563,7 +562,7 @@ const BillingTab: React.FC = () => {
           onChange={(e) => setInvoiceNoValue(e.target.value)}
           style={{ marginTop: 8 }}
         />
-      </Modal>
+      </SmallModal>
 
       {/* 减免原因弹窗 */}
       <RejectReasonModal

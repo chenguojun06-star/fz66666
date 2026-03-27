@@ -199,6 +199,12 @@
             </exclusions>
         </dependency>
 
+        <dependency>
+            <groupId>com.tencentcloudapi</groupId>
+            <artifactId>tencentcloud-sdk-java-sms</artifactId>
+            <version>3.1.1422</version>
+        </dependency>
+
     </dependencies>
 
     <build>

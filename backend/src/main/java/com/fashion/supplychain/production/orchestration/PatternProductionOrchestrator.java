@@ -168,14 +168,12 @@ public class PatternProductionOrchestrator {
             String progressJson = objectMapper.writeValueAsString(progressNodes);
             record.setProgressNodes(progressJson);
             record.setUpdateBy(UserContext.username());
-            record.setUpdateTime(LocalDateTime.now());
+            LocalDateTime now = LocalDateTime.now();
+            record.setUpdateTime(now);
 
             boolean allCompleted = progressNodes.values().stream().allMatch(v -> v >= 100);
             if (allCompleted && !"PRODUCTION_COMPLETED".equals(record.getStatus()) && !"COMPLETED".equals(record.getStatus())) {
-                record.setStatus("PRODUCTION_COMPLETED");
-                if (!StringUtils.hasText(record.getReviewStatus())) {
-                    record.setReviewStatus("PENDING");
-                }
+                markPatternProductionCompleted(record, now);
             }
 
             patternProductionService.updateById(record);
@@ -682,6 +680,7 @@ public class PatternProductionOrchestrator {
      */
     private Map<String, Object> enrichRecord(PatternProduction record) {
         Map<String, Object> map = new HashMap<>();
+        LocalDateTime resolvedCompleteTime = resolvePatternProductionCompleteTime(record);
         map.put("id", record.getId());
         map.put("styleId", record.getStyleId());
         map.put("styleNo", record.getStyleNo());
@@ -691,7 +690,7 @@ public class PatternProductionOrchestrator {
         map.put("deliveryTime", record.getDeliveryTime());
         map.put("receiver", record.getReceiver());
         map.put("receiveTime", record.getReceiveTime());
-        map.put("completeTime", record.getCompleteTime());
+        map.put("completeTime", resolvedCompleteTime);
         // 旧记录 patternMaker 可能为 null（领取时未写入），兜底用 receiver（两者为同一人）
         String patternMakerVal = StringUtils.hasText(record.getPatternMaker())
                 ? record.getPatternMaker() : record.getReceiver();
@@ -995,6 +994,7 @@ public class PatternProductionOrchestrator {
             int progress = calculatePatternProgressPercent(pattern);
             String status = String.valueOf(pattern.getStatus() == null ? "" : pattern.getStatus()).trim().toUpperCase();
             LocalDateTime now = LocalDateTime.now();
+            LocalDateTime resolvedCompleteTime = resolvePatternProductionCompleteTime(pattern);
 
             StyleInfo patch = new StyleInfo();
             patch.setId(styleId);
@@ -1009,7 +1009,7 @@ public class PatternProductionOrchestrator {
             }
 
             if ("PRODUCTION_COMPLETED".equals(status) || "COMPLETED".equals(status)) {
-                patch.setProductionCompletedTime(pattern.getCompleteTime() != null ? pattern.getCompleteTime() : now);
+                patch.setProductionCompletedTime(resolvedCompleteTime != null ? resolvedCompleteTime : now);
             }
 
             if (!sampleFinished && !"PENDING".equals(status)) {
@@ -1064,6 +1064,7 @@ public class PatternProductionOrchestrator {
 
     private void updatePatternStatusByOperation(PatternProduction pattern, String operationType, String operatorName) {
         boolean needUpdate = false;
+        LocalDateTime now = LocalDateTime.now();
 
         if (!StringUtils.hasText(operationType)) {
             return;
@@ -1078,7 +1079,7 @@ public class PatternProductionOrchestrator {
                         && !"COMPLETED".equals(pattern.getStatus())) {
                     pattern.setStatus("IN_PROGRESS");
                     pattern.setReceiver(operatorName);
-                    pattern.setReceiveTime(LocalDateTime.now());
+                    pattern.setReceiveTime(now);
                     needUpdate = true;
                 }
                 break;
@@ -1093,17 +1094,16 @@ public class PatternProductionOrchestrator {
                 needUpdate = true;
                 break;
             case "COMPLETE":
-                pattern.setStatus("PRODUCTION_COMPLETED");
                 updateProgressNode(pattern, "尾部", 100);
-                if (!StringUtils.hasText(pattern.getReviewStatus())) {
-                    pattern.setReviewStatus("PENDING");
-                }
+                markPatternProductionCompleted(pattern, now);
                 needUpdate = true;
                 break;
             case "WAREHOUSE_IN":
                 updateProgressNode(pattern, "入库", 100);
                 pattern.setStatus("COMPLETED");
-                pattern.setCompleteTime(LocalDateTime.now());
+                if (pattern.getCompleteTime() == null) {
+                    pattern.setCompleteTime(now);
+                }
                 if (!StringUtils.hasText(pattern.getReviewStatus())) {
                     pattern.setReviewStatus("PENDING");
                 }
@@ -1141,10 +1141,7 @@ public class PatternProductionOrchestrator {
                 break;
             case "TAIL":
                 updateProgressNode(pattern, "尾部", 100);
-                pattern.setStatus("PRODUCTION_COMPLETED");
-                if (!StringUtils.hasText(pattern.getReviewStatus())) {
-                    pattern.setReviewStatus("PENDING");
-                }
+                markPatternProductionCompleted(pattern, now);
                 needUpdate = true;
                 break;
             default:
@@ -1153,19 +1150,54 @@ public class PatternProductionOrchestrator {
                 updateProgressNode(pattern, dynamicStage, 100);
 
                 if (isPatternAllProcessesCompleted(pattern.getId(), pattern.getStyleId())) {
-                    pattern.setStatus("PRODUCTION_COMPLETED");
-                    if (!StringUtils.hasText(pattern.getReviewStatus())) {
-                        pattern.setReviewStatus("PENDING");
-                    }
+                    markPatternProductionCompleted(pattern, now);
                 }
                 needUpdate = true;
         }
 
         if (needUpdate) {
-            pattern.setUpdateTime(LocalDateTime.now());
+            pattern.setUpdateTime(now);
             patternProductionService.updateById(pattern);
             syncStyleInfoSampleStage(pattern);
         }
+    }
+
+    private void markPatternProductionCompleted(PatternProduction pattern, LocalDateTime completedTime) {
+        pattern.setStatus("PRODUCTION_COMPLETED");
+        if (pattern.getCompleteTime() == null) {
+            pattern.setCompleteTime(completedTime);
+        }
+        if (!StringUtils.hasText(pattern.getReviewStatus())) {
+            pattern.setReviewStatus("PENDING");
+        }
+    }
+
+    private LocalDateTime resolvePatternProductionCompleteTime(PatternProduction pattern) {
+        if (pattern == null) {
+            return null;
+        }
+        if (pattern.getCompleteTime() != null) {
+            return pattern.getCompleteTime();
+        }
+
+        String status = StringUtils.hasText(pattern.getStatus()) ? pattern.getStatus().trim().toUpperCase() : "";
+        if (!"PRODUCTION_COMPLETED".equals(status) && !"COMPLETED".equals(status)) {
+            return null;
+        }
+
+        LambdaQueryWrapper<PatternScanRecord> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(PatternScanRecord::getPatternProductionId, pattern.getId())
+                .eq(PatternScanRecord::getDeleteFlag, 0)
+                .in(PatternScanRecord::getOperationType, Arrays.asList("COMPLETE", "TAIL"))
+                .orderByDesc(PatternScanRecord::getScanTime)
+                .orderByDesc(PatternScanRecord::getCreateTime)
+                .last("limit 1");
+        PatternScanRecord completeRecord = patternScanRecordService.getOne(wrapper, false);
+        if (completeRecord != null) {
+            return completeRecord.getScanTime() != null ? completeRecord.getScanTime() : completeRecord.getCreateTime();
+        }
+
+        return pattern.getUpdateTime();
     }
 
     private void ensureInProgress(PatternProduction pattern, String operatorName) {

@@ -22,6 +22,8 @@ public class SchedulingSuggestionResponse {
         private int matchScore;
         /** 当前在产订单数 */
         private int currentLoad;
+        /** AI 采用的目标日产能（件/天） */
+        private int dailyCapacity;
         /** 剩余产能（件/日） */
         private int availableCapacity;
         /** 建议开始日期 */
@@ -30,6 +32,22 @@ public class SchedulingSuggestionResponse {
         private String estimatedEnd;
         /** 预计需要天数 */
         private int estimatedDays;
+        /** 最快预计天数 */
+        private int fastestDays;
+        /** 最慢预计天数 */
+        private int slowestDays;
+        /** 最快回货日期 */
+        private String earliestEnd;
+        /** 最慢回货日期 */
+        private String latestEnd;
+        /** 产能分 */
+        private int capacityScore;
+        /** 时效分 */
+        private int timeScore;
+        /** 品类匹配分 */
+        private int categoryScore;
+        /** 品质分 */
+        private int qualityScore;
         /** 甘特图条目 */
         private List<GanttItem> ganttItems;
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Button, Tag, Space, message, Form, Input, Modal, Card, Typography, Alert, Badge } from 'antd';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import ResizableTable from '@/components/common/ResizableTable';
-import ResizableModal from '@/components/common/ResizableModal';
+import SmallModal from '@/components/common/SmallModal';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
 import { useModal } from '@/hooks';
@@ -166,11 +166,10 @@ const RegistrationTab: React.FC = () => {
       </div>
 
       {/* 编辑申请信息弹窗 */}
-      <ResizableModal
+      <SmallModal
         open={editModal.visible}
         title={`编辑申请信息 - ${editModal.data?.tenantName || ''}`}
         onCancel={() => { editModal.close(); editForm.resetFields(); }}
-        width="30vw"
         footer={
           <Space>
             <Button onClick={() => { editModal.close(); editForm.resetFields(); }}>取消</Button>
@@ -195,7 +194,7 @@ const RegistrationTab: React.FC = () => {
             <Input id="contactPhone" />
           </Form.Item>
         </Form>
-      </ResizableModal>
+      </SmallModal>
 
       {/* 拒绝原因弹窗 */}
       <RejectReasonModal

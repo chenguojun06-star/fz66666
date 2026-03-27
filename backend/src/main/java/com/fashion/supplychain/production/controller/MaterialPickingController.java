@@ -3,6 +3,7 @@ package com.fashion.supplychain.production.controller;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.production.entity.MaterialPicking;
 import com.fashion.supplychain.production.entity.MaterialPickingItem;
+import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.orchestration.MaterialPurchaseOrchestrator;
 import com.fashion.supplychain.production.service.MaterialPickingService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -75,7 +76,27 @@ public class MaterialPickingController {
         }
         wrapper.orderByDesc(MaterialPicking::getCreateTime);
 
-        return Result.success(materialPickingService.page(new Page<>(page, pageSize), wrapper));
+        IPage<MaterialPicking> result = materialPickingService.page(new Page<>(page, pageSize), wrapper);
+        java.util.List<MaterialPicking> records = result.getRecords();
+        java.util.Set<String> orderIds = records.stream()
+                .map(MaterialPicking::getOrderId)
+                .filter(StringUtils::hasText)
+                .collect(java.util.stream.Collectors.toSet());
+        if (!orderIds.isEmpty()) {
+            java.util.Map<String, ProductionOrder> orderMap = productionOrderService.listByIds(orderIds).stream()
+                    .filter(java.util.Objects::nonNull)
+                    .collect(java.util.stream.Collectors.toMap(ProductionOrder::getId, o -> o, (a, b) -> a));
+            for (MaterialPicking record : records) {
+                ProductionOrder order = orderMap.get(record.getOrderId());
+                if (order == null) {
+                    continue;
+                }
+                record.setFactoryId(order.getFactoryId());
+                record.setFactoryName(order.getFactoryName());
+                record.setFactoryType(order.getFactoryType());
+            }
+        }
+        return Result.success(result);
     }
 
     @GetMapping("/{id}/items")

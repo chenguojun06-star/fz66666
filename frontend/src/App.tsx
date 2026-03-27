@@ -23,8 +23,6 @@ import {
   TaxExport,
 } from './modules/finance';
 import { CrmDashboard, ReceivableList } from './modules/crm';
-// 客户门户（公开页，无需登录）
-const CustomerPortal = React.lazy(() => import('./pages/CustomerPortal'));
 
 import { SelectionCenter } from './modules/selection';
 import {
@@ -55,7 +53,7 @@ import {
 // 懒加载组件
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 // 公开页面（无需登录）
-const ShareOrderPage = React.lazy(() => import('./modules/production/pages/ShareOrderPage'));
+const ShareOrderPage = React.lazy(() => import('./modules/production/pages/ShareOrderPage/index'));
 
 const RootRedirect: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
@@ -285,8 +283,6 @@ const AppRoutes: React.FC = () => {
         </Route>
         {/* 客户订单分享页（无需登录） */}
         <Route path="/share/:token" element={<Suspense fallback={<Spin />}><ShareOrderPage /></Suspense>} />
-        {/* 客户订单追踪门户（无需登录） */}
-        <Route path="/portal" element={<Suspense fallback={<Spin />}><CustomerPortal /></Suspense>} />
         <Route path="*" element={<Suspense fallback={<Spin />}><NotFound /></Suspense>} />
       </Routes>
 

@@ -25,6 +25,7 @@ import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { readPageSize } from '@/utils/pageSizeStore';
+import { usePersistentState } from '@/hooks/usePersistentState';
 
 type PageResp<T> = {
   records: T[];
@@ -73,7 +74,7 @@ const TemplateCenter: React.FC = () => {
   const [activeRow, _setActiveRow] = useState<TemplateLibrary | null>(null);
   const [viewContent, _setViewContent] = useState<string>('');
   const [viewObj, _setViewObj] = useState<unknown>(null);
-  const [cardTab, setCardTab] = useState<'list' | 'knowledge'>('list');
+  const [cardTab, setCardTab] = usePersistentState<'list' | 'knowledge'>('template-center-card-tab', 'list');
 
   // 工序智能库 Tab — 持久化状态（Tab 切换后返回不丢失）
   const [knowledgeKeyword, setKnowledgeKeyword] = useState('');

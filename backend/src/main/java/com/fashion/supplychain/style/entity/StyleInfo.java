@@ -357,6 +357,17 @@ public class StyleInfo {
     private String orderType;
 
     /**
+     * 是否已推送到下单管理：0-未推送，1-已推送
+     */
+    private Integer pushedToOrder;
+
+    /**
+     * 推送到下单管理时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime pushedToOrderTime;
+
+    /**
      * 客户
      */
     private String customer;

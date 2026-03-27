@@ -34,24 +34,28 @@ const AttachmentThumb: React.FC<AttachmentThumbProps> = ({
   style,
   imageStyle,
 }) => {
-  const resolvedSrc = (() => {
+  const resolvedSrc = React.useMemo(() => {
     const override = getStyleCoverOverride(styleId);
     if (override !== null) {
       return override || null;
     }
     return src || cover || null;
-  })();
+  }, [cover, src, styleId]);
+  const overrideKey = React.useMemo(() => `style-cover-override:id:${String(styleId)}`, [styleId]);
   const [url, setUrl] = useState<string | null>(resolvedSrc);
   const [loading, setLoading] = useState<boolean>(false);
   const [srcFailed, setSrcFailed] = useState(false);
+  const [fallbackFailed, setFallbackFailed] = useState(false);
 
   useEffect(() => {
-    setUrl(resolvedSrc);
+    setUrl((prev) => prev === resolvedSrc ? prev : resolvedSrc);
     setSrcFailed(false);
+    setFallbackFailed(false);
   }, [resolvedSrc]);
 
   useEffect(() => {
     let mounted = true;
+    if (fallbackFailed) return () => { mounted = false; };
     if (resolvedSrc && !srcFailed) return () => { mounted = false; };
     (async () => {
       setLoading(true);
@@ -60,10 +64,10 @@ const AttachmentThumb: React.FC<AttachmentThumbProps> = ({
         if (res.code === 200) {
           const images = (res.data || []).filter((f: any) => String(f.fileType || '').includes('image'));
           const firstImage = (images[0] as any)?.fileUrl || null;
-          if (mounted) setUrl(firstImage);
+          if (mounted) setUrl((prev) => prev === firstImage ? prev : firstImage);
         }
       } catch {
-        if (mounted && !resolvedSrc) setUrl(null);
+        if (mounted && !resolvedSrc) setUrl((prev) => prev === null ? prev : null);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -71,19 +75,23 @@ const AttachmentThumb: React.FC<AttachmentThumbProps> = ({
     return () => {
       mounted = false;
     };
-  }, [resolvedSrc, srcFailed, styleId]);
+  }, [fallbackFailed, resolvedSrc, srcFailed, styleId]);
 
   useEffect(() => {
     const handler = (event: StorageEvent) => {
-      if (event.key !== `style-cover-override:id:${String(styleId)}`) return;
-      setUrl(event.newValue === '__EMPTY_STYLE_COVER__' ? null : (event.newValue || src || cover || null));
+      if (event.key !== overrideKey) return;
+      const nextUrl = event.newValue === '__EMPTY_STYLE_COVER__' ? null : (event.newValue || src || cover || null);
+      setUrl((prev) => prev === nextUrl ? prev : nextUrl);
       setSrcFailed(false);
+      setFallbackFailed(false);
     };
     const customHandler = (event: Event) => {
       const detail = (event as CustomEvent<{ styleId?: string; url?: string | null }>).detail;
       if (detail?.styleId !== String(styleId)) return;
-      setUrl(detail.url || null);
+      const nextUrl = detail.url || null;
+      setUrl((prev) => prev === nextUrl ? prev : nextUrl);
       setSrcFailed(false);
+      setFallbackFailed(false);
     };
     window.addEventListener('storage', handler);
     window.addEventListener('style-cover-override-change', customHandler as any);
@@ -91,7 +99,7 @@ const AttachmentThumb: React.FC<AttachmentThumbProps> = ({
       window.removeEventListener('storage', handler);
       window.removeEventListener('style-cover-override-change', customHandler as any);
     };
-  }, [cover, src, styleId]);
+  }, [cover, overrideKey, src, styleId]);
 
   return (
     <div
@@ -126,7 +134,9 @@ const AttachmentThumb: React.FC<AttachmentThumbProps> = ({
           onError={() => {
             if (url === resolvedSrc && resolvedSrc) {
               setSrcFailed(true);
+              setUrl(null);
             } else {
+              setFallbackFailed(true);
               setUrl(null);
             }
           }}

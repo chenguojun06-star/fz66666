@@ -36,6 +36,36 @@ async function tryAutoWechatLogin() {
   }
 }
 
+function clearBusinessCaches() {
+  const OLD_DATA_KEYS = [
+    'pending_cutting_task',
+    'pending_procurement_task',
+    'pending_quality_task',
+    'pending_order_hint',
+    'highlight_order_no',
+    'mp_scan_type_index',
+    'work_active_tab',
+    'scan_history_v2',
+    'pending_reminders',
+  ];
+  OLD_DATA_KEYS.forEach(key => {
+    try {
+      wx.removeStorageSync(key);
+    } catch (_) {
+      /* ignore */
+    }
+  });
+}
+
+function finishLogin(user, token) {
+  clearBusinessCaches();
+  setToken(token);
+  if (user) {
+    setUserInfo(user);
+  }
+  safeNavigate({ url: '/pages/home/index' }, 'switchTab').catch(() => {});
+}
+
 /**
  * 验证用户名（3-20位，仅允许字母数字下划线短横线）
  * @param {string} username - 用户名
@@ -150,36 +180,19 @@ function resolveEnvVersion() {
  */
 async function executeLogin(params, options = {}) {
   const silent = options.silent === true;
+  const expectedTenantId = options.expectedTenantId ? String(options.expectedTenantId) : '';
   try {
     const resp = await api.wechat.miniProgramLogin(params);
 
     // ✅ openid 已绑定 → 拿到 token，直接登录
     if (resp && resp.code === 200 && resp.data && resp.data.token) {
-      // 登录前清除旧用户的业务缓存，防止跨租户数据泄漏
-      const OLD_DATA_KEYS = [
-        'pending_cutting_task',
-        'pending_procurement_task',
-        'pending_quality_task',
-        'pending_order_hint',
-        'highlight_order_no',
-        'mp_scan_type_index',
-        'work_active_tab',
-        'scan_history_v2',
-        'pending_reminders',
-      ];
-      OLD_DATA_KEYS.forEach(key => {
-        try {
-          wx.removeStorageSync(key);
-        } catch (_) {
-          /* ignore */
-        }
-      });
-
-      setToken(resp.data.token);
-      if (resp.data.user) {
-        setUserInfo(resp.data.user);
+      const loginUser = resp.data.user || null;
+      const loginTenantId = loginUser && loginUser.tenantId != null ? String(loginUser.tenantId) : '';
+      if (expectedTenantId && loginTenantId && expectedTenantId !== loginTenantId) {
+        toast.error('当前微信已绑定其他公司账号，请改用账号密码登录或先解绑微信');
+        return { success: false, tenantMismatch: true };
       }
-      safeNavigate({ url: '/pages/home/index' }, 'switchTab').catch(() => {});
+      finishLogin(loginUser, resp.data.token);
       return { success: true };
     }
 
@@ -513,6 +526,8 @@ Page({
         selectedTenantName: tenant.tenantName || '',
         tenantSearchText: tenant.tenantName || '',
         showTenantResults: false,
+        username: '',
+        password: '',
       });
       // 记住选择
       try {
@@ -603,12 +618,20 @@ Page({
 
     this.setData({ loading: true });
     try {
-      const code = await resolveLoginCode();
-      if (!code) {
-        toast.error(i18n.t('login.getCodeFailed'));
+      const resp = await api.system.login({ username, password, tenantId });
+      if (resp && resp.code === 200 && resp.data && resp.data.token) {
+        finishLogin(resp.data.user || null, resp.data.token);
         return;
       }
-      await executeLogin({ code, username, password, tenantId });
+      toast.error((resp && resp.message) || i18n.t('login.loginFailed'));
+      return;
+    } catch (e) {
+      const app = getApp();
+      if (app && typeof app.toastError === 'function') {
+        app.toastError(e, i18n.t('login.networkError'));
+      } else {
+        toast.error(i18n.t('login.networkError'));
+      }
     } finally {
       this.setData({ loading: false });
     }
@@ -645,7 +668,7 @@ Page({
       }
 
       // 静默尝试：openid 已绑定则直接登录，未绑定则不弹错误提示，用户填写表单就可以
-      await executeLogin({ code, tenantId }, { silent: true });
+      await executeLogin({ code, tenantId }, { silent: true, expectedTenantId: tenantId });
     } finally {
       this.setData({ loading: false });
     }

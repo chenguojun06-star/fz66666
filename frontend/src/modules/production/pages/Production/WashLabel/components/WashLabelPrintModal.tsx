@@ -13,6 +13,7 @@ import { Table, InputNumber, Button, Alert, Checkbox, Tag, Typography, Spin } fr
 import { PrinterOutlined } from '@ant-design/icons';
 import QRCode from 'qrcode';
 import ResizableModal from '../../../../../../components/common/ResizableModal';
+import { parseProductionOrderLines } from '@/utils/api';
 import type { ProductionOrder } from '../../../../../../types/production';
 import { productionCuttingApi } from '../../../../../../services/production/productionApi';
 import { message } from '@/utils/antdStatic';
@@ -61,28 +62,69 @@ export default function WashLabelPrintModal({ open, onCancel, order }: Props) {
             skuRows.push({ key: k, color: v.color, size: v.size, totalQty: v.qty, perLabelQty: v.qty }),
           );
         } else {
-          // 兜底：按订单整体颜色/码数生成一行
-          const k = `${order.color ?? ''}__${order.size ?? ''}`;
-          skuRows.push({
-            key: k,
-            color: order.color || '-',
-            size:  order.size  || '-',
-            totalQty:    order.orderQuantity || 0,
-            perLabelQty: order.orderQuantity || 0,
-          });
+          const detailLines = parseProductionOrderLines(order);
+          if (detailLines.length > 0) {
+            const map = new Map<string, { color: string; size: string; qty: number }>();
+            detailLines.forEach((line) => {
+              const color = String(line.color || '').trim() || String(order.color || '').trim() || '-';
+              const size = String(line.size || '').trim() || String(order.size || '').trim() || '-';
+              const key = `${color}__${size}`;
+              const entry = map.get(key);
+              if (entry) entry.qty += Number(line.quantity || 0) || 0;
+              else map.set(key, { color, size, qty: Number(line.quantity || 0) || 0 });
+            });
+            map.forEach((v, k) => {
+              skuRows.push({ key: k, color: v.color, size: v.size, totalQty: v.qty, perLabelQty: v.qty });
+            });
+          } else {
+            const k = `${order.color ?? ''}__${order.size ?? ''}`;
+            skuRows.push({
+              key: k,
+              color: order.color || '-',
+              size: order.size || '-',
+              totalQty: order.orderQuantity || 0,
+              perLabelQty: order.orderQuantity || 0,
+            });
+          }
         }
 
         setRows(skuRows);
         setSelectedKeys(skuRows.map(r => r.key));
       })
       .catch(() => {
-        const k = `${order.color ?? ''}__${order.size ?? ''}`;
-        const row: SkuRow = {
-          key: k, color: order.color || '-', size: order.size || '-',
-          totalQty: order.orderQuantity || 0, perLabelQty: order.orderQuantity || 0,
-        };
-        setRows([row]);
-        setSelectedKeys([k]);
+        const detailLines = parseProductionOrderLines(order);
+        if (detailLines.length > 0) {
+          const map = new Map<string, SkuRow>();
+          detailLines.forEach((line) => {
+            const color = String(line.color || '').trim() || String(order.color || '').trim() || '-';
+            const size = String(line.size || '').trim() || String(order.size || '').trim() || '-';
+            const key = `${color}__${size}`;
+            const current = map.get(key);
+            if (current) {
+              current.totalQty += Number(line.quantity || 0) || 0;
+              current.perLabelQty = current.totalQty;
+            } else {
+              map.set(key, {
+                key,
+                color,
+                size,
+                totalQty: Number(line.quantity || 0) || 0,
+                perLabelQty: Number(line.quantity || 0) || 0,
+              });
+            }
+          });
+          const nextRows = Array.from(map.values());
+          setRows(nextRows);
+          setSelectedKeys(nextRows.map((row) => row.key));
+        } else {
+          const k = `${order.color ?? ''}__${order.size ?? ''}`;
+          const row: SkuRow = {
+            key: k, color: order.color || '-', size: order.size || '-',
+            totalQty: order.orderQuantity || 0, perLabelQty: order.orderQuantity || 0,
+          };
+          setRows([row]);
+          setSelectedKeys([k]);
+        }
       })
       .finally(() => setLoading(false));
   }, [open, order?.id]);

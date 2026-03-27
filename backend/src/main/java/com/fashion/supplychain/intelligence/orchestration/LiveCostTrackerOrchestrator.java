@@ -8,6 +8,7 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
+import com.fashion.supplychain.production.util.OrderPricingSnapshotUtils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
@@ -116,9 +117,10 @@ public class LiveCostTrackerOrchestrator {
             resp.setEstimatedLaborCost(estimatedCost.setScale(2, RoundingMode.HALF_UP));
 
             // 5. 收入和利润
-            BigDecimal revenue = order.getQuotationUnitPrice() != null
-                    ? order.getQuotationUnitPrice().multiply(BigDecimal.valueOf(totalQty))
-                    : BigDecimal.ZERO;
+            BigDecimal lockedOrderUnitPrice = OrderPricingSnapshotUtils.resolveLockedOrderUnitPrice(
+                    order.getFactoryUnitPrice(),
+                    order.getOrderDetails());
+            BigDecimal revenue = lockedOrderUnitPrice.multiply(BigDecimal.valueOf(totalQty));
             resp.setEstimatedRevenue(revenue.setScale(2, RoundingMode.HALF_UP));
 
             BigDecimal profit = revenue.subtract(estimatedCost);

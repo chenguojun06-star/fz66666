@@ -790,6 +790,7 @@ body {
 
 .ant-modal {
   max-width: calc(100vw - 24px);
+  min-width: min(760px, calc(100vw - 32px));
   /* 强制所有设备居中显示，不要底部弹出 */
   top: 0 !important;
   padding-bottom: 0 !important;
@@ -991,6 +992,11 @@ body {
 }
 
 .ant-table-wrapper .ant-table-container table {
+  width: 100%;
+  min-width: 100%;
+}
+
+.resizable-table .ant-table-container table {
   table-layout: fixed;
 }
 
@@ -1566,6 +1572,20 @@ body {
 /* Tooltip 更快出现 */
 .ant-tooltip {
   animation-duration: 0.12s !important;
+  z-index: 2600 !important;
+}
+
+.ant-popover {
+  z-index: 2600 !important;
+}
+
+.ant-tooltip .ant-tooltip-inner,
+.ant-popover .ant-popover-inner,
+.ant-popover .ant-popover-inner-content {
+  max-width: min(520px, calc(100vw - 32px)) !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
 }
 
 /* Dropdown 菜单出现更流畅 */

@@ -34,6 +34,7 @@ import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
+import SmallModal from '@/components/common/SmallModal';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { formatDateTime } from '@/utils/datetime';
@@ -1250,11 +1251,10 @@ const PaymentCenterPage: React.FC = () => {
         </ResizableModal>
 
         {/* ========================== 上传凭证弹窗 ========================== */}
-        <ResizableModal
+        <SmallModal
           open={proofModalOpen}
           title="确认线下支付"
           onCancel={() => setProofModalOpen(false)}
-          width="30vw"
           centered
           footer={
             <Space>
@@ -1285,7 +1285,7 @@ const PaymentCenterPage: React.FC = () => {
               </Form.Item>
             </Form>
           </div>
-        </ResizableModal>
+        </SmallModal>
       <RejectReasonModal
         open={!!pendingRejectPayable}
         title="驳回待付款"

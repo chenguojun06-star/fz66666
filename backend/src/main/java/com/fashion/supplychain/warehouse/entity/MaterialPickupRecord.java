@@ -27,6 +27,16 @@ public class MaterialPickupRecord {
     /** 领取类型：INTERNAL=内部  EXTERNAL=外部 */
     private String pickupType;
 
+    private String movementType;
+
+    private String sourceType;
+
+    private String usageType;
+
+    private String sourceRecordId;
+
+    private String sourceDocumentNo;
+
     /** 关联生产订单号 */
     private String orderNo;
 
@@ -81,6 +91,16 @@ public class MaterialPickupRecord {
     /** 领取时间 */
     private LocalDateTime pickupTime;
 
+    private String receiverId;
+
+    private String receiverName;
+
+    private String issuerId;
+
+    private String issuerName;
+
+    private String warehouseLocation;
+
     /** 审核状态：PENDING / APPROVED / REJECTED */
     private String auditStatus;
 
@@ -102,18 +122,28 @@ public class MaterialPickupRecord {
     /** 财务核算备注 */
     private String financeRemark;
 
+    private String receivableId;
+
+    private String receivableNo;
+
+    private String receivableStatus;
+
+    private BigDecimal receivedAmount;
+
+    private LocalDateTime receivedTime;
+
     /** 领取备注 */
     private String remark;
 
-    // =================== 关联生产订单（非数据库字段，查询时从生产订单富化） ===================
+    private String factoryId;
 
-    /** 生产方名称（来自关联生产订单，非数据库字段） */
-    @TableField(exist = false)
+    /** 生产方名称 */
     private String factoryName;
 
-    /** 生产方类型：INTERNAL=内部工厂  EXTERNAL=外部工厂（非数据库字段） */
-    @TableField(exist = false)
+    /** 生产方类型：INTERNAL=内部工厂  EXTERNAL=外部工厂 */
     private String factoryType;
+
+    // =================== 关联生产订单（查询时补充业务属性） ===================
 
     /** 生产方式：CMT / FOB / ODM / OEM（非数据库字段） */
     @TableField(exist = false)

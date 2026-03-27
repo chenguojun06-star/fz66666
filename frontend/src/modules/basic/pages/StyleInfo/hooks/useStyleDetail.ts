@@ -92,6 +92,7 @@ export const useStyleDetail = (styleId?: string) => {
 
     const nextValues: Record<string, any> = { ...currentStyle };
     const rawCreateTime = nextValues.createTime;
+    const rawCompletedTime = nextValues.completedTime;
     const rawDeliveryDate = nextValues.deliveryDate;
 
     nextValues.category = normalizeCategoryQuery(nextValues.category);
@@ -99,6 +100,7 @@ export const useStyleDetail = (styleId?: string) => {
 
     // 转换日期字段为 dayjs 对象
     nextValues.createTime = rawCreateTime ? dayjs(rawCreateTime) : undefined;
+    nextValues.completedTime = rawCompletedTime ? dayjs(rawCompletedTime) : undefined;
     nextValues.deliveryDate = rawDeliveryDate ? dayjs(rawDeliveryDate) : undefined;
 
     form.setFieldsValue(nextValues);

@@ -228,6 +228,8 @@ public class DashboardOrchestrator {
         // 裁剪/出入库无factory_id字段，不安全过滤，置零
         response.setCutting(new TopStatsResponse.TimeRangeStats());
         response.setWarehousing(new TopStatsResponse.TimeRangeStats());
+        response.setWarehousingInbound(new TopStatsResponse.TimeRangeStats());
+        response.setWarehousingOutbound(new TopStatsResponse.TimeRangeStats());
         return response;
     }
 
@@ -510,13 +512,30 @@ public class DashboardOrchestrator {
         cuttingStats.setTotal((int) dashboardQueryService.sumCuttingQuantityBetween(totalStart, endTime));
         response.setCutting(cuttingStats);
 
-        // 4. 出入库数量
+        // 4. 入库数量
+        TopStatsResponse.TimeRangeStats warehousingInboundStats = new TopStatsResponse.TimeRangeStats();
+        warehousingInboundStats.setDay((int) dashboardQueryService.sumWarehousingQuantityBetween(dayStart, endTime));
+        warehousingInboundStats.setWeek((int) dashboardQueryService.sumWarehousingQuantityBetween(weekStart, endTime));
+        warehousingInboundStats.setMonth((int) dashboardQueryService.sumWarehousingQuantityBetween(monthStart, endTime));
+        warehousingInboundStats.setYear((int) dashboardQueryService.sumWarehousingQuantityBetween(yearStart, endTime));
+        warehousingInboundStats.setTotal((int) dashboardQueryService.sumWarehousingQuantityBetween(totalStart, endTime));
+        response.setWarehousingInbound(warehousingInboundStats);
+
+        // 5. 出库数量
+        TopStatsResponse.TimeRangeStats warehousingOutboundStats = new TopStatsResponse.TimeRangeStats();
+        warehousingOutboundStats.setDay((int) dashboardQueryService.sumOutstockQuantityBetween(dayStart, endTime));
+        warehousingOutboundStats.setWeek((int) dashboardQueryService.sumOutstockQuantityBetween(weekStart, endTime));
+        warehousingOutboundStats.setMonth((int) dashboardQueryService.sumOutstockQuantityBetween(monthStart, endTime));
+        warehousingOutboundStats.setYear((int) dashboardQueryService.sumOutstockQuantityBetween(yearStart, endTime));
+        warehousingOutboundStats.setTotal((int) dashboardQueryService.sumOutstockQuantityBetween(totalStart, endTime));
+        response.setWarehousingOutbound(warehousingOutboundStats);
+
         TopStatsResponse.TimeRangeStats warehousingStats = new TopStatsResponse.TimeRangeStats();
-        warehousingStats.setDay((int) dashboardQueryService.sumWarehousingQuantityBetween(dayStart, endTime));
-        warehousingStats.setWeek((int) dashboardQueryService.sumWarehousingQuantityBetween(weekStart, endTime));
-        warehousingStats.setMonth((int) dashboardQueryService.sumWarehousingQuantityBetween(monthStart, endTime));
-        warehousingStats.setYear((int) dashboardQueryService.sumWarehousingQuantityBetween(yearStart, endTime));
-        warehousingStats.setTotal((int) dashboardQueryService.sumWarehousingQuantityBetween(totalStart, endTime));
+        warehousingStats.setDay(warehousingInboundStats.getDay() + warehousingOutboundStats.getDay());
+        warehousingStats.setWeek(warehousingInboundStats.getWeek() + warehousingOutboundStats.getWeek());
+        warehousingStats.setMonth(warehousingInboundStats.getMonth() + warehousingOutboundStats.getMonth());
+        warehousingStats.setYear(warehousingInboundStats.getYear() + warehousingOutboundStats.getYear());
+        warehousingStats.setTotal(warehousingInboundStats.getTotal() + warehousingOutboundStats.getTotal());
         response.setWarehousing(warehousingStats);
 
         return response;

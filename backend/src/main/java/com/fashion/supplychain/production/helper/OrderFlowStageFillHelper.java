@@ -312,14 +312,12 @@ public class OrderFlowStageFillHelper {
 
                 // 采购时间显示逻辑：
                 // 1. 物料到货率>0%：显示采购开始时间
-                // 2. 物料到货率=100% 或 (物料到货率≥50%且已人工确认)：显示采购完成时间
+                // 2. 只有人工确认后才显示采购完成时间
                 if (!directCuttingOrder && procurementRate != null && procurementRate > 0) {
                     o.setProcurementStartTime(procurementStart);
 
                     boolean showCompleted = false;
-                    if (procurementRate >= 100) {
-                        showCompleted = true;
-                    } else if (procurementRate >= 50 && isManuallyConfirmed) {
+                    if (procurementRate >= 50 && isManuallyConfirmed) {
                         showCompleted = true;
                         // 人工确认时，使用确认时间和确认人
                         if (o.getProcurementConfirmedAt() != null) {
@@ -698,14 +696,12 @@ public class OrderFlowStageFillHelper {
 
             // 采购时间显示逻辑：
             // 1. 物料到货率>0%：显示采购开始时间
-            // 2. 物料到货率=100% 或 (物料到货率≥50%且已人工确认)：显示采购完成时间
+            // 2. 只有人工确认后才显示采购完成时间
             if (procurementRate != null && procurementRate > 0) {
                 o.setProcurementStartTime(procurementStart);
 
                 boolean showCompleted = false;
-                if (procurementRate >= 100) {
-                    showCompleted = true;
-                } else if (procurementRate >= 50 && isManuallyConfirmed) {
+                if (procurementRate >= 50 && isManuallyConfirmed) {
                     showCompleted = true;
                     // 人工确认时，使用确认时间和确认人
                     if (o.getProcurementConfirmedAt() != null) {

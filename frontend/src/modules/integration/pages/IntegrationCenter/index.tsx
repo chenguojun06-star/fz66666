@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Tabs } from 'antd';
 import { ApiOutlined, CreditCardOutlined, CarOutlined, BellOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
@@ -6,6 +6,7 @@ import ChannelStatusTab from './ChannelStatusTab';
 import PaymentRecordsTab from './PaymentRecordsTab';
 import LogisticsRecordsTab from './LogisticsRecordsTab';
 import CallbackLogsTab from './CallbackLogsTab';
+import { usePersistentState } from '@/hooks/usePersistentState';
 
 /**
  * 集成对接中心
@@ -17,7 +18,7 @@ import CallbackLogsTab from './CallbackLogsTab';
  * - 回调日志：查看第三方推送原始报文
  */
 const IntegrationCenter: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('channel-status');
+  const [activeTab, setActiveTab] = usePersistentState<string>('integration-center-active-tab', 'channel-status');
 
   const tabs = [
     {

@@ -5,8 +5,6 @@ import com.fashion.supplychain.crm.entity.Customer;
 import com.fashion.supplychain.crm.entity.Receivable;
 import com.fashion.supplychain.crm.orchestration.CustomerOrchestrator;
 import com.fashion.supplychain.crm.orchestration.ReceivableOrchestrator;
-import com.fashion.supplychain.crm.orchestration.PortalTokenOrchestrator;
-import com.fashion.supplychain.crm.entity.CustomerPortalToken;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -30,9 +28,6 @@ public class CrmController {
 
     @Autowired
     private ReceivableOrchestrator receivableOrchestrator;
-
-    @Autowired
-    private PortalTokenOrchestrator portalTokenOrchestrator;
 
     /** 客户列表（分页+搜索） */
     @PostMapping("/customers/list")
@@ -101,6 +96,11 @@ public class CrmController {
         return Result.success(receivableOrchestrator.create(receivable));
     }
 
+    @GetMapping("/receivables/{id}")
+    public Result<?> getReceivableDetail(@PathVariable String id) {
+        return Result.success(receivableOrchestrator.getDetail(id));
+    }
+
     /**
      * 登记到账（部分/全额）
      * Body: { "amount": 5000.00 }
@@ -112,7 +112,8 @@ public class CrmController {
         BigDecimal amount = rawAmount instanceof Number
                 ? new BigDecimal(rawAmount.toString())
                 : new BigDecimal((String) rawAmount);
-        receivableOrchestrator.markReceived(id, amount);
+        String remark = body.get("remark") == null ? null : String.valueOf(body.get("remark"));
+        receivableOrchestrator.markReceived(id, amount, remark);
         return Result.success(null);
     }
 
@@ -123,20 +124,4 @@ public class CrmController {
         return Result.success(null);
     }
 
-    // ──────────────────────────────────────────────────────────────────────
-    // 客户追踪门户（Portal Token）
-    // ──────────────────────────────────────────────────────────────────────
-
-    /**
-     * 为指定客户+订单生成追踪链接令牌
-     * Body: { "orderId": "xxx" }
-     */
-    @PostMapping("/customers/{customerId}/portal-link")
-    public Result<CustomerPortalToken> generatePortalLink(
-            @PathVariable String customerId,
-            @RequestBody Map<String, String> body) {
-        String orderId = body.get("orderId");
-        CustomerPortalToken token = portalTokenOrchestrator.generateToken(customerId, orderId);
-        return Result.success(token);
-    }
 }

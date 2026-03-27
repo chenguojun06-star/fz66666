@@ -205,7 +205,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQ
       render: (v: unknown) => String(v || '').trim() || '-' },
     { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 160, ellipsis: true,
       render: (v: unknown) => String(v || '').trim() || '-' },
-    { title: '规格/描述', dataIndex: 'specifications', key: 'specifications', width: 140, ellipsis: true,
+    { title: '规格/幅宽', dataIndex: 'specifications', key: 'specifications', width: 140, ellipsis: true,
       render: (v: unknown) => String(v || '').trim() || '-' },
     { title: '单位', dataIndex: 'unit', key: 'unit', width: 70,
       render: (v: unknown) => String(v || '').trim() || '-' },

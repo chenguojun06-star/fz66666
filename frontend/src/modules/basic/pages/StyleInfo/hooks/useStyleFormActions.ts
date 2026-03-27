@@ -44,6 +44,11 @@ export const useStyleFormActions = ({
 }: UseStyleFormActionsProps) => {
   const { message } = App.useApp();
   const navigate = useNavigate();
+  const isSameFile = (left: File, right: File) => (
+    left.name === right.name
+    && left.size === right.size
+    && left.lastModified === right.lastModified
+  );
 
   const [saving, setSaving] = useState(false);
   const [completingSample, setCompletingSample] = useState(false);
@@ -59,18 +64,10 @@ export const useStyleFormActions = ({
 
       const normalizedValues: Record<string, any> = { ...values };
 
-      // 处理 createTime 字段
-      const ct = normalizedValues.createTime;
-      if (ct) {
-        const formatted = formatDateTimeSecond(ct);
-        if (formatted && formatted !== '-') {
-          normalizedValues.createTime = formatted;
-        } else {
-          delete normalizedValues.createTime;
-        }
-      } else {
-        delete normalizedValues.createTime;
-      }
+      delete normalizedValues.createTime;
+      delete normalizedValues.completedTime;
+      delete normalizedValues.pushedToOrder;
+      delete normalizedValues.pushedToOrderTime;
 
       // 处理 deliveryDate 字段
       const dd = normalizedValues.deliveryDate;
@@ -115,6 +112,9 @@ export const useStyleFormActions = ({
         // 更新
         const payload: Record<string, any> = { ...currentStyle, ...normalizedValues };
         delete payload.createTime;
+        delete payload.completedTime;
+        delete payload.pushedToOrder;
+        delete payload.pushedToOrderTime;
         delete payload.description;
         res = await api.put('/style/info', payload);
       } else {
@@ -172,18 +172,21 @@ export const useStyleFormActions = ({
           // 上传待上传的图片
           if (pendingImages.length > 0 || pendingColorImages.length > 0) {
             try {
-              const uploadPromises = pendingImages.map(async (file) => {
+              const standaloneImages = pendingImages.filter((file) =>
+                !pendingColorImages.some((item) => isSameFile(item.file, file))
+              );
+              const uploadPromises = standaloneImages.map(async (file) => {
                 const formData = new FormData();
                 formData.append('file', file);
                 formData.append('styleId', newId);
-                return api.post('/style/attachment/upload', formData);
+                return api.post('/style/attachment/upload', formData, { timeout: 60000 } as any);
               });
               const colorUploadPromises = pendingColorImages.map(async ({ color, file }) => {
                 const formData = new FormData();
                 formData.append('file', file);
                 formData.append('styleId', newId);
-                formData.append('bizType', `color_image::${encodeURIComponent(color)}`);
-                return api.post('/style/attachment/upload', formData);
+                formData.append('bizType', `color_image::${String(color || '').trim()}`);
+                return api.post('/style/attachment/upload', formData, { timeout: 60000 } as any);
               });
               const uploadResults = await Promise.all([...uploadPromises, ...colorUploadPromises]);
               const successCount = uploadResults.filter((r: any) => r.code === 200).length;

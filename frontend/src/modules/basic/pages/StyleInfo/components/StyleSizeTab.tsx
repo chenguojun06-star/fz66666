@@ -275,8 +275,6 @@ const StyleSizeTab: React.FC<Props> = ({
   const [gradingTargetRowKey, setGradingTargetRowKey] = useState('');
   const [gradingDraftBaseSize, setGradingDraftBaseSize] = useState('');
   const [gradingDraftZones, setGradingDraftZones] = useState<GradingZone[]>([]);
-  // 未开始时禁止编辑（需先点击「开始尺寸表」）
-  const notStarted = !sizeStartTime && !sizeCompletedTime;
   const [newSizeName, setNewSizeName] = useState('');
   const [newGroupName, setNewGroupName] = useState('');
   const [sizeTemplateKey, setSizeTemplateKey] = useState<string | undefined>(undefined);
@@ -1373,15 +1371,15 @@ const StyleSizeTab: React.FC<Props> = ({
             onOpenChange={(open) => {
               if (open && !styleNoOptions.length) fetchStyleNoOptions('');
             }}
-            disabled={loading || saving || Boolean(readOnly) || notStarted || templateLoading}
+            disabled={loading || saving || Boolean(readOnly) || templateLoading}
           />
 
-          <Button disabled={loading || saving || Boolean(readOnly) || notStarted || templateLoading} onClick={() => fetchSizeTemplates(templateSourceStyleNo)}>
+          <Button disabled={loading || saving || Boolean(readOnly) || templateLoading} onClick={() => fetchSizeTemplates(templateSourceStyleNo)}>
             筛选
           </Button>
 
           <Button
-            disabled={loading || saving || Boolean(readOnly) || notStarted || templateLoading}
+            disabled={loading || saving || Boolean(readOnly) || templateLoading}
             onClick={() => {
               setTemplateSourceStyleNo('');
               fetchSizeTemplates('');
@@ -1400,7 +1398,7 @@ const StyleSizeTab: React.FC<Props> = ({
               value: String(t.id || ''),
               label: t.sourceStyleNo ? `${t.templateName}（${t.sourceStyleNo}）` : t.templateName,
             }))}
-            disabled={loading || saving || Boolean(readOnly) || notStarted || templateLoading}
+            disabled={loading || saving || Boolean(readOnly) || templateLoading}
           />
           <Button
             onClick={() => {
@@ -1410,18 +1408,18 @@ const StyleSizeTab: React.FC<Props> = ({
               }
               applySizeTemplate(sizeTemplateKey);
             }}
-            disabled={loading || saving || Boolean(readOnly) || notStarted || templateLoading}
+            disabled={loading || saving || Boolean(readOnly) || templateLoading}
           >
             导入模板
           </Button>
-          <Button type="default" onClick={() => setAddGroupOpen(true)} disabled={loading || saving || Boolean(readOnly) || notStarted}>
+          <Button type="default" onClick={() => setAddGroupOpen(true)} disabled={loading || saving || Boolean(readOnly)}>
             新增分组
           </Button>
-          <Button type="default" onClick={() => setAddSizeOpen(true)} disabled={loading || saving || Boolean(readOnly) || notStarted}>
+          <Button type="default" onClick={() => setAddSizeOpen(true)} disabled={loading || saving || Boolean(readOnly)}>
             新增尺码
           </Button>
           {!editMode || readOnly ? (
-            <Button type="primary" onClick={enterEdit} disabled={loading || saving || Boolean(readOnly) || notStarted}>
+            <Button type="primary" onClick={enterEdit} disabled={loading || saving || Boolean(readOnly)}>
               编辑
             </Button>
           ) : (
@@ -1563,14 +1561,16 @@ const StyleSizeTab: React.FC<Props> = ({
                       placeholder={`跳码区${index + 1}`}
                       onChange={(e) => setGradingDraftZones((prev) => prev.map((item) => (item.key === zone.key ? { ...item, label: e.target.value } : item)))}
                     />
-                    <InputNumber
-                      value={zone.step}
-                      min={0}
-                      step={0.1}
-                      style={{ width: '100%' }}
-                      addonBefore="跳码"
-                      onChange={(value) => setGradingDraftZones((prev) => prev.map((item) => (item.key === zone.key ? { ...item, step: toNumberSafe(value) } : item)))}
-                    />
+                    <Space.Compact style={{ width: '100%' }}>
+                      <Button disabled style={{ width: 64 }}>跳码</Button>
+                      <InputNumber
+                        value={zone.step}
+                        min={0}
+                        step={0.1}
+                        style={{ width: '100%' }}
+                        onChange={(value) => setGradingDraftZones((prev) => prev.map((item) => (item.key === zone.key ? { ...item, step: toNumberSafe(value) } : item)))}
+                      />
+                    </Space.Compact>
                     <Button
                       danger
                       onClick={() => setGradingDraftZones((prev) => prev.filter((item) => item.key !== zone.key))}

@@ -5,6 +5,7 @@ import {
   ShoppingCartOutlined,
   ScissorOutlined,
   InboxOutlined,
+  ExportOutlined,
 } from '@ant-design/icons';
 import api from '@/utils/api';
 import './styles.css';
@@ -22,6 +23,8 @@ interface TopStatsData {
   bulkOrder: TimeRangeStats;
   cutting: TimeRangeStats;
   warehousing: TimeRangeStats;
+  warehousingInbound?: TimeRangeStats;
+  warehousingOutbound?: TimeRangeStats;
 }
 
 interface StatCardProps {
@@ -131,10 +134,16 @@ const TopStats: React.FC = () => {
       color: '#f59e0b', // 橙色
     },
     {
-      key: 'warehousing' as keyof TopStatsData,
+      key: 'warehousingInbound' as keyof TopStatsData,
       icon: <InboxOutlined />,
-      label: '出入库数量',
+      label: '入库数量',
       color: '#10b981', // 绿色
+    },
+    {
+      key: 'warehousingOutbound' as keyof TopStatsData,
+      icon: <ExportOutlined />,
+      label: '出库数量',
+      color: '#06b6d4',
     },
   ];
 

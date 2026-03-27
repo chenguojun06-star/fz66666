@@ -3,6 +3,7 @@ import { Alert, Button, Card, DatePicker, Descriptions, Drawer, Empty, Input, Se
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { DEFAULT_PAGE_SIZE_OPTIONS, readPageSize, savePageSize } from '@/utils/pageSizeStore';
 import Layout from '../../../../components/Layout';
 import { intelligenceApi } from '../../../../services/intelligence/intelligenceApi';
 import { paths } from '../../../../routeConfig';
@@ -106,6 +107,7 @@ const AiAgentTraceCenter: React.FC = () => {
   const [toolName, setToolName] = useState<string | undefined>(undefined);
   const [failedOnly, setFailedOnly] = useState(false);
   const [timeRange, setTimeRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
+  const [pageSize, setPageSize] = useState(() => readPageSize(20));
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detail, setDetail] = useState<{ commandId?: string; logs?: TraceRow[]; count?: number } | null>(null);
@@ -241,7 +243,16 @@ const AiAgentTraceCenter: React.FC = () => {
           rowKey={(record) => record.id || record.commandId || Math.random().toString(36)}
           loading={loading}
           dataSource={filteredRows}
-          pagination={{ pageSize: 10, showSizeChanger: false }}
+          pagination={{
+            pageSize,
+            showSizeChanger: true,
+            pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
+            onChange: (_page, nextPageSize) => {
+              if (!nextPageSize || nextPageSize === pageSize) return;
+              savePageSize(nextPageSize);
+              setPageSize(nextPageSize);
+            },
+          }}
           locale={{ emptyText: <Empty description="暂无 AI 执行记录" /> }}
           columns={[
             { title: '时间', dataIndex: 'createdAt', width: 180 },

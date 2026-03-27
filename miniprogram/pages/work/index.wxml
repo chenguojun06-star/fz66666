@@ -114,7 +114,25 @@
             </view>
           </view>
           <!-- 底部信息区（码数明细 + 交期） -->
-          <view wx:if="{{item.sizeList && item.sizeList.length}}" class="size-plain">
+          <view wx:if="{{item.colorGroups && item.colorGroups.length}}" class="size-plain">
+            <block wx:for="{{item.colorGroups}}" wx:key="color" wx:for-item="group">
+              <view class="size-plain-row">
+                <text class="size-plain-label">颜色</text>
+                <text class="size-plain-cell">{{group.color || '-'}}</text>
+                <text class="size-plain-cell">总数</text>
+                <text class="size-plain-cell">{{group.total || 0}}</text>
+              </view>
+              <view class="size-plain-row">
+                <text class="size-plain-label">码数</text>
+                <text wx:for="{{group.sizeList}}" wx:key="*this" class="size-plain-cell">{{item}}</text>
+              </view>
+              <view class="size-plain-row">
+                <text class="size-plain-label">数量</text>
+                <text wx:for="{{group.sizeQtyList}}" wx:key="index" class="size-plain-cell">{{item}}</text>
+              </view>
+            </block>
+          </view>
+          <view wx:elif="{{item.sizeList && item.sizeList.length}}" class="size-plain">
             <view class="size-plain-row">
               <text class="size-plain-label">码数</text>
               <text wx:for="{{item.sizeList}}" wx:key="*this" class="size-plain-cell">{{item}}</text>

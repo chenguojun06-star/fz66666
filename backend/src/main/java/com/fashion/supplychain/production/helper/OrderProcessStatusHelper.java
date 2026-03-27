@@ -3,6 +3,7 @@ package com.fashion.supplychain.production.helper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ProductionOrderQueryService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleInfo;
@@ -36,6 +37,9 @@ public class OrderProcessStatusHelper {
 
     @Autowired
     private StyleAttachmentOrchestrator styleAttachmentOrchestrator;
+
+    @Autowired
+    private MaterialPurchaseService materialPurchaseService;
 
     private void checkPatternCompleteWarning(String styleId) {
         if (!StringUtils.hasText(styleId)) {
@@ -179,16 +183,16 @@ public class OrderProcessStatusHelper {
         Integer materialArrivalRate = order.getMaterialArrivalRate();
         Integer manuallyCompleted = order.getProcurementManuallyCompleted();
         boolean isManuallyConfirmed = (manuallyCompleted != null && manuallyCompleted == 1);
+        boolean hasConfirmedFabric = StringUtils.hasText(order.getId())
+                && materialPurchaseService.hasConfirmedQuantityByOrderId(order.getId(), true);
 
         // 判断采购是否完成
         boolean procurementComplete = false;
         String operatorName = null;
         LocalDateTime completedTime = null;
 
-        if (materialArrivalRate != null && materialArrivalRate >= 100) {
-            // 物料到货率=100%：自动认为采购完成
+        if (hasConfirmedFabric) {
             procurementComplete = true;
-            // 从采购单中获取最后一次收货的操作人和时间
             operatorName = order.getProcurementOperatorName();
             completedTime = order.getProcurementEndTime();
         } else if (materialArrivalRate != null && materialArrivalRate >= 50 && isManuallyConfirmed) {

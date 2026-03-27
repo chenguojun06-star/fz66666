@@ -2,6 +2,7 @@ package com.fashion.supplychain.style.controller;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.style.entity.SecondaryProcess;
 import com.fashion.supplychain.style.orchestration.StyleQuotationOrchestrator;
 import com.fashion.supplychain.style.service.SecondaryProcessService;
@@ -10,9 +11,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 二次工艺Controller
@@ -49,8 +53,8 @@ public class SecondaryProcessController {
     @Operation(summary = "新建二次工艺")
     @PostMapping
     public Result<SecondaryProcess> create(@RequestBody SecondaryProcess process) {
+        normalizeProcess(process, null);
         secondaryProcessService.save(process);
-        // 二次工艺变更后自动重算报价单
         try {
             styleQuotationOrchestrator.recalculateFromLiveData(process.getStyleId());
         } catch (Exception e) {
@@ -62,12 +66,12 @@ public class SecondaryProcessController {
     @Operation(summary = "更新二次工艺")
     @PutMapping("/{id}")
     public Result<SecondaryProcess> update(@PathVariable Long id, @RequestBody SecondaryProcess process) {
+        SecondaryProcess existing = secondaryProcessService.getById(id);
         process.setId(id);
+        normalizeProcess(process, existing);
         secondaryProcessService.updateById(process);
-        // 二次工艺变更后自动重算报价单
         Long styleId = process.getStyleId();
         if (styleId == null) {
-            SecondaryProcess existing = secondaryProcessService.getById(id);
             styleId = existing != null ? existing.getStyleId() : null;
         }
         if (styleId != null) {
@@ -98,5 +102,47 @@ public class SecondaryProcessController {
             }
         }
         return Result.success(null);
+    }
+
+    private void normalizeProcess(SecondaryProcess process, SecondaryProcess existing) {
+        if (process == null) {
+            return;
+        }
+        String normalizedStatus = normalizeStatus(process.getStatus());
+        process.setStatus(normalizedStatus);
+
+        String currentUser = StringUtils.hasText(UserContext.username()) ? UserContext.username().trim() : null;
+        String assignee = firstNonBlank(process.getAssignee(), existing != null ? existing.getAssignee() : null, currentUser);
+        if (StringUtils.hasText(assignee)) {
+            process.setAssignee(assignee);
+        }
+
+        if ("completed".equals(normalizedStatus)) {
+            LocalDateTime completedTime = process.getCompletedTime();
+            if (completedTime == null && existing != null) {
+                completedTime = existing.getCompletedTime();
+            }
+            process.setCompletedTime(completedTime != null ? completedTime : LocalDateTime.now());
+            return;
+        }
+
+        process.setCompletedTime(null);
+    }
+
+    private String normalizeStatus(String rawStatus) {
+        String status = StringUtils.hasText(rawStatus) ? rawStatus.trim().toLowerCase() : "pending";
+        return Set.of("pending", "processing", "completed", "cancelled").contains(status) ? status : "pending";
+    }
+
+    private String firstNonBlank(String... values) {
+        if (values == null) {
+            return null;
+        }
+        for (String value : values) {
+            if (StringUtils.hasText(value)) {
+                return value.trim();
+            }
+        }
+        return null;
     }
 }

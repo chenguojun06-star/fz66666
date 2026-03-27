@@ -38,6 +38,26 @@ type PendingColorImage = {
   file: File;
 };
 
+const COLOR_IMAGE_BIZ_TYPE_PREFIX = 'color_image::';
+
+const parseColorImageBizType = (bizType: unknown) => {
+  const value = String(bizType || '').trim();
+  if (!value.startsWith(COLOR_IMAGE_BIZ_TYPE_PREFIX)) {
+    return null;
+  }
+  const rawColor = value.slice(COLOR_IMAGE_BIZ_TYPE_PREFIX.length);
+  if (!rawColor) {
+    return '';
+  }
+  try {
+    return decodeURIComponent(rawColor);
+  } catch {
+    return rawColor;
+  }
+};
+
+const buildColorImageBizType = (color: string) => `${COLOR_IMAGE_BIZ_TYPE_PREFIX}${String(color || '').trim()}`;
+
 const StyleInfoDetailPage: React.FC = () => {
   const params = useParams();
   const location = window.location;
@@ -184,9 +204,7 @@ const StyleInfoDetailPage: React.FC = () => {
         const list = Array.isArray((res as any)?.data) ? (res as any).data : [];
         const nextMap: Record<string, string> = {};
         list.forEach((item: any) => {
-          const bizType = String(item?.bizType || '');
-          if (!bizType.startsWith('color_image::')) return;
-          const color = decodeURIComponent(bizType.slice('color_image::'.length));
+          const color = parseColorImageBizType(item?.bizType);
           if (color && item?.fileUrl && !nextMap[color]) {
             nextMap[color] = String(item.fileUrl);
           }
@@ -244,10 +262,13 @@ const StyleInfoDetailPage: React.FC = () => {
   };
 
   const handleColorImageSync = async (color: string, file: File) => {
-    const bizType = `color_image::${encodeURIComponent(color)}`;
+    const normalizedColor = String(color || '').trim();
+    const bizType = buildColorImageBizType(normalizedColor);
     if (currentStyle?.id) {
-      const oldRes = await api.get('/style/attachment/list', { params: { styleId: currentStyle.id, bizType } });
-      const oldList = Array.isArray((oldRes as any)?.data) ? (oldRes as any).data : [];
+      const oldRes = await api.get('/style/attachment/list', { params: { styleId: currentStyle.id } });
+      const oldList = (Array.isArray((oldRes as any)?.data) ? (oldRes as any).data : []).filter((item: any) =>
+        parseColorImageBizType(item?.bizType) === normalizedColor
+      );
       await Promise.all(oldList.map((item: any) => api.delete(`/style/attachment/${item.id}`)));
       const formData = new FormData();
       formData.append('file', file);
@@ -276,9 +297,11 @@ const StyleInfoDetailPage: React.FC = () => {
 
   const handleColorImageClear = async (color: string) => {
     if (currentStyle?.id) {
-      const bizType = `color_image::${encodeURIComponent(color)}`;
-      const res = await api.get('/style/attachment/list', { params: { styleId: currentStyle.id, bizType } });
-      const list = Array.isArray((res as any)?.data) ? (res as any).data : [];
+      const normalizedColor = String(color || '').trim();
+      const res = await api.get('/style/attachment/list', { params: { styleId: currentStyle.id } });
+      const list = (Array.isArray((res as any)?.data) ? (res as any).data : []).filter((item: any) =>
+        parseColorImageBizType(item?.bizType) === normalizedColor
+      );
       await Promise.all(list.map((item: any) => api.delete(`/style/attachment/${item.id}`)));
       setColorImageMap((prev) => {
         const next = { ...prev };
@@ -406,9 +429,12 @@ const StyleInfoDetailPage: React.FC = () => {
     setProductionSaving(true);
     try {
       const content = _serializeProductionReqRows(productionReqRows);
-      await api.put(`/style/info/${currentStyle.id}/production-requirements`, {
+      await api.put('/style/info', {
+        id: currentStyle.id,
+        styleNo: currentStyle.styleNo,
+        styleName: currentStyle.styleName,
+        category: currentStyle.category,
         description: content,
-        productionRequirements: content,
       });
       message.success('生产制单保存成功');
       // 刷新详情
@@ -510,7 +536,7 @@ const StyleInfoDetailPage: React.FC = () => {
               isNewPage={isNewPage}
               sampleCompleted={currentStyle?.sampleStatus === 'COMPLETED'}
               hasProcessData={processData?.length > 0 || Boolean((currentStyle as any)?.processCompletedTime)}
-              pushedToOrder={Boolean((currentStyle as any)?.orderType)}
+              pushedToOrder={Boolean((currentStyle as any)?.pushedToOrder)}
               onSave={handleSave}
               onCompleteSample={handleCompleteSample}
               onPushToOrder={handlePushToOrder}

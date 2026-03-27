@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.dto;
 
 import lombok.Data;
+import java.util.List;
 
 /**
  * 客户订单分享页响应 DTO（公开接口，无需鉴权）
@@ -20,6 +21,9 @@ public class OrderShareResponse {
 
     /** 款式名称 */
     private String styleName;
+
+    /** 款式图 */
+    private String styleCover;
 
     /** 颜色 */
     private String color;
@@ -62,4 +66,61 @@ public class OrderShareResponse {
 
     /** 租户公司名（品牌形象） */
     private String companyName;
+
+    /** 订单备注 */
+    private String remarks;
+
+    /** 当前所处进度节点 */
+    private String currentStage;
+
+    /** 尺码数量分布 */
+    private List<SizeQuantity> sizeQuantities;
+
+    /** 颜色尺码数量分布 */
+    private List<ColorSizeQuantity> colorSizeQuantities;
+
+    /** 工序阶段进度 */
+    private List<StageProgress> stages;
+
+    /** 近期扫码动态 */
+    private List<ScanEntry> recentScans;
+
+    /** AI 预测信息 */
+    private AiPrediction aiPrediction;
+
+    @Data
+    public static class StageProgress {
+        private String stageName;
+        private Integer rate;
+        private String status;
+    }
+
+    @Data
+    public static class SizeQuantity {
+        private String size;
+        private Integer quantity;
+    }
+
+    @Data
+    public static class ColorSizeQuantity {
+        private String color;
+        private String size;
+        private Integer quantity;
+    }
+
+    @Data
+    public static class ScanEntry {
+        private String processName;
+        private Integer quantity;
+        private String scanTime;
+    }
+
+    @Data
+    public static class AiPrediction {
+        private String predictedFinishDate;
+        private Integer estimatedRemainingDays;
+        private Integer confidence;
+        private String riskLevel;
+        private String riskReason;
+    }
 }

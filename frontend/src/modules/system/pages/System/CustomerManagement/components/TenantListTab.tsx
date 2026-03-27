@@ -3,6 +3,7 @@ import { Button, Tag, Space, Form, Input, InputNumber, Modal, Select, Card, Typo
 import { PlusOutlined, CopyOutlined, QrcodeOutlined, ExclamationCircleOutlined, AppstoreOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
+import SmallModal from '@/components/common/SmallModal';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
 import { useModal } from '@/hooks';
@@ -514,11 +515,10 @@ const TenantListTab: React.FC = () => {
       />
 
       {/* 拒绝申请弹窗 */}
-      <ResizableModal
+      <SmallModal
         open={rejectModal.visible}
         title={`拒绝入驻申请 - ${rejectModal.data?.tenantName || ''}`}
         onCancel={() => { rejectModal.close(); rejectReasonForm.resetFields(); }}
-        width="30vw"
         footer={
           <Space>
             <Button onClick={() => { rejectModal.close(); rejectReasonForm.resetFields(); }}>取消</Button>
@@ -532,7 +532,7 @@ const TenantListTab: React.FC = () => {
             <Input.TextArea rows={3} placeholder="请填写拒绝原因（将记录在备注中）" />
           </Form.Item>
         </Form>
-      </ResizableModal>
+      </SmallModal>
 
       {/* 新建租户弹窗 */}
       <ResizableModal
@@ -659,11 +659,10 @@ const TenantListTab: React.FC = () => {
       </ResizableModal>
 
       {/* 重置主账号密码弹窗 */}
-      <ResizableModal
+      <SmallModal
         open={resetPwdModal.visible}
         title={`重置主账号密码 - ${resetPwdModal.data?.tenantName || ''}`}
         onCancel={() => { resetPwdModal.close(); resetPwdForm.resetFields(); }}
-        width="30vw"
         footer={
           <Space>
             <Button onClick={() => { resetPwdModal.close(); resetPwdForm.resetFields(); }}>取消</Button>
@@ -682,7 +681,7 @@ const TenantListTab: React.FC = () => {
             <Input.Password placeholder="请再次输入新密码" autoComplete="new-password" />
           </Form.Item>
         </Form>
-      </ResizableModal>
+      </SmallModal>
 
       {/* 付费模块开通弹窗 */}
       <ResizableModal

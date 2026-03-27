@@ -578,6 +578,7 @@ const StyleProcessTab: React.FC<Props> = ({
           styleId,
           processCode: norm(r.processCode),
           processName: norm(r.processName),
+          description: norm(r.description),
           progressStage: norm(r.progressStage) || '车缝',
           machineType: norm(r.machineType),
           standardTime: r.standardTime != null ? toNumberSafe(r.standardTime) : 0,
@@ -739,7 +740,7 @@ const StyleProcessTab: React.FC<Props> = ({
           ),
       },
       {
-        title: '制作描述',
+        title: '工序描述',
         dataIndex: 'description',
         width: 160,
         ellipsis: true,
@@ -749,7 +750,7 @@ const StyleProcessTab: React.FC<Props> = ({
               dictType="process_description"
               autoCollect
               value={record.description || ''}
-              placeholder="请选择或输入制作描述"
+              placeholder="请选择或输入工序描述"
               popupMatchSelectWidth={false}
               styles={{ popup: { root: { minWidth: 260 } } }}
               onChange={(v) => updateField(record.id!, 'description', v || null)}

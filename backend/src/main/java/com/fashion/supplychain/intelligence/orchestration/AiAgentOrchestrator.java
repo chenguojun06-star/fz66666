@@ -34,6 +34,9 @@ public class AiAgentOrchestrator {
     @Autowired
     private AiCriticOrchestrator criticOrchestrator;
 
+    @Autowired
+    private XiaoyunInsightCardOrchestrator xiaoyunInsightCardOrchestrator;
+
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final int MAX_TOOL_RAW_CHARS = 1800;
 
@@ -89,6 +92,7 @@ public class AiAgentOrchestrator {
         List<AiMessage> messages = new ArrayList<>();
         List<JsonNode> teamDispatchCards = new ArrayList<>();
         List<JsonNode> bundleSplitCards = new ArrayList<>();
+        List<JsonNode> xiaoyunInsightCards = new ArrayList<>();
         messages.add(AiMessage.system(buildSystemPrompt(userMessage)));
         // 加载对话记忆（最近 N 轮）
         List<AiMessage> history = getConversationHistory(userId);
@@ -139,6 +143,7 @@ public class AiAgentOrchestrator {
                     aiAgentTraceOrchestrator.logToolCall(commandId, toolName, args, toolResult, System.currentTimeMillis() - toolStartAt, !toolResult.contains("\"error\""));
                     captureTeamDispatchCard(toolName, toolResult, teamDispatchCards);
                     captureBundleSplitCard(toolName, toolResult, bundleSplitCards);
+                    xiaoyunInsightCardOrchestrator.collectFromToolResult(toolName, toolResult, xiaoyunInsightCards);
                     String toolEvidence = buildToolEvidenceMessage(toolName, toolResult);
                     log.info("[AiAgent] 工具证据摘要:\n{}", toolEvidence);
                     messages.add(AiMessage.tool(toolEvidence, toolCall.getId(), toolName));
@@ -149,6 +154,7 @@ public class AiAgentOrchestrator {
                 String revisedContent = criticOrchestrator.reviewAndRevise(userMessage, result.getContent());
                 revisedContent = appendTeamDispatchCards(revisedContent, teamDispatchCards);
                 revisedContent = appendBundleSplitCards(revisedContent, bundleSplitCards);
+                revisedContent = xiaoyunInsightCardOrchestrator.appendToContent(revisedContent, xiaoyunInsightCards);
 
                 log.info("[AiAgent] 返回最终结果给用户");
                 saveConversationTurn(userId, userMessage, revisedContent);
@@ -185,6 +191,7 @@ public class AiAgentOrchestrator {
             List<AiMessage> messages = new ArrayList<>();
             List<JsonNode> teamDispatchCards = new ArrayList<>();
             List<JsonNode> bundleSplitCards = new ArrayList<>();
+            List<JsonNode> xiaoyunInsightCards = new ArrayList<>();
             messages.add(AiMessage.system(buildSystemPrompt(userMessage)));
             String userId = UserContext.userId();
             List<AiMessage> history = getConversationHistory(userId);
@@ -230,6 +237,7 @@ public class AiAgentOrchestrator {
                         aiAgentTraceOrchestrator.logToolCall(commandId, toolName, args, toolResult, System.currentTimeMillis() - toolStartAt, !toolResult.contains("\"error\""));
                         captureTeamDispatchCard(toolName, toolResult, teamDispatchCards);
                         captureBundleSplitCard(toolName, toolResult, bundleSplitCards);
+                        xiaoyunInsightCardOrchestrator.collectFromToolResult(toolName, toolResult, xiaoyunInsightCards);
                         String toolEvidence = buildToolEvidenceMessage(toolName, toolResult);
                         emitSse(emitter, "tool_result", Map.of(
                                 "tool", toolName,
@@ -243,6 +251,7 @@ public class AiAgentOrchestrator {
                     String revisedContent = criticOrchestrator.reviewAndRevise(userMessage, result.getContent());
                     revisedContent = appendTeamDispatchCards(revisedContent, teamDispatchCards);
                     revisedContent = appendBundleSplitCards(revisedContent, bundleSplitCards);
+                    revisedContent = xiaoyunInsightCardOrchestrator.appendToContent(revisedContent, xiaoyunInsightCards);
 
                     // 最终回答
                     saveConversationTurn(userId, userMessage, revisedContent);
@@ -423,7 +432,8 @@ public class AiAgentOrchestrator {
                 "㉘ tool_material_receive — 面辅料到货与智能收货：查看智能收货预览、一键智能收货、单条领取、到货登记、到货入库、撤回收货\n" +
                 "㉙ tool_style_template — 模板库与多码单价：从款式生成模板、应用模板、同步工序单价、查看/保存多码单价\n" +
                 "㉚ tool_material_doc_receive — 采购单据自动收货：基于已上传单据回放识别结果，并自动登记到货或自动到货入库\n" +
-                "㉛ tool_bundle_split_transfer — 拆菲转派：把一个菲号按数量拆成两个执行子菲号，也支持在未继续流转时撤回拆菲，让数据自动归回原有菲号\n\n" +
+                "㉛ tool_bundle_split_transfer — 拆菲转派：把一个菲号按数量拆成两个执行子菲号，也支持在未继续流转时撤回拆菲，让数据自动归回原有菲号\n" +
+                "㉜ tool_order_learning — 下单学习与事件处理：分析同款历史、推荐更优工厂/单价模式、解释这单为什么贵、刷新该单学习结果\n\n" +
                 "【协作原则 — 必须遵守】\n" +
                 "1. 先判断，再解释，再给动作。不要先铺垫背景。第一句必须给出当前最关键的判断。\n" +
                 "2. 你的每个判断都要能落回真实数据、真实对象、真实风险，不允许用空泛词代替结论。\n" +
@@ -439,6 +449,7 @@ public class AiAgentOrchestrator {
                 "4. 执行操作（\"标记xx为紧急/给工厂发个通知\"）→ 调 tool_action_executor，执行前先用1句话确认操作内容\n" +
                 "5. 复杂分析 → 组合多个工具：先 overview 看全局 → 再 deep_analysis 定位问题 → 最后给出行动建议\n" +
                 "6. 当用户问\"现在最应该关注什么\" → 调 tool_system_overview 读取 topPriorities，按优先级逐条解读并给出操作建议\n" +
+                "7. 当用户问\"这单怎么下更划算/为什么成本高/帮我刷新这单学习结果\" → 调 tool_order_learning，优先返回多花多少钱、推荐怎么切、是否已刷新学习结果\n" +
                 "7. 库存问题 → 面辅料用 tool_query_warehouse_stock；样衣用 tool_sample_stock；成品/大货用 tool_finished_product_stock\n" +
                 "8. 客户/人员问题 → 客户档案用 tool_query_crm_customer；员工信息用 tool_query_system_user\n" +
                 "9. 审批问题（\"有什么待审批/帮我看看审批\"）→ 变更审批用 tool_change_approval(action=list_pending)；工资结算审批用 tool_payroll_approve；面辅料采购初审/领取审核用 tool_material_audit(action=list_material_audits)\n" +

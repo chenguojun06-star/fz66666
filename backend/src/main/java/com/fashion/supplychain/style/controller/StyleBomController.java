@@ -2,10 +2,13 @@ package com.fashion.supplychain.style.controller;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.style.entity.StyleBom;
+import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.orchestration.StyleBomOrchestrator;
+import com.fashion.supplychain.style.service.StyleInfoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,9 +23,29 @@ public class StyleBomController {
     @Autowired
     private StyleBomOrchestrator styleBomOrchestrator;
 
+    @Autowired
+    private StyleInfoService styleInfoService;
+
     @GetMapping("/list")
-    public Result<List<StyleBom>> listByStyleId(@RequestParam Long styleId) {
-        return Result.success(styleBomOrchestrator.listByStyleId(styleId));
+    public Result<List<StyleBom>> listByStyleId(
+            @RequestParam(required = false) Long styleId,
+            @RequestParam(required = false) String styleNo) {
+        Long resolvedStyleId = styleId;
+        if (resolvedStyleId == null && StringUtils.hasText(styleNo)) {
+            StyleInfo style = styleInfoService.lambdaQuery()
+                    .eq(StyleInfo::getStyleNo, styleNo.trim())
+                    .orderByDesc(StyleInfo::getId)
+                    .last("limit 1")
+                    .one();
+            if (style == null || style.getId() == null) {
+                return Result.success(java.util.Collections.emptyList());
+            }
+            resolvedStyleId = style.getId();
+        }
+        if (resolvedStyleId == null) {
+            return Result.fail("缺少参数 styleId 或 styleNo");
+        }
+        return Result.success(styleBomOrchestrator.listByStyleId(resolvedStyleId));
     }
 
     @PostMapping

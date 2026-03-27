@@ -103,6 +103,9 @@ export interface ProductionOrder extends Record<string, unknown> {
 
   factoryUnitPrice?: number;
   quotationUnitPrice?: number;
+  pricingMode?: 'PROCESS' | 'SIZE' | 'QUOTE' | 'MANUAL';
+  scatterPricingMode?: 'FOLLOW_ORDER' | 'MANUAL';
+  scatterCuttingUnitPrice?: number;
 
   // 工序单价和明细
   progressNodeUnitPrices?: any[]; // 工序节点单价数组

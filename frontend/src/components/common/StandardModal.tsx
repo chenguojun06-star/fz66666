@@ -1,12 +1,12 @@
 import React from 'react';
-import ResizableModal, { ResizableModalProps } from '@/components/common/ResizableModal';
+import ResizableModal, { COMPACT_MODAL_MIN_WIDTH, ResizableModalProps } from '@/components/common/ResizableModal';
 
 export type StandardModalSize = 'sm' | 'md' | 'lg';
 
 const sizeConfig: Record<StandardModalSize, { width: string; heightRatio: number; minWidth: number }> = {
-  sm: { width: '30vw', heightRatio: 0.4, minWidth: 520 },
-  md: { width: '40vw', heightRatio: 0.5, minWidth: 560 },
-  lg: { width: '60vw', heightRatio: 0.6, minWidth: 720 },
+  sm: { width: '760px', heightRatio: 0.4, minWidth: COMPACT_MODAL_MIN_WIDTH },
+  md: { width: '920px', heightRatio: 0.5, minWidth: 920 },
+  lg: { width: '60vw', heightRatio: 0.6, minWidth: 880 },
 };
 
 export type StandardModalProps = ResizableModalProps & {

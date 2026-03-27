@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS `t_receivable_receipt_log` (
+  `id` VARCHAR(64) NOT NULL,
+  `receivable_id` VARCHAR(64) NOT NULL,
+  `receivable_no` VARCHAR(64) DEFAULT NULL,
+  `customer_id` VARCHAR(64) DEFAULT NULL,
+  `customer_name` VARCHAR(128) DEFAULT NULL,
+  `source_biz_type` VARCHAR(32) DEFAULT NULL,
+  `source_biz_id` VARCHAR(64) DEFAULT NULL,
+  `source_biz_no` VARCHAR(64) DEFAULT NULL,
+  `received_amount` DECIMAL(18,2) NOT NULL DEFAULT 0,
+  `remark` VARCHAR(255) DEFAULT NULL,
+  `received_time` DATETIME DEFAULT NULL,
+  `operator_id` VARCHAR(64) DEFAULT NULL,
+  `operator_name` VARCHAR(64) DEFAULT NULL,
+  `tenant_id` BIGINT DEFAULT NULL,
+  `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+  `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `delete_flag` TINYINT(1) DEFAULT 0,
+  PRIMARY KEY (`id`),
+  KEY `idx_receivable_receipt_log_receivable` (`receivable_id`),
+  KEY `idx_receivable_receipt_log_tenant_time` (`tenant_id`, `received_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -112,6 +112,10 @@ public interface MaterialPurchaseService extends IService<MaterialPurchase> {
 
     int computeEffectiveArrivedQuantity(int purchaseQty, int arrivedQty);
 
+    int sumConfirmedQuantityByOrderId(String orderId, boolean fabricOnly);
+
+    boolean hasConfirmedQuantityByOrderId(String orderId, boolean fabricOnly);
+
     ArrivalStats computeArrivalStatsByOrderId(String orderId);
 
     ArrivalStats computeArrivalStats(List<MaterialPurchase> purchases);

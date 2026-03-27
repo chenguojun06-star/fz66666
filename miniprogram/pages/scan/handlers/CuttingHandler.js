@@ -14,6 +14,8 @@ const { toast } = require('../../../utils/uiHelper');
 
 const { eventBus } = require('../../../utils/eventBus');
 
+const ENABLE_CUTTING_BOM_LOOKUP = false;
+
 // ==================== 配比面板核心算法 ====================
 
 /**
@@ -130,6 +132,7 @@ function buildCuttingRatioState(skuItems, task) {
  * @param {string} styleNo - 款式编号
  */
 async function fetchBomAndUpdate(ctx, styleNo) {
+  if (!ENABLE_CUTTING_BOM_LOOKUP) return;
   if (!styleNo) return;
   try {
     const res = await api.style.getBomList({ styleNo, pageSize: 50 });

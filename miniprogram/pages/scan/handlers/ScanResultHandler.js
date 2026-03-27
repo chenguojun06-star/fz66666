@@ -47,6 +47,33 @@ function buildProcessOptions(processName, progressStage, stageResult) {
   return { options, index };
 }
 
+function applySelectionState(processOptions, selectedProcessNames) {
+  const selectedSet = new Set(
+    Array.isArray(selectedProcessNames)
+      ? selectedProcessNames.filter(Boolean)
+      : []
+  );
+
+  return (processOptions || []).map((option) => ({
+    ...option,
+    checked: selectedSet.has(option.value),
+  }));
+}
+
+function buildSelectionSummary(processOptions, selectedProcessNames) {
+  const selected = (processOptions || []).filter((option) =>
+    (selectedProcessNames || []).includes(option.value)
+  );
+  return {
+    selectedProcessDetails: selected.map((option) => ({
+      value: option.value,
+      unitPrice: Number(option.unitPrice || 0),
+    })),
+    selectedProcessCount: selected.length,
+    selectedProcessAmount: selected.reduce((sum, option) => sum + Number(option.unitPrice || 0), 0),
+  };
+}
+
 /**
  * 显示扫码结果确认页
  * @param {Object} ctx - Page 上下文
@@ -70,6 +97,8 @@ function showScanResultConfirm(ctx, data) {
 
   const selectedOption = processOptions[processIndex];
   const selectedProcessNames = selectedOption ? [selectedOption.value] : [];
+  const processOptionsWithSelection = applySelectionState(processOptions, selectedProcessNames);
+  const selectionSummary = buildSelectionSummary(processOptionsWithSelection, selectedProcessNames);
   const confirmedQty = normalizePositiveInt(quantity, 1);
 
   ctx.setData({
@@ -82,8 +111,11 @@ function showScanResultConfirm(ctx, data) {
     'scanResultConfirm.orderNo': orderNo,
     'scanResultConfirm.bundleNo': bundleNo,
     'scanResultConfirm.styleNo': orderDetail?.styleNo || '',
-    'scanResultConfirm.processOptions': processOptions,
+    'scanResultConfirm.processOptions': processOptionsWithSelection,
     'scanResultConfirm.selectedProcessNames': selectedProcessNames,
+    'scanResultConfirm.selectedProcessDetails': selectionSummary.selectedProcessDetails,
+    'scanResultConfirm.selectedProcessCount': selectionSummary.selectedProcessCount,
+    'scanResultConfirm.selectedProcessAmount': selectionSummary.selectedProcessAmount,
     'scanResultConfirm.processIndex': processIndex,
     'scanResultConfirm.scanData': scanData,
     'scanResultConfirm.orderDetail': orderDetail,
@@ -254,10 +286,16 @@ function onProcessScrollSelect(ctx, e) {
   const nextSelected = Array.from(selectedNames);
   const selectedOptions = (ctx.data.scanResultConfirm.processOptions || []).filter(item => nextSelected.includes(item.value));
   const primaryOption = selectedOptions[0] || option;
+  const nextOptions = applySelectionState(ctx.data.scanResultConfirm.processOptions || [], nextSelected);
+  const selectionSummary = buildSelectionSummary(nextOptions, nextSelected);
 
   ctx.setData({
     'scanResultConfirm.processIndex': nextSelected.length ? index : -1,
     'scanResultConfirm.selectedProcessNames': nextSelected,
+    'scanResultConfirm.processOptions': nextOptions,
+    'scanResultConfirm.selectedProcessDetails': selectionSummary.selectedProcessDetails,
+    'scanResultConfirm.selectedProcessCount': selectionSummary.selectedProcessCount,
+    'scanResultConfirm.selectedProcessAmount': selectionSummary.selectedProcessAmount,
     'scanResultConfirm.processName': primaryOption.value,
     'scanResultConfirm.progressStage': primaryOption.value,
     'scanResultConfirm.scanType': primaryOption.scanType,

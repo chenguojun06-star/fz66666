@@ -171,6 +171,56 @@ public class UserController {
         }
     }
 
+    @PostMapping("/login/sms-code")
+    @PreAuthorize("permitAll()")
+    public Result<?> sendLoginSmsCode(@RequestBody java.util.Map<String, Object> body, HttpServletRequest request) {
+        String phone = body == null ? null : safeTrim(String.valueOf(body.getOrDefault("phone", "")));
+        Long tenantId = parseTenantId(body);
+        String ip = resolveClientIp(request);
+        userOrchestrator.assertLoginAllowed(phone, safeTrim(ip));
+        return Result.success(userOrchestrator.sendLoginSmsCode(phone, tenantId));
+    }
+
+    @PostMapping("/login/sms")
+    @PreAuthorize("permitAll()")
+    public Result<?> loginBySms(@RequestBody java.util.Map<String, Object> body, HttpServletRequest request) {
+        String phone = body == null ? null : safeTrim(String.valueOf(body.getOrDefault("phone", "")));
+        String code = body == null ? null : safeTrim(String.valueOf(body.getOrDefault("code", "")));
+        Long tenantId = parseTenantId(body);
+        String ip = resolveClientIp(request);
+        userOrchestrator.assertLoginAllowed(phone, safeTrim(ip));
+        try {
+            Object payloadObj = userOrchestrator.loginWithPhoneCode(phone, code, tenantId);
+            User user = null;
+            if (payloadObj instanceof java.util.Map<?, ?> map) {
+                Object u = map.get("user");
+                if (u instanceof User user1) {
+                    user = user1;
+                }
+            }
+            String loginName = user == null ? phone : safeTrim(user.getUsername());
+            userOrchestrator.recordLoginAttempt(
+                    loginName,
+                    user == null ? null : safeTrim(user.getName()),
+                    ip,
+                    request == null ? null : request.getHeader("User-Agent"),
+                    "SUCCESS",
+                    "验证码登录成功");
+            userOrchestrator.onLoginSuccess(phone, safeTrim(ip));
+            return Result.success(payloadObj);
+        } catch (RuntimeException e) {
+            userOrchestrator.onLoginFailed(phone, safeTrim(ip));
+            userOrchestrator.recordLoginAttempt(
+                    phone,
+                    null,
+                    ip,
+                    request == null ? null : request.getHeader("User-Agent"),
+                    "FAILED",
+                    e.getMessage());
+            throw e;
+        }
+    }
+
     @GetMapping("/online-count")
     public Result<?> onlineCount() {
         LocalDateTime since = LocalDateTime.now().minusMinutes(10);
@@ -217,6 +267,21 @@ public class UserController {
         }
         String t = s.trim();
         return t.isEmpty() ? null : t;
+    }
+
+    private static Long parseTenantId(java.util.Map<String, Object> body) {
+        if (body == null) {
+            return null;
+        }
+        Object tenantIdValue = body.get("tenantId");
+        if (tenantIdValue == null) {
+            return null;
+        }
+        try {
+            return Long.valueOf(String.valueOf(tenantIdValue).trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     @GetMapping("/permissions")

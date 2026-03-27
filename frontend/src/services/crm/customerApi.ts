@@ -78,8 +78,24 @@ export interface Receivable {
   dueDate?: string;
   status?: ReceivableStatus;
   description?: string;
+  sourceBizType?: string;
+  sourceBizId?: string;
+  sourceBizNo?: string;
   createTime?: string;
   creatorName?: string;
+}
+
+export interface ReceivableReceiptLog {
+  id: string;
+  receivableId: string;
+  receivableNo?: string;
+  sourceBizType?: string;
+  sourceBizId?: string;
+  sourceBizNo?: string;
+  receivedAmount: number;
+  remark?: string;
+  receivedTime?: string;
+  operatorName?: string;
 }
 
 export interface ReceivableStats {
@@ -90,34 +106,25 @@ export interface ReceivableStats {
 }
 
 export const receivableApi = {
-  list: (params: { page?: number; pageSize?: number; customerId?: string; status?: string }) =>
+  list: (params: {
+    page?: number;
+    pageSize?: number;
+    customerId?: string;
+    status?: string;
+    keyword?: string;
+    sourceBizType?: string;
+    sourceBizNo?: string;
+  }) =>
     api.post<PageResult<Receivable>>('/crm/receivables/list', params),
 
   stats: () => api.get<ApiResult<ReceivableStats>>('/crm/receivables/stats'),
 
   create: (data: Receivable) => api.post<ApiResult<Receivable>>('/crm/receivables', data),
 
-  markReceived: (id: string, amount: number) =>
-    api.post<ApiResult<void>>(`/crm/receivables/${id}/receive`, { amount }),
+  detail: (id: string) => api.get<ApiResult<{ receivable: Receivable; receiptLogs: ReceivableReceiptLog[] }>>(`/crm/receivables/${id}`),
+
+  markReceived: (id: string, amount: number, remark?: string) =>
+    api.post<ApiResult<void>>(`/crm/receivables/${id}/receive`, { amount, remark }),
 
   delete: (id: string) => api.delete<ApiResult<void>>(`/crm/receivables/${id}`),
 };
-
-// ─── 客户追踪门户（Portal Token）─────────────────────────────────────────────
-
-export interface PortalToken {
-  id?: string;
-  token: string;
-  customerId: string;
-  orderId: string;
-  orderNo: string;
-  expireTime: string;
-}
-
-/** 员工登录后，为客户生成追踪链接 */
-export const generatePortalLink = (customerId: string, orderId: string) =>
-  api.post<ApiResult<PortalToken>>(`/crm/customers/${customerId}/portal-link`, { orderId });
-
-/** 客户无需登录，凭 token 查看订单进度（公开接口） */
-export const getOrderStatusByToken = (token: string) =>
-  api.get<ApiResult<Record<string, unknown>>>(`/public/portal/order-status?token=${token}`);

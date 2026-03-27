@@ -159,12 +159,12 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                   {hasCoverSource ? (
                     <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
                       <StyleCoverThumb
-                        styleId={styleId}
-                        styleNo={styleNo}
-                        src={coverSrc}
-                        size="fill"
-                        fit="contain"
-                        borderRadius={0}
+                      styleId={styleId}
+                      styleNo={styleNo}
+                      src={coverSrc}
+                      size="fill"
+                      fit="contain"
+                      borderRadius={0}
                       />
                     </div>
                   ) : (
@@ -199,7 +199,7 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                   <div className="universal-card-row" key={idx}>
                     {group.map((field) => (
                       <div className="universal-card-field" key={field.key}>
-                        <span className="field-label">{field.label}:</span>
+                        {field.label ? <span className="field-label">{field.label}:</span> : null}
                         <div className="field-value">
                           {renderFieldValue(field, record)}
                         </div>

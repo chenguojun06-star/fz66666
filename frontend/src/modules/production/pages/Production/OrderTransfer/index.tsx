@@ -11,6 +11,7 @@ import { errorHandler } from '@/utils/errorHandling';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
+import { usePersistentSort } from '@/hooks/usePersistentSort';
 import '../../../styles.css';
 
 const { TextArea } = Input;
@@ -33,6 +34,8 @@ interface OrderTransfer {
   handledTime?: string;
 }
 
+const ORDER_TRANSFER_FETCH_BATCH_SIZE = 200;
+
 const OrderTransferPage: React.FC = () => {
   const { message } = App.useApp();
   const [transfers, setTransfers] = useState<OrderTransfer[]>([]);
@@ -40,8 +43,11 @@ const OrderTransferPage: React.FC = () => {
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [selectedTransfer, setSelectedTransfer] = useState<OrderTransfer | null>(null);
   const [rejectReason, setRejectReason] = useState('');
-  const [sortField, setSortField] = useState<string>('createdTime');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const { sortField, sortOrder, handleSort } = usePersistentSort<string, 'asc' | 'desc'>({
+    storageKey: 'order-transfer-list',
+    defaultField: 'createdTime',
+    defaultOrder: 'desc',
+  });
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
 
@@ -50,25 +56,34 @@ const OrderTransferPage: React.FC = () => {
     setSmartError({ title, reason, code });
   };
 
-  const handleSort = (field: string, order: 'asc' | 'desc') => {
-    setSortField(field);
-    setSortOrder(order);
-  };
-
   const fetchTransfers = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/production/order/transfer/received', {
-        params: { page: 1, pageSize: 100 }
-      });
-      const result = response as Record<string, unknown>;
-      if (result.code === 200) {
-        setTransfers((result.data as any)?.records || []);
-        if (showSmartErrorNotice) setSmartError(null);
-      } else {
-        reportSmartError('订单转移列表加载失败', (result.message as string) || '服务返回异常，请稍后重试', 'ORDER_TRANSFER_LIST_FAILED');
-        errorHandler.handleError(new Error((result.message as string) || '获取转移列表失败'), '获取转移列表失败');
-      }
+      const allRecords: OrderTransfer[] = [];
+      let page = 1;
+      let total = 0;
+
+      do {
+        const response = await api.get('/production/order/transfer/received', {
+          params: { page, pageSize: ORDER_TRANSFER_FETCH_BATCH_SIZE }
+        });
+        const result = response as Record<string, unknown>;
+        if (result.code !== 200) {
+          reportSmartError('订单转移列表加载失败', (result.message as string) || '服务返回异常，请稍后重试', 'ORDER_TRANSFER_LIST_FAILED');
+          errorHandler.handleError(new Error((result.message as string) || '获取转移列表失败'), '获取转移列表失败');
+          return;
+        }
+
+        const data = (result.data as any) || {};
+        const records = Array.isArray(data.records) ? data.records : [];
+        total = Number(data.total || 0);
+        allRecords.push(...records);
+        if (!records.length) break;
+        page += 1;
+      } while (!total || allRecords.length < total);
+
+      setTransfers(allRecords);
+      if (showSmartErrorNotice) setSmartError(null);
     } catch (error) {
       reportSmartError('订单转移列表加载失败', (error as Error)?.message || '网络异常或服务不可用，请稍后重试', 'ORDER_TRANSFER_LIST_EXCEPTION');
       errorHandler.handleError(error, '获取转移列表失败');

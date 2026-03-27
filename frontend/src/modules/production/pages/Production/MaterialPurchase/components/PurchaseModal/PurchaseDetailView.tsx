@@ -7,7 +7,7 @@ import api from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
 import { MaterialPurchase as MaterialPurchaseType, ProductionOrder } from '@/types/production';
-import { getMaterialTypeCategory, getMaterialTypeLabel } from '@/utils/materialType';
+import { formatMaterialSpecWidth, getMaterialTypeCategory, getMaterialTypeLabel } from '@/utils/materialType';
 import { formatDateTime } from '@/utils/datetime';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import { getStatusConfig, buildColorSummary, getOrderQtyTotal, formatMaterialQuantity, formatReferenceKilograms } from '../../utils';
@@ -54,6 +54,7 @@ interface PurchaseDetailViewProps {
   onReceive: (record: MaterialPurchaseType) => void;
   onConfirmReturn: (record: MaterialPurchaseType) => void;
   onReturnReset: (record: MaterialPurchaseType) => void;
+  onQualityIssue: (record: MaterialPurchaseType) => void;
   onReceiveAll: () => void;
   onBatchReturn: () => void;
   isSamplePurchase: boolean;
@@ -76,6 +77,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
   onReceive,
   onConfirmReturn,
   onReturnReset,
+  onQualityIssue,
   onReceiveAll,
   onBatchReturn,
   isSamplePurchase,
@@ -172,6 +174,8 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
     <div className="purchase-detail-view">
       <style>{confirmedRowStyle}</style>
       <ProductionOrderHeader
+        order={detailOrder}
+        orderLines={detailOrderLines}
         orderNo={currentPurchase?.orderNo}
         styleNo={currentPurchase?.styleNo}
         styleName={currentPurchase?.styleName}
@@ -259,10 +263,10 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                   },
                   { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 120, render: (v: unknown) => v || '-' },
                   { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 180, ellipsis: true, render: (v: unknown) => v || '-' },
-                  { title: '规格', dataIndex: 'specifications', key: 'specifications', width: 140, ellipsis: true, render: (v: unknown) => v || '-' },
+                  { title: '规格/幅宽', key: 'specWidth', width: 140, ellipsis: true, render: (_: unknown, r: MaterialPurchaseType) => formatMaterialSpecWidth(r.specifications, r.fabricWidth) },
                   { title: '单位', dataIndex: 'unit', key: 'unit', width: 80, render: (v: unknown) => v || '-' },
                   { title: '需求数量', dataIndex: 'purchaseQuantity', key: 'purchaseQuantity', width: 110, align: 'right' as const, render: (v: unknown) => formatMaterialQuantity(v) },
-                  { title: '参考公斤数', key: 'referenceKilograms', width: 120, align: 'right' as const, render: (_: unknown, r: MaterialPurchaseType) => formatReferenceKilograms(r.purchaseQuantity, r.conversionRate) },
+                  { title: '参考公斤数', key: 'referenceKilograms', width: 120, align: 'right' as const, render: (_: unknown, r: MaterialPurchaseType) => formatReferenceKilograms(r.purchaseQuantity, r.conversionRate, r.unit) },
                   { title: '到货数量', dataIndex: 'arrivedQuantity', key: 'arrivedQuantity', width: 110, align: 'right' as const, render: (v: unknown) => formatMaterialQuantity(v) },
                   {
                     title: '单价(元)',
@@ -311,7 +315,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                   {
                     title: '确认',
                     key: 'confirm',
-                    width: 140,
+                    width: 200,
                     render: (_: any, record: MaterialPurchaseType) => {
                       const frozen = isOrderFrozenForRecord(record);
                       const status = normalizeStatus(record.status);
@@ -328,14 +332,21 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                           <Button
                             type="link"
                             size="small"
+                            disabled={frozen || !(status === MATERIAL_PURCHASE_STATUS.RECEIVED || status === MATERIAL_PURCHASE_STATUS.PARTIAL || status === MATERIAL_PURCHASE_STATUS.COMPLETED)}
+                            onClick={() => onQualityIssue(record)}
+                          >
+                            品质异常
+                          </Button>
+                          <Button
+                            type="link"
+                            size="small"
                             disabled={
                               frozen
                               || !(status === MATERIAL_PURCHASE_STATUS.RECEIVED || status === MATERIAL_PURCHASE_STATUS.PARTIAL || status === MATERIAL_PURCHASE_STATUS.COMPLETED)
-                              || Number(record?.returnConfirmed || 0) === 1
                             }
                             onClick={() => onConfirmReturn(record)}
                           >
-                            {Number(record?.returnConfirmed || 0) === 1 ? '已回料' : '回料确认'}
+                            {Number(record?.returnConfirmed || 0) === 1 ? '追加回料' : '回料确认'}
                           </Button>
                           {Number(record?.returnConfirmed || 0) === 1 && (
                             <Button

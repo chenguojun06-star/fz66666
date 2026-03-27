@@ -299,17 +299,8 @@ function onMaterialInput(ctx, e) {
  * @returns {void}
  */
 function onMaterialRemarkInput(ctx, e) {
-  const id = e.currentTarget.dataset.id;
   const value = e.detail.value;
-
-  const materialPurchases = ctx.data.scanConfirm.materialPurchases.map(item => {
-    if (item.id === id) {
-      return { ...item, remarkInput: value };
-    }
-    return item;
-  });
-
-  ctx.setData({ 'scanConfirm.materialPurchases': materialPurchases });
+  ctx.setData({ 'scanConfirm.procurementRemark': value });
 }
 
 /**
@@ -393,7 +384,7 @@ async function onSubmitProcurement(ctx) {
   wx.showLoading({ title: '提交中...', mask: true });
 
   try {
-    const updates = _buildProcurementUpdatesOnly(materialPurchases);
+    const updates = _buildProcurementUpdatesOnly(materialPurchases, ctx.data.scanConfirm.procurementRemark);
 
     if (updates.length === 0) {
       wx.hideLoading();
@@ -427,14 +418,15 @@ async function onSubmitProcurement(ctx) {
  * @throws {Error} 无有效数据时抛出
  * @private
  */
-function _buildProcurementUpdatesOnly(materialPurchases) {
+function _buildProcurementUpdatesOnly(materialPurchases, globalRemarkInput) {
+  const globalRemark = globalRemarkInput == null ? '' : String(globalRemarkInput).trim();
   const updates = [];
 
   for (const item of materialPurchases) {
     const inputQty = Number(item.inputQuantity);
     if (inputQty > 0) {
       const newArrived = (Number(item.arrivedQuantity) || 0) + inputQty;
-      const remark = _validateProcurementArrival(item, inputQty, newArrived);
+      const remark = _validateProcurementArrival(item, inputQty, newArrived, globalRemark);
 
       updates.push({
         id: item.id,
@@ -459,9 +451,9 @@ function _buildProcurementUpdatesOnly(materialPurchases) {
  * @returns {string} 备注内容
  * @private
  */
-function _validateProcurementArrival(item, inputQty, newArrived) {
+function _validateProcurementArrival(item, inputQty, newArrived, globalRemark) {
   const purchaseQty = Number(item.purchaseQuantity) || 0;
-  const remark = (item.remarkInput || '').trim();
+  const remark = String(globalRemark || '').trim();
 
   if (purchaseQty > 0 && newArrived * 100 < purchaseQty * 70) {
     const arrivalRate = ((newArrived / purchaseQty) * 100).toFixed(1);
@@ -489,7 +481,8 @@ function _validateProcurementArrival(item, inputQty, newArrived) {
  * @returns {Object} 领取和更新数据
  * @private
  */
-function _buildProcurementUpdates(materialPurchases) {
+function _buildProcurementUpdates(materialPurchases, globalRemarkInput) {
+  const globalRemark = globalRemarkInput == null ? '' : String(globalRemarkInput).trim();
   const receives = [];
   const updates = [];
   const userInfo = getUserInfo();
@@ -512,7 +505,7 @@ function _buildProcurementUpdates(materialPurchases) {
     const inputQty = Number(item.inputQuantity);
     if (inputQty > 0) {
       const newArrived = (Number(item.arrivedQuantity) || 0) + inputQty;
-      const remark = _validateProcurementArrival(item, inputQty, newArrived);
+      const remark = _validateProcurementArrival(item, inputQty, newArrived, globalRemark);
 
       updates.push({
         id: item.id,
@@ -622,7 +615,7 @@ function _mapProcurementBusinessError(message) {
  * @returns {Promise<void>} 提交完成后刷新列表
  */
 async function processProcurementSubmit(ctx, { materialPurchases }) {
-  const { receives, updates } = _buildProcurementUpdates(materialPurchases);
+  const { receives, updates } = _buildProcurementUpdates(materialPurchases, ctx.data.scanConfirm.procurementRemark);
   await _executeProcurementSubmit(receives, updates);
 
   toast.success('提交成功');

@@ -1,11 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Empty, Form, Input, InputNumber, Modal, Pagination, Popover, Progress, Select, Skeleton, Tag } from 'antd';
+import { App, Button, Empty, Form, Input, InputNumber, Modal, Popover, Progress, Select, Skeleton, Tag } from 'antd';
 import dayjs from 'dayjs';
 import { SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
-import AttachmentThumb from '../components/AttachmentThumb';
+import AttachmentThumb from '@/components/common/AttachmentThumb';
+import SmallModal from '@/components/common/SmallModal';
+import StandardPagination from '@/components/common/StandardPagination';
 import StyleDevelopmentWorkbench from './StyleDevelopmentWorkbench';
 import SmartStyleHoverCard from './SmartStyleHoverCard';
 import { StyleInfo } from '@/types/style';
+import { getStyleCardColorText, getStyleCardQuantityText, getStyleCardSizeText } from '@/utils/cardSizeQuantity';
 import { getStyleSourceMeta } from '@/utils/styleSource';
 import { useNavigate } from 'react-router-dom';
 import api, { withQuery } from '@/utils/api';
@@ -27,8 +30,8 @@ interface StyleTableViewProps {
   focusedStyleId?: string | null;
 }
 
-type StageStatus = 'done' | 'active' | 'waiting' | 'risk';
-type DeliveryTone = 'normal' | 'warning' | 'danger' | 'success';
+type StageStatus = 'done' | 'active' | 'waiting' | 'risk' | 'scrapped';
+type DeliveryTone = 'normal' | 'warning' | 'danger' | 'success' | 'scrapped';
 type StageActionKey = 'detail' | 'pattern' | 'sizePrice' | 'secondary';
 type WorkbenchSection = 'bom' | 'pattern' | 'size' | 'process' | 'sizePrice' | 'secondary' | 'production' | 'quotation' | 'files';
 
@@ -55,6 +58,7 @@ interface PatternProductionSnapshot {
   releaseTime: string;
   receiveTime: string;
   completeTime: string;
+  updateTime: string;
   reviewStatus: string;
   reviewTime: string;
   procurementProgress: number;
@@ -105,104 +109,27 @@ const SAMPLE_PARENT_STAGES = [
   { key: 'tail', label: '尾部' },
   { key: 'warehousing', label: '入库' },
 ];
-const STYLE_COMPLETION_FIELDS = [
-  'bomCompletedTime',
-  'patternCompletedTime',
-  'sizeCompletedTime',
-  'processCompletedTime',
-  'productionCompletedTime',
-  'secondaryCompletedTime',
-] as const;
+const SAMPLE_PROGRESS_NODE_ALIASES: Record<string, string[]> = {
+  procurement: ['procurement', '采购'],
+  cutting: ['cutting', '裁剪', '下板'],
+  secondary: ['secondary', '二次工艺'],
+  sewing: ['sewing', '车缝', '缝制'],
+  tail: ['tail', '尾部', '后整'],
+  warehousing: ['warehousing', '入库'],
+};
 
 const clampPercent = (value: number) => Math.max(0, Math.min(100, Math.round(value)));
 
-const parseSizeColorConfig = (raw: unknown): { sizes: string[]; colors: string[]; quantities: number[] } => {
-  try {
-    const parsed = typeof raw === 'string' ? JSON.parse(raw || '{}') : (raw || {});
-    return {
-      sizes: Array.isArray((parsed as any)?.sizes) ? (parsed as any).sizes.map((item: unknown) => String(item || '').trim()).filter(Boolean) : [],
-      colors: Array.isArray((parsed as any)?.colors) ? (parsed as any).colors.map((item: unknown) => String(item || '').trim()).filter(Boolean) : [],
-      quantities: Array.isArray((parsed as any)?.quantities) ? (parsed as any).quantities.map((item: unknown) => Number(item || 0)) : [],
-    };
-  } catch {
-    return { sizes: [], colors: [], quantities: [] };
-  }
-};
-
-const buildConfiguredSpecPairs = (record: StyleRecord) => {
-  const config = parseSizeColorConfig(record.sizeColorConfig);
-  const directColor = String(record.color || '').trim() || config.colors.find(Boolean) || '';
-  const parsed = typeof record.sizeColorConfig === 'string' ? (() => {
-    try {
-      return JSON.parse(record.sizeColorConfig || '{}') as { matrixRows?: Array<{ color?: string; quantities?: unknown[] }>; sizes?: string[] };
-    } catch {
-      return {};
-    }
-  })() : ((record.sizeColorConfig as { matrixRows?: Array<{ color?: string; quantities?: unknown[] }>; sizes?: string[] }) || {});
-  const matrixSizes = Array.isArray(parsed?.sizes)
-    ? parsed.sizes.map((item) => String(item || '').trim()).filter(Boolean)
-    : config.sizes;
-  const matrixRows = Array.isArray(parsed?.matrixRows) ? parsed.matrixRows : [];
-  const matrixPairs = matrixRows.flatMap((row) => {
-    const rowColor = String(row?.color || '').trim();
-    const quantities = Array.isArray(row?.quantities) ? row.quantities : [];
-    return matrixSizes
-      .map((size, index) => ({
-        color: rowColor,
-        size,
-        quantity: Number(quantities[index] || 0),
-      }))
-      .filter((item) => item.color && item.size && item.quantity > 0);
-  });
-  if (matrixPairs.length) {
-    return matrixPairs;
-  }
-
-  const topLevelPairs = config.sizes
-    .map((size, index) => ({
-      color: directColor,
-      size,
-      quantity: Number(config.quantities[index] || 0),
-    }))
-    .filter((item) => item.size && item.quantity > 0);
-  if (topLevelPairs.length) {
-    return topLevelPairs;
-  }
-
-  const fallbackSizes = String(record.size || '')
-    .split(/[/,，\s]+/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-  const fallbackQuantity = Number(record.sampleQuantity || 0);
-  if (directColor && fallbackSizes.length === 1 && fallbackQuantity > 0) {
-    return [{ color: directColor, size: fallbackSizes[0], quantity: fallbackQuantity }];
-  }
-
-  return [];
-};
-
 const resolveDisplayColor = (record: StyleRecord) => {
-  const pairs = buildConfiguredSpecPairs(record);
-  if (pairs.length) {
-    return Array.from(new Set(pairs.map((item) => item.color).filter(Boolean))).join(' / ');
-  }
-  return '';
+  return getStyleCardColorText(record) || '';
 };
 
 const resolveDisplaySize = (record: StyleRecord) => {
-  const pairs = buildConfiguredSpecPairs(record);
-  if (pairs.length) {
-    return pairs.map((item) => item.size).join(' / ');
-  }
-  return '';
+  return getStyleCardSizeText(record) || '';
 };
 
 const resolveDisplayQuantity = (record: StyleRecord) => {
-  const pairs = buildConfiguredSpecPairs(record);
-  if (pairs.length) {
-    return pairs.map((item) => `${item.quantity}`).join(' / ');
-  }
-  return '';
+  return getStyleCardQuantityText(record) || '';
 };
 
 const formatNodeTime = (value?: unknown) => {
@@ -225,39 +152,79 @@ const getLatestTimeLabel = (values: unknown[]) => {
 };
 
 const getStyleCompletedTime = (record: StyleRecord) => {
-  const preferred = [
-    record.sampleCompletedTime,
+  const finalCompletedTime = dayjs(record.completedTime as string | number | Date | null | undefined);
+  return finalCompletedTime.isValid() ? finalCompletedTime : null;
+};
+
+const getStyleLifecycleCompletedTime = (record: StyleRecord) => {
+  const candidates = [
     record.completedTime,
-    ...STYLE_COMPLETION_FIELDS.map((field) => record[field]),
-  ];
-  const valid = preferred
+    record.sampleReviewTime,
+    record.sampleCompletedTime,
+    record.productionCompletedTime,
+    record.secondaryCompletedTime,
+    record.sizePriceCompletedTime,
+    record.patternCompletedTime,
+    record.processCompletedTime,
+    record.bomCompletedTime,
+  ]
     .map((value) => dayjs(value as string | number | Date | null | undefined))
     .filter((value) => value.isValid())
     .sort((a, b) => b.valueOf() - a.valueOf());
-
-  return valid.length ? valid[0] : null;
+  return candidates[0] || null;
 };
 
-const isStyleCompleted = (record: StyleRecord) => {
-  const sampleStatus = String(record.sampleStatus || '').trim().toUpperCase();
-  const progressNode = String(record.progressNode || '').trim();
-  const latestPatternStatus = String(record.latestPatternStatus || '').trim().toUpperCase();
-  const completedStageCount = STYLE_COMPLETION_FIELDS.filter((field) => Boolean(record[field])).length;
+const isMaintainedAfterCompletion = (record: StyleRecord, completed: boolean) => {
+  const maintenanceRemark = String(record.maintenanceRemark || '').trim();
+  const maintenanceTime = dayjs(record.maintenanceTime as string | number | Date | null | undefined);
+  if (!maintenanceRemark || !maintenanceTime.isValid()) {
+    return false;
+  }
 
-  return sampleStatus === 'COMPLETED'
-    || latestPatternStatus === 'COMPLETED'
-    || progressNode === '样衣完成'
-    || Boolean(record.sampleCompletedTime)
-    || Boolean(record.completedTime)
-    || completedStageCount === STYLE_COMPLETION_FIELDS.length;
+  const hasCompletedEvidence = completed
+    || isPassedReviewStatus(record.sampleReviewStatus)
+    || Boolean(record.sampleReviewTime)
+    || Boolean(record.completedTime);
+  if (!hasCompletedEvidence) {
+    return false;
+  }
+
+  const lifecycleCompletedTime = getStyleLifecycleCompletedTime(record);
+  if (!lifecycleCompletedTime) {
+    return false;
+  }
+
+  return maintenanceTime.isAfter(lifecycleCompletedTime);
 };
 
-const getDeliveryMeta = (record: StyleRecord): { tone: DeliveryTone; label: string } => {
-  if (isStyleCompleted(record)) {
+const formatStageTimeRange = (startTime?: unknown, endTime?: unknown) => {
+  const start = formatNodeTime(startTime);
+  const end = formatNodeTime(endTime);
+  if (start !== '待启动' && end !== '待启动') {
+    const startInstance = dayjs(startTime as string | number | Date | null | undefined);
+    const endInstance = dayjs(endTime as string | number | Date | null | undefined);
+    if (startInstance.isValid() && endInstance.isValid() && startInstance.isSame(endInstance, 'day')) {
+      return `${startInstance.format('MM-DD HH:mm')} → ${endInstance.format('HH:mm')}`;
+    }
+    return `${start} → ${end}`;
+  }
+  return end !== '待启动' ? end : start;
+};
+
+const getDeliveryMeta = (record: StyleRecord, completed = false): { tone: DeliveryTone; label: string } => {
+  if (completed) {
     const completedTime = getStyleCompletedTime(record);
+    const createdTime = record.createTime ? dayjs(record.createTime) : null;
+    const createdLabel = createdTime?.isValid() ? createdTime.format('MM-DD') : '';
+    const completedLabel = completedTime?.isValid() ? completedTime.format('MM-DD') : '';
+    const rangeLabel = createdLabel && completedLabel
+      ? `${createdLabel} → ${completedLabel} 已完成`
+      : completedLabel
+        ? `${completedLabel} 已完成`
+        : '已完成';
     return {
       tone: 'success',
-      label: completedTime ? `${completedTime.format('MM-DD')} 已完成` : '已完成',
+      label: rangeLabel,
     };
   }
 
@@ -279,7 +246,21 @@ const getDeliveryMeta = (record: StyleRecord): { tone: DeliveryTone; label: stri
 const buildStageDetails = (...values: Array<string | null | undefined | false>) =>
   values.filter(Boolean) as string[];
 
+const isPassedReviewStatus = (status?: unknown) => ['PASS', 'APPROVED'].includes(String(status || '').trim().toUpperCase());
+
+const isRiskReviewStatus = (status?: unknown) => ['REJECT', 'REJECTED', 'REWORK'].includes(String(status || '').trim().toUpperCase());
+
+const getReviewStatusLabel = (status?: unknown) => {
+  const normalized = String(status || '').trim().toUpperCase();
+  if (normalized === 'PASS' || normalized === 'APPROVED') return '审核通过';
+  if (normalized === 'PENDING') return '待审核';
+  if (normalized === 'REWORK') return '需返修';
+  if (normalized === 'REJECT' || normalized === 'REJECTED') return '审核不通过';
+  return '未开始';
+};
+
 const getProgressNodeColor = (node: string) => {
+  if (/开发样报废|样衣报废|已报废/.test(node)) return 'default';
   if (/报废|驳回|不通过|异常|失败/.test(node)) return 'error';
   if (/返修|紧急/.test(node)) return 'warning';
   if (/完成|通过/.test(node)) return 'success';
@@ -287,10 +268,23 @@ const getProgressNodeColor = (node: string) => {
   return 'default';
 };
 
-const resolveStageTag = (status: StageStatus) => {
-  if (status === 'done') return { color: 'success' as const, text: '已完成' };
-  if (status === 'active') return { color: 'processing' as const, text: '进行中' };
-  if (status === 'risk') return { color: 'error' as const, text: '风险中' };
+const isScrappedStyle = (record?: Partial<StyleInfo> | null) => {
+  if (!record) return false;
+  return String(record.status || '').trim().toUpperCase() === 'SCRAPPED'
+    || String((record as Record<string, unknown>).progressNode || '').trim() === '开发样报废';
+};
+
+const isScrappedPatternSnapshot = (snapshot?: PatternProductionSnapshot | null) => (
+  String(snapshot?.status || '').trim().toUpperCase() === 'SCRAPPED'
+);
+
+const resolveStageTag = (stage: SmartStage) => {
+  if (stage.status === 'done') return { color: 'success' as const, text: '已完成' };
+  if (stage.status === 'active') return { color: 'processing' as const, text: '进行中' };
+  if (stage.status === 'scrapped') return { color: 'default' as const, text: '已停止' };
+  if (stage.status === 'risk') {
+    return { color: 'error' as const, text: /报废|停止/.test(stage.helper) ? '已停止' : '风险中' };
+  }
   return { color: 'default' as const, text: '未开始' };
 };
 
@@ -315,6 +309,7 @@ const normalizePatternProductionSnapshot = (item: Record<string, unknown>): Patt
     releaseTime: formatNodeTime(item.releaseTime),
     receiveTime: formatNodeTime(item.receiveTime),
     completeTime: formatNodeTime(item.completeTime),
+    updateTime: formatNodeTime(item.updateTime),
     reviewStatus: String(item.reviewStatus || ''),
     reviewTime: formatNodeTime(item.reviewTime),
     procurementProgress: clampPercent(Number((item.procurementProgress as Record<string, unknown> | undefined)?.percent || 0)),
@@ -322,7 +317,56 @@ const normalizePatternProductionSnapshot = (item: Record<string, unknown>): Patt
   };
 };
 
+const getSampleNodeProgress = (snapshot: PatternProductionSnapshot, key: string) => {
+  const aliases = SAMPLE_PROGRESS_NODE_ALIASES[key] || [key];
+  for (const alias of aliases) {
+    const value = snapshot.progressNodes[alias];
+    if (value !== undefined && value !== null) {
+      return clampPercent(Number(value));
+    }
+  }
+  return 0;
+};
+
+const isSampleSnapshotFullyCompleted = (snapshot?: PatternProductionSnapshot | null) => {
+  if (!snapshot) return false;
+  return SAMPLE_PARENT_STAGES.every((item) => {
+    if (item.key === 'procurement') {
+      return clampPercent(Number(snapshot.procurementProgress || 0)) >= 100;
+    }
+    return getSampleNodeProgress(snapshot, item.key) >= 100;
+  });
+};
+
+const applyScrappedStageState = (record: StyleRecord, stage: SmartStage): SmartStage => {
+  if (!isScrappedStyle(record) || stage.status === 'done') {
+    return stage;
+  }
+
+  const helper = stage.key === 'confirm'
+    ? '开发样已报废，不再进入审核 / 入库'
+    : stage.key === 'sample'
+      ? '开发样已报废，样衣生产已停止'
+      : '开发样已报废，当前环节已停止';
+
+  return {
+    ...stage,
+    helper,
+    timeLabel: stage.timeLabel === '待启动' ? '已停止' : stage.timeLabel,
+    status: 'scrapped',
+    details: Array.from(new Set([
+      '当前状态：开发样报废',
+      stage.key === 'confirm' ? '审核 / 入库已终止' : '后续推进已停止',
+      ...stage.details.filter(Boolean),
+    ])),
+  };
+};
+
 const buildStageInsight = (stage: SmartStage, snapshot: PatternProductionSnapshot | null) => {
+  if (/报废|已停止/.test(stage.helper) || isScrappedPatternSnapshot(snapshot)) {
+    return '开发样已报废，当前节点已停止，不再继续后续审核或入库。';
+  }
+
   if (stage.key === 'sample' && snapshot) {
     if (snapshot.status === 'COMPLETED') return '样衣生产、入库与库存链路已经闭环，可继续做审核与流转。';
     if (snapshot.status === 'PRODUCTION_COMPLETED') return '生产动作已经完成，当前重点转入审核与入库确认。';
@@ -342,6 +386,7 @@ const buildStageInsight = (stage: SmartStage, snapshot: PatternProductionSnapsho
   }
 
   if (stage.status === 'done') return '当前环节已经闭环，可以继续推进后续节点。';
+  if (stage.status === 'scrapped') return '开发样已报废，当前环节已经停止，页面改为静态灰色展示。';
   if (stage.status === 'risk') return '当前环节存在异常或返修，需要优先处理。';
   if (stage.status === 'active') return '当前环节正在推进，建议优先跟踪负责人与关键时间。';
   return '当前环节尚未启动，可从快捷动作直接进入处理。';
@@ -384,7 +429,9 @@ const buildPatternStage: StageBuilder = (record) => {
     key: 'pattern',
     label: '纸样开发',
     helper: patternDone ? '纸样已完成' : record.patternAssignee ? `负责人 ${String(record.patternAssignee)}` : '等待处理',
-    timeLabel: formatNodeTime(patternDone ? record.patternCompletedTime : record.patternStartTime),
+    timeLabel: patternDone
+      ? formatStageTimeRange(record.patternStartTime, record.patternCompletedTime)
+      : formatNodeTime(record.patternStartTime),
     status: patternDone ? 'done' : patternStarted ? 'active' : 'waiting',
     progress: patternDone ? 100 : patternStarted ? 58 : 0,
     actionKey: 'pattern',
@@ -407,7 +454,9 @@ const buildSizePriceStage: StageBuilder = (record) => {
     key: 'sizePrice',
     label: '码数单价',
     helper: done ? '单价已锁定' : record.sizePriceAssignee ? `负责人 ${String(record.sizePriceAssignee)}` : '等待维护',
-    timeLabel: formatNodeTime(done ? record.sizePriceCompletedTime : record.sizePriceStartTime),
+    timeLabel: done
+      ? formatStageTimeRange(record.sizePriceStartTime, record.sizePriceCompletedTime)
+      : formatNodeTime(record.sizePriceStartTime),
     status: done ? 'done' : started ? 'active' : 'waiting',
     progress: done ? 100 : started ? 56 : 0,
     actionKey: 'sizePrice',
@@ -430,7 +479,9 @@ const buildSecondaryStage: StageBuilder = (record) => {
     key: 'secondary',
     label: '二次工艺',
     helper: done ? '工艺已锁定' : record.secondaryAssignee ? `负责人 ${String(record.secondaryAssignee)}` : '待安排',
-    timeLabel: formatNodeTime(done ? record.secondaryCompletedTime : record.secondaryStartTime),
+    timeLabel: done
+      ? formatStageTimeRange(record.secondaryStartTime, record.secondaryCompletedTime)
+      : formatNodeTime(record.secondaryStartTime),
     status: done ? 'done' : started ? 'active' : 'waiting',
     progress: done ? 100 : started ? 52 : 0,
     actionKey: 'secondary',
@@ -444,9 +495,11 @@ const buildSecondaryStage: StageBuilder = (record) => {
 
 const buildSampleStage: StageBuilder = (record) => {
   const progressNode = String(record.progressNode || '').trim();
+  const sampleStatus = String(record.sampleStatus || '').trim().toUpperCase();
   const sampleProgress = clampPercent(Number(record.sampleProgress || 0));
-  const done = Boolean(record.productionCompletedTime);
-  const started = done || sampleProgress > 0 || /样衣/.test(progressNode) || Boolean(record.productionStartTime);
+  const started = Boolean(record.productionStartTime) || /样衣/.test(progressNode) || ['IN_PROGRESS', 'PRODUCTION_COMPLETED', 'COMPLETED'].includes(sampleStatus);
+  const done = Boolean(record.productionCompletedTime)
+    || (started && ['PRODUCTION_COMPLETED', 'COMPLETED'].includes(sampleStatus));
 
   return {
     key: 'sample',
@@ -458,16 +511,16 @@ const buildSampleStage: StageBuilder = (record) => {
         : started
           ? '已领取生产'
           : '等待纸样',
-    timeLabel: formatNodeTime(done ? record.productionCompletedTime : record.productionStartTime),
+    timeLabel: done
+      ? formatStageTimeRange(record.productionStartTime, record.productionCompletedTime || record.sampleCompletedTime)
+      : formatNodeTime(record.productionStartTime),
     status: done ? 'done' : started ? 'active' : 'waiting',
-    progress: done ? 100 : sampleProgress > 0 ? sampleProgress : started ? 36 : 0,
+    progress: done ? 100 : (started && sampleProgress > 0 ? sampleProgress : started ? 36 : 0),
     actionKey: 'detail',
     actionLabel: '查看详情',
     details: buildStageDetails(
-      record.productionAssignee ? `负责人：${String(record.productionAssignee)}` : false,
       record.productionStartTime ? `领取时间：${dayjs(record.productionStartTime as string | number | Date).format('YYYY-MM-DD HH:mm')}` : '领取时间待更新',
-      done && record.productionCompletedTime ? `完成时间：${dayjs(record.productionCompletedTime as string | number | Date).format('YYYY-MM-DD HH:mm')}` : false,
-      `当前进度：${done ? 100 : sampleProgress}%`
+      done && record.productionCompletedTime ? `完成时间：${dayjs(record.productionCompletedTime as string | number | Date).format('YYYY-MM-DD HH:mm')}` : false
     ),
   };
 };
@@ -476,10 +529,10 @@ const buildConfirmStage: StageBuilder = (record) => {
   const progressNode = String(record.progressNode || '').trim();
   const reviewStatus = String(record.sampleReviewStatus || '').trim().toUpperCase();
   const latestPatternStatus = String(record.latestPatternStatus || '').trim().toUpperCase();
-  const reviewPassed = reviewStatus === 'PASS';
+  const reviewPassed = isPassedReviewStatus(reviewStatus);
   const inboundCompleted = latestPatternStatus === 'COMPLETED';
-  const done = inboundCompleted;
-  const risk = ['REJECT', 'REWORK'].includes(reviewStatus) || progressNode === '开发样报废';
+  const done = reviewPassed && inboundCompleted;
+  const risk = isRiskReviewStatus(reviewStatus) || progressNode === '开发样报废';
   const started = done || risk || reviewStatus === 'PENDING' || reviewPassed || latestPatternStatus === 'PRODUCTION_COMPLETED';
 
   return {
@@ -498,7 +551,9 @@ const buildConfirmStage: StageBuilder = (record) => {
             : started
               ? '等待结果'
               : '未开始',
-    timeLabel: formatNodeTime(done ? (record.completedTime || record.sampleReviewTime) : (record.sampleReviewTime || record.sampleCompletedTime)),
+    timeLabel: done
+      ? formatStageTimeRange(record.sampleReviewTime, record.completedTime)
+      : formatNodeTime(record.sampleReviewTime || record.sampleCompletedTime),
     status: done ? 'done' : risk ? 'risk' : started ? 'active' : 'waiting',
     progress: done ? 100 : risk ? 66 : reviewPassed ? 90 : started ? 72 : 0,
     actionKey: 'detail',
@@ -522,7 +577,10 @@ const STAGE_BUILDERS: StageBuilder[] = [
 ];
 
 const buildSmartStages = (record: StyleInfo) => STAGE_BUILDERS
-  .map((builder) => builder(record as StyleRecord))
+  .map((builder) => {
+    const stage = builder(record as StyleRecord);
+    return stage ? applyScrappedStageState(record as StyleRecord, stage) : null;
+  })
   .filter(Boolean) as SmartStage[];
 
 const resolveStageActionPath = (record: StyleInfo, stage: SmartStage) => {
@@ -584,11 +642,10 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
     return buildConfirmStage(record as StyleRecord).status === 'done';
   };
 
-  const hasPushedOrder = (record: StyleInfo) => Boolean(String((record as any).orderNo || '').trim());
+  const hasPushedOrder = (record: StyleInfo) => Boolean((record as any).pushedToOrder);
 
   const isScrappedRow = (record: StyleInfo) => {
-    return String(record.status || '').trim().toUpperCase() === 'SCRAPPED'
-      || String((record as any).progressNode || '').trim() === '开发样报废';
+    return isScrappedStyle(record);
   };
 
   const openDevelopmentWorkbench = useCallback((record: StyleInfo, section: WorkbenchSection) => {
@@ -620,20 +677,22 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
       const normalizedRecord = stockStateMap[stockKey]
         ? { ...(record as StyleRecord), latestPatternStatus: 'COMPLETED' }
         : record;
-      const deliveryMeta = getDeliveryMeta(record);
       const sourceMeta = getStyleSourceMeta(record);
       const progressNode = String((normalizedRecord as StyleRecord).progressNode || '未开始').trim() || '未开始';
       const stages = buildSmartStages(normalizedRecord as StyleInfo);
+      const allStagesCompleted = stages.length > 0 && stages.every((item) => item.status === 'done');
+      const maintainedAfterCompletion = isMaintainedAfterCompletion(normalizedRecord as StyleRecord, allStagesCompleted);
+      const deliveryMeta = getDeliveryMeta(normalizedRecord as StyleRecord, allStagesCompleted);
       const baseProgress = clampPercent(
         stages.reduce((sum, item) => sum + item.progress, 0) / Math.max(stages.length, 1),
       );
-      const overallProgress = stages.some((item) => item.key === 'confirm' && item.status === 'done') ? 100 : baseProgress;
-      const rowState = isScrappedRow(record) ? 'danger' : deliveryMeta.tone;
+      const overallProgress = allStagesCompleted ? 100 : baseProgress;
+      const rowState = isScrappedRow(record) ? 'scrapped' : deliveryMeta.tone;
       const metaItems = [
+        { label: '来源', value: sourceMeta.label },
         { label: '品类', value: toCategoryCn(record.category) },
         { label: '季节', value: toSeasonCn(record.season) },
         { label: '颜色', value: resolveDisplayColor(record as StyleRecord) || '-' },
-        { label: '来源', value: sourceMeta.label },
         { label: '码数', value: resolveDisplaySize(record as StyleRecord) || '-' },
         { label: '数量', value: `${resolveDisplayQuantity(record as StyleRecord) || '0'} 件` },
         { label: '交板', value: record.deliveryDate ? dayjs(record.deliveryDate).format('YYYY-MM-DD') : '-' },
@@ -642,6 +701,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
 
       return {
         deliveryMeta,
+        maintainedAfterCompletion,
         metaItems,
         overallProgress,
         progressNode,
@@ -652,40 +712,261 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
     });
   }, [categoryOptions, data, stockStateMap]);
 
-  const selectedStageTag = selectedStage ? resolveStageTag(selectedStage.stage.status) : null;
+  const selectedStageTag = selectedStage ? resolveStageTag(selectedStage.stage) : null;
   const selectedStageInsight = selectedStage ? buildStageInsight(selectedStage.stage, sampleSnapshot) : '';
-  const isSampleStageDone = useMemo(() => {
-    if (!selectedStage || selectedStage.stage.key !== 'sample') return false;
-    return selectedStage.stage.status === 'done'
-      || selectedStage.stage.progress >= 100
-      || Boolean((selectedStage.record as StyleRecord).productionCompletedTime);
-  }, [selectedStage]);
-
+  const selectedStageRecordScrapped = useMemo(() => selectedStage ? isScrappedStyle(selectedStage.record) : false, [selectedStage]);
   const isSampleSnapshotCompleted = useMemo(() => {
     if (!sampleSnapshot) return false;
     const status = String(sampleSnapshot.status || '').trim().toUpperCase();
-    return ['PRODUCTION_COMPLETED', 'COMPLETED'].includes(status);
+    return isSampleSnapshotFullyCompleted(sampleSnapshot)
+      && ['PRODUCTION_COMPLETED', 'COMPLETED'].includes(status);
+  }, [sampleSnapshot]);
+
+  const isSampleSnapshotReceived = useMemo(() => {
+    if (!sampleSnapshot) return false;
+    const status = String(sampleSnapshot.status || '').trim().toUpperCase();
+    return ['IN_PROGRESS', 'PRODUCTION_COMPLETED', 'COMPLETED'].includes(status)
+      || Boolean(sampleSnapshot.receiver)
+      || sampleSnapshot.receiveTime !== '待启动';
   }, [sampleSnapshot]);
 
   const sampleCompletedTimeLabel = useMemo(() => {
     if (!selectedStage || selectedStage.stage.key !== 'sample') return '待启动';
-    if (sampleSnapshot?.completeTime && sampleSnapshot.completeTime !== '待启动') return sampleSnapshot.completeTime;
-    return formatNodeTime((selectedStage.record as StyleRecord).productionCompletedTime);
-  }, [sampleSnapshot, selectedStage]);
+    if (!isSampleSnapshotCompleted) {
+      return selectedStageRecordScrapped || isScrappedPatternSnapshot(sampleSnapshot) ? '已停止' : '待启动';
+    }
+    const finalCompletedTime = (selectedStage.record as StyleRecord).completedTime;
+    if (finalCompletedTime) return formatNodeTime(finalCompletedTime);
+    return selectedStageRecordScrapped || isScrappedPatternSnapshot(sampleSnapshot) ? '已停止' : '待启动';
+  }, [isSampleSnapshotCompleted, sampleSnapshot, selectedStage, selectedStageRecordScrapped]);
+
+  const sampleReceiveTimeLabel = useMemo(() => {
+    if (!selectedStage || selectedStage.stage.key !== 'sample') return '待启动';
+    if (sampleSnapshot?.receiveTime && sampleSnapshot.receiveTime !== '待启动') return sampleSnapshot.receiveTime;
+    const productionStartTime = (selectedStage.record as StyleRecord).productionStartTime;
+    if (sampleSnapshot?.receiver && productionStartTime) return formatNodeTime(productionStartTime);
+    return selectedStageRecordScrapped || isScrappedPatternSnapshot(sampleSnapshot) ? '已停止' : '待启动';
+  }, [sampleSnapshot, selectedStage, selectedStageRecordScrapped]);
+
+  const sampleCompletedRangeLabel = useMemo(() => {
+    if (sampleCompletedTimeLabel === '待启动' || sampleCompletedTimeLabel === '已停止') {
+      return sampleCompletedTimeLabel;
+    }
+    if (sampleReceiveTimeLabel === '待启动' || sampleReceiveTimeLabel === '已停止') {
+      return sampleCompletedTimeLabel;
+    }
+    return formatStageTimeRange(sampleReceiveTimeLabel, sampleCompletedTimeLabel);
+  }, [sampleCompletedTimeLabel, sampleReceiveTimeLabel]);
+
+  const sampleReceiverLabel = useMemo(() => {
+    if (!sampleSnapshot?.receiver) return '-';
+    return sampleSnapshot.receiver;
+  }, [sampleSnapshot]);
 
   const sampleStageProgressItems = useMemo(() => {
     if (!sampleSnapshot) return [];
+    const status = String(sampleSnapshot.status || '').trim().toUpperCase();
+    const completed = isSampleSnapshotFullyCompleted(sampleSnapshot);
+    const received = ['IN_PROGRESS', 'PRODUCTION_COMPLETED', 'COMPLETED'].includes(status)
+      || Boolean(sampleSnapshot.receiver)
+      || sampleSnapshot.receiveTime !== '待启动';
 
     return SAMPLE_PARENT_STAGES.map((item) => ({
       key: item.key,
       label: item.label,
-      percent: isSampleStageDone || isSampleSnapshotCompleted
+      percent: completed
         ? 100
         : item.key === 'procurement'
           ? sampleSnapshot.procurementProgress
-          : clampPercent(Number(sampleSnapshot.progressNodes[item.key] || 0)),
+          : received
+            ? getSampleNodeProgress(sampleSnapshot, item.key)
+            : 0,
     }));
-  }, [isSampleSnapshotCompleted, isSampleStageDone, sampleSnapshot]);
+  }, [sampleSnapshot]);
+
+  const shouldShowSampleStageProgress = useMemo(() => (
+    sampleStageProgressItems.some((item) => item.percent > 0) || isSampleSnapshotReceived || isSampleSnapshotCompleted
+  ), [isSampleSnapshotCompleted, isSampleSnapshotReceived, sampleStageProgressItems]);
+
+  const sampleStageSummary = useMemo(() => {
+    if (!selectedStage || selectedStage.stage.key !== 'sample') return null;
+    if (selectedStageRecordScrapped || isScrappedPatternSnapshot(sampleSnapshot)) {
+      return {
+        tag: { color: 'error' as const, text: '已停止' },
+        helper: '样衣生产已停止',
+        time: sampleCompletedRangeLabel,
+      };
+    }
+
+    if (isSampleSnapshotCompleted) {
+      return {
+        tag: { color: 'success' as const, text: '已完成' },
+        helper: '样衣生产已完成',
+        time: sampleCompletedRangeLabel,
+      };
+    }
+
+    if (isSampleSnapshotReceived) {
+      return {
+        tag: { color: 'processing' as const, text: '进行中' },
+        helper: sampleReceiverLabel !== '-' ? `已由 ${sampleReceiverLabel} 领取生产` : '样衣生产进行中',
+        time: sampleReceiveTimeLabel,
+      };
+    }
+
+    return {
+      tag: { color: 'default' as const, text: '未开始' },
+      helper: '尚未领取样衣生产',
+      time: '待领取',
+    };
+  }, [
+    isSampleSnapshotCompleted,
+    isSampleSnapshotReceived,
+    sampleCompletedTimeLabel,
+    sampleCompletedRangeLabel,
+    sampleReceiveTimeLabel,
+    sampleReceiverLabel,
+    sampleSnapshot,
+    selectedStage,
+    selectedStageRecordScrapped,
+  ]);
+
+  const confirmReviewStatus = useMemo(() => (
+    selectedStage?.stage.key === 'confirm'
+      ? String((selectedStage.record as StyleRecord).sampleReviewStatus || '').trim().toUpperCase()
+      : ''
+  ), [selectedStage]);
+
+  const isConfirmReviewPassed = useMemo(() => isPassedReviewStatus(confirmReviewStatus), [confirmReviewStatus]);
+
+  const isConfirmInboundCompleted = useMemo(() => (
+    selectedStage?.stage.key === 'confirm'
+      ? String((selectedStage.record as StyleRecord).latestPatternStatus || '').trim().toUpperCase() === 'COMPLETED'
+      : false
+  ), [selectedStage]);
+
+  const confirmReviewStatusLabel = useMemo(() => getReviewStatusLabel(confirmReviewStatus), [confirmReviewStatus]);
+
+  const confirmReviewerLabel = useMemo(() => {
+    if (!selectedStage || selectedStage.stage.key !== 'confirm') return '-';
+    return String((selectedStage.record as StyleRecord).sampleReviewer || '').trim() || '-';
+  }, [selectedStage]);
+
+  const confirmReviewTimeLabel = useMemo(() => {
+    if (!selectedStage || selectedStage.stage.key !== 'confirm') return '待启动';
+    const reviewTime = (selectedStage.record as StyleRecord).sampleReviewTime;
+    if (reviewTime) return formatNodeTime(reviewTime);
+    return selectedStageRecordScrapped ? '已停止' : '待启动';
+  }, [selectedStage, selectedStageRecordScrapped]);
+
+  const confirmInboundTimeLabel = useMemo(() => {
+    if (!selectedStage || selectedStage.stage.key !== 'confirm') return '待启动';
+    const completedTime = (selectedStage.record as StyleRecord).completedTime;
+    if (completedTime) return formatNodeTime(completedTime);
+    return selectedStageRecordScrapped ? '已停止' : '待启动';
+  }, [selectedStage, selectedStageRecordScrapped]);
+
+  const confirmStageSummary = useMemo(() => {
+    if (!selectedStage || selectedStage.stage.key !== 'confirm') return null;
+    if (selectedStageRecordScrapped) {
+      return {
+        tag: { color: 'error' as const, text: '已停止' },
+        helper: '审核 / 入库已停止',
+        time: confirmInboundTimeLabel,
+      };
+    }
+    if (isConfirmReviewPassed && isConfirmInboundCompleted) {
+      return {
+        tag: { color: 'success' as const, text: '已完成' },
+        helper: '审核通过，样衣已入库',
+        time: formatStageTimeRange((selectedStage.record as StyleRecord).sampleReviewTime, (selectedStage.record as StyleRecord).completedTime),
+      };
+    }
+    if (isRiskReviewStatus(confirmReviewStatus)) {
+      return {
+        tag: { color: 'error' as const, text: '异常' },
+        helper: confirmReviewStatus === 'REWORK' ? '审核需返修' : '审核未通过',
+        time: confirmReviewTimeLabel,
+      };
+    }
+    if (isConfirmReviewPassed) {
+      return {
+        tag: { color: 'processing' as const, text: '待入库' },
+        helper: '审核已通过，等待入库',
+        time: confirmReviewTimeLabel,
+      };
+    }
+    if (confirmReviewStatus === 'PENDING') {
+      return {
+        tag: { color: 'processing' as const, text: '待审核' },
+        helper: '样衣已完成，等待审核',
+        time: confirmReviewTimeLabel,
+      };
+    }
+    return {
+      tag: { color: 'default' as const, text: '未开始' },
+      helper: '尚未进入审核 / 入库',
+      time: '待审核',
+    };
+  }, [
+    confirmInboundTimeLabel,
+    confirmReviewStatus,
+    confirmReviewTimeLabel,
+    isConfirmInboundCompleted,
+    isConfirmReviewPassed,
+    selectedStage,
+    selectedStageRecordScrapped,
+  ]);
+
+  const selectedStageInsightText = useMemo(() => {
+    if (!selectedStage) return selectedStageInsight;
+    if (selectedStage.stage.key === 'sample') {
+      if (selectedStageRecordScrapped || isScrappedPatternSnapshot(sampleSnapshot)) {
+        return '开发样已报废，样衣生产已停止。';
+      }
+      if (isSampleSnapshotCompleted) {
+        return '样衣生产已经完成，可以继续做审核与入库确认。';
+      }
+      if (isSampleSnapshotReceived) {
+        return sampleReceiverLabel !== '-'
+          ? `样衣已由 ${sampleReceiverLabel} 领取，当前按实际节点进度推进。`
+          : '样衣已经领取，当前按实际节点进度推进。';
+      }
+      return '当前还没有领取样衣生产，节点进度会在领取并推进后更新。';
+    }
+    if (selectedStage.stage.key === 'confirm') {
+      if (selectedStageRecordScrapped) {
+        return '开发样已报废，审核 / 入库流程已停止。';
+      }
+      if (isConfirmReviewPassed && isConfirmInboundCompleted) {
+        return '样衣已审核通过并完成入库，确认链路已经闭环。';
+      }
+      if (isRiskReviewStatus(confirmReviewStatus)) {
+        return confirmReviewStatus === 'REWORK'
+          ? '样衣审核要求返修，返修完成后再继续审核 / 入库。'
+          : '样衣审核未通过，需要先处理异常后再继续。';
+      }
+      if (isConfirmReviewPassed) {
+        return '样衣审核已通过，当前只差入库动作即可闭环。';
+      }
+      if (confirmReviewStatus === 'PENDING') {
+        return '样衣已经完成，当前等待审核结论。';
+      }
+      return '当前还没有进入审核 / 入库，请先完成样衣生产。';
+    }
+    return selectedStageInsight;
+  }, [
+    confirmReviewStatus,
+    isConfirmInboundCompleted,
+    isConfirmReviewPassed,
+    isSampleSnapshotCompleted,
+    isSampleSnapshotReceived,
+    sampleReceiverLabel,
+    sampleSnapshot,
+    selectedStage,
+    selectedStageInsight,
+    selectedStageRecordScrapped,
+  ]);
 
   const loadSampleSnapshot = useCallback(async (record: StyleInfo) => {
     const response: any = await api.get('/production/pattern/list', {
@@ -834,8 +1115,12 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
 
   const buildStageQuickActions = (selected: { record: StyleInfo; stage: SmartStage }): StageQuickAction[] => {
     const actions: StageQuickAction[] = [];
+    const scrapped = isScrappedStyle(selected.record) || isScrappedPatternSnapshot(sampleSnapshot);
+    const sampleStageCompleted = selected.stage.key === 'sample'
+      ? isSampleSnapshotCompleted || sampleCompletedTimeLabel !== '待启动'
+      : selected.stage.status === 'done';
 
-    if (selected.stage.actionKey && selected.stage.actionKey !== 'detail') {
+    if (!scrapped && selected.stage.actionKey && selected.stage.actionKey !== 'detail') {
       actions.push({
         key: 'stage-entry',
         label: selected.stage.actionLabel || '进入环节',
@@ -847,7 +1132,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
       });
     }
 
-    if (selected.stage.key === 'sample') {
+    if (!scrapped && selected.stage.key === 'sample') {
       if (sampleSnapshot?.status === 'PENDING' || !sampleSnapshot?.receiveTime || sampleSnapshot.receiveTime === '待启动') {
         actions.push({
           key: 'receive-sample',
@@ -865,7 +1150,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
         onClick: () => setProgressEditorOpen(true),
       });
 
-      if (selected.record.sampleCompletedTime) {
+      if (sampleStageCompleted || selected.record.sampleCompletedTime) {
         actions.push({
           key: 'review',
           label: selected.record.sampleReviewStatus ? '修改审核结论' : '记录审核结论',
@@ -875,7 +1160,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
       }
     }
 
-    if (selected.stage.key === 'confirm') {
+    if (!scrapped && selected.stage.key === 'confirm') {
       if (selected.record.sampleCompletedTime) {
         actions.push({
           key: 'review',
@@ -907,7 +1192,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
       }
     }
 
-    if (selected.stage.key === 'confirm' && String(selected.record.sampleReviewStatus || '').trim().toUpperCase() === 'PASS') {
+    if (!scrapped && selected.stage.key === 'confirm' && String(selected.record.sampleReviewStatus || '').trim().toUpperCase() === 'PASS') {
       actions.push(hasPushedOrder(selected.record)
         ? {
             key: 'order-view',
@@ -950,7 +1235,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
     });
 
     const uniqueActions = actions.filter((action, index, list) => list.findIndex((item) => item.key === action.key) === index);
-    if (selected.stage.status !== 'done') {
+    if (!sampleStageCompleted) {
       return uniqueActions;
     }
 
@@ -972,7 +1257,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
           <Empty description="暂无样衣数据" />
         </div>
       ) : (
-        rows.map(({ deliveryMeta, metaItems, overallProgress, progressNode, record, rowState, stages }) => {
+        rows.map(({ deliveryMeta, maintainedAfterCompletion, metaItems, overallProgress, progressNode, record, rowState, stages }) => {
           const actionButtons: StageQuickAction[] = (() => {
             if (isScrappedRow(record)) {
               return [
@@ -986,7 +1271,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                 { key: 'detail', label: '详情', type: 'primary' as const, onClick: () => navigate(`/style-info/${record.id}`) },
                 hasPushedOrder(record)
                   ? { key: 'order-view', label: '订单', type: 'default' as const, onClick: () => navigate(withQuery('/order-management', { styleNo: (record as any).styleNo, orderNo: (record as any).orderNo })) }
-                  : { key: 'order-push', label: '下单', type: 'default' as const, onClick: () => navigate(withQuery('/order-management', { styleNo: (record as any).styleNo })) },
+                  : { key: 'order-push', label: '去推送', type: 'default' as const, onClick: () => navigate(`/style-info/${record.id}`) },
                 { key: 'print', label: '打印', type: 'default' as const, onClick: () => onPrint(record) },
               ];
 
@@ -1033,7 +1318,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                   <div className="style-smart-row__identity">
                     <div className="style-smart-row__tags">
                       <Tag color={getProgressNodeColor(progressNode)}>{progressNode}</Tag>
-                      {record.maintenanceRemark ? <Tag color="gold">已维护</Tag> : null}
+                      {maintainedAfterCompletion ? <Tag color="gold">已维护</Tag> : null}
                     </div>
 
                     <Popover
@@ -1052,7 +1337,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                           {record.styleNo}
                         </button>
                         <div className="style-smart-row__title-name">{record.styleName || '未命名样衣'}</div>
-                        <span className={`style-smart-row__delivery style-smart-row__delivery--${deliveryMeta.tone}`}>
+                        <span className={`style-smart-row__delivery style-smart-row__delivery--${isScrappedRow(record) ? 'scrapped' : deliveryMeta.tone}`}>
                           {deliveryMeta.label}
                         </span>
                       </div>
@@ -1109,6 +1394,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                             <span className="style-smart-stage__ring" />
                             <span className="style-smart-stage__orbit" />
                             <span className="style-smart-stage__core" />
+                            <span className="style-smart-stage__check" />
                           </div>
                           <div className="style-smart-stage__label">{stage.label}</div>
                           <div className="style-smart-stage__helper">{stage.helper}</div>
@@ -1121,7 +1407,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                     <div className="style-smart-row__overview">
                       <div className="style-smart-row__overview-value">{overallProgress}%</div>
                       <div className="style-smart-row__overview-label">总进度</div>
-                      <Progress percent={overallProgress} showInfo={false} size="small" strokeColor="#2d7ff9" />
+                      <Progress percent={overallProgress} showInfo={false} size="small" strokeColor={isScrappedRow(record) ? '#9ca3af' : '#2d7ff9'} />
                     </div>
 
                     <div className="style-smart-row__actions">
@@ -1157,14 +1443,10 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
       )}
 
       <div className="style-smart-list__pagination">
-        <Pagination
+        <StandardPagination
           current={currentPage}
           pageSize={pageSize}
           total={total}
-          showTotal={(value) => `共 ${value} 条`}
-          showSizeChanger
-          showQuickJumper
-          pageSizeOptions={['10', '20', '50', '100']}
           onChange={onPageChange}
         />
       </div>
@@ -1174,7 +1456,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
         open={Boolean(selectedStage)}
         title={selectedStage ? `${selectedStage.record.styleNo} · ${selectedStage.stage.label}` : ''}
         onCancel={() => setSelectedStage(null)}
-        width={760}
+        width={selectedStage?.stage.key === 'sample' || selectedStage?.stage.key === 'confirm' ? 680 : 760}
         footer={selectedStage ? [
           <Button key="close" onClick={() => setSelectedStage(null)}>
             关闭
@@ -1183,23 +1465,39 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
       >
         {selectedStage && selectedStageTag ? (
           <div className="style-smart-stage-modal">
-            <div className="style-smart-stage-modal__summary">
-              <div className="style-smart-stage-modal__score">
-                <span>{selectedStage.stage.progress}%</span>
-                <Progress
-                  percent={selectedStage.stage.progress}
-                  showInfo={false}
-                  size="small"
-                  strokeColor="#2d7ff9"
-                />
+            {(selectedStage.stage.key === 'sample' && sampleStageSummary) || (selectedStage.stage.key === 'confirm' && confirmStageSummary) ? (
+              <div className="style-smart-stage-modal__summary style-smart-stage-modal__summary--compact">
+                <div className="style-smart-stage-modal__meta">
+                  <Tag color={(selectedStage.stage.key === 'sample' ? sampleStageSummary : confirmStageSummary)?.tag.color}>
+                    {(selectedStage.stage.key === 'sample' ? sampleStageSummary : confirmStageSummary)?.tag.text}
+                  </Tag>
+                  <div className="style-smart-stage-modal__helper">
+                    {(selectedStage.stage.key === 'sample' ? sampleStageSummary : confirmStageSummary)?.helper}
+                  </div>
+                  <div className="style-smart-stage-modal__time">
+                    {(selectedStage.stage.key === 'sample' ? sampleStageSummary : confirmStageSummary)?.time}
+                  </div>
+                </div>
               </div>
-              <div className="style-smart-stage-modal__meta">
-                <Tag color={selectedStageTag.color}>{selectedStageTag.text}</Tag>
-                <div className="style-smart-stage-modal__helper">{selectedStage.stage.helper}</div>
-                <div className="style-smart-stage-modal__time">{selectedStage.stage.timeLabel}</div>
+            ) : (
+              <div className="style-smart-stage-modal__summary">
+                <div className="style-smart-stage-modal__score">
+                  <span>{selectedStage.stage.progress}%</span>
+                  <Progress
+                    percent={selectedStage.stage.progress}
+                    showInfo={false}
+                    size="small"
+                    strokeColor="#2d7ff9"
+                  />
+                </div>
+                <div className="style-smart-stage-modal__meta">
+                  <Tag color={selectedStageTag.color}>{selectedStageTag.text}</Tag>
+                  <div className="style-smart-stage-modal__helper">{selectedStage.stage.helper}</div>
+                  <div className="style-smart-stage-modal__time">{selectedStage.stage.timeLabel}</div>
+                </div>
               </div>
-            </div>
-            <div className="style-smart-stage-modal__insight">{selectedStageInsight}</div>
+            )}
+            <div className="style-smart-stage-modal__insight">{selectedStageInsightText}</div>
             <div className="style-smart-stage-modal__actions">
               {selectedStageActions.map((action) => (
                 <Button
@@ -1214,16 +1512,18 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                 </Button>
               ))}
             </div>
-            <div className="style-smart-stage-modal__details">
-              {selectedStage.stage.details.map((item) => (
-                <div key={item} className="style-smart-stage-modal__detail-item">
-                  {item}
-                </div>
-              ))}
-            </div>
+            {selectedStage.stage.key !== 'sample' && selectedStage.stage.key !== 'confirm' ? (
+              <div className="style-smart-stage-modal__details">
+                {selectedStage.stage.details.map((item) => (
+                  <div key={item} className="style-smart-stage-modal__detail-item">
+                    {item}
+                  </div>
+                ))}
+              </div>
+            ) : null}
             {selectedStage.stage.key === 'sample' ? (
               <div className="style-smart-stage-modal__panel">
-                <div className="style-smart-stage-modal__panel-title">样衣生产快照</div>
+                <div className="style-smart-stage-modal__panel-title">样衣生产信息</div>
                 {sampleSnapshotLoading ? (
                   <Skeleton active paragraph={{ rows: 4 }} />
                 ) : sampleSnapshot ? (
@@ -1231,43 +1531,77 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                     <div className="style-smart-stage-modal__facts">
                       <div className="style-smart-stage-modal__fact">
                         <span>领取人</span>
-                        <strong>{sampleSnapshot.receiver || '-'}</strong>
-                      </div>
-                      <div className="style-smart-stage-modal__fact">
-                        <span>下板时间</span>
-                        <strong>{sampleSnapshot.releaseTime}</strong>
+                        <strong>{sampleReceiverLabel}</strong>
                       </div>
                       <div className="style-smart-stage-modal__fact">
                         <span>领取时间</span>
-                        <strong>{sampleSnapshot.receiveTime}</strong>
+                        <strong>{sampleReceiveTimeLabel}</strong>
                       </div>
                       <div className="style-smart-stage-modal__fact">
                         <span>完成时间</span>
                         <strong>{sampleCompletedTimeLabel}</strong>
                       </div>
                     </div>
-                    <div className="style-smart-stage-modal__processes">
-                      {sampleStageProgressItems.map((item) => (
-                        <div key={item.key} className="style-smart-stage-modal__process-item">
-                          <div className="style-smart-stage-modal__process-head">
+                    {shouldShowSampleStageProgress ? (
+                      <div className="style-smart-stage-modal__processes style-smart-stage-modal__processes--compact">
+                        {sampleStageProgressItems.map((item) => (
+                          <div key={item.key} className="style-smart-stage-modal__process-item style-smart-stage-modal__process-item--compact">
                             <span>{item.label}</span>
                             <strong>{item.percent}%</strong>
                           </div>
-                          <Progress percent={item.percent} showInfo={false} size="small" strokeColor="#2d7ff9" />
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="style-smart-stage-modal__empty">尚未领取，暂无节点进度</div>
+                    )}
                   </>
                 ) : (
                   <div className="style-smart-stage-modal__empty">当前还没有同步到样衣生产快照数据</div>
                 )}
               </div>
             ) : null}
+            {selectedStage.stage.key === 'confirm' ? (
+              <div className="style-smart-stage-modal__panel">
+                <div className="style-smart-stage-modal__panel-title">审核 / 入库信息</div>
+                <div className="style-smart-stage-modal__facts">
+                  <div className="style-smart-stage-modal__fact">
+                    <span>审核状态</span>
+                    <strong>{confirmReviewStatusLabel}</strong>
+                  </div>
+                  <div className="style-smart-stage-modal__fact">
+                    <span>审核人</span>
+                    <strong>{confirmReviewerLabel}</strong>
+                  </div>
+                  <div className="style-smart-stage-modal__fact">
+                    <span>审核时间</span>
+                    <strong>{confirmReviewTimeLabel}</strong>
+                  </div>
+                  <div className="style-smart-stage-modal__fact">
+                    <span>入库时间</span>
+                    <strong>{confirmInboundTimeLabel}</strong>
+                  </div>
+                </div>
+                {(selectedStage.record.sampleReviewComment || selectedStage.stage.details.length > 0) ? (
+                  <div className="style-smart-stage-modal__details style-smart-stage-modal__details--compact">
+                    {selectedStage.record.sampleReviewComment ? (
+                      <div className="style-smart-stage-modal__detail-item">
+                        审核意见：{String(selectedStage.record.sampleReviewComment)}
+                      </div>
+                    ) : null}
+                    {!selectedStage.record.sampleReviewComment && selectedStage.stage.details.map((item) => (
+                      <div key={item} className="style-smart-stage-modal__detail-item">
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         ) : null}
       </Modal>
 
-      <Modal
+      <SmallModal
         open={progressEditorOpen}
         title="更新样衣进度"
         onCancel={() => setProgressEditorOpen(false)}
@@ -1291,9 +1625,9 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
             </div>
           ))}
         </div>
-      </Modal>
+      </SmallModal>
 
-      <Modal
+      <SmallModal
         open={reviewModalOpen}
         title="记录样衣审核结论"
         onCancel={() => setReviewModalOpen(false)}
@@ -1316,7 +1650,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
             <Input.TextArea rows={4} placeholder="可填写审核意见或返修要求" />
           </Form.Item>
         </Form>
-      </Modal>
+      </SmallModal>
     </>
   );
 };

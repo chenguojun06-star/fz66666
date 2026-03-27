@@ -55,6 +55,12 @@ public class Receivable {
     /** 备注 */
     private String description;
 
+    private String sourceBizType;
+
+    private String sourceBizId;
+
+    private String sourceBizNo;
+
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 

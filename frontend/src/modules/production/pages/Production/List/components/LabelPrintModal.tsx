@@ -3,13 +3,13 @@
  *  Tab 1 — 打印洗水唛：按 SKU 展示可编辑打印数，生成洗水唛标签
  *  Tab 2 — 打印U编码：按 SKU 展示可编辑打印数，生成 U 编码 / QR 标签
  */
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Button, Checkbox, InputNumber, Radio, Space, Spin, Tabs, Tag } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
 import QRCode from 'qrcode';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
-import api from '@/utils/api';
+import api, { parseProductionOrderLines } from '@/utils/api';
 import type { ProductionOrder } from '@/types/production';
 import type { ColumnsType } from 'antd/es/table';
 import { StyleCoverThumb } from '@/components/StyleAssets';
@@ -161,6 +161,34 @@ async function loadSkuRows(order: ProductionOrder): Promise<SkuRow[]> {
       });
     }
   } catch { /* ignore */ }
+  const detailLines = parseProductionOrderLines(order);
+  if (detailLines.length > 0) {
+    const grouped = new Map<string, SkuRow>();
+    detailLines.forEach((item) => {
+      const color = String(item.color || '').trim() || String(order.color || '').trim() || '-';
+      const size = String(item.size || '').trim() || String(order.size || '').trim() || '-';
+      const quantity = Number(item.quantity || 0) || 0;
+      const key = `${color}__${size}`;
+      const existing = grouped.get(key);
+      if (existing) {
+        existing.quantity += quantity;
+        existing.printCount += quantity;
+        return;
+      }
+      grouped.set(key, {
+        key,
+        color,
+        size,
+        quantity,
+        printCount: quantity,
+        sku: String(item.skuNo || `${order.styleNo || ''}-${color}-${size}`),
+        styleImageUrl: order.styleCover || '',
+        styleId: order.styleId || '',
+        styleNo: order.styleNo || '',
+      });
+    });
+    return Array.from(grouped.values());
+  }
   return [{
     key: `${order.color ?? ''}__${order.size ?? ''}`,
     color: order.color || '-',

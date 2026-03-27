@@ -1028,7 +1028,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
         rowKey="id"
         dataSource={filteredScanRecords}
         columns={scanColumns}
-        pagination={{ pageSize: 10, size: 'small', showTotal: (total) => `共 ${total} 条`, showSizeChanger: false }}
+        pagination={{ size: 'small', showTotal: (total) => `共 ${total} 条`, showSizeChanger: false }}
         scroll={{ y: 280 }}
       />
     </div>
@@ -1051,7 +1051,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
           rowKey="id"
           dataSource={bundlesWithStatus}
           columns={bundleColumns}
-          pagination={{ pageSize: 10, size: 'small', showTotal: (total) => `共 ${total} 条`, showSizeChanger: false }}
+          pagination={{ size: 'small', showTotal: (total) => `共 ${total} 条`, showSizeChanger: false }}
           scroll={{ y: 280 }}
         />
       </div>
@@ -1241,6 +1241,8 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                       <ProcessTrackingTable
                         records={processTrackingRecords}
                         loading={trackingLoading}
+                        orderId={orderId}
+                        orderNo={orderSummary.orderNo || orderNo}
                         nodeType={nodeType}
                         nodeName={nodeName}
                         processList={trackingFilterList.length > 0 ? trackingFilterList : undefined}

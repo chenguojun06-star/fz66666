@@ -21,6 +21,10 @@ export interface MaterialPickupRecord {
   id: string;
   pickupNo: string;
   pickupType: 'INTERNAL' | 'EXTERNAL';
+  movementType?: 'INBOUND' | 'OUTBOUND';
+  sourceType?: string;
+  usageType?: string;
+  sourceDocumentNo?: string;
   orderNo?: string;
   styleNo?: string;
   factoryName?: string;
@@ -41,6 +45,11 @@ export interface MaterialPickupRecord {
   amount?: number;
   pickerId?: string;
   pickerName?: string;
+  receiverId?: string;
+  receiverName?: string;
+  issuerId?: string;
+  issuerName?: string;
+  warehouseLocation?: string;
   pickupTime?: string;
   auditStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
   auditorName?: string;
@@ -48,6 +57,11 @@ export interface MaterialPickupRecord {
   auditRemark?: string;
   financeStatus: 'PENDING' | 'SETTLED';
   financeRemark?: string;
+  receivableId?: string;
+  receivableNo?: string;
+  receivableStatus?: 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE';
+  receivedAmount?: number;
+  receivedTime?: string;
   remark?: string;
   createTime?: string;
 }
@@ -63,21 +77,37 @@ export function useMaterialPickupData() {
   const [financeStatus, setFinanceStatus] = useState<string>('');
   const [orderNo, setOrderNo]           = useState('');
   const [styleNo, setStyleNo]           = useState('');
+  const [factoryName, setFactoryName]   = useState('');
+  const [factoryType, setFactoryType]   = useState<string>('');
 
-  const pagination = useTablePagination(20);
+  const pagination = useTablePagination(20, 'material-pickup-records');
+  const { current, pageSize } = pagination.pagination;
+  const { setPageSize, setTotal } = pagination;
+  const paymentPagination = useTablePagination(20, 'material-payment-center');
+  const { pageSize: paymentPageSize } = paymentPagination.pagination;
+  const { setPageSize: setPaymentPageSize, setTotal: setPaymentTotal } = paymentPagination;
+
+  useEffect(() => {
+    if (pageSize < 20) {
+      setPageSize(20);
+    }
+  }, [pageSize, setPageSize]);
+
+  useEffect(() => {
+    if (paymentPageSize < 20) {
+      setPaymentPageSize(20);
+    }
+  }, [paymentPageSize, setPaymentPageSize]);
 
   // 弹窗
-  const createModal  = useModal<null>();
   const auditModal   = useModal<MaterialPickupRecord>();
   const financeModal = useModal<MaterialPickupRecord>();
 
   // 表单
-  const [createForm] = Form.useForm();
   const [auditForm]  = Form.useForm();
   const [financeForm] = Form.useForm();
 
   // 操作状态
-  const [creating, setCreating]   = useState(false);
   const [auditing, setAuditing]   = useState(false);
   const [settling, setSettling]   = useState(false);
 
@@ -97,45 +127,30 @@ export function useMaterialPickupData() {
     if (!opt?.silent) setLoading(true);
     try {
       const res = await api.post('/warehouse/material-pickup/list', {
-        page: opt?.page ?? pagination.pagination.current ?? 1,
-        pageSize: pagination.pagination.pageSize ?? 20,
+        page: opt?.page ?? current ?? 1,
+        pageSize: pageSize ?? 20,
         keyword:       keyword       || undefined,
         pickupType:    pickupType    || undefined,
         auditStatus:   auditStatus   || undefined,
         financeStatus: financeStatus || undefined,
         orderNo:       orderNo       || undefined,
         styleNo:       styleNo       || undefined,
+        factoryName:   factoryName   || undefined,
+        factoryType:   factoryType   || undefined,
       });
       const data = res?.data ?? res;
       setDataSource(Array.isArray(data?.records) ? data.records : []);
-      pagination.setTotal?.(Number(data?.total ?? 0));
+      setTotal(Number(data?.total ?? 0));
     } catch {
       message.error('加载领取记录失败');
     } finally {
       if (!opt?.silent) setLoading(false);
     }
-  }, [keyword, pickupType, auditStatus, financeStatus, orderNo, styleNo, pagination]);
+  }, [auditStatus, current, factoryName, factoryType, financeStatus, keyword, orderNo, pageSize, pickupType, setTotal, styleNo]);
 
   useEffect(() => {
     void fetchData({ silent: true });
-  }, [fetchData, pagination.pagination.current, pagination.pagination.pageSize]);
-
-  // ===== 新建 =====
-  const handleCreate = async () => {
-    const values = await createForm.validateFields();
-    setCreating(true);
-    try {
-      await api.post('/warehouse/material-pickup', values);
-      message.success('领取记录创建成功');
-      createModal.close();
-      createForm.resetFields();
-      void fetchData();
-    } catch {
-      message.error('创建失败，请重试');
-    } finally {
-      setCreating(false);
-    }
-  };
+  }, [fetchData]);
 
   // ===== 审核（单条）=====
   const handleAudit = async () => {
@@ -181,19 +196,19 @@ export function useMaterialPickupData() {
     }
   };
 
-  // ===== 财务核算 =====
+  // ===== 账单补录/修正 =====
   const handleFinanceSettle = async () => {
     const values = await financeForm.validateFields();
     if (!financeModal.data) return;
     setSettling(true);
     try {
       await api.post(`/warehouse/material-pickup/${financeModal.data.id}/finance-settle`, values);
-      message.success('财务核算完成');
+      message.success('应收账单已同步');
       financeModal.close();
       financeForm.resetFields();
       void fetchData();
     } catch {
-      message.error('财务核算操作失败');
+      message.error('账单同步失败');
     } finally {
       setSettling(false);
     }
@@ -216,22 +231,24 @@ export function useMaterialPickupData() {
     try {
       const res = await api.post('/warehouse/material-pickup/payment-center/list', params ?? {});
       const data = res?.data ?? res;
-      setPaymentCenterData(Array.isArray(data) ? data : []);
+      const records = Array.isArray(data) ? data : [];
+      setPaymentCenterData(records);
+      setPaymentTotal(records.length);
     } catch {
       message.error('加载收款中心失败');
     } finally {
       setPaymentCenterLoading(false);
     }
-  }, []);
+  }, [setPaymentTotal]);
 
   const handlePaymentSettle = async (ids: string[], remark?: string) => {
     setPaymentSettling(true);
     try {
       await api.post('/warehouse/material-pickup/payment-center/settle', { ids, remark });
-      message.success(`已标记 ${ids.length} 条记录为已收款`);
+      message.success(`已登记 ${ids.length} 条记录的收款`);
       void fetchPaymentCenter();
     } catch {
-      message.error('标记收款失败，请重试');
+      message.error('登记收款失败，请重试');
     } finally {
       setPaymentSettling(false);
     }
@@ -247,18 +264,20 @@ export function useMaterialPickupData() {
     financeStatus, setFinanceStatus,
     orderNo, setOrderNo,
     styleNo, setStyleNo,
+    factoryName, setFactoryName,
+    factoryType, setFactoryType,
     // 分页
-    pagination,
+    pagination, paymentPagination,
     // 弹窗
-    createModal, auditModal, financeModal, batchAuditModal,
+    auditModal, financeModal, batchAuditModal,
     // 表单
-    createForm, auditForm, financeForm, batchAuditForm,
+    auditForm, financeForm, batchAuditForm,
     // 加载状态
-    creating, auditing, settling, batchAuditing, paymentSettling,
+    auditing, settling, batchAuditing, paymentSettling,
     // 批量选择
     selectedRowKeys, setSelectedRowKeys,
     // 操作
-    handleCreate, handleAudit, handleBatchAudit,
+    handleAudit, handleBatchAudit,
     handleFinanceSettle, handleCancel,
     fetchData,
     // 收款中心

@@ -8,6 +8,7 @@ import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.FinishedProductSettlement;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.production.util.OrderPricingSnapshotUtils;
 import com.fashion.supplychain.finance.service.FinishedProductSettlementService;
 import com.fashion.supplychain.finance.service.FinishedSettlementApprovalStatusService;
 import com.fashion.supplychain.finance.service.FinishedProductSettlementExportService;
@@ -26,6 +27,8 @@ import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
@@ -136,7 +139,7 @@ public class FinishedProductSettlementController {
         if (StringUtils.isNotBlank(ctxFactoryId) && !ctxFactoryId.equals(settlement.getFactoryId())) {
             return Result.fail("未找到该订单的结算数据");
         }
-
+        enrichSettlementRecords(Collections.singletonList(settlement));
         return Result.success(settlement);
     }
 
@@ -188,6 +191,7 @@ public class FinishedProductSettlementController {
 
         // 查询所有数据
         List<FinishedProductSettlement> data = settlementService.list(wrapper);
+        enrichSettlementRecords(data);
 
         // 导出为Excel
         byte[] excelBytes = exportService.exportToExcel(data);
@@ -479,7 +483,36 @@ public class FinishedProductSettlementController {
             record.setOrgPath(StringUtils.isNotBlank(order != null ? order.getOrgPath() : null)
                     ? order.getOrgPath()
                     : factory != null ? factory.getOrgPath() : null);
+            applyLockedOrderPrice(record, order);
         }
+    }
+
+    private void applyLockedOrderPrice(FinishedProductSettlement record, ProductionOrder order) {
+        if (record == null || order == null) {
+            return;
+        }
+        BigDecimal lockedUnitPrice = OrderPricingSnapshotUtils.resolveLockedOrderUnitPrice(
+                order.getFactoryUnitPrice(),
+                order.getOrderDetails());
+        if (lockedUnitPrice.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        int qty = record.getWarehousedQuantity() != null && record.getWarehousedQuantity() > 0
+                ? record.getWarehousedQuantity()
+                : Math.max(0, record.getOrderQuantity() == null ? 0 : record.getOrderQuantity());
+        BigDecimal totalAmount = lockedUnitPrice.multiply(BigDecimal.valueOf(qty)).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal materialCost = record.getMaterialCost() == null ? BigDecimal.ZERO : record.getMaterialCost();
+        BigDecimal productionCost = record.getProductionCost() == null ? BigDecimal.ZERO : record.getProductionCost();
+        BigDecimal defectLoss = record.getDefectLoss() == null ? BigDecimal.ZERO : record.getDefectLoss();
+        BigDecimal totalCost = materialCost.add(productionCost).add(defectLoss).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal profit = totalAmount.subtract(totalCost).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal margin = totalAmount.compareTo(BigDecimal.ZERO) > 0
+                ? profit.multiply(BigDecimal.valueOf(100)).divide(totalAmount, 2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+        record.setStyleFinalPrice(lockedUnitPrice.setScale(2, RoundingMode.HALF_UP));
+        record.setTotalAmount(totalAmount);
+        record.setProfit(profit);
+        record.setProfitMargin(margin);
     }
 
     private String resolveOrgPathForFactory(Map<String, Object> row, List<FinishedProductSettlement> allData,

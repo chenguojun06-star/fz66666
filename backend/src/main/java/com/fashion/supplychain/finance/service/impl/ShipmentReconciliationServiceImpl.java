@@ -5,8 +5,9 @@ import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
 import com.fashion.supplychain.finance.mapper.ShipmentReconciliationMapper;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
-import com.fashion.supplychain.style.service.StyleInfoService;
-import com.fashion.supplychain.style.service.StyleQuotationService;
+import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.production.util.OrderPricingSnapshotUtils;
 import org.springframework.stereotype.Service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -22,9 +23,10 @@ import java.util.Map;
 public class ShipmentReconciliationServiceImpl extends BaseReconciliationServiceImpl<ShipmentReconciliation, ShipmentReconciliationMapper>
         implements ShipmentReconciliationService {
 
-    public ShipmentReconciliationServiceImpl(StyleInfoService styleInfoService, StyleQuotationService styleQuotationService) {
-        this.setStyleInfoService(styleInfoService);
-        this.setStyleQuotationService(styleQuotationService);
+    private final ProductionOrderService productionOrderService;
+
+    public ShipmentReconciliationServiceImpl(ProductionOrderService productionOrderService) {
+        this.productionOrderService = productionOrderService;
     }
 
     @Override
@@ -42,8 +44,19 @@ public class ShipmentReconciliationServiceImpl extends BaseReconciliationService
         if (r == null) {
             return;
         }
-        // 优先从款号报价中获取单价
-        BigDecimal computedUp = resolveTotalUnitPriceFromStyleQuotation(r.getStyleNo(), r.getStyleId());
+        ProductionOrder order = null;
+        if (StringUtils.hasText(r.getOrderId())) {
+            order = productionOrderService.getById(r.getOrderId().trim());
+        }
+        if (order == null && StringUtils.hasText(r.getOrderNo())) {
+            order = productionOrderService.lambdaQuery()
+                    .eq(ProductionOrder::getOrderNo, r.getOrderNo().trim())
+                    .last("limit 1")
+                    .one();
+        }
+        BigDecimal computedUp = order == null
+                ? BigDecimal.ZERO
+                : OrderPricingSnapshotUtils.resolveLockedOrderUnitPrice(order.getFactoryUnitPrice(), order.getOrderDetails());
         if (computedUp.compareTo(BigDecimal.ZERO) > 0) {
             autoFixAmounts(r, computedUp);
         }

@@ -19,6 +19,7 @@ import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import '../../../styles.css';
 import { message } from '@/utils/antdStatic';
+import { formatReferenceKilograms } from '../MaterialPurchase/utils';
 
 type FlowStage = {
   processName: string;
@@ -90,6 +91,8 @@ const OrderFlow: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<OrderFlowResponse | null>(null);
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
+  const [styleProcessDescriptionMap, setStyleProcessDescriptionMap] = useState<Map<string, string>>(new Map());
+  const [secondaryProcessDescriptionMap, setSecondaryProcessDescriptionMap] = useState<Map<string, string>>(new Map());
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
@@ -123,6 +126,42 @@ const OrderFlow: React.FC = () => {
   useEffect(() => {
     fetchFlow();
   }, [query.orderId]);
+
+  useEffect(() => {
+    const styleId = String(data?.order?.styleId || '').trim();
+    if (!styleId) {
+      setStyleProcessDescriptionMap(new Map());
+      setSecondaryProcessDescriptionMap(new Map());
+      return;
+    }
+    (async () => {
+      try {
+        const [processRes, secondaryRes] = await Promise.all([
+          api.get(`/style/process/list?styleId=${styleId}`),
+          api.get(`/style/secondary-process/list?styleId=${styleId}`),
+        ]);
+        const processRows = Array.isArray((processRes as any)?.data) ? (processRes as any).data : [];
+        const secondaryRows = Array.isArray((secondaryRes as any)?.data) ? (secondaryRes as any).data : [];
+        const nextProcessMap = new Map<string, string>();
+        const nextSecondaryMap = new Map<string, string>();
+        processRows.forEach((item: any) => {
+          const name = String(item?.processName || item?.name || '').trim();
+          const description = String(item?.description || '').trim();
+          if (name && description) nextProcessMap.set(name, description);
+        });
+        secondaryRows.forEach((item: any) => {
+          const name = String(item?.processName || item?.name || '').trim();
+          const description = String(item?.description || '').trim();
+          if (name && description) nextSecondaryMap.set(name, description);
+        });
+        setStyleProcessDescriptionMap(nextProcessMap);
+        setSecondaryProcessDescriptionMap(nextSecondaryMap);
+      } catch {
+        setStyleProcessDescriptionMap(new Map());
+        setSecondaryProcessDescriptionMap(new Map());
+      }
+    })();
+  }, [data?.order?.styleId]);
 
   // 合并采购信息到stages
   const enrichedStages = useMemo(() => {
@@ -341,26 +380,28 @@ const OrderFlow: React.FC = () => {
     [data?.warehousings],
   );
 
-  // 计算裁剪数量（按尺码聚合）
+  // 计算裁剪数量（按颜色+尺码聚合）
   const cuttingSizeItems = useMemo(() => {
     const cuttingBundles = (data?.cuttingBundles || []) as CuttingBundle[];
     if (cuttingBundles.length === 0) return undefined;
 
-    // 按尺码聚合裁剪数量
-    const sizeMap = new Map<string, number>();
+    const bundleMap = new Map<string, { color?: string; size: string; quantity: number }>();
     cuttingBundles.forEach(bundle => {
+      const color = String(bundle.color || '').trim();
       const size = String(bundle.size || '').trim();
       const quantity = toNumberSafe(bundle.quantity);
       if (size && quantity > 0) {
-        sizeMap.set(size, (sizeMap.get(size) || 0) + quantity);
+        const key = `${color}__${size}`;
+        const current = bundleMap.get(key);
+        if (current) {
+          current.quantity += quantity;
+        } else {
+          bundleMap.set(key, { color, size, quantity });
+        }
       }
     });
 
-    // 转换为数组格式
-    return Array.from(sizeMap.entries()).map(([size, quantity]) => ({
-      size,
-      quantity,
-    }));
+    return Array.from(bundleMap.values());
   }, [data?.cuttingBundles]);
 
   return (
@@ -505,7 +546,7 @@ const OrderFlow: React.FC = () => {
                                   standardTime: item.standardTime || 0,
                                   unitPrice: Number(item.unitPrice) || 0,
                                   sortOrder: item.sortOrder ?? idx,
-                                  remark: item.remark || '',
+                                  description: item.description || item.remark || '',
                                 }));
                               } else {
                                 // 旧格式：从 processesByNode 读取
@@ -525,7 +566,7 @@ const OrderFlow: React.FC = () => {
                                       standardTime: p.standardTime || 0,
                                       unitPrice: Number(p.unitPrice) || 0,
                                       sortOrder: sortIdx,
-                                      remark: p.remark || '',
+                                      description: p.description || p.remark || '',
                                     });
                                     sortIdx++;
                                   }
@@ -547,12 +588,24 @@ const OrderFlow: React.FC = () => {
                               standardTime: item.standardTime || 0,
                               unitPrice: Number(item.unitPrice) || Number(item.price) || 0,
                               sortOrder: item.sortOrder ?? idx,
-                              remark: item.remark || '',
+                              description: item.description || item.remark || '',
                             }));
                           }
 
                           // 如果有工序数据，显示表格
                           if (workflowNodes.length > 0) {
+                            workflowNodes = workflowNodes.map((item) => {
+                              const processName = String(item?.name || '').trim();
+                              const stageName = String(item?.progressStage || '').trim();
+                              const isSecondary = stageName.includes('二次工艺') || processName.includes('二次工艺');
+                              const description = String(item?.description || '').trim()
+                                || (isSecondary ? secondaryProcessDescriptionMap.get(processName) : styleProcessDescriptionMap.get(processName))
+                                || '';
+                              return {
+                                ...item,
+                                description,
+                              };
+                            });
                             const totalPrice = workflowNodes.reduce((sum, item) => sum + (item.unitPrice || 0), 0);
 
                             return (
@@ -636,9 +689,9 @@ const OrderFlow: React.FC = () => {
                                       render: (v: any) => <strong style={{ color: 'var(--primary-color)' }}>¥{Number(v || 0).toFixed(2)}</strong>
                                     },
                                     {
-                                      title: '说明',
-                                      dataIndex: 'remark',
-                                      key: 'remark',
+                                      title: '工序描述',
+                                      dataIndex: 'description',
+                                      key: 'description',
                                       ellipsis: true,
                                       render: (v: any) => v || '-'
                                     },
@@ -743,12 +796,8 @@ const OrderFlow: React.FC = () => {
                                 key: 'referenceKilograms',
                                 width: 120,
                                 align: 'right',
-                                render: (_: any, record: any) => {
-                                  const meters = Number(record.purchaseQuantity || 0);
-                                  const rate = Number(record.conversionRate || 0);
-                                  if (!rate || rate <= 0) return '-';
-                                  return `${(meters / rate).toFixed(2)} 公斤`;
-                                }
+                                render: (_: any, record: any) =>
+                                  formatReferenceKilograms(record.purchaseQuantity, record.conversionRate, record.unit)
                               },
                               {
                                 title: '已到货',

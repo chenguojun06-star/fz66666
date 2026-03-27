@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Card, Col, DatePicker, Descriptions, Form, Input, InputNumber, Modal, Row, Select, Space, Statistic, Tag, Typography } from 'antd';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   CheckCircleOutlined, DollarOutlined, ExclamationCircleOutlined,
   PlusOutlined, WarningOutlined,
@@ -8,9 +9,11 @@ import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
+import SmallModal from '@/components/common/SmallModal';
 import RowActions, { type RowAction } from '@/components/common/RowActions';
-import { receivableApi, type Receivable, type ReceivableStats } from '@/services/crm/customerApi';
+import { receivableApi, type Receivable, type ReceivableReceiptLog, type ReceivableStats } from '@/services/crm/customerApi';
 import { message } from '@/utils/antdStatic';
+import { paths } from '@/routeConfig';
 
 const { Text } = Typography;
 
@@ -129,7 +132,7 @@ const MarkReceivedModal: React.FC<{
 
   useEffect(() => {
     if (open && record) {
-      form.setFieldsValue({ amount: remaining });
+      form.setFieldsValue({ amount: remaining, remark: '' });
     }
   }, [open, record, form, remaining]);
 
@@ -139,11 +142,11 @@ const MarkReceivedModal: React.FC<{
   }, [form, onClose]);
 
   const handleOk = async () => {
-    const { amount } = await form.validateFields();
+    const { amount, remark } = await form.validateFields();
     if (!record?.id) return;
     setSaving(true);
     try {
-      await receivableApi.markReceived(record.id, amount);
+      await receivableApi.markReceived(record.id, amount, remark);
       message.success('到账金额已登记');
       onSuccess();
       handleClose();
@@ -155,14 +158,12 @@ const MarkReceivedModal: React.FC<{
   };
 
   return (
-    <ResizableModal
+    <SmallModal
       title="登记到账"
       open={open}
       onOk={handleOk}
       onCancel={handleClose}
       confirmLoading={saving}
-      width="30vw"
-      destroyOnHidden
     >
       {record && (
         <div style={{ marginTop: 16 }}>
@@ -183,9 +184,90 @@ const MarkReceivedModal: React.FC<{
             >
               <InputNumber min={0.01} precision={2} style={{ width: '100%' }} placeholder="0.00" />
             </Form.Item>
+            <Form.Item name="remark" label="到账备注">
+              <Input.TextArea rows={3} placeholder="选填" />
+            </Form.Item>
           </Form>
         </div>
       )}
+    </SmallModal>
+  );
+};
+
+const ReceivableDetailModal: React.FC<{
+  open: boolean;
+  receivableId?: string;
+  onClose: () => void;
+}> = ({ open, receivableId, onClose }) => {
+  const [loading, setLoading] = useState(false);
+  const [detail, setDetail] = useState<Receivable | null>(null);
+  const [logs, setLogs] = useState<ReceivableReceiptLog[]>([]);
+
+  useEffect(() => {
+    if (!open || !receivableId) {
+      setDetail(null);
+      setLogs([]);
+      return;
+    }
+    setLoading(true);
+    void receivableApi.detail(receivableId)
+      .then((res) => {
+        const data = (res as any)?.data ?? res;
+        setDetail(data?.receivable ?? null);
+        setLogs(Array.isArray(data?.receiptLogs) ? data.receiptLogs : []);
+      })
+      .catch(() => {
+        message.error('加载应收详情失败');
+      })
+      .finally(() => setLoading(false));
+  }, [open, receivableId]);
+
+  return (
+    <ResizableModal
+      title={`应收详情${detail?.receivableNo ? ` - ${detail.receivableNo}` : ''}`}
+      open={open}
+      onCancel={onClose}
+      footer={null}
+      width="56vw"
+      destroyOnHidden
+    >
+      <div style={{ marginTop: 16 }}>
+        <Descriptions size="small" column={2} bordered>
+          <Descriptions.Item label="客户名称">{detail?.customerName || '-'}</Descriptions.Item>
+          <Descriptions.Item label="关联订单">{detail?.orderNo || '-'}</Descriptions.Item>
+          <Descriptions.Item label="来源业务">
+            {detail?.sourceBizType === 'MATERIAL_PICKUP' ? <Tag color="purple">面辅料领取</Tag> : (detail?.sourceBizType || '-')}
+          </Descriptions.Item>
+          <Descriptions.Item label="来源单号">{detail?.sourceBizNo || '-'}</Descriptions.Item>
+          <Descriptions.Item label="应收金额">¥ {fmt(detail?.amount)}</Descriptions.Item>
+          <Descriptions.Item label="已收金额">¥ {fmt(detail?.receivedAmount)}</Descriptions.Item>
+          <Descriptions.Item label="待收余款">
+            ¥ {fmt((Number(detail?.amount ?? 0) - Number(detail?.receivedAmount ?? 0)))}
+          </Descriptions.Item>
+          <Descriptions.Item label="状态">
+            {detail?.status ? <Tag color={(STATUS_CONFIG[detail.status] ?? { color: 'default' }).color}>{(STATUS_CONFIG[detail.status] ?? { label: detail.status }).label}</Tag> : '-'}
+          </Descriptions.Item>
+          <Descriptions.Item label="到期日">{detail?.dueDate || '-'}</Descriptions.Item>
+          <Descriptions.Item label="备注">{detail?.description || '-'}</Descriptions.Item>
+        </Descriptions>
+        <Card size="small" title="回款流水" style={{ marginTop: 16 }}>
+          <ResizableTable
+            rowKey="id"
+            size="small"
+            pagination={false}
+            loading={loading}
+            dataSource={logs}
+            scroll={{ x: 720 }}
+            locale={{ emptyText: '暂无回款流水' }}
+            columns={[
+              { title: '回款时间', dataIndex: 'receivedTime', width: 160, render: (v?: string) => v?.replace('T', ' ').substring(0, 16) || '-' },
+              { title: '回款金额', dataIndex: 'receivedAmount', width: 120, align: 'right', render: (v?: number) => `¥ ${fmt(v)}` },
+              { title: '操作人', dataIndex: 'operatorName', width: 120, render: (v?: string) => v || '-' },
+              { title: '备注', dataIndex: 'remark', render: (v?: string) => v || '-' },
+            ]}
+          />
+        </Card>
+      </div>
     </ResizableModal>
   );
 };
@@ -193,20 +275,40 @@ const MarkReceivedModal: React.FC<{
 // ─── 主页组件 ──────────────────────────────────────────────────────────────
 
 const ReceivableList: React.FC = () => {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [records, setRecords] = useState<Receivable[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<ReceivableStats>({ totalPending: 0, totalOverdue: 0, overdueCount: 0, newThisMonth: 0 });
   const [statusFilter, setStatusFilter] = useState('');
+  const [keyword, setKeyword] = useState('');
+  const [sourceBizType, setSourceBizType] = useState('');
+  const [sourceBizNo, setSourceBizNo] = useState('');
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20 });
   const [createOpen, setCreateOpen] = useState(false);
   const [receiveOpen, setReceiveOpen] = useState(false);
   const [activeRecord, setActiveRecord] = useState<Receivable | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailReceivableId, setDetailReceivableId] = useState<string>();
 
-  const fetchList = useCallback(async (page = pagination.current, st = statusFilter) => {
+  const fetchList = useCallback(async (
+    page = pagination.current,
+    st = statusFilter,
+    kw = keyword,
+    bizType = sourceBizType,
+    bizNo = sourceBizNo,
+  ) => {
     setLoading(true);
     try {
-      const res = await receivableApi.list({ page, pageSize: pagination.pageSize, status: st || undefined });
+      const res = await receivableApi.list({
+        page,
+        pageSize: pagination.pageSize,
+        status: st || undefined,
+        keyword: kw || undefined,
+        sourceBizType: bizType || undefined,
+        sourceBizNo: bizNo || undefined,
+      });
       const data = (res as any)?.data ?? res;
       setRecords(data?.records ?? []);
       setTotal(data?.total ?? 0);
@@ -215,7 +317,7 @@ const ReceivableList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [pagination.pageSize, statusFilter]);
+  }, [keyword, pagination.pageSize, sourceBizNo, sourceBizType, statusFilter]);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -226,9 +328,52 @@ const ReceivableList: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    fetchList(1);
+    const initialStatus = searchParams.get('status') || '';
+    const initialKeyword = searchParams.get('keyword') || '';
+    const initialSourceBizType = searchParams.get('sourceBizType') || '';
+    const initialSourceBizNo = searchParams.get('sourceBizNo') || '';
+    const initialReceivableId = searchParams.get('receivableId') || undefined;
+    setStatusFilter(initialStatus);
+    setKeyword(initialKeyword);
+    setSourceBizType(initialSourceBizType);
+    setSourceBizNo(initialSourceBizNo);
+    setDetailReceivableId(initialReceivableId);
+    setDetailOpen(Boolean(initialReceivableId));
+    fetchList(1, initialStatus, initialKeyword, initialSourceBizType, initialSourceBizNo);
     fetchStats();
-  }, []);
+  }, [fetchList, fetchStats, searchParams]);
+
+  const goToMaterialPickup = useCallback((record: Receivable, tab: 'pickup' | 'payment') => {
+    const params = new URLSearchParams();
+    params.set('tab', tab);
+    params.set('sourceBizType', record.sourceBizType || 'MATERIAL_PICKUP');
+    if (record.sourceBizNo) {
+      params.set('pickupNo', record.sourceBizNo);
+    }
+    if (record.customerName) {
+      params.set('factoryName', record.customerName);
+    }
+    navigate(`${paths.materialInventory}?${params.toString()}`);
+  }, [navigate]);
+
+  const openReceivableDetail = useCallback((record: Receivable) => {
+    if (!record.id) {
+      return;
+    }
+    setDetailReceivableId(record.id);
+    setDetailOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.set('receivableId', record.id);
+    setSearchParams(next);
+  }, [searchParams, setSearchParams]);
+
+  const closeReceivableDetail = useCallback(() => {
+    setDetailOpen(false);
+    setDetailReceivableId(undefined);
+    const next = new URLSearchParams(searchParams);
+    next.delete('receivableId');
+    setSearchParams(next);
+  }, [searchParams, setSearchParams]);
 
   const handleDelete = (record: Receivable) => {
     Modal.confirm({
@@ -246,9 +391,36 @@ const ReceivableList: React.FC = () => {
   };
 
   const columns: ColumnsType<Receivable> = [
-    { title: '单号', dataIndex: 'receivableNo', width: 160, render: v => <Text code style={{ fontSize: 12 }}>{v}</Text> },
+    {
+      title: '单号',
+      dataIndex: 'receivableNo',
+      width: 160,
+      render: (v, record) => (
+        <Button type="link" size="small" style={{ padding: 0 }} onClick={() => openReceivableDetail(record)}>
+          <Text code style={{ fontSize: 12 }}>{v}</Text>
+        </Button>
+      ),
+    },
     { title: '客户名称', dataIndex: 'customerName', width: 160 },
     { title: '关联订单', dataIndex: 'orderNo', width: 140, render: v => v || '-' },
+    {
+      title: '来源业务',
+      dataIndex: 'sourceBizType',
+      width: 120,
+      render: (v?: string) => v === 'MATERIAL_PICKUP' ? <Tag color="purple">面辅料领取</Tag> : (v || '-'),
+    },
+    {
+      title: '来源单号',
+      dataIndex: 'sourceBizNo',
+      width: 160,
+      render: (v, record) => (
+        record.sourceBizType === 'MATERIAL_PICKUP' && v ? (
+          <Button type="link" size="small" style={{ padding: 0 }} onClick={() => goToMaterialPickup(record, 'pickup')}>
+            {v}
+          </Button>
+        ) : (v || '-')
+      ),
+    },
     {
       title: '应收金额', dataIndex: 'amount', width: 120, align: 'right',
       render: v => <Text strong>¥ {fmt(v)}</Text>,
@@ -285,6 +457,20 @@ const ReceivableList: React.FC = () => {
       render: (_, record) => {
         const canReceive = record.status === 'PENDING' || record.status === 'PARTIAL' || record.status === 'OVERDUE';
         const actions: RowAction[] = [
+          {
+            key: 'detail',
+            label: '应收详情',
+            onClick: () => openReceivableDetail(record),
+          },
+          ...(record.sourceBizType === 'MATERIAL_PICKUP' ? [{
+            key: 'pickup',
+            label: '查看领料',
+            onClick: () => goToMaterialPickup(record, 'pickup'),
+          }, {
+            key: 'payment-center',
+            label: '查看收款汇总',
+            onClick: () => goToMaterialPickup(record, 'payment'),
+          }] : []),
           ...(canReceive ? [{
             key: 'receive',
             label: '登记到账',
@@ -376,7 +562,11 @@ const ReceivableList: React.FC = () => {
               <Space>
                 <Select
                   value={statusFilter}
-                  onChange={v => { setStatusFilter(v); setPagination(p => ({ ...p, current: 1 })); fetchList(1, v); }}
+                  onChange={v => {
+                    setStatusFilter(v);
+                    setPagination(p => ({ ...p, current: 1 }));
+                    fetchList(1, v, keyword, sourceBizType, sourceBizNo);
+                  }}
                   style={{ width: 140 }}
                   options={[
                     { value: '', label: '全部状态' },
@@ -386,6 +576,38 @@ const ReceivableList: React.FC = () => {
                     { value: 'PAID', label: '已全额到账' },
                   ]}
                 />
+                <Select
+                  value={sourceBizType}
+                  onChange={v => {
+                    setSourceBizType(v);
+                    setPagination(p => ({ ...p, current: 1 }));
+                    fetchList(1, statusFilter, keyword, v, sourceBizNo);
+                  }}
+                  style={{ width: 160 }}
+                  options={[
+                    { value: '', label: '全部来源' },
+                    { value: 'MATERIAL_PICKUP', label: '面辅料领取' },
+                  ]}
+                />
+                <Input
+                  value={sourceBizNo}
+                  onChange={e => setSourceBizNo(e.target.value)}
+                  onPressEnter={() => fetchList(1, statusFilter, keyword, sourceBizType, sourceBizNo)}
+                  placeholder="来源单号"
+                  style={{ width: 180 }}
+                  allowClear
+                />
+                <Input
+                  value={keyword}
+                  onChange={e => setKeyword(e.target.value)}
+                  onPressEnter={() => fetchList(1, statusFilter, keyword, sourceBizType, sourceBizNo)}
+                  placeholder="单号/客户/订单"
+                  style={{ width: 220 }}
+                  allowClear
+                />
+                <Button onClick={() => fetchList(1, statusFilter, keyword, sourceBizType, sourceBizNo)}>
+                  查询
+                </Button>
               </Space>
             </Col>
             <Col>
@@ -414,7 +636,7 @@ const ReceivableList: React.FC = () => {
             onChange={p => {
               const page = (p as any).current ?? 1;
               setPagination({ current: page, pageSize: (p as any).pageSize ?? 20 });
-              fetchList(page);
+              fetchList(page, statusFilter, keyword, sourceBizType, sourceBizNo);
             }}
             size="small"
           />
@@ -433,6 +655,11 @@ const ReceivableList: React.FC = () => {
           record={activeRecord}
           onClose={() => { setReceiveOpen(false); setActiveRecord(null); }}
           onSuccess={() => { fetchList(pagination.current); fetchStats(); }}
+        />
+        <ReceivableDetailModal
+          open={detailOpen}
+          receivableId={detailReceivableId}
+          onClose={closeReceivableDetail}
         />
       </div>
     </Layout>

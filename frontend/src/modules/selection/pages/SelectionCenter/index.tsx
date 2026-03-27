@@ -2,9 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Row, Col, Tag, Button, Input, Select, Space, Spin, Empty,
   Popover, Typography, Divider, Progress, Modal, Form, App,
-  InputNumber, Tooltip, Tabs, Pagination,
+  InputNumber, Tooltip, Tabs,
 } from 'antd';
 import Layout from '@/components/Layout';
+import StandardPagination from '@/components/common/StandardPagination';
+import { DEFAULT_PAGE_SIZE } from '@/utils/pageSizeStore';
 import {
   PlusOutlined, DeleteOutlined, SendOutlined,
   ThunderboltOutlined, FireOutlined, CheckCircleOutlined,
@@ -22,6 +24,7 @@ import {
 import MarketHotItems from './MarketHotItems';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import DecisionInsightCard, { SMART_CARD_CONTENT_WIDTH, SMART_CARD_OVERLAY_WIDTH, type DecisionInsight } from '@/components/common/DecisionInsightCard';
+import { usePersistentState } from '@/hooks/usePersistentState';
 
 const { Text, Paragraph } = Typography;
 
@@ -166,7 +169,10 @@ interface CandidateReviewItem {
 interface CandidateListResponse {
   records?: Candidate[];
   list?: Candidate[];
+  total?: number;
 }
+
+const CANDIDATE_FETCH_BATCH_SIZE = 200;
 
 const STATUS_MAP: Record<string, { color: string; label: string }> = {
   PENDING:  { color: 'orange', label: '待评审' },
@@ -324,27 +330,39 @@ export default function SelectionCenter() {
   const [aiLoadingIds, setAiLoadingIds] = useState<Set<number>>(new Set());
   const [addOpen, setAddOpen] = useState(false);
   const [addForm] = Form.useForm();
-  const [activeTab, setActiveTab] = useState<string>('market');
+  const [activeTab, setActiveTab] = usePersistentState<string>('selection-center-active-tab', 'market');
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewTarget, setReviewTarget] = useState<Candidate | null>(null);
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewForm] = Form.useForm();
   const [reviewMap, setReviewMap] = useState<Record<number, CandidateReviewItem | null>>({});
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(12);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
   const fetchList = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await candidateList({ page: 1, pageSize: 100 }) as CandidateListResponse | Candidate[];
-      const data = Array.isArray(res) ? res : (res.records ?? res.list ?? []);
-      setCandidates(Array.isArray(data) ? data : []);
+      const allRecords: Candidate[] = [];
+      let page = 1;
+      let total = 0;
+
+      do {
+        const res = await candidateList({ page, pageSize: CANDIDATE_FETCH_BATCH_SIZE }) as CandidateListResponse | Candidate[];
+        const data = Array.isArray(res) ? res : (res.records ?? res.list ?? []);
+        const records = Array.isArray(data) ? data : [];
+        total = Array.isArray(res) ? records.length : Number(res?.total || 0);
+        allRecords.push(...records);
+        if (!records.length || Array.isArray(res)) break;
+        page += 1;
+      } while (!total || allRecords.length < total);
+
+      setCandidates(allRecords);
     } catch {
       message.error('加载失败');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [message]);
 
   useEffect(() => { fetchList(); }, [fetchList]);
 
@@ -711,20 +729,17 @@ export default function SelectionCenter() {
                 );
               })}
             </Row>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 18 }}>
-              <Pagination
-                current={currentPage}
-                pageSize={pageSize}
-                total={filtered.length}
-                showSizeChanger
-                pageSizeOptions={['12', '18', '24', '36']}
-                onChange={(page, size) => {
-                  setCurrentPage(page);
-                  setPageSize(size);
-                }}
-                showTotal={(total) => `共 ${total} 款`}
-              />
-            </div>
+            <StandardPagination
+              current={currentPage}
+              pageSize={pageSize}
+              total={filtered.length}
+              wrapperStyle={{ marginTop: 18 }}
+              showTotal={(value) => `共 ${value} 款`}
+              onChange={(page, size) => {
+                setCurrentPage(page);
+                setPageSize(size);
+              }}
+            />
           </div>
         )}
       </Spin>

@@ -48,6 +48,8 @@ public class StyleTableMigrator {
                 "sample_status VARCHAR(20) COMMENT '样衣状态：IN_PROGRESS/COMPLETED'," +
                 "sample_progress INT DEFAULT 0 COMMENT '样衣进度(%)'," +
                 "sample_completed_time DATETIME COMMENT '样衣完成时间'," +
+                "pushed_to_order TINYINT DEFAULT 0 COMMENT '是否已推送到下单管理：0-未推送，1-已推送'," +
+                "pushed_to_order_time DATETIME COMMENT '推送到下单管理时间'," +
                 "status VARCHAR(20) DEFAULT 'ENABLED' COMMENT '状态：ENABLED-启用，DISABLED-禁用'," +
                 "create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'," +
                 "update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'" +
@@ -191,6 +193,10 @@ public class StyleTableMigrator {
             dbHelper.execSilently("ALTER TABLE t_style_info ADD COLUMN sample_progress INT DEFAULT 0 COMMENT '样衣进度(%)'");
         if (!dbHelper.columnExists("t_style_info", "sample_completed_time"))
             dbHelper.execSilently("ALTER TABLE t_style_info ADD COLUMN sample_completed_time DATETIME COMMENT '样衣完成时间'");
+        if (!dbHelper.columnExists("t_style_info", "pushed_to_order"))
+            dbHelper.execSilently("ALTER TABLE t_style_info ADD COLUMN pushed_to_order TINYINT DEFAULT 0 COMMENT '是否已推送到下单管理：0-未推送，1-已推送'");
+        if (!dbHelper.columnExists("t_style_info", "pushed_to_order_time"))
+            dbHelper.execSilently("ALTER TABLE t_style_info ADD COLUMN pushed_to_order_time DATETIME COMMENT '推送到下单管理时间'");
     }
 
     private void migrateStyleBom() {
@@ -275,6 +281,8 @@ public class StyleTableMigrator {
         if (!dbHelper.columnExists("t_style_attachment", "uploader"))
             dbHelper.execSilently("ALTER TABLE t_style_attachment ADD COLUMN uploader VARCHAR(50)");
         if (!dbHelper.columnExists("t_style_attachment", "biz_type"))
-            dbHelper.execSilently("ALTER TABLE t_style_attachment ADD COLUMN biz_type VARCHAR(20) DEFAULT 'general' COMMENT '业务类型：general/pattern/sample'");
+            dbHelper.execSilently("ALTER TABLE t_style_attachment ADD COLUMN biz_type VARCHAR(128) DEFAULT 'general' COMMENT '业务类型：general/pattern/sample/color_image::*'");
+        else
+            dbHelper.execSilently("ALTER TABLE t_style_attachment MODIFY COLUMN biz_type VARCHAR(128) DEFAULT 'general' COMMENT '业务类型：general/pattern/sample/color_image::*'");
     }
 }

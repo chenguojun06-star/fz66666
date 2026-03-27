@@ -1,7 +1,16 @@
 import React from 'react';
 import { Table, ConfigProvider } from 'antd';
 import type { TableProps } from 'antd';
-import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE_OPTIONS, normalizePageSize, savePageSize } from '@/utils/pageSizeStore';
+import {
+  DEFAULT_PAGE_SIZE,
+  DEFAULT_PAGE_SIZE_OPTIONS,
+  buildPageSizeStorageKey,
+  normalizePageSize,
+  readPageSize,
+  readPageSizeByKey,
+  savePageSize,
+  savePageSizeByKey,
+} from '@/utils/pageSizeStore';
 
 /**
  * 任意记录类型定义
@@ -37,19 +46,16 @@ const normalizePageSizeOptions = (
   pageSize?: number,
   defaultPageSize?: number
 ): string[] => {
-  const fallback = [...DEFAULT_PAGE_SIZE_OPTIONS];
-  const base = Array.isArray(pageSizeOptions) && pageSizeOptions.length > 0
-    ? pageSizeOptions.map((item) => String(item))
-    : fallback;
+  const fallback = [...DEFAULT_PAGE_SIZE_OPTIONS] as string[];
   const effectivePageSize = pageSize ?? defaultPageSize;
   if (effectivePageSize == null) {
-    return base;
+    return fallback;
   }
   const currentPageSize = String(normalizePageSize(effectivePageSize, DEFAULT_PAGE_SIZE));
-  if (base.includes(currentPageSize)) {
-    return base;
+  if (fallback.includes(currentPageSize)) {
+    return fallback;
   }
-  return [...base, currentPageSize].sort((a, b) => Number(a) - Number(b));
+  return fallback;
 };
 
 const hashString = (input: string) => {
@@ -395,7 +401,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     stickyFooter: stickyFooterProp,
     minColumnWidth = 60,
     maxColumnWidth = 800,
-    defaultColumnWidth = 120,
+    defaultColumnWidth: _defaultColumnWidth = 120,
     className,
     rowKey,
     ...rest
@@ -414,18 +420,27 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
 
   // 是否启用粘性页脚
   const stickyFooter = stickyFooterProp ?? false;
+  const pageSizeStorageKey = React.useMemo(() => (
+    resolvedStorageKey ? buildPageSizeStorageKey(resolvedStorageKey) : undefined
+  ), [resolvedStorageKey]);
 
   const mergedPagination = React.useMemo(() => {
     if (paginationProp === false) return false;
     if (paginationProp === undefined || paginationProp === null) return paginationProp;
     const base = typeof paginationProp === 'object' ? paginationProp : ({} as any);
     const { position, placement, ...baseRest } = base as any;
+    const explicitDefaultPageSize = typeof base?.defaultPageSize === 'number'
+      ? normalizePageSize(base.defaultPageSize, DEFAULT_PAGE_SIZE)
+      : undefined;
+    const persistedPageSize = pageSizeStorageKey
+      ? readPageSizeByKey(pageSizeStorageKey, explicitDefaultPageSize ?? DEFAULT_PAGE_SIZE)
+      : readPageSize(explicitDefaultPageSize ?? DEFAULT_PAGE_SIZE);
     const normalizedPageSize = typeof base?.pageSize === 'number'
       ? normalizePageSize(base.pageSize, DEFAULT_PAGE_SIZE)
       : undefined;
-    const normalizedDefaultPageSize = typeof base?.defaultPageSize === 'number'
-      ? normalizePageSize(base.defaultPageSize, DEFAULT_PAGE_SIZE)
-      : undefined;
+    const normalizedDefaultPageSize = normalizedPageSize === undefined
+      ? persistedPageSize
+      : explicitDefaultPageSize;
 
     // 拦截 onChange：当用户切换每页条数时，自动持久化到 localStorage
     const originalOnChange = base?.onChange;
@@ -433,7 +448,11 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     const interceptedOnChange = (page: number, pageSize: number) => {
       const nextPageSize = normalizePageSize(pageSize, DEFAULT_PAGE_SIZE);
       if (trackedPageSize === undefined || nextPageSize !== trackedPageSize) {
-        savePageSize(nextPageSize);
+        if (pageSizeStorageKey) {
+          savePageSizeByKey(pageSizeStorageKey, nextPageSize);
+        } else {
+          savePageSize(nextPageSize);
+        }
       }
       originalOnChange?.(page, nextPageSize);
     };
@@ -448,7 +467,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
       showSizeChanger: base?.showSizeChanger ?? true,
       placement: placement ?? position ?? ['bottomRight'],
     } as any;
-  }, [paginationProp]);
+  }, [pageSizeStorageKey, paginationProp]);
 
   // 合并类名
   const mergedClassName = React.useMemo(() => {
@@ -631,9 +650,14 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
           ['action', 'actions', 'operation', 'operate', 'op'].includes(dataIndexText.toLowerCase()) ||
           ['操作', '操作列', '操作区', '操作按钮'].includes(titleText.trim());
 
-        const baseWidth = maybeAction
-          ? (parseWidthPx(colRecord.width) ?? actionColumnWidth)
-          : clamp(widths[id] ?? parseWidthPx(colRecord.width) ?? defaultColumnWidth, minColumnWidth, maxColumnWidth);
+        const explicitWidth = parseWidthPx(colRecord.width);
+        const storedWidth = widths[id];
+        const nextWidth = maybeAction
+          ? (explicitWidth ?? actionColumnWidth)
+          : (storedWidth ?? explicitWidth);
+        const baseWidth = typeof nextWidth === 'number'
+          ? clamp(nextWidth, minColumnWidth, maxColumnWidth)
+          : undefined;
 
         // 判断是否可调整列宽
         const resizable = colRecord.resizable === true
@@ -651,7 +675,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
 
         return {
           ...safeColRecord,
-          width: baseWidth,
+          ...(typeof baseWidth === 'number' ? { width: baseWidth } : {}),
           fixed,
           onHeaderCell: () => ({
             width: baseWidth,
@@ -720,7 +744,25 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     };
 
     return mapColumns(orderedTopLevel);
-  }, [allowFixedColumns, autoFixedColumns, columnOrder, columns, defaultColumnWidth, maxColumnWidth, minColumnWidth, reorderableColumns, widths]);
+  }, [allowFixedColumns, autoFixedColumns, columnOrder, columns, maxColumnWidth, minColumnWidth, reorderableColumns, widths]);
+
+  const resolvedTableLayout = React.useMemo(() => {
+    if (tableLayout) return tableLayout;
+    if (!resizableColumns) return undefined;
+    const stack = Array.isArray(mergedColumns) ? [...mergedColumns] as any[] : [];
+    while (stack.length > 0) {
+      const col = stack.pop();
+      if (!col) continue;
+      if (Array.isArray(col.children) && col.children.length > 0) {
+        stack.push(...col.children);
+        continue;
+      }
+      if (parseWidthPx(col.width) == null) {
+        return 'auto' as const;
+      }
+    }
+    return 'fixed' as const;
+  }, [mergedColumns, resizableColumns, tableLayout]);
 
   // 包装器类名
   const wrapperClassName = React.useMemo(() => {
@@ -740,7 +782,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
           columns={mergedColumns as TableProps<T>['columns']}
           components={mergedComponents}
           scroll={mergedScroll as TableProps<T>['scroll']}
-          tableLayout={tableLayout ?? (resizableColumns ? 'fixed' : undefined)}
+          tableLayout={resolvedTableLayout}
           pagination={mergedPagination as TableProps<T>['pagination']}
         />
       </ConfigProvider>

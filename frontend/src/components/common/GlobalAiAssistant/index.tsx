@@ -14,11 +14,13 @@ import {
   DislikeOutlined,
 } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
+import { normalizeXiaoyunChatPayload, parseXiaoyunLegacyMeta } from '@/services/intelligence/xiaoyunChatAdapter';
 import { App, Tooltip } from 'antd';
 import type { RiskIndicator, SimulationResultData, HyperAdvisorResponse, ChatHistoryMessage } from '@/services/intelligence/intelligenceApi';
 import api from '@/utils/api';
 import { useAuth } from '@/utils/AuthContext';
 import { paths } from '@/routeConfig';
+import XiaoyunInsightCard, { type XiaoyunInsightCardData } from '@/components/common/XiaoyunInsightCard';
 import styles from './index.module.css';
 import MiniChartWidget, { type ChartSpec } from './MiniChartWidget';
 import { AiTraceCardWidget, BundleSplitCardWidget, PurchaseDocCardWidget, TeamStatusCardWidget, type AiTraceCardData, type BundleSplitCardData, type PurchaseDocCardData, type TeamStatusCardData } from './AgentCards';
@@ -155,54 +157,17 @@ interface QuickAction {
 }
 
 /** 从 AI 原始回复中提取 CHART/ACTIONS 标记块，返回干净展示文本 + 结构化数据 */
-function parseAiResponse(rawText: string): { displayText: string; charts: ChartSpec[]; actionCards: ActionCard[]; quickActions: QuickAction[]; teamStatusCards: TeamStatusCardData[]; bundleSplitCards: BundleSplitCardData[] } {
-  const charts: ChartSpec[] = [];
-  const actionCards: ActionCard[] = [];
-  const quickActions: QuickAction[] = [];
-  const teamStatusCards: TeamStatusCardData[] = [];
-  const bundleSplitCards: BundleSplitCardData[] = [];
-  const chartRe = /【CHART】([\s\S]*?)【\/CHART】/g;
-  let m: RegExpExecArray | null;
-  while ((m = chartRe.exec(rawText)) !== null) {
-    try { charts.push(JSON.parse(m[1].trim())); } catch { /* skip */ }
-  }
-  const actionsRe = /【ACTIONS】([\s\S]*?)【\/ACTIONS】/g;
-  while ((m = actionsRe.exec(rawText)) !== null) {
-    try {
-      const parsed = JSON.parse(m[1].trim()) as unknown;
-      if (Array.isArray(parsed)) actionCards.push(...(parsed as ActionCard[]));
-    } catch { /* skip */ }
-  }
-  // 解析 ```ACTIONS_JSON\n[...]\n``` 代码块 → 快捷操作按钮
-  const actionsJsonRe = /```ACTIONS_JSON\s*\n([\s\S]*?)\n```/g;
-  while ((m = actionsJsonRe.exec(rawText)) !== null) {
-    try {
-      const parsed = JSON.parse(m[1].trim()) as unknown;
-      if (Array.isArray(parsed)) quickActions.push(...(parsed as QuickAction[]));
-    } catch { /* skip */ }
-  }
-  const teamStatusRe = /【TEAM_STATUS】([\s\S]*?)【\/TEAM_STATUS】/g;
-  while ((m = teamStatusRe.exec(rawText)) !== null) {
-    try {
-      const parsed = JSON.parse(m[1].trim()) as unknown;
-      if (Array.isArray(parsed)) teamStatusCards.push(...(parsed as TeamStatusCardData[]));
-    } catch { /* skip */ }
-  }
-  const bundleSplitRe = /【BUNDLE_SPLIT】([\s\S]*?)【\/BUNDLE_SPLIT】/g;
-  while ((m = bundleSplitRe.exec(rawText)) !== null) {
-    try {
-      const parsed = JSON.parse(m[1].trim()) as unknown;
-      if (Array.isArray(parsed)) bundleSplitCards.push(...(parsed as BundleSplitCardData[]));
-    } catch { /* skip */ }
-  }
-  const displayText = rawText
-    .replace(/```ACTIONS_JSON\s*\n[\s\S]*?\n```/g, '')
-    .replace(/【CHART】[\s\S]*?【\/CHART】/g, '')
-    .replace(/【ACTIONS】[\s\S]*?【\/ACTIONS】/g, '')
-    .replace(/【TEAM_STATUS】[\s\S]*?【\/TEAM_STATUS】/g, '')
-    .replace(/【BUNDLE_SPLIT】[\s\S]*?【\/BUNDLE_SPLIT】/g, '')
-    .trim();
-  return { displayText, charts, actionCards, quickActions, teamStatusCards, bundleSplitCards };
+function parseAiResponse(rawText: string): { displayText: string; charts: ChartSpec[]; cards: XiaoyunInsightCardData[]; actionCards: ActionCard[]; quickActions: QuickAction[]; teamStatusCards: TeamStatusCardData[]; bundleSplitCards: BundleSplitCardData[] } {
+  const parsed = parseXiaoyunLegacyMeta(rawText);
+  return {
+    displayText: parsed.displayText,
+    charts: parsed.charts as ChartSpec[],
+    cards: parsed.cards,
+    actionCards: parsed.actionCards as ActionCard[],
+    quickActions: parsed.quickActions as QuickAction[],
+    teamStatusCards: parsed.teamStatusCards as TeamStatusCardData[],
+    bundleSplitCards: parsed.bundleSplitCards as BundleSplitCardData[],
+  };
 }
 
 interface Message {
@@ -213,6 +178,7 @@ interface Message {
   hasSpeech?: boolean;
   reportType?: 'daily' | 'weekly' | 'monthly';
   charts?: ChartSpec[];
+  cards?: XiaoyunInsightCardData[];
   actionCards?: ActionCard[];
   quickActions?: QuickAction[];
   teamStatusCards?: TeamStatusCardData[];
@@ -281,7 +247,7 @@ const shouldAutoArrival = (text: string) => /自动收货|自动到货|一键收
 type CloudMood = 'normal' | 'curious' | 'urgent' | 'error' | 'success';
 
 // 超级可爱的表情云朵组件
-const CuteCloudTrigger = ({ size = 52, active = false, mood = 'normal', loading = false, interacting = false }: { size?: number, active?: boolean, mood?: CloudMood, loading?: boolean, interacting?: boolean }) => {
+export const CuteCloudTrigger = ({ size = 52, active = false, mood = 'normal', loading = false, interacting = false }: { size?: number, active?: boolean, mood?: CloudMood, loading?: boolean, interacting?: boolean }) => {
   const isUrgent = mood === 'urgent';
   const isError = mood === 'error';
   const isSuccess = mood === 'success';
@@ -772,10 +738,10 @@ const GlobalAiAssistant: React.FC = () => {
           } else if (event.type === 'answer') {
             const rawContent = String(event.data.content || '');
             const commandId = event.data.commandId ? String(event.data.commandId) : undefined;
-            const { displayText, charts, actionCards, quickActions, teamStatusCards, bundleSplitCards } = parseAiResponse(rawContent);
+            const { displayText, charts, cards, actionCards, quickActions, teamStatusCards, bundleSplitCards } = parseAiResponse(rawContent);
             accumulatedText = displayText;
             setMessages(prev => prev.map(m => m.id === aiMsgId
-              ? { ...m, text: accumulatedText, reportType: reportTypeToDownload, charts, actionCards, quickActions, teamStatusCards, bundleSplitCards, agentCommandId: commandId }
+              ? { ...m, text: accumulatedText, reportType: reportTypeToDownload, charts, cards, actionCards, quickActions, teamStatusCards, bundleSplitCards, agentCommandId: commandId }
               : m));
           } else if (event.type === 'error') {
             accumulatedText = String(event.data.message || '智能分析暂时异常，请稍后再试。');
@@ -814,22 +780,22 @@ const GlobalAiAssistant: React.FC = () => {
             return;
           }
           try {
-            // @ts-ignore
-            const res = await intelligenceApi.aiAdvisorChat(contextualText);
-            // @ts-ignore
-            const resultData: any = res?.code === 200 ? res.data : (res?.data || res);
-            const rawAnswer = resultData?.answer || '当前还没拿到有效分析结果，请换个问法或稍后重试。';
-            const commandId = resultData?.commandId ? String(resultData.commandId) : undefined;
-            const { displayText, charts, actionCards, quickActions, teamStatusCards, bundleSplitCards } = parseAiResponse(rawAnswer);
+            const payload = normalizeXiaoyunChatPayload(await intelligenceApi.aiAdvisorChat(contextualText));
+            const rawAnswer = payload?.answer || '当前还没拿到有效分析结果，请换个问法或稍后重试。';
+            const displayAnswer = payload?.displayAnswer || rawAnswer;
+            const commandId = payload?.commandId;
+            const { displayText, charts, cards: parsedCards, actionCards, quickActions, teamStatusCards, bundleSplitCards } = parseAiResponse(rawAnswer);
+            const cards = payload?.cards || [];
             setMessages(prev => {
               const existing = prev.find(m => m.id === aiMsgId);
               if (existing) {
                 return prev.map(m => m.id === aiMsgId ? {
                   ...m,
-                  text: displayText,
-                  intent: resultData?.source,
+                  text: displayAnswer || displayText,
+                  intent: payload?.source,
                   reportType: reportTypeToDownload,
                   charts,
+                  cards: cards.length ? cards : parsedCards,
                   actionCards,
                   quickActions,
                   teamStatusCards,
@@ -840,10 +806,11 @@ const GlobalAiAssistant: React.FC = () => {
               return [...prev, {
                 id: aiMsgId,
                 role: 'ai' as const,
-                text: displayText,
-                intent: resultData?.source,
+                text: displayAnswer || displayText,
+                intent: payload?.source,
                 reportType: reportTypeToDownload,
                 charts,
+                cards: cards.length ? cards : parsedCards,
                 actionCards,
                 quickActions,
                 teamStatusCards,
@@ -851,7 +818,7 @@ const GlobalAiAssistant: React.FC = () => {
                 agentCommandId: commandId,
               }];
             });
-            speak(displayText);
+            speak(displayAnswer || displayText);
           } catch (syncErr) {
             console.error('Sync fallback also failed:', syncErr);
             setMessages(prev => [...prev, { id: aiMsgId, role: 'ai' as const, text: '当前连不到数据服务，请稍后再试。' }]);
@@ -1289,6 +1256,23 @@ const GlobalAiAssistant: React.FC = () => {
                   {msg.role === 'ai' && !!msg.charts?.length && (
                     <div className={styles.chartsWrapper}>
                       {msg.charts.map((chart, i) => <MiniChartWidget key={i} chart={chart} />)}
+                    </div>
+                  )}
+                  {msg.role === 'ai' && !!msg.cards?.length && (
+                    <div className={styles.teamStatusWrapper}>
+                      {msg.cards.map((card, i) => (
+                        <XiaoyunInsightCard
+                          key={`${card.title ?? 'insight'}-${i}`}
+                          compact
+                          card={card}
+                          onNavigate={(path) => {
+                            const knownPrefixes = ['/production', '/finance', '/warehouse', '/intelligence', '/system', '/dashboard', '/style', '/crm', '/procurement', '/basic'];
+                            const safePath = path && knownPrefixes.some(prefix => path.startsWith(prefix)) ? path : '/production';
+                            setIsOpen(false);
+                            navigate(safePath);
+                          }}
+                        />
+                      ))}
                     </div>
                   )}
                   {/* 任务流操作卡片 */}

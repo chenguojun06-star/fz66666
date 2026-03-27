@@ -22,7 +22,9 @@ import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { SupplierScore } from '@/services/intelligence/intelligenceApi';
 import { paths } from '@/routeConfig';
 import { organizationApi } from '@/services/system/organizationApi';
+import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE_OPTIONS, readPageSize } from '@/utils/pageSizeStore';
 import CustomerManagementTab from './CustomerManagementTab';
+import { usePersistentState } from '@/hooks/usePersistentState';
 
 type DialogMode = 'create' | 'view' | 'edit';
 
@@ -54,8 +56,8 @@ const FactoryList: React.FC = () => {
   const [remarkLoading, setRemarkLoading] = useState(false);
 
   const [dialogMode, setDialogMode] = useState<DialogMode>('view');
-  const [managementTab, setManagementTab] = useState<'supplier' | 'customer'>('supplier');
-  const [activeTab, setActiveTab] = useState<'ALL' | 'MATERIAL' | 'OUTSOURCE'>('ALL');
+  const [managementTab, setManagementTab] = usePersistentState<'supplier' | 'customer'>('factory-list-management-tab', 'supplier');
+  const [activeTab, setActiveTab] = usePersistentState<'ALL' | 'MATERIAL' | 'OUTSOURCE'>('factory-list-supplier-tab', 'ALL');
   const handleManagementTabChange = (tab: string) => {
     setManagementTab(tab as 'supplier' | 'customer');
   };
@@ -66,7 +68,7 @@ const FactoryList: React.FC = () => {
   };
   const [queryParams, setQueryParams] = useState<FactoryQueryParams>({
     page: 1,
-    pageSize: 10
+    pageSize: readPageSize(DEFAULT_PAGE_SIZE)
   });
 
   const [factoryList, setFactoryList] = useState<FactoryType[]>([]);
@@ -684,7 +686,7 @@ const FactoryList: React.FC = () => {
                       showSizeChanger: true,
                       showQuickJumper: true,
                       showTotal: (t) => `共 ${t} 条`,
-                      pageSizeOptions: ['10', '20', '50', '100'],
+                      pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
                       onChange: (page, pageSize) => setQueryParams((prev) => ({ ...prev, page, pageSize })),
                     }}
                     scroll={{ x: 'max-content' }}

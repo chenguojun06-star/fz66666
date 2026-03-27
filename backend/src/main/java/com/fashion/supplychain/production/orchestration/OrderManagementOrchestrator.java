@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -58,7 +59,7 @@ public class OrderManagementOrchestrator {
         }
 
         // 已推送过则禁止重复推送
-        if (StringUtils.hasText(style.getOrderType())) {
+        if (Integer.valueOf(1).equals(style.getPushedToOrder())) {
             throw new IllegalStateException("该款已推送到下单管理，无需重复推送");
         }
 
@@ -77,12 +78,14 @@ public class OrderManagementOrchestrator {
                     styleId, style.getStyleNo(), currentProgressNode);
         }
 
-        // 绑定跟单员为当前推送人（复用orderType字段）
+        // 标记已推送，并记录推送人
         String currentUser = UserContext.username();
-        if (StringUtils.hasText(currentUser)) {
+        style.setPushedToOrder(1);
+        style.setPushedToOrderTime(LocalDateTime.now());
+        if (StringUtils.hasText(currentUser) && !StringUtils.hasText(style.getOrderType())) {
             style.setOrderType(currentUser.trim());
-            styleInfoService.updateById(style);
         }
+        styleInfoService.updateById(style);
 
         // 根据勾选的目标进行同步
         if (targetTypes != null && !targetTypes.isEmpty()) {

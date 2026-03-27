@@ -14,9 +14,11 @@ import { appStoreService } from '@/services/system/appStore';
 import { useAuth } from '@/utils/AuthContext';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions, { type RowAction } from '@/components/common/RowActions';
-import { customerApi, receivableApi, generatePortalLink, type Customer, type Receivable } from '@/services/crm/customerApi';
+import { customerApi, receivableApi, type Customer, type Receivable } from '@/services/crm/customerApi';
 import { message } from '@/utils/antdStatic';
 import { readPageSize } from '@/utils/pageSizeStore';
+import type { ProductionOrder } from '@/types/production';
+import { useShareOrderDialog } from '@/modules/production/pages/Production/ProgressDetail/hooks/useShareOrderDialog';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -233,7 +235,7 @@ const CustomerManagement: React.FC = () => {
   const [drawerLoading, setDrawerLoading] = useState(false);
   const [drawerReceivables, setDrawerReceivables] = useState<Receivable[]>([]);
   const [drawerReceivableLoading, setDrawerReceivableLoading] = useState(false);
-  const [portalLink, setPortalLink] = useState<{ open: boolean; url: string; orderNo: string }>({ open: false, url: '', orderNo: '' });
+  const { handleShareOrder, shareOrderDialog } = useShareOrderDialog({ message });
 
   const fetchList = useCallback(async (page = pagination.current, kw = keyword, st = statusFilter) => {
     setLoading(true);
@@ -305,18 +307,6 @@ const CustomerManagement: React.FC = () => {
       : []);
     setDrawerLoading(false);
     setDrawerReceivableLoading(false);
-  };
-
-  const handleGeneratePortalLink = async (customerId: string, orderId: string, orderNo: string) => {
-    try {
-      const res = await generatePortalLink(customerId, orderId);
-      const token = ((res as any)?.data?.token ?? (res as any)?.token) as string;
-      if (!token) { message.error('生成链接失败，请重试'); return; }
-      const url = `${window.location.origin}/portal?token=${token}`;
-      setPortalLink({ open: true, url, orderNo });
-    } catch {
-      message.error('生成追踪链接失败');
-    }
   };
 
   const columns: ColumnsType<Customer> = [
@@ -500,7 +490,12 @@ const CustomerManagement: React.FC = () => {
                           <Button
                             size="small"
                             icon={<LinkOutlined />}
-                            onClick={() => handleGeneratePortalLink(drawerData!.id!, order.id, order.orderNo)}
+                            onClick={() => {
+                              void handleShareOrder({
+                                id: order.id,
+                                orderNo: order.orderNo,
+                              } as ProductionOrder);
+                            }}
                           >
                             追踪链接
                           </Button>
@@ -554,26 +549,7 @@ const CustomerManagement: React.FC = () => {
         )}
       </ResizableModal>
 
-      {/* 客户门户追踪链接弹窗 */}
-      <Modal
-        title={<Space><LinkOutlined />客户订单追踪链接</Space>}
-        open={portalLink.open}
-        onCancel={() => setPortalLink({ open: false, url: '', orderNo: '' })}
-        footer={<Button onClick={() => setPortalLink({ open: false, url: '', orderNo: '' })}>关闭</Button>}
-        width="40vw"
-      >
-        <Descriptions size="small" column={1} bordered style={{ marginBottom: 16 }}>
-          <Descriptions.Item label="关联订单">{portalLink.orderNo}</Descriptions.Item>
-          <Descriptions.Item label="追踪链接">
-            <Typography.Text copyable style={{ wordBreak: 'break-all', fontSize: 12 }}>
-              {portalLink.url}
-            </Typography.Text>
-          </Descriptions.Item>
-        </Descriptions>
-        <Text type="secondary" style={{ fontSize: 12 }}>
-          链接有效期 30 天，客户可通过此链接查询订单实时进度，无需登录系统。
-        </Text>
-      </Modal>
+      {shareOrderDialog}
     </>
   );
 };

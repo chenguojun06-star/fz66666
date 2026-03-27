@@ -73,23 +73,39 @@ export const formatMaterialQuantityWithUnit = (value: unknown, unit?: unknown, p
   return unitText ? `${quantityText} ${unitText}` : quantityText;
 };
 
+const normalizeUnit = (value: unknown) => String(value || '').trim().toLowerCase();
+const isMeterUnit = (value: unknown) => {
+  const unit = normalizeUnit(value);
+  return unit === '米' || unit === 'm' || unit === 'meter' || unit === 'meters';
+};
+const isKilogramUnit = (value: unknown) => {
+  const unit = normalizeUnit(value);
+  return unit === 'kg' || unit === '公斤' || unit === '千克' || unit === 'kilogram' || unit === 'kilograms';
+};
+
 export const computeReferenceKilograms = (
-  meterUsage: unknown,
+  quantity: unknown,
   conversionRate: unknown,
+  unit?: unknown,
   precision = MATERIAL_QUANTITY_PRECISION,
 ) => {
-  const meters = normalizeMaterialQuantity(meterUsage, precision);
+  const normalizedQuantity = normalizeMaterialQuantity(quantity, precision);
   const rate = Number(conversionRate);
-  if (!Number.isFinite(rate) || rate <= 0) return null;
-  return normalizeMaterialQuantity(meters / rate, precision);
+  if (isKilogramUnit(unit)) return normalizedQuantity;
+  if (isMeterUnit(unit)) {
+    if (!Number.isFinite(rate) || rate <= 0) return null;
+    return normalizeMaterialQuantity(normalizedQuantity / rate, precision);
+  }
+  return null;
 };
 
 export const formatReferenceKilograms = (
-  meterUsage: unknown,
+  quantity: unknown,
   conversionRate: unknown,
+  unit?: unknown,
   precision = MATERIAL_QUANTITY_PRECISION,
 ) => {
-  const kilograms = computeReferenceKilograms(meterUsage, conversionRate, precision);
+  const kilograms = computeReferenceKilograms(quantity, conversionRate, unit, precision);
   if (kilograms == null) return '-';
   return `${formatMaterialQuantity(kilograms, precision)} 公斤`;
 };
@@ -169,20 +185,47 @@ export const buildPurchaseSheetHtml = (
   };
 
   const buildSizeTable = () => {
-    if (!detailSizePairs.length) {
+    const sizeOrder = detailSizePairs.length
+      ? detailSizePairs.map((item) => String(item.size || '').trim()).filter(Boolean)
+      : sortSizeNames(Array.from(new Set(detailOrderLines.map((item) => String(item.size || '').trim()).filter(Boolean))));
+    if (!sizeOrder.length) {
       return '<div class="size-empty">-</div>';
     }
-    const headCells = detailSizePairs.map((x) => `<th>${escapeHtml(x.size)}</th>`).join('');
-    const qtyCells = detailSizePairs.map((x) => `<td>${escapeHtml(x.quantity)}</td>`).join('');
+
+    const rowMap = new Map<string, Map<string, number>>();
+    detailOrderLines.forEach((line) => {
+      const color = String(line.color || '').trim() || colorText || '未设色';
+      const size = String(line.size || '').trim();
+      const qty = Number(line.quantity || 0) || 0;
+      if (!size) return;
+      const sizeMap = rowMap.get(color) || new Map<string, number>();
+      sizeMap.set(size, (sizeMap.get(size) || 0) + qty);
+      rowMap.set(color, sizeMap);
+    });
+
+    const matrixRows = rowMap.size
+      ? Array.from(rowMap.entries()).map(([color, sizeMap]) => {
+          const cells = sizeOrder.map((size) => `<td>${escapeHtml(sizeMap.get(size) || 0)}</td>`).join('');
+          const rowTotal = Array.from(sizeMap.values()).reduce((sum, value) => sum + value, 0);
+          return `<tr><th class="row-head">${escapeHtml(color)}</th>${cells}<th class="total-cell">${escapeHtml(rowTotal)}</th></tr>`;
+        }).join('')
+      : '';
+
+    const headCells = sizeOrder.map((size) => `<th>${escapeHtml(size)}</th>`).join('');
+    const qtyCells = sizeOrder.map((size) => {
+      const pair = detailSizePairs.find((item) => String(item.size || '').trim() === size);
+      return `<td>${escapeHtml(pair?.quantity || 0)}</td>`;
+    }).join('');
     return `
         <table class="size-table">
           <tr>
-            <th class="row-head">码数</th>
+            <th class="row-head">颜色</th>
             ${headCells}
-            <th class="total-cell"></th>
+            <th class="total-cell">合计</th>
           </tr>
+          ${matrixRows || `<tr><th class="row-head">${escapeHtml(colorText || '-')}</th>${qtyCells}<th class="total-cell">${escapeHtml(totalOrderQty)}</th></tr>`}
           <tr>
-            <th class="row-head">数量</th>
+            <th class="row-head">码数合计</th>
             ${qtyCells}
             <th class="total-cell">总下单数：${escapeHtml(totalOrderQty)}</th>
           </tr>

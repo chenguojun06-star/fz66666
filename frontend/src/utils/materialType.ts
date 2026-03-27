@@ -60,6 +60,15 @@ export const getMaterialTypeSortKey = (v: unknown): string => {
   return `${catIdx}-${String(letterIdx).padStart(2, '0')}-${type}`;
 };
 
+export const formatMaterialSpecWidth = (specification?: unknown, fabricWidth?: unknown): string => {
+  const specificationText = String(specification || '').trim();
+  const fabricWidthText = String(fabricWidth || '').trim();
+  if (specificationText && fabricWidthText) {
+    return `${specificationText} / ${fabricWidthText}`;
+  }
+  return specificationText || fabricWidthText || '-';
+};
+
 export const getMaterialSortWeight = (v: unknown): number => {
   const type = String(normalizeMaterialType(v)).trim();
   const lower = type.toLowerCase();

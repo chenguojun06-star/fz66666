@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { App, Button, Card, Input, Modal } from 'antd';
+import { App, Button, Card, Input } from 'antd';
 import { AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
+import SmallModal from '@/components/common/SmallModal';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import SmartPredictionStrip from '@/components/common/SmartPredictionStrip';
 import api from '@/utils/api';
@@ -216,6 +217,14 @@ const StyleInfoListPage: React.FC = () => {
     const node = String(record?.progressNode || '').trim();
     const sampleStatus = String(record?.sampleStatus ?? '').trim().toUpperCase();
     const patternStatus = String(record?.patternStatus ?? '').trim().toUpperCase();
+    const reviewStatus = String(record?.sampleReviewStatus ?? '').trim().toUpperCase();
+    const latestPatternStatus = String(record?.latestPatternStatus ?? '').trim().toUpperCase();
+    const styleFullyCompleted = ['PASS', 'APPROVED'].includes(reviewStatus) && latestPatternStatus === 'COMPLETED';
+    if (!styleFullyCompleted) {
+      message.error('只有款式全部完成后，再次修改才算维护');
+      closeMaintenance();
+      return;
+    }
     const url =
       node === '样衣完成' || sampleStatus === 'COMPLETED'
         ? `/style/info/${record.id}/sample/reset`
@@ -472,7 +481,7 @@ const StyleInfoListPage: React.FC = () => {
       />
 
       {/* 维护原因弹窗 */}
-      <Modal
+      <SmallModal
         title="款式维护"
         open={maintenanceOpen}
         onCancel={closeMaintenance}
@@ -480,7 +489,6 @@ const StyleInfoListPage: React.FC = () => {
         confirmLoading={maintenanceSaving}
         okText="确定"
         cancelText="取消"
-        width="30vw"
       >
         <div style={{ marginBottom: 16 }}>
           <div style={{ marginBottom: 8, color: 'var(--neutral-text-secondary)' }}>
@@ -496,7 +504,7 @@ const StyleInfoListPage: React.FC = () => {
             style={{ width: '100%', resize: 'vertical' }}
           />
         </div>
-      </Modal>
+      </SmallModal>
 
       <RejectReasonModal
         open={pendingScrapId !== null}

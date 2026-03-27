@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Button, Card, Input, Select, Tag, App, Dropdown, Checkbox, Alert, InputNumber, Tabs, Pagination } from 'antd';
+import { Button, Card, Input, Select, Tag, App, Dropdown, Checkbox, Alert, InputNumber, Tabs } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
-import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined, ShareAltOutlined, CopyOutlined, StopOutlined } from '@ant-design/icons';
+import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
+import StandardPagination from '@/components/common/StandardPagination';
 import PageStatCards from '@/components/common/PageStatCards';
 import SmartPredictionStrip from '@/components/common/SmartPredictionStrip';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
@@ -11,6 +12,7 @@ import StandardToolbar from '@/components/common/StandardToolbar';
 import QuickEditModal from '@/components/common/QuickEditModal';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
+import SmallModal from '@/components/common/SmallModal';
 import LabelPrintModal from './components/LabelPrintModal';
 import { ProductionOrder, ProductionQueryParams } from '@/types/production';
 import type { PaginatedResponse } from '@/types/api';
@@ -27,21 +29,26 @@ import '../../../styles.css';
 import dayjs from 'dayjs';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import UniversalCardView from '@/components/common/UniversalCardView';
+import { createOrderColorSizeGridFieldGroups } from '@/components/common/CardSizeQuantityFieldGroups';
 import SmartOrderHoverCard from '../ProgressDetail/components/SmartOrderHoverCard';
 import { ensureBoardStatsForOrder, clearBoardStatsTimestamps } from '../ProgressDetail/hooks/useBoardStats';
 import { useDeliveryRiskMap } from '../ProgressDetail/hooks/useDeliveryRiskMap';
+import { useShareOrderDialog } from '../ProgressDetail/hooks/useShareOrderDialog';
 import { useStagnantDetection } from '../ProgressDetail/hooks/useStagnantDetection';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { AnomalyItem } from '@/services/intelligence/intelligenceApi';
 import { getStyleInfoByRef } from '@/services/style/styleApi';
 import ExportButton from '@/components/common/ExportButton';
+import { getOrderCardSizeQuantityItems } from '@/utils/cardSizeQuantity';
 import type { ProgressNode } from '../ProgressDetail/types';
+import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE_OPTIONS, readPageSize, savePageSize } from '@/utils/pageSizeStore';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useSync } from '@/utils/syncManager';
 import { useViewport } from '@/utils/useViewport';
 import { useCardGridLayout } from '@/hooks/useCardGridLayout';
 import { useModal } from '@/hooks';
 import { useOrganizationFilterOptions } from '@/hooks/useOrganizationFilterOptions';
+import { usePersistentSort } from '@/hooks/usePersistentSort';
 import ProcessDetailModal from '@/components/production/ProcessDetailModal';
 import { getProgressColorStatus, getRemainingDaysDisplay } from '@/utils/progressColor';
 import {
@@ -75,6 +82,7 @@ const ProductionList: React.FC = () => {
   const { message } = App.useApp();
   useViewport();
   const { columns: cardColumns } = useCardGridLayout(10);
+  const { handleShareOrder, shareOrderDialog } = useShareOrderDialog({ message });
   const quickEditModal = useModal<ProductionOrder>();
   const { user } = useAuth();
   const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUser(user), [user]);
@@ -124,110 +132,22 @@ const ProductionList: React.FC = () => {
     }
   };
 
-  // ===== 分享进度弹窗状态 =====
-  const [shareModal, setShareModal] = useState<{
-    open: boolean;
-    record: ProductionOrder | null;
-    token: string | null;
-    loading: boolean;
-    revoking: boolean;
-  }>({ open: false, record: null, token: null, loading: false, revoking: false });
-
-  const handleShareOrder = useCallback(async (record: ProductionOrder) => {
-    setShareModal({ open: true, record, token: null, loading: true, revoking: false });
-    try {
-      const res = await intelligenceApi.generateShareToken(String(record.id));
-      const token = (res as any)?.data as string | null;
-      if (!token) throw new Error('未返回 token');
-      setShareModal(prev => ({ ...prev, token, loading: false }));
-    } catch {
-      setShareModal(prev => ({ ...prev, loading: false }));
-      message.error('生成分享链接失败，请重试');
-    }
-  }, [message]);
-
-  const handleRevokeShare = useCallback(async () => {
-    const orderId = shareModal.record?.id;
-    if (!orderId) return;
-    setShareModal(prev => ({ ...prev, revoking: true }));
-    try {
-      await intelligenceApi.revokeShareToken(String(orderId));
-      message.success('分享链接已撤销');
-      setShareModal({ open: false, record: null, token: null, loading: false, revoking: false });
-    } catch {
-      setShareModal(prev => ({ ...prev, revoking: false }));
-      message.error('撤销失败，请重试');
-    }
-  }, [shareModal.record, message]);
-
-  const copyTextSafely = useCallback(async (text: string) => {
-    const value = String(text || '').trim();
-    if (!value) {
-      message.warning('复制内容为空');
-      return;
-    }
-
-    try {
-      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(value);
-        message.success('链接已复制');
-        return;
-      }
-    } catch {
-      // fallback to document.execCommand('copy')
-    }
-
-    try {
-      if (typeof document === 'undefined') {
-        message.error('当前环境不支持复制，请手动复制');
-        return;
-      }
-      const textarea = document.createElement('textarea');
-      textarea.value = value;
-      textarea.setAttribute('readonly', 'true');
-      textarea.style.position = 'fixed';
-      textarea.style.top = '-1000px';
-      textarea.style.left = '-1000px';
-      document.body.appendChild(textarea);
-      textarea.focus();
-      textarea.select();
-      const copied = document.execCommand('copy');
-      document.body.removeChild(textarea);
-      if (copied) {
-        message.success('链接已复制');
-      } else {
-        message.error('复制失败，请手动复制');
-      }
-    } catch {
-      message.error('复制失败，请手动复制');
-    }
-  }, [message]);
-
   // ===== 查询参数 =====
   // 跨页跳转精准定位：组件 mount 时就从 URL 读取 orderNo，避免初始 fetch 与 URL params effect 之间的竞态条件
   const [queryParams, setQueryParams] = useState<ProductionQueryParams>(() => {
     const initSearch = new URLSearchParams(window.location.search);
     const initOrderNo = initSearch.get('orderNo') || '';
-    // 读取上次用户选择的每页条数，刷新后仍保持（仅列表模式；卡片模式由 cardPageSize 控制）
-    const savedPageSize = (() => {
-      try {
-        const raw = localStorage.getItem('production_list_page_size');
-        const n = raw ? parseInt(raw, 10) : NaN;
-        return Number.isFinite(n) && n > 0 ? n : 10;
-      } catch { return 10; }
-    })();
     return {
-      page: 1, pageSize: savedPageSize, includeScrapped: true, excludeTerminal: false,
+      page: 1, pageSize: readPageSize(DEFAULT_PAGE_SIZE), includeScrapped: true, excludeTerminal: false,
       ...(initOrderNo ? { keyword: initOrderNo } : {}),
     };
   });
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
-  const [sortField, setSortField] = useState<string>('createTime');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
-  const handleSort = (field: string, order: 'asc' | 'desc') => {
-    setSortField(field);
-    setSortOrder(order);
-  };
+  const { sortField, sortOrder, handleSort } = usePersistentSort<string, 'asc' | 'desc'>({
+    storageKey: 'production-list',
+    defaultField: 'createTime',
+    defaultOrder: 'desc',
+  });
   // ===== 数据状态 =====
   const [productionList, setProductionList] = useState<ProductionOrder[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
@@ -795,7 +715,6 @@ const ProductionList: React.FC = () => {
                 ],
                 onClick: () => handleStatClick('production'),
                 activeColor: 'var(--color-primary)',
-                activeBg: 'rgba(45, 127, 249, 0.1)',
               },
               {
                 key: 'delayed',
@@ -805,7 +724,6 @@ const ProductionList: React.FC = () => {
                 ],
                 onClick: () => handleStatClick('delayed'),
                 activeColor: 'var(--color-danger)',
-                activeBg: 'rgba(239, 68, 68, 0.1)',
               },
               {
                 key: 'today',
@@ -815,7 +733,6 @@ const ProductionList: React.FC = () => {
                 ],
                 onClick: () => handleStatClick('today'),
                 activeColor: 'var(--color-primary)',
-                activeBg: 'rgba(45, 127, 249, 0.1)',
               },
             ]}
           />
@@ -977,9 +894,9 @@ const ProductionList: React.FC = () => {
                 total: total,
                 showTotal: (total) => `共 ${total} 条`,
                 showSizeChanger: true,
-                pageSizeOptions: ['10', '20', '50', '100'],
+                pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
                 onChange: (page, pageSize) => {
-                  try { localStorage.setItem('production_list_page_size', String(pageSize)); } catch { /* ignore */ }
+                  savePageSize(pageSize);
                   setQueryParams({ ...queryParams, page, pageSize });
                 },
               }}
@@ -994,55 +911,13 @@ const ProductionList: React.FC = () => {
               subtitleField="styleNo"
               fields={[]}
               fieldGroups={[
-                [
-                  {
-                    label: '码数',
-                    key: 'orderDetails',
-                    render: (val: unknown, record: Record<string, unknown>) => {
-                      try {
-                        const details = record?.orderDetails;
-                        const parsed = typeof details === 'string' ? JSON.parse(details) : details;
-                        const lines = parsed?.orderLines || parsed?.lines || parsed;
-                        if (Array.isArray(lines) && lines.length > 0) {
-                          return (
-                            <div style={{ display: 'flex', gap: '2px', flexWrap: 'wrap' }}>
-                              {lines.map((l: any, idx: number) => (
-                                <span key={idx} style={{ width: '22px', textAlign: 'center', fontSize: '10px' }}>{l.size || '-'}</span>
-                              ))}
-                            </div>
-                          );
-                        }
-                      } catch { /* ignore */ }
-                      return String(record?.size || '').trim() || '-';
-                    }
-                  }
-                ],
-                [
-                  {
-                    label: '数量',
-                    key: 'orderDetails',
-                    render: (val: unknown, record: Record<string, unknown>) => {
-                      try {
-                        const details = record?.orderDetails;
-                        const parsed = typeof details === 'string' ? JSON.parse(details) : details;
-                        const lines = parsed?.orderLines || parsed?.lines || parsed;
-                        if (Array.isArray(lines) && lines.length > 0) {
-                          const total = lines.reduce((s: number, l: any) => s + (Number(l.quantity) || 0), 0);
-                          return (
-                            <div style={{ display: 'flex', gap: '2px', alignItems: 'center', flexWrap: 'wrap' }}>
-                              {lines.map((l: any, idx: number) => (
-                                <span key={idx} style={{ width: '22px', textAlign: 'center', fontSize: '10px', color: 'var(--color-info)', fontWeight: 600 }}>{l.quantity || 0}</span>
-                              ))}
-                              <span style={{ marginLeft: '4px', color: '#8c8c8c', fontSize: '10px', flexShrink: 0 }}>共{total}</span>
-                            </div>
-                          );
-                        }
-                      } catch { /* ignore */ }
-                      const qty = Number(record?.orderQuantity) || 0;
-                      return qty > 0 ? `${qty}件` : '-';
-                    }
-                  }
-                ],
+                ...createOrderColorSizeGridFieldGroups<ProductionOrder>({
+                  gridKey: 'cardColorSizeGrid',
+                  getItems: (record) => getOrderCardSizeQuantityItems(record),
+                  getFallbackColor: (record) => String(record.color || '').trim(),
+                  getFallbackSize: (record) => String(record.size || '').trim(),
+                  getFallbackQuantity: (record) => Number(record.orderQuantity) || 0,
+                }),
                 [
                   { label: '下单', key: 'createTime', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' },
                   { label: '交期', key: 'plannedEndDate', render: (val: unknown) => val ? dayjs(val as string).format('MM-DD') : '-' },
@@ -1091,20 +966,17 @@ const ProductionList: React.FC = () => {
               )}
             />
             {/* 卡片视图分页器 */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 0 4px' }}>
-              <Pagination
-                current={queryParams.page}
-                pageSize={queryParams.pageSize}
-                total={total}
-                showTotal={(t) => `共 ${t} 条`}
-                showSizeChanger
-                pageSizeOptions={['10', '20', '50', '100']}
-                onChange={(page, pageSize) => {
-                  try { localStorage.setItem('production_list_page_size', String(pageSize)); } catch { /* ignore */ }
-                  setQueryParams({ ...queryParams, page, pageSize });
-                }}
-              />
-            </div>
+            <StandardPagination
+              current={queryParams.page}
+              pageSize={queryParams.pageSize}
+              total={total}
+              wrapperStyle={{ paddingTop: 12, paddingBottom: 4 }}
+              showQuickJumper={false}
+              onChange={(page, pageSize) => {
+                savePageSize(pageSize);
+                setQueryParams({ ...queryParams, page, pageSize });
+              }}
+            />
             </>
           )}
         </Card>
@@ -1123,7 +995,7 @@ const ProductionList: React.FC = () => {
         />
 
         {/* 备注异常 Modal */}
-        <ResizableModal
+        <SmallModal
           title={<><ExclamationCircleOutlined style={{ color: '#f59e0b', marginRight: 8 }} />备注异常</>}
           open={remarkPopoverId !== null}
           onCancel={() => { setRemarkPopoverId(null); setRemarkText(''); }}
@@ -1131,8 +1003,6 @@ const ProductionList: React.FC = () => {
           okText="保存"
           cancelText="取消"
           confirmLoading={remarkSaving}
-          width="40vw"
-          destroyOnHidden
         >
           <Input.TextArea
             value={remarkText}
@@ -1143,7 +1013,7 @@ const ProductionList: React.FC = () => {
             placeholder="请输入异常备注..."
             style={{ marginTop: 8 }}
           />
-        </ResizableModal>
+        </SmallModal>
 
         {/* 工序详情弹窗 */}
         <ProcessDetailModal
@@ -1542,55 +1412,7 @@ const ProductionList: React.FC = () => {
           </div>
         </ResizableModal>
 
-        {/* 分享进度弹窗 */}
-        <ResizableModal
-          title={<><ShareAltOutlined style={{ color: 'var(--primary-color)', marginRight: 8 }} />分享订单进度</>}
-          open={shareModal.open}
-          onCancel={() => setShareModal({ open: false, record: null, token: null, loading: false, revoking: false })}
-          footer={null}
-          width="30vw"
-          destroyOnHidden
-        >
-          {shareModal.loading ? (
-            <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-secondary)' }}>正在生成链接……</div>
-          ) : shareModal.token ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <Alert
-                type="info"
-                showIcon
-                title="链接已生成，1天后自动失效"
-                description="客户打开链接可查看完整进度与AI预测，不展示单价，不支持下载。"
-                style={{ fontSize: 12 }}
-              />
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <Input
-                  readOnly
-                  value={`${window.location.origin}/share/${shareModal.token}`}
-                  style={{ flex: 1, fontSize: 12 }}
-                />
-                <Button
-                  type="primary"
-                  icon={<CopyOutlined />}
-                  onClick={() => {
-                    void copyTextSafely(`${window.location.origin}/share/${shareModal.token}`);
-                  }}
-                >
-                  复制
-                </Button>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <Button
-                  danger
-                  icon={<StopOutlined />}
-                  loading={shareModal.revoking}
-                  onClick={handleRevokeShare}
-                >
-                  撤销链接
-                </Button>
-              </div>
-            </div>
-          ) : null}
-        </ResizableModal>
+        {shareOrderDialog}
 
         {/* 打印标签（洗水唛 / U编码）双 Tab 弹窗 */}
         <LabelPrintModal

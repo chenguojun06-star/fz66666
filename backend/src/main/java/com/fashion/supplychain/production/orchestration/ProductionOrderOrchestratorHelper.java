@@ -305,11 +305,7 @@ public class ProductionOrderOrchestratorHelper {
         String operatorName = null;
         LocalDateTime completedTime = null;
 
-        if (materialArrivalRate != null && materialArrivalRate >= 100) {
-            procurementComplete = true;
-            operatorName = order.getProcurementOperatorName();
-            completedTime = order.getProcurementEndTime();
-        } else if (materialArrivalRate != null && materialArrivalRate >= 50 && isManuallyConfirmed) {
+        if (materialArrivalRate != null && materialArrivalRate >= 50 && isManuallyConfirmed) {
             procurementComplete = true;
             operatorName = order.getProcurementConfirmedByName();
             completedTime = order.getProcurementConfirmedAt();

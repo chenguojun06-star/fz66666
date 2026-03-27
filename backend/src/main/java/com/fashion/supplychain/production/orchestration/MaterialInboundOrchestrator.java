@@ -5,14 +5,17 @@ import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.service.MaterialInboundService;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.MaterialStockService;
+import com.fashion.supplychain.warehouse.orchestration.MaterialPickupOrchestrator;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -42,6 +45,9 @@ public class MaterialInboundOrchestrator {
 
     @Autowired
     private com.fashion.supplychain.finance.orchestration.MaterialReconciliationSyncOrchestrator materialReconciliationSyncOrchestrator;
+
+    @Autowired
+    private MaterialPickupOrchestrator materialPickupOrchestrator;
 
     /**
      * 采购到货入库完整流程
@@ -137,6 +143,8 @@ public class MaterialInboundOrchestrator {
             // 不中断入库流程，仅记录错误
         }
 
+        syncInboundTraceRecord(inbound, purchase, "PURCHASE_INBOUND");
+
         // 7. 返回结果
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
@@ -228,6 +236,8 @@ public class MaterialInboundOrchestrator {
         materialStockService.increaseStock(tempPurchase, quantity, warehouseLocation);
         log.info("库存已更新: materialCode={}, quantity=+{}, location={}", materialCode, quantity, warehouseLocation);
 
+        syncInboundTraceRecord(inbound, null, "MANUAL_INBOUND");
+
         // 4. 返回结果
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
@@ -258,5 +268,55 @@ public class MaterialInboundOrchestrator {
                     .orderByDesc(MaterialInbound::getInboundTime));
         }
         return materialInboundService.list();
+    }
+
+    private void syncInboundTraceRecord(MaterialInbound inbound, MaterialPurchase purchase, String sourceType) {
+        if (inbound == null || !StringUtils.hasText(inbound.getInboundNo())) {
+            return;
+        }
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("pickupType", "INTERNAL");
+        body.put("movementType", "INBOUND");
+        body.put("sourceType", sourceType);
+        body.put("usageType", resolveUsageType(purchase));
+        body.put("sourceRecordId", inbound.getId());
+        body.put("sourceDocumentNo", inbound.getInboundNo());
+        body.put("orderNo", purchase != null ? purchase.getOrderNo() : null);
+        body.put("styleNo", purchase != null ? purchase.getStyleNo() : null);
+        body.put("materialId", purchase != null ? purchase.getMaterialId() : null);
+        body.put("materialCode", inbound.getMaterialCode());
+        body.put("materialName", inbound.getMaterialName());
+        body.put("materialType", inbound.getMaterialType());
+        body.put("color", inbound.getColor());
+        body.put("specification", purchase != null ? purchase.getSpecifications() : inbound.getSize());
+        body.put("fabricWidth", null);
+        body.put("fabricWeight", null);
+        body.put("fabricComposition", purchase != null ? purchase.getFabricComposition() : null);
+        body.put("quantity", inbound.getInboundQuantity());
+        body.put("unit", purchase != null ? purchase.getUnit() : null);
+        body.put("unitPrice", purchase != null ? purchase.getUnitPrice() : null);
+        body.put("receiverId", inbound.getOperatorId());
+        body.put("receiverName", inbound.getOperatorName());
+        body.put("issuerId", inbound.getOperatorId());
+        body.put("issuerName", inbound.getOperatorName());
+        body.put("warehouseLocation", inbound.getWarehouseLocation());
+        body.put("auditStatus", "APPROVED");
+        body.put("financeStatus", "SETTLED");
+        body.put("remark", StringUtils.hasText(inbound.getRemark()) ? inbound.getRemark() : "系统自动同步入库记录");
+        materialPickupOrchestrator.create(body);
+    }
+
+    private String resolveUsageType(MaterialPurchase purchase) {
+        if (purchase == null || !StringUtils.hasText(purchase.getSourceType())) {
+            return "STOCK";
+        }
+        String sourceType = purchase.getSourceType().trim().toLowerCase();
+        if ("sample".equals(sourceType)) {
+            return "SAMPLE";
+        }
+        if ("stock".equals(sourceType)) {
+            return "STOCK";
+        }
+        return "BULK";
     }
 }

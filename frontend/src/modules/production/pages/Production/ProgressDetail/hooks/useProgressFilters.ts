@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import dayjs from 'dayjs';
 import { ProductionQueryParams } from '@/types/production';
 import { readPageSize } from '@/utils/pageSizeStore';
+import { usePersistentSort } from '@/hooks/usePersistentSort';
 
 /**
  * 筛选条件、排序、统计卡片状态管理
@@ -20,8 +21,15 @@ export const useProgressFilters = () => {
     setViewMode(mode);
   };
   const [activeStatFilter, setActiveStatFilter] = useState<'production' | 'delayed' | 'today'>('production');
-  const [orderSortField, setOrderSortField] = useState<string>('createTime');
-  const [orderSortOrder, setOrderSortOrder] = useState<'asc' | 'desc'>('desc');
+  const {
+    sortField: orderSortField,
+    sortOrder: orderSortOrder,
+    handleSort: handleOrderSort,
+  } = usePersistentSort<string, 'asc' | 'desc'>({
+    storageKey: 'progress-detail-order-list',
+    defaultField: 'createTime',
+    defaultOrder: 'desc',
+  });
 
   const statusOptions = useMemo(() => ([
     { label: '全部', value: '' },
@@ -32,11 +40,6 @@ export const useProgressFilters = () => {
     { label: '已逾期', value: 'delayed' },
     { label: '已取消', value: 'cancelled' },
   ]), []);
-
-  const handleOrderSort = (field: string, order: 'asc' | 'desc') => {
-    setOrderSortField(field);
-    setOrderSortOrder(order);
-  };
 
   const handleStatClick = (type: 'production' | 'delayed' | 'today') => {
     setActiveStatFilter(type);

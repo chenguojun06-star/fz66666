@@ -397,7 +397,7 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
             return;
         }
         try {
-            redisService.deleteByPattern(BOM_CACHE_PREFIX + UserContext.tenantId() + ":" + styleId + ":*");
+            redisService.deleteByPattern(BOM_CACHE_PREFIX + "*:" + UserContext.tenantId() + ":" + styleId + ":*");
         } catch (Exception e) {
             log.debug("清除BOM缓存失败: styleId={}", styleId);
         }

@@ -4,6 +4,14 @@ import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 
 const { Text } = Typography;
+const inlineLabelTextStyle: React.CSSProperties = {
+  fontSize: 'var(--font-size-sm)',
+};
+
+const inlineValueTextStyle: React.CSSProperties = {
+  fontSize: 'var(--font-size-sm)',
+  fontWeight: 600,
+};
 
 export interface SizeRatioRow {
   key: string;
@@ -173,7 +181,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
             borderRadius: 6,
             padding: '4px 8px',
             width: '100%',
-            fontSize: 14,
+            fontSize: 13,
             outline: 'none',
             background: disabled ? '#f5f5f5' : '#fff',
           }}
@@ -221,7 +229,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
           return (
             <Text strong style={{ color: '#1677ff' }}>
               {qty} 件
-              <Text type="secondary" style={{ fontSize: 12, marginLeft: 4 }}>
+              <Text type="secondary" style={{ fontSize: 'var(--font-size-sm)', marginLeft: 4 }}>
                 · {sizeBundles} 扎
               </Text>
             </Text>
@@ -257,11 +265,11 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
       {/* 输入区：颜色 + 三个固定输入框横排 */}
       <Space style={{ marginBottom: 10 }} wrap align="center">
         <span>
-          <Text type="secondary">颜色：</Text>
-          <Text strong>{entryColorText || '-'}</Text>
+          <Text type="secondary" style={inlineLabelTextStyle}>颜色：</Text>
+          <Text style={inlineValueTextStyle}>{entryColorText || '-'}</Text>
         </span>
         <span style={{ marginLeft: 8 }}>
-          <Text type="secondary">到货面料量：</Text>
+          <Text type="secondary" style={inlineLabelTextStyle}>已确认可裁面料：</Text>
           <InputNumber
             min={0}
             max={999999}
@@ -270,12 +278,12 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
             disabled={disabled}
             onChange={(val) => setArrivedInput(val)}
             style={{ width: 120, marginLeft: 4, marginRight: 4 }}
-            placeholder="到货米数"
+            placeholder="可裁米数"
           />
-          <Text type="secondary">m</Text>
+          <Text type="secondary" style={inlineLabelTextStyle}>m</Text>
         </span>
         <span style={{ marginLeft: 8 }}>
-          <Text type="secondary">件数：</Text>
+          <Text type="secondary" style={inlineLabelTextStyle}>下单数量：</Text>
           <InputNumber
             min={1}
             max={999999}
@@ -284,10 +292,10 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
             onChange={(val) => setTotalQty(val ?? 0)}
             style={{ width: 110, marginLeft: 4, marginRight: 4 }}
           />
-          <Text type="secondary">件</Text>
+          <Text type="secondary" style={inlineLabelTextStyle}>件</Text>
         </span>
         <span style={{ marginLeft: 8 }}>
-          <Text type="secondary">每扎件数：</Text>
+          <Text type="secondary" style={inlineLabelTextStyle}>每扎件数：</Text>
           <InputNumber
             min={1}
             max={9999}
@@ -297,13 +305,13 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
             style={{ width: 90, marginLeft: 4, marginRight: 4 }}
             placeholder="如 25/30"
           />
-          <Text type="secondary">件/扎</Text>
+          <Text type="secondary" style={inlineLabelTextStyle}>件/扎</Text>
         </span>
         {/* 面料消耗参考（有到货量时才显示） */}
         {consumedFabric > 0 && arrivedInput && arrivedInput > 0 && (
-          <Text style={{ fontSize: 12, color: consumedFabric > arrivedInput ? '#ff4d4f' : '#52c41a' }}>
-            预计消耗 {consumedFabric.toFixed(2)} m / 到货 {arrivedInput} m
-            {consumedFabric > arrivedInput && '（面料不足！）'}
+          <Text style={{ fontSize: 'var(--font-size-sm)', color: consumedFabric > arrivedInput ? '#ff4d4f' : '#52c41a' }}>
+            预计消耗 {consumedFabric.toFixed(2)} m / 已确认 {arrivedInput} m
+            {consumedFabric > arrivedInput && '（仅作提示，支持分批裁剪）'}
           </Text>
         )}
       </Space>
@@ -336,13 +344,13 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
         <Tag color="blue">
           扎数：{bundles} 扎
           {piecesPerBundle && piecesPerBundle > 0 && (
-            <span style={{ marginLeft: 4, fontSize: 12 }}>（每扎≤{piecesPerBundle} 件）</span>
+            <span style={{ marginLeft: 4, fontSize: 'var(--font-size-sm)' }}>（每扎≤{piecesPerBundle} 件）</span>
           )}
         </Tag>
         <Tag color={actualTotal > 0 ? 'green' : 'default'}>
           实际总裁剪：{actualTotal} 件
           {actualTotal > 0 && actualTotal !== totalQty && (
-            <span style={{ marginLeft: 4, fontSize: 12 }}>
+            <span style={{ marginLeft: 4, fontSize: 'var(--font-size-sm)' }}>
               （订单 {totalQty} 件 → 进位后 {actualTotal} 件）
             </span>
           )}
@@ -375,4 +383,3 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
 };
 
 export default CuttingRatioPanel;
-

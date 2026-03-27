@@ -11,10 +11,12 @@ import MaterialTable from './components/MaterialTable';
 import PurchaseModal from './components/PurchaseModal';
 import SmartReceiveModal from './components/SmartReceiveModal';
 import MaterialPurchaseAIBanner from './components/MaterialPurchaseAIBanner';
+import MaterialQualityIssueModal from './components/MaterialQualityIssueModal';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import '../../../styles.css';
 import { useMaterialPurchase } from './hooks/useMaterialPurchase';
 import { formatMaterialQuantity } from './utils';
+import type { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
 
 const MaterialPurchase: React.FC = () => {
   const {
@@ -28,6 +30,7 @@ const MaterialPurchase: React.FC = () => {
     purchaseStats, activeStatFilter, handleStatClick, overdueCount,
     smartError, showSmartErrorNotice, showPurchaseAI,
     fetchMaterialPurchaseList,
+    reloadCurrentDetail,
     isOrderFrozenForRecord,
     handleExport,
     location,
@@ -54,6 +57,8 @@ const MaterialPurchase: React.FC = () => {
 
   // 本弹窗用于 AI 识别时传递给 recognizeReturnEvidence 的文件引用
   const [returnRecognizeFile, setReturnRecognizeFile] = useState<File | null>(null);
+  const [qualityIssueOpen, setQualityIssueOpen] = useState(false);
+  const [qualityIssuePurchase, setQualityIssuePurchase] = useState<MaterialPurchaseType | null>(null);
 
   return (
     <Layout>
@@ -133,42 +138,36 @@ const MaterialPurchase: React.FC = () => {
                           ],
                           onClick: () => handleStatClick('all'),
                           activeColor: 'var(--color-primary)',
-                          activeBg: 'rgba(45, 127, 249, 0.1)',
                         },
                         {
                           key: 'pending',
                           items: [{ label: '待采购', value: purchaseStats.pendingCount, unit: '条', color: 'var(--color-warning)' }],
                           onClick: () => handleStatClick('pending'),
                           activeColor: 'var(--color-warning)',
-                          activeBg: '#fff7e6',
                         },
                         {
                           key: 'received',
                           items: [{ label: '已领取', value: purchaseStats.receivedCount, unit: '条', color: 'var(--color-primary)' }],
                           onClick: () => handleStatClick('received'),
                           activeColor: 'var(--color-primary)',
-                          activeBg: 'rgba(45, 127, 249, 0.1)',
                         },
                         {
                           key: 'partial',
                           items: [{ label: '部分到货', value: purchaseStats.partialCount, unit: '条', color: 'var(--color-warning)' }],
                           onClick: () => handleStatClick('partial'),
                           activeColor: '#fa8c16',
-                          activeBg: '#fff2e8',
                         },
                         {
                           key: 'completed',
                           items: [{ label: '全部到货', value: purchaseStats.completedCount, unit: '条', color: 'var(--color-success)' }],
                           onClick: () => handleStatClick('completed'),
                           activeColor: 'var(--color-success)',
-                          activeBg: 'rgba(34, 197, 94, 0.15)',
                         },
                         {
                           key: 'overdue',
                           items: [{ label: '逆期未到', value: overdueCount, unit: '条', color: 'var(--error-color, #ff4d4f)' }],
                           onClick: () => handleStatClick('overdue'),
                           activeColor: 'var(--error-color, #ff4d4f)',
-                          activeBg: '#fff1f0',
                         },
                       ]}
                     />
@@ -180,7 +179,7 @@ const MaterialPurchase: React.FC = () => {
                       onReset={() => {
                         const params = new URLSearchParams(location.search);
                         const orderNo = (params.get('orderNo') || '').trim();
-                        setQueryParams({ page: 1, pageSize: 10, orderNo, materialType: '', factoryType: '', sourceType: '', status: '' });
+                        setQueryParams((prev) => ({ page: 1, pageSize: prev.pageSize, orderNo, materialType: '', factoryType: '', sourceType: '', status: '' }));
                       }}
                       onExport={handleExport}
                       onAdd={() => openDialog('create')}
@@ -246,6 +245,10 @@ const MaterialPurchase: React.FC = () => {
           onReceive={receivePurchaseTask}
           onConfirmReturn={confirmReturnPurchaseTask}
           onReturnReset={openReturnReset}
+          onQualityIssue={(record) => {
+            setQualityIssuePurchase(record);
+            setQualityIssueOpen(true);
+          }}
           onReceiveAll={handleReceiveAll}
           onBatchReturn={handleBatchReturn}
           isSamplePurchase={isSamplePurchaseView}
@@ -255,11 +258,23 @@ const MaterialPurchase: React.FC = () => {
           onSavePreview={handleSavePreview}
           isOrderFrozenForRecord={isOrderFrozenForRecord}
         />
+        <MaterialQualityIssueModal
+          open={qualityIssueOpen}
+          purchase={qualityIssuePurchase}
+          onChanged={async () => {
+            await fetchMaterialPurchaseList();
+            await reloadCurrentDetail();
+          }}
+          onClose={() => {
+            setQualityIssueOpen(false);
+            setQualityIssuePurchase(null);
+          }}
+        />
 
         <ResizableModal
           open={returnConfirmModal.visible}
-          title="回料确认"
-          okText="确认回料"
+          title="回料确认 / 追加回料"
+          okText="提交回料"
           cancelText="取消"
           width={isMobile ? '96vw' : '60vw'}
           centered

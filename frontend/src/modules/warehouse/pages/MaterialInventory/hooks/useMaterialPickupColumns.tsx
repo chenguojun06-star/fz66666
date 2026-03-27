@@ -1,17 +1,23 @@
-import React from 'react';
 import { Button, Tag, Space, Popconfirm } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import { formatMaterialSpecWidth } from '@/utils/materialType';
 import type { MaterialPickupRecord } from './useMaterialPickupData';
 
 interface UsedActions {
   onAudit:   (record: MaterialPickupRecord) => void;
   onFinance: (record: MaterialPickupRecord) => void;
   onCancel:  (id: string) => void;
+  onOpenReceivable: (record: MaterialPickupRecord) => void;
 }
 
 const PICKUP_TYPE_MAP: Record<string, { color: string; text: string }> = {
   INTERNAL: { color: 'green',  text: '内部' },
   EXTERNAL: { color: 'blue',   text: '外部' },
+};
+
+const MOVEMENT_TYPE_MAP: Record<string, { color: string; text: string }> = {
+  INBOUND: { color: 'cyan', text: '入库' },
+  OUTBOUND: { color: 'orange', text: '出库' },
 };
 
 const AUDIT_STATUS_MAP: Record<string, { color: string; text: string }> = {
@@ -21,8 +27,15 @@ const AUDIT_STATUS_MAP: Record<string, { color: string; text: string }> = {
 };
 
 const FINANCE_STATUS_MAP: Record<string, { color: string; text: string }> = {
-  PENDING: { color: 'default', text: '待核算' },
-  SETTLED: { color: 'blue',    text: '已核算' },
+  PENDING: { color: 'default', text: '待入账' },
+  SETTLED: { color: 'blue',    text: '已入账' },
+};
+
+const RECEIVABLE_STATUS_MAP: Record<string, { color: string; text: string }> = {
+  PENDING: { color: 'orange', text: '待收款' },
+  PARTIAL: { color: 'gold', text: '部分收款' },
+  PAID: { color: 'green', text: '已收款' },
+  OVERDUE: { color: 'red', text: '逾期未收' },
 };
 
 function fmtTime(t?: string) {
@@ -39,12 +52,35 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Mate
       ellipsis: true,
     },
     {
+      title: '流转方向',
+      dataIndex: 'movementType',
+      width: 90,
+      render: (v?: string) => {
+        const cfg = MOVEMENT_TYPE_MAP[v || 'OUTBOUND'] ?? { color: 'default', text: v || '-' };
+        return <Tag color={cfg.color}>{cfg.text}</Tag>;
+      },
+    },
+    {
       title: '类型',
       dataIndex: 'pickupType',
       width: 80,
       render: (v: string) => {
         const cfg = PICKUP_TYPE_MAP[v] ?? { color: 'default', text: v };
         return <Tag color={cfg.color}>{cfg.text}</Tag>;
+      },
+    },
+    {
+      title: '用料场景',
+      dataIndex: 'usageType',
+      width: 110,
+      render: (v?: string) => {
+        const map: Record<string, string> = {
+          BULK: '大货用料',
+          SAMPLE: '样衣用料',
+          STOCK: '备库/补库',
+          OTHER: '其他',
+        };
+        return map[v || ''] || v || '-';
       },
     },
     {
@@ -109,18 +145,11 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Mate
       render: (v?: string) => v || '-',
     },
     {
-      title: '规格',
-      dataIndex: 'specification',
-      width: 120,
+      title: '规格/幅宽',
+      key: 'specWidth',
+      width: 150,
       ellipsis: true,
-      render: (v?: string) => v || '-',
-    },
-    {
-      title: '幅宽',
-      dataIndex: 'fabricWidth',
-      width: 90,
-      ellipsis: true,
-      render: (v?: string) => v || '-',
+      render: (_: unknown, record) => formatMaterialSpecWidth(record.specification, record.fabricWidth),
     },
     {
       title: '克重',
@@ -164,8 +193,22 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Mate
     },
     {
       title: '领取人',
-      dataIndex: 'pickerName',
-      width: 90,
+      dataIndex: 'receiverName',
+      width: 100,
+      ellipsis: true,
+      render: (v?: string, record?: MaterialPickupRecord) => v || record?.pickerName || '-',
+    },
+    {
+      title: '出库/入库人',
+      dataIndex: 'issuerName',
+      width: 110,
+      ellipsis: true,
+      render: (v?: string) => v || '-',
+    },
+    {
+      title: '库位',
+      dataIndex: 'warehouseLocation',
+      width: 120,
       ellipsis: true,
       render: (v?: string) => v || '-',
     },
@@ -194,12 +237,55 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Mate
       },
     },
     {
+      title: '应收单',
+      dataIndex: 'receivableNo',
+      width: 150,
+      ellipsis: true,
+      render: (v: string | undefined, record: MaterialPickupRecord) => (
+        v ? (
+          <Button type="link" size="small" style={{ padding: 0 }} onClick={() => actions.onOpenReceivable(record)}>
+            {v}
+          </Button>
+        ) : '-'
+      ),
+    },
+    {
+      title: '收款状态',
+      dataIndex: 'receivableStatus',
+      width: 110,
+      render: (v?: string) => {
+        const cfg = RECEIVABLE_STATUS_MAP[v || ''] ?? { color: 'default', text: v || '-' };
+        return <Tag color={cfg.color}>{cfg.text}</Tag>;
+      },
+    },
+    {
+      title: '已收金额',
+      dataIndex: 'receivedAmount',
+      width: 110,
+      align: 'right' as const,
+      render: (v?: number) => v != null ? `¥${v.toFixed(2)}` : '-',
+    },
+    {
+      title: '收款时间',
+      dataIndex: 'receivedTime',
+      width: 150,
+      render: fmtTime,
+    },
+    {
       title: '操作',
       key: 'actions',
-      width: 180,
+      width: 240,
       fixed: 'right' as const,
       render: (_: unknown, record: MaterialPickupRecord) => (
         <Space size={4}>
+          {record.receivableId && (
+            <Button
+              size="small"
+              onClick={() => actions.onOpenReceivable(record)}
+            >
+              应收详情
+            </Button>
+          )}
           {record.auditStatus === 'PENDING' && (
             <Button
               size="small"
@@ -209,12 +295,12 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Mate
               审核
             </Button>
           )}
-          {record.auditStatus === 'APPROVED' && record.financeStatus === 'PENDING' && (
+          {record.movementType !== 'INBOUND' && record.auditStatus === 'APPROVED' && record.receivableNo == null && (
             <Button
               size="small"
               onClick={() => actions.onFinance(record)}
             >
-              财务核算
+              补录账单
             </Button>
           )}
           {record.auditStatus === 'PENDING' && (

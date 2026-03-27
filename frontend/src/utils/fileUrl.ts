@@ -48,7 +48,7 @@ export function getAuthedFileUrl(fileUrl: string | undefined | null): string {
     }
   }
 
-  if (url.startsWith('blob:')) return url;
+  if (url.startsWith('blob:') || url.startsWith('data:')) return url;
 
   const separator = url.includes('?') ? '&' : '?';
   return `${url}${separator}token=${encodeURIComponent(token)}`;
@@ -67,7 +67,7 @@ export function getFullAuthedFileUrl(fileUrl: string | undefined | null): string
   if (!url) return '';
 
   // 完整 URL 仍需补 token；blob 直接返回
-  if (url.startsWith('blob:')) {
+  if (url.startsWith('blob:') || url.startsWith('data:')) {
     return url;
   }
   if (url.startsWith('http://') || url.startsWith('https://')) {

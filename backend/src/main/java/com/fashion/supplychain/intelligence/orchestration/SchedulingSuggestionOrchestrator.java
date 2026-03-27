@@ -160,7 +160,7 @@ public class SchedulingSuggestionOrchestrator {
                 int dailyCapacity;
                 String capacitySource;
                 if (hasRealScanCapacity) {
-                    dailyCapacity = realCap;
+                    dailyCapacity = realCap != null ? realCap.intValue() : 0;
                     capacitySource = "real";
                 } else if (capacityConfigured) {
                     dailyCapacity = f.getDailyCapacity();
@@ -227,22 +227,40 @@ public class SchedulingSuggestionOrchestrator {
                 int startDelayDays = loadRatio < 0.5 ? 1 : (loadRatio < 0.8 ? 3 : 7);
                 LocalDate suggestedStart = LocalDate.now().plusDays(startDelayDays);
                 LocalDate estimatedEnd = suggestedStart.plusDays(estimatedDays);
+                int rangeBufferDays = hasRealScanCapacity && !factoryDone.isEmpty()
+                        ? Math.max(1, (int) Math.ceil(estimatedDays * 0.08))
+                        : capacityConfigured
+                        ? Math.max(2, (int) Math.ceil(estimatedDays * 0.15))
+                        : Math.max(3, (int) Math.ceil(estimatedDays * 0.20));
+                int fastestDays = Math.max(3, estimatedDays - rangeBufferDays);
+                int slowestDays = Math.max(fastestDays, estimatedDays + rangeBufferDays * 2);
+                LocalDate earliestEnd = suggestedStart.plusDays(fastestDays);
+                LocalDate latestEnd = suggestedStart.plusDays(slowestDays);
 
                 SchedulePlan plan = new SchedulePlan();
                 plan.setFactoryName(factoryName);
                 plan.setMatchScore(matchScore);
                 plan.setCurrentLoad(currentLoad);
+                plan.setDailyCapacity(dailyCapacity);
                 plan.setAvailableCapacity(availableCapacity);
                 plan.setSuggestedStart(suggestedStart.toString());
                 plan.setEstimatedEnd(estimatedEnd.toString());
                 plan.setEstimatedDays(estimatedDays);
+                plan.setFastestDays(fastestDays);
+                plan.setSlowestDays(slowestDays);
+                plan.setEarliestEnd(earliestEnd.toString());
+                plan.setLatestEnd(latestEnd.toString());
+                plan.setCapacityScore(capacityScore);
+                plan.setTimeScore(onTimeScore);
+                plan.setCategoryScore(categoryScore);
+                plan.setQualityScore(qualityScore);
                 plan.setGanttItems(buildGantt(suggestedStart, estimatedDays));
 
                 // ── 数据质量标记 ─────────────────────────────────────────────
                 boolean hasRealData = !factoryDone.isEmpty();
                 plan.setHasRealData(hasRealData || hasRealScanCapacity);
                 plan.setCapacityConfigured(capacityConfigured || hasRealScanCapacity);
-                plan.setRealDailyCapacity(hasRealScanCapacity ? realCap : 0);
+                plan.setRealDailyCapacity(hasRealScanCapacity && realCap != null ? realCap.intValue() : 0);
                 plan.setCapacitySource(capacitySource);
                 if (hasRealScanCapacity && hasRealData) {
                     plan.setDataNote(null); // 产能+历史均为真实数据，不显示提示

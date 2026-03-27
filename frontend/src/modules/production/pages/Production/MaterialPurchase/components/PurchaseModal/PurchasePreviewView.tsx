@@ -3,7 +3,7 @@ import { Tag } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import { StyleCoverThumb, StyleAttachmentsButton } from '@/components/StyleAssets';
 import { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
-import { getMaterialTypeCategory, getMaterialTypeLabel } from '@/utils/materialType';
+import { formatMaterialSpecWidth, getMaterialTypeCategory, getMaterialTypeLabel } from '@/utils/materialType';
 import { formatReferenceKilograms } from '../../utils';
 
 interface PurchasePreviewViewProps {
@@ -57,7 +57,6 @@ const PurchasePreviewView: React.FC<PurchasePreviewViewProps> = ({ previewList, 
                 styleId={record.styleId}
                 styleNo={record.styleNo}
                 modalTitle={record.styleNo ? `放码纸样（${record.styleNo}）` : '放码纸样'}
-                onlyGradingPattern={true}
                 onlyActive
               />
             )
@@ -86,14 +85,9 @@ const PurchasePreviewView: React.FC<PurchasePreviewViewProps> = ({ previewList, 
             key: 'materialName',
           },
           {
-            title: '规格',
-            dataIndex: 'specifications',
-            key: 'specifications',
-          },
-          {
-            title: '幅宽',
-            dataIndex: 'fabricWidth',
-            key: 'fabricWidth',
+            title: '规格/幅宽',
+            key: 'specWidth',
+            render: (_: unknown, record: MaterialPurchaseType) => formatMaterialSpecWidth(record.specifications, record.fabricWidth),
           },
           {
             title: '克重',
@@ -120,7 +114,7 @@ const PurchasePreviewView: React.FC<PurchasePreviewViewProps> = ({ previewList, 
             title: '参考公斤数',
             key: 'referenceKilograms',
             align: 'right' as const,
-            render: (_: unknown, record: MaterialPurchaseType) => formatReferenceKilograms(record.purchaseQuantity, record.conversionRate),
+            render: (_: unknown, record: MaterialPurchaseType) => formatReferenceKilograms(record.purchaseQuantity, record.conversionRate, record.unit),
           },
           {
             title: '供应商',

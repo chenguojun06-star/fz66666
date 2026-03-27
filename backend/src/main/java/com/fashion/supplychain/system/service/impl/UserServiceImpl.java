@@ -166,6 +166,23 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     @Override
+    public User findLoginUserByPhone(String phone, Long tenantId) {
+        String normalizedPhone = phone == null ? null : phone.trim();
+        if (!StringUtils.hasText(normalizedPhone)) {
+            return null;
+        }
+
+        QueryWrapper<User> queryWrapper = new QueryWrapper<User>()
+                .eq("phone", normalizedPhone)
+                .in("status", "active", "ENABLED");
+        if (tenantId != null) {
+            queryWrapper.eq("tenant_id", tenantId);
+        }
+        queryWrapper.last("limit 1");
+        return userMapper.selectOne(queryWrapper);
+    }
+
+    @Override
     public User findByName(String name) {
         if (!StringUtils.hasText(name)) {
             return null;

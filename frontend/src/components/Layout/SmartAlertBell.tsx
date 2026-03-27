@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AlertOutlined,
@@ -12,9 +12,11 @@ import {
 import { Badge, Input, Spin } from 'antd';
 import api, { ApiResult } from '../../utils/api';
 import { intelligenceApi, sysNoticeApi } from '../../services/production/productionApi';
+import { normalizeXiaoyunChatPayload } from '@/services/intelligence/xiaoyunChatAdapter';
+import { buildXiaoyunPopupIntroMessage } from './xiaoyunPopupPresenter';
 import { useAuth } from '../../utils/AuthContext';
 import type { SysNotice } from '../../services/production/productionApi';
-import DecisionInsightCard, { type DecisionInsight } from '../common/DecisionInsightCard';
+import XiaoyunInsightCard, { type XiaoyunInsightCardData } from '../common/XiaoyunInsightCard';
 
 // ─── 数据类型 ────────────────────────────────────────────────
 interface TopPriorityOrder {
@@ -34,7 +36,7 @@ interface BriefData {
   highRiskOrderCount: number;
   topPriorityOrder?: TopPriorityOrder;
   suggestions: string[];
-  decisionCards?: Array<DecisionInsight & { actionPath?: string }>;
+  decisionCards?: XiaoyunInsightCardData[];
 }
 
 interface UrgentEvent {
@@ -49,10 +51,9 @@ interface AiMessage {
   role: 'user' | 'ai';
   content: string;
   suggestions?: string[];
+  cards?: XiaoyunInsightCardData[];
 }
 
-const AI_WELCOME = '我是小云。你直接自然语言跟我说就行，我会分析问题、执行动作，或者通知对应同事去处理。下面这些只是示例。';
-const AI_DEFAULT_SUGGESTIONS = ['先帮我排今天处理顺序', '给我本周工作总结', '给我本月经营报告', '通知跟单跟进这单'];
 // 建议词跟路径映射表（只保留纯导航类，AI能回答的问题统一走 askAi）
 const SUGGESTION_NAV: Record<string, string> = {
   '整体情况怎么样？': '/dashboard',
@@ -105,8 +106,9 @@ const SmartAlertBell: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [aiInput, setAiInput] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
+  const introMessage = useMemo(() => buildXiaoyunPopupIntroMessage(brief, events), [brief, events]);
   const [aiMessages, setAiMessages] = useState<AiMessage[]>([
-    { role: 'ai', content: AI_WELCOME, suggestions: AI_DEFAULT_SUGGESTIONS },
+    { role: 'ai', content: introMessage.content, suggestions: introMessage.suggestions, cards: introMessage.cards },
   ]);
   const [fetchedToday, setFetchedToday] = useState('');
   const [myNotices, setMyNotices] = useState<SysNotice[]>([]);
@@ -199,6 +201,20 @@ const SmartAlertBell: React.FC = () => {
     if (!fetchedToday) fetchData();
   }, [fetchedToday, fetchData]);
 
+  useEffect(() => {
+    setAiMessages(prev => {
+      if (prev.length !== 1 || prev[0]?.role !== 'ai') {
+        return prev;
+      }
+      return [{
+        role: 'ai',
+        content: introMessage.content,
+        suggestions: introMessage.suggestions,
+        cards: introMessage.cards,
+      }];
+    });
+  }, [introMessage]);
+
   // 点击面板外关闭
   useEffect(() => {
     if (!open) return;
@@ -267,13 +283,13 @@ const SmartAlertBell: React.FC = () => {
     setAiMessages(prev => [...prev, { role: 'user', content: q }]);
     setAiLoading(true);
     try {
-      const res = await intelligenceApi.aiAdvisorChat(q) as any;
-      const d = res?.data ?? res ?? null;
-      if (d && d.answer) {
+      const payload = normalizeXiaoyunChatPayload(await intelligenceApi.aiAdvisorChat(q));
+      if (payload?.answer) {
         setAiMessages(prev => [...prev, {
           role: 'ai',
-          content: d.answer,
-          suggestions: [],
+          content: payload.displayAnswer || payload.answer,
+          suggestions: payload.suggestions || [],
+          cards: payload.cards || [],
         }]);
       } else {
         setAiMessages(prev => [...prev, { role: 'ai', content: '这句我还没拿到足够上下文。你可以换成“先看哪几单最急”这种问法。' }]);
@@ -437,9 +453,10 @@ const SmartAlertBell: React.FC = () => {
                         >
                           <CloseOutlined style={{ fontSize: 9 }} />
                         </button>
-                        <DecisionInsightCard
+                        <XiaoyunInsightCard
                           compact
-                          insight={{
+                          onNavigate={goTo}
+                          card={{
                             ...card,
                             source: card.source || '实时数据推演',
                             confidence: card.confidence || ((brief.overdueOrderCount || 0) + (brief.highRiskOrderCount || 0) > 0 ? '建议优先处理' : '可执行建议'),
@@ -456,7 +473,6 @@ const SmartAlertBell: React.FC = () => {
                               note: '补充',
                               ...card.labels,
                             },
-                            onAction: card.actionPath ? () => goTo(card.actionPath!) : undefined,
                           }}
                         />
                       </div>
@@ -555,6 +571,18 @@ const SmartAlertBell: React.FC = () => {
                     )}
                     <div className="sap-ai-msg-bubble">
                       <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</span>
+                      {msg.role === 'ai' && msg.cards && msg.cards.length > 0 && (
+                        <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
+                          {msg.cards.map((card, cardIndex) => (
+                            <XiaoyunInsightCard
+                              key={`${card.title}-${cardIndex}`}
+                              compact
+                              card={card}
+                              onNavigate={goTo}
+                            />
+                          ))}
+                        </div>
+                      )}
                       {/* 建议词 */}
                       {msg.role === 'ai' && msg.suggestions && msg.suggestions.length > 0 && (
                         <div className="sap-ai-suggestions">

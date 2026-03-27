@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 import { Tag, Space, App } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
@@ -7,7 +7,8 @@ import { formatDateTime } from '@/utils/datetime';
 import { productionScanApi } from '@/services/production/productionApi';
 import { stageAliasMap, carSewingKeywords, tailProcessKeywords } from '@/utils/productionStage';
 import { useAuth, isAdminUser } from '@/utils/AuthContext';
-import { readPageSize } from '@/utils/pageSizeStore';
+import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE_OPTIONS, readPageSize } from '@/utils/pageSizeStore';
+import { generateRequestId } from '@/utils/api';
 
 interface ProcessTrackingRecord {
   id: string;
@@ -45,6 +46,8 @@ interface ProcessListItem {
 interface ProcessTrackingTableProps {
   records: ProcessTrackingRecord[];
   loading?: boolean;
+  orderId?: string;
+  orderNo?: string;
   /** NodeDetailModal 传入的节点类型 (procurement/cutting/sewing/ironing/quality/packaging/secondaryProcess) */
   nodeType?: string;
   /** NodeDetailModal 传入的节点名称，如 "车缝"、"剪线"、"质检" */
@@ -93,6 +96,20 @@ function canUndoTracking(record: ProcessTrackingRecord, orderStatus?: string, is
     const limitMs = isAdmin ? 5 * 3600 * 1000 : 30 * 60 * 1000; // 管理员 5h，普通用户 30min
     if (!isNaN(scanMs) && Date.now() - scanMs >= limitMs) return false;
   }
+  return true;
+}
+
+function isTerminalOrderStatus(orderStatus?: string): boolean {
+  const s = String(orderStatus || '').trim().toLowerCase();
+  return s === 'completed' || s === 'cancelled' || s === 'closed';
+}
+
+function canManualCompleteTracking(record: ProcessTrackingRecord, orderStatus?: string, orderNo?: string, orderId?: string): boolean {
+  if (record.scanStatus === 'scanned') return false;
+  if (isTerminalOrderStatus(orderStatus)) return false;
+  if (!String(record.processName || '').trim()) return false;
+  if (!String(record.bundleNo || '').trim()) return false;
+  if (!String(orderNo || '').trim() && !String(orderId || '').trim()) return false;
   return true;
 }
 
@@ -187,11 +204,66 @@ const matchesFilter = (record: ProcessTrackingRecord, filterType: string, nodeNa
   return false;
 };
 
-const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({ records, loading, nodeType, nodeName, processType, orderStatus, processList, onUndoSuccess }) => {
+const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
+  records,
+  loading,
+  orderId,
+  orderNo,
+  nodeType,
+  nodeName,
+  processType,
+  orderStatus,
+  processList,
+  onUndoSuccess,
+}) => {
   const { message, modal } = App.useApp();
   const { user } = useAuth();
   const _isAdmin = isAdminUser(user);
   const safeRecords = Array.isArray(records) ? records : [];
+  const [actioningRecordId, setActioningRecordId] = useState<string>('');
+
+  const resolveScanType = useCallback((record: ProcessTrackingRecord) => {
+    const processCode = String(record.processCode || '').trim().toLowerCase();
+    const processName = String(record.processName || '').trim();
+    const currentType = String(processType || nodeType || '').trim();
+    if (currentType === 'warehousing' || processCode.startsWith('warehousing') || ['入库', '质检入库', '次品入库'].includes(processName)) {
+      return 'warehouse';
+    }
+    if (currentType === 'cutting' || processCode.startsWith('cutting') || processName === '裁剪') {
+      return 'cutting';
+    }
+    if (currentType === 'procurement' || processCode.startsWith('procurement') || processName.includes('采购')) {
+      return 'procurement';
+    }
+    return 'production';
+  }, [nodeType, processType]);
+
+  const resolveProgressStage = useCallback((record: ProcessTrackingRecord) => {
+    const processCode = String(record.processCode || '').trim().toLowerCase();
+    const processName = String(record.processName || '').trim();
+    const currentType = String(processType || nodeType || '').trim();
+    if (currentType === 'procurement' || processCode.startsWith('procurement') || processName.includes('采购')) return '采购';
+    if (currentType === 'cutting' || processCode.startsWith('cutting') || processName === '裁剪') return '裁剪';
+    if (currentType === 'secondaryProcess' || processCode.startsWith('secondary')) return '二次工艺';
+    if (currentType === 'carSewing' || currentType === 'sewing' || processCode.startsWith('sewing')) return '车缝';
+    if (
+      currentType === 'tailProcess' ||
+      currentType === 'ironing' ||
+      currentType === 'quality' ||
+      currentType === 'packaging' ||
+      processCode.startsWith('ironing') ||
+      processCode.startsWith('pressing') ||
+      processCode.startsWith('quality') ||
+      processCode.startsWith('packaging') ||
+      processName === '剪线'
+    ) {
+      return '尾部';
+    }
+    if (currentType === 'warehousing' || processCode.startsWith('warehousing') || ['入库', '质检入库', '次品入库'].includes(processName)) {
+      return '入库';
+    }
+    return String(nodeName || processName || '').trim();
+  }, [nodeName, nodeType, processType]);
 
   const handleUndo = useCallback(async (record: ProcessTrackingRecord) => {
     modal.confirm({
@@ -212,6 +284,47 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({ records, lo
       },
     });
   }, [message, modal, onUndoSuccess]);
+
+  const handleManualComplete = useCallback((record: ProcessTrackingRecord) => {
+    const bundleNo = Number(record.bundleNo || 0);
+    const operatorLabel = String(user?.username || user?.name || '').trim() || '当前账号';
+    modal.confirm({
+      width: '30vw',
+      title: '确认手动完成',
+      content: `确定将此节点标记为完成？\n菲号: ${record.bundleNo}\n工序: ${record.processName || '-'}\n数量: ${record.quantity || 0}件\n操作账号: ${operatorLabel}`,
+      okText: '确认完成',
+      cancelText: '取消',
+      onOk: async () => {
+        setActioningRecordId(record.id);
+        try {
+          const payload = {
+            requestId: generateRequestId(),
+            orderId: String(orderId || '').trim() || undefined,
+            orderNo: String(orderNo || '').trim() || undefined,
+            bundleNo: Number.isFinite(bundleNo) && bundleNo > 0 ? bundleNo : undefined,
+            quantity: Number(record.quantity || 0) || 0,
+            scanType: resolveScanType(record),
+            progressStage: resolveProgressStage(record),
+            processName: String(record.processName || '').trim() || undefined,
+            processCode: String(record.processCode || '').trim() || undefined,
+            unitPrice: Number.isFinite(Number(record.unitPrice)) ? Number(record.unitPrice) : undefined,
+            scanTime: new Date().toISOString(),
+            operatorId: String(user?.id || '').trim() || undefined,
+            operatorName: String(user?.username || user?.name || '').trim() || undefined,
+            remark: 'PC手动完成',
+            manual: true,
+          };
+          await productionScanApi.execute(payload);
+          message.success('已手动完成，数据已按扫码链路同步');
+          onUndoSuccess?.();
+        } catch (e: any) {
+          message.error(e?.response?.data?.message || e?.message || '手动完成失败');
+        } finally {
+          setActioningRecordId('');
+        }
+      },
+    });
+  }, [message, modal, onUndoSuccess, orderId, orderNo, resolveProgressStage, resolveScanType, user]);
   const filterType = nodeType || processType;
 
   // 按 nodeType/processType/nodeName/processList 过滤记录（动态匹配，支持模板改名）
@@ -346,18 +459,29 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({ records, lo
     {
       title: '操作',
       key: 'actions',
-      width: 80,
+      width: 138,
       render: (_: any, record: ProcessTrackingRecord) => {
-        if (!canUndoTracking(record, orderStatus, _isAdmin)) return null;
-        const actions: RowAction[] = [
-          {
+        const actions: RowAction[] = [];
+        if (canManualCompleteTracking(record, orderStatus, orderNo, orderId)) {
+          const acting = actioningRecordId === record.id;
+          actions.push({
+            key: 'complete',
+            label: acting ? '完成中...' : '手动完成',
+            primary: true,
+            disabled: acting,
+            onClick: () => handleManualComplete(record),
+          });
+        }
+        if (canUndoTracking(record, orderStatus, _isAdmin)) {
+          actions.push({
             key: 'undo',
             label: '撤回',
             danger: true,
-            primary: true,
+            primary: actions.length === 0,
             onClick: () => handleUndo(record),
-          },
-        ];
+          });
+        }
+        if (!actions.length) return null;
         return <RowActions actions={actions} />;
       },
     },
@@ -394,11 +518,11 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({ records, lo
         loading={loading}
         rowKey="key"
         size="small"
-        scroll={{ x: 900, y: 450 }}
+        scroll={{ x: 900, y: 750 }}
         pagination={{
-          defaultPageSize: readPageSize(50),
+          defaultPageSize: readPageSize(DEFAULT_PAGE_SIZE),
           showSizeChanger: true,
-          pageSizeOptions: ['20', '50', '100'],
+          pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
           showTotal: (total) => `共 ${total} 条记录`,
           size: 'small',
         }}
