@@ -343,12 +343,13 @@ public class StyleStageHelper {
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
-        ensureStyleFullyCompletedBeforeMaintenance(current);
+        // ✅ 移除过度限制：用户在开发阶段应该能自由退回修改
+        // ensureStyleFullyCompletedBeforeMaintenance(current);
         Object reasonValue = body == null ? null : body.get("reason");
         String reason = reasonValue == null ? "" : String.valueOf(reasonValue).trim();
         String remark = StringUtils.hasText(reason) ? reason : "";
         if (!StringUtils.hasText(remark)) {
-            throw new IllegalArgumentException("维护原因不能为空");
+            throw new IllegalArgumentException("退回原因不能为空");
         }
         boolean ok = styleInfoService.lambdaUpdate()
                 .eq(StyleInfo::getId, id)
@@ -502,12 +503,13 @@ public class StyleStageHelper {
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
         }
-        ensureStyleFullyCompletedBeforeMaintenance(current);
+        // ✅ 移除过度限制：用户在开发阶段应该能自由退回修改
+        // ensureStyleFullyCompletedBeforeMaintenance(current);
         Object reasonValue = body == null ? null : body.get("reason");
         String reason = reasonValue == null ? "" : String.valueOf(reasonValue).trim();
         String remark = StringUtils.hasText(reason) ? reason : "";
         if (!StringUtils.hasText(remark)) {
-            throw new IllegalArgumentException("维护原因不能为空");
+            throw new IllegalArgumentException("退回原因不能为空");
         }
         boolean ok = styleInfoService.lambdaUpdate()
                 .eq(StyleInfo::getId, id)
