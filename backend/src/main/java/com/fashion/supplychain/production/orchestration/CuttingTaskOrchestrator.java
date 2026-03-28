@@ -293,101 +293,121 @@ public class CuttingTaskOrchestrator {
                 .map(line -> line.get("quantity"))
                 .mapToInt(value -> Integer.parseInt(String.valueOf(value)))
                 .sum();
-        String resolvedColor = summarizeLineField(requestedOrderLines, "color", "多色");
-        String resolvedSize = summarizeLineField(requestedOrderLines, "size", "多码");
         String resolvedStyleName = style != null && StringUtils.hasText(style.getStyleName())
             ? style.getStyleName() : styleNo;
 
-        // 生成 CUT 前缀订单号（若用户未提供）
-        String finalOrderNo = StringUtils.hasText(orderNo)
+        // 生成 CUT 前缀订单号基础（若用户未提供）
+        String baseOrderNo = StringUtils.hasText(orderNo)
                 ? orderNo
                 : "CUT" + DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS").format(LocalDateTime.now());
-
-        CuttingTask existed = cuttingTaskService.getOne(
-                new LambdaQueryWrapper<CuttingTask>()
-                        .eq(CuttingTask::getProductionOrderNo, finalOrderNo)
-                        .last("limit 1"));
-        if (existed != null) {
-            finalOrderNo = finalOrderNo + "-" + String.valueOf(System.nanoTime()).substring(8);
-        }
 
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime orderCreateTime = requestedOrderDate != null ? requestedOrderDate : now;
 
         String progressWorkflowJson = buildProgressWorkflowJson(styleNo);
-
-        // ── 1. 创建关联的 ProductionOrder（只建立正常裁剪起点）────────────
-        ProductionOrder order = new ProductionOrder();
-        order.setOrderNo(finalOrderNo);
-        order.setQrCode(finalOrderNo);
-        order.setStyleId(resolvedStyleId);
-        order.setStyleNo(styleNo);
-        order.setStyleName(resolvedStyleName);
-        order.setColor(resolvedColor);
-        order.setSize(resolvedSize);
-        order.setOrderQuantity(totalOrderQuantity);
-        order.setOrderDetails(buildOrderDetailsJson(requestedOrderLines));
-        order.setCompletedQuantity(0);
-        order.setProductionProgress(0);
-        // 模板裁剪任务从裁剪起点直接开始，不经过采购回料链路，避免生成菲号时被采购校验误拦截。
-        order.setMaterialArrivalRate(100);
-        order.setStatus("pending");
-        order.setDeleteFlag(0);
-        order.setPlannedEndDate(requestedDeliveryDate);
-        order.setProgressWorkflowJson(progressWorkflowJson);
-        order.setCreateTime(orderCreateTime);
-        order.setUpdateTime(now);
-        if ("INTERNAL".equals(resolvedFactoryType)) {
-            order.setFactoryId(null);
-            order.setFactoryName(StringUtils.hasText(factoryName) ? factoryName : internalUnit.getNodeName());
-            order.setFactoryContactPerson(null);
-            order.setFactoryContactPhone(null);
-            order.setFactoryType("INTERNAL");
-            order.setOrgUnitId(internalUnit.getId());
-            order.setParentOrgUnitId(internalParentUnit != null ? internalParentUnit.getId() : internalUnit.getParentId());
-            order.setParentOrgUnitName(internalParentUnit != null ? internalParentUnit.getNodeName() : null);
-            order.setOrgPath(internalUnit.getPathNames());
-        } else {
-            order.setFactoryId(factory.getId());
-            order.setFactoryName(StringUtils.hasText(factoryName) ? factoryName : factory.getFactoryName());
-            order.setFactoryContactPerson(factory.getContactPerson());
-            order.setFactoryContactPhone(factory.getContactPhone());
-            order.setFactoryType(factorySnapshot.getFactoryType());
-            order.setOrgUnitId(factorySnapshot.getOrgUnitId());
-            order.setParentOrgUnitId(factorySnapshot.getParentOrgUnitId());
-            order.setParentOrgUnitName(factorySnapshot.getParentOrgUnitName());
-            order.setOrgPath(factorySnapshot.getOrgPath());
-        }
-        // 设置租户 ID 及创建人
         com.fashion.supplychain.common.UserContext ctx = com.fashion.supplychain.common.UserContext.get();
-        if (ctx != null && ctx.getTenantId() != null) {
-            order.setTenantId(ctx.getTenantId());
-        }
-        if (ctx != null) {
-            order.setCreatedById(ctx.getUserId() == null ? null : String.valueOf(ctx.getUserId()));
-            order.setCreatedByName(ctx.getUsername());
+
+        // ── 按颜色分菲：为每个 orderLine（color+size+qty 组合）创建独立的 CuttingTask ────────────
+        List<CuttingTask> createdTasks = new ArrayList<>();
+        int lineIndex = 0;
+
+        for (Map<String, Object> orderLine : requestedOrderLines) {
+            lineIndex++;
+            String lineColor = String.valueOf(orderLine.get("color")).trim();
+            String lineSize = String.valueOf(orderLine.get("size")).trim();
+            int lineQuantity = Integer.parseInt(String.valueOf(orderLine.get("quantity")));
+
+            // 为每条颜色行生成唯一订单号
+            String finalOrderNo = baseOrderNo;
+            if (requestedOrderLines.size() > 1) {
+                // 多颜色时，按顺序追加 -1, -2, -3...
+                finalOrderNo = baseOrderNo + "-" + lineIndex;
+            }
+
+            // 检查重复
+            CuttingTask existed = cuttingTaskService.getOne(
+                    new LambdaQueryWrapper<CuttingTask>()
+                            .eq(CuttingTask::getProductionOrderNo, finalOrderNo)
+                            .last("limit 1"));
+            if (existed != null) {
+                finalOrderNo = finalOrderNo + "-" + String.valueOf(System.nanoTime()).substring(8);
+            }
+
+            // 创建该颜色/尺码的 ProductionOrder
+            ProductionOrder order = new ProductionOrder();
+            order.setOrderNo(finalOrderNo);
+            order.setQrCode(finalOrderNo);
+            order.setStyleId(resolvedStyleId);
+            order.setStyleNo(styleNo);
+            order.setStyleName(resolvedStyleName);
+            order.setColor(lineColor);
+            order.setSize(lineSize);
+            order.setOrderQuantity(lineQuantity);
+            order.setOrderDetails(buildOrderDetailsJson(List.of(orderLine)));
+            order.setCompletedQuantity(0);
+            order.setProductionProgress(0);
+            // 模板裁剪任务从裁剪起点直接开始，不经过采购回料链路，避免生成菲号时被采购校验误拦截。
+            order.setMaterialArrivalRate(100);
+            order.setStatus("pending");
+            order.setDeleteFlag(0);
+            order.setPlannedEndDate(requestedDeliveryDate);
+            order.setProgressWorkflowJson(progressWorkflowJson);
+            order.setCreateTime(orderCreateTime);
+            order.setUpdateTime(now);
+            if ("INTERNAL".equals(resolvedFactoryType)) {
+                order.setFactoryId(null);
+                order.setFactoryName(StringUtils.hasText(factoryName) ? factoryName : internalUnit.getNodeName());
+                order.setFactoryContactPerson(null);
+                order.setFactoryContactPhone(null);
+                order.setFactoryType("INTERNAL");
+                order.setOrgUnitId(internalUnit.getId());
+                order.setParentOrgUnitId(internalParentUnit != null ? internalParentUnit.getId() : internalUnit.getParentId());
+                order.setParentOrgUnitName(internalParentUnit != null ? internalParentUnit.getNodeName() : null);
+                order.setOrgPath(internalUnit.getPathNames());
+            } else {
+                order.setFactoryId(factory.getId());
+                order.setFactoryName(StringUtils.hasText(factoryName) ? factoryName : factory.getFactoryName());
+                order.setFactoryContactPerson(factory.getContactPerson());
+                order.setFactoryContactPhone(factory.getContactPhone());
+                order.setFactoryType(factorySnapshot.getFactoryType());
+                order.setOrgUnitId(factorySnapshot.getOrgUnitId());
+                order.setParentOrgUnitId(factorySnapshot.getParentOrgUnitId());
+                order.setParentOrgUnitName(factorySnapshot.getParentOrgUnitName());
+                order.setOrgPath(factorySnapshot.getOrgPath());
+            }
+            // 设置租户 ID 及创建人
+            if (ctx != null && ctx.getTenantId() != null) {
+                order.setTenantId(ctx.getTenantId());
+            }
+            if (ctx != null) {
+                order.setCreatedById(ctx.getUserId() == null ? null : String.valueOf(ctx.getUserId()));
+                order.setCreatedByName(ctx.getUsername());
+            }
+
+            boolean orderOk = productionOrderService.save(order);
+            if (!orderOk) {
+                throw new IllegalStateException("创建颜色 " + lineColor + " 的生产订单失败");
+            }
+
+            CuttingTask task = cuttingTaskService.createTaskIfAbsent(order);
+            if (task == null) {
+                throw new IllegalStateException("创建颜色 " + lineColor + " 的裁剪任务失败");
+            }
+
+            try {
+                scanRecordDomainService.ensureBaseStageScanRecordsOnCreate(order);
+                productionOrderService.recomputeProgressFromRecords(order.getId().trim());
+            } catch (Exception e) {
+                log.warn("颜色 {} 的裁剪任务创建后初始化基础记录失败: orderId={}", lineColor, order.getId(), e);
+            }
+
+            createdTasks.add(task);
+            log.info("已创建颜色分菲裁剪任务: orderNo={}, color={}, size={}, quantity={}, orderId={}",
+                    finalOrderNo, lineColor, lineSize, lineQuantity, order.getId());
         }
 
-        boolean orderOk = productionOrderService.save(order);
-        if (!orderOk) {
-            throw new IllegalStateException("创建生产订单失败");
-        }
-        log.info("模板款号裁剪任务已关联正常生产起点: orderNo={}, orderId={}, progressWorkflowJson={}",
-                finalOrderNo, order.getId(), progressWorkflowJson != null ? "已设置" : "未设置（无工序单价）");
-
-        CuttingTask task = cuttingTaskService.createTaskIfAbsent(order);
-        if (task == null) {
-            throw new IllegalStateException("创建裁剪任务失败");
-        }
-
-        try {
-            scanRecordDomainService.ensureBaseStageScanRecordsOnCreate(order);
-            productionOrderService.recomputeProgressFromRecords(order.getId().trim());
-        } catch (Exception e) {
-            log.warn("模板款号裁剪任务创建后初始化基础记录失败: orderId={}", order.getId(), e);
-        }
-
-        return task;
+        // 返回最后一个创建的任务，或首个任务（用于前端响应）
+        return createdTasks.isEmpty() ? null : createdTasks.get(0);
     }
 
     private LocalDateTime parseDate(Map<String, Object> body, String key, boolean endOfDay) {
