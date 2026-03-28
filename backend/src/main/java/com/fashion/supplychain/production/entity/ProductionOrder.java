@@ -555,6 +555,18 @@ public class ProductionOrder {
     private String orderBizType;
 
     /**
+     * 订单业务来源类型（来自样衣、电商平台等）
+     */
+    @TableField("source_biz_type")
+    private String sourceBizType;
+
+    /**
+     * 是否已推送至订单系统（1=已推送，0=未推送）
+     */
+    @TableField("pushed_to_order")
+    private Integer pushedToOrder;
+
+    /**
      * 下单单价模式：PROCESS=工序单价，SIZE=尺码单价，MANUAL=手动单价
      */
     @TableField("pricing_mode")
