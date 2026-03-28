@@ -437,7 +437,7 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
           </Form.Item>
         </Col>
         <Col xs={24} md={6}>
-          <Form.Item name="conversionRate" label="每公斤米数(米/公斤)">
+          <Form.Item name="conversionRate" label="换算">
             <InputNumber style={{ width: '100%' }} min={0} step={0.01} precision={4} placeholder="如：3" />
           </Form.Item>
         </Col>

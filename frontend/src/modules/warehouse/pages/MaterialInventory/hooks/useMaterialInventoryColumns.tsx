@@ -209,7 +209,7 @@ export function useMaterialInventoryColumns({
             }}>
               <span style={{ color: 'var(--neutral-text-disabled)' }}>参考公斤数:</span> {referenceKg == null ? '-' : `${referenceKg} kg`}
               <span style={{ margin: '0 8px', color: 'var(--neutral-border)' }}>|</span>
-              <span style={{ color: 'var(--neutral-text-disabled)' }}>每公斤米数:</span> {conversionRate > 0 ? `${conversionRate} 米/公斤` : '-'}
+              <span style={{ color: 'var(--neutral-text-disabled)' }}>换算:</span> {conversionRate > 0 ? `${conversionRate} 米/公斤` : '-'}
             </div>
             {isLow && (
               <div style={{

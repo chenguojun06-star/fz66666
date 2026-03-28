@@ -727,6 +727,11 @@ public class StyleInfoOrchestrator {
         return styleStageHelper.completeSize(id);
     }
 
+    public boolean resetSize(Long id, Map<String, Object> body) {
+        ensureStyleNotScrapped(id);
+        return styleStageHelper.resetSize(id, body);
+    }
+
     public boolean startBom(Long id) {
         ensureStyleNotScrapped(id);
         return styleStageHelper.startBom(id);

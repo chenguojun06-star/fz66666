@@ -401,13 +401,13 @@ export function useBomColumns({
       }
     },
     {
-      title: '每公斤米数(米/公斤)',
+      title: '换算',
       dataIndex: 'conversionRate',
       key: 'conversionRate',
       width: 220,
       render: (text: number, record: StyleBom) => {
         const value = Number(text ?? 1) || 1;
-        const formulaText = '填写每公斤对应的米数';
+        const formulaText = '每公斤对应的米数';
         const exampleText = '示例：3米=1公斤，则填 3';
         const row = form.getFieldValue(String(record.id)) || {};
         const bomUnit = String(row.unit ?? record.unit ?? '').trim();
@@ -424,7 +424,7 @@ export function useBomColumns({
               </Form.Item>
               <div style={{ fontSize: 11, color: '#8c8c8c', lineHeight: 1.4 }}>
                 {canConvertToKg
-                  ? `${exampleText}；系统会用“米数 ÷ 每公斤米数”算出公斤数`
+                  ? `${exampleText}；系统会用"米数 ÷ 换算值"算出公斤数`
                   : '仅在纸样录入单位为米、BOM单位为公斤时参与换算'}
               </div>
             </div>

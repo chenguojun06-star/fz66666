@@ -18,7 +18,6 @@ import StyleSizeTab from './components/StyleSizeTab';
 import StyleProcessTab from './components/StyleProcessTab';
 import StyleProductionTab from './components/StyleProductionTab';
 import StyleSecondaryProcessTab from './components/StyleSecondaryProcessTab';
-import StyleSizePriceTab from './components/StyleSizePriceTab';
 import StyleIntelligenceProfileCard from './components/StyleIntelligenceProfileCard';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
@@ -365,7 +364,6 @@ const StyleInfoDetailPage: React.FC = () => {
   // ===== 4. Tab相关状态（工序、生产制单） =====
   const [_processModalVisible, _setProcessModalVisible] = useState(false);
   const [pushToOrderModalVisible, setPushToOrderModalVisible] = useState(false);
-  const [processData, _setProcessData] = useState<any[]>([]);
   const [pushToOrderForm] = Form.useForm();
   const [pushToOrderSaving, setPushToOrderSaving] = useState(false);
   const [pushToOrderTargets, setPushToOrderTargets] = useState<string[]>([
@@ -535,7 +533,7 @@ const StyleInfoDetailPage: React.FC = () => {
               editLocked={editLocked}
               isNewPage={isNewPage}
               sampleCompleted={currentStyle?.sampleStatus === 'COMPLETED'}
-              hasProcessData={processData?.length > 0 || Boolean((currentStyle as any)?.processCompletedTime)}
+              hasProcessData={Boolean((currentStyle as any)?.processCompletedTime)}
               pushedToOrder={Boolean((currentStyle as any)?.pushedToOrder)}
               onSave={handleSave}
               onCompleteSample={handleCompleteSample}
@@ -718,22 +716,8 @@ const StyleInfoDetailPage: React.FC = () => {
                     processStartTime={(currentStyle as any)?.processStartTime}
                     processCompletedTime={(currentStyle as any)?.processCompletedTime}
                     onRefresh={() => { void fetchDetail(styleIdParam!); }}
-                    onDataLoaded={_setProcessData}
                   />
                 )
-              },
-              {
-                key: '10',
-                label: '码数单价',
-                disabled: !currentStyle?.id,
-                children: <StyleSizePriceTab
-                  styleId={currentStyle?.id}
-                  readOnly={Boolean((currentStyle as any)?.sizePriceCompletedTime)}
-                  sizePriceAssignee={(currentStyle as any)?.sizePriceAssignee}
-                  sizePriceStartTime={(currentStyle as any)?.sizePriceStartTime}
-                  sizePriceCompletedTime={(currentStyle as any)?.sizePriceCompletedTime}
-                  onRefresh={() => { void fetchDetail(styleIdParam!); }}
-                />
               },
               {
                 key: '3',
@@ -784,20 +768,8 @@ const StyleInfoDetailPage: React.FC = () => {
                 <Checkbox value="process">工序单价</Checkbox>
                 <Checkbox value="production">生产制单</Checkbox>
                 <Checkbox value="secondary">二次工艺</Checkbox>
-                <Checkbox value="sizePrice">码数单价</Checkbox>
               </div>
             </Checkbox.Group>
-          </Form.Item>
-          <Form.Item
-            label="单价类型"
-            name="priceType"
-            rules={[{ required: true, message: '请选择单价类型' }]}
-            initialValue="process"
-          >
-            <Select>
-              <Select.Option value="process">工序单价</Select.Option>
-              <Select.Option value="sizePrice">码数单价</Select.Option>
-            </Select>
           </Form.Item>
           <Form.Item label="备注" name="remark">
             <Input.TextArea rows={3} placeholder="选填：推送备注" />

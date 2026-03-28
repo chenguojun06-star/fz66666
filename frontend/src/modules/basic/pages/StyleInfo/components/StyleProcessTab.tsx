@@ -73,7 +73,6 @@ const StyleProcessTab: React.FC<Props> = ({
   const snapshotRef = useRef<StyleProcessWithSizePrice[] | null>(null);
   const [processTemplateKey, setProcessTemplateKey] = useState<string | undefined>(undefined);
   const [processTemplates, setProcessTemplates] = useState<TemplateLibrary[]>([]);
-  const [templateSourceStyleNo, setTemplateSourceStyleNo] = useState('');
   const [templateLoading, setTemplateLoading] = useState(false);
 
   // 多码单价相关状态
@@ -163,48 +162,6 @@ const StyleProcessTab: React.FC<Props> = ({
       setAiLoading(false);
     }
   }, [aiCategory, styleId, message]);
-
-  const [styleNoOptions, setStyleNoOptions] = useState<Array<{ value: string; label: string }>>([]);
-  const [styleNoLoading, setStyleNoLoading] = useState(false);
-  const styleNoReqSeq = useRef(0);
-  const styleNoTimerRef = useRef<number | undefined>(undefined);
-
-  const fetchStyleNoOptions = async (keyword?: string) => {
-    const seq = (styleNoReqSeq.current += 1);
-    setStyleNoLoading(true);
-    try {
-      const res = await api.get<{ code: number; data: { records: unknown[]; total: number } }>('/style/info/list', {
-        params: {
-          page: 1,
-          pageSize: 200,
-          styleNo: String(keyword ?? '').trim(),
-        },
-      });
-      const result = res as any;
-      if (seq !== styleNoReqSeq.current) return;
-      if (result.code !== 200) return;
-      const records = (result.data?.records || []) as Array<any>;
-      const next = (Array.isArray(records) ? records : [])
-        .map((r) => String(r?.styleNo || '').trim())
-        .filter(Boolean)
-        .map((sn) => ({ value: sn, label: sn }));
-      setStyleNoOptions(next);
-    } catch {
-    // Intentionally empty
-      // 忽略错误
-    } finally {
-      if (seq === styleNoReqSeq.current) setStyleNoLoading(false);
-    }
-  };
-
-  const scheduleFetchStyleNos = (keyword: string) => {
-    if (styleNoTimerRef.current != null) {
-      window.clearTimeout(styleNoTimerRef.current);
-    }
-    styleNoTimerRef.current = window.setTimeout(() => {
-      fetchStyleNoOptions(keyword);
-    }, 250);
-  };
 
   const fetchProcessTemplates = async (sourceStyleNo?: string) => {
     const sn = String(sourceStyleNo ?? '').trim();
@@ -329,7 +286,6 @@ const StyleProcessTab: React.FC<Props> = ({
 
   useEffect(() => {
     fetchProcessTemplates('');
-    fetchStyleNoOptions('');
   }, []);
 
   const enterEdit = async () => {
@@ -903,7 +859,7 @@ const StyleProcessTab: React.FC<Props> = ({
 
   return (
     <div>
-      <StyleQuoteSuggestionInlineCard styleNo={styleNo} sourceStyleNo={templateSourceStyleNo} />
+      <StyleQuoteSuggestionInlineCard styleNo={styleNo} sourceStyleNo="" />
 
       {/* 进度节点 - 已隐藏 */}
       {/* {progressNode && (
@@ -941,37 +897,6 @@ const StyleProcessTab: React.FC<Props> = ({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <div />
         <Space>
-          <Select
-            allowClear
-            showSearch
-            filterOption={false}
-            loading={styleNoLoading}
-            value={templateSourceStyleNo || undefined}
-            placeholder="来源款号"
-            style={{ width: 180 }}
-            options={styleNoOptions}
-            onSearch={scheduleFetchStyleNos}
-            onChange={(v) => setTemplateSourceStyleNo(String(v || ''))}
-            onOpenChange={(open) => {
-              if (open && !styleNoOptions.length) fetchStyleNoOptions('');
-            }}
-            disabled={Boolean(readOnly) || loading || saving || templateLoading}
-          />
-
-          <Button disabled={Boolean(readOnly) || loading || saving || templateLoading} onClick={() => fetchProcessTemplates(templateSourceStyleNo)}>
-            筛选
-          </Button>
-
-          <Button
-            disabled={Boolean(readOnly) || loading || saving || templateLoading}
-            onClick={() => {
-              setTemplateSourceStyleNo('');
-              fetchProcessTemplates('');
-            }}
-          >
-            全部
-          </Button>
-
           <Select
             allowClear
             style={{ width: 220 }}

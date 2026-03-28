@@ -401,7 +401,7 @@ const MaterialDatabasePage: React.FC = () => {
       render: (value: unknown) => renderMaskedNumber(value, user),
     },
     {
-      title: '每公斤米数',
+      title: '换算',
       dataIndex: 'conversionRate',
       key: 'conversionRate',
       width: 130,
@@ -722,7 +722,7 @@ const MaterialDatabasePage: React.FC = () => {
                 </Form.Item>
               </Col>
               <Col xs={24} sm={8} md={6} lg={4} xl={4}>
-                <Form.Item name="conversionRate" label="每公斤米数(米/公斤)">
+                <Form.Item name="conversionRate" label="换算">
                   <InputNumber
                     placeholder="如：3"
                     style={{ width: '100%' }}

@@ -153,9 +153,6 @@ const tenantService = {
   resetTenantOwnerPassword: (tenantId: number, newPassword: string) =>
     api.post('/system/user/reset-tenant-owner-password', { tenantId, newPassword }),
 
-  // ========== 工人注册审批 ==========
-  workerRegister: (data: Record<string, string>) => api.post(`${BASE}/registration/register`, data),
-
   /** 工厂入驻申请（无需登录） */
   applyForTenant: (data: {
     tenantName: string;

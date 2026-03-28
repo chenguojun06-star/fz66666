@@ -1571,11 +1571,11 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                             {Math.round(sampleStageProgressItems.reduce((sum, item) => sum + item.percent, 0) / sampleStageProgressItems.length)}%
                           </span>
                         </div>
-                        <Progress 
-                          percent={Math.round(sampleStageProgressItems.reduce((sum, item) => sum + item.percent, 0) / sampleStageProgressItems.length)} 
-                          showInfo={false} 
-                          size={8} 
-                          strokeColor={sampleStageProgressItems.reduce((sum, item) => sum + item.percent, 0) / sampleStageProgressItems.length >= 100 ? '#52c41a' : '#2d7ff9'} 
+                        <Progress
+                          percent={Math.round(sampleStageProgressItems.reduce((sum, item) => sum + item.percent, 0) / sampleStageProgressItems.length)}
+                          showInfo={false}
+                          size={8}
+                          strokeColor={sampleStageProgressItems.reduce((sum, item) => sum + item.percent, 0) / sampleStageProgressItems.length >= 100 ? '#52c41a' : '#2d7ff9'}
                         />
                       </div>
                     ) : (

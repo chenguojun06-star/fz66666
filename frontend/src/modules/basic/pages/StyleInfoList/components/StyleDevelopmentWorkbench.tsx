@@ -10,10 +10,9 @@ import StyleProcessTab from '../../StyleInfo/components/StyleProcessTab';
 import StyleProductionTab from '../../StyleInfo/components/StyleProductionTab';
 import StyleQuotationTab from '../../StyleInfo/components/StyleQuotationTab';
 import StyleSecondaryProcessTab from '../../StyleInfo/components/StyleSecondaryProcessTab';
-import StyleSizePriceTab from '../../StyleInfo/components/StyleSizePriceTab';
 import StyleSizeTab from '../../StyleInfo/components/StyleSizeTab';
 
-type WorkbenchSection = 'bom' | 'pattern' | 'size' | 'process' | 'sizePrice' | 'secondary' | 'production' | 'quotation' | 'files';
+type WorkbenchSection = 'bom' | 'pattern' | 'size' | 'process' | 'secondary' | 'production' | 'quotation' | 'files';
 
 interface Props {
   record: StyleInfo;
@@ -50,7 +49,6 @@ const resolvePreferredSection = (detail: StyleInfo | null | undefined): Workbenc
   if (!(detail as any).patternCompletedTime) return 'pattern';
   if (!(detail as any).sizeCompletedTime) return 'size';
   if (!(detail as any).processCompletedTime) return 'process';
-  if (!(detail as any).sizePriceCompletedTime) return 'sizePrice';
   if (!(detail as any).secondaryCompletedTime) return 'secondary';
   if (!(detail as any).productionCompletedTime) return 'production';
   if (!(detail as any).price) return 'quotation';
@@ -175,7 +173,6 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
     const patternMeta = resolveStageMeta(Boolean((detail as any).patternCompletedTime), Boolean((detail as any).patternStartTime));
     const sizeMeta = resolveStageMeta(Boolean((detail as any).sizeCompletedTime), Boolean((detail as any).sizeStartTime));
     const processMeta = resolveStageMeta(Boolean((detail as any).processCompletedTime), Boolean((detail as any).processStartTime));
-    const sizePriceMeta = resolveStageMeta(Boolean((detail as any).sizePriceCompletedTime), Boolean((detail as any).sizePriceStartTime));
     const productionMeta = resolveStageMeta(Boolean((detail as any).productionCompletedTime), Boolean((detail as any).productionStartTime));
     const quotationLocked = Boolean((data.quotation as any)?.id);
 
@@ -184,7 +181,6 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
       { key: 'pattern', title: '纸样开发', count: `${data.attachments.filter((item) => item.bizType === 'pattern').length} 份`, meta: patternMeta, helper: formatTime((detail as any).patternCompletedTime || (detail as any).patternStartTime) },
       { key: 'size', title: '尺寸表', count: `${data.sizeList.length} 项`, meta: sizeMeta, helper: formatTime((detail as any).sizeCompletedTime || (detail as any).sizeStartTime) },
       { key: 'process', title: '工序单价', count: `${data.processList.length} 项`, meta: processMeta, helper: formatTime((detail as any).processCompletedTime || (detail as any).processStartTime) },
-      { key: 'sizePrice', title: '码数单价', count: `${String((detail as any).sizePriceRowCount || 0)} 项`, meta: sizePriceMeta, helper: formatTime((detail as any).sizePriceCompletedTime || (detail as any).sizePriceStartTime) },
       { key: 'secondary', title: '二次工艺', count: `${String((detail as any).secondaryProcessCount || 0)} 项`, meta: resolveStageMeta(Boolean((detail as any).secondaryCompletedTime), Boolean((detail as any).secondaryStartTime)), helper: formatTime((detail as any).secondaryCompletedTime || (detail as any).secondaryStartTime) },
       { key: 'production', title: '生产制单', count: `${String((detail as any).productionReqRows || 0)} 行`, meta: productionMeta, helper: formatTime((detail as any).productionCompletedTime || (detail as any).productionStartTime) },
       { key: 'quotation', title: '报价单', count: data.quotation?.totalPrice != null ? `¥${Number(data.quotation.totalPrice).toFixed(2)}` : '未报价', meta: quotationLocked ? resolveStageMeta(true, true) : resolveStageMeta(false, Boolean((detail as any).price)), helper: quotationLocked ? '已保存报价单' : '待维护报价' },
@@ -295,21 +291,6 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
             secondaryStartTime={(detail as any).secondaryStartTime}
             secondaryCompletedTime={(detail as any).secondaryCompletedTime}
             sampleQuantity={(detail as any).sampleQuantity}
-            onRefresh={handleSectionRefresh}
-          />
-        </div>
-      );
-    }
-
-    if (activeSection === 'sizePrice') {
-      return (
-        <div className="style-workbench__editor">
-          <StyleSizePriceTab
-            styleId={record.id!}
-            readOnly={Boolean((detail as any).sizePriceCompletedTime)}
-            sizePriceAssignee={(detail as any).sizePriceAssignee}
-            sizePriceStartTime={(detail as any).sizePriceStartTime}
-            sizePriceCompletedTime={(detail as any).sizePriceCompletedTime}
             onRefresh={handleSectionRefresh}
           />
         </div>

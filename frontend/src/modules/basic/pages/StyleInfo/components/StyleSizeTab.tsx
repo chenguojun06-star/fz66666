@@ -279,13 +279,9 @@ const StyleSizeTab: React.FC<Props> = ({
   const [newGroupName, setNewGroupName] = useState('');
   const [sizeTemplateKey, setSizeTemplateKey] = useState<string | undefined>(undefined);
   const [sizeTemplates, setSizeTemplates] = useState<TemplateLibrary[]>([]);
-  const [templateSourceStyleNo, setTemplateSourceStyleNo] = useState('');
   const [templateLoading, setTemplateLoading] = useState(false);
+  const [sizeOptions, setSizeOptions] = useState<Array<{ value: string; label: string }>>([]);
 
-  const [styleNoOptions, setStyleNoOptions] = useState<Array<{ value: string; label: string }>>([]);
-  const [styleNoLoading, setStyleNoLoading] = useState(false);
-  const styleNoReqSeq = useRef(0);
-  const styleNoTimerRef = useRef<number | undefined>(undefined);
   const { message, modal } = App.useApp();
   const linkedSizeColumns = useMemo(() => normalizeSizeList(linkedSizes), [linkedSizes]);
 
@@ -345,43 +341,6 @@ const StyleSizeTab: React.FC<Props> = ({
     return Array.from(optionSet).map((groupName) => ({ value: groupName, label: groupName }));
   }, [rows]);
 
-  const fetchStyleNoOptions = async (keyword?: string) => {
-    const seq = (styleNoReqSeq.current += 1);
-    setStyleNoLoading(true);
-    try {
-      const res = await api.get<{ code: number; data: { records: any[]; total: number } }>('/style/info/list', {
-        params: {
-          page: 1,
-          pageSize: 200,
-          styleNo: String(keyword ?? '').trim(),
-        },
-      });
-      const result = res as Record<string, unknown>;
-      if (seq !== styleNoReqSeq.current) return;
-      if (result.code !== 200) return;
-      const records = ((result.data as any)?.records || []) as Array<any>;
-      const next = (Array.isArray(records) ? records : [])
-        .map((r) => String(r?.styleNo || '').trim())
-        .filter(Boolean)
-        .map((sn) => ({ value: sn, label: sn }));
-      setStyleNoOptions(next);
-    } catch {
-    // Intentionally empty
-      // 忽略错误
-    } finally {
-      if (seq === styleNoReqSeq.current) setStyleNoLoading(false);
-    }
-  };
-
-  const scheduleFetchStyleNos = (keyword: string) => {
-    if (styleNoTimerRef.current != null) {
-      window.clearTimeout(styleNoTimerRef.current);
-    }
-    styleNoTimerRef.current = window.setTimeout(() => {
-      fetchStyleNoOptions(keyword);
-    }, 250);
-  };
-
   const fetchSizeTemplates = async (sourceStyleNo?: string) => {
     const sn = String(sourceStyleNo ?? '').trim();
     setTemplateLoading(true);
@@ -397,15 +356,12 @@ const StyleSizeTab: React.FC<Props> = ({
       });
       const result = res as Record<string, unknown>;
       if (result.code === 200) {
-        // 兼容两种返回格式：分页格式 {records: [...]} 或 直接数组 [...]
         const data = result.data as { records?: any[] } | any[];
         const records = Array.isArray(data) ? data : ((data as { records?: any[] })?.records || []);
         setSizeTemplates(Array.isArray(records) ? records as TemplateLibrary[] : []);
         return;
       }
     } catch {
-    // Intentionally empty
-      // 忽略错误
     } finally {
       setTemplateLoading(false);
     }
@@ -417,14 +373,29 @@ const StyleSizeTab: React.FC<Props> = ({
         setSizeTemplates(Array.isArray(result.data) ? result.data : []);
       }
     } catch {
-    // Intentionally empty
-      // 忽略错误
+    }
+  };
+
+  const fetchSizeDictOptions = async () => {
+    try {
+      const res = await api.get<{ code: number; data: { records: any[] } | any[] }>('/system/dict/list', {
+        params: { dictType: 'size', page: 1, pageSize: 200 },
+      });
+      const result = res as Record<string, unknown>;
+      if (result.code === 200) {
+        const data = result.data as { records?: any[] } | any[];
+        const records = Array.isArray(data) ? data : ((data as { records?: any[] })?.records || []);
+        const options = (Array.isArray(records) ? records : [])
+          .filter((item: any) => item.dictLabel)
+          .map((item: any) => ({ value: item.dictLabel, label: item.dictLabel }));
+        setSizeOptions(options);
+      }
+    } catch {
     }
   };
 
   useEffect(() => {
     fetchSizeTemplates('');
-    fetchStyleNoOptions('');
   }, []);
 
 
@@ -1359,37 +1330,6 @@ const StyleSizeTab: React.FC<Props> = ({
           <Space>
           <Select
             allowClear
-            showSearch
-            filterOption={false}
-            loading={styleNoLoading}
-            value={templateSourceStyleNo || undefined}
-            placeholder="来源款号"
-            style={{ width: 180 }}
-            options={styleNoOptions}
-            onSearch={scheduleFetchStyleNos}
-            onChange={(v) => setTemplateSourceStyleNo(String(v || ''))}
-            onOpenChange={(open) => {
-              if (open && !styleNoOptions.length) fetchStyleNoOptions('');
-            }}
-            disabled={loading || saving || Boolean(readOnly) || templateLoading}
-          />
-
-          <Button disabled={loading || saving || Boolean(readOnly) || templateLoading} onClick={() => fetchSizeTemplates(templateSourceStyleNo)}>
-            筛选
-          </Button>
-
-          <Button
-            disabled={loading || saving || Boolean(readOnly) || templateLoading}
-            onClick={() => {
-              setTemplateSourceStyleNo('');
-              fetchSizeTemplates('');
-            }}
-          >
-            全部
-          </Button>
-
-          <Select
-            allowClear
             style={{ width: 220 }}
             placeholder="导入尺寸模板"
             value={sizeTemplateKey}
@@ -1415,9 +1355,80 @@ const StyleSizeTab: React.FC<Props> = ({
           <Button type="default" onClick={() => setAddGroupOpen(true)} disabled={loading || saving || Boolean(readOnly)}>
             新增分组
           </Button>
-          <Button type="default" onClick={() => setAddSizeOpen(true)} disabled={loading || saving || Boolean(readOnly)}>
-            新增尺码
-          </Button>
+          <Select
+            mode="multiple"
+            allowClear
+            showSearch
+            placeholder="新增尺码(多选)"
+            style={{ minWidth: 160 }}
+            disabled={loading || saving || Boolean(readOnly)}
+            options={sizeOptions.filter(opt => !sizeColumns.includes(opt.value))}
+            value={[]}
+            onChange={(values) => {
+              if (values.length === 0) return;
+              const merged = sortSizeNames([...sizeColumns, ...values]);
+              setSizeColumns(merged);
+              setRows((prev) =>
+                prev.map((r) => {
+                  const nextCells = { ...r.cells };
+                  values.forEach((sn) => {
+                    nextCells[sn] = { value: 0 };
+                  });
+                  return {
+                    ...r,
+                    baseSize: merged.includes(r.baseSize) ? r.baseSize : '',
+                    gradingZones: normalizeGradingZones(r.gradingZones || [], merged),
+                    cells: nextCells,
+                  };
+                }),
+              );
+              if (!editMode) enterEdit();
+            }}
+            filterOption={(input, option) =>
+              String(option?.value || '').toLowerCase().includes(String(input || '').toLowerCase())
+          }
+          onSearch={(value) => {
+            if (value && value.trim() && !sizeOptions.some(opt => opt.value === value.trim()) && !sizeColumns.includes(value.trim())) {
+              setSizeOptions(prev => [...prev, { value: value.trim(), label: value.trim() }]);
+            }
+          }}
+          dropdownRender={(menu) => (
+            <>
+              {menu}
+              <div style={{ padding: '8px', borderTop: '1px solid #f0f0f0' }}>
+                <Input
+                  placeholder="输入新码数后回车添加"
+                  size="small"
+                  onPressEnter={(e) => {
+                    const input = e.target as HTMLInputElement;
+                    const val = input.value.trim();
+                    if (val && !sizeColumns.includes(val) && !sizeOptions.some(opt => opt.value === val)) {
+                      const merged = sortSizeNames([...sizeColumns, val]);
+                      setSizeColumns(merged);
+                      setRows((prev) =>
+                        prev.map((r) => {
+                          const nextCells = { ...r.cells };
+                          nextCells[val] = { value: 0 };
+                          return {
+                            ...r,
+                            baseSize: merged.includes(r.baseSize) ? r.baseSize : '',
+                            gradingZones: normalizeGradingZones(r.gradingZones || [], merged),
+                            cells: nextCells,
+                          };
+                        }),
+                      );
+                      if (!editMode) enterEdit();
+                      input.value = '';
+                    }
+                  }}
+                />
+              </div>
+            </>
+          )}
+          onDropdownVisibleChange={(open) => {
+            if (open) fetchSizeDictOptions();
+          }}
+        />
           {!editMode || readOnly ? (
             <Button type="primary" onClick={enterEdit} disabled={loading || saving || Boolean(readOnly)}>
               编辑

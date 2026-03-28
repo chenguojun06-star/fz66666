@@ -585,6 +585,34 @@ public class StyleStageHelper {
         return true;
     }
 
+    /**
+     * 退回尺寸表配置（只清空完成时间，保留开始时间和负责人）
+     */
+    public boolean resetSize(Long id, Map<String, Object> body) {
+        if (!UserContext.isSupervisorOrAbove()) {
+            throw new AccessDeniedException("无权限操作");
+        }
+        StyleInfo current = styleInfoService.getById(id);
+        if (current == null) {
+            throw new NoSuchElementException("款号不存在");
+        }
+        Object reasonValue = body == null ? null : body.get("reason");
+        String reason = reasonValue == null ? "" : String.valueOf(reasonValue).trim();
+        if (!StringUtils.hasText(reason)) {
+            throw new IllegalArgumentException("退回原因不能为空");
+        }
+        boolean ok = styleInfoService.lambdaUpdate()
+                .eq(StyleInfo::getId, id)
+                .set(StyleInfo::getSizeCompletedTime, null)
+                .set(StyleInfo::getUpdateTime, LocalDateTime.now())
+                .update();
+        if (!ok) {
+            throw new IllegalStateException("操作失败");
+        }
+        log.info("尺寸表配置已退回维护: styleId={}, reason={}", id, reason);
+        return true;
+    }
+
     // ==================== BOM Stage ====================
 
     public boolean startBom(Long id) {

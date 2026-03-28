@@ -149,6 +149,7 @@ public class StyleInfoController {
                 switch (action.toLowerCase()) {
                     case "start": return Result.success(styleInfoOrchestrator.startSize(id));
                     case "complete": return Result.success(styleInfoOrchestrator.completeSize(id));
+                    case "reset": return Result.success(styleInfoOrchestrator.resetSize(id, body));
                     default: return Result.fail("不支持的操作: " + action);
                 }
             case "production":
