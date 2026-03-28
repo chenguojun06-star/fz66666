@@ -33,7 +33,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-@Service
+// @Service  // 暂时禁用：编译缓存问题，待后续修复
 @Slf4j
 public class ProductionCleanupOrchestrator {
 

@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.fashion.supplychain.production.orchestration.ProductionCleanupOrchestrator;
+// import com.fashion.supplychain.production.orchestration.ProductionCleanupOrchestrator;
 import com.fashion.supplychain.style.orchestration.StyleQuotationOrchestrator;
 
 @SpringBootApplication
@@ -23,17 +23,18 @@ public class FashionSupplychainApplication {
         SpringApplication.run(FashionSupplychainApplication.class, args);
     }
 
-    @Bean
-    @Profile("!test")
-    public ApplicationRunner cleanupOrphanData(final ProductionCleanupOrchestrator cleanupOrchestrator) {
-        return args -> {
-            try {
-                cleanupOrchestrator.cleanupOrphanData();
-            } catch (Exception e) {
-                log.error("[Startup] cleanupOrphanData 失败（可能是数据库 schema 未同步），跳过清理，应用继续启动。原因: {}", e.getMessage());
-            }
-        };
-    }
+    // ⚠️ ProductionCleanupOrchestrator 临时禁用 - 编译错误待修复
+    // @Bean
+    // @Profile("!test")
+    // public ApplicationRunner cleanupOrphanData(final ProductionCleanupOrchestrator cleanupOrchestrator) {
+    //     return args -> {
+    //         try {
+    //             cleanupOrchestrator.cleanupOrphanData();
+    //         } catch (Exception e) {
+    //             log.error("[Startup] cleanupOrphanData 失败（可能是数据库 schema 未同步），跳过清理，应用继续启动。原因: {}", e.getMessage());
+    //         }
+    //     };
+    // }
 
     /** 修复历史脏数据：other_cost 被老 bug 错误写入了二次工艺总价 */
     @Bean

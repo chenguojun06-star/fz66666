@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.production.dto.response.OrderHealthScoreDTO;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import lombok.extern.slf4j.Slf4j;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 订单健康度评分编排器（纯计算，无 DB 写操作）
@@ -33,17 +35,50 @@ public class OrderHealthScoreOrchestrator {
     // ─────────────────────────────────────────────────────────────────────
 
     /**
-     * 批量计算订单健康分
-     *
-     * @param orderIds 订单主键列表（最多 200 个）
-     * @return 每条包含 orderId / score / level / hint
+     * 批量计算订单健康分（接收 String 类型订单 ID，返回 DTO 对象）
      */
+    public Map<String, OrderHealthScoreDTO> batchCalculateHealth(List<String> orderIds) {
+        if (orderIds == null || orderIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        final Long tenantId = UserContext.tenantId();
+
+        // 将 String ID 转换为查询参数（productionOrder 的 id 字段是 String）
+        List<ProductionOrder> orders = productionOrderService.lambdaQuery()
+                .in(ProductionOrder::getId, orderIds)
+                .eq(ProductionOrder::getTenantId, tenantId)
+                .list();
+
+        Map<String, OrderHealthScoreDTO> resultMap = new HashMap<>(orders.size());
+        for (ProductionOrder productionOrder : orders) {
+            if (productionOrder != null) {
+                String orderId = productionOrder.getId();
+                OrderHealthScoreDTO dto = calculateScoreDTO(productionOrder);
+                resultMap.put(orderId, dto);
+            }
+        }
+
+        return resultMap;
+    }
+
+    /**
+     * 批量计算订单健康分（向后兼容，接收 String 类型订单 ID，返回 Map）
+     * @deprecated 请使用 batchCalculateHealth(List<Long>) 替换
+     */
+    @Deprecated(since = "2026-03-22", forRemoval = false)
     public List<Map<String, Object>> batchScores(List<String> orderIds) {
         if (orderIds == null || orderIds.isEmpty()) return Collections.emptyList();
         Long tenantId = UserContext.tenantId();
 
         List<ProductionOrder> orders = productionOrderService.lambdaQuery()
-                .in(ProductionOrder::getId, orderIds)
+                .in(ProductionOrder::getId,
+                    orderIds.stream()
+                        .map(id -> {
+                            try { return Long.parseLong(id); } catch (NumberFormatException e) { return null; }
+                        })
+                        .filter(java.util.Objects::nonNull)
+                        .collect(Collectors.toList()))
                 .eq(ProductionOrder::getTenantId, tenantId)
                 .list();
 
@@ -59,11 +94,7 @@ public class OrderHealthScoreOrchestrator {
                 int score = calcScore(o);
                 item.put("score", score);
                 item.put("level", scoreToLevel(score));
-                item.put("hint", buildHint(score, o));
-            } else {
-                item.put("score", -1);
-                item.put("level", "unknown");
-                item.put("hint", "");
+                item.put("hint", calculateBadge(score));
             }
             result.add(item);
         }
@@ -71,57 +102,134 @@ public class OrderHealthScoreOrchestrator {
     }
 
     /**
-     * 计算单个订单健康分（0-100）
+     * 获取租户所有订单的健康度评分（按风险排序）
+     */
+    public List<OrderHealthScoreDTO> getTenantOrdersHealthScores() {
+        Long tenantId = UserContext.tenantId();
+        List<ProductionOrder> orders = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getTenantId, tenantId)
+                .orderByAsc(ProductionOrder::getId)
+                .list();
+
+        return orders.stream()
+                .map(this::calculateScoreDTO)
+                .sorted(Comparator.comparingInt(OrderHealthScoreDTO::getScore))  // 按分数升序
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 获取高风险订单列表（评分 < 50）
+     */
+    public List<OrderHealthScoreDTO> getHighRiskOrders(int limit) {
+        Long tenantId = UserContext.tenantId();
+        List<ProductionOrder> orders = productionOrderService.lambdaQuery()
+                .eq(ProductionOrder::getTenantId, tenantId)
+                .orderByAsc(ProductionOrder::getId)
+                .last("LIMIT " + (limit > 0 ? limit : 100))
+                .list();
+
+        return orders.stream()
+                .map(this::calculateScoreDTO)
+                .filter(dto -> dto.getScore() < 50)
+                .sorted(Comparator.comparingInt(OrderHealthScoreDTO::getScore))
+                .limit(limit > 0 ? limit : 10)
+                .collect(Collectors.toList());
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // 私有方法
+    // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * 将订单转换为评分 DTO
+     */
+    private OrderHealthScoreDTO calculateScoreDTO(ProductionOrder order) {
+        int score = calcScore(order);
+        String level = scoreToLevel(score);
+        String badge = calculateBadge(score);
+
+        OrderHealthScoreDTO dto = new OrderHealthScoreDTO();
+        dto.setOrderId(order.getId());
+        dto.setOrderNo(order.getOrderNo());
+        dto.setScore(score);
+        dto.setLevel(level);
+        dto.setBadge(badge);
+        dto.setProgressScore(calculateProgressScore(order));
+        dto.setDeadlineScore(calculateDeadlineScore(order));
+        dto.setProcurementScore(calculateProcurementScore(order));
+        return dto;
+    }
+
+    /**
+     * 计算总分
      */
     public int calcScore(ProductionOrder order) {
         int score = 0;
 
-        // ① 生产进度 40 分
-        int progress = order.getProductionProgress() != null ? order.getProductionProgress() : 0;
-        score += Math.round(progress * 0.40f);
+        // 进度：40分
+        score += calculateProgressScore(order);
 
-        // ② 交期健康 35 分
-        if (order.getExpectedShipDate() != null) {
-            long days = ChronoUnit.DAYS.between(LocalDate.now(), order.getExpectedShipDate());
-            if (days > 14)     score += 35;
-            else if (days > 7) score += 26;
-            else if (days > 3) score += 16;
-            else if (days > 0) score += 8;
-            // 逾期 → 0 分
-        } else {
-            score += 20; // 无交期：给中等分
-        }
+        // 交期：35分
+        score += calculateDeadlineScore(order);
 
-        // ③ 物料采购完成率 25 分
-        Integer proc = order.getProcurementCompletionRate();
-        if (proc != null) {
-            score += Math.round(proc * 0.25f);
-        } else {
-            score += 18; // 无数据：给中等分
-        }
+        // 采购：25分
+        score += calculateProcurementScore(order);
 
         return Math.max(0, Math.min(100, score));
     }
 
-    public String scoreToLevel(int score) {
-        if (score >= 75) return "good";
-        if (score >= 50) return "warn";
-        return "danger";
+    /**
+     * 生产进度评分（40分）
+     */
+    private int calculateProgressScore(ProductionOrder order) {
+        Integer progress = order.getProductionProgress();
+        if (progress == null) progress = 0;
+        return Math.round(progress * 0.40f);
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    // 私有辅助
-    // ─────────────────────────────────────────────────────────────────────
-
-    private String buildHint(int score, ProductionOrder order) {
-        if (score >= 75) return "进度良好";
-        int progress = order.getProductionProgress() != null ? order.getProductionProgress() : 0;
-        if (order.getExpectedShipDate() != null) {
-            long days = ChronoUnit.DAYS.between(LocalDate.now(), order.getExpectedShipDate());
-            if (days <= 0) return "已逾期";
-            if (days <= 3) return "交期极度紧迫";
+    /**
+     * 交期评分（35分）
+     */
+    private int calculateDeadlineScore(ProductionOrder order) {
+        if (order.getExpectedShipDate() == null) {
+            return 20;  // 无交期：20分
         }
-        if (progress < 30) return "进度严重落后";
-        return "需关注";
+
+        long daysRemaining = ChronoUnit.DAYS.between(LocalDate.now(), order.getExpectedShipDate());
+
+        if (daysRemaining > 14) return 35;
+        if (daysRemaining > 7)  return 26;
+        if (daysRemaining > 3)  return 16;
+        if (daysRemaining > 0)  return 8;
+        return 0;  // 已逾期：0分
+    }
+
+    /**
+     * 采购完成评分（25分）
+     */
+    private int calculateProcurementScore(ProductionOrder order) {
+        Integer procRate = order.getProcurementCompletionRate();
+        if (procRate == null) {
+            return 18;  // 无数据：18分
+        }
+        return Math.round(procRate * 0.25f);
+    }
+
+    /**
+     * 分数到风险等级
+     */
+    public String scoreToLevel(int score) {
+        if (score >= 75) return "NORMAL";
+        if (score >= 50) return "WARNING";
+        return "CRITICAL";
+    }
+
+    /**
+     * 计算徽章
+     */
+    private String calculateBadge(int score) {
+        if (score >= 75) return null;
+        if (score >= 50) return "注";
+        return "危";
     }
 }

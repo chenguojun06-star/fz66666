@@ -26,8 +26,6 @@ export interface StatCard {
   onClick?: () => void;
   /** 选中时的高亮颜色（如 '#2D7FF9' 或 'var(--color-primary)'），仅在可点击时生效 */
   activeColor?: string;
-  /** 选中时的背景色 */
-  activeBg?: string;
 }
 
 /**

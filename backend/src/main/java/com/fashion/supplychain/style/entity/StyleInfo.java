@@ -439,18 +439,6 @@ public class StyleInfo {
     private String fabricCompositionParts;
 
     /**
-     * 是否已推送至生产订单系统（1=已推送，0=未推送）
-     */
-    @TableField("pushed_to_order")
-    private Integer pushedToOrder;
-
-    /**
-     * 推送至生产订单的时间
-     */
-    @TableField("pushed_to_order_time")
-    private LocalDateTime pushedToOrderTime;
-
-    /**
      * 租户ID（多租户隔离，自动填充）
      */
     @TableField(fill = FieldFill.INSERT)
