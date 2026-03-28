@@ -318,15 +318,12 @@ public class StyleStageHelper {
                 .set(StyleInfo::getProductionAssignee, current.getProductionAssignee() != null ? current.getProductionAssignee() : UserContext.username())
                 .set(StyleInfo::getProductionStartTime, current.getProductionStartTime() != null ? current.getProductionStartTime() : LocalDateTime.now())
                 .set(StyleInfo::getProductionCompletedTime, LocalDateTime.now())
-                // 自动同步样衣状态为完成，代表纸样、尺寸表、工序表、生产制单流程结束
-                .set(StyleInfo::getSampleStatus, "COMPLETED")
-                .set(StyleInfo::getSampleProgress, 100)
-                .set(StyleInfo::getSampleCompletedTime, LocalDateTime.now())
+                // ⚠️ 2026-05-03 修复：样衣生产应由用户手动点击"完成"按钮，不应在纸样完成时自动标记完成
+                // 已删除的自动完成逻辑：.set(StyleInfo::getSampleStatus, "COMPLETED") / .set(StyleInfo::getSampleProgress, 100) 等
                 .set(StyleInfo::getUpdateTime, LocalDateTime.now())
                 .update();
         if (ok) {
             styleLogHelper.savePatternLog(id, "PATTERN_COMPLETED", null);
-            styleLogHelper.saveSampleLog(id, "SAMPLE_COMPLETED", "关联纸样完成自动同步");
             log.info("纸样完成，已同步更新尺寸表和生产制单时间: styleId={}", id);
         }
         if (!ok) {
