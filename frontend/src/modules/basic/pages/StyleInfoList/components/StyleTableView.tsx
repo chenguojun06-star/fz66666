@@ -1564,13 +1564,19 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                       </div>
                     </div>
                     {shouldShowSampleStageProgress ? (
-                      <div className="style-smart-stage-modal__processes style-smart-stage-modal__processes--compact">
-                        {sampleStageProgressItems.map((item) => (
-                          <div key={item.key} className="style-smart-stage-modal__process-item style-smart-stage-modal__process-item--compact">
-                            <span>{item.label}</span>
-                            <strong>{item.percent}%</strong>
-                          </div>
-                        ))}
+                      <div style={{ marginTop: '16px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <span style={{ fontSize: '14px', fontWeight: 500 }}>样衣生产进度</span>
+                          <span style={{ fontSize: '14px', fontWeight: 600, color: '#2d7ff9' }}>
+                            {Math.round(sampleStageProgressItems.reduce((sum, item) => sum + item.percent, 0) / sampleStageProgressItems.length)}%
+                          </span>
+                        </div>
+                        <Progress 
+                          percent={Math.round(sampleStageProgressItems.reduce((sum, item) => sum + item.percent, 0) / sampleStageProgressItems.length)} 
+                          showInfo={false} 
+                          size={8} 
+                          strokeColor={sampleStageProgressItems.reduce((sum, item) => sum + item.percent, 0) / sampleStageProgressItems.length >= 100 ? '#52c41a' : '#2d7ff9'} 
+                        />
                       </div>
                     ) : (
                       <div className="style-smart-stage-modal__empty">尚未领取，暂无节点进度</div>
