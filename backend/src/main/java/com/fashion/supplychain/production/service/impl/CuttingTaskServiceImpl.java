@@ -32,6 +32,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
 
 @Service
 @Slf4j
@@ -363,28 +365,109 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
             return null;
         }
 
-        CuttingTask existing = loadTaskCoreByOrderId(order.getId());
-        if (existing != null) {
-            return existing;
+        // 检查是否已经创建过该订单的任何裁剪任务
+        List<CuttingTask> existing = this.list(
+                new LambdaQueryWrapper<CuttingTask>()
+                        .eq(CuttingTask::getProductionOrderId, order.getId())
+                        .orderByAsc(CuttingTask::getCreateTime)
+        );
+        if (existing != null && !existing.isEmpty()) {
+            return existing.get(0);  // 返回第一个创建的任务
         }
 
         LocalDateTime now = LocalDateTime.now();
-        CuttingTask task = new CuttingTask();
-        task.setProductionOrderId(order.getId());
-        task.setProductionOrderNo(order.getOrderNo());
-        task.setOrderQrCode(order.getQrCode());
-        task.setStyleId(order.getStyleId());
-        task.setStyleNo(order.getStyleNo());
-        task.setStyleName(order.getStyleName());
-        task.setColor(order.getColor());
-        task.setSize(order.getSize());
-        task.setOrderQuantity(order.getOrderQuantity());
-        task.setFactoryType(order.getFactoryType());
-        task.setStatus("pending");
-        task.setCreateTime(now);
-        task.setUpdateTime(now);
-        this.save(task);
-        return task;
+        List<CuttingTask> createdTasks = new ArrayList<>();
+
+        // 尝试从 orderDetails JSON 中解析颜色行
+        List<Map<String, Object>> orderLines = parseOrderDetails(order);
+
+        if (orderLines != null && !orderLines.isEmpty() && orderLines.size() > 1) {
+            // 多行颜色：为每一行创建独立的 CuttingTask
+            int lineIndex = 0;
+            for (Map<String, Object> line : orderLines) {
+                lineIndex++;
+                String lineColor = line.get("color") == null ? "" : String.valueOf(line.get("color")).trim();
+                String lineSize = line.get("size") == null ? "" : String.valueOf(line.get("size")).trim();
+                Integer lineQuantity = (Integer) line.get("quantity");
+
+                if (lineQuantity == null || lineQuantity <= 0) {
+                    continue;
+                }
+
+                CuttingTask task = new CuttingTask();
+                task.setProductionOrderId(order.getId());
+                task.setProductionOrderNo(order.getOrderNo() + "-" + lineIndex);  // 追加 -1, -2, -3 标记颜色行
+                task.setOrderQrCode(order.getQrCode());
+                task.setStyleId(order.getStyleId());
+                task.setStyleNo(order.getStyleNo());
+                task.setStyleName(order.getStyleName());
+                task.setColor(lineColor);  // 单个颜色，而非汇总的"多色"
+                task.setSize(lineSize);
+                task.setOrderQuantity(lineQuantity);  // 该颜色行的数量
+                task.setFactoryType(order.getFactoryType());
+                task.setStatus("pending");
+                task.setCreateTime(now);
+                task.setUpdateTime(now);
+                this.save(task);
+                createdTasks.add(task);
+                log.info("按颜色分菲创建裁剪任务: orderNo={}, color={}, size={}, quantity={}",
+                        order.getOrderNo(), lineColor, lineSize, lineQuantity);
+            }
+        } else {
+            // 单颜色或无详细行信息：创建一个汇总任务（兼容旧数据）
+            CuttingTask task = new CuttingTask();
+            task.setProductionOrderId(order.getId());
+            task.setProductionOrderNo(order.getOrderNo());
+            task.setOrderQrCode(order.getQrCode());
+            task.setStyleId(order.getStyleId());
+            task.setStyleNo(order.getStyleNo());
+            task.setStyleName(order.getStyleName());
+            task.setColor(order.getColor());
+            task.setSize(order.getSize());
+            task.setOrderQuantity(order.getOrderQuantity());
+            task.setFactoryType(order.getFactoryType());
+            task.setStatus("pending");
+            task.setCreateTime(now);
+            task.setUpdateTime(now);
+            this.save(task);
+            createdTasks.add(task);
+        }
+
+        return createdTasks.isEmpty() ? null : createdTasks.get(0);
+    }
+
+    /**
+     * 从 ProductionOrder.orderDetails JSON 中解析颜色行
+     */
+    private List<Map<String, Object>> parseOrderDetails(ProductionOrder order) {
+        if (order == null || !StringUtils.hasText(order.getOrderDetails())) {
+            return null;
+        }
+        try {
+            String json = order.getOrderDetails().trim();
+            ObjectMapper mapper = new ObjectMapper();
+            if (json.startsWith("[")) {
+                // 直接是数组格式
+                return mapper.readValue(json, new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>() {});
+            } else if (json.startsWith("{")) {
+                // 可能是 {records: [...]} 或其他嵌套结构
+                Map<String, Object> wrapper = mapper.readValue(json, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+                if (wrapper.containsKey("records")) {
+                    Object records = wrapper.get("records");
+                    if (records instanceof java.util.List<?> list) {
+                        return (List<Map<String, Object>>) list;
+                    }
+                } else if (wrapper.containsKey("orderLines")) {
+                    Object lines = wrapper.get("orderLines");
+                    if (lines instanceof java.util.List<?> list) {
+                        return (List<Map<String, Object>>) list;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("解析 orderDetails JSON 失败: {}", e.getMessage());
+        }
+        return null;
     }
 
     @Override
