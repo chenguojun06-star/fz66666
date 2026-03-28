@@ -7,7 +7,7 @@ import SmallModal from '@/components/common/SmallModal';
 import StandardPagination from '@/components/common/StandardPagination';
 import StyleDevelopmentWorkbench from './StyleDevelopmentWorkbench';
 import SmartStyleHoverCard from './SmartStyleHoverCard';
-import { StyleInfo } from '@/types/style';
+import { StyleInfo, WorkbenchSection } from '@/types/style';
 import { getStyleCardColorText, getStyleCardQuantityText, getStyleCardSizeText } from '@/utils/cardSizeQuantity';
 import { getStyleSourceMeta } from '@/utils/styleSource';
 import { useNavigate } from 'react-router-dom';
@@ -33,7 +33,6 @@ interface StyleTableViewProps {
 type StageStatus = 'done' | 'active' | 'waiting' | 'risk' | 'scrapped';
 type DeliveryTone = 'normal' | 'warning' | 'danger' | 'success' | 'scrapped';
 type StageActionKey = 'detail' | 'pattern' | 'sizePrice' | 'secondary';
-type WorkbenchSection = 'bom' | 'pattern' | 'size' | 'process' | 'sizePrice' | 'secondary' | 'production' | 'quotation' | 'files';
 
 type StyleRecord = StyleInfo & Record<string, unknown>;
 

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { App, Button, Skeleton, Tag } from 'antd';
 import dayjs from 'dayjs';
 import api from '@/utils/api';
-import { StyleAttachment, StyleBom, StyleInfo, StyleProcess, StyleQuotation, StyleSize } from '@/types/style';
+import { StyleAttachment, StyleBom, StyleInfo, StyleProcess, StyleQuotation, StyleSize, WorkbenchSection } from '@/types/style';
 import StyleAttachmentTab from '../../StyleInfo/components/StyleAttachmentTab';
 import StyleBomTab from '../../StyleInfo/components/StyleBomTab';
 import StylePatternTab from '../../StyleInfo/components/StylePatternTab';
@@ -11,8 +11,6 @@ import StyleProductionTab from '../../StyleInfo/components/StyleProductionTab';
 import StyleQuotationTab from '../../StyleInfo/components/StyleQuotationTab';
 import StyleSecondaryProcessTab from '../../StyleInfo/components/StyleSecondaryProcessTab';
 import StyleSizeTab from '../../StyleInfo/components/StyleSizeTab';
-
-type WorkbenchSection = 'bom' | 'pattern' | 'size' | 'process' | 'secondary' | 'production' | 'quotation' | 'files';
 
 interface Props {
   record: StyleInfo;

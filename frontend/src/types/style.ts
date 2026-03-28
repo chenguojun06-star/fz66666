@@ -219,3 +219,6 @@ export interface TemplateLibrary {
   operatorName?: string;
   styleCoverUrl?: string | null;
 }
+
+/** 样衣开发工作台可切换的 Tab 段落 */
+export type WorkbenchSection = 'bom' | 'pattern' | 'size' | 'process' | 'sizePrice' | 'secondary' | 'production' | 'quotation' | 'files';
