@@ -53,63 +53,62 @@ public class OrderPriceFillHelper {
             return;
         }
 
-        List<String> orderIds = records.stream()
-                .map(r -> r == null ? null : r.getId())
+        List<String> internalOrderIds = records.stream()
+                .filter(r -> r != null && "INTERNAL".equals(r.getFactoryType()))
+                .map(r -> r.getId())
                 .filter(StringUtils::hasText)
                 .map(String::trim)
                 .distinct()
                 .collect(Collectors.toList());
-        if (orderIds.isEmpty()) {
-            return;
-        }
 
         Map<String, BigDecimal> fromScanRecordSum = new HashMap<>();
-        try {
-            int lim = Math.min(20000, Math.max(1000, orderIds.size() * 200));
-            LambdaQueryWrapper<ScanRecord> qw = new LambdaQueryWrapper<ScanRecord>()
-                    .select(ScanRecord::getOrderId, ScanRecord::getProcessName, ScanRecord::getUnitPrice,
-                            ScanRecord::getScanTime, ScanRecord::getCreateTime)
-                    .in(ScanRecord::getOrderId, orderIds)
-                    .in(ScanRecord::getScanType, java.util.Arrays.asList("production", "cutting"))
-                    .eq(ScanRecord::getScanResult, "success")
-                    .isNotNull(ScanRecord::getUnitPrice)
-                    .orderByDesc(ScanRecord::getScanTime)
-                    .orderByDesc(ScanRecord::getCreateTime);
-            List<ScanRecord> list = scanRecordMapper
-                    .selectPage(new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(1,
-                            lim), qw)
-                    .getRecords();
+        if (!internalOrderIds.isEmpty()) {
+            try {
+                int lim = Math.min(20000, Math.max(1000, internalOrderIds.size() * 200));
+                LambdaQueryWrapper<ScanRecord> qw = new LambdaQueryWrapper<ScanRecord>()
+                        .select(ScanRecord::getOrderId, ScanRecord::getProcessName, ScanRecord::getUnitPrice,
+                                ScanRecord::getScanTime, ScanRecord::getCreateTime)
+                        .in(ScanRecord::getOrderId, internalOrderIds)
+                        .in(ScanRecord::getScanType, java.util.Arrays.asList("production", "cutting"))
+                        .eq(ScanRecord::getScanResult, "success")
+                        .isNotNull(ScanRecord::getUnitPrice)
+                        .orderByDesc(ScanRecord::getScanTime)
+                        .orderByDesc(ScanRecord::getCreateTime);
+                List<ScanRecord> list = scanRecordMapper
+                        .selectPage(new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(1, lim), qw)
+                        .getRecords();
 
-            if (list != null && !list.isEmpty()) {
-                Map<String, LinkedHashSet<String>> seenByOrder = new HashMap<>();
-                Map<String, BigDecimal> sumByOrder = new HashMap<>();
-                for (ScanRecord r : list) {
-                    if (r == null || !StringUtils.hasText(r.getOrderId())) {
-                        continue;
+                if (list != null && !list.isEmpty()) {
+                    Map<String, LinkedHashSet<String>> seenByOrder = new HashMap<>();
+                    Map<String, BigDecimal> sumByOrder = new HashMap<>();
+                    for (ScanRecord r : list) {
+                        if (r == null || !StringUtils.hasText(r.getOrderId())) {
+                            continue;
+                        }
+                        String oid = r.getOrderId().trim();
+                        String pn = StringUtils.hasText(r.getProcessName()) ? r.getProcessName().trim() : "";
+                        if (!StringUtils.hasText(pn)) {
+                            continue;
+                        }
+                        LinkedHashSet<String> seen = seenByOrder.computeIfAbsent(oid, k -> new LinkedHashSet<>());
+                        if (!seen.add(pn)) {
+                            continue;
+                        }
+                        BigDecimal up = r.getUnitPrice();
+                        if (up == null || up.compareTo(BigDecimal.ZERO) <= 0) {
+                            continue;
+                        }
+                        sumByOrder.put(oid, sumByOrder.getOrDefault(oid, BigDecimal.ZERO).add(up));
                     }
-                    String oid = r.getOrderId().trim();
-                    String pn = StringUtils.hasText(r.getProcessName()) ? r.getProcessName().trim() : "";
-                    if (!StringUtils.hasText(pn)) {
-                        continue;
+                    for (Map.Entry<String, BigDecimal> e : sumByOrder.entrySet()) {
+                        if (e.getValue() != null && e.getValue().compareTo(BigDecimal.ZERO) > 0) {
+                            fromScanRecordSum.put(e.getKey(), e.getValue().setScale(2, RoundingMode.HALF_UP));
+                        }
                     }
-                    LinkedHashSet<String> seen = seenByOrder.computeIfAbsent(oid, k -> new LinkedHashSet<>());
-                    if (!seen.add(pn)) {
-                        continue;
-                    }
-                    BigDecimal up = r.getUnitPrice();
-                    if (up == null || up.compareTo(BigDecimal.ZERO) <= 0) {
-                        continue;
-                    }
-                    sumByOrder.put(oid, sumByOrder.getOrDefault(oid, BigDecimal.ZERO).add(up));
                 }
-                for (Map.Entry<String, BigDecimal> e : sumByOrder.entrySet()) {
-                    if (e.getValue() != null && e.getValue().compareTo(BigDecimal.ZERO) > 0) {
-                        fromScanRecordSum.put(e.getKey(), e.getValue().setScale(2, RoundingMode.HALF_UP));
-                    }
-                }
+            } catch (Exception e) {
+                log.warn("Failed to resolve unit price from scan records: internalOrderIdsCount={}", internalOrderIds.size(), e);
             }
-        } catch (Exception e) {
-            log.warn("Failed to resolve unit price from scan records: orderIdsCount={}", orderIds.size(), e);
         }
 
         Map<String, BigDecimal> tplSumByStyleNo = new HashMap<>();
@@ -118,6 +117,22 @@ public class OrderPriceFillHelper {
             if (o == null || !StringUtils.hasText(o.getId())) {
                 continue;
             }
+
+            String factoryType = o.getFactoryType();
+            boolean isExternal = "EXTERNAL".equals(factoryType);
+
+            if (isExternal) {
+                BigDecimal lockedPrice = o.getFactoryUnitPrice();
+                if (lockedPrice != null && lockedPrice.compareTo(BigDecimal.ZERO) > 0) {
+                    continue;
+                }
+                BigDecimal snapshotPrice = OrderPricingSnapshotUtils.resolveOrderUnitPrice(o.getOrderDetails());
+                if (snapshotPrice != null && snapshotPrice.compareTo(BigDecimal.ZERO) > 0) {
+                    o.setFactoryUnitPrice(snapshotPrice.setScale(2, RoundingMode.HALF_UP));
+                }
+                continue;
+            }
+
             String oid = o.getId().trim();
             BigDecimal picked = fromScanRecordSum.get(oid);
             if (picked != null && picked.compareTo(BigDecimal.ZERO) > 0) {

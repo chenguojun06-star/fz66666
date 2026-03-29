@@ -34,13 +34,15 @@ function normalizePositiveInt(value, fallback = 1) {
 function buildProcessOptions(processName, progressStage, stageResult) {
   const scannedSet = new Set(stageResult?.scannedProcessNames || []);
   const allBundleProcesses = stageResult?.allBundleProcesses || [];
+  const hidePrice = stageResult?.hidePrice || false;
   const options = allBundleProcesses
     .filter(p => !scannedSet.has(p.processName))
     .map(p => ({
-      label: `${p.processName}（¥${Number(p.price || p.unitPrice || 0).toFixed(1)}）`,
+      label: hidePrice ? p.processName : `${p.processName}（¥${Number(p.price || p.unitPrice || 0).toFixed(1)}）`,
       value: p.processName,
       scanType: normalizeScanType(p.processName, p.scanType),
       unitPrice: Number(p.price || p.unitPrice || 0),
+      hidePrice: hidePrice,
     }));
   let index = options.findIndex(opt => opt.value === processName || opt.value === progressStage);
   if (index < 0) index = 0;

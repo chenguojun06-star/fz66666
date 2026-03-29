@@ -194,6 +194,13 @@ public class TemplateLibraryOrchestrator {
             throw new IllegalArgumentException("styleNo不能为空");
         }
         assertFactoryCanAccessStyle(sn);
+
+        String currentFactoryId = UserContext.factoryId();
+        boolean isFactoryWorker = StringUtils.hasText(currentFactoryId) && UserContext.isWorker();
+        if (isFactoryWorker) {
+            return new HashMap<>();
+        }
+
         return templateLibraryService.resolveProcessUnitPrices(sn);
     }
 
@@ -203,7 +210,17 @@ public class TemplateLibraryOrchestrator {
             throw new IllegalArgumentException("styleNo不能为空");
         }
         assertFactoryCanAccessStyle(sn);
-        return templateLibraryService.resolveProgressNodeUnitPrices(sn);
+        List<Map<String, Object>> result = templateLibraryService.resolveProgressNodeUnitPrices(sn);
+
+        String currentFactoryId = UserContext.factoryId();
+        boolean isFactoryWorker = StringUtils.hasText(currentFactoryId) && UserContext.isWorker();
+        if (isFactoryWorker && result != null) {
+            for (Map<String, Object> node : result) {
+                node.remove("unitPrice");
+                node.remove("price");
+            }
+        }
+        return result;
     }
 
     public Map<String, Object> getProcessPriceTemplate(String styleNo) {
@@ -216,6 +233,14 @@ public class TemplateLibraryOrchestrator {
             matchedScope = "style";
         }
 
+        Map<String, Object> content = parseProcessPriceTemplateContent(matched == null ? null : matched.getTemplateContent());
+
+        String currentFactoryId = UserContext.factoryId();
+        boolean isFactoryWorker = StringUtils.hasText(currentFactoryId) && UserContext.isWorker();
+        if (isFactoryWorker) {
+            content = hidePricesFromContent(content);
+        }
+
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("exists", matched != null);
         result.put("requestedStyleNo", sn);
@@ -224,7 +249,25 @@ public class TemplateLibraryOrchestrator {
         result.put("templateKey", matched == null ? null : matched.getTemplateKey());
         result.put("templateName", matched == null ? null : matched.getTemplateName());
         result.put("sourceStyleNo", matched == null ? null : matched.getSourceStyleNo());
-        result.put("content", parseProcessPriceTemplateContent(matched == null ? null : matched.getTemplateContent()));
+        result.put("content", content);
+        return result;
+    }
+
+    private Map<String, Object> hidePricesFromContent(Map<String, Object> content) {
+        if (content == null) return content;
+        Map<String, Object> result = new LinkedHashMap<>(content);
+        List<Map<String, Object>> steps = (List<Map<String, Object>>) result.get("steps");
+        if (steps != null) {
+            List<Map<String, Object>> cleanedSteps = new ArrayList<>();
+            for (Map<String, Object> step : steps) {
+                Map<String, Object> cleaned = new LinkedHashMap<>(step);
+                cleaned.remove("unitPrice");
+                cleaned.remove("price");
+                cleaned.remove("sizePrices");
+                cleanedSteps.add(cleaned);
+            }
+            result.put("steps", cleanedSteps);
+        }
         return result;
     }
 

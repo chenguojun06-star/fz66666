@@ -1,5 +1,6 @@
 package com.fashion.supplychain.production.helper;
 
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -20,7 +21,10 @@ import java.util.Map;
  * 工序单价解析器
  * 职责：从模板库解析工序单价，支持多种匹配方式
  *
- * 提取自 ScanRecordOrchestrator（2026-02-10）
+ * 权限控制：
+ * - 外发工厂员工：不返回单价，扫码只显示工序
+ * - 外发工厂老板：可以看到外发价格
+ * - 内部工厂：正常显示单价
  */
 @Component
 @Slf4j
@@ -41,7 +45,11 @@ public class UnitPriceResolver {
 
     /**
      * 解析工序单价（公开接口）
-     * 支持通过扫码/订单号/款号定位，并查询工序单价
+     * 
+     * 权限控制：
+     * - 外发工厂员工（isWorker + factoryId）：不返回单价
+     * - 外发工厂老板（isSupervisorOrAbove + factoryId）：返回外发锁定价格
+     * - 内部工厂：正常返回模板价格
      */
     public Map<String, Object> resolveUnitPrice(Map<String, Object> params) {
         Map<String, Object> safeParams = params == null ? new HashMap<>() : new HashMap<>(params);
@@ -57,9 +65,16 @@ public class UnitPriceResolver {
         }
 
         ProductionOrder order = null;
-        if (!hasText(styleNo)) {
+        if (!hasText(styleNo) || !hasText(orderId)) {
             order = resolveOrder(orderId, orderNo);
-            styleNo = order == null ? null : TextUtils.safeText(order.getStyleNo());
+            if (order != null) {
+                if (!hasText(styleNo)) {
+                    styleNo = TextUtils.safeText(order.getStyleNo());
+                }
+                if (!hasText(orderId)) {
+                    orderId = TextUtils.safeText(order.getId());
+                }
+            }
         }
         if (!hasText(styleNo)) {
             throw new IllegalArgumentException("未匹配到款号");
@@ -73,19 +88,61 @@ public class UnitPriceResolver {
             throw new IllegalArgumentException("缺少工序名称");
         }
 
-        BigDecimal unitPrice = resolveUnitPriceFromTemplate(styleNo, processName);
+        if (order == null && hasText(orderId)) {
+            order = productionOrderService.getById(orderId);
+        }
+
+        boolean isExternalOrder = order != null && "EXTERNAL".equals(order.getFactoryType());
+        String currentFactoryId = UserContext.factoryId();
+        boolean isExternalFactoryUser = hasText(currentFactoryId);
+        boolean isExternalFactoryWorker = isExternalFactoryUser && UserContext.isWorker();
+        boolean isExternalFactoryAdmin = isExternalFactoryUser && UserContext.isSupervisorOrAbove();
+
+        BigDecimal unitPrice = null;
+        String priceSource = null;
         String unitPriceHint = null;
-        if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
+        boolean hidePrice = false;
+
+        if (isExternalFactoryWorker && isExternalOrder) {
+            hidePrice = true;
+            unitPrice = BigDecimal.ZERO;
+            unitPriceHint = "外发订单，单价已锁定";
+            log.debug("外发工厂员工扫码，隐藏单价: factoryId={}, orderNo={}", currentFactoryId, order.getOrderNo());
+        } else if (isExternalOrder) {
+            BigDecimal lockedPrice = com.fashion.supplychain.production.util.OrderPricingSnapshotUtils
+                    .resolveOrderUnitPrice(order.getOrderDetails());
+            if (lockedPrice != null && lockedPrice.compareTo(BigDecimal.ZERO) > 0) {
+                unitPrice = lockedPrice;
+                priceSource = isExternalFactoryAdmin ? "外发锁定单价" : "订单单价";
+            }
+        }
+
+        if (!hidePrice && (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0)) {
+            unitPrice = resolveUnitPriceFromTemplate(styleNo, processName);
+            if (unitPrice != null && unitPrice.compareTo(BigDecimal.ZERO) > 0) {
+                priceSource = "模板工序单价";
+            }
+        }
+
+        if (!hidePrice && (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0)) {
             unitPrice = BigDecimal.ZERO;
             unitPriceHint = "未找到工序【" + processName + "】的单价配置，请在模板中心设置工序单价模板";
         }
 
         Map<String, Object> result = new HashMap<>();
-        result.put("unitPrice", unitPrice.setScale(2, RoundingMode.HALF_UP));
+        if (hidePrice) {
+            result.put("unitPrice", null);
+            result.put("hidePrice", true);
+        } else {
+            result.put("unitPrice", unitPrice.setScale(2, RoundingMode.HALF_UP));
+        }
         result.put("styleNo", styleNo);
         result.put("processName", processName);
         if (hasText(unitPriceHint)) {
             result.put("unitPriceHint", unitPriceHint);
+        }
+        if (hasText(priceSource)) {
+            result.put("priceSource", priceSource);
         }
         if (hasText(scanCode)) {
             result.put("scanCode", scanCode);

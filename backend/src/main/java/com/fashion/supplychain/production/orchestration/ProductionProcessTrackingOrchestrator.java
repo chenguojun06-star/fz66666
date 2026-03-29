@@ -587,6 +587,11 @@ public class ProductionProcessTrackingOrchestrator {
     /**
      * 查询订单的工序跟踪记录（PC端弹窗显示）
      * 返回前自动使用模板库最新单价覆盖旧的快照价格
+     * 
+     * 权限控制：
+     * - 外发工厂员工：不返回单价，只显示工序
+     * - 外发工厂老板：可以看到外发价格
+     * - 内部工厂：正常显示单价
      *
      * @param productionOrderId 订单ID（String类型）
      * @return 跟踪记录列表（单价已用模板最新值覆盖）
@@ -597,9 +602,20 @@ public class ProductionProcessTrackingOrchestrator {
             return records;
         }
 
-        // 查询订单的款号，从模板库获取最新单价覆盖
         ProductionOrder order = productionOrderService.getById(productionOrderId);
         if (order == null || !StringUtils.hasText(order.getStyleNo())) {
+            return records;
+        }
+
+        String currentFactoryId = UserContext.factoryId();
+        boolean isFactoryWorker = StringUtils.hasText(currentFactoryId) && UserContext.isWorker();
+        boolean isExternalOrder = "EXTERNAL".equals(order.getFactoryType());
+
+        if (isFactoryWorker && isExternalOrder) {
+            for (ProductionProcessTracking tracking : records) {
+                tracking.setUnitPrice(null);
+                tracking.setSettlementAmount(null);
+            }
             return records;
         }
 
@@ -609,7 +625,6 @@ public class ProductionProcessTrackingOrchestrator {
                 return records;
             }
 
-            // 构建当前模板名称列表，用于同义词映射和单价查找
             Map<String, BigDecimal> priceMap = new HashMap<>();
             List<String> templateCurrentNames = new ArrayList<>();
             for (Map<String, Object> tn : templateNodes) {
@@ -625,17 +640,12 @@ public class ProductionProcessTrackingOrchestrator {
                 return records;
             }
 
-            // 用模板最新名称覆盖跟踪记录中的旧工序名（仅内存覆盖，不写DB）
-            // 场景：裁剪时工序叫"大烫"，后来模板改名，DB里还是"大烫"，
-            //       通过同义词映射找到对应的当前名称并覆盖显示。
             for (ProductionProcessTracking tracking : records) {
                 String oldName = tracking.getProcessName() == null ? "" : tracking.getProcessName().trim();
                 if (oldName.isEmpty()) continue;
 
-                // 直接命中：跳过（名字未改）
                 if (priceMap.containsKey(oldName)) continue;
 
-                // 同义词匹配：找到当前模板中等价的名称
                 String currentName = null;
                 for (String tplName : templateCurrentNames) {
                     if (templateLibraryService.progressStageNameMatches(tplName, oldName)) {
@@ -645,14 +655,12 @@ public class ProductionProcessTrackingOrchestrator {
                 }
                 if (currentName != null) {
                     tracking.setProcessName(currentName);
-                    // processCode 在本系统中存储的也是工序名（非稳定码），一并更新
                     if (oldName.equals(tracking.getProcessCode())) {
                         tracking.setProcessCode(currentName);
                     }
                 }
             }
 
-            // 用模板最新价格覆盖记录中的旧价格（仅在内存中覆盖，不写DB）
             for (ProductionProcessTracking tracking : records) {
                 BigDecimal templatePrice = priceMap.get(tracking.getProcessName());
                 if (templatePrice == null) {
@@ -660,7 +668,6 @@ public class ProductionProcessTrackingOrchestrator {
                 }
                 if (templatePrice != null) {
                     tracking.setUnitPrice(templatePrice);
-                    // 重新计算结算金额
                     if (tracking.getQuantity() != null) {
                         tracking.setSettlementAmount(templatePrice.multiply(new BigDecimal(tracking.getQuantity())));
                     }
@@ -670,8 +677,6 @@ public class ProductionProcessTrackingOrchestrator {
             log.warn("获取模板价格失败，使用DB中存储的价格 orderNo={}: {}", order.getOrderNo(), e.getMessage());
         }
 
-        // 填充虚拟字段 hasNextStageScanned：检查质检环节是否已扫码（适用于生产工序记录）
-        // 若某菲号已完成质检扫码，对应生产工序记录不允许再撤回（后端 undo() 同样会拒绝，此处仅供前端提前隐藏按钮）
         try {
             boolean anyScanned = records.stream()
                     .anyMatch(r -> "scanned".equals(r.getScanStatus()) && r.getCuttingBundleId() != null);
@@ -715,14 +720,18 @@ public class ProductionProcessTrackingOrchestrator {
     public int syncUnitPrices(String productionOrderId) {
         log.info("开始同步工序单价，订单ID: {}", productionOrderId);
 
-        // 1. 查询订单最新数据
         ProductionOrder order = productionOrderService.getById(productionOrderId);
         if (order == null) {
             log.warn("同步单价失败：订单不存在 {}", productionOrderId);
             return 0;
         }
 
-        // 2. 优先从模板库获取最新单价（最权威的价格来源）
+        boolean isExternalOrder = "EXTERNAL".equals(order.getFactoryType());
+        if (isExternalOrder) {
+            log.info("外发订单 {} 跳过模板单价同步，保持下单时锁定价格", order.getOrderNo());
+            return 0;
+        }
+
         Map<String, BigDecimal> priceMap = new HashMap<>();
         String styleNo = order.getStyleNo();
         if (StringUtils.hasText(styleNo)) {
@@ -742,7 +751,6 @@ public class ProductionProcessTrackingOrchestrator {
             }
         }
 
-        // 3. 如果模板库没有数据，回退到 progressWorkflowJson
         if (priceMap.isEmpty()) {
             List<Map<String, Object>> processNodes = parseProcessNodes(order);
             if (CollectionUtils.isEmpty(processNodes)) {
@@ -763,17 +771,14 @@ public class ProductionProcessTrackingOrchestrator {
             return 0;
         }
 
-        // 4. 查询该订单所有跟踪记录
         List<ProductionProcessTracking> trackingRecords = trackingService.getByOrderId(productionOrderId);
         if (CollectionUtils.isEmpty(trackingRecords)) {
             log.info("订单 {} 没有跟踪记录，跳过单价同步", order.getOrderNo());
             return 0;
         }
 
-        // 5. 逐条更新单价（兼容 processCode 为名称或编号的两种情况）
         int updatedCount = 0;
         for (ProductionProcessTracking tracking : trackingRecords) {
-            // 优先用 processName 匹配，其次用 processCode 匹配
             BigDecimal newPrice = priceMap.get(tracking.getProcessName());
             if (newPrice == null) {
                 newPrice = priceMap.get(tracking.getProcessCode());
@@ -789,8 +794,6 @@ public class ProductionProcessTrackingOrchestrator {
 
             tracking.setUnitPrice(newPrice);
 
-            // 已扫码的记录需要重新计算结算金额
-            // ⚠️ 已结算记录（is_settled=true）跳过 settlementAmount 更新，避免覆盖已审批的工资数据
             if ("scanned".equals(tracking.getScanStatus()) && tracking.getQuantity() != null) {
                 if (Boolean.TRUE.equals(tracking.getIsSettled())) {
                     log.warn("跳过已结算记录的结算金额更新: trackingId={}, orderId={}, processCode={}, settledBatchNo={}",
@@ -809,9 +812,6 @@ public class ProductionProcessTrackingOrchestrator {
         log.info("订单 {} 跟踪记录单价同步完成：共 {} 条，更新 {} 条",
                 order.getOrderNo(), trackingRecords.size(), updatedCount);
 
-        // 6. 补充：同步更新未结算扫码记录的价格字段，确保工资核算页面立即反映最新单价
-        //    payroll 聚合查询使用 total_amount → scan_cost → unit_price×quantity 兜底链，
-        //    必须同时更新全部三个字段才能保证优先级最高的 total_amount 不拉低聚合结果。
         int scanUpdated = 0;
         for (Map.Entry<String, BigDecimal> entry : priceMap.entrySet()) {
             String pName = entry.getKey();
@@ -831,7 +831,6 @@ public class ProductionProcessTrackingOrchestrator {
 
             for (ScanRecord sr : scanRecords) {
                 if (sr.getQuantity() == null || sr.getQuantity() <= 0) continue;
-                // 跳过该记录若单价已是最新值（避免无效更新）
                 if (newPrice.compareTo(sr.getProcessUnitPrice() != null ? sr.getProcessUnitPrice()
                         : (sr.getUnitPrice() != null ? sr.getUnitPrice() : BigDecimal.ZERO)) == 0) {
                     continue;
@@ -1025,6 +1024,11 @@ public class ProductionProcessTrackingOrchestrator {
 
         for (ProductionOrder order : orders) {
             try {
+                if ("EXTERNAL".equals(order.getFactoryType())) {
+                    skipCount++;
+                    continue;
+                }
+
                 String styleNo = order.getStyleNo().trim();
                 if (!StringUtils.hasText(styleNo)) {
                     skipCount++;

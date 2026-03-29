@@ -108,7 +108,7 @@
       <text wx:if="{{lastResult.color}}">{{lastResult.color}}</text>
       <text wx:if="{{lastResult.size}}">{{lastResult.size}}</text>
       <text wx:if="{{lastResult.processName}}" class="res-proc">{{lastResult.processName}}</text>
-      <text wx:if="{{lastResult.unitPrice != null}}" class="{{lastResult.unitPriceHint ? 'res-price-warn' : ''}}">¥{{lastResult.unitPrice}}{{lastResult.unitPriceHint ? ' ⚠️' : ''}}</text>
+      <text wx:if="{{lastResult.unitPrice != null && !lastResult.hidePrice}}" class="{{lastResult.unitPriceHint ? 'res-price-warn' : ''}}">¥{{lastResult.unitPrice}}{{lastResult.unitPriceHint ? ' ⚠️' : ''}}</text>
     </view>
     <view wx:if="{{lastResult.success && lastResult.sessionQty > 0}}" class="res-session-bar">
       <text class="res-session-text">📊 本工序今日累计 {{lastResult.sessionQty}} 件</text>
@@ -249,7 +249,8 @@
             <text class="hdi-label">颜色:</text>
             <text class="hdi-value">{{record.color || '-'}}</text>
             <text class="hdi-label">单价:</text>
-            <text class="hdi-value">¥{{record.unitPrice || '-'}}</text>
+            <text class="hdi-value" wx:if="{{!record.hidePrice}}">¥{{record.unitPrice || '-'}}</text>
+            <text class="hdi-value" wx:else>-</text>
           </view>
           <view wx:if="{{record.sizeArr && record.sizeArr.length}}" class="hdi-size-grid">
             <view class="hdi-size-row">
@@ -397,7 +398,7 @@
                   </view>
                   <text class="inline-selector-label">{{item.value}}</text>
                 </view>
-                <text class="process-item-price">¥{{item.unitPrice}}</text>
+                <text wx:if="{{!item.hidePrice}}" class="process-item-price">¥{{item.unitPrice}}</text>
               </view>
             </scroll-view>
           </view>
