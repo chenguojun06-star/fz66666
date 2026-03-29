@@ -6,6 +6,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { StyleQuotation, StyleBom, StyleProcess } from '@/types/style';
 import api, { toNumberSafe } from '@/utils/api';
 import { getMaterialTypeLabel } from '@/utils/materialType';
+import ProcessStageSummary from './ProcessStageSummary';
 
 interface Props {
   styleId: string | number;
@@ -259,8 +260,8 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQ
     <div className="style-quotation" style={{ padding: '0 4px' }}>
       {/* 1. 成本核算 - 顶部 */}
       <Row gutter={8} style={{ marginBottom: 8 }}>
-        <Col span={18}>
-          <Card title="� 成本核算" size="small" style={{ height: '100%' }} styles={{ body: { padding: '8px' } }}>
+        <Col span={14}>
+          <Card title="📊 成本核算" size="small" style={{ height: '100%' }} styles={{ body: { padding: '8px' } }}>
             <Form form={form} layout="vertical" onValuesChange={calculateTotal} size="small">
               <Row gutter={8}>
                 <Col span={8}>
@@ -373,6 +374,11 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQ
                 </Row>
               )}
             </Form>
+          </Card>
+        </Col>
+        <Col span={4}>
+          <Card title="🔧 工序单价拆解" size="small" style={{ height: '100%' }} styles={{ body: { padding: '8px' } }}>
+            <ProcessStageSummary data={processList} />
           </Card>
         </Col>
         <Col span={6}>

@@ -676,6 +676,7 @@ const CuttingManagement: React.FC = () => {
                       <CuttingRatioPanel
                         entryColorText={bundles.entryColorText || String(activeTask?.color || '').trim()}
                         entrySizeItems={bundles.entrySizeItems}
+                        entryOrderLines={bundles.entryOrderLines}
                         defaultTotalQty={Number(activeTask?.orderQuantity ?? 0) || 0}
                         sizeUsageMap={bundles.entrySizeUsageMap}
                         arrivedFabricM={bundles.entryMainFabricArrived}

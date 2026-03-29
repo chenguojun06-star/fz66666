@@ -666,7 +666,7 @@ const DataCenter: React.FC = () => {
                   }
                 : {
                     key: 'returnDesc',
-                    label: '退回制单',
+                    label: '制单更新',
                     title: '退回后可重新编辑生产制单',
                     onClick: () => { setReturnDescRecord(record); setReturnDescModalVisible(true); },
                   },

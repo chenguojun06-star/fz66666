@@ -28,7 +28,6 @@ interface BuildOrderSubmitPayloadArgs {
   quotationUnitPrice: number;
   suggestedQuotationUnitPrice: number;
   resolvedOrderUnitPrice: number;
-  resolvedScatterUnitPrice: number;
   buildProgressWorkflowJson: (nodes: ProgressNode[]) => string;
   progressNodes: ProgressNode[];
 }
@@ -55,7 +54,6 @@ export const buildOrderSubmitPayload = ({
   quotationUnitPrice,
   suggestedQuotationUnitPrice,
   resolvedOrderUnitPrice,
-  resolvedScatterUnitPrice,
   buildProgressWorkflowJson,
   progressNodes,
 }: BuildOrderSubmitPayloadArgs) => {
@@ -67,8 +65,6 @@ export const buildOrderSubmitPayload = ({
     quotationUnitPrice,
     suggestedQuotationUnitPrice,
     orderUnitPrice: resolvedOrderUnitPrice,
-    scatterPricingMode: values.scatterPricingMode || 'FOLLOW_ORDER',
-    scatterCuttingUnitPrice: resolvedScatterUnitPrice,
     pricingSummary: orderOrchestration.pricingSummary,
     scatterSummary: orderOrchestration.scatterSummary,
     sizeLabels: orderOrchestration.sizeLabels,
@@ -111,8 +107,6 @@ export const buildOrderSubmitPayload = ({
     factoryUnitPrice: resolvedOrderUnitPrice,
     quotationUnitPrice: quotationUnitPrice > 0 ? quotationUnitPrice : null,
     pricingMode: values.pricingMode || 'PROCESS',
-    scatterPricingMode: values.scatterPricingMode || 'FOLLOW_ORDER',
-    scatterCuttingUnitPrice: resolvedScatterUnitPrice,
     plannedStartDate: values.plannedStartDate ? values.plannedStartDate.format('YYYY-MM-DDTHH:mm:ss') : null,
     plannedEndDate: values.plannedEndDate ? values.plannedEndDate.format('YYYY-MM-DDTHH:mm:ss') : null,
     progressWorkflowJson: buildProgressWorkflowJson(progressNodes),

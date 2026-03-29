@@ -1216,7 +1216,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
       actions.push(hasPushedOrder(selected.record)
         ? {
             key: 'order-view',
-            label: '查看订单',
+            label: '下单',
             onClick: () => {
               navigate(withQuery('/order-management', {
                 styleNo: (selected.record as StyleRecord).styleNo,
@@ -1227,7 +1227,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
           }
         : {
             key: 'order-push',
-            label: '推送下单',
+            label: '资料推送',
             type: 'default',
             onClick: () => {
               navigate(withQuery('/order-management', { styleNo: (selected.record as StyleRecord).styleNo }));
@@ -1290,8 +1290,8 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
               const items = [
                 { key: 'detail', label: '详情', type: 'primary' as const, onClick: () => navigate(`/style-info/${record.id}`) },
                 hasPushedOrder(record)
-                  ? { key: 'order-view', label: '订单', type: 'default' as const, onClick: () => navigate(withQuery('/order-management', { styleNo: (record as any).styleNo, orderNo: (record as any).orderNo })) }
-                  : { key: 'order-push', label: '去推送', type: 'default' as const, onClick: () => navigate(`/style-info/${record.id}`) },
+                  ? { key: 'order-view', label: '下单', type: 'default' as const, onClick: () => navigate(withQuery('/order-management', { styleNo: (record as any).styleNo, orderNo: (record as any).orderNo })) }
+                  : { key: 'order-push', label: '资料推送', type: 'default' as const, onClick: () => navigate(`/style-info/${record.id}`) },
                 { key: 'print', label: '打印', type: 'default' as const, onClick: () => onPrint(record) },
               ];
 

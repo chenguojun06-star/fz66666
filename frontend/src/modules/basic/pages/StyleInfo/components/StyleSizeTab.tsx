@@ -1007,7 +1007,7 @@ const StyleSizeTab: React.FC<Props> = ({
         title: '参考图',
         key: 'groupImage',
         dataIndex: '__groupImage',
-        width: 180,
+        width: 100,
         onCell: (record: DisplayRow) => {
           return {
             rowSpan: record.isImageChunkStart ? record.imageChunkSpan : 0,
@@ -1069,7 +1069,7 @@ const StyleSizeTab: React.FC<Props> = ({
       {
         title: '分组',
         dataIndex: 'groupName',
-        width: 160,
+        width: 50,
         onCell: (record: DisplayRow) => {
           return {
             rowSpan: record.isGroupChunkStart ? record.groupChunkSpan : 0,
@@ -1123,9 +1123,9 @@ const StyleSizeTab: React.FC<Props> = ({
         },
       },
       {
-        title: '部位(cm)',
+        title: '部位',
         dataIndex: 'partName',
-        width: 180,
+        width: 50,
         render: (_: any, record: DisplayRow) =>
           editableMode ? (
             <Input value={record.partName} placeholder="如：胸围" onChange={(e) => updatePartName(record.key, e.target.value)} />
@@ -1136,7 +1136,7 @@ const StyleSizeTab: React.FC<Props> = ({
       {
         title: '度量方式',
         dataIndex: 'measureMethod',
-        width: 160,
+        width: 80,
         render: (_: any, record: MatrixRow) =>
           editableMode ? (
             <Input value={record.measureMethod} placeholder="如：平量" onChange={(e) => updateMeasureMethod(record.key, e.target.value)} />
@@ -1147,7 +1147,7 @@ const StyleSizeTab: React.FC<Props> = ({
       {
         title: '样版码',
         dataIndex: 'baseSize',
-        width: 110,
+        width: 40,
         align: 'center' as const,
         render: (_: any, record: MatrixRow) =>
           editableMode ? (
@@ -1165,7 +1165,7 @@ const StyleSizeTab: React.FC<Props> = ({
       {
         title: '跳码区',
         dataIndex: 'gradingZones',
-        width: 260,
+        width: 80,
         render: (_: any, record: MatrixRow) => {
           const summary = normalizeGradingZones(record.gradingZones || [], sizeColumns)
             .map((zone) => `${zone.label}(${zone.sizes.join('/')}) ±${toNumberSafe(zone.step)}`)
@@ -1207,7 +1207,7 @@ const StyleSizeTab: React.FC<Props> = ({
         </span>
       ),
       dataIndex: sn,
-      width: 90,
+      width: 40,
       align: 'center' as const,
       render: (_: any, record: MatrixRow) => {
         const v = record.cells[sn]?.value;
@@ -1227,9 +1227,9 @@ const StyleSizeTab: React.FC<Props> = ({
 
     const right = [
       {
-        title: '公差(+/-)',
+        title: '公差',
         dataIndex: 'tolerance',
-        width: 110,
+        width: 50,
         align: 'center' as const,
         render: (_: any, record: MatrixRow) =>
           editableMode ? (
@@ -1464,6 +1464,7 @@ const StyleSizeTab: React.FC<Props> = ({
         pagination={false}
         loading={loading}
         rowKey="key"
+        resizableColumns={false}
         rowClassName={(_record, rowIndex) => {
           const row = displayRows[rowIndex];
           if (!row) return '';
@@ -1473,10 +1474,6 @@ const StyleSizeTab: React.FC<Props> = ({
           }
           return classes.join(' ');
         }}
-        scroll={{ x: 'max-content' }}
-        tableLayout="auto"
-        storageKey={`style-size-v2-${String(styleId)}`}
-        minColumnWidth={70}
       />
 
       <ResizableModal

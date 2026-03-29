@@ -1,7 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { AutoComplete, Button, Empty, InputNumber, Select, Space, Tag } from 'antd';
-import ResizableTable from '@/components/common/ResizableTable';
-import RowActions from '@/components/common/RowActions';
+import { Button, Empty, InputNumber, Select, Space, Tag } from 'antd';
 import type { OrderLine } from '../types';
 
 interface MultiColorOrderEditorProps {
@@ -69,7 +67,6 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
   isMobile,
   onChange,
 }) => {
-  const hasStructuredOptions = availableColors.length > 0 && availableSizes.length > 0;
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [quickFillQty, setQuickFillQty] = useState<number>(1);
@@ -80,7 +77,6 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
   const optionSignatureRef = useRef(optionSignature);
 
   useEffect(() => {
-    if (!hasStructuredOptions) return;
     const nextColors = uniq(orderLines.map((line) => line.color).filter(Boolean));
     const nextSizes = uniq(orderLines.map((line) => line.size).filter(Boolean));
     if (nextColors.length || nextSizes.length) {
@@ -94,7 +90,7 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
       setSelectedColors([]);
       setSelectedSizes([]);
     }
-  }, [hasStructuredOptions, optionSignature, orderLines]);
+  }, [optionSignature, orderLines]);
 
   const matrixRows = useMemo(() => {
     return selectedColors.map((color) => ({
@@ -118,8 +114,12 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
   const syncSelection = (colors: string[], sizes: string[]) => {
     setSelectedColors(colors);
     setSelectedSizes(sizes);
-    const allowedKeys = new Set(colors.flatMap((color) => sizes.map((size) => buildComboKey(color, size))));
-    onChange(orderLines.filter((line) => allowedKeys.has(buildComboKey(line.color, line.size))));
+    if (colors.length === 0 || sizes.length === 0) {
+      onChange([]);
+      return;
+    }
+    const newLines = buildLinesFromSelection(colors, sizes, orderLines);
+    onChange(newLines);
   };
 
   const updateMatrixQty = (color: string, size: string, quantity: number) => {
@@ -153,107 +153,6 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
     })));
   };
 
-  const addManualLine = () => {
-    onChange([
-      ...orderLines,
-      {
-        id: `${Date.now()}-${Math.random()}`,
-        color: availableColors[0] || '',
-        size: availableSizes[0] || '',
-        quantity: 1,
-      },
-    ]);
-  };
-
-  const updateManualLine = (id: string, patch: Partial<OrderLine>) => {
-    onChange(orderLines.map((line) => (line.id === id ? { ...line, ...patch } : line)));
-  };
-
-  const removeManualLine = (id: string) => {
-    onChange(orderLines.filter((line) => line.id !== id));
-  };
-
-  if (!hasStructuredOptions) {
-    return (
-      <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <div style={{ color: 'var(--neutral-text-light)' }}>
-            总数量：<span style={{ fontWeight: 600 }}>{totalQuantity}</span>
-          </div>
-          <Button onClick={addManualLine}>新增明细</Button>
-        </div>
-        <ResizableTable
-          rowKey={(row) => row.id}
-          dataSource={orderLines}
-          pagination={false}
-          scroll={{ x: 'max-content' }}
-          size={isMobile ? 'small' : 'middle'}
-          columns={[
-            {
-              title: '颜色',
-              key: 'color',
-              width: isMobile ? 160 : 220,
-              render: (_: unknown, record: OrderLine) => (
-                <AutoComplete
-                  value={record.color}
-                  options={availableColors.map((value) => ({ value }))}
-                  style={{ width: '100%' }}
-                  onChange={(value) => updateManualLine(record.id, { color: String(value || '') })}
-                  placeholder="颜色"
-                />
-              ),
-            },
-            {
-              title: '码数',
-              key: 'size',
-              width: isMobile ? 160 : 220,
-              render: (_: unknown, record: OrderLine) => (
-                <AutoComplete
-                  value={record.size}
-                  options={availableSizes.map((value) => ({ value }))}
-                  style={{ width: '100%' }}
-                  onChange={(value) => updateManualLine(record.id, { size: String(value || '') })}
-                  placeholder="码数"
-                />
-              ),
-            },
-            {
-              title: '数量',
-              key: 'quantity',
-              width: isMobile ? 120 : 160,
-              render: (_: unknown, record: OrderLine) => (
-                <InputNumber
-                  min={1}
-                  style={{ width: '100%' }}
-                  value={record.quantity}
-                  onChange={(value) => updateManualLine(record.id, { quantity: Number(value) || 1 })}
-                />
-              ),
-            },
-            {
-              title: '操作',
-              key: 'action',
-              width: isMobile ? 90 : 120,
-              render: (_: unknown, record: OrderLine) => (
-                <RowActions
-                  actions={[
-                    {
-                      key: 'delete',
-                      label: '删除',
-                      danger: true,
-                      disabled: orderLines.length <= 1,
-                      onClick: () => removeManualLine(record.id),
-                    },
-                  ]}
-                />
-              ),
-            },
-          ]}
-        />
-      </div>
-    );
-  }
-
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
@@ -267,7 +166,7 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
           总数量：<span style={{ fontWeight: 600 }}>{totalQuantity}</span>
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10, color: '#8c8c8c', fontSize: 12 }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10, color: '#8c8c8c' }}>
         <span>开发颜色：{availableColors.join(' / ') || '-'}</span>
         <span>可手动加色</span>
       </div>
@@ -275,15 +174,15 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 12, marginBottom: 12 }}>
         <Select
           mode="tags"
-          placeholder="选择下单颜色"
+          placeholder="选择或输入下单颜色"
           value={selectedColors}
           options={availableColors.map((value) => ({ label: value, value }))}
           onChange={(values) => syncSelection(uniq(values as string[]), selectedSizes)}
           maxTagCount="responsive"
         />
         <Select
-          mode="multiple"
-          placeholder="选择下单码数"
+          mode="tags"
+          placeholder="选择或输入下单码数"
           value={selectedSizes}
           options={availableSizes.map((value) => ({ label: value, value }))}
           onChange={(values) => syncSelection(selectedColors, uniq(values as string[]))}
@@ -304,45 +203,46 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="先选颜色和码数" />
         </div>
       ) : (
-        <div style={{ border: '1px solid #f0f0f0', borderRadius: 8, overflow: 'auto' }}>
-          <table style={{ width: '100%', minWidth: 420, borderCollapse: 'collapse' }}>
+        <div style={{ border: '1px solid #f0f0f0', borderRadius: 8, overflow: 'auto', width: '100%' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <thead>
               <tr>
-                <th style={{ textAlign: 'left', padding: '10px 12px', borderBottom: '1px solid #f0f0f0', background: '#fafafa', minWidth: 120 }}>颜色</th>
+                <th style={{ textAlign: 'left', padding: '8px 6px', borderBottom: '1px solid #f0f0f0', background: '#fafafa', width: '15%' }}>颜色</th>
                 {selectedSizes.map((size) => (
-                  <th key={size} style={{ textAlign: 'center', padding: '10px 8px', borderBottom: '1px solid #f0f0f0', background: '#fafafa', minWidth: 110 }}>{size}</th>
+                  <th key={size} style={{ textAlign: 'center', padding: '8px 2px', borderBottom: '1px solid #f0f0f0', background: '#fafafa', width: `${70 / selectedSizes.length}%` }}>{size}</th>
                 ))}
-                <th style={{ textAlign: 'center', padding: '10px 12px', borderBottom: '1px solid #f0f0f0', background: '#fafafa', minWidth: 90 }}>小计</th>
+                <th style={{ textAlign: 'center', padding: '8px 4px', borderBottom: '1px solid #f0f0f0', background: '#fafafa', width: '15%' }}>小计</th>
               </tr>
             </thead>
             <tbody>
               {matrixRows.map((row) => (
                 <tr key={row.key}>
-                  <td style={{ padding: '10px 12px', borderBottom: '1px solid #f5f5f5', fontWeight: 600 }}>{row.color}</td>
+                  <td style={{ padding: '6px 6px', borderBottom: '1px solid #f5f5f5', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.color}</td>
                   {selectedSizes.map((size) => {
                     const matched = orderLines.find((line) => buildComboKey(line.color, line.size) === buildComboKey(row.color, size));
                     return (
-                      <td key={`${row.key}-${size}`} style={{ padding: 8, borderBottom: '1px solid #f5f5f5' }}>
+                      <td key={`${row.key}-${size}`} style={{ padding: 2, borderBottom: '1px solid #f5f5f5' }}>
                         <InputNumber
                           min={0}
                           value={matched?.quantity || 0}
                           style={{ width: '100%' }}
+                          size="small"
                           onChange={(value) => updateMatrixQty(row.color, size, Number(value) || 0)}
                         />
                       </td>
                     );
                   })}
-                  <td style={{ padding: '10px 12px', borderBottom: '1px solid #f5f5f5', textAlign: 'center', fontWeight: 600 }}>{row.total}</td>
+                  <td style={{ padding: '6px 6px', borderBottom: '1px solid #f5f5f5', textAlign: 'center', fontWeight: 600 }}>{row.total}</td>
                 </tr>
               ))}
               <tr>
-                <td style={{ padding: '10px 12px', background: '#fafafa', fontWeight: 700 }}>码数合计</td>
+                <td style={{ padding: '6px 6px', background: '#fafafa', fontWeight: 700 }}>码数合计</td>
                 {selectedSizes.map((size) => (
-                  <td key={`total-${size}`} style={{ padding: '10px 8px', background: '#fafafa', textAlign: 'center', fontWeight: 700 }}>
+                  <td key={`total-${size}`} style={{ padding: '6px 2px', background: '#fafafa', textAlign: 'center', fontWeight: 700 }}>
                     {sizeTotals[size] || 0}
                   </td>
                 ))}
-                <td style={{ padding: '10px 12px', background: '#fafafa', textAlign: 'center', fontWeight: 700 }}>{totalQuantity}</td>
+                <td style={{ padding: '6px 6px', background: '#fafafa', textAlign: 'center', fontWeight: 700 }}>{totalQuantity}</td>
               </tr>
             </tbody>
           </table>

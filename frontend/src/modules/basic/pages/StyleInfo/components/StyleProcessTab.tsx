@@ -13,6 +13,7 @@ import { useDictOptions } from '@/hooks/useDictOptions';
 
 import StyleStageControlBar from './StyleStageControlBar';
 import StyleQuoteSuggestionInlineCard from './StyleQuoteSuggestionInlineCard';
+import ProcessCostSummary from './ProcessCostSummary';
 
 interface Props {
   styleId: string | number;
@@ -78,8 +79,7 @@ const StyleProcessTab: React.FC<Props> = ({
   // 多码单价相关状态
   const [sizes, setSizes] = useState<string[]>([]);
   const showSizePrices = true; // 始终显示多码单价列
-  const [newSizeName, setNewSizeName] = useState('');
-  const [addSizePopoverOpen, setAddSizePopoverOpen] = useState(false);
+  const [sizeOptions, setSizeOptions] = useState<Array<{ value: string; label: string }>>([]);
   const defaultSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 
   // AI 工序单价提示状态
@@ -88,6 +88,26 @@ const StyleProcessTab: React.FC<Props> = ({
   const hintTimerRef = useRef<Record<string | number, ReturnType<typeof setTimeout>>>({});
 
   const { options: categoryOptions } = useDictOptions('category', CATEGORY_CODE_OPTIONS);
+
+  // 获取码数字典选项
+  const fetchSizeDictOptions = async () => {
+    try {
+      const res = await api.get<{ code: number; data: { records: any[] } | any[] }>('/system/dict/list', {
+        params: { dictType: 'size', page: 1, pageSize: 200 },
+      });
+      const result = res as any;
+      if (result.code === 200) {
+        const data = result.data as { records?: any[] } | any[];
+        const records = Array.isArray(data) ? data : ((data as { records?: any[] })?.records || []);
+        const options = (Array.isArray(records) ? records : [])
+          .filter((item: any) => item.dictLabel)
+          .map((item: any) => ({ value: item.dictLabel, label: item.dictLabel }));
+        setSizeOptions(options);
+      }
+    } catch {
+      // 忽略错误
+    }
+  };
 
   // AI 工序补全状态
   const [aiOpen, setAiOpen] = useState(false);
@@ -207,25 +227,56 @@ const StyleProcessTab: React.FC<Props> = ({
   const fetchProcess = async () => {
     setLoading(true);
     try {
-      // 同时获取工序数据和多码单价数据
-      const [processRes, sizePriceRes] = await Promise.all([
+      // 同时获取工序数据、多码单价数据和尺寸表数据
+      const [processRes, sizePriceRes, sizeTableRes] = await Promise.all([
         api.get<StyleProcess[]>(`/style/process/list?styleId=${styleId}`),
         api.get<{ code: number; data: SizePrice[] }>(`/style/size-price/list`, { params: { styleId } }),
+        api.get<{ code: number; data: Array<{ sizeName: string }> }>(`/style/size/list?styleId=${styleId}`),
       ]);
 
       const processResult = processRes as any;
       const sizePriceResult = sizePriceRes as any;
+      const sizeTableResult = sizeTableRes as any;
 
       if (processResult.code === 200) {
         const processData = (processResult.data || []) as StyleProcess[];
 
         // 处理多码单价数据
         let sizePriceData: SizePrice[] = [];
-        let sizeList: string[] = [...defaultSizes];
-
         if (sizePriceResult.code === 200 && sizePriceResult.data) {
           sizePriceData = sizePriceResult.data as SizePrice[];
-          // 从已保存的数据中提取尺码列表
+        }
+
+        // 优先从尺寸表获取码数列表，实现尺寸表与工序单价联动
+        let sizeList: string[] = [];
+
+        // 从尺寸表提取码数
+        if (sizeTableResult.code === 200 && sizeTableResult.data) {
+          const sizeTableData = sizeTableResult.data;
+          const sizeSet = new Set<string>();
+          sizeTableData.forEach((item: any) => {
+            const sizeName = String(item.sizeName || '').trim();
+            if (sizeName) {
+              // 支持多码合并的情况，如 "S,M,L" 或 "S M L"
+              const parts = sizeName.split(/[,，\s]+/).map((s: string) => s.trim()).filter(Boolean);
+              parts.forEach((s: string) => sizeSet.add(s));
+            }
+          });
+          if (sizeSet.size > 0) {
+            sizeList = Array.from(sizeSet).sort((a, b) => {
+              const order = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', '3XL', '4XL', '5XL'];
+              const ia = order.indexOf(a.toUpperCase());
+              const ib = order.indexOf(b.toUpperCase());
+              if (ia >= 0 && ib >= 0) return ia - ib;
+              if (ia >= 0) return -1;
+              if (ib >= 0) return 1;
+              return a.localeCompare(b);
+            });
+          }
+        }
+
+        // 如果尺寸表没有数据，则从已保存的多码单价数据中提取
+        if (sizeList.length === 0 && sizePriceData.length > 0) {
           const savedSizes = new Set<string>();
           sizePriceData.forEach((sp: SizePrice) => {
             if (sp.size) savedSizes.add(sp.size.trim());
@@ -354,30 +405,6 @@ const StyleProcessTab: React.FC<Props> = ({
       sizePriceTouched,
     };
     setData((prev) => [...prev, newProcess]);
-  };
-
-  // 添加尺码
-  const handleAddSize = () => {
-    const trimmed = newSizeName.trim().toUpperCase();
-    if (!trimmed) {
-      message.warning('请输入尺码');
-      return;
-    }
-    if (sizes.includes(trimmed)) {
-      message.warning('该尺码已存在');
-      return;
-    }
-    setSizes((prev) => [...prev, trimmed]);
-    // 为所有工序添加该尺码的默认单价
-    setData((prev) =>
-      prev.map((row) => ({
-        ...row,
-        sizePrices: { ...(row.sizePrices || {}), [trimmed]: toNumberSafe(row.price) },
-        sizePriceTouched: { ...(row.sizePriceTouched || {}), [trimmed]: false },
-      }))
-    );
-    setNewSizeName('');
-    message.success(`已添加尺码: ${trimmed}`);
   };
 
   // 删除尺码
@@ -973,52 +1000,92 @@ const StyleProcessTab: React.FC<Props> = ({
                 boxShadow: '0 2px 6px rgba(114, 46, 209, 0.3)'
               }}
             >
-              直接给出 AI 全套建议
+              AI建议单价
             </Button>
           </Popover>
 
-          {/* 添加码数按钮 */}
-          <Popover
-            trigger="click"
-            placement="bottomRight"
-            open={addSizePopoverOpen}
-            onOpenChange={setAddSizePopoverOpen}
-            content={
-              <div style={{ width: 200 }}>
-                <div style={{ marginBottom: 8, fontWeight: 500 }}>添加新尺码</div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <Input
-                    size="small"
-                    placeholder="如: 3XL, 4XL"
-                    value={newSizeName}
-                    onChange={(e) => setNewSizeName(e.target.value)}
-                    onPressEnter={() => {
-                      handleAddSize();
-                      setAddSizePopoverOpen(false);
-                    }}
-                    style={{ flex: 1 }}
-                  />
-                  <Button
-                    size="small"
-                    type="primary"
-                    onClick={() => {
-                      handleAddSize();
-                      setAddSizePopoverOpen(false);
-                    }}
-                  >
-                    添加
-                  </Button>
-                </div>
-                <div style={{ marginTop: 8, fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)' }}>
-                  当前: {sizes.join(', ')}
-                </div>
-              </div>
+          {/* 添加码数 - 与尺寸表样式一致 */}
+          <Select
+            mode="multiple"
+            allowClear
+            showSearch
+            placeholder="添加码数"
+            style={{ minWidth: 120 }}
+            disabled={!editMode || Boolean(readOnly)}
+            options={sizeOptions.filter(opt => !sizes.includes(opt.value))}
+            value={[]}
+            onChange={(values) => {
+              if (values.length === 0) return;
+              const newSizes = [...sizes, ...values];
+              const sortedSizes = newSizes.sort((a, b) => {
+                const order = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', '3XL', '4XL', '5XL'];
+                const ia = order.indexOf(a.toUpperCase());
+                const ib = order.indexOf(b.toUpperCase());
+                if (ia >= 0 && ib >= 0) return ia - ib;
+                if (ia >= 0) return -1;
+                if (ib >= 0) return 1;
+                return a.localeCompare(b);
+              });
+              setSizes(sortedSizes);
+              setData((prev) =>
+                prev.map((row) => {
+                  const nextSizePrices = { ...(row.sizePrices || {}) };
+                  const nextTouched = { ...(row.sizePriceTouched || {}) };
+                  values.forEach((s) => {
+                    nextSizePrices[s] = toNumberSafe(row.price);
+                    nextTouched[s] = false;
+                  });
+                  return { ...row, sizePrices: nextSizePrices, sizePriceTouched: nextTouched };
+                })
+              );
+            }}
+            filterOption={(input, option) =>
+              String(option?.value || '').toLowerCase().includes(String(input || '').toLowerCase())
             }
-          >
-            <Button disabled={!editMode || Boolean(readOnly)}>
-              添加码数
-            </Button>
-          </Popover>
+            onSearch={(value) => {
+              if (value && value.trim() && !sizeOptions.some(opt => opt.value === value.trim()) && !sizes.includes(value.trim())) {
+                setSizeOptions(prev => [...prev, { value: value.trim(), label: value.trim() }]);
+              }
+            }}
+            dropdownRender={(menu) => (
+              <>
+                {menu}
+                <div style={{ padding: '8px', borderTop: '1px solid #f0f0f0' }}>
+                  <Input
+                    placeholder="输入新码数后回车添加"
+                    size="small"
+                    onPressEnter={(e) => {
+                      const input = e.target as HTMLInputElement;
+                      const val = input.value.trim().toUpperCase();
+                      if (val && !sizes.includes(val) && !sizeOptions.some(opt => opt.value === val)) {
+                        const sortedSizes = [...sizes, val].sort((a, b) => {
+                          const order = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', '3XL', '4XL', '5XL'];
+                          const ia = order.indexOf(a.toUpperCase());
+                          const ib = order.indexOf(b.toUpperCase());
+                          if (ia >= 0 && ib >= 0) return ia - ib;
+                          if (ia >= 0) return -1;
+                          if (ib >= 0) return 1;
+                          return a.localeCompare(b);
+                        });
+                        setSizes(sortedSizes);
+                        setData((prev) =>
+                          prev.map((row) => ({
+                            ...row,
+                            sizePrices: { ...(row.sizePrices || {}), [val]: toNumberSafe(row.price) },
+                            sizePriceTouched: { ...(row.sizePriceTouched || {}), [val]: false },
+                          }))
+                        );
+                        input.value = '';
+                      }
+                    }}
+                  />
+                </div>
+              </>
+            )}
+            onDropdownVisibleChange={(open) => {
+              if (open) fetchSizeDictOptions();
+            }}
+          />
 
           {!editMode || readOnly ? (
             <Button type="primary" onClick={enterEdit} disabled={loading || saving || Boolean(readOnly) || !processStartTime}>
@@ -1045,6 +1112,10 @@ const StyleProcessTab: React.FC<Props> = ({
           )}
         </Space>
       </div>
+
+      {/* 工序单价汇总 - 按进度节点分类 */}
+      <ProcessCostSummary data={data} />
+
       <ResizableTable
         bordered
         dataSource={data as unknown as any[]}

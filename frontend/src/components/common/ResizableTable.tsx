@@ -401,7 +401,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     stickyFooter: stickyFooterProp,
     minColumnWidth = 60,
     maxColumnWidth = 800,
-    defaultColumnWidth: _defaultColumnWidth = 120,
+    defaultColumnWidth = 120,
     className,
     rowKey,
     ...rest
@@ -537,9 +537,6 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
   // 合并滚动配置
   const mergedScroll = React.useMemo(() => {
     const baseScroll = typeof scroll === 'object' && scroll !== null ? (scroll as any) : {};
-    // 默认提供一个 y 轴滚动高度，使表头可以固定，并且分页区域自然呈现在可视区域底部
-    // 使用 calc(100vh - 330px) 适配绝大多数页面（减去顶部导航、搜索栏、底部分页等高度）
-    // 增加 min() 限制避免极端小屏幕下表格高度过小
     const defaultY = 'max(300px, calc(100vh - 330px))';
 
     if (!resizableColumns) {
@@ -547,11 +544,11 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
       return { ...baseScroll, y: baseScroll.y ?? defaultY };
     }
 
-    if (!scroll) return { x: 'max-content' as const, y: defaultY };
-    return { 
-      ...baseScroll, 
-      x: baseScroll.x ?? 'max-content', 
-      y: baseScroll.y ?? defaultY 
+    if (!scroll) return { x: '100%' as const, y: defaultY };
+    return {
+      ...baseScroll,
+      x: baseScroll.x ?? '100%',
+      y: baseScroll.y ?? defaultY
     };
   }, [resizableColumns, scroll]);
 
@@ -582,7 +579,32 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
   const mergedColumns = React.useMemo(() => {
     if (!columns) return columns;
     // 不启用列宽调整时，直接透传原始列配置（避免注入 fixed/onHeaderCell/宽度等副作用）
-    if (!resizableColumns) return columns;
+    // 但需要确保每列都有宽度，否则 table-layout: fixed 会出问题
+    if (!resizableColumns) {
+      return (Array.isArray(columns) ? columns : []).map((col) => {
+        if (col.width) return col;
+        const colKey = (col as any).key || (col as any).dataIndex;
+        const keyText = typeof colKey === 'string' ? colKey.toLowerCase() : '';
+        const titleText = typeof col.title === 'string' ? col.title.toLowerCase() : '';
+
+        // 智能默认宽度
+        let defaultWidth = 100;
+        const narrowKeywords = ['数量', '件数', '码数', '尺码', '码', 'size', 'qty', 'quantity', 'num', 'count', '序号', 'no', 'id'];
+        if (narrowKeywords.some(k => titleText.includes(k) || keyText.includes(k))) {
+          defaultWidth = 40;
+        }
+        const mediumKeywords = ['颜色', '状态', '类型', '仓库', '单位', 'color', 'status', 'type', 'warehouse', 'unit'];
+        if (mediumKeywords.some(k => titleText.includes(k) || keyText.includes(k))) {
+          defaultWidth = 60;
+        }
+        const wideKeywords = ['订单', '款号', '款名', '名称', '编号', 'order', 'style', 'name', 'code', 'qr', '菲号'];
+        if (wideKeywords.some(k => titleText.includes(k) || keyText.includes(k))) {
+          defaultWidth = 100;
+        }
+
+        return { ...col, width: defaultWidth };
+      });
+    }
 
     const rawCols = (Array.isArray(columns) ? columns : []) as any[];
     const topLevelLeaf = rawCols.every((c) => isLeafColumn(c));
@@ -650,14 +672,48 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
           ['action', 'actions', 'operation', 'operate', 'op'].includes(dataIndexText.toLowerCase()) ||
           ['操作', '操作列', '操作区', '操作按钮'].includes(titleText.trim());
 
+        // 根据列标题智能判断默认宽度
+        const getSmartDefaultWidth = () => {
+          const title = titleText.trim().toLowerCase();
+          const key = keyText.toLowerCase();
+          const dataIdx = dataIndexText.toLowerCase();
+
+          // 窄列：数量、码数、尺码等（内容短）
+          const narrowKeywords = ['数量', '件数', '码数', '尺码', '码', 'size', 'qty', 'quantity', 'num', 'count', '序号', 'no', 'id'];
+          if (narrowKeywords.some(k => title.includes(k) || key.includes(k) || dataIdx.includes(k))) {
+            return 40;
+          }
+
+          // 中等列：颜色、状态、类型等
+          const mediumKeywords = ['颜色', '状态', '类型', '仓库', '单位', 'color', 'status', 'type', 'warehouse', 'unit', 'tag'];
+          if (mediumKeywords.some(k => title.includes(k) || key.includes(k) || dataIdx.includes(k))) {
+            return 60;
+          }
+
+          // 宽列：订单号、款号、名称等
+          const wideKeywords = ['订单', '款号', '款名', '名称', '编号', 'order', 'style', 'name', 'code', 'no', 'qr', '菲号'];
+          if (wideKeywords.some(k => title.includes(k) || key.includes(k) || dataIdx.includes(k))) {
+            return 100;
+          }
+
+          // 超宽列：备注、描述等
+          const extraWideKeywords = ['备注', '描述', '说明', 'remark', 'desc', 'description', 'note'];
+          if (extraWideKeywords.some(k => title.includes(k) || key.includes(k) || dataIdx.includes(k))) {
+            return 150;
+          }
+
+          return defaultColumnWidth;
+        };
+
         const explicitWidth = parseWidthPx(colRecord.width);
         const storedWidth = widths[id];
+        const smartDefaultWidth = getSmartDefaultWidth();
         const nextWidth = maybeAction
           ? (explicitWidth ?? actionColumnWidth)
-          : (storedWidth ?? explicitWidth);
+          : (storedWidth ?? explicitWidth ?? smartDefaultWidth);
         const baseWidth = typeof nextWidth === 'number'
           ? clamp(nextWidth, minColumnWidth, maxColumnWidth)
-          : undefined;
+          : clamp(smartDefaultWidth, minColumnWidth, maxColumnWidth);
 
         // 判断是否可调整列宽
         const resizable = colRecord.resizable === true
@@ -748,29 +804,16 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
 
   const resolvedTableLayout = React.useMemo(() => {
     if (tableLayout) return tableLayout;
-    if (!resizableColumns) return undefined;
-    const stack = Array.isArray(mergedColumns) ? [...mergedColumns] as any[] : [];
-    while (stack.length > 0) {
-      const col = stack.pop();
-      if (!col) continue;
-      if (Array.isArray(col.children) && col.children.length > 0) {
-        stack.push(...col.children);
-        continue;
-      }
-      if (parseWidthPx(col.width) == null) {
-        return 'auto' as const;
-      }
-    }
     return 'fixed' as const;
-  }, [mergedColumns, resizableColumns, tableLayout]);
+  }, [tableLayout]);
 
   // 包装器类名
   const wrapperClassName = React.useMemo(() => {
-    const next = ['resizable-table-shell', stickyFooter ? 'resizable-table-shell-sticky-footer' : '']
+    const next = ['resizable-table-shell', className, stickyFooter ? 'resizable-table-shell-sticky-footer' : '']
       .filter(Boolean)
       .join(' ');
     return next;
-  }, [stickyFooter]);
+  }, [className, stickyFooter]);
 
   return (
     <div className={wrapperClassName}>

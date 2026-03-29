@@ -11,7 +11,6 @@ import React, { CSSProperties } from 'react';
 // ================ 头部卡片容器（灰色背景） ================
 interface HeaderCardProps {
   children: React.ReactNode;
-  /** 是否移动端，影响间距 */
   isMobile?: boolean;
   style?: CSSProperties;
 }
@@ -26,6 +25,8 @@ export const ModalHeaderCard: React.FC<HeaderCardProps> = ({ children, isMobile 
         background: 'var(--color-bg-gray)',
         borderRadius: 12,
         marginBottom: 10,
+        maxWidth: '100%',
+        overflow: 'hidden',
         ...style,
       }}
     >
@@ -38,13 +39,9 @@ export const ModalHeaderCard: React.FC<HeaderCardProps> = ({ children, isMobile 
 interface FieldProps {
   label: string;
   value: React.ReactNode;
-  /** 标签字体大小，默认 13px */
   labelSize?: number;
-  /** 值字体大小，默认 14px */
   valueSize?: number;
-  /** 值字重，默认 600 */
   valueWeight?: number;
-  /** 值颜色，默认 #111827 */
   valueColor?: string;
   style?: CSSProperties;
 }
@@ -52,17 +49,15 @@ interface FieldProps {
 export const ModalField: React.FC<FieldProps> = ({
   label,
   value,
-  labelSize = 13,
-  valueSize = 14,
   valueWeight = 600,
   valueColor = 'var(--neutral-text)',
   style,
 }) => {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1.2, minWidth: 0, ...style }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1.2, minWidth: 0, maxWidth: '100%', ...style }}>
       <span
         style={{
-          fontSize: labelSize,
+          fontSize: 'var(--font-size-sm)',
           color: 'var(--neutral-text-light)',
           fontWeight: 600,
           whiteSpace: 'nowrap',
@@ -73,7 +68,7 @@ export const ModalField: React.FC<FieldProps> = ({
       </span>
       <span
         style={{
-          fontSize: valueSize,
+          fontSize: 'var(--font-size-base)',
           fontWeight: valueWeight,
           color: valueColor,
           whiteSpace: 'nowrap',
@@ -93,7 +88,6 @@ export const ModalField: React.FC<FieldProps> = ({
 interface PrimaryFieldProps {
   label: string;
   value: React.ReactNode;
-  /** 值字体大小，默认 18px */
   valueSize?: number;
   style?: CSSProperties;
 }
@@ -101,15 +95,14 @@ interface PrimaryFieldProps {
 export const ModalPrimaryField: React.FC<PrimaryFieldProps> = ({
   label,
   value,
-  valueSize = 18,
   style,
 }) => {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1.2, minWidth: 0, ...style }}>
-      <span style={{ fontSize: "var(--font-size-base)", color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap', lineHeight: 1.2 }}>{label}</span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1.2, minWidth: 0, maxWidth: '100%', ...style }}>
+      <span style={{ fontSize: 'var(--font-size-base)', color: 'var(--neutral-text-light)', fontWeight: 600, whiteSpace: 'nowrap', lineHeight: 1.2 }}>{label}</span>
       <span
         style={{
-          fontSize: valueSize,
+          fontSize: 'var(--font-size-lg)',
           fontWeight: 700,
           color: 'var(--neutral-text)',
           letterSpacing: '0.5px',
@@ -129,11 +122,8 @@ export const ModalPrimaryField: React.FC<PrimaryFieldProps> = ({
 // ================ 字段行容器 ================
 interface FieldRowProps {
   children: React.ReactNode;
-  /** 字段标签 */
   label?: string;
-  /** 是否移动端 */
   isMobile?: boolean;
-  /** 字段之间的间距，默认 24px */
   gap?: number;
   style?: CSSProperties;
 }
@@ -153,11 +143,12 @@ export const ModalFieldRow: React.FC<FieldRowProps> = ({
         gap: Math.max(8, gap - 8),
         flexWrap: 'wrap',
         marginBottom: isMobile ? 6 : 10,
+        maxWidth: '100%',
         ...style,
       }}
     >
       {label && (
-        <span style={{ minWidth: 80, color: 'var(--neutral-text-secondary)', fontSize: 13 }}>
+        <span style={{ minWidth: 80, color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-sm)' }}>
           {label}
         </span>
       )}
@@ -169,9 +160,7 @@ export const ModalFieldRow: React.FC<FieldRowProps> = ({
 // ================ 网格字段容器（适合多个字段） ================
 interface FieldGridProps {
   children: React.ReactNode;
-  /** 是否移动端，影响列数 */
   isMobile?: boolean;
-  /** PC 端列数，默认 3 */
   columns?: number;
   style?: CSSProperties;
 }
@@ -189,6 +178,8 @@ export const ModalFieldGrid: React.FC<FieldGridProps> = ({
         background: 'var(--neutral-white)',
         borderRadius: 8,
         border: '1px solid var(--table-border-color)',
+        maxWidth: '100%',
+        overflow: 'hidden',
         ...style,
       }}
     >
@@ -197,6 +188,7 @@ export const ModalFieldGrid: React.FC<FieldGridProps> = ({
           display: 'grid',
           gridTemplateColumns: isMobile ? '1fr' : `repeat(${columns}, 1fr)`,
           gap: isMobile ? '4px 6px' : '4px 8px',
+          maxWidth: '100%',
         }}
       >
         {children}
@@ -208,7 +200,6 @@ export const ModalFieldGrid: React.FC<FieldGridProps> = ({
 // ================ 信息卡片容器（白色背景带边框） ================
 interface InfoCardProps {
   children: React.ReactNode;
-  /** 内边距，默认 6px */
   padding?: number;
   style?: CSSProperties;
 }
@@ -222,6 +213,8 @@ export const ModalInfoCard: React.FC<InfoCardProps> = ({ children, padding = 6, 
         borderRadius: 12,
         border: '2px solid var(--table-border-color)',
         boxShadow: 'var(--shadow-sm)',
+        maxWidth: '100%',
+        overflow: 'hidden',
         ...style,
       }}
     >
@@ -232,18 +225,16 @@ export const ModalInfoCard: React.FC<InfoCardProps> = ({ children, padding = 6, 
 
 // ================ 左右布局容器（左侧图片+二维码，右侧信息） ================
 interface SideLayoutProps {
-  /** 左侧内容（通常是图片或二维码） */
   left: React.ReactNode;
-  /** 右侧内容（通常是字段信息） */
   right: React.ReactNode;
   style?: CSSProperties;
 }
 
 export const ModalSideLayout: React.FC<SideLayoutProps> = ({ left, right, style }) => {
   return (
-    <div style={{ display: 'flex', gap: 16, ...style }}>
+    <div style={{ display: 'flex', gap: 16, maxWidth: '100%', overflow: 'hidden', ...style }}>
       {left}
-      <div style={{ flex: 1, minWidth: 0 }}>{right}</div>
+      <div style={{ flex: 1, minWidth: 0, maxWidth: '100%' }}>{right}</div>
     </div>
   );
 };
@@ -251,9 +242,7 @@ export const ModalSideLayout: React.FC<SideLayoutProps> = ({ left, right, style 
 // ================ 垂直内容栏（用于左侧图片/二维码组合） ================
 interface VerticalStackProps {
   children: React.ReactNode;
-  /** 间距，默认 8px */
   gap?: number;
-  /** 对齐方式，默认居中 */
   align?: 'flex-start' | 'center' | 'flex-end';
   style?: CSSProperties;
 }
@@ -271,6 +260,7 @@ export const ModalVerticalStack: React.FC<VerticalStackProps> = ({
         flexDirection: 'column',
         alignItems: align,
         gap,
+        maxWidth: '100%',
         ...style,
       }}
     >
@@ -282,20 +272,20 @@ export const ModalVerticalStack: React.FC<VerticalStackProps> = ({
 // ================ 段落标题 ================
 interface SectionTitleProps {
   children: React.ReactNode;
-  /** 字体大小，默认 15px */
   size?: number;
   style?: CSSProperties;
 }
 
-export const ModalSectionTitle: React.FC<SectionTitleProps> = ({ children, size = 15, style }) => {
+export const ModalSectionTitle: React.FC<SectionTitleProps> = ({ children, style }) => {
   return (
     <div
       style={{
-        fontSize: size,
+        fontSize: 'var(--font-size-base)',
         fontWeight: 700,
         color: 'var(--neutral-text)',
         marginTop: 10,
         marginBottom: 6,
+        maxWidth: '100%',
         ...style,
       }}
     >

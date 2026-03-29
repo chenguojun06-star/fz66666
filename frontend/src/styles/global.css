@@ -971,7 +971,7 @@ body {
 
 .ant-table-wrapper .ant-table-container {
   border: 1px solid var(--table-border-color);
-  border-radius: 6px;
+  border-radius: 8px;
   overflow: hidden;
 }
 
@@ -993,7 +993,7 @@ body {
 
 .ant-table-wrapper .ant-table-container table {
   width: 100%;
-  min-width: 100%;
+  table-layout: fixed;
 }
 
 .resizable-table .ant-table-container table {
@@ -1017,20 +1017,31 @@ body {
   z-index: 0 !important;
 }
 
-.resizable-table .ant-table-thead > tr > th .resizable-table-header-content {
+.ant-table-wrapper .ant-table-tbody > tr.ant-table-row-selected > td {
+  background: var(--table-selected-row-bg);
   position: relative;
   z-index: 1;
 }
 
 .resizable-table-shell {
-  position: relative; /* 建立定位含块，使 getPopupContainer 返回此元素后 popup 能正确定位 */
+  position: relative;
   width: 100%;
   max-width: 100%;
   min-width: 0;
+  overflow: hidden;
 }
 
 .resizable-table-shell .ant-table-wrapper {
   min-width: 0;
+  width: 100%;
+}
+
+.resizable-table-shell .ant-table-wrapper .ant-table {
+  width: 100% !important;
+}
+
+.resizable-table-shell .ant-table-wrapper .ant-table-container {
+  width: 100% !important;
 }
 
 .resizable-table .ant-table-cell {
@@ -1803,4 +1814,23 @@ body {
   height: auto !important;
   object-fit: initial !important;
   max-width: 100%;
+}
+
+/* ── 17. Spin 加载居中显示 ── */
+.ant-spin-nested-loading > div > .ant-spin {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  max-height: 100% !important;
+}
+.ant-spin-nested-loading > div > .ant-spin .ant-spin-dot {
+  display: none !important;
+}
+.ant-spin-nested-loading > div > .ant-spin-lg {
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+}
+.ant-spin-nested-loading > div > .ant-spin-sm {
+  top: 50% !important;
+  transform: translateY(-50%) !important;
 }

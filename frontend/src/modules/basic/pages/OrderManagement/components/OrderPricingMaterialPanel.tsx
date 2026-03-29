@@ -12,11 +12,8 @@ interface OrderPricingMaterialPanelProps {
   suggestedQuotationUnitPrice: number;
   factoryMode: 'INTERNAL' | 'EXTERNAL';
   watchedPricingMode: 'PROCESS' | 'SIZE' | 'COST' | 'QUOTE' | 'MANUAL';
-  watchedScatterPricingMode: 'FOLLOW_ORDER' | 'MANUAL';
   resolvedOrderUnitPrice: number;
-  resolvedScatterUnitPrice: number;
   onPricingModeChange: () => void;
-  onScatterPricingModeChange: () => void;
   orchestration: OrderOrchestrationResult;
 }
 
@@ -30,11 +27,8 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
   suggestedQuotationUnitPrice,
   factoryMode,
   watchedPricingMode,
-  watchedScatterPricingMode,
   resolvedOrderUnitPrice,
-  resolvedScatterUnitPrice,
   onPricingModeChange,
-  onScatterPricingModeChange,
   orchestration,
 }) => {
   const visibleMaterials = orchestration.materialAnalyses.filter((item) => item.requiredMeters > 0).slice(0, 6);
@@ -79,7 +73,7 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
           marginBottom: 12,
         }}
       >
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '112px minmax(0, 1fr)', gap: 8, alignItems: 'start' }}>
             <div style={{ paddingTop: 6, fontSize: 12, color: '#595959' }}>下单单价</div>
             <div>
@@ -112,38 +106,6 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
                 <div style={{ minHeight: 32, display: 'flex', alignItems: 'center', fontSize: 12, color: '#595959' }}>
                   <span style={{ fontWeight: 600, color: '#1677ff' }}>¥{resolvedOrderUnitPrice.toFixed(2)} / 件</span>
                   {suggestedQuotationUnitPrice > 0 ? <span style={{ marginLeft: 8, color: '#8c8c8c' }}>建议报价 ¥{suggestedQuotationUnitPrice.toFixed(2)}</span> : null}
-                </div>
-              )}
-            </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '112px minmax(0, 1fr)', gap: 8, alignItems: 'start' }}>
-            <div style={{ paddingTop: 6, fontSize: 12, color: '#595959' }}>散剪单价</div>
-            <div>
-              <Form.Item name="scatterPricingMode" initialValue="FOLLOW_ORDER" style={{ marginBottom: 0 }}>
-                <Select
-                  onChange={onScatterPricingModeChange}
-                  options={[
-                    { label: '跟随下单单价', value: 'FOLLOW_ORDER' },
-                    { label: '单独设置散剪单价', value: 'MANUAL' },
-                  ]}
-                />
-              </Form.Item>
-            </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '92px minmax(0, 1fr)', gap: 8, alignItems: 'start' }}>
-            <div style={{ paddingTop: 6, fontSize: 12, color: '#595959' }}>散剪价格</div>
-            <div>
-              {watchedScatterPricingMode === 'MANUAL' ? (
-                <Form.Item
-                  name="manualScatterUnitPrice"
-                  rules={[{ required: true, message: '请输入散剪单价' }]}
-                  style={{ marginBottom: 0 }}
-                >
-                  <InputNumber min={0.01} precision={2} style={{ width: '100%' }} placeholder="输入散剪单价" />
-                </Form.Item>
-              ) : (
-                <div style={{ minHeight: 32, display: 'flex', alignItems: 'center', fontSize: 12, color: '#595959' }}>
-                  <span style={{ fontWeight: 600, color: '#d48806' }}>¥{resolvedScatterUnitPrice.toFixed(2)} / 件</span>
                 </div>
               )}
             </div>

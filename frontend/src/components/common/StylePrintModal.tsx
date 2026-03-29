@@ -492,16 +492,30 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
       open={visible}
       onCancel={onClose}
       size="lg"
-      footer={
-        <Space>
-          <Button onClick={onClose}>取消</Button>
-          <Button type="primary" onClick={handlePrint}>
-            打印
-          </Button>
-        </Space>
-      }
+      footer={null}
     >
       <Spin spinning={loading}>
+        {/* 顶部操作栏 - 打印和取消按钮 */}
+        <div style={{
+          marginBottom: 12,
+          padding: '10px 16px',
+          background: 'linear-gradient(90deg, #f0f5ff 0%, #e6f7ff 100%)',
+          borderRadius: 8,
+          border: '1px solid #91d5ff',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          gap: 16,
+        }}>
+          <div style={{ fontWeight: 600, color: '#1d39c4' }}>🖨️ 打印预览</div>
+          <Space>
+            <Button onClick={onClose}>取消</Button>
+            <Button type="primary" onClick={handlePrint}>
+              打印
+            </Button>
+          </Space>
+        </div>
+
         {/* 打印选项 - 置顶 */}
         <div style={{
           marginBottom: 16,

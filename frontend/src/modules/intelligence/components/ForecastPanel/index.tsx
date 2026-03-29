@@ -124,7 +124,7 @@ export default function ForecastPanel() {
       {/* 加载中 */}
       {loading && (
         <div className="fp-loading">
-          <Spin indicator={<LoadingOutlined style={{ fontSize: 14, color: '#a78bfa' }} spin />} />
+          <Spin size="small" />
           <span>AI 预测引擎计算中…</span>
         </div>
       )}

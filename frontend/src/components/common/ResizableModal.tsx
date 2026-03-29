@@ -176,6 +176,19 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
   // 是否居中显示
   const centered = centeredProp ?? true;
 
+  // 根据弹窗宽度计算响应式字体大小
+  const responsiveFontSize = React.useMemo(() => {
+    const baseWidth = 900;
+    const scale = Math.min(1, Math.max(0.75, size.width / baseWidth));
+    return {
+      base: Math.round(14 * scale),
+      sm: Math.round(12 * scale),
+      xs: Math.round(11 * scale),
+      lg: Math.round(16 * scale),
+      scale,
+    };
+  }, [size.width]);
+
   // 动态生成模态框样式
   const modalCss = React.useMemo(() => {
     const resolvedPadding = (() => {
@@ -199,9 +212,16 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
       '[data-resizable-modal-root] .ant-modal-body{flex:1 1 auto;min-height:0;overflow:auto;padding:' +
       `${resolvedPadding.top}px ${resolvedPadding.right}px ${resolvedPadding.bottom}px ${resolvedPadding.left}px` +
       '!important;}' +
-      '[data-resizable-modal-root] .ant-form-item{margin-bottom:10px;}'
+      '[data-resizable-modal-root] .ant-form-item{margin-bottom:10px;}' +
+      `[data-resizable-modal-root]{font-size:${responsiveFontSize.base}px;}` +
+      `[data-resizable-modal-root] .ant-input,[data-resizable-modal-root] .ant-select,[data-resizable-modal-root] .ant-input-number,[data-resizable-modal-root] .ant-picker{font-size:${responsiveFontSize.base}px!important;}` +
+      `[data-resizable-modal-root] .ant-btn-sm{font-size:${responsiveFontSize.sm}px!important;}` +
+      `[data-resizable-modal-root] .ant-form-item-label>label{font-size:${responsiveFontSize.base}px!important;}` +
+      `[data-resizable-modal-root] .ant-table{font-size:${responsiveFontSize.sm}px!important;}` +
+      `[data-resizable-modal-root] .ant-tag{font-size:${responsiveFontSize.xs}px!important;}` +
+      `[data-resizable-modal-root] .ant-tabs-tab{font-size:${responsiveFontSize.base}px!important;}`
     );
-  }, [contentPadding]);
+  }, [contentPadding, responsiveFontSize]);
 
   const rafIdRef = React.useRef<number | null>(null);
 
@@ -240,6 +260,31 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
     });
   }, [initialHeight, maxHeight, maxWidth, minHeight, minWidth, open, width]);
 
+  // 窗口大小变化时自动调整弹窗大小
+  React.useEffect(() => {
+    if (!open) return;
+
+    const handleResize = () => {
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const viewportMaxWidth = Math.round(viewportWidth * 0.98);
+      const viewportMaxHeight = Math.round(viewportHeight * 0.95);
+
+      setSize((prev) => {
+        const newWidth = clamp(prev.width, minWidth, viewportMaxWidth);
+        const newHeight = clamp(prev.height, minHeight, viewportMaxHeight);
+        // 如果尺寸没有变化，返回原对象避免不必要的渲染
+        if (newWidth === prev.width && newHeight === prev.height) {
+          return prev;
+        }
+        return { width: newWidth, height: newHeight };
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [minWidth, minHeight, open]);
+
   // 组件卸载时清理
   React.useEffect(() => {
     return () => {
@@ -268,6 +313,7 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
           ...(styles as any)?.body,
           overflow: 'auto',
           minHeight: 0,
+          maxHeight: '100%',
         },
       }}
       modalRender={(modal) => {
@@ -280,15 +326,20 @@ const ResizableModal: React.FC<ResizableModalProps> = ({
               width: size.width,
               height: size.height,
               lineHeight: 1.4,
+              maxWidth: '100vw',
+              maxHeight: '100vh',
+              overflow: 'hidden',
             }}
           >
             <style>{modalCss}</style>
             {React.cloneElement(element, {
               style: {
                 ...element.props.style,
-                width: size.width,
-                height: size.height,
+                width: '100%',
+                height: '100%',
                 lineHeight: 1.4,
+                maxWidth: '100%',
+                maxHeight: '100%',
               },
             })}
 

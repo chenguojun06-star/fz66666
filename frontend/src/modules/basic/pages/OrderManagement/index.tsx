@@ -132,7 +132,6 @@ const OrderManagement: React.FC = () => {
   const [sizePriceRows, setSizePriceRows] = useState<SizePriceRecord[]>([]);
   const [sizePriceLoading, setSizePriceLoading] = useState(false);
   const [pricingModeTouched, setPricingModeTouched] = useState(false);
-  const [scatterPricingModeTouched, setScatterPricingModeTouched] = useState(false);
   const [createdOrder, setCreatedOrder] = useState<any>(null);
 
   const [orderLines, setOrderLines] = useState<OrderLine[]>([]);
@@ -481,9 +480,7 @@ const OrderManagement: React.FC = () => {
 
   const watchedFactoryId = Form.useWatch('factoryId', form) as string | undefined;
   const watchedPricingMode = (Form.useWatch('pricingMode', form) as 'PROCESS' | 'SIZE' | 'COST' | 'QUOTE' | 'MANUAL' | undefined) || 'PROCESS';
-  const watchedScatterPricingMode = (Form.useWatch('scatterPricingMode', form) as 'FOLLOW_ORDER' | 'MANUAL' | undefined) || 'FOLLOW_ORDER';
   const watchedManualOrderUnitPrice = Number(Form.useWatch('manualOrderUnitPrice', form) || 0);
-  const watchedManualScatterUnitPrice = Number(Form.useWatch('manualScatterUnitPrice', form) || 0);
 
   // 当前选中工厂的产能信息（下单时即时显示）
   const selectedFactoryStat = useMemo(() => {
@@ -682,12 +679,6 @@ const OrderManagement: React.FC = () => {
     return Number(processBasedUnitPrice.toFixed(2));
   }, [processBasedUnitPrice, quotationUnitPrice, sizeBasedUnitPrice, totalCostUnitPrice, watchedManualOrderUnitPrice, watchedPricingMode]);
 
-  const resolvedScatterUnitPrice = useMemo(() => {
-    if (watchedScatterPricingMode === 'MANUAL') {
-      return Number(watchedManualScatterUnitPrice.toFixed(2));
-    }
-    return Number(resolvedOrderUnitPrice.toFixed(2));
-  }, [resolvedOrderUnitPrice, watchedManualScatterUnitPrice, watchedScatterPricingMode]);
   const lastOrderLearningRequestKeyRef = useRef('');
 
   useEffect(() => {
@@ -762,13 +753,6 @@ const OrderManagement: React.FC = () => {
     form.setFieldValue('pricingMode', preferredPricingMode);
   }, [form, preferredPricingMode, pricingModeTouched, visible]);
 
-  useEffect(() => {
-    if (!visible || scatterPricingModeTouched) {
-      return;
-    }
-    form.setFieldValue('scatterPricingMode', 'FOLLOW_ORDER');
-  }, [form, scatterPricingModeTouched, visible]);
-
   const schedulingPlans = schedulingResult?.plans || [];
 
   // 工厂或数量变化时自动重新计算交货期建议
@@ -814,7 +798,6 @@ const OrderManagement: React.FC = () => {
                 </Tag>
               </div>
               <div style={{ fontSize: 12, color: '#595959' }}>{orderOrchestration.scatterSummary}</div>
-              <div style={{ marginTop: 6, fontSize: 12, color: '#d48806' }}>散剪单价：¥{resolvedScatterUnitPrice.toFixed(2)} / 件</div>
             </div>
           </div>
         ),
@@ -1198,7 +1181,6 @@ const OrderManagement: React.FC = () => {
       plannedEndDate: plannedEndDate
     });
     setPricingModeTouched(false);
-    setScatterPricingModeTouched(false);
     generateOrderNo();
   };
 
@@ -1214,7 +1196,6 @@ const OrderManagement: React.FC = () => {
     setProgressNodes(defaultProgressNodes);
     setFactoryMode('INTERNAL');
     setPricingModeTouched(false);
-    setScatterPricingModeTouched(false);
     form.resetFields();
   };
 
@@ -1226,15 +1207,15 @@ const OrderManagement: React.FC = () => {
       setSubmitLoading(true);
 
       if (!orderLines.length) {
-        message.error('请至少填写一条订单明细');
-        setActiveTabKey('detail');
+        message.error('请至少填写一条下单数量');
+        setActiveTabKey('base');
         return;
       }
 
       const invalid = orderLines.find(l => !String(l.color || '').trim() || !String(l.size || '').trim() || (Number(l.quantity) || 0) <= 0);
       if (invalid) {
-        message.error('订单明细需填写颜色、码数且数量>0');
-        setActiveTabKey('detail');
+        message.error('下单数量需填写颜色、码数且数量>0');
+        setActiveTabKey('base');
         return;
       }
 
@@ -1253,12 +1234,6 @@ const OrderManagement: React.FC = () => {
 
       if (resolvedOrderUnitPrice <= 0) {
         message.error('下单单价必须大于0');
-        setActiveTabKey('base');
-        return;
-      }
-
-      if (watchedScatterPricingMode === 'MANUAL' && resolvedScatterUnitPrice <= 0) {
-        message.error('散剪单价必须大于0');
         setActiveTabKey('base');
         return;
       }
@@ -1318,7 +1293,6 @@ const OrderManagement: React.FC = () => {
         quotationUnitPrice,
         suggestedQuotationUnitPrice,
         resolvedOrderUnitPrice,
-        resolvedScatterUnitPrice,
         buildProgressWorkflowJson,
         progressNodes,
       });
@@ -1651,7 +1625,7 @@ const OrderManagement: React.FC = () => {
         scaleWithViewport
         tableDensity={isMobile ? 'dense' : 'auto'}
       >
-        <Form form={form} layout="vertical" style={{ minWidth: 0 }}>
+        <Form form={form} layout="vertical" style={{ minWidth: 0, width: '100%' }}>
           <Tabs
             activeKey={activeTabKey}
             onChange={setActiveTabKey}
@@ -1663,15 +1637,15 @@ const OrderManagement: React.FC = () => {
                   <div
                     style={
                       isMobile
-                        ? { display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0, width: '100%' }
-                        : { display: 'grid', gridTemplateColumns: '280px 1fr', gap: 20, minWidth: 0, width: '100%' }
+                        ? { display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0, width: '100%', maxWidth: '100%' }
+                        : { display: 'flex', gap: 20, minWidth: 0, width: '100%', maxWidth: '100%' }
                     }
                   >
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0, flex: isMobile ? '1 1 100%' : '0 0 25%', maxWidth: isMobile ? '100%' : '220px' }}>
                       <div style={{ fontWeight: 600 }}>图片</div>
                       <StyleQuotePopover styleNo={selectedStyle?.styleNo || ''}>
                         <div>
-                          <div style={{ width: isMobile ? 160 : isTablet ? 200 : 240, maxWidth: '100%' }}>
+                          <div style={{ width: '100%' }}>
                             <StyleCoverGallery
                               styleId={selectedStyle?.id}
                               styleNo={selectedStyle?.styleNo}
@@ -1710,24 +1684,21 @@ const OrderManagement: React.FC = () => {
                       />
                     </div>
 
-                    <div style={{ minWidth: 0 }}>
-                      <Row gutter={16}>
+                    <div style={{ minWidth: 0, flex: isMobile ? '1 1 100%' : '1 1 75%', maxWidth: '100%', overflow: 'hidden' }}>
+                      {/* 第一行：订单号 + 工厂 */}
+                      <Row gutter={16} style={{ marginBottom: 12 }}>
                         <Col xs={24} sm={12}>
-                          <div>
-                            <div style={{ marginBottom: 8, fontSize: '14px', color: 'var(--neutral-text)' }}>
-                              订单号<span style={{ color: 'var(--color-danger)', marginLeft: 4 }}>*</span>
-                            </div>
-                            <Form.Item
-                              name="orderNo"
-                              rules={[{ required: true, message: '请输入订单号' }]}
-                              style={{ marginBottom: 0 }}
-                            >
-                              <Space.Compact style={{ width: '100%' }}>
-                                <Input placeholder="例如：PO20260107001" />
-                                <Button onClick={generateOrderNo}>自动生成</Button>
-                              </Space.Compact>
-                            </Form.Item>
-                          </div>
+                          <div style={{ marginBottom: 4, fontWeight: 600 }}>订单号 <span style={{ color: 'var(--color-danger)' }}>*</span></div>
+                          <Form.Item
+                            name="orderNo"
+                            rules={[{ required: true, message: '请输入订单号' }]}
+                            style={{ marginBottom: 0 }}
+                          >
+                            <Space.Compact style={{ width: '100%' }}>
+                              <Input placeholder="例如：PO20260107001" />
+                              <Button onClick={generateOrderNo}>自动生成</Button>
+                            </Space.Compact>
+                          </Form.Item>
                         </Col>
                         <Col xs={24} sm={12}>
                           <OrderFactorySelector
@@ -1742,6 +1713,129 @@ const OrderManagement: React.FC = () => {
                         </Col>
                       </Row>
 
+                      {/* 第二行：下单时间 + 订单交期 + 更多选项 */}
+                      <Row gutter={12} style={{ marginBottom: 12 }}>
+                        <Col xs={24} sm={8}>
+                          <div style={{ marginBottom: 4, fontWeight: 600 }}>下单时间 <span style={{ color: 'var(--color-danger)' }}>*</span></div>
+                          <Form.Item
+                            name="plannedStartDate"
+                            rules={[{ required: true, message: '请选择下单时间' }]}
+                            style={{ marginBottom: 0 }}
+                          >
+                            <UnifiedDatePicker showTime style={{ width: '100%' }} />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={24} sm={8}>
+                          <div style={{ marginBottom: 4, fontWeight: 600 }}>
+                            订单交期 <span style={{ color: 'var(--color-danger)' }}>*</span>
+                            {deliverySuggestion && !suggestionLoading && (
+                              <Tooltip title={deliverySuggestion.reason}>
+                                <Tag
+                                  color="blue"
+                                  style={{ marginLeft: 4, cursor: 'pointer' }}
+                                  onClick={() => {
+                                    const d = dayjs().add(deliverySuggestion.recommendedDays, 'day').hour(18).minute(0).second(0);
+                                    form.setFieldValue('plannedEndDate', d);
+                                  }}
+                                >
+                                  建议
+                                </Tag>
+                              </Tooltip>
+                            )}
+                          </div>
+                          <Form.Item
+                            name="plannedEndDate"
+                            rules={[{ required: true, message: '请选择订单交期' }]}
+                            style={{ marginBottom: 0 }}
+                          >
+                            <UnifiedDatePicker showTime style={{ width: '100%' }} />
+                          </Form.Item>
+                        </Col>
+                        <Col xs={24} sm={8}>
+                          <div style={{ marginBottom: 4, fontWeight: 600 }}>急单</div>
+                          <Form.Item name="urgencyLevel" initialValue="normal" style={{ marginBottom: 0 }}>
+                            <Select
+                              placeholder="普通"
+                              allowClear
+                              options={[
+                                { label: '🔴 急单', value: 'urgent' },
+                                { label: '普通', value: 'normal' },
+                              ]}
+                            />
+                          </Form.Item>
+                        </Col>
+                      </Row>
+
+                      {/* 更多选项 */}
+                      <div style={{ marginBottom: 12 }}>
+                        <Row gutter={[12, 12]}>
+                          <Col xs={24} sm={8}>
+                            <InlineField label="公司">
+                              <Form.Item name="company" style={{ marginBottom: 0 }}>
+                                <SupplierSelect placeholder="选填" allowClear />
+                              </Form.Item>
+                            </InlineField>
+                          </Col>
+                          <Col xs={24} sm={8}>
+                            <InlineField label="品类">
+                              <Form.Item name="productCategory" style={{ marginBottom: 0 }}>
+                                <Select placeholder="选填" allowClear showSearch optionFilterProp="label" style={{ width: '100%' }} options={categoryOptions} />
+                              </Form.Item>
+                            </InlineField>
+                          </Col>
+                          <Col xs={24} sm={8}>
+                            <InlineField label="单型">
+                              <Form.Item name="plateType" style={{ marginBottom: 0 }}>
+                                <Select placeholder="不填自动判断" allowClear options={[{ label: '首单', value: 'FIRST' }, { label: '翻单', value: 'REORDER' }]} />
+                              </Form.Item>
+                            </InlineField>
+                          </Col>
+                          <Col xs={24} sm={8}>
+                            <InlineField label="下单类型">
+                              <Form.Item name="orderBizType" style={{ marginBottom: 0 }}>
+                                <Select placeholder="选填" allowClear options={[
+                                  { label: 'FOB', value: 'FOB' },
+                                  { label: 'ODM', value: 'ODM' },
+                                  { label: 'OEM', value: 'OEM' },
+                                  { label: 'CMT', value: 'CMT' },
+                                ]} />
+                              </Form.Item>
+                            </InlineField>
+                          </Col>
+                          <Col xs={24} sm={8}>
+                            <InlineField label="纸样师">
+                              <Form.Item name="patternMaker" style={{ marginBottom: 0 }}>
+                                <Select placeholder="选填" allowClear showSearch optionFilterProp="label" options={users.filter(u => u.name || u.username).map(u => ({ value: u.name || u.username, label: u.name || u.username }))} />
+                              </Form.Item>
+                            </InlineField>
+                          </Col>
+                          <Col xs={24} sm={8}>
+                            <InlineField label="跟单员">
+                              <Form.Item name="merchandiser" style={{ marginBottom: 0 }}>
+                                <Select placeholder="选填" allowClear showSearch optionFilterProp="label" options={users.filter(u => u.name || u.username).map(u => ({ value: u.name || u.username, label: u.name || u.username }))} />
+                              </Form.Item>
+                            </InlineField>
+                          </Col>
+                        </Row>
+                      </div>
+
+                      {/* 下单数量 */}
+                      <div style={{ marginBottom: 12 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                          <span style={{ fontWeight: 600 }}>📦 下单数量</span>
+                          <Tag color="default">总计 {totalOrderQuantity} 件</Tag>
+                        </div>
+                        <MultiColorOrderEditor
+                          availableColors={selectableColors}
+                          availableSizes={selectableSizes}
+                          orderLines={orderLines}
+                          totalQuantity={totalOrderQuantity}
+                          isMobile={isMobile}
+                          onChange={setOrderLines}
+                        />
+                      </div>
+
+                      {/* 下单单价 */}
                       <OrderPricingMaterialPanel
                         sizePriceLoading={sizePriceLoading}
                         sizePriceCount={sizePriceRows.length}
@@ -1752,227 +1846,17 @@ const OrderManagement: React.FC = () => {
                         suggestedQuotationUnitPrice={suggestedQuotationUnitPrice}
                         factoryMode={factoryMode}
                         watchedPricingMode={watchedPricingMode}
-                        watchedScatterPricingMode={watchedScatterPricingMode}
                         resolvedOrderUnitPrice={resolvedOrderUnitPrice}
-                        resolvedScatterUnitPrice={resolvedScatterUnitPrice}
                         onPricingModeChange={() => setPricingModeTouched(true)}
-                        onScatterPricingModeChange={() => setScatterPricingModeTouched(true)}
                         orchestration={orderOrchestration}
                       />
+
                       <OrderLearningInsightCard
                         loading={orderLearningLoading}
                         data={orderLearningRecommendation}
                       />
 
-                      <Row gutter={[15, 15]} style={{ marginBottom: 15 }}>
-                        <Col xs={24} sm={8}>
-                          <InlineField label="公司">
-                            <Form.Item name="company" style={{ marginBottom: 0 }}>
-                              <SupplierSelect
-                                placeholder="请选择或输入公司名称（选填）"
-                                allowClear
-                              />
-                            </Form.Item>
-                          </InlineField>
-                        </Col>
-                        <Col xs={24} sm={8}>
-                          <InlineField label="急单">
-                            <Form.Item name="urgencyLevel" initialValue="normal" style={{ marginBottom: 0 }}>
-                              <Select
-                                placeholder="普通"
-                                allowClear
-                                options={[
-                                  { label: '🔴 急单', value: 'urgent' },
-                                  { label: '普通', value: 'normal' },
-                                ]}
-                              />
-                            </Form.Item>
-                          </InlineField>
-                        </Col>
-                        <Col xs={24} sm={8}>
-                          <InlineField label="品类">
-                            <Form.Item name="productCategory" style={{ marginBottom: 0 }}>
-                              <Select
-                                placeholder="请选择品类（选填）"
-                                allowClear
-                                showSearch
-                                optionFilterProp="label"
-                                style={{ width: '100%' }}
-                                options={categoryOptions}
-                              />
-                            </Form.Item>
-                          </InlineField>
-                        </Col>
-                      </Row>
-
-                      <Row gutter={[15, 15]} style={{ marginBottom: 15 }}>
-                        <Col xs={24} sm={8}>
-                          <InlineField label="单型">
-                            <Form.Item name="plateType" style={{ marginBottom: 0 }}>
-                              <Select
-                                placeholder="不填自动判断"
-                                allowClear
-                                options={[
-                                  { label: '首单', value: 'FIRST' },
-                                  { label: '翻单', value: 'REORDER' },
-                                ]}
-                              />
-                            </Form.Item>
-                          </InlineField>
-                        </Col>
-                        <Col xs={24} sm={8}>
-                          <InlineField label="下单类型">
-                            <Form.Item name="orderBizType" style={{ marginBottom: 0 }}>
-                              <Select
-                                placeholder="选填（FOB/ODM/OEM/CMT）"
-                                allowClear
-                                options={[
-                                  { label: 'FOB — 离岸价交货', value: 'FOB' },
-                                  { label: 'ODM — 原创设计制造', value: 'ODM' },
-                                  { label: 'OEM — 代工贴牌', value: 'OEM' },
-                                  { label: 'CMT — 纯加工', value: 'CMT' },
-                                ]}
-                              />
-                            </Form.Item>
-                          </InlineField>
-                        </Col>
-                        <Col xs={24} sm={8}>
-                          <InlineField label="纸样师">
-                            <Form.Item name="patternMaker" style={{ marginBottom: 0 }}>
-                              <Select
-                                placeholder="请选择纸样师（选填）"
-                                allowClear
-                                showSearch
-                                optionFilterProp="label"
-                                options={users.filter(u => u.name || u.username).map(u => ({ value: u.name || u.username, label: u.name || u.username }))}
-                              />
-                            </Form.Item>
-                          </InlineField>
-                        </Col>
-                      </Row>
-
-                      <Row gutter={[15, 15]} style={{ marginBottom: 15 }}>
-                        <Col xs={24} sm={8}>
-                          <InlineField label="跟单员">
-                            <Form.Item name="merchandiser" style={{ marginBottom: 0 }}>
-                              <Select
-                                placeholder="请选择跟单员（选填）"
-                                allowClear
-                                showSearch
-                                optionFilterProp="label"
-                                options={users.filter(u => u.name || u.username).map(u => ({ value: u.name || u.username, label: u.name || u.username }))}
-                              />
-                            </Form.Item>
-                          </InlineField>
-                        </Col>
-                        <Col xs={24} sm={8}>
-                          <InlineField label="计划开始">
-                            <Form.Item
-                              name="plannedStartDate"
-                              rules={[{ required: true, message: '请选择计划开始时间' }]}
-                              style={{ marginBottom: 0 }}
-                            >
-                              <UnifiedDatePicker showTime />
-                            </Form.Item>
-                          </InlineField>
-                        </Col>
-                        <Col xs={24} sm={8}>
-                          <InlineField
-                            label={
-                              <span>
-                                计划完成
-                                {deliverySuggestion && !suggestionLoading && (
-                                  <Tooltip title={deliverySuggestion.reason}>
-                                    <Tag
-                                      color="blue"
-                                      style={{ marginLeft: 4, cursor: 'pointer', fontSize: 11 }}
-                                      onClick={() => {
-                                        const d = dayjs().add(deliverySuggestion.recommendedDays, 'day').hour(18).minute(0).second(0);
-                                        form.setFieldValue('plannedEndDate', d);
-                                      }}
-                                    >
-                                      建议
-                                    </Tag>
-                                  </Tooltip>
-                                )}
-                              </span>
-                            }
-                          >
-                            <Form.Item
-                              name="plannedEndDate"
-                              rules={[{ required: true, message: '请选择计划完成时间' }]}
-                              style={{ marginBottom: 0 }}
-                            >
-                              <UnifiedDatePicker showTime />
-                            </Form.Item>
-                          </InlineField>
-                        </Col>
-                      </Row>
-
-                      <OrderInfoSummary
-                        styleNo={selectedStyle?.styleNo || ''}
-                        styleName={selectedStyle?.styleName || ''}
-                        sampleSummary={styleSampleSummary}
-                        orderSummary={orderSummary}
-                        totalOrderQuantity={totalOrderQuantity}
-                      />
-
                     </div>
-                  </div>
-                )
-              },
-              {
-                key: 'detail',
-                label: '订单明细',
-                children: (
-                  <MultiColorOrderEditor
-                    availableColors={selectableColors}
-                    availableSizes={selectableSizes}
-                    orderLines={orderLines}
-                    totalQuantity={totalOrderQuantity}
-                    isMobile={isMobile}
-                    onChange={setOrderLines}
-                  />
-                )
-              },
-              {
-                key: 'bom',
-                label: '面辅料预算',
-                children: (
-                  <div>
-                    <div style={{ marginBottom: 12, color: 'var(--neutral-text-light)' }}>
-                      需求数量(米) = 匹配到的订单数量 × 单件用量 × (1 + 损耗率%)；<span style={{ color: 'var(--warning-color, #f7a600)' }}>★</span> 表示已配置码数用量，按每码分别计算，单件用量显示加权平均值
-                    </div>
-                    <div style={{ fontWeight: 600, fontSize: 13, margin: '16px 0 8px', paddingLeft: 8, borderLeft: '3px solid var(--primary-color, #1677ff)', color: 'var(--neutral-text)' }}>面料</div>
-                    <ResizableTable
-                      rowKey={(r) => String((r as Record<string, unknown>).id ?? (r as Record<string, unknown>).materialCode)}
-                      loading={bomLoading}
-                      dataSource={bomByType.fabric}
-                      pagination={false}
-                      scroll={{ x: 'max-content' }}
-                      size={isMobile ? 'small' : 'middle'}
-                      columns={bomColumns}
-                    />
-                    <div style={{ fontWeight: 600, fontSize: 13, margin: '16px 0 8px', paddingLeft: 8, borderLeft: '3px solid var(--primary-color, #1677ff)', color: 'var(--neutral-text)' }}>里料</div>
-                    <ResizableTable
-                      rowKey={(r) => String((r as Record<string, unknown>).id ?? (r as Record<string, unknown>).materialCode)}
-                      loading={bomLoading}
-                      dataSource={bomByType.lining}
-                      pagination={false}
-                      scroll={{ x: 'max-content' }}
-                      size={isMobile ? 'small' : 'middle'}
-                      columns={bomColumns}
-                    />
-                    <div style={{ fontWeight: 600, fontSize: 13, margin: '16px 0 8px', paddingLeft: 8, borderLeft: '3px solid var(--primary-color, #1677ff)', color: 'var(--neutral-text)' }}>辅料</div>
-                    <ResizableTable
-                      rowKey={(r) => String((r as Record<string, unknown>).id ?? (r as Record<string, unknown>).materialCode)}
-                      loading={bomLoading}
-                      dataSource={bomByType.accessory}
-                      pagination={false}
-                      scroll={{ x: 'max-content' }}
-                      size={isMobile ? 'small' : 'middle'}
-                      columns={bomColumns}
-                    />
                   </div>
                 )
               },

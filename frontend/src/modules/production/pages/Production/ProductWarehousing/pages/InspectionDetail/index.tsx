@@ -17,6 +17,7 @@ import { OrderLineWarehousingRow, WarehousingDetailRecord, CuttingBundleRow, Ord
 import { getQualityStatusConfig, getDefectCategoryLabel, getDefectRemarkLabel, isBundleBlockedForWarehousing } from '../../utils';
 import { DEFECT_CATEGORY_OPTIONS, DEFECT_REMARK_OPTIONS } from '../../constants';
 import UnqualifiedUpload from '../../components/WarehousingModal/components/UnqualifiedUpload';
+import BatchUnqualifiedModal from '../../components/WarehousingModal/BatchUnqualifiedModal';
 import { useWarehousingForm } from '../../components/WarehousingModal/hooks/useWarehousingForm';
 import StyleSizeTab from '@/modules/basic/pages/StyleInfo/components/StyleSizeTab';
 import { qualityAiApi } from '@/services/production/productionApi';
@@ -86,6 +87,10 @@ const InspectionDetail: React.FC = () => {
   const [markingRepairBundleId, setMarkingRepairBundleId] = useState<string | null>(null);
   const { warehouseOptions } = useWarehouseLocationOptions();
 
+  /* ---- 批量不合格弹窗 ---- */
+  const [batchUnqualifiedModalOpen, setBatchUnqualifiedModalOpen] = useState(false);
+  const [batchUnqualifiedForm] = Form.useForm();
+
   /* ---- 内联质检表单 ---- */
   const formHook = useWarehousingForm(
     true, null,
@@ -93,6 +98,16 @@ const InspectionDetail: React.FC = () => {
     () => { message.success('质检完成'); fetchBriefing(); fetchQcRecords(); },
     briefing?.order?.orderNo,
   );
+
+  // 从 formHook 提取需要在组件顶层使用的变量
+  const {
+    submitLoading,
+    batchSelectedSummary,
+    unqualifiedFileList,
+    setUnqualifiedFileList,
+    handleBatchUnqualifiedSubmit,
+    uploadOneUnqualifiedImage,
+  } = formHook;
 
   /* ---- 自动初始化订单（直接使用 URL orderId + orderDetail，避免 orderOptions 竞态条件） ---- */
   const autoInitRef = useRef(false);
@@ -303,9 +318,9 @@ const InspectionDetail: React.FC = () => {
   const renderOrderLines = () => (
     <div style={{ padding: '8px 0' }}>
       <ResizableTable<OrderLineWarehousingRow>
-        storageKey="inspection-order-lines"
         size="small" rowKey="key" loading={orderDetailLoading}
-        pagination={false} dataSource={orderLineWarehousingRows} scroll={{ x: 1040 }}
+        pagination={false} dataSource={orderLineWarehousingRows}
+        resizableColumns={false}
         style={{ fontSize: 12 }}
         columns={[
           { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 160 },
@@ -400,9 +415,9 @@ const InspectionDetail: React.FC = () => {
       {/* 质检记录明细 */}
       <Card size="small" title="质检记录明细" loading={recordsLoading}>
         <ResizableTable<WarehousingDetailRecord>
-          storageKey="inspection-qc-records"
           size="small" rowKey="id" pagination={false}
-          dataSource={qcRecords} scroll={{ x: 1200 }}
+          dataSource={qcRecords}
+          resizableColumns={false}
           style={{ fontSize: 12 }}
           rowClassName={(record) =>
             highlightWhNo && record.warehousingNo === highlightWhNo ? 'ant-table-row-selected' : ''
@@ -474,9 +489,9 @@ const InspectionDetail: React.FC = () => {
 
         <Card size="small" title="待入库记录" style={{ marginBottom: 16 }}>
           <ResizableTable<WarehousingDetailRecord>
-            storageKey="inspection-pending-records"
             size="small" rowKey="id" pagination={false}
-            dataSource={pendingRecords} scroll={{ x: 800 }}
+            dataSource={pendingRecords}
+            resizableColumns={false}
             style={{ fontSize: 12 }}
             columns={[
               { title: '质检入库号', dataIndex: 'warehousingNo', key: 'wn', width: 120 },
@@ -549,7 +564,7 @@ const InspectionDetail: React.FC = () => {
       batchQtyByQr, batchSelectedSummary, batchSelectedHasBlocked,
       singleSelectedBundle, isSingleSelectedBundleBlocked, singleSelectedBundleRepairStats,
       handleBatchSelectionChange, handleBatchSelectAll, handleBatchSelectInvert, handleBatchSelectClear,
-      handleBatchQualifiedSubmit, handleSubmit: handleQcSubmit,
+      handleBatchQualifiedSubmit, handleBatchUnqualifiedSubmit, handleSubmit: handleQcSubmit,
       uploadOneUnqualifiedImage, unqualifiedFileList, setUnqualifiedFileList,
       watchedWarehousingQty, watchedUnqualifiedQty,
       bundles: formBundles, orderOptionsLoading,
@@ -588,27 +603,26 @@ const InspectionDetail: React.FC = () => {
             </div>
           ) : (
             <ResizableTable<BatchSelectBundleRow>
-              storageKey="inspection-batch-select-v2"
               size="small" rowKey="qr" pagination={false}
               dataSource={batchSelectRows}
-              scroll={{ x: 820, y: 360 }}
+              resizableColumns={false}
               rowSelection={{
                 selectedRowKeys: batchSelectedBundleQrs,
                 onChange: (keys, rows) => handleBatchSelectionChange(keys, rows as BatchSelectBundleRow[]),
                 getCheckboxProps: (record) => ({ disabled: !!record.disabled }),
               }}
               columns={[
-                { title: '菲号', dataIndex: 'qr', width: 180, ellipsis: true },
-                { title: '扎号', dataIndex: 'bundleNo', width: 70, render: (v: unknown) => v ? String(v) : '-' },
-                { title: '颜色', dataIndex: 'color', width: 80, render: (v: unknown) => String(v || '') || '-' },
-                { title: '码数', dataIndex: 'size', width: 70, render: (v: unknown) => String(v || '') || '-' },
-                { title: '数量', dataIndex: 'quantity', width: 60, align: 'center' as const },
+                { title: '菲号', dataIndex: 'qr', width: 50, ellipsis: true },
+                { title: '扎号', dataIndex: 'bundleNo', width: 50, render: (v: unknown) => v ? String(v) : '-' },
+                { title: '颜色', dataIndex: 'color', width: 50, render: (v: unknown) => String(v || '') || '-' },
+                { title: '码数', dataIndex: 'size', width: 50, render: (v: unknown) => String(v || '') || '-' },
+                { title: '数量', dataIndex: 'quantity', width: 50, align: 'center' as const },
                 {
-                  title: '可质检', dataIndex: 'availableQty', width: 70, align: 'center' as const,
+                  title: '可质检', dataIndex: 'availableQty', width: 50, align: 'center' as const,
                   render: (v: number, record: BatchSelectBundleRow) => record.disabled ? <Text type="secondary">-</Text> : v,
                 },
                 {
-                  title: '状态', dataIndex: 'statusText', width: 120,
+                  title: '状态', dataIndex: 'statusText', width: 50,
                   render: (v: any, record: BatchSelectBundleRow) => {
                     if (record.disabled) return <Tag color="default">{v || '不可质检'}</Tag>;
                     if (isBundleBlockedForWarehousing(record.rawStatus)) return <Tag color="warning">{v}</Tag>;
@@ -616,7 +630,7 @@ const InspectionDetail: React.FC = () => {
                   },
                 },
                 {
-                  title: '操作', key: 'action', width: 100,
+                  title: '操作', key: 'action', width: 50,
                   render: (_: any, record: BatchSelectBundleRow) => {
                     const isUnqualified = record.rawStatus === 'unqualified';
                     if (!isUnqualified || !record.bundleId) return null;
@@ -683,15 +697,21 @@ const InspectionDetail: React.FC = () => {
                 />
               )}
 
-              {/* 批量模式：批量合格 */}
+              {/* 批量模式：批量合格/不合格 */}
               {isMultiSelected && !batchSelectedHasBlocked && (
-                <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-                  <Button type="primary" size="large" loading={submitLoading}
-                    onClick={handleBatchQualifiedSubmit}>
-                    批量合格质检（{batchSelectedSummary.totalQty} 件）
-                  </Button>
-                  <Button onClick={handleBatchSelectClear}>取消</Button>
-                </div>
+                <>
+                  <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+                    <Button type="primary" size="large" loading={submitLoading}
+                      onClick={handleBatchQualifiedSubmit}>
+                      批量合格质检（{batchSelectedSummary.totalQty} 件）
+                    </Button>
+                    <Button danger size="large" loading={submitLoading}
+                      onClick={() => setBatchUnqualifiedModalOpen(true)}>
+                      批量不合格质检（{batchSelectedSummary.totalQty} 件）
+                    </Button>
+                    <Button onClick={handleBatchSelectClear}>取消</Button>
+                  </div>
+                </>
               )}
               {isMultiSelected && batchSelectedHasBlocked && (
                 <Alert type="warning" showIcon style={{ marginBottom: 12 }}
@@ -995,7 +1015,7 @@ const InspectionDetail: React.FC = () => {
                     children: (
                       <div style={{ padding: '8px 0' }}>
                         <ResizableTable
-                          rowKey="id" size="small" pagination={false} scroll={{ x: 'max-content' }}
+                          rowKey="id" size="small" pagination={false}
                           resizableColumns={false}
                           dataSource={bom}
                           columns={[
@@ -1079,7 +1099,6 @@ const InspectionDetail: React.FC = () => {
                               )}
                               <Title level={5} style={{ marginBottom: 12 }}>生产要求</Title>
                               <ResizableTable
-                                storageKey="inspection-requirements-v2"
                                 size="small" rowKey="key" pagination={false}
                                 resizableColumns={false}
                                 dataSource={fixedRows}
@@ -1130,6 +1149,19 @@ const InspectionDetail: React.FC = () => {
         >
           {renderWarehousingAction()}
         </ResizableModal>
+
+        {/* ========== 批量不合格质检弹窗 ========== */}
+        <BatchUnqualifiedModal
+          open={batchUnqualifiedModalOpen}
+          totalQty={batchSelectedSummary?.totalQty || 0}
+          submitLoading={submitLoading}
+          unqualifiedFileList={unqualifiedFileList}
+          onCancel={() => setBatchUnqualifiedModalOpen(false)}
+          onOk={handleBatchUnqualifiedSubmit}
+          onUploadImage={uploadOneUnqualifiedImage}
+          onRemoveImage={(file) => setUnqualifiedFileList((prev) => prev.filter((f) => f.uid !== file.uid))}
+          onFileListChange={setUnqualifiedFileList}
+        />
     </Layout>
   );
 };

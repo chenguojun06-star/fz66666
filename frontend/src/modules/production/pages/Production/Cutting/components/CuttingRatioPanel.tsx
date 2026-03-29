@@ -1,23 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Form, InputNumber, Space, Table, Tag, Typography } from 'antd';
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
+import { Button, Form, InputNumber, Space, Tag, Typography, Tooltip, Select } from 'antd';
+import { DeleteOutlined, PlusOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 
 const { Text } = Typography;
-const inlineLabelTextStyle: React.CSSProperties = {
-  fontSize: 'var(--font-size-sm)',
-};
-
-const inlineValueTextStyle: React.CSSProperties = {
-  fontSize: 'var(--font-size-sm)',
-  fontWeight: 600,
-};
-
-export interface SizeRatioRow {
-  key: string;
-  size: string;
-  ratio: number;
-}
 
 export interface BundleInputRow {
   skuNo: string;
@@ -26,24 +11,22 @@ export interface BundleInputRow {
   quantity: number;
 }
 
+interface ColorSizeRatioRow {
+  key: string;
+  color: string;
+  sizes: Record<string, { ratio: number; cuttingQty: number; orderQty: number; usage?: number }>;
+}
+
 interface CuttingRatioPanelProps {
-  /** 来自订单的颜色 */
   entryColorText: string;
-  /** 来自订单的尺码列表（预填） */
   entrySizeItems: Array<{ size: string; quantity: number }>;
-  /** 订单总件数（预填） */
+  entryOrderLines: Array<{ color: string; size: string; quantity: number; skuNo?: string }>;
   defaultTotalQty: number;
-  /** 纸样按码用量（m/件），来自 BOM sizeUsageMap */
   sizeUsageMap?: Record<string, number>;
-  /** 主面料已到货量（m），预填到货量输入框 */
   arrivedFabricM?: number;
-  /** 是否正在生成 */
   generating: boolean;
-  /** 是否禁用（已生成菲号 / 锁定） */
   disabled: boolean;
-  /** 确认 → 写入 bundlesInput 并触发生成 */
   onConfirm: (rows: BundleInputRow[]) => void;
-  /** 清空回调 */
   onClear: () => void;
 }
 
@@ -53,6 +36,7 @@ const nextKey = () => String(++_keySeq);
 const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
   entryColorText,
   entrySizeItems,
+  entryOrderLines,
   defaultTotalQty,
   sizeUsageMap,
   arrivedFabricM,
@@ -61,215 +45,181 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
   onConfirm,
   onClear,
 }) => {
-  const buildInitialRows = useCallback(
-    (items: Array<{ size: string; quantity: number }>): SizeRatioRow[] => {
-      if (items.length > 0) {
-        return items.map((x) => ({ key: nextKey(), size: x.size, ratio: 1 }));
-      }
-      return [{ key: nextKey(), size: '', ratio: 1 }];
-    },
-    []
-  );
-
-  const [ratioRows, setRatioRows] = useState<SizeRatioRow[]>(() => buildInitialRows(entrySizeItems));
-  const [totalQty, setTotalQty] = useState<number>(defaultTotalQty || 0);
+  const [colorRows, setColorRows] = useState<ColorSizeRatioRow[]>([]);
+  const [allSizes, setAllSizes] = useState<string[]>([]);
   const [arrivedInput, setArrivedInput] = useState<number | null>(null);
-  /** 每扎件数上限（可选）：有值时各码独立拆扎 */
-  const [piecesPerBundle, setPiecesPerBundle] = useState<number | null>(null);
 
   const hasUsageMap = Boolean(sizeUsageMap && Object.keys(sizeUsageMap).length > 0);
 
-  // 订单尺码数据加载后同步
-  useEffect(() => {
-    if (entrySizeItems.length > 0) {
-      setRatioRows(buildInitialRows(entrySizeItems));
+  const buildInitialData = useCallback((lines: Array<{ color: string; size: string; quantity: number }>) => {
+    if (lines.length === 0) {
+      return { rows: [{ key: nextKey(), color: '', sizes: {} }], sizes: [] };
     }
-  }, [entrySizeItems.map((x) => x.size).join(',')]);
+
+    const colorMap = new Map<string, Record<string, { ratio: number; cuttingQty: number; orderQty: number; usage?: number }>>();
+    const sizeSet = new Set<string>();
+
+    for (const line of lines) {
+      const color = line.color || '';
+      const size = line.size || '';
+      const qty = line.quantity || 0;
+
+      sizeSet.add(size);
+
+      if (!colorMap.has(color)) {
+        colorMap.set(color, {});
+      }
+      const sizes = colorMap.get(color)!;
+      sizes[size] = { ratio: 1, cuttingQty: qty, orderQty: qty };
+    }
+
+    const rows: ColorSizeRatioRow[] = Array.from(colorMap.entries()).map(([color, sizes]) => ({
+      key: nextKey(),
+      color,
+      sizes,
+    }));
+
+    const sortedSizes = Array.from(sizeSet).sort((a, b) => {
+      const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', '3XL', '4XL', '5XL'];
+      const aIdx = sizeOrder.indexOf(a.toUpperCase());
+      const bIdx = sizeOrder.indexOf(b.toUpperCase());
+      if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+      if (aIdx !== -1) return -1;
+      if (bIdx !== -1) return 1;
+      return a.localeCompare(b, 'zh-CN', { numeric: true });
+    });
+
+    return { rows, sizes: sortedSizes };
+  }, []);
 
   useEffect(() => {
-    if (defaultTotalQty > 0) setTotalQty(defaultTotalQty);
-  }, [defaultTotalQty]);
+    if (entryOrderLines.length > 0) {
+      const { rows, sizes } = buildInitialData(entryOrderLines);
+      setColorRows(rows);
+      setAllSizes(sizes);
+    }
+  }, [entryOrderLines.map((x) => `${x.color}-${x.size}`).join(',')]);
 
-  // 主面料到货量：仅在首次预填
   useEffect(() => {
     if (arrivedFabricM != null && arrivedFabricM > 0) {
       setArrivedInput((prev) => prev ?? arrivedFabricM);
     }
   }, [arrivedFabricM]);
 
-  // ── 计算（单一路径，无模式切换） ─────────────────────────────────────────
-  const { totalRatio, bundles, actualTotal, sizeQtyMap, consumedFabric } = useMemo(() => {
-    const totalRatio = ratioRows.reduce((s, r) => s + (Number(r.ratio) || 0), 0);
+  const handleRatioChange = (rowKey: string, size: string, ratio: number) => {
+    setColorRows((prev) => prev.map((row) => {
+      if (row.key !== rowKey) return row;
+      const sizeData = row.sizes[size] || { orderQty: 0, cuttingQty: 0 };
+      const newRatio = Math.max(0, ratio || 0);
+      return {
+        ...row,
+        sizes: {
+          ...row.sizes,
+          [size]: { ...sizeData, ratio: newRatio },
+        },
+      };
+    }));
+  };
 
-    // 配比轮次 = ceil(订单件数 / 总配比)
-    const baseCount = totalRatio > 0 && totalQty > 0 ? Math.ceil(totalQty / totalRatio) : 0;
+  const handleCuttingQtyChange = (rowKey: string, size: string, qty: number) => {
+    setColorRows((prev) => prev.map((row) => {
+      if (row.key !== rowKey) return row;
+      const sizeData = row.sizes[size] || { orderQty: 0, ratio: 0 };
+      const newQty = Math.max(0, qty || 0);
+      return {
+        ...row,
+        sizes: {
+          ...row.sizes,
+          [size]: { ...sizeData, cuttingQty: newQty },
+        },
+      };
+    }));
+  };
 
-    const sizeQtyMap: Record<string, number> = {};
-    for (const r of ratioRows) {
-      sizeQtyMap[r.key] = (Number(r.ratio) || 0) * baseCount;
+  const handleColorChange = (rowKey: string, color: string) => {
+    setColorRows((prev) => prev.map((row) => {
+      if (row.key !== rowKey) return row;
+      return { ...row, color };
+    }));
+  };
+
+  const handleAddColor = () => {
+    setColorRows((prev) => [...prev, { key: nextKey(), color: '', sizes: {} }]);
+  };
+
+  const handleRemoveColor = (rowKey: string) => {
+    setColorRows((prev) => prev.filter((row) => row.key !== rowKey));
+  };
+
+  const { totalCuttingQty, totalBundles, consumedFabric, colorSummaries } = useMemo(() => {
+    let totalCuttingQty = 0;
+    let totalBundles = 0;
+    let consumedFabric = 0;
+    const summaries: Record<string, { orderQty: number; cuttingQty: number; bundleCount: number }> = {};
+
+    for (const row of colorRows) {
+      const color = row.color || '未知颜色';
+      if (!summaries[color]) {
+        summaries[color] = { orderQty: 0, cuttingQty: 0, bundleCount: 0 };
+      }
+
+      for (const size of allSizes) {
+        const sizeData = row.sizes[size];
+        if (!sizeData) continue;
+
+        const bundleQty = sizeData.cuttingQty || 0;
+        const orderQty = sizeData.orderQty || 0;
+        const bundleCount = sizeData.ratio || 0;
+        const totalQty = bundleQty * bundleCount;
+
+        totalCuttingQty += totalQty;
+        summaries[color].orderQty += orderQty;
+        summaries[color].cuttingQty += totalQty;
+        totalBundles += bundleCount;
+        summaries[color].bundleCount += bundleCount;
+      }
     }
 
-    // 扎数：有每扎件数限制时各码独立拆扎求和，否则等于配比轮次
-    const bundles = (piecesPerBundle && piecesPerBundle > 0)
-      ? ratioRows.reduce((sum, r) => {
-          const qty = sizeQtyMap[r.key] || 0;
-          return sum + (qty > 0 ? Math.ceil(qty / piecesPerBundle) : 0);
-        }, 0)
-      : baseCount;
+    return { totalCuttingQty, totalBundles, consumedFabric, colorSummaries: summaries };
+  }, [colorRows, allSizes, sizeUsageMap, hasUsageMap]);
 
-    const actualTotal = Object.values(sizeQtyMap).reduce((s, v) => s + v, 0);
-
-    // 预计消耗面料 = 各码件数 × 纸样用量
-    const consumedFabric = (hasUsageMap && sizeUsageMap)
-      ? ratioRows.reduce((sum, r) => sum + (sizeQtyMap[r.key] || 0) * (sizeUsageMap[r.size] || 0), 0)
-      : 0;
-
-    return { totalRatio, bundles, actualTotal, sizeQtyMap, consumedFabric };
-  }, [ratioRows, totalQty, piecesPerBundle, sizeUsageMap, hasUsageMap]);
-
-  // ── 行操作 ────────────────────────────────────────────────────────────────
-  const handleAddRow = () => {
-    setRatioRows((prev) => [...prev, { key: nextKey(), size: '', ratio: 1 }]);
-  };
-
-  const handleRemoveRow = (key: string) => {
-    setRatioRows((prev) => prev.filter((r) => r.key !== key));
-  };
-
-  const handleChangeSize = (key: string, val: string) => {
-    setRatioRows((prev) => prev.map((r) => (r.key === key ? { ...r, size: val } : r)));
-  };
-
-  const handleChangeRatio = (key: string, val: number | null) => {
-    setRatioRows((prev) => prev.map((r) => (r.key === key ? { ...r, ratio: val ?? 0 } : r)));
-  };
-
-  // ── 确认生成 ─────────────────────────────────────────────────────────────
   const handleConfirm = () => {
-    const color = String(entryColorText || '').trim();
     const rows: BundleInputRow[] = [];
-    for (const r of ratioRows) {
-      const size = r.size.trim();
-      const qty = sizeQtyMap[r.key] || 0;
-      if (!size || !(Number(r.ratio) || 0) || qty <= 0) continue;
-      if (piecesPerBundle && piecesPerBundle > 0) {
-        // 单码独立拆扎：每个菲号只有同一个码，上限 piecesPerBundle 件
-        let remaining = qty;
-        while (remaining > 0) {
-          const bundleQty = Math.min(remaining, piecesPerBundle);
+    for (const row of colorRows) {
+      const color = String(row.color || '').trim();
+      if (!color) continue;
+
+      for (const size of allSizes) {
+        const sizeData = row.sizes[size];
+        if (!sizeData) continue;
+
+        const bundleQty = sizeData.cuttingQty || 0;
+        const bundleCount = sizeData.ratio || 0;
+        if (bundleQty <= 0 || bundleCount <= 0) continue;
+
+        for (let i = 0; i < bundleCount; i++) {
           rows.push({ skuNo: '', color, size, quantity: bundleQty });
-          remaining -= bundleQty;
         }
-      } else {
-        // 无件数限制：每码一个菲号，单码
-        rows.push({ skuNo: '', color, size, quantity: qty });
       }
     }
     onConfirm(rows);
   };
 
-  // ── 表格列 ────────────────────────────────────────────────────────────────
-  const columns: ColumnsType<SizeRatioRow> = [
-    {
-      title: '尺码',
-      dataIndex: 'size',
-      width: 100,
-      render: (_, record) => (
-        <input
-          style={{
-            border: '1px solid #d9d9d9',
-            borderRadius: 6,
-            padding: '4px 8px',
-            width: '100%',
-            fontSize: 13,
-            outline: 'none',
-            background: disabled ? '#f5f5f5' : '#fff',
-          }}
-          value={record.size}
-          placeholder="如 S / M / L"
-          disabled={disabled}
-          onChange={(e) => handleChangeSize(record.key, e.target.value)}
-        />
-      ),
-    },
-    ...(hasUsageMap ? [{
-      title: '纸样用量(m/件)',
-      key: 'patternUsage',
-      width: 120,
-      render: (_: unknown, record: SizeRatioRow) => {
-        const usage = sizeUsageMap?.[record.size];
-        return usage != null
-          ? <Text type="secondary">{Number(usage).toFixed(2)}</Text>
-          : <Text style={{ color: '#ccc' }}>-</Text>;
-      },
-    } as ColumnsType<SizeRatioRow>[number]] : []),
-    {
-      title: '配比',
-      dataIndex: 'ratio',
-      width: 100,
-      render: (_, record) => (
-        <InputNumber
-          min={0}
-          max={999}
-          style={{ width: '100%' }}
-          value={record.ratio}
-          disabled={disabled}
-          onChange={(val) => handleChangeRatio(record.key, val)}
-        />
-      ),
-    },
-    {
-      title: '裁剪件数',
-      key: 'qty',
-      width: 120,
-      render: (_, record) => {
-        const qty = sizeQtyMap[record.key] || 0;
-        if (piecesPerBundle && piecesPerBundle > 0 && qty > 0) {
-          const sizeBundles = Math.ceil(qty / piecesPerBundle);
-          return (
-            <Text strong style={{ color: '#1677ff' }}>
-              {qty} 件
-              <Text type="secondary" style={{ fontSize: 'var(--font-size-sm)', marginLeft: 4 }}>
-                · {sizeBundles} 扎
-              </Text>
-            </Text>
-          );
-        }
-        return (
-          <Text strong style={{ color: qty > 0 ? '#1677ff' : '#999' }}>
-            {qty} 件
-          </Text>
-        );
-      },
-    },
-    {
-      title: '',
-      key: 'del',
-      width: 44,
-      render: (_, record) => (
-        <Button
-          type="text"
-          danger
-          icon={<DeleteOutlined />}
-          disabled={disabled || ratioRows.length <= 1}
-          onClick={() => handleRemoveRow(record.key)}
-        />
-      ),
-    },
-  ];
+  const valid = colorRows.some((row) => {
+    if (!row.color) return false;
+    return allSizes.some((size) => (row.sizes[size]?.cuttingQty || 0) > 0);
+  });
 
-  const valid = ratioRows.some((r) => r.size.trim() && (Number(r.ratio) || 0) > 0) && bundles > 0;
+  const availableColors = useMemo(() => {
+    const colors = new Set(entryOrderLines.map((x) => x.color).filter(Boolean));
+    return Array.from(colors);
+  }, [entryOrderLines]);
 
   return (
     <div style={{ marginBottom: 16 }}>
-      {/* 输入区：颜色 + 三个固定输入框横排 */}
       <Space style={{ marginBottom: 10 }} wrap align="center">
         <span>
-          <Text type="secondary" style={inlineLabelTextStyle}>颜色：</Text>
-          <Text style={inlineValueTextStyle}>{entryColorText || '-'}</Text>
-        </span>
-        <span style={{ marginLeft: 8 }}>
-          <Text type="secondary" style={inlineLabelTextStyle}>已确认可裁面料：</Text>
+          <Text type="secondary" style={{ fontSize: 'var(--font-size-sm)' }}>已确认可裁面料：</Text>
           <InputNumber
             min={0}
             max={999999}
@@ -280,34 +230,8 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
             style={{ width: 120, marginLeft: 4, marginRight: 4 }}
             placeholder="可裁米数"
           />
-          <Text type="secondary" style={inlineLabelTextStyle}>m</Text>
+          <Text type="secondary" style={{ fontSize: 'var(--font-size-sm)' }}>m</Text>
         </span>
-        <span style={{ marginLeft: 8 }}>
-          <Text type="secondary" style={inlineLabelTextStyle}>下单数量：</Text>
-          <InputNumber
-            min={1}
-            max={999999}
-            value={totalQty}
-            disabled={disabled}
-            onChange={(val) => setTotalQty(val ?? 0)}
-            style={{ width: 110, marginLeft: 4, marginRight: 4 }}
-          />
-          <Text type="secondary" style={inlineLabelTextStyle}>件</Text>
-        </span>
-        <span style={{ marginLeft: 8 }}>
-          <Text type="secondary" style={inlineLabelTextStyle}>每扎件数：</Text>
-          <InputNumber
-            min={1}
-            max={9999}
-            value={piecesPerBundle}
-            disabled={disabled}
-            onChange={(val) => setPiecesPerBundle(val)}
-            style={{ width: 90, marginLeft: 4, marginRight: 4 }}
-            placeholder="如 25/30"
-          />
-          <Text type="secondary" style={inlineLabelTextStyle}>件/扎</Text>
-        </span>
-        {/* 面料消耗参考（有到货量时才显示） */}
         {consumedFabric > 0 && arrivedInput && arrivedInput > 0 && (
           <Text style={{ fontSize: 'var(--font-size-sm)', color: consumedFabric > arrivedInput ? '#ff4d4f' : '#52c41a' }}>
             预计消耗 {consumedFabric.toFixed(2)} m / 已确认 {arrivedInput} m
@@ -316,53 +240,158 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
         )}
       </Space>
 
-      {/* 配比表格 */}
-      <Table<SizeRatioRow>
-        size="small"
-        pagination={false}
-        dataSource={ratioRows}
-        columns={columns}
-        rowKey="key"
-        style={{ marginBottom: 8 }}
-      />
+      <div style={{ marginBottom: 8, fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>
+        📋 按颜色+尺码分配裁剪数量
+        <Tooltip title={
+          <div>
+            <div><b>填写说明：</b></div>
+            <div>• 配比 = 扎数（分成几扎）</div>
+            <div>• 件数 = 每扎的件数</div>
+            <div>• 总件数 = 配比 × 件数</div>
+            <div style={{ marginTop: 8 }}><b>示例：</b></div>
+            <div>• 配比2，件数25 → 2扎，每扎25件，共50件</div>
+            <div>• 配比3，件数10 → 3扎，每扎10件，共30件</div>
+          </div>
+        }>
+          <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+        </Tooltip>
+      </div>
 
-      {/* 添加尺码 */}
+      <div style={{ overflow: 'auto', border: '1px solid #f0f0f0', borderRadius: 8 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: allSizes.length * 170 + 260 }}>
+          <thead>
+            <tr style={{ background: '#fafafa' }}>
+              <th style={{ padding: '10px 12px', borderBottom: '2px solid #f0f0f0', textAlign: 'center', width: 100, fontWeight: 600 }}>颜色</th>
+              {allSizes.map((size) => (
+                <th key={size} style={{ padding: '10px 6px', borderBottom: '2px solid #f0f0f0', textAlign: 'center', fontWeight: 600, minWidth: 170 }}>
+                  {size}
+                </th>
+              ))}
+              <th style={{ padding: '10px 12px', borderBottom: '2px solid #f0f0f0', textAlign: 'center', width: 80, fontWeight: 600, background: '#e6f7ff' }}>小计</th>
+              <th style={{ padding: '10px 8px', borderBottom: '2px solid #f0f0f0', textAlign: 'center', width: 90, fontWeight: 600 }}>
+                <Tooltip title={`扎数 = 配比\n总件数 = 配比 × 每扎件数`}>
+                  <span>扎数 <QuestionCircleOutlined style={{ marginLeft: 2, color: '#999', fontSize: 11 }} /></span>
+                </Tooltip>
+              </th>
+              <th style={{ padding: '10px 4px', borderBottom: '2px solid #f0f0f0', width: 44 }}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {colorRows.map((row) => {
+              const rowTotal = allSizes.reduce((sum, size) => {
+                const data = row.sizes[size];
+                return sum + ((data?.cuttingQty || 0) * (data?.ratio || 0));
+              }, 0);
+              const rowBundles = allSizes.reduce((sum, size) => sum + (row.sizes[size]?.ratio || 0), 0);
+
+              return (
+                <tr key={row.key}>
+                  <td style={{ padding: '8px', borderBottom: '1px solid #f5f5f5', textAlign: 'center' }}>
+                    <Select
+                      value={row.color || undefined}
+                      onChange={(val) => handleColorChange(row.key, val)}
+                      placeholder="颜色"
+                      disabled={disabled}
+                      style={{ width: '100%' }}
+                      size="small"
+                      showSearch
+                      allowClear
+                      options={availableColors.map((c) => ({ label: c, value: c }))}
+                    />
+                  </td>
+                  {allSizes.map((size) => {
+                    const sizeData = row.sizes[size] || { ratio: 0, cuttingQty: 0, orderQty: 0 };
+                    const usage = sizeUsageMap?.[size];
+                    return (
+                      <td key={size} style={{ padding: '8px 6px', borderBottom: '1px solid #f5f5f5', textAlign: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <span style={{ fontSize: 12, color: '#8c8c8c' }}>用量</span>
+                            <span style={{ fontSize: 13, color: '#262626', fontWeight: 500, minWidth: 45 }}>
+                              {usage != null ? `${Number(usage).toFixed(2)}m` : '-'}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <span style={{ fontSize: 12, color: '#8c8c8c' }}>配比</span>
+                            <InputNumber
+                              min={0}
+                              max={99}
+                              step={1}
+                              precision={0}
+                              size="small"
+                              style={{ width: 45 }}
+                              value={sizeData.ratio}
+                              disabled={disabled}
+                              onChange={(val) => handleRatioChange(row.key, size, val || 0)}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <span style={{ fontSize: 12, color: '#8c8c8c' }}>每扎</span>
+                            <InputNumber
+                              min={0}
+                              max={99999}
+                              size="small"
+                              style={{ width: 50 }}
+                              value={sizeData.cuttingQty}
+                              disabled={disabled}
+                              onChange={(val) => handleCuttingQtyChange(row.key, size, val || 0)}
+                            />
+                            <span style={{ fontSize: 12, color: '#8c8c8c' }}>件</span>
+                          </div>
+                          <div style={{ fontSize: 11, color: '#1677ff', fontWeight: 500, marginLeft: 2 }}>
+                            下单{sizeData.orderQty || 0}件
+                          </div>
+                        </div>
+                      </td>
+                    );
+                  })}
+                  <td style={{ padding: '8px', borderBottom: '1px solid #f5f5f5', textAlign: 'center', background: '#e6f7ff', fontWeight: 600 }}>
+                    {rowTotal}
+                  </td>
+                  <td style={{ padding: '8px', borderBottom: '1px solid #f5f5f5', textAlign: 'center', fontWeight: 500, color: '#1677ff' }}>
+                    {rowBundles} 扎
+                  </td>
+                  <td style={{ padding: '4px', borderBottom: '1px solid #f5f5f5', textAlign: 'center' }}>
+                    <Button
+                      type="text"
+                      danger
+                      size="small"
+                      icon={<DeleteOutlined />}
+                      disabled={disabled || colorRows.length <= 1}
+                      onClick={() => handleRemoveColor(row.key)}
+                    />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
       {!disabled && (
         <Button
           type="dashed"
           icon={<PlusOutlined />}
-          onClick={handleAddRow}
-          style={{ marginBottom: 12, width: '100%' }}
+          onClick={handleAddColor}
+          style={{ marginTop: 8, width: '100%' }}
         >
-          添加尺码
+          添加颜色
         </Button>
       )}
 
-      {/* 汇总栏 */}
-      <Space wrap style={{ marginBottom: 12 }}>
-        <Tag>总配比：{totalRatio}</Tag>
-        <Tag color="blue">
-          扎数：{bundles} 扎
-          {piecesPerBundle && piecesPerBundle > 0 && (
-            <span style={{ marginLeft: 4, fontSize: 'var(--font-size-sm)' }}>（每扎≤{piecesPerBundle} 件）</span>
-          )}
-        </Tag>
-        <Tag color={actualTotal > 0 ? 'green' : 'default'}>
-          实际总裁剪：{actualTotal} 件
-          {actualTotal > 0 && actualTotal !== totalQty && (
-            <span style={{ marginLeft: 4, fontSize: 'var(--font-size-sm)' }}>
-              （订单 {totalQty} 件 → 进位后 {actualTotal} 件）
-            </span>
-          )}
-        </Tag>
-        {consumedFabric > 0 && (!arrivedInput || arrivedInput <= 0) && (
-          <Tag color="purple">
-            预计消耗面料：{consumedFabric.toFixed(2)} m
+      <Space wrap style={{ marginTop: 12, marginBottom: 12 }}>
+        {Object.entries(colorSummaries).map(([color, data]) => (
+          <Tag key={color} color="blue" style={{ marginBottom: 4 }}>
+            {color}: {data.cuttingQty}/{data.orderQty} 件 · {data.bundleCount} 扎
           </Tag>
+        ))}
+        <Tag color="green">总裁剪：{totalCuttingQty} 件</Tag>
+        <Tag color="purple">总扎数：{totalBundles} 扎</Tag>
+        {consumedFabric > 0 && (!arrivedInput || arrivedInput <= 0) && (
+          <Tag color="orange">预计消耗面料：{consumedFabric.toFixed(2)} m</Tag>
         )}
       </Space>
 
-      {/* 操作按钮 */}
       <Form.Item style={{ marginBottom: 0 }}>
         <Space>
           <Button

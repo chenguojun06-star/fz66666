@@ -67,6 +67,7 @@ import { AuthProvider } from './utils/AuthContext';
 import { AppProvider } from './utils/AppContext';
 import { type AppLanguage } from './i18n/languagePreference';
 import { useAppLanguage } from './i18n/useAppLanguage';
+import XiaoyunSpinIndicator from './components/common/XiaoyunSpinIndicator';
 import 'antd/dist/reset.css'; // 引入组件库样式
 import './styles/global.css';
 import './styles/design-system.css'; // 设计系统
@@ -416,6 +417,7 @@ const AppWrapper: React.FC = () => {
       locale={resolveAntdLocale(language)}
       theme={themeConfig}
       getPopupContainer={(triggerNode) => (triggerNode?.parentElement ?? document.body) as HTMLElement}
+      spin={{ indicator: <XiaoyunSpinIndicator /> }}
     >
       <AntApp>
         <AntdStaticLoader />

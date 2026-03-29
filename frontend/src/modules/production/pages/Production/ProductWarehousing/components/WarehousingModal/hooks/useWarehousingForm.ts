@@ -733,6 +733,59 @@ export const useWarehousingForm = (
     }
   };
 
+  const handleBatchUnqualifiedSubmit = async (defectCategory: string, defectRemark: string, unqualifiedImageUrls?: string[]) => {
+    if (!batchSelectedBundleQrs.length) {
+      message.warning('请先添加菲号');
+      return;
+    }
+    if (batchSelectedHasBlocked) {
+      message.warning('次品待返修菲号请单条处理');
+      return;
+    }
+    try {
+      setSubmitLoading(true);
+      const orderId = String(form.getFieldValue('orderId') || '').trim();
+      if (!orderId) {
+        message.error('请选择订单号');
+        return;
+      }
+
+      if (!(await ensureOrderUnlockedById(orderId))) return;
+
+      const items = batchSelectedBundleQrs
+        .map((qr) => {
+          const qty = Number(batchQtyByQr[qr] || 0) || 0;
+          return { cuttingBundleQrCode: qr, warehousingQuantity: qty };
+        })
+        .filter((it) => (Number(it.warehousingQuantity || 0) || 0) > 0);
+
+      if (!items.length) {
+        message.error('质检数量必须大于0');
+        return;
+      }
+
+      const res = await api.post<{ code: number; message: string; data: boolean }>('/production/warehousing/batch-unqualified', {
+        orderId,
+        warehousingType: 'manual',
+        items,
+        defectCategory,
+        defectRemark,
+        unqualifiedImageUrls: unqualifiedImageUrls || '[]',
+      });
+      if (res.code === 200) {
+        message.success('批量不合格质检成功');
+        onSuccess();
+        onCancel();
+      } else {
+        message.error(res.message || '批量不合格质检失败');
+      }
+    } catch (error: any) {
+      message.error(error.message || '批量不合格质检失败');
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
   const handleSubmit = async () => {
     try {
       setSubmitLoading(true);
@@ -895,6 +948,7 @@ export const useWarehousingForm = (
     uploadOneUnqualifiedImage,
     handleBatchSelectionChange,
     handleBatchQualifiedSubmit,
+    handleBatchUnqualifiedSubmit,
     handleSubmit,
     handleBatchSelectAll,
     handleBatchSelectInvert,
