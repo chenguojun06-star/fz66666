@@ -1047,7 +1047,7 @@ const StyleProcessTab: React.FC<Props> = ({
                 setSizeOptions(prev => [...prev, { value: value.trim(), label: value.trim() }]);
               }
             }}
-            dropdownRender={(menu) => (
+            popupRender={(menu) => (
               <>
                 {menu}
                 <div style={{ padding: '8px', borderTop: '1px solid #f0f0f0' }}>
@@ -1082,7 +1082,7 @@ const StyleProcessTab: React.FC<Props> = ({
                 </div>
               </>
             )}
-            onDropdownVisibleChange={(open) => {
+            onOpenChange={(open) => {
               if (open) fetchSizeDictOptions();
             }}
           />

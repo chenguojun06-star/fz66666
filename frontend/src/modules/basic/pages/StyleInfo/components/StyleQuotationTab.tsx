@@ -23,7 +23,13 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQ
   const [bomList, setBomList] = useState<StyleBom[]>([]);
   const [processList, setProcessList] = useState<StyleProcess[]>([]);
   const [secondaryProcessList, setSecondaryProcessList] = useState<any[]>([]);
-  const [isLocked, setIsLocked] = useState(false); // 锁定状态
+  const [isLocked, setIsLocked] = useState(false);
+  const [bomColorCosts, setBomColorCosts] = useState<{ costByColor: Record<string, number>; avgCost: number; maxCost: number; colors: string[] }>({
+    costByColor: {},
+    avgCost: 0,
+    maxCost: 0,
+    colors: [],
+  });
 
   const materialCost = Number(Form.useWatch('materialCost', form)) || 0;
   const processCost = Number(Form.useWatch('processCost', form)) || 0;
@@ -56,6 +62,32 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQ
     }, 0);
   };
 
+  // 按颜色分组计算BOM成本（每个颜色单独计算一件的成本，取平均值或最大值）
+  const calcBomCostByColor = (items: any[]): { costByColor: Record<string, number>; avgCost: number; maxCost: number; colors: string[] } => {
+    const colorGroups: Record<string, any[]> = {};
+
+    (items || []).forEach((item: any) => {
+      const color = String(item?.color || '默认').trim() || '默认';
+      if (!colorGroups[color]) {
+        colorGroups[color] = [];
+      }
+      colorGroups[color].push(item);
+    });
+
+    const colors = Object.keys(colorGroups);
+    const costByColor: Record<string, number> = {};
+
+    colors.forEach((color) => {
+      costByColor[color] = calcBomCost(colorGroups[color]);
+    });
+
+    const costs = Object.values(costByColor);
+    const avgCost = costs.length > 0 ? costs.reduce((a, b) => a + b, 0) / costs.length : 0;
+    const maxCost = costs.length > 0 ? Math.max(...costs) : 0;
+
+    return { costByColor, avgCost, maxCost, colors };
+  };
+
   // 获取报价单及关联成本
   const fetchData = async () => {
     if (!styleId || styleId === 'undefined') {
@@ -68,15 +100,18 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQ
       const quoteResult = quoteRes as any;
       const existing = quoteResult.code === 200 ? (quoteResult.data as any) : null;
 
-      // 2. 自动计算物料清单成本
+      // 2. 自动计算物料清单成本（按颜色分组，取单件成本）
       const bomRes = await api.get<StyleBom[]>(`/style/bom/list?styleId=${styleId}`);
       const bomResult = bomRes as any;
       let bomCost = 0;
       let bomData: StyleBom[] = [];
       if (bomResult.code === 200) {
         bomData = (bomResult.data || []) as StyleBom[];
-        bomCost = calcBomCost(bomData);
+        // 按颜色分组计算，取平均成本作为单件物料成本
+        const bomColorInfo = calcBomCostByColor(bomData);
+        bomCost = bomColorInfo.avgCost; // 使用平均成本
         setBomList(bomData);
+        setBomColorCosts(bomColorInfo);
       }
 
       // 3. 自动计算工序成本
