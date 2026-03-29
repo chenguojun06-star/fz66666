@@ -101,8 +101,7 @@ const scanCoreMixin = Behavior({
           onSuccess: this.handleScanSuccess.bind(this),
           onError: this.handleScanError.bind(this),
           getCurrentFactory: () => this.data.currentFactory,
-          // 外发工厂账号：优先使用手动选择的工人；否则退回登录账号本身
-          getCurrentWorker: () => this.data.selectedWorker || this.data.currentUser,
+          getCurrentWorker: () => this.data.currentUser,
         });
       } catch (e) {
         console.error('[scanCoreMixin] scanHandler 惰性初始化失败:', e);
@@ -146,31 +145,10 @@ const scanCoreMixin = Behavior({
         this.setData(updates);
       }
 
-      // 外发工厂账号：拉取工人名册供扫码时选人
-      const factoryId = user && user.factoryId;
-      if (factoryId && this.data.workerList.length === 0) {
-        api.factoryWorker.list(factoryId, 'active').then(res => {
-          const list = (res && res.data) ? res.data : (Array.isArray(res) ? res : []);
-          this.setData({ workerList: list });
-        }).catch(err => {
-          console.warn('[scanCoreMixin] 拉取工人名册失败:', err);
-        });
-      }
-
       return true;
     },
 
     // ==================== 数据加载 ====================
-
-    /**
-     * 外发工厂账号：工人选择器选中事件
-     * @param {object} e - picker change event
-     */
-    onWorkerSelect(e) {
-      const index = Number(e.detail.value);
-      const worker = this.data.workerList[index] || null;
-      this.setData({ selectedWorker: worker });
-    },
 
     /**
      * 刷新我的面板（别名方法，供 WXML 调用）

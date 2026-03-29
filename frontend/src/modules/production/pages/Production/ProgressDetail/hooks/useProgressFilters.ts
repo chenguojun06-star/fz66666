@@ -1,13 +1,26 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import dayjs from 'dayjs';
+import { useDebouncedValue } from '@/hooks/usePerformance';
 import { ProductionQueryParams } from '@/types/production';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { usePersistentSort } from '@/hooks/usePersistentSort';
 
-/**
- * 筛选条件、排序、统计卡片状态管理
- */
+const DATE_SORT_STORAGE_KEY = 'production_date_sort_asc';
+
+const getDateSortFromStorage = (): boolean => {
+  try {
+    return localStorage.getItem(DATE_SORT_STORAGE_KEY) === 'true';
+  } catch {}
+  return false;
+};
+
+const saveDateSortToStorage = (asc: boolean) => {
+  try {
+    localStorage.setItem(DATE_SORT_STORAGE_KEY, String(asc));
+  } catch {}
+};
+
 export const useProgressFilters = () => {
   const location = useLocation();
 
@@ -21,6 +34,16 @@ export const useProgressFilters = () => {
     setViewMode(mode);
   };
   const [activeStatFilter, setActiveStatFilter] = useState<'production' | 'delayed' | 'today'>('production');
+  const [dateSortAsc, setDateSortAsc] = useState<boolean>(() => getDateSortFromStorage());
+
+  const toggleDateSort = useCallback(() => {
+    setDateSortAsc((prev) => {
+      const newValue = !prev;
+      saveDateSortToStorage(newValue);
+      return newValue;
+    });
+  }, []);
+
   const {
     sortField: orderSortField,
     sortOrder: orderSortOrder,
@@ -85,5 +108,7 @@ export const useProgressFilters = () => {
     statusOptions,
     handleOrderSort,
     handleStatClick,
+    dateSortAsc,
+    toggleDateSort,
   };
 };

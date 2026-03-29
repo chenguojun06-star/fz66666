@@ -161,6 +161,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     [paths.productionPartners]: 'menu.items.factory',
     [paths.cutting]: 'menu.items.cutting',
     [paths.progressDetail]: 'menu.items.progressDetail',
+    [paths.externalFactory]: 'menu.items.externalFactory',
     [paths.warehousing]: 'menu.items.warehousing',
     [paths.materialInventory]: 'menu.items.materialInventory',
     [paths.materialDatabase]: 'menu.items.materialDatabase',

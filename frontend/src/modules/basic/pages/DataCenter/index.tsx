@@ -8,7 +8,6 @@ import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import SmallModal from '@/components/common/SmallModal';
 import RowActions from '@/components/common/RowActions';
-import StylePrintModal from '@/components/common/StylePrintModal';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import api from '@/utils/api';
 import { StyleInfo, StyleQueryParams } from '@/types/style';
@@ -317,10 +316,6 @@ const DataCenter: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [_viewMode, _setViewMode] = useState<'list' | 'card'>('list');
 
-  // 打印弹窗状态
-  const [printModalVisible, setPrintModalVisible] = useState(false);
-  const [printingRecord, setPrintingRecord] = useState<StyleInfo | null>(null);
-
   // 编辑弹窗状态
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<StyleInfo | null>(null);
@@ -408,12 +403,6 @@ const DataCenter: React.FC = () => {
     } catch (e: unknown) {
       message.error((e as any)?.message || '下载失败');
     }
-  };
-
-  const printProductionSheet = async (style: StyleInfo) => {
-    // 使用通用打印组件
-    setPrintingRecord(style);
-    setPrintModalVisible(true);
   };
 
   // 打开编辑弹窗
@@ -684,13 +673,6 @@ const DataCenter: React.FC = () => {
                     onClick: () => { setReturnPatternRecord(record); setReturnPatternModalVisible(true); },
                   },
               {
-                key: 'print',
-                label: '打印',
-                title: '打印制单',
-                onClick: () => printProductionSheet(record),
-                primary: true,
-              },
-              {
                 key: 'download',
                 label: '下载',
                 title: '下载生产制单',
@@ -765,21 +747,6 @@ const DataCenter: React.FC = () => {
         />
 
       {/* 通用打印弹窗 */}
-      <StylePrintModal
-        visible={printModalVisible}
-        onClose={() => {
-          setPrintModalVisible(false);
-          setPrintingRecord(null);
-        }}
-        styleId={printingRecord?.id}
-        styleNo={printingRecord?.styleNo}
-        styleName={printingRecord?.styleName}
-        cover={printingRecord?.cover}
-        category={printingRecord?.category}
-        season={printingRecord?.season}
-        mode="sample"
-      />
-
       {/* 编辑生产制单弹窗 */}
       <ResizableModal
         open={editModalVisible}
@@ -963,11 +930,6 @@ const DataCenter: React.FC = () => {
               setDetailModalVisible(false);
               setDetailRecord(null);
             }}>关闭</Button>
-            <Button type="primary" onClick={() => {
-              if (detailRecord) {
-                printProductionSheet(detailRecord);
-              }
-            }}>打印制单</Button>
           </Space>
         }
         width="60vw"

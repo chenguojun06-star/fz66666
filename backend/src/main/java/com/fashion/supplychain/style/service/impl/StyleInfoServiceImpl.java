@@ -169,6 +169,8 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
 
         Map<String, Integer> countByStyleId = new HashMap<>();
         Map<String, Integer> countByStyleNo = new HashMap<>();
+        Map<String, Integer> quantityByStyleId = new HashMap<>();
+        Map<String, Integer> quantityByStyleNo = new HashMap<>();
         Map<String, LocalDateTime> latestOrderTimeByStyleId = new HashMap<>();
         Map<String, LocalDateTime> latestOrderTimeByStyleNo = new HashMap<>();
         Map<String, String> latestOrderCreatorByStyleId = new HashMap<>();
@@ -180,9 +182,8 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                 return;
             }
 
-            // 统计订单数量
             QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
-            qw.select("style_id as styleId", "style_no as styleNo", "count(1) as cnt")
+            qw.select("style_id as styleId", "style_no as styleNo", "count(1) as cnt", "COALESCE(SUM(order_quantity), 0) as totalQty")
                     .and(w -> {
                         boolean hasPrev = false;
                         if (!styleIds.isEmpty()) {
@@ -207,19 +208,24 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                 String sid = r.get("styleId") == null ? null : String.valueOf(r.get("styleId")).trim();
                 String sno = r.get("styleNo") == null ? null : String.valueOf(r.get("styleNo")).trim();
                 int cnt;
+                int totalQty;
                 try {
                     cnt = r.get("cnt") == null ? 0 : Integer.parseInt(String.valueOf(r.get("cnt")));
+                    totalQty = r.get("totalQty") == null ? 0 : Integer.parseInt(String.valueOf(r.get("totalQty")));
                 } catch (Exception e) {
                     cnt = 0;
+                    totalQty = 0;
                 }
                 if (cnt <= 0) {
                     continue;
                 }
                 if (StringUtils.hasText(sid)) {
                     countByStyleId.put(sid, cnt);
+                    quantityByStyleId.put(sid, totalQty);
                 }
                 if (StringUtils.hasText(sno)) {
                     countByStyleNo.put(sno, cnt);
+                    quantityByStyleNo.put(sno, totalQty);
                 }
             }
 
@@ -285,6 +291,7 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
             Integer byId = StringUtils.hasText(idKey) ? countByStyleId.get(idKey) : null;
             if (byId != null && byId > 0) {
                 s.setOrderCount(byId);
+                s.setTotalOrderQuantity(quantityByStyleId.get(idKey));
                 if (StringUtils.hasText(idKey)) {
                     s.setLatestOrderTime(latestOrderTimeByStyleId.get(idKey));
                     s.setLatestOrderCreator(latestOrderCreatorByStyleId.get(idKey));
@@ -293,6 +300,7 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
             }
             String sno = StringUtils.hasText(s.getStyleNo()) ? s.getStyleNo().trim() : null;
             s.setOrderCount(StringUtils.hasText(sno) ? countByStyleNo.getOrDefault(sno, 0) : 0);
+            s.setTotalOrderQuantity(StringUtils.hasText(sno) ? quantityByStyleNo.getOrDefault(sno, 0) : 0);
             if (StringUtils.hasText(sno)) {
                 s.setLatestOrderTime(latestOrderTimeByStyleNo.get(sno));
                 s.setLatestOrderCreator(latestOrderCreatorByStyleNo.get(sno));

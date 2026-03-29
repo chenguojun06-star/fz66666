@@ -154,6 +154,11 @@ page {
   gap: 6px;
 }
 
+.org-filter-pill-active {
+  border-color: #ff4d4f;
+  background: #fff2f0;
+}
+
 .org-filter-label {
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
@@ -166,9 +171,12 @@ page {
 }
 
 .org-filter-clear {
-  margin-left: auto;
+  padding: 8px 12px;
   font-size: var(--font-size-sm);
   color: var(--color-primary);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-primary);
+  background: var(--color-bg-card);
 }
 
 .grid-menu {

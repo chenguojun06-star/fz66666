@@ -78,9 +78,7 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
 
   useEffect(() => {
     if (!open) {
-      createForm.resetFields();
       setResolveTarget(null);
-      resolveForm.resetFields();
       return;
     }
     createForm.setFieldsValue({
@@ -91,7 +89,7 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
       remark: '',
     });
     void loadIssues();
-  }, [createForm, loadIssues, maxIssueQuantity, open, resolveForm]);
+  }, [loadIssues, maxIssueQuantity, open]);
 
   const handleCreate = async () => {
     if (!purchaseId) {

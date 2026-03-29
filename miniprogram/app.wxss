@@ -238,9 +238,9 @@ wx-vconsole,
 .global-search {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-bottom: 8px;
-  padding: 3px 6px;
+  gap: 6px;
+  margin-bottom: 10px;
+  padding: 6px 8px;
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
@@ -251,26 +251,26 @@ wx-vconsole,
   flex: 1;
   display: flex;
   align-items: center;
-  padding: 3px 10px;
+  padding: 8px 14px;
   background: rgba(224, 242, 254, 0.3);
   border: 1px solid rgba(224, 242, 254, 0.5);
   border-radius: var(--radius-full);
 }
 
 .global-search .search-icon {
-  font-size: var(--font-size-sm);
-  margin-right: 4px;
+  font-size: 16px;
+  margin-right: 6px;
 }
 
 .global-search .search-input {
   flex: 1;
-  font-size: var(--font-size-xs);
+  font-size: 15px;
   color: var(--color-text-primary);
 }
 
 .global-search .search-btn {
-  padding: 3px 18px;
-  font-size: var(--font-size-sm);
+  padding: 8px 20px;
+  font-size: 15px;
   font-weight: 500;
   color: var(--color-text-primary);
   background: rgba(224, 242, 254, 0.8);
@@ -281,8 +281,8 @@ wx-vconsole,
 }
 
 .global-search .clear-btn {
-  padding: 3px 18px;
-  font-size: var(--font-size-sm);
+  padding: 8px 20px;
+  font-size: 15px;
   color: var(--color-text-secondary);
   background: rgba(224, 242, 254, 0.3);
   border: 1px solid var(--color-border);

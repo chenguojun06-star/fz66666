@@ -49,6 +49,7 @@ import {
   OrderFlow,
   ProgressDetail,
   MaterialPicking,
+  ExternalFactory,
 } from './modules/production';
 
 // 懒加载组件
@@ -235,6 +236,14 @@ const AppRoutes: React.FC = () => {
             element={
               <Suspense fallback={routeFallback}>
                 <ProgressDetail />
+              </Suspense>
+            }
+          />
+          <Route
+            path={paths.externalFactory}
+            element={
+              <Suspense fallback={routeFallback}>
+                <ExternalFactory />
               </Suspense>
             }
           />

@@ -202,8 +202,10 @@
   }
   
   .style-no {
-    font-size: 11px;
-  }
+  font-size: 11px;
+  position: relative;
+  z-index: 1;
+}
 }
 
 /* 暗色主题 */

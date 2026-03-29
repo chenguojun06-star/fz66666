@@ -310,6 +310,12 @@ public class StyleInfo {
     private Integer orderCount;
 
     /**
+     * 下单总件数
+     */
+    @TableField(exist = false)
+    private Integer totalOrderQuantity;
+
+    /**
      * 最近下单人
      */
     @TableField(exist = false)

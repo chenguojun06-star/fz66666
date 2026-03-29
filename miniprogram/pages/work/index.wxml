@@ -44,18 +44,16 @@
     </view>
 
     <view class="org-filter-row">
-      <picker mode="selector" range="{{departmentOptions}}" range-key="label" value="{{selectedDepartmentIndex}}" bindchange="onDepartmentFilterChange">
-        <view class="org-filter-pill">
-          <text class="org-filter-label">部门</text>
-          <text class="org-filter-value">{{departmentOptions[selectedDepartmentIndex].label}}</text>
-        </view>
-      </picker>
       <picker mode="selector" range="{{factoryTypeOptions}}" range-key="label" value="{{selectedFactoryTypeIndex}}" bindchange="onFactoryTypeFilterChange">
         <view class="org-filter-pill">
-          <text class="org-filter-label">标签</text>
+          <text class="org-filter-label">工厂</text>
           <text class="org-filter-value">{{factoryTypeOptions[selectedFactoryTypeIndex].label}}</text>
         </view>
       </picker>
+      <view class="org-filter-pill {{delayedOnly ? 'org-filter-pill-active' : ''}}" bindtap="toggleDelayedOnly">
+        <text class="org-filter-label">⏰</text>
+        <text class="org-filter-value">{{delayedOnly ? '全部' : '延期'}}</text>
+      </view>
       <view class="org-filter-clear" bindtap="clearOrderFilters">重置</view>
     </view>
 

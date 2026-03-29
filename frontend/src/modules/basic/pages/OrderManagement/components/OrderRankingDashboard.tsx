@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Avatar, Tag, Tooltip } from 'antd';
-import { TrophyOutlined, ClockCircleOutlined, UserOutlined, CalendarOutlined, ShoppingCartOutlined } from '@ant-design/icons';
+import { TrophyOutlined, ClockCircleOutlined, UserOutlined, CalendarOutlined, ShoppingCartOutlined, AppstoreOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import dayjs from 'dayjs';
@@ -16,6 +16,7 @@ interface OrderRankingStats {
     styleName: string;
     cover?: string;
     orderCount: number;
+    totalOrderQuantity?: number;
     latestOrderCreator?: string;
     latestOrderTime?: string;
     firstOrderTime?: string;
@@ -69,6 +70,7 @@ const OrderRankingDashboard: React.FC<OrderRankingDashboardProps> = ({ onOrderCl
               styleName: r.styleName,
               cover: r.cover,
               orderCount,
+              totalOrderQuantity: r.totalOrderQuantity || 0,
               latestOrderCreator: r.latestOrderCreator,
               latestOrderTime,
               firstOrderTime,
@@ -102,6 +104,12 @@ const OrderRankingDashboard: React.FC<OrderRankingDashboardProps> = ({ onOrderCl
       <div className="ranking-tooltip">
         <div className="tooltip-title">{item.styleNo} - {item.styleName}</div>
         <div className="tooltip-item">
+          <ShoppingCartOutlined /> 下单总数: <b>{item.orderCount}次</b>
+        </div>
+        <div className="tooltip-item">
+          <AppstoreOutlined /> 下单总件数: <b>{item.totalOrderQuantity || 0}件</b>
+        </div>
+        <div className="tooltip-item">
           <UserOutlined /> 最新下单人: {item.latestOrderCreator || '-'}
         </div>
         <div className="tooltip-item">
@@ -112,11 +120,8 @@ const OrderRankingDashboard: React.FC<OrderRankingDashboardProps> = ({ onOrderCl
             <ClockCircleOutlined /> 平均下单周期: <b>{item.avgOrderCycle}天</b>
           </div>
         )}
-        <div className="tooltip-item">
-          <TrophyOutlined /> 累计下单: <b>{item.orderCount}次</b>
-        </div>
         <div className="tooltip-hint">
-          <ShoppingCartOutlined /> 点击卡片快速下单
+          <TrophyOutlined /> 点击卡片快速下单
         </div>
       </div>
     );
@@ -139,7 +144,7 @@ const OrderRankingDashboard: React.FC<OrderRankingDashboardProps> = ({ onOrderCl
           <Tooltip
             key={item.styleNo}
             title={renderTooltipContent(item)}
-            placement="top"
+            placement="bottom"
             classNames={{ root: 'ranking-tooltip-overlay' }}
           >
             <div

@@ -214,7 +214,7 @@ public class ScanRecordOrchestrator {
 
         // 质检扫码路由
         if ("quality".equals(scanType)) {
-            Map<String, Object> r = executeQualityScan(safeParams, requestId, operatorId, operatorName);
+            Map<String, Object> r = executeQualityScan(safeParams, requestId, operatorId, operatorName, ctx);
             tryNotifyNextStage(safeParams, r);
             return r;
         }
@@ -226,7 +226,7 @@ public class ScanRecordOrchestrator {
             return r;
         }
 
-        Map<String, Object> r = executeProductionScan(safeParams, requestId, operatorId, operatorName, scanType, qty, autoProcess);
+        Map<String, Object> r = executeProductionScan(safeParams, requestId, operatorId, operatorName, scanType, qty, autoProcess, ctx);
         tryNotifyNextStage(safeParams, r);
         return r;
     }
@@ -572,8 +572,7 @@ public class ScanRecordOrchestrator {
      * 已迁移逻辑：领取/验收/确认/返修流程
      */
     private Map<String, Object> executeQualityScan(Map<String, Object> params, String requestId, String operatorId,
-            String operatorName) {
-        // 解析基础参数
+            String operatorName, UserContext ctx) {
         String scanCode = TextUtils.safeText(params.get("scanCode"));
         final CuttingBundle bundle = cuttingBundleService.getByQrCode(scanCode);
 
@@ -587,9 +586,9 @@ public class ScanRecordOrchestrator {
         if (order == null && !hasText(orderId) && !hasText(orderNo) && hasText(scanCode)) {
             order = resolveOrder(null, scanCode);
         }
+        validateOrderBelonging(order, ctx);
         final ProductionOrder finalOrder = order;
 
-        // 委托给Executor执行
         return qualityScanExecutor.execute(
                 params, requestId, operatorId, operatorName, finalOrder,
                 (unused) -> resolveColor(params, bundle, finalOrder),
@@ -632,8 +631,15 @@ public class ScanRecordOrchestrator {
      * 已迁移逻辑：裁剪/车缝/大烫等生产工序
      */
     private Map<String, Object> executeProductionScan(Map<String, Object> params, String requestId, String operatorId,
-            String operatorName, String scanType, Integer quantity, boolean autoProcess) {
-        // 委托给Executor执行
+            String operatorName, String scanType, Integer quantity, boolean autoProcess, UserContext ctx) {
+        String orderId = TextUtils.safeText(params.get("orderId"));
+        String orderNo = TextUtils.safeText(params.get("orderNo"));
+        String scanCode = TextUtils.safeText(params.get("scanCode"));
+        ProductionOrder order = resolveOrder(orderId, orderNo);
+        if (order == null && hasText(scanCode)) {
+            order = resolveOrder(null, scanCode);
+        }
+        validateOrderBelonging(order, ctx);
         return productionScanExecutor.execute(
                 params, requestId, operatorId, operatorName, scanType,
                 quantity != null ? quantity : NumberUtils.toInt(params.get("quantity")),
@@ -661,6 +667,39 @@ public class ScanRecordOrchestrator {
                 .eq(ProductionOrder::getOrderNo, on)
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .last("limit 1"));
+    }
+
+    private void validateOrderBelonging(ProductionOrder order, UserContext ctx) {
+        if (order == null || ctx == null) {
+            return;
+        }
+        String role = ctx.getRole();
+        boolean isAdmin = role != null && (role.contains("admin") || role.contains("manager")
+                || role.contains("supervisor") || role.contains("主管") || role.contains("管理员"));
+        if (isAdmin) {
+            return;
+        }
+        String userFactoryId = ctx.getFactoryId();
+        String orderFactoryId = order.getFactoryId();
+        String orderFactoryType = order.getFactoryType();
+        boolean isInternalUser = !StringUtils.hasText(userFactoryId);
+        boolean isExternalOrder = "EXTERNAL".equalsIgnoreCase(orderFactoryType);
+        boolean isInternalOrder = !isExternalOrder;
+        if (isInternalUser && isInternalOrder) {
+            return;
+        }
+        if (isInternalUser && isExternalOrder) {
+            throw new AccessDeniedException("内部员工无法扫码外发订单，请确认订单归属");
+        }
+        if (!isInternalUser && isExternalOrder) {
+            if (userFactoryId != null && userFactoryId.equals(orderFactoryId)) {
+                return;
+            }
+            throw new AccessDeniedException("无法扫码其他工厂的外发订单，请确认订单归属");
+        }
+        if (!isInternalUser && isInternalOrder) {
+            throw new AccessDeniedException("外发工厂无法扫码内部订单，请确认订单归属");
+        }
     }
 
     private String resolveColor(Map<String, Object> params, CuttingBundle bundle, ProductionOrder order) {

@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback, useState } from 'react';
-import { Tag, Space, App } from 'antd';
+import { Tag, Space, App, Button, Popconfirm } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
@@ -221,6 +221,8 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
   const _isAdmin = isAdminUser(user);
   const safeRecords = Array.isArray(records) ? records : [];
   const [actioningRecordId, setActioningRecordId] = useState<string>('');
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [batchCompleting, setBatchCompleting] = useState(false);
 
   const resolveScanType = useCallback((record: ProcessTrackingRecord) => {
     const processCode = String(record.processCode || '').trim().toLowerCase();
@@ -325,15 +327,14 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
       },
     });
   }, [message, modal, onUndoSuccess, orderId, orderNo, resolveProgressStage, resolveScanType, user]);
+
   const filterType = nodeType || processType;
 
-  // 按 nodeType/processType/nodeName/processList 过滤记录（动态匹配，支持模板改名）
   const filteredRecords = useMemo(() => {
     if (!filterType) return safeRecords;
     return safeRecords.filter(r => matchesFilter(r, filterType, nodeName, processList));
   }, [safeRecords, filterType, nodeName, processList]);
 
-  // 平铺数据：按菲号+工序排序
   const flatData = useMemo(() => {
     return [...filteredRecords]
       .sort((a, b) => {
@@ -344,6 +345,69 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
       })
       .map(r => ({ ...r, key: `row-${r.id}` }));
   }, [filteredRecords]);
+
+  const handleBatchComplete = useCallback(async () => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('请先勾选要完成的记录');
+      return;
+    }
+    const selectedRecords = flatData.filter(r => selectedRowKeys.includes(r.key));
+    const completableRecords = selectedRecords.filter(r => 
+      canManualCompleteTracking(r, orderStatus, orderNo, orderId)
+    );
+    if (completableRecords.length === 0) {
+      message.warning('所选记录中没有可手动完成的记录');
+      return;
+    }
+    const totalQty = completableRecords.reduce((s, r) => s + (r.quantity || 0), 0);
+    const operatorLabel = String(user?.username || user?.name || '').trim() || '当前账号';
+    modal.confirm({
+      width: '30vw',
+      title: '确认批量完成',
+      content: `确定将选中的 ${completableRecords.length} 条记录标记为完成？\n总数量: ${totalQty} 件\n操作账号: ${operatorLabel}`,
+      okText: '确认完成',
+      cancelText: '取消',
+      onOk: async () => {
+        setBatchCompleting(true);
+        let successCount = 0;
+        let failCount = 0;
+        for (const record of completableRecords) {
+          try {
+            const bundleNo = Number(record.bundleNo || 0);
+            const payload = {
+              requestId: generateRequestId(),
+              orderId: String(orderId || '').trim() || undefined,
+              orderNo: String(orderNo || '').trim() || undefined,
+              bundleNo: Number.isFinite(bundleNo) && bundleNo > 0 ? bundleNo : undefined,
+              quantity: Number(record.quantity || 0) || 0,
+              scanType: resolveScanType(record),
+              progressStage: resolveProgressStage(record),
+              processName: String(record.processName || '').trim() || undefined,
+              processCode: String(record.processCode || '').trim() || undefined,
+              unitPrice: Number.isFinite(Number(record.unitPrice)) ? Number(record.unitPrice) : undefined,
+              scanTime: new Date().toISOString(),
+              operatorId: String(user?.id || '').trim() || undefined,
+              operatorName: String(user?.username || user?.name || '').trim() || undefined,
+              remark: 'PC批量完成',
+              manual: true,
+            };
+            await productionScanApi.execute(payload);
+            successCount++;
+          } catch {
+            failCount++;
+          }
+        }
+        setBatchCompleting(false);
+        setSelectedRowKeys([]);
+        if (failCount === 0) {
+          message.success(`批量完成成功，共 ${successCount} 条记录`);
+        } else {
+          message.warning(`完成 ${successCount} 条，失败 ${failCount} 条`);
+        }
+        onUndoSuccess?.();
+      },
+    });
+  }, [selectedRowKeys, flatData, orderStatus, orderNo, orderId, message, modal, user, resolveScanType, resolveProgressStage, onUndoSuccess]);
 
   // 统计信息
   const stats = useMemo(() => {
@@ -487,14 +551,54 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
     },
   ];
 
+  const completableCount = useMemo(() => {
+    return flatData.filter(r => canManualCompleteTracking(r, orderStatus, orderNo, orderId)).length;
+  }, [flatData, orderStatus, orderNo, orderId]);
+
+  const selectedCompletableCount = useMemo(() => {
+    const selectedRecords = flatData.filter(r => selectedRowKeys.includes(r.key));
+    return selectedRecords.filter(r => canManualCompleteTracking(r, orderStatus, orderNo, orderId)).length;
+  }, [flatData, selectedRowKeys, orderStatus, orderNo, orderId]);
+
+  const rowSelection = {
+    selectedRowKeys,
+    onChange: (newSelectedRowKeys: React.Key[]) => {
+      setSelectedRowKeys(newSelectedRowKeys);
+    },
+    getCheckboxProps: (record: ProcessTrackingRecord) => ({
+      disabled: !canManualCompleteTracking(record, orderStatus, orderNo, orderId),
+    }),
+  };
+
   return (
     <div style={{ fontSize: 12 }}>
       <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-        {filterType && (
-          <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
-            当前筛选：<strong style={{ color: '#1f2937' }}>{nodeName || filterType}</strong>
-          </span>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {filterType && (
+            <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+              当前筛选：<strong style={{ color: '#1f2937' }}>{nodeName || filterType}</strong>
+            </span>
+          )}
+          {completableCount > 0 && (
+            <Popconfirm
+              title="批量完成"
+              description={`确定将选中的 ${selectedCompletableCount} 条记录标记为完成？`}
+              onConfirm={handleBatchComplete}
+              okText="确认"
+              cancelText="取消"
+              disabled={selectedCompletableCount === 0}
+            >
+              <Button 
+                type="primary" 
+                size="small"
+                loading={batchCompleting}
+                disabled={selectedCompletableCount === 0}
+              >
+                批量完成 ({selectedCompletableCount}/{completableCount})
+              </Button>
+            </Popconfirm>
+          )}
+        </div>
         <Space separator={'·'}>
           <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
             菲号: <strong>{stats.bundles}</strong> 个
@@ -519,6 +623,7 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
         rowKey="key"
         size="small"
         scroll={{ x: 900, y: 750 }}
+        rowSelection={rowSelection}
         pagination={{
           defaultPageSize: readPageSize(DEFAULT_PAGE_SIZE),
           showSizeChanger: true,

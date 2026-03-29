@@ -30,10 +30,9 @@ Page({
       parentOrgUnitId: '',
       factoryType: '',
     },
-    departmentOptions: [{ label: '全部部门', value: '' }],
-    factoryTypeOptions: [{ label: '全部标签', value: '' }, { label: '内部工厂', value: 'INTERNAL' }, { label: '外部工厂', value: 'EXTERNAL' }],
-    selectedDepartmentIndex: 0,
+    factoryTypeOptions: [{ label: '全部工厂', value: '' }, { label: '内部工厂', value: 'INTERNAL' }, { label: '外部工厂', value: 'EXTERNAL' }],
     selectedFactoryTypeIndex: 0,
+    delayedOnly: false,
     orderStats: {
       orderCount: 0,
       totalQuantity: 0,
@@ -77,7 +76,6 @@ Page({
     }
     // 工厂账号隐藏仓库卡片
     this.setData({ isFactory: !!getCurrentFactoryId() });
-    this.loadOrganizationFilterOptions();
     try {
       const nextTab = wx.getStorageSync('work_active_tab');
       if (nextTab) {
@@ -217,36 +215,6 @@ Page({
     this.setData({ 'filters.factoryName': (e && e.detail && e.detail.value) || '' });
   },
 
-  loadOrganizationFilterOptions() {
-    api.system.listOrganizationDepartments()
-      .then((list) => {
-        const records = Array.isArray(list) ? list : [];
-        this.setData({
-          departmentOptions: [{ label: '全部部门', value: '' }].concat(
-            records
-              .filter(item => item && item.id)
-              .map(item => ({ label: item.nodeName || '未命名部门', value: item.id }))
-          ),
-        });
-      })
-      .catch(() => {});
-  },
-
-  onDepartmentFilterChange(e) {
-    const index = Number(e && e.detail ? e.detail.value : 0) || 0;
-    const option = this.data.departmentOptions[index] || { value: '' };
-    this.setData({
-      selectedDepartmentIndex: index,
-      'filters.parentOrgUnitId': option.value || '',
-    }, () => {
-      const app = getApp();
-      if (app && typeof app.resetPagedList === 'function') {
-        app.resetPagedList(this, 'orders');
-      }
-      this.loadOrders(true);
-    });
-  },
-
   onFactoryTypeFilterChange(e) {
     const index = Number(e && e.detail ? e.detail.value : 0) || 0;
     const option = this.data.factoryTypeOptions[index] || { value: '' };
@@ -281,8 +249,8 @@ Page({
           parentOrgUnitId: '',
           factoryType: '',
         },
-        selectedDepartmentIndex: 0,
         selectedFactoryTypeIndex: 0,
+        delayedOnly: false,
       },
       () => {
         const app = getApp();
@@ -292,6 +260,17 @@ Page({
         this.loadOrders(true);
       }
     );
+  },
+
+  toggleDelayedOnly() {
+    const newDelayedOnly = !this.data.delayedOnly;
+    this.setData({ delayedOnly: newDelayedOnly }, () => {
+      const app = getApp();
+      if (app && typeof app.resetPagedList === 'function') {
+        app.resetPagedList(this, 'orders');
+      }
+      this.loadOrders(true);
+    });
   },
 
   // ==================== 步骤回流（委托 RollbackHandler） ====================
@@ -339,7 +318,8 @@ Page({
           factoryName: normalizeText(f.factoryName),
           parentOrgUnitId: String(f.parentOrgUnitId || '').trim() || '',
           factoryType: String(f.factoryType || '').trim() || '',
-          excludeTerminal: 'true', // 生产页仅显示进行中订单，过滤已完成/已取消，减少数据量
+          excludeTerminal: 'true',
+          delayedOnly: this.data.delayedOnly ? 'true' : undefined,
         };
 
         // 根据标签页添加当前工序节点过滤

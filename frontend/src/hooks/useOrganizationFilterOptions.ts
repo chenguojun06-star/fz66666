@@ -4,9 +4,9 @@ import { organizationApi } from '@/services/system/organizationApi';
 import type { OrganizationUnit } from '@/types/system';
 
 export const FACTORY_TYPE_FILTER_OPTIONS = [
-  { label: '全部标签', value: '' },
+  { label: '全部工厂', value: '' },
   { label: '内部工厂', value: 'INTERNAL' },
-  { label: '外部工厂', value: 'EXTERNAL' },
+  { label: '外发工厂', value: 'EXTERNAL' },
 ];
 
 export const useOrganizationFilterOptions = () => {

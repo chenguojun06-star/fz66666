@@ -43,6 +43,7 @@ export interface StyleInfo extends Record<string, unknown> {
   maintenanceRemark?: string;
 
   orderCount?: number;
+  totalOrderQuantity?: number;
   latestOrderTime?: string;
   latestOrderCreator?: string;
   firstOrderTime?: string;

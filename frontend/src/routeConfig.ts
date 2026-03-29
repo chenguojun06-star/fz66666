@@ -48,6 +48,7 @@ export const paths = {
   cutting: '/production/cutting',
   cuttingTask: '/production/cutting/task/:orderNo',
   progressDetail: '/production/progress-detail',
+  externalFactory: '/production/external-factory',
   orderFlow: '/production/order-flow',
   warehousing: '/production/warehousing',
   warehousingDetail: '/production/warehousing/detail/:warehousingNo',
@@ -205,6 +206,7 @@ export const menuConfig: MenuSection[] = [
       { label: '我的订单', path: paths.productionList, icon: React.createElement(BuildOutlined) },
       { label: '裁剪管理', path: paths.cutting, icon: React.createElement(ScissorOutlined) },
       { label: '生产进度', path: paths.progressDetail, icon: React.createElement(FileSearchOutlined) },
+      { label: '外发工厂', path: paths.externalFactory, icon: React.createElement(ThunderboltOutlined) },
       { label: '质检入库', path: paths.warehousing, icon: React.createElement(InboxOutlined) },
     ],
   },
@@ -316,6 +318,7 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.cutting]: permissionCodes.cutting,
   [paths.materialPicking]: permissionCodes.materialPicking,
   [paths.progressDetail]: permissionCodes.progress,
+  [paths.externalFactory]: permissionCodes.progress,
   [paths.warehousing]: permissionCodes.warehousing,
 
   [paths.materialReconciliation]: permissionCodes.materialRecon,

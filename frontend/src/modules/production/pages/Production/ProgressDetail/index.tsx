@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, App, Button, Card, Form, Input, Modal, Select, Space, Tag } from 'antd';
 import type { InputRef } from 'antd';
-import { AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import Layout from '@/components/Layout';
 import PageStatCards from '@/components/common/PageStatCards';
@@ -148,6 +148,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     orderSortField, orderSortOrder,
     statusOptions,
     handleOrderSort, handleStatClick,
+    dateSortAsc, toggleDateSort,
   } = useProgressFilters();
 
   useEffect(() => {
@@ -184,14 +185,16 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
-  // 卡片视图排序：终态订单（关单/报废/完成）排到最后
   const sortedOrders = useMemo(() => {
     return [...orders].sort((a, b) => {
       const aClose = isOrderTerminal(a) ? 1 : 0;
       const bClose = isOrderTerminal(b) ? 1 : 0;
-      return aClose - bClose;
+      if (aClose !== bClose) return aClose - bClose;
+      const aTime = new Date(String(a.createTime || 0)).getTime();
+      const bTime = new Date(String(b.createTime || 0)).getTime();
+      return dateSortAsc ? aTime - bTime : bTime - aTime;
     });
-  }, [orders]);
+  }, [orders, dateSortAsc]);
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const [globalStats, setGlobalStats] = useState({
     activeOrders: 0, activeQuantity: 0,
@@ -1006,6 +1009,17 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     clearFocus: clearSmartFocus,
   });
 
+  const sortedSmartQueueOrders = useMemo(() => {
+    return [...smartQueueOrders].sort((a, b) => {
+      const aClose = isOrderTerminal(a) ? 1 : 0;
+      const bClose = isOrderTerminal(b) ? 1 : 0;
+      if (aClose !== bClose) return aClose - bClose;
+      const aTime = new Date(String(a.createTime || 0)).getTime();
+      const bTime = new Date(String(b.createTime || 0)).getTime();
+      return dateSortAsc ? aTime - bTime : bTime - aTime;
+    });
+  }, [smartQueueOrders, dateSortAsc]);
+
   const scrollToFocusedOrder = useCallback((orderId: string) => {
     const safeId = orderId.replace(/"/g, '\\"');
     const selector = viewMode === 'list'
@@ -1242,7 +1256,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               rowKey={(r: ProductionOrder) => String(r.id || r.orderNo)}
               loading={loading && orders.length === 0}
               columns={columns}
-              dataSource={orders}
+              dataSource={sortedOrders}
               resizableColumns={false}
               maxColumnWidth={1600}
               pagination={{
@@ -1441,6 +1455,12 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     刷新
                   </Button>
                   <Button
+                    icon={dateSortAsc ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
+                    onClick={toggleDateSort}
+                    title={dateSortAsc ? '按时间升序（最早在前）' : '按时间降序（最新在前）'}
+                    style={{ borderRadius: 16, minWidth: 32, width: 32, padding: 0 }}
+                  />
+                  <Button
                     icon={viewMode === 'list' ? <AppstoreOutlined /> : <UnorderedListOutlined />}
                     onClick={() => setViewMode(viewMode === 'list' ? 'card' : 'list')}
                   >
@@ -1495,7 +1515,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               rowKey={(r: ProductionOrder) => String(r.id || r.orderNo)}
               loading={loading && orders.length === 0}
               columns={columns}
-              dataSource={smartQueueOrders}
+              dataSource={sortedSmartQueueOrders}
               showHeader={false}
               resizableColumns={false}
               maxColumnWidth={1600}

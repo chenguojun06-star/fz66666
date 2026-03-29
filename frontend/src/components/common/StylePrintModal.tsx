@@ -36,7 +36,6 @@ export interface PrintOptions {
   bomTable: boolean;     // BOM表
   processTable: boolean; // 工序表
   productionSheet: boolean; // 生产制单
-  attachments: boolean;  // 纸样附件
 }
 
 // 默认打印选项
@@ -46,7 +45,6 @@ export const DEFAULT_PRINT_OPTIONS: PrintOptions = {
   bomTable: true,
   processTable: true,
   productionSheet: true,
-  attachments: false,
 };
 
 // 组件属性
@@ -536,7 +534,6 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
                     bomTable: values.includes('bomTable'),
                     processTable: values.includes('processTable'),
                     productionSheet: values.includes('productionSheet'),
-                    attachments: values.includes('attachments'),
                   });
                 }}
                 style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px' }}
@@ -546,7 +543,6 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
                 <Checkbox value="bomTable">BOM表</Checkbox>
                 <Checkbox value="processTable">工序表</Checkbox>
                 <Checkbox value="productionSheet">生产制单</Checkbox>
-                <Checkbox value="attachments">纸样附件</Checkbox>
               </Checkbox.Group>
             </div>
             <Button
@@ -950,38 +946,9 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
             );
           })()}
 
-          {/* 纸样附件 */}
-          {options.attachments && data.attachments.length > 0 && (
-            <div className="print-section">
-              <div className="print-section-title">📎 纸样附件</div>
-              <ResizableTable
-                storageKey="print-attachments"
-                className="print-table"
-                dataSource={data.attachments}
-                rowKey="id"
-                size="small"
-                pagination={false}
-                bordered
-                columns={[
-                  { title: '类型', dataIndex: 'bizType', key: 'bizType', width: 120,
-                    render: (t: string) => {
-                      if (t === 'pattern' || t === 'pattern_final') return <Tag color="blue">原始纸样</Tag>;
-                      if (t === 'pattern_grading' || t === 'pattern_grading_final') return <Tag color="green">放码纸样</Tag>;
-                      if (t === 'size_table') return <Tag color="orange">尺寸表</Tag>;
-                      if (t === 'production_sheet') return <Tag color="purple">生产制单</Tag>;
-                      return <Tag>{t}</Tag>;
-                    }
-                  },
-                  { title: '文件名', dataIndex: 'fileName', key: 'fileName', ellipsis: true },
-                  { title: '上传时间', dataIndex: 'createTime', key: 'createTime', width: 160 },
-                ]}
-              />
-            </div>
-          )}
-
           {/* 无数据提示 */}
           {!loading && !options.basicInfo && data.sizes.length === 0 && data.bom.length === 0 &&
-           data.process.length === 0 && data.attachments.length === 0 && (
+           data.process.length === 0 && (
             <div style={{ textAlign: 'center', padding: 48, color: 'var(--color-text-tertiary)' }}>
               暂无打印数据，请选择要打印的内容
             </div>
