@@ -28,6 +28,7 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -681,16 +682,17 @@ public class PatternProductionOrchestrator {
     private Map<String, Object> enrichRecord(PatternProduction record) {
         Map<String, Object> map = new HashMap<>();
         LocalDateTime resolvedCompleteTime = resolvePatternProductionCompleteTime(record);
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MM-dd HH:mm");
         map.put("id", record.getId());
         map.put("styleId", record.getStyleId());
         map.put("styleNo", record.getStyleNo());
         map.put("color", record.getColor());
         map.put("quantity", record.getQuantity());
-        map.put("releaseTime", record.getReleaseTime());
+        map.put("releaseTime", record.getReleaseTime() != null ? record.getReleaseTime().format(fmt) : null);
         map.put("deliveryTime", record.getDeliveryTime());
         map.put("receiver", record.getReceiver());
-        map.put("receiveTime", record.getReceiveTime());
-        map.put("completeTime", resolvedCompleteTime);
+        map.put("receiveTime", record.getReceiveTime() != null ? record.getReceiveTime().format(fmt) : null);
+        map.put("completeTime", resolvedCompleteTime != null ? resolvedCompleteTime.format(fmt) : null);
         // 旧记录 patternMaker 可能为 null（领取时未写入），兜底用 receiver（两者为同一人）
         String patternMakerVal = StringUtils.hasText(record.getPatternMaker())
                 ? record.getPatternMaker() : record.getReceiver();
@@ -1094,7 +1096,13 @@ public class PatternProductionOrchestrator {
                 needUpdate = true;
                 break;
             case "COMPLETE":
+                // 标记完成时，将所有进度节点都更新到100%
+                updateProgressNode(pattern, "采购", 100);
+                updateProgressNode(pattern, "裁剪", 100);
+                updateProgressNode(pattern, "二次工艺", 100);
+                updateProgressNode(pattern, "车缝", 100);
                 updateProgressNode(pattern, "尾部", 100);
+                updateProgressNode(pattern, "入库", 100);
                 markPatternProductionCompleted(pattern, now);
                 needUpdate = true;
                 break;
@@ -1170,6 +1178,8 @@ public class PatternProductionOrchestrator {
         if (!StringUtils.hasText(pattern.getReviewStatus())) {
             pattern.setReviewStatus("PENDING");
         }
+        // 同步 StyleInfo 的 productionCompletedTime
+        syncStyleInfoOnComplete(pattern);
     }
 
     private LocalDateTime resolvePatternProductionCompleteTime(PatternProduction pattern) {

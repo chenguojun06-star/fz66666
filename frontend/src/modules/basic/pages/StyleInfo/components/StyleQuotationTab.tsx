@@ -34,16 +34,16 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQ
   const materialCost = Number(Form.useWatch('materialCost', form)) || 0;
   const processCost = Number(Form.useWatch('processCost', form)) || 0;
   const otherCost = Number(Form.useWatch('otherCost', form)) || 0;
-  const profitRate = Number(Form.useWatch('profitRate', form)) || 0; // 目标利润率
-  const totalCost = materialCost + processCost + otherCost; // 总成本
+  const profitRate = Number(Form.useWatch('profitRate', form)) || 0;
+  const totalCost = materialCost + processCost + otherCost;
 
-  // 计算最终报价和利润 - 每次渲染都从表单获取最新值
   const getTotalPrice = () => {
     const val = form.getFieldValue('totalPrice');
     return Number(val) || 0;
   };
   const totalPrice = getTotalPrice();
   const profit = totalPrice - totalCost;
+  const actualProfitRate = totalPrice > 0 ? ((profit / totalPrice) * 100).toFixed(1) : '0.0';
 
   const calcBomCost = (items: any[]) => {
     return (items || []).reduce((sum: number, item: any) => {
@@ -488,50 +488,137 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQ
       </Row>
 
       {/* 实际批次报价汇总（按款式实际数量） */}
-      {totalPrice > 0 && totalQty > 0 && (
+      {totalPrice > 0 && (
         <Card
           size="small"
-          style={{ marginBottom: 8, background: 'var(--color-bg-subtle)', border: '1px solid var(--neutral-border)' }}
-          styles={{ body: { padding: '12px 16px' } }}
+          style={{ marginBottom: 8 }}
+          styles={{ body: { padding: 0 } }}
         >
-          <Row align="middle" gutter={32}>
-            <Col>
-              <span style={{ fontSize: '13px', color: 'var(--neutral-text-secondary)' }}>本批实际数量</span>
-              <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--neutral-text)' }}>{totalQty} 件</div>
-            </Col>
-            <Col flex={1} style={{ borderLeft: '1px solid var(--neutral-border)', paddingLeft: 24 }}>
-              <Row gutter={32}>
-                <Col>
-                  <span style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>单件报价</span>
-                  <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--color-danger)' }}>¥{totalPrice.toFixed(2)}</div>
-                </Col>
-                <Col>
-                  <span style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>本批总成本</span>
-                  <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--neutral-text-secondary)' }}>¥{(totalCost * totalQty).toFixed(2)}</div>
-                </Col>
-                <Col>
-                  <span style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>本批含利润总订单价</span>
-                  <div style={{ fontSize: '20px', fontWeight: 700, color: 'var(--color-danger)' }}>¥{(totalPrice * totalQty).toFixed(2)}</div>
-                </Col>
-                <Col>
-                  <span style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>预计总利润（{profitRate}%）</span>
-                  <div style={{ fontSize: '16px', fontWeight: 600, color: (totalPrice - totalCost) * totalQty >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
-                    {(totalPrice - totalCost) * totalQty >= 0 ? '+' : ''}¥{((totalPrice - totalCost) * totalQty).toFixed(2)}
-                  </div>
-                </Col>
-              </Row>
-            </Col>
-          </Row>
+          {/* 标题栏 */}
+          <div style={{
+            padding: '10px 16px',
+            borderBottom: '1px solid var(--neutral-border)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <span style={{ fontSize: '15px', fontWeight: 600 }}>💰 开发报价明细</span>
+            {totalQty > 0 && (
+              <span style={{ fontSize: '13px', color: 'var(--neutral-text-secondary)' }}>
+                本批数量：<strong>{totalQty} 件</strong>
+              </span>
+            )}
+          </div>
+
+          {/* 成本明细区域 - 两行布局 */}
+          <div style={{ padding: '16px' }}>
+            {/* 第一行：成本构成 | 报价利润 */}
+            <Row gutter={0}>
+              <Col span={12} style={{ paddingRight: 24 }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: 12, color: 'var(--neutral-text-secondary)' }}>
+                  大货成本（单件）
+                </div>
+                <Row gutter={12}>
+                  <Col span={6}>
+                    <div style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>物料成本</div>
+                    <div style={{ fontSize: '16px', fontWeight: 600 }}>¥{materialCost.toFixed(2)}</div>
+                    {bomColorCosts.colors.length > 1 && (
+                      <div style={{ fontSize: '11px', color: 'var(--neutral-text-disabled)' }}>{bomColorCosts.colors.length}色平均</div>
+                    )}
+                  </Col>
+                  <Col span={6}>
+                    <div style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>工序成本</div>
+                    <div style={{ fontSize: '16px', fontWeight: 600 }}>¥{processCost.toFixed(2)}</div>
+                  </Col>
+                  <Col span={6}>
+                    <div style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>其他费用</div>
+                    <div style={{ fontSize: '16px', fontWeight: 600 }}>¥{otherCost.toFixed(2)}</div>
+                  </Col>
+                  <Col span={6}>
+                    <div style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>单件总成本</div>
+                    <div style={{ fontSize: '16px', fontWeight: 700 }}>¥{totalCost.toFixed(2)}</div>
+                  </Col>
+                </Row>
+              </Col>
+              <Col span={12} style={{ paddingLeft: 24, borderLeft: '1px solid var(--neutral-border)' }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: 12, color: 'var(--neutral-text-secondary)' }}>
+                  总开发成本
+                </div>
+                <Row gutter={12}>
+                  <Col span={6}>
+                    <div style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>单件报价</div>
+                    <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--color-danger)' }}>¥{totalPrice.toFixed(2)}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--neutral-text-disabled)' }}>利润率 {actualProfitRate}%</div>
+                  </Col>
+                  {totalQty > 0 ? (
+                    <>
+                      <Col span={6}>
+                        <div style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>本批总成本</div>
+                        <div style={{ fontSize: '16px', fontWeight: 600 }}>¥{(totalCost * totalQty).toFixed(2)}</div>
+                      </Col>
+                      <Col span={6}>
+                        <div style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>本批订单总额</div>
+                        <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--color-danger)' }}>¥{(totalPrice * totalQty).toFixed(2)}</div>
+                      </Col>
+                      <Col span={6}>
+                        <div style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>预计总利润</div>
+                        <div style={{ fontSize: '16px', fontWeight: 700, color: (totalPrice - totalCost) * totalQty >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
+                          {(totalPrice - totalCost) * totalQty >= 0 ? '+' : ''}¥{((totalPrice - totalCost) * totalQty).toFixed(2)}
+                        </div>
+                      </Col>
+                    </>
+                  ) : (
+                    <Col span={6}>
+                      <div style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>单件利润</div>
+                      <div style={{ fontSize: '16px', fontWeight: 700, color: profit >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
+                        {profit >= 0 ? '+' : ''}¥{profit.toFixed(2)}
+                      </div>
+                    </Col>
+                  )}
+                </Row>
+              </Col>
+            </Row>
+          </div>
         </Card>
       )}
 
       {/* 2. BOM 物料清单 - 中部 */}
       <Card
-        title={<span style={{ fontSize: '15px', fontWeight: 600 }}>📦 BOM物料清单 ({bomList.length}项) - 总成本: ¥{materialCost.toFixed(2)}</span>}
+        title={
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '15px', fontWeight: 600 }}>📦 BOM物料清单 ({bomList.length}项)</span>
+            <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--primary-color)' }}>
+              单件物料成本: ¥{materialCost.toFixed(2)}
+              {bomColorCosts.colors.length > 1 && (
+                <span style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)', marginLeft: 8 }}>
+                  ({bomColorCosts.colors.length}个颜色平均)
+                </span>
+              )}
+            </span>
+          </div>
+        }
         size="small"
         style={{ marginBottom: 8 }}
         styles={{ body: { padding: '8px' } }}
       >
+        {/* 颜色成本明细 */}
+        {bomColorCosts.colors.length > 1 && (
+          <div style={{ marginBottom: 8, padding: '8px 12px', background: 'var(--color-bg-subtle)', borderRadius: 6 }}>
+            <div style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)', marginBottom: 4 }}>各颜色物料成本明细：</div>
+            <Row gutter={16}>
+              {bomColorCosts.colors.map((color) => (
+                <Col key={color}>
+                  <span style={{ fontSize: '13px', fontWeight: 500 }}>{color}：</span>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--primary-color)' }}>¥{(bomColorCosts.costByColor[color] || 0).toFixed(2)}</span>
+                </Col>
+              ))}
+              <Col>
+                <span style={{ fontSize: '13px', fontWeight: 500 }}>平均：</span>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-danger)' }}>¥{bomColorCosts.avgCost.toFixed(2)}</span>
+              </Col>
+            </Row>
+          </div>
+        )}
         <ResizableTable
           storageKey="style-quotation-bom"
           size="middle"

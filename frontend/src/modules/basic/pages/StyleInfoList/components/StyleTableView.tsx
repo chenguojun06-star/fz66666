@@ -330,9 +330,6 @@ const getSampleNodeProgress = (snapshot: PatternProductionSnapshot, key: string)
 const isSampleSnapshotFullyCompleted = (snapshot?: PatternProductionSnapshot | null) => {
   if (!snapshot) return false;
   return SAMPLE_PARENT_STAGES.every((item) => {
-    if (item.key === 'procurement') {
-      return clampPercent(Number(snapshot.procurementProgress || 0)) >= 100;
-    }
     return getSampleNodeProgress(snapshot, item.key) >= 100;
   });
 };
@@ -733,6 +730,10 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
     if (!selectedStage || selectedStage.stage.key !== 'sample') return '待启动';
     if (!isSampleSnapshotCompleted) {
       return selectedStageRecordScrapped || isScrappedPatternSnapshot(sampleSnapshot) ? '已停止' : '待启动';
+    }
+    // 优先使用 sampleSnapshot 的完成时间
+    if (sampleSnapshot?.completeTime && sampleSnapshot.completeTime !== '待启动') {
+      return sampleSnapshot.completeTime;
     }
     const finalCompletedTime = (selectedStage.record as StyleRecord).completedTime;
     if (finalCompletedTime) return formatNodeTime(finalCompletedTime);

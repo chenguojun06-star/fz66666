@@ -199,9 +199,23 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
       render: (v: unknown) => {
         const text = String(v || '').trim();
         if (!text) return '-';
-        // 提取核心信息：颜色-尺码-序号
-        const parts = text.split('-');
-        const short = parts.length >= 4 ? parts.slice(-3).join('-') : (text.length > 14 ? '...' + text.slice(-12) : text);
+        // 菲号格式: {订单号}-{款号}-{颜色}-{尺码}-{数量}-{扎号}|SKU-...|SIG-...
+        // 提取核心信息：颜色-尺码-扎号
+        const pipeIndex = text.indexOf('|');
+        const mainPart = pipeIndex > 0 ? text.substring(0, pipeIndex) : text;
+        const parts = mainPart.split('-');
+        // parts: [订单号, 款号, 颜色, 尺码, 数量, 扎号]
+        let short = text;
+        if (parts.length >= 6) {
+          const color = parts[2] || '';
+          const size = parts[3] || '';
+          const bundleNo = parts[5] || '';
+          short = `${color}-${size}#${bundleNo}`;
+        } else if (parts.length >= 4) {
+          short = parts.slice(2, 5).join('-');
+        } else if (text.length > 14) {
+          short = '...' + text.slice(-12);
+        }
         return <span title={text} style={{ fontSize: 12 }}>{short}</span>;
       },
     },

@@ -44,7 +44,7 @@ interface StyleColorSizeTableProps {
   colorOptions: string[];
   setColorOptions: (values: string[]) => void;
   matrixRows: Array<{ color: string; quantities: number[]; imageUrl?: string }>;
-  setMatrixRows: (rows: Array<{ color: string; quantities: number[]; imageUrl?: string }>) => void;
+  setMatrixRows: (rows: Array<{ color: string; quantities: number[]; imageUrl?: string }> | ((prev: Array<{ color: string; quantities: number[]; imageUrl?: string }>) => Array<{ color: string; quantities: number[]; imageUrl?: string }>)) => void;
   onImageSync?: (color: string, file: File) => Promise<void> | void;
   onImageClear?: (color: string) => Promise<void> | void;
 
@@ -110,25 +110,37 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
     borderColor: '#d9d9d9',
   };
 
+  const prevColorsRef = useRef<string[]>(selectedColors);
+  const prevSizesRef = useRef<string[]>(selectedSizes);
+
   useEffect(() => {
+    const colorsChanged = JSON.stringify(prevColorsRef.current) !== JSON.stringify(selectedColors);
+    const sizesChanged = JSON.stringify(prevSizesRef.current) !== JSON.stringify(selectedSizes);
+
+    prevColorsRef.current = selectedColors;
+    prevSizesRef.current = selectedSizes;
+
     if (!selectedColors.length || !selectedSizes.length) {
-      if (matrixRows.length) setMatrixRows([]);
+      setMatrixRows([]);
       return;
     }
 
-    const nextRows = selectedColors.map((color) => {
-      const matched = matrixRows.find((row) => row.color === color);
-      return {
-        color,
-        quantities: selectedSizes.map((_, index) => Number(matched?.quantities?.[index] || 0)),
-        imageUrl: matched?.imageUrl,
-      };
-    });
-    const same = JSON.stringify(nextRows) === JSON.stringify(matrixRows);
-    if (!same) {
-      setMatrixRows(nextRows);
+    if (!colorsChanged && !sizesChanged) {
+      return;
     }
-  }, [matrixRows, selectedColors, selectedSizes, setMatrixRows]);
+
+    // 使用函数式更新，确保使用最新的 matrixRows 值
+    setMatrixRows((prevRows: { color: string; quantities: number[]; imageUrl?: string }[]) => {
+      return selectedColors.map((color) => {
+        const matched = prevRows.find((row) => row.color === color);
+        return {
+          color,
+          quantities: selectedSizes.map((_, index) => Number(matched?.quantities?.[index] || 0)),
+          imageUrl: matched?.imageUrl,
+        };
+      });
+    });
+  }, [selectedColors, selectedSizes]);
 
   useEffect(() => {
     const rowTotals = matrixRows.map((row) => row.quantities.reduce((sum, qty) => sum + Number(qty || 0), 0));
@@ -217,8 +229,8 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
       message.warning('请上传图片文件');
       return;
     }
-    if (file.size > 2 * 1024 * 1024) {
-      message.warning('单张颜色图最大 2MB');
+    if (file.size > 10 * 1024 * 1024) {
+      message.warning('单张颜色图最大 10MB');
       return;
     }
     const imageUrl = await new Promise<string>((resolve, reject) => {

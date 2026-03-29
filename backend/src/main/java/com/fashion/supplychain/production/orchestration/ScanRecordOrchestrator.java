@@ -386,16 +386,12 @@ public class ScanRecordOrchestrator {
             body.put("rollbackRemark", "撤销扫码");
             boolean ok = productWarehousingOrchestrator.rollbackByBundle(body);
 
-            // 标记扫码记录为已撤销
-            ScanRecord patch = new ScanRecord();
-            patch.setId(target.getId());
-            patch.setScanResult("failure");
-            patch.setRemark("已撤销");
-            patch.setUpdateTime(LocalDateTime.now());
-            scanRecordService.updateById(patch);
-
             // 同步重置工序跟踪记录（撤回就应还原为待扫码）
             resetTrackingByScanRecord(target.getId());
+
+            // 删除扫码记录（彻底清除，允许重新扫码）
+            scanRecordService.removeById(target.getId());
+            log.info("[undo] 已删除扫码记录: recordId={}", target.getId());
 
             String oid = TextUtils.safeText(target.getOrderId());
             if (hasText(oid)) {
@@ -408,15 +404,12 @@ public class ScanRecordOrchestrator {
             return resp;
         }
 
-        ScanRecord patch = new ScanRecord();
-        patch.setId(target.getId());
-        patch.setScanResult("failure");
-        patch.setRemark("已撤销");
-        patch.setUpdateTime(LocalDateTime.now());
-        scanRecordService.updateById(patch);
-
         // 同步重置工序跟踪记录（撤回就应还原为待扫码）
         resetTrackingByScanRecord(target.getId());
+
+        // 删除扫码记录（彻底清除，允许重新扫码）
+        scanRecordService.removeById(target.getId());
+        log.info("[undo] 已删除扫码记录: recordId={}", target.getId());
 
         String oid = TextUtils.safeText(target.getOrderId());
         if (hasText(oid)) {
@@ -555,16 +548,12 @@ public class ScanRecordOrchestrator {
             }
         }
 
-        // 标记扫码记录为已撤销
-        ScanRecord patch = new ScanRecord();
-        patch.setId(target.getId());
-        patch.setScanResult("failure");
-        patch.setRemark("退回重扫");
-        patch.setUpdateTime(LocalDateTime.now());
-        scanRecordService.updateById(patch);
-
         // 同步重置工序跟踪记录（退回重扫就应还原为待扫码）
         resetTrackingByScanRecord(target.getId());
+
+        // 删除扫码记录（彻底清除，允许重新扫码）
+        scanRecordService.removeById(target.getId());
+        log.info("[rescan] 已删除扫码记录: recordId={}", target.getId());
 
         // 异步重算订单进度
         String orderId = TextUtils.safeText(target.getOrderId());

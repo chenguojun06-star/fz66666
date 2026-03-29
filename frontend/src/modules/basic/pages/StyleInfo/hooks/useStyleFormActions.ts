@@ -237,7 +237,7 @@ export const useStyleFormActions = ({
 
     setCompletingSample(true);
     try {
-      const res = await api.post(`/style/info/${currentStyle.id}/sample/complete`, null, { timeout: 30000 });
+      const res = await api.post(`/style/info/${currentStyle.id}/stage-action?stage=sample&action=complete`, null, { timeout: 30000 });
       if (res.code === 200) {
         message.success('样衣开发已完成，可继续进行审核与入库');
         fetchDetail(String(currentStyle.id));

@@ -225,28 +225,17 @@ const StyleInfoListPage: React.FC = () => {
       closeMaintenance();
       return;
     }
-    const url =
-      node === '样衣完成' || sampleStatus === 'COMPLETED'
-        ? `/style/info/${record.id}/sample/reset`
-        : node === '纸样完成' || patternStatus === 'COMPLETED'
-          ? `/style/info/${record.id}/pattern/reset`
-          : null;
-
-    if (!url) {
-      message.error('当前状态无需维护');
-      closeMaintenance();
-      return;
-    }
-
     const remark = String(maintenanceReason || '').trim();
     if (!remark) {
       message.error('请输入维护原因');
       return;
     }
 
+    const stage = node === '样衣完成' || sampleStatus === 'COMPLETED' ? 'sample' : 'pattern';
+
     setMaintenanceSaving(true);
     try {
-      const res = await api.post(url, { reason: remark });
+      const res = await api.post(`/style/info/${record.id}/stage-action?stage=${stage}&action=reset`, { reason: remark });
       if (res.code === 200) {
         message.success('维护成功');
         closeMaintenance();
