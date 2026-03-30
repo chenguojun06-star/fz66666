@@ -15,6 +15,7 @@
     "完整检查": "npm run 检查 && npm run 类型检查 && npm run 检查格式"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@types/node": "^20.12.7",
     "eslint": "^8.57.0",
     "miniprogram-api-typings": "^3.12.0",

@@ -1,29 +1,41 @@
 <view class="container">
-  <!-- 通用悬浮铃铛组件 -->
-
-  <!-- 智能提醒入口（有未读通知时显示） -->
-  <view wx:if="{{unreadNoticeCount > 0}}" class="inbox-banner" bindtap="goInbox" hover-class="inbox-banner-hover" hover-stay-time="100">
-    <text class="inbox-banner-icon">🔔</text>
-    <text class="inbox-banner-text">你有 {{unreadNoticeCount}} 条智能提醒待查看</text>
-    <text class="inbox-banner-arrow">›</text>
-  </view>
+  <custom-nav
+    title="生产"
+    show-search="{{true}}"
+    search-keyword="{{globalSearch.keyword}}"
+    search-placeholder="搜索订单号/款号"
+    bind:searchinput="onGlobalSearchInput"
+    bind:searchconfirm="doGlobalSearch"
+    bind:searchclear="clearGlobalSearch"
+  />
 
   <view class="card">
-    <view class="title-row">
-      <view class="title">生产</view>
+    <view wx:if="{{globalSearch.hasSearched && globalSearch.results.length > 0}}" class="global-results">
+      <view class="results-header">
+        <text class="results-title">搜索结果 ({{globalSearch.results.length}})</text>
+        <text class="close-results" bindtap="closeGlobalSearch">✕</text>
+      </view>
+      <scroll-view class="results-list" scroll-y>
+        <view wx:for="{{globalSearch.results}}" wx:key="id" class="result-item" hover-class="result-item-hover" hover-stay-time="100" bindtap="onResultItemTap" data-item="{{item}}">
+          <view class="result-header">
+            <text class="result-type">{{item.typeText}}</text>
+            <text class="result-status" style="color: {{item.statusColor}}">{{item.statusText}}</text>
+          </view>
+          <view class="result-info">
+            <text class="result-order">订单号: {{item.orderNo}}</text>
+            <text class="result-style">款号: {{item.styleNo}}</text>
+          </view>
+        </view>
+      </scroll-view>
     </view>
 
-    <!-- 搜索组件放在最上面 -->
-    <global-search
-      keyword="{{globalSearch.keyword}}"
-      results="{{globalSearch.results}}"
-      has-searched="{{globalSearch.hasSearched}}"
-      bind:input="onGlobalSearchInput"
-      bind:search="doGlobalSearch"
-      bind:clear="clearGlobalSearch"
-      bind:close="closeGlobalSearch"
-      bind:itemtap="onResultItemTap"
-    />
+    <view wx:if="{{globalSearch.hasSearched && globalSearch.results.length === 0}}" class="no-results">
+      <text class="no-results-icon">🔍</text>
+      <text class="no-results-text">未找到匹配的订单</text>
+      <view class="close-btn" bindtap="closeGlobalSearch">关闭</view>
+    </view>
+
+    <view wx:if="{{!globalSearch.hasSearched}}">
 
     <!-- 标签栏在搜索栏下面 -->
     <view class="tabbar">
@@ -54,7 +66,10 @@
         <text class="org-filter-label">⏰</text>
         <text class="org-filter-value">{{delayedOnly ? '全部' : '延期'}}</text>
       </view>
-      <view class="org-filter-clear" bindtap="clearOrderFilters">重置</view>
+      <view class="refresh-btn {{orders.loading ? 'refresh-btn-loading' : ''}}" bindtap="onRefresh" hover-class="refresh-btn-hover">
+        <text class="refresh-icon">{{orders.loading ? '⏳' : '🔄'}}</text>
+        <text class="refresh-text">刷新</text>
+      </view>
     </view>
 
     <!-- 订单列表 -->
@@ -85,59 +100,49 @@
               <view class="item-meta">
                 <text class="meta-label">款号</text>
                 <text class="meta-value">{{item.styleNo || '-'}}</text>
-                <text class="meta-sep">｜</text>
-                <text class="meta-label">工厂</text>
-                <text class="meta-value">{{item.factoryName || '-'}}</text>
-              </view>
-              <view wx:if="{{item.orgDisplay || item.factoryTypeText}}" class="item-meta">
-                <text class="meta-label">组织</text>
-                <text class="meta-value">{{item.orgDisplay || '-'}}</text>
-                <text wx:if="{{item.factoryTypeText}}" class="meta-sep">｜</text>
-                <text wx:if="{{item.factoryTypeText}}" class="meta-label">标签</text>
-                <text wx:if="{{item.factoryTypeText}}" class="meta-value">{{item.factoryTypeText}}</text>
-              </view>
-              <view class="item-qty-row">
+                <text class="meta-sep">|</text>
                 <text class="meta-label">数量</text>
                 <text class="meta-value meta-value-bold">{{item.sizeTotal ? item.sizeTotal : (item.orderQuantity || 0)}}</text>
-                <text class="meta-sep">｜</text>
+                <text class="meta-sep">|</text>
                 <text class="meta-label">完成</text>
                 <text class="meta-value meta-value-bold">{{item.completedQuantity || 0}}</text>
               </view>
-              <view class="progress-wrapper">
-                <view class="progress-bar {{item.isClosed ? 'progress-completed' : ''}}">
-                  <view class="progress-fill" style="width: {{item.productionProgress || 0}}%"></view>
-                </view>
-                <text class="progress-text progress-percent">{{item.productionProgress || 0}}%</text>
+              <view class="item-meta">
+                <text class="meta-label">工厂</text>
+                <text class="meta-value">{{item.factoryName || '-'}}</text>
+                <text wx:if="{{item.factoryTypeText}}" class="meta-sep">|</text>
+                <text wx:if="{{item.factoryTypeText}}" class="meta-value">{{item.factoryTypeText}}</text>
               </view>
             </view>
           </view>
-          <!-- 底部信息区（码数明细 + 交期） -->
-          <view wx:if="{{item.colorGroups && item.colorGroups.length}}" class="size-plain">
+          <!-- 进度条作为分隔线 -->
+          <view class="progress-divider">
+            <view class="progress-bar {{item.isClosed ? 'progress-completed' : ''}}">
+              <view class="progress-fill" style="width: {{item.productionProgress || 0}}%"></view>
+            </view>
+            <text class="progress-percent">{{item.productionProgress || 0}}%</text>
+          </view>
+          <!-- 码数明细（紧凑版） -->
+          <view wx:if="{{item.colorGroups && item.colorGroups.length}}" class="size-compact">
+            <view class="size-compact-header">
+              <text class="size-compact-label">码数</text>
+              <text wx:for="{{item.allSizes}}" wx:key="*this" wx:for-item="size" class="size-compact-cell">{{size}}</text>
+            </view>
             <block wx:for="{{item.colorGroups}}" wx:key="color" wx:for-item="group">
-              <view class="size-plain-row">
-                <text class="size-plain-label">颜色</text>
-                <text class="size-plain-cell">{{group.color || '-'}}</text>
-                <text class="size-plain-cell">总数</text>
-                <text class="size-plain-cell">{{group.total || 0}}</text>
-              </view>
-              <view class="size-plain-row">
-                <text class="size-plain-label">码数</text>
-                <text wx:for="{{group.sizeList}}" wx:key="*this" class="size-plain-cell">{{item}}</text>
-              </view>
-              <view class="size-plain-row">
-                <text class="size-plain-label">数量</text>
-                <text wx:for="{{group.sizeQtyList}}" wx:key="index" class="size-plain-cell">{{item}}</text>
+              <view class="size-compact-row">
+                <text class="size-compact-label">{{group.color || '-'}}</text>
+                <text wx:for="{{group.sizeQtyList}}" wx:key="index" wx:for-item="qty" class="size-compact-cell">{{qty}}</text>
               </view>
             </block>
           </view>
-          <view wx:elif="{{item.sizeList && item.sizeList.length}}" class="size-plain">
-            <view class="size-plain-row">
-              <text class="size-plain-label">码数</text>
-              <text wx:for="{{item.sizeList}}" wx:key="*this" class="size-plain-cell">{{item}}</text>
+          <view wx:elif="{{item.sizeList && item.sizeList.length}}" class="size-compact">
+            <view class="size-compact-row">
+              <text class="size-compact-label">码数</text>
+              <text wx:for="{{item.sizeList}}" wx:key="*this" wx:for-item="size" class="size-compact-cell">{{size}}</text>
             </view>
-            <view class="size-plain-row">
-              <text class="size-plain-label">数量</text>
-              <text wx:for="{{item.sizeQtyList}}" wx:key="index" class="size-plain-cell">{{item}}</text>
+            <view class="size-compact-row">
+              <text class="size-compact-label">数量</text>
+              <text wx:for="{{item.sizeQtyList}}" wx:key="index" wx:for-item="qty" class="size-compact-cell size-compact-qty">{{qty}}</text>
             </view>
           </view>
           <!-- 交期信息 -->
@@ -150,14 +155,12 @@
       <view class="btn">
         <view class="btn-secondary {{orders.loading || !orders.hasMore ? 'btn-disabled' : ''}}" hover-class="btn-secondary-hover" bindtap="loadMoreActive">{{orders.loading ? '加载中...' : (orders.hasMore ? '加载更多' : '没有更多了')}}</view>
       </view>
+    </view>
   </view>
-
-
-
 </view>
 
 <!-- 小云 AI 助手（全页面悬浮） -->
-<ai-assistant />
+<ai-assistant notice-count="{{unreadNoticeCount}}" />
 
 <!-- 隐私保护授权弹窗（微信 2023-09-15 强制要求） -->
 <privacy-dialog id="privacyDialog" />

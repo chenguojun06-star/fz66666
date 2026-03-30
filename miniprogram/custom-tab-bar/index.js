@@ -11,34 +11,22 @@ function buildTabList(language) {
 
 Component({
   options: {
-    styleIsolation: 'apply-shared', // 继承 page 级 CSS 变量（--color-primary 等）
+    styleIsolation: 'apply-shared',
   },
   lifetimes: {
     attached() {
-      // 延迟执行：避免在页面初始渲染周期内同步 setData，防止 FLOW_INITIAL_CREATION 冲突
-      // data.list 在 Component 定义时已用当前语言初始化，attached 只需在语言可能变化时刷新
       const lang = i18n.getLanguage();
       const currentText = this.data.list && this.data.list[0] && this.data.list[0].text;
       const expectedText = i18n.t('tabbar.home', lang);
       if (currentText !== expectedText) {
-        // 只有语言确实变化时才更新，且推迟到初始化完成后
         setTimeout(() => { this.refreshLanguage(lang); }, 0);
       }
     },
   },
   pageLifetimes: {
     show() {
-      // 自动同步 selected：防止直接 switchTab 或外部跳转后选中态不更新
-      try {
-        const pages = getCurrentPages();
-        const curPage = pages && pages.length ? pages[pages.length - 1] : null;
-        const curRoute = curPage && curPage.route ? `/${curPage.route}` : '';
-        const idx = this.data.list.findIndex(t => t.pagePath === curRoute);
-        if (idx >= 0 && this.data.selected !== idx) {
-          this.setData({ selected: idx });
-        }
-      } catch (e) { /* 容错 */ }
       this.refreshLanguage(i18n.getLanguage());
+      this.syncSelected();
     },
   },
   data: {
@@ -46,10 +34,25 @@ Component({
     list: buildTabList(i18n.getLanguage()),
   },
 
-  // 防重复点击时间戳
   _lastTapTime: 0,
+  _navigating: false,
 
   methods: {
+    syncSelected() {
+      if (this._navigating) return;
+      
+      try {
+        const pages = getCurrentPages();
+        const curPage = pages && pages.length ? pages[pages.length - 1] : null;
+        const curRoute = curPage && curPage.route ? `/${curPage.route}` : '';
+        const idx = this.data.list.findIndex(t => t.pagePath === curRoute);
+        
+        if (idx >= 0 && this.data.selected !== idx) {
+          this.setData({ selected: idx });
+        }
+      } catch (e) { /* 容错 */ }
+    },
+
     refreshLanguage(language) {
       this.setData({ list: buildTabList(language) });
     },
@@ -66,9 +69,8 @@ Component({
         return;
       }
 
-      // 300ms 内重复点击同一 tab 不再触发（防误触，不用全局锁）
       const now = Date.now();
-      if (now - this._lastTapTime < 300) {
+      if (now - this._lastTapTime < 500) {
         return;
       }
       this._lastTapTime = now;
@@ -77,25 +79,21 @@ Component({
       const current = pages && pages.length ? pages[pages.length - 1] : null;
       const currentRoute = current && current.route ? `/${current.route}` : '';
 
-      // 已在当前页：只同步选中态，不导航
       if (currentRoute === item.pagePath) {
         this.setData({ selected: idx });
         return;
       }
 
-      // 立即更新选中态，给用户即时视觉反馈
       this.setData({ selected: idx });
+      this._navigating = true;
 
-      // 直接调用 wx.switchTab（不使用 safeNavigate 全局锁，避免被 app 内其他导航阻断）
       wx.switchTab({
         url: item.pagePath,
-        fail: () => {
-          // 导航失败：恢复到之前的选中态
-          const prevPages = getCurrentPages();
-          const prevPage = prevPages && prevPages.length ? prevPages[prevPages.length - 1] : null;
-          const prevRoute = prevPage && prevPage.route ? `/${prevPage.route}` : '';
-          const prevIdx = this.data.list.findIndex(t => t.pagePath === prevRoute);
-          if (prevIdx >= 0) this.setData({ selected: prevIdx });
+        complete: () => {
+          setTimeout(() => {
+            this._navigating = false;
+            this.syncSelected();
+          }, 100);
         },
       });
     },

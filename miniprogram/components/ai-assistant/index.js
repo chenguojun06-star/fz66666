@@ -3,24 +3,25 @@ const bellTaskLoader = require('./bellTaskLoader.js');
 const bellTaskActions = require('./bellTaskActions.js');
 const { toast } = require('../../utils/uiHelper.js');
 
-const WECHAT_SI_ENABLED = false;
-
 Component({
   properties: {
     visible: {
       type: Boolean,
       value: true,
     },
+    noticeCount: {
+      type: Number,
+      value: 0,
+    },
   },
   data: {
     isOpen: false,
     inputValue: '',
-    messages: [], // will be injected on attached
+    messages: [],
     isLoading: false,
     scrollTo: '',
 
-    // --- Task Integration ---
-    currentTab: 'chat', // 'chat' or 'tasks'
+    currentTab: 'chat',
     totalTasks: 0,
     qualityTasks: [],
     cuttingTasks: [],
@@ -36,29 +37,20 @@ Component({
     isTenantOwner: false,
     isManager: false,
     taskLoading: false,
-    isRecording: false,
-    voiceEnabled: false,
-    voiceEntryVisible: false,
-    voiceHint: '',
   },
   lifetimes: {
     attached() {
-      // 推迟到下一个 tick，避免在父页面初始渲染周期内同步触发 setData
-      // 防止 FLOW_INITIAL_CREATION / Expected updated data 渲染层错误
       setTimeout(() => {
-        // 热重载保护：组件已卸载时不再执行
         if (!this.data) return;
 
         let userName = '';
         let isManager = false;
         try {
-          // 兼容两种 storage key（userInfo / user_info）
           const userInfo = wx.getStorageSync('user_info') || wx.getStorageSync('userInfo') || {};
           if (userInfo.realName) userName = userInfo.realName;
           else if (userInfo.username) userName = userInfo.username;
           else if (userInfo.nickname) userName = userInfo.nickname;
 
-          // 角色判断：租户老板 or 管理角色 => 管理员模式
           const role = String(userInfo.role || userInfo.roleCode || '').toLowerCase();
           isManager = userInfo.isTenantOwner === true ||
             ['admin', 'super_admin', 'manager', 'supervisor',
@@ -82,7 +74,6 @@ Component({
             content: greeting,
           }],
         });
-        this.initVoiceRecognition();
       }, 0);
     },
   },
@@ -105,60 +96,6 @@ Component({
     }
   },
   methods: {
-    initVoiceRecognition() {
-      if (!WECHAT_SI_ENABLED) {
-        this.setData({ voiceEnabled: false, voiceEntryVisible: false });
-        return;
-      }
-      if (this.voiceManager) {
-        this.setData({ voiceEnabled: true, voiceEntryVisible: true });
-        return;
-      }
-      try {
-        const plugin = requirePlugin('WechatSI');
-        const manager = plugin && typeof plugin.getRecordRecognitionManager === 'function'
-          ? plugin.getRecordRecognitionManager()
-          : null;
-        if (!manager) {
-          this.setData({ voiceEnabled: false });
-          return;
-        }
-        this.voiceManager = manager;
-        manager.onStart = () => {
-          this.setData({ isRecording: true, voiceHint: '正在听，请松开结束' });
-        };
-        manager.onRecognize = (res) => {
-          const text = String((res && res.result) || '').trim();
-          if (text) {
-            this.setData({ voiceHint: text });
-          }
-        };
-        manager.onStop = (res) => {
-          const text = String((res && res.result) || '').trim().replace(/[。]+$/g, '');
-          this.setData({ isRecording: false, voiceHint: '' });
-          if (!text) {
-            toast.info('没听清，再说一次');
-            return;
-          }
-          this.setData({ inputValue: text }, () => {
-            this.sendMessage();
-          });
-        };
-        manager.onError = (res) => {
-          this.setData({ isRecording: false, voiceHint: '' });
-          const msg = String((res && (res.msg || res.errMsg)) || '');
-          if (msg.includes('auth deny')) {
-            toast.error('请先允许麦克风权限');
-            return;
-          }
-          toast.error('语音识别失败，请重试');
-        };
-        this.setData({ voiceEnabled: true, voiceEntryVisible: true });
-      } catch (err) {
-        console.warn('[AiAssistant] voice plugin unavailable', err);
-        this.setData({ voiceEnabled: false, voiceEntryVisible: false });
-      }
-    },
     switchTab(e) {
       this.setData({ currentTab: e.currentTarget.dataset.tab });
     },
@@ -195,7 +132,6 @@ Component({
       }
     },
 
-    // Delegation of Task clicks
     handleQualityTask(e) {
       const task = e.currentTarget.dataset.item;
       this.setData({ isOpen: false });
@@ -234,34 +170,7 @@ Component({
     onInput(e) {
       this.setData({ inputValue: e.detail.value });
     },
-    startVoiceInput() {
-      if (!this.data.voiceEnabled) {
-        toast.info('当前小程序未启用语音插件');
-        return;
-      }
-      if (this.data.isLoading || this.data.isRecording || !this.voiceManager) {
-        return;
-      }
-      wx.authorize({
-        scope: 'scope.record',
-        success: () => {
-          wx.vibrateShort({ type: 'light' });
-          this.voiceManager.start({
-            lang: 'zh_CN',
-            duration: 60000,
-          });
-        },
-        fail: () => {
-          toast.error('请先允许麦克风权限');
-        },
-      });
-    },
-    stopVoiceInput() {
-      if (!this.data.isRecording || !this.voiceManager) {
-        return;
-      }
-      this.voiceManager.stop();
-    },
+
     async sendMessage() {
       const text = this.data.inputValue.trim();
       if (!text || this.data.isLoading) return;
@@ -318,7 +227,7 @@ Component({
         else if (userInfo.username) userName = userInfo.username;
         else if (userInfo.nickname) userName = userInfo.nickname;
       } catch (err) {
-        // ignore: user info read failure is non-critical
+        // ignore
       }
 
       const greeting = userName ? `Hi 👋 ${userName}，我是小云～ 有什么可以帮您的？\n可以直接点下面的快捷问题，或者问我任何关于订单、工厂、库存的问题哦！` : `Hi 👋 我是小云～ 有什么可以帮您的？\n可以直接点下面的快捷问题，或者问我任何关于订单、工厂、库存的问题哦！`;

@@ -278,16 +278,17 @@ wx-vconsole,
   border-radius: var(--radius-full);
   box-shadow: 0 2px 6px rgba(59, 130, 246, 0.15);
   white-space: nowrap;
+  transition: all 0.2s ease;
 }
 
-.global-search .clear-btn {
-  padding: 8px 20px;
-  font-size: 15px;
-  color: var(--color-text-secondary);
-  background: rgba(224, 242, 254, 0.3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
-  white-space: nowrap;
+.global-search .search-btn-clear {
+  background: #fff2f0;
+  border-color: #ffccc7;
+  color: #ff4d4f;
+}
+
+.global-search .search-btn:active {
+  opacity: 0.8;
 }
 
 /* ============ 全局搜索结果 ============ */

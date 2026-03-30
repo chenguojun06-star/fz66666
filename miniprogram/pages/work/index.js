@@ -1,7 +1,6 @@
 const api = require('../../utils/api');
 const { errorHandler } = require('../../utils/errorHandler');
 const { syncManager } = require('../../utils/syncManager');
-const { onDataRefresh, eventBus } = require('../../utils/eventBus');
 const { toast, safeNavigate } = require('../../utils/uiHelper');
 const { getCurrentFactoryId } = require('../../utils/permission');
 
@@ -68,13 +67,9 @@ Page({
 
   onShow() {
     const app = getApp();
-    if (app && typeof app.setTabSelected === 'function') {
-      app.setTabSelected(this, 1);
-    }
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) {
       return;
     }
-    // 工厂账号隐藏仓库卡片
     this.setData({ isFactory: !!getCurrentFactoryId() });
     try {
       const nextTab = wx.getStorageSync('work_active_tab');
@@ -86,16 +81,15 @@ Page({
         wx.removeStorageSync('work_active_tab');
       }
     } catch (e) {
-      null;
+      console.error('读取tab失败:', e);
     }
 
-    // ⚠️ 强制刷新订单列表（应对后端数据变更）
-    this.loadOrders(true);
+    if (!this.data.orders.list || this.data.orders.list.length === 0) {
+      this.loadOrders(true);
+    }
 
-    // 加载未读智能提醒数
     this.loadUnreadNoticeCount();
 
-    // 检查是否有pending_order_hint，如果有则显示提示
     try {
       const pendingOrderHint = wx.getStorageSync('pending_order_hint');
       if (pendingOrderHint) {
@@ -103,57 +97,48 @@ Page({
         wx.removeStorageSync('pending_order_hint');
       }
 
-      // 检查是否需要高亮显示订单
       const highlightOrderNo = wx.getStorageSync('highlight_order_no');
       if (highlightOrderNo) {
         this.setData({ highlightOrderNo });
         wx.removeStorageSync('highlight_order_no');
       }
+
+      const scrollToOrderNo = wx.getStorageSync('scroll_to_order_no');
+      if (scrollToOrderNo) {
+        wx.removeStorageSync('scroll_to_order_no');
+        this.scrollToOrder(scrollToOrderNo);
+      }
     } catch (e) {
-      // 检查pending_order_hint失败静默处理
+      console.error('读取提示失败:', e);
     }
-
-
-
-    // 启动订单列表的实时同步 (30 秒轮询一次)
-    this.setupOrderSync();
-
-    // 设置数据刷新监听
-    this.setupDataRefreshListener();
-
-    this.ensureLoaded();
   },
 
-  setupDataRefreshListener() {
-    // 如果已经设置监听，先取消旧的
-    if (this._unsubscribeRefresh) {
-      this._unsubscribeRefresh();
-    }
-    if (this._unsubPrivacy) {
-      this._unsubPrivacy();
-    }
+  scrollToOrder(orderNo) {
+    if (!orderNo || !this.data.orders.list) return;
 
-    // 订阅数据刷新事件
-    this._unsubscribeRefresh = onDataRefresh(_payload => {
-      // 刷新当前页面数据
-      this.loadOrders(true);
-    });
+    const index = this.data.orders.list.findIndex(
+      order => order.orderNo === orderNo || order.styleNo === orderNo
+    );
 
-    // 订阅隐私授权弹窗事件（微信审核必须）
-    if (eventBus && typeof eventBus.on === 'function') {
-      this._unsubPrivacy = eventBus.on('showPrivacyDialog', resolve => {
-        try {
-          const dialog = this.selectComponent('#privacyDialog');
-          if (dialog && typeof dialog.showDialog === 'function') {
-            dialog.showDialog(resolve);
-          }
-        } catch (_) { /* 静默忽略 */ }
+    if (index >= 0) {
+      this.setData({
+        highlightOrderNo: orderNo,
+        scrollToIndex: index,
       });
+
+      setTimeout(() => {
+        this.setData({ highlightOrderNo: '' });
+      }, 3000);
     }
   },
 
   onPullDownRefresh() {
     this.refreshActive().finally(() => wx.stopPullDownRefresh());
+  },
+
+  onRefresh() {
+    if (this.data.orders.loading) return;
+    this.refreshActive();
   },
 
   onReachBottom() {
@@ -417,6 +402,21 @@ Page({
   onHide() {
     // 页面隐藏时停止同步（节省资源）
     syncManager.stopSync('work_orders');
+  },
+
+  onUnload() {
+    // 页面卸载时清理所有资源
+    syncManager.stopSync('work_orders');
+
+    // 清理数据刷新监听
+    if (this._unsubscribeRefresh) {
+      this._unsubscribeRefresh();
+      this._unsubscribeRefresh = null;
+    }
+    if (this._unsubPrivacy) {
+      this._unsubPrivacy();
+      this._unsubPrivacy = null;
+    }
   },
 
   // ==================== 全局搜索功能 ====================

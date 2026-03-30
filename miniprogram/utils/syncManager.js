@@ -46,10 +46,13 @@ class SyncManager {
       onDataChange: opts.onDataChange || null,
       onError: opts.onError || null,
       compareData: opts.compareData || this._defaultCompare,
+      immediate: opts.immediate !== false, // 默认立即执行，可传 false 延迟执行
     };
 
-    // 立即执行一次
-    this._executeSync(config);
+    // 延迟执行首次同步，避免阻塞页面切换
+    if (config.immediate) {
+      setTimeout(() => this._executeSync(config), 100);
+    }
 
     // 设置定时器
     const timer = setInterval(() => {

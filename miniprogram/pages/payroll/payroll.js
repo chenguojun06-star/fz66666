@@ -209,8 +209,8 @@ Page({
       return time >= monthStart && time <= monthEnd;
     });
 
-    const totalAmount = monthData.reduce((sum, item) => sum + (item.totalAmount || 0), 0);
-    const totalQuantity = monthData.reduce((sum, item) => sum + (item.quantity || 0), 0);
+    const totalAmount = monthData.reduce((sum, item) => sum + (Number(item.totalAmount) || 0), 0);
+    const totalQuantity = monthData.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
     const orderNos = new Set(monthData.map(item => item.orderNo).filter(Boolean));
 
     // 处理明细数据（当前筛选）

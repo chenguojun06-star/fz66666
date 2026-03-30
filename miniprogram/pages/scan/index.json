@@ -1,7 +1,9 @@
 {
-  "navigationBarTitleText": "扫码",
+  "navigationStyle": "custom",
   "usingComponents": {
+    "custom-nav": "/components/common/custom-nav/index",
     "ai-assistant": "/components/ai-assistant/index",
-    "mp-modal": "/components/common/mp-modal/index"
+    "mp-modal": "/components/common/mp-modal/index",
+    "privacy-dialog": "/components/privacy-dialog/index"
   }
 }

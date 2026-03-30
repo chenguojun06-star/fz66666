@@ -22,37 +22,43 @@
     "pages/order/index",
     "pages/privacy/index"
   ],
-  "usingComponents": {
-    "privacy-dialog": "/components/privacy-dialog/index"
-  },
+  "usingComponents": {},
   "tabBar": {
-    "custom": true,
-    "color": "#8e8e93",
-    "selectedColor": "#475569",
-    "backgroundColor": "#f2f2f7",
+    "custom": false,
+    "color": "#999999",
+    "selectedColor": "#3b82f6",
+    "backgroundColor": "#ffffff",
     "borderStyle": "white",
     "list": [
       {
         "pagePath": "pages/home/index",
-        "text": "首页"
+        "text": "首页",
+        "iconPath": "/assets/tabbar/home.png",
+        "selectedIconPath": "/assets/tabbar/home-active.png"
       },
       {
         "pagePath": "pages/work/index",
-        "text": "生产"
+        "text": "生产",
+        "iconPath": "/assets/tabbar/work.png",
+        "selectedIconPath": "/assets/tabbar/work-active.png"
       },
       {
         "pagePath": "pages/scan/index",
-        "text": "扫码"
+        "text": "扫码",
+        "iconPath": "/assets/tabbar/scan.png",
+        "selectedIconPath": "/assets/tabbar/scan-active.png"
       },
       {
         "pagePath": "pages/admin/index",
-        "text": "我的"
+        "text": "我的",
+        "iconPath": "/assets/tabbar/admin.png",
+        "selectedIconPath": "/assets/tabbar/admin-active.png"
       }
     ]
   },
   "window": {
     "navigationBarTitleText": "生产管理",
-    "navigationBarBackgroundColor": "#f3f5f9",
+    "navigationBarBackgroundColor": "#ffffff",
     "navigationBarTextStyle": "black",
     "backgroundTextStyle": "light"
   },

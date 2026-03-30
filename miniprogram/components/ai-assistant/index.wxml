@@ -1,13 +1,28 @@
 <view class="ai-assistant-container" hover-class="none" hover-stop-propagation="false" wx:if="{{visible}}">
-  <!-- 顶部固定入口，位于铃铛左侧，使用CSS背景作为图标展示 -->
-  <view class="ai-trigger-btn" catchtap="toggleChat" hover-class="ai-trigger-hover" hover-stay-time="50" wx:if="{{!isOpen}}"></view>
-  <!-- 任务角标：独立 fixed 定位，避免 absolute 在 fixed 父元素内位置不准 -->
-  <view class="ai-badge" wx:if="{{!isOpen && totalTasks > 0}}">{{totalTasks}}</view>
+  <view class="ai-trigger-btn" catchtap="toggleChat" hover-class="ai-trigger-hover" hover-stay-time="50" wx:if="{{!isOpen}}">
+    <view class="mini-cloud-wrapper">
+      <view class="mini-cloud-glow"></view>
+      <view class="mini-cloud">
+        <view class="mini-cloud-part mini-cloud-part-left"></view>
+        <view class="mini-cloud-part mini-cloud-part-center"></view>
+        <view class="mini-cloud-part mini-cloud-part-right"></view>
+        <view class="mini-cloud-base"></view>
+        <view class="mini-cloud-eye mini-cloud-eye-left">
+          <view class="mini-cloud-eye-highlight"></view>
+        </view>
+        <view class="mini-cloud-eye mini-cloud-eye-right">
+          <view class="mini-cloud-eye-highlight"></view>
+        </view>
+        <view class="mini-cloud-smile"></view>
+        <view class="mini-cloud-spark mini-cloud-spark-left"></view>
+        <view class="mini-cloud-spark mini-cloud-spark-right"></view>
+      </view>
+    </view>
+  </view>
+  <view class="ai-badge" wx:if="{{!isOpen && (totalTasks > 0 || noticeCount > 0)}}">{{totalTasks + noticeCount > 99 ? '99+' : totalTasks + noticeCount}}</view>
 
-  <!-- 遮罩层 -->
   <view class="chat-overlay" wx:if="{{isOpen}}" catchtap="toggleChat"></view>
 
-  <!-- 聊天弹窗 -->
   <view class="chat-modal" wx:if="{{isOpen}}">
     <view class="chat-header">
       <view class="header-tabs">
@@ -26,15 +41,12 @@
     </view>
 
     <view class="chat-main" wx:if="{{currentTab === 'chat'}}">
-    <!-- 快捷问题卡片（角色差异化） -->
     <view class="quick-chips" wx:if="{{messages.length <= 1 && !isLoading}}">
-      <!-- 管理员/老板/跟单 -->
       <block wx:if="{{isManager}}">
         <view class="quick-chip" catchtap="autoAsk" data-question="帮我生成今日智能日报">📊 生成日报</view>
         <view class="quick-chip" catchtap="autoAsk" data-question="当前有哪些逾期或高风险订单？">⚠️ 风险订单</view>
         <view class="quick-chip" catchtap="autoAsk" data-question="今天工厂扫码情况如何？">🔍 今日扫码</view>
       </block>
-      <!-- 普通生产员工 -->
       <block wx:else>
         <view class="quick-chip" catchtap="autoAsk" data-question="我今天负责的生产任务是什么？">📋 我的任务</view>
         <view class="quick-chip" catchtap="autoAsk" data-question="帮我查一下我最近的扫码记录">🔍 扫码记录</view>
@@ -65,28 +77,20 @@
       </block>
       <view class="loading-indicator" wx:if="{{isLoading}}">小云正在思考...</view>
     </scroll-view>
-    <view class="voice-hint" wx:if="{{voiceHint}}">{{voiceHint}}</view>
     <view class="chat-input-area">
-      <view
-        wx:if="{{voiceEntryVisible}}"
-        class="voice-btn {{isRecording ? 'voice-btn-recording' : ''}} {{(!voiceEnabled || isLoading) ? 'voice-btn-disabled' : ''}}"
-        catchtouchstart="startVoiceInput"
-        catchtouchend="stopVoiceInput"
-        catchtouchcancel="stopVoiceInput"
-      >{{isRecording ? '松开发送' : '按住说话'}}</view>
       <input class="chat-input" value="{{inputValue}}" placeholder="问点什么..." bindinput="onInput" confirm-type="send" bindconfirm="sendMessage" />
-      <button class="send-btn {{(isLoading || !inputValue) ? 'btn-disabled' : ''}}" catchtap="sendMessage" disabled="{{isLoading || !inputValue}}">发送</button>
+      <view class="send-btn-mini {{(isLoading || !inputValue) ? 'btn-disabled' : ''}}" catchtap="sendMessage">
+        <text class="send-icon">➤</text>
+      </view>
     </view>
-    </view> <!-- Close chat-main -->
+    </view>
 
-    <!-- Tasks Main View -->
     <scroll-view class="tasks-main" scroll-y wx:if="{{currentTab === 'tasks'}}">
       <view class="empty-state" wx:if="{{totalTasks === 0}}">
         <view class="empty-icon">🎉</view>
         <view class="empty-text">太棒了！所有任务都处理完了</view>
       </view>
 
-      <!-- 质检任务 -->
       <view class="task-section" wx:if="{{qualityTasks && qualityTasks.length > 0}}">
         <view class="section-title">
           <text class="icon">🔍</text> 待质检 ({{qualityTasks.length}})
@@ -110,7 +114,6 @@
         </view>
       </view>
 
-      <!-- 裁剪任务 -->
       <view class="task-section" wx:if="{{cuttingTasks && cuttingTasks.length > 0}}">
         <view class="section-title">
           <text class="icon">✂️</text> 待裁剪 ({{cuttingTasks.length}})
@@ -132,7 +135,6 @@
         </view>
       </view>
 
-      <!-- 采购任务 -->
       <view class="task-section" wx:if="{{purchaseTasks && purchaseTasks.length > 0}}">
         <view class="section-title">
           <text class="icon">🛒</text> 待采购 ({{purchaseTasks.length}})
@@ -155,7 +157,6 @@
         </view>
       </view>
 
-      <!-- 次品待返修 -->
       <view class="task-section" wx:if="{{repairTasks && repairTasks.length > 0}}">
         <view class="section-title">
           <text class="icon">🔧</text> 待返修 ({{repairTasks.length}})
@@ -174,7 +175,6 @@
         </view>
       </view>
 
-      <!-- 延期订单 -->
       <view class="task-section" wx:if="{{overdueOrders && overdueOrders.length > 0}}">
         <view class="section-title">
           <text class="icon">⏰</text> 延期订单 ({{overdueOrders.length}})
@@ -190,7 +190,6 @@
         </view>
       </view>
 
-      <!-- 待审批用户（管理员可见） -->
       <view class="task-section" wx:if="{{pendingUsers && pendingUsers.length > 0}}">
         <view class="section-title">
           <text class="icon">👤</text> 待审批用户 ({{pendingUsers.length}})
@@ -206,7 +205,6 @@
         </view>
       </view>
 
-      <!-- 待审批员工注册（租户主账号可见） -->
       <view class="task-section" wx:if="{{pendingRegistrations && pendingRegistrations.length > 0}}">
         <view class="section-title">
           <text class="icon">📝</text> 待审批注册 ({{pendingRegistrations.length}})

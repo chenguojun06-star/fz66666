@@ -1,0 +1,31 @@
+<view class="custom-nav" style="background-color: {{bgColor}};">
+  <view class="status-bar" style="height: {{statusBarHeight}}px;"></view>
+  <view class="nav-content" style="height: {{navBarHeight}}px;">
+    <view class="nav-left">
+      <view wx:if="{{showBack}}" class="back-btn" bindtap="onBack">
+        <text class="back-icon">‹</text>
+      </view>
+      <text wx:if="{{title}}" class="nav-title-left">{{title}}</text>
+    </view>
+    
+    <view wx:if="{{showSearch}}" class="nav-center">
+      <view class="search-box">
+        <text class="search-icon">🔍</text>
+        <input
+          class="search-input"
+          placeholder="{{searchPlaceholder}}"
+          value="{{searchKeyword}}"
+          bindinput="onSearchInput"
+          bindconfirm="onSearchConfirm"
+          confirm-type="search"
+        />
+        <text wx:if="{{searchKeyword}}" class="clear-icon" bindtap="onSearchClear">✕</text>
+      </view>
+    </view>
+    
+    <view class="nav-right">
+      <slot name="right"></slot>
+    </view>
+  </view>
+</view>
+<view class="nav-placeholder" style="height: {{statusBarHeight + navBarHeight}}px;"></view>

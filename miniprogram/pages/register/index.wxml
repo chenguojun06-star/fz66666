@@ -15,7 +15,9 @@
           disabled="{{!!scannedCode}}"
         />
         <view class="scan-btn" bindtap="onScanCode">
-          <text class="scan-icon">📷</text>
+          <view class="scan-icon-svg">
+            <image src="/assets/icons/scan-blue.svg" mode="aspectFit" style="width: 20px; height: 20px;" />
+          </view>
         </view>
       </view>
       <view wx:if="{{tenantName}}" class="tenant-info">

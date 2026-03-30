@@ -1,27 +1,30 @@
 <view class="container">
-  <!-- 通用悬浮铃铛组件 -->
+  <custom-nav
+    title="我的"
+    show-search="{{false}}"
+  />
 
   <view class="card">
-    <view class="title-row">
-      <view class="title-left-group">
-        <view class="title">我的</view>
-        <view class="logout-btn" hover-class="logout-btn-hover" hover-stay-time="100" bindtap="onLogout">
-          <text class="logout-text">退出</text>
-        </view>
-      </view>
-    </view>
-
     <!-- 用户信息 -->
     <view wx:if="{{userInfo}}" class="user-profile-card">
-      <view class="profile-avatar">
-        <image wx:if="{{avatarImgUrl}}" src="{{avatarImgUrl}}" mode="aspectFill" style="width:100%;height:100%;border-radius:50%;display:block;" binderror="onAvatarError"/>
-        <text wx:else>{{avatarLetter}}</text>
-      </view>
-      <view class="profile-name">{{userInfo.name || userInfo.username || '未知用户'}}</view>
-      <view class="profile-role">{{roleDisplayName || '普通用户'}}</view>
-      <view wx:if="{{showApprovalEntry}}" class="profile-online">
-        <text class="online-icon">👥</text>
-        <text>{{onlineCount}}人</text>
+      <view class="profile-header">
+        <view class="profile-avatar">
+          <image wx:if="{{avatarImgUrl}}" src="{{avatarImgUrl}}" mode="aspectFill" style="width:100%;height:100%;border-radius:50%;display:block;" binderror="onAvatarError"/>
+          <text wx:else>{{avatarLetter}}</text>
+        </view>
+        <view class="profile-info">
+          <view class="profile-name-row">
+            <text class="profile-name">{{userInfo.name || userInfo.username || '未知用户'}}</text>
+            <view class="logout-btn" hover-class="logout-btn-hover" hover-stay-time="100" bindtap="onLogout">
+              <text class="logout-text">退出</text>
+            </view>
+          </view>
+          <view class="profile-role">{{roleDisplayName || '普通用户'}}</view>
+          <view wx:if="{{showApprovalEntry}}" class="profile-online">
+            <text class="online-icon">👥</text>
+            <text>{{onlineCount}}人</text>
+          </view>
+        </view>
       </view>
     </view>
 

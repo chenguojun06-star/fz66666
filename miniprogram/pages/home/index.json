@@ -1,7 +1,7 @@
 {
-  "navigationBarTitleText": "首页",
+  "navigationStyle": "custom",
   "usingComponents": {
-    "global-search": "/components/common/global-search/index",
+    "custom-nav": "/components/common/custom-nav/index",
     "ai-assistant": "/components/ai-assistant/index"
   }
 }

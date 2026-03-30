@@ -59,10 +59,8 @@ Page({
   onShow() {
     this.applyLanguage(i18n.getLanguage());
 
+    // tab-bar 选中状态由 custom-tab-bar 的 pageLifetimes.show 自动处理
     const app = getApp();
-    if (app && typeof app.setTabSelected === 'function') {
-      app.setTabSelected(this, 3);
-    }
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) {
       return;
     }

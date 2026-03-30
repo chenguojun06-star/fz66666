@@ -41,8 +41,11 @@
 </wxs>
 
 <view class="page">
-  <!-- 通用悬浮铃铛组件 -->
-  <!-- 离线待同步提示条：无网时扫码会自动入队，此条提示待上传数量 -->
+  <custom-nav
+    title="扫码"
+    show-search="{{false}}"
+  />
+
   <view wx:if="{{offlinePendingCount > 0}}" class="offline-badge-bar" bindtap="onManualSync">
     <text class="offline-badge-icon">{{offlineSyncing ? '⏳' : '📤'}}</text>
     <text class="offline-badge-text">{{offlineSyncing ? '同步中...' : offlinePendingCount + ' 条待上传，点击立即同步'}}</text>
@@ -51,7 +54,10 @@
   <view class="today-stats-card">
     <view class="tsc-head">
       <text class="tsc-title">📊 今日统计</text>
-      <text class="tsc-refresh {{my.loadingStats ? 'off' : ''}}" bindtap="refreshMy">刷新</text>
+      <view class="refresh-btn {{my.loadingStats ? 'refresh-btn-loading' : ''}}" bindtap="refreshMy" hover-class="refresh-btn-hover">
+        <text class="refresh-icon">{{my.loadingStats ? '⏳' : '🔄'}}</text>
+        <text class="refresh-text">刷新</text>
+      </view>
     </view>
     <view class="tsc-grid">
       <view class="tsc-item">
@@ -128,7 +134,9 @@
   <view class="scan-area-big">
     <view class="scan-row">
       <view class="scan-btn-big {{loading ? 'off' : ''}}" hover-class="scan-btn-big-hover" hover-stay-time="100" bindtap="onScan">
-        <text class="scan-btn-icon">📷</text>
+        <view class="scan-btn-icon-svg">
+          <image src="/assets/icons/scan-blue.svg" mode="aspectFit" style="width: 28px; height: 28px;" />
+        </view>
         <view class="scan-btn-text-group">
           <text class="scan-btn-main">{{loading ? '识别中...' : '扫码识别'}}</text>
           <text class="scan-btn-sub">{{lastUsedProcessName ? '上次：' + lastUsedProcessName : '自动匹配工序'}}</text>

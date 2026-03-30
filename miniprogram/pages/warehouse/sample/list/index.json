@@ -3,6 +3,7 @@
   "enablePullDownRefresh": true,
   "usingComponents": {
     "date-picker": "/components/common/date-picker/index",
-    "mp-modal": "/components/common/mp-modal/index"
+    "mp-modal": "/components/common/mp-modal/index",
+    "privacy-dialog": "/components/privacy-dialog/index"
   }
 }

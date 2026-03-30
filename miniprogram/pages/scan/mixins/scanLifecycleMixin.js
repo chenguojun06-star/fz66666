@@ -95,11 +95,8 @@ const scanLifecycleMixin = Behavior({
    * @returns {Promise<void>} 无返回值
    */
   async onShow() {
-    // 设置 tab-bar 选中状态（扫码页面是第3个tab，索引为2）
-    const app = getApp();
-    if (app && typeof app.setTabSelected === 'function') {
-      app.setTabSelected(this, 2);
-    }
+    // tab-bar 选中状态由 custom-tab-bar 的 pageLifetimes.show 自动处理
+    // 不再手动设置，避免竞态条件
 
     // 每次显示都检查登录状态和更新统计
     const isLogin = await this.checkLoginStatus();

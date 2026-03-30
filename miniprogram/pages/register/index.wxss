@@ -37,18 +37,26 @@ page {
 }
 
 .scan-btn {
-  width: 80rpx;
-  height: 80rpx;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-primary, #2d7ff9);
-  border-radius: 16rpx;
+  background: transparent;
+  border-radius: 8px;
   flex-shrink: 0;
 }
 
 .scan-icon {
-  font-size: 36rpx;
+  font-size: 18px;
+}
+
+.scan-icon-svg {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tenant-info {

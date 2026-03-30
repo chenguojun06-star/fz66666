@@ -106,6 +106,7 @@ function buildColorSizeMeta(order) {
   }
 
   const colorMap = new Map();
+  const allSizesSet = new Set();
 
   lines.forEach(line => {
     const color = normalizeText(line && line.color);
@@ -115,6 +116,8 @@ function buildColorSizeMeta(order) {
       return;
     }
 
+    allSizesSet.add(size);
+    
     if (!colorMap.has(color)) {
       colorMap.set(color, { color, sizeMap: new Map(), total: 0 });
     }
@@ -123,15 +126,19 @@ function buildColorSizeMeta(order) {
     current.total += qty;
   });
 
-  return Array.from(colorMap.values()).map(group => {
-    const sizeList = sortSizes(Array.from(group.sizeMap.keys()));
-    return {
-      color: group.color,
-      sizeList,
-      sizeQtyList: sizeList.map(size => group.sizeMap.get(size) || 0),
-      total: group.total,
-    };
-  });
+  // 先获取所有尺码并排序
+  const allSizes = sortSizes(Array.from(allSizesSet));
+
+  return {
+    groups: Array.from(colorMap.values()).map(group => {
+      return {
+        color: group.color,
+        sizeQtyList: allSizes.map(size => group.sizeMap.get(size) || 0),
+        total: group.total,
+      };
+    }),
+    allSizes,
+  };
 }
 
 /**
@@ -249,7 +256,9 @@ function transformOrderData(r) {
   const validated = validateAndNormalizeOrder(r);
   const source = validated || r || {};
   const sizeMeta = buildSizeMeta(source);
-  const colorGroups = buildColorSizeMeta(source);
+  const colorSizeMeta = buildColorSizeMeta(source);
+  const colorGroups = colorSizeMeta.groups || [];
+  const allSizes = colorSizeMeta.allSizes || [];
   const delivery = calcDeliveryInfo(source);
   const urgencyTagText = mapUrgencyLabel(source.urgencyLevel || source.urgency_level);
   const plateTypeTagText = mapPlateTypeLabel(source.plateType || source.plate_type);
@@ -262,6 +271,11 @@ function transformOrderData(r) {
     styleCoverUrl = getAuthedImageUrl(cover);
   }
 
+  // 计算总数量
+  const totalQuantity = colorGroups.length > 0
+    ? colorGroups.reduce((sum, g) => sum + g.total, 0)
+    : sizeMeta.sizeTotal;
+
   return {
     ...source,
     styleCoverUrl,
@@ -271,6 +285,8 @@ function transformOrderData(r) {
     sizeQtyList: sizeMeta.sizeQtyList,
     sizeTotal: sizeMeta.sizeTotal,
     colorGroups,
+    allSizes,
+    totalQuantity,
     deliveryDateStr: delivery.deliveryDateStr,
     remainDays: delivery.remainDays,
     remainDaysText: delivery.remainDaysText,

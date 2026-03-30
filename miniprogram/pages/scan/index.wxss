@@ -112,13 +112,36 @@ page {
 .tsc-head {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   margin-bottom: 10px;
-  gap: 12px;
 }
 .tsc-title {
   font-size: var(--font-size-base);
   font-weight: 600;
   color: var(--color-text-primary);
+}
+.refresh-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: rgba(224, 242, 254, 0.5);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  margin-right: 8px;
+}
+.refresh-btn-loading {
+  opacity: 0.6;
+}
+.refresh-btn-hover {
+  background: rgba(224, 242, 254, 0.8);
+}
+.refresh-icon {
+  font-size: 12px;
+}
+.refresh-text {
+  font-size: 12px;
+  color: var(--color-text-secondary);
 }
 .tsc-refresh {
   font-size: var(--font-size-xs);
@@ -172,14 +195,13 @@ page {
   flex-direction: row;
   align-items: center;
   padding: 10px 12px;
-  background: var(--color-bg-card);
+  background: transparent;
   border-radius: var(--radius-xl);
-  border: 1px solid var(--color-border);
+  border: none;
   gap: 8px;
 }
 .quick-entry-card-hover {
-  background: rgba(224, 242, 254, 0.5);
-  transform: scale(0.97);
+  opacity: 0.7;
 }
 .qe-icon {
   font-size: 22px;
@@ -191,9 +213,9 @@ page {
   gap: 1px;
 }
 .qe-title {
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--color-text-primary);
+  font-size: 15px;
+  font-weight: 500;
+  color: #3b82f6;
   line-height: 1.2;
 }
 .qe-desc {
@@ -249,6 +271,13 @@ page {
 }
 .scan-btn-icon {
   font-size: 20px;
+}
+.scan-btn-icon-svg {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .scan-btn-text-group {
   display: flex;

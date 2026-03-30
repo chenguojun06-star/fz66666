@@ -97,7 +97,11 @@ App({
       redirectingToLogin = false;
       redirectResetTimer = null;
     }, 800);
-    wx.reLaunch({ url: '/pages/login/index' });
+    // 延迟 100ms 执行 reLaunch，避免 onShow 在 appLaunch 阶段同步触发 reLaunch
+    // 导致微信报 "appLaunch with non-empty page stack" system error
+    setTimeout(() => {
+      wx.reLaunch({ url: '/pages/login/index' });
+    }, 100);
   },
 
   logout() {

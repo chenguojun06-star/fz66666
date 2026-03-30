@@ -73,10 +73,8 @@ Page({
   },
 
   onShow() {
+    // tab-bar 选中状态由 custom-tab-bar 的 pageLifetimes.show 自动处理
     const app = getApp();
-    if (app && typeof app.setTabSelected === 'function') {
-      app.setTabSelected(this, 0);
-    }
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) {
       return;
     }
@@ -85,13 +83,19 @@ Page({
       isFactory: !!getCurrentFactoryId(),
       isTenantOwner: checkTenantOwner(),
     });
-    this.loadStats();
 
-    // 加载未读智能提醒数（工人/跟单员首页都能看到）
+    // 只在数据为空时加载，避免每次切换页面都刷新
+    if (!this.data.topStats || !this.data.topStats.bulkOrder || this.data.topStats.bulkOrder.total === 0) {
+      this.loadStats();
+    }
+
+    // 加载未读智能提醒数
     this.loadUnreadNoticeCount();
 
     // 加载提醒列表（延迟执行，不阻塞首屏渲染）
-    setTimeout(() => this.loadReminders(), 100);
+    if (!this.data.reminders || this.data.reminders.length === 0) {
+      setTimeout(() => this.loadReminders(), 100);
+    }
   },
 
   async loadUnreadNoticeCount() {
@@ -447,28 +451,30 @@ Page({
       return;
     }
 
-    // 根据类型跳转到对应Tab
     if (item.type === 'order') {
       const status = item.rawData.status;
       const targetTab = status === 'production' ? 'orders_production' : 'orders_all';
       try {
         wx.setStorageSync('work_active_tab', targetTab);
-      } catch (e) {
-        // 存储失败静默处理
+        wx.setStorageSync('scroll_to_order_no', item.orderNo);
+      } catch (err) {
+        console.error('存储失败:', err);
       }
       wx.switchTab({ url: '/pages/work/index' });
     } else if (item.type === 'warehousing') {
       try {
         wx.setStorageSync('work_active_tab', 'warehousing');
-      } catch (e) {
-        // 存储失败静默处理
+        wx.setStorageSync('scroll_to_order_no', item.orderNo);
+      } catch (err) {
+        console.error('存储失败:', err);
       }
       wx.switchTab({ url: '/pages/work/index' });
     } else if (item.type === 'exception') {
       try {
         wx.setStorageSync('work_active_tab', 'exceptions');
-      } catch (e) {
-        // 存储失败静默处理
+        wx.setStorageSync('scroll_to_order_no', item.orderNo);
+      } catch (err) {
+        console.error('存储失败:', err);
       }
       wx.switchTab({ url: '/pages/work/index' });
     }

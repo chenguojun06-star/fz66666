@@ -20,9 +20,6 @@ Page({
 
   onShow() {
     const app = getApp();
-    if (app && typeof app.setTabSelected === 'function') {
-      app.setTabSelected(this, -1);
-    }
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) {
       return;
     }
