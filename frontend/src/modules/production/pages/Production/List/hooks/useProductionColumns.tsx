@@ -39,6 +39,7 @@ export interface UseProductionColumnsProps {
   handleShareOrder: (record: ProductionOrder) => void;
   handlePrintLabel?: (record: ProductionOrder) => void;
   canManageOrderLifecycle?: boolean;
+  openSubProcessRemap?: (record: ProductionOrder) => void;
 }
 
 /**
@@ -56,6 +57,7 @@ export function useProductionColumns({
   handleShareOrder,
   handlePrintLabel,
   canManageOrderLifecycle = false,
+  openSubProcessRemap,
 }: UseProductionColumnsProps) {
   const renderStageTime = (value: unknown) => value ? formatDateTime(value) : '-';
   const renderStageText = (value: unknown) => safeString(value);
@@ -691,6 +693,13 @@ export function useProductionColumns({
                   { key: 'syncProcess', label: '🔄 从模板同步', onClick: () => syncProcessFromTemplate(record) },
                 ],
               },
+              ...(openSubProcessRemap ? [{
+                key: 'subProcessRemap',
+                label: '子工序',
+                title: frozen ? '子工序配置（订单已关单）' : '临时子工序配置',
+                disabled: frozen,
+                onClick: () => openSubProcessRemap(record),
+              }] : []),
               {
                 key: 'quickEdit',
                 label: '编辑',
