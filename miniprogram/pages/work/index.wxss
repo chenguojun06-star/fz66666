@@ -528,3 +528,35 @@ page {
   color: #999;
   box-shadow: none;
 }
+
+/* ==================== 生成菲号操作按鈕 ==================== */
+.item-actions { display:flex; justify-content:flex-end; padding:8rpx 20rpx 16rpx; }
+.action-btn { padding:12rpx 32rpx; border-radius:32rpx; font-size:26rpx; font-weight:500; }
+.action-btn-primary { background:var(--color-primary,#4f7ef8); color:#fff; }
+
+/* ==================== 菲号生成弹窗 ==================== */
+.bundle-modal-mask { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; display:flex; align-items:center; justify-content:center; }
+.bundle-modal { background:#fff; border-radius:20rpx; width:92vw; max-height:80vh; overflow-y:auto; padding:32rpx; box-sizing:border-box; }
+.bundle-modal-title { font-size:34rpx; font-weight:700; color:#222; text-align:center; margin-bottom:12rpx; }
+.bundle-modal-meta { display:flex; gap:20rpx; font-size:24rpx; color:#888; margin-bottom:20rpx; justify-content:center; }
+.bundle-size-row { display:flex; align-items:center; gap:16rpx; margin-bottom:28rpx; }
+.bundle-size-label { font-size:28rpx; color:#333; white-space:nowrap; }
+.bundle-size-input { flex:1; height:72rpx; border:2rpx solid #4f7ef8; border-radius:12rpx; padding:0 20rpx; font-size:30rpx; text-align:center; }
+.bundle-size-unit { font-size:26rpx; color:#888; white-space:nowrap; }
+.bundle-rows-container { background:#f8f9fb; border-radius:12rpx; padding:0 20rpx; margin-bottom:24rpx; }
+.bundle-rows-header { display:flex; padding:12rpx 0; border-bottom:2rpx solid #e0e5f5; }
+.bundle-rows-header text { font-size:22rpx; color:#888; font-weight:600; }
+.bundle-row-item { display:flex; align-items:center; padding:10rpx 0; border-bottom:1rpx solid #eee; }
+.bundle-row-item:last-child { border-bottom:none; }
+.bundle-rows-total { padding:12rpx 0; text-align:right; font-size:26rpx; color:#4f7ef8; font-weight:600; border-top:2rpx solid #e0e5f5; }
+.bundle-empty { text-align:center; padding:32rpx 0; font-size:26rpx; color:#bbb; margin-bottom:24rpx; }
+.col-color { width:110rpx; font-size:26rpx; color:#333; }
+.col-size { width:70rpx; font-size:26rpx; color:#555; }
+.col-qty { flex:1; font-size:26rpx; color:#333; }
+.col-cutting { flex:1; font-size:26rpx; color:#333; }
+.col-count { width:80rpx; font-size:26rpx; color:#4f7ef8; text-align:right; font-weight:500; }
+.bundle-footer { display:flex; gap:20rpx; }
+.bundle-btn { flex:1; height:80rpx; line-height:80rpx; text-align:center; border-radius:40rpx; font-size:28rpx; font-weight:500; }
+.bundle-btn-cancel { background:#f4f6fb; color:#666; }
+.bundle-btn-confirm { background:var(--color-primary,#4f7ef8); color:#fff; }
+.bundle-btn-confirm.btn-loading { opacity:.6; }

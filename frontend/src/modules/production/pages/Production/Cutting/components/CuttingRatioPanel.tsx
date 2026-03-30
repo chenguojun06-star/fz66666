@@ -137,6 +137,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
       title: '分扎数',
       dataIndex: 'bundleDisplay',
       key: 'bundleDisplay',
+      width: 280,
       render: (val: string) => (
         <Text style={{ color: '#1677ff', fontWeight: 500 }}>{val}</Text>
       ),

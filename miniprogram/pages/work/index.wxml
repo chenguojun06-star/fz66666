@@ -150,6 +150,10 @@
             <text class="delivery-label">交期：{{item.deliveryDateStr}}</text>
             <text class="delivery-days {{item.remainDaysClass}}">{{item.remainDaysText}}</text>
           </view>
+          <!-- 裁剪菲号操作（仅裁剪tab） -->
+          <view wx:if="{{activeTab === 'cutting'}}" class="item-actions">
+            <view class="action-btn action-btn-primary" bindtap="onGenerateBundle" data-order="{{item}}">&#9986;&#65039; 生成菲号</view>
+          </view>
         </view>
 
       <view class="btn">
@@ -160,6 +164,56 @@
 </view>
 
 <!-- 小云 AI 助手（全页面悬浮） -->
+<!-- 裁剪菲号生成弹窗 -->
+<view wx:if="{{bundleModal.visible}}" class="bundle-modal-mask">
+  <view class="bundle-modal">
+    <view class="bundle-modal-title">✂️ 生成裁剪菲号</view>
+    <view class="bundle-modal-meta">
+      <text>订单: {{bundleModal.orderNo}}</text>
+      <text>款号: {{bundleModal.styleNo}}</text>
+    </view>
+    <view class="bundle-size-row">
+      <text class="bundle-size-label">每扎数量</text>
+      <input class="bundle-size-input" type="number" placeholder="例如 30"
+             bindinput="onBundleSizeInput" value="{{bundleModal.bundleSize}}" />
+      <text class="bundle-size-unit">件/扎</text>
+    </view>
+    <view class="bundle-size-row">
+      <text class="bundle-size-label">损耗加放</text>
+      <input class="bundle-size-input" type="digit" placeholder="例如 4"
+             bindinput="onExcessRateInput" value="{{bundleModal.excessRate}}" />
+      <text class="bundle-size-unit">%</text>
+    </view>
+    <view wx:if="{{bundleModal.hasData}}" class="bundle-rows-container">
+      <view class="bundle-rows-header">
+        <text class="col-color">颜色</text>
+        <text class="col-size">码数</text>
+        <text class="col-qty">下单数量</text>
+        <text class="col-cutting">裁剪数量</text>
+        <text class="col-count">分扎数</text>
+      </view>
+      <view wx:for="{{bundleModal.bundleRows}}" wx:key="index" class="bundle-row-item">
+        <text class="col-color">{{item.color}}</text>
+        <text class="col-size">{{item.size}}</text>
+        <text class="col-qty">{{item.orderedQty}}件</text>
+        <text class="col-cutting" style="{{item.cuttingQty !== item.orderedQty ? 'color:#fa8c16;font-weight:bold;' : ''}}">{{item.cuttingQty}}件</text>
+        <text class="col-count">{{item.bundleCount > 0 ? item.bundleCount + '扎' : '--'}}</text>
+      </view>
+      <view wx:if="{{bundleModal.totalBundles > 0}}" class="bundle-rows-total">
+        <text>合计裁剪: {{bundleModal.totalCuttingQty}} 件 · 生成: {{bundleModal.totalBundles}} 扎</text>
+      </view>
+    </view>
+    <view wx:if="{{!bundleModal.hasData}}" class="bundle-empty">
+      <text>暂无下单数据</text>
+    </view>
+    <view class="bundle-footer">
+      <view class="bundle-btn bundle-btn-cancel" bindtap="onCancelBundle">取消</view>
+      <view class="bundle-btn bundle-btn-confirm {{bundleModal.loading ? 'btn-loading' : ''}}"
+            bindtap="onConfirmBundle">{{bundleModal.loading ? '生成中...' : '确认生成'}}</view>
+    </view>
+  </view>
+</view>
+
 <ai-assistant notice-count="{{unreadNoticeCount}}" />
 
 <!-- 隐私保护授权弹窗（微信 2023-09-15 强制要求） -->
