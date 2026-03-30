@@ -47,7 +47,7 @@ export function useKpiMetrics(data: CockpitData) {
     totalFactories: Math.max(Number(pulse?.factoryActivity?.length) || 0, Number(ranking?.rankings?.length) || 0),
     productionOrderCount: Number(productionStats?.activeOrders ?? (orders ?? []).filter(o => {
       const s = String(o.status || '').toUpperCase();
-      return s !== 'COMPLETED' && s !== 'CANCELLED' && s !== 'DRAFT';
+      return s !== 'COMPLETED' && s !== 'CANCELLED' && s !== 'DRAFT' && s !== 'SCRAPPED';
     }).length),
   }), [health?.healthIndex, notify?.pendingCount, notify?.sentToday, orders, productionStats?.activeOrders, pulse?.activeFactories, pulse?.activeWorkers, pulse?.factoryActivity?.length, pulse?.scanRatePerHour, pulse?.stagnantFactories, pulse?.todayScanQty, ranking?.rankings?.length, shortage?.shortageItems]);
 

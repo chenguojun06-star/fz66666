@@ -1,0 +1,76 @@
+.warehouse-pie-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.warehouse-pie-wrapper .pie-card {
+  flex-shrink: 0;
+}
+
+.style-stats {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(79, 209, 197, 0.1);
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.style-stats-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4fd1c5;
+  margin-bottom: 10px;
+  padding-left: 4px;
+}
+
+.style-stats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.style-stats-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto auto;
+  align-items: center;
+  gap: 8px;
+  background: rgba(7, 13, 27, 0.5);
+  border-radius: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  font-size: 12px;
+}
+
+.style-no {
+  font-weight: 600;
+  color: #94a3b8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.style-percent {
+  font-weight: 700;
+  color: #4fd1c5;
+  min-width: 40px;
+  text-align: right;
+}
+
+.style-detail {
+  color: rgba(148, 163, 184, 0.72);
+  min-width: 50px;
+  text-align: center;
+}
+
+.style-instock {
+  color: #34d399;
+  font-weight: 500;
+}
+
+.style-outstock {
+  color: #60a5fa;
+  font-weight: 500;
+}
