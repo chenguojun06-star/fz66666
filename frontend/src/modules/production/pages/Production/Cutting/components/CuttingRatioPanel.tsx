@@ -28,7 +28,8 @@ interface BundleRow {
   key: string;
   color: string;
   size: string;
-  quantity: number;
+  quantity: number;    // 订单数量
+  cuttingQty: number;  // 实际裁剪数量（含损耗加放）
   bundles: number;
   remainder: number;
   bundleDisplay: string;
@@ -43,14 +44,18 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
   onClear,
 }) => {
   const [bundleSize, setBundleSize] = useState<number>(20);
+  const [excessRate, setExcessRate] = useState<number>(0);
 
   const tableRows = useMemo<BundleRow[]>(() => {
     if (!entryOrderLines?.length) return [];
     return entryOrderLines.map((line, idx) => {
-      const qty = Number(line.quantity) || 0;
+      const orderQty = Number(line.quantity) || 0;
+      const rate = excessRate > 0 ? excessRate : 0;
+      // 裁剪数 = 订单数 × (1 + 损耗率)，向上取整
+      const cuttingQty = rate > 0 ? Math.ceil(orderQty * (1 + rate / 100)) : orderQty;
       const bs = bundleSize > 0 ? bundleSize : 20;
-      const bundles = qty > 0 ? Math.ceil(qty / bs) : 0;
-      const remainder = qty % bs;
+      const bundles = cuttingQty > 0 ? Math.ceil(cuttingQty / bs) : 0;
+      const remainder = cuttingQty % bs;
 
       let bundleDisplay: string;
       if (bundles === 0) {
@@ -58,7 +63,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
       } else if (remainder === 0) {
         bundleDisplay = `${bundles} 扎`;
       } else if (bundles === 1) {
-        bundleDisplay = `1×${qty}件（1 扎）`;
+        bundleDisplay = `1×${cuttingQty}件（1 扎）`;
       } else {
         bundleDisplay = `${bundles - 1}×${bs} + 1×${remainder}件（${bundles} 扎）`;
       }
@@ -67,23 +72,25 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
         key: `${line.color}-${line.size}-${idx}`,
         color: line.color,
         size: line.size,
-        quantity: qty,
+        quantity: orderQty,
+        cuttingQty,
         bundles,
         remainder,
         bundleDisplay,
         skuNo: line.skuNo || '',
       };
     });
-  }, [entryOrderLines, bundleSize]);
+  }, [entryOrderLines, bundleSize, excessRate]);
 
-  const { totalQty, totalBundles } = useMemo(
+  const { totalQty, totalCuttingQty, totalBundles } = useMemo(
     () =>
       tableRows.reduce(
         (acc, row) => ({
           totalQty: acc.totalQty + row.quantity,
+          totalCuttingQty: acc.totalCuttingQty + row.cuttingQty,
           totalBundles: acc.totalBundles + row.bundles,
         }),
-        { totalQty: 0, totalBundles: 0 },
+        { totalQty: 0, totalCuttingQty: 0, totalBundles: 0 },
       ),
     [tableRows],
   );
@@ -115,6 +122,18 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
       render: (val: number) => <Text>{val} 件</Text>,
     },
     {
+      title: '裁剪数量',
+      dataIndex: 'cuttingQty',
+      key: 'cuttingQty',
+      width: 120,
+      render: (val: number, row: BundleRow) =>
+        val !== row.quantity ? (
+          <Text style={{ color: '#d46b08', fontWeight: 500 }}>{val} 件</Text>
+        ) : (
+          <Text>{val} 件</Text>
+        ),
+    },
+    {
       title: '分扎数',
       dataIndex: 'bundleDisplay',
       key: 'bundleDisplay',
@@ -126,7 +145,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
 
   return (
     <div style={{ padding: '0 0 8px' }}>
-      <Space align="center" style={{ marginBottom: 16 }}>
+      <Space align="center" wrap style={{ marginBottom: 16 }}>
         <Text strong>每扎件数：</Text>
         <InputNumber
           min={1}
@@ -137,7 +156,18 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
           onChange={(val) => setBundleSize(val || 20)}
           style={{ width: 90 }}
         />
-        <Text type="secondary">件/扎（系统按此自动拆分菲号）</Text>
+        <Text type="secondary">件/扎</Text>
+        <Text strong style={{ marginLeft: 12 }}>损耗加放：</Text>
+        <InputNumber
+          min={0}
+          max={30}
+          precision={1}
+          value={excessRate}
+          disabled={disabled}
+          onChange={(val) => setExcessRate(val ?? 0)}
+          style={{ width: 80 }}
+          addonAfter="%"
+        />
       </Space>
 
       <Table<BundleRow>
@@ -152,6 +182,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
 
       <Space wrap style={{ marginBottom: 12 }}>
         <Tag color="green">总下单：{totalQty} 件</Tag>
+        {excessRate > 0 && <Tag color="orange">总裁剪：{totalCuttingQty} 件</Tag>}
         <Tag color="purple">总扎数：{totalBundles} 扎</Tag>
       </Space>
 
