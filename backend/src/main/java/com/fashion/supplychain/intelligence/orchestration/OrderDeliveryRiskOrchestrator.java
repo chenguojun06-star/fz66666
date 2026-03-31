@@ -57,8 +57,9 @@ public class OrderDeliveryRiskOrchestrator {
     public DeliveryRiskResponse assess(DeliveryRiskRequest request) {
         DeliveryRiskResponse response = new DeliveryRiskResponse();
         Long tenantId = UserContext.tenantId();
+        String factoryId = UserContext.factoryId();
 
-        List<ProductionOrder> orders = loadOrders(tenantId, request);
+        List<ProductionOrder> orders = loadOrders(tenantId, factoryId, request);
         if (orders.isEmpty()) return response;
 
         List<String> orderIds = orders.stream()
@@ -179,9 +180,10 @@ public class OrderDeliveryRiskOrchestrator {
 
     // ── 辅助方法 ──────────────────────────────────────────────────────
 
-    private List<ProductionOrder> loadOrders(Long tenantId, DeliveryRiskRequest request) {
+    private List<ProductionOrder> loadOrders(Long tenantId, String factoryId, DeliveryRiskRequest request) {
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
         qw.eq(tenantId != null, "tenant_id", tenantId)
+          .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
           .eq("delete_flag", 0)
           .in("status", "production", "cutting");
         if (request != null && StringUtils.hasText(request.getOrderId())) {

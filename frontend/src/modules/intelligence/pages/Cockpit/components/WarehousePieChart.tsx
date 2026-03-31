@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import PieChartCard, { PieSegment } from '@/components/PieChartCard';
+import PieChartCard, { PieSegment, TodayStat } from '@/components/PieChartCard';
 import { useTimeDimension } from '../contexts/TimeDimensionContext';
 import { useStyleLink } from '../contexts/StyleLinkContext';
 import api from '@/utils/api';
@@ -30,6 +30,15 @@ interface StyleStats {
   inboundQty: number;
   outboundQty: number;
 }
+
+const isToday = (dateStr?: string | null): boolean => {
+  if (!dateStr) return false;
+  const date = new Date(dateStr);
+  const today = new Date();
+  return date.getFullYear() === today.getFullYear() &&
+    date.getMonth() === today.getMonth() &&
+    date.getDate() === today.getDate();
+};
 
 const WarehousePieChart: React.FC<WarehousePieChartProps> = ({ mode = 'sidebar', moduleKey, position }) => {
   const { dimension, getDateRange } = useTimeDimension();
@@ -165,10 +174,29 @@ const WarehousePieChart: React.FC<WarehousePieChartProps> = ({ mode = 'sidebar',
       .sort((a, b) => b.totalQty - a.totalQty)
       .slice(0, 8);
 
-    return { totalQty, totalPendingInbound, totalInStock, totalOutStock, stageQuantities, styleStats };
+    const todayOutboundOrders = orders.filter(o => isToday(String(o.outstockTime || o.outstockDate)));
+    const todayOutboundQty = todayOutboundOrders.reduce((sum, o) => sum + (o.outstockQuantity || 0), 0);
+
+    return { 
+      totalQty, 
+      totalPendingInbound, 
+      totalInStock, 
+      totalOutStock, 
+      stageQuantities, 
+      styleStats,
+      todayOutboundCount: todayOutboundOrders.length,
+      todayOutboundQty,
+    };
   }, [orders, inventory]);
 
   const segments: PieSegment[] = stats.stageQuantities;
+
+  const extraCompletedStat: TodayStat = {
+    label: '今日出库',
+    value: stats.todayOutboundQty,
+    unit: '件',
+    type: 'success',
+  };
 
   return (
     <div className="warehouse-pie-wrapper">
@@ -181,6 +209,7 @@ const WarehousePieChart: React.FC<WarehousePieChartProps> = ({ mode = 'sidebar',
         avgTime={stats.totalOutStock > 0 ? `已出库${stats.totalOutStock}件` : undefined}
         segments={segments}
         loading={loading}
+        extraCompletedStat={extraCompletedStat}
       />
       
       {mode === 'stage' && stats.styleStats.length > 0 && (

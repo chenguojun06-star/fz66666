@@ -2,11 +2,12 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Tag, Tooltip, Popover } from 'antd';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  ThunderboltOutlined, SyncOutlined, RobotOutlined,
+  ThunderboltOutlined, SyncOutlined,
   WarningOutlined, CheckCircleOutlined,
   FullscreenOutlined, FullscreenExitOutlined, SearchOutlined,
   DownOutlined, UpOutlined,
 } from '@ant-design/icons';
+import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
 import { intelligenceApi as execApi } from '@/services/intelligenceApi';
 import api from '@/utils/api';
 import Layout from '@/components/Layout';
@@ -267,7 +268,7 @@ const IntelligenceCenter: React.FC = () => {
             </Tooltip>
             <Tooltip title="查看 AI 执行记录">
               <button className="cockpit-fs-btn" onClick={() => navigate(paths.cockpitTrace)} style={{ marginRight: 4 }}>
-                <RobotOutlined />
+                <XiaoyunCloudAvatar size={18} active />
               </button>
             </Tooltip>
             <Tooltip title={isFullscreen ? '退出全屏 (F)' : '全屏投屏 (F)'}>
@@ -1057,7 +1058,7 @@ const IntelligenceCenter: React.FC = () => {
             ╚══════════════════════════════════════════════╝ */}
         <div className="c-card" style={{ marginBottom: 16 }}>
           <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('meeting')}>
-            <RobotOutlined style={{ color: '#a78bfa', marginRight: 6 }} />
+            <XiaoyunCloudAvatar size={18} active />
             Agent 智能例会
             <span className="c-card-badge purple-badge">多Agent辩论</span>
             <CollapseChevron panelKey="meeting" />
@@ -1130,7 +1131,7 @@ const IntelligenceCenter: React.FC = () => {
           {/* AI 大脑快照 */}
           <div className="c-card">
             <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('brain')}>
-              <RobotOutlined style={{ color: '#a78bfa', marginRight: 6 }} />
+              <XiaoyunCloudAvatar size={18} active />
               AI 大脑状态
               {brain && (
                 <span className="c-card-badge" style={{

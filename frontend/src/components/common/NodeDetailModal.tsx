@@ -1198,7 +1198,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
             return [
               {
                 key: 'settings',
-                label: <span><FileTextOutlined /> 设置</span>,
+                label: <span><FileTextOutlined /> 工序委派</span>,
                 children: renderSettingsTab(),
               },
               // 样板生产扫码记录Tab已移除（需要时可在工序跟踪查看）

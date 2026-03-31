@@ -74,11 +74,31 @@ const ProcessStageSummary: React.FC<Props> = ({ data }) => {
           <span style={countStyle}>{stageSummary['车缝'].count} 道</span>
         </span>
       </div>
-      <div style={{ ...rowStyle, marginBottom: 0 }}>
+      <div style={rowStyle}>
         <span style={labelStyle}>尾部</span>
         <span>
           <span style={valueStyle}>¥{stageSummary['尾部'].total.toFixed(2)}</span>
           <span style={countStyle}>{stageSummary['尾部'].count} 道</span>
+        </span>
+      </div>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '6px 10px',
+        background: '#e6f4ff',
+        borderRadius: 4,
+        border: '1px solid #91caff',
+        marginBottom: 0,
+      }}>
+        <span style={{ fontSize: 12, color: '#1677ff', fontWeight: 600 }}>单价汇总</span>
+        <span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#1677ff' }}>
+            ¥{(stageSummary['裁剪'].total + stageSummary['车缝'].total + stageSummary['尾部'].total).toFixed(2)}
+          </span>
+          <span style={{ fontSize: 11, color: '#4096ff', marginLeft: 8 }}>
+            {stageSummary['裁剪'].count + stageSummary['车缝'].count + stageSummary['尾部'].count} 道
+          </span>
         </span>
       </div>
     </div>

@@ -17,6 +17,7 @@ import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 /**
  * NL 查询数据处理器 — 从 NlQueryOrchestrator 抽取的数据查询方法
@@ -38,7 +39,7 @@ public class NlQueryDataHandlers {
 
     // ── 订单查询 ──
 
-    public NlQueryResponse handleOrderQuery(String question, Long tenantId) {
+    public NlQueryResponse handleOrderQuery(String question, Long tenantId, String factoryId) {
         NlQueryResponse resp = new NlQueryResponse();
         resp.setIntent("order_query");
 
@@ -47,6 +48,7 @@ public class NlQueryDataHandlers {
             String orderNo = matcher.group();
             QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
             qw.eq(tenantId != null, "tenant_id", tenantId)
+              .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
               .eq("order_no", orderNo).eq("delete_flag", 0);
             ProductionOrder order = productionOrderService.getOne(qw, false);
             if (order != null) {
@@ -84,19 +86,20 @@ public class NlQueryDataHandlers {
         } else {
             QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
             qw.eq(tenantId != null, "tenant_id", tenantId)
+              .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
               .eq("delete_flag", 0).ne("status", "completed");
             long inProgress = productionOrderService.count(qw);
             resp.setAnswer(String.format("当前有 %d 个进行中订单。请提供具体订单号（如PO20260301001）以查看详情。", inProgress));
             resp.setConfidence(70);
         }
-        tryAddAiInsight(resp, tenantId);
+        tryAddAiInsight(resp, tenantId, factoryId);
         resp.setSuggestions(Arrays.asList("有哪些延期订单？", "今日扫码数量是多少？", "整体情况怎么样？"));
         return resp;
     }
 
     // ── 延期查询 ──
 
-    public NlQueryResponse handleOverdueQuery(Long tenantId) {
+    public NlQueryResponse handleOverdueQuery(Long tenantId, String factoryId) {
         NlQueryResponse resp = new NlQueryResponse();
         resp.setIntent("overdue");
         long count = dashboardQueryService.countOverdueOrders();
@@ -124,14 +127,14 @@ public class NlQueryDataHandlers {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("overdueCount", (int) count);
         resp.setData(data);
-        tryAddAiInsight(resp, tenantId);
+        tryAddAiInsight(resp, tenantId, factoryId);
         resp.setSuggestions(Arrays.asList("今日产量如何？", "哪个工厂延期最多？", "整体情况怎么样？"));
         return resp;
     }
 
     // ── 对比/趋势查询 ──
 
-    public NlQueryResponse handleCompareQuery(Long tenantId) {
+    public NlQueryResponse handleCompareQuery(Long tenantId, String factoryId) {
         NlQueryResponse resp = new NlQueryResponse();
         resp.setIntent("compare");
 
@@ -164,14 +167,14 @@ public class NlQueryDataHandlers {
         data.put("todayWarehouse", todayWarehouse);
         data.put("yesterdayWarehouse", yesterdayWarehouse);
         resp.setData(data);
-        tryAddAiInsight(resp, tenantId);
+        tryAddAiInsight(resp, tenantId, factoryId);
         resp.setSuggestions(Arrays.asList("这周产量怎么样？", "哪个工厂产量最高？", "有多少延期订单？"));
         return resp;
     }
 
     // ── 产量查询 ──
 
-    public NlQueryResponse handleProductionQuery(Long tenantId) {
+    public NlQueryResponse handleProductionQuery(Long tenantId, String factoryId) {
         NlQueryResponse resp = new NlQueryResponse();
         resp.setIntent("production");
 
@@ -181,6 +184,7 @@ public class NlQueryDataHandlers {
         try {
             QueryWrapper<ScanRecord> aqw = new QueryWrapper<>();
             aqw.eq(tenantId != null, "tenant_id", tenantId)
+               .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
                .eq("scan_result", "success")
                .ge("scan_time", thirtyMinAgo)
                .select("DISTINCT operator_id");
@@ -205,14 +209,14 @@ public class NlQueryDataHandlers {
         data.put("todayScanQty", todayScan);
         data.put("activeWorkers", activeWorkers);
         resp.setData(data);
-        tryAddAiInsight(resp, tenantId);
+        tryAddAiInsight(resp, tenantId, factoryId);
         resp.setSuggestions(Arrays.asList("和昨天比怎么样？", "哪个工厂产量最高？", "有多少延期订单？"));
         return resp;
     }
 
     // ── 质检查询 ──
 
-    public NlQueryResponse handleQualityQuery(Long tenantId) {
+    public NlQueryResponse handleQualityQuery(Long tenantId, String factoryId) {
         NlQueryResponse resp = new NlQueryResponse();
         resp.setIntent("quality");
 
@@ -234,14 +238,14 @@ public class NlQueryDataHandlers {
             resp.setAnswer("暂无质检数据记录");
             resp.setConfidence(70);
         }
-        tryAddAiInsight(resp, tenantId);
+        tryAddAiInsight(resp, tenantId, factoryId);
         resp.setSuggestions(Arrays.asList("今日产量多少？", "有延期订单吗？", "整体情况怎么样？"));
         return resp;
     }
 
     // ── 入库查询 ──
 
-    public NlQueryResponse handleWarehousingQuery(Long tenantId) {
+    public NlQueryResponse handleWarehousingQuery(Long tenantId, String factoryId) {
         NlQueryResponse resp = new NlQueryResponse();
         resp.setIntent("warehousing");
 
@@ -262,7 +266,7 @@ public class NlQueryDataHandlers {
 
     // ── 裁剪查询 ──
 
-    public NlQueryResponse handleCuttingQuery(Long tenantId) {
+    public NlQueryResponse handleCuttingQuery(Long tenantId, String factoryId) {
         NlQueryResponse resp = new NlQueryResponse();
         resp.setIntent("cutting");
 
@@ -316,12 +320,13 @@ public class NlQueryDataHandlers {
 
     // ── 全景概要 ──
 
-    public NlQueryResponse handleSummaryQuery(Long tenantId) {
+    public NlQueryResponse handleSummaryQuery(Long tenantId, String factoryId) {
         NlQueryResponse resp = new NlQueryResponse();
         resp.setIntent("summary");
 
         QueryWrapper<ProductionOrder> ipQw = new QueryWrapper<>();
         ipQw.eq(tenantId != null, "tenant_id", tenantId)
+            .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
             .eq("delete_flag", 0).ne("status", "completed");
         long inProgress = productionOrderService.count(ipQw);
         long overdue = dashboardQueryService.countOverdueOrders();
@@ -346,6 +351,7 @@ public class NlQueryDataHandlers {
         try {
             QueryWrapper<ScanRecord> aqw = new QueryWrapper<>();
             aqw.eq(tenantId != null, "tenant_id", tenantId)
+               .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
                .eq("scan_result", "success")
                .ge("scan_time", LocalDateTime.now().minusMinutes(60))
                .select("DISTINCT operator_id");
@@ -371,8 +377,8 @@ public class NlQueryDataHandlers {
 
     // ── AI 深度兜底 ──
 
-    public NlQueryResponse handleAiDeepFallback(String question, Long tenantId) {
-        NlQueryResponse ctx = handleSummaryQuery(tenantId);
+    public NlQueryResponse handleAiDeepFallback(String question, Long tenantId, String factoryId) {
+        NlQueryResponse ctx = handleSummaryQuery(tenantId, factoryId);
         if (aiAdvisorService.isEnabled() && aiAdvisorService.checkAndConsumeQuota(tenantId)) {
             try {
                 String ctxStr = buildBriefContext(ctx.getData(), ctx.getAnswer());
@@ -405,7 +411,7 @@ public class NlQueryDataHandlers {
 
     // ── 工具方法 ──
 
-    void tryAddAiInsight(NlQueryResponse resp, Long tenantId) {
+    void tryAddAiInsight(NlQueryResponse resp, Long tenantId, String factoryId) {
         if (resp.getAiInsight() != null) return;
         if (!aiAdvisorService.isEnabled() || !aiAdvisorService.checkAndConsumeQuota(tenantId)) return;
         try {

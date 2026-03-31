@@ -24,6 +24,7 @@ import { qualityAiApi } from '@/services/production/productionApi';
 import type { QualityAiSuggestionResult } from '@/services/production/productionApi';
 import { message } from '@/utils/antdStatic';
 import { useWarehouseLocationOptions } from '@/hooks/useWarehouseLocationOptions';
+import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -321,11 +322,11 @@ const InspectionDetail: React.FC = () => {
         size="small" rowKey="key" loading={orderDetailLoading}
         pagination={false} dataSource={orderLineWarehousingRows}
         resizableColumns={false}
-        scroll={{ x: 'max-content' }}
+        scroll={undefined}
         style={{ fontSize: 12 }}
         columns={[
-          { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 160 },
-          { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 130, ellipsis: true },
+          { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 150, ellipsis: true },
+          { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 120, ellipsis: true },
           { title: '颜色', dataIndex: 'color', key: 'color', width: 100 },
           { title: '尺码', dataIndex: 'size', key: 'size', width: 80 },
           { title: '下单数', dataIndex: 'quantity', key: 'quantity', width: 90, align: 'right' as const },
@@ -419,23 +420,23 @@ const InspectionDetail: React.FC = () => {
           size="small" rowKey="id" pagination={false}
           dataSource={qcRecords}
           resizableColumns={false}
-          scroll={{ x: 'max-content' }}
+          scroll={undefined}
           style={{ fontSize: 12 }}
           rowClassName={(record) =>
             highlightWhNo && record.warehousingNo === highlightWhNo ? 'ant-table-row-selected' : ''
           }
           columns={[
             {
-              title: '质检入库号', dataIndex: 'warehousingNo', key: 'wn', width: 120,
+              title: '质检入库号', dataIndex: 'warehousingNo', key: 'wn', width: 110,
               render: (v: string) => <Text strong={highlightWhNo === v}>{v || '-'}</Text>,
             },
             {
-              title: '菲号', dataIndex: 'cuttingBundleQrCode', key: 'qr', width: 180, ellipsis: true,
-              render: (v: unknown) => { const t = String(v || '').trim(); return t ? (t.split('|')[0] || t) : '-'; },
+              title: '菲号', dataIndex: 'cuttingBundleQrCode', key: 'qr', width: 100, ellipsis: true,
+              render: (v: unknown) => { const t = String(v || '').split('|')[0].trim(); if (!t) return '-'; const parts = t.split('-'); return parts.length > 3 ? parts.slice(-3).join('-') : t; },
             },
-            { title: '颜色', dataIndex: 'color', key: 'color', width: 80 },
-            { title: '尺码', dataIndex: 'size', key: 'size', width: 70 },
-            { title: '质检数', dataIndex: 'warehousingQuantity', key: 'wq', width: 80, align: 'right' as const },
+            { title: '颜色', dataIndex: 'color', key: 'color', width: 70 },
+            { title: '尺码', dataIndex: 'size', key: 'size', width: 60 },
+            { title: '质检数', dataIndex: 'warehousingQuantity', key: 'wq', width: 70, align: 'right' as const },
             {
               title: '合格数', dataIndex: 'qualifiedQuantity', key: 'qq', width: 80, align: 'right' as const,
               render: (v: number) => <span style={{ color: 'var(--color-success)' }}>{v ?? 0}</span>,
@@ -494,17 +495,17 @@ const InspectionDetail: React.FC = () => {
             size="small" rowKey="id" pagination={false}
             dataSource={pendingRecords}
             resizableColumns={false}
-            scroll={{ x: 'max-content' }}
+            scroll={undefined}
             style={{ fontSize: 12 }}
             columns={[
-              { title: '质检入库号', dataIndex: 'warehousingNo', key: 'wn', width: 120 },
+              { title: '质检入库号', dataIndex: 'warehousingNo', key: 'wn', width: 110 },
               {
-                title: '菲号', dataIndex: 'cuttingBundleQrCode', key: 'qr', width: 160, ellipsis: true,
-                render: (v: unknown) => { const t = String(v || '').trim(); return t ? (t.split('|')[0] || t) : '-'; },
+                title: '菲号', dataIndex: 'cuttingBundleQrCode', key: 'qr', width: 100, ellipsis: true,
+                render: (v: unknown) => { const t = String(v || '').split('|')[0].trim(); if (!t) return '-'; const parts = t.split('-'); return parts.length > 3 ? parts.slice(-3).join('-') : t; },
               },
-              { title: '颜色', dataIndex: 'color', key: 'c', width: 80 },
-              { title: '尺码', dataIndex: 'size', key: 's', width: 70 },
-              { title: '合格数', dataIndex: 'qualifiedQuantity', key: 'qq', width: 80, align: 'right' as const },
+              { title: '颜色', dataIndex: 'color', key: 'c', width: 70 },
+              { title: '尺码', dataIndex: 'size', key: 's', width: 60 },
+              { title: '合格数', dataIndex: 'qualifiedQuantity', key: 'qq', width: 70, align: 'right' as const },
             ]}
           />
         </Card>
@@ -609,24 +610,26 @@ const InspectionDetail: React.FC = () => {
               size="small" rowKey="qr" pagination={false}
               dataSource={batchSelectRows}
               resizableColumns={false}
-              scroll={{ x: 'max-content' }}
+              scroll={undefined}
               rowSelection={{
                 selectedRowKeys: batchSelectedBundleQrs,
                 onChange: (keys, rows) => handleBatchSelectionChange(keys, rows as BatchSelectBundleRow[]),
                 getCheckboxProps: (record) => ({ disabled: !!record.disabled }),
               }}
               columns={[
-                { title: '菲号', dataIndex: 'qr', width: 50, ellipsis: true },
-                { title: '扎号', dataIndex: 'bundleNo', width: 50, render: (v: unknown) => v ? String(v) : '-' },
-                { title: '颜色', dataIndex: 'color', width: 50, render: (v: unknown) => String(v || '') || '-' },
-                { title: '码数', dataIndex: 'size', width: 50, render: (v: unknown) => String(v || '') || '-' },
-                { title: '数量', dataIndex: 'quantity', width: 50, align: 'center' as const },
+                { title: '菲号', dataIndex: 'qr', width: 100, ellipsis: true,
+                  render: (v: unknown) => { const t = String(v || '').split('|')[0].trim(); if (!t) return '-'; const parts = t.split('-'); return parts.length > 3 ? parts.slice(-3).join('-') : t; },
+                },
+                { title: '扎号', dataIndex: 'bundleNo', width: 60, render: (v: unknown) => v ? String(v) : '-' },
+                { title: '颜色', dataIndex: 'color', width: 70, render: (v: unknown) => String(v || '') || '-' },
+                { title: '码数', dataIndex: 'size', width: 60, render: (v: unknown) => String(v || '') || '-' },
+                { title: '数量', dataIndex: 'quantity', width: 60, align: 'center' as const },
                 {
-                  title: '可质检', dataIndex: 'availableQty', width: 50, align: 'center' as const,
+                  title: '可质检', dataIndex: 'availableQty', width: 60, align: 'center' as const,
                   render: (v: number, record: BatchSelectBundleRow) => record.disabled ? <Text type="secondary">-</Text> : v,
                 },
                 {
-                  title: '状态', dataIndex: 'statusText', width: 50,
+                  title: '状态', dataIndex: 'statusText', width: 80,
                   render: (v: any, record: BatchSelectBundleRow) => {
                     if (record.disabled) return <Tag color="default">{v || '不可质检'}</Tag>;
                     if (isBundleBlockedForWarehousing(record.rawStatus)) return <Tag color="warning">{v}</Tag>;
@@ -634,7 +637,7 @@ const InspectionDetail: React.FC = () => {
                   },
                 },
                 {
-                  title: '操作', key: 'action', width: 50,
+                  title: '操作', key: 'action', width: 100,
                   render: (_: any, record: BatchSelectBundleRow) => {
                     const isUnqualified = record.rawStatus === 'unqualified';
                     if (!isUnqualified || !record.bundleId) return null;
@@ -914,7 +917,7 @@ const InspectionDetail: React.FC = () => {
               style={{ background: '#fff', border: '1px solid #d6e4ff' }}
               title={
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span>🤖</span>
+                  <XiaoyunCloudAvatar size={18} active />
                   <span style={{ fontWeight: 600, color: '#1677ff' }}>智能质检助手</span>
                   {aiSuggestion?.historicalDefectRate !== undefined && (
                     <span style={{
@@ -1021,7 +1024,7 @@ const InspectionDetail: React.FC = () => {
                         <ResizableTable
                           rowKey="id" size="small" pagination={false}
                           resizableColumns={false}
-                          scroll={{ x: 'max-content' }}
+                          scroll={undefined}
                           dataSource={bom}
                           columns={[
                             { title: '物料编码', dataIndex: 'materialCode', key: 'mc', width: 100 },

@@ -11,6 +11,7 @@ import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -46,11 +47,13 @@ public class CapacityGapOrchestrator {
 
     public CapacityGapResponse analyze() {
         Long tenantId = UserContext.tenantId();
+        String factoryId = UserContext.factoryId();
         CapacityGapResponse response = new CapacityGapResponse();
 
         // 1. 在手订单（production + cutting 状态）
         QueryWrapper<ProductionOrder> oqw = new QueryWrapper<>();
         oqw.eq(tenantId != null, "tenant_id", tenantId)
+           .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
            .eq("delete_flag", 0)
            .in("status", "production", "cutting")
            .isNotNull("factory_name")
@@ -71,6 +74,7 @@ public class CapacityGapOrchestrator {
         LocalDateTime since = LocalDateTime.now().minusDays(CAPACITY_WINDOW_DAYS);
         QueryWrapper<ScanRecord> sqw = new QueryWrapper<>();
         sqw.eq(tenantId != null, "tenant_id", tenantId)
+           .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
            .eq("scan_result", "success")
            .ge("scan_time", since)
            .gt("quantity", 0);

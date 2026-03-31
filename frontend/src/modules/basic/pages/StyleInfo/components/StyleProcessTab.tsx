@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Input, InputNumber, Space, Select, App, Popover, Tag, Tooltip } from 'antd';
+import { Button, Input, InputNumber, Space, Select, App, Popover, Tag, Tooltip, Dropdown } from 'antd';
 import { modal } from '@/utils/antdStatic';
-import { DeleteOutlined, BulbOutlined, LoadingOutlined } from '@ant-design/icons';
+import { DeleteOutlined, BulbOutlined, LoadingOutlined, DownOutlined, PlusOutlined } from '@ant-design/icons';
 import { StyleProcess, TemplateLibrary } from '@/types/style';
 import api, { toNumberSafe } from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -11,6 +11,7 @@ import { intelligenceApi, ProcessPriceHintResponse, ProcessTemplateItem } from '
 import { CATEGORY_CODE_OPTIONS } from '@/utils/styleCategory';
 import { useDictOptions } from '@/hooks/useDictOptions';
 
+import { STAGE_ACCENT, STAGE_ACCENT_LIGHT } from '@/utils/stageStyles';
 import StyleStageControlBar from './StyleStageControlBar';
 import StyleQuoteSuggestionInlineCard from './StyleQuoteSuggestionInlineCard';
 import ProcessCostSummary from './ProcessCostSummary';
@@ -52,6 +53,8 @@ const isTempId = (id: any) => {
   if (!s) return true;
   return s.startsWith('-');
 };
+
+const STAGE_ORDER = ['采购', '裁剪', '车缝', '二次工艺', '尾部', '入库'];
 
 const StyleProcessTab: React.FC<Props> = ({
   styleId,
@@ -370,7 +373,7 @@ const StyleProcessTab: React.FC<Props> = ({
   };
 
   // 新增行
-  const handleAdd = async () => {
+  const handleAdd = async (targetStage?: string) => {
     if (readOnly) return;
     // 未开始时不允许添加行
     if (!processStartTime) {
@@ -396,7 +399,7 @@ const StyleProcessTab: React.FC<Props> = ({
       styleId,
       processCode: autoCode,
       processName: '',
-      progressStage: '车缝', // 默认车缝节点
+      progressStage: targetStage || '车缝',
       machineType: '',
       standardTime: 0,
       price: 0,
@@ -524,7 +527,7 @@ const StyleProcessTab: React.FC<Props> = ({
       processCode: String(index + 1).padStart(2, '0'),
     }));
     if (!rows.length) {
-      message.error('请先添加工序');
+      message.error('请先添加进度节点');
       return;
     }
 
@@ -619,6 +622,28 @@ const StyleProcessTab: React.FC<Props> = ({
     }
   };
 
+  // 按进度节点分组排序 + rowSpan 计算
+  const { sortedData, stageSpanMap } = useMemo(() => {
+    const sorted = [...data].sort((a, b) => {
+      const sa = STAGE_ORDER.indexOf(a.progressStage || '车缝');
+      const sb = STAGE_ORDER.indexOf(b.progressStage || '车缝');
+      if (sa !== sb) return sa - sb;
+      return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+    });
+    const spanMap = new Map<number, { rowSpan: number; stage: string; count: number }>();
+    let i = 0;
+    while (i < sorted.length) {
+      const stage = sorted[i].progressStage || '车缝';
+      let j = i + 1;
+      while (j < sorted.length && (sorted[j].progressStage || '车缝') === stage) j++;
+      const count = j - i;
+      spanMap.set(i, { rowSpan: count, stage, count });
+      for (let k = i + 1; k < j; k++) spanMap.set(k, { rowSpan: 0, stage, count });
+      i = j;
+    }
+    return { sortedData: sorted, stageSpanMap: spanMap };
+  }, [data]);
+
   // 列定义
   const columns = useMemo(() => {
     const editableMode = editMode && !readOnly;
@@ -660,25 +685,31 @@ const StyleProcessTab: React.FC<Props> = ({
         title: '进度节点',
         dataIndex: 'progressStage',
         width: 130,
-        ellipsis: true,
-        render: (text: string, record: StyleProcess) =>
-          editableMode ? (
-            <Select
-              value={record.progressStage || '车缝'}
-              style={{ width: '100%' }}
-              onChange={(v) => updateField(record.id!, 'progressStage', v)}
-              options={[
-                { label: '采购', value: '采购' },
-                { label: '裁剪', value: '裁剪' },
-                { label: '车缝', value: '车缝' },
-                { label: '二次工艺', value: '二次工艺' },
-                { label: '尾部', value: '尾部' },
-                { label: '入库', value: '入库' },
-              ]}
-            />
-          ) : (
-            record.progressStage || '车缝'
-          ),
+        onCell: (_: StyleProcess, index?: number) => {
+          const info = stageSpanMap.get(index ?? -1);
+          return {
+            rowSpan: info?.rowSpan ?? 1,
+            style: info && info.rowSpan > 0
+              ? { background: STAGE_ACCENT_LIGHT, borderLeft: `3px solid ${STAGE_ACCENT}`, verticalAlign: 'middle' as const, textAlign: 'center' as const }
+              : undefined,
+          };
+        },
+        render: (_: string, record: StyleProcess, index: number) => {
+          const info = stageSpanMap.get(index);
+          if (!info || info.rowSpan === 0) return null;
+          const stage = record.progressStage || '车缝';
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+              <Tag style={{ background: STAGE_ACCENT, color: '#fff', border: 'none', fontWeight: 600, fontSize: 13 }}>{stage}</Tag>
+              <span style={{ fontSize: 12, color: '#999' }}>{info.count} 个工序</span>
+              {editableMode && (
+                <Button type="link" size="small" icon={<PlusOutlined />} onClick={() => handleAdd(stage)} style={{ fontSize: 12, padding: 0 }}>
+                  添加
+                </Button>
+              )}
+            </div>
+          );
+        },
       },
       {
         title: '机器类型',
@@ -882,7 +913,7 @@ const StyleProcessTab: React.FC<Props> = ({
           ) : null,
       },
     ];
-  }, [data, editMode, readOnly, showSizePrices, sizes]);
+  }, [data, editMode, readOnly, showSizePrices, sizes, stageSpanMap]);
 
   return (
     <div>
@@ -950,9 +981,17 @@ const StyleProcessTab: React.FC<Props> = ({
             导入模板
           </Button>
 
-          <Button onClick={handleAdd} disabled={Boolean(readOnly) || !processStartTime || loading || saving} type="primary">
-            添加工序
-          </Button>
+          <Dropdown
+            disabled={Boolean(readOnly) || !processStartTime || loading || saving}
+            menu={{
+              items: STAGE_ORDER.map(s => ({ key: s, label: s, icon: <PlusOutlined /> })),
+              onClick: ({ key }) => handleAdd(key),
+            }}
+          >
+            <Button type="primary" disabled={Boolean(readOnly) || !processStartTime || loading || saving}>
+              进度节点 <DownOutlined />
+            </Button>
+          </Dropdown>
 
           {/* AI 工序补全按钮 */}
           <Popover
@@ -1118,7 +1157,7 @@ const StyleProcessTab: React.FC<Props> = ({
 
       <ResizableTable
         bordered
-        dataSource={data as unknown as any[]}
+        dataSource={sortedData as unknown as any[]}
         columns={columns as unknown as any[]}
         pagination={false}
         loading={loading}

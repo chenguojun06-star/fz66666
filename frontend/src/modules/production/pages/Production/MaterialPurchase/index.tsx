@@ -93,17 +93,6 @@ const MaterialPurchase: React.FC = () => {
                           style={{ width: 120 }}
                           placeholder="订单类型"
                         />
-                        <Select
-                          value={queryParams.factoryType || ''}
-                          onChange={(value) => setQueryParams(prev => ({ ...prev, factoryType: value as 'INTERNAL' | 'EXTERNAL' | '', page: 1 }))}
-                          options={[
-                            { label: '全部工厂', value: '' },
-                            { label: '内部自产', value: 'INTERNAL' },
-                            { label: '外发工厂', value: 'EXTERNAL' },
-                          ]}
-                          style={{ width: 132 }}
-                          placeholder="工厂类型"
-                        />
                         <Segmented
                           value={queryParams.materialType || ''}
                           options={[

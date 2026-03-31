@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '@/components/Layout';
-import { Tabs, Tag, Button, Input, Select, Card, Space, Modal, Form, Row, Col, Statistic, Drawer, Descriptions, Divider, InputNumber, Typography, Badge, Tooltip, Steps, Alert, Image } from 'antd';
+import { Tabs, Tag, Button, Input, Select, Card, Space, Form, Row, Col, Statistic, Drawer, Descriptions, Divider, InputNumber, Typography, Badge, Tooltip, Steps, Alert, Image } from 'antd';
+import ResizableModal from '@/components/common/ResizableModal';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import {
   CarOutlined, CheckCircleOutlined, EditOutlined, EyeOutlined,
@@ -394,7 +395,7 @@ const OrdersTab: React.FC = () => {
         )}
       </Drawer>
 
-      <Modal title={<><LinkOutlined /> 关联生产订单</>}
+      <ResizableModal title={<><LinkOutlined /> 关联生产订单</>}
         open={!!linkTarget} onCancel={() => setLinkTarget(null)}
         onOk={handleLink} confirmLoading={linking} okText="确认关联" width="40vw">
         {linkTarget && (
@@ -412,9 +413,9 @@ const OrdersTab: React.FC = () => {
             <Input placeholder="如 PO20260301001，可在生产进度页查看" prefix={<SearchOutlined />} />
           </Form.Item>
         </Form>
-      </Modal>
+      </ResizableModal>
 
-      <Modal title={<><CarOutlined /> 现货直接出库</>}
+      <ResizableModal title={<><CarOutlined /> 现货直接出库</>}
         open={!!outboundTarget} onCancel={() => setOutboundTarget(null)}
         onOk={handleDirectOutbound} confirmLoading={outbounding} okText="确认出库" width="40vw">
         {outboundTarget && (
@@ -440,7 +441,7 @@ const OrdersTab: React.FC = () => {
             <Input placeholder="输入快递单号" />
           </Form.Item>
         </Form>
-      </Modal>
+      </ResizableModal>
     </div>
   );
 };

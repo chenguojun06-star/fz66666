@@ -352,7 +352,7 @@ const SyncProcessPriceModal: React.FC<SyncProcessPriceModalProps> = ({ open, onC
       processCode: String(index + 1).padStart(2, '0'),
     }));
     if (!rows.length) {
-      message.error('请先添加工序');
+      message.error('请先添加进度节点');
       return false;
     }
     const invalid = rows.find((row) => !norm(row.processName));
@@ -717,7 +717,7 @@ const SyncProcessPriceModal: React.FC<SyncProcessPriceModalProps> = ({ open, onC
           </Text>
 
           <Space>
-            <Button type="primary" onClick={handleAdd} disabled={isBusy || !readyForScope}>添加工序</Button>
+            <Button type="primary" onClick={handleAdd} disabled={isBusy || !readyForScope}>进度节点</Button>
             <Popover
               trigger="click"
               placement="bottomRight"
@@ -817,7 +817,7 @@ const SyncProcessPriceModal: React.FC<SyncProcessPriceModalProps> = ({ open, onC
           locale={{
             emptyText: !selectedStyleNo
               ? '请先输入款号后再维护工序单价'
-              : '当前规则暂无工序配置，点击「添加工序」开始维护',
+              : '当前规则暂无工序配置，点击「进度节点」开始维护',
           }}
         />
       </Space>

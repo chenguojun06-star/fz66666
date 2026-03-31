@@ -26,6 +26,14 @@ export interface UseProductionColumnsProps {
   handleTransferOrder: (record: ProductionOrder) => void;
   navigate: NavigateFunction;
   openProcessDetail: (record: ProductionOrder, type: string) => void;
+  openNodeDetail: (
+    order: ProductionOrder,
+    nodeType: string,
+    nodeName: string,
+    stats?: { done: number; total: number; percent: number; remaining: number },
+    unitPrice?: number,
+    processList?: any[]
+  ) => void;
   syncProcessFromTemplate: (record: ProductionOrder) => void;
   setPrintModalVisible: (v: boolean) => void;
   setPrintingRecord: (r: ProductionOrder | null) => void;
@@ -50,7 +58,7 @@ export interface UseProductionColumnsProps {
 export function useProductionColumns({
   sortField, sortOrder, handleSort,
   handleCloseOrder, handleScrapOrder, handleTransferOrder,
-  navigate, openProcessDetail, syncProcessFromTemplate,
+  navigate, openProcessDetail, openNodeDetail, syncProcessFromTemplate,
   setPrintModalVisible, setPrintingRecord,
   setRemarkPopoverId, setRemarkText,
   quickEditModal, isSupervisorOrAbove, renderCompletionTimeTag, deliveryRiskMap,
@@ -359,7 +367,7 @@ export function useProductionColumns({
         return (
           <div
             style={{ cursor: frozen ? 'default' : 'pointer', padding: '4px', transition: 'background 0.2s', opacity: frozen ? 0.6 : 1 }}
-            onClick={(e) => { e.stopPropagation(); if (!frozen) openProcessDetail(record, 'cutting'); }}
+            onClick={(e) => { e.stopPropagation(); if (!frozen) openNodeDetail(record, 'cutting', '裁剪', { done: completed, total, percent: rate || 0, remaining: total - completed }); }}
             onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
           >
@@ -407,7 +415,7 @@ export function useProductionColumns({
         return (
           <div
             style={{ cursor: frozen ? 'default' : 'pointer', padding: '4px', transition: 'background 0.2s', opacity: frozen ? 0.6 : 1 }}
-            onClick={(e) => { e.stopPropagation(); if (!frozen) openProcessDetail(record, 'secondaryProcess'); }}
+            onClick={(e) => { e.stopPropagation(); if (!frozen) openNodeDetail(record, 'secondaryProcess', '二次工艺', { done: completed, total, percent: rate || 0, remaining: total - completed }); }}
             onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
           >
@@ -435,7 +443,7 @@ export function useProductionColumns({
         return (
           <div
             style={{ cursor: frozen ? 'default' : 'pointer', padding: '4px', transition: 'background 0.2s', opacity: frozen ? 0.6 : 1 }}
-            onClick={(e) => { e.stopPropagation(); if (!frozen) openProcessDetail(record, 'carSewing'); }}
+            onClick={(e) => { e.stopPropagation(); if (!frozen) openNodeDetail(record, 'carSewing', '车缝', { done: completed, total, percent: rate || 0, remaining: total - completed }); }}
             onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
           >
@@ -463,7 +471,7 @@ export function useProductionColumns({
         return (
           <div
             style={{ cursor: frozen ? 'default' : 'pointer', padding: '4px', transition: 'background 0.2s', opacity: frozen ? 0.6 : 1 }}
-            onClick={(e) => { e.stopPropagation(); if (!frozen) openProcessDetail(record, 'tailProcess'); }}
+            onClick={(e) => { e.stopPropagation(); if (!frozen) openNodeDetail(record, 'tailProcess', '尾部', { done: completed, total, percent: rate || 0, remaining: total - completed }); }}
             onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
           >
@@ -695,10 +703,10 @@ export function useProductionColumns({
                   { key: 'syncProcess', label: '🔄 从模板同步', onClick: () => syncProcessFromTemplate(record) },
                 ],
               }] as RowAction[] : []),
-              ...(!isFactoryAccount && openSubProcessRemap ? [{
+              ...(isFactoryAccount && openSubProcessRemap ? [{
                 key: 'subProcessRemap',
                 label: '子工序',
-                title: frozen ? '子工序配置（订单已关单）' : '临时子工序配置',
+                title: frozen ? '子工序单价配置（订单已关单）' : '子工序单价配置',
                 disabled: frozen,
                 onClick: () => openSubProcessRemap(record),
               }] : []),

@@ -1539,7 +1539,7 @@ const StyleSizeTab: React.FC<Props> = ({
         okText="保存并带出"
         cancelText="取消"
         confirmLoading={saving}
-        width="52vw"
+        width="60vw"
         minWidth={720}
         initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.62 : 520}
         minHeight={420}

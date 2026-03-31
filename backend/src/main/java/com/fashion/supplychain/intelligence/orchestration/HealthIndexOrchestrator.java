@@ -18,6 +18,7 @@ import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 /**
  * 供应链健康指数编排器 — 0~100 综合健康得分
@@ -51,21 +52,22 @@ public class HealthIndexOrchestrator {
         HealthIndexResponse resp = new HealthIndexResponse();
         try {
         Long tenantId = UserContext.tenantId();
+        String factoryId = UserContext.factoryId();
 
         // ── 维度1: 生产执行 ──
-        int productionScore = calcProductionScore(tenantId);
+        int productionScore = calcProductionScore(tenantId, factoryId);
 
         // ── 维度2: 交期达成 ──
-        int deliveryScore = calcDeliveryScore(tenantId);
+        int deliveryScore = calcDeliveryScore(tenantId, factoryId);
 
         // ── 维度3: 质量合格 ──
-        int qualityScore = calcQualityScore(tenantId);
+        int qualityScore = calcQualityScore(tenantId, factoryId);
 
         // ── 维度4: 库存健康 ──
         int inventoryScore = calcInventoryScore(tenantId);
 
         // ── 维度5: 结算进度 ──
-        int financeScore = calcFinanceScore(tenantId);
+        int financeScore = calcFinanceScore(tenantId, factoryId);
 
         int healthIndex = productionScore + deliveryScore + qualityScore + inventoryScore + financeScore;
         healthIndex = Math.min(100, Math.max(0, healthIndex));
@@ -80,7 +82,7 @@ public class HealthIndexOrchestrator {
                 : healthIndex >= 60 ? "C" : healthIndex >= 40 ? "D" : "F");
 
         // ── 7日趋势 ──
-        resp.setTrend(buildTrend(tenantId));
+        resp.setTrend(buildTrend(tenantId, factoryId));
 
         // ── 首要风险 + 建议 ──
         int minScore = Math.min(productionScore, Math.min(deliveryScore,
@@ -109,9 +111,10 @@ public class HealthIndexOrchestrator {
     }
 
     // ── 生产执行分 (0~20) ──
-    private int calcProductionScore(Long tenantId) {
+    private int calcProductionScore(Long tenantId, String factoryId) {
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
         qw.eq(tenantId != null, "tenant_id", tenantId)
+          .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
           .eq("delete_flag", 0).eq("status", "production");
         List<ProductionOrder> orders = productionOrderService.list(qw);
         if (orders.isEmpty()) return 20;
@@ -123,9 +126,10 @@ public class HealthIndexOrchestrator {
     }
 
     // ── 交期达成分 (0~20) ──
-    private int calcDeliveryScore(Long tenantId) {
+    private int calcDeliveryScore(Long tenantId, String factoryId) {
         QueryWrapper<ProductionOrder> all = new QueryWrapper<>();
         all.eq(tenantId != null, "tenant_id", tenantId)
+           .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
            .eq("delete_flag", 0)
            .in("status", Arrays.asList("production", "completed", "delayed"));
         long totalOrders = productionOrderService.count(all);
@@ -137,16 +141,18 @@ public class HealthIndexOrchestrator {
     }
 
     // ── 质量合格分 (0~20) ──
-    private int calcQualityScore(Long tenantId) {
+    private int calcQualityScore(Long tenantId, String factoryId) {
         LocalDateTime weekAgo = LocalDateTime.now().minusDays(7);
         QueryWrapper<ScanRecord> total = new QueryWrapper<>();
         total.eq(tenantId != null, "tenant_id", tenantId)
+             .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
              .ge("scan_time", weekAgo);
         long totalScans = scanRecordService.count(total);
         if (totalScans == 0) return 20;
 
         QueryWrapper<ScanRecord> success = new QueryWrapper<>();
         success.eq(tenantId != null, "tenant_id", tenantId)
+               .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
                .ge("scan_time", weekAgo)
                .eq("scan_result", "success");
         long successScans = scanRecordService.count(success);
@@ -178,9 +184,10 @@ public class HealthIndexOrchestrator {
     // ── 结算进度分 (0~20) ──
     // 计算逻辑：COMPLETED 订单 / 全部非取消订单 × 20
     // 无订单则给满分，体现业务完工交付能力
-    private int calcFinanceScore(Long tenantId) {
+    private int calcFinanceScore(Long tenantId, String factoryId) {
         QueryWrapper<ProductionOrder> total = new QueryWrapper<>();
         total.eq(tenantId != null, "tenant_id", tenantId)
+             .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
              .eq("delete_flag", 0)
              .ne("status", "cancelled");
         long totalOrders = productionOrderService.count(total);
@@ -188,6 +195,7 @@ public class HealthIndexOrchestrator {
 
         QueryWrapper<ProductionOrder> completed = new QueryWrapper<>();
         completed.eq(tenantId != null, "tenant_id", tenantId)
+                 .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
                  .eq("delete_flag", 0)
                  .eq("status", "completed");
         long completedCount = productionOrderService.count(completed);
@@ -196,7 +204,7 @@ public class HealthIndexOrchestrator {
     }
 
     // ── 7日趋势 ──
-    private List<DailyIndex> buildTrend(Long tenantId) {
+    private List<DailyIndex> buildTrend(Long tenantId, String factoryId) {
         List<DailyIndex> trend = new ArrayList<>();
         for (int i = 6; i >= 0; i--) {
             LocalDate date = LocalDate.now().minusDays(i);
@@ -206,11 +214,13 @@ public class HealthIndexOrchestrator {
             // 简化：用当天扫码成功率 × 100 作为当日指数估算
             QueryWrapper<ScanRecord> total = new QueryWrapper<>();
             total.eq(tenantId != null, "tenant_id", tenantId)
+                 .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
                  .between("scan_time", start, end);
             long dayTotal = scanRecordService.count(total);
 
             QueryWrapper<ScanRecord> ok = new QueryWrapper<>();
             ok.eq(tenantId != null, "tenant_id", tenantId)
+              .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
               .between("scan_time", start, end)
               .eq("scan_result", "success");
             long dayOk = scanRecordService.count(ok);

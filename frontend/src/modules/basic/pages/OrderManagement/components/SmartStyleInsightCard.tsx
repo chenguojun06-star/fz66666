@@ -9,7 +9,8 @@
  */
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Button, Space, Spin, Tag } from 'antd';
-import { RobotOutlined, ReloadOutlined, WarningOutlined } from '@ant-design/icons';
+import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
+import { ReloadOutlined, WarningOutlined } from '@ant-design/icons';
 import { productionOrderApi } from '@/services/production/productionApi';
 import type { FactoryCapacityItem } from '@/services/production/productionApi';
 import dayjs from 'dayjs';
@@ -266,7 +267,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
       {!aiAdviceVisible && (
         <Button
           size="small"
-          icon={<RobotOutlined />}
+          icon={<XiaoyunCloudAvatar size={18} active />}
           onClick={() => setAiAdviceVisible(true)}
           type="primary"
           ghost
@@ -282,7 +283,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
             <span style={{ fontWeight: 600, fontSize: 12, color: '#1677ff' }}>
-              <RobotOutlined style={{ marginRight: 6 }} />AI 下单建议
+              <XiaoyunCloudAvatar size={16} active /> AI 下单建议
             </span>
             <Space size={8}>
               <Button

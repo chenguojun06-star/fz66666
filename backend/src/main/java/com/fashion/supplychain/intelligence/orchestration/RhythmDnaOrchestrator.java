@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 /**
  * 生产节奏DNA编排器 — 工序耗时占比基因图
@@ -46,10 +47,12 @@ public class RhythmDnaOrchestrator {
         resp.setOrders(Collections.emptyList());
         try {
         Long tenantId = UserContext.tenantId();
+        String factoryId = UserContext.factoryId();
 
         // 取最近的已完成/进行中订单（最多20个）
         var qw = new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.fashion.supplychain.production.entity.ProductionOrder>();
         qw.eq(tenantId != null, "tenant_id", tenantId)
+          .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
           .eq("delete_flag", 0)
           .in("status", "completed", "production", "delayed")
           .orderByDesc("update_time")

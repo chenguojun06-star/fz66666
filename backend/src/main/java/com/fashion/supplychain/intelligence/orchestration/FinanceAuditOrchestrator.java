@@ -20,6 +20,7 @@ import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 /**
  * 财务审核智能编排器 — 一站式审核看板
@@ -41,7 +42,8 @@ public class FinanceAuditOrchestrator {
         FinanceAuditResponse resp = new FinanceAuditResponse();
         try {
             Long tenantId = UserContext.tenantId();
-            List<ProductionOrder> orders = loadRecentOrders(tenantId);
+            String factoryId = UserContext.factoryId();
+            List<ProductionOrder> orders = loadRecentOrders(tenantId, factoryId);
             List<AuditFinding> findings = new ArrayList<>();
 
             ProfitAnalysis profitAnalysis = new ProfitAnalysis();
@@ -61,7 +63,7 @@ public class FinanceAuditOrchestrator {
             }
 
             // ④ 重复结算检查（批量）
-            duplicateSuspect = checkDuplicateSettlement(tenantId, findings);
+            duplicateSuspect = checkDuplicateSettlement(tenantId, factoryId, findings);
 
             // ⑤ 汇总 + 审核建议
             Summary summary = buildSummary(orders, findings, duplicateSuspect);
@@ -84,11 +86,12 @@ public class FinanceAuditOrchestrator {
 
     // ── 数据加载 ──
 
-    private List<ProductionOrder> loadRecentOrders(Long tenantId) {
+    private List<ProductionOrder> loadRecentOrders(Long tenantId, String factoryId) {
         LambdaQueryWrapper<ProductionOrder> qw = new LambdaQueryWrapper<>();
         if (tenantId != null) {
             qw.eq(ProductionOrder::getTenantId, tenantId);
         }
+        qw.eq(StringUtils.hasText(factoryId), ProductionOrder::getFactoryId, factoryId);
         qw.in(ProductionOrder::getStatus, "production", "completed", "delayed");
         qw.and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0));
         qw.orderByDesc(ProductionOrder::getCreateTime);
@@ -219,12 +222,13 @@ public class FinanceAuditOrchestrator {
 
     // ── ④ 重复结算检查 ──
 
-    private int checkDuplicateSettlement(Long tenantId, List<AuditFinding> findings) {
+    private int checkDuplicateSettlement(Long tenantId, String factoryId, List<AuditFinding> findings) {
         // 查找被关联到结算单但 quantity=0 或 scanResult!=success 的异常记录
         LambdaQueryWrapper<ScanRecord> qw = new LambdaQueryWrapper<>();
         if (tenantId != null) {
             qw.eq(ScanRecord::getTenantId, tenantId);
         }
+        qw.eq(StringUtils.hasText(factoryId), ScanRecord::getFactoryId, factoryId);
         qw.isNotNull(ScanRecord::getPayrollSettlementId);
         qw.ne(ScanRecord::getPayrollSettlementId, "");
         qw.and(w -> w.ne(ScanRecord::getScanResult, "success")

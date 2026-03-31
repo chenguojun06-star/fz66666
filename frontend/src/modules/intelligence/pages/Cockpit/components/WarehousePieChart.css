@@ -9,6 +9,33 @@
   flex-shrink: 0;
 }
 
+.warehouse-sidebar-today {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(79, 209, 197, 0.1);
+}
+
+.today-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px;
+  background: rgba(7, 13, 27, 0.5);
+  border-radius: 6px;
+}
+
+.today-stat-label {
+  font-size: 10px;
+  color: #64748b;
+}
+
+.today-stat-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #3b82f6;
+}
+
 .style-stats {
   margin-top: 12px;
   padding-top: 12px;

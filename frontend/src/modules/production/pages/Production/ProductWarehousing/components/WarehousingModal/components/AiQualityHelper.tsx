@@ -5,7 +5,8 @@
  */
 import React, { useEffect, useState, useCallback } from 'react';
 import { Alert, Button, Spin, Tag, Typography } from 'antd';
-import { BulbOutlined, CheckCircleOutlined, WarningOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined, WarningOutlined } from '@ant-design/icons';
+import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
 import { qualityAiApi, QualityAiSuggestionResult } from '@/services/production/productionApi';
 
 const { Text } = Typography;
@@ -65,7 +66,7 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
     <div style={{ margin: '8px 0', padding: '10px 12px', background: '#f0f7ff', borderRadius: 6, border: '1px solid #d0e8ff' }}>
       {/* 标题行 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-        <BulbOutlined style={{ color: '#1677ff', fontSize: 14 }} />
+        <XiaoyunCloudAvatar size={16} active />
         <Text strong style={{ fontSize: 13, color: '#1677ff' }}>AI质检助手</Text>
         {loading && <Spin size="small" style={{ marginLeft: 4 }} />}
         {data && data.historicalVerdict && (

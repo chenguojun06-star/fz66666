@@ -15,6 +15,7 @@ import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 /**
  * 供应商智能评分卡编排器
@@ -43,11 +44,13 @@ public class SupplierScorecardOrchestrator {
         SupplierScorecardResponse resp = new SupplierScorecardResponse();
         try {
             Long tenantId = UserContext.tenantId();
+            String factoryId = UserContext.factoryId();
             LocalDateTime since = LocalDateTime.now().minusMonths(RECENT_MONTHS);
 
             // 加载近3个月订单
             QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
             qw.eq(tenantId != null, "tenant_id", tenantId)
+              .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
               .eq("delete_flag", 0)
               .ge("create_time", since)
               .isNotNull("factory_name")
@@ -70,7 +73,7 @@ public class SupplierScorecardOrchestrator {
             Set<String> orderIdSet = orders.stream()
                     .map(o -> String.valueOf(o.getId()))
                     .collect(Collectors.toSet());
-            Map<String, long[]> scanStats = buildScanStats(tenantId, orderIdSet);
+            Map<String, long[]> scanStats = buildScanStats(tenantId, factoryId, orderIdSet);
 
             List<SupplierScore> scores = new ArrayList<>();
             for (Map.Entry<String, List<ProductionOrder>> entry : byFactory.entrySet()) {
@@ -156,10 +159,11 @@ public class SupplierScorecardOrchestrator {
     }
 
     /** 构建 orderId → [totalScan, successScan] 的映射 */
-    private Map<String, long[]> buildScanStats(Long tenantId, Set<String> orderIds) {
+    private Map<String, long[]> buildScanStats(Long tenantId, String factoryId, Set<String> orderIds) {
         if (orderIds.isEmpty()) return Collections.emptyMap();
         QueryWrapper<ScanRecord> sq = new QueryWrapper<>();
         sq.eq(tenantId != null, "tenant_id", tenantId)
+          .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
           .in("order_id", orderIds);
         List<ScanRecord> records = scanRecordMapper.selectList(sq);
         Map<String, long[]> result = new HashMap<>();

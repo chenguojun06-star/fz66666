@@ -12,6 +12,7 @@ import {
   Button,
   Switch,
   Input,
+  InputNumber,
   Tag,
   Typography,
   Empty,
@@ -74,6 +75,8 @@ interface Props {
   saving: boolean;
   onSave: (newConfig: SubProcessRemapConfig) => void;
   onClose: () => void;
+  /** 是否为外发工厂账号。工厂账号可设置子工序自定义单价（仅外部参考，系统不参与结算） */
+  isFactoryAccount?: boolean;
 }
 
 export default function SubProcessRemapModal({
@@ -84,6 +87,7 @@ export default function SubProcessRemapModal({
   saving,
   onSave,
   onClose,
+  isFactoryAccount = false,
 }: Props) {
   const [localConfig, setLocalConfig] = useState<SubProcessRemapConfig>({});
 
@@ -145,6 +149,14 @@ export default function SubProcessRemapModal({
     });
   }
 
+  function updateSubProcessUnitPrice(stageKey: string, id: string, unitPrice: number | undefined) {
+    setLocalConfig(prev => {
+      const entry = prev[stageKey];
+      if (!entry) return prev;
+      return { ...prev, [stageKey]: { ...entry, subProcesses: entry.subProcesses.map(s => s.id === id ? { ...s, unitPrice } : s) } };
+    });
+  }
+
   // ── 构建表格行（按阶段顺序，每个子工序一行；未启用时 1 行占位）
   const tableRows = useMemo<TableRow[]>(() => {
     const sorted = [...parentNodes].sort((a, b) =>
@@ -167,7 +179,7 @@ export default function SubProcessRemapModal({
   // ── 表格列定义
   const columns: ColumnsType<TableRow> = [
     {
-      title: '子工序名称',
+      title: isFactoryAccount ? '子工序名称 / 自定义单价' : '子工序名称',
       key: 'subprocessName',
       render: (_: unknown, row: TableRow) => {
         if (!row.entry.enabled || row.subprocess === null) {
@@ -178,44 +190,62 @@ export default function SubProcessRemapModal({
           );
         }
         return (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingLeft: 8 }}>
-            <Text style={{ fontSize: 11, color: '#9ca3af', width: 18, flexShrink: 0 }}>
-              {row.subIndex + 1}.
-            </Text>
-            <Input
-              value={row.subprocess.name}
-              placeholder={`子工序名称 ${row.subIndex + 1}`}
-              onChange={e => updateSubProcessName(row.parentNode.stageKey, row.subprocess!.id, e.target.value)}
-              size="small"
-              maxLength={30}
-              status={!row.subprocess.name.trim() ? 'error' : undefined}
-              style={{ flex: 1 }}
-            />
-            <Button type="text" size="small" icon={<ArrowUpOutlined />}
-              disabled={row.subIndex === 0}
-              onClick={() => moveSubProcess(row.parentNode.stageKey, row.subIndex, -1)}
-              style={{ padding: '0 3px', color: '#6b7280' }}
-            />
-            <Button type="text" size="small" icon={<ArrowDownOutlined />}
-              disabled={row.subIndex === row.totalInParent - 1}
-              onClick={() => moveSubProcess(row.parentNode.stageKey, row.subIndex, 1)}
-              style={{ padding: '0 3px', color: '#6b7280' }}
-            />
-            <Tooltip title={row.totalInParent <= 1 ? '父节点至少保留 1 个子工序' : '删除'}>
-              <Button type="text" size="small" danger icon={<DeleteOutlined />}
-                disabled={row.totalInParent <= 1}
-                onClick={() => removeSubProcess(row.parentNode.stageKey, row.subprocess!.id)}
-                style={{ padding: '0 3px' }}
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingLeft: 8 }}>
+              <Text style={{ fontSize: 11, color: '#9ca3af', width: 18, flexShrink: 0 }}>
+                {row.subIndex + 1}.
+              </Text>
+              <Input
+                value={row.subprocess.name}
+                placeholder={`子工序名称 ${row.subIndex + 1}`}
+                onChange={e => updateSubProcessName(row.parentNode.stageKey, row.subprocess!.id, e.target.value)}
+                size="small"
+                maxLength={30}
+                status={!row.subprocess.name.trim() ? 'error' : undefined}
+                style={{ flex: 1 }}
               />
-            </Tooltip>
-          </div>
+              <Button type="text" size="small" icon={<ArrowUpOutlined />}
+                disabled={row.subIndex === 0}
+                onClick={() => moveSubProcess(row.parentNode.stageKey, row.subIndex, -1)}
+                style={{ padding: '0 3px', color: '#6b7280' }}
+              />
+              <Button type="text" size="small" icon={<ArrowDownOutlined />}
+                disabled={row.subIndex === row.totalInParent - 1}
+                onClick={() => moveSubProcess(row.parentNode.stageKey, row.subIndex, 1)}
+                style={{ padding: '0 3px', color: '#6b7280' }}
+              />
+              <Tooltip title={row.totalInParent <= 1 ? '父节点至少保留 1 个子工序' : '删除'}>
+                <Button type="text" size="small" danger icon={<DeleteOutlined />}
+                  disabled={row.totalInParent <= 1}
+                  onClick={() => removeSubProcess(row.parentNode.stageKey, row.subprocess!.id)}
+                  style={{ padding: '0 3px' }}
+                />
+              </Tooltip>
+            </div>
+            {isFactoryAccount && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingLeft: 26, marginTop: 4 }}>
+                <InputNumber
+                  value={row.subprocess.unitPrice}
+                  min={0}
+                  max={99999}
+                  precision={2}
+                  prefix="¥"
+                  size="small"
+                  placeholder="自定义单价"
+                  style={{ width: 130 }}
+                  onChange={v => updateSubProcessUnitPrice(row.parentNode.stageKey, row.subprocess!.id, v ?? undefined)}
+                />
+                <Text style={{ fontSize: 11, color: '#9ca3af' }}>厂方内部参考，不参与结算</Text>
+              </div>
+            )}
+          </>
         );
       },
     },
     {
       title: '进度节点',
       key: 'stage',
-      width: 130,
+      width: '50%',
       onCell: (row: TableRow) => ({
         rowSpan: row.rowSpan,
         style: {
@@ -280,7 +310,7 @@ export default function SubProcessRemapModal({
     : '子工序配置';
 
   return (
-    <ResizableModal title={title} open={visible} onCancel={onClose} width="40vw" destroyOnClose footer={null}>
+    <ResizableModal title={title} open={visible} onCancel={onClose} width="60vw" initialHeight={Math.round(window.innerHeight * 0.82)} destroyOnClose footer={null}>
       {/* ══ 顶部操作栏 ══ */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -306,7 +336,7 @@ export default function SubProcessRemapModal({
           size="small"
           bordered
           rowKey="key"
-          scroll={{ y: 400 }}
+          scroll={undefined}
         />
       )}
     </ResizableModal>

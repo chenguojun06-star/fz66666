@@ -577,7 +577,7 @@ export default function LabelPrintModal({ open, onClose, order, styleInfo }: Pro
       title={`打印标签 — ${order?.orderNo ?? ''}`}
       open={open}
       onCancel={onClose}
-      width="50vw"
+      width="60vw"
       footer={null}
       destroyOnHidden
     >

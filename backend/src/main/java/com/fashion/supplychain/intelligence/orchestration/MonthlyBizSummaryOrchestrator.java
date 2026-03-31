@@ -17,6 +17,7 @@ import com.fashion.supplychain.production.service.ScanRecordService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -41,6 +42,7 @@ public class MonthlyBizSummaryOrchestrator {
 
     public Map<String, Object> getMonthly(int year, int month) {
         Long tenantId = UserContext.tenantId();
+        String factoryId = UserContext.factoryId();
         LocalDateTime start = LocalDateTime.of(year, month, 1, 0, 0, 0);
         LocalDateTime end = start.plusMonths(1);
 
@@ -50,29 +52,31 @@ public class MonthlyBizSummaryOrchestrator {
         result.put("period", year + "年" + month + "月经营汇总");
         result.put("startDate", start.toLocalDate().toString());
         result.put("endDate", end.toLocalDate().minusDays(1).toString());
-        result.put("production", buildProductionStats(tenantId, start, end));
-        result.put("factoryBreakdown", buildFactoryBreakdown(tenantId, start, end));
+        result.put("production", buildProductionStats(tenantId, factoryId, start, end));
+        result.put("factoryBreakdown", buildFactoryBreakdown(tenantId, factoryId, start, end));
         result.put("materialStock", buildMaterialStats(tenantId, start, end));
-        result.put("finishedGoods", buildFinishedGoodsStats(tenantId, start, end));
-        result.put("finance", buildFinanceStats(tenantId, start, end));
+        result.put("finishedGoods", buildFinishedGoodsStats(tenantId, factoryId, start, end));
+        result.put("finance", buildFinanceStats(tenantId, factoryId, start, end));
         return result;
     }
 
     // ── 1. 生产总览 ──────────────────────────────────────────────────
-    private Map<String, Object> buildProductionStats(Long tenantId, LocalDateTime start, LocalDateTime end) {
-        long produced    = sumScan(tenantId, start, end, "production", "success");
-        long qualityTotal = sumScan(tenantId, start, end, "quality", null);
-        long defects      = sumScan(tenantId, start, end, "quality", "failure");
+    private Map<String, Object> buildProductionStats(Long tenantId, String factoryId, LocalDateTime start, LocalDateTime end) {
+        long produced    = sumScan(tenantId, factoryId, start, end, "production", "success");
+        long qualityTotal = sumScan(tenantId, factoryId, start, end, "quality", null);
+        long defects      = sumScan(tenantId, factoryId, start, end, "quality", "failure");
         long qualityPassed = qualityTotal - defects;
         double defectRatePct = qualityTotal > 0 ? round2(defects * 100.0 / qualityTotal) : 0.0;
 
         QueryWrapper<ProductionOrder> newOrdQw = new QueryWrapper<>();
         if (tenantId != null) newOrdQw.eq("tenant_id", tenantId);
+        if (StringUtils.hasText(factoryId)) newOrdQw.eq("factory_id", factoryId);
         newOrdQw.ge("create_time", start).lt("create_time", end).eq("delete_flag", 0);
         long newOrders = productionOrderService.count(newOrdQw);
 
         QueryWrapper<ProductionOrder> doneQw = new QueryWrapper<>();
         if (tenantId != null) doneQw.eq("tenant_id", tenantId);
+        if (StringUtils.hasText(factoryId)) doneQw.eq("factory_id", factoryId);
         doneQw.eq("status", "COMPLETED").ge("update_time", start).lt("update_time", end).eq("delete_flag", 0);
         long completedOrders = productionOrderService.count(doneQw);
 
@@ -89,9 +93,10 @@ public class MonthlyBizSummaryOrchestrator {
     }
 
     // ── 2. 各工厂件数 ──────────────────────────────────────────────────
-    private List<Map<String, Object>> buildFactoryBreakdown(Long tenantId, LocalDateTime start, LocalDateTime end) {
+    private List<Map<String, Object>> buildFactoryBreakdown(Long tenantId, String factoryId, LocalDateTime start, LocalDateTime end) {
         QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
         if (tenantId != null) qw.eq("tenant_id", tenantId);
+        if (StringUtils.hasText(factoryId)) qw.eq("factory_id", factoryId);
         qw.eq("scan_type", "production").eq("scan_result", "success")
           .ge("scan_time", start).lt("scan_time", end)
           .select("order_id", "quantity");
@@ -155,8 +160,8 @@ public class MonthlyBizSummaryOrchestrator {
     }
 
     // ── 4. 成品进出 ──────────────────────────────────────────────────
-    private Map<String, Object> buildFinishedGoodsStats(Long tenantId, LocalDateTime start, LocalDateTime end) {
-        long inboundPieces = sumScan(tenantId, start, end, "warehouse", "success");
+    private Map<String, Object> buildFinishedGoodsStats(Long tenantId, String factoryId, LocalDateTime start, LocalDateTime end) {
+        long inboundPieces = sumScan(tenantId, factoryId, start, end, "warehouse", "success");
 
         QueryWrapper<ProductOutstock> oqw = new QueryWrapper<>();
         if (tenantId != null) oqw.eq("tenant_id", tenantId);
@@ -171,9 +176,10 @@ public class MonthlyBizSummaryOrchestrator {
     }
 
     // ── 5. 财务汇总 ──────────────────────────────────────────────────
-    private Map<String, Object> buildFinanceStats(Long tenantId, LocalDateTime start, LocalDateTime end) {
+    private Map<String, Object> buildFinanceStats(Long tenantId, String factoryId, LocalDateTime start, LocalDateTime end) {
         QueryWrapper<ScanRecord> cqw = new QueryWrapper<>();
         if (tenantId != null) cqw.eq("tenant_id", tenantId);
+        if (StringUtils.hasText(factoryId)) cqw.eq("factory_id", factoryId);
         cqw.eq("scan_result", "success").isNotNull("scan_cost")
            .ge("scan_time", start).lt("scan_time", end).select("scan_cost");
         BigDecimal laborCost = scanRecordService.list(cqw).stream()
@@ -209,10 +215,11 @@ public class MonthlyBizSummaryOrchestrator {
     }
 
     // ── 工具方法 ──────────────────────────────────────────────────────
-    private long sumScan(Long tenantId, LocalDateTime start, LocalDateTime end,
+    private long sumScan(Long tenantId, String factoryId, LocalDateTime start, LocalDateTime end,
                          String type, String result) {
         QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
         if (tenantId != null) qw.eq("tenant_id", tenantId);
+        if (StringUtils.hasText(factoryId)) qw.eq("factory_id", factoryId);
         if (type != null) qw.eq("scan_type", type);
         if (result != null) qw.eq("scan_result", result);
         qw.ge("scan_time", start).lt("scan_time", end).select("quantity");

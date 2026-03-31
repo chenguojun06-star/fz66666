@@ -10,6 +10,8 @@ import com.fashion.supplychain.intelligence.dto.IntelligenceSignalResponse.Signa
 import com.fashion.supplychain.intelligence.service.AiAdvisorService;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,12 +52,22 @@ public class TenantIntelligenceBrainOrchestrator {
     // ──────────────────────────────────────────────────────────────
 
     /**
+     * 整体超时守护：信号+记忆+AI三步最多允许占用的总秒数。
+     * 略低于前端 Axios 30s 超时，确保响应来得及到达客户端。
+     */
+    private static final int UNIFIED_SNAPSHOT_TIMEOUT_SECONDS = 22;
+
+    /**
      * 生成统一的智能大脑快照（含信号层 + 记忆层 + AI合成）。
+     *
+     * <p>步骤 2-4（信号采集 + 记忆召回 + AI推理）在独立线程执行，
+     * 并设置 {@value #UNIFIED_SNAPSHOT_TIMEOUT_SECONDS} 秒整体超时。
+     * 超时后优雅降级：直接返回已有的基础快照数据，不阻塞 HTTP 线程。
      */
     public IntelligenceBrainSnapshotResponse unifiedSnapshot() {
         Long tenantId = UserContext.tenantId();
 
-        // 1. 基础快照（已有编排器）
+        // 1. 基础快照（同步，必须完成，通常很快）
         IntelligenceBrainSnapshotResponse snapshot;
         try {
             snapshot = brainOrchestrator.snapshot();
@@ -65,6 +77,24 @@ public class TenantIntelligenceBrainOrchestrator {
         }
         snapshot.setGeneratedAt(LocalDateTime.now().format(FORMATTER));
 
+        // 2-4. 信号采集 + 记忆召回 + AI推理：异步执行，整体 22s 超时守护
+        final IntelligenceBrainSnapshotResponse finalSnapshot = snapshot;
+        try {
+            CompletableFuture.runAsync(() -> enrichAsync(finalSnapshot, tenantId))
+                    .orTimeout(UNIFIED_SNAPSHOT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                    .join(); // 阻塞等待，但有超时保护
+        } catch (Exception e) {
+            // 超时或异步异常：优雅降级，基础快照仍可用
+            log.warn("[大脑快照] 异步丰富步骤超时或失败（已降级返回基础快照）: {}", e.getMessage());
+        }
+
+        log.info("[大脑快照] tenantId={} signals={} actions={}", tenantId,
+                finalSnapshot.getSignals().size(), finalSnapshot.getActions().size());
+        return finalSnapshot;
+    }
+
+    /** 异步执行：信号采集 + 记忆召回 + AI合成推理，任意步骤失败均降级跳过。 */
+    private void enrichAsync(IntelligenceBrainSnapshotResponse snapshot, Long tenantId) {
         // 2. 信号采集层（降级安全）
         IntelligenceSignalResponse signalResp = null;
         try {
@@ -97,10 +127,6 @@ public class TenantIntelligenceBrainOrchestrator {
             snapshot.getSummary().setAnomalyCount(
                     snapshot.getSummary().getAnomalyCount() + signalResp.getCriticalCount());
         }
-
-        log.info("[大脑快照] tenantId={} signals={} actions={}", tenantId,
-                snapshot.getSignals().size(), snapshot.getActions().size());
-        return snapshot;
     }
 
     // ──────────────────────────────────────────────────────────────

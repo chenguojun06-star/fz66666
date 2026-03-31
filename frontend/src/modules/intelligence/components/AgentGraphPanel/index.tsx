@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Button, Select, Input, Tag, Progress, Spin, Alert, Divider, Rate, Segmented, Table, Tooltip } from 'antd';
-import { RobotOutlined, ThunderboltOutlined, BranchesOutlined, HistoryOutlined, PlayCircleOutlined } from '@ant-design/icons';
+import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
+import { ThunderboltOutlined, BranchesOutlined, HistoryOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import { useAgentGraphStore, type NodeEvent } from '@/stores/useAgentGraphStore';
 
 const SCENES = [
@@ -286,7 +287,7 @@ const AgentGraphPanel: React.FC = () => {
               {result.contextSummary && (
                 <div style={{ marginBottom: 8 }}>
                   <div style={{ fontSize: 11, color: '#a78bfa', fontWeight: 600, marginBottom: 4 }}>
-                    <RobotOutlined style={{ marginRight: 4 }} />分析结果
+                    <XiaoyunCloudAvatar size={16} active />分析结果
                   </div>
                   <div style={{ fontSize: 12, color: '#d4d4d4', lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
                     {result.contextSummary}

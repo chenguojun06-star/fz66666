@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import org.springframework.util.StringUtils;
 
 /**
  * 工厂工序瓶颈分析编排器
@@ -58,11 +59,13 @@ public class FactoryBottleneckOrchestrator {
 
     public List<FactoryBottleneckItem> compute() {
         Long tenantId = UserContext.tenantId();
+        String factoryId = UserContext.factoryId();
 
         // 1. 查询活跃订单（非已完成、非已取消、非软删除）
         List<ProductionOrder> orders = productionOrderService.list(
                 new LambdaQueryWrapper<ProductionOrder>()
                         .eq(ProductionOrder::getTenantId, tenantId)
+                        .eq(StringUtils.hasText(factoryId), ProductionOrder::getFactoryId, factoryId)
                         .notIn(ProductionOrder::getStatus, "completed", "cancelled")
                         .eq(ProductionOrder::getDeleteFlag, 0)
                         .isNotNull(ProductionOrder::getFactoryName)
@@ -79,6 +82,7 @@ public class FactoryBottleneckOrchestrator {
         List<ScanRecord> scans = scanRecordService.list(
                 new LambdaQueryWrapper<ScanRecord>()
                         .eq(ScanRecord::getTenantId, tenantId)
+                        .eq(StringUtils.hasText(factoryId), ScanRecord::getFactoryId, factoryId)
                         .in(ScanRecord::getOrderId, orderIds)
                         .eq(ScanRecord::getScanResult, "success")
         );

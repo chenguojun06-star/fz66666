@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Input, Button, Tag, Space, Tooltip, Statistic, Row, Col, Card, Alert } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
-import { SearchOutlined, RiseOutlined, FallOutlined, MinusOutlined, RobotOutlined } from '@ant-design/icons';
+import { SearchOutlined, RiseOutlined, FallOutlined, MinusOutlined } from '@ant-design/icons';
+import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
 import type { ColumnsType, TableProps } from 'antd/es/table';
 import type { TableRowSelection } from 'antd/es/table/interface';
 import { intelligenceApi, ProcessKnowledgeItem, ProcessKnowledgeResponse, ProcessKnowledgeStyleRecord } from '@/services/production/productionApi';
@@ -216,7 +217,7 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
       title: (
         <Tooltip title="AI 加权建议价（最近 3 条权重 ×2）">
           <Space size={4}>
-            <RobotOutlined />
+            <XiaoyunCloudAvatar size={18} active />
             AI建议价
           </Space>
         </Tooltip>

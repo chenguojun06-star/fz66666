@@ -6,6 +6,7 @@ import dayjs from 'dayjs';
 
 import type { ProductionOrder } from '@/types/production';
 import { stageAliasMap, tailProcessKeywords } from '@/utils/productionStage';
+import { STAGE_ACCENT, STAGE_GLOW } from '@/utils/stageStyles';
 import { useProductionBoardStore } from '@/stores/productionBoardStore';
 
 type StageKey = 'procurement' | 'cutting' | 'secondaryProcess' | 'sewing' | 'tailProcess' | 'warehousing';
@@ -26,12 +27,12 @@ type StageBucket = StageMeta & {
 };
 
 const STAGE_META: StageMeta[] = [
-  { key: 'procurement', label: '采购', focusNode: '采购', accent: '#2dd4bf', glow: 'rgba(45,212,191,0.26)' },
-  { key: 'cutting', label: '裁剪', focusNode: '裁剪', accent: '#22c55e', glow: 'rgba(34,197,94,0.24)' },
-  { key: 'secondaryProcess', label: '二次工艺', focusNode: '二次工艺', accent: '#a78bfa', glow: 'rgba(167,139,250,0.24)' },
-  { key: 'sewing', label: '车缝', focusNode: '车缝', accent: '#38bdf8', glow: 'rgba(56,189,248,0.24)' },
-  { key: 'tailProcess', label: '尾部', focusNode: '尾部', accent: '#f59e0b', glow: 'rgba(245,158,11,0.24)' },
-  { key: 'warehousing', label: '入库', focusNode: '入库', accent: '#f97316', glow: 'rgba(249,115,22,0.24)' },
+  { key: 'procurement', label: '采购', focusNode: '采购', accent: STAGE_ACCENT, glow: STAGE_GLOW },
+  { key: 'cutting', label: '裁剪', focusNode: '裁剪', accent: STAGE_ACCENT, glow: STAGE_GLOW },
+  { key: 'secondaryProcess', label: '二次工艺', focusNode: '二次工艺', accent: STAGE_ACCENT, glow: STAGE_GLOW },
+  { key: 'sewing', label: '车缝', focusNode: '车缝', accent: STAGE_ACCENT, glow: STAGE_GLOW },
+  { key: 'tailProcess', label: '尾部', focusNode: '尾部', accent: STAGE_ACCENT, glow: STAGE_GLOW },
+  { key: 'warehousing', label: '入库', focusNode: '入库', accent: STAGE_ACCENT, glow: STAGE_GLOW },
 ];
 
 const STAGE_INDEX: Record<StageKey, number> = {
@@ -265,11 +266,11 @@ const StageCapsulePanel: React.FC<StageCapsulePanelProps> = ({ orders }) => {
     <div className="c-stage-capsule-panel">
       <div className="c-card c-stage-shell">
         <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={toggleCollapsed}>
-          <span className="live-dot" style={{ ['--dot-size' as any]: '7px', ['--dot-color' as any]: '#38bdf8' }} />
+          <span className="live-dot" style={{ ['--dot-size' as any]: '7px', ['--dot-color' as any]: STAGE_ACCENT }} />
           进度节点
           <span className="c-card-badge cyan-badge">点击卡片展开订单</span>
           <span
-            style={{ marginLeft: 'auto', cursor: 'pointer', color: collapsed ? '#a78bfa' : '#5a7a9a', fontSize: 12, padding: '0 4px', display: 'inline-flex', alignItems: 'center', flexShrink: 0, userSelect: 'none' }}
+            style={{ marginLeft: 'auto', cursor: 'pointer', color: collapsed ? STAGE_ACCENT : STAGE_ACCENT, fontSize: 12, padding: '0 4px', display: 'inline-flex', alignItems: 'center', flexShrink: 0, userSelect: 'none' }}
             title={collapsed ? '展开面板' : '收起面板'}
           >
             {collapsed ? <DownOutlined /> : <UpOutlined />}

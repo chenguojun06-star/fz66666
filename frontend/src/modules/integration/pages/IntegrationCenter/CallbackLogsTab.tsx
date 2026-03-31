@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Card, Select, Button, Tag, Space, Typography } from 'antd';
+import { Card, Select, Tag, Space, Typography } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
-import { SearchOutlined, ReloadOutlined, EyeOutlined } from '@ant-design/icons';
+import { SearchOutlined, ReloadOutlined } from '@ant-design/icons';
+import RowActions from '@/components/common/RowActions';
+import type { RowAction } from '@/components/common/RowActions';
 import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
 import { formatDateTimeSecond } from '@/utils/datetime';
@@ -93,12 +95,12 @@ const CallbackLogsTab: React.FC<Props> = ({ active }) => {
         ? <Text type="danger" ellipsis={{ tooltip: v }}>{v}</Text>
         : '-' },
     { title: '操作', key: 'action', width: 80, fixed: 'right',
-      render: (_: unknown, r: CallbackLog) => (
-        <Button type="link" size="small" icon={<EyeOutlined />}
-          onClick={() => setRawBodyModal({ open: true, content: r.rawBody || '（无内容）' })}>
-          原文
-        </Button>
-      ) },
+      render: (_: unknown, r: CallbackLog) => {
+        const actions: RowAction[] = [
+          { key: 'raw', label: '原文', primary: true, onClick: () => setRawBodyModal({ open: true, content: r.rawBody || '（无内容）' }) },
+        ];
+        return <RowActions actions={actions} />;
+      } },
   ];
 
   const formatRawBody = (body: string) => {

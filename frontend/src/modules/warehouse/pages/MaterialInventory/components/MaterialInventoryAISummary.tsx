@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Alert } from 'antd';
-import { RobotOutlined } from '@ant-design/icons';
+import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
 import type { MaterialStockAlertItem } from './MaterialAlertRanking';
 
 interface MaterialInventoryStats {
@@ -64,7 +64,7 @@ const MaterialInventoryAISummary: React.FC<MaterialInventoryAISummaryProps> = ({
 
   return (
     <Alert
-      icon={<RobotOutlined />}
+      icon={<XiaoyunCloudAvatar size={18} active />}
       showIcon
       type={insight.type}
       title={insight.message}

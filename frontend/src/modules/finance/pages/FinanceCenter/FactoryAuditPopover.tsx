@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Popover, Progress, Tag, Divider } from 'antd';
-import { RobotOutlined, CheckCircleOutlined, WarningOutlined } from '@ant-design/icons';
+import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
+import { CheckCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import DecisionInsightCard, { SMART_CARD_CONTENT_WIDTH, SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
 
 interface FactorySummaryRow {
@@ -92,7 +93,7 @@ const FactoryAuditPopover: React.FC<Props> = ({ record, auditedOrderNos, childre
   const content = (
     <div style={{ width: SMART_CARD_CONTENT_WIDTH, boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-        <RobotOutlined style={{ color: 'var(--primary-color)' }} />
+        <XiaoyunCloudAvatar size={18} active />
         <span style={{ fontWeight: 600, fontSize: 13 }}>AI 智能分析</span>
         <Tag color={analysis.auditedCount === analysis.totalCount ? 'success' : 'orange'} style={{ marginLeft: 'auto', fontSize: 11 }}>
           {analysis.auditedCount === analysis.totalCount ? '全部已审核' : `${analysis.auditedCount}/${analysis.totalCount} 已审核`}

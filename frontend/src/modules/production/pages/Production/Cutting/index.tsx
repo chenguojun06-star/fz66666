@@ -372,17 +372,6 @@ const CuttingManagement: React.FC = () => {
               <StandardToolbar
                 left={(
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                    <Select
-                      value={tasks.taskQuery.factoryType || ''}
-                      onChange={(value) => tasks.setTaskQuery(prev => ({ ...prev, factoryType: value as 'INTERNAL' | 'EXTERNAL' | '', page: 1 }))}
-                      options={[
-                        { label: '全部工厂', value: '' },
-                        { label: '内部自产', value: 'INTERNAL' },
-                        { label: '外发工厂', value: 'EXTERNAL' },
-                      ]}
-                      style={{ width: 132 }}
-                      placeholder="工厂类型"
-                    />
                     <StandardSearchBar
                       searchValue={tasks.taskQuery.orderNo || ''}
                       onSearchChange={(value) => tasks.setTaskQuery(prev => ({ ...prev, orderNo: value, page: 1 }))}
@@ -404,6 +393,17 @@ const CuttingManagement: React.FC = () => {
                         tasks.setTaskQuery((prev) => ({ page: 1, pageSize: prev.pageSize, status: '', orderNo: '', styleNo: '', orgUnitId: '', factoryType: '' }));
                         tasks.setTaskDateRange(null);
                       }}
+                    />
+                    <Select
+                      value={tasks.taskQuery.factoryType || ''}
+                      onChange={(value) => tasks.setTaskQuery(prev => ({ ...prev, factoryType: value as 'INTERNAL' | 'EXTERNAL' | '', page: 1 }))}
+                      options={[
+                        { label: '全部工厂', value: '' },
+                        { label: '内部自产', value: 'INTERNAL' },
+                        { label: '外发工厂', value: 'EXTERNAL' },
+                      ]}
+                      style={{ width: 132 }}
+                      placeholder="工厂类型"
                     />
                   </div>
                 )}

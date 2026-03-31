@@ -225,6 +225,9 @@ const SUGGESTIONS = [
   '⚠️ 异常订单排查',
   '👥 通知跟单跟进这单',
   '🧵 安排生产主管推进排期',
+  '📈 分析这单为什么成本高',
+  '💰 推荐这单怎么下更划算',
+  '🔄 刷新这单学习结果',
 ];
 
 const describeToolName = (toolName?: string) => {

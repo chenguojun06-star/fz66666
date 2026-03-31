@@ -69,3 +69,34 @@
   color: #4fd1c5;
   font-weight: 500;
 }
+
+.order-scrapped-stats {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(248, 113, 113, 0.2);
+}
+
+.order-scrapped-stats-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(248, 113, 113, 0.1);
+  border-radius: 8px;
+  padding: 10px 16px;
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  font-size: 12px;
+}
+
+.order-scrapped-label {
+  font-weight: 600;
+  color: #f87171;
+}
+
+.order-scrapped-count {
+  color: #f87171;
+  font-weight: 500;
+}
+
+.order-scrapped-qty {
+  color: rgba(248, 113, 113, 0.8);
+}

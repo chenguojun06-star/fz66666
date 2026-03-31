@@ -349,7 +349,10 @@ const PayrollOperatorSummary: React.FC = () => {
 
         setLoading(true);
         try {
-            const res = await api.post<{ code: number; message: string; data: PayrollOperatorProcessSummaryRow[] }>('/finance/payroll-settlement/operator-summary', payload);
+            const endpoint = activeTab === 'detail'
+                ? '/finance/payroll-settlement/operator-detail'
+                : '/finance/payroll-settlement/operator-summary';
+            const res = await api.post<{ code: number; message: string; data: PayrollOperatorProcessSummaryRow[] }>(endpoint, payload);
             const data = unwrapApiData<PayrollOperatorProcessSummaryRow[]>(res, '获取人员工序统计失败');
             setRows(Array.isArray(data) ? data : []);
             if (showSmartErrorNotice) setSmartError(null);
@@ -493,7 +496,7 @@ const PayrollOperatorSummary: React.FC = () => {
     };
 
     // Tab2: 批量终审推送到付款中心
-    
+
     const handlePrintWageSlips = () => {
         if (selectedRowKeys.length === 0) {
             message.warning('请选择需要打印工资条的人员');

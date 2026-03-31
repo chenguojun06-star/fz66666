@@ -7,6 +7,14 @@ export interface PieSegment {
   label: string;
   count: number;
   color: string;
+  unit?: string;
+}
+
+export interface TodayStat {
+  label: string;
+  value: number | string;
+  unit?: string;
+  type?: 'default' | 'success' | 'warning';
 }
 
 export interface PieChartCardProps {
@@ -18,6 +26,8 @@ export interface PieChartCardProps {
   avgTime?: string;
   segments: PieSegment[];
   loading?: boolean;
+  todayStats?: TodayStat[];
+  extraCompletedStat?: TodayStat;
 }
 
 const polarToCartesian = (cx: number, cy: number, r: number, angle: number) => ({
@@ -53,6 +63,8 @@ const PieChartCard: React.FC<PieChartCardProps> = ({
   avgTime,
   segments,
   loading = false,
+  todayStats,
+  extraCompletedStat,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -62,7 +74,7 @@ const PieChartCard: React.FC<PieChartCardProps> = ({
     const el = containerRef.current;
     const parentEl = el.parentElement;
     const targetEl = parentEl || el;
-    
+
     const update = () => {
       const w = targetEl.getBoundingClientRect().width;
       const h = targetEl.getBoundingClientRect().height;
@@ -122,6 +134,18 @@ const PieChartCard: React.FC<PieChartCardProps> = ({
             <span className="pie-sidebar-num">{completed}</span>
           </div>
         </div>
+        {todayStats && todayStats.length > 0 && (
+          <div className="pie-sidebar-today">
+            {todayStats.map((stat, idx) => (
+              <div key={idx} className="pie-today-item">
+                <span className="pie-today-label">{stat.label}</span>
+                <span className={`pie-today-value ${stat.type === 'success' ? 'pie-today-value--success' : ''}`}>
+                  {stat.value}{stat.unit || ''}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   }
@@ -139,6 +163,14 @@ const PieChartCard: React.FC<PieChartCardProps> = ({
           <span className="pie-card-stat-num pie-card-stat-num--done">{completed}</span>
           <span className="pie-card-stat-label">已完成</span>
         </div>
+        {extraCompletedStat && (
+          <div className="pie-card-stat pie-card-stat--extra">
+            <span className={`pie-card-stat-num ${extraCompletedStat.type === 'success' ? 'pie-card-stat-num--done' : ''}`}>
+              {extraCompletedStat.value}{extraCompletedStat.unit || ''}
+            </span>
+            <span className="pie-card-stat-label">{extraCompletedStat.label}</span>
+          </div>
+        )}
         <div className="pie-card-stat">
           <span className="pie-card-stat-num">{total}</span>
           <span className="pie-card-stat-label">总数量</span>
@@ -185,7 +217,7 @@ const PieChartCard: React.FC<PieChartCardProps> = ({
                     textAnchor="middle"
                     className="pie-card-pie-count"
                   >
-                    {seg.count}件
+                    {seg.count}{seg.unit || '件'}
                   </text>
                 </g>
               );
@@ -201,7 +233,7 @@ const PieChartCard: React.FC<PieChartCardProps> = ({
             <div key={seg.key} className="pie-legend-item">
               <span className="pie-legend-dot" style={{ background: seg.color }} />
               <span className="pie-legend-label">{seg.label}</span>
-              <span className="pie-legend-count">{seg.count}件</span>
+              <span className="pie-legend-count">{seg.count}{seg.unit || '件'}</span>
               <span className="pie-legend-percent">{seg.percent}%</span>
             </div>
           ))}

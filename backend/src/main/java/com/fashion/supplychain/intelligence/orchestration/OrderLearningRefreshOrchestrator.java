@@ -20,8 +20,10 @@ public class OrderLearningRefreshOrchestrator {
     private final OrderLearningOutcomeOrchestrator orderLearningOutcomeOrchestrator;
 
     public int refreshRecentOrdersForCurrentTenant(int limit) {
+        String factoryId = UserContext.factoryId();
         List<ProductionOrder> orders = productionOrderService.list(new LambdaQueryWrapper<ProductionOrder>()
                 .eq(ProductionOrder::getTenantId, UserContext.tenantId())
+                .eq(StringUtils.hasText(factoryId), ProductionOrder::getFactoryId, factoryId)
                 .orderByDesc(ProductionOrder::getUpdateTime)
                 .last("limit " + Math.max(limit, 1)));
         return refreshOrders(orders);
@@ -31,8 +33,10 @@ public class OrderLearningRefreshOrchestrator {
         if (!StringUtils.hasText(styleNo)) {
             return 0;
         }
+        String factoryId = UserContext.factoryId();
         List<ProductionOrder> orders = productionOrderService.list(new LambdaQueryWrapper<ProductionOrder>()
                 .eq(ProductionOrder::getTenantId, UserContext.tenantId())
+                .eq(StringUtils.hasText(factoryId), ProductionOrder::getFactoryId, factoryId)
                 .eq(ProductionOrder::getStyleNo, styleNo.trim())
                 .orderByDesc(ProductionOrder::getUpdateTime)
                 .last("limit " + Math.max(limit, 1)));

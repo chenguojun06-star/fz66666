@@ -10,6 +10,7 @@ interface TrendData {
   orderCount: number;
   productionCount: number;
   inboundCount: number;
+  outboundCount: number;
 }
 
 interface OverviewChartProps {
@@ -22,6 +23,16 @@ const COLORS = {
   order: { ring: '#a78bfa', text: '#94a3b8' },
   production: { ring: '#60a5fa', text: '#94a3b8' },
   inbound: { ring: '#34d399', text: '#94a3b8' },
+  outbound: { ring: '#f472b6', text: '#94a3b8' },
+};
+
+const isToday = (dateStr?: string | null): boolean => {
+  if (!dateStr) return false;
+  const date = new Date(dateStr);
+  const today = new Date();
+  return date.getFullYear() === today.getFullYear() &&
+    date.getMonth() === today.getMonth() &&
+    date.getDate() === today.getDate();
 };
 
 const OverviewChart: React.FC<OverviewChartProps> = ({ mode = 'sidebar', moduleKey, position }) => {
@@ -147,7 +158,16 @@ const OverviewChart: React.FC<OverviewChartProps> = ({ mode = 'sidebar', moduleK
       const productionCount = periodOrders.filter(o => String(o.status||'').toUpperCase() === 'PRODUCTION').reduce((sum, o) => sum + (o.orderQuantity || 0), 0);
       const inboundCount = periodOrders.filter(o => String(o.status||'').toUpperCase() === 'COMPLETED').reduce((sum, o) => sum + (o.inStockQuantity || o.orderQuantity || 0), 0);
 
-      data.push({ date: label, orderCount, productionCount, inboundCount });
+      const outboundOrders = orders.filter(o => {
+        const outDateStr = String(o.outstockTime || o.outstockDate || '');
+        if (!outDateStr || outDateStr === 'undefined') return false;
+        const outDate = new Date(outDateStr);
+        if (isNaN(outDate.getTime())) return false;
+        return outDate >= pointStart && outDate < pointEnd;
+      });
+      const outboundCount = outboundOrders.reduce((sum, o) => sum + (o.outstockQuantity || 0), 0);
+
+      data.push({ date: label, orderCount, productionCount, inboundCount, outboundCount });
     }
 
     return data;
@@ -170,17 +190,33 @@ const OverviewChart: React.FC<OverviewChartProps> = ({ mode = 'sidebar', moduleK
     const productionQty = productionOrders.reduce((sum, o) => sum + (o.orderQuantity || 0), 0);
     const completedOrders = filteredOrders.filter(o => String(o.status||'').toUpperCase() === 'COMPLETED');
     const inboundQty = completedOrders.reduce((sum, o) => sum + (o.inStockQuantity || o.orderQuantity || 0), 0);
+    const outboundQty = orders.reduce((sum, o) => sum + (o.outstockQuantity || 0), 0);
 
     const days = dimension === 'day' ? 1 : dimension === 'week' ? 7 : dimension === 'month' ? 30 : 365;
     const avgOrderCycle = totalOrders > 0 ? Math.round((days / totalOrders) * 10) / 10 : 0;
     const avgOrderQty = totalOrders > 0 ? Math.round(totalOrderQty / totalOrders) : 0;
     const avgProductionTime = productionQty > 0 ? Math.round((days * 24 / productionQty) * 10) / 10 : 0;
     const avgInboundTime = inboundQty > 0 ? Math.round((days * 24 / inboundQty) * 10) / 10 : 0;
+    const avgOutboundTime = outboundQty > 0 ? Math.round((days * 24 / outboundQty) * 10) / 10 : 0;
+
+    const todayOrders = orders.filter(o => isToday(String(o.createTime || o.createdAt || o.orderDate || '')));
+    const todayOrderQty = todayOrders.reduce((sum, o) => sum + (o.orderQuantity || 0), 0);
+    const todayInboundOrders = orders.filter(o => isToday(String(o.instockTime || o.instockDate || '')) || (String(o.status||'').toUpperCase() === 'COMPLETED' && isToday(String(o.actualEndDate || ''))));
+    const todayInboundQty = todayInboundOrders.reduce((sum, o) => sum + (o.inStockQuantity || o.orderQuantity || 0), 0);
+    const todayOutboundOrders = orders.filter(o => isToday(String(o.outstockTime || o.outstockDate)));
+    const todayOutboundQty = todayOutboundOrders.reduce((sum, o) => sum + (o.outstockQuantity || 0), 0);
 
     return {
       order: { count: totalOrders, qty: totalOrderQty, avgCycle: avgOrderCycle, avgQty: avgOrderQty },
       production: { count: productionOrders.length, qty: productionQty, avgTime: avgProductionTime },
       inbound: { count: completedOrders.length, qty: inboundQty, avgTime: avgInboundTime },
+      outbound: { qty: outboundQty, avgTime: avgOutboundTime },
+      today: {
+        orderCount: todayOrders.length,
+        orderQty: todayOrderQty,
+        inboundQty: todayInboundQty,
+        outboundQty: todayOutboundQty,
+      },
     };
   }, [orders, dimension, getDateRange]);
 
@@ -247,7 +283,7 @@ const OverviewChart: React.FC<OverviewChartProps> = ({ mode = 'sidebar', moduleK
   }, []);
 
   const total = stats.order.count + stats.production.count + stats.inbound.count;
-  const maxValue = Math.max(...trendData.map(d => Math.max(d.orderCount, d.productionCount, d.inboundCount)), 1);
+  const maxValue = Math.max(...trendData.map(d => Math.max(d.orderCount, d.productionCount, d.inboundCount, d.outboundCount)), 1);
 
   return (
     <div ref={containerRef} className="overview-chart-wrapper" style={{ '--ov-scale': scale } as React.CSSProperties}>
@@ -258,6 +294,21 @@ const OverviewChart: React.FC<OverviewChartProps> = ({ mode = 'sidebar', moduleK
             <span>下单 {stats.order.count}单</span>
             <span>生产 {stats.production.count}单</span>
             <span>入库 {stats.inbound.qty}件</span>
+            <span>出库 {stats.outbound.qty}件</span>
+          </div>
+          <div className="overview-sidebar-today">
+            <div className="today-stat-item">
+              <span className="today-stat-label">今日下单</span>
+              <span className="today-stat-value">{stats.today.orderQty}件</span>
+            </div>
+            <div className="today-stat-item">
+              <span className="today-stat-label">今日入库</span>
+              <span className="today-stat-value today-stat-value--success">{stats.today.inboundQty}件</span>
+            </div>
+            <div className="today-stat-item">
+              <span className="today-stat-label">今日出库</span>
+              <span className="today-stat-value today-stat-value--outbound">{stats.today.outboundQty}件</span>
+            </div>
           </div>
         </div>
       ) : (
@@ -319,6 +370,25 @@ const OverviewChart: React.FC<OverviewChartProps> = ({ mode = 'sidebar', moduleK
                 </div>
               </div>
             </div>
+
+            <div className="overview-pie-card">
+              <div className="pie-left">
+                {renderPie(stats.outbound.qty, Math.max(total, 1), COLORS.outbound.ring)}
+              </div>
+              <div className="pie-right">
+                <div className="pie-title">出库</div>
+                <div className="pie-stats">
+                  <div className="pie-stat">
+                    <span className="stat-value">{stats.outbound.qty}</span>
+                    <span className="stat-unit">件</span>
+                  </div>
+                  <div className="pie-stat">
+                    <span className="stat-value">{stats.outbound.avgTime}</span>
+                    <span className="stat-unit">时/件</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="overview-trend">
@@ -338,6 +408,10 @@ const OverviewChart: React.FC<OverviewChartProps> = ({ mode = 'sidebar', moduleK
                     <stop offset="0%" stopColor={COLORS.inbound.ring} stopOpacity="0.25" />
                     <stop offset="100%" stopColor={COLORS.inbound.ring} stopOpacity="0" />
                   </linearGradient>
+                  <linearGradient id="outboundGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={COLORS.outbound.ring} stopOpacity="0.25" />
+                    <stop offset="100%" stopColor={COLORS.outbound.ring} stopOpacity="0" />
+                  </linearGradient>
                 </defs>
 
                 {trendData.length > 1 && (
@@ -353,6 +427,10 @@ const OverviewChart: React.FC<OverviewChartProps> = ({ mode = 'sidebar', moduleK
                     <path
                       d={buildSmoothPath(trendData.map(d => d.inboundCount), 400, 120, 10) + ` L 400,120 L 0,120 Z`}
                       fill="url(#inboundGrad)"
+                    />
+                    <path
+                      d={buildSmoothPath(trendData.map(d => d.outboundCount), 400, 120, 10) + ` L 400,120 L 0,120 Z`}
+                      fill="url(#outboundGrad)"
                     />
 
                     <path
@@ -375,6 +453,14 @@ const OverviewChart: React.FC<OverviewChartProps> = ({ mode = 'sidebar', moduleK
                       d={buildSmoothPath(trendData.map(d => d.inboundCount), 400, 120, 10)}
                       fill="none"
                       stroke={COLORS.inbound.ring}
+                      strokeWidth={0.75}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d={buildSmoothPath(trendData.map(d => d.outboundCount), 400, 120, 10)}
+                      fill="none"
+                      stroke={COLORS.outbound.ring}
                       strokeWidth={0.75}
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -415,6 +501,14 @@ const OverviewChart: React.FC<OverviewChartProps> = ({ mode = 'sidebar', moduleK
                           stroke="#fff"
                           strokeWidth={1.5}
                         />
+                        <circle
+                          cx={(hoverIndex / (trendData.length - 1)) * 400}
+                          cy={getY(trendData[hoverIndex].outboundCount, maxValue, 120, 10)}
+                          r={3}
+                          fill={COLORS.outbound.ring}
+                          stroke="#fff"
+                          strokeWidth={1.5}
+                        />
                       </>
                     )}
                   </>
@@ -444,6 +538,10 @@ const OverviewChart: React.FC<OverviewChartProps> = ({ mode = 'sidebar', moduleK
                           <span className="tooltip-label">入库</span>
                           <span className="tooltip-value">{d.inboundCount}</span>
                         </div>
+                        <div className="tooltip-row" style={{ color: COLORS.outbound.text }}>
+                          <span className="tooltip-label">出库</span>
+                          <span className="tooltip-value">{d.outboundCount}</span>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -461,6 +559,7 @@ const OverviewChart: React.FC<OverviewChartProps> = ({ mode = 'sidebar', moduleK
               <span className="legend-item"><span className="legend-dot" style={{ background: COLORS.order.ring }}></span>下单</span>
               <span className="legend-item"><span className="legend-dot" style={{ background: COLORS.production.ring }}></span>生产</span>
               <span className="legend-item"><span className="legend-dot" style={{ background: COLORS.inbound.ring }}></span>入库</span>
+              <span className="legend-item"><span className="legend-dot" style={{ background: COLORS.outbound.ring }}></span>出库</span>
             </div>
           </div>
         </>

@@ -142,6 +142,45 @@
   border-bottom: 1px solid rgba(79, 209, 197, 0.1);
   cursor: move;
   user-select: none;
+  gap: 12px;
+}
+
+.cockpit-widget-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cockpit-accent);
+  flex-shrink: 0;
+}
+
+.cockpit-widget-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  justify-content: flex-start;
+}
+
+.cockpit-stat-tag {
+  font-size: 11px;
+  padding: 3px 8px;
+  background: rgba(7, 13, 27, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 4px;
+  color: var(--cockpit-text);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.cockpit-stat-tag--success {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+
+.cockpit-stat-tag--outbound {
+  background: rgba(244, 114, 182, 0.15);
+  border-color: rgba(244, 114, 182, 0.3);
+  color: #f472b6;
 }
 
 .cockpit-widget-title {

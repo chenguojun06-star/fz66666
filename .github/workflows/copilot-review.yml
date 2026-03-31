@@ -1,0 +1,89 @@
+name: Copilot 代码审核
+
+on:
+  pull_request:
+    types: [opened, ready_for_review]
+    branches: [main, develop]
+
+jobs:
+  request-copilot-review:
+    name: 请求 Copilot 代码审核
+    runs-on: ubuntu-latest
+    # 仅对真正的 PR（非 draft）执行
+    if: github.event.pull_request.draft == false
+
+    permissions:
+      pull-requests: write
+
+    steps:
+    - name: 请求 GitHub Copilot 进行代码审核
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const pr = context.payload.pull_request;
+          const owner = context.repo.owner;
+          const repo = context.repo.repo;
+          const pull_number = pr.number;
+
+          // 请求 Copilot 作为 reviewer
+          try {
+            await github.rest.pulls.requestReviewers({
+              owner,
+              repo,
+              pull_number,
+              reviewers: ['copilot-review[bot]'],
+            });
+            console.log('✅ 已请求 GitHub Copilot 代码审核');
+          } catch (e) {
+            // Copilot 审核功能可能在仓库未开启，继续执行后续步骤
+            console.log('⚠️ Copilot reviewer 请求失败 (可能未在仓库设置中启用):', e.message);
+          }
+
+    - name: 发布代码审核检查清单评论
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const pr = context.payload.pull_request;
+          const filesUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/pull/${pr.number}/files`;
+
+          const body = `## 🤖 自动代码审核清单
+
+          > 由 GitHub Actions 自动触发。请在合并前确认以下各项 ✅
+
+          ### 🏗️ 架构
+          - [ ] 跨 Service 调用已通过 **Orchestrator** 编排（无 Controller 直调多 Service）
+          - [ ] 多表写操作已加 \`@Transactional(rollbackFor = Exception.class)\`
+          - [ ] 新功能涉及 2 张以上表写入时新建/复用了 Orchestrator
+
+          ### 🗃️ 数据库（有 Entity/SQL 改动时）
+          - [ ] 新增 Entity 字段已同步写 Flyway 脚本（\`V{YYYYMMDDHHMM}__xxx.sql\`）
+          - [ ] Flyway 脚本使用 \`SET @s = IF(EXISTS...)\` 幂等写法，**不含 \`COMMENT ''text''\`**
+          - [ ] **未修改任何已执行过的** Flyway 脚本文件内容（改内容 → checksum 不匹配 → 全系统 500）
+
+          ### 🔐 权限
+          - [ ] Controller **class 级别** 有 \`@PreAuthorize("isAuthenticated()")\`，方法级别无重复
+          - [ ] 使用的权限码在 \`t_permission\` 表中真实存在（禁止虚构权限码）
+
+          ### 🎨 前端
+          - [ ] 弹窗只使用 \`60vw / 40vw / 30vw\` 三档（禁止自定义尺寸）
+          - [ ] 表格使用 \`ResizableTable\`，弹窗使用 \`ResizableModal\`
+          - [ ] 组件 ≤ 300 行，页面 ≤ 500 行
+
+          ### ✅ 本地验证（提交前已完成）
+          - [ ] \`mvn clean compile -q\` → BUILD SUCCESS（有 Java 改动）
+          - [ ] \`npx tsc --noEmit\` → 0 errors（有 TypeScript 改动）
+          - [ ] \`git status\` 核对所有文件已 \`git add\`，无遗漏
+
+          ---
+
+          📁 [查看本次变更文件](${filesUrl})`;
+
+          await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: pr.number,
+            body,
+          });
+          console.log('✅ 已发布代码审核检查清单');

@@ -1047,7 +1047,7 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                               }}
                             >
                               <Button type="dashed" size="small" style={{ width: '100%' }}>
-                                添加工序 <DownOutlined />
+                                进度节点 <DownOutlined />
                               </Button>
                             </Dropdown>
                           )}

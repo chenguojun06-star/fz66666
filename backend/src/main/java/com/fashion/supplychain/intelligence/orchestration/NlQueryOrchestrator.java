@@ -33,14 +33,15 @@ public class NlQueryOrchestrator {
     public NlQueryResponse query(NlQueryRequest req) {
         String question = req.getQuestion().trim();
         Long tenantId = UserContext.tenantId();
-        log.info("[NlQuery] question={}, tenant={}", question, tenantId);
+        String factoryId = UserContext.factoryId();
+        log.info("[NlQuery] question={}, tenant={}, factory={}", question, tenantId, factoryId);
 
         String sessionId = req.getSessionId() != null ? req.getSessionId() : "";
         String sessionKey = tenantId + ":" + sessionId;
 
         NlQueryResponse resp;
         try {
-            resp = routeIntent(question, tenantId, sessionKey);
+            resp = routeIntent(question, tenantId, factoryId, sessionKey);
         } catch (Exception e) {
             log.error("[NL查询] 数据加载异常（降级返回兜底）: {}", e.getMessage(), e);
             resp = new NlQueryResponse();
@@ -63,12 +64,12 @@ public class NlQueryOrchestrator {
     }
 
     /** 意图识别路由（LLM优先 → 关键词兜底） */
-    private NlQueryResponse routeIntent(String question, Long tenantId, String sessionKey) {
+    private NlQueryResponse routeIntent(String question, Long tenantId, String factoryId, String sessionKey) {
         String contextPrompt = buildContextPrompt(sessionKey);
         // ── 优先尝试 LLM 意图分类（快速超时，失败降级关键词） ──
         String llmIntent = classifyIntentByLlm(question, tenantId, contextPrompt);
         if (llmIntent != null) {
-            NlQueryResponse resp = dispatchByIntent(llmIntent, question, tenantId);
+            NlQueryResponse resp = dispatchByIntent(llmIntent, question, tenantId, factoryId);
             if (resp != null) {
                 log.info("[NlQuery] LLM意图命中: intent={}", llmIntent);
                 return resp;
@@ -79,15 +80,15 @@ public class NlQueryOrchestrator {
         // 1) 具体订单查询（含订单号或"订单+进度"）
         if (NlQueryDataHandlers.ORDER_NO_PATTERN.matcher(question).find()
                 || (containsAny(question, "订单") && containsAny(question, "进度", "多少", "怎样", "如何", "状态"))) {
-            return dataHandlers.handleOrderQuery(question, tenantId);
+            return dataHandlers.handleOrderQuery(question, tenantId, factoryId);
         }
         // 2) 延期/逾期
         if (containsAny(question, "延期", "逾期", "超期", "过期")) {
-            return dataHandlers.handleOverdueQuery(tenantId);
+            return dataHandlers.handleOverdueQuery(tenantId, factoryId);
         }
         // 3) 对比/趋势
         if (containsAny(question, "昨天", "昨日", "环比", "同比", "对比", "比较", "趋势", "变化")) {
-            return dataHandlers.handleCompareQuery(tenantId);
+            return dataHandlers.handleCompareQuery(tenantId, factoryId);
         }
         // 4) 系统健康
         if (containsAny(question, "健康", "健康度", "健康指数", "评分", "打分", "得分")) {
@@ -107,14 +108,14 @@ public class NlQueryOrchestrator {
         }
         // 8) 产量/扫码
         if (containsAny(question, "产量", "扫码", "今日", "今天", "多少件")) {
-            return dataHandlers.handleProductionQuery(tenantId);
+            return dataHandlers.handleProductionQuery(tenantId, factoryId);
         }
         // 9) 质检/缺陷
         if (containsAny(question, "缺陷", "不良分布", "热力图")) {
             return smartHandlers.handleDefectQuery();
         }
         if (containsAny(question, "质检", "质量", "通过率", "良品率", "合格率", "不良")) {
-            return dataHandlers.handleQualityQuery(tenantId);
+            return dataHandlers.handleQualityQuery(tenantId, factoryId);
         }
         // 10) 工厂（升级为排行榜）
         if (containsAny(question, "工厂", "车间", "哪个厂", "哪家")) {
@@ -131,11 +132,11 @@ public class NlQueryOrchestrator {
         }
         // 13) 入库/仓库
         if (containsAny(question, "入库", "仓库", "出库", "库存")) {
-            return dataHandlers.handleWarehousingQuery(tenantId);
+            return dataHandlers.handleWarehousingQuery(tenantId, factoryId);
         }
         // 14) 裁剪
         if (containsAny(question, "裁剪", "裁片", "菲号")) {
-            return dataHandlers.handleCuttingQuery(tenantId);
+            return dataHandlers.handleCuttingQuery(tenantId, factoryId);
         }
         // 15) 成本/利润（升级为利润预估）
         if (containsAny(question, "成本", "利润", "费用", "花了", "赚了", "毛利")) {
@@ -213,11 +214,11 @@ public class NlQueryOrchestrator {
         }
         // 23) 总览/概况
         if (containsAny(question, "总览", "概况", "汇总", "情况", "怎么样", "报告", "整体")) {
-            return dataHandlers.handleSummaryQuery(tenantId);
+            return dataHandlers.handleSummaryQuery(tenantId, factoryId);
         }
 
         // ── 智能底：调用 DeepSeek 处理无法匹配关键词的自由问题
-        return dataHandlers.handleAiDeepFallback(question, tenantId);
+        return dataHandlers.handleAiDeepFallback(question, tenantId, factoryId);
     }
 
     // ── 工具方法 ──
@@ -296,23 +297,23 @@ public class NlQueryOrchestrator {
     }
 
     /** 根据意图名称分发到对应处理方法，不存在返回 null */
-    private NlQueryResponse dispatchByIntent(String intent, String question, Long tenantId) {
+    private NlQueryResponse dispatchByIntent(String intent, String question, Long tenantId, String factoryId) {
         switch (intent) {
-            case "order_query":       return dataHandlers.handleOrderQuery(question, tenantId);
-            case "overdue":           return dataHandlers.handleOverdueQuery(tenantId);
-            case "compare":           return dataHandlers.handleCompareQuery(tenantId);
+            case "order_query":       return dataHandlers.handleOrderQuery(question, tenantId, factoryId);
+            case "overdue":           return dataHandlers.handleOverdueQuery(tenantId, factoryId);
+            case "compare":           return dataHandlers.handleCompareQuery(tenantId, factoryId);
             case "health":            return smartHandlers.handleHealthQuery();
             case "bottleneck":        return smartHandlers.handleBottleneckQuery();
             case "risk":              return smartHandlers.handleRiskQuery();
             case "anomaly":           return smartHandlers.handleAnomalyQuery();
-            case "production":        return dataHandlers.handleProductionQuery(tenantId);
+            case "production":        return dataHandlers.handleProductionQuery(tenantId, factoryId);
             case "defect":            return smartHandlers.handleDefectQuery();
-            case "quality":           return dataHandlers.handleQualityQuery(tenantId);
+            case "quality":           return dataHandlers.handleQualityQuery(tenantId, factoryId);
             case "factory_ranking":   return smartHandlers.handleFactoryRankingQuery();
             case "pulse":             return smartHandlers.handlePulseQuery();
             case "worker_efficiency": return smartHandlers.handleWorkerEfficiencyQuery();
-            case "warehousing":       return dataHandlers.handleWarehousingQuery(tenantId);
-            case "cutting":           return dataHandlers.handleCuttingQuery(tenantId);
+            case "warehousing":       return dataHandlers.handleWarehousingQuery(tenantId, factoryId);
+            case "cutting":           return dataHandlers.handleCuttingQuery(tenantId, factoryId);
             case "cost":              return smartHandlers.handleCostQuery();
             case "rhythm":            return smartHandlers.handleRhythmQuery();
             case "scheduling":        return smartHandlers.handleSchedulingQuery();
@@ -325,7 +326,7 @@ public class NlQueryOrchestrator {
             case "execution":         return smartHandlers.handleRiskQuery();
             case "finance_audit":     return smartHandlers.handleCostQuery();
             case "help":              return dataHandlers.handleHelpQuery();
-            case "summary":           return dataHandlers.handleSummaryQuery(tenantId);
+            case "summary":           return dataHandlers.handleSummaryQuery(tenantId, factoryId);
             case "root_cause":        return smartHandlers.handleRootCauseQuery(question);
             case "pattern":           return smartHandlers.handlePatternQuery();
             case "goal":              return smartHandlers.handleGoalQuery(question);

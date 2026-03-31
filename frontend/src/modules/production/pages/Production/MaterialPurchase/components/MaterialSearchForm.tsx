@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button, Card, Space } from 'antd';
+import { Button, Card, Select, Space } from 'antd';
 
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import { MaterialQueryParams } from '@/types/production';
@@ -57,6 +57,20 @@ const MaterialSearchForm: React.FC<MaterialSearchFormProps> = ({
               { label: '全部到货', value: MATERIAL_PURCHASE_STATUS.COMPLETED },
               { label: '已取消', value: MATERIAL_PURCHASE_STATUS.CANCELLED },
             ]}
+          />
+          <Select
+            value={queryParams.factoryType || ''}
+            onChange={(value) => {
+              setQueryParams(prev => ({ ...prev, factoryType: value as 'INTERNAL' | 'EXTERNAL' | '', page: 1 }));
+              onSearch();
+            }}
+            options={[
+              { label: '全部工厂', value: '' },
+              { label: '内部自产', value: 'INTERNAL' },
+              { label: '外发工厂', value: 'EXTERNAL' },
+            ]}
+            style={{ width: 132 }}
+            placeholder="工厂类型"
           />
         </div>
         <Space wrap>

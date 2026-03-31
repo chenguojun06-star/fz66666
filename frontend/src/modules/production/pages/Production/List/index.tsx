@@ -52,6 +52,7 @@ import { useModal } from '@/hooks';
 import { useOrganizationFilterOptions } from '@/hooks/useOrganizationFilterOptions';
 import { usePersistentSort } from '@/hooks/usePersistentSort';
 import ProcessDetailModal from '@/components/production/ProcessDetailModal';
+import NodeDetailModal from '@/components/common/NodeDetailModal';
 import { getProgressColorStatus, getRemainingDaysDisplay } from '@/utils/progressColor';
 import {
   useColumnSettings,
@@ -112,6 +113,37 @@ const ProductionList: React.FC = () => {
     ironCode?: string;
     dryCleanCode?: string;
   } | null>(null);
+
+  // ===== NodeDetailModal 状态（进度球点击弹窗）=====
+  const [nodeDetailVisible, setNodeDetailVisible] = useState(false);
+  const [nodeDetailOrder, setNodeDetailOrder] = useState<ProductionOrder | null>(null);
+  const [nodeDetailType, setNodeDetailType] = useState('');
+  const [nodeDetailName, setNodeDetailName] = useState('');
+  const [nodeDetailStats, setNodeDetailStats] = useState<{ done: number; total: number; percent: number; remaining: number } | undefined>(undefined);
+  const [nodeDetailUnitPrice, setNodeDetailUnitPrice] = useState<number | undefined>(undefined);
+  const [nodeDetailProcessList, setNodeDetailProcessList] = useState<any[]>([]);
+
+  const openNodeDetail = useCallback((
+    order: ProductionOrder,
+    nodeType: string,
+    nodeName: string,
+    stats?: { done: number; total: number; percent: number; remaining: number },
+    unitPrice?: number,
+    processList?: any[]
+  ) => {
+    setNodeDetailOrder(order);
+    setNodeDetailType(nodeType);
+    setNodeDetailName(nodeName);
+    setNodeDetailStats(stats);
+    setNodeDetailUnitPrice(unitPrice);
+    setNodeDetailProcessList(processList || []);
+    setNodeDetailVisible(true);
+  }, []);
+
+  const closeNodeDetail = useCallback(() => {
+    setNodeDetailVisible(false);
+    setNodeDetailOrder(null);
+  }, []);
 
   const handlePrintLabel = async (record: ProductionOrder) => {
     setLabelPrintOrder(record);
@@ -602,7 +634,7 @@ const ProductionList: React.FC = () => {
   const allColumns = useProductionColumns({
     sortField, sortOrder, handleSort,
     handleCloseOrder, handleScrapOrder, handleTransferOrder,
-    navigate, openProcessDetail, syncProcessFromTemplate,
+    navigate, openProcessDetail, openNodeDetail, syncProcessFromTemplate,
     setPrintModalVisible, setPrintingRecord,
     setRemarkPopoverId, setRemarkText,
     quickEditModal, isSupervisorOrAbove, renderCompletionTimeTag,
@@ -1249,6 +1281,22 @@ const ProductionList: React.FC = () => {
           )}
         />
 
+        {/* 节点详情弹窗 - 进度球点击 */}
+        <NodeDetailModal
+          visible={nodeDetailVisible}
+          onClose={closeNodeDetail}
+          orderId={nodeDetailOrder?.id}
+          orderNo={nodeDetailOrder?.orderNo}
+          nodeType={nodeDetailType}
+          nodeName={nodeDetailName}
+          stats={nodeDetailStats}
+          unitPrice={nodeDetailUnitPrice}
+          processList={nodeDetailProcessList}
+          onSaved={() => {
+            void fetchProductionList();
+          }}
+        />
+
         {/* 转单弹窗 */}
         <ResizableModal
           title={`转单 - ${safeString((transferRecord as any)?.orderNo)}`}
@@ -1441,6 +1489,7 @@ const ProductionList: React.FC = () => {
           saving={remapSaving}
           onSave={saveRemap}
           onClose={closeRemap}
+          isFactoryAccount={isFactoryAccount}
         />
 
         {/* 打印预览弹窗 */}

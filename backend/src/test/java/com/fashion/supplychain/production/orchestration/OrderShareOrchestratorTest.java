@@ -163,7 +163,7 @@ class OrderShareOrchestratorTest {
         String token = orchestrator.generateShareToken("order-3");
 
         // 解析令牌时也要 mock
-        when(productionOrderService.getById("order-3")).thenReturn(order);
+        when(productionOrderService.getDetailById("order-3")).thenReturn(order);
         when(scanRecordService.list(Mockito.<Wrapper<ScanRecord>>any())).thenReturn(Collections.emptyList());
 
         Result<OrderShareResponse> result = orchestrator.resolveShareOrder(token);
@@ -181,8 +181,7 @@ class OrderShareOrchestratorTest {
         when(productionOrderService.getById("order-4")).thenReturn(order);
         String token = orchestrator.generateShareToken("order-4");
 
-        // 解析时订单已不存在
-        when(productionOrderService.getById("order-4")).thenReturn(null);
+        // 解析时订单已不存在（getDetailById 未 stub，默认返回 null）
 
         Result<OrderShareResponse> result = orchestrator.resolveShareOrder(token);
         assertNotEquals(200, result.getCode(), "订单不存在应返回 fail");
@@ -198,7 +197,7 @@ class OrderShareOrchestratorTest {
         ScanRecord scan = new ScanRecord();
         scan.setScanTime(LocalDateTime.of(2026, 3, 1, 10, 30));
         scan.setProgressStage("车缝");
-        when(productionOrderService.getById("order-5")).thenReturn(order);
+        when(productionOrderService.getDetailById("order-5")).thenReturn(order);
         when(scanRecordService.list(Mockito.<Wrapper<ScanRecord>>any())).thenReturn(List.of(scan));
 
         Result<OrderShareResponse> result = orchestrator.resolveShareOrder(token);
@@ -214,7 +213,7 @@ class OrderShareOrchestratorTest {
         when(productionOrderService.getById("order-6")).thenReturn(order);
         String token = orchestrator.generateShareToken("order-6");
 
-        when(productionOrderService.getById("order-6")).thenReturn(order);
+        when(productionOrderService.getDetailById("order-6")).thenReturn(order);
         when(scanRecordService.list(Mockito.<Wrapper<ScanRecord>>any())).thenThrow(new RuntimeException("DB error"));
 
         // 扫码查询异常不应导致整体失败

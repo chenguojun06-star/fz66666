@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import PieChartCard, { PieSegment } from '@/components/PieChartCard';
+import PieChartCard, { PieSegment, TodayStat } from '@/components/PieChartCard';
 import { useTimeDimension } from '../contexts/TimeDimensionContext';
 import { useStyleLink } from '../contexts/StyleLinkContext';
 import api from '@/utils/api';
@@ -31,6 +31,15 @@ const formatDays = (days: number): string => {
   const months = Math.floor(days / 30);
   const remainDays = Math.round(days % 30);
   return remainDays > 0 ? `${months}月${remainDays}天` : `${months}月`;
+};
+
+const isToday = (dateStr?: string | null): boolean => {
+  if (!dateStr) return false;
+  const date = new Date(dateStr);
+  const today = new Date();
+  return date.getFullYear() === today.getFullYear() &&
+    date.getMonth() === today.getMonth() &&
+    date.getDate() === today.getDate();
 };
 
 interface SamplePieChartProps {
@@ -110,7 +119,7 @@ const SamplePieChart: React.FC<SamplePieChartProps> = ({ mode = 'sidebar', modul
     }).length;
     const completed = styles.filter(s => isCompleted('sample', s)).length;
 
-    const stageCounts = STAGES.map((stage, index) => {
+    const stageCounts: PieSegment[] = STAGES.map((stage, index) => {
       const prevStage = index > 0 ? STAGES[index - 1] : null;
 
       const matchedStyles = styles.filter(s => {
@@ -142,10 +151,23 @@ const SamplePieChart: React.FC<SamplePieChartProps> = ({ mode = 'sidebar', modul
       avgDays = totalDays / completedStyles.length;
     }
 
-    return { total, inDev, completed, stageCounts, avgDays };
-  }, [styles]);
+    const todayNewStyles = styles.filter(s => isToday(s.createTime));
+    const todayCompletedStyles = styles.filter(s => isToday(s.sampleCompletedTime));
 
-  const segments: PieSegment[] = stats.stageCounts;
+    const todayStats: TodayStat[] = [
+      { label: '今日下样', value: todayNewStyles.length },
+      { label: '今日完成', value: todayCompletedStyles.length, type: 'success' },
+    ];
+
+    return {
+      total,
+      inDev,
+      completed,
+      stageCounts,
+      avgDays,
+      todayStats,
+    };
+  }, [styles]);
 
   return (
     <PieChartCard
@@ -155,8 +177,9 @@ const SamplePieChart: React.FC<SamplePieChartProps> = ({ mode = 'sidebar', modul
       inProgress={stats.inDev}
       completed={stats.completed}
       avgTime={formatDays(stats.avgDays)}
-      segments={segments}
+      segments={stats.stageCounts}
       loading={loading}
+      todayStats={stats.todayStats}
     />
   );
 };

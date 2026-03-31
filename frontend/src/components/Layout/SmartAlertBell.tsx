@@ -5,20 +5,16 @@ import {
   CheckCircleOutlined,
   CloseOutlined,
   ExclamationCircleOutlined,
-  SendOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons';
-import { Badge, Input } from 'antd';
+import { Badge } from 'antd';
 import api, { ApiResult } from '../../utils/api';
-import { intelligenceApi, sysNoticeApi } from '../../services/production/productionApi';
-import { normalizeXiaoyunChatPayload } from '@/services/intelligence/xiaoyunChatAdapter';
-import { buildXiaoyunPopupIntroMessage } from './xiaoyunPopupPresenter';
+import { sysNoticeApi } from '../../services/production/productionApi';
 import { useAuth } from '../../utils/AuthContext';
 import type { SysNotice } from '../../services/production/productionApi';
 import XiaoyunCloudAvatar from '../common/XiaoyunCloudAvatar';
 import XiaoyunInsightCard, { type XiaoyunInsightCardData } from '../common/XiaoyunInsightCard';
 
-// ─── 数据类型 ────────────────────────────────────────────────
 interface TopPriorityOrder {
   orderNo: string;
   styleNo: string;
@@ -46,19 +42,6 @@ interface UrgentEvent {
   orderNo: string;
   time: string;
 }
-
-interface AiMessage {
-  role: 'user' | 'ai';
-  content: string;
-  suggestions?: string[];
-  cards?: XiaoyunInsightCardData[];
-}
-
-// 建议词跟路径映射表（只保留纯导航类，AI能回答的问题统一走 askAi）
-const SUGGESTION_NAV: Record<string, string> = {
-  '整体情况怎么样？': '/dashboard',
-  '有逾期订单吗？': '/production',
-};
 
 const choose = (seed: number, variants: string[]) => {
   if (!variants.length) return '';
@@ -104,18 +87,11 @@ const SmartAlertBell: React.FC = () => {
   const [brief, setBrief] = useState<BriefData | null>(null);
   const [events, setEvents] = useState<UrgentEvent[]>([]);
   const [loading, setLoading] = useState(false);
-  const [aiInput, setAiInput] = useState('');
-  const [aiLoading, setAiLoading] = useState(false);
-  const introMessage = buildXiaoyunPopupIntroMessage();
-  const [aiMessages, setAiMessages] = useState<AiMessage[]>([
-    { role: 'ai', content: introMessage.content, suggestions: introMessage.suggestions, cards: introMessage.cards },
-  ]);
   const [fetchedToday, setFetchedToday] = useState('');
   const [myNotices, setMyNotices] = useState<SysNotice[]>([]);
   const [_myUnreadCount, setMyUnreadCount] = useState(0);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(loadDismissed);
   const [dismissedNoticeIds, setDismissedNoticeIds] = useState<Set<number>>(loadDismissedNotices);
-  const aiChatEndRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
 
@@ -223,11 +199,6 @@ const SmartAlertBell: React.FC = () => {
     return () => document.removeEventListener('keydown', handler);
   }, []);
 
-  // 自动滚到底
-  useEffect(() => {
-    if (open) aiChatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [aiMessages, open]);
-
   // 消除单条我的通知（localStorage 每日持久化，隔天重新检测）
   const dismissNotice = useCallback((id: number, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -259,32 +230,6 @@ const SmartAlertBell: React.FC = () => {
   const handleToggle = () => {
     if (!open) fetchData();
     setOpen(v => !v);
-  };
-
-  // AI 问答 — 使用系统内置 Intelligence API，无需外部 Key
-  const askAi = async (question?: string) => {
-    const q = (question ?? aiInput).trim();
-    if (!q || aiLoading) return;
-    setAiInput('');
-    setAiMessages(prev => [...prev, { role: 'user', content: q }]);
-    setAiLoading(true);
-    try {
-      const payload = normalizeXiaoyunChatPayload(await intelligenceApi.aiAdvisorChat(q));
-      if (payload?.answer) {
-        setAiMessages(prev => [...prev, {
-          role: 'ai',
-          content: payload.displayAnswer || payload.answer,
-          suggestions: payload.suggestions || [],
-          cards: payload.cards || [],
-        }]);
-      } else {
-        setAiMessages(prev => [...prev, { role: 'ai', content: '这句我还没拿到足够上下文。你可以换成“先看哪几单最急”这种问法。' }]);
-      }
-    } catch {
-      setAiMessages(prev => [...prev, { role: 'ai', content: '我这边暂时连不到分析服务，稍后再问一次就好。' }]);
-    } finally {
-      setAiLoading(false);
-    }
   };
 
   // ── 渲染 ──────────────────────────────────────────────────
@@ -545,88 +490,6 @@ const SmartAlertBell: React.FC = () => {
               </div>
             )}
 
-          {/* ── AI 助手区 —— 使用系统内置 Intelligence API，无需外部 Key ── */}
-            <div className="sap-ai-zone">
-              <div className="sap-ai-label">
-                <span style={{ display: 'inline-flex', marginRight: 6 }}><XiaoyunCloudAvatar size={18} active /></span>
-                <span>小云智能助手</span>
-              </div>
-              {/* 对话历史 */}
-              <div className="sap-ai-chat-history">
-                {aiMessages.map((msg, i) => (
-                  <div key={i} className={`sap-ai-msg sap-ai-msg-${msg.role}`}>
-                    {msg.role === 'ai' && (
-                      <span className="sap-ai-msg-avatar"><XiaoyunCloudAvatar size={18} active /></span>
-                    )}
-                    <div className="sap-ai-msg-bubble">
-                      <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</span>
-                      {msg.role === 'ai' && msg.cards && msg.cards.length > 0 && (
-                        <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
-                          {msg.cards.map((card, cardIndex) => (
-                            <XiaoyunInsightCard
-                              key={`${card.title}-${cardIndex}`}
-                              compact
-                              card={card}
-                              onNavigate={goTo}
-                            />
-                          ))}
-                        </div>
-                      )}
-                      {/* 建议词 */}
-                      {msg.role === 'ai' && msg.suggestions && msg.suggestions.length > 0 && (
-                        <div className="sap-ai-suggestions">
-                          {msg.suggestions.map((s, si) => (
-                            <button
-                              key={si}
-                              className="sap-ai-suggestion-btn"
-                              onClick={() => {
-                                const navPath = SUGGESTION_NAV[s];
-                                if (navPath) {
-                                  goTo(navPath);
-                                } else {
-                                  askAi(s);
-                                }
-                              }}
-                              disabled={aiLoading}
-                            >
-                              {s}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-                {aiLoading && (
-                  <div className="sap-ai-msg sap-ai-msg-ai">
-                    <span className="sap-ai-msg-avatar"><XiaoyunCloudAvatar size={22} active loading /></span>
-                    <div className="sap-ai-msg-bubble sap-ai-thinking">
-                      <span>小云正在处理，请稍等一下…</span>
-                    </div>
-                  </div>
-                )}
-                <div ref={aiChatEndRef} />
-              </div>
-              {/* 输入框 */}
-              <div className="sap-ai-input-row">
-                <Input
-                  size="small"
-                  placeholder="直接问风险、瓶颈、进度或处理动作"
-                  value={aiInput}
-                  onChange={e => setAiInput(e.target.value)}
-                  onPressEnter={() => askAi()}
-                  disabled={aiLoading}
-                  style={{ fontSize: 12, flex: 1, minWidth: 0, width: '100%' }}
-                />
-                <button
-                  className="sap-ai-send"
-                  onClick={() => askAi()}
-                  disabled={!aiInput.trim() || aiLoading}
-                >
-                  <SendOutlined style={{ fontSize: 12 }} />
-                </button>
-              </div>
-            </div>
           </>
         )}
       </div>

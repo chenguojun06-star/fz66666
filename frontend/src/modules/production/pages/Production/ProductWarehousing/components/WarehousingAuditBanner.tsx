@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Alert } from 'antd';
-import { RobotOutlined } from '@ant-design/icons';
+import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
 import type { WarehousingStats } from '../hooks/useProductWarehousing';
 import type { ProductWarehousing } from '@/types/production';
 
@@ -120,7 +120,7 @@ const WarehousingAuditBanner: React.FC<WarehousingAuditBannerProps> = ({
 
   return (
     <Alert
-      icon={<RobotOutlined />}
+      icon={<XiaoyunCloudAvatar size={18} active />}
       showIcon
       type={insight.type}
       title={insight.message}

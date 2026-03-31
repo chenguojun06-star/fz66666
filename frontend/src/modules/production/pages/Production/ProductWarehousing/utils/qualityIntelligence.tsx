@@ -167,7 +167,7 @@ export function renderQualityTooltip(insight: QualityInsight, _orderNo: string):
     <div style={{ fontSize: 12, maxWidth: 340, lineHeight: 1.7, color: '#333' }}>
       {/* 标题 + 状态标签 */}
       <div style={{ fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span>🤖 智能质检分析</span>
+        <span>☁️ 智能质检分析</span>
         <span style={{
           fontSize: 10, padding: '1px 6px', borderRadius: 4,
           background: VERDICT_COLOR[insight.verdict], color: '#fff',

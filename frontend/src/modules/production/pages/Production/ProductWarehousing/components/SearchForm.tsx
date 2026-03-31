@@ -17,7 +17,7 @@ interface SearchFormProps {
 
 const SearchForm: React.FC<SearchFormProps> = ({ queryParams, setQueryParams, onSearch, extra }) => {
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
-  const { factoryTypeOptions, departmentOptions } = useOrganizationFilterOptions();
+  const { factoryTypeOptions } = useOrganizationFilterOptions();
   const { warehouseSelectOptions } = useWarehouseLocationOptions();
 
   const handleSearchChange = (value: string) => {
@@ -64,17 +64,6 @@ const SearchForm: React.FC<SearchFormProps> = ({ queryParams, setQueryParams, on
               allowClear
               style={{ minWidth: 110 }}
               options={factoryTypeOptions}
-            />
-            <Select
-              value={queryParams.orgUnitId || ''}
-              onChange={(value) => {
-                setQueryParams({ ...queryParams, orgUnitId: value || undefined, page: 1 });
-                onSearch();
-              }}
-              placeholder="全部生产方"
-              allowClear
-              style={{ minWidth: 130 }}
-              options={departmentOptions}
             />
           </>
         )}

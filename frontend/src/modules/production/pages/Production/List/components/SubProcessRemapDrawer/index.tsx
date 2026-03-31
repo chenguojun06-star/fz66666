@@ -34,18 +34,9 @@ import type {
   SubProcessRemapEntry,
   ParentNode,
 } from '../../hooks/useSubProcessRemap';
+import { STAGE_ACCENT } from '@/utils/stageStyles';
 
 const { Text } = Typography;
-
-// ── 颜色映射（与 mainStages 对齐）
-const STAGE_COLORS: Record<string, string> = {
-  procurement:      '#1e40af',
-  cutting:          '#92400e',
-  carSewing:        '#065f46',
-  secondaryProcess: '#5b21b6',
-  tailProcess:      '#9d174d',
-  warehousing:      '#374151',
-};
 
 // ── 图标映射
 const STAGE_ICONS: Record<string, string> = {
@@ -87,7 +78,7 @@ interface EntryEditorProps {
 }
 
 function EntryEditor({ node, entry, onChange }: EntryEditorProps) {
-  const color = STAGE_COLORS[node.stageKey] ?? '#6b7280';
+  const color = STAGE_ACCENT;
 
   function addSubProcess() {
     const next: SubProcess = {
@@ -312,7 +303,7 @@ export default function SubProcessRemapDrawer({
 
   // 构建 Collapse items（树状父子结构）
   const collapseItems = parentNodes.map(node => {
-    const color   = STAGE_COLORS[node.stageKey] ?? '#6b7280';
+    const color   = STAGE_ACCENT;
     const icon    = STAGE_ICONS[node.stageKey]  ?? '●';
     const entry   = localConfig[node.stageKey] ?? { enabled: false, subProcesses: [] };
     const count   = entry.subProcesses.length;

@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Alert, App, Button, Card, DatePicker, Form, Input, InputNumber,
-  Select, Space, Tag, Tooltip, Popconfirm, Row, Col, Statistic,
+  Alert, App, Card, DatePicker, Form, Input, InputNumber,
+  Select, Space, Tag, Popconfirm, Row, Col, Statistic,
   Upload, Image, Spin,
 } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
+import RowActions from '@/components/common/RowActions';
+import type { RowAction } from '@/components/common/RowActions';
 import {
   PlusOutlined, SearchOutlined, CheckCircleOutlined,
   CloseCircleOutlined, DollarOutlined, EditOutlined, DeleteOutlined,
@@ -393,9 +395,9 @@ const ExpenseReimbursementPage: React.FC = () => {
       render: (val: string) => val ? dayjs(val).format('MM-DD HH:mm') : '-',
     },
     {
-      title: '操作', key: 'actions', width: 180, fixed: 'right' as const,
+      title: '操作', key: 'actions', width: 120, fixed: 'right' as const,
       render: (_: unknown, record: ExpenseReimbursement) => {
-        const actions: React.ReactNode[] = [];
+        const actions: RowAction[] = [];
         const isAllView = viewMode === 'all';
         const isOwnRecord = record.applicantId === Number(user?.id);
         const isPendingRecord = record.status === 'pending';
@@ -403,66 +405,33 @@ const ExpenseReimbursementPage: React.FC = () => {
 
         // 自己的待审批/已驳回单据可以编辑、删除
         if (isOwnRecord && (record.status === 'pending' || record.status === 'rejected')) {
-          actions.push(
-            <Tooltip title="编辑" key="edit">
-              <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openForm(record)} />
-            </Tooltip>,
-          );
-          actions.push(
-            <Popconfirm key="del" title="确定删除该报销单？" onConfirm={() => handleDelete(record.id!)}>
-              <Tooltip title="删除"><Button type="link" size="small" danger icon={<DeleteOutlined />} /></Tooltip>
-            </Popconfirm>,
-          );
+          actions.push({ key: 'edit', label: '编辑', primary: true, onClick: () => openForm(record) });
+          actions.push({
+            key: 'del', label: '删除', danger: true,
+            confirm: '确定删除该报销单？',
+            onClick: () => handleDelete(record.id!),
+          });
         }
 
-        // 审批入口：仅待审批且非本人可点击；其他状态统一灰色禁用
+        // 审批入口
         if (isAllView) {
-          actions.push(
-            <Tooltip
-              title={
-                canApproveRecord
-                  ? '审批'
-                  : isOwnRecord && isPendingRecord
-                    ? '本人提交的单据不能自审'
-                    : '当前状态不可审批'
-              }
-              key="approve"
-            >
-              <Button
-                type="link"
-                size="small"
-                icon={<CheckCircleOutlined />}
-                disabled={!canApproveRecord}
-                onClick={() => {
-                  if (canApproveRecord) {
-                    openDetail(record);
-                  }
-                }}
-              >
-                审批
-              </Button>
-            </Tooltip>,
-          );
+          actions.push({
+            key: 'approve', label: '审批',
+            disabled: !canApproveRecord,
+            onClick: () => { if (canApproveRecord) openDetail(record); },
+          });
         }
 
         // 全部视图下，已批准可确认付款
         if (isAllView && record.status === 'approved') {
-          actions.push(
-            <Tooltip title="确认付款" key="pay">
-              <Button type="link" size="small" style={{ color: 'var(--color-success)' }} icon={<DollarOutlined />} onClick={() => handlePay(record)}>付款</Button>
-            </Tooltip>,
-          );
+          actions.push({ key: 'pay', label: '付款', onClick: () => handlePay(record) });
         }
 
         if (!isAllView) {
-          actions.push(
-            <Tooltip title="审批" key="detail">
-              <Button type="link" size="small" onClick={() => openDetail(record)}>审批</Button>
-            </Tooltip>,
-          );
+          actions.push({ key: 'detail', label: '审批', onClick: () => openDetail(record) });
         }
 
-        return <Space size={0}>{actions}</Space>;
+        return <RowActions actions={actions} />;
       },
     },
   ];

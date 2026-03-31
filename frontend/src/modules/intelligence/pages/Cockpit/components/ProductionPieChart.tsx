@@ -22,6 +22,15 @@ const formatDays = (days: number): string => {
   return remainDays > 0 ? `${months}月${remainDays}天` : `${months}月`;
 };
 
+const isToday = (dateStr?: string | null): boolean => {
+  if (!dateStr) return false;
+  const date = new Date(dateStr);
+  const today = new Date();
+  return date.getFullYear() === today.getFullYear() &&
+    date.getMonth() === today.getMonth() &&
+    date.getDate() === today.getDate();
+};
+
 const getStageRate = (order: ProductionOrder, rateField: string): number => {
   const rate = order[rateField as keyof ProductionOrder];
   if (rate == null) return 0;
@@ -104,8 +113,6 @@ const ProductionPieChart: React.FC<ProductionPieChartProps> = ({ mode = 'sidebar
           }),
           api.get<{ code: number; data: FactoryCapacityItem[] }>('/production/order/factory-capacity'),
         ]);
-        console.log('Orders:', ordersRes?.data?.records?.length);
-        console.log('Factory capacity:', factoryRes?.data);
         setOrders(ordersRes?.data?.records || []);
         setFactoryCapacity(factoryRes?.data || []);
       } catch (e) {
@@ -220,9 +227,22 @@ const ProductionPieChart: React.FC<ProductionPieChartProps> = ({ mode = 'sidebar
       atRiskCount: f.atRiskCount || 0,
     })).sort((a, b) => b.totalQuantity - a.totalQuantity);
 
-    console.log('Factory stats:', factoryStats);
+    const todayCompletedOrders = orders.filter(o =>
+      String(o.status||'').toUpperCase() === 'COMPLETED' && isToday(o.actualEndDate)
+    );
+    const todayCompletedQty = todayCompletedOrders.reduce((sum, o) => sum + (o.orderQuantity || 0), 0);
 
-    return { totalOrders, totalQuantity, inProgress, completed, stageStats, avgDays, factoryStats };
+    return {
+      totalOrders,
+      totalQuantity,
+      inProgress,
+      completed,
+      stageStats,
+      avgDays,
+      factoryStats,
+      todayCompletedCount: todayCompletedOrders.length,
+      todayCompletedQty,
+    };
   }, [orders, factoryCapacity]);
 
   const pieSegments = useMemo(() => {
@@ -270,6 +290,12 @@ const ProductionPieChart: React.FC<ProductionPieChartProps> = ({ mode = 'sidebar
             <span className="pie-sidebar-dot pie-sidebar-dot--done" />
             <span>已完成</span>
             <span className="pie-sidebar-num">{stats.completed}</span>
+          </div>
+        </div>
+        <div className="pie-sidebar-today">
+          <div className="today-stat-item">
+            <span className="today-stat-label">今日完成</span>
+            <span className="today-stat-value">{stats.todayCompletedQty}件</span>
           </div>
         </div>
       </div>

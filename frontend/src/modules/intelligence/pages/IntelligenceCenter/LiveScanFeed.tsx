@@ -3,6 +3,7 @@ import { useAuth } from '@/utils/AuthContext';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import type { WsMessage } from '@/hooks/useWebSocket';
 import { useNavigate } from 'react-router-dom';
+import { STAGE_ACCENT } from '@/utils/stageStyles';
 
 interface ScanEvent {
   id: string;
@@ -18,21 +19,7 @@ const MAX_EVENTS = 7;
 const PULSE_WINDOW_MS = 60 * 1000;
 const PULSE_BUCKETS = 12;
 
-const STAGE_COLORS: Record<string, string> = {
-  '裁剪': '#00e5ff',
-  '车缝': '#39ff14',
-  '尾部': '#f7a600',
-  '质检': '#ff6b6b',
-  '入库': '#a78bfa',
-  '包装': '#ffd166',
-};
-
-const getStageColor = (stageName?: string) => {
-  const safeStage = String(stageName || '').trim();
-  if (!safeStage) return '#00e5ff';
-  const matched = Object.keys(STAGE_COLORS).find((key) => safeStage.includes(key));
-  return matched ? STAGE_COLORS[matched] : '#00e5ff';
-};
+const getStageColor = (_stageName?: string) => STAGE_ACCENT;
 
 const normalizeFocusNode = (stageName?: string) => {
   const safeStage = String(stageName || '').trim();

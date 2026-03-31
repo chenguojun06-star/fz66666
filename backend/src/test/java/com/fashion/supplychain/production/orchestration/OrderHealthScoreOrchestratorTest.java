@@ -42,7 +42,7 @@ class OrderHealthScoreOrchestratorTest {
         order.setId("TEST-ID-001");
         order.setOrderNo("TEST-PO-001");
         order.setProductionProgress(progress);
-        order.setExpectedShipDate(shipDate.toLocalDate());
+        order.setExpectedShipDate(shipDate != null ? shipDate.toLocalDate() : null);
         order.setProcurementCompletionRate(procRate);
         return order;
     }
@@ -54,7 +54,7 @@ class OrderHealthScoreOrchestratorTest {
     @Test
     void testProgressScore_AllCompleted() {
         // 进度 100% 应得 40 分
-        ProductionOrder order = createOrder(100, LocalDateTime.now().plusDays(7), 100);
+        ProductionOrder order = createOrder(100, LocalDateTime.now().plusDays(8), 100);
         int score = orchestrator.calcScore(order);
         
         // 总分 = 40 (进度) + 26 (货期) + 25 (采购) = 91
@@ -64,7 +64,7 @@ class OrderHealthScoreOrchestratorTest {
     @Test
     void testProgressScore_ZeroProgress() {
         // 进度 0% 应得 0 分
-        ProductionOrder order = createOrder(0, LocalDateTime.now().plusDays(7), 100);
+        ProductionOrder order = createOrder(0, LocalDateTime.now().plusDays(8), 100);
         int score = orchestrator.calcScore(order);
         
         // 总分 = 0 (进度) + 26 (货期) + 25 (采购) = 51
@@ -74,7 +74,7 @@ class OrderHealthScoreOrchestratorTest {
     @Test
     void testProgressScore_PartialProgress() {
         // 进度 50% 应得 20 分
-        ProductionOrder order = createOrder(50, LocalDateTime.now().plusDays(7), 100);
+        ProductionOrder order = createOrder(50, LocalDateTime.now().plusDays(8), 100);
         int score = orchestrator.calcScore(order);
         
         // 总分 = 20 (进度) + 26 (货期) + 25 (采购) = 71
@@ -152,7 +152,7 @@ class OrderHealthScoreOrchestratorTest {
     @Test
     void testProcurementScore_FullyCompleted() {
         // 采购完成 100% 应得 25 分
-        ProductionOrder order = createOrder(50, LocalDateTime.now().plusDays(7), 100);
+        ProductionOrder order = createOrder(50, LocalDateTime.now().plusDays(8), 100);
         int score = orchestrator.calcScore(order);
         
         // 总分 = 20 (进度) + 26 (货期) + 25 (采购) = 71
@@ -162,7 +162,7 @@ class OrderHealthScoreOrchestratorTest {
     @Test
     void testProcurementScore_ZeroCompletion() {
         // 采购完成 0% 应得 0 分
-        ProductionOrder order = createOrder(50, LocalDateTime.now().plusDays(7), 0);
+        ProductionOrder order = createOrder(50, LocalDateTime.now().plusDays(8), 0);
         int score = orchestrator.calcScore(order);
         
         // 总分 = 20 (进度) + 26 (货期) + 0 (采购) = 46
@@ -172,7 +172,7 @@ class OrderHealthScoreOrchestratorTest {
     @Test
     void testProcurementScore_NoData() {
         // 无采购数据应得 18 分（中等）
-        ProductionOrder order = createOrder(50, LocalDateTime.now().plusDays(7), null);
+        ProductionOrder order = createOrder(50, LocalDateTime.now().plusDays(8), null);
         int score = orchestrator.calcScore(order);
         
         // 总分 = 20 (进度) + 26 (货期) + 18 (无数据) = 64
@@ -185,32 +185,32 @@ class OrderHealthScoreOrchestratorTest {
 
     @Test
     void testRiskLevel_Good() {
-        // 得分 >= 75 应为 "good"
+        // 得分 >= 75 应为 "NORMAL"
         String level = orchestrator.scoreToLevel(75);
-        assertEquals("good", level);
+        assertEquals("NORMAL", level);
         
         level = orchestrator.scoreToLevel(100);
-        assertEquals("good", level);
+        assertEquals("NORMAL", level);
     }
 
     @Test
     void testRiskLevel_Warning() {
-        // 得分 50-74 应为 "warn"
+        // 得分 50-74 应为 "WARNING"
         String level = orchestrator.scoreToLevel(50);
-        assertEquals("warn", level);
+        assertEquals("WARNING", level);
         
         level = orchestrator.scoreToLevel(74);
-        assertEquals("warn", level);
+        assertEquals("WARNING", level);
     }
 
     @Test
     void testRiskLevel_Critical() {
-        // 得分 < 50 应为 "danger"
+        // 得分 < 50 应为 "CRITICAL"
         String level = orchestrator.scoreToLevel(49);
-        assertEquals("danger", level);
+        assertEquals("CRITICAL", level);
         
         level = orchestrator.scoreToLevel(0);
-        assertEquals("danger", level);
+        assertEquals("CRITICAL", level);
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -225,7 +225,7 @@ class OrderHealthScoreOrchestratorTest {
         
         // 总分 = 0 (进度) + 0 (逾期) + 18 (无数据) = 18
         assertEquals(18, score, 2);
-        assertEquals("danger", orchestrator.scoreToLevel(score));
+        assertEquals("CRITICAL", orchestrator.scoreToLevel(score));
     }
 
     @Test
@@ -236,7 +236,7 @@ class OrderHealthScoreOrchestratorTest {
         
         // 总分 = 40 (进度) + 35 (充足) + 25 (采购) = 100
         assertEquals(100, score);
-        assertEquals("good", orchestrator.scoreToLevel(score));
+        assertEquals("NORMAL", orchestrator.scoreToLevel(score));
     }
 
     @Test
@@ -269,7 +269,7 @@ class OrderHealthScoreOrchestratorTest {
         
         // 总分 = 24 (进度) + 16 (较紧) + 18.75 (采购) = 58.75 ≈ 59
         assertTrue(score >= 58 && score <= 60, "预期 58-60 分，实际: " + score);
-        assertEquals("warn", orchestrator.scoreToLevel(score));
+        assertEquals("WARNING", orchestrator.scoreToLevel(score));
     }
 
     @Test
@@ -280,7 +280,7 @@ class OrderHealthScoreOrchestratorTest {
         
         // 总分 = 8 (进度) + 8 (紧迫) + 7.5 (采购) = 23.5 ≈ 24
         assertTrue(score <= 30, "预期结果较低，实际: " + score);
-        assertEquals("danger", orchestrator.scoreToLevel(score));
+        assertEquals("CRITICAL", orchestrator.scoreToLevel(score));
     }
 
     @Test
@@ -291,7 +291,7 @@ class OrderHealthScoreOrchestratorTest {
         
         // 总分 = 34 (进度) + 35 (充足) + 23.75 (采购) = 92.75 ≈ 93
         assertTrue(score >= 90, "预期 ≥90 分，实际: " + score);
-        assertEquals("good", orchestrator.scoreToLevel(score));
+        assertEquals("NORMAL", orchestrator.scoreToLevel(score));
     }
 
     // ─────────────────────────────────────────────────────────────────────
