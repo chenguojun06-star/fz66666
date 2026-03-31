@@ -248,7 +248,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     paths.materialPurchase,        // /production/material（面辅料采购）
     paths.financeCenter,           // /finance/center（订单结算(外)）
     paths.factoryWorkers,          // /system/factory-workers（工人名册）
-    paths.templateCenter,          // /basic/template-center（单价维护）
     paths.organization,            // /system/organization（组织架构）
     paths.tutorial,                // /system/tutorial（系统教学）
   ]);

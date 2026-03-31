@@ -3,6 +3,7 @@ import {
   App,
   Button,
   Checkbox,
+  Dropdown,
   Form,
   Image,
   Input,
@@ -11,7 +12,8 @@ import {
   Tag,
   Upload,
 } from 'antd';
-import { DeleteOutlined, UploadOutlined } from '@ant-design/icons';
+import { DeleteOutlined, DownOutlined, PlusOutlined, UploadOutlined } from '@ant-design/icons';
+import { STAGE_ACCENT, STAGE_ACCENT_LIGHT } from '@/utils/stageStyles';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
@@ -38,6 +40,7 @@ import type {
 } from '../utils/templateUtils';
 
 const EDITOR_FONT_SIZE = 12;
+const STAGE_ORDER = ['采购', '裁剪', '车缝', '二次工艺', '尾部', '入库'];
 
 interface EditTemplateModalProps {
   /** 款号下拉选项 */
@@ -538,7 +541,7 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
           </div>
           <Form.Item label="模板内容">
             {editTableData ? (
-              <div style={{ maxHeight: 400, overflow: 'auto', border: '1px solid var(--color-border)', padding: 8, fontSize: EDITOR_FONT_SIZE }}>
+              <div style={{ border: '1px solid var(--color-border)', padding: 8, fontSize: EDITOR_FONT_SIZE }}>
                 {(() => {
                   const type = editingRow?.templateType;
 
@@ -787,6 +790,61 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                       </div>
                     );
 
+                    // ---- 排序 + 分组辅助 ----
+                    const sortedSteps = editTableData.steps
+                      .map((step: ProcessStepRow, i: number) => ({ ...step, _origIdx: i }))
+                      .sort((a, b) => {
+                        const sa = STAGE_ORDER.indexOf(a.progressStage || '车缝');
+                        const sb = STAGE_ORDER.indexOf(b.progressStage || '车缝');
+                        return sa - sb;
+                      });
+
+                    const stageSpanMap = (() => {
+                      const map = new Map<number, { rowSpan: number; stage: string; count: number }>();
+                      let i = 0;
+                      while (i < sortedSteps.length) {
+                        const stage = sortedSteps[i].progressStage || '车缝';
+                        let j = i + 1;
+                        while (j < sortedSteps.length && (sortedSteps[j].progressStage || '车缝') === stage) j++;
+                        const cnt = j - i;
+                        map.set(i, { rowSpan: cnt, stage, count: cnt });
+                        for (let k = i + 1; k < j; k++) map.set(k, { rowSpan: 0, stage, count: cnt });
+                        i = j;
+                      }
+                      return map;
+                    })();
+
+                    const updateStep = (sortedIdx: number, updates: Partial<ProcessStepRow>) => {
+                      const origIdx = sortedSteps[sortedIdx]?._origIdx ?? sortedIdx;
+                      const newSteps = [...editTableData.steps];
+                      newSteps[origIdx] = { ...newSteps[origIdx], ...updates };
+                      setEditTableData({ ...editTableData, steps: newSteps });
+                    };
+
+                    const deleteStep = (sortedIdx: number) => {
+                      const origIdx = sortedSteps[sortedIdx]?._origIdx ?? sortedIdx;
+                      const kept = editTableData.steps.filter((_s: ProcessStepRow, i: number) => i !== origIdx);
+                      setEditTableData({ ...editTableData, steps: normalizeProcessSteps(kept) });
+                    };
+
+                    const addStepToStage = (targetStage: string) => {
+                      const maxCode = editTableData.steps.reduce((max: number, step: ProcessStepRow) => {
+                        const code = Number.parseInt(String(step.processCode ?? '').trim() || '0', 10);
+                        return Number.isFinite(code) && code > max ? code : max;
+                      }, 0);
+                      const nextCode = String(maxCode + 1).padStart(2, '0');
+                      const newRow: ProcessStepRow = {
+                        processCode: nextCode,
+                        processName: '',
+                        progressStage: targetStage,
+                        machineType: '',
+                        standardTime: 0,
+                        unitPrice: 0,
+                        sizePrices: templateSizes.reduce((acc, size) => ({ ...acc, [size]: 0 }), {}),
+                      };
+                      setEditTableData({ ...editTableData, steps: [...editTableData.steps, newRow] });
+                    };
+
                     const baseColumns = [
                       {
                         title: '排序',
@@ -805,11 +863,7 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                           <Input
                             size="small"
                             value={text || ''}
-                            onChange={(e) => {
-                              const newData = { ...editTableData, steps: [...editTableData.steps] };
-                              newData.steps[idx] = { ...newData.steps[idx], processCode: e.target.value };
-                              setEditTableData(newData);
-                            }}
+                            onChange={(e) => updateStep(idx, { processCode: e.target.value })}
                             style={{ border: 'none', fontSize: EDITOR_FONT_SIZE, padding: 0 }}
                           />
                         ),
@@ -824,11 +878,7 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                             autoCollect
                             size="small"
                             value={text || ''}
-                            onChange={(value) => {
-                              const newData = { ...editTableData, steps: [...editTableData.steps] };
-                              newData.steps[idx] = { ...newData.steps[idx], processName: value as string };
-                              setEditTableData(newData);
-                            }}
+                            onChange={(value) => updateStep(idx, { processName: value as string })}
                             style={{ border: 'none', fontSize: EDITOR_FONT_SIZE }}
                           />
                         ),
@@ -836,23 +886,30 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                       {
                         title: '进度节点',
                         dataIndex: 'progressStage',
-                        width: 96,
-                        render: (value: string, _: ProcessStepRow, idx: number) => (
-                          <Select
-                            size="small"
-                            value={value || undefined}
-                            options={MAIN_PROGRESS_STAGE_OPTIONS}
-                            placeholder="选择父节点"
-                            allowClear
-                            onChange={(val) => {
-                              const newData = { ...editTableData, steps: [...editTableData.steps] };
-                              newData.steps[idx] = { ...newData.steps[idx], progressStage: val || '' };
-                              setEditTableData(newData);
-                            }}
-                            style={{ width: '100%', fontSize: EDITOR_FONT_SIZE }}
-                            variant="borderless"
-                          />
-                        ),
+                        width: 130,
+                        onCell: (_: ProcessStepRow, index?: number) => {
+                          const info = stageSpanMap.get(index ?? -1);
+                          return {
+                            rowSpan: info?.rowSpan ?? 1,
+                            style: info && info.rowSpan > 0
+                              ? { background: STAGE_ACCENT_LIGHT, borderLeft: `3px solid ${STAGE_ACCENT}`, verticalAlign: 'middle' as const, textAlign: 'center' as const }
+                              : undefined,
+                          };
+                        },
+                        render: (_: string, record: ProcessStepRow, index: number) => {
+                          const info = stageSpanMap.get(index);
+                          if (!info || info.rowSpan === 0) return null;
+                          const stage = record.progressStage || '车缝';
+                          return (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                              <Tag style={{ background: STAGE_ACCENT, color: '#fff', border: 'none', fontWeight: 600, fontSize: 13 }}>{stage}</Tag>
+                              <span style={{ fontSize: 12, color: '#999' }}>{info.count} 个工序</span>
+                              <Button type="link" size="small" icon={<PlusOutlined />} onClick={() => addStepToStage(stage)} style={{ fontSize: 12, padding: 0 }}>
+                                添加
+                              </Button>
+                            </div>
+                          );
+                        },
                       },
                       {
                         title: '机器类型',
@@ -864,11 +921,7 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                             autoCollect
                             size="small"
                             value={text || ''}
-                            onChange={(value) => {
-                              const newData = { ...editTableData, steps: [...editTableData.steps] };
-                              newData.steps[idx] = { ...newData.steps[idx], machineType: value as string };
-                              setEditTableData(newData);
-                            }}
+                            onChange={(value) => updateStep(idx, { machineType: value as string })}
                             style={{ border: 'none', fontSize: EDITOR_FONT_SIZE }}
                           />
                         ),
@@ -883,11 +936,7 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                             value={value || undefined}
                             allowClear
                             placeholder="选择"
-                            onChange={(val) => {
-                              const newData = { ...editTableData, steps: [...editTableData.steps] };
-                              newData.steps[idx] = { ...newData.steps[idx], difficulty: val || '' };
-                              setEditTableData(newData);
-                            }}
+                            onChange={(val) => updateStep(idx, { difficulty: val || '' })}
                             options={[
                               { value: '易', label: '易' },
                               { value: '中', label: '中' },
@@ -907,11 +956,7 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                             size="small"
                             value={value || 0}
                             min={0}
-                            onChange={(val) => {
-                              const newData = { ...editTableData, steps: [...editTableData.steps] };
-                              newData.steps[idx] = { ...newData.steps[idx], standardTime: val || 0 };
-                              setEditTableData(newData);
-                            }}
+                            onChange={(val) => updateStep(idx, { standardTime: val || 0 })}
                             style={{ width: '100%', fontSize: EDITOR_FONT_SIZE }}
                           />
                         ),
@@ -926,11 +971,7 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                             value={item.unitPrice ?? item.price ?? 0}
                             min={0}
                             precision={2}
-                            onChange={(val) => {
-                              const newData = { ...editTableData, steps: [...editTableData.steps] };
-                              newData.steps[idx] = { ...newData.steps[idx], unitPrice: val || 0 };
-                              setEditTableData(newData);
-                            }}
+                            onChange={(val) => updateStep(idx, { unitPrice: val || 0 })}
                             style={{ width: '100%', fontSize: EDITOR_FONT_SIZE }}
                           />
                         ),
@@ -949,15 +990,16 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                                 min={0}
                                 precision={2}
                                 onChange={(val) => {
-                                  const newData = { ...editTableData, steps: [...editTableData.steps] };
-                                  newData.steps[idx] = {
-                                    ...newData.steps[idx],
+                                  const origIdx = sortedSteps[idx]?._origIdx ?? idx;
+                                  const newSteps = [...editTableData.steps];
+                                  newSteps[origIdx] = {
+                                    ...newSteps[origIdx],
                                     sizePrices: {
-                                      ...(newData.steps[idx].sizePrices || {}),
+                                      ...(newSteps[origIdx].sizePrices || {}),
                                       [size]: val || 0,
                                     },
                                   };
-                                  setEditTableData(newData);
+                                  setEditTableData({ ...editTableData, steps: newSteps });
                                 }}
                                 style={{ width: '100%', fontSize: EDITOR_FONT_SIZE }}
                               />
@@ -975,11 +1017,7 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                           danger
                           size="small"
                           icon={<DeleteOutlined style={{ fontSize: EDITOR_FONT_SIZE }} />}
-                          onClick={() => {
-                            const kept = editTableData.steps.filter((_s: ProcessStepRow, i: number) => i !== idx);
-                            const newData = { ...editTableData, steps: normalizeProcessSteps(kept) };
-                            setEditTableData(newData);
-                          }}
+                          onClick={() => deleteStep(idx)}
                           style={{ padding: 0 }}
                         />
                       ),
@@ -992,7 +1030,7 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                         <SizePriceManager />
                         <ResizableTable
                           storageKey="template-process-edit"
-                          dataSource={editTableData.steps}
+                          dataSource={sortedSteps}
                           columns={processColumns}
                           pagination={false}
                           size="small"
@@ -1002,31 +1040,16 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                             (record as any).processCode || (record as any).id || `process-${Math.random()}`
                           }
                           footer={() => (
-                            <Button
-                              type="dashed"
-                              size="small"
-                              style={{ width: '100%' }}
-                              onClick={() => {
-                                const maxCode = editTableData.steps.reduce((max: number, step: ProcessStepRow) => {
-                                  const code = Number.parseInt(String(step.processCode ?? '').trim() || '0', 10);
-                                  return Number.isFinite(code) && code > max ? code : max;
-                                }, 0);
-                                const nextCode = String(maxCode + 1).padStart(2, '0');
-                                const newRow: ProcessStepRow = {
-                                  processCode: nextCode,
-                                  processName: '',
-                                  progressStage: '',
-                                  machineType: '',
-                                  standardTime: 0,
-                                  unitPrice: 0,
-                                  sizePrices: templateSizes.reduce((acc, size) => ({ ...acc, [size]: 0 }), {}),
-                                };
-                                const newData = { ...editTableData, steps: [...editTableData.steps, newRow] };
-                                setEditTableData(newData);
+                            <Dropdown
+                              menu={{
+                                items: STAGE_ORDER.map((s) => ({ key: s, label: s })),
+                                onClick: ({ key }) => addStepToStage(key),
                               }}
                             >
-                              添加工序
-                            </Button>
+                              <Button type="dashed" size="small" style={{ width: '100%' }}>
+                                添加工序 <DownOutlined />
+                              </Button>
+                            </Dropdown>
                           )}
                         />
                       </div>

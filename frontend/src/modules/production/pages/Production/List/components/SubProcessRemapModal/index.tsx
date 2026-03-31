@@ -4,26 +4,27 @@
  * 使用场景：外发工厂按订单临时增删/排序父节点下的子工序用于进度追踪，
  *           不影响父节点结构、下单单价与工资结算。
  *
- * 替代 SubProcessRemapDrawer（侧边栏）改为通用弹窗组件。
+ * v3 Table布局：左列子工序名称，右列进度节点 rowSpan 分组（与模板中心表格风格一致）
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Button,
   Switch,
   Input,
-  InputNumber,
-  Space,
   Tag,
   Typography,
   Empty,
-  Divider,
   Tooltip,
+  message,
+  Table,
 } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 import {
   PlusOutlined,
   DeleteOutlined,
-  HolderOutlined,
+  ArrowUpOutlined,
+  ArrowDownOutlined,
 } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import type { ProductionOrder } from '@/types/production';
@@ -36,19 +37,29 @@ import type {
 
 const { Text } = Typography;
 
-// ── 颜色映射（与 mainStages 对齐）
-const STAGE_COLORS: Record<string, string> = {
-  procurement: '#1e40af',
-  cutting: '#92400e',
-  carSewing: '#065f46',
-  secondaryProcess: '#5b21b6',
-  tailProcess: '#9d174d',
-  warehousing: '#374151',
-};
+import {
+  STAGE_ACCENT as ACCENT,
+  STAGE_ACCENT_LIGHT as ACCENT_LIGHT,
+  STAGE_ACTIVE as ACTIVE_COLOR,
+} from '@/utils/stageStyles';
 
-// ── 生成简短 ID（避免 uuid 依赖）
+// ── 阶段排序
+const STAGE_ORDER = ['procurement', 'cutting', 'carSewing', 'secondaryProcess', 'tailProcess', 'warehousing'];
+
+// ── 生成简短 ID
 function genId(): string {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+}
+
+// ── 表格行类型
+interface TableRow {
+  key: string;
+  parentNode: ParentNode;
+  entry: SubProcessRemapEntry;
+  subprocess: SubProcess | null;
+  subIndex: number;
+  rowSpan: number;
+  totalInParent: number;
 }
 
 // ────────────────────────────────────
@@ -65,196 +76,6 @@ interface Props {
   onClose: () => void;
 }
 
-// ────────────────────────────────────
-// 单个父节点区块
-// ────────────────────────────────────
-
-interface StageBlockProps {
-  node: ParentNode;
-  entry: SubProcessRemapEntry;
-  onChange: (entry: SubProcessRemapEntry) => void;
-}
-
-function StageBlock({ node, entry, onChange }: StageBlockProps) {
-  const color = STAGE_COLORS[node.stageKey] ?? '#6b7280';
-
-  function toggleEnabled(checked: boolean) {
-    onChange({ ...entry, enabled: checked });
-  }
-
-  function addSubProcess() {
-    const next: SubProcess = { id: genId(), name: '', sortOrder: entry.subProcesses.length };
-    onChange({ ...entry, subProcesses: [...entry.subProcesses, next] });
-  }
-
-  function updateSubProcess(id: string, patch: Partial<SubProcess>) {
-    onChange({
-      ...entry,
-      subProcesses: entry.subProcesses.map(s => (s.id === id ? { ...s, ...patch } : s)),
-    });
-  }
-
-  function removeSubProcess(id: string) {
-    const filtered = entry.subProcesses
-      .filter(s => s.id !== id)
-      .map((s, i) => ({ ...s, sortOrder: i }));
-    onChange({ ...entry, subProcesses: filtered });
-  }
-
-  function moveSubProcess(idx: number, dir: -1 | 1) {
-    const arr = [...entry.subProcesses];
-    const swapIdx = idx + dir;
-    if (swapIdx < 0 || swapIdx >= arr.length) return;
-    [arr[idx], arr[swapIdx]] = [arr[swapIdx], arr[idx]];
-    onChange({
-      ...entry,
-      subProcesses: arr.map((s, i) => ({ ...s, sortOrder: i })),
-    });
-  }
-
-  return (
-    <div
-      style={{
-        marginBottom: 20,
-        border: `1px solid ${color}30`,
-        borderRadius: 8,
-        overflow: 'hidden',
-      }}
-    >
-      {/* 区块标题栏 — 单价已隐藏，仅显示节点名与启用开关 */}
-      <div
-        style={{
-          background: `${color}18`,
-          borderBottom: entry.enabled ? `1px solid ${color}30` : 'none',
-          padding: '8px 14px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-        }}
-      >
-        <Tag color={color} style={{ fontWeight: 600, margin: 0 }}>
-          {node.name}
-        </Tag>
-        <div style={{ flex: 1 }} />
-        <Switch
-          size="small"
-          checked={entry.enabled}
-          onChange={toggleEnabled}
-          checkedChildren="已配置"
-          unCheckedChildren="关闭"
-        />
-      </div>
-
-      {/* 子工序列表 */}
-      {entry.enabled && (
-        <div style={{ padding: '10px 14px' }}>
-          {entry.subProcesses.length === 0 ? (
-            <Empty
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-              description="暂无子工序，点击下方「+」添加"
-              style={{ margin: '8px 0' }}
-            />
-          ) : (
-            entry.subProcesses.map((sp, idx) => (
-              <div
-                key={sp.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  marginBottom: 8,
-                }}
-              >
-                {/* 排序按钮 */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<HolderOutlined />}
-                    disabled={idx === 0}
-                    onClick={() => moveSubProcess(idx, -1)}
-                    style={{ height: 16, padding: '0 4px', fontSize: 12 }}
-                    title="上移"
-                  />
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<HolderOutlined style={{ transform: 'rotate(180deg)' }} />}
-                    disabled={idx === entry.subProcesses.length - 1}
-                    onClick={() => moveSubProcess(idx, 1)}
-                    style={{ height: 16, padding: '0 4px', fontSize: 12 }}
-                    title="下移"
-                  />
-                </div>
-
-                {/* 子工序名称 */}
-                <Input
-                  value={sp.name}
-                  placeholder={`子工序名称 ${idx + 1}`}
-                  onChange={e => updateSubProcess(sp.id, { name: e.target.value })}
-                  style={{ flex: 1, minWidth: 0 }}
-                  size="small"
-                  maxLength={30}
-                />
-
-                {/* 权重比例（可选） */}
-                <Tooltip title="进度权重 %（可不填，留空时系统等比分配）">
-                  <InputNumber
-                    value={sp.ratio}
-                    min={1}
-                    max={100}
-                    placeholder="权重%"
-                    onChange={val => updateSubProcess(sp.id, { ratio: val ?? undefined })}
-                    style={{ width: 72 }}
-                    size="small"
-                  />
-                </Tooltip>
-
-                {/* 删除 */}
-                <Button
-                  type="text"
-                  size="small"
-                  danger
-                  icon={<DeleteOutlined />}
-                  onClick={() => removeSubProcess(sp.id)}
-                  title="删除该子工序"
-                />
-              </div>
-            ))
-          )}
-
-          {/* 字数提示 */}
-          {entry.subProcesses.length > 0 && (
-            <Text type="secondary" style={{ fontSize: 11 }}>
-              共&nbsp;{entry.subProcesses.length}&nbsp;个子工序
-              {entry.subProcesses.some(s => !s.name.trim()) && (
-                <Text type="danger" style={{ fontSize: 11 }}>
-                  &nbsp;·&nbsp;名称不能为空
-                </Text>
-              )}
-            </Text>
-          )}
-
-          {/* 添加按钮 */}
-          <Button
-            type="dashed"
-            size="small"
-            icon={<PlusOutlined />}
-            onClick={addSubProcess}
-            style={{ marginTop: 8, width: '100%' }}
-          >
-            添加子工序
-          </Button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ────────────────────────────────────
-// 主弹窗组件
-// ────────────────────────────────────
-
 export default function SubProcessRemapModal({
   visible,
   record,
@@ -264,12 +85,10 @@ export default function SubProcessRemapModal({
   onSave,
   onClose,
 }: Props) {
-  // local editable copy
   const [localConfig, setLocalConfig] = useState<SubProcessRemapConfig>({});
 
   useEffect(() => {
     if (visible) {
-      // 确保每个父节点都有初始 entry
       const init: SubProcessRemapConfig = {};
       parentNodes.forEach(node => {
         init[node.stageKey] = config[node.stageKey] ?? { enabled: false, subProcesses: [] };
@@ -278,24 +97,180 @@ export default function SubProcessRemapModal({
     }
   }, [visible, parentNodes, config]);
 
-  function handleEntryChange(stageKey: string, entry: SubProcessRemapEntry) {
-    setLocalConfig(prev => ({ ...prev, [stageKey]: entry }));
+  function toggleEnabled(stageKey: string, checked: boolean) {
+    setLocalConfig(prev => {
+      const entry = prev[stageKey] ?? { enabled: false, subProcesses: [] };
+      if (checked && entry.subProcesses.length === 0) {
+        return { ...prev, [stageKey]: { ...entry, enabled: true, subProcesses: [{ id: genId(), name: '', sortOrder: 0 }] } };
+      }
+      return { ...prev, [stageKey]: { ...entry, enabled: checked } };
+    });
   }
 
+  function addSubProcess(stageKey: string) {
+    setLocalConfig(prev => {
+      const entry = prev[stageKey] ?? { enabled: false, subProcesses: [] };
+      const next: SubProcess = { id: genId(), name: '', sortOrder: entry.subProcesses.length };
+      return { ...prev, [stageKey]: { ...entry, enabled: true, subProcesses: [...entry.subProcesses, next] } };
+    });
+  }
+
+  function removeSubProcess(stageKey: string, id: string) {
+    setLocalConfig(prev => {
+      const entry = prev[stageKey];
+      if (!entry) return prev;
+      if (entry.subProcesses.length <= 1) { message.warning('父节点至少保留 1 个子工序'); return prev; }
+      const filtered = entry.subProcesses.filter(s => s.id !== id).map((s, i) => ({ ...s, sortOrder: i }));
+      return { ...prev, [stageKey]: { ...entry, subProcesses: filtered } };
+    });
+  }
+
+  function moveSubProcess(stageKey: string, idx: number, dir: -1 | 1) {
+    setLocalConfig(prev => {
+      const entry = prev[stageKey];
+      if (!entry) return prev;
+      const arr = [...entry.subProcesses];
+      const swapIdx = idx + dir;
+      if (swapIdx < 0 || swapIdx >= arr.length) return prev;
+      [arr[idx], arr[swapIdx]] = [arr[swapIdx], arr[idx]];
+      return { ...prev, [stageKey]: { ...entry, subProcesses: arr.map((s, i) => ({ ...s, sortOrder: i })) } };
+    });
+  }
+
+  function updateSubProcessName(stageKey: string, id: string, name: string) {
+    setLocalConfig(prev => {
+      const entry = prev[stageKey];
+      if (!entry) return prev;
+      return { ...prev, [stageKey]: { ...entry, subProcesses: entry.subProcesses.map(s => s.id === id ? { ...s, name } : s) } };
+    });
+  }
+
+  // ── 构建表格行（按阶段顺序，每个子工序一行；未启用时 1 行占位）
+  const tableRows = useMemo<TableRow[]>(() => {
+    const sorted = [...parentNodes].sort((a, b) =>
+      STAGE_ORDER.indexOf(a.stageKey) - STAGE_ORDER.indexOf(b.stageKey),
+    );
+    const rows: TableRow[] = [];
+    for (const node of sorted) {
+      const entry = localConfig[node.stageKey] ?? { enabled: false, subProcesses: [] };
+      if (!entry.enabled || entry.subProcesses.length === 0) {
+        rows.push({ key: `${node.stageKey}-placeholder`, parentNode: node, entry, subprocess: null, subIndex: 0, rowSpan: 1, totalInParent: 0 });
+      } else {
+        entry.subProcesses.forEach((sp, idx) => {
+          rows.push({ key: sp.id, parentNode: node, entry, subprocess: sp, subIndex: idx, rowSpan: idx === 0 ? entry.subProcesses.length : 0, totalInParent: entry.subProcesses.length });
+        });
+      }
+    }
+    return rows;
+  }, [parentNodes, localConfig]);
+
+  // ── 表格列定义
+  const columns: ColumnsType<TableRow> = [
+    {
+      title: '子工序名称',
+      key: 'subprocessName',
+      render: (_: unknown, row: TableRow) => {
+        if (!row.entry.enabled || row.subprocess === null) {
+          return (
+            <span style={{ color: '#9ca3af', fontSize: 12, paddingLeft: 8 }}>
+              使用系统默认节点 — 开启右侧开关可自定义
+            </span>
+          );
+        }
+        return (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, paddingLeft: 8 }}>
+            <Text style={{ fontSize: 11, color: '#9ca3af', width: 18, flexShrink: 0 }}>
+              {row.subIndex + 1}.
+            </Text>
+            <Input
+              value={row.subprocess.name}
+              placeholder={`子工序名称 ${row.subIndex + 1}`}
+              onChange={e => updateSubProcessName(row.parentNode.stageKey, row.subprocess!.id, e.target.value)}
+              size="small"
+              maxLength={30}
+              status={!row.subprocess.name.trim() ? 'error' : undefined}
+              style={{ flex: 1 }}
+            />
+            <Button type="text" size="small" icon={<ArrowUpOutlined />}
+              disabled={row.subIndex === 0}
+              onClick={() => moveSubProcess(row.parentNode.stageKey, row.subIndex, -1)}
+              style={{ padding: '0 3px', color: '#6b7280' }}
+            />
+            <Button type="text" size="small" icon={<ArrowDownOutlined />}
+              disabled={row.subIndex === row.totalInParent - 1}
+              onClick={() => moveSubProcess(row.parentNode.stageKey, row.subIndex, 1)}
+              style={{ padding: '0 3px', color: '#6b7280' }}
+            />
+            <Tooltip title={row.totalInParent <= 1 ? '父节点至少保留 1 个子工序' : '删除'}>
+              <Button type="text" size="small" danger icon={<DeleteOutlined />}
+                disabled={row.totalInParent <= 1}
+                onClick={() => removeSubProcess(row.parentNode.stageKey, row.subprocess!.id)}
+                style={{ padding: '0 3px' }}
+              />
+            </Tooltip>
+          </div>
+        );
+      },
+    },
+    {
+      title: '进度节点',
+      key: 'stage',
+      width: 130,
+      onCell: (row: TableRow) => ({
+        rowSpan: row.rowSpan,
+        style: {
+          background: ACCENT_LIGHT,
+          borderLeft: `3px solid ${ACCENT}`,
+          verticalAlign: 'middle' as const,
+          textAlign: 'center' as const,
+          padding: '8px 6px',
+        },
+      }),
+      render: (_: unknown, row: TableRow) => (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+          <Tag style={{ background: ACCENT, color: '#fff', border: 'none', fontWeight: 600, fontSize: 13, margin: 0 }}>
+            {row.parentNode.name}
+          </Tag>
+          <span style={{ fontSize: 12, color: '#999' }}>
+            {row.entry.enabled && row.entry.subProcesses.length > 0
+              ? `${row.entry.subProcesses.length} 个子工序`
+              : '未启用'}
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Text style={{ fontSize: 11, color: row.entry.enabled ? ACTIVE_COLOR : '#9ca3af' }}>
+              {row.entry.enabled ? '已启用' : '已关闭'}
+            </Text>
+            <Switch
+              size="small"
+              checked={row.entry.enabled}
+              onChange={c => toggleEnabled(row.parentNode.stageKey, c)}
+            />
+          </div>
+          {row.entry.enabled && (
+            <Button type="link" size="small" icon={<PlusOutlined />}
+              onClick={() => addSubProcess(row.parentNode.stageKey)}
+              style={{ fontSize: 12, padding: 0 }}
+            >
+              添加
+            </Button>
+          )}
+        </div>
+      ),
+    },
+  ];
+
   function handleSave() {
-    // 校验：已启用的父节点所有子工序名称不能为空
     const hasEmptyName = Object.values(localConfig).some(
       e => e.enabled && e.subProcesses.some(s => !s.name.trim()),
     );
-    if (hasEmptyName) {
-      return; // StageBlock 内有"名称不能为空"提示，此处静默阻止
-    }
-    // 只保存已启用且有子工序的条目，减少存储体积
+    const hasEnabledWithoutSub = Object.values(localConfig).some(
+      e => e.enabled && e.subProcesses.length === 0,
+    );
+    if (hasEnabledWithoutSub) { message.warning('已启用的父节点至少保留 1 个子工序'); return; }
+    if (hasEmptyName) { message.warning('已启用节点存在空白子工序名称，请先补全'); return; }
     const cleaned: SubProcessRemapConfig = {};
     Object.entries(localConfig).forEach(([key, entry]) => {
-      if (entry.enabled && entry.subProcesses.length > 0) {
-        cleaned[key] = entry;
-      }
+      if (entry.enabled && entry.subProcesses.length > 0) cleaned[key] = entry;
     });
     onSave(cleaned);
   }
@@ -305,54 +280,34 @@ export default function SubProcessRemapModal({
     : '子工序配置';
 
   return (
-    <ResizableModal
-      title={title}
-      open={visible}
-      onCancel={onClose}
-      width="40vw"
-      destroyOnClose
-      footer={
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-          <Button onClick={onClose}>取消</Button>
-          <Button type="primary" loading={saving} onClick={handleSave}>
-            保存
-          </Button>
+    <ResizableModal title={title} open={visible} onCancel={onClose} width="40vw" destroyOnClose footer={null}>
+      {/* ══ 顶部操作栏 ══ */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        marginBottom: 12, padding: '8px 12px',
+        background: '#f0f5ff', border: '1px solid #adc6ff', borderRadius: 6,
+      }}>
+        <span style={{ fontSize: 12, color: '#595959' }}>
+          开启右侧开关后可自定义子工序，仅影响本订单扫码节点
+        </span>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button size="small" onClick={onClose}>取消</Button>
+          <Button size="small" type="primary" loading={saving} onClick={handleSave}>保存</Button>
         </div>
-      }
-    >
-      {/* 说明栏 */}
-      <div
-        style={{
-          background: '#fffbeb',
-          border: '1px solid #f59e0b',
-          borderRadius: 6,
-          padding: '8px 12px',
-          marginBottom: 16,
-          fontSize: 12,
-          lineHeight: '1.6',
-          color: '#78350f',
-        }}
-      >
-        <strong>📌 使用说明：</strong>此处仅影响进度追踪中的子步骤分组显示，
-        <br />
-        <strong>不修改父节点结构、下单单价，不影响工资结算。</strong>
-        <br />
-        如不需要子工序细分，保持"关闭"状态即可。
       </div>
-
-      <Divider style={{ margin: '0 0 16px' }} />
 
       {parentNodes.length === 0 ? (
         <Empty description="暂无可配置的父节点" />
       ) : (
-        parentNodes.map(node => (
-          <StageBlock
-            key={node.stageKey}
-            node={node}
-            entry={localConfig[node.stageKey] ?? { enabled: false, subProcesses: [] }}
-            onChange={entry => handleEntryChange(node.stageKey, entry)}
-          />
-        ))
+        <Table<TableRow>
+          dataSource={tableRows}
+          columns={columns}
+          pagination={false}
+          size="small"
+          bordered
+          rowKey="key"
+          scroll={{ y: 400 }}
+        />
       )}
     </ResizableModal>
   );

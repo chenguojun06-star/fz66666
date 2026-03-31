@@ -5,7 +5,7 @@ import type { NavigateFunction } from 'react-router-dom';
 import type { ProductionOrder } from '@/types/production';
 import type { DeliveryRiskItem } from '@/services/intelligence/intelligenceApi';
 import { SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
-import RowActions from '@/components/common/RowActions';
+import RowActions, { type RowAction } from '@/components/common/RowActions';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import LiquidProgressBar from '@/components/common/LiquidProgressBar';
 import SmartOrderHoverCard from '../../ProgressDetail/components/SmartOrderHoverCard';
@@ -40,6 +40,7 @@ export interface UseProductionColumnsProps {
   handlePrintLabel?: (record: ProductionOrder) => void;
   canManageOrderLifecycle?: boolean;
   openSubProcessRemap?: (record: ProductionOrder) => void;
+  isFactoryAccount?: boolean;
 }
 
 /**
@@ -58,6 +59,7 @@ export function useProductionColumns({
   handlePrintLabel,
   canManageOrderLifecycle = false,
   openSubProcessRemap,
+  isFactoryAccount = false,
 }: UseProductionColumnsProps) {
   const renderStageTime = (value: unknown) => value ? formatDateTime(value) : '-';
   const renderStageText = (value: unknown) => safeString(value);
@@ -668,7 +670,7 @@ export function useProductionColumns({
                 title: '打印洗水唛 / 吊牌',
                 onClick: () => handlePrintLabel(record),
               }] : []),
-              {
+              ...(!isFactoryAccount ? [{  // RowAction[]
                 key: 'process',
                 label: '工序',
                 title: frozen ? '工序（订单已关单）' : '查看工序详情',
@@ -692,8 +694,8 @@ export function useProductionColumns({
                   { type: 'divider' },
                   { key: 'syncProcess', label: '🔄 从模板同步', onClick: () => syncProcessFromTemplate(record) },
                 ],
-              },
-              ...(openSubProcessRemap ? [{
+              }] as RowAction[] : []),
+              ...(!isFactoryAccount && openSubProcessRemap ? [{
                 key: 'subProcessRemap',
                 label: '子工序',
                 title: frozen ? '子工序配置（订单已关单）' : '临时子工序配置',

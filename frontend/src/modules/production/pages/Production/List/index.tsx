@@ -612,6 +612,7 @@ const ProductionList: React.FC = () => {
     handlePrintLabel,
     canManageOrderLifecycle,
     openSubProcessRemap,
+    isFactoryAccount,
   });
 
   // 根据 visibleColumns 过滤列
