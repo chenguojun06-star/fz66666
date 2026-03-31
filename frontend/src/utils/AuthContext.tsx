@@ -331,7 +331,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.setItem('app.theme', userTheme);
         applyThemeValue(userTheme);
         window.dispatchEvent(new CustomEvent('user-login', { detail: { userId: baseUser.id } }));
-      } catch {
+      } catch (e) {
+        console.warn('[AuthContext] 登录后主题恢复失败', e);
       }
 
       try {
@@ -344,7 +345,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             updateUser({ permissions: pRes.data as string[] });
           }
         }
-      } catch {
+      } catch (e) {
+        console.warn('[AuthContext] 权限列表获取失败，使用默认权限', e);
       }
 
       window.location.href = '/';

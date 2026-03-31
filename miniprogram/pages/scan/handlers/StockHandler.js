@@ -57,7 +57,7 @@ function showStockUpdateDialog(skuCode) {
     placeholderText: '例如: 10 或 -5',
     success: async (res) => {
       if (res.confirm && res.content) {
-        const qty = parseInt(res.content);
+        const qty = parseInt(res.content, 10);
         if (isNaN(qty) || qty === 0) {
           toast.error('无效数量');
           return;

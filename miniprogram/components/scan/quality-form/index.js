@@ -64,8 +64,8 @@ Component({
         return;
       }
 
-      const qualified = parseInt(qualifiedQuantity) || 0;
-      const defect = parseInt(defectQuantity) || 0;
+      const qualified = parseInt(qualifiedQuantity, 10) || 0;
+      const defect = parseInt(defectQuantity, 10) || 0;
 
       if (qualified < 0 || defect < 0) {
         wx.showToast({

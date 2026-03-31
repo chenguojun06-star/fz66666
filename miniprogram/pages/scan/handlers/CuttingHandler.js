@@ -586,7 +586,7 @@ function onClearCuttingInput(ctx) {
  * @returns {void}
  */
 function onModalCuttingInput(ctx, e) {
-  const idx = e.currentTarget.dataset.idx;
+  const idx = Number(e.currentTarget.dataset.idx);
   const val = e.detail.value;
   ctx.setData({ [`scanConfirm.cuttingTasks[${idx}].cuttingInput`]: val });
 }

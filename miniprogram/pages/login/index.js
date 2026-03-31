@@ -518,7 +518,7 @@ Page({
    * 选择搜索结果中的公司
    */
   onTenantSelect(e) {
-    const index = e.currentTarget.dataset.index;
+    const index = Number(e.currentTarget.dataset.index);
     const tenant = this.data.filteredTenants[index];
     if (tenant) {
       this.setData({

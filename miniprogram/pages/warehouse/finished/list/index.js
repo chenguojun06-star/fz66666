@@ -414,6 +414,7 @@ Page({
 
   async onConfirmOutstock() {
     const { modal } = this.data;
+    if (modal.submitting) return;
     const order = modal.order;
     const skuList = modal.skuList || [];
 
@@ -465,8 +466,8 @@ Page({
 
   /** 图片加载失败（COS 404）→ 清空 URL，显示"暂无图片"占位 */
   onImageError(e) {
-    const idx = e.currentTarget.dataset.index;
-    if (idx === undefined) return;
+    const idx = Number(e.currentTarget.dataset.index);
+    if (isNaN(idx)) return;
     this.setData({ [`list[${idx}].imageUrl`]: '' });
   },
 });

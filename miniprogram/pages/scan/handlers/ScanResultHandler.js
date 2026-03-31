@@ -276,7 +276,7 @@ function getSelectedOptions(confirm) {
  * @returns {void}
  */
 function onProcessScrollSelect(ctx, e) {
-  const index = e.currentTarget.dataset.index;
+  const index = Number(e.currentTarget.dataset.index);
   const option = ctx.data.scanResultConfirm.processOptions[index];
   if (!option) return;
   const selectedNames = new Set(ctx.data.scanResultConfirm.selectedProcessNames || []);

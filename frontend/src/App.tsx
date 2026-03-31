@@ -37,7 +37,7 @@ import {
 import { Dashboard } from './modules/dashboard';
 import { UserList, UserApproval, RoleList, OrganizationTree, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard } from './modules/system';
 import { IntegrationCenter } from './modules/integration';
-import { AiAgentTraceCenter, IntelligenceCenter } from './modules/intelligence';
+import { AiAgentTraceCenter, CockpitPage, IntelligenceCenter } from './modules/intelligence';
 import {
   ProductionList,
   CuttingManagement,
@@ -205,6 +205,10 @@ const AppRoutes: React.FC = () => {
       }
     };
     window.addEventListener('app:auth:logout', w.__appAuthLogoutListener);
+    return () => {
+      window.removeEventListener('app:auth:logout', w.__appAuthLogoutListener);
+      w.__appAuthLogoutListenerInstalled = false;
+    };
   }, [navigate]);
 
   return (
@@ -284,8 +288,10 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.appStore} element={<Suspense fallback={routeFallback}><AppStore /></Suspense>} />
           <Route path={paths.dataImport} element={<Suspense fallback={routeFallback}><DataImport /></Suspense>} />
           <Route path={paths.integrationCenter} element={<Suspense fallback={routeFallback}><IntegrationCenter /></Suspense>} />
+          <Route path={paths.cockpit} element={<Suspense fallback={routeFallback}><CockpitPage /></Suspense>} />
+          <Route path={paths.cockpitTrace} element={<Suspense fallback={routeFallback}><AiAgentTraceCenter /></Suspense>} />
           <Route path={paths.intelligenceCenter} element={<Suspense fallback={routeFallback}><IntelligenceCenter /></Suspense>} />
-          <Route path={paths.aiAgentTraceCenter} element={<Suspense fallback={routeFallback}><AiAgentTraceCenter /></Suspense>} />
+          <Route path={paths.aiAgentTraceCenter} element={<Navigate to={paths.cockpitTrace} replace />} />
           <Route path={paths.orderManagementList} element={<Suspense fallback={routeFallback}><OrderManagement /></Suspense>} />
           <Route path={paths.orderManagementDetail} element={<Suspense fallback={routeFallback}><OrderManagement /></Suspense>} />
           <Route path={paths.dataCenter} element={<Suspense fallback={routeFallback}><DataCenter /></Suspense>} />

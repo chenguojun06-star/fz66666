@@ -554,7 +554,7 @@ function addToLocalHistory(page, record) {
  * @returns {void}
  */
 function onTapHistoryItem(page, e) {
-  const index = e.currentTarget.dataset.index;
+  const index = Number(e.currentTarget.dataset.index);
   const item = page.data.scanHistory[index];
 
   if (!item) {

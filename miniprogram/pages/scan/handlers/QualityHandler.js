@@ -103,7 +103,7 @@ function onUploadQualityImage(page) {
 }
 
 function onDeleteQualityImage(page, e) {
-  const index = e.currentTarget.dataset.index;
+  const index = Number(e.currentTarget.dataset.index);
   const images = [...page.data.qualityModal.images];
   images.splice(index, 1);
   page.setData({ 'qualityModal.images': images });

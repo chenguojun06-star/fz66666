@@ -26,8 +26,8 @@ interface AnalysisResult {
 /* ===== 从 description 解析结构化字段 ===== */
 function parseDescriptionFields(desc: string) {
   const m = desc.match(/(\d+)\s*个订单.*?共\s*(\d+)\s*件/);
-  const orderCount = m ? parseInt(m[1]) : 0;
-  const totalQty = m ? parseInt(m[2]) : 0;
+  const orderCount = m ? parseInt(m[1], 10) : 0;
+  const totalQty = m ? parseInt(m[2], 10) : 0;
 
   const extract = (key: string) => {
     const r = desc.match(new RegExp(key + ':\\s*([\\d.]+)'));
@@ -51,8 +51,8 @@ function parsePayrollDescription(desc: string) {
   const scanMatch = desc.match(/(\d+)\s*次扫码/);
   const qtyMatch = desc.match(/共\s*(\d+)\s*件/);
   return {
-    scanCount: scanMatch ? parseInt(scanMatch[1]) : 0,
-    totalQty: qtyMatch ? parseInt(qtyMatch[1]) : 0,
+    scanCount: scanMatch ? parseInt(scanMatch[1], 10) : 0,
+    totalQty: qtyMatch ? parseInt(qtyMatch[1], 10) : 0,
   };
 }
 

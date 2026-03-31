@@ -135,7 +135,7 @@ Page({
 
   // ==================== 下单弹窗 ====================
   openCreateOrder(e) {
-    const idx = e.currentTarget.dataset.index;
+    const idx = Number(e.currentTarget.dataset.index);
     const style = this.data.styles[idx];
     if (!style) return;
 
@@ -267,13 +267,13 @@ Page({
   },
 
   removeOrderLine(e) {
-    const idx = e.currentTarget.dataset.idx;
+    const idx = Number(e.currentTarget.dataset.idx);
     const lines = this.data.form.orderLines.filter((_, i) => i !== idx);
     this._recalcTotal(lines);
   },
 
   onLineInput(e) {
-    const idx = e.currentTarget.dataset.idx;
+    const idx = Number(e.currentTarget.dataset.idx);
     const field = e.currentTarget.dataset.field;
     const val = e.detail.value || '';
     this.setData({ [`form.orderLines[${idx}].${field}`]: val });
@@ -342,8 +342,8 @@ Page({
   },
 
   onCoverImageError(e) {
-    const idx = e.currentTarget.dataset.index;
-    if (idx !== undefined) {
+    const idx = Number(e.currentTarget.dataset.index);
+    if (!isNaN(idx)) {
       this.setData({ [`styles[${idx}].cover`]: '' });
     }
   },

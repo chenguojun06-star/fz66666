@@ -257,13 +257,13 @@ App({
     let raw = '';
 
     // 优先级：e.errMsg > e.message > fallback > 默认提示
-    if (e && e.errMsg !== null) {
+    if (e && e.errMsg != null) {
       raw = String(e.errMsg);
-    } else if (e && e.message !== null) {
+    } else if (e && e.message != null) {
       raw = String(e.message);
     } else if (typeof e === 'string') {
       raw = e;
-    } else if (fallback !== null) {
+    } else if (fallback != null) {
       raw = String(fallback);
     } else {
       raw = '网络异常';

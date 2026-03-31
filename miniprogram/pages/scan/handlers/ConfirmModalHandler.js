@@ -258,7 +258,7 @@ function onCancelScan(ctx) {
  * @returns {void}
  */
 function handleIndexInput(e, ctx, dataPath, field) {
-  const idx = e.currentTarget.dataset.idx;
+  const idx = Number(e.currentTarget.dataset.idx);
   const val = e.detail.value;
   const key = `${dataPath}[${idx}].${field}`;
   ctx.setData({ [key]: val });

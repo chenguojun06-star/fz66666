@@ -59,7 +59,7 @@ const ChannelStatusTab: React.FC<Props> = ({ active }) => {
       const res = await api.post<{ code: number; data: { channels: ChannelInfo[]; stats: DashboardStats } }>(
         '/integration/channel-status', {}
       );
-      if (res.code === 200) {
+      if (res.code === 200 && res.data) {
         setChannels(res.data.channels);
         setStats(res.data.stats);
       }

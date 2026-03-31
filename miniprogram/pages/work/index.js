@@ -11,6 +11,7 @@ const { normalizeText, transformOrderData } = require('./utils/orderTransform');
 // ==================== 提取的 Handler ====================
 const BatchProgressHandler = require('./handlers/BatchProgressHandler');
 const RollbackHandler = require('./handlers/RollbackHandler');
+const BundleGenerateHandler = require('./handlers/BundleGenerateHandler');
 
 Page({
   data: {
@@ -62,6 +63,17 @@ Page({
       selectedIds: [],
       progress: '',
       remark: '',
+    },
+    bundleModal: {
+      visible: false,
+      loading: false,
+      orderId: '',
+      orderNo: '',
+      styleNo: '',
+      colorGroups: [],
+      allSizes: [],
+      bundleSize: '',
+      previewRows: [],
     },
   },
 
@@ -272,6 +284,12 @@ Page({
   onRollbackRemarkInput(e) { RollbackHandler.onRollbackRemarkInput(this, e); },
   onScanRollbackQr() { RollbackHandler.onScanRollbackQr(this); },
   async submitRollback() { return RollbackHandler.submitRollback(this); },
+
+  // ==================== 菲号生成（委托 BundleGenerateHandler） ====================
+  onGenerateBundle(e) { BundleGenerateHandler.onGenerateBundle(this, e); },
+  onBundleSizeInput(e) { BundleGenerateHandler.onBundleSizeInput(this, e); },
+  onCancelBundle() { BundleGenerateHandler.onCancelBundle(this); },
+  async onConfirmBundle() { return BundleGenerateHandler.onConfirmBundle(this); },
 
 
 
@@ -565,8 +583,8 @@ Page({
 
   /** 封面图加载失败（COS 404）→ 清空 URL，显示"暂无\n图片"占位 */
   onCoverImageError(e) {
-    const idx = e.currentTarget.dataset.index;
-    if (idx === undefined) return;
+    const idx = Number(e.currentTarget.dataset.index);
+    if (isNaN(idx)) return;
     this.setData({ [`orders.list[${idx}].styleCoverUrl`]: '' });
   },
 });

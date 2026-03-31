@@ -92,11 +92,15 @@ export const useAgentGraphStore = create<AgentGraphState>()((set, get) => ({
   },
 
   runGraphStream: () => {
+    // 关闭上一个 EventSource 防止竞态泄漏
+    const prev = (get() as any)._eventSource as EventSource | undefined;
+    if (prev) { try { prev.close(); } catch { /* ignore */ } }
     const { scene, question } = get();
     set({ loading: true, error: null, result: null, nodeEvents: [], streamStatus: 'connecting' });
     const params = new URLSearchParams({ scene });
     if (question) params.set('question', question);
     const es = new EventSource(`/api/intelligence/multi-agent-graph/stream?${params}`);
+    (set as any)({ _eventSource: es });
     es.addEventListener('graph_start', () => {
       set({ streamStatus: 'streaming' });
     });
