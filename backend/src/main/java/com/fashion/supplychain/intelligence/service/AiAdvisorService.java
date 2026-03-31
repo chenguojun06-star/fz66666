@@ -1,6 +1,5 @@
 package com.fashion.supplychain.intelligence.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator;
 import lombok.extern.slf4j.Slf4j;

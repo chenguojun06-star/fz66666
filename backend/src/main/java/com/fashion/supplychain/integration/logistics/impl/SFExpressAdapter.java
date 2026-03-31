@@ -6,16 +6,13 @@ import com.fashion.supplychain.integration.logistics.ShippingRequest;
 import com.fashion.supplychain.integration.logistics.ShippingResponse;
 import com.fashion.supplychain.integration.logistics.TrackingInfo;
 import com.fashion.supplychain.integration.util.IntegrationHttpClient;
-import com.fashion.supplychain.integration.util.SignatureUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 顺丰速运适配器

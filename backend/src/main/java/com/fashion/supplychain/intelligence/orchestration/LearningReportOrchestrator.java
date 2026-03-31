@@ -7,7 +7,6 @@ import com.fashion.supplychain.intelligence.dto.LearningReportResponse.StageLear
 import com.fashion.supplychain.intelligence.entity.IntelligenceProcessStats;
 import com.fashion.supplychain.intelligence.mapper.IntelligencePredictionLogMapper;
 import com.fashion.supplychain.intelligence.mapper.IntelligenceProcessStatsMapper;
-import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;

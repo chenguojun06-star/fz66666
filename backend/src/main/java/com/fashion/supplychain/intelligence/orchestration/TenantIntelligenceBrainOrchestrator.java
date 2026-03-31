@@ -10,7 +10,6 @@ import com.fashion.supplychain.intelligence.dto.IntelligenceSignalResponse.Signa
 import com.fashion.supplychain.intelligence.service.AiAdvisorService;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

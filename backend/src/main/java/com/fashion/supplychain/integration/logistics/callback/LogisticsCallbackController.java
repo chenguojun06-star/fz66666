@@ -2,7 +2,6 @@ package com.fashion.supplychain.integration.logistics.callback;
 
 import com.fashion.supplychain.integration.record.entity.IntegrationCallbackLog;
 import com.fashion.supplychain.integration.record.service.IntegrationRecordService;
-import com.fashion.supplychain.integration.util.SignatureUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;

@@ -32,7 +32,7 @@ public class DefectiveBoardTool implements AgentTool {
     @Autowired
     private ProductionOrderService productionOrderService;
 
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Override
     public String getName() {
@@ -75,10 +75,10 @@ public class DefectiveBoardTool implements AgentTool {
 
     @Override
     public String execute(String argumentsJson) throws Exception {
-        Map<String, Object> args = mapper.readValue(argumentsJson, new TypeReference<>() {});
+        Map<String, Object> args = MAPPER.readValue(argumentsJson, new TypeReference<>() {});
         String action = (String) args.get("action");
         if (action == null || action.isBlank()) {
-            return mapper.writeValueAsString(Map.of("error", "请指定操作类型（list/start_repair/complete_repair/scrap）"));
+            return MAPPER.writeValueAsString(Map.of("error", "请指定操作类型（list/start_repair/complete_repair/scrap）"));
         }
 
         return switch (action) {
@@ -86,7 +86,7 @@ public class DefectiveBoardTool implements AgentTool {
             case "start_repair" -> executeStartRepair(args);
             case "complete_repair" -> executeCompleteRepair(args);
             case "scrap" -> executeScrap(args);
-            default -> mapper.writeValueAsString(Map.of("error", "未知操作：" + action));
+            default -> MAPPER.writeValueAsString(Map.of("error", "未知操作：" + action));
         };
     }
 
@@ -115,13 +115,13 @@ public class DefectiveBoardTool implements AgentTool {
         }
 
         if (tasks.isEmpty()) {
-            return mapper.writeValueAsString(Map.of(
+            return MAPPER.writeValueAsString(Map.of(
                     "success", true,
                     "message", "当前没有待处理的次品，所有菲号状态正常 ✅",
                     "count", 0));
         }
 
-        return mapper.writeValueAsString(Map.of(
+        return MAPPER.writeValueAsString(Map.of(
                 "success", true,
                 "count", tasks.size(),
                 "message", "共有 " + tasks.size() + " 个次品待处理",
@@ -131,7 +131,7 @@ public class DefectiveBoardTool implements AgentTool {
     private String executeStartRepair(Map<String, Object> args) throws Exception {
         String bundleId = (String) args.get("bundleId");
         if (bundleId == null || bundleId.isBlank()) {
-            return mapper.writeValueAsString(Map.of("error", "请提供菲号ID（bundleId）"));
+            return MAPPER.writeValueAsString(Map.of("error", "请提供菲号ID（bundleId）"));
         }
         String operatorName = (String) args.getOrDefault("operatorName", "");
 
@@ -141,18 +141,18 @@ public class DefectiveBoardTool implements AgentTool {
 
         try {
             productWarehousingOrchestrator.startBundleRepair(bundleId.trim(), operatorName);
-            return mapper.writeValueAsString(Map.of(
+            return MAPPER.writeValueAsString(Map.of(
                     "success", true,
                     "message", "菲号已标记为「返修中」，返修完成后请告诉我"));
         } catch (IllegalArgumentException | IllegalStateException e) {
-            return mapper.writeValueAsString(Map.of("success", false, "message", e.getMessage()));
+            return MAPPER.writeValueAsString(Map.of("success", false, "message", e.getMessage()));
         }
     }
 
     private String executeCompleteRepair(Map<String, Object> args) throws Exception {
         String bundleId = (String) args.get("bundleId");
         if (bundleId == null || bundleId.isBlank()) {
-            return mapper.writeValueAsString(Map.of("error", "请提供菲号ID（bundleId）"));
+            return MAPPER.writeValueAsString(Map.of("error", "请提供菲号ID（bundleId）"));
         }
 
         String factoryCheckError = checkFactoryIsolation(bundleId);
@@ -160,18 +160,18 @@ public class DefectiveBoardTool implements AgentTool {
 
         try {
             productWarehousingOrchestrator.completeBundleRepair(bundleId.trim());
-            return mapper.writeValueAsString(Map.of(
+            return MAPPER.writeValueAsString(Map.of(
                     "success", true,
                     "message", "菲号返修已完成，状态已更新为「待质检」，现在可以进行质检了 ✅"));
         } catch (IllegalArgumentException | IllegalStateException e) {
-            return mapper.writeValueAsString(Map.of("success", false, "message", e.getMessage()));
+            return MAPPER.writeValueAsString(Map.of("success", false, "message", e.getMessage()));
         }
     }
 
     private String executeScrap(Map<String, Object> args) throws Exception {
         String bundleId = (String) args.get("bundleId");
         if (bundleId == null || bundleId.isBlank()) {
-            return mapper.writeValueAsString(Map.of("error", "请提供菲号ID（bundleId）"));
+            return MAPPER.writeValueAsString(Map.of("error", "请提供菲号ID（bundleId）"));
         }
 
         String factoryCheckError = checkFactoryIsolation(bundleId);
@@ -179,11 +179,11 @@ public class DefectiveBoardTool implements AgentTool {
 
         try {
             productWarehousingOrchestrator.scrapBundle(bundleId.trim());
-            return mapper.writeValueAsString(Map.of(
+            return MAPPER.writeValueAsString(Map.of(
                     "success", true,
                     "message", "菲号已标记为「报废」，不再进入质检流程"));
         } catch (IllegalArgumentException | IllegalStateException e) {
-            return mapper.writeValueAsString(Map.of("success", false, "message", e.getMessage()));
+            return MAPPER.writeValueAsString(Map.of("success", false, "message", e.getMessage()));
         }
     }
 
@@ -202,7 +202,7 @@ public class DefectiveBoardTool implements AgentTool {
                 String orderId = String.valueOf(task.get("orderId"));
                 ProductionOrder order = productionOrderService.getById(orderId);
                 if (order != null && !userFactoryId.equals(order.getFactoryId())) {
-                    return mapper.writeValueAsString(Map.of("error", "该次品不属于您的工厂，无权操作"));
+                    return MAPPER.writeValueAsString(Map.of("error", "该次品不属于您的工厂，无权操作"));
                 }
                 return null; // 校验通过
             }

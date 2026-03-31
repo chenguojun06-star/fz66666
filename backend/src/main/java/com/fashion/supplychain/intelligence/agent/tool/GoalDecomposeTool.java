@@ -6,8 +6,6 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.entity.GoalDecomposition;
 import com.fashion.supplychain.intelligence.orchestration.GoalDecompositionOrchestrator;
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +19,7 @@ import org.springframework.stereotype.Component;
 public class GoalDecomposeTool implements AgentTool {
 
     @Autowired private GoalDecompositionOrchestrator goalOrchestrator;
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
     public String getName() {
@@ -68,7 +66,7 @@ public class GoalDecomposeTool implements AgentTool {
     @Override
     public String execute(String argumentsJson) {
         try {
-            JsonNode args = objectMapper.readTree(argumentsJson);
+            JsonNode args = OBJECT_MAPPER.readTree(argumentsJson);
             String action = args.path("action").asText("list");
 
             if ("create".equals(action)) {
@@ -100,7 +98,7 @@ public class GoalDecomposeTool implements AgentTool {
                 result.put("title", goal.getTitle());
                 result.put("subGoalCount", subGoals.size());
                 result.put("subGoals", subGoals);
-                return objectMapper.writeValueAsString(result);
+                return OBJECT_MAPPER.writeValueAsString(result);
             } else {
                 Long tenantId = UserContext.tenantId();
                 List<GoalDecomposition> tree = goalOrchestrator.listGoalTree(tenantId);
@@ -115,7 +113,7 @@ public class GoalDecomposeTool implements AgentTool {
                     m.put("isSubGoal", g.getParentGoalId() != null);
                     items.add(m);
                 }
-                return objectMapper.writeValueAsString(Map.of("count", items.size(), "goals", items));
+                return OBJECT_MAPPER.writeValueAsString(Map.of("count", items.size(), "goals", items));
             }
         } catch (Exception e) {
             log.warn("[GoalTool] 执行失败: {}", e.getMessage());

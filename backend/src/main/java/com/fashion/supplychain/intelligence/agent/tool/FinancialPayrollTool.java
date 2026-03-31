@@ -33,7 +33,7 @@ public class FinancialPayrollTool implements AgentTool {
     @Autowired
     private PayrollSettlementItemService payrollSettlementItemService;
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
     public String getName() {
@@ -86,7 +86,7 @@ public class FinancialPayrollTool implements AgentTool {
         try {
             Map<String, Object> args = new HashMap<>();
             if (argumentsJson != null && !argumentsJson.isBlank()) {
-                args = objectMapper.readValue(argumentsJson, new TypeReference<Map<String, Object>>() {});
+                args = OBJECT_MAPPER.readValue(argumentsJson, new TypeReference<Map<String, Object>>() {});
             }
 
             String orderNo = (String) args.get("orderNo");
@@ -131,7 +131,7 @@ public class FinancialPayrollTool implements AgentTool {
                 }
                 resultWrap.put("employeeName", operatorName);
                 resultWrap.put("recentItems", itemDtos);
-                return objectMapper.writeValueAsString(resultWrap);
+                return OBJECT_MAPPER.writeValueAsString(resultWrap);
 
             } else {
                 // 按结算单维度查询
@@ -180,7 +180,7 @@ public class FinancialPayrollTool implements AgentTool {
                     }
                     resultList.add(dto);
                 }
-                return objectMapper.writeValueAsString(resultList);
+                return OBJECT_MAPPER.writeValueAsString(resultList);
             }
         } catch (JsonProcessingException e) {
             log.error("Tool execution failed: parse json error", e);

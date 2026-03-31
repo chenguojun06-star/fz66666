@@ -41,7 +41,7 @@ import java.util.stream.Collectors;
 @Component
 public class ProductionOrderCreationTool implements AgentTool {
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final String MATERIAL_PRICE_SOURCE = "物料采购系统";
     private static final String MATERIAL_PRICE_VERSION = "purchase.v1";
 
@@ -207,7 +207,7 @@ public class ProductionOrderCreationTool implements AgentTool {
     @Transactional(rollbackFor = Exception.class)
     public String execute(String argumentsJson) {
         try {
-            JsonNode args = objectMapper.readTree(argumentsJson);
+            JsonNode args = OBJECT_MAPPER.readTree(argumentsJson);
             String styleNo = text(args, "styleNo");
             String styleName = text(args, "styleName");
             String factoryName = text(args, "factoryName");
@@ -332,7 +332,7 @@ public class ProductionOrderCreationTool implements AgentTool {
             result.put("statusLabel", "待生产");
                 result.put("message", "订单已按完整链路创建成功，已包含工厂、颜色尺码数量明细、计划日期和工序工作流，可直接进入后续生产。");
 
-            return objectMapper.writeValueAsString(result);
+            return OBJECT_MAPPER.writeValueAsString(result);
 
         } catch (Exception e) {
             log.error("[ProductionOrderCreationTool] 建单异常", e);
@@ -346,12 +346,12 @@ public class ProductionOrderCreationTool implements AgentTool {
         result.put("needMoreInfo", true);
         result.put("missingFields", missingFields);
         result.put("question", "请继续补充「款号/款名、加工厂、颜色-尺码-数量明细、计划开始时间、计划完成时间」。示例：D2024001 红色M码100件、红色L码200件，外发给鑫达制衣厂，2026-03-20开工，2026-03-28交货。");
-        return objectMapper.writeValueAsString(result);
+        return OBJECT_MAPPER.writeValueAsString(result);
     }
 
     private String buildError(String message) {
         try {
-            return objectMapper.writeValueAsString(Map.of("error", message));
+            return OBJECT_MAPPER.writeValueAsString(Map.of("error", message));
         } catch (Exception e) {
             return "{\"error\": \"" + message + "\"}";
         }
@@ -505,7 +505,7 @@ public class ProductionOrderCreationTool implements AgentTool {
             row.put("materialPriceVersion", MATERIAL_PRICE_VERSION);
             lines.add(row);
         }
-        return objectMapper.writeValueAsString(lines);
+        return OBJECT_MAPPER.writeValueAsString(lines);
     }
 
     private String buildProgressWorkflowJson(String styleNo) throws Exception {
@@ -540,7 +540,7 @@ public class ProductionOrderCreationTool implements AgentTool {
             nodes.add(Map.of("id", "packaging", "name", "包装", "unitPrice", 0));
             nodes.add(Map.of("id", "warehousing", "name", "入库", "unitPrice", 0));
         }
-        return objectMapper.writeValueAsString(Map.of("nodes", nodes));
+        return OBJECT_MAPPER.writeValueAsString(Map.of("nodes", nodes));
     }
 
     private String joinDistinct(List<Map<String, Object>> orderLines, String field) {

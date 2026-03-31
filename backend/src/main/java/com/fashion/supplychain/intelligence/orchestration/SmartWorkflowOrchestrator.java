@@ -4,7 +4,6 @@ import com.fashion.supplychain.intelligence.dto.ExecutableCommand;
 import com.fashion.supplychain.intelligence.dto.ExecutionResult;
 import com.fashion.supplychain.intelligence.entity.IntelligenceWorkflowLog;
 import com.fashion.supplychain.intelligence.mapper.IntelligenceWorkflowLogMapper;
-import com.fashion.supplychain.common.UserContext;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;

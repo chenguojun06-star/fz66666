@@ -989,7 +989,7 @@ public class ProductionProcessTrackingOrchestrator {
         }
     }
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     /**
      * 批量刷新所有订单的 progressWorkflowJson 中的工序单价
@@ -1065,7 +1065,7 @@ public class ProductionProcessTrackingOrchestrator {
                 }
 
                 String json = order.getProgressWorkflowJson();
-                Map<String, Object> workflow = objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
+                Map<String, Object> workflow = OBJECT_MAPPER.readValue(json, new TypeReference<Map<String, Object>>() {});
                 @SuppressWarnings("unchecked")
                 List<Map<String, Object>> nodes = (List<Map<String, Object>>) workflow.get("nodes");
 
@@ -1092,7 +1092,7 @@ public class ProductionProcessTrackingOrchestrator {
                 }
 
                 if (changed) {
-                    String updatedJson = objectMapper.writeValueAsString(workflow);
+                    String updatedJson = OBJECT_MAPPER.writeValueAsString(workflow);
                     productionOrderService.lambdaUpdate()
                             .eq(ProductionOrder::getId, order.getId())
                             .set(ProductionOrder::getProgressWorkflowJson, updatedJson)

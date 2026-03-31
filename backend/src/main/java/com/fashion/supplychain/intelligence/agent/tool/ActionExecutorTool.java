@@ -41,7 +41,7 @@ public class ActionExecutorTool implements AgentTool {
     @Autowired
     private com.fashion.supplychain.production.service.MaterialPurchaseService materialPurchaseService;
 
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Override
     public String getName() {
@@ -101,7 +101,7 @@ public class ActionExecutorTool implements AgentTool {
         log.info("Tool: {} called with args: {}", getName(), argumentsJson);
         Map<String, Object> args = new HashMap<>();
         if (argumentsJson != null && !argumentsJson.isBlank()) {
-            args = mapper.readValue(argumentsJson, new TypeReference<>() {});
+            args = MAPPER.readValue(argumentsJson, new TypeReference<>() {});
         }
 
         String action = (String) args.get("action");
@@ -126,7 +126,7 @@ public class ActionExecutorTool implements AgentTool {
             }
         }
 
-        return mapper.writeValueAsString(result);
+        return MAPPER.writeValueAsString(result);
     }
 
     private void executeMarkUrgent(Map<String, Object> args, Long tenantId,

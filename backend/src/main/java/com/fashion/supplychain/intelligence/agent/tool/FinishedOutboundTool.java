@@ -24,7 +24,7 @@ import java.util.*;
 @Component
 public class FinishedOutboundTool implements AgentTool {
 
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Autowired
     private FinishedInventoryOrchestrator finishedInventoryOrchestrator;
@@ -92,30 +92,30 @@ public class FinishedOutboundTool implements AgentTool {
     public String execute(String argumentsJson) throws Exception {
         // 安全门禁1：外发工厂账号不允许操作
         if (UserContext.factoryId() != null) {
-            return mapper.writeValueAsString(Map.of("error", "外发工厂账号无权执行出库操作，请联系内部管理人员"));
+            return MAPPER.writeValueAsString(Map.of("error", "外发工厂账号无权执行出库操作，请联系内部管理人员"));
         }
 
         // 安全门禁2：必须有角色信息
         String role = UserContext.role();
         if (role == null || role.isBlank()) {
-            return mapper.writeValueAsString(Map.of("error", "账号角色信息缺失，无权执行出库操作"));
+            return MAPPER.writeValueAsString(Map.of("error", "账号角色信息缺失，无权执行出库操作"));
         }
 
-        Map<String, Object> args = mapper.readValue(argumentsJson, new TypeReference<>() {});
+        Map<String, Object> args = MAPPER.readValue(argumentsJson, new TypeReference<>() {});
         String itemsJsonStr = (String) args.get("items");
         if (itemsJsonStr == null || itemsJsonStr.isBlank()) {
-            return mapper.writeValueAsString(Map.of("error", "缺少参数：items（出库明细）"));
+            return MAPPER.writeValueAsString(Map.of("error", "缺少参数：items（出库明细）"));
         }
 
         List<Map<String, Object>> itemList;
         try {
-            itemList = mapper.readValue(itemsJsonStr, new TypeReference<>() {});
+            itemList = MAPPER.readValue(itemsJsonStr, new TypeReference<>() {});
         } catch (Exception e) {
-            return mapper.writeValueAsString(Map.of("error", "items 格式错误，需为JSON数组：" + e.getMessage()));
+            return MAPPER.writeValueAsString(Map.of("error", "items 格式错误，需为JSON数组：" + e.getMessage()));
         }
 
         if (itemList == null || itemList.isEmpty()) {
-            return mapper.writeValueAsString(Map.of("error", "出库明细不能为空"));
+            return MAPPER.writeValueAsString(Map.of("error", "出库明细不能为空"));
         }
 
         String operatorName = UserContext.username();
@@ -142,11 +142,11 @@ public class FinishedOutboundTool implements AgentTool {
         } catch (IllegalArgumentException e) {
             writeAuditLog(tenantId, operatorName, role, detail, "FAILED", e.getMessage());
             log.warn("[FinishedOutboundTool] 出库参数异常: {}", e.getMessage());
-            return mapper.writeValueAsString(Map.of("error", e.getMessage()));
+            return MAPPER.writeValueAsString(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             writeAuditLog(tenantId, operatorName, role, detail, "FAILED", e.getMessage());
             log.error("[FinishedOutboundTool] 出库失败: {}", e.getMessage());
-            return mapper.writeValueAsString(Map.of("error", "出库操作失败：" + e.getMessage()));
+            return MAPPER.writeValueAsString(Map.of("error", "出库操作失败：" + e.getMessage()));
         }
 
         writeAuditLog(tenantId, operatorName, role, detail, "SUCCESS", null);
@@ -156,7 +156,7 @@ public class FinishedOutboundTool implements AgentTool {
         result.put("totalSkus", itemList.size());
         result.put("totalQuantity", totalQty);
         result.put("message", "大货出库成功，共出库 " + itemList.size() + " 个SKU，合计 " + totalQty + " 件");
-        return mapper.writeValueAsString(result);
+        return MAPPER.writeValueAsString(result);
     }
 
     private void putIfPresent(Map<String, Object> target, Map<String, Object> src, String key) {

@@ -36,7 +36,7 @@ public class ProductionProgressTool implements AgentTool {
     @Autowired
     private ScanRecordService scanRecordService;
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
     public String getName() {
@@ -106,7 +106,7 @@ public class ProductionProgressTool implements AgentTool {
         try {
             Map<String, Object> args = new HashMap<>();
             if (argumentsJson != null && !argumentsJson.isBlank()) {
-                args = objectMapper.readValue(argumentsJson, new TypeReference<Map<String, Object>>() {});
+                args = OBJECT_MAPPER.readValue(argumentsJson, new TypeReference<Map<String, Object>>() {});
             }
 
             String orderNo = (String) args.get("orderNo");
@@ -203,7 +203,7 @@ public class ProductionProgressTool implements AgentTool {
                 resultList.add(orderDto);
             }
 
-            return objectMapper.writeValueAsString(resultList);
+            return OBJECT_MAPPER.writeValueAsString(resultList);
 
         } catch (JsonProcessingException e) {
             log.error("Tool execution failed: parse json error", e);

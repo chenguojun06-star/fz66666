@@ -27,7 +27,7 @@ public class CrmCustomerTool implements AgentTool {
     @Autowired
     private CustomerService customerService;
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
     public String getName() {
@@ -72,7 +72,7 @@ public class CrmCustomerTool implements AgentTool {
         try {
             Map<String, Object> args = new HashMap<>();
             if (argumentsJson != null && !argumentsJson.isBlank()) {
-                args = objectMapper.readValue(argumentsJson, new TypeReference<Map<String, Object>>() {});
+                args = OBJECT_MAPPER.readValue(argumentsJson, new TypeReference<Map<String, Object>>() {});
             }
 
             String companyName = (String) args.get("companyName");
@@ -114,7 +114,7 @@ public class CrmCustomerTool implements AgentTool {
                 dto.put("remark", c.getRemark());
                 resultList.add(dto);
             }
-            return objectMapper.writeValueAsString(resultList);
+            return OBJECT_MAPPER.writeValueAsString(resultList);
 
         } catch (JsonProcessingException e) {
             log.error("Tool execution failed: parse json error", e);

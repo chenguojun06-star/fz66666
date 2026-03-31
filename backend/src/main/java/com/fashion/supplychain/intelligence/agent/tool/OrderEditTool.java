@@ -13,7 +13,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
 
@@ -30,7 +29,7 @@ public class OrderEditTool implements AgentTool {
     @Autowired
     private ProductionOrderService productionOrderService;
 
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Override
     public String getName() {
@@ -93,23 +92,23 @@ public class OrderEditTool implements AgentTool {
 
     @Override
     public String execute(String argumentsJson) throws Exception {
-        Map<String, Object> args = mapper.readValue(argumentsJson, new TypeReference<>() {});
+        Map<String, Object> args = MAPPER.readValue(argumentsJson, new TypeReference<>() {});
 
         String orderId = (String) args.get("orderId");
         if (orderId == null || orderId.isBlank()) {
-            return mapper.writeValueAsString(Map.of("error", "请提供订单ID（orderId）"));
+            return MAPPER.writeValueAsString(Map.of("error", "请提供订单ID（orderId）"));
         }
 
         ProductionOrder order = productionOrderService.getById(orderId.trim());
         if (order == null) {
-            return mapper.writeValueAsString(Map.of("error", "订单不存在"));
+            return MAPPER.writeValueAsString(Map.of("error", "订单不存在"));
         }
         TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "订单");
 
         // 工厂账号只能编辑自己工厂的订单
         String userFactoryId = UserContext.factoryId();
         if (userFactoryId != null && !userFactoryId.equals(order.getFactoryId())) {
-            return mapper.writeValueAsString(Map.of("error", "该订单不属于您的工厂，无权编辑"));
+            return MAPPER.writeValueAsString(Map.of("error", "该订单不属于您的工厂，无权编辑"));
         }
 
         List<String> updatedFields = new ArrayList<>();
@@ -156,13 +155,13 @@ public class OrderEditTool implements AgentTool {
         }
 
         if (updatedFields.isEmpty()) {
-            return mapper.writeValueAsString(Map.of("error", "请至少提供一个要修改的字段"));
+            return MAPPER.writeValueAsString(Map.of("error", "请至少提供一个要修改的字段"));
         }
 
         try {
             boolean success = productionOrderService.updateById(order);
             if (!success) {
-                return mapper.writeValueAsString(Map.of("success", false, "message", "订单更新失败"));
+                return MAPPER.writeValueAsString(Map.of("success", false, "message", "订单更新失败"));
             }
 
             Map<String, Object> result = new LinkedHashMap<>();
@@ -172,10 +171,10 @@ public class OrderEditTool implements AgentTool {
             result.put("orderNo", order.getOrderNo());
             result.put("updatedFields", updatedFields);
             log.info("[OrderEditTool] 订单编辑成功: orderId={}, fields={}", orderId, updatedFields);
-            return mapper.writeValueAsString(result);
+            return MAPPER.writeValueAsString(result);
 
         } catch (Exception e) {
-            return mapper.writeValueAsString(Map.of(
+            return MAPPER.writeValueAsString(Map.of(
                     "success", false,
                     "message", "订单更新异常：" + e.getMessage()));
         }

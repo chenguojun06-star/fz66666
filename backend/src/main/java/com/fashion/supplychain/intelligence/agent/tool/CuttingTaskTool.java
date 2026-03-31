@@ -23,7 +23,7 @@ public class CuttingTaskTool implements AgentTool {
     @Autowired
     private CuttingTaskOrchestrator cuttingTaskOrchestrator;
 
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Override
     public String getName() {
@@ -95,16 +95,16 @@ public class CuttingTaskTool implements AgentTool {
 
     @Override
     public String execute(String argumentsJson) throws Exception {
-        Map<String, Object> args = mapper.readValue(argumentsJson, new TypeReference<>() {});
+        Map<String, Object> args = MAPPER.readValue(argumentsJson, new TypeReference<>() {});
 
         String styleNo = (String) args.get("styleNo");
         if (styleNo == null || styleNo.isBlank()) {
-            return mapper.writeValueAsString(Map.of("error", "请提供款号（styleNo）"));
+            return MAPPER.writeValueAsString(Map.of("error", "请提供款号（styleNo）"));
         }
 
         Object orderLinesObj = args.get("orderLines");
         if (orderLinesObj == null) {
-            return mapper.writeValueAsString(Map.of("error", "请提供至少一行颜色+尺码+数量（orderLines）"));
+            return MAPPER.writeValueAsString(Map.of("error", "请提供至少一行颜色+尺码+数量（orderLines）"));
         }
 
         try {
@@ -119,13 +119,13 @@ public class CuttingTaskTool implements AgentTool {
             result.put("orderNo", task.getProductionOrderNo());
             result.put("styleNo", task.getStyleNo());
             result.put("totalQuantity", task.getOrderQuantity());
-            return mapper.writeValueAsString(result);
+            return MAPPER.writeValueAsString(result);
 
         } catch (IllegalArgumentException e) {
-            return mapper.writeValueAsString(Map.of(
+            return MAPPER.writeValueAsString(Map.of(
                     "error", "参数错误：" + e.getMessage()));
         } catch (IllegalStateException e) {
-            return mapper.writeValueAsString(Map.of(
+            return MAPPER.writeValueAsString(Map.of(
                     "success", false,
                     "message", e.getMessage()));
         }

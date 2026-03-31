@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component;
 public class AgentMeetingTool implements AgentTool {
 
     @Autowired private AgentMeetingOrchestrator meetingOrchestrator;
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
     public String getName() {
@@ -62,7 +62,7 @@ public class AgentMeetingTool implements AgentTool {
     @Override
     public String execute(String argumentsJson) {
         try {
-            JsonNode args = objectMapper.readTree(argumentsJson);
+            JsonNode args = OBJECT_MAPPER.readTree(argumentsJson);
             String action = args.path("action").asText("list");
 
             if ("hold".equals(action)) {
@@ -87,7 +87,7 @@ public class AgentMeetingTool implements AgentTool {
                 result.put("actionItems", meeting.getActionItems());
                 result.put("confidenceScore", meeting.getConfidenceScore());
                 result.put("durationMs", meeting.getDurationMs());
-                return objectMapper.writeValueAsString(result);
+                return OBJECT_MAPPER.writeValueAsString(result);
             } else {
                 Long tenantId = UserContext.tenantId();
                 List<AgentMeeting> meetings = meetingOrchestrator.listByTenant(tenantId, 5);
@@ -102,7 +102,7 @@ public class AgentMeetingTool implements AgentTool {
                     item.put("time", m.getCreateTime() != null ? m.getCreateTime().toString() : "");
                     items.add(item);
                 }
-                return objectMapper.writeValueAsString(Map.of("count", items.size(), "meetings", items));
+                return OBJECT_MAPPER.writeValueAsString(Map.of("count", items.size(), "meetings", items));
             }
         } catch (Exception e) {
             log.warn("[MeetingTool] 执行失败: {}", e.getMessage());

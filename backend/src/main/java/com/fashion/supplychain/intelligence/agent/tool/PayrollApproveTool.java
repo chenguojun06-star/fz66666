@@ -22,7 +22,7 @@ public class PayrollApproveTool implements AgentTool {
     @Autowired
     private PayrollSettlementOrchestrator payrollSettlementOrchestrator;
 
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Override
     public String getName() {
@@ -65,14 +65,14 @@ public class PayrollApproveTool implements AgentTool {
 
     @Override
     public String execute(String argumentsJson) throws Exception {
-        Map<String, Object> args = mapper.readValue(argumentsJson, new TypeReference<>() {});
+        Map<String, Object> args = MAPPER.readValue(argumentsJson, new TypeReference<>() {});
 
         String action = (String) args.get("action");
         String settlementId = (String) args.get("settlementId");
         String remark = (String) args.get("remark");
 
         if (settlementId == null || settlementId.isBlank()) {
-            return mapper.writeValueAsString(Map.of("error", "请提供工资结算单ID（settlementId）"));
+            return MAPPER.writeValueAsString(Map.of("error", "请提供工资结算单ID（settlementId）"));
         }
 
         try {
@@ -80,7 +80,7 @@ public class PayrollApproveTool implements AgentTool {
                 case "approve" -> {
                     payrollSettlementOrchestrator.approve(settlementId.trim(), remark);
                     log.info("[PayrollApproveTool] 工资结算单审核通过: {}", settlementId);
-                    yield mapper.writeValueAsString(Map.of(
+                    yield MAPPER.writeValueAsString(Map.of(
                             "success", true,
                             "message", "工资结算单审核通过，关联扫码记录已锁定",
                             "settlementId", settlementId.trim()));
@@ -88,22 +88,22 @@ public class PayrollApproveTool implements AgentTool {
                 case "cancel" -> {
                     payrollSettlementOrchestrator.cancel(settlementId.trim(), remark);
                     log.info("[PayrollApproveTool] 工资结算单已取消: {}", settlementId);
-                    yield mapper.writeValueAsString(Map.of(
+                    yield MAPPER.writeValueAsString(Map.of(
                             "success", true,
                             "message", "工资结算单已取消，关联扫码记录已释放",
                             "settlementId", settlementId.trim()));
                 }
-                default -> mapper.writeValueAsString(Map.of(
+                default -> MAPPER.writeValueAsString(Map.of(
                         "error", "不支持的操作：" + action + "，请使用 approve 或 cancel"));
             };
         } catch (IllegalArgumentException e) {
-            return mapper.writeValueAsString(Map.of("error", "参数错误：" + e.getMessage()));
+            return MAPPER.writeValueAsString(Map.of("error", "参数错误：" + e.getMessage()));
         } catch (IllegalStateException e) {
-            return mapper.writeValueAsString(Map.of(
+            return MAPPER.writeValueAsString(Map.of(
                     "success", false,
                     "message", e.getMessage()));
         } catch (NoSuchElementException e) {
-            return mapper.writeValueAsString(Map.of(
+            return MAPPER.writeValueAsString(Map.of(
                     "success", false,
                     "message", "结算单不存在：" + e.getMessage()));
         }

@@ -192,33 +192,10 @@ public class ProductionOrderCommandService {
     }
 
     /**
-     * 生成订单号
+     * 生成订单号：PO + 年月日时分秒（PO20260503143025）
      */
     private String generateOrderNo() {
-        // 格式：PO + 年月日 + 4位序号
-        String prefix = "PO" + java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd").format(LocalDateTime.now());
-
-        // 查询当天最大序号
-        LambdaQueryWrapper<ProductionOrder> wrapper = new LambdaQueryWrapper<>();
-        wrapper.likeRight(ProductionOrder::getOrderNo, prefix);
-        wrapper.orderByDesc(ProductionOrder::getOrderNo);
-        wrapper.last("limit 1");
-
-        ProductionOrder lastOrder = productionOrderService.getOne(wrapper);
-        int seq = 1;
-
-        if (lastOrder != null && StringUtils.hasText(lastOrder.getOrderNo())) {
-            String lastNo = lastOrder.getOrderNo();
-            if (lastNo.length() >= prefix.length() + 4) {
-                try {
-                    seq = Integer.parseInt(lastNo.substring(prefix.length())) + 1;
-                } catch (NumberFormatException e) {
-                    seq = 1;
-                }
-            }
-        }
-
-        return prefix + String.format("%04d", seq);
+        return "PO" + java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss").format(LocalDateTime.now());
     }
 
     private void applyFactorySnapshot(ProductionOrder productionOrder) {

@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 public class PatternDiscoveryTool implements AgentTool {
 
     @Autowired private PatternDiscoveryOrchestrator patternOrchestrator;
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
     public String getName() {
@@ -61,7 +61,7 @@ public class PatternDiscoveryTool implements AgentTool {
     @Override
     public String execute(String argumentsJson) {
         try {
-            JsonNode args = objectMapper.readTree(argumentsJson);
+            JsonNode args = OBJECT_MAPPER.readTree(argumentsJson);
             String action = args.path("action").asText("list");
             int lookbackDays = args.path("lookbackDays").asInt(30);
 
@@ -77,7 +77,7 @@ public class PatternDiscoveryTool implements AgentTool {
                     m.put("impact", p.getImpactScore());
                     items.add(m);
                 }
-                return objectMapper.writeValueAsString(Map.of("action", "discover", "found", items.size(), "patterns", items));
+                return OBJECT_MAPPER.writeValueAsString(Map.of("action", "discover", "found", items.size(), "patterns", items));
             } else {
                 String patternType = args.path("patternType").asText(null);
                 Long tenantId = UserContext.tenantId();
@@ -93,7 +93,7 @@ public class PatternDiscoveryTool implements AgentTool {
                     m.put("status", p.getStatus());
                     items.add(m);
                 }
-                return objectMapper.writeValueAsString(Map.of("action", "list", "count", items.size(), "patterns", items));
+                return OBJECT_MAPPER.writeValueAsString(Map.of("action", "list", "count", items.size(), "patterns", items));
             }
         } catch (Exception e) {
             log.warn("[PatternTool] 执行失败: {}", e.getMessage());

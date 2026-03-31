@@ -35,7 +35,7 @@ public class SystemOverviewTool implements AgentTool {
     @Autowired
     private MaterialStockService materialStockService;
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
     public String getName() {
@@ -88,7 +88,7 @@ public class SystemOverviewTool implements AgentTool {
             // --- 管理简报：给 AI 一个更像经营会议底稿的摘要 ---
             overview.put("managementBrief", buildManagementBrief(overview));
 
-            return objectMapper.writeValueAsString(overview);
+            return OBJECT_MAPPER.writeValueAsString(overview);
         } catch (Exception e) {
             log.error("SystemOverviewTool execution failed", e);
             return "{\"error\": \"系统概览查询失败: " + e.getMessage() + "\"}";

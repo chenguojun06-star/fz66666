@@ -28,7 +28,7 @@ import java.util.*;
 @Component
 public class SampleLoanTool implements AgentTool {
 
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Autowired
     private SampleStockService sampleStockService;
@@ -102,29 +102,29 @@ public class SampleLoanTool implements AgentTool {
     public String execute(String argumentsJson) throws Exception {
         // 安全门禁1：外发工厂账号不允许操作仓库
         if (UserContext.factoryId() != null) {
-            return mapper.writeValueAsString(Map.of("error", "外发工厂账号无权执行仓库操作，请联系内部管理人员"));
+            return MAPPER.writeValueAsString(Map.of("error", "外发工厂账号无权执行仓库操作，请联系内部管理人员"));
         }
 
         // 安全门禁2：必须有角色信息
         String role = UserContext.role();
         if (role == null || role.isBlank()) {
-            return mapper.writeValueAsString(Map.of("error", "账号角色信息缺失，无权执行此操作"));
+            return MAPPER.writeValueAsString(Map.of("error", "账号角色信息缺失，无权执行此操作"));
         }
 
-        Map<String, Object> args = mapper.readValue(argumentsJson, new TypeReference<>() {});
+        Map<String, Object> args = MAPPER.readValue(argumentsJson, new TypeReference<>() {});
         String action = (String) args.get("action");
         Object qtyObj = args.get("quantity");
         if (qtyObj == null) {
-            return mapper.writeValueAsString(Map.of("error", "缺少参数：quantity"));
+            return MAPPER.writeValueAsString(Map.of("error", "缺少参数：quantity"));
         }
         int qty;
         try {
             qty = Integer.parseInt(qtyObj.toString());
         } catch (NumberFormatException e) {
-            return mapper.writeValueAsString(Map.of("error", "quantity 必须是整数"));
+            return MAPPER.writeValueAsString(Map.of("error", "quantity 必须是整数"));
         }
         if (qty <= 0) {
-            return mapper.writeValueAsString(Map.of("error", "数量必须大于0"));
+            return MAPPER.writeValueAsString(Map.of("error", "数量必须大于0"));
         }
 
         String remarkStr = (String) args.getOrDefault("remark", "");
@@ -136,7 +136,7 @@ public class SampleLoanTool implements AgentTool {
         } else if ("return".equals(action)) {
             return doReturn(args, qty, remarkStr, operatorName, role, tenantId);
         } else {
-            return mapper.writeValueAsString(Map.of("error", "不支持的 action：" + action + "，仅支持 loan/return"));
+            return MAPPER.writeValueAsString(Map.of("error", "不支持的 action：" + action + "，仅支持 loan/return"));
         }
     }
 
@@ -144,16 +144,16 @@ public class SampleLoanTool implements AgentTool {
                           String operatorName, String role, Long tenantId) throws Exception {
         String sampleStockId = (String) args.get("sampleStockId");
         if (sampleStockId == null || sampleStockId.isBlank()) {
-            return mapper.writeValueAsString(Map.of("error", "借调操作必须提供 sampleStockId"));
+            return MAPPER.writeValueAsString(Map.of("error", "借调操作必须提供 sampleStockId"));
         }
 
         // 安全门禁3：租户隔离
         SampleStock stock = sampleStockService.getById(sampleStockId);
         if (stock == null) {
-            return mapper.writeValueAsString(Map.of("error", "样衣库存不存在：" + sampleStockId));
+            return MAPPER.writeValueAsString(Map.of("error", "样衣库存不存在：" + sampleStockId));
         }
         if (tenantId != null && !tenantId.equals(stock.getTenantId())) {
-            return mapper.writeValueAsString(Map.of("error", "无权操作其他租户的样衣数据"));
+            return MAPPER.writeValueAsString(Map.of("error", "无权操作其他租户的样衣数据"));
         }
 
         SampleLoan loan = new SampleLoan();
@@ -181,7 +181,7 @@ public class SampleLoanTool implements AgentTool {
             writeAuditLog(tenantId, "sample_loan", operatorName, role,
                     "sampleStockId=" + sampleStockId + " qty=" + qty, "FAILED", e.getMessage());
             log.error("[SampleLoanTool] 借调失败 sampleStockId={} err={}", sampleStockId, e.getMessage());
-            return mapper.writeValueAsString(Map.of("error", "借调失败：" + e.getMessage()));
+            return MAPPER.writeValueAsString(Map.of("error", "借调失败：" + e.getMessage()));
         }
 
         writeAuditLog(tenantId, "sample_loan", operatorName, role,
@@ -195,14 +195,14 @@ public class SampleLoanTool implements AgentTool {
         result.put("quantity", qty);
         result.put("borrower", loan.getBorrower());
         result.put("message", "样衣借调成功，借调记录ID：" + loan.getId());
-        return mapper.writeValueAsString(result);
+        return MAPPER.writeValueAsString(result);
     }
 
     private String doReturn(Map<String, Object> args, int qty, String remark,
                             String operatorName, String role, Long tenantId) throws Exception {
         String loanId = (String) args.get("loanId");
         if (loanId == null || loanId.isBlank()) {
-            return mapper.writeValueAsString(Map.of("error", "归还操作必须提供 loanId（借调记录ID）"));
+            return MAPPER.writeValueAsString(Map.of("error", "归还操作必须提供 loanId（借调记录ID）"));
         }
 
         try {
@@ -211,7 +211,7 @@ public class SampleLoanTool implements AgentTool {
             writeAuditLog(tenantId, "sample_return", operatorName, role,
                     "loanId=" + loanId + " qty=" + qty, "FAILED", e.getMessage());
             log.error("[SampleLoanTool] 归还失败 loanId={} err={}", loanId, e.getMessage());
-            return mapper.writeValueAsString(Map.of("error", "归还失败：" + e.getMessage()));
+            return MAPPER.writeValueAsString(Map.of("error", "归还失败：" + e.getMessage()));
         }
 
         writeAuditLog(tenantId, "sample_return", operatorName, role,
@@ -222,7 +222,7 @@ public class SampleLoanTool implements AgentTool {
         result.put("loanId", loanId);
         result.put("quantity", qty);
         result.put("message", "样衣归还成功，归还数量：" + qty + "件");
-        return mapper.writeValueAsString(result);
+        return MAPPER.writeValueAsString(result);
     }
 
     private void writeAuditLog(Long tenantId, String action, String operatorName,

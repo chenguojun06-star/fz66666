@@ -28,7 +28,7 @@ public class SampleStockTool implements AgentTool {
     @Autowired
     private SampleStockService sampleStockService;
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
     public String getName() {
@@ -82,7 +82,7 @@ public class SampleStockTool implements AgentTool {
         try {
             Map<String, Object> args = new HashMap<>();
             if (argumentsJson != null && !argumentsJson.isBlank()) {
-                args = objectMapper.readValue(argumentsJson, new TypeReference<Map<String, Object>>() {});
+                args = OBJECT_MAPPER.readValue(argumentsJson, new TypeReference<Map<String, Object>>() {});
             }
 
             String sampleType = (String) args.get("sampleType");
@@ -138,7 +138,7 @@ public class SampleStockTool implements AgentTool {
                 resultList.add(dto);
             }
 
-            return objectMapper.writeValueAsString(resultList);
+            return OBJECT_MAPPER.writeValueAsString(resultList);
 
         } catch (JsonProcessingException e) {
             log.error("Tool execution failed: parse json error", e);

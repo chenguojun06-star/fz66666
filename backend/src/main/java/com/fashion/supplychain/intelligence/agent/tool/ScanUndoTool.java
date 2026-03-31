@@ -33,7 +33,7 @@ public class ScanUndoTool implements AgentTool {
     @Autowired
     private ProductionOrderService productionOrderService;
 
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Override
     public String getName() {
@@ -90,13 +90,13 @@ public class ScanUndoTool implements AgentTool {
 
     @Override
     public String execute(String argumentsJson) throws Exception {
-        Map<String, Object> args = mapper.readValue(argumentsJson, new TypeReference<>() {});
+        Map<String, Object> args = MAPPER.readValue(argumentsJson, new TypeReference<>() {});
 
         String recordId = (String) args.get("recordId");
         String scanCode = (String) args.get("scanCode");
 
         if ((recordId == null || recordId.isBlank()) && (scanCode == null || scanCode.isBlank())) {
-            return mapper.writeValueAsString(Map.of(
+            return MAPPER.writeValueAsString(Map.of(
                     "error", "请提供扫码记录ID或扫码码值（菲号），才能定位要撤回的记录"));
         }
 
@@ -107,7 +107,7 @@ public class ScanUndoTool implements AgentTool {
             if (record != null && record.getOrderId() != null) {
                 ProductionOrder order = productionOrderService.getById(record.getOrderId());
                 if (order == null || !userFactoryId.equals(order.getFactoryId())) {
-                    return mapper.writeValueAsString(Map.of("error", "该扫码记录不属于您的工厂，无权撤回"));
+                    return MAPPER.writeValueAsString(Map.of("error", "该扫码记录不属于您的工厂，无权撤回"));
                 }
             }
         }
@@ -134,14 +134,14 @@ public class ScanUndoTool implements AgentTool {
             }
 
             Map<String, Object> result = scanRecordOrchestrator.undo(params);
-            return mapper.writeValueAsString(result);
+            return MAPPER.writeValueAsString(result);
 
         } catch (IllegalStateException e) {
-            return mapper.writeValueAsString(Map.of(
+            return MAPPER.writeValueAsString(Map.of(
                     "success", false,
                     "message", e.getMessage()));
         } catch (IllegalArgumentException e) {
-            return mapper.writeValueAsString(Map.of(
+            return MAPPER.writeValueAsString(Map.of(
                     "error", "参数错误：" + e.getMessage()));
         }
     }

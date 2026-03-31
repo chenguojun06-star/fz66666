@@ -1,12 +1,10 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.intelligence.entity.AdvisorFeedback;
 import com.fashion.supplychain.intelligence.entity.KnowledgeBase;
 import com.fashion.supplychain.intelligence.mapper.AdvisorFeedbackMapper;
 import com.fashion.supplychain.intelligence.mapper.KnowledgeBaseMapper;
 import java.time.LocalDateTime;
-import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;

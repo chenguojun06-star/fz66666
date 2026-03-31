@@ -5,7 +5,6 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
-import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
 import java.time.LocalDateTime;
 import java.util.Map;

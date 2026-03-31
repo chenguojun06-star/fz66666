@@ -27,7 +27,7 @@ public class SystemUserTool implements AgentTool {
     @Autowired
     private UserService userService;
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
     public String getName() {
@@ -71,7 +71,7 @@ public class SystemUserTool implements AgentTool {
         try {
             Map<String, Object> args = new HashMap<>();
             if (argumentsJson != null && !argumentsJson.isBlank()) {
-                args = objectMapper.readValue(argumentsJson, new TypeReference<Map<String, Object>>() {});
+                args = OBJECT_MAPPER.readValue(argumentsJson, new TypeReference<Map<String, Object>>() {});
             }
 
             String username = (String) args.get("username");
@@ -107,7 +107,7 @@ public class SystemUserTool implements AgentTool {
                 dto.put("approvalStatus", u.getApprovalStatus()); // 状态: APPROVED, PENDING等
                 resultList.add(dto);
             }
-            return objectMapper.writeValueAsString(resultList);
+            return OBJECT_MAPPER.writeValueAsString(resultList);
 
         } catch (JsonProcessingException e) {
             log.error("Tool execution failed: parse json error", e);

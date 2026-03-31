@@ -37,7 +37,7 @@ public class KnowledgeSearchTool implements AgentTool {
     @Autowired(required = false)
     private CohereRerankService cohereRerankService;
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
     public String getName() {
@@ -73,7 +73,7 @@ public class KnowledgeSearchTool implements AgentTool {
     @Override
     public String execute(String argumentsJson) {
         try {
-            JsonNode args = objectMapper.readTree(argumentsJson);
+            JsonNode args = OBJECT_MAPPER.readTree(argumentsJson);
             String query = args.path("query").asText("").trim();
             String category = args.path("category").asText("").trim();
 
@@ -223,7 +223,7 @@ public class KnowledgeSearchTool implements AgentTool {
             result.put("retrievalMode", cohereRerankService != null && cohereRerankService.isAvailable() ? "reranked" : "hybrid");
             result.put("semanticHits", semanticKbList.size());
             result.put("keywordHits", sqlResults.size());
-            return objectMapper.writeValueAsString(result);
+            return OBJECT_MAPPER.writeValueAsString(result);
 
         } catch (Exception e) {
             log.error("[KnowledgeSearchTool] 搜索异常", e);

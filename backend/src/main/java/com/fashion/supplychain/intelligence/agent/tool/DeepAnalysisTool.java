@@ -32,7 +32,7 @@ public class DeepAnalysisTool implements AgentTool {
     @Autowired
     private ScanRecordService scanRecordService;
 
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Override
     public String getName() {
@@ -80,7 +80,7 @@ public class DeepAnalysisTool implements AgentTool {
         log.info("Tool: {} called with args: {}", getName(), argumentsJson);
         Map<String, Object> args = new HashMap<>();
         if (argumentsJson != null && !argumentsJson.isBlank()) {
-            args = mapper.readValue(argumentsJson, new TypeReference<>() {});
+            args = MAPPER.readValue(argumentsJson, new TypeReference<>() {});
         }
 
         String analysisType = (String) args.getOrDefault("analysisType", "factory_ranking");
@@ -107,7 +107,7 @@ public class DeepAnalysisTool implements AgentTool {
             result.put("managementBrief", buildManagementBrief(analysisType, result.get("data")));
         }
 
-        return mapper.writeValueAsString(result);
+        return MAPPER.writeValueAsString(result);
     }
 
     private Map<String, Object> buildManagementBrief(String analysisType, Object data) {

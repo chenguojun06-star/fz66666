@@ -1,6 +1,5 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
-import com.fashion.supplychain.intelligence.entity.AgentExecutionLog;
 import com.fashion.supplychain.intelligence.entity.CrewSession;
 import com.fashion.supplychain.intelligence.mapper.AgentExecutionLogMapper;
 import com.fashion.supplychain.intelligence.mapper.CrewSessionMapper;

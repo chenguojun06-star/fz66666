@@ -36,7 +36,7 @@ public class SmartReportTool implements AgentTool {
     @Autowired
     private ScanRecordService scanRecordService;
 
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Override
     public String getName() {
@@ -78,7 +78,7 @@ public class SmartReportTool implements AgentTool {
         log.info("Tool: {} called with args: {}", getName(), argumentsJson);
         Map<String, Object> args = new HashMap<>();
         if (argumentsJson != null && !argumentsJson.isBlank()) {
-            args = mapper.readValue(argumentsJson, new TypeReference<>() {});
+            args = MAPPER.readValue(argumentsJson, new TypeReference<>() {});
         }
 
         String reportType = (String) args.getOrDefault("reportType", "daily");
@@ -132,7 +132,7 @@ public class SmartReportTool implements AgentTool {
         // 5. 成本汇总
         report.put("costSummary", buildCostSummary(tenantId, periodStart, periodEnd));
 
-        return mapper.writeValueAsString(report);
+        return MAPPER.writeValueAsString(report);
     }
 
     private Map<String, Object> buildScanStats(Long tenantId, LocalDateTime start, LocalDateTime end,

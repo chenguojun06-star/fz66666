@@ -12,7 +12,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Collectors;
 
 /**
  * 蒙特卡洛多场景模拟工具 — Monte Carlo Scenario Simulator

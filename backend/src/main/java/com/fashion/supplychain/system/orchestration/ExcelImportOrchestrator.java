@@ -2,7 +2,6 @@ package com.fashion.supplychain.system.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.CosService;
-import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantFilePathResolver;
 import com.fashion.supplychain.style.entity.StyleAttachment;
 import com.fashion.supplychain.style.entity.StyleInfo;

@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 @Component
 public class WarehouseOpLogTool implements AgentTool {
 
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private static final List<String> WAREHOUSE_ACTIONS =
             List.of("sample_loan", "sample_return", "finished_outbound");
@@ -86,16 +86,16 @@ public class WarehouseOpLogTool implements AgentTool {
     public String execute(String argumentsJson) throws Exception {
         // 安全门禁1：外发工厂账号不可查询
         if (UserContext.factoryId() != null) {
-            return mapper.writeValueAsString(Map.of("error", "外发工厂账号无权查询仓库操作日志"));
+            return MAPPER.writeValueAsString(Map.of("error", "外发工厂账号无权查询仓库操作日志"));
         }
 
         // 安全门禁2：必须有角色信息
         String role = UserContext.role();
         if (role == null || role.isBlank()) {
-            return mapper.writeValueAsString(Map.of("error", "账号角色信息缺失，无权查询仓库操作日志"));
+            return MAPPER.writeValueAsString(Map.of("error", "账号角色信息缺失，无权查询仓库操作日志"));
         }
 
-        Map<String, Object> args = mapper.readValue(argumentsJson, new TypeReference<>() {});
+        Map<String, Object> args = MAPPER.readValue(argumentsJson, new TypeReference<>() {});
         Long tenantId = UserContext.tenantId();
 
         // 解析参数
@@ -112,7 +112,7 @@ public class WarehouseOpLogTool implements AgentTool {
             if (startDateStr != null) startDt = LocalDate.parse(startDateStr).atStartOfDay();
             if (endDateStr != null) endDt = LocalDate.parse(endDateStr).plusDays(1).atStartOfDay();
         } catch (DateTimeParseException e) {
-            return mapper.writeValueAsString(Map.of("error", "日期格式错误，请使用 yyyy-MM-dd 格式"));
+            return MAPPER.writeValueAsString(Map.of("error", "日期格式错误，请使用 yyyy-MM-dd 格式"));
         }
 
         // 确定查询的 action 列表
@@ -161,7 +161,7 @@ public class WarehouseOpLogTool implements AgentTool {
         if (items.isEmpty()) {
             result.put("message", "未找到符合条件的仓库操作记录");
         }
-        return mapper.writeValueAsString(result);
+        return MAPPER.writeValueAsString(result);
     }
 
     private String translateAction(String action) {

@@ -2,7 +2,6 @@ package com.fashion.supplychain.intelligence.agent.tool;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.entity.RootCauseAnalysis;
 import com.fashion.supplychain.intelligence.orchestration.RootCauseAnalysisOrchestrator;
@@ -19,7 +18,7 @@ import org.springframework.stereotype.Component;
 public class RcaAnalysisTool implements AgentTool {
 
     @Autowired private RootCauseAnalysisOrchestrator rcaOrchestrator;
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
     public String getName() {
@@ -61,7 +60,7 @@ public class RcaAnalysisTool implements AgentTool {
     @Override
     public String execute(String argumentsJson) {
         try {
-            JsonNode args = objectMapper.readTree(argumentsJson);
+            JsonNode args = OBJECT_MAPPER.readTree(argumentsJson);
             String description = args.path("description").asText("").trim();
             String triggerType = args.path("triggerType").asText("manual");
             String linkedOrderIds = args.path("linkedOrderIds").asText("");
@@ -79,7 +78,7 @@ public class RcaAnalysisTool implements AgentTool {
             result.put("severity", rca.getSeverity());
             result.put("whyChain", rca.getWhyChain());
             result.put("suggestedActions", rca.getSuggestedActions());
-            return objectMapper.writeValueAsString(result);
+            return OBJECT_MAPPER.writeValueAsString(result);
         } catch (Exception e) {
             log.warn("[RcaTool] 执行失败: {}", e.getMessage());
             return "{\"error\": \"根因分析执行失败: " + e.getMessage() + "\"}";

@@ -55,7 +55,7 @@ public class SystemOperationLogAspect {
     @Autowired(required = false)
     private OperationLogTargetNameResolver operationLogTargetNameResolver;
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     /**
      * 只记录「有溯源价值」的操作：修改/删除/报废/关单/驳回/撤销/审批等异常/破坏性事件。
@@ -320,7 +320,7 @@ public class SystemOperationLogAspect {
                 return null;
             }
 
-            return objectMapper.writeValueAsString(detailMap);
+            return OBJECT_MAPPER.writeValueAsString(detailMap);
         } catch (Exception e) {
             return null; // 构建失败不影响主流程
         }
@@ -775,7 +775,7 @@ public class SystemOperationLogAspect {
             if (detailMap.isEmpty()) {
                 return null;
             }
-            return objectMapper.writeValueAsString(detailMap);
+            return OBJECT_MAPPER.writeValueAsString(detailMap);
         } catch (Exception ignored) {
             return null;
         }

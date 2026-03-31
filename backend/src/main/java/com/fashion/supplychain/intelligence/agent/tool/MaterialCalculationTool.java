@@ -39,7 +39,7 @@ public class MaterialCalculationTool implements AgentTool {
     @Autowired
     private ProductionOrderService productionOrderService;
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
     public String getName() {
@@ -80,7 +80,7 @@ public class MaterialCalculationTool implements AgentTool {
     @Override
     public String execute(String argumentsJson) {
         try {
-            JsonNode args = objectMapper.readTree(argumentsJson);
+            JsonNode args = OBJECT_MAPPER.readTree(argumentsJson);
             String styleNo = args.path("styleNo").asText("").trim();
             int orderQuantity = args.path("orderQuantity").asInt(0);
 
@@ -191,7 +191,7 @@ public class MaterialCalculationTool implements AgentTool {
                 result.put("totalMaterialCost", "部分物料未配置单价，无法合计成本");
             }
 
-            return objectMapper.writeValueAsString(result);
+            return OBJECT_MAPPER.writeValueAsString(result);
 
         } catch (Exception e) {
             log.error("[MaterialCalculationTool] 计算异常", e);

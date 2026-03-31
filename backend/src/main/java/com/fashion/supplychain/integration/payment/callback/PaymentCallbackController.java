@@ -1,9 +1,7 @@
 package com.fashion.supplychain.integration.payment.callback;
 
-import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.integration.payment.PaymentGateway;
 import com.fashion.supplychain.integration.payment.PaymentManager;
-import com.fashion.supplychain.integration.payment.PaymentResponse;
 import com.fashion.supplychain.integration.record.entity.IntegrationCallbackLog;
 import com.fashion.supplychain.integration.record.service.IntegrationRecordService;
 import lombok.RequiredArgsConstructor;

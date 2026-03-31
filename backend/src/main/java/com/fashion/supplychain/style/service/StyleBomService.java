@@ -3,7 +3,6 @@ package com.fashion.supplychain.style.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.fashion.supplychain.style.entity.StyleBom;
 import java.util.List;
-import java.util.Map;
 
 public interface StyleBomService extends IService<StyleBom> {
     /**

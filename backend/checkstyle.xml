@@ -1,0 +1,96 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+    "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+    "https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<!--
+  服装供应链管理系统 Checkstyle 规则
+  模式：report-only（只报告，不阻断构建）
+  目标：覆盖命名规范 + 基础代码质量，不检查格式缩进（项目已用 IDE 统一）
+-->
+<module name="Checker">
+    <property name="charset" value="UTF-8"/>
+    <property name="severity" value="warning"/>
+    <property name="fileExtensions" value="java"/>
+
+    <!-- 跳过生成代码和测试数据目录 -->
+    <module name="BeforeExecutionExclusionFileFilter">
+        <property name="fileNamePattern" value=".*[\\/]target[\\/].*"/>
+    </module>
+
+    <module name="TreeWalker">
+
+        <!-- ===== 命名规范 ===== -->
+        <!-- 类名：大驼峰 -->
+        <module name="TypeName">
+            <property name="format" value="^[A-Z][a-zA-Z0-9]*$"/>
+            <message key="name.invalidPattern" value="类名 ''{0}'' 应为大驼峰命名（如 ProductionOrder）"/>
+        </module>
+
+        <!-- 方法名：小驼峰 -->
+        <module name="MethodName">
+            <property name="format" value="^[a-z][a-zA-Z0-9]*$"/>
+            <message key="name.invalidPattern" value="方法名 ''{0}'' 应为小驼峰命名（如 createOrder）"/>
+        </module>
+
+        <!-- 成员变量：小驼峰 -->
+        <module name="MemberName">
+            <property name="format" value="^[a-z][a-zA-Z0-9]*$"/>
+            <message key="name.invalidPattern" value="成员变量 ''{0}'' 应为小驼峰命名"/>
+        </module>
+
+        <!-- 局部变量：小驼峰 -->
+        <module name="LocalVariableName">
+            <property name="format" value="^[a-z][a-zA-Z0-9]*$"/>
+            <message key="name.invalidPattern" value="局部变量 ''{0}'' 应为小驼峰命名"/>
+        </module>
+
+        <!-- 参数名：小驼峰 -->
+        <module name="ParameterName">
+            <property name="format" value="^[a-z][a-zA-Z0-9]*$"/>
+            <message key="name.invalidPattern" value="参数名 ''{0}'' 应为小驼峰命名"/>
+        </module>
+
+        <!-- 常量：全大写下划线；保留 log/logger（SLF4J Lombok 约定小写，不强制改名） -->
+        <module name="ConstantName">
+            <property name="format" value="^(log|logger|[A-Z][A-Z0-9]*(_[A-Z0-9]+)*)$"/>
+            <message key="name.invalidPattern" value="常量 ''{0}'' 应为全大写下划线命名（如 MAX_RETRY_COUNT）"/>
+        </module>
+
+        <!-- ===== 代码质量 ===== -->
+        <!-- 不允许空 catch 块（吞异常） -->
+        <module name="EmptyCatchBlock">
+            <property name="exceptionVariableName" value="ignored|expected"/>
+            <message key="catch.block.empty" value="catch 块为空，请至少加注释说明为何忽略此异常"/>
+        </module>
+
+        <!-- 不允许多余的 import -->
+        <module name="UnusedImports"/>
+
+        <!-- 不允许重复 import -->
+        <module name="RedundantImport"/>
+
+        <!-- 不允许使用 System.out.print（应用 log） -->
+        <module name="Regexp">
+            <property name="format" value="System\.(out|err)\.print"/>
+            <property name="illegalPattern" value="true"/>
+            <property name="message" value="请使用 log.info/warn/error 替代 System.out/err.print"/>
+        </module>
+
+        <!-- 方法不宜过长（超过 80 行提示） -->
+        <module name="MethodLength">
+            <property name="max" value="80"/>
+            <property name="severity" value="warning"/>
+            <message key="maxLen.method" value="方法过长（{0} 行），建议拆分为多个小方法（目标 ≤ 40 行）"/>
+        </module>
+
+    </module>
+
+    <!-- 行长度：超过 200 字符警告（宽松阈值，仅捕捉明显问题） -->
+    <module name="LineLength">
+        <property name="max" value="200"/>
+        <property name="severity" value="warning"/>
+        <message key="maxLineLength" value="行过长（{0} 字符），建议换行"/>
+    </module>
+
+</module>

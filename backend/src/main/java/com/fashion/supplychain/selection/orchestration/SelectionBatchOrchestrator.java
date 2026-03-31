@@ -3,7 +3,6 @@ package com.fashion.supplychain.selection.orchestration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.selection.dto.SelectionBatchRequest;
 import com.fashion.supplychain.selection.entity.SelectionBatch;

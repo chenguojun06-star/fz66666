@@ -24,7 +24,7 @@ public class ChangeApprovalTool implements AgentTool {
     @Autowired
     private ChangeApprovalOrchestrator changeApprovalOrchestrator;
 
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("MM-dd HH:mm");
 
     @Override
@@ -67,7 +67,7 @@ public class ChangeApprovalTool implements AgentTool {
 
     @Override
     public String execute(String argumentsJson) throws Exception {
-        Map<String, Object> args = mapper.readValue(argumentsJson, new TypeReference<>() {});
+        Map<String, Object> args = MAPPER.readValue(argumentsJson, new TypeReference<>() {});
         String action = (String) args.get("action");
 
         if (action == null) {
@@ -91,7 +91,7 @@ public class ChangeApprovalTool implements AgentTool {
         List<ChangeApproval> records = page.getRecords();
 
         if (records.isEmpty()) {
-            return mapper.writeValueAsString(Map.of(
+            return MAPPER.writeValueAsString(Map.of(
                     "total", 0,
                     "message", "当前没有待审批的申请"
             ));
@@ -112,7 +112,7 @@ public class ChangeApprovalTool implements AgentTool {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("total", page.getTotal());
         result.put("items", items);
-        return mapper.writeValueAsString(result);
+        return MAPPER.writeValueAsString(result);
     }
 
     private String handleApprove(Map<String, Object> args) throws Exception {
@@ -122,7 +122,7 @@ public class ChangeApprovalTool implements AgentTool {
         }
         String remark = (String) args.get("remark");
         Map<String, Object> result = changeApprovalOrchestrator.approve(id, remark);
-        return mapper.writeValueAsString(result);
+        return MAPPER.writeValueAsString(result);
     }
 
     private String handleReject(Map<String, Object> args) throws Exception {
@@ -132,7 +132,7 @@ public class ChangeApprovalTool implements AgentTool {
         }
         String reason = (String) args.get("remark");
         changeApprovalOrchestrator.reject(id, reason);
-        return mapper.writeValueAsString(Map.of("success", true, "message", "已驳回该申请"));
+        return MAPPER.writeValueAsString(Map.of("success", true, "message", "已驳回该申请"));
     }
 
     private String labelForType(String type) {

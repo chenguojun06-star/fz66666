@@ -27,7 +27,7 @@ public class FinishedProductStockTool implements AgentTool {
     @Autowired
     private ProductSkuService productSkuService;
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @Override
     public String getName() {
@@ -76,7 +76,7 @@ public class FinishedProductStockTool implements AgentTool {
         try {
             Map<String, Object> args = new HashMap<>();
             if (argumentsJson != null && !argumentsJson.isBlank()) {
-                args = objectMapper.readValue(argumentsJson, new TypeReference<Map<String, Object>>() {});
+                args = OBJECT_MAPPER.readValue(argumentsJson, new TypeReference<Map<String, Object>>() {});
             }
 
             String styleNo = (String) args.get("styleNo");
@@ -128,7 +128,7 @@ public class FinishedProductStockTool implements AgentTool {
                 result.put("message", "未找到符合条件的成品库存记录");
             }
 
-            return objectMapper.writeValueAsString(result);
+            return OBJECT_MAPPER.writeValueAsString(result);
         } catch (Exception e) {
             log.error("FinishedProductStockTool execute error", e);
             return "{\"error\": \"查询成品库存失败: " + e.getMessage() + "\"}";
