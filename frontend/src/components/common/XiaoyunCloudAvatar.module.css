@@ -120,12 +120,9 @@
 }
 
 .loading .eye {
-  border: 2px solid #4d8fff;
-  border-right-color: transparent;
-  border-top-color: transparent;
-  background: transparent;
-  border-radius: 50%;
-  animation: eyeRotate 1s linear infinite;
+  background: #3f5d95;
+  border-radius: 999px;
+  animation: eyeBlink 2.2s ease-in-out infinite;
 }
 
 .highlight {
@@ -140,7 +137,7 @@
 }
 
 .loading .highlight {
-  display: none;
+  animation: eyeSpark 1.8s ease-in-out infinite;
 }
 
 .mouth {
@@ -157,14 +154,12 @@
 }
 
 .loading .mouth {
-  width: 18%;
-  height: 18%;
-  border: 4px solid #597ac0;
-  border-radius: 50%;
-  border-top-color: rgba(89, 122, 192, 0.22);
-  border-left-color: rgba(89, 122, 192, 0.22);
-  border-right-color: #597ac0;
-  border-bottom-color: #597ac0;
+  width: 16%;
+  height: 10%;
+  border: none;
+  border-bottom: 4px solid #597ac0;
+  border-radius: 0 0 999px 999px;
+  animation: mouthTalk 1.6s ease-in-out infinite;
 }
 
 @keyframes cloudFloat {
@@ -190,10 +185,6 @@
 @keyframes eyeBlink {
   0%, 44%, 48%, 92%, 96%, 100% { transform: scaleY(1); opacity: 1; }
   46%, 94% { transform: scaleY(0.18); opacity: 0.85; }
-}
-
-@keyframes eyeRotate {
-  to { transform: rotate(360deg); }
 }
 
 @keyframes eyeSpark {

@@ -652,15 +652,6 @@
   transform: translate(4px, -2px);
 }
 
-.cuteCloudEyeSpin {
-  border: 2px solid #4d8fff;
-  border-right-color: transparent;
-  border-top-color: transparent;
-  background: transparent;
-  border-radius: 50%;
-  animation: cloudEyeSpin 1s linear infinite;
-}
-
 .cuteCloudEyeHighlight {
   position: absolute;
   width: 44%;
@@ -776,10 +767,6 @@
 @keyframes cloudSmileTalk {
   0%, 100% { transform: translateX(-50%) scaleX(1); }
   50% { transform: translateX(-50%) scaleX(1.12); }
-}
-
-@keyframes cloudEyeSpin {
-  to { transform: rotate(360deg); }
 }
 
 @keyframes eyeHighlightTwinkle {
