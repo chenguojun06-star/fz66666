@@ -52,7 +52,8 @@ App({
   onShow() {
     // 小程序从后台进入前台时检查提醒
     try {
-      setTimeout(() => {
+      if (this._reminderTimerId) { clearTimeout(this._reminderTimerId); }
+      this._reminderTimerId = setTimeout(() => {
         reminderManager.checkAndShowReminders();
       }, 1000);
     } catch (e) {

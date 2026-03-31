@@ -194,19 +194,16 @@ Page({
    * 处理数据
    */
   processData(data) {
-    // 计算汇总数据（本月总计）
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth() + 1;
-    const monthStart = new Date(year, month - 1, 1);
-    const monthEnd = new Date(year, month, 0, 23, 59, 59);
+    // 计算汇总数据（按当前筛选日期范围）
+    const filterStart = this.data.startDate ? new Date(this.data.startDate + ' 00:00:00') : null;
+    const filterEnd = this.data.endDate ? new Date(this.data.endDate + ' 23:59:59') : null;
 
     const monthData = data.filter(item => {
       if (!item.startTime) {
         return false;
       }
       const time = new Date(item.startTime);
-      return time >= monthStart && time <= monthEnd;
+      return (!filterStart || time >= filterStart) && (!filterEnd || time <= filterEnd);
     });
 
     const totalAmount = monthData.reduce((sum, item) => sum + (Number(item.totalAmount) || 0), 0);

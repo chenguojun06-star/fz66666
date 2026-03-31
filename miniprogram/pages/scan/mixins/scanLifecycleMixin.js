@@ -118,7 +118,7 @@ const scanLifecycleMixin = Behavior({
       const offlineCount = ScanOfflineQueue.count();
       if (offlineCount > 0) {
         this.setData({ offlinePendingCount: offlineCount });
-        setTimeout(() => {
+        this._flushTimerId = setTimeout(() => {
           if (this && this.data && !this.data.offlineSyncing) {
             this._flushOfflineQueue();
           }
@@ -131,6 +131,8 @@ const scanLifecycleMixin = Behavior({
    * @returns {void} 无返回值
    */
   onHide() {
+    // 清理离线刷新定时器
+    if (this._flushTimerId) { clearTimeout(this._flushTimerId); this._flushTimerId = null; }
     // 清理撤销定时器（委托给 UndoHandler）
     this.stopUndoTimer();
   },
@@ -140,6 +142,9 @@ const scanLifecycleMixin = Behavior({
    * @returns {void} 无返回值
    */
   onUnload() {
+    // 清理离线刷新定时器
+    if (this._flushTimerId) { clearTimeout(this._flushTimerId); this._flushTimerId = null; }
+
     // 取消订阅
     if (this.unsubscribeEvents) {
       this.unsubscribeEvents();

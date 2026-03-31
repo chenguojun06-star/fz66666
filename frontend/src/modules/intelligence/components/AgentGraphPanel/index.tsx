@@ -136,7 +136,7 @@ const HistoryTable: React.FC = () => {
         <Rate
           count={5} value={v ?? 0}
           style={{ fontSize: 13 }}
-          onChange={(val) => submitFeedback(row.id, val).then(loadHistory)}
+          onChange={(val) => submitFeedback(row.id, val).then(loadHistory).catch(console.error)}
         />
       ),
     },
@@ -331,7 +331,7 @@ const AgentGraphPanel: React.FC = () => {
                     style={{ fontSize: 14 }}
                     onChange={(val) => {
                       const store = useAgentGraphStore.getState();
-                      store.submitFeedback(result.executionId!, val);
+                      store.submitFeedback(result.executionId!, val).catch(console.error);
                     }}
                   />
                 </div>

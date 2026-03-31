@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useRef, ReactNode, useCallback } from 'react';
 import { message } from '@/utils/antdStatic';
 
 
@@ -31,6 +31,8 @@ interface AppProviderProps {
 }
 
 export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
   // 应用状态
   const [state, setState] = useState<AppState>({
     isLoading: false,
@@ -70,8 +72,9 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         visible: true
       }
     }));
-    // 3秒后自动隐藏
-    setTimeout(() => {
+    // 3秒后自动隐藏（清理上一个定时器防止堆积）
+    clearTimeout(hideTimerRef.current);
+    hideTimerRef.current = setTimeout(() => {
       hideMessage();
     }, 3000);
   }, [hideMessage]);
