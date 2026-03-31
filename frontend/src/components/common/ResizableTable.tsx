@@ -544,10 +544,10 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
       return { ...baseScroll, y: baseScroll.y ?? defaultY };
     }
 
-    if (!scroll) return { x: '100%' as const, y: defaultY };
+    if (!scroll) return { x: 'max-content' as const, y: defaultY };
     return {
       ...baseScroll,
-      x: baseScroll.x ?? '100%',
+      x: baseScroll.x ?? 'max-content',
       y: baseScroll.y ?? defaultY
     };
   }, [resizableColumns, scroll]);

@@ -339,6 +339,8 @@ export interface ProductWarehousing extends Record<string, unknown> {
   qualityOperatorName?: string;
   receiverName?: string;
   receiverId?: string;
+  /** 扫码模式: bundle(菲号) / ucode(U编码) */
+  scanMode?: string;
 }
 
 export interface ProductOutstock {

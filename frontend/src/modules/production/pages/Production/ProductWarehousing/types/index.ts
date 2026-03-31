@@ -39,6 +39,8 @@ export interface WarehousingDetailRecord {
   colour?: string;
   size?: string;
   qrCode?: string;
+  /** 扫码模式: bundle(菲号) / ucode(U编码) */
+  scanMode?: string;
 }
 
 /** Row type for the order line warehousing summary table */

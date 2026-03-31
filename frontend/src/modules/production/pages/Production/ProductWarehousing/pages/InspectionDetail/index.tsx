@@ -321,6 +321,7 @@ const InspectionDetail: React.FC = () => {
         size="small" rowKey="key" loading={orderDetailLoading}
         pagination={false} dataSource={orderLineWarehousingRows}
         resizableColumns={false}
+        scroll={{ x: 'max-content' }}
         style={{ fontSize: 12 }}
         columns={[
           { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 160 },
@@ -418,6 +419,7 @@ const InspectionDetail: React.FC = () => {
           size="small" rowKey="id" pagination={false}
           dataSource={qcRecords}
           resizableColumns={false}
+          scroll={{ x: 'max-content' }}
           style={{ fontSize: 12 }}
           rowClassName={(record) =>
             highlightWhNo && record.warehousingNo === highlightWhNo ? 'ant-table-row-selected' : ''
@@ -492,6 +494,7 @@ const InspectionDetail: React.FC = () => {
             size="small" rowKey="id" pagination={false}
             dataSource={pendingRecords}
             resizableColumns={false}
+            scroll={{ x: 'max-content' }}
             style={{ fontSize: 12 }}
             columns={[
               { title: '质检入库号', dataIndex: 'warehousingNo', key: 'wn', width: 120 },
@@ -606,6 +609,7 @@ const InspectionDetail: React.FC = () => {
               size="small" rowKey="qr" pagination={false}
               dataSource={batchSelectRows}
               resizableColumns={false}
+              scroll={{ x: 'max-content' }}
               rowSelection={{
                 selectedRowKeys: batchSelectedBundleQrs,
                 onChange: (keys, rows) => handleBatchSelectionChange(keys, rows as BatchSelectBundleRow[]),
@@ -1017,6 +1021,7 @@ const InspectionDetail: React.FC = () => {
                         <ResizableTable
                           rowKey="id" size="small" pagination={false}
                           resizableColumns={false}
+                          scroll={{ x: 'max-content' }}
                           dataSource={bom}
                           columns={[
                             { title: '物料编码', dataIndex: 'materialCode', key: 'mc', width: 100 },
@@ -1103,7 +1108,7 @@ const InspectionDetail: React.FC = () => {
                                 resizableColumns={false}
                                 dataSource={fixedRows}
                                 columns={[
-                                  { title: '序号', dataIndex: 'seq', key: 'seq', width: 60, align: 'center' as const },
+                                  { title: '序号', dataIndex: 'seq', key: 'seq', width: 40, align: 'center' as const },
                                   {
                                     title: '内容',
                                     dataIndex: 'content',

@@ -30,6 +30,7 @@ const OrderInfoGrid: React.FC<OrderInfoGridProps> = ({
   const valueBaseStyle: React.CSSProperties = {
     color: 'var(--neutral-text, #111827)',
     minWidth: 0,
+    maxWidth: 'fit-content',
     textAlign: 'left',
   };
 
@@ -37,14 +38,14 @@ const OrderInfoGrid: React.FC<OrderInfoGridProps> = ({
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: 'max-content minmax(0,1fr)',
+        gridTemplateColumns: 'auto auto',
         alignItems: 'start',
         columnGap: gap,
         rowGap,
         fontSize,
         lineHeight: 1.5,
         textAlign: 'left',
-        width: '100%',
+        width: 'fit-content',
         minWidth: 0,
       }}
     >

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import PieChartCard, { PieSegment } from '@/components/PieChartCard';
 import { useTimeDimension } from '../contexts/TimeDimensionContext';
 import { useStyleLink } from '../contexts/StyleLinkContext';
@@ -51,8 +51,8 @@ const SamplePieChart: React.FC<SamplePieChartProps> = ({ mode = 'sidebar', modul
       try {
         const { start, end } = getDateRange();
         const res = await api.get<{ code: number; data: { records?: StyleInfo[] } }>('/style/info/list', {
-          params: { 
-            page: 1, 
+          params: {
+            page: 1,
             pageSize: 500,
             startDate: start.toISOString(),
             endDate: end.toISOString(),
@@ -74,10 +74,23 @@ const SamplePieChart: React.FC<SamplePieChartProps> = ({ mode = 'sidebar', modul
       .map(s => ({ styleNo: s.styleNo, styleName: s.styleName }));
   }, [styles]);
 
+  const prevStyleListRef = useRef<string>('');
+  const prevPositionRef = useRef<string>('');
+
   useEffect(() => {
-    if (mode === 'stage' && styleLink && moduleKey && position && styleList.length > 0) {
-      styleLink.registerStyle(moduleKey, styleList, position);
+    if (mode !== 'stage' || !styleLink || !moduleKey || !position || styleList.length === 0) return;
+
+    const styleListKey = styleList.map(s => s.styleNo).sort().join(',');
+    const positionKey = `${position.x},${position.y},${position.width},${position.height}`;
+
+    if (prevStyleListRef.current === styleListKey && prevPositionRef.current === positionKey) {
+      return;
     }
+
+    prevStyleListRef.current = styleListKey;
+    prevPositionRef.current = positionKey;
+
+    styleLink.registerStyle(moduleKey, styleList, position);
   }, [mode, styleLink, moduleKey, position, styleList]);
 
   useEffect(() => {
@@ -97,12 +110,26 @@ const SamplePieChart: React.FC<SamplePieChartProps> = ({ mode = 'sidebar', modul
     }).length;
     const completed = styles.filter(s => isCompleted('sample', s)).length;
 
-    const stageCounts = STAGES.map(stage => ({
-      key: stage.key,
-      label: stage.label,
-      color: stage.color,
-      count: styles.filter(s => isCompleted(stage.key, s)).length,
-    }));
+    const stageCounts = STAGES.map((stage, index) => {
+      const prevStage = index > 0 ? STAGES[index - 1] : null;
+
+      const matchedStyles = styles.filter(s => {
+        const currentCompleted = isCompleted(stage.key, s);
+        const prevCompleted = prevStage ? isCompleted(prevStage.key, s) : true;
+
+        const isInCurrentStage = !currentCompleted;
+        const prevStageDone = prevCompleted || index === 0;
+
+        return isInCurrentStage && prevStageDone;
+      });
+
+      return {
+        key: stage.key,
+        label: stage.label,
+        color: stage.color,
+        count: matchedStyles.length,
+      };
+    });
 
     const completedStyles = styles.filter(s => s.sampleCompletedTime && s.createTime);
     let avgDays = 0;

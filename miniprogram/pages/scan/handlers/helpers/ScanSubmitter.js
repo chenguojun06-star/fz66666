@@ -174,6 +174,9 @@ class ScanSubmitter {
       // 菲号模式：显示工序和数量
       const hint = stageResult.hint ? ` ${stageResult.hint}` : '';
       return `✅ ${processName} ${quantity}件${hint}${hintSuffix}`;
+    } else if (scanMode === 'ucode') {
+      // U编码入库模式
+      return `✅ U编码入库成功 - ${scanData.color}/${scanData.size} ${quantity}件${hintSuffix}`;
     } else if (scanMode === 'sku') {
       // SKU模式：显示工序、SKU信息和数量
       return `✅ ${processName} 成功 - ${scanData.color}/${scanData.size} ${quantity}件${hintSuffix}`;

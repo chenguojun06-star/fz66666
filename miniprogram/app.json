@@ -1,27 +1,85 @@
 {
   "pages": [
     "pages/login/index",
-    "pages/register/index",
     "pages/home/index",
     "pages/work/index",
-    "pages/work/inbox/index",
-    "pages/work/ai-assistant/index",
     "pages/scan/index",
-    "pages/scan/history/index",
-    "pages/scan/monthly/index",
-    "pages/payroll/payroll",
-    "pages/admin/index",
-    "pages/admin/notification/index",
-    "pages/admin/production-detail/index",
-    "pages/admin/user-approval/index",
-    "pages/warehouse/sample/list/index",
-    "pages/warehouse/finished/list/index",
-    "pages/warehouse/material/alerts/index",
-    "pages/warehouse/material/detail-page/index",
-    "pages/warehouse/material/scan/index",
-    "pages/order/index",
-    "pages/privacy/index"
+    "pages/admin/index"
   ],
+  "subpackages": [
+    {
+      "root": "pages/register",
+      "name": "pkg-register",
+      "pages": ["index"]
+    },
+    {
+      "root": "pages/work/inbox",
+      "name": "pkg-work-inbox",
+      "pages": ["index"]
+    },
+    {
+      "root": "pages/work/ai-assistant",
+      "name": "pkg-work-ai",
+      "pages": ["index"]
+    },
+    {
+      "root": "pages/scan/history",
+      "name": "pkg-scan-history",
+      "pages": ["index"]
+    },
+    {
+      "root": "pages/scan/monthly",
+      "name": "pkg-scan-monthly",
+      "pages": ["index"]
+    },
+    {
+      "root": "pages/payroll",
+      "name": "pkg-payroll",
+      "pages": ["payroll"]
+    },
+    {
+      "root": "pages/admin/notification",
+      "name": "pkg-admin-notification",
+      "pages": ["index"]
+    },
+    {
+      "root": "pages/admin/production-detail",
+      "name": "pkg-admin-detail",
+      "pages": ["index"]
+    },
+    {
+      "root": "pages/admin/user-approval",
+      "name": "pkg-admin-approval",
+      "pages": ["index"]
+    },
+    {
+      "root": "pages/warehouse",
+      "name": "pkg-warehouse",
+      "pages": [
+        "sample/list/index",
+        "finished/list/index",
+        "material/alerts/index",
+        "material/detail-page/index",
+        "material/scan/index"
+      ]
+    },
+    {
+      "root": "pages/order",
+      "name": "pkg-order",
+      "pages": ["index"]
+    },
+    {
+      "root": "pages/privacy",
+      "name": "pkg-privacy",
+      "pages": ["index"]
+    }
+  ],
+  "preloadRule": {
+    "pages/home/index":  { "network": "all", "packages": ["pkg-warehouse", "pkg-order", "pkg-register"] },
+    "pages/work/index":  { "network": "all", "packages": ["pkg-work-inbox", "pkg-work-ai"] },
+    "pages/scan/index":  { "network": "all", "packages": ["pkg-scan-history", "pkg-scan-monthly"] },
+    "pages/admin/index": { "network": "all", "packages": ["pkg-admin-notification", "pkg-admin-detail", "pkg-admin-approval", "pkg-payroll", "pkg-privacy"] }
+  },
   "usingComponents": {},
   "tabBar": {
     "custom": false,

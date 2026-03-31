@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import { useStyleLink, StyleLinkData } from '../contexts/StyleLinkContext';
 import './StyleLinkLines.css';
 
@@ -24,23 +24,29 @@ const getModuleCenter = (data: StyleLinkData): { x: number; y: number } => {
 };
 
 const buildCurvePath = (start: { x: number; y: number }, end: { x: number; y: number }): string => {
-  const midX = (start.x + end.x) / 2;
   const controlOffset = Math.abs(end.x - start.x) * 0.3;
   
   return `M ${start.x} ${start.y} C ${start.x + controlOffset} ${start.y}, ${end.x - controlOffset} ${end.y}, ${end.x} ${end.y}`;
 };
 
-interface StyleLinkLinesProps {
-  containerRef?: React.RefObject<HTMLDivElement>;
-}
-
-const StyleLinkLines: React.FC<StyleLinkLinesProps> = () => {
+const StyleLinkLines: React.FC = () => {
   const styleLink = useStyleLink();
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    if (!styleLink) return;
+    
+    const interval = setInterval(() => {
+      setTick(t => t + 1);
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, [styleLink]);
 
   const links = useMemo(() => {
     if (!styleLink) return [];
     
-    const linkedStyles = styleLink.linkedStyles;
+    const linkedStyles = styleLink.getLinkedStyles();
     const result: Array<{
       styleNo: string;
       styleName: string;
@@ -74,7 +80,7 @@ const StyleLinkLines: React.FC<StyleLinkLinesProps> = () => {
     });
 
     return result;
-  }, [styleLink]);
+  }, [styleLink, tick]);
 
   if (links.length === 0) return null;
 

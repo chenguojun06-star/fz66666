@@ -395,6 +395,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (base === '/order-management' && pathname !== base) return t('layout.orderDetail', language);
     if (base === '/production/cutting' && pathname.startsWith('/production/cutting/task/')) return t('layout.cuttingTask', language);
     if (base === '/production/warehousing' && pathname.startsWith('/production/warehousing/detail/')) return t('layout.warehousingDetail', language);
+    if (base === '/cockpit') return '数据看板';
+    if (base === '/cockpit/agent-traces') return 'AI执行记录中心';
+    if (base === '/intelligence/center') return '智能运营中心';
     if (base === '/intelligence/agent-traces') return 'AI执行记录中心';
 
     for (const section of localizedMenuConfig) {

@@ -11,6 +11,8 @@ import com.fashion.supplychain.production.helper.InventoryValidator;
 import com.fashion.supplychain.production.service.impl.ProductWarehousingHelper;
 import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
 import com.fashion.supplychain.production.service.*;
+import com.fashion.supplychain.style.entity.ProductSku;
+import com.fashion.supplychain.style.service.ProductSkuService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
@@ -62,6 +64,9 @@ public class WarehouseScanExecutor {
 
     @Autowired
     private ProductWarehousingHelper warehousingHelper;
+
+    @Autowired
+    private ProductSkuService productSkuService;
 
     /**
      * 执行仓库入库扫码
@@ -566,5 +571,154 @@ public class WarehouseScanExecutor {
             }
         }
         return fallbackQty;
+    }
+
+    // ======================== U编码入库 ========================
+
+    /**
+     * U编码入库扫码（无菲号模式）
+     * 跳过菲号相关的5项前置校验，直接按SKU维度入库并更新库存
+     */
+    public Map<String, Object> executeUCode(Map<String, Object> params, String requestId,
+            String operatorId, String operatorName, ProductionOrder order) {
+        int quantity = NumberUtils.toInt(params.get("quantity"));
+        String scanCode = TextUtils.safeText(params.get("scanCode"));
+        String warehouse = TextUtils.safeText(params.get("warehouse"));
+
+        if (quantity <= 0) {
+            return Map.of("success", false, "message", "入库数量必须大于0");
+        }
+        if (!hasText(scanCode)) {
+            return Map.of("success", false, "message", "扫码内容不能为空");
+        }
+
+        // 解析U编码：款号-颜色-尺码
+        String[] segments = scanCode.split("-");
+        if (segments.length < 3) {
+            return Map.of("success", false, "message", "U编码格式不正确，应为: 款号-颜色-尺码");
+        }
+        String styleNo = segments[0];
+        String color = segments[1];
+        String size = segments[2];
+
+        if (order == null) {
+            return Map.of("success", false, "message", "未找到关联订单，请指定订单号");
+        }
+        if ("completed".equalsIgnoreCase(order.getStatus())) {
+            return Map.of("success", false, "message", "订单已完成，无法继续入库");
+        }
+
+        // SKU 查找或自动创建
+        String skuCode = scanCode;
+        ProductSku sku = productSkuService.lambdaQuery()
+                .eq(ProductSku::getSkuCode, skuCode)
+                .last("limit 1")
+                .one();
+        if (sku == null) {
+            sku = new ProductSku();
+            sku.setSkuCode(skuCode);
+            sku.setStyleNo(styleNo);
+            sku.setColor(color);
+            sku.setSize(size);
+            sku.setStockQuantity(0);
+            if (order.getStyleId() != null) {
+                try { sku.setStyleId(Long.parseLong(order.getStyleId())); } catch (NumberFormatException ignored) {}
+            }
+            sku.setTenantId(order.getTenantId());
+            productSkuService.save(sku);
+            log.info("[U编码入库] 自动创建SKU: {}", skuCode);
+        }
+
+        // 更新SKU库存
+        productSkuService.updateStock(skuCode, quantity);
+
+        // 创建入库记录
+        ProductWarehousing pw = new ProductWarehousing();
+        pw.setOrderId(order.getId());
+        pw.setWarehousingType("scan");
+        pw.setWarehouse(hasText(warehouse) ? warehouse : "默认仓库");
+        pw.setWarehousingQuantity(quantity);
+        pw.setQualifiedQuantity(quantity);
+        pw.setUnqualifiedQuantity(0);
+        pw.setQualityStatus("qualified");
+        pw.setScanMode("ucode");
+        pw.setCuttingBundleQrCode(scanCode);
+        if (StringUtils.hasText(operatorId)) {
+            pw.setWarehousingOperatorId(operatorId);
+            pw.setReceiverId(operatorId);
+            pw.setQualityOperatorId(operatorId);
+        }
+        if (StringUtils.hasText(operatorName)) {
+            pw.setWarehousingOperatorName(operatorName);
+            pw.setReceiverName(operatorName);
+            pw.setQualityOperatorName(operatorName);
+        }
+        pw.setTenantId(order.getTenantId());
+
+        try {
+            boolean ok = productWarehousingService.saveWarehousingAndUpdateOrder(pw);
+            if (!ok) {
+                return Map.of("success", false, "message", "入库记录保存失败");
+            }
+        } catch (DataAccessException dae) {
+            log.error("[U编码入库] 保存入库记录失败: {}", dae.getMessage());
+            return Map.of("success", false, "message", "入库记录保存失败");
+        }
+
+        // 重新计算进度
+        try {
+            if (productionOrderService != null) {
+                productionOrderService.recomputeProgressFromRecords(order.getId());
+            }
+        } catch (Exception e) {
+            log.error("重新计算订单进度失败: orderId={}", order.getId(), e);
+        }
+
+        // 创建扫码记录
+        ScanRecord sr = new ScanRecord();
+        sr.setRequestId(requestId);
+        sr.setScanCode(scanCode);
+        sr.setOrderId(order.getId());
+        sr.setOrderNo(order.getOrderNo());
+        sr.setStyleId(order.getStyleId());
+        sr.setStyleNo(order.getStyleNo());
+        sr.setTenantId(order.getTenantId());
+        sr.setColor(color);
+        sr.setSize(size);
+        sr.setQuantity(quantity);
+        sr.setProcessCode("warehouse");
+        sr.setProgressStage("入库");
+        sr.setProcessName("入库");
+        sr.setOperatorId(operatorId);
+        sr.setOperatorName(operatorName);
+        sr.setScanTime(LocalDateTime.now());
+        sr.setScanType("warehouse");
+        sr.setScanResult("success");
+        sr.setRemark("U编码入库: " + warehouse);
+        // U编码模式无菲号
+        sr.setCuttingBundleId(null);
+        sr.setCuttingBundleNo(null);
+        sr.setCuttingBundleQrCode(scanCode);
+        skuService.attachProcessUnitPrice(sr);
+
+        try {
+            scanRecordService.save(sr);
+        } catch (DuplicateKeyException dke) {
+            log.warn("[U编码入库] 扫码记录重复: {}", requestId);
+        }
+
+        // U编码模式无菲号，不更新工序跟踪（工序跟踪以 bundleId 为维度）
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("message", "U编码入库成功");
+        result.put("scanMode", "ucode");
+        result.put("skuCode", skuCode);
+        result.put("quantity", quantity);
+        result.put("orderNo", order.getOrderNo());
+        result.put("styleNo", styleNo);
+        result.put("color", color);
+        result.put("size", size);
+        return result;
     }
 }

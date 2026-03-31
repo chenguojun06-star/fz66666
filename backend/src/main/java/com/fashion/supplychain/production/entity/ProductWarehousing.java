@@ -167,6 +167,11 @@ public class ProductWarehousing {
      */
     private String qualityOperatorName;
 
+    /**
+     * 扫码模式: bundle(菲号) / ucode(U编码)
+     */
+    private String scanMode;
+
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 }

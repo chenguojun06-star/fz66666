@@ -17,6 +17,7 @@ class ScanModeResolver {
       ORDER: 'order',     // 订单扫码
       SKU: 'sku',         // SKU扫码
       PATTERN: 'pattern', // 样板生产扫码
+      UCODE: 'ucode',     // U编码入库（无菲号）
     };
   }
 
@@ -58,6 +59,9 @@ class ScanModeResolver {
 
     if (parsedData.isPatternQR || qrType === 'pattern' || hasPatternId || looksLikePatternCode) {
       return this.SCAN_MODE.PATTERN;
+    }
+    if (parsedData.isUCode) {
+      return this.SCAN_MODE.UCODE;
     }
     if (parsedData.isOrderQR || (hasOrderNo && !hasBundleNo && !hasSkuMarker)) {
       return this.SCAN_MODE.ORDER;

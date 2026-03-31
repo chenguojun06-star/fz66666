@@ -518,11 +518,11 @@ page {
 .home-entries {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 10px;
+  gap: 8px;
+  margin-top: 8px;
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.03) 100%);
-  border-radius: 16px;
-  padding: 12px;
+  border-radius: 12px;
+  padding: 8px;
   border: 1px solid rgba(59, 130, 246, 0.15);
 }
 
@@ -530,16 +530,16 @@ page {
   border: none;
   background: #ffffff;
   color: #3b82f6;
-  border-radius: 12px;
-  padding: 10px 8px;
+  border-radius: 10px;
+  padding: 7px 6px;
   text-align: center;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 500;
-  min-height: 44px;
+  min-height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 1px 4px rgba(59, 130, 246, 0.1);
 }
 
 .home-entry-hover {

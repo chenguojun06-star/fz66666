@@ -1,3 +1,5 @@
+const { formatLocalDateTime } = require('./ScanPeripheralHelper');
+
 /**
  * 扫码数据处理器
  *
@@ -7,6 +9,8 @@
  * 3. 处理SKU数量计算
  * 4. 处理订单数量计算
  * 5. 订单详情获取
+ * 6. 工厂/工人信息获取
+ * 7. 扫码数据组装
  *
  * @author GitHub Copilot
  * @date 2026-02-15
@@ -284,6 +288,68 @@ class ScanDataProcessor {
         orderDetail.order_code ||
         '',
     );
+  }
+
+  /**
+   * 获取工厂信息（优先从当前工厂，否则从订单详情）
+   * @param {Object} orderDetail - 订单详情
+   * @param {Object} options - ScanHandler 的 options 配置
+   * @returns {Object} 工厂信息 { factoryId, factoryName }
+   */
+  getFactoryInfo(orderDetail, options) {
+    const factory = options.getCurrentFactory ? options.getCurrentFactory() : null;
+    return {
+      factoryId: factory?.id || orderDetail.factoryId || '',
+      factoryName: factory?.name || orderDetail.factoryName || '',
+    };
+  }
+
+  /**
+   * 获取工人信息
+   * @param {Object} options - ScanHandler 的 options 配置
+   * @returns {Object} 工人信息 { workerId, workerName }
+   */
+  getWorkerInfo(options) {
+    const worker = options.getCurrentWorker ? options.getCurrentWorker() : null;
+    return {
+      workerId: worker?.id || '',
+      workerName: worker?.name || '',
+    };
+  }
+
+  /**
+   * 准备提交的扫码数据
+   * @param {Object} parsedData - 解析后的数据
+   * @param {Object} stageResult - 工序检测结果
+   * @param {Object} orderDetail - 订单详情
+   * @param {string} warehouse - 仓库名称
+   * @param {Object} options - ScanHandler 的 options 配置
+   * @returns {Object} 扫码数据对象
+   */
+  prepareScanData(parsedData, stageResult, orderDetail, warehouse, options) {
+    const factoryInfo = this.getFactoryInfo(orderDetail, options);
+    const workerInfo = this.getWorkerInfo(options);
+
+    return {
+      orderNo: parsedData.orderNo,
+      bundleNo: parsedData.bundleNo || '',
+      quantity: stageResult.quantity || parsedData.quantity || 0,
+      scanCode: parsedData.scanCode || '',
+      skuItems: parsedData.skuItems || [],
+      processName: stageResult.processName,
+      progressStage: stageResult.progressStage,
+      scanType: stageResult.scanType,
+      unitPrice: Number(stageResult.unitPrice || 0),
+      qualityStage: stageResult.qualityStage || '',
+      styleNo: parsedData.styleNo || orderDetail.styleNo || '',
+      color: parsedData.color || '',
+      size: parsedData.size || '',
+      ...factoryInfo,
+      ...workerInfo,
+      scanTime: formatLocalDateTime(new Date()),
+      warehouse: warehouse || '',
+      source: 'miniprogram',
+    };
   }
 
   /**

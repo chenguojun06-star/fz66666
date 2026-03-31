@@ -6,13 +6,15 @@
   --cockpit-text-muted: rgba(148, 163, 184, 0.72);
   --cockpit-accent: #4fd1c5;
 
-  min-height: calc(100vh - 48px);
+  min-height: calc(100vh - 60px);
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
   gap: 12px;
   padding: 12px;
   background: var(--cockpit-bg);
   color: var(--cockpit-text);
+  position: relative;
+  z-index: 1;
 }
 
 .cockpit-sidebar,

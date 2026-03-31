@@ -173,7 +173,7 @@ const AiAgentTraceCenter: React.FC = () => {
             <div style={{ color: '#8c8c8c', fontSize: 13 }}>统一查看小云每次执行的 commandId、状态、耗时、工具轨迹与失败信息</div>
           </div>
           <Space>
-            <Button onClick={() => navigate(paths.intelligenceCenter)}>返回智能运营中心</Button>
+            <Button onClick={() => navigate(paths.cockpit)}>返回智能运营中心</Button>
             <Button onClick={() => exportTraceRows(filteredRows)}>导出审计报表</Button>
             <Button type="primary" icon={<ReloadOutlined />} onClick={() => void fetchRecent()} loading={loading}>刷新</Button>
           </Space>

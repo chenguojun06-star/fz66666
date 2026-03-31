@@ -148,7 +148,7 @@ export const useProgressColumns = ({
     {
       title: '',
       key: 'orderSummary',
-      width: 490,
+      width: 340,
       align: 'left' as const,
       render: (_: any, record: ProductionOrder) => {
         const statusMap: Record<string, { color: string; label: string }> = {
@@ -230,7 +230,7 @@ export const useProgressColumns = ({
                   borderRadius={14}
                 />
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%', minWidth: 0, paddingTop: 2, textAlign: 'left' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, paddingTop: 2, textAlign: 'left' }}>
                 <OrderInfoGrid
                   fontSize={12}
                   items={[
@@ -534,23 +534,29 @@ export const useProgressColumns = ({
       align: 'center' as const,
       render: (_: any, record: ProductionOrder) => {
         const frozen = isOrderFrozenByStatus(record);
+        const btnStyle: CSSProperties = {
+          fontSize: 12,
+          height: 28,
+          padding: '0 12px',
+          borderRadius: 14,
+        };
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 8, minWidth: 82 }}>
-            <Button size="small" shape="round" onClick={() => { setQuickEditRecord(record); setQuickEditVisible(true); }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+            <Button size="small" style={btnStyle} onClick={() => { setQuickEditRecord(record); setQuickEditVisible(true); }}>
               编辑
             </Button>
-            <Button size="small" shape="round" disabled={frozen} onClick={() => setPrintingRecord(record)}>
+            <Button size="small" style={btnStyle} disabled={frozen} onClick={() => setPrintingRecord(record)}>
               打印
             </Button>
-            <Button size="small" shape="round" disabled={frozen} onClick={() => { void handlePrintLabel(record); }}>
-              标签打印
+            <Button size="small" style={btnStyle} disabled={frozen} onClick={() => { void handlePrintLabel(record); }}>
+              标签
             </Button>
             {canManageOrderLifecycle ? (
-              <Button size="small" shape="round" danger disabled={frozen} onClick={() => handleCloseOrder(record)}>
+              <Button size="small" style={btnStyle} danger disabled={frozen} onClick={() => handleCloseOrder(record)}>
                 关单
               </Button>
             ) : null}
-            <Button size="small" shape="round" icon={<ShareAltOutlined />} onClick={() => onShareOrder?.(record)}>
+            <Button size="small" style={btnStyle} icon={<ShareAltOutlined />} onClick={() => onShareOrder?.(record)}>
               分享
             </Button>
           </div>

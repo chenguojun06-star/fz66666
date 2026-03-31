@@ -21,6 +21,7 @@ import {
   ScissorOutlined,
   ThunderboltOutlined,
   FireOutlined,
+  RadarChartOutlined,
 } from '@ant-design/icons';
 
 export const paths = {
@@ -88,6 +89,8 @@ export const paths = {
   dataImport: '/system/data-import',
   systemIssues: '/system/issues',
   integrationCenter: '/integration/center',
+  cockpit: '/cockpit',
+  cockpitTrace: '/cockpit/agent-traces',
   intelligenceCenter: '/intelligence/center',
   aiAgentTraceCenter: '/intelligence/agent-traces',
   crm: '/crm',
@@ -287,6 +290,10 @@ export const menuConfig: MenuSection[] = [
     key: 'intelligenceCenter',
     icon: React.createElement(ThunderboltOutlined),
     path: paths.intelligenceCenter,
+    items: [
+      { label: '智能运营中心', path: paths.intelligenceCenter, icon: React.createElement(ThunderboltOutlined) },
+      { label: '数据看板', path: paths.cockpit, icon: React.createElement(RadarChartOutlined) },
+    ],
   },
   {
     title: '集成对接中心',
@@ -340,6 +347,8 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.appStore]: permissionCodes.appStore,
   [paths.dataImport]: permissionCodes.dataImport,
   [paths.integrationCenter]: permissionCodes.integrationCenter,
+  [paths.cockpit]: permissionCodes.intelligenceCenter,
+  [paths.cockpitTrace]: permissionCodes.intelligenceCenter,
   [paths.intelligenceCenter]: permissionCodes.intelligenceCenter,
   [paths.aiAgentTraceCenter]: permissionCodes.intelligenceCenter,
   [paths.systemIssues]: permissionCodes.systemIssues,
@@ -381,7 +390,7 @@ export const resolvePermissionCode = (pathname: string): string | undefined => {
 export const getDefaultRouteForUser = (user: any): string => {
   if (!user) return paths.login;
   if (user.isSuperAdmin) return paths.dashboard;
-  
+
   // 工厂账号专属默认页
   if (user.factoryId) return paths.productionList;
 

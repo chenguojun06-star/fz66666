@@ -158,6 +158,7 @@ const CockpitPage: React.FC = () => {
 
     const handleMouseMove = (e: MouseEvent) => {
       if (!dragRef.current) return;
+      e.preventDefault();
       pendingDelta.x = e.clientX - dragRef.current.startX;
       pendingDelta.y = e.clientY - dragRef.current.startY;
       if (!rafId) {
@@ -173,7 +174,7 @@ const CockpitPage: React.FC = () => {
       dragRef.current = null;
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mousemove', handleMouseMove, { passive: false });
     document.addEventListener('mouseup', handleMouseUp);
     return () => {
       document.removeEventListener('mousemove', handleMouseMove);

@@ -31,16 +31,8 @@ const ScanModeResolver = require('./helpers/ScanModeResolver');
 const ScanDataProcessor = require('./helpers/ScanDataProcessor');
 const ScanStageProcessor = require('./helpers/ScanStageProcessor');
 const ScanSubmitter = require('./helpers/ScanSubmitter');
-
-const formatLocalDateTime = (date) => {
-  const pad = (n) => (n < 10 ? "0" + n : n);
-  return date.getFullYear() + "-" +
-    pad(date.getMonth() + 1) + "-" +
-    pad(date.getDate()) + " " +
-    pad(date.getHours()) + ":" +
-    pad(date.getMinutes()) + ":" +
-    pad(date.getSeconds());
-};
+const ScanPeripheralHelper = require('./helpers/ScanPeripheralHelper');
+const { formatLocalDateTime } = ScanPeripheralHelper;
 
 /**
  * 扫码业务编排器
@@ -170,6 +162,11 @@ class ScanHandler {
       // === 步骤1.5：样板特殊处理 ===
       if (scanMode === this.SCAN_MODE.PATTERN) {
         return await this._handlePatternScan(parsedData, manualScanType);
+      }
+
+      // === 步骤1.6：U编码入库快捷路径（跳过工序检测，直接走warehouse） ===
+      if (scanMode === this.SCAN_MODE.UCODE) {
+        return this._buildUCodeConfirmResult(parsedData, manualWarehouse);
       }
 
       // === 步骤2-3：获取订单 + 处理模式特殊逻辑 ===
@@ -358,86 +355,19 @@ class ScanHandler {
     return await this.stageProcessor.detectStage(scanMode, parsedData, orderDetail);
   }
 
-  /**
-   * 获取工厂信息（优先从当前工厂，否则从订单详情）
-   * @private
-   * @param {Object} orderDetail - 订单详情
-   * @returns {Object} 工厂信息 { factoryId, factoryName }
-   */
+  /** @private 委托 ScanDataProcessor */
   _getFactoryInfo(orderDetail) {
-    const factory = this.options.getCurrentFactory ? this.options.getCurrentFactory() : null;
-    return {
-      factoryId: factory?.id || orderDetail.factoryId || '',
-      factoryName: factory?.name || orderDetail.factoryName || '',
-    };
+    return this.dataProcessor.getFactoryInfo(orderDetail, this.options);
   }
 
-  /**
-   * 获取工人信息
-   * @private
-   * @returns {Object} 工人信息 { workerId, workerName }
-   */
+  /** @private 委托 ScanDataProcessor */
   _getWorkerInfo() {
-    const worker = this.options.getCurrentWorker ? this.options.getCurrentWorker() : null;
-    return {
-      workerId: worker?.id || '',
-      workerName: worker?.name || '',
-    };
+    return this.dataProcessor.getWorkerInfo(this.options);
   }
 
-  /**
-   * 准备提交的扫码数据
-   * @private
-   * @param {Object} parsedData - 解析后的数据
-   * @param {Object} stageResult - 工序检测结果
-   * @param {Object} orderDetail - 订单详情
-   * @param {string} warehouse - 仓库名称
-   * @returns {Object} 扫码数据对象
-   */
+  /** @private 委托 ScanDataProcessor */
   _prepareScanData(parsedData, stageResult, orderDetail, warehouse) {
-    const factoryInfo = this._getFactoryInfo(orderDetail);
-    const workerInfo = this._getWorkerInfo();
-
-    return {
-      // 基础信息
-      orderNo: parsedData.orderNo,
-      bundleNo: parsedData.bundleNo || '',
-      quantity: stageResult.quantity || parsedData.quantity || 0,
-
-      // 🔧 修复：添加 scanCode 字段，质检等工序需要此字段
-      scanCode: parsedData.scanCode || '',
-
-      // 扩展信息：SKU明细
-      skuItems: parsedData.skuItems || [],
-
-      // 工序信息
-      processName: stageResult.processName,
-      progressStage: stageResult.progressStage,
-      scanType: stageResult.scanType,
-
-      // 工序单价（从订单动态配置加载，PC端设定多少就是多少）
-      unitPrice: Number(stageResult.unitPrice || 0),
-
-      // 质检子步骤（领取/验收/确认）
-      qualityStage: stageResult.qualityStage || '',
-
-      // 订单信息
-      styleNo: parsedData.styleNo || orderDetail.styleNo || '',
-      color: parsedData.color || '',
-      size: parsedData.size || '',
-
-      // 工厂和工人信息
-      ...factoryInfo,
-      ...workerInfo,
-
-      // 扫码时间
-      scanTime: formatLocalDateTime(new Date()),
-
-      warehouse: warehouse || '',
-
-      // 客户端标识
-      source: 'miniprogram',
-    };
+    return this.dataProcessor.prepareScanData(parsedData, stageResult, orderDetail, warehouse, this.options);
   }
 
   /**
@@ -454,123 +384,60 @@ class ScanHandler {
   }
 
   /**
-   * 批量扫码处理（支持连续扫码场景）
-   *
-   * 使用场景：
-   * - 一次性扫描多个菲号
-   * - 批量导入扫码记录
-   *
-   * @param {Array<string>} scanCodes - 扫码结果数组
-   * @returns {Promise<Object>} 批量处理结果
-   * @returns {number} result.total - 总数
-   * @returns {number} result.success - 成功数
-   * @returns {number} result.failed - 失败数
-   * @returns {Array} result.details - 详细结果
+   * 构建U编码入库确认结果（跳过工序检测）
+   * @private
    */
-  async handleBatchScan(scanCodes) {
-    const results = {
-      total: scanCodes.length,
-      success: 0,
-      failed: 0,
-      details: [],
+  _buildUCodeConfirmResult(parsedData, warehouse) {
+    const workerInfo = this._getWorkerInfo();
+    const scanData = {
+      orderNo: parsedData.orderNo || '',
+      bundleNo: '',
+      quantity: parsedData.quantity || 0,
+      scanCode: parsedData.scanCode || '',
+      processName: '入库',
+      progressStage: '入库',
+      scanType: 'warehouse',
+      scanMode: 'ucode',
+      styleNo: parsedData.styleNo || '',
+      color: parsedData.color || '',
+      size: parsedData.size || '',
+      ...workerInfo,
+      scanTime: formatLocalDateTime(new Date()),
+      warehouse: warehouse || '',
+      source: 'miniprogram',
     };
-
-    for (let i = 0; i < scanCodes.length; i++) {
-      const code = scanCodes[i];
-      const result = await this.handleScan(code);
-
-      if (result.success) {
-        results.success++;
-      } else {
-        results.failed++;
-      }
-
-      results.details.push({
-        index: i + 1,
-        code: code,
-        success: result.success,
-        message: result.message,
-      });
-    }
-
-    return results;
-  }
-
-  /**
-   * 验证扫码权限
-   *
-   * 检查项：
-   * - 是否选择工厂
-   * - 是否登录
-   * - 是否有扫码权限
-   *
-   * @returns {Object} 验证结果
-   * @returns {boolean} result.valid - 是否有效
-   * @returns {string} result.message - 错误消息（无效时）
-   */
-  validateScanPermission() {
-    const factory = this.options.getCurrentFactory ? this.options.getCurrentFactory() : null;
-
-    const worker = this.options.getCurrentWorker ? this.options.getCurrentWorker() : null;
-
-    if (!factory) {
-      return {
-        valid: false,
-        message: '请先选择工厂',
-      };
-    }
-
-    if (!worker) {
-      return {
-        valid: false,
-        message: '请先登录',
-      };
-    }
-
     return {
-      valid: true,
+      success: true,
+      needConfirmProcess: true,
+      message: 'U编码入库，请确认数量和仓库',
+      data: {
+        scanMode: 'ucode',
+        orderNo: parsedData.orderNo || '',
+        bundleNo: '',
+        quantity: parsedData.quantity || 0,
+        processName: '入库',
+        progressStage: '入库',
+        scanType: 'warehouse',
+        scanData,
+        parsedData,
+        stageResult: { processName: '入库', progressStage: '入库', scanType: 'warehouse', quantity: parsedData.quantity || 0 },
+      },
     };
   }
 
-  /**
-   * 获取扫码统计信息
-   *
-   * 统计项：
-   * - 今日扫码次数
-   * - 今日扫码数量
-   * - 最近扫码记录
-   *
-   * @returns {Promise<Object>} 统计信息
-   */
+  /** 批量扫码处理（委托 ScanPeripheralHelper） */
+  async handleBatchScan(scanCodes) {
+    return ScanPeripheralHelper.handleBatchScan(this, scanCodes);
+  }
+
+  /** 验证扫码权限（委托 ScanPeripheralHelper） */
+  validateScanPermission() {
+    return ScanPeripheralHelper.validateScanPermission(this.options);
+  }
+
+  /** 获取扫码统计信息（委托 ScanPeripheralHelper） */
   async getScanStatistics() {
-    try {
-      const today = new Date();
-      const startTime = formatLocalDateTime(new Date(today.setHours(0, 0, 0, 0)));
-      const endTime = formatLocalDateTime(new Date(today.setHours(23, 59, 59, 999)));
-
-      const res = await this.api.production.myScanHistory({
-        page: 1,
-        pageSize: 100,
-        startTime: startTime,
-        endTime: endTime,
-      });
-
-      const records = res && res.records ? res.records : [];
-      const totalQuantity = records.reduce((sum, r) => sum + (r.quantity || 0), 0);
-
-      return {
-        todayScans: records.length,
-        todayQuantity: totalQuantity,
-        recentRecords: records.slice(0, 5), // 最近5条
-      };
-    } catch (e) {
-      console.error('[ScanHandler] 获取统计失败:', e);
-      return {
-        todayScans: 0,
-        todayQuantity: 0,
-        recentRecords: [],
-      };
-    }
+    return ScanPeripheralHelper.getScanStatistics(this.api);
   }
 
   // ==================== 样板生产扫码处理（委托 PatternScanProcessor） ====================

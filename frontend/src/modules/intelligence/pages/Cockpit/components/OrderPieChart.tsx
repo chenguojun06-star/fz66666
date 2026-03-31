@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import PieChartCard, { PieSegment } from '@/components/PieChartCard';
 import { useTimeDimension } from '../contexts/TimeDimensionContext';
 import { useStyleLink } from '../contexts/StyleLinkContext';
@@ -37,8 +37,8 @@ const OrderPieChart: React.FC<OrderPieChartProps> = ({ mode = 'sidebar', moduleK
             params: { page: 1, pageSize: 500 },
           }),
           api.get<{ code: number; data: { records?: ProductionOrder[] } }>('/production/order/list', {
-            params: { 
-              page: 1, 
+            params: {
+              page: 1,
               pageSize: 500,
               startDate: start.toISOString(),
               endDate: end.toISOString(),
@@ -63,10 +63,23 @@ const OrderPieChart: React.FC<OrderPieChartProps> = ({ mode = 'sidebar', moduleK
       .map(o => ({ styleNo: o.styleNo, styleName: o.styleName }));
   }, [orders]);
 
+  const prevStyleListRef = useRef<string>('');
+  const prevPositionRef = useRef<string>('');
+
   useEffect(() => {
-    if (mode === 'stage' && styleLink && moduleKey && position && styleList.length > 0) {
-      styleLink.registerStyle(moduleKey, styleList, position);
+    if (mode !== 'stage' || !styleLink || !moduleKey || !position || styleList.length === 0) return;
+
+    const styleListKey = styleList.map(s => s.styleNo).sort().join(',');
+    const positionKey = `${position.x},${position.y},${position.width},${position.height}`;
+
+    if (prevStyleListRef.current === styleListKey && prevPositionRef.current === positionKey) {
+      return;
     }
+
+    prevStyleListRef.current = styleListKey;
+    prevPositionRef.current = positionKey;
+
+    styleLink.registerStyle(moduleKey, styleList, position);
   }, [mode, styleLink, moduleKey, position, styleList]);
 
   useEffect(() => {
@@ -132,7 +145,7 @@ const OrderPieChart: React.FC<OrderPieChartProps> = ({ mode = 'sidebar', moduleK
         segments={segments}
         loading={loading}
       />
-      
+
       {mode === 'stage' && stats.styleStats.length > 0 && (
         <div className="order-style-stats">
           <div className="order-style-stats-header">款号下单统计</div>

@@ -39,7 +39,7 @@ Component({
       const menuButton = wx.getMenuButtonBoundingClientRect();
       const statusBarHeight = windowInfo.statusBarHeight || 20;
       const navBarHeight = (menuButton.top - statusBarHeight) * 2 + menuButton.height || 44;
-      
+
       this.setData({
         statusBarHeight,
         navBarHeight,

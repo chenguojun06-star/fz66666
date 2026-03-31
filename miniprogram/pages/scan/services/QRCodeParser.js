@@ -162,6 +162,27 @@ class QRCodeParser {
       };
     }
 
+    // 2.6 U编码格式：U-款号-颜色-尺码（无菲号入库专用）
+    const ucodeMatch = parseTarget.match(/^U-([^-]+)-([^-]+)-([^-]+)$/);
+    if (ucodeMatch) {
+      return {
+        success: true,
+        message: '解析成功 (U编码)',
+        data: {
+          scanCode: rawScanCode,
+          styleNo: ucodeMatch[1],
+          color: ucodeMatch[2],
+          size: ucodeMatch[3],
+          orderNo: '',
+          quantity: 0,
+          bundleNo: '',
+          skuNo: '',
+          isOrderQR: false,
+          isUCode: true,
+        },
+      };
+    }
+
     // 3. 菲号格式（🔧 修复：使用原始完整扫码内容作为 scanCode）
     const bundleResult = BundleCodeParser.parse(parseTarget);
     if (bundleResult) {

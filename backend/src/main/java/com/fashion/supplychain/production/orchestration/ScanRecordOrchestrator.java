@@ -607,6 +607,13 @@ public class ScanRecordOrchestrator {
         String orderId = TextUtils.safeText(params.get("orderId"));
         String orderNo = TextUtils.safeText(params.get("orderNo"));
 
+        // U编码模式：跳过菲号逻辑，直接走SKU入库
+        String scanMode = TextUtils.safeText(params.get("scanMode"));
+        if ("ucode".equals(scanMode)) {
+            ProductionOrder order = resolveOrder(orderId, orderNo);
+            return warehouseScanExecutor.executeUCode(params, requestId, operatorId, operatorName, order);
+        }
+
         final CuttingBundle bundle = hasText(scanCode) ? cuttingBundleService.getByQrCode(scanCode) : null;
         if (!hasText(orderId) && bundle != null && hasText(bundle.getProductionOrderId())) {
             orderId = bundle.getProductionOrderId().trim();

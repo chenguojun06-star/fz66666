@@ -596,7 +596,7 @@ const GlobalAiAssistant: React.FC = () => {
         setMessages(prev => prev.length <= 1 ? [INITIAL_MSG, ...restored] : prev);
       })
       .catch(() => { /* 静默降级，不影响正常使用 */ });
-   
+
   }, []);
 
   // 监听回车和滚到底部
@@ -950,7 +950,7 @@ const GlobalAiAssistant: React.FC = () => {
   const openTraceCenter = (commandId?: string) => {
     const search = commandId ? `?commandId=${encodeURIComponent(commandId)}` : '';
     setIsOpen(false);
-    navigate(`${paths.aiAgentTraceCenter}${search}`);
+    navigate(`${paths.cockpitTrace}${search}`);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -1059,8 +1059,8 @@ const GlobalAiAssistant: React.FC = () => {
   const jumpToIntelligenceCenter = (_query: string) => {
     setIsOpen(false);
     // 如果已经在智能驾驶舱，不跨路由跳转仅提示
-    if (location.pathname !== '/intelligence/center') {
-      navigate('/intelligence/center');
+    if (location.pathname !== '/cockpit') {
+      navigate('/cockpit');
     }
   };
 
@@ -1373,7 +1373,7 @@ const GlobalAiAssistant: React.FC = () => {
                       <div style={{ fontWeight: 'bold', color: '#00e5ff', marginBottom: 8, fontSize: 14 }}>
                         {msg.traceableAdvice.title}
                       </div>
-                      
+
                       <div style={{ marginBottom: 12 }}>
                         <details style={{ cursor: 'pointer', fontSize: 12, color: 'rgba(255,255,255,0.6)' }}>
                           <summary style={{ outline: 'none', userSelect: 'none' }}>🔍 查看评估依据</summary>

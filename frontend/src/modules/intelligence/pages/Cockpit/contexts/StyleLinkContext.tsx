@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode, useRef, useEffect } from 'react';
+import React, { createContext, useContext, useCallback, ReactNode, useRef, useMemo } from 'react';
 
 interface StyleLinkData {
   styleNo: string;
@@ -11,8 +11,7 @@ interface StyleLinkContextType {
   registerStyle: (moduleKey: string, styles: Array<{ styleNo: string; styleName?: string }>, position: { x: number; y: number; width: number; height: number }) => void;
   unregisterModule: (moduleKey: string) => void;
   updateModulePosition: (moduleKey: string, position: { x: number; y: number; width: number; height: number }) => void;
-  getStyleLinks: () => StyleLinkData[];
-  linkedStyles: Map<string, StyleLinkData[]>;
+  getLinkedStyles: () => Map<string, StyleLinkData[]>;
 }
 
 const StyleLinkContext = createContext<StyleLinkContextType | null>(null);
@@ -31,7 +30,11 @@ interface StyleLinkProviderProps {
 
 export const StyleLinkProvider: React.FC<StyleLinkProviderProps> = ({ children }) => {
   const styleDataRef = useRef<Map<string, StyleLinkData[]>>(new Map());
-  const [, forceUpdate] = useState(0);
+  const listenersRef = useRef<Set<() => void>>(new Set());
+
+  const notifyListeners = useCallback(() => {
+    listenersRef.current.forEach(listener => listener());
+  }, []);
 
   const registerStyle = useCallback((
     moduleKey: string, 
@@ -48,13 +51,13 @@ export const StyleLinkProvider: React.FC<StyleLinkProviderProps> = ({ children }
     }));
     
     styleDataRef.current.set(moduleKey, linkData);
-    forceUpdate(n => n + 1);
-  }, []);
+    notifyListeners();
+  }, [notifyListeners]);
 
   const unregisterModule = useCallback((moduleKey: string) => {
     styleDataRef.current.delete(moduleKey);
-    forceUpdate(n => n + 1);
-  }, []);
+    notifyListeners();
+  }, [notifyListeners]);
 
   const updateModulePosition = useCallback((
     moduleKey: string, 
@@ -64,17 +67,9 @@ export const StyleLinkProvider: React.FC<StyleLinkProviderProps> = ({ children }
     if (existingData) {
       const updatedData = existingData.map(d => ({ ...d, position }));
       styleDataRef.current.set(moduleKey, updatedData);
-      forceUpdate(n => n + 1);
+      notifyListeners();
     }
-  }, []);
-
-  const getStyleLinks = useCallback(() => {
-    const allData: StyleLinkData[] = [];
-    styleDataRef.current.forEach(data => {
-      allData.push(...data);
-    });
-    return allData;
-  }, []);
+  }, [notifyListeners]);
 
   const getLinkedStyles = useCallback(() => {
     const styleMap = new Map<string, StyleLinkData[]>();
@@ -100,22 +95,15 @@ export const StyleLinkProvider: React.FC<StyleLinkProviderProps> = ({ children }
     return linkedOnly;
   }, []);
 
-  const [linkedStyles] = useState(() => new Map());
-  
-  useEffect(() => {
-    const result = getLinkedStyles();
-    linkedStyles.clear();
-    result.forEach((v, k) => linkedStyles.set(k, v));
-  }, [getLinkedStyles, linkedStyles]);
+  const contextValue = useMemo(() => ({
+    registerStyle,
+    unregisterModule,
+    updateModulePosition,
+    getLinkedStyles,
+  }), [registerStyle, unregisterModule, updateModulePosition, getLinkedStyles]);
 
   return (
-    <StyleLinkContext.Provider value={{ 
-      registerStyle, 
-      unregisterModule, 
-      updateModulePosition, 
-      getStyleLinks,
-      linkedStyles: getLinkedStyles()
-    }}>
+    <StyleLinkContext.Provider value={contextValue}>
       {children}
     </StyleLinkContext.Provider>
   );

@@ -266,7 +266,7 @@ const IntelligenceCenter: React.FC = () => {
               </button>
             </Tooltip>
             <Tooltip title="查看 AI 执行记录">
-              <button className="cockpit-fs-btn" onClick={() => navigate(paths.aiAgentTraceCenter)} style={{ marginRight: 4 }}>
+              <button className="cockpit-fs-btn" onClick={() => navigate(paths.cockpitTrace)} style={{ marginRight: 4 }}>
                 <RobotOutlined />
               </button>
             </Tooltip>

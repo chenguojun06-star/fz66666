@@ -264,6 +264,17 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
       align: 'right' as const,
     },
     {
+      title: '扫码方式',
+      dataIndex: 'scanMode',
+      key: 'scanMode',
+      width: 80,
+      render: (v: unknown) => {
+        const mode = String(v || '').trim().toLowerCase();
+        if (mode === 'ucode') return <Tag color="green" style={{ marginInlineEnd: 0, fontSize: 11 }}>U编码</Tag>;
+        return <Tag color="blue" style={{ marginInlineEnd: 0, fontSize: 11 }}>菲号</Tag>;
+      },
+    },
+    {
       title: '状态',
       dataIndex: 'qualityStatus',
       key: 'qualityStatus',

@@ -14,7 +14,7 @@ import StylePrintModal from '@/components/common/StylePrintModal';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import SmallModal from '@/components/common/SmallModal';
 import LabelPrintModal from './components/LabelPrintModal';
-import SubProcessRemapDrawer from './components/SubProcessRemapDrawer';
+import SubProcessRemapModal from './components/SubProcessRemapModal';
 import { useSubProcessRemap } from './hooks/useSubProcessRemap';
 import { ProductionOrder, ProductionQueryParams } from '@/types/production';
 import type { PaginatedResponse } from '@/types/api';
@@ -1431,8 +1431,8 @@ const ProductionList: React.FC = () => {
           styleInfo={labelPrintStyle}
         />
 
-        {/* 子工序临时重新分配抽屉 */}
-        <SubProcessRemapDrawer
+        {/* 子工序临时重新分配弹窗 */}
+        <SubProcessRemapModal
           visible={remapVisible}
           record={remapRecord}
           parentNodes={remapParentNodes}

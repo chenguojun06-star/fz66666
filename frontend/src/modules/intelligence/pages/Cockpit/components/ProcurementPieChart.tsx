@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import PieChartCard, { PieSegment } from '@/components/PieChartCard';
 import { useTimeDimension } from '../contexts/TimeDimensionContext';
 import { useStyleLink } from '../contexts/StyleLinkContext';
@@ -72,10 +72,23 @@ const ProcurementPieChart: React.FC<ProcurementPieChartProps> = ({ mode = 'sideb
     return Array.from(styleNos).map(styleNo => ({ styleNo, styleName: styleNo }));
   }, [purchases]);
 
+  const prevStyleListRef = useRef<string>('');
+  const prevPositionRef = useRef<string>('');
+
   useEffect(() => {
-    if (mode === 'stage' && styleLink && moduleKey && position && styleList.length > 0) {
-      styleLink.registerStyle(moduleKey, styleList, position);
+    if (mode !== 'stage' || !styleLink || !moduleKey || !position || styleList.length === 0) return;
+    
+    const styleListKey = styleList.map(s => s.styleNo).sort().join(',');
+    const positionKey = `${position.x},${position.y},${position.width},${position.height}`;
+    
+    if (prevStyleListRef.current === styleListKey && prevPositionRef.current === positionKey) {
+      return;
     }
+    
+    prevStyleListRef.current = styleListKey;
+    prevPositionRef.current = positionKey;
+    
+    styleLink.registerStyle(moduleKey, styleList, position);
   }, [mode, styleLink, moduleKey, position, styleList]);
 
   useEffect(() => {
