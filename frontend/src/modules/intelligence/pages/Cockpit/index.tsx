@@ -1,412 +1,499 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Tag } from 'antd';
-import { ArrowsAltOutlined, BorderOutlined, ReloadOutlined } from '@ant-design/icons';
-import dayjs from 'dayjs';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { Button } from 'antd';
+import { ReloadOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
-import api from '@/utils/api';
-import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
-import { patternProductionApi } from '@/services/production/productionApi';
-import type { PatternDevelopmentStats } from '@/types/production';
-import type { StyleInfo } from '@/types/style';
-import type { StyleIntelligenceProfileResponse } from '@/services/intelligence/intelligenceApi';
+import { TimeDimensionProvider } from './contexts/TimeDimensionContext';
+import { StyleLinkProvider } from './contexts/StyleLinkContext';
+import TimeDimensionSelector from './components/TimeDimensionSelector';
+import StyleLinkLines from './components/StyleLinkLines';
+import OverviewChart from './components/OverviewChart';
+import OrderPieChart from './components/OrderPieChart';
+import SamplePieChart from './components/SamplePieChart';
+import ProductionPieChart from './components/ProductionPieChart';
+import ProcurementPieChart from './components/ProcurementPieChart';
+import WarehousePieChart from './components/WarehousePieChart';
 import './styles.css';
 
-type WidgetData = {
-  id: string;
-  title: string;
-  subtitle: string;
-  inProgress: number;
-  completed: number;
-  trend: string;
-  stats?: PatternDevelopmentStats | null;
-  nodes: Array<{
-    key: string;
-    label: string;
-    status: string;
-    assignee?: string | null;
-    startTime?: string | null;
-    completedTime?: string | null;
-  }>;
+const STORAGE_KEY = 'cockpit-widgets';
+
+interface WidgetPosition {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+interface WidgetState {
+  overview: { placed: boolean } & WidgetPosition;
+  order: { placed: boolean } & WidgetPosition;
+  sample: { placed: boolean } & WidgetPosition;
+  production: { placed: boolean } & WidgetPosition;
+  procurement: { placed: boolean } & WidgetPosition;
+  warehouse: { placed: boolean } & WidgetPosition;
+}
+
+const DEFAULT_POSITION: WidgetPosition = {
+  x: 20,
+  y: 20,
+  width: 520,
+  height: 560,
 };
 
-type PlacedWidget = {
-  id: string;
+const DEFAULT_WIDGETS: WidgetState = {
+  overview: { placed: false, ...DEFAULT_POSITION, x: 20 },
+  order: { placed: false, ...DEFAULT_POSITION, x: 540, y: 20 },
+  sample: { placed: false, ...DEFAULT_POSITION, x: 20, y: 600 },
+  production: { placed: false, ...DEFAULT_POSITION, x: 540, y: 600 },
+  procurement: { placed: false, ...DEFAULT_POSITION, x: 1060, y: 600 },
+  warehouse: { placed: false, ...DEFAULT_POSITION, x: 20, y: 1200 },
 };
 
-const normalizeStatus = (value?: string | null) => String(value ?? '').trim().toUpperCase();
-
-const stageStatusLabel = (status?: string | null, completedTime?: string | null) => {
-  if (completedTime || normalizeStatus(status) === 'COMPLETED') return '已完成';
-  if (normalizeStatus(status) === 'IN_PROGRESS') return '进行中';
-  if (normalizeStatus(status) === 'PENDING') return '未开始';
-  return status ? String(status) : '未开始';
+const loadWidgetState = (): WidgetState => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return { ...DEFAULT_WIDGETS, ...parsed };
+    }
+  } catch {}
+  return DEFAULT_WIDGETS;
 };
-
-const stageStatusColor = (status?: string | null, completedTime?: string | null) => {
-  if (completedTime || normalizeStatus(status) === 'COMPLETED') return 'success';
-  if (normalizeStatus(status) === 'IN_PROGRESS') return 'processing';
-  return 'default';
-};
-
-const stagePercent = (status?: string | null, completedTime?: string | null) => {
-  if (completedTime || normalizeStatus(status) === 'COMPLETED') return 100;
-  if (normalizeStatus(status) === 'IN_PROGRESS') return 60;
-  if (normalizeStatus(status) === 'PENDING') return 0;
-  return 20;
-};
-
-const formatStageTime = (value?: string | null) => (value ? dayjs(value).format('MM-DD HH:mm') : '');
-
-const toPercent = (value: number) => Math.max(0, Math.min(100, Math.round(value)));
 
 const CockpitPage: React.FC = () => {
-  const [stageWidgets, setStageWidgets] = useState<PlacedWidget[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [moduleStats, setModuleStats] = useState<PatternDevelopmentStats | null>(null);
-  const [selectedStyle, setSelectedStyle] = useState<StyleInfo | null>(null);
-  const [selectedProfile, setSelectedProfile] = useState<StyleIntelligenceProfileResponse | null>(null);
-  const stageWidgetRef = useRef<HTMLElement | null>(null);
-  const [stageScale, setStageScale] = useState(1);
+  const [widgets, setWidgets] = useState<WidgetState>(loadWidgetState);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{
+    key: keyof WidgetState;
+    startX: number;
+    startY: number;
+    startWidgetX: number;
+    startWidgetY: number;
+    startWidth: number;
+    startHeight: number;
+    mode: 'move' | 'resize';
+  } | null>(null);
 
-  const widget = useMemo<WidgetData>(() => {
-    const profileStages = selectedProfile?.stages ?? [];
-    const fallbackStages = selectedStyle
-      ? [
-          {
-            key: 'pattern',
-            label: '纸样',
-            status: selectedStyle.patternStatus || 'PENDING',
-            completedTime: (selectedStyle.patternCompletedTime as string) || undefined,
-            startTime: (selectedStyle.patternStartTime as string) || undefined,
-            assignee: (selectedStyle.patternAssignee as string) || undefined,
-          },
-          {
-            key: 'sample',
-            label: '样衣',
-            status: selectedStyle.sampleStatus || 'PENDING',
-            completedTime: (selectedStyle.sampleCompletedTime as string) || undefined,
-            startTime: (selectedStyle.createTime as string) || undefined,
-            assignee: (selectedStyle.patternAssignee as string) || undefined,
-          },
-          {
-            key: 'bom',
-            label: 'BOM',
-            status: selectedStyle.bomCompletedTime ? 'COMPLETED' : 'IN_PROGRESS',
-            completedTime: (selectedStyle.bomCompletedTime as string) || undefined,
-            startTime: (selectedStyle.createTime as string) || undefined,
-            assignee: (selectedStyle.updateBy as string) || undefined,
-          },
-          {
-            key: 'process',
-            label: '工序单价',
-            status: selectedStyle.processCompletedTime ? 'COMPLETED' : 'IN_PROGRESS',
-            completedTime: (selectedStyle.processCompletedTime as string) || undefined,
-            startTime: (selectedStyle.createTime as string) || undefined,
-            assignee: (selectedStyle.updateBy as string) || undefined,
-          },
-          {
-            key: 'size',
-            label: '码数',
-            status: selectedStyle.sizeCompletedTime ? 'COMPLETED' : 'IN_PROGRESS',
-            completedTime: (selectedStyle.sizeCompletedTime as string) || undefined,
-            startTime: (selectedStyle.createTime as string) || undefined,
-            assignee: (selectedStyle.updateBy as string) || undefined,
-          },
-        ]
-      : [];
-    const nodes = profileStages.length
-      ? profileStages.map((stage) => ({
-          key: stage.key,
-          label: stage.label,
-          status: stage.status,
-          assignee: (stage.assignee as string) || undefined,
-          startTime: (stage.startTime as string) || undefined,
-          completedTime: (stage.completedTime as string) || undefined,
-        }))
-      : fallbackStages;
-    const completed = nodes.filter((node) => stageStatusLabel(node.status, node.completedTime as string) === '已完成').length;
-    const inProgress = Math.max(0, nodes.length - completed);
-
-    return {
-      id: 'style-development',
-      title: '样衣板块',
-      subtitle: '真实样衣数据',
-      inProgress,
-      completed,
-      trend: selectedProfile?.insights?.[0] || '拖进中间后查看完整样衣节点。',
-      stats: moduleStats,
-      nodes,
-    };
-  }, [moduleStats, selectedProfile, selectedStyle]);
-
-  const loadWorkbenchData = useCallback(async () => {
-    setLoading(true);
+  useEffect(() => {
     try {
-      const [statsRes, styleListRes] = await Promise.all([
-        patternProductionApi.getDevelopmentStats('day'),
-        api.get<{ code: number; data: { records?: StyleInfo[] } }>('/style/info/list', {
-          params: { page: 1, pageSize: 20 },
-        }),
-      ]);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(widgets));
+    } catch {}
+  }, [widgets]);
 
-      setModuleStats(statsRes.data ?? null);
-
-      const records = Array.isArray(styleListRes?.data?.records) ? styleListRes.data.records : [];
-      const previewStyle = records.find((item) => normalizeStatus(item.patternStatus) === 'IN_PROGRESS')
-        || records.find((item) => normalizeStatus(item.patternStatus) === 'COMPLETED')
-        || records[0]
-        || null;
-      setSelectedStyle(previewStyle);
-
-      if (previewStyle?.id != null) {
-        try {
-          const profileRes = await intelligenceApi.getStyleIntelligenceProfile({
-            styleId: previewStyle.id,
-            styleNo: previewStyle.styleNo,
-          });
-          setSelectedProfile(profileRes.data ?? null);
-        } catch {
-          setSelectedProfile(null);
-        }
-      } else {
-        setSelectedProfile(null);
-      }
-    } catch {
-      setModuleStats(null);
-      setSelectedStyle(null);
-      setSelectedProfile(null);
-    } finally {
-      setLoading(false);
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    const moduleKey = e.dataTransfer.getData('text/module-key') as keyof WidgetState;
+    if (moduleKey && moduleKey in widgets && !widgets[moduleKey].placed) {
+      const rect = containerRef.current?.getBoundingClientRect();
+      const x = e.clientX - (rect?.left || 0) - 100;
+      const y = e.clientY - (rect?.top || 0) - 100;
+      setWidgets(prev => ({
+        ...prev,
+        [moduleKey]: {
+          placed: true,
+          x: Math.max(0, x),
+          y: Math.max(0, y),
+          width: DEFAULT_POSITION.width,
+          height: DEFAULT_POSITION.height,
+        },
+      }));
     }
+  }, [widgets]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
   }, []);
 
+  const handleRemove = useCallback((key: keyof WidgetState) => {
+    setWidgets(prev => ({
+      ...prev,
+      [key]: { ...prev[key], placed: false },
+    }));
+  }, []);
+
+  const handleRefresh = useCallback(() => {
+    setWidgets(DEFAULT_WIDGETS);
+    setRefreshKey(k => k + 1);
+  }, []);
+
+  const handleMouseDown = useCallback((key: keyof WidgetState, e: React.MouseEvent, mode: 'move' | 'resize') => {
+    e.preventDefault();
+    e.stopPropagation();
+    const widget = widgets[key];
+    dragRef.current = {
+      key,
+      startX: e.clientX,
+      startY: e.clientY,
+      startWidgetX: widget.x,
+      startWidgetY: widget.y,
+      startWidth: widget.width,
+      startHeight: widget.height,
+      mode,
+    };
+  }, [widgets]);
+
   useEffect(() => {
-    void loadWorkbenchData();
-  }, [loadWorkbenchData]);
+    let rafId: number | null = null;
+    let pendingDelta = { x: 0, y: 0 };
 
-  const placedWidget = stageWidgets[0];
+    const updatePosition = () => {
+      if (!dragRef.current) return;
+      const { key, startX, startY, startWidgetX, startWidgetY, startWidth, startHeight, mode } = dragRef.current;
+      const deltaX = pendingDelta.x;
+      const deltaY = pendingDelta.y;
 
-  useEffect(() => {
-    const element = stageWidgetRef.current;
-    if (!element) return undefined;
-
-    const updateScale = () => {
-      const width = element.getBoundingClientRect().width;
-      const nextScale = Math.max(0.72, Math.min(1.25, width / 920));
-      setStageScale(Number(nextScale.toFixed(3)));
+      setWidgets(prev => ({
+        ...prev,
+        [key]: {
+          ...prev[key],
+          x: mode === 'move' ? Math.max(0, startWidgetX + deltaX) : prev[key].x,
+          y: mode === 'move' ? Math.max(0, startWidgetY + deltaY) : prev[key].y,
+          width: mode === 'resize' ? Math.max(300, startWidth + deltaX) : prev[key].width,
+          height: mode === 'resize' ? Math.max(280, startHeight + deltaY) : prev[key].height,
+        },
+      }));
+      rafId = null;
     };
 
-    updateScale();
-    const observer = new ResizeObserver(() => updateScale());
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [stageWidgets.length]);
-
-  const placeWidget = (widgetId: string) => {
-    setStageWidgets((prev) => {
-      if (prev.some((item) => item.id === widgetId)) return prev;
-      return [...prev, { id: widgetId }];
-    });
-  };
-
-  const removeWidget = (widgetId: string) => {
-    setStageWidgets((prev) => prev.filter((item) => item.id !== widgetId));
-  };
-
-  const onDragStart = (event: React.DragEvent<HTMLDivElement>, widgetId: string) => {
-    event.dataTransfer.setData('text/widget-id', widgetId);
-    event.dataTransfer.effectAllowed = 'move';
-  };
-
-  const onDrop = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const widgetId = event.dataTransfer.getData('text/widget-id');
-    if (!widgetId) return;
-    placeWidget(widgetId);
-  };
-
-  const onDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-  };
-
-  const nodeWeightTotal = widget.nodes.reduce((sum, node) => sum + Math.max(stagePercent(node.status, node.completedTime), 1), 0) || 1;
-  const nodeBreakdown = widget.nodes.map((node) => {
-    const nodePercent = stagePercent(node.status, node.completedTime);
-    const sharePercent = toPercent((Math.max(nodePercent, 1) / nodeWeightTotal) * 100);
-    return {
-      key: node.key,
-      label: node.label,
-      percent: nodePercent,
-      sharePercent,
-      color: stageStatusColor(node.status, node.completedTime) === 'success' ? '#26d07c' : nodePercent > 0 ? '#43f7df' : '#f7b500',
-      statusLabel: stageStatusLabel(node.status, node.completedTime),
-      timeLabel: node.completedTime ? formatStageTime(node.completedTime) : (node.startTime ? formatStageTime(node.startTime) : '暂无时间'),
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!dragRef.current) return;
+      e.preventDefault();
+      pendingDelta.x = e.clientX - dragRef.current.startX;
+      pendingDelta.y = e.clientY - dragRef.current.startY;
+      if (!rafId) {
+        rafId = requestAnimationFrame(updatePosition);
+      }
     };
-  });
-  // 纯SVG环形饼图：弧形路径 + 折线引标 + 百分比文字，统一坐标系无错位
-  const PIE_CX = 100, PIE_CY = 100, PIE_OR = 62, PIE_IR = 36;
-  const pieToRad = (d: number) => d * (Math.PI / 180);
-  const pieX = (r: number, deg: number) => PIE_CX + Math.cos(pieToRad(deg)) * r;
-  const pieY = (r: number, deg: number) => PIE_CY + Math.sin(pieToRad(deg)) * r;
-  let pieAngleCursor = -90;
-  const nodeArcData = nodeBreakdown.map((node, i) => {
-    const isLast = i === nodeBreakdown.length - 1;
-    const startDeg = pieAngleCursor;
-    const endDeg = isLast ? 270 : startDeg + (node.sharePercent / 100) * 360;
-    const sweepDeg = endDeg - startDeg;
-    const midDeg = startDeg + sweepDeg / 2;
-    pieAngleCursor = endDeg;
-    const large = sweepDeg > 180 ? 1 : 0;
-    const pathD =
-      `M ${pieX(PIE_OR, startDeg).toFixed(2)} ${pieY(PIE_OR, startDeg).toFixed(2)} ` +
-      `A ${PIE_OR} ${PIE_OR} 0 ${large} 1 ${pieX(PIE_OR, endDeg).toFixed(2)} ${pieY(PIE_OR, endDeg).toFixed(2)} ` +
-      `L ${pieX(PIE_IR, endDeg).toFixed(2)} ${pieY(PIE_IR, endDeg).toFixed(2)} ` +
-      `A ${PIE_IR} ${PIE_IR} 0 ${large} 0 ${pieX(PIE_IR, startDeg).toFixed(2)} ${pieY(PIE_IR, startDeg).toFixed(2)} Z`;
-    const cornerX = pieX(PIE_OR + 18, midDeg);
-    const cornerY = pieY(PIE_OR + 18, midDeg);
-    const isRight = cornerX >= PIE_CX;
-    return {
-      ...node,
-      pathD,
-      lsx: pieX(PIE_OR + 3, midDeg),
-      lsy: pieY(PIE_OR + 3, midDeg),
-      cornerX,
-      cornerY,
-      labelX: cornerX + (isRight ? 12 : -12),
-      labelY: cornerY,
-      labelAnchor: isRight ? ('start' as const) : ('end' as const),
+
+    const handleMouseUp = () => {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+      dragRef.current = null;
     };
-  });
+
+    document.addEventListener('mousemove', handleMouseMove, { passive: false });
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, []);
+
+  const hasPlacedWidgets = useMemo(() =>
+    widgets.overview.placed || widgets.order.placed || widgets.sample.placed || widgets.production.placed || widgets.procurement.placed || widgets.warehouse.placed,
+    [widgets]
+  );
 
   return (
     <Layout>
-      <div className="cockpit-workbench">
-        <aside className="cockpit-sidebar">
-          <div className="cockpit-sidebar-header">
-            <div className="cockpit-sidebar-title">样衣板块</div>
-            <div className="cockpit-sidebar-subtitle">真实样衣数据</div>
-          </div>
+      <TimeDimensionProvider>
+        <StyleLinkProvider>
+          <div className="cockpit-workbench">
+          <aside className="cockpit-sidebar">
+            <div className="cockpit-sidebar-header">
+              <div className="cockpit-sidebar-subtitle">拖拽到右侧区域查看详情</div>
+            </div>
 
-          <div
-            className="cockpit-module-card cockpit-module-card-side"
-            draggable
-            onDragStart={(event) => onDragStart(event, widget.id)}
-          >
-            <div className="cockpit-module-head">
+            <div className="cockpit-sidebar-section">
+              <div
+                className="cockpit-module-card"
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData('text/module-key', 'overview');
+                  e.dataTransfer.effectAllowed = 'move';
+                }}
+              >
+                <OverviewChart key={refreshKey} mode="sidebar" />
+              </div>
+            </div>
+
+            <div className="cockpit-sidebar-section">
+              <div
+                className="cockpit-module-card"
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData('text/module-key', 'order');
+                  e.dataTransfer.effectAllowed = 'move';
+                }}
+              >
+                <OrderPieChart key={refreshKey} mode="sidebar" />
+              </div>
+            </div>
+
+            <div className="cockpit-sidebar-section">
+              <div
+                className="cockpit-module-card"
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData('text/module-key', 'sample');
+                  e.dataTransfer.effectAllowed = 'move';
+                }}
+              >
+                <SamplePieChart key={refreshKey} mode="sidebar" />
+              </div>
+            </div>
+
+            <div className="cockpit-sidebar-section">
+              <div
+                className="cockpit-module-card"
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData('text/module-key', 'production');
+                  e.dataTransfer.effectAllowed = 'move';
+                }}
+              >
+                <ProductionPieChart key={refreshKey} mode="sidebar" />
+              </div>
+            </div>
+
+            <div className="cockpit-sidebar-section">
+              <div
+                className="cockpit-module-card"
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData('text/module-key', 'procurement');
+                  e.dataTransfer.effectAllowed = 'move';
+                }}
+              >
+                <ProcurementPieChart key={refreshKey} mode="sidebar" />
+              </div>
+            </div>
+
+            <div className="cockpit-sidebar-section">
+              <div
+                className="cockpit-module-card"
+                draggable
+                onDragStart={(e) => {
+                  e.dataTransfer.setData('text/module-key', 'warehouse');
+                  e.dataTransfer.effectAllowed = 'move';
+                }}
+              >
+                <WarehousePieChart key={refreshKey} mode="sidebar" />
+              </div>
+            </div>
+          </aside>
+
+          <main className="cockpit-main" onDrop={handleDrop} onDragOver={handleDragOver}>
+            <div className="cockpit-stage-header">
               <div>
-                <div className="cockpit-module-name">{widget.title}</div>
-                <div className="cockpit-module-desc">{widget.subtitle}</div>
+                <div className="cockpit-stage-title">数据看板</div>
+                <div className="cockpit-stage-desc">拖入模块后可自由拖动位置、调整大小</div>
               </div>
-              <Tag color="cyan">真实数据</Tag>
+              <div className="cockpit-stage-actions">
+                <TimeDimensionSelector />
+                <Button icon={<ReloadOutlined />} onClick={handleRefresh} className="cockpit-reset-btn">重置</Button>
+              </div>
             </div>
 
-            <div className="cockpit-module-quick-stats cockpit-module-stat-grid">
-              <div className="cockpit-module-stat-item">
-                <div className="cockpit-module-stat-num">{widget.inProgress}</div>
-                <div className="cockpit-module-stat-name">开发中</div>
-              </div>
-              <div className="cockpit-module-stat-item">
-                <div className="cockpit-module-stat-num cockpit-module-stat-num--cyan">
-                  {widget.stats?.patternCount ?? widget.completed}
+            <div ref={containerRef} className="cockpit-stage-canvas">
+              <StyleLinkLines />
+              {!hasPlacedWidgets && (
+                <div className="cockpit-stage-empty">
+                  <div className="cockpit-stage-empty-title">把左侧模块拖进来</div>
+                  <div className="cockpit-stage-empty-desc">支持业务概览、下单管理、样衣开发、大货生产、物料采购、成品仓库等多个模块，可自由摆放</div>
                 </div>
-                <div className="cockpit-module-stat-name">已完成</div>
-              </div>
-            </div>
-          </div>
-        </aside>
+              )}
 
-        <main className="cockpit-main" onDrop={onDrop} onDragOver={onDragOver}>
-          <div className="cockpit-stage-header">
-            <div>
-              <div className="cockpit-stage-title">中间大屏</div>
-              <div className="cockpit-stage-desc">把左边的模块拖进来，右下角可直接拖动缩放，不再限制死尺寸</div>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              {loading ? <span className="cockpit-stage-loading">真实样衣数据加载中…</span> : null}
-              <Button icon={<ReloadOutlined />} onClick={() => { setStageWidgets([]); void loadWorkbenchData(); }}>重置</Button>
-            </div>
-          </div>
-
-          {placedWidget ? (
-            <section
-              ref={stageWidgetRef}
-              className="cockpit-stage-widget cockpit-stage-widget-resizable"
-              style={{ '--cockpit-scale': stageScale } as React.CSSProperties}
-            >
-              <div className="cockpit-stage-widget-head">
-                <div>
-                  <div className="cockpit-stage-widget-title">{widget.title}</div>
-                  <div className="cockpit-stage-widget-subtitle">{widget.trend}</div>
-                </div>
-                <div className="cockpit-stage-widget-actions">
-                  <Button size="small" icon={<BorderOutlined />} onClick={() => removeWidget(widget.id)}>收回</Button>
-                </div>
-              </div>
-
-              <div className="cockpit-stage-grid">
-                <div className="cockpit-stage-chart-block">
-                  <div className="cockpit-stage-pie-center-layout">
-                    <div className="cockpit-pie-svg-container">
-                      <svg viewBox="0 0 200 200" className="cockpit-pie-svg">
-                        {nodeArcData.map((seg) => (
-                          <path key={seg.key} d={seg.pathD} fill={seg.color} opacity={0.88} />
-                        ))}
-                        <circle cx={PIE_CX} cy={PIE_CY} r={PIE_IR} fill="#070f1f" />
-                        <text x={PIE_CX} y={PIE_CY - 8} textAnchor="middle" dominantBaseline="auto"
-                          fill="#67f8e6" fontSize={22} fontWeight={800}>
-                          {widget.nodes.length}
-                        </text>
-                        <text x={PIE_CX} y={PIE_CY + 14} textAnchor="middle" dominantBaseline="auto"
-                          fill="rgba(226,232,240,0.82)" fontSize={10}>
-                          节点
-                        </text>
-                        {nodeArcData.map((seg) => (
-                          <g key={`callout-${seg.key}`}>
-                            <polyline
-                              points={`${seg.lsx.toFixed(2)},${seg.lsy.toFixed(2)} ${seg.cornerX.toFixed(2)},${seg.cornerY.toFixed(2)} ${seg.labelX.toFixed(2)},${seg.labelY.toFixed(2)}`}
-                              fill="none" stroke={seg.color} strokeWidth={0.8} opacity={0.75}
-                            />
-                            <text
-                              x={seg.labelAnchor === 'start' ? seg.labelX + 3 : seg.labelX - 3}
-                              y={seg.labelY}
-                              fill={seg.color}
-                              fontSize={8.5}
-                              fontWeight={700}
-                              textAnchor={seg.labelAnchor}
-                              dominantBaseline="middle"
-                            >
-                              {seg.sharePercent}%
-                            </text>
-                          </g>
-                        ))}
-                      </svg>
-                    </div>
-                    <div className="cockpit-stage-pie-legend">
-                      {nodeBreakdown.map((node) => (
-                        <div key={node.key} className="cockpit-stage-pie-legend-item">
-                          <span className="cockpit-dot" style={{ background: node.color }} />
-                          <div>
-                            <div className="cockpit-stage-pie-legend-label">{node.label}</div>
-                            <div className="cockpit-stage-pie-legend-meta">{node.percent}% · {node.statusLabel}</div>
-                            <div className="cockpit-stage-pie-legend-time">{node.timeLabel}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+              {widgets.overview.placed && (
+                <div
+                  className="cockpit-widget"
+                  style={{
+                    left: widgets.overview.x,
+                    top: widgets.overview.y,
+                    width: widgets.overview.width,
+                    height: widgets.overview.height,
+                  }}
+                >
+                  <div
+                    className="cockpit-widget-header"
+                    onMouseDown={(e) => handleMouseDown('overview', e, 'move')}
+                  >
+                    <span className="cockpit-widget-title">业务概览</span>
+                    <Button className="cockpit-widget-close" size="small" onClick={() => handleRemove('overview')}>×</Button>
                   </div>
+                  <div className="cockpit-widget-body">
+                    <OverviewChart
+                      key={refreshKey}
+                      mode="stage"
+                      moduleKey="overview"
+                      position={{ x: widgets.overview.x, y: widgets.overview.y, width: widgets.overview.width, height: widgets.overview.height }}
+                    />
+                  </div>
+                  <div
+                    className="cockpit-widget-resize"
+                    onMouseDown={(e) => handleMouseDown('overview', e, 'resize')}
+                  />
                 </div>
-              </div>
-            </section>
-          ) : (
-            <div className="cockpit-stage-empty">
-              <ArrowsAltOutlined className="cockpit-stage-empty-icon" />
-              <div className="cockpit-stage-empty-title">把左边的“样衣开发”拖进来</div>
-              <div className="cockpit-stage-empty-desc">拖入后这里会显示真实的样衣节点看板，右下角可自由放大或缩小。</div>
+              )}
+
+              {widgets.order.placed && (
+                <div
+                  className="cockpit-widget"
+                  style={{
+                    left: widgets.order.x,
+                    top: widgets.order.y,
+                    width: widgets.order.width,
+                    height: widgets.order.height,
+                  }}
+                >
+                  <div
+                    className="cockpit-widget-header"
+                    onMouseDown={(e) => handleMouseDown('order', e, 'move')}
+                  >
+                    <span className="cockpit-widget-title">下单管理</span>
+                    <Button className="cockpit-widget-close" size="small" onClick={() => handleRemove('order')}>×</Button>
+                  </div>
+                  <div className="cockpit-widget-body">
+                    <OrderPieChart
+                      key={refreshKey}
+                      mode="stage"
+                      moduleKey="order"
+                      position={{ x: widgets.order.x, y: widgets.order.y, width: widgets.order.width, height: widgets.order.height }}
+                    />
+                  </div>
+                  <div
+                    className="cockpit-widget-resize"
+                    onMouseDown={(e) => handleMouseDown('order', e, 'resize')}
+                  />
+                </div>
+              )}
+
+              {widgets.sample.placed && (
+                <div
+                  className="cockpit-widget"
+                  style={{
+                    left: widgets.sample.x,
+                    top: widgets.sample.y,
+                    width: widgets.sample.width,
+                    height: widgets.sample.height,
+                  }}
+                >
+                  <div
+                    className="cockpit-widget-header"
+                    onMouseDown={(e) => handleMouseDown('sample', e, 'move')}
+                  >
+                    <span className="cockpit-widget-title">样衣开发</span>
+                    <Button className="cockpit-widget-close" size="small" onClick={() => handleRemove('sample')}>×</Button>
+                  </div>
+                  <div className="cockpit-widget-body">
+                    <SamplePieChart
+                      key={refreshKey}
+                      mode="stage"
+                      moduleKey="sample"
+                      position={{ x: widgets.sample.x, y: widgets.sample.y, width: widgets.sample.width, height: widgets.sample.height }}
+                    />
+                  </div>
+                  <div
+                    className="cockpit-widget-resize"
+                    onMouseDown={(e) => handleMouseDown('sample', e, 'resize')}
+                  />
+                </div>
+              )}
+
+              {widgets.production.placed && (
+                <div
+                  className="cockpit-widget"
+                  style={{
+                    left: widgets.production.x,
+                    top: widgets.production.y,
+                    width: widgets.production.width,
+                    height: widgets.production.height,
+                  }}
+                >
+                  <div
+                    className="cockpit-widget-header"
+                    onMouseDown={(e) => handleMouseDown('production', e, 'move')}
+                  >
+                    <span className="cockpit-widget-title">大货生产</span>
+                    <Button className="cockpit-widget-close" size="small" onClick={() => handleRemove('production')}>×</Button>
+                  </div>
+                  <div className="cockpit-widget-body">
+                    <ProductionPieChart
+                      key={refreshKey}
+                      mode="stage"
+                      moduleKey="production"
+                      position={{ x: widgets.production.x, y: widgets.production.y, width: widgets.production.width, height: widgets.production.height }}
+                    />
+                  </div>
+                  <div
+                    className="cockpit-widget-resize"
+                    onMouseDown={(e) => handleMouseDown('production', e, 'resize')}
+                  />
+                </div>
+              )}
+
+              {widgets.procurement.placed && (
+                <div
+                  className="cockpit-widget"
+                  style={{
+                    left: widgets.procurement.x,
+                    top: widgets.procurement.y,
+                    width: widgets.procurement.width,
+                    height: widgets.procurement.height,
+                  }}
+                >
+                  <div
+                    className="cockpit-widget-header"
+                    onMouseDown={(e) => handleMouseDown('procurement', e, 'move')}
+                  >
+                    <span className="cockpit-widget-title">物料采购</span>
+                    <Button className="cockpit-widget-close" size="small" onClick={() => handleRemove('procurement')}>×</Button>
+                  </div>
+                  <div className="cockpit-widget-body">
+                    <ProcurementPieChart
+                      key={refreshKey}
+                      mode="stage"
+                      moduleKey="procurement"
+                      position={{ x: widgets.procurement.x, y: widgets.procurement.y, width: widgets.procurement.width, height: widgets.procurement.height }}
+                    />
+                  </div>
+                  <div
+                    className="cockpit-widget-resize"
+                    onMouseDown={(e) => handleMouseDown('procurement', e, 'resize')}
+                  />
+                </div>
+              )}
+
+              {widgets.warehouse.placed && (
+                <div
+                  className="cockpit-widget"
+                  style={{
+                    left: widgets.warehouse.x,
+                    top: widgets.warehouse.y,
+                    width: widgets.warehouse.width,
+                    height: widgets.warehouse.height,
+                  }}
+                >
+                  <div
+                    className="cockpit-widget-header"
+                    onMouseDown={(e) => handleMouseDown('warehouse', e, 'move')}
+                  >
+                    <span className="cockpit-widget-title">成品仓库</span>
+                    <Button className="cockpit-widget-close" size="small" onClick={() => handleRemove('warehouse')}>×</Button>
+                  </div>
+                  <div className="cockpit-widget-body">
+                    <WarehousePieChart
+                      key={refreshKey}
+                      mode="stage"
+                      moduleKey="warehouse"
+                      position={{ x: widgets.warehouse.x, y: widgets.warehouse.y, width: widgets.warehouse.width, height: widgets.warehouse.height }}
+                    />
+                  </div>
+                  <div
+                    className="cockpit-widget-resize"
+                    onMouseDown={(e) => handleMouseDown('warehouse', e, 'resize')}
+                  />
+                </div>
+              )}
             </div>
-          )}
-        </main>
-      </div>
+          </main>
+        </div>
+        </StyleLinkProvider>
+      </TimeDimensionProvider>
     </Layout>
   );
 };
