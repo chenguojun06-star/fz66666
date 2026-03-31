@@ -36,12 +36,15 @@ function buildBundleRows(colorGroups, allSizes, bundleSize, excessRate) {
       var qty = (group.sizeQtyList && group.sizeQtyList[si]) || 0;
       if (qty <= 0) return;
       var cuttingQty = rate > 0 ? Math.ceil(qty * (1 + rate / 100)) : qty;
+      var bundleCount = bs > 0 ? Math.ceil(cuttingQty / bs) : 0;
+      var remainder = bs > 0 && bundleCount > 0 ? cuttingQty % bs : 0;
       rows.push({
         color: group.color || '',
         size: size,
         orderedQty: qty,
         cuttingQty: cuttingQty,
-        bundleCount: bs > 0 ? Math.ceil(cuttingQty / bs) : 0,
+        bundleCount: bundleCount,
+        lastBundleQty: bundleCount > 0 ? (remainder > 0 ? remainder : bs) : 0,
       });
     });
   });
@@ -98,6 +101,15 @@ function onExcessRateInput(ctx, e) {
   });
 }
 
+function onLastBundleQtyInput(ctx, e) {
+  var index = e.currentTarget.dataset.index;
+  var val = parseInt(e.detail.value, 10);
+  if (isNaN(val) || val < 1) val = 1;
+  ctx.setData({
+    ['bundleModal.bundleRows[' + index + '].lastBundleQty']: val,
+  });
+}
+
 function onCancelBundle(ctx) {
   ctx.setData({ bundleModal: Object.assign({}, INITIAL_BUNDLE_MODAL) });
 }
@@ -108,21 +120,12 @@ async function onConfirmBundle(ctx) {
   if (!bundleSize || bundleSize <= 0) { toast.error('请填写每扎数量'); return; }
 
   const items = [];
-  const rate = parseFloat(modal.excessRate) || 0;
-  modal.colorGroups.forEach(function(group) {
-    modal.allSizes.forEach(function(size, si) {
-      const orderedQty = (group.sizeQtyList && group.sizeQtyList[si]) || 0;
-      if (orderedQty <= 0) return;
-      const cuttingQty = rate > 0 ? Math.ceil(orderedQty * (1 + rate / 100)) : orderedQty;
-      const fullBundles = Math.floor(cuttingQty / bundleSize);
-      const remainder = cuttingQty % bundleSize;
-      for (let b = 0; b < fullBundles; b++) {
-        items.push({ color: String(group.color || ''), size: String(size || ''), quantity: bundleSize });
-      }
-      if (remainder > 0) {
-        items.push({ color: String(group.color || ''), size: String(size || ''), quantity: remainder });
-      }
-    });
+  (modal.bundleRows || []).forEach(function(row) {
+    if (!row.cuttingQty || row.cuttingQty <= 0 || !row.bundleCount || row.bundleCount <= 0) return;
+    for (var b = 0; b < row.bundleCount - 1; b++) {
+      items.push({ color: String(row.color || ''), size: String(row.size || ''), quantity: bundleSize });
+    }
+    items.push({ color: String(row.color || ''), size: String(row.size || ''), quantity: row.lastBundleQty || bundleSize });
   });
 
   if (items.length === 0) { toast.error('订单无有效数量，无法分扎'); return; }
@@ -150,6 +153,7 @@ module.exports = {
   onGenerateBundle,
   onBundleSizeInput,
   onExcessRateInput,
+  onLastBundleQtyInput,
   onCancelBundle,
   onConfirmBundle,
 };

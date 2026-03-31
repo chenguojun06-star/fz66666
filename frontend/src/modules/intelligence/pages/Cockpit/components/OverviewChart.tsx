@@ -55,10 +55,13 @@ const OverviewChart: React.FC<OverviewChartProps> = ({ mode = 'sidebar', moduleK
     const loadData = async () => {
       setLoading(true);
       try {
+        const { start, end } = getDateRange();
         const res = await api.get<{ code: number; data: { records?: ProductionOrder[] } }>('/production/order/list', {
           params: {
             page: 1,
             pageSize: 1000,
+            startDate: start.toISOString(),
+            endDate: end.toISOString(),
             excludeTerminal: true,
           },
         });
@@ -70,7 +73,7 @@ const OverviewChart: React.FC<OverviewChartProps> = ({ mode = 'sidebar', moduleK
       }
     };
     void loadData();
-  }, []);
+  }, [dimension, getDateRange]);
 
   const styleList = useMemo(() => {
     return orders

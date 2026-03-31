@@ -1,7 +1,6 @@
 const api = require('../../utils/api.js');
 const bellTaskLoader = require('./bellTaskLoader.js');
 const bellTaskActions = require('./bellTaskActions.js');
-const { toast } = require('../../utils/uiHelper.js');
 
 Component({
   properties: {
@@ -54,7 +53,7 @@ Component({
           const role = String(userInfo.role || userInfo.roleCode || '').toLowerCase();
           isManager = userInfo.isTenantOwner === true ||
             ['admin', 'super_admin', 'manager', 'supervisor',
-             'tenant_admin', 'tenant_manager', 'merchandiser'].some(r => role.includes(r));
+              'tenant_admin', 'tenant_manager', 'merchandiser'].some(r => role.includes(r));
         } catch (err) {
           console.error('get user info error', err);
         }

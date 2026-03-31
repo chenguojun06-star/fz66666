@@ -288,6 +288,8 @@ Page({
   // ==================== 菲号生成（委托 BundleGenerateHandler） ====================
   onGenerateBundle(e) { BundleGenerateHandler.onGenerateBundle(this, e); },
   onBundleSizeInput(e) { BundleGenerateHandler.onBundleSizeInput(this, e); },
+  onExcessRateInput(e) { BundleGenerateHandler.onExcessRateInput(this, e); },
+  onLastBundleQtyInput(e) { BundleGenerateHandler.onLastBundleQtyInput(this, e); },
   onCancelBundle() { BundleGenerateHandler.onCancelBundle(this); },
   async onConfirmBundle() { return BundleGenerateHandler.onConfirmBundle(this); },
 

@@ -92,11 +92,14 @@ const ProductionPieChart: React.FC<ProductionPieChartProps> = ({ mode = 'sidebar
     const loadData = async () => {
       setLoading(true);
       try {
+        const { start, end } = getDateRange();
         const [ordersRes, factoryRes] = await Promise.all([
           api.get<{ code: number; data: { records?: ProductionOrder[] } }>('/production/order/list', {
             params: {
               page: 1,
               pageSize: 1000,
+              startDate: start.toISOString(),
+              endDate: end.toISOString(),
             },
           }),
           api.get<{ code: number; data: FactoryCapacityItem[] }>('/production/order/factory-capacity'),
@@ -112,7 +115,7 @@ const ProductionPieChart: React.FC<ProductionPieChartProps> = ({ mode = 'sidebar
       }
     };
     void loadData();
-  }, []);
+  }, [dimension, getDateRange]);
 
   useEffect(() => {
     if (mode !== 'stage' || !containerRef.current) return;

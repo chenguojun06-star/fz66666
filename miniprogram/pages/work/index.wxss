@@ -554,7 +554,11 @@ page {
 .col-size { width:70rpx; font-size:26rpx; color:#555; }
 .col-qty { flex:1; font-size:26rpx; color:#333; }
 .col-cutting { flex:1; font-size:26rpx; color:#333; }
-.col-count { width:80rpx; font-size:26rpx; color:#4f7ef8; text-align:right; font-weight:500; }
+.col-count { width:160rpx; font-size:26rpx; color:#4f7ef8; text-align:right; font-weight:500; }
+.col-count-num { display:block; }
+.last-bundle-edit { display:flex; align-items:center; justify-content:flex-end; gap:4rpx; margin-top:6rpx; }
+.last-bundle-label { font-size:22rpx; color:#999; }
+.last-bundle-input { width:80rpx; height:44rpx; line-height:44rpx; font-size:24rpx; color:#333; text-align:center; border:1rpx solid #d9d9d9; border-radius:8rpx; background:#fff; }
 .bundle-footer { display:flex; gap:20rpx; }
 .bundle-btn { flex:1; height:80rpx; line-height:80rpx; text-align:center; border-radius:40rpx; font-size:28rpx; font-weight:500; }
 .bundle-btn-cancel { background:#f4f6fb; color:#666; }
