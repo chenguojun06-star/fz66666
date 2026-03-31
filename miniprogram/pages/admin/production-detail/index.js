@@ -95,7 +95,7 @@ Page({
 
   onTabChange(e) {
     const idx = Number(e.currentTarget.dataset.index);
-    if (idx === this.data.activeTab) return;
+    if (isNaN(idx) || idx === this.data.activeTab) return;
     this.setData({ activeTab: idx });
     this.loadData(true);
   },

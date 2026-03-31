@@ -157,7 +157,10 @@ const TenantListTab: React.FC = () => {
       { path: '/system/tutorial', label: '系统教学' },
       { path: '/system/data-import', label: '数据导入' },
     ]},
-    { key: 'intelligence', title: '智能运营中心', paths: [{ path: '/intelligence/center', label: '智能运营中心' }] },
+    { key: 'intelligence', title: '智能运营中心', paths: [
+      { path: '/intelligence/center', label: '智能运营中心' },
+      { path: '/cockpit', label: '数据看板' },
+    ] },
     // 应用商店(/system/app-store) 和 集成对接中心(/integration/center) 始终可见，不在白名单管控范围内，无需配置
   ];
 
@@ -454,6 +457,12 @@ const TenantListTab: React.FC = () => {
     navigator.clipboard.writeText(tenantCode).then(() => {
       message.success('工厂编码已复制');
     }).catch(() => {
+      const input = document.createElement('input');
+      input.value = tenantCode;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
       message.success('工厂编码已复制');
     });
   };

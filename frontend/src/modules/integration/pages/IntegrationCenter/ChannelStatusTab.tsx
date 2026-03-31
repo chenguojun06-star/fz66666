@@ -73,7 +73,7 @@ const ChannelStatusTab: React.FC<Props> = ({ active }) => {
   useEffect(() => { if (active) fetchData(); }, [active, fetchData]);
 
   const copyText = (text: string) => {
-    navigator.clipboard.writeText(text).then(() => message.success('已复制到剪贴板'));
+    navigator.clipboard.writeText(text).then(() => message.success('已复制到剪贴板')).catch(() => message.error('复制失败'));
   };
 
   return (

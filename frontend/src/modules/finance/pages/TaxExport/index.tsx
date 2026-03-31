@@ -276,7 +276,7 @@ const InvoiceTab: React.FC = () => {
         defaultHeight="50vh"
         footer={[
           <Button key="cancel" onClick={() => setFormOpen(false)}>取消</Button>,
-          <Button key="ok" type="primary" loading={submitting} onClick={() => form.validateFields().then(handleSave)}>保存</Button>,
+          <Button key="ok" type="primary" loading={submitting} onClick={() => form.validateFields().then(handleSave).catch(() => {})}>保存</Button>,
         ]}
       >
         <Form form={form} layout="vertical" style={{ padding: '16px 0' }}>
@@ -534,7 +534,7 @@ const PayableTab: React.FC = () => {
         defaultHeight="50vh"
         footer={[
           <Button key="cancel" onClick={() => setFormOpen(false)}>取消</Button>,
-          <Button key="ok" type="primary" loading={submitting} onClick={() => createForm.validateFields().then(handleCreate)}>保存</Button>,
+          <Button key="ok" type="primary" loading={submitting} onClick={() => createForm.validateFields().then(handleCreate).catch(() => {})}>保存</Button>,
         ]}
       >
         <Form form={createForm} layout="vertical" style={{ padding: '16px 0' }}>
@@ -703,7 +703,7 @@ const TaxConfigTab: React.FC = () => {
         defaultHeight="40vh"
         footer={[
           <Button key="cancel" onClick={() => setFormOpen(false)}>取消</Button>,
-          <Button key="ok" type="primary" loading={submitting} onClick={() => form.validateFields().then(handleSave)}>保存</Button>,
+          <Button key="ok" type="primary" loading={submitting} onClick={() => form.validateFields().then(handleSave).catch(() => {})}>保存</Button>,
         ]}
       >
         <Form form={form} layout="vertical" style={{ padding: '16px 0' }}>

@@ -188,6 +188,7 @@ function onPatternOperationChange(page, e) {
   // 无二次工艺等禁用项：直接忽略点击
   if (e.currentTarget.dataset.disabled) return;
   const operationType = e.currentTarget.dataset.type;
+  if (!operationType) return;
   const state = _getPatternState(page);
   const options = Array.isArray(state.operationOptions)
     ? state.operationOptions

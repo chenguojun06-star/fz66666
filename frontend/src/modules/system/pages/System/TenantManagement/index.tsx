@@ -479,8 +479,11 @@ const AppManagementTab: React.FC = () => {
   };
 
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    message.success('已复制到剪贴板');
+    navigator.clipboard.writeText(text).then(() => {
+      message.success('已复制到剪贴板');
+    }).catch(() => {
+      message.error('复制失败');
+    });
   };
 
 

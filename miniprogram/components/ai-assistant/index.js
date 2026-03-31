@@ -134,21 +134,25 @@ Component({
 
     handleQualityTask(e) {
       const task = e.currentTarget.dataset.item;
+      if (!task) return;
       this.setData({ isOpen: false });
       bellTaskActions.handleQualityTask(task);
     },
     handleCuttingTask(e) {
       const task = e.currentTarget.dataset.item;
+      if (!task) return;
       this.setData({ isOpen: false });
       bellTaskActions.handleCuttingTask(task);
     },
     handleWarehouseTask(e) {
       const task = e.currentTarget.dataset.item;
+      if (!task) return;
       this.setData({ isOpen: false });
       bellTaskActions.handleProcurementTask(task);
     },
     handlePurchaseTask(e) {
       const task = e.currentTarget.dataset.item;
+      if (!task) return;
       this.setData({ isOpen: false });
       bellTaskActions.handleProcurementTask(task);
     },

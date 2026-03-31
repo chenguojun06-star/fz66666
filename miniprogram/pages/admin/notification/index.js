@@ -97,6 +97,7 @@ Page({
 
   onApproveUser(e) {
     const user = e.currentTarget.dataset.user;
+    if (!user) return;
     this.setData({
       currentUser: user,
       selectedRoleId: user.roleId ? String(user.roleId) : '',
@@ -106,6 +107,7 @@ Page({
 
   onRejectUser(e) {
     const user = e.currentTarget.dataset.user;
+    if (!user) return;
     this.setData({
       currentUser: user,
       rejectReason: '',
@@ -115,6 +117,7 @@ Page({
 
   onRoleSelect(e) {
     const id = e.currentTarget.dataset.id;
+    if (id === undefined || id === null) return;
     this.setData({ selectedRoleId: String(id) });
   },
 

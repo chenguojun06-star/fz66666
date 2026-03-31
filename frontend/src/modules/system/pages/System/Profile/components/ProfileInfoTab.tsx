@@ -559,12 +559,18 @@ const ProfileInfoTab: React.FC = () => {
                                 onOpenFeedback={() => setFeedbackVisible(true)}
                                 onLoadFeedbacks={() => { void loadMyFeedbacks(); }}
                                 onCopyRegisterUrl={(registerUrl) => {
-                                    navigator.clipboard.writeText(registerUrl);
-                                    message.success('注册链接已复制');
+                                    navigator.clipboard.writeText(registerUrl).then(() => {
+                                        message.success('注册链接已复制');
+                                    }).catch(() => {
+                                        message.error('复制失败');
+                                    });
                                 }}
                                 onCopyTenantCode={(tenantCode) => {
-                                    navigator.clipboard.writeText(tenantCode);
-                                    message.success('工厂码已复制');
+                                    navigator.clipboard.writeText(tenantCode).then(() => {
+                                        message.success('工厂码已复制');
+                                    }).catch(() => {
+                                        message.error('复制失败');
+                                    });
                                 }}
                             />
                         )}

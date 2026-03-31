@@ -207,7 +207,7 @@ const AppStore: React.FC = () => {
     fetchMyApps();
   };
 
-  const copyToClipboard = (text: string) => { navigator.clipboard.writeText(text); message.success('已复制'); };
+  const copyToClipboard = (text: string) => { navigator.clipboard.writeText(text).then(() => message.success('已复制')).catch(() => message.error('复制失败')); };
 
   const handleOrderSubmit = async () => {
     try {
