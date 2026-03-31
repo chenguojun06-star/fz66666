@@ -1012,7 +1012,7 @@ const OrderManagement: React.FC = () => {
       }
     } catch { /* 组织成员加载失败，回退到用户列表 */ }
     try {
-      const response = await api.get<{ code: number; data: { records: Array<{ id: number; name: string; username: string }> } }>('/system/user/list', { params: { page: 1, pageSize: 1000, status: 'enabled' } });
+      const response = await api.get<{ code: number; data: { records: Array<{ id: number; name: string; username: string }> } }>('/system/user/list', { params: { page: 1, pageSize: 1000, status: 'active' } });
       if (response.code === 200) {
         setUsers(response.data.records || []);
       }

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Alert, App, Button, Input, InputNumber, Popconfirm, Select, Space, Spin, Tabs, Tag, Typography } from 'antd';
-import { FileTextOutlined, UnorderedListOutlined, UserOutlined, WalletOutlined } from '@ant-design/icons';
+import { FileTextOutlined, UserOutlined, WalletOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
 import PredictionFeedbackBar from '@/components/common/PredictionFeedbackBar';
@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { matchRecordToStage } from '@/utils/productionStage';
 import ProcessTrackingTable from '@/components/production/ProcessTrackingTable';
 import { getProductionProcessTracking } from '@/utils/api/production';
+import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 
 const { Text } = Typography;
 
@@ -40,20 +41,21 @@ interface HistoryItem {
 /** 单个节点的操作数据 */
 interface NodeOperationData {
   assignee?: string;
-  assigneeId?: string;
+  assigneeId?: number | string;
   assigneeQuantity?: number;
   receiveTime?: string;
   completeTime?: string;
+  delegateType?: 'factory' | 'person';
   delegateFactoryId?: string;
   delegateFactoryName?: string;
-  delegatePrice?: number; // 委派单价/金额
-  delegateProcessName?: string; // 外发工序名称
-  processType?: string; // 二次工艺类型
+  delegatePrice?: number;
+  delegateProcessName?: string;
+  processType?: string;
   remark?: string;
   updatedAt?: string;
   updatedBy?: string;
-  updatedByName?: string; // 操作人名称
-  history?: HistoryItem[]; // 操作历史记录
+  updatedByName?: string;
+  history?: HistoryItem[];
 }
 
 /** 所有节点操作数据 */
@@ -132,6 +134,7 @@ interface NodeDetailModalProps {
   onClose: () => void;
   orderId?: string;
   orderNo?: string;
+  styleNo?: string;
   nodeType: string;
   nodeName: string;
   stats?: NodeStats;
@@ -170,11 +173,12 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   onClose,
   orderId,
   orderNo,
+  styleNo,
   nodeType,
   nodeName,
   stats: nodeStats,
   unitPrice,
-  processList = [],
+  processList: propsProcessList = [],
   isPatternProduction = false,
   extraData: _extraData,
   onSaved,
@@ -186,6 +190,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [factories, setFactories] = useState<Factory[]>();
+  const [users, setUsers] = useState<{ id: number; name: string; username: string }[]>([]);
   const [nodeOperations, setNodeOperations] = useState<NodeOperations>({});
   const [scanRecords, setScanRecords] = useState<ScanRecord[]>([]);
   const [bundles, setBundles] = useState<BundleRecord[]>([]);
@@ -194,13 +199,12 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     orderNo,
   });
   const [activeTab, setActiveTab] = useState('settings');
-  // 管理员解锁状态（允许在进度>=80%时仍然编辑）
   const [adminUnlocked, setAdminUnlocked] = useState(false);
-  // 工序跟踪（工资结算）数据
   const [processTrackingRecords, setProcessTrackingRecords] = useState<any[]>([]);
   const [trackingLoading, setTrackingLoading] = useState(false);
   const [repairLoading, setRepairLoading] = useState(false);
   const [loadWarnings, setLoadWarnings] = useState<string[]>([]);
+  const [templateProcessList, setTemplateProcessList] = useState<ProcessPriceItem[]>([]);
   // 进度预测
   const [prediction, setPrediction] = useState<{
     predictedFinishTime?: string;
@@ -226,24 +230,58 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   // 将 nodeType 转换为 NodeType 类型，用于索引
   const nodeTypeKey = nodeType as NodeType;
 
-  // 当前节点的操作数据
   const currentNodeData = nodeOperations[nodeTypeKey] || {};
+
+  const processList = useMemo(() => {
+    const merged = [...propsProcessList];
+    templateProcessList.forEach((tp) => {
+      const exists = merged.some(
+        (p) =>
+          String((p as any)?.processCode || (p as any)?.code || '').trim() ===
+          String((tp as any)?.processCode || (tp as any)?.code || '').trim()
+      );
+      if (!exists) {
+        merged.push(tp);
+      }
+    });
+    return merged;
+  }, [propsProcessList, templateProcessList]);
+
   const matchedProcess = useMemo(() => {
+    console.log('[matchedProcess] nodeName:', nodeName, 'processList:', processList);
     const byName = (p: any, target: string) => {
       const candidates = [p?.name, p?.processName, p?.label, p?.title].map((v) => String(v || '').trim());
       return candidates.some((v) => v && v === target);
     };
+    const byNameContains = (p: any, target: string) => {
+      const candidates = [p?.name, p?.processName, p?.label, p?.title].map((v) => String(v || '').trim().toLowerCase());
+      const targetLower = target.toLowerCase();
+      return candidates.some((v) => v && (v.includes(targetLower) || targetLower.includes(v)));
+    };
     const pickedName = String(currentNodeData.delegateProcessName || '').trim();
     const nodeLabel = String(nodeName || '').trim();
+    
     if (pickedName) {
       const byPicked = processList.find((p) => byName(p as any, pickedName));
-      if (byPicked) return byPicked as any;
+      if (byPicked) {
+        console.log('[matchedProcess] 通过 pickedName 精确匹配:', byPicked);
+        return byPicked as any;
+      }
     }
     if (nodeLabel) {
       const byNode = processList.find((p) => byName(p as any, nodeLabel));
-      if (byNode) return byNode as any;
+      if (byNode) {
+        console.log('[matchedProcess] 通过 nodeLabel 精确匹配:', byNode);
+        return byNode as any;
+      }
+      const byNodeContains = processList.find((p) => byNameContains(p as any, nodeLabel));
+      if (byNodeContains) {
+        console.log('[matchedProcess] 通过 nodeLabel 包含匹配:', byNodeContains);
+        return byNodeContains as any;
+      }
     }
-    return (processList[0] as any) || null;
+    console.log('[matchedProcess] 未找到匹配，返回 null');
+    return null;
   }, [currentNodeData.delegateProcessName, nodeName, processList]);
 
   const delegateProcessCode = useMemo(() => {
@@ -261,11 +299,10 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     }
   };
 
-  // 加载工厂列表
   const loadFactories = useCallback(async () => {
     try {
       const res = await api.get<{ code: number; data: { records: Factory[] } }>('/system/factory/list', {
-        params: { page: 1, pageSize: 500 }
+        params: { page: 1, pageSize: 500, factoryType: 'EXTERNAL' }
       });
       if (res.data?.records) {
         setFactories(res.data.records);
@@ -275,6 +312,66 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
       addLoadWarning('工厂列表加载失败');
     }
   }, [addLoadWarning]);
+
+  const loadUsers = useCallback(async () => {
+    try {
+      const params: Record<string, unknown> = { page: 1, pageSize: 500, status: 'active' };
+      
+      // 如果当前用户是工厂账号，只加载该工厂的用户
+      if (user?.factoryId) {
+        params.factoryId = user.factoryId;
+        console.log('[loadUsers] 当前用户是工厂账号，factoryId:', user.factoryId);
+      } else {
+        console.log('[loadUsers] 当前用户不是工厂账号，加载所有用户');
+      }
+      
+      console.log('[loadUsers] 请求参数:', params);
+      const res = await api.get<{ code: number; data: { records: { id: number; name: string; username: string }[] } }>('/system/user/list', {
+        params
+      });
+      console.log('[loadUsers] response:', res);
+      if (res.code === 200 && res.data?.records) {
+        console.log('[loadUsers] users count:', res.data.records.length, 'users:', res.data.records);
+        setUsers(res.data.records);
+      } else {
+        console.log('[loadUsers] API 返回异常:', res);
+        setUsers([]);
+      }
+    } catch (err) {
+      console.error('加载用户列表失败', err);
+      addLoadWarning('用户列表加载失败');
+      setUsers([]);
+    }
+  }, [addLoadWarning, user?.factoryId]);
+
+  const loadTemplateProcessList = useCallback(async (styleNoParam: string) => {
+    try {
+      console.log('[loadTemplateProcessList] 加载模板工序, styleNo:', styleNoParam);
+      const res = await templateLibraryApi.progressNodeUnitPrices(styleNoParam);
+      console.log('[loadTemplateProcessList] API response:', res);
+      if (res.code === 200 && Array.isArray(res.data)) {
+        const list = res.data.map((item: any) => ({
+          id: item?.id || item?.processCode,
+          processCode: item?.processCode || item?.code,
+          code: item?.code || item?.processCode,
+          name: item?.name || item?.processName || '',
+          unitPrice: item?.unitPrice || item?.price || 0,
+        }));
+        console.log('[loadTemplateProcessList] 解析后的工序列表:', list);
+        setTemplateProcessList(list);
+      }
+    } catch (err) {
+      console.error('加载模板工序列表失败', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (visible && styleNo) {
+      loadTemplateProcessList(styleNo);
+    } else if (!visible) {
+      setTemplateProcessList([]);
+    }
+  }, [visible, styleNo, loadTemplateProcessList]);
 
   // 加载节点操作数据
   const loadNodeOperations = useCallback(async () => {
@@ -437,6 +534,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     if (visible && orderId) {
       setLoadWarnings([]);
       loadFactories();
+      loadUsers();
       loadNodeOperations();
       // 样板生产不加载扫码记录和菲号明细（这些是大货生产的数据）
       if (!isPatternProduction) {
@@ -515,21 +613,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     }).catch(() => { /* 静默失败 */ });
   }, [orderId, nodeName, visible, isPatternProduction, nodeStats?.percent, filteredScanRecords, prediction, orderSummary.orderNo]);
 
-  // 计算菲号在当前节点的完成情况
-  const bundlesWithStatus = useMemo(() => {
-    return bundles.map(b => {
-      // 查找这个菲号在当前节点的扫码记录
-      const bundleScanRecords = filteredScanRecords.filter(r =>
-        r.cuttingBundleNo === b.bundleNo || r.cuttingBundleQrCode === b.qrCode
-      );
-      const completedQty = bundleScanRecords.reduce((sum, r) => sum + (r.quantity || 0), 0);
-      return {
-        ...b,
-        completed: completedQty >= (b.quantity || 0),
-        completedQty,
-      };
-    });
-  }, [bundles, filteredScanRecords]);
+
 
   // 未使用的变量，保留供将来使用
   const _cuttingTotalQty = useMemo(() => {
@@ -637,11 +721,16 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   // 生成变更描述
   const generateChangeDescription = (data: NodeOperationData): string => {
     const parts: string[] = [];
-    if (data.delegateFactoryName) parts.push(`委派工厂: ${data.delegateFactoryName}`);
+    if (data.delegateType === 'person') {
+      parts.push(`委派类型: 人员`);
+      if (data.assignee) parts.push(`委派人员: ${data.assignee}`);
+    } else {
+      parts.push(`委派类型: 工厂`);
+      if (data.delegateFactoryName) parts.push(`委派工厂: ${data.delegateFactoryName}`);
+    }
     if (data.delegateProcessName) parts.push(`外发工序: ${data.delegateProcessName}`);
     if (data.delegatePrice) parts.push(`单价: ¥${data.delegatePrice}`);
     if (data.processType) parts.push(`工艺类型: ${data.processType}`);
-    if (data.assignee) parts.push(`负责人: ${data.assignee}`);
     if (typeof data.assigneeQuantity === 'number') parts.push(`领取数量: ${data.assigneeQuantity}`);
     if (data.receiveTime) parts.push(`领取时间: ${new Date(data.receiveTime).toLocaleString()}`);
     if (data.completeTime) parts.push(`完成时间: ${new Date(data.completeTime).toLocaleString()}`);
@@ -811,29 +900,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     { title: '时间', dataIndex: 'scanTime', width: 100, render: formatTime },
   ];
 
-  // 菲号明细表格列
-  const bundleColumns: ColumnsType<BundleRecord> = [
-    { title: '扎号', dataIndex: 'bundleNo', width: 60 },
-    { title: '颜色', dataIndex: 'color', width: 80, ellipsis: true, render: (v) => normalizeText(v) || '-' },
-    { title: '尺码', dataIndex: 'size', width: 50 },
-    { title: '数量', dataIndex: 'quantity', width: 50 },
-    {
-      title: '完成',
-      dataIndex: 'completedQty',
-      width: 70,
-      render: (v, r) => (
-        <span style={{ color: r.completed ? 'var(--color-success)' : 'var(--color-warning)' }}>
-          {v || 0}/{r.quantity || 0}
-        </span>
-      )
-    },
-    {
-      title: '状态',
-      dataIndex: 'completed',
-      width: 60,
-      render: v => v ? <Tag color="success">✓</Tag> : <Tag>待做</Tag>
-    },
-  ];
+
 
   // 操作员明细表格列
   const operatorColumns: ColumnsType<OperatorSummary> = [
@@ -911,7 +978,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
 
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
           gap: 8,
           padding: '6px 8px',
           background: 'var(--color-bg-base)',
@@ -928,15 +995,16 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
           <div>工序编号</div>
           <div>工序名称</div>
           <div>数量</div>
+          <div>委派类型</div>
           <div>执行工厂</div>
+          <div>委派人员</div>
           <div>委派单价</div>
-          <div>委派人</div>
           <div>委派时间</div>
           <div>操作</div>
         </div>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
           gap: 8,
           padding: '8px',
           border: '1px solid var(--color-border)',
@@ -971,6 +1039,25 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
             style={{ width: '100%', minWidth: 0 }}
           />
           <Select
+            value={currentNodeData.delegateType || 'factory'}
+            onChange={(v) => {
+              updateNodeData('delegateType', v);
+              if (v === 'factory') {
+                updateNodeData('assigneeId', undefined);
+                updateNodeData('assignee', undefined);
+              } else {
+                updateNodeData('delegateFactoryId', undefined);
+                updateNodeData('delegateFactoryName', undefined);
+              }
+            }}
+            options={[
+              { value: 'factory', label: '工厂' },
+              { value: 'person', label: '人员' },
+            ]}
+            disabled={disableEdit}
+            style={{ width: '100%', minWidth: 0 }}
+          />
+          <Select
             allowClear
             showSearch
             placeholder="选择工厂"
@@ -980,7 +1067,24 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
               (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
             }
             options={factories?.map(f => ({ value: f.id, label: f.factoryName })) || []}
-            disabled={disableEdit}
+            disabled={disableEdit || currentNodeData.delegateType === 'person'}
+            style={{ width: '100%', minWidth: 0 }}
+          />
+          <Select
+            allowClear
+            showSearch
+            placeholder={`选择人员 (${users.length}人)`}
+            value={currentNodeData.assigneeId}
+            onChange={(v, option) => {
+              console.log('[Select Person] selected:', v, option);
+              updateNodeData('assigneeId', v);
+              updateNodeData('assignee', (option as any)?.label || String(v));
+            }}
+            filterOption={(input, option) =>
+              (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+            }
+            options={users.map(u => ({ value: u.id, label: u.name || u.username }))}
+            disabled={disableEdit || currentNodeData.delegateType === 'factory'}
             style={{ width: '100%', minWidth: 0 }}
           />
           <Input
@@ -989,7 +1093,6 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
             disabled
             style={{ width: '100%', minWidth: 0 }}
           />
-          <div style={{ color: 'var(--color-text-secondary)', minWidth: 0 }}>{delegateUser}</div>
           <div style={{ color: 'var(--color-text-secondary)', minWidth: 0 }}>{formatDelegationTime(currentNodeData.updatedAt)}</div>
           <Button size="small" type="primary" loading={saving} onClick={handleSave} disabled={disableEdit}>
             保存
@@ -1034,29 +1137,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     </div>
   );
 
-  // 菲号明细 Tab
-  const renderBundlesTab = () => {
-    const completedCount = bundlesWithStatus.filter(b => b.completed).length;
-    return (
-      <div style={{ padding: '8px 0' }}>
-        <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text type="secondary">共 {bundlesWithStatus.length} 个扎号</Text>
-          <Text type="secondary">
-            已完成: <span style={{ color: 'var(--color-success)' }}>{completedCount}</span> / {bundlesWithStatus.length}
-          </Text>
-        </div>
-        <ResizableTable
-          storageKey="node-detail-bundles"
-          size="small"
-          rowKey="id"
-          dataSource={bundlesWithStatus}
-          columns={bundleColumns}
-          pagination={{ size: 'small', showTotal: (total) => `共 ${total} 条`, showSizeChanger: false }}
-          scroll={{ y: 280 }}
-        />
-      </div>
-    );
-  };
+
 
   // 操作员明细 Tab
   const renderOperatorsTab = () => (
@@ -1201,13 +1282,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                 label: <span><FileTextOutlined /> 工序委派</span>,
                 children: renderSettingsTab(),
               },
-              // 样板生产扫码记录Tab已移除（需要时可在工序跟踪查看）
-              // 大货生产显示菲号明细、操作员 tab（扫码记录已合并到操作历史）
-              showProductionTabs && {
-                key: 'bundles',
-                label: <span><UnorderedListOutlined /> 菲号明细 ({bundlesWithStatus.length})</span>,
-                children: renderBundlesTab(),
-              },
+              // 大货生产显示操作员 tab
               showProductionTabs && {
                 key: 'operators',
                 label: <span><UserOutlined /> 操作员 ({operatorSummary.length})</span>,
