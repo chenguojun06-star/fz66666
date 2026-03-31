@@ -3,6 +3,8 @@ package com.fashion.supplychain.production.service.impl;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -17,6 +19,7 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.CuttingBundleMapper;
 import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
 import com.fashion.supplychain.production.service.CuttingTaskService;
+import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +47,9 @@ class CuttingBundleServiceImplTest {
 
     @Mock
     private ProductionOrderService productionOrderService;
+
+    @Mock
+    private MaterialPurchaseService materialPurchaseService;
 
     @Mock
     private CuttingTaskService cuttingTaskService;
@@ -113,7 +119,7 @@ class CuttingBundleServiceImplTest {
         assertThat(result.get(0).getQrCode()).contains("SIGNED-");
 
         verify(cuttingTaskService).markBundledByOrderId("order-1");
-        verify(processTrackingOrchestrator).initializeProcessTracking("order-1");
+        verify(processTrackingOrchestrator).appendProcessTracking(eq("order-1"), anyList());
         verify(productionOrderService).updateById(order);
         verify(productionOrderService).recomputeProgressFromRecords("order-1");
         assertThat(order.getCurrentProcessName()).isEqualTo("车缝");

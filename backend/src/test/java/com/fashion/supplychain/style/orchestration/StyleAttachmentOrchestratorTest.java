@@ -54,10 +54,7 @@ class StyleAttachmentOrchestratorTest {
 
     @Test
     void list_styleNoProvided_styleNotFound_throwsNoSuchElement() {
-        var mockQuery = mock(com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper.class);
-        when(styleInfoService.lambdaQuery()).thenReturn(mockQuery);
-        when(mockQuery.eq(any(), any())).thenReturn(mockQuery);
-        when(mockQuery.one()).thenReturn(null); // 款号不存在
+        when(styleInfoService.getOne(any(), eq(false))).thenReturn(null); // 款号不存在
 
         assertThatThrownBy(() -> orchestrator.list(null, "FZ001", "pattern"))
                 .isInstanceOf(NoSuchElementException.class)
@@ -68,10 +65,7 @@ class StyleAttachmentOrchestratorTest {
     void list_styleNoProvided_styleFound_usesStyleId() {
         StyleInfo style = new StyleInfo();
         style.setId(10L);
-        var mockQuery = mock(com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper.class);
-        when(styleInfoService.lambdaQuery()).thenReturn(mockQuery);
-        when(mockQuery.eq(any(), any())).thenReturn(mockQuery);
-        when(mockQuery.one()).thenReturn(style);
+        when(styleInfoService.getOne(any(), eq(false))).thenReturn(style);
 
         StyleAttachment att = new StyleAttachment();
         when(styleAttachmentService.listByStyleId("10", "pattern")).thenReturn(List.of(att));

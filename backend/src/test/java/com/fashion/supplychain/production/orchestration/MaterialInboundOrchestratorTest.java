@@ -25,6 +25,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import com.fashion.supplychain.warehouse.orchestration.MaterialPickupOrchestrator;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -41,6 +42,9 @@ class MaterialInboundOrchestratorTest {
 
     @Mock
     private MaterialReconciliationSyncOrchestrator materialReconciliationSyncOrchestrator;
+
+    @Mock
+    private MaterialPickupOrchestrator materialPickupOrchestrator;
 
     @InjectMocks
     private MaterialInboundOrchestrator materialInboundOrchestrator;

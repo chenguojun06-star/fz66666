@@ -77,6 +77,7 @@ class OrderManagementOrchestratorTest {
         style.setId(1L);
         style.setStyleNo("FZ001");
         style.setOrderType("alreadyUser");  // 非空表示已推送
+        style.setPushedToOrder(1);
         when(styleInfoService.getById(1L)).thenReturn(style);
 
         assertThatThrownBy(() -> orchestrator.createFromStyle(1L, List.of()))

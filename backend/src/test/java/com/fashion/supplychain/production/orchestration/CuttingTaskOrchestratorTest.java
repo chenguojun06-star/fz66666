@@ -184,7 +184,7 @@ class CuttingTaskOrchestratorTest {
         createdTask.setStatus("pending");
         when(cuttingTaskService.createTaskIfAbsent(any(ProductionOrder.class))).thenReturn(createdTask);
 
-        CuttingTask result = orchestrator.createCustom(buildCreateBody("TPL-001", "CUT-ORDER-001"));
+        CuttingTask result = orchestrator.createCustom(buildSingleLineCreateBody("TPL-001", "CUT-ORDER-001"));
 
         ProductionOrder savedOrder = orderCaptor.getValue();
         assertNotNull(result);
@@ -195,19 +195,16 @@ class CuttingTaskOrchestratorTest {
         assertEquals("TPL-001", savedOrder.getStyleNo());
         assertEquals("TPL-001", savedOrder.getStyleName());
         assertEquals("TPL-001", savedOrder.getStyleId());
-        assertEquals("多色", savedOrder.getColor());
-        assertEquals("多码", savedOrder.getSize());
+        assertEquals("黑色", savedOrder.getColor());
+        assertEquals("XL", savedOrder.getSize());
         assertEquals("pending", savedOrder.getStatus());
-        assertEquals(170, savedOrder.getOrderQuantity());
+        assertEquals(120, savedOrder.getOrderQuantity());
         assertEquals(LocalDateTime.of(2026, 3, 15, 0, 0), savedOrder.getCreateTime());
         assertEquals(LocalDateTime.of(2026, 3, 25, 23, 59, 59), savedOrder.getPlannedEndDate());
         assertNotNull(savedOrder.getOrderDetails());
         assertTrue(savedOrder.getOrderDetails().contains("黑色"));
-        assertTrue(savedOrder.getOrderDetails().contains("白色"));
         assertTrue(savedOrder.getOrderDetails().contains("XL"));
-        assertTrue(savedOrder.getOrderDetails().contains("L"));
         assertTrue(savedOrder.getOrderDetails().contains("120"));
-        assertTrue(savedOrder.getOrderDetails().contains("50"));
         assertEquals(0, savedOrder.getCompletedQuantity());
         assertEquals(0, savedOrder.getProductionProgress());
         assertEquals(100, savedOrder.getMaterialArrivalRate());

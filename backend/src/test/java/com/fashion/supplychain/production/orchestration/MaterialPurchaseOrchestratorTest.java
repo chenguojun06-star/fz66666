@@ -8,6 +8,8 @@ import com.fashion.supplychain.production.entity.MaterialPickingItem;
 import com.fashion.supplychain.production.entity.MaterialStock;
 import com.fashion.supplychain.production.mapper.MaterialOutboundLogMapper;
 import com.fashion.supplychain.production.service.MaterialPickingService;
+import com.fashion.supplychain.warehouse.mapper.MaterialPickupRecordMapper;
+import com.fashion.supplychain.warehouse.orchestration.MaterialPickupOrchestrator;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.MaterialStockService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
@@ -43,6 +45,8 @@ class MaterialPurchaseOrchestratorTest {
     @Mock MaterialStockService materialStockService;
     @Mock MaterialPickingService materialPickingService;
     @Mock MaterialOutboundLogMapper materialOutboundLogMapper;
+    @Mock MaterialPickupOrchestrator materialPickupOrchestrator;
+    @Mock MaterialPickupRecordMapper materialPickupRecordMapper;
 
     @Test
     void list_delegatesToService() {
