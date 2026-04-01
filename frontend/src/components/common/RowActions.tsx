@@ -65,6 +65,26 @@ const collectActionHandlers = (items?: MenuProps['items']) => {
   return handlers;
 };
 
+const stripMenuItemHandlers = (items?: MenuProps['items']): MenuProps['items'] => {
+  return (items || []).map((item) => {
+    if (!item || item.type === 'divider') {
+      return item;
+    }
+
+    const it = item as unknown as Record<string, unknown>;
+    const sanitized: Record<string, unknown> = {
+      ...it,
+      onClick: undefined,
+    };
+
+    if (Array.isArray(it['children']) && (it['children'] as unknown[]).length) {
+      sanitized['children'] = stripMenuItemHandlers(it['children'] as MenuProps['items']);
+    }
+
+    return sanitized as unknown as NonNullable<MenuProps['items']>[number];
+  });
+};
+
 /**
  * 行操作组件
  * 用于展示表格行的操作按钮，支持自动折叠溢出的操作到下拉菜单
@@ -129,6 +149,7 @@ const RowActions: React.FC<{
   })();
 
   const menuActionHandlers = collectActionHandlers(menuItems);
+  const sanitizedMenuItems = stripMenuItemHandlers(menuItems);
 
   // 判断下拉菜单是否所有操作都禁用
   const isDropdownDisabled = (menuItems || []).every((it: any) => {
@@ -172,7 +193,8 @@ const RowActions: React.FC<{
         <Dropdown
           trigger={['click']}
           menu={{
-            items: menuItems,
+            items: sanitizedMenuItems,
+            getPopupContainer: () => document.body,
             onClick: ({ key, domEvent }) => {
               domEvent?.stopPropagation?.();
               const handler = menuActionHandlers.get(String(key || '').trim());

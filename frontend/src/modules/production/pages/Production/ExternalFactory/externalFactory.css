@@ -84,28 +84,30 @@
 .ef-info-fields {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
 
 .ef-field-row {
   display: flex;
   align-items: baseline;
-  gap: 4px;
-  font-size: 12px;
-  line-height: 1.4;
+  gap: 5px;
+  line-height: 1.08;
 }
 
 .ef-field-label {
-  color: #999;
+  color: var(--color-text-tertiary);
   flex-shrink: 0;
   min-width: 28px;
   text-align-last: justify;
-  font-size: 12px;
+  font-size: 10px;
+  line-height: 1.08;
 }
 
 .ef-field-value {
-  color: #333;
-  font-size: 12px;
+  color: var(--color-text-primary);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.08;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

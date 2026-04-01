@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { App, Card, Checkbox, Form, Input, Modal, Select, Tabs } from 'antd';
 import dayjs from 'dayjs';
@@ -112,6 +112,8 @@ const StyleInfoDetailPage: React.FC = () => {
   const [sizeColorMatrixRows, setSizeColorMatrixRows] = useState<SizeColorMatrixRow[]>([]);
   const [colorImageMap, setColorImageMap] = useState<Record<string, string>>({});
   const [coverRefreshToken, setCoverRefreshToken] = useState(0);
+  // 标志：当 setCurrentStyle 只是更新封面URL时，跳过颜色/码数数据的重新解析
+  const skipColorSizeResetRef = useRef(false);
 
   // 待上传图片
   const [pendingImages, setPendingImages] = useState<File[]>([]);
@@ -120,6 +122,11 @@ const StyleInfoDetailPage: React.FC = () => {
   // ===== 3. 从currentStyle恢复颜色码数数据 =====
   useEffect(() => {
     if (!currentStyle) return;
+    // 仅更新封面时（如颜色图上传），跳过颜色/码数重置，避免新增颜色被旧服务端数据覆盖
+    if (skipColorSizeResetRef.current) {
+      skipColorSizeResetRef.current = false;
+      return;
+    }
 
     // 优先从sizeColorConfig JSON解析（新版格式）
     if ((currentStyle as any).sizeColorConfig) {
@@ -149,10 +156,22 @@ const StyleInfoDetailPage: React.FC = () => {
           setQty5(config.quantities[4] || 0);
         }
         if (Array.isArray(config.matrixRows)) {
-          setSizeColorMatrixRows(config.matrixRows.map((row: any) => ({
+          const restoredRows = config.matrixRows.map((row: any) => ({
             color: String(row?.color || ''),
             quantities: Array.isArray(row?.quantities) ? row.quantities.map((qty: any) => Number(qty || 0)) : [],
-          })));
+            imageUrl: row?.imageUrl || undefined,
+          }));
+          setSizeColorMatrixRows(restoredRows);
+          // 同步恢复颜色图片映射（新上传的 URL 不被覆盖）
+          const imageMapFromConfig: Record<string, string> = {};
+          restoredRows.forEach((row) => {
+            if (row.color && row.imageUrl) {
+              imageMapFromConfig[row.color] = row.imageUrl;
+            }
+          });
+          if (Object.keys(imageMapFromConfig).length > 0) {
+            setColorImageMap((prev) => ({ ...imageMapFromConfig, ...prev }));
+          }
         } else {
           setSizeColorMatrixRows([]);
         }
@@ -254,6 +273,7 @@ const StyleInfoDetailPage: React.FC = () => {
   }, [form, isNewPage]);
 
   const handleCoverChange = (url: string | null) => {
+    skipColorSizeResetRef.current = true; // 标记：此次 currentStyle 变更只更新封面，不重置颜色/码数
     setCurrentStyle((prev) => (prev ? { ...prev, cover: url || undefined } as any : prev));
     if (currentStyle?.id || currentStyle?.styleNo) {
       setStyleCoverOverride(currentStyle?.id, currentStyle?.styleNo, url);
@@ -329,10 +349,16 @@ const StyleInfoDetailPage: React.FC = () => {
     quantities: sizeColorMatrixRows.map((row) => row.quantities.reduce((sum, qty) => sum + Number(qty || 0), 0)),
     commonSizes,
     commonColors,
-    matrixRows: sizeColorMatrixRows.map((row) => ({
-      color: row.color,
-      quantities: row.quantities,
-    })),
+    matrixRows: sizeColorMatrixRows.map((row) => {
+      // 优先用 colorImageMap 中的服务端 URL（上传后真实地址）；data: blob 不保存到服务器
+      const serverImgUrl = colorImageMap[row.color]
+        || (row.imageUrl && !row.imageUrl.startsWith('data:') ? row.imageUrl : undefined);
+      return {
+        color: row.color,
+        quantities: row.quantities,
+        ...(serverImgUrl ? { imageUrl: serverImgUrl } : {}),
+      };
+    }),
   };
   const totalMatrixQty = sizeColorMatrixRows.reduce(
     (sum, row) => sum + row.quantities.reduce((subtotal, qty) => subtotal + Number(qty || 0), 0),

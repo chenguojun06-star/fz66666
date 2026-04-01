@@ -7,6 +7,7 @@ import { readPageSize } from '@/utils/pageSizeStore';
 import { usePersistentSort } from '@/hooks/usePersistentSort';
 
 const DATE_SORT_STORAGE_KEY = 'production_date_sort_asc';
+const PROGRESS_VIEW_MODE_STORAGE_KEY = 'production_progress_view_mode';
 
 const getDateSortFromStorage = (): boolean => {
   try {
@@ -27,10 +28,10 @@ export const useProgressFilters = () => {
   const [queryParams, setQueryParams] = useState<ProductionQueryParams>({ page: 1, pageSize: readPageSize(10), keyword: '', includeScrapped: false, excludeTerminal: true });
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'card'>(
-    () => (localStorage.getItem('production_view_mode') as 'list' | 'card') || 'card'
+    () => (localStorage.getItem(PROGRESS_VIEW_MODE_STORAGE_KEY) as 'list' | 'card') || 'card'
   );
   const setViewModePersist = (mode: 'list' | 'card') => {
-    localStorage.setItem('production_view_mode', mode);
+    localStorage.setItem(PROGRESS_VIEW_MODE_STORAGE_KEY, mode);
     setViewMode(mode);
   };
   const [activeStatFilter, setActiveStatFilter] = useState<'production' | 'delayed' | 'today'>('production');

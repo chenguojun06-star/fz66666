@@ -261,7 +261,7 @@ public class OrderFlowStageFillHelper {
                 if (!trackingByProcess.isEmpty()) {
                     carSewingQty = resolveTrackingQty(trackingByProcess, carSewingQty, "车缝", "carsewing", "car_sewing", "carSewing");
                     ironingQty = resolveTrackingQty(trackingByProcess, ironingQty, "尾部", "大烫", "整烫", "剪线", "尾工", "ironing", "tailprocess", "tail_process");
-                    secondaryProcessQty = resolveTrackingQty(trackingByProcess, secondaryProcessQty, "二次工艺", "secondary", "secondaryprocess", "secondary_process");
+                    secondaryProcessQty = resolveTrackingQty(trackingByProcess, secondaryProcessQty, "二次工艺", "secondary", "secondaryprocess", "secondary_process", "绣花", "印花", "水洗", "压花");
                     packagingQty = resolveTrackingQty(trackingByProcess, packagingQty, "包装", "packaging");
                 }
 
@@ -593,8 +593,11 @@ public class OrderFlowStageFillHelper {
                     tailQty += Math.max(0, q);
                 } else if ("production".equals(st)
                         && ("secondaryProcess".equals(pn) || "secondary_process".equals(pn)
-                            || "二次工艺".equals(pn) || pn.contains("二次"))) {
-                    // ★ 父进度节点「二次工艺」：包含所有 progressStage=二次工艺 的子工序（绣花/印花等）
+                            || "二次工艺".equals(pn) || pn.contains("二次")
+                            || pn.contains("绣花") || pn.contains("印花")
+                            || pn.contains("水洗") || pn.contains("压花"))) {
+                    // ★ 父进度节点「二次工艺」：包含所有 progressStage=二次工艺 的子工序（绣花/印花/水洗/压花等）
+                    // 防御：即使 resolveParentProgressStage 未成功归并，子工序名仍能正确归入二次工艺
                     if (secondaryProcessStart == null) {
                         secondaryProcessStart = t;
                     }
@@ -607,6 +610,7 @@ public class OrderFlowStageFillHelper {
                         && !templateLibraryService.isProgressQualityStageName(pn)
                         && !"车缝".equals(pn) && !"carSewing".equals(pn) && !"car_sewing".equals(pn)
                         && !"二次工艺".equals(pn) && !"secondaryProcess".equals(pn) && !"secondary_process".equals(pn)
+                        && !pn.contains("绣花") && !pn.contains("印花") && !pn.contains("水洗") && !pn.contains("压花")
                         && !"尾部".equals(pn) && !"tailProcess".equals(pn) && !"tail_process".equals(pn)
                         && !"packaging".equals(pn) && !"ironing".equals(pn)) {
                     // 兜底：未归类的生产扫码记录（sewing fallback）

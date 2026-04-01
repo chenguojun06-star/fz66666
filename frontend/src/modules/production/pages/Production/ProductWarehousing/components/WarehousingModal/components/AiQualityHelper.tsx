@@ -75,7 +75,7 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
             {data.historicalDefectRate != null && ` ${(data.historicalDefectRate * 100).toFixed(1)}%`}
           </Tag>
         )}
-        {data?.isUrgent && (
+        {data?.urgent && (
           <Tag color="orange">加急</Tag>
         )}
       </div>

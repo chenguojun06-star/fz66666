@@ -502,13 +502,6 @@ public class MaterialPurchaseOrchestrator {
         if (returnQuantity < 0) {
             throw new IllegalArgumentException("实际回料数量不能小于0");
         }
-        int purchaseQty = purchase.getPurchaseQuantity() == null ? 0 : purchase.getPurchaseQuantity().intValue();
-        int arrivedQty = purchase.getArrivedQuantity() == null ? 0 : purchase.getArrivedQuantity();
-        int max = arrivedQty > 0 ? arrivedQty : purchaseQty;
-        // 数量 ≤ 10 的面料/辅料（按米/克计量），不限制回料数量上限，与前端保持一致
-        if (max > 10 && returnQuantity > max) {
-            throw new IllegalArgumentException("实际回料数量不能大于到货数量或采购数量");
-        }
 
         // 保存凭证图片 URLs
         Object rawUrls = body == null ? null : body.get("evidenceImageUrls");

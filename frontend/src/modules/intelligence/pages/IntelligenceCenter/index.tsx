@@ -349,7 +349,7 @@ const IntelligenceCenter: React.FC = () => {
             <div className="c-kpi-unit">家</div>
             <div className="c-kpi-sub">
               {currentKpiMetrics.activeFactories === 0 && currentKpiMetrics.productionOrderCount > 0
-                ? <span style={{ color: '#ff4136' }}>⚠️ 全部离线·{currentKpiMetrics.productionOrderCount}单在制</span>
+                ? <span style={{ color: '#ff4136' }}>⚠️ 全部离线·{currentKpiMetrics.productionOrderCount}单生产中</span>
                 : <>员工&nbsp;<b style={{ color: '#39ff14' }}><AnimatedNum val={pulse?.activeWorkers ?? '—'} /></b>&nbsp;人在线</>}
             </div>
             <div className="c-kpi-delta-row">
@@ -484,7 +484,7 @@ const IntelligenceCenter: React.FC = () => {
               <span style={{ color: '#f7a600', fontSize: 42, fontWeight: 800, textShadow: '0 0 14px #f7a60088', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
                 <AnimatedNum val={currentKpiMetrics.productionOrderCount} />
               </span>
-              <span style={{ color: '#7dacc4', fontSize: 14, fontWeight: 600 }}>单在制</span>
+              <span style={{ color: '#7dacc4', fontSize: 14, fontWeight: 600 }}>单生产中</span>
               <span style={{ marginLeft: 'auto', color: '#7dacc4', fontSize: 14, fontWeight: 600 }}>
                 总&nbsp;<b style={{ color: '#e0e0e0', fontSize: 28, fontWeight: 800 }}>{orderStats.totalQty.toLocaleString()}</b>&nbsp;件
               </span>

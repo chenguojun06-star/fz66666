@@ -10,6 +10,7 @@ import com.fashion.supplychain.finance.service.PayrollSettlementItemService;
 import com.fashion.supplychain.finance.service.PayrollSettlementService;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -32,6 +33,9 @@ public class FinancialPayrollTool implements AgentTool {
 
     @Autowired
     private PayrollSettlementItemService payrollSettlementItemService;
+
+    @Autowired
+    private AiAgentToolAccessService aiAgentToolAccessService;
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -97,9 +101,55 @@ public class FinancialPayrollTool implements AgentTool {
             DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
             List<Map<String, Object>> resultList = new ArrayList<>();
 
-            // 如果指定了 operatorName 并且通过明细反查结算单
             Long tenantId = UserContext.tenantId();
+            String currentUserId = UserContext.userId();
 
+            // ── 工人自助模式：只允许查本人数据，安全隔离 ──
+            if (!aiAgentToolAccessService.hasManagerAccess() && currentUserId != null) {
+                QueryWrapper<PayrollSettlementItem> selfQuery = new QueryWrapper<>();
+                selfQuery.eq("operator_id", currentUserId);
+                if (tenantId != null) {
+                    selfQuery.eq("tenant_id", tenantId);
+                }
+                if (orderNo != null && !orderNo.isBlank()) {
+                    selfQuery.eq("order_no", orderNo);
+                }
+                selfQuery.orderByDesc("create_time");
+                selfQuery.last("LIMIT 15");
+
+                List<PayrollSettlementItem> selfItems = payrollSettlementItemService.list(selfQuery);
+                if (selfItems.isEmpty()) {
+                    return "{\"message\": \"暂无您的计件工资明细，请联系管理员确认是否已录入结算单\"}";
+                }
+
+                java.math.BigDecimal totalEarned = selfItems.stream()
+                        .map(i -> i.getTotalAmount() != null ? i.getTotalAmount() : java.math.BigDecimal.ZERO)
+                        .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+                List<Map<String, Object>> selfDtos = new ArrayList<>();
+                for (PayrollSettlementItem item : selfItems) {
+                    Map<String, Object> dto = new HashMap<>();
+                    dto.put("orderNo", item.getOrderNo());
+                    dto.put("styleNo", item.getStyleNo());
+                    dto.put("processName", item.getProcessName());
+                    dto.put("quantity", item.getQuantity());
+                    dto.put("unitPrice", item.getUnitPrice());
+                    dto.put("totalAmount", item.getTotalAmount());
+                    if (item.getCreateTime() != null) {
+                        dto.put("date", item.getCreateTime().format(dtf));
+                    }
+                    selfDtos.add(dto);
+                }
+
+                Map<String, Object> selfResult = new HashMap<>();
+                selfResult.put("employeeName", selfItems.get(0).getOperatorName());
+                selfResult.put("totalEarned", totalEarned);
+                selfResult.put("recordCount", selfItems.size());
+                selfResult.put("recentItems", selfDtos);
+                return OBJECT_MAPPER.writeValueAsString(selfResult);
+            }
+
+            // ── 管理员 / 跟单员完整查询路径 ──
             if (operatorName != null && !operatorName.isBlank()) {
                 QueryWrapper<PayrollSettlementItem> itemQuery = new QueryWrapper<>();
                 itemQuery.like("operator_name", operatorName);

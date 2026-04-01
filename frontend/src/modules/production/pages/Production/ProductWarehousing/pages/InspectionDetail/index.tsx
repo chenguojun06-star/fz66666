@@ -23,11 +23,10 @@ import StyleSizeTab from '@/modules/basic/pages/StyleInfo/components/StyleSizeTa
 import { qualityAiApi } from '@/services/production/productionApi';
 import type { QualityAiSuggestionResult } from '@/services/production/productionApi';
 import { message } from '@/utils/antdStatic';
-import { useWarehouseLocationOptions } from '@/hooks/useWarehouseLocationOptions';
+import DictAutoComplete from '@/components/common/DictAutoComplete';
 import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
 
 const { Title, Text } = Typography;
-const { Option } = Select;
 
 /* -------- 类型定义 -------- */
 interface QualityBriefingData {
@@ -86,7 +85,6 @@ const InspectionDetail: React.FC = () => {
   const [warehousingLoading, setWarehousingLoading] = useState(false);
   const [showWarehousingModal, setShowWarehousingModal] = useState(false);
   const [markingRepairBundleId, setMarkingRepairBundleId] = useState<string | null>(null);
-  const { warehouseOptions } = useWarehouseLocationOptions();
 
   /* ---- 批量不合格弹窗 ---- */
   const [batchUnqualifiedModalOpen, setBatchUnqualifiedModalOpen] = useState(false);
@@ -514,14 +512,13 @@ const InspectionDetail: React.FC = () => {
           <Space orientation="vertical" style={{ width: '100%' }} size="middle">
             <div>
               <Text strong style={{ marginRight: 12 }}>入库仓库：</Text>
-              <Select
-                placeholder="请选择仓库"
+              <DictAutoComplete
+                dictType="warehouse_location"
+                placeholder="请选择或输入仓库"
                 value={warehouseValue || undefined}
                 onChange={(v) => setWarehouseValue(String(v || '').trim())}
                 style={{ width: 200 }}
-              >
-                {warehouseOptions.map(w => <Option key={w} value={w}>{w}</Option>)}
-              </Select>
+              />
             </div>
             <Button type="primary" size="large" icon={<InboxOutlined />}
               loading={warehousingLoading} onClick={handleWarehouseSubmit}

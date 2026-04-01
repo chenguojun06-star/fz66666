@@ -952,6 +952,13 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
       if (confirmReviewStatus === 'PENDING') {
         return '样衣已经完成，当前等待审核结论。';
       }
+      const confirmSampleStatus = String(selectedStage.record.sampleStatus || '').trim().toUpperCase();
+      const isSampleProductionDone = Boolean(selectedStage.record.productionCompletedTime)
+        || Boolean(selectedStage.record.sampleCompletedTime)
+        || ['PRODUCTION_COMPLETED', 'COMPLETED'].includes(confirmSampleStatus);
+      if (isSampleProductionDone) {
+        return '样衣生产已完成，可以记录审核结论。';
+      }
       return '当前还没有进入审核 / 入库，请先完成样衣生产。';
     }
     return selectedStageInsight;
@@ -1182,7 +1189,11 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
     }
 
     if (!scrapped && selected.stage.key === 'confirm') {
-      if (selected.record.sampleCompletedTime) {
+      const confirmSampleStatus = String((selected.record as StyleRecord).sampleStatus || '').trim().toUpperCase();
+      const isSampleProductionDone = Boolean(selected.record.productionCompletedTime)
+        || Boolean(selected.record.sampleCompletedTime)
+        || ['PRODUCTION_COMPLETED', 'COMPLETED'].includes(confirmSampleStatus);
+      if (isSampleProductionDone) {
         actions.push({
           key: 'review',
           label: selected.record.sampleReviewStatus ? '修改审核结论' : '记录审核结论',
@@ -1272,7 +1283,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
 
   return (
     <>
-      <div className="style-smart-list">
+      <div className="style-smart-list style-smart-list--style-info">
         {data.length === 0 && !loading ? (
         <div className="style-smart-list__empty">
           <Empty description="暂无样衣数据" />

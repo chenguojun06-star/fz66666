@@ -15,6 +15,7 @@ import { analyzePurchase, renderPurchaseTooltip } from '../utils/purchaseIntelli
 import { formatDateTime } from '@/utils/datetime';
 import { MATERIAL_TYPES } from '@/constants/business';
 import { formatMaterialQuantityWithUnit, formatReferenceKilograms, getStatusConfig, subtractMaterialQuantity } from '../utils';
+import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import api from '@/utils/api';
 
 interface MaterialTableProps {
@@ -466,12 +467,13 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       fixed: 'right' as const,
       render: (_: any, record: MaterialPurchaseType) => {
         const frozen = isOrderFrozenForRecord(record);
+        const isPending = String(record?.status || '').trim().toLowerCase() === MATERIAL_PURCHASE_STATUS.PENDING;
         return (
           <RowActions
             actions={[
               {
                 key: 'view',
-                label: '查看',
+                label: isPending ? '领取' : '查看',
                 onClick: () => onView(record),
                 primary: true,
               },

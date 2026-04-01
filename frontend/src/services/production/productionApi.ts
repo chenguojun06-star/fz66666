@@ -175,7 +175,7 @@ export interface QualityAiSuggestionResult {
   styleNo?: string;
   styleName?: string;
   productCategory?: string;
-  isUrgent?: boolean;
+  urgent?: boolean;
   historicalDefectRate?: number;
   historicalVerdict?: 'good' | 'warn' | 'critical';
   checkpoints: string[];

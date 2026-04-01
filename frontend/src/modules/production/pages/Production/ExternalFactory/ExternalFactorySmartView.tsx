@@ -10,7 +10,7 @@ import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { getOrderCardSizeQuantityItems } from '@/utils/cardSizeQuantity';
 import { buildOrderColorSizeMatrixModel } from '@/components/common/OrderColorSizeMatrix';
 import RowActions, { type RowAction } from '@/components/common/RowActions';
-import { isDirectCuttingOrder, isOrderFrozenByStatus, isOrderFrozenByStatusOrStock } from '@/utils/api';
+import { isOrderFrozenByStatus, isOrderFrozenByStatusOrStock } from '@/utils/api';
 import '../../../../basic/pages/StyleInfo/styles.css';
 import './externalFactory.css';
 
@@ -553,7 +553,6 @@ const ExternalFactorySmartView: React.FC<Props> = ({
                   {(setPrintModalVisible || quickEditModal || handleCloseOrder || handleShareOrder) && (() => {
                     const frozen = isOrderFrozenByStatusOrStock(record);
                     const completed = isOrderFrozenByStatus(record);
-                    const directCutting = isDirectCuttingOrder(record as any);
                     const cardActions: RowAction[] = [
                       ...(setPrintModalVisible && setPrintingRecord ? [{
                         key: 'print',
@@ -571,26 +570,15 @@ const ExternalFactorySmartView: React.FC<Props> = ({
                       ...(!isFactoryAccount && openProcessDetail ? [{
                         key: 'process',
                         label: '工序',
-                        title: frozen ? '工序（订单已关单）' : '查看工序详情',
                         disabled: frozen,
                         children: [
-                          { key: 'all', label: '📋 全部工序', onClick: () => openProcessDetail(record, 'all') },
-                          { type: 'divider' as const },
-                          ...(!directCutting ? [{ key: 'procurement', label: '采购', onClick: () => openProcessDetail(record, 'procurement') }] : []),
-                          { key: 'cutting', label: '裁剪', onClick: () => openProcessDetail(record, 'cutting') },
-                          { key: 'carSewing', label: '车缝', onClick: () => openProcessDetail(record, 'carSewing') },
-                          ...(() => {
-                            const nodes = record.progressNodeUnitPrices;
-                            if (!Array.isArray(nodes)) return [];
-                            const hasSecondary = nodes.some((n: any) => {
-                              const name = String(n.name || n.processName || '').trim();
-                              return name.includes('二次工艺') || name.includes('二次') || (name.includes('工艺') && !name.includes('车'));
-                            });
-                            return hasSecondary ? [{ key: 'secondaryProcess', label: '二次工艺', onClick: () => openProcessDetail(record, 'secondaryProcess') }] : [];
-                          })(),
-                          { key: 'tailProcess', label: '尾部', onClick: () => openProcessDetail(record, 'tailProcess') },
-                          { type: 'divider' as const },
-                          ...(syncProcessFromTemplate ? [{ key: 'syncProcess', label: '🔄 从模板同步', onClick: () => syncProcessFromTemplate(record) }] : []),
+                          { key: 'all', label: '📋 全部工序', disabled: frozen, onClick: () => openProcessDetail(record, 'all') },
+                          ...(syncProcessFromTemplate ? [{
+                            key: 'syncProcess',
+                            label: '单价同步',
+                            disabled: frozen,
+                            onClick: () => syncProcessFromTemplate(record),
+                          }] : []),
                         ],
                       }] : []),
                       ...(isFactoryAccount && openSubProcessRemap ? [{

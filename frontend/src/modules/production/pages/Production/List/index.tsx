@@ -74,6 +74,7 @@ import type { SmartErrorInfo } from '@/smart/core/types';
 import { useProductionSmartQueue } from '../useProductionSmartQueue';
 
 const { Option } = Select;
+const LIST_VIEW_MODE_STORAGE_KEY = 'production_list_view_mode';
 
 // 悬停卡预加载用的默认工序节点（与 SmartOrderHoverCard STAGES_DEF 对应）
 const DEFAULT_HOVER_NODES: ProgressNode[] = [
@@ -192,10 +193,10 @@ const ProductionList: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [viewMode, setViewModeState] = useState<'list' | 'card' | 'smart'>(
-    () => (localStorage.getItem('production_view_mode') as 'list' | 'card' | 'smart') || 'list'
+    () => (localStorage.getItem(LIST_VIEW_MODE_STORAGE_KEY) as 'list' | 'card' | 'smart') || 'list'
   );
   const setViewMode = (mode: 'list' | 'card' | 'smart') => {
-    localStorage.setItem('production_view_mode', mode);
+    localStorage.setItem(LIST_VIEW_MODE_STORAGE_KEY, mode);
     setViewModeState(mode);
     // 无论切到哪个视图，都只重置页码，pageSize 由用户自己选择（不强制覆盖）
     setQueryParams(prev => ({ ...prev, page: 1 }));

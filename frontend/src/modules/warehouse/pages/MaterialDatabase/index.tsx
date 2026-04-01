@@ -210,6 +210,7 @@ const MaterialDatabasePage: React.FC = () => {
       }
     },
     {
+      manual: true,
       onSuccess: () => {
         close();
         fetchList();

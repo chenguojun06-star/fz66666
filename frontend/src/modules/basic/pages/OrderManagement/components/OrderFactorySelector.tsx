@@ -95,57 +95,58 @@ const OrderFactorySelector: React.FC<OrderFactorySelectorProps> = ({
           />
         </Form.Item>
       ) : (
-        <Form.Item name="factoryId" noStyle rules={[{ required: true, message: '请选择外发工厂' }]}>
-          <Select
-            placeholder="请选择外发工厂（工厂须先完成入驻）"
-            options={factories.map((factory) => ({ value: factory.id!, label: `${factory.factoryName}（${factory.factoryCode}）` }))}
-            showSearch
-            optionFilterProp="label"
-            allowClear
-          />
-        </Form.Item>
-      )}
-      {factoryMode === 'EXTERNAL' && selectedFactoryStat && (
-        <div
-          style={{
-            marginTop: -12,
-            marginBottom: 8,
-            padding: '6px 10px',
-            background: 'var(--color-bg-container, #fafafa)',
-            border: '1px solid var(--color-border, #e8e8e8)',
-            borderRadius: 6,
-            fontSize: 12,
-            lineHeight: '20px',
-            color: 'var(--color-text-secondary, #888)',
-          }}
-        >
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <span>在制 <b style={{ color: '#333' }}>{selectedFactoryStat.totalOrders}</b> 单</span>
-            <span>共 <b style={{ color: '#333' }}>{selectedFactoryStat.totalQuantity?.toLocaleString() || 0}</b> 件</span>
-            <span>
-              货期完成率
-              <b style={{ marginLeft: 4, color: selectedFactoryStat.deliveryOnTimeRate < 0 ? '#888' : selectedFactoryStat.deliveryOnTimeRate >= 80 ? '#52c41a' : selectedFactoryStat.deliveryOnTimeRate >= 60 ? '#fa8c16' : '#ff4d4f' }}>
-                {selectedFactoryStat.deliveryOnTimeRate < 0 ? '暂无' : `${selectedFactoryStat.deliveryOnTimeRate}%`}
-              </b>
-            </span>
-            {selectedFactoryStat.atRiskCount > 0 ? <span style={{ color: '#fa8c16' }}>高风险 <b>{selectedFactoryStat.atRiskCount}</b> 单</span> : null}
-            {selectedFactoryStat.overdueCount > 0 ? <span style={{ color: '#ff4d4f' }}>逾期 <b>{selectedFactoryStat.overdueCount}</b> 单</span> : null}
-          </div>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4, paddingTop: 4, borderTop: '1px dashed var(--color-border, #e8e8e8)' }}>
-            {selectedFactoryStat.activeWorkers > 0 ? <span>生产人数 <b style={{ color: '#333' }}>{selectedFactoryStat.activeWorkers}</b> 人</span> : null}
-            {selectedFactoryStat.avgDailyOutput > 0 ? <span>日均产量 <b style={{ color: '#1890ff' }}>{selectedFactoryStat.avgDailyOutput}</b> 件/天</span> : null}
-            {selectedFactoryStat.estimatedCompletionDays > 0 ? (
-              <span>
-                预计
-                <b style={{ marginInline: 4, color: selectedFactoryStat.estimatedCompletionDays > 30 ? '#ff4d4f' : selectedFactoryStat.estimatedCompletionDays > 15 ? '#fa8c16' : '#52c41a' }}>
-                  {selectedFactoryStat.estimatedCompletionDays}
-                </b>
-                天可完工
-              </span>
-            ) : null}
-            {selectedFactoryStat.activeWorkers <= 0 && selectedFactoryStat.avgDailyOutput <= 0 ? <span style={{ color: '#bbb' }}>暂无产能数据（该工厂近30天无扫码记录）</span> : null}
-          </div>
-        </div>
+        <>
+          <Form.Item name="factoryId" noStyle rules={[{ required: true, message: '请选择外发工厂' }]}>
+            <Select
+              placeholder="请选择外发工厂（工厂须先完成入驻）"
+              options={factories.map((factory) => ({ value: factory.id!, label: `${factory.factoryName}（${factory.factoryCode}）` }))}
+              showSearch
+              optionFilterProp="label"
+              allowClear
+            />
+          </Form.Item>
+          {selectedFactoryStat && (
+            <div
+              style={{
+                marginTop: 8,
+                padding: '6px 10px',
+                background: 'var(--color-bg-container, #fafafa)',
+                border: '1px solid var(--color-border, #e8e8e8)',
+                borderRadius: 6,
+                fontSize: 12,
+                lineHeight: '20px',
+                color: 'var(--color-text-secondary, #888)',
+              }}
+            >
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                <span>生产中 <b style={{ color: '#333' }}>{selectedFactoryStat.totalOrders}</b> 单</span>
+                <span>共 <b style={{ color: '#333' }}>{selectedFactoryStat.totalQuantity?.toLocaleString() || 0}</b> 件</span>
+                <span>
+                  货期完成率
+                  <b style={{ marginLeft: 4, color: selectedFactoryStat.deliveryOnTimeRate < 0 ? '#888' : selectedFactoryStat.deliveryOnTimeRate >= 80 ? '#52c41a' : selectedFactoryStat.deliveryOnTimeRate >= 60 ? '#fa8c16' : '#ff4d4f' }}>
+                    {selectedFactoryStat.deliveryOnTimeRate < 0 ? '暂无' : `${selectedFactoryStat.deliveryOnTimeRate}%`}
+                  </b>
+                </span>
+                {selectedFactoryStat.atRiskCount > 0 ? <span style={{ color: '#fa8c16' }}>高风险 <b>{selectedFactoryStat.atRiskCount}</b> 单</span> : null}
+                {selectedFactoryStat.overdueCount > 0 ? <span style={{ color: '#ff4d4f' }}>逾期 <b>{selectedFactoryStat.overdueCount}</b> 单</span> : null}
+              </div>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 4, paddingTop: 4, borderTop: '1px dashed var(--color-border, #e8e8e8)' }}>
+                {selectedFactoryStat.activeWorkers > 0 ? <span>生产人数 <b style={{ color: '#333' }}>{selectedFactoryStat.activeWorkers}</b> 人</span> : null}
+                {selectedFactoryStat.avgDailyOutput > 0 ? <span>日均产量 <b style={{ color: '#1890ff' }}>{selectedFactoryStat.avgDailyOutput}</b> 件/天</span> : null}
+                {selectedFactoryStat.estimatedCompletionDays > 0 ? (
+                  <span>
+                    预计
+                    <b style={{ marginInline: 4, color: selectedFactoryStat.estimatedCompletionDays > 30 ? '#ff4d4f' : selectedFactoryStat.estimatedCompletionDays > 15 ? '#fa8c16' : '#52c41a' }}>
+                      {selectedFactoryStat.estimatedCompletionDays}
+                    </b>
+                    天可完工
+                  </span>
+                ) : null}
+                {selectedFactoryStat.activeWorkers <= 0 && selectedFactoryStat.avgDailyOutput <= 0 ? <span style={{ color: '#bbb' }}>暂无产能数据（该工厂近30天无扫码记录）</span> : null}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </Form.Item>
   );

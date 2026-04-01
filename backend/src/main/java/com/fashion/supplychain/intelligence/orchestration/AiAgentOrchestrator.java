@@ -8,9 +8,11 @@ import com.fashion.supplychain.intelligence.agent.AiMessage;
 import com.fashion.supplychain.intelligence.dto.IntelligenceMemoryResponse;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.agent.AiToolCall;
+import com.fashion.supplychain.intelligence.agent.hook.ToolExecutionHook;
 import com.fashion.supplychain.intelligence.agent.tool.AgentTool;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
 import com.fashion.supplychain.intelligence.service.AiContextBuilderService;
+import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,9 +24,14 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -50,6 +57,9 @@ public class AiAgentOrchestrator {
     private AiContextBuilderService aiContextBuilderService;
 
     @Autowired
+    private AiAgentToolAccessService aiAgentToolAccessService;
+
+    @Autowired
     private AiMemoryOrchestrator aiMemoryOrchestrator;
 
     @Autowired
@@ -58,23 +68,29 @@ public class AiAgentOrchestrator {
     @Autowired
     private AiAgentTraceOrchestrator aiAgentTraceOrchestrator;
 
+    @Autowired(required = false)
+    private List<ToolExecutionHook> toolHooks;
+
     private Map<String, AgentTool> toolMap;
-    private List<AiTool> apiTools;
 
     /** 对话记忆：userId → 最近 N 轮 user+assistant 消息 */
     private final ConcurrentHashMap<String, List<AiMessage>> conversationMemory = new ConcurrentHashMap<>();
     private final ThreadLocal<String> lastCommandIdHolder = new ThreadLocal<>();
     private static final int MAX_MEMORY_TURNS = 6; // 保留最近6轮（12条消息）
     private static final int MAX_USERS_CACHED = 200; // 超过则清理最早的
+    /** 会话历史压缩阈值：超过此轮数时触发 LLM 摘要压缩（保留最近2轮原文，其余压缩） */
+    private static final int COMPACT_THRESHOLD_TURNS = 4;
+    /** Stuck 检测：同一工具+参数连续调用超过此次数时强制跳出 */
+    private static final int STUCK_MAX_REPEAT = 3;
+    /** 工具并发执行线程池 */
+    private final ExecutorService toolExecutor = Executors.newFixedThreadPool(4);
 
     @PostConstruct
     public void init() {
         toolMap = new HashMap<>();
-        apiTools = new ArrayList<>();
         if (registeredTools != null) {
             for (AgentTool tool : registeredTools) {
                 toolMap.put(tool.getName(), tool);
-                apiTools.add(tool.getToolDefinition());
                 log.info("[AiAgent] 已注册工具: {}", tool.getName());
             }
         }
@@ -89,24 +105,28 @@ public class AiAgentOrchestrator {
         lastCommandIdHolder.set(commandId);
         long requestStartAt = System.currentTimeMillis();
         String userId = UserContext.userId();
+        List<AgentTool> visibleTools = aiAgentToolAccessService.resolveVisibleTools(registeredTools);
+        Map<String, AgentTool> visibleToolMap = toToolLookup(visibleTools);
+        List<AiTool> visibleApiTools = aiAgentToolAccessService.toApiTools(visibleTools);
         List<AiMessage> messages = new ArrayList<>();
         List<JsonNode> teamDispatchCards = new ArrayList<>();
         List<JsonNode> bundleSplitCards = new ArrayList<>();
         List<JsonNode> xiaoyunInsightCards = new ArrayList<>();
-        messages.add(AiMessage.system(buildSystemPrompt(userMessage)));
-        // 加载对话记忆（最近 N 轮）
+        messages.add(AiMessage.system(buildSystemPrompt(userMessage, visibleTools)));
+        // 加载对话记忆（最近 N 轮），超过阈值时自动 LLM 压缩
         List<AiMessage> history = getConversationHistory(userId);
-        messages.addAll(history);
+        messages.addAll(compactConversationHistory(history));
         messages.add(AiMessage.user(userMessage));
 
         int maxIterations = 5;
         int currentIter = 0;
+        List<String> stuckSignatures = new ArrayList<>(); // Stuck 检测：跨轮次工具调用签名
 
         while (currentIter < maxIterations) {
             currentIter++;
             log.info("[AiAgent] 开始第 {} 轮思考...", currentIter);
 
-            IntelligenceInferenceResult result = inferenceOrchestrator.chat("agent-loop", messages, apiTools);
+            IntelligenceInferenceResult result = inferenceOrchestrator.chat("agent-loop", messages, visibleApiTools);
             if (!result.isSuccess()) {
                 log.error("[AiAgent] 推理失败: {}", result.getErrorMessage());
                 aiAgentTraceOrchestrator.finishRequest(commandId, null, result.getErrorMessage(), System.currentTimeMillis() - requestStartAt);
@@ -118,35 +138,29 @@ public class AiAgentOrchestrator {
 
             // Handle Tool Calls
             if (result.getToolCalls() != null && !result.getToolCalls().isEmpty()) {
+                // ── Stuck 检测：连续相同工具+参数调用超过阈值则强制终止 ──
+                Set<String> iterSignatures = new HashSet<>();
+                for (AiToolCall tc : result.getToolCalls()) {
+                    iterSignatures.add(buildStuckSignature(tc));
+                }
+                stuckSignatures.addAll(iterSignatures);
+                if (isStuck(stuckSignatures)) {
+                    log.warn("[AiAgent] Stuck 检测触发：连续 {} 轮重复相同工具调用，强制终止", STUCK_MAX_REPEAT);
+                    String stuckMsg = "抱歉，我在处理过程中遇到了循环，已自动终止。请尝试换一种方式描述您的需求。";
+                    aiAgentTraceOrchestrator.finishRequest(commandId, stuckMsg, "stuck_detected", System.currentTimeMillis() - requestStartAt);
+                    return Result.success(stuckMsg);
+                }
+
                 assistantMessage.setTool_calls(result.getToolCalls());
                 messages.add(assistantMessage);
 
-                for (AiToolCall toolCall : result.getToolCalls()) {
-                    String toolName = toolCall.getFunction().getName();
-                    String args = toolCall.getFunction().getArguments();
-                    long toolStartAt = System.currentTimeMillis();
-                    log.info("[AiAgent] LLM 决定调用工具: {} | args: {}", toolName, args);
-
-                    AgentTool tool = toolMap.get(toolName);
-                    String toolResult;
-                    if (tool == null) {
-                        toolResult = "{\"error\": \"工具不存在: " + toolName + "\"}";
-                    } else {
-                        try {
-                            toolResult = tool.execute(args);
-                        } catch (Exception e) {
-                            log.error("[AiAgent] 工具执行异常", e);
-                            toolResult = "{\"error\": \"执行失败: " + e.getMessage() + "\"}";
-                        }
-                    }
-                    log.info("[AiAgent] 工具调用结果:\n{}", toolResult);
-                    aiAgentTraceOrchestrator.logToolCall(commandId, toolName, args, toolResult, System.currentTimeMillis() - toolStartAt, !toolResult.contains("\"error\""));
-                    captureTeamDispatchCard(toolName, toolResult, teamDispatchCards);
-                    captureBundleSplitCard(toolName, toolResult, bundleSplitCards);
-                    xiaoyunInsightCardOrchestrator.collectFromToolResult(toolName, toolResult, xiaoyunInsightCards);
-                    String toolEvidence = buildToolEvidenceMessage(toolName, toolResult);
-                    log.info("[AiAgent] 工具证据摘要:\n{}", toolEvidence);
-                    messages.add(AiMessage.tool(toolEvidence, toolCall.getId(), toolName));
+                // ── 并发执行多工具调用 + Pre/Post Hooks ──
+                List<ToolExecRecord> execRecords = executeToolsConcurrently(result.getToolCalls(), visibleToolMap, commandId);
+                for (ToolExecRecord rec : execRecords) {
+                    captureTeamDispatchCard(rec.toolName, rec.rawResult, teamDispatchCards);
+                    captureBundleSplitCard(rec.toolName, rec.rawResult, bundleSplitCards);
+                    xiaoyunInsightCardOrchestrator.collectFromToolResult(rec.toolName, rec.rawResult, xiaoyunInsightCards);
+                    messages.add(AiMessage.tool(rec.evidence, rec.toolCallId, rec.toolName));
                 }
             } else {
                 // Done!
@@ -159,6 +173,8 @@ public class AiAgentOrchestrator {
                 log.info("[AiAgent] 返回最终结果给用户");
                 saveConversationTurn(userId, userMessage, revisedContent);
                 aiAgentTraceOrchestrator.finishRequest(commandId, revisedContent, null, System.currentTimeMillis() - requestStartAt);
+                // ── 租户级 AI 记忆增强：异步提取对话洞察 ──
+                enhanceMemoryAsync(userId, userMessage, revisedContent);
                 return Result.success(revisedContent);
             }
         }
@@ -188,21 +204,25 @@ public class AiAgentOrchestrator {
             }
 
             commandId = aiAgentTraceOrchestrator.startRequest(userMessage);
+            List<AgentTool> visibleTools = aiAgentToolAccessService.resolveVisibleTools(registeredTools);
+            Map<String, AgentTool> visibleToolMap = toToolLookup(visibleTools);
+            List<AiTool> visibleApiTools = aiAgentToolAccessService.toApiTools(visibleTools);
             List<AiMessage> messages = new ArrayList<>();
             List<JsonNode> teamDispatchCards = new ArrayList<>();
             List<JsonNode> bundleSplitCards = new ArrayList<>();
             List<JsonNode> xiaoyunInsightCards = new ArrayList<>();
-            messages.add(AiMessage.system(buildSystemPrompt(userMessage)));
+            messages.add(AiMessage.system(buildSystemPrompt(userMessage, visibleTools)));
             String userId = UserContext.userId();
             List<AiMessage> history = getConversationHistory(userId);
-            messages.addAll(history);
+            messages.addAll(compactConversationHistory(history));
             messages.add(AiMessage.user(userMessage));
 
             int maxIterations = 5;
+            List<String> stuckSignatures = new ArrayList<>(); // Stuck 检测
             for (int i = 1; i <= maxIterations; i++) {
                 emitSse(emitter, "thinking", Map.of("iteration", i, "message", "正在思考第 " + i + " 轮…"));
 
-                IntelligenceInferenceResult result = inferenceOrchestrator.chat("agent-loop", messages, apiTools);
+                IntelligenceInferenceResult result = inferenceOrchestrator.chat("agent-loop", messages, visibleApiTools);
                 if (!result.isSuccess()) {
                     aiAgentTraceOrchestrator.finishRequest(commandId, null, result.getErrorMessage(), System.currentTimeMillis() - requestStartAt);
                     emitSse(emitter, "error", Map.of("message", "推理服务暂时不可用: " + result.getErrorMessage()));
@@ -213,37 +233,40 @@ public class AiAgentOrchestrator {
                 AiMessage assistantMessage = AiMessage.assistant(result.getContent());
 
                 if (result.getToolCalls() != null && !result.getToolCalls().isEmpty()) {
+                    // ── Stuck 检测 ──
+                    Set<String> iterSigs = new HashSet<>();
+                    for (AiToolCall tc : result.getToolCalls()) {
+                        iterSigs.add(buildStuckSignature(tc));
+                    }
+                    stuckSignatures.addAll(iterSigs);
+                    if (isStuck(stuckSignatures)) {
+                        log.warn("[AiAgent-Stream] Stuck 检测触发，强制终止");
+                        String stuckMsg = "抱歉，我在处理过程中遇到了循环，已自动终止。请尝试换一种方式描述您的需求。";
+                        aiAgentTraceOrchestrator.finishRequest(commandId, stuckMsg, "stuck_detected", System.currentTimeMillis() - requestStartAt);
+                        emitSse(emitter, "answer", Map.of("content", stuckMsg, "commandId", commandId));
+                        emitSse(emitter, "done", Map.of());
+                        emitter.complete();
+                        return;
+                    }
+
                     assistantMessage.setTool_calls(result.getToolCalls());
                     messages.add(assistantMessage);
 
+                    // ── 并发执行多工具调用 + Pre/Post Hooks ──
+                    // 先发送所有 tool_call 事件
                     for (AiToolCall toolCall : result.getToolCalls()) {
-                        String toolName = toolCall.getFunction().getName();
-                        String args = toolCall.getFunction().getArguments();
-                        long toolStartAt = System.currentTimeMillis();
-                        emitSse(emitter, "tool_call", Map.of("tool", toolName, "arguments", args));
-
-                        AgentTool tool = toolMap.get(toolName);
-                        String toolResult;
-                        if (tool == null) {
-                            toolResult = "{\"error\": \"工具不存在: " + toolName + "\"}";
-                        } else {
-                            try {
-                                toolResult = tool.execute(args);
-                            } catch (Exception e) {
-                                log.error("[AiAgent-Stream] 工具执行异常", e);
-                                toolResult = "{\"error\": \"执行失败: " + e.getMessage() + "\"}";
-                            }
-                        }
-                        aiAgentTraceOrchestrator.logToolCall(commandId, toolName, args, toolResult, System.currentTimeMillis() - toolStartAt, !toolResult.contains("\"error\""));
-                        captureTeamDispatchCard(toolName, toolResult, teamDispatchCards);
-                        captureBundleSplitCard(toolName, toolResult, bundleSplitCards);
-                        xiaoyunInsightCardOrchestrator.collectFromToolResult(toolName, toolResult, xiaoyunInsightCards);
-                        String toolEvidence = buildToolEvidenceMessage(toolName, toolResult);
+                        emitSse(emitter, "tool_call", Map.of("tool", toolCall.getFunction().getName(), "arguments", toolCall.getFunction().getArguments()));
+                    }
+                    List<ToolExecRecord> execRecords = executeToolsConcurrently(result.getToolCalls(), visibleToolMap, commandId);
+                    for (ToolExecRecord rec : execRecords) {
+                        captureTeamDispatchCard(rec.toolName, rec.rawResult, teamDispatchCards);
+                        captureBundleSplitCard(rec.toolName, rec.rawResult, bundleSplitCards);
+                        xiaoyunInsightCardOrchestrator.collectFromToolResult(rec.toolName, rec.rawResult, xiaoyunInsightCards);
                         emitSse(emitter, "tool_result", Map.of(
-                                "tool", toolName,
-                                "success", !toolResult.contains("\"error\""),
-                                "summary", truncateOneLine(toolEvidence, 200)));
-                        messages.add(AiMessage.tool(toolEvidence, toolCall.getId(), toolName));
+                                "tool", rec.toolName,
+                                "success", !rec.rawResult.contains("\"error\""),
+                                "summary", truncateOneLine(rec.evidence, 200)));
+                        messages.add(AiMessage.tool(rec.evidence, rec.toolCallId, rec.toolName));
                     }
                 } else {
                     // == 自反思审查 ==
@@ -256,6 +279,8 @@ public class AiAgentOrchestrator {
                     // 最终回答
                     saveConversationTurn(userId, userMessage, revisedContent);
                     aiAgentTraceOrchestrator.finishRequest(commandId, revisedContent, null, System.currentTimeMillis() - requestStartAt);
+                    // ── 租户级 AI 记忆增强：异步提取对话洞察 ──
+                    enhanceMemoryAsync(userId, userMessage, revisedContent);
                     emitSse(emitter, "answer", Map.of("content", revisedContent, "commandId", commandId));
                     emitSse(emitter, "done", Map.of());
                     emitter.complete();
@@ -311,18 +336,14 @@ public class AiAgentOrchestrator {
         }
     }
 
-    private String buildSystemPrompt(String userMessage) {
+    private String buildSystemPrompt(String userMessage, List<AgentTool> visibleTools) {
         String currentTime = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
         String currentDate = LocalDate.now().toString();
         String userName = UserContext.username();
         String userRole = UserContext.role();
         boolean isSuperAdmin = UserContext.isSuperAdmin();
         boolean isTenantOwner = UserContext.isTenantOwner();
-        // 判断是否具备管理权限（老板/超管/管理角色）
-        boolean isManager = isSuperAdmin || isTenantOwner || (userRole != null &&
-                java.util.Arrays.asList("admin", "super_admin", "manager", "supervisor",
-                        "tenant_admin", "tenant_manager", "merchandiser")
-                        .stream().anyMatch(r -> userRole.toLowerCase().contains(r)));
+        boolean isManager = aiAgentToolAccessService.hasManagerAccess();
         String intelligenceContext;
         try {
             intelligenceContext = aiContextBuilderService.buildSystemPrompt();
@@ -343,8 +364,8 @@ public class AiAgentOrchestrator {
         if (!isManager) {
             workerRestriction = "\n【⚠️ 权限说明】\n" +
                     "当前用户是生产员工，仅允许查询与自己相关的生产信息。\n" +
-                    "可以回答：扫码记录查询、本人负责的订单进度、当前生产任务状态、本人产量与计件工资估算。\n" +
-                    "禁止回答：全厂汇总数据、财务结算总览、其他员工工资、管理层报告、仓库/CRM/采购等管理功能。\n" +
+                    "可以回答：本人负责订单的进度、相关扫码记录、当前生产任务状态、系统操作与SOP说明、本人计件工资明细。\n" +
+                    "禁止回答：全厂汇总数据、财务结算总览、他人工资数据、管理层报告、仓库/CRM/采购等管理功能。\n" +
                     "当用户询问超出权限范围的问题时，友好说明：该信息需管理员权限，同时引导用户可以查什么。\n";
         }
 
@@ -395,45 +416,15 @@ public class AiAgentOrchestrator {
             log.debug("[AiAgent-RAG] 混合检索跳过（Qdrant 未启用或记忆链失败）: {}", e.getMessage());
         }
 
+        String toolGuide = aiAgentToolAccessService.buildToolGuide(visibleTools);
+
         return "你是小云——服装供应链智能运营助理。第一句必须给结论+关键数字，不铺垫背景，不捏造数据。\n\n" +
                 contextBlock + "\n" +
                 workerRestriction +
                 intelligenceContext + "\n" +
                 memoryContext +
                 ragContext +
-                "【你的核心能力 — 业务工具】\n" +
-                "① tool_system_overview — 系统全局总览：订单统计、风险概况、今日数据（含昨日对比）、最需关注事项排名\n" +
-                "② tool_query_production_progress — 生产进度查询：按订单号/款式/状态/日期范围/工厂筛选，返回详细进度\n" +
-                "③ tool_smart_report — 智能报告生成：日报(daily)/周报(weekly)/月报(monthly)，含环比数据、工厂排名、风险摘要、成本汇总\n" +
-                "④ tool_deep_analysis — 深度分析：工厂排名(factory_ranking)/瓶颈分析(bottleneck)/跟单员负荷(merchandiser_load)/交期风险(delivery_risk)/成本分析(cost_analysis)/订单类型分布(order_type_breakdown)\n" +
-                "⑤ tool_action_executor — 执行操作：标记紧急(mark_urgent)/取消紧急(remove_urgent)/添加备注(add_remark)/发送通知(send_notification)\n" +
-                "⑥ tool_query_style_info — 款式信息查询：不仅查工价和BOM，还可以查样衣开发进度、纸样状态、整体开发进度节点。\n" +
-                "⑦ tool_query_warehouse_stock — 面辅料库存查询：按材料类型(FABRIC/EXCIPIENT)、材料名、颜色、供应商查询面辅料库存\n" +
-                "⑧ tool_query_financial_payroll — 工资与结算查询\n" +
-                "⑨ tool_sample_stock — 样衣库存查询：按样衣类型(development开发样/pre_production产前样/shipment大货样/sales销售样)、款号、颜色、尺码查询，返回库存数量、借出数量、可用数量、存放位置\n" +
-                "⑩ tool_finished_product_stock — 成品/大货库存查询：按款号、颜色、尺码、SKU编码查询已入库成品库存数量及成本价\n" +
-                "⑪ tool_query_crm_customer — CRM客户查询：按公司名称、客户级别(A/B/C/D)、联系人查询客户档案、折扣、信用分\n" +
-                "⑫ tool_query_system_user — 系统用户查询：按用户名、角色名称、工序类型查询员工数据和权限信息\n" +
-                "⑬ tool_change_approval — 变更审批：查看待审批列表(list_pending)、审批通过(approve)、驳回(reject)。当用户问'有什么待审批'、'通过那个申请'时调用\n" +
-                "⑭ tool_whatif — 推演沙盘：分析[如果提前X天交货/换工厂/加X个工人/降成本/推迟开工]对完工日、成本、逾期风险的量化影响，并给出最优策略。当用户说如果提前/换厂/加人/推迟时调用\n" +
-                "⑮ tool_multi_agent — 多智能体协同图谱：排产+采购+合规+物流专家并行分析，反思引擎整合，适合全面分析/综合评估所有订单/我最需要关注什么等宏观决策\n" +
-                "⑯ tool_knowledge_search — 知识库RAG问答：用混合检索回答行业术语(FOB/CMT/菲号等)、系统操作指南(如何建单/扫码/结算)、业务FAQ，并自动更新向量索引\n" +
-                "⑰ tool_scan_undo — 扫码撤回：撤回错误扫码记录，受工资结算/后续工序/时效限制\n" +
-                "⑱ tool_cutting_task_create — 裁剪单创建：按款号+颜色尺码数量直接创建裁剪单\n" +
-                "⑲ tool_order_edit — 订单编辑：修改备注、紧急程度、工厂、客户、预计出货日期等\n" +
-                "⑳ tool_payroll_approve — 工资结算审批：approve(通过) / cancel(取消/驳回)\n" +
-                "㉑ tool_team_dispatch — 协同派单：把任务直接分派给真实员工，自动匹配跟单/生产主管/采购/财务/仓库/质检等岗位并发站内通知\n" +
-                "㉒ tool_material_audit — 面辅料审核：查看待发起采购初审/待采购初审/待领取审核，并支持直接发起、通过、驳回审核\n" +
-                "㉓ tool_material_reconciliation — 物料对账：查看对账单、更新状态、退回上一步、解释异常、派发责任人跟进\n" +
-                "㉔ tool_finance_workflow — 财务工作流：查看待付款/待审批、发起付款、确认线下付款、驳回付款、通过报销、通过成品结算\n" +
-                "㉕ tool_sample_workflow — 样衣开发与样板生产：查看样衣开发状态、启动/完成阶段、更新样衣进度、样衣审核、推到下单管理、样板领取/完成/入库/审核\n" +
-                "㉖ tool_sample_loan — 样衣借调与归还：处理样衣借出/归还，面向销售样、开发样等库存协同\n" +
-                "㉗ tool_warehouse_op_log — 仓库操作日志：查询样衣借调/归还、大货出库等审计轨迹\n" +
-                "㉘ tool_material_receive — 面辅料到货与智能收货：查看智能收货预览、一键智能收货、单条领取、到货登记、到货入库、撤回收货\n" +
-                "㉙ tool_style_template — 模板库与多码单价：从款式生成模板、应用模板、同步工序单价、查看/保存多码单价\n" +
-                "㉚ tool_material_doc_receive — 采购单据自动收货：基于已上传单据回放识别结果，并自动登记到货或自动到货入库\n" +
-                "㉛ tool_bundle_split_transfer — 拆菲转派：把一个菲号按数量拆成两个执行子菲号，也支持在未继续流转时撤回拆菲，让数据自动归回原有菲号\n" +
-                "㉜ tool_order_learning — 下单学习与事件处理：分析同款历史、推荐更优工厂/单价模式、解释这单为什么贵、刷新该单学习结果\n\n" +
+                toolGuide +
                 "【协作原则 — 必须遵守】\n" +
                 "1. 先判断，再解释，再给动作。不要先铺垫背景。第一句必须给出当前最关键的判断。\n" +
                 "2. 你的每个判断都要能落回真实数据、真实对象、真实风险，不允许用空泛词代替结论。\n" +
@@ -443,33 +434,13 @@ public class AiAgentOrchestrator {
                 "6. 发现多个问题时，按影响交期、影响现金、影响客户、影响产能的顺序排序。\n" +
                 "7. 你不是客服口吻。语气要像一个成熟的业务搭档，直接、克制、可信。\n\n" +
                 "【工具使用策略 — 必须遵守】\n" +
-                "1. 概览问题（\"系统状态/今天怎么样/有什么问题\"）→ 先调 tool_system_overview，重点解读 topPriorities\n" +
-                "2. 报告需求（\"日报/周报/月报\"）→ 调 tool_smart_report(reportType=daily/weekly/monthly)，直接基于返回数据生成完整 Markdown 报告\n" +
-                "3. 分析需求（\"哪个工厂效率最高/瓶颈在哪/交期有风险吗\"）→ 调 tool_deep_analysis(analysisType=对应类型)\n" +
-                "4. 执行操作（\"标记xx为紧急/给工厂发个通知\"）→ 调 tool_action_executor，执行前先用1句话确认操作内容\n" +
-                "5. 复杂分析 → 组合多个工具：先 overview 看全局 → 再 deep_analysis 定位问题 → 最后给出行动建议\n" +
-                "6. 当用户问\"现在最应该关注什么\" → 调 tool_system_overview 读取 topPriorities，按优先级逐条解读并给出操作建议\n" +
-                "7. 当用户问\"这单怎么下更划算/为什么成本高/帮我刷新这单学习结果\" → 调 tool_order_learning，优先返回多花多少钱、推荐怎么切、是否已刷新学习结果\n" +
-                "7. 库存问题 → 面辅料用 tool_query_warehouse_stock；样衣用 tool_sample_stock；成品/大货用 tool_finished_product_stock\n" +
-                "8. 客户/人员问题 → 客户档案用 tool_query_crm_customer；员工信息用 tool_query_system_user\n" +
-                "9. 审批问题（\"有什么待审批/帮我看看审批\"）→ 变更审批用 tool_change_approval(action=list_pending)；工资结算审批用 tool_payroll_approve；面辅料采购初审/领取审核用 tool_material_audit(action=list_material_audits)\n" +
-                "10. 扫码撤回（\"撤回刚才那条扫码/撤销菲号扫码\"）→ 调 tool_scan_undo，优先传 recordId，其次传 scanCode\n" +
-                "11. 创建裁剪单（\"帮我开裁剪单\"）→ 调 tool_cutting_task_create\n" +
-                "12. 修改订单（\"把这个订单交期改到xx/备注改成xx\"）→ 调 tool_order_edit\n" +
-                "13. 人员协同（\"通知跟单跟进这单/安排采购今天处理缺料/找财务确认回款/让生产主管推进\"）→ 优先调 tool_team_dispatch(action=dispatch)，明确责任岗位、时效、关联订单；执行后必须回报已分派给谁\n" +
-                "13.1 协同进度（\"谁在处理这单/这单通知出去了吗/财务接单没有\"）→ 调 tool_team_dispatch(action=query_status)\n" +
-                "13.2 协同回写（\"我接单了/我开始处理了/我处理完成了\"）→ 调 tool_team_dispatch(action=accept_task/start_task/complete_task)\n" +
-                "13.3 协同列表（\"列出当前协同任务/最近哪些任务卡住了\"）→ 调 tool_team_dispatch(action=list_tasks)\n" +
-                "14. 面辅料审核（\"帮我看面辅料待审核/发起这张采购单初审/通过这张领取单/驳回这张采购单\"）→ 必须优先调 tool_material_audit，不要只回答流程说明\n" +
-                "15. 物料对账（\"帮我看物料对账/通过这张对账/退回这张对账/这张对账为什么异常/通知财务处理这张对账\"）→ 必须优先调 tool_material_reconciliation\n" +
-                "16. 财务审批与付款（\"帮我看财务待审批/通过这张报销/发起这张对账付款/确认线下付款\"）→ 必须优先调 tool_finance_workflow\n" +
-                "17. 样衣开发与样板（\"把这款样衣开工/样衣进度改到80/样衣审核通过/推到下单管理/让样板入库\"）→ 必须优先调 tool_sample_workflow\n\n" +
-                "18. 样衣借调与归还（\"借一件样衣给客户/这件样衣归还入库\"）→ 调 tool_sample_loan\n" +
-                "19. 仓库追溯（\"谁借走了这件样衣/最近谁做了样衣归还\"）→ 调 tool_warehouse_op_log\n" +
-                "20. 面辅料到货与收货（\"看看这单能不能智能收货/把这张采购单登记到货/直接到货入库/一键收完这单面辅料\"）→ 必须优先调 tool_material_receive\n" +
-                "21. 模板库与多码单价（\"从这款生成模板/把模板套到这款样衣/同步工序单价/查看多码单价/保存多码单价\"）→ 必须优先调 tool_style_template\n" +
-                "22. 采购单据自动执行（\"按最新采购单据自动收货/根据这张采购单直接到货入库\"）→ 必须优先调 tool_material_doc_receive\n" +
-                "23. 拆菲转派（\"这扎号做了30件，剩20件转给李四/把这个菲号拆成30和20\"）→ 调 tool_bundle_split_transfer(action=split_transfer)；查拆分关系时调 action=query_family；撤回拆菲（\"把刚才拆的菲号撤回/恢复成原来的菲号\"）→ 调 action=rollback_split\n\n" +
+                "1. 只能使用【当前会话可用工具】里已经列出的工具；没列出的能力一律视为当前账号不可用。\n" +
+                "2. 概览类问题先查总览，单订单/单对象问题先查明细，规则/SOP问题先查知识库。\n" +
+                "3. 同一结论需要多个维度时，先查主事实，再补风险、库存、财务，不要无序乱调工具。\n" +
+                "4. 写操作对象明确且风险可控就直接执行；对象不明确时，只补一句最关键的确认，不要反复追问。\n" +
+                "5. 工具返回权限不足或数据不足时，要直接说明限制，并给出当前账号还能继续查的内容。\n" +
+                "6. 当用户问“现在最应该关注什么”时，优先使用带优先级、风险排序或异常聚合能力的工具。\n" +
+                "7. 当用户问“怎么办”时，优先把建议落到负责人、动作、时效和预期结果。\n\n" +
                 "【输出要求】\n" +
                 "- 默认用这个顺序组织回答：结论 → 依据 → 动作。需要时再补风险或预期效果。\n" +
                 "- 结论必须短，依据必须有数字或对象，动作最多 3 条。\n" +
@@ -506,6 +477,17 @@ public class AiAgentOrchestrator {
         Long tenantId = UserContext.tenantId();
         List<AiMessage> msgs = getConversationHistory(userId);
         aiMemoryOrchestrator.saveConversation(tenantId, userId, msgs);
+    }
+
+    private Map<String, AgentTool> toToolLookup(List<AgentTool> visibleTools) {
+        return visibleTools.stream().collect(Collectors.toMap(AgentTool::getName, tool -> tool));
+    }
+
+    private String buildUnavailableToolResult(String toolName) {
+        if (toolMap.containsKey(toolName) && !aiAgentToolAccessService.canUseTool(toolName)) {
+            return "{\"error\": \"当前账号无权使用工具: " + toolName + "\"}";
+        }
+        return "{\"error\": \"工具不存在: " + toolName + "\"}";
     }
 
     private void emitSse(SseEmitter emitter, String eventName, Map<String, Object> data) {
@@ -748,5 +730,243 @@ public class AiAgentOrchestrator {
             return 800;
         }
         return MAX_TOOL_RAW_CHARS;
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // Upgrade #1  会话历史压缩 — 超过阈值轮数时 LLM 摘要压缩旧对话
+    // ══════════════════════════════════════════════════════════
+
+    private List<AiMessage> compactConversationHistory(List<AiMessage> history) {
+        if (history == null || history.isEmpty()) {
+            return List.of();
+        }
+        // 每 2 条消息视为 1 轮（user + assistant）
+        int turnCount = history.size() / 2;
+        if (turnCount <= COMPACT_THRESHOLD_TURNS) {
+            return new ArrayList<>(history);
+        }
+        // 保留最近 2 轮原文（最后 4 条消息）
+        int keepMessages = 4;
+        List<AiMessage> recentMessages = history.subList(history.size() - keepMessages, history.size());
+        List<AiMessage> olderMessages = history.subList(0, history.size() - keepMessages);
+
+        // 拼接旧对话为文本，请求 LLM 摘要
+        StringBuilder olderText = new StringBuilder();
+        for (AiMessage msg : olderMessages) {
+            String role = msg.getRole() == null ? "unknown" : msg.getRole();
+            String content = msg.getContent() == null ? "" : msg.getContent();
+            olderText.append("[").append(role).append("] ").append(truncate(content, 500)).append("\n");
+        }
+
+        try {
+            List<AiMessage> compactPrompt = List.of(
+                    AiMessage.system("你是对话摘要助手。将以下多轮对话压缩为一段简要上下文摘要（中文，150字以内），保留关键实体（订单号、款号、工厂名、金额）和用户意图。"),
+                    AiMessage.user(olderText.toString())
+            );
+            IntelligenceInferenceResult compactResult = inferenceOrchestrator.chat("history-compact", compactPrompt, List.of());
+            if (compactResult.isSuccess() && compactResult.getContent() != null) {
+                List<AiMessage> result = new ArrayList<>();
+                result.add(AiMessage.system("[对话上下文摘要] " + compactResult.getContent()));
+                result.addAll(recentMessages);
+                log.info("[AiAgent] 会话历史压缩：{} 条 → 1条摘要 + {} 条近期", olderMessages.size(), recentMessages.size());
+                return result;
+            }
+        } catch (Exception e) {
+            log.warn("[AiAgent] 会话历史压缩失败，回退全量: {}", e.getMessage());
+        }
+        return new ArrayList<>(history);
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // Upgrade #2  Stuck 检测 — 防止 ReAct 死循环
+    // ══════════════════════════════════════════════════════════
+
+    private String buildStuckSignature(AiToolCall toolCall) {
+        String name = toolCall.getFunction() == null ? "?" : toolCall.getFunction().getName();
+        String args = toolCall.getFunction() == null ? "" : String.valueOf(
+                toolCall.getFunction().getArguments() == null ? "" : toolCall.getFunction().getArguments());
+        return name + "|" + args.hashCode();
+    }
+
+    private boolean isStuck(List<String> signatures) {
+        if (signatures.size() < STUCK_MAX_REPEAT) {
+            return false;
+        }
+        // 检查最后 STUCK_MAX_REPEAT 个签名是否全部相同
+        String last = signatures.get(signatures.size() - 1);
+        for (int i = signatures.size() - STUCK_MAX_REPEAT; i < signatures.size(); i++) {
+            if (!last.equals(signatures.get(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // Upgrade #3 & #5  Pre/Post Hooks + 并发工具执行
+    // ══════════════════════════════════════════════════════════
+
+    /** 工具执行结果记录（内部数据结构） */
+    private static class ToolExecRecord {
+        final String toolCallId;
+        final String toolName;
+        final String args;
+        final String rawResult;
+        final String evidence;
+        final long elapsedMs;
+
+        ToolExecRecord(String toolCallId, String toolName, String args,
+                       String rawResult, String evidence, long elapsedMs) {
+            this.toolCallId = toolCallId;
+            this.toolName = toolName;
+            this.args = args;
+            this.rawResult = rawResult;
+            this.evidence = evidence;
+            this.elapsedMs = elapsedMs;
+        }
+    }
+
+    private List<ToolExecRecord> executeToolsConcurrently(
+            List<AiToolCall> toolCalls,
+            Map<String, AgentTool> visibleToolMap,
+            String commandId) {
+
+        // 单工具时直接同步执行，避免线程池开销
+        if (toolCalls.size() == 1) {
+            return List.of(executeSingleTool(toolCalls.get(0), visibleToolMap, commandId));
+        }
+
+        // 多工具并发执行
+        List<CompletableFuture<ToolExecRecord>> futures = new ArrayList<>();
+        for (AiToolCall toolCall : toolCalls) {
+            futures.add(CompletableFuture.supplyAsync(
+                    () -> executeSingleTool(toolCall, visibleToolMap, commandId),
+                    toolExecutor));
+        }
+
+        List<ToolExecRecord> records = new ArrayList<>();
+        for (CompletableFuture<ToolExecRecord> future : futures) {
+            try {
+                records.add(future.join());
+            } catch (Exception e) {
+                log.error("[AiAgent] 并发工具执行异常: {}", e.getMessage());
+                records.add(new ToolExecRecord("err", "unknown", "",
+                        "{\"error\":\"工具执行异常: " + e.getMessage() + "\"}",
+                        "【工具证据】\n- 状态: 异常\n- 错误: " + e.getMessage(), 0));
+            }
+        }
+        return records;
+    }
+
+    private ToolExecRecord executeSingleTool(AiToolCall toolCall,
+                                             Map<String, AgentTool> visibleToolMap,
+                                             String commandId) {
+        String toolName = toolCall.getFunction().getName();
+        String arguments = toolCall.getFunction().getArguments();
+        String toolCallId = toolCall.getId();
+        long start = System.currentTimeMillis();
+        String rawResult;
+        boolean success = false;
+
+        // ── Pre-Hook: 允许拦截 ──
+        if (toolHooks != null) {
+            for (ToolExecutionHook hook : toolHooks) {
+                try {
+                    if (!hook.preToolUse(toolName, arguments)) {
+                        log.info("[AiAgent] Hook 拦截工具调用: {}", toolName);
+                        rawResult = "{\"error\":\"工具调用被安全策略拦截: " + toolName + "\"}";
+                        long elapsed = System.currentTimeMillis() - start;
+                        return new ToolExecRecord(toolCallId, toolName, arguments, rawResult,
+                                buildToolEvidenceMessage(toolName, rawResult), elapsed);
+                    }
+                } catch (Exception e) {
+                    log.warn("[AiAgent] preToolUse hook 异常: {}", e.getMessage());
+                }
+            }
+        }
+
+        // ── 执行工具 ──
+        AgentTool tool = visibleToolMap.get(toolName);
+        if (tool != null) {
+            try {
+                rawResult = tool.execute(arguments);
+                success = true;
+            } catch (Exception e) {
+                log.error("[AiAgent] 工具执行异常: tool={}, error={}", toolName, e.getMessage());
+                rawResult = "{\"error\":\"工具执行异常: " + e.getMessage() + "\"}";
+            }
+        } else {
+            rawResult = buildUnavailableToolResult(toolName);
+        }
+
+        long elapsed = System.currentTimeMillis() - start;
+
+        // ── Post-Hook: 通知 ──
+        if (toolHooks != null) {
+            for (ToolExecutionHook hook : toolHooks) {
+                try {
+                    hook.postToolUse(toolName, arguments, rawResult, elapsed, success);
+                } catch (Exception e) {
+                    log.warn("[AiAgent] postToolUse hook 异常: {}", e.getMessage());
+                }
+            }
+        }
+
+        // ── Trace 记录 ──
+        try {
+            aiAgentTraceOrchestrator.logToolCall(commandId, toolName, arguments, rawResult, elapsed, true);
+        } catch (Exception e) {
+            log.debug("[AiAgent] trace logToolCall 失败: {}", e.getMessage());
+        }
+
+        String evidence = buildToolEvidenceMessage(toolName, rawResult);
+        return new ToolExecRecord(toolCallId, toolName, arguments, rawResult, evidence, elapsed);
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // Upgrade #4  租户级 AI 记忆增强 — 异步提取对话洞察写入知识库
+    // ══════════════════════════════════════════════════════════
+
+    private void enhanceMemoryAsync(String userId, String userMessage, String assistantResponse) {
+        CompletableFuture.runAsync(() -> {
+            try {
+                // 简单对话（单纯闲聊/推荐追问）不值得提取
+                if (assistantResponse == null || assistantResponse.length() < 80) {
+                    return;
+                }
+                List<AiMessage> extractPrompt = List.of(
+                        AiMessage.system("你是知识提取助手。分析以下对话，如果其中包含有价值的业务洞察（如决策依据、" +
+                                "异常处理方案、数据分析结论），则输出一行标题和一段摘要，格式:\n" +
+                                "TITLE: 标题\nCONTENT: 摘要\n\n" +
+                                "如果对话是简单闲聊/查询且无新洞察，仅输出 SKIP"),
+                        AiMessage.user("用户: " + truncate(userMessage, 300) + "\n助手: " + truncate(assistantResponse, 600))
+                );
+                IntelligenceInferenceResult extractResult = inferenceOrchestrator.chat("memory-extract", extractPrompt, List.of());
+                if (!extractResult.isSuccess() || extractResult.getContent() == null) {
+                    return;
+                }
+                String extraction = extractResult.getContent().trim();
+                if (extraction.startsWith("SKIP") || !extraction.contains("TITLE:")) {
+                    return;
+                }
+                // 解析 TITLE 和 CONTENT
+                String title = "";
+                String content = "";
+                for (String line : extraction.split("\n")) {
+                    if (line.startsWith("TITLE:")) {
+                        title = line.substring(6).trim();
+                    } else if (line.startsWith("CONTENT:")) {
+                        content = line.substring(8).trim();
+                    }
+                }
+                if (title.isEmpty() || content.isEmpty()) {
+                    return;
+                }
+                intelligenceMemoryOrchestrator.saveCase("agent_insight", "conversation", title, content);
+                log.info("[AiAgent] 记忆增强成功: title={}, userId={}", title, userId);
+            } catch (Exception e) {
+                log.debug("[AiAgent] 记忆增强异常（不影响主流程）: {}", e.getMessage());
+            }
+        }, toolExecutor);
     }
 }

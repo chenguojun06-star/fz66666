@@ -86,8 +86,8 @@
 
 .style-smart-row {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 22px;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 16px;
   padding: 22px;
   border-radius: 28px;
   border: 1px solid rgba(148, 163, 184, 0.16);
@@ -122,7 +122,7 @@
 }
 
 .style-smart-row__cover {
-  min-height: 280px;
+  min-height: 200px;
   align-self: stretch;
 }
 
@@ -281,6 +281,49 @@
   font-weight: 600;
 }
 
+/* 样衣开发智能列表：信息区单列排列，与外发工厂一致 */
+.style-smart-list--style-info .style-smart-row__meta--stacked {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.style-smart-list--style-info .style-smart-row__meta--stacked .style-smart-row__meta-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  line-height: 1.35;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.style-smart-list--style-info .style-smart-row__meta-label {
+  flex-shrink: 0;
+  white-space: nowrap;
+  line-height: 1.35;
+  letter-spacing: 0;
+  min-width: 28px;
+  text-align-last: justify;
+}
+
+.style-smart-list--style-info .style-smart-row__meta-label::after {
+  content: '：';
+  color: var(--color-text-tertiary);
+}
+
+.style-smart-list--style-info .style-smart-row__meta-value {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
 .style-smart-row__aside {
   display: flex;
   flex-direction: column;
@@ -289,25 +332,25 @@
 }
 
 .style-smart-row__overview {
-  width: 82px;
-  min-width: 82px;
-  padding: 8px;
-  border-radius: 14px;
-  background: linear-gradient(180deg, rgba(45, 127, 249, 0.08) 0%, rgba(59, 130, 246, 0.03) 100%);
-  border: 1px solid rgba(59, 130, 246, 0.14);
+  width: 62px;
+  min-width: 62px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  background: none;
+  border: none;
 }
 
 .style-smart-row__overview-value {
-  color: #2563eb;
-  font-size: 20px;
-  font-weight: 700;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 600;
   line-height: 1;
 }
 
 .style-smart-row__overview-label {
-  margin: 4px 0 8px;
-  color: var(--color-text-secondary);
-  font-size: 10px;
+  margin: 2px 0 5px;
+  color: #c0c4cc;
+  font-size: 9px;
 }
 
 .style-smart-row__timeline-shell {

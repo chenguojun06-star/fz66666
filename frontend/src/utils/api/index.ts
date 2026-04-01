@@ -43,6 +43,18 @@ export {
   returnFinanceReconciliation,
 } from './finance';
 
+// 权限拦截器
+export {
+  type PermissionCheckResult,
+  type PermissionRequirement,
+  checkPermissionRequirement,
+  createPermissionGuard,
+  usePermissionGuard,
+  withPermissionCheck,
+  PERMISSION_REQUIREMENTS,
+  type PermissionRequirementKey,
+} from './permissionGuard';
+
 // 为了保持向后兼容，默认导出 createApiClient
 import { createApiClient } from './core';
 export default createApiClient();

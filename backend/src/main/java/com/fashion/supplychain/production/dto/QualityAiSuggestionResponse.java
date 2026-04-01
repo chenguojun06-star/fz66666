@@ -23,7 +23,7 @@ public class QualityAiSuggestionResponse {
     /** 品类 */
     private String productCategory;
     /** 是否急单 */
-    private boolean isUrgent;
+    private boolean urgent;
 
     /** 历史次品率（0~1），null表示无历史数据 */
     private Double historicalDefectRate;

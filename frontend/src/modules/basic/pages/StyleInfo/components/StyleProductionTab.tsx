@@ -217,13 +217,13 @@ const StyleProductionTab: React.FC<Props> = ({
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>样衣审核</span>
             {reviewStatusTag(sampleReviewStatus)}
-            {!sampleReviewStatus && !sampleCompleted && (
+            {!sampleReviewStatus && !sampleCompleted && !productionCompletedTime && (
               <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-xs)' }}>
                 （样衣生产完成后可记录审核结论）
               </span>
             )}
           </div>
-          {sampleCompleted && (
+          {(sampleCompleted || !!productionCompletedTime) && (
             <Button size="small" onClick={openReviewModal}>
               {sampleReviewStatus ? '修改审核结论' : '记录审核结论'}
             </Button>

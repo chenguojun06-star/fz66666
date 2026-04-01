@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { App, Button, Card, Input } from 'antd';
-import { AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import { AppstoreOutlined, RadarChartOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import SmallModal from '@/components/common/SmallModal';
@@ -14,6 +14,7 @@ import dayjs from 'dayjs';
 // Hooks
 import { useStyleList, useStyleStats } from '../StyleInfo/hooks';
 import { useStyleActions } from './hooks/useStyleActions';
+import { useStyleViewMode } from './hooks/useStyleViewMode';
 
 // Components
 import StyleFilterPanel from './components/StyleFilterPanel';
@@ -58,10 +59,7 @@ const StyleInfoListPage: React.FC = () => {
   const { handleScrap, confirmScrap, cancelScrap, pendingScrapId, scrapLoading, handleToggleTop: _handleToggleTop, handlePrint: _handlePrint } = useStyleActions(fetchList);
 
   // 视图模式（持久化）
-  const [viewMode, setViewMode] = useState<'list' | 'card'>(() => {
-    const saved = localStorage.getItem('viewMode_styleInfoList');
-    return saved === 'card' ? 'card' : 'list';
-  });
+  const { viewMode, setViewMode } = useStyleViewMode();
 
   // 打印功能状态
   const [printModalVisible, setPrintModalVisible] = useState(false);
@@ -289,7 +287,7 @@ const StyleInfoListPage: React.FC = () => {
 
   const scrollToFocusedStyle = useCallback((styleId: string) => {
     const safeId = styleId.replace(/"/g, '\\"');
-    const selector = viewMode === 'list'
+    const selector = viewMode === 'smart'
       ? `#style-smart-row-${safeId}`
       : `#style-card-${safeId}`;
     const node = document.querySelector(selector) as HTMLElement | null;
@@ -399,17 +397,14 @@ const StyleInfoListPage: React.FC = () => {
                 刷新
               </Button>
               <Button
-                icon={viewMode === 'list' ? <AppstoreOutlined /> : <UnorderedListOutlined />}
+                icon={viewMode === 'smart' ? <AppstoreOutlined /> : <RadarChartOutlined />}
                 onClick={() => {
-                  const next = viewMode === 'list' ? 'card' : 'list';
+                  const next = viewMode === 'smart' ? 'card' : 'smart';
                   setViewMode(next);
-                  localStorage.setItem('viewMode_styleInfoList', next);
-                  if (next === 'card') {
-                    setQueryParams((prev) => ({ ...prev, page: 1 }));
-                  }
+                  setQueryParams((prev) => ({ ...prev, page: 1 }));
                 }}
               >
-                {viewMode === 'list' ? '卡片视图' : '列表视图'}
+                {viewMode === 'smart' ? '卡片视图' : '智能视图'}
               </Button>
               <Button
                 type="primary"
@@ -422,7 +417,7 @@ const StyleInfoListPage: React.FC = () => {
         />
 
         {/* 列表/卡片视图 */}
-        {viewMode === 'list' ? (
+        {viewMode === 'smart' ? (
           <StyleTableView
             data={data}
             stockStateMap={stockStateMap}

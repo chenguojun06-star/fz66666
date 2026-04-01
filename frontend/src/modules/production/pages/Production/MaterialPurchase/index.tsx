@@ -410,7 +410,6 @@ const MaterialPurchase: React.FC = () => {
                                   const n = Number(v);
                                   if (!Number.isFinite(n)) throw new Error('请输入数字');
                                   if (n < 0) throw new Error('不能小于0');
-                                  if (max > 10 && !Number.isInteger(n)) throw new Error('请输入整数');
                                 },
                               },
                             ]}

@@ -1,103 +1,164 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { App } from 'antd';
+import { useAuth } from '@/utils/AuthContext';
+import { checkPermissionRequirement, type PermissionRequirement } from '@/utils/api/permissionGuard';
 
-/**
- * API 请求配置选项
- */
 export interface RequestOptions<T = any> {
-  /** 成功回调 */
   onSuccess?: (data?: T) => void;
-  /** 错误回调 */
   onError?: (error: any) => void;
-  /** 是否手动触发（默认false - 自动执行） */
   manual?: boolean;
+  permission?: PermissionRequirement;
+  cache?: boolean;
+  cacheKey?: string;
+  cacheTTL?: number;
 }
 
-/**
- * useRequest 返回结果
- */
 export interface RequestResult<T = any> {
-  /** 执行请求函数 */
   run: () => Promise<T | void>;
-  /** 加载状态 */
   loading: boolean;
-  /** 请求数据（可选，取决于是否需要缓存） */
   data?: T;
+  error?: Error;
+  refresh: () => Promise<T | void>;
 }
 
+const globalCache = new Map<string, { data: any; expireAt: number }>();
+
 /**
- * 通用 API 请求管理 Hook
- * 统一处理：loading状态、错误提示、成功提示
- *
- * @param asyncFn - 异步请求函数
- * @param options - 请求选项
- *
- * @example
- * // 自动执行（组件加载时）
- * const { run: fetchList, loading } = useRequest(async () => {
- *   const res = await api.get('/list');
- *   setDataList(res.data);
- * });
- *
- * // 手动触发（按钮点击时）
- * const { run: handleSubmit, loading: submitLoading } = useRequest(
- *   async () => {
- *     await api.post('/save', form.getFieldsValue());
- *     return '保存成功'; // 返回字符串自动显示成功提示
- *   },
- *   {
- *     onSuccess: () => {
- *       closeModal();
- *       fetchList();
- *     }
- *   }
- * );
+ * 清除请求缓存。
+ * 传 key 时会清除所有租户下该 key 的缓存（匹配 tenant:*:key 和 no-tenant:key）；
+ * 不传 key 则清除全部缓存。
  */
+export function clearRequestCache(key?: string) {
+  if (!key) {
+    globalCache.clear();
+    return;
+  }
+  const suffix = `:${key}`;
+  for (const cacheKey of Array.from(globalCache.keys())) {
+    if (cacheKey === key || cacheKey.endsWith(suffix)) {
+      globalCache.delete(cacheKey);
+    }
+  }
+}
+
+function buildTenantCacheKey(key: string, tenantId: number | string | undefined): string {
+  if (tenantId === undefined || tenantId === null) {
+    return `no-tenant:${key}`;
+  }
+  return `tenant:${tenantId}:${key}`;
+}
+
 export const useRequest = <T = any>(
   asyncFn: () => Promise<T | string | void>,
   options: RequestOptions<T> = {}
 ): RequestResult<T> => {
   const { message } = App.useApp();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<T | undefined>();
+  const [error, setError] = useState<Error | undefined>();
+  const hasAutoRun = useRef(false);
+
+  const {
+    onSuccess,
+    onError,
+    manual = false,
+    permission,
+    cache = false,
+    cacheKey,
+    cacheTTL = 5 * 60 * 1000,
+  } = options;
+
+  const tenantId = user?.tenantId;
+
+  // --- 用 ref 存储回调/选项，避免 run 引用频繁变化导致子组件重渲染 ---
+  const asyncFnRef = useRef(asyncFn);
+  const onSuccessRef = useRef(onSuccess);
+  const onErrorRef = useRef(onError);
+  useEffect(() => { asyncFnRef.current = asyncFn; }, [asyncFn]);
+  useEffect(() => { onSuccessRef.current = onSuccess; }, [onSuccess]);
+  useEffect(() => { onErrorRef.current = onError; }, [onError]);
+
+  // 租户维度缓存 key（稳定值，仅在 cacheKey/tenantId 变化时重算）
+  const tenantCacheKey = useMemo(
+    () => (cache && cacheKey ? buildTenantCacheKey(cacheKey, tenantId) : null),
+    [cache, cacheKey, tenantId]
+  );
 
   const run = useCallback(async (): Promise<T | void> => {
-    setLoading(true);
-    try {
-      const result = await asyncFn();
+    // 权限前置拦截
+    if (permission) {
+      const result = checkPermissionRequirement(user, permission);
+      if (!result.allowed) {
+        const err = new Error(result.reason || '无权限');
+        setError(err);
+        message.error(result.reason || '无权限执行此操作');
+        onErrorRef.current?.(err);
+        return;
+      }
+    }
 
-      // 如果返回字符串，视为成功提示
+    // 缓存命中 → 直接返回，不发请求
+    if (tenantCacheKey) {
+      const cached = globalCache.get(tenantCacheKey);
+      if (cached && cached.expireAt > Date.now()) {
+        setData(cached.data as T);
+        onSuccessRef.current?.(cached.data as T);
+        return cached.data as T;
+      }
+    }
+
+    setLoading(true);
+    setError(undefined);
+
+    try {
+      const result = await asyncFnRef.current();
+
       if (typeof result === 'string') {
         message.success(result);
       }
 
-      // 缓存数据（可选）
       if (result && typeof result !== 'string') {
         setData(result as T);
+        if (tenantCacheKey) {
+          globalCache.set(tenantCacheKey, { data: result, expireAt: Date.now() + cacheTTL });
+        }
       }
 
-      // 执行成功回调
-      options.onSuccess?.(result as T);
-
+      onSuccessRef.current?.(result as T);
       return result as T;
-    } catch (error: any) {
-      // 自动显示错误提示
-      const errorMsg = error?.message || error?.msg || '操作失败';
+    } catch (err: any) {
+      const errorMsg = err?.message || err?.msg || '操作失败';
       message.error(errorMsg);
-
-      // 执行错误回调
-      options.onError?.(error);
-
-      throw error; // 重新抛出错误，让调用者可以捕获
+      setError(err);
+      onErrorRef.current?.(err);
+      throw err;
     } finally {
       setLoading(false);
     }
-  }, [asyncFn, options]);
+  }, [user, permission, tenantCacheKey, cacheTTL, message]);
+
+  const refresh = useCallback(async (): Promise<T | void> => {
+    if (tenantCacheKey) {
+      globalCache.delete(tenantCacheKey);
+    }
+    return run();
+  }, [tenantCacheKey, run]);
+
+  useEffect(() => {
+    if (!manual && !hasAutoRun.current) {
+      hasAutoRun.current = true;
+      run();
+    }
+  }, [manual, run]);
 
   return {
     run,
     loading,
     data,
+    error,
+    refresh,
   };
 };
 
+export default useRequest;

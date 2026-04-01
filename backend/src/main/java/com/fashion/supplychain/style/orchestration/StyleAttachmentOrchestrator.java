@@ -48,7 +48,8 @@ public class StyleAttachmentOrchestrator {
                     .eq(StyleInfo::getStyleNo, styleNo.trim())
                     .last("limit 1"), false);
             if (style == null || style.getId() == null) {
-                throw new NoSuchElementException("款号不存在");
+                // 款式不存在时返回空列表，而非 404（前端可能在款式创建完成前就查询附件）
+                return new ArrayList<>();
             }
             sid = String.valueOf(style.getId());
         }
