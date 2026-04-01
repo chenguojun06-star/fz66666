@@ -1,13 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Tabs } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
-import ProcessTrackingTable from '@/components/production/ProcessTrackingTable';
 import { ProductionOrder } from '@/types/production';
 import { formatDateTime } from '@/utils/datetime';
 import api from '@/utils/api';
-import { getProductionProcessTracking } from '@/utils/api/production';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 import { stageAliasMap, carSewingKeywords, tailProcessKeywords } from '@/utils/productionStage';
 import { compareSizeAsc } from '@/utils/api/size';
@@ -47,9 +44,6 @@ interface ProcessDetailModalProps {
   processType: string;
   procurementStatus: any;
   processStatus: any;
-  activeTab: string;
-  onTabChange: (key: string) => void;
-  delegationContent?: React.ReactNode; // 工序委派Tab内容（从父组件传入）
   onDataChanged?: () => void;
 }
 
@@ -60,15 +54,11 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
   processType,
   procurementStatus,
   processStatus,
-  activeTab,
-  onTabChange,
-  delegationContent,
   onDataChanged,
 }) => {
   const navigate = useNavigate();
   const [cuttingBundles, setCuttingBundles] = useState<CuttingBundle[]>([]);
-  const [processTrackingRecords, setProcessTrackingRecords] = useState<any[]>([]);
-  const [trackingLoading, setTrackingLoading] = useState(false);
+
   const [templatePriceMap, setTemplatePriceMap] = useState<Map<string, number>>(new Map());
   const [styleProcessDescriptionMap, setStyleProcessDescriptionMap] = useState<Map<string, string>>(new Map());
   const [secondaryProcessDescriptionMap, setSecondaryProcessDescriptionMap] = useState<Map<string, string>>(new Map());
@@ -77,21 +67,6 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
    * 作为 workflowNodesByStage 的主数据源，支持任意自定义工序名精确归类
    */
   const [templateNodesList, setTemplateNodesList] = useState<{ name: string; processCode?: string; progressStage?: string; description?: string }[]>([]);
-
-  /**
-   * 将模板节点按阶段分组，传给 ProcessTrackingTable.processList
-   * 数据来源：templateNodesList（弹窗打开时从 progressNodeUnitPrices API 加载，含 progressStage）
-   * 无需解析 record.progressWorkflowJson，后者仅在 list API 响应中且缺少 progressStage 字段
-   */
-  const workflowNodesByStage = useMemo<Record<string, { name: string; processCode?: string }[]>>(() => {
-    const result: Record<string, { name: string; processCode?: string }[]> = {};
-    PROCESS_STAGE_DEFS.forEach(s => { result[s.key] = []; });
-    templateNodesList.forEach((n) => {
-      const stage = classifyNodeStage(n.progressStage || '', n.name);
-      if (n.name) result[stage].push({ name: n.name, processCode: n.processCode || n.name });
-    });
-    return result;
-  }, [templateNodesList]);
 
   // 加载模板最新单价 & 节点列表（弹窗每次打开时触发）
   useEffect(() => {
@@ -175,7 +150,6 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
   useEffect(() => {
     if (visible && record?.id) {
       loadCuttingData();
-      loadProcessTrackingData();
     }
   }, [visible, record?.id]);
 
@@ -216,31 +190,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
     }
   };
 
-  // 加载工序跟踪数据
-  const loadProcessTrackingData = async () => {
-    if (!record?.id) {
-      return;
-    }
 
-    setTrackingLoading(true);
-    try {
-      const response = await getProductionProcessTracking(record.id);
-      // API返回的是 {code: 200, data: [...]} 结构，需要提取data字段
-      const data = (response as any)?.data || [];
-      const records = Array.isArray(data) ? data : [];
-      setProcessTrackingRecords(records);
-    } catch (error) {
-      console.error('加载工序跟踪数据失败:', error);
-      setProcessTrackingRecords([]);
-    } finally {
-      setTrackingLoading(false);
-    }
-  };
-
-  const handleUndoSuccess = async () => {
-    await loadProcessTrackingData();
-    onDataChanged?.();
-  };
 
   // 计算裁剪数量的尺码明细
   const cuttingSizeItems = useMemo(() => {
@@ -664,12 +614,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
               }}>
                 {/* 进度节点标题 */}
                 <div style={{
-                  background: stage.key === 'procurement' ? '#dbeafe' :
-                             stage.key === 'cutting' ? '#fef3c7' :
-                             stage.key === 'carSewing' ? '#d1fae5' :
-                             stage.key === 'secondaryProcess' ? '#ede9fe' :
-                             stage.key === 'tailProcess' ? '#fce7f3' :
-                             '#f3f4f6',
+                  background: '#f3f4f6',
                   padding: '10px 16px',
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -680,12 +625,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                     <span style={{
                       fontWeight: 700,
                       fontSize: '15px',
-                      color: stage.key === 'procurement' ? '#1e40af' :
-                             stage.key === 'cutting' ? '#92400e' :
-                             stage.key === 'carSewing' ? '#065f46' :
-                             stage.key === 'secondaryProcess' ? '#5b21b6' :
-                             stage.key === 'tailProcess' ? '#9d174d' :
-                             '#374151'
+                      color: '#374151'
                     }}>
                       {stage.name}
                     </span>
@@ -890,43 +830,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
       width="60vw"
       initialHeight={Math.round(window.innerHeight * 0.82)}
     >
-      <Tabs
-        activeKey={activeTab}
-        onChange={onTabChange}
-        items={[
-          {
-            key: 'process',
-            label: '工序详情',
-            children: renderProcessDetail(),
-          },
-          ...(delegationContent ? [{
-            key: 'delegation',
-            label: '工序委派',
-            children: delegationContent,
-          }] : []),
-          {
-            key: 'processTracking',
-            label: '工序跟踪',
-            children: (
-              <div style={{ padding: '8px 0' }}>
-                <ProcessTrackingTable
-                  records={Array.isArray(processTrackingRecords) ? processTrackingRecords : []}
-                  loading={trackingLoading}
-                  orderId={record?.id}
-                  orderNo={record?.orderNo}
-                  processType={processType}
-                  nodeName={{ procurement: '采购', cutting: '裁剪', carSewing: '车缝', secondaryProcess: '二次工艺', tailProcess: '尾部', warehousing: '入库' }[processType] || processType}
-                  orderStatus={record?.status}
-                  onUndoSuccess={handleUndoSuccess}
-                  processList={workflowNodesByStage[processType] && workflowNodesByStage[processType].length > 0
-                    ? workflowNodesByStage[processType]
-                    : undefined}
-                />
-              </div>
-            ),
-          },
-        ]}
-      />
+      {renderProcessDetail()}
     </ResizableModal>
   );
 };

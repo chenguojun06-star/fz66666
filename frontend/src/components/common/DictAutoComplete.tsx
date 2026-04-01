@@ -136,35 +136,7 @@ const DictAutoComplete: React.FC<DictAutoCompleteProps> = ({
       onSelect={handleSelect}
       placeholder={restProps.placeholder || `请选择或输入...`}
       filterOption={false}
-      notFoundContent={loading ? <Spin size="small" /> : (allItems.length === 0 ? '暂无字典项，请前往字典管理添加' : '无匹配项')}
-      popupRender={(menu) => (
-        <>
-          {menu}
-          <div
-            style={{
-              borderTop: '1px solid var(--color-border, #f0f0f0)',
-              padding: '4px 8px 4px',
-              fontSize: 11,
-              color: 'var(--color-text-tertiary, #999)',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-            onMouseDown={e => e.preventDefault()}
-          >
-            <span>共 {allItems.length} 项</span>
-            <a
-              href="/system/dict"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={e => e.stopPropagation()}
-              style={{ color: 'var(--primary-color, #2D7FF9)', fontSize: 11 }}
-            >
-              + 字典管理维护选项 ↗
-            </a>
-          </div>
-        </>
-      )}
+      notFoundContent={loading ? <Spin size="small" /> : (allItems.length === 0 ? '暂无数据' : '无匹配项')}
       {...restProps}
     />
   );

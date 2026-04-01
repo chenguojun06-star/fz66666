@@ -230,7 +230,7 @@ export function useBomColumns({
         if (!locked && (tableEditable || isEditing(record))) {
           return (
             <Form.Item name={rowName(record.id, 'fabricComposition')} style={{ margin: 0 }}>
-              <Input placeholder="如：100%棉 / 95%棉5%氨纶" />
+              <DictAutoComplete dictType="fabric_composition" placeholder="如：100%棉 / 95%棉5%氨纶" />
             </Form.Item>
           );
         }
@@ -248,7 +248,7 @@ export function useBomColumns({
         if (!locked && (tableEditable || isEditing(record))) {
           return (
             <Form.Item name={rowName(record.id, 'fabricWeight')} style={{ margin: 0 }}>
-              <Input placeholder="如：220g" />
+              <DictAutoComplete dictType="fabric_weight" placeholder="如：220g" />
             </Form.Item>
           );
         }

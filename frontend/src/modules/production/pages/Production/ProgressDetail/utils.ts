@@ -20,6 +20,27 @@ export function getDynamicParentMapping(): Record<string, string> | null {
 }
 
 /**
+ * 从动态映射中解析父节点（模拟后端 contains 匹配策略）
+ * 优先精确匹配，其次 processName.includes(keyword)，按关键词长度降序
+ */
+function resolveDynamicParent(processName: string): string | undefined {
+  if (!_dynamicParentMapping || !processName) return undefined;
+  // 1. 精确匹配
+  const exact = _dynamicParentMapping[processName];
+  if (exact) return exact;
+  // 2. contains 匹配（长关键词优先）
+  let bestParent: string | undefined;
+  let bestLen = 0;
+  for (const [keyword, parent] of Object.entries(_dynamicParentMapping)) {
+    if (keyword.length > bestLen && processName.includes(keyword)) {
+      bestParent = parent;
+      bestLen = keyword.length;
+    }
+  }
+  return bestParent;
+}
+
+/**
  * 默认进度节点配置
  */
 export const defaultNodes: ProgressNode[] = [
@@ -169,6 +190,11 @@ export const canonicalStageKey = (k: string) => {
     入库质检: '入库',
     成品入库: '入库',
     完工入库: '入库',
+    // 二次工艺别名
+    绣花: '二次工艺',
+    印花: '二次工艺',
+    水洗: '二次工艺',
+    压花: '二次工艺',
   };
   return normalizeStageKey(map[n] || n);
 };
@@ -184,6 +210,13 @@ const isTailStageKey = (k: string) => {
   const n = normalizeStageKey(k);
   if (!n) return false;
   return n === '尾部' || n.includes('尾部') || n.includes('尾工');
+};
+
+/** 判断是否为「二次工艺」阶段（含绣花、印花等子工序） */
+const isSecondaryProcessStageKey = (k: string) => {
+  const n = normalizeStageKey(k);
+  if (!n) return false;
+  return n.includes('二次工艺') || n.includes('二次') || n.includes('绣花') || n.includes('印花') || n.includes('水洗') || n.includes('压花');
 };
 
 /** 判断是否为入库阶段（包含质检入库、入仓、仓库等别名） */
@@ -206,6 +239,8 @@ export const stageNameMatches = (a: any, b: any) => {
   if (isProductionStageKey(x) && isProductionStageKey(y)) return true;
   if (isSewingStageKey(x) && isSewingStageKey(y)) return true;
   if (isWarehouseStageKey(x) && isWarehouseStageKey(y)) return true;
+  // 二次工艺父节点可以匹配绣花/印花/水洗/压花等子工序
+  if (isSecondaryProcessStageKey(x) && isSecondaryProcessStageKey(y)) return true;
   // 尾部父节点可以匹配整烫/质检/包装等子阶段
   // （与后端 resolveParentProgressStage 关键词兜底策略保持一致）
   // 历史扫码记录 progressStage="整烫" 可以被尾部进度球正确计数
@@ -579,7 +614,7 @@ export const resolveNodesForListOrder = (
 export const getProcessesByNodeFromOrder = (
   order: ProductionOrder | null,
   templateNodes?: ProgressNode[],
-): Record<string, { name: string; unitPrice?: number }[]> => {
+): Record<string, { name: string; unitPrice?: number; processCode?: string }[]> => {
   const raw = String((order as any)?.progressWorkflowJson ?? '').trim();
   if (!raw) return {};
 
@@ -597,28 +632,32 @@ export const getProcessesByNodeFromOrder = (
   try {
     const obj = JSON.parse(raw);
     const nodes = Array.isArray(obj?.nodes) ? obj.nodes : [];
-    const byNode: Record<string, { name: string; unitPrice?: number }[]> = {};
+    const byNode: Record<string, { name: string; unitPrice?: number; processCode?: string }[]> = {};
     if (nodes.length && nodes[0]?.name) {
       for (const item of nodes) {
         const n = String(item?.name || item?.processName || '').trim();
-        const stage = String(item?.progressStage || n).trim();
+        // 若 progressStage 与节点名相同（模板未设父级时的自名称兜底），
+        // 尝试通过动态映射还原真实父级（如 "烫画" → "二次工艺"）
+        const rawStage = String(item?.progressStage || '').trim();
+        const stage = (rawStage && rawStage !== n) ? rawStage : (resolveDynamicParent(n) || rawStage || n);
         const storedPrice = Number(item?.unitPrice) || 0;
-        // 优先使用模板最新单价
         const price = templatePriceMap.get(n) ?? storedPrice;
+        const processCode = String(item?.id || item?.processCode || '').trim() || undefined;
         if (!byNode[stage]) byNode[stage] = [];
-        byNode[stage].push({ name: n, unitPrice: price });
+        byNode[stage].push({ name: n, unitPrice: price, processCode });
       }
       return byNode;
     }
     const processesByNode = obj?.processesByNode || {};
-    const result: Record<string, { name: string; unitPrice?: number }[]> = {};
+    const result: Record<string, { name: string; unitPrice?: number; processCode?: string }[]> = {};
     for (const k of Object.keys(processesByNode || {})) {
       const arr = Array.isArray(processesByNode[k]) ? processesByNode[k] : [];
       result[k] = arr
         .map((p: any) => {
           const name = String(p?.name || p?.processName || '').trim();
           const storedPrice = Number(p?.unitPrice) || 0;
-          return { name, unitPrice: templatePriceMap.get(name) ?? storedPrice };
+          const processCode = String(p?.id || p?.processCode || '').trim() || undefined;
+          return { name, unitPrice: templatePriceMap.get(name) ?? storedPrice, processCode };
         })
         .filter((x) => x.name);
     }

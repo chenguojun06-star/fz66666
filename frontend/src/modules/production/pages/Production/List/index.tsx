@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Button, Card, Input, Select, Tag, App, Dropdown, Checkbox, Alert, InputNumber, Tabs } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
-import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined, RadarChartOutlined } from '@ant-design/icons';
+import ExternalFactorySmartView from '../ExternalFactory/ExternalFactorySmartView';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardPagination from '@/components/common/StandardPagination';
@@ -34,6 +35,8 @@ import UniversalCardView from '@/components/common/UniversalCardView';
 import { createOrderColorSizeGridFieldGroups } from '@/components/common/CardSizeQuantityFieldGroups';
 import SmartOrderHoverCard from '../ProgressDetail/components/SmartOrderHoverCard';
 import { ensureBoardStatsForOrder, clearBoardStatsTimestamps } from '../ProgressDetail/hooks/useBoardStats';
+import { getDynamicParentMapping, setDynamicParentMapping } from '../ProgressDetail/utils';
+import { processParentMappingApi } from '@/services/production/productionApi';
 import { useDeliveryRiskMap } from '../ProgressDetail/hooks/useDeliveryRiskMap';
 import { useShareOrderDialog } from '../ProgressDetail/hooks/useShareOrderDialog';
 import { useStagnantDetection } from '../ProgressDetail/hooks/useStagnantDetection';
@@ -188,10 +191,10 @@ const ProductionList: React.FC = () => {
   const [selectedRows, setSelectedRows] = useState<ProductionOrder[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
-  const [viewMode, setViewModeState] = useState<'list' | 'card'>(
-    () => (localStorage.getItem('production_view_mode') as 'list' | 'card') || 'list'
+  const [viewMode, setViewModeState] = useState<'list' | 'card' | 'smart'>(
+    () => (localStorage.getItem('production_view_mode') as 'list' | 'card' | 'smart') || 'list'
   );
-  const setViewMode = (mode: 'list' | 'card') => {
+  const setViewMode = (mode: 'list' | 'card' | 'smart') => {
     localStorage.setItem('production_view_mode', mode);
     setViewModeState(mode);
     // 无论切到哪个视图，都只重置页码，pageSize 由用户自己选择（不强制覆盖）
@@ -448,11 +451,9 @@ const ProductionList: React.FC = () => {
 
   const {
     processDetailVisible, processDetailRecord, processDetailType,
-    processDetailActiveTab, setProcessDetailActiveTab,
     procurementStatus, processStatus, processDetailNodeOperations: _processDetailNodeOperations,
-    openProcessDetail, closeProcessDetail, syncProcessFromTemplate, saveDelegation,
-    childProcessesByStage, activeStageKeys,
-    factories: _factories, factoriesLoading: _factoriesLoading, delegationData, setDelegationData,
+    openProcessDetail, closeProcessDetail, syncProcessFromTemplate,
+    factories: _factories, factoriesLoading: _factoriesLoading,
   } = useProcessDetail({ message, fetchProductionList });
 
   const {
@@ -466,6 +467,16 @@ const ProductionList: React.FC = () => {
   } = useProgressTracking(productionList);
 
   // ===== Effects =====
+  // 挂载时懒加载动态工序父级映射（供二次工艺等子工序识别父级用，全局只请求一次）
+  useEffect(() => {
+    if (!getDynamicParentMapping()) {
+      processParentMappingApi.list().then((res: any) => {
+        const data = res?.data?.data ?? res?.data ?? {};
+        if (data && typeof data === 'object') setDynamicParentMapping(data);
+      }).catch(() => {});
+    }
+  }, []);
+
   useEffect(() => {
     setSelectedRowKeys([]);
     setSelectedRows([]);
@@ -896,12 +907,26 @@ const ProductionList: React.FC = () => {
                   >
                     <Button icon={<SettingOutlined />}>列设置</Button>
                   </Dropdown>
-                  <Button
-                    icon={viewMode === 'list' ? <AppstoreOutlined /> : <UnorderedListOutlined />}
-                    onClick={() => setViewMode(viewMode === 'list' ? 'card' : 'list')}
-                  >
-                    {viewMode === 'list' ? '卡片视图' : '列表视图'}
-                  </Button>
+                  <Button.Group>
+                    <Button
+                      type={viewMode === 'list' ? 'primary' : 'default'}
+                      icon={<UnorderedListOutlined />}
+                      onClick={() => setViewMode('list')}
+                      title="列表视图"
+                    />
+                    <Button
+                      type={viewMode === 'card' ? 'primary' : 'default'}
+                      icon={<AppstoreOutlined />}
+                      onClick={() => setViewMode('card')}
+                      title="卡片视图"
+                    />
+                    <Button
+                      type={viewMode === 'smart' ? 'primary' : 'default'}
+                      icon={<RadarChartOutlined />}
+                      onClick={() => setViewMode('smart')}
+                      title="智能看板"
+                    />
+                  </Button.Group>
                                     <ExportButton
                     label="导出明细"
                     url="/api/production/order/export-excel"
@@ -915,7 +940,19 @@ const ProductionList: React.FC = () => {
             />
           </Card>
 
-          {viewMode === 'list' ? (
+          {viewMode === 'smart' ? (
+            <ExternalFactorySmartView
+              data={sortedProductionList}
+              loading={loading}
+              total={total}
+              currentPage={queryParams.page}
+              pageSize={queryParams.pageSize}
+              onPageChange={(page, pageSize) => {
+                savePageSize(pageSize);
+                setQueryParams({ ...queryParams, page, pageSize });
+              }}
+            />
+          ) : viewMode === 'list' ? (
             <ResizableTable<any>
               storageKey="production-order-table"
               columns={columns as any}
@@ -1065,220 +1102,9 @@ const ProductionList: React.FC = () => {
           processType={processDetailType}
           procurementStatus={procurementStatus}
           processStatus={processStatus}
-          activeTab={processDetailActiveTab}
-          onTabChange={setProcessDetailActiveTab}
           onDataChanged={() => {
             void fetchProductionList();
           }}
-          delegationContent={processDetailRecord && (
-            <div style={{ padding: '8px 0' }}>
-              <Alert
-                title="可以为不同的生产节点指定执行工厂"
-                type="info"
-                showIcon
-                closable
-                style={{ marginBottom: '12px', padding: '6px 12px', fontSize: '12px' }}
-              />
-              {(() => {
-                const stageStatusMap: Record<string, any> = {
-                  cutting: processStatus?.cutting,
-                  carSewing: processStatus?.sewing,
-                  tailProcess: processStatus?.finishing,
-                  warehousing: processStatus?.warehousing,
-                };
-                const stagesToShow = mainStages.filter(s => activeStageKeys.includes(s.key));
-                return (
-                  <div style={{ border: '1px solid var(--color-border)', overflow: 'hidden' }}>
-                    <div style={{
-                      background: 'var(--color-bg-subtle)',
-                      padding: '8px 12px',
-                      fontSize: '12px',
-                      color: 'var(--neutral-text-secondary)',
-                      borderBottom: '1px solid var(--color-border)'
-                    }}>
-                      <span style={{ fontWeight: 600, color: 'var(--neutral-text)' }}>订单：</span>
-                      <span style={{ marginRight: '16px' }}>{processDetailRecord?.orderNo || '-'}</span>
-                      <span style={{ fontWeight: 600, color: 'var(--neutral-text)' }}>款号：</span>
-                      <span style={{ marginRight: '16px' }}>{processDetailRecord?.styleNo || '-'}</span>
-                      <span style={{ fontWeight: 600, color: 'var(--neutral-text)' }}>数量：</span>
-                      <span>{processDetailRecord?.orderQuantity || 0} 件</span>
-                    </div>
-                    <ResizableTable
-                      storageKey="production-list-process"
-                      dataSource={stagesToShow}
-                      columns={[
-                        {
-                          title: '生产节点',
-                          dataIndex: 'name',
-                          width: 90,
-                          render: (text: string, record) => (
-                            <span style={{ fontSize: '13px', fontWeight: 600, color: (record as any).color }}>{text}</span>
-                          ),
-                        },
-                        {
-                          title: '当前状态',
-                          key: 'status',
-                          width: 90,
-                          render: (_, record) => {
-                            const status = stageStatusMap[record.key];
-                            return status ? (
-                              <span style={{
-                                fontSize: '11px', fontWeight: 600,
-                                color: status.completed ? 'var(--color-success)' : 'var(--color-warning)',
-                                background: status.completed ? '#d1fae5' : '#fef3c7',
-                                padding: '2px 6px', whiteSpace: 'nowrap'
-                              }}>
-                                {status.completed ? '✓ 完成' : `${status.completionRate}%`}
-                              </span>
-                            ) : null;
-                          },
-                        },
-                        {
-                          title: '工序名称',
-                          key: 'processName',
-                          width: 140,
-                          render: (_, record) => (
-                            <Select
-                              placeholder="选择工序" size="small" style={{ width: '100%', minWidth: '120px' }}
-                              allowClear showSearch optionFilterProp="children"
-                              value={delegationData[record.key]?.processName}
-                              onChange={(value) => {
-                                setDelegationData(prev => ({ ...prev, [record.key]: { ...prev[record.key], processName: value } }));
-                              }}
-                              disabled={childProcessesByStage[record.key]?.length === 0}
-                            >
-                              {(childProcessesByStage[record.key] || []).map((proc, idx) => (
-                                <Select.Option key={idx} value={proc.name}>
-                                  {proc.name} (¥{proc.unitPrice.toFixed(2)})
-                                </Select.Option>
-                              ))}
-                            </Select>
-                          ),
-                        },
-                        {
-                          title: '数量',
-                          key: 'quantity',
-                          width: 90,
-                          align: 'right',
-                          render: (_, record) => (
-                            <InputNumber
-                              placeholder="数量" size="small" min={0} step={1} style={{ width: '85px' }}
-                              value={delegationData[record.key]?.quantity}
-                              onChange={(value) => {
-                                setDelegationData(prev => ({ ...prev, [record.key]: { ...prev[record.key], quantity: value || undefined } }));
-                              }}
-                            />
-                          ),
-                        },
-                        {
-                          title: '执行工厂',
-                          key: 'factoryId',
-                          render: (_, record) => (
-                            <SupplierSelect
-                              placeholder="选择工厂"
-                              size="small"
-                              style={{ width: '100%', maxWidth: '220px' }}
-                              value={delegationData[record.key]?.factoryId}
-                              onChange={(value, option) => {
-                                setDelegationData(prev => ({
-                                  ...prev,
-                                  [record.key]: {
-                                    ...prev[record.key],
-                                    factoryId: value,
-                                    factoryContactPerson: option?.supplierContactPerson,
-                                    factoryContactPhone: option?.supplierContactPhone,
-                                  }
-                                }));
-                              }}
-                            />
-                          ),
-                        },
-                        {
-                          title: '委派单价',
-                          key: 'unitPrice',
-                          width: 110,
-                          render: (_, record) => (
-                            <InputNumber
-                              placeholder="单价" size="small" min={0} step={0.01} precision={2} prefix="¥" style={{ width: '100px' }}
-                              value={delegationData[record.key]?.unitPrice}
-                              onChange={(value) => {
-                                setDelegationData(prev => ({ ...prev, [record.key]: { ...prev[record.key], unitPrice: value || undefined } }));
-                              }}
-                            />
-                          ),
-                        },
-                        {
-                          title: '委派人',
-                          key: 'operatorName',
-                          width: 90,
-                          render: (_, record) => {
-                            const status = stageStatusMap[record.key];
-                            return status?.operatorName ? (
-                              <a
-                                style={{ cursor: 'pointer', color: 'var(--primary-color)', fontWeight: 500 }}
-                                onClick={() => {
-                                  if (processDetailRecord?.orderNo) {
-                                    navigate(`/finance/payroll-operator-summary?orderNo=${processDetailRecord.orderNo}&processName=${record.name}`);
-                                  }
-                                }}
-                              >
-                                {status.operatorName}
-                              </a>
-                            ) : (
-                              <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>
-                            );
-                          },
-                        },
-                        {
-                          title: '委派时间',
-                          key: 'completedTime',
-                          width: 110,
-                          render: (_, record) => {
-                            const status = stageStatusMap[record.key];
-                            return status?.completedTime ? (
-                              <span style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)' }}>
-                                {new Date(status.completedTime).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                            ) : (
-                              <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>
-                            );
-                          },
-                        },
-                        {
-                          title: '操作',
-                          key: 'action',
-                          width: 90,
-                          align: 'center',
-                          render: (_, record) => (
-                            <Button type="primary" size="small"
-                              onClick={() => processDetailRecord && saveDelegation(record.key, processDetailRecord.id)}
-                            >
-                              保存
-                            </Button>
-                          ),
-                        },
-                      ]}
-                      pagination={false}
-                      size="small"
-                      bordered
-                      rowKey="key"
-                    />
-                  </div>
-                );
-              })()}
-              <div style={{ marginTop: '16px' }}>
-                <div style={{
-                  fontSize: '13px', fontWeight: 600, color: 'var(--neutral-text)',
-                  marginBottom: '8px', paddingBottom: '6px', borderBottom: '1px solid var(--color-border)'
-                }}>
-                  委派历史
-                </div>
-                <div style={{ color: 'var(--neutral-text-disabled)', fontSize: '12px', padding: '16px', textAlign: 'center' }}>
-                  暂无委派记录
-                </div>
-              </div>
-            </div>
-          )}
         />
 
         {/* 节点详情弹窗 - 进度球点击 */}
@@ -1287,6 +1113,7 @@ const ProductionList: React.FC = () => {
           onClose={closeNodeDetail}
           orderId={nodeDetailOrder?.id}
           orderNo={nodeDetailOrder?.orderNo}
+          styleNo={nodeDetailOrder?.styleNo}
           nodeType={nodeDetailType}
           nodeName={nodeDetailName}
           stats={nodeDetailStats}

@@ -1082,12 +1082,17 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       resolvedNodeName,
       { done: completedQty, total: totalQty, percent, remaining },
       matchedNode?.unitPrice,
-      resolvedNodes.map((node) => ({
-        id: String(node.id || '').trim() || undefined,
-        processCode: String(node.id || '').trim() || undefined,
-        name: node.name,
-        unitPrice: node.unitPrice,
-      }))
+      resolvedNodes
+        .filter((node) => {
+          const ps = String((node as any).progressStage || '').trim();
+          return ps === resolvedNodeName;
+        })
+        .map((node) => ({
+          id: String(node.id || '').trim() || undefined,
+          processCode: String(node.id || '').trim() || undefined,
+          name: node.name,
+          unitPrice: node.unitPrice,
+        }))
     );
     setPendingFocusNode(null);
   }, [

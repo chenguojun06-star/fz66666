@@ -198,7 +198,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   const [orderSummary, setOrderSummary] = useState<{ orderNo?: string; styleNo?: string; orderQuantity?: number }>({
     orderNo,
   });
-  const [activeTab, setActiveTab] = useState('settings');
+  const [activeTab, setActiveTab] = useState('processTracking');
   // 管理员解锁状态（允许在进度>=80%时仍然编辑）
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   // 工序跟踪（工资结算）数据
@@ -459,6 +459,8 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
       loadFactories();
       loadUsers();
       loadNodeOperations();
+      // 每次打开时默认显示工序跟踪Tab（数据最丰富）
+      setActiveTab('processTracking');
       // 样板生产不加载扫码记录和菲号明细（这些是大货生产的数据）
       if (!isPatternProduction) {
         loadScanRecords();
@@ -472,7 +474,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     }
     // 重置状态
     if (!visible) {
-      setActiveTab('settings');
+      setActiveTab('processTracking');
       setAdminUnlocked(false); // 关闭弹窗时重置解锁状态
       setLoadWarnings([]);
       setPrediction(null);
@@ -499,14 +501,15 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   // 从 processList 提取子工序名称集合，用于动态匹配（不依赖硬编码别名）
   const childProcessNames = useMemo(() => {
     if (!processList || processList.length === 0) return [] as string[];
-    return processList.map(p => ((p as any).processName || p.name || '').trim()).filter(Boolean);
-  }, [processList]);
+    const names = processList.map(p => ((p as any).processName || p.name || '').trim()).filter(Boolean);
+    return names;
+  }, [processList, nodeName]);
 
   // 筛选当前节点的扫码记录
   const filteredScanRecords = useMemo(() => {
     const nName = normalizeText(nodeName);
     const nKey = String(nodeTypeKey || '').trim();
-    return scanRecords.filter((r) => {
+    const matched = scanRecords.filter((r) => {
       if (String((r as any)?.scanResult || '').trim() !== 'success') return false;
       if ((Number((r as any)?.quantity) || 0) <= 0) return false;
       // 优先：别名匹配（兼容已有逻辑）
@@ -520,6 +523,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
       }
       return false;
     });
+    return matched;
   }, [scanRecords, nodeName, nodeTypeKey, normalizeText, childProcessNames]);
 
   // 反馈闭环：节点完成(100%)时，静默上报实际完工时间，训练预测模型
@@ -830,17 +834,6 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   };
 
   // 扫码记录表格列
-  const scanColumns: ColumnsType<ScanRecord> = [
-    { title: '扎号', dataIndex: 'cuttingBundleNo', width: 60, render: v => v || '-' },
-    { title: '颜色', dataIndex: 'color', width: 70, ellipsis: true },
-    { title: '尺码', dataIndex: 'size', width: 50 },
-    { title: '数量', dataIndex: 'quantity', width: 50 },
-    { title: '操作员', dataIndex: 'operatorName', width: 80, ellipsis: true, render: v => v || '-' },
-    { title: '时间', dataIndex: 'scanTime', width: 100, render: formatTime },
-  ];
-
-
-
   // 操作员明细表格列
   const operatorColumns: ColumnsType<OperatorSummary> = [
     { title: '操作员', dataIndex: 'operatorName', ellipsis: true },
@@ -860,7 +853,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
       if (Number.isFinite(picked)) return picked;
       return Number(unitPrice) || 0;
     })();
-    const delegateUser = currentNodeData.updatedByName || currentNodeData.updatedBy || currentNodeData.assignee || '-';
+    const _delegateUser = currentNodeData.updatedByName || currentNodeData.updatedBy || currentNodeData.assignee || '-';
     const orderInfoLine = `${orderSummary.orderNo || orderNo || '-'}  款号：${orderSummary.styleNo || '-'}  数量：${orderSummary.orderQuantity || 0} 件`;
 
     return (
@@ -1057,26 +1050,6 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     );
   };
 
-  const _renderScanRecordsTab = () => (
-    <div style={{ padding: '4px 0' }}>
-      <div style={{ marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Text type="secondary">共 {filteredScanRecords.length} 条扫码记录</Text>
-        <Text type="secondary">合计: {filteredScanRecords.reduce((s, r) => s + (r.quantity || 0), 0)} 件</Text>
-      </div>
-      <ResizableTable
-        storageKey="node-detail-scan-records"
-        size="small"
-        rowKey="id"
-        dataSource={filteredScanRecords}
-        columns={scanColumns}
-        pagination={{ size: 'small', showTotal: (total) => `共 ${total} 条`, showSizeChanger: false }}
-        scroll={{ y: 280 }}
-      />
-    </div>
-  );
-
-
-
   // 操作员明细 Tab
   const renderOperatorsTab = () => (
     <div style={{ padding: '8px 0' }}>
@@ -1231,14 +1204,8 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                 key: 'processTracking',
                 label: <span><WalletOutlined /> 工序跟踪（工资结算） ({processTrackingRecords.length})</span>,
                 children: (() => {
-                  // processList 是全量节点列表（用于委派下拉）。
-                  // ProcessTrackingTable 过滤只能用当前点击节点自身，
-                  // 否则 Strategy-0 会命中所有节点名导致全量展示。
-                  const nodeLabel = String(nodeName || '').trim().toLowerCase();
-                  const trackingFilterList = processList.filter((p) => {
-                    const pName = String((p as any)?.name || (p as any)?.processName || '').trim().toLowerCase();
-                    return pName && (pName === nodeLabel || pName.includes(nodeLabel) || nodeLabel.includes(pName));
-                  });
+                  // processList 已由调用方按节点提取子工序（getProcessesByNodeFromOrder），
+                  // 直接传给 ProcessTrackingTable 的 Strategy-0 做动态匹配，无需二次过滤。
                   return (
                     <div>
                       <div style={{ marginBottom: 8, textAlign: 'right' }}>
@@ -1258,7 +1225,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                         orderNo={orderSummary.orderNo || orderNo}
                         nodeType={nodeType}
                         nodeName={nodeName}
-                        processList={trackingFilterList.length > 0 ? trackingFilterList : undefined}
+                        processList={processList.length > 0 ? processList : undefined}
                         onUndoSuccess={handleUndoSuccess}
                       />
                     </div>

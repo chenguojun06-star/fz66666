@@ -42,6 +42,7 @@ import {
   stripWarehousingNode,
   getOrderShipTime,
   resolveNodesForListOrder,
+  getProcessesByNodeFromOrder,
   defaultNodes,
 } from '../utils';
 
@@ -427,19 +428,42 @@ export const useProgressColumns = ({
                       position: 'relative',
                       zIndex: 1,
                     }}
-                    onClick={() => !frozen && openNodeDetail(
-                      record,
-                      nodeType,
-                      nodeName,
-                      { done: completedQty, total: totalQty, percent, remaining },
-                      node.unitPrice,
-                      ns.map(n => ({
-                        id: String(n.id || '').trim() || undefined,
-                        processCode: String(n.id || '').trim() || undefined,
-                        name: n.name,
-                        unitPrice: n.unitPrice,
-                      }))
-                    )}
+                    onClick={() => {
+                      if (frozen) return;
+                      // 优先从 progressWorkflowJson 获取该父节点下的子工序列表
+                      const sn = String((record as any)?.styleNo || '').trim();
+                      const templateNodes = sn && progressNodesByStyleNo[sn] ? progressNodesByStyleNo[sn] : undefined;
+                      const byParent = getProcessesByNodeFromOrder(record, templateNodes);
+                      const children = byParent[nodeName];
+                      let processList: { id?: string; processCode?: string; name: string; unitPrice?: number }[];
+                      if (children?.length) {
+                        processList = children.map(c => ({
+                          name: c.name,
+                          unitPrice: c.unitPrice,
+                          processCode: c.processCode,
+                        }));
+                      } else {
+                        // fallback：从模板节点中按 progressStage 过滤出属于当前父节点的子工序
+                        const stageChildren = ns.filter(n => {
+                          const ps = String((n as any).progressStage || '').trim();
+                          return ps === nodeName;
+                        });
+                        processList = stageChildren.map(n => ({
+                          id: String(n.id || '').trim() || undefined,
+                          processCode: String(n.id || '').trim() || undefined,
+                          name: n.name,
+                          unitPrice: n.unitPrice,
+                        }));
+                      }
+                      openNodeDetail(
+                        record,
+                        nodeType,
+                        nodeName,
+                        { done: completedQty, total: totalQty, percent, remaining },
+                        node.unitPrice,
+                        processList,
+                      );
+                    }}
                     onMouseEnter={() => {
                       if (frozen) return;
                       void triggerPredict({
