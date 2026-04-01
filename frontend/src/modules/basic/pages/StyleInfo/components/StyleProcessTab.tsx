@@ -462,7 +462,8 @@ const StyleProcessTab: React.FC<Props> = ({
       }
       message.success('已导入工艺模板');
       setProcessTemplateKey(undefined);
-      fetchProcess();
+      await fetchProcess();
+      void enterEdit();
     } catch (e: any) {
       message.error(e?.message || '导入失败');
     }
