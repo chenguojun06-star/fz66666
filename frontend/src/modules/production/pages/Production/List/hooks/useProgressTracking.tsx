@@ -9,6 +9,7 @@ import {
   resolveNodesForListOrder,
   getProcessesByNodeFromOrder,
   canonicalStageKey,
+  stageNameMatches,
 } from '../../ProgressDetail/utils';
 import type { ProgressNode } from '../../ProgressDetail/types';
 import { formatCompletionTime } from '../utils';
@@ -128,11 +129,37 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
    * 父进度完成时间 = 它所有子工序全部完成时的最晚时间
    * 每个父独立核算，不跨父混用子工序
    */
-  const getStageCompletionTime = (record: ProductionOrder, stageKeyword: string): string => {
+  const getStageCompletionTime = (record: ProductionOrder, stageKeyword: string, rate = 0): string => {
     const orderId = String(record.id || '');
     const timeMap = boardTimesByOrder[orderId] || {};
     const keyword = String(stageKeyword || '').trim();
     if (!keyword) return '';
+
+    const pickLatestTime = (times: string[]): string => {
+      let latest = '';
+      for (const time of times) {
+        if (time && (!latest || time > latest)) {
+          latest = time;
+        }
+      }
+      return latest;
+    };
+
+    const findLatestTimeByStage = (expectedStage: string): string => {
+      const matchedTimes: string[] = [];
+      for (const [timeKey, timeValue] of Object.entries(timeMap)) {
+        const normalizedKey = String(timeKey || '').trim();
+        if (!normalizedKey || !timeValue) continue;
+        if (
+          normalizedKey === expectedStage
+          || stageNameMatches(normalizedKey, expectedStage)
+          || stageNameMatches(expectedStage, normalizedKey)
+        ) {
+          matchedTimes.push(String(timeValue));
+        }
+      }
+      return pickLatestTime(matchedTimes);
+    };
 
     // ★ 采购特殊处理：模板无采购节点时，到货时间由 useBoardStats 写入 __procurement__ 哨兵键
     if (/采购|物料|备料|辅料|面料/.test(keyword) && timeMap['__procurement__']) {
@@ -157,21 +184,24 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
       if (matchKey && byParent[matchKey]?.length > 0) {
         const children = byParent[matchKey];
         let allHaveTime = true;
-        let latestTime = '';
+        const childTimes: string[] = [];
 
         for (const child of children) {
-          const t = timeMap[child.name] || '';
+          const t = String(timeMap[child.name] || findLatestTimeByStage(child.name) || '');
           if (!t) {
             allHaveTime = false;
-            break;
+            continue;
           }
-          if (!latestTime || t > latestTime) {
-            latestTime = t;
-          }
+          childTimes.push(t);
         }
+
+        const latestTime = pickLatestTime(childTimes);
+        const parentTime = findLatestTimeByStage(matchKey) || findLatestTimeByStage(keyword);
 
         // 所有子工序都完成 → 返回最晚时间 = 父完成时间
         if (allHaveTime && latestTime) return latestTime;
+        // 阶段已经 100% 完成时，允许用已有子工序的最晚时间或父节点时间兜底，避免时间闪烁消失
+        if (rate >= 100) return latestTime || parentTime;
         // 还有子工序没完成 → 父未完成
         return '';
       }
@@ -180,23 +210,32 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
     // 回退：无 progressWorkflowJson 时直接匹配节点名（兼容旧数据）
     const nodes = stripWarehousingNode(resolveNodesForListOrder(record, progressNodesByStyleNo, defaultNodes));
     const keywordCanonical = canonicalStageKey(keyword);
-    const matchingNodeNames = nodes
-      .map(n => n.name)
-      .filter(name => {
+    const matchingTimes = nodes
+      .map((node) => {
+        const name = String(node.name || '').trim();
+        const parent = String(node.progressStage || '').trim();
         const nc = canonicalStageKey(name);
-        return nc === keywordCanonical
+        const pc = canonicalStageKey(parent);
+        const matchesNode = nc === keywordCanonical
           || nc.includes(keywordCanonical)
           || keywordCanonical.includes(nc);
-      });
+        const matchesParent = pc === keywordCanonical
+          || pc.includes(keywordCanonical)
+          || keywordCanonical.includes(pc)
+          || (parent && stageNameMatches(parent, keyword));
+        if (!matchesNode && !matchesParent) return '';
+        return String(timeMap[name] || findLatestTimeByStage(name) || '');
+      })
+      .filter(Boolean);
 
-    let latestTime = '';
-    for (const name of matchingNodeNames) {
-      const time = timeMap[name];
-      if (time && (!latestTime || time > latestTime)) {
-        latestTime = time;
-      }
+    const latestTime = pickLatestTime(matchingTimes);
+    if (latestTime) return latestTime;
+
+    if (rate >= 100) {
+      return findLatestTimeByStage(keyword);
     }
-    return latestTime;
+
+    return '';
   };
 
   /**
@@ -208,7 +247,7 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
     rate: number,
     align: 'left' | 'center' = 'center'
   ): React.ReactNode => {
-    const t = getStageCompletionTime(record, stageKeyword);
+    const t = getStageCompletionTime(record, stageKeyword, rate);
     const formatted = formatCompletionTime(t);
     const orderId = String(record.id || '').trim();
     const currentProgress = Math.max(0, Math.min(100, Math.round(Number(rate) || 0)));
