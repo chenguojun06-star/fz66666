@@ -13,7 +13,6 @@ import { useNavigate } from 'react-router-dom';
 import { matchRecordToStage } from '@/utils/productionStage';
 import ProcessTrackingTable from '@/components/production/ProcessTrackingTable';
 import { getProductionProcessTracking } from '@/utils/api/production';
-import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 
 const { Text } = Typography;
 
@@ -41,7 +40,7 @@ interface HistoryItem {
 /** 单个节点的操作数据 */
 interface NodeOperationData {
   assignee?: string;
-  assigneeId?: number | string;
+  assigneeId?: string;
   assigneeQuantity?: number;
   receiveTime?: string;
   completeTime?: string;
@@ -173,12 +172,11 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   onClose,
   orderId,
   orderNo,
-  styleNo,
   nodeType,
   nodeName,
   stats: nodeStats,
   unitPrice,
-  processList: propsProcessList = [],
+  processList = [],
   isPatternProduction = false,
   extraData: _extraData,
   onSaved,
@@ -190,7 +188,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [factories, setFactories] = useState<Factory[]>();
-  const [users, setUsers] = useState<{ id: number; name: string; username: string }[]>([]);
+  const [users, setUsers] = useState<{ id: string; name: string; username: string }[]>([]);
   const [nodeOperations, setNodeOperations] = useState<NodeOperations>({});
   const [scanRecords, setScanRecords] = useState<ScanRecord[]>([]);
   const [bundles, setBundles] = useState<BundleRecord[]>([]);
@@ -199,12 +197,13 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     orderNo,
   });
   const [activeTab, setActiveTab] = useState('settings');
+  // 管理员解锁状态（允许在进度>=80%时仍然编辑）
   const [adminUnlocked, setAdminUnlocked] = useState(false);
+  // 工序跟踪（工资结算）数据
   const [processTrackingRecords, setProcessTrackingRecords] = useState<any[]>([]);
   const [trackingLoading, setTrackingLoading] = useState(false);
   const [repairLoading, setRepairLoading] = useState(false);
   const [loadWarnings, setLoadWarnings] = useState<string[]>([]);
-  const [templateProcessList, setTemplateProcessList] = useState<ProcessPriceItem[]>([]);
   // 进度预测
   const [prediction, setPrediction] = useState<{
     predictedFinishTime?: string;
@@ -230,58 +229,24 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   // 将 nodeType 转换为 NodeType 类型，用于索引
   const nodeTypeKey = nodeType as NodeType;
 
+  // 当前节点的操作数据
   const currentNodeData = nodeOperations[nodeTypeKey] || {};
-
-  const processList = useMemo(() => {
-    const merged = [...propsProcessList];
-    templateProcessList.forEach((tp) => {
-      const exists = merged.some(
-        (p) =>
-          String((p as any)?.processCode || (p as any)?.code || '').trim() ===
-          String((tp as any)?.processCode || (tp as any)?.code || '').trim()
-      );
-      if (!exists) {
-        merged.push(tp);
-      }
-    });
-    return merged;
-  }, [propsProcessList, templateProcessList]);
-
   const matchedProcess = useMemo(() => {
-    console.log('[matchedProcess] nodeName:', nodeName, 'processList:', processList);
     const byName = (p: any, target: string) => {
       const candidates = [p?.name, p?.processName, p?.label, p?.title].map((v) => String(v || '').trim());
       return candidates.some((v) => v && v === target);
     };
-    const byNameContains = (p: any, target: string) => {
-      const candidates = [p?.name, p?.processName, p?.label, p?.title].map((v) => String(v || '').trim().toLowerCase());
-      const targetLower = target.toLowerCase();
-      return candidates.some((v) => v && (v.includes(targetLower) || targetLower.includes(v)));
-    };
     const pickedName = String(currentNodeData.delegateProcessName || '').trim();
     const nodeLabel = String(nodeName || '').trim();
-    
     if (pickedName) {
       const byPicked = processList.find((p) => byName(p as any, pickedName));
-      if (byPicked) {
-        console.log('[matchedProcess] 通过 pickedName 精确匹配:', byPicked);
-        return byPicked as any;
-      }
+      if (byPicked) return byPicked as any;
     }
     if (nodeLabel) {
       const byNode = processList.find((p) => byName(p as any, nodeLabel));
-      if (byNode) {
-        console.log('[matchedProcess] 通过 nodeLabel 精确匹配:', byNode);
-        return byNode as any;
-      }
-      const byNodeContains = processList.find((p) => byNameContains(p as any, nodeLabel));
-      if (byNodeContains) {
-        console.log('[matchedProcess] 通过 nodeLabel 包含匹配:', byNodeContains);
-        return byNodeContains as any;
-      }
+      if (byNode) return byNode as any;
     }
-    console.log('[matchedProcess] 未找到匹配，返回 null');
-    return null;
+    return (processList[0] as any) || null;
   }, [currentNodeData.delegateProcessName, nodeName, processList]);
 
   const delegateProcessCode = useMemo(() => {
@@ -299,10 +264,11 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     }
   };
 
+  // 加载工厂列表
   const loadFactories = useCallback(async () => {
     try {
       const res = await api.get<{ code: number; data: { records: Factory[] } }>('/system/factory/list', {
-        params: { page: 1, pageSize: 500, factoryType: 'EXTERNAL' }
+        params: { page: 1, pageSize: 500 }
       });
       if (res.data?.records) {
         setFactories(res.data.records);
@@ -313,65 +279,20 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     }
   }, [addLoadWarning]);
 
+  // 加载用户列表
   const loadUsers = useCallback(async () => {
     try {
-      const params: Record<string, unknown> = { page: 1, pageSize: 500, status: 'active' };
-      
-      // 如果当前用户是工厂账号，只加载该工厂的用户
-      if (user?.factoryId) {
-        params.factoryId = user.factoryId;
-        console.log('[loadUsers] 当前用户是工厂账号，factoryId:', user.factoryId);
-      } else {
-        console.log('[loadUsers] 当前用户不是工厂账号，加载所有用户');
-      }
-      
-      console.log('[loadUsers] 请求参数:', params);
-      const res = await api.get<{ code: number; data: { records: { id: number; name: string; username: string }[] } }>('/system/user/list', {
-        params
+      const res = await api.get<{ code: number; data: { records: { id: string; name: string; username: string }[] } }>('/system/user/list', {
+        params: { page: 1, pageSize: 500, status: 'active' }
       });
-      console.log('[loadUsers] response:', res);
-      if (res.code === 200 && res.data?.records) {
-        console.log('[loadUsers] users count:', res.data.records.length, 'users:', res.data.records);
+      if (res.data?.records) {
         setUsers(res.data.records);
-      } else {
-        console.log('[loadUsers] API 返回异常:', res);
-        setUsers([]);
       }
     } catch (err) {
       console.error('加载用户列表失败', err);
       addLoadWarning('用户列表加载失败');
-      setUsers([]);
     }
-  }, [addLoadWarning, user?.factoryId]);
-
-  const loadTemplateProcessList = useCallback(async (styleNoParam: string) => {
-    try {
-      console.log('[loadTemplateProcessList] 加载模板工序, styleNo:', styleNoParam);
-      const res = await templateLibraryApi.progressNodeUnitPrices(styleNoParam);
-      console.log('[loadTemplateProcessList] API response:', res);
-      if (res.code === 200 && Array.isArray(res.data)) {
-        const list = res.data.map((item: any) => ({
-          id: item?.id || item?.processCode,
-          processCode: item?.processCode || item?.code,
-          code: item?.code || item?.processCode,
-          name: item?.name || item?.processName || '',
-          unitPrice: item?.unitPrice || item?.price || 0,
-        }));
-        console.log('[loadTemplateProcessList] 解析后的工序列表:', list);
-        setTemplateProcessList(list);
-      }
-    } catch (err) {
-      console.error('加载模板工序列表失败', err);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (visible && styleNo) {
-      loadTemplateProcessList(styleNo);
-    } else if (!visible) {
-      setTemplateProcessList([]);
-    }
-  }, [visible, styleNo, loadTemplateProcessList]);
+  }, [addLoadWarning]);
 
   // 加载节点操作数据
   const loadNodeOperations = useCallback(async () => {
@@ -1073,12 +994,11 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
           <Select
             allowClear
             showSearch
-            placeholder={`选择人员 (${users.length}人)`}
+            placeholder="选择人员"
             value={currentNodeData.assigneeId}
             onChange={(v, option) => {
-              console.log('[Select Person] selected:', v, option);
               updateNodeData('assigneeId', v);
-              updateNodeData('assignee', (option as any)?.label || String(v));
+              updateNodeData('assignee', (option as any)?.label || v);
             }}
             filterOption={(input, option) =>
               (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
@@ -1120,7 +1040,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   };
 
   const _renderScanRecordsTab = () => (
-    <div style={{ padding: '4px 0', minHeight: 400 }}>
+    <div style={{ padding: '4px 0' }}>
       <div style={{ marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Text type="secondary">共 {filteredScanRecords.length} 条扫码记录</Text>
         <Text type="secondary">合计: {filteredScanRecords.reduce((s, r) => s + (r.quantity || 0), 0)} 件</Text>

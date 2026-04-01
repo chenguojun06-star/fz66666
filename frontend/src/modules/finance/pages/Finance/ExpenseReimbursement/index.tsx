@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Alert, App, Card, DatePicker, Form, Input, InputNumber,
+  Alert, App, Button, Card, DatePicker, Form, Input, InputNumber,
   Select, Space, Tag, Popconfirm, Row, Col, Statistic,
   Upload, Image, Spin,
 } from 'antd';
@@ -408,7 +408,6 @@ const ExpenseReimbursementPage: React.FC = () => {
           actions.push({ key: 'edit', label: '编辑', primary: true, onClick: () => openForm(record) });
           actions.push({
             key: 'del', label: '删除', danger: true,
-            confirm: '确定删除该报销单？',
             onClick: () => handleDelete(record.id!),
           });
         }
