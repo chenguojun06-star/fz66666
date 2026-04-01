@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Input, InputNumber, Space, Select, Modal, Upload, Image, Tag } from 'antd';
+import { App, Button, Dropdown, Input, InputNumber, Space, Select, Modal, Upload, Image, Tag } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { StyleSize, TemplateLibrary } from '@/types/style';
 import api, { sortSizeNames, toNumberSafe } from '@/utils/api';
@@ -808,7 +808,7 @@ const StyleSizeTab: React.FC<Props> = ({
     if (!editMode) enterEdit();
   };
 
-  const applySizeTemplate = (templateId: string) => {
+  const applySizeTemplate = async (templateId: string, mode: 'merge' | 'overwrite' = 'overwrite') => {
     if (readOnly) return;
     if (editMode) {
       message.error('请先保存或退出编辑再导入模板');
@@ -819,47 +819,24 @@ const StyleSizeTab: React.FC<Props> = ({
       message.error('styleId不合法');
       return;
     }
-
-    const doImport = async (mode: 'merge' | 'overwrite') => {
-      try {
-        const res = await api.post<{ code: number; message: string; data: boolean }>('/template-library/apply-to-style', {
-          templateId,
-          targetStyleId: sid,
-          mode,
-        });
-        const result = res as any;
-        if (result.code !== 200) {
-          message.error(result.message as any || '导入失败');
-          return;
-        }
-        message.success(mode === 'merge' ? '已追加导入尺寸模板' : '已覆盖导入尺寸模板');
-        setSizeTemplateKey(undefined);
-        fetchSize();
-      } catch (e: unknown) {
-        message.error((e as any)?.message || '导入失败');
+    try {
+      const res = await api.post<{ code: number; message: string; data: boolean }>('/template-library/apply-to-style', {
+        templateId,
+        targetStyleId: sid,
+        mode,
+      });
+      const result = res as any;
+      if (result.code !== 200) {
+        message.error(result.message as any || '导入失败');
+        return;
       }
-    };
-
-    modal.confirm({
-      title: '导入尺寸模板',
-      content: (
-        <div>
-          <p style={{ marginBottom: 8 }}>请选择导入方式：</p>
-          <p style={{ marginBottom: 4 }}>• <b>追加</b>：将模板部位行添加到现有数据后面（保留现有部位）</p>
-          <p style={{ marginBottom: 0 }}>• <b>覆盖</b>：清除现有所有尺寸行，以模板数据替换</p>
-        </div>
-      ),
-      okText: '追加导入',
-      cancelText: '取消',
-      footer: (_, { OkBtn, CancelBtn }) => (
-        <>
-          <CancelBtn />
-          <Button danger onClick={() => { Modal.destroyAll(); void doImport('overwrite'); }}>覆盖导入</Button>
-          <OkBtn />
-        </>
-      ),
-      onOk: () => doImport('merge'),
-    });
+      message.success(mode === 'merge' ? '已追加导入尺寸模板' : '已覆盖导入尺寸模板');
+      setSizeTemplateKey(undefined);
+      await fetchSize();
+      setEditMode(true);
+    } catch (e: unknown) {
+      message.error((e as any)?.message || '导入失败');
+    }
   };
 
   const handleDeletePart = (row: MatrixRow) => {
@@ -1340,18 +1317,25 @@ const StyleSizeTab: React.FC<Props> = ({
             }))}
             disabled={loading || saving || Boolean(readOnly) || templateLoading}
           />
-          <Button
-            onClick={() => {
-              if (!sizeTemplateKey) {
-                message.error('请选择模板');
-                return;
-              }
-              applySizeTemplate(sizeTemplateKey);
-            }}
+          <Dropdown.Button
             disabled={loading || saving || Boolean(readOnly) || templateLoading}
+            onClick={() => {
+              if (!sizeTemplateKey) { message.error('请选择模板'); return; }
+              void applySizeTemplate(sizeTemplateKey, 'overwrite');
+            }}
+            menu={{
+              items: [
+                { key: 'overwrite', label: '覆盖导入（清除现有数据）' },
+                { key: 'merge', label: '追加导入（保留现有数据）' },
+              ],
+              onClick: ({ key }) => {
+                if (!sizeTemplateKey) { message.error('请选择模板'); return; }
+                void applySizeTemplate(sizeTemplateKey, key as 'merge' | 'overwrite');
+              },
+            }}
           >
             导入模板
-          </Button>
+          </Dropdown.Button>
           <Button type="default" onClick={() => setAddGroupOpen(true)} disabled={loading || saving || Boolean(readOnly)}>
             新增分组
           </Button>
