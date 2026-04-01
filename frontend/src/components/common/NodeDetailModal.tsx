@@ -925,7 +925,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     const orderInfoLine = `${orderSummary.orderNo || orderNo || '-'}  款号：${orderSummary.styleNo || '-'}  数量：${orderSummary.orderQuantity || 0} 件`;
 
     return (
-      <div style={{ padding: '4px 0' }}>
+      <div style={{ padding: '4px 0', minHeight: 400 }}>
         <Alert
           type="info"
           showIcon
@@ -1120,7 +1120,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   };
 
   const _renderScanRecordsTab = () => (
-    <div style={{ padding: '4px 0' }}>
+    <div style={{ padding: '4px 0', minHeight: 400 }}>
       <div style={{ marginBottom: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Text type="secondary">共 {filteredScanRecords.length} 条扫码记录</Text>
         <Text type="secondary">合计: {filteredScanRecords.reduce((s, r) => s + (r.quantity || 0), 0)} 件</Text>
