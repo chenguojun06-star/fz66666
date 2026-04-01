@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { App, Button, Dropdown, Input, InputNumber, Space, Select, Modal, Upload, Image, Tag } from 'antd';
-import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
+import { DeleteOutlined, DownOutlined, PlusOutlined } from '@ant-design/icons';
 import { StyleSize, TemplateLibrary } from '@/types/style';
 import api, { sortSizeNames, toNumberSafe } from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
@@ -1317,12 +1317,8 @@ const StyleSizeTab: React.FC<Props> = ({
             }))}
             disabled={loading || saving || Boolean(readOnly) || templateLoading}
           />
-          <Dropdown.Button
+          <Dropdown
             disabled={loading || saving || Boolean(readOnly) || templateLoading}
-            onClick={() => {
-              if (!sizeTemplateKey) { message.error('请选择模板'); return; }
-              void applySizeTemplate(sizeTemplateKey, 'overwrite');
-            }}
             menu={{
               items: [
                 { key: 'overwrite', label: '覆盖导入（清除现有数据）' },
@@ -1334,8 +1330,10 @@ const StyleSizeTab: React.FC<Props> = ({
               },
             }}
           >
-            导入模板
-          </Dropdown.Button>
+            <Button disabled={loading || saving || Boolean(readOnly) || templateLoading}>
+              导入模板 <DownOutlined />
+            </Button>
+          </Dropdown>
           <Button type="default" onClick={() => setAddGroupOpen(true)} disabled={loading || saving || Boolean(readOnly)}>
             新增分组
           </Button>
