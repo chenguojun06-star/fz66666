@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Button, Card, Input, Select, Tag, App, Dropdown, Checkbox, Alert, InputNumber, Tabs } from 'antd';
+import { Button, Card, Input, Select, Tag, App, Dropdown, Checkbox, Alert, InputNumber, Tabs, Segmented } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined, RadarChartOutlined } from '@ant-design/icons';
 import ExternalFactorySmartView from '../ExternalFactory/ExternalFactorySmartView';
@@ -907,26 +907,15 @@ const ProductionList: React.FC = () => {
                   >
                     <Button icon={<SettingOutlined />}>列设置</Button>
                   </Dropdown>
-                  <Button.Group>
-                    <Button
-                      type={viewMode === 'list' ? 'primary' : 'default'}
-                      icon={<UnorderedListOutlined />}
-                      onClick={() => setViewMode('list')}
-                      title="列表视图"
-                    />
-                    <Button
-                      type={viewMode === 'card' ? 'primary' : 'default'}
-                      icon={<AppstoreOutlined />}
-                      onClick={() => setViewMode('card')}
-                      title="卡片视图"
-                    />
-                    <Button
-                      type={viewMode === 'smart' ? 'primary' : 'default'}
-                      icon={<RadarChartOutlined />}
-                      onClick={() => setViewMode('smart')}
-                      title="智能看板"
-                    />
-                  </Button.Group>
+                  <Segmented
+                    value={viewMode}
+                    onChange={(v) => setViewMode(v as 'list' | 'card' | 'smart')}
+                    options={[
+                      { value: 'list', icon: <UnorderedListOutlined /> },
+                      { value: 'card', icon: <AppstoreOutlined /> },
+                      { value: 'smart', icon: <RadarChartOutlined /> },
+                    ]}
+                  />
                                     <ExportButton
                     label="导出明细"
                     url="/api/production/order/export-excel"
@@ -951,6 +940,20 @@ const ProductionList: React.FC = () => {
                 savePageSize(pageSize);
                 setQueryParams({ ...queryParams, page, pageSize });
               }}
+              handleCloseOrder={handleCloseOrder}
+              handleScrapOrder={handleScrapOrder}
+              handleTransferOrder={handleTransferOrder}
+              openProcessDetail={openProcessDetail}
+              syncProcessFromTemplate={syncProcessFromTemplate}
+              setPrintModalVisible={setPrintModalVisible}
+              setPrintingRecord={setPrintingRecord}
+              quickEditModal={quickEditModal}
+              handleShareOrder={handleShareOrder}
+              handlePrintLabel={handlePrintLabel}
+              canManageOrderLifecycle={canManageOrderLifecycle}
+              isSupervisorOrAbove={isSupervisorOrAbove}
+              openSubProcessRemap={openSubProcessRemap}
+              isFactoryAccount={isFactoryAccount}
             />
           ) : viewMode === 'list' ? (
             <ResizableTable<any>

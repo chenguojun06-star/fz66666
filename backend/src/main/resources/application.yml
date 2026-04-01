@@ -159,7 +159,7 @@ fashion:
 
 app:
   auth:
-    jwt-secret: ${APP_AUTH_JWT_SECRET:}
+    jwt-secret: ${APP_AUTH_JWT_SECRET:fashion-supply-chain-jwt-secret-key-2026}
     header-auth-enabled: ${APP_AUTH_HEADER_AUTH_ENABLED:false}
     sms-login:
       code-ttl-seconds: ${APP_AUTH_SMS_LOGIN_CODE_TTL_SECONDS:300}

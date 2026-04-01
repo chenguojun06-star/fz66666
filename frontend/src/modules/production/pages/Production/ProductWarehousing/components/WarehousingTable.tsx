@@ -32,7 +32,7 @@ async function printWarehousingQr(warehousingNo: string, orderNo?: string) {
   const win = window.open('', '_blank', 'width=400,height=400');
   if (win) { win.document.write(html); win.document.close(); }
 }
-import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
+import { StyleCoverThumb } from '@/components/StyleAssets';
 import { formatDateTime } from '@/utils/datetime';
 import { ProductWarehousing as WarehousingType, WarehousingQueryParams } from '@/types/production';
 import { getQualityStatusConfig } from '../utils';
@@ -177,18 +177,6 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
           </Space>
         );
       },
-    },
-    {
-      title: '附件',
-      key: 'attachments',
-      width: 60,
-      render: (_: any, record: any) => (
-        <StyleAttachmentsButton
-          styleId={record.styleId}
-          styleNo={record.styleNo}
-          onlyActive
-        />
-      )
     },
     {
       title: '菲号',

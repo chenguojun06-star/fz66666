@@ -947,3 +947,12 @@
     text-align: right;
   }
 }
+
+/* 操作列跟随进度节点：默认隐藏，行 hover 时显示 */
+.ant-table-tbody > tr > td.prod-act-cell {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.ant-table-tbody > tr:hover > td.prod-act-cell {
+  opacity: 1;
+}

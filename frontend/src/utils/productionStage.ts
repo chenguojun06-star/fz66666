@@ -5,7 +5,7 @@ export const stageAliasMap: Record<string, string[]> = {
   ironing: ['整烫', '熨烫', '大烫'],
   quality: ['质检', '检验', '品检', '验货'],
   packaging: ['包装', '后整', '打包', '装箱'],
-  secondaryProcess: ['二次工艺', '绣花', '印花', '二次'],
+  secondaryProcess: ['二次工艺', '二次'],
   warehousing: ['入库', '仓库', '质检入库'],
 };
 

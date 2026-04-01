@@ -1,0 +1,192 @@
+/* 外发工厂订单 — 覆盖 style-smart 共享样式 */
+
+/* ── 行高压低 ── */
+.ef-compact .style-smart-row {
+  padding: 10px 14px;
+  gap: 14px;
+  grid-template-columns: 130px minmax(0, 1fr);
+  border-radius: 14px;
+}
+
+.ef-compact .style-smart-row__cover {
+  min-height: unset;
+  height: auto;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.ef-compact .style-smart-row__thumb {
+  width: 130px;
+  height: auto;
+  min-height: 70px;
+  max-height: 120px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.ef-compact .style-smart-row__thumb img {
+  width: 100%;
+  height: auto;
+  max-height: 120px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.ef-thumb-empty {
+  background: #f5f5f5;
+  color: #aaa;
+  font-size: 12px;
+}
+
+/* ── 图片下方区域：标签 + 日期 ── */
+.ef-cover-below {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+/* ── 标签条 ── */
+.ef-cover-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.ef-delivery-badge {
+  display: inline-block;
+  font-size: 11px;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.ef-delivery-badge--normal  { background: #e6f4ff; color: #1677ff; }
+.ef-delivery-badge--warning { background: #fff7e6; color: #fa8c16; }
+.ef-delivery-badge--danger  { background: #fff1f0; color: #ff4d4f; }
+.ef-delivery-badge--success { background: #f6ffed; color: #52c41a; }
+.ef-delivery-badge--scrapped { background: #f5f5f5; color: #999; }
+
+/* ── 三栏布局微调 ── */
+.ef-compact .style-smart-row__layout {
+  gap: 8px;
+  align-items: start;
+}
+
+/* ── 身份信息区 ── */
+.ef-info-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ef-field-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.ef-field-label {
+  color: #999;
+  flex-shrink: 0;
+  min-width: 28px;
+  text-align-last: justify;
+  font-size: 12px;
+}
+
+.ef-field-value {
+  color: #333;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ef-order-no {
+  color: #1677ff;
+  cursor: pointer;
+  font-weight: 500;
+}
+.ef-order-no:hover {
+  text-decoration: underline;
+}
+
+/* ── 码数×颜色 自然展开 ── */
+.ef-size-color-block {
+  margin-top: 2px;
+}
+
+.ef-size-row {
+  display: flex;
+  gap: 0;
+}
+
+.ef-size-cell {
+  display: inline-block;
+  min-width: 36px;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #333;
+  font-weight: 500;
+}
+
+.ef-size-qty {
+  color: #1677ff;
+  font-weight: 500;
+}
+
+/* ── 日期竖排（图片下方） ── */
+.ef-date-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* ── 时间轴：线条只在节点球之间 ── */
+.ef-compact .style-smart-row__timeline-shell {
+  padding: 6px 0 2px;
+}
+
+.ef-compact .style-smart-row__timeline-track,
+.ef-compact .style-smart-row__timeline-progress {
+  left: calc(100% / var(--ef-stage-count) / 2);
+  right: calc(100% / var(--ef-stage-count) / 2);
+  width: auto;
+}
+
+.ef-compact .style-smart-stage__time {
+  font-size: 11px;
+  min-height: 18px;
+}
+
+.ef-compact .style-smart-stage__node {
+  width: 36px;
+  height: 36px;
+}
+
+.ef-compact .style-smart-stage__label {
+  font-size: 12px;
+}
+
+/* ─── 操作按钮区：悬停卡片时才显示 ─── */
+.ef-card-actions {
+  margin-top: 8px;
+  opacity: 0;
+  transition: opacity 0.18s;
+}
+.ef-compact .style-smart-row:hover .ef-card-actions {
+  opacity: 1;
+}
+.ef-card-row-actions {
+  justify-content: flex-end;
+}

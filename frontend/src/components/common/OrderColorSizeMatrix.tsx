@@ -70,7 +70,7 @@ const createSizeOrder = (items: CardSizeQuantityItem[], fallbackSizes: string[])
   return ordered;
 };
 
-const buildOrderColorSizeMatrixModel = ({
+export const buildOrderColorSizeMatrixModel = ({
   items,
   fallbackColor,
   fallbackSize,

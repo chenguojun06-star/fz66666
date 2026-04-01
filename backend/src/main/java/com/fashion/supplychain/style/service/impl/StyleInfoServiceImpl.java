@@ -523,25 +523,6 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
             return null;
         }
 
-        StyleOperationLog reset = styleOperationLogService.lambdaQuery()
-                .eq(StyleOperationLog::getStyleId, id)
-                .eq(StyleOperationLog::getBizType, "maintenance")
-                .eq(StyleOperationLog::getAction, "PATTERN_RESET")
-                .orderByDesc(StyleOperationLog::getCreateTime)
-                .last("limit 1")
-                .one();
-        LocalDateTime resetTime = reset != null ? reset.getCreateTime() : null;
-
-        StyleOperationLog start = styleOperationLogService.lambdaQuery()
-                .eq(StyleOperationLog::getStyleId, id)
-                .eq(StyleOperationLog::getBizType, "pattern")
-                .eq(StyleOperationLog::getAction, "PATTERN_START")
-                .gt(resetTime != null, StyleOperationLog::getCreateTime, resetTime)
-                .orderByDesc(StyleOperationLog::getCreateTime)
-                .last("limit 1")
-                .one();
-        style.setPatternStartTime(start != null ? start.getCreateTime() : null);
-
         try {
             Set<Long> one = new HashSet<>();
             one.add(id);

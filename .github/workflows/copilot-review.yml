@@ -1,6 +1,6 @@
 name: Copilot 代码审核
 
-on:
+'on':
   pull_request:
     types: [opened, ready_for_review]
     branches: [main, develop]

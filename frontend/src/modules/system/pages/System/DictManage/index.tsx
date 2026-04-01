@@ -75,6 +75,10 @@ const DICT_TYPES = [
   { value: 'warehouse_location', label: '仓库', description: '仓库库位：A仓、B仓、成品仓、面辅料仓等，可在此维护仓库列表' },
   { value: 'plate_type', label: '板类', description: '样衣版次类型：首单、复板、公司版等' },
   { value: 'style_name', label: '品名', description: '服装品名/品类：连衣裙、T恤、衬衫、裤子、外套等' },
+  { value: 'fabric_composition', label: '成分', description: '面料成分：100%棉、95%棉5%氨纶、100%涤纶等' },
+  { value: 'fabric_weight', label: '克重', description: '面料克重：180g、220g、280g、320g等' },
+  { value: 'material_specification', label: '规格', description: '面辅料规格：150cm、180cm门幅等' },
+  { value: 'material_unit', label: '单位', description: '计量单位：米、码、公斤、件等' },
 ];
 
 const DictManage: React.FC = () => {
