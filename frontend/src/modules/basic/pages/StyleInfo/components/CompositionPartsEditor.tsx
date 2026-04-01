@@ -31,8 +31,7 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
   const [activeParts, setActiveParts] = useState<string[]>([]);
   const [partsMap, setPartsMap] = useState<Record<string, string[]>>({});
   const [washNoteMap, setWashNoteMap] = useState<Record<string, string>>({});
-  const [showCustomPartInput, setShowCustomPartInput] = useState(false);
-  const [customPartName, setCustomPartName] = useState('');
+  const [selectSearch, setSelectSearch] = useState('');
 
   useEffect(() => {
     const map = parseWashLabelPartsMap(value);
@@ -57,14 +56,6 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
     if (activeParts.includes(partLabel)) return;
     emit({ ...partsMap, [partLabel]: [''] }, [...activeParts, partLabel], washNoteMap);
     autoCollectDictEntry('garment_part', partLabel);
-  };
-
-  const handleAddCustomPart = () => {
-    const value = customPartName.trim();
-    if (!value) return;
-    addSection(value);
-    setCustomPartName('');
-    setShowCustomPartInput(false);
   };
 
   const removeSection = (partLabel: string) => {
@@ -193,36 +184,29 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
 
         {/* 添加品类 */}
         {!disabled && (
-          <div style={{ marginTop: hasRows ? 8 : 0, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            {unactiveParts.length > 0 && (
-              <Select
-                size="small"
-                placeholder="添加品类…"
-                style={{ width: 140 }}
-                value={undefined}
-                onChange={(v: string) => addSection(v)}
-                options={unactiveParts.map(label => ({ label, value: label }))}
-              />
-            )}
-            {showCustomPartInput ? (
-              <Space>
-                <Input
-                  size="small"
-                  value={customPartName}
-                  placeholder="自定义品类名"
-                  style={{ width: 110 }}
-                  autoFocus
-                  onChange={e => setCustomPartName(e.target.value)}
-                  onPressEnter={handleAddCustomPart}
-                  onBlur={() => { if (!customPartName.trim()) setShowCustomPartInput(false); }}
-                />
-                <Button size="small" type="primary" onClick={handleAddCustomPart}>确定</Button>
-              </Space>
-            ) : (
-              <Button size="small" icon={<PlusOutlined />} onClick={() => setShowCustomPartInput(true)}>
-                自定义品类
-              </Button>
-            )}
+          <div style={{ marginTop: hasRows ? 8 : 0 }}>
+            <Select
+              size="small"
+              showSearch
+              placeholder="添加品类…（可直接输入新品类）"
+              style={{ width: 200 }}
+              value={undefined}
+              searchValue={selectSearch}
+              onSearch={setSelectSearch}
+              filterOption={(input, option) =>
+                String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+              }
+              onChange={(v: string) => {
+                addSection(v);
+                setSelectSearch('');
+              }}
+              options={[
+                ...unactiveParts.map(label => ({ label, value: label })),
+                ...(selectSearch.trim() && !unactiveParts.includes(selectSearch.trim()) && !activeParts.includes(selectSearch.trim())
+                  ? [{ label: `创建 "${selectSearch.trim()}"`, value: selectSearch.trim() }]
+                  : []),
+              ]}
+            />
           </div>
         )}
 
