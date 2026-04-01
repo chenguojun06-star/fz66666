@@ -121,6 +121,7 @@ interface ProcessPriceItem {
   processCode?: string;
   code?: string;
   name: string;
+  processName?: string;
   unitPrice?: number;
   quantity?: number;
   completedQuantity?: number;
@@ -133,13 +134,14 @@ interface NodeDetailModalProps {
   onClose: () => void;
   orderId?: string;
   orderNo?: string;
-  styleNo?: string;
   nodeType: string;
   nodeName: string;
   stats?: NodeStats;
   unitPrice?: number;
   /** 该节点下的所有子工序列表（含单价） */
   processList?: ProcessPriceItem[];
+  /** 款号（用于工序名称匹配上下文） */
+  styleNo?: string;
   /** 是否是样板生产（样板生产不显示菲号明细、扫码记录等） */
   isPatternProduction?: boolean;
   /** 额外数据（如采购进度信息、时间节点等） */
@@ -283,7 +285,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   const loadUsers = useCallback(async () => {
     try {
       const res = await api.get<{ code: number; data: { records: { id: string; name: string; username: string }[] } }>('/system/user/list', {
-        params: { page: 1, pageSize: 500, status: 'active' }
+        params: { page: 1, pageSize: 500, status: 'enabled' }
       });
       if (res.data?.records) {
         setUsers(res.data.records);
@@ -494,15 +496,31 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     return () => { cancelled = true; };
   }, [visible, orderId, nodeName, isPatternProduction]);
 
+  // 从 processList 提取子工序名称集合，用于动态匹配（不依赖硬编码别名）
+  const childProcessNames = useMemo(() => {
+    if (!processList || processList.length === 0) return [] as string[];
+    return processList.map(p => ((p as any).processName || p.name || '').trim()).filter(Boolean);
+  }, [processList]);
+
   // 筛选当前节点的扫码记录
   const filteredScanRecords = useMemo(() => {
-    return scanRecords.filter((r) =>
-      // 与 useBoardStats 保持一致：只统计成功扫码且件数>0，保证弹窗"合计"与进度球数字一致
-      String((r as any)?.scanResult || '').trim() === 'success' &&
-      (Number((r as any)?.quantity) || 0) > 0 &&
-      matchRecordToStage(r.progressStage, r.processName, String(nodeTypeKey || '').trim(), normalizeText(nodeName))
-    );
-  }, [scanRecords, nodeName, nodeTypeKey, normalizeText]);
+    const nName = normalizeText(nodeName);
+    const nKey = String(nodeTypeKey || '').trim();
+    return scanRecords.filter((r) => {
+      if (String((r as any)?.scanResult || '').trim() !== 'success') return false;
+      if ((Number((r as any)?.quantity) || 0) <= 0) return false;
+      // 优先：别名匹配（兼容已有逻辑）
+      if (matchRecordToStage(r.progressStage, r.processName, nKey, nName)) return true;
+      // 补充：父节点名匹配 progressStage，或子工序名匹配 processName
+      const stage = (r.progressStage || '').trim();
+      const process = (r.processName || '').trim();
+      if (stage && nName && (stage.includes(nName) || nName.includes(stage))) return true;
+      if (childProcessNames.length > 0 && process) {
+        return childProcessNames.some(cp => process.includes(cp) || cp.includes(process));
+      }
+      return false;
+    });
+  }, [scanRecords, nodeName, nodeTypeKey, normalizeText, childProcessNames]);
 
   // 反馈闭环：节点完成(100%)时，静默上报实际完工时间，训练预测模型
   useEffect(() => {

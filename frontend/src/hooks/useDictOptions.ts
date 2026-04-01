@@ -50,3 +50,14 @@ export function useDictOptions(dictType: string, fallback: DictOption[] = []): {
 
   return { options, loading };
 }
+
+/**
+ * 自动收录词典新词（幂等，已存在则后端跳过）
+ * 调用后静默失败，不影响主流程
+ */
+export function autoCollectDictEntry(dictType: string, label: string): void {
+  if (!dictType || !label || !label.trim()) return;
+  api
+    .post('/system/dict/auto-collect', null, { params: { dictType, label: label.trim() } })
+    .catch(() => { /* 静默失败，不影响用户操作 */ });
+}

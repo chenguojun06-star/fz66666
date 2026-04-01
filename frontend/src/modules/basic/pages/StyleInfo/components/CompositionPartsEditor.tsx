@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { Button, Input, Select, Space, Spin, Tag } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { parseWashLabelPartsMap, parseWashNotePerPart, serializeWashLabelParts } from '@/utils/washLabel';
-import { useDictOptions } from '@/hooks/useDictOptions';
+import { useDictOptions, autoCollectDictEntry } from '@/hooks/useDictOptions';
 
 const DEFAULT_GARMENT_PARTS = [
   { label: '整件', value: 'GARMENT_PART_WHOLE' },
@@ -31,6 +31,8 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
   const [activeParts, setActiveParts] = useState<string[]>([]);
   const [partsMap, setPartsMap] = useState<Record<string, string[]>>({});
   const [washNoteMap, setWashNoteMap] = useState<Record<string, string>>({});
+  const [showCustomPartInput, setShowCustomPartInput] = useState(false);
+  const [customPartName, setCustomPartName] = useState('');
 
   useEffect(() => {
     const map = parseWashLabelPartsMap(value);
@@ -54,6 +56,15 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
   const addSection = (partLabel: string) => {
     if (activeParts.includes(partLabel)) return;
     emit({ ...partsMap, [partLabel]: [''] }, [...activeParts, partLabel], washNoteMap);
+    autoCollectDictEntry('garment_part', partLabel);
+  };
+
+  const handleAddCustomPart = () => {
+    const value = customPartName.trim();
+    if (!value) return;
+    addSection(value);
+    setCustomPartName('');
+    setShowCustomPartInput(false);
   };
 
   const removeSection = (partLabel: string) => {
@@ -182,19 +193,36 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
 
         {/* 添加品类 */}
         {!disabled && (
-          <div style={{ marginTop: hasRows ? 8 : 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Select
-              size="small"
-              placeholder="添加品类…"
-              style={{ width: 140 }}
-              value={undefined}
-              onChange={(v: string) => addSection(v)}
-              options={unactiveParts.map(label => ({ label, value: label }))}
-              disabled={unactiveParts.length === 0}
-            />
-            <span style={{ color: '#999', fontSize: 12 }}>
-              （在「系统 → 词典管理 → garment_part」中可新增品类）
-            </span>
+          <div style={{ marginTop: hasRows ? 8 : 0, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            {unactiveParts.length > 0 && (
+              <Select
+                size="small"
+                placeholder="添加品类…"
+                style={{ width: 140 }}
+                value={undefined}
+                onChange={(v: string) => addSection(v)}
+                options={unactiveParts.map(label => ({ label, value: label }))}
+              />
+            )}
+            {showCustomPartInput ? (
+              <Space>
+                <Input
+                  size="small"
+                  value={customPartName}
+                  placeholder="自定义品类名"
+                  style={{ width: 110 }}
+                  autoFocus
+                  onChange={e => setCustomPartName(e.target.value)}
+                  onPressEnter={handleAddCustomPart}
+                  onBlur={() => { if (!customPartName.trim()) setShowCustomPartInput(false); }}
+                />
+                <Button size="small" type="primary" onClick={handleAddCustomPart}>确定</Button>
+              </Space>
+            ) : (
+              <Button size="small" icon={<PlusOutlined />} onClick={() => setShowCustomPartInput(true)}>
+                自定义品类
+              </Button>
+            )}
           </div>
         )}
 

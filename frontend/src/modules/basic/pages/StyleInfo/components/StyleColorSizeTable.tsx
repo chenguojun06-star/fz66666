@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { App, Button, Input, InputNumber, Space, Tag } from 'antd';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import { autoCollectDictEntry } from '@/hooks/useDictOptions';
 
 interface StyleColorSizeTableProps {
   // 码数状态
@@ -194,6 +195,7 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
     if (!selectedSizes.includes(value)) {
       setSizeOptions([...selectedSizes, value]);
     }
+    autoCollectDictEntry('size', value);
     setNewSize('');
     setShowSizeInput(false);
   };
@@ -207,6 +209,7 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
     if (!selectedColors.includes(value)) {
       setColorOptions([...selectedColors, value]);
     }
+    autoCollectDictEntry('color', value);
     setNewColor('');
     setShowColorInput(false);
   };

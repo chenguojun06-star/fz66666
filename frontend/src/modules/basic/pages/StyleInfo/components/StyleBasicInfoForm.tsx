@@ -306,7 +306,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
                   name="fabricCompositionParts"
                   label="洗水唛成分 / 洗涤说明"
                 >
-                  <CompositionPartsEditor disabled={editLocked} />
+                  <CompositionPartsEditor disabled={false} />
                 </Form.Item>
                 <div style={{ marginTop: -8, marginBottom: 10, fontSize: 12, lineHeight: 1.6, color: '#8c8c8c' }}>
                   每个部位可分别填写成分和洗涤说明，打印洗水唛时会自动按部位分段输出

@@ -56,4 +56,14 @@ public class DictController {
         dictOrchestrator.delete(id);
         return Result.success("删除成功");
     }
+
+    /**
+     * 自动收录词典新词（幂等，已存在则跳过）
+     * POST /api/system/dict/auto-collect?dictType=color&label=橙色
+     */
+    @PostMapping("/auto-collect")
+    public Result<?> autoCollect(@RequestParam String dictType, @RequestParam String label) {
+        dictOrchestrator.autoCollect(dictType, label);
+        return Result.success(null);
+    }
 }
