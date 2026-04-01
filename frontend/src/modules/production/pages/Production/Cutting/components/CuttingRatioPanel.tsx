@@ -22,6 +22,7 @@ interface CuttingRatioPanelProps {
   disabled: boolean;
   onConfirm: (rows: BundleInputRow[]) => void;
   onClear: () => void;
+  existingCutQtyByKey?: Record<string, number>;
 }
 
 interface BundleRow {
@@ -42,6 +43,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
   disabled,
   onConfirm,
   onClear,
+  existingCutQtyByKey,
 }) => {
   const [bundleSize, setBundleSize] = useState<number>(20);
   const [excessRate, setExcessRate] = useState<number>(0);
@@ -147,6 +149,20 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
         ) : (
           <Text>{val} 件</Text>
         ),
+    },
+    {
+      title: '剩余裁剪数量',
+      key: 'remainingCutQty',
+      width: 130,
+      render: (_: unknown, row: BundleRow) => {
+        const alreadyCut = (existingCutQtyByKey ?? {})[`${row.color}-${row.size}`] ?? 0;
+        const remaining = row.quantity - alreadyCut;
+        return (
+          <Text style={{ color: remaining < 0 ? '#cf1322' : remaining === 0 ? '#999' : '#389e0d' }}>
+            {remaining} 件
+          </Text>
+        );
+      },
     },
     {
       title: '分扎数',

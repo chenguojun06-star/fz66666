@@ -398,9 +398,6 @@ const MaterialPurchase: React.FC = () => {
                       align: 'right' as const,
                       render: (_, record) => {
                         const max = record.arrivedQuantity > 0 ? record.arrivedQuantity : record.purchaseQuantity;
-                        const minReturn = max <= 100
-                          ? Math.floor(max * 0.5)
-                          : Math.floor(max * 0.8);
                         return (
                           <Form.Item
                             name={['items', record.index, 'returnQuantity']}
@@ -414,8 +411,6 @@ const MaterialPurchase: React.FC = () => {
                                   if (!Number.isFinite(n)) throw new Error('请输入数字');
                                   if (n < 0) throw new Error('不能小于0');
                                   if (max > 10 && !Number.isInteger(n)) throw new Error('请输入整数');
-                                  if (max > 10 && n > max) throw new Error(`不能大于${max}`);
-                                  if (n < minReturn) throw new Error(`少货超出允许范围，至少回料 ${minReturn}`);
                                 },
                               },
                             ]}

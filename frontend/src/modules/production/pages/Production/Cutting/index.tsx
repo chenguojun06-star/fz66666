@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { App, Button, Card, Form, Select, Space, Tag } from 'antd';
+import { App, Button, Card, Form, Select, Space, Tag, Upload } from 'antd';
+import { PlusOutlined, UploadOutlined } from '@ant-design/icons';
 
 import Layout from '@/components/Layout';
 import PageStatCards from '@/components/common/PageStatCards';
@@ -80,6 +81,15 @@ const CuttingManagement: React.FC = () => {
     ensureOrderUnlockedById: tasks.ensureOrderUnlockedById,
     syncActiveTaskByOrderNo,
   });
+
+  const existingCutQtyByKey = useMemo(() => {
+    const map: Record<string, number> = {};
+    (bundles.dataSource || []).forEach(row => {
+      const k = `${String(row.color || '').trim()}-${String(row.size || '').trim()}`;
+      map[k] = (map[k] || 0) + Number(row.quantity || 0);
+    });
+    return map;
+  }, [bundles.dataSource]);
 
   const print = useCuttingPrint({ message });
 
@@ -553,7 +563,7 @@ const CuttingManagement: React.FC = () => {
                       const isPending = record.status === 'pending';
                       const isReceived = record.status === 'received';
                       const isCompleted = record.status === 'completed';
-                      const canRollback = tasks.isAdmin && !isPending && !isCompleted && record.status !== 'bundled';
+                      const canRollback = tasks.isAdmin && !isPending && !isCompleted;
                       return (
                         <RowActions
                           actions={[
@@ -659,7 +669,7 @@ const CuttingManagement: React.FC = () => {
                   </div>
 
                   <div>
-                    {tasks.isAdmin && activeTask && activeTask.status !== 'pending' && activeTask.status !== 'bundled' && activeTask.status !== 'completed' ? (
+                    {tasks.isAdmin && activeTask && activeTask.status !== 'pending' && activeTask.status !== 'completed' ? (
                       <div className="cutting-entry-actions">
                         <Button
                           danger
@@ -690,6 +700,7 @@ const CuttingManagement: React.FC = () => {
                           bundles.setImportLocked(false);
                           bundles.setBundlesInput([{ skuNo: '', color: '', size: '', quantity: 0 }]);
                         }}
+                        existingCutQtyByKey={existingCutQtyByKey}
                       />
                     </Form>
 
@@ -699,6 +710,34 @@ const CuttingManagement: React.FC = () => {
                       className="cutting-entry-purchase-card"
                       style={{ marginTop: 12 }}
                       loading={bundles.entryPurchaseLoading}
+                      extra={
+                        <Upload
+                          accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.doc,.docx"
+                          showUploadList={false}
+                          customRequest={async (options: any) => {
+                            const { file, onSuccess, onError } = options;
+                            const formData = new FormData();
+                            formData.append('file', file);
+                            try {
+                              const res = await api.post('/common/upload', formData, {
+                                headers: { 'Content-Type': 'multipart/form-data' },
+                              }) as any;
+                              if (res.code === 200) {
+                                message.success('采购单上传成功');
+                                onSuccess?.({});
+                              } else {
+                                message.error(res.message || '上传失败');
+                                onError?.(new Error('upload failed'));
+                              }
+                            } catch (err) {
+                              message.error('上传失败');
+                              onError?.(err);
+                            }
+                          }}
+                        >
+                          <Button icon={<UploadOutlined />} size="small">上传采购单</Button>
+                        </Upload>
+                      }
                     >
                       <ResizableTable<MaterialPurchase>
                         storageKey="cutting-entry-purchase-table"
@@ -758,6 +797,15 @@ const CuttingManagement: React.FC = () => {
                   清除勾选
                 </Button>
                 <Tag color={bundles.selectedBundles.length ? 'blue' : 'default'}>{`已选：${bundles.selectedBundles.length}`}</Tag>
+                {bundles.importLocked && bundles.dataSource.length > 0 && (
+                  <Button
+                    type="default"
+                    icon={<PlusOutlined />}
+                    onClick={bundles.handleAddBed}
+                  >
+                    增加床次
+                  </Button>
+                )}
               </Space>
 
               <ResizableTable<CuttingBundleRow>

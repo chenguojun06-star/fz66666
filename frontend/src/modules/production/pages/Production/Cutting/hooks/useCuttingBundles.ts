@@ -122,8 +122,12 @@ export function useCuttingBundles({
         params: { ...queryParams, orderNo: activeTask.productionOrderNo },
       });
       if (res.code === 200) {
-        setDataSource(res.data.records || []);
+        const records = res.data.records || [];
+        setDataSource(records);
         setTotal(res.data.total || 0);
+        if (records.length > 0) {
+          setImportLocked(true);
+        }
       } else {
         message.error(res.message || '获取裁剪列表失败');
       }
@@ -178,6 +182,7 @@ export function useCuttingBundles({
 
   // 生成菲号
   const handleGenerate = async () => {
+    if (generateLoading) return;
     let resolvedOrderId = orderId;
     if (!activeTask) {
       message.error('请先在上方裁剪任务中领取任务');
@@ -206,14 +211,15 @@ export function useCuttingBundles({
       return;
     }
 
+    setGenerateLoading(true);
     modal.confirm({
       width: '30vw',
       title: '确认保存并生成二维码？',
       content: '确认后将保存裁剪单并生成二维码，保存成功后才可批量打印。',
       okText: '确认保存',
       cancelText: '取消',
+      onCancel: () => setGenerateLoading(false),
       onOk: async () => {
-        setGenerateLoading(true);
         try {
           const payload = {
             orderId: resolvedOrderId,
@@ -229,6 +235,7 @@ export function useCuttingBundles({
             clearBundleSelection();
             await fetchBundles();
             await syncActiveTaskByOrderNo(activeTask.productionOrderNo);
+            setImportLocked(true);
           } else {
             message.error(res.message || '生成失败');
           }
@@ -476,12 +483,16 @@ export function useCuttingBundles({
     clearBundleSelection();
   }, [activeTask?.id]);
 
+  const handleAddBed = () => {
+    setImportLocked(false);
+  };
+
   return {
     // refs
     editSectionRef,
     // 菲号输入
     bundlesInput, setBundlesInput, importLocked, setImportLocked, generateLoading,
-    handleAddRow, handleRemoveRow, handleChangeRow, handleGenerate, handleAutoImport,
+    handleAddRow, handleRemoveRow, handleChangeRow, handleGenerate, handleAutoImport, handleAddBed,
     // 菲号列表
     queryParams, setQueryParams, listLoading, dataSource, total,
     fetchBundles,
