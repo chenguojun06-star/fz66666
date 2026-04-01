@@ -44,6 +44,13 @@ public class CuttingBundle {
      */
     private Integer bedNo;
 
+    /**
+     * 子床次编号（同一订单追加裁剪时递增：首次为 null，追加为 1、2…）
+     * 显示格式：bedNo=16,bedSubNo=null → "16"；bedSubNo=1 → "16-1"
+     */
+    @TableField("bed_sub_no")
+    private Integer bedSubNo;
+
     private String qrCode;
 
     private String status;

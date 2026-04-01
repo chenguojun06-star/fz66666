@@ -321,8 +321,8 @@ class CuttingTaskOrchestratorTest {
     }
 
     @Test
-    @DisplayName("rollback - 裁剪已完成并生成菲号时不允许退回")
-    void rollback_bundledTask_throwsIllegalState() {
+    @DisplayName("rollback - 裁剪已生成菲号(bundled)时允许退回并清理菲号")
+    void rollback_bundledTask_allowed() {
         Map<String, Object> body = new HashMap<>();
         body.put("taskId", "task-1");
         body.put("reason", "重新分配");
@@ -334,14 +334,21 @@ class CuttingTaskOrchestratorTest {
         current.setProductionOrderId("order-1");
         current.setProductionOrderNo("CUT-ORDER-001");
 
+        ProductionOrder order = new ProductionOrder();
+        order.setId("order-1");
+        order.setTenantId(1L);
+        order.setDeleteFlag(0);
+
         when(cuttingTaskService.getById("task-1")).thenReturn(current);
+        when(cuttingTaskService.rollbackTask("task-1")).thenReturn(true);
+        when(productionOrderService.getById("order-1")).thenReturn(order);
+        // markCustomCutOrderScrapped 会把 CUT- 订单状态改为 scrapped，需要 updateById 返回 true
+        when(productionOrderService.updateById(any(ProductionOrder.class))).thenReturn(true);
 
-        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> orchestrator.rollback(body));
+        // bundled 状态应正常退回，不再抛出异常
+        assertDoesNotThrow(() -> orchestrator.rollback(body));
 
-        assertEquals("裁剪已完成并生成菲号，不允许退回", ex.getMessage());
-        verify(cuttingTaskService, never()).rollbackTask("task-1");
-        verify(cuttingTaskService, never()).insertRollbackLog(any(), any(), any(), any());
-        verify(productionOrderService, never()).updateById(any(ProductionOrder.class));
+        verify(cuttingTaskService).rollbackTask("task-1");
     }
 
     @Test

@@ -373,6 +373,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
             <Collapse
               size="small"
               collapsible="icon"
+              defaultActiveKey={sections.map(s => s.key)}
               items={items}
             />
           );

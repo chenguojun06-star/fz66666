@@ -776,9 +776,7 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
         }
 
         String status = task.getStatus() == null ? "" : task.getStatus().trim().toLowerCase();
-        if ("bundled".equals(status) || task.getBundledTime() != null) {
-            return false;
-        }
+        // bundled 状态同样允许退回，下方清理逻辑会删除已生成的菲号及相关记录
 
         String orderId = task.getProductionOrderId();
         String orderNo = task.getProductionOrderNo();

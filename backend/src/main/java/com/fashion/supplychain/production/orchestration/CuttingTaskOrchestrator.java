@@ -668,9 +668,7 @@ public class CuttingTaskOrchestrator {
         TenantAssert.assertBelongsToCurrentTenant(task.getTenantId(), "裁剪任务");
 
         String taskStatus = task.getStatus() == null ? "" : task.getStatus().trim().toLowerCase();
-        if ("bundled".equals(taskStatus) || task.getBundledTime() != null) {
-            throw new IllegalStateException("裁剪已完成并生成菲号，不允许退回");
-        }
+        // bundled 状态（已生成菲号）允许退回，rollbackTask 会同步清理菲号、扫码记录、工序跟踪
 
         boolean ok = cuttingTaskService.rollbackTask(taskId);
         if (!ok) {

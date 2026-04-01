@@ -19,6 +19,7 @@ interface CuttingBundleRow {
   bundleNo?: number;
   bundleLabel?: string;
   bedNo?: number; // 床号（裁剪批次编号）
+  bedSubNo?: number; // 子床次编号（同一订单追加时递增，null 表示首次）
   qrCode?: string;
   status?: string;
   creatorId?: string; // 创建人ID

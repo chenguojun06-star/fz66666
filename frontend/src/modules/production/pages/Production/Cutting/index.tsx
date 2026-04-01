@@ -309,11 +309,16 @@ const CuttingManagement: React.FC = () => {
       dataIndex: 'bedNo',
       key: 'bedNo',
       width: 80,
-      render: (value: number | null | undefined) => (
-        <span style={{ fontWeight: 600, color: value ? 'var(--color-primary)' : 'var(--neutral-text-secondary)' }}>
-          {value || '-'}
-        </span>
-      )
+      render: (value: number | null | undefined, record: CuttingBundleRow) => {
+        const display = value
+          ? (record.bedSubNo != null ? `${value}-${record.bedSubNo}` : String(value))
+          : '-';
+        return (
+          <span style={{ fontWeight: 600, color: value ? 'var(--color-primary)' : 'var(--neutral-text-secondary)' }}>
+            {display}
+          </span>
+        );
+      }
     },
     { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 100, align: 'right' as const },
     { title: '二维码内容', dataIndex: 'qrCode', key: 'qrCode', width: 220, ellipsis: true },

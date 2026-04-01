@@ -210,6 +210,7 @@ export function useCuttingTasks({ message, isEntryPage }: UseCuttingTasksOptions
 
   const confirmRollback = async (reason: string) => {
     if (!pendingRollbackTask) return;
+    if (rollbackTaskLoading) return; // 防止重复提交
     const { task, onRolledBack } = pendingRollbackTask;
     setRollbackTaskLoading(true);
     try {

@@ -160,9 +160,22 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
         );
 
         int nextBedNo;
+        Integer nextBedSubNo = null;
         if (sameOrderBundle != null && sameOrderBundle.getBedNo() != null && sameOrderBundle.getBedNo() > 0) {
-            nextBedNo = sameOrderBundle.getBedNo() + 1;
-            log.info("追加新床号: orderId={}, bedNo={}", order.getId(), nextBedNo);
+            nextBedNo = sameOrderBundle.getBedNo(); // 保持同一床号，不递增
+            // 查此订单此床号下已有的最大子编号
+            CuttingBundle maxSubBundle = this.baseMapper.selectOne(
+                new LambdaQueryWrapper<CuttingBundle>()
+                    .select(CuttingBundle::getBedSubNo)
+                    .eq(CuttingBundle::getProductionOrderId, order.getId())
+                    .eq(CuttingBundle::getBedNo, nextBedNo)
+                    .isNotNull(CuttingBundle::getBedSubNo)
+                    .orderByDesc(CuttingBundle::getBedSubNo)
+                    .last("LIMIT 1")
+            );
+            Integer currentMaxSub = (maxSubBundle != null) ? maxSubBundle.getBedSubNo() : null;
+            nextBedSubNo = (currentMaxSub == null ? 0 : currentMaxSub) + 1;
+            log.info("追加子床号: orderId={}, bedNo={}, bedSubNo={}", order.getId(), nextBedNo, nextBedSubNo);
         } else {
             CuttingBundle lastBundle = this.baseMapper.selectOne(
                 new LambdaQueryWrapper<CuttingBundle>()
@@ -218,6 +231,7 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
             bundle.setQuantity(quantity);
             bundle.setBundleNo(bundleIndex);
             bundle.setBedNo(nextBedNo); // ✅ 设置床号（按租户自动递增）
+            bundle.setBedSubNo(nextBedSubNo); // 追加裁剪时设置子床次编号（首次 null）
 
             String qrCode = buildQrCode(
                     StringUtils.hasText(order.getOrderNo()) ? order.getOrderNo() : order.getQrCode(),
