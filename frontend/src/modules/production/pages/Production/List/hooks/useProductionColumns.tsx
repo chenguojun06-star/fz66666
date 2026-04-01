@@ -15,6 +15,7 @@ import { formatDateTime } from '@/utils/datetime';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { getProgressColorStatus, getRemainingDaysDisplay } from '@/utils/progressColor';
 import { getStatusConfig, safeString } from '../utils';
+import { getProcessesByNodeFromOrder } from '../../ProgressDetail/utils';
 import dayjs from 'dayjs';
 
 export interface UseProductionColumnsProps {
@@ -415,7 +416,27 @@ export function useProductionColumns({
         return (
           <div
             style={{ cursor: frozen ? 'default' : 'pointer', padding: '4px', transition: 'background 0.2s', opacity: frozen ? 0.6 : 1 }}
-            onClick={(e) => { e.stopPropagation(); if (!frozen) openNodeDetail(record, 'secondaryProcess', '二次工艺', { done: completed, total, percent: rate || 0, remaining: total - completed }); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (frozen) return;
+              if (openNodeDetail) {
+                const byParent = getProcessesByNodeFromOrder(record);
+                // exactChildren: processes with DB mapping to 二次工艺
+                const exactChildren = byParent['二次工艺'] || [];
+                // orphans: processes whose stage key is not one of the 6 standard parent nodes
+                const STD_STAGES = new Set(['采购', '裁剪', '车缝', '尾部', '入库', '二次工艺']);
+                const orphanChildren = Object.entries(byParent)
+                  .filter(([stage]) => !STD_STAGES.has(stage))
+                  .flatMap(([, nodes]) => nodes || []);
+                const allSecondary = [...exactChildren, ...orphanChildren];
+                const processList = allSecondary.length
+                  ? allSecondary.map(c => ({ name: c.name, unitPrice: c.unitPrice, processCode: c.processCode }))
+                  : [];
+                openNodeDetail(record, 'secondaryProcess', '二次工艺', { done: completed, total, percent: rate || 0, remaining: Math.max(0, total - completed) }, undefined, processList);
+              } else {
+                openProcessDetail(record, 'secondaryProcess');
+              }
+            }}
             onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
           >
