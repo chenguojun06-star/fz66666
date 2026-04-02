@@ -913,4 +913,105 @@ public class StyleInfoOrchestrator {
         styleInfoService.updateById(style);
         return styleInfoService.getById(id);
     }
+
+    /**
+     * 一键复制款式：将源款式的基础信息和BOM全量复制到新款色。
+     *
+     * @param sourceStyleId 源款式ID
+     * @param newStyleNo    新款号（必填）
+     * @param newColor      新颜色（必填）
+     * @param newStyleName  新款式名称（可选，null 时沿用原款名）
+     * @return 新创建的款式信息
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public StyleInfo copyStyle(Long sourceStyleId, String newStyleNo, String newColor, String newStyleName) {
+        if (sourceStyleId == null) {
+            throw new IllegalArgumentException("源款式ID不能为空");
+        }
+        if (!StringUtils.hasText(newStyleNo)) {
+            throw new IllegalArgumentException("新款号不能为空");
+        }
+        if (!StringUtils.hasText(newColor)) {
+            throw new IllegalArgumentException("颜色不能为空");
+        }
+
+        // 1. 查询源款式
+        StyleInfo source = styleInfoService.getById(sourceStyleId);
+        if (source == null) {
+            throw new NoSuchElementException("源款式不存在");
+        }
+
+        // 2. 检查目标款号是否已存在（交给数据库唯一索引兜底，这里提前给友好提示）
+        boolean exists = styleInfoService.lambdaQuery()
+                .eq(StyleInfo::getStyleNo, newStyleNo.trim())
+                .exists();
+        if (exists) {
+            throw new IllegalArgumentException("款号 " + newStyleNo.trim() + " 已存在，请换一个款号");
+        }
+
+        // 3. 构建新款式（清空 id 走新增路径）
+        StyleInfo newStyle = new StyleInfo();
+        newStyle.setStyleNo(newStyleNo.trim());
+        newStyle.setColor(newColor.trim());
+        newStyle.setStyleName(StringUtils.hasText(newStyleName) ? newStyleName.trim() : source.getStyleName());
+        newStyle.setCategory(source.getCategory());
+        newStyle.setSeason(source.getSeason());
+        newStyle.setYear(source.getYear());
+        newStyle.setMonth(source.getMonth());
+        newStyle.setDescription(source.getDescription());
+        newStyle.setCover(source.getCover());
+        // id 不设置 → saveOrUpdateStyle 走新增路径，自动生成时间戳/租户/状态等
+
+        boolean saved = styleInfoService.saveOrUpdateStyle(newStyle);
+        if (!saved) {
+            throw new IllegalStateException("款式保存失败");
+        }
+
+        // saveOrUpdateStyle 在新增后不保证 newStyle.id 已填充，需重新查询
+        StyleInfo savedStyle = styleInfoService.lambdaQuery()
+                .eq(StyleInfo::getStyleNo, newStyle.getStyleNo())
+                .orderByDesc(StyleInfo::getCreateTime)
+                .last("LIMIT 1")
+                .one();
+        if (savedStyle == null) {
+            throw new IllegalStateException("款式保存后查询失败");
+        }
+
+        // 4. 复制 BOM 明细
+        List<StyleBom> sourceBoms = styleBomService.listByStyleId(sourceStyleId);
+        if (sourceBoms != null && !sourceBoms.isEmpty()) {
+            List<StyleBom> newBoms = new java.util.ArrayList<>();
+            for (StyleBom bom : sourceBoms) {
+                StyleBom nb = new StyleBom();
+                // id 不设置 → MyBatis-Plus ASSIGN_UUID 自动生成
+                nb.setStyleId(savedStyle.getId());
+                nb.setMaterialCode(bom.getMaterialCode());
+                nb.setMaterialName(bom.getMaterialName());
+                nb.setFabricComposition(bom.getFabricComposition());
+                nb.setFabricWeight(bom.getFabricWeight());
+                nb.setMaterialType(bom.getMaterialType());
+                nb.setGroupName(bom.getGroupName());
+                nb.setColor(bom.getColor());
+                nb.setSpecification(bom.getSpecification());
+                nb.setSize(bom.getSize());
+                nb.setUnit(bom.getUnit());
+                nb.setUsageAmount(bom.getUsageAmount());
+                nb.setDevUsageAmount(bom.getDevUsageAmount());
+                nb.setLossRate(bom.getLossRate());
+                nb.setUnitPrice(bom.getUnitPrice());
+                nb.setSizeUsageMap(bom.getSizeUsageMap());
+                nb.setPatternSizeUsageMap(bom.getPatternSizeUsageMap());
+                nb.setSizeSpecMap(bom.getSizeSpecMap());
+                nb.setPatternUnit(bom.getPatternUnit());
+                nb.setCreateTime(LocalDateTime.now());
+                nb.setUpdateTime(LocalDateTime.now());
+                newBoms.add(nb);
+            }
+            styleBomService.saveBatch(newBoms);
+        }
+
+        log.info("一键复制款式成功: sourceStyleId={}, newStyleId={}, newStyleNo={}, newColor={}",
+                sourceStyleId, savedStyle.getId(), newStyle.getStyleNo(), newColor);
+        return savedStyle;
+    }
 }

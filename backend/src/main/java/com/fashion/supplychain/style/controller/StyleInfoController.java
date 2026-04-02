@@ -220,4 +220,19 @@ public class StyleInfoController {
         String reviewComment = body != null ? (String) body.get("reviewComment") : null;
         return Result.success(styleInfoOrchestrator.saveSampleReview(id, reviewStatus, reviewComment));
     }
+
+    /**
+     * 一键复制款式（复制款式基础信息 + BOM 到新款色）
+     * 调用方式：POST /api/style/info/{id}/copy
+     * Body：{ "styleNo": "新款号", "color": "新颜色", "styleName": "新款名（可选）" }
+     */
+    @PostMapping("/{id}/copy")
+    public Result<?> copyStyle(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
+        String newStyleNo   = body.get("styleNo");
+        String newColor     = body.get("color");
+        String newStyleName = body.get("styleName");
+        return Result.success(styleInfoOrchestrator.copyStyle(id, newStyleNo, newColor, newStyleName));
+    }
 }

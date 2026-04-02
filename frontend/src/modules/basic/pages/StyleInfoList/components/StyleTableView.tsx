@@ -616,6 +616,10 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [reviewSaving, setReviewSaving] = useState(false);
   const [reviewForm] = Form.useForm();
+  const [copyModalOpen, setCopyModalOpen] = useState(false);
+  const [copySource, setCopySource] = useState<StyleInfo | null>(null);
+  const [copying, setCopying] = useState(false);
+  const [copyForm] = Form.useForm();
   const viewportRestoreRef = useRef<{ x: number; y: number } | null>(null);
 
   const toCategoryCn = (value: unknown) => {
@@ -642,6 +646,26 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
 
   const isScrappedRow = (record: StyleInfo) => {
     return isScrappedStyle(record);
+  };
+
+  const handleCopy = async (values: { styleNo: string; color: string; styleName?: string }) => {
+    if (!copySource?.id) return;
+    setCopying(true);
+    try {
+      const res = await api.post(`/style/info/${copySource.id}/copy`, values);
+      if ((res as any).code === 200) {
+        message.success('复制成功');
+        setCopyModalOpen(false);
+        copyForm.resetFields();
+        onRefresh();
+      } else {
+        message.error((res as any).message || '复制失败');
+      }
+    } catch {
+      message.error('复制失败');
+    } finally {
+      setCopying(false);
+    }
   };
 
   const openDevelopmentWorkbench = useCallback((record: StyleInfo, section: WorkbenchSection) => {
@@ -1310,6 +1334,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
               if (isSupervisorOrAbove) {
                 items.push({ key: 'maintenance', label: '维护', type: 'default' as const, onClick: () => onMaintenance(record) });
               }
+              items.push({ key: 'copy', label: '复制', type: 'default' as const, onClick: () => { setCopySource(record); setCopyModalOpen(true); } });
 
               return items;
             }
@@ -1318,6 +1343,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
               { key: 'detail', label: '详情', type: 'primary' as const, onClick: () => navigate(`/style-info/${record.id}`) },
               { key: 'print', label: '打印', type: 'default' as const, onClick: () => onPrint(record) },
               { key: 'scrap', label: '报废', type: 'default' as const, danger: true, onClick: () => onScrap(String(record.id!)) },
+              { key: 'copy', label: '复制', type: 'default' as const, onClick: () => { setCopySource(record); setCopyModalOpen(true); } },
             ];
           })();
           const timelineMinWidth = stages.length * STAGE_MIN_SLOT_WIDTH;
@@ -1689,6 +1715,34 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
           </Form.Item>
         </Form>
       </SmallModal>
+
+      <Modal
+        title="复制款式"
+        open={copyModalOpen}
+        onCancel={() => { setCopyModalOpen(false); copyForm.resetFields(); }}
+        onOk={() => copyForm.submit()}
+        confirmLoading={copying}
+        okText="确认复制"
+        cancelText="取消"
+        destroyOnClose
+      >
+        {copySource && (
+          <div style={{ marginBottom: 12, color: '#666', fontSize: 13 }}>
+            源款式：{copySource.styleNo}（{(copySource as any).color || '无颜色'}）
+          </div>
+        )}
+        <Form form={copyForm} layout="vertical" onFinish={handleCopy}>
+          <Form.Item name="styleNo" label="新款号" rules={[{ required: true, message: '请输入新款号' }]}>
+            <Input placeholder="请输入新款号" />
+          </Form.Item>
+          <Form.Item name="color" label="新颜色" rules={[{ required: true, message: '请输入颜色' }]}>
+            <Input placeholder="如：黑色" />
+          </Form.Item>
+          <Form.Item name="styleName" label="新款名（留空则沿用原款名）">
+            <Input placeholder="可选" />
+          </Form.Item>
+        </Form>
+      </Modal>
     </>
   );
 };
