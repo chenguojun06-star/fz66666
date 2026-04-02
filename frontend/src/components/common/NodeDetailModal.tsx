@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Alert, App, Button, Input, InputNumber, Popconfirm, Select, Space, Spin, Tabs, Tag, Typography } from 'antd';
-import { FileTextOutlined, UserOutlined, WalletOutlined, ShoppingCartOutlined, ScissorOutlined } from '@ant-design/icons';
+import { FileTextOutlined, UserOutlined, WalletOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
 import PredictionFeedbackBar from '@/components/common/PredictionFeedbackBar';
@@ -13,8 +13,8 @@ import { useNavigate } from 'react-router-dom';
 import { matchRecordToStage } from '@/utils/productionStage';
 import ProcessTrackingTable from '@/components/production/ProcessTrackingTable';
 import { getProductionProcessTracking } from '@/utils/api/production';
-import ProcurementQuickPanel from '@/components/common/ProcurementQuickPanel';
-import CuttingQuickPanel from '@/components/common/CuttingQuickPanel';
+import CuttingQuickPanel from './CuttingQuickPanel';
+import ProcurementQuickPanel from './ProcurementQuickPanel';
 
 const { Text } = Typography;
 
@@ -461,10 +461,8 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
       loadFactories();
       loadUsers();
       loadNodeOperations();
-      // 根据节点类型设置默认Tab
-      if (nodeType === 'procurement') setActiveTab('procurement');
-      else if (nodeType === 'cutting') setActiveTab('cutting');
-      else setActiveTab('processTracking');
+      // 每次打开时默认显示工序跟踪Tab（数据最丰富）
+      setActiveTab('processTracking');
       // 样板生产不加载扫码记录和菲号明细（这些是大货生产的数据）
       if (!isPatternProduction) {
         loadScanRecords();
@@ -1123,7 +1121,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
           </Space>
         </div>
       }
-      width="60vw"
+      width={nodeTypeKey === 'procurement' ? '40vw' : '60vw'}
       initialHeight={Math.round(window.innerHeight * 0.82)}
     >
       <Spin spinning={loading}>
@@ -1203,17 +1201,17 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                 label: <span><UserOutlined /> 操作员 ({operatorSummary.length})</span>,
                 children: renderOperatorsTab(),
               },
-              // 采购快捷面板 - 采购节点专用
-              nodeType === 'procurement' && !isPatternProduction && {
-                key: 'procurement',
-                label: <span><ShoppingCartOutlined /> 快捷采购</span>,
-                children: <ProcurementQuickPanel orderNo={orderNo} visible={visible} onDataChanged={handleUndoSuccess} />,
+              // 裁剪节点快捷面板（跳转 + 领取）
+              nodeTypeKey === 'cutting' && {
+                key: 'cuttingPanel',
+                label: <span>✂ 裁剪管理</span>,
+                children: <CuttingQuickPanel orderId={orderId} orderNo={orderSummary.orderNo || orderNo} />,
               },
-              // 裁剪菲号面板 - 裁剪节点专用
-              nodeType === 'cutting' && !isPatternProduction && {
-                key: 'cutting',
-                label: <span><ScissorOutlined /> 裁剪菲号</span>,
-                children: <CuttingQuickPanel orderId={orderId} orderNo={orderNo} visible={visible} bundles={bundles} orderDetail={_orderDetail} onDataChanged={handleUndoSuccess} />,
+              // 采购节点快捷面板（跳转）
+              nodeTypeKey === 'procurement' && {
+                key: 'procurementPanel',
+                label: <span>📦 物料采购</span>,
+                children: <ProcurementQuickPanel orderNo={orderSummary.orderNo || orderNo} />,
               },
               // 工序跟踪（工资结算）- 所有大货生产都显示（不受 unitPrice 限制）
               !isPatternProduction && {
