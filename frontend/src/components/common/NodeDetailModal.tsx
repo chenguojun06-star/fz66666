@@ -1213,7 +1213,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
               nodeType === 'cutting' && !isPatternProduction && {
                 key: 'cutting',
                 label: <span><ScissorOutlined /> 裁剪菲号</span>,
-                children: <CuttingQuickPanel orderId={orderId} orderNo={orderNo} visible={visible} bundles={bundles} onDataChanged={handleUndoSuccess} />,
+                children: <CuttingQuickPanel orderId={orderId} orderNo={orderNo} visible={visible} bundles={bundles} orderDetail={_orderDetail} onDataChanged={handleUndoSuccess} />,
               },
               // 工序跟踪（工资结算）- 所有大货生产都显示（不受 unitPrice 限制）
               !isPatternProduction && {

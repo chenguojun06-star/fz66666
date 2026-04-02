@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, App, Button, InputNumber, Space, Spin, Table, Tag } from 'antd';
-import { CheckCircleOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { CheckCircleOutlined } from '@ant-design/icons';
 import type { MaterialPurchase } from '@/types/production';
 import { materialPurchaseApi } from '@/services/production/productionApi';
 
@@ -10,14 +10,6 @@ interface ProcurementQuickPanelProps {
   onDataChanged?: () => void;
 }
 
-const statusMap: Record<string, { text: string; color: string }> = {
-  pending: { text: '待采购', color: 'orange' },
-  partial: { text: '部分到货', color: 'blue' },
-  received: { text: '已到货', color: 'green' },
-  completed: { text: '已完成', color: 'green' },
-  cancelled: { text: '已取消', color: 'default' },
-};
-
 const ProcurementQuickPanel: React.FC<ProcurementQuickPanelProps> = ({
   orderNo, visible, onDataChanged,
 }) => {
@@ -25,7 +17,6 @@ const ProcurementQuickPanel: React.FC<ProcurementQuickPanelProps> = ({
   const [records, setRecords] = useState<MaterialPurchase[]>([]);
   const [loading, setLoading] = useState(false);
   const [receiveLoadingId, setReceiveLoadingId] = useState<string | null>(null);
-  const [bulkLoading, setBulkLoading] = useState(false);
   const [editQty, setEditQty] = useState<Record<string, number>>({});
 
   const loadRecords = useCallback(async () => {
@@ -62,49 +53,35 @@ const ProcurementQuickPanel: React.FC<ProcurementQuickPanelProps> = ({
     }
   }, [editQty, loadRecords, message, onDataChanged]);
 
-  const handleBulkReceive = useCallback(async () => {
-    setBulkLoading(true);
-    try {
-      await materialPurchaseApi.smartReceiveAll({ orderNo });
-      message.success('一键收料完成');
-      await loadRecords();
-      onDataChanged?.();
-    } catch {
-      message.error('一键收料失败');
-    } finally {
-      setBulkLoading(false);
-    }
-  }, [orderNo, loadRecords, message, onDataChanged]);
-
   const pendingCount = records.filter(r => r.status === 'pending' || r.status === 'partial').length;
 
   const columns = [
     {
-      title: '物料', dataIndex: 'materialName', width: 140, ellipsis: true,
+      title: '面料编号', dataIndex: 'materialName', width: 140, ellipsis: true,
       render: (v: string, r: MaterialPurchase) => (
         <span>{v}{r.color ? <Tag style={{ marginLeft: 4 }} color="blue">{r.color}</Tag> : null}</span>
       ),
     },
     {
-      title: '需求', dataIndex: 'purchaseQuantity', width: 70, align: 'center' as const,
-      render: (v: number, r: MaterialPurchase) => `${v} ${r.unit || ''}`,
-    },
-    {
-      title: '已到', dataIndex: 'arrivedQuantity', width: 60, align: 'center' as const,
-      render: (v: number) => <span style={{ color: v > 0 ? '#52c41a' : '#999' }}>{v || 0}</span>,
-    },
-    {
-      title: '状态', dataIndex: 'status', width: 80, align: 'center' as const,
-      render: (v: string) => {
-        const s = statusMap[v] || { text: v, color: 'default' };
-        return <Tag color={s.color}>{s.text}</Tag>;
+      title: '需求数量', dataIndex: 'requiredQuantity', width: 90, align: 'center' as const,
+      render: (_v: number, r: MaterialPurchase) => {
+        const qty = (r as Record<string, unknown>).requiredQuantity ?? r.purchaseQuantity ?? 0;
+        return `${qty} ${r.unit || ''}`;
       },
     },
     {
-      title: '操作', width: 160, align: 'center' as const,
+      title: '采购数量', dataIndex: 'purchaseQuantity', width: 90, align: 'center' as const,
+      render: (v: number, r: MaterialPurchase) => `${v ?? 0} ${r.unit || ''}`,
+    },
+    {
+      title: '到货数量', dataIndex: 'arrivedQuantity', width: 90, align: 'center' as const,
+      render: (v: number) => <span style={{ color: v > 0 ? '#52c41a' : '#999' }}>{v || 0}</span>,
+    },
+    {
+      title: '操作', width: 150, align: 'center' as const,
       render: (_: unknown, r: MaterialPurchase) => {
         if (r.status === 'completed' || r.status === 'received') {
-          return <Tag icon={<CheckCircleOutlined />} color="success">已收</Tag>;
+          return <Tag icon={<CheckCircleOutlined />} color="success">已确认</Tag>;
         }
         return (
           <Space size={4}>
@@ -117,7 +94,7 @@ const ProcurementQuickPanel: React.FC<ProcurementQuickPanelProps> = ({
               type="primary" size="small"
               loading={receiveLoadingId === r.id}
               onClick={() => handleReceive(r)}
-            >收料</Button>
+            >确认到料</Button>
           </Space>
         );
       },
@@ -130,16 +107,12 @@ const ProcurementQuickPanel: React.FC<ProcurementQuickPanelProps> = ({
 
   return (
     <Spin spinning={loading}>
-      <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ marginBottom: 12 }}>
         <span style={{ color: '#666' }}>
-          共 {records.length} 项物料，{pendingCount > 0 ? <Tag color="orange">{pendingCount} 项待处理</Tag> : <Tag color="green">全部已到</Tag>}
+          共 {records.length} 项面料，{pendingCount > 0
+            ? <Tag color="orange">{pendingCount} 项待确认</Tag>
+            : <Tag color="green">全部已到</Tag>}
         </span>
-        {pendingCount > 0 && (
-          <Button
-            type="primary" icon={<ThunderboltOutlined />}
-            loading={bulkLoading} onClick={handleBulkReceive}
-          >一键全部收料</Button>
-        )}
       </div>
       <Table
         dataSource={records} columns={columns} rowKey="id"
