@@ -439,12 +439,7 @@ const ExternalFactorySmartView: React.FC<Props> = ({
                     {deliveryMeta.label}
                   </span>
                 </div>
-                <div className="ef-date-stack">
-                  <div className="ef-field-row">
-                    <span className="ef-field-label">交期</span>
-                    <span className="ef-field-value">{shipDate ? dayjs(shipDate).format('YYYY-MM-DD') : '-'}</span>
-                  </div>
-                </div>
+                <div className="ef-date-stack" />
               </div>
             </div>
 
@@ -468,10 +463,6 @@ const ExternalFactorySmartView: React.FC<Props> = ({
                       </Popover>
                     </div>
                     <div className="ef-field-row">
-                      <span className="ef-field-label">交期</span>
-                      <span className="ef-field-value">{shipDate ? dayjs(shipDate).format('YYYY-MM-DD') : '-'}</span>
-                    </div>
-                    <div className="ef-field-row">
                       <span className="ef-field-label">款号</span>
                       <span className="ef-field-value">{record.styleNo}{record.styleName && ` · ${record.styleName}`}</span>
                     </div>
@@ -493,6 +484,10 @@ const ExternalFactorySmartView: React.FC<Props> = ({
                   <div className="ef-field-row" style={{ marginTop: 4 }}>
                     <span className="ef-field-label">总数</span>
                     <span className="ef-field-value" style={{ fontWeight: 700 }}>{totalQty}件</span>
+                  </div>
+                  <div className="ef-field-row">
+                    <span className="ef-field-label">交期</span>
+                    <span className="ef-field-value">{shipDate ? dayjs(shipDate).format('YYYY-MM-DD') : '-'}</span>
                   </div>
 
                 </div>
