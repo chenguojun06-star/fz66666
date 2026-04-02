@@ -81,12 +81,6 @@ export const productionCuttingApi = {
   list: (params: unknown) => api.get<{ code: number; data: { records: unknown[]; total: number } }>('/production/cutting/list', { params }),
   getByCode: (qrCode: string) => api.get<{ code: number; data: unknown }>(`/production/cutting/by-code/${encodeURIComponent(String(qrCode || '').trim())}`),
   listBundles: (orderId: any) => api.get<any>(`/production/cutting/bundles/${encodeURIComponent(String(orderId || '').trim())}`),
-  /** 生成菲号（裁剪分菲） */
-  generateBundles: (payload: { orderId: string; bundles: { color: string; size: string; quantity: number }[] }) =>
-    api.post<{ code: number; message: string; data: unknown }>('/production/cutting/generate', payload),
-  /** 菲号汇总统计 */
-  bundleSummary: (params: { orderNo?: string; orderId?: string }) =>
-    api.get<{ code: number; data: unknown }>('/production/cutting/summary', { params }),
 };
 
 export const productionScanApi = {
@@ -158,15 +152,6 @@ export const materialPurchaseApi = {
       '/production/purchase/list',
       { params: { orderNo: String(orderNo || '').trim(), sourceType: 'order', pageSize: 200, page: 1 } },
     ),
-  /** 单条收料确认 */
-  receive: (payload: { purchaseId: string | number; arrivedQuantity: number; receiverId?: string; receiverName?: string; remark?: string }) =>
-    api.post<{ code: number; message: string }>('/production/purchase/receive', payload),
-  /** 一键智能收料（按订单号全部确认） */
-  smartReceiveAll: (payload: { orderNo: string; receiverId?: string; receiverName?: string }) =>
-    api.post<{ code: number; message: string; data: unknown }>('/production/purchase/smart-receive-all', payload),
-  /** 一键收料预览（返回待收料汇总） */
-  smartReceivePreview: (orderNo: string) =>
-    api.get<{ code: number; data: unknown }>('/production/purchase/smart-receive-preview', { params: { orderNo } }),
 };
 
 export const patternProductionApi = {

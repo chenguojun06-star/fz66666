@@ -526,7 +526,7 @@ const MaterialDatabasePage: React.FC = () => {
         <Card>
           {/* 页面标题 */}
           <div style={{ marginBottom: 16 }}>
-            <h2 style={{ margin: 0 }}>📦 物料资料库</h2>
+            <h2 style={{ margin: 0 }}> 物料资料库</h2>
           </div>
 
           {/* 筛选区 */}
@@ -753,7 +753,7 @@ const MaterialDatabasePage: React.FC = () => {
                         marginBottom: 8,
                         color: 'var(--primary-color)'
                       }}>
-                        🧵 面料属性
+                         面料属性
                       </div>
                     </Col>
                     <Col xs={24} sm={8} md={6} lg={5} xl={4}>

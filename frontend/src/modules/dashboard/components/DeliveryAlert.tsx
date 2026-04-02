@@ -92,10 +92,10 @@ const DeliveryAlert: React.FC = () => {
         />
         <span className="order-no">{order.orderNo}</span>
         <span className="order-style">{order.styleNo || '-'} {order.styleName || '款式名未填写'}</span>
-        <span className="order-factory">🏭 {order.factoryName || '未指定'}</span>
-        <span className="order-quantity">📦 {order.completedQuantity || 0}/{order.orderQuantity || 0}</span>
-        <span className="order-progress">📊 {order.productionProgress || 0}%</span>
-        <span className="order-date">📅 {deliveryDate}</span>
+        <span className="order-factory"> {order.factoryName || '未指定'}</span>
+        <span className="order-quantity"> {order.completedQuantity || 0}/{order.orderQuantity || 0}</span>
+        <span className="order-progress"> {order.productionProgress || 0}%</span>
+        <span className="order-date"> {deliveryDate}</span>
       </div>
     );
   };

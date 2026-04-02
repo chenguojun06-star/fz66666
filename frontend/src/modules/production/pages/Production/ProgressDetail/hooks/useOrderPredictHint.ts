@@ -31,7 +31,7 @@ export function useOrderPredictHint(
   skip?: boolean,
 ) {
   const [hint, setHint] = useState<PredictHint | null>(null);
-  // ★ 缓存 key 包含进度 + 当前工序，进度变化或工序推进时自动失效
+  //  缓存 key 包含进度 + 当前工序，进度变化或工序推进时自动失效
   const progBucket = Math.floor(currentProgress / 5) * 5; // 每5%为一个桶，避免微小浮动
   const key = `${orderId || ''}_${stageName || ''}_${progBucket}`;
 

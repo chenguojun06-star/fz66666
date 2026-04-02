@@ -427,7 +427,7 @@ const WhatIfSimPanel: React.FC = () => {
         <>
           {result.summary ? (
             <div style={{ marginBottom: 10, padding: '8px 12px', background: 'rgba(124,58,237,0.1)', borderRadius: 6, border: '1px solid rgba(124,58,237,0.25)' }}>
-              <Text style={{ color: '#c4b5fd', fontSize: 12 }}>🤖 {result.summary}</Text>
+              <Text style={{ color: '#c4b5fd', fontSize: 12 }}> {result.summary}</Text>
             </div>
           ) : null}
           {result.baseline ? (

@@ -28,7 +28,7 @@ const toneColorMap: Record<SmartPredictionItem['tone'], string> = {
 
 const neutralButtonBorder = '#d9d9d9';
 const SmartPredictionStrip: React.FC<SmartPredictionStripProps> = ({
-  title = '⚡ 智能提示：',
+  title = ' 智能提示：',
   items,
   onClear,
   clearLabel = '清除筛选',

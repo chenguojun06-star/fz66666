@@ -77,7 +77,7 @@ const QuickEditModal: React.FC<QuickEditModalProps> = ({
           <Select
             options={[
               { label: '普通', value: 'normal' },
-              { label: '🔴 急单', value: 'urgent' },
+              { label: ' 急单', value: 'urgent' },
             ]}
             placeholder="请选择紧急程度"
           />

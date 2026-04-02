@@ -170,42 +170,42 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
   const tutorialItems = [
     {
       key: '1',
-      label: '📋 查看我的订单',
+      label: ' 查看我的订单',
       children: <Text type="secondary">左侧菜单 → 生产管理 → 我的订单。可按状态、款号、时间筛选，查看分配给本工厂的全部生产订单。点击订单行可查看详情与进度。</Text>,
     },
     {
       key: '2',
-      label: '📊 查看生产进度',
+      label: ' 查看生产进度',
       children: <Text type="secondary">左侧菜单 → 生产管理 → 生产进度。查看每个工序的进度球，点击进度球可查看扫码明细与工人产量。</Text>,
     },
     {
       key: '3',
-      label: '✂️ 裁剪管理',
+      label: ' 裁剪管理',
       children: <Text type="secondary">左侧菜单 → 生产管理 → 裁剪管理。查看裁剪任务和菲号（捆包）信息，了解每个尺码颜色的裁剪数量。</Text>,
     },
     {
       key: '4',
-      label: '🧵 面辅料采购',
+      label: ' 面辅料采购',
       children: <Text type="secondary">左侧菜单 → 生产管理 → 面辅料采购。查看物料采购记录，了解原料供应进度与采购状态。</Text>,
     },
     {
       key: '5',
-      label: '📦 成品入库',
+      label: ' 成品入库',
       children: <Text type="secondary">左侧菜单 → 生产管理 → 成品入库。登记完工成品的入库数量，系统自动更新库存与进度。</Text>,
     },
     {
       key: '6',
-      label: '💰 订单结算',
+      label: ' 订单结算',
       children: <Text type="secondary">左侧菜单 → 财务管理 → 订单结算（外）。查看本工厂已完成订单的结算金额，以及各款式工序的单价明细。</Text>,
     },
     {
       key: '7',
-      label: '👥 组织架构 & 人员管理',
+      label: ' 组织架构 & 人员管理',
       children: <Text type="secondary">左侧菜单 → 系统管理 → 组织架构。查看本工厂所有成员，点击成员头像查看资料。右上角头像 → 个人中心 → 成员管理 可新增/停用成员账号。</Text>,
     },
     {
       key: '8',
-      label: '🔐 修改密码',
+      label: ' 修改密码',
       children: <Text type="secondary">右上角头像 → 个人中心 → 修改密码。建议定期更新密码保障账号安全，新密码不少于6位。</Text>,
     },
   ];

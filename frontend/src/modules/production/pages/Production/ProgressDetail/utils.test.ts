@@ -47,7 +47,7 @@ describe('stageNameMatches — 有动态映射（尾部子工序）', () => {
     });
   });
 
-  // ✅ 核心回归测试：扫码单个工序不能带连兄弟
+  //  核心回归测试：扫码单个工序不能带连兄弟
   it('【核心】扫剪线不能匹配整烫节点 → false', () => {
     expect(stageNameMatches('整烫', '剪线')).toBe(false);
   });
@@ -68,7 +68,7 @@ describe('stageNameMatches — 有动态映射（尾部子工序）', () => {
     expect(stageNameMatches('包装', '质检')).toBe(false);
   });
 
-  // ✅ 同名匹配仍然正确
+  //  同名匹配仍然正确
   it('剪线节点匹配剪线扫码记录 → true', () => {
     expect(stageNameMatches('剪线', '剪线')).toBe(true);
   });
@@ -77,7 +77,7 @@ describe('stageNameMatches — 有动态映射（尾部子工序）', () => {
     expect(stageNameMatches('整烫', '整烫')).toBe(true);
   });
 
-  // ✅ 父节点匹配子节点（父→子方向仍然有效）
+  //  父节点匹配子节点（父→子方向仍然有效）
   it('尾部父节点匹配剪线扫码 → true（父子关系）', () => {
     expect(stageNameMatches('尾部', '剪线')).toBe(true);
   });
@@ -86,7 +86,7 @@ describe('stageNameMatches — 有动态映射（尾部子工序）', () => {
     expect(stageNameMatches('尾部', '整烫')).toBe(true);
   });
 
-  // ✅ 子节点 → 父节点方向（扫码 progressStage=尾部，节点名=剪线）
+  //  子节点 → 父节点方向（扫码 progressStage=尾部，节点名=剪线）
   it('子节点名剪线 vs 记录progressStage尾部 → true（子→父兼容）', () => {
     expect(stageNameMatches('剪线', '尾部')).toBe(true);
   });

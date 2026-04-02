@@ -162,7 +162,7 @@ export function useKpiMetrics(data: CockpitData) {
       const d = o.plannedEndDate ? Math.abs(Math.ceil((new Date(o.plannedEndDate).getTime() - Date.now()) / 86400000)) : 0;
       items.push({
         orderNo: String(o.orderNo || '').trim(),
-        text: `⚠ ${o.orderNo} · ${o.factoryName ?? '—'} · 已逾期 ${d} 天 · 进度 ${Number(o.productionProgress) || 0}%`,
+        text: ` ${o.orderNo} · ${o.factoryName ?? '—'} · 已逾期 ${d} 天 · 进度 ${Number(o.productionProgress) || 0}%`,
         level: 'danger',
       });
     });
@@ -170,7 +170,7 @@ export function useKpiMetrics(data: CockpitData) {
       const d = o.plannedEndDate ? Math.ceil((new Date(o.plannedEndDate).getTime() - Date.now()) / 86400000) : 0;
       items.push({
         orderNo: String(o.orderNo || '').trim(),
-        text: `🔴 ${o.orderNo} · ${o.factoryName ?? '—'} · 剩 ${d} 天 · 进度 ${Number(o.productionProgress) || 0}%`,
+        text: ` ${o.orderNo} · ${o.factoryName ?? '—'} · 剩 ${d} 天 · 进度 ${Number(o.productionProgress) || 0}%`,
         level: 'warning',
       });
     });

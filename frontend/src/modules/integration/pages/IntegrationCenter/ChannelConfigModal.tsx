@@ -156,7 +156,7 @@ const ChannelConfigModal: React.FC<Props> = ({ open, channelCode, onClose, onSav
         {configData?.hasConfig && (
           <Descriptions size="small" bordered column={1} style={{ marginBottom: 16 }}>
             <Descriptions.Item label="当前状态">
-              {configData.enabled ? '✅ 已启用' : '⭕ 未启用'}
+              {configData.enabled ? ' 已启用' : ' 未启用'}
             </Descriptions.Item>
             {configData.hasAppSecret && (
               <Descriptions.Item label="密钥状态">
@@ -183,7 +183,7 @@ const ChannelConfigModal: React.FC<Props> = ({ open, channelCode, onClose, onSav
                 <span>
                   {field.icon}&nbsp;{field.label}
                   {field.isSecret && configData?.hasConfig && configData?.[`has${field.key.charAt(0).toUpperCase() + field.key.slice(1)}`] && (
-                    <span style={{ color: '#52c41a', marginLeft: 8, fontSize: 12 }}>✓ 已配置</span>
+                    <span style={{ color: '#52c41a', marginLeft: 8, fontSize: 12 }}> 已配置</span>
                   )}
                 </span>
               }

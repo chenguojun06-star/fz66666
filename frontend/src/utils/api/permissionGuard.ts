@@ -86,7 +86,7 @@ export function withPermissionCheck<T extends (...args: any[]) => any>(
 
 /**
  * 数据库 t_permission 中实际存在的权限码。
- * ⚠️ 仅收录已在后端注册的权限码，禁止凭空虚构！
+ *  仅收录已在后端注册的权限码，禁止凭空虚构！
  * 虚构的权限码会导致 admin 以外的角色全部被拦截（等同全员 403）。
  * 菜单权限（MENU_*）数量较多且由后端动态下发，此处不重复列举。
  */

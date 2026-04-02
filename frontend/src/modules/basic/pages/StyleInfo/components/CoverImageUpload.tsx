@@ -528,7 +528,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
         ) : null}
         {isNewMode && pendingFiles.length > 0 && (
           <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--primary-color)', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span>💡</span>
+            <span></span>
             <span>填写上方基础信息并点击"保存基础信息"后，即可上传图片</span>
           </div>
         )}

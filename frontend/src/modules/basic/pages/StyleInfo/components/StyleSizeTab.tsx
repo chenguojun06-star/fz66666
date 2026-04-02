@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Dropdown, Input, InputNumber, Space, Select, Modal, Upload, Image, Tag } from 'antd';
+import { App, Button, Dropdown, Input, InputNumber, Space, Select, Modal, Upload, Image, Tag, Popover } from 'antd';
 import { DeleteOutlined, DownOutlined, PlusOutlined } from '@ant-design/icons';
 import { StyleSize, TemplateLibrary } from '@/types/style';
 import api, { sortSizeNames, toNumberSafe } from '@/utils/api';
@@ -270,7 +270,6 @@ const StyleSizeTab: React.FC<Props> = ({
   const snapshotRef = useRef<{ sizeColumns: string[]; rows: MatrixRow[] } | null>(null);
 
   const [addSizeOpen, setAddSizeOpen] = useState(false);
-  const [addGroupOpen, setAddGroupOpen] = useState(false);
   const [gradingConfigOpen, setGradingConfigOpen] = useState(false);
   const [gradingTargetRowKey, setGradingTargetRowKey] = useState('');
   const [gradingDraftBaseSize, setGradingDraftBaseSize] = useState('');
@@ -745,7 +744,6 @@ const StyleSizeTab: React.FC<Props> = ({
         cells,
       },
     ]));
-    setAddGroupOpen(false);
     setNewGroupName('');
     if (!editMode) enterEdit();
   };
@@ -1302,9 +1300,32 @@ const StyleSizeTab: React.FC<Props> = ({
       {!simpleView && (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-xs)' }}>
-            💡 提示：相关文件请在“文件管理”标签页统一上传
+             提示：相关文件请在“文件管理”标签页统一上传
           </div>
           <Space>
+          {!editMode || readOnly ? (
+            <Button type="primary" onClick={enterEdit} disabled={loading || saving || Boolean(readOnly)}>
+              编辑
+            </Button>
+          ) : (
+            <>
+              <Button type="primary" onClick={saveAll} loading={saving}>
+                保存
+              </Button>
+              <Button
+                disabled={saving}
+                onClick={() => {
+                  Modal.confirm({
+                    width: '30vw',
+                    title: '放弃未保存的修改？',
+                    onOk: exitEdit,
+                  });
+                }}
+              >
+                取消
+              </Button>
+            </>
+          )}
           <Select
             allowClear
             style={{ width: 220 }}
@@ -1334,9 +1355,30 @@ const StyleSizeTab: React.FC<Props> = ({
               导入模板 <DownOutlined />
             </Button>
           </Dropdown>
-          <Button type="default" onClick={() => setAddGroupOpen(true)} disabled={loading || saving || Boolean(readOnly)}>
-            新增分组
-          </Button>
+          <Popover
+            trigger="click"
+            placement="bottom"
+            content={
+              <Space.Compact style={{ width: 220 }}>
+                <Input
+                  placeholder="如：上装区 / 下装区"
+                  value={newGroupName}
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                  onPressEnter={() => {
+                    confirmAddGroup();
+                  }}
+                  style={{ width: 160 }}
+                />
+                <Button type="primary" onClick={confirmAddGroup}>
+                  确定
+                </Button>
+              </Space.Compact>
+            }
+          >
+            <Button disabled={loading || saving || Boolean(readOnly)}>
+              新增分组
+            </Button>
+          </Popover>
           <Select
             mode="multiple"
             allowClear
@@ -1411,29 +1453,6 @@ const StyleSizeTab: React.FC<Props> = ({
             if (open) fetchSizeDictOptions();
           }}
         />
-          {!editMode || readOnly ? (
-            <Button type="primary" onClick={enterEdit} disabled={loading || saving || Boolean(readOnly)}>
-              编辑
-            </Button>
-          ) : (
-            <>
-              <Button type="primary" onClick={saveAll} loading={saving}>
-                保存
-              </Button>
-              <Button
-                disabled={saving}
-                onClick={() => {
-                  Modal.confirm({
-                    width: '30vw',
-                    title: '放弃未保存的修改？',
-                    onOk: exitEdit,
-                  });
-                }}
-              >
-                取消
-              </Button>
-            </>
-          )}
         </Space>
       </div>
       )}
@@ -1457,32 +1476,6 @@ const StyleSizeTab: React.FC<Props> = ({
           return classes.join(' ');
         }}
       />
-
-      <ResizableModal
-        open={addGroupOpen}
-        title="新增分组"
-        onCancel={() => {
-          setAddGroupOpen(false);
-          setNewGroupName('');
-        }}
-        onOk={confirmAddGroup}
-        okText="确定"
-        cancelText="取消"
-        confirmLoading={saving}
-        width="30vw"
-        minWidth={360}
-        initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.34 : 280}
-        minHeight={220}
-        autoFontSize={false}
-        scaleWithViewport
-      >
-        <Input
-          value={newGroupName}
-          placeholder="如：上装区 / 下装区 / 马甲区"
-          onChange={(e) => setNewGroupName(e.target.value)}
-          onPressEnter={confirmAddGroup}
-        />
-      </ResizableModal>
 
       <ResizableModal
         open={addSizeOpen}

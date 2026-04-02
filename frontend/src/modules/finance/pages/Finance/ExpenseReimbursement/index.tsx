@@ -558,7 +558,7 @@ const ExpenseReimbursementPage: React.FC = () => {
               validateStatus={uploadedDocs.some(d => d.docId) ? 'success' : undefined}
               help={
                 uploadedDocs.some(d => d.docId)
-                  ? `✓ 已上传 ${uploadedDocs.filter(d => d.docId).length} 张，点击图片可放大预览`
+                  ? ` 已上传 ${uploadedDocs.filter(d => d.docId).length} 张，点击图片可放大预览`
                   : editingRecord
                     ? undefined
                     : '请上传发票/收据图片，系统将自动识别金额和日期'

@@ -50,7 +50,7 @@ interface PageStatCardsProps {
   activeKey?: string;
   /** 智能提示标签列表（可选，count=0 的项自动隐藏） */
   hints?: HintItem[];
-  /** 智能提示区域标题，默认 '⚡ 智能提示：' */
+  /** 智能提示区域标题，默认 ' 智能提示：' */
   hintTitle?: string;
   /** 清除筛选回调（有值时显示清除按钮） */
   onClearHints?: () => void;
@@ -114,7 +114,7 @@ const PageStatCards: React.FC<PageStatCardsProps> = ({
   cards,
   activeKey,
   hints = [],
-  hintTitle = '⚡ 智能提示：',
+  hintTitle = ' 智能提示：',
   onClearHints,
   clearHintsLabel = '清除筛选',
   style,

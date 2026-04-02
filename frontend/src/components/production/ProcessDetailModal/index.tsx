@@ -14,7 +14,6 @@ import { compareSizeAsc } from '@/utils/api/size';
  * 修改关键词请直接修改 frontend/src/utils/productionStage.ts
  */
 const PROCESS_STAGE_DEFS: { key: string; name: string; keywords: string[] }[] = [
-  { key: 'procurement',      name: '采购',     keywords: stageAliasMap.procurement },
   { key: 'cutting',          name: '裁剪',     keywords: stageAliasMap.cutting },
   { key: 'carSewing',        name: '车缝',     keywords: carSewingKeywords },
   { key: 'secondaryProcess', name: '二次工艺', keywords: stageAliasMap.secondaryProcess },
@@ -58,6 +57,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
 }) => {
   const navigate = useNavigate();
   const [cuttingBundles, setCuttingBundles] = useState<CuttingBundle[]>([]);
+  const [warehousingSkuRows, setWarehousingSkuRows] = useState<Array<{ color: string; size: string; quantity: number }>>([]);
 
   const [templatePriceMap, setTemplatePriceMap] = useState<Map<string, number>>(new Map());
   const [styleProcessDescriptionMap, setStyleProcessDescriptionMap] = useState<Map<string, string>>(new Map());
@@ -189,6 +189,31 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
       setCuttingBundles([]);
     }
   };
+
+  // 加载入库码数明细（从 /production/scan/sku/query 拉取真实数据）
+  useEffect(() => {
+    if (!visible || processType !== 'warehousing' || !record?.orderNo) {
+      setWarehousingSkuRows([]);
+      return;
+    }
+    (async () => {
+      try {
+        const res = await api.get('/production/scan/sku/query', {
+          params: { type: 'list', orderNo: record.orderNo },
+        });
+        const rows: any[] = Array.isArray(res) ? (res as any[]) : ((res as any)?.data ?? []);
+        setWarehousingSkuRows(
+          rows.map((r: any) => ({
+            color: String(r.color || '-'),
+            size: String(r.size || '-'),
+            quantity: Number(r.quantity) || 0,
+          })),
+        );
+      } catch {
+        setWarehousingSkuRows([]);
+      }
+    })();
+  }, [visible, processType, record?.orderNo]);
 
 
 
@@ -373,22 +398,16 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
           padding: '12px',
         }}>
           <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '12px', color: '#111827' }}>
-            📏 码数明细
+             码数明细
           </div>
           <ResizableTable
             storageKey="process-detail-sizes"
-            dataSource={(() => {
-              const skuData = record.skuRows || [];
-              if (Array.isArray(skuData) && skuData.length > 0) {
-                return skuData.map((sku: any, index: number) => ({
-                  key: index,
-                  color: sku.color || '-',
-                  size: sku.size || '-',
-                  quantity: sku.quantity || 0,
-                }));
-              }
-              return [];
-            })()}
+            dataSource={warehousingSkuRows.map((sku, index) => ({
+              key: index,
+              color: sku.color,
+              size: sku.size,
+              quantity: sku.quantity,
+            }))}
             columns={[
               { title: '颜色', dataIndex: 'color', key: 'color', width: 100 },
               { title: '尺码', dataIndex: 'size', key: 'size', width: 80 },
@@ -646,7 +665,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                               padding: '2px 8px',
                               borderRadius: '4px'
                             }}>
-                              ✓ 已完成
+                               已完成
                             </span>
                             {procurementStatus.operatorName && (
                               <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
@@ -702,7 +721,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                           padding: '2px 8px',
                           borderRadius: '4px'
                         }}>
-                          {processStatus.cutting.completed ? '✓ 已完成' : `进行中 (${processStatus.cutting.completionRate}%)`}
+                          {processStatus.cutting.completed ? ' 已完成' : `进行中 (${processStatus.cutting.completionRate}%)`}
                         </span>
                         <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>
                           完成: <span style={{ fontWeight: 600, color: 'var(--color-success)' }}>{processStatus.cutting.completedQuantity} 件</span>

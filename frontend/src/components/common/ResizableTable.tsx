@@ -515,7 +515,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
 
   // getPopupContainer：表格在 Modal 内时锚定到 .ant-modal-body（避免弹层被遮挡），
   // 否则回退到 document.body。
-  // ⚠️ 禁止将 popup 容器设为表格 wrapper div：该 div 无 position:relative，
+  //  禁止将 popup 容器设为表格 wrapper div：该 div 无 position:relative，
   //    absolute 弹层初始定位到错误祖先再修正，会导致视觉"抖动"（闪烁）。
   const getTablePopupContainer = React.useCallback((triggerNode?: HTMLElement) => {
     if (triggerNode) {

@@ -50,7 +50,7 @@ const FactoryAuditPopover: React.FC<Props> = ({ record, auditedOrderNos, childre
       suggestions.push(`尚有 ${totalCount - auditedCount} 个订单未审核，终审前请确认已关单`);
     }
     if (profitRate < 0) {
-      suggestions.push('⚠️ 整体利润为负，建议核查成本结构');
+      suggestions.push(' 整体利润为负，建议核查成本结构');
     } else if (profitRate < 5) {
       suggestions.push('利润率偏低（<5%），关注成本控制');
     }
@@ -136,7 +136,7 @@ const FactoryAuditPopover: React.FC<Props> = ({ record, auditedOrderNos, childre
 
       <div>
         <div style={{ fontSize: 12, color: 'var(--neutral-text-secondary)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
-          {analysis.topSuggestion.startsWith('⚠️') || analysis.topSuggestion.includes('警')
+          {analysis.topSuggestion.startsWith('') || analysis.topSuggestion.includes('警')
             ? <WarningOutlined style={{ color: 'var(--color-warning)' }} />
             : <CheckCircleOutlined style={{ color: 'var(--color-success)' }} />}
           智能判断

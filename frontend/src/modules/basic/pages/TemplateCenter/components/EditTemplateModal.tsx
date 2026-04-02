@@ -338,9 +338,9 @@ const EditTemplateModal = React.forwardRef<EditTemplateModalRef, EditTemplateMod
                 <div>
                   <p style={{ marginBottom: 12 }}>保存工序单价后，系统将自动执行以下操作：</p>
                   <ul style={{ paddingLeft: 20, marginBottom: 12 }}>
-                    <li>✅ 自动同步所有未完成订单的工序单价</li>
-                    <li>✅ 自动更新工序跟踪表中的单价</li>
-                    <li>✅ 后续扫码将自动使用最新单价</li>
+                    <li> 自动同步所有未完成订单的工序单价</li>
+                    <li> 自动更新工序跟踪表中的单价</li>
+                    <li> 后续扫码将自动使用最新单价</li>
                   </ul>
                   <p style={{ marginTop: 8, fontSize: 13, color: '#8c8c8c' }}>
                     提示：自动同步过程通常需要 1-3 秒完成

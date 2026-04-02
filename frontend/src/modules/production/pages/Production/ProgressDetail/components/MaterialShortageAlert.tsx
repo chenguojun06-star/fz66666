@@ -60,8 +60,8 @@ const MaterialShortageAlert: React.FC = () => {
 
   const topItems = isHigh ? highItems : medItems;
   const messageText = isHigh
-    ? `⚠️ 面料紧急预警：${highItems.length} 种物料严重缺货`
-    : `📦 面料缺口提醒：${medItems.length} 种物料库存偏低`;
+    ? ` 面料紧急预警：${highItems.length} 种物料严重缺货`
+    : ` 面料缺口提醒：${medItems.length} 种物料库存偏低`;
 
   const descItems = topItems.slice(0, 3).map((item) => (
     <span

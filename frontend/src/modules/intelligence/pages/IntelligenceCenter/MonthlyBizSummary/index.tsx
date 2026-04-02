@@ -136,7 +136,7 @@ const MonthlyBizSummary: React.FC = () => {
           background: 'rgba(255,65,54,0.10)', border: '1px solid rgba(255,65,54,0.3)',
           borderRadius: 6, padding: '8px 14px', color: '#ff6b6b', fontSize: 13, marginBottom: 12,
         }}>
-          ⚠ {error}
+           {error}
         </div>
       )}
 
@@ -155,11 +155,11 @@ const MonthlyBizSummary: React.FC = () => {
             fontSize: 11, color: '#7dacc4', marginBottom: 4,
             paddingBottom: 10, borderBottom: '1px solid rgba(255,255,255,0.06)',
           }}>
-            📅 统计区间：{data.startDate} 至 {data.endDate}
+             统计区间：{data.startDate} 至 {data.endDate}
           </div>
 
           {/* 1. 生产总览 */}
-          <SectionLabel color="#00e5ff">📦 生产总览</SectionLabel>
+          <SectionLabel color="#00e5ff"> 生产总览</SectionLabel>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
             <KpiBox label="生产完成" value={data.production.producedPieces.toLocaleString()} unit="件" color="#00e5ff" />
             <KpiBox label="质检扫码" value={data.production.qualityScanned.toLocaleString()} unit="件" color="#7dacc4" />
@@ -168,7 +168,7 @@ const MonthlyBizSummary: React.FC = () => {
           </div>
 
           {/* 2. 次品 / 返修率 */}
-          <SectionLabel color="#f7a600">🔧 次品 / 返修率</SectionLabel>
+          <SectionLabel color="#f7a600"> 次品 / 返修率</SectionLabel>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
             <KpiBox label="次品件数" value={data.production.defectPieces.toLocaleString()} unit="件" color="#a78bfa" />
             <KpiBox label="合格件数" value={data.production.passedPieces.toLocaleString()} unit="件" color="#39ff14" />
@@ -189,7 +189,7 @@ const MonthlyBizSummary: React.FC = () => {
           {/* 3. 各工厂件数 */}
           {data.factoryBreakdown.length > 0 && (
             <>
-              <SectionLabel color="#a78bfa">🏭 各工厂件数</SectionLabel>
+              <SectionLabel color="#a78bfa"> 各工厂件数</SectionLabel>
               <table className="c-table" style={{ marginBottom: 4 }}>
                 <thead>
                   <tr>
@@ -219,7 +219,7 @@ const MonthlyBizSummary: React.FC = () => {
           )}
 
           {/* 4. 面辅料 & 成品进出 */}
-          <SectionLabel color="#39ff14">📊 面辅料 & 成品进出</SectionLabel>
+          <SectionLabel color="#39ff14"> 面辅料 & 成品进出</SectionLabel>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 4 }}>
             {/* 面辅料 */}
             <div style={{
@@ -247,7 +247,7 @@ const MonthlyBizSummary: React.FC = () => {
           </div>
 
           {/* 5. 成本 & 利润 */}
-          <SectionLabel color="#f7a600">💹 成本 & 利润</SectionLabel>
+          <SectionLabel color="#f7a600"> 成本 & 利润</SectionLabel>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
             <KpiBox
               label="人工成本"

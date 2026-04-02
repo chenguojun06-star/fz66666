@@ -705,7 +705,7 @@ export default function SelectionCenter() {
                             )}
                             {item.createdStyleId && (
                               <Tag color="green" style={{ fontSize: 11, margin: 0 }}>
-                                ✓ 已下版 {item.createdStyleNo}
+                                 已下版 {item.createdStyleNo}
                               </Tag>
                             )}
                             {canDeleteCandidate(item) && (

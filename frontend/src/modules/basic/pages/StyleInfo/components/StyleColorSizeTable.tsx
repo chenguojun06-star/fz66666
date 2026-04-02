@@ -315,8 +315,8 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
               ) : (
                 <Space.Compact size="small">
                   <Input size="small" placeholder="新颜色" value={newColor} onChange={(e) => setNewColor(e.target.value)} onPressEnter={handleAddNewColor} style={{ width: 88 }} />
-                  <Button size="small" type="primary" onClick={handleAddNewColor}>✓</Button>
-                  <Button size="small" onClick={() => { setNewColor(''); setShowColorInput(false); }}>✕</Button>
+                  <Button size="small" type="primary" onClick={handleAddNewColor}></Button>
+                  <Button size="small" onClick={() => { setNewColor(''); setShowColorInput(false); }}></Button>
                 </Space.Compact>
               )
             )}
@@ -369,8 +369,8 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
               ) : (
                 <Space.Compact size="small">
                   <Input size="small" placeholder="新码数" value={newSize} onChange={(e) => setNewSize(e.target.value)} onPressEnter={handleAddNewSize} style={{ width: 88 }} />
-                  <Button size="small" type="primary" onClick={handleAddNewSize}>✓</Button>
-                  <Button size="small" onClick={() => { setNewSize(''); setShowSizeInput(false); }}>✕</Button>
+                  <Button size="small" type="primary" onClick={handleAddNewSize}></Button>
+                  <Button size="small" onClick={() => { setNewSize(''); setShowSizeInput(false); }}></Button>
                 </Space.Compact>
               )
             )}

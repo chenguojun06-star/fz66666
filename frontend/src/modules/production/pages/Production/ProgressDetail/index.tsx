@@ -478,7 +478,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     const id = String(n?.id || name || '').trim() || name;
                     const p = Number(n?.unitPrice);
                     const unitPrice = Number.isFinite(p) && p >= 0 ? p : 0;
-                    // ★ 保留 progressStage（父分类字段），用于进度球弹窗过滤和boardStats匹配
+                    //  保留 progressStage（父分类字段），用于进度球弹窗过滤和boardStats匹配
                     const progressStage = String(n?.progressStage || '').trim() || undefined;
                     return { id, name, unitPrice, progressStage };
                   })
@@ -1194,7 +1194,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     style={{ minWidth: 110 }}
                     options={[
                       { label: '全部紧急度', value: '' },
-                      { label: '🔴 急单', value: 'urgent' },
+                      { label: ' 急单', value: 'urgent' },
                       { label: '普通', value: 'normal' },
                     ]}
                   />
@@ -1234,7 +1234,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     关闭
                   </Button>
                 )}
-                title={<span>⚠️ 工序瓶颈：{bottleneckItems.length} 个阶段存在积压风险</span>}
+                title={<span> 工序瓶颈：{bottleneckItems.length} 个阶段存在积压风险</span>}
                 description={
                   <ul style={{ margin: 0, paddingLeft: 18 }}>
                     {bottleneckItems.slice(0, 4).map((it, idx) => (
@@ -1473,7 +1473,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     style={{ minWidth: 110 }}
                     options={[
                       { label: '全部紧急度', value: '' },
-                      { label: '🔴 急单', value: 'urgent' },
+                      { label: ' 急单', value: 'urgent' },
                       { label: '普通', value: 'normal' },
                     ]}
                   />
@@ -1525,7 +1525,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     关闭
                   </Button>
                 )}
-                title={<span>⚠️ 工序瓶颈：{bottleneckItems.length} 个阶段存在积压风险</span>}
+                title={<span> 工序瓶颈：{bottleneckItems.length} 个阶段存在积压风险</span>}
                 description={
                   <ul style={{ margin: 0, paddingLeft: 18 }}>
                     {bottleneckItems.slice(0, 4).map((it, idx) => (

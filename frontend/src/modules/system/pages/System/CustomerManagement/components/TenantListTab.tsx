@@ -568,15 +568,15 @@ const TenantListTab: React.FC = () => {
             <Radio.Group style={{ width: '100%' }}>
               <div style={{ display: 'flex', gap: 8 }}>
                 <Radio value="SELF_FACTORY" style={{ flex: 1, margin: 0, alignItems: 'flex-start', padding: '8px 10px', border: '1px solid #f0f0f0', borderRadius: 6 }}>
-                  <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>🏭 自建工厂</span>
+                  <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}> 自建工厂</span>
                   <div style={{ fontSize: 11, color: '#888', marginTop: 2, lineHeight: 1.3 }}>含裁剪管理，不含外发工厂</div>
                 </Radio>
                 <Radio value="HYBRID" style={{ flex: 1, margin: 0, alignItems: 'flex-start', padding: '8px 10px', border: '1px solid #f0f0f0', borderRadius: 6 }}>
-                  <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>🔄 混合型（推荐）</span>
+                  <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}> 混合型（推荐）</span>
                   <div style={{ fontSize: 11, color: '#888', marginTop: 2, lineHeight: 1.3 }}>自有产线 + 外发合作，全功能</div>
                 </Radio>
                 <Radio value="BRAND" style={{ flex: 1, margin: 0, alignItems: 'flex-start', padding: '8px 10px', border: '1px solid #f0f0f0', borderRadius: 6 }}>
-                  <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>🎯 纯品牌 / 贸易</span>
+                  <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}> 纯品牌 / 贸易</span>
                   <div style={{ fontSize: 11, color: '#888', marginTop: 2, lineHeight: 1.3 }}>全部外发，不含裁剪管理</div>
                 </Radio>
               </div>

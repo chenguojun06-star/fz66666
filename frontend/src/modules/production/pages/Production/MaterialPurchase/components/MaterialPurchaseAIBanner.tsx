@@ -30,7 +30,7 @@ const MaterialPurchaseAIBanner: React.FC<MaterialPurchaseAIBannerProps> = ({
       if (orderRecords.length === 0) {
         return {
           type: 'info' as const,
-          message: `🤖 AI 采购分析：订单 ${currentOrderNo} 暂无采购记录，请确认是否已录入面辅料采购单。`,
+          message: ` AI 采购分析：订单 ${currentOrderNo} 暂无采购记录，请确认是否已录入面辅料采购单。`,
         };
       }
 
@@ -80,7 +80,7 @@ const MaterialPurchaseAIBanner: React.FC<MaterialPurchaseAIBannerProps> = ({
       const typeDesc = Array.from(typeGroupMap.entries())
         .map(([type, { arrived, total }]) => {
           const rate = total > 0 ? Math.round((arrived / total) * 100) : 0;
-          const icon = arrived >= total ? '✅' : arrived > 0 ? '⚡' : '❌';
+          const icon = arrived >= total ? '' : arrived > 0 ? '' : '';
           return `${type} ${formatMaterialQuantity(arrived)}/${formatMaterialQuantity(total)}${icon}(${rate}%)`;
         })
         .join('  ');
@@ -91,7 +91,7 @@ const MaterialPurchaseAIBanner: React.FC<MaterialPurchaseAIBannerProps> = ({
       if (notArrived.length === 0 && partial.length === 0) {
         // 全部到齐
         msg = `订单 ${currentOrderNo} 面辅料全部到货（共 ${formatMaterialQuantity(totalArrived)}/${formatMaterialQuantity(totalPurchase)} 单位）。` +
-          `${typeDesc}  材料已备齐，可安排裁剪 🟢`;
+          `${typeDesc}  材料已备齐，可安排裁剪 `;
         alertType = 'success';
       } else if (notArrived.length > 0) {
         // 有物料未到
@@ -99,7 +99,7 @@ const MaterialPurchaseAIBanner: React.FC<MaterialPurchaseAIBannerProps> = ({
           .map(m => `${m.name}（${m.purchaseQuantity}${m.unit}，供应商：${m.supplier || '未知'}）`)
           .join('、');
         const more = notArrived.length > 3 ? `等共 ${notArrived.length} 种` : '';
-        msg = `订单 ${currentOrderNo} 材料未齐，裁剪暂不可开始 🔴\n` +
+        msg = `订单 ${currentOrderNo} 材料未齐，裁剪暂不可开始 \n` +
           `未到货：${missingDesc}${more}。` +
           (partial.length > 0 ? ` 另有 ${partial.length} 种物料部分到货。` : '') +
           ` 整体到货率 ${totalPurchase > 0 ? Math.round((totalArrived / totalPurchase) * 100) : 0}%，建议催促相关供应商。`;
@@ -109,14 +109,14 @@ const MaterialPurchaseAIBanner: React.FC<MaterialPurchaseAIBannerProps> = ({
         const partDesc = partial.slice(0, 2)
           .map(m => `${m.name} ${formatMaterialQuantity(m.arrivedQuantity)}/${formatMaterialQuantity(m.purchaseQuantity)}${m.unit}`)
           .join('、');
-        msg = `订单 ${currentOrderNo} 部分物料在途 ⚡\n` +
+        msg = `订单 ${currentOrderNo} 部分物料在途 \n` +
           `部分到货：${partDesc}${partial.length > 2 ? `等 ${partial.length} 种` : ''}。` +
           ` 全量到货 ${fullArrived.length} 种，整体到货率 ${totalPurchase > 0 ? Math.round((totalArrived / totalPurchase) * 100) : 0}%。` +
           ` 建议确认是否可先开始已到材料部分裁剪。`;
         alertType = 'warning';
       }
 
-      return { type: alertType, message: `🤖 AI 采购分析：${msg}` };
+      return { type: alertType, message: ` AI 采购分析：${msg}` };
     }
 
     // ── 全局汇总（未指定订单号）─────────────────────────────────────
@@ -149,7 +149,7 @@ const MaterialPurchaseAIBanner: React.FC<MaterialPurchaseAIBannerProps> = ({
     let alertType: 'success' | 'warning' | 'error' | 'info';
 
     if (pending === 0 && partial === 0) {
-      msg = `当前 ${totalRecords} 条采购记录全部到货（到货率 ${overallRate}%）。材料状态良好，可推进生产 ✅`;
+      msg = `当前 ${totalRecords} 条采购记录全部到货（到货率 ${overallRate}%）。材料状态良好，可推进生产 `;
       alertType = 'success';
     } else {
       msg = `全局采购：共 ${totalRecords} 条记录 | ` +
@@ -161,7 +161,7 @@ const MaterialPurchaseAIBanner: React.FC<MaterialPurchaseAIBannerProps> = ({
       alertType = pending >= 5 ? 'warning' : 'info';
     }
 
-    return { type: alertType, message: `🤖 AI 采购分析：${msg}` };
+    return { type: alertType, message: ` AI 采购分析：${msg}` };
   }, [purchaseList, currentOrderNo]);
 
   if (!insight) return null;

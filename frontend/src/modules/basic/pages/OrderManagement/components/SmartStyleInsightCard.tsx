@@ -196,7 +196,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
         background: '#fafafa', borderRadius: 8, padding: '10px 14px',
         fontSize: 12, color: '#bbb', display: 'flex', alignItems: 'center', gap: 8,
       }}>
-        <span>📊</span>
+        <span></span>
         <span>该款暂无历史订单数据</span>
         <Button type="link" size="small" icon={<ReloadOutlined />} onClick={calcInsight}>
           重新加载

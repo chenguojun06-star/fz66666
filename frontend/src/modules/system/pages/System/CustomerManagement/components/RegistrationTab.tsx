@@ -146,7 +146,7 @@ const RegistrationTab: React.FC = () => {
 
       <div style={{ marginBottom: 24 }}>
         <Typography.Title level={5} style={{ marginBottom: 12 }}>
-          🏭 工厂入驻申请 {tenantApps.length > 0 && <Badge count={tenantApps.length} style={{ marginLeft: 8 }} />}
+           工厂入驻申请 {tenantApps.length > 0 && <Badge count={tenantApps.length} style={{ marginLeft: 8 }} />}
         </Typography.Title>
         {tenantApps.length > 0 ? (
           <ResizableTable

@@ -71,7 +71,7 @@ async function fetchProfile(name: string): Promise<WorkerProfile | null> {
 
 function LevelDot({ level }: { level?: string }) {
   if (level === 'excellent') {
-    return <span style={{ fontSize: 12, lineHeight: 1, cursor: 'pointer' }}>⚡</span>;
+    return <span style={{ fontSize: 12, lineHeight: 1, cursor: 'pointer' }}></span>;
   }
   if (level === 'good') {
     return (

@@ -257,7 +257,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     boot();
   }, []);
 
-  // 🔐 跨标签页 token 变更检测：当其他标签页登录/登出时，自动同步状态
+  //  跨标签页 token 变更检测：当其他标签页登录/登出时，自动同步状态
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === tokenStorageKey) {

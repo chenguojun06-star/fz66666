@@ -383,7 +383,7 @@ const PaymentAuditPopover: React.FC<{ record: PayableItem; children: React.React
   const content = (
     <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 13, boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <span style={{ fontWeight: 600, fontSize: 14 }}>🔍 付款审核</span>
+        <span style={{ fontWeight: 600, fontSize: 14 }}> 付款审核</span>
         <Tag color={riskTagColor[analysis.risk]}>{suggestionLabel[analysis.suggestion]}</Tag>
       </div>
       <DecisionInsightCard compact insight={insight} />

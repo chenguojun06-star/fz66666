@@ -60,23 +60,23 @@ const WarehousingAuditBanner: React.FC<WarehousingAuditBannerProps> = ({
 
     if (totalUnqualified === 0) {
       msg = `订单 ${currentOrderNo}：共 ${totalProcessed} 件全部合格（合格率 100%），` +
-        `已入库 ${totalWarehoused} 件，入库流程完成 ✅`;
+        `已入库 ${totalWarehoused} 件，入库流程完成 `;
       alertType = 'success';
     } else if (passRate >= 85) {
       msg = `订单 ${currentOrderNo}：${totalProcessed} 件中 ${totalQualified} 件合格（${passRate}%），` +
         `${badSizes.join('、')} 需返工重检。已入库 ${totalWarehoused} 件，建议跟进不合格件处理。`;
       alertType = 'info';
     } else if (passRate >= 60) {
-      msg = `订单 ${currentOrderNo}：⚠️ 合格率仅 ${passRate}%，${totalUnqualified} 件不合格（${badSizes.join('、')}）。` +
+      msg = `订单 ${currentOrderNo}： 合格率仅 ${passRate}%，${totalUnqualified} 件不合格（${badSizes.join('、')}）。` +
         `已入库 ${totalWarehoused} 件，需重点跟进质量问题。`;
       alertType = 'warning';
     } else {
-      msg = `订单 ${currentOrderNo}：🚨 质检合格率 ${passRate}% 偏低！${totalUnqualified} 件不合格（${badSizes.join('、')}），` +
+      msg = `订单 ${currentOrderNo}： 质检合格率 ${passRate}% 偏低！${totalUnqualified} 件不合格（${badSizes.join('、')}），` +
         `已入库 ${totalWarehoused} 件。建议立即排查工序问题，避免延误交货。`;
       alertType = 'error';
     }
 
-    return { type: alertType, message: `🤖 AI 质检入库：${msg}` };
+    return { type: alertType, message: ` AI 质检入库：${msg}` };
   }, [currentOrderNo, warehousingList]);
 
   // ── 全局积压分析（无订单筛选时使用）────────────────────────────────
@@ -91,7 +91,7 @@ const WarehousingAuditBanner: React.FC<WarehousingAuditBannerProps> = ({
       if ((totalOrders ?? 0) === 0) return null;
       return {
         type: 'success' as const,
-        message: `✅ AI 质检入库分析：当前无积压菲号，累计已完成 ${totalOrders} 个订单 · ${totalQuantity} 件，入库流程畅通。`,
+        message: ` AI 质检入库分析：当前无积压菲号，累计已完成 ${totalOrders} 个订单 · ${totalQuantity} 件，入库流程畅通。`,
       };
     }
 
@@ -112,7 +112,7 @@ const WarehousingAuditBanner: React.FC<WarehousingAuditBannerProps> = ({
     if ((totalOrders ?? 0) > 0) mainAdvice += ` 累计已入库 ${totalOrders} 订单 · ${totalQuantity} 件。`;
 
     const alertType = top.bundles >= 20 ? 'error' : top.bundles >= 10 ? 'warning' : 'info';
-    return { type: alertType as 'error' | 'warning' | 'info', message: `🤖 AI 质检入库分析：${mainAdvice}` };
+    return { type: alertType as 'error' | 'warning' | 'info', message: ` AI 质检入库分析：${mainAdvice}` };
   }, [stats, currentOrderNo]);
 
   const insight = orderInsight ?? globalInsight;

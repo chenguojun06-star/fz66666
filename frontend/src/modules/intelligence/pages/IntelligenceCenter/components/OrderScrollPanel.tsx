@@ -82,7 +82,7 @@ const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
             <span className="order-pop-days" style={{
               color: daysLeft < 0 ? '#ff4136' : daysLeft <= 3 ? '#f7a600' : '#39ff14',
             }}>
-              {daysLeft < 0 ? `⚠ 逾期${-daysLeft}天` : daysLeft === 0 ? '今日交货' : `剩 ${daysLeft} 天`}
+              {daysLeft < 0 ? ` 逾期${-daysLeft}天` : daysLeft === 0 ? '今日交货' : `剩 ${daysLeft} 天`}
             </span>
           )}
         </div>
@@ -90,9 +90,9 @@ const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
 
       {/* 概要 */}
       <div className="order-pop-meta">
-        <span>🏭 {order.factoryName}</span>
-        <span>👗 {order.styleName}</span>
-        <span>📦 {order.orderQuantity} 件</span>
+        <span> {order.factoryName}</span>
+        <span> {order.styleName}</span>
+        <span> {order.orderQuantity} 件</span>
       </div>
 
       {/* 5 个工序进度条 */}
@@ -118,7 +118,7 @@ const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
           background: 'rgba(255,65,54,0.04)', borderRadius: 5,
           border: '1px solid rgba(255,65,54,0.15)' }}>
           <div style={{ fontSize: 10, color: '#ff4136', fontWeight: 700,
-            marginBottom: 5, letterSpacing: 0.5 }}>⚡ 工序瓶颈 Top{intel.bottleneck.items.length > 1 ? '2' : '1'}</div>
+            marginBottom: 5, letterSpacing: 0.5 }}> 工序瓶颈 Top{intel.bottleneck.items.length > 1 ? '2' : '1'}</div>
           {intel.bottleneck.items.slice(0, 2).map((b, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center',
               gap: 6, marginBottom: i < 1 ? 3 : 0, fontSize: 11 }}>
@@ -132,7 +132,7 @@ const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
           ))}
           {intel.bottleneck.items[0]?.suggestion && (
             <div style={{ fontSize: 10, color: '#8ab4c8', marginTop: 5, lineHeight: 1.5 }}>
-              💡 {intel.bottleneck.items[0].suggestion}
+               {intel.bottleneck.items[0].suggestion}
             </div>
           )}
         </div>
@@ -146,7 +146,7 @@ const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
           <div style={{ display: 'flex', justifyContent: 'space-between',
             alignItems: 'center', marginBottom: 4 }}>
             <span style={{ fontSize: 10, color: risk2badge(intel.riskItem.riskLevel).color,
-              fontWeight: 700 }}>📊 交期风险评估</span>
+              fontWeight: 700 }}> 交期风险评估</span>
             <span style={{ fontSize: 10, color: '#7aaec8' }}>
               预测: {intel.riskItem.predictedEndDate?.slice(0, 10) ?? '--'}
             </span>
@@ -169,7 +169,7 @@ const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
           background: 'rgba(255,200,0,0.04)', borderRadius: 5,
           border: '1px solid rgba(255,200,0,0.12)' }}>
           <div style={{ fontSize: 10, color: '#f7a600', fontWeight: 700, marginBottom: 4 }}>
-            🔍 异常行为 ({intel.anomalies.length})
+             异常行为 ({intel.anomalies.length})
           </div>
           {intel.anomalies.map((a, i) => (
             <div key={i} style={{
@@ -185,7 +185,7 @@ const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
         <div style={{ marginBottom: 6, padding: '5px 8px',
           background: 'rgba(57,255,20,0.03)', borderRadius: 5,
           border: '1px solid rgba(57,255,20,0.10)', fontSize: 10, color: '#5a9a6a' }}>
-          ✅ 暂无异常行为
+           暂无异常行为
         </div>
       )}
 
@@ -201,26 +201,26 @@ const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
         <div style={{ marginBottom: 6, padding: '6px 8px',
           background: 'rgba(180,80,255,0.05)', borderRadius: 5,
           border: '1px solid rgba(180,80,255,0.18)' }}>
-          <div style={{ fontSize: 10, color: '#c084fc', fontWeight: 700, marginBottom: 4 }}>🔬 缺陷溯源</div>
+          <div style={{ fontSize: 10, color: '#c084fc', fontWeight: 700, marginBottom: 4 }}> 缺陷溯源</div>
           {intel.defectTrace.workers?.slice(0, 2).map((w, i) => (
             <div key={i} style={{ fontSize: 10, color: '#a78bfa', marginBottom: 2 }}>
-              👷 {w.operatorName}：缺陷率 <b style={{ color: '#f472b6' }}>{(w.defectRate * 100).toFixed(1)}%</b>
+               {w.operatorName}：缺陷率 <b style={{ color: '#f472b6' }}>{(w.defectRate * 100).toFixed(1)}%</b>
               {w.worstProcess ? ` · ${w.worstProcess}` : ''}
             </div>
           ))}
           {intel.defectTrace.hotProcesses?.slice(0, 1).map((p, i) => (
             <div key={i} style={{ fontSize: 10, color: '#818cf8', marginTop: 2 }}>
-              ⚙ 高发工序：{p.processName}（{p.defectCount} 件）
+               高发工序：{p.processName}（{p.defectCount} 件）
             </div>
           ))}
           {intel.defectTrace.overallDefectRate !== undefined && (
-            <div style={{ fontSize: 10, color: '#9d87c0', marginTop: 4 }}>💡 总缺陷率：{(intel.defectTrace.overallDefectRate * 100).toFixed(1)}%（{intel.defectTrace.totalDefects} 件/{intel.defectTrace.totalScans} 件）</div>
+            <div style={{ fontSize: 10, color: '#9d87c0', marginTop: 4 }}> 总缺陷率：{(intel.defectTrace.overallDefectRate * 100).toFixed(1)}%（{intel.defectTrace.totalDefects} 件/{intel.defectTrace.totalScans} 件）</div>
           )}
         </div>
       )}
 
       {/* AI 整体建议 */}
-      <div className="order-pop-ai">🤖 AI：{aiTip}</div>
+      <div className="order-pop-ai"> AI：{aiTip}</div>
     </div>
   );
 };

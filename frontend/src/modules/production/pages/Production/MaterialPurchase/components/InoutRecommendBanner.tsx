@@ -18,32 +18,32 @@ const InoutRecommendBanner: React.FC<Props> = ({ pendingCount, noStockCount, par
 
   const fullStockCount = pendingCount - noStockCount - partialStockCount;
 
-  let icon = '💡';
+  let icon = '';
   let hint = '';
 
   if (noStockCount === 0 && partialStockCount === 0) {
     // 全部有货
-    icon = '✅';
+    icon = '';
     hint = `检测到 ${pendingCount} 项物料库存充足，点击「一键智能领取」即可提交出库申请`;
   } else if (fullStockCount === 0 && noStockCount === 0) {
     // 全是部分有货
-    icon = '⚡';
+    icon = '';
     hint = `检测到 ${partialStockCount} 项物料库存不足，点击「一键智能领取」将自动领取现有库存，剩余缺口自动转采购任务`;
   } else if (fullStockCount === 0 && partialStockCount === 0) {
     // 全部缺货
-    icon = '🛒';
+    icon = '';
     hint = `当前 ${noStockCount} 项物料均无库存，请先完成采购入库后再领取`;
   } else if (partialStockCount > 0 && noStockCount > 0) {
     // 混合：部分有货 + 完全缺货
-    icon = '⚡';
+    icon = '';
     hint = `${partialStockCount} 项部分有货（自动领现有库存并补采缺口）、${noStockCount} 项完全缺货（需先采购入库）`;
   } else if (partialStockCount > 0) {
     // 部分有货 + 部分全量
-    icon = '⚡';
+    icon = '';
     hint = `${partialStockCount} 项物料库存不足，点击「一键智能领取」将领取现有库存，缺口自动转采购任务`;
   } else {
     // 有全量 + 有缺货
-    icon = '💡';
+    icon = '';
     hint = `${fullStockCount} 项库存充足可直接领取，${noStockCount} 项需先完成采购入库`;
   }
 

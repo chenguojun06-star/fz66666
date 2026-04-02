@@ -9,9 +9,9 @@ import StyleStageControlBar from './StyleStageControlBar';
 import { message } from '@/utils/antdStatic';
 
 const REVIEW_STATUS_OPTIONS = [
-  { label: '✅ 通过', value: 'PASS' },
-  { label: '⚠️ 需修改', value: 'REWORK' },
-  { label: '❌ 不通过', value: 'REJECT' },
+  { label: ' 通过', value: 'PASS' },
+  { label: ' 需修改', value: 'REWORK' },
+  { label: ' 不通过', value: 'REJECT' },
 ];
 
 const reviewStatusTag = (status?: string | null) => {
@@ -249,7 +249,7 @@ const StyleProductionTab: React.FC<Props> = ({
         <div>
           <span style={{ fontWeight: 500 }}>生产要求</span>
           <div style={{ marginTop: 8, color: 'var(--neutral-text-secondary)', fontSize: "var(--font-size-xs)" }}>
-            💡 提示：相关文件请在"文件管理"标签页统一上传
+             提示：相关文件请在"文件管理"标签页统一上传
           </div>
         </div>
         <Space size={8} wrap>

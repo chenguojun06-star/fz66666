@@ -123,7 +123,7 @@ const ChannelStatusTab: React.FC<Props> = ({ active }) => {
                   styles={{ body: { paddingTop: 12 } }}
                 >
                   {ch.mode === 'LIVE' && (
-                    <p style={{ color: '#52c41a', margin: '0 0 8px' }}>✓ 密钥已配置，正在调用真实 API</p>
+                    <p style={{ color: '#52c41a', margin: '0 0 8px' }}> 密钥已配置，正在调用真实 API</p>
                   )}
                   {ch.mode === 'MOCK' && (
                     <p style={{ color: '#fa8c16', margin: '0 0 8px' }}>尚未填写密钥，当前以 Mock 模拟运行</p>

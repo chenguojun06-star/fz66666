@@ -188,7 +188,7 @@ const ProfitDeliveryPanel: React.FC = () => {
 
             {delivery.rationale && (
               <div style={{ marginTop: 10, padding: '8px 10px', background: 'rgba(0,229,255,0.06)', borderRadius: 6, fontSize: 11, color: '#4a6d8a', lineHeight: 1.6 }}>
-                💡 {delivery.rationale}
+                 {delivery.rationale}
               </div>
             )}
           </div>

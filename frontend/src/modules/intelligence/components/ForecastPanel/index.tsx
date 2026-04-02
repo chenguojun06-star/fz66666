@@ -131,7 +131,7 @@ export default function ForecastPanel() {
 
       {/* 错误提示 */}
       {error && !loading && (
-        <div className="fp-error">⚠ {error}</div>
+        <div className="fp-error"> {error}</div>
       )}
 
       {/* 预测结果 */}

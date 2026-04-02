@@ -711,10 +711,10 @@ const MaterialReconciliation: React.FC = () => {
                   onClick={fetchFinanceAudit}
                   style={{ padding: 0 }}
                 >
-                  {financeAudit ? '重新分析' : '🤖 AI分析'}
+                  {financeAudit ? '重新分析' : ' AI分析'}
                 </Button>
               }
-              title={<span style={{ fontSize: 13, color: '#1677ff' }}>🧾 智能财务审核助手</span>}
+              title={<span style={{ fontSize: 13, color: '#1677ff' }}> 智能财务审核助手</span>}
             >
               {!financeAudit ? (
                 <span style={{ fontSize: 12, color: '#8c8c8c' }}>

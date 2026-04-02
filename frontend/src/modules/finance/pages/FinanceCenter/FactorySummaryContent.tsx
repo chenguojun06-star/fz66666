@@ -531,7 +531,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
           style={{ marginBottom: 12 }}
           loading={lbLoading}
           title={
-            <span style={{ fontSize: 13, fontWeight: 600 }}>🏆 工厂绩效榜</span>
+            <span style={{ fontSize: 13, fontWeight: 600 }}> 工厂绩效榜</span>
           }
           extra={
             <Button type="link" size="small" onClick={() => setLbCollapsed(!lbCollapsed)} style={{ padding: 0 }}>

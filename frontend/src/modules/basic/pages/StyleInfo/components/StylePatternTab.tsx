@@ -435,7 +435,7 @@ const StylePatternTab: React.FC<Props> = ({
                   gap: '4px',
                 }}
               >
-                ⚠️ 缺少: {patternCheckResult.missingItems.join('、')}
+                 缺少: {patternCheckResult.missingItems.join('、')}
               </span>
             )}
           </>
@@ -460,7 +460,7 @@ const StylePatternTab: React.FC<Props> = ({
         items={[
           {
             key: 'size',
-            label: <span style={{ fontWeight: 600 }}>📏 尺寸表</span>,
+            label: <span style={{ fontWeight: 600 }}> 尺寸表</span>,
             children: (
               <StyleSizeTab
                 styleId={styleId}

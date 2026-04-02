@@ -5,11 +5,11 @@ import { ThunderboltOutlined, BranchesOutlined, HistoryOutlined, PlayCircleOutli
 import { useAgentGraphStore, type NodeEvent } from '@/stores/useAgentGraphStore';
 
 const SCENES = [
-  { value: 'full',          label: '🌐 全面分析' },
-  { value: 'delivery_risk', label: '⚠️ 货期风险' },
-  { value: 'sourcing',      label: '📦 采购风险' },
-  { value: 'compliance',    label: '✅ 合规 DPP' },
-  { value: 'logistics',     label: '🚚 物流优化' },
+  { value: 'full',          label: ' 全面分析' },
+  { value: 'delivery_risk', label: ' 货期风险' },
+  { value: 'sourcing',      label: ' 采购风险' },
+  { value: 'compliance',    label: ' 合规 DPP' },
+  { value: 'logistics',     label: ' 物流优化' },
 ];
 
 const ROUTE_MAP: Record<string, [string, string]> = {
@@ -21,11 +21,11 @@ const ROUTE_MAP: Record<string, [string, string]> = {
 };
 
 const NODE_LABELS: Record<string, [string, string]> = {
-  digital_twin:  ['🏭 数字孪生',  '#818cf8'],
-  supervisor:    ['🧠 Supervisor', '#a78bfa'],
-  specialists:   ['⚙️ Specialist', '#60a5fa'],
-  reflection:    ['🔍 Reflection', '#facc15'],
-  re_route:      ['🔄 重路由',     '#f97316'],
+  digital_twin:  [' 数字孪生',  '#818cf8'],
+  supervisor:    [' Supervisor', '#a78bfa'],
+  specialists:   [' Specialist', '#60a5fa'],
+  reflection:    [' Reflection', '#facc15'],
+  re_route:      [' 重路由',     '#f97316'],
 };
 
 const confColor = (v: number) =>
@@ -73,7 +73,7 @@ const GraphPipeline: React.FC<{ events: NodeEvent[]; streaming: boolean }> = ({ 
               }}>
                 {label}
                 {active && <Spin size="small" style={{ marginLeft: 6 }} />}
-                {done && <span style={{ marginLeft: 4 }}>✓</span>}
+                {done && <span style={{ marginLeft: 4 }}></span>}
               </div>
             </Tooltip>
           </React.Fragment>
@@ -87,7 +87,7 @@ const GraphPipeline: React.FC<{ events: NodeEvent[]; streaming: boolean }> = ({ 
             padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
             border: '1.5px solid #f97316', background: '#f9731622', color: '#f97316',
             whiteSpace: 'nowrap',
-          }}>🔄 重路由 ✓</div>
+          }}> 重路由 </div>
         </>
       )}
     </div>
@@ -98,8 +98,8 @@ const GraphPipeline: React.FC<{ events: NodeEvent[]; streaming: boolean }> = ({ 
 const SpecialistCards: React.FC<{ results?: Record<string, string> }> = ({ results }) => {
   if (!results || Object.keys(results).length === 0) return null;
   const nameMap: Record<string, string> = {
-    delivery: '📦 货期分析', sourcing: '🏭 采购分析',
-    compliance: '✅ 合规分析', logistics: '🚚 物流分析',
+    delivery: ' 货期分析', sourcing: ' 采购分析',
+    compliance: ' 合规分析', logistics: ' 物流分析',
   };
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8, marginBottom: 8 }}>
@@ -299,7 +299,7 @@ const AgentGraphPanel: React.FC = () => {
               {result.optimizationSuggestion && (
                 <div style={{ marginBottom: 8 }}>
                   <div style={{ fontSize: 11, color: '#34d399', fontWeight: 600, marginBottom: 4 }}>
-                    💡 AI 优化建议
+                     AI 优化建议
                   </div>
                   <div style={{ fontSize: 12, color: '#d4d4d4', lineHeight: 1.65 }}>
                     {result.optimizationSuggestion}
@@ -311,7 +311,7 @@ const AgentGraphPanel: React.FC = () => {
               {result.reflection && (
                 <div style={{ marginBottom: 8 }}>
                   <div style={{ fontSize: 11, color: '#faad14', fontWeight: 600, marginBottom: 4 }}>
-                    🔍 自我反思（置信评估）
+                     自我反思（置信评估）
                   </div>
                   <div style={{
                     fontSize: 11, color: '#8b8b8b', fontFamily: 'monospace',

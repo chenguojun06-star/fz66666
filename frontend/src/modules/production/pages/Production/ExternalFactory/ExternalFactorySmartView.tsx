@@ -229,7 +229,7 @@ function StagePopoverContent({
     const target = expectedShipDate || plannedEndDate;
     const deliveryLeft = target ? dayjs(target).diff(dayjs(), 'day') : null;
     if (deliveryLeft !== null && deliveryLeft < 0) {
-      aiLabel = '⚠ 已逾期'; aiColor = '#f5222d';
+      aiLabel = ' 已逾期'; aiColor = '#f5222d';
     } else if (scanData.dailyRate7d > 0 && leftQty > 0) {
       const daysNeeded = Math.ceil(leftQty / scanData.dailyRate7d);
       if (deliveryLeft !== null) {
@@ -244,7 +244,7 @@ function StagePopoverContent({
       // 有工人在做但扫码量不足7天，速率数据少
       aiLabel = '数据积累中'; aiColor = '#1677ff';
     } else if (status === 'risk') {
-      aiLabel = '⚠ 进度滞后'; aiColor = '#fa8c16';
+      aiLabel = ' 进度滞后'; aiColor = '#fa8c16';
     } else if (scanData.totalScanned > 0) {
       // 有历史扫码，但近7天无记录（可能已暂停）
       aiLabel = '近7天无扫码'; aiColor = '#fa8c16';
@@ -591,7 +591,7 @@ const ExternalFactorySmartView: React.FC<Props> = ({
                         label: '工序',
                         disabled: frozen,
                         children: [
-                          { key: 'all', label: '📋 全部工序', disabled: frozen, onClick: () => openProcessDetail(record, 'all') },
+                          { key: 'all', label: ' 全部工序', disabled: frozen, onClick: () => openProcessDetail(record, 'all') },
                           ...(syncProcessFromTemplate ? [{
                             key: 'syncProcess',
                             label: '单价同步',
@@ -638,7 +638,7 @@ const ExternalFactorySmartView: React.FC<Props> = ({
                       ] : []),
                       ...(handleShareOrder ? [{
                         key: 'share',
-                        label: '🔗 分享',
+                        label: ' 分享',
                         title: '生成客户查看链接（30天有效）',
                         onClick: () => handleShareOrder(record),
                       }] : []),

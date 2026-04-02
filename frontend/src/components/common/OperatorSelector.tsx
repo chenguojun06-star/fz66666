@@ -177,7 +177,7 @@ export const OperatorSelector: React.FC<OperatorSelectorProps> = ({
           label={renderLabel('操作人', '系统将自动记录当前登录用户')}
         >
           <Input
-            value="✅ 系统自动记录当前登录用户"
+            value=" 系统自动记录当前登录用户"
             disabled
             style={{
               background: '#f0f0f0',

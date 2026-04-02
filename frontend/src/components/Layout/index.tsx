@@ -561,7 +561,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
             {isFactoryAccount && (
               <Tag color="orange" style={{ marginLeft: 0, marginRight: 8, fontSize: 12 }}>
-                🏭 {factoryName || '外发工厂'}
+                 {factoryName || '外发工厂'}
               </Tag>
             )}
 

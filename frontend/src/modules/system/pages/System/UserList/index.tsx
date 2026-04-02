@@ -241,7 +241,7 @@ const UserList: React.FC = () => {
     }
   };
 
-  // 🔐 用户身份变化时清空旧数据（防止跨租户数据残留）
+  //  用户身份变化时清空旧数据（防止跨租户数据残留）
   const currentUserId = user?.id;
   useEffect(() => {
     setUserList([]);

@@ -1,14 +1,14 @@
 /**
  * 生产进度智能分析 v2.0 (2026-03)
  *
- * ★ 全动态：不硬编码任何节点名称，完全基于传入的 stages 数组分析
+ *  全动态：不硬编码任何节点名称，完全基于传入的 stages 数组分析
  *   工厂自定义工序（如 烫衣/包装/贴标/水洗 等）同样被分析
  *
- * 1. 🔍 瓶颈识别 — 相邻工序进度落差最大的环节
- * 2. 👥 人员分析 — 各节点人员配置是否合理（已知字段 + 动态推断）
- * 3. 📊 资源建议 — 应该在哪里加人/减人？
- * 4. 📋 跟进要点 — 跟单员最该关注什么？
- * 5. ⚡ 风险预测 — 按当前趋势会出什么问题？
+ * 1.  瓶颈识别 — 相邻工序进度落差最大的环节
+ * 2.  人员分析 — 各节点人员配置是否合理（已知字段 + 动态推断）
+ * 3.  资源建议 — 应该在哪里加人/减人？
+ * 4.  跟进要点 — 跟单员最该关注什么？
+ * 5.  风险预测 — 按当前趋势会出什么问题？
  */
 import React from 'react';
 import dayjs from 'dayjs';
@@ -164,7 +164,7 @@ export function analyzeProgress(
 
   // ── 4. 跟进要点（完全动态） ──
   // 未开工的工序（在有活跃工序的情况下）
-  // ★ 智能推断：若某工序的下游已有进度，说明该工序已完成（可能无扫码记录），不应报"尚未开始"
+  //  智能推断：若某工序的下游已有进度，说明该工序已完成（可能无扫码记录），不应报"尚未开始"
   //   例：入库 25% → 采购必然已完成，即使 procurementCompletionRate=0 也不报
   const notStarted = allStages.filter((s, idx) => {
     if (s.pct > 0 || s.qty > 0) return false;
@@ -194,7 +194,7 @@ export function analyzeProgress(
 
   // 急单额外关注
   if (isUrgent && prog < 80) {
-    followUpPoints.push('⚡ 急单，进度不足80%，每日跟进');
+    followUpPoints.push(' 急单，进度不足80%，每日跟进');
   }
 
   // ── 5. 风险预测 ──
@@ -329,7 +329,7 @@ export function renderProgressInsight(insight: ProgressInsight): React.ReactNode
   return (
     <div style={{ borderTop: '1px dashed #e8e8e8', marginTop: 6, paddingTop: 6 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 6, fontWeight: 600, fontSize: 11 }}>
-        <span>🤖 小云实时推演</span>
+        <span> 小云实时推演</span>
         <span style={{
           fontSize: 9, padding: '0 5px', borderRadius: 3,
           background: V_COLOR[verdict], color: '#fff',

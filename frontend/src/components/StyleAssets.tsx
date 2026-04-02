@@ -529,9 +529,9 @@ export const StyleAttachmentsButton: React.FC<{
       width: 120,
       render: (t: string) => {
         if (t === 'pattern') return <Tag color="blue">原始纸样</Tag>;
-        if (t === 'pattern_final') return <Tag color="blue">原始纸样 ✓</Tag>;
+        if (t === 'pattern_final') return <Tag color="blue">原始纸样 </Tag>;
         if (t === 'pattern_grading') return <Tag color="green">放码纸样</Tag>;
-        if (t === 'pattern_grading_final') return <Tag color="green">放码纸样 ✓</Tag>;
+        if (t === 'pattern_grading_final') return <Tag color="green">放码纸样 </Tag>;
         if (t === 'order') return <Tag color="purple">下单附件</Tag>;
         return <Tag>{t}</Tag>;
       }
@@ -637,7 +637,7 @@ export const StyleAttachmentsButton: React.FC<{
               fontSize: "var(--font-size-sm)",
               color: '#ad6800'
             }}>
-              ⚠️ 当前只有{patternTypeInfo.hasPattern ? '原始纸样' : '放码纸样'}，
+               当前只有{patternTypeInfo.hasPattern ? '原始纸样' : '放码纸样'}，
               {patternTypeInfo.hasPattern ? '缺少放码纸样' : '缺少原始纸样'}，请补充上传
             </div>
           )}
@@ -651,7 +651,7 @@ export const StyleAttachmentsButton: React.FC<{
               fontSize: "var(--font-size-sm)",
               color: '#a8071a'
             }}>
-              ⚠️ 暂无纸样附件，请先上传原始纸样和放码纸样
+               暂无纸样附件，请先上传原始纸样和放码纸样
             </div>
           )}
           <div ref={tableWrapRef} style={{ flex: '1 1 auto', minHeight: 0 }}>

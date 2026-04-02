@@ -22,38 +22,38 @@ const { Text } = Typography;
 
 // ========== 应用类型配置 ==========
 const APP_TYPE_CONFIG: Record<string, { label: string; color: string; icon: string; description: string }> = {
-  ORDER_SYNC:       { label: '下单对接',       color: 'var(--color-primary)', icon: '📦', description: '客户ERP系统直接下达生产订单，实时查询订单进度' },
-  QUALITY_FEEDBACK: { label: '质检反馈',       color: 'var(--color-success)', icon: '✅', description: '质检完成后自动推送结果到客户系统，支持Webhook回调' },
-  LOGISTICS_SYNC:   { label: '物流对接',       color: 'var(--color-info)',    icon: '🚚', description: '出库发货时自动同步物流信息到客户系统' },
-  PAYMENT_SYNC:     { label: '付款对接',       color: 'var(--color-warning)', icon: '💰', description: '对账单推送、付款确认，与客户支付系统双向对接' },
-  MATERIAL_SUPPLY:  { label: '面辅料供应对接', color: '#13c2c2',              icon: '🧵', description: '面辅料供应商系统直接同步采购、入库数据' },
-  DATA_IMPORT:      { label: '数据导入',       color: '#722ed1',              icon: '📊', description: '批量导入生产订单、工序、库存等数据，开通即用' },
-  EC_TAOBAO:        { label: '淘宝对接',       color: '#ff4500',              icon: '🛒', description: '淘宝平台订单自动同步到生产系统' },
-  EC_TMALL:         { label: '天猫对接',       color: '#ff2d2d',              icon: '🏪', description: '天猫旗舰店订单实时同步，支持SKU映射' },
-  EC_JD:            { label: '京东对接',       color: '#e1251b',              icon: '🏬', description: '京东平台订单自动同步，支持物流回传' },
-  EC_DOUYIN:        { label: '抖音对接',       color: '#000000',              icon: '🎵', description: '抖音小店订单实时接入，直播售卖自动下单' },
-  EC_PINDUODUO:     { label: '拼多多对接',     color: '#e02e24',              icon: '🛍️', description: '拼多多平台订单同步，支持多规格SKU' },
-  EC_XIAOHONGSHU:   { label: '小红书对接',     color: '#fe2c55',              icon: '📕', description: '小红书商城订单同步，种草转化直连生产' },
-  EC_WECHAT_SHOP:   { label: '微信小店对接',   color: '#07c160',              icon: '💬', description: '微信小店/视频号订单直接推送生产系统' },
-  EC_SHOPIFY:       { label: 'Shopify对接',    color: '#96bf48',              icon: '🌐', description: '跨境Shopify店铺订单自动同步，支持多货币' },
+  ORDER_SYNC:       { label: '下单对接',       color: 'var(--color-primary)', icon: '', description: '客户ERP系统直接下达生产订单，实时查询订单进度' },
+  QUALITY_FEEDBACK: { label: '质检反馈',       color: 'var(--color-success)', icon: '', description: '质检完成后自动推送结果到客户系统，支持Webhook回调' },
+  LOGISTICS_SYNC:   { label: '物流对接',       color: 'var(--color-info)',    icon: '', description: '出库发货时自动同步物流信息到客户系统' },
+  PAYMENT_SYNC:     { label: '付款对接',       color: 'var(--color-warning)', icon: '', description: '对账单推送、付款确认，与客户支付系统双向对接' },
+  MATERIAL_SUPPLY:  { label: '面辅料供应对接', color: '#13c2c2',              icon: '', description: '面辅料供应商系统直接同步采购、入库数据' },
+  DATA_IMPORT:      { label: '数据导入',       color: '#722ed1',              icon: '', description: '批量导入生产订单、工序、库存等数据，开通即用' },
+  EC_TAOBAO:        { label: '淘宝对接',       color: '#ff4500',              icon: '', description: '淘宝平台订单自动同步到生产系统' },
+  EC_TMALL:         { label: '天猫对接',       color: '#ff2d2d',              icon: '', description: '天猫旗舰店订单实时同步，支持SKU映射' },
+  EC_JD:            { label: '京东对接',       color: '#e1251b',              icon: '', description: '京东平台订单自动同步，支持物流回传' },
+  EC_DOUYIN:        { label: '抖音对接',       color: '#000000',              icon: '', description: '抖音小店订单实时接入，直播售卖自动下单' },
+  EC_PINDUODUO:     { label: '拼多多对接',     color: '#e02e24',              icon: '', description: '拼多多平台订单同步，支持多规格SKU' },
+  EC_XIAOHONGSHU:   { label: '小红书对接',     color: '#fe2c55',              icon: '', description: '小红书商城订单同步，种草转化直连生产' },
+  EC_WECHAT_SHOP:   { label: '微信小店对接',   color: '#07c160',              icon: '', description: '微信小店/视频号订单直接推送生产系统' },
+  EC_SHOPIFY:       { label: 'Shopify对接',    color: '#96bf48',              icon: '', description: '跨境Shopify店铺订单自动同步，支持多货币' },
 };
 
 // ========== 集成总览 Tab ==========
 const MODULE_ICONS: Record<string, { icon: string; color: string; bgColor: string }> = {
-  ORDER_SYNC:       { icon: '📦', color: 'var(--color-primary)', bgColor: 'rgba(45, 127, 249, 0.1)' },
-  QUALITY_FEEDBACK: { icon: '✅', color: 'var(--color-success)', bgColor: 'rgba(34, 197, 94, 0.15)' },
-  LOGISTICS_SYNC:   { icon: '🚚', color: 'var(--color-info)',    bgColor: 'rgba(114, 46, 209, 0.1)' },
-  PAYMENT_SYNC:     { icon: '💰', color: 'var(--color-warning)', bgColor: 'rgba(250, 140, 22, 0.1)' },
-  MATERIAL_SUPPLY:  { icon: '🧵', color: '#13c2c2',              bgColor: 'rgba(19, 194, 194, 0.1)' },
-  DATA_IMPORT:      { icon: '📊', color: '#722ed1',              bgColor: 'rgba(114, 46, 209, 0.1)' },
-  EC_TAOBAO:        { icon: '🛒', color: '#ff4500',              bgColor: 'rgba(255, 69, 0, 0.1)' },
-  EC_TMALL:         { icon: '🏪', color: '#ff2d2d',              bgColor: 'rgba(255, 45, 45, 0.1)' },
-  EC_JD:            { icon: '🏬', color: '#e1251b',              bgColor: 'rgba(225, 37, 27, 0.1)' },
-  EC_DOUYIN:        { icon: '🎵', color: '#333333',              bgColor: 'rgba(0,0,0,0.06)' },
-  EC_PINDUODUO:     { icon: '🛍️', color: '#e02e24',              bgColor: 'rgba(224, 46, 36, 0.1)' },
-  EC_XIAOHONGSHU:   { icon: '📕', color: '#fe2c55',              bgColor: 'rgba(254, 44, 85, 0.1)' },
-  EC_WECHAT_SHOP:   { icon: '💬', color: '#07c160',              bgColor: 'rgba(7, 193, 96, 0.1)' },
-  EC_SHOPIFY:       { icon: '🌐', color: '#96bf48',              bgColor: 'rgba(150, 191, 72, 0.1)' },
+  ORDER_SYNC:       { icon: '', color: 'var(--color-primary)', bgColor: 'rgba(45, 127, 249, 0.1)' },
+  QUALITY_FEEDBACK: { icon: '', color: 'var(--color-success)', bgColor: 'rgba(34, 197, 94, 0.15)' },
+  LOGISTICS_SYNC:   { icon: '', color: 'var(--color-info)',    bgColor: 'rgba(114, 46, 209, 0.1)' },
+  PAYMENT_SYNC:     { icon: '', color: 'var(--color-warning)', bgColor: 'rgba(250, 140, 22, 0.1)' },
+  MATERIAL_SUPPLY:  { icon: '', color: '#13c2c2',              bgColor: 'rgba(19, 194, 194, 0.1)' },
+  DATA_IMPORT:      { icon: '', color: '#722ed1',              bgColor: 'rgba(114, 46, 209, 0.1)' },
+  EC_TAOBAO:        { icon: '', color: '#ff4500',              bgColor: 'rgba(255, 69, 0, 0.1)' },
+  EC_TMALL:         { icon: '', color: '#ff2d2d',              bgColor: 'rgba(255, 45, 45, 0.1)' },
+  EC_JD:            { icon: '', color: '#e1251b',              bgColor: 'rgba(225, 37, 27, 0.1)' },
+  EC_DOUYIN:        { icon: '', color: '#333333',              bgColor: 'rgba(0,0,0,0.06)' },
+  EC_PINDUODUO:     { icon: '', color: '#e02e24',              bgColor: 'rgba(224, 46, 36, 0.1)' },
+  EC_XIAOHONGSHU:   { icon: '', color: '#fe2c55',              bgColor: 'rgba(254, 44, 85, 0.1)' },
+  EC_WECHAT_SHOP:   { icon: '', color: '#07c160',              bgColor: 'rgba(7, 193, 96, 0.1)' },
+  EC_SHOPIFY:       { icon: '', color: '#96bf48',              bgColor: 'rgba(150, 191, 72, 0.1)' },
 };
 
 const IntegrationOverviewTab: React.FC = () => {
@@ -146,10 +146,10 @@ const IntegrationOverviewTab: React.FC = () => {
       </Row>
 
       {/* 四大模块卡片 */}
-      <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 12 }}>🔗 对接模块状态</div>
+      <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 12 }}> 对接模块状态</div>
       <Row gutter={16} style={{ marginBottom: 24 }}>
         {(overview?.modules || []).map((mod: IntegrationModuleInfo) => {
-          const cfg = MODULE_ICONS[mod.appType] || { icon: '🔌', color: 'var(--color-text-tertiary)', bgColor: 'var(--color-bg-subtle)' };
+          const cfg = MODULE_ICONS[mod.appType] || { icon: '', color: 'var(--color-text-tertiary)', bgColor: 'var(--color-bg-subtle)' };
           return (
             <Col span={6} key={mod.appType}>
               <Card
@@ -168,7 +168,7 @@ const IntegrationOverviewTab: React.FC = () => {
                     color={mod.connected ? 'success' : 'default'}
                     style={{ marginTop: 4 }}
                   >
-                    {mod.connected ? '✓ 已对接' : '未对接'}
+                    {mod.connected ? ' 已对接' : '未对接'}
                   </Tag>
                 </div>
 
@@ -202,11 +202,11 @@ const IntegrationOverviewTab: React.FC = () => {
         <Col span={12}>
           <Card
             size="small"
-            title="📡 API 端点速查"
+            title=" API 端点速查"
             style={{ minHeight: 360 }}
           >
             {(overview?.modules || []).map((mod: IntegrationModuleInfo) => {
-              const cfg = MODULE_ICONS[mod.appType] || { icon: '🔌', color: 'var(--color-text-tertiary)', bgColor: 'var(--color-bg-subtle)' };
+              const cfg = MODULE_ICONS[mod.appType] || { icon: '', color: 'var(--color-text-tertiary)', bgColor: 'var(--color-bg-subtle)' };
               const endpoints = getApiEndpoints(mod.appType);
               return (
                 <div key={mod.appType} style={{ marginBottom: 16 }}>
@@ -232,7 +232,7 @@ const IntegrationOverviewTab: React.FC = () => {
         <Col span={12}>
           <Card
             size="small"
-            title="📋 最近 API 调用"
+            title=" 最近 API 调用"
             style={{ minHeight: 360 }}
             extra={<Text type="secondary" style={{ fontSize: 12 }}>最新10条</Text>}
           >
@@ -517,7 +517,7 @@ const AppManagementTab: React.FC = () => {
         return (
           <Tooltip title={hasUrl ? '已配置接口地址' : '未配置接口地址，点击操作列编辑'}>
             <Tag color={hasUrl ? 'success' : 'warning'} style={{ fontSize: 11 }}>
-              {hasUrl ? '✓ 已配置' : '⚙ 待配置'}
+              {hasUrl ? ' 已配置' : ' 待配置'}
             </Tag>
           </Tooltip>
         );
@@ -673,7 +673,7 @@ const AppManagementTab: React.FC = () => {
           <div style={{ padding: '0 8px' }}>
             {newSecret && (
               <div style={{ background: 'rgba(250, 140, 22, 0.1)', border: '1px solid rgba(250, 140, 22, 0.5)', borderRadius: 8, padding: 16, marginBottom: 16 }}>
-                <div style={{ fontWeight: 700, color: 'var(--color-warning)', marginBottom: 8 }}>⚠️ 请妥善保管以下密钥（仅显示一次）</div>
+                <div style={{ fontWeight: 700, color: 'var(--color-warning)', marginBottom: 8 }}> 请妥善保管以下密钥（仅显示一次）</div>
                 <div style={{ marginBottom: 8 }}>
                   <Text strong>AppSecret: </Text>
                   <Text code copyable>{newSecret}</Text>
@@ -731,7 +731,7 @@ const AppManagementTab: React.FC = () => {
             {/* 接入示例 */}
             {selectedApp.exampleSnippet && (
               <div style={{ marginTop: 16 }}>
-                <div style={{ fontWeight: 600, marginBottom: 8 }}>📖 接入示例</div>
+                <div style={{ fontWeight: 600, marginBottom: 8 }}> 接入示例</div>
                 <pre style={{
                   background: 'var(--color-bg-base)', color: 'var(--color-text-secondary)', padding: 16, borderRadius: 8,
                   fontSize: 13, lineHeight: 1.5, overflow: 'auto', maxHeight: 300,

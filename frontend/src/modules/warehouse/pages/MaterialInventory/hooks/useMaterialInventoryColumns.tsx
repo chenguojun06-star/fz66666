@@ -221,7 +221,7 @@ export function useMaterialInventoryColumns({
                 fontSize: "var(--font-size-sm)",
                 color: '#fa8c16',
               }}>
-                💡 建议补货 <strong>{Math.max(0, safetyStock * 2 - availableQty - inTransitQty).toLocaleString()}</strong> {record.unit}
+                 建议补货 <strong>{Math.max(0, safetyStock * 2 - availableQty - inTransitQty).toLocaleString()}</strong> {record.unit}
               </div>
             )}
           </Space>
@@ -270,14 +270,14 @@ export function useMaterialInventoryColumns({
       render: (_, record) => (
         <Space orientation="vertical" size={6} style={{ width: '100%' }}>
           <div style={{ padding: '4px 8px', background: '#f0f9ff' }}>
-            <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--primary-color)', marginBottom: 2 }}>📥 最后入库</div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--primary-color)', marginBottom: 2 }}> 最后入库</div>
             <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-secondary)' }}>{record.lastInboundDate}</div>
             {record.lastInboundBy && (
               <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)' }}>操作人: {record.lastInboundBy}</div>
             )}
           </div>
           <div style={{ padding: '4px 8px', background: 'rgba(250, 140, 22, 0.1)' }}>
-            <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--warning-color-dark)', marginBottom: 2 }}>📤 最后出库</div>
+            <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--warning-color-dark)', marginBottom: 2 }}> 最后出库</div>
             <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-secondary)' }}>{record.lastOutboundDate}</div>
             {record.lastOutboundBy && (
               <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)' }}>操作人: {record.lastOutboundBy}</div>

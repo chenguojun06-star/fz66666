@@ -464,7 +464,7 @@ const MyBillingTab: React.FC = () => {
                 </Descriptions.Item>
               </Descriptions>
               <div style={{ marginTop: 12, padding: '10px 12px', background: '#fffbe6', borderRadius: 6, fontSize: 13, color: '#ad6800' }}>
-                ⚠️ 请联系管理员获取收款账号/收款码，并在转账备注中填写账单编号。
+                 请联系管理员获取收款账号/收款码，并在转账备注中填写账单编号。
               </div>
             </Card>
           </div>

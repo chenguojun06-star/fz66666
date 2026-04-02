@@ -64,8 +64,8 @@ export const message = new Proxy({} as MessageInstance, {
 /**
  * context-aware 的 modal 静态方法（confirm / info / success / error / warning）。
  * 替换 `Modal.confirm(...)` 等静态调用：
- *   ❌ Modal.confirm({ ... })
- *   ✅ modal.confirm({ ... })
+ *    Modal.confirm({ ... })
+ *    modal.confirm({ ... })
  *
  * 注意：JSX 中的 `<Modal>` 仍需从 antd 导入组件，不替换。
  */

@@ -2,10 +2,10 @@
  * 质检入库智能分析 — 从原始数据中挖掘风险、瓶颈、建议
  *
  * 不是傻白甜地堆数字，而是：
- * 1. 🔴 风险预判 — 质量异常在哪个尺码/颜色？对出货的影响？
- * 2. ⚡ 瓶颈识别 — 质检卡住了哪些件？裁剪与质检的进度差？
- * 3. 💡 行动建议 — 该查工艺？催质检？补裁？
- * 4. 📈 预计影响 — 按当前趋势，最终能入库多少件？
+ * 1.  风险预判 — 质量异常在哪个尺码/颜色？对出货的影响？
+ * 2.  瓶颈识别 — 质检卡住了哪些件？裁剪与质检的进度差？
+ * 3.  行动建议 — 该查工艺？催质检？补裁？
+ * 4.  预计影响 — 按当前趋势，最终能入库多少件？
  */
 import React from 'react';
 import { ProductWarehousing as WarehousingType } from '@/types/production';
@@ -85,7 +85,7 @@ export function analyzeQuality(orderRecs: WarehousingType[], isUrgent: boolean):
   if (rate < 70 && processed > 0) {
     verdict = 'critical';
     risks.push(`严重质量事故：整体合格率仅 ${rate}%（${totalQ}/${processed}件）。`);
-    suggestions.push('建议立刻按下全线暂停键⛔，封存同一批次面料，召集裁剪与车缝组长进行工艺还原排查！');
+    suggestions.push('建议立刻按下全线暂停键，封存同一批次面料，召集裁剪与车缝组长进行工艺还原排查！');
   } else if (rate < 85 && processed > 0 && rate >= 70) {
     verdict = 'warn';
     risks.push(`质量亮黄灯：合格率 ${rate}% 偏低，可能带来后续入库缺口。`);
@@ -134,20 +134,20 @@ export function analyzeQuality(orderRecs: WarehousingType[], isUrgent: boolean):
   // ── 预计影响 ──
   if (totalCut > 0 && rate > 0 && processed > 5) {
     const estimatedFinal = Math.round(totalCut * rate / 100);
-    impact.push(`📊 推演入库：凭过往合格率走势(${rate}%)，本次大盘预计最多斩获合格正品 ${estimatedFinal} 件。`);
+    impact.push(` 推演入库：凭过往合格率走势(${rate}%)，本次大盘预计最多斩获合格正品 ${estimatedFinal} 件。`);
     const shortfall = totalCut - estimatedFinal;
     if (shortfall > 0) {
-      impact.push(`⚠️ 产能战损：大概率将凭空流失 ${shortfall} 件，如缺口过大建议提前联系客户商议让步或立马下单补料补货。`);
+      impact.push(` 产能战损：大概率将凭空流失 ${shortfall} 件，如缺口过大建议提前联系客户商议让步或立马下单补料补货。`);
     }
   }
   if (totalW > 0 && totalCut > 0) {
     const warehousingRate = Math.round(totalW / totalCut * 100);
-    impact.push(`✅ 净库流转进度 ${warehousingRate}%（${totalW}/${totalCut}件）已落地上架`);
+    impact.push(` 净库流转进度 ${warehousingRate}%（${totalW}/${totalCut}件）已落地上架`);
   }
 
   // ── 急单特殊提示 ──
   if (isUrgent && verdict !== 'good') {
-    suggestions.unshift('⚡ VIP急批流转中！特事特办：全员让行为该单开辟绿色人工初筛，并强制实行组长跟线防呆。');
+    suggestions.unshift(' VIP急批流转中！特事特办：全员让行为该单开辟绿色人工初筛，并强制实行组长跟线防呆。');
   }
 
   // ── 全部合格的正面反馈 ──
@@ -167,7 +167,7 @@ export function renderQualityTooltip(insight: QualityInsight, _orderNo: string):
     <div style={{ fontSize: 12, maxWidth: 340, lineHeight: 1.7, color: '#333' }}>
       {/* 标题 + 状态标签 */}
       <div style={{ fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span>☁️ 智能质检分析</span>
+        <span> 智能质检分析</span>
         <span style={{
           fontSize: 10, padding: '1px 6px', borderRadius: 4,
           background: VERDICT_COLOR[insight.verdict], color: '#fff',
@@ -184,7 +184,7 @@ export function renderQualityTooltip(insight: QualityInsight, _orderNo: string):
       {insight.risks.length > 0 && (
         <div style={{ marginBottom: 6 }}>
           {insight.risks.map((r, i) => (
-            <div key={`r${i}`} style={{ color: '#d4380d' }}>⚠ {r}</div>
+            <div key={`r${i}`} style={{ color: '#d4380d' }}> {r}</div>
           ))}
         </div>
       )}
@@ -193,7 +193,7 @@ export function renderQualityTooltip(insight: QualityInsight, _orderNo: string):
       {insight.impact.length > 0 && (
         <div style={{ marginBottom: 6 }}>
           {insight.impact.map((line, i) => (
-            <div key={`i${i}`} style={{ color: '#1677ff' }}>📈 {line}</div>
+            <div key={`i${i}`} style={{ color: '#1677ff' }}> {line}</div>
           ))}
         </div>
       )}
@@ -202,7 +202,7 @@ export function renderQualityTooltip(insight: QualityInsight, _orderNo: string):
       {insight.suggestions.length > 0 && (
         <div>
           {insight.suggestions.map((s, i) => (
-            <div key={`s${i}`} style={{ color: '#389e0d' }}>💡 {s}</div>
+            <div key={`s${i}`} style={{ color: '#389e0d' }}> {s}</div>
           ))}
         </div>
       )}

@@ -30,7 +30,7 @@ const MaterialInventoryAISummary: React.FC<MaterialInventoryAISummaryProps> = ({
     if (lowStockCount === 0) {
       return {
         type: 'success' as const,
-        message: `✅ AI 库存摘要：当前 ${materialTypes} 类物料库存全部高于安全水位，总库存 ${totalQty.toLocaleString()} 件/米，供应保障良好，无需补货。`,
+        message: ` AI 库存摘要：当前 ${materialTypes} 类物料库存全部高于安全水位，总库存 ${totalQty.toLocaleString()} 件/米，供应保障良好，无需补货。`,
       };
     }
 
@@ -56,7 +56,7 @@ const MaterialInventoryAISummary: React.FC<MaterialInventoryAISummaryProps> = ({
 
     return {
       type: alertType as 'error' | 'warning' | 'info',
-      message: `🤖 AI 库存摘要：${lowStockCount} 种物料低于安全库存，建议尽快补货以避免影响在手订单排产。${urgentDesc}其余 ${Math.max(0, materialTypes - lowStockCount)} 类物料充足。`,
+      message: ` AI 库存摘要：${lowStockCount} 种物料低于安全库存，建议尽快补货以避免影响在手订单排产。${urgentDesc}其余 ${Math.max(0, materialTypes - lowStockCount)} 类物料充足。`,
     };
   }, [stats, alertList]);
 

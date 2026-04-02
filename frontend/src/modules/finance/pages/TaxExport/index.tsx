@@ -34,10 +34,10 @@ const FORMAT_OPTIONS = [
 ];
 
 const EXPORT_TYPES = [
-  { key: 'payroll', title: '工资结算汇总', desc: '导出指定周期内所有结算单数据，含结算金额、操作工姓名、工序明细', icon: '💰', color: '#52c41a' },
-  { key: 'material', title: '物料对账单', desc: '导出面辅料采购、出入库、对账数据，与供应商对账一目了然', icon: '📦', color: '#1890ff' },
-  { key: 'supplier-payment', title: '供应商付款汇总', desc: '导出应付账款、已付款、逾期明细，便于对账审计及供应商信用评估', icon: '🏭', color: '#722ed1' },
-  { key: 'tax-summary', title: '月度税务汇总', desc: '导出本期开票金额、税种税率、税额合计，可直接用于月度税务申报附表', icon: '📋', color: '#fa8c16' },
+  { key: 'payroll', title: '工资结算汇总', desc: '导出指定周期内所有结算单数据，含结算金额、操作工姓名、工序明细', icon: '', color: '#52c41a' },
+  { key: 'material', title: '物料对账单', desc: '导出面辅料采购、出入库、对账数据，与供应商对账一目了然', icon: '', color: '#1890ff' },
+  { key: 'supplier-payment', title: '供应商付款汇总', desc: '导出应付账款、已付款、逾期明细，便于对账审计及供应商信用评估', icon: '', color: '#722ed1' },
+  { key: 'tax-summary', title: '月度税务汇总', desc: '导出本期开票金额、税种税率、税额合计，可直接用于月度税务申报附表', icon: '', color: '#fa8c16' },
 ];
 
 const INVOICE_TYPES = [
@@ -841,7 +841,7 @@ const TaxExport: React.FC = () => {
       )}
       {subscribed && (
         <Alert type="success" showIcon
-          icon={subscriptionType === 'FREE' ? <span style={{ fontSize: 16 }}>🎁</span> : <RocketOutlined />}
+          icon={subscriptionType === 'FREE' ? <span style={{ fontSize: 16 }}></span> : <RocketOutlined />}
           style={{ marginBottom: 16 }}
           title={subscriptionType === 'FREE' ? '新开户赠送已激活 · 财税对接模块（1年免费）' : '已开通财税对接模块'}
           description={subscriptionType === 'FREE' ? '恭喜！金蝶 KIS / 用友 T3 专用格式均已为您解锁，有效期1年。' : '金蝶 KIS / 用友 T3 专用格式均已解锁。'} />

@@ -2,11 +2,11 @@
  * 物料采购智能分析 — 从采购数据中挖掘关键路径、供应商风险、裁剪可行性
  *
  * 分析维度：
- * 1. 🔴 关键路径 — 面料是裁剪前提，面料没到=整单卡死
- * 2. 🏭 供应商维度 — 谁快谁慢？谁超期？该催谁？
- * 3. ⚡ 裁剪可行性 — 能不能先开裁？辅料能不能后补？
- * 4. 💡 行动建议 — 具体该催谁、做什么、优先级
- * 5. 📈 预计影响 — 对生产进度和成本的影响
+ * 1.  关键路径 — 面料是裁剪前提，面料没到=整单卡死
+ * 2.  供应商维度 — 谁快谁慢？谁超期？该催谁？
+ * 3.  裁剪可行性 — 能不能先开裁？辅料能不能后补？
+ * 4.  行动建议 — 具体该催谁、做什么、优先级
+ * 5.  预计影响 — 对生产进度和成本的影响
  */
 import React from 'react';
 import { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
@@ -83,7 +83,7 @@ export function analyzePurchase(orderRecs: MaterialPurchaseType[]): PurchaseInsi
         suggestions.push(`待到：${pendingNames.join('、')}${[...pendingLinings, ...pendingAccessories].length > 3 ? '等' : ''}`);
       }
     } else {
-      criticalPath = '全部到齐 ✅';
+      criticalPath = '全部到齐 ';
     }
   } else if (fabrics.length === 0 && orderRecs.length > 0) {
     // 没有面料记录（可能是辅料单独采购）
@@ -92,7 +92,7 @@ export function analyzePurchase(orderRecs: MaterialPurchaseType[]): PurchaseInsi
       verdict = 'warn';
       criticalPath = `${pendingAll.length} 种物料未到`;
     } else {
-      criticalPath = '全部到齐 ✅';
+      criticalPath = '全部到齐 ';
     }
   }
 
@@ -183,7 +183,7 @@ export function renderPurchaseTooltip(insight: PurchaseInsight, _orderNo: string
     <div style={{ fontSize: 12, maxWidth: 360, lineHeight: 1.7, color: '#333' }}>
       {/* 标题 + 状态 */}
       <div style={{ fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-        <span>🤖 智能采购分析</span>
+        <span> 智能采购分析</span>
         <span style={{
           fontSize: 10, padding: '1px 6px', borderRadius: 4,
           background: VERDICT_COLOR[insight.verdict], color: '#fff',
@@ -193,13 +193,13 @@ export function renderPurchaseTooltip(insight: PurchaseInsight, _orderNo: string
       {/* 核心数据 */}
       <div style={{ marginBottom: 6, padding: '4px 8px', background: 'rgba(0,0,0,0.04)', borderRadius: 4, color: '#555' }}>
         {insight.totalMaterials} 种物料 · 到货率 {insight.arrivalRate}%
-        {insight.canStartCutting ? ' · ✂️ 可开裁' : ' · 🚫 不可开裁'}
+        {insight.canStartCutting ? ' ·  可开裁' : ' ·  不可开裁'}
       </div>
 
       {/* 关键路径 */}
       {insight.criticalPath && (
         <div style={{ marginBottom: 6, fontWeight: 500, color: '#262626' }}>
-          🎯 {insight.criticalPath}
+           {insight.criticalPath}
         </div>
       )}
 
@@ -207,7 +207,7 @@ export function renderPurchaseTooltip(insight: PurchaseInsight, _orderNo: string
       {insight.risks.length > 0 && (
         <div style={{ marginBottom: 6 }}>
           {insight.risks.map((r, i) => (
-            <div key={`r${i}`} style={{ color: '#d4380d' }}>⚠ {r}</div>
+            <div key={`r${i}`} style={{ color: '#d4380d' }}> {r}</div>
           ))}
         </div>
       )}
@@ -216,7 +216,7 @@ export function renderPurchaseTooltip(insight: PurchaseInsight, _orderNo: string
       {insight.supplierIssues.length > 0 && (
         <div style={{ marginBottom: 6 }}>
           {insight.supplierIssues.map((s, i) => (
-            <div key={`sp${i}`} style={{ color: '#595959' }}>🏭 {s}</div>
+            <div key={`sp${i}`} style={{ color: '#595959' }}> {s}</div>
           ))}
         </div>
       )}
@@ -225,7 +225,7 @@ export function renderPurchaseTooltip(insight: PurchaseInsight, _orderNo: string
       {insight.impact.length > 0 && (
         <div style={{ marginBottom: 6 }}>
           {insight.impact.map((line, i) => (
-            <div key={`i${i}`} style={{ color: '#1677ff' }}>📈 {line}</div>
+            <div key={`i${i}`} style={{ color: '#1677ff' }}> {line}</div>
           ))}
         </div>
       )}
@@ -234,7 +234,7 @@ export function renderPurchaseTooltip(insight: PurchaseInsight, _orderNo: string
       {insight.suggestions.length > 0 && (
         <div>
           {insight.suggestions.map((s, i) => (
-            <div key={`s${i}`} style={{ color: '#389e0d' }}>💡 {s}</div>
+            <div key={`s${i}`} style={{ color: '#389e0d' }}> {s}</div>
           ))}
         </div>
       )}

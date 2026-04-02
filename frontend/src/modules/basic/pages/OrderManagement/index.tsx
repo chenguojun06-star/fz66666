@@ -409,7 +409,7 @@ const OrderManagement: React.FC = () => {
             const effectiveUnit = calcBomBudgetQty(record) / divisor;
             return (
               <span title="已配置码数用量，此处为加权平均值">
-                {Number(effectiveUnit.toFixed(4))}<span style={{ color: 'var(--warning-color, #f7a600)', marginLeft: 2 }}>★</span>
+                {Number(effectiveUnit.toFixed(4))}<span style={{ color: 'var(--warning-color, #f7a600)', marginLeft: 2 }}></span>
               </span>
             );
           }
@@ -1657,7 +1657,7 @@ const OrderManagement: React.FC = () => {
                             />
                           </div>
                           <div style={{ fontSize: 11, color: '#8c8c8c', textAlign: 'center', marginTop: 4 }}>
-                            💰 悬停查看报价参考
+                             悬停查看报价参考
                           </div>
                         </div>
                       </StyleQuotePopover>
@@ -1760,7 +1760,7 @@ const OrderManagement: React.FC = () => {
                               placeholder="普通"
                               allowClear
                               options={[
-                                { label: '🔴 急单', value: 'urgent' },
+                                { label: ' 急单', value: 'urgent' },
                                 { label: '普通', value: 'normal' },
                               ]}
                             />
@@ -1824,7 +1824,7 @@ const OrderManagement: React.FC = () => {
                       {/* 下单数量 */}
                       <div style={{ marginBottom: 12 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                          <span style={{ fontWeight: 600 }}>📦 下单数量</span>
+                          <span style={{ fontWeight: 600 }}> 下单数量</span>
                           <Tag color="default">总计 {totalOrderQuantity} 件</Tag>
                         </div>
                         <MultiColorOrderEditor

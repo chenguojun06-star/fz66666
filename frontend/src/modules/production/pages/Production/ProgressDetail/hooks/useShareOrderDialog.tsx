@@ -83,7 +83,7 @@ export const useShareOrderDialog = ({ message }: UseShareOrderDialogOptions) => 
 
   const shareOrderDialog = (
     <Modal
-      title="👤 客户订单追踪链接"
+      title=" 客户订单追踪链接"
       open={shareModal.open}
       onCancel={closeShareModal}
       footer={

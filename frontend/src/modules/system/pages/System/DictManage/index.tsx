@@ -509,7 +509,7 @@ const DictManage: React.FC = () => {
           style={{ marginBottom: 12 }}
           type="info"
           showIcon
-          icon={<span>🤖</span>}
+          icon={<span></span>}
           title="词典自动收录已开启"
           description="AI 正在监听业务中新出现的词汇，自动放入待审池。请结合此页定期审核并拣优字典条目，确保业务词汇准确。如需关闭，可在“智能功能设置”中关闭。"
           banner={false}

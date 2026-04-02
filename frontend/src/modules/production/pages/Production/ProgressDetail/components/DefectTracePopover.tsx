@@ -75,13 +75,13 @@ const DefectTracePopover: React.FC<{
     <div style={{ width: 280, textAlign: 'center', padding: 16 }}><Spin size="small" /></div>
   ) : !data || data.totalDefects === 0 ? (
     <div style={{ width: 260, fontSize: 13, color: '#8c8c8c', textAlign: 'center', padding: 12 }}>
-      ✅ 该订单暂无次品记录
+       该订单暂无次品记录
     </div>
   ) : (
     <div style={{ width: 300, fontSize: 13 }}>
       {/* 标题 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <span style={{ fontWeight: 600, fontSize: 14 }}>🔍 次品溯源</span>
+        <span style={{ fontWeight: 600, fontSize: 14 }}> 次品溯源</span>
         <Tag color={data.overallDefectRate > 10 ? 'red' : data.overallDefectRate > 5 ? 'orange' : 'green'}>
           缺陷率 {data.overallDefectRate}%
         </Tag>
@@ -96,7 +96,7 @@ const DefectTracePopover: React.FC<{
       {/* 工人缺陷明细 */}
       {(data.workers?.length ?? 0) > 0 && (
         <>
-          <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 4 }}>👷 工人缺陷明细</div>
+          <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 4 }}> 工人缺陷明细</div>
           {data.workers.slice(0, 5).map((w, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', padding: '3px 0', gap: 6 }}>
               <span style={{ width: 56, flexShrink: 0, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -119,7 +119,7 @@ const DefectTracePopover: React.FC<{
       {/* 高频缺陷工序 */}
       {(data.hotProcesses?.length ?? 0) > 0 && (
         <>
-          <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 6, marginBottom: 4 }}>🔥 高频缺陷工序</div>
+          <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 6, marginBottom: 4 }}> 高频缺陷工序</div>
           {data.hotProcesses.map((p, i) => (
             <div key={i} style={{ display: 'flex', gap: 8, padding: '2px 0', fontSize: 12 }}>
               <span style={{ fontWeight: 500 }}>{p.processName}</span>
@@ -133,7 +133,7 @@ const DefectTracePopover: React.FC<{
       {/* 7天趋势（简化为mini sparkline数字） */}
       {(data.trend?.length ?? 0) > 0 && data.trend.some(t => t.defectCount > 0) && (
         <>
-          <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 6, marginBottom: 4 }}>📈 近7天趋势</div>
+          <div style={{ fontSize: 12, color: '#8c8c8c', marginTop: 6, marginBottom: 4 }}> 近7天趋势</div>
           <div style={{ display: 'flex', gap: 4, alignItems: 'flex-end' }}>
             {data.trend.map((t, i) => {
               const maxDefect = Math.max(...data.trend.map(d => d.defectCount), 1);
@@ -161,7 +161,7 @@ const DefectTracePopover: React.FC<{
       )}
 
       <div style={{ borderTop: '1px solid #f0f0f0', marginTop: 6, paddingTop: 6, color: '#8c8c8c', fontSize: 12 }}>
-        💡 悬停进度球查看次品溯源，点击查看扫码明细
+         悬停进度球查看次品溯源，点击查看扫码明细
       </div>
     </div>
   );

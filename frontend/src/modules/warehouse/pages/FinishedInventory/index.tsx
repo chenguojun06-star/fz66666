@@ -702,7 +702,7 @@ const _FinishedInventory: React.FC = () => {
 
         <Card>
           <div style={{ marginBottom: 16 }}>
-            <h2 style={{ margin: 0 }}>📦 成品进销存</h2>
+            <h2 style={{ margin: 0 }}> 成品进销存</h2>
           </div>
 
           <StandardToolbar
@@ -820,7 +820,7 @@ const _FinishedInventory: React.FC = () => {
                   marginBottom: 12,
                   color: 'var(--neutral-text)'
                 }}>
-                  📋 请选择需要出库的颜色和尺码，并输入数量：
+                   请选择需要出库的颜色和尺码，并输入数量：
                 </div>
                 <ResizableTable
                   storageKey="finished-inventory-sku"
@@ -859,7 +859,7 @@ const _FinishedInventory: React.FC = () => {
               {/* 发货信息 — 填写后自动回写关联电商订单 */}
               <Card size="small" style={{ background: '#fffbe6', border: '1px solid #ffe58f' }}>
                 <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, color: '#d46b08' }}>
-                  📦 发货信息（选填）—— 填写后将自动回写关联电商订单的发货状态和快递单号
+                   发货信息（选填）—— 填写后将自动回写关联电商订单的发货状态和快递单号
                 </div>
                 <Row gutter={12}>
                   <Col span={8}>
@@ -911,7 +911,7 @@ const _FinishedInventory: React.FC = () => {
                 fontSize: "var(--font-size-sm)",
                 color: 'var(--primary-color)'
               }}>
-                💡 提示：请在"出库数量"列输入需要出库的数量，系统将自动汇总。出库数量不能超过可用库存。
+                 提示：请在"出库数量"列输入需要出库的数量，系统将自动汇总。出库数量不能超过可用库存。
               </div>
             </Space>
           )}

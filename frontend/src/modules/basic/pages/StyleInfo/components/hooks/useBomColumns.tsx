@@ -1,5 +1,6 @@
-import { App, Form, Input, Button, Select, InputNumber, Tag, Space, Image } from 'antd';
+import { App, Form, Input, Button, Select, InputNumber, Tag, Space, Image, Tooltip } from 'antd';
 import type { FormInstance } from 'antd/es/form';
+import { QuestionCircleOutlined } from '@ant-design/icons';
 import { StyleBom } from '@/types/style';
 import RowActions from '@/components/common/RowActions';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
@@ -39,6 +40,7 @@ interface UseBomColumnsProps {
   cancel: () => void;
   edit: (record: StyleBom) => void;
   handleDelete: (id: unknown) => void;
+  isTempId: (id: unknown) => boolean;
   fetchMaterials: (page: number, keyword?: string) => Promise<void>;
   materialCreateForm: FormInstance;
   calcTotalPrice: (item: Partial<StyleBom>) => number;
@@ -63,6 +65,7 @@ export function useBomColumns({
   cancel,
   edit,
   handleDelete,
+  isTempId,
   fetchMaterials,
   materialCreateForm,
   calcTotalPrice,
@@ -292,36 +295,65 @@ export function useBomColumns({
       }
     },
     {
-      title: '单件用量',
-      dataIndex: 'usageAmount',
-      key: 'usageAmount',
-      width: 120,
-      editable: true,
+      title: '开发用量',
+      dataIndex: 'devUsageAmount',
+      key: 'devUsageAmount',
+      width: 100,
       render: (text: number, record: StyleBom) => {
         if (!locked && (tableEditable || isEditing(record))) {
           return (
-            <Form.Item name={rowName(record.id, 'usageAmount')} style={{ margin: 0 }} rules={[{ required: true, message: '必填' }]}>
-              <InputNumber min={0} step={0.01} style={{ width: '100%' }} />
+            <Form.Item name={rowName(record.id, 'devUsageAmount')} style={{ margin: 0 }}>
+              <InputNumber
+                min={0}
+                step={0.01}
+                style={{ width: '100%' }}
+                onChange={(val) => {
+                  if (val != null) {
+                    form.setFieldValue(rowName(record.id, 'usageAmount'), val);
+                  }
+                }}
+              />
             </Form.Item>
           );
         }
-        // 用量异常检测：与同类型面料的平均用量对比，偏差>20%时标警告
+        return text != null ? text : '-';
+      }
+    },
+    {
+      title: '单件用量',
+      dataIndex: 'usageAmount',
+      key: 'usageAmount',
+      width: 100,
+      render: (text: number, record: StyleBom) => {
+        const row = form.getFieldValue(String(record.id)) || {};
+        const devUsage = row.devUsageAmount ?? record.devUsageAmount;
+        const patternUsage = record.patternSizeUsageMap;
+        const hasPatternData = patternUsage && Object.keys(JSON.parse(patternUsage || '{}')).length > 0;
+        const displayValue = hasPatternData ? text : (devUsage ?? text);
+        if (!locked && (tableEditable || isEditing(record))) {
+          return (
+            <span style={{ color: '#8c8c8c' }}>
+              {displayValue != null ? displayValue : '-'}
+              {hasPatternData && <span style={{ fontSize: 10, marginLeft: 4, color: '#52c41a' }}>(纸样)</span>}
+            </span>
+          );
+        }
         const sameTypeRows = data.filter(r => r.materialType === record.materialType && typeof r.usageAmount === 'number' && r.usageAmount > 0);
         const anomalyEl = (() => {
-          if (sameTypeRows.length < 2 || !text || text <= 0) return null;
+          if (sameTypeRows.length < 2 || !displayValue || displayValue <= 0) return null;
           const avg = sameTypeRows.reduce((s, r) => s + r.usageAmount, 0) / sameTypeRows.length;
-          const deviation = Math.abs(text - avg) / avg;
+          const deviation = Math.abs(displayValue - avg) / avg;
           if (deviation <= 0.2) return null;
           const pct = Math.round(deviation * 100);
-          const isHigh = text > avg;
+          const isHigh = displayValue > avg;
           return (
             <span title={`同类面料平均用量 ${avg.toFixed(2)}，偏差 ${pct}%`}
               style={{ marginLeft: 6, color: '#fa8c16', cursor: 'help', fontSize: 12 }}>
-              ⚠️{isHigh ? `+${pct}%` : `-${pct}%`}
+              {isHigh ? `+${pct}%` : `-${pct}%`}
             </span>
           );
         })();
-        return <span>{text}{anomalyEl}</span>;
+        return <span>{displayValue != null ? displayValue : '-'}{anomalyEl}</span>;
       }
     },
     {
@@ -401,33 +433,28 @@ export function useBomColumns({
       }
     },
     {
-      title: '换算',
+      title: (
+        <Space size={4}>
+          换算
+          <Tooltip title="每公斤对应的米数，BOM单位为公斤时参与换算，辅料不换算">
+            <QuestionCircleOutlined style={{ color: '#8c8c8c', cursor: 'help' }} />
+          </Tooltip>
+        </Space>
+      ),
       dataIndex: 'conversionRate',
       key: 'conversionRate',
-      width: 220,
+      width: 120,
       render: (text: number, record: StyleBom) => {
         const value = Number(text ?? 1) || 1;
-        const formulaText = '每公斤对应的米数';
-        const exampleText = '示例：3米=1公斤，则填 3';
         const row = form.getFieldValue(String(record.id)) || {};
         const bomUnit = String(row.unit ?? record.unit ?? '').trim();
         const patternUnit = String(row.patternUnit ?? record.patternUnit ?? '米').trim();
         const canConvertToKg = isKilogramUnit(bomUnit) && isMeterUnit(patternUnit);
         if (!locked && (tableEditable || isEditing(record))) {
           return (
-            <div style={{ display: 'grid', gap: 4 }}>
-              <div style={{ fontSize: 11, color: '#595959', lineHeight: 1.4 }}>
-                {formulaText}
-              </div>
-              <Form.Item name={rowName(record.id, 'conversionRate')} style={{ margin: 0 }} initialValue={value}>
-                <InputNumber min={0} step={0.01} style={{ width: '100%' }} />
-              </Form.Item>
-              <div style={{ fontSize: 11, color: '#8c8c8c', lineHeight: 1.4 }}>
-                {canConvertToKg
-                  ? `${exampleText}；系统会用"米数 ÷ 换算值"算出公斤数`
-                  : '仅在纸样录入单位为米、BOM单位为公斤时参与换算'}
-              </div>
-            </div>
+            <Form.Item name={rowName(record.id, 'conversionRate')} style={{ margin: 0 }} initialValue={value}>
+              <InputNumber min={0} step={0.01} style={{ width: '100%' }} />
+            </Form.Item>
           );
         }
         if (!canConvertToKg) return '-';
@@ -628,24 +655,23 @@ export function useBomColumns({
         }
         if (tableEditable) {
           return (
-            <RowActions
-              maxInline={1}
-              actions={[
-                {
-                  key: 'delete',
-                  label: '删除',
-                  title: '删除',
-                  danger: true,
-                  onClick: () => {
-                    modal.confirm({
-                      width: '30vw',
-                      title: '确定删除?',
-                      onOk: () => handleDelete(record.id!),
-                    });
-                  },
-                },
-              ]}
-            />
+            <Button
+              size="small"
+              danger
+              onClick={() => {
+                if (isTempId(record.id)) {
+                  handleDelete(record.id!);
+                } else {
+                  modal.confirm({
+                    width: '30vw',
+                    title: '确定删除?',
+                    onOk: () => handleDelete(record.id!),
+                  });
+                }
+              }}
+            >
+              删除
+            </Button>
           );
         }
 
@@ -681,7 +707,7 @@ export function useBomColumns({
           />
         ) : (
           <RowActions
-            maxInline={2}
+            maxInline={3}
             actions={[
               {
                 key: 'edit',
@@ -705,11 +731,15 @@ export function useBomColumns({
                 danger: true,
                 disabled: editingKey !== '',
                 onClick: () => {
-                  modal.confirm({
-                    width: '30vw',
-                    title: '确定删除?',
-                    onOk: () => handleDelete(record.id!),
-                  });
+                  if (isTempId(record.id)) {
+                    handleDelete(record.id!);
+                  } else {
+                    modal.confirm({
+                      width: '30vw',
+                      title: '确定删除?',
+                      onOk: () => handleDelete(record.id!),
+                    });
+                  }
                 },
               },
             ]}

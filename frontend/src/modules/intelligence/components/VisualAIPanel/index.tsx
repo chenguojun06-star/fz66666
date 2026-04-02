@@ -89,9 +89,9 @@ const VisualAIPanel: React.FC = () => {
             onChange={v => setTaskType(v)}
             dropdownStyle={{ background: '#0d1b2e', border: '1px solid rgba(0,229,255,0.3)' }}
           >
-            <Option value="DEFECT_DETECT">🔍 缺陷检测</Option>
-            <Option value="STYLE_IDENTIFY">👗 款式识别</Option>
-            <Option value="COLOR_CHECK">🎨 颜色校验</Option>
+            <Option value="DEFECT_DETECT"> 缺陷检测</Option>
+            <Option value="STYLE_IDENTIFY"> 款式识别</Option>
+            <Option value="COLOR_CHECK"> 颜色校验</Option>
           </Select>
 
           <Input
@@ -197,7 +197,7 @@ const VisualAIPanel: React.FC = () => {
           {/* 建议 */}
           {result.suggestion && (
             <div className="vai-suggestion">
-              <span className="vai-suggest-icon">💡</span>
+              <span className="vai-suggest-icon"></span>
               {result.suggestion}
             </div>
           )}

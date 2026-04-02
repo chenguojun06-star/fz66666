@@ -113,7 +113,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
     }
 
     // 备用：boardStats 父工序级别
-    // ★ 提前规范化 boardStats key（"仓库入库"→"入库"），防止与 STAGES_DEF 生成重复同名条目
+    //  提前规范化 boardStats key（"仓库入库"→"入库"），防止与 STAGES_DEF 生成重复同名条目
     //   若不规范化，"仓库入库"(qty=10,pct=25%) 与 STAGES_DEF "入库"(qty=0,pct=0) 并存
     //   导致 AI 看到两条"入库"，错误地把 pct=0 那条识别为"未开始"
     const normBoardMap = new Map<string, number>(); // normalizedLabel → qty
@@ -189,7 +189,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
     if (isCompleted) return null;
     if (daysLeft === null) return null;
     if (daysLeft < 0) return { text: '已逾期', color: '#ff4d4f', bg: '#fff2f0' };
-    if (daysLeft <= 3 && prog < 80) return { text: '⚠ 高风险', color: '#ff4d4f', bg: '#fff2f0' };
+    if (daysLeft <= 3 && prog < 80) return { text: ' 高风险', color: '#ff4d4f', bg: '#fff2f0' };
     if (daysLeft <= 7 && prog < 50) return { text: '存在风险', color: '#fa8c16', bg: '#fffbe6' };
     if (daysLeft <= 14 && prog < 30) return { text: '需关注', color: '#fa8c16', bg: '#fffbe6' };
     return null;
@@ -231,7 +231,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
   }, [isCompleted, daysLeft, total, prog, speed]);
 
   /**
-   * ★ 核心显示逻辑
+   *  核心显示逻辑
    *
    * 分三类：
    *   inProgress  → pct > 0 && pct < 100（有扫码但未完成）— 全部显示
@@ -357,7 +357,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
           marginBottom: 8, fontSize: 11, color: '#1677ff',
           display: 'flex', alignItems: 'center', gap: 6,
         }}>
-          <span>🔮</span>
+          <span></span>
           <span>AI预测完工 <b>{predictHint.text}</b></span>
           {predictHint.confidence && <span style={{ color: '#8c8c8c' }}>置信{predictHint.confidence}</span>}
           {predictHint.remaining > 0 && <span style={{ color: '#8c8c8c' }}>剩{predictHint.remaining}件</span>}
@@ -386,7 +386,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
           marginBottom: 8, fontSize: 11, color: '#ff4d4f', fontWeight: 700,
           display: 'flex', alignItems: 'center', gap: 5,
         }}>
-          <span>🔴</span>
+          <span></span>
           <span>次品 {order.unqualifiedQuantity} 件，请核查质检记录</span>
         </div>
       )}
@@ -398,7 +398,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
           background: todayTask.color + '14',
           display: 'flex', alignItems: 'center', gap: 6, fontSize: 11,
         }}>
-          <span>🎯</span>
+          <span></span>
           <span style={{ fontWeight: 700, color: todayTask.color }}>
             今日需≥{todayTask.target}件
           </span>
@@ -450,7 +450,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
                       <span style={{
                         background: '#fff2f0', color: '#ff4d4f',
                         borderRadius: 8, padding: '0 5px', fontSize: 10, fontWeight: 700,
-                      }}>🔴瓶颈</span>
+                      }}>瓶颈</span>
                     )}
                     <div style={{ width: 60, flexShrink: 0, height: 4, background: '#f0f5ff', borderRadius: 2, overflow: 'hidden' }}>
                       <div style={{
@@ -470,7 +470,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
                         color: '#1677ff', background: '#e6f4ff',
                         padding: '0px 5px', borderRadius: 8, fontSize: 10, fontWeight: 600,
                       }}>
-                        👥 {s.workerCount}人
+                         {s.workerCount}人
                       </span>
                     )}
                     {s.workerCount > 0 && speed > 0 && (
@@ -538,7 +538,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
         </div>
       )}
 
-      {/* 🤖 智能进度分析 */}
+      {/*  智能进度分析 */}
       {progressInsight && renderProgressInsight(progressInsight)}
 
       {/* 跟单 + 备注 */}

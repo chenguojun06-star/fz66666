@@ -360,7 +360,7 @@ const BillingTab: React.FC = () => {
   return (
     <div>
       {/* 租户套餐列表 */}
-      <Typography.Title level={5} style={{ marginBottom: 12 }}>🏭 租户套餐一览</Typography.Title>
+      <Typography.Title level={5} style={{ marginBottom: 12 }}> 租户套餐一览</Typography.Title>
       <ResizableTable
         storageKey="customer-billing-tenants"
         rowKey="id"
@@ -376,7 +376,7 @@ const BillingTab: React.FC = () => {
 
       {/* 账单列表 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <Typography.Title level={5} style={{ margin: 0 }}>📋 账单记录</Typography.Title>
+        <Typography.Title level={5} style={{ margin: 0 }}> 账单记录</Typography.Title>
         <Space>
           <Select
             placeholder="筛选租户"

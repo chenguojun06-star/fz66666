@@ -124,7 +124,7 @@ export default function IntelligenceScreen() {
 
             {/* 左列：工厂排行 */}
             <div className="screen-col">
-              <div className="screen-panel-title">🏭 工厂产能排行</div>
+              <div className="screen-panel-title"> 工厂产能排行</div>
               {ranking?.ranks?.length ? (
                 ranking.ranks.slice(0, 8).map((r: any, i: number) => (
                   <div key={r.factoryName} className="screen-rank-row">
@@ -147,7 +147,7 @@ export default function IntelligenceScreen() {
 
             {/* 中列：进行中订单 */}
             <div className="screen-col">
-              <div className="screen-panel-title">📦 进行中订单</div>
+              <div className="screen-panel-title"> 进行中订单</div>
               {orders.slice(0, 10).map((o: any) => (
                 <div key={o.id} className="screen-order-row">
                   <span className="screen-order-no">{o.orderNo}</span>
@@ -171,7 +171,7 @@ export default function IntelligenceScreen() {
 
             {/* 右列：智能通知 & 物料缺口 */}
             <div className="screen-col">
-              <div className="screen-panel-title">🔔 智能提醒</div>
+              <div className="screen-panel-title"> 智能提醒</div>
               {notify?.items?.length ? (
                 notify.items.slice(0, 6).map((n: any, i: number) => (
                   <div key={i} className="screen-notify-row">
@@ -185,7 +185,7 @@ export default function IntelligenceScreen() {
 
               {shortage?.items?.length > 0 && (
                 <>
-                  <div className="screen-panel-title" style={{ marginTop: 24 }}>⚠️ 物料缺口</div>
+                  <div className="screen-panel-title" style={{ marginTop: 24 }}> 物料缺口</div>
                   {shortage.items.slice(0, 5).map((m: any, i: number) => (
                     <div key={i} className="screen-notify-row">
                       <span style={{ color: '#fa8c16', fontSize: 12 }}>缺</span>

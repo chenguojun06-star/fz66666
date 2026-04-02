@@ -30,10 +30,10 @@ const ProfileFeedbackModal: React.FC<Props> = ({
       <Form form={feedbackForm} layout="vertical" requiredMark={false}>
         <Form.Item label="分类" name="category" initialValue="BUG" rules={[{ required: true }]}>
           <Select options={[
-            { value: 'BUG', label: '🐛 系统缺陷' },
-            { value: 'SUGGESTION', label: '💡 功能建议' },
-            { value: 'QUESTION', label: '❓ 使用咨询' },
-            { value: 'OTHER', label: '📋 其他' },
+            { value: 'BUG', label: ' 系统缺陷' },
+            { value: 'SUGGESTION', label: ' 功能建议' },
+            { value: 'QUESTION', label: ' 使用咨询' },
+            { value: 'OTHER', label: ' 其他' },
           ]} />
         </Form.Item>
         <Form.Item label="标题" name="title" rules={[{ required: true, message: '请输入标题' }]}>

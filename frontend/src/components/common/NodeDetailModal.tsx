@@ -13,8 +13,6 @@ import { useNavigate } from 'react-router-dom';
 import { matchRecordToStage } from '@/utils/productionStage';
 import ProcessTrackingTable from '@/components/production/ProcessTrackingTable';
 import { getProductionProcessTracking } from '@/utils/api/production';
-import CuttingQuickPanel from './CuttingQuickPanel';
-import ProcurementQuickPanel from './ProcurementQuickPanel';
 
 const { Text } = Typography;
 
@@ -1145,7 +1143,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
             fontSize: 13,
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 16 }}>🎯</span>
+              <span style={{ fontSize: 16 }}></span>
               {predicting ? (
                 <span style={{ color: '#1677ff' }}>预测中…</span>
               ) : prediction?.predictedFinishTime ? (
@@ -1182,6 +1180,24 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
             )}
           </div>
         )}
+        {(nodeTypeKey === 'cutting' || nodeTypeKey === 'procurement') && (
+          <div style={{ marginBottom: 8 }}>
+            <Button
+              size="small"
+              style={(nodeStats?.percent || 0) >= 100 ? { color: '#999', borderColor: '#d9d9d9' } : {}}
+              onClick={() => _navigate(
+                nodeTypeKey === 'cutting'
+                  ? `/production/cutting?orderNo=${encodeURIComponent(orderSummary.orderNo || orderNo || '')}`
+                  : `/production/material?orderNo=${encodeURIComponent(orderSummary.orderNo || orderNo || '')}`
+              )}
+            >
+              {nodeTypeKey === 'cutting' ? ' 前往裁剪管理 →' : ' 前往物料采购 →'}
+              {(nodeStats?.percent || 0) >= 100 && (
+                <span style={{ color: '#999', marginLeft: 4 }}>（已完成）</span>
+              )}
+            </Button>
+          </div>
+        )}
         <Tabs
           activeKey={activeTab}
           onChange={setActiveTab}
@@ -1200,18 +1216,6 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                 key: 'operators',
                 label: <span><UserOutlined /> 操作员 ({operatorSummary.length})</span>,
                 children: renderOperatorsTab(),
-              },
-              // 裁剪节点快捷面板（跳转 + 领取）
-              nodeTypeKey === 'cutting' && {
-                key: 'cuttingPanel',
-                label: <span>✂ 裁剪管理</span>,
-                children: <CuttingQuickPanel orderId={orderId} orderNo={orderSummary.orderNo || orderNo} />,
-              },
-              // 采购节点快捷面板（跳转）
-              nodeTypeKey === 'procurement' && {
-                key: 'procurementPanel',
-                label: <span>📦 物料采购</span>,
-                children: <ProcurementQuickPanel orderNo={orderSummary.orderNo || orderNo} />,
               },
               // 工序跟踪（工资结算）- 所有大货生产都显示（不受 unitPrice 限制）
               !isPatternProduction && {

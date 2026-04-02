@@ -426,7 +426,7 @@ export default function AiExecutionPanel() {
 
       {/* ===== 执行结果模态框 ===== */}
       <Modal
-        title={executeResult?.success ? '✅ 执行成功' : '❌ 执行失败'}
+        title={executeResult?.success ? ' 执行成功' : ' 执行失败'}
         open={showResult}
         onOk={() => setShowResult(false)}
         onCancel={() => setShowResult(false)}

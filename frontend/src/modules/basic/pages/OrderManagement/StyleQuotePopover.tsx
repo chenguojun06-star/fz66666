@@ -95,7 +95,7 @@ const StyleQuotePopover: React.FC<{
     <div style={{ width: SMART_CARD_CONTENT_WIDTH, fontSize: 13, boxSizing: 'border-box' }}>
       {/* 标题 */}
       <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>
-        💰 报价参考 <span style={{ fontSize: 12, fontWeight: 400, color: '#8c8c8c' }}>{data.styleNo}</span>
+         报价参考 <span style={{ fontSize: 12, fontWeight: 400, color: '#8c8c8c' }}>{data.styleNo}</span>
       </div>
 
       {/* 成本分解 */}
@@ -128,7 +128,7 @@ const StyleQuotePopover: React.FC<{
       {/* 现有报价引用 */}
       {data.currentQuotation != null && data.currentQuotation > 0 && (
         <div style={{ fontSize: 12, color: '#595959', marginBottom: 6 }}>
-          📋 现有报价单价：<b>{fmt(data.currentQuotation)}</b>
+           现有报价单价：<b>{fmt(data.currentQuotation)}</b>
         </div>
       )}
 
@@ -136,7 +136,7 @@ const StyleQuotePopover: React.FC<{
       {(data.recentOrders?.length ?? 0) > 0 && (
         <>
           <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 4 }}>
-            📦 最近 {data.historicalOrderCount} 个订单（共 {data.historicalTotalQuantity} 件）
+             最近 {data.historicalOrderCount} 个订单（共 {data.historicalTotalQuantity} 件）
           </div>
           <div style={{ maxHeight: 120, overflowY: 'auto' }}>
             {data.recentOrders.slice(0, 5).map((o, i) => {

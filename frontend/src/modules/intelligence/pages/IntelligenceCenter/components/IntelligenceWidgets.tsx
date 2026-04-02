@@ -121,8 +121,8 @@ export const KpiPop: React.FC<{
         <span className="kpi-pop-value" style={it.color ? { color: it.color } : undefined}>{it.value}</span>
       </div>
     ))}
-    {warning && <div className="kpi-pop-warn">⚠️ {warning}</div>}
-    {aiTip   && <div className="kpi-pop-ai">🤖 AI 预测：{aiTip}</div>}
+    {warning && <div className="kpi-pop-warn"> {warning}</div>}
+    {aiTip   && <div className="kpi-pop-ai"> AI 预测：{aiTip}</div>}
   </div>
 );
 

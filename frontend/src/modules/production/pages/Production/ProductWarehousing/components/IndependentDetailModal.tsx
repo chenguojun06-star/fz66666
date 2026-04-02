@@ -359,7 +359,7 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
             },
             {
               key: 'size-chart',
-              label: '📏 尺寸表',
+              label: ' 尺寸表',
               children: (
                 <Card size="small" style={{ height: '100%' }}>
                   {styleId ? (

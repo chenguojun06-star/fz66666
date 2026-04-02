@@ -98,7 +98,7 @@ const VideoPlayerBlock: React.FC<{ url: string }> = ({ url }) => {
         }
       />
       <Button type="primary" onClick={() => window.open(u, '_blank')}>
-        🎬 点击播放视频
+         点击播放视频
       </Button>
     </Space>
   );
@@ -174,7 +174,7 @@ const SystemTutorial: React.FC = () => {
 
       {/* 快速指引 */}
       <Alert
-        title="💡 新手指引"
+        title=" 新手指引"
         description={
           <div>
             <p style={{ marginBottom: 8 }}>
@@ -182,10 +182,10 @@ const SystemTutorial: React.FC = () => {
             </p>
             <Timeline
               items={[
-                { content: '1️⃣ 先学习「生产订单创建」和「人员与权限管理」了解系统基础' },
-                { content: '2️⃣ 掌握「裁剪单生成」和「小程序扫码工序」进行实操练习' },
-                { content: '3️⃣ 学习「质检入库」和「面辅料管理」完善生产流程' },
-                { content: '4️⃣ 最后学习「对账与财务结算」掌握完整业务闭环' },
+                { content: '1⃣ 先学习「生产订单创建」和「人员与权限管理」了解系统基础' },
+                { content: '2⃣ 掌握「裁剪单生成」和「小程序扫码工序」进行实操练习' },
+                { content: '3⃣ 学习「质检入库」和「面辅料管理」完善生产流程' },
+                { content: '4⃣ 最后学习「对账与财务结算」掌握完整业务闭环' },
               ]}
             />
           </div>
@@ -260,7 +260,7 @@ const SystemTutorial: React.FC = () => {
                   items={[
                     {
                       key: 'steps',
-                      label: '📖 操作步骤',
+                      label: ' 操作步骤',
                       children: (
                         <Steps
                           orientation="vertical"
@@ -277,7 +277,7 @@ const SystemTutorial: React.FC = () => {
                                 <Paragraph>{step.description}</Paragraph>
                                 {step.tips && step.tips.length > 0 && (
                                   <Alert
-                                    title="💡 温馨提示"
+                                    title=" 温馨提示"
                                     description={
                                       <ul style={{ margin: '8px 0', paddingLeft: 20 }}>
                                         {step.tips.map((tip, i) => (
@@ -307,7 +307,7 @@ const SystemTutorial: React.FC = () => {
                     },
                     ...(tutorial.faqs && tutorial.faqs.length > 0 ? [{
                       key: 'faqs',
-                      label: '❓ 常见问题',
+                      label: ' 常见问题',
                       children: (
                         <Collapse
                           accordion
@@ -326,7 +326,7 @@ const SystemTutorial: React.FC = () => {
                     }] : []),
                     ...(tutorial.videoUrl ? [{
                       key: 'video',
-                      label: '🎬 视频教程',
+                      label: ' 视频教程',
                       children: <VideoPlayerBlock url={tutorial.videoUrl} />,
                     }] : []),
                   ]}

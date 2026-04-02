@@ -247,7 +247,7 @@ const _MaterialInventory: React.FC = () => {
 
         <Card>
           <div style={{ marginBottom: 16 }}>
-            <h2 style={{ margin: 0 }}>📦 物料进销存</h2>
+            <h2 style={{ margin: 0 }}> 物料进销存</h2>
           </div>
 
           <StandardToolbar
@@ -305,7 +305,7 @@ const _MaterialInventory: React.FC = () => {
               <Badge count={pendingPickings.length} style={{ backgroundColor: '#faad14' }} />
               <Tooltip title="采购侧点击「仓库领取」后，需由仓库在此处确认出库才会实际扣减库存">
                 <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)', cursor: 'help' }}>
-                  ❓ 什么是待出库
+                   什么是待出库
                 </span>
               </Tooltip>
             </Space>
@@ -469,7 +469,7 @@ const _MaterialInventory: React.FC = () => {
               children: (
                 <Card>
                   <div style={{ marginBottom: 16 }}>
-                    <h2 style={{ margin: 0 }}>📋 面辅料领取记录</h2>
+                    <h2 style={{ margin: 0 }}> 面辅料领取记录</h2>
                   </div>
                   <StandardToolbar
                     left={(
@@ -592,7 +592,7 @@ const _MaterialInventory: React.FC = () => {
               children: (
                 <Card>
                   <div style={{ marginBottom: 16 }}>
-                    <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, marginBottom: 4 }}>💰 面辅料领取应收汇总</div>
+                    <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, marginBottom: 4 }}> 面辅料领取应收汇总</div>
                     <div style={{ color: 'var(--color-text-secondary)', fontSize: 'var(--font-size-sm)' }}>
                       领取记录审核通过后会自动生成应收账单，这里按工厂汇总待收/已收金额，并推动到收款中心登记回款。
                     </div>
@@ -750,7 +750,7 @@ const _MaterialInventory: React.FC = () => {
                   marginBottom: 8,
                   color: 'var(--primary-color)'
                 }}>
-                  🧵 面料属性
+                   面料属性
                 </div>
                 <Space orientation="vertical" size={8} style={{ width: '100%' }}>
                   <div style={{ fontSize: 'var(--font-size-sm)' }}>
@@ -1035,7 +1035,7 @@ const _MaterialInventory: React.FC = () => {
               return (
                 <Row gutter={12} style={{ background: '#f0f7ff', borderRadius: 6, padding: '8px 6px 0', marginBottom: 12 }}>
                   <Col span={24} style={{ marginBottom: 6 }}>
-                    <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--primary-color)' }}>🧵 面料属性</span>
+                    <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--primary-color)' }}> 面料属性</span>
                   </Col>
                   <Col span={8}>
                     <Form.Item label="幅宽" name="fabricWidth">
@@ -1123,7 +1123,7 @@ const _MaterialInventory: React.FC = () => {
                 {/* 右栏：面料属性（仅面料显示） */}
                 {getMaterialTypeCategory(outboundModal.data.materialType) === 'fabric' && (
                   <Col span={11} style={{ paddingLeft: 16 }}>
-                    <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--primary-color)', marginBottom: 10 }}>🧵 面料属性</div>
+                    <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--primary-color)', marginBottom: 10 }}> 面料属性</div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px' }}>
                       <div style={{ fontSize: 'var(--font-size-sm)' }}>
                         <span style={{ color: 'var(--neutral-text-disabled)' }}>克重：</span>
@@ -1288,7 +1288,7 @@ const _MaterialInventory: React.FC = () => {
                 marginBottom: 12,
                 color: 'var(--neutral-text)'
               }}>
-                📋 请选择需要出库的批次，并输入数量：
+                 请选择需要出库的批次，并输入数量：
               </div>
               <ResizableTable
                 storageKey="material-inventory-batch-out"
@@ -1401,7 +1401,7 @@ const _MaterialInventory: React.FC = () => {
               fontSize: "var(--font-size-sm)",
               color: 'var(--primary-color)'
             }}>
-              💡 提示：请在"出库数量"列输入需要出库的数量，系统将自动汇总。出库数量不能超过可用库存。
+               提示：请在"出库数量"列输入需要出库的数量，系统将自动汇总。出库数量不能超过可用库存。
             </div>
           </Space>
         )}
@@ -1528,8 +1528,8 @@ const _MaterialInventory: React.FC = () => {
         <Form form={pickupData.batchAuditForm} layout="vertical">
           <Form.Item name="action" label="审核结果" rules={[{ required: true, message: '请选择审核结果' }]}>
             <Select placeholder="请选择">
-              <Option value="approve">✅ 通过</Option>
-              <Option value="reject">❌ 拒绝</Option>
+              <Option value="approve"> 通过</Option>
+              <Option value="reject"> 拒绝</Option>
             </Select>
           </Form.Item>
           <Form.Item name="remark" label="审核备注">

@@ -41,7 +41,7 @@ export function useKpiPopovers({ data, currentKpiMetrics, now }: Props) {
         { label: '在线员工',  value: `${pulse?.activeWorkers ?? '—'} 人` },
         { label: '停工预警',  value: `${pulse?.stagnantFactories?.length ?? 0} 家`, color: (pulse?.stagnantFactories?.length ?? 0) > 0 ? '#ff4136' : '#39ff14' },
         ...(ranking?.rankings?.slice(0, 3).map((r, i) => ({
-          label: (['🥇 ', '🥈 ', '🥉 '][i] ?? '') + r.factoryName,
+          label: ([' ', ' ', ' '][i] ?? '') + r.factoryName,
           value: `${r.totalScore} 分`,
           color: (['#ffd700', '#c0c0c0', '#cd7f32'][i] as string | undefined),
         })) ?? []),

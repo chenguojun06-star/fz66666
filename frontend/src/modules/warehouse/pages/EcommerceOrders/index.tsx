@@ -18,14 +18,14 @@ const { Text } = Typography;
 const { Option } = Select;
 
 const PLATFORM_MAP: Record<string, { name: string; emoji: string; color: string }> = {
-  TAOBAO:      { name: '淘宝',   emoji: '🟠', color: 'orange' },
-  TMALL:       { name: '天猫',   emoji: '🐱', color: 'red' },
-  JD:          { name: '京东',   emoji: '🔴', color: 'volcano' },
-  DOUYIN:      { name: '抖音',   emoji: '🎵', color: 'default' },
-  PINDUODUO:   { name: '拼多多', emoji: '🛒', color: 'red' },
-  XIAOHONGSHU: { name: '小红书', emoji: '📕', color: 'magenta' },
-  WECHAT_SHOP: { name: '视频号', emoji: '💚', color: 'green' },
-  SHOPIFY:     { name: 'Shopify',emoji: '🟢', color: 'purple' },
+  TAOBAO:      { name: '淘宝',   emoji: '', color: 'orange' },
+  TMALL:       { name: '天猫',   emoji: '', color: 'red' },
+  JD:          { name: '京东',   emoji: '', color: 'volcano' },
+  DOUYIN:      { name: '抖音',   emoji: '', color: 'default' },
+  PINDUODUO:   { name: '拼多多', emoji: '', color: 'red' },
+  XIAOHONGSHU: { name: '小红书', emoji: '', color: 'magenta' },
+  WECHAT_SHOP: { name: '视频号', emoji: '', color: 'green' },
+  SHOPIFY:     { name: 'Shopify',emoji: '', color: 'purple' },
 };
 const STATUS_MAP: Record<number, { label: string; color: string }> = {
   0: { label: '待付款', color: 'default' },
@@ -165,7 +165,7 @@ const OrdersTab: React.FC = () => {
     {
       title: '平台', dataIndex: 'sourcePlatformCode', width: 88,
       render: code => {
-        const p = PLATFORM_MAP[code] ?? { name: code, emoji: '🛒', color: 'default' };
+        const p = PLATFORM_MAP[code] ?? { name: code, emoji: '', color: 'default' };
         return <Tag color={p.color}>{p.emoji} {p.name}</Tag>;
       },
     },
@@ -203,7 +203,7 @@ const OrdersTab: React.FC = () => {
               width: 44, height: 44, background: '#f5f5f5', borderRadius: 4,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 22, color: '#bbb',
-            }}>👗</div>;
+            }}></div>;
       },
     },
     {

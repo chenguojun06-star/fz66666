@@ -40,12 +40,12 @@ const { Text } = Typography;
 
 // ── 图标映射
 const STAGE_ICONS: Record<string, string> = {
-  procurement:      '📦',
-  cutting:          '✂️',
-  carSewing:        '🧵',
-  secondaryProcess: '🔧',
-  tailProcess:      '🏷️',
-  warehousing:      '🏭',
+  procurement:      '',
+  cutting:          '',
+  carSewing:        '',
+  secondaryProcess: '',
+  tailProcess:      '',
+  warehousing:      '',
 };
 
 // ── 生成简短 ID（避免 uuid 依赖）
@@ -123,7 +123,7 @@ function EntryEditor({ node, entry, onChange }: EntryEditorProps) {
       {node.unitPrice !== undefined && (
         <div style={{ marginBottom: 10 }}>
           <Text type="secondary" style={{ fontSize: 12 }}>
-            ⚠️&nbsp;父节点单价&nbsp;
+            &nbsp;父节点单价&nbsp;
             <Text strong style={{ fontSize: 12 }}>¥{node.unitPrice}</Text>
             &nbsp;—&nbsp;不可修改，不影响工资结算
           </Text>
@@ -377,7 +377,7 @@ export default function SubProcessRemapDrawer({
           color: '#78350f',
         }}
       >
-        <strong>📌 使用方法：</strong>
+        <strong> 使用方法：</strong>
         点击左侧父工序展开 → 在该节点下添加子工序步骤。
         <br />
         <strong>不修改父节点结构、不影响下单单价与工资结算。</strong>

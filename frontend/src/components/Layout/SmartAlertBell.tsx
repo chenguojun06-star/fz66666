@@ -434,7 +434,7 @@ const SmartAlertBell: React.FC = () => {
             {visibleNotices.length > 0 && (
               <div className="sap-section">
                 <div className="sap-section-title">
-                  <span style={{ color: '#d46b08' }}>📤</span> 我的通知
+                  <span style={{ color: '#d46b08' }}></span> 我的通知
                   {visibleNotices.filter(n => !n.isRead).length > 0 && (
                     <span style={{ marginLeft: 4, fontSize: 10, background: '#ffa940', color: '#fff', borderRadius: 8, padding: '0 5px' }}>
                       {visibleNotices.filter(n => !n.isRead).length} 未读

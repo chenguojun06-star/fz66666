@@ -89,7 +89,7 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
             lineHeight: '1.6',
           }}
         >
-          <div style={{ fontWeight: 600, marginBottom: '4px' }}>✂️ 本次拆菲新生成的子菲号</div>
+          <div style={{ fontWeight: 600, marginBottom: '4px' }}> 本次拆菲新生成的子菲号</div>
           <div>{highlightedBundles.map((item) => String(item.bundleLabel || item.bundleNo || '-')).join('、')}</div>
         </div>
       )}

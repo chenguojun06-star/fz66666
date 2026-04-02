@@ -7,9 +7,9 @@ import { message } from '@/utils/antdStatic';
 const { TextArea } = Input;
 
 const BROADCAST_TYPES = [
-  { value: 'upgrade',      label: '🔧 系统升级' },
-  { value: 'maintenance',  label: '🛠️ 系统维护' },
-  { value: 'announcement', label: '📢 重要公告' },
+  { value: 'upgrade',      label: ' 系统升级' },
+  { value: 'maintenance',  label: ' 系统维护' },
+  { value: 'announcement', label: ' 重要公告' },
 ];
 
 const BroadcastTab: React.FC = () => {

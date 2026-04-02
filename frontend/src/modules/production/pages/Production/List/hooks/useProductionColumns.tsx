@@ -390,7 +390,7 @@ export function useProductionColumns({
           );
         }
 
-        // ★ 采购节点：有到货即显示 ✓（不显示件数比），进度锁 100% 避免波浪死循环
+        //  采购节点：有到货即显示 （不显示件数比），进度锁 100% 避免波浪死循环
         const procurePercent = (rate || 0) > 0 ? 100 : 0;
         return (
           <div
@@ -401,7 +401,7 @@ export function useProductionColumns({
           >
             {renderCompletionTimeTag(record, '采购', rate || 0)}
             <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
-              {(rate || 0) > 0 ? '✓' : ''}
+              {(rate || 0) > 0 ? '' : ''}
             </div>
             <LiquidProgressBar percent={procurePercent} width="100%" height={16} status={colorStatus} />
           </div>
@@ -586,11 +586,11 @@ export function useProductionColumns({
         const dLeft = planEnd ? planEnd.diff(dayjs(), 'day') : null;
         let riskTag: { text: string; color: string } | null = null;
         if (s !== 'completed' && dLeft !== null && prog < 100) {
-          if (dLeft < 0)                          riskTag = { text: '🔴 已逾期', color: '#ff4d4f' };
-          else if (dLeft <= 3  && prog < 80)      riskTag = { text: '🔴 严重偏慢', color: '#ff4d4f' };
-          else if (dLeft <= 7  && prog < 50)      riskTag = { text: '🟡 进度偏慢', color: '#fa8c16' };
-          else if (dLeft <= 14 && prog < 30)      riskTag = { text: '🟡 需关注', color: '#faad14' };
-          else if (prog >= 80 && dLeft >= 3)      riskTag = { text: '🟢 顺利', color: '#52c41a' };
+          if (dLeft < 0)                          riskTag = { text: ' 已逾期', color: '#ff4d4f' };
+          else if (dLeft <= 3  && prog < 80)      riskTag = { text: ' 严重偏慢', color: '#ff4d4f' };
+          else if (dLeft <= 7  && prog < 50)      riskTag = { text: ' 进度偏慢', color: '#fa8c16' };
+          else if (dLeft <= 14 && prog < 30)      riskTag = { text: ' 需关注', color: '#faad14' };
+          else if (prog >= 80 && dLeft >= 3)      riskTag = { text: ' 顺利', color: '#52c41a' };
         }
         const aiRisk = deliveryRiskMap?.get(String(record.orderNo || ''));
         return (
@@ -607,7 +607,7 @@ export function useProductionColumns({
                 fontSize: 10, fontWeight: 700,
                 color: aiRisk.riskLevel === 'overdue' ? '#ff4d4f' : aiRisk.riskLevel === 'danger' ? '#fa8c16' : '#faad14',
               }}>
-                🤖 {dayjs(aiRisk.predictedEndDate).format('M/D完工')}
+                 {dayjs(aiRisk.predictedEndDate).format('M/D完工')}
                 {aiRisk.riskLevel === 'overdue' ? '·逾期风险' : aiRisk.riskLevel === 'danger' ? '·存在风险' : '·需关注'}
               </span>
             )}
@@ -649,7 +649,7 @@ export function useProductionColumns({
                 title: frozen ? '工序（订单已关单）' : '查看工序详情',
                 disabled: frozen,
                 children: [
-                  { key: 'all', label: '📋 全部工序', onClick: () => openProcessDetail(record, 'all') },
+                  { key: 'all', label: ' 全部工序', onClick: () => openProcessDetail(record, 'all') },
                   { type: 'divider' },
                   ...(!directCutting ? [{ key: 'procurement', label: '采购', onClick: () => openProcessDetail(record, 'procurement') }] : []),
                   { key: 'cutting', label: '裁剪', onClick: () => openProcessDetail(record, 'cutting') },
@@ -657,7 +657,7 @@ export function useProductionColumns({
                   ...(hasSecondaryProcessForOrder(record) ? [{ key: 'secondaryProcess', label: '二次工艺', onClick: () => openProcessDetail(record, 'secondaryProcess') }] : []),
                   { key: 'tailProcess', label: '尾部', onClick: () => openProcessDetail(record, 'tailProcess') },
                   { type: 'divider' },
-                  { key: 'syncProcess', label: '🔄 从模板同步', onClick: () => syncProcessFromTemplate(record) },
+                  { key: 'syncProcess', label: ' 从模板同步', onClick: () => syncProcessFromTemplate(record) },
                 ],
               }] as RowAction[] : []),
               ...(isFactoryAccount && openSubProcessRemap ? [{
@@ -698,7 +698,7 @@ export function useProductionColumns({
               ] : []),
               {
                 key: 'share',
-                label: '🔗 分享',
+                label: ' 分享',
                 title: '生成客户查看链接（30天有效）',
                 onClick: () => handleShareOrder(record),
               },

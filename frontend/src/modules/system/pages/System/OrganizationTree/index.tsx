@@ -621,14 +621,14 @@ const OrganizationTreePage: React.FC = () => {
               [
                 {
                   type: 'FACTORY' as const,
-                  icon: '🏭',
+                  icon: '',
                   label: '工厂 / 车间',
                   desc: '适合外发工厂、合作供应商',
                   children: ['车间一', '车间二', '车间三'],
                 },
                 {
                   type: 'INTERNAL' as const,
-                  icon: '🏢',
+                  icon: '',
                   label: '公司内部',
                   desc: '适合公司内部管理部门',
                   children: ['生产部门', '财务部门', '行政部门'],
@@ -699,7 +699,7 @@ const OrganizationTreePage: React.FC = () => {
                 创建预览
               </div>
               <div style={{ marginBottom: 4 }}>
-                📁 <strong>{tplModal.rootName || '(待填写)'}</strong>
+                 <strong>{tplModal.rootName || '(待填写)'}</strong>
               </div>
               {(tplModal.type === 'FACTORY'
                 ? ['车间一', '车间二', '车间三']

@@ -42,23 +42,23 @@ interface OrderForm {
 
 // 模块图标 + 颜色配置
 const MODULE_CONFIG: Record<string, { icon: string; color: string; urlHint: string }> = {
-  ORDER_SYNC: { icon: '📦', color: 'var(--color-primary)', urlHint: '如: https://your-erp.com/api/order-callback' },
-  QUALITY_FEEDBACK: { icon: '✅', color: 'var(--color-success)', urlHint: '如: https://your-system.com/webhook/quality' },
-  LOGISTICS_SYNC: { icon: '🚚', color: 'var(--color-info)', urlHint: '如: https://your-system.com/webhook/logistics' },
-  PAYMENT_SYNC: { icon: '💰', color: 'var(--color-warning)', urlHint: '如: https://your-finance.com/api/payment' },
+  ORDER_SYNC: { icon: '', color: 'var(--color-primary)', urlHint: '如: https://your-erp.com/api/order-callback' },
+  QUALITY_FEEDBACK: { icon: '', color: 'var(--color-success)', urlHint: '如: https://your-system.com/webhook/quality' },
+  LOGISTICS_SYNC: { icon: '', color: 'var(--color-info)', urlHint: '如: https://your-system.com/webhook/logistics' },
+  PAYMENT_SYNC: { icon: '', color: 'var(--color-warning)', urlHint: '如: https://your-finance.com/api/payment' },
   // 电商平台 — 所有 EC_* 均展示「开通后自动获得」区块
-  EC_TAOBAO:      { icon: '🟠', color: '#FF6600', urlHint: '如: https://your-system.com/webhook/taobao' },
-  EC_TMALL:       { icon: '🐱', color: '#D40016', urlHint: '如: https://your-system.com/webhook/tmall' },
-  EC_JD:          { icon: '🔴', color: '#CC0000', urlHint: '如: https://your-system.com/webhook/jd' },
-  EC_DOUYIN:      { icon: '🎵', color: '#161823', urlHint: '如: https://your-system.com/webhook/douyin' },
-  EC_PINDUODUO:   { icon: '🛒', color: '#CC2B2B', urlHint: '如: https://your-system.com/webhook/pdd' },
-  EC_XIAOHONGSHU: { icon: '📕', color: '#FF2442', urlHint: '如: https://your-system.com/webhook/xiaohongshu' },
-  EC_WECHAT_SHOP: { icon: '💚', color: '#07C160', urlHint: '如: https://your-system.com/webhook/wechat-shop' },
-  EC_SHOPIFY:     { icon: '🟢', color: '#5C6AC4', urlHint: '如: https://your-system.com/webhook/shopify' },
+  EC_TAOBAO:      { icon: '', color: '#FF6600', urlHint: '如: https://your-system.com/webhook/taobao' },
+  EC_TMALL:       { icon: '', color: '#D40016', urlHint: '如: https://your-system.com/webhook/tmall' },
+  EC_JD:          { icon: '', color: '#CC0000', urlHint: '如: https://your-system.com/webhook/jd' },
+  EC_DOUYIN:      { icon: '', color: '#161823', urlHint: '如: https://your-system.com/webhook/douyin' },
+  EC_PINDUODUO:   { icon: '', color: '#CC2B2B', urlHint: '如: https://your-system.com/webhook/pdd' },
+  EC_XIAOHONGSHU: { icon: '', color: '#FF2442', urlHint: '如: https://your-system.com/webhook/xiaohongshu' },
+  EC_WECHAT_SHOP: { icon: '', color: '#07C160', urlHint: '如: https://your-system.com/webhook/wechat-shop' },
+  EC_SHOPIFY:     { icon: '', color: '#5C6AC4', urlHint: '如: https://your-system.com/webhook/shopify' },
   // UI功能模块 — 订阅后直接解锁系统内功能页面，无需配置外部API地址
-  CRM_MODULE:  { icon: '👥', color: 'var(--color-primary)', urlHint: '' },
-  FINANCE_TAX: { icon: '📊', color: 'var(--color-success)', urlHint: '' },
-  PROCUREMENT: { icon: '🏭', color: 'var(--color-warning)', urlHint: '' },
+  CRM_MODULE:  { icon: '', color: 'var(--color-primary)', urlHint: '' },
+  FINANCE_TAX: { icon: '', color: 'var(--color-success)', urlHint: '' },
+  PROCUREMENT: { icon: '', color: 'var(--color-warning)', urlHint: '' },
 };
 
 
@@ -158,7 +158,7 @@ const AppStore: React.FC = () => {
       setDetailVisible(false);
       // UI 功能模块（采购/CRM/财税）无 API 凭证，直接刷新并提示成功
       if (!result?.apiCredentials) {
-        message.success(`🎉 ${result?.appName || selectedApp.appName} 试用已开通！`);
+        message.success(` ${result?.appName || selectedApp.appName} 试用已开通！`);
         fetchMyApps();
         return;
       }
@@ -189,12 +189,12 @@ const AppStore: React.FC = () => {
             callbackUrl: callbackUrl || undefined,
             externalApiUrl: externalApiUrl || undefined,
           });
-          message.success('🎉 配置完成！API对接已就绪');
+          message.success(' 配置完成！API对接已就绪');
           setWizardStep(2);
         } catch { message.warning('URL保存失败，您可以稍后在「API对接管理」中配置'); }
         finally { setSetupLoading(false); }
       } else {
-        message.success('🎉 试用已开通！您可以稍后配置API地址');
+        message.success(' 试用已开通！您可以稍后配置API地址');
         setWizardStep(2);
       }
       fetchMyApps();
@@ -221,8 +221,8 @@ const AppStore: React.FC = () => {
           <div style={{ fontSize: 13, lineHeight: 1.8, color: 'var(--color-text-secondary)' }}>
             <div>商务团队将在 <strong>1-3个工作日</strong> 内联系您确认订单。</div>
             <div style={{ marginTop: 12, padding: '8px 12px', background: '#f6f8fa', borderRadius: 6, fontSize: 12 }}>
-              <div>📞 商务电话：400-xxx-xxxx</div>
-              <div>📧 商务邮箱：sales@example.com</div>
+              <div> 商务电话：400-xxx-xxxx</div>
+              <div> 商务邮箱：sales@example.com</div>
             </div>
           </div>
         ),
@@ -254,7 +254,7 @@ const AppStore: React.FC = () => {
                   {activated && myApp ? (
                     <div style={{ marginTop: 6 }}>
                       <Tag color={myApp.configured ? 'green' : 'orange'} style={{ fontSize: 11 }}>
-                        {myApp.configured ? '✓ 已配置' : '⚙ 待配置URL'}
+                        {myApp.configured ? ' 已配置' : ' 待配置URL'}
                       </Tag>
                       {(myApp.totalCalls ?? 0) > 0 && <Tag style={{ fontSize: 11 }}>调用 {myApp.totalCalls} 次</Tag>}
                     </div>
@@ -303,7 +303,7 @@ const AppStore: React.FC = () => {
         </div>
         <Row gutter={[16, 16]}>
           {myApps.map(app => {
-            const cfg = MODULE_CONFIG[app.appCode] || { icon: '🔌', color: 'var(--color-text-tertiary)', urlHint: '' };
+            const cfg = MODULE_CONFIG[app.appCode] || { icon: '', color: 'var(--color-text-tertiary)', urlHint: '' };
             return (
               <Col xs={24} sm={12} md={6} key={app.appCode}>
                 <Card size="small" hoverable
@@ -315,7 +315,7 @@ const AppStore: React.FC = () => {
                     <div>
                       <div style={{ fontWeight: 600, fontSize: 14 }}>{app.appName}</div>
                       <Tag color={app.isExpired ? 'default' : app.configured ? 'success' : 'warning'} style={{ fontSize: 11 }}>
-                        {app.isExpired ? '已过期' : app.configured ? '✓ 运行中' : '⚙ 待配置'}
+                        {app.isExpired ? '已过期' : app.configured ? ' 运行中' : ' 待配置'}
                       </Tag>
                     </div>
                   </div>
@@ -488,7 +488,7 @@ const AppStore: React.FC = () => {
                   </div>
                   <div>
                     <Text type="secondary" style={{ fontSize: 12 }}>AppSecret</Text>
-                    <Alert type="warning" showIcon style={{ padding: '4px 8px', fontSize: 11, marginBottom: 4 }} title="⚠️ 密镂仅显示一次，请立即保存！" />
+                    <Alert type="warning" showIcon style={{ padding: '4px 8px', fontSize: 11, marginBottom: 4 }} title=" 密镂仅显示一次，请立即保存！" />
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <Text code style={{ fontSize: 13, fontWeight: 600, color: '#cf1322' }}>{wizardData.appSecret}</Text>
                       <CopyOutlined style={{ cursor: 'pointer', color: 'var(--color-primary)' }} onClick={() => copyToClipboard(wizardData.appSecret || '')} />
@@ -504,7 +504,7 @@ const AppStore: React.FC = () => {
             )}
             {wizardData.apiEndpoints && wizardData.apiEndpoints.length > 0 && (
               <div style={{ marginBottom: 16 }}>
-                <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 13 }}>✅ 已自动匹配的API端点：</div>
+                <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 13 }}> 已自动匹配的API端点：</div>
                 <div style={{ background: '#f0f5ff', borderRadius: 6, padding: 12 }}>
                   {wizardData.apiEndpoints.map((ep, idx) => (
                     <div key={idx} style={{ display: 'flex', gap: 8, padding: '3px 0', fontSize: 12, alignItems: 'center' }}>
@@ -547,7 +547,7 @@ const AppStore: React.FC = () => {
             </Form>
             <Divider style={{ margin: '16px 0' }} />
             <div style={{ background: '#f6f8fa', borderRadius: 6, padding: 12, marginBottom: 16, fontSize: 12 }}>
-              <div style={{ fontWeight: 600, marginBottom: 4 }}>💡 不确定填什么？</div>
+              <div style={{ fontWeight: 600, marginBottom: 4 }}> 不确定填什么？</div>
               <ul style={{ margin: 0, paddingLeft: 16, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}>
                 <li><strong>回调地址</strong>：您系统中接收推送通知的URL（如质检结果、物流信息）</li>
                 <li><strong>您的API地址</strong>：我们主动调用您系统的地址（如查询订单状态）</li>
@@ -565,14 +565,14 @@ const AppStore: React.FC = () => {
         {wizardStep === 2 && (
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
             <CheckCircleOutlined style={{ fontSize: 48, color: 'var(--color-success)', marginBottom: 16 }} />
-            <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>🎉 对接配置完成！</div>
+            <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}> 对接配置完成！</div>
             <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 24 }}>
               {wizardData.appName} 已开通{wizardData.trialDays ? ` ${wizardData.trialDays} 天试用` : ''}，API端点已就绪。
             </div>
             <Row gutter={16} style={{ textAlign: 'left', marginBottom: 24 }}>
               <Col span={12}>
                 <Card size="small" style={{ borderLeft: '3px solid var(--color-success)' }}>
-                  <div style={{ fontWeight: 600, marginBottom: 4 }}>✅ 已完成</div>
+                  <div style={{ fontWeight: 600, marginBottom: 4 }}> 已完成</div>
                   <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}>
                     <li>API凭证自动生成</li><li>内部端点自动匹配</li><li>接口地址已配置</li>
                   </ul>
@@ -580,7 +580,7 @@ const AppStore: React.FC = () => {
               </Col>
               <Col span={12}>
                 <Card size="small" style={{ borderLeft: '3px solid var(--color-primary)' }}>
-                  <div style={{ fontWeight: 600, marginBottom: 4 }}>📖 下一步</div>
+                  <div style={{ fontWeight: 600, marginBottom: 4 }}> 下一步</div>
                   <ul style={{ margin: 0, paddingLeft: 16, fontSize: 12, color: 'var(--color-text-secondary)', lineHeight: 1.8 }}>
                     <li>查看对接教程了解详情</li><li>在您的系统中集成API</li><li>发送第一个请求测试</li>
                   </ul>

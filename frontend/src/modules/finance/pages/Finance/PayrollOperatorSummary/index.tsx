@@ -1090,9 +1090,9 @@ function WorkerEfficiencyTab({
         {
             title: '排名', key: 'rank', width: 60, align: 'center' as const,
             render: (_: unknown, __: unknown, idx: number) => {
-                if (idx === 0) return <Tag color="gold">🥇 1</Tag>;
-                if (idx === 1) return <Tag color="silver">🥈 2</Tag>;
-                if (idx === 2) return <Tag color="orange">🥉 3</Tag>;
+                if (idx === 0) return <Tag color="gold"> 1</Tag>;
+                if (idx === 1) return <Tag color="silver"> 2</Tag>;
+                if (idx === 2) return <Tag color="orange"> 3</Tag>;
                 return <span style={{ color: '#8c8c8c' }}>{idx + 1}</span>;
             },
         },

@@ -702,7 +702,7 @@ const ProductionList: React.FC = () => {
                 onClose={() => setAnomalyBannerVisible(false)}
                 title={
                   <span style={{ fontWeight: 600, fontSize: 13 }}>
-                    🔔 智能异常检测：发现 {anomalyItems.length} 条异常
+                     智能异常检测：发现 {anomalyItems.length} 条异常
                   </span>
                 }
                 description={
@@ -838,7 +838,7 @@ const ProductionList: React.FC = () => {
                     style={{ minWidth: 110 }}
                     options={[
                       { label: '全部紧急度', value: '' },
-                      { label: '🔴 急单', value: 'urgent' },
+                      { label: ' 急单', value: 'urgent' },
                       { label: '普通', value: 'normal' },
                     ]}
                   />

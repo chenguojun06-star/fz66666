@@ -37,7 +37,7 @@ const OrderLearningInsightCard: React.FC<OrderLearningInsightCardProps> = ({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: '#1d39c4' }}>✨ AI 学习建议</span>
+          <span style={{ fontSize: 14, fontWeight: 600, color: '#1d39c4' }}> AI 学习建议</span>
           {presented && presented.tags.length > 0 && (
             <div style={{ display: 'flex', gap: 4 }}>
               {presented.tags.slice(0, 2).map((tag) => <Tag key={tag} style={{ margin: 0 }}>{tag}</Tag>)}

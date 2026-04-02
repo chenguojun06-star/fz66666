@@ -179,7 +179,7 @@ export const fetchProductionOrderDetail = async (
     if (resp && (resp as any).code === 200 && (resp as any).data) {
       const records = extractListRecords((resp as any).data);
 
-      // 🔧 FIX: 从列表中找到匹配的订单（后端可能返回多条记录）
+      //  FIX: 从列表中找到匹配的订单（后端可能返回多条记录）
       const matched = records.find((r: any) => {
         const recordOrderNo = String(r.orderNo || '').trim();
         const recordId = String(r.id || '').trim();

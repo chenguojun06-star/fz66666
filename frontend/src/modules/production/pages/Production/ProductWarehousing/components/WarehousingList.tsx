@@ -154,28 +154,38 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
             ]}
           />
 
+          {/* 筛选栏：始终渲染，pending模式下关键词仅做客户端过滤 */}
+          <SearchForm
+            queryParams={queryParams}
+            setQueryParams={setQueryParams}
+            onSearch={statusFilter === 'all' || statusFilter === 'completed' ? fetchWarehousingList : () => {}}
+          />
+
           {/* 根据筛选状态显示不同内容 */}
           {statusFilter === 'all' || statusFilter === 'completed' ? (
-            <>
-              <SearchForm
-                queryParams={queryParams}
-                setQueryParams={setQueryParams}
-                onSearch={fetchWarehousingList}
-              />
-              <WarehousingTable
-                loading={loading}
-                dataSource={warehousingList}
-                total={total}
-                queryParams={queryParams}
-                setQueryParams={setQueryParams}
-                isOrderFrozen={isOrderFrozenById}
-              />
-            </>
+            <WarehousingTable
+              loading={loading}
+              dataSource={warehousingList}
+              total={total}
+              queryParams={queryParams}
+              setQueryParams={setQueryParams}
+              isOrderFrozen={isOrderFrozenById}
+            />
           ) : (
             <>
               <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Tag color={statusFilter === 'pendingQc' ? 'warning' : statusFilter === 'pendingPackaging' ? 'purple' : 'processing'}>
-                  {statusFilterLabels[statusFilter]} · {pendingBundles.length} 个菲号
+                  {statusFilterLabels[statusFilter]} · {(() => {
+                    const kw = (queryParams.warehousingNo || '').toLowerCase().trim();
+                    return kw
+                      ? pendingBundles.filter(b =>
+                          b.orderNo?.toLowerCase().includes(kw) ||
+                          b.styleNo?.toLowerCase().includes(kw) ||
+                          String(b.bundleNo ?? '').includes(kw) ||
+                          b.color?.toLowerCase().includes(kw)
+                        ).length
+                      : pendingBundles.length;
+                  })()} 个菲号
                 </Tag>
                 <Button size="small" onClick={() => handleStatusFilterChange('all')}>
                   返回全部
@@ -185,7 +195,17 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
                 storageKey="warehousing-list"
                 rowKey="bundleId"
                 columns={pendingColumns}
-                dataSource={pendingBundles}
+                dataSource={(() => {
+                  const kw = (queryParams.warehousingNo || '').toLowerCase().trim();
+                  return kw
+                    ? pendingBundles.filter(b =>
+                        b.orderNo?.toLowerCase().includes(kw) ||
+                        b.styleNo?.toLowerCase().includes(kw) ||
+                        String(b.bundleNo ?? '').includes(kw) ||
+                        b.color?.toLowerCase().includes(kw)
+                      )
+                    : pendingBundles;
+                })()}
                 loading={pendingBundlesLoading}
                 size="small"
                 pagination={{ pageSize: 20, showTotal: (t) => `共 ${t} 条`, showSizeChanger: false }}

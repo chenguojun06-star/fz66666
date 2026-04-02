@@ -131,7 +131,7 @@ const SmartStyleHoverCard: React.FC<Props> = ({ record }) => {
           return (
             <div key={s.key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontSize: 13, lineHeight: 1, flexShrink: 0 }}>
-                {s.done ? '✅' : '⬜'}
+                {s.done ? '' : ''}
               </span>
               <span style={{
                 flex: 1,
@@ -164,7 +164,7 @@ const SmartStyleHoverCard: React.FC<Props> = ({ record }) => {
       }}>
         <span style={{ color: isCompleted ? '#52c41a' : '#888' }}>
           {isCompleted
-            ? `✅ ${completedTimeStr ? completedTimeStr + ' 完成' : '全部完成'}`
+            ? ` ${completedTimeStr ? completedTimeStr + ' 完成' : '全部完成'}`
             : doneCount === 0
             ? `0/${STAGES.length} 待开始`
             : `${doneCount}/${STAGES.length} 进行中`}

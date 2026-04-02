@@ -39,12 +39,12 @@ const hasActiveSubscription = (item: any, appCodeAliases: string[]) => {
 
 // ─── 锁定页（未订阅时展示）─────────────────────────────────────────
 const FEATURES = [
-  { icon: '👥', title: '客户档案管理', desc: '统一管理B端客户信息、联系人、合作历史' },
-  { icon: '💳', title: '应收账款追踪', desc: '发货即自动生成应收单，逾期自动提醒催款' },
-  { icon: '📱', title: '客户查询门户', desc: '生成专属二维码，客户扫码即可查看订单进度' },
-  { icon: '📊', title: '历史订单汇总', desc: '按客户维度查看所有合作款式、金额、周期' },
-  { icon: '🔔', title: '出货提醒', desc: '出货前3天自动微信提醒对接人，降低漏货风险' },
-  { icon: '📋', title: '报价单生成', desc: '一键生成带款式图、价格、工艺描述的PDF报价单' },
+  { icon: '', title: '客户档案管理', desc: '统一管理B端客户信息、联系人、合作历史' },
+  { icon: '', title: '应收账款追踪', desc: '发货即自动生成应收单，逾期自动提醒催款' },
+  { icon: '', title: '客户查询门户', desc: '生成专属二维码，客户扫码即可查看订单进度' },
+  { icon: '', title: '历史订单汇总', desc: '按客户维度查看所有合作款式、金额、周期' },
+  { icon: '', title: '出货提醒', desc: '出货前3天自动微信提醒对接人，降低漏货风险' },
+  { icon: '', title: '报价单生成', desc: '一键生成带款式图、价格、工艺描述的PDF报价单' },
 ];
 
 const LockedView: React.FC<{ onGoStore: () => void }> = ({ onGoStore }) => (

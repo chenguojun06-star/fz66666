@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { App, Button, Input, InputNumber, Form, Select, Space, Modal, Tabs, Image, Tag } from 'antd';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { App, Button, Dropdown, Input, InputNumber, Form, Select, Space, Modal, Tabs, Image, Tag, Popover } from 'antd';
+import { DownOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { StyleBom, TemplateLibrary } from '@/types/style';
 import api from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -38,6 +39,13 @@ interface Props {
 const sortBomRows = (rows: StyleBom[]) => {
   const list = Array.isArray(rows) ? [...rows] : [];
   list.sort((a, b) => {
+    const ga = String((a as Record<string, unknown>)?.groupName || '').trim();
+    const gb = String((b as Record<string, unknown>)?.groupName || '').trim();
+    if (ga !== gb) {
+      if (!ga) return 1;
+      if (!gb) return -1;
+      return ga.localeCompare(gb, 'zh-CN');
+    }
     const wa = getMaterialSortWeight((a as Record<string, unknown>)?.materialType);
     const wb = getMaterialSortWeight((b as Record<string, unknown>)?.materialType);
     if (wa !== wb) return wa - wb;
@@ -106,7 +114,6 @@ const StyleBomTab: React.FC<Props> = ({
   const [form] = Form.useForm();
   const [bomTemplateId, setBomTemplateId] = useState<string | undefined>(undefined);
   const [bomTemplates, setBomTemplates] = useState<TemplateLibrary[]>([]);
-  const [importMode, setImportMode] = useState<'overwrite' | 'append'>('overwrite');
   const [_templateSourceStyleNo, _setTemplateSourceStyleNo] = useState('');
   const [templateLoading, setTemplateLoading] = useState(false);
   const [_syncLoading, _setSyncLoading] = useState(false);
@@ -126,6 +133,7 @@ const StyleBomTab: React.FC<Props> = ({
   const [materialPageSize, setMaterialPageSize] = useState(() => readPageSizeByKey(MATERIAL_SELECT_PAGE_SIZE_KEY, DEFAULT_PAGE_SIZE));
   const [materialKeyword, setMaterialKeyword] = useState('');
   const [materialTargetRowId, setMaterialTargetRowId] = useState('');
+  const [newGroupName, setNewGroupName] = useState('');
   const activeSizes = normalizeUniqueValues(sizeColorConfig?.sizes);
   const activeColors = normalizeUniqueValues(sizeColorConfig?.colors);
   const parseNumberMap = useCallback((value?: string) => {
@@ -158,7 +166,6 @@ const StyleBomTab: React.FC<Props> = ({
   const [materialCreateForm] = Form.useForm();
 
   const [checkingStock, setCheckingStock] = useState(false);
-  const [productionQty, setProductionQty] = useState(1);
 
   const locked = Boolean(readOnly);
 
@@ -567,8 +574,7 @@ const StyleBomTab: React.FC<Props> = ({
           const stock = res.data.records[0];
           const availableQty = Number(stock.quantity || 0) - Number(stock.lockedQuantity || 0);
           const usageAmount = Number(merged.usageAmount || 0);
-          const lossRate = Number(merged.lossRate || 0);
-          const requiredQty = Math.ceil(usageAmount * productionQty * (1 + lossRate / 100));
+          const requiredQty = Math.ceil(usageAmount);
 
           const stockStatus = availableQty >= requiredQty ? 'sufficient' : availableQty > 0 ? 'insufficient' : 'none';
           const requiredPurchase = Math.max(0, requiredQty - availableQty);
@@ -591,8 +597,7 @@ const StyleBomTab: React.FC<Props> = ({
         } else {
           // 无库存记录
           const usageAmount = Number(merged.usageAmount || 0);
-          const lossRate = Number(merged.lossRate || 0);
-          const requiredQty = Math.ceil(usageAmount * productionQty * (1 + lossRate / 100));
+          const requiredQty = Math.ceil(usageAmount);
 
           setData(prev => sortBomRows(
             prev.map(item =>
@@ -724,13 +729,21 @@ const StyleBomTab: React.FC<Props> = ({
         rowName(key, 'unitPrice'),
       ];
       await form.validateFields(requiredPaths);
-      const row = (form.getFieldValue(String(key)) || {}) as any;
+      // 修复：先获取基础值，再获取用户输入的值
+      const item = data.find((d) => key === String(d.id));
+      const baseRow = item ? { ...item } : {};
+      const userRow = (form.getFieldValue(String(key)) || {}) as any;
+      const row = { ...baseRow, ...userRow };
       const newData = [...data];
       const index = newData.findIndex((item) => key === String(item.id));
 
       if (index > -1) {
         const item = newData[index];
         const newItem: any = { ...item, ...row };
+        // 确保groupName不被丢失（因为表格中没有groupName的表单控件）
+        if (item.groupName && !row.groupName) {
+          newItem.groupName = item.groupName;
+        }
         const conversionRate = Number(row?.conversionRate ?? newItem.conversionRate ?? 1) || 1;
         const rawSizeUsageMap = activeSizes.length
           ? Object.fromEntries(activeSizes.map((size) => [size, Number(row?.sizeUsageMapObject?.[size] ?? item.usageAmount ?? newItem.usageAmount ?? 0)]))
@@ -781,7 +794,7 @@ const StyleBomTab: React.FC<Props> = ({
     }
   };
 
-  const applyBomTemplate = async () => {
+  const applyBomTemplate = async (mode: 'overwrite' | 'append' = 'overwrite') => {
     if (locked) {
       message.error('已完成，无法操作');
       return;
@@ -810,14 +823,14 @@ const StyleBomTab: React.FC<Props> = ({
       const res = await api.post<{ code: number; message: string; data: boolean }>('/template-library/apply-to-style', {
         templateId: bomTemplateId,
         targetStyleId: sid,
-        mode: importMode,
+        mode,
       });
       const result = res as Record<string, unknown>;
       if (result.code !== 200) {
         message.error(String(result.message || '导入失败'));
         return;
       }
-      message.success('已导入BOM模板');
+      message.success(mode === 'append' ? '已追加导入BOM模板' : '已覆盖导入BOM模板');
       setBomTemplateId(undefined);
       const next = await fetchBom();
       if (Array.isArray(next) && next.length) enterTableEdit(next);
@@ -846,13 +859,24 @@ const StyleBomTab: React.FC<Props> = ({
       }
 
       await form.validateFields(requiredPaths);
-      const allValues = form.getFieldsValue() || {};
+      // 修复：先用buildFormValues初始化所有行的表单值，再获取用户输入的值
+      // 这样可以确保不在视图中的行也能正确获取到值
+      const baseValues = buildFormValues(data);
+      const userValues = form.getFieldsValue() || {};
+      const allValues = Object.keys(baseValues).reduce((acc, key) => {
+        acc[key] = { ...baseValues[key] as object, ...(userValues[key] as object || {}) };
+        return acc;
+      }, {} as Record<string, unknown>);
 
       setLoading(true);
       for (const item of data) {
         const key = String(item.id);
         const row = (allValues?.[key] || {}) as any;
         const newItem: any = { ...item, ...row };
+        // 确保groupName不被丢失（因为表格中没有groupName的表单控件）
+        if (item.groupName && !row.groupName) {
+          newItem.groupName = item.groupName;
+        }
         const conversionRate = Number(row?.conversionRate ?? newItem.conversionRate ?? 1) || 1;
         const rawSizeUsageMap = activeSizes.length
           ? Object.fromEntries(activeSizes.map((size) => [size, Number(row?.sizeUsageMapObject?.[size] ?? item.usageAmount ?? newItem.usageAmount ?? 0)]))
@@ -913,6 +937,15 @@ const StyleBomTab: React.FC<Props> = ({
       message.error('已完成，无法操作');
       return;
     }
+
+    // 先同步form中的数据到data，避免丢失用户输入
+    const allValues = form.getFieldsValue() || {};
+    const syncedData = data.map((item) => {
+      const key = String(item.id);
+      const row = allValues[key] || {};
+      return { ...item, ...row };
+    });
+
     // 生成一个临时编号，用于标识临时行
     const newId = `tmp_${Date.now()}`;
     const newBom: StyleBom = {
@@ -936,13 +969,73 @@ const StyleBomTab: React.FC<Props> = ({
       totalPrice: 0,
       supplier: ''
     };
-    setData(sortBomRows([...data, newBom]));
+    setData(sortBomRows([...syncedData, newBom]));
 
     const rid = String(newId);
+    // 修复：tableEditable=false 时 Form.Item 未挂载，allValues 为空，必须先用
+    // buildFormValues 初始化所有已有行，再叠加 allValues（保留已挂载行的用户输入）
     form.setFieldsValue({
+      ...buildFormValues(syncedData),
+      ...allValues,
       [rid]: { ...newBom },
     });
 
+    setEditingKey('');
+    setTableEditable(true);
+  };
+
+  // 新增分组
+  const handleAddGroup = () => {
+    if (locked) {
+      message.error('已完成，无法操作');
+      return;
+    }
+    if (!newGroupName.trim()) {
+      message.error('请输入分组名称');
+      return;
+    }
+
+    // 先同步form中的数据到data，避免丢失用户输入
+    const allValues = form.getFieldsValue() || {};
+    const syncedData = data.map((item) => {
+      const key = String(item.id);
+      const row = allValues[key] || {};
+      return { ...item, ...row };
+    });
+
+    const newId = `tmp_${Date.now()}`;
+    const newBom: StyleBom = {
+      id: newId,
+      styleId,
+      materialType: 'fabricA',
+      groupName: newGroupName.trim(),
+      materialCode: '',
+      materialName: '',
+      color: '',
+      fabricComposition: '',
+      fabricWidth: '',
+      size: activeSizes.join('/'),
+      sizeUsageMap: buildSizeUsageMap(0),
+      patternSizeUsageMap: buildSizeUsageMap(0),
+      sizeSpecMap: buildSizeSpecMap(''),
+      unit: '',
+      patternUnit: '',
+      conversionRate: 1,
+      usageAmount: 0,
+      devUsageAmount: 0,
+      lossRate: 0,
+      unitPrice: 0,
+      totalPrice: 0,
+      supplier: ''
+    };
+    setData(sortBomRows([...syncedData, newBom]));
+    // 修复：同 handleAdd，先用 buildFormValues 初始化所有已有行
+    form.setFieldsValue({
+      ...buildFormValues(syncedData),
+      ...allValues,
+      [String(newId)]: { ...newBom },
+    });
+    setNewGroupName('');
     setEditingKey('');
     setTableEditable(true);
   };
@@ -1011,23 +1104,28 @@ const StyleBomTab: React.FC<Props> = ({
       return;
     }
 
-    if (!data || data.length === 0) {
-      message.warning('暂无BOM数据，无需检查');
+    // 分离临时数据和已保存数据
+    const tempRows = data.filter((item) => isTempId(item.id));
+    const savedRows = data.filter((item) => !isTempId(item.id));
+
+    if (savedRows.length === 0) {
+      message.warning('暂无已保存的BOM数据，请先保存后再检查库存');
       return;
     }
 
     setCheckingStock(true);
     try {
       const res = await api.post<{ code: number; message: string; data: StyleBom[] }>(
-        `/style/bom/check-stock/${sid}`,
-        null,
-        { params: { productionQty } }
+        `/style/bom/check-stock/${sid}`
       );
       const result = res as Record<string, unknown>;
 
       if (result.code === 200) {
         const checkedBomList = result.data as StyleBom[];
-        setData(sortBomRows(checkedBomList));
+
+        // 合并：已检查的数据 + 临时数据（保留未保存的行）
+        const mergedData = [...checkedBomList, ...tempRows];
+        setData(sortBomRows(mergedData));
 
         // 统计库存状态
         const stats = {
@@ -1149,6 +1247,7 @@ const StyleBomTab: React.FC<Props> = ({
     cancel,
     edit,
     handleDelete,
+    isTempId,
     fetchMaterials,
     materialCreateForm,
     calcTotalPrice,
@@ -1160,6 +1259,127 @@ const StyleBomTab: React.FC<Props> = ({
     onApplyPickup: handleApplyPickup,
     activeSizes,
   });
+
+  // 按分组聚合数据
+  const groupedData = useMemo(() => {
+    const groups = new Map<string, StyleBom[]>();
+    const noGroupName = '未分组';
+
+    data.forEach((item) => {
+      const groupName = String(item.groupName || '').trim() || noGroupName;
+      if (!groups.has(groupName)) {
+        groups.set(groupName, []);
+      }
+      groups.get(groupName)!.push(item);
+    });
+
+    const result: { groupName: string; items: StyleBom[]; isDefault: boolean }[] = [];
+    groups.forEach((items, groupName) => {
+      result.push({
+        groupName,
+        items,
+        isDefault: groupName === noGroupName,
+      });
+    });
+
+    result.sort((a, b) => {
+      if (a.isDefault) return 1;
+      if (b.isDefault) return -1;
+      return a.groupName.localeCompare(b.groupName, 'zh-CN');
+    });
+
+    return result;
+  }, [data]);
+
+  // 删除整个分组
+  const handleDeleteGroup = (groupName: string) => {
+    if (locked) {
+      message.error('已完成，无法操作');
+      return;
+    }
+    const groupItems = data.filter((item) => (String(item.groupName || '').trim() || '未分组') === groupName);
+    if (!groupItems.length) return;
+
+    Modal.confirm({
+      width: '30vw',
+      title: `确定删除分组「${groupName}」？`,
+      content: `该分组下有 ${groupItems.length} 条物料记录，将一并删除。`,
+      okText: '确定删除',
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk: async () => {
+        setLoading(true);
+        try {
+          const deleteTasks = groupItems
+            .filter((item) => !isTempId(item.id))
+            .map((item) => api.delete(`/style/bom/${encodeURIComponent(String(item.id))}`));
+          await Promise.all(deleteTasks);
+          message.success('删除成功');
+          fetchBom();
+        } catch (error: any) {
+          message.error(`删除失败（${error?.message || '请求失败'}）`);
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
+  };
+
+  // 在分组内添加物料
+  const handleAddInGroup = (groupName: string, count: number = 1) => {
+    if (locked) {
+      message.error('已完成，无法操作');
+      return;
+    }
+    const actualGroupName = groupName === '未分组' ? '' : groupName;
+
+    // 先同步form中的数据到data，避免丢失用户输入
+    const allValues = form.getFieldsValue() || {};
+    const syncedData = data.map((item) => {
+      const key = String(item.id);
+      const row = allValues[key] || {};
+      return { ...item, ...row };
+    });
+
+    const newRows: StyleBom[] = [];
+    const newFormValues: Record<string, StyleBom> = {};
+
+    for (let i = 0; i < count; i++) {
+      const newId = `tmp_${Date.now()}_${i}`;
+      const newBom: StyleBom = {
+        id: newId,
+        styleId,
+        materialType: 'fabricA',
+        groupName: actualGroupName,
+        materialCode: '',
+        materialName: '',
+        color: activeColors.length === 1 ? activeColors[0] : '',
+        specification: '',
+        size: activeSizes.join('/'),
+        sizeUsageMap: buildSizeUsageMap(0),
+        patternSizeUsageMap: buildSizeUsageMap(0),
+        sizeSpecMap: buildSizeSpecMap(''),
+        unit: '',
+        patternUnit: '',
+        conversionRate: 1,
+        usageAmount: 0,
+        lossRate: 0,
+        unitPrice: 0,
+        totalPrice: 0,
+        supplier: '',
+      };
+      newRows.push(newBom);
+      newFormValues[String(newId)] = { ...newBom };
+    }
+
+    setData(sortBomRows([...syncedData, ...newRows]));
+    form.setFieldsValue({
+      ...allValues,
+      ...newFormValues,
+    });
+    setEditingKey('');
+    setTableEditable(true);
+  };
 
   return (
     <div>
@@ -1219,22 +1439,12 @@ const StyleBomTab: React.FC<Props> = ({
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         {/* 左侧：库存检查和生成采购单 */}
         <Space>
-          <Space.Compact>
-            <Input style={{ width: 60 }} disabled value="数量" />
-            <InputNumber
-              min={1}
-              value={productionQty}
-              onChange={(v) => setProductionQty(v || 1)}
-              style={{ width: 100 }}
-              disabled={checkingStock}
-            />
-          </Space.Compact>
           <Button
             onClick={handleCheckStock}
             disabled={!data.length || loading}
             loading={checkingStock}
           >
-            🔍 检查库存
+             检查库存
           </Button>
           <Button
             type="primary"
@@ -1242,37 +1452,25 @@ const StyleBomTab: React.FC<Props> = ({
             disabled={locked || !data.length || loading}
             loading={loading}
           >
-            📦 生成采购单
+             生成采购单
           </Button>
         </Space>
 
         {/* 右侧：BOM配置操作按钮 */}
         <Space wrap>
           <Button
-            onClick={handleAdd}
-            disabled={locked || Boolean(editingKey) || loading || templateLoading}
+            type={tableEditable ? 'primary' : 'default'}
+            onClick={tableEditable ? saveAll : () => enterTableEdit()}
+            disabled={locked || loading || templateLoading || Boolean(editingKey) || (tableEditable ? false : !data.length)}
+            loading={loading}
           >
-            添加物料
+            {tableEditable ? '保存' : '编辑'}
           </Button>
-
-          {tableEditable ? (
-            <>
-              <Button type="primary" onClick={saveAll} loading={loading}>
-                保存
-              </Button>
-              <Button onClick={exitTableEdit} disabled={loading}>
-                取消编辑
-              </Button>
-            </>
-          ) : isSupervisorOrAbove ? (
-            <Button
-              type="default"
-              onClick={() => enterTableEdit()}
-              disabled={locked || loading || templateLoading || Boolean(editingKey) || !data.length}
-            >
-              退回编辑
+          {tableEditable && (
+            <Button onClick={exitTableEdit} disabled={loading}>
+              取消
             </Button>
-          ) : null}
+          )}
 
           <Select
             allowClear
@@ -1290,20 +1488,61 @@ const StyleBomTab: React.FC<Props> = ({
             }}
           />
 
-          <Select
-            value={importMode}
-            style={{ width: 100 }}
-            options={[
-              { value: 'overwrite', label: '覆盖' },
-              { value: 'append', label: '追加' },
-            ]}
-            onChange={(v) => setImportMode(v)}
-            disabled={locked || Boolean(editingKey) || loading || templateLoading}
-          />
+          <Dropdown
+            disabled={locked || Boolean(editingKey) || loading || templateLoading || tableEditable}
+            menu={{
+              items: [
+                { key: 'overwrite', label: '覆盖导入（清除现有数据）' },
+                { key: 'append', label: '追加导入（保留现有数据）' },
+              ],
+              onClick: ({ key }) => {
+                if (!bomTemplateId) { message.error('请选择模板'); return; }
+                void applyBomTemplate(key as 'overwrite' | 'append');
+              },
+            }}
+          >
+            <Button disabled={locked || Boolean(editingKey) || loading || templateLoading || tableEditable}>
+              导入模板 <DownOutlined />
+            </Button>
+          </Dropdown>
 
-          <Button disabled={locked || Boolean(editingKey) || loading || templateLoading || tableEditable} onClick={applyBomTemplate}>
-            导入模板
-          </Button>
+          <Dropdown
+            disabled={locked || Boolean(editingKey) || loading || templateLoading}
+            menu={{
+              items: [
+                { key: '1', label: '+1行' },
+                { key: '5', label: '+5行' },
+                { key: '10', label: '+10行' },
+              ],
+              onClick: ({ key }) => handleAddInGroup('未分组', Number(key)),
+            }}
+          >
+            <Button type="primary">
+              添加物料
+            </Button>
+          </Dropdown>
+          <Popover
+            trigger="click"
+            placement="bottom"
+            content={
+              <Space.Compact style={{ width: 220 }}>
+                <Input
+                  placeholder="如：上衣 / 裤子 / 亲子装-大人款"
+                  value={newGroupName}
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                  onPressEnter={handleAddGroup}
+                  style={{ width: 160 }}
+                />
+                <Button type="primary" onClick={handleAddGroup}>
+                  确定
+                </Button>
+              </Space.Compact>
+            }
+          >
+            <Button disabled={locked || Boolean(editingKey) || loading || templateLoading || tableEditable}>
+              新增BOM
+            </Button>
+          </Popover>
         </Space>
       </div>
       <Modal
@@ -1585,23 +1824,95 @@ const StyleBomTab: React.FC<Props> = ({
         />
       </Modal>
       <Form form={form} component={false}>
-        <ResizableTable
-          components={{
-            body: {
-              cell: ({ children, ...restProps }: any) => <td {...restProps}>{children}</td>,
-            },
-          }}
-          bordered
-          dataSource={data}
-          columns={columns}
-          rowClassName="editable-row"
-          pagination={false}
-          loading={loading}
-          rowKey="id"
-          scroll={{ x: 'max-content' }}
-          storageKey={`style-bom-v2-${String(styleId)}`}
-          minColumnWidth={70}
-        />
+        {groupedData.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-secondary)' }}>
+            暂无BOM数据，请点击"添加物料"或"新增BOM"开始配置
+          </div>
+        ) : (
+          groupedData.map((group, groupIndex) => (
+            <div
+              key={group.groupName}
+              style={{
+                marginBottom: 24,
+                borderRadius: 12,
+                border: '1px solid var(--color-border)',
+                overflow: 'hidden',
+              }}
+            >
+              {/* 分组标题栏 */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '12px 16px',
+                  background: 'var(--color-bg-layout)',
+                  borderBottom: '1px solid var(--color-border)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <Tag
+                    color={group.isDefault ? 'default' : 'blue'}
+                    style={{ margin: 0, fontSize: 14, padding: '4px 12px' }}
+                  >
+                    {group.groupName}
+                  </Tag>
+                  <span style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>
+                    {group.items.length} 项物料
+                  </span>
+                </div>
+                {!group.isDefault && (
+                  <Button
+                    size="small"
+                    danger
+                    icon={<DeleteOutlined />}
+                    disabled={locked || Boolean(editingKey) || loading || templateLoading}
+                    onClick={() => handleDeleteGroup(group.groupName)}
+                  >
+                    删除分组
+                  </Button>
+                )}
+              </div>
+              {/* 分组表格 */}
+              <ResizableTable
+                components={{
+                  body: {
+                    cell: ({ children, ...restProps }: any) => <td {...restProps}>{children}</td>,
+                  },
+                }}
+                bordered
+                dataSource={group.items}
+                columns={columns}
+                rowClassName="editable-row"
+                pagination={false}
+                loading={loading && groupIndex === 0}
+                rowKey="id"
+                scroll={{ x: 'max-content' }}
+                storageKey={`style-bom-v2-${String(styleId)}-${group.groupName}`}
+                minColumnWidth={70}
+                footer={() => (
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0' }}>
+                    <Dropdown
+                      disabled={locked || Boolean(editingKey) || loading || templateLoading}
+                      menu={{
+                        items: [
+                          { key: '1', label: '+1行' },
+                          { key: '5', label: '+5行' },
+                          { key: '10', label: '+10行' },
+                        ],
+                        onClick: ({ key }) => handleAddInGroup(group.groupName, Number(key)),
+                      }}
+                    >
+                      <Button type="dashed">
+                        添加物料
+                      </Button>
+                    </Dropdown>
+                  </div>
+                )}
+              />
+            </div>
+          ))
+        )}
       </Form>
     </div>
   );

@@ -1002,7 +1002,7 @@ const StyleProcessTab: React.FC<Props> = ({
             onOpenChange={(v) => { if (!aiLoading) setAiOpen(v); }}
             content={
               <div style={{ width: 260 }}>
-                <div style={{ marginBottom: 8, fontWeight: 600, color: '#722ed1' }}>✨ AI 智能 IE 指导价 & 全套工序生成</div>
+                <div style={{ marginBottom: 8, fontWeight: 600, color: '#722ed1' }}> AI 智能 IE 指导价 & 全套工序生成</div>
                 <div style={{ marginBottom: 8, fontSize: 12, color: '#888' }}>
                   选择品类，系统将基于 IE 数据库为您直接生成全套标准工序与智能指导单价。
                 </div>
@@ -1024,7 +1024,7 @@ const StyleProcessTab: React.FC<Props> = ({
                   style={{ background: 'linear-gradient(135deg, #722ed1, #1677ff)', border: 'none' }}
                   onClick={handleAiTemplate}
                 >
-                  {aiLoading ? '生成中…' : '🚀 一键生成全套工序与指导价'}
+                  {aiLoading ? '生成中…' : ' 一键生成全套工序与指导价'}
                 </Button>
               </div>
             }
@@ -1032,7 +1032,7 @@ const StyleProcessTab: React.FC<Props> = ({
             <Button
               type="primary"
               disabled={Boolean(readOnly) || !editMode || loading || saving}
-              icon={aiLoading ? <LoadingOutlined /> : <span style={{ marginRight: 4 }}>✨</span>}
+              icon={aiLoading ? <LoadingOutlined /> : <span style={{ marginRight: 4 }}></span>}
               style={{
                 background: 'linear-gradient(135deg, #722ed1, #2f54eb)',
                 borderColor: 'transparent',

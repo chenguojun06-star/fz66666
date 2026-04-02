@@ -278,7 +278,7 @@ class SyncManager {
   }
 
   /**
-   * 🔐 监听用户登出事件，自动停止所有同步任务（防止跨租户数据轮询）
+   *  监听用户登出事件，自动停止所有同步任务（防止跨租户数据轮询）
    */
   private setupUserLogoutListener(): void {
     if (typeof window === 'undefined') return;

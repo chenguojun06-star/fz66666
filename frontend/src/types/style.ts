@@ -100,11 +100,15 @@ export interface StyleBom extends Record<string, unknown> {
   | 'accessoryE';
   materialCode: string;
   materialName: string;
+  /** 分组名称（如：上衣、裤子、亲子装-大人款、亲子装-儿童款） */
+  groupName?: string;
   fabricComposition?: string;
   color: string;
   specification?: string;
   size: string;
   unit: string;
+  /** 开发用量（开发阶段预估用量，输入后自动带入单件用量） */
+  devUsageAmount?: number;
   usageAmount: number;
   /** 纸样各码实际用量（JSON，格式：{"S":1.5,"M":1.6}；为空则用统一 usageAmount） */
   sizeUsageMap?: string;

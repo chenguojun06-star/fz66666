@@ -934,7 +934,7 @@ const InspectionDetail: React.FC = () => {
             >
               {!aiSuggestion && !aiLoading && (
                 <div style={{ color: '#aaa', textAlign: 'center', padding: '16px 0', fontSize: 12 }}>
-                  <div style={{ fontSize: 20, marginBottom: 6 }}>🔍</div>
+                  <div style={{ fontSize: 20, marginBottom: 6 }}></div>
                   AI正在分析订单数据，请稍后…
                 </div>
               )}
@@ -946,7 +946,7 @@ const InspectionDetail: React.FC = () => {
                       border: '1px solid #ffd591', borderRadius: 6,
                       marginBottom: 10, color: '#d46b08', fontWeight: 600,
                     }}>
-                      ⚠️ {aiSuggestion.urgentTip}
+                       {aiSuggestion.urgentTip}
                     </div>
                   )}
                   <div style={{ fontWeight: 600, color: '#333', marginBottom: 6 }}>质检要点</div>
@@ -963,7 +963,7 @@ const InspectionDetail: React.FC = () => {
                           <span style={{ fontWeight: 400, fontSize: 11, color: '#aaa', marginLeft: 6 }}>（本批尚无次品记录，以下供参考）</span>
                         )}
                         {actualDefectSet.size > 0 && (
-                          <span style={{ fontWeight: 400, fontSize: 11, color: '#f5222d', marginLeft: 6 }}>⚠️ 本批已发现 {actualDefectSet.size} 类缺陷，请重点处理标红项</span>
+                          <span style={{ fontWeight: 400, fontSize: 11, color: '#f5222d', marginLeft: 6 }}> 本批已发现 {actualDefectSet.size} 类缺陷，请重点处理标红项</span>
                         )}
                       </div>
                       {Object.entries(aiSuggestion.defectSuggestions)

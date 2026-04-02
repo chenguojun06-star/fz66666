@@ -376,7 +376,7 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
         <div>
           {hasStockCount > 0 && (
             <p style={{ color: '#fa8c16', fontWeight: 600 }}>
-              ⚠ 有 {hasStockCount} 项物料存在可用库存，确认后将跳过仓库直接外采。
+               有 {hasStockCount} 项物料存在可用库存，确认后将跳过仓库直接外采。
             </p>
           )}
           <p>
@@ -607,7 +607,7 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
           }
           const pQty = Math.max(0, record.requiredQty - (record.userPickQty || 0));
           if (pQty === 0) {
-            return <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>✓ 0</span>;
+            return <span style={{ color: 'var(--color-success)', fontWeight: 600 }}> 0</span>;
           }
           return <span style={{ fontWeight: 600, color: 'var(--color-warning)' }}>{pQty}</span>;
         },
@@ -889,7 +889,7 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
 
       {/* 面辅料需求明细表格 */}
       <div style={{ marginBottom: 8 }}>
-        <span style={{ fontWeight: 600, fontSize: 14 }}>📦 面辅料需求明细</span>
+        <span style={{ fontWeight: 600, fontSize: 14 }}> 面辅料需求明细</span>
         {pendingCount === 0 && materials.length > 0 && (
           <Tag color="green" style={{ marginLeft: 8 }}>全部已处理</Tag>
         )}
@@ -925,7 +925,7 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
         <>
           <Divider style={{ margin: '12px 0' }} />
           <div style={{ marginBottom: 8 }}>
-            <span style={{ fontWeight: 600, fontSize: 14 }}>📋 出库单记录</span>
+            <span style={{ fontWeight: 600, fontSize: 14 }}> 出库单记录</span>
             {isSupervisorOrAbove && (
               <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)', marginLeft: 8 }}>（主管以上可撤销）</span>
             )}

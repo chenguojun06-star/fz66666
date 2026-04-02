@@ -639,14 +639,14 @@ const DashboardContent: React.FC = () => {
         </Card>
       ) : null}
 
-      {/* 🩺 系统健康指数 */}
+      {/*  系统健康指数 */}
       {healthData && (
         <Card
           size="small"
           style={{ marginBottom: 12 }}
           title={
             <span>
-              <span style={{ fontSize: 14, marginRight: 6 }}>🩺</span>
+              <span style={{ fontSize: 14, marginRight: 6 }}></span>
               <span style={{ fontWeight: 600 }}>系统健康指数</span>
               <span style={{
                 marginLeft: 10, fontSize: 20, fontWeight: 700,
@@ -698,12 +698,12 @@ const DashboardContent: React.FC = () => {
               </div>
               {healthData.topRisk && (
                 <div style={{ color: '#ff4d4f', fontSize: 11, marginBottom: 4 }}>
-                  ⚠ 首要风险：{healthData.topRisk}
+                   首要风险：{healthData.topRisk}
                 </div>
               )}
               {healthData.suggestion && (
                 <div style={{ color: '#666', fontSize: 11 }}>
-                  💡 {healthData.suggestion}
+                   {healthData.suggestion}
                 </div>
               )}
             </>

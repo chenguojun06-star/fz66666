@@ -32,7 +32,7 @@ const WebSocketNotification: React.FC = () => {
     return subscribe('tenant:application:pending', (msg) => {
       const payload = msg.payload as { tenantName?: string; message?: string };
       notification.info({
-        message: '🏭 新工厂入驻申请',
+        message: ' 新工厂入驻申请',
         description: payload?.message || `${payload?.tenantName || '未知工厂'} 提交了入驻申请`,
         placement: 'topRight',
         duration: 10,
@@ -51,7 +51,7 @@ const WebSocketNotification: React.FC = () => {
     return subscribe('worker:registration:pending', (msg) => {
       const payload = msg.payload as { workerName?: string; message?: string };
       notification.info({
-        message: '👤 新员工注册申请',
+        message: ' 新员工注册申请',
         description: payload?.message || `${payload?.workerName || '未知员工'} 提交了注册申请`,
         placement: 'topRight',
         duration: 8,
@@ -70,7 +70,7 @@ const WebSocketNotification: React.FC = () => {
     return subscribe('app:order:pending', (msg) => {
       const payload = msg.payload as { tenantName?: string; appName?: string; orderNo?: string; message?: string };
       notification.warning({
-        message: '🛒 新应用购买订单',
+        message: ' 新应用购买订单',
         description: payload?.message || `${payload?.tenantName || '客户'} 购买了 ${payload?.appName || '应用'}，订单号：${payload?.orderNo || '-'}`,
         placement: 'topRight',
         duration: 0,
@@ -83,7 +83,7 @@ const WebSocketNotification: React.FC = () => {
     });
   }, [subscribe, user?.isSuperAdmin, notification, navigate]);
 
-  // ⚠️ AI质检异常预警（所有已登录用户）
+  //  AI质检异常预警（所有已登录用户）
   useEffect(() => {
     return subscribe('quality:anomaly', (msg) => {
       const p = msg.payload as {
@@ -94,7 +94,7 @@ const WebSocketNotification: React.FC = () => {
       };
       const rateStr = p.defectRate != null ? `${(p.defectRate * 100).toFixed(1)}%` : '-';
       notification.warning({
-        message: '⚠️ 质检异常预警',
+        message: ' 质检异常预警',
         description: `订单 ${p.orderNo ?? '-'} · ${p.stageName ?? ''} · 次品率 ${rateStr}${p.suggestion ? ` · ${p.suggestion}` : ''}`,
         placement: 'topRight',
         duration: 0,
@@ -103,7 +103,7 @@ const WebSocketNotification: React.FC = () => {
     });
   }, [subscribe, notification]);
 
-  // ⚠️ AI小云决策卡片 (TraceableAdvice) 推送处理
+  //  AI小云决策卡片 (TraceableAdvice) 推送处理
   useEffect(() => {
     return subscribe('ai:traceable_advice', (msg) => {
       // 通过自定义事件广播给 GlobalAiAssistant 组件去渲染 UI

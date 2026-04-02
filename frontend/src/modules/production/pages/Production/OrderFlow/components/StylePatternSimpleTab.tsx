@@ -109,7 +109,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
         items={[
           {
             key: 'pattern',
-            label: `📐 大货纸样 (${allPatternFiles.length})`,
+            label: ` 大货纸样 (${allPatternFiles.length})`,
             children: (
               <Card size="small" style={{ marginBottom: 16 }}>
                 {allPatternFiles.length > 0 ? (
@@ -153,7 +153,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
           },
           {
             key: 'size',
-            label: '📏 尺寸表',
+            label: ' 尺寸表',
             children: (
               <Card size="small" style={{ marginBottom: 16 }}>
                 <StyleSizeTab styleId={styleId} readOnly={true} simpleView={true} />
@@ -162,7 +162,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
           },
           {
             key: 'production',
-            label: '📋 生产制单',
+            label: ' 生产制单',
             children: (
               <Card size="small" style={{ marginBottom: 16 }}>
                 <Spin spinning={loading}>
@@ -218,7 +218,7 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
           },
           {
             key: 'secondary',
-            label: '🧵 二次工艺',
+            label: ' 二次工艺',
             children: (
               <Card size="small" style={{ marginBottom: 16 }}>
                 <StyleSecondaryProcessTab styleId={styleId} styleNo={styleNo} readOnly simpleView />

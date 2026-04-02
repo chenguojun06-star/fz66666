@@ -58,7 +58,7 @@ const columns: ColumnsType<SystemIssueItem> = [
         <Text type="secondary" style={{ fontSize: 12 }}>{record.description}</Text>
         {record.actionHint && (
           <Text type="secondary" style={{ fontSize: 12, color: 'var(--primary-color)' }}>
-            💡 {record.actionHint}
+             {record.actionHint}
           </Text>
         )}
       </Space>
@@ -221,7 +221,7 @@ export default function SystemIssueBoard() {
       <Card size="small" title="问题明细">
         <Spin spinning={loading}>
           {summary && (summary.issues ?? []).length === 0 ? (
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<Text type="secondary">🎉 当前无已知问题，系统运行正常</Text>} />
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<Text type="secondary"> 当前无已知问题，系统运行正常</Text>} />
           ) : (
             <ResizableTable
               dataSource={summary?.issues ?? []}
@@ -246,7 +246,7 @@ export default function SystemIssueBoard() {
       <Card size="small" title={`前端 JS 异常（最近 100 条，内存队列 · 重启后清空）`}>
         <Spin spinning={feLoading}>
           {feErrors.length === 0 ? (
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<Text type="secondary">🎉 暂无前端异常记录</Text>} />
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={<Text type="secondary"> 暂无前端异常记录</Text>} />
           ) : (
             <ResizableTable
               dataSource={feErrors}

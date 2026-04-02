@@ -100,7 +100,7 @@ const IntegrationGuideTab: React.FC = () => {
                 type="warning"
                 showIcon
                 icon={<SafetyCertificateOutlined />}
-                title="⚠️ 重要提醒"
+                title=" 重要提醒"
                 description="开通试用或购买成功后，系统会弹窗显示 appKey 和 appSecret。appSecret 仅此一次显示，请务必立即保存！如遗失可在「应用管理」Tab中重置密钥。"
                 style={{ marginBottom: 16 }}
               />
@@ -146,19 +146,19 @@ const IntegrationGuideTab: React.FC = () => {
       <Card title={<span><SwapOutlined style={{ marginRight: 8, color: 'var(--color-info)' }} />五大对接模块</span>} style={{ marginBottom: 24 }}>
         <Row gutter={[16, 16]}>
           <Col xs={24} sm={12}>
-            <FlowCard icon={<SendOutlined />} title="📦 下单对接 (ORDER_SYNC)" desc="客户ERP系统自动推送订单 → 本系统创建生产订单。支持查询订单状态和进度。" color="var(--color-info)" />
+            <FlowCard icon={<SendOutlined />} title=" 下单对接 (ORDER_SYNC)" desc="客户ERP系统自动推送订单 → 本系统创建生产订单。支持查询订单状态和进度。" color="var(--color-info)" />
           </Col>
           <Col xs={24} sm={12}>
-            <FlowCard icon={<CheckCircleOutlined />} title="✅ 质检反馈 (QUALITY_FEEDBACK)" desc="入库质检完成 → 自动Webhook推送质检结果到客户系统。支持API主动查询质检报告。" color="var(--color-success)" />
+            <FlowCard icon={<CheckCircleOutlined />} title=" 质检反馈 (QUALITY_FEEDBACK)" desc="入库质检完成 → 自动Webhook推送质检结果到客户系统。支持API主动查询质检报告。" color="var(--color-success)" />
           </Col>
           <Col xs={24} sm={12}>
-            <FlowCard icon={<CloudUploadOutlined />} title="🚚 物流对接 (LOGISTICS_SYNC)" desc="成品出库操作 → 自动推送物流信息（出库单号、物流公司、运单号）到客户系统。" color="#722ed1" />
+            <FlowCard icon={<CloudUploadOutlined />} title=" 物流对接 (LOGISTICS_SYNC)" desc="成品出库操作 → 自动推送物流信息（出库单号、物流公司、运单号）到客户系统。" color="#722ed1" />
           </Col>
           <Col xs={24} sm={12}>
-            <FlowCard icon={<ThunderboltOutlined />} title="💰 付款对接 (PAYMENT_SYNC)" desc="对账审批通过 → 推送结算通知。客户可通过API确认付款，双向同步对账状态。" color="#fa8c16" />
+            <FlowCard icon={<ThunderboltOutlined />} title=" 付款对接 (PAYMENT_SYNC)" desc="对账审批通过 → 推送结算通知。客户可通过API确认付款，双向同步对账状态。" color="#fa8c16" />
           </Col>
           <Col xs={24} sm={12}>
-            <FlowCard icon={<LinkOutlined />} title="🧵 面辅料供应对接 (MATERIAL_SUPPLY)" desc="向供应商推送采购订单，查询供应商库存。接收供应商订单确认、价格更新、发货通知。" color="#13c2c2" />
+            <FlowCard icon={<LinkOutlined />} title=" 面辅料供应对接 (MATERIAL_SUPPLY)" desc="向供应商推送采购订单，查询供应商库存。接收供应商订单确认、价格更新、发货通知。" color="#13c2c2" />
           </Col>
         </Row>
 
@@ -301,7 +301,7 @@ const IntegrationGuideTab: React.FC = () => {
         </ol>
 
         <div style={{ background: 'rgba(234, 179, 8, 0.15)', padding: 16, borderRadius: 8, borderLeft: '4px solid var(--color-warning)', marginTop: 16 }}>
-          <Text strong style={{ color: 'var(--color-warning)' }}>💡 最佳实践</Text>
+          <Text strong style={{ color: 'var(--color-warning)' }}> 最佳实践</Text>
           <ul style={{ margin: '8px 0 0 0', fontSize: 13, lineHeight: 2 }}>
             <li>为每个ERP系统创建独立应用，避免混用</li>
             <li>应用名称使用有意义的标识（如"国内ERP"、"外贸ERP"）</li>
@@ -317,7 +317,7 @@ const IntegrationGuideTab: React.FC = () => {
         <Collapse accordion defaultActiveKey="order" items={[
           {
             key: 'order',
-            label: '📦 下单对接 — 3个端点',
+            label: ' 下单对接 — 3个端点',
             children: (
               <div>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -339,7 +339,7 @@ const IntegrationGuideTab: React.FC = () => {
           },
           {
             key: 'quality',
-            label: '✅ 质检反馈 — 1个端点 + Webhook推送',
+            label: ' 质检反馈 — 1个端点 + Webhook推送',
             children: (
               <div>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -358,7 +358,7 @@ const IntegrationGuideTab: React.FC = () => {
           },
           {
             key: 'logistics',
-            label: '🚚 物流对接 — 1个端点 + Webhook推送',
+            label: ' 物流对接 — 1个端点 + Webhook推送',
             children: (
               <div>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -377,7 +377,7 @@ const IntegrationGuideTab: React.FC = () => {
           },
           {
             key: 'payment',
-            label: '💰 付款对接 — 2个端点 + Webhook推送',
+            label: ' 付款对接 — 2个端点 + Webhook推送',
             children: (
               <div>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -397,7 +397,7 @@ const IntegrationGuideTab: React.FC = () => {
           },
           {
             key: 'material',
-            label: '🧵 面辅料供应对接 — 2个主动端点 + 3个Webhook',
+            label: ' 面辅料供应对接 — 2个主动端点 + 3个Webhook',
             children: (
               <div>
                 <Title level={5} style={{ marginTop: 0, marginBottom: 8 }}>主动调用端点</Title>
@@ -436,7 +436,7 @@ const IntegrationGuideTab: React.FC = () => {
           },
           {
             key: 'pull',
-            label: '📥 数据拉取 — 从客户系统拉取纸样/制单',
+            label: ' 数据拉取 — 从客户系统拉取纸样/制单',
             children: (
               <div>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -651,25 +651,25 @@ public class OpenApiClient {
         <Row gutter={[12, 12]}>
           <Col xs={24} sm={12} md={6}>
             <Card size="small" style={{ background: 'rgba(45, 127, 249, 0.08)', borderColor: '#adc6ff' }}>
-              <Text strong>🚚 成品出库</Text>
+              <Text strong> 成品出库</Text>
               <br /><Text type="secondary" style={{ fontSize: 12 }}>推送物流信息（出库单号、物流公司、运单号）</Text>
             </Card>
           </Col>
           <Col xs={24} sm={12} md={6}>
             <Card size="small" style={{ background: 'rgba(34, 197, 94, 0.15)', borderColor: '#b7eb8f' }}>
-              <Text strong>✅ 生产完工</Text>
+              <Text strong> 生产完工</Text>
               <br /><Text type="secondary" style={{ fontSize: 12 }}>推送订单状态变更为已完成</Text>
             </Card>
           </Col>
           <Col xs={24} sm={12} md={6}>
             <Card size="small" style={{ background: 'rgba(250, 140, 22, 0.1)', borderColor: '#ffd591' }}>
-              <Text strong>💰 对账审批</Text>
+              <Text strong> 对账审批</Text>
               <br /><Text type="secondary" style={{ fontSize: 12 }}>推送结算审批通过通知</Text>
             </Card>
           </Col>
           <Col xs={24} sm={12} md={6}>
             <Card size="small" style={{ background: 'rgba(19, 194, 194, 0.1)', borderColor: '#87e8de' }}>
-              <Text strong>🧵 供应商回调</Text>
+              <Text strong> 供应商回调</Text>
               <br /><Text type="secondary" style={{ fontSize: 12 }}>接收供应商订单确认、价格更新、发货通知</Text>
             </Card>
           </Col>

@@ -1174,7 +1174,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
           },
         });
       } else if (sampleSnapshot?.receiveTime && sampleSnapshot.receiveTime !== '待启动' && !sampleStageCompleted && !selected.record.sampleCompletedTime) {
-        // ✅ 已领取但未完成 → 显示"完成"按钮
+        //  已领取但未完成 → 显示"完成"按钮
         actions.push({
           key: 'complete-sample',
           label: '标记完成',
@@ -1199,7 +1199,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
         });
       }
 
-      // ❌ 移除：自动"更新进度"弹窗（用户投诉的主要问题）
+      //  移除：自动"更新进度"弹窗（用户投诉的主要问题）
       // 如果需要手动调整进度，可以通过 API 直接修改，但不弹窗
 
       if (sampleStageCompleted || selected.record.sampleCompletedTime) {

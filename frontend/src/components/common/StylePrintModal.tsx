@@ -509,7 +509,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
           alignItems: 'center',
           gap: 16,
         }}>
-          <div style={{ fontWeight: 600, color: '#1d39c4' }}>🖨️ 打印预览</div>
+          <div style={{ fontWeight: 600, color: '#1d39c4' }}> 打印预览</div>
           <Space>
             <Button onClick={onClose}>取消</Button>
             <Button type="primary" onClick={handlePrint}>
@@ -528,7 +528,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-              <div style={{ fontWeight: 600, color: '#1f2937', whiteSpace: 'nowrap' }}>📋 选择打印内容：</div>
+              <div style={{ fontWeight: 600, color: '#1f2937', whiteSpace: 'nowrap' }}> 选择打印内容：</div>
               <Checkbox.Group
                 value={Object.keys(options).filter(k => options[k as keyof PrintOptions])}
                 onChange={(values) => {
@@ -656,7 +656,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
 
             return (
               <div className="print-section">
-                <div className="print-section-title">📊 码数明细</div>
+                <div className="print-section-title"> 码数明细</div>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: "var(--font-size-sm)" }}>
                   <thead>
                     <tr style={{ background: 'var(--color-bg-container)' }}>
@@ -771,7 +771,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
 
             return (
               <div className="print-section">
-                <div className="print-section-title">📏 尺寸表</div>
+                <div className="print-section-title"> 尺寸表</div>
                 {/* table-layout:fixed + 只固定图片/分组列宽，其余列自动均分剩余空间 */}
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--font-size-xs)', tableLayout: 'fixed' }}>
                   <thead>
@@ -821,7 +821,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
           {/* BOM表 */}
           {options.bomTable && data.bom.length > 0 && (
             <div className="print-section">
-              <div className="print-section-title">📦 BOM物料清单</div>
+              <div className="print-section-title"> BOM物料清单</div>
               <ResizableTable
                 storageKey="print-bom"
                 className="print-table"
@@ -862,7 +862,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
           {/* 工序表 */}
           {options.processTable && data.process.length > 0 && (
             <div className="print-section">
-              <div className="print-section-title">⚙️ 工序表</div>
+              <div className="print-section-title"> 工序表</div>
               <ResizableTable
                 storageKey="print-process"
                 className="print-table"
@@ -907,7 +907,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
 
             return (
               <div className="print-section">
-                <div className="print-section-title">📋 生产要求</div>
+                <div className="print-section-title"> 生产要求</div>
                 {(reviewLabel || sampleReviewComment || sampleReviewer || sampleReviewTime) && (
                   <div style={{ marginBottom: 10, border: '1px solid var(--color-border)', padding: '8px 10px', borderRadius: 6 }}>
                     <div style={{ marginBottom: 6, fontWeight: 600 }}>样衣审核</div>

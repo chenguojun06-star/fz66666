@@ -471,7 +471,7 @@ export const useProgressColumns = ({
             {ns.map((node: ProgressNode, index: number) => {
               const nodeName = node.name || '-';
               const completedQty = nodeDoneMap?.[nodeName] || 0;
-              // ★ 采购/物料节点：到货即完成(100%)，显示 ✓；不按件数比率（避免裁剪>下单时卡死）
+              //  采购/物料节点：到货即完成(100%)，显示 ；不按件数比率（避免裁剪>下单时卡死）
               const isProcureNode = /采购|物料|备料|辅料|面料/.test(nodeName);
               const percent = isProcureNode
                 ? (completedQty > 0 ? 100 : 0)
@@ -480,7 +480,7 @@ export const useProgressColumns = ({
                   : 0;
               const remaining = totalQty - completedQty;
               const completionTime = nodeTimeMap?.[nodeName] || '';
-              // ★ nodeType 优先用模板返回的 progressStage（父分类），避免硬编码 NODE_TYPE_MAP 漏掉自定义工序名
+              //  nodeType 优先用模板返回的 progressStage（父分类），避免硬编码 NODE_TYPE_MAP 漏掉自定义工序名
               const nodeType = (node.progressStage && node.progressStage.trim())
                 || NODE_TYPE_MAP[nodeName]
                 || nodeName.toLowerCase();
@@ -588,7 +588,7 @@ export const useProgressColumns = ({
                           progress={percent}
                           size={68}
                           nodeName={nodeName}
-                          text={isProcureNode ? (completedQty > 0 ? '✓' : '') : `${completedQty}/${totalQty}`}
+                          text={isProcureNode ? (completedQty > 0 ? '' : '') : `${completedQty}/${totalQty}`}
                           subText={!isProcureNode && totalQty > 0 ? `${percent}%` : undefined}
                           paused={frozen}
                           color1={nodePrimaryColor}
@@ -600,7 +600,7 @@ export const useProgressColumns = ({
                         progress={percent}
                         size={68}
                         nodeName={nodeName}
-                        text={isProcureNode ? (completedQty > 0 ? '✓' : '') : `${completedQty}/${totalQty}`}
+                        text={isProcureNode ? (completedQty > 0 ? '' : '') : `${completedQty}/${totalQty}`}
                         subText={!isProcureNode && totalQty > 0 ? `${percent}%` : undefined}
                         paused={frozen}
                         color1={nodePrimaryColor}

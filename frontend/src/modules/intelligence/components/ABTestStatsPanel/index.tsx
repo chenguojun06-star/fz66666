@@ -64,8 +64,8 @@ const ABTestStatsPanel: React.FC = () => {
               }}>
                 <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8, color: '#e0e0e0' }}>
                   {SCENE_LABELS[r.scene] || r.scene}
-                  {isBestLatency && <Tooltip title="最低延迟"><span style={{ marginLeft: 4, fontSize: 11, color: '#4ade80' }}>⚡</span></Tooltip>}
-                  {isBestFeedback && <Tooltip title="最高评分"><span style={{ marginLeft: 4, fontSize: 11, color: '#facc15' }}>⭐</span></Tooltip>}
+                  {isBestLatency && <Tooltip title="最低延迟"><span style={{ marginLeft: 4, fontSize: 11, color: '#4ade80' }}></span></Tooltip>}
+                  {isBestFeedback && <Tooltip title="最高评分"><span style={{ marginLeft: 4, fontSize: 11, color: '#facc15' }}></span></Tooltip>}
                 </div>
                 <Metric label="执行次数" value={r.totalRuns} />
                 <Metric label="成功率" value={`${successRate}%`} color={successRate >= 90 ? '#4ade80' : successRate >= 70 ? '#facc15' : '#f87171'} />

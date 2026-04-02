@@ -296,7 +296,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQ
       {/* 1. 成本核算 - 顶部 */}
       <Row gutter={8} style={{ marginBottom: 8 }}>
         <Col span={14}>
-          <Card title="📊 成本核算" size="small" style={{ height: '100%' }} styles={{ body: { padding: '8px' } }}>
+          <Card title=" 成本核算" size="small" style={{ height: '100%' }} styles={{ body: { padding: '8px' } }}>
             <Form form={form} layout="vertical" onValuesChange={calculateTotal} size="small">
               <Row gutter={8}>
                 <Col span={8}>
@@ -412,12 +412,12 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQ
           </Card>
         </Col>
         <Col span={4}>
-          <Card title="🔧 工序单价拆解" size="small" style={{ height: '100%' }} styles={{ body: { padding: '8px' } }}>
+          <Card title=" 工序单价拆解" size="small" style={{ height: '100%' }} styles={{ body: { padding: '8px' } }}>
             <ProcessStageSummary data={processList} />
           </Card>
         </Col>
         <Col span={6}>
-          <Card title="💰 成本结构" size="small" style={{ height: '100%' }} styles={{ body: { padding: '12px' } }}>
+          <Card title=" 成本结构" size="small" style={{ height: '100%' }} styles={{ body: { padding: '12px' } }}>
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
               <div style={{ fontSize: '13px', color: 'var(--neutral-text-disabled)', marginBottom: 8 }}>预计可赚</div>
               <div style={{
@@ -429,7 +429,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQ
                 {profit >= 0 ? '+' : ''}¥{profit.toFixed(2)}
               </div>
               <div style={{ fontSize: '12px', color: profit >= 0 ? 'var(--color-success)' : 'var(--color-danger)' }}>
-                {profit >= 0 ? `✓ 利润率 ${profitRate}%` : '✗ 报价低于成本'}
+                {profit >= 0 ? ` 利润率 ${profitRate}%` : ' 报价低于成本'}
               </div>
             </div>
             <Divider style={{ margin: '12px 0' }} />
@@ -502,7 +502,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQ
             justifyContent: 'space-between',
             alignItems: 'center'
           }}>
-            <span style={{ fontSize: '15px', fontWeight: 600 }}>💰 开发报价明细</span>
+            <span style={{ fontSize: '15px', fontWeight: 600 }}> 开发报价明细</span>
             {totalQty > 0 && (
               <span style={{ fontSize: '13px', color: 'var(--neutral-text-secondary)' }}>
                 本批数量：<strong>{totalQty} 件</strong>
@@ -586,7 +586,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQ
       <Card
         title={
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '15px', fontWeight: 600 }}>📦 BOM物料清单 ({bomList.length}项)</span>
+            <span style={{ fontSize: '15px', fontWeight: 600 }}> BOM物料清单 ({bomList.length}项)</span>
             <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--primary-color)' }}>
               单件物料成本: ¥{materialCost.toFixed(2)}
               {bomColorCosts.colors.length > 1 && (
@@ -647,7 +647,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQ
 
       {/* 3. 工序明细 */}
       <Card
-        title={<span style={{ fontSize: '15px', fontWeight: 600 }}>🔧 工序明细 ({processList.length}项) - 小计: ¥{processList.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0).toFixed(2)}</span>}
+        title={<span style={{ fontSize: '15px', fontWeight: 600 }}> 工序明细 ({processList.length}项) - 小计: ¥{processList.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0).toFixed(2)}</span>}
         size="small"
         style={{ marginBottom: 8 }}
         styles={{ body: { padding: '8px' } }}
@@ -684,7 +684,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQ
       {/* 4. 二次工艺明细 */}
       {secondaryProcessList.length > 0 && (
         <Card
-          title={<span style={{ fontSize: '15px', fontWeight: 600 }}>✨ 二次工艺明细 ({secondaryProcessList.length}项) - 单件小计: ¥{secondaryProcessList.reduce((sum, item) => sum + (Number(item.unitPrice) || 0), 0).toFixed(2)}</span>}
+          title={<span style={{ fontSize: '15px', fontWeight: 600 }}> 二次工艺明细 ({secondaryProcessList.length}项) - 单件小计: ¥{secondaryProcessList.reduce((sum, item) => sum + (Number(item.unitPrice) || 0), 0).toFixed(2)}</span>}
           size="small"
           styles={{ body: { padding: '8px' } }}
         >
@@ -727,7 +727,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQ
           <Row justify="space-between" align="middle">
             <Col>
               <span style={{ fontSize: '15px', fontWeight: 600 }}>
-                💰 工序总成本（普通工序 + 二次工艺）
+                 工序总成本（普通工序 + 二次工艺）
               </span>
             </Col>
             <Col>

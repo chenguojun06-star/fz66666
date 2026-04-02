@@ -88,7 +88,7 @@ export const ensureBoardStatsForOrder = async ({
 
   const existing = boardStatsByOrder[oid];
   // null = 已请求但 API 失败；有数据且含全部节点 = 缓存命中
-  // ★ TTL 检查：超过 2 分钟的缓存视为过期，允许重新拉取（解决数据不动态更新）
+  //  TTL 检查：超过 2 分钟的缓存视为过期，允许重新拉取（解决数据不动态更新）
   const fetchTs = fetchTimestamps.get(oid) ?? 0;
   const isExpired = Date.now() - fetchTs >= BOARD_STATS_TTL_MS;
   if (existing === null && !isExpired) return;
@@ -98,7 +98,7 @@ export const ensureBoardStatsForOrder = async ({
   })) {
     return;
   }
-  // ★ 静默刷新：有真实缓存数据时（TTL 过期）不调用 setBoardLoadingForOrder(true)，
+  //  静默刷新：有真实缓存数据时（TTL 过期）不调用 setBoardLoadingForOrder(true)，
   //   避免进度球/悬停卡因 loading 状态切换而闪烁消失。
   //   仅首次加载（existing=undefined）或 API 失败重试（existing=null）才显示 loading。
   const isSilentRefresh = existing != null; // null/undefined 均视为"无真实数据"
@@ -121,7 +121,7 @@ export const ensureBoardStatsForOrder = async ({
       const rProcessName = String((r as any)?.processName || '').trim();
       const nodeParent = String((node as any)?.progressStage || '').trim();
 
-      // ★ 子工序精确归属：节点有父分类 + 记录有明确 processName → 只用 processName 决定归属
+      //  子工序精确归属：节点有父分类 + 记录有明确 processName → 只用 processName 决定归属
       // 避免 progressStage="尾部" 时，"蒸烫"节点错误地计入"剪线"的扫码记录
       if (nodeParent && rProcessName) {
         return rProcessName === nName || stageNameMatches(nName, rProcessName);
@@ -198,7 +198,7 @@ export const ensureBoardStatsForOrder = async ({
     let procureArrived = 0;
     let procureArrivalTime = '';
     const orderNo = String((order as any)?.orderNo || '').trim();
-    // ★ 无论模板是否配了采购节点，只要有 orderNo 就查采购接口
+    //  无论模板是否配了采购节点，只要有 orderNo 就查采购接口
     // 这样即使模板用不同名称（如"面料到货"）或根本没配采购节点，也能拿到到货时间
     if (orderNo) {
       try {
@@ -222,7 +222,7 @@ export const ensureBoardStatsForOrder = async ({
         stats[nodeName] = procureArrived;
       }
     }
-    // ★ 模板无采购节点但有到货数据 → 写入哨兵键，供悬停卡/弹窗消费
+    //  模板无采购节点但有到货数据 → 写入哨兵键，供悬停卡/弹窗消费
     if (!hasProcureNode && procureArrived > 0) {
       stats['__procurement__'] = procureArrived;
     }
@@ -238,7 +238,7 @@ export const ensureBoardStatsForOrder = async ({
         if (!nodeName) continue;
         const matchingRecords = valid.filter((r) => recordMatchesNode(n as ProgressNode, r));
         // 找到最大的 scanTime（即最后一次扫码时间 = 完成时间）
-        // ★ Bug5修复：scanTime 可能为 null（旧数据），兜底读 createTime
+        //  Bug5修复：scanTime 可能为 null（旧数据），兜底读 createTime
         let maxTime = '';
         for (const r of matchingRecords) {
           const t = String((r as any)?.scanTime || (r as any)?.createTime || '');
@@ -250,7 +250,7 @@ export const ensureBoardStatsForOrder = async ({
         }
         if (maxTime) timeStats[nodeName] = maxTime;
       }
-      // ★ 模板无采购节点但有到货时间 → 写入哨兵键，供悬停卡/详情弹窗消费
+      //  模板无采购节点但有到货时间 → 写入哨兵键，供悬停卡/详情弹窗消费
       if (!hasProcureNode && procureArrivalTime) {
         timeStats['__procurement__'] = procureArrivalTime;
       }

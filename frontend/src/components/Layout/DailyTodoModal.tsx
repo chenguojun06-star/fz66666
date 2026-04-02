@@ -175,7 +175,7 @@ const DailyTodoModal: React.FC = () => {
       badge: brief.overdueOrderCount > 0 ? brief.overdueOrderCount : undefined,
       desc: brief.overdueOrderCount > 0
         ? `当前 ${brief.overdueOrderCount} 单已超出交期，需立即联系工厂确认进度`
-        : '暂无逾期订单，继续保持 ✅',
+        : '暂无逾期订单，继续保持 ',
       path: brief.overdueOrderCount > 0 ? '/production/progress-detail' : undefined,
     });
 
@@ -187,7 +187,7 @@ const DailyTodoModal: React.FC = () => {
       badge: brief.highRiskOrderCount > 0 ? brief.highRiskOrderCount : undefined,
       desc: brief.highRiskOrderCount > 0
         ? `${brief.highRiskOrderCount} 单 7 天内截止但进度不足 50%，今日必须跟进`
-        : '暂无高风险订单 ✅',
+        : '暂无高风险订单 ',
       path: brief.highRiskOrderCount > 0 ? '/production/progress-detail' : undefined,
     });
 
@@ -209,7 +209,7 @@ const DailyTodoModal: React.FC = () => {
       level: scanLevel,
       title: '今日扫码进度',
       desc: brief.todayScanCount === 0
-        ? '⚠️ 今日暂无扫码记录，提醒工厂及时录入生产进度'
+        ? ' 今日暂无扫码记录，提醒工厂及时录入生产进度'
         : `今日已扫码 ${brief.todayScanCount} 次，持续跟进各工厂进度录入`,
       path: '/production/progress-detail',
     });
@@ -245,7 +245,7 @@ const DailyTodoModal: React.FC = () => {
       open={open}
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 18 }}>📋</span>
+          <span style={{ fontSize: 18 }}></span>
           <span style={{ fontSize: 16, fontWeight: 700 }}>今日必做清单</span>
           {brief?.date && (
             <span style={{ fontSize: 12, color: '#8c8c8c', fontWeight: 400 }}>{brief.date}</span>

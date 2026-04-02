@@ -366,7 +366,7 @@ export function useMaterialInventoryData() {
         const isAlert = alertList.some((a) => a.materialCode === m.materialCode);
         const labelBase = `${m.materialName || ''}（${m.materialCode || ''}）`;
         return {
-          label: isAlert ? `${labelBase} ⚠️库存不足` : labelBase,
+          label: isAlert ? `${labelBase} 库存不足` : labelBase,
           value: m.materialCode,
           dbRecord: m,
         };

@@ -525,7 +525,7 @@ const RoleList: React.FC = () => {
                 style={{ marginBottom: 12 }}
                 type="warning"
                 showIcon
-                icon={<span>🛡️</span>}
+                icon={<span></span>}
                 title="权限防呆检测"
                 description={
                   <span>

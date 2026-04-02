@@ -116,7 +116,7 @@ export function confirmPrecheckRisk(data: PrecheckData): Promise<boolean> {
         : <WarningOutlined style={{ color: '#faad14' }} />,
       title: (
         <span style={{ color: isHigh ? '#cf1322' : '#ad6800', fontWeight: 700 }}>
-          {isHigh ? '🔴 高风险预警 — 建议暂停' : '🟡 中等风险提示'}
+          {isHigh ? ' 高风险预警 — 建议暂停' : ' 中等风险提示'}
         </span>
       ),
       content: <ModalContent data={data} isHigh={isHigh} />,

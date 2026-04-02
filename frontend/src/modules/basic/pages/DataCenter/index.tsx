@@ -155,9 +155,9 @@ export const buildProductionSheetHtml = (payload: any) => {
 
   // 样衣审核
   const reviewStatusLabel = (s: unknown) => {
-    if (s === 'PASS')   return '<span style="color:#52c41a;font-weight:600">✅ 通过</span>';
-    if (s === 'REWORK') return '<span style="color:#faad14;font-weight:600">⚠️ 需修改</span>';
-    if (s === 'REJECT') return '<span style="color:#ff4d4f;font-weight:600">❌ 不通过</span>';
+    if (s === 'PASS')   return '<span style="color:#52c41a;font-weight:600"> 通过</span>';
+    if (s === 'REWORK') return '<span style="color:#faad14;font-weight:600"> 需修改</span>';
+    if (s === 'REJECT') return '<span style="color:#ff4d4f;font-weight:600"> 不通过</span>';
     return '<span style="color:#aaa">未审核</span>';
   };
   const sampleReviewHtml = style.sampleReviewStatus ? `

@@ -299,7 +299,7 @@ const IntelligenceCenter: React.FC = () => {
         {/* 紧急预警跑马灯：逾期 & 高风险订单滚动提示（有数据时才渲染） */}
         {tickerItems.length > 0 && (
           <div className="cockpit-ticker">
-            <span className="cockpit-ticker-label">⚠ 紧急预警</span>
+            <span className="cockpit-ticker-label"> 紧急预警</span>
             <div className="cockpit-ticker-track">
               <div className="cockpit-ticker-inner"
                 style={{ animationDuration: `${Math.max(12, tickerItems.length * 5)}s` }}>
@@ -361,7 +361,7 @@ const IntelligenceCenter: React.FC = () => {
             <div className="c-kpi-unit">家</div>
             <div className="c-kpi-sub">
               {currentKpiMetrics.activeFactories === 0 && currentKpiMetrics.productionOrderCount > 0
-                ? <span style={{ color: '#ff4136' }}>⚠️ 全部离线·{currentKpiMetrics.productionOrderCount}单生产中</span>
+                ? <span style={{ color: '#ff4136' }}> 全部离线·{currentKpiMetrics.productionOrderCount}单生产中</span>
                 : <>员工&nbsp;<b style={{ color: '#39ff14' }}><AnimatedNum val={pulse?.activeWorkers ?? '—'} /></b>&nbsp;人在线</>}
             </div>
             <div className="c-kpi-delta-row">
@@ -412,9 +412,9 @@ const IntelligenceCenter: React.FC = () => {
             <div className="c-kpi-unit">家停滞</div>
             <div className="c-kpi-sub">
               {(pulse?.stagnantFactories?.length ?? 0) > 0
-                ? <span className="blink-text">⚠️ 需立即处理</span>
+                ? <span className="blink-text"> 需立即处理</span>
                 : currentKpiMetrics.activeFactories === 0 && currentKpiMetrics.productionOrderCount > 0
-                  ? <span style={{ color: '#f7a600' }}>⚠️ 无工厂活跃·生产停滞</span>
+                  ? <span style={{ color: '#f7a600' }}> 无工厂活跃·生产停滞</span>
                   : '生产运转正常'}
             </div>
             <div className="c-kpi-delta-row">
@@ -444,7 +444,7 @@ const IntelligenceCenter: React.FC = () => {
             <div className="c-kpi-unit">项缺料</div>
             <div className="c-kpi-sub">
               {(shortage?.shortageItems?.length ?? 0) > 0
-                ? <span style={{ color: '#f7a600' }}>⚡ 请及时补单</span>
+                ? <span style={{ color: '#f7a600' }}> 请及时补单</span>
                 : '库存储备充足'}
             </div>
             <div className="c-kpi-delta-row">
@@ -660,7 +660,7 @@ const IntelligenceCenter: React.FC = () => {
             {/* 停滞工厂明细 */}
             {(pulse?.stagnantFactories?.length ?? 0) > 0 && (
               <div style={{ marginTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 8 }}>
-                <div style={{ color: '#ff6b6b', fontSize: 10, marginBottom: 5 }}>停滞工厂 ⚠</div>
+                <div style={{ color: '#ff6b6b', fontSize: 10, marginBottom: 5 }}>停滞工厂 </div>
                 {pulse!.stagnantFactories.map(f => {
                   const h = Math.floor(f.minutesSilent / 60);
                   const m = f.minutesSilent % 60;
@@ -778,7 +778,7 @@ const IntelligenceCenter: React.FC = () => {
                         return (
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                             <b style={{ color: grd.c, border: `1px solid ${grd.c}55`, padding: '0 3px', borderRadius: 3, fontSize: 10 }}>{grd.g}</b>
-                            {w.trend === 'UP' ? '📈' : w.trend === 'DOWN' ? '📉' : '➡️'}
+                            {w.trend === 'UP' ? '' : w.trend === 'DOWN' ? '' : ''}
                           </span>
                         );
                       })()}
@@ -851,7 +851,7 @@ const IntelligenceCenter: React.FC = () => {
                       <span className="c-risk-order">{o.orderNo}</span>
                       <span className="c-risk-factory">{o.factoryName}</span>
                       <span className="c-risk-prog" style={{ color: '#ff4136' }}>{Number(o.productionProgress)||0}%</span>
-                      <span style={{ flex: 1, textAlign: 'right', fontSize: 10, color: '#ff4136', flexShrink: 0, fontWeight: 600 }}>📞 立即联系</span>
+                      <span style={{ flex: 1, textAlign: 'right', fontSize: 10, color: '#ff4136', flexShrink: 0, fontWeight: 600 }}> 立即联系</span>
                     </div>
                   );
                 })}
@@ -863,7 +863,7 @@ const IntelligenceCenter: React.FC = () => {
                       <span className="c-risk-order">{o.orderNo}</span>
                       <span className="c-risk-factory">{o.factoryName}</span>
                       <span className="c-risk-prog" style={{ color: '#f7a600' }}>{Number(o.productionProgress)||0}%</span>
-                      <span style={{ flex: 1, textAlign: 'right', fontSize: 10, color: '#f7a600', flexShrink: 0, fontWeight: 600 }}>⚡ 加急协调</span>
+                      <span style={{ flex: 1, textAlign: 'right', fontSize: 10, color: '#f7a600', flexShrink: 0, fontWeight: 600 }}> 加急协调</span>
                     </div>
                   );
                 })}
@@ -875,7 +875,7 @@ const IntelligenceCenter: React.FC = () => {
                       <span className="c-risk-order">{o.orderNo}</span>
                       <span className="c-risk-factory">{o.factoryName}</span>
                       <span className="c-risk-prog" style={{ color: '#3a8aff' }}>{Number(o.productionProgress)||0}%</span>
-                      <span style={{ flex: 1, textAlign: 'right', fontSize: 10, color: '#3a8aff', flexShrink: 0 }}>👁 持续关注</span>
+                      <span style={{ flex: 1, textAlign: 'right', fontSize: 10, color: '#3a8aff', flexShrink: 0 }}> 持续关注</span>
                     </div>
                   );
                 })}
@@ -911,7 +911,7 @@ const IntelligenceCenter: React.FC = () => {
                     marginLeft: 'auto', fontSize: 10, flexShrink: 0, fontWeight: 600,
                     color: item.riskLevel === 'HIGH' ? '#ff4136' : item.riskLevel === 'MEDIUM' ? '#f7a600' : '#39ff14',
                   }}>
-                    {item.riskLevel === 'HIGH' ? '⚠ 库存严重不足' : item.riskLevel === 'MEDIUM' ? '库存偏紧' : '适量补充'}
+                    {item.riskLevel === 'HIGH' ? ' 库存严重不足' : item.riskLevel === 'MEDIUM' ? '库存偏紧' : '适量补充'}
                   </span>
                 </div>
               ))
@@ -1025,7 +1025,7 @@ const IntelligenceCenter: React.FC = () => {
                     fontSize: 12, fontWeight: 600, opacity: repairing ? 0.6 : 1,
                   }}
                 >
-                  {repairing ? '修复中…' : '⚡ 一键修复'}
+                  {repairing ? '修复中…' : ' 一键修复'}
                 </button>
                 {repairResult && (
                   <span style={{ fontSize: 11, color: repairResult.needManual < 0 ? '#ff4d4f' : '#73d13d' }}>
@@ -1050,7 +1050,7 @@ const IntelligenceCenter: React.FC = () => {
               ranking.rankings.slice(0, 5).map((r, i) => (
                 <div key={r.factoryId} className="c-rank-row">
                   <span className="c-rank-medal" style={{ color: medalColor[i] ?? '#7a8999' }}>
-                    {i < 3 ? ['🥇','🥈','🥉'][i] : `#${r.rank}`}
+                    {i < 3 ? ['','',''][i] : `#${r.rank}`}
                   </span>
                   <span className="c-rank-name">{r.factoryName}</span>
                   <div className="c-rank-bar-wrap">
@@ -1096,17 +1096,17 @@ const IntelligenceCenter: React.FC = () => {
                   fontSize: 12, fontWeight: 600, opacity: (holdingMeeting || !meetingTopic.trim()) ? 0.5 : 1, whiteSpace: 'nowrap',
                 }}
               >
-                {holdingMeeting ? '讨论中…' : '🧠 召开例会'}
+                {holdingMeeting ? '讨论中…' : ' 召开例会'}
               </button>
             </div>
             {/* 最新结果 */}
             {meetingResult && !meetingResult.error && (
               <div style={{ padding: '8px 14px', margin: '0 14px 10px', background: 'rgba(167,139,250,0.06)', borderRadius: 8, border: '1px solid rgba(167,139,250,0.15)' }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#a78bfa', marginBottom: 4 }}>📋 共识结论</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#a78bfa', marginBottom: 4 }}> 共识结论</div>
                 <div style={{ fontSize: 12, color: '#c0c8d0', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{meetingResult.consensus || '无共识'}</div>
                 {meetingResult.dissent && (
                   <>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: '#d48806', marginTop: 8, marginBottom: 4 }}>⚠️ 分歧意见</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: '#d48806', marginTop: 8, marginBottom: 4 }}> 分歧意见</div>
                     <div style={{ fontSize: 12, color: '#a0a8b0', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{meetingResult.dissent}</div>
                   </>
                 )}
@@ -1193,7 +1193,7 @@ const IntelligenceCenter: React.FC = () => {
                 ))}
                 {brain.summary.topRisk && (
                   <div style={{ marginTop: 6, fontSize: 10, color: '#f7a600', background: 'rgba(247,166,0,0.06)', padding: '4px 8px', borderRadius: 4 }}>
-                    🎯 首要风险：{brain.summary.topRisk}
+                     首要风险：{brain.summary.topRisk}
                   </div>
                 )}
               </>
@@ -1241,7 +1241,7 @@ const IntelligenceCenter: React.FC = () => {
                     {task.autoExecutable && (
                       executeTaskResult?.taskCode === task.taskCode ? (
                         <span style={{ fontSize: 9, color: executeTaskResult.ok ? '#73d13d' : '#ff4136', fontWeight: 600 }}>
-                          {executeTaskResult.ok ? '✓ 已执行' : '✗ 失败'}
+                          {executeTaskResult.ok ? ' 已执行' : ' 失败'}
                         </span>
                       ) : (
                         <button
@@ -1289,7 +1289,7 @@ const IntelligenceCenter: React.FC = () => {
             ╚════════════════════════════════════════════╝ */}
         <div style={{ padding: '0 24px 4px' }}>
           <div className="c-card-title" style={{ cursor: 'pointer', padding: '8px 0', marginBottom: 0 }} onClick={() => toggleCollapse('profit')}>
-            <span style={{ fontSize: 13, color: '#a78bfa', fontWeight: 600 }}>💰 订单利润估算 &amp; 完工预测</span>
+            <span style={{ fontSize: 13, color: '#a78bfa', fontWeight: 600 }}> 订单利润估算 &amp; 完工预测</span>
             <span className="c-card-badge purple-badge" style={{ marginLeft: 8 }}>AI 双引擎分析</span>
             <CollapseChevron panelKey="profit" collapsed={!!collapsedPanels['profit']} />
           </div>
@@ -1312,7 +1312,7 @@ const IntelligenceCenter: React.FC = () => {
             ╚════════════════════════════════════════════════╝ */}
         <div style={{ padding: '0 24px 4px' }}>
           <div className="c-card-title" style={{ cursor: 'pointer', padding: '8px 0', marginBottom: 0 }} onClick={() => toggleCollapse('graphmas')}>
-            <span style={{ fontSize: 13, color: '#c084fc', fontWeight: 600 }}>🤖 多代理图分析（Graph MAS）</span>
+            <span style={{ fontSize: 13, color: '#c084fc', fontWeight: 600 }}> 多代理图分析（Graph MAS）</span>
             <span className="c-card-badge" style={{ marginLeft: 8, background: 'rgba(192,132,252,0.15)', color: '#c084fc' }}>
               Plan · Act · Reflect v4.0
             </span>
@@ -1330,7 +1330,7 @@ const IntelligenceCenter: React.FC = () => {
             ╚════════════════════════════════════════════════╝ */}
         <div style={{ padding: '0 24px 4px' }}>
           <div className="c-card-title" style={{ cursor: 'pointer', padding: '8px 0', marginBottom: 0 }} onClick={() => toggleCollapse('abtest')}>
-            <span style={{ fontSize: 13, color: '#38bdf8', fontWeight: 600 }}>📊 A/B 测试统计</span>
+            <span style={{ fontSize: 13, color: '#38bdf8', fontWeight: 600 }}> A/B 测试统计</span>
             <span className="c-card-badge" style={{ marginLeft: 8, background: 'rgba(56,189,248,0.15)', color: '#38bdf8' }}>
               Scene Comparison
             </span>
@@ -1350,7 +1350,7 @@ const IntelligenceCenter: React.FC = () => {
             ╚════════════════════════════════════════════╝ */}
         <div style={{ padding: '0 24px 4px' }}>
           <div className="c-card-title" style={{ cursor: 'pointer', padding: '8px 0', marginBottom: 0 }} onClick={() => toggleCollapse('whatif')}>
-            <span style={{ fontSize: 13, color: '#fb923c', fontWeight: 600 }}>🔮 推演仿真（What-If）</span>
+            <span style={{ fontSize: 13, color: '#fb923c', fontWeight: 600 }}> 推演仿真（What-If）</span>
             <span className="c-card-badge" style={{ marginLeft: 8, background: 'rgba(251,146,60,0.15)', color: '#fb923c' }}>场景推演</span>
             <CollapseChevron panelKey="whatif" collapsed={!!collapsedPanels['whatif']} />
           </div>
@@ -1372,7 +1372,7 @@ const IntelligenceCenter: React.FC = () => {
                 style={{ cursor: 'pointer', padding: '8px 0', marginBottom: 0 }}
                 onClick={() => toggleCollapse('monthly')}
               >
-                <span style={{ fontSize: 13, color: '#34d399', fontWeight: 600 }}>📊 月度经营汇总</span>
+                <span style={{ fontSize: 13, color: '#34d399', fontWeight: 600 }}> 月度经营汇总</span>
                 <span className="c-card-badge" style={{ marginLeft: 8, background: 'rgba(52,211,153,0.15)', color: '#34d399' }}>
                   全维度报告
                 </span>
