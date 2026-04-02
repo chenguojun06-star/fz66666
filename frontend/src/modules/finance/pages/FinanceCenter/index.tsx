@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs } from 'antd';
-import { FileTextOutlined, LineChartOutlined, ShopOutlined } from '@ant-design/icons';
+import { FileTextOutlined, LineChartOutlined, ShopOutlined, ScanOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/utils/AuthContext';
 import Layout from '@/components/Layout';
 import FinishedSettlementContent from './FinishedSettlementContent';
 import FactorySummaryContent from './FactorySummaryContent';
 import DashboardContent from './DashboardContent';
+import ExternalScanContent from './ExternalScanContent';
 import styles from './index.module.css';
 
-type TabKey = 'settlement' | 'factory' | 'dashboard';
+type TabKey = 'settlement' | 'factory' | 'dashboard' | 'scans';
 
 const FinanceCenter: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -21,7 +22,7 @@ const FinanceCenter: React.FC = () => {
   // 从 URL 参数读取初始 Tab，默认 settlement
   const getInitialTab = (): TabKey => {
     const tab = searchParams.get('tab');
-    if (tab === 'dashboard' || tab === 'settlement' || tab === 'factory') {
+    if (tab === 'dashboard' || tab === 'settlement' || tab === 'factory' || tab === 'scans') {
       return tab;
     }
     return 'settlement';
@@ -44,9 +45,9 @@ const FinanceCenter: React.FC = () => {
     }
   }, []);
 
-  // 工厂账号不能访问其他 Tab︌强制跳回订单汇总
+  // 工厂账号只能访问订单汇总和扫码明细
   useEffect(() => {
-    if (isFactoryAccount && activeTab !== 'settlement') {
+    if (isFactoryAccount && activeTab !== 'settlement' && activeTab !== 'scans') {
       setActiveTab('settlement');
       setSearchParams({ tab: 'settlement' }, { replace: true });
     }
@@ -93,9 +94,21 @@ const FinanceCenter: React.FC = () => {
       ),
       children: <DashboardContent />,
     },
+    {
+      key: 'scans',
+      label: (
+        <span className={styles.tabLabel}>
+          <ScanOutlined />
+          扫码明细
+        </span>
+      ),
+      children: <ExternalScanContent />,
+    },
   ];
 
-  const visibleTabItems = isFactoryAccount ? tabItems.slice(0, 1) : tabItems;
+  const visibleTabItems = isFactoryAccount
+    ? tabItems.filter((t) => t.key === 'settlement' || t.key === 'scans')
+    : tabItems;
 
   return (
     <Layout>

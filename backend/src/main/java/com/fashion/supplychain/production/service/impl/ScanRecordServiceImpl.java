@@ -93,6 +93,18 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
                         wrapper.eq(ScanRecord::getFactoryId, factoryId);
                 }
 
+                // 外发工厂扫码明细：只查 factory_id 非空的记录（财务中心-扫码明细Tab）
+                String externalOnly = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "externalOnly"));
+                if ("true".equalsIgnoreCase(externalOnly)) {
+                        wrapper.isNotNull(ScanRecord::getFactoryId);
+                }
+
+                // 工序名模糊过滤
+                String processName = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "processName"));
+                if (StringUtils.hasText(processName)) {
+                        wrapper.like(ScanRecord::getProcessName, processName);
+                }
+
                 // 如果没有指定operatorId，根据数据权限添加过滤条件
                 if (!StringUtils.hasText(operatorId)) {
                         applyDataPermissionFilter(wrapper);
