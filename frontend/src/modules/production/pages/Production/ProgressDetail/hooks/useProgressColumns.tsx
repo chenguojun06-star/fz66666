@@ -434,6 +434,7 @@ export const useProgressColumns = ({
                       padding: 4,
                       cursor: orderMatrix.hasData ? 'pointer' : 'default',
                     }}>
+                      <div style={{ minHeight: 15 }} />
                       <LiquidProgressLottie progress={100} size={68} nodeName="下单" text="下单"
                         paused={false} color1="#52c41a" color2="#95de64" />
                     </div>

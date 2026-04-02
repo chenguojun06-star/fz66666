@@ -547,6 +547,7 @@ const ExternalFactorySmartView: React.FC<Props> = ({
                       getPopupContainer={() => document.body}
                     >
                       <div className="style-smart-stage style-smart-stage--done" style={{ cursor: sizeMatrix.hasData ? 'pointer' : 'default' }}>
+                        <div className="style-smart-stage__time" />
                         <div className="style-smart-stage__node">
                           <span className="style-smart-stage__ring" />
                           <span className="style-smart-stage__orbit" />
