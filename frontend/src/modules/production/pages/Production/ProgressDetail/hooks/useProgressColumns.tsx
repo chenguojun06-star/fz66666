@@ -383,7 +383,6 @@ export const useProgressColumns = ({
                 fallbackSize: String(record.size || '').trim(),
                 fallbackQuantity: totalQty,
               });
-              const createTimeLabel = record.createTime ? formatCompletionTime(String(record.createTime)) : '';
               const matrixPopoverContent = orderMatrix.hasData ? (
                 <div style={{ minWidth: 100 }}>
                   <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#333' }}>颜色码数</div>
@@ -435,10 +434,6 @@ export const useProgressColumns = ({
                       padding: 4,
                       cursor: orderMatrix.hasData ? 'pointer' : 'default',
                     }}>
-                      <div style={{ fontSize: 12, color: '#10b981', fontWeight: 600, lineHeight: 1.25,
-                        textAlign: 'center', whiteSpace: 'nowrap', marginBottom: 3, minHeight: 15 }}>
-                        {createTimeLabel || '--'}
-                      </div>
                       <LiquidProgressLottie progress={100} size={68} nodeName="下单" text="下单"
                         paused={false} color1="#52c41a" color2="#95de64" />
                     </div>

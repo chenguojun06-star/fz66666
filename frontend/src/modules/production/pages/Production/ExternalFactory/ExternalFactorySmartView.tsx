@@ -444,10 +444,6 @@ const ExternalFactorySmartView: React.FC<Props> = ({
                     <span className="ef-field-label">下单</span>
                     <span className="ef-field-value">{record.createTime ? dayjs(record.createTime).format('YYYY-MM-DD') : '-'}</span>
                   </div>
-                  <div className="ef-field-row">
-                    <span className="ef-field-label">交期</span>
-                    <span className="ef-field-value">{shipDate ? dayjs(shipDate).format('YYYY-MM-DD') : '-'}</span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -470,6 +466,10 @@ const ExternalFactorySmartView: React.FC<Props> = ({
                       >
                         <span className="ef-field-value ef-order-no">{record.orderNo}</span>
                       </Popover>
+                    </div>
+                    <div className="ef-field-row">
+                      <span className="ef-field-label">交期</span>
+                      <span className="ef-field-value">{shipDate ? dayjs(shipDate).format('YYYY-MM-DD') : '-'}</span>
                     </div>
                     <div className="ef-field-row">
                       <span className="ef-field-label">款号</span>
@@ -547,7 +547,6 @@ const ExternalFactorySmartView: React.FC<Props> = ({
                       getPopupContainer={() => document.body}
                     >
                       <div className="style-smart-stage style-smart-stage--done" style={{ cursor: sizeMatrix.hasData ? 'pointer' : 'default' }}>
-                        <div className="style-smart-stage__time">{record.createTime ? fmtTime(String(record.createTime)) : ''}</div>
                         <div className="style-smart-stage__node">
                           <span className="style-smart-stage__ring" />
                           <span className="style-smart-stage__orbit" />
