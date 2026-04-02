@@ -22,9 +22,12 @@ const MASKED_VALUE = '***';
 
 /**
  * 判断用户是否有权查看价格/金额信息
- * 主管及以上角色可见
+ * 规则：外发工厂联系人账号（factoryId 不为空）不可见；其余须为主管及以上角色
  */
 export function canViewPrice(user: UserInfo | null): boolean {
+  if (!user) return false;
+  // 外发工厂人员不可见价格
+  if (user.factoryId) return false;
   return isSupervisorOrAbove(user);
 }
 

@@ -16,6 +16,8 @@ import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import StandardModal from '@/components/common/StandardModal';
 import { getStyleInfoByRef } from '@/services/style/styleApi';
 import { message } from '@/utils/antdStatic';
+import { useAuth } from '@/utils/AuthContext';
+import { canViewPrice } from '@/utils/sensitiveDataMask';
 
 /** 季节英文→中文映射 */
 const toSeasonCn = (v: unknown): string => {
@@ -105,9 +107,11 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
   extraInfo = {},
   sizeDetails = [],
 }) => {
+  const { user } = useAuth();
+  const showPrice = canViewPrice(user);
+
   const [options, setOptions] = useState<PrintOptions>(DEFAULT_PRINT_OPTIONS);
   const [loading, setLoading] = useState(false);
-  const [expanded, setExpanded] = useState(false); // 展开/收起状态
   const [resolvedCover, setResolvedCover] = useState<string | null>(cover || null);
   const [data, setData] = useState<PrintData>({
     sizes: [],
@@ -545,20 +549,11 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
                 <Checkbox value="productionSheet">生产制单</Checkbox>
               </Checkbox.Group>
             </div>
-            <Button
-              size="small"
-              type={expanded ? 'default' : 'primary'}
-              onClick={() => setExpanded(!expanded)}
-              style={{ fontSize: "var(--font-size-xs)", flexShrink: 0 }}
-            >
-              {expanded ? '▲ 收起预览' : '▼ 展开预览'}
-            </Button>
           </div>
         </div>
 
-        {/* 内容预览区域 - 可展开/收起 */}
-        {expanded && (
-          <div className="style-print-content" id="style-print-content" style={{ background: 'var(--color-bg-base)', padding: 20, border: '1px solid var(--color-border)', borderRadius: 12 }}>
+        {/* 打印内容预览区域 */}
+        <div className="style-print-content" id="style-print-content" style={{ background: 'var(--color-bg-base)', padding: 20, border: '1px solid var(--color-border)', borderRadius: 12 }}>
             {/* 预览样式 */}
             <style>{`
               .print-section { margin-bottom: 24px; }
@@ -843,8 +838,8 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
                   { title: '规格', dataIndex: 'specifications', key: 'specifications', width: 100 },
                   { title: '单位', dataIndex: 'unit', key: 'unit', width: 60 },
                   { title: '用量', dataIndex: 'quantity', key: 'quantity', width: 80, align: 'right' as const },
-                  { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 80, align: 'right' as const,
-                    render: (v: number) => v ? `¥${Number(v).toFixed(2)}` : '-' },
+                  ...(showPrice ? [{ title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 80, align: 'right' as const,
+                    render: (v: number) => v ? `¥${Number(v).toFixed(2)}` : '-' }] : []),
                   { title: '备注', dataIndex: 'remark', key: 'remark', ellipsis: true },
                   { title: '图片', dataIndex: 'imageUrls', key: 'image', width: 90,
                     render: (v: string) => {
@@ -881,8 +876,8 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
                   { title: '工序名称', dataIndex: 'processName', key: 'processName', width: 150 },
                   { title: '工序编码', dataIndex: 'processCode', key: 'processCode', width: 100 },
                   { title: '工时(秒)', dataIndex: 'standardTime', key: 'standardTime', width: 80, align: 'right' as const },
-                  { title: '单价', dataIndex: 'price', key: 'price', width: 80, align: 'right' as const,
-                    render: (v: number) => v ? `¥${Number(v).toFixed(2)}` : '-' },
+                  ...(showPrice ? [{ title: '单价', dataIndex: 'price', key: 'price', width: 80, align: 'right' as const,
+                    render: (v: number) => v ? `¥${Number(v).toFixed(2)}` : '-' }] : []),
                   { title: '备注', dataIndex: 'remark', key: 'remark', ellipsis: true },
                 ]}
               />
@@ -954,22 +949,6 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
             </div>
           )}
         </div>
-        )}
-
-        {/* 未展开时的提示 */}
-        {!expanded && (
-          <div style={{
-            textAlign: 'center',
-            padding: '40px 20px',
-            color: 'var(--color-text-tertiary)',
-            background: 'var(--color-bg-container)',
-            borderRadius: 12,
-            border: '1px dashed #d9d9d9'
-          }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>👆</div>
-            <div style={{ fontSize: "var(--font-size-base)" }}>点击"展开预览"按钮查看打印内容</div>
-          </div>
-        )}
       </Spin>
     </StandardModal>
   );
