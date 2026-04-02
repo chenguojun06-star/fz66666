@@ -186,7 +186,8 @@ public class WorkerEfficiencyOrchestrator {
     private List<ScanRecord> queryRecords(Long tenantId, LocalDateTime since) {
         QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
         qw.eq(tenantId != null, "tenant_id", tenantId)
-          .ge("scan_time", since);
+          .ge("scan_time", since)
+          .isNull("factory_id");  // 只统计内部员工，排除外发工厂人员
         return scanRecordService.list(qw);
     }
 }

@@ -117,6 +117,7 @@ public class UserOrchestrator {
             if (StringUtils.hasText(roleName)) query.like("role_name", roleName);
             if (StringUtils.hasText(status)) query.eq("status", status);
             if (StringUtils.hasText(factoryId)) query.eq("factory_id", factoryId);
+            else query.isNull("factory_id");  // 内部人员管理只显示本厂内部账号，排除外发工厂账号
             userPage = userService.page(new Page<>(page != null ? page : 1, pageSize != null ? pageSize : 10), query);
         } else {
             // 超级管理员：无租户过滤
