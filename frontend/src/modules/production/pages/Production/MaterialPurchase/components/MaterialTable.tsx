@@ -1,6 +1,5 @@
 import React, { useCallback, useState } from 'react';
 import { Tag, App, Space, Tooltip } from 'antd';
-import { UploadOutlined } from '@ant-design/icons';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 
 import type { ColumnsType } from 'antd/es/table';
@@ -414,40 +413,6 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       width: 100,
       ellipsis: true,
       render: (_: string, record: MaterialPurchaseType) => resolveOperatorName(record) || '-',
-    },
-    {
-      title: '采购单据',
-      dataIndex: 'invoiceUrls',
-      key: 'invoiceUrls',
-      width: 100,
-      render: (v: string | null, record: MaterialPurchaseType) => {
-        let urls: string[] = [];
-        if (v) {
-          try {
-            urls = JSON.parse(v);
-          } catch {
-            urls = v.split(',').filter(Boolean);
-          }
-        }
-        if (!urls || urls.length === 0) {
-          return (
-            <span
-              style={{ fontSize: 12, color: 'var(--primary-color)', cursor: 'pointer' }}
-              onClick={() => onView(record)}
-            >
-              <UploadOutlined /> 上传单据
-            </span>
-          );
-        }
-
-        return (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ fontSize: 12, color: 'var(--primary-color)', cursor: 'pointer' }} onClick={() => onView(record)}>
-              <UploadOutlined style={{ marginRight: 2 }} />查看单据({urls.length})
-            </span>
-          </div>
-        );
-      },
     },
     {
       title: '备注',
