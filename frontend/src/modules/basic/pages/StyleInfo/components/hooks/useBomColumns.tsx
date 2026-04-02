@@ -191,7 +191,6 @@ export function useBomColumns({
                   setMaterialTab('select');
                   setMaterialKeyword('');
                   setMaterialModalOpen(true);
-                  materialCreateForm.resetFields();
                   fetchMaterials(1, '');
                 }}
                 style={{ flexShrink: 0 }}

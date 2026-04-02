@@ -1724,7 +1724,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
         confirmLoading={copying}
         okText="确认复制"
         cancelText="取消"
-        destroyOnClose
+        destroyOnHidden
       >
         {copySource && (
           <div style={{ marginBottom: 12, color: '#666', fontSize: 13 }}>

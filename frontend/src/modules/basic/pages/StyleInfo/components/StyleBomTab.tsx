@@ -133,7 +133,6 @@ const StyleBomTab: React.FC<Props> = ({
   const [materialPageSize, setMaterialPageSize] = useState(() => readPageSizeByKey(MATERIAL_SELECT_PAGE_SIZE_KEY, DEFAULT_PAGE_SIZE));
   const [materialKeyword, setMaterialKeyword] = useState('');
   const [materialTargetRowId, setMaterialTargetRowId] = useState('');
-  const [newGroupName, setNewGroupName] = useState('');
   const activeSizes = normalizeUniqueValues(sizeColorConfig?.sizes);
   const activeColors = normalizeUniqueValues(sizeColorConfig?.colors);
   const parseNumberMap = useCallback((value?: string) => {
@@ -984,62 +983,6 @@ const StyleBomTab: React.FC<Props> = ({
     setTableEditable(true);
   };
 
-  // 新增分组
-  const handleAddGroup = () => {
-    if (locked) {
-      message.error('已完成，无法操作');
-      return;
-    }
-    if (!newGroupName.trim()) {
-      message.error('请输入分组名称');
-      return;
-    }
-
-    // 先同步form中的数据到data，避免丢失用户输入
-    const allValues = form.getFieldsValue() || {};
-    const syncedData = data.map((item) => {
-      const key = String(item.id);
-      const row = allValues[key] || {};
-      return { ...item, ...row };
-    });
-
-    const newId = `tmp_${Date.now()}`;
-    const newBom: StyleBom = {
-      id: newId,
-      styleId,
-      materialType: 'fabricA',
-      groupName: newGroupName.trim(),
-      materialCode: '',
-      materialName: '',
-      color: '',
-      fabricComposition: '',
-      fabricWidth: '',
-      size: activeSizes.join('/'),
-      sizeUsageMap: buildSizeUsageMap(0),
-      patternSizeUsageMap: buildSizeUsageMap(0),
-      sizeSpecMap: buildSizeSpecMap(''),
-      unit: '',
-      patternUnit: '',
-      conversionRate: 1,
-      usageAmount: 0,
-      devUsageAmount: 0,
-      lossRate: 0,
-      unitPrice: 0,
-      totalPrice: 0,
-      supplier: ''
-    };
-    setData(sortBomRows([...syncedData, newBom]));
-    // 修复：同 handleAdd，先用 buildFormValues 初始化所有已有行
-    form.setFieldsValue({
-      ...buildFormValues(syncedData),
-      ...allValues,
-      [String(newId)]: { ...newBom },
-    });
-    setNewGroupName('');
-    setEditingKey('');
-    setTableEditable(true);
-  };
-
   // 生成采购单（手动触发）
   const handleGeneratePurchase = async () => {
     if (!data || data.length === 0) {
@@ -1441,7 +1384,7 @@ const StyleBomTab: React.FC<Props> = ({
         <Space>
           <Button
             onClick={handleCheckStock}
-            disabled={!data.length || loading}
+            disabled={locked || !data.length || loading || tableEditable}
             loading={checkingStock}
           >
              检查库存
@@ -1449,7 +1392,7 @@ const StyleBomTab: React.FC<Props> = ({
           <Button
             type="primary"
             onClick={handleGeneratePurchase}
-            disabled={locked || !data.length || loading}
+            disabled={locked || !data.length || loading || tableEditable}
             loading={loading}
           >
              生成采购单
@@ -1521,28 +1464,6 @@ const StyleBomTab: React.FC<Props> = ({
               添加物料
             </Button>
           </Dropdown>
-          <Popover
-            trigger="click"
-            placement="bottom"
-            content={
-              <Space.Compact style={{ width: 220 }}>
-                <Input
-                  placeholder="如：上衣 / 裤子 / 亲子装-大人款"
-                  value={newGroupName}
-                  onChange={(e) => setNewGroupName(e.target.value)}
-                  onPressEnter={handleAddGroup}
-                  style={{ width: 160 }}
-                />
-                <Button type="primary" onClick={handleAddGroup}>
-                  确定
-                </Button>
-              </Space.Compact>
-            }
-          >
-            <Button disabled={locked || Boolean(editingKey) || loading || templateLoading || tableEditable}>
-              新增BOM
-            </Button>
-          </Popover>
         </Space>
       </div>
       <Modal
@@ -1826,7 +1747,7 @@ const StyleBomTab: React.FC<Props> = ({
       <Form form={form} component={false}>
         {groupedData.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-secondary)' }}>
-            暂无BOM数据，请点击"添加物料"或"新增BOM"开始配置
+            暂无BOM数据，请点击"添加物料"开始配置
           </div>
         ) : (
           groupedData.map((group, groupIndex) => (

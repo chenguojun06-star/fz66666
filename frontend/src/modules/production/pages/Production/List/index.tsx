@@ -863,7 +863,7 @@ const ProductionList: React.FC = () => {
                     trigger="click"
                     placement="bottomRight"
                     overlayStyle={{ padding: 0 }}
-                    overlayInnerStyle={{ maxHeight: '70vh', overflowY: 'auto', minWidth: 200, padding: 0 }}
+                    styles={{ container: { maxHeight: '70vh', overflowY: 'auto', minWidth: 200, padding: 0 } }}
                     content={(
                       <div>
                         <div style={{ fontWeight: 600, color: 'var(--neutral-text-secondary)', padding: '8px 16px 4px' }}>选择要显示的列</div>

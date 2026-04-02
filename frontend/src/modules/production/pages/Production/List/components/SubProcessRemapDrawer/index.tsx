@@ -353,7 +353,7 @@ export default function SubProcessRemapDrawer({
       open={visible}
       onClose={onClose}
       width={540}
-      destroyOnClose
+      destroyOnHidden
       getContainer={() => document.body}
       footer={
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
