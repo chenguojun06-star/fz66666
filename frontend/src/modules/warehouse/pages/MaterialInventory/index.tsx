@@ -247,7 +247,7 @@ const _MaterialInventory: React.FC = () => {
 
         <Card>
           <div style={{ marginBottom: 16 }}>
-            <h2 style={{ margin: 0 }}>📦 面辅料进销存</h2>
+            <h2 style={{ margin: 0 }}>📦 物料进销存</h2>
           </div>
 
           <StandardToolbar
@@ -282,6 +282,7 @@ const _MaterialInventory: React.FC = () => {
             dataSource={dataSource}
             loading={loading}
             rowKey="id"
+            stickyHeader
             scroll={{ x: 1600 }}
             pagination={false}
           />
@@ -563,6 +564,7 @@ const _MaterialInventory: React.FC = () => {
                     dataSource={pickupData.dataSource}
                     loading={pickupData.loading}
                     rowKey="id"
+                    stickyHeader
                     scroll={{ x: 1600 }}
                     pagination={false}
                     rowSelection={{
@@ -665,6 +667,7 @@ const _MaterialInventory: React.FC = () => {
                         },
                       },
                     ]}
+                    stickyHeader
                     pagination={false}
                   />
                   <StandardPagination

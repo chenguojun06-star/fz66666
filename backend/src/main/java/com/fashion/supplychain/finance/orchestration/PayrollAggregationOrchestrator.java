@@ -82,14 +82,10 @@ public class PayrollAggregationOrchestrator {
         // 排除：procurement(采购)、quality(质检领取/验收/入库)、warehouse(仓储)等系统流程记录
         qw.in("scan_type", "production", "cutting");
 
-        // ★ 关键：排除外部工厂指派的扫码记录
-        // 外部工厂扫码只用于进度追踪，走订单结算(ORDER_SETTLEMENT)，不纳入人员工资统计
-        qw.and(w -> w.isNull("delegate_target_type")
-                .or().eq("delegate_target_type", "none")
-                .or().eq("delegate_target_type", "internal"));
-
-        // 工厂账户只能查看分配到本工厂的扫码记录
-        DataPermissionHelper.applyFactoryFilter(qw, "factory_id");
+        // ★ 关键：工资结算(内)只统计本厂内部员工的扫码记录
+        // factory_id IS NULL = 本厂内部账号扫码；factory_id 非空 = 外发工厂账号扫码（走订单结算）
+        // 此过滤对所有角色（管理员/老板/工厂账号）均有效，彻底阻止外发工厂数据进入内部工资结算
+        qw.isNull("factory_id");
 
         // 应用数据权限过滤（根据角色：all=全部, team=团队, own=仅自己）
         DataPermissionHelper.applyOperatorFilter(qw, "operator_id", "operator_name");

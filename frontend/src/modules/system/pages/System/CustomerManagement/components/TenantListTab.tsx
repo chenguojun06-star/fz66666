@@ -116,10 +116,10 @@ const TenantListTab: React.FC = () => {
       { path: '/warehouse/sample', label: '样衣出入库' },
       { path: '/order-management', label: '下单管理' },
     ]},
-    { key: 'procurement', title: '采购管理', paths: [
-      { path: '/production/material', label: '面辅料采购' },
-      { path: '/warehouse/material', label: '面辅料进销存' },
-      { path: '/warehouse/material-database', label: '物料资料库' },
+    { key: 'procurement', title: '物料管理', paths: [
+      { path: '/production/material', label: '物料采购' },
+      { path: '/warehouse/material', label: '物料进销存' },
+      { path: '/warehouse/material-database', label: '物料新增' },
     ]},
     { key: 'production', title: '生产管理', paths: [
       { path: '/production', label: '我的订单' },

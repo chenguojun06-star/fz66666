@@ -192,13 +192,13 @@ export const menuConfig: MenuSection[] = [
     ],
   },
   {
-    title: '采购管理',
+    title: '物料管理',
     key: 'procurement',
     icon: React.createElement(ShoppingCartOutlined),
     items: [
-      { label: '面辅料采购', path: paths.materialPurchase, icon: React.createElement(ShoppingCartOutlined) },
-      { label: '面辅料进销存', path: paths.materialInventory, icon: React.createElement(InboxOutlined) },
-      { label: '物料资料库', path: paths.materialDatabase, icon: React.createElement(DatabaseOutlined) },
+      { label: '物料采购', path: paths.materialPurchase, icon: React.createElement(ShoppingCartOutlined) },
+      { label: '物料进销存', path: paths.materialInventory, icon: React.createElement(InboxOutlined) },
+      { label: '物料新增', path: paths.materialInventory, icon: React.createElement(DatabaseOutlined) },
     ],
   },
   {

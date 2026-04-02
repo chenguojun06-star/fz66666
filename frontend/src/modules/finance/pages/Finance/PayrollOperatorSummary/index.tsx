@@ -349,10 +349,7 @@ const PayrollOperatorSummary: React.FC = () => {
 
         setLoading(true);
         try {
-            const endpoint = activeTab === 'detail'
-                ? '/finance/payroll-settlement/operator-detail'
-                : '/finance/payroll-settlement/operator-summary';
-            const res = await api.post<{ code: number; message: string; data: PayrollOperatorProcessSummaryRow[] }>(endpoint, payload);
+            const res = await api.post<{ code: number; message: string; data: PayrollOperatorProcessSummaryRow[] }>('/finance/payroll-settlement/operator-summary', payload);
             const data = unwrapApiData<PayrollOperatorProcessSummaryRow[]>(res, '获取人员工序统计失败');
             setRows(Array.isArray(data) ? data : []);
             if (showSmartErrorNotice) setSmartError(null);
@@ -972,6 +969,7 @@ const PayrollOperatorSummary: React.FC = () => {
                                             pageSizeOptions: ['10', '20', '50', '100'],
                                             defaultPageSize: readPageSize(20),
                                         }}
+                                        stickyHeader
                                         scroll={{ x: 1600 }}
                                     />
                                 </>
@@ -1023,6 +1021,7 @@ const PayrollOperatorSummary: React.FC = () => {
                                             pageSizeOptions: ['10', '20', '50', '100'],
                                             defaultPageSize: readPageSize(20),
                                         }}
+                                        stickyHeader
                                         scroll={{ x: 1300 }}
                                     />
                                 </>
