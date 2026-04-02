@@ -83,10 +83,10 @@ export const productionCuttingApi = {
   listBundles: (orderId: any) => api.get<any>(`/production/cutting/bundles/${encodeURIComponent(String(orderId || '').trim())}`),
   /** 生成菲号（裁剪分菲） */
   generateBundles: (payload: { orderId: string; bundles: { color: string; size: string; quantity: number }[] }) =>
-    api.post<{ code: number; message: string; data: unknown }>('/production/cutting/receive', payload),
+    api.post<{ code: number; message: string; data: unknown }>('/production/cutting/generate', payload),
   /** 菲号汇总统计 */
   bundleSummary: (params: { orderNo?: string; orderId?: string }) =>
-    api.get<{ code: number; data: unknown }>('/production/cutting-bundle/summary', { params }),
+    api.get<{ code: number; data: unknown }>('/production/cutting/summary', { params }),
 };
 
 export const productionScanApi = {
