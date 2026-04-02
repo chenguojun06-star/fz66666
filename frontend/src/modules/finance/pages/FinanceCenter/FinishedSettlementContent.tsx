@@ -587,12 +587,9 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
                 statusValue={searchStatus}
                 onStatusChange={(value) => {
                   setSearchStatus(value || '');
-                  handleSearch();
+                  handleSearch({ status: (value || undefined) as PageParams['status'] });
                 }}
                 statusOptions={[
-                  { label: '全部', value: '' },
-                  { label: '待确认', value: 'PENDING' },
-                  { label: '已确认', value: 'CONFIRMED' },
                   { label: '生产中', value: 'IN_PRODUCTION' },
                   { label: '已完成', value: 'COMPLETED' },
                 ]}
