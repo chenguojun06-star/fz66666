@@ -405,7 +405,7 @@ const ExternalFactorySmartView: React.FC<Props> = ({
   const renderRow = ({ record, deliveryMeta, stages, overallProgress, statusInfo, sizeMatrix, totalQty }: typeof rows[0]) => {
         const isScrapped = record.status === 'scrapped' || record.status === 'cancelled';
         const doneCount = stages.filter(s => s.status === 'done').length;
-        const timelinePercent = stages.length > 0 ? (doneCount / stages.length) * 100 : 0;
+        const timelinePercent = ((doneCount + 1) / (stages.length + 1)) * 100;
         const shipDate = (record as any).expectedShipDate || record.plannedEndDate;
         const factoryTag = record.factoryType === 'INTERNAL'
           ? <Tag color="blue"   style={{ fontSize: 10, lineHeight: '16px', padding: '0 4px', marginLeft: 4 }}>内部</Tag>
@@ -489,53 +489,64 @@ const ExternalFactorySmartView: React.FC<Props> = ({
                     </div>
                   </div>
 
-                  {/* 码数×颜色：单一 grid，所有行列宽一致 */}
-                  {sizeMatrix.hasData && (
-                    <div className="ef-size-matrix" style={{
-                      display: 'grid',
-                      gridTemplateColumns: `max-content repeat(${sizeMatrix.sizes.length}, minmax(28px, max-content))`,
-                      columnGap: 8,
-                      rowGap: 2,
-                      fontSize: 12,
-                      marginTop: 4,
-                    }}>
-                      {/* 码数头行 */}
-                      <span style={{ color: '#98a2b3', fontWeight: 600 }}>码数</span>
-                      {sizeMatrix.sizes.map(s => (
-                        <span key={`h-${s}`} style={{ textAlign: 'center', fontWeight: 600, color: '#262626' }}>{s}</span>
-                      ))}
-                      {/* 颜色数据行 */}
-                      {sizeMatrix.rows.map(row => (
-                        <React.Fragment key={row.label}>
-                          <span style={{ color: '#98a2b3' }}>{row.label}</span>
-                          {sizeMatrix.sizes.map(s => (
-                            <span key={`${row.label}-${s}`} style={{ textAlign: 'center', color: '#1677ff', fontWeight: 600 }}>
-                              {row.quantityMap.get(s) || 0}
-                            </span>
-                          ))}
-                        </React.Fragment>
-                      ))}
-                      {/* 总数 */}
-                      <span style={{ color: '#98a2b3', fontWeight: 600 }}>总数</span>
-                      <span style={{ gridColumn: `2 / ${sizeMatrix.sizes.length + 2}`, color: '#262626', fontWeight: 700 }}>
-                        {sizeMatrix.total}件
-                      </span>
-                    </div>
-                  )}
+                  {/* 总数 */}
+                  <div className="ef-field-row" style={{ marginTop: 4 }}>
+                    <span className="ef-field-label">总数</span>
+                    <span className="ef-field-value" style={{ fontWeight: 700 }}>{totalQty}件</span>
+                  </div>
 
                 </div>
 
                 {/* 时间轴 + 节点 */}
-                <div className="style-smart-row__timeline-shell" style={{ '--ef-stage-count': stages.length } as React.CSSProperties}>
+                <div className="style-smart-row__timeline-shell" style={{ '--ef-stage-count': stages.length + 1 } as React.CSSProperties}>
                   <div className="style-smart-row__timeline-track" />
                   <div className="style-smart-row__timeline-progress" style={{
-                    width: `calc((100% - 100% / ${stages.length}) * ${timelinePercent / 100})`,
+                    width: `calc((100% - 100% / ${stages.length + 1}) * ${timelinePercent / 100})`,
                   }} />
                   <div style={{
                     display: 'grid',
-                    gridTemplateColumns: `repeat(${stages.length}, minmax(${STAGE_MIN_SLOT_WIDTH}px, 1fr))`,
+                    gridTemplateColumns: `repeat(${stages.length + 1}, minmax(${STAGE_MIN_SLOT_WIDTH}px, 1fr))`,
                     position: 'relative',
                   }}>
+                    <div className="style-smart-stage style-smart-stage--done" style={{ cursor: 'default' }}>
+                      <div className="style-smart-stage__time">{record.createTime ? fmtTime(String(record.createTime)) : ''}</div>
+                      <div className="style-smart-stage__node">
+                        <span className="style-smart-stage__ring" />
+                        <span className="style-smart-stage__orbit" />
+                        <span className="style-smart-stage__core" />
+                        <span className="style-smart-stage__check" />
+                      </div>
+                      <div className="style-smart-stage__label">下单</div>
+                      {sizeMatrix.hasData && (
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: `max-content repeat(${sizeMatrix.sizes.length}, minmax(16px, max-content))`,
+                          columnGap: 3,
+                          rowGap: 1,
+                          fontSize: 10,
+                          marginTop: 4,
+                          textAlign: 'center' as const,
+                          alignSelf: 'stretch',
+                        }}>
+                          <span style={{ color: '#98a2b3', fontWeight: 600 }}>码</span>
+                          {sizeMatrix.sizes.map(s => <span key={`h-${s}`} style={{ fontWeight: 600 }}>{s}</span>)}
+                          {sizeMatrix.rows.map(row => (
+                            <React.Fragment key={row.label}>
+                              <span style={{ color: '#98a2b3', textAlign: 'left' }}>{row.label}</span>
+                              {sizeMatrix.sizes.map(s => (
+                                <span key={`${row.label}-${s}`} style={{ color: '#1677ff', fontWeight: 600 }}>
+                                  {row.quantityMap.get(s) || 0}
+                                </span>
+                              ))}
+                            </React.Fragment>
+                          ))}
+                          <span style={{ color: '#98a2b3', fontWeight: 600 }}>总</span>
+                          <span style={{ gridColumn: `2 / ${sizeMatrix.sizes.length + 2}`, fontWeight: 700, textAlign: 'left' }}>
+                            {sizeMatrix.total}件
+                          </span>
+                        </div>
+                      )}
+                    </div>
                     {stages.map(stage => (
                       <StageNode key={stage.key} stage={stage} record={record} totalQty={totalQty} />
                     ))}

@@ -1,10 +1,10 @@
-import { useMemo, type CSSProperties } from 'react';
+import { Fragment, useMemo, type CSSProperties } from 'react';
 import dayjs from 'dayjs';
 import { Badge, Button, Popover, Tag, Tooltip } from 'antd';
 import { ExclamationCircleOutlined, ShareAltOutlined } from '@ant-design/icons';
 import type { DeliveryRiskItem } from '@/services/intelligence/intelligenceApi';
 import OrderInfoGrid from '@/components/common/OrderInfoGrid';
-import { createOrderColorSizeMatrixInfoItems } from '@/components/common/OrderColorSizeMatrix';
+import { buildOrderColorSizeMatrixModel } from '@/components/common/OrderColorSizeMatrix';
 import { SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
 import LiquidProgressLottie from '@/components/common/LiquidProgressLottie';
 import SmartOrderHoverCard from '../components/SmartOrderHoverCard';
@@ -289,22 +289,12 @@ export const useProgressColumns = ({
                       labelStyle: metaLabelStyle,
                       valueStyle: metaValueStyle,
                     },
-                    ...createOrderColorSizeMatrixInfoItems({
-                      items: orderLines.map((item) => ({
-                        color: String(item.color || '').trim(),
-                        size: String(item.size || '').trim(),
-                        quantity: Number(item.quantity || 0),
-                      })),
-                      fallbackColor: colorText === '-' ? '' : colorText,
-                      fallbackSize: sizeText === '-' ? '' : sizeText,
-                      fallbackQuantity: quantity,
-                      totalSuffix: '件',
-                      columnMinWidth: 28,
-                      gap: 12,
-                      fontSize: 12,
+                    {
+                      label: '总数',
+                      value: `${quantity}件`,
                       labelStyle: metaLabelStyle,
                       valueStyle: metaValueStyle,
-                    }),
+                    },
                     {
                       label: '下单日期',
                       value: createDate,
@@ -355,7 +345,7 @@ export const useProgressColumns = ({
         const nodeDoneMap = boardStatsByOrder[String(record.id || '')];
         const nodeTimeMap = boardTimesByOrder[String(record.id || '')];
         const progressPercent = Math.max(0, Math.min(100, Number(record.productionProgress || 0)));
-        const progressTrackMinWidth = Math.max(ns.length * 92, 420);
+        const progressTrackMinWidth = Math.max((ns.length + 1) * 92, 420);
 
         if (!ns || ns.length === 0) {
           return (
@@ -381,6 +371,76 @@ export const useProgressColumns = ({
               width: '100%',
               minWidth: progressTrackMinWidth,
             }}>
+            {(() => {
+              const orderLines = parseProductionOrderLines(String((record as any).orderLines || ''));
+              const orderMatrix = buildOrderColorSizeMatrixModel({
+                items: orderLines.map(item => ({
+                  color: String(item.color || '').trim(),
+                  size: String(item.size || '').trim(),
+                  quantity: Number(item.quantity || 0),
+                })),
+                fallbackColor: String(record.color || '').trim(),
+                fallbackSize: String(record.size || '').trim(),
+                fallbackQuantity: totalQty,
+              });
+              const createTimeLabel = record.createTime ? formatCompletionTime(String(record.createTime)) : '';
+              return (
+                <div style={{ display: 'flex', alignItems: 'flex-start', flex: '0 0 auto' }}>
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 2,
+                    width: 76,
+                    flex: '0 0 auto',
+                    justifyContent: 'flex-start',
+                    padding: 4,
+                  }}>
+                    <div style={{ fontSize: 12, color: '#10b981', fontWeight: 600, lineHeight: 1.25,
+                      textAlign: 'center', whiteSpace: 'nowrap', marginBottom: 3, minHeight: 15 }}>
+                      {createTimeLabel || '--'}
+                    </div>
+                    <LiquidProgressLottie progress={100} size={68} nodeName="下单" text="下单"
+                      paused={false} color1="#52c41a" color2="#95de64" />
+                    {orderMatrix.hasData && (
+                      <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: `max-content repeat(${orderMatrix.sizes.length}, minmax(18px, max-content))`,
+                        columnGap: 4,
+                        rowGap: 1,
+                        fontSize: 11,
+                        marginTop: 4,
+                        textAlign: 'center',
+                      }}>
+                        <span style={{ color: '#98a2b3', fontWeight: 600 }}>码</span>
+                        {orderMatrix.sizes.map(s => <span key={`h-${s}`} style={{ fontWeight: 600 }}>{s}</span>)}
+                        {orderMatrix.rows.map(row => (
+                          <Fragment key={row.label}>
+                            <span style={{ color: '#98a2b3', textAlign: 'left' }}>{row.label}</span>
+                            {orderMatrix.sizes.map(s => (
+                              <span key={`${row.label}-${s}`} style={{ color: '#1677ff', fontWeight: 600 }}>
+                                {row.quantityMap.get(s) || 0}
+                              </span>
+                            ))}
+                          </Fragment>
+                        ))}
+                        <span style={{ color: '#98a2b3', fontWeight: 600 }}>总</span>
+                        <span style={{ gridColumn: `2 / ${orderMatrix.sizes.length + 2}`, fontWeight: 700, textAlign: 'left' }}>
+                          {orderMatrix.total}件
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ flex: 1, paddingTop: 50, paddingLeft: 2, paddingRight: 2, minWidth: 16 }}>
+                    <div style={{ position: 'relative', height: 2, borderRadius: 999,
+                      background: colorWithAlpha('#52c41a', 0.28), overflow: 'hidden' }}>
+                      <div style={{ width: '100%', height: '100%', borderRadius: 999,
+                        background: '#52c41a', transition: 'width 0.25s ease' }} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
             {ns.map((node: ProgressNode, index: number) => {
               const nodeName = node.name || '-';
               const completedQty = nodeDoneMap?.[nodeName] || 0;
