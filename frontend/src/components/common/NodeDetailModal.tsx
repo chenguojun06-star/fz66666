@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Alert, App, Button, Input, InputNumber, Popconfirm, Select, Space, Spin, Tabs, Tag, Typography } from 'antd';
-import { FileTextOutlined, UserOutlined, WalletOutlined } from '@ant-design/icons';
+import { FileTextOutlined, UserOutlined, WalletOutlined, ShoppingCartOutlined, ScissorOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
 import PredictionFeedbackBar from '@/components/common/PredictionFeedbackBar';
@@ -13,6 +13,8 @@ import { useNavigate } from 'react-router-dom';
 import { matchRecordToStage } from '@/utils/productionStage';
 import ProcessTrackingTable from '@/components/production/ProcessTrackingTable';
 import { getProductionProcessTracking } from '@/utils/api/production';
+import ProcurementQuickPanel from '@/components/common/ProcurementQuickPanel';
+import CuttingQuickPanel from '@/components/common/CuttingQuickPanel';
 
 const { Text } = Typography;
 
@@ -459,8 +461,10 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
       loadFactories();
       loadUsers();
       loadNodeOperations();
-      // 每次打开时默认显示工序跟踪Tab（数据最丰富）
-      setActiveTab('processTracking');
+      // 根据节点类型设置默认Tab
+      if (nodeType === 'procurement') setActiveTab('procurement');
+      else if (nodeType === 'cutting') setActiveTab('cutting');
+      else setActiveTab('processTracking');
       // 样板生产不加载扫码记录和菲号明细（这些是大货生产的数据）
       if (!isPatternProduction) {
         loadScanRecords();
@@ -1198,6 +1202,18 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                 key: 'operators',
                 label: <span><UserOutlined /> 操作员 ({operatorSummary.length})</span>,
                 children: renderOperatorsTab(),
+              },
+              // 采购快捷面板 - 采购节点专用
+              nodeType === 'procurement' && !isPatternProduction && {
+                key: 'procurement',
+                label: <span><ShoppingCartOutlined /> 快捷采购</span>,
+                children: <ProcurementQuickPanel orderNo={orderNo} visible={visible} onDataChanged={handleUndoSuccess} />,
+              },
+              // 裁剪菲号面板 - 裁剪节点专用
+              nodeType === 'cutting' && !isPatternProduction && {
+                key: 'cutting',
+                label: <span><ScissorOutlined /> 裁剪菲号</span>,
+                children: <CuttingQuickPanel orderId={orderId} orderNo={orderNo} visible={visible} bundles={bundles} onDataChanged={handleUndoSuccess} />,
               },
               // 工序跟踪（工资结算）- 所有大货生产都显示（不受 unitPrice 限制）
               !isPatternProduction && {
