@@ -784,7 +784,7 @@ const OrderFlow: React.FC = () => {
                                 render: (v: any) => v || '-'
                               },
                               {
-                                title: '需求数量',
+                                title: '采购数量',
                                 dataIndex: 'purchaseQuantity',
                                 key: 'purchaseQuantity',
                                 width: 120,

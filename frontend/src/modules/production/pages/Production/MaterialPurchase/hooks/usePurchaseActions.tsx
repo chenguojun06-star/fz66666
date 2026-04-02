@@ -368,7 +368,7 @@ export function usePurchaseActions({
         { header: '物料编码', key: 'materialCode', width: 16 },
         { header: '规格', key: 'specifications', width: 14 },
         { header: '供应商', key: 'supplierName', width: 18 },
-        { header: '需求数量', key: 'purchaseQuantity', width: 10 },
+        { header: '采购数量', key: 'purchaseQuantity', width: 10 },
         { header: '参考公斤数', key: 'referenceKilograms', width: 12 },
         { header: '到货数量', key: 'arrivedQuantity', width: 10 },
         { header: '待到数量', key: 'pendingQuantity', width: 10 },

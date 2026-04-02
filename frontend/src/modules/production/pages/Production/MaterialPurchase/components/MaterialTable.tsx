@@ -270,7 +270,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       ellipsis: true,
     },
     {
-      title: '需求数量',
+      title: '采购数量',
       dataIndex: 'purchaseQuantity',
       key: 'purchaseQuantity',
       width: 100,
@@ -433,7 +433,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
           return (
             <span 
               style={{ fontSize: 12, color: 'var(--primary-color)', cursor: 'pointer' }} 
-              onClick={() => onEdit(record)}
+              onClick={() => onView(record)}
             >
               <UploadOutlined /> 上传单据
             </span>

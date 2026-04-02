@@ -217,7 +217,7 @@ const CuttingManagement: React.FC = () => {
         },
         { title: '单位', dataIndex: 'unit', key: 'unit', width: 90, ellipsis: true },
         {
-          title: '需求数量',
+          title: '采购数量',
           dataIndex: 'purchaseQuantity',
           key: 'purchaseQuantity',
           width: 110,
@@ -288,18 +288,6 @@ const CuttingManagement: React.FC = () => {
       width: 160,
       ellipsis: true,
       render: () => activeTask?.styleName || '-',
-    },
-    {
-      title: '附件',
-      key: 'attachments',
-      width: 100,
-      render: (_: any, record: any) => (
-        <StyleAttachmentsButton
-          styleId={activeTask?.styleId}
-          styleNo={record.styleNo || activeTask?.styleNo}
-          onlyActive
-        />
-      )
     },
     { title: '颜色', dataIndex: 'color', key: 'color', width: 120 },
     { title: '尺码', dataIndex: 'size', key: 'size', width: 80 },

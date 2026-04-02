@@ -93,7 +93,7 @@ public class ProductionScanStageSupport {
             long count = scanRecordService.count(new LambdaQueryWrapper<ScanRecord>()
                     .eq(ScanRecord::getOrderId, order.getId())
                     .eq(ScanRecord::getCuttingBundleId, bundle.getId())
-                    .eq(ScanRecord::getScanType, "production")
+                    .in(ScanRecord::getScanType, java.util.Arrays.asList("production", "cutting"))
                     .eq(ScanRecord::getScanResult, "success")
                     .and(w -> w.eq(ScanRecord::getProcessCode, process)
                             .or().eq(ScanRecord::getProcessName, process)));

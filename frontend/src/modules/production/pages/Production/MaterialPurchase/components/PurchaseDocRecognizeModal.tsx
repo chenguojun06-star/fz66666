@@ -157,7 +157,7 @@ const PurchaseDocRecognizeModal: React.FC<Props> = ({ open, orderNo, onCancel, o
         ),
     },
     {
-      title: '需求数量',
+      title: '采购数量',
       dataIndex: 'purchaseQty',
       width: 90,
       render: (v: number) => (v != null ? v : '—'),

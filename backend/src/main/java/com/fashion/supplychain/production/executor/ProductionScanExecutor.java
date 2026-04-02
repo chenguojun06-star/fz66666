@@ -341,7 +341,7 @@ public class ProductionScanExecutor {
                 sr.setScanResult("failure");
                 sr.setRemark("风控拦截：" + e.getMessage());
                 scanRecordService.saveScanRecord(sr);
-                
+
                 // 触发风控预警推送到 AI 小云
                 Map<String, Object> riskData = new HashMap<>();
                 riskData.put("operatorName", operatorName);
@@ -370,7 +370,7 @@ public class ProductionScanExecutor {
                         ))
                         .build();
                 webSocketService.broadcastTraceableAdvice(order.getTenantId(), advice);
-                
+
                 throw new IllegalStateException("AI 财务风控拦截：单次扫码金额/数量过大，请拆分批次或联系厂长核实。");
             }
         }

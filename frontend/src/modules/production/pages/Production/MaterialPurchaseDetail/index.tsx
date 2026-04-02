@@ -251,7 +251,7 @@ const MaterialPurchaseDetail: React.FC = () => {
       ellipsis: true,
     },
     {
-      title: '需求数量',
+      title: '采购数量',
       dataIndex: 'purchaseQuantity',
       key: 'purchaseQuantity',
       width: 100,

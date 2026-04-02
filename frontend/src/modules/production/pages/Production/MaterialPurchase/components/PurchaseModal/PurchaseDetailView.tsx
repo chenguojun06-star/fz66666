@@ -265,7 +265,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                   { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 180, ellipsis: true, render: (v: unknown) => v || '-' },
                   { title: '规格/幅宽', key: 'specWidth', width: 140, ellipsis: true, render: (_: unknown, r: MaterialPurchaseType) => formatMaterialSpecWidth(r.specifications, r.fabricWidth) },
                   { title: '单位', dataIndex: 'unit', key: 'unit', width: 80, render: (v: unknown) => v || '-' },
-                  { title: '需求数量', dataIndex: 'purchaseQuantity', key: 'purchaseQuantity', width: 110, align: 'right' as const, render: (v: unknown) => formatMaterialQuantity(v) },
+                  { title: '采购数量', dataIndex: 'purchaseQuantity', key: 'purchaseQuantity', width: 110, align: 'right' as const, render: (v: unknown) => formatMaterialQuantity(v) },
                   { title: '参考公斤数', key: 'referenceKilograms', width: 120, align: 'right' as const, render: (_: unknown, r: MaterialPurchaseType) => formatReferenceKilograms(r.purchaseQuantity, r.conversionRate, r.unit) },
                   { title: '到货数量', dataIndex: 'arrivedQuantity', key: 'arrivedQuantity', width: 110, align: 'right' as const, render: (v: unknown) => formatMaterialQuantity(v) },
                   {

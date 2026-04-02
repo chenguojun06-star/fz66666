@@ -67,10 +67,22 @@ export function useCuttingBundles({
   const [generateLoading, setGenerateLoading] = useState(false);
 
   // 菲号列表
-  const [queryParams, setQueryParams] = useState<CuttingQueryParams>({ page: 1, pageSize: readPageSize(10) });
+  const BUNDLES_PAGE_SIZE_KEY = 'Cutting.bundlesPageSize';
+  const [queryParams, setQueryParams] = useState<CuttingQueryParams>(() => {
+    try {
+      const raw = window.localStorage.getItem(BUNDLES_PAGE_SIZE_KEY);
+      if (raw) {
+        const n = Number(raw);
+        if (Number.isFinite(n) && n > 0) return { page: 1, pageSize: n };
+      }
+    } catch { /* ignore */ }
+    return { page: 1, pageSize: 20 };
+  });
   const [listLoading, setListLoading] = useState(false);
   const [dataSource, setDataSource] = useState<CuttingBundleRow[]>([]);
   const [total, setTotal] = useState(0);
+  // 全量颜色-尺码已裁件数映射（用于计算剩余裁剪量，不受分页影响）
+  const [allBundlesQtyMap, setAllBundlesQtyMap] = useState<Record<string, number>>({});
 
   // 菲号选择
   const [selectedBundleRowKeys, setSelectedBundleRowKeys] = useState<React.Key[]>([]);
@@ -317,9 +329,37 @@ export function useCuttingBundles({
   };
 
   // Effects
+  // 持久化菲号列表 pageSize
+  useEffect(() => {
+    try { window.localStorage.setItem(BUNDLES_PAGE_SIZE_KEY, String(queryParams.pageSize)); } catch { /* ignore */ }
+  }, [queryParams.pageSize]);
+
   useEffect(() => {
     fetchBundles();
   }, [queryParams, activeTask?.productionOrderNo]);
+
+  // 全量菲号汇总（不受分页限制，始终拉全部记录用于计算剩余裁剪量）
+  useEffect(() => {
+    const orderNo = activeTask?.productionOrderNo;
+    if (!orderNo) { setAllBundlesQtyMap({}); return; }
+    let cancelled = false;
+    void api.get<{ code: number; data: { records: CuttingBundleRow[]; total: number } }>('/production/cutting/list', {
+      params: { page: 1, pageSize: 9999, orderNo },
+    }).then((res) => {
+      if (cancelled) return;
+      if (res.code === 200) {
+        const map: Record<string, number> = {};
+        (res.data?.records || []).forEach((row) => {
+          const k = `${String(row.color || '').trim()}-${String(row.size || '').trim()}`;
+          map[k] = (map[k] || 0) + Number(row.quantity || 0);
+        });
+        setAllBundlesQtyMap(map);
+      } else {
+        setAllBundlesQtyMap({});
+      }
+    }).catch(() => { if (!cancelled) setAllBundlesQtyMap({}); });
+    return () => { cancelled = true; };
+  }, [activeTask?.productionOrderNo, total]);
 
   // 实时同步：裁剪批次数据
   useSync(
@@ -496,7 +536,7 @@ export function useCuttingBundles({
     handleAddRow, handleRemoveRow, handleChangeRow, handleGenerate, handleAutoImport, handleAddBed,
     // 菲号列表
     queryParams, setQueryParams, listLoading, dataSource, total,
-    fetchBundles,
+    fetchBundles, allBundlesQtyMap,
     // 菲号选择
     selectedBundleRowKeys, setSelectedBundleRowKeys,
     selectedBundles, setSelectedBundles,

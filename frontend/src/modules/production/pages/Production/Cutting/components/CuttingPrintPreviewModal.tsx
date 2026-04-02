@@ -1,7 +1,6 @@
 import React from 'react';
-import { Button, InputNumber } from 'antd';
+import { Button } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
-import { QRCodeCanvas } from 'qrcode.react';
 import type { CuttingPrintState } from '../hooks';
 import type { CuttingBundleRow } from '../hooks';
 
@@ -17,10 +16,29 @@ interface Props {
 const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles }) => {
   const highlightedSet = new Set((print.highlightedBundleIds || []).map((item) => String(item)));
   const highlightedBundles = print.printBundles.filter((item) => item.id && highlightedSet.has(String(item.id)));
+
+  const orderNo = String(print.printBundles[0]?.productionOrderNo || '').trim() || '-';
+  const styleNo = String(print.printBundles[0]?.styleNo || '').trim() || '-';
+
+  // 按颜色+码数分组统计
+  const groupedMap = new Map<string, { color: string; size: string; bundleCount: number; totalQty: number }>();
+  for (const b of print.printBundles) {
+    const color = String(b.color || '').trim() || '-';
+    const size = String(b.size || '').trim() || '-';
+    const key = `${color}|||${size}`;
+    if (!groupedMap.has(key)) groupedMap.set(key, { color, size, bundleCount: 0, totalQty: 0 });
+    const g = groupedMap.get(key)!;
+    g.bundleCount++;
+    g.totalQty += Number(b.quantity || 0);
+  }
+  const rows = [...groupedMap.values()];
+  const totalBundles = print.printBundles.length;
+  const totalQty = rows.reduce((s, r) => s + r.totalQty, 0);
+
   return (
     <ResizableModal
       open={print.printPreviewOpen}
-      title={`批量打印（${print.printBundles.length}张）`}
+      title={`裁剪汇总打印（${totalBundles} 扎 · ${totalQty} 件）`}
       width={modalWidth}
       centered
       onCancel={() => print.setPrintPreviewOpen(false)}
@@ -35,43 +53,9 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
           下载/打印
         </Button>,
       ]}
-      initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800}
+      initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.7 : 600}
     >
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginBottom: 16, alignItems: 'center' }}>
-        <span style={{ fontWeight: 600, fontSize: 'var(--font-size-base)' }}>打印纸规格</span>
-        <InputNumber
-          min={2}
-          max={50}
-          precision={1}
-          value={print.printConfig.paperWidth}
-          onChange={(v) => print.setPrintConfig((p) => ({ ...p, paperWidth: Math.max(2, Number(v) || 7) }))}
-          addonBefore="宽"
-          suffix="cm"
-          style={{ width: 110 }}
-        />
-        <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-base)' }}>×</span>
-        <InputNumber
-          min={2}
-          max={50}
-          precision={1}
-          value={print.printConfig.paperHeight}
-          onChange={(v) => print.setPrintConfig((p) => ({ ...p, paperHeight: Math.max(2, Number(v) || 4) }))}
-          addonBefore="高"
-          suffix="cm"
-          style={{ width: 110 }}
-        />
-        <span style={{ fontWeight: 600, fontSize: 'var(--font-size-base)', marginLeft: 16 }}>二维码大小</span>
-        <InputNumber
-          min={60}
-          max={150}
-          value={print.printConfig.qrSize}
-          onChange={(v) => print.setPrintConfig((p) => ({ ...p, qrSize: Math.max(60, Number(v) || 84) }))}
-          suffix="px"
-          style={{ width: 120 }}
-        />
-        <span style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-sm)', marginLeft: 16 }}>💡 每页打印一张菲号标签</span>
-      </div>
-
+      {/* 汇总信息栏 */}
       <div
         style={{
           padding: '12px 16px',
@@ -79,38 +63,26 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
           color: '#fff',
           marginBottom: '8px',
           borderRadius: '4px',
-          textAlign: 'center',
           fontSize: '14px',
           fontWeight: 600,
+          display: 'flex',
+          gap: 24,
+          flexWrap: 'wrap',
         }}
       >
-        共 {print.printBundles.length} 张菲号标签，实际尺寸：{print.printConfig.paperWidth}cm × {print.printConfig.paperHeight}cm（一页一张，居中显示）
+        <span>订单号：{orderNo}</span>
+        <span>款号：{styleNo}</span>
+        <span>共 {totalBundles} 扎 · 共 {totalQty} 件</span>
       </div>
-      <div
-        style={{
-          padding: '10px 16px',
-          background: '#d4edda',
-          color: '#155724',
-          marginBottom: '16px',
-          borderRadius: '4px',
-          border: '1px solid #28a745',
-          fontSize: '13px',
-          lineHeight: '1.6',
-        }}
-      >
-        <div style={{ fontWeight: 600, marginBottom: '4px' }}>✅ 使用说明：</div>
-        <div>• 点击"下载/打印"后直接选择打印机或"另存为PDF"即可</div>
-        <div>• 标签已按固定尺寸设置，无需手动调整纸张大小</div>
-        <div>• 每张标签独占一页，居中显示，方便裁剪</div>
-        <div>• 建议使用专用标签打印机或A4纸打印后裁剪</div>
-      </div>
+
+      {/* 拆菲新生成子菲号提示 */}
       {!!highlightedBundles.length && (
         <div
           style={{
             padding: '10px 16px',
             background: '#fff7e6',
             color: '#ad6800',
-            marginBottom: '16px',
+            marginBottom: '12px',
             borderRadius: '4px',
             border: '1px solid #ffd591',
             fontSize: '13px',
@@ -121,70 +93,50 @@ const CuttingPrintPreviewModal: React.FC<Props> = ({ modalWidth, print, bundles 
           <div>{highlightedBundles.map((item) => String(item.bundleLabel || item.bundleNo || '-')).join('、')}</div>
         </div>
       )}
-      <div
+
+      {/* 汇总表格 */}
+      <table
         style={{
-          maxHeight: 'calc(85vh - 310px)',
-          overflowY: 'auto',
-          padding: '16px',
-          background: 'var(--color-bg-subtle)',
+          width: '100%',
+          borderCollapse: 'collapse',
+          fontSize: '14px',
         }}
       >
-        {print.printBundles.map((b, idx) => {
-          const isHighlighted = b.id && highlightedSet.has(String(b.id));
-          const paperRatio = print.printConfig.paperWidth / print.printConfig.paperHeight;
-          const previewWidth = 280;
-          const previewHeight = previewWidth / paperRatio;
-
-          return (
-            <div
-              key={b.id || `${b.qrCode || ''}-${idx}`}
-              style={{
-                width: `${previewWidth}px`,
-                height: `${previewHeight}px`,
-                margin: '0 auto 16px',
-                background: 'var(--neutral-white)',
-                boxShadow: isHighlighted ? '0 0 0 2px #fa8c16, 0 6px 18px rgba(250,140,22,0.22)' : '0 2px 8px rgba(0,0,0,0.15)',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                padding: '8px',
-              }}
-            >
-              <div
+        <thead>
+          <tr style={{ background: 'var(--color-bg-subtle)' }}>
+            {(['颜色', '码数', '扎数', '数量合计'] as const).map((col) => (
+              <th
+                key={col}
                 style={{
-                  width: '100%',
-                  height: '100%',
-                  border: isHighlighted ? '2px solid #fa8c16' : '1px solid #000',
-                  padding: '6px',
-                  display: 'flex',
-                  gap: '6px',
+                  border: '1px solid var(--neutral-border)',
+                  padding: '8px 12px',
+                  textAlign: 'center',
+                  fontWeight: 600,
                 }}
               >
-                <div style={{ flex: '0 0 auto', display: 'flex', alignItems: 'center' }}>
-                  {b.qrCode ? <QRCodeCanvas value={b.qrCode} size={Math.min(previewHeight - 20, print.printConfig.qrSize)} includeMargin /> : null}
-                </div>
-                <div
-                  style={{
-                    flex: '1 1 auto',
-                    fontSize: '11px',
-                    lineHeight: '1.3',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-around',
-                  }}
-                >
-                  <div>{`订单：${String(b.productionOrderNo || '').trim() || '-'}`}</div>
-                  <div>{`款号：${String(b.styleNo || '').trim() || '-'}`}</div>
-                  <div>{`颜色：${String(b.color || '').trim() || '-'}`}</div>
-                  <div>{`码数：${String(b.size || '').trim() || '-'}`}</div>
-                  <div>{`数量：${Number(b.quantity || 0)}`}</div>
-                  <div>{`扎号：${String(b.bundleLabel || '').trim() || Number(b.bundleNo || 0) || '-'}`}</div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+                {col}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={i} style={{ background: i % 2 === 0 ? '#fff' : 'var(--color-bg-subtle)' }}>
+              <td style={{ border: '1px solid var(--neutral-border)', padding: '7px 12px', textAlign: 'center' }}>{r.color}</td>
+              <td style={{ border: '1px solid var(--neutral-border)', padding: '7px 12px', textAlign: 'center' }}>{r.size}</td>
+              <td style={{ border: '1px solid var(--neutral-border)', padding: '7px 12px', textAlign: 'center' }}>{r.bundleCount}</td>
+              <td style={{ border: '1px solid var(--neutral-border)', padding: '7px 12px', textAlign: 'center', fontWeight: 600 }}>{r.totalQty}</td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr style={{ background: 'var(--color-bg-subtle)', fontWeight: 700 }}>
+            <td colSpan={2} style={{ border: '1px solid var(--neutral-border)', padding: '8px 12px', textAlign: 'center' }}>合计</td>
+            <td style={{ border: '1px solid var(--neutral-border)', padding: '8px 12px', textAlign: 'center' }}>{totalBundles}</td>
+            <td style={{ border: '1px solid var(--neutral-border)', padding: '8px 12px', textAlign: 'center' }}>{totalQty}</td>
+          </tr>
+        </tfoot>
+      </table>
     </ResizableModal>
   );
 };

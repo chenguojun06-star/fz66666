@@ -427,7 +427,7 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
 
       <Row gutter={[16, 0]}>
         <Col xs={24} md={6}>
-          <Form.Item name="purchaseQuantity" label="需求数量" rules={[{ required: true, message: '必填' }]}>
+          <Form.Item name="purchaseQuantity" label="采购数量" rules={[{ required: true, message: '必填' }]}>
             <InputNumber id="purchaseQuantity" style={{ width: '100%' }} min={0} />
           </Form.Item>
         </Col>

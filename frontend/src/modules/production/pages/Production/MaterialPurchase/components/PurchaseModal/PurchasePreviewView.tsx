@@ -105,7 +105,7 @@ const PurchasePreviewView: React.FC<PurchasePreviewViewProps> = ({ previewList, 
             key: 'unit',
           },
           {
-            title: '需求数量',
+            title: '采购数量',
             dataIndex: 'purchaseQuantity',
             key: 'purchaseQuantity',
             align: 'right' as const,
