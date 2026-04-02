@@ -18,6 +18,7 @@ import { customerApi, receivableApi, type Customer, type Receivable } from '@/se
 import { message } from '@/utils/antdStatic';
 import { readPageSize } from '@/utils/pageSizeStore';
 import type { ProductionOrder } from '@/types/production';
+import { ORDER_STATUS_LABEL, ORDER_STATUS_COLOR } from '@/constants/orderStatus';
 import { useShareOrderDialog } from '@/modules/production/pages/Production/ProgressDetail/hooks/useShareOrderDialog';
 
 const { Title, Text, Paragraph } = Typography;
@@ -483,7 +484,14 @@ const CustomerManagement: React.FC = () => {
                           />
                         ),
                       },
-                      { title: '状态', dataIndex: 'status', width: 100, render: v => <Tag>{v}</Tag> },
+                      {
+                        title: '状态', dataIndex: 'status', width: 100,
+                        render: (v: string) => {
+                          const s = String(v || '').toLowerCase();
+                          const label = ORDER_STATUS_LABEL[s];
+                          return <Tag color={ORDER_STATUS_COLOR[s] ?? 'default'}>{label ?? v}</Tag>;
+                        },
+                      },
                       { title: '创建时间', dataIndex: 'createTime', width: 110, render: v => v?.substring(0, 10) ?? '-' },
                       {
                         title: '操作', width: 120,

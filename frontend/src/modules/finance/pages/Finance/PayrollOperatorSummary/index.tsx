@@ -25,6 +25,7 @@ import { readPageSize } from '@/utils/pageSizeStore';
 import { usePersistentSort } from '@/hooks/usePersistentSort';
 import { usePersistentState } from '@/hooks/usePersistentState';
 import * as XLSX from 'xlsx';
+import { ORDER_STATUS_LABEL, ORDER_STATUS_COLOR } from '@/constants/orderStatus';
 
 // 工具函数：创建可排序的数字列配置
 const createSortableNumberColumn = (
@@ -791,11 +792,12 @@ const PayrollOperatorSummary: React.FC = () => {
             fixed: 'right' as const,
             render: (v: unknown) => {
                 const status = String(v || '').toLowerCase();
+                // 可审核状态单独标注
                 if (status === 'completed') return <Tag color="green">已完成·可审核</Tag>;
                 if (status === 'closed') return <Tag color="blue">已关单·可审核</Tag>;
-                if (status === 'cancelled') return <Tag color="red">已取消</Tag>;
-                if (status) return <Tag color="default">{v as string}</Tag>;
-                return <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>;
+                if (!status) return <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>;
+                const label = ORDER_STATUS_LABEL[status];
+                return <Tag color={ORDER_STATUS_COLOR[status] ?? 'default'}>{label ?? status}</Tag>;
             },
         },
         {

@@ -4,19 +4,12 @@ import ResizableTable from '@/components/common/ResizableTable';
 import { BulbOutlined, ReloadOutlined, DownOutlined, RightOutlined } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { StyleQuoteSuggestionResponse } from '@/services/intelligence/intelligenceApi';
+import { STYLE_ORDER_STATUS_LABEL, STYLE_ORDER_STATUS_COLOR } from '@/constants/orderStatus';
 
 interface Props {
   styleNo?: string;
   sourceStyleNo?: string;
 }
-
-const statusColor: Record<string, string> = {
-  COMPLETED: '#52c41a',
-  WAREHOUSED: '#52c41a',
-  IN_PROGRESS: '#1677ff',
-  DRAFT: '#d9d9d9',
-  CANCELLED: '#ff4d4f',
-};
 
 const fmtMoney = (value: number | null | undefined) => {
   if (value == null) return '—';
@@ -161,7 +154,11 @@ const StyleQuoteSuggestionInlineCard: React.FC<Props> = ({ styleNo, sourceStyleN
                       title: '状态',
                       dataIndex: 'status',
                       width: 90,
-                      render: (value: string) => <Tag color={statusColor[value] ?? 'default'}>{value}</Tag>,
+                      render: (value: string) => (
+                        <Tag color={STYLE_ORDER_STATUS_COLOR[value] ?? 'default'}>
+                          {STYLE_ORDER_STATUS_LABEL[value] ?? value}
+                        </Tag>
+                      ),
                     },
                   ]}
                 />
