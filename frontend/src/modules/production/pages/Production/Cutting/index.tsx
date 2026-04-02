@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { App, Button, Card, Form, Select, Space, Tag, Upload } from 'antd';
-import { PlusOutlined, UploadOutlined } from '@ant-design/icons';
+import { App, Button, Card, Form, Select, Space, Tag } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
 
 import Layout from '@/components/Layout';
 import PageStatCards from '@/components/common/PageStatCards';
@@ -217,9 +217,9 @@ const CuttingManagement: React.FC = () => {
         },
         { title: '单位', dataIndex: 'unit', key: 'unit', width: 90, ellipsis: true },
         {
-          title: '采购数量',
-          dataIndex: 'purchaseQuantity',
-          key: 'purchaseQuantity',
+          title: '到货数量',
+          dataIndex: 'arrivedQuantity',
+          key: 'arrivedQuantity',
           width: 110,
           align: 'right' as const,
           render: (v: unknown) => Number(v ?? 0) || 0,
@@ -229,7 +229,7 @@ const CuttingManagement: React.FC = () => {
           key: 'referenceKilograms',
           width: 110,
           align: 'right' as const,
-          render: (_: unknown, record: MaterialPurchase) => formatReferenceKilograms(record.purchaseQuantity, record.conversionRate, record.unit),
+          render: (_: unknown, record: MaterialPurchase) => formatReferenceKilograms(record.arrivedQuantity, record.conversionRate, record.unit),
         },
         {
           title: '单价(元)',
@@ -469,14 +469,6 @@ const CuttingManagement: React.FC = () => {
                       );
                     },
                   },
-                  {
-                    title: '附件',
-                    key: 'attachments',
-                    width: 100,
-                    render: (_: any, record: any) => (
-                      <StyleAttachmentsButton styleId={record.styleId} styleNo={record.styleNo} onlyActive />
-                    )
-                  },
                   { title: '下单人', dataIndex: 'orderCreatorName', key: 'orderCreatorName', width: 110, render: (v: unknown) => String(v || '').trim() || '-' },
                   {
                     title: '下单时间',
@@ -703,34 +695,6 @@ const CuttingManagement: React.FC = () => {
                       className="cutting-entry-purchase-card"
                       style={{ marginTop: 12 }}
                       loading={bundles.entryPurchaseLoading}
-                      extra={
-                        <Upload
-                          accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.doc,.docx"
-                          showUploadList={false}
-                          customRequest={async (options: any) => {
-                            const { file, onSuccess, onError } = options;
-                            const formData = new FormData();
-                            formData.append('file', file);
-                            try {
-                              const res = await api.post('/common/upload', formData, {
-                                headers: { 'Content-Type': 'multipart/form-data' },
-                              }) as any;
-                              if (res.code === 200) {
-                                message.success('采购单上传成功');
-                                onSuccess?.({});
-                              } else {
-                                message.error(res.message || '上传失败');
-                                onError?.(new Error('upload failed'));
-                              }
-                            } catch (err) {
-                              message.error('上传失败');
-                              onError?.(err);
-                            }
-                          }}
-                        >
-                          <Button icon={<UploadOutlined />} size="small">上传采购单</Button>
-                        </Upload>
-                      }
                     >
                       <ResizableTable<MaterialPurchase>
                         storageKey="cutting-entry-purchase-table"

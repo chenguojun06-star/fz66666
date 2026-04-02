@@ -166,7 +166,7 @@ const StyleProductionTab: React.FC<Props> = ({
     const html = buildWorkorderHtml(payload);
     const success = safePrint(html, '生产制单');
     if (!success) {
-      message.error('浏览器拦截了新窗口');
+      message.error('打印失败，请重试');
     }
   };
 

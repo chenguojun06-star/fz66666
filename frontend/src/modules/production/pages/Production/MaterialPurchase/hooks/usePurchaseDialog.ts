@@ -160,7 +160,7 @@ export function usePurchaseDialog({
     const html = buildPurchaseSheetHtml(currentPurchase, detailOrder, detailOrderLines, detailPurchases, detailSizePairs);
     const success = safePrint(html, '采购单');
     if (!success) {
-      message.error('浏览器拦截了新窗口，请允许弹窗');
+      message.error('打印失败，请重试');
     }
   };
 

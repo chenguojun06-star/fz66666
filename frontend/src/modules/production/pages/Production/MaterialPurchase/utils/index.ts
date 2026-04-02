@@ -4,6 +4,7 @@ import { getMaterialTypeCategory, getMaterialTypeLabel } from '@/utils/materialT
 import { formatDateTime } from '@/utils/datetime';
 import { sortSizeNames } from '@/utils/api';
 import { MATERIAL_PURCHASE_STATUS, MATERIAL_TYPES } from '@/constants/business';
+import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 
 export const toLocalDateTimeInputValue = (v?: Date) => {
   const d = v || new Date();
@@ -291,6 +292,7 @@ export const buildPurchaseSheetHtml = (
 
   const now = new Date();
   const ts = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const styleImageUrl = getFullAuthedFileUrl(detailOrder?.styleCover);
 
   return `
       <!doctype html>
@@ -320,6 +322,7 @@ export const buildPurchaseSheetHtml = (
           .empty{text-align:center;color:#999}
           .actions{display:flex;gap:8px;justify-content:flex-end}
           .ant-btn{font-family:inherit}
+          .cover-img{width:80px;height:80px;object-fit:cover;border-radius:4px;border:1px solid #e5e7eb;display:block}
           @media print{.no-print{display:none} body{margin:0}}
         </style>
       </head>
@@ -336,9 +339,12 @@ export const buildPurchaseSheetHtml = (
               <div class="kv">生成时间<b>${escapeHtml(ts)}</b></div>
             </div>
           </div>
-          <div class="actions no-print">
-            <button class="ant-btn ant-btn-default" onclick="window.print()">打印</button>
-            <button class="ant-btn ant-btn-primary" onclick="window.close()">关闭</button>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+            ${styleImageUrl ? `<img class="cover-img" src="${styleImageUrl}" alt="款式图" />` : ''}
+            <div class="actions no-print">
+              <button class="ant-btn ant-btn-default" onclick="window.print()">打印</button>
+              <button class="ant-btn ant-btn-primary" onclick="window.close()">关闭</button>
+            </div>
           </div>
         </div>
 
