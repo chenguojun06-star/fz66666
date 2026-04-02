@@ -384,53 +384,65 @@ export const useProgressColumns = ({
                 fallbackQuantity: totalQty,
               });
               const createTimeLabel = record.createTime ? formatCompletionTime(String(record.createTime)) : '';
+              const matrixPopoverContent = orderMatrix.hasData ? (
+                <div style={{ minWidth: 100 }}>
+                  <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#333' }}>颜色码数</div>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: `max-content repeat(${orderMatrix.sizes.length}, minmax(20px, max-content))`,
+                    columnGap: 6,
+                    rowGap: 2,
+                    fontSize: 12,
+                    textAlign: 'center',
+                  }}>
+                    <span style={{ color: '#98a2b3', fontWeight: 600 }}>码</span>
+                    {orderMatrix.sizes.map(s => <span key={`h-${s}`} style={{ fontWeight: 600 }}>{s}</span>)}
+                    {orderMatrix.rows.map(row => (
+                      <Fragment key={row.label}>
+                        <span style={{ color: '#98a2b3', textAlign: 'left' }}>{row.label}</span>
+                        {orderMatrix.sizes.map(s => (
+                          <span key={`${row.label}-${s}`} style={{ color: '#1677ff', fontWeight: 600 }}>
+                            {row.quantityMap.get(s) || 0}
+                          </span>
+                        ))}
+                      </Fragment>
+                    ))}
+                    <span style={{ color: '#98a2b3', fontWeight: 600 }}>总</span>
+                    <span style={{ gridColumn: `2 / ${orderMatrix.sizes.length + 2}`, fontWeight: 700, textAlign: 'left' }}>
+                      {orderMatrix.total}件
+                    </span>
+                  </div>
+                </div>
+              ) : null;
               return (
                 <div style={{ display: 'flex', alignItems: 'flex-start', flex: '0 0 auto' }}>
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 2,
-                    width: 76,
-                    flex: '0 0 auto',
-                    justifyContent: 'flex-start',
-                    padding: 4,
-                  }}>
-                    <div style={{ fontSize: 12, color: '#10b981', fontWeight: 600, lineHeight: 1.25,
-                      textAlign: 'center', whiteSpace: 'nowrap', marginBottom: 3, minHeight: 15 }}>
-                      {createTimeLabel || '--'}
-                    </div>
-                    <LiquidProgressLottie progress={100} size={68} nodeName="下单" text="下单"
-                      paused={false} color1="#52c41a" color2="#95de64" />
-                    {orderMatrix.hasData && (
-                      <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: `max-content repeat(${orderMatrix.sizes.length}, minmax(18px, max-content))`,
-                        columnGap: 4,
-                        rowGap: 1,
-                        fontSize: 11,
-                        marginTop: 4,
-                        textAlign: 'center',
-                      }}>
-                        <span style={{ color: '#98a2b3', fontWeight: 600 }}>码</span>
-                        {orderMatrix.sizes.map(s => <span key={`h-${s}`} style={{ fontWeight: 600 }}>{s}</span>)}
-                        {orderMatrix.rows.map(row => (
-                          <Fragment key={row.label}>
-                            <span style={{ color: '#98a2b3', textAlign: 'left' }}>{row.label}</span>
-                            {orderMatrix.sizes.map(s => (
-                              <span key={`${row.label}-${s}`} style={{ color: '#1677ff', fontWeight: 600 }}>
-                                {row.quantityMap.get(s) || 0}
-                              </span>
-                            ))}
-                          </Fragment>
-                        ))}
-                        <span style={{ color: '#98a2b3', fontWeight: 600 }}>总</span>
-                        <span style={{ gridColumn: `2 / ${orderMatrix.sizes.length + 2}`, fontWeight: 700, textAlign: 'left' }}>
-                          {orderMatrix.total}件
-                        </span>
+                  <Popover
+                    content={matrixPopoverContent}
+                    trigger="hover"
+                    placement="top"
+                    mouseEnterDelay={0.1}
+                    overlayStyle={{ maxWidth: 320 }}
+                    open={orderMatrix.hasData ? undefined : false}
+                  >
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 2,
+                      width: 76,
+                      flex: '0 0 auto',
+                      justifyContent: 'flex-start',
+                      padding: 4,
+                      cursor: orderMatrix.hasData ? 'pointer' : 'default',
+                    }}>
+                      <div style={{ fontSize: 12, color: '#10b981', fontWeight: 600, lineHeight: 1.25,
+                        textAlign: 'center', whiteSpace: 'nowrap', marginBottom: 3, minHeight: 15 }}>
+                        {createTimeLabel || '--'}
                       </div>
-                    )}
-                  </div>
+                      <LiquidProgressLottie progress={100} size={68} nodeName="下单" text="下单"
+                        paused={false} color1="#52c41a" color2="#95de64" />
+                    </div>
+                  </Popover>
                   <div style={{ flex: 1, paddingTop: 50, paddingLeft: 2, paddingRight: 2, minWidth: 16 }}>
                     <div style={{ position: 'relative', height: 2, borderRadius: 999,
                       background: colorWithAlpha('#52c41a', 0.28), overflow: 'hidden' }}>

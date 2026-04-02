@@ -508,45 +508,55 @@ const ExternalFactorySmartView: React.FC<Props> = ({
                     gridTemplateColumns: `repeat(${stages.length + 1}, minmax(${STAGE_MIN_SLOT_WIDTH}px, 1fr))`,
                     position: 'relative',
                   }}>
-                    <div className="style-smart-stage style-smart-stage--done" style={{ cursor: 'default' }}>
-                      <div className="style-smart-stage__time">{record.createTime ? fmtTime(String(record.createTime)) : ''}</div>
-                      <div className="style-smart-stage__node">
-                        <span className="style-smart-stage__ring" />
-                        <span className="style-smart-stage__orbit" />
-                        <span className="style-smart-stage__core" />
-                        <span className="style-smart-stage__check" />
-                      </div>
-                      <div className="style-smart-stage__label">下单</div>
-                      {sizeMatrix.hasData && (
-                        <div style={{
-                          display: 'grid',
-                          gridTemplateColumns: `max-content repeat(${sizeMatrix.sizes.length}, minmax(16px, max-content))`,
-                          columnGap: 3,
-                          rowGap: 1,
-                          fontSize: 10,
-                          marginTop: 4,
-                          textAlign: 'center' as const,
-                          alignSelf: 'stretch',
-                        }}>
-                          <span style={{ color: '#98a2b3', fontWeight: 600 }}>码</span>
-                          {sizeMatrix.sizes.map(s => <span key={`h-${s}`} style={{ fontWeight: 600 }}>{s}</span>)}
-                          {sizeMatrix.rows.map(row => (
-                            <React.Fragment key={row.label}>
-                              <span style={{ color: '#98a2b3', textAlign: 'left' }}>{row.label}</span>
-                              {sizeMatrix.sizes.map(s => (
-                                <span key={`${row.label}-${s}`} style={{ color: '#1677ff', fontWeight: 600 }}>
-                                  {row.quantityMap.get(s) || 0}
-                                </span>
-                              ))}
-                            </React.Fragment>
-                          ))}
-                          <span style={{ color: '#98a2b3', fontWeight: 600 }}>总</span>
-                          <span style={{ gridColumn: `2 / ${sizeMatrix.sizes.length + 2}`, fontWeight: 700, textAlign: 'left' }}>
-                            {sizeMatrix.total}件
-                          </span>
+                    <Popover
+                      content={sizeMatrix.hasData ? (
+                        <div style={{ minWidth: 100 }}>
+                          <div style={{ fontWeight: 600, marginBottom: 6, fontSize: 13, color: '#333' }}>颜色码数</div>
+                          <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: `max-content repeat(${sizeMatrix.sizes.length}, minmax(20px, max-content))`,
+                            columnGap: 6,
+                            rowGap: 2,
+                            fontSize: 12,
+                            textAlign: 'center',
+                          }}>
+                            <span style={{ color: '#98a2b3', fontWeight: 600 }}>码</span>
+                            {sizeMatrix.sizes.map(s => <span key={`h-${s}`} style={{ fontWeight: 600 }}>{s}</span>)}
+                            {sizeMatrix.rows.map(row => (
+                              <React.Fragment key={row.label}>
+                                <span style={{ color: '#98a2b3', textAlign: 'left' }}>{row.label}</span>
+                                {sizeMatrix.sizes.map(s => (
+                                  <span key={`${row.label}-${s}`} style={{ color: '#1677ff', fontWeight: 600 }}>
+                                    {row.quantityMap.get(s) || 0}
+                                  </span>
+                                ))}
+                              </React.Fragment>
+                            ))}
+                            <span style={{ color: '#98a2b3', fontWeight: 600 }}>总</span>
+                            <span style={{ gridColumn: `2 / ${sizeMatrix.sizes.length + 2}`, fontWeight: 700, textAlign: 'left' }}>
+                              {sizeMatrix.total}件
+                            </span>
+                          </div>
                         </div>
-                      )}
-                    </div>
+                      ) : null}
+                      trigger="hover"
+                      placement="top"
+                      mouseEnterDelay={0.1}
+                      overlayStyle={{ maxWidth: 320, zIndex: 1100 }}
+                      open={sizeMatrix.hasData ? undefined : false}
+                      getPopupContainer={() => document.body}
+                    >
+                      <div className="style-smart-stage style-smart-stage--done" style={{ cursor: sizeMatrix.hasData ? 'pointer' : 'default' }}>
+                        <div className="style-smart-stage__time">{record.createTime ? fmtTime(String(record.createTime)) : ''}</div>
+                        <div className="style-smart-stage__node">
+                          <span className="style-smart-stage__ring" />
+                          <span className="style-smart-stage__orbit" />
+                          <span className="style-smart-stage__core" />
+                          <span className="style-smart-stage__check" />
+                        </div>
+                        <div className="style-smart-stage__label">下单</div>
+                      </div>
+                    </Popover>
                     {stages.map(stage => (
                       <StageNode key={stage.key} stage={stage} record={record} totalQty={totalQty} />
                     ))}
