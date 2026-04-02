@@ -347,9 +347,8 @@ public class QualityScanExecutor {
     }
 
     /**
-     * 验证生产前置条件：车缝父节点下所有子工序都有扫码记录归属人才能质检
-     * 业务规则：不管工序前后顺序，只要车缝环节里所有子工序都有归属人就可以质检
-     * PC端和小程序共用此校验，确保业务逻辑一致
+     * 质检前置校验：必须完成所有车缝子工序（归属人），且“尾部”父节点下所有子工序全部完成
+     * 业务规则：质检前需车缝+尾部全部完成，PC端和小程序共用此校验
      */
     private void validateProductionPrerequisite(ProductionOrder order, CuttingBundle bundle) {
         if (order == null || bundle == null || !hasText(order.getId()) || !hasText(bundle.getId())) {
@@ -371,8 +370,10 @@ public class QualityScanExecutor {
                         .eq(ScanRecord::getScanResult, "success")
                         .isNotNull(ScanRecord::getOperatorId));
                 if (productionCount <= 0) {
-                    throw new IllegalStateException("温馨提示：该菲号还未完成生产扫码哦～请先完成生产工序（如车缝）后再进行质检");
+                    throw new IllegalStateException("温馨提示：该菲号还未完成生产扫码哦～请先完成所有生产工序（车缝/尾部）后再进行质检");
                 }
+                // 仍需校验尾部
+                stageSupport.validateParentStagePrerequisite(order, bundle, "入库", null);
                 return;
             }
 
@@ -399,7 +400,7 @@ public class QualityScanExecutor {
             if (!missingProcesses.isEmpty()) {
                 throw new IllegalStateException(
                         "温馨提示：车缝工序还未全部完成哦～以下子工序还需要扫码：" + String.join("、", missingProcesses)
-                                + "。完成这些工序后就可以进行质检啦！");
+                                + "。完成这些工序后就可以进行质检啦！（尾部工序也需全部完成）");
             }
 
             // 3. 尾部子工序全部完成校验（基于模板配置）
@@ -409,7 +410,7 @@ public class QualityScanExecutor {
         } catch (IllegalStateException e) {
             throw e;
         } catch (Exception e) {
-            log.warn("检查生产前置条件失败: orderId={}, bundleId={}", orderId, bundleId, e);
+            log.warn("检查质检前置条件失败: orderId={}, bundleId={}", orderId, bundleId, e);
             // 查询异常时不阻断业务，仅记录日志
         }
     }

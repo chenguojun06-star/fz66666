@@ -431,15 +431,15 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
         }
         if (!urls || urls.length === 0) {
           return (
-            <span 
-              style={{ fontSize: 12, color: 'var(--primary-color)', cursor: 'pointer' }} 
+            <span
+              style={{ fontSize: 12, color: 'var(--primary-color)', cursor: 'pointer' }}
               onClick={() => onView(record)}
             >
               <UploadOutlined /> 上传单据
             </span>
           );
         }
-        
+
         return (
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <span style={{ fontSize: 12, color: 'var(--primary-color)', cursor: 'pointer' }} onClick={() => onView(record)}>

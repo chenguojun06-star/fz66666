@@ -338,20 +338,20 @@ export function useCuttingBundles({
     fetchBundles();
   }, [queryParams, activeTask?.productionOrderNo]);
 
-  // 全量菲号汇总（不受分页限制，始终拉全部记录用于计算剩余裁剪量）
+  // 全量菲号汇总：用 /summary 端点（全量聚合，无分页 500 上限限制）计算剩余裁剪量
   useEffect(() => {
     const orderNo = activeTask?.productionOrderNo;
     if (!orderNo) { setAllBundlesQtyMap({}); return; }
     let cancelled = false;
-    void api.get<{ code: number; data: { records: CuttingBundleRow[]; total: number } }>('/production/cutting/list', {
-      params: { page: 1, pageSize: 9999, orderNo },
+    void api.get<{ code: number; data: { tasks: Array<{ color: string; size: string; quantity: number }> } }>('/production/cutting/summary', {
+      params: { orderNo },
     }).then((res) => {
       if (cancelled) return;
       if (res.code === 200) {
         const map: Record<string, number> = {};
-        (res.data?.records || []).forEach((row) => {
-          const k = `${String(row.color || '').trim()}-${String(row.size || '').trim()}`;
-          map[k] = (map[k] || 0) + Number(row.quantity || 0);
+        (res.data?.tasks || []).forEach((task) => {
+          const k = `${String(task.color || '').trim()}-${String(task.size || '').trim()}`;
+          map[k] = (map[k] || 0) + Number(task.quantity || 0);
         });
         setAllBundlesQtyMap(map);
       } else {

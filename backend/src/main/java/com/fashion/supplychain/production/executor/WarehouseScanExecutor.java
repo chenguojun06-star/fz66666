@@ -412,8 +412,8 @@ public class WarehouseScanExecutor {
     }
 
     /**
-     * 验证生产前置条件：该菲号必须有至少一条生产扫码记录才能入库
-     * 业务规则：生产工序完成后才能入库，PC端和小程序共用此校验
+     * 入库前置校验：必须完成所有生产扫码（至少一条），且“尾部”父节点下所有子工序全部完成
+     * 业务规则：入库前需车缝+尾部全部完成，PC端和小程序共用此校验
      */
     private void validateProductionPrerequisite(ProductionOrder order, CuttingBundle bundle) {
         if (order == null || bundle == null || !hasText(order.getId()) || !hasText(bundle.getId())) {
@@ -427,16 +427,16 @@ public class WarehouseScanExecutor {
                     .eq(ScanRecord::getScanType, "production")
                     .eq(ScanRecord::getScanResult, "success"));
             if (productionCount <= 0) {
-                throw new IllegalStateException("温馨提示：该菲号还未完成生产扫码哦～请先完成生产工序后再入库");
+                throw new IllegalStateException("温馨提示：该菲号还未完成生产扫码哦～请先完成所有生产工序（车缝/尾部）后再入库");
             }
 
-            // 2. 尾部子工序全部完成校验（基于模板配置，替代旧的硬编码包装关键词检查）
+            // 2. 尾部子工序全部完成校验（基于模板配置）
             // "入库"的前一个父节点是"尾部"，此调用会检查尾部所有子工序都有扫码记录
             stageSupport.validateParentStagePrerequisite(order, bundle, "入库", null);
         } catch (IllegalStateException e) {
             throw e;
         } catch (Exception e) {
-            log.warn("检查生产前置条件失败: orderId={}, bundleId={}", order.getId(), bundle.getId(), e);
+            log.warn("检查入库前置条件失败: orderId={}, bundleId={}", order.getId(), bundle.getId(), e);
         }
     }
 
