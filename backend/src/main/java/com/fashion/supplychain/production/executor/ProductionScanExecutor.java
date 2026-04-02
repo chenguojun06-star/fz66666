@@ -51,6 +51,9 @@ public class ProductionScanExecutor {
     };
 
     @Autowired
+    private ProductionScanStageSupport stageSupport;
+
+    @Autowired
     private ScanRecordService scanRecordService;
 
     @Autowired
@@ -222,6 +225,10 @@ public class ProductionScanExecutor {
             log.info("子工序 '{}' 映射到父进度节点 '{}' (styleNo={})", childProcessName, parentStage, order.getStyleNo());
             progressStage = parentStage; // progressStage 存储父节点名（用于聚合）
         }
+
+        // ★ 阶段门控校验：进入当前父节点前，上一个父节点的全部子工序必须完成
+        // 例如：扫描"尾部"子工序时，"车缝"的所有子工序必须全部有扫码记录
+        stageSupport.validateParentStagePrerequisite(order, bundle, progressStage, childProcessName);
 
         // 判断是否裁剪
         boolean isCutting = "cutting".equalsIgnoreCase(scanType) ||

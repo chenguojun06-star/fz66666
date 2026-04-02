@@ -42,6 +42,9 @@ import java.util.NoSuchElementException;
 public class WarehouseScanExecutor {
 
     @Autowired
+    private ProductionScanStageSupport stageSupport;
+
+    @Autowired
     private ScanRecordService scanRecordService;
 
     @Autowired
@@ -167,8 +170,8 @@ public class WarehouseScanExecutor {
             }
             // ★ 验证单个菲号累计入库数量不超过菲号裁剪数量
             validateBundleWarehousingQuantity(bundle, qty);
-            // ★ 生产前置校验：该菲号必须有生产扫码记录（含包装工序）才能入库
-            validateProductionPrerequisite(order.getId(), bundle.getId());
+            // ★ 生产前置校验：该菲号必须有生产扫码记录，且尾部子工序全部完成才能入库
+            validateProductionPrerequisite(order, bundle);
             // ★ 质检前置校验：必须有质检验收记录（quality_receive + confirmTime 不为空）才能入库
             validateQualityConfirmBeforeWarehousing(order.getId(), bundle.getId());
             // 验证数量不超过订单/裁剪总量
@@ -412,50 +415,28 @@ public class WarehouseScanExecutor {
      * 验证生产前置条件：该菲号必须有至少一条生产扫码记录才能入库
      * 业务规则：生产工序完成后才能入库，PC端和小程序共用此校验
      */
-    private void validateProductionPrerequisite(String orderId, String bundleId) {
-        if (!hasText(orderId) || !hasText(bundleId)) {
+    private void validateProductionPrerequisite(ProductionOrder order, CuttingBundle bundle) {
+        if (order == null || bundle == null || !hasText(order.getId()) || !hasText(bundle.getId())) {
             return;
         }
         try {
             // 1. 基础检查：至少有生产扫码记录
             long productionCount = scanRecordService.count(new LambdaQueryWrapper<ScanRecord>()
-                    .eq(ScanRecord::getOrderId, orderId)
-                    .eq(ScanRecord::getCuttingBundleId, bundleId)
+                    .eq(ScanRecord::getOrderId, order.getId())
+                    .eq(ScanRecord::getCuttingBundleId, bundle.getId())
                     .eq(ScanRecord::getScanType, "production")
                     .eq(ScanRecord::getScanResult, "success"));
             if (productionCount <= 0) {
                 throw new IllegalStateException("温馨提示：该菲号还未完成生产扫码哦～请先完成生产工序后再入库");
             }
 
-            // 2. 包装前置检查：包装工序必须有扫码记录归属人（与PC端保持一致）
-            //    包装同义词：包装、打包、入袋、后整、装箱、封箱、贴标
-            long packingCount = scanRecordService.count(new LambdaQueryWrapper<ScanRecord>()
-                    .eq(ScanRecord::getOrderId, orderId)
-                    .eq(ScanRecord::getCuttingBundleId, bundleId)
-                    .eq(ScanRecord::getScanType, "production")
-                    .eq(ScanRecord::getScanResult, "success")
-                    .isNotNull(ScanRecord::getOperatorId)
-                    .and(w -> w
-                            .eq(ScanRecord::getProcessCode, "包装")
-                            .or().eq(ScanRecord::getProcessCode, "打包")
-                            .or().eq(ScanRecord::getProcessCode, "入袋")
-                            .or().eq(ScanRecord::getProcessCode, "后整")
-                            .or().eq(ScanRecord::getProcessCode, "装箱")
-                            .or().eq(ScanRecord::getProcessCode, "封箱")
-                            .or().eq(ScanRecord::getProcessCode, "贴标")
-                            .or().eq(ScanRecord::getProcessCode, "packing")
-                            .or().eq(ScanRecord::getProcessName, "包装")
-                            .or().eq(ScanRecord::getProcessName, "打包")
-                            .or().eq(ScanRecord::getProcessName, "入袋")
-                            .or().eq(ScanRecord::getProcessName, "后整")
-                            .or().eq(ScanRecord::getProcessName, "装箱")));
-            if (packingCount <= 0) {
-                throw new IllegalStateException("温馨提示：该菲号还未完成包装工序哦～请先完成包装扫码后再入库");
-            }
+            // 2. 尾部子工序全部完成校验（基于模板配置，替代旧的硬编码包装关键词检查）
+            // "入库"的前一个父节点是"尾部"，此调用会检查尾部所有子工序都有扫码记录
+            stageSupport.validateParentStagePrerequisite(order, bundle, "入库", null);
         } catch (IllegalStateException e) {
             throw e;
         } catch (Exception e) {
-            log.warn("检查生产前置条件失败: orderId={}, bundleId={}", orderId, bundleId, e);
+            log.warn("检查生产前置条件失败: orderId={}, bundleId={}", order.getId(), bundle.getId(), e);
         }
     }
 

@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.common.ParamUtils;
+import com.fashion.supplychain.common.DataPermissionHelper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.finance.orchestration.MaterialReconciliationOrchestrator;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
@@ -81,7 +82,14 @@ public class MaterialPurchaseOrchestrator {
     private MaterialQualityIssueOrchestrator materialQualityIssueOrchestrator;
 
     public IPage<MaterialPurchase> list(Map<String, Object> params) {
-        return materialPurchaseService.queryPage(params);
+        // 🔒 PC端默认隔离：未指定工厂类型时，跟单员/管理员只查内部工厂采购记录
+        Map<String, Object> effectiveParams = params != null ? params : new java.util.HashMap<>();
+        String factoryType = String.valueOf(effectiveParams.getOrDefault("factoryType", "")).trim();
+        if (!StringUtils.hasText(factoryType) && !DataPermissionHelper.isFactoryAccount()) {
+            effectiveParams = new java.util.HashMap<>(effectiveParams);
+            effectiveParams.put("factoryType", "INTERNAL");
+        }
+        return materialPurchaseService.queryPage(effectiveParams);
     }
 
     /**
@@ -1001,11 +1009,13 @@ public class MaterialPurchaseOrchestrator {
         }
 
         // factoryType 过滤：通过子查询匹配关联订单工厂类型
-        // 如果上面已经执行了工厂账号隔离 (wrapper.in(OrderId))，这里的 factoryType 筛选依然可以叠加
-        if (StringUtils.hasText(factoryType)) {
+        // 🔒 PC端默认隔离：未指定工厂类型时，跟单员/管理员只统计内部工厂采购数据
+        String effectiveFactoryType = StringUtils.hasText(factoryType) ? factoryType :
+                (!DataPermissionHelper.isFactoryAccount() ? "INTERNAL" : "");
+        if (StringUtils.hasText(effectiveFactoryType)) {
             wrapper.apply("(order_id IS NULL OR order_id = '' OR order_id IN " +
                     "(SELECT id FROM t_production_order WHERE factory_type = {0} AND (delete_flag IS NULL OR delete_flag = 0)))",
-                    factoryType.toUpperCase());
+                    effectiveFactoryType.toUpperCase());
         }
 
         List<MaterialPurchase> all = materialPurchaseService.list(wrapper);

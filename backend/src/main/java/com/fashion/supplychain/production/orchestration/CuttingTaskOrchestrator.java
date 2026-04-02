@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.fashion.supplychain.common.DataPermissionHelper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.CuttingTask;
@@ -127,7 +128,13 @@ public class CuttingTaskOrchestrator {
             mutableParams.put("_factoryOrderIds", factoryOrderIds);
             return cuttingTaskService.queryPage(mutableParams);
         }
-        return cuttingTaskService.queryPage(params);
+        // 🔒 PC端默认隔离：未指定工厂类型时，跟单员/管理员只查内部工厂裁剪任务
+        Map<String, Object> pcParams = params != null ? new java.util.HashMap<>(params) : new java.util.HashMap<>();
+        String pcFactoryType = String.valueOf(pcParams.getOrDefault("factoryType", "")).trim();
+        if (!StringUtils.hasText(pcFactoryType) && !DataPermissionHelper.isFactoryAccount()) {
+            pcParams.put("factoryType", "INTERNAL");
+        }
+        return cuttingTaskService.queryPage(pcParams);
     }
 
     /**
@@ -166,11 +173,14 @@ public class CuttingTaskOrchestrator {
             baseWrapper.in(CuttingTask::getProductionOrderId, factoryOrderIds);
         }
 
-        if (StringUtils.hasText(factoryType)) {
+        // 🔒 PC端默认隔离：未指定工厂类型时，跟单员/管理员只统计内部工厂裁剪数据
+        String effectiveFactoryType = StringUtils.hasText(factoryType) ? factoryType :
+                (!DataPermissionHelper.isFactoryAccount() ? "INTERNAL" : null);
+        if (StringUtils.hasText(effectiveFactoryType)) {
             List<String> matchedOrderIds = productionOrderService.list(
                     new LambdaQueryWrapper<ProductionOrder>()
                             .select(ProductionOrder::getId)
-                            .eq(ProductionOrder::getFactoryType, factoryType)
+                            .eq(ProductionOrder::getFactoryType, effectiveFactoryType)
                             .ne(ProductionOrder::getStatus, "scrapped")
                             .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
             ).stream().map(ProductionOrder::getId).filter(StringUtils::hasText).collect(Collectors.toList());

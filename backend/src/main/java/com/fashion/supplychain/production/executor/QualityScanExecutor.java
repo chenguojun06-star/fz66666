@@ -44,6 +44,9 @@ import java.util.Map;
 public class QualityScanExecutor {
 
     @Autowired
+    private ProductionScanStageSupport stageSupport;
+
+    @Autowired
     private ScanRecordService scanRecordService;
 
     @Autowired
@@ -124,8 +127,8 @@ public class QualityScanExecutor {
 
         inventoryValidator.validateNotExceedOrderQuantity(order, "quality", "质检", qty, bundle);
 
-        // ★ 生产前置校验：车缝父节点下所有子工序都有归属人才能质检
-        validateProductionPrerequisite(order, bundle.getId());
+        // ★ 生产前置校验：车缝 + 尾部父节点下所有子工序都有归属人才能质检
+        validateProductionPrerequisite(order, bundle);
 
         String qualityStage = parseQualityStageFromParams(params);
 
@@ -348,11 +351,12 @@ public class QualityScanExecutor {
      * 业务规则：不管工序前后顺序，只要车缝环节里所有子工序都有归属人就可以质检
      * PC端和小程序共用此校验，确保业务逻辑一致
      */
-    private void validateProductionPrerequisite(ProductionOrder order, String bundleId) {
-        if (order == null || !hasText(order.getId()) || !hasText(bundleId)) {
+    private void validateProductionPrerequisite(ProductionOrder order, CuttingBundle bundle) {
+        if (order == null || bundle == null || !hasText(order.getId()) || !hasText(bundle.getId())) {
             return;
         }
         String orderId = order.getId();
+        String bundleId = bundle.getId();
         try {
             // 1. 从工序模板获取车缝父节点下的所有子工序
             String styleNo = order.getStyleNo();
@@ -397,6 +401,11 @@ public class QualityScanExecutor {
                         "温馨提示：车缝工序还未全部完成哦～以下子工序还需要扫码：" + String.join("、", missingProcesses)
                                 + "。完成这些工序后就可以进行质检啦！");
             }
+
+            // 3. 尾部子工序全部完成校验（基于模板配置）
+            // 质检在流程上位于“尾部”之后，入库之前，必须确保尾部所有子工序已完成
+            stageSupport.validateParentStagePrerequisite(order, bundle, "入库", null);
+
         } catch (IllegalStateException e) {
             throw e;
         } catch (Exception e) {
