@@ -90,9 +90,11 @@ public class ProductionScanStageSupport {
 
         List<String> missing = new ArrayList<>();
         for (String process : required) {
+            // 接受两种模式：ORDER模式（cutting_bundle_id=NULL）和BUNDLE模式（matching bundle id）
             long count = scanRecordService.count(new LambdaQueryWrapper<ScanRecord>()
                     .eq(ScanRecord::getOrderId, order.getId())
-                    .eq(ScanRecord::getCuttingBundleId, bundle.getId())
+                    .and(bw -> bw.isNull(ScanRecord::getCuttingBundleId)
+                            .or().eq(ScanRecord::getCuttingBundleId, bundle.getId()))
                     .in(ScanRecord::getScanType, java.util.Arrays.asList("production", "cutting"))
                     .eq(ScanRecord::getScanResult, "success")
                     .and(w -> w.eq(ScanRecord::getProcessCode, process)
