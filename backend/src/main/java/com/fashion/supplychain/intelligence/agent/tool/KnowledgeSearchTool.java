@@ -2,7 +2,6 @@ package com.fashion.supplychain.intelligence.agent.tool;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.entity.KnowledgeBase;
@@ -24,7 +23,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Component
-public class KnowledgeSearchTool implements AgentTool {
+public class KnowledgeSearchTool extends AbstractAgentTool {
 
     @Autowired
     private KnowledgeBaseService knowledgeBaseService;
@@ -37,8 +36,6 @@ public class KnowledgeSearchTool implements AgentTool {
     @Autowired(required = false)
     private CohereRerankService cohereRerankService;
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-
     @Override
     public String getName() {
         return "tool_knowledge_search";
@@ -46,40 +43,25 @@ public class KnowledgeSearchTool implements AgentTool {
 
     @Override
     public AiTool getToolDefinition() {
-        Map<String, Object> properties = new HashMap<>();
+        Map<String, Object> properties = new LinkedHashMap<>();
+        properties.put("query", stringProp("搜索关键词，例如：FOB、菲号、如何建单、工资结算、逾期处理"));
+        properties.put("category", stringProp("知识分类（可选）：terminology=行业术语, system_guide=系统操作指南, faq=常见问题, sop=标准操作流程, rule=业务规则"));
 
-        Map<String, Object> queryProp = new HashMap<>();
-        queryProp.put("type", "string");
-        queryProp.put("description", "搜索关键词，例如：FOB、菲号、如何建单、工资结算、逾期处理");
-        properties.put("query", queryProp);
-
-        Map<String, Object> categoryProp = new HashMap<>();
-        categoryProp.put("type", "string");
-        categoryProp.put("description", "知识分类（可选）：terminology=行业术语, system_guide=系统操作指南, faq=常见问题, sop=标准操作流程, rule=业务规则");
-        properties.put("category", categoryProp);
-
-        AiTool tool = new AiTool();
-        AiTool.AiFunction function = new AiTool.AiFunction();
-        function.setName(getName());
-        function.setDescription("搜索知识库，回答行业术语（FOB/CMT/ODM/菲号等）、系统操作指南（如何建单/扫码/结算）、业务常见问题（面料不足/逾期处理/报价计算）等问题。当用户询问'什么是X'、'如何操作X'、'X怎么算'时调用此工具。");
-        AiTool.AiParameters aiParams = new AiTool.AiParameters();
-        aiParams.setProperties(properties);
-        aiParams.setRequired(List.of("query"));
-        function.setParameters(aiParams);
-        tool.setFunction(function);
-        return tool;
+        return buildToolDef(
+                "搜索知识库，回答行业术语（FOB/CMT/ODM/菲号等）、系统操作指南（如何建单/扫码/结算）、"
+                        + "业务常见问题（面料不足/逾期处理/报价计算）等问题。当用户询问'什么是X'、'如何操作X'、'X怎么算'时调用此工具。",
+                properties, List.of("query"));
     }
 
     @Override
-    public String execute(String argumentsJson) {
-        try {
-            JsonNode args = OBJECT_MAPPER.readTree(argumentsJson);
-            String query = args.path("query").asText("").trim();
-            String category = args.path("category").asText("").trim();
+    protected String doExecute(String argumentsJson) throws Exception {
+        JsonNode args = MAPPER.readTree(argumentsJson);
+        String query = args.path("query").asText("").trim();
+        String category = args.path("category").asText("").trim();
 
-            if (query.isEmpty()) {
-                return "{\"error\": \"请提供搜索关键词\"}";
-            }
+        if (query.isEmpty()) {
+            return errorJson("请提供搜索关键词");
+        }
 
             Long tenantId = UserContext.tenantId();
 
@@ -223,12 +205,7 @@ public class KnowledgeSearchTool implements AgentTool {
             result.put("retrievalMode", cohereRerankService != null && cohereRerankService.isAvailable() ? "reranked" : "hybrid");
             result.put("semanticHits", semanticKbList.size());
             result.put("keywordHits", sqlResults.size());
-            return OBJECT_MAPPER.writeValueAsString(result);
-
-        } catch (Exception e) {
-            log.error("[KnowledgeSearchTool] 搜索异常", e);
-            return "{\"error\": \"知识库搜索失败: " + e.getMessage() + "\"}";
-        }
+            return MAPPER.writeValueAsString(result);
     }
 
     private KnowledgeHit buildKnowledgeHit(KnowledgeBase kb,

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { App, Button, Card, Form, Select, Space, Tag } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { App, Button, Card, Form, Select, Space, Tag, Upload } from 'antd';
+import { PlusOutlined, UploadOutlined } from '@ant-design/icons';
 
 import Layout from '@/components/Layout';
 import PageStatCards from '@/components/common/PageStatCards';
@@ -82,14 +82,7 @@ const CuttingManagement: React.FC = () => {
     syncActiveTaskByOrderNo,
   });
 
-  const existingCutQtyByKey = useMemo(() => {
-    const map: Record<string, number> = {};
-    (bundles.dataSource || []).forEach(row => {
-      const k = `${String(row.color || '').trim()}-${String(row.size || '').trim()}`;
-      map[k] = (map[k] || 0) + Number(row.quantity || 0);
-    });
-    return map;
-  }, [bundles.dataSource]);
+  const existingCutQtyByKey = bundles.allBundlesQtyMap;
 
   const print = useCuttingPrint({ message });
 
@@ -217,9 +210,9 @@ const CuttingManagement: React.FC = () => {
         },
         { title: '单位', dataIndex: 'unit', key: 'unit', width: 90, ellipsis: true },
         {
-          title: '到货数量',
-          dataIndex: 'arrivedQuantity',
-          key: 'arrivedQuantity',
+          title: '需求数量',
+          dataIndex: 'purchaseQuantity',
+          key: 'purchaseQuantity',
           width: 110,
           align: 'right' as const,
           render: (v: unknown) => Number(v ?? 0) || 0,
@@ -229,7 +222,7 @@ const CuttingManagement: React.FC = () => {
           key: 'referenceKilograms',
           width: 110,
           align: 'right' as const,
-          render: (_: unknown, record: MaterialPurchase) => formatReferenceKilograms(record.arrivedQuantity, record.conversionRate, record.unit),
+          render: (_: unknown, record: MaterialPurchase) => formatReferenceKilograms(record.purchaseQuantity, record.conversionRate, record.unit),
         },
         {
           title: '单价(元)',
@@ -288,6 +281,18 @@ const CuttingManagement: React.FC = () => {
       width: 160,
       ellipsis: true,
       render: () => activeTask?.styleName || '-',
+    },
+    {
+      title: '附件',
+      key: 'attachments',
+      width: 100,
+      render: (_: any, record: any) => (
+        <StyleAttachmentsButton
+          styleId={activeTask?.styleId}
+          styleNo={record.styleNo || activeTask?.styleNo}
+          onlyActive
+        />
+      )
     },
     { title: '颜色', dataIndex: 'color', key: 'color', width: 120 },
     { title: '尺码', dataIndex: 'size', key: 'size', width: 80 },
@@ -468,6 +473,14 @@ const CuttingManagement: React.FC = () => {
                         </Space>
                       );
                     },
+                  },
+                  {
+                    title: '附件',
+                    key: 'attachments',
+                    width: 100,
+                    render: (_: any, record: any) => (
+                      <StyleAttachmentsButton styleId={record.styleId} styleNo={record.styleNo} onlyActive />
+                    )
                   },
                   { title: '下单人', dataIndex: 'orderCreatorName', key: 'orderCreatorName', width: 110, render: (v: unknown) => String(v || '').trim() || '-' },
                   {
@@ -695,6 +708,34 @@ const CuttingManagement: React.FC = () => {
                       className="cutting-entry-purchase-card"
                       style={{ marginTop: 12 }}
                       loading={bundles.entryPurchaseLoading}
+                      extra={
+                        <Upload
+                          accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.doc,.docx"
+                          showUploadList={false}
+                          customRequest={async (options: any) => {
+                            const { file, onSuccess, onError } = options;
+                            const formData = new FormData();
+                            formData.append('file', file);
+                            try {
+                              const res = await api.post('/common/upload', formData, {
+                                headers: { 'Content-Type': 'multipart/form-data' },
+                              }) as any;
+                              if (res.code === 200) {
+                                message.success('采购单上传成功');
+                                onSuccess?.({});
+                              } else {
+                                message.error(res.message || '上传失败');
+                                onError?.(new Error('upload failed'));
+                              }
+                            } catch (err) {
+                              message.error('上传失败');
+                              onError?.(err);
+                            }
+                          }}
+                        >
+                          <Button icon={<UploadOutlined />} size="small">上传采购单</Button>
+                        </Upload>
+                      }
                     >
                       <ResizableTable<MaterialPurchase>
                         storageKey="cutting-entry-purchase-table"
@@ -824,7 +865,7 @@ const CuttingManagement: React.FC = () => {
             open={cuttingSheetPrintOpen}
             onCancel={() => setCuttingSheetPrintOpen(false)}
             bundles={bundles.selectedBundles}
-            styleImageUrl={(activeTask as any)?.styleImageUrl}
+            styleImageUrl={activeTask?.styleCover}
             companyName={user?.tenantName}
             cuttingTask={activeTask ? {
               receiverName: (activeTask as any).receiverName,

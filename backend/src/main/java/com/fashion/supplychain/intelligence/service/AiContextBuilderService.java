@@ -1,5 +1,6 @@
 package com.fashion.supplychain.intelligence.service;
 
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.dashboard.orchestration.DailyBriefOrchestrator;
 import com.fashion.supplychain.intelligence.dto.HealthIndexResponse;
 import com.fashion.supplychain.intelligence.dto.MaterialShortageResponse;
@@ -14,6 +15,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * AI 上下文构建服务
@@ -38,10 +40,47 @@ public class AiContextBuilderService {
     private final MaterialShortageOrchestrator materialShortageOrchestrator;
     private final AiChatContextOrchestrator aiChatContextOrchestrator;
 
+    /** 租户级上下文缓存，TTL 60 秒（避免同一租户连续对话反复查 4 个 Orchestrator） */
+    private static final long CONTEXT_CACHE_TTL_MS = 60_000;
+    private final ConcurrentHashMap<Long, CachedContext> contextCache = new ConcurrentHashMap<>();
+
+    private record CachedContext(String prompt, long expiresAt) {
+        boolean isExpired() { return System.currentTimeMillis() > expiresAt; }
+    }
+
     /**
-     * 构建完整系统上下文，作为 System Prompt 传给 AI
+     * 构建完整系统上下文，作为 System Prompt 传给 AI。
+     * 同一租户 60 秒内复用缓存，避免重复调用 4 个数据编排器。
      */
     public String buildSystemPrompt() {
+        Long tenantId = UserContext.tenantId();
+        if (tenantId != null) {
+            CachedContext cached = contextCache.get(tenantId);
+            if (cached != null && !cached.isExpired()) {
+                log.debug("[AiContext] 命中缓存 tenantId={}, 剩余{}ms", tenantId, cached.expiresAt - System.currentTimeMillis());
+                return cached.prompt;
+            }
+        }
+        String prompt = doBuildSystemPrompt();
+        if (tenantId != null) {
+            contextCache.put(tenantId, new CachedContext(prompt, System.currentTimeMillis() + CONTEXT_CACHE_TTL_MS));
+            // 防止缓存无限膨胀：超过 200 个租户时清理过期条目
+            if (contextCache.size() > 200) {
+                contextCache.entrySet().removeIf(e -> e.getValue().isExpired());
+            }
+        }
+        return prompt;
+    }
+
+    /** 主动失效指定租户的上下文缓存（数据变更时调用） */
+    public void invalidateCache(Long tenantId) {
+        if (tenantId != null) {
+            contextCache.remove(tenantId);
+        }
+    }
+
+    /** 实际构建逻辑（从 4 个 Orchestrator 拉取实时数据） */
+    private String doBuildSystemPrompt() {
         StringBuilder sb = new StringBuilder();
         String today = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy年MM月dd日"));
 

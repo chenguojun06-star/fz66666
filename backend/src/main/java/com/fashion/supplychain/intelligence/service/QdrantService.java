@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -82,6 +83,30 @@ public class QdrantService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
+    /** F4: 启动时校验 Qdrant 集合向量维度是否与当前配置一致 */
+    @PostConstruct
+    void validateCollectionDimension() {
+        try {
+            ResponseEntity<String> resp = restTemplate.getForEntity(
+                    qdrantUrl + "/collections/" + collectionName, String.class);
+            if (resp.getStatusCode().is2xxSuccessful() && resp.getBody() != null) {
+                JsonNode root = objectMapper.readTree(resp.getBody());
+                long storedDim = root.path("result").path("config")
+                        .path("params").path("vectors").path("size").asLong(-1);
+                int expectedDim = getVectorDim();
+                if (storedDim > 0 && storedDim != expectedDim) {
+                    log.error("[Qdrant] ⚠️ 向量维度不匹配！集合={} 存储维度={} 当前配置维度={}"
+                            + " — 搜索结果将不可靠，请重建集合或调整 API Key 配置",
+                            collectionName, storedDim, expectedDim);
+                } else if (storedDim > 0) {
+                    log.info("[Qdrant] 集合 {} 维度校验通过 dim={}", collectionName, storedDim);
+                }
+            }
+        } catch (Exception e) {
+            log.debug("[Qdrant] 启动维度校验跳过（Qdrant不可用）: {}", e.getMessage());
+        }
+    }
+
     // ──────────────────────────────────────────────────────────────
     //  公开接口
     // ──────────────────────────────────────────────────────────────
@@ -100,6 +125,10 @@ public class QdrantService {
         try {
             ensureCollectionExists();
             float[] vector = computeEmbedding(content);
+            if (vector == null) {
+                log.warn("[Qdrant] upsert跳过：内容为空无法生成向量 pointId={}", pointId);
+                return false;
+            }
 
             ObjectNode body = objectMapper.createObjectNode();
             ArrayNode points = body.putArray("points");
@@ -140,6 +169,10 @@ public class QdrantService {
         List<ScoredPoint> results = new ArrayList<>();
         try {
             float[] vector = computeEmbedding(queryText);
+            if (vector == null) {
+                log.warn("[Qdrant] search跳过：查询文本为空无法生成向量");
+                return results;
+            }
 
             ObjectNode body = objectMapper.createObjectNode();
             ArrayNode vec = body.putArray("vector");
@@ -148,6 +181,8 @@ public class QdrantService {
             }
             body.put("limit", topK);
             body.put("with_payload", true);
+            // F26: 过滤低质量匹配，余弦相似度 < 0.3 的结果直接丢弃
+            body.put("score_threshold", 0.3);
 
             // 租户隔离过滤
             if (tenantId != null) {
@@ -305,10 +340,12 @@ public class QdrantService {
 
     /**
      * 生成语义向量：优先 Voyage AI → DeepSeek → 伪向量（逐级降级）。
+     * F5: 空文本返回 null（零向量的余弦相似度未定义，会产生无意义匹配结果）。
+     * @return 向量数组；null 表示输入为空无法生成有效向量
      */
     private float[] computeEmbedding(String text) {
-        if (text == null || text.isEmpty()) {
-            return new float[getVectorDim()];
+        if (text == null || text.isBlank()) {
+            return null;
         }
         // ① Voyage AI（首选，语义质量最高）
         if (voyageApiKey != null && !voyageApiKey.isEmpty()) {

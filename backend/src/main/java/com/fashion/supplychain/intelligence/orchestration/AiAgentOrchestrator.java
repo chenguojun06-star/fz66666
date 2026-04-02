@@ -19,19 +19,25 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -45,7 +51,10 @@ public class AiAgentOrchestrator {
     private XiaoyunInsightCardOrchestrator xiaoyunInsightCardOrchestrator;
 
     private static final ObjectMapper JSON = new ObjectMapper();
-    private static final int MAX_TOOL_RAW_CHARS = 1800;
+    /** F11: 工具原始输出截断阈值（从 1800 提升到 3000，避免复杂查询被过度截断） */
+    private static final int MAX_TOOL_RAW_CHARS = 3000;
+    /** F8: 系统提示词最大字符数（超出截断以防溢出 context window） */
+    private static final int MAX_SYSTEM_PROMPT_CHARS = 12000;
 
     @Autowired
     private IntelligenceInferenceOrchestrator inferenceOrchestrator;
@@ -73,17 +82,35 @@ public class AiAgentOrchestrator {
 
     private Map<String, AgentTool> toolMap;
 
-    /** 对话记忆：userId → 最近 N 轮 user+assistant 消息 */
-    private final ConcurrentHashMap<String, List<AiMessage>> conversationMemory = new ConcurrentHashMap<>();
+    /** 对话记忆：userId → 最近 N 轮 user+assistant 消息（LRU 淘汰最久未访问的用户） */
+    private final Map<String, List<AiMessage>> conversationMemory = Collections.synchronizedMap(
+            new LinkedHashMap<String, List<AiMessage>>(64, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, List<AiMessage>> eldest) {
+                    return size() > MAX_USERS_CACHED;
+                }
+            });
     private final ThreadLocal<String> lastCommandIdHolder = new ThreadLocal<>();
     private static final int MAX_MEMORY_TURNS = 6; // 保留最近6轮（12条消息）
     private static final int MAX_USERS_CACHED = 200; // 超过则清理最早的
     /** 会话历史压缩阈值：超过此轮数时触发 LLM 摘要压缩（保留最近2轮原文，其余压缩） */
-    private static final int COMPACT_THRESHOLD_TURNS = 4;
+    private static final int COMPACT_THRESHOLD_TURNS = 8;
     /** Stuck 检测：同一工具+参数连续调用超过此次数时强制跳出 */
     private static final int STUCK_MAX_REPEAT = 3;
-    /** 工具并发执行线程池 */
-    private final ExecutorService toolExecutor = Executors.newFixedThreadPool(4);
+    /** F17: 命名线程池（有界队列、名称可述、CallerRuns 拒绝策略） */
+    private final ExecutorService toolExecutor = new ThreadPoolExecutor(
+            4, 8, 60L, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(64),
+            new ThreadFactory() {
+                private final AtomicInteger seq = new AtomicInteger(1);
+                @Override
+                public Thread newThread(Runnable r) {
+                    Thread t = new Thread(r, "ai-tool-" + seq.getAndIncrement());
+                    t.setDaemon(true);
+                    return t;
+                }
+            },
+            new ThreadPoolExecutor.CallerRunsPolicy());
 
     @PostConstruct
     public void init() {
@@ -96,6 +123,37 @@ public class AiAgentOrchestrator {
         }
     }
 
+    /** F17: 优雅关闭工具线程池，等待进行中的任务完成 */
+    @PreDestroy
+    public void shutdown() {
+        toolExecutor.shutdown();
+        try {
+            if (!toolExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+                log.warn("[AiAgent] 工具线程池 5s 内未关闭，强制终止");
+                toolExecutor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            toolExecutor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    /**
+     * 根据用户消息复杂度自适应调整最大迭代轮次。
+     * 简单问候→2轮；中等查询→5轮；多维分析→8轮。
+     */
+    private int estimateMaxIterations(String userMessage) {
+        if (userMessage == null || userMessage.length() < 8) return 3;
+        String msg = userMessage.trim();
+        if (msg.length() < 25 && msg.matches("(?s).*(你好|hi|hello|谢谢|再见|你是谁|在吗).*")) {
+            return 2;
+        }
+        if (msg.matches("(?s).*(对比|排名|趋势|分析|汇总|所有|每个|各个|评估|预测|方案|为什么|怎么办|如何优化|哪些.*风险|哪些.*问题).*")) {
+            return 8;
+        }
+        return 5;
+    }
+
     public Result<String> executeAgent(String userMessage) {
         if (!inferenceOrchestrator.isAnyModelEnabled()) {
             return Result.fail("智能服务暂未配置或不可用");
@@ -103,6 +161,7 @@ public class AiAgentOrchestrator {
 
         String commandId = aiAgentTraceOrchestrator.startRequest(userMessage);
         lastCommandIdHolder.set(commandId);
+        try { // F31: finally 块强制清理 ThreadLocal，防止线程池复用泄漏
         long requestStartAt = System.currentTimeMillis();
         String userId = UserContext.userId();
         List<AgentTool> visibleTools = aiAgentToolAccessService.resolveVisibleTools(registeredTools);
@@ -118,13 +177,19 @@ public class AiAgentOrchestrator {
         messages.addAll(compactConversationHistory(history));
         messages.add(AiMessage.user(userMessage));
 
-        int maxIterations = 5;
+        int maxIterations = estimateMaxIterations(userMessage);
         int currentIter = 0;
         List<String> stuckSignatures = new ArrayList<>(); // Stuck 检测：跨轮次工具调用签名
 
         while (currentIter < maxIterations) {
             currentIter++;
             log.info("[AiAgent] 开始第 {} 轮思考...", currentIter);
+
+            // 进度感知：让 LLM 知道当前轮次，避免无效循环
+            if (currentIter > 2) {
+                messages.add(AiMessage.system(String.format(
+                    "[进度提示] 当前第%d/%d轮。如已有足够信息请直接给出最终回答，避免重复调用工具。", currentIter, maxIterations)));
+            }
 
             IntelligenceInferenceResult result = inferenceOrchestrator.chat("agent-loop", messages, visibleApiTools);
             if (!result.isSuccess()) {
@@ -181,6 +246,9 @@ public class AiAgentOrchestrator {
 
         aiAgentTraceOrchestrator.finishRequest(commandId, null, "对话轮数超过限制", System.currentTimeMillis() - requestStartAt);
         return Result.fail("对话轮数超过限制 (" + maxIterations + ")，可能陷入了死循环。");
+        } finally { // F31: 强制清理 ThreadLocal
+            lastCommandIdHolder.remove();
+        }
     }
 
     public String consumeLastCommandId() {
@@ -192,6 +260,10 @@ public class AiAgentOrchestrator {
     /**
      * SSE 流式执行 Agent：每一轮思考/工具调用/最终回答都通过 SseEmitter 推送给前端。
      * 事件类型：thinking | tool_call | tool_result | answer | error | done
+     *
+     * <p><b>架构备注(F7)</b>：本方法与 executeAgent() 共享约 70% 的 ReAct 循环逻辑，
+     * 差异在于输出机制(return vs SSE)和错误处理(Result vs emitter.complete)。
+     * 后续可提取公共的 ReAct 循环骨架方法，通过回调接口区分输出通道，消除重复。</p>
      */
     public void executeAgentStreaming(String userMessage, SseEmitter emitter) {
         String commandId = null;
@@ -217,10 +289,16 @@ public class AiAgentOrchestrator {
             messages.addAll(compactConversationHistory(history));
             messages.add(AiMessage.user(userMessage));
 
-            int maxIterations = 5;
+            int maxIterations = estimateMaxIterations(userMessage);
             List<String> stuckSignatures = new ArrayList<>(); // Stuck 检测
             for (int i = 1; i <= maxIterations; i++) {
                 emitSse(emitter, "thinking", Map.of("iteration", i, "message", "正在思考第 " + i + " 轮…"));
+
+                // 进度感知：让 LLM 知道当前轮次，避免无效循环
+                if (i > 2) {
+                    messages.add(AiMessage.system(String.format(
+                        "[进度提示] 当前第%d/%d轮。如已有足够信息请直接给出最终回答，避免重复调用工具。", i, maxIterations)));
+                }
 
                 IntelligenceInferenceResult result = inferenceOrchestrator.chat("agent-loop", messages, visibleApiTools);
                 if (!result.isSuccess()) {
@@ -319,11 +397,7 @@ public class AiAgentOrchestrator {
 
     private void saveConversationTurn(String userId, String userMsg, String assistantMsg) {
         if (userId == null || userId.isBlank()) return;
-        // 防止内存膨胀：超过 MAX_USERS_CACHED 时清空最早缓存
-        if (conversationMemory.size() > MAX_USERS_CACHED) {
-            conversationMemory.clear();
-            log.info("[AiAgent] 对话缓存超过{}用户，已清空", MAX_USERS_CACHED);
-        }
+        // LRU 淘汰由 LinkedHashMap.removeEldestEntry 自动处理
         List<AiMessage> history = conversationMemory.computeIfAbsent(userId, k -> new ArrayList<>());
         synchronized (history) {
             history.add(AiMessage.user(userMsg));
@@ -418,7 +492,7 @@ public class AiAgentOrchestrator {
 
         String toolGuide = aiAgentToolAccessService.buildToolGuide(visibleTools);
 
-        return "你是小云——服装供应链智能运营助理。第一句必须给结论+关键数字，不铺垫背景，不捏造数据。\n\n" +
+        String prompt = "你是小云——服装供应链智能运营助理。第一句必须给结论+关键数字，不铺垫背景，不捏造数据。\n\n" +
                 contextBlock + "\n" +
                 workerRestriction +
                 intelligenceContext + "\n" +
@@ -440,7 +514,14 @@ public class AiAgentOrchestrator {
                 "4. 写操作对象明确且风险可控就直接执行；对象不明确时，只补一句最关键的确认，不要反复追问。\n" +
                 "5. 工具返回权限不足或数据不足时，要直接说明限制，并给出当前账号还能继续查的内容。\n" +
                 "6. 当用户问“现在最应该关注什么”时，优先使用带优先级、风险排序或异常聚合能力的工具。\n" +
-                "7. 当用户问“怎么办”时，优先把建议落到负责人、动作、时效和预期结果。\n\n" +
+                "7. 当用户问“怎么办”时，优先把建议落到负责人、动作、时效和预期结果。\n\n" +                "【主动思考指引 — tool_think 使用时机】\n" +
+                "遇到以下任一情况，请务必先调用 tool_think 理清思路，再进行后续工具调用或输出建议：\n" +
+                "1. 问题涉及 3 个以上数据维度（如 订单 + 工厂 + 时间 + 财务 的复合查询）；\n" +
+                "2. 需要规划 3 个及以上工具的调用顺序；\n" +
+                "3. 需要做风险判断、进度推算、成本估算或异常分析；\n" +
+                "4. 用户给出模糊指令（\u201c帮我分析\u201d\u201c最应该关注什么\u201d\u201c怎么处理\u201d等），需要先拆解理解；\n" +
+                "5. 工具返回结果与预期不符，需要重新推理后再调用其他工具。\n" +
+                "tool_think 无任何副作用，执行成本极低；先思考再行动比直接猜测工具调用准确率更高。\n\n" +
                 "【输出要求】\n" +
                 "- 默认用这个顺序组织回答：结论 → 依据 → 动作。需要时再补风险或预期效果。\n" +
                 "- 结论必须短，依据必须有数字或对象，动作最多 3 条。\n" +
@@ -469,6 +550,11 @@ public class AiAgentOrchestrator {
                 "C) 用户要求催单/跟进出货/催出货日期时，为每个相关订单生成催单卡片（type=urge_order）：\n" +
                 "【ACTIONS】[{\"title\":\"催单通知\",\"desc\":\"请尽快填写最新预计出货日期并备注情况\",\"orderNo\":\"真实单号\",\"responsiblePerson\":\"订单跟单员或工厂老板姓名\",\"factoryName\":\"工厂名\",\"currentExpectedShipDate\":\"当前预计出货日期(如有,格式YYYY-MM-DD)\",\"actions\":[{\"label\":\"填写出货日期\",\"type\":\"urge_order\"}]}]【/ACTIONS】\n" +
                 "⚠️ 仅用真实数据，禁止用占位符。常规闲聊不生成这两个标记块。订单号必须是数据库中真实存在的。";
+        if (prompt.length() > MAX_SYSTEM_PROMPT_CHARS) {
+            log.warn("[AiAgent] systemPrompt过长({}字符)，截断至{}", prompt.length(), MAX_SYSTEM_PROMPT_CHARS);
+            prompt = prompt.substring(0, MAX_SYSTEM_PROMPT_CHARS) + "\n...(系统提示词已截断，请用工具查询补充信息)";
+        }
+        return prompt;
     }
 
     /** 将当前用户的会话记忆异步持久化（由 Controller 在会话结束时调用） */
@@ -792,14 +878,40 @@ public class AiAgentOrchestrator {
         if (signatures.size() < STUCK_MAX_REPEAT) {
             return false;
         }
-        // 检查最后 STUCK_MAX_REPEAT 个签名是否全部相同
-        String last = signatures.get(signatures.size() - 1);
-        for (int i = signatures.size() - STUCK_MAX_REPEAT; i < signatures.size(); i++) {
-            if (!last.equals(signatures.get(i))) {
-                return false;
+        int sz = signatures.size();
+        // 检查1: 完全相同签名连续出现 STUCK_MAX_REPEAT 次（原逻辑）
+        String last = signatures.get(sz - 1);
+        boolean exactRepeat = true;
+        for (int i = sz - STUCK_MAX_REPEAT; i < sz; i++) {
+            if (!last.equals(signatures.get(i))) { exactRepeat = false; break; }
+        }
+        if (exactRepeat) return true;
+
+        // 检查2: 同一工具名连续调用 4+ 次（参数不同也视为卡住）
+        if (sz >= 4) {
+            String lastTool = signatures.get(sz - 1).split("\\|", 2)[0];
+            boolean sameToolRepeat = true;
+            for (int i = sz - 4; i < sz; i++) {
+                if (!lastTool.equals(signatures.get(i).split("\\|", 2)[0])) {
+                    sameToolRepeat = false; break;
+                }
+            }
+            if (sameToolRepeat) {
+                log.warn("[AiAgent] Stuck: 同一工具 {} 连续调用 4 次（参数不同）", lastTool);
+                return true;
             }
         }
-        return true;
+
+        // 检查3: A-B-A-B 振荡模式（最近4个签名交替出现两种）
+        if (sz >= 4) {
+            String a = signatures.get(sz - 4);
+            String b = signatures.get(sz - 3);
+            if (!a.equals(b) && a.equals(signatures.get(sz - 2)) && b.equals(signatures.get(sz - 1))) {
+                log.warn("[AiAgent] Stuck: A-B-A-B 振荡检测 ({} ↔ {})", a, b);
+                return true;
+            }
+        }
+        return false;
     }
 
     // ══════════════════════════════════════════════════════════
@@ -885,15 +997,27 @@ public class AiAgentOrchestrator {
             }
         }
 
-        // ── 执行工具 ──
+        // ── 执行工具（含瞬态错误单次重试）──
         AgentTool tool = visibleToolMap.get(toolName);
         if (tool != null) {
             try {
                 rawResult = tool.execute(arguments);
                 success = true;
             } catch (Exception e) {
-                log.error("[AiAgent] 工具执行异常: tool={}, error={}", toolName, e.getMessage());
-                rawResult = "{\"error\":\"工具执行异常: " + e.getMessage() + "\"}";
+                if (isTransientError(e)) {
+                    log.warn("[AiAgent] 工具瞬态异常，500ms 后重试: tool={}, error={}", toolName, e.getMessage());
+                    try {
+                        Thread.sleep(500);
+                        rawResult = tool.execute(arguments);
+                        success = true;
+                    } catch (Exception retryEx) {
+                        log.error("[AiAgent] 工具重试仍失败: tool={}, error={}", toolName, retryEx.getMessage());
+                        rawResult = "{\"error\":\"工具执行异常(重试后): " + retryEx.getMessage() + "\"}";
+                    }
+                } else {
+                    log.error("[AiAgent] 工具执行异常: tool={}, error={}", toolName, e.getMessage());
+                    rawResult = "{\"error\":\"工具执行异常: " + e.getMessage() + "\"}";
+                }
             }
         } else {
             rawResult = buildUnavailableToolResult(toolName);
@@ -921,6 +1045,18 @@ public class AiAgentOrchestrator {
 
         String evidence = buildToolEvidenceMessage(toolName, rawResult);
         return new ToolExecRecord(toolCallId, toolName, arguments, rawResult, evidence, elapsed);
+    }
+
+    /** 判断异常是否为瞬态错误（网络超时/连接重置/服务限流等，值得重试） */
+    private boolean isTransientError(Exception e) {
+        String msg = e.getMessage();
+        if (msg == null) return false;
+        String lower = msg.toLowerCase();
+        return lower.contains("timeout") || lower.contains("timed out")
+            || lower.contains("connection reset") || lower.contains("connection refused")
+            || lower.contains("429") || lower.contains("too many requests")
+            || lower.contains("503") || lower.contains("service unavailable")
+            || lower.contains("502") || lower.contains("bad gateway");
     }
 
     // ══════════════════════════════════════════════════════════

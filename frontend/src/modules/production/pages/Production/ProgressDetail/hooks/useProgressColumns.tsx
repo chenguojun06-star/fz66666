@@ -164,7 +164,6 @@ export const useProgressColumns = ({
         const stagnantDays = stagnantOrderIds?.get(String(record.id));
         const shipTimeValue = getOrderShipTime(record);
         const shipDate = shipTimeValue ? dayjs(shipTimeValue).format('YYYY-MM-DD') : '-';
-        const createDate = record.createTime ? dayjs(record.createTime).format('YYYY-MM-DD') : '-';
         const quantity = Number(record.orderQuantity || 0);
         const { text, color } = getRemainingDaysDisplay(record.plannedEndDate, record.createTime, record.actualEndDate, record.status);
         const aiRisk = deliveryRiskMap?.get(String(record.orderNo || ''));
@@ -295,12 +294,7 @@ export const useProgressColumns = ({
                       labelStyle: metaLabelStyle,
                       valueStyle: metaValueStyle,
                     },
-                    {
-                      label: '下单日期',
-                      value: createDate,
-                      labelStyle: { ...metaLabelStyle, fontWeight: 500 },
-                      valueStyle: metaValueStyle,
-                    },
+
                     {
                       label: '交货日期',
                       value: shipDate,
@@ -366,19 +360,31 @@ export const useProgressColumns = ({
               display: 'flex',
               gap: 0,
               alignItems: 'stretch',
-              justifyContent: 'space-between',
-              padding: '14px 12px 14px 12px',
+              padding: '24px 12px 14px 12px',
               width: '100%',
               minWidth: progressTrackMinWidth,
             }}>
             {(() => {
-              const orderLines = parseProductionOrderLines(String((record as any).orderLines || ''));
+              const orderLines = parseProductionOrderLines(record);
+              let matrixItems = orderLines.map(item => ({
+                color: String(item.color || '').trim(),
+                size: String(item.size || '').trim(),
+                quantity: Number(item.quantity || 0),
+              }));
+              // 展开合并颜色/码数字符串（如 "白色,黑色" 或 "M,L,XL,XXL" 拆为各自行）
+              if (matrixItems.length === 1) {
+                const single = matrixItems[0];
+                const clrArr = single.color.split(/[,，\/]+/).map(s => s.trim()).filter(Boolean);
+                const sizeArr = single.size.split(/[,，\/、\s]+/).map(s => s.trim()).filter(Boolean);
+                if (clrArr.length > 1 || sizeArr.length > 1) {
+                  const clrs = clrArr.length > 0 ? clrArr : [single.color];
+                  const sizes = sizeArr.length > 0 ? sizeArr : [single.size];
+                  const qtyEach = Math.round(single.quantity / (clrs.length * sizes.length));
+                  matrixItems = clrs.flatMap(c => sizes.map(s => ({ color: c, size: s, quantity: qtyEach })));
+                }
+              }
               const orderMatrix = buildOrderColorSizeMatrixModel({
-                items: orderLines.map(item => ({
-                  color: String(item.color || '').trim(),
-                  size: String(item.size || '').trim(),
-                  quantity: Number(item.quantity || 0),
-                })),
+                items: matrixItems,
                 fallbackColor: String(record.color || '').trim(),
                 fallbackSize: String(record.size || '').trim(),
                 fallbackQuantity: totalQty,
@@ -414,7 +420,7 @@ export const useProgressColumns = ({
                 </div>
               ) : null;
               return (
-                <div style={{ display: 'flex', alignItems: 'flex-start', flex: '0 0 auto' }}>
+                <div style={{ display: 'flex', alignItems: 'center', flex: '1 1 0' }}>
                   <Popover
                     content={matrixPopoverContent}
                     trigger="hover"
@@ -427,20 +433,33 @@ export const useProgressColumns = ({
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      gap: 2,
                       width: 76,
                       flex: '0 0 auto',
-                      justifyContent: 'flex-start',
+                      justifyContent: 'center',
                       padding: 4,
+                      position: 'relative',
                       cursor: orderMatrix.hasData ? 'pointer' : 'default',
                     }}>
-                      <div style={{ minHeight: 15 }} />
-                      <LiquidProgressLottie progress={100} size={68} nodeName="下单" text="下单"
+                      <div style={{
+                        position: 'absolute',
+                        bottom: 'calc(100% + 3px)',
+                        left: 0,
+                        right: 0,
+                        fontSize: 12,
+                        color: '#10b981',
+                        fontWeight: 600,
+                        lineHeight: 1.25,
+                        textAlign: 'center',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {record.createTime ? dayjs(record.createTime as string).format('MM-DD') : '--'}
+                      </div>
+                      <LiquidProgressLottie progress={100} size={68} nodeName="下单"
                         paused={false} color1="#52c41a" color2="#95de64" />
                     </div>
                   </Popover>
-                  <div style={{ flex: 1, paddingTop: 50, paddingLeft: 2, paddingRight: 2, minWidth: 16 }}>
-                    <div style={{ position: 'relative', height: 2, borderRadius: 999,
+                  <div style={{ flex: 1, alignSelf: 'stretch', display: 'flex', alignItems: 'center', paddingLeft: 2, paddingRight: 2, minWidth: 16 }}>
+                    <div style={{ flex: 1, position: 'relative', height: 2, borderRadius: 999,
                       background: colorWithAlpha('#52c41a', 0.28), overflow: 'hidden' }}>
                       <div style={{ width: '100%', height: '100%', borderRadius: 999,
                         background: '#52c41a', transition: 'width 0.25s ease' }} />
@@ -466,9 +485,7 @@ export const useProgressColumns = ({
                 || NODE_TYPE_MAP[nodeName]
                 || nodeName.toLowerCase();
               const predictHint = getPredictHint(String(record.id || ''), nodeName, percent);
-              const segmentProgress = ns.length > 1
-                ? Math.max(0, Math.min(1, (progressPercent / 100) * (ns.length - 1) - index))
-                : 0;
+              const segmentProgress = Math.min(1, percent / 100);
               const nodePrimaryColor = isClosed ? '#9ca3af' : getNodeColor(record.expectedShipDate || record.plannedEndDate);
               const nodeSecondaryColor = isClosed ? '#d1d5db' : getNodeColor(record.expectedShipDate || record.plannedEndDate, true);
 
@@ -477,8 +494,8 @@ export const useProgressColumns = ({
                   key={node.id || index}
                   style={{
                     display: 'flex',
-                    alignItems: 'flex-start',
-                    flex: index === ns.length - 1 ? '0 0 auto' : '1 1 0',
+                    alignItems: 'center',
+                    flex: '1 1 0',
                   }}
                 >
                   <div
@@ -486,10 +503,9 @@ export const useProgressColumns = ({
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      gap: 2,
                       width: 76,
                       flex: '0 0 auto',
-                      justifyContent: 'flex-start',
+                      justifyContent: 'center',
                       cursor: frozen ? 'default' : 'pointer',
                       padding: 4,
                       opacity: isClosed ? 0.6 : percent >= 100 ? 0.75 : 1,
@@ -547,19 +563,21 @@ export const useProgressColumns = ({
                   >
                     {completionTime ? (
                       <div style={{
+                        position: 'absolute',
+                        bottom: 'calc(100% + 3px)',
+                        left: 0,
+                        right: 0,
                         fontSize: 12,
                         color: percent >= 100 ? '#10b981' : '#6b7280',
                         fontWeight: percent >= 100 ? 600 : 400,
                         lineHeight: 1.25,
                         textAlign: 'center',
                         whiteSpace: 'nowrap',
-                        marginBottom: 3,
-                        minHeight: 15,
                       }}>
                         {formatCompletionTime(completionTime)}
                       </div>
                     ) : (
-                      <div style={{ fontSize: 12, color: '#d1d5db', lineHeight: 1.25, marginBottom: 3, minHeight: 15 }}>--</div>
+                      <div style={{ position: 'absolute', bottom: 'calc(100% + 3px)', left: 0, right: 0, fontSize: 12, color: '#d1d5db', lineHeight: 1.25, textAlign: 'center' }}>--</div>
                     )}
                     {(nodeType === 'quality' || nodeType === 'warehousing') ? (
                       <DefectTracePopover
@@ -589,9 +607,10 @@ export const useProgressColumns = ({
                     )}
                   </div>
                   {index < ns.length - 1 ? (
-                    <div style={{ flex: 1, paddingTop: 50, paddingLeft: 2, paddingRight: 2 }}>
+                    <div style={{ flex: 1, alignSelf: 'stretch', display: 'flex', alignItems: 'center', paddingLeft: 2, paddingRight: 2 }}>
                       <div
                         style={{
+                          flex: 1,
                           position: 'relative',
                           height: 2,
                           borderRadius: 999,
@@ -624,6 +643,7 @@ export const useProgressColumns = ({
       key: 'action',
       width: 72,
       align: 'center' as const,
+      fixed: 'right' as const,
       render: (_: any, record: ProductionOrder) => {
         const frozen = isOrderFrozenByStatus(record);
         const btnStyle: CSSProperties = {

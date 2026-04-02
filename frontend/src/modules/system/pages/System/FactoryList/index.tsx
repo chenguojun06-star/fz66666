@@ -689,6 +689,7 @@ const FactoryList: React.FC = () => {
                       pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
                       onChange: (page, pageSize) => setQueryParams((prev) => ({ ...prev, page, pageSize })),
                     }}
+                    stickyHeader
                     scroll={{ x: 'max-content' }}
                   />
                 </>

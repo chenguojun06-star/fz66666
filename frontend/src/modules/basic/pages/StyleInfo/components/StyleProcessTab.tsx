@@ -528,7 +528,7 @@ const StyleProcessTab: React.FC<Props> = ({
       processCode: String(index + 1).padStart(2, '0'),
     }));
     if (!rows.length) {
-      message.error('请先添加进度节点');
+      message.error('请先添加工序');
       return;
     }
 
@@ -990,7 +990,7 @@ const StyleProcessTab: React.FC<Props> = ({
             }}
           >
             <Button type="primary" disabled={Boolean(readOnly) || !processStartTime || loading || saving}>
-              进度节点 <DownOutlined />
+              添加工序 <DownOutlined />
             </Button>
           </Dropdown>
 

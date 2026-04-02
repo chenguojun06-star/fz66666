@@ -603,7 +603,9 @@ public class WarehouseScanExecutor {
             sku.setSize(size);
             sku.setStockQuantity(0);
             if (order.getStyleId() != null) {
-                try { sku.setStyleId(Long.parseLong(order.getStyleId())); } catch (NumberFormatException ignored) {}
+                try { sku.setStyleId(Long.parseLong(order.getStyleId())); } catch (NumberFormatException e) {
+                    log.warn("[SKU创建] styleId 解析失败: orderId={}, styleId={}", order.getId(), order.getStyleId());
+                }
             }
             sku.setTenantId(order.getTenantId());
             productSkuService.save(sku);

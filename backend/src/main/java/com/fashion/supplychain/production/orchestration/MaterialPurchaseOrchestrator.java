@@ -1275,7 +1275,7 @@ public class MaterialPurchaseOrchestrator {
         String pickingId = materialPickingService.savePendingPicking(picking, items);
 
         // 4. 更新采购任务状态为「仓库待出库」（尚未完成，等仓库出库后变 completed）
-        purchase.setStatus("warehouse_pending");
+        purchase.setStatus(MaterialConstants.STATUS_WAREHOUSE_PENDING);
         purchase.setReceiverId(receiverId);
         purchase.setReceiverName(receiverName);
         purchase.setUpdateTime(LocalDateTime.now());
@@ -1330,7 +1330,7 @@ public class MaterialPurchaseOrchestrator {
                 .sum();
 
             boolean isPending = MaterialConstants.STATUS_PENDING.equals(status);
-            boolean isWarehousePending = "warehouse_pending".equals(status);
+            boolean isWarehousePending = MaterialConstants.STATUS_WAREHOUSE_PENDING.equals(status);
             if (isPending || isWarehousePending) pendingCount++;
 
             Map<String, Object> item = new java.util.LinkedHashMap<>();
@@ -1412,7 +1412,7 @@ public class MaterialPurchaseOrchestrator {
         }
 
         // 幂等校验：已提交仓库出库申请，禁止重复提交
-        if ("warehouse_pending".equals(purchase.getStatus())) {
+        if (MaterialConstants.STATUS_WAREHOUSE_PENDING.equals(purchase.getStatus())) {
             throw new IllegalStateException("该物料已提交仓库出库申请（待仓库确认），请勿重复提交");
         }
 
@@ -1493,7 +1493,7 @@ public class MaterialPurchaseOrchestrator {
         String pickingId = materialPickingService.savePendingPicking(picking, items);
 
         // 更新采购任务状态为「仓库待出库」
-        purchase.setStatus("warehouse_pending");
+        purchase.setStatus(MaterialConstants.STATUS_WAREHOUSE_PENDING);
         purchase.setReceiverId(receiverId);
         purchase.setReceiverName(receiverName);
         purchase.setUpdateTime(LocalDateTime.now());

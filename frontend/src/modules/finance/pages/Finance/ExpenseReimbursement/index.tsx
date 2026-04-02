@@ -519,6 +519,7 @@ const ExpenseReimbursementPage: React.FC = () => {
           columns={columns}
           dataSource={list}
           loading={loading}
+          stickyHeader
           scroll={{ x: 1200 }}
           pagination={{
             current: page,

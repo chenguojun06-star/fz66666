@@ -198,7 +198,7 @@ export const menuConfig: MenuSection[] = [
     items: [
       { label: '物料采购', path: paths.materialPurchase, icon: React.createElement(ShoppingCartOutlined) },
       { label: '物料进销存', path: paths.materialInventory, icon: React.createElement(InboxOutlined) },
-      { label: '物料新增', path: paths.materialInventory, icon: React.createElement(DatabaseOutlined) },
+      { label: '物料新增', path: paths.materialDatabase, icon: React.createElement(DatabaseOutlined) },
     ],
   },
   {

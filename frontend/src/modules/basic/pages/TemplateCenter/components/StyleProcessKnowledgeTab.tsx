@@ -317,6 +317,7 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
         rowKey="processName"
         expandable={expandable}
         rowSelection={rowSelection}
+        stickyHeader
         scroll={{ x: 1000 }}
         pagination={{
           current: currentPage,

@@ -342,6 +342,7 @@ const SystemLogs: React.FC = () => {
                         setLoginQueryParams((prev) => ({ ...prev, page, pageSize }));
                       },
                     }}
+                    stickyHeader
                     scroll={{ x: 'max-content' }}
                   />
                 </>
@@ -460,6 +461,7 @@ const SystemLogs: React.FC = () => {
                         setOperationQueryParams((prev) => ({ ...prev, page, pageSize }));
                       },
                     }}
+                    stickyHeader
                     scroll={{ x: 1200 }}
                   />
                 </>

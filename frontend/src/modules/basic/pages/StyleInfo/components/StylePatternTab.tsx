@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { App, Button, Card, InputNumber, Space, Spin, Typography } from 'antd';
+import { App, Button, Card, InputNumber, Space, Spin, Typography, Collapse } from 'antd';
 import api from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
 
 import type { StyleBom, StyleAttachment } from '@/types/style';
 import StyleAttachmentTab from './StyleAttachmentTab';
 import StyleStageControlBar from './StyleStageControlBar';
+import StyleSizeTab from './StyleSizeTab';
 
 const { Text } = Typography;
 type PatternRowMode = 'usage' | 'spec';
@@ -32,8 +33,11 @@ interface Props {
   patternAssignee?: string;
   readOnly?: boolean;
   onRefresh: () => void;
-  /** 从父页面传入的颜色码数配置，用于确定各码列 */
   sizeColorConfig?: SizeColorConfigInput;
+  sizeAssignee?: string;
+  sizeStartTime?: string;
+  sizeCompletedTime?: string;
+  linkedSizes?: string[];
 }
 
 const isZipperMaterial = (bom: StyleBom) => /拉链/.test(String(bom.materialName || '').trim());
@@ -79,6 +83,10 @@ const StylePatternTab: React.FC<Props> = ({
   readOnly,
   onRefresh,
   sizeColorConfig,
+  sizeAssignee,
+  sizeStartTime,
+  sizeCompletedTime,
+  linkedSizes,
 }) => {
   const { message } = App.useApp();
   const [_sectionKey, _setSectionKey] = useState<'files'>('files');
@@ -444,6 +452,29 @@ const StylePatternTab: React.FC<Props> = ({
           onListChange={setPatternFiles}
         />
       </div>
+
+      {/* 尺寸表模块 */}
+      <Collapse
+        defaultActiveKey={['size']}
+        style={{ marginTop: 16 }}
+        items={[
+          {
+            key: 'size',
+            label: <span style={{ fontWeight: 600 }}>📏 尺寸表</span>,
+            children: (
+              <StyleSizeTab
+                styleId={styleId}
+                readOnly={Boolean(sizeCompletedTime)}
+                sizeAssignee={sizeAssignee}
+                sizeStartTime={sizeStartTime}
+                sizeCompletedTime={sizeCompletedTime}
+                linkedSizes={linkedSizes}
+                onRefresh={onRefresh}
+              />
+            ),
+          },
+        ]}
+      />
 
       {/* 各码用量配比 */}
       <Card

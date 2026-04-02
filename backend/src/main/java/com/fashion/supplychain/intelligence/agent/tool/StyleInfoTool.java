@@ -1,7 +1,5 @@
 package com.fashion.supplychain.intelligence.agent.tool;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.style.entity.StyleInfo;
@@ -13,51 +11,38 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 款式全景查询工具 — 根据款号查询基本信息、开发状态、工序/工价。
+ */
 @Slf4j
 @Component
-public class StyleInfoTool implements AgentTool {
+public class StyleInfoTool extends AbstractAgentTool {
 
-    @Autowired
-    private StyleInfoService styleInfoService;
-
-    @Autowired
-    private StyleProcessService styleProcessService;
-
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    @Autowired private StyleInfoService styleInfoService;
+    @Autowired private StyleProcessService styleProcessService;
 
     @Override
-    public AiTool getToolDefinition() {
-        AiTool tool = new AiTool();
-        AiTool.AiFunction function = new AiTool.AiFunction();
-        function.setName(getName());
-        function.setDescription("根据款号获取款式的全景数据：基本信息、开发阶段状态（纸样/样衣进度）、工序列表、IE标准工时、工价等。当用户询问某一款式的开发进度、价格、工序或相关详情时调用此工具。");
-        AiTool.AiParameters parameters = new AiTool.AiParameters();
-        Map<String, Object> props = new HashMap<>();
-
-        Map<String, String> styleNoProp = new HashMap<>();
-        styleNoProp.put("type", "string");
-        styleNoProp.put("description", "款号（Style No），例如：D2024001");
-        props.put("styleNo", styleNoProp);
-
-        parameters.setProperties(props);
-        parameters.setRequired(List.of("styleNo"));
-        function.setParameters(parameters);
-        tool.setFunction(function);
-        return tool;
+    public String getName() {
+        return "tool_query_style_info";
     }
 
     @Override
-    public String execute(String argumentsJson) throws Exception {
-        JsonNode args = MAPPER.readTree(argumentsJson);
-        String styleNo = args.path("styleNo").asText();
+    public AiTool getToolDefinition() {
+        Map<String, Object> props = new LinkedHashMap<>();
+        props.put("styleNo", stringProp("款号（Style No），例如：D2024001"));
+        return buildToolDef(
+                "根据款号获取款式全景数据：基本信息、开发状态、工序列表、IE标准工时、工价。",
+                props, List.of("styleNo"));
+    }
 
-        if (styleNo == null || styleNo.trim().isEmpty()) {
-            return "执行失败：款号参数缺失";
-        }
+    @Override
+    protected String doExecute(String argumentsJson) throws Exception {
+        Map<String, Object> args = parseArgs(argumentsJson);
+        String styleNo = requireString(args, "styleNo");
 
         Long tenantId = UserContext.tenantId();
 
@@ -84,8 +69,6 @@ public class StyleInfoTool implements AgentTool {
         sb.append("品类: ").append(info.getCategory() != null ? info.getCategory() : "无").append("\n");
         sb.append("款式单价: ").append(info.getPrice() != null ? info.getPrice().toString() : "未设置").append("\n");
         sb.append("开发周期: ").append(info.getCycle() != null ? info.getCycle() : "无").append("\n");
-        
-        // 追加开发状态进度信息
         sb.append("纸样状态: ").append(info.getPatternStatus() != null ? info.getPatternStatus() : "未开始").append("\n");
         sb.append("样衣状态: ").append(info.getSampleStatus() != null ? info.getSampleStatus() : "未开始").append("\n");
         sb.append("样衣进度: ").append(info.getSampleProgress() != null ? info.getSampleProgress() + "%" : "0%").append("\n");
@@ -105,10 +88,5 @@ public class StyleInfoTool implements AgentTool {
         }
 
         return sb.toString();
-    }
-
-    @Override
-    public String getName() {
-        return "tool_query_style_info";
     }
 }

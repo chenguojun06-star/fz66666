@@ -156,6 +156,7 @@ const LoginLogList: React.FC = () => {
             pageSizeOptions: ['10', '20', '50', '100'],
             onChange: (page, pageSize) => setQueryParams((prev) => ({ ...prev, page, pageSize })),
           }}
+          stickyHeader
           scroll={{ x: 'max-content' }}
         />
       </Card>

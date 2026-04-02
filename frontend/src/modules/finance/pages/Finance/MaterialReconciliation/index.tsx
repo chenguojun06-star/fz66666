@@ -831,6 +831,7 @@ const MaterialReconciliation: React.FC = () => {
             rowKey="id"
             loading={loading}
             allowFixedColumns
+            stickyHeader
             scroll={{ x: 'max-content' }} // 启用横向滚动，自适应高度
             rowSelection={{
               selectedRowKeys,

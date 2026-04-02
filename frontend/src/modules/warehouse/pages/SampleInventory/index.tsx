@@ -463,6 +463,7 @@ const SampleInventory: React.FC = () => {
             dataSource={dataSource}
             loading={loading}
             rowKey="id"
+            stickyHeader
             pagination={{
               ...pagination.pagination,
               showTotal: (total) => `共 ${total} 条`,

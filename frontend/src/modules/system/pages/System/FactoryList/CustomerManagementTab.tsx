@@ -300,6 +300,7 @@ const CustomerManagementTab: React.FC<Props> = ({ active }) => {
         dataSource={customers}
         loading={loading}
         pagination={false}
+        stickyHeader
         scroll={{ x: 'max-content' }}
       />
       <StandardPagination

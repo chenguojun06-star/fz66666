@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Button, Card, Input, Select, Tag, App, Dropdown, Checkbox, Alert, InputNumber, Tabs, Segmented } from 'antd';
+import { Button, Card, Input, Select, Tag, App, Popover, Checkbox, Alert, InputNumber, Tabs, Segmented } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined, RadarChartOutlined } from '@ant-design/icons';
 import ExternalFactorySmartView from '../ExternalFactory/ExternalFactorySmartView';
@@ -7,7 +7,7 @@ import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardPagination from '@/components/common/StandardPagination';
 import PageStatCards from '@/components/common/PageStatCards';
-import SmartPredictionStrip from '@/components/common/SmartPredictionStrip';
+
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import QuickEditModal from '@/components/common/QuickEditModal';
@@ -765,7 +765,7 @@ const ProductionList: React.FC = () => {
                 key: 'production',
                 items: [
                   { label: '生产订单', value: Number(globalStats.activeOrders ?? globalStats.totalOrders ?? 0), unit: '个', color: 'var(--color-primary)' },
-                  { label: '生产数量', value: Number(globalStats.activeQuantity ?? globalStats.totalQuantity ?? 0), unit: '件', color: 'var(--color-success)' },
+                  { label: '数量', value: Number(globalStats.activeQuantity ?? globalStats.totalQuantity ?? 0), unit: '件', color: 'var(--color-success)' },
                 ],
                 onClick: () => handleStatClick('production'),
                 activeColor: 'var(--color-primary)',
@@ -774,7 +774,7 @@ const ProductionList: React.FC = () => {
                 key: 'delayed',
                 items: [
                   { label: '延期订单', value: globalStats.delayedOrders, unit: '个', color: 'var(--color-danger)' },
-                  { label: '延期数量', value: globalStats.delayedQuantity, unit: '件', color: 'var(--color-danger)' },
+                  { label: '数量', value: globalStats.delayedQuantity, unit: '件', color: 'var(--color-danger)' },
                 ],
                 onClick: () => handleStatClick('delayed'),
                 activeColor: 'var(--color-danger)',
@@ -783,25 +783,17 @@ const ProductionList: React.FC = () => {
                 key: 'today',
                 items: [
                   { label: '今日订单', value: globalStats.todayOrders, unit: '个', color: 'var(--color-primary)' },
-                  { label: '今日数量', value: globalStats.todayQuantity, unit: '件', color: 'var(--color-primary-light)' },
+                  { label: '数量', value: globalStats.todayQuantity, unit: '件', color: 'var(--color-primary-light)' },
                 ],
                 onClick: () => handleStatClick('today'),
                 activeColor: 'var(--color-primary)',
               },
             ]}
+            hints={smartActionItems.map((item) => ({ ...item, count: item.value }))}
+            onClearHints={smartQueueFilter !== 'all' ? () => setSmartQueueFilter('all') : undefined}
           />
 
-          {/* 智能提示条 */}
-          <SmartPredictionStrip
-            items={smartActionItems.map((item) => ({
-              ...item,
-              count: item.value,
-            }))}
-            onClear={smartQueueFilter !== 'all' ? () => {
-              setSmartQueueFilter('all');
-            } : undefined}
-          />
-
+          <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--neutral-light)' }}>
           <Card size="small" className="filter-card mb-sm">
             <StandardToolbar
               left={(
@@ -867,47 +859,37 @@ const ProductionList: React.FC = () => {
               right={(
                 <>
                   <Button onClick={() => fetchProductionList()}>刷新</Button>
-                  <Dropdown
-                    menu={{
-                      items: [
-                        {
-                          key: 'column-settings-title',
-                          label: <div style={{ fontWeight: 600, color: 'var(--neutral-text-secondary)', padding: '0 4px' }}>选择要显示的列</div>,
-                          disabled: true,
-                        },
-                        { type: 'divider' as const },
-                        ...columnOptions.map(opt => ({
-                          key: opt.key,
-                          label: (
-                            <div onClick={(e) => e.stopPropagation()}>
-                              <Checkbox
-                                checked={visibleColumns[opt.key] === true}
-                                onChange={() => toggleColumnVisible(opt.key)}
-                              >
-                                {opt.label}
-                              </Checkbox>
-                            </div>
-                          ),
-                        })),
-                        { type: 'divider' as const },
-                        {
-                          key: 'reset-columns',
-                          label: (
-                            <div
-                              style={{ color: 'var(--primary-color)', textAlign: 'center', cursor: 'pointer' }}
-                              onClick={(e) => { e.stopPropagation(); resetColumnSettings(); }}
-                            >
-                              重置为默认
-                            </div>
-                          ),
-                        },
-                      ],
-                    }}
-                    trigger={['click']}
+                  <Popover
+                    trigger="click"
                     placement="bottomRight"
+                    overlayStyle={{ padding: 0 }}
+                    overlayInnerStyle={{ maxHeight: '70vh', overflowY: 'auto', minWidth: 200, padding: 0 }}
+                    content={(
+                      <div>
+                        <div style={{ fontWeight: 600, color: 'var(--neutral-text-secondary)', padding: '8px 16px 4px' }}>选择要显示的列</div>
+                        <div style={{ borderTop: '1px solid #f0f0f0', margin: '4px 0' }} />
+                        {columnOptions.map(opt => (
+                          <div key={opt.key} style={{ padding: '4px 16px' }}>
+                            <Checkbox
+                              checked={visibleColumns[opt.key] === true}
+                              onChange={() => toggleColumnVisible(opt.key)}
+                            >
+                              {opt.label}
+                            </Checkbox>
+                          </div>
+                        ))}
+                        <div style={{ borderTop: '1px solid #f0f0f0', margin: '4px 0' }} />
+                        <div
+                          style={{ color: 'var(--primary-color)', textAlign: 'center', cursor: 'pointer', padding: '6px 16px' }}
+                          onClick={() => resetColumnSettings()}
+                        >
+                          重置为默认
+                        </div>
+                      </div>
+                    )}
                   >
                     <Button icon={<SettingOutlined />}>列设置</Button>
-                  </Dropdown>
+                  </Popover>
                   <Segmented
                     value={viewMode}
                     onChange={(v) => setViewMode(v as 'list' | 'card' | 'smart')}
@@ -929,6 +911,7 @@ const ProductionList: React.FC = () => {
               )}
             />
           </Card>
+          </div>
 
           {viewMode === 'smart' ? (
             <ExternalFactorySmartView
@@ -971,6 +954,7 @@ const ProductionList: React.FC = () => {
                   setSelectedRows(rows);
                 },
               }}
+              stickyHeader
               pagination={{
                 current: queryParams.page,
                 pageSize: queryParams.pageSize,

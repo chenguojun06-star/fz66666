@@ -321,8 +321,14 @@ const OrdersTab: React.FC = () => {
         </Space>
       </Card>
 
-      <ResizableTable rowKey="id" dataSource={data} columns={columns} loading={loading}
-        scroll={{ x: 1350 }} size="small"
+      <ResizableTable
+        rowKey="id"
+        dataSource={data}
+        columns={columns}
+        loading={loading}
+        stickyHeader
+        scroll={{ x: 1350 }}
+        size="small"
         pagination={{ current: page, pageSize, total, showSizeChanger: true,
           showTotal: t => `共 ${t} 条`,
           onChange: (p, ps) => { setPage(p); setPageSize(ps); } }}
@@ -554,8 +560,14 @@ const PricingTab: React.FC = () => {
           <Button icon={<ReloadOutlined />} onClick={fetchData}>刷新</Button>
         </Space>
       </Card>
-      <ResizableTable rowKey="id" dataSource={data} columns={pricingColumns} loading={loading}
-        size="small" scroll={{ x: 900 }}
+      <ResizableTable
+        rowKey="id"
+        dataSource={data}
+        columns={pricingColumns}
+        loading={loading}
+        stickyHeader
+        size="small"
+        scroll={{ x: 900 }}
         pagination={{ current: page, pageSize: 20, total,
           showTotal: t => `共 ${t} 个 SKU`,
           onChange: p => setPage(p) }}

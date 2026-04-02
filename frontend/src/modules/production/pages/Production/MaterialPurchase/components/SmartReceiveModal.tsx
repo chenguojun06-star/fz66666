@@ -13,6 +13,7 @@ import PageStatCards, { StatCard } from '@/components/common/PageStatCards';
 import InoutRecommendBanner from './InoutRecommendBanner';
 import api from '@/utils/api';
 import { getMaterialTypeLabel } from '@/utils/materialType';
+import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 
 /** 获取物料类型中文名（委托共享工具函数） */
 const getMaterialTypeName = (type: string): string => {
@@ -489,7 +490,7 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
     if (status === 'cancelled') {
       return <Tag color="default">已取消</Tag>;
     }
-    if (status === 'warehouse_pending') {
+    if (status === MATERIAL_PURCHASE_STATUS.WAREHOUSE_PENDING) {
       return <Tag color="blue">待仓库出库</Tag>;
     }
     if (status === 'purchasing') {
@@ -624,7 +625,7 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
         width: 180,
         render: (_: unknown, record: MaterialItem) => {
           // warehouse_pending：等待仓库确认出库中
-          if (record.purchaseStatus === 'warehouse_pending') {
+          if (record.purchaseStatus === MATERIAL_PURCHASE_STATUS.WAREHOUSE_PENDING) {
             return <span style={{ color: 'var(--color-primary)', fontSize: 12 }}>⏳ 待仓库出库确认</span>;
           }
           // 其他非 pending 状态，不显示操作按钮

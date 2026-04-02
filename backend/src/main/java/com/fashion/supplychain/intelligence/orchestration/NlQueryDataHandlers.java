@@ -190,7 +190,9 @@ public class NlQueryDataHandlers {
                .select("DISTINCT operator_id");
             activeWorkers = scanRecordService.list(aqw).stream()
                     .map(ScanRecord::getOperatorId).filter(Objects::nonNull).distinct().count();
-        } catch (Exception ignore) { }
+        } catch (Exception e) {
+            log.warn("[智能问答] 查询活跃工人数量失败: tenantId={}, error={}", tenantId, e.getMessage());
+        }
 
         StringBuilder sb = new StringBuilder(String.format("📦 今日累计扫码 %d 件\n", todayScan));
         if (activeWorkers > 0) {
@@ -360,7 +362,9 @@ public class NlQueryDataHandlers {
             if (recentWorkers > 0) {
                 sb.append(String.format("• 最近1小时活跃工人：%d 人", recentWorkers));
             }
-        } catch (Exception ignore) { }
+        } catch (Exception e) {
+            log.warn("[智能问答] 查询最近1小时活跃工人失败: tenantId={}, error={}", tenantId, e.getMessage());
+        }
 
         resp.setAnswer(sb.toString().trim());
         resp.setConfidence(85);

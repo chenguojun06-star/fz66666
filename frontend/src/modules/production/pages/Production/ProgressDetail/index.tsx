@@ -5,7 +5,7 @@ import { AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined, Arr
 import dayjs from 'dayjs';
 import Layout from '@/components/Layout';
 import PageStatCards from '@/components/common/PageStatCards';
-import SmartPredictionStrip from '@/components/common/SmartPredictionStrip';
+
 import UniversalCardView from '@/components/common/UniversalCardView';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardPagination from '@/components/common/StandardPagination';
@@ -1253,6 +1253,40 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
           <MaterialShortageAlert />
 
+          {/* 数据概览卡片 - 我的订单也能看到全局统计 */}
+          <PageStatCards
+            activeKey={activeStatFilter}
+            cards={[
+              {
+                key: 'production',
+                items: [
+                  { label: '生产订单', value: Number(globalStats.activeOrders ?? globalStats.totalOrders ?? 0), unit: '个', color: 'var(--color-primary)' },
+                  { label: '生产数量', value: Number(globalStats.activeQuantity ?? globalStats.totalQuantity ?? 0), unit: '件', color: 'var(--color-success)' },
+                ],
+                onClick: () => handleStatClick('production'),
+                activeColor: 'var(--color-primary)',
+              },
+              {
+                key: 'delayed',
+                items: [
+                  { label: '延期订单', value: globalStats.delayedOrders, unit: '个', color: 'var(--color-danger)' },
+                  { label: '延期数量', value: globalStats.delayedQuantity, unit: '件', color: 'var(--color-danger)' },
+                ],
+                onClick: () => handleStatClick('delayed'),
+                activeColor: 'var(--color-danger)',
+              },
+              {
+                key: 'today',
+                items: [
+                  { label: '今日订单', value: globalStats.todayOrders, unit: '个', color: 'var(--color-primary)' },
+                  { label: '今日数量', value: globalStats.todayQuantity, unit: '件', color: 'var(--color-primary-light)' },
+                ],
+                onClick: () => handleStatClick('today'),
+                activeColor: 'var(--color-primary)',
+              },
+            ]}
+          />
+
           {viewMode === 'list' ? (
             <ResizableTable
               className="production-progress-list-table"
@@ -1275,6 +1309,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 },
               }}
               scroll={{ x: 3000 }}
+              stickyHeader
             />
           ) : (
             <>
@@ -1388,17 +1423,11 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 activeColor: 'var(--color-primary)',
               },
             ]}
+            hints={smartActionItems.map((item) => ({ ...item, count: item.value }))}
+            onClearHints={smartQueueFilter !== 'all' ? () => setSmartQueueFilter('all') : undefined}
           />
 
-          {/* 智能提示条 */}
-          <SmartPredictionStrip
-            items={smartActionItems.map((item) => ({
-              ...item,
-              count: item.value,
-            }))}
-            onClear={smartQueueFilter !== 'all' ? () => setSmartQueueFilter('all') : undefined}
-          />
-
+          <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--neutral-light)' }}>
           <Card size="small" className="filter-card mb-sm">
             <StandardToolbar
               left={(
@@ -1473,6 +1502,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               )}
             />
           </Card>
+          </div>
 
           {showSmartErrorNotice && smartError ? (
             <Card size="small" className="mb-sm">

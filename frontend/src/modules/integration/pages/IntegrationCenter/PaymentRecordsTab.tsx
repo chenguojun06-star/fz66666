@@ -131,6 +131,7 @@ const PaymentRecordsTab: React.FC<Props> = ({ active }) => {
           showTotal: (t: number) => `共 ${t} 条`,
           onChange: (p: number, ps: number) => { setPage(p); setPageSize(ps); fetchData(p, ps, filters); },
         }}
+        stickyHeader
         scroll={{ x: 1200 }}
       />
     </div>

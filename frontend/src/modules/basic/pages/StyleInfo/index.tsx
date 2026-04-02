@@ -14,7 +14,6 @@ import StyleBomTab from './components/StyleBomTab';
 import StyleQuotationTab from './components/StyleQuotationTab';
 import StyleAttachmentTab from './components/StyleAttachmentTab';
 import StylePatternTab from './components/StylePatternTab';
-import StyleSizeTab from './components/StyleSizeTab';
 import StyleProcessTab from './components/StyleProcessTab';
 import StyleProductionTab from './components/StyleProductionTab';
 import StyleSecondaryProcessTab from './components/StyleSecondaryProcessTab';
@@ -661,18 +660,6 @@ const StyleInfoDetailPage: React.FC = () => {
                     patternStartTime={(currentStyle as any)?.patternStartTime}
                     patternCompletedTime={(currentStyle as any)?.patternCompletedTime}
                     patternStatus={currentStyle?.patternStatus}
-                    onRefresh={() => { void fetchDetail(styleIdParam!); }}
-                  />
-                )
-              },
-              {
-                key: '6',
-                label: '尺寸表',
-                disabled: !currentStyle?.id,
-                children: (
-                  <StyleSizeTab
-                    styleId={currentStyle?.id}
-                    readOnly={Boolean((currentStyle as any)?.sizeCompletedTime)}
                     sizeAssignee={(currentStyle as any)?.sizeAssignee}
                     sizeStartTime={(currentStyle as any)?.sizeStartTime}
                     sizeCompletedTime={(currentStyle as any)?.sizeCompletedTime}
@@ -789,8 +776,7 @@ const StyleInfoDetailPage: React.FC = () => {
                   gap: 8,
                 }}
               >
-                <Checkbox value="pattern">纸样开发</Checkbox>
-                <Checkbox value="size">尺寸表</Checkbox>
+                <Checkbox value="pattern">纸样开发（含尺寸表）</Checkbox>
                 <Checkbox value="process">工序单价</Checkbox>
                 <Checkbox value="production">生产制单</Checkbox>
                 <Checkbox value="secondary">二次工艺</Checkbox>

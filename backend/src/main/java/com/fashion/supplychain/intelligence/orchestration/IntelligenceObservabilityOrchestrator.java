@@ -37,6 +37,9 @@ public class IntelligenceObservabilityOrchestrator {
     @Value("${ai.observability.sample-rate:100}")
     private int sampleRate;
 
+    /** 单次调用延迟超过此阈值则输出 WARN（毫秒） */
+    private static final int LATENCY_WARN_THRESHOLD_MS = 30_000;
+
     @Autowired
     private IntelligenceMetricsMapper metricsMapper;
 
@@ -59,6 +62,8 @@ public class IntelligenceObservabilityOrchestrator {
             metrics.setPromptChars(result.getPromptChars());
             metrics.setResponseChars(result.getResponseChars());
             metrics.setToolCallCount(result.getToolCallCount());
+            metrics.setPromptTokens(result.getPromptTokens());
+            metrics.setCompletionTokens(result.getCompletionTokens());
             metrics.setErrorMessage(result.getErrorMessage());
             metrics.setUserId(userId);
             metrics.setCreateTime(LocalDateTime.now());
@@ -68,6 +73,12 @@ public class IntelligenceObservabilityOrchestrator {
             log.warn("[AI_OBSERVABILITY] 度量持久化失败（不影响业务）: {}", e.getMessage());
         }
 
+        // F30：延迟异常检测
+        if (result.getLatencyMs() > LATENCY_WARN_THRESHOLD_MS) {
+            log.warn("[AI_ANOMALY] 高延迟告警 scene={} latencyMs={} model={} traceId={}",
+                    scene, result.getLatencyMs(), result.getModel(), result.getTraceId());
+        }
+
         // 结构化日志（受 enabled + sample-rate 控制）
         if (!shouldRecord() || !hitSample()) {
             return;
@@ -75,8 +86,8 @@ public class IntelligenceObservabilityOrchestrator {
         String promptNote = capturePrompts
                 ? String.format("promptChars=%d,responseChars=%d", result.getPromptChars(), result.getResponseChars())
                 : "promptChars=masked,responseChars=masked";
-        log.info("[AI_OBSERVABILITY] traceId={} provider={} scene={} tenantId={} userId={} success={} fallback={} latencyMs={} model={} toolCalls={} status={} {} error={} traceUrl={}",
-            result.getTraceId(),
+        log.info("[AI_OBSERVABILITY] traceId={} provider={} scene={} tenantId={} userId={} success={} fallback={} latencyMs={} model={} toolCalls={} promptTokens={} completionTokens={} status={} {} error={} traceUrl={}",
+                result.getTraceId(),
                 result.getProvider(),
                 scene,
                 tenantId,
@@ -85,11 +96,13 @@ public class IntelligenceObservabilityOrchestrator {
                 result.isFallbackUsed(),
                 result.getLatencyMs(),
                 result.getModel(),
-            result.getToolCallCount(),
+                result.getToolCallCount(),
+                result.getPromptTokens(),
+                result.getCompletionTokens(),
                 resolveStatus(),
                 promptNote,
-            result.getErrorMessage(),
-            result.getTraceUrl());
+                result.getErrorMessage(),
+                result.getTraceUrl());
     }
 
     /**
@@ -143,6 +156,60 @@ public class IntelligenceObservabilityOrchestrator {
             return base + "/trace/" + traceId;
         }
         return base + "/traces/" + traceId;
+    }
+
+    /**
+     * F30：健康指标检查 — 查询最近 N 次调用，返回异常告警列表。
+     * 调用方：IntelligenceBrainSnapshot / 定时巡检 / 管理面板
+     */
+    public Map<String, Object> checkHealthIndicators(Long tenantId, int recentCount) {
+        Map<String, Object> health = new java.util.LinkedHashMap<>();
+        try {
+            List<Map<String, Object>> recent = metricsMapper.listRecentInvocations(tenantId,
+                    Math.max(10, Math.min(recentCount, 200)));
+            if (recent.isEmpty()) {
+                health.put("status", "no_data");
+                health.put("alerts", java.util.Collections.emptyList());
+                return health;
+            }
+            long total = recent.size();
+            long failures = recent.stream()
+                    .filter(m -> Boolean.FALSE.equals(m.get("success")) || Integer.valueOf(0).equals(m.get("success")))
+                    .count();
+            double errorRate = (double) failures / total;
+
+            double avgLatency = recent.stream()
+                    .filter(m -> m.get("latency_ms") instanceof Number)
+                    .mapToInt(m -> ((Number) m.get("latency_ms")).intValue())
+                    .average().orElse(0);
+
+            long fallbackCount = recent.stream()
+                    .filter(m -> Boolean.TRUE.equals(m.get("fallback_used")) || Integer.valueOf(1).equals(m.get("fallback_used")))
+                    .count();
+
+            List<String> alerts = new java.util.ArrayList<>();
+            if (errorRate > 0.5) {
+                alerts.add(String.format("错误率过高: %.0f%% (%d/%d)", errorRate * 100, failures, total));
+            }
+            if (avgLatency > 20_000) {
+                alerts.add(String.format("平均延迟过高: %.0fms", avgLatency));
+            }
+            if (fallbackCount > total * 0.3) {
+                alerts.add(String.format("降级频繁: %d/%d 次使用 fallback", fallbackCount, total));
+            }
+
+            health.put("status", alerts.isEmpty() ? "healthy" : "degraded");
+            health.put("errorRate", String.format("%.1f%%", errorRate * 100));
+            health.put("avgLatencyMs", (int) avgLatency);
+            health.put("fallbackRate", String.format("%.1f%%", (double) fallbackCount / total * 100));
+            health.put("sampleSize", total);
+            health.put("alerts", alerts);
+        } catch (Exception e) {
+            log.warn("[AI_ANOMALY] 健康指标查询失败: {}", e.getMessage());
+            health.put("status", "query_error");
+            health.put("alerts", java.util.Collections.singletonList("健康指标查询异常: " + e.getMessage()));
+        }
+        return health;
     }
 
     private boolean shouldRecord() {

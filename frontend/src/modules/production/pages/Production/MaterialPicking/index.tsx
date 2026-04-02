@@ -136,6 +136,7 @@ const MaterialPickingList: React.FC = () => {
           dataSource={dataSource}
           columns={columns}
           rowKey="id"
+          stickyHeader
           pagination={{
             total,
             current,

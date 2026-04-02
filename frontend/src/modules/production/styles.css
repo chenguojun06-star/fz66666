@@ -263,8 +263,6 @@
 .production-progress-list-table .ant-table-container::after,
 .production-progress-list-table .ant-table-ping-left .ant-table-container::before,
 .production-progress-list-table .ant-table-ping-right .ant-table-container::after,
-.production-progress-list-table .ant-table-cell-fix-left,
-.production-progress-list-table .ant-table-cell-fix-right,
 .production-progress-list-table .ant-table-fixed-column-sorters::after,
 .production-progress-list-table .ant-table-column-sorters::after,
 .production-progress-list-table .ant-table-tbody > tr > td::before,
@@ -948,11 +946,7 @@
   }
 }
 
-/* 操作列跟随进度节点：默认隐藏，行 hover 时显示 */
+/* 操作列始终可见 */
 .ant-table-tbody > tr > td.prod-act-cell {
-  opacity: 0;
-  transition: opacity 0.15s ease;
-}
-.ant-table-tbody > tr:hover > td.prod-act-cell {
   opacity: 1;
 }

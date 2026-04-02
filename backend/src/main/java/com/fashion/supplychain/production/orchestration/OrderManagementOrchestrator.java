@@ -106,7 +106,7 @@ public class OrderManagementOrchestrator {
         try {
             if (StringUtils.hasText(style.getStyleNo())) {
                 List<String> templateTypes = new ArrayList<>();
-                if (targetTypes.contains("size")) {
+                if (targetTypes.contains("size") || targetTypes.contains("pattern")) {
                     templateTypes.add("size");
                 }
                 if (targetTypes.contains("process") || targetTypes.contains("sizePrice")) {

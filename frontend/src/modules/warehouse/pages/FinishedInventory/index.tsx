@@ -752,6 +752,7 @@ const _FinishedInventory: React.FC = () => {
             dataSource={dataSource}
             loading={loading}
             rowKey="id"
+            stickyHeader
             scroll={{ x: 1400 }}
             pagination={false}
           />

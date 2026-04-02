@@ -63,7 +63,7 @@ const SmartPredictionStrip: React.FC<SmartPredictionStripProps> = ({
           border: `1px solid ${item.active ? color : neutralButtonBorder}`,
           background: item.active ? `${color}14` : '#fff',
           color,
-          borderRadius: 999,
+          borderRadius: 4,
           padding: '4px 10px',
           fontSize: 12,
           fontWeight: 600,

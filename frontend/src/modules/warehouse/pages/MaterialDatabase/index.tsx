@@ -552,7 +552,7 @@ const MaterialDatabasePage: React.FC = () => {
               )}
               right={(
                 <Button type="primary" onClick={() => openDialog('create')}>
-                  新增面辅料
+                  新增物料信息
                 </Button>
               )}
             />
@@ -564,6 +564,7 @@ const MaterialDatabasePage: React.FC = () => {
             dataSource={dataList}
             rowKey={(r) => String(r?.id || r?.materialCode || '')}
             loading={loading}
+            stickyHeader
             scroll={{ x: 'max-content' }}
             size={isMobile ? 'small' : 'middle'}
             pagination={{
@@ -580,7 +581,7 @@ const MaterialDatabasePage: React.FC = () => {
 
         {/* 新增/编辑弹窗 */}
         <StandardModal
-          title={currentMaterial ? '编辑面辅料' : '新增面辅料'}
+          title={currentMaterial ? '编辑物料信息' : '新增物料信息'}
           open={visible}
           onCancel={closeDialog}
           size="lg"
@@ -669,8 +670,8 @@ const MaterialDatabasePage: React.FC = () => {
                 </Form.Item>
               </Col>
               <Col xs={24} sm={8} md={6} lg={5} xl={4}>
-                <Form.Item name="specifications" label="规格">
-                  <Input placeholder="请输入规格" />
+                <Form.Item name="specifications" label="规格/幅宽">
+                  <Input placeholder="如：150cm 或请输入规格" />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={8} md={6} lg={5} xl={4}>
@@ -739,8 +740,9 @@ const MaterialDatabasePage: React.FC = () => {
             <Form.Item noStyle shouldUpdate={(prevValues, currentValues) => prevValues.materialType !== currentValues.materialType}>
               {({ getFieldValue }) => {
                 const materialType = getFieldValue('materialType');
-                const isFabric = materialType && String(materialType).toLowerCase().includes('fabric');
-                if (!isFabric) return null;
+                const mt = String(materialType || '').toLowerCase();
+                const showAttributes = mt === 'fabric' || mt === 'lining' || mt === 'accessory';
+                if (!showAttributes) return null;
                 return (
                   <Row gutter={[12, 8]}>
                     <Col xs={24}>
@@ -753,11 +755,6 @@ const MaterialDatabasePage: React.FC = () => {
                       }}>
                         🧵 面料属性
                       </div>
-                    </Col>
-                    <Col xs={24} sm={8} md={6} lg={5} xl={4}>
-                      <Form.Item name="fabricWidth" label="幅宽">
-                        <Input placeholder="如：150cm" />
-                      </Form.Item>
                     </Col>
                     <Col xs={24} sm={8} md={6} lg={5} xl={4}>
                       <Form.Item name="fabricWeight" label="克重">

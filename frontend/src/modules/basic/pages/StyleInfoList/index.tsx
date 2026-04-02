@@ -6,7 +6,7 @@ import Layout from '@/components/Layout';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import SmallModal from '@/components/common/SmallModal';
 import StylePrintModal from '@/components/common/StylePrintModal';
-import SmartPredictionStrip from '@/components/common/SmartPredictionStrip';
+import PageStatCards from '@/components/common/PageStatCards';
 import api from '@/utils/api';
 import { StyleInfo } from '@/types/style';
 import dayjs from 'dayjs';
@@ -354,8 +354,9 @@ const StyleInfoListPage: React.FC = () => {
           onRangeChange={handleStatsRangeChange}
         />
 
-        <SmartPredictionStrip
-          items={[
+        <PageStatCards
+          cards={[]}
+          hints={[
             {
               key: 'overdue',
               count: overdueStyleCount,
@@ -375,7 +376,7 @@ const StyleInfoListPage: React.FC = () => {
               onClick: () => handleSmartFilterClick('warning', warningStyles),
             },
           ]}
-          onClear={smartFilter !== 'all' ? () => {
+          onClearHints={smartFilter !== 'all' ? () => {
             setSmartFilter('all');
             setPendingFocusStyleId(null);
             setFocusedStyleId(null);
@@ -383,6 +384,7 @@ const StyleInfoListPage: React.FC = () => {
         />
 
         {/* 筛选面板 */}
+        <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--neutral-light)' }}>
         <StyleFilterPanel
           queryParams={queryParams}
           onQueryChange={(params) => setQueryParams(prev => ({ ...prev, ...params }))}
@@ -415,6 +417,7 @@ const StyleInfoListPage: React.FC = () => {
             </>
           )}
         />
+        </div>
 
         {/* 列表/卡片视图 */}
         {viewMode === 'smart' ? (

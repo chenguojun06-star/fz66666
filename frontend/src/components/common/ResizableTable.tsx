@@ -33,6 +33,8 @@ type ResizableTableProps<T extends object> = TableProps<T> & {
   reorderableColumns?: boolean;
   /** 是否启用粘性页脚，默认根据是否有分页自动判断 */
   stickyFooter?: boolean;
+  /** 是否启用粘性表头（固定列标题在滚动时不消失），默认false。true 时 offsetHeader=60（顶部导航栏高度）*/
+  stickyHeader?: boolean | { offsetHeader?: number };
   /** 最小列宽，默认60px */
   minColumnWidth?: number;
   /** 最大列宽，默认800px */
@@ -399,6 +401,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
     allowFixedColumns = true,
     reorderableColumns = true,
     stickyFooter: stickyFooterProp,
+    stickyHeader: stickyHeaderProp,
     minColumnWidth = 60,
     maxColumnWidth = 800,
     defaultColumnWidth = 120,
@@ -827,6 +830,7 @@ const ResizableTable = <T extends object>(props: ResizableTableProps<T>) => {
           scroll={mergedScroll as TableProps<T>['scroll']}
           tableLayout={resolvedTableLayout}
           pagination={mergedPagination as TableProps<T>['pagination']}
+          sticky={stickyHeaderProp === true ? { offsetHeader: 0 } : (stickyHeaderProp || undefined)}
         />
       </ConfigProvider>
     </div>

@@ -12,6 +12,7 @@ public class MaterialConstants {
     public static final String STATUS_COMPLETED = "completed";
     public static final String STATUS_PARTIAL = "partial";
     public static final String STATUS_RECEIVED = "received";
+    public static final String STATUS_WAREHOUSE_PENDING = "warehouse_pending";
 
     // ==================== 物料类型常量 ====================
     public static final String TYPE_FABRIC = "fabric";

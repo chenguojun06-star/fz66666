@@ -279,6 +279,7 @@ const UserApproval: React.FC = () => {
                     setPageSize(pageSize);
                   },
                 }}
+                stickyHeader
                 scroll={{ x: isMobile ? 'max-content' : undefined }}
               />
             </>

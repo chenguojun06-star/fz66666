@@ -105,7 +105,10 @@ function useStageScanData(orderId: string, stageKey: string): ScanStageData {
     }).catch(() => {
       if (!cancelled) setState(s => ({ ...s, loading: false }));
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      prevKey.current = ''; // 重置，允许 React StrictMode 第二次挂载正常触发请求
+    };
   }, [orderId, stageKey]);
 
   return state;
@@ -272,7 +275,7 @@ function StagePopoverContent({
 
       {/* 子工序明细 */}
       {scanData.loading ? (
-        <div style={{ textAlign: 'center', padding: '4px 0', borderTop: '1px solid #f0f0f0', paddingTop: 6, marginBottom: 6 }}>
+        <div style={{ textAlign: 'center', paddingTop: 6, paddingBottom: 4, borderTop: '1px solid #f0f0f0', marginBottom: 6 }}>
           <Spin size="small" /><span style={{ color: '#bfbfbf', marginLeft: 6, fontSize: 11 }}>加载子工序…</span>
         </div>
       ) : scanData.subProcesses.length > 0 ? (

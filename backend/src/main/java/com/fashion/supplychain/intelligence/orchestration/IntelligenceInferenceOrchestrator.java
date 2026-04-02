@@ -15,7 +15,9 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import javax.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,6 +28,32 @@ import org.springframework.stereotype.Service;
 public class IntelligenceInferenceOrchestrator {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    /** F6: 单例 HttpClient（连接池复用，避免每次请求新建 SSL 上下文） */
+    private HttpClient sharedHttpClient;
+
+    /** F2: 按场景分级 temperature（tool-calling 需要确定性，闲聊可适度创造） */
+    private static final Map<String, Double> SCENE_TEMPERATURE = Map.of(
+        "agent-loop", 0.3, "critic_review", 0.1, "nl-intent", 0.0,
+        "daily-brief", 0.0, "memory_summarize", 0.2, "history-compact", 0.1,
+        "memory-extract", 0.3
+    );
+    private static final double DEFAULT_TEMPERATURE = 0.3;
+
+    /** F3: 按场景分级 max_tokens */
+    private static final Map<String, Integer> SCENE_MAX_TOKENS = Map.of(
+        "agent-loop", 2048, "critic_review", 1024, "nl-intent", 256,
+        "daily-brief", 512, "memory_summarize", 256, "history-compact", 256,
+        "memory-extract", 256
+    );
+    private static final int DEFAULT_MAX_TOKENS = 2048;
+
+    @PostConstruct
+    public void initHttpClient() {
+        sharedHttpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .build();
+    }
     private static final int MIN_TIMEOUT_SECONDS = 5;
     private static final int DEFAULT_MAX_TIMEOUT_SECONDS = 60;
     private static final int AI_ADVISOR_MAX_TIMEOUT_SECONDS = 20;
@@ -141,12 +169,10 @@ public class IntelligenceInferenceOrchestrator {
             && !"nl-intent".equals(scene)
             && !"daily-brief".equals(scene);
 
-        HttpClient client = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(10))
-                .build();
+        HttpClient client = sharedHttpClient;
         HttpRequest request = null;
         try {
-            String body = buildRequestBody(model, messages, tools);
+            String body = buildRequestBody(scene, model, messages, tools);
             request = HttpRequest.newBuilder()
                     .uri(URI.create(endpoint))
                     .header("Content-Type", "application/json")
@@ -162,22 +188,34 @@ public class IntelligenceInferenceOrchestrator {
                 extractResponse(response.body(), result);
                 return result;
             }
+            // F12: 5xx 状态码也走重试通道
+            if (allowRetryOnTimeout && response.statusCode() >= 500) {
+                log.warn("[IntelligenceInference] {} 返回 {}，1.5s后重试", provider, response.statusCode());
+                Thread.sleep(1500);
+                HttpResponse<String> retryResp = client.send(request, HttpResponse.BodyHandlers.ofString());
+                if (retryResp.statusCode() == 200) {
+                    result.setSuccess(true);
+                    extractResponse(retryResp.body(), result);
+                    return result;
+                }
+            }
             result.setSuccess(false);
             result.setErrorMessage("http-" + response.statusCode());
             log.warn("[IntelligenceInference] {} 调用失败 status={} body={}", provider, response.statusCode(),
                     response.body().substring(0, Math.min(200, response.body().length())));
             return result;
-        } catch (java.net.http.HttpTimeoutException e) {
-            if (!allowRetryOnTimeout) {
+        } catch (Exception e) {
+            // F12: 扩展重试 — 超时/5xx/连接异常统一走重试逻辑
+            boolean isRetryable = isRetryableError(e);
+            if (!isRetryable || !allowRetryOnTimeout) {
                 result.setSuccess(false);
-                result.setErrorMessage("timeout-" + effectiveTimeoutSeconds + "s");
-                log.warn("[IntelligenceInference] {} 场景={} 超时({}s)，快速失败不重试", provider, scene, effectiveTimeoutSeconds);
+                result.setErrorMessage(e.getClass().getSimpleName() + ": " + e.getMessage());
+                log.warn("[IntelligenceInference] {} 场景={} 异常(不重试): {}", provider, scene, e.getMessage());
                 return result;
             }
-            // 超时自动重试一次（间隔2秒）
-            log.warn("[IntelligenceInference] {} 场景={} 首次超时({}s)，即将重试...", provider, scene, effectiveTimeoutSeconds);
+            log.warn("[IntelligenceInference] {} 场景={} 可恢复异常，1.5s后重试: {}", provider, scene, e.getMessage());
             try {
-                Thread.sleep(2000);
+                Thread.sleep(1500);
                 HttpResponse<String> retryResp = client.send(request, HttpResponse.BodyHandlers.ofString());
                 if (retryResp.statusCode() == 200) {
                     result.setSuccess(true);
@@ -192,11 +230,6 @@ public class IntelligenceInferenceOrchestrator {
                 result.setErrorMessage("重试仍失败: " + retryEx.getClass().getSimpleName());
                 log.warn("[IntelligenceInference] {} 重试也失败: {}", provider, retryEx.getMessage());
             }
-            return result;
-        } catch (Exception e) {
-            result.setSuccess(false);
-            result.setErrorMessage(e.getClass().getSimpleName() + ": " + e.getMessage());
-            log.warn("[IntelligenceInference] {} 调用异常: {}", provider, e.getMessage());
             return result;
         }
     }
@@ -218,10 +251,11 @@ public class IntelligenceInferenceOrchestrator {
         return effective;
     }
 
-    private String buildRequestBody(String model, List<AiMessage> messages, List<AiTool> tools) throws Exception {
+    private String buildRequestBody(String scene, String model, List<AiMessage> messages, List<AiTool> tools) throws Exception {
         var root = MAPPER.createObjectNode();
         root.put("model", model);
-        root.put("temperature", 0.0);
+        root.put("temperature", SCENE_TEMPERATURE.getOrDefault(scene, DEFAULT_TEMPERATURE));
+        root.put("max_tokens", SCENE_MAX_TOKENS.getOrDefault(scene, DEFAULT_MAX_TOKENS));
         root.set("messages", MAPPER.valueToTree(messages));
         if (tools != null && !tools.isEmpty()) {
             root.set("tools", MAPPER.valueToTree(tools));
@@ -232,14 +266,25 @@ public class IntelligenceInferenceOrchestrator {
     private void extractResponse(String responseBody, IntelligenceInferenceResult result) throws Exception {
         JsonNode root = MAPPER.readTree(responseBody);
         JsonNode choices = root.path("choices");
-        if (choices.isArray() && choices.size() > 0) {
-            JsonNode message = choices.get(0).path("message");
-            result.setContent(message.path("content").asText(null));
-            if (message.has("tool_calls")) {
-                List<AiToolCall> toolCalls = MAPPER.convertValue(message.path("tool_calls"), new TypeReference<List<AiToolCall>>(){});
-                result.setToolCalls(toolCalls);
-                result.setToolCallCount(toolCalls == null ? 0 : toolCalls.size());
-            }
+        // F15: 守卫空 choices 数组
+        if (!choices.isArray() || choices.isEmpty()) {
+            log.warn("[IntelligenceInference] API 返回空 choices: {}",
+                    responseBody.substring(0, Math.min(200, responseBody.length())));
+            result.setContent(null);
+            return;
+        }
+        JsonNode message = choices.get(0).path("message");
+        result.setContent(message.path("content").asText(null));
+        // 提取 token 用量（F16: 为后续成本分析做准备）
+        JsonNode usage = root.path("usage");
+        if (!usage.isMissingNode()) {
+            result.setPromptTokens(usage.path("prompt_tokens").asInt(0));
+            result.setCompletionTokens(usage.path("completion_tokens").asInt(0));
+        }
+        if (message.has("tool_calls")) {
+            List<AiToolCall> toolCalls = MAPPER.convertValue(message.path("tool_calls"), new TypeReference<List<AiToolCall>>(){});
+            result.setToolCalls(toolCalls);
+            result.setToolCallCount(toolCalls == null ? 0 : toolCalls.size());
         }
     }
 
@@ -295,7 +340,7 @@ public class IntelligenceInferenceOrchestrator {
                     .timeout(Duration.ofSeconds(doubaoTimeoutSeconds))
                     .POST(HttpRequest.BodyPublishers.ofString(payload))
                     .build();
-            HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = sharedHttpClient.send(request, HttpResponse.BodyHandlers.ofString());
             String body = response.body();
             if (response.statusCode() == 200) {
                 JsonNode root = MAPPER.readTree(body);
@@ -320,21 +365,26 @@ public class IntelligenceInferenceOrchestrator {
     }
 
     private String buildDoubaoVisionPayload(String imageUrl, String textPrompt) throws Exception {
-        // Doubao vision API payload format
-        String json = "{" +
-                "\"model\":\"" + doubaoModel + "\"," +
-                "\"messages\":[{" +
-                "\"role\":\"user\"," +
-                "\"content\":[" +
-                "{\"type\":\"image_url\",\"image_url\":{\"url\":\"" + escapeJsonString(imageUrl) + "\"}}," +
-                "{\"type\":\"text\",\"text\":\"" + escapeJsonString(textPrompt) + "\"}" +
-                "]" +
-                "}]" +
-                "}";
-        return json;
+        var root = MAPPER.createObjectNode();
+        root.put("model", doubaoModel);
+        var messagesArr = root.putArray("messages");
+        var userMsg = messagesArr.addObject();
+        userMsg.put("role", "user");
+        var content = userMsg.putArray("content");
+        var imgPart = content.addObject();
+        imgPart.put("type", "image_url");
+        imgPart.putObject("image_url").put("url", imageUrl);
+        var textPart = content.addObject();
+        textPart.put("type", "text");
+        textPart.put("text", textPrompt);
+        return MAPPER.writeValueAsString(root);
     }
 
-    private String escapeJsonString(String s) {
-        return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\r", "\\r").replace("\n", "\\n");
+    /** F12: 判断异常是否可重试（超时/连接重置/IO异常） */
+    private boolean isRetryableError(Exception e) {
+        if (e instanceof java.net.http.HttpTimeoutException) return true;
+        if (e instanceof java.net.ConnectException) return true;
+        if (e instanceof java.io.IOException) return true;
+        return false;
     }
 }

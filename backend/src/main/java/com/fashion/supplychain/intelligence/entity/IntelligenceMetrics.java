@@ -46,6 +46,12 @@ public class IntelligenceMetrics {
 
     private Integer toolCallCount;
 
+    /** 提示词 token 数（由 LLM 返回） */
+    private Integer promptTokens;
+
+    /** 生成 token 数（由 LLM 返回） */
+    private Integer completionTokens;
+
     private String errorMessage;
 
     private String userId;

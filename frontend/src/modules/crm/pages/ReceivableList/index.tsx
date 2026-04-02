@@ -625,6 +625,7 @@ const ReceivableList: React.FC = () => {
             columns={columns}
             dataSource={records}
             loading={loading}
+            stickyHeader
             scroll={{ x: 1400 }}
             pagination={{
               current: pagination.current,

@@ -401,6 +401,7 @@ const CustomerManagement: React.FC = () => {
           columns={columns}
           dataSource={customers}
           loading={loading}
+          stickyHeader
           scroll={{ x: 1200 }}
           pagination={{
             current: pagination.current,

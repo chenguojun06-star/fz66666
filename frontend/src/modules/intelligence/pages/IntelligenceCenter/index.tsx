@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Tag, Tooltip, Popover } from 'antd';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -33,7 +33,16 @@ import { useKpiPopovers } from './KpiPopoverContent';
 import { paths } from '@/routeConfig';
 import './styles.css';
 
-
+/* ── 面板折叠 Chevron（模块级，稳定引用 → 避免 unmount/remount） ── */
+const CollapseChevron = React.memo(({ panelKey, collapsed }: { panelKey: string; collapsed: boolean }) => (
+  <span
+    style={{ marginLeft: 'auto', cursor: 'pointer', color: collapsed ? '#a78bfa' : '#5a7a9a', fontSize: 12, padding: '0 4px', display: 'inline-flex', alignItems: 'center', flexShrink: 0, userSelect: 'none' }}
+    title={collapsed ? '展开面板' : '收起面板'}
+  >
+    {collapsed ? <DownOutlined /> : <UpOutlined />}
+  </span>
+));
+CollapseChevron.displayName = 'CollapseChevron';
 
 const IntelligenceCenter: React.FC = () => {
   const navigate = useNavigate();
@@ -210,15 +219,18 @@ const IntelligenceCenter: React.FC = () => {
   /* ── KPI Popover 内容（委托给 useKpiPopovers） ── */
   const { scanPop, factoryPop, healthPop, stagnantPop, shortagePop, notifyPop } = useKpiPopovers({ data, currentKpiMetrics, now });
 
-  /* 面板折叠按钮（chevron 图标，放在 c-card-title 末尾） */
-  const CollapseChevron = ({ panelKey }: { panelKey: string }) => (
-    <span
-      style={{ marginLeft: 'auto', cursor: 'pointer', color: collapsedPanels[panelKey] ? '#a78bfa' : '#5a7a9a', fontSize: 12, padding: '0 4px', display: 'inline-flex', alignItems: 'center', flexShrink: 0, userSelect: 'none' }}
-      title={collapsedPanels[panelKey] ? '展开面板' : '收起面板'}
-    >
-      {collapsedPanels[panelKey] ? <DownOutlined /> : <UpOutlined />}
-    </span>
-  );
+  /* ── useMemo: 热力图 O(1) 查找 Map ── */
+  const heatmapCellMap = useMemo(() => {
+    const m = new Map<string, (typeof heatmap.cells)[number]>();
+    (heatmap?.cells || []).forEach(c => m.set(`${c.process}|${c.factory}`, c));
+    return m;
+  }, [heatmap?.cells]);
+
+  /* ── useMemo: 工厂产能汇总 ── */
+  const factoryCapTotals = useMemo(() => ({
+    totalOrders: (factoryCapacity || []).reduce((s: number, f: any) => s + f.totalOrders, 0),
+    totalQuantity: (factoryCapacity || []).reduce((s: number, f: any) => s + f.totalQuantity, 0),
+  }), [factoryCapacity]);
 
   return (
     <Layout>
@@ -312,7 +324,7 @@ const IntelligenceCenter: React.FC = () => {
             ╚══════════════════════════════════════════════╝ */}
         <div style={{ display: 'flex', alignItems: 'center', padding: '0 20px 4px', cursor: 'pointer', userSelect: 'none' }} onClick={() => toggleCollapse('kpiRow6')}>
           <span style={{ color: '#5a7a9a', fontSize: 11 }}>核心 KPI 指标</span>
-          <CollapseChevron panelKey="kpiRow6" />
+          <CollapseChevron panelKey="kpiRow6" collapsed={!!collapsedPanels['kpiRow6']} />
         </div>
         <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['kpiRow6'] ? 0 : 420, transition: 'max-height 0.28s ease' }}>
         <div className={`cockpit-grid-6${kpiFlash ? ' kpi-flash' : ''}`}>
@@ -476,7 +488,7 @@ const IntelligenceCenter: React.FC = () => {
           {/* 生产中订单数 —— 扩充版 */}
           <div className="c-card" style={{ padding: '12px 14px' }}>
             <div className="c-kpi-label" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('productionOrders')}>
-              <LiveDot size={7} color="#f7a600" />生产中订单<CollapseChevron panelKey="productionOrders" />
+              <LiveDot size={7} color="#f7a600" />生产中订单<CollapseChevron panelKey="productionOrders" collapsed={!!collapsedPanels['productionOrders']} />
             </div>
             <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['productionOrders'] ? 0 : 1200, transition: 'max-height 0.28s ease' }}>
             {/* 主数字 + 总件数 */}
@@ -595,7 +607,7 @@ const IntelligenceCenter: React.FC = () => {
           {/* 工厂全景 —— 扩充版 */}
           <div className="c-card" style={{ padding: '12px 14px' }}>
             <div className="c-kpi-label" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('factoryOverview')}>
-              <LiveDot size={7} color="#00b4ff" />工厂全景<CollapseChevron panelKey="factoryOverview" />
+              <LiveDot size={7} color="#00b4ff" />工厂全景<CollapseChevron panelKey="factoryOverview" collapsed={!!collapsedPanels['factoryOverview']} />
             </div>
             <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['factoryOverview'] ? 0 : 800, transition: 'max-height 0.28s ease' }}>
             {/* 主数字 + 状态概要 */}
@@ -606,7 +618,7 @@ const IntelligenceCenter: React.FC = () => {
               <span style={{ color: '#7dacc4', fontSize: 12 }}>家工厂&nbsp;共计</span>
               {factoryCapacity.length > 0 && (
                 <span style={{ color: '#7dacc4', fontSize: 11, marginLeft: 4 }}>
-                  · {factoryCapacity.reduce((s, f) => s + f.totalOrders, 0)} 单 {factoryCapacity.reduce((s, f) => s + f.totalQuantity, 0).toLocaleString()} 件
+                  · {factoryCapTotals.totalOrders} 单 {factoryCapTotals.totalQuantity.toLocaleString()} 件
                 </span>
               )}
             </div>
@@ -696,7 +708,7 @@ const IntelligenceCenter: React.FC = () => {
               <LiveDot />
               实时生产脉搏
               <span className="c-card-badge cyan-badge">{pulse?.scanRatePerHour ?? 0} 件/时</span>
-              <CollapseChevron panelKey="pulse" />
+              <CollapseChevron panelKey="pulse" collapsed={!!collapsedPanels['pulse']} />
             </div>
             <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['pulse'] ? 0 : 800, transition: 'max-height 0.28s ease' }}>
             <div style={{ margin: '6px 0 4px' }}>
@@ -740,7 +752,7 @@ const IntelligenceCenter: React.FC = () => {
             <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('workers')}>
               <LiveDot size={7} />
               人效实时动态
-              <CollapseChevron panelKey="workers" />
+              <CollapseChevron panelKey="workers" collapsed={!!collapsedPanels['workers']} />
             </div>
             <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['workers'] ? 0 : 600, transition: 'max-height 0.28s ease' }}>
             <table className="c-table">
@@ -799,7 +811,7 @@ const IntelligenceCenter: React.FC = () => {
               工厂工序卡点
               <span className="c-card-badge cyan-badge">{factoryBottleneck.length} 家工厂</span>
               <span style={{ fontSize: 10, color: '#4a8aaa', letterSpacing: 0 }}>点击整行或订单号可直达 →</span>
-              <CollapseChevron panelKey="bottleneck" />
+              <CollapseChevron panelKey="bottleneck" collapsed={!!collapsedPanels['bottleneck']} />
             </div>
             <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['bottleneck'] ? 0 : 600, transition: 'max-height 0.28s ease' }}>
             <AutoScrollBox className="c-orders-scroll">
@@ -824,7 +836,7 @@ const IntelligenceCenter: React.FC = () => {
                   高风险 {overdueRisk.highRisk.length} 单
                 </span>
               )}
-              <CollapseChevron panelKey="overdueRisk" />
+              <CollapseChevron panelKey="overdueRisk" collapsed={!!collapsedPanels['overdueRisk']} />
             </div>
             <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['overdueRisk'] ? 0 : 600, transition: 'max-height 0.28s ease' }}>
             {overdueRisk.overdue.length === 0 && overdueRisk.highRisk.length === 0 && overdueRisk.watch.length === 0 ? (
@@ -884,7 +896,7 @@ const IntelligenceCenter: React.FC = () => {
             <div className="c-card-title" style={{ cursor: 'pointer' }} onClick={() => toggleCollapse('shortage')}>
               <LiveDot color={(shortage?.shortageItems?.length ?? 0) > 0 ? '#f7a600' : '#39ff14'} />
               面料 &amp; 辅料缺口预警
-              <CollapseChevron panelKey="shortage" />
+              <CollapseChevron panelKey="shortage" collapsed={!!collapsedPanels['shortage']} />
             </div>
             <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['shortage'] ? 0 : 600, transition: 'max-height 0.28s ease' }}>
             {shortage?.shortageItems?.length ? (
@@ -923,7 +935,7 @@ const IntelligenceCenter: React.FC = () => {
                   总缺陷 {heatmap.totalDefects}
                 </span>
               )}
-              <CollapseChevron panelKey="heatmap" />
+              <CollapseChevron panelKey="heatmap" collapsed={!!collapsedPanels['heatmap']} />
             </div>
             <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['heatmap'] ? 0 : 600, transition: 'max-height 0.28s ease' }}>
             {heatmap?.cells?.length ? (
@@ -943,7 +955,7 @@ const IntelligenceCenter: React.FC = () => {
                     <React.Fragment key={proc}>
                       <div className="c-heat-row-label">{proc}</div>
                       {(heatmap.factories || []).map(fac => {
-                        const cell = heatmap.cells.find(c => c.process === proc && c.factory === fac);
+                        const cell = heatmapCellMap.get(`${proc}|${fac}`);
                         const alpha = cell ? Math.min(cell.intensity, 0.9) : 0;
                         return (
                           <div key={fac} className="c-heat-cell"
@@ -981,7 +993,7 @@ const IntelligenceCenter: React.FC = () => {
                   健康 <AnimatedNum val={healing.healthScore} /> 分 · 发现 <AnimatedNum val={healing.issuesFound} /> 项
                 </span>
               )}
-              <CollapseChevron panelKey="healing" />
+              <CollapseChevron panelKey="healing" collapsed={!!collapsedPanels['healing']} />
             </div>
             <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['healing'] ? 0 : 500, transition: 'max-height 0.28s ease' }}>
             {healing?.items?.length ? (
@@ -1031,7 +1043,7 @@ const IntelligenceCenter: React.FC = () => {
               <LiveDot size={7} color="#ffd700" />
               工厂绩效排行榜
               <span className="c-card-badge purple-badge">实时评分</span>
-              <CollapseChevron panelKey="ranking" />
+              <CollapseChevron panelKey="ranking" collapsed={!!collapsedPanels['ranking']} />
             </div>
             <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['ranking'] ? 0 : 500, transition: 'max-height 0.28s ease' }}>
             {ranking?.rankings?.length ? (
@@ -1061,7 +1073,7 @@ const IntelligenceCenter: React.FC = () => {
             <XiaoyunCloudAvatar size={18} active />
             Agent 智能例会
             <span className="c-card-badge purple-badge">多Agent辩论</span>
-            <CollapseChevron panelKey="meeting" />
+            <CollapseChevron panelKey="meeting" collapsed={!!collapsedPanels['meeting']} />
           </div>
           <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['meeting'] ? 0 : 600, transition: 'max-height 0.28s ease' }}>
             <div style={{ display: 'flex', gap: 8, padding: '10px 14px', alignItems: 'center' }}>
@@ -1142,7 +1154,7 @@ const IntelligenceCenter: React.FC = () => {
                   {brain.summary.healthGrade} 级 · {brain.summary.healthIndex} 分
                 </span>
               )}
-              <CollapseChevron panelKey="brain" />
+              <CollapseChevron panelKey="brain" collapsed={!!collapsedPanels['brain']} />
             </div>
             <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['brain'] ? 0 : 600, transition: 'max-height 0.28s ease' }}>
             {brain ? (
@@ -1199,7 +1211,7 @@ const IntelligenceCenter: React.FC = () => {
                   待处理 {actionCenter.summary.totalTasks} · 紧急 {actionCenter.summary.highPriorityTasks}
                 </span>
               )}
-              <CollapseChevron panelKey="actionCenter" />
+              <CollapseChevron panelKey="actionCenter" collapsed={!!collapsedPanels['actionCenter']} />
             </div>
             <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['actionCenter'] ? 0 : 800, transition: 'max-height 0.28s ease' }}>
             {actionCenter?.tasks?.length ? (
@@ -1279,7 +1291,7 @@ const IntelligenceCenter: React.FC = () => {
           <div className="c-card-title" style={{ cursor: 'pointer', padding: '8px 0', marginBottom: 0 }} onClick={() => toggleCollapse('profit')}>
             <span style={{ fontSize: 13, color: '#a78bfa', fontWeight: 600 }}>💰 订单利润估算 &amp; 完工预测</span>
             <span className="c-card-badge purple-badge" style={{ marginLeft: 8 }}>AI 双引擎分析</span>
-            <CollapseChevron panelKey="profit" />
+            <CollapseChevron panelKey="profit" collapsed={!!collapsedPanels['profit']} />
           </div>
         </div>
         <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['profit'] ? 0 : 2000, transition: 'max-height 0.3s ease' }}>
@@ -1304,7 +1316,7 @@ const IntelligenceCenter: React.FC = () => {
             <span className="c-card-badge" style={{ marginLeft: 8, background: 'rgba(192,132,252,0.15)', color: '#c084fc' }}>
               Plan · Act · Reflect v4.0
             </span>
-            <CollapseChevron panelKey="graphmas" />
+            <CollapseChevron panelKey="graphmas" collapsed={!!collapsedPanels['graphmas']} />
           </div>
         </div>
         <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['graphmas'] ? 0 : 600, transition: 'max-height 0.3s ease' }}>
@@ -1322,7 +1334,7 @@ const IntelligenceCenter: React.FC = () => {
             <span className="c-card-badge" style={{ marginLeft: 8, background: 'rgba(56,189,248,0.15)', color: '#38bdf8' }}>
               Scene Comparison
             </span>
-            <CollapseChevron panelKey="abtest" />
+            <CollapseChevron panelKey="abtest" collapsed={!!collapsedPanels['abtest']} />
           </div>
         </div>
         <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['abtest'] ? 0 : 400, transition: 'max-height 0.3s ease' }}>
@@ -1340,7 +1352,7 @@ const IntelligenceCenter: React.FC = () => {
           <div className="c-card-title" style={{ cursor: 'pointer', padding: '8px 0', marginBottom: 0 }} onClick={() => toggleCollapse('whatif')}>
             <span style={{ fontSize: 13, color: '#fb923c', fontWeight: 600 }}>🔮 推演仿真（What-If）</span>
             <span className="c-card-badge" style={{ marginLeft: 8, background: 'rgba(251,146,60,0.15)', color: '#fb923c' }}>场景推演</span>
-            <CollapseChevron panelKey="whatif" />
+            <CollapseChevron panelKey="whatif" collapsed={!!collapsedPanels['whatif']} />
           </div>
         </div>
         <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['whatif'] ? 0 : 800, transition: 'max-height 0.3s ease' }}>
@@ -1364,7 +1376,7 @@ const IntelligenceCenter: React.FC = () => {
                 <span className="c-card-badge" style={{ marginLeft: 8, background: 'rgba(52,211,153,0.15)', color: '#34d399' }}>
                   全维度报告
                 </span>
-                <CollapseChevron panelKey="monthly" />
+                <CollapseChevron panelKey="monthly" collapsed={!!collapsedPanels['monthly']} />
               </div>
             </div>
             <div style={{ overflow: 'hidden', maxHeight: collapsedPanels['monthly'] ? 0 : 3000, transition: 'max-height 0.4s ease' }}>

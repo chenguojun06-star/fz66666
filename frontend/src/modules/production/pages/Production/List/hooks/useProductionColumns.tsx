@@ -8,6 +8,7 @@ import { SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCar
 import RowActions, { type RowAction } from '@/components/common/RowActions';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import LiquidProgressBar from '@/components/common/LiquidProgressBar';
+import { getProcessesByNodeFromOrder } from '../../ProgressDetail/utils';
 import SmartOrderHoverCard from '../../ProgressDetail/components/SmartOrderHoverCard';
 import { StyleCoverThumb, StyleAttachmentsButton } from '@/components/StyleAssets';
 import { isDirectCuttingOrder, isOrderFrozenByStatus, isOrderFrozenByStatusOrStock, withQuery } from '@/utils/api';
@@ -15,7 +16,6 @@ import { formatDateTime } from '@/utils/datetime';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { getProgressColorStatus, getRemainingDaysDisplay } from '@/utils/progressColor';
 import { getStatusConfig, safeString } from '../utils';
-import { getProcessesByNodeFromOrder } from '../../ProgressDetail/utils';
 import dayjs from 'dayjs';
 
 export interface UseProductionColumnsProps {
@@ -27,14 +27,7 @@ export interface UseProductionColumnsProps {
   handleTransferOrder: (record: ProductionOrder) => void;
   navigate: NavigateFunction;
   openProcessDetail: (record: ProductionOrder, type: string) => void;
-  openNodeDetail: (
-    order: ProductionOrder,
-    nodeType: string,
-    nodeName: string,
-    stats?: { done: number; total: number; percent: number; remaining: number },
-    unitPrice?: number,
-    processList?: any[]
-  ) => void;
+  openNodeDetail?: (record: ProductionOrder, nodeType: string, nodeName: string, stats?: { done: number; total: number; percent: number; remaining: number }, unitPrice?: number, processList?: { name: string; unitPrice?: number; processCode?: string }[]) => void;
   syncProcessFromTemplate: (record: ProductionOrder) => void;
   setPrintModalVisible: (v: boolean) => void;
   setPrintingRecord: (r: ProductionOrder | null) => void;
@@ -72,6 +65,68 @@ export function useProductionColumns({
 }: UseProductionColumnsProps) {
   const renderStageTime = (value: unknown) => value ? formatDateTime(value) : '-';
   const renderStageText = (value: unknown) => safeString(value);
+
+  // ===== 工序进度列共享逻辑 =====
+  const PROGRESS_CELL_BASE: React.CSSProperties = { padding: '4px', transition: 'background 0.2s' };
+  const COUNT_TEXT_STYLE: React.CSSProperties = { fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' };
+
+  /** 判断订单是否有二次工艺（列渲染 + action菜单共用） */
+  const hasSecondaryProcessForOrder = (record: ProductionOrder): boolean => {
+    if ((record as any).hasSecondaryProcess) return true;
+    if ((record as any).secondaryProcessStartTime || (record as any).secondaryProcessEndTime) return true;
+    const nodes = record.progressNodeUnitPrices;
+    if (!Array.isArray(nodes) || nodes.length === 0) return false;
+    return nodes.some((n: any) => {
+      const name = String(n.name || n.processName || '').trim();
+      return name.includes('二次工艺') || name.includes('二次') || (name.includes('工艺') && !name.includes('车'));
+    });
+  };
+
+  /** 提取指定父节点下的子工序列表 */
+  const getNodeProcessList = (record: ProductionOrder, nodeName: string): { name: string; unitPrice?: number; processCode?: string }[] => {
+    const byParent = getProcessesByNodeFromOrder(record);
+    if (nodeName === '二次工艺') {
+      const exactChildren = byParent['二次工艺'] || [];
+      const STD_STAGES = new Set(['采购', '裁剪', '车缝', '尾部', '入库', '二次工艺']);
+      const orphanChildren = Object.entries(byParent)
+        .filter(([stage]) => !STD_STAGES.has(stage))
+        .flatMap(([, nodes]) => nodes || []);
+      return [...exactChildren, ...orphanChildren].map(c => ({ name: c.name, unitPrice: c.unitPrice, processCode: c.processCode }));
+    }
+    const children = byParent[nodeName];
+    return children?.length ? children.map(c => ({ name: c.name, unitPrice: c.unitPrice, processCode: c.processCode })) : [];
+  };
+
+  /** 通用工序进度列渲染器（裁剪/二次工艺/车缝/尾部共用） */
+  const renderStageProgressCell = (rate: number, record: ProductionOrder, nodeType: string, nodeName: string) => {
+    const total = Number(record.cuttingQuantity || record.orderQuantity) || 0;
+    const completed = Math.round((rate || 0) * total / 100);
+    const percent = rate || 0;
+    const frozen = isOrderFrozenByStatus(record);
+    const colorStatus = frozen ? 'default' : getProgressColorStatus(record.plannedEndDate);
+
+    return (
+      <div
+        style={{ ...PROGRESS_CELL_BASE, cursor: frozen ? 'default' : 'pointer', opacity: frozen ? 0.6 : 1 }}
+        onClick={(e) => {
+          e.stopPropagation();
+          if (frozen) return;
+          if (openNodeDetail) {
+            const processList = getNodeProcessList(record, nodeName);
+            openNodeDetail(record, nodeType, nodeName, { done: completed, total, percent, remaining: Math.max(0, total - completed) }, undefined, processList);
+          } else {
+            openProcessDetail(record, nodeType);
+          }
+        }}
+        onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
+      >
+        {renderCompletionTimeTag(record, nodeName, percent)}
+        <div style={COUNT_TEXT_STYLE}>{completed}/{total}</div>
+        <LiquidProgressBar percent={percent} width="100%" height={16} status={colorStatus} />
+      </div>
+    );
+  };
 
   // ===== 表格列定义 =====
   const allColumns = [
@@ -359,27 +414,7 @@ export function useProductionColumns({
       key: 'cuttingSummary',
       width: 110,
       align: 'center' as const,
-      render: (rate: number, record: ProductionOrder) => {
-        const total = Number(record.cuttingQuantity || record.orderQuantity) || 0;
-        const completed = Math.round((rate || 0) * total / 100);
-        const frozen = isOrderFrozenByStatus(record);
-        const colorStatus = frozen ? 'default' : getProgressColorStatus(record.plannedEndDate);
-
-        return (
-          <div
-            style={{ cursor: frozen ? 'default' : 'pointer', padding: '4px', transition: 'background 0.2s', opacity: frozen ? 0.6 : 1 }}
-            onClick={(e) => { e.stopPropagation(); if (!frozen) openNodeDetail(record, 'cutting', '裁剪', { done: completed, total, percent: rate || 0, remaining: total - completed }); }}
-            onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
-          >
-            {renderCompletionTimeTag(record, '裁剪', rate || 0)}
-            <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
-              {completed}/{total}
-            </div>
-            <LiquidProgressBar percent={rate || 0} width="100%" height={16} status={colorStatus} />
-          </div>
-        );
-      },
+      render: (rate: number, record: ProductionOrder) => renderStageProgressCell(rate, record, 'cutting', '裁剪'),
     },
     {
       title: '二次工艺',
@@ -388,65 +423,14 @@ export function useProductionColumns({
       width: 90,
       align: 'center' as const,
       render: (rate: number, record: ProductionOrder) => {
-        const hasSecondaryProcessData = (() => {
-          // 后端已查t_secondary_process表，直接使用
-          if ((record as any).hasSecondaryProcess) return true;
-          if ((record as any).secondaryProcessStartTime || (record as any).secondaryProcessEndTime) return true;
-          const nodes = record.progressNodeUnitPrices;
-          if (!Array.isArray(nodes) || nodes.length === 0) return false;
-          return nodes.some((n: any) => {
-            const name = String(n.name || n.processName || '').trim();
-            return name.includes('二次工艺') || name.includes('二次') || (name.includes('工艺') && !name.includes('车'));
-          });
-        })();
-
-        if (!hasSecondaryProcessData) {
+        if (!hasSecondaryProcessForOrder(record)) {
           return (
             <div style={{ padding: '4px', textAlign: 'center' }}>
               <span style={{ fontSize: '11px', color: 'var(--color-text-tertiary)', opacity: 0.7 }}>无二次工艺</span>
             </div>
           );
         }
-
-        const total = Number(record.cuttingQuantity || record.orderQuantity) || 0;
-        const completed = Math.round((rate || 0) * total / 100);
-        const frozen = isOrderFrozenByStatus(record);
-        const colorStatus = frozen ? 'default' : getProgressColorStatus(record.plannedEndDate);
-
-        return (
-          <div
-            style={{ cursor: frozen ? 'default' : 'pointer', padding: '4px', transition: 'background 0.2s', opacity: frozen ? 0.6 : 1 }}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (frozen) return;
-              if (openNodeDetail) {
-                const byParent = getProcessesByNodeFromOrder(record);
-                // exactChildren: processes with DB mapping to 二次工艺
-                const exactChildren = byParent['二次工艺'] || [];
-                // orphans: processes whose stage key is not one of the 6 standard parent nodes
-                const STD_STAGES = new Set(['采购', '裁剪', '车缝', '尾部', '入库', '二次工艺']);
-                const orphanChildren = Object.entries(byParent)
-                  .filter(([stage]) => !STD_STAGES.has(stage))
-                  .flatMap(([, nodes]) => nodes || []);
-                const allSecondary = [...exactChildren, ...orphanChildren];
-                const processList = allSecondary.length
-                  ? allSecondary.map(c => ({ name: c.name, unitPrice: c.unitPrice, processCode: c.processCode }))
-                  : [];
-                openNodeDetail(record, 'secondaryProcess', '二次工艺', { done: completed, total, percent: rate || 0, remaining: Math.max(0, total - completed) }, undefined, processList);
-              } else {
-                openProcessDetail(record, 'secondaryProcess');
-              }
-            }}
-            onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
-          >
-            {renderCompletionTimeTag(record, '二次工艺', rate || 0)}
-            <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
-              {completed}/{total}
-            </div>
-            <LiquidProgressBar percent={rate || 0} width="100%" height={16} status={colorStatus} />
-          </div>
-        );
+        return renderStageProgressCell(rate, record, 'secondaryProcess', '二次工艺');
       },
     },
     {
@@ -455,27 +439,7 @@ export function useProductionColumns({
       key: 'carSewingSummary',
       width: 110,
       align: 'center' as const,
-      render: (rate: number, record: ProductionOrder) => {
-        const total = Number(record.cuttingQuantity || record.orderQuantity) || 0;
-        const completed = Math.round((rate || 0) * total / 100);
-        const frozen = isOrderFrozenByStatus(record);
-        const colorStatus = frozen ? 'default' : getProgressColorStatus(record.plannedEndDate);
-
-        return (
-          <div
-            style={{ cursor: frozen ? 'default' : 'pointer', padding: '4px', transition: 'background 0.2s', opacity: frozen ? 0.6 : 1 }}
-            onClick={(e) => { e.stopPropagation(); if (!frozen) openNodeDetail(record, 'carSewing', '车缝', { done: completed, total, percent: rate || 0, remaining: total - completed }); }}
-            onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
-          >
-            {renderCompletionTimeTag(record, '车缝', rate || 0)}
-            <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
-              {completed}/{total}
-            </div>
-            <LiquidProgressBar percent={rate || 0} width="100%" height={16} status={colorStatus} />
-          </div>
-        );
-      },
+      render: (rate: number, record: ProductionOrder) => renderStageProgressCell(rate, record, 'carSewing', '车缝'),
     },
     {
       title: '尾部',
@@ -483,27 +447,7 @@ export function useProductionColumns({
       key: 'tailProcessSummary',
       width: 110,
       align: 'center' as const,
-      render: (rate: number, record: ProductionOrder) => {
-        const total = Number(record.cuttingQuantity || record.orderQuantity) || 0;
-        const completed = Math.round((rate || 0) * total / 100);
-        const frozen = isOrderFrozenByStatus(record);
-        const colorStatus = frozen ? 'default' : getProgressColorStatus(record.plannedEndDate);
-
-        return (
-          <div
-            style={{ cursor: frozen ? 'default' : 'pointer', padding: '4px', transition: 'background 0.2s', opacity: frozen ? 0.6 : 1 }}
-            onClick={(e) => { e.stopPropagation(); if (!frozen) openNodeDetail(record, 'tailProcess', '尾部', { done: completed, total, percent: rate || 0, remaining: total - completed }); }}
-            onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
-          >
-            {renderCompletionTimeTag(record, '尾部', rate || 0)}
-            <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
-              {completed}/{total}
-            </div>
-            <LiquidProgressBar percent={rate || 0} width="100%" height={16} status={colorStatus} />
-          </div>
-        );
-      },
+      render: (rate: number, record: ProductionOrder) => renderStageProgressCell(rate, record, 'tailProcess', '尾部'),
     },
     {
       title: '裁剪数量',
@@ -674,8 +618,8 @@ export function useProductionColumns({
     {
       title: '操作',
       key: 'action',
-      fixed: 'right' as const,
-      width: 140,
+      width: 130,
+      onCell: () => ({ className: 'prod-act-cell' }),
       render: (_: any, record: ProductionOrder) => {
         const frozen = isOrderFrozenByStatusOrStock(record);
         const completed = isOrderFrozenByStatus(record);
@@ -710,15 +654,7 @@ export function useProductionColumns({
                   ...(!directCutting ? [{ key: 'procurement', label: '采购', onClick: () => openProcessDetail(record, 'procurement') }] : []),
                   { key: 'cutting', label: '裁剪', onClick: () => openProcessDetail(record, 'cutting') },
                   { key: 'carSewing', label: '车缝', onClick: () => openProcessDetail(record, 'carSewing') },
-                  ...(() => {
-                    const nodes = record.progressNodeUnitPrices;
-                    if (!Array.isArray(nodes)) return [];
-                    const hasSecondary = nodes.some((n: any) => {
-                      const name = String(n.name || n.processName || '').trim();
-                      return name.includes('二次工艺') || name.includes('二次') || (name.includes('工艺') && !name.includes('车'));
-                    });
-                    return hasSecondary ? [{ key: 'secondaryProcess', label: '二次工艺', onClick: () => openProcessDetail(record, 'secondaryProcess') }] : [];
-                  })(),
+                  ...(hasSecondaryProcessForOrder(record) ? [{ key: 'secondaryProcess', label: '二次工艺', onClick: () => openProcessDetail(record, 'secondaryProcess') }] : []),
                   { key: 'tailProcess', label: '尾部', onClick: () => openProcessDetail(record, 'tailProcess') },
                   { type: 'divider' },
                   { key: 'syncProcess', label: '🔄 从模板同步', onClick: () => syncProcessFromTemplate(record) },

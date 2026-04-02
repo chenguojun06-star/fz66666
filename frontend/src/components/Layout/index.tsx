@@ -239,7 +239,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const ALWAYS_VISIBLE_PATHS = new Set(['/integration/center', '/system/app-store']);
 
   // 工厂账号可见的菜单分组键（其余整组隐藏）
-  const FACTORY_VISIBLE_SECTIONS = new Set<string>(['basic', 'procurement', 'production', 'finance', 'system']);
+  // 注意：'basic'（样衣管理）不在工厂账号白名单内，外发工厂不可见
+  const FACTORY_VISIBLE_SECTIONS = new Set<string>(['procurement', 'production', 'finance', 'system']);
   // 工厂账号可见的具体路径白名单
   const FACTORY_VISIBLE_PATHS = new Set<string>([
     paths.productionList,          // /production（我的订单）

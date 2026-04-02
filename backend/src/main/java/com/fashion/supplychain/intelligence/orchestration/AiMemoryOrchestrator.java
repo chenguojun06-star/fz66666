@@ -6,6 +6,7 @@ import com.fashion.supplychain.intelligence.entity.AiConversationMemory;
 import com.fashion.supplychain.intelligence.mapper.AiConversationMemoryMapper;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,8 +32,15 @@ public class AiMemoryOrchestrator {
     /** 触发保存的最少消息数（user + assistant，低于此不保存以避免记录无意义对话） */
     private static final int MIN_MESSAGES_TO_SAVE = 4;
 
-    /** 记忆默认过期天数 */
-    private static final int EXPIRE_DAYS = 30;
+    /** 记忆过期天数 — 按重要性分级：高(>=80)/中(>=60)/低 */
+    private static final int EXPIRE_DAYS_HIGH = 90;
+    private static final int EXPIRE_DAYS_MED = 60;
+    private static final int EXPIRE_DAYS_LOW = 30;
+
+    /** F23: 重要性评分正则 — 匹配订单号/金额/决策关键词 */
+    private static final Pattern ORDER_PATTERN = Pattern.compile("PO\\d{8,}");
+    private static final Pattern MONEY_PATTERN = Pattern.compile("[¥$]\\d+|\\d+[万元]");
+    private static final Pattern DECISION_PATTERN = Pattern.compile("决定|确认|审批|同意|拒绝|取消|变更|改为");
 
     @Autowired
     private AiConversationMemoryMapper memoryMapper;
@@ -88,9 +96,12 @@ public class AiMemoryOrchestrator {
             memory.setUserId(userId);
             memory.setMemorySummary(summary);
             memory.setSourceMessageCount(messages.size());
-            memory.setImportanceScore(50);
+            int importance = calculateImportance(summary, messages);
+            memory.setImportanceScore(importance);
             memory.setCreateTime(LocalDateTime.now());
-            memory.setExpireTime(LocalDateTime.now().plusDays(EXPIRE_DAYS));
+            int expireDays = importance >= 80 ? EXPIRE_DAYS_HIGH
+                    : importance >= 60 ? EXPIRE_DAYS_MED : EXPIRE_DAYS_LOW;
+            memory.setExpireTime(LocalDateTime.now().plusDays(expireDays));
             memory.setDeleteFlag(0);
             memoryMapper.insert(memory);
 
@@ -140,15 +151,35 @@ public class AiMemoryOrchestrator {
         return sb.toString().trim();
     }
 
-    /** 保留最近 MAX_MEMORIES_PER_USER 条，超出则软删除最旧的 */
+    /**
+     * F24: 智能裁剪 — 按重要性降序保留 MAX_MEMORIES_PER_USER 条。
+     * 重要性相同时保留更新的记忆。
+     */
     private void pruneOldMemories(Long tenantId, String userId) {
         List<AiConversationMemory> all = memoryMapper.findRecentByUser(tenantId, userId, 100);
-        if (all.size() > MAX_MEMORIES_PER_USER) {
-            for (int i = MAX_MEMORIES_PER_USER; i < all.size(); i++) {
-                AiConversationMemory old = all.get(i);
-                memoryMapper.deleteById(old.getId());
-            }
+        if (all.size() <= MAX_MEMORIES_PER_USER) return;
+        // 按 importanceScore DESC → createTime DESC 排序，保留前 N 条
+        all.sort((a, b) -> {
+            int cmp = Integer.compare(b.getImportanceScore(), a.getImportanceScore());
+            return cmp != 0 ? cmp : b.getCreateTime().compareTo(a.getCreateTime());
+        });
+        for (int i = MAX_MEMORIES_PER_USER; i < all.size(); i++) {
+            memoryMapper.deleteById(all.get(i).getId());
         }
+    }
+
+    /**
+     * F23: 根据摘要内容与原始消息动态计算重要性（30-100）。
+     * 提及订单号+20、金额+15、决策关键词+10、消息数多+5。
+     */
+    private int calculateImportance(String summary, List<AiMessage> messages) {
+        int score = 30;
+        String text = summary != null ? summary : "";
+        if (ORDER_PATTERN.matcher(text).find()) score += 20;
+        if (MONEY_PATTERN.matcher(text).find()) score += 15;
+        if (DECISION_PATTERN.matcher(text).find()) score += 10;
+        if (messages.size() >= 8) score += 5;
+        return Math.min(100, score);
     }
 
     private String truncate(String s, int maxLen) {

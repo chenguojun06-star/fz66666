@@ -12,6 +12,9 @@ const BOARD_STATS_TTL_MS = 2 * 60 * 1000;
 /** 模块级时间戳缓存（不放 store 内，避免触发无关 re-render） */
 const fetchTimestamps = new Map<string, number>();
 
+/** 正在静默刷新（TTL 过期后台重拉）的订单 ID，防并发用，不触发 loading 重渲染 */
+const silentRefreshInProgress = new Set<string>();
+
 /** 清空时间戳缓存 — 在调用 clearAllBoardCache() 时同步调用 */
 export const clearBoardStatsTimestamps = () => fetchTimestamps.clear();
 
@@ -95,8 +98,17 @@ export const ensureBoardStatsForOrder = async ({
   })) {
     return;
   }
-  if (boardStatsLoadingByOrder[oid]) return;
-  setBoardLoadingForOrder(oid, true);
+  // ★ 静默刷新：有真实缓存数据时（TTL 过期）不调用 setBoardLoadingForOrder(true)，
+  //   避免进度球/悬停卡因 loading 状态切换而闪烁消失。
+  //   仅首次加载（existing=undefined）或 API 失败重试（existing=null）才显示 loading。
+  const isSilentRefresh = existing != null; // null/undefined 均视为"无真实数据"
+  if (isSilentRefresh) {
+    if (silentRefreshInProgress.has(oid)) return;
+    silentRefreshInProgress.add(oid);
+  } else {
+    if (boardStatsLoadingByOrder[oid]) return;
+    setBoardLoadingForOrder(oid, true);
+  }
   try {
     const records: ScanRecord[] = await loadAllOrderScans(oid);
     const valid = records
@@ -278,10 +290,19 @@ export const ensureBoardStatsForOrder = async ({
       mergeProcessDataForOrder(oid, pStats, pGroups, pTimes, pWorkers);
     }
   } catch {
-    // API 失败时写入 null 标记，2 分钟 TTL 过期后允许重试
-    mergeBoardStatsForOrder(oid, null);
-    fetchTimestamps.set(oid, Date.now());
+    if (isSilentRefresh) {
+      // 静默刷新失败：保留旧缓存数据，更新时间戳避免立即重试（等下一个 TTL 周期）
+      fetchTimestamps.set(oid, Date.now());
+    } else {
+      // 首次加载或 API 失败重试：写 null 标记，等 TTL 过期后允许重试
+      mergeBoardStatsForOrder(oid, null);
+      fetchTimestamps.set(oid, Date.now());
+    }
   } finally {
-    setBoardLoadingForOrder(oid, false);
+    if (isSilentRefresh) {
+      silentRefreshInProgress.delete(oid);
+    } else {
+      setBoardLoadingForOrder(oid, false);
+    }
   }
 };

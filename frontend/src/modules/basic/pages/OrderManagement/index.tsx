@@ -1456,6 +1456,7 @@ const OrderManagement: React.FC = () => {
             loading={detailLoading}
             dataSource={detailRows}
             style={{ color: 'var(--neutral-text)' }}
+            stickyHeader
             scroll={{ x: 'max-content' }}
             size={isMobile ? 'small' : 'middle'}
             pagination={{
@@ -1556,6 +1557,7 @@ const OrderManagement: React.FC = () => {
             columns={columns as any}
             dataSource={styles}
             loading={loading}
+            stickyHeader
             scroll={{ x: 'max-content' }}
             pagination={{
               current: queryParams.page,

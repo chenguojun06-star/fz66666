@@ -856,6 +856,7 @@ const TemplateCenter: React.FC = () => {
           columns={columns}
           dataSource={data as TemplateLibraryRecord[]}
           loading={loading}
+          stickyHeader
           scroll={{ x: 'max-content' }}
           pagination={{
             current: page,
