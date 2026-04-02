@@ -10,6 +10,8 @@ interface LiquidProgressLottieProps {
   text?: string;
   nodeName?: string;
   paused?: boolean;
+  /** 双行模式：传入后球内显示 text(数量,上) + subText(百分比,下)，不显示 nodeName */
+  subText?: string;
 }
 
 /** 全局注入 CSS 动画帧（只注入一次，组件挂载时执行） */
@@ -40,6 +42,7 @@ const LiquidProgressLottie: React.FC<LiquidProgressLottieProps> = ({
   text,
   nodeName,
   paused = false,
+  subText,
 }) => {
   useEffect(ensureAnimCSS, []);
 
@@ -75,9 +78,11 @@ const LiquidProgressLottie: React.FC<LiquidProgressLottieProps> = ({
     : '';
 
   // ── 文字尺寸 ──
-  const FS    = Math.max(7, Math.round(D * 0.18));
-  const nameY = nodeName ? C - FS * 0.65 : C;
-  const textY = nodeName ? C + FS * 0.75 : C;
+  const FS       = Math.max(7, Math.round(D * 0.18));
+  // 双行模式（subText存在）：text=数量(上), subText=百分比(下)，取代 nodeName 显示
+  const hasDual  = !!subText;
+  const nameY    = (hasDual || nodeName) ? C - FS * 0.65 : C;
+  const textY    = (hasDual || nodeName) ? C + FS * 0.75 : C;
 
   return (
     <div style={{ width: D, height: D, display: 'inline-block', flexShrink: 0, borderRadius: '50%', overflow: 'hidden', boxShadow: '0 0 0 1.5px rgba(0,0,0,0.1), 0 1px 4px rgba(0,0,0,0.1)' }}>
@@ -184,19 +189,27 @@ const LiquidProgressLottie: React.FC<LiquidProgressLottieProps> = ({
           </g>
         )}
 
-        {/* ⑥ 工序名称 */}
-        {nodeName && (
+        {/* ⑥ 工序名/数量行 */}
+        {hasDual ? (
+          // 双行：数量显示在上方（替代工序名位置）
+          text ? (
+            <text x={C} y={nameY} textAnchor="middle" dominantBaseline="middle"
+              fill={isDone ? '#237804' : '#374151'} fontSize={FS} fontWeight="600" fontFamily="inherit">
+              {text}
+            </text>
+          ) : null
+        ) : nodeName ? (
           <text x={C} y={nameY} textAnchor="middle" dominantBaseline="middle"
             fill="#374151" fontSize={FS} fontWeight="700" fontFamily="inherit">
             {nodeName.slice(0, 2)}
           </text>
-        )}
+        ) : null}
 
-        {/* ⑦ 进度文字 */}
+        {/* ⑦ 百分比/进度文字行 */}
         <text x={C} y={textY} textAnchor="middle" dominantBaseline="middle"
           fill={isDone ? '#237804' : '#6b7280'}
           fontSize={FS} fontWeight="600" fontFamily="inherit">
-          {text || `${pct}%`}
+          {hasDual ? (subText || `${pct}%`) : (text || `${pct}%`)}
         </text>
       </svg>
     </div>

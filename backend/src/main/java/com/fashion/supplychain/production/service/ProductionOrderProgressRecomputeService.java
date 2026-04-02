@@ -450,6 +450,12 @@ public class ProductionOrderProgressRecomputeService {
             lastDoneQty = orderQty;
         }
 
+        // 用户需求：下单不计算进度，只有实际产线（车缝/裁剪/质检/入库）扫码才开始计算进度
+        // 下单(STAGE_ORDER_CREATED)和采购(STAGE_PROCUREMENT)均不属于"真实产线动作"
+        if (!realProductionStarted) {
+            newProgress = 0;
+        }
+
         String curStatus = order.getStatus() == null ? "" : order.getStatus().trim();
         String newStatus;
         if ("completed".equals(curStatus)) {

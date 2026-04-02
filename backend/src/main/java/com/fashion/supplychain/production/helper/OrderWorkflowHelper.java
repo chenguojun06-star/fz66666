@@ -294,12 +294,10 @@ public class OrderWorkflowHelper {
                 List<Map<String, Object>> nodes = (List<Map<String, Object>>) workflow.get("nodes");
 
                 if (nodes != null && !nodes.isEmpty()) {
-                    int totalNodes = nodes.size();
-                    // 采购完成 = 第1个节点完成 = 1/N * 100
-                    int progress = (int) Math.round(100.0 / totalNodes);
-                    updateEntity.setProductionProgress(progress);
-                    log.info("Order procurement confirmed - updating progress: orderId={}, totalNodes={}, progress={}%",
-                            orderId, totalNodes, progress);
+                    // 用户需求：采购确认不计入进度，进度仅由实际产线扫码决定
+                    // 进度由 recomputeProgressFromRecords() 统一计算，下单/采购均保持 0%
+                    log.info("Order procurement confirmed: orderId={}, totalNodes={}",
+                            orderId, nodes.size());
                 }
             }
         } catch (Exception e) {
