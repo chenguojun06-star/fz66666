@@ -57,7 +57,11 @@ Page({
   },
 
   onShow() {
-    this.applyLanguage(i18n.getLanguage());
+    // 语言未变时跳过 setData 重绘（避免每次 onShow 重建 languageNameMap）
+    const lang = i18n.getLanguage();
+    if (lang !== this.data.currentLanguage) {
+      this.applyLanguage(lang);
+    }
 
     // tab-bar 选中状态由 custom-tab-bar 的 pageLifetimes.show 自动处理
     const app = getApp();
@@ -65,16 +69,10 @@ Page({
       return;
     }
 
-    // 加载用户信息
-    this.loadUserInfo();
+    // 将 showApprovalEntry 合并进 loadUserInfo 的 setData，减少一次重绘
+    this.loadUserInfo(isAdminOrSupervisor());
 
-    // 检查是否显示审批入口
-    const showApproval = isAdminOrSupervisor();
-    this.setData({ showApprovalEntry: showApproval });
-
-    // 加载系统信息
-    this.loadSystemInfo();
-
+    // loadSystemInfo 已由 refreshAll 内部调用，此处无需独立调用（_loadingSystemInfo 守卫也会防重）
     this.refreshAll(true);
 
     // 设置数据刷新监听
@@ -151,7 +149,7 @@ Page({
     }
   },
 
-  loadUserInfo() {
+  loadUserInfo(showApprovalEntry) {
     const userInfo = getUserInfo();
     const roleDisplayName = getRoleDisplayName();
     const userName = userInfo?.name || userInfo?.username || '未知';
@@ -171,7 +169,12 @@ Page({
       }
     }
 
-    this.setData({ userInfo, roleDisplayName, avatarLetter, avatarImgUrl });
+    // 将 showApprovalEntry 合并进同一次 setData，减少一次重绘触发
+    const patch = { userInfo, roleDisplayName, avatarLetter, avatarImgUrl };
+    if (typeof showApprovalEntry === 'boolean') {
+      patch.showApprovalEntry = showApprovalEntry;
+    }
+    this.setData(patch);
 
     // 后台从服务器刷新用户信息，PC端改了头像无需重新登录即可同步
     api.system.getMe().then(res => {
