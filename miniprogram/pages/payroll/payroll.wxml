@@ -71,8 +71,8 @@
 
     <view wx:for="{{records}}" wx:key="index" class="record-item">
       <view class="record-header">
-        <text class="order-info">订单 {{item.orderNo}}</text>
-        <text class="style-info">款号 {{item.styleNo}}</text>
+        <text class="order-info" user-select>订单 {{item.orderNo}}</text>
+        <text class="style-info" user-select>款号 {{item.styleNo}}</text>
       </view>
       <view class="record-detail">
         <text class="color-size">{{item.color}} {{item.size}}</text>
@@ -80,11 +80,11 @@
       </view>
       <view class="record-footer">
         <view class="calculation">
-          <text class="quantity">{{item.quantity}}件</text>
+          <text class="quantity" user-select>{{item.quantity}}件</text>
           <text class="multiply">×</text>
-          <text class="unit-price">¥{{item.unitPrice}}</text>
+          <text class="unit-price" user-select>¥{{item.unitPrice}}</text>
           <text class="equals">=</text>
-          <text class="amount">¥{{item.totalAmount}}</text>
+          <text class="amount" user-select>¥{{item.totalAmount}}</text>
         </view>
         <text class="time">{{item.scanTime}}</text>
       </view>
@@ -93,7 +93,7 @@
     <!-- 底部统计 -->
     <view wx:if="{{records.length > 0}}" class="bottom-summary">
       <text class="bottom-label">当前筛选总计：</text>
-      <text class="bottom-amount">¥{{filteredTotalAmount}}</text>
+      <text class="bottom-amount" user-select>¥{{filteredTotalAmount}}</text>
     </view>
   </view>
 </view>

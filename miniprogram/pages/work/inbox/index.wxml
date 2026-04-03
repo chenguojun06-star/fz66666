@@ -38,11 +38,11 @@
       </view>
 
       <!-- 内容 -->
-      <text class="notice-content">{{item.content}}</text>
+      <text class="notice-content" user-select>{{item.content}}</text>
 
       <!-- 底部元数据 -->
       <view class="notice-meta">
-        <text class="meta-order" wx:if="{{item.orderNo}}">订单：{{item.orderNo}}</text>
+        <text class="meta-order" wx:if="{{item.orderNo}}" user-select>订单：{{item.orderNo}}</text>
         <text class="meta-time">{{item.timeAgo}}</text>
       </view>
     </view>

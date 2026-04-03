@@ -13,15 +13,15 @@
     </view>
 
     <view wx:for="{{records}}" wx:key="id" class="srt-table-row" hover-class="srt-table-row-hover" hover-stay-time="50">
-      <text class="srt-td srt-td-worker">{{item.displayWorker}}</text>
-      <text class="srt-td srt-td-order">{{item.displayOrderNo}}</text>
-      <text class="srt-td srt-td-bundle">{{item.displayBundleNo}}</text>
-      <text class="srt-td srt-td-process">{{item.displayProcess}}</text>
-      <text class="srt-td srt-td-price">{{item.displayUnitPrice}}</text>
-      <text class="srt-td srt-td-qty">{{item.displayQuantity}}</text>
-      <text wx:if="{{showAmount}}" class="srt-td srt-td-amount">{{item.displayLineAmount}}</text>
-      <text class="srt-td srt-td-bed">{{item.displayBedNo}}</text>
-      <text class="srt-td srt-td-time">{{item.displayTime}}</text>
+      <text class="srt-td srt-td-worker" user-select>{{item.displayWorker}}</text>
+      <text class="srt-td srt-td-order" user-select>{{item.displayOrderNo}}</text>
+      <text class="srt-td srt-td-bundle" user-select>{{item.displayBundleNo}}</text>
+      <text class="srt-td srt-td-process" user-select>{{item.displayProcess}}</text>
+      <text class="srt-td srt-td-price" user-select>{{item.displayUnitPrice}}</text>
+      <text class="srt-td srt-td-qty" user-select>{{item.displayQuantity}}</text>
+      <text wx:if="{{showAmount}}" class="srt-td srt-td-amount" user-select>{{item.displayLineAmount}}</text>
+      <text class="srt-td srt-td-bed" user-select>{{item.displayBedNo}}</text>
+      <text class="srt-td srt-td-time" user-select>{{item.displayTime}}</text>
     </view>
   </view>
 </scroll-view>

@@ -49,15 +49,15 @@
       </view>
       <!-- 数据行 -->
       <view wx:for="{{records}}" wx:key="id" class="table-row">
-        <text class="td td-worker">{{item.displayWorker}}</text>
-        <text class="td td-order">{{item.displayOrderNo}}</text>
-        <text class="td td-bundle">{{item.displayBundleNo}}</text>
-        <text class="td td-process">{{item.displayProcess}}</text>
-        <text class="td td-price">{{item.displayUnitPrice}}</text>
-        <text class="td td-color">{{item.displayColor}}</text>
-        <text class="td td-qty">{{item.displayQuantity}}</text>
-        <text class="td td-size">{{item.displaySize}}</text>
-        <text class="td td-time">{{item.displayTime}}</text>
+        <text class="td td-worker" user-select>{{item.displayWorker}}</text>
+        <text class="td td-order" user-select>{{item.displayOrderNo}}</text>
+        <text class="td td-bundle" user-select>{{item.displayBundleNo}}</text>
+        <text class="td td-process" user-select>{{item.displayProcess}}</text>
+        <text class="td td-price" user-select>{{item.displayUnitPrice}}</text>
+        <text class="td td-color" user-select>{{item.displayColor}}</text>
+        <text class="td td-qty" user-select>{{item.displayQuantity}}</text>
+        <text class="td td-size" user-select>{{item.displaySize}}</text>
+        <text class="td td-time" user-select>{{item.displayTime}}</text>
       </view>
     </view>
   </scroll-view>

@@ -43,12 +43,12 @@
     <view class="wc-content">
       <!-- 款号与下单次数 tag 同行，tag 靠右对齐 -->
       <view class="wc-head">
-        <text class="wc-title">{{item.styleNo || '-'}}</text>
+        <text class="wc-title" user-select>{{item.styleNo || '-'}}</text>
         <text class="order-tag {{item.orderCount > 0 ? 'order-tag-has' : 'order-tag-none'}}">
           {{item.orderCount > 0 ? item.orderCount + '次下单' : '未下单'}}
         </text>
       </view>
-      <text class="wc-subtitle">{{item.styleName || '-'}}</text>
+      <text class="wc-subtitle" user-select>{{item.styleName || '-'}}</text>
       <view class="card-meta-row">
         <text class="meta-label">码数</text>
         <text class="meta-value">{{item.size || '-'}}</text>
