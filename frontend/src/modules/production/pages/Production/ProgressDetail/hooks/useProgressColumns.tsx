@@ -338,7 +338,6 @@ export const useProgressColumns = ({
         const totalQty = Number(record.cuttingQuantity || record.orderQuantity) || 0;
         const nodeDoneMap = boardStatsByOrder[String(record.id || '')];
         const nodeTimeMap = boardTimesByOrder[String(record.id || '')];
-        const progressPercent = Math.max(0, Math.min(100, Number(record.productionProgress || 0)));
         const progressTrackMinWidth = Math.max((ns.length + 1) * 92, 420);
 
         if (!ns || ns.length === 0) {
