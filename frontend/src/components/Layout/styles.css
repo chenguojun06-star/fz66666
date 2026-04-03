@@ -175,7 +175,7 @@
   align-items: center;
   border: 1px solid var(--recent-tab-border);
   background: var(--recent-tab-bg);
-  border-radius: 999px;
+  border-radius: 6px;
   flex: 0 0 auto;
 }
 
@@ -187,7 +187,7 @@
 .recent-tab-label.ant-btn {
   height: 24px;
   padding: 0 8px;
-  border-radius: 999px;
+  border-radius: 6px;
   min-width: 0;
   font-size: 12px;
 }
@@ -204,7 +204,7 @@
   width: 22px;
   height: 22px;
   padding: 0;
-  border-radius: 999px;
+  border-radius: 6px;
   font-size: 10px;
 }
 
