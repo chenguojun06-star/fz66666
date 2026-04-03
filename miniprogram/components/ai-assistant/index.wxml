@@ -92,130 +92,181 @@
       </view>
 
       <view class="task-section" wx:if="{{qualityTasks && qualityTasks.length > 0}}">
-        <view class="section-title">
-          <text class="icon">🔍</text> 待质检 ({{qualityTasks.length}})
+        <view class="section-header quality-header">
+          <view class="section-header-left">
+            <text class="section-icon">🔍</text>
+            <text class="section-name">待质检</text>
+          </view>
+          <view class="section-count-badge quality-badge">{{qualityTasks.length}}</view>
         </view>
-        <view class="task-card" wx:for="{{qualityTasks}}" wx:key="orderId" bindtap="handleQualityTask" data-item="{{item}}">
-          <view class="task-header">
-            <text class="order-no">{{item.orderNo}}</text>
-            <text class="style-no">{{item.styleNo}}</text>
-          </view>
-          <view class="task-content">
-            <text class="task-desc">款式: {{item.styleName || '未知'}}</text>
-            <view class="task-meta">
-              <text class="qty">数量: {{item.orderQuantity}}</text>
-              <text class="customer">{{item.customerName || ''}}</text>
+        <view class="task-card task-type-quality" wx:for="{{qualityTasks}}" wx:key="orderId" catchtap="handleQualityTask" data-item="{{item}}">
+          <view class="task-accent-bar"></view>
+          <view class="task-card-main">
+            <view class="task-card-info">
+              <view class="task-order-row">
+                <text class="task-order-no">{{item.orderNo}}</text>
+                <text class="task-style-tag">{{item.styleNo}}</text>
+              </view>
+              <text class="task-name">{{item.styleName || '暂无款式信息'}}</text>
+              <view class="task-chips">
+                <view class="task-chip" wx:if="{{item.orderQuantity}}">📦 {{item.orderQuantity}}件</view>
+                <view class="task-chip" wx:if="{{item.customerName}}">{{item.customerName}}</view>
+              </view>
             </view>
-          </view>
-          <view class="task-footer">
-            <text class="time">创建于: {{item.createdAt}}</text>
-            <button class="action-btn primary" size="mini" catchtap="handleQualityTask" data-item="{{item}}">去质检</button>
+            <view class="task-action-col">
+              <button class="task-action-btn quality-btn" size="mini" catchtap="handleQualityTask" data-item="{{item}}">去质检</button>
+            </view>
           </view>
         </view>
       </view>
 
       <view class="task-section" wx:if="{{cuttingTasks && cuttingTasks.length > 0}}">
-        <view class="section-title">
-          <text class="icon">✂️</text> 待裁剪 ({{cuttingTasks.length}})
+        <view class="section-header cutting-header">
+          <view class="section-header-left">
+            <text class="section-icon">✂️</text>
+            <text class="section-name">待裁剪</text>
+          </view>
+          <view class="section-count-badge cutting-badge">{{cuttingTasks.length}}</view>
         </view>
-        <view class="task-card" wx:for="{{cuttingTasks}}" wx:key="orderId" bindtap="handleCuttingTask" data-item="{{item}}">
-          <view class="task-header">
-            <text class="order-no">{{item.orderNo}}</text>
-            <text class="style-no">{{item.styleNo}}</text>
-          </view>
-          <view class="task-content">
-            <text class="task-desc">等待裁剪</text>
-            <view class="task-meta">
-              <text class="qty">排单数量: {{item.orderQuantity || 0}}</text>
+        <view class="task-card task-type-cutting" wx:for="{{cuttingTasks}}" wx:key="orderId" catchtap="handleCuttingTask" data-item="{{item}}">
+          <view class="task-accent-bar"></view>
+          <view class="task-card-main">
+            <view class="task-card-info">
+              <view class="task-order-row">
+                <text class="task-order-no">{{item.orderNo}}</text>
+                <text class="task-style-tag cutting-tag">{{item.styleNo}}</text>
+              </view>
+              <view class="task-chips">
+                <view class="task-chip">📋 排单 {{item.orderQuantity || 0}}件</view>
+              </view>
             </view>
-          </view>
-          <view class="task-footer">
-            <button class="action-btn primary" size="mini" catchtap="handleCuttingTask" data-item="{{item}}">去裁剪</button>
+            <view class="task-action-col">
+              <button class="task-action-btn cutting-btn" size="mini" catchtap="handleCuttingTask" data-item="{{item}}">去裁剪</button>
+            </view>
           </view>
         </view>
       </view>
 
       <view class="task-section" wx:if="{{purchaseTasks && purchaseTasks.length > 0}}">
-        <view class="section-title">
-          <text class="icon">🛒</text> 待采购 ({{purchaseTasks.length}})
+        <view class="section-header purchase-header">
+          <view class="section-header-left">
+            <text class="section-icon">🛒</text>
+            <text class="section-name">待采购</text>
+          </view>
+          <view class="section-count-badge purchase-badge">{{purchaseTasks.length}}</view>
         </view>
-        <view class="task-card" wx:for="{{purchaseTasks}}" wx:key="id" bindtap="handlePurchaseTask" data-item="{{item}}">
-          <view class="task-header">
-            <text class="order-no">{{item.orderNo || item.purchaseNo}}</text>
-            <text class="status tag-orange">待处理</text>
-          </view>
-          <view class="task-content">
-            <text class="task-desc">{{item.materialName || '待采购物料'}}</text>
-            <view class="task-meta">
-              <text class="qty">数量: {{item.purchaseQuantity || 0}}{{item.unit || ''}}</text>
+        <view class="task-card task-type-purchase" wx:for="{{purchaseTasks}}" wx:key="id" catchtap="handlePurchaseTask" data-item="{{item}}">
+          <view class="task-accent-bar"></view>
+          <view class="task-card-main">
+            <view class="task-card-info">
+              <view class="task-order-row">
+                <text class="task-order-no">{{item.orderNo || item.purchaseNo}}</text>
+                <text class="task-style-tag purchase-tag">待处理</text>
+              </view>
+              <text class="task-name">{{item.materialName || '待采购物料'}}</text>
+              <view class="task-chips">
+                <view class="task-chip">📦 {{item.purchaseQuantity || 0}}{{item.unit || ''}}</view>
+                <view class="task-chip time-chip" wx:if="{{item.receivedTimeText}}">{{item.receivedTimeText}}</view>
+              </view>
             </view>
-          </view>
-          <view class="task-footer">
-            <text class="time">{{item.receivedTimeText}}</text>
-            <button class="action-btn" size="mini" catchtap="handlePurchaseTask" data-item="{{item}}">查看</button>
+            <view class="task-action-col">
+              <button class="task-action-btn default-btn" size="mini" catchtap="handlePurchaseTask" data-item="{{item}}">查看</button>
+            </view>
           </view>
         </view>
       </view>
 
       <view class="task-section" wx:if="{{repairTasks && repairTasks.length > 0}}">
-        <view class="section-title">
-          <text class="icon">🔧</text> 待返修 ({{repairTasks.length}})
-        </view>
-        <view class="task-card" wx:for="{{repairTasks}}" wx:key="id">
-          <view class="task-header">
-            <text class="order-no">{{item.orderNo}}</text>
-            <text class="style-no">{{item.bundleNo}}</text>
+        <view class="section-header repair-header">
+          <view class="section-header-left">
+            <text class="section-icon">🔧</text>
+            <text class="section-name">待返修</text>
           </view>
-          <view class="task-content">
-            <text class="task-desc">{{item.defectCategory || '次品待返修'}} · {{item.color}} {{item.size}}</text>
-            <view class="task-meta">
-              <text class="qty">次品数: {{item.defectQty}}</text>
+          <view class="section-count-badge repair-badge">{{repairTasks.length}}</view>
+        </view>
+        <view class="task-card task-type-repair" wx:for="{{repairTasks}}" wx:key="id">
+          <view class="task-accent-bar"></view>
+          <view class="task-card-main">
+            <view class="task-card-info">
+              <view class="task-order-row">
+                <text class="task-order-no">{{item.orderNo}}</text>
+                <text class="task-style-tag repair-tag">{{item.bundleNo}}</text>
+              </view>
+              <text class="task-name">{{item.defectCategory || '次品待返修'}} · {{item.color}} {{item.size}}</text>
+              <view class="task-chips">
+                <view class="task-chip">⚠️ 次品 {{item.defectQty}}件</view>
+              </view>
             </view>
           </view>
         </view>
       </view>
 
       <view class="task-section" wx:if="{{overdueOrders && overdueOrders.length > 0}}">
-        <view class="section-title">
-          <text class="icon">⏰</text> 延期订单 ({{overdueOrders.length}})
-        </view>
-        <view class="task-card" wx:for="{{overdueOrders}}" wx:key="id">
-          <view class="task-header">
-            <text class="order-no">{{item.orderNo}}</text>
-            <text class="status tag-red">延期</text>
+        <view class="section-header overdue-header">
+          <view class="section-header-left">
+            <text class="section-icon">⏰</text>
+            <text class="section-name">延期订单</text>
           </view>
-          <view class="task-content">
-            <text class="task-desc">{{item.styleName || item.styleNo || ''}}</text>
+          <view class="section-count-badge overdue-badge">{{overdueOrders.length}}</view>
+        </view>
+        <view class="task-card task-type-overdue" wx:for="{{overdueOrders}}" wx:key="id">
+          <view class="task-accent-bar"></view>
+          <view class="task-card-main">
+            <view class="task-card-info">
+              <view class="task-order-row">
+                <text class="task-order-no">{{item.orderNo}}</text>
+                <text class="task-style-tag overdue-tag">逾期</text>
+              </view>
+              <text class="task-name">{{item.styleName || item.styleNo || ''}}</text>
+            </view>
           </view>
         </view>
       </view>
 
       <view class="task-section" wx:if="{{pendingUsers && pendingUsers.length > 0}}">
-        <view class="section-title">
-          <text class="icon">👤</text> 待审批用户 ({{pendingUsers.length}})
-        </view>
-        <view class="task-card" wx:for="{{pendingUsers}}" wx:key="id">
-          <view class="task-header">
-            <text class="order-no">{{item.name}}</text>
-            <text class="style-no">{{item.phone}}</text>
+        <view class="section-header pending-header">
+          <view class="section-header-left">
+            <text class="section-icon">👤</text>
+            <text class="section-name">待审批用户</text>
           </view>
-          <view class="task-footer">
-            <text class="time">{{item.timeText}}</text>
+          <view class="section-count-badge pending-badge">{{pendingUsers.length}}</view>
+        </view>
+        <view class="task-card task-type-pending" wx:for="{{pendingUsers}}" wx:key="id">
+          <view class="task-accent-bar"></view>
+          <view class="task-card-main">
+            <view class="task-card-info">
+              <view class="task-order-row">
+                <text class="task-order-no">{{item.name}}</text>
+              </view>
+              <view class="task-chips">
+                <view class="task-chip">📱 {{item.phone}}</view>
+                <view class="task-chip time-chip">{{item.timeText}}</view>
+              </view>
+            </view>
           </view>
         </view>
       </view>
 
       <view class="task-section" wx:if="{{pendingRegistrations && pendingRegistrations.length > 0}}">
-        <view class="section-title">
-          <text class="icon">📝</text> 待审批注册 ({{pendingRegistrations.length}})
-        </view>
-        <view class="task-card" wx:for="{{pendingRegistrations}}" wx:key="id">
-          <view class="task-header">
-            <text class="order-no">{{item.name}}</text>
-            <text class="style-no">{{item.phone}}</text>
+        <view class="section-header pending-header">
+          <view class="section-header-left">
+            <text class="section-icon">📝</text>
+            <text class="section-name">待审批注册</text>
           </view>
-          <view class="task-footer">
-            <text class="time">{{item.timeText}}</text>
+          <view class="section-count-badge pending-badge">{{pendingRegistrations.length}}</view>
+        </view>
+        <view class="task-card task-type-pending" wx:for="{{pendingRegistrations}}" wx:key="id">
+          <view class="task-accent-bar"></view>
+          <view class="task-card-main">
+            <view class="task-card-info">
+              <view class="task-order-row">
+                <text class="task-order-no">{{item.name}}</text>
+              </view>
+              <view class="task-chips">
+                <view class="task-chip">📱 {{item.phone}}</view>
+                <view class="task-chip time-chip">{{item.timeText}}</view>
+              </view>
+            </view>
           </view>
         </view>
       </view>
