@@ -5,10 +5,21 @@ const { toast } = require('../../utils/uiHelper');
 // 日期格式化工具函数（重构版 - 消除重复代码）
 
 /**
+ * 解析日期字符串（兼容 iOS）
+ * iOS 不支持 "yyyy-MM-dd HH:mm:ss"，需要使用 "yyyy-MM-ddTHH:mm:ss"
+ */
+function parseDateSafe(dateStr) {
+  if (!dateStr) return new Date(NaN);
+  if (dateStr instanceof Date) return dateStr;
+  // 将空格分隔符替换为 T，兼容 iOS
+  return new Date(String(dateStr).replace(' ', 'T'));
+}
+
+/**
  * 提取日期组件（公共函数）
  */
 function extractDateComponents(date) {
-  const d = new Date(date);
+  const d = parseDateSafe(date);
   return {
     year: d.getFullYear(),
     month: String(d.getMonth() + 1).padStart(2, '0'),
@@ -195,14 +206,14 @@ Page({
    */
   processData(data) {
     // 计算汇总数据（按当前筛选日期范围）
-    const filterStart = this.data.startDate ? new Date(this.data.startDate + ' 00:00:00') : null;
-    const filterEnd = this.data.endDate ? new Date(this.data.endDate + ' 23:59:59') : null;
+    const filterStart = this.data.startDate ? new Date(this.data.startDate + 'T00:00:00') : null;
+    const filterEnd = this.data.endDate ? new Date(this.data.endDate + 'T23:59:59') : null;
 
     const monthData = data.filter(item => {
       if (!item.startTime) {
         return false;
       }
-      const time = new Date(item.startTime);
+      const time = parseDateSafe(item.startTime);
       return (!filterStart || time >= filterStart) && (!filterEnd || time <= filterEnd);
     });
 
@@ -221,7 +232,7 @@ Page({
       unitPrice: (item.unitPrice || 0).toFixed(2),
       totalAmount: (item.totalAmount || 0).toFixed(2),
       totalAmountNum: item.totalAmount || 0, // 用于排序
-      scanTime: item.startTime ? formatDateTime(new Date(item.startTime)) : '-',
+      scanTime: item.startTime ? formatDateTime(parseDateSafe(item.startTime)) : '-',
     }));
 
     // 按总金额排序
