@@ -301,15 +301,6 @@ page {
   background: var(--color-bg-card);
 }
 
-.filter-text {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
-  padding: 8px 12px;
-  font-size: var(--font-size-base);
-  color: var(--color-text-primary);
-  background: var(--color-bg-card);
-}
-
 .filter-actions {
   display: flex;
   gap: 10px;
@@ -398,139 +389,22 @@ page {
   border-color: var(--color-warning, #f59e0b);
 }
 
-/* 保留旧胶囊行样式以兼容 */
-.home-stats-row {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 12px;
-  padding: 6px 16px;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: 24px;
-  box-shadow: var(--shadow-md);
-}
-
-.home-stat-item {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 3px 14px;
-  background: rgba(224, 242, 254, 0.3);
-  border: 1px solid rgba(224, 242, 254, 0.5);
-  border-radius: 20px;
-  font-size: var(--font-size-sm);
-  color: var(--color-text-primary);
-}
-
-.home-stat-left {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.home-stat-emoji {
-  font-size: var(--font-size-base);
-  opacity: 0.8;
-}
-
-.home-stat-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-}
-
-.home-stat-value {
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.home-stats {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 8px;
-}
-
-.home-stat {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  padding: 10px 12px;
-  background: var(--color-bg-card);
-}
-
-.home-stat-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* Emoji图标样式 */
-.home-stat-emoji {
-  font-size: var(--font-size-2xl);
-  opacity: 0.8;
-}
-
-.home-stat-icon-wrap {
-  width: 24px;
-  height: 24px;
-  border-radius: var(--radius-full);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: none;
-}
-
-.home-stat-icon {
-  width: 16px;
-  height: 16px;
-}
-
-.icon-order {
-  background: rgba(99, 102, 241, 0.12);
-}
-
-.icon-stock {
-  background: rgba(16, 185, 129, 0.12);
-}
-
-.icon-purchase {
-  background: rgba(249, 115, 22, 0.12);
-}
-
-.icon-defect {
-  background: rgba(239, 68, 68, 0.12);
-}
-
-.home-stat-value {
-  font-size: var(--font-size-base);
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.home-stat-label {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
-
 .home-entries {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin-top: 8px;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0.03) 100%);
-  border-radius: 12px;
+  background: var(--color-bg-light);
+  border-radius: var(--radius-md);
   padding: 8px;
-  border: 1px solid rgba(59, 130, 246, 0.15);
+  border: 1px solid var(--color-border);
 }
 
 .home-entry {
   border: none;
-  background: #ffffff;
-  color: #3b82f6;
-  border-radius: 10px;
+  background: var(--color-bg-card);
+  color: var(--color-primary-light);
+  border-radius: var(--radius-md);
   padding: 4px 6px;
   text-align: center;
   font-size: 15px;
@@ -539,7 +413,7 @@ page {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 1px 4px rgba(59, 130, 246, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .home-entry-hover {
@@ -610,15 +484,15 @@ page {
 .home-notice-bar {
   display: flex;
   align-items: center;
-  background: linear-gradient(135deg, #fff7e6 0%, #ffe7ba 100%);
-  border: 1rpx solid #ffd591;
+  background: var(--color-bg-light);
+  border: 1rpx solid var(--color-border);
   border-radius: 16rpx;
   padding: 18rpx 24rpx;
   margin: 0 0 16rpx;
   gap: 14rpx;
 }
 .home-notice-bar-hover {
-  background: linear-gradient(135deg, #ffe7ba 0%, #ffd591 100%);
+  background: rgba(37, 99, 235, 0.1);
 }
 .home-notice-icon {
   font-size: 34rpx;
@@ -628,11 +502,11 @@ page {
   flex: 1;
   font-size: 28rpx;
   font-weight: 600;
-  color: var(--color-warning);
+  color: var(--color-primary);
 }
 .home-notice-arrow {
   font-size: 34rpx;
-  color: var(--color-warning);
+  color: var(--color-primary);
   font-weight: 700;
 }
 

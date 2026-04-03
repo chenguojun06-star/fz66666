@@ -5,13 +5,13 @@ page {
 
 .nav-logout {
   padding: 6px 12px;
-  background: #f5f5f5;
+  background: var(--color-bg-gray);
   border-radius: 16px;
 }
 
 .nav-logout-text {
   font-size: 14px;
-  color: #666;
+  color: var(--color-text-secondary);
 }
 
 .title-row {
@@ -61,7 +61,7 @@ page {
 }
 
 .notification-bell-hover {
-  background: rgba(224, 242, 254, 0.8);
+  background: var(--color-bg-light);
 }
 
 .bell-icon {
@@ -108,7 +108,7 @@ page {
 .profile-avatar {
   width: 48px;
   height: 48px;
-  background: rgba(224, 242, 254, 0.8);
+  background: var(--color-bg-light);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -116,7 +116,7 @@ page {
   font-size: 20px;
   font-weight: 600;
   color: var(--color-text-primary);
-  border: 2px solid rgba(224, 242, 254, 0.9);
+  border: 2px solid var(--color-border);
   flex-shrink: 0;
 }
 
@@ -152,14 +152,14 @@ page {
 
 .logout-text {
   font-size: 13px;
-  color: #dc2626;
+  color: var(--color-error);
 }
 
 .profile-role {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
   padding: 2px 8px;
-  background: rgba(224, 242, 254, 0.5);
+  background: var(--color-bg-light);
   border-radius: var(--radius-md);
   align-self: flex-start;
 }
@@ -181,15 +181,15 @@ page {
   align-items: center;
   gap: 4px;
   padding: 4px 10px;
-  background: rgba(224, 242, 254, 0.3);
-  border: 1px solid rgba(224, 242, 254, 0.5);
+  background: var(--color-bg-light);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
   font-size: var(--font-size-sm);
   color: var(--color-text-primary);
 }
 
 .user-info-item-hover {
-  background: rgba(224, 242, 254, 0.8);
+  background: var(--color-bg-light);
 }
 
 .user-info-item.disabled {
@@ -379,7 +379,7 @@ page {
 }
 
 .stat-card-hover {
-  background: rgba(224, 242, 254, 0.3);
+  background: var(--color-bg-light);
   transform: scale(0.97);
 }
 
@@ -481,6 +481,47 @@ page {
   color: var(--color-text-secondary);
 }
 
+/* ========== 双列操作卡片 ========== */
+.action-row-pair {
+  display: flex;
+  gap: 16rpx;
+  margin: 20rpx 0 8rpx;
+}
+
+.action-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24rpx 12rpx;
+  background: var(--color-bg-card);
+  border-radius: 16rpx;
+  border: 1rpx solid var(--color-border);
+  gap: 8rpx;
+}
+
+.action-card--active {
+  background: rgba(37, 99, 235, 0.06);
+  border-color: rgba(37, 99, 235, 0.3);
+}
+
+.action-card-emoji {
+  font-size: 40rpx;
+  line-height: 1;
+}
+
+.action-card-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+.action-card-arrow {
+  font-size: 28rpx;
+  color: var(--color-text-secondary);
+}
+
 .change-pwd-panel {
   background: var(--color-bg-card);
   border-radius: 16rpx;
@@ -554,7 +595,7 @@ page {
   padding: 28rpx 24rpx;
   background: var(--color-bg-card, #f8f9ff);
   border-radius: 16rpx;
-  border: 1rpx solid rgba(45, 127, 249, 0.18);
+  border: 1rpx solid var(--color-border);
 }
 
 .invite-title {
@@ -590,8 +631,8 @@ page {
   font-size: 44rpx;
   font-weight: 800;
   letter-spacing: 6rpx;
-  color: var(--color-primary, #2d7ff9);
-  background: rgba(45, 127, 249, 0.08);
+  color: var(--color-primary);
+  background: var(--color-bg-light);
   border-radius: 12rpx;
   padding: 16rpx 20rpx;
   text-align: center;
@@ -599,7 +640,7 @@ page {
 
 .invite-copy-btn {
   padding: 16rpx 24rpx;
-  background: var(--color-primary, #2d7ff9);
+  background: var(--color-primary);
   color: var(--color-text-white);
   border-radius: 10rpx;
   font-size: 24rpx;
@@ -616,7 +657,7 @@ page {
 
 .invite-link-text {
   font-size: 24rpx;
-  color: var(--color-primary, #2d7ff9);
+  color: var(--color-primary);
 }
 
 /* ========== 问题反馈 ========== */
@@ -681,8 +722,8 @@ page {
 }
 
 .feedback-status-PROCESSING {
-  background: #eff6ff;
-  color: #2563eb;
+  background: var(--color-bg-light);
+  color: var(--color-primary);
 }
 
 .feedback-status-RESOLVED {
@@ -691,8 +732,8 @@ page {
 }
 
 .feedback-status-CLOSED {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--color-bg-gray);
+  color: var(--color-text-secondary);
 }
 
 .feedback-item-content {
@@ -708,8 +749,8 @@ page {
 
 .feedback-item-reply {
   font-size: 24rpx;
-  color: var(--color-primary, #2d7ff9);
-  background: rgba(45, 127, 249, 0.06);
+  color: var(--color-primary);
+  background: var(--color-bg-light);
   padding: 8rpx 12rpx;
   border-radius: 8rpx;
   margin-bottom: 8rpx;

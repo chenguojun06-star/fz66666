@@ -28,18 +28,19 @@
       </view>
     </view>
 
-    <!-- 修改密码入口 -->
-    <view class="action-row" bindtap="onShowChangePwd">
-      <text class="action-row-label">🔒 修改密码</text>
-      <text class="action-row-arrow">›</text>
+    <!-- 修改密码 + 工资查询（同一行） -->
+    <view class="action-row-pair">
+      <view class="action-card {{showChangePwd ? 'action-card--active' : ''}}" bindtap="onShowChangePwd">
+        <text class="action-card-emoji">🔒</text>
+        <text class="action-card-label">修改密码</text>
+        <text class="action-card-arrow">{{showChangePwd ? '∨' : '›'}}</text>
+      </view>
+      <view class="action-card" bindtap="onNavigateToPayroll">
+        <text class="action-card-emoji">💰</text>
+        <text class="action-card-label">工资查询</text>
+        <text class="action-card-arrow">›</text>
+      </view>
     </view>
-
-    <!-- 语言切换（暂隐藏，后续上线）
-    <view class="action-row" bindtap="onLanguageSwitchTap">
-      <text class="action-row-label">🌐 {{currentLanguageLabel}}</text>
-      <text class="action-row-arrow">›</text>
-    </view>
-    -->
 
     <!-- 修改密码表单（展开） -->
     <view wx:if="{{showChangePwd}}" class="change-pwd-panel">
@@ -78,16 +79,18 @@
       </view>
     </view>
 
-    <!-- 工资查询入口 -->
-    <view class="action-row" bindtap="onNavigateToPayroll">
-      <text class="action-row-label">💰 工资查询</text>
-      <text class="action-row-arrow">›</text>
-    </view>
-
-    <!-- 问题反馈入口 -->
-    <view class="action-row" bindtap="onShowFeedbackForm">
-      <text class="action-row-label">📝 问题反馈</text>
-      <text class="action-row-arrow">›</text>
+    <!-- 问题反馈 + 我的反馈（同一行） -->
+    <view class="action-row-pair">
+      <view class="action-card {{showFeedbackForm ? 'action-card--active' : ''}}" bindtap="onShowFeedbackForm">
+        <text class="action-card-emoji">📝</text>
+        <text class="action-card-label">问题反馈</text>
+        <text class="action-card-arrow">{{showFeedbackForm ? '∨' : '›'}}</text>
+      </view>
+      <view class="action-card {{showMyFeedbacks ? 'action-card--active' : ''}}" bindtap="onToggleMyFeedbacks">
+        <text class="action-card-emoji">📋</text>
+        <text class="action-card-label">我的反馈</text>
+        <text class="action-card-arrow">{{showMyFeedbacks ? '∨' : '›'}}</text>
+      </view>
     </view>
 
     <!-- 问题反馈表单（展开） -->
@@ -117,11 +120,7 @@
       </view>
     </view>
 
-    <!-- 我的反馈历史 -->
-    <view class="action-row" bindtap="onToggleMyFeedbacks">
-      <text class="action-row-label">📋 我的反馈</text>
-      <text class="action-row-arrow">{{showMyFeedbacks ? '∨' : '›'}}</text>
-    </view>
+    <!-- 我的反馈列表（展开） -->
     <view wx:if="{{showMyFeedbacks}}" class="feedback-list">
       <view wx:if="{{myFeedbacks.length === 0}}" class="hint">暂无反馈记录</view>
       <view wx:for="{{myFeedbacks}}" wx:key="id" class="feedback-item">

@@ -377,7 +377,11 @@ Page({
 
   // ========== 修改密码 ==========
   onShowChangePwd() {
-    this.setData({ showChangePwd: true, pwdForm: { oldPassword: '', newPassword: '', confirmPassword: '' } });
+    if (this.data.showChangePwd) {
+      this.setData({ showChangePwd: false, pwdForm: { oldPassword: '', newPassword: '', confirmPassword: '' } });
+    } else {
+      this.setData({ showChangePwd: true });
+    }
   },
 
   onCancelChangePwd() {
@@ -454,10 +458,14 @@ Page({
 
   // ========== 问题反馈 ==========
   onShowFeedbackForm() {
-    this.setData({
-      showFeedbackForm: true,
-      feedbackForm: { category: 'BUG', title: '', content: '', contact: '' },
-    });
+    if (this.data.showFeedbackForm) {
+      this.setData({ showFeedbackForm: false });
+    } else {
+      this.setData({
+        showFeedbackForm: true,
+        feedbackForm: { category: 'BUG', title: '', content: '', contact: '' },
+      });
+    }
   },
 
   onCloseFeedbackForm() {
