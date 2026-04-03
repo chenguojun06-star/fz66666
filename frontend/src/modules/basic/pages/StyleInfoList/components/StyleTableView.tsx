@@ -1211,6 +1211,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
           key: 'review',
           label: selected.record.sampleReviewStatus ? '修改审核结论' : '记录审核结论',
           type: selected.record.sampleReviewStatus ? 'default' : 'primary',
+          disabled: selected.stage.status === 'done',
           onClick: handleOpenReviewModal,
         });
       }
@@ -1226,6 +1227,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
           key: 'review',
           label: selected.record.sampleReviewStatus ? '修改审核结论' : '记录审核结论',
           type: selected.record.sampleReviewStatus ? 'default' : 'primary',
+          disabled: selected.stage.status === 'done',
           onClick: handleOpenReviewModal,
         });
       }
