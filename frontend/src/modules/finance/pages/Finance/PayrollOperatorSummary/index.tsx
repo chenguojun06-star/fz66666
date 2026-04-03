@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { App, Button, Card, Input, Progress, Select, Space, Switch, Tabs, Tag, Tooltip } from 'antd';
 import { UnifiedRangePicker } from '@/components/common/UnifiedDatePicker';
-import DictAutoComplete from '@/components/common/DictAutoComplete';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -18,7 +17,7 @@ import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import WorkerPayrollAuditPopover from './WorkerPayrollAuditPopover';
 import WageSlipPrintModal from './WageSlipPrintModal';
-import { PrinterOutlined } from '@ant-design/icons';
+import { PrinterOutlined, SearchOutlined } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { WorkerEfficiencyItem } from '@/services/intelligence/intelligenceApi';
 import { readPageSize } from '@/utils/pageSizeStore';
@@ -79,10 +78,7 @@ const PayrollOperatorSummary: React.FC = () => {
     const { message } = App.useApp();
     const [searchParams] = useSearchParams();
     const [activeTab, setActiveTab] = usePersistentState<string>('payroll-operator-active-tab', 'detail');
-    const [orderNo, setOrderNo] = useState('');
-    const [styleNo, setStyleNo] = useState('');
-    const [operatorName, setOperatorName] = useState('');
-    const [processName, setProcessName] = useState('');
+    const [keyword, setKeyword] = useState('');
     const [scanType, setScanType] = useState<string | undefined>(undefined);
     const [includeSettled, setIncludeSettled] = useState(true);
     const [dateRange, setDateRange] = useState<any>(null);
@@ -202,6 +198,18 @@ const PayrollOperatorSummary: React.FC = () => {
         return sorted;
     }, [rows, detailSortField, detailSortOrder]);
 
+    // 统一搜索关键词过滤（订单号 / 款号 / 人员 / 工序）
+    const filteredRows = useMemo(() => {
+        const kw = keyword.trim().toLowerCase();
+        if (!kw) return sortedRows;
+        return sortedRows.filter((r: any) =>
+            String(r.orderNo || '').toLowerCase().includes(kw) ||
+            String(r.styleNo || '').toLowerCase().includes(kw) ||
+            String(r.operatorName || '').toLowerCase().includes(kw) ||
+            String(r.processName || '').toLowerCase().includes(kw)
+        );
+    }, [sortedRows, keyword]);
+
     // 工资汇总数据：仅聚合已审核的明细行
     const summaryRows = useMemo(() => {
         // 只已审核的明细行才进入汇总
@@ -282,9 +290,9 @@ const PayrollOperatorSummary: React.FC = () => {
 
         if (urlOrderNo && !hasAutoFetched.current) {
             hasAutoFetched.current = true;
-            setOrderNo(urlOrderNo);
+            setKeyword(urlOrderNo);
             if (urlProcessName) {
-                setProcessName(urlProcessName);
+                // URL参数直接通过自定义payload传给服务端，keyword仅显示订单号提示
             }
             if (urlScanType) {
                 setScanType(urlScanType);
@@ -328,10 +336,6 @@ const PayrollOperatorSummary: React.FC = () => {
 
     const buildPayload = () => {
         const payload: Record<string, any> = {
-            orderNo: String(orderNo || '').trim(),
-            styleNo: String(styleNo || '').trim(),
-            operatorName: String(operatorName || '').trim(),
-            processName: String(processName || '').trim(),
             scanType: scanType ? String(scanType || '').trim() : undefined,
             includeSettled,
         };
@@ -368,10 +372,7 @@ const PayrollOperatorSummary: React.FC = () => {
         await doFetchData();
     };
     const reset = () => {
-        setOrderNo('');
-        setStyleNo('');
-        setOperatorName('');
-        setProcessName('');
+        setKeyword('');
         setScanType(undefined);
         setIncludeSettled(true);
         setDateRange(null);
@@ -845,34 +846,12 @@ const PayrollOperatorSummary: React.FC = () => {
                 <Card size="small" className="filter-card mb-sm">
                     <Space wrap>
                         <Input
-                            placeholder="订单号"
-                            style={{ width: 180 }}
+                            placeholder="搜索订单号 / 款号 / 人员 / 工序"
+                            style={{ width: 280 }}
                             allowClear
-                            value={orderNo}
-                            onChange={(e) => setOrderNo(e.target.value)}
-                        />
-                        <Input
-                            placeholder="款号"
-                            style={{ width: 160 }}
-                            allowClear
-                            value={styleNo}
-                            onChange={(e) => setStyleNo(e.target.value)}
-                        />
-                        <Input
-                            placeholder="人员"
-                            style={{ width: 160 }}
-                            allowClear
-                            value={operatorName}
-                            onChange={(e) => setOperatorName(e.target.value)}
-                        />
-                        <DictAutoComplete
-                            dictType="process_name"
-                            autoCollect={false}
-                            placeholder="工序"
-                            style={{ width: 160 }}
-                            allowClear
-                            value={processName}
-                            onChange={(value) => setProcessName(String(value || ''))}
+                            value={keyword}
+                            onChange={(e) => setKeyword(e.target.value)}
+                            prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
                         />
                         <Select
                             placeholder="生产节点"
@@ -963,7 +942,7 @@ const PayrollOperatorSummary: React.FC = () => {
                                             }),
                                         }}
                                         columns={columns}
-                                        dataSource={sortedRows as any}
+                                        dataSource={filteredRows as any}
                                         loading={loading}
                                         pagination={{
                                             showTotal: (total) => `共 ${total} 条`,
