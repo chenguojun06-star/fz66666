@@ -531,7 +531,7 @@ page {
 
 /* ==================== 生成菲号操作按鈕 ==================== */
 .item-actions { display:flex; justify-content:flex-end; padding:8rpx 20rpx 16rpx; }
-.action-btn { padding:12rpx 32rpx; border-radius:32rpx; font-size:26rpx; font-weight:500; }
+.action-btn { padding:12rpx 32rpx; border-radius:12rpx; font-size:26rpx; font-weight:500; }
 .action-btn-primary { background:var(--color-primary,#4f7ef8); color:#fff; }
 
 /* ==================== 菲号生成弹窗 ==================== */
@@ -560,7 +560,7 @@ page {
 .last-bundle-label { font-size:22rpx; color:#999; }
 .last-bundle-input { width:80rpx; height:44rpx; line-height:44rpx; font-size:24rpx; color:#333; text-align:center; border:1rpx solid #d9d9d9; border-radius:8rpx; background:#fff; }
 .bundle-footer { display:flex; gap:20rpx; }
-.bundle-btn { flex:1; height:80rpx; line-height:80rpx; text-align:center; border-radius:40rpx; font-size:28rpx; font-weight:500; }
+.bundle-btn { flex:1; height:80rpx; line-height:80rpx; text-align:center; border-radius:12rpx; font-size:28rpx; font-weight:500; }
 .bundle-btn-cancel { background:#f4f6fb; color:#666; }
 .bundle-btn-confirm { background:var(--color-primary,#4f7ef8); color:#fff; }
 .bundle-btn-confirm.btn-loading { opacity:.6; }

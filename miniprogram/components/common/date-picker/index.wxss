@@ -238,7 +238,7 @@
   color: #ffffff;
   background: var(--color-primary, #3b82f6);
   padding: 5px 16px;
-  border-radius: 999px;
+  border-radius: 12rpx;
 }
 
 /* ===== picker-view ===== */
