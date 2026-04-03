@@ -1,8 +1,9 @@
 import React from 'react';
-import { Card, Button, Space, Popover } from 'antd';
+import { Button, Card, Space, Popover } from 'antd';
 import { StyleCoverThumb } from '@/components/StyleAssets';
 import LiquidProgressBar from '@/components/common/LiquidProgressBar';
 import { SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
+import '@/modules/basic/pages/StyleInfo/styles.css';
 import './style.css';
 
 export interface CardField {
@@ -121,14 +122,7 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
   });
 
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: `repeat(auto-fill, minmax(280px, 1fr))`,
-        alignItems: 'start',
-        gap: 16,
-      }}
-    >
+    <div className="style-smart-list">
       {sortedData.map((record, index) => {
         // 计算是否已完成 - 添加防护检查
         const isCompleted = progressConfig && typeof progressConfig.calculate === 'function'
@@ -146,136 +140,131 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
           return true;
         }) || [];
 
-        const cardNode = (
-          <Card
-              id={getCardId?.(record)}
-              hoverable
-              className="universal-card"
-              loading={loading}
-              style={getCardStyle?.(record)}
-              onClick={() => onCardClick?.(record)}
-              cover={
-                <div className="universal-card-cover">
-                  {hasCoverSource ? (
-                    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
-                      <StyleCoverThumb
-                      styleId={styleId}
-                      styleNo={styleNo}
-                      src={coverSrc}
-                      size="fill"
-                      fit="contain"
-                      borderRadius={0}
-                      />
-                    </div>
-                  ) : (
-                    <div className="universal-card-cover-placeholder">
-                      <span>{coverPlaceholder}</span>
-                    </div>
-                  )}
-                </div>
-              }
-            >
-              <div className="universal-card-body">
-                {/* 标题和副标题在同一行 */}
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginBottom: '2px' }}>
-                  <h3 className="universal-card-title" style={{ margin: 0, flex: 1, minWidth: 0 }}>
-                    {record[titleField]}
-                  </h3>
-                  {subtitleField && (
-                    <div className="universal-card-subtitle" style={{ margin: 0, flexShrink: 0 }}>
-                      {record[subtitleField]}
-                    </div>
-                  )}
-                </div>
-                {/* 标签行：急/首单/翻单等 */}
-                {titleTags && (
-                  <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', marginBottom: 3 }}>
-                    {titleTags(record)}
-                  </div>
-                )}
-
-                {/* 字段行 */}
-                {groupFields(fields).map((group, idx) => (
-                  <div className="universal-card-row" key={idx}>
-                    {group.map((field) => (
-                      <div className="universal-card-field" key={field.key}>
-                        {field.label ? <span className="field-label">{field.label}:</span> : null}
-                        <div className="field-value">
-                          {renderFieldValue(field, record)}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ))}
-
-                {/* 进度条作为分割线（可选） */}
-                {progressConfig?.show !== false && progressConfig && typeof progressConfig.calculate === 'function' && (
+        const rowNode = (
+          <div
+            id={getCardId?.(record)}
+            className="style-smart-row"
+            style={{ cursor: onCardClick ? 'pointer' : undefined, ...getCardStyle?.(record) }}
+            onClick={() => onCardClick?.(record)}
+          >
+            {/* 封面列 */}
+            <div className="style-smart-row__cover">
+              <div className="style-smart-row__thumb">
+                {hasCoverSource ? (
+                  <StyleCoverThumb
+                    styleId={styleId}
+                    styleNo={styleNo}
+                    src={coverSrc}
+                    size="fill"
+                    fit="contain"
+                    borderRadius={0}
+                  />
+                ) : (
                   <div style={{
-                    marginTop: '4px',
-                    marginBottom: '2px',
-                    animation: 'progressFadeIn 0.5s ease-out'
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: '100%', height: '100%', fontSize: 11, color: '#bbb',
                   }}>
-                    {progressConfig.type === 'liquid' ? (
-                      <LiquidProgressBar
-                        percent={progressConfig.calculate(record)}
-                        width="100%"
-                        height={10}
-                        status={progressConfig.getStatus?.(record)}
-                        isCompleted={progressConfig.isCompleted?.(record)}
-                        minVisiblePercent={progressConfig.minVisiblePercent?.(record) ?? 0}
-                      />
-                    ) : (
-                      // 胶囊椭圆形进度条（默认）
-                      <div
-                        className={`universal-card-progress-line universal-card-progress-${
-                          progressConfig.getStatus?.(record) || 'default'
-                        }`}
-                        style={{
-                          width: `${progressConfig.calculate(record) <= 0
-                            ? (progressConfig.minVisiblePercent?.(record) ?? 0)
-                            : Math.max(progressConfig.minVisiblePercent?.(record) ?? 15, progressConfig.calculate(record))}%`,
-                        }}
-                      >
-                        <span className="universal-card-progress-text">
-                          {progressConfig.calculate(record)}%
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* 操作按钮 - 直接显示文字按钮 */}
-                {actionButtons.length > 0 && (
-                  <div className="universal-card-actions">
-                    <Space size={4}>
-                      {actionButtons.map((action) => (
-                        <Button
-                          key={action.key}
-                          type="link"
-                          danger={action.danger}
-                          size="small"
-                          disabled={action.disabled}
-                          title={action.title}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (action.disabled) return;
-                            action.onClick?.(record);
-                          }}
-                          style={{
-                            fontSize: '12px',
-                            padding: '0 6px',
-                            height: 'auto'
-                          }}
-                        >
-                          {action.label}
-                        </Button>
-                      ))}
-                    </Space>
+                    {coverPlaceholder}
                   </div>
                 )}
               </div>
-            </Card>
-          );
+            </div>
+
+            {/* 正文列 */}
+            <div className="style-smart-row__body">
+              {/* 标题和副标题 */}
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+                <h3 className="universal-card-title" style={{ flex: 1, minWidth: 0 }}>
+                  {record[titleField]}
+                </h3>
+                {subtitleField && (
+                  <span className="universal-card-subtitle" style={{ flexShrink: 0 }}>
+                    {record[subtitleField]}
+                  </span>
+                )}
+              </div>
+
+              {/* 标签行：急/首单/翻单等 */}
+              {titleTags && (
+                <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                  {titleTags(record)}
+                </div>
+              )}
+
+              {/* 字段行 */}
+              {groupFields(fields).map((group, idx) => (
+                <div className="universal-card-row" key={idx}>
+                  {group.map((field) => (
+                    <div className="universal-card-field" key={field.key}>
+                      {field.label ? <span className="field-label">{field.label}:</span> : null}
+                      <div className="field-value">
+                        {renderFieldValue(field, record)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+
+              {/* 进度条（可选） */}
+              {progressConfig?.show !== false && progressConfig && typeof progressConfig.calculate === 'function' && (
+                <div style={{ marginTop: 4, marginBottom: 2, animation: 'progressFadeIn 0.5s ease-out' }}>
+                  {progressConfig.type === 'liquid' ? (
+                    <LiquidProgressBar
+                      percent={progressConfig.calculate(record)}
+                      width="100%"
+                      height={10}
+                      status={progressConfig.getStatus?.(record)}
+                      isCompleted={progressConfig.isCompleted?.(record)}
+                      minVisiblePercent={progressConfig.minVisiblePercent?.(record) ?? 0}
+                    />
+                  ) : (
+                    <div
+                      className={`universal-card-progress-line universal-card-progress-${
+                        progressConfig.getStatus?.(record) || 'default'
+                      }`}
+                      style={{
+                        width: `${progressConfig.calculate(record) <= 0
+                          ? (progressConfig.minVisiblePercent?.(record) ?? 0)
+                          : Math.max(progressConfig.minVisiblePercent?.(record) ?? 15, progressConfig.calculate(record))}%`,
+                      }}
+                    >
+                      <span className="universal-card-progress-text">
+                        {progressConfig.calculate(record)}%
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 操作按钮 */}
+              {actionButtons.length > 0 && (
+                <div className="universal-card-actions">
+                  <Space size={4}>
+                    {actionButtons.map((action) => (
+                      <Button
+                        key={action.key}
+                        type="link"
+                        danger={action.danger}
+                        size="small"
+                        disabled={action.disabled}
+                        title={action.title}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (action.disabled) return;
+                          action.onClick?.(record);
+                        }}
+                        style={{ fontSize: 12, padding: '0 6px', height: 'auto' }}
+                      >
+                        {action.label}
+                      </Button>
+                    ))}
+                  </Space>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
         return (
           <div key={record.id || index}>
             {hoverRender ? (() => {
@@ -287,10 +276,10 @@ const UniversalCardView: React.FC<UniversalCardViewProps> = ({
                   placement="rightTop"
                   overlayStyle={{ width: SMART_CARD_OVERLAY_WIDTH, maxWidth: SMART_CARD_OVERLAY_WIDTH }}
                 >
-                  {cardNode}
+                  {rowNode}
                 </Popover>
-              ) : cardNode;
-            })() : cardNode}
+              ) : rowNode;
+            })() : rowNode}
           </div>
         );
       })}
