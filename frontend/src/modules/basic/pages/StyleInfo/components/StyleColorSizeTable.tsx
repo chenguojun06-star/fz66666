@@ -381,7 +381,7 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
             <tbody>
               <tr>
-                <td style={{ width: 148, padding: '8px 10px', background: 'var(--color-bg-container)', fontWeight: 600, fontSize: 12 }}>颜色 / 尺码</td>
+                <td style={{ width: 120, padding: '8px 10px', background: 'var(--color-bg-container)', fontWeight: 600, fontSize: 12 }}>颜色 / 尺码</td>
                 {selectedSizes.map((size) => (
                   <td key={size} style={{ padding: '8px 10px', background: 'var(--color-bg-container)', textAlign: 'center', fontWeight: 600, fontSize: 12 }}>{size}</td>
                 ))}
@@ -402,7 +402,7 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                           event.currentTarget.value = '';
                         }}
                       />
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                         <div
                           onClick={() => !editLocked && uploadInputRefs.current[row.color]?.click()}
                           onDragOver={(event) => {
@@ -421,8 +421,8 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                             void applyRowImage(rowIndex, pasted);
                           }}
                           style={{
-                            width: 34,
-                            height: 34,
+                            width: 80,
+                            height: 80,
                             borderRadius: 8,
                             border: '1px dashed #cbd5e1',
                             background: '#f8fafc',
@@ -437,32 +437,33 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                           {row.imageUrl ? (
                             <img src={getFullAuthedFileUrl(row.imageUrl)} alt={row.color} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           ) : (
-                            <span style={{ fontSize: 11, color: '#94a3b8' }}>图</span>
+                            <div style={{ textAlign: 'center' }}>
+                              <div style={{ fontSize: 22, color: '#d1d5db', lineHeight: 1 }}>+</div>
+                              <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 3 }}>图片</div>
+                            </div>
                           )}
                         </div>
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontWeight: 600, color: '#ef4444', fontSize: 12 }}>{row.color}</div>
-                          {!editLocked ? (
-                            <div style={{ display: 'flex', gap: 6, marginTop: 2, fontSize: 11 }}>
+                        <div style={{ fontWeight: 600, color: '#ef4444', fontSize: 11, textAlign: 'center', maxWidth: 90, wordBreak: 'break-all' }}>{row.color}</div>
+                        {!editLocked ? (
+                          <div style={{ display: 'flex', gap: 6, fontSize: 11 }}>
+                            <button
+                              type="button"
+                              onClick={() => uploadInputRefs.current[row.color]?.click()}
+                              style={{ border: 0, background: 'transparent', color: '#2563eb', padding: 0, cursor: 'pointer' }}
+                            >
+                              上传
+                            </button>
+                            {row.imageUrl ? (
                               <button
                                 type="button"
-                                onClick={() => uploadInputRefs.current[row.color]?.click()}
-                                style={{ border: 0, background: 'transparent', color: '#2563eb', padding: 0, cursor: 'pointer' }}
+                                onClick={() => { void clearRowImage(rowIndex); }}
+                                style={{ border: 0, background: 'transparent', color: '#94a3b8', padding: 0, cursor: 'pointer' }}
                               >
-                                上传
+                                清除
                               </button>
-                              {row.imageUrl ? (
-                                <button
-                                  type="button"
-                                  onClick={() => { void clearRowImage(rowIndex); }}
-                                  style={{ border: 0, background: 'transparent', color: '#94a3b8', padding: 0, cursor: 'pointer' }}
-                                >
-                                  清除
-                                </button>
-                              ) : null}
-                            </div>
-                          ) : null}
-                        </div>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </div>
                     </td>
                     {selectedSizes.map((_, columnIndex) => (

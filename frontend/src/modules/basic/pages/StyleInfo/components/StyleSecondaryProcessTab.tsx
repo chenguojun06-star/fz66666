@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Alert, App, Button, Col, Form, Image, Input, InputNumber, Popover, Row, Select, Space, Tag, Tooltip, Upload } from 'antd';
-import { CameraOutlined, PaperClipOutlined, PlusOutlined, QuestionCircleOutlined } from '@ant-design/icons';
-import ResizableModal from '@/components/common/ResizableModal';
+import { Alert, App, Button, Form, Image, Input, InputNumber, Popover, Select, Space, Tag, Tooltip, Upload } from 'antd';
+import { CameraOutlined, PaperClipOutlined, PlusOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import SupplierSelect from '@/components/common/SupplierSelect';
@@ -11,33 +10,13 @@ import api, { toNumberSafe } from '@/utils/api';
 import { downloadFile, getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { useViewport } from '@/utils/useViewport';
 import { formatDateTime } from '@/utils/datetime';
-import { useModal } from '@/hooks';
 import { useAuth } from '@/utils/AuthContext';
 import type { ColumnsType } from 'antd/es/table';
 
 const { Option } = Select;
 
-const helpTooltipStyles = {
-  root: { maxWidth: 320, zIndex: 4000 },
-  body: {
-    color: 'var(--neutral-text)',
-    background: 'var(--component-bg, #ffffff)',
-    border: '1px solid var(--neutral-border, #d9d9d9)',
-    boxShadow: '0 10px 28px rgba(15, 23, 42, 0.18)',
-  },
-} as const;
-
-const renderFieldLabel = (label: string, tooltip?: string) => {
-  if (!tooltip) return label;
-  return (
-    <Space size={4}>
-      <span>{label}</span>
-      <Tooltip title={tooltip} styles={helpTooltipStyles}>
-        <QuestionCircleOutlined style={{ color: 'var(--text-secondary, #8c8c8c)', cursor: 'help' }} />
-      </Tooltip>
-    </Space>
-  );
-};
+/** 新建行临时 key */
+const NEW_ROW_KEY = '__new__';
 
 const getCurrentDateTimeText = () => {
   const now = new Date();
@@ -209,6 +188,116 @@ const ProcessAttachmentCell: React.FC<{ record: SecondaryProcess; readOnly?: boo
   );
 };
 
+/** 新建行（未保存）专用图片上传 —— 先传 COS 拿 URL，保存时一并提交 */
+const NewRowImageUpload: React.FC<{
+  value: string[];
+  onChange: (urls: string[]) => void;
+}> = ({ value, onChange }) => {
+  const { message: msg } = App.useApp();
+  const [uploading, setUploading] = React.useState(false);
+
+  const handleUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await api.post('/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }) as any;
+      if (res.code === 200 && res.data) {
+        onChange([...value, res.data]);
+        msg.success('图片上传成功');
+      } else {
+        msg.error(res.message || '上传失败');
+      }
+    } catch { msg.error('上传失败，请重试'); }
+    finally { setUploading(false); }
+    return false;
+  };
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap', justifyContent: 'center', minHeight: 24 }}
+      onClick={(e) => e.stopPropagation()}>
+      {value.length > 0 && (
+        <Image.PreviewGroup>
+          {value.slice(0, 2).map((url, i) => (
+            <Image key={i} src={getFullAuthedFileUrl(url)} width={28} height={28}
+              style={{ borderRadius: 3, objectFit: 'cover', flexShrink: 0 }}
+              styles={{ root: { display: 'inline-block', flexShrink: 0 } }}
+            />
+          ))}
+        </Image.PreviewGroup>
+      )}
+      {value.length > 2 && <span style={{ fontSize: 10, color: '#999' }}>+{value.length - 2}</span>}
+      <Upload showUploadList={false} accept="image/*"
+        beforeUpload={(file) => { void handleUpload(file as unknown as File); return false; }}
+        disabled={uploading}>
+        <Tooltip title={uploading ? '上传中…' : '上传工艺图片'} mouseEnterDelay={0.5}>
+          <CameraOutlined style={{ fontSize: 13, color: uploading ? '#1677ff' : '#bbb', cursor: uploading ? 'wait' : 'pointer', flexShrink: 0 }} />
+        </Tooltip>
+      </Upload>
+    </div>
+  );
+};
+
+/** 新建行（未保存）专用附件上传 —— 先传 COS 拿 URL，保存时一并提交 */
+const NewRowAttachmentUpload: React.FC<{
+  value: AttachmentFile[];
+  onChange: (files: AttachmentFile[]) => void;
+}> = ({ value, onChange }) => {
+  const { message: msg } = App.useApp();
+  const [uploading, setUploading] = React.useState(false);
+
+  const handleUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await api.post('/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }) as any;
+      if (res.code === 200 && res.data) {
+        onChange([...value, { name: file.name, url: res.data }]);
+        msg.success('附件上传成功');
+      } else {
+        msg.error(res.message || '上传失败');
+      }
+    } catch { msg.error('上传失败，请重试'); }
+    finally { setUploading(false); }
+    return false;
+  };
+
+  const popoverContent = (
+    <div style={{ minWidth: 180, maxWidth: 300 }}>
+      {value.length === 0 && <div style={{ color: '#999', fontSize: 12, padding: '4px 0' }}>暂无附件</div>}
+      {value.map((f, i) => (
+        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0' }}>
+          <PaperClipOutlined style={{ color: '#1677ff', flexShrink: 0, fontSize: 12 }} />
+          <a
+            onClick={(e) => { e.preventDefault(); downloadFile(f.url, f.name); }}
+            href="#"
+            style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12, cursor: 'pointer' }}>
+            {f.name}
+          </a>
+        </div>
+      ))}
+      <Upload showUploadList={false}
+        beforeUpload={(file) => { void handleUpload(file as unknown as File); return false; }}
+        disabled={uploading}>
+        <Button size="small" icon={<PaperClipOutlined />} loading={uploading} style={{ marginTop: 6, width: '100%' }}>
+          上传附件
+        </Button>
+      </Upload>
+    </div>
+  );
+
+  return (
+    <Popover content={popoverContent} title="附件" trigger="click" placement="bottomRight">
+      <div style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '0 4px' }}
+        onClick={(e) => e.stopPropagation()}>
+        <PaperClipOutlined style={{ fontSize: 14, color: value.length > 0 ? '#1677ff' : '#bbb' }} />
+        {value.length > 0 && <span style={{ fontSize: 12, color: '#1677ff' }}>{value.length}</span>}
+      </div>
+    </Popover>
+  );
+};
+
 const StyleSecondaryProcessTab: React.FC<Props> = ({
   styleId,
   styleNo,
@@ -221,13 +310,16 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
   simpleView = false,
 }) => {
   const { message, modal } = App.useApp();
-  const { isMobile, modalWidth } = useViewport();
+  const { isMobile } = useViewport();
   const { user } = useAuth();
-  const processModal = useModal<SecondaryProcess>();
   const [dataSource, setDataSource] = useState<SecondaryProcess[]>([]);
   const [loading, setLoading] = useState(false);
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [editingExtraValues, setEditingExtraValues] = useState<Record<string, any>>({});
   const [form] = Form.useForm();
   const currentOperatorName = String(user?.name || user?.username || secondaryAssignee || '').trim();
+
+  const isEditing = (record: SecondaryProcess) => String(record.id) === editingKey;
 
   // 状态选项
   const statusOptions = [
@@ -242,18 +334,15 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
     if (!styleId) return;
     setLoading(true);
     try {
-      // 使用特殊配置抑制404错误日志
       const res = await api.get(`/style/secondary-process/list?styleId=${styleId}`, {
-        validateStatus: (status: number) => status < 500, // 不抛出4xx错误
+        validateStatus: (status: number) => status < 500,
       });
       if (res && (res as any).code === 200) {
         setDataSource((res as any).data || []);
       } else {
-        // 后端API暂未实现，使用空数据
         setDataSource([]);
       }
-    } catch (error) {
-      // 静默处理错误（后端API暂未实现）
+    } catch {
       setDataSource([]);
     } finally {
       setLoading(false);
@@ -276,43 +365,83 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
       await api.post(`/style/info/${styleId}/stage-action?stage=secondary&action=skip`);
       message.success('已标记为无二次工艺');
       if (onRefresh) onRefresh();
-    } catch (error) {
+    } catch {
       message.error('操作失败');
     }
   };
 
-  // 新建
+  // 新建（插入临时行，进入内联编辑）
   const handleAdd = () => {
-    processModal.open(null);
-    form.resetFields();
-    form.setFieldsValue({
-      processType: '二次工艺', // 默认工艺类型为"二次工艺"
+    if (editingKey) {
+      message.warning('请先保存或取消当前编辑');
+      return;
+    }
+    const newRow: SecondaryProcess = {
+      id: NEW_ROW_KEY,
+      processType: '二次工艺',
       status: 'pending',
       quantity: sampleQuantity || 0,
+    };
+    setDataSource(prev => [newRow, ...prev]);
+    setEditingKey(NEW_ROW_KEY);
+    form.setFieldsValue({
+      processType: '二次工艺',
+      status: 'pending',
+      quantity: sampleQuantity || 0,
+      processName: undefined,
+      description: undefined,
+      unitPrice: undefined,
+      totalPrice: undefined,
+      factoryName: undefined,
+      remark: undefined,
+    });
+    setEditingExtraValues({
+      factoryId: undefined,
+      factoryContactPerson: undefined,
+      factoryContactPhone: undefined,
       assignee: currentOperatorName || undefined,
       completedTime: undefined,
+      pendingImages: [],
+      pendingAttachments: [],
     });
   };
 
-  // 编辑
+  // 编辑已有行（内联）
   const handleEdit = (record: SecondaryProcess) => {
-    processModal.open(record);
+    if (editingKey) {
+      message.warning('请先保存或取消当前编辑');
+      return;
+    }
+    setEditingKey(String(record.id));
     form.setFieldsValue({
-      ...record,
-      assignee: record.assignee || currentOperatorName || undefined,
+      processType: record.processType || '二次工艺',
+      processName: record.processName,
+      description: record.description,
+      quantity: record.quantity,
+      unitPrice: record.unitPrice,
       totalPrice: record.quantity && record.unitPrice
         ? toNumberSafe(record.quantity) * toNumberSafe(record.unitPrice)
-        : 0
+        : 0,
+      factoryName: record.factoryName,
+      status: record.status || 'pending',
+      remark: record.remark,
+    });
+    setEditingExtraValues({
+      factoryId: record.factoryId,
+      factoryContactPerson: record.factoryContactPerson,
+      factoryContactPhone: record.factoryContactPhone,
+      assignee: record.assignee || currentOperatorName,
+      completedTime: record.completedTime,
     });
   };
 
-  // 查看
-  const handleView = (record: SecondaryProcess) => {
-    processModal.open(record);
-    form.setFieldsValue({
-      ...record,
-      assignee: record.assignee || currentOperatorName || undefined,
-    });
+  // 取消内联编辑
+  const handleCancel = () => {
+    if (editingKey === NEW_ROW_KEY) {
+      setDataSource(prev => prev.filter(r => String(r.id) !== NEW_ROW_KEY));
+    }
+    setEditingKey(null);
+    form.resetFields();
   };
 
   // 删除
@@ -333,37 +462,45 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
     });
   };
 
-  // 保存
+  // 保存（内联）
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
       const normalizedStatus = String(values.status || 'pending').trim().toLowerCase();
-      const assignee = String(processModal.data?.assignee || values.assignee || currentOperatorName || '').trim() || undefined;
+      const assignee = String(editingExtraValues.assignee || currentOperatorName || '').trim() || undefined;
       const completedTime = normalizedStatus === 'completed'
-        ? String(processModal.data?.completedTime || values.completedTime || '').trim() || getCurrentDateTimeText()
+        ? String(editingExtraValues.completedTime || '').trim() || getCurrentDateTimeText()
         : null;
       const data = {
         ...values,
+        ...editingExtraValues,
         styleId,
         assignee,
         completedTime,
       };
 
-      if (processModal.data?.id) {
-        await api.put(`/style/secondary-process/${processModal.data.id}`, data);
+      if (editingKey && editingKey !== NEW_ROW_KEY) {
+        await api.put(`/style/secondary-process/${editingKey}`, data);
         message.success('更新成功');
       } else {
-        await api.post('/style/secondary-process', data);
+        // 新建行：将 pending 数组转成正式字段，去掉临时 key
+        const { pendingImages, pendingAttachments, ...restData } = data as any;
+        const postData = {
+          ...restData,
+          images: JSON.stringify(pendingImages || []),
+          attachments: JSON.stringify(pendingAttachments || []),
+        };
+        await api.post('/style/secondary-process', postData);
         message.success('新建成功');
       }
 
-      processModal.close();
+      setEditingKey(null);
       fetchData();
     } catch (error: any) {
       if (error.errorFields) {
         message.error('请检查表单输入');
       } else {
-        message.error((error as any)?.message || '保存失败，请重试');
+        message.error(error?.message || '保存失败，请重试');
       }
     }
   };
@@ -376,63 +513,98 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
     form.setFieldValue('totalPrice', Number(total.toFixed(2)));
   };
 
-  // 表格列定义
+  // 表格列定义（支持内联编辑）
   const columns: ColumnsType<SecondaryProcess> = [
     {
       title: '图片',
       key: 'images',
-      width: 90,
+      width: 80,
       align: 'center' as const,
-      render: (_: any, record: SecondaryProcess) => (
-        <ProcessImageCell record={record} readOnly={readOnly} />
-      )
-    },
-    {
-      title: '工艺类型',
-      dataIndex: 'processType',
-      key: 'processType',
-      width: 100,
-      render: (value: string) => value || '二次工艺'
+      render: (_: any, record: SecondaryProcess) => {
+        if (isEditing(record) && String(record.id) === NEW_ROW_KEY) {
+          const pendingImgs = (editingExtraValues.pendingImages as string[]) || [];
+          return (
+            <NewRowImageUpload
+              value={pendingImgs}
+              onChange={(urls) => setEditingExtraValues(prev => ({ ...prev, pendingImages: urls }))}
+            />
+          );
+        }
+        return <ProcessImageCell record={record} readOnly={readOnly} />;
+      },
     },
     {
       title: '工艺名称',
       dataIndex: 'processName',
       key: 'processName',
-      width: 140,
+      width: 150,
       ellipsis: true,
-      render: (text: string) => text || '-'
+      render: (text: string, record: SecondaryProcess) => isEditing(record) ? (
+        <Form.Item name="processName" style={{ margin: 0 }} rules={[{ required: true, message: '请输入工艺名称' }]}>
+          <DictAutoComplete
+            dictType="process_name"
+            autoCollect
+            placeholder="工艺名称"
+            style={{ width: '100%' }}
+          />
+        </Form.Item>
+      ) : (text || '-'),
     },
     {
       title: '工艺描述',
       dataIndex: 'description',
       key: 'description',
-      width: 180,
+      width: 160,
       ellipsis: true,
-      render: (text: string) => text || '-'
+      render: (text: string, record: SecondaryProcess) => isEditing(record) ? (
+        <Form.Item name="description" style={{ margin: 0 }}>
+          <DictAutoComplete
+            dictType="process_description"
+            autoCollect
+            placeholder="工艺描述"
+            style={{ width: '100%' }}
+          />
+        </Form.Item>
+      ) : (text || '-'),
     },
     {
       title: '数量',
       dataIndex: 'quantity',
       key: 'quantity',
-      width: 80,
+      width: 90,
       align: 'right',
-      render: (value: number) => toNumberSafe(value).toLocaleString()
+      render: (value: number, record: SecondaryProcess) => isEditing(record) ? (
+        <Form.Item name="quantity" style={{ margin: 0 }} rules={[{ required: true, message: '请输入' }]}>
+          <InputNumber min={0} style={{ width: '100%' }} onChange={calculateTotalPrice} />
+        </Form.Item>
+      ) : toNumberSafe(value).toLocaleString(),
     },
     {
       title: '单价',
       dataIndex: 'unitPrice',
       key: 'unitPrice',
-      width: 90,
+      width: 110,
       align: 'right',
-      render: (value: number) => `¥${toNumberSafe(value).toFixed(2)}`
+      render: (value: number, record: SecondaryProcess) => isEditing(record) ? (
+        <Form.Item name="unitPrice" style={{ margin: 0 }} rules={[{ required: true, message: '请输入' }]}>
+          <InputNumber min={0} precision={2} prefix="¥" style={{ width: '100%' }} onChange={calculateTotalPrice} />
+        </Form.Item>
+      ) : `¥${toNumberSafe(value).toFixed(2)}`,
     },
     {
       title: '总价',
       dataIndex: 'totalPrice',
       key: 'totalPrice',
-      width: 100,
+      width: 110,
       align: 'right',
       render: (value: number, record: SecondaryProcess) => {
+        if (isEditing(record)) {
+          return (
+            <Form.Item name="totalPrice" style={{ margin: 0 }}>
+              <InputNumber disabled precision={2} prefix="¥" style={{ width: '100%' }} />
+            </Form.Item>
+          );
+        }
         const total = record.totalPrice !== undefined
           ? toNumberSafe(record.totalPrice)
           : toNumberSafe(record.quantity || 0) * toNumberSafe(record.unitPrice || 0);
@@ -441,72 +613,133 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
             ¥{total.toFixed(2)}
           </span>
         );
-      }
+      },
     },
     {
       title: '加工厂',
       dataIndex: 'factoryName',
       key: 'factoryName',
-      width: 120,
+      width: 140,
       ellipsis: true,
-      render: (text: string) => text || '-'
+      render: (text: string, record: SecondaryProcess) => isEditing(record) ? (
+        <Form.Item name="factoryName" style={{ margin: 0 }}>
+          <SupplierSelect
+            placeholder="选择加工厂"
+            onChange={(_value: any, option: any) => {
+              if (option) {
+                setEditingExtraValues(prev => ({
+                  ...prev,
+                  factoryId: option.id,
+                  factoryContactPerson: option.supplierContactPerson,
+                  factoryContactPhone: option.supplierContactPhone,
+                }));
+              }
+            }}
+          />
+        </Form.Item>
+      ) : (text || '-'),
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      width: 90,
-      render: (value: string) => {
+      width: 110,
+      render: (value: string, record: SecondaryProcess) => {
+        if (isEditing(record)) {
+          return (
+            <Form.Item name="status" style={{ margin: 0 }} rules={[{ required: true, message: '请选择' }]}>
+              <Select placeholder="状态" style={{ width: '100%' }}>
+                {statusOptions.map(opt => (
+                  <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+                ))}
+              </Select>
+            </Form.Item>
+          );
+        }
         const option = statusOptions.find(opt => opt.value === value);
-        return option ? (
-          <Tag color={option.color}>{option.label}</Tag>
-        ) : <Tag>{value || '-'}</Tag>;
-      }
+        return option ? <Tag color={option.color}>{option.label}</Tag> : <Tag>{value || '-'}</Tag>;
+      },
+    },
+    {
+      title: '备注',
+      dataIndex: 'remark',
+      key: 'remark',
+      width: 150,
+      ellipsis: true,
+      render: (text: string, record: SecondaryProcess) => isEditing(record) ? (
+        <Form.Item name="remark" style={{ margin: 0 }}>
+          <Input placeholder="备注" />
+        </Form.Item>
+      ) : (text || '-'),
     },
     {
       title: '附件',
       key: 'attachments',
-      width: 80,
+      width: 60,
       align: 'center' as const,
-      render: (_: any, record: SecondaryProcess) => (
-        <ProcessAttachmentCell record={record} readOnly={readOnly} />
-      )
+      render: (_: any, record: SecondaryProcess) => {
+        if (isEditing(record) && String(record.id) === NEW_ROW_KEY) {
+          const pendingAtts = (editingExtraValues.pendingAttachments as AttachmentFile[]) || [];
+          return (
+            <NewRowAttachmentUpload
+              value={pendingAtts}
+              onChange={(files) => setEditingExtraValues(prev => ({ ...prev, pendingAttachments: files }))}
+            />
+          );
+        }
+        return <ProcessAttachmentCell record={record} readOnly={readOnly} />;
+      },
+    },
+    {
+      title: '领取人',
+      dataIndex: 'assignee',
+      key: 'assignee',
+      width: 100,
+      ellipsis: true,
+      render: (text: string) => text || '-',
+    },
+    {
+      title: '完成时间',
+      dataIndex: 'completedTime',
+      key: 'completedTime',
+      width: 140,
+      render: (text: string) => formatDateTime(text) || '-',
     },
     {
       title: '创建时间',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      width: 160,
-      render: (text: string) => formatDateTime(text)
+      width: 140,
+      render: (text: string) => formatDateTime(text) || '-',
     },
     ...(!readOnly ? [{
       title: '操作',
       key: 'action',
-      width: 120,
+      width: 140,
       fixed: isMobile ? undefined : 'right' as const,
-      render: (_: any, record: SecondaryProcess) => (
-        <RowActions
-          actions={[
-            {
-              key: 'view',
-              label: '查看',
-              onClick: () => handleView(record)
-            },
-            {
-              key: 'edit',
-              label: '编辑',
-              onClick: () => handleEdit(record)
-            },
-            {
-              key: 'delete',
-              label: '删除',
-              danger: true,
-              onClick: () => handleDelete(record)
-            }
-          ]}
-        />
-      )
-    }] : [])
+      render: (_: any, record: SecondaryProcess) => {
+        if (isEditing(record)) {
+          return (
+            <Space>
+              <Button type="link" size="small" onClick={handleSave} style={{ padding: '0 4px' }}>
+                保存
+              </Button>
+              <Button type="link" size="small" onClick={handleCancel} style={{ padding: '0 4px' }}>
+                取消
+              </Button>
+            </Space>
+          );
+        }
+        return (
+          <RowActions
+            actions={[
+              { key: 'edit', label: '编辑', onClick: () => handleEdit(record) },
+              { key: 'delete', label: '删除', danger: true, onClick: () => handleDelete(record) },
+            ]}
+          />
+        );
+      },
+    }] : []),
   ];
 
   return (
@@ -545,8 +778,12 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
               type="primary"
               icon={<PlusOutlined />}
               onClick={handleAdd}
-              disabled={notStarted}
-              title={notStarted ? '请先点击「开始二次工艺」再操作' : undefined}
+              disabled={notStarted || !!editingKey}
+              title={
+                notStarted ? '请先点击「开始二次工艺」再操作'
+                  : editingKey ? '请先保存或取消当前编辑'
+                    : undefined
+              }
             >
               新建工艺
             </Button>
@@ -556,192 +793,22 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
 
       {/* 简化视图：无数据提示 */}
       {simpleView && dataSource.length === 0 && (
-        <Alert title="无二次工艺" type="info" showIcon style={{ marginBottom: 16 }} />
+        <Alert message="无二次工艺记录" type="info" showIcon style={{ marginBottom: 16 }} />
       )}
 
-      {/* 数据表格 */}
-      <ResizableTable
-        storageKey="style-secondary-process"
-        columns={columns}
-        dataSource={dataSource}
-        rowKey="id"
-        loading={loading}
-        pagination={false}
-        scroll={{ x: 1200 }}
-        size="middle"
-      />
-
-      {/* 新建/编辑弹窗 */}
-      <ResizableModal
-        title={processModal.data?.id ? '编辑二次工艺' : '新建二次工艺'}
-        open={processModal.visible}
-        onOk={handleSave}
-        onCancel={() => processModal.close()}
-        width={modalWidth}
-        okText="保存"
-        cancelText="取消"
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          style={{ marginTop: 16 }}
-        >
-          <Row gutter={16}>
-            <Col xs={24} sm={12}>
-              <Form.Item
-                label="工艺类型"
-                name="processType"
-              >
-                <Input disabled />
-              </Form.Item>
-            </Col>
-
-            <Col xs={24} sm={12}>
-              <Form.Item
-                label={renderFieldLabel('工艺名称', '具体的工艺描述')}
-                name="processName"
-                rules={[{ required: true, message: '请输入工艺名称' }]}
-              >
-                <DictAutoComplete
-                  dictType="process_name"
-                  autoCollect
-                  placeholder="请输入或选择工艺名称，如：胸前刺绣、背部印花"
-                />
-              </Form.Item>
-            </Col>
-
-            <Col xs={24} sm={12}>
-              <Form.Item
-                label="工艺描述"
-                name="description"
-              >
-                <DictAutoComplete
-                  dictType="process_description"
-                  autoCollect
-                  placeholder="请输入工艺描述"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col xs={24} sm={8}>
-              <Form.Item
-                label={renderFieldLabel('数量', '新建时自动填充为样衣数量，可手动修改')}
-                name="quantity"
-                rules={[{ required: true, message: '请输入数量' }]}
-              >
-                <InputNumber
-                  placeholder="请输入数量"
-                  min={0}
-                  style={{ width: '100%' }}
-                  onChange={calculateTotalPrice}
-                />
-              </Form.Item>
-            </Col>
-
-            <Col xs={24} sm={8}>
-              <Form.Item
-                label="单价"
-                name="unitPrice"
-                rules={[{ required: true, message: '请输入单价' }]}
-              >
-                <InputNumber
-                  placeholder="请输入单价"
-                  min={0}
-                  precision={2}
-                  style={{ width: '100%' }}
-                  prefix="¥"
-                  onChange={calculateTotalPrice}
-                />
-              </Form.Item>
-            </Col>
-
-            <Col xs={24} sm={8}>
-              <Form.Item
-                label="总价"
-                name="totalPrice"
-              >
-                <InputNumber
-                  placeholder="自动计算"
-                  disabled
-                  precision={2}
-                  style={{ width: '100%' }}
-                  prefix="¥"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col xs={24} sm={8}>
-              <Form.Item name="factoryId" hidden>
-                <Input />
-              </Form.Item>
-              <Form.Item name="factoryContactPerson" hidden>
-                <Input />
-              </Form.Item>
-              <Form.Item name="factoryContactPhone" hidden>
-                <Input />
-              </Form.Item>
-              <Form.Item name="assignee" hidden>
-                <Input />
-              </Form.Item>
-              <Form.Item name="completedTime" hidden>
-                <Input />
-              </Form.Item>
-              <Form.Item
-                label="加工厂"
-                name="factoryName"
-              >
-                <SupplierSelect
-                  placeholder="选择加工厂"
-                  onChange={(value, option) => {
-                    if (option) {
-                      form.setFieldsValue({
-                        factoryId: option.id,
-                        factoryContactPerson: option.supplierContactPerson,
-                        factoryContactPhone: option.supplierContactPhone,
-                      });
-                    }
-                  }}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col xs={24} sm={8}>
-              <Form.Item
-                label="状态"
-                name="status"
-                rules={[{ required: true, message: '请选择状态' }]}
-                extra="领取人与完成时间由系统按当前操作人和完成动作自动记录"
-              >
-                <Select id="status" placeholder="请选择状态">
-                  {statusOptions.map(opt => (
-                    <Option key={opt.value} value={opt.value}>{opt.label}</Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col xs={24}>
-              <Form.Item
-                label="备注"
-                name="remark"
-              >
-                <Input.TextArea
-                  placeholder="请输入备注信息，如工艺要求、注意事项等"
-                  rows={3}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-        </Form>
-      </ResizableModal>
+      {/* 包裹 Form，实现内联编辑 */}
+      <Form form={form} component={false}>
+        <ResizableTable
+          storageKey="style-secondary-process"
+          columns={columns}
+          dataSource={dataSource}
+          rowKey="id"
+          loading={loading}
+          pagination={false}
+          scroll={{ x: 1540 }}
+          size="middle"
+        />
+      </Form>
     </div>
   );
 };

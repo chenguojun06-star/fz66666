@@ -142,7 +142,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
               </Col>
               <Col xs={24} md={6}>
                 <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-                  <Form.Item name="category" label="品类" rules={[{ required: true, message: '必填' }]} style={{ flex: 1, minWidth: 0, marginBottom: 0 }}>
+                  <Form.Item name="category" label="品类" style={{ flex: 1, minWidth: 0, marginBottom: 0 }}>
                     <Select
                       id="category"
                       placeholder="选择"
@@ -268,7 +268,7 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
                 </Form.Item>
               </Col>
               <Col xs={24} md={6}>
-                <Form.Item name="deliveryDate" label="交板日期">
+                <Form.Item name="deliveryDate" label="交板日期" rules={[{ required: true, message: '请选择交板日期' }]}>
                   <UnifiedDatePicker
                     id="deliveryDate"
                     disabled={isFieldLocked((currentStyle as any)?.deliveryDate)}
@@ -280,13 +280,6 @@ const StyleBasicInfoForm: React.FC<StyleBasicInfoFormProps> = ({
                   />
                 </Form.Item>
               </Col>
-              <Col xs={24} md={6}>
-                <Form.Item name="cycle" label="样衣周期[天]">
-                  <InputNumber id="cycle" style={{ width: '100%' }} min={0} disabled={isFieldLocked(currentStyle?.cycle)} />
-                </Form.Item>
-              </Col>
-            </Row>
-            <Row gutter={[16, 0]}>
               <Col xs={24} md={6}>
                 <Form.Item name="remark" label="备注">
                   <Input.TextArea id="remark" rows={1} placeholder="请输入备注" disabled={isFieldLocked((currentStyle as any)?.remark)} />

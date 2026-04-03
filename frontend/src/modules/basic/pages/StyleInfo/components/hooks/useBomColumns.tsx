@@ -324,19 +324,38 @@ export function useBomColumns({
       key: 'usageAmount',
       width: 100,
       render: (text: number, record: StyleBom) => {
-        const row = form.getFieldValue(String(record.id)) || {};
-        const devUsage = row.devUsageAmount ?? record.devUsageAmount;
         const patternUsage = record.patternSizeUsageMap;
-        const hasPatternData = patternUsage && Object.keys(JSON.parse(patternUsage || '{}')).length > 0;
-        const displayValue = hasPatternData ? text : (devUsage ?? text);
+        const hasPatternData = (() => {
+          try { return patternUsage ? Object.keys(JSON.parse(patternUsage)).length > 0 : false; } catch { return false; }
+        })();
         if (!locked && (tableEditable || isEditing(record))) {
           return (
-            <span style={{ color: '#8c8c8c' }}>
-              {displayValue != null ? displayValue : '-'}
-              {hasPatternData && <span style={{ fontSize: 10, marginLeft: 4, color: '#52c41a' }}>(纸样)</span>}
-            </span>
+            <Form.Item
+              noStyle
+              shouldUpdate={(prev, curr) => {
+                const id = String(record.id);
+                return prev?.[id]?.devUsageAmount !== curr?.[id]?.devUsageAmount ||
+                  prev?.[id]?.usageAmount !== curr?.[id]?.usageAmount;
+              }}
+            >
+              {() => {
+                const liveRow = form.getFieldValue(String(record.id)) || {};
+                const liveDevUsage = liveRow.devUsageAmount ?? record.devUsageAmount;
+                const liveUsage = liveRow.usageAmount ?? text;
+                const liveDisplay = hasPatternData ? liveUsage : (liveDevUsage ?? liveUsage);
+                return (
+                  <span style={{ color: '#8c8c8c' }}>
+                    {liveDisplay != null ? liveDisplay : '-'}
+                    {hasPatternData && <span style={{ fontSize: 10, marginLeft: 4, color: '#52c41a' }}>(纸样)</span>}
+                  </span>
+                );
+              }}
+            </Form.Item>
           );
         }
+        const row = form.getFieldValue(String(record.id)) || {};
+        const devUsage = row.devUsageAmount ?? record.devUsageAmount;
+        const displayValue = hasPatternData ? text : (devUsage ?? text);
         const sameTypeRows = data.filter(r => r.materialType === record.materialType && typeof r.usageAmount === 'number' && r.usageAmount > 0);
         const anomalyEl = (() => {
           if (sameTypeRows.length < 2 || !displayValue || displayValue <= 0) return null;

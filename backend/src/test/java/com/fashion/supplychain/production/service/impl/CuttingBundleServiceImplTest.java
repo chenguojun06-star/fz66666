@@ -100,7 +100,7 @@ class CuttingBundleServiceImplTest {
 
         when(productionOrderService.getById("order-1")).thenReturn(order);
         when(cuttingTaskService.createTaskIfAbsent(order)).thenReturn(task);
-        when(cuttingBundleMapper.selectOne(any())).thenReturn(null, lastBundle);
+        when(cuttingBundleMapper.selectOne(any())).thenReturn(null, null, lastBundle);
         when(qrCodeSigner.sign(any())).thenAnswer(inv -> "SIGNED-" + inv.getArgument(0));
         doReturn(0L).when(service).count(any());
         doReturn(true).when(service).saveBatch(any());

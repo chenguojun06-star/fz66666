@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Dropdown, Input, InputNumber, Space, Select, Modal, Upload, Image, Tag, Popover } from 'antd';
+import { App, Button, Dropdown, Input, InputNumber, Space, Select, Modal, Upload, Image, Tag, Popover, Table } from 'antd';
 import { DeleteOutlined, DownOutlined, PlusOutlined } from '@ant-design/icons';
 import { StyleSize, TemplateLibrary } from '@/types/style';
 import api, { sortSizeNames, toNumberSafe } from '@/utils/api';
@@ -30,6 +30,11 @@ type GradingZone = {
   label: string;
   sizes: string[];
   step: number;
+  partKeys?: string[];
+  frontSizes?: string[];
+  frontStep?: number;
+  backSizes?: string[];
+  backStep?: number;
 };
 
 type MatrixRow = {
@@ -188,28 +193,46 @@ const normalizeChunkImageAssignments = (list: MatrixRow[]) => {
   return normalizedRows;
 };
 
-const createGradingZone = (sizes: string[] = [], label = '跳码区'): GradingZone => ({
+const createGradingZone = (
+  sizes: string[] = [],
+  label = '跳码区',
+  partKeys: string[] = [],
+  frontSizes: string[] = [],
+  backSizes: string[] = [],
+): GradingZone => ({
   key: `grading-zone-${Date.now()}-${Math.random()}`,
   label,
   sizes,
   step: 0,
+  partKeys,
+  frontSizes,
+  frontStep: 0,
+  backSizes,
+  backStep: 0,
 });
 
 const normalizeGradingZones = (zones: GradingZone[], sizeColumns: string[]) => {
   const validSizes = new Set(sizeColumns);
-  const used = new Set<string>();
   return zones
     .map((zone, index) => {
-      const nextSizes = zone.sizes.filter((size) => validSizes.has(size) && !used.has(size));
-      nextSizes.forEach((size) => used.add(size));
+      let frontSizes = (zone.frontSizes || []).filter((size) => validSizes.has(size));
+      let backSizes = (zone.backSizes || []).filter((size) => validSizes.has(size));
+      if (frontSizes.length === 0 && backSizes.length === 0 && (zone.sizes || []).length > 0) {
+        const allSizes = (zone.sizes || []).filter((size) => validSizes.has(size));
+        backSizes = allSizes;
+      }
       return {
         key: zone.key || `grading-zone-${index}`,
         label: String(zone.label || `跳码区${index + 1}`),
-        sizes: nextSizes,
+        sizes: zone.sizes || [],
         step: toNumberSafe(zone.step),
+        frontSizes,
+        frontStep: toNumberSafe(zone.frontStep || zone.step),
+        backSizes,
+        backStep: toNumberSafe(zone.backStep || zone.step),
       };
     })
-    .filter((zone) => zone.sizes.length > 0);
+    .filter((zone) => zone.frontSizes.length > 0 || zone.backSizes.length > 0);
 };
 
 const parseGradingRule = (rule: unknown, sizeColumns: string[]) => {
@@ -221,6 +244,10 @@ const parseGradingRule = (rule: unknown, sizeColumns: string[]) => {
         label: String(zone?.label || `跳码区${index + 1}`),
         sizes: Array.isArray(zone?.sizes) ? zone.sizes.map((item: any) => String(item || '').trim()).filter(Boolean) : [],
         step: toNumberSafe(zone?.step),
+        frontSizes: Array.isArray(zone?.frontSizes) ? zone.frontSizes.map((item: any) => String(item || '').trim()).filter(Boolean) : [],
+        frontStep: toNumberSafe(zone?.frontStep),
+        backSizes: Array.isArray(zone?.backSizes) ? zone.backSizes.map((item: any) => String(item || '').trim()).filter(Boolean) : [],
+        backStep: toNumberSafe(zone?.backStep),
       })) : [],
       sizeColumns
     );
@@ -245,6 +272,10 @@ const serializeGradingRule = (row: MatrixRow, sizeColumns: string[]) => {
       label: zone.label,
       sizes: zone.sizes,
       step: toNumberSafe(zone.step),
+      frontSizes: zone.frontSizes,
+      frontStep: toNumberSafe(zone.frontStep),
+      backSizes: zone.backSizes,
+      backStep: toNumberSafe(zone.backStep),
     })),
   });
 };
@@ -280,6 +311,7 @@ const StyleSizeTab: React.FC<Props> = ({
   const [sizeTemplates, setSizeTemplates] = useState<TemplateLibrary[]>([]);
   const [templateLoading, setTemplateLoading] = useState(false);
   const [sizeOptions, setSizeOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
   const { message, modal } = App.useApp();
   const linkedSizeColumns = useMemo(() => normalizeSizeList(linkedSizes), [linkedSizes]);
@@ -595,9 +627,14 @@ const StyleSizeTab: React.FC<Props> = ({
       return { ...row, baseSize, gradingZones: [] };
     }
     const baseValue = toNumberSafe(row.cells[baseSize]?.value);
-    const stepForSize = (sizeName: string) => {
-      const zone = zones.find((item) => item.sizes.includes(sizeName));
-      return toNumberSafe(zone?.step);
+    const stepForSize = (sizeName: string, direction: 'front' | 'back') => {
+      const zone = zones.find((item) => {
+        if (direction === 'front') {
+          return (item.frontSizes || []).includes(sizeName);
+        }
+        return (item.backSizes || []).includes(sizeName);
+      });
+      return toNumberSafe(direction === 'front' ? zone?.frontStep : zone?.backStep);
     };
     const nextCells = { ...row.cells };
     nextCells[baseSize] = { ...(nextCells[baseSize] || { value: 0 }), value: baseValue };
@@ -605,18 +642,20 @@ const StyleSizeTab: React.FC<Props> = ({
       const currentSize = sizeColumns[index];
       const prevSize = sizeColumns[index - 1];
       const prevValue = toNumberSafe(nextCells[prevSize]?.value);
+      const step = stepForSize(currentSize, 'back');
       nextCells[currentSize] = {
         ...(nextCells[currentSize] || { value: 0 }),
-        value: Number((prevValue + stepForSize(currentSize)).toFixed(2)),
+        value: Number((prevValue + step).toFixed(2)),
       };
     }
     for (let index = baseIndex - 1; index >= 0; index -= 1) {
       const currentSize = sizeColumns[index];
       const nextSize = sizeColumns[index + 1];
       const nextValue = toNumberSafe(nextCells[nextSize]?.value);
+      const step = stepForSize(currentSize, 'front');
       nextCells[currentSize] = {
         ...(nextCells[currentSize] || { value: 0 }),
-        value: Number((nextValue - stepForSize(nextSize)).toFixed(2)),
+        value: Number((nextValue - step).toFixed(2)),
       };
     }
     return { ...row, baseSize, gradingZones: zones, cells: nextCells };
@@ -630,8 +669,42 @@ const StyleSizeTab: React.FC<Props> = ({
 
   const openGradingConfig = (row: MatrixRow) => {
     setGradingTargetRowKey(row.key);
-    setGradingDraftBaseSize(row.baseSize || '');
-    setGradingDraftZones(normalizeGradingZones(row.gradingZones || [], sizeColumns));
+    const baseSize = row.baseSize || '';
+    setGradingDraftBaseSize(baseSize);
+    const baseIndex = baseSize ? sizeColumns.indexOf(baseSize) : -1;
+    const defaultFrontSizes = baseIndex > 0 ? sizeColumns.slice(0, baseIndex) : [];
+    const defaultBackSizes = baseIndex >= 0 && baseIndex < sizeColumns.length - 1 ? sizeColumns.slice(baseIndex + 1) : [];
+    const existingZones = normalizeGradingZones(row.gradingZones || [], sizeColumns);
+    if (existingZones.length > 0) {
+      setGradingDraftZones(existingZones.map((z) => ({
+        ...z,
+        frontSizes: (z.frontSizes || []).length > 0 ? z.frontSizes : defaultFrontSizes,
+        backSizes: (z.backSizes || []).length > 0 ? z.backSizes : defaultBackSizes,
+        partKeys: [row.key],
+      })));
+    } else {
+      setGradingDraftZones([
+        createGradingZone([], '1', [row.key], defaultFrontSizes, defaultBackSizes),
+      ]);
+    }
+    setGradingConfigOpen(true);
+  };
+
+  const openBatchGradingConfig = () => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('请先选择要配置的部位');
+      return;
+    }
+    setGradingTargetRowKey('batch');
+    const firstSelectedRow = rows.find((r) => selectedRowKeys.includes(r.key));
+    const baseSize = firstSelectedRow?.baseSize || '';
+    setGradingDraftBaseSize(baseSize);
+    const baseIndex = baseSize ? sizeColumns.indexOf(baseSize) : -1;
+    const frontSizes = baseIndex > 0 ? sizeColumns.slice(0, baseIndex) : [];
+    const backSizes = baseIndex >= 0 && baseIndex < sizeColumns.length - 1 ? sizeColumns.slice(baseIndex + 1) : [];
+    setGradingDraftZones([
+      createGradingZone([], '1', selectedRowKeys.map(String), frontSizes, backSizes),
+    ]);
     setGradingConfigOpen(true);
   };
 
@@ -642,15 +715,37 @@ const StyleSizeTab: React.FC<Props> = ({
       message.error('请先选择样版码');
       return;
     }
-    setRows((prev) => prev.map((row) => (
-      row.key === targetKey
-        ? applyGradingToRow({
-            ...row,
-            baseSize: gradingDraftBaseSize,
-            gradingZones: normalizeGradingZones(gradingDraftZones, sizeColumns),
-          })
-        : row
-    )));
+    if (targetKey === 'batch') {
+      setRows((prev) => prev.map((row) => {
+        const matchingZones = gradingDraftZones.filter((zone) => (zone.partKeys || []).includes(row.key));
+        if (matchingZones.length === 0) return row;
+        return applyGradingToRow({
+          ...row,
+          baseSize: gradingDraftBaseSize,
+          gradingZones: matchingZones.map((z) => ({
+            key: z.key,
+            label: z.label,
+            sizes: z.sizes || [],
+            step: z.step || 0,
+            frontSizes: z.frontSizes || [],
+            frontStep: z.frontStep || 0,
+            backSizes: z.backSizes || [],
+            backStep: z.backStep || 0,
+          })),
+        });
+      }));
+      setSelectedRowKeys([]);
+    } else {
+      setRows((prev) => prev.map((row) => (
+        row.key === targetKey
+          ? applyGradingToRow({
+              ...row,
+              baseSize: gradingDraftBaseSize,
+              gradingZones: normalizeGradingZones(gradingDraftZones, sizeColumns),
+            })
+          : row
+      )));
+    }
     setGradingConfigOpen(false);
     setGradingTargetRowKey('');
   };
@@ -1140,14 +1235,21 @@ const StyleSizeTab: React.FC<Props> = ({
       {
         title: '跳码区',
         dataIndex: 'gradingZones',
-        width: 80,
+        width: 120,
         render: (_: any, record: MatrixRow) => {
-          const summary = normalizeGradingZones(record.gradingZones || [], sizeColumns)
-            .map((zone) => `${zone.label}(${zone.sizes.join('/')}) ±${toNumberSafe(zone.step)}`)
-            .join('；');
+          const zones = normalizeGradingZones(record.gradingZones || [], sizeColumns);
+          const summary = zones.map((zone) => {
+            const frontInfo = (zone.frontSizes || []).length > 0
+              ? `前:${zone.frontSizes.join('/')}↓${toNumberSafe(zone.frontStep)}`
+              : '';
+            const backInfo = (zone.backSizes || []).length > 0
+              ? `后:${zone.backSizes.join('/')}↑${toNumberSafe(zone.backStep)}`
+              : '';
+            return `${zone.label}(${[frontInfo, backInfo].filter(Boolean).join(' ')})`;
+          }).join('；');
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ fontSize: 12, lineHeight: 1.6, color: '#334155' }}>{summary || '-'}</div>
+              <div style={{ fontSize: 11, lineHeight: 1.5, color: '#334155', whiteSpace: 'pre-wrap' }}>{summary || '-'}</div>
               {editableMode ? (
                 <Button size="small" onClick={() => openGradingConfig(record)}>
                   配置跳码区
@@ -1299,8 +1401,17 @@ const StyleSizeTab: React.FC<Props> = ({
       )}
       {!simpleView && (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-xs)' }}>
-             提示：相关文件请在“文件管理”标签页统一上传
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {editMode && !readOnly && selectedRowKeys.length > 0 && (
+              <Button type="primary" onClick={openBatchGradingConfig}>
+                批量配置跳码区 ({selectedRowKeys.length})
+              </Button>
+            )}
+            {editMode && !readOnly && selectedRowKeys.length > 0 && (
+              <Button onClick={() => setSelectedRowKeys([])}>
+                取消选择
+              </Button>
+            )}
           </div>
           <Space>
           {!editMode || readOnly ? (
@@ -1475,6 +1586,21 @@ const StyleSizeTab: React.FC<Props> = ({
           }
           return classes.join(' ');
         }}
+        rowSelection={
+          editMode && !readOnly
+            ? {
+                selectedRowKeys,
+                onChange: (newSelectedRowKeys: React.Key[]) => {
+                  setSelectedRowKeys(newSelectedRowKeys);
+                },
+                selections: [
+                  Table.SELECTION_ALL,
+                  Table.SELECTION_INVERT,
+                  Table.SELECTION_NONE,
+                ],
+              }
+            : undefined
+        }
       />
 
       <ResizableModal
@@ -1505,15 +1631,12 @@ const StyleSizeTab: React.FC<Props> = ({
 
       <ResizableModal
         open={gradingConfigOpen}
-        title="配置跳码区"
+        title={gradingTargetRowKey === 'batch' ? `批量配置跳码区 (${selectedRowKeys.length}个部位)` : '配置跳码区'}
         onCancel={() => {
           setGradingConfigOpen(false);
           setGradingTargetRowKey('');
         }}
-        onOk={applyGradingDraft}
-        okText="保存并带出"
-        cancelText="取消"
-        confirmLoading={saving}
+        footer={null}
         width="60vw"
         minWidth={720}
         initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.62 : 520}
@@ -1522,80 +1645,135 @@ const StyleSizeTab: React.FC<Props> = ({
         scaleWithViewport
       >
         <div style={{ display: 'grid', gap: 16 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '120px minmax(0, 1fr)', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '120px minmax(0, 1fr) auto', alignItems: 'center', gap: 12 }}>
             <div style={{ fontWeight: 600 }}>样版码</div>
             <Select
               value={gradingDraftBaseSize || undefined}
               allowClear
               options={sizeColumns.map((size) => ({ value: size, label: size }))}
-              onChange={(value) => setGradingDraftBaseSize(String(value || ''))}
+              onChange={(value) => {
+                const newBaseSize = String(value || '');
+                setGradingDraftBaseSize(newBaseSize);
+                const baseIndex = newBaseSize ? sizeColumns.indexOf(newBaseSize) : -1;
+                const newFrontSizes = baseIndex > 0 ? sizeColumns.slice(0, baseIndex) : [];
+                const newBackSizes = baseIndex >= 0 ? sizeColumns.slice(baseIndex + 1) : [...sizeColumns];
+                setGradingDraftZones((prev) => prev.map((zone) => ({
+                  ...zone,
+                  frontSizes: newFrontSizes,
+                  backSizes: newBackSizes,
+                })));
+              }}
             />
+            <Button type="primary" onClick={applyGradingDraft}>
+              保存并带出
+            </Button>
           </div>
           <div style={{ color: '#64748b', fontSize: 12, lineHeight: 1.7 }}>
-            跳码区直接使用当前尺寸表里的码数，不再单独搞第二套码数。样版码不写死，由你自己指定；再给每个区勾选要覆盖的码数和跳码值，系统按区间推算。
+            样版码为基准码，跳码值相对于样版码递增/递减。选择样版码后自动分割前后码数。
           </div>
-          <div style={{ display: 'grid', gap: 12 }}>
+          <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '80px 140px 1fr 120px 1fr 120px 40px', gap: 0, background: '#f8fafc', fontWeight: 600, fontSize: 13, alignItems: 'center' }}>
+              <div style={{ padding: '12px', borderRight: '1px solid #e2e8f0' }}>跳码区</div>
+              <div style={{ padding: '12px', borderRight: '1px solid #e2e8f0' }}>部位</div>
+              <div style={{ padding: '12px', borderRight: '1px solid #e2e8f0' }}>码数(前)</div>
+              <div style={{ padding: '12px', borderRight: '1px solid #e2e8f0' }}>跳码</div>
+              <div style={{ padding: '12px', borderRight: '1px solid #e2e8f0' }}>码数(后)</div>
+              <div style={{ padding: '12px', borderRight: '1px solid #e2e8f0' }}>跳码</div>
+              <div style={{ padding: '12px' }}>操作</div>
+            </div>
             {gradingDraftZones.map((zone, index) => (
-              <div key={zone.key} style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 12, background: '#fff' }}>
-                <div style={{ display: 'grid', gap: 10 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.7fr auto', gap: 10, alignItems: 'center' }}>
-                    <Input
-                      value={zone.label}
-                      placeholder={`跳码区${index + 1}`}
-                      onChange={(e) => setGradingDraftZones((prev) => prev.map((item) => (item.key === zone.key ? { ...item, label: e.target.value } : item)))}
-                    />
-                    <Space.Compact style={{ width: '100%' }}>
-                      <Button disabled style={{ width: 64 }}>跳码</Button>
-                      <InputNumber
-                        value={zone.step}
-                        min={0}
-                        step={0.1}
-                        style={{ width: '100%' }}
-                        onChange={(value) => setGradingDraftZones((prev) => prev.map((item) => (item.key === zone.key ? { ...item, step: toNumberSafe(value) } : item)))}
-                      />
-                    </Space.Compact>
-                    <Button
-                      danger
-                      onClick={() => setGradingDraftZones((prev) => prev.filter((item) => item.key !== zone.key))}
-                      disabled={gradingDraftZones.length <= 1}
-                    >
-                      删除
-                    </Button>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-                    <div style={{ fontSize: 12, color: '#64748b' }}>
-                      这个跳码区包含的码数：{zone.sizes.length ? zone.sizes.join(' / ') : '未选择'}
-                    </div>
-                    <Space size={8} wrap>
-                      <Button size="small" type="link" onClick={() => setGradingDraftZones((prev) => prev.map((item) => (item.key === zone.key ? { ...item, sizes: [...sizeColumns] } : item)))}>
-                        全选当前码数
-                      </Button>
-                      <Button size="small" type="link" onClick={() => setGradingDraftZones((prev) => prev.map((item) => (item.key === zone.key ? { ...item, sizes: [] } : item)))}>
-                        清空
-                      </Button>
-                    </Space>
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {sizeColumns.map((size) => {
-                      const checked = zone.sizes.includes(size);
-                      return (
-                        <Tag
-                          key={`${zone.key}-${size}`}
-                          color={checked ? 'blue' : undefined}
-                          style={{ marginInlineEnd: 0, cursor: 'pointer', userSelect: 'none' }}
-                          onClick={() => setGradingDraftZones((prev) => prev.map((item) => {
-                            if (item.key !== zone.key) return item;
-                            const nextSizes = item.sizes.includes(size)
-                              ? item.sizes.filter((current) => current !== size)
-                              : [...item.sizes, size];
-                            return { ...item, sizes: sortSizeNames(nextSizes) };
-                          }))}
-                        >
-                          {size}
-                        </Tag>
-                      );
-                    })}
-                  </div>
+              <div key={zone.key} style={{ display: 'grid', gridTemplateColumns: '80px 140px 1fr 120px 1fr 120px 40px', gap: 0, borderTop: '1px solid #e2e8f0', background: '#fff', alignItems: 'center' }}>
+                <div style={{ padding: '12px', borderRight: '1px solid #e2e8f0', display: 'flex', alignItems: 'center' }}>
+                  <Input
+                    value={zone.label}
+                    size="small"
+                    placeholder={`${index + 1}`}
+                    onChange={(e) => setGradingDraftZones((prev) => prev.map((item) => (item.key === zone.key ? { ...item, label: e.target.value } : item)))}
+                  />
+                </div>
+                <div style={{ padding: '12px', borderRight: '1px solid #e2e8f0' }}>
+                  <Select
+                    mode="multiple"
+                    size="small"
+                    value={zone.partKeys || []}
+                    onChange={(values) => setGradingDraftZones((prev) => prev.map((item) => (item.key === zone.key ? { ...item, partKeys: values } : item)))}
+                    options={rows.map((r) => ({ value: r.key, label: r.partName || '未命名' }))}
+                    placeholder="部位"
+                    style={{ width: '100%', height: 32 }}
+                    maxTagCount="responsive"
+                  />
+                </div>
+                <div style={{ padding: '12px', borderRight: '1px solid #e2e8f0', display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {sizeColumns.map((size) => {
+                    const checked = (zone.frontSizes || []).includes(size);
+                    return (
+                      <Tag
+                        key={`front-${zone.key}-${size}`}
+                        color={checked ? 'blue' : 'default'}
+                        style={{ margin: 0, cursor: 'pointer', userSelect: 'none', opacity: checked ? 1 : 0.5 }}
+                        onClick={() => setGradingDraftZones((prev) => prev.map((item) => {
+                          if (item.key !== zone.key) return item;
+                          const nextSizes = (item.frontSizes || []).includes(size)
+                            ? (item.frontSizes || []).filter((s) => s !== size)
+                            : [...(item.frontSizes || []), size];
+                          return { ...item, frontSizes: nextSizes };
+                        }))}
+                      >
+                        {size}
+                      </Tag>
+                    );
+                  })}
+                </div>
+                <div style={{ padding: '12px', borderRight: '1px solid #e2e8f0', display: 'flex', alignItems: 'center' }}>
+                  <InputNumber
+                    size="small"
+                    value={zone.frontStep}
+                    min={0}
+                    step={0.1}
+                    style={{ width: '100%', height: 32 }}
+                    onChange={(value) => setGradingDraftZones((prev) => prev.map((item) => (item.key === zone.key ? { ...item, frontStep: toNumberSafe(value) } : item)))}
+                  />
+                </div>
+                <div style={{ padding: '12px', borderRight: '1px solid #e2e8f0', display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {sizeColumns.map((size) => {
+                    const checked = (zone.backSizes || []).includes(size);
+                    return (
+                      <Tag
+                        key={`back-${zone.key}-${size}`}
+                        color={checked ? 'blue' : 'default'}
+                        style={{ margin: 0, cursor: 'pointer', userSelect: 'none', opacity: checked ? 1 : 0.5 }}
+                        onClick={() => setGradingDraftZones((prev) => prev.map((item) => {
+                          if (item.key !== zone.key) return item;
+                          const nextSizes = (item.backSizes || []).includes(size)
+                            ? (item.backSizes || []).filter((s) => s !== size)
+                            : [...(item.backSizes || []), size];
+                          return { ...item, backSizes: nextSizes };
+                        }))}
+                      >
+                        {size}
+                      </Tag>
+                    );
+                  })}
+                </div>
+                <div style={{ padding: '12px', borderRight: '1px solid #e2e8f0', display: 'flex', alignItems: 'center' }}>
+                  <InputNumber
+                    size="small"
+                    value={zone.backStep}
+                    min={0}
+                    step={0.1}
+                    style={{ width: '100%', height: 32 }}
+                    onChange={(value) => setGradingDraftZones((prev) => prev.map((item) => (item.key === zone.key ? { ...item, backStep: toNumberSafe(value) } : item)))}
+                  />
+                </div>
+                <div style={{ padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Button
+                    size="small"
+                    danger
+                    type="text"
+                    icon={<DeleteOutlined />}
+                    onClick={() => setGradingDraftZones((prev) => prev.filter((item) => item.key !== zone.key))}
+                    disabled={gradingDraftZones.length <= 1}
+                  />
                 </div>
               </div>
             ))}
@@ -1603,7 +1781,7 @@ const StyleSizeTab: React.FC<Props> = ({
           <Button
             type="dashed"
             icon={<PlusOutlined />}
-            onClick={() => setGradingDraftZones((prev) => [...prev, createGradingZone([], `跳码区${prev.length + 1}`)])}
+            onClick={() => setGradingDraftZones((prev) => [...prev, createGradingZone([], `${prev.length + 1}`, [], [], [...sizeColumns])])}
           >
             新增跳码区
           </Button>

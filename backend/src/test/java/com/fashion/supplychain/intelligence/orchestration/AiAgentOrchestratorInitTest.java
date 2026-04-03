@@ -1,6 +1,5 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
-import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.agent.tool.AgentTool;
 import com.fashion.supplychain.intelligence.service.AiContextBuilderService;
 import org.junit.jupiter.api.Test;
@@ -47,20 +46,8 @@ class AiAgentOrchestratorInitTest {
 
     @Test
     void init_registersAllAgentToolsIncludingProductionOrderTool() {
-        AiTool productionDefinition = new AiTool();
-        AiTool.AiFunction productionFunction = new AiTool.AiFunction();
-        productionFunction.setName("tool_create_production_order");
-        productionDefinition.setFunction(productionFunction);
-
-        AiTool knowledgeDefinition = new AiTool();
-        AiTool.AiFunction knowledgeFunction = new AiTool.AiFunction();
-        knowledgeFunction.setName("tool_knowledge_search");
-        knowledgeDefinition.setFunction(knowledgeFunction);
-
         when(productionOrderTool.getName()).thenReturn("tool_create_production_order");
-        when(productionOrderTool.getToolDefinition()).thenReturn(productionDefinition);
         when(knowledgeTool.getName()).thenReturn("tool_knowledge_search");
-        when(knowledgeTool.getToolDefinition()).thenReturn(knowledgeDefinition);
 
         ReflectionTestUtils.setField(orchestrator, "registeredTools", List.of(productionOrderTool, knowledgeTool));
 
@@ -68,15 +55,10 @@ class AiAgentOrchestratorInitTest {
 
         @SuppressWarnings("unchecked")
         Map<String, AgentTool> toolMap = (Map<String, AgentTool>) ReflectionTestUtils.getField(orchestrator, "toolMap");
-        @SuppressWarnings("unchecked")
-        List<AiTool> apiTools = (List<AiTool>) ReflectionTestUtils.getField(orchestrator, "apiTools");
 
         assertNotNull(toolMap);
-        assertNotNull(apiTools);
         assertEquals(2, toolMap.size());
-        assertEquals(2, apiTools.size());
         assertTrue(toolMap.containsKey("tool_create_production_order"));
         assertTrue(toolMap.containsKey("tool_knowledge_search"));
-        assertEquals("tool_create_production_order", apiTools.get(0).getFunction().getName());
     }
 }

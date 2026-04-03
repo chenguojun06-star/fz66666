@@ -6,6 +6,7 @@ import com.fashion.supplychain.production.helper.*;
 import com.fashion.supplychain.production.service.*;
 import com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
+import com.fashion.supplychain.websocket.service.WebSocketService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -63,6 +64,15 @@ class ProductionScanExecutorTest {
 
     @Mock
     private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
+
+    @Mock
+    private ProductionScanStageSupport stageSupport;
+
+    @Mock
+    private ProcessParentMappingService processParentMappingService;
+
+    @Mock
+    private WebSocketService webSocketService;
 
     @InjectMocks
     private ProductionScanExecutor executor;

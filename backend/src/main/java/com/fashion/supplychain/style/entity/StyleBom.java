@@ -47,6 +47,11 @@ public class StyleBom {
     private String materialType;
 
     /**
+     * 分组名称（如：上衣、裤子、亲子装-大人款、亲子装-儿童款）
+     */
+    private String groupName;
+
+    /**
      * 颜色
      */
     private String color;
@@ -67,6 +72,11 @@ public class StyleBom {
      * 单件用量
      */
     private BigDecimal usageAmount;
+
+    /**
+     * 开发用量（开发阶段预估用量，输入后自动带入单件用量）
+     */
+    private BigDecimal devUsageAmount;
 
     /**
      * 码数用量配比（JSON，格式：{"S":1.5,"M":1.6,"L":1.7}，为空则统一用 usageAmount）

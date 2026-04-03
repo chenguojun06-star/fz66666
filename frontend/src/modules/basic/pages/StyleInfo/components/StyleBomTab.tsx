@@ -1761,28 +1761,28 @@ const StyleBomTab: React.FC<Props> = ({
               }}
             >
               {/* 分组标题栏 */}
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '12px 16px',
-                  background: 'var(--color-bg-layout)',
-                  borderBottom: '1px solid var(--color-border)',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <Tag
-                    color={group.isDefault ? 'default' : 'blue'}
-                    style={{ margin: 0, fontSize: 14, padding: '4px 12px' }}
-                  >
-                    {group.groupName}
-                  </Tag>
-                  <span style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>
-                    {group.items.length} 项物料
-                  </span>
-                </div>
-                {!group.isDefault && (
+              {!group.isDefault && (
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '12px 16px',
+                    background: 'var(--color-bg-layout)',
+                    borderBottom: '1px solid var(--color-border)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <Tag
+                      color="blue"
+                      style={{ margin: 0, fontSize: 14, padding: '4px 12px' }}
+                    >
+                      {group.groupName}
+                    </Tag>
+                    <span style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>
+                      {group.items.length} 项物料
+                    </span>
+                  </div>
                   <Button
                     size="small"
                     danger
@@ -1792,8 +1792,8 @@ const StyleBomTab: React.FC<Props> = ({
                   >
                     删除分组
                   </Button>
-                )}
-              </div>
+                </div>
+              )}
               {/* 分组表格 */}
               <ResizableTable
                 components={{

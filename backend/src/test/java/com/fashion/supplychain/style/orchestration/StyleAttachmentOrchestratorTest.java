@@ -53,12 +53,11 @@ class StyleAttachmentOrchestratorTest {
     }
 
     @Test
-    void list_styleNoProvided_styleNotFound_throwsNoSuchElement() {
+    void list_styleNoProvided_styleNotFound_returnsEmptyList() {
         when(styleInfoService.getOne(any(), eq(false))).thenReturn(null); // 款号不存在
 
-        assertThatThrownBy(() -> orchestrator.list(null, "FZ001", "pattern"))
-                .isInstanceOf(NoSuchElementException.class)
-                .hasMessageContaining("款号不存在");
+        List<StyleAttachment> result = orchestrator.list(null, "FZ001", "pattern");
+        assertThat(result).isEmpty();
     }
 
     @Test

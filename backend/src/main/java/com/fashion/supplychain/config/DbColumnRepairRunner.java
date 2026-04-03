@@ -129,6 +129,8 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                     "VARCHAR(100) DEFAULT NULL COMMENT '物料成分，优先从面辅料资料带入' ");
             repaired += ensureColumn(conn, schema, "t_style_bom", "fabric_weight",
                     "VARCHAR(50) DEFAULT NULL COMMENT '克重'");
+            repaired += ensureColumn(conn, schema, "t_style_bom", "group_name",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '分组名称（如：上衣、裤子、亲子装-大人款）'");
             repaired += ensureColumn(conn, schema, "t_style_bom", "size_usage_map",
                     "TEXT DEFAULT NULL COMMENT '码数用量配比(JSON，格式：{\"S\":1.5,\"M\":1.6,\"L\":1.7}，为空则统一用usageAmount)'");
             repaired += ensureColumn(conn, schema, "t_style_bom", "pattern_size_usage_map",
@@ -139,6 +141,8 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                     "VARCHAR(20) DEFAULT NULL COMMENT '纸样录入单位'");
             repaired += ensureColumn(conn, schema, "t_style_bom", "conversion_rate",
                     "DECIMAL(10,4) DEFAULT NULL COMMENT '换算系数：1个纸样录入单位=x个BOM单位'");
+            repaired += ensureColumn(conn, schema, "t_style_bom", "dev_usage_amount",
+                    "DECIMAL(18,4) DEFAULT NULL COMMENT '开发用量（开发阶段预估用量，输入后自动带入单件用量）'");
             repaired += ensureColumn(conn, schema, "t_style_size", "image_urls",
                     "TEXT DEFAULT NULL COMMENT '部位参考图片URLs(JSON数组)' ");
             repaired += ensureColumn(conn, schema, "t_style_size", "group_name",
