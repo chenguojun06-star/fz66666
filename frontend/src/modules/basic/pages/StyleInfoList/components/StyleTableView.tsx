@@ -561,7 +561,7 @@ const buildConfirmStage: StageBuilder = (record) => {
     details: buildStageDetails(
       record.sampleReviewer ? `审核人：${String(record.sampleReviewer)}` : false,
       record.sampleReviewComment ? `审核意见：${String(record.sampleReviewComment)}` : false,
-      reviewStatus ? `审核状态：${reviewStatus}` : '审核状态待更新',
+      reviewStatus ? `审核状态：${getReviewStatusLabel(reviewStatus)}` : '审核状态待更新',
       reviewPassed ? (inboundCompleted ? '入库状态：已入库' : '入库状态：待入库') : false
     ),
   };
@@ -1633,11 +1633,15 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                         审核意见：{String(selectedStage.record.sampleReviewComment)}
                       </div>
                     ) : null}
-                    {!selectedStage.record.sampleReviewComment && selectedStage.stage.details.map((item) => (
-                      <div key={item} className="style-smart-stage-modal__detail-item">
-                        {item}
+                    {!selectedStage.record.sampleReviewComment && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', alignItems: 'center' }}>
+                        {selectedStage.stage.details.map((item) => (
+                          <span key={item} className="style-smart-stage-modal__detail-item">
+                            {item}
+                          </span>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
                 ) : null}
               </div>
