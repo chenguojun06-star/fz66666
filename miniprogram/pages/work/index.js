@@ -583,6 +583,13 @@ Page({
     }, 500);
   },
 
+  /** 卡片折叠/展开 */
+  onCardToggle(e) {
+    const index = e.currentTarget.dataset.index;
+    const cur = this.data.orders.list[index]?.expanded;
+    this.setData({ [`orders.list[${index}].expanded`]: !cur });
+  },
+
   /** 封面图加载失败（COS 404）→ 清空 URL，显示"暂无\n图片"占位 */
   onCoverImageError(e) {
     const idx = Number(e.currentTarget.dataset.index);

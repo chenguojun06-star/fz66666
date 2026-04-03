@@ -234,8 +234,8 @@ page {
 }
 
 .item-cover-box {
-  width: 55px;
-  height: 55px;
+  width: 80px;
+  height: 80px;
   border-radius: var(--radius-md);
   overflow: hidden;
   flex-shrink: 0;
@@ -564,3 +564,104 @@ page {
 .bundle-btn-cancel { background:#f4f6fb; color:#666; }
 .bundle-btn-confirm { background:var(--color-primary,#4f7ef8); color:#fff; }
 .bundle-btn-confirm.btn-loading { opacity:.6; }
+
+/* ===== 折叠卡片新样式 ===== */
+.item-header {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.item-header-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.item-header-sub {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.header-style-no {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.header-sep {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.header-delivery {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.header-remain-days {
+  font-size: 11px;
+  padding: 1px 6px;
+}
+
+.header-progress-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.header-progress-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--color-border-light, #e8eaf0);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.header-progress-bar .progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.header-progress-bar.progress-completed .progress-fill {
+  background: linear-gradient(90deg, #52c41a 0%, #38a169 100%);
+}
+
+.header-progress-pct {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-primary, #4f7ef8);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.collapse-arrow {
+  font-size: 16px;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+  align-self: center;
+  transition: transform 0.25s;
+  padding: 4px 2px;
+}
+
+.collapse-arrow.collapse-up {
+  transform: rotate(180deg);
+}
+
+.item-collapse-body {
+  border-top: 1px solid var(--color-border-light, #e8eaf0);
+  margin-top: 10px;
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

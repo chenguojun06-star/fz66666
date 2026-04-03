@@ -76,14 +76,15 @@
 
       <view wx:if="{{orders.list.length === 0 && !orders.loading}}" class="hint">暂无数据</view>
         <view wx:for="{{orders.list}}" wx:key="id" class="list-item {{item.isClosed ? 'list-item-closed' : ''}} {{highlightOrderNo && item.orderNo === highlightOrderNo ? 'list-item-highlight' : ''}} {{item.remainDaysClass === 'days-overdue' ? 'list-item-overdue' : ''}}">
-          <view class="item-body">
-            <!-- 左侧款式图片 -->
+          <!-- ===== 始终可见的头部（点击折叠/展开） ===== -->
+          <view class="item-header" bindtap="onCardToggle" data-index="{{index}}">
+            <!-- 左侧：款式图片（放大版） -->
             <view class="item-cover-box">
               <image wx:if="{{item.styleCoverUrl}}" class="item-cover" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load data-index="{{index}}" binderror="onCoverImageError" />
               <view wx:else class="item-cover-empty">暂无\n图片</view>
             </view>
-            <!-- 右侧信息区 -->
-            <view class="item-info">
+            <!-- 中间：核心信息 -->
+            <view class="item-header-info">
               <view class="item-head">
                 <view class="item-title {{item.isClosed ? 'item-title-closed' : ''}}">
                   {{item.orderNo || '-'}}
@@ -92,67 +93,70 @@
                   <text wx:if="{{item.remainDaysClass === 'days-overdue'}}" class="overdue-indicator">⏰延期</text>
                 </view>
                 <view class="item-tags">
-                  <!-- 已完成显示"已完成"标签，否则显示当前工序 -->
                   <text wx:if="{{item.isClosed}}" class="tag tag-completed">已完成</text>
                   <text wx:elif="{{item.currentProcessName}}" class="tag {{item.currentProcessName === '裁剪' ? 'tag-process' : ''}}">{{item.currentProcessName}}</text>
                 </view>
               </view>
-              <view class="item-meta">
-                <text class="meta-label">款号</text>
-                <text class="meta-value">{{item.styleNo || '-'}}</text>
-                <text class="meta-sep">|</text>
-                <text class="meta-label">数量</text>
-                <text class="meta-value meta-value-bold">{{item.sizeTotal ? item.sizeTotal : (item.orderQuantity || 0)}}</text>
-                <text class="meta-sep">|</text>
-                <text class="meta-label">完成</text>
-                <text class="meta-value meta-value-bold">{{item.completedQuantity || 0}}</text>
+              <!-- 款号 · 交期（折叠状态也可见） -->
+              <view class="item-header-sub">
+                <text class="header-style-no">{{item.styleNo || '-'}}</text>
+                <text class="header-sep">·</text>
+                <text class="header-delivery">{{item.deliveryDateStr || '交期待定'}}</text>
+                <text wx:if="{{item.remainDaysText}}" class="delivery-days header-remain-days {{item.remainDaysClass}}">{{item.remainDaysText}}</text>
               </view>
-              <view class="item-meta">
-                <text class="meta-label">工厂</text>
-                <text class="meta-value">{{item.factoryName || '-'}}</text>
-                <text wx:if="{{item.factoryTypeText}}" class="meta-sep">|</text>
-                <text wx:if="{{item.factoryTypeText}}" class="meta-value">{{item.factoryTypeText}}</text>
+              <!-- 进度条 -->
+              <view class="header-progress-row">
+                <view class="header-progress-bar {{item.isClosed ? 'progress-completed' : ''}}">
+                  <view class="progress-fill" style="width: {{item.productionProgress || 0}}%"></view>
+                </view>
+                <text class="header-progress-pct">{{item.productionProgress || 0}}%</text>
               </view>
             </view>
+            <!-- 右侧：折叠箭头 -->
+            <text class="collapse-arrow {{item.expanded ? 'collapse-up' : ''}}">▾</text>
           </view>
-          <!-- 进度条作为分隔线 -->
-          <view class="progress-divider">
-            <view class="progress-bar {{item.isClosed ? 'progress-completed' : ''}}">
-              <view class="progress-fill" style="width: {{item.productionProgress || 0}}%"></view>
+          <!-- ===== 折叠明细（点击展开后显示） ===== -->
+          <view wx:if="{{item.expanded}}" class="item-collapse-body">
+            <view class="item-meta">
+              <text class="meta-label">数量</text>
+              <text class="meta-value meta-value-bold">{{item.sizeTotal ? item.sizeTotal : (item.orderQuantity || 0)}}</text>
+              <text class="meta-sep">|</text>
+              <text class="meta-label">完成</text>
+              <text class="meta-value meta-value-bold">{{item.completedQuantity || 0}}</text>
             </view>
-            <text class="progress-percent">{{item.productionProgress || 0}}%</text>
-          </view>
-          <!-- 码数明细（紧凑版） -->
-          <view wx:if="{{item.colorGroups && item.colorGroups.length}}" class="size-compact">
-            <view class="size-compact-header">
-              <text class="size-compact-label">码数</text>
-              <text wx:for="{{item.allSizes}}" wx:key="*this" wx:for-item="size" class="size-compact-cell">{{size}}</text>
+            <view class="item-meta">
+              <text class="meta-label">工厂</text>
+              <text class="meta-value">{{item.factoryName || '-'}}</text>
+              <text wx:if="{{item.factoryTypeText}}" class="meta-sep">|</text>
+              <text wx:if="{{item.factoryTypeText}}" class="meta-value">{{item.factoryTypeText}}</text>
             </view>
-            <block wx:for="{{item.colorGroups}}" wx:key="color" wx:for-item="group">
+            <!-- 码数明细（紧凑版） -->
+            <view wx:if="{{item.colorGroups && item.colorGroups.length}}" class="size-compact">
+              <view class="size-compact-header">
+                <text class="size-compact-label">码数</text>
+                <text wx:for="{{item.allSizes}}" wx:key="*this" wx:for-item="size" class="size-compact-cell">{{size}}</text>
+              </view>
+              <block wx:for="{{item.colorGroups}}" wx:key="color" wx:for-item="group">
+                <view class="size-compact-row">
+                  <text class="size-compact-label">{{group.color || '-'}}</text>
+                  <text wx:for="{{group.sizeQtyList}}" wx:key="index" wx:for-item="qty" class="size-compact-cell">{{qty}}</text>
+                </view>
+              </block>
+            </view>
+            <view wx:elif="{{item.sizeList && item.sizeList.length}}" class="size-compact">
               <view class="size-compact-row">
-                <text class="size-compact-label">{{group.color || '-'}}</text>
-                <text wx:for="{{group.sizeQtyList}}" wx:key="index" wx:for-item="qty" class="size-compact-cell">{{qty}}</text>
+                <text class="size-compact-label">码数</text>
+                <text wx:for="{{item.sizeList}}" wx:key="*this" wx:for-item="size" class="size-compact-cell">{{size}}</text>
               </view>
-            </block>
-          </view>
-          <view wx:elif="{{item.sizeList && item.sizeList.length}}" class="size-compact">
-            <view class="size-compact-row">
-              <text class="size-compact-label">码数</text>
-              <text wx:for="{{item.sizeList}}" wx:key="*this" wx:for-item="size" class="size-compact-cell">{{size}}</text>
+              <view class="size-compact-row">
+                <text class="size-compact-label">数量</text>
+                <text wx:for="{{item.sizeQtyList}}" wx:key="index" wx:for-item="qty" class="size-compact-cell size-compact-qty">{{qty}}</text>
+              </view>
             </view>
-            <view class="size-compact-row">
-              <text class="size-compact-label">数量</text>
-              <text wx:for="{{item.sizeQtyList}}" wx:key="index" wx:for-item="qty" class="size-compact-cell size-compact-qty">{{qty}}</text>
+            <!-- 裁剪菲号操作（仅裁剪tab） -->
+            <view wx:if="{{activeTab === 'cutting'}}" class="item-actions">
+              <view class="action-btn action-btn-primary" bindtap="onGenerateBundle" data-order="{{item}}">&#9986;&#65039; 生成菲号</view>
             </view>
-          </view>
-          <!-- 交期信息 -->
-          <view wx:if="{{item.deliveryDateStr}}" class="delivery-row">
-            <text class="delivery-label">交期：{{item.deliveryDateStr}}</text>
-            <text class="delivery-days {{item.remainDaysClass}}">{{item.remainDaysText}}</text>
-          </view>
-          <!-- 裁剪菲号操作（仅裁剪tab） -->
-          <view wx:if="{{activeTab === 'cutting'}}" class="item-actions">
-            <view class="action-btn action-btn-primary" bindtap="onGenerateBundle" data-order="{{item}}">&#9986;&#65039; 生成菲号</view>
           </view>
         </view>
 
