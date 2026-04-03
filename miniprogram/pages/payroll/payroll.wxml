@@ -48,7 +48,7 @@
       <text class="date-label">开始</text>
       <date-picker value="{{startDate}}" bindchange="onStartDateChange" />
     </view>
-    <view class="date-col" style="margin-top: 10px;">
+    <view class="date-col">
       <text class="date-label">结束</text>
       <date-picker value="{{endDate}}" bindchange="onEndDateChange" />
     </view>

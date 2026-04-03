@@ -105,12 +105,26 @@
 .custom-date {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
   margin: 0 24rpx 24rpx;
   gap: 16rpx;
 }
 
-.date-picker {
+.date-col {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.date-label {
+  font-size: 26rpx;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  padding-left: 4rpx;
+}
+
+.date-picker {
   padding: 20rpx;
   background: var(--color-bg-card);
   border-radius: var(--radius-md);
