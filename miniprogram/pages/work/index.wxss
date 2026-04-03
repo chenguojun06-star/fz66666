@@ -203,12 +203,12 @@ page {
 .list-item {
   display: flex;
   flex-direction: column;
-  padding: 8px;
+  padding: 10px 12px;
   background: var(--color-bg-card);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  margin-bottom: 6px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  margin-bottom: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .list-item:last-child {
@@ -226,6 +226,7 @@ page {
 
 .list-item-overdue {
   border-left: 3px solid #ff4d4f;
+  background: #fffafa;
 }
 
 .item-body {
@@ -569,7 +570,7 @@ page {
 .item-header {
   display: flex;
   flex-direction: row;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
 }
 
@@ -606,7 +607,10 @@ page {
 
 .header-remain-days {
   font-size: 11px;
-  padding: 1px 6px;
+  font-weight: 600;
+  padding: 0 !important;
+  background: transparent !important;
+  border-radius: 0 !important;
 }
 
 .header-progress-row {

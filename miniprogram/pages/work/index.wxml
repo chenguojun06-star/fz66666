@@ -90,7 +90,6 @@
                   {{item.orderNo || '-'}}
                   <text wx:if="{{item.plateTypeTagText}}" class="order-tag order-tag-plate">{{item.plateTypeTagText}}</text>
                   <text wx:if="{{item.urgencyTagText}}" class="order-tag {{item.urgencyTagText === '急' ? 'order-tag-urgent' : 'order-tag-normal'}}">{{item.urgencyTagText}}</text>
-                  <text wx:if="{{item.remainDaysClass === 'days-overdue'}}" class="overdue-indicator">⏰延期</text>
                 </view>
                 <view class="item-tags">
                   <text wx:if="{{item.isClosed}}" class="tag tag-completed">已完成</text>
@@ -102,7 +101,7 @@
                 <text class="header-style-no">{{item.styleNo || '-'}}</text>
                 <text class="header-sep">·</text>
                 <text class="header-delivery">{{item.deliveryDateStr || '交期待定'}}</text>
-                <text wx:if="{{item.remainDaysText}}" class="delivery-days header-remain-days {{item.remainDaysClass}}">{{item.remainDaysText}}</text>
+                <text wx:if="{{item.remainDaysText}}" class="header-remain-days {{item.remainDaysClass}}">{{item.remainDaysText}}</text>
               </view>
               <!-- 进度条 -->
               <view class="header-progress-row">
