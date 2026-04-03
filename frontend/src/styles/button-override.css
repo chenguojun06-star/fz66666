@@ -1,5 +1,5 @@
 /* ============================================
-   按钮统一样式覆盖 - 全站胶囊形绿色主题
+   按钮统一样式覆盖 - 全站圆角矩形（6px）
    ============================================ */
 
 /* ========== Ant Design 按钮全局覆盖 ========== */
@@ -8,7 +8,7 @@
 .ant-btn:not(.ant-btn-icon-only) {
   height: 32px !important;
   padding: 0 16px !important;
-  border-radius: 999px !important;
+  border-radius: 6px !important;
   font-size: 14px !important;
   line-height: 30px !important;
   font-weight: 500 !important;
@@ -19,7 +19,7 @@
   padding: 0 8px !important;
   font-size: 12px !important;
   line-height: 22px !important;
-  border-radius: 999px !important;
+  border-radius: 6px !important;
 }
 
 .ant-btn.ant-btn-lg:not(.ant-btn-icon-only) {
@@ -27,7 +27,7 @@
   padding: 0 20px !important;
   font-size: 14px !important;
   line-height: 34px !important;
-  border-radius: 999px !important;
+  border-radius: 6px !important;
 }
 
 /* 主按钮 - 镂空胶囊形（白底+彩色边框） */
@@ -193,7 +193,7 @@
 
 /* 图标按钮 */
 .ant-btn-icon-only {
-  border-radius: 50% !important; /* 圆形 */
+  border-radius: 6px !important; /* 圆角矩形 */
   width: auto !important;
   height: auto !important;
   padding: 8px !important;
@@ -231,11 +231,11 @@
 }
 
 .ant-space-compact .ant-btn:first-child:not(:last-child) {
-  border-radius: 999px 0 0 999px !important;
+  border-radius: 6px 0 0 6px !important;
 }
 
 .ant-space-compact .ant-btn:last-child:not(:first-child) {
-  border-radius: 0 999px 999px 0 !important;
+  border-radius: 0 6px 6px 0 !important;
 }
 
 /* Modal 底部按钮 */
@@ -261,15 +261,15 @@
 }
 
 .ant-btn-group .ant-btn:first-child {
-  border-radius: 999px 0 0 999px !important;
+  border-radius: 6px 0 0 6px !important;
 }
 
 .ant-btn-group .ant-btn:last-child {
-  border-radius: 0 999px 999px 0 !important;
+  border-radius: 0 6px 6px 0 !important;
 }
 
 .ant-btn-group .ant-btn:only-child {
-  border-radius: 999px !important;
+  border-radius: 6px !important;
 }
 
 /* ========== 加载状态 ========== */

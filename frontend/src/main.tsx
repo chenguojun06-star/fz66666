@@ -139,6 +139,7 @@ try {
 
 // 深色主题 token 配置（雾黑色调）
 const darkThemeTokens = {
+  borderRadius: 6,
   colorPrimary: '#6ba3ff',
   colorPrimaryBg: 'rgba(107, 163, 255, 0.15)',
   colorPrimaryBgHover: 'rgba(107, 163, 255, 0.25)',
@@ -171,6 +172,7 @@ const darkThemeTokens = {
 
 // 蓝色主题 token 配置
 const blueThemeTokens = {
+  borderRadius: 6,
   colorPrimary: '#2D7FF9',
   colorBgContainer: '#ffffff',
   colorBgElevated: '#ffffff',
@@ -184,6 +186,7 @@ const blueThemeTokens = {
 
 // 浅蓝色主题 token 配置（与小程序统一）
 const lightBlueThemeTokens = {
+  borderRadius: 6,
   colorPrimary: '#3b82f6',
   colorPrimaryBg: 'rgba(224, 242, 254, 0.3)',
   colorPrimaryBgHover: 'rgba(224, 242, 254, 0.5)',

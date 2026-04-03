@@ -110,7 +110,7 @@ body {
 /* 按钮样式已迁移到 button-override.css，这里不再重复定义 */
 
 /* ============================================
-   首页例外 - 40px 胶囊形
+   首页例外 - 40px 圆角矩形
    ============================================ */
 .dashboard-page .ant-input,
 .dashboard-page .ant-input-affix-wrapper,
@@ -118,7 +118,7 @@ body {
 .dashboard-page .ant-select-selector,
 .dashboard-page .ant-picker {
   height: 40px !important;
-  border-radius: 20px !important;
+  border-radius: 6px !important;
 }
 
 /* ============================================
