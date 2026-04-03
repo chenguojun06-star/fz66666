@@ -496,8 +496,9 @@ const buildSampleStage: StageBuilder = (record) => {
   const sampleProgress = clampPercent(Number(record.sampleProgress || 0));
   // started：样衣已领取并进入制作（IN_PROGRESS）、制作完成待审（PRODUCTION_COMPLETED）或全流程完成（COMPLETED）
   const started = ['IN_PROGRESS', 'PRODUCTION_COMPLETED', 'COMPLETED'].includes(sampleStatus);
-  // done：样衣制作本身完成（PRODUCTION_COMPLETED 或 COMPLETED），时间字段有值时优先校验
+  // done：样衣制作本身完成（PRODUCTION_COMPLETED 或 COMPLETED），进度满100%或时间字段有值时优先校验
   const done = Boolean(record.sampleCompletedTime)
+    || sampleProgress >= 100
     || ['PRODUCTION_COMPLETED', 'COMPLETED'].includes(sampleStatus);
 
   return {
@@ -1232,7 +1233,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
       if (String(selected.record.sampleReviewStatus || '').trim().toUpperCase() === 'PASS') {
         actions.push({
           key: 'inventory',
-          label: '去做入库',
+          label: '样衣入库',
           type: 'primary',
           onClick: () => {
             navigate(withQuery('/warehouse/sample', {
@@ -1275,35 +1276,10 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
           });
     }
 
-    actions.push({
-      key: 'detail',
-      label: '进入详情',
-      onClick: () => {
-        navigate(`/style-info/${selected.record.id}`);
-        setSelectedStage(null);
-      },
-    });
 
-    actions.push({
-      key: 'print',
-      label: '打印',
-      onClick: () => {
-        onPrint(selected.record);
-        setSelectedStage(null);
-      },
-    });
 
     const uniqueActions = actions.filter((action, index, list) => list.findIndex((item) => item.key === action.key) === index);
-    if (!sampleStageCompleted) {
-      return uniqueActions;
-    }
-
-    return uniqueActions.map((action) => ({
-      ...action,
-      type: ['print', 'detail'].includes(action.key) ? action.type : 'default',
-      danger: action.key === 'print' ? action.danger : false,
-      disabled: !['print', 'detail'].includes(action.key),
-    }));
+    return uniqueActions;
   };
 
   const selectedStageActions = selectedStage ? buildStageQuickActions(selectedStage) : [];
