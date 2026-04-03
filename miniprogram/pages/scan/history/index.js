@@ -87,11 +87,18 @@ Page({
     },
   },
 
+  /** 请求代际计数器（非 data 属性）：每次发起新请求时递增，用于丢弃过期请求的结果，防止下拉刷新时旧请求回来覆盖新数据 */
+  _reqGeneration: 0,
+
   onLoad() {
+    this._reqGeneration = 0;
     this.loadData(true);
   },
 
   onPullDownRefresh() {
+    // 强制刷新：先重置 loading，避免初始请求未完成时被 guard 拦截
+    // 代际递增在 loadData 内部完成，旧请求结果会被自动丢弃
+    this.setData({ loading: false });
     this.loadData(true).finally(() => wx.stopPullDownRefresh());
   },
 
@@ -139,6 +146,7 @@ Page({
     if (this.data.loading) return;
     if (!reset && !this.data.hasMore) return;
 
+    const gen = ++this._reqGeneration; // 记录本次请求的代际，用于识别过期结果
     const nextPage = reset ? 1 : this.data.page + 1;
     this.setData({ loading: true });
 
@@ -230,6 +238,7 @@ Page({
       const allForDisplay = this._mergeAndSort(merged, patternRecords);
       const displayRecords = this._getDisplayRecords(allForDisplay);
 
+      if (gen !== this._reqGeneration) return; // 已被新请求（如下拉刷新）取代，丢弃本次过期结果
       this.setData({
         records: merged,
         patternRecords,
@@ -246,7 +255,11 @@ Page({
         },
       });
     } catch (e) {
-      if (e && e.type === 'auth') return;
+      if (gen !== this._reqGeneration) return; // 过期请求的错误也不处理
+      if (e && e.type === 'auth') {
+        this.setData({ loading: false }); // 修复：auth 错误也要还原 loading，避免页面永久卡住
+        return;
+      }
       wx.showToast({ title: `加载失败: ${(e && e.message) || '请稍后重试'}`, icon: 'none' });
       this.setData({ loading: false });
     }

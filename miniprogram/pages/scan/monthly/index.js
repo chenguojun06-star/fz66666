@@ -88,12 +88,18 @@ Page({
     },
   },
 
+  /** 请求代际计数器（非 data 属性） */
+  _reqGeneration: 0,
+
   onLoad() {
+    this._reqGeneration = 0;
     this._updateDisplay();
     this.loadData(true);
   },
 
   onPullDownRefresh() {
+    // 强制刷新：重置 loading 避免初始请求未完成时被 guard 拦截
+    this.setData({ loading: false });
     this.loadData(true).finally(() => wx.stopPullDownRefresh());
   },
 
@@ -277,6 +283,7 @@ Page({
     if (this.data.loading) return;
     if (!reset && !this.data.hasMore) return;
 
+    const gen = ++this._reqGeneration;
     const nextPage = reset ? 1 : this.data.page + 1;
     this.setData({ loading: true });
 
@@ -299,14 +306,20 @@ Page({
         const patternRecords = (Array.isArray(rawPattern) ? rawPattern : []).map((item) =>
           _formatPatternRecord(item)
         );
+        if (gen !== this._reqGeneration) return;
         this._applyPageResult(result, true, 1, patternRecords);
       } else {
         // 翻页时只加载大货记录，样衣记录保持不变
         const result = await api.production.myScanHistory(params);
+        if (gen !== this._reqGeneration) return;
         this._applyPageResult(result, false, nextPage, undefined);
       }
     } catch (e) {
-      if (e && e.type === 'auth') return;
+      if (gen !== this._reqGeneration) return;
+      if (e && e.type === 'auth') {
+        this.setData({ loading: false }); // 修复：auth 错误也还原 loading
+        return;
+      }
       wx.showToast({ title: `加载失败: ${(e && e.message) || '请稍后重试'}`, icon: 'none' });
       this.setData({ loading: false });
     }
