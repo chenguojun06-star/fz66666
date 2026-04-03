@@ -31,13 +31,17 @@
     <!-- 修改密码 + 工资查询（同一行） -->
     <view class="action-row-pair">
       <view class="action-card {{showChangePwd ? 'action-card--active' : ''}}" bindtap="onShowChangePwd">
-        <text class="action-card-emoji">🔒</text>
-        <text class="action-card-label">修改密码</text>
+        <view class="action-card-left">
+          <text class="action-card-emoji">🔒</text>
+          <text class="action-card-label">修改密码</text>
+        </view>
         <text class="action-card-arrow">{{showChangePwd ? '∨' : '›'}}</text>
       </view>
       <view class="action-card" bindtap="onNavigateToPayroll">
-        <text class="action-card-emoji">💰</text>
-        <text class="action-card-label">工资查询</text>
+        <view class="action-card-left">
+          <text class="action-card-emoji">💰</text>
+          <text class="action-card-label">工资查询</text>
+        </view>
         <text class="action-card-arrow">›</text>
       </view>
     </view>
@@ -82,13 +86,17 @@
     <!-- 问题反馈 + 我的反馈（同一行） -->
     <view class="action-row-pair">
       <view class="action-card {{showFeedbackForm ? 'action-card--active' : ''}}" bindtap="onShowFeedbackForm">
-        <text class="action-card-emoji">📝</text>
-        <text class="action-card-label">问题反馈</text>
+        <view class="action-card-left">
+          <text class="action-card-emoji">📝</text>
+          <text class="action-card-label">问题反馈</text>
+        </view>
         <text class="action-card-arrow">{{showFeedbackForm ? '∨' : '›'}}</text>
       </view>
       <view class="action-card {{showMyFeedbacks ? 'action-card--active' : ''}}" bindtap="onToggleMyFeedbacks">
-        <text class="action-card-emoji">📋</text>
-        <text class="action-card-label">我的反馈</text>
+        <view class="action-card-left">
+          <text class="action-card-emoji">📋</text>
+          <text class="action-card-label">我的反馈</text>
+        </view>
         <text class="action-card-arrow">{{showMyFeedbacks ? '∨' : '›'}}</text>
       </view>
     </view>

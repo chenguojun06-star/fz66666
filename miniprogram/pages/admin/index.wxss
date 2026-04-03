@@ -491,14 +491,20 @@ page {
 .action-card {
   flex: 1;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
-  padding: 14rpx 12rpx;
+  justify-content: space-between;
+  padding: 10rpx 14rpx;
   background: var(--color-bg-card);
   border-radius: 12rpx;
   border: 1rpx solid var(--color-border);
-  gap: 4rpx;
+  gap: 0;
+}
+
+.action-card-left {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
 }
 
 .action-card--active {
@@ -507,7 +513,7 @@ page {
 }
 
 .action-card-emoji {
-  font-size: 30rpx;
+  font-size: 28rpx;
   line-height: 1;
 }
 
@@ -515,6 +521,7 @@ page {
   font-size: var(--font-size-sm);
   color: var(--color-text-primary);
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .action-card-arrow {
