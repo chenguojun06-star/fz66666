@@ -1230,7 +1230,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
         });
       }
 
-      if (String(selected.record.sampleReviewStatus || '').trim().toUpperCase() === 'PASS') {
+      if (String(selected.record.sampleReviewStatus || '').trim().toUpperCase() === 'PASS' && selected.stage.status !== 'done') {
         actions.push({
           key: 'inventory',
           label: '样衣入库',
