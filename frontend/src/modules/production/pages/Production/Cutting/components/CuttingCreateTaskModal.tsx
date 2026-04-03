@@ -55,7 +55,7 @@ const CuttingCreateTaskModal: React.FC<Props> = ({ createTask }) => {
           <Segmented
             value={createTask.createFactoryMode}
             options={[
-              { label: '内部自产', value: 'INTERNAL' },
+              { label: '内部工厂', value: 'INTERNAL' },
               { label: '外发加工', value: 'EXTERNAL' },
             ]}
             style={{ width: 220 }}

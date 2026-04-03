@@ -41,7 +41,7 @@ const OrderFactorySelector: React.FC<OrderFactorySelectorProps> = ({
               <div style={{ fontSize: 'var(--font-size-sm)', color: tooltipTheme.text }}>
                 <div style={{ marginBottom: 8, fontWeight: 600, color: tooltipTheme.text }}>生产方式说明</div>
                 <div style={{ marginBottom: 6 }}>
-                  <span style={{ color: 'var(--primary-color-light)' }}>内部自产：</span>
+                  <span style={{ color: 'var(--primary-color-light)' }}>内部工厂：</span>
                   选择内部车间/部门，由内部工序团队完成
                 </div>
                 <div>
@@ -78,7 +78,7 @@ const OrderFactorySelector: React.FC<OrderFactorySelectorProps> = ({
           form.setFieldValue('orgUnitId', undefined);
         }}
         options={[
-          { label: '内部自产', value: 'INTERNAL' },
+          { label: '内部工厂', value: 'INTERNAL' },
           { label: '外发加工', value: 'EXTERNAL' },
         ]}
         block

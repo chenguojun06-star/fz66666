@@ -99,7 +99,7 @@ public class ProductionOrderCreationTool implements AgentTool {
 
         Map<String, Object> orgUnitIdProp = new HashMap<>();
         orgUnitIdProp.put("type", "string");
-        orgUnitIdProp.put("description", "内部生产组织节点ID；内部自产场景优先传这个");
+        orgUnitIdProp.put("description", "内部生产组织节点ID；内部工厂场景优先传这个");
         properties.put("orgUnitId", orgUnitIdProp);
 
         Map<String, Object> orgUnitNameProp = new HashMap<>();

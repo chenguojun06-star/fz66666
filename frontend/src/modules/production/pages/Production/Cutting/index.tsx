@@ -407,7 +407,7 @@ const CuttingManagement: React.FC = () => {
                       onChange={(value) => tasks.setTaskQuery(prev => ({ ...prev, factoryType: value as 'INTERNAL' | 'EXTERNAL' | '', page: 1 }))}
                       options={[
                         { label: '全部工厂', value: '' },
-                        { label: '内部自产', value: 'INTERNAL' },
+                        { label: '内部工厂', value: 'INTERNAL' },
                         { label: '外发工厂', value: 'EXTERNAL' },
                       ]}
                       style={{ width: 132 }}

@@ -138,7 +138,7 @@ export function useCuttingTasks({ message, isEntryPage }: UseCuttingTasksOptions
       const filterParams: Record<string, string> = {};
       if (taskQuery.orderNo) filterParams.orderNo = taskQuery.orderNo;
       if (taskQuery.styleNo) filterParams.styleNo = taskQuery.styleNo;
-      if (taskQuery.factoryType) filterParams.factoryType = taskQuery.factoryType;
+      filterParams.factoryType = taskQuery.factoryType;
       const res = await api.get<{ code: number; data: typeof cuttingStats }>('/production/cutting-task/stats', { params: filterParams });
       if (res.code === 200 && res.data) {
         setCuttingStats(res.data);

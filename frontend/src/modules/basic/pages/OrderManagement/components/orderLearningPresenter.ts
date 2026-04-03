@@ -9,7 +9,7 @@ const pricingModeTextMap: Record<string, string> = {
 };
 
 const factoryModeTextMap: Record<string, string> = {
-  INTERNAL: '内部自产',
+  INTERNAL: '内部工厂',
   EXTERNAL: '外发加工',
 };
 

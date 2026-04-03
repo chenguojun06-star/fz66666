@@ -1367,7 +1367,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                   width="100%"
                   height="100%"
                   borderRadius={28}
-                  imageStyle={{ objectFit: 'contain', padding: 14 }}
+                  imageStyle={{ objectFit: 'contain' }}
                 />
               </div>
 

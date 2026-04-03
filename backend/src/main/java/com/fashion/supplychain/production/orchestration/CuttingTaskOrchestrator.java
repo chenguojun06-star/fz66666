@@ -128,12 +128,8 @@ public class CuttingTaskOrchestrator {
             mutableParams.put("_factoryOrderIds", factoryOrderIds);
             return cuttingTaskService.queryPage(mutableParams);
         }
-        // 🔒 PC端默认隔离：未指定工厂类型时，跟单员/管理员只查内部工厂裁剪任务
+        // PC端透传参数，factoryType 由前端明确传递（全部/内部/外发），不在后端强制覆盖
         Map<String, Object> pcParams = params != null ? new java.util.HashMap<>(params) : new java.util.HashMap<>();
-        String pcFactoryType = String.valueOf(pcParams.getOrDefault("factoryType", "")).trim();
-        if (!StringUtils.hasText(pcFactoryType) && !DataPermissionHelper.isFactoryAccount()) {
-            pcParams.put("factoryType", "INTERNAL");
-        }
         return cuttingTaskService.queryPage(pcParams);
     }
 

@@ -358,7 +358,7 @@ public class OrderLearningRecommendationOrchestrator {
     }
 
     private String translateFactoryMode(String factoryMode) {
-        return "EXTERNAL".equalsIgnoreCase(factoryMode) ? "外发加工" : "内部自产";
+        return "EXTERNAL".equalsIgnoreCase(factoryMode) ? "外发加工" : "内部工厂";
     }
 
     private String translatePricingMode(String pricingMode) {

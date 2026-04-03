@@ -25,7 +25,7 @@ public class OrderLearningFactoryScoreOrchestrator {
         Map<String, FactoryScoreAggregate> aggregateMap = new LinkedHashMap<>();
         for (OrderDecisionSnapshot snapshot : snapshots) {
             String factoryMode = StringUtils.hasText(snapshot.getFactoryMode()) ? snapshot.getFactoryMode() : "INTERNAL";
-            String factoryName = StringUtils.hasText(snapshot.getFactoryName()) ? snapshot.getFactoryName() : ("EXTERNAL".equalsIgnoreCase(factoryMode) ? "外发工厂" : "内部自产");
+            String factoryName = StringUtils.hasText(snapshot.getFactoryName()) ? snapshot.getFactoryName() : ("EXTERNAL".equalsIgnoreCase(factoryMode) ? "外发工厂" : "内部工厂");
             String key = factoryMode + "|" + factoryName;
             FactoryScoreAggregate aggregate = aggregateMap.computeIfAbsent(key, unused -> new FactoryScoreAggregate(factoryMode, factoryName));
             aggregate.count++;
