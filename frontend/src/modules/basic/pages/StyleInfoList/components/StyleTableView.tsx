@@ -490,12 +490,15 @@ const buildSecondaryStage: StageBuilder = (record) => {
 };
 
 const buildSampleStage: StageBuilder = (record) => {
-  const progressNode = String(record.progressNode || '').trim();
+  // 注意：productionStartTime/productionCompletedTime 是「生产制单」阶段的时间，不是样衣生产的时间。
+  // 样衣生产状态应只依赖 sampleStatus 和 sampleCompletedTime。
   const sampleStatus = String(record.sampleStatus || '').trim().toUpperCase();
   const sampleProgress = clampPercent(Number(record.sampleProgress || 0));
-  const started = Boolean(record.productionStartTime) || /样衣/.test(progressNode) || ['IN_PROGRESS', 'PRODUCTION_COMPLETED', 'COMPLETED'].includes(sampleStatus);
-  const done = Boolean(record.productionCompletedTime)
-    || (started && ['PRODUCTION_COMPLETED', 'COMPLETED'].includes(sampleStatus));
+  // started：样衣已领取并进入制作（IN_PROGRESS）、制作完成待审（PRODUCTION_COMPLETED）或全流程完成（COMPLETED）
+  const started = ['IN_PROGRESS', 'PRODUCTION_COMPLETED', 'COMPLETED'].includes(sampleStatus);
+  // done：样衣制作本身完成（PRODUCTION_COMPLETED 或 COMPLETED），时间字段有值时优先校验
+  const done = Boolean(record.sampleCompletedTime)
+    || ['PRODUCTION_COMPLETED', 'COMPLETED'].includes(sampleStatus);
 
   return {
     key: 'sample',
@@ -508,15 +511,15 @@ const buildSampleStage: StageBuilder = (record) => {
           ? '已领取生产'
           : '等待纸样',
     timeLabel: done
-      ? formatStageTimeRange(record.productionStartTime, record.productionCompletedTime || record.sampleCompletedTime)
-      : formatNodeTime(record.productionStartTime),
+      ? formatStageTimeRange(null, record.sampleCompletedTime)
+      : '',
     status: done ? 'done' : started ? 'active' : 'waiting',
     progress: done ? 100 : (started && sampleProgress > 0 ? sampleProgress : started ? 36 : 0),
     actionKey: 'detail',
     actionLabel: '查看详情',
     details: buildStageDetails(
-      record.productionStartTime ? `领取时间：${dayjs(record.productionStartTime as string | number | Date).format('YYYY-MM-DD HH:mm')}` : '领取时间待更新',
-      done && record.productionCompletedTime ? `完成时间：${dayjs(record.productionCompletedTime as string | number | Date).format('YYYY-MM-DD HH:mm')}` : false
+      started ? '样衣制作中' : '领取时间待更新',
+      done && record.sampleCompletedTime ? `完成时间：${dayjs(record.sampleCompletedTime as string | number | Date).format('YYYY-MM-DD HH:mm')}` : false
     ),
   };
 };
