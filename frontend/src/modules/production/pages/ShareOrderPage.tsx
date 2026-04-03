@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Progress, Tag, Spin, Alert } from 'antd';
 import OrderInfoGrid from '@/components/common/OrderInfoGrid';
+import { clampProgress } from '@/modules/production/utils/calcOrderProgress';
 
 interface StageProgress {
   stageName: string;
@@ -58,7 +59,7 @@ function getDaysLeft(dateText?: string): number | null {
 function buildSmartNarrative(data: OrderTrackData) {
   const daysLeft = getDaysLeft(data.plannedEndDate);
   const latestStage = data.latestScanStage || data.statusText || '当前阶段';
-  const progress = Number(data.productionProgress || 0);
+  const progress = clampProgress(Number(data.productionProgress || 0));
   let summary = `${latestStage}，完成 ${progress}%`;
   let reason = '生产节奏正常。';
   let prediction = data.plannedEndDate ? `预计 ${formatDate(data.plannedEndDate)} 完成` : '暂无交期，请确认工厂反馈。';
@@ -204,7 +205,7 @@ const ShareOrderPage: React.FC = () => {
               { label: '预计交期', value: formatDate(data.plannedEndDate), labelStyle: shareInfoLabelStyle, valueStyle: shareInfoValueStyle },
               {
                 label: '总体进度',
-                value: <span style={{ color: '#00e5ff', fontWeight: 700 }}>{data.productionProgress ?? 0}%</span>,
+                value: <span style={{ color: '#00e5ff', fontWeight: 700 }}>{clampProgress(data.productionProgress ?? 0)}%</span>,
                 labelStyle: shareInfoLabelStyle,
                 valueStyle: shareInfoValueStyle,
               },

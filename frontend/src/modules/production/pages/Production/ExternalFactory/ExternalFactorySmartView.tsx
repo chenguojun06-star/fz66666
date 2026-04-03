@@ -11,6 +11,7 @@ import { getOrderCardSizeQuantityItems } from '@/utils/cardSizeQuantity';
 import { buildOrderColorSizeMatrixModel } from '@/components/common/OrderColorSizeMatrix';
 import RowActions, { type RowAction } from '@/components/common/RowActions';
 import { isOrderFrozenByStatus, isOrderFrozenByStatusOrStock } from '@/utils/api';
+import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress';
 import '../../../../basic/pages/StyleInfo/styles.css';
 import './externalFactory.css';
 
@@ -392,7 +393,7 @@ const ExternalFactorySmartView: React.FC<Props> = ({
   const rows = useMemo(() => data.map(record => {
     const deliveryMeta = getDeliveryMeta(record);
     const stages = buildStages(record, deliveryMeta.tone === 'danger');
-    const overallProgress = clamp(record.productionProgress || 0);
+    const overallProgress = calcOrderProgress(record);
     const statusInfo = STATUS_MAP[record.status] || STATUS_MAP.pending;
     const sizeQtyItems = getOrderCardSizeQuantityItems(record);
     const sizeMatrix = buildOrderColorSizeMatrixModel({

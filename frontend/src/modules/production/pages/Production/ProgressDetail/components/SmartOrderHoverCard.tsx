@@ -13,6 +13,7 @@ import { SMART_CARD_CONTENT_WIDTH } from '@/components/common/DecisionInsightCar
 import type { ProductionOrder } from '@/types/production';
 import { useProductionBoardStore } from '@/stores/productionBoardStore';
 import { isDirectCuttingOrder, isOrderTerminal } from '@/utils/api';
+import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress';
 import { useOrderPredictHint } from '../hooks/useOrderPredictHint';
 import { analyzeProgress, renderProgressInsight } from '../utils/progressIntelligence';
 
@@ -64,7 +65,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
   const now         = dayjs();
   const planEnd     = order.plannedEndDate ? dayjs(order.plannedEndDate) : null;
   const daysLeft    = planEnd ? planEnd.diff(now, 'day') : null;
-  const prog        = Number(order.productionProgress) || 0;
+  const prog        = calcOrderProgress(order, boardStats);
 
   /**
    * 工序条目列表：

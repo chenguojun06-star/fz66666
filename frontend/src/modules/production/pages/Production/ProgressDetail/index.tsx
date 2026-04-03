@@ -17,7 +17,8 @@ import NodeDetailModal from '@/components/common/NodeDetailModal';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import SmallModal from '@/components/common/SmallModal';
-import api, { generateRequestId, hasProcurementStage, isDuplicateScanMessage, parseProductionOrderLines, isApiSuccess, isOrderFrozenByStatus, isOrderTerminal } from '@/utils/api';
+import api, { generateRequestId, isDuplicateScanMessage, parseProductionOrderLines, isApiSuccess, isOrderFrozenByStatus, isOrderTerminal } from '@/utils/api';
+import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress';
 import { isSupervisorOrAboveUser as isSupervisorOrAboveUserFn, useAuth } from '@/utils/AuthContext';
 import { formatDateTimeCompact } from '@/utils/datetime';
 import { getProgressColorStatus, getRemainingDaysDisplay } from '@/utils/progressColor';
@@ -263,65 +264,12 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     return () => clearInterval(timer);
   }, []);
 
-  /**
-   * 基于 boardStats 实时数据计算卡片进度。
-   * 解决：进度球用 boardStats（含订单级字段兜底）显示 100%，而卡片只用 productionProgress（纯扫码公式）显示 60% 的割裂感。
-   * 策略：取 boardStats 最远下游节点位置权重 与 productionProgress 的较大值。
-   */
-  const calcCardProgress = useCallback((record: ProductionOrder): number => {
-    const dbProgress = Math.min(100, Math.max(0, Number(record.productionProgress) || 0));
-    if (record.status === 'completed') return 100;
-    if (isOrderFrozenByStatus(record)) return dbProgress;
-    const orderId = String(record.id || '');
-    const stats = boardStatsByOrder[orderId];
-    const hasProcurementAction = Boolean(record.procurementManuallyCompleted)
-      || Boolean(record.procurementConfirmedAt)
-      || (Number(record.materialArrivalRate) || 0) > 0;
-    const hasCuttingAction = (Number(record.cuttingCompletionRate) || 0) > 0
-      || (Number(record.cuttingQuantity) || 0) > 0;
-    const hasBoardAction = !!stats && Object.values(stats as Record<string, number>)
-      .some((value) => (Number(value) || 0) > 0);
-    const hasRealAction = hasProcurementAction || hasCuttingAction || hasBoardAction;
-    if (!hasRealAction) return 0;
-    if (!stats) return dbProgress;
-    const total = Math.max(1, Number(record.cuttingQuantity || record.orderQuantity) || 1);
-    // 工序流水线顺序（从前到后）
-    const PIPELINE = hasProcurementStage(record as any)
-      ? ['采购', '裁剪', '二次工艺', '绣花', '车缝', '尾部', '剪线', '整烫', '后整', '质检', '包装', '入库']
-      : ['裁剪', '二次工艺', '绣花', '车缝', '尾部', '剪线', '整烫', '后整', '质检', '包装', '入库'];
-    // 规范化节点名：把 "仓库入库" / "质检入库" 等都归到最近的标准节点
-    const normalizeKey = (k: string) => {
-      if (k.includes('入库') || k.includes('入仓')) return '入库';
-      if (k.includes('质检') || k.includes('品检') || k.includes('验货')) return '质检';
-      if (k.includes('包装') || k.includes('后整') || k.includes('打包')) return '包装';
-      if (k.includes('裁剪') || k.includes('裁床')) return '裁剪';
-      if (k.includes('车缝') || k.includes('车间')) return '车缝';
-      return k;
-    };
-    // 汇总 boardStats，规范化后取最大值
-    const normMap = new Map<string, number>();
-    for (const [rawKey, rawQty] of Object.entries(stats as Record<string, number>)) {
-      const nk = normalizeKey(rawKey);
-      const pct = Math.min(100, Math.round(Number(rawQty) / total * 100));
-      if (pct > 0) normMap.set(nk, Math.max(normMap.get(nk) ?? 0, pct));
-    }
-    if (normMap.size === 0) return dbProgress;
-    // 找到最远下游节点
-    let lastIdx = -1;
-    let lastPct = 0;
-    for (const [nk, pct] of normMap.entries()) {
-      const idx = PIPELINE.indexOf(nk);
-      if (idx > lastIdx || (idx === lastIdx && pct > lastPct)) {
-        lastIdx = idx;
-        lastPct = pct;
-      }
-    }
-    if (lastIdx < 0) return dbProgress;
-    // 该节点之前所有节点贡献 (lastIdx / PIPELINE.length * 100)，该节点贡献 (lastPct / PIPELINE.length)
-    const perStage = 100 / PIPELINE.length;
-    const boardProgress = Math.round(lastIdx * perStage + lastPct * perStage / 100);
-    return Math.min(100, Math.max(dbProgress, boardProgress));
-  }, [boardStatsByOrder]);
+  /** 卡片进度 — 委托给统一工具函数 */
+  const calcCardProgress = useCallback(
+    (record: ProductionOrder): number =>
+      calcOrderProgress(record, boardStatsByOrder[String(record.id || '')] ?? null),
+    [boardStatsByOrder],
+  );
 
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
