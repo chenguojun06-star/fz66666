@@ -50,7 +50,7 @@
 .header-title.header-brand {
   font-size: calc(var(--font-size-lg) + 1px);
   padding: 8px 14px;
-  border-radius: 999px;
+  border-radius: 6px;
   background: rgba(255, 255, 255, 0.75); /* @design-system: 纯色，禁止渐变 */
   border: 1px solid rgba(45, 127, 249, 0.28);
   box-shadow: 0 2px 8px rgba(11, 45, 92, 0.1); /* @design-system: 轻量阴影 */
