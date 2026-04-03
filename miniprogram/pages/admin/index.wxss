@@ -484,8 +484,8 @@ page {
 /* ========== 双列操作卡片 ========== */
 .action-row-pair {
   display: flex;
-  gap: 16rpx;
-  margin: 20rpx 0 8rpx;
+  gap: 12rpx;
+  margin: 10rpx 0 6rpx;
 }
 
 .action-card {
@@ -494,11 +494,11 @@ page {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 24rpx 12rpx;
+  padding: 14rpx 12rpx;
   background: var(--color-bg-card);
-  border-radius: 16rpx;
+  border-radius: 12rpx;
   border: 1rpx solid var(--color-border);
-  gap: 8rpx;
+  gap: 4rpx;
 }
 
 .action-card--active {
@@ -507,7 +507,7 @@ page {
 }
 
 .action-card-emoji {
-  font-size: 40rpx;
+  font-size: 30rpx;
   line-height: 1;
 }
 
