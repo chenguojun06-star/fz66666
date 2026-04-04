@@ -13,6 +13,7 @@ const FACTORY_PREFIX_PATHS: string[] = [
   paths.progressDetail,          // /production/progress-detail
   paths.cutting,                 // /production/cutting（含子路由 /task/:orderNo）
   paths.materialPurchase,        // /production/material（含 /:styleNo）
+  paths.orderFlow,               // /production/order-flow（订单全流程记录）
   paths.financeCenter,           // /finance/center
   paths.factoryWorkers,          // /system/factory-workers
   paths.templateCenter,          // /basic/template-center
