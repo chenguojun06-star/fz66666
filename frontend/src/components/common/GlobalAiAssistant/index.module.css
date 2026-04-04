@@ -19,8 +19,8 @@
 
 /* 面板主体 */
 .chatPanel {
-  width: 420px;
-  height: 620px;
+  width: 560px;
+  height: 760px;
   background: #ffffff;
   border-radius: 20px;
   box-shadow: 0 12px 32px rgba(0, 83, 204, 0.15), 0 4px 12px rgba(0, 0, 0, 0.05);

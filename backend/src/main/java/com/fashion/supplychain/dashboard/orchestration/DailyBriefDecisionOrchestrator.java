@@ -98,7 +98,7 @@ public class DailyBriefDecisionOrchestrator {
                 "昨日入库 " + yesterdayWarehousingCount + " 单 / " + yesterdayWarehousingQuantity + " 件"
             ),
             "核实是否停工或漏录",
-            "查看生产进度",
+            "查看工序跟进",
             "/production/progress-detail");
     }
 

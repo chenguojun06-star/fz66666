@@ -1026,7 +1026,7 @@ const InspectionDetail: React.FC = () => {
                           columns={[
                             { title: '物料编码', dataIndex: 'materialCode', key: 'mc', width: 100 },
                             { title: '物料名称', dataIndex: 'materialName', key: 'mn', width: 120, ellipsis: true },
-                            { title: '类型', dataIndex: 'materialType', key: 'mt', width: 70,
+                            { title: '物料类型', dataIndex: 'materialType', key: 'mt', width: 70,
                               render: (v: unknown) => getMaterialTypeLabel(v) },
                             { title: '颜色', dataIndex: 'color', key: 'c', width: 70 },
                             { title: '尺码', dataIndex: 'size', key: 's', width: 60 },

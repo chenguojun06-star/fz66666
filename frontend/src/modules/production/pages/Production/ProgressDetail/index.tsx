@@ -16,6 +16,7 @@ import LabelPrintModal from '../List/components/LabelPrintModal';
 import NodeDetailModal from '@/components/common/NodeDetailModal';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
+import StickyFilterBar from '@/components/common/StickyFilterBar';
 import SmallModal from '@/components/common/SmallModal';
 import api, { generateRequestId, isDuplicateScanMessage, parseProductionOrderLines, isApiSuccess, isOrderFrozenByStatus, isOrderTerminal } from '@/utils/api';
 import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress';
@@ -1336,7 +1337,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       ) : (
         <Card className="page-card">
           <div className="page-header">
-            <h2 className="page-title">生产进度</h2>
+            <h2 className="page-title">工序跟进</h2>
           </div>
 
           {/* 数据概览卡片 - 使用全局统计数据（不受分页影响，不受列设置控制） */}
@@ -1375,7 +1376,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             onClearHints={smartQueueFilter !== 'all' ? () => setSmartQueueFilter('all') : undefined}
           />
 
-          <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--neutral-light)' }}>
+          <StickyFilterBar>
           <Card size="small" className="filter-card mb-sm">
             <StandardToolbar
               left={(
@@ -1450,7 +1451,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               )}
             />
           </Card>
-          </div>
+          </StickyFilterBar>
 
           {showSmartErrorNotice && smartError ? (
             <Card size="small" className="mb-sm">

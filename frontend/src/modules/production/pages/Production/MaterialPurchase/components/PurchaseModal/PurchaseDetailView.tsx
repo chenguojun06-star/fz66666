@@ -4,10 +4,12 @@ import { FileImageOutlined, PlusOutlined, LoadingOutlined, DeleteOutlined } from
 import type { RcFile } from 'antd/es/upload/interface';
 import api from '@/utils/api';
 
+import MaterialTypeTag from '@/components/common/MaterialTypeTag';
 import ResizableTable from '@/components/common/ResizableTable';
+import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
 import { MaterialPurchase as MaterialPurchaseType, ProductionOrder } from '@/types/production';
-import { formatMaterialSpecWidth, getMaterialTypeCategory, getMaterialTypeLabel } from '@/utils/materialType';
+import { formatMaterialSpecWidth, getMaterialTypeCategory } from '@/utils/materialType';
 import { formatDateTime } from '@/utils/datetime';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import { getStatusConfig, buildColorSummary, getOrderQtyTotal, formatMaterialQuantity, formatReferenceKilograms } from '../../utils';
@@ -249,17 +251,11 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                 }}
                 columns={[
                   {
-                    title: '类型',
+                    title: '物料类型',
                     dataIndex: 'materialType',
                     key: 'materialType',
                     width: 110,
-                    render: (v: unknown) => {
-                      const type = String(v || '').trim();
-                      const category = getMaterialTypeCategory(type);
-                      const text = getMaterialTypeLabel(type);
-                      const color = category === 'accessory' ? 'purple' : category === 'lining' ? 'cyan' : 'geekblue';
-                      return <Tag color={color}>{text}</Tag>;
-                    },
+                    render: (v: unknown) => <MaterialTypeTag value={v} />,
                   },
                   { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 120, render: (v: unknown) => v || '-' },
                   { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 180, ellipsis: true, render: (v: unknown) => v || '-' },
@@ -293,7 +289,20 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                       return Number.isFinite(n) ? n.toFixed(2) : '-';
                     },
                   },
-                  { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 140, ellipsis: true, render: (v: unknown) => v || '-' },
+                  {
+                    title: '供应商',
+                    dataIndex: 'supplierName',
+                    key: 'supplierName',
+                    width: 140,
+                    ellipsis: true,
+                    render: (_: unknown, record: MaterialPurchaseType) => (
+                      <SupplierNameTooltip
+                        name={record.supplierName}
+                        contactPerson={(record as any).supplierContactPerson}
+                        contactPhone={(record as any).supplierContactPhone}
+                      />
+                    ),
+                  },
                   {
                     title: '状态',
                     dataIndex: 'status',

@@ -1,0 +1,16 @@
+import type { Message } from './types';
+
+export const INITIAL_MSG: Message = {
+  id: 'init-msg',
+  role: 'ai',
+  text: '你好呀～我是小云 🌤️ 你直接用自然语言跟我说就行，我会分析、执行，或者把任务分派给真实同事去处理。下面这些按钮只是示例，不是必须点。',
+};
+
+export const SUGGESTIONS = [
+  '📄 今日运营日报',
+  '📅 本周工作总结',
+  '📊 本月经营报告',
+  '🚨 逾期订单预警',
+  '⚠️ 异常订单排查',
+  '👥 通知跟单跟进这单',
+];

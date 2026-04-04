@@ -113,7 +113,7 @@ const TenantListTab: React.FC = () => {
       { path: '/style-info', label: '样衣开发' },
       { path: '/data-center', label: '资料中心' },
       { path: '/basic/template-center', label: '单价维护' },
-      { path: '/warehouse/sample', label: '样衣出入库' },
+      { path: '/warehouse/sample', label: '样衣库存' },
       { path: '/order-management', label: '下单管理' },
     ]},
     { key: 'procurement', title: '物料管理', paths: [
@@ -124,7 +124,7 @@ const TenantListTab: React.FC = () => {
     { key: 'production', title: '生产管理', paths: [
       { path: '/production', label: '我的订单' },
       { path: '/production/cutting', label: '裁剪管理' },
-      { path: '/production/progress-detail', label: '生产进度' },
+      { path: '/production/progress-detail', label: '工序跟进' },
       { path: '/production/warehousing', label: '质检入库' },
     ]},
     { key: 'supplierManagement', title: '供应商管理', paths: [

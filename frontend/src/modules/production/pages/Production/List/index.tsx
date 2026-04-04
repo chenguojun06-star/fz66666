@@ -10,6 +10,7 @@ import PageStatCards from '@/components/common/PageStatCards';
 
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
+import StickyFilterBar from '@/components/common/StickyFilterBar';
 import QuickEditModal from '@/components/common/QuickEditModal';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
@@ -793,7 +794,7 @@ const ProductionList: React.FC = () => {
             onClearHints={smartQueueFilter !== 'all' ? () => setSmartQueueFilter('all') : undefined}
           />
 
-          <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--neutral-light)' }}>
+          <StickyFilterBar>
           <Card size="small" className="filter-card mb-sm">
             <StandardToolbar
               left={(
@@ -911,7 +912,7 @@ const ProductionList: React.FC = () => {
               )}
             />
           </Card>
-          </div>
+          </StickyFilterBar>
 
           {viewMode === 'smart' ? (
             <ExternalFactorySmartView

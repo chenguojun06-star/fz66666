@@ -1,17 +1,17 @@
 import React from 'react';
 import { Button, Col, Row, Space, Tag, Tooltip } from 'antd';
 
-import api, { parseProductionOrderLines, sortSizeNames, toNumberSafe, ProductionOrderLine } from '../utils/api';
-import { StyleAttachment } from '../types/style';
+import api, { parseProductionOrderLines, sortSizeNames, toNumberSafe, ProductionOrderLine } from '../../utils/api';
+import { StyleAttachment } from '../../types/style';
 import type { CardSizeQuantityItem } from '@/utils/cardSizeQuantity';
 import ResizableModal, {
   useResizableModalTableScrollY,
-} from './common/ResizableModal';
-import OrderInfoGrid from './common/OrderInfoGrid';
-import { createOrderColorSizeMatrixInfoItems } from './common/OrderColorSizeMatrix';
-import ResizableTable from './common/ResizableTable';
-import { useAuth } from '../utils/AuthContext';
-import { getFullAuthedFileUrl } from '../utils/fileUrl';
+} from '../common/ResizableModal';
+import OrderInfoGrid from '../common/OrderInfoGrid';
+import { createOrderColorSizeMatrixInfoItems } from '../common/OrderColorSizeMatrix';
+import ResizableTable from '../common/ResizableTable';
+import { useAuth } from '../../utils/AuthContext';
+import { getFullAuthedFileUrl } from '../../utils/fileUrl';
 import { message } from '@/utils/antdStatic';
 
 /**
@@ -626,34 +626,6 @@ export const StyleAttachmentsButton: React.FC<{
         }}>关闭</Button></Space>}
       >
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          {/* 纸样类型提示 */}
-          {!loading && data.length > 0 && patternTypeInfo.onlyOneType && (
-            <div style={{
-              marginBottom: 12,
-              padding: '8px 12px',
-              background: 'rgba(234, 179, 8, 0.15)',
-              border: '1px solid #ffe58f',
-
-              fontSize: "var(--font-size-sm)",
-              color: '#ad6800'
-            }}>
-               当前只有{patternTypeInfo.hasPattern ? '原始纸样' : '放码纸样'}，
-              {patternTypeInfo.hasPattern ? '缺少放码纸样' : '缺少原始纸样'}，请补充上传
-            </div>
-          )}
-          {!loading && data.length === 0 && (
-            <div style={{
-              marginBottom: 12,
-              padding: '8px 12px',
-              background: 'rgba(239, 68, 68, 0.1)',
-              border: '1px solid #ffccc7',
-
-              fontSize: "var(--font-size-sm)",
-              color: '#a8071a'
-            }}>
-               暂无纸样附件，请先上传原始纸样和放码纸样
-            </div>
-          )}
           <div ref={tableWrapRef} style={{ flex: '1 1 auto', minHeight: 0 }}>
             <ResizableTable
               rowKey={(r) => String((r as any).id)}

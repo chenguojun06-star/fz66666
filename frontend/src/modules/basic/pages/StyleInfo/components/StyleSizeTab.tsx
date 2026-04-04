@@ -1,13 +1,31 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Dropdown, Input, InputNumber, Space, Select, Modal, Upload, Image, Tag, Popover, Table } from 'antd';
-import { DeleteOutlined, DownOutlined, PlusOutlined } from '@ant-design/icons';
+import { App, Button, Input, InputNumber, Select, Modal, Upload, Image, Table } from 'antd';
+import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { StyleSize, TemplateLibrary } from '@/types/style';
 import api, { sortSizeNames, toNumberSafe } from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import ResizableTable from '@/components/common/ResizableTable';
-import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
 import StyleStageControlBar from './StyleStageControlBar';
+import StyleSizeToolbar from './styleSize/StyleSizeToolbar';
+import StyleSizeGradingConfigModal from './styleSize/StyleSizeGradingConfigModal';
+import {
+  DisplayRow,
+  GradingZone,
+  MatrixCell,
+  MatrixRow,
+  buildEmptySizeCells,
+  createGradingZone,
+  normalizeChunkImageAssignments,
+  normalizeGradingZones,
+  normalizeRowSorts,
+  normalizeSizeList,
+  parseGradingRule,
+  resolveGroupName,
+  resolveGroupToneMeta,
+  serializeGradingRule,
+  splitSizeNames,
+} from './styleSize/shared';
 
 interface Props {
   styleId: string | number;
@@ -17,268 +35,9 @@ interface Props {
   sizeCompletedTime?: string;
   linkedSizes?: string[];
   simpleView?: boolean; // 简化视图：隐藏领取人信息、操作按钮、提示信息
+  hideStageControl?: boolean; // 仅隐藏阶段控制栏（嵌入其他 Tab 时使用，编辑按钮仍保留）
   onRefresh?: () => void;
 }
-
-type MatrixCell = {
-  id?: string | number;
-  value: number;
-};
-
-type GradingZone = {
-  key: string;
-  label: string;
-  sizes: string[];
-  step: number;
-  partKeys?: string[];
-  frontSizes?: string[];
-  frontStep?: number;
-  backSizes?: string[];
-  backStep?: number;
-};
-
-type MatrixRow = {
-  key: string;
-  groupName: string;
-  partName: string;
-  measureMethod: string;
-  baseSize: string;
-  gradingZones: GradingZone[];
-  tolerance: number;
-  sort: number;
-  cells: Record<string, MatrixCell>;
-  /** 部位参考图片 URLs（JSON 字符串数组反序列化后） */
-  imageUrls?: string[];
-};
-
-type GroupToneMeta = {
-  key: 'upper' | 'lower' | 'other';
-  tint: string;
-  tagBg: string;
-  tagColor: string;
-};
-
-type DisplayRow = MatrixRow & {
-  resolvedGroupName: string;
-  groupToneMeta: GroupToneMeta;
-  isGroupStart: boolean;
-  isGroupChunkStart: boolean;
-  groupChunkSpan: number;
-  isImageChunkStart: boolean;
-  imageChunkSpan: number;
-  chunkImageUrls: string[];
-  chunkRowKeys: string[];
-};
-
-const splitSizeNames = (name: string) => {
-  const raw = String(name || '').trim();
-  if (!raw) return [];
-  const parts = raw
-    .split(/[\n,，、;；]+/g)
-    .map((x) => String(x || '').trim())
-    .filter(Boolean);
-  if (!parts.length) return [];
-  return parts;
-};
-
-const normalizeSizeList = (sizes: string[] = []) => {
-  return sortSizeNames(
-    Array.from(
-      new Set(
-        sizes
-          .map((item) => String(item || '').trim())
-          .filter(Boolean),
-      ),
-    ),
-  );
-};
-
-const GROUP_TONE_METAS: Record<GroupToneMeta['key'], GroupToneMeta> = {
-  upper: {
-    key: 'upper',
-    tint: '#f7fbff',
-    tagBg: '#e8f3ff',
-    tagColor: '#1677ff',
-  },
-  lower: {
-    key: 'lower',
-    tint: '#fffaf2',
-    tagBg: '#fff1db',
-    tagColor: '#d48806',
-  },
-  other: {
-    key: 'other',
-    tint: '#fafafa',
-    tagBg: '#f0f0f0',
-    tagColor: '#595959',
-  },
-};
-
-const inferGroupNameFromPart = (partName: string): string => {
-  const normalized = String(partName || '').replace(/\s+/g, '').toLowerCase();
-  if (!normalized) return '其他区';
-
-  const upperKeywords = [
-    '衣长', '胸围', '肩宽', '袖长', '袖口', '袖肥', '领围', '领宽', '领深', '门襟', '胸宽', '摆围', '下摆', '前长', '后长', '前胸', '后背', '袖窿',
-  ];
-  const lowerKeywords = [
-    '裤长', '腰围', '臀围', '前浪', '后浪', '脚口', '裤口', '腿围', '小腿围', '大腿围', '膝围', '坐围', '裆', '裙长', '裙摆',
-  ];
-
-  if (upperKeywords.some((keyword) => normalized.includes(keyword))) {
-    return '上装区';
-  }
-  if (lowerKeywords.some((keyword) => normalized.includes(keyword))) {
-    return '下装区';
-  }
-  return '其他区';
-};
-
-const resolveGroupName = (groupName?: string, partName?: string) => {
-  const explicit = String(groupName || '').trim();
-  if (explicit) return explicit;
-  return inferGroupNameFromPart(String(partName || ''));
-};
-
-const resolveGroupToneMeta = (groupName: string): GroupToneMeta => {
-  const normalized = String(groupName || '').replace(/\s+/g, '').toLowerCase();
-  if (normalized.includes('上装')) {
-    return GROUP_TONE_METAS.upper;
-  }
-  if (normalized.includes('下装') || normalized.includes('裤') || normalized.includes('裙')) {
-    return GROUP_TONE_METAS.lower;
-  }
-  return GROUP_TONE_METAS.other;
-};
-
-const normalizeRowSorts = (list: MatrixRow[]) => {
-  return list.map((row, index) => ({
-    ...row,
-    sort: index + 1,
-  }));
-};
-
-const normalizeChunkImageAssignments = (list: MatrixRow[]) => {
-  const sortedRows = normalizeRowSorts(list)
-    .map((row, index) => ({ row, index }))
-    .sort((a, b) => {
-      const sortDiff = toNumberSafe(a.row.sort) - toNumberSafe(b.row.sort);
-      return sortDiff !== 0 ? sortDiff : a.index - b.index;
-    })
-    .map((item) => item.row);
-
-  const groupOrder: string[] = [];
-  const grouped = new Map<string, MatrixRow[]>();
-  sortedRows.forEach((row) => {
-    const groupName = resolveGroupName(row.groupName, row.partName);
-    if (!grouped.has(groupName)) {
-      grouped.set(groupName, []);
-      groupOrder.push(groupName);
-    }
-    grouped.get(groupName)!.push(row);
-  });
-
-  const normalizedRows: MatrixRow[] = [];
-  groupOrder.forEach((groupName) => {
-    const groupRows = grouped.get(groupName) || [];
-    const ownerImages = groupRows.find((row) => Array.isArray(row.imageUrls) && row.imageUrls.length > 0)?.imageUrls;
-    groupRows.forEach((row, index) => {
-      normalizedRows.push({
-        ...row,
-        imageUrls: index === 0 && ownerImages?.length ? ownerImages.slice(0, 2) : undefined,
-      });
-    });
-  });
-
-  return normalizedRows;
-};
-
-const createGradingZone = (
-  sizes: string[] = [],
-  label = '跳码区',
-  partKeys: string[] = [],
-  frontSizes: string[] = [],
-  backSizes: string[] = [],
-): GradingZone => ({
-  key: `grading-zone-${Date.now()}-${Math.random()}`,
-  label,
-  sizes,
-  step: 0,
-  partKeys,
-  frontSizes,
-  frontStep: 0,
-  backSizes,
-  backStep: 0,
-});
-
-const normalizeGradingZones = (zones: GradingZone[], sizeColumns: string[]) => {
-  const validSizes = new Set(sizeColumns);
-  return zones
-    .map((zone, index) => {
-      let frontSizes = (zone.frontSizes || []).filter((size) => validSizes.has(size));
-      let backSizes = (zone.backSizes || []).filter((size) => validSizes.has(size));
-      if (frontSizes.length === 0 && backSizes.length === 0 && (zone.sizes || []).length > 0) {
-        const allSizes = (zone.sizes || []).filter((size) => validSizes.has(size));
-        backSizes = allSizes;
-      }
-      return {
-        key: zone.key || `grading-zone-${index}`,
-        label: String(zone.label || `跳码区${index + 1}`),
-        sizes: zone.sizes || [],
-        step: toNumberSafe(zone.step),
-        frontSizes,
-        frontStep: toNumberSafe(zone.frontStep || zone.step),
-        backSizes,
-        backStep: toNumberSafe(zone.backStep || zone.step),
-      };
-    })
-    .filter((zone) => zone.frontSizes.length > 0 || zone.backSizes.length > 0);
-};
-
-const parseGradingRule = (rule: unknown, sizeColumns: string[]) => {
-  try {
-    const parsed = JSON.parse(String(rule || '{}'));
-    const zones = normalizeGradingZones(
-      Array.isArray(parsed?.zones) ? parsed.zones.map((zone: any, index: number) => ({
-        key: String(zone?.key || `grading-zone-${index}`),
-        label: String(zone?.label || `跳码区${index + 1}`),
-        sizes: Array.isArray(zone?.sizes) ? zone.sizes.map((item: any) => String(item || '').trim()).filter(Boolean) : [],
-        step: toNumberSafe(zone?.step),
-        frontSizes: Array.isArray(zone?.frontSizes) ? zone.frontSizes.map((item: any) => String(item || '').trim()).filter(Boolean) : [],
-        frontStep: toNumberSafe(zone?.frontStep),
-        backSizes: Array.isArray(zone?.backSizes) ? zone.backSizes.map((item: any) => String(item || '').trim()).filter(Boolean) : [],
-        backStep: toNumberSafe(zone?.backStep),
-      })) : [],
-      sizeColumns
-    );
-    const baseSize = sizeColumns.includes(String(parsed?.baseSize || '').trim())
-      ? String(parsed.baseSize).trim()
-      : '';
-    return { baseSize, gradingZones: zones };
-  } catch {
-    return {
-      baseSize: '',
-      gradingZones: [],
-    };
-  }
-};
-
-const serializeGradingRule = (row: MatrixRow, sizeColumns: string[]) => {
-  const gradingZones = normalizeGradingZones(row.gradingZones || [], sizeColumns);
-  return JSON.stringify({
-    baseSize: String(row.baseSize || '').trim(),
-    zones: gradingZones.map((zone) => ({
-      key: zone.key,
-      label: zone.label,
-      sizes: zone.sizes,
-      step: toNumberSafe(zone.step),
-      frontSizes: zone.frontSizes,
-      frontStep: toNumberSafe(zone.frontStep),
-      backSizes: zone.backSizes,
-      backStep: toNumberSafe(zone.backStep),
-    })),
-  });
-};
 
 const StyleSizeTab: React.FC<Props> = ({
   styleId,
@@ -288,6 +47,7 @@ const StyleSizeTab: React.FC<Props> = ({
   sizeCompletedTime,
   linkedSizes = [],
   simpleView = false,
+  hideStageControl = false,
   onRefresh,
 }) => {
   const [loading, setLoading] = useState(false);
@@ -300,12 +60,10 @@ const StyleSizeTab: React.FC<Props> = ({
   const combinedSizeIdsRef = useRef<Array<string | number>>([]);
   const snapshotRef = useRef<{ sizeColumns: string[]; rows: MatrixRow[] } | null>(null);
 
-  const [addSizeOpen, setAddSizeOpen] = useState(false);
   const [gradingConfigOpen, setGradingConfigOpen] = useState(false);
   const [gradingTargetRowKey, setGradingTargetRowKey] = useState('');
   const [gradingDraftBaseSize, setGradingDraftBaseSize] = useState('');
   const [gradingDraftZones, setGradingDraftZones] = useState<GradingZone[]>([]);
-  const [newSizeName, setNewSizeName] = useState('');
   const [newGroupName, setNewGroupName] = useState('');
   const [sizeTemplateKey, setSizeTemplateKey] = useState<string | undefined>(undefined);
   const [sizeTemplates, setSizeTemplates] = useState<TemplateLibrary[]>([]);
@@ -313,7 +71,7 @@ const StyleSizeTab: React.FC<Props> = ({
   const [sizeOptions, setSizeOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
-  const { message, modal } = App.useApp();
+  const { message } = App.useApp();
   const linkedSizeColumns = useMemo(() => normalizeSizeList(linkedSizes), [linkedSizes]);
 
   const displayRows = useMemo<DisplayRow[]>(() => {
@@ -627,35 +385,33 @@ const StyleSizeTab: React.FC<Props> = ({
       return { ...row, baseSize, gradingZones: [] };
     }
     const baseValue = toNumberSafe(row.cells[baseSize]?.value);
-    const stepForSize = (sizeName: string, direction: 'front' | 'back') => {
-      const zone = zones.find((item) => {
-        if (direction === 'front') {
-          return (item.frontSizes || []).includes(sizeName);
+    const getStepForSize = (sizeName: string): number => {
+      for (const zone of zones) {
+        if ((zone.frontSizes || []).includes(sizeName)) {
+          return toNumberSafe(zone.frontStep);
         }
-        return (item.backSizes || []).includes(sizeName);
-      });
-      return toNumberSafe(direction === 'front' ? zone?.frontStep : zone?.backStep);
+        if ((zone.backSizes || []).includes(sizeName)) {
+          return toNumberSafe(zone.backStep);
+        }
+      }
+      return 0;
     };
     const nextCells = { ...row.cells };
     nextCells[baseSize] = { ...(nextCells[baseSize] || { value: 0 }), value: baseValue };
-    for (let index = baseIndex + 1; index < sizeColumns.length; index += 1) {
+    for (let index = 0; index < sizeColumns.length; index += 1) {
+      if (index === baseIndex) continue;
       const currentSize = sizeColumns[index];
-      const prevSize = sizeColumns[index - 1];
-      const prevValue = toNumberSafe(nextCells[prevSize]?.value);
-      const step = stepForSize(currentSize, 'back');
+      const step = getStepForSize(currentSize);
+      const distance = Math.abs(index - baseIndex);
+      let value: number;
+      if (index < baseIndex) {
+        value = baseValue - step * distance;
+      } else {
+        value = baseValue + step * distance;
+      }
       nextCells[currentSize] = {
         ...(nextCells[currentSize] || { value: 0 }),
-        value: Number((prevValue + step).toFixed(2)),
-      };
-    }
-    for (let index = baseIndex - 1; index >= 0; index -= 1) {
-      const currentSize = sizeColumns[index];
-      const nextSize = sizeColumns[index + 1];
-      const nextValue = toNumberSafe(nextCells[nextSize]?.value);
-      const step = stepForSize(currentSize, 'front');
-      nextCells[currentSize] = {
-        ...(nextCells[currentSize] || { value: 0 }),
-        value: Number((nextValue - step).toFixed(2)),
+        value: Number(value.toFixed(2)),
       };
     }
     return { ...row, baseSize, gradingZones: zones, cells: nextCells };
@@ -715,23 +471,25 @@ const StyleSizeTab: React.FC<Props> = ({
       message.error('请先选择样版码');
       return;
     }
+    const normalizedZones = gradingDraftZones.map((z) => ({
+      key: z.key,
+      label: z.label,
+      sizes: z.sizes || [],
+      step: z.step || 0,
+      frontSizes: (z.frontSizes || []),
+      frontStep: z.frontStep || 0,
+      backSizes: (z.backSizes || []),
+      backStep: z.backStep || 0,
+      partKeys: z.partKeys || [],
+    }));
     if (targetKey === 'batch') {
       setRows((prev) => prev.map((row) => {
-        const matchingZones = gradingDraftZones.filter((zone) => (zone.partKeys || []).includes(row.key));
+        const matchingZones = normalizedZones.filter((zone) => (zone.partKeys || []).includes(row.key));
         if (matchingZones.length === 0) return row;
         return applyGradingToRow({
           ...row,
           baseSize: gradingDraftBaseSize,
-          gradingZones: matchingZones.map((z) => ({
-            key: z.key,
-            label: z.label,
-            sizes: z.sizes || [],
-            step: z.step || 0,
-            frontSizes: z.frontSizes || [],
-            frontStep: z.frontStep || 0,
-            backSizes: z.backSizes || [],
-            backStep: z.backStep || 0,
-          })),
+          gradingZones: matchingZones,
         });
       }));
       setSelectedRowKeys([]);
@@ -741,7 +499,7 @@ const StyleSizeTab: React.FC<Props> = ({
           ? applyGradingToRow({
               ...row,
               baseSize: gradingDraftBaseSize,
-              gradingZones: normalizeGradingZones(gradingDraftZones, sizeColumns),
+              gradingZones: normalizedZones,
             })
           : row
       )));
@@ -784,10 +542,7 @@ const StyleSizeTab: React.FC<Props> = ({
   const handleAddPartInGroup = (groupName: string) => {
     if (readOnly) return;
     const key = `tmp-part-${Date.now()}-${Math.random()}`;
-    const cells: Record<string, MatrixCell> = {};
-    sizeColumns.forEach((sn) => {
-      cells[sn] = { value: 0 };
-    });
+    const cells = buildEmptySizeCells(sizeColumns);
     setRows((prev) => {
       const groupRowIndices: number[] = [];
       prev.forEach((r, i) => {
@@ -820,10 +575,7 @@ const StyleSizeTab: React.FC<Props> = ({
     }
 
     const key = `tmp-group-${Date.now()}-${Math.random()}`;
-    const cells: Record<string, MatrixCell> = {};
-    sizeColumns.forEach((sn) => {
-      cells[sn] = { value: 0 };
-    });
+    const cells = buildEmptySizeCells(sizeColumns);
 
     setRows((prev) => normalizeRowSorts([
       ...prev,
@@ -843,62 +595,47 @@ const StyleSizeTab: React.FC<Props> = ({
     if (!editMode) enterEdit();
   };
 
-  const confirmAddSize = () => {
-    if (readOnly) return;
-    const raw = String(newSizeName || '').trim();
-    if (!raw) {
-      message.error('请输入尺码');
-      return;
-    }
+  const appendSizes = (inputSizes: string[]) => {
+    if (readOnly) return false;
 
-    const parts = raw
-      .split(/[\n,，、;；]+/g)
-      .map((x) => String(x || '').trim())
-      .filter(Boolean);
-
-    if (!parts.length) {
-      message.error('请输入尺码');
-      return;
-    }
-
-    const nextToAdd: string[] = [];
-    const seen = new Set<string>();
-    for (const p of parts) {
-      if (sizeColumns.includes(p)) {
-        message.error(`尺码已存在：${p}`);
-        return;
-      }
-      if (seen.has(p)) {
-        continue;
-      }
-      seen.add(p);
-      nextToAdd.push(p);
-    }
+    const nextToAdd = Array.from(
+      new Set(
+        inputSizes
+          .map((item) => String(item || '').trim())
+          .filter(Boolean),
+      ),
+    );
 
     if (!nextToAdd.length) {
       message.error('请输入尺码');
-      return;
+      return false;
+    }
+
+    const duplicated = nextToAdd.find((sizeName) => sizeColumns.includes(sizeName));
+    if (duplicated) {
+      message.error(`尺码已存在：${duplicated}`);
+      return false;
     }
 
     const merged = sortSizeNames([...sizeColumns, ...nextToAdd]);
     setSizeColumns(merged);
     setRows((prev) =>
-      prev.map((r) => {
-        const nextCells = { ...r.cells };
-        nextToAdd.forEach((sn) => {
-          nextCells[sn] = { value: 0 };
+      prev.map((row) => {
+        const nextCells = { ...row.cells };
+        nextToAdd.forEach((sizeName) => {
+          nextCells[sizeName] = { value: 0 };
         });
         return {
-          ...r,
-          baseSize: merged.includes(r.baseSize) ? r.baseSize : '',
-          gradingZones: normalizeGradingZones(r.gradingZones || [], merged),
+          ...row,
+          baseSize: merged.includes(row.baseSize) ? row.baseSize : '',
+          gradingZones: normalizeGradingZones(row.gradingZones || [], merged),
           cells: nextCells,
         };
       }),
     );
-    setAddSizeOpen(false);
-    setNewSizeName('');
+
     if (!editMode) enterEdit();
+    return true;
   };
 
   const applySizeTemplate = async (templateId: string, mode: 'merge' | 'overwrite' = 'overwrite') => {
@@ -1379,7 +1116,7 @@ const StyleSizeTab: React.FC<Props> = ({
         }
       `}</style>
       {/* 统一状态控制栏 */}
-      {!simpleView && (
+      {!simpleView && !hideStageControl && (
         <StyleStageControlBar
           stageName="尺寸表"
           styleId={styleId}
@@ -1400,172 +1137,52 @@ const StyleSizeTab: React.FC<Props> = ({
         />
       )}
       {!simpleView && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            {editMode && !readOnly && selectedRowKeys.length > 0 && (
-              <Button type="primary" onClick={openBatchGradingConfig}>
-                批量配置跳码区 ({selectedRowKeys.length})
-              </Button>
-            )}
-            {editMode && !readOnly && selectedRowKeys.length > 0 && (
-              <Button onClick={() => setSelectedRowKeys([])}>
-                取消选择
-              </Button>
-            )}
-          </div>
-          <Space>
-          {!editMode || readOnly ? (
-            <Button type="primary" onClick={enterEdit} disabled={loading || saving || Boolean(readOnly)}>
-              编辑
-            </Button>
-          ) : (
-            <>
-              <Button type="primary" onClick={saveAll} loading={saving}>
-                保存
-              </Button>
-              <Button
-                disabled={saving}
-                onClick={() => {
-                  Modal.confirm({
-                    width: '30vw',
-                    title: '放弃未保存的修改？',
-                    onOk: exitEdit,
-                  });
-                }}
-              >
-                取消
-              </Button>
-            </>
-          )}
-          <Select
-            allowClear
-            style={{ width: 220 }}
-            placeholder="导入尺寸模板"
-            value={sizeTemplateKey}
-            onChange={(v) => setSizeTemplateKey(v)}
-            options={sizeTemplates.map((t) => ({
-              value: String(t.id || ''),
-              label: t.sourceStyleNo ? `${t.templateName}（${t.sourceStyleNo}）` : t.templateName,
-            }))}
-            disabled={loading || saving || Boolean(readOnly) || templateLoading}
-          />
-          <Dropdown
-            disabled={loading || saving || Boolean(readOnly) || templateLoading}
-            menu={{
-              items: [
-                { key: 'overwrite', label: '覆盖导入（清除现有数据）' },
-                { key: 'merge', label: '追加导入（保留现有数据）' },
-              ],
-              onClick: ({ key }) => {
-                if (!sizeTemplateKey) { message.error('请选择模板'); return; }
-                void applySizeTemplate(sizeTemplateKey, key as 'merge' | 'overwrite');
-              },
-            }}
-          >
-            <Button disabled={loading || saving || Boolean(readOnly) || templateLoading}>
-              导入模板 <DownOutlined />
-            </Button>
-          </Dropdown>
-          <Popover
-            trigger="click"
-            placement="bottom"
-            content={
-              <Space.Compact style={{ width: 220 }}>
-                <Input
-                  placeholder="如：上装区 / 下装区"
-                  value={newGroupName}
-                  onChange={(e) => setNewGroupName(e.target.value)}
-                  onPressEnter={() => {
-                    confirmAddGroup();
-                  }}
-                  style={{ width: 160 }}
-                />
-                <Button type="primary" onClick={confirmAddGroup}>
-                  确定
-                </Button>
-              </Space.Compact>
-            }
-          >
-            <Button disabled={loading || saving || Boolean(readOnly)}>
-              新增分组
-            </Button>
-          </Popover>
-          <Select
-            mode="multiple"
-            allowClear
-            showSearch
-            placeholder="新增尺码(多选)"
-            style={{ minWidth: 160 }}
-            disabled={loading || saving || Boolean(readOnly)}
-            options={sizeOptions.filter(opt => !sizeColumns.includes(opt.value))}
-            value={[]}
-            onChange={(values) => {
-              if (values.length === 0) return;
-              const merged = sortSizeNames([...sizeColumns, ...values]);
-              setSizeColumns(merged);
-              setRows((prev) =>
-                prev.map((r) => {
-                  const nextCells = { ...r.cells };
-                  values.forEach((sn) => {
-                    nextCells[sn] = { value: 0 };
-                  });
-                  return {
-                    ...r,
-                    baseSize: merged.includes(r.baseSize) ? r.baseSize : '',
-                    gradingZones: normalizeGradingZones(r.gradingZones || [], merged),
-                    cells: nextCells,
-                  };
-                }),
-              );
-              if (!editMode) enterEdit();
-            }}
-            filterOption={(input, option) =>
-              String(option?.value || '').toLowerCase().includes(String(input || '').toLowerCase())
-          }
-          onSearch={(value) => {
-            if (value && value.trim() && !sizeOptions.some(opt => opt.value === value.trim()) && !sizeColumns.includes(value.trim())) {
-              setSizeOptions(prev => [...prev, { value: value.trim(), label: value.trim() }]);
-            }
+        <StyleSizeToolbar
+          editMode={editMode}
+          readOnly={readOnly}
+          loading={loading}
+          saving={saving}
+          templateLoading={templateLoading}
+          selectedRowCount={selectedRowKeys.length}
+          sizeTemplateKey={sizeTemplateKey}
+          sizeTemplates={sizeTemplates}
+          newGroupName={newGroupName}
+          sizeOptions={sizeOptions}
+          sizeColumns={sizeColumns}
+          onOpenBatchGradingConfig={openBatchGradingConfig}
+          onClearSelection={() => setSelectedRowKeys([])}
+          onEnterEdit={enterEdit}
+          onSave={saveAll}
+          onCancelEdit={() => {
+            Modal.confirm({
+              width: '30vw',
+              title: '放弃未保存的修改？',
+              onOk: exitEdit,
+            });
           }}
-          popupRender={(menu) => (
-            <>
-              {menu}
-              <div style={{ padding: '8px', borderTop: '1px solid #f0f0f0' }}>
-                <Input
-                  placeholder="输入新码数后回车添加"
-                  size="small"
-                  onPressEnter={(e) => {
-                    const input = e.target as HTMLInputElement;
-                    const val = input.value.trim();
-                    if (val && !sizeColumns.includes(val) && !sizeOptions.some(opt => opt.value === val)) {
-                      const merged = sortSizeNames([...sizeColumns, val]);
-                      setSizeColumns(merged);
-                      setRows((prev) =>
-                        prev.map((r) => {
-                          const nextCells = { ...r.cells };
-                          nextCells[val] = { value: 0 };
-                          return {
-                            ...r,
-                            baseSize: merged.includes(r.baseSize) ? r.baseSize : '',
-                            gradingZones: normalizeGradingZones(r.gradingZones || [], merged),
-                            cells: nextCells,
-                          };
-                        }),
-                      );
-                      if (!editMode) enterEdit();
-                      input.value = '';
-                    }
-                  }}
-                />
-              </div>
-            </>
-          )}
-          onOpenChange={(open) => {
-            if (open) fetchSizeDictOptions();
+          onSizeTemplateChange={setSizeTemplateKey}
+          onImportTemplate={(mode) => {
+            if (!sizeTemplateKey) {
+              message.error('请选择模板');
+              return;
+            }
+            void applySizeTemplate(sizeTemplateKey, mode);
           }}
+          onGroupNameChange={setNewGroupName}
+          onConfirmAddGroup={confirmAddGroup}
+          onOpenSizeOptions={fetchSizeDictOptions}
+          onSearchSizeOption={(value) => {
+            const normalized = String(value || '').trim();
+            if (!normalized || sizeColumns.includes(normalized) || sizeOptions.some((option) => option.value === normalized)) {
+              return;
+            }
+            setSizeOptions((prev) => [...prev, { value: normalized, label: normalized }]);
+          }}
+          onAddSizes={(values) => {
+            appendSizes(values);
+          }}
+          onAddCustomSize={(value) => appendSizes([value])}
         />
-        </Space>
-      </div>
       )}
 
       <ResizableTable
@@ -1603,190 +1220,22 @@ const StyleSizeTab: React.FC<Props> = ({
         }
       />
 
-      <ResizableModal
-        open={addSizeOpen}
-        title="新增尺码(多码)"
-        onCancel={() => {
-          setAddSizeOpen(false);
-          setNewSizeName('');
-        }}
-        onOk={confirmAddSize}
-        okText="确定"
-        cancelText="取消"
-        confirmLoading={saving}
-        width="30vw"
-        minWidth={360}
-        initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.4 : 320}
-        minHeight={220}
-        autoFontSize={false}
-        scaleWithViewport
-      >
-        <Input.TextArea
-          value={newSizeName}
-          placeholder="每行一个，或用逗号分隔：\nS\nM\n3-6M"
-          rows={4}
-          onChange={(e) => setNewSizeName(e.target.value)}
-        />
-      </ResizableModal>
-
-      <ResizableModal
+      <StyleSizeGradingConfigModal
         open={gradingConfigOpen}
-        title={gradingTargetRowKey === 'batch' ? `批量配置跳码区 (${selectedRowKeys.length}个部位)` : '配置跳码区'}
+        gradingTargetRowKey={gradingTargetRowKey}
+        selectedRowCount={selectedRowKeys.length}
+        sizeColumns={sizeColumns}
+        rows={rows}
+        gradingDraftBaseSize={gradingDraftBaseSize}
+        gradingDraftZones={gradingDraftZones}
+        setGradingDraftBaseSize={setGradingDraftBaseSize}
+        setGradingDraftZones={setGradingDraftZones}
         onCancel={() => {
           setGradingConfigOpen(false);
           setGradingTargetRowKey('');
         }}
-        footer={null}
-        width="60vw"
-        minWidth={720}
-        initialHeight={typeof window !== 'undefined' ? window.innerHeight * 0.62 : 520}
-        minHeight={420}
-        autoFontSize={false}
-        scaleWithViewport
-      >
-        <div style={{ display: 'grid', gap: 16 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '120px minmax(0, 1fr) auto', alignItems: 'center', gap: 12 }}>
-            <div style={{ fontWeight: 600 }}>样版码</div>
-            <Select
-              value={gradingDraftBaseSize || undefined}
-              allowClear
-              options={sizeColumns.map((size) => ({ value: size, label: size }))}
-              onChange={(value) => {
-                const newBaseSize = String(value || '');
-                setGradingDraftBaseSize(newBaseSize);
-                const baseIndex = newBaseSize ? sizeColumns.indexOf(newBaseSize) : -1;
-                const newFrontSizes = baseIndex > 0 ? sizeColumns.slice(0, baseIndex) : [];
-                const newBackSizes = baseIndex >= 0 ? sizeColumns.slice(baseIndex + 1) : [...sizeColumns];
-                setGradingDraftZones((prev) => prev.map((zone) => ({
-                  ...zone,
-                  frontSizes: newFrontSizes,
-                  backSizes: newBackSizes,
-                })));
-              }}
-            />
-            <Button type="primary" onClick={applyGradingDraft}>
-              保存并带出
-            </Button>
-          </div>
-          <div style={{ color: '#64748b', fontSize: 12, lineHeight: 1.7 }}>
-            样版码为基准码，跳码值相对于样版码递增/递减。选择样版码后自动分割前后码数。
-          </div>
-          <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '80px 140px 1fr 120px 1fr 120px 40px', gap: 0, background: '#f8fafc', fontWeight: 600, fontSize: 13, alignItems: 'center' }}>
-              <div style={{ padding: '12px', borderRight: '1px solid #e2e8f0' }}>跳码区</div>
-              <div style={{ padding: '12px', borderRight: '1px solid #e2e8f0' }}>部位</div>
-              <div style={{ padding: '12px', borderRight: '1px solid #e2e8f0' }}>码数(前)</div>
-              <div style={{ padding: '12px', borderRight: '1px solid #e2e8f0' }}>跳码</div>
-              <div style={{ padding: '12px', borderRight: '1px solid #e2e8f0' }}>码数(后)</div>
-              <div style={{ padding: '12px', borderRight: '1px solid #e2e8f0' }}>跳码</div>
-              <div style={{ padding: '12px' }}>操作</div>
-            </div>
-            {gradingDraftZones.map((zone, index) => (
-              <div key={zone.key} style={{ display: 'grid', gridTemplateColumns: '80px 140px 1fr 120px 1fr 120px 40px', gap: 0, borderTop: '1px solid #e2e8f0', background: '#fff', alignItems: 'center' }}>
-                <div style={{ padding: '12px', borderRight: '1px solid #e2e8f0', display: 'flex', alignItems: 'center' }}>
-                  <Input
-                    value={zone.label}
-                    size="small"
-                    placeholder={`${index + 1}`}
-                    onChange={(e) => setGradingDraftZones((prev) => prev.map((item) => (item.key === zone.key ? { ...item, label: e.target.value } : item)))}
-                  />
-                </div>
-                <div style={{ padding: '12px', borderRight: '1px solid #e2e8f0' }}>
-                  <Select
-                    mode="multiple"
-                    size="small"
-                    value={zone.partKeys || []}
-                    onChange={(values) => setGradingDraftZones((prev) => prev.map((item) => (item.key === zone.key ? { ...item, partKeys: values } : item)))}
-                    options={rows.map((r) => ({ value: r.key, label: r.partName || '未命名' }))}
-                    placeholder="部位"
-                    style={{ width: '100%', height: 32 }}
-                    maxTagCount="responsive"
-                  />
-                </div>
-                <div style={{ padding: '12px', borderRight: '1px solid #e2e8f0', display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                  {sizeColumns.map((size) => {
-                    const checked = (zone.frontSizes || []).includes(size);
-                    return (
-                      <Tag
-                        key={`front-${zone.key}-${size}`}
-                        color={checked ? 'blue' : 'default'}
-                        style={{ margin: 0, cursor: 'pointer', userSelect: 'none', opacity: checked ? 1 : 0.5 }}
-                        onClick={() => setGradingDraftZones((prev) => prev.map((item) => {
-                          if (item.key !== zone.key) return item;
-                          const nextSizes = (item.frontSizes || []).includes(size)
-                            ? (item.frontSizes || []).filter((s) => s !== size)
-                            : [...(item.frontSizes || []), size];
-                          return { ...item, frontSizes: nextSizes };
-                        }))}
-                      >
-                        {size}
-                      </Tag>
-                    );
-                  })}
-                </div>
-                <div style={{ padding: '12px', borderRight: '1px solid #e2e8f0', display: 'flex', alignItems: 'center' }}>
-                  <InputNumber
-                    size="small"
-                    value={zone.frontStep}
-                    min={0}
-                    step={0.1}
-                    style={{ width: '100%', height: 32 }}
-                    onChange={(value) => setGradingDraftZones((prev) => prev.map((item) => (item.key === zone.key ? { ...item, frontStep: toNumberSafe(value) } : item)))}
-                  />
-                </div>
-                <div style={{ padding: '12px', borderRight: '1px solid #e2e8f0', display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                  {sizeColumns.map((size) => {
-                    const checked = (zone.backSizes || []).includes(size);
-                    return (
-                      <Tag
-                        key={`back-${zone.key}-${size}`}
-                        color={checked ? 'blue' : 'default'}
-                        style={{ margin: 0, cursor: 'pointer', userSelect: 'none', opacity: checked ? 1 : 0.5 }}
-                        onClick={() => setGradingDraftZones((prev) => prev.map((item) => {
-                          if (item.key !== zone.key) return item;
-                          const nextSizes = (item.backSizes || []).includes(size)
-                            ? (item.backSizes || []).filter((s) => s !== size)
-                            : [...(item.backSizes || []), size];
-                          return { ...item, backSizes: nextSizes };
-                        }))}
-                      >
-                        {size}
-                      </Tag>
-                    );
-                  })}
-                </div>
-                <div style={{ padding: '12px', borderRight: '1px solid #e2e8f0', display: 'flex', alignItems: 'center' }}>
-                  <InputNumber
-                    size="small"
-                    value={zone.backStep}
-                    min={0}
-                    step={0.1}
-                    style={{ width: '100%', height: 32 }}
-                    onChange={(value) => setGradingDraftZones((prev) => prev.map((item) => (item.key === zone.key ? { ...item, backStep: toNumberSafe(value) } : item)))}
-                  />
-                </div>
-                <div style={{ padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Button
-                    size="small"
-                    danger
-                    type="text"
-                    icon={<DeleteOutlined />}
-                    onClick={() => setGradingDraftZones((prev) => prev.filter((item) => item.key !== zone.key))}
-                    disabled={gradingDraftZones.length <= 1}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-          <Button
-            type="dashed"
-            icon={<PlusOutlined />}
-            onClick={() => setGradingDraftZones((prev) => [...prev, createGradingZone([], `${prev.length + 1}`, [], [], [...sizeColumns])])}
-          >
-            新增跳码区
-          </Button>
-        </div>
-      </ResizableModal>
+        onSubmit={applyGradingDraft}
+      />
     </div>
   );
 };

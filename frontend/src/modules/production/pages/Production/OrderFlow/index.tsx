@@ -723,7 +723,7 @@ const OrderFlow: React.FC = () => {
                                       dataIndex: 'standardTime',
                                       key: 'standardTime',
                                       width: 130,
-                                      align: 'right',
+                                      align: 'right' as const,
                                       render: (v: any) => Number(v || 0).toFixed(2)
                                     },
                                     ...(!isFactoryUser ? [{
@@ -790,7 +790,7 @@ const OrderFlow: React.FC = () => {
                                 title: '序号',
                                 key: 'index',
                                 width: 70,
-                                align: 'center',
+                                align: 'center' as const,
                                 render: (_: any, __: any, index: number) => index + 1
                               },
                               {
@@ -855,14 +855,14 @@ const OrderFlow: React.FC = () => {
                                 dataIndex: 'purchaseQuantity',
                                 key: 'purchaseQuantity',
                                 width: 120,
-                                align: 'right',
+                                align: 'right' as const,
                                 render: (v: any, record: any) => `${Number(v || 0).toFixed(2)} ${record.unit || ''}`
                               },
                               {
                                 title: '参考公斤数',
                                 key: 'referenceKilograms',
                                 width: 120,
-                                align: 'right',
+                                align: 'right' as const,
                                 render: (_: any, record: any) =>
                                   formatReferenceKilograms(record.purchaseQuantity, record.conversionRate, record.unit)
                               },
@@ -871,7 +871,7 @@ const OrderFlow: React.FC = () => {
                                 dataIndex: 'arrivedQuantity',
                                 key: 'arrivedQuantity',
                                 width: 120,
-                                align: 'right',
+                                align: 'right' as const,
                                 render: (v: any, record: any) => {
                                   const val = Number(v || 0);
                                   const ordered = Number(record.purchaseQuantity || 0);
@@ -892,7 +892,7 @@ const OrderFlow: React.FC = () => {
                                 dataIndex: 'totalAmount',
                                 key: 'totalAmount',
                                 width: 120,
-                                align: 'right',
+                                align: 'right' as const,
                                 render: (v: any, record: any) => {
                                   const total = Number(v || 0) || (Number(record.purchasedQuantity || 0) * Number(record.unitPrice || 0));
                                   return total > 0 ? <strong style={{ color: 'var(--primary-color)' }}>¥{total.toFixed(2)}</strong> : '-';

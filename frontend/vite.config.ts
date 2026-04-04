@@ -61,10 +61,11 @@ export default defineConfig({
       'Content-Security-Policy':
         "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https:; connect-src 'self' ws: wss: http: https:; font-src 'self' data:; worker-src blob: 'self'; media-src 'self' blob: http: https:;",
     },
-    // HMR 配置：默认跟随当前访问域名，必要时允许通过环境变量覆盖
+    // HMR 配置：自动跟随客户端请求的 Host，同时支持 localhost 和内网 IP 访问
+    // 注意：不要设置 host 字段，否则 Vite 会把 WebSocket 地址硬编码为固定 IP，
+    // 导致内网 IP 访问时动态模块 import() 收到 text/html 而非 JS 文件
     hmr: {
       protocol: 'ws',
-      host: env.VITE_HMR_HOST || undefined,
       port: 5173,
       clientPort: 5173
     },

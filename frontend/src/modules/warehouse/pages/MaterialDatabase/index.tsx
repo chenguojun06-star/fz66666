@@ -5,10 +5,12 @@ import type { ColumnsType } from 'antd/es/table';
 import { UploadOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
 import Layout from '@/components/Layout';
+import MaterialTypeTag from '@/components/common/MaterialTypeTag';
 import StandardModal from '@/components/common/StandardModal';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import StandardToolbar from '@/components/common/StandardToolbar';
+import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import { useAuth } from '@/utils/AuthContext';
 import { renderMaskedNumber } from '@/utils/sensitiveDataMask';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -344,13 +346,7 @@ const MaterialDatabasePage: React.FC = () => {
       dataIndex: 'materialType',
       key: 'materialType',
       width: 120,
-      render: (v: unknown) => {
-        const type = String(v || '').trim();
-        const category = getMaterialTypeCategory(type);
-        const text = getBaseMaterialTypeLabel(type);
-        const color = category === 'accessory' ? 'purple' : category === 'lining' ? 'cyan' : 'geekblue';
-        return <Tag color={color}>{text}</Tag>;
-      },
+      render: (v: unknown) => <MaterialTypeTag value={v} />,
     },
     {
       title: '颜色',
@@ -392,6 +388,13 @@ const MaterialDatabasePage: React.FC = () => {
       key: 'supplierName',
       width: 120,
       ellipsis: true,
+      render: (_: unknown, record: MaterialDatabase) => (
+        <SupplierNameTooltip
+          name={record.supplierName}
+          contactPerson={(record as any).supplierContactPerson}
+          contactPhone={(record as any).supplierContactPhone}
+        />
+      ),
     },
     {
       title: '单价(元)',

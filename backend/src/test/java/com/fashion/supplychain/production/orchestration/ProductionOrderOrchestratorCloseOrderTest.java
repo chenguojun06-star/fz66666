@@ -128,7 +128,7 @@ class ProductionOrderOrchestratorCloseOrderTest {
         AccessDeniedException ex = assertThrows(AccessDeniedException.class,
                 () -> orchestrator.closeOrder("o1", "dashboard"));
 
-        assertEquals("仅允许在我的订单或生产进度完成", ex.getMessage());
+        assertEquals("仅允许在我的订单或工序跟进完成", ex.getMessage());
     }
 
     /** 大小写敏感测试：确保sourceModule不会被自动转换大小写 */
@@ -137,7 +137,7 @@ class ProductionOrderOrchestratorCloseOrderTest {
         AccessDeniedException ex = assertThrows(AccessDeniedException.class,
                 () -> orchestrator.closeOrder("o1", "MyOrders"));
 
-        assertEquals("仅允许在我的订单或生产进度完成", ex.getMessage());
+        assertEquals("仅允许在我的订单或工序跟进完成", ex.getMessage());
     }
 
     // ========== sourceModule 白名单：myOrders（3个测试） ==========

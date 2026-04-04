@@ -8,6 +8,7 @@ import StandardToolbar from '@/components/common/StandardToolbar';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
+import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import MaterialReconModalContent from '@/components/Finance/MaterialReconModalContent';
 import { MaterialReconciliation as MaterialReconType, MaterialReconQueryParams } from '@/types/finance';
 import materialReconciliationApi from '@/services/finance/materialReconciliationApi';
@@ -489,6 +490,13 @@ const MaterialReconciliation: React.FC = () => {
       dataIndex: 'supplierName',
       key: 'supplierName',
       width: 120,
+      render: (_: unknown, record: MaterialReconType) => (
+        <SupplierNameTooltip
+          name={record.supplierName}
+          contactPerson={(record as any).supplierContactPerson}
+          contactPhone={(record as any).supplierContactPhone}
+        />
+      ),
     },
     {
       title: '物料编码',

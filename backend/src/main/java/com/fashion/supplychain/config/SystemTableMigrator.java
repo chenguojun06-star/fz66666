@@ -348,7 +348,7 @@ public class SystemTableMigrator {
             ensurePermission("我的订单", "MENU_PRODUCTION_LIST", productionId, "生产管理", "menu", "/production", null, 21);
             ensurePermission("物料采购", "MENU_MATERIAL_PURCHASE", productionId, "生产管理", "menu", "/production/material", null, 22);
             ensurePermission("裁剪管理", "MENU_CUTTING", productionId, "生产管理", "menu", "/production/cutting", null, 23);
-            ensurePermission("生产进度", "MENU_PROGRESS", productionId, "生产管理", "menu", "/production/progress-detail", null, 24);
+            ensurePermission("工序跟进", "MENU_PROGRESS", productionId, "生产管理", "menu", "/production/progress-detail", null, 24);
             ensurePermission("质检入库", "MENU_WAREHOUSING", productionId, "生产管理", "menu", "/production/warehousing", null, 25);
             dbHelper.ensurePermissionNameByCode("MENU_WAREHOUSING", "质检入库");
         }

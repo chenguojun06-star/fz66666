@@ -95,6 +95,12 @@ public class MaterialPurchase {
      */
     private String size;
 
+    /**
+     * 各码用量（非DB字段，从款号BOM运行时填充，JSON格式：{"S":"1.50","M":"1.60"...}）
+     */
+    @TableField(exist = false)
+    private String sizeUsageMap;
+
     private Integer returnConfirmed;
 
     private Integer returnQuantity;

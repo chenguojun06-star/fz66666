@@ -392,6 +392,7 @@ const StyleInfoDetailPage: React.FC = () => {
   const [pushToOrderForm] = Form.useForm();
   const [pushToOrderSaving, setPushToOrderSaving] = useState(false);
   const [pushToOrderTargets, setPushToOrderTargets] = useState<string[]>([
+    'bom',
     'pattern',
     'size',
     'process',
@@ -776,7 +777,9 @@ const StyleInfoDetailPage: React.FC = () => {
                   gap: 8,
                 }}
               >
-                <Checkbox value="pattern">纸样开发（含尺寸表）</Checkbox>
+                <Checkbox value="pattern">纸样开发</Checkbox>
+                <Checkbox value="size">尺寸表</Checkbox>
+                <Checkbox value="bom">BOM清单</Checkbox>
                 <Checkbox value="process">工序单价</Checkbox>
                 <Checkbox value="production">生产制单</Checkbox>
                 <Checkbox value="secondary">二次工艺</Checkbox>

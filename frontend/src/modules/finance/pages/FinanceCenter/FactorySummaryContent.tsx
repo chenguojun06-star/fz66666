@@ -17,6 +17,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import FactoryStatementPrintModal from './FactoryStatementPrintModal';
 import dayjs from 'dayjs';
 import StandardToolbar from '@/components/common/StandardToolbar';
+import StickyFilterBar from '@/components/common/StickyFilterBar';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
@@ -567,6 +568,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
       )}
 
       {/* 搜索 & 工具栏 */}
+      <StickyFilterBar>
       <Card size="small" style={{ marginBottom: 12 }}>
         {searchFields}
       </Card>
@@ -603,6 +605,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
           </Button>
         }
       />
+      </StickyFilterBar>
 
       {/* 数据表格 */}
       <ResizableTable

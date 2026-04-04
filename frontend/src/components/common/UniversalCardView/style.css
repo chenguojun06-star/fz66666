@@ -1,5 +1,54 @@
-/* ===== 通用卡片视图样式 — 字段行/进度条/操作按钮 ===== */
-/* 布局层（外壳/封面/标题）已迁移至 StyleInfo/styles.css 的 style-smart-row */
+/* ===== 通用卡片视图样式 - 全站统一 ===== */
+.universal-card {
+  border-radius: 8px;
+  transition: all 0.25s ease;
+  overflow: hidden;
+  cursor: default;
+}
+
+.universal-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.universal-card .ant-card-body {
+  padding: 8px 10px;
+}
+
+/* 卡片封面图片 */
+.universal-card-cover {
+  position: relative;
+  width: 100%;
+  padding-top: 100%;
+  background: #f5f5f5;
+  overflow: hidden;
+}
+
+.universal-card-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.universal-card-cover-placeholder {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #bfbfbf;
+  font-size: 13px;
+}
+
+/* 卡片主体 - 紧凑布局 */
+.universal-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
 
 .universal-card-title {
   margin: 0;
@@ -123,4 +172,5 @@
 @media (max-width: 768px) {
   .universal-card-title { font-size: 12px; }
   .universal-card-field { font-size: 10px; }
+  .universal-card .ant-card-body { padding: 6px 8px; }
 }

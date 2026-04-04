@@ -39,6 +39,7 @@ interface BundleRow {
 
 const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
   entryOrderLines,
+  sizeUsageMap,
   generating,
   disabled,
   onConfirm,
@@ -131,6 +132,16 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
   const columns: ColumnsType<BundleRow> = [
     { title: '颜色', dataIndex: 'color', key: 'color', width: 100 },
     { title: '尺码', dataIndex: 'size', key: 'size', width: 80 },
+    {
+      title: '单件码数用量',
+      key: 'sizeUsage',
+      width: 110,
+      align: 'right' as const,
+      render: (_: unknown, row: BundleRow) => {
+        const val = sizeUsageMap?.[row.size];
+        return val != null ? <Text>{val} m</Text> : <Text type="secondary">-</Text>;
+      },
+    },
     {
       title: '下单数量',
       dataIndex: 'quantity',

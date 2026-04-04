@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Card, Col, Form, Input, Row, Select, Space, Tabs, Tag, Tooltip } from 'antd';
+import { App, Button, Card, Col, Form, Input, Row, Select, Space, Tag, Tooltip } from 'antd';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
 import { AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import { useSync } from '@/utils/syncManager';
@@ -7,6 +7,7 @@ import { createCardSpecFieldGroups } from '@/components/common/CardSizeQuantityF
 import UniversalCardView from '@/components/common/UniversalCardView';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import StandardPagination from '@/components/common/StandardPagination';
+import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import { usePersistentState } from '@/hooks/usePersistentState';
 
 import dayjs from 'dayjs';
@@ -126,7 +127,7 @@ const OrderManagement: React.FC = () => {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailRows, setDetailRows] = useState<any[]>([]);
 
-  const [activeTabKey, setActiveTabKey] = usePersistentState<string>('order-management-active-tab', 'base');
+  const [, setActiveTabKey] = usePersistentState<string>('order-management-active-tab', 'base');
   const [bomLoading, setBomLoading] = useState(false);
   const [bomList, setBomList] = useState<StyleBom[]>([]);
   const [sizePriceRows, setSizePriceRows] = useState<SizePriceRecord[]>([]);
@@ -434,7 +435,20 @@ const OrderManagement: React.FC = () => {
         return kg == null ? '-' : `${kg} kg`;
       },
     },
-    { title: '供应商', dataIndex: 'supplier', key: 'supplier', width: 140, ellipsis: true },
+    {
+      title: '供应商',
+      dataIndex: 'supplier',
+      key: 'supplier',
+      width: 140,
+      ellipsis: true,
+      render: (_: unknown, record: StyleBom) => (
+        <SupplierNameTooltip
+          name={record.supplier}
+          contactPerson={record.supplierContactPerson}
+          contactPhone={record.supplierContactPhone}
+        />
+      ),
+    },
     { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 100 },
     {
       title: '总价',
@@ -1628,242 +1642,242 @@ const OrderManagement: React.FC = () => {
         tableDensity={isMobile ? 'dense' : 'auto'}
       >
         <Form form={form} layout="vertical" style={{ minWidth: 0, width: '100%' }}>
-          <Tabs
-            activeKey={activeTabKey}
-            onChange={setActiveTabKey}
-            items={[
-              {
-                key: 'base',
-                label: '基础信息',
-                children: (
-                  <div
-                    style={
-                      isMobile
-                        ? { display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0, width: '100%', maxWidth: '100%' }
-                        : { display: 'flex', gap: 20, minWidth: 0, width: '100%', maxWidth: '100%' }
-                    }
-                  >
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0, flex: isMobile ? '1 1 100%' : '0 0 25%', maxWidth: isMobile ? '100%' : '220px' }}>
-                      <div style={{ fontWeight: 600 }}>图片</div>
-                      <StyleQuotePopover styleNo={selectedStyle?.styleNo || ''}>
-                        <div>
-                          <div style={{ width: '100%' }}>
-                            <StyleCoverGallery
-                              styleId={selectedStyle?.id}
-                              styleNo={selectedStyle?.styleNo}
-                              src={selectedStyle?.cover || null}
-                              fit="cover"
-                              borderRadius={8}
-                            />
-                          </div>
-                          <div style={{ fontSize: 11, color: '#8c8c8c', textAlign: 'center', marginTop: 4 }}>
-                             悬停查看报价参考
-                          </div>
-                        </div>
-                      </StyleQuotePopover>
-                      <div>
-                        <StyleAttachmentsButton
-                          styleId={selectedStyle?.id}
-                          styleNo={selectedStyle?.styleNo}
-                          buttonText="查看附件"
-                          modalTitle={selectedStyle?.styleNo ? `纸样附件（${selectedStyle.styleNo}）` : '纸样附件'}
-                        />
-                      </div>
-                      <OrderSidebarInsights
-                        styleNo={selectedStyle?.styleNo}
-                        factoryName={factories.find(
-                          f => String(f.id) === String(watchedFactoryId)
-                        )?.factoryName}
-                        capacityData={selectedFactoryStat}
-                        schedulingLoading={schedulingLoading}
-                        schedulingPlans={schedulingPlans}
-                        selectedFactoryId={watchedFactoryId}
-                        factories={factories}
-                        onSelectFactory={(factoryId) => {
-                          setFactoryMode('EXTERNAL');
-                          form.setFieldValue('factoryId', factoryId);
-                        }}
-                      />
-                    </div>
-
-                    <div style={{ minWidth: 0, flex: isMobile ? '1 1 100%' : '1 1 75%', maxWidth: '100%', overflow: 'hidden' }}>
-                      {/* 第一行：订单号 + 工厂 */}
-                      <Row gutter={16} style={{ marginBottom: 12 }}>
-                        <Col xs={24} sm={12}>
-                          <div style={{ marginBottom: 4, fontWeight: 600 }}>订单号 <span style={{ color: 'var(--color-danger)' }}>*</span></div>
-                          <Form.Item
-                            name="orderNo"
-                            rules={[{ required: true, message: '请输入订单号' }]}
-                            style={{ marginBottom: 0 }}
-                          >
-                            <Space.Compact style={{ width: '100%' }}>
-                              <Input placeholder="例如：PO20260107001" />
-                              <Button onClick={generateOrderNo}>自动生成</Button>
-                            </Space.Compact>
-                          </Form.Item>
-                        </Col>
-                        <Col xs={24} sm={12}>
-                          <OrderFactorySelector
-                            factoryMode={factoryMode}
-                            setFactoryMode={setFactoryMode}
-                            form={form}
-                            departments={departments}
-                            factories={factories}
-                            selectedFactoryStat={selectedFactoryStat}
-                            tooltipTheme={tooltipTheme}
-                          />
-                        </Col>
-                      </Row>
-
-                      {/* 第二行：下单时间 + 订单交期 + 更多选项 */}
-                      <Row gutter={12} style={{ marginBottom: 12 }}>
-                        <Col xs={24} sm={8}>
-                          <div style={{ marginBottom: 4, fontWeight: 600 }}>下单时间 <span style={{ color: 'var(--color-danger)' }}>*</span></div>
-                          <Form.Item
-                            name="plannedStartDate"
-                            rules={[{ required: true, message: '请选择下单时间' }]}
-                            style={{ marginBottom: 0 }}
-                          >
-                            <UnifiedDatePicker showTime style={{ width: '100%' }} />
-                          </Form.Item>
-                        </Col>
-                        <Col xs={24} sm={8}>
-                          <div style={{ marginBottom: 4, fontWeight: 600 }}>
-                            订单交期 <span style={{ color: 'var(--color-danger)' }}>*</span>
-                            {deliverySuggestion && !suggestionLoading && (
-                              <Tooltip title={deliverySuggestion.reason}>
-                                <Tag
-                                  color="blue"
-                                  style={{ marginLeft: 4, cursor: 'pointer' }}
-                                  onClick={() => {
-                                    const d = dayjs().add(deliverySuggestion.recommendedDays, 'day').hour(18).minute(0).second(0);
-                                    form.setFieldValue('plannedEndDate', d);
-                                  }}
-                                >
-                                  建议
-                                </Tag>
-                              </Tooltip>
-                            )}
-                          </div>
-                          <Form.Item
-                            name="plannedEndDate"
-                            rules={[{ required: true, message: '请选择订单交期' }]}
-                            style={{ marginBottom: 0 }}
-                          >
-                            <UnifiedDatePicker showTime style={{ width: '100%' }} />
-                          </Form.Item>
-                        </Col>
-                        <Col xs={24} sm={8}>
-                          <div style={{ marginBottom: 4, fontWeight: 600 }}>急单</div>
-                          <Form.Item name="urgencyLevel" initialValue="normal" style={{ marginBottom: 0 }}>
-                            <Select
-                              placeholder="普通"
-                              allowClear
-                              options={[
-                                { label: ' 急单', value: 'urgent' },
-                                { label: '普通', value: 'normal' },
-                              ]}
-                            />
-                          </Form.Item>
-                        </Col>
-                      </Row>
-
-                      {/* 更多选项 */}
-                      <div style={{ marginBottom: 12 }}>
-                        <Row gutter={[12, 12]}>
-                          <Col xs={24} sm={8}>
-                            <InlineField label="公司">
-                              <Form.Item name="company" style={{ marginBottom: 0 }}>
-                                <SupplierSelect placeholder="选填" allowClear />
-                              </Form.Item>
-                            </InlineField>
-                          </Col>
-                          <Col xs={24} sm={8}>
-                            <InlineField label="品类">
-                              <Form.Item name="productCategory" style={{ marginBottom: 0 }}>
-                                <Select placeholder="选填" allowClear showSearch optionFilterProp="label" style={{ width: '100%' }} options={categoryOptions} />
-                              </Form.Item>
-                            </InlineField>
-                          </Col>
-                          <Col xs={24} sm={8}>
-                            <InlineField label="单型">
-                              <Form.Item name="plateType" style={{ marginBottom: 0 }}>
-                                <Select placeholder="不填自动判断" allowClear options={[{ label: '首单', value: 'FIRST' }, { label: '翻单', value: 'REORDER' }]} />
-                              </Form.Item>
-                            </InlineField>
-                          </Col>
-                          <Col xs={24} sm={8}>
-                            <InlineField label="下单类型">
-                              <Form.Item name="orderBizType" style={{ marginBottom: 0 }}>
-                                <Select placeholder="选填" allowClear options={[
-                                  { label: 'FOB', value: 'FOB' },
-                                  { label: 'ODM', value: 'ODM' },
-                                  { label: 'OEM', value: 'OEM' },
-                                  { label: 'CMT', value: 'CMT' },
-                                ]} />
-                              </Form.Item>
-                            </InlineField>
-                          </Col>
-                          <Col xs={24} sm={8}>
-                            <InlineField label="纸样师">
-                              <Form.Item name="patternMaker" style={{ marginBottom: 0 }}>
-                                <Select placeholder="选填" allowClear showSearch optionFilterProp="label" options={users.filter(u => u.name || u.username).map(u => ({ value: u.name || u.username, label: u.name || u.username }))} />
-                              </Form.Item>
-                            </InlineField>
-                          </Col>
-                          <Col xs={24} sm={8}>
-                            <InlineField label="跟单员">
-                              <Form.Item name="merchandiser" style={{ marginBottom: 0 }}>
-                                <Select placeholder="选填" allowClear showSearch optionFilterProp="label" options={users.filter(u => u.name || u.username).map(u => ({ value: u.name || u.username, label: u.name || u.username }))} />
-                              </Form.Item>
-                            </InlineField>
-                          </Col>
-                        </Row>
-                      </div>
-
-                      {/* 下单数量 */}
-                      <div style={{ marginBottom: 12 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                          <span style={{ fontWeight: 600 }}> 下单数量</span>
-                          <Tag color="default">总计 {totalOrderQuantity} 件</Tag>
-                        </div>
-                        <MultiColorOrderEditor
-                          availableColors={selectableColors}
-                          availableSizes={selectableSizes}
-                          orderLines={orderLines}
-                          totalQuantity={totalOrderQuantity}
-                          isMobile={isMobile}
-                          onChange={setOrderLines}
-                        />
-                      </div>
-
-                      {/* 下单单价 */}
-                      <OrderPricingMaterialPanel
-                        sizePriceLoading={sizePriceLoading}
-                        sizePriceCount={sizePriceRows.length}
-                        processBasedUnitPrice={processBasedUnitPrice}
-                        sizeBasedUnitPrice={sizeBasedUnitPrice}
-                        totalCostUnitPrice={totalCostUnitPrice}
-                        quotationUnitPrice={quotationUnitPrice}
-                        suggestedQuotationUnitPrice={suggestedQuotationUnitPrice}
-                        factoryMode={factoryMode}
-                        watchedPricingMode={watchedPricingMode}
-                        resolvedOrderUnitPrice={resolvedOrderUnitPrice}
-                        onPricingModeChange={() => setPricingModeTouched(true)}
-                        orchestration={orderOrchestration}
-                      />
-
-                      <OrderLearningInsightCard
-                        loading={orderLearningLoading}
-                        data={orderLearningRecommendation}
-                      />
-
-                    </div>
+          <div
+            style={
+              isMobile
+                ? { display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0, width: '100%', maxWidth: '100%' }
+                : { display: 'flex', gap: 20, minWidth: 0, width: '100%', maxWidth: '100%' }
+            }
+          >
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 12,
+                minWidth: 0,
+                flex: isMobile ? '1 1 100%' : '0 0 25%',
+                maxWidth: isMobile ? '100%' : '220px',
+              }}
+            >
+              <StyleQuotePopover styleNo={selectedStyle?.styleNo || ''}>
+                <div>
+                  <div style={{ width: '100%' }}>
+                    <StyleCoverGallery
+                      styleId={selectedStyle?.id}
+                      styleNo={selectedStyle?.styleNo}
+                      src={selectedStyle?.cover || null}
+                      fit="cover"
+                      borderRadius={8}
+                    />
                   </div>
-                )
-              },
-            ]}
-          />
+                  <div style={{ fontSize: 11, color: '#8c8c8c', textAlign: 'center', marginTop: 4 }}>
+                    悬停查看报价参考
+                  </div>
+                </div>
+              </StyleQuotePopover>
+              <div>
+                <StyleAttachmentsButton
+                  styleId={selectedStyle?.id}
+                  styleNo={selectedStyle?.styleNo}
+                  buttonText="查看附件"
+                  modalTitle={selectedStyle?.styleNo ? `纸样附件（${selectedStyle.styleNo}）` : '纸样附件'}
+                />
+              </div>
+              <OrderSidebarInsights
+                styleNo={selectedStyle?.styleNo}
+                factoryName={factories.find(
+                  f => String(f.id) === String(watchedFactoryId)
+                )?.factoryName}
+                capacityData={selectedFactoryStat}
+                schedulingLoading={schedulingLoading}
+                schedulingPlans={schedulingPlans}
+                selectedFactoryId={watchedFactoryId}
+                factories={factories}
+                onSelectFactory={(factoryId) => {
+                  setFactoryMode('EXTERNAL');
+                  form.setFieldValue('factoryId', factoryId);
+                }}
+              />
+            </div>
+
+            <div
+              style={{
+                minWidth: 0,
+                flex: isMobile ? '1 1 100%' : '1 1 75%',
+                maxWidth: '100%',
+                overflow: 'hidden',
+                borderLeft: isMobile ? 'none' : '1px solid #f0f0f0',
+                paddingLeft: isMobile ? 0 : 20,
+              }}
+            >
+              {/* 第一行：订单号 + 工厂 */}
+              <Row gutter={16} style={{ marginBottom: 12 }}>
+                <Col xs={24} sm={12}>
+                  <div style={{ marginBottom: 4, fontWeight: 600 }}>订单号 <span style={{ color: 'var(--color-danger)' }}>*</span></div>
+                  <Form.Item
+                    name="orderNo"
+                    rules={[{ required: true, message: '请输入订单号' }]}
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Space.Compact style={{ width: '100%' }}>
+                      <Input placeholder="例如：PO20260107001" />
+                      <Button onClick={generateOrderNo}>自动生成</Button>
+                    </Space.Compact>
+                  </Form.Item>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <OrderFactorySelector
+                    factoryMode={factoryMode}
+                    setFactoryMode={setFactoryMode}
+                    form={form}
+                    departments={departments}
+                    factories={factories}
+                    selectedFactoryStat={selectedFactoryStat}
+                    tooltipTheme={tooltipTheme}
+                  />
+                </Col>
+              </Row>
+
+              {/* 第二行：下单时间 + 订单交期 + 更多选项 */}
+              <Row gutter={12} style={{ marginBottom: 12 }}>
+                <Col xs={24} sm={8}>
+                  <InlineField label={<>下单时间 <span style={{ color: 'var(--color-danger)' }}>*</span></>}>
+                    <Form.Item
+                      name="plannedStartDate"
+                      rules={[{ required: true, message: '请选择下单时间' }]}
+                      style={{ marginBottom: 0 }}
+                    >
+                      <UnifiedDatePicker showTime style={{ width: '100%' }} />
+                    </Form.Item>
+                  </InlineField>
+                </Col>
+                <Col xs={24} sm={8}>
+                  <InlineField label={<>订单交期 <span style={{ color: 'var(--color-danger)' }}>*</span>{deliverySuggestion && !suggestionLoading && (
+                    <Tooltip title={deliverySuggestion.reason}>
+                      <Tag
+                        color="blue"
+                        style={{ marginLeft: 4, cursor: 'pointer' }}
+                        onClick={() => {
+                          const d = dayjs().add(deliverySuggestion.recommendedDays, 'day').hour(18).minute(0).second(0);
+                          form.setFieldValue('plannedEndDate', d);
+                        }}
+                      >
+                        建议
+                      </Tag>
+                    </Tooltip>
+                  )}</>}>
+                    <Form.Item
+                      name="plannedEndDate"
+                      rules={[{ required: true, message: '请选择订单交期' }]}
+                      style={{ marginBottom: 0 }}
+                    >
+                      <UnifiedDatePicker showTime style={{ width: '100%' }} />
+                    </Form.Item>
+                  </InlineField>
+                </Col>
+                <Col xs={24} sm={8}>
+                  <InlineField label="急单">
+                    <Form.Item name="urgencyLevel" initialValue="normal" style={{ marginBottom: 0 }}>
+                      <Select
+                        placeholder="普通"
+                        allowClear
+                        options={[
+                          { label: ' 急单', value: 'urgent' },
+                          { label: '普通', value: 'normal' },
+                        ]}
+                      />
+                    </Form.Item>
+                  </InlineField>
+                </Col>
+              </Row>
+
+              <div style={{ marginBottom: 12 }}>
+                <Row gutter={[12, 12]}>
+                  <Col xs={24} sm={8}>
+                    <InlineField label="公司">
+                      <Form.Item name="company" style={{ marginBottom: 0 }}>
+                        <SupplierSelect placeholder="选填" allowClear />
+                      </Form.Item>
+                    </InlineField>
+                  </Col>
+                  <Col xs={24} sm={8}>
+                    <InlineField label="品类">
+                      <Form.Item name="productCategory" style={{ marginBottom: 0 }}>
+                        <Select placeholder="选填" allowClear showSearch optionFilterProp="label" style={{ width: '100%' }} options={categoryOptions} />
+                      </Form.Item>
+                    </InlineField>
+                  </Col>
+                  <Col xs={24} sm={8}>
+                    <InlineField label="单型">
+                      <Form.Item name="plateType" style={{ marginBottom: 0 }}>
+                        <Select placeholder="不填自动判断" allowClear options={[{ label: '首单', value: 'FIRST' }, { label: '翻单', value: 'REORDER' }]} />
+                      </Form.Item>
+                    </InlineField>
+                  </Col>
+                  <Col xs={24} sm={8}>
+                    <InlineField label="下单类型">
+                      <Form.Item name="orderBizType" style={{ marginBottom: 0 }}>
+                        <Select placeholder="选填" allowClear options={[
+                          { label: 'FOB', value: 'FOB' },
+                          { label: 'ODM', value: 'ODM' },
+                          { label: 'OEM', value: 'OEM' },
+                          { label: 'CMT', value: 'CMT' },
+                        ]} />
+                      </Form.Item>
+                    </InlineField>
+                  </Col>
+                  <Col xs={24} sm={8}>
+                    <InlineField label="纸样师">
+                      <Form.Item name="patternMaker" style={{ marginBottom: 0 }}>
+                        <Select placeholder="选填" allowClear showSearch optionFilterProp="label" options={users.filter(u => u.name || u.username).map(u => ({ value: u.name || u.username, label: u.name || u.username }))} />
+                      </Form.Item>
+                    </InlineField>
+                  </Col>
+                  <Col xs={24} sm={8}>
+                    <InlineField label="跟单员">
+                      <Form.Item name="merchandiser" style={{ marginBottom: 0 }}>
+                        <Select placeholder="选填" allowClear showSearch optionFilterProp="label" options={users.filter(u => u.name || u.username).map(u => ({ value: u.name || u.username, label: u.name || u.username }))} />
+                      </Form.Item>
+                    </InlineField>
+                  </Col>
+                </Row>
+              </div>
+
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ marginBottom: 8 }}>
+                  <span style={{ fontWeight: 600 }}> 下单数量</span>
+                </div>
+                <MultiColorOrderEditor
+                  availableColors={selectableColors}
+                  availableSizes={selectableSizes}
+                  orderLines={orderLines}
+                  totalQuantity={totalOrderQuantity}
+                  isMobile={isMobile}
+                  onChange={setOrderLines}
+                />
+              </div>
+
+              <OrderPricingMaterialPanel
+                sizePriceLoading={sizePriceLoading}
+                sizePriceCount={sizePriceRows.length}
+                processBasedUnitPrice={processBasedUnitPrice}
+                sizeBasedUnitPrice={sizeBasedUnitPrice}
+                totalCostUnitPrice={totalCostUnitPrice}
+                quotationUnitPrice={quotationUnitPrice}
+                suggestedQuotationUnitPrice={suggestedQuotationUnitPrice}
+                factoryMode={factoryMode}
+                watchedPricingMode={watchedPricingMode}
+                resolvedOrderUnitPrice={resolvedOrderUnitPrice}
+                onPricingModeChange={() => setPricingModeTouched(true)}
+                orchestration={orderOrchestration}
+              />
+
+              <OrderLearningInsightCard
+                loading={orderLearningLoading}
+                data={orderLearningRecommendation}
+              />
+            </div>
+          </div>
 
           <div className="modal-sticky-footer">
             <Button onClick={closeDialog} disabled={submitLoading}>

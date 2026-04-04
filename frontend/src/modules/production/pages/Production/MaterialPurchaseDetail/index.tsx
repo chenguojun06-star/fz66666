@@ -6,13 +6,15 @@ import ResizableModal from '@/components/common/ResizableModal';
 
 import StylePrintModal from '@/components/common/StylePrintModal';
 import Layout from '@/components/Layout';
+import MaterialTypeTag from '@/components/common/MaterialTypeTag';
 import ResizableTable from '@/components/common/ResizableTable';
+import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import type { ColumnsType } from 'antd/es/table';
 import { MATERIAL_ARRIVAL_RATE_THRESHOLD, REMARK_MIN_LENGTH, MATERIAL_PURCHASE_STATUS, MATERIAL_TYPES } from '@/constants/business';
 import { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
 import api, { parseProductionOrderLines } from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
-import { getMaterialTypeCategory, getMaterialTypeLabel } from '@/utils/materialType';
+import { getMaterialTypeCategory } from '@/utils/materialType';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
 import { useViewport } from '@/utils/useViewport';
 import ModalContentLayout from '@/components/common/ModalContentLayout';
@@ -206,14 +208,7 @@ const MaterialPurchaseDetail: React.FC = () => {
       dataIndex: 'materialType',
       key: 'materialType',
       width: 100,
-      render: (v: string) => (
-        <Tag color={
-          getMaterialTypeCategory(v) === MATERIAL_TYPES.ACCESSORY ? 'purple' :
-            getMaterialTypeCategory(v) === MATERIAL_TYPES.LINING ? 'cyan' : 'geekblue'
-        }>
-          {getMaterialTypeLabel(v)}
-        </Tag>
-      ),
+      render: (v: string) => <MaterialTypeTag value={v} />,
     },
     {
       title: '采购单号',
@@ -249,6 +244,13 @@ const MaterialPurchaseDetail: React.FC = () => {
       key: 'supplierName',
       width: 140,
       ellipsis: true,
+      render: (_: unknown, record: MaterialPurchaseType) => (
+        <SupplierNameTooltip
+          name={record.supplierName}
+          contactPerson={(record as any).supplierContactPerson}
+          contactPhone={(record as any).supplierContactPhone}
+        />
+      ),
     },
     {
       title: '采购数量',

@@ -1,9 +1,10 @@
 import React from 'react';
-import { Tag } from 'antd';
+import MaterialTypeTag from '@/components/common/MaterialTypeTag';
 import ResizableTable from '@/components/common/ResizableTable';
+import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import { StyleCoverThumb, StyleAttachmentsButton } from '@/components/StyleAssets';
 import { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
-import { formatMaterialSpecWidth, getMaterialTypeCategory, getMaterialTypeLabel } from '@/utils/materialType';
+import { formatMaterialSpecWidth } from '@/utils/materialType';
 import { formatReferenceKilograms } from '../../utils';
 
 interface PurchasePreviewViewProps {
@@ -62,17 +63,11 @@ const PurchasePreviewView: React.FC<PurchasePreviewViewProps> = ({ previewList, 
             )
           },
           {
-            title: '面料辅料类型',
+            title: '物料类型',
             dataIndex: 'materialType',
             key: 'materialType',
             width: 120,
-            render: (v: unknown) => {
-              const type = String(v || '').trim();
-              const category = getMaterialTypeCategory(type);
-              const text = getMaterialTypeLabel(type);
-              const color = category === 'accessory' ? 'purple' : category === 'lining' ? 'cyan' : 'geekblue';
-              return <Tag color={color}>{text}</Tag>;
-            },
+            render: (v: unknown) => <MaterialTypeTag value={v} />,
           },
           {
             title: '物料编码',
@@ -120,6 +115,13 @@ const PurchasePreviewView: React.FC<PurchasePreviewViewProps> = ({ previewList, 
             title: '供应商',
             dataIndex: 'supplierName',
             key: 'supplierName',
+            render: (_: unknown, record: MaterialPurchaseType) => (
+              <SupplierNameTooltip
+                name={record.supplierName}
+                contactPerson={(record as any).supplierContactPerson}
+                contactPhone={(record as any).supplierContactPhone}
+              />
+            ),
           },
         ]}
         dataSource={previewList}

@@ -54,7 +54,7 @@ const isTempId = (id: any) => {
   return s.startsWith('-');
 };
 
-const STAGE_ORDER = ['采购', '裁剪', '车缝', '二次工艺', '尾部', '入库'];
+const STAGE_ORDER = ['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库'];
 
 const StyleProcessTab: React.FC<Props> = ({
   styleId,

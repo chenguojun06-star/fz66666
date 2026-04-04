@@ -108,6 +108,11 @@ public class SecondaryProcessController {
         if (process == null) {
             return;
         }
+        if (!StringUtils.hasText(process.getProcessType())) {
+            String existingType = (existing != null && StringUtils.hasText(existing.getProcessType()))
+                    ? existing.getProcessType() : null;
+            process.setProcessType(existingType != null ? existingType : "二次工艺");
+        }
         String normalizedStatus = normalizeStatus(process.getStatus());
         process.setStatus(normalizedStatus);
 

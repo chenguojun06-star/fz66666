@@ -217,6 +217,7 @@ export interface CuttingTask {
   factoryName?: string;
   factoryType?: 'INTERNAL' | 'EXTERNAL';
   styleCover?: string;
+  hasScanRecords?: boolean;
 }
 
 export interface MaterialPurchase extends Record<string, unknown> {

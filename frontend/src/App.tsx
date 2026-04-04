@@ -13,7 +13,7 @@ import WebSocketNotification from './components/common/WebSocketNotification';
 import CommandPalette from './components/common/CommandPalette';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import { StyleInfo, StyleInfoList, OrderManagement, DataCenter, TemplateCenter, PatternRevisionManagement } from './modules/basic';
+import { StyleInfo, StyleInfoList, OrderManagement, DataCenter, TemplateCenter, PatternRevisionManagement, MaintenanceCenter } from './modules/basic';
 import {
   MaterialReconciliation,
   PayrollOperatorSummary,
@@ -296,6 +296,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.orderManagementDetail} element={<Suspense fallback={routeFallback}><OrderManagement /></Suspense>} />
           <Route path={paths.dataCenter} element={<Suspense fallback={routeFallback}><DataCenter /></Suspense>} />
           <Route path={paths.templateCenter} element={<Suspense fallback={routeFallback}><TemplateCenter /></Suspense>} />
+          <Route path={paths.maintenanceCenter} element={<Suspense fallback={routeFallback}><MaintenanceCenter /></Suspense>} />
           <Route path={paths.patternRevision} element={<Suspense fallback={routeFallback}><PatternRevisionManagement /></Suspense>} />
         </Route>
         {/* 客户订单分享页（无需登录） */}
@@ -310,7 +311,7 @@ const AppRoutes: React.FC = () => {
             element={
               <ResizableModal
                 open
-                title="生产进度"
+                title="工序跟进"
                 onCancel={() => navigate(-1)}
                 footer={
                   <div className="modal-footer-actions">

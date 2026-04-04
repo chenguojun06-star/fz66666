@@ -10,7 +10,6 @@ import StyleProcessTab from '../../StyleInfo/components/StyleProcessTab';
 import StyleProductionTab from '../../StyleInfo/components/StyleProductionTab';
 import StyleQuotationTab from '../../StyleInfo/components/StyleQuotationTab';
 import StyleSecondaryProcessTab from '../../StyleInfo/components/StyleSecondaryProcessTab';
-import StyleSizeTab from '../../StyleInfo/components/StyleSizeTab';
 
 interface Props {
   record: StyleInfo;
@@ -45,7 +44,6 @@ const resolvePreferredSection = (detail: StyleInfo | null | undefined): Workbenc
   if (!detail) return 'bom';
   if (!(detail as any).bomCompletedTime) return 'bom';
   if (!(detail as any).patternCompletedTime) return 'pattern';
-  if (!(detail as any).sizeCompletedTime) return 'size';
   if (!(detail as any).processCompletedTime) return 'process';
   if (!(detail as any).secondaryCompletedTime) return 'secondary';
   if (!(detail as any).productionCompletedTime) return 'production';
@@ -169,7 +167,6 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
   const stageCards = useMemo(() => {
     const bomMeta = resolveStageMeta(Boolean((detail as any).bomCompletedTime), Boolean((detail as any).bomStartTime));
     const patternMeta = resolveStageMeta(Boolean((detail as any).patternCompletedTime), Boolean((detail as any).patternStartTime));
-    const sizeMeta = resolveStageMeta(Boolean((detail as any).sizeCompletedTime), Boolean((detail as any).sizeStartTime));
     const processMeta = resolveStageMeta(Boolean((detail as any).processCompletedTime), Boolean((detail as any).processStartTime));
     const productionMeta = resolveStageMeta(Boolean((detail as any).productionCompletedTime), Boolean((detail as any).productionStartTime));
     const quotationLocked = Boolean((data.quotation as any)?.id);
@@ -177,14 +174,13 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
     return [
       { key: 'bom', title: 'BOM清单', count: `${data.bomList.length} 项`, meta: bomMeta, helper: formatTime((detail as any).bomCompletedTime || (detail as any).bomStartTime) },
       { key: 'pattern', title: '纸样开发', count: `${data.attachments.filter((item) => item.bizType === 'pattern').length} 份`, meta: patternMeta, helper: formatTime((detail as any).patternCompletedTime || (detail as any).patternStartTime) },
-      { key: 'size', title: '尺寸表', count: `${data.sizeList.length} 项`, meta: sizeMeta, helper: formatTime((detail as any).sizeCompletedTime || (detail as any).sizeStartTime) },
       { key: 'process', title: '工序单价', count: `${data.processList.length} 项`, meta: processMeta, helper: formatTime((detail as any).processCompletedTime || (detail as any).processStartTime) },
       { key: 'secondary', title: '二次工艺', count: `${String((detail as any).secondaryProcessCount || 0)} 项`, meta: resolveStageMeta(Boolean((detail as any).secondaryCompletedTime), Boolean((detail as any).secondaryStartTime)), helper: formatTime((detail as any).secondaryCompletedTime || (detail as any).secondaryStartTime) },
       { key: 'production', title: '生产制单', count: `${String((detail as any).productionReqRows || 0)} 行`, meta: productionMeta, helper: formatTime((detail as any).productionCompletedTime || (detail as any).productionStartTime) },
       { key: 'quotation', title: '报价单', count: data.quotation?.totalPrice != null ? `¥${Number(data.quotation.totalPrice).toFixed(2)}` : '未报价', meta: quotationLocked ? resolveStageMeta(true, true) : resolveStageMeta(false, Boolean((detail as any).price)), helper: quotationLocked ? '已保存报价单' : '待维护报价' },
       { key: 'files', title: '附件文件', count: `${data.attachments.length} 份`, meta: data.attachments.length ? resolveStageMeta(true, true) : resolveStageMeta(false, false), helper: data.attachments[0] ? `最近更新 ${formatTime(data.attachments[0].createTime)}` : '暂无文件' },
     ] as const;
-  }, [data.attachments, data.bomList.length, data.processList.length, data.quotation, data.sizeList.length, detail]);
+  }, [data.attachments, data.bomList.length, data.processList.length, data.quotation, detail]);
 
   const handleSaveProduction = useCallback(async () => {
     if (!record.id) return;
@@ -240,21 +236,6 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
             patternCompletedTime={(detail as any).patternCompletedTime}
             patternAssignee={(detail as any).patternAssignee}
             readOnly={Boolean((detail as any).patternCompletedTime)}
-            onRefresh={handleSectionRefresh}
-          />
-        </div>
-      );
-    }
-
-    if (activeSection === 'size') {
-      return (
-        <div className="style-workbench__editor">
-          <StyleSizeTab
-            styleId={record.id!}
-            readOnly={Boolean((detail as any).sizeCompletedTime)}
-            sizeAssignee={(detail as any).sizeAssignee}
-            sizeStartTime={(detail as any).sizeStartTime}
-            sizeCompletedTime={(detail as any).sizeCompletedTime}
             onRefresh={handleSectionRefresh}
           />
         </div>

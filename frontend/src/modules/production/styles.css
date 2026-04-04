@@ -179,7 +179,7 @@
 }
 
 .order-flow-tabs-card .ant-tabs-content-holder {
-  padding: 12px;
+  padding: 8px 12px;
 }
 
 .order-flow-module-stack {
@@ -189,17 +189,105 @@
 }
 
 .order-flow-module {
-  border: 1px solid #f0f0f0;
-  background: #fff;
   overflow: hidden;
 }
 
 .order-flow-module-title {
-  padding: 10px 12px;
-  font-weight: 800;
-  color: #1f1f1f;
-  border-bottom: 1px solid #f0f0f0;
-  background: #fff;
+  display: none;
+}
+
+/* ========= 紧凑订单头部（OrderFlow 页专用）========= */
+.ofh {
+  display: flex;
+  gap: 14px;
+  padding: 12px 16px;
+  align-items: flex-start;
+}
+.ofh-cover {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+  background: #f5f5f5;
+  display: block;
+}
+.ofh-cover--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed #d9d9d9;
+  width: 80px;
+  height: 80px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  background: #fafafa;
+  font-size: 28px;
+  color: #d9d9d9;
+}
+.ofh-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ofh-row-primary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  row-gap: 2px;
+}
+.ofh-inline-kv {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  margin-right: 20px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.ofh-inline-kv .ofh-kv-label {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.42);
+}
+.ofh-inline-kv .ofh-kv-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.85);
+}
+.ofh-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0 12px;
+  padding-top: 6px;
+  border-top: 1px solid #f0f0f0;
+}
+.ofh-kv {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.ofh-kv-label {
+  font-size: 11px;
+  color: rgba(0, 0, 0, 0.42);
+  white-space: nowrap;
+}
+.ofh-kv-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ofh-kv-value--num {
+  color: var(--primary-color, #1677ff);
+}
+.ofh-kv-value--time {
+  font-size: 12px;
+  font-weight: 400;
+  color: rgba(0, 0, 0, 0.6);
 }
 
 .order-flow-module .ant-table-wrapper .ant-table-container {

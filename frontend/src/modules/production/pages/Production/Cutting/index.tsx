@@ -20,6 +20,7 @@ import { getMaterialTypeLabel } from '@/utils/materialType';
 import { useViewport } from '@/utils/useViewport';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
+import StickyFilterBar from '@/components/common/StickyFilterBar';
 import CuttingSheetPrintModal from '@/components/common/CuttingSheetPrintModal';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 
@@ -327,7 +328,7 @@ const CuttingManagement: React.FC = () => {
                 ]}
               />
 
-              <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--neutral-light)' }}>
+              <StickyFilterBar>
               <StandardToolbar
                 left={(
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -372,7 +373,7 @@ const CuttingManagement: React.FC = () => {
                   </Button>
                 )}
               />
-              </div>
+              </StickyFilterBar>
 
               <ResizableTable<CuttingTask>
                 stickyHeader
@@ -619,10 +620,19 @@ const CuttingManagement: React.FC = () => {
                           danger
                           onClick={() => handleRollbackActive(activeTask)}
                           loading={tasks.rollbackTaskLoading}
-                          disabled={tasks.isOrderFrozenById((activeTask as unknown as any)?.productionOrderNo)}
+                          disabled={tasks.isOrderFrozenById((activeTask as unknown as any)?.productionOrderNo) || !!activeTask?.hasScanRecords}
                         >
                           退回
                         </Button>
+                        {bundles.importLocked && bundles.dataSource.length > 0 && (
+                          <Button
+                            type="default"
+                            icon={<PlusOutlined />}
+                            onClick={bundles.handleAddBed}
+                          >
+                            增加床次
+                          </Button>
+                        )}
                       </div>
                     ) : null}
 
@@ -713,15 +723,6 @@ const CuttingManagement: React.FC = () => {
                   清除勾选
                 </Button>
                 <Tag color={bundles.selectedBundles.length ? 'blue' : 'default'}>{`已选：${bundles.selectedBundles.length}`}</Tag>
-                {bundles.importLocked && bundles.dataSource.length > 0 && (
-                  <Button
-                    type="default"
-                    icon={<PlusOutlined />}
-                    onClick={bundles.handleAddBed}
-                  >
-                    增加床次
-                  </Button>
-                )}
               </Space>
 
               <ResizableTable<CuttingBundleRow>

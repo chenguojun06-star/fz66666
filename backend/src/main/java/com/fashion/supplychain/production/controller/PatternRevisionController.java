@@ -6,11 +6,13 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.production.entity.PatternRevision;
 import com.fashion.supplychain.production.service.PatternRevisionService;
+import com.fashion.supplychain.style.orchestration.StyleInfoOrchestrator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -23,6 +25,9 @@ public class PatternRevisionController {
 
     @Autowired
     private PatternRevisionService patternRevisionService;
+
+    @Autowired
+    private StyleInfoOrchestrator styleInfoOrchestrator;
 
     /**
      * 分页查询
@@ -80,7 +85,17 @@ public class PatternRevisionController {
         if (!success) {
             return Result.fail("创建失败");
         }
-        return Result.success(revision);
+        if (!StringUtils.hasText(revision.getStyleId())) {
+            return Result.fail("缺少款式ID");
+        }
+
+        styleInfoOrchestrator.lockPatternRevision(Long.valueOf(revision.getStyleId()));
+        Map<String, Object> result = new HashMap<>();
+        result.put("revision", revision);
+        result.put("styleId", revision.getStyleId());
+        result.put("styleNo", revision.getStyleNo());
+        result.put("patternRevLocked", 1);
+        return Result.success(result);
     }
 
     /**

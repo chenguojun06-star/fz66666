@@ -20,7 +20,9 @@ import com.fashion.supplychain.production.service.ProductOutstockService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
+import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleQuotation;
+import com.fashion.supplychain.style.mapper.StyleBomMapper;
 import com.fashion.supplychain.style.mapper.StyleQuotationMapper;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -157,6 +159,9 @@ public class ProductionOrderFlowOrchestrationService {
     @Autowired
     private StyleQuotationMapper styleQuotationMapper;
 
+    @Autowired
+    private StyleBomMapper styleBomMapper;
+
     @Autowired(required = false)
     private JdbcTemplate jdbcTemplate;
 
@@ -274,6 +279,34 @@ public class ProductionOrderFlowOrchestrationService {
             }
         } catch (Exception e) {
             log.warn("[OrderFlow] 采购操作人名称补全失败: {}", e.getMessage());
+        }
+
+        // 为面辅料采购记录补全各码用量信息（来自款号BOM的sizeUsageMap）
+        if (!materialPurchases.isEmpty() && StringUtils.hasText(order.getStyleId())) {
+            try {
+                Long styleId = Long.valueOf(order.getStyleId());
+                List<StyleBom> boms = styleBomMapper.selectList(new LambdaQueryWrapper<StyleBom>()
+                        .eq(StyleBom::getStyleId, styleId)
+                        .isNotNull(StyleBom::getSizeUsageMap));
+                Map<String, String> bomSizeUsageByCode = new HashMap<>();
+                for (StyleBom bom : boms) {
+                    if (StringUtils.hasText(bom.getMaterialCode()) && StringUtils.hasText(bom.getSizeUsageMap())) {
+                        bomSizeUsageByCode.put(bom.getMaterialCode(), bom.getSizeUsageMap());
+                    }
+                }
+                if (!bomSizeUsageByCode.isEmpty()) {
+                    for (MaterialPurchase mp : materialPurchases) {
+                        if (StringUtils.hasText(mp.getMaterialCode())) {
+                            String sizeUsageJson = bomSizeUsageByCode.get(mp.getMaterialCode());
+                            if (StringUtils.hasText(sizeUsageJson)) {
+                                mp.setSizeUsageMap(sizeUsageJson);
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[OrderFlow] 补全面辅料各码用量失败: {}", e.getMessage());
+            }
         }
 
         List<CuttingTask> cuttingTasks = cuttingTaskService.list(new LambdaQueryWrapper<CuttingTask>()

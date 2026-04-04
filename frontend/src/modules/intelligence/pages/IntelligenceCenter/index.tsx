@@ -309,7 +309,7 @@ const IntelligenceCenter: React.FC = () => {
                     type="button"
                     className={`cockpit-ticker-item ${item.level}`}
                     onClick={() => handleTickerClick(item.orderNo)}
-                    title={`点击查看 ${item.orderNo} 生产进度`}
+                    title={`点击查看 ${item.orderNo} 工序跟进`}
                   >
                     {item.text}
                   </button>

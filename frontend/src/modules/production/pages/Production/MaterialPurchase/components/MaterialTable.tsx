@@ -1,6 +1,8 @@
 import React, { useCallback, useState } from 'react';
 import { Tag, App, Space, Tooltip } from 'antd';
+import MaterialTypeTag from '@/components/common/MaterialTypeTag';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
+import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 
 import type { ColumnsType } from 'antd/es/table';
 import { useNavigate } from 'react-router-dom';
@@ -9,7 +11,7 @@ import RowActions from '@/components/common/RowActions';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import { StyleCoverThumb } from '@/components/StyleAssets';
 import { MaterialPurchase as MaterialPurchaseType, MaterialQueryParams } from '@/types/production';
-import { formatMaterialSpecWidth, getMaterialTypeCategory, getMaterialTypeLabel } from '@/utils/materialType';
+import { formatMaterialSpecWidth } from '@/utils/materialType';
 import { analyzePurchase, renderPurchaseTooltip } from '../utils/purchaseIntelligence';
 import { formatDateTime } from '@/utils/datetime';
 import { MATERIAL_TYPES } from '@/constants/business';
@@ -210,14 +212,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       dataIndex: 'materialType',
       key: 'materialType',
       width: 100,
-      render: (v: string) => (
-        <Tag color={
-          getMaterialTypeCategory(v) === MATERIAL_TYPES.ACCESSORY ? 'purple' :
-            getMaterialTypeCategory(v) === MATERIAL_TYPES.LINING ? 'cyan' : 'geekblue'
-        }>
-          {getMaterialTypeLabel(v)}
-        </Tag>
-      ),
+      render: (v: string) => <MaterialTypeTag value={v} />,
     },
     {
       title: '物料名称',
@@ -267,6 +262,13 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       key: 'supplierName',
       width: 140,
       ellipsis: true,
+      render: (_: unknown, record: MaterialPurchaseType) => (
+        <SupplierNameTooltip
+          name={record.supplierName}
+          contactPerson={(record as any).supplierContactPerson}
+          contactPhone={(record as any).supplierContactPhone}
+        />
+      ),
     },
     {
       title: '采购数量',

@@ -7,6 +7,7 @@ import { isOrderFrozenByStatus } from '@/utils/api/production';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
+import StickyFilterBar from '@/components/common/StickyFilterBar';
 import RowActions from '@/components/common/RowActions';
 import StandardModal from '@/components/common/StandardModal';
 import SmallModal from '@/components/common/SmallModal';
@@ -568,6 +569,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
           </Card>
         ) : null}
 
+        <StickyFilterBar>
         <StandardToolbar
           left={(
             <>
@@ -639,6 +641,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
             </>
           )}
         />
+        </StickyFilterBar>
 
         <ResizableTable<FinishedSettlementRow>
           storageKey="finance-finished-settlement"

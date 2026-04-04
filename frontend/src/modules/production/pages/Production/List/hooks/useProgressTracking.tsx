@@ -265,7 +265,7 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
     if (!formatted) {
       return (
         <div
-          style={{ fontSize: 10, color: '#d1d5db', lineHeight: 1.2, marginTop: 2, textAlign: align }}
+          style={{ fontSize: 10, color: '#d1d5db', lineHeight: 1.2, marginBottom: 1, textAlign: align }}
           onMouseEnter={triggerPredictOnHover}
           title={predictHint ? `预计完成：${predictHint}` : '--'}
         >
@@ -276,7 +276,7 @@ export function useProgressTracking(productionList: ProductionOrder[]) {
     const isComplete = rate >= 100;
     return (
       <div
-        style={{ fontSize: 10, color: isComplete ? '#10b981' : '#6b7280', fontWeight: isComplete ? 600 : 400, lineHeight: 1.2, marginTop: 2, textAlign: align, whiteSpace: 'nowrap' }}
+        style={{ fontSize: 10, color: isComplete ? '#10b981' : '#6b7280', fontWeight: isComplete ? 600 : 400, lineHeight: 1.2, marginBottom: 1, textAlign: align, whiteSpace: 'nowrap' }}
         onMouseEnter={triggerPredictOnHover}
         title={predictHint ? `完成时间：${formatted}\n预计完成：${predictHint}` : `完成时间：${formatted}`}
       >

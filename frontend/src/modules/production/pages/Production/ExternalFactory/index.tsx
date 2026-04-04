@@ -4,6 +4,7 @@ import { ArrowUpOutlined, ArrowDownOutlined, ShopOutlined } from '@ant-design/ic
 import Layout from '@/components/Layout';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
+import StickyFilterBar from '@/components/common/StickyFilterBar';
 import SkeletonLoader from '@/components/common/SkeletonLoader';
 import { useAuth } from '@/utils/AuthContext';
 import { ProductionOrder, ProductionQueryParams } from '@/types/production';
@@ -205,6 +206,7 @@ const ExternalFactory: React.FC = () => {
           loading={loading}
         />
         <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
+          <StickyFilterBar>
           <Card
             size="small"
             styles={{ body: { padding: '12px 16px' } }}
@@ -242,6 +244,7 @@ const ExternalFactory: React.FC = () => {
               }
             />
           </Card>
+          </StickyFilterBar>
 
           {loading && orders.length === 0 ? (
             <SkeletonLoader type="table" rows={8} loading={loading} />

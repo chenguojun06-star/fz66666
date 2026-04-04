@@ -10,7 +10,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Button, Space, Spin, Tag } from 'antd';
 import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
-import { ReloadOutlined, WarningOutlined } from '@ant-design/icons';
+import { DownOutlined, ReloadOutlined, RightOutlined, WarningOutlined } from '@ant-design/icons';
 import { productionOrderApi } from '@/services/production/productionApi';
 import type { FactoryCapacityItem } from '@/services/production/productionApi';
 import dayjs from 'dayjs';
@@ -38,6 +38,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
   const [insight, setInsight] = useState<StyleInsight | null>(null);
   const [loading, setLoading] = useState(false);
   const [aiAdviceVisible, setAiAdviceVisible] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   const calcInsight = useCallback(async () => {
     if (!styleNo) return;
@@ -214,20 +215,24 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
       fontSize: 12,
       marginTop: 8,
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+      <div onClick={() => setCollapsed(!collapsed)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: collapsed ? 0 : 8, cursor: 'pointer' }}>
         <span style={{ fontWeight: 700, fontSize: 13, color: '#1677ff' }}>
           {styleNo} 下单分析
         </span>
-        <Button
-          type="link" size="small"
-          icon={<ReloadOutlined style={{ fontSize: 11 }} />}
-          onClick={calcInsight}
-          style={{ padding: 0, height: 'auto', color: '#8c8c8c', fontSize: 11 }}
-        >
-          刷新
-        </Button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Button
+            type="link" size="small"
+            icon={<ReloadOutlined style={{ fontSize: 11 }} />}
+            onClick={(e) => { e.stopPropagation(); void calcInsight(); }}
+            style={{ padding: 0, height: 'auto', color: '#8c8c8c', fontSize: 11 }}
+          >
+            刷新
+          </Button>
+          {collapsed ? <RightOutlined style={{ fontSize: 11, color: '#8c8c8c' }} /> : <DownOutlined style={{ fontSize: 11, color: '#8c8c8c' }} />}
+        </div>
       </div>
 
+      {!collapsed && <>
       {factoryName && capacityData && (isFactoryHighRisk || isFactoryMedRisk) && (
         <div style={{
           background: isFactoryHighRisk ? '#fff2f0' : '#fffbe6',
@@ -305,6 +310,7 @@ const SmartStyleInsightCard: React.FC<Props> = ({ styleNo, factoryName, capacity
           </div>
         </div>
       )}
+      </>}
     </div>
   );
 };

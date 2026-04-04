@@ -175,8 +175,8 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
     },
     {
       key: '2',
-      label: ' 查看生产进度',
-      children: <Text type="secondary">左侧菜单 → 生产管理 → 生产进度。查看每个工序的进度球，点击进度球可查看扫码明细与工人产量。</Text>,
+      label: ' 查看工序跟进',
+      children: <Text type="secondary">左侧菜单 → 生产管理 → 工序跟进。查看每个工序的进度球，点击进度球可查看扫码明细与工人产量。</Text>,
     },
     {
       key: '3',

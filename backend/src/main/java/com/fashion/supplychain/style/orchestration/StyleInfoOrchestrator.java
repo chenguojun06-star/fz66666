@@ -231,7 +231,7 @@ public class StyleInfoOrchestrator {
         }
     }
 
-    public boolean updateProductionRequirements(Long id, Map<String, Object> body) {
+    public StyleInfo updateProductionRequirements(Long id, Map<String, Object> body) {
         ensureStyleNotScrapped(id);
         return styleStageHelper.updateProductionRequirements(id, body);
     }
@@ -244,6 +244,11 @@ public class StyleInfoOrchestrator {
     public boolean rollbackPatternRevision(Long id, Map<String, Object> body) {
         ensureStyleNotScrapped(id);
         return styleStageHelper.rollbackPatternRevision(id, body);
+    }
+
+    public void lockPatternRevision(Long id) {
+        ensureStyleNotScrapped(id);
+        styleStageHelper.lockPatternRevision(id);
     }
 
     private boolean isNumericKey(String key) {
@@ -990,7 +995,7 @@ public class StyleInfoOrchestrator {
                 nb.setFabricComposition(bom.getFabricComposition());
                 nb.setFabricWeight(bom.getFabricWeight());
                 nb.setMaterialType(bom.getMaterialType());
-                nb.setGroupName(bom.getGroupName());
+                nb.setGroupName(null);
                 nb.setColor(bom.getColor());
                 nb.setSpecification(bom.getSpecification());
                 nb.setSize(bom.getSize());

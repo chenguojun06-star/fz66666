@@ -646,7 +646,7 @@ export default function LabelPrintModal({ open, onClose, order, styleInfo }: Pro
                 </div>
                 <SkuTable
                   open={open} order={order} styleInfo={styleInfo}
-                  printColLabel="出库数量"
+                  printColLabel="打印数量"
                   onPrint={(sel, ord) => handleUCodePrint(sel, ord)}
                   onClose={onClose}
                 />

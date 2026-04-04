@@ -126,11 +126,23 @@ public class CuttingTaskOrchestrator {
             }
             Map<String, Object> mutableParams = new java.util.HashMap<>(params != null ? params : new java.util.HashMap<>());
             mutableParams.put("_factoryOrderIds", factoryOrderIds);
-            return cuttingTaskService.queryPage(mutableParams);
+            IPage<CuttingTask> factoryPage = cuttingTaskService.queryPage(mutableParams);
+            factoryPage.getRecords().forEach(t -> {
+                if (StringUtils.hasText(t.getProductionOrderId())) {
+                    t.setHasScanRecords(scanRecordDomainService.hasProductionTypeScanRecords(t.getProductionOrderId()));
+                }
+            });
+            return factoryPage;
         }
         // PC端透传参数，factoryType 由前端明确传递（全部/内部/外发），不在后端强制覆盖
         Map<String, Object> pcParams = params != null ? new java.util.HashMap<>(params) : new java.util.HashMap<>();
-        return cuttingTaskService.queryPage(pcParams);
+        IPage<CuttingTask> page = cuttingTaskService.queryPage(pcParams);
+        page.getRecords().forEach(t -> {
+            if (StringUtils.hasText(t.getProductionOrderId())) {
+                t.setHasScanRecords(scanRecordDomainService.hasProductionTypeScanRecords(t.getProductionOrderId()));
+            }
+        });
+        return page;
     }
 
     /**
@@ -672,6 +684,11 @@ public class CuttingTaskOrchestrator {
             throw new NoSuchElementException("裁剪任务不存在");
         }
         TenantAssert.assertBelongsToCurrentTenant(task.getTenantId(), "裁剪任务");
+
+        // 检查是否已有生产扫码记录，有则禁止退回（防止清除工人工资数据）
+        if (scanRecordDomainService.hasProductionTypeScanRecords(task.getProductionOrderId())) {
+            throw new IllegalStateException("该裁剪任务已存在生产扫码记录，无法退回");
+        }
 
         String taskStatus = task.getStatus() == null ? "" : task.getStatus().trim().toLowerCase();
         // bundled 状态（已生成菲号）允许退回，rollbackTask 会同步清理菲号、扫码记录、工序跟踪

@@ -61,7 +61,7 @@ public class StyleStageHelper {
 
     // ==================== Production Requirements ====================
 
-    public boolean updateProductionRequirements(Long id, Map<String, Object> body) {
+    public StyleInfo updateProductionRequirements(Long id, Map<String, Object> body) {
         StyleInfo current = styleInfoService.getById(id);
         if (current == null) {
             throw new NoSuchElementException("款号不存在");
@@ -74,13 +74,10 @@ public class StyleStageHelper {
         boolean ok = styleInfoService.lambdaUpdate()
                 .eq(StyleInfo::getId, id)
                 .set(StyleInfo::getDescription, desc)
-                .set(StyleInfo::getDescriptionLocked, 0)
+            .set(StyleInfo::getDescriptionLocked, 1)
                 .set(StyleInfo::getDescriptionReturnComment, null)
                 .set(StyleInfo::getDescriptionReturnBy, null)
                 .set(StyleInfo::getDescriptionReturnTime, null)
-                .set(current.getProductionStartTime() == null, StyleInfo::getProductionStartTime, now)
-                .set(!StringUtils.hasText(current.getProductionAssignee()), StyleInfo::getProductionAssignee, currentUser)
-                .set(current.getProductionCompletedTime() != null, StyleInfo::getProductionCompletedTime, null)
                 .set(StyleInfo::getUpdateTime, now)
                 .set(StyleInfo::getUpdateBy, currentUser)
                 .update();
@@ -92,7 +89,21 @@ public class StyleStageHelper {
         if (!ok) {
             throw new IllegalStateException("保存失败");
         }
-        return true;
+
+        StyleInfo saved = styleInfoService.lambdaQuery()
+                .select(StyleInfo::getId,
+                        StyleInfo::getStyleNo,
+                        StyleInfo::getDescription,
+                        StyleInfo::getDescriptionLocked,
+                        StyleInfo::getDescriptionReturnComment,
+                        StyleInfo::getUpdateBy,
+                        StyleInfo::getUpdateTime)
+                .eq(StyleInfo::getId, id)
+                .one();
+        if (saved == null || !Integer.valueOf(1).equals(saved.getDescriptionLocked())) {
+            throw new IllegalStateException("保存后状态校验失败");
+        }
+        return saved;
     }
 
     public boolean rollbackProductionRequirements(Long id, Map<String, Object> body) {

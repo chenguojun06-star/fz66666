@@ -5,6 +5,7 @@ import { StyleBom } from '@/types/style';
 import RowActions from '@/components/common/RowActions';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import SupplierSelect from '@/components/common/SupplierSelect';
+import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 
@@ -149,7 +150,7 @@ export function useBomColumns({
       },
     },
     {
-      title: '面料辅料类型',
+      title: '物料类型',
       dataIndex: 'materialType',
       key: 'materialType',
       width: 120,
@@ -619,7 +620,13 @@ export function useBomColumns({
             </>
           );
         }
-        return text;
+        return (
+          <SupplierNameTooltip
+            name={text}
+            contactPerson={record.supplierContactPerson}
+            contactPhone={record.supplierContactPhone}
+          />
+        );
       }
     },
     {
@@ -640,21 +647,7 @@ export function useBomColumns({
 
         const config = statusConfig[status] || { color: 'default', text: '未知' };
 
-        return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <Tag color={config.color}>{config.text}</Tag>
-            {status === 'insufficient' || status === 'none' ? (
-              <span style={{ fontSize: "var(--font-size-xs)", color: 'var(--color-danger)' }}>
-                需采购: {record.requiredPurchase || 0}
-              </span>
-            ) : null}
-            {status === 'sufficient' && record.availableStock !== undefined ? (
-              <span style={{ fontSize: "var(--font-size-xs)", color: 'var(--color-success)' }}>
-                可用: {record.availableStock}
-              </span>
-            ) : null}
-          </div>
-        );
+        return <Tag color={config.color}>{config.text}</Tag>;
       }
     },
     {

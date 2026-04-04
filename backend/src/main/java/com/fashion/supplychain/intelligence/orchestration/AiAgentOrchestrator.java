@@ -140,7 +140,7 @@ public class AiAgentOrchestrator {
 
     /**
      * 根据用户消息复杂度自适应调整最大迭代轮次。
-     * 简单问候→2轮；中等查询→5轮；多维分析→8轮。
+     * 简单问候→2轮；普通查询→8轮；多维分析→10轮；操作型任务→12轮。
      */
     private int estimateMaxIterations(String userMessage) {
         if (userMessage == null || userMessage.length() < 8) return 3;
@@ -148,10 +148,15 @@ public class AiAgentOrchestrator {
         if (msg.length() < 25 && msg.matches("(?s).*(你好|hi|hello|谢谢|再见|你是谁|在吗).*")) {
             return 2;
         }
-        if (msg.matches("(?s).*(对比|排名|趋势|分析|汇总|所有|每个|各个|评估|预测|方案|为什么|怎么办|如何优化|哪些.*风险|哪些.*问题).*")) {
-            return 8;
+        // 操作型任务：需要查询+执行，轮次最多（最高优先级）
+        if (msg.matches("(?s).*(入库|建单|创建订单|审批|结算|撤回扫码|分配|派单|新建|快速建单|帮我.*做|去做|执行.*操作).*")) {
+            return 12;
         }
-        return 5;
+        // 多维分析 / 复杂调查（含"什么问题/什么情况/看一下"等口语化问法）
+        if (msg.matches("(?s).*(对比|排名|趋势|分析|汇总|所有|每个|各个|评估|预测|方案|为什么|怎么办|如何优化|哪些.*风险|哪些.*问题|什么问题|什么情况|什么原因|看一下|查一下|帮我查|告诉我).*")) {
+            return 10;
+        }
+        return 8;
     }
 
     public Result<String> executeAgent(String userMessage) {

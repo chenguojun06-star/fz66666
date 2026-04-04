@@ -21,7 +21,7 @@ public class AiAgentToolAccessService {
 
     static {
         register("tool_system_overview", "系统全局总览：订单、风险、今日动态与重点事项，适合“系统状态、今天怎么样、最该关注什么”", false);
-        register("tool_query_production_progress", "生产进度查询：按订单、款号、状态看进度与扫码记录，适合“这单到哪了、我负责的订单怎么样”", true);
+        register("tool_query_production_progress", "工序跟进查询：按订单、款号、状态看进度与扫码记录，适合“这单到哪了、我负责的订单怎么样”", true);
         register("tool_smart_report", "智能报告生成：日报、周报、月报，适合经营汇总与正式报告输出", false);
         register("tool_deep_analysis", "深度分析：工厂排名、瓶颈、交期风险、成本结构，适合经营诊断", false);
         register("tool_action_executor", "动作执行：紧急标记、备注、通知等轻量写操作，适合对象明确的直接处理", false);
@@ -127,7 +127,7 @@ public class AiAgentToolAccessService {
         }
 
         if (!hasManagerAccess()) {
-            builder.append("当前账号开放本人直接相关的查询：生产进度、本人计件工资明细、系统知识库；管理、审批、财务总览、跨部门协同类工具已自动隐藏。\n");
+            builder.append("当前账号开放本人直接相关的查询：工序跟进、本人计件工资明细、系统知识库；管理、审批、财务总览、跨部门协同类工具已自动隐藏。\n");
         }
         builder.append("\n");
         return builder.toString();

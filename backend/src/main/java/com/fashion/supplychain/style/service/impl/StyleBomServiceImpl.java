@@ -36,16 +36,14 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
     private volatile Boolean imageUrlsColumnExists;
     private volatile Boolean fabricCompositionColumnExists;
     private volatile Boolean fabricWeightColumnExists;
-    private volatile Boolean groupNameColumnExists;
 
     @Override
     public List<StyleBom> listByStyleId(Long styleId) {
         boolean includeImageUrls = hasImageUrlsColumn();
         boolean includeFabricComposition = hasFabricCompositionColumn();
         boolean includeFabricWeight = hasFabricWeightColumn();
-        boolean includeGroupName = hasGroupNameColumn();
         // 尝试从Redis缓存获取
-        String cacheKey = BOM_CACHE_PREFIX + BOM_CACHE_VERSION + ":" + UserContext.tenantId() + ":" + styleId + ":" + (includeImageUrls ? "img" : "base") + ":" + (includeFabricComposition ? "comp" : "nocomp") + ":" + (includeFabricWeight ? "fw" : "nofw") + ":" + (includeGroupName ? "gn" : "nogn");
+        String cacheKey = BOM_CACHE_PREFIX + BOM_CACHE_VERSION + ":" + UserContext.tenantId() + ":" + styleId + ":" + (includeImageUrls ? "img" : "base") + ":" + (includeFabricComposition ? "comp" : "nocomp") + ":" + (includeFabricWeight ? "fw" : "nofw");
         try {
             List<StyleBom> cached = redisService.get(cacheKey);
             if (cached != null) {
@@ -64,7 +62,6 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
                 StyleBom::getMaterialName,
                 includeFabricComposition ? StyleBom::getFabricComposition : null,
                 includeFabricWeight ? StyleBom::getFabricWeight : null,
-                includeGroupName ? StyleBom::getGroupName : null,
                 StyleBom::getMaterialType,
                 StyleBom::getColor,
                 StyleBom::getSpecification,
@@ -114,7 +111,6 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
         boolean includeImageUrls = hasImageUrlsColumn();
         boolean includeFabricComposition = hasFabricCompositionColumn();
         boolean includeFabricWeight = hasFabricWeightColumn();
-        boolean includeGroupName = hasGroupNameColumn();
         LambdaQueryWrapper<StyleBom> queryWrapper = new LambdaQueryWrapper<StyleBom>()
             .select(
                 StyleBom::getId,
@@ -123,7 +119,6 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
                 StyleBom::getMaterialName,
                 includeFabricComposition ? StyleBom::getFabricComposition : null,
                 includeFabricWeight ? StyleBom::getFabricWeight : null,
-                includeGroupName ? StyleBom::getGroupName : null,
                 StyleBom::getMaterialType,
                 StyleBom::getColor,
                 StyleBom::getSpecification,
@@ -211,26 +206,6 @@ public class StyleBomServiceImpl extends ServiceImpl<StyleBomMapper, StyleBom> i
         } catch (Exception ex) {
             log.warn("检查 t_style_bom.fabric_weight 失败，降级为不查询克重列", ex);
             fabricWeightColumnExists = false;
-            return false;
-        }
-    }
-
-    private boolean hasGroupNameColumn() {
-        Boolean cached = groupNameColumnExists;
-        if (cached != null) {
-            return cached;
-        }
-        try {
-            Integer count = jdbcTemplate.queryForObject(
-                    "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 't_style_bom' AND COLUMN_NAME = 'group_name'",
-                    Integer.class
-            );
-            boolean exists = count != null && count > 0;
-            groupNameColumnExists = exists;
-            return exists;
-        } catch (Exception ex) {
-            log.warn("检查 t_style_bom.group_name 失败，降级为不查询分组列", ex);
-            groupNameColumnExists = false;
             return false;
         }
     }

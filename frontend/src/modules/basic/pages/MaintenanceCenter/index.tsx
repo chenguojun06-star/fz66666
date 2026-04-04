@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { App, Empty, Input, Skeleton, Tag } from 'antd';
+import { App, Empty, Input, Skeleton, Tabs } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
-import dayjs from 'dayjs';
 import Layout from '@/components/Layout';
 import AttachmentThumb from '@/components/common/AttachmentThumb';
 import StandardPagination from '@/components/common/StandardPagination';
@@ -9,24 +8,30 @@ import ResizableModal from '@/components/common/ResizableModal';
 import PatternPanel from './components/PatternPanel';
 import ProductionSheetPanel from './components/ProductionSheetPanel';
 import SizeTablePanel from './components/SizeTablePanel';
+import BomPanel from './components/BomPanel';
 import UnitPricePanel from './components/UnitPricePanel';
+import StyleProcessKnowledgeTab from '../TemplateCenter/components/StyleProcessKnowledgeTab';
 import api from '@/utils/api';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { formatDateTime } from '@/utils/datetime';
 import { readPageSize } from '@/utils/pageSizeStore';
 import type { StyleInfo, TemplateLibrary } from '@/types/style';
-import '../StyleInfo/styles.css';
 import './index.css';
 
 /* ─── types ─── */
-interface MStage { key: string; label: string; timeLabel: string; person: string }
+interface MStage {
+  key: string;
+  label: string;
+  processing?: boolean;
+}
 
-/* ─── constants ─── */
-const STAGE_SLOT_MIN = 128;
-const fmtNodeTime = (dt?: string | null) => {
-  if (!dt) return '';
-  const d = dayjs(dt);
-  return d.isValid() ? d.format('MM-DD HH:mm') : '';
+const sortTemplatesByUpdateTime = (records: TemplateLibrary[]) => (
+  [...records].sort((a, b) => String(b.updateTime || '').localeCompare(String(a.updateTime || '')))
+);
+
+const isTemplateProcessing = (record?: TemplateLibrary | null) => {
+  if (!record) return false;
+  return Number(record.locked) !== 1;
 };
 
 /* ─── component ─── */
@@ -36,6 +41,7 @@ const MaintenanceCenter: React.FC = () => {
   /* ── data ── */
   const [styles, setStyles] = useState<StyleInfo[]>([]);
   const [sizeMap, setSizeMap] = useState<Record<string, TemplateLibrary[]>>({});
+  const [bomMap, setBomMap] = useState<Record<string, TemplateLibrary[]>>({});
   const [priceMap, setPriceMap] = useState<Record<string, TemplateLibrary[]>>({});
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
@@ -45,28 +51,45 @@ const MaintenanceCenter: React.FC = () => {
 
   /* ── search ── */
   const [keyword, setKeyword] = useState('');
+  const [pageTab, setPageTab] = useState<'maintenance' | 'knowledge'>('maintenance');
+  const [knowledgeKeyword, setKnowledgeKeyword] = useState('');
+  const [knowledgePage, setKnowledgePage] = useState(1);
+  const [knowledgePageSize, setKnowledgePageSize] = useState(10);
+  const [knowledgeSelectedKeys, setKnowledgeSelectedKeys] = useState<React.Key[]>([]);
 
   /* ── panel modal ── */
-  type PanelType = 'pattern' | 'sheet' | 'size' | 'price' | null;
+  type PanelType = 'pattern' | 'sheet' | 'size' | 'bom' | 'price' | null;
   const [panelType, setPanelType] = useState<PanelType>(null);
   const [activeStyleNo, setActiveStyleNo] = useState('');
-  const panelTitleMap: Record<string, string> = { pattern: '纸样维护', sheet: '制单维护', size: '尺寸表维护', price: '单价维护' };
+  const panelTitleMap: Record<string, string> = { pattern: '纸样维护', sheet: '制单维护', size: '尺寸表维护', bom: 'BOM维护', price: '工序单价维护' };
 
   /* ── fetch templates (once) ── */
   const fetchTemplates = useCallback(async () => {
     try {
-      const [sizeRes, priceRes] = await Promise.all([
+      const [sizeRes, bomRes, processRes, processPriceRes] = await Promise.all([
         api.get<any>('/template-library/list', { params: { page: 1, pageSize: 500, templateType: 'size' } }),
         api.get<any>('/template-library/list', { params: { page: 1, pageSize: 500, templateType: 'bom' } }),
+        api.get<any>('/template-library/list', { params: { page: 1, pageSize: 500, templateType: 'process' } }),
+        api.get<any>('/template-library/list', { params: { page: 1, pageSize: 500, templateType: 'process_price' } }),
       ]);
-      const buildMap = (res: any) => {
-        const records: TemplateLibrary[] = res?.data?.records ?? res?.records ?? [];
+      const buildMap = (records: TemplateLibrary[]) => {
         const m: Record<string, TemplateLibrary[]> = {};
-        records.forEach(t => { const k = t.sourceStyleNo; if (k) (m[k] = m[k] || []).push(t); });
+        records.forEach((template) => {
+          const key = template.sourceStyleNo;
+          if (key) (m[key] = m[key] || []).push(template);
+        });
+        Object.keys(m).forEach((key) => {
+          m[key] = sortTemplatesByUpdateTime(m[key]);
+        });
         return m;
       };
-      setSizeMap(buildMap(sizeRes));
-      setPriceMap(buildMap(priceRes));
+      const sizeRecords: TemplateLibrary[] = sizeRes?.data?.records ?? sizeRes?.records ?? [];
+      const bomRecords: TemplateLibrary[] = bomRes?.data?.records ?? bomRes?.records ?? [];
+      const processRecords: TemplateLibrary[] = processRes?.data?.records ?? processRes?.records ?? [];
+      const processPriceRecords: TemplateLibrary[] = processPriceRes?.data?.records ?? processPriceRes?.records ?? [];
+      setSizeMap(buildMap(sizeRecords));
+      setBomMap(buildMap(bomRecords));
+      setPriceMap(buildMap([...processPriceRecords, ...processRecords]));
     } catch { /* silent */ }
   }, []);
 
@@ -77,7 +100,13 @@ const MaintenanceCenter: React.FC = () => {
     setLoading(true);
     try {
       const res = await api.get<any>('/style/info/list', {
-        params: { page: pg, pageSize: pageSizeRef.current, onlyCompleted: true, styleNo: keywordRef.current || undefined },
+        params: {
+          page: pg,
+          pageSize: pageSizeRef.current,
+          onlyCompleted: true,
+          pushedToOrderOnly: true,
+          styleNo: keywordRef.current || undefined,
+        },
       });
       const data = res?.data ?? res;
       setStyles(data?.records ?? []);
@@ -95,24 +124,56 @@ const MaintenanceCenter: React.FC = () => {
   /* ── build stages ── */
   const buildStages = useCallback((record: StyleInfo): MStage[] => {
     const sizeTpls = sizeMap[record.styleNo] || [];
+    const bomTpls = bomMap[record.styleNo] || [];
     const priceTpls = priceMap[record.styleNo] || [];
+    const latestSizeTpl = sizeTpls[0] || null;
+    const latestBomTpl = bomTpls[0] || null;
+    const latestPriceTpl = priceTpls[0] || null;
+    const patternProcessing = Number(record.patternRevLocked) === 0
+      && !!String(record.patternRevReturnComment || '').trim();
+    const sheetProcessing = Number(record.descriptionLocked) === 0;
     return [
-      { key: 'pattern', label: '纸样维护', timeLabel: fmtNodeTime(record.patternRevReturnTime), person: record.patternRevReturnBy || '' },
-      { key: 'sheet', label: '制单维护', timeLabel: fmtNodeTime(record.descriptionReturnTime), person: record.descriptionReturnBy || '' },
-      { key: 'size', label: '尺寸表维护', timeLabel: fmtNodeTime(sizeTpls[0]?.updateTime), person: sizeTpls[0]?.operatorName || '' },
-      { key: 'price', label: '单价维护', timeLabel: fmtNodeTime(priceTpls[0]?.updateTime), person: priceTpls[0]?.operatorName || '' },
+      {
+        key: 'pattern',
+        label: '纸样维护',
+        processing: patternProcessing,
+      },
+      {
+        key: 'sheet',
+        label: '制单维护',
+        processing: sheetProcessing,
+      },
+      {
+        key: 'size',
+        label: '尺寸表维护',
+        processing: isTemplateProcessing(latestSizeTpl),
+      },
+      {
+        key: 'bom',
+        label: 'BOM维护',
+        processing: isTemplateProcessing(latestBomTpl),
+      },
+      {
+        key: 'price',
+        label: '工序单价',
+        processing: isTemplateProcessing(latestPriceTpl),
+      },
     ];
-  }, [sizeMap, priceMap]);
+  }, [bomMap, priceMap, sizeMap]);
 
   /* ── rows ── */
   const rows = useMemo(() => styles.map(record => {
     const stages = buildStages(record);
-    const metaItems = [
-      { label: '品类', value: toCategoryCn(record.category) || '-' },
-      { label: '维护人', value: record.maintenanceMan || '-' },
-      { label: '更新', value: record.updateTime ? formatDateTime(record.updateTime) : '-' },
-    ];
-    return { record, stages, metaItems };
+    const latestMaintenanceRecord = [record.maintenanceMan || '', record.maintenanceTime ? formatDateTime(record.maintenanceTime) : '']
+      .filter(Boolean)
+      .join(' ');
+    return {
+      record,
+      stages,
+      displayCategory: toCategoryCn(record.category) || '未分类',
+      latestMaintenanceRecord: latestMaintenanceRecord || (record.updateTime ? formatDateTime(record.updateTime) : '-'),
+      pushedInfoTime: record.pushedToOrderTime ? formatDateTime(record.pushedToOrderTime) : '-',
+    };
   }), [styles, buildStages]);
 
   /* ── stage click ── */
@@ -132,91 +193,128 @@ const MaintenanceCenter: React.FC = () => {
 
   return (
     <Layout>
-      <div className="style-smart-list style-smart-list--style-info style-smart-list--maintenance">
-        {/* ── Search bar ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-          <Input.Search
-            placeholder="按款号搜索"
-            allowClear
-            enterButton={<SearchOutlined />}
-            style={{ maxWidth: 300 }}
-            onSearch={handleSearch}
-          />
-        </div>
-        {rows.length === 0 && !loading && (
-          <div style={{ padding: 48, textAlign: 'center' }}><Empty description="暂无已完成的款式" /></div>
-        )}
-        {loading && rows.length === 0 && (
-          <div style={{ padding: 24 }}><Skeleton active paragraph={{ rows: 4 }} /></div>
-        )}
-
-        {rows.map(({ record, stages, metaItems }) => {
-          const n = stages.length;
-          return (
-            <div key={record.id ?? record.styleNo} className="style-smart-row">
-              <div className="style-smart-row__cover">
-                <div className="style-smart-row__thumb">
-                  <AttachmentThumb styleId={record.id} width="100%" height="100%" />
-                </div>
-              </div>
-              <div className="style-smart-row__body">
-                <div className="style-smart-row__layout">
-                  {/* Identity */}
-                  <div className="style-smart-row__identity">
-                    <div className="style-smart-row__tags">
-                      <Tag>{toCategoryCn(record.category) || '未分类'}</Tag>
+      <div className="maintenance-center">
+        <Tabs
+          activeKey={pageTab}
+          onChange={(key) => {
+            setPageTab(key as 'maintenance' | 'knowledge');
+            if (panelType) handlePanelClose();
+          }}
+          items={[
+            {
+              key: 'maintenance',
+              label: '资料维护',
+              children: (
+                <>
+                  <div className="maintenance-center__toolbar">
+                    <div className="maintenance-center__toolbar-left">
+                      <Input.Search
+                        placeholder="按款号搜索"
+                        allowClear
+                        enterButton={<SearchOutlined />}
+                        style={{ maxWidth: 320 }}
+                        onSearch={handleSearch}
+                      />
                     </div>
-                    <div className="style-smart-row__title-wrap">
-                      <span className="style-smart-row__title">{record.styleNo || '-'}</span>
-                      {record.styleName && <span className="style-smart-row__title-name">{record.styleName}</span>}
-                    </div>
-                    <div className="style-smart-row__meta style-smart-row__meta--stacked">
-                      {metaItems.map(m => (
-                        <div key={m.label} className="style-smart-row__meta-item">
-                          <span className="style-smart-row__meta-label">{m.label}</span>
-                          <span className="style-smart-row__meta-value">{m.value}</span>
-                        </div>
-                      ))}
+                    <div className="maintenance-center__toolbar-right">
+                      <span className="maintenance-center__toolbar-count">共 {total} 款</span>
                     </div>
                   </div>
+                  {rows.length === 0 && !loading && (
+                    <div style={{ padding: 48, textAlign: 'center' }}><Empty description="暂无已推送到资料侧的款式" /></div>
+                  )}
+                  {loading && rows.length === 0 && (
+                    <div style={{ padding: 24 }}><Skeleton active paragraph={{ rows: 4 }} /></div>
+                  )}
 
-                  {/* Maintenance Nodes */}
-                  <div className="style-smart-row__timeline-shell" style={{ minWidth: n * STAGE_SLOT_MIN }}>
-                    <div className="style-smart-row__timeline" style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}>
-                      {stages.map(stage => (
-                        <button
-                          key={stage.key} type="button"
-                          className="style-smart-stage style-smart-stage--active"
-                          onClick={() => handleStageClick(record, stage.key)}
-                        >
-                          <span className="style-smart-stage__time">{stage.timeLabel}</span>
-                          <span className="style-smart-stage__node">
-                            <span className="style-smart-stage__ring" />
-                            <span className="style-smart-stage__orbit" />
-                            <span className="style-smart-stage__core" />
-                          </span>
-                          <span className="style-smart-stage__label">{stage.label}</span>
-                          <span className="style-smart-stage__helper">
-                            {stage.person || '点击维护'}
-                          </span>
-                        </button>
-                      ))}
+                  {rows.length > 0 ? (
+                    <div className="maintenance-center__grid">
+                      {rows.map(({ record, stages, displayCategory, latestMaintenanceRecord, pushedInfoTime }) => {
+                        const processingCount = stages.filter((stage) => stage.processing).length;
+                        return (
+                          <div key={record.id ?? record.styleNo} className="maintenance-card">
+                            <div className="maintenance-card__body">
+                              <div className="maintenance-card__hero">
+                                <div className="maintenance-card__thumb">
+                                  <AttachmentThumb styleId={record.id} width="100%" height="100%" />
+                                </div>
+                                <div className="maintenance-card__hero-body">
+                                  <div className="maintenance-card__header">
+                                    <div className="maintenance-card__title-stack">
+                                      <div className="maintenance-card__style-no">{record.styleNo || '-'}</div>
+                                      <div className="maintenance-card__headline">
+                                        <span className="maintenance-card__category">{displayCategory}</span>
+                                        {record.styleName ? (
+                                          <span className="maintenance-card__name">{record.styleName}</span>
+                                        ) : null}
+                                      </div>
+                                    </div>
+                                    {processingCount > 0 ? (
+                                      <span className="maintenance-card__status maintenance-card__status--processing">
+                                        {processingCount} 项
+                                      </span>
+                                    ) : null}
+                                  </div>
+
+                                  <div className="maintenance-card__meta-lines">
+                                    <div className="maintenance-card__summary">
+                                      <span className="maintenance-card__summary-item">推送资料 {pushedInfoTime}</span>
+                                    </div>
+                                    <div className="maintenance-card__summary">
+                                      <span className="maintenance-card__summary-item">最近修改 {latestMaintenanceRecord}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="maintenance-card__stages">
+                                {stages.map((stage) => (
+                                  <button
+                                    key={stage.key}
+                                    type="button"
+                                    className={`maintenance-stage${stage.processing ? ' maintenance-stage--processing' : ''}`}
+                                    onClick={() => handleStageClick(record, stage.key)}
+                                  >
+                                    <span className="maintenance-stage__label">{stage.label}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  </div>
+                  ) : null}
 
-
-                </div>
-              </div>
-            </div>
-          );
-        })}
-
-        {total > 0 && (
-          <div className="style-smart-list__pagination">
-            <StandardPagination current={page} pageSize={pageSize} total={total}
-              onChange={(p: number, ps: number) => { pageSizeRef.current = ps; setPageSize(ps); fetchStyles(p); }} />
-          </div>
-        )}
+                  {total > 0 && (
+                    <div className="maintenance-center__pagination">
+                      <StandardPagination current={page} pageSize={pageSize} total={total}
+                        onChange={(p: number, ps: number) => { pageSizeRef.current = ps; setPageSize(ps); fetchStyles(p); }} />
+                    </div>
+                  )}
+                </>
+              ),
+            },
+            {
+              key: 'knowledge',
+              label: '工序库',
+              children: (
+                <StyleProcessKnowledgeTab
+                  keyword={knowledgeKeyword}
+                  onKeywordChange={setKnowledgeKeyword}
+                  currentPage={knowledgePage}
+                  pageSize={knowledgePageSize}
+                  onPageChange={(p: number, s: number) => {
+                    setKnowledgePage(p);
+                    setKnowledgePageSize(s);
+                  }}
+                  selectedKeys={knowledgeSelectedKeys}
+                  onSelectionChange={setKnowledgeSelectedKeys}
+                />
+              ),
+            },
+          ]}
+        />
       </div>
 
       {/* ── Panel Modal ── */}
@@ -231,6 +329,7 @@ const MaintenanceCenter: React.FC = () => {
         {panelType === 'pattern' && <PatternPanel styleNo={activeStyleNo} />}
         {panelType === 'sheet' && <ProductionSheetPanel styleNo={activeStyleNo} />}
         {panelType === 'size' && <SizeTablePanel styleNo={activeStyleNo} />}
+        {panelType === 'bom' && <BomPanel styleNo={activeStyleNo} />}
         {panelType === 'price' && <UnitPricePanel styleNo={activeStyleNo} />}
       </ResizableModal>
     </Layout>

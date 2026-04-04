@@ -14,6 +14,7 @@ const ProcessStageSummary: React.FC<Props> = ({ data }) => {
   const stageSummary = React.useMemo(() => {
     const stages: Record<string, { count: number; total: number }> = {
       '裁剪': { count: 0, total: 0 },
+      '二次工艺': { count: 0, total: 0 },
       '车缝': { count: 0, total: 0 },
       '尾部': { count: 0, total: 0 },
     };
@@ -68,6 +69,13 @@ const ProcessStageSummary: React.FC<Props> = ({ data }) => {
         </span>
       </div>
       <div style={rowStyle}>
+        <span style={labelStyle}>二次工艺</span>
+        <span>
+          <span style={valueStyle}>¥{stageSummary['二次工艺'].total.toFixed(2)}</span>
+          <span style={countStyle}>{stageSummary['二次工艺'].count} 道</span>
+        </span>
+      </div>
+      <div style={rowStyle}>
         <span style={labelStyle}>车缝</span>
         <span>
           <span style={valueStyle}>¥{stageSummary['车缝'].total.toFixed(2)}</span>
@@ -94,10 +102,10 @@ const ProcessStageSummary: React.FC<Props> = ({ data }) => {
         <span style={{ fontSize: 12, color: '#1677ff', fontWeight: 600 }}>单价汇总</span>
         <span>
           <span style={{ fontSize: 13, fontWeight: 700, color: '#1677ff' }}>
-            ¥{(stageSummary['裁剪'].total + stageSummary['车缝'].total + stageSummary['尾部'].total).toFixed(2)}
+            ¥{(stageSummary['裁剪'].total + stageSummary['二次工艺'].total + stageSummary['车缝'].total + stageSummary['尾部'].total).toFixed(2)}
           </span>
           <span style={{ fontSize: 11, color: '#4096ff', marginLeft: 8 }}>
-            {stageSummary['裁剪'].count + stageSummary['车缝'].count + stageSummary['尾部'].count} 道
+            {stageSummary['裁剪'].count + stageSummary['二次工艺'].count + stageSummary['车缝'].count + stageSummary['尾部'].count} 道
           </span>
         </span>
       </div>

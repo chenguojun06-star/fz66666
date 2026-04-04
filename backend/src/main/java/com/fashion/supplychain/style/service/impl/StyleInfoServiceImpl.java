@@ -668,6 +668,9 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
         if (style == null) {
             return false;
         }
+        if (Integer.valueOf(0).equals(style.getPatternRevLocked())) {
+            return false;
+        }
         String status = String.valueOf(style.getPatternStatus() == null ? "" : style.getPatternStatus()).trim();
         return "COMPLETED".equalsIgnoreCase(status);
     }

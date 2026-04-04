@@ -191,7 +191,7 @@ const ShareOrderPage: React.FC = () => {
           <div style={heroHeaderStyle}>
             <div>
               <div style={brandTitleStyle}>{data.companyName || '客户订单追踪'}</div>
-              <div style={brandSubtitleStyle}>客户订单生产进度</div>
+              <div style={brandSubtitleStyle}>客户订单工序跟进</div>
             </div>
             <Tag color={statusColor} style={statusTagStyle}>
               {data.statusText}
@@ -379,7 +379,7 @@ const ShareOrderPage: React.FC = () => {
         </div>
         <div style={bottomBrandLineStyle}>
           <span>2026云裳智链</span>
-          <span>仅展示客户可见的生产进度信息</span>
+          <span>仅展示客户可见的工序跟进信息</span>
           {expiresAtText !== '—' && <span>链接有效至 {expiresAtText}</span>}
         </div>
       </div>

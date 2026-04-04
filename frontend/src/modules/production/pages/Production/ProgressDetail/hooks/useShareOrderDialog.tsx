@@ -112,7 +112,7 @@ export const useShareOrderDialog = ({ message }: UseShareOrderDialogOptions) => 
       ) : (
         <div>
           <p style={{ marginBottom: 8, color: '#555', fontSize: 13 }}>
-            发送以下链接给客户，客户无需登录即可实时查看订单生产进度（30天有效）：
+            发送以下链接给客户，客户无需登录即可实时查看订单工序跟进（30天有效）：
           </p>
           <Input.TextArea
             value={shareModal.shareUrl}

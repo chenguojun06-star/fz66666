@@ -279,7 +279,7 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
       {/* 面料信息和单位区域 */}
       <Row gutter={[16, 0]}>
         <Col xs={24} md={6}>
-          <Form.Item name="materialType" label="面料辅料类型" rules={[{ required: true, message: '必填' }]}>
+          <Form.Item name="materialType" label="物料类型" rules={[{ required: true, message: '必填' }]}>
             <Select id="materialType">
               <Option value="fabricA">面料A</Option>
               <Option value="fabricB">面料B</Option>

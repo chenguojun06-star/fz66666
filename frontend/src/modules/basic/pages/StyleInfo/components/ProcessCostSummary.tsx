@@ -14,6 +14,7 @@ const ProcessCostSummary: React.FC<Props> = ({ data }) => {
   const stageSummary = React.useMemo(() => {
     const stages: Record<string, { count: number; total: number }> = {
       '裁剪': { count: 0, total: 0 },
+      '二次工艺': { count: 0, total: 0 },
       '车缝': { count: 0, total: 0 },
       '尾部': { count: 0, total: 0 },
     };
@@ -60,7 +61,7 @@ const ProcessCostSummary: React.FC<Props> = ({ data }) => {
   };
 
   return (
-    <div style={{ marginBottom: 12, display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12 }}>
+    <div style={{ marginBottom: 12, display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 12 }}>
       <div style={cardStyle}>
         <span style={labelStyle}>工序单价（总计）</span>
         <span style={valueStyle}>¥{totalProcessCost.toFixed(2)}</span>
@@ -70,6 +71,11 @@ const ProcessCostSummary: React.FC<Props> = ({ data }) => {
         <span style={labelStyle}>裁剪</span>
         <span style={valueStyle}>¥{stageSummary['裁剪'].total.toFixed(2)}</span>
         <span style={subStyle}>{stageSummary['裁剪'].count} 道工序</span>
+      </div>
+      <div style={cardStyle}>
+        <span style={labelStyle}>二次工艺</span>
+        <span style={valueStyle}>¥{stageSummary['二次工艺'].total.toFixed(2)}</span>
+        <span style={subStyle}>{stageSummary['二次工艺'].count} 道工序</span>
       </div>
       <div style={cardStyle}>
         <span style={labelStyle}>车缝</span>

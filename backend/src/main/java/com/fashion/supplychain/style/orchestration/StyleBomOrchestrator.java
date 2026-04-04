@@ -735,6 +735,7 @@ public class StyleBomOrchestrator {
     }
 
     private void normalizeAndCalc(StyleBom styleBom) {
+        styleBom.setGroupName(null);
         BigDecimal usageAmount = styleBom.getUsageAmount() == null ? BigDecimal.ZERO : styleBom.getUsageAmount();
         BigDecimal lossRate = styleBom.getLossRate() == null ? BigDecimal.ZERO : styleBom.getLossRate();
         BigDecimal unitPrice = styleBom.getUnitPrice() == null ? BigDecimal.ZERO : styleBom.getUnitPrice();

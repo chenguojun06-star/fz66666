@@ -11,11 +11,39 @@ export type SizeTablePart = {
 
 export type SizeTableData = { sizes: string[]; parts: SizeTablePart[] };
 
-export type BomTableRow = {
+export type BomTableRow = Record<string, unknown> & {
+  groupName?: string;
+  materialCode?: string;
   materialName?: string;
+  materialType?: string;
+  fabricComposition?: string;
+  color?: string;
   spec?: string;
+  specification?: string;
+  fabricWidth?: string;
+  fabricWeight?: string;
+  size?: string;
+  devUsageAmount?: string | number;
+  usageAmount?: string | number;
   quantity?: string | number;
+  dosage?: string | number;
+  sizeUsageMap?: string;
+  patternSizeUsageMap?: string;
+  sizeSpecMap?: string;
   unit?: string;
+  patternUnit?: string;
+  conversionRate?: string | number;
+  lossRate?: string | number;
+  unitPrice?: string | number;
+  totalPrice?: string | number;
+  supplier?: string;
+  supplierContactPerson?: string;
+  supplierContactPhone?: string;
+  stockStatus?: string;
+  availableStock?: string | number;
+  requiredPurchase?: string | number;
+  remark?: string;
+  imageUrls?: string;
 };
 
 export type BomTableData = BomTableRow[];

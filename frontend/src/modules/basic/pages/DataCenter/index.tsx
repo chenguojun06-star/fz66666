@@ -9,6 +9,7 @@ import ResizableModal from '@/components/common/ResizableModal';
 import SmallModal from '@/components/common/SmallModal';
 import RowActions from '@/components/common/RowActions';
 import StandardToolbar from '@/components/common/StandardToolbar';
+import StickyFilterBar from '@/components/common/StickyFilterBar';
 import api from '@/utils/api';
 import { StyleInfo, StyleQueryParams } from '@/types/style';
 import { StyleAttachmentsButton } from '@/components/StyleAssets';
@@ -26,6 +27,23 @@ interface DataCenterStats {
   materialCount: number;
   productionCount: number;
 }
+
+interface ProductionRequirementsSaveResult {
+  id: number;
+  styleNo?: string;
+  description?: string;
+  descriptionLocked?: number;
+  descriptionReturnComment?: string | null;
+  updateBy?: string;
+  updateTime?: string;
+}
+
+const normalizeUploadFileList = (event: any) => {
+  if (Array.isArray(event)) {
+    return event;
+  }
+  return event?.fileList || [];
+};
 
 export const buildProductionSheetHtml = (payload: any) => {
   const style = payload?.style || {};
@@ -420,19 +438,15 @@ const DataCenter: React.FC = () => {
     try {
       setEditSaving(true);
       const values = await editForm.validateFields();
-      const res = await api.put<{ code: number; message: string }>('/style/info', {
-        id: editingRecord.id,
-        styleNo: editingRecord.styleNo,
-        styleName: editingRecord.styleName,
-        category: editingRecord.category,
+      const res = await api.put<{ code: number; message: string; data?: ProductionRequirementsSaveResult }>(`/style/info/${editingRecord.id}/production-requirements`, {
         description: values.description,
       });
-      if (res.code === 200) {
-        message.success('保存成功');
+      if (res.code === 200 && Number(res.data?.descriptionLocked) === 1) {
         setEditModalVisible(false);
-        fetchStyles();
+        await fetchStyles();
+        message.success('保存成功');
       } else {
-        message.error(res.message || '保存失败');
+        message.error(res.message || '保存后状态未锁定，请刷新后重试');
       }
     } catch (e: unknown) {
       message.error((e as any)?.message || '保存失败');
@@ -515,10 +529,11 @@ const DataCenter: React.FC = () => {
     try {
       setPatternRevisionSaving(true);
       const values = await patternRevisionForm.validateFields();
+      const patternFileList = Array.isArray(values.patternFile) ? values.patternFile : [];
 
       // 1. 如果有上传文件，先上传文件
-      if (values.patternFile && values.patternFile.fileList && values.patternFile.fileList.length > 0) {
-        const file = values.patternFile.fileList[0].originFileObj;
+      if (patternFileList.length > 0) {
+        const file = patternFileList[0]?.originFileObj;
         if (file) {
           const formData = new FormData();
           formData.append('file', file);
@@ -662,8 +677,8 @@ const DataCenter: React.FC = () => {
               record.patternRevLocked === 0
                 ? {
                     key: 'patternRevision',
-                    label: '纸样修改',
-                    title: '记录纸样修改',
+                    label: String(record.patternRevReturnComment || '').trim() ? '继续处理' : '纸样修改',
+                    title: String(record.patternRevReturnComment || '').trim() ? '继续处理纸样修改' : '记录纸样修改',
                     onClick: () => openPatternRevisionModal(record),
                   }
                 : {
@@ -708,6 +723,7 @@ const DataCenter: React.FC = () => {
           ]}
         />
 
+        <StickyFilterBar>
         <Card size="small" className="filter-card" style={{ marginBottom: 16 }}>
           <StandardToolbar
             left={(
@@ -729,6 +745,7 @@ const DataCenter: React.FC = () => {
             )}
           />
         </Card>
+        </StickyFilterBar>
 
         <ResizableTable
           rowKey={(r) => String((r as any).id ?? r.styleNo)}
@@ -904,7 +921,7 @@ const DataCenter: React.FC = () => {
             </Form.Item>
           </div>
 
-          <Form.Item name="patternFile" label="纸样文件">
+          <Form.Item name="patternFile" label="纸样文件" valuePropName="fileList" getValueFromEvent={normalizeUploadFileList}>
             <Upload
               beforeUpload={() => false}
               maxCount={1}

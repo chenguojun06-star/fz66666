@@ -56,6 +56,11 @@ public class MyBatisPlusMetaObjectHandler implements MetaObjectHandler {
         this.strictInsertFill(metaObject, "operatorId", String.class, userId);
         this.strictInsertFill(metaObject, "operatorName", String.class, userName);
 
+        // 自动填充维护人（纸样修改等维护记录使用）
+        this.strictInsertFill(metaObject, "maintainerId", String.class, userId);
+        this.strictInsertFill(metaObject, "maintainerName", String.class, userName);
+        this.strictInsertFill(metaObject, "maintainTime", LocalDateTime.class, now);
+
         // 自动填充租户ID（多租户支持）
         Long tenantId = UserContext.tenantId();
         if (tenantId != null && metaObject.hasSetter("tenantId")) {

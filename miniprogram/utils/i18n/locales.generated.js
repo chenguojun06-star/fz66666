@@ -89,7 +89,7 @@ module.exports = {
         "productionList": "我的订单",
         "materialPurchase": "物料采购",
         "cutting": "裁剪管理",
-        "progressDetail": "生产进度",
+        "progressDetail": "工序跟进",
         "warehousing": "质检入库",
         "warehouseDashboard": "数据看板",
         "materialInventory": "面辅料进销存",

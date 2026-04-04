@@ -168,7 +168,7 @@ const ShareOrderPage: React.FC = () => {
         {/* 品牌标题 */}
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <div style={{ fontSize: 13, color: '#76a7c4', letterSpacing: 2, marginBottom: 4 }}>PRODUCTION TRACKING</div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: '#e6f7ff', letterSpacing: 0.5, textShadow: '0 0 18px rgba(0,229,255,0.25)' }}>生产进度追踪</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: '#e6f7ff', letterSpacing: 0.5, textShadow: '0 0 18px rgba(0,229,255,0.25)' }}>工序跟进追踪</div>
         </div>
 
         <Alert
@@ -176,7 +176,7 @@ const ShareOrderPage: React.FC = () => {
           type="info"
           showIcon
           title="该分享链接1天内有效"
-          description="页面仅展示生产进度信息，不展示单价，不支持下载。"
+          description="页面仅展示工序跟进信息，不展示单价，不支持下载。"
         />
 
         {/* 订单基本信息 */}
@@ -284,7 +284,7 @@ const ShareOrderPage: React.FC = () => {
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < data.recentScans.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(57,255,20,0.14)', color: '#39ff14', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>
-                    
+
                   </div>
                   <div>
                     <div style={{ fontSize: 13, color: '#dff5ff', fontWeight: 500 }}>{s.processName || '工序'}</div>

@@ -2,49 +2,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
-import { ProductionOrder } from '@/types/production';
 import { formatDateTime } from '@/utils/datetime';
 import api from '@/utils/api';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
-import { stageAliasMap, carSewingKeywords, tailProcessKeywords } from '@/utils/productionStage';
 import { compareSizeAsc } from '@/utils/api/size';
-
-/**
- * 模块级工序阶段定义（关键词统一从 productionStage.ts 导入，禁止在此处内联数组）
- * 修改关键词请直接修改 frontend/src/utils/productionStage.ts
- */
-const PROCESS_STAGE_DEFS: { key: string; name: string; keywords: string[] }[] = [
-  { key: 'cutting',          name: '裁剪',     keywords: stageAliasMap.cutting },
-  { key: 'carSewing',        name: '车缝',     keywords: carSewingKeywords },
-  { key: 'secondaryProcess', name: '二次工艺', keywords: stageAliasMap.secondaryProcess },
-  { key: 'tailProcess',      name: '尾部',     keywords: tailProcessKeywords },
-  { key: 'warehousing',      name: '入库',     keywords: stageAliasMap.warehousing },
-];
-
-/** 将模板节点分类到对应阶段（全局唯一实现，供 workflowNodesByStage 和 renderNormalProcessDetail 共用）*/
-const classifyNodeStage = (progressStage: string, nodeName: string): string => {
-  const text = `${progressStage || ''} ${nodeName || ''}`;
-  for (const s of PROCESS_STAGE_DEFS) {
-    if (s.keywords.some(kw => text.includes(kw))) return s.key;
-  }
-  return 'tailProcess';
-};
-
-interface CuttingBundle {
-  id: string;
-  size: string;
-  quantity: number;
-}
-
-interface ProcessDetailModalProps {
-  visible: boolean;
-  onClose: () => void;
-  record: ProductionOrder | null;
-  processType: string;
-  procurementStatus: any;
-  processStatus: any;
-  onDataChanged?: () => void;
-}
+import type { CuttingBundle, ProcessDetailModalProps } from './types';
+import { PROCESS_STAGE_DEFS, classifyNodeStage } from './processStageUtils';
 
 const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
   visible,

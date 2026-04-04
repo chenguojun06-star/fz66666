@@ -85,6 +85,10 @@ public class CuttingTask {
     @TableField(exist = false)
     private String styleCover;
 
+    /** 是否存在生产扫码记录（非数据库字段，查询时动态填充，用于前端禁用退回按钮）*/
+    @TableField(exist = false)
+    private Boolean hasScanRecords;
+
     // ==================== 操作人字段（自动填充）====================
 
     @TableField(fill = FieldFill.INSERT)

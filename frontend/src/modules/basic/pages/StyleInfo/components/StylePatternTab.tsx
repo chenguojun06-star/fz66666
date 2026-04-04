@@ -464,11 +464,12 @@ const StylePatternTab: React.FC<Props> = ({
             children: (
               <StyleSizeTab
                 styleId={styleId}
-                readOnly={Boolean(sizeCompletedTime)}
+                readOnly={childReadOnly}
                 sizeAssignee={sizeAssignee}
                 sizeStartTime={sizeStartTime}
                 sizeCompletedTime={sizeCompletedTime}
                 linkedSizes={linkedSizes}
+                hideStageControl
                 onRefresh={onRefresh}
               />
             ),

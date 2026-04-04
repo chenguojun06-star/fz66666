@@ -1,5 +1,5 @@
 import React from 'react';
-import { Form, InputNumber, Select, Tag } from 'antd';
+import { Collapse, Form, InputNumber, Select, Tag } from 'antd';
 import type { OrderOrchestrationResult } from '../utils/orderIntelligence';
 
 interface OrderPricingMaterialPanelProps {
@@ -67,62 +67,67 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: '1fr',
-          gap: 10,
+          gridTemplateColumns: '1fr 1fr',
+          gap: 12,
           alignItems: 'start',
           marginBottom: 12,
         }}
       >
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '112px minmax(0, 1fr)', gap: 8, alignItems: 'start' }}>
-            <div style={{ paddingTop: 6, fontSize: 12, color: '#595959' }}>下单单价</div>
-            <div>
-              <Form.Item name="pricingMode" initialValue="PROCESS" style={{ marginBottom: 0 }}>
-                <Select
-                  onChange={onPricingModeChange}
-                  options={[
-                    { label: `工序单价 · ¥${processBasedUnitPrice.toFixed(2)}/件`, value: 'PROCESS' },
-                    { label: `尺码单价 · ¥${sizeBasedUnitPrice.toFixed(2)}/件`, value: 'SIZE' },
-                    { label: `外发整件单价 · ¥${totalCostUnitPrice.toFixed(2)}/件`, value: 'COST' },
-                    ...(quotationUnitPrice > 0 ? [{ label: `报价单价 · ¥${quotationUnitPrice.toFixed(2)}/件`, value: 'QUOTE' }] : []),
-                    { label: '手动单价', value: 'MANUAL' },
-                  ]}
-                />
-              </Form.Item>
-            </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '56px minmax(0, 1fr)', gap: 8, alignItems: 'start' }}>
+          <div style={{ paddingTop: 6, fontSize: 12, color: '#595959' }}>下单单价</div>
+          <div>
+            <Form.Item name="pricingMode" initialValue="PROCESS" style={{ marginBottom: 0 }}>
+              <Select
+                onChange={onPricingModeChange}
+                options={[
+                  { label: `工序单价 · ¥${processBasedUnitPrice.toFixed(2)}/件`, value: 'PROCESS' },
+                  { label: `尺码单价 · ¥${sizeBasedUnitPrice.toFixed(2)}/件`, value: 'SIZE' },
+                  { label: `外发整件单价 · ¥${totalCostUnitPrice.toFixed(2)}/件`, value: 'COST' },
+                  ...(quotationUnitPrice > 0 ? [{ label: `报价单价 · ¥${quotationUnitPrice.toFixed(2)}/件`, value: 'QUOTE' }] : []),
+                  { label: '手动单价', value: 'MANUAL' },
+                ]}
+              />
+            </Form.Item>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '92px minmax(0, 1fr)', gap: 8, alignItems: 'start' }}>
-            <div style={{ paddingTop: 6, fontSize: 12, color: '#595959' }}>锁定价格</div>
-            <div>
-              {watchedPricingMode === 'MANUAL' ? (
-                <Form.Item
-                  name="manualOrderUnitPrice"
-                  rules={[{ required: true, message: '请输入下单单价' }]}
-                  style={{ marginBottom: 0 }}
-                >
-                  <InputNumber min={0.01} precision={2} style={{ width: '100%' }} placeholder="输入下单单价" />
-                </Form.Item>
-              ) : (
-                <div style={{ minHeight: 32, display: 'flex', alignItems: 'center', fontSize: 12, color: '#595959' }}>
-                  <span style={{ fontWeight: 600, color: '#1677ff' }}>¥{resolvedOrderUnitPrice.toFixed(2)} / 件</span>
-                  {suggestedQuotationUnitPrice > 0 ? <span style={{ marginLeft: 8, color: '#8c8c8c' }}>建议报价 ¥{suggestedQuotationUnitPrice.toFixed(2)}</span> : null}
-                </div>
-              )}
-            </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '56px minmax(0, 1fr)', gap: 8, alignItems: 'start' }}>
+          <div style={{ paddingTop: 6, fontSize: 12, color: '#595959' }}>锁定价格</div>
+          <div>
+            {watchedPricingMode === 'MANUAL' ? (
+              <Form.Item
+                name="manualOrderUnitPrice"
+                rules={[{ required: true, message: '请输入下单单价' }]}
+                style={{ marginBottom: 0 }}
+              >
+                <InputNumber min={0.01} precision={2} style={{ width: '100%' }} placeholder="输入下单单价" />
+              </Form.Item>
+            ) : (
+              <div style={{ minHeight: 32, display: 'flex', alignItems: 'center', fontSize: 12, color: '#595959' }}>
+                <span style={{ fontWeight: 600, color: '#1677ff' }}>¥{resolvedOrderUnitPrice.toFixed(2)} / 件</span>
+                {suggestedQuotationUnitPrice > 0 ? <span style={{ marginLeft: 8, color: '#8c8c8c' }}>建议报价 ¥{suggestedQuotationUnitPrice.toFixed(2)}</span> : null}
+              </div>
+            )}
           </div>
         </div>
       </div>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr 1.2fr',
-          gap: 12,
-          fontSize: 12,
-          color: '#595959',
-          lineHeight: '20px',
-          marginTop: 4,
-        }}
-      >
+      <Collapse
+        defaultActiveKey={[]}
+        ghost
+        size="small"
+        items={[{
+          key: 'analysis',
+          label: <span style={{ fontSize: 12, color: '#8c8c8c' }}>明细分析</span>,
+          children: (
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr 1.2fr',
+                gap: 12,
+                fontSize: 12,
+                color: '#595959',
+                lineHeight: '20px',
+              }}
+            >
         <div style={{ padding: 12, borderRadius: 8, border: '1px solid #f0f0f0', background: '#fcfcfd', minHeight: 96 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', marginBottom: 6 }}>
             <div style={{ fontWeight: 600, color: '#1f1f1f' }}>码数与单价</div>
@@ -178,7 +183,10 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
             </div>
           </div>
         </div>
-      </div>
+            </div>
+          ),
+        }]}
+      />
     </div>
   );
 };

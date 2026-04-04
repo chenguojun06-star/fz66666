@@ -126,7 +126,7 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
         });
       }
     } catch {
-      setError('加载工序智能库失败，请稍后重试');
+      setError('加载工序库失败，请稍后重试');
     } finally {
       setLoading(false);
     }
@@ -328,9 +328,9 @@ const StyleProcessKnowledgeTab: React.FC<StyleProcessKnowledgeTabProps> = ({
           onChange: (page, size) => onPageChange(page, size),
         }}
         footer={() => (
-          <span style={{ color: '#999', fontSize: 12 }}>
-             数据实时聚合自所有款式工序表，点击行左侧展开查看最近 5 款历史记录。AI 建议价 = 最近 3 条权重 ×2 的加权均价，这里作为工序智能库持续为开发、生产与财务联动提供基线。
-          </span>
+           <span style={{ color: '#999', fontSize: 12 }}>
+             数据实时聚合自所有款式工序表，点击行左侧展开查看最近 5 款历史记录。AI 建议价 = 最近 3 条权重 ×2 的加权均价，这里作为工序库持续为开发、生产与财务联动提供基线。
+           </span>
         )}
       />
     </div>

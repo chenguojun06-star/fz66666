@@ -416,7 +416,7 @@ const OrdersTab: React.FC = () => {
         <Form form={linkForm} layout="vertical" size="small">
           <Form.Item name="productionOrderNo" label="生产订单号"
             rules={[{ required: true, message: '请输入生产订单号' }]}>
-            <Input placeholder="如 PO20260301001，可在生产进度页查看" prefix={<SearchOutlined />} />
+            <Input placeholder="如 PO20260301001，可在工序跟进页查看" prefix={<SearchOutlined />} />
           </Form.Item>
         </Form>
       </ResizableModal>

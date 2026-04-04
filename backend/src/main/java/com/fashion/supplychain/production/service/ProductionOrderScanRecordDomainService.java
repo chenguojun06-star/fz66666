@@ -375,6 +375,28 @@ public class ProductionOrderScanRecordDomainService {
         }
     }
 
+    /**
+     * 检查指定订单是否存在生产类型的扫码记录（用于阻止裁剪任务退回）
+     */
+    public boolean hasProductionTypeScanRecords(String orderId) {
+        String oid = StringUtils.hasText(orderId) ? orderId.trim() : null;
+        if (!StringUtils.hasText(oid)) {
+            return false;
+        }
+        try {
+            Long c = scanRecordMapper.selectCount(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ScanRecord>()
+                            .eq(ScanRecord::getOrderId, oid)
+                            .eq(ScanRecord::getScanType, "production")
+                            .eq(ScanRecord::getScanResult, "success")
+                            .gt(ScanRecord::getQuantity, 0));
+            return c != null && c > 0;
+        } catch (Exception e) {
+            log.warn("Failed to check production scan records for order: orderId={}", oid, e);
+            return false;
+        }
+    }
+
     public void upsertStageScanRecord(
             String requestId,
             String orderId,

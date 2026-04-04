@@ -9,7 +9,6 @@ import com.fashion.supplychain.dashboard.dto.OverdueOrderDto;
 import com.fashion.supplychain.dashboard.dto.QualityStatsResponse;
 import com.fashion.supplychain.dashboard.dto.ScanCountChartResponse;
 import com.fashion.supplychain.dashboard.dto.TopStatsResponse;
-import com.fashion.supplychain.dashboard.dto.UrgentEventDto;
 import com.fashion.supplychain.production.dto.MaterialStockAlertDto;
 import com.fashion.supplychain.dashboard.service.DashboardQueryService;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
@@ -25,6 +24,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -278,20 +278,19 @@ public class DashboardOrchestrator {
     /**
      * 获取紧急事件列表
      */
-    public List<UrgentEventDto> getUrgentEvents() {
-        List<UrgentEventDto> events = new ArrayList<>();
+    public List<Map<String, Object>> getUrgentEvents() {
+        List<Map<String, Object>> events = new ArrayList<>();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
         // 获取延期订单
         List<ProductionOrder> overdueOrders = dashboardQueryService.listOverdueOrders(10);
         for (ProductionOrder order : overdueOrders) {
-            UrgentEventDto event = new UrgentEventDto();
-            event.setId(order.getId());
-            event.setType("overdue");
-            event.setTitle("订单延期：" + order.getOrderNo());
-            event.setOrderNo(order.getOrderNo());
-            event.setTime(order.getPlannedEndDate() == null ? "" : order.getPlannedEndDate().format(formatter));
-            events.add(event);
+            events.add(buildUrgentEvent(
+                    order.getId(),
+                    "overdue",
+                    "订单延期：" + order.getOrderNo(),
+                    order.getOrderNo(),
+                    order.getPlannedEndDate() == null ? "" : order.getPlannedEndDate().format(formatter)));
         }
 
         try {
@@ -300,13 +299,12 @@ public class DashboardOrchestrator {
             params.put("limit", 5);
             List<MaterialStockAlertDto> alerts = materialStockOrchestrator.listAlerts(params);
             for (MaterialStockAlertDto alert : alerts) {
-                UrgentEventDto event = new UrgentEventDto();
-                event.setId(alert.getStockId());
-                event.setType("material");
-                event.setTitle("库存预警：" + (alert.getMaterialName() == null ? "物料" : alert.getMaterialName()));
-                event.setOrderNo(alert.getMaterialCode());
-                event.setTime(alert.getLastOutTime() == null ? "" : alert.getLastOutTime().format(formatter));
-                events.add(event);
+                events.add(buildUrgentEvent(
+                        alert.getStockId(),
+                        "material",
+                        "库存预警：" + (alert.getMaterialName() == null ? "物料" : alert.getMaterialName()),
+                        alert.getMaterialCode(),
+                        alert.getLastOutTime() == null ? "" : alert.getLastOutTime().format(formatter)));
             }
         } catch (Exception e) {
             // ignore alert failures
@@ -317,6 +315,16 @@ public class DashboardOrchestrator {
         // 这里可以根据实际业务需求添加更多事件类型
 
         return events;
+    }
+
+    private Map<String, Object> buildUrgentEvent(Object id, String type, String title, String orderNo, String time) {
+        Map<String, Object> event = new HashMap<>();
+        event.put("id", id == null ? "" : String.valueOf(id));
+        event.put("type", type);
+        event.put("title", title);
+        event.put("orderNo", orderNo);
+        event.put("time", time);
+        return event;
     }
 
     /**

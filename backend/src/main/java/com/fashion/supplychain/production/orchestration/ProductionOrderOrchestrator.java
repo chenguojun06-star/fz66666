@@ -631,7 +631,7 @@ public class ProductionOrderOrchestrator {
             throw new AccessDeniedException("仅允许在指定模块完成");
         }
         if (!CLOSE_SOURCE_MY_ORDERS.equals(src) && !CLOSE_SOURCE_PRODUCTION_PROGRESS.equals(src)) {
-            throw new AccessDeniedException("仅允许在我的订单或生产进度完成");
+            throw new AccessDeniedException("仅允许在我的订单或工序跟进完成");
         }
         ProductionOrder result = financeOrchestrationService.closeOrder(id);
         // 记录关闭操作日志

@@ -5,6 +5,7 @@ import Layout from '@/components/Layout';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
+import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import type { RowAction } from '@/components/common/RowActions';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
@@ -76,7 +77,7 @@ const TemplateCenter: React.FC = () => {
   const [viewObj, _setViewObj] = useState<unknown>(null);
   const [cardTab, setCardTab] = usePersistentState<'list' | 'knowledge'>('template-center-card-tab', 'list');
 
-  // 工序智能库 Tab — 持久化状态（Tab 切换后返回不丢失）
+  // 工序库 Tab — 持久化状态（Tab 切换后返回不丢失）
   const [knowledgeKeyword, setKnowledgeKeyword] = useState('');
   const [knowledgePage, setKnowledgePage] = useState(1);
   const [knowledgePageSize, setKnowledgePageSize] = useState(20);
@@ -265,7 +266,7 @@ const TemplateCenter: React.FC = () => {
     }
     const t = String(activeRow?.templateType || '').trim().toLowerCase();
     if (t === 'progress') {
-      message.info('进度模板请在“生产进度”页面导入');
+      message.info('进度模板请在"工序跟进"页面导入');
       return;
     }
     try {
@@ -458,7 +459,7 @@ const TemplateCenter: React.FC = () => {
           pagination={false}
           scroll={{ x: 'max-content', y: 520 }}
           columns={[
-            { title: '类型', dataIndex: 'materialType', key: 'materialType', width: 140, render: (v: unknown) => getMaterialTypeLabel(v) },
+            { title: '物料类型', dataIndex: 'materialType', key: 'materialType', width: 140, render: (v: unknown) => getMaterialTypeLabel(v) },
             { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 180, ellipsis: true, render: (v: unknown) => String(v || '-') },
             { title: '颜色', dataIndex: 'color', key: 'color', width: 110, render: (v: unknown) => String(v || '-') },
             { title: '规格', dataIndex: 'specification', key: 'specification', width: 160, ellipsis: true, render: (v: unknown) => String(v || '-') },
@@ -496,7 +497,20 @@ const TemplateCenter: React.FC = () => {
                 return Number.isFinite(n) ? n.toFixed(2) : '-';
               },
             },
-            { title: '供应商', dataIndex: 'supplier', key: 'supplier', width: 160, ellipsis: true, render: (v: unknown) => String(v || '-') },
+            {
+              title: '供应商',
+              dataIndex: 'supplier',
+              key: 'supplier',
+              width: 160,
+              ellipsis: true,
+              render: (_: unknown, row: Record<string, unknown>) => (
+                <SupplierNameTooltip
+                  name={row.supplier}
+                  contactPerson={row.supplierContactPerson}
+                  contactPhone={row.supplierContactPhone}
+                />
+              ),
+            },
           ]}
           dataSource={rows}
         />
@@ -757,7 +771,7 @@ const TemplateCenter: React.FC = () => {
         title="单价维护"
         tabList={[
           { key: 'list', tab: '模板列表' },
-          ...(!isFactoryUser ? [{ key: 'knowledge', tab: '工序智能库' }] : []),
+          ...(!isFactoryUser ? [{ key: 'knowledge', tab: '工序库' }] : []),
         ]}
         activeTabKey={cardTab}
         onTabChange={(key) => setCardTab(key as 'list' | 'knowledge')}

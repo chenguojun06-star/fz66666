@@ -487,6 +487,7 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
         const { pendingImages, pendingAttachments, ...restData } = data as any;
         const postData = {
           ...restData,
+          processType: restData.processType || form.getFieldValue('processType') || '二次工艺',
           images: JSON.stringify(pendingImages || []),
           attachments: JSON.stringify(pendingAttachments || []),
         };
@@ -771,7 +772,7 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
                 disabled={notStarted}
                 title={notStarted ? '请先点击「开始二次工艺」再操作' : undefined}
               >
-                标记无二次工艺
+                无二次工艺
               </Button>
             )}
             <Button

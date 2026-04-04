@@ -18,6 +18,7 @@ import { useStyleViewMode } from './hooks/useStyleViewMode';
 
 // Components
 import StyleFilterPanel from './components/StyleFilterPanel';
+import StickyFilterBar from '@/components/common/StickyFilterBar';
 import StyleStatsCard from './components/StyleStatsCard';
 import StyleTableView from './components/StyleTableView';
 import StyleCardView from './components/StyleCardView';
@@ -384,7 +385,7 @@ const StyleInfoListPage: React.FC = () => {
         />
 
         {/* 筛选面板 */}
-        <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--neutral-light)' }}>
+        <StickyFilterBar>
         <StyleFilterPanel
           queryParams={queryParams}
           onQueryChange={(params) => setQueryParams(prev => ({ ...prev, ...params }))}
@@ -417,7 +418,7 @@ const StyleInfoListPage: React.FC = () => {
             </>
           )}
         />
-        </div>
+        </StickyFilterBar>
 
         {/* 列表/卡片视图 */}
         {viewMode === 'smart' ? (

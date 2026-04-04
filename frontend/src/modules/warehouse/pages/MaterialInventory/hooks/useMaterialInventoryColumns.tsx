@@ -3,10 +3,12 @@ import { Space, Tag, Image } from 'antd';
 import { WarningOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { FormInstance } from 'antd/es/form';
+import MaterialTypeTag from '@/components/common/MaterialTypeTag';
 import RowActions from '@/components/common/RowActions';
+import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import { canViewPrice } from '@/utils/sensitiveDataMask';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
-import { formatMaterialSpecWidth, getBaseMaterialTypeLabel, getMaterialTypeCategory } from '@/utils/materialType';
+import { formatMaterialSpecWidth, getMaterialTypeCategory } from '@/utils/materialType';
 import type { UserInfo } from '@/utils/AuthContext';
 import type { MaterialInventory } from '../types';
 
@@ -98,12 +100,9 @@ export function useMaterialInventoryColumns({
           </div>
           <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px', alignItems: 'center' }}>
             <span style={{ color: 'var(--neutral-text-disabled)', width: '60px', textAlign: 'right', flexShrink: 0 }}>分类：</span>
-            <Tag
-              color={getMaterialTypeCategory(record.materialType) === 'fabric' ? 'blue' : getMaterialTypeCategory(record.materialType) === 'lining' ? 'cyan' : 'green'}
-              style={{ fontSize: 'var(--font-size-xs)', margin: '0 0 0 8px' }}
-            >
-              {getBaseMaterialTypeLabel(record.materialType)}
-            </Tag>
+            <span style={{ margin: '0 0 0 8px' }}>
+              <MaterialTypeTag value={record.materialType} />
+            </span>
           </div>
           <div style={{ display: 'flex', fontSize: 'var(--font-size-sm)', lineHeight: '22px', height: '22px' }}>
             <span style={{ color: 'var(--neutral-text-disabled)', width: '60px', textAlign: 'right', flexShrink: 0 }}>颜色：</span>
@@ -259,7 +258,11 @@ export function useMaterialInventoryColumns({
       width: 150,
       render: (_, record) => (
         <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 500 }}>
-          {record.supplierName || '-'}
+          <SupplierNameTooltip
+            name={record.supplierName}
+            contactPerson={(record as any).supplierContactPerson}
+            contactPhone={(record as any).supplierContactPhone}
+          />
         </div>
       ),
     },

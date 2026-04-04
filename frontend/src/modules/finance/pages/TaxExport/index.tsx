@@ -13,6 +13,7 @@ import { paths } from '@/routeConfig';
 import { appStoreService } from '@/services/system/appStore';
 import { useAuth } from '@/utils/AuthContext';
 import ResizableModal from '@/components/common/ResizableModal';
+import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import SmallModal from '@/components/common/SmallModal';
 import { ModalFieldRow } from '@/components/common/ModalContentLayout';
 import invoiceApi from '@/services/finance/invoiceApi';
@@ -428,7 +429,18 @@ const PayableTab: React.FC = () => {
 
   const columns = [
     { title: '应付单号', dataIndex: 'payableNo', width: 140 },
-    { title: '供应商', dataIndex: 'supplierName', ellipsis: true },
+    {
+      title: '供应商',
+      dataIndex: 'supplierName',
+      ellipsis: true,
+      render: (_: unknown, record: any) => (
+        <SupplierNameTooltip
+          name={record.supplierName}
+          contactPerson={record.supplierContactPerson}
+          contactPhone={record.supplierContactPhone}
+        />
+      ),
+    },
     { title: '来源单号', dataIndex: 'orderNo', width: 160, ellipsis: true, render: (v: string) => v || '-' },
     { title: '业务说明', dataIndex: 'description', ellipsis: true },
     { title: '应付金额(元)', dataIndex: 'amount', width: 120, render: (v: number) => v?.toFixed(2) },

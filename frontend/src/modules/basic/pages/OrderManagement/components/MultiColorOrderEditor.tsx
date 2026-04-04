@@ -157,10 +157,10 @@ const MultiColorOrderEditor: React.FC<MultiColorOrderEditorProps> = ({
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 12, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          <Tag color="blue" style={{ marginInlineEnd: 0 }}>开发色 {availableColors.length}</Tag>
-          <Tag color="purple" style={{ marginInlineEnd: 0 }}>开发码 {availableSizes.length}</Tag>
-          <Tag color="gold" style={{ marginInlineEnd: 0 }}>已选 {selectedColors.length} 色 / {selectedSizes.length} 码</Tag>
-          <Tag color="green" style={{ marginInlineEnd: 0 }}>组合 {orderLines.length}</Tag>
+<Tag style={{ marginInlineEnd: 0, color: '#1677ff', background: '#e6f4ff', borderColor: '#91caff' }}>开发色 {availableColors.length}</Tag>
+              <Tag style={{ marginInlineEnd: 0, color: '#1677ff', background: '#e6f4ff', borderColor: '#91caff' }}>开发码 {availableSizes.length}</Tag>
+              <Tag style={{ marginInlineEnd: 0, color: '#1677ff', background: '#e6f4ff', borderColor: '#91caff' }}>已选 {selectedColors.length} 色 / {selectedSizes.length} 码</Tag>
+              <Tag style={{ marginInlineEnd: 0, color: '#1677ff', background: '#e6f4ff', borderColor: '#91caff' }}>组合 {orderLines.length}</Tag>
         </div>
         <div style={{ color: 'var(--neutral-text-light)' }}>
           总数量：<span style={{ fontWeight: 600 }}>{totalQuantity}</span>

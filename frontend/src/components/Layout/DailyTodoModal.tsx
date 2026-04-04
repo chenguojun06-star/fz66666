@@ -209,7 +209,7 @@ const DailyTodoModal: React.FC = () => {
       level: scanLevel,
       title: '今日扫码进度',
       desc: brief.todayScanCount === 0
-        ? ' 今日暂无扫码记录，提醒工厂及时录入生产进度'
+        ? ' 今日暂无扫码记录，提醒工厂及时录入工序跟进'
         : `今日已扫码 ${brief.todayScanCount} 次，持续跟进各工厂进度录入`,
       path: '/production/progress-detail',
     });

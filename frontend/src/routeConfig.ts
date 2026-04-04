@@ -40,6 +40,7 @@ export const paths = {
 
   dataCenter: '/data-center',
   templateCenter: '/basic/template-center',
+  maintenanceCenter: '/basic/maintenance-center',
   patternRevision: '/basic/pattern-revision',
 
   productionList: '/production',
@@ -185,9 +186,8 @@ export const menuConfig: MenuSection[] = [
     icon: React.createElement(AppstoreOutlined),
     items: [
       { label: '样衣开发', path: paths.styleInfoList, icon: React.createElement(FileTextOutlined) },
-      { label: '资料中心', path: paths.dataCenter, icon: React.createElement(DatabaseOutlined) },
-      { label: '单价维护', path: paths.templateCenter, icon: React.createElement(BookOutlined) },
-      { label: '样衣出入库', path: paths.sampleInventory, icon: React.createElement(FileTextOutlined) },
+      { label: '资料单价', path: paths.maintenanceCenter, icon: React.createElement(DatabaseOutlined) },
+      { label: '样衣库存', path: paths.sampleInventory, icon: React.createElement(FileTextOutlined) },
       { label: '下单管理', path: paths.orderManagementList, icon: React.createElement(FileTextOutlined) },
     ],
   },
@@ -208,7 +208,7 @@ export const menuConfig: MenuSection[] = [
     items: [
       { label: '我的订单', path: paths.productionList, icon: React.createElement(BuildOutlined) },
       { label: '裁剪管理', path: paths.cutting, icon: React.createElement(ScissorOutlined) },
-      { label: '生产进度', path: paths.progressDetail, icon: React.createElement(FileSearchOutlined) },
+      { label: '工序跟进', path: paths.progressDetail, icon: React.createElement(FileSearchOutlined) },
       { label: '外发工厂', path: paths.externalFactory, icon: React.createElement(ThunderboltOutlined) },
       { label: '质检入库', path: paths.warehousing, icon: React.createElement(InboxOutlined) },
     ],
@@ -310,6 +310,7 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.orderManagementList]: permissionCodes.orderManagement,
   [paths.dataCenter]: permissionCodes.dataCenter,
   [paths.templateCenter]: permissionCodes.templateCenter,
+  [paths.maintenanceCenter]: permissionCodes.dataCenter,
 
   [paths.warehouseDashboard]: permissionCodes.warehouseDashboard,
   [paths.materialInventory]: permissionCodes.materialInventory,

@@ -7,7 +7,7 @@ import type { DeliveryRiskItem } from '@/services/intelligence/intelligenceApi';
 import { SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
 import RowActions, { type RowAction } from '@/components/common/RowActions';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
-import '@/modules/basic/pages/StyleInfo/styles.css';
+import LiquidProgressBar from '@/components/common/LiquidProgressBar';
 import { getProcessesByNodeFromOrder } from '../../ProgressDetail/utils';
 import SmartOrderHoverCard from '../../ProgressDetail/components/SmartOrderHoverCard';
 import { StyleCoverThumb, StyleAttachmentsButton } from '@/components/StyleAssets';
@@ -104,8 +104,6 @@ export function useProductionColumns({
     const percent = rate || 0;
     const frozen = isOrderFrozenByStatus(record);
     const colorStatus = frozen ? 'default' : getProgressColorStatus(record.plannedEndDate);
-    const colorStatusToStage: Record<string, string> = { success: 'done', normal: 'active', exception: 'risk', default: 'waiting' };
-    const stageStatus = frozen ? 'scrapped' : (colorStatusToStage[colorStatus] ?? 'waiting');
 
     return (
       <div
@@ -123,18 +121,9 @@ export function useProductionColumns({
         onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
         onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
       >
-        <div className={`style-smart-stage style-smart-stage--${stageStatus}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, padding: 0 }}>
-          <div className="style-smart-stage__node" style={{ width: 28, height: 28, flexShrink: 0 }}>
-            <span className="style-smart-stage__ring" />
-            <span className="style-smart-stage__orbit" />
-            <span className="style-smart-stage__core" />
-            <span className="style-smart-stage__check" />
-          </div>
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', lineHeight: 1.3 }}>{nodeName}</div>
-            <div style={{ fontSize: 10, color: 'var(--color-text-tertiary)', lineHeight: 1.2 }}>{completed}/{total}</div>
-          </div>
-        </div>
+        {renderCompletionTimeTag(record, nodeName, percent)}
+        <div style={COUNT_TEXT_STYLE}>{completed}/{total}</div>
+        <LiquidProgressBar percent={percent} width="100%" height={16} status={colorStatus} />
       </div>
     );
   };
@@ -396,15 +385,7 @@ export function useProductionColumns({
               <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
                 -/-
               </div>
-              <div className="style-smart-stage style-smart-stage--scrapped" style={{ margin: '0 auto', flexDirection: 'row', alignItems: 'center', gap: 4, padding: 0 }}>
-                <div className="style-smart-stage__node" style={{ width: 28, height: 28, flexShrink: 0 }}>
-                  <span className="style-smart-stage__ring" />
-                  <span className="style-smart-stage__orbit" />
-                  <span className="style-smart-stage__core" />
-                  <span className="style-smart-stage__check" />
-                </div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-primary)', whiteSpace: 'nowrap' }}>采购</div>
-              </div>
+              <LiquidProgressBar percent={0} width="100%" height={16} status="default" />
             </div>
           );
         }
@@ -418,15 +399,11 @@ export function useProductionColumns({
             onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-container)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
           >
-            <div className={`style-smart-stage style-smart-stage--${procurePercent >= 100 ? 'done' : 'waiting'}`} style={{ margin: '0 auto', flexDirection: 'row', alignItems: 'center', gap: 4, padding: 0 }}>
-              <div className="style-smart-stage__node" style={{ width: 28, height: 28, flexShrink: 0 }}>
-                <span className="style-smart-stage__ring" />
-                <span className="style-smart-stage__orbit" />
-                <span className="style-smart-stage__core" />
-                <span className="style-smart-stage__check" />
-              </div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-primary)', whiteSpace: 'nowrap' }}>采购</div>
+            {renderCompletionTimeTag(record, '采购', rate || 0)}
+            <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
+              {(rate || 0) > 0 ? '' : ''}
             </div>
+            <LiquidProgressBar percent={procurePercent} width="100%" height={16} status={colorStatus} />
           </div>
         );
       },

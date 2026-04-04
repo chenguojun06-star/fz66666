@@ -171,6 +171,7 @@ public class TemplateStyleOrchestrator {
                     List<StyleBom> boms = styleBomService.lambdaQuery()
                             .eq(StyleBom::getStyleId, styleId)
                             .list();
+                    boms.forEach(bom -> bom.setGroupName(null));
                     content = objectMapper.writeValueAsString(boms);
                 }
                 case "process" -> {

@@ -419,7 +419,15 @@ const AppWrapper: React.FC = () => {
     <ConfigProvider
       locale={resolveAntdLocale(language)}
       theme={themeConfig}
-      getPopupContainer={(triggerNode) => (triggerNode?.parentElement ?? document.body) as HTMLElement}
+      getPopupContainer={(triggerNode) => {
+        // Modal 内的弹出层锚定到 .ant-modal-body（保证定位正确、outside-click 不误关闭）
+        // 其余情况统一用 document.body，避免 sticky 容器的 z-index 堆叠上下文导致下拉被遮挡
+        if (triggerNode) {
+          const modal = triggerNode.closest?.('.ant-modal-body') as HTMLElement | null;
+          if (modal) return modal;
+        }
+        return document.body;
+      }}
       spin={{ indicator: <XiaoyunSpinIndicator /> }}
     >
       <AntApp>
