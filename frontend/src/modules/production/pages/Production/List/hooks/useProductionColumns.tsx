@@ -121,9 +121,9 @@ export function useProductionColumns({
         onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
         onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
       >
-        {renderCompletionTimeTag(record, nodeName, percent)}
-        <div style={COUNT_TEXT_STYLE}>{completed}/{total}</div>
+          <div style={COUNT_TEXT_STYLE}>{completed}/{total}</div>
         <LiquidProgressBar percent={percent} width="100%" height={16} status={colorStatus} />
+        {renderCompletionTimeTag(record, nodeName, percent)}
       </div>
     );
   };
@@ -399,11 +399,11 @@ export function useProductionColumns({
             onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-container)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
           >
-            {renderCompletionTimeTag(record, '采购', rate || 0)}
             <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
               {(rate || 0) > 0 ? '' : ''}
             </div>
             <LiquidProgressBar percent={procurePercent} width="100%" height={16} status={colorStatus} />
+            {renderCompletionTimeTag(record, '采购', rate || 0)}
           </div>
         );
       },
@@ -496,7 +496,6 @@ export function useProductionColumns({
             style={{ display: 'flex', flexDirection: 'column', cursor: frozen ? 'default' : 'pointer', padding: '4px 0', opacity: frozen ? 0.6 : 1 }}
             onClick={(e) => { e.stopPropagation(); if (!frozen) openProcessDetail(record, 'warehousing'); }}
           >
-            {renderCompletionTimeTag(record, '入库', rate || 0, 'left')}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ position: 'relative', width: '36px', height: '36px' }}>
                 <svg width="36" height="36" style={{ transform: 'rotate(-90deg)' }}>
@@ -514,6 +513,7 @@ export function useProductionColumns({
                 <span style={{ fontSize: '11px', color: 'var(--neutral-text-disabled)' }}>{qualified > 0 ? '已入库' : '未入库'}</span>
               </div>
             </div>
+            {renderCompletionTimeTag(record, '入库', rate || 0, 'left')}
           </div>
         );
       },
