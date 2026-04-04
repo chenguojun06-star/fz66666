@@ -9,7 +9,7 @@ import { Factory as FactoryType, FactoryQueryParams, OrganizationUnit, User } fr
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { useModal } from '@/hooks';
-import { App, Button, Card, Form, Input, InputNumber, Select, Space, Tabs, Tag, Tooltip, Upload } from 'antd';
+import { App, Button, Card, Col, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag, Tooltip, Upload } from 'antd';
 import type { UploadFile } from 'antd';
 import { QuestionCircleOutlined, UploadOutlined } from '@ant-design/icons';
 import { formatDateTime } from '@/utils/datetime';
@@ -791,50 +791,55 @@ const FactoryList: React.FC = () => {
               <Input id="factoryName" placeholder="请输入供应商名称" />
             </Form.Item>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <Form.Item noStyle dependencies={['factoryType']}>
-              {({ getFieldValue }) => {
-                const factoryType = getFieldValue('factoryType');
-                const isInternal = factoryType === 'INTERNAL';
-                return (
-                  <div>
-                    {isInternal ? (
-                      <Form.Item name="managerId" label="负责人">
-                        <Select
-                          id="managerId"
-                          showSearch
-                          optionFilterProp="label"
-                          placeholder="选择系统用户"
-                          options={userOptions.map(u => ({ label: `${u.name} (${u.phone || '-'})`, value: String(u.id) }))}
-                          onChange={(val) => {
-                            const user = userOptions.find(u => String(u.id) === val);
-                            if (user) {
-                              form.setFieldsValue({
-                                contactPerson: user.name,
-                                contactPhone: user.phone,
-                              });
-                            }
-                          }}
-                        />
-                      </Form.Item>
-                    ) : (
-                      <Form.Item name="contactPerson" label="联系人">
-                        <Input id="contactPerson" placeholder="请输入联系人" />
-                      </Form.Item>
-                    )}
-                    <Form.Item name="contactPhone" label="联系电话">
-                      <Input id="contactPhone" placeholder="请输入联系电话" />
-                    </Form.Item>
-                    {/* Hidden fields to store synced values if needed */}
-                    {isInternal && <Form.Item name="contactPerson" hidden><Input id="contactPersonHidden" /></Form.Item>}
-                  </div>
-                );
-              }}
-            </Form.Item>
-          </div>
-          <Form.Item name="address" label="地址">
-            <Input id="address" placeholder="请输入地址" />
-          </Form.Item>
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item noStyle dependencies={['factoryType']}>
+                {({ getFieldValue }) => {
+                  const factoryType = getFieldValue('factoryType');
+                  const isInternal = factoryType === 'INTERNAL';
+                  return (
+                    <>
+                      {isInternal ? (
+                        <Form.Item name="managerId" label="负责人">
+                          <Select
+                            id="managerId"
+                            showSearch
+                            optionFilterProp="label"
+                            placeholder="选择系统用户"
+                            options={userOptions.map(u => ({ label: `${u.name} (${u.phone || '-'})`, value: String(u.id) }))}
+                            onChange={(val) => {
+                              const user = userOptions.find(u => String(u.id) === val);
+                              if (user) {
+                                form.setFieldsValue({
+                                  contactPerson: user.name,
+                                  contactPhone: user.phone,
+                                });
+                              }
+                            }}
+                          />
+                        </Form.Item>
+                      ) : (
+                        <Form.Item name="contactPerson" label="联系人">
+                          <Input id="contactPerson" placeholder="请输入联系人" />
+                        </Form.Item>
+                      )}
+                      {isInternal && <Form.Item name="contactPerson" hidden><Input id="contactPersonHidden" /></Form.Item>}
+                    </>
+                  );
+                }}
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="contactPhone" label="联系电话">
+                <Input id="contactPhone" placeholder="请输入联系电话" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="address" label="地址">
+                <Input id="address" placeholder="请输入地址" />
+              </Form.Item>
+            </Col>
+          </Row>
           <Form.Item
             name="dailyCapacity"
             label="日产能（件/天）"
@@ -879,9 +884,6 @@ const FactoryList: React.FC = () => {
               )}
             </Upload>
             <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--neutral-text-disabled)', marginTop: 4 }}>支持jpg、png格式，最大10MB（非必填）</div>
-          </Form.Item>
-          <Form.Item name="operationRemark" label="运营备注">
-            <Input.TextArea id="operationRemark" rows={2} placeholder="用于内部记录供应商特点、优劣势等（不向供应商展示）" />
           </Form.Item>
           <Form.Item name="remark" label="备注">
             <Input.TextArea id="remark" rows={3} placeholder="请输入备注" />
