@@ -444,6 +444,10 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                     "VARCHAR(500) DEFAULT NULL COMMENT '外部观测平台Trace链接'");
                 repaired += ensureColumn(conn, schema, "t_intelligence_metrics", "tool_call_count",
                     "INT DEFAULT NULL COMMENT '本次AI调用工具次数'");
+                repaired += ensureColumn(conn, schema, "t_intelligence_metrics", "prompt_tokens",
+                    "INT DEFAULT NULL");
+                repaired += ensureColumn(conn, schema, "t_intelligence_metrics", "completion_tokens",
+                    "INT DEFAULT NULL");
                 repairedTables += ensureTable(conn, schema,
                     "t_intelligence_signal",
                     "CREATE TABLE IF NOT EXISTS `t_intelligence_signal` ("
@@ -490,6 +494,11 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                             + "KEY `idx_tenant_task` (`tenant_id`, `task_code`, `related_order_no`, `create_time`),"
                             + "KEY `idx_tenant_status` (`tenant_id`, `feedback_status`, `create_time`)"
                             + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='动作中心任务回执表'");
+
+            // t_style_attachment.style_no — 云端手动添加时设为NOT NULL无DEFAULT，确保为可空
+            // Flyway V202607202303 MODIFY已有列；此处保障全新环境添加时为DEFAULT NULL
+            repaired += ensureColumn(conn, schema, "t_style_attachment", "style_no",
+                    "VARCHAR(64) DEFAULT NULL");
 
             // t_secondary_process 二次工艺图片/附件字段（V20260501002 可能未执行）
             repaired += ensureColumn(conn, schema, "t_secondary_process", "images",
