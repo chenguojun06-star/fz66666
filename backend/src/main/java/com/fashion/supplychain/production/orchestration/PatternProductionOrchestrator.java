@@ -239,6 +239,12 @@ public class PatternProductionOrchestrator {
         // 更新样板状态
         updatePatternStatusByOperation(pattern, operationType, operatorName);
 
+        // COMPLETE 操作后同步样衣阶段状态到 t_style_info（sample_status / sample_progress / sample_completed_time）
+        // 不调用此方法时，进度球会因 t_style_info 未更新而持续旋转显示"进行中"
+        if ("COMPLETE".equals(operationType.trim())) {
+            syncStyleInfoSampleStage(pattern);
+        }
+
         // 同步库存：根据操作类型自动更新 t_sample_stock / t_sample_loan
         syncStockByOperation(pattern, scanRecord, operationType, operatorId, operatorName);
 
