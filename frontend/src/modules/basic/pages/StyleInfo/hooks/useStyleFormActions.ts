@@ -179,12 +179,14 @@ export const useStyleFormActions = ({
                 const formData = new FormData();
                 formData.append('file', file);
                 formData.append('styleId', newId);
+                formData.append('styleNo', String(normalizedValues.styleNo || '').trim());
                 return api.post('/style/attachment/upload', formData, { timeout: 60000 } as any);
               });
               const colorUploadPromises = pendingColorImages.map(async ({ color, file }) => {
                 const formData = new FormData();
                 formData.append('file', file);
                 formData.append('styleId', newId);
+                formData.append('styleNo', String(normalizedValues.styleNo || '').trim());
                 formData.append('bizType', `color_image::${String(color || '').trim()}`);
                 return api.post('/style/attachment/upload', formData, { timeout: 60000 } as any);
               });
@@ -193,8 +195,8 @@ export const useStyleFormActions = ({
               if (successCount > 0) {
                 message.success(`成功上传 ${successCount} 张图片`);
               }
-            } catch (error) {
-              message.error('图片上传失败');
+            } catch (error: any) {
+              message.error(error?.message || '图片上传失败');
             }
           }
 

@@ -41,11 +41,12 @@ public class StyleAttachmentOrchestrator {
     private String uploadPath;
 
     public List<StyleAttachment> list(String styleId, String styleNo, String bizType) {
-        String sid = styleId;
-        if (!StringUtils.hasText(sid) && StringUtils.hasText(styleNo)) {
+        String sid = normalizeNullable(styleId);
+        String normalizedStyleNo = normalizeNullable(styleNo);
+        if (!StringUtils.hasText(sid) && StringUtils.hasText(normalizedStyleNo)) {
             StyleInfo style = styleInfoService.getOne(new LambdaQueryWrapper<StyleInfo>()
                     .select(StyleInfo::getId)
-                    .eq(StyleInfo::getStyleNo, styleNo.trim())
+                    .eq(StyleInfo::getStyleNo, normalizedStyleNo)
                     .last("limit 1"), false);
             if (style == null || style.getId() == null) {
                 // 款式不存在时返回空列表，而非 404（前端可能在款式创建完成前就查询附件）
@@ -85,17 +86,25 @@ public class StyleAttachmentOrchestrator {
     }
 
     public StyleAttachment upload(MultipartFile file, String styleId, String bizType) {
-        return uploadWithVersion(file, styleId, bizType, null);
+        return upload(file, styleId, null, bizType);
+    }
+
+    public StyleAttachment upload(MultipartFile file, String styleId, String styleNo, String bizType) {
+        return uploadWithVersion(file, styleId, styleNo, bizType, null);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public StyleAttachment uploadWithVersion(MultipartFile file, String styleId, String bizType, String versionRemark) {
+        return uploadWithVersion(file, styleId, null, bizType, versionRemark);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public StyleAttachment uploadWithVersion(MultipartFile file, String styleId, String styleNo, String bizType,
+            String versionRemark) {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("文件为空");
         }
-        if (!StringUtils.hasText(styleId)) {
-            throw new IllegalArgumentException("styleId不能为空");
-        }
+        String resolvedStyleId = resolveStyleId(styleId, styleNo);
 
         // ✅ 租户上下文校验
         TenantAssert.assertTenantContext();
@@ -119,7 +128,7 @@ public class StyleAttachmentOrchestrator {
             }
 
             // 获取当前版本号
-            StyleAttachment latest = styleAttachmentService.getLatestPattern(styleId, type);
+            StyleAttachment latest = styleAttachmentService.getLatestPattern(resolvedStyleId, type);
             int nextVersion = 1;
             String parentId = null;
             if (latest != null) {
@@ -131,7 +140,7 @@ public class StyleAttachmentOrchestrator {
             }
 
             StyleAttachment attachment = new StyleAttachment();
-            attachment.setStyleId(styleId);
+            attachment.setStyleId(resolvedStyleId);
             attachment.setFileName(safeOriginal);
             attachment.setFileUrl(TenantFilePathResolver.buildDownloadUrl(newFilename));
             String contentType = file.getContentType();
@@ -150,13 +159,14 @@ public class StyleAttachmentOrchestrator {
 
             if (contentType != null && contentType.startsWith("image/")) {
                 try {
-                    Long sid = Long.valueOf(styleId);
+                    Long sid = Long.valueOf(resolvedStyleId);
                     styleInfoService.lambdaUpdate()
                             .eq(StyleInfo::getId, sid)
                             .set(StyleInfo::getCover, attachment.getFileUrl())
                             .update();
                 } catch (Exception e) {
-                    log.warn("Failed to update style cover: styleId={}, fileUrl={}", styleId, attachment.getFileUrl(),
+                    log.warn("Failed to update style cover: styleId={}, fileUrl={}", resolvedStyleId,
+                            attachment.getFileUrl(),
                             e);
                 }
             }
@@ -165,8 +175,8 @@ public class StyleAttachmentOrchestrator {
         } catch (IllegalArgumentException | IllegalStateException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Upload style attachment failed: styleId={}, bizType={}, fileName={}", styleId, bizType,
-                    file == null ? null : file.getOriginalFilename(), e);
+            log.error("Upload style attachment failed: styleId={}, styleNo={}, bizType={}, fileName={}",
+                    resolvedStyleId, styleNo, bizType, file == null ? null : file.getOriginalFilename(), e);
             throw new IllegalStateException(StringUtils.hasText(e.getMessage()) ? e.getMessage() : "文件上传失败");
         }
     }
@@ -464,6 +474,38 @@ public class StyleAttachmentOrchestrator {
             log.error("[StyleAttachment] 设置封面失败: attachmentId={}", attachmentId, e);
             throw new IllegalStateException("设置封面失败：" + e.getMessage());
         }
+    }
+
+    private String resolveStyleId(String styleId, String styleNo) {
+        String normalizedStyleId = normalizeNullable(styleId);
+        if (StringUtils.hasText(normalizedStyleId)) {
+            return normalizedStyleId;
+        }
+
+        String normalizedStyleNo = normalizeNullable(styleNo);
+        if (!StringUtils.hasText(normalizedStyleNo)) {
+            throw new IllegalArgumentException("请先保存基础信息，再上传图片");
+        }
+
+        StyleInfo style = styleInfoService.getOne(new LambdaQueryWrapper<StyleInfo>()
+                .select(StyleInfo::getId)
+                .eq(StyleInfo::getStyleNo, normalizedStyleNo)
+                .last("limit 1"), false);
+        if (style == null || style.getId() == null) {
+            throw new IllegalArgumentException("请先保存基础信息，再上传图片");
+        }
+        return String.valueOf(style.getId());
+    }
+
+    private String normalizeNullable(String value) {
+        String normalized = value == null ? null : value.trim();
+        if (!StringUtils.hasText(normalized)) {
+            return null;
+        }
+        if ("undefined".equalsIgnoreCase(normalized) || "null".equalsIgnoreCase(normalized)) {
+            return null;
+        }
+        return normalized;
     }
 
     private boolean isPatternLocked(String styleId) {

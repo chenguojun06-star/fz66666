@@ -1,3 +1,29 @@
+# 2026-04-05
+
+## 款式图片上传 / 云端 400 兼容修复
+
+- **问题背景**：云端 `POST /api/style/attachment/upload` 在部分页面状态下仍会出现 400，用户侧只看到“图片上传失败”，无法判断是 `styleId` 丢失、旧前端包参数不兼容，还是 multipart 请求格式异常。
+- **已修复**：
+
+### 1. 后端上传接口兼容 `styleId` / `styleNo`
+- `StyleAttachmentController`：`/upload` 由“强制要求 `styleId`”改为兼容 `styleId` + `styleNo`。
+- `StyleAttachmentOrchestrator`：新增 `resolveStyleId()`，自动忽略 `undefined` / `null` 字符串，并在仅有 `styleNo` 时反查真实款式 ID。
+- 当两者都缺失或款式尚未保存时，统一返回清晰提示：`请先保存基础信息，再上传图片`。
+
+### 2. 前端上传链路补强
+- `StyleAttachmentTab`：上传前先校验 `styleId/styleNo`，未保存时不再盲发请求，直接提示用户先保存。
+- `StyleInfo` 页面颜色图上传/清空：改为同时支持 `styleId` 和 `styleNo`，避免详情页异常状态下联动上传直接 400。
+- `useStyleFormActions`：新建款式保存后自动补传图片时同时附带 `styleNo`，并透传后端真实错误消息，不再只显示泛化的“图片上传失败”。
+
+### 3. 全局错误提示补强
+- `GlobalExceptionHandler`：新增 `MissingServletRequestParameterException` 和 `MultipartException` 处理。
+- 现在云端若再次出现上传参数缺失或 multipart 格式错误，前端能直接看到明确提示，而不是只有浏览器控制台里的 400。
+
+- **对系统的帮助**：
+  - ✅ 旧前端包或异常页面状态下，图片上传不再因为 `styleId` 丢失直接报死 400
+  - ✅ 用户能直接看到“请先保存基础信息，再上传图片”这类可执行提示
+  - ✅ 云端后续如果再出 multipart / 参数问题，定位成本明显降低
+
 # 2026-06-（当前）
 
 ## 小程序 / 微信开发者工具体验审计修复

@@ -213,11 +213,15 @@ const StyleInfoDetailPage: React.FC = () => {
   }, [currentStyle]);
 
   useEffect(() => {
-    if (!currentStyle?.id) return;
+    const resolvedStyleId = String(currentStyle?.id ?? '').trim();
+    const resolvedStyleNo = String(currentStyle?.styleNo || '').trim();
+    if (!resolvedStyleId && !resolvedStyleNo) return;
     let mounted = true;
     void (async () => {
       try {
-        const res = await api.get('/style/attachment/list', { params: { styleId: currentStyle.id } });
+        const res = await api.get('/style/attachment/list', {
+          params: resolvedStyleId ? { styleId: resolvedStyleId } : { styleNo: resolvedStyleNo },
+        });
         const list = Array.isArray((res as any)?.data) ? (res as any).data : [];
         const nextMap: Record<string, string> = {};
         list.forEach((item: any) => {
@@ -227,18 +231,18 @@ const StyleInfoDetailPage: React.FC = () => {
           }
         });
         if (mounted) {
-          setColorImageMap(nextMap);
+          // 使用合并（非替换）避免竞态导致图片闪烁消失
+          setColorImageMap((prev) => ({ ...prev, ...nextMap }));
         }
       } catch {
-        if (mounted) {
-          setColorImageMap({});
-        }
+        // 出错时保留现有图片，避免因接口失败导致图片消失
+        // 删除操作已由 handleColorImageClear 直接更新 map，无需在此清空
       }
     })();
     return () => {
       mounted = false;
     };
-  }, [currentStyle?.id, coverRefreshToken]);
+  }, [currentStyle?.id, currentStyle?.styleNo, coverRefreshToken]);
 
   useEffect(() => {
     setSizeColorMatrixRows((prev) => prev.map((row) => ({
@@ -282,15 +286,24 @@ const StyleInfoDetailPage: React.FC = () => {
   const handleColorImageSync = async (color: string, file: File) => {
     const normalizedColor = String(color || '').trim();
     const bizType = buildColorImageBizType(normalizedColor);
-    if (currentStyle?.id) {
-      const oldRes = await api.get('/style/attachment/list', { params: { styleId: currentStyle.id } });
+    const resolvedStyleId = String(currentStyle?.id ?? '').trim();
+    const resolvedStyleNo = String(currentStyle?.styleNo || '').trim();
+    if (resolvedStyleId || resolvedStyleNo) {
+      const oldRes = await api.get('/style/attachment/list', {
+        params: resolvedStyleId ? { styleId: resolvedStyleId } : { styleNo: resolvedStyleNo },
+      });
       const oldList = (Array.isArray((oldRes as any)?.data) ? (oldRes as any).data : []).filter((item: any) =>
         parseColorImageBizType(item?.bizType) === normalizedColor
       );
       await Promise.all(oldList.map((item: any) => api.delete(`/style/attachment/${item.id}`)));
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('styleId', String(currentStyle.id));
+      if (resolvedStyleId) {
+        formData.append('styleId', resolvedStyleId);
+      }
+      if (resolvedStyleNo) {
+        formData.append('styleNo', resolvedStyleNo);
+      }
       formData.append('bizType', bizType);
       const res = await api.post('/style/attachment/upload', formData, { timeout: 60000 } as any);
       if ((res as any).code !== 200) {
@@ -314,9 +327,13 @@ const StyleInfoDetailPage: React.FC = () => {
   };
 
   const handleColorImageClear = async (color: string) => {
-    if (currentStyle?.id) {
+    const resolvedStyleId = String(currentStyle?.id ?? '').trim();
+    const resolvedStyleNo = String(currentStyle?.styleNo || '').trim();
+    if (resolvedStyleId || resolvedStyleNo) {
       const normalizedColor = String(color || '').trim();
-      const res = await api.get('/style/attachment/list', { params: { styleId: currentStyle.id } });
+      const res = await api.get('/style/attachment/list', {
+        params: resolvedStyleId ? { styleId: resolvedStyleId } : { styleNo: resolvedStyleNo },
+      });
       const list = (Array.isArray((res as any)?.data) ? (res as any).data : []).filter((item: any) =>
         parseColorImageBizType(item?.bizType) === normalizedColor
       );
@@ -402,7 +419,7 @@ const StyleInfoDetailPage: React.FC = () => {
   ]);
 
   // 生产制单相关状态
-  const productionReqRowCount = 15;
+  const productionReqRowCount = 100;
   const [productionReqRows, setProductionReqRows] = useState<string[]>(() =>
     Array.from({ length: productionReqRowCount }).map(() => '')
   );
@@ -427,22 +444,15 @@ const StyleInfoDetailPage: React.FC = () => {
 
   const parseProductionReqRows = (value: unknown) => {
     const raw = String(value ?? '');
-    const lines = raw
-      .split(/\r?\n/)
-      .map((l) => String(l || '').replace(/^\s*\d+\s*[.、)）-]?\s*/, '').trim());
+    // 原文整串存 index 0，不拆行、不修改任何内容
     const out = Array.from({ length: productionReqRowCount }).map(() => '');
-    for (let i = 0; i < Math.min(productionReqRowCount, lines.length); i += 1) {
-      out[i] = lines[i] || '';
-    }
+    out[0] = raw;
     return out;
   };
 
   const _serializeProductionReqRows = (rows: string[]) => {
-    const list = (Array.isArray(rows) ? rows : [])
-      .slice(0, productionReqRowCount)
-      .map((x) => String(x ?? '').replace(/\r/g, '').trim());
-    while (list.length && !String(list[list.length - 1] || '').trim()) list.pop();
-    return list.join('\n');
+    // 直接取 index 0 原文，不做任何 trim / 过滤 / 拼接
+    return String((Array.isArray(rows) ? rows[0] : '') ?? '');
   };
 
   const handleSaveProduction = async () => {
@@ -743,7 +753,7 @@ const StyleInfoDetailPage: React.FC = () => {
                 key: '4',
                 label: '附件文件',
                 disabled: !currentStyle?.id,
-                children: <StyleAttachmentTab styleId={currentStyle?.id} />
+                children: <StyleAttachmentTab styleId={currentStyle?.id} styleNo={currentStyle?.styleNo} />
 
               }
             ]}

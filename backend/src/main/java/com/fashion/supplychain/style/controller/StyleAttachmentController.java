@@ -27,9 +27,10 @@ public class StyleAttachmentController {
 
     @PostMapping("/upload")
     public Result<StyleAttachment> upload(@RequestParam("file") MultipartFile file,
-            @RequestParam("styleId") String styleId,
+            @RequestParam(value = "styleId", required = false) String styleId,
+            @RequestParam(value = "styleNo", required = false) String styleNo,
             @RequestParam(value = "bizType", required = false) String bizType) {
-        return Result.success(styleAttachmentOrchestrator.upload(file, styleId, bizType));
+        return Result.success(styleAttachmentOrchestrator.upload(file, styleId, styleNo, bizType));
     }
 
     /**

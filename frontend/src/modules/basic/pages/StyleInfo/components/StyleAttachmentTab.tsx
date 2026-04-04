@@ -13,16 +13,27 @@ import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 
 interface Props {
   styleId: string | number;
+  styleNo?: string;
   bizType?: string;
   uploadText?: string;
   readOnly?: boolean;
   onListChange?: (list: StyleAttachment[]) => void;
 }
 
-const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, readOnly, onListChange }) => {
+const StyleAttachmentTab: React.FC<Props> = ({ styleId, styleNo, bizType, uploadText, readOnly, onListChange }) => {
   const [data, setData] = useState<StyleAttachment[]>([]);
   const [loading, setLoading] = useState(false);
   const { message } = App.useApp();
+
+  const normalizedStyleId = useMemo(() => {
+    const value = String(styleId ?? '').trim();
+    if (!value || value === 'undefined' || value === 'null') {
+      return '';
+    }
+    return value;
+  }, [styleId]);
+
+  const normalizedStyleNo = useMemo(() => String(styleNo || '').trim(), [styleNo]);
 
   const isPattern = useMemo(() => {
     const type = String(bizType || '').trim().toLowerCase();
@@ -61,13 +72,17 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
 
   // 获取附件列表
   const fetchList = async () => {
-    if (!styleId || styleId === 'undefined') {
+    if (!normalizedStyleId && !normalizedStyleNo) {
       return;
     }
     setLoading(true);
     try {
       const res = await api.get<StyleAttachment[]>('/style/attachment/list', {
-        params: { styleId, ...(bizType ? { bizType } : {}) },
+        params: {
+          ...(normalizedStyleId ? { styleId: normalizedStyleId } : {}),
+          ...(normalizedStyleNo ? { styleNo: normalizedStyleNo } : {}),
+          ...(bizType ? { bizType } : {}),
+        },
       });
       const result = res as any;
       if (result.code === 200) {
@@ -84,7 +99,7 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
 
   useEffect(() => {
     fetchList();
-  }, [styleId, bizType]);
+  }, [normalizedStyleId, normalizedStyleNo, bizType]);
 
   // 删除附件
   const handleDelete = async (id: string | number) => {
@@ -110,9 +125,18 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
       return Upload.LIST_IGNORE;
     }
     // 不限制文件类型，所有格式均允许（dxf/plt/ets/paj 等 CAD 纸样格式）
+    if (!normalizedStyleId && !normalizedStyleNo) {
+      message.error('请先保存基础信息，再上传附件');
+      return Upload.LIST_IGNORE;
+    }
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('styleId', String(styleId));
+    if (normalizedStyleId) {
+      formData.append('styleId', normalizedStyleId);
+    }
+    if (normalizedStyleNo) {
+      formData.append('styleNo', normalizedStyleNo);
+    }
     if (bizType) {
       formData.append('bizType', String(bizType));
     }

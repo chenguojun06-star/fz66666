@@ -10,10 +10,12 @@ import org.springframework.jdbc.BadSqlGrammarException;
 import org.springframework.transaction.UnexpectedRollbackException;
 import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
 import javax.servlet.http.HttpServletRequest;
@@ -81,6 +83,30 @@ public class GlobalExceptionHandler {
                                 : e.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
 
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Result.fail(400, message));
+        }
+
+        /**
+         * 处理缺少请求参数异常
+         */
+        @ExceptionHandler(MissingServletRequestParameterException.class)
+        public ResponseEntity<Result<?>> handleMissingServletRequestParameter(
+                        MissingServletRequestParameterException e,
+                        HttpServletRequest request) {
+                logger.warn("缺少请求参数: {} {} - {}", request == null ? "" : request.getMethod(),
+                                request == null ? "" : request.getRequestURI(), e.getMessage());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                .body(Result.fail(400, "缺少必填参数：" + e.getParameterName()));
+        }
+
+        /**
+         * 处理 multipart 上传格式异常
+         */
+        @ExceptionHandler(MultipartException.class)
+        public ResponseEntity<Result<?>> handleMultipartException(MultipartException e, HttpServletRequest request) {
+                logger.warn("上传请求格式异常: {} {} - {}", request == null ? "" : request.getMethod(),
+                                request == null ? "" : request.getRequestURI(), e.getMessage());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                .body(Result.fail(400, "上传请求格式错误，请重新选择文件后再试"));
         }
 
         /**

@@ -121,6 +121,10 @@ public class SerpApiTrendService {
     // 统一缓存：key → CachedResult（趋势/购物数据共用）
     private final ConcurrentHashMap<String, CachedResult> cache = new ConcurrentHashMap<>();
 
+    // 账户配额耗尽断路器：检测到429+"run out of searches"后静止24小时
+    private volatile boolean accountExhausted = false;
+    private volatile long accountExhaustedUntil = 0L;
+
     @PostConstruct
     void init() {
         boolean keyOk = apiKey != null && !apiKey.isEmpty() && !apiKey.startsWith("{{");
@@ -487,7 +491,13 @@ public class SerpApiTrendService {
 
     public boolean isReady() {
         // 额外过滤：拒绝 CI 未替换的模板占位符 {{SERPAPI_KEY}}
-        return enabled && apiKey != null && !apiKey.isEmpty() && !apiKey.startsWith("{{");
+        if (!enabled || apiKey == null || apiKey.isEmpty() || apiKey.startsWith("{{")) return false;
+        // 账户配额耗尽时熔断，等待恢复窗口结束
+        if (accountExhausted && System.currentTimeMillis() < accountExhaustedUntil) return false;
+        if (accountExhausted && System.currentTimeMillis() >= accountExhaustedUntil) {
+            accountExhausted = false; // 恢复窗口结束，重置
+        }
+        return true;
     }
 
     /** 清空本地缓存（测试/调试用） */
@@ -528,6 +538,17 @@ public class SerpApiTrendService {
                     .GET()
                     .build();
             HttpResponse<String> resp = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() == 429) {
+                String body = resp.body() != null ? resp.body() : "";
+                if (body.contains("run out of searches") || body.contains("quota") || body.contains("exhausted")) {
+                    accountExhausted = true;
+                    accountExhaustedUntil = System.currentTimeMillis() + CACHE_TTL_MS; // 24h 熔断
+                    log.warn("[SerpApi] 账户配额已用尽，将暂停服务 24 小时，避免重复触发 429 日志风暴");
+                } else {
+                    log.warn("[SerpApi] HTTP 429 — {}", body.substring(0, Math.min(200, body.length())));
+                }
+                return null;
+            }
             if (resp.statusCode() != 200) {
                 log.warn("[SerpApi] HTTP {} — {}", resp.statusCode(),
                         resp.body().substring(0, Math.min(200, resp.body().length())));
