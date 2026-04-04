@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { App, Button, Input, InputNumber, Space, Tag } from 'antd';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
-import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import ImageUploadBox from '@/components/common/ImageUploadBox';
 import { autoCollectDictEntry } from '@/hooks/useDictOptions';
 
 interface StyleColorSizeTableProps {
@@ -87,7 +87,6 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
   const [quickSizeDraft, setQuickSizeDraft] = useState('');
   const [newColor, setNewColor] = useState('');
   const [newSize, setNewSize] = useState('');
-  const uploadInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const selectedSizes = useMemo(
     () => sizeOptions.map((item) => String(item || '').trim()).filter(Boolean),
@@ -224,30 +223,6 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
         : row
     ));
     setMatrixRows(nextRows);
-  };
-
-  const applyRowImage = async (rowIndex: number, file?: File | null) => {
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      message.warning('请上传图片文件');
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      message.warning('单张颜色图最大 10MB');
-      return;
-    }
-    const imageUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ''));
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-    setMatrixRows(matrixRows.map((row, index) => (index === rowIndex ? { ...row, imageUrl } : row)));
-    try {
-      await onImageSync?.(matrixRows[rowIndex]?.color || '', file);
-    } catch (error: any) {
-      message.warning(error?.message || '颜色图片已本地预览，但联动封面图失败');
-    }
   };
 
   const clearRowImage = async (rowIndex: number) => {
@@ -392,78 +367,36 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                 return (
                   <tr key={row.color || rowIndex}>
                     <td style={{ padding: '8px 10px', borderTop: '1px solid var(--color-border)' }}>
-                      <input
-                        ref={(node) => { uploadInputRefs.current[row.color] = node; }}
-                        type="file"
-                        accept="image/*"
-                        style={{ display: 'none' }}
-                        onChange={(event) => {
-                          void applyRowImage(rowIndex, event.target.files?.[0] || null);
-                          event.currentTarget.value = '';
-                        }}
-                      />
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                        <div
-                          onClick={() => !editLocked && uploadInputRefs.current[row.color]?.click()}
-                          onDragOver={(event) => {
-                            if (!editLocked) event.preventDefault();
+                        <ImageUploadBox
+                          size={80}
+                          enableDrop
+                          maxSizeMB={0}
+                          value={row.imageUrl ?? null}
+                          disabled={editLocked}
+                          uploadFn={async (file) => {
+                            if (!file.type.startsWith('image/')) throw new Error('请上传图片文件');
+                            if (file.size > 10 * 1024 * 1024) throw new Error('单张颜色图最大 10MB');
+                            const dataUrl = await new Promise<string>((resolve, reject) => {
+                              const reader = new FileReader();
+                              reader.onload = () => resolve(String(reader.result || ''));
+                              reader.onerror = reject;
+                              reader.readAsDataURL(file);
+                            });
+                            void Promise.resolve(onImageSync?.(row.color, file)).catch((err: any) => {
+                              message.warning(err?.message || '颜色图片已预览，但联动封面图失败');
+                            });
+                            return dataUrl;
                           }}
-                          onDrop={(event) => {
-                            if (editLocked) return;
-                            event.preventDefault();
-                            void applyRowImage(rowIndex, event.dataTransfer.files?.[0] || null);
+                          onChange={(url) => {
+                            if (url) {
+                              setMatrixRows((prev) => prev.map((r, i) => i === rowIndex ? { ...r, imageUrl: url } : r));
+                            } else {
+                              void clearRowImage(rowIndex);
+                            }
                           }}
-                          onPaste={(event) => {
-                            if (editLocked) return;
-                            const pasted = event.clipboardData.files?.[0];
-                            if (!pasted) return;
-                            event.preventDefault();
-                            void applyRowImage(rowIndex, pasted);
-                          }}
-                          style={{
-                            width: 80,
-                            height: 80,
-                            borderRadius: 8,
-                            border: '1px dashed #cbd5e1',
-                            background: '#f8fafc',
-                            overflow: 'hidden',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: editLocked ? 'default' : 'pointer',
-                            flexShrink: 0,
-                          }}
-                        >
-                          {row.imageUrl ? (
-                            <img src={getFullAuthedFileUrl(row.imageUrl)} alt={row.color} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          ) : (
-                            <div style={{ textAlign: 'center' }}>
-                              <div style={{ fontSize: 22, color: '#d1d5db', lineHeight: 1 }}>+</div>
-                              <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 3 }}>图片</div>
-                            </div>
-                          )}
-                        </div>
+                        />
                         <div style={{ fontWeight: 600, color: '#ef4444', fontSize: 11, textAlign: 'center', maxWidth: 90, wordBreak: 'break-all' }}>{row.color}</div>
-                        {!editLocked ? (
-                          <div style={{ display: 'flex', gap: 6, fontSize: 11 }}>
-                            <button
-                              type="button"
-                              onClick={() => uploadInputRefs.current[row.color]?.click()}
-                              style={{ border: 0, background: 'transparent', color: '#2563eb', padding: 0, cursor: 'pointer' }}
-                            >
-                              上传
-                            </button>
-                            {row.imageUrl ? (
-                              <button
-                                type="button"
-                                onClick={() => { void clearRowImage(rowIndex); }}
-                                style={{ border: 0, background: 'transparent', color: '#94a3b8', padding: 0, cursor: 'pointer' }}
-                              >
-                                清除
-                              </button>
-                            ) : null}
-                          </div>
-                        ) : null}
                       </div>
                     </td>
                     {selectedSizes.map((_, columnIndex) => (

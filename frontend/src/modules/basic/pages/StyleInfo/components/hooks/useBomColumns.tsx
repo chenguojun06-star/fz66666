@@ -1,14 +1,13 @@
-import { useRef } from 'react';
 import { App, Form, Input, Button, Select, InputNumber, Tag, Space, Image, Tooltip } from 'antd';
 import type { FormInstance } from 'antd/es/form';
 import { QuestionCircleOutlined } from '@ant-design/icons';
-import api from '@/utils/api';
 import { StyleBom } from '@/types/style';
 import RowActions from '@/components/common/RowActions';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import ImageUploadBox from '@/components/common/ImageUploadBox';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 
 export type MaterialType = NonNullable<StyleBom['materialType']>;
@@ -80,8 +79,7 @@ export function useBomColumns({
   onApplyPickup,
   activeSizes = [],
 }: UseBomColumnsProps) {
-  const { modal, message } = App.useApp();
-  const uploadInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const { modal } = App.useApp();
   const parseSizeUsageMap = (value?: string) => {
     try {
       const parsed = JSON.parse(String(value || '{}'));
@@ -135,78 +133,15 @@ export function useBomColumns({
           const existingUrls: string[] = (() => {
             try { return JSON.parse(record.imageUrls || '[]'); } catch { return []; }
           })();
-          const doUpload = async (file: File) => {
-            const formData = new FormData();
-            formData.append('file', file);
-            try {
-              const res = await api.post<{ code: number; data: string; message?: string }>(
-                '/common/upload', formData,
-                { headers: { 'Content-Type': 'multipart/form-data' } }
-              );
-              if (res.code === 200 && res.data) {
-                form.setFieldValue(rowName(record.id, 'imageUrls'), JSON.stringify([res.data]));
-                message.success('上传成功');
-              } else {
-                message.error(String(res.message || '上传失败'));
-              }
-            } catch (e: any) {
-              message.error(String(e?.message || '上传失败'));
-            }
-          };
-          const rowKey = String(record.id);
           return (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-              <input
-                ref={(node) => { uploadInputRefs.current[rowKey] = node; }}
-                type="file"
-                accept="image/*"
-                style={{ display: 'none' }}
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) void doUpload(f);
-                  e.currentTarget.value = '';
+              <ImageUploadBox
+                size={64}
+                value={existingUrls[0] ?? null}
+                onChange={(url) => {
+                  form.setFieldValue(rowName(record.id, 'imageUrls'), url ? JSON.stringify([url]) : JSON.stringify([]));
                 }}
               />
-              <div
-                onClick={() => uploadInputRefs.current[rowKey]?.click()}
-                style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: 6,
-                  border: existingUrls.length ? '1px solid #e5e7eb' : '1px dashed #cbd5e1',
-                  background: '#f8fafc',
-                  overflow: 'hidden',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  flexShrink: 0,
-                }}
-              >
-                {existingUrls.length > 0 ? (
-                  <img
-                    src={getFullAuthedFileUrl(existingUrls[0])}
-                    alt="物料图"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                ) : (
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 20, color: '#d1d5db', lineHeight: 1 }}>+</div>
-                    <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>图片</div>
-                  </div>
-                )}
-              </div>
-              {existingUrls.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    form.setFieldValue(rowName(record.id, 'imageUrls'), JSON.stringify([]));
-                  }}
-                  style={{ border: 0, background: 'transparent', color: '#94a3b8', padding: 0, cursor: 'pointer', fontSize: 11 }}
-                >
-                  清除
-                </button>
-              )}
               <Form.Item name={rowName(record.id, 'imageUrls')} hidden noStyle>
                 <Input />
               </Form.Item>

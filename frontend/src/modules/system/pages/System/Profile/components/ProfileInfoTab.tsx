@@ -3,8 +3,9 @@
  * 独立组件，在 Profile（个人中心）页面中作为 Tab 使用
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import { App, Avatar, Button, Card, Form, Input, Select, Space, Spin, Typography, Upload } from 'antd';
-import { LockOutlined, TeamOutlined, UploadOutlined } from '@ant-design/icons';
+import { App, Avatar, Button, Card, Form, Input, Select, Space, Spin, Typography } from 'antd';
+import { LockOutlined, TeamOutlined } from '@ant-design/icons';
+import ImageUploadBox from '@/components/common/ImageUploadBox';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { useAuth } from '@/utils/AuthContext';
@@ -38,7 +39,6 @@ const ProfileInfoTab: React.FC = () => {
     const { message } = App.useApp();
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
-    const [avatarUploading, setAvatarUploading] = useState(false);
     const [form] = Form.useForm();
     const [pwdForm] = Form.useForm();
     const [savingPwd, setSavingPwd] = useState(false);
@@ -209,45 +209,7 @@ const ProfileInfoTab: React.FC = () => {
         message.success('主题已切换');
     };
 
-    const uploadAvatar = async (file: File) => {
-        if (!file.type.startsWith('image/')) {
-            message.error('仅支持图片文件');
-            return Upload.LIST_IGNORE;
-        }
-        if (file.size > 5 * 1024 * 1024) {
-            message.error('图片过大，最大5MB');
-            return Upload.LIST_IGNORE;
-        }
-        setAvatarUploading(true);
-        try {
-            const formData = new FormData();
-            formData.append('file', file);
-            const res = await api.post<{ code: number; message: string; data: string }>('/common/upload', formData);
-            if (res.code !== 200) {
-                message.error(res.message || '上传失败');
-                return Upload.LIST_IGNORE;
-            }
-            const url = String(res.data || '').trim();
-            if (!url) {
-                message.error('上传失败');
-                return Upload.LIST_IGNORE;
-            }
-            form.setFieldsValue({ avatarUrl: url });
-            updateUser({ avatarUrl: url } as any);
-            // 立即持久化到数据库，否则刷新页面后头像丢失
-            try {
-                await api.put('/system/user/me', { avatarUrl: url });
-            } catch {
-                // 保存失败不阻断上传成功的提示
-            }
-            message.success('上传成功');
-        } catch (e: any) {
-            message.error(e?.message || '上传失败');
-        } finally {
-            setAvatarUploading(false);
-        }
-        return Upload.LIST_IGNORE;
-    };
+
 
     const saveProfile = async () => {
         try {
@@ -427,18 +389,31 @@ const ProfileInfoTab: React.FC = () => {
             <Card size="small" className="filter-card mb-sm">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <Upload showUploadList={false} beforeUpload={uploadAvatar} accept="image/*">
-                            <Spin spinning={avatarUploading}>
-                                <Avatar
-                                    size={72}
-                                    src={getFullAuthedFileUrl(String(avatarUrl || (user as any)?.avatarUrl || '').trim()) || undefined}
-                                    style={{ fontWeight: 800, cursor: 'pointer' }}
-                                >
-                                    {(initialName || 'U').slice(0, 1).toUpperCase()}
-                                </Avatar>
-                            </Spin>
-                        </Upload>
-                        <Button size="small" icon={<UploadOutlined />} loading={avatarUploading} onClick={() => { /* trigger upload via Upload component */ }}>换头像</Button>
+                        <ImageUploadBox
+                            shape="round"
+                            size={72}
+                            label="头像"
+                            showClear={false}
+                            value={getFullAuthedFileUrl(String(avatarUrl || (user as any)?.avatarUrl || '').trim()) || null}
+                            uploadFn={async (file) => {
+                                if (!file.type.startsWith('image/')) throw new Error('仅支持图片文件');
+                                if (file.size > 5 * 1024 * 1024) throw new Error('图片过大，最大5MB');
+                                const formData = new FormData();
+                                formData.append('file', file);
+                                const res = await api.post<{ code: number; message: string; data: string }>('/common/upload', formData);
+                                if (res.code !== 200) throw new Error(res.message || '上传失败');
+                                const url = String(res.data || '').trim();
+                                if (!url) throw new Error('上传失败');
+                                return url;
+                            }}
+                            onChange={async (url) => {
+                                if (!url) return;
+                                form.setFieldsValue({ avatarUrl: url });
+                                updateUser({ avatarUrl: url } as any);
+                                try { await api.put('/system/user/me', { avatarUrl: url }); } catch { /* ignore */ }
+                                message.success('上传成功');
+                            }}
+                        />
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <label htmlFor="profile-theme-select" style={{ fontWeight: 700 }}>主题</label>

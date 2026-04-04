@@ -7,11 +7,10 @@ import PaymentAccountManager from '@/components/common/PaymentAccountManager';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import { Factory as FactoryType, FactoryQueryParams, OrganizationUnit, User } from '@/types/system';
 import api from '@/utils/api';
-import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { useModal } from '@/hooks';
-import { App, Button, Card, Col, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag, Tooltip, Upload } from 'antd';
-import type { UploadFile } from 'antd';
-import { QuestionCircleOutlined, UploadOutlined } from '@ant-design/icons';
+import { App, Button, Card, Col, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag, Tooltip } from 'antd';
+import { QuestionCircleOutlined } from '@ant-design/icons';
+import ImageUploadBox from '@/components/common/ImageUploadBox';
 import { formatDateTime } from '@/utils/datetime';
 import { useViewport } from '@/utils/useViewport';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -81,7 +80,7 @@ const FactoryList: React.FC = () => {
     setSmartError({ title, reason, code });
   };
   const [submitLoading, setSubmitLoading] = useState(false);
-  const [licenseFileList, setLicenseFileList] = useState<UploadFile[]>([]);
+  const businessLicenseUrl = Form.useWatch('businessLicense', form) as string | undefined;
   const [logLoading, setLogLoading] = useState(false);
   const [logRecords, setLogRecords] = useState<any[]>([]);
   const [logTitle, setLogTitle] = useState('操作日志');
@@ -115,44 +114,6 @@ const FactoryList: React.FC = () => {
   const tierColorMap: Record<string, string> = { S: '#f7a600', A: '#39ff14', B: '#4fc3f7', C: '#ff4136' };
 
   const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
-
-  // 构建图片文件列表
-  const buildImageFileList = (url: any): UploadFile[] => {
-    const u = String(url || '').trim();
-    if (!u) return [];
-    return [{ uid: 'license-1', name: '营业执照', status: 'done', url: getFullAuthedFileUrl(u) } as UploadFile];
-  };
-
-  // 上传营业执照
-  const uploadBusinessLicense = async (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      message.error('仅支持图片文件');
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      message.error('图片过大，最大5MB');
-      return;
-    }
-    const formData = new FormData();
-    formData.append('file', file);
-    try {
-      const response = await api.post<{ code: number; message: string; data: string }>('/common/upload', formData);
-      if (response.code === 200) {
-        const url = String(response.data || '').trim();
-        if (!url) {
-          message.error('上传失败');
-          return;
-        }
-        form.setFieldsValue({ businessLicense: url });
-        setLicenseFileList(buildImageFileList(url));
-        message.success('上传成功');
-      } else {
-        message.error(response.message || '上传失败');
-      }
-    } catch (e: any) {
-      message.error(String(e?.message || '上传失败'));
-    }
-  };
 
   const fetchFactories = async () => {
     setLoading(true);
@@ -216,7 +177,6 @@ const FactoryList: React.FC = () => {
   useEffect(() => {
     if (!factoryModal.visible) {
       form.resetFields();
-      setLicenseFileList([]);
       return;
     }
 
@@ -235,7 +195,6 @@ const FactoryList: React.FC = () => {
         parentOrgUnitId: undefined,
         businessLicense: undefined,
       });
-      setLicenseFileList([]);
       return;
     }
 
@@ -253,7 +212,6 @@ const FactoryList: React.FC = () => {
       parentOrgUnitId: factoryModal.data?.parentOrgUnitId,
       businessLicense: (factoryModal.data as any)?.businessLicense,
     });
-    setLicenseFileList(buildImageFileList((factoryModal.data as any)?.businessLicense));
   }, [activeTab, dialogMode, factoryModal.data, factoryModal.visible, form]);
 
   const openDialog = (mode: DialogMode, factory?: FactoryType) => {
@@ -264,7 +222,6 @@ const FactoryList: React.FC = () => {
   const closeDialog = () => {
     factoryModal.close();
     form.resetFields();
-    setLicenseFileList([]);
   };
 
   const openRemarkModal = (
@@ -859,30 +816,13 @@ const FactoryList: React.FC = () => {
             <Input id="businessLicense" />
           </Form.Item>
           <Form.Item label="营业执照图片">
-            <Upload
-              id="businessLicenseUpload"
-              accept="image/*"
-              listType="picture-card"
-              maxCount={1}
-              fileList={licenseFileList}
+            <ImageUploadBox
+              label="营业执照"
+              maxSizeMB={10}
               disabled={dialogMode === 'view'}
-              onRemove={() => {
-                form.setFieldsValue({ businessLicense: undefined });
-                setLicenseFileList([]);
-                return true;
-              }}
-              beforeUpload={(file) => {
-                void uploadBusinessLicense(file as File);
-                return Upload.LIST_IGNORE;
-              }}
-            >
-              {licenseFileList.length ? null : (
-                <div>
-                  <UploadOutlined />
-                  <div style={{ marginTop: 8, fontSize: 'var(--font-size-sm)' }}>上传营业执照</div>
-                </div>
-              )}
-            </Upload>
+              value={businessLicenseUrl || null}
+              onChange={(url) => form.setFieldsValue({ businessLicense: url ?? undefined })}
+            />
             <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--neutral-text-disabled)', marginTop: 4 }}>支持jpg、png格式，最大10MB（非必填）</div>
           </Form.Item>
           <Form.Item name="remark" label="备注">
