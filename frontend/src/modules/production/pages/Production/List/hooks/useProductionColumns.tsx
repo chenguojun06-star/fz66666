@@ -123,18 +123,17 @@ export function useProductionColumns({
         onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-subtle)'; }}
         onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
       >
-        <div className={`style-smart-stage style-smart-stage--${stageStatus}`}>
-          <div className="style-smart-stage__node">
+        <div className={`style-smart-stage style-smart-stage--${stageStatus}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, padding: 0 }}>
+          <div className="style-smart-stage__node" style={{ width: 28, height: 28, flexShrink: 0 }}>
             <span className="style-smart-stage__ring" />
             <span className="style-smart-stage__orbit" />
             <span className="style-smart-stage__core" />
             <span className="style-smart-stage__check" />
           </div>
-          <div className="style-smart-stage__time">
-            {renderCompletionTimeTag(record, nodeName, percent)}
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', lineHeight: 1.3 }}>{nodeName}</div>
+            <div style={{ fontSize: 10, color: 'var(--color-text-tertiary)', lineHeight: 1.2 }}>{completed}/{total}</div>
           </div>
-          <div className="style-smart-stage__label">{nodeName}</div>
-          <div style={{ fontSize: 10, color: 'var(--color-text-tertiary)', lineHeight: 1.2 }}>{completed}/{total}</div>
         </div>
       </div>
     );
@@ -397,14 +396,14 @@ export function useProductionColumns({
               <div style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '2px', textAlign: 'center' }}>
                 -/-
               </div>
-              <div className="style-smart-stage style-smart-stage--scrapped" style={{ margin: '0 auto' }}>
-                <div className="style-smart-stage__node">
+              <div className="style-smart-stage style-smart-stage--scrapped" style={{ margin: '0 auto', flexDirection: 'row', alignItems: 'center', gap: 4, padding: 0 }}>
+                <div className="style-smart-stage__node" style={{ width: 28, height: 28, flexShrink: 0 }}>
                   <span className="style-smart-stage__ring" />
                   <span className="style-smart-stage__orbit" />
                   <span className="style-smart-stage__core" />
                   <span className="style-smart-stage__check" />
                 </div>
-                <div className="style-smart-stage__label">采购</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-primary)', whiteSpace: 'nowrap' }}>采购</div>
               </div>
             </div>
           );
@@ -419,17 +418,14 @@ export function useProductionColumns({
             onMouseEnter={(e) => { if (!frozen) e.currentTarget.style.background = 'var(--color-bg-container)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
           >
-            <div className={`style-smart-stage style-smart-stage--${procurePercent >= 100 ? 'done' : 'waiting'}`} style={{ margin: '0 auto' }}>
-              <div className="style-smart-stage__node">
+            <div className={`style-smart-stage style-smart-stage--${procurePercent >= 100 ? 'done' : 'waiting'}`} style={{ margin: '0 auto', flexDirection: 'row', alignItems: 'center', gap: 4, padding: 0 }}>
+              <div className="style-smart-stage__node" style={{ width: 28, height: 28, flexShrink: 0 }}>
                 <span className="style-smart-stage__ring" />
                 <span className="style-smart-stage__orbit" />
                 <span className="style-smart-stage__core" />
                 <span className="style-smart-stage__check" />
               </div>
-              <div className="style-smart-stage__time">
-                {renderCompletionTimeTag(record, '采购', rate || 0)}
-              </div>
-              <div className="style-smart-stage__label">采购</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-primary)', whiteSpace: 'nowrap' }}>采购</div>
             </div>
           </div>
         );

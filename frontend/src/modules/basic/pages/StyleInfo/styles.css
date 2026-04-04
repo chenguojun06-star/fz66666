@@ -86,7 +86,7 @@
 
 .style-smart-row {
   display: grid;
-  grid-template-columns: 100px minmax(0, 1fr);
+  grid-template-columns: 120px minmax(0, 1fr);
   gap: 8px;
   padding: 8px;
   border-radius: 28px;
@@ -406,11 +406,7 @@
 }
 
 .style-smart-stage__time {
-  min-height: 22px;
-  color: var(--color-text-tertiary);
-  font-size: 13px;
-  line-height: 1.45;
-  font-weight: 600;
+  display: none;
 }
 
 .style-smart-stage__node {
@@ -466,7 +462,7 @@
 
 .style-smart-stage__label {
   color: var(--color-text-primary);
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 700;
 }
 

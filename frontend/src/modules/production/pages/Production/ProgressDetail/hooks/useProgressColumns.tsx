@@ -430,18 +430,15 @@ export const useProgressColumns = ({
                   >
                     <div
                       className="style-smart-stage style-smart-stage--done"
-                      style={{ cursor: orderMatrix.hasData ? 'pointer' : 'default', width: 76, flex: '0 0 auto' }}
+                      style={{ cursor: orderMatrix.hasData ? 'pointer' : 'default', flex: '0 0 auto', flexDirection: 'row', alignItems: 'center', gap: 4, padding: 0 }}
                     >
-                      <div className="style-smart-stage__node">
+                      <div className="style-smart-stage__node" style={{ width: 28, height: 28, flexShrink: 0 }}>
                         <span className="style-smart-stage__ring" />
                         <span className="style-smart-stage__orbit" />
                         <span className="style-smart-stage__core" />
                         <span className="style-smart-stage__check" />
                       </div>
-                      <div className="style-smart-stage__time">
-                        {record.createTime ? dayjs(record.createTime as string).format('MM-DD') : '--'}
-                      </div>
-                      <div className="style-smart-stage__label">下单</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-primary)', whiteSpace: 'nowrap' }}>下单</div>
                     </div>
                   </Popover>
                   <div style={{ flex: 1, alignSelf: 'stretch', display: 'flex', alignItems: 'center', paddingLeft: 2, paddingRight: 2, minWidth: 16 }}>
@@ -498,7 +495,7 @@ export const useProgressColumns = ({
                     const stageNode = (
                       <div
                         className={`style-smart-stage style-smart-stage--${stageStatus}`}
-                        style={{ cursor: frozen ? 'default' : 'pointer', opacity: isClosed ? 0.6 : 1, width: 76, flex: '0 0 auto' }}
+                        style={{ cursor: frozen ? 'default' : 'pointer', opacity: isClosed ? 0.6 : 1, flex: '0 0 auto', flexDirection: 'row', alignItems: 'center', gap: 4, padding: 0 }}
                         onClick={() => {
                           if (frozen) return;
                           // 优先从 progressWorkflowJson 获取该父节点下的子工序列表
@@ -548,21 +545,20 @@ export const useProgressColumns = ({
                           ? `${nodeName} 完成时间：${completionTime}${predictHint ? `\n预计完成：${predictHint}` : ''}\n点击查看详情`
                           : `${predictHint ? `预计完成：${predictHint}\n` : ''}点击查看 ${nodeName} 详情`}
                       >
-                        <div className="style-smart-stage__node">
+                        <div className="style-smart-stage__node" style={{ width: 28, height: 28, flexShrink: 0 }}>
                           <span className="style-smart-stage__ring" />
                           <span className="style-smart-stage__orbit" />
                           <span className="style-smart-stage__core" />
                           <span className="style-smart-stage__check" />
                         </div>
-                        <div className="style-smart-stage__time">
-                          {completionTime ? formatCompletionTime(completionTime) : '--'}
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-text-primary)', whiteSpace: 'nowrap', lineHeight: 1.3 }}>{nodeName}</div>
+                          {!isProcureNode && totalQty > 0 && (
+                            <div style={{ fontSize: 10, color: 'var(--color-text-tertiary)', lineHeight: 1.2 }}>
+                              {completedQty}/{totalQty}
+                            </div>
+                          )}
                         </div>
-                        <div className="style-smart-stage__label">{nodeName}</div>
-                        {!isProcureNode && totalQty > 0 && (
-                          <div style={{ fontSize: 10, color: 'var(--color-text-tertiary)', lineHeight: 1.2 }}>
-                            {completedQty}/{totalQty}
-                          </div>
-                        )}
                       </div>
                     );
                     return (nodeType === 'quality' || nodeType === 'warehousing') ? (
