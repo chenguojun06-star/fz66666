@@ -992,7 +992,8 @@ public class PatternProductionOrchestrator {
                 return;
             }
 
-            boolean sampleFinished = "COMPLETED".equalsIgnoreCase(String.valueOf(styleInfo.getSampleStatus()));
+            String currentSampleStatus = String.valueOf(styleInfo.getSampleStatus() == null ? "" : styleInfo.getSampleStatus()).trim().toUpperCase();
+            boolean sampleFinished = "COMPLETED".equals(currentSampleStatus) || "PRODUCTION_COMPLETED".equals(currentSampleStatus);
             int progress = calculatePatternProgressPercent(pattern);
             String status = String.valueOf(pattern.getStatus() == null ? "" : pattern.getStatus()).trim().toUpperCase();
             LocalDateTime now = LocalDateTime.now();
@@ -1012,9 +1013,13 @@ public class PatternProductionOrchestrator {
 
             if ("PRODUCTION_COMPLETED".equals(status) || "COMPLETED".equals(status)) {
                 patch.setProductionCompletedTime(resolvedCompleteTime != null ? resolvedCompleteTime : now);
-            }
-
-            if (!sampleFinished && !"PENDING".equals(status)) {
+                // 生产实际完成时，将样衣状态同步为 PRODUCTION_COMPLETED，使时间轴节点显示「生产完成」而非「进行中」
+                if (!sampleFinished) {
+                    patch.setSampleStatus("PRODUCTION_COMPLETED");
+                    patch.setSampleProgress(100);
+                    patch.setSampleCompletedTime(resolvedCompleteTime != null ? resolvedCompleteTime : now);
+                }
+            } else if (!sampleFinished && !"PENDING".equals(status)) {
                 patch.setSampleStatus("IN_PROGRESS");
                 patch.setSampleProgress(progress);
                 patch.setSampleCompletedTime(null);
