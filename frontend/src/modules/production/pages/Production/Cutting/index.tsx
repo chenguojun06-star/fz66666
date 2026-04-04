@@ -1,18 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { App, Button, Card, Form, Select, Space, Tag, Upload } from 'antd';
-import { PlusOutlined, UploadOutlined } from '@ant-design/icons';
+import { App, Button, Card, Form, Select, Space, Tag } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
 
 import Layout from '@/components/Layout';
 import PageStatCards from '@/components/common/PageStatCards';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
-import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import QuickEditModal from '@/components/common/QuickEditModal';
 import api from '@/utils/api';
 import { QRCodeCanvas } from 'qrcode.react';
 import { useAuth } from '@/utils/AuthContext';
-import { canViewPrice } from '@/utils/sensitiveDataMask';
 import type { CuttingTask, MaterialPurchase } from '@/types/production';
 import { ProductionOrderHeader, StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
 import StyleCoverGallery from '@/components/common/StyleCoverGallery';
@@ -24,7 +22,6 @@ import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import CuttingSheetPrintModal from '@/components/common/CuttingSheetPrintModal';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
-import { formatReferenceKilograms } from '../MaterialPurchase/utils';
 
 import '../../../styles.css';
 
@@ -218,55 +215,6 @@ const CuttingManagement: React.FC = () => {
           align: 'right' as const,
           render: (v: unknown) => Number(v ?? 0) || 0,
         },
-        {
-          title: '参考公斤数',
-          key: 'referenceKilograms',
-          width: 110,
-          align: 'right' as const,
-          render: (_: unknown, record: MaterialPurchase) => formatReferenceKilograms(record.purchaseQuantity, record.conversionRate, record.unit),
-        },
-        {
-          title: '单价(元)',
-          dataIndex: 'unitPrice',
-          key: 'unitPrice',
-          width: 110,
-          align: 'right' as const,
-          render: (v: unknown) => {
-            if (!canViewPrice(user)) return '***';
-            const n = Number(v);
-            return Number.isFinite(n) ? n.toFixed(2) : '-';
-          },
-        },
-        {
-          title: '总费用(元)',
-          dataIndex: 'totalAmount',
-          key: 'totalAmount',
-          width: 120,
-          align: 'right' as const,
-          render: (v: any, r: any) => {
-            if (!canViewPrice(user)) return '***';
-            const raw = Number(v);
-            if (Number.isFinite(raw)) return raw.toFixed(2);
-            const qty = Number(r?.purchaseQuantity ?? 0) || 0;
-            const price = Number(r?.unitPrice);
-            if (Number.isFinite(price)) return (qty * price).toFixed(2);
-            return '-';
-          },
-        },
-        {
-          title: '供应商',
-          dataIndex: 'supplierName',
-          key: 'supplierName',
-          width: 160,
-          ellipsis: true,
-          render: (_: unknown, record: MaterialPurchase) => (
-            <SupplierNameTooltip
-              name={record.supplierName}
-              contactPerson={(record as any).supplierContactPerson}
-              contactPhone={(record as any).supplierContactPhone}
-            />
-          ),
-        },
       ],
     []
   );
@@ -439,6 +387,7 @@ const CuttingManagement: React.FC = () => {
               </div>
 
               <ResizableTable<CuttingTask>
+                stickyHeader
                 storageKey="cutting-task-table-v2"
                 autoFixedColumns={false}
                 columns={[
@@ -720,38 +669,10 @@ const CuttingManagement: React.FC = () => {
 
                     <Card
                       size="small"
-                      title="面辅料采购明细"
+                      title="面辅料用量"
                       className="cutting-entry-purchase-card"
                       style={{ marginTop: 12 }}
                       loading={bundles.entryPurchaseLoading}
-                      extra={
-                        <Upload
-                          accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.doc,.docx"
-                          showUploadList={false}
-                          customRequest={async (options: any) => {
-                            const { file, onSuccess, onError } = options;
-                            const formData = new FormData();
-                            formData.append('file', file);
-                            try {
-                              const res = await api.post('/common/upload', formData, {
-                                headers: { 'Content-Type': 'multipart/form-data' },
-                              }) as any;
-                              if (res.code === 200) {
-                                message.success('采购单上传成功');
-                                onSuccess?.({});
-                              } else {
-                                message.error(res.message || '上传失败');
-                                onError?.(new Error('upload failed'));
-                              }
-                            } catch (err) {
-                              message.error('上传失败');
-                              onError?.(err);
-                            }
-                          }}
-                        >
-                          <Button icon={<UploadOutlined />} size="small">上传采购单</Button>
-                        </Upload>
-                      }
                     >
                       <ResizableTable<MaterialPurchase>
                         storageKey="cutting-entry-purchase-table"
