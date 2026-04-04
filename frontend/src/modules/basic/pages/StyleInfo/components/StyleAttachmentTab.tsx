@@ -41,7 +41,6 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, styleNo, bizType, upload
   }, [bizType]);
 
   // 不限制格式，所有纸样/附件格式均允许上传（含 dxf/plt/ets/paj 及其他 CAD 格式）
-  const acceptExts: string[] = [];
 
   const getExt = (name?: string | null) => {
     const n = String(name || '').trim();

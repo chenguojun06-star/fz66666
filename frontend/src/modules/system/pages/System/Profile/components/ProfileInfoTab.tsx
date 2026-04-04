@@ -3,7 +3,7 @@
  * 独立组件，在 Profile（个人中心）页面中作为 Tab 使用
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import { App, Avatar, Button, Card, Form, Input, Select, Space, Spin, Typography } from 'antd';
+import { App, Button, Card, Form, Input, Select, Space, Spin, Typography } from 'antd';
 import { LockOutlined, TeamOutlined } from '@ant-design/icons';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
 import api from '@/utils/api';
@@ -77,7 +77,6 @@ const ProfileInfoTab: React.FC = () => {
     });
 
     const initialRoleName = useMemo(() => String(user?.role || '').trim(), [user?.role]);
-    const initialName = useMemo(() => String(user?.name || '').trim(), [user?.name]);
 
     const applyTheme = (nextTheme: string) => {
         if (typeof document === 'undefined') return;

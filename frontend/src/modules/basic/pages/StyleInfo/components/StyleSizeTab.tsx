@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Dropdown, Input, InputNumber, Space, Select, Modal, Upload, Image, Tag, Popover, Table } from 'antd';
+import { App, Button, Dropdown, Input, InputNumber, Space, Select, Modal, Upload, Image, Popover, Table } from 'antd';
 import { DeleteOutlined, DownOutlined, PlusOutlined } from '@ant-design/icons';
 import { StyleSize, TemplateLibrary } from '@/types/style';
 import api, { sortSizeNames, toNumberSafe } from '@/utils/api';
@@ -47,7 +47,7 @@ type MatrixRow = {
   measureMethod: string;
   baseSize: string;
   gradingZones: GradingZone[];
-  tolerance: number;
+  tolerance: string | number;
   sort: number;
   cells: Record<string, MatrixCell>;
   /** 部位参考图片 URLs（JSON 字符串数组反序列化后） */
@@ -332,7 +332,7 @@ const StyleSizeTab: React.FC<Props> = ({
   const [sizeOptions, setSizeOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
-  const { message, modal } = App.useApp();
+  const { message } = App.useApp();
   const linkedSizeColumns = useMemo(() => normalizeSizeList(linkedSizes), [linkedSizes]);
 
   const displayRows = useMemo<DisplayRow[]>(() => {
@@ -503,7 +503,7 @@ const StyleSizeTab: React.FC<Props> = ({
             const key = items.map((x) => String(x.id || '')).filter(Boolean)[0] || mapKey || `tmp-${Date.now()}-${Math.random()}`;
             const measureMethod = items.length ? String((items[0] as Record<string, unknown>).measureMethod || '') : '';
             const gradingMeta = parseGradingRule((items[0] as any)?.gradingRule, sizes);
-            const tolerance = items.length ? toNumberSafe((items[0] as Record<string, unknown>).tolerance) : 0;
+            const tolerance = items.length ? String((items[0] as Record<string, unknown>).tolerance ?? '') : '';
             const sort = Math.min(...items.map((x) => toNumberSafe((x as Record<string, unknown>).sort)), 0);
             const cells: Record<string, MatrixCell> = {};
             sizes.forEach((sn) => {
@@ -549,21 +549,20 @@ const StyleSizeTab: React.FC<Props> = ({
   useEffect(() => {
     if (editMode || !linkedSizeColumns.length) return;
     setSizeColumns((prev) => {
-      const next = normalizeSizeList(linkedSizeColumns);
+      // 合并：已有尺码保留，新增关联尺码追加，避免异步加载覆盖已存库数据
+      const next = normalizeSizeList([...prev, ...linkedSizeColumns]);
       return JSON.stringify(prev) === JSON.stringify(next) ? prev : next;
     });
     setRows((prev) => normalizeChunkImageAssignments(prev.map((row) => {
-      const nextCells: Record<string, MatrixCell> = {};
+      const nextCells: Record<string, MatrixCell> = { ...row.cells };
+      // 仅为新增的关联尺码补空格，已有尺码的数据保持不变
       linkedSizeColumns.forEach((sizeName) => {
-        const matched = row.cells[sizeName];
-        nextCells[sizeName] = matched
-          ? { ...matched, value: toNumberSafe(matched.value) }
-          : { value: 0 };
+        if (!nextCells[sizeName]) {
+          nextCells[sizeName] = { value: 0 };
+        }
       });
       return {
         ...row,
-        baseSize: linkedSizeColumns.includes(String(row.baseSize || '').trim()) ? String(row.baseSize || '').trim() : '',
-        gradingZones: normalizeGradingZones(row.gradingZones || [], linkedSizeColumns),
         cells: nextCells,
       };
     })));
@@ -630,8 +629,8 @@ const StyleSizeTab: React.FC<Props> = ({
     setRows((prev) => prev.map((r) => (r.key === rowKey ? { ...r, measureMethod } : r)));
   };
 
-  const updateTolerance = (rowKey: string, tolerance: number) => {
-    setRows((prev) => prev.map((r) => (r.key === rowKey ? { ...r, tolerance: toNumberSafe(tolerance) } : r)));
+  const updateTolerance = (rowKey: string, tolerance: string) => {
+    setRows((prev) => prev.map((r) => (r.key === rowKey ? { ...r, tolerance } : r)));
   };
 
   const applyGradingToRow = (row: MatrixRow) => {
@@ -825,7 +824,7 @@ const StyleSizeTab: React.FC<Props> = ({
         measureMethod: '',
         baseSize: '',
         gradingZones: [],
-        tolerance: 0,
+        tolerance: '',
         sort: 0,
         cells,
       });
@@ -857,7 +856,7 @@ const StyleSizeTab: React.FC<Props> = ({
         measureMethod: '',
         baseSize: '',
         gradingZones: [],
-        tolerance: 0,
+        tolerance: '',
         sort: prev.length ? Math.max(...prev.map((r) => toNumberSafe(r.sort))) + 1 : 1,
         cells,
       },
@@ -1041,7 +1040,7 @@ const StyleSizeTab: React.FC<Props> = ({
             measureMethod: r.measureMethod,
             baseSize: r.baseSize || '',
             standardValue: toNumberSafe(cell?.value),
-            tolerance: toNumberSafe(r.tolerance),
+            tolerance: r.tolerance,
             sort: toNumberSafe(r.sort),
             imageUrls: imageUrlsJson,
             gradingRule,
@@ -1057,7 +1056,7 @@ const StyleSizeTab: React.FC<Props> = ({
               String((old as Record<string, unknown>).measureMethod || '').trim() !== String(r.measureMethod || '').trim() ||
               String((old as Record<string, unknown>).baseSize || '').trim() !== String(payload.baseSize || '').trim() ||
               toNumberSafe(old.standardValue) !== toNumberSafe(payload.standardValue) ||
-              toNumberSafe(old.tolerance) !== toNumberSafe(payload.tolerance) ||
+              String(old.tolerance ?? '') !== String(payload.tolerance ?? '') ||
               toNumberSafe((old as Record<string, unknown>).sort) !== toNumberSafe(payload.sort) ||
               String((old as Record<string, unknown>).imageUrls || '') !== String(payload.imageUrls || '') ||
               String((old as Record<string, unknown>).gradingRule || '') !== String(payload.gradingRule || '');
@@ -1320,6 +1319,7 @@ const StyleSizeTab: React.FC<Props> = ({
             value={v}
             min={0}
             step={0.1}
+            controls={false}
             style={{ width: '100%' }}
             onChange={(val) => updateCellValue(record.key, sn, toNumberSafe(val))}
           />
@@ -1337,12 +1337,10 @@ const StyleSizeTab: React.FC<Props> = ({
         align: 'center' as const,
         render: (_: any, record: MatrixRow) =>
           editableMode ? (
-            <InputNumber
-              value={record.tolerance}
-              min={0}
-              step={0.1}
+            <Input
+              value={String(record.tolerance ?? '')}
               style={{ width: '100%' }}
-              onChange={(val) => updateTolerance(record.key, toNumberSafe(val))}
+              onChange={(e) => updateTolerance(record.key, e.target.value)}
             />
           ) : (
             record.tolerance
