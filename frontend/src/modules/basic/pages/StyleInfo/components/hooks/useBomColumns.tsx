@@ -1,6 +1,7 @@
-import { App, Form, Input, Button, Select, InputNumber, Tag, Space, Image, Tooltip } from 'antd';
+import { App, Form, Input, Button, Select, InputNumber, Tag, Space, Image, Tooltip, Upload } from 'antd';
 import type { FormInstance } from 'antd/es/form';
-import { QuestionCircleOutlined } from '@ant-design/icons';
+import { QuestionCircleOutlined, UploadOutlined } from '@ant-design/icons';
+import api from '@/utils/api';
 import { StyleBom } from '@/types/style';
 import RowActions from '@/components/common/RowActions';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
@@ -68,7 +69,7 @@ export function useBomColumns({
   handleDelete,
   isTempId,
   fetchMaterials,
-  materialCreateForm,
+  materialCreateForm: _materialCreateForm,
   calcTotalPrice,
   isSupervisorOrAbove,
   setMaterialKeyword,
@@ -78,7 +79,7 @@ export function useBomColumns({
   onApplyPickup,
   activeSizes = [],
 }: UseBomColumnsProps) {
-  const { modal } = App.useApp();
+  const { modal, message } = App.useApp();
   const parseSizeUsageMap = (value?: string) => {
     try {
       const parsed = JSON.parse(String(value || '{}'));
@@ -127,6 +128,57 @@ export function useBomColumns({
       key: 'imageUrls',
       width: 90,
       render: (_: any, record: StyleBom) => {
+        // 编辑模式：显示上传按钮
+        if (!locked && (tableEditable || isEditing(record))) {
+          const existingUrls: string[] = (() => {
+            try { return JSON.parse(record.imageUrls || '[]'); } catch { return []; }
+          })();
+          const doUpload = async (file: File) => {
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+              const res = await api.post<{ code: number; data: string; message?: string }>(
+                '/common/upload', formData,
+                { headers: { 'Content-Type': 'multipart/form-data' } }
+              );
+              if (res.code === 200 && res.data) {
+                form.setFieldValue(rowName(record.id, 'imageUrls'), JSON.stringify([res.data]));
+                message.success('上传成功');
+              } else {
+                message.error(String(res.message || '上传失败'));
+              }
+            } catch (e: any) {
+              message.error(String(e?.message || '上传失败'));
+            }
+          };
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+              {existingUrls.length > 0 && (
+                <Image
+                  src={getFullAuthedFileUrl(existingUrls[0])}
+                  width={40}
+                  height={40}
+                  style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }}
+                  preview={{ src: getFullAuthedFileUrl(existingUrls[0]) }}
+                />
+              )}
+              <Upload
+                accept="image/*"
+                maxCount={1}
+                showUploadList={false}
+                beforeUpload={(file) => { void doUpload(file as File); return Upload.LIST_IGNORE; }}
+              >
+                <Button type="link" size="small" icon={<UploadOutlined />} style={{ padding: 0, fontSize: 12 }}>
+                  {existingUrls.length ? '换图' : '上传'}
+                </Button>
+              </Upload>
+              <Form.Item name={rowName(record.id, 'imageUrls')} hidden noStyle>
+                <Input />
+              </Form.Item>
+            </div>
+          );
+        }
+        // 查看模式
         const urls: string[] = (() => {
           try { return JSON.parse(record.imageUrls || '[]'); } catch { return []; }
         })();
@@ -633,7 +685,7 @@ export function useBomColumns({
       title: '库存状态',
       dataIndex: 'stockStatus',
       width: 110,
-      render: (status: string, record: StyleBom) => {
+      render: (status: string, _record: StyleBom) => {
         if (!status) {
           return <Tag color="default">未检查</Tag>;
         }

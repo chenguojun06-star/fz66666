@@ -192,6 +192,36 @@ const useStyleBomMutations = ({
         }
       }
 
+      // 自动同步到物料数据库（尽力而为，静默跳过重复与所有错误）
+      const allValuesForSync = form.getFieldsValue() || {};
+      for (const item of data) {
+        const key = String(item.id);
+        const row = (allValuesForSync?.[key] || {}) as Record<string, any>;
+        const materialCode = String(row.materialCode ?? item.materialCode ?? '').trim();
+        if (!materialCode) continue;
+        let imageUrl: string | undefined;
+        try {
+          const parsedUrls = JSON.parse(String(row.imageUrls ?? item.imageUrls ?? '[]'));
+          imageUrl = Array.isArray(parsedUrls) && parsedUrls.length > 0 ? String(parsedUrls[0]) : undefined;
+        } catch { imageUrl = undefined; }
+        try {
+          await api.post('/material/database', {
+            materialCode,
+            materialName: String(row.materialName ?? item.materialName ?? '').trim() || materialCode,
+            unit: String(row.unit ?? item.unit ?? '').trim(),
+            supplierName: String(row.supplier ?? item.supplier ?? '').trim(),
+            materialType: row.materialType ?? item.materialType,
+            fabricComposition: row.fabricComposition ?? item.fabricComposition,
+            fabricWeight: row.fabricWeight ?? item.fabricWeight,
+            specifications: row.specification ?? item.specification,
+            unitPrice: row.unitPrice ?? item.unitPrice,
+            image: imageUrl,
+          });
+        } catch {
+          // 尽力而为：静默跳过重复、验证错误、网络失败等所有情况
+        }
+      }
+
       message.success('保存成功');
       setTableEditable(false);
       await fetchBom();

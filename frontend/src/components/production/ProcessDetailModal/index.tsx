@@ -16,7 +16,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
   processType,
   procurementStatus,
   processStatus,
-  onDataChanged,
+  onDataChanged: _onDataChanged,
 }) => {
   const navigate = useNavigate();
   const [cuttingBundles, setCuttingBundles] = useState<CuttingBundle[]>([]);

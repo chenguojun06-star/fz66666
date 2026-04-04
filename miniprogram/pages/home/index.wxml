@@ -15,7 +15,7 @@
         <text class="results-title">搜索结果 ({{globalSearch.results.length}})</text>
         <text class="close-results" bindtap="closeGlobalSearch">✕</text>
       </view>
-      <scroll-view class="results-list" scroll-y>
+      <scroll-view class="results-list" scroll-y enhanced="{{true}}">
         <view wx:for="{{globalSearch.results}}" wx:key="id" class="result-item" hover-class="result-item-hover" hover-stay-time="100" bindtap="onResultItemTap" data-item="{{item}}">
           <view class="result-header">
             <text class="result-type">{{item.typeText}}</text>
@@ -39,7 +39,7 @@
     <view wx:if="{{!globalSearch.hasSearched}}">
       <view wx:if="{{loading}}" class="hint">加载中...</view>
       <view wx:if="{{!loading && !statsLoaded}}" class="hint">暂无统计</view>
-      
+
       <view wx:if="{{isTenantOwner}}">
         <view class="home-section-title">数据概览</view>
         <view class="home-stats-grid">

@@ -1,6 +1,6 @@
 import { App, Modal } from 'antd';
 import type { FormInstance } from 'antd/es/form';
-import { useCallback } from 'react';
+import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import type { StyleBom } from '@/types/style';
 import api from '@/utils/api';
 
@@ -14,7 +14,7 @@ interface UseStyleBomActionsOptions {
   form: FormInstance;
   setLoading: (loading: boolean) => void;
   setCheckingStock: (loading: boolean) => void;
-  setData: React.Dispatch<React.SetStateAction<StyleBom[]>>;
+  setData: Dispatch<SetStateAction<StyleBom[]>>;
   fetchBom: () => Promise<StyleBom[]>;
   isTempId: (id: unknown) => boolean;
   sortBomRows: (rows: StyleBom[]) => StyleBom[];

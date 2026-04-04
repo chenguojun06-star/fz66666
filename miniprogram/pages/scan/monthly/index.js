@@ -72,7 +72,6 @@ Page({
     displayMonth: '',
     searchKeyword: '',
     records: [],
-    patternRecords: [],   // 样衣扫码记录（按月全量加载）
     displayRecords: [],
     showOnlyPayable: false,
     loading: false,
@@ -219,15 +218,15 @@ Page({
     // 样衣记录：reset 时使用新拉取的，翻页时复用旧数据
     const patternRecords = freshPatternRecords !== undefined
       ? freshPatternRecords
-      : this.data.patternRecords;
+      : (this._patternRecords || []);
 
     const summary = this._buildSummaryFromRecords(merged, patternRecords);
     const allForDisplay = this._mergeAndSort(merged, patternRecords);
     const displayRecords = this._getDisplayRecords(allForDisplay);
 
+    this._patternRecords = patternRecords;
     this.setData({
       records: merged,
-      patternRecords,
       displayRecords,
       page: nextPage,
       hasMore: merged.length < total,
@@ -267,7 +266,7 @@ Page({
 
   onTogglePayableFilter() {
     const showOnlyPayable = !this.data.showOnlyPayable;
-    const allRecords = this._mergeAndSort(this.data.records, this.data.patternRecords);
+    const allRecords = this._mergeAndSort(this.data.records, this._patternRecords || []);
     const displayRecords = showOnlyPayable
       ? allRecords.filter((item) => item.isPayable)
       : allRecords;

@@ -35,25 +35,25 @@
         </view>
       </view>
       <view class="chat-header-actions">
-        <view class="header-action-btn" catchtap="clearMessages" title="清空对话" wx:if="{{currentTab === 'chat'}}">🗑</view>
-        <view class="header-action-btn close-btn" catchtap="toggleChat">×</view>
+        <view class="header-action-btn" hover-class="header-action-btn-hover" hover-stay-time="100" catchtap="clearMessages" title="清空对话" wx:if="{{currentTab === 'chat'}}">🗑</view>
+        <view class="header-action-btn close-btn" hover-class="header-action-btn-hover" hover-stay-time="100" catchtap="toggleChat">×</view>
       </view>
     </view>
 
     <view class="chat-main" wx:if="{{currentTab === 'chat'}}">
     <view class="quick-chips" wx:if="{{messages.length <= 1 && !isLoading}}">
       <block wx:if="{{isManager}}">
-        <view class="quick-chip" catchtap="autoAsk" data-question="帮我生成今日智能日报">📊 生成日报</view>
-        <view class="quick-chip" catchtap="autoAsk" data-question="当前有哪些逾期或高风险订单？">⚠️ 风险订单</view>
-        <view class="quick-chip" catchtap="autoAsk" data-question="今天工厂扫码情况如何？">🔍 今日扫码</view>
+        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="帮我生成今日智能日报">📊 生成日报</view>
+        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="当前有哪些逾期或高风险订单？">⚠️ 风险订单</view>
+        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="今天工厂扫码情况如何？">🔍 今日扫码</view>
       </block>
       <block wx:else>
-        <view class="quick-chip" catchtap="autoAsk" data-question="我今天负责的生产任务是什么？">📋 我的任务</view>
-        <view class="quick-chip" catchtap="autoAsk" data-question="帮我查一下我最近的扫码记录">🔍 扫码记录</view>
-        <view class="quick-chip" catchtap="autoAsk" data-question="我负责的订单当前进度怎么样？">📦 订单进度</view>
+        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="我今天负责的生产任务是什么？">📋 我的任务</view>
+        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="帮我查一下我最近的扫码记录">🔍 扫码记录</view>
+        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="我负责的订单当前进度怎么样？">📦 订单进度</view>
       </block>
     </view>
-    <scroll-view class="chat-history" scroll-y scroll-into-view="{{scrollTo}}">
+    <scroll-view class="chat-history" scroll-y enhanced="{{true}}" scroll-into-view="{{scrollTo}}">
       <block wx:for="{{messages}}" wx:key="id">
         <view class="message-row {{item.role === 'user' ? 'my-message' : 'ai-message'}}" id="msg-{{item.id}}">
           <view class="avatar">{{item.role === 'user' ? '我' : '☁️'}}</view>
@@ -64,6 +64,8 @@
               <view class="recommend-pills">
                 <view
                   class="recommend-pill"
+                  hover-class="recommend-pill-hover"
+                  hover-stay-time="100"
                   wx:for="{{item.recommendPills}}"
                   wx:for-item="pill"
                   wx:key="*this"
@@ -85,7 +87,7 @@
     </view>
     </view>
 
-    <scroll-view class="tasks-main" scroll-y wx:if="{{currentTab === 'tasks'}}">
+    <scroll-view class="tasks-main" scroll-y enhanced="{{true}}" wx:if="{{currentTab === 'tasks'}}">
       <view class="empty-state" wx:if="{{totalTasks === 0}}">
         <view class="empty-icon">🎉</view>
         <view class="empty-text">太棒了！所有任务都处理完了</view>
@@ -99,7 +101,7 @@
           </view>
           <view class="section-count-badge quality-badge">{{qualityTasks.length}}</view>
         </view>
-        <view class="task-card task-type-quality" wx:for="{{qualityTasks}}" wx:key="orderId" catchtap="handleQualityTask" data-item="{{item}}">
+        <view class="task-card task-type-quality" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{qualityTasks}}" wx:key="orderId" catchtap="handleQualityTask" data-item="{{item}}">
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
             <view class="task-card-info">
@@ -128,7 +130,7 @@
           </view>
           <view class="section-count-badge cutting-badge">{{cuttingTasks.length}}</view>
         </view>
-        <view class="task-card task-type-cutting" wx:for="{{cuttingTasks}}" wx:key="orderId" catchtap="handleCuttingTask" data-item="{{item}}">
+        <view class="task-card task-type-cutting" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{cuttingTasks}}" wx:key="orderId" catchtap="handleCuttingTask" data-item="{{item}}">
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
             <view class="task-card-info">
@@ -155,7 +157,7 @@
           </view>
           <view class="section-count-badge purchase-badge">{{purchaseTasks.length}}</view>
         </view>
-        <view class="task-card task-type-purchase" wx:for="{{purchaseTasks}}" wx:key="id" catchtap="handlePurchaseTask" data-item="{{item}}">
+        <view class="task-card task-type-purchase" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{purchaseTasks}}" wx:key="id" catchtap="handlePurchaseTask" data-item="{{item}}">
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
             <view class="task-card-info">
@@ -184,7 +186,7 @@
           </view>
           <view class="section-count-badge repair-badge">{{repairTasks.length}}</view>
         </view>
-        <view class="task-card task-type-repair" wx:for="{{repairTasks}}" wx:key="id">
+        <view class="task-card task-type-repair" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{repairTasks}}" wx:key="id">
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
             <view class="task-card-info">
@@ -209,7 +211,7 @@
           </view>
           <view class="section-count-badge overdue-badge">{{overdueOrders.length}}</view>
         </view>
-        <view class="task-card task-type-overdue" wx:for="{{overdueOrders}}" wx:key="id">
+        <view class="task-card task-type-overdue" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{overdueOrders}}" wx:key="id">
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
             <view class="task-card-info">
@@ -231,7 +233,7 @@
           </view>
           <view class="section-count-badge pending-badge">{{pendingUsers.length}}</view>
         </view>
-        <view class="task-card task-type-pending" wx:for="{{pendingUsers}}" wx:key="id">
+        <view class="task-card task-type-pending" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{pendingUsers}}" wx:key="id">
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
             <view class="task-card-info">
@@ -255,7 +257,7 @@
           </view>
           <view class="section-count-badge pending-badge">{{pendingRegistrations.length}}</view>
         </view>
-        <view class="task-card task-type-pending" wx:for="{{pendingRegistrations}}" wx:key="id">
+        <view class="task-card task-type-pending" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{pendingRegistrations}}" wx:key="id">
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
             <view class="task-card-info">

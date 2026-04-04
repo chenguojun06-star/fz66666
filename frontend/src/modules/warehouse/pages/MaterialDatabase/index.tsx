@@ -19,7 +19,7 @@ import { MaterialDatabase, MaterialDatabaseQueryParams } from '@/types/productio
 import api, { unwrapApiData } from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { formatDateTime } from '@/utils/datetime';
-import { formatMaterialSpecWidth, getBaseMaterialType, getBaseMaterialTypeLabel, getMaterialTypeCategory } from '@/utils/materialType';
+import { formatMaterialSpecWidth, getBaseMaterialType } from '@/utils/materialType';
 import { useViewport } from '@/utils/useViewport';
 import { useModal, useRequest, useTablePagination } from '@/hooks';
 import type { Dayjs } from 'dayjs';

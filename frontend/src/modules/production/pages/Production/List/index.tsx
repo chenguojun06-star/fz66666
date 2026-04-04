@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Button, Card, Input, Select, Tag, App, Popover, Checkbox, Alert, InputNumber, Tabs, Segmented } from 'antd';
+import { Button, Card, Input, Select, Tag, App, Popover, Checkbox, Alert, Tabs, Segmented } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined, RadarChartOutlined } from '@ant-design/icons';
 import ExternalFactorySmartView from '../ExternalFactory/ExternalFactorySmartView';
@@ -31,7 +31,6 @@ import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
 import type { Dayjs } from 'dayjs';
 import '../../../styles.css';
 import dayjs from 'dayjs';
-import SupplierSelect from '@/components/common/SupplierSelect';
 import UniversalCardView from '@/components/common/UniversalCardView';
 import { createOrderColorSizeGridFieldGroups } from '@/components/common/CardSizeQuantityFieldGroups';
 import SmartOrderHoverCard from '../ProgressDetail/components/SmartOrderHoverCard';
@@ -67,7 +66,7 @@ import {
   useProductionStats,
   useProductionColumns,
 } from './hooks';
-import { safeString, mainStages } from './utils';
+import { safeString } from './utils';
 import { useProductionBoardStore } from '@/stores';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';

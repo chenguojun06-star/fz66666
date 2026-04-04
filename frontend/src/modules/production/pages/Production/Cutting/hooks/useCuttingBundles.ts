@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { readPageSize } from '@/utils/pageSizeStore';
 import type { StyleBom } from '@/types/style';
 import api, { compareSizeAsc, fetchProductionOrderDetail, parseProductionOrderLines } from '@/utils/api';
 import { useSync } from '@/utils/syncManager';

@@ -88,7 +88,7 @@ const InspectionDetail: React.FC = () => {
 
   /* ---- 批量不合格弹窗 ---- */
   const [batchUnqualifiedModalOpen, setBatchUnqualifiedModalOpen] = useState(false);
-  const [batchUnqualifiedForm] = Form.useForm();
+  const [_batchUnqualifiedForm] = Form.useForm();
 
   /* ---- 内联质检表单 ---- */
   const formHook = useWarehousingForm(
@@ -565,7 +565,7 @@ const InspectionDetail: React.FC = () => {
       batchQtyByQr, batchSelectedSummary, batchSelectedHasBlocked,
       singleSelectedBundle, isSingleSelectedBundleBlocked, singleSelectedBundleRepairStats,
       handleBatchSelectionChange, handleBatchSelectAll, handleBatchSelectInvert, handleBatchSelectClear,
-      handleBatchQualifiedSubmit, handleBatchUnqualifiedSubmit, handleSubmit: handleQcSubmit,
+      handleBatchQualifiedSubmit, handleBatchUnqualifiedSubmit: _handleBatchUnqualifiedSubmit, handleSubmit: handleQcSubmit,
       uploadOneUnqualifiedImage, unqualifiedFileList, setUnqualifiedFileList,
       watchedWarehousingQty, watchedUnqualifiedQty,
       bundles: formBundles, orderOptionsLoading,

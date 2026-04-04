@@ -71,7 +71,6 @@ Page({
     endDate: getToday(),
     searchKeyword: '',
     records: [],          // 普通扫码记录（分页追加）
-    patternRecords: [],   // 样板扫码记录（首次全量加载，后续不再追加）
     displayRecords: [],
     showOnlyPayable: false,
     loading: false,
@@ -196,7 +195,7 @@ Page({
       const result = settled[0].status === 'fulfilled' ? settled[0].value : null;
       const patternRaw = reset
         ? (settled[1] && settled[1].status === 'fulfilled' ? settled[1].value : [])
-        : this.data.patternRecords;
+        : (this._patternRecords || []);
 
       // 格式化大货记录
       const newRecords = (result?.records || []).filter(
@@ -232,7 +231,7 @@ Page({
       // 格式化样衣记录（reset 时重建，翻页时复用旧数据）
       const patternRecords = reset
         ? (Array.isArray(patternRaw) ? patternRaw : []).map((item) => _formatPatternRecord(item))
-        : this.data.patternRecords;
+        : (this._patternRecords || []);
 
       // 计算汇总（仅大货记录计入数量和工资）
       let totalQuantity = 0;
@@ -250,9 +249,9 @@ Page({
       const displayRecords = this._getDisplayRecords(allForDisplay);
 
       if (gen !== this._reqGeneration) return; // 已被新请求（如下拉刷新）取代，丢弃本次过期结果
+      this._patternRecords = patternRecords;
       this.setData({
         records: merged,
-        patternRecords,
         displayRecords,
         page: nextPage,
         hasMore,
@@ -285,7 +284,7 @@ Page({
 
   onTogglePayableFilter() {
     const showOnlyPayable = !this.data.showOnlyPayable;
-    const allRecords = this._mergeAndSort(this.data.records, this.data.patternRecords);
+    const allRecords = this._mergeAndSort(this.data.records, this._patternRecords || []);
     const displayRecords = showOnlyPayable
       ? allRecords.filter((item) => item.isPayable)
       : allRecords;

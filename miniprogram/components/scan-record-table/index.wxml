@@ -1,4 +1,4 @@
-<scroll-view scroll-x class="srt-table-wrap" wx:if="{{records.length > 0}}">
+<scroll-view scroll-x enhanced="{{true}}" class="srt-table-wrap" wx:if="{{records.length > 0}}">
   <view class="srt-table-inner">
     <view class="srt-table-header">
       <text class="srt-th srt-th-worker">领取人</text>

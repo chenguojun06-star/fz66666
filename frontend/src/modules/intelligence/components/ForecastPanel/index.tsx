@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button, Input, Select, Progress, Tag, Spin } from 'antd';
-import { RiseOutlined, LoadingOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { RiseOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { runForecast, ForecastRequest, ForecastResult } from '@/services/intelligenceApi';
 import './ForecastPanel.css';
 

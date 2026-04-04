@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { App, Card, Checkbox, Form, Input, Modal, Select, Tabs } from 'antd';
+import { App, Card, Checkbox, Form, Input, Modal, Tabs } from 'antd';
 import dayjs from 'dayjs';
 import Layout from '@/components/Layout';
 import api from '@/utils/api';

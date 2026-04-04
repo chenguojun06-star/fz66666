@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { useTimeDimension, TimeDimension } from '../contexts/TimeDimensionContext';
+import { useTimeDimension } from '../contexts/TimeDimensionContext';
 import { useStyleLink } from '../contexts/StyleLinkContext';
 import api from '@/utils/api';
 import type { ProductionOrder } from '@/types/production';
@@ -38,7 +38,7 @@ const isToday = (dateStr?: string | null): boolean => {
 const OverviewChart: React.FC<OverviewChartProps> = ({ mode = 'sidebar', moduleKey, position }) => {
   const { dimension, getDateRange } = useTimeDimension();
   const styleLink = useStyleLink();
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert, App, Button, Card, DatePicker, Form, Input, InputNumber,
-  Select, Space, Tag, Popconfirm, Row, Col, Statistic,
+  Select, Space, Tag, Row, Col, Statistic,
   Upload, Image, Spin,
 } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -9,7 +9,7 @@ import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
 import {
   PlusOutlined, SearchOutlined, CheckCircleOutlined,
-  CloseCircleOutlined, DollarOutlined, EditOutlined, DeleteOutlined,
+  CloseCircleOutlined,
   UploadOutlined, PictureOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';

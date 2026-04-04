@@ -33,7 +33,7 @@
   </view>
 
   <!-- 表格（表头+数据一体横向滚动） -->
-  <scroll-view scroll-x class="table-wrap" wx:if="{{records.length > 0}}">
+  <scroll-view scroll-x enhanced="{{true}}" class="table-wrap" wx:if="{{records.length > 0}}">
     <view class="table-inner">
       <!-- 表头 -->
       <view class="table-header">

@@ -13,7 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { matchRecordToStage } from '@/utils/productionStage';
 import ProcessTrackingTable from '@/components/production/ProcessTrackingTable';
 import { getProductionProcessTracking } from '@/utils/api/production';
-import type { NodeType, HistoryItem, NodeOperationData, NodeOperations, Factory, NodeStats, ScanRecord, BundleRecord, OperatorSummary, ProcessPriceItem, NodeDetailModalProps } from './types';
+import type { NodeType, HistoryItem, NodeOperationData, NodeOperations, Factory, ScanRecord, BundleRecord, OperatorSummary, NodeDetailModalProps } from './types';
 
 const { Text } = Typography;
 

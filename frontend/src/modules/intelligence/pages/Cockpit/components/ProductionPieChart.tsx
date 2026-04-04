@@ -68,7 +68,7 @@ interface ProductionPieChartProps {
   position?: { x: number; y: number; width: number; height: number };
 }
 
-interface FactoryStats {
+interface _FactoryStats {
   factoryName: string;
   orderCount: number;
   totalQuantity: number;

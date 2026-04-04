@@ -47,6 +47,7 @@
   <!-- 列表内容 -->
   <scroll-view
     scroll-y
+    enhanced="{{true}}"
     class="list-container"
     bindscrolltolower="onLoadMore"
     refresher-enabled

@@ -1113,7 +1113,7 @@
       <view class="modal-close" hover-class="modal-close-hover" hover-stay-time="100" catchtap="closeProcurementModal">×</view>
     </view>
 
-    <scroll-view class="modal-body" scroll-y="true" show-scrollbar="false">
+    <scroll-view class="modal-body" scroll-y="true" enhanced="{{true}}" show-scrollbar="false">
       <view class="scan-result-info procurement-modal-info">
         <view class="result-item">
           <text class="item-label">订单号</text>

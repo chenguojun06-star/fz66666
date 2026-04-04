@@ -14,7 +14,6 @@ import { MaterialPurchase as MaterialPurchaseType, MaterialQueryParams } from '@
 import { formatMaterialSpecWidth } from '@/utils/materialType';
 import { analyzePurchase, renderPurchaseTooltip } from '../utils/purchaseIntelligence';
 import { formatDateTime } from '@/utils/datetime';
-import { MATERIAL_TYPES } from '@/constants/business';
 import { formatMaterialQuantityWithUnit, formatReferenceKilograms, getStatusConfig, subtractMaterialQuantity } from '../utils';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import api from '@/utils/api';

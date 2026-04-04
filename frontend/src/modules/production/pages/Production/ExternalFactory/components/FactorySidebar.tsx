@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Tag, Spin, Empty, Tooltip } from 'antd';
+import { Card, Tag, Spin, Empty } from 'antd';
 import { ShopOutlined, CheckCircleOutlined, SyncOutlined, WarningOutlined, AppstoreOutlined } from '@ant-design/icons';
 
 export interface FactoryStats {

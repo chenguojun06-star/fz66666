@@ -238,12 +238,12 @@
 .chat-subtitle { font-size: 22rpx; color: #999; line-height: 1.3; margin-top: 2rpx; }
 .chat-header-actions { display: flex; align-items: center; gap: 8rpx; }
 .header-action-btn { font-size: 34rpx; color: #aaa; padding: 8rpx 12rpx; border-radius: 8rpx; }
-.header-action-btn:active { background: #f0f0f0; }
+.header-action-btn-hover { background: #f0f0f0; }
 .close-btn { font-size: 40rpx; color: #999; }
 
 .quick-chips { display: flex; flex-direction: row; padding: 16rpx 24rpx 0; gap: 16rpx; flex-wrap: wrap; }
 .quick-chip { background: #f0f7ff; color: #2D7FF9; border-radius: 32rpx; padding: 12rpx 24rpx; font-size: 24rpx; line-height: 1.4; border: 1rpx solid #d0e8ff; }
-.quick-chip:active { background: #d8edff; }
+.quick-chip-hover { background: #d8edff; }
 .chat-history { flex: 1; height: 0; width: 100%; box-sizing: border-box; padding: 24rpx; background: #f8f9fa; }
 .message-row { display: flex; margin-bottom: 24rpx; align-items: flex-start; }
 .my-message { flex-direction: row-reverse; }
@@ -395,7 +395,7 @@
   flex-direction: row;
   box-shadow: 0 2rpx 14rpx rgba(0,0,0,0.06);
 }
-.task-card:active { background: #f8faff; }
+.task-card-hover { background: #f8faff; }
 
 .task-accent-bar { width: 6rpx; flex-shrink: 0; }
 .task-type-quality  .task-accent-bar { background: #2D7FF9; }
@@ -509,6 +509,6 @@
   border-radius: 24rpx;
   border: 1rpx solid #d0e8ff;
 }
-.recommend-pill:active {
+.recommend-pill-hover {
   background: #d8edff;
 }

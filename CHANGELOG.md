@@ -1,3 +1,32 @@
+# 2026-06-（当前）
+
+## 小程序 / 微信开发者工具体验审计修复
+
+- **问题背景**：微信开发者工具体验评分报告（基础库 3.15.0）发现多项体验与最佳实践问题。
+- **已修复**：
+
+### 1. 消除 CSS `:active` 伪类（影响 iOS 点击反馈）
+- `components/ai-assistant/index.wxss`：4 处 `:active` 规则改为独立 hover 类
+- `components/ai-assistant/index.wxml`：11 个 `<view>` 补充 `hover-class` + `hover-stay-time="100"`
+
+### 2. 修复 setData 传入未绑定 WXML 变量
+- `pages/scan/history/index.js`：`patternRecords` 迁为 `this._patternRecords` 实例属性
+- `pages/scan/monthly/index.js`：同上
+- `pages/login/index.js`：`envVersion` 从 setData 移除
+
+### 3. 开启 scroll-view 惯性滚动（11 处）
+- 涉及文件：warehouse/sample、warehouse/finished、ai-assistant、scan-record-table、work、home、privacy、mp-modal、admin/production-detail、scan/index
+
+### 4. 图片 mode 属性（已满足）
+- 经核查，全部 16 个 `<image>` 标签均已含正确的 `mode` 属性，无需修改。
+
+- **对系统的帮助**：
+  - ✅ iOS 用户获得正确的点击视觉反馈
+  - ✅ setData 传输量减小，降低帧丢失风险
+  - ✅ 所有长列表与弹窗内容区支持 iOS 原生惯性弹性滚动
+
+---
+
 # 2026-03-31
 
 ## 生产进度 / 子工序配置运行时生效 + 父节点门禁统一

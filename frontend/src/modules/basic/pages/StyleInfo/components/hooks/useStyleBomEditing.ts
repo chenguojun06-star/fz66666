@@ -1,6 +1,6 @@
 import { App } from 'antd';
 import type { FormInstance } from 'antd/es/form';
-import { useCallback } from 'react';
+import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import type { StyleBom } from '@/types/style';
 import { normalizeMaterialType } from '@/utils/materialType';
 import type { MaterialType } from './useBomColumns';
@@ -13,7 +13,7 @@ interface UseStyleBomEditingOptions {
   form: FormInstance;
   activeSizes: string[];
   activeColors: string[];
-  setData: React.Dispatch<React.SetStateAction<StyleBom[]>>;
+  setData: Dispatch<SetStateAction<StyleBom[]>>;
   setEditingKey: (key: string) => void;
   setTableEditable: (editable: boolean) => void;
   fetchBom: () => Promise<StyleBom[]>;

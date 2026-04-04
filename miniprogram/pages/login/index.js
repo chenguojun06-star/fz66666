@@ -249,7 +249,6 @@ Page({
     password: '',
     apiBaseUrl: '',
     loading: false,
-    envVersion: '',
     showDevFields: false,
     // 租户搜索
     tenants: [],
@@ -385,7 +384,6 @@ Page({
 
     // ✅ 合并 setData 调用，减少渲染次数
     this.setData({
-      envVersion,
       showDevFields,
       apiBaseUrl,
       wechatChecking: shouldAutoWechat,

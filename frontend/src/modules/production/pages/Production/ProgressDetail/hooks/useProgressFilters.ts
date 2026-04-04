@@ -1,7 +1,6 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { useDebouncedValue } from '@/hooks/usePerformance';
 import { ProductionQueryParams } from '@/types/production';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { usePersistentSort } from '@/hooks/usePersistentSort';

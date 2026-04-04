@@ -4,7 +4,7 @@
  * 可在样衣开发、下单管理、大货生产等页面复用
  */
 import React, { useEffect, useState } from 'react';
-import { Checkbox, Button, Space, Spin, Tag, QRCode } from 'antd';
+import { Checkbox, Button, Space, Spin, QRCode } from 'antd';
 
 import api from '@/utils/api';
 import { sortSizeNames } from '@/utils/api/size';

@@ -210,7 +210,7 @@ interface StagePopoverInfo {
 
 function StagePopoverContent({
   orderId, stageKey, label, progress, status, totalQty,
-  open = false, expectedShipDate, plannedEndDate,
+  open: _open = false, expectedShipDate, plannedEndDate,
 }: StagePopoverInfo & { open?: boolean }) {
   const scanData = useStageScanData(orderId, stageKey);
 

@@ -37,7 +37,6 @@ import { getStyleCardSizeQuantityItems } from '@/utils/cardSizeQuantity';
 import { getStyleSourceMeta, getStyleSourceText } from '@/utils/styleSource';
 import OrderRankingDashboard from './components/OrderRankingDashboard';
 import OrderFactorySelector from './components/OrderFactorySelector';
-import OrderInfoSummary from './components/OrderInfoSummary';
 import InlineField from './components/InlineField';
 import OrderLearningInsightCard from './components/OrderLearningInsightCard';
 import MultiColorOrderEditor from './components/MultiColorOrderEditor';
@@ -78,7 +77,7 @@ const OrderManagement: React.FC = () => {
       return raw;
     }
   }, [params]);
-  const { isMobile, isTablet, modalWidth } = useViewport();
+  const { isMobile, isTablet: _isTablet, modalWidth } = useViewport();
   const { columns: cardColumns, pageSize: _cardPageSize } = useCardGridLayout(10);
   const tooltipTheme = useMemo(() => {
     const theme = typeof document !== 'undefined' ? document.documentElement.getAttribute('data-theme') : '';
@@ -128,7 +127,7 @@ const OrderManagement: React.FC = () => {
   const [detailRows, setDetailRows] = useState<any[]>([]);
 
   const [, setActiveTabKey] = usePersistentState<string>('order-management-active-tab', 'base');
-  const [bomLoading, setBomLoading] = useState(false);
+  const [_bomLoading, setBomLoading] = useState(false);
   const [bomList, setBomList] = useState<StyleBom[]>([]);
   const [sizePriceRows, setSizePriceRows] = useState<SizePriceRecord[]>([]);
   const [sizePriceLoading, setSizePriceLoading] = useState(false);
@@ -379,7 +378,7 @@ const OrderManagement: React.FC = () => {
     return computeReferenceKilograms(meters, (record as Record<string, unknown>).conversionRate, '米');
   };
 
-  const bomColumns = [
+  const _bomColumns = [
     { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 140 },
     { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 180, ellipsis: true },
     { title: '颜色', dataIndex: 'color', key: 'color', width: 90 },
@@ -940,8 +939,8 @@ const OrderManagement: React.FC = () => {
     return Array.from(set);
   }, [orderLines]);
 
-  const orderSummary = useMemo(() => buildOrderColorSummary(orderLines), [orderLines]);
-  const styleSampleSummary = useMemo(() => buildStyleSampleColorSummary({
+  const _orderSummary = useMemo(() => buildOrderColorSummary(orderLines), [orderLines]);
+  const _styleSampleSummary = useMemo(() => buildStyleSampleColorSummary({
     sizeColorConfig: (selectedStyle as any)?.sizeColorConfig,
     fallbackSizeText: selectedStyle?.size,
     fallbackColorText: selectedStyle?.color,

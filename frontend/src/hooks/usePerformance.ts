@@ -1,4 +1,6 @@
+/* global IntersectionObserverInit */
 import { useCallback, useEffect, useRef, useMemo, useState } from 'react';
+import type React from 'react';
 
 /**
  * 防抖 Hook
@@ -9,7 +11,7 @@ export function useDebounce<T extends (...args: any[]) => any>(
   fn: T,
   wait: number
 ): (...args: Parameters<T>) => void {
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fnRef = useRef(fn);
   fnRef.current = fn;
 

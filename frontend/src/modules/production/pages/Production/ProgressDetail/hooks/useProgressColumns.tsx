@@ -167,8 +167,8 @@ export const useProgressColumns = ({
         const quantity = Number(record.orderQuantity || 0);
         const { text, color } = getRemainingDaysDisplay(record.plannedEndDate, record.createTime, record.actualEndDate, record.status);
         const aiRisk = deliveryRiskMap?.get(String(record.orderNo || ''));
-        const colorText = String(record.color || '').trim() || '-';
-        const sizeText = String(record.size || '').trim() || '-';
+        const _colorText = String(record.color || '').trim() || '-';
+        const _sizeText = String(record.size || '').trim() || '-';
         const factoryName = String(record.factoryName || '').trim() || '-';
         const factoryTypeText = record.factoryType === 'INTERNAL' ? '内部' : record.factoryType === 'EXTERNAL' ? '外发' : '';
         const merchandiserName = String((record as Record<string, unknown>).merchandiser || '').trim();
@@ -179,7 +179,7 @@ export const useProgressColumns = ({
         const remarkBody = tsMatch ? remark.slice(tsMatch[0].length) : remark;
         const expectedShipDateRaw = (record as Record<string, unknown>).expectedShipDate;
         const expectedShipDate = expectedShipDateRaw ? dayjs(String(expectedShipDateRaw)).format('YYYY-MM-DD') : '-';
-        const orderLines = parseProductionOrderLines(record);
+        const _orderLines = parseProductionOrderLines(record);
         const softTagBaseStyle: CSSProperties = {
           margin: 0,
           fontSize: 11,
@@ -373,8 +373,8 @@ export const useProgressColumns = ({
               // 展开合并颜色/码数字符串（如 "白色,黑色" 或 "M,L,XL,XXL" 拆为各自行）
               if (matrixItems.length === 1) {
                 const single = matrixItems[0];
-                const clrArr = single.color.split(/[,，\/]+/).map(s => s.trim()).filter(Boolean);
-                const sizeArr = single.size.split(/[,，\/、\s]+/).map(s => s.trim()).filter(Boolean);
+                const clrArr = single.color.split(/[,，/]+/).map(s => s.trim()).filter(Boolean);
+                const sizeArr = single.size.split(/[,，/、\s]+/).map(s => s.trim()).filter(Boolean);
                 if (clrArr.length > 1 || sizeArr.length > 1) {
                   const clrs = clrArr.length > 0 ? clrArr : [single.color];
                   const sizes = sizeArr.length > 0 ? sizeArr : [single.size];

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Space, Tag, Image } from 'antd';
+import { Space, Image } from 'antd';
 import { WarningOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { FormInstance } from 'antd/es/form';

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { Spin, Empty, Tag, Button, Tooltip } from 'antd';
-import { ThunderboltOutlined, WarningOutlined, CheckCircleOutlined, ReloadOutlined, BulbOutlined } from '@ant-design/icons';
+import { Spin, Tag, Button } from 'antd';
+import { ThunderboltOutlined, WarningOutlined, CheckCircleOutlined, BulbOutlined } from '@ant-design/icons';
 import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
 import { useNavigate } from 'react-router-dom';
 import { useTimeDimension } from '../contexts/TimeDimensionContext';
@@ -71,9 +71,9 @@ const levelColor = (level: string): string => {
   }
 };
 
-const InsightCard: React.FC<InsightCardProps> = ({ mode = 'sidebar', moduleKey, position }) => {
-  const { dimension, getDateRange } = useTimeDimension();
-  const styleLink = useStyleLink();
+const InsightCard: React.FC<InsightCardProps> = ({ mode = 'sidebar', moduleKey: _moduleKey, position: _position }) => {
+  const { dimension, getDateRange: _getDateRange } = useTimeDimension();
+  const _styleLink = useStyleLink();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [brainData, setBrainData] = useState<AiBrainData | null>(null);

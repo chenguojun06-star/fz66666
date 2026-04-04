@@ -83,7 +83,7 @@ const StyleProcessTab: React.FC<Props> = ({
   const [sizes, setSizes] = useState<string[]>([]);
   const showSizePrices = true; // 始终显示多码单价列
   const [sizeOptions, setSizeOptions] = useState<Array<{ value: string; label: string }>>([]);
-  const defaultSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
+  const _defaultSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 
   // AI 工序单价提示状态
   const [priceHints, setPriceHints] = useState<Record<string | number, ProcessPriceHintResponse | null>>({});

@@ -250,7 +250,7 @@ const CockpitPage: React.FC = () => {
 
     const updatePosition = () => {
       if (!dragRef.current) return;
-      const { key, startX, startY, startWidgetX, startWidgetY, startWidth, startHeight, mode } = dragRef.current;
+      const { key, startX: _startX, startY: _startY, startWidgetX, startWidgetY, startWidth, startHeight, mode } = dragRef.current;
       const deltaX = pendingDelta.x;
       const deltaY = pendingDelta.y;
 

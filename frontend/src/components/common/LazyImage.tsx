@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Spin } from 'antd';
 
 interface LazyImageProps {
   src: string;
@@ -23,7 +22,7 @@ const LazyImage: React.FC<LazyImageProps> = ({
   className,
   alt = '',
   fallback = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-  preview = false,
+  preview: _preview = false,
   borderRadius = 4,
   placeholder,
   threshold = 100,
@@ -75,11 +74,11 @@ const LazyImage: React.FC<LazyImageProps> = ({
   };
 
   const defaultPlaceholder = (
-    <div style={{ 
-      width: '100%', 
-      height: '100%', 
-      display: 'flex', 
-      alignItems: 'center', 
+    <div style={{
+      width: '100%',
+      height: '100%',
+      display: 'flex',
+      alignItems: 'center',
       justifyContent: 'center',
       background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
       backgroundSize: '200% 100%',

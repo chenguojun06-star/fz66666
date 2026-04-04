@@ -1,4 +1,4 @@
-<scroll-view class="page" scroll-y="{{true}}">
+<scroll-view class="page" scroll-y="{{true}}" enhanced="{{true}}">
   <view class="section">
     <text class="title">云裳智链 隐私保护指引</text>
     <text class="update-date">更新日期：2026年2月25日</text>
