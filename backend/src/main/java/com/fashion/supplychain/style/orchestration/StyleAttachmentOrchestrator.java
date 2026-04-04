@@ -111,11 +111,6 @@ public class StyleAttachmentOrchestrator {
             int dot = safeOriginal.lastIndexOf('.');
             String extension = dot >= 0 ? safeOriginal.substring(dot) : "";
 
-            if (("pattern".equalsIgnoreCase(type) || "pattern_grading".equalsIgnoreCase(type))
-                    && !isAllowedPatternExtension(extension)) {
-                throw new IllegalArgumentException("纸样文件仅支持dxf/plt/ets格式");
-            }
-
             String newFilename = UUID.randomUUID().toString() + extension;
             // ✅ 存储文件：COS 优先，本地降级
             if (cosService.isEnabled()) {
@@ -475,11 +470,6 @@ public class StyleAttachmentOrchestrator {
             log.error("[StyleAttachment] 设置封面失败: attachmentId={}", attachmentId, e);
             throw new IllegalStateException("设置封面失败：" + e.getMessage());
         }
-    }
-
-    private boolean isAllowedPatternExtension(String extension) {
-        String ext = extension == null ? "" : extension.trim().toLowerCase();
-        return ".dxf".equals(ext) || ".plt".equals(ext) || ".ets".equals(ext);
     }
 
     private boolean isPatternLocked(String styleId) {
