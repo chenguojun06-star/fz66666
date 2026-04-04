@@ -168,20 +168,10 @@ const StylePatternTab: React.FC<Props> = ({
   const locked = useMemo(() => String(patternStatus || '').trim().toUpperCase() === 'COMPLETED', [patternStatus]);
   const childReadOnly = useMemo(() => Boolean(readOnly) || locked, [readOnly, locked]);
 
+  // 只要有任意纸样文件即视为有效，不限制格式（含 paj/dxf/plt/ets 等所有 CAD 格式）
   const hasValidPatternFile = useMemo(() => {
     const list = Array.isArray(patternFiles) ? patternFiles : [];
-    return list.some((f) => {
-      const name = String((f as any)?.fileName || '').toLowerCase();
-      const url = String((f as any)?.fileUrl || '').toLowerCase();
-      return (
-        name.endsWith('.dxf') ||
-        name.endsWith('.plt') ||
-        name.endsWith('.ets') ||
-        url.includes('.dxf') ||
-        url.includes('.plt') ||
-        url.includes('.ets')
-      );
-    });
+    return list.length > 0;
   }, [patternFiles]);
 
   // 当前有效的码数列表：优先用已选码数，兜底用常用码数

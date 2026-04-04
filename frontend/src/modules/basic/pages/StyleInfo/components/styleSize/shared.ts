@@ -15,6 +15,7 @@ export type GradingZone = {
   frontStep?: number;
   backSizes?: string[];
   backStep?: number;
+  sizeStepColumns?: { key: string; sizes: string[]; step: number }[];
 };
 
 export type MatrixRow = {
@@ -24,7 +25,7 @@ export type MatrixRow = {
   measureMethod: string;
   baseSize: string;
   gradingZones: GradingZone[];
-  tolerance: number;
+  tolerance: number | string;
   sort: number;
   cells: Record<string, MatrixCell>;
   imageUrls?: string[];
@@ -208,6 +209,11 @@ export const normalizeGradingZones = (zones: GradingZone[], sizeColumns: string[
         const allSizes = (zone.sizes || []).filter((size) => validSizes.has(size));
         backSizes = allSizes;
       }
+      const sizeStepColumns = (zone.sizeStepColumns || []).map((col) => ({
+        key: col.key || `col-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        sizes: (col.sizes || []).filter((size) => validSizes.has(size)),
+        step: toNumberSafe(col.step),
+      })).filter((col) => col.sizes.length > 0);
       return {
         key: zone.key || `grading-zone-${index}`,
         label: String(zone.label || `跳码区${index + 1}`),
@@ -217,9 +223,11 @@ export const normalizeGradingZones = (zones: GradingZone[], sizeColumns: string[
         frontStep: toNumberSafe(zone.frontStep || zone.step),
         backSizes,
         backStep: toNumberSafe(zone.backStep || zone.step),
+        sizeStepColumns,
+        partKeys: zone.partKeys || [],
       };
     })
-    .filter((zone) => zone.frontSizes.length > 0 || zone.backSizes.length > 0);
+    .filter((zone) => zone.frontSizes.length > 0 || zone.backSizes.length > 0 || (zone.sizeStepColumns || []).length > 0);
 };
 
 export const parseGradingRule = (rule: unknown, sizeColumns: string[]) => {
@@ -235,6 +243,12 @@ export const parseGradingRule = (rule: unknown, sizeColumns: string[]) => {
         frontStep: toNumberSafe(zone?.frontStep),
         backSizes: Array.isArray(zone?.backSizes) ? zone.backSizes.map((item: any) => String(item || '').trim()).filter(Boolean) : [],
         backStep: toNumberSafe(zone?.backStep),
+        sizeStepColumns: Array.isArray(zone?.sizeStepColumns) ? zone.sizeStepColumns.map((col: any) => ({
+          key: String(col?.key || `col-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`),
+          sizes: Array.isArray(col?.sizes) ? col.sizes.map((s: any) => String(s || '').trim()).filter(Boolean) : [],
+          step: toNumberSafe(col?.step),
+        })) : [],
+        partKeys: Array.isArray(zone?.partKeys) ? zone.partKeys.map((item: any) => String(item || '').trim()).filter(Boolean) : [],
       })) : [],
       sizeColumns,
     );
@@ -263,6 +277,8 @@ export const serializeGradingRule = (row: MatrixRow, sizeColumns: string[]) => {
       frontStep: toNumberSafe(zone.frontStep),
       backSizes: zone.backSizes,
       backStep: toNumberSafe(zone.backStep),
+      sizeStepColumns: zone.sizeStepColumns,
+      partKeys: zone.partKeys || [],
     })),
   });
 };

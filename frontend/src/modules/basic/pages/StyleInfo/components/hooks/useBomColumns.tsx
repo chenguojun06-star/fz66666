@@ -130,20 +130,27 @@ export function useBomColumns({
       render: (_: any, record: StyleBom) => {
         // 编辑模式：显示上传按钮
         if (!locked && (tableEditable || isEditing(record))) {
-          const existingUrls: string[] = (() => {
-            try { return JSON.parse(record.imageUrls || '[]'); } catch { return []; }
-          })();
           return (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-              <ImageUploadBox
-                size={64}
-                value={existingUrls[0] ?? null}
-                onChange={(url) => {
-                  form.setFieldValue(rowName(record.id, 'imageUrls'), url ? JSON.stringify([url]) : JSON.stringify([]));
-                }}
-              />
               <Form.Item name={rowName(record.id, 'imageUrls')} hidden noStyle>
                 <Input />
+              </Form.Item>
+              <Form.Item noStyle shouldUpdate>
+                {() => {
+                  const formVal = form.getFieldValue(rowName(record.id, 'imageUrls'));
+                  const displayUrls: string[] = (() => {
+                    try { return JSON.parse(formVal ?? record.imageUrls ?? '[]'); } catch { return []; }
+                  })();
+                  return (
+                    <ImageUploadBox
+                      size={48}
+                      value={displayUrls[0] ?? null}
+                      onChange={(url) => {
+                        form.setFieldValue(rowName(record.id, 'imageUrls'), url ? JSON.stringify([url]) : JSON.stringify([]));
+                      }}
+                    />
+                  );
+                }}
               </Form.Item>
             </div>
           );
@@ -317,7 +324,7 @@ export function useBomColumns({
       }
     },
     {
-      title: '开发用量',
+      title: '开发采购用量',
       dataIndex: 'devUsageAmount',
       key: 'devUsageAmount',
       width: 100,
@@ -409,46 +416,6 @@ export function useBomColumns({
         const zipperRow = isZipperRow(record);
         if (!activeSizes.length) {
           return '-';
-        }
-        if (!locked && (tableEditable || isEditing(record))) {
-          return (
-            <div style={{ display: 'grid', gap: zipperRow ? 8 : 0 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${activeSizes.length}, minmax(108px, 1fr))`, gap: 8 }}>
-                {activeSizes.map((sizeKey) => (
-                  <div key={sizeKey} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                    <span style={{ flex: '0 0 auto', minWidth: 16, fontSize: 12, color: '#595959', textAlign: 'center' }}>{sizeKey}</span>
-                    <Form.Item
-                      name={[String(record.id), 'sizeUsageMapObject', sizeKey]}
-                      style={{ margin: 0, flex: 1 }}
-                      initialValue={Number(rowUsageMap?.[sizeKey] ?? record.usageAmount ?? 0)}
-                    >
-                      <InputNumber min={0} step={0.01} style={{ width: '100%' }} />
-                    </Form.Item>
-                  </div>
-                ))}
-              </div>
-              {zipperRow ? (
-                <div style={{ padding: '6px 8px', borderRadius: 8, background: '#fafafa' }}>
-                  <div style={{ marginBottom: 6, fontSize: 12, color: '#8c8c8c' }}>拉链规格(cm)</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: `repeat(${activeSizes.length}, minmax(108px, 1fr))`, gap: 8 }}>
-                    {activeSizes.map((sizeKey) => (
-                      <div key={`spec-${sizeKey}`} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                        <span style={{ flex: '0 0 auto', minWidth: 16, fontSize: 12, color: '#595959', textAlign: 'center' }}>{sizeKey}</span>
-                        <Form.Item
-                          name={[String(record.id), 'sizeSpecMapObject', sizeKey]}
-                          style={{ margin: 0, flex: 1 }}
-                          initialValue={Number(rowSpecMap?.[sizeKey] ?? 0)}
-                        >
-                          <InputNumber min={0} step={1} style={{ width: '100%' }} />
-                        </Form.Item>
-                        <span style={{ flex: '0 0 auto', fontSize: 12, color: '#8c8c8c' }}>cm</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          );
         }
         return (
           <div style={{ display: 'grid', gap: zipperRow ? 8 : 0 }}>

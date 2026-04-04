@@ -162,6 +162,10 @@ public class StyleInfoOrchestrator {
     public boolean save(StyleInfo styleInfo) {
         normalizeManualSourceFields(styleInfo);
         validateStyleInfo(styleInfo);
+        // 新建款式时：若款号已存在则自动追加 -1/-2/... 后缀，保证不冲突
+        if (styleInfo.getId() == null && StringUtils.hasText(styleInfo.getStyleNo())) {
+            styleInfo.setStyleNo(generateUniqueStyleNo(styleInfo.getStyleNo()));
+        }
         try {
             boolean result = styleInfoService.saveOrUpdateStyle(styleInfo);
             if (result) {
@@ -701,6 +705,31 @@ public class StyleInfoOrchestrator {
             log.warn("解析候选款参考图失败 referenceImages={}", raw, e);
             return null;
         }
+    }
+
+    /** 为新款式生成一个当前不存在的款号，冲突时加 -1/-2/... 后缀 */
+    private String generateUniqueStyleNo(String requested) {
+        String baseNo = requested.trim().replaceAll("-\\d+$", "");
+        if (!styleNoExists(baseNo)) {
+            return baseNo;
+        }
+        for (int i = 1; i <= 99; i++) {
+            String candidate = baseNo + "-" + i;
+            if (!styleNoExists(candidate)) {
+                log.info("款号 {} 已存在，自动分配后缀：{}", requested.trim(), candidate);
+                return candidate;
+            }
+        }
+        log.warn("款号 {} 的后缀 1-99 均已占用，将使用原款号触发数据库约束", baseNo);
+        return requested.trim();
+    }
+
+    private boolean styleNoExists(String styleNo) {
+        return styleInfoService.lambdaQuery()
+                .select(StyleInfo::getId)
+                .eq(StyleInfo::getStyleNo, styleNo)
+                .last("LIMIT 1")
+                .one() != null;
     }
 
     private void validateStyleInfo(StyleInfo styleInfo) {

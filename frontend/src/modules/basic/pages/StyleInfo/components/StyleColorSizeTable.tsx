@@ -405,6 +405,7 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
                           className="style-color-size-table__input"
                           size="small"
                           min={0}
+                          controls={false}
                           value={Number(row.quantities[columnIndex] || 0)}
                           onChange={(value) => updateCell(rowIndex, columnIndex, Number(value || 0))}
                           style={{ width: '100%' }}

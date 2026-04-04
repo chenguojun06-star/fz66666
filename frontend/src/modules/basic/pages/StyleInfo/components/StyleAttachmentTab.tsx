@@ -29,27 +29,8 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
     return type === 'pattern' || type === 'pattern_grading';
   }, [bizType]);
 
-  const acceptExts = useMemo(() => {
-    return [
-      '.jpg',
-      '.jpeg',
-      '.png',
-      '.gif',
-      '.webp',
-      '.bmp',
-      '.pdf',
-      '.xlsx',
-      '.xls',
-      '.doc',
-      '.docx',
-      '.dxf',
-      '.plt',
-      '.ets',
-      '.zip',
-      '.rar',
-      '.7z',
-    ];
-  }, []);
+  // 不限制格式，所有纸样/附件格式均允许上传（含 dxf/plt/ets/paj 及其他 CAD 格式）
+  const acceptExts: string[] = [];
 
   const getExt = (name?: string | null) => {
     const n = String(name || '').trim();
@@ -128,27 +109,7 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
       message.error('文件过大，最大15MB');
       return Upload.LIST_IGNORE;
     }
-    const ext = getExt(file.name);
-    const type = String(file.type || '').toLowerCase();
-    const mimeOk =
-      type.startsWith('image/') ||
-      type === 'application/pdf' ||
-      type === 'application/vnd.ms-excel' ||
-      type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-      type === 'application/msword' ||
-      type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-      type === 'application/zip' ||
-      type === 'application/x-zip-compressed' ||
-      type === 'application/x-rar-compressed' ||
-      type === 'application/x-7z-compressed' ||
-      type === 'application/octet-stream'; // 用于 dxf/plt/ets 等特殊格式
-
-    const extOk = acceptExts.includes(ext);
-
-    if (!mimeOk && !extOk) {
-      message.error('不支持的文件类型');
-      return Upload.LIST_IGNORE;
-    }
+    // 不限制文件类型，所有格式均允许（dxf/plt/ets/paj 等 CAD 纸样格式）
     const formData = new FormData();
     formData.append('file', file);
     formData.append('styleId', String(styleId));
@@ -386,7 +347,7 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
       <div style={{ marginBottom: 16 }}>
         <Upload
           multiple
-          accept={acceptExts.join(',')}
+          accept="*"
           showUploadList={false}
           disabled={Boolean(readOnly)}
           beforeUpload={(file: any, fileList: unknown[]) => {
@@ -408,7 +369,7 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
           <Button type="primary" disabled={Boolean(readOnly)}>{uploadText || '上传附件'}</Button>
         </Upload>
         <span style={{ marginLeft: 16, color: 'var(--neutral-text-lighter)', fontSize: 'var(--font-size-sm)', lineHeight: 1.4 }}>
-          {'支持设计稿、工艺单、PDF、纸样(dxf/plt/ets)等，单个文件不超过10MB，一次最多上传4个'}
+          {'单个文件不超过10MB，一次最多上传4个'}
         </span>
       </div>
 

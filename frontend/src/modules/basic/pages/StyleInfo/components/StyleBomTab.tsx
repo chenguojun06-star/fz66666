@@ -148,10 +148,17 @@ const StyleBomTab: React.FC<Props> = ({
   };
 
   const calcTotalPrice = (item: Partial<StyleBom>) => {
-    const usageAmount = Number(item.usageAmount) || 0;
+    // 与单件用量列显示逻辑保持一致：
+    // 无纸样数据时，有效用量 = devUsageAmount（开发采购用量）；有纸样数据时用 usageAmount
+    const hasPatternData = (() => {
+      try { return item.patternSizeUsageMap ? Object.keys(JSON.parse(item.patternSizeUsageMap as string)).length > 0 : false; } catch { return false; }
+    })();
+    const effectiveUsage = hasPatternData
+      ? (Number(item.usageAmount) || 0)
+      : (Number(item.devUsageAmount) || Number(item.usageAmount) || 0);
     const lossRate = Number(item.lossRate) || 0;
     const unitPrice = Number(item.unitPrice) || 0;
-    const qty = usageAmount * (1 + lossRate / 100);
+    const qty = effectiveUsage * (1 + lossRate / 100);
     return Number((qty * unitPrice).toFixed(2));
   };
 

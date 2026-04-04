@@ -101,9 +101,7 @@ public class StyleAttachmentOrchestrator {
         TenantAssert.assertTenantContext();
 
         String type = StringUtils.hasText(bizType) ? bizType.trim() : "general";
-        if ("pattern".equalsIgnoreCase(type) && isPatternLocked(styleId)) {
-            throw new IllegalStateException("纸样已完成，无法修改，请先回退");
-        }
+        // 纸样锁定检查已移除：全部开放，不限制已完成状态的款式上传
 
         try {
             String originalFilename = file.getOriginalFilename();
@@ -183,9 +181,7 @@ public class StyleAttachmentOrchestrator {
         }
 
         String type = StringUtils.hasText(bizType) ? bizType.trim() : "general";
-        if ("pattern".equalsIgnoreCase(type) && isPatternLocked(styleId)) {
-            throw new IllegalStateException("纸样已完成，无法修改，请先回退");
-        }
+        // 纸样锁定检查已移除：全部开放
 
         String safeName = StringUtils.hasText(fileName) ? fileName.trim() : "file";
         int dot = safeName.lastIndexOf('.');
@@ -237,9 +233,7 @@ public class StyleAttachmentOrchestrator {
         } catch (Exception ignore) {
         }
         String type = StringUtils.hasText(current.getBizType()) ? current.getBizType().trim() : null;
-        if ("pattern".equalsIgnoreCase(type) && isPatternLocked(String.valueOf(current.getStyleId()))) {
-            throw new IllegalStateException("纸样已完成，无法修改，请先回退");
-        }
+        // 纸样锁定检查已移除：全部开放
         boolean ok = styleAttachmentService.removeById(id);
         if (!ok) {
             if (styleAttachmentService.getById(id) == null) {
