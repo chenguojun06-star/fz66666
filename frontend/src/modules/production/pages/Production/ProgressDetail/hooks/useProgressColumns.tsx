@@ -6,7 +6,7 @@ import type { DeliveryRiskItem } from '@/services/intelligence/intelligenceApi';
 import OrderInfoGrid from '@/components/common/OrderInfoGrid';
 import { buildOrderColorSizeMatrixModel } from '@/components/common/OrderColorSizeMatrix';
 import { SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
-import LiquidProgressLottie from '@/components/common/LiquidProgressLottie';
+import '@/modules/basic/pages/StyleInfo/styles.css';
 import SmartOrderHoverCard from '../components/SmartOrderHoverCard';
 import DefectTracePopover from '../components/DefectTracePopover';
 import { StyleCoverThumb } from '@/components/StyleAssets';
@@ -359,7 +359,7 @@ export const useProgressColumns = ({
               display: 'flex',
               gap: 0,
               alignItems: 'stretch',
-              padding: '8px 12px 44px 12px',
+              padding: '8px 12px 8px 12px',
               width: '100%',
               minWidth: progressTrackMinWidth,
             }}>
@@ -428,47 +428,20 @@ export const useProgressColumns = ({
                     overlayStyle={{ maxWidth: 320 }}
                     open={orderMatrix.hasData ? undefined : false}
                   >
-                    <div style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      width: 76,
-                      flex: '0 0 auto',
-                      justifyContent: 'center',
-                      padding: 4,
-                      position: 'relative',
-                      cursor: orderMatrix.hasData ? 'pointer' : 'default',
-                    }}>
-                      <LiquidProgressLottie progress={100} size={68} nodeName="下单"
-                        paused={false} color1="#52c41a" color2="#95de64" />
-                      <div style={{
-                        position: 'absolute',
-                        top: 'calc(100% + 4px)',
-                        left: 0,
-                        right: 0,
-                        fontSize: 11,
-                        color: '#10b981',
-                        fontWeight: 600,
-                        lineHeight: 1.25,
-                        textAlign: 'center',
-                        whiteSpace: 'nowrap',
-                      }}>
+                    <div
+                      className="style-smart-stage style-smart-stage--done"
+                      style={{ cursor: orderMatrix.hasData ? 'pointer' : 'default', width: 76, flex: '0 0 auto' }}
+                    >
+                      <div className="style-smart-stage__node">
+                        <span className="style-smart-stage__ring" />
+                        <span className="style-smart-stage__orbit" />
+                        <span className="style-smart-stage__core" />
+                        <span className="style-smart-stage__check" />
+                      </div>
+                      <div className="style-smart-stage__time">
                         {record.createTime ? dayjs(record.createTime as string).format('MM-DD') : '--'}
                       </div>
-                      <div style={{
-                        position: 'absolute',
-                        top: 'calc(100% + 20px)',
-                        left: 0,
-                        right: 0,
-                        fontSize: 11,
-                        color: '#555',
-                        fontWeight: 500,
-                        lineHeight: 1.2,
-                        textAlign: 'center',
-                        whiteSpace: 'nowrap',
-                      }}>
-                        下单
-                      </div>
+                      <div className="style-smart-stage__label">下单</div>
                     </div>
                   </Popover>
                   <div style={{ flex: 1, alignSelf: 'stretch', display: 'flex', alignItems: 'center', paddingLeft: 2, paddingRight: 2, minWidth: 16 }}>
@@ -498,6 +471,16 @@ export const useProgressColumns = ({
                 || NODE_TYPE_MAP[nodeName]
                 || nodeName.toLowerCase();
               const predictHint = getPredictHint(String(record.id || ''), nodeName, percent);
+              const stageStatus = (() => {
+                if (frozen || isClosed) return 'scrapped';
+                if (percent >= 100) return 'done';
+                if (percent > 0) {
+                  const endDate = record.expectedShipDate || record.plannedEndDate;
+                  if (endDate && dayjs(endDate as string).isBefore(dayjs(), 'day')) return 'risk';
+                  return 'active';
+                }
+                return 'waiting';
+              })();
               const segmentProgress = Math.min(1, percent / 100);
               const nodePrimaryColor = isClosed ? '#9ca3af' : getNodeColor(record.expectedShipDate || record.plannedEndDate);
               const nodeSecondaryColor = isClosed ? '#d1d5db' : getNodeColor(record.expectedShipDate || record.plannedEndDate, true);
@@ -511,130 +494,86 @@ export const useProgressColumns = ({
                     flex: '1 1 0',
                   }}
                 >
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      width: 76,
-                      flex: '0 0 auto',
-                      justifyContent: 'center',
-                      cursor: frozen ? 'default' : 'pointer',
-                      padding: 4,
-                      opacity: isClosed ? 0.6 : percent >= 100 ? 0.75 : 1,
-                      position: 'relative',
-                      zIndex: 1,
-                    }}
-                    onClick={() => {
-                      if (frozen) return;
-                      // 优先从 progressWorkflowJson 获取该父节点下的子工序列表
-                      const sn = String((record as any)?.styleNo || '').trim();
-                      const templateNodes = sn && progressNodesByStyleNo[sn] ? progressNodesByStyleNo[sn] : undefined;
-                      const byParent = getProcessesByNodeFromOrder(record, templateNodes);
-                      const children = byParent[nodeName];
-                      let processList: { id?: string; processCode?: string; name: string; unitPrice?: number }[];
-                      if (children?.length) {
-                        processList = children.map(c => ({
-                          name: c.name,
-                          unitPrice: c.unitPrice,
-                          processCode: c.processCode,
-                        }));
-                      } else {
-                        // fallback：从模板节点中按 progressStage 过滤出属于当前父节点的子工序
-                        const stageChildren = ns.filter(n => {
-                          const ps = String((n as any).progressStage || '').trim();
-                          return ps === nodeName;
-                        });
-                        processList = stageChildren.map(n => ({
-                          id: String(n.id || '').trim() || undefined,
-                          processCode: String(n.id || '').trim() || undefined,
-                          name: n.name,
-                          unitPrice: n.unitPrice,
-                        }));
-                      }
-                      openNodeDetail(
-                        record,
-                        nodeType,
-                        nodeName,
-                        { done: completedQty, total: totalQty, percent, remaining },
-                        node.unitPrice,
-                        processList,
-                      );
-                    }}
-                    onMouseEnter={() => {
-                      if (frozen) return;
-                      void triggerPredict({
-                        orderId: String(record.id || '').trim(),
-                        orderNo: String(record.orderNo || '').trim() || undefined,
-                        stageName: nodeName,
-                        currentProgress: percent,
-                      });
-                    }}
-                    title={completionTime
-                      ? `${nodeName} 完成时间：${completionTime}${predictHint ? `\n预计完成：${predictHint}` : ''}\n点击查看详情`
-                      : `${predictHint ? `预计完成：${predictHint}\n` : ''}点击查看 ${nodeName} 详情`}
-                  >
-                    {completionTime ? (
-                      <div style={{
-                        position: 'absolute',
-                        top: 'calc(100% + 4px)',
-                        left: 0,
-                        right: 0,
-                        fontSize: 11,
-                        color: percent >= 100 ? '#10b981' : '#6b7280',
-                        fontWeight: percent >= 100 ? 600 : 400,
-                        lineHeight: 1.25,
-                        textAlign: 'center',
-                        whiteSpace: 'nowrap',
-                      }}>
-                        {formatCompletionTime(completionTime)}
+                  {(() => {
+                    const stageNode = (
+                      <div
+                        className={`style-smart-stage style-smart-stage--${stageStatus}`}
+                        style={{ cursor: frozen ? 'default' : 'pointer', opacity: isClosed ? 0.6 : 1, width: 76, flex: '0 0 auto' }}
+                        onClick={() => {
+                          if (frozen) return;
+                          // 优先从 progressWorkflowJson 获取该父节点下的子工序列表
+                          const sn = String((record as any)?.styleNo || '').trim();
+                          const templateNodes = sn && progressNodesByStyleNo[sn] ? progressNodesByStyleNo[sn] : undefined;
+                          const byParent = getProcessesByNodeFromOrder(record, templateNodes);
+                          const children = byParent[nodeName];
+                          let processList: { id?: string; processCode?: string; name: string; unitPrice?: number }[];
+                          if (children?.length) {
+                            processList = children.map(c => ({
+                              name: c.name,
+                              unitPrice: c.unitPrice,
+                              processCode: c.processCode,
+                            }));
+                          } else {
+                            // fallback：从模板节点中按 progressStage 过滤出属于当前父节点的子工序
+                            const stageChildren = ns.filter(n => {
+                              const ps = String((n as any).progressStage || '').trim();
+                              return ps === nodeName;
+                            });
+                            processList = stageChildren.map(n => ({
+                              id: String(n.id || '').trim() || undefined,
+                              processCode: String(n.id || '').trim() || undefined,
+                              name: n.name,
+                              unitPrice: n.unitPrice,
+                            }));
+                          }
+                          openNodeDetail(
+                            record,
+                            nodeType,
+                            nodeName,
+                            { done: completedQty, total: totalQty, percent, remaining },
+                            node.unitPrice,
+                            processList,
+                          );
+                        }}
+                        onMouseEnter={() => {
+                          if (frozen) return;
+                          void triggerPredict({
+                            orderId: String(record.id || '').trim(),
+                            orderNo: String(record.orderNo || '').trim() || undefined,
+                            stageName: nodeName,
+                            currentProgress: percent,
+                          });
+                        }}
+                        title={completionTime
+                          ? `${nodeName} 完成时间：${completionTime}${predictHint ? `\n预计完成：${predictHint}` : ''}\n点击查看详情`
+                          : `${predictHint ? `预计完成：${predictHint}\n` : ''}点击查看 ${nodeName} 详情`}
+                      >
+                        <div className="style-smart-stage__node">
+                          <span className="style-smart-stage__ring" />
+                          <span className="style-smart-stage__orbit" />
+                          <span className="style-smart-stage__core" />
+                          <span className="style-smart-stage__check" />
+                        </div>
+                        <div className="style-smart-stage__time">
+                          {completionTime ? formatCompletionTime(completionTime) : '--'}
+                        </div>
+                        <div className="style-smart-stage__label">{nodeName}</div>
+                        {!isProcureNode && totalQty > 0 && (
+                          <div style={{ fontSize: 10, color: 'var(--color-text-tertiary)', lineHeight: 1.2 }}>
+                            {completedQty}/{totalQty}
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, fontSize: 11, color: '#d1d5db', lineHeight: 1.25, textAlign: 'center' }}>--</div>
-                    )}
-                    <div style={{
-                      position: 'absolute',
-                      top: 'calc(100% + 20px)',
-                      left: 0,
-                      right: 0,
-                      fontSize: 11,
-                      color: '#333',
-                      fontWeight: 500,
-                      lineHeight: 1.2,
-                      textAlign: 'center',
-                      whiteSpace: 'nowrap',
-                    }}>
-                      {nodeName}
-                    </div>
-                    {(nodeType === 'quality' || nodeType === 'warehousing') ? (
+                    );
+                    return (nodeType === 'quality' || nodeType === 'warehousing') ? (
                       <DefectTracePopover
                         orderId={String(record.id || '')}
                         hasDefects={Number(record.unqualifiedQuantity) > 0}
                       >
-                        <LiquidProgressLottie
-                          progress={percent}
-                          size={68}
-                          nodeName={nodeName}
-                          text={isProcureNode ? (completedQty > 0 ? '✓' : '') : `${completedQty}/${totalQty}`}
-                          subText={!isProcureNode && totalQty > 0 ? `${percent}%` : undefined}
-                          paused={frozen}
-                          color1={nodePrimaryColor}
-                          color2={nodeSecondaryColor}
-                        />
+                        {stageNode}
                       </DefectTracePopover>
-                    ) : (
-                      <LiquidProgressLottie
-                        progress={percent}
-                        size={68}
-                        nodeName={nodeName}
-                        text={isProcureNode ? (completedQty > 0 ? '✓' : '') : `${completedQty}/${totalQty}`}
-                        subText={!isProcureNode && totalQty > 0 ? `${percent}%` : undefined}
-                        paused={frozen}
-                        color1={nodePrimaryColor}
-                        color2={nodeSecondaryColor}
-                      />
-                    )}
-                  </div>
+                    ) : stageNode;
+                  })()}
                   {index < ns.length - 1 ? (
                     <div style={{ flex: 1, alignSelf: 'stretch', display: 'flex', alignItems: 'center', paddingLeft: 2, paddingRight: 2 }}>
                       <div
