@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 /**
  * 款号资料Controller
@@ -38,11 +39,16 @@ public class StyleInfoController {
     }
 
     /**
-     * 根据ID查询款号资料详情
+     * 根据ID或款号查询详情。款式不存在时返回 data=null（200），不报404，
+     * 适配样衣入库等"预填充"场景：未找到款式只是静默跳过，不是错误。
      */
     @GetMapping("/{id}")
     public Result<?> detail(@PathVariable("id") String idOrStyleNo) {
-        return Result.success(styleInfoOrchestrator.detail(idOrStyleNo));
+        try {
+            return Result.success(styleInfoOrchestrator.detail(idOrStyleNo));
+        } catch (NoSuchElementException e) {
+            return Result.success(null);
+        }
     }
 
     /**
@@ -80,6 +86,12 @@ public class StyleInfoController {
     public Result<?> rollbackPatternRevision(@PathVariable Long id,
             @RequestBody(required = false) Map<String, Object> body) {
         return Result.success(styleInfoOrchestrator.rollbackPatternRevision(id, body));
+    }
+
+    @PostMapping("/{id}/pattern-revision/lock")
+    public Result<?> lockPatternRevision(@PathVariable Long id) {
+        styleInfoOrchestrator.lockPatternRevision(id);
+        return Result.success();
     }
 
     /**
