@@ -41,8 +41,10 @@ public class FactoryOrchestrator {
         String parentId = TextUtils.safeText(parentOrgUnitId);
 
         Page<Factory> pageInfo = new Page<>(p, ps);
+        Long tenantId = UserContext.tenantId();
         LambdaQueryWrapper<Factory> wrapper = new LambdaQueryWrapper<Factory>()
                 .eq(Factory::getDeleteFlag, 0)
+                .eq(!UserContext.isSuperAdmin() && tenantId != null, Factory::getTenantId, tenantId)
                 .like(StringUtils.hasText(code), Factory::getFactoryCode, code)
                 .like(StringUtils.hasText(name), Factory::getFactoryName, name)
                 .eq(StringUtils.hasText(st), Factory::getStatus, st)
@@ -105,10 +107,6 @@ public class FactoryOrchestrator {
         if (factory == null || !StringUtils.hasText(factory.getId())) {
             throw new IllegalArgumentException("参数错误");
         }
-        String remark = TextUtils.safeText(factory.getOperationRemark());
-        if (!StringUtils.hasText(remark)) {
-            throw new IllegalArgumentException("操作原因不能为空");
-        }
         factory.setUpdateTime(LocalDateTime.now());
         if (!StringUtils.hasText(factory.getFactoryType())) {
             factory.setFactoryType("EXTERNAL");
@@ -124,7 +122,7 @@ public class FactoryOrchestrator {
             FactoryOrganizationSnapshot snapshot = organizationUnitBindingHelper.syncFactoryNode(latest);
             persistSnapshot(latest.getId(), snapshot);
         }
-        saveOperationLog("factory", factory.getId(), factory.getFactoryName(), "UPDATE", remark);
+        saveOperationLog("factory", factory.getId(), factory.getFactoryName(), "UPDATE", null);
         return true;
     }
 

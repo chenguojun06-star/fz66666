@@ -61,7 +61,7 @@ public class SystemTableMigrator {
     private void createFactoryTable(JdbcTemplate jdbc) {
         String createFactoryTable = "CREATE TABLE IF NOT EXISTS t_factory (" +
                 "id VARCHAR(36) PRIMARY KEY COMMENT '加工厂ID'," +
-                "factory_code VARCHAR(50) NOT NULL UNIQUE COMMENT '加工厂编码'," +
+                "factory_code VARCHAR(50) NOT NULL COMMENT '加工厂编码'," +
                 "factory_name VARCHAR(100) NOT NULL COMMENT '加工厂名称'," +
                 "contact_person VARCHAR(50) COMMENT '联系人'," +
                 "contact_phone VARCHAR(30) COMMENT '联系电话'," +
@@ -71,8 +71,11 @@ public class SystemTableMigrator {
                 "create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'," +
                 "update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'," +
                 "delete_flag INT NOT NULL DEFAULT 0 COMMENT '删除标识：0-未删除，1-已删除'," +
+                "tenant_id BIGINT DEFAULT NULL COMMENT '租户ID'," +
+                "UNIQUE KEY uq_tenant_factory_code (tenant_id, factory_code)," +
                 "INDEX idx_factory_code (factory_code)," +
-                "INDEX idx_factory_name (factory_name)" +
+                "INDEX idx_factory_name (factory_name)," +
+                "INDEX idx_f_tenant_id (tenant_id)" +
                 ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='加工厂表'";
 
         try {
@@ -113,6 +116,14 @@ public class SystemTableMigrator {
             }
             dbHelper.addIndexIfAbsent("t_factory", "idx_factory_code", "factory_code");
             dbHelper.addIndexIfAbsent("t_factory", "idx_factory_name", "factory_name");
+            // 添加租户ID列和复合唯一索引（迁移至租户级供应商编码隔离）
+            if (!dbHelper.columnExists("t_factory", "tenant_id")) {
+                dbHelper.execSilently("ALTER TABLE t_factory ADD COLUMN tenant_id BIGINT DEFAULT NULL");
+            }
+            dbHelper.addIndexIfAbsent("t_factory", "idx_f_tenant_id", "tenant_id");
+            // 将全局 UNIQUE factory_code 改为 (tenant_id, factory_code) 复合唯一，允许不同租户使用相同编码
+            dbHelper.execSilently("ALTER TABLE t_factory DROP INDEX factory_code");
+            dbHelper.execSilently("ALTER TABLE t_factory ADD UNIQUE KEY uq_tenant_factory_code (tenant_id, factory_code)");
         }
     }
 
@@ -365,7 +376,7 @@ public class SystemTableMigrator {
         ensurePermission("供应商采购", "MENU_PROCUREMENT", 0L, null, "menu", "/procurement", null, 60);
         if (systemId != null) {
             ensurePermission("人员管理", "MENU_USER", systemId, "系统设置", "menu", "/system/user", null, 41);
-            ensurePermission("角色管理", "MENU_ROLE", systemId, "系统设置", "menu", "/system/role", null, 42);
+            ensurePermission("岗位权限", "MENU_ROLE", systemId, "系统设置", "menu", "/system/role", null, 42);
             ensurePermission("供应商管理", "MENU_FACTORY", systemId, "系统设置", "menu", "/system/factory", null, 43);
             ensurePermission("权限管理", "MENU_PERMISSION", systemId, "系统设置", "menu", "/system/permission", null, 44);
             ensurePermission("登录日志", "MENU_LOGIN_LOG", systemId, "系统设置", "menu", "/system/login-log", null, 45);

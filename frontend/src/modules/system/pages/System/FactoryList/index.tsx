@@ -785,7 +785,7 @@ const FactoryList: React.FC = () => {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <Form.Item name="factoryCode" label="供应商编码" rules={[{ required: true, message: '请输入供应商编码' }]}>
-              <Input id="factoryCode" placeholder="请输入供应商编码" />
+              <Input id="factoryCode" placeholder="请输入供应商编码" autoComplete="off" />
             </Form.Item>
             <Form.Item name="factoryName" label="供应商名称" rules={[{ required: true, message: '请输入供应商名称' }]}>
               <Input id="factoryName" placeholder="请输入供应商名称" />
