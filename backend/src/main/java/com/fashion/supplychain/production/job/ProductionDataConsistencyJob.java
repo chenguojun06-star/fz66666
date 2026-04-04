@@ -72,6 +72,7 @@ public class ProductionDataConsistencyJob {
             try {
                 List<ProductionOrder> activeOrders = productionOrderService.list(
                         new LambdaQueryWrapper<ProductionOrder>()
+                                .select(ProductionOrder::getId, ProductionOrder::getOrderNo)
                                 .eq(ProductionOrder::getStatus, "production")
                                 .eq(ProductionOrder::getDeleteFlag, 0));
 

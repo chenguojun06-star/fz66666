@@ -96,11 +96,12 @@ public class ProductionOrderProgressRecomputeService {
             return null;
         }
 
-        // 获取实际裁剪数量（从裁剪菲号汇总）
+        // 获取实际裁剪数量（从裁剪菲号汇总）— 仅查询 quantity 列，防止 schema 漂移导致全字段映射失败
         int actualCuttingQty = 0;
         try {
             List<CuttingBundle> bundles = cuttingBundleService.list(
                     new LambdaQueryWrapper<CuttingBundle>()
+                            .select(CuttingBundle::getQuantity)
                             .eq(CuttingBundle::getProductionOrderId, oid));
             if (bundles != null && !bundles.isEmpty()) {
                 for (CuttingBundle bundle : bundles) {
