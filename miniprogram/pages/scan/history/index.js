@@ -92,6 +92,17 @@ Page({
 
   onLoad() {
     this._reqGeneration = 0;
+    this._showedOnce = false; // onLoad→onShow 初次连续触发时跳过 onShow 的重复加载
+    this.loadData(true);
+  },
+
+  onShow() {
+    // 首次进入：onLoad 已调用 loadData，跳过；返回本页时才重新拉取最新数据
+    if (!this._showedOnce) {
+      this._showedOnce = true;
+      return;
+    }
+    this.setData({ loading: false }); // 重置 loading 守卫，防止上次请求未完成时卡住
     this.loadData(true);
   },
 
