@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button, Card, Form, InputNumber, Select, Space, Spin, Switch, Typography } from 'antd';
-import { MessageOutlined, TeamOutlined } from '@ant-design/icons';
+import { DownOutlined, MessageOutlined, TeamOutlined } from '@ant-design/icons';
 import type { SmartFeatureKey } from '@/smart/core/featureFlags';
 import type { TenantIntelligenceProfilePayload, TenantIntelligenceProfileResponse } from '@/services/system/tenantIntelligenceProfileService';
 
@@ -90,16 +90,22 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
   onResetProfile,
   onSaveProfile,
 }) => {
+  const [smartFlagsCollapsed, setSmartFlagsCollapsed] = useState(true);
+
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+      <div
+        style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, cursor: 'pointer', userSelect: 'none' }}
+        onClick={() => setSmartFlagsCollapsed(v => !v)}
+      >
         <MessageOutlined style={{ color: 'var(--primary-color)' }} />
         <span style={{ fontWeight: 600, fontSize: 15 }}>智能开关</span>
         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
           （当前已开启 {enabledCount}/{SMART_FEATURE_KEYS.length}）
         </Typography.Text>
+        <DownOutlined style={{ marginLeft: 'auto', fontSize: 11, transition: 'transform 0.2s', transform: smartFlagsCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }} />
       </div>
-      <Card size="small" style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
+      {!smartFlagsCollapsed && <Card size="small" style={{ borderRadius: 10, background: 'var(--card-bg, #f8f9ff)' }}>
         <Space style={{ marginBottom: 12, width: '100%', justifyContent: 'space-between' }} wrap>
           <Typography.Text type="secondary" style={{ fontSize: 13 }}>
             开关已升级为按租户持久化保存，同租户成员读取同一套配置。
@@ -144,7 +150,7 @@ const ProfileSmartSettingsPanel: React.FC<Props> = ({
             当前账号仅可查看租户智能开关，修改需使用租户管理员账号。
           </Typography.Text>
         )}
-      </Card>
+      </Card>}
 
       <div style={{ marginTop: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
