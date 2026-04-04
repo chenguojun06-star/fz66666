@@ -359,7 +359,7 @@ export const useProgressColumns = ({
               display: 'flex',
               gap: 0,
               alignItems: 'stretch',
-              padding: '24px 12px 14px 12px',
+              padding: '8px 12px 44px 12px',
               width: '100%',
               minWidth: progressTrackMinWidth,
             }}>
@@ -439,12 +439,14 @@ export const useProgressColumns = ({
                       position: 'relative',
                       cursor: orderMatrix.hasData ? 'pointer' : 'default',
                     }}>
+                      <LiquidProgressLottie progress={100} size={68} nodeName="下单"
+                        paused={false} color1="#52c41a" color2="#95de64" />
                       <div style={{
                         position: 'absolute',
-                        bottom: 'calc(100% + 3px)',
+                        top: 'calc(100% + 4px)',
                         left: 0,
                         right: 0,
-                        fontSize: 12,
+                        fontSize: 11,
                         color: '#10b981',
                         fontWeight: 600,
                         lineHeight: 1.25,
@@ -453,8 +455,20 @@ export const useProgressColumns = ({
                       }}>
                         {record.createTime ? dayjs(record.createTime as string).format('MM-DD') : '--'}
                       </div>
-                      <LiquidProgressLottie progress={100} size={68} nodeName="下单"
-                        paused={false} color1="#52c41a" color2="#95de64" />
+                      <div style={{
+                        position: 'absolute',
+                        top: 'calc(100% + 20px)',
+                        left: 0,
+                        right: 0,
+                        fontSize: 11,
+                        color: '#555',
+                        fontWeight: 500,
+                        lineHeight: 1.2,
+                        textAlign: 'center',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        下单
+                      </div>
                     </div>
                   </Popover>
                   <div style={{ flex: 1, alignSelf: 'stretch', display: 'flex', alignItems: 'center', paddingLeft: 2, paddingRight: 2, minWidth: 16 }}>
@@ -470,7 +484,7 @@ export const useProgressColumns = ({
             {ns.map((node: ProgressNode, index: number) => {
               const nodeName = node.name || '-';
               const completedQty = nodeDoneMap?.[nodeName] || 0;
-              //  采购/物料节点：到货即完成(100%)，显示 ；不按件数比率（避免裁剪>下单时卡死）
+              // ★ 采购/物料节点：到货即完成(100%)，显示 ✓；不按件数比率（避免裁剪>下单时卡死）
               const isProcureNode = /采购|物料|备料|辅料|面料/.test(nodeName);
               const percent = isProcureNode
                 ? (completedQty > 0 ? 100 : 0)
@@ -479,7 +493,7 @@ export const useProgressColumns = ({
                   : 0;
               const remaining = totalQty - completedQty;
               const completionTime = nodeTimeMap?.[nodeName] || '';
-              //  nodeType 优先用模板返回的 progressStage（父分类），避免硬编码 NODE_TYPE_MAP 漏掉自定义工序名
+              // ★ nodeType 优先用模板返回的 progressStage（父分类），避免硬编码 NODE_TYPE_MAP 漏掉自定义工序名
               const nodeType = (node.progressStage && node.progressStage.trim())
                 || NODE_TYPE_MAP[nodeName]
                 || nodeName.toLowerCase();
@@ -563,10 +577,10 @@ export const useProgressColumns = ({
                     {completionTime ? (
                       <div style={{
                         position: 'absolute',
-                        bottom: 'calc(100% + 3px)',
+                        top: 'calc(100% + 4px)',
                         left: 0,
                         right: 0,
-                        fontSize: 12,
+                        fontSize: 11,
                         color: percent >= 100 ? '#10b981' : '#6b7280',
                         fontWeight: percent >= 100 ? 600 : 400,
                         lineHeight: 1.25,
@@ -576,8 +590,22 @@ export const useProgressColumns = ({
                         {formatCompletionTime(completionTime)}
                       </div>
                     ) : (
-                      <div style={{ position: 'absolute', bottom: 'calc(100% + 3px)', left: 0, right: 0, fontSize: 12, color: '#d1d5db', lineHeight: 1.25, textAlign: 'center' }}>--</div>
+                      <div style={{ position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, fontSize: 11, color: '#d1d5db', lineHeight: 1.25, textAlign: 'center' }}>--</div>
                     )}
+                    <div style={{
+                      position: 'absolute',
+                      top: 'calc(100% + 20px)',
+                      left: 0,
+                      right: 0,
+                      fontSize: 11,
+                      color: '#333',
+                      fontWeight: 500,
+                      lineHeight: 1.2,
+                      textAlign: 'center',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {nodeName}
+                    </div>
                     {(nodeType === 'quality' || nodeType === 'warehousing') ? (
                       <DefectTracePopover
                         orderId={String(record.id || '')}
@@ -587,7 +615,7 @@ export const useProgressColumns = ({
                           progress={percent}
                           size={68}
                           nodeName={nodeName}
-                          text={isProcureNode ? (completedQty > 0 ? '' : '') : `${completedQty}/${totalQty}`}
+                          text={isProcureNode ? (completedQty > 0 ? '✓' : '') : `${completedQty}/${totalQty}`}
                           subText={!isProcureNode && totalQty > 0 ? `${percent}%` : undefined}
                           paused={frozen}
                           color1={nodePrimaryColor}
@@ -599,7 +627,7 @@ export const useProgressColumns = ({
                         progress={percent}
                         size={68}
                         nodeName={nodeName}
-                        text={isProcureNode ? (completedQty > 0 ? '' : '') : `${completedQty}/${totalQty}`}
+                        text={isProcureNode ? (completedQty > 0 ? '✓' : '') : `${completedQty}/${totalQty}`}
                         subText={!isProcureNode && totalQty > 0 ? `${percent}%` : undefined}
                         paused={frozen}
                         color1={nodePrimaryColor}
