@@ -9,8 +9,9 @@ import { ProductionOrder } from '@/types/production';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { getOrderCardSizeQuantityItems } from '@/utils/cardSizeQuantity';
 import { buildOrderColorSizeMatrixModel } from '@/components/common/OrderColorSizeMatrix';
+import { useNavigate } from 'react-router-dom';
 import RowActions, { type RowAction } from '@/components/common/RowActions';
-import { isOrderFrozenByStatus, isOrderFrozenByStatusOrStock } from '@/utils/api';
+import { isOrderFrozenByStatus, isOrderFrozenByStatusOrStock, withQuery } from '@/utils/api';
 import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress';
 import '../../../../basic/pages/StyleInfo/styles.css';
 import './externalFactory.css';
@@ -390,6 +391,7 @@ const ExternalFactorySmartView: React.FC<Props> = ({
   canManageOrderLifecycle, isSupervisorOrAbove,
   openSubProcessRemap, isFactoryAccount,
 }) => {
+  const navigate = useNavigate();
   const rows = useMemo(() => data.map(record => {
     const deliveryMeta = getDeliveryMeta(record);
     const stages = buildStages(record, deliveryMeta.tone === 'danger');
@@ -642,6 +644,16 @@ const ExternalFactorySmartView: React.FC<Props> = ({
                         label: ' 分享',
                         title: '生成客户查看链接（30天有效）',
                         onClick: () => handleShareOrder(record),
+                      }] : []),
+                      ...(isFactoryAccount ? [{
+                        key: 'orderFlow',
+                        label: '全流程',
+                        title: '查看订单全流程记录',
+                        onClick: () => navigate(withQuery('/production/order-flow', {
+                          orderId: record.id,
+                          orderNo: record.orderNo,
+                          styleNo: record.styleNo,
+                        })),
                       }] : []),
                     ];
                     return cardActions.length > 0 ? (

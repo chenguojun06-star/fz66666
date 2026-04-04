@@ -1,16 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Card, Space, Tabs, Tag } from 'antd';
+import { Alert, Button, Card, Col, Row, Space, Tabs, Tag } from 'antd';
 
 import type { ColumnsType } from 'antd/es/table';
 import { useLocation } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
-import { ProductionOrderHeader } from '@/components/StyleAssets';
+import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import api, { parseProductionOrderLines, toNumberSafe } from '@/utils/api';
+import { useAuth } from '@/utils/AuthContext';
 import { formatDateTime } from '@/utils/datetime';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 
 import type { CuttingBundle, ProductionOrder, ProductWarehousing } from '@/types/production';
+import { StyleCoverThumb } from '@/components/StyleAssets';
 import StylePatternSimpleTab from './components/StylePatternSimpleTab';
 import StyleQuotationTab from '@/modules/basic/pages/StyleInfo/components/StyleQuotationTab';
 import StyleSecondaryProcessTab from '@/modules/basic/pages/StyleInfo/components/StyleSecondaryProcessTab';
@@ -78,6 +80,8 @@ const statusTag = (status: FlowStage['status']) => {
 
 const OrderFlow: React.FC = () => {
   const location = useLocation();
+  const { user } = useAuth();
+  const isFactoryUser = !!(user as any)?.factoryId;
 
   const query = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -306,8 +310,11 @@ const OrderFlow: React.FC = () => {
     const lines = parseProductionOrderLines(order || null) as OrderLine[];
     const warehousings = (data?.warehousings || []) as ProductWarehousing[];
     const cuttingBundles = (data?.cuttingBundles || []) as CuttingBundle[];
-    const styleQuotation = (data as any)?.styleQuotation;
-    const unitPrice = styleQuotation?.totalPrice || 0;
+    // 优先用订单级 factoryUnitPrice，回退到 styleQuotation.totalPrice
+    const unitPrice =
+      Number(order?.factoryUnitPrice) ||
+      Number((data as any)?.styleQuotation?.totalPrice) ||
+      0;
 
     // 为每个SKU计算统计数据
     return lines.map(line => {
@@ -330,8 +337,8 @@ const OrderFlow: React.FC = () => {
       const warehousingQuantity = matchedWarehousings.reduce((sum, w) =>
         sum + (w.warehousingQuantity || 0), 0);
 
-      // 计算总单价 = 数量 × 单价
-      const totalPrice = unitPrice > 0 ? line.quantity * unitPrice : 0;
+      // totalPrice = 每件单价（factoryUnitPrice，对所有尺码行相同）
+      const totalPrice = unitPrice > 0 ? unitPrice : 0;
 
       return {
         ...line,
@@ -348,7 +355,7 @@ const OrderFlow: React.FC = () => {
     { title: '颜色', dataIndex: 'color', key: 'color', width: 140, render: (v: unknown) => String(v || '').trim() || '-' },
     { title: '尺码', dataIndex: 'size', key: 'size', width: 100, render: (v: unknown) => String(v || '').trim() || '-' },
     { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 90, align: 'right', render: (v: unknown) => toNumberSafe(v) },
-    { title: '总单价', dataIndex: 'totalPrice', key: 'totalPrice', width: 110, align: 'right', render: (v: unknown) => {
+    { title: '单价', dataIndex: 'totalPrice', key: 'totalPrice', width: 110, align: 'right', render: (v: unknown) => {
       const val = toNumberSafe(v);
       return val > 0 ? `¥${val.toFixed(2)}` : '-';
     }},
@@ -380,28 +387,22 @@ const OrderFlow: React.FC = () => {
     [data?.warehousings],
   );
 
-  // 计算裁剪数量（按颜色+尺码聚合）
   const cuttingSizeItems = useMemo(() => {
-    const cuttingBundles = (data?.cuttingBundles || []) as CuttingBundle[];
-    if (cuttingBundles.length === 0) return undefined;
-
-    const bundleMap = new Map<string, { color?: string; size: string; quantity: number }>();
-    cuttingBundles.forEach(bundle => {
+    const bundles = (data?.cuttingBundles || []) as CuttingBundle[];
+    if (bundles.length === 0) return undefined;
+    const map = new Map<string, { color?: string; size: string; quantity: number }>();
+    bundles.forEach(bundle => {
       const color = String(bundle.color || '').trim();
       const size = String(bundle.size || '').trim();
-      const quantity = toNumberSafe(bundle.quantity);
-      if (size && quantity > 0) {
+      const qty = toNumberSafe(bundle.quantity);
+      if (size && qty > 0) {
         const key = `${color}__${size}`;
-        const current = bundleMap.get(key);
-        if (current) {
-          current.quantity += quantity;
-        } else {
-          bundleMap.set(key, { color, size, quantity });
-        }
+        const cur = map.get(key);
+        if (cur) { cur.quantity += qty; }
+        else { map.set(key, { color: color || undefined, size, quantity: qty }); }
       }
     });
-
-    return Array.from(bundleMap.values());
+    return Array.from(map.values());
   }, [data?.cuttingBundles]);
 
   return (
@@ -435,95 +436,138 @@ const OrderFlow: React.FC = () => {
             />
           ) : null}
 
-          <Card size="small" className="order-flow-detail" style={{ marginTop: 12 }} loading={loading}>
-            <ProductionOrderHeader
-              order={order}
-              orderLines={orderLines}
-              cuttingSizeItems={cuttingSizeItems}
-              orderNo={String((order as any)?.orderNo || query.orderNo || '').trim()}
-              styleNo={String((order as any)?.styleNo || query.styleNo || '').trim()}
-              styleName={String((order as any)?.styleName || '').trim()}
-              styleId={(order as any)?.styleId}
-              styleCover={(order as any)?.styleCover || null}
-              color={String((order as any)?.color || '').trim()}
-              totalQuantity={toNumberSafe((order as any)?.orderQuantity)}
-              coverSize={64}
-              extraFields={[
-                { label: '加工厂', value: (order as any)?.factoryName || '-' },
-                { label: '订单状态', value: orderStatusTag((order as any)?.status) },
-                { label: '下单数', value: toNumberSafe((order as any)?.orderQuantity) },
-                { label: '已完成', value: toNumberSafe((order as any)?.completedQuantity) },
-                { label: '生产进度', value: `${toNumberSafe((order as any)?.productionProgress)}%` },
-                { label: '当前环节', value: String((order as any)?.currentProcessName || '').trim() || '-' },
-                { label: '扎数', value: toNumberSafe((order as any)?.cuttingBundleCount) },
-                { label: '入库数', value: warehousingTotal },
-                { label: '计划开始', value: (order as any)?.plannedStartDate ? formatDateTime((order as any)?.plannedStartDate) : '-' },
-                { label: '计划交期', value: (order as any)?.plannedEndDate ? formatDateTime((order as any)?.plannedEndDate) : '-' },
-                { label: '入库合格/不合格', value: `${warehousingQualified}/${warehousingUnqualified}` },
-                { label: '下单时间', value: (order as any)?.createTime ? formatDateTime((order as any)?.createTime) : '-' },
-                { label: '实际完成', value: (order as any)?.actualEndDate ? formatDateTime((order as any)?.actualEndDate) : '-' },
-                { label: '更新时间', value: (order as any)?.updateTime ? formatDateTime((order as any)?.updateTime) : '-' },
-              ]}
-            />
+          <Card size="small" className="order-flow-detail" style={{ marginTop: 8 }} loading={loading}>
+            <Row gutter={0} align="top" wrap={false}>
+              {/* 封面图 */}
+              <Col flex="none" style={{ paddingRight: 20, flexShrink: 0, paddingTop: 2 }}>
+                <StyleCoverThumb
+                  src={(order as any)?.styleCover}
+                  styleId={(order as any)?.styleId}
+                  size={80}
+                  borderRadius={8}
+                />
+              </Col>
+
+              {/* 基本信息 */}
+              <Col flex="1" style={{ minWidth: 180, padding: '0 20px', borderLeft: '1px solid rgba(0,0,0,0.08)' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#bbb', marginBottom: 8, letterSpacing: 1 }}>基本信息</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', rowGap: 4, columnGap: 12 }}>
+                  <span style={{ color: '#999', fontSize: 12, lineHeight: '22px' }}>订单号</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, lineHeight: '22px' }}>{(order as any)?.orderNo || '-'}</span>
+                  <span style={{ color: '#999', fontSize: 12, lineHeight: '22px' }}>款号</span>
+                  <span style={{ fontSize: 13, lineHeight: '22px' }}>{(order as any)?.styleNo || '-'}</span>
+                  <span style={{ color: '#999', fontSize: 12, lineHeight: '22px' }}>款名</span>
+                  <span style={{ fontSize: 13, lineHeight: '22px' }}>{(order as any)?.styleName || '-'}</span>
+                  <span style={{ color: '#999', fontSize: 12, lineHeight: '22px' }}>颜色</span>
+                  <span style={{ fontSize: 13, lineHeight: '22px' }}>{(order as any)?.color || '-'}</span>
+                  <span style={{ color: '#999', fontSize: 12, lineHeight: '22px' }}>加工厂</span>
+                  <span style={{ fontSize: 13, lineHeight: '22px' }}>{String((order as any)?.factoryName || '-').trim()}</span>
+                  <span style={{ color: '#999', fontSize: 12, lineHeight: '22px' }}>状态</span>
+                  <span style={{ fontSize: 13, lineHeight: '22px' }}>{orderStatusTag((order as any)?.status)}</span>
+                  <span style={{ color: '#999', fontSize: 12, lineHeight: '22px' }}>当前环节</span>
+                  <span style={{ fontSize: 13, lineHeight: '22px' }}>{String((order as any)?.currentProcessName || '-').trim()}</span>
+                </div>
+              </Col>
+
+              {/* 生产统计 */}
+              <Col flex="1" style={{ minWidth: 200, paddingLeft: 20, borderLeft: '1px solid rgba(0,0,0,0.08)' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#bbb', marginBottom: 8, letterSpacing: 1 }}>生产统计</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', rowGap: 4, columnGap: 12 }}>
+                  <span style={{ color: '#999', fontSize: 12, lineHeight: '22px' }}>下单数</span>
+                  <span style={{ fontSize: 13, lineHeight: '22px' }}>{toNumberSafe((order as any)?.orderQuantity)}</span>
+                  <span style={{ color: '#999', fontSize: 12, lineHeight: '22px' }}>已完成</span>
+                  <span style={{ fontSize: 13, lineHeight: '22px' }}>{toNumberSafe((order as any)?.completedQuantity)}</span>
+                  <span style={{ color: '#999', fontSize: 12, lineHeight: '22px' }}>生产进度</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, lineHeight: '22px' }}>{`${toNumberSafe((order as any)?.productionProgress)}%`}</span>
+                  <span style={{ color: '#999', fontSize: 12, lineHeight: '22px' }}>扎数</span>
+                  <span style={{ fontSize: 13, lineHeight: '22px' }}>{toNumberSafe((order as any)?.cuttingBundleCount)}</span>
+                  <span style={{ color: '#999', fontSize: 12, lineHeight: '22px' }}>入库数</span>
+                  <span style={{ fontSize: 13, lineHeight: '22px' }}>{warehousingTotal}</span>
+                  <span style={{ color: '#999', fontSize: 12, lineHeight: '22px' }}>合格/不合格</span>
+                  <span style={{ fontSize: 13, lineHeight: '22px' }}>{`${warehousingQualified} / ${warehousingUnqualified}`}</span>
+                  <span style={{ color: '#999', fontSize: 12, lineHeight: '22px' }}>计划开始</span>
+                  <span style={{ fontSize: 13, lineHeight: '22px' }}>{(order as any)?.plannedStartDate ? formatDateTime((order as any)?.plannedStartDate) : '-'}</span>
+                  <span style={{ color: '#999', fontSize: 12, lineHeight: '22px' }}>计划交期</span>
+                  <span style={{ fontSize: 13, lineHeight: '22px' }}>{(order as any)?.plannedEndDate ? formatDateTime((order as any)?.plannedEndDate) : '-'}</span>
+                  <span style={{ color: '#999', fontSize: 12, lineHeight: '22px' }}>下单时间</span>
+                  <span style={{ fontSize: 13, lineHeight: '22px' }}>{(order as any)?.createTime ? formatDateTime((order as any)?.createTime) : '-'}</span>
+                  <span style={{ color: '#999', fontSize: 12, lineHeight: '22px' }}>实际完成</span>
+                  <span style={{ fontSize: 13, lineHeight: '22px' }}>{(order as any)?.actualEndDate ? formatDateTime((order as any)?.actualEndDate) : '-'}</span>
+                  <span style={{ color: '#999', fontSize: 12, lineHeight: '22px' }}>更新时间</span>
+                  <span style={{ fontSize: 13, lineHeight: '22px' }}>{(order as any)?.updateTime ? formatDateTime((order as any)?.updateTime) : '-'}</span>
+                </div>
+              </Col>
+            </Row>
           </Card>
 
-          <Card size="small" className="order-flow-tabs-card" style={{ marginTop: 12 }} loading={loading}>
+          <Card size="small" className="order-flow-tabs-card" style={{ marginTop: 8 }} loading={loading}>
             <Tabs
               items={[
                 {
                   key: 'overview',
                   label: '概览',
                   children: (
-                    <div className="order-flow-module">
-                      <div className="order-flow-module-title">环节汇总</div>
-                      <ResizableTable
-                        storageKey="order-flow-stages"
-                        size="small"
-                        columns={stageColumns}
-                        dataSource={enrichedStages}
-                        rowKey={(r) => r.processName}
-                        pagination={false}
-                        scroll={{ x: 980 }}
-                      />
-                    </div>
+                    <ResizableTable
+                      storageKey="order-flow-stages"
+                      size="small"
+                      columns={stageColumns}
+                      dataSource={enrichedStages}
+                      rowKey={(r) => r.processName}
+                      pagination={false}
+                      scroll={{ x: 980 }}
+                    />
                   ),
                 },
                 {
                   key: 'order',
                   label: `下单明细${orderLines.length ? ` (${orderLines.length})` : ''}`,
                   children: (
-                    <div className="order-flow-module">
-                      <div className="order-flow-module-title">订单明细-SKU</div>
-                      <ResizableTable
-                        storageKey="order-flow-order-lines"
-                        size="small"
-                        columns={orderLineColumns}
-                        dataSource={orderLines}
-                        rowKey={(r) => String((r as any)?.skuNo || `${r.color}-${r.size}`)}
-                        pagination={false}
-                        scroll={{ x: 1060 }}
-                      />
-                    </div>
+                    <ResizableTable
+                      storageKey="order-flow-order-lines"
+                      size="small"
+                      columns={isFactoryUser ? orderLineColumns.filter(c => c.key !== 'totalPrice') : orderLineColumns}
+                      dataSource={orderLines}
+                      rowKey={(r) => String((r as any)?.skuNo || `${r.color}-${r.size}`)}
+                      pagination={false}
+                      scroll={{ x: 1060 }}
+                    />
                   ),
                 },
+                ...(cuttingSizeItems && cuttingSizeItems.length > 0 ? [{
+                  key: 'cutting',
+                  label: `裁剪明细 (${cuttingSizeItems.reduce((s, i) => s + i.quantity, 0)})`,
+                  children: (
+                    <ResizableTable
+                      storageKey="order-flow-cutting"
+                      size="small"
+                      columns={[
+                        { title: '颜色', dataIndex: 'color', key: 'color', width: 140, render: (v: any) => String(v || '').trim() || '-' },
+                        { title: '尺码', dataIndex: 'size', key: 'size', width: 100 },
+                        { title: '裁剪数量', dataIndex: 'quantity', key: 'quantity', width: 120, align: 'right' as const },
+                      ]}
+                      dataSource={cuttingSizeItems}
+                      rowKey={(r: any) => `${r.color || ''}-${r.size}`}
+                      pagination={false}
+                      scroll={{ x: 360 }}
+                    />
+                  ),
+                }] : []),
                 ...(data?.order?.styleId ? [
                   {
                     key: 'style-pattern',
                     label: '纸样详情',
                     children: (
-                      <div className="order-flow-module">
-                        <StylePatternSimpleTab
-                          styleId={data.order.styleId}
-                          styleNo={data.order.styleNo}
-                        />
-                      </div>
+                      <StylePatternSimpleTab
+                        styleId={data.order.styleId}
+                        styleNo={data.order.styleNo}
+                      />
                     ),
                   },
                   {
                     key: 'style-cost',
                     label: '工序详细信息',
                     children: (
-                      <div className="order-flow-module">
+                      <>
                         {/* 解析工序数据：优先使用 progressWorkflowJson，备选 progressNodeUnitPrices */}
                         {(() => {
                           let workflowNodes: any[] = [];
@@ -609,7 +653,8 @@ const OrderFlow: React.FC = () => {
                             const totalPrice = workflowNodes.reduce((sum, item) => sum + (item.unitPrice || 0), 0);
 
                             return (
-                              <Card>
+                              <>
+                                {!isFactoryUser && (
                                 <Alert
                                   title="工序单价信息"
                                   description={
@@ -626,6 +671,7 @@ const OrderFlow: React.FC = () => {
                                   showIcon
                                   style={{ marginBottom: 16 }}
                                 />
+                                )}
                                 <ResizableTable
                                   storageKey="order-flow-workflow"
                                   dataSource={workflowNodes}
@@ -680,14 +726,14 @@ const OrderFlow: React.FC = () => {
                                       align: 'right',
                                       render: (v: any) => Number(v || 0).toFixed(2)
                                     },
-                                    {
+                                    ...(!isFactoryUser ? [{
                                       title: '单价(元)',
                                       dataIndex: 'unitPrice',
                                       key: 'unitPrice',
                                       width: 120,
-                                      align: 'right',
+                                      align: 'right' as const,
                                       render: (v: any) => <strong style={{ color: 'var(--primary-color)' }}>¥{Number(v || 0).toFixed(2)}</strong>
-                                    },
+                                    }] : []),
                                     {
                                       title: '工序描述',
                                       dataIndex: 'description',
@@ -700,7 +746,7 @@ const OrderFlow: React.FC = () => {
                                   bordered
                                   scroll={{ x: 'max-content' }}
                                 />
-                              </Card>
+                              </>
                             );
                           }
 
@@ -725,14 +771,15 @@ const OrderFlow: React.FC = () => {
                             />
                           );
                         })()}
-                      </div>
+                      </>
                     ),
                   },
                   {
                     key: 'material-purchases',
-                    label: `面辅料信息${data?.materialPurchases?.length ? ` (${data.materialPurchases.length})` : ''}`,
+                    label: `物料信息${data?.materialPurchases?.length ? ` (${data.materialPurchases.length})` : ''}`,
+
                     children: (
-                      <div className="order-flow-module">
+                      <>
                         {data?.materialPurchases && data.materialPurchases.length > 0 ? (
                           <ResizableTable
                             storageKey="order-flow-materials"
@@ -762,9 +809,9 @@ const OrderFlow: React.FC = () => {
                                 render: (v: any) => v || '-'
                               },
                               {
-                                title: '规格',
-                                dataIndex: 'specification',
-                                key: 'specification',
+                                title: '规格/幅宽',
+                                dataIndex: 'specifications',
+                                key: 'specifications',
                                 width: 150,
                                 ellipsis: true,
                                 render: (v: any) => v || '-'
@@ -777,11 +824,31 @@ const OrderFlow: React.FC = () => {
                                 render: (v: any) => v || '-'
                               },
                               {
-                                title: '尺寸',
-                                dataIndex: 'size',
-                                key: 'size',
-                                width: 100,
-                                render: (v: any) => v || '-'
+                                title: '尺码用量',
+                                key: 'sizeUsage',
+                                width: 220,
+                                render: (_: any, record: any) => {
+                                  if (record.sizeUsageMap) {
+                                    try {
+                                      const map: Record<string, string> = JSON.parse(record.sizeUsageMap);
+                                      const entries = Object.entries(map);
+                                      if (entries.length > 0) {
+                                        return (
+                                          <Space wrap size={2}>
+                                            {entries.map(([sz, usage]) => (
+                                              <Tag key={sz} style={{ margin: 0, fontSize: 11 }}>
+                                                {sz}: {Number(usage).toFixed(2)}{record.unit || ''}
+                                              </Tag>
+                                            ))}
+                                          </Space>
+                                        );
+                                      }
+                                    } catch {
+                                      // 兜底显示原始尺寸字符串
+                                    }
+                                  }
+                                  return <span style={{ color: '#999' }}>{record.size || '-'}</span>;
+                                }
                               },
                               {
                                 title: '采购数量',
@@ -812,14 +879,14 @@ const OrderFlow: React.FC = () => {
                                   return <span style={{ color }}>{val.toFixed(2)} {record.unit || ''}</span>;
                                 }
                               },
-                              {
+                              ...(!isFactoryUser ? [{
                                 title: '单价',
                                 dataIndex: 'unitPrice',
                                 key: 'unitPrice',
                                 width: 100,
-                                align: 'right',
+                                align: 'right' as const,
                                 render: (v: any) => v ? `¥${Number(v).toFixed(2)}` : '-'
-                              },
+                              }] : []),
                               {
                                 title: '总价',
                                 dataIndex: 'totalAmount',
@@ -837,7 +904,13 @@ const OrderFlow: React.FC = () => {
                                 key: 'supplierName',
                                 width: 150,
                                 ellipsis: true,
-                                render: (v: any) => v || '-'
+                                render: (_: any, record: any) => (
+                                  <SupplierNameTooltip
+                                    name={record.supplierName}
+                                    contactPerson={record.supplierContactPerson}
+                                    contactPhone={record.supplierContactPhone}
+                                  />
+                                )
                               },
                               {
                                 title: '状态',
@@ -893,14 +966,14 @@ const OrderFlow: React.FC = () => {
                             showIcon
                           />
                         )}
-                      </div>
+                      </>
                     ),
                   },
                   {
                     key: 'style-secondary',
                     label: '二次工艺详情',
                     children: (
-                      <div className="order-flow-module">
+                      <>
                         {data?.order?.styleId ? (
                           <StyleSecondaryProcessTab
                             styleId={data.order.styleId}
@@ -915,7 +988,7 @@ const OrderFlow: React.FC = () => {
                             showIcon
                           />
                         )}
-                      </div>
+                      </>
                     ),
                   },
                 ] : []),

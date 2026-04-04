@@ -244,13 +244,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   // 工厂账号可见的具体路径白名单
   const FACTORY_VISIBLE_PATHS = new Set<string>([
     paths.productionList,          // /production（我的订单）
-    paths.progressDetail,          // /production/progress-detail（生产进度）
+    paths.progressDetail,          // /production/progress-detail（工序跟进）
     paths.cutting,                 // /production/cutting（裁剪管理）
     paths.materialPurchase,        // /production/material（面辅料采购）
     paths.financeCenter,           // /finance/center（订单结算(外)）
     paths.factoryWorkers,          // /system/factory-workers（工人名册）
     paths.organization,            // /system/organization（组织架构）
     paths.tutorial,                // /system/tutorial（系统教学）
+    paths.orderFlow,               // /production/order-flow（订单全流程记录）
   ]);
 
   // 构建 Menu items
