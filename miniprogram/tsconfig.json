@@ -3,6 +3,7 @@
     "target": "ES2019",
     "module": "ESNext",
     "moduleResolution": "node",
+    "ignoreDeprecations": "5.0",
     "allowJs": true,
     "checkJs": false,
     "noEmit": true,

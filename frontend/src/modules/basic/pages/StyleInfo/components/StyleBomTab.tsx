@@ -447,7 +447,7 @@ const StyleBomTab: React.FC<Props> = ({
           }
           const hasZeroPrices = data.some(item => !Number(item.unitPrice));
           if (hasZeroPrices) {
-            return new Promise<boolean>((resolve) => {
+            const confirmed = await new Promise<boolean>((resolve) => {
               Modal.confirm({
                 width: '30vw',
                 title: '部分单价为0',
@@ -458,6 +458,13 @@ const StyleBomTab: React.FC<Props> = ({
                 onCancel: () => resolve(false),
               });
             });
+            if (!confirmed) return false;
+          }
+          // 标记完成前自动同步BOM到物料数据库（尽力而为，重复自动过滤）
+          try {
+            await api.post(`/style/bom/${styleId}/sync-material-database`);
+          } catch {
+            // 尽力而为：同步失败不阻断完成操作
           }
           return true;
         }}

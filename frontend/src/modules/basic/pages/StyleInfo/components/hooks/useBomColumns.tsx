@@ -1,6 +1,7 @@
-import { App, Form, Input, Button, Select, InputNumber, Tag, Space, Image, Tooltip, Upload } from 'antd';
+import { useRef } from 'react';
+import { App, Form, Input, Button, Select, InputNumber, Tag, Space, Image, Tooltip } from 'antd';
 import type { FormInstance } from 'antd/es/form';
-import { QuestionCircleOutlined, UploadOutlined } from '@ant-design/icons';
+import { QuestionCircleOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import { StyleBom } from '@/types/style';
 import RowActions from '@/components/common/RowActions';
@@ -80,6 +81,7 @@ export function useBomColumns({
   activeSizes = [],
 }: UseBomColumnsProps) {
   const { modal, message } = App.useApp();
+  const uploadInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const parseSizeUsageMap = (value?: string) => {
     try {
       const parsed = JSON.parse(String(value || '{}'));
@@ -126,7 +128,7 @@ export function useBomColumns({
       title: '图片',
       dataIndex: 'imageUrls',
       key: 'imageUrls',
-      width: 90,
+      width: 100,
       render: (_: any, record: StyleBom) => {
         // 编辑模式：显示上传按钮
         if (!locked && (tableEditable || isEditing(record))) {
@@ -151,27 +153,60 @@ export function useBomColumns({
               message.error(String(e?.message || '上传失败'));
             }
           };
+          const rowKey = String(record.id);
           return (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-              {existingUrls.length > 0 && (
-                <Image
-                  src={getFullAuthedFileUrl(existingUrls[0])}
-                  width={40}
-                  height={40}
-                  style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid #eee' }}
-                  preview={{ src: getFullAuthedFileUrl(existingUrls[0]) }}
-                />
-              )}
-              <Upload
+              <input
+                ref={(node) => { uploadInputRefs.current[rowKey] = node; }}
+                type="file"
                 accept="image/*"
-                maxCount={1}
-                showUploadList={false}
-                beforeUpload={(file) => { void doUpload(file as File); return Upload.LIST_IGNORE; }}
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) void doUpload(f);
+                  e.currentTarget.value = '';
+                }}
+              />
+              <div
+                onClick={() => uploadInputRefs.current[rowKey]?.click()}
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: 6,
+                  border: existingUrls.length ? '1px solid #e5e7eb' : '1px dashed #cbd5e1',
+                  background: '#f8fafc',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                }}
               >
-                <Button type="link" size="small" icon={<UploadOutlined />} style={{ padding: 0, fontSize: 12 }}>
-                  {existingUrls.length ? '换图' : '上传'}
-                </Button>
-              </Upload>
+                {existingUrls.length > 0 ? (
+                  <img
+                    src={getFullAuthedFileUrl(existingUrls[0])}
+                    alt="物料图"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 20, color: '#d1d5db', lineHeight: 1 }}>+</div>
+                    <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>图片</div>
+                  </div>
+                )}
+              </div>
+              {existingUrls.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    form.setFieldValue(rowName(record.id, 'imageUrls'), JSON.stringify([]));
+                  }}
+                  style={{ border: 0, background: 'transparent', color: '#94a3b8', padding: 0, cursor: 'pointer', fontSize: 11 }}
+                >
+                  清除
+                </button>
+              )}
               <Form.Item name={rowName(record.id, 'imageUrls')} hidden noStyle>
                 <Input />
               </Form.Item>
