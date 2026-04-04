@@ -30,9 +30,6 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
   }, [bizType]);
 
   const acceptExts = useMemo(() => {
-    if (isPattern) {
-      return ['.dxf', '.plt', '.ets'];
-    }
     return [
       '.jpg',
       '.jpeg',
@@ -47,11 +44,12 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
       '.docx',
       '.dxf',
       '.plt',
+      '.ets',
       '.zip',
       '.rar',
       '.7z',
     ];
-  }, [isPattern]);
+  }, []);
 
   const getExt = (name?: string | null) => {
     const n = String(name || '').trim();
@@ -147,16 +145,9 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
 
     const extOk = acceptExts.includes(ext);
 
-    if (isPattern) {
-      if (!extOk) {
-        message.error('仅支持上传 dxf/plt/ets 格式的纸样文件');
-        return Upload.LIST_IGNORE;
-      }
-    } else {
-      if (!mimeOk && !extOk) {
-        message.error('不支持的文件类型');
-        return Upload.LIST_IGNORE;
-      }
+    if (!mimeOk && !extOk) {
+      message.error('不支持的文件类型');
+      return Upload.LIST_IGNORE;
     }
     const formData = new FormData();
     formData.append('file', file);
@@ -417,7 +408,7 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, bizType, uploadText, rea
           <Button type="primary" disabled={Boolean(readOnly)}>{uploadText || '上传附件'}</Button>
         </Upload>
         <span style={{ marginLeft: 16, color: 'var(--neutral-text-lighter)', fontSize: 'var(--font-size-sm)', lineHeight: 1.4 }}>
-          {isPattern ? '仅支持dxf/plt/ets，单个文件不超过10MB，一次最多上传4个' : '支持设计稿、工艺单、PDF、纸样(dxf/plt/ets)等，单个文件不超过10MB，一次最多上传4个'}
+          {'支持设计稿、工艺单、PDF、纸样(dxf/plt/ets)等，单个文件不超过10MB，一次最多上传4个'}
         </span>
       </div>
 
