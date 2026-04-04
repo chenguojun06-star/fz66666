@@ -12,7 +12,7 @@ import api from '@/utils/api';
 import { QRCodeCanvas } from 'qrcode.react';
 import { useAuth } from '@/utils/AuthContext';
 import type { CuttingTask, MaterialPurchase } from '@/types/production';
-import { ProductionOrderHeader, StyleCoverThumb } from '@/components/StyleAssets';
+import { ProductionOrderHeader, StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
 import StyleCoverGallery from '@/components/common/StyleCoverGallery';
 import { formatDateTime } from '@/utils/datetime';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -490,11 +490,12 @@ const CuttingManagement: React.FC = () => {
                     render: (v: any) => v || '-',
                   },
                   {
-                    title: <SortableColumnTitle title="预计出货" fieldName="expectedShipDate" onSort={tasks.handleCuttingSort} sortField={tasks.cuttingSortField} sortOrder={tasks.cuttingSortOrder} />,
-                    dataIndex: 'expectedShipDate',
-                    key: 'expectedShipDate',
-                    width: 120,
-                    render: (v: any) => v ? formatDateTime(v) : '-',
+                    title: '纸样',
+                    key: 'attachments',
+                    width: 80,
+                    render: (_: any, record: CuttingTask) => (
+                      <StyleAttachmentsButton styleId={record.styleId} styleNo={record.styleNo} onlyActive />
+                    ),
                   },
                   {
                     title: '操作',
