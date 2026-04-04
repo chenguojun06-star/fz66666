@@ -139,7 +139,7 @@ const StyleSizeGradingConfigModal: React.FC<Props> = ({
         {gradingDraftZones.map((zone, zoneIndex) => {
           const sizeStepColumns = zone.sizeStepColumns || [];
           const totalPairs = 2 + sizeStepColumns.length;
-          const gridColumns = `50px 100px repeat(${totalPairs}, 1fr 110px) 40px`;
+          const gridColumns = `50px 100px repeat(${totalPairs}, 1fr 80px) 40px`;
           return (
             <div key={zone.key} style={{ border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>

@@ -197,9 +197,10 @@ export const createGradingZone = (
   frontStep: 0,
   backSizes,
   backStep: 0,
+  sizeStepColumns: [],
 });
 
-export const normalizeGradingZones = (zones: GradingZone[], sizeColumns: string[]) => {
+export const normalizeGradingZones = (zones: GradingZone[], sizeColumns: string[]): GradingZone[] => {
   const validSizes = new Set(sizeColumns);
   return zones
     .map((zone, index) => {
