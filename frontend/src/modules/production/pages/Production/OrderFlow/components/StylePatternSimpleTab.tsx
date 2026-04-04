@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Tabs, Spin, List, Button, Space, Tag } from 'antd';
+import { Card, Tabs, Spin, Button, Space, Tag } from 'antd';
 import { FileOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import type { StyleAttachment } from '@/types/style';
@@ -113,36 +113,33 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
             children: (
               <Card size="small" style={{ marginBottom: 16 }}>
                 {allPatternFiles.length > 0 ? (
-                  <List
-                    dataSource={allPatternFiles}
-                    renderItem={(item) => (
-                      <List.Item
-                        actions={[
-                          <Button
-                            key="download"
-                            type="link"
-                            size="small"
-                            onClick={() => handleDownload(item)}
-                          >
-                            下载
-                          </Button>,
-                        ]}
+                  <div>
+                    {allPatternFiles.map((item, idx) => (
+                      <div
+                        key={item.id ? String(item.id) : `${item.fileName}-${idx}`}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '8px 0',
+                          borderBottom: idx < allPatternFiles.length - 1 ? '1px solid var(--neutral-border-subtle)' : 'none',
+                        }}
                       >
-                        <List.Item.Meta
-                          avatar={<FileOutlined style={{ fontSize: "var(--font-size-xxl)", color: 'var(--primary-color)' }} />}
-                          title={
-                            <Space>
-                              {item.fileName}
-                              {getFileTypeTag(item.fileName || '')}
-                              {item.bizType === 'pattern' && <Tag color="green">原始纸样</Tag>}
-                              {item.bizType === 'pattern_grading' && <Tag color="purple">放码纸样</Tag>}
-                            </Space>
-                          }
-                          description={`上传者: ${item.uploader || '-'} | 上传时间: ${item.createTime || '-'}`}
-                        />
-                      </List.Item>
-                    )}
-                  />
+                        <FileOutlined style={{ fontSize: 'var(--font-size-xxl)', color: 'var(--primary-color)', marginRight: 12, flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <Space wrap>
+                            {item.fileName}
+                            {getFileTypeTag(item.fileName || '')}
+                            {item.bizType === 'pattern' && <Tag color="green">原始纸样</Tag>}
+                            {item.bizType === 'pattern_grading' && <Tag color="purple">放码纸样</Tag>}
+                          </Space>
+                          <div style={{ fontSize: 12, color: 'var(--neutral-text-disabled)', marginTop: 2 }}>
+                            {`上传者: ${item.uploader || '-'} | 上传时间: ${item.createTime || '-'}`}
+                          </div>
+                        </div>
+                        <Button type="link" size="small" onClick={() => handleDownload(item)}>下载</Button>
+                      </div>
+                    ))}
+                  </div>
                 ) : (
                   <div style={{ textAlign: 'center', padding: '24px', color: 'var(--neutral-text-disabled)' }}>
                     暂无纸样文件

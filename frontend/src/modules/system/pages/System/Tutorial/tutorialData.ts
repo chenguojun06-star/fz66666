@@ -917,7 +917,7 @@ export const tutorials: Tutorial[] = [
           tips: [
             '一个用户可以有多个角色',
             '角色继承权限（如"财务经理"包含"财务人员"的所有权限）',
-            '新建角色需要先在「角色管理」中配置',
+            '新建角色需要先在「岗位权限」中配置',
           ],
         },
         {
@@ -1624,15 +1624,15 @@ export const tutorials: Tutorial[] = [
     },
     {
       id: 'role-management',
-      title: '角色管理与权限配置',
+      title: '岗位权限与权限配置',
       category: 'system',
       difficulty: 'intermediate',
       duration: '7分钟',
-      tags: ['角色', '权限', '安全'],
+      tags: ['岗位', '权限', '安全'],
       steps: [
         {
-          title: '进入角色管理页面',
-          description: '从左侧菜单选择「系统设置」→「角色管理」进入。显示系统中所有角色的列表。',
+          title: '进入岗位权限页面',
+          description: '从左侧菜单选择「系统设置」→「岗位权限」进入。显示系统中所有岗位角色的列表。',
           tips: [
             '角色决定用户能看到哪些菜单和执行哪些操作',
             '系统预置了几个默认角色，可基于此修改',

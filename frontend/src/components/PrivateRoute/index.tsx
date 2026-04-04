@@ -65,7 +65,7 @@ const PrivateRoute: React.FC = () => {
   if (user?.permissions?.includes('MENU_PRODUCTION_LIST')) {
     return <Navigate to={paths.productionList} replace />;
   }
-  
+
   return <Navigate to={paths.profile} replace />;
 };
 

@@ -62,7 +62,7 @@ const OrderLearningInsightCard: React.FC<OrderLearningInsightCardProps> = ({
                     {presented.tags.map((tag) => <Tag key={tag}>{tag}</Tag>)}
                   </div>
                 </div>
-                <Alert type="info" showIcon message={presented.summary} style={{ marginBottom: 10 }} />
+                <Alert type="info" showIcon title={presented.summary} style={{ marginBottom: 10 }} />
                 <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 12, marginBottom: 12 }}>
                   <OrderLearningRecommendationSummary lines={presented.recommendationLines} />
                   <OrderLearningHistoryPanel lines={presented.recentCaseLines} />
