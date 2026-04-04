@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import QRCode from 'qrcode';
 import type { CuttingBundleRow } from './useCuttingBundles';
 
 interface UseCuttingPrintOptions {
@@ -7,7 +8,7 @@ interface UseCuttingPrintOptions {
 
 /**
  * 裁剪打印管理 Hook
- * 管理打印预览、纸张配置、iframe打印
+ * 管理打印预览、纸张配置、iframe打印（QR码标签模式：每扎一张独立标签）
  */
 export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
   const [printPreviewOpen, setPrintPreviewOpen] = useState(false);
@@ -15,7 +16,7 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
   const [highlightedBundleIds, setHighlightedBundleIds] = useState<string[]>([]);
   const [printUnlocked, setPrintUnlocked] = useState(false);
 
-// 打印配置：自由输入纸张宽高（单位：cm），默认 7×4
+  // 打印配置：自由输入纸张宽高（单位：cm），默认 7×4
   const [printConfig, setPrintConfig] = useState<{
     paperWidth: number;
     paperHeight: number;
@@ -40,7 +41,7 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
     setPrintPreviewOpen(true);
   };
 
-  const triggerPrint = () => {
+  const triggerPrint = async () => {
     if (!printUnlocked) {
       message.warning('请先保存生成裁剪单后再打印');
       return;
@@ -50,33 +51,49 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
       return;
     }
 
-    const orderNo = String(printBundles[0]?.productionOrderNo || '').trim() || '-';
-    const styleNo = String(printBundles[0]?.styleNo || '').trim() || '-';
+    const labelW = Math.round(printConfig.paperWidth * 10);   // cm → mm
+    const labelH = Math.round(printConfig.paperHeight * 10);
+    const pageSize = `${labelW}mm ${labelH}mm`;
+    const qrSize = printConfig.qrSize;
 
-    // 按颜色 + 码数分组统计
-    const groupedMap = new Map<string, { color: string; size: string; bundleCount: number; totalQty: number }>();
+    // 本地生成 QR 码 DataURL（替代外部 api.qrserver.com，防止业务数据泄露）
+    const qrDataUrls: Record<string, string> = {};
     for (const b of printBundles) {
-      const color = String(b.color || '').trim() || '-';
-      const size = String(b.size || '').trim() || '-';
-      const key = `${color}|||${size}`;
-      if (!groupedMap.has(key)) groupedMap.set(key, { color, size, bundleCount: 0, totalQty: 0 });
-      const g = groupedMap.get(key)!;
-      g.bundleCount++;
-      g.totalQty += Number(b.quantity || 0);
+      const code = b.qrCode || '';
+      if (code && !qrDataUrls[code]) {
+        try {
+          qrDataUrls[code] = await QRCode.toDataURL(code, {
+            width: qrSize,
+            margin: 1,
+            errorCorrectionLevel: 'M',
+          });
+        } catch {
+          qrDataUrls[code] = '';
+        }
+      }
     }
 
-    const rows = [...groupedMap.values()];
-    const totalBundles = printBundles.length;
-    const totalQty = rows.reduce((s, r) => s + r.totalQty, 0);
-    const printDate = new Date().toLocaleDateString('zh-CN');
+    const getQRUrl = (code: string) => {
+      if (!code) return '';
+      return qrDataUrls[code] || '';
+    };
 
-    const tableRows = rows.map((r) => `
-      <tr>
-        <td>${r.color}</td>
-        <td>${r.size}</td>
-        <td>${r.bundleCount}</td>
-        <td>${r.totalQty}</td>
-      </tr>
+    const labelsHtml = printBundles.map((b) => `
+      <div class="print-page">
+        <div class="label">
+          <div class="qr">
+            <img src="${getQRUrl(b.qrCode || '')}" width="${qrSize}" height="${qrSize}" />
+          </div>
+          <div class="text">
+            <div>订单：${String(b.productionOrderNo || '').trim() || '-'}</div>
+            <div>款号：${String(b.styleNo || '').trim() || '-'}</div>
+            <div>颜色：${String(b.color || '').trim() || '-'}</div>
+            <div>码数：${String(b.size || '').trim() || '-'}</div>
+            <div>数量：${Number(b.quantity || 0)}</div>
+            <div>扎号：${String(b.bundleLabel || '').trim() || Number(b.bundleNo || 0) || '-'}</div>
+          </div>
+        </div>
+      </div>
     `).join('');
 
     const printHtml = `
@@ -84,42 +101,42 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
       <html>
       <head>
         <meta charset="UTF-8">
-        <title>裁剪汇总 ${orderNo}</title>
+        <title>菲号标签打印</title>
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: Arial, "Microsoft YaHei", sans-serif; padding: 20mm 16mm; font-size: 13pt; color: #000; }
-          h2 { text-align: center; font-size: 18pt; margin-bottom: 14pt; letter-spacing: 2px; }
-          .info { display: flex; gap: 32pt; margin-bottom: 14pt; font-size: 12pt; }
-          .info .label { color: #555; }
-          .info .val { font-weight: bold; }
-          table { width: 100%; border-collapse: collapse; margin-bottom: 14pt; font-size: 12pt; }
-          th, td { border: 1px solid #555; padding: 6pt 10pt; text-align: center; }
-          th { background: #eeeeee; font-weight: bold; }
-          tfoot td { font-weight: bold; background: #f5f5f5; }
-          .footer { text-align: right; font-size: 10pt; color: #888; margin-top: 10pt; }
+          @page { size: ${pageSize}; margin: 0; }
+          html, body { width: ${labelW}mm; height: ${labelH}mm; }
+          .print-page {
+            width: ${labelW}mm;
+            height: ${labelH}mm;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            page-break-after: always;
+          }
+          .label {
+            width: 90%;
+            height: 90%;
+            border: 1px solid #000;
+            padding: 4mm;
+            display: flex;
+            gap: 4mm;
+            font-family: Arial, "Microsoft YaHei", sans-serif;
+          }
+          .qr { flex: 0 0 auto; display: flex; align-items: center; }
+          .qr img { display: block; }
+          .text {
+            flex: 1 1 auto;
+            font-size: 10pt;
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+          }
         </style>
       </head>
       <body>
-        <h2>裁剪汇总单</h2>
-        <div class="info">
-          <div><span class="label">订单号：</span><span class="val">${orderNo}</span></div>
-          <div><span class="label">款号：</span><span class="val">${styleNo}</span></div>
-          <div><span class="label">打印日期：</span><span class="val">${printDate}</span></div>
-        </div>
-        <table>
-          <thead>
-            <tr><th>颜色</th><th>码数</th><th>扎数</th><th>数量合计</th></tr>
-          </thead>
-          <tbody>${tableRows}</tbody>
-          <tfoot>
-            <tr>
-              <td colspan="2">合计</td>
-              <td>${totalBundles}</td>
-              <td>${totalQty}</td>
-            </tr>
-          </tfoot>
-        </table>
-        <div class="footer">共 ${totalBundles} 扎 · 共 ${totalQty} 件</div>
+        ${labelsHtml}
       </body>
       </html>
     `;
@@ -133,11 +150,29 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
       iframeDoc.open();
       iframeDoc.write(printHtml);
       iframeDoc.close();
-      setTimeout(() => {
+
+      // 等待 QR 码图片加载完成后再调用 print()
+      const imgs = iframeDoc.querySelectorAll('img');
+      const waitForImages = () => new Promise<void>((resolve) => {
+        let loaded = 0;
+        const total = imgs.length;
+        if (total === 0) { resolve(); return; }
+        const onLoad = () => { loaded++; if (loaded >= total) resolve(); };
+        imgs.forEach((img) => {
+          if ((img as HTMLImageElement).complete) { onLoad(); }
+          else {
+            img.addEventListener('load', onLoad);
+            img.addEventListener('error', onLoad);
+          }
+        });
+        setTimeout(resolve, 5000); // 5s 超时兜底
+      });
+
+      waitForImages().then(() => {
         iframe.contentWindow?.focus();
         iframe.contentWindow?.print();
         setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 1000);
-      }, 100);
+      });
     }
 
     setPrintPreviewOpen(false);

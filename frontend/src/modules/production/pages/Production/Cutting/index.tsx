@@ -6,6 +6,7 @@ import Layout from '@/components/Layout';
 import PageStatCards from '@/components/common/PageStatCards';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
+import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import QuickEditModal from '@/components/common/QuickEditModal';
 import api from '@/utils/api';
@@ -192,7 +193,7 @@ const CuttingManagement: React.FC = () => {
     () =>
       [
         {
-          title: '类型',
+          title: '物料类型',
           dataIndex: 'materialType',
           key: 'materialType',
           width: 110,
@@ -252,7 +253,20 @@ const CuttingManagement: React.FC = () => {
             return '-';
           },
         },
-        { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 160, ellipsis: true },
+        {
+          title: '供应商',
+          dataIndex: 'supplierName',
+          key: 'supplierName',
+          width: 160,
+          ellipsis: true,
+          render: (_: unknown, record: MaterialPurchase) => (
+            <SupplierNameTooltip
+              name={record.supplierName}
+              contactPerson={(record as any).supplierContactPerson}
+              contactPhone={(record as any).supplierContactPhone}
+            />
+          ),
+        },
       ],
     []
   );
@@ -343,7 +357,7 @@ const CuttingManagement: React.FC = () => {
 
           {/* ====== 任务列表（非entry时显示） ====== */}
           {isEntryPage ? null : (
-            <Card size="small" title="裁剪任务" className="mb-sm">
+            <Card size="small" className="mb-sm">
               <PageStatCards
                 activeKey={tasks.activeStatFilter}
                 cards={[
@@ -377,6 +391,7 @@ const CuttingManagement: React.FC = () => {
                 ]}
               />
 
+              <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--neutral-light)' }}>
               <StandardToolbar
                 left={(
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -421,6 +436,7 @@ const CuttingManagement: React.FC = () => {
                   </Button>
                 )}
               />
+              </div>
 
               <ResizableTable<CuttingTask>
                 storageKey="cutting-task-table-v2"
