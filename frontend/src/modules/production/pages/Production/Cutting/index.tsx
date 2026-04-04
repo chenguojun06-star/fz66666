@@ -12,7 +12,7 @@ import api from '@/utils/api';
 import { QRCodeCanvas } from 'qrcode.react';
 import { useAuth } from '@/utils/AuthContext';
 import type { CuttingTask, MaterialPurchase } from '@/types/production';
-import { ProductionOrderHeader, StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
+import { ProductionOrderHeader, StyleCoverThumb } from '@/components/StyleAssets';
 import StyleCoverGallery from '@/components/common/StyleCoverGallery';
 import { formatDateTime } from '@/utils/datetime';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -208,9 +208,9 @@ const CuttingManagement: React.FC = () => {
         },
         { title: '单位', dataIndex: 'unit', key: 'unit', width: 90, ellipsis: true },
         {
-          title: '需求数量',
-          dataIndex: 'purchaseQuantity',
-          key: 'purchaseQuantity',
+          title: '实际到料',
+          dataIndex: 'arrivedQuantity',
+          key: 'arrivedQuantity',
           width: 110,
           align: 'right' as const,
           render: (v: unknown) => Number(v ?? 0) || 0,
@@ -243,18 +243,6 @@ const CuttingManagement: React.FC = () => {
       width: 160,
       ellipsis: true,
       render: () => activeTask?.styleName || '-',
-    },
-    {
-      title: '附件',
-      key: 'attachments',
-      width: 100,
-      render: (_: any, record: any) => (
-        <StyleAttachmentsButton
-          styleId={activeTask?.styleId}
-          styleNo={record.styleNo || activeTask?.styleNo}
-          onlyActive
-        />
-      )
     },
     { title: '颜色', dataIndex: 'color', key: 'color', width: 120 },
     { title: '尺码', dataIndex: 'size', key: 'size', width: 80 },
@@ -438,14 +426,6 @@ const CuttingManagement: React.FC = () => {
                         </Space>
                       );
                     },
-                  },
-                  {
-                    title: '附件',
-                    key: 'attachments',
-                    width: 100,
-                    render: (_: any, record: any) => (
-                      <StyleAttachmentsButton styleId={record.styleId} styleNo={record.styleNo} onlyActive />
-                    )
                   },
                   { title: '下单人', dataIndex: 'orderCreatorName', key: 'orderCreatorName', width: 110, render: (v: unknown) => String(v || '').trim() || '-' },
                   {
