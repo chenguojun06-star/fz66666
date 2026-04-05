@@ -174,8 +174,38 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
 
         MaterialStock exist = this.getOne(query);
         if (exist != null) {
+            boolean updated = false;
             if (p.getConversionRate() != null && (exist.getConversionRate() == null || exist.getConversionRate().compareTo(p.getConversionRate()) != 0)) {
                 exist.setConversionRate(p.getConversionRate());
+                updated = true;
+            }
+            // 补全可能缺失的物料属性（历史存量记录下次入库时自动补齐）
+            if (exist.getSupplierId() == null && p.getSupplierId() != null) {
+                exist.setSupplierId(p.getSupplierId());
+                updated = true;
+            }
+            if (exist.getFabricComposition() == null && p.getFabricComposition() != null) {
+                exist.setFabricComposition(p.getFabricComposition());
+                updated = true;
+            }
+            if ((exist.getFabricWidth() == null || exist.getFabricWeight() == null) && StringUtils.hasText(p.getMaterialId())) {
+                MaterialDatabase db = materialDatabaseService.getById(p.getMaterialId());
+                if (db != null) {
+                    if (exist.getFabricWidth() == null && StringUtils.hasText(db.getFabricWidth())) {
+                        exist.setFabricWidth(db.getFabricWidth());
+                        updated = true;
+                    }
+                    if (exist.getFabricWeight() == null && StringUtils.hasText(db.getFabricWeight())) {
+                        exist.setFabricWeight(db.getFabricWeight());
+                        updated = true;
+                    }
+                    if (exist.getFabricComposition() == null && StringUtils.hasText(db.getFabricComposition())) {
+                        exist.setFabricComposition(db.getFabricComposition());
+                        updated = true;
+                    }
+                }
+            }
+            if (updated) {
                 exist.setUpdateTime(LocalDateTime.now());
                 this.updateById(exist);
             }
@@ -204,6 +234,34 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
         }
         if (p.getSupplierName() != null) {
             newStock.setSupplierName(p.getSupplierName());
+        }
+        if (p.getSupplierId() != null) {
+            newStock.setSupplierId(p.getSupplierId());
+        }
+        // 同步面料成分、幅宽、克重（优先从采购单，其次从物料资料库补充）
+        if (p.getFabricComposition() != null) {
+            newStock.setFabricComposition(p.getFabricComposition());
+        }
+        if (p.getFabricWidth() != null) {
+            newStock.setFabricWidth(p.getFabricWidth());
+        }
+        if (p.getFabricWeight() != null) {
+            newStock.setFabricWeight(p.getFabricWeight());
+        }
+        // 从物料资料库补充缺失的幅宽/克重/成分
+        if (StringUtils.hasText(p.getMaterialId())) {
+            MaterialDatabase dbMat = materialDatabaseService.getById(p.getMaterialId());
+            if (dbMat != null) {
+                if (newStock.getFabricComposition() == null && StringUtils.hasText(dbMat.getFabricComposition())) {
+                    newStock.setFabricComposition(dbMat.getFabricComposition());
+                }
+                if (newStock.getFabricWidth() == null && StringUtils.hasText(dbMat.getFabricWidth())) {
+                    newStock.setFabricWidth(dbMat.getFabricWidth());
+                }
+                if (newStock.getFabricWeight() == null && StringUtils.hasText(dbMat.getFabricWeight())) {
+                    newStock.setFabricWeight(dbMat.getFabricWeight());
+                }
+            }
         }
         newStock.setLastInboundDate(LocalDateTime.now());
         newStock.setCreateTime(LocalDateTime.now());

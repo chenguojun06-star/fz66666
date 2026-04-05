@@ -195,6 +195,16 @@ public class MaterialPurchase {
     private String fabricComposition;
 
     /**
+     * 面料幅宽（从物料资料库同步）
+     */
+    private String fabricWidth;
+
+    /**
+     * 面料克重（从物料资料库同步）
+     */
+    private String fabricWeight;
+
+    /**
      * 发票/单据图片URL列表（JSON数组字符串），用于财务留底
      * 示例：["/api/file/tenant-download/1/invoice-xxx.jpg","..."]
      */

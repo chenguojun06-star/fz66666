@@ -232,6 +232,8 @@ public class MaterialQualityIssueOrchestrator {
         replacement.setColor(source.getColor());
         replacement.setSize(source.getSize());
         replacement.setFabricComposition(source.getFabricComposition());
+        replacement.setFabricWidth(source.getFabricWidth());
+        replacement.setFabricWeight(source.getFabricWeight());
         replacement.setExpectedArrivalDate(source.getExpectedArrivalDate());
         replacement.setExpectedShipDate(source.getExpectedShipDate());
         replacement.setRemark(String.format("【品质异常补货】来源异常单:%s；原采购单:%s；说明:%s",

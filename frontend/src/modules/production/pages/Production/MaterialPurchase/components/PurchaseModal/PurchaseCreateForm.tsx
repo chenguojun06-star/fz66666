@@ -103,6 +103,8 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
     if (m.specifications) patch.specifications = String(m.specifications);
     if (m.color) patch.color = String(m.color);
     if (m.fabricComposition) patch.fabricComposition = String(m.fabricComposition);
+    if (m.fabricWidth) patch.fabricWidth = String(m.fabricWidth);
+    if (m.fabricWeight) patch.fabricWeight = String(m.fabricWeight);
     if (m.unitPrice != null) patch.unitPrice = Number(m.unitPrice);
     form.setFieldsValue(patch);
   };
@@ -346,6 +348,16 @@ const PurchaseCreateForm: React.FC<PurchaseCreateFormProps> = ({ form }) => {
         <Col xs={24} md={6}>
           <Form.Item name="fabricComposition" label="成分">
             <Input id="fabricComposition" placeholder="如：棉100%" />
+          </Form.Item>
+        </Col>
+        <Col xs={24} md={6}>
+          <Form.Item name="fabricWidth" label="幅宽">
+            <Input id="fabricWidth" placeholder="如：150cm" />
+          </Form.Item>
+        </Col>
+        <Col xs={24} md={6}>
+          <Form.Item name="fabricWeight" label="克重">
+            <Input id="fabricWeight" placeholder="如：280g/m²" />
           </Form.Item>
         </Col>
         <Col xs={24} md={6}>
