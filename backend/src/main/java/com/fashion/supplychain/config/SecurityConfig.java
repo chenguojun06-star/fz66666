@@ -437,7 +437,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                                     "UPDATE t_user SET tenant_id = ? WHERE id = ? AND tenant_id IS NULL",
                                     recoveredTenantId, Long.parseLong(ctx.getUserId())
                                 );
-                                tenantInfoCache.remove(ctx.getUserId()); // 失效缓存，下次重新读取修复后的值
+                                tenantInfoCache.remove("u:" + ctx.getUserId()); // 失效缓存，下次重新读取修复后的值（key必须与put时一致）
                                 log.warn("[UserContextInterceptor] 自愈修复: 租户主 userId={} tenant_id 已回填为 {}（请检查 V20260323 迁移是否已执行）",
                                         ctx.getUserId(), recoveredTenantId);
                             } else {
@@ -446,6 +446,59 @@ public class SecurityConfig implements WebMvcConfigurer {
                             }
                         } catch (Exception e) {
                             log.error("[UserContextInterceptor] 自愈查询失败 userId={}", ctx.getUserId(), e);
+                        }
+                    }
+
+                    // [2026-07-20 修复] 非owner普通用户 tenant_id 为 NULL 时，从同组织/同工厂的其他用户反查 tenant_id
+                    if (ctx.getTenantId() == null && !Boolean.TRUE.equals(ctx.getTenantOwner()) && !ctx.getSuperAdmin()) {
+                        try {
+                            Long recoveredTenantId = null;
+                            String userId = ctx.getUserId();
+                            // 策略1：从同 org_unit_id 的其他用户获取 tenant_id
+                            List<Long> tids = jdbcTemplate.query(
+                                "SELECT DISTINCT u2.tenant_id FROM t_user u1 JOIN t_user u2 ON u1.org_unit_id = u2.org_unit_id " +
+                                        "WHERE u1.id = ? AND u1.org_unit_id IS NOT NULL AND u2.tenant_id IS NOT NULL LIMIT 1",
+                                (rs, i) -> rs.getLong(1), Long.parseLong(userId)
+                            );
+                            if (!tids.isEmpty()) {
+                                recoveredTenantId = tids.get(0);
+                            }
+                            // 策略2：从同 factory_id 的其他用户获取 tenant_id
+                            if (recoveredTenantId == null && org.springframework.util.StringUtils.hasText(ctx.getFactoryId())) {
+                                tids = jdbcTemplate.query(
+                                    "SELECT DISTINCT tenant_id FROM t_user WHERE factory_id = ? AND tenant_id IS NOT NULL LIMIT 1",
+                                    (rs, i) -> rs.getLong(1), ctx.getFactoryId()
+                                );
+                                if (!tids.isEmpty()) {
+                                    recoveredTenantId = tids.get(0);
+                                }
+                            }
+                            // 策略3：从同 role_id 的其他用户获取 tenant_id（最后兜底）
+                            if (recoveredTenantId == null) {
+                                tids = jdbcTemplate.query(
+                                    "SELECT DISTINCT u2.tenant_id FROM t_user u1 JOIN t_user u2 ON u1.role_id = u2.role_id " +
+                                            "WHERE u1.id = ? AND u2.tenant_id IS NOT NULL AND u2.id != u1.id LIMIT 1",
+                                    (rs, i) -> rs.getLong(1), Long.parseLong(userId)
+                                );
+                                if (!tids.isEmpty()) {
+                                    recoveredTenantId = tids.get(0);
+                                }
+                            }
+                            if (recoveredTenantId != null) {
+                                ctx.setTenantId(recoveredTenantId);
+                                jdbcTemplate.update(
+                                    "UPDATE t_user SET tenant_id = ? WHERE id = ? AND tenant_id IS NULL",
+                                    recoveredTenantId, Long.parseLong(userId)
+                                );
+                                tenantInfoCache.remove("u:" + userId);
+                                log.warn("[UserContextInterceptor] 非owner用户自愈: userId={} tenant_id 已回填为 {}",
+                                        userId, recoveredTenantId);
+                            } else {
+                                log.error("[UserContextInterceptor] 严重: 非owner用户 userId={} 无法推断 tenant_id，该用户将看不到任何业务数据!",
+                                        userId);
+                            }
+                        } catch (Exception e) {
+                            log.error("[UserContextInterceptor] 非owner用户自愈查询失败 userId={}", ctx.getUserId(), e);
                         }
                     }
                 }

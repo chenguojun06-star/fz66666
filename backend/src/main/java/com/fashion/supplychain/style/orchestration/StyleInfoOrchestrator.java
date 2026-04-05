@@ -160,6 +160,17 @@ public class StyleInfoOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean save(StyleInfo styleInfo) {
+        // [2026-07-20 修复] 防御性校验：非超管用户必须有 tenantId，否则拒绝保存
+        Long currentTenantId = UserContext.tenantId();
+        if (currentTenantId == null && !UserContext.isSuperAdmin()) {
+            log.error("[TenantGuard] 租户信息缺失，拒绝创建款式。userId={}, username={}",
+                    UserContext.userId(), UserContext.username());
+            throw new IllegalStateException("租户信息异常，请退出重新登录后再试");
+        }
+        // 显式设置 tenantId，不完全依赖 MetaObjectHandler 自动填充
+        if (currentTenantId != null && styleInfo.getTenantId() == null) {
+            styleInfo.setTenantId(currentTenantId);
+        }
         normalizeManualSourceFields(styleInfo);
         validateStyleInfo(styleInfo);
         // 新建款式时：若款号已存在则自动追加 -1/-2/... 后缀，保证不冲突
