@@ -315,9 +315,14 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      width: 110,
-      render: (status: MaterialPurchaseType['status'] | string) => {
+      width: 120,
+      render: (status: MaterialPurchaseType['status'] | string, record: MaterialPurchaseType) => {
         const config = getStatusConfig(status as MaterialPurchaseType['status']);
+        const s = String(status || '').toLowerCase();
+        if ((s === 'partial' || s === 'partial_arrival') && Number(record.purchaseQuantity) > 0) {
+          const pct = Math.round(((Number(record.arrivedQuantity) || 0) / Number(record.purchaseQuantity)) * 100);
+          return <Tag color={config.color}>{config.text} {pct}%</Tag>;
+        }
         return <Tag color={config.color}>{config.text}</Tag>;
       },
     },
@@ -458,6 +463,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
 
   return (
     <>
+    <style>{`.material-row-overdue { background-color: rgba(255, 77, 79, 0.06) !important; }`}</style>
     <RejectReasonModal
       open={cancelTarget !== null}
       title="撤回采购领取"
@@ -482,6 +488,13 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       rowKey="id"
       loading={loading}
       scroll={{ x: 'max-content' }}
+      rowClassName={(record: MaterialPurchaseType) => {
+        const s = String(record.status || '').toLowerCase();
+        if (['completed', 'cancelled', 'received'].includes(s)) return '';
+        const exp = record.expectedShipDate;
+        if (exp && new Date(exp).getTime() < Date.now()) return 'material-row-overdue';
+        return '';
+      }}
       size={isMobile ? 'small' : 'middle'}
       pagination={{
         current: queryParams.page,

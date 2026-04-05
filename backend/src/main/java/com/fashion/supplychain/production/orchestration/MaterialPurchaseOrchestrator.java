@@ -941,9 +941,12 @@ public class MaterialPurchaseOrchestrator {
         LambdaQueryWrapper<MaterialPurchase> wrapper = new LambdaQueryWrapper<MaterialPurchase>()
                 .eq(MaterialPurchase::getDeleteFlag, 0);
 
-        // 工厂账号隔离：只统计该工厂的采购记录
+        // 🔒 多租户隔离：所有账号（含非工厂）都必须按 tenantId 过滤
         String qFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
         Long qTenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        wrapper.eq(qTenantId != null, MaterialPurchase::getTenantId, qTenantId);
+
+        // 工厂账号进一步隔离：只统计该工厂的采购记录
         if (StringUtils.hasText(qFactoryId)) {
             List<String> factoryOrderIds = productionOrderService.list(
                     new LambdaQueryWrapper<ProductionOrder>()
@@ -1035,7 +1038,8 @@ public class MaterialPurchaseOrchestrator {
             switch (status) {
                 case "pending": pendingCount++; break;
                 case "received": receivedCount++; break;
-                case "partial": partialCount++; break;
+                case "partial":
+                case "partial_arrival": partialCount++; break;
                 case "completed": completedCount++; break;
                 case "cancelled": cancelledCount++; break;
                 default: pendingCount++; break;
@@ -1930,7 +1934,7 @@ public class MaterialPurchaseOrchestrator {
         }
 
         // 3. 标记出库单为已撤销
-        picking.setStatus("cancelled");
+        picking.setStatus(MaterialConstants.STATUS_CANCELLED);
         picking.setRemark("【撤销】" + reason + " | 操作人: " + UserContext.username() + " | 原备注: " + (picking.getRemark() != null ? picking.getRemark() : ""));
         picking.setUpdateTime(LocalDateTime.now());
         materialPickingService.updateById(picking);
@@ -1944,7 +1948,7 @@ public class MaterialPurchaseOrchestrator {
                     .eq(MaterialPurchase::getOrderNo, orderNo)
                     .eq(MaterialPurchase::getMaterialCode, item.getMaterialCode())
                     .eq(MaterialPurchase::getDeleteFlag, 0)
-                    .in(MaterialPurchase::getStatus, MaterialConstants.STATUS_COMPLETED, MaterialConstants.STATUS_PARTIAL)
+                    .in(MaterialPurchase::getStatus, MaterialConstants.STATUS_COMPLETED, MaterialConstants.STATUS_PARTIAL, MaterialConstants.STATUS_WAREHOUSE_PENDING)
                     .list();
 
                 for (MaterialPurchase purchase : relatedPurchases) {

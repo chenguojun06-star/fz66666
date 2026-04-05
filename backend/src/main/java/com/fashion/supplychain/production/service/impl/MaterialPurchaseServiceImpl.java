@@ -26,6 +26,7 @@ import java.util.Map;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import org.springframework.util.StringUtils;
+import com.fashion.supplychain.common.UserContext;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
@@ -98,6 +99,10 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         LambdaQueryWrapper<MaterialPurchase> wrapper = new LambdaQueryWrapper<MaterialPurchase>()
                 .eq(MaterialPurchase::getDeleteFlag, 0);
 
+        // 🔒 多租户隔离：非工厂账号也必须按 tenantId 过滤，防止跨租户数据泄漏
+        Long tenantId = UserContext.tenantId();
+        wrapper.eq(tenantId != null, MaterialPurchase::getTenantId, tenantId);
+
         // orderNo作为通用搜索关键词，支持订单号/采购单号/物料编码/物料名称的or查询
         if (StringUtils.hasText(orderNo)) {
             String keyword = orderNo.trim();
@@ -120,7 +125,13 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                 .like(StringUtils.hasText(styleNo), MaterialPurchase::getStyleNo, styleNo)
                 .eq(StringUtils.hasText(receiverId), MaterialPurchase::getReceiverId, receiverId)
                 .like(StringUtils.hasText(receiverName), MaterialPurchase::getReceiverName, receiverName)
-                .eq(StringUtils.hasText(status), MaterialPurchase::getStatus, status)
+                .and(StringUtils.hasText(status), w -> {
+                    if ("partial".equals(status)) {
+                        w.in(MaterialPurchase::getStatus, "partial", "partial_arrival");
+                    } else {
+                        w.eq(MaterialPurchase::getStatus, status);
+                    }
+                })
                 .orderByDesc(MaterialPurchase::getCreateTime);
 
         // sourceType筛选：batch同时匹配batch、stock和manual（均为非订单采购）
