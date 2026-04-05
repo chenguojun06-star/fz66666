@@ -128,10 +128,15 @@ public class StyleTableMigrator {
                 "style_id VARCHAR(36) NOT NULL COMMENT '款号ID'," +
                 "file_name VARCHAR(100) NOT NULL COMMENT '文件名'," +
                 "file_type VARCHAR(200) NOT NULL COMMENT '文件类型'," +
-                "biz_type VARCHAR(20) DEFAULT 'general' COMMENT '业务类型：general/pattern/sample'," +
+                "biz_type VARCHAR(128) DEFAULT 'general' COMMENT '业务类型：general/pattern/sample/color_image'," +
                 "file_size BIGINT NOT NULL COMMENT '文件大小(字节)'," +
                 "file_url VARCHAR(200) NOT NULL COMMENT '文件URL'," +
                 "uploader VARCHAR(50) COMMENT '上传人'," +
+                "version INT DEFAULT 1 COMMENT '版本号'," +
+                "version_remark VARCHAR(200) DEFAULT NULL COMMENT '版本说明'," +
+                "status VARCHAR(20) DEFAULT 'active' COMMENT '状态: active/archived'," +
+                "parent_id VARCHAR(36) DEFAULT NULL COMMENT '父版本ID'," +
+                "tenant_id BIGINT DEFAULT NULL COMMENT '租户ID'," +
                 "create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间'," +
                 "update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'," +
                 "INDEX idx_style_id (style_id)" +
@@ -284,5 +289,15 @@ public class StyleTableMigrator {
             dbHelper.execSilently("ALTER TABLE t_style_attachment ADD COLUMN biz_type VARCHAR(128) DEFAULT 'general' COMMENT '业务类型：general/pattern/sample/color_image::*'");
         else
             dbHelper.execSilently("ALTER TABLE t_style_attachment MODIFY COLUMN biz_type VARCHAR(128) DEFAULT 'general' COMMENT '业务类型：general/pattern/sample/color_image::*'");
+        if (!dbHelper.columnExists("t_style_attachment", "version"))
+            dbHelper.execSilently("ALTER TABLE t_style_attachment ADD COLUMN version INT DEFAULT 1");
+        if (!dbHelper.columnExists("t_style_attachment", "version_remark"))
+            dbHelper.execSilently("ALTER TABLE t_style_attachment ADD COLUMN version_remark VARCHAR(200) DEFAULT NULL");
+        if (!dbHelper.columnExists("t_style_attachment", "status"))
+            dbHelper.execSilently("ALTER TABLE t_style_attachment ADD COLUMN status VARCHAR(20) DEFAULT 'active'");
+        if (!dbHelper.columnExists("t_style_attachment", "parent_id"))
+            dbHelper.execSilently("ALTER TABLE t_style_attachment ADD COLUMN parent_id VARCHAR(36) DEFAULT NULL");
+        if (!dbHelper.columnExists("t_style_attachment", "tenant_id"))
+            dbHelper.execSilently("ALTER TABLE t_style_attachment ADD COLUMN tenant_id BIGINT DEFAULT NULL");
     }
 }
