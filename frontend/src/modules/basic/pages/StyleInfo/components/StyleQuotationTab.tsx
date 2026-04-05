@@ -103,7 +103,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQ
       if (processResult.code === 200) {
         processData = (processResult.data || []) as StyleProcess[];
         procCost = processData.reduce(
-          (sum: number, item: any) => sum + (Number(item.price) || 0),
+          (sum: number, item: any) => sum + (Number(item.price) || 0) * (Number(item.rateMultiplier) || 1),
           0,
         );
         setProcessList(processData);
@@ -144,7 +144,6 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQ
     }
   };
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchData(); }, [styleId]);
 
   const calculateTotal = () => {
