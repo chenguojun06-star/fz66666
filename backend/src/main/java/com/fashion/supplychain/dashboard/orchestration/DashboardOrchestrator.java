@@ -177,7 +177,9 @@ public class DashboardOrchestrator {
 
         LocalDateTime now = LocalDateTime.now();
         long overdueCount = factoryOrders.stream()
-                .filter(o -> !"completed".equals(o.getStatus()) && !"cancelled".equals(o.getStatus()))
+                .filter(o -> !"completed".equals(o.getStatus()) && !"cancelled".equals(o.getStatus())
+                        && !"scrapped".equals(o.getStatus()) && !"closed".equals(o.getStatus())
+                        && !"archived".equals(o.getStatus()))
                 .filter(o -> o.getPlannedEndDate() != null && o.getPlannedEndDate().isBefore(now))
                 .count();
         data.setOverdueOrderCount(overdueCount);
@@ -338,7 +340,9 @@ public class DashboardOrchestrator {
         DeliveryAlertResponse response = new DeliveryAlertResponse();
         LocalDate today = LocalDate.now();
 
-        // 获取所有生产订单（优化：未来可添加数据库查询条件）
+        // 仅查询有效的、非终态的生产订单（排除报废/已完成/已取消/已关闭/已归档）
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        String factoryId = com.fashion.supplychain.common.UserContext.factoryId();
         List<ProductionOrder> allOrders = productionOrderService.lambdaQuery()
             .select(
                 ProductionOrder::getId,
@@ -352,6 +356,10 @@ public class DashboardOrchestrator {
                 ProductionOrder::getStatus,
                 ProductionOrder::getPlannedEndDate
             )
+            .eq(ProductionOrder::getDeleteFlag, 0)
+            .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+            .eq(org.springframework.util.StringUtils.hasText(factoryId), ProductionOrder::getFactoryId, factoryId)
+            .notIn(ProductionOrder::getStatus, "completed", "cancelled", "scrapped", "closed", "archived")
             .list();
 
         // 如果没有订单，直接返回空结果
@@ -365,11 +373,6 @@ public class DashboardOrchestrator {
         List<DeliveryAlertOrderDto> warningOrders = new ArrayList<>();
 
         for (ProductionOrder order : allOrders) {
-            // 跳过已完成或已取消的订单
-            if ("completed".equals(order.getStatus()) || "cancelled".equals(order.getStatus())) {
-                continue;
-            }
-
             // 跳过没有交期的订单
             if (order.getPlannedEndDate() == null) {
                 continue;

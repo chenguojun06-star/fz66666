@@ -541,7 +541,7 @@ public class ProfessionalReportOrchestrator {
     private long countCompletedOrders(Long tenantId, LocalDateTime start, LocalDateTime end,
                                       String scopeUserId, String scopeUsername) {
         QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId, scopeUserId, scopeUsername);
-        q.eq("status", "COMPLETED").ge("update_time", start).le("update_time", end);
+        q.eq("status", "completed").ge("update_time", start).le("update_time", end);
         return productionOrderService.count(q);
     }
 
@@ -553,14 +553,14 @@ public class ProfessionalReportOrchestrator {
 
     private List<ProductionOrder> getOverdueOrders(Long tenantId, String scopeUserId, String scopeUsername) {
         QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId, scopeUserId, scopeUsername);
-        q.ne("status", "COMPLETED").ne("status", "CANCELLED")
+        q.notIn("status", "completed", "cancelled", "scrapped", "closed", "archived")
                 .isNotNull("planned_end_date").lt("planned_end_date", LocalDateTime.now());
         return productionOrderService.list(q);
     }
 
     private List<ProductionOrder> getHighRiskOrders(Long tenantId, String scopeUserId, String scopeUsername) {
         QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId, scopeUserId, scopeUsername);
-        q.eq("status", "IN_PROGRESS").isNotNull("planned_end_date")
+        q.eq("status", "production").isNotNull("planned_end_date")
                 .le("planned_end_date", LocalDateTime.now().plusDays(7))
                 .ge("planned_end_date", LocalDateTime.now());
         return productionOrderService.list(q).stream()
@@ -570,7 +570,7 @@ public class ProfessionalReportOrchestrator {
 
     private long countStagnantOrders(Long tenantId, String scopeUserId, String scopeUsername) {
         QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId, scopeUserId, scopeUsername);
-        q.eq("status", "IN_PROGRESS")
+        q.eq("status", "production")
                 .and(w -> w.isNull("production_progress").or().eq("production_progress", 0));
         return productionOrderService.count(q);
     }
