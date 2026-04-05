@@ -796,6 +796,31 @@ public class TemplateLibraryOrchestrator {
         return true;
     }
 
+    /** 取消修改：将模板重新锁定（不保存任何改动） */
+    public boolean lockTemplate(String id) {
+        String tid = String.valueOf(id == null ? "" : id).trim();
+        if (!StringUtils.hasText(tid)) {
+            throw new IllegalArgumentException("id不能为空");
+        }
+        TemplateLibrary current = templateLibraryService.getById(tid);
+        if (current == null) {
+            throw new NoSuchElementException("模板不存在");
+        }
+        if (current.getTenantId() != null) {
+            TenantAssert.assertBelongsToCurrentTenant(current.getTenantId(), "模板");
+        }
+        if (isLocked(current)) {
+            return true; // 已锁定，幂等
+        }
+        current.setLocked(1);
+        current.setUpdateTime(LocalDateTime.now());
+        boolean ok = templateLibraryService.updateById(current);
+        if (!ok) {
+            throw new IllegalStateException("锁定失败");
+        }
+        return true;
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public boolean rollback(String id, String reason) {
         // 管理员/主管/工厂用户（仅限其被分配款号的模板）均可退回

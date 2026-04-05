@@ -105,6 +105,7 @@ const SizeTablePanel: React.FC<SizeTablePanelProps> = ({ styleNo }) => {
 
   const [rollbackTarget, setRollbackTarget] = useState<TemplateLibrary | null>(null);
   const [rollbackLoading, setRollbackLoading] = useState(false);
+  const [cancelLocking, setCancelLocking] = useState(false);
 
   const [pendingDeleteTemplate, setPendingDeleteTemplate] = useState<TemplateLibrary | null>(null);
   const [deleteTemplateLoading, setDeleteTemplateLoading] = useState(false);
@@ -385,6 +386,18 @@ const SizeTablePanel: React.FC<SizeTablePanelProps> = ({ styleNo }) => {
                 row={directRow}
                 compact
                 maintenanceMode
+                onCancel={async () => {
+                  if (!directRow?.id) return;
+                  setCancelLocking(true);
+                  try {
+                    await api.post(`/template-library/${directRow.id}/lock`);
+                    await fetchList({ page: 1 });
+                  } catch (error: unknown) {
+                    message.error(getErrorMessage(error, '取消修改失败'));
+                  } finally {
+                    setCancelLocking(false);
+                  }
+                }}
                 onSaved={async () => {
                   await fetchList({ page: 1 });
                 }}

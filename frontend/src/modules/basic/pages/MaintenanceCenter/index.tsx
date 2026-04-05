@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { App, Empty, Input, Skeleton, Tabs } from 'antd';
-import { SearchOutlined } from '@ant-design/icons';
+import { SearchOutlined, PrinterOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
+import StylePrintModal from '@/components/common/StylePrintModal';
 import AttachmentThumb from '@/components/common/AttachmentThumb';
 import StandardPagination from '@/components/common/StandardPagination';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -56,6 +57,9 @@ const MaintenanceCenter: React.FC = () => {
   const [knowledgePage, setKnowledgePage] = useState(1);
   const [knowledgePageSize, setKnowledgePageSize] = useState(10);
   const [knowledgeSelectedKeys, setKnowledgeSelectedKeys] = useState<React.Key[]>([]);
+
+  /* ── print modal ── */
+  const [printingStyle, setPrintingStyle] = useState<StyleInfo | null>(null);
 
   /* ── panel modal ── */
   type PanelType = 'pattern' | 'sheet' | 'size' | 'bom' | 'price' | null;
@@ -233,51 +237,64 @@ const MaintenanceCenter: React.FC = () => {
                         const processingCount = stages.filter((stage) => stage.processing).length;
                         return (
                           <div key={record.id ?? record.styleNo} className="maintenance-card">
-                            <div className="maintenance-card__body">
-                              <div className="maintenance-card__hero">
-                                <div className="maintenance-card__thumb">
-                                  <AttachmentThumb styleId={record.id} width="100%" height="100%" />
+                            <div className="maintenance-card__cover">
+                              <AttachmentThumb styleId={record.id} width="100%" height="100%" />
+                            </div>
+                            <div className="maintenance-card__info-zone">
+                              <div className="maintenance-card__info">
+                                <div className="maintenance-card__info-row">
+                                  <span className="maintenance-card__info-item">
+                                    <span className="maintenance-card__info-label">款号</span>
+                                    <span className="maintenance-card__info-value">{record.styleNo || '-'}</span>
+                                  </span>
+                                  <span className="maintenance-card__info-item">
+                                    <span className="maintenance-card__info-label">品类</span>
+                                    <span className="maintenance-card__info-value">{displayCategory}</span>
+                                  </span>
                                 </div>
-                                <div className="maintenance-card__hero-body">
-                                  <div className="maintenance-card__header">
-                                    <div className="maintenance-card__title-stack">
-                                      <div className="maintenance-card__style-no">{record.styleNo || '-'}</div>
-                                      <div className="maintenance-card__headline">
-                                        <span className="maintenance-card__category">{displayCategory}</span>
-                                        {record.styleName ? (
-                                          <span className="maintenance-card__name">{record.styleName}</span>
-                                        ) : null}
-                                      </div>
-                                    </div>
-                                    {processingCount > 0 ? (
-                                      <span className="maintenance-card__status maintenance-card__status--processing">
-                                        {processingCount} 项
-                                      </span>
-                                    ) : null}
-                                  </div>
-
-                                  <div className="maintenance-card__meta-lines">
-                                    <div className="maintenance-card__summary">
-                                      <span className="maintenance-card__summary-item">推送资料 {pushedInfoTime}</span>
-                                    </div>
-                                    <div className="maintenance-card__summary">
-                                      <span className="maintenance-card__summary-item">最近修改 {latestMaintenanceRecord}</span>
-                                    </div>
-                                  </div>
+                                <div className="maintenance-card__info-row">
+                                  <span className="maintenance-card__info-item">
+                                    <span className="maintenance-card__info-label">品名</span>
+                                    <span className="maintenance-card__info-value">{record.styleName || '-'}</span>
+                                  </span>
+                                  <span className="maintenance-card__info-item">
+                                    <span className="maintenance-card__info-label">工序</span>
+                                    <span className="maintenance-card__info-value">
+                                      {processingCount > 0 ? <span className="maintenance-card__processing-badge">{processingCount} 项待处理</span> : '已完成'}
+                                    </span>
+                                  </span>
+                                </div>
+                                <div className="maintenance-card__info-row">
+                                  <span className="maintenance-card__info-item">
+                                    <span className="maintenance-card__info-label">推送</span>
+                                    <span className="maintenance-card__info-value maintenance-card__info-value--time">{pushedInfoTime}</span>
+                                  </span>
+                                  <span className="maintenance-card__info-item">
+                                    <span className="maintenance-card__info-label">修改</span>
+                                    <span className="maintenance-card__info-value maintenance-card__info-value--time">{latestMaintenanceRecord}</span>
+                                  </span>
                                 </div>
                               </div>
-
-                              <div className="maintenance-card__stages">
-                                {stages.map((stage) => (
+                              <div className="maintenance-card__overlay">
+                                <div className="maintenance-card__overlay-grid">
+                                  {stages.map((stage) => (
+                                    <button
+                                      key={stage.key}
+                                      type="button"
+                                      className={`maintenance-overlay-btn${stage.processing ? ' maintenance-overlay-btn--processing' : ''}`}
+                                      onClick={() => handleStageClick(record, stage.key)}
+                                    >
+                                      {stage.label}
+                                    </button>
+                                  ))}
                                   <button
-                                    key={stage.key}
                                     type="button"
-                                    className={`maintenance-stage${stage.processing ? ' maintenance-stage--processing' : ''}`}
-                                    onClick={() => handleStageClick(record, stage.key)}
+                                    className="maintenance-overlay-btn maintenance-overlay-btn--print"
+                                    onClick={() => setPrintingStyle(record)}
                                   >
-                                    <span className="maintenance-stage__label">{stage.label}</span>
+                                    <PrinterOutlined /> 打印
                                   </button>
-                                ))}
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -332,6 +349,16 @@ const MaintenanceCenter: React.FC = () => {
         {panelType === 'bom' && <BomPanel styleNo={activeStyleNo} />}
         {panelType === 'price' && <UnitPricePanel styleNo={activeStyleNo} />}
       </ResizableModal>
+
+      {/* ── Print Modal ── */}
+      <StylePrintModal
+        visible={!!printingStyle}
+        onClose={() => setPrintingStyle(null)}
+        styleId={printingStyle?.id}
+        styleNo={printingStyle?.styleNo}
+        styleName={printingStyle?.styleName}
+        cover={printingStyle?.cover}
+      />
     </Layout>
   );
 };

@@ -93,6 +93,11 @@ public class TemplateLibraryController {
         return Result.success(templateLibraryOrchestrator.rollback(id, reason));
     }
 
+    @PostMapping("/{id}/lock")
+    public Result<?> lock(@PathVariable String id) {
+        return Result.success(templateLibraryOrchestrator.lockTemplate(id));
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('STYLE_DELETE')")
     public Result<?> delete(@PathVariable String id) {

@@ -197,6 +197,42 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
               </div>
             </div>
           )}
+          {/* 生产制单（生产要求） */}
+          {options.productionSheet && (() => {
+            const description = data.productionSheet?.description || '';
+            const sampleReviewStatus = String((data.productionSheet as any)?.sampleReviewStatus || '').trim().toUpperCase();
+            const sampleReviewComment = String((data.productionSheet as any)?.sampleReviewComment || '').trim();
+            const sampleReviewer = String((data.productionSheet as any)?.sampleReviewer || '').trim();
+            const sampleReviewTime = (data.productionSheet as any)?.sampleReviewTime;
+            const reviewLabel =
+              sampleReviewStatus === 'PASS' ? '通过'
+                : sampleReviewStatus === 'REWORK' ? '需修改'
+                  : sampleReviewStatus === 'REJECT' ? '不通过'
+                    : sampleReviewStatus === 'PENDING' ? '待审核'
+                      : '';
+            return (
+              <div className="print-section">
+                <div className="print-section-title"> 生产要求</div>
+                {(reviewLabel || sampleReviewComment || sampleReviewer || sampleReviewTime) && (
+                  <div style={{ marginBottom: 10, border: '1px solid var(--color-border)', padding: '8px 10px', borderRadius: 6 }}>
+                    <div style={{ marginBottom: 6, fontWeight: 600 }}>样衣审核</div>
+                    <div style={{ fontSize: 12, lineHeight: '20px' }}>
+                      <span>审核状态：{reviewLabel || '-'}</span>
+                      <span style={{ marginLeft: 16 }}>审核人：{sampleReviewer || '-'}</span>
+                      <span style={{ marginLeft: 16 }}>审核时间：{sampleReviewTime ? formatDateTime(sampleReviewTime) : '-'}</span>
+                    </div>
+                    {sampleReviewComment && (
+                      <div style={{ marginTop: 4, fontSize: 12, whiteSpace: 'pre-wrap' }}>审核评语：{sampleReviewComment}</div>
+                    )}
+                  </div>
+                )}
+                <div style={{ border: '1px solid var(--color-border)', padding: '8px 10px', borderRadius: 4, fontSize: 'var(--font-size-xs)', whiteSpace: 'pre-wrap', lineHeight: 1.8, minHeight: 40 }}>
+                  {description || <span style={{ color: 'var(--color-text-quaternary)' }}>暂无生产要求</span>}
+                </div>
+              </div>
+            );
+          })()}
+
           {/* 码数明细 IIFE */}
           {options.basicInfo && sizeDetails && sizeDetails.length > 0 && (() => {
             const colors = [...new Set(sizeDetails.map(d => d.color))];
@@ -420,63 +456,6 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
               />
             </div>
           )}
-
-          {/* 生产制单（生产要求） */}
-          {options.productionSheet && (() => {
-            const description = data.productionSheet?.description || '';
-            const sampleReviewStatus = String((data.productionSheet as any)?.sampleReviewStatus || '').trim().toUpperCase();
-            const sampleReviewComment = String((data.productionSheet as any)?.sampleReviewComment || '').trim();
-            const sampleReviewer = String((data.productionSheet as any)?.sampleReviewer || '').trim();
-            const sampleReviewTime = (data.productionSheet as any)?.sampleReviewTime;
-            const reviewLabel =
-              sampleReviewStatus === 'PASS' ? '通过'
-                : sampleReviewStatus === 'REWORK' ? '需修改'
-                  : sampleReviewStatus === 'REJECT' ? '不通过'
-                    : sampleReviewStatus === 'PENDING' ? '待审核'
-                      : '';
-            // 将 description 拆分成多行
-            const lines = description
-              .split(/\r?\n/)
-              .map((l: string) => String(l || '').replace(/^\s*\d+\s*[.、)）-]?\s*/, '').trim())
-              .filter((l: string) => Boolean(l));
-            // 固定15行
-            const fixedLines = Array.from({ length: 15 }).map((_, i) => lines[i] || '');
-
-            return (
-              <div className="print-section">
-                <div className="print-section-title"> 生产要求</div>
-                {(reviewLabel || sampleReviewComment || sampleReviewer || sampleReviewTime) && (
-                  <div style={{ marginBottom: 10, border: '1px solid var(--color-border)', padding: '8px 10px', borderRadius: 6 }}>
-                    <div style={{ marginBottom: 6, fontWeight: 600 }}>样衣审核</div>
-                    <div style={{ fontSize: 12, lineHeight: '20px' }}>
-                      <span>审核状态：{reviewLabel || '-'}</span>
-                      <span style={{ marginLeft: 16 }}>审核人：{sampleReviewer || '-'}</span>
-                      <span style={{ marginLeft: 16 }}>审核时间：{sampleReviewTime ? formatDateTime(sampleReviewTime) : '-'}</span>
-                    </div>
-                    {sampleReviewComment && (
-                      <div style={{ marginTop: 4, fontSize: 12, whiteSpace: 'pre-wrap' }}>审核评语：{sampleReviewComment}</div>
-                    )}
-                  </div>
-                )}
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: "var(--font-size-xs)" }}>
-                  <thead>
-                    <tr style={{ background: 'var(--color-bg-container)' }}>
-                      <th style={{ border: '1px solid var(--color-border)', padding: '6px 8px', width: 60, textAlign: 'center' }}>序号</th>
-                      <th style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'left' }}>内容</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {fixedLines.map((line: string, idx: number) => (
-                      <tr key={idx}>
-                        <td style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center' }}>{idx + 1}</td>
-                        <td style={{ border: '1px solid var(--color-border)', padding: '6px 8px', whiteSpace: 'pre-wrap', textAlign: 'left' }}>{line}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            );
-          })()}
 
           {/* 无数据提示 */}
           {!loading && !options.basicInfo && data.sizes.length === 0 && data.bom.length === 0 &&

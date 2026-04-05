@@ -75,6 +75,7 @@ const BomPanel: React.FC<BomPanelProps> = ({ styleNo }) => {
   const [data, setData] = useState<TemplateLibrary[]>([]);
 
   const [rollbackLoading, setRollbackLoading] = useState(false);
+  const [cancelLocking, setCancelLocking] = useState(false);
 
   const fetchList = useCallback(async () => {
     setLoading(true);
@@ -202,6 +203,18 @@ const BomPanel: React.FC<BomPanelProps> = ({ styleNo }) => {
                 row={directRow}
                 compact
                 maintenanceMode
+                onCancel={async () => {
+                  if (!directRow?.id) return;
+                  setCancelLocking(true);
+                  try {
+                    await api.post(`/template-library/${directRow.id}/lock`);
+                    await fetchList();
+                  } catch (error: unknown) {
+                    message.error(getErrorMessage(error, '取消修改失败'));
+                  } finally {
+                    setCancelLocking(false);
+                  }
+                }}
                 onSaved={async () => {
                   await fetchList();
                 }}

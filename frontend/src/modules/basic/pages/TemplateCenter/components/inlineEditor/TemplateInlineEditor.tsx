@@ -31,6 +31,7 @@ interface StyleNoOption {
 interface TemplateInlineEditorProps {
   row: TemplateLibrary;
   onSaved: () => Promise<void> | void;
+  onCancel?: () => void;
   readOnly?: boolean;
   compact?: boolean;
   maintenanceMode?: boolean;
@@ -55,6 +56,7 @@ const parseTemplateContent = (content: unknown) => {
 const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
   row,
   onSaved,
+  onCancel,
   readOnly = false,
   compact = false,
   maintenanceMode = false,
@@ -506,7 +508,10 @@ const TemplateInlineEditor: React.FC<TemplateInlineEditorProps> = ({
       {renderEditor()}
 
       {!readOnly ? (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: compact ? 10 : 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: compact ? 10 : 16 }}>
+          {onCancel ? (
+            <Button size={compact ? 'small' : 'middle'} onClick={onCancel}>取消修改</Button>
+          ) : null}
           <Button type="primary" size={compact ? 'small' : 'middle'} loading={saving} onClick={handleSave}>
             保存
           </Button>

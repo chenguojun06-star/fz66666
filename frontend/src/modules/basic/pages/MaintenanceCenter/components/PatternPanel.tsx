@@ -8,6 +8,7 @@ import StandardToolbar from '@/components/common/StandardToolbar';
 import { StyleAttachmentsButton } from '@/components/StyleAssets';
 import api from '@/utils/api';
 import { StyleAttachment, StyleInfo, StyleQueryParams } from '@/types/style';
+import { getErrorMessage } from '../../TemplateCenter/utils/templateUtils';
 import type { PatternRevision } from '@/types/patternRevision';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { formatDateTime } from '@/utils/datetime';
@@ -269,6 +270,7 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
   const [patternRevisionRecord, setPatternRevisionRecord] = useState<StyleInfo | null>(null);
   const [patternRevisionForm] = Form.useForm();
   const [patternRevisionSaving, setPatternRevisionSaving] = useState(false);
+  const [cancelLocking, setCancelLocking] = useState(false);
 
   const [returnPatternModalVisible, setReturnPatternModalVisible] = useState(false);
   const [returnPatternRecord, setReturnPatternRecord] = useState<StyleInfo | null>(null);
@@ -291,6 +293,7 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
   const [latestPatternRevision, setLatestPatternRevision] = useState<PatternRevision | null>(null);
   const [currentPatternFile, setCurrentPatternFile] = useState<PatternAttachment | null>(null);
   const [patternVersionCount, setPatternVersionCount] = useState(0);
+  const [patternVersionList, setPatternVersionList] = useState<PatternAttachment[]>([]);
   const [nextRevisionNo, setNextRevisionNo] = useState('');
   const [patternMetaLoading, setPatternMetaLoading] = useState(false);
 
@@ -298,6 +301,7 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
     setLatestPatternRevision(null);
     setCurrentPatternFile(null);
     setPatternVersionCount(0);
+    setPatternVersionList([]);
     setNextRevisionNo('');
     setPatternMetaLoading(false);
   };
@@ -390,6 +394,7 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
       setLatestPatternRevision(latestRevision);
       setCurrentPatternFile(patternFile);
       setPatternVersionCount(versionCount);
+      setPatternVersionList(versionList);
     } finally {
       setPatternMetaLoading(false);
     }
@@ -585,7 +590,7 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
               </div>
             </div>
             {currentPatternFile?.fileUrl ? (
-              <a href={getFullAuthedFileUrl(currentPatternFile.fileUrl)} target="_blank" rel="noreferrer">查看当前文件</a>
+              <a href={getFullAuthedFileUrl(currentPatternFile.fileUrl)} target="_blank" rel="noreferrer" title="下载当前纸样文件（大货读取版本）" style={{ fontSize: 12, color: '#1677ff', whiteSpace: 'nowrap' }}>↓ 下载</a>
             ) : null}
           </div>
           <div style={{ ...directMetaStyle, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -594,6 +599,37 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
             <span>上传时间 {currentPatternFile?.createTime ? formatDateTime(currentPatternFile.createTime) : '-'}</span>
           </div>
         </div>
+
+        {!patternMetaLoading && patternVersionList.filter(v => v.status === 'archived').length > 0 ? (
+          <div style={{ border: '1px solid #f0f0f0', borderRadius: 10, overflow: 'hidden' }}>
+            <div style={{ padding: '8px 12px', background: '#fafafa', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-primary)' }}>历史封存版本</span>
+              <span style={{ fontSize: 11, color: '#8c8c8c', background: '#fff7e6', padding: '1px 8px', borderRadius: 4, border: '1px solid #ffd591' }}>已封存 · 仅供参考 · 不参与大货生产</span>
+            </div>
+            <div>
+              {patternVersionList
+                .filter(v => v.status === 'archived')
+                .sort((a, b) => (b.version || 0) - (a.version || 0))
+                .map((ver, idx) => (
+                  <div key={(ver as any).id || idx} style={{ padding: '8px 12px', borderBottom: '1px solid #f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-primary)', flexShrink: 0 }}>V{ver.version || '-'}</span>
+                        <span style={{ fontSize: 11, color: '#8c8c8c', background: '#f5f5f5', padding: '0 6px', borderRadius: 3, border: '1px solid #e8e8e8', flexShrink: 0 }}>封存</span>
+                        <span style={{ fontSize: 12, color: 'var(--neutral-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180 }}>{ver.fileName || '-'}</span>
+                      </div>
+                      <div style={{ marginTop: 2, fontSize: 11, color: 'var(--neutral-text-disabled)' }}>
+                        上传人 {ver.uploader || '-'} · {ver.createTime ? formatDateTime(ver.createTime) : '-'}
+                      </div>
+                    </div>
+                    {ver.fileUrl ? (
+                      <a href={getFullAuthedFileUrl(ver.fileUrl)} target="_blank" rel="noreferrer" title="下载此封存版本" style={{ fontSize: 12, color: '#1677ff', flexShrink: 0, whiteSpace: 'nowrap' }}>↓ 下载</a>
+                    ) : <span style={{ fontSize: 12, color: '#d9d9d9', flexShrink: 0 }}>无文件</span>}
+                  </div>
+                ))}
+            </div>
+          </div>
+        ) : null}
       </div>
     );
   };
@@ -721,7 +757,19 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
         <div style={directCardStyle}>{renderPatternSummary(directRow)}</div>
         <div style={directCardStyle}>
           {renderPatternEditorForm()}
-          <div style={{ ...actionBarStyle, marginTop: 12 }}>
+          <div style={{ ...actionBarStyle, marginTop: 12, gap: 8 }}>
+            <Button size="small" loading={cancelLocking} onClick={async () => {
+              if (!directRow?.id) return;
+              setCancelLocking(true);
+              try {
+                await api.post(`/style/info/${directRow.id}/pattern-revision/lock`);
+                await fetchStyles();
+              } catch (error: unknown) {
+                message.error(getErrorMessage(error, '取消修改失败'));
+              } finally {
+                setCancelLocking(false);
+              }
+            }}>取消修改</Button>
             <Button type="primary" size="small" loading={patternRevisionSaving} onClick={handlePatternRevisionSave}>保存本次修改</Button>
           </div>
         </div>

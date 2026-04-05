@@ -6,6 +6,7 @@ import Layout from '@/components/Layout';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import SmallModal from '@/components/common/SmallModal';
 import StylePrintModal from '@/components/common/StylePrintModal';
+import SampleLabelPrintModal from './components/SampleLabelPrintModal';
 import PageStatCards from '@/components/common/PageStatCards';
 import api from '@/utils/api';
 import { StyleInfo } from '@/types/style';
@@ -66,6 +67,10 @@ const StyleInfoListPage: React.FC = () => {
   const [printModalVisible, setPrintModalVisible] = useState(false);
   const [printingRecord, setPrintingRecord] = useState<StyleInfo | null>(null);
 
+  // 样衣标签打印状态
+  const [sampleLabelModalOpen, setSampleLabelModalOpen] = useState(false);
+  const [sampleLabelRecord, setSampleLabelRecord] = useState<StyleInfo | null>(null);
+
   // 维护功能状态
   const [maintenanceOpen, setMaintenanceOpen] = useState(false);
   const [maintenanceSaving, setMaintenanceSaving] = useState(false);
@@ -79,6 +84,20 @@ const StyleInfoListPage: React.FC = () => {
   const [pendingFocusStyleId, setPendingFocusStyleId] = useState<string | null>(null);
   const [focusedStyleId, setFocusedStyleId] = useState<string | null>(null);
   const focusClearTimerRef = useRef<number | null>(null);
+
+  // ESC 键清除智能筛选（逾期/临近交期标记）
+  useEffect(() => {
+    if (smartFilter === 'all') return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSmartFilter('all');
+        setPendingFocusStyleId(null);
+        setFocusedStyleId(null);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [smartFilter]);
 
   // 初始化加载
   useEffect(() => {
@@ -192,6 +211,12 @@ const StyleInfoListPage: React.FC = () => {
     setPrintModalVisible(true);
   };
 
+  // 样衣标签打印处理
+  const handleLabelPrint = (record: StyleInfo) => {
+    setSampleLabelRecord(record);
+    setSampleLabelModalOpen(true);
+  };
+
   // 维护功能
   const openMaintenance = (record: StyleInfo) => {
     setMaintenanceRecord(record);
@@ -282,6 +307,14 @@ const StyleInfoListPage: React.FC = () => {
     return warningStyles.length;
   }, [warningStyles]);
 
+  const displayData = useMemo(() => {
+    if (smartFilter === 'overdue') return overdueStyles;
+    if (smartFilter === 'warning') return warningStyles;
+    return data;
+  }, [smartFilter, data, overdueStyles, warningStyles]);
+
+  const displayTotal = smartFilter !== 'all' ? displayData.length : total;
+
   const getStyleDomKey = useCallback((record: Partial<StyleInfo> | null | undefined) => {
     return String(record?.id || record?.styleNo || '').trim();
   }, []);
@@ -324,8 +357,9 @@ const StyleInfoListPage: React.FC = () => {
       return;
     }
     setSmartFilter(target);
+    setQueryParams(prev => ({ ...prev, page: 1 }));
     setPendingFocusStyleId(getStyleDomKey(records[0]));
-  }, [getStyleDomKey, smartFilter]);
+  }, [getStyleDomKey, smartFilter, setQueryParams]);
 
   // 分页处理
   const handlePageChange = (page: number, pageSize: number) => {
@@ -423,15 +457,16 @@ const StyleInfoListPage: React.FC = () => {
         {/* 列表/卡片视图 */}
         {viewMode === 'smart' ? (
           <StyleTableView
-            data={data}
+            data={displayData}
             stockStateMap={stockStateMap}
             loading={loading}
-            total={total}
+            total={displayTotal}
             pageSize={queryParams.pageSize}
             currentPage={queryParams.page}
             onPageChange={handlePageChange}
             onScrap={handleScrap}
             onPrint={handlePrintClick}
+            onLabelPrint={handleLabelPrint}
             onMaintenance={openMaintenance}
             categoryOptions={categoryOptions}
             onRefresh={fetchList}
@@ -439,10 +474,10 @@ const StyleInfoListPage: React.FC = () => {
           />
         ) : (
           <StyleCardView
-            data={data}
+            data={displayData}
             stockStateMap={stockStateMap}
             loading={loading}
-            total={total}
+            total={displayTotal}
             pageSize={queryParams.pageSize}
             currentPage={queryParams.page}
             onPageChange={handlePageChange}
@@ -466,6 +501,15 @@ const StyleInfoListPage: React.FC = () => {
         styleName={printingRecord?.styleName}
         cover={printingRecord?.cover}
         color={printingRecord?.color}
+      />
+
+      <SampleLabelPrintModal
+        open={sampleLabelModalOpen}
+        onClose={() => {
+          setSampleLabelModalOpen(false);
+          setSampleLabelRecord(null);
+        }}
+        record={sampleLabelRecord}
       />
 
       {/* 维护原因弹窗 */}

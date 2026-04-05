@@ -8,6 +8,7 @@ import StandardToolbar from '@/components/common/StandardToolbar';
 import PageStatCards from '@/components/common/PageStatCards';
 import api from '@/utils/api';
 import { StyleInfo, StyleQueryParams } from '@/types/style';
+import { getErrorMessage } from '../../TemplateCenter/utils/templateUtils';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { formatDateTime } from '@/utils/datetime';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
@@ -123,6 +124,7 @@ const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo }) 
   const [editingRecord, setEditingRecord] = useState<StyleInfo | null>(null);
   const [editForm] = Form.useForm();
   const [editSaving, setEditSaving] = useState(false);
+  const [cancelLocking, setCancelLocking] = useState(false);
 
   const [returnDescVisible, setReturnDescVisible] = useState(false);
   const [returnDescRecord, setReturnDescRecord] = useState<StyleInfo | null>(null);
@@ -320,7 +322,19 @@ const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo }) 
             <TextArea autoSize={{ minRows: 10, maxRows: 16 }} placeholder={'请输入生产要求和制单描述信息\n示例：\n1. 面料：主面料用32支全棉平纹\n2. 颜色：藏蓝色（潘通色号19-4024）\n3. 缝制要求：1/4″四线包缝'} />
           </Form.Item>
         </Form>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10, gap: 8 }}>
+          <Button size="small" loading={cancelLocking} onClick={async () => {
+            if (!directRow?.id) return;
+            setCancelLocking(true);
+            try {
+              await api.post(`/style/info/${directRow.id}/production-requirements/lock`);
+              await fetchStyles();
+            } catch (error: unknown) {
+              message.error(getErrorMessage(error, '取消修改失败'));
+            } finally {
+              setCancelLocking(false);
+            }
+          }}>取消修改</Button>
           <Button type="primary" size="small" loading={editSaving} onClick={handleEditSave}>保存</Button>
         </div>
       </div>
