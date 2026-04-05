@@ -496,9 +496,11 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                             + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='动作中心任务回执表'");
 
             // t_style_attachment.style_no — 云端手动添加时设为NOT NULL无DEFAULT，确保为可空
-            // Flyway V202607202303 MODIFY已有列；此处保障全新环境添加时为DEFAULT NULL
+            // Flyway V202608011500 handles both EXISTS->MODIFY and NOT EXISTS->ADD cases
             repaired += ensureColumn(conn, schema, "t_style_attachment", "style_no",
                     "VARCHAR(64) DEFAULT NULL");
+            // Also handle case where column already EXISTS but is NOT NULL (ensureColumn only ADDs)
+            repaired += ensureColumnIsNullable(conn, schema, "t_style_attachment", "style_no", "VARCHAR(64)");
 
             // t_secondary_process 二次工艺图片/附件字段（V20260501002 可能未执行）
             repaired += ensureColumn(conn, schema, "t_secondary_process", "images",
@@ -589,6 +591,38 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             }
         } catch (Exception e) {
             log.error("[DbRepair] 创建表 {} 失败: {}", table, e.getMessage());
+        }
+        return 0;
+    }
+
+    /**
+     * If column exists as NOT NULL (IS_NULLABLE='NO'), MODIFY it to typeDefinition DEFAULT NULL.
+     * Complements ensureColumn which only handles the ADD case (column not existing).
+     */
+    private int ensureColumnIsNullable(Connection conn, String schema, String table, String column, String typeDefinition) {
+        try {
+            String checkSql = "SELECT IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS " +
+                    "WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ? LIMIT 1";
+            String isNullable;
+            try (PreparedStatement ps = conn.prepareStatement(checkSql)) {
+                ps.setString(1, schema);
+                ps.setString(2, table);
+                ps.setString(3, column);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (!rs.next()) return 0; // column doesn't exist — handled by ensureColumn
+                    isNullable = rs.getString(1);
+                }
+            }
+            if ("NO".equalsIgnoreCase(isNullable)) {
+                String sql = "ALTER TABLE `" + table + "` MODIFY COLUMN `" + column + "` " + typeDefinition + " DEFAULT NULL";
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.executeUpdate();
+                }
+                log.warn("[DbRepair] 已修正列为可空: {}.{}", table, column);
+                return 1;
+            }
+        } catch (Exception e) {
+            log.error("[DbRepair] 检查/修复列可空性 {}.{} 失败: {}", table, column, e.getMessage());
         }
         return 0;
     }
