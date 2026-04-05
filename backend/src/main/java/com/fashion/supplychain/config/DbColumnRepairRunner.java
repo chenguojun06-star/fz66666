@@ -151,6 +151,8 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                     "VARCHAR(50) DEFAULT NULL COMMENT '基准码/样衣码' ");
             repaired += ensureColumn(conn, schema, "t_style_size", "grading_rule",
                     "TEXT DEFAULT NULL COMMENT '跳码规则JSON' ");
+            repaired += ensureColumnType(conn, schema, "t_style_size", "tolerance",
+                    "varchar", "MODIFY COLUMN `tolerance` VARCHAR(50) DEFAULT NULL");
                 repaired += ensureColumn(conn, schema, "t_cutting_task", "factory_type",
                     "VARCHAR(20) DEFAULT NULL COMMENT '工厂类型：internal=内部工厂 external=外发工厂'");
                 repaired += ensureColumn(conn, schema, "t_product_warehousing", "repair_status",
