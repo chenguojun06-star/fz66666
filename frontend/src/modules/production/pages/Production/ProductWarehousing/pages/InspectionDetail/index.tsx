@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, Spin, Button, Tabs, Alert, Descriptions, Table, Tag, Image, Typography, Select, Space, Statistic, Row, Col, Form, InputNumber, Input, Popconfirm } from 'antd';
+import { Card, Spin, Button, Tabs, Alert, Descriptions, Tag, Image, Typography, Select, Space, Statistic, Row, Col, Form, InputNumber, Input, Popconfirm } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import {
   ArrowLeftOutlined, CheckCircleOutlined,
@@ -357,28 +357,28 @@ const InspectionDetail: React.FC = () => {
             { quantity: 0, warehousedQuantity: 0, unqualifiedQuantity: 0, unwarehousedQuantity: 0 },
           );
           return (
-            <Table.Summary>
-              <Table.Summary.Row>
-                <Table.Summary.Cell index={0}><strong>合计</strong></Table.Summary.Cell>
-                <Table.Summary.Cell index={1} />
-                <Table.Summary.Cell index={2} />
-                <Table.Summary.Cell index={3} />
-                <Table.Summary.Cell index={4} align="right"><strong>{totals.quantity}</strong></Table.Summary.Cell>
-                <Table.Summary.Cell index={5} align="right">
+            <ResizableTable.Summary>
+              <ResizableTable.Summary.Row>
+                <ResizableTable.Summary.Cell index={0}><strong>合计</strong></ResizableTable.Summary.Cell>
+                <ResizableTable.Summary.Cell index={1} />
+                <ResizableTable.Summary.Cell index={2} />
+                <ResizableTable.Summary.Cell index={3} />
+                <ResizableTable.Summary.Cell index={4} align="right"><strong>{totals.quantity}</strong></ResizableTable.Summary.Cell>
+                <ResizableTable.Summary.Cell index={5} align="right">
                   <strong style={{ color: 'var(--color-success)' }}>{totals.warehousedQuantity}</strong>
-                </Table.Summary.Cell>
-                <Table.Summary.Cell index={6} align="right">
+                </ResizableTable.Summary.Cell>
+                <ResizableTable.Summary.Cell index={6} align="right">
                   <strong style={{ color: totals.unqualifiedQuantity > 0 ? 'var(--color-danger)' : undefined }}>
                     {totals.unqualifiedQuantity}
                   </strong>
-                </Table.Summary.Cell>
-                <Table.Summary.Cell index={7} align="right">
+                </ResizableTable.Summary.Cell>
+                <ResizableTable.Summary.Cell index={7} align="right">
                   <strong style={{ color: totals.unwarehousedQuantity > 0 ? 'var(--color-warning)' : 'var(--color-success)' }}>
                     {totals.unwarehousedQuantity}
                   </strong>
-                </Table.Summary.Cell>
-              </Table.Summary.Row>
-            </Table.Summary>
+                </ResizableTable.Summary.Cell>
+              </ResizableTable.Summary.Row>
+            </ResizableTable.Summary>
           );
         }}
       />

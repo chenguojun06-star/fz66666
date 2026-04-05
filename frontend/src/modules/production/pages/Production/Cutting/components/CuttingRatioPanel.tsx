@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Button, Form, InputNumber, Space, Table, Tag, Typography } from 'antd';
+import { Button, Form, InputNumber, Space, Tag, Typography } from 'antd';
+import ResizableTable from '@/components/common/ResizableTable';
 import type { ColumnsType } from 'antd/es/table';
 
 const { Text } = Typography;
@@ -233,7 +234,7 @@ const CuttingRatioPanel: React.FC<CuttingRatioPanelProps> = ({
         />
       </Space>
 
-      <Table<BundleRow>
+      <ResizableTable<BundleRow>
         dataSource={tableRows}
         columns={columns}
         pagination={false}

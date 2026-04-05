@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { Form, Input, Select, Row, Col, Image, Tag, Table, Alert } from 'antd';
+import { Form, Input, Select, Row, Col, Image, Tag, Alert } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
+import ResizableTable from '@/components/common/ResizableTable';
 import type { InputRef } from 'antd';
 import { SampleTypeMap } from './types';
 import api from '@/utils/api';
@@ -460,7 +461,7 @@ const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSucces
           {prefillLoading ? (
             <Alert type="info" showIcon title="正在从样衣开发与码数配置中匹配颜色、尺码、数量…" />
           ) : styleSnapshot?.planRows?.length ? (
-            <Table<InboundPlanRow>
+            <ResizableTable<InboundPlanRow>
               rowKey="key"
               size="small"
               pagination={false}

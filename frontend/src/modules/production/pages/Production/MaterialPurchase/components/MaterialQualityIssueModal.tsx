@@ -279,7 +279,7 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
         onOk={() => void handleResolve()}
         okText="确认处理"
         cancelText="取消"
-        width={560}
+        width="40vw"
         confirmLoading={resolveSubmitting}
         destroyOnHidden
       >

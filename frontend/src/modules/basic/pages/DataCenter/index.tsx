@@ -156,16 +156,12 @@ export const buildProductionSheetHtml = (payload: any) => {
 
   const productionReqLines = (() => {
     const raw = String(style.description ?? '');
-    const lines = raw
-      .split(/\r?\n/)
-      .map((l) => String(l || '').replace(/^\s*\d+\s*[.、)）-]?\s*/, '').trim())
-      .filter((l) => Boolean(l));
-    const fixed = Array.from({ length: 15 }).map((_, i) => lines[i] || '');
-    return fixed;
+    const lines = raw.split(/\r?\n/).filter((l) => Boolean(l.trim()));
+    return lines;
   })();
 
   const productionReqRows = productionReqLines
-    .map((txt: string, idx: number) => `<tr><td class="no">${idx + 1}</td><td class="req">${esc(txt || '')}</td></tr>`)
+    .map((txt: string) => `<tr><td class="req">${esc(txt)}</td></tr>`)
     .join('');
 
   const categoryText = toCategoryCn(style.category);
@@ -246,7 +242,6 @@ export const buildProductionSheetHtml = (payload: any) => {
     <div class="section">
       <div class="section-title">生产要求</div>
       <table>
-        <thead><tr><th class="no">序号</th><th>内容</th></tr></thead>
         <tbody>
           ${productionReqRows}
         </tbody>
@@ -788,12 +783,12 @@ const DataCenter: React.FC = () => {
         <Form form={editForm} layout="vertical">
           <Form.Item
             name="description"
-            label="生产要求（每行一条，最多15条）"
+            label="生产要求"
             rules={[{ required: false }]}
           >
             <Input.TextArea
-              rows={15}
-              placeholder="请输入生产要求，每行一条&#10;例如：&#10;1. 裁剪前需松布和缩水，确认布号、正反面及染布，裁剪按照合同订单数量明细裁剪；&#10;2. 针织面料需松布24小时可裁剪，拉布经纬纱向要求经直纬平，注意避开布匹瑕疵和色差；"
+              autoSize={{ minRows: 3 }}
+              placeholder="请输入生产要求，每行填写一条内容"
             />
           </Form.Item>
         </Form>

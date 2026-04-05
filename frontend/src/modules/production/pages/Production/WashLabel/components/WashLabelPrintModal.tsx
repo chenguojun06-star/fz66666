@@ -9,10 +9,11 @@
  *  · QR内容：款号-颜色-码数-序号（本地生成，不走外部API）
  */
 import React, { useState, useEffect, useCallback } from 'react';
-import { Table, InputNumber, Button, Alert, Checkbox, Tag, Typography, Spin } from 'antd';
+import { InputNumber, Button, Alert, Checkbox, Tag, Typography, Spin } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
 import QRCode from 'qrcode';
 import ResizableModal from '../../../../../../components/common/ResizableModal';
+import ResizableTable from '@/components/common/ResizableTable';
 import { parseProductionOrderLines } from '@/utils/api';
 import type { ProductionOrder } from '../../../../../../types/production';
 import { productionCuttingApi } from '../../../../../../services/production/productionApi';
@@ -370,7 +371,7 @@ export default function WashLabelPrintModal({ open, onCancel, order }: Props) {
             type="info" showIcon style={{ marginBottom: 10 }}
           />
         )}
-        <Table
+        <ResizableTable
           dataSource={rows}
           columns={columns}
           pagination={false}

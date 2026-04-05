@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { App, Button, Upload, Tag, Space, Modal, Table } from 'antd';
+import { App, Button, Upload, Tag, Space, Modal } from 'antd';
+import ResizableTable from '@/components/common/ResizableTable';
 import {
   FileOutlined,
   FileImageOutlined,
@@ -396,7 +397,7 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, styleNo, bizType, upload
         </span>
       </div>
 
-      <Table
+      <ResizableTable
         columns={columns as any}
         dataSource={data}
         rowKey="id"

@@ -97,7 +97,7 @@ export function useBomColumns({
     const unit = normalizeUnitText(value);
     return unit === 'kg' || unit === '公斤' || unit === '千克' || unit === 'kilogram' || unit === 'kilograms';
   };
-  const isZipperRow = (record: StyleBom) => /拉链/.test(String(record.materialName || ''));
+  const _isZipperRow = (record: StyleBom) => /拉链/.test(String(record.materialName || ''));
   const computeAverageMeterUsage = (record: StyleBom) => {
     const row = form.getFieldValue(String(record.id)) || {};
     const rowUsageMap = row.sizeUsageMapObject || parseSizeUsageMap(row.sizeUsageMap || record.patternSizeUsageMap || record.sizeUsageMap);
@@ -412,31 +412,22 @@ export function useBomColumns({
       render: (text: string, record: StyleBom) => {
         const row = form.getFieldValue(String(record.id)) || {};
         const rowUsageMap = row.sizeUsageMapObject || parseSizeUsageMap(row.sizeUsageMap || text);
-        const rowSpecMap = row.sizeSpecMapObject || parseSizeUsageMap(record.sizeSpecMap);
-        const zipperRow = isZipperRow(record);
-        if (!activeSizes.length) {
+        // 纸样开发已填各码用量时，sizeUsageMap 包含所有码（含额外尺码）
+        // 将 sizeUsageMap 中超出 activeSizes 的码也一并展示
+        const mapKeys = Object.keys(rowUsageMap);
+        const extraKeys = mapKeys.filter(k => !activeSizes.includes(k));
+        const displaySizes = mapKeys.length > 0 ? [...activeSizes, ...extraKeys] : activeSizes;
+        if (!displaySizes.length) {
           return '-';
         }
         return (
-          <div style={{ display: 'grid', gap: zipperRow ? 8 : 0 }}>
-            <Space size={[4, 4]} wrap>
-              {activeSizes.map((sizeKey) => (
-                <Tag key={sizeKey} style={{ marginInlineEnd: 0 }}>
-                  {sizeKey}:{Number(rowUsageMap?.[sizeKey] ?? record.usageAmount ?? 0)}
-                </Tag>
-              ))}
-            </Space>
-            {zipperRow ? (
-              <div style={{ fontSize: 12, color: '#8c8c8c', lineHeight: 1.8 }}>
-                拉链规格：
-                {activeSizes.map((sizeKey) => (
-                  <span key={`spec-view-${sizeKey}`} style={{ marginLeft: 8 }}>
-                    {sizeKey} {Number(rowSpecMap?.[sizeKey] ?? 0)}cm
-                  </span>
-                ))}
-              </div>
-            ) : null}
-          </div>
+          <Space size={[4, 4]} wrap>
+            {displaySizes.map((sizeKey) => (
+              <Tag key={sizeKey} style={{ marginInlineEnd: 0 }}>
+                {sizeKey}:{Number(rowUsageMap?.[sizeKey] ?? record.usageAmount ?? 0)}
+              </Tag>
+            ))}
+          </Space>
         );
       }
     },

@@ -17,7 +17,6 @@ import type { MaterialType } from './hooks/useBomColumns';
 import StyleBomMaterialModal from './styleBom/StyleBomMaterialModal';
 import StyleBomSizeColorSummary from './styleBom/StyleBomSizeColorSummary';
 import StyleBomToolbar from './styleBom/StyleBomToolbar';
-import StyleBomAddRowsDropdown from './styleBom/StyleBomAddRowsDropdown';
 
 interface Props {
   styleId: string | number;
@@ -562,15 +561,6 @@ const StyleBomTab: React.FC<Props> = ({
             scroll={{ x: 'max-content' }}
             storageKey={`style-bom-v2-${String(styleId)}`}
             minColumnWidth={70}
-            footer={() => (
-              <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0' }}>
-                <StyleBomAddRowsDropdown
-                  onAddRows={handleAddRows}
-                  disabled={locked || Boolean(editingKey) || loading || templateLoading}
-                  type="dashed"
-                />
-              </div>
-            )}
           />
         )}
       </Form>

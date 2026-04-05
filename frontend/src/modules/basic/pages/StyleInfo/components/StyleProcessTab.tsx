@@ -141,41 +141,67 @@ const StyleProcessTab: React.FC<Props> = ({
     }, 600);
   }, []);
 
-  /** AI 工序补全：按品类拉取高频工序并追加到表格 */
+  /** AI 工序补全：按品类拉取高频工序，弹确认框后再追加到表格 */
   const handleAiTemplate = useCallback(async () => {
     setAiLoading(true);
     try {
       const res = await intelligenceApi.getProcessTemplate(aiCategory) as any;
       if (res?.code === 200 && Array.isArray(res.data?.processes) && res.data.processes.length > 0) {
         const incoming: ProcessTemplateItem[] = res.data.processes;
-        let addedCount = 0;
-        setData(prev => {
-          const existingNames = new Set(prev.map(r => String(r.processName || '').trim()));
-          const base = prev.length;
-          const toAdd: StyleProcessWithSizePrice[] = incoming
-            .filter(p => !existingNames.has(String(p.processName || '').trim()))
-            .map((p, idx) => ({
-              id: -(Date.now() + idx) as unknown as number,
-              styleId: Number(styleId),
-              processCode: '',
-              processName: p.processName,
-              progressStage: p.progressStage ?? '',
-              price: p.suggestedPrice,
-              standardTime: p.avgStandardTime,
-              sortOrder: (base + idx + 1) * 10,
-            } as any));
-          addedCount = toAdd.length;
-          return [...prev, ...toAdd];
-        });
-        // 次帧提示（等 setData 完成）
-        setTimeout(() => {
-          if (addedCount > 0) {
-            message.success(`AI已补全 ${addedCount} 道工序（${res.data.category || aiCategory || '历史数据'} · ${res.data.sampleStyleCount ?? '?'} 个样本）`);
-          } else {
-            message.info('所有工序已存在，无需重复补全');
-          }
-        }, 0);
+
+        // 预计算待添加工序（用于确认框展示；setData 内部会再次过滤以防并发）
+        const existingNames = new Set(data.map(r => String(r.processName || '').trim()));
+        const preview = incoming.filter(p => !existingNames.has(String(p.processName || '').trim()));
+
         setAiOpen(false);
+
+        if (preview.length === 0) {
+          message.info('所有工序已存在，无需重复补全');
+          return;
+        }
+
+        // 弹确认框，让用户明确确认后再写入 data，防止误操作批量添加
+        modal.confirm({
+          title: `AI建议补全 ${preview.length} 道工序`,
+          content: (
+            <div>
+              <p style={{ marginBottom: 8 }}>以下工序将被添加，请确认：</p>
+              {preview.map((p, i) => (
+                <div key={i} style={{ color: '#555', lineHeight: '24px' }}>
+                  • {p.progressStage || '车缝'} - {p.processName}（建议单价 ¥{p.suggestedPrice ?? 0}）
+                </div>
+              ))}
+            </div>
+          ),
+          okText: '确认添加',
+          cancelText: '取消',
+          onOk: async () => {
+            // 若未进入编辑模式则自动进入
+            if (!editMode) await enterEdit();
+            let addedCount = 0;
+            setData(prev => {
+              const existingNamesNow = new Set(prev.map(r => String(r.processName || '').trim()));
+              const base = prev.length;
+              const toAdd: StyleProcessWithSizePrice[] = incoming
+                .filter(p => !existingNamesNow.has(String(p.processName || '').trim()))
+                .map((p, idx) => ({
+                  id: -(Date.now() + idx) as unknown as number,
+                  styleId: Number(styleId),
+                  processCode: '',
+                  processName: p.processName,
+                  progressStage: p.progressStage ?? '',
+                  price: p.suggestedPrice,
+                  standardTime: p.avgStandardTime,
+                  sortOrder: (base + idx + 1) * 10,
+                } as any));
+              addedCount = toAdd.length;
+              return [...prev, ...toAdd];
+            });
+            setTimeout(() => {
+              message.success(`已添加 ${addedCount} 道AI建议工序（${res.data.category || aiCategory || '历史数据'} · ${res.data.sampleStyleCount ?? '?'} 个样本）`);
+            }, 0);
+          },
+        });
       } else {
         message.warning('暂无该品类的工序历史数据');
       }
@@ -184,7 +210,7 @@ const StyleProcessTab: React.FC<Props> = ({
     } finally {
       setAiLoading(false);
     }
-  }, [aiCategory, styleId, message]);
+  }, [aiCategory, styleId, message, data, editMode]);
 
   const fetchProcessTemplates = async (sourceStyleNo?: string) => {
     const sn = String(sourceStyleNo ?? '').trim();
@@ -850,7 +876,7 @@ const StyleProcessTab: React.FC<Props> = ({
       ...(showSizePrices ? sizes.map((size) => ({
         title: (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-            <span>{size}码</span>
+            <span>{size}</span>
             {editableMode && (
               <DeleteOutlined
                 style={{ color: 'var(--color-danger)', cursor: 'pointer', fontSize: "var(--font-size-xs)" }}

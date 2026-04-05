@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { App, Avatar, Badge, Button, Collapse, Form, Input, Modal, Popconfirm, Space, Table, Tabs, Tag, Typography } from 'antd';
+import { App, Avatar, Badge, Button, Collapse, Form, Input, Popconfirm, Space, Tabs, Tag, Typography } from 'antd';
+import ResizableTable from '@/components/common/ResizableTable';
+import ResizableModal from '@/components/common/ResizableModal';
 import { LockOutlined, PlusOutlined, QuestionCircleOutlined, UserOutlined } from '@ant-design/icons';
 
 const { Text } = Typography;
@@ -212,7 +214,7 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
 
   return (
     <>
-      <Modal title="个人中心" open={open} onCancel={onClose} footer={null} width={580}>
+      <ResizableModal title="个人中心" open={open} onCancel={onClose} footer={null} width="40vw">
         <Tabs
           defaultActiveKey="info"
           items={[
@@ -320,7 +322,7 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
                       新增成员
                     </Button>
                   </div>
-                  <Table
+                  <ResizableTable
                     size="small"
                     dataSource={members}
                     columns={columns}
@@ -334,9 +336,9 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
             },
           ]}
         />
-      </Modal>
+      </ResizableModal>
 
-      <Modal
+      <ResizableModal
         title="新增成员"
         open={addModalOpen}
         onCancel={() => { setAddModalOpen(false); addForm.resetFields(); }}
@@ -344,7 +346,7 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
         okText="确认新增"
         cancelText="取消"
         confirmLoading={addLoading}
-        width={400}
+        width="30vw"
         destroyOnHidden
       >
         <Form form={addForm} layout="vertical" style={{ marginTop: 16 }}>
@@ -361,7 +363,7 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
             <Input.Password placeholder="请输入初始密码" autoComplete="new-password" />
           </Form.Item>
         </Form>
-      </Modal>
+      </ResizableModal>
     </>
   );
 };

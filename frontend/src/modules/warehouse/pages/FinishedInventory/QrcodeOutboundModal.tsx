@@ -1,7 +1,8 @@
 import React, { useRef, useState } from 'react';
-import { App, Button, InputNumber, Space, Table, Typography } from 'antd';
+import { App, Button, InputNumber, Space, Typography } from 'antd';
 import { DeleteOutlined, PlusOutlined, ScanOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
+import ResizableTable from '@/components/common/ResizableTable';
 import api from '@/utils/api';
 
 interface QrcodeItem {
@@ -260,7 +261,7 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
         二维码格式：款号-颜色-尺码-序号。扫码后会自动显示 SKU、颜色、码数、当前库存，再填写本次要出库的数量。
       </Typography.Text>
 
-      <Table
+      <ResizableTable
         size="small"
         dataSource={items}
         columns={columns}

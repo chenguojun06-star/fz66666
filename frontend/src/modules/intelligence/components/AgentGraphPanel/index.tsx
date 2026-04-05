@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { Button, Select, Input, Tag, Progress, Spin, Alert, Divider, Rate, Segmented, Table, Tooltip } from 'antd';
+import { Button, Select, Input, Tag, Progress, Spin, Alert, Divider, Rate, Segmented, Tooltip } from 'antd';
+import ResizableTable from '@/components/common/ResizableTable';
 import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
 import { ThunderboltOutlined, BranchesOutlined, HistoryOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import { useAgentGraphStore, type NodeEvent } from '@/stores/useAgentGraphStore';
@@ -143,7 +144,7 @@ const HistoryTable: React.FC = () => {
     },
   ];
   return (
-    <Table
+    <ResizableTable
       dataSource={history}
       columns={columns}
       loading={historyLoading}

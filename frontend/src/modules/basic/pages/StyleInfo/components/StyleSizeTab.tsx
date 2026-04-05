@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Dropdown, Input, InputNumber, Space, Select, Modal, Upload, Image, Popover, Table } from 'antd';
+import { App, Button, Dropdown, Input, InputNumber, Space, Select, Modal, Table, Upload, Image, Popover } from 'antd';
 import { DeleteOutlined, DownOutlined, PlusOutlined } from '@ant-design/icons';
 import { StyleSize, TemplateLibrary } from '@/types/style';
 import api, { sortSizeNames, toNumberSafe } from '@/utils/api';

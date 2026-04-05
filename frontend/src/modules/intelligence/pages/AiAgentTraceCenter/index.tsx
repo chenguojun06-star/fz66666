@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Card, DatePicker, Descriptions, Drawer, Empty, Input, Select, Space, Table, Tag, Timeline, Typography } from 'antd';
+import { Alert, Button, Card, DatePicker, Descriptions, Drawer, Empty, Input, Select, Space, Tag, Timeline, Typography } from 'antd';
+import ResizableTable from '@/components/common/ResizableTable';
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -239,7 +240,7 @@ const AiAgentTraceCenter: React.FC = () => {
             : '这里展示的是小云 AI 请求主记录。点击“查看详情”后，可看到本次请求的工具调用链、状态、错误信息与耗时。'}
         />
 
-        <Table<TraceRow>
+        <ResizableTable<TraceRow>
           rowKey={(record) => record.id || record.commandId || Math.random().toString(36)}
           loading={loading}
           dataSource={filteredRows}

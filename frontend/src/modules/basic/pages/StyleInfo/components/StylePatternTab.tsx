@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { App, Button, Card, InputNumber, Space, Spin, Typography, Collapse } from 'antd';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { App, Button, Card, InputNumber, Modal, Select, Space, Spin, Typography, Collapse } from 'antd';
+import { DeleteOutlined } from '@ant-design/icons';
 import api from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
 
@@ -9,11 +10,9 @@ import StyleStageControlBar from './StyleStageControlBar';
 import StyleSizeTab from './StyleSizeTab';
 
 const { Text } = Typography;
-type PatternRowMode = 'usage' | 'spec';
 type PatternMaterialRow = {
   id: string;
   bomId: string | number;
-  mode: PatternRowMode;
   bom: StyleBom;
 };
 
@@ -98,11 +97,11 @@ const StylePatternTab: React.FC<Props> = ({
   const [bomLoading, setBomLoading] = useState(false);
   /** { [bomId]: { [size]: value } } */
   const [usageEdits, setUsageEdits] = useState<Record<string | number, Record<string, number | null>>>({});
-  /** { [bomId]: { [size]: specCm } } */
-  const [specEdits, setSpecEdits] = useState<Record<string | number, Record<string, number | null>>>({});
   /** { [bomId]: lossRate } */
   const [lossEdits, setLossEdits] = useState<Record<string | number, number | null>>({});
   const [savingUsage, setSavingUsage] = useState(false);
+  const [extraSizes, setExtraSizes] = useState<string[]>([]);
+  const [sizeOptions, setSizeOptions] = useState<Array<{ value: string; label: string }>>([]);
 
   // 检查纸样是否齐全
   const checkPatternComplete = useCallback(async () => {
@@ -133,7 +132,6 @@ const StylePatternTab: React.FC<Props> = ({
       setBomList(patternBoms);
       // 从已保存的 sizeUsageMap 和 lossRate 初始化编辑状态
       const initEdits: Record<string | number, Record<string, number | null>> = {};
-      const initSpecEdits: Record<string | number, Record<string, number | null>> = {};
       const initLoss: Record<string | number, number | null> = {};
       for (const b of patternBoms) {
         if (!b.id) continue;
@@ -142,17 +140,10 @@ const StylePatternTab: React.FC<Props> = ({
         for (const [k, v] of Object.entries(sourceMap)) {
           parsed[k] = typeof v === 'number' ? v : null;
         }
-        const parsedSpec: Record<string, number | null> = {};
-        const sourceSpecMap = parseNumberMap(b.sizeSpecMap);
-        for (const [k, v] of Object.entries(sourceSpecMap)) {
-          parsedSpec[k] = typeof v === 'number' ? v : null;
-        }
         initEdits[b.id] = parsed;
-        initSpecEdits[b.id] = parsedSpec;
         initLoss[b.id] = b.lossRate != null ? Number(b.lossRate) : 0;
       }
       setUsageEdits(initEdits);
-      setSpecEdits(initSpecEdits);
       setLossEdits(initLoss);
     } catch {
       // ignore – BOM list optional for pattern tab
@@ -184,14 +175,30 @@ const StylePatternTab: React.FC<Props> = ({
     }
     return [];
   }, [sizeColorConfig]);
+
+  const allSizes = useMemo<string[]>(
+    () => [...activeSizes, ...extraSizes.filter(s => !activeSizes.includes(s))],
+    [activeSizes, extraSizes],
+  );
+
+  // 从已保存的 patternSizeUsageMap 中恢复 extraSizes，确保页面刷新后用户手动添加的尺码持久化
+  // 用 styleId 作为 key，每次切换款式或首次加载只恢复一次，避免覆盖用户正在编辑的状态
+  const extraSizesRestoredForRef = useRef<number | string | null>(null);
+  useEffect(() => {
+    if (!styleId || bomList.length === 0) return;
+    if (extraSizesRestoredForRef.current === styleId) return;
+    const savedKeys = new Set<string>();
+    for (const b of bomList) {
+      const m = parseNumberMap(b.patternSizeUsageMap || b.sizeUsageMap);
+      Object.keys(m).forEach(k => savedKeys.add(k));
+    }
+    const restored = [...savedKeys].filter(s => !activeSizes.includes(s));
+    setExtraSizes(restored);
+    extraSizesRestoredForRef.current = styleId;
+  }, [bomList, activeSizes, styleId]);
+
   const handleUsageChange = useCallback((bomId: string | number, size: string, val: number | null) => {
     setUsageEdits((prev) => ({
-      ...prev,
-      [bomId]: { ...(prev[bomId] ?? {}), [size]: val },
-    }));
-  }, []);
-  const handleSpecChange = useCallback((bomId: string | number, size: string, val: number | null) => {
-    setSpecEdits((prev) => ({
       ...prev,
       [bomId]: { ...(prev[bomId] ?? {}), [size]: val },
     }));
@@ -201,14 +208,38 @@ const StylePatternTab: React.FC<Props> = ({
     setLossEdits((prev) => ({ ...prev, [bomId]: val }));
   }, []);
 
-  const patternRows = useMemo<PatternMaterialRow[]>(() => bomList.flatMap((bom) => {
-    const baseRow: PatternMaterialRow = { id: `${bom.id}-usage`, bomId: String(bom.id || ''), mode: 'usage', bom };
-    if (!isZipperMaterial(bom)) return [baseRow];
-    return [
-      baseRow,
-      { id: `${bom.id}-spec`, bomId: String(bom.id || ''), mode: 'spec', bom },
-    ];
-  }), [bomList]);
+  const handleAddSizes = useCallback((values: string[]) => {
+    if (!values.length) return;
+    setExtraSizes(prev => [...prev, ...values.filter(v => !prev.includes(v) && !activeSizes.includes(v))]);
+  }, [activeSizes]);
+
+  const fetchSizeDictOptions = useCallback(async () => {
+    try {
+      const res = await api.get<{ code: number; data: { records: any[] } | any[] }>('/system/dict/list', {
+        params: { dictType: 'size', page: 1, pageSize: 200 },
+      });
+      const result = res as Record<string, unknown>;
+      if (result.code === 200) {
+        const data = result.data as { records?: any[] } | any[];
+        const records = Array.isArray(data) ? data : ((data as { records?: any[] })?.records || []);
+        const options = (Array.isArray(records) ? records : [])
+          .filter((item: any) => item.dictLabel)
+          .map((item: any) => ({ value: item.dictLabel, label: item.dictLabel }));
+        setSizeOptions(options);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSizeDictOptions();
+  }, [fetchSizeDictOptions]);
+
+  const patternRows = useMemo<PatternMaterialRow[]>(
+    () => bomList.map((bom) => ({ id: `${bom.id}-usage`, bomId: String(bom.id || ''), bom })),
+    [bomList],
+  );
 
   const handleSaveUsage = useCallback(async () => {
     if (bomList.length === 0) return;
@@ -225,18 +256,10 @@ const StylePatternTab: React.FC<Props> = ({
             mapObj[size] = val;
           }
         }
-        const specMapObj: Record<string, number> = {};
-        for (const [size, val] of Object.entries(specEdits[bom.id] ?? {})) {
-          if (val !== null && val !== undefined && val > 0) {
-            specMapObj[size] = val;
-          }
-        }
         const rawMapJson = Object.keys(mapObj).length > 0 ? JSON.stringify(mapObj) : '';
         const newMapJson = rawMapJson;
-        const newSpecJson = Object.keys(specMapObj).length > 0 ? JSON.stringify(specMapObj) : '';
         const currentMap = bom.sizeUsageMap ?? '';
         const currentRawMap = bom.patternSizeUsageMap ?? '';
-        const currentSpecMap = bom.sizeSpecMap ?? '';
         const newLoss = lossEdits[bom.id] ?? Number(bom.lossRate ?? 0);
         const lossChanged = Number(newLoss) !== Number(bom.lossRate ?? 0);
         const sizeVals = Object.values(mapObj).filter(v => v > 0);
@@ -244,13 +267,12 @@ const StylePatternTab: React.FC<Props> = ({
           ? Math.round((sizeVals.reduce((a, b) => a + b, 0) / sizeVals.length) * 100) / 100
           : null;
         const usageChanged = avgUsage !== null && Number(avgUsage) !== Number(bom.usageAmount ?? 0);
-        if (newMapJson !== currentMap || rawMapJson !== currentRawMap || newSpecJson !== currentSpecMap || lossChanged || usageChanged) {
+        if (newMapJson !== currentMap || rawMapJson !== currentRawMap || lossChanged || usageChanged) {
           promises.push(
             api.put('/style/bom', {
               ...bom,
               sizeUsageMap: newMapJson || null,
               patternSizeUsageMap: rawMapJson || null,
-              sizeSpecMap: newSpecJson || null,
               patternUnit: resolvePatternUnit(bom) || null,
               conversionRate,
               lossRate: newLoss,
@@ -272,7 +294,7 @@ const StylePatternTab: React.FC<Props> = ({
     } finally {
       setSavingUsage(false);
     }
-  }, [bomList, usageEdits, specEdits, lossEdits, message, fetchBomList]);
+  }, [bomList, usageEdits, lossEdits, message, fetchBomList]);
 
   // 各码用量配比表格列
   const usageColumns = useMemo(() => {
@@ -284,7 +306,7 @@ const StylePatternTab: React.FC<Props> = ({
         ellipsis: true,
         render: (_: unknown, record: PatternMaterialRow) => (
           <div>
-            <div>{record.bom.materialName}{record.mode === 'spec' ? '（规格）' : isZipperMaterial(record.bom) ? '（数量）' : ''}</div>
+            <div>{record.bom.materialName}</div>
             {record.bom.color && <Text type="secondary" style={{ fontSize: 12 }}>{record.bom.color}</Text>}
           </div>
         ),
@@ -293,18 +315,13 @@ const StylePatternTab: React.FC<Props> = ({
         title: '单位',
         key: 'unit',
         width: 72,
-        render: (_: unknown, record: PatternMaterialRow) => record.mode === 'spec' ? 'cm' : (resolvePatternUnit(record.bom) || '-'),
+        render: (_: unknown, record: PatternMaterialRow) => resolvePatternUnit(record.bom) || '-',
       },
       {
         title: '规格/幅宽',
         key: 'specification',
         width: 120,
-        render: (_: unknown, record: PatternMaterialRow) => {
-          if (record.mode === 'spec') {
-            return '拉链长度';
-          }
-          return record.bom.specification || record.bom.fabricWeight || '—';
-        },
+        render: (_: unknown, record: PatternMaterialRow) => record.bom.specification || record.bom.fabricWeight || '—',
       },
       {
         title: (
@@ -317,16 +334,12 @@ const StylePatternTab: React.FC<Props> = ({
         key: 'avgUsage',
         width: 90,
         render: (_: unknown, record: PatternMaterialRow) => {
-          const edits = record.mode === 'spec'
-            ? (specEdits[record.bomId] ?? {})
-            : (usageEdits[record.bomId] ?? {});
+          const edits = usageEdits[record.bomId] ?? {};
           const vals = Object.values(edits).filter((v): v is number => v !== null && v !== undefined && (v as number) > 0);
           if (vals.length === 0) {
-            if (record.mode === 'spec') return '—';
             return record.bom.usageAmount != null ? <Text type="secondary">{record.bom.usageAmount}</Text> : '—';
           }
           const avg = Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 100) / 100;
-          if (record.mode === 'spec') return <Text strong>{avg}cm</Text>;
           return <Text strong>{avg}</Text>;
         },
       },
@@ -335,9 +348,6 @@ const StylePatternTab: React.FC<Props> = ({
         key: 'lossRate',
         width: 100,
         render: (_: unknown, record: PatternMaterialRow) => {
-          if (record.mode === 'spec') {
-            return <Text type="secondary">{Number(record.bom.lossRate ?? 0)}%</Text>;
-          }
           const val = lossEdits[record.bomId] ?? Number(record.bom.lossRate ?? 0);
           return (
             <InputNumber
@@ -356,28 +366,54 @@ const StylePatternTab: React.FC<Props> = ({
       },
     ];
     // 为每个有效码数添加一列输入
-    for (const size of activeSizes) {
+    for (const size of allSizes) {
       cols.push({
         title: (
-          <span style={{ fontWeight: 600, color: 'var(--primary-color, #1677ff)' }}>{size}</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ fontWeight: 600, color: 'var(--primary-color, #1677ff)' }}>{size}</span>
+            {!childReadOnly && extraSizes.includes(size) && (
+              <Button
+                size="small"
+                type="text"
+                danger
+                icon={<DeleteOutlined />}
+                title={`删除尺码 ${size}`}
+                onClick={() => {
+                  Modal.confirm({
+                    width: '30vw',
+                    title: `确定删除尺码"${size}"？`,
+                    onOk: () => {
+                      setExtraSizes(prev => prev.filter(s => s !== size));
+                      setUsageEdits(prev => {
+                        const next = { ...prev };
+                        for (const bomId of Object.keys(next)) {
+                          if (next[bomId] && size in next[bomId]) {
+                            const { [size]: _, ...rest } = next[bomId];
+                            next[bomId] = rest;
+                          }
+                        }
+                        return next;
+                      });
+                    },
+                  });
+                }}
+              />
+            )}
+          </span>
         ),
         key: `size_${size}`,
         width: 80,
         render: (_: unknown, record: PatternMaterialRow) => {
-          const val = record.mode === 'spec'
-            ? (specEdits[record.bomId] ?? {})[size] ?? null
-            : (usageEdits[record.bomId] ?? {})[size] ?? null;
+          const val = (usageEdits[record.bomId] ?? {})[size] ?? null;
           return (
             <InputNumber
               size="small"
               min={0}
-              max={record.mode === 'spec' ? 999 : 99}
-              step={record.mode === 'spec' ? 1 : 0.05}
+              max={99}
+              step={0.05}
               precision={2}
               value={val ?? undefined}
-              onChange={(v) => (record.mode === 'spec'
-                ? handleSpecChange(record.bomId, size, v)
-                : handleUsageChange(record.bomId, size, v))}
+              onChange={(v) => handleUsageChange(record.bomId, size, v)}
               disabled={childReadOnly}
               style={{ width: '100%' }}
             />
@@ -386,7 +422,7 @@ const StylePatternTab: React.FC<Props> = ({
       });
     }
     return cols;
-  }, [activeSizes, usageEdits, specEdits, lossEdits, handleUsageChange, handleSpecChange, handleLossChange, childReadOnly]);
+  }, [allSizes, extraSizes, usageEdits, lossEdits, handleUsageChange, handleLossChange, childReadOnly]);
 
   return (
     <div>
@@ -403,7 +439,7 @@ const StylePatternTab: React.FC<Props> = ({
         onRefresh={onRefresh}
         onBeforeComplete={async () => {
           if (!hasValidPatternFile) {
-            message.error('请先上传纸样文件（dxf/plt/ets）');
+            message.error('请先上传纸样文件后再标记完成');
             return false;
           }
           return true;
@@ -481,14 +517,26 @@ const StylePatternTab: React.FC<Props> = ({
         }
         extra={
           !childReadOnly && activeSizes.length > 0 && (
-            <Button
-              type="primary"
-              size="small"
-              loading={savingUsage}
-              onClick={handleSaveUsage}
-            >
-              保存各码用量
-            </Button>
+            <Space>
+              <Select
+                mode="multiple"
+                allowClear
+                showSearch
+                placeholder="新增尺码(多选)"
+                style={{ minWidth: 160 }}
+                options={sizeOptions.filter(o => !allSizes.includes(o.value))}
+                value={[]}
+                onChange={(values: string[]) => handleAddSizes(values)}
+              />
+              <Button
+                type="primary"
+                size="small"
+                loading={savingUsage}
+                onClick={handleSaveUsage}
+              >
+                保存各码用量
+              </Button>
+            </Space>
           )
         }
       >
