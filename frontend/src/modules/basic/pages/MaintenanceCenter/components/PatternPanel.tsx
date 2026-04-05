@@ -633,7 +633,7 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
           <div style={directFieldLabelStyle}>上传新纸样文件</div>
 
           <Form.Item name="patternFile" valuePropName="fileList" getValueFromEvent={normalizeUploadFileList} style={{ marginBottom: 0 }}>
-            <Upload beforeUpload={() => false} maxCount={1} accept=".pdf,.dwg,.dxf,.ai,.cdr,.zip,.rar,.plt,.pat,.ets,.hpg,.jpg,.jpeg,.png,.bmp,.gif,.svg">
+            <Upload beforeUpload={() => false} maxCount={1} accept=".pdf,.dwg,.dxf,.ai,.cdr,.zip,.rar,.plt,.pat,.ets,.hpg,.prj,.jpg,.jpeg,.png,.bmp,.gif,.svg">
               <Button size="small">选择纸样文件</Button>
             </Upload>
           </Form.Item>

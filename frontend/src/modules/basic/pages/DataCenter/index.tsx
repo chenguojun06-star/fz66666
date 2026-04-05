@@ -154,15 +154,7 @@ export const buildProductionSheetHtml = (payload: any) => {
   const coverFromAttachments = (attachments.find((a: any) => String(a?.fileType || '').includes('image')) as any)?.fileUrl;
   const coverUrl = resolveUrl(style.cover || coverFromAttachments || '');
 
-  const productionReqLines = (() => {
-    const raw = String(style.description ?? '');
-    const lines = raw.split(/\r?\n/).filter((l) => Boolean(l.trim()));
-    return lines;
-  })();
-
-  const productionReqRows = productionReqLines
-    .map((txt: string) => `<tr><td class="req">${esc(txt)}</td></tr>`)
-    .join('');
+  const productionReqText = esc(String(style.description ?? ''));
 
   const categoryText = toCategoryCn(style.category);
   const seasonText = toSeasonCn(style.season);
@@ -241,11 +233,7 @@ export const buildProductionSheetHtml = (payload: any) => {
 
     <div class="section">
       <div class="section-title">生产要求</div>
-      <table>
-        <tbody>
-          ${productionReqRows}
-        </tbody>
-      </table>
+      <div style="white-space:pre-wrap;line-height:1.8;padding:8px 10px;border:1px solid #d9d9d9;border-radius:4px;min-height:40px;font-size:13px">${productionReqText || '<span style="color:#bfbfbf">暂无生产要求</span>'}</div>
     </div>
 
     ${sampleReviewHtml}
@@ -920,7 +908,7 @@ const DataCenter: React.FC = () => {
             <Upload
               beforeUpload={() => false}
               maxCount={1}
-              accept=".pdf,.dwg,.dxf,.ai,.cdr,.zip,.rar,.plt,.pat,.ets,.hpg,.jpg,.jpeg,.png,.bmp,.gif,.svg"
+              accept=".pdf,.dwg,.dxf,.ai,.cdr,.zip,.rar,.plt,.pat,.ets,.hpg,.prj,.jpg,.jpeg,.png,.bmp,.gif,.svg"
             >
               <Button>选择文件上传</Button>
             </Upload>
