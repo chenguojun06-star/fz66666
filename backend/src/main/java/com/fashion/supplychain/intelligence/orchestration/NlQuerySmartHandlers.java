@@ -36,6 +36,9 @@ public class NlQuerySmartHandlers {
     @Autowired private PatternDiscoveryOrchestrator patternDiscoveryOrchestrator;
     @Autowired private GoalDecompositionOrchestrator goalDecompositionOrchestrator;
     @Autowired private AgentMeetingOrchestrator agentMeetingOrchestrator;
+    @Autowired private PersonnelDelayAnalysisOrchestrator personnelDelayAnalysisOrchestrator;
+    @Autowired private SampleDelayAnalysisOrchestrator sampleDelayAnalysisOrchestrator;
+    @Autowired private DelayTrendOrchestrator delayTrendOrchestrator;
 
     // ── 系统健康指数 ──
     public NlQueryResponse handleHealthQuery() {
@@ -591,6 +594,92 @@ public class NlQuerySmartHandlers {
         return resp;
     }
 
+    // ── 人员延期分析 ──
+    @SuppressWarnings("unchecked")
+    public NlQueryResponse handlePersonnelDelayQuery() {
+        NlQueryResponse resp = build("personnel_delay");
+        try {
+            Map<String, Object> result = personnelDelayAnalysisOrchestrator.analyze();
+            StringBuilder sb = new StringBuilder("👤 人员延期分析：\n");
+            sb.append(String.format("• 延期订单数：%s\n", result.getOrDefault("delayedOrderCount", 0)));
+            List<Map<String, Object>> byMerchandiser = (List<Map<String, Object>>) result.get("byMerchandiser");
+            if (byMerchandiser != null && !byMerchandiser.isEmpty()) {
+                sb.append("\n▶ 跟单员延期 TOP：\n");
+                for (Map<String, Object> m : byMerchandiser) {
+                    sb.append(String.format("  • %s：%s单延期，平均%.1f天\n",
+                            m.get("name"), m.get("delayedCount"), doubleVal(m.get("avgDelayDays"))));
+                }
+            }
+            List<Map<String, Object>> byFactory = (List<Map<String, Object>>) result.get("byFactory");
+            if (byFactory != null && !byFactory.isEmpty()) {
+                sb.append("\n▶ 工厂延期 TOP：\n");
+                for (Map<String, Object> m : byFactory) {
+                    sb.append(String.format("  • %s：%s单延期，延期率%s%%\n",
+                            m.get("name"), m.get("delayedCount"), m.get("delayRate")));
+                }
+            }
+            resp.setAnswer(sb.toString().trim());
+            resp.setConfidence(85);
+            resp.setData(result);
+        } catch (Exception e) {
+            fallback(resp, "人员延期分析", e);
+        }
+        resp.setSuggestions(Arrays.asList("样板延期分析", "延期趋势", "逾期订单查询"));
+        return resp;
+    }
+
+    // ── 样板延期分析 ──
+    @SuppressWarnings("unchecked")
+    public NlQueryResponse handleSampleDelayQuery() {
+        NlQueryResponse resp = build("sample_delay");
+        try {
+            Map<String, Object> result = sampleDelayAnalysisOrchestrator.analyze();
+            StringBuilder sb = new StringBuilder("🧵 样板延期分析：\n");
+            sb.append(String.format("• 延期样板数：%s\n", result.getOrDefault("delayedSampleCount", 0)));
+            List<Map<String, Object>> byPatternMaker = (List<Map<String, Object>>) result.get("byPatternMaker");
+            if (byPatternMaker != null && !byPatternMaker.isEmpty()) {
+                sb.append("\n▶ 纸样师延期 TOP：\n");
+                for (Map<String, Object> m : byPatternMaker) {
+                    sb.append(String.format("  • %s：%s单延期，平均%.1f天\n",
+                            m.get("name"), m.get("delayedCount"), doubleVal(m.get("avgDelayDays"))));
+                }
+            }
+            resp.setAnswer(sb.toString().trim());
+            resp.setConfidence(85);
+            resp.setData(result);
+        } catch (Exception e) {
+            fallback(resp, "样板延期分析", e);
+        }
+        resp.setSuggestions(Arrays.asList("人员延期分析", "延期趋势", "查看样板列表"));
+        return resp;
+    }
+
+    // ── 延期趋势分析 ──
+    @SuppressWarnings("unchecked")
+    public NlQueryResponse handleDelayTrendQuery() {
+        NlQueryResponse resp = build("delay_trend");
+        try {
+            Map<String, Object> result = delayTrendOrchestrator.analyze(null);
+            StringBuilder sb = new StringBuilder("📈 延期趋势分析：\n");
+            sb.append(String.format("• 趋势方向：%s\n", result.getOrDefault("trendDirection", "未知")));
+            List<Map<String, Object>> weeks = (List<Map<String, Object>>) result.get("weeklyData");
+            if (weeks != null && !weeks.isEmpty()) {
+                sb.append("\n▶ 逐周数据：\n");
+                for (Map<String, Object> w : weeks) {
+                    sb.append(String.format("  • %s：生产延期%s单 + 样板延期%s单，综合延期率%s%%\n",
+                            w.get("weekLabel"), w.get("orderDelayCount"), w.get("sampleDelayCount"), w.get("delayRate")));
+                }
+            }
+            resp.setAnswer(sb.toString().trim());
+            resp.setConfidence(85);
+            resp.setData(result);
+        } catch (Exception e) {
+            fallback(resp, "延期趋势分析", e);
+        }
+        resp.setSuggestions(Arrays.asList("人员延期分析", "样板延期分析", "逾期订单查询"));
+        return resp;
+    }
+
     // ── 工具方法 ──
 
     private NlQueryResponse build(String intent) {
@@ -607,5 +696,11 @@ public class NlQuerySmartHandlers {
 
     private double doubleVal(java.math.BigDecimal bd) {
         return bd != null ? bd.doubleValue() : 0;
+    }
+
+    private double doubleVal(Object obj) {
+        if (obj == null) return 0;
+        if (obj instanceof Number) return ((Number) obj).doubleValue();
+        try { return Double.parseDouble(obj.toString()); } catch (Exception e) { return 0; }
     }
 }

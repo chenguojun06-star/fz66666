@@ -82,7 +82,19 @@ public class NlQueryOrchestrator {
                 || (containsAny(question, "订单") && containsAny(question, "进度", "多少", "怎样", "如何", "状态"))) {
             return dataHandlers.handleOrderQuery(question, tenantId, factoryId);
         }
-        // 2) 延期/逾期
+        // 2a) 人员延期分析（跟单员/纸样师/工厂延期率）
+        if (containsAny(question, "跟单员延期", "纸样师延期", "人员延期", "工厂延期率")) {
+            return smartHandlers.handlePersonnelDelayQuery();
+        }
+        // 2b) 样板延期分析
+        if (containsAny(question, "样板延期", "打样延期", "交板延期", "样衣延期")) {
+            return smartHandlers.handleSampleDelayQuery();
+        }
+        // 2c) 延期趋势
+        if (containsAny(question, "延期趋势", "延期走势", "延期统计")) {
+            return smartHandlers.handleDelayTrendQuery();
+        }
+        // 2) 延期/逾期（通用兜底）
         if (containsAny(question, "延期", "逾期", "超期", "过期")) {
             return dataHandlers.handleOverdueQuery(tenantId, factoryId);
         }
@@ -238,7 +250,8 @@ public class NlQueryOrchestrator {
             "warehousing", "cutting", "cost", "rhythm", "scheduling", "notification",
             "self_healing", "learning", "root_cause", "pattern", "goal", "meeting",
             "quote", "supplier_scorecard", "smart_assignment",
-            "execution", "finance_audit", "help", "summary"
+            "execution", "finance_audit", "help", "summary",
+            "personnel_delay", "sample_delay", "delay_trend"
     );
 
     private static final String LLM_INTENT_PROMPT =
@@ -275,6 +288,9 @@ public class NlQueryOrchestrator {
             + "smart_assignment - 智能派工/排班/分配\n"
             + "execution - 执行/命令/操作\n"
             + "finance_audit - 财务/资金/对账\n"
+            + "personnel_delay - 人员延期分析/跟单员延期/纸样师延期/工厂延期率\n"
+            + "sample_delay - 样板延期分析/打样延期/交板延期/样衣延期\n"
+            + "delay_trend - 延期趋势分析/逐周延期走势/延期统计\n"
             + "help - 帮助/功能/你能做什么\n"
             + "summary - 总览/概况/汇总/整体情况\n";
 
@@ -331,6 +347,9 @@ public class NlQueryOrchestrator {
             case "pattern":           return smartHandlers.handlePatternQuery();
             case "goal":              return smartHandlers.handleGoalQuery(question);
             case "meeting":           return smartHandlers.handleMeetingQuery(question);
+            case "personnel_delay":  return smartHandlers.handlePersonnelDelayQuery();
+            case "sample_delay":     return smartHandlers.handleSampleDelayQuery();
+            case "delay_trend":      return smartHandlers.handleDelayTrendQuery();
             default:                  return null;
         }
     }
