@@ -43,7 +43,7 @@ export interface UseProductionColumnsProps {
   canManageOrderLifecycle?: boolean;
   openSubProcessRemap?: (record: ProductionOrder) => void;
   isFactoryAccount?: boolean;
-  onOpenRemark?: (record: ProductionOrder) => void;
+  onOpenRemark?: (record: ProductionOrder, defaultRole?: string) => void;
 }
 
 /**
@@ -247,7 +247,10 @@ export function useProductionColumns({
           <Space size={4} style={{ flexWrap: 'nowrap' }}>
             {factoryType === 'INTERNAL' && <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>}
             {factoryType === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>外</Tag>}
-            <span>{v || '-'}</span>
+            <span
+              style={{ cursor: 'pointer', color: '#1677ff', textDecoration: 'underline' }}
+              onClick={(e) => { e.stopPropagation(); onOpenRemark?.(record, '生产方 — ' + (v || '')); }}
+            >{v || '-'}</span>
             {bizType && (
               <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>{bizType}</Tag>
             )}
@@ -263,7 +266,6 @@ export function useProductionColumns({
       render: (v: any, record: ProductionOrder) => {
         const name = String(v || '').trim();
         const remark = String((record as unknown as Record<string, unknown>).remarks || '').trim();
-        const orderId = String(record.id || '');
         const tsMatch = remark.match(/^\[(\d{2}-\d{2} \d{2}:\d{2})\]\s*/);
         const remarkTime = tsMatch ? tsMatch[1] : '';
         const remarkBody = tsMatch ? remark.slice(tsMatch[0].length) : remark;
@@ -271,7 +273,7 @@ export function useProductionColumns({
         return (
           <div
             style={{ position: 'relative', lineHeight: 1.3, cursor: 'pointer' }}
-            onClick={() => { setRemarkPopoverId(orderId); setRemarkText(remarkBody); }}
+            onClick={() => onOpenRemark?.(record, '跟单员 — ' + name)}
           >
             {remarkTime && (
               <div style={{ fontSize: 10, color: 'var(--color-text-secondary)', marginBottom: 2 }}>
@@ -307,7 +309,12 @@ export function useProductionColumns({
       dataIndex: 'patternMaker',
       key: 'patternMaker',
       width: 100,
-      render: (v: any) => v || '-',
+      render: (v: any, record: ProductionOrder) => (
+        <span
+          style={{ cursor: v ? 'pointer' : 'default', color: v ? '#1677ff' : undefined, textDecoration: v ? 'underline' : undefined }}
+          onClick={() => v && onOpenRemark?.(record, '纸样师 — ' + v)}
+        >{v || '-'}</span>
+      ),
     },
     {
       title: '订单数量',
@@ -333,7 +340,15 @@ export function useProductionColumns({
       dataIndex: 'orderOperatorName',
       key: 'orderOperatorName',
       width: 120,
-      render: renderStageText,
+      render: (v: any, record: ProductionOrder) => {
+        const text = safeString(v);
+        return (
+          <span
+            style={{ cursor: text ? 'pointer' : 'default', color: text ? '#1677ff' : undefined, textDecoration: text ? 'underline' : undefined }}
+            onClick={() => text && onOpenRemark?.(record, '下单人 — ' + text)}
+          >{text || '-'}</span>
+        );
+      },
     },
     {
       title: <SortableColumnTitle

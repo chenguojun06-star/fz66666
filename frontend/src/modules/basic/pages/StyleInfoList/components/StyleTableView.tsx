@@ -78,7 +78,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
   const [copySource, setCopySource] = useState<StyleInfo | null>(null);
   const [copying, setCopying] = useState(false);
   const [copyForm] = Form.useForm();
-  const [remarkTarget, setRemarkTarget] = useState<{ open: boolean; styleNo: string }>({ open: false, styleNo: '' });
+  const [remarkTarget, setRemarkTarget] = useState<{ open: boolean; styleNo: string; defaultRole?: string }>({ open: false, styleNo: '' });
   const viewportRestoreRef = useRef<{ x: number; y: number } | null>(null);
 
   const toCategoryCn = (value: unknown) => {
@@ -1046,7 +1046,10 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                     <div className="style-smart-stage-modal__facts">
                       <div className="style-smart-stage-modal__fact">
                         <span>领取人</span>
-                        <strong>{sampleReceiverLabel}</strong>
+                        <strong
+                          style={{ cursor: sampleReceiverLabel !== '-' ? 'pointer' : 'default', color: sampleReceiverLabel !== '-' ? '#1677ff' : undefined, textDecoration: sampleReceiverLabel !== '-' ? 'underline' : undefined }}
+                          onClick={() => sampleReceiverLabel !== '-' && setRemarkTarget({ open: true, styleNo: selectedStage?.record?.styleNo || '', defaultRole: '领取人 — ' + sampleReceiverLabel })}
+                        >{sampleReceiverLabel}</strong>
                       </div>
                       <div className="style-smart-stage-modal__fact">
                         <span>领取时间</span>
@@ -1091,7 +1094,10 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                   </div>
                   <div className="style-smart-stage-modal__fact">
                     <span>审核人</span>
-                    <strong>{confirmReviewerLabel}</strong>
+                    <strong
+                      style={{ cursor: confirmReviewerLabel !== '-' ? 'pointer' : 'default', color: confirmReviewerLabel !== '-' ? '#1677ff' : undefined, textDecoration: confirmReviewerLabel !== '-' ? 'underline' : undefined }}
+                      onClick={() => confirmReviewerLabel !== '-' && setRemarkTarget({ open: true, styleNo: selectedStage?.record?.styleNo || '', defaultRole: '审核人 — ' + confirmReviewerLabel })}
+                    >{confirmReviewerLabel}</strong>
                   </div>
                   <div className="style-smart-stage-modal__fact">
                     <span>审核时间</span>
@@ -1211,6 +1217,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
         onClose={() => setRemarkTarget({ open: false, styleNo: '' })}
         targetType="style"
         targetNo={remarkTarget.styleNo}
+        defaultRole={remarkTarget.defaultRole}
       />
     </>
   );

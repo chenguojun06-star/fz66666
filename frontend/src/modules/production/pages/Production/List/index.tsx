@@ -92,7 +92,7 @@ const ProductionList: React.FC = () => {
   const { columns: cardColumns } = useCardGridLayout(10);
   const { handleShareOrder, shareOrderDialog } = useShareOrderDialog({ message });
   const quickEditModal = useModal<ProductionOrder>();
-  const [remarkTarget, setRemarkTarget] = useState<{ open: boolean; orderNo: string }>({ open: false, orderNo: '' });
+  const [remarkTarget, setRemarkTarget] = useState<{ open: boolean; orderNo: string; defaultRole?: string }>({ open: false, orderNo: '' });
   const { user } = useAuth();
   const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUser(user), [user]);
   const isFactoryAccount = !!(user as any)?.factoryId;
@@ -659,7 +659,7 @@ const ProductionList: React.FC = () => {
     canManageOrderLifecycle,
     openSubProcessRemap,
     isFactoryAccount,
-    onOpenRemark: (record: ProductionOrder) => setRemarkTarget({ open: true, orderNo: record.orderNo || '' }),
+    onOpenRemark: (record: ProductionOrder, defaultRole?: string) => setRemarkTarget({ open: true, orderNo: record.orderNo || '', defaultRole }),
   });
 
   // 根据 visibleColumns 过滤列
@@ -1296,6 +1296,7 @@ const ProductionList: React.FC = () => {
           onClose={() => setRemarkTarget({ open: false, orderNo: '' })}
           targetType="order"
           targetNo={remarkTarget.orderNo}
+          defaultRole={remarkTarget.defaultRole}
         />
 
         {/* 打印标签（洗水唛 / U编码）双 Tab 弹窗 */}

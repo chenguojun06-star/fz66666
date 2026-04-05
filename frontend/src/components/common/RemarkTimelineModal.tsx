@@ -11,6 +11,7 @@ interface RemarkTimelineModalProps {
   onClose: () => void;
   targetType: 'order' | 'style';
   targetNo: string;
+  defaultRole?: string;
 }
 
 /**
@@ -21,6 +22,7 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
   onClose,
   targetType,
   targetNo,
+  defaultRole,
 }) => {
   const { message } = App.useApp();
   const [remarks, setRemarks] = useState<OrderRemark[]>([]);
@@ -46,9 +48,9 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
     if (open && targetNo) {
       fetchRemarks();
       setContent('');
-      setAuthorRole('');
+      setAuthorRole(defaultRole || '');
     }
-  }, [open, targetNo, fetchRemarks]);
+  }, [open, targetNo, defaultRole, fetchRemarks]);
 
   const handleSubmit = async () => {
     const trimmed = content.trim();
@@ -66,7 +68,7 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
       });
       message.success('备注已添加');
       setContent('');
-      setAuthorRole('');
+      setAuthorRole(defaultRole || '');
       fetchRemarks();
     } catch {
       message.error('添加备注失败');
