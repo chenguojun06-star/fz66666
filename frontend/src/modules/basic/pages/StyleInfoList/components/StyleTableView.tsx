@@ -21,6 +21,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import api, { withQuery } from '@/utils/api';
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
+import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 
 interface StyleTableViewProps {
   data: StyleInfo[];
@@ -37,6 +38,7 @@ interface StyleTableViewProps {
   categoryOptions: { label: string; value: string }[];
   onRefresh: () => void;
   focusedStyleId?: string | null;
+  dateSortAsc?: boolean;
 }
 
 
@@ -55,6 +57,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
   categoryOptions,
   onRefresh,
   focusedStyleId,
+  dateSortAsc = false,
 }) => {
   const { message } = App.useApp();
   const navigate = useNavigate();
@@ -75,6 +78,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
   const [copySource, setCopySource] = useState<StyleInfo | null>(null);
   const [copying, setCopying] = useState(false);
   const [copyForm] = Form.useForm();
+  const [remarkTarget, setRemarkTarget] = useState<{ open: boolean; styleNo: string }>({ open: false, styleNo: '' });
   const viewportRestoreRef = useRef<{ x: number; y: number } | null>(null);
 
   const toCategoryCn = (value: unknown) => {
@@ -147,7 +151,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
   }, [developmentWorkbenchRecord?.id, developmentWorkbenchSection]);
 
   const rows = useMemo(() => {
-    return data.map((record) => {
+    const mapped = data.map((record) => {
       const stockKey = `${String((record as StyleRecord).styleNo || '').trim().toUpperCase()}|${resolveDisplayColor(record as StyleRecord).trim().toUpperCase()}`;
       const normalizedRecord = stockStateMap[stockKey]
         ? { ...(record as StyleRecord), latestPatternStatus: 'COMPLETED' }
@@ -185,7 +189,20 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
         stages,
       };
     });
-  }, [categoryOptions, data, stockStateMap]);
+
+    // 完成的款号自动往后排（按时间排序）
+    mapped.sort((a, b) => {
+      const aCompleted = a.overallProgress >= 100 ? 1 : 0;
+      const bCompleted = b.overallProgress >= 100 ? 1 : 0;
+      if (aCompleted !== bCompleted) return aCompleted - bCompleted;
+      // 同组内按时间排序
+      const aTime = new Date((a.record.updatedAt || a.record.createdAt || 0) as string | number).getTime();
+      const bTime = new Date((b.record.updatedAt || b.record.createdAt || 0) as string | number).getTime();
+      return dateSortAsc ? aTime - bTime : bTime - aTime;
+    });
+
+    return mapped;
+  }, [categoryOptions, data, stockStateMap, dateSortAsc]);
 
   const selectedStageTag = selectedStage ? resolveStageTag(selectedStage.stage) : null;
   const selectedStageInsight = selectedStage ? buildStageInsight(selectedStage.stage, sampleSnapshot) : '';
@@ -751,6 +768,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
               return [
                 { key: 'detail', label: '详情', type: 'primary' as const, onClick: () => navigate(`/style-info/${record.id}`) },
                 { key: 'print', label: '打印', type: 'default' as const, onClick: () => onPrint(record) },
+                { key: 'remark', label: '备注', type: 'default' as const, onClick: () => setRemarkTarget({ open: true, styleNo: (record as any).styleNo || '' }) },
               ];
             }
 
@@ -768,6 +786,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                 items.push({ key: 'maintenance', label: '维护', type: 'default' as const, onClick: () => onMaintenance(record) });
               }
               items.push({ key: 'copy', label: '复制', type: 'default' as const, onClick: () => { setCopySource(record); setCopyModalOpen(true); } });
+              items.push({ key: 'remark', label: '备注', type: 'default' as const, onClick: () => setRemarkTarget({ open: true, styleNo: (record as any).styleNo || '' }) });
 
               return items;
             }
@@ -777,6 +796,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
               { key: 'print', label: '打印', type: 'default' as const, onClick: () => onPrint(record) },
               { key: 'scrap', label: '报废', type: 'default' as const, danger: true, onClick: () => onScrap(String(record.id!)) },
               { key: 'copy', label: '复制', type: 'default' as const, onClick: () => { setCopySource(record); setCopyModalOpen(true); } },
+              { key: 'remark', label: '备注', type: 'default' as const, onClick: () => setRemarkTarget({ open: true, styleNo: (record as any).styleNo || '' }) },
             ];
           })();
           const timelineMinWidth = stages.length * STAGE_MIN_SLOT_WIDTH;
@@ -805,6 +825,16 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
               </div>
 
               <div className="style-smart-row__body">
+                <div className="style-smart-row__progress-wrap">
+                  <span className="style-smart-row__progress-pct">{overallProgress}%</span>
+                  <Progress
+                    percent={overallProgress}
+                    showInfo={false}
+                    size="small"
+                    strokeColor={isScrappedRow(record) ? '#9ca3af' : overallProgress >= 100 ? '#52c41a' : '#2d7ff9'}
+                    className="style-smart-row__progress-bar"
+                  />
+                </div>
                 <div className="style-smart-row__layout">
                   <div className="style-smart-row__identity">
                     <div className="style-smart-row__tags">
@@ -894,28 +924,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                     </div>
                   </div>
 
-                  <div className="style-smart-row__aside">
-                    <div className="style-smart-row__overview">
-                      <div className="style-smart-row__overview-value">{overallProgress}%</div>
-                      <div className="style-smart-row__overview-label">总进度</div>
-                      <Progress percent={overallProgress} showInfo={false} size="small" strokeColor={isScrappedRow(record) ? '#9ca3af' : '#2d7ff9'} />
-                    </div>
 
-                    <div className="style-smart-row__actions">
-                      {actionButtons.map((action) => (
-                        <Button
-                          key={action.key}
-                          size="small"
-                          type={action.type}
-                          danger={action.danger}
-                          disabled={action.disabled}
-                          onClick={action.onClick}
-                        >
-                          {action.label}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
                 </div>
                 {developmentWorkbenchRecord && String(developmentWorkbenchRecord.id || '') === String(record.id || '') ? (
                   <div className="style-smart-row__workbench">
@@ -927,6 +936,21 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                     />
                   </div>
                 ) : null}
+              </div>
+
+              <div className="style-smart-row__actions">
+                {actionButtons.map((action) => (
+                  <Button
+                    key={action.key}
+                    size="small"
+                    type={action.type}
+                    danger={action.danger}
+                    disabled={action.disabled}
+                    onClick={action.onClick}
+                  >
+                    {action.label}
+                  </Button>
+                ))}
               </div>
             </div>
           );
@@ -1180,6 +1204,14 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* 通用备注记录弹窗 */}
+      <RemarkTimelineModal
+        open={remarkTarget.open}
+        onClose={() => setRemarkTarget({ open: false, styleNo: '' })}
+        targetType="style"
+        targetNo={remarkTarget.styleNo}
+      />
     </>
   );
 };

@@ -43,6 +43,7 @@ export interface UseProductionColumnsProps {
   canManageOrderLifecycle?: boolean;
   openSubProcessRemap?: (record: ProductionOrder) => void;
   isFactoryAccount?: boolean;
+  onOpenRemark?: (record: ProductionOrder) => void;
 }
 
 /**
@@ -62,6 +63,7 @@ export function useProductionColumns({
   canManageOrderLifecycle = false,
   openSubProcessRemap,
   isFactoryAccount = false,
+  onOpenRemark,
 }: UseProductionColumnsProps) {
   const renderStageTime = (value: unknown) => value ? formatDateTime(value) : '-';
   const renderStageText = (value: unknown) => safeString(value);
@@ -701,6 +703,11 @@ export function useProductionColumns({
                 label: ' 分享',
                 title: '生成客户查看链接（30天有效）',
                 onClick: () => handleShareOrder(record),
+              },
+              {
+                key: 'remark',
+                label: '备注记录',
+                onClick: () => onOpenRemark?.(record),
               },
             ]}
           />

@@ -17,6 +17,7 @@ import RejectReasonModal from '@/components/common/RejectReasonModal';
 import SmallModal from '@/components/common/SmallModal';
 import LabelPrintModal from './components/LabelPrintModal';
 import SubProcessRemapModal from './components/SubProcessRemapModal';
+import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import { useSubProcessRemap } from './hooks/useSubProcessRemap';
 import { ProductionOrder, ProductionQueryParams } from '@/types/production';
 import type { PaginatedResponse } from '@/types/api';
@@ -91,6 +92,7 @@ const ProductionList: React.FC = () => {
   const { columns: cardColumns } = useCardGridLayout(10);
   const { handleShareOrder, shareOrderDialog } = useShareOrderDialog({ message });
   const quickEditModal = useModal<ProductionOrder>();
+  const [remarkTarget, setRemarkTarget] = useState<{ open: boolean; orderNo: string }>({ open: false, orderNo: '' });
   const { user } = useAuth();
   const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUser(user), [user]);
   const isFactoryAccount = !!(user as any)?.factoryId;
@@ -657,6 +659,7 @@ const ProductionList: React.FC = () => {
     canManageOrderLifecycle,
     openSubProcessRemap,
     isFactoryAccount,
+    onOpenRemark: (record: ProductionOrder) => setRemarkTarget({ open: true, orderNo: record.orderNo || '' }),
   });
 
   // 根据 visibleColumns 过滤列
@@ -1286,6 +1289,14 @@ const ProductionList: React.FC = () => {
         </ResizableModal>
 
         {shareOrderDialog}
+
+        {/* 通用备注记录弹窗 */}
+        <RemarkTimelineModal
+          open={remarkTarget.open}
+          onClose={() => setRemarkTarget({ open: false, orderNo: '' })}
+          targetType="order"
+          targetNo={remarkTarget.orderNo}
+        />
 
         {/* 打印标签（洗水唛 / U编码）双 Tab 弹窗 */}
         <LabelPrintModal
