@@ -1,7 +1,7 @@
 import React, { Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { Button, App as AntdApp } from 'antd';
+import { Button } from 'antd';
 import PrivateRoute from './components/PrivateRoute';
 import XiaoyunPageLoader from './components/common/XiaoyunPageLoader';
 import { useAuth } from './utils/AuthContext';
@@ -339,11 +339,9 @@ const AppRoutes: React.FC = () => {
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
-      <AntdApp>
-        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <AppRoutes />
-        </BrowserRouter>
-      </AntdApp>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <AppRoutes />
+      </BrowserRouter>
     </ErrorBoundary>
   );
 };
