@@ -26,9 +26,9 @@ export interface RemarkAddParams {
 
 export const remarkApi = {
   list(params: RemarkListParams) {
-    return api.post<OrderRemark[]>('/api/system/order-remark/list', params);
+    return api.post<OrderRemark[]>('/system/order-remark/list', params);
   },
   add(params: RemarkAddParams) {
-    return api.post<OrderRemark>('/api/system/order-remark/add', params);
+    return api.post<OrderRemark>('/system/order-remark/add', params);
   },
 };

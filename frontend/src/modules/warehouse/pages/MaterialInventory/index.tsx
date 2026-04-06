@@ -739,6 +739,10 @@ const _MaterialInventory: React.FC = () => {
                 <div style={{ color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>颜色</div>
                 <div style={{ fontWeight: 600 }}>{instructionTarget?.color || '-'}</div>
               </div>
+              <div style={{ fontSize: 'var(--font-size-sm)' }}>
+                <div style={{ color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>单价</div>
+                <div style={{ fontWeight: 600 }}>{instructionTarget?.unitPrice != null ? `¥${instructionTarget.unitPrice}` : '-'}</div>
+              </div>
             </div>
 
             {/* 面料属性（仅面料显示） */}
@@ -755,7 +759,7 @@ const _MaterialInventory: React.FC = () => {
                 <Space orientation="vertical" size={8} style={{ width: '100%' }}>
                   <div style={{ fontSize: 'var(--font-size-sm)' }}>
                     <span style={{ color: 'var(--neutral-text-disabled)' }}>规格/幅宽：</span>
-                    <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{formatMaterialSpecWidth((instructionTarget as any)?.specification, instructionTarget?.fabricWidth)}</span>
+                    <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{formatMaterialSpecWidth(instructionTarget?.specification, instructionTarget?.fabricWidth)}</span>
                   </div>
                   <div style={{ fontSize: 'var(--font-size-sm)' }}>
                     <span style={{ color: 'var(--neutral-text-disabled)' }}>克重：</span>

@@ -81,14 +81,10 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
     public boolean isProgressQualityStageName(String name) {
         return stageNameHelper.isProgressQualityStageName(name);
     }
-        return n.contains("质检") || n.contains("检验") || n.contains("品检") || n.contains("验货");
-    }
 
     @Override
     public boolean isProgressPackagingStageName(String name) {
         return stageNameHelper.isProgressPackagingStageName(name);
-    }
-        return n.contains("包装") || n.contains("后整") || n.contains("打包") || n.contains("装箱");
     }
 
     @Override

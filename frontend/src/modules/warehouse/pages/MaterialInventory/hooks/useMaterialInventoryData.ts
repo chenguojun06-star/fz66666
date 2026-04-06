@@ -575,6 +575,8 @@ export function useMaterialInventoryData() {
                 fabricWidth: prev.fabricWidth || dbMatch.fabricWidth || '',
                 fabricWeight: prev.fabricWeight || dbMatch.fabricWeight || '',
                 fabricComposition: prev.fabricComposition || dbMatch.fabricComposition || '',
+                specification: prev.specification || dbMatch.specification || '',
+                unitPrice: prev.unitPrice ?? dbMatch.unitPrice ?? undefined,
               } : prev
             );
           }
@@ -644,6 +646,8 @@ export function useMaterialInventoryData() {
         fabricWeight: alertMatch.fabricWeight || dbRec0?.fabricWeight || '',
         fabricComposition: alertMatch.fabricComposition || dbRec0?.fabricComposition || '',
         conversionRate: alertMatch.conversionRate || dbRec0?.conversionRate || undefined,
+        specification: alertMatch.specification || dbRec0?.specification || '',
+        unitPrice: alertMatch.unitPrice ?? dbRec0?.unitPrice ?? undefined,
       });
       const suggested = Number(alertMatch.suggestedSafetyStock ?? alertMatch.safetyStock ?? 0);
       const current = Number(alertMatch.quantity ?? 0);
@@ -668,6 +672,8 @@ export function useMaterialInventoryData() {
           fabricWeight: m.fabricWeight || '',
           fabricComposition: m.fabricComposition || '',
           conversionRate: m.conversionRate != null ? Number(m.conversionRate) : undefined,
+          specification: m.specification || '',
+          unitPrice: m.unitPrice != null ? Number(m.unitPrice) : undefined,
         });
         // 查询进销存获取真实库存，计算采购缺口
         try {
@@ -775,6 +781,8 @@ export function useMaterialInventoryData() {
       fabricWidth: record.fabricWidth,
       fabricWeight: record.fabricWeight,
       fabricComposition: record.fabricComposition,
+      specification: record.specification,
+      unitPrice: record.unitPrice,
     };
   };
 

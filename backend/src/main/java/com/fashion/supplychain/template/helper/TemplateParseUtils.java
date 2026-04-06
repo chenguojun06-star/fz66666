@@ -12,7 +12,7 @@ public final class TemplateParseUtils {
 
     private TemplateParseUtils() {} // utility class
 
-    static Map<String, Object> coerceMap(Object value) {
+    public static Map<String, Object> coerceMap(Object value) {
         if (value instanceof Map<?, ?> rawMap) {
             Map<String, Object> mapped = new LinkedHashMap<>();
             for (Map.Entry<?, ?> entry : rawMap.entrySet()) {
@@ -26,7 +26,7 @@ public final class TemplateParseUtils {
         return new LinkedHashMap<>();
     }
 
-    static List<Map<String, Object>> coerceListOfMap(Object value) {
+    public static List<Map<String, Object>> coerceListOfMap(Object value) {
         if (!(value instanceof List<?> rawList)) {
             return List.of();
         }
@@ -39,7 +39,7 @@ public final class TemplateParseUtils {
         return mapped;
     }
 
-    static List<String> coerceListOfString(Object value) {
+    public static List<String> coerceListOfString(Object value) {
         if (!(value instanceof List<?> rawList)) {
             return List.of();
         }
@@ -56,7 +56,7 @@ public final class TemplateParseUtils {
         return out;
     }
 
-    static BigDecimal toBigDecimal(Object value) {
+    public static BigDecimal toBigDecimal(Object value) {
         if (value == null) {
             return null;
         }
@@ -75,6 +75,11 @@ public final class TemplateParseUtils {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    public static BigDecimal toBigDecimalOrZero(Object value) {
+        BigDecimal result = toBigDecimal(value);
+        return result != null ? result : BigDecimal.ZERO;
     }
 
 }
