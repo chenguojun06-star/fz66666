@@ -208,7 +208,11 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
 
     @Override
     public long countUrgentEvents() {
-        Number cached = getFromCache("urgentEvents");
+        Long tenantId = UserContext.tenantId();
+        String factoryId = UserContext.factoryId(); // 🔒 工厂账号只看自己工厂的数据
+        String factorySuffix = org.springframework.util.StringUtils.hasText(factoryId) ? "." + factoryId : "";
+        String cacheKey = "urgentEvents" + factorySuffix;
+        Number cached = getFromCache(cacheKey);
         if (cached != null) return cached.longValue();
 
         LocalDateTime now = LocalDateTime.now();
@@ -216,6 +220,8 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         // 1. 订单超期：已超过计划结束日期但未完成的订单
         long delayedOrders = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
+                .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)                                                          // 🔒 租户隔离
+                .eq(org.springframework.util.StringUtils.hasText(factoryId), ProductionOrder::getFactoryId, factoryId)                // 🔒 工厂隔离
                 .ne(ProductionOrder::getStatus, "completed")
                 .ne(ProductionOrder::getStatus, "cancelled")
                 .isNotNull(ProductionOrder::getPlannedEndDate)
@@ -225,11 +231,12 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         // 2. 面料采购待处理：状态为pending的采购单
         long pendingPurchases = materialPurchaseService.lambdaQuery()
                 .eq(MaterialPurchase::getDeleteFlag, 0)
+                .eq(tenantId != null, MaterialPurchase::getTenantId, tenantId)                                                         // 🔒 租户隔离
                 .eq(MaterialPurchase::getStatus, "pending")
                 .count();
 
         long result = delayedOrders + pendingPurchases;
-        putToCache("urgentEvents", result);
+        putToCache(cacheKey, result);
         return result;
     }
 
@@ -311,17 +318,23 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
 
     @Override
     public long countOverdueOrders() {
-        Number cached = getFromCache("overdueOrders");
+        Long tenantId = UserContext.tenantId();
+        String factoryId = UserContext.factoryId(); // 🔒 工厂账号只看自己工厂的数据
+        String factorySuffix = org.springframework.util.StringUtils.hasText(factoryId) ? "." + factoryId : "";
+        String cacheKey = "overdueOrders" + factorySuffix;
+        Number cached = getFromCache(cacheKey);
         if (cached != null) return cached.longValue();
         // 计算延期订单：计划结束日期已过且处于生产中的订单（排除已关闭/已完成/已取消/已归档）
         LocalDateTime now = LocalDateTime.now();
         long result = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
+                .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)                                                          // 🔒 租户隔离
+                .eq(org.springframework.util.StringUtils.hasText(factoryId), ProductionOrder::getFactoryId, factoryId)                // 🔒 工厂隔离
                 .notIn(ProductionOrder::getStatus, "closed", "completed", "cancelled", "archived", "scrapped", "pending")
                 .isNotNull(ProductionOrder::getPlannedEndDate)
                 .lt(ProductionOrder::getPlannedEndDate, now)
                 .count();
-        putToCache("overdueOrders", result);
+        putToCache(cacheKey, result);
         return result;
     }
 

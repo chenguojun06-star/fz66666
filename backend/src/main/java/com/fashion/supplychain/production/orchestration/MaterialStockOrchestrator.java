@@ -59,8 +59,10 @@ public class MaterialStockOrchestrator {
 
         LocalDateTime startTime = LocalDateTime.now().minusDays(days);
 
+        Long tenantId = UserContext.tenantId();
         List<MaterialStock> stocks = materialStockService.list(new LambdaQueryWrapper<MaterialStock>()
-                .eq(MaterialStock::getDeleteFlag, 0));
+                .eq(MaterialStock::getDeleteFlag, 0)
+                .eq(tenantId != null, MaterialStock::getTenantId, tenantId)); // 🔒 租户隔离
 
         if (stocks == null || stocks.isEmpty()) {
             return new ArrayList<>();
