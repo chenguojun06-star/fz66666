@@ -34,6 +34,11 @@ public class ProductOutstockController {
         return Result.success(productOutstockOrchestrator.save(outstock));
     }
 
+    @PostMapping("/{id}/receive")
+    public Result<ProductOutstock> receive(@PathVariable String id) {
+        return Result.success(productOutstockOrchestrator.receive(id));
+    }
+
     @DeleteMapping("/{id}")
     public Result<Boolean> delete(@PathVariable String id) {
         return Result.success(productOutstockOrchestrator.delete(id));

@@ -888,8 +888,9 @@ public class StyleBomOrchestrator {
                 purchase.setUnit(bom.getUnit());
                 purchase.setConversionRate(bom.getConversionRate());
 
-                // 采购数量 = BOM单件用量 × 款式总件数（含损耗率）
-                BigDecimal usageAmount = bom.getUsageAmount() != null ? bom.getUsageAmount() : BigDecimal.ZERO;
+                // 采购数量 = BOM开发采购用量 × 款式总件数（含损耗率），优先使用 devUsageAmount
+                BigDecimal usageAmount = bom.getDevUsageAmount() != null ? bom.getDevUsageAmount()
+                        : (bom.getUsageAmount() != null ? bom.getUsageAmount() : BigDecimal.ZERO);
                 BigDecimal lossRate = bom.getLossRate() != null ? bom.getLossRate() : BigDecimal.ZERO;
                 BigDecimal lossFactor = BigDecimal.ONE.add(lossRate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP));
                 BigDecimal totalUsage = usageAmount.multiply(BigDecimal.valueOf(styleTotalQty)).multiply(lossFactor);

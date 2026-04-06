@@ -94,6 +94,12 @@ public class StyleInfoController {
         return Result.success();
     }
 
+    @PostMapping("/{id}/production-requirements/lock")
+    public Result<?> lockProductionRequirements(@PathVariable Long id) {
+        styleInfoOrchestrator.lockProductionRequirements(id);
+        return Result.success();
+    }
+
     /**
      * 统一的阶段操作端点（替代14个分散端点）
      *

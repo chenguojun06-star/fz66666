@@ -10,6 +10,8 @@ import com.fashion.supplychain.system.entity.Factory;
 import com.fashion.supplychain.system.helper.OrganizationUnitBindingHelper;
 import com.fashion.supplychain.system.service.FactoryService;
 import com.fashion.supplychain.system.service.LoginLogService;
+import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import java.time.LocalDateTime;
 import java.util.NoSuchElementException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +30,9 @@ public class FactoryOrchestrator {
 
     @Autowired
     private OrganizationUnitBindingHelper organizationUnitBindingHelper;
+
+    @Autowired
+    private ProductionOrderService productionOrderService;
 
     public IPage<Factory> list(String page, String pageSize, String factoryCode, String factoryName, String status,
             String supplierType, String factoryType, String parentOrgUnitId) {
@@ -144,6 +149,18 @@ public class FactoryOrchestrator {
         // 删除前先获取工厂名称用于日志
         Factory existing = factoryService.getById(id);
         String factoryName = existing != null ? existing.getFactoryName() : null;
+
+        // 检查是否存在未完成的生产订单 — 有活跃订单时禁止删除
+        long activeOrders = productionOrderService.count(
+                new LambdaQueryWrapper<ProductionOrder>()
+                        .eq(ProductionOrder::getFactoryId, id)
+                        .eq(ProductionOrder::getDeleteFlag, 0)
+                        .ne(ProductionOrder::getStatus, "completed"));
+        if (activeOrders > 0) {
+            throw new IllegalStateException(
+                    "该工厂存在 " + activeOrders + " 个未完成的生产订单，请在订单结算完成后再删除");
+        }
+
         boolean ok = factoryService.removeById(id);
         if (!ok) {
             throw new IllegalStateException("删除失败");

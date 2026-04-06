@@ -31,8 +31,8 @@ export interface UseProductionColumnsProps {
   syncProcessFromTemplate: (record: ProductionOrder) => void;
   setPrintModalVisible: (v: boolean) => void;
   setPrintingRecord: (r: ProductionOrder | null) => void;
-  setRemarkPopoverId: (id: string | null) => void;
-  setRemarkText: (text: string) => void;
+  setRemarkPopoverId?: (id: string | null) => void;
+  setRemarkText?: (text: string) => void;
   quickEditModal: { open: (r: ProductionOrder) => void };
   isSupervisorOrAbove: boolean;
   renderCompletionTimeTag: (record: ProductionOrder, stage: string, rate: number, position?: string) => React.ReactNode;
@@ -55,7 +55,6 @@ export function useProductionColumns({
   handleCloseOrder, handleScrapOrder, handleTransferOrder,
   navigate, openProcessDetail, openNodeDetail, syncProcessFromTemplate,
   setPrintModalVisible, setPrintingRecord,
-  setRemarkPopoverId, setRemarkText,
   quickEditModal, isSupervisorOrAbove, renderCompletionTimeTag, deliveryRiskMap,
   stagnantOrderIds,
   handleShareOrder,
@@ -66,7 +65,6 @@ export function useProductionColumns({
   onOpenRemark,
 }: UseProductionColumnsProps) {
   const renderStageTime = (value: unknown) => value ? formatDateTime(value) : '-';
-  const renderStageText = (value: unknown) => safeString(value);
 
   // ===== 工序进度列共享逻辑 =====
   const PROGRESS_CELL_BASE: React.CSSProperties = { padding: '4px', transition: 'background 0.2s' };

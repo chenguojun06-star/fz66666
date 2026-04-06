@@ -72,6 +72,7 @@ export const paths = {
   finishedInventory: '/warehouse/finished',
   sampleInventory: '/warehouse/sample',
   ecommerceOrders: '/warehouse/ecommerce',
+  outstockReceive: '/warehouse/outstock-receive',
 
   profile: '/system/profile',
   user: '/system/user',
@@ -127,6 +128,7 @@ export const permissionCodes = {
   finishedInventory: 'MENU_FINISHED_INVENTORY',
   sampleInventory: 'MENU_SAMPLE_INVENTORY',
   ecommerceOrders: 'MENU_FINISHED_INVENTORY', // 复用成品库权限，平台订单均可查看
+  outstockReceive: 'MENU_FINISHED_INVENTORY', // 复用成品库权限
 
   user: 'MENU_USER',
   userApproval: 'MENU_USER_APPROVAL',
@@ -226,6 +228,7 @@ export const menuConfig: MenuSection[] = [
     items: [
       { label: '成品进销存', path: paths.finishedInventory, icon: React.createElement(InboxOutlined) },
       { label: '电商订单', path: paths.ecommerceOrders, icon: React.createElement(ApiOutlined) },
+      { label: '出库收货', path: paths.outstockReceive, icon: React.createElement(InboxOutlined) },
     ],
   },
   {
@@ -318,6 +321,7 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.finishedInventory]: permissionCodes.finishedInventory,
   [paths.sampleInventory]: permissionCodes.sampleInventory,
   [paths.ecommerceOrders]: permissionCodes.ecommerceOrders,
+  [paths.outstockReceive]: permissionCodes.outstockReceive,
 
 
   [paths.productionList]: permissionCodes.productionList,

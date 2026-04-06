@@ -65,6 +65,12 @@ public class StyleProcess {
     private BigDecimal price;
 
     /**
+     * 工序倍率（null 或 1 表示不参与倍率计算）
+     */
+    @TableField("rate_multiplier")
+    private BigDecimal rateMultiplier;
+
+    /**
      * 排序号
      */
     private Integer sortOrder;

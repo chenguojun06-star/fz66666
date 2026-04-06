@@ -139,22 +139,35 @@ export const buildProductionSheetHtml = (payload: any) => {
     }
   }
 
-  const sizeHeader = `<tr><th>部位(cm)</th><th>度量方式</th>${sortedSizeNames.map((s) => `<th>${esc(s)}</th>`).join('')}</tr>`;
+  const sizeHeader = `<tr><th>部位(cm)</th><th>度量方式</th>${sortedSizeNames.map((s) => `<th>${esc(s)}</th>`).join('')}<th>公差(+/-)</th></tr>`;
   const sizeRows = (partNames as string[]).map((part) => {
     const partKey = String(part);
+    let toleranceVal: string | null = null;
     const tds = sortedSizeNames.map((sn) => {
       const key = `${partKey}__${sn}`;
       const cell = sizeCellMap[key] as any;
-      const v = cell?.standardValue != null ? `${cell.standardValue}${cell?.tolerance != null ? ` ±${cell.tolerance}` : ''}` : '';
+      if (toleranceVal == null && cell?.tolerance != null) toleranceVal = String(cell.tolerance);
+      const v = cell?.standardValue != null ? String(cell.standardValue) : '';
       return `<td>${esc(v)}</td>`;
     }).join('');
-    return `<tr><td>${esc(partKey)}</td><td>${esc(partMethodMap[partKey] || '')}</td>${tds}</tr>`;
+    const toleranceTd = toleranceVal != null ? `<td style="text-align:center">±${esc(toleranceVal)}</td>` : `<td style="text-align:center">-</td>`;
+    return `<tr><td>${esc(partKey)}</td><td>${esc(partMethodMap[partKey] || '')}</td>${tds}${toleranceTd}</tr>`;
   }).join('');
 
   const coverFromAttachments = (attachments.find((a: any) => String(a?.fileType || '').includes('image')) as any)?.fileUrl;
   const coverUrl = resolveUrl(style.cover || coverFromAttachments || '');
 
-  const productionReqText = esc(String(style.description ?? ''));
+  const rawReqText = String(style.description ?? '');
+  const productionReqHtml = rawReqText
+    ? rawReqText.split('\n').map(line => {
+        const escaped = esc(line);
+        // 非空且不以数字开头 → 视为小标题，加粗显示
+        if (line.trim() && !/^\s*\d/.test(line)) {
+          return `<strong style="font-weight:700">${escaped}</strong>`;
+        }
+        return escaped;
+      }).join('<br>')
+    : '';
 
   const categoryText = toCategoryCn(style.category);
   const seasonText = toSeasonCn(style.season);
@@ -233,7 +246,7 @@ export const buildProductionSheetHtml = (payload: any) => {
 
     <div class="section">
       <div class="section-title">生产要求</div>
-      <div style="white-space:pre-wrap;line-height:1.8;padding:8px 10px;border:1px solid #d9d9d9;border-radius:4px;min-height:40px;font-size:13px">${productionReqText || '<span style="color:#bfbfbf">暂无生产要求</span>'}</div>
+      <div style="line-height:1.8;padding:8px 10px;border:1px solid #d9d9d9;border-radius:4px;min-height:40px;font-size:13px">${productionReqHtml || '<span style="color:#bfbfbf">暂无生产要求</span>'}</div>
     </div>
 
     ${sampleReviewHtml}

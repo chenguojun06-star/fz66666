@@ -314,8 +314,8 @@ const StyleInfoListPage: React.FC = () => {
              : data;
     if (base.length > 1) {
       base = [...base].sort((a, b) => {
-        const aTime = new Date((a.updatedAt || a.createdAt || 0) as string | number).getTime();
-        const bTime = new Date((b.updatedAt || b.createdAt || 0) as string | number).getTime();
+        const aTime = new Date((a.updateTime || a.createTime || 0) as string | number).getTime();
+        const bTime = new Date((b.updateTime || b.createTime || 0) as string | number).getTime();
         return dateSortAsc ? aTime - bTime : bTime - aTime;
       });
     }

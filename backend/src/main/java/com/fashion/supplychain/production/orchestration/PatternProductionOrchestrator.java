@@ -3,22 +3,13 @@ package com.fashion.supplychain.production.orchestration;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
-import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.PatternProduction;
 import com.fashion.supplychain.production.entity.PatternScanRecord;
-import com.fashion.supplychain.production.service.MaterialPurchaseService;
+import com.fashion.supplychain.production.helper.PatternEnrichmentHelper;
+import com.fashion.supplychain.production.helper.PatternStatusHelper;
+import com.fashion.supplychain.production.helper.PatternStockHelper;
 import com.fashion.supplychain.production.service.PatternProductionService;
 import com.fashion.supplychain.production.service.PatternScanRecordService;
-import com.fashion.supplychain.stock.entity.SampleLoan;
-import com.fashion.supplychain.stock.entity.SampleStock;
-import com.fashion.supplychain.stock.mapper.SampleLoanMapper;
-import com.fashion.supplychain.stock.mapper.SampleStockMapper;
-import com.fashion.supplychain.stock.service.SampleStockService;
-import com.fashion.supplychain.style.entity.StyleInfo;
-import com.fashion.supplychain.style.entity.StyleProcess;
-import com.fashion.supplychain.style.service.StyleInfoService;
-import com.fashion.supplychain.style.service.StyleProcessService;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,25 +17,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
  * 样板生产编排器
  * <p>
  * 编排跨服务调用：样板生产、款式信息、款式工序、物料采购、扫码记录
- * 从 PatternProductionController 提取跨服务业务逻辑
+ * 具体私有逻辑已委托给 PatternEnrichmentHelper / PatternStockHelper / PatternStatusHelper
  */
 @Slf4j
 @Service
@@ -54,28 +38,19 @@ public class PatternProductionOrchestrator {
     private PatternProductionService patternProductionService;
 
     @Autowired
-    private StyleInfoService styleInfoService;
-
-    @Autowired
-    private StyleProcessService styleProcessService;
-
-    @Autowired
-    private MaterialPurchaseService materialPurchaseService;
-
-    @Autowired
     private PatternScanRecordService patternScanRecordService;
 
     @Autowired
-    private SampleStockService sampleStockService;
-
-    @Autowired
-    private SampleLoanMapper sampleLoanMapper;
-
-    @Autowired
-    private SampleStockMapper sampleStockMapper;
-
-    @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private PatternEnrichmentHelper enrichmentHelper;
+
+    @Autowired
+    private PatternStockHelper stockHelper;
+
+    @Autowired
+    private PatternStatusHelper statusHelper;
 
     /**
      * 分页查询并丰富样板生产记录（关联款式、工序、采购数据）
@@ -106,7 +81,7 @@ public class PatternProductionOrchestrator {
 
         // 丰富每条记录
         List<Map<String, Object>> enrichedRecords = pageResult.getRecords().stream()
-                .map(this::enrichRecord)
+                .map(enrichmentHelper::enrichRecord)
                 .collect(Collectors.toList());
 
         Map<String, Object> result = new HashMap<>();
@@ -148,8 +123,8 @@ public class PatternProductionOrchestrator {
         patternProductionService.updateById(record);
 
         // 同步更新 StyleInfo
-        syncStyleInfoOnReceive(record.getStyleId(), currentUser);
-        syncStyleInfoSampleStage(record);
+        statusHelper.syncStyleInfoOnReceive(record.getStyleId(), currentUser);
+        statusHelper.syncStyleInfoSampleStage(record);
 
         log.info("Pattern production received: id={}, receiver={}", id, currentUser);
         return "领取成功";
@@ -174,11 +149,11 @@ public class PatternProductionOrchestrator {
 
             boolean allCompleted = progressNodes.values().stream().allMatch(v -> v >= 100);
             if (allCompleted && !"PRODUCTION_COMPLETED".equals(record.getStatus()) && !"COMPLETED".equals(record.getStatus())) {
-                markPatternProductionCompleted(record, now);
+                statusHelper.markPatternProductionCompleted(record, now);
             }
 
             patternProductionService.updateById(record);
-            syncStyleInfoSampleStage(record);
+            statusHelper.syncStyleInfoSampleStage(record);
             log.info("Pattern production progress updated: id={}, progress={}", id, progressNodes);
             return "进度更新成功";
         } catch (Exception e) {
@@ -205,7 +180,7 @@ public class PatternProductionOrchestrator {
             throw new IllegalArgumentException("样板生产记录不存在");
         }
 
-        validateWarehouseOperationFlow(patternId, operationType);
+        statusHelper.validateWarehouseOperationFlow(patternId, operationType);
 
         String operatorId = UserContext.userId();
         String operatorName = UserContext.username();
@@ -237,19 +212,18 @@ public class PatternProductionOrchestrator {
         patternScanRecordService.save(scanRecord);
 
         // 更新样板状态
-        updatePatternStatusByOperation(pattern, operationType, operatorName);
+        statusHelper.updatePatternStatusByOperation(pattern, operationType, operatorName);
 
-        // COMPLETE 操作后同步样衣阶段状态到 t_style_info（sample_status / sample_progress / sample_completed_time）
-        // 不调用此方法时，进度球会因 t_style_info 未更新而持续旋转显示"进行中"
+        // COMPLETE 操作后同步样衣阶段状态到 t_style_info
         if ("COMPLETE".equals(operationType.trim())) {
-            syncStyleInfoSampleStage(pattern);
+            statusHelper.syncStyleInfoSampleStage(pattern);
         }
 
         // 同步库存：根据操作类型自动更新 t_sample_stock / t_sample_loan
-        syncStockByOperation(pattern, scanRecord, operationType, operatorId, operatorName);
+        stockHelper.syncStockByOperation(pattern, scanRecord, operationType, operatorId, operatorName);
 
         // 扫码时同步人员信息回样衣开发表（车板师等）
-        syncStyleInfoOnScan(pattern.getStyleId(), operatorName, operationType);
+        statusHelper.syncStyleInfoOnScan(pattern.getStyleId(), operatorName, operationType);
 
         Map<String, Object> result = new HashMap<>();
         result.put("recordId", scanRecord.getId());
@@ -266,246 +240,6 @@ public class PatternProductionOrchestrator {
     }
 
     /**
-     * 扫码操作自动同步样衣库存<br>
-     * - WAREHOUSE_IN  → t_sample_stock 新增或累加（同款号+颜色+尺码+类型幂等）<br>
-     * - WAREHOUSE_OUT → t_sample_loan  新增借出记录，减少可用库存<br>
-     * - WAREHOUSE_RETURN → t_sample_loan 对应记录归还，恢复可用库存
-     */
-    private void syncStockByOperation(PatternProduction pattern,
-                                      PatternScanRecord scanRecord,
-                                      String operationType,
-                                      String operatorId,
-                                      String operatorName) {
-        if (pattern == null) return;
-        Long tenantId = UserContext.tenantId();
-        int qty = pattern.getQuantity() != null && pattern.getQuantity() > 0
-                ? pattern.getQuantity() : 1;
-
-        if ("WAREHOUSE_IN".equals(operationType)) {
-            List<SampleStock> plannedStocks = buildInboundStocksFromPattern(pattern, scanRecord, tenantId);
-            for (SampleStock stock : plannedStocks) {
-                LambdaQueryWrapper<SampleStock> q = new LambdaQueryWrapper<SampleStock>()
-                        .eq(SampleStock::getDeleteFlag, 0)
-                        .eq(SampleStock::getStyleNo, stock.getStyleNo())
-                        .eq(SampleStock::getColor, stock.getColor())
-                        .eq(SampleStock::getSize, stock.getSize())
-                        .eq(SampleStock::getSampleType, "development")
-                        .eq(tenantId != null, SampleStock::getTenantId, tenantId);
-                SampleStock existing = sampleStockService.getOne(q);
-                if (existing != null) {
-                    throw new IllegalStateException("该颜色尺码已存在库存，不能重复扫码入库");
-                }
-                sampleStockService.save(stock);
-                log.info("[样衣扫码入库] 新建库存 styleNo={} color={} size={} qty={}",
-                        stock.getStyleNo(), stock.getColor(), stock.getSize(), stock.getQuantity());
-            }
-
-        } else if ("WAREHOUSE_OUT".equals(operationType)) {
-            // 找到对应库存记录
-            LambdaQueryWrapper<SampleStock> q = new LambdaQueryWrapper<SampleStock>()
-                    .eq(SampleStock::getDeleteFlag, 0)
-                    .eq(SampleStock::getStyleNo, pattern.getStyleNo())
-                    .eq(SampleStock::getColor, pattern.getColor())
-                    .eq(SampleStock::getSampleType, "development")
-                    .eq(tenantId != null, SampleStock::getTenantId, tenantId);
-            SampleStock stock = sampleStockService.getOne(q);
-            if (stock == null) {
-                log.warn("[样衣出库] 未找到对应库存记录，跳过借出登记 styleNo={}", pattern.getStyleNo());
-                return;
-            }
-            int available = (stock.getQuantity() == null ? 0 : stock.getQuantity())
-                    - (stock.getLoanedQuantity() == null ? 0 : stock.getLoanedQuantity());
-            if (available < qty) {
-                throw new IllegalStateException(
-                        String.format("样衣可用库存不足（可用%d件，出库%d件）", available, qty));
-            }
-            // 创建借出记录
-            SampleLoan loan = new SampleLoan();
-            loan.setSampleStockId(stock.getId());
-            loan.setBorrower(operatorName);
-            loan.setBorrowerId(operatorId);
-            loan.setQuantity(qty);
-            loan.setLoanDate(LocalDateTime.now());
-            loan.setStatus("borrowed");
-            loan.setRemark(scanRecord.getWarehouseCode() != null
-                    ? "扫码出库，目的地：" + scanRecord.getWarehouseCode() : "扫码出库");
-            loan.setCreateTime(LocalDateTime.now());
-            loan.setUpdateTime(LocalDateTime.now());
-            loan.setDeleteFlag(0);
-            loan.setTenantId(tenantId);
-            sampleLoanMapper.insert(loan);
-            sampleStockMapper.updateLoanedQuantity(stock.getId(), qty);
-            log.info("[样衣出库] loanId={} stockId={} qty={}", loan.getId(), stock.getId(), qty);
-
-        } else if ("WAREHOUSE_RETURN".equals(operationType)) {
-            // 找最近一条该样衣的借出中记录归还
-            LambdaQueryWrapper<SampleStock> sq = new LambdaQueryWrapper<SampleStock>()
-                    .eq(SampleStock::getDeleteFlag, 0)
-                    .eq(SampleStock::getStyleNo, pattern.getStyleNo())
-                    .eq(SampleStock::getColor, pattern.getColor())
-                    .eq(SampleStock::getSampleType, "development")
-                    .eq(tenantId != null, SampleStock::getTenantId, tenantId);
-            SampleStock stock = sampleStockService.getOne(sq);
-            if (stock == null) {
-                log.warn("[样衣归还] 未找到库存记录，跳过 styleNo={}", pattern.getStyleNo());
-                return;
-            }
-            LambdaQueryWrapper<SampleLoan> lq = new LambdaQueryWrapper<SampleLoan>()
-                    .eq(SampleLoan::getSampleStockId, stock.getId())
-                    .eq(SampleLoan::getStatus, "borrowed")
-                    .eq(SampleLoan::getDeleteFlag, 0)
-                    .orderByDesc(SampleLoan::getLoanDate)
-                    .last("LIMIT 1");
-            SampleLoan loan = sampleLoanMapper.selectOne(lq);
-            if (loan == null) {
-                log.warn("[样衣归还] 未找到借出记录，跳过 stockId={}", stock.getId());
-                return;
-            }
-            loan.setStatus("returned");
-            loan.setReturnDate(LocalDateTime.now());
-            loan.setUpdateTime(LocalDateTime.now());
-            loan.setRemark("扫码归还");
-            sampleLoanMapper.updateById(loan);
-            sampleStockMapper.updateLoanedQuantity(stock.getId(), -loan.getQuantity());
-            log.info("[样衣归还] loanId={} stockId={} qty=-{}", loan.getId(), stock.getId(), loan.getQuantity());
-        }
-    }
-
-    private List<SampleStock> buildInboundStocksFromPattern(PatternProduction pattern, PatternScanRecord scanRecord, Long tenantId) {
-        StyleInfo styleInfo = null;
-        Long styleId = parseStyleId(pattern.getStyleId());
-        if (styleId != null) {
-            styleInfo = styleInfoService.getById(styleId);
-        }
-        if (styleInfo == null && StringUtils.hasText(pattern.getStyleNo())) {
-            styleInfo = styleInfoService.lambdaQuery()
-                    .eq(StyleInfo::getStyleNo, pattern.getStyleNo())
-                    .last("LIMIT 1")
-                    .one();
-        }
-        if (styleInfo == null) {
-            throw new IllegalStateException("未找到样衣开发资料，无法自动匹配颜色尺码数量入库");
-        }
-
-        List<Map<String, Object>> specRows = extractConfiguredSpecRows(styleInfo, pattern.getColor());
-        if (specRows.isEmpty()) {
-            throw new IllegalStateException("未配置有生产数量的颜色尺码，无法扫码入库");
-        }
-
-        List<SampleStock> stocks = new ArrayList<>();
-        for (Map<String, Object> row : specRows) {
-            SampleStock stock = new SampleStock();
-            stock.setStyleId(String.valueOf(styleInfo.getId()));
-            stock.setStyleNo(styleInfo.getStyleNo());
-            stock.setStyleName(styleInfo.getStyleName());
-            stock.setImageUrl(styleInfo.getCover());
-            stock.setColor(String.valueOf(row.get("color")));
-            stock.setSize(String.valueOf(row.get("size")));
-            stock.setSampleType("development");
-            stock.setQuantity((Integer) row.get("quantity"));
-            stock.setLoanedQuantity(0);
-            stock.setLocation(scanRecord == null ? null : scanRecord.getWarehouseCode());
-            stock.setRemark("扫码自动入库");
-            stock.setCreateTime(LocalDateTime.now());
-            stock.setUpdateTime(LocalDateTime.now());
-            stock.setDeleteFlag(0);
-            stock.setTenantId(tenantId);
-            stocks.add(stock);
-        }
-        return stocks;
-    }
-
-    private List<Map<String, Object>> extractConfiguredSpecRows(StyleInfo styleInfo, String preferredColor) {
-        List<Map<String, Object>> rows = new ArrayList<>();
-        if (styleInfo == null || !StringUtils.hasText(styleInfo.getSizeColorConfig())) {
-            return rows;
-        }
-        try {
-            Map<String, Object> config = objectMapper.readValue(styleInfo.getSizeColorConfig(), new TypeReference<Map<String, Object>>() {});
-            List<String> sizes = new ArrayList<>();
-            Object sizesRaw = config.get("sizes");
-            if (sizesRaw instanceof List<?> list) {
-                for (Object item : list) {
-                    String value = item == null ? "" : String.valueOf(item).trim();
-                    if (StringUtils.hasText(value)) {
-                        sizes.add(value);
-                    }
-                }
-            }
-
-            String directColor = StringUtils.hasText(styleInfo.getColor()) ? styleInfo.getColor().trim() : "";
-            Object colorsRaw = config.get("colors");
-            if (colorsRaw instanceof List<?> list) {
-                for (Object item : list) {
-                    String value = item == null ? "" : String.valueOf(item).trim();
-                    if (StringUtils.hasText(value)) {
-                        directColor = value;
-                        break;
-                    }
-                }
-            }
-            if (!StringUtils.hasText(directColor)) {
-                directColor = StringUtils.hasText(preferredColor) ? preferredColor.trim() : "";
-            }
-
-            Object matrixRowsRaw = config.get("matrixRows");
-            if (matrixRowsRaw instanceof List<?> list) {
-                for (Object item : list) {
-                    if (!(item instanceof Map<?, ?> matrixRow)) {
-                        continue;
-                    }
-                    String color = matrixRow.get("color") == null ? "" : String.valueOf(matrixRow.get("color")).trim();
-                    if (!StringUtils.hasText(color)) {
-                        continue;
-                    }
-                    if (StringUtils.hasText(preferredColor) && !preferredColor.trim().equalsIgnoreCase(color)) {
-                        continue;
-                    }
-                    Object quantitiesRaw = matrixRow.get("quantities");
-                    if (!(quantitiesRaw instanceof List<?> quantities)) {
-                        continue;
-                    }
-                    for (int i = 0; i < sizes.size(); i++) {
-                        int quantity = i < quantities.size() ? Integer.parseInt(String.valueOf(quantities.get(i) == null ? 0 : quantities.get(i))) : 0;
-                        if (quantity <= 0) {
-                            continue;
-                        }
-                        Map<String, Object> row = new HashMap<>();
-                        row.put("color", color);
-                        row.put("size", sizes.get(i));
-                        row.put("quantity", quantity);
-                        rows.add(row);
-                    }
-                }
-            }
-            if (!rows.isEmpty()) {
-                return rows;
-            }
-
-            Object topQuantitiesRaw = config.get("quantities");
-            if (StringUtils.hasText(directColor) && topQuantitiesRaw instanceof List<?> topQuantities) {
-                for (int i = 0; i < sizes.size(); i++) {
-                    int quantity = i < topQuantities.size() ? Integer.parseInt(String.valueOf(topQuantities.get(i) == null ? 0 : topQuantities.get(i))) : 0;
-                    if (quantity <= 0) {
-                        continue;
-                    }
-                    if (StringUtils.hasText(preferredColor) && !preferredColor.trim().equalsIgnoreCase(directColor)) {
-                        continue;
-                    }
-                    Map<String, Object> row = new HashMap<>();
-                    row.put("color", directColor);
-                    row.put("size", sizes.get(i));
-                    row.put("quantity", quantity);
-                    rows.add(row);
-                }
-            }
-        } catch (Exception e) {
-            log.warn("解析样衣配置失败，styleNo={}, error={}", styleInfo.getStyleNo(), e.getMessage());
-        }
-        return rows;
-    }
-
-    /**
      * 样衣入库（跨域：扫码 + 状态更新）
      */
     @Transactional(rollbackFor = Exception.class)
@@ -518,7 +252,7 @@ public class PatternProductionOrchestrator {
         if (!"PRODUCTION_COMPLETED".equals(status) && !"COMPLETED".equals(status)) {
             throw new IllegalStateException("样板生产未完成，无法入库");
         }
-        if (!isReviewApproved(pattern)) {
+        if (!statusHelper.isReviewApproved(pattern)) {
             throw new IllegalStateException("样衣审核未通过，无法入库");
         }
 
@@ -561,7 +295,7 @@ public class PatternProductionOrchestrator {
         pattern.setUpdateBy(operatorName);
         pattern.setUpdateTime(LocalDateTime.now());
         patternProductionService.updateById(pattern);
-        syncStyleInfoReviewFields(pattern, normalizedResult, normalizedRemark, operatorName);
+        statusHelper.syncStyleInfoReviewFields(pattern, normalizedResult, normalizedRemark, operatorName);
 
         Map<String, Object> response = new HashMap<>();
         response.put("patternId", pattern.getId());
@@ -575,92 +309,11 @@ public class PatternProductionOrchestrator {
         return response;
     }
 
-    private void syncStyleInfoReviewFields(PatternProduction pattern, String reviewResult, String reviewRemark, String operatorName) {
-        try {
-            Long styleId = parseStyleId(pattern.getStyleId());
-            if (styleId == null) {
-                return;
-            }
-            StyleInfo styleInfo = styleInfoService.getById(styleId);
-            if (styleInfo == null) {
-                return;
-            }
-
-            String mappedStatus;
-            if ("APPROVED".equalsIgnoreCase(reviewResult)) {
-                mappedStatus = "PASS";
-            } else if ("REJECTED".equalsIgnoreCase(reviewResult)) {
-                mappedStatus = "REJECT";
-            } else {
-                mappedStatus = reviewResult;
-            }
-
-            styleInfo.setSampleReviewStatus(mappedStatus);
-            styleInfo.setSampleReviewComment(reviewRemark);
-            styleInfo.setSampleReviewer(operatorName);
-            styleInfo.setSampleReviewTime(LocalDateTime.now());
-            styleInfoService.updateById(styleInfo);
-        } catch (Exception e) {
-            log.error("同步样衣审核结果到StyleInfo失败: patternId={}", pattern.getId(), e);
-        }
-    }
-
     /**
      * 获取样衣动态工序配置（对齐大货动态工序思路）
      */
     public List<Map<String, Object>> getPatternProcessConfig(String patternId) {
-        if (!StringUtils.hasText(patternId)) {
-            throw new IllegalArgumentException("样衣ID不能为空");
-        }
-
-        PatternProduction pattern = patternProductionService.getById(patternId);
-        if (pattern == null || pattern.getDeleteFlag() == 1) {
-            throw new IllegalArgumentException("样板生产记录不存在");
-        }
-
-        Long styleId = parseStyleId(pattern.getStyleId());
-        if (styleId == null) {
-            return buildDefaultPatternProcessConfig();
-        }
-
-        LambdaQueryWrapper<StyleProcess> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(StyleProcess::getStyleId, styleId)
-                .orderByAsc(StyleProcess::getSortOrder)
-                .orderByAsc(StyleProcess::getId);
-        List<StyleProcess> processes = styleProcessService.list(wrapper);
-        if (processes == null || processes.isEmpty()) {
-            return buildDefaultPatternProcessConfig();
-        }
-
-        List<Map<String, Object>> result = new ArrayList<>();
-        int sort = 1;
-        for (StyleProcess process : processes) {
-            String processName = StringUtils.hasText(process.getProcessName())
-                    ? process.getProcessName().trim()
-                    : StringUtils.hasText(process.getProgressStage()) ? process.getProgressStage().trim() : "";
-            if (!StringUtils.hasText(processName)) {
-                continue;
-            }
-
-            String progressStage = StringUtils.hasText(process.getProgressStage())
-                    ? process.getProgressStage().trim()
-                    : processName;
-
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("operationType", processName);
-            item.put("processName", processName);
-            item.put("progressStage", progressStage);
-            item.put("sortOrder", process.getSortOrder() != null ? process.getSortOrder() : sort);
-            item.put("scanType", inferPatternScanType(progressStage, processName));
-            item.put("price", process.getPrice() != null ? process.getPrice() : BigDecimal.ZERO);
-            result.add(item);
-            sort++;
-        }
-
-        if (result.isEmpty()) {
-            return buildDefaultPatternProcessConfig();
-        }
-        return result;
+        return enrichmentHelper.getPatternProcessConfig(patternId);
     }
 
     /**
@@ -681,852 +334,6 @@ public class PatternProductionOrchestrator {
     }
 
     // ========================== 私有辅助方法 ==========================
-
-    /**
-     * 丰富单条样板生产记录（关联款式、工序、采购）
-     */
-    private Map<String, Object> enrichRecord(PatternProduction record) {
-        Map<String, Object> map = new HashMap<>();
-        LocalDateTime resolvedCompleteTime = resolvePatternProductionCompleteTime(record);
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MM-dd HH:mm");
-        map.put("id", record.getId());
-        map.put("styleId", record.getStyleId());
-        map.put("styleNo", record.getStyleNo());
-        map.put("color", record.getColor());
-        map.put("quantity", record.getQuantity());
-        map.put("releaseTime", record.getReleaseTime() != null ? record.getReleaseTime().format(fmt) : null);
-        map.put("deliveryTime", record.getDeliveryTime());
-        map.put("receiver", record.getReceiver());
-        map.put("receiveTime", record.getReceiveTime() != null ? record.getReceiveTime().format(fmt) : null);
-        map.put("completeTime", resolvedCompleteTime != null ? resolvedCompleteTime.format(fmt) : null);
-        // 旧记录 patternMaker 可能为 null（领取时未写入），兜底用 receiver（两者为同一人）
-        String patternMakerVal = StringUtils.hasText(record.getPatternMaker())
-                ? record.getPatternMaker() : record.getReceiver();
-        map.put("patternMaker", patternMakerVal);
-        map.put("progressNodes", record.getProgressNodes());
-        map.put("status", record.getStatus());
-        map.put("createTime", record.getCreateTime());
-        map.put("reviewStatus", record.getReviewStatus());
-        map.put("reviewResult", record.getReviewResult());
-        map.put("reviewRemark", record.getReviewRemark());
-        map.put("reviewBy", record.getReviewBy());
-        map.put("reviewById", record.getReviewById());
-        map.put("reviewTime", record.getReviewTime());
-
-        // 从款式信息获取封面图、码数、人员
-        enrichWithStyleInfo(map, record.getStyleId());
-
-        // 获取工序单价
-        enrichWithProcessPrices(map, record.getStyleId());
-
-        // 获取采购进度
-        enrichWithProcurementProgress(map, record.getStyleId());
-
-        // 获取动态工序配置（与小程序端保持一致）
-        try {
-            List<Map<String, Object>> processConfig = getPatternProcessConfig(record.getId());
-            map.put("processConfig", processConfig);
-        } catch (Exception e) {
-            log.warn("Failed to get processConfig for record: {}", record.getId(), e);
-            map.put("processConfig", buildDefaultPatternProcessConfig());
-        }
-
-        return map;
-    }
-
-    private void enrichWithStyleInfo(Map<String, Object> map, String styleIdStr) {
-        String coverImage = null;
-        List<String> sizes = new ArrayList<>();
-        String designer = null;
-        String patternDeveloper = null;
-        String plateWorker = null;
-        String merchandiser = null;
-
-        if (StringUtils.hasText(styleIdStr)) {
-            try {
-                Long styleId = Long.parseLong(styleIdStr);
-                StyleInfo styleInfo = styleInfoService.getById(styleId);
-                if (styleInfo != null) {
-                    coverImage = styleInfo.getCover();
-                    designer = styleInfo.getSampleNo();
-                    patternDeveloper = styleInfo.getSampleSupplier();
-                    plateWorker = styleInfo.getPlateWorker();
-                    merchandiser = styleInfo.getOrderType();
-
-                    String sizeColorConfig = styleInfo.getSizeColorConfig();
-                    if (StringUtils.hasText(sizeColorConfig)) {
-                        try {
-                            Map<String, Object> configMap = objectMapper.readValue(sizeColorConfig,
-                                    new TypeReference<Map<String, Object>>() {});
-                            Object sizesObj = configMap.get("sizes");
-                            if (sizesObj instanceof List) {
-                                for (Object sizeItem : (List<?>) sizesObj) {
-                                    if (sizeItem != null) {
-                                        String sizeStr = sizeItem.toString().trim();
-                                        if (!sizeStr.isEmpty() && !sizes.contains(sizeStr)) {
-                                            sizes.add(sizeStr);
-                                        }
-                                    }
-                                }
-                            }
-                        } catch (Exception e) {
-                            log.warn("Failed to parse sizeColorConfig for styleId: {}", styleId, e);
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                log.warn("Failed to get style info for styleId: {}", styleIdStr, e);
-            }
-        }
-        map.put("coverImage", coverImage);
-        map.put("sizes", sizes);
-        map.put("designer", designer);
-        map.put("patternDeveloper", patternDeveloper);
-        map.put("plateWorker", plateWorker);
-        map.put("merchandiser", merchandiser);
-    }
-
-    private void enrichWithProcessPrices(Map<String, Object> map, String styleIdStr) {
-        Map<String, Object> processUnitPrices = new LinkedHashMap<>();
-        Map<String, Object> processDetails = new LinkedHashMap<>();
-
-        if (StringUtils.hasText(styleIdStr)) {
-            try {
-                Long styleId = Long.parseLong(styleIdStr);
-                List<StyleProcess> processes = styleProcessService.listByStyleId(styleId);
-                if (processes != null) {
-                    String[] stages = {"采购", "裁剪", "车缝", "尾部", "入库"};
-                    Map<String, Double> stagePriceMap = new HashMap<>();
-                    Map<String, List<Map<String, Object>>> stageDetailsMap = new HashMap<>();
-
-                    for (String stage : stages) {
-                        stagePriceMap.put(stage, 0.0);
-                        stageDetailsMap.put(stage, new ArrayList<>());
-                    }
-
-                    for (StyleProcess process : processes) {
-                        String progressStage = process.getProgressStage();
-                        BigDecimal price = process.getPrice();
-                        double priceValue = price != null ? price.doubleValue() : 0;
-
-                        if (StringUtils.hasText(progressStage) && stagePriceMap.containsKey(progressStage)) {
-                            stagePriceMap.put(progressStage, stagePriceMap.get(progressStage) + priceValue);
-
-                            Map<String, Object> detail = new HashMap<>();
-                            detail.put("name", process.getProcessName() != null ? process.getProcessName() : process.getProcessCode());
-                            detail.put("unitPrice", priceValue);
-                            detail.put("processCode", process.getProcessCode());
-                            detail.put("machineType", process.getMachineType());
-                            detail.put("standardTime", process.getStandardTime());
-                            stageDetailsMap.get(progressStage).add(detail);
-                        }
-                    }
-
-                    processUnitPrices.putAll(stagePriceMap);
-                    processDetails.putAll(stageDetailsMap);
-                }
-            } catch (Exception e) {
-                log.warn("Failed to get process unit prices for styleId: {}", styleIdStr, e);
-            }
-        }
-        map.put("processUnitPrices", processUnitPrices);
-        map.put("processDetails", processDetails);
-    }
-
-    private void enrichWithProcurementProgress(Map<String, Object> map, String styleIdStr) {
-        Map<String, Object> procurementProgress = new HashMap<>();
-
-        if (StringUtils.hasText(styleIdStr)) {
-            try {
-                Long styleId = Long.parseLong(styleIdStr);
-                LambdaQueryWrapper<MaterialPurchase> purchaseWrapper = new LambdaQueryWrapper<>();
-                purchaseWrapper.eq(MaterialPurchase::getStyleId, styleId)
-                        .eq(MaterialPurchase::getDeleteFlag, 0);
-                List<MaterialPurchase> purchases = materialPurchaseService.list(purchaseWrapper);
-
-                if (purchases != null && !purchases.isEmpty()) {
-                    long completedCount = purchases.stream()
-                            .filter(p -> p.getReceivedTime() != null)
-                            .count();
-                    int totalCount = purchases.size();
-                    int completionPercent = (int) ((completedCount * 100.0) / totalCount);
-
-                    procurementProgress.put("total", totalCount);
-                    procurementProgress.put("completed", completedCount);
-                    procurementProgress.put("percent", completionPercent);
-
-                    MaterialPurchase latestCompleted = purchases.stream()
-                            .filter(p -> p.getReceivedTime() != null)
-                            .max((p1, p2) -> p1.getReceivedTime().compareTo(p2.getReceivedTime()))
-                            .orElse(null);
-
-                    if (latestCompleted != null) {
-                        procurementProgress.put("completedTime", latestCompleted.getReceivedTime());
-                        procurementProgress.put("receiver", latestCompleted.getReceiverName());
-                    }
-                } else {
-                    procurementProgress.put("total", 0);
-                    procurementProgress.put("completed", 0);
-                    procurementProgress.put("percent", 0);
-                }
-            } catch (Exception e) {
-                log.warn("Failed to get procurement progress for styleId: {}", styleIdStr, e);
-                procurementProgress.put("total", 0);
-                procurementProgress.put("completed", 0);
-                procurementProgress.put("percent", 0);
-            }
-        }
-        map.put("procurementProgress", procurementProgress);
-    }
-
-    private void syncStyleInfoOnReceive(String styleIdStr, String currentUser) {
-        if (!StringUtils.hasText(styleIdStr)) return;
-        try {
-            Long styleId = Long.parseLong(styleIdStr);
-            StyleInfo styleInfo = styleInfoService.getById(styleId);
-            if (styleInfo != null) {
-                boolean updated = false;
-
-                if (!StringUtils.hasText(styleInfo.getProductionAssignee())) {
-                    styleInfo.setProductionAssignee(currentUser);
-                    updated = true;
-                }
-                if (styleInfo.getProductionStartTime() == null) {
-                    styleInfo.setProductionStartTime(LocalDateTime.now());
-                    updated = true;
-                }
-                if (!StringUtils.hasText(styleInfo.getPlateWorker())) {
-                    styleInfo.setPlateWorker(currentUser);
-                    updated = true;
-                    log.info("Synced plate worker to style info: styleId={}, plateWorker={}", styleId, currentUser);
-                }
-
-                if (updated) {
-                    styleInfoService.updateById(styleInfo);
-                    log.info("Synced production start to style info: styleId={}, assignee={}", styleId, currentUser);
-                }
-            }
-        } catch (NumberFormatException e) {
-            log.warn("Invalid styleId format: {}", styleIdStr);
-        }
-    }
-
-    /**
-     * 扫码操作时同步人员信息回样衣开发表（t_style_info）
-     * 解决直接扫码（未走"领取"流程）时车板师等字段不回写的问题
-     */
-    private void syncStyleInfoOnScan(String styleIdStr, String operatorName, String operationType) {
-        if (!StringUtils.hasText(styleIdStr)) return;
-        try {
-            Long styleId = Long.parseLong(styleIdStr);
-            StyleInfo styleInfo = styleInfoService.getById(styleId);
-            if (styleInfo == null) return;
-
-            boolean updated = false;
-
-            // 车板师：扫码的人就是车板师（如果还没设置）
-            if (!StringUtils.hasText(styleInfo.getPlateWorker())) {
-                styleInfo.setPlateWorker(operatorName);
-                updated = true;
-                log.info("Scan synced plate worker to style info: styleId={}, plateWorker={}", styleId, operatorName);
-            }
-
-            // 纸样师：扫码的人补充为纸样师（如果还没设置）
-            if (!StringUtils.hasText(styleInfo.getSampleSupplier())) {
-                styleInfo.setSampleSupplier(operatorName);
-                updated = true;
-                log.info("Scan synced pattern developer to style info: styleId={}, patternDeveloper={}", styleId, operatorName);
-            }
-
-            // 生产开始时间：如果还没有，补充
-            if (styleInfo.getProductionStartTime() == null) {
-                styleInfo.setProductionStartTime(LocalDateTime.now());
-                updated = true;
-            }
-            if (!StringUtils.hasText(styleInfo.getProductionAssignee())) {
-                styleInfo.setProductionAssignee(operatorName);
-                updated = true;
-            }
-
-            if (updated) {
-                styleInfo.setUpdateTime(LocalDateTime.now());
-                styleInfoService.updateById(styleInfo);
-                log.info("Scan synced style info fields: styleId={}, operator={}, operation={}", styleId, operatorName, operationType);
-            }
-        } catch (NumberFormatException e) {
-            log.warn("syncStyleInfoOnScan: invalid styleId format: {}", styleIdStr);
-        } catch (Exception e) {
-            log.error("syncStyleInfoOnScan failed: styleId={}", styleIdStr, e);
-        }
-    }
-
-    private void syncStyleInfoOnComplete(PatternProduction record) {
-        if (!StringUtils.hasText(record.getStyleId())) return;
-        try {
-            Long styleId = Long.parseLong(record.getStyleId());
-            StyleInfo styleInfo = styleInfoService.getById(styleId);
-            if (styleInfo != null) {
-                String currentUser = UserContext.username();
-                LocalDateTime now = LocalDateTime.now();
-
-                if (!StringUtils.hasText(styleInfo.getProductionAssignee())) {
-                    styleInfo.setProductionAssignee(currentUser);
-                }
-                if (styleInfo.getProductionStartTime() == null) {
-                    styleInfo.setProductionStartTime(record.getCreateTime() != null ? record.getCreateTime() : now);
-                }
-                styleInfo.setProductionCompletedTime(now);
-
-                styleInfoService.updateById(styleInfo);
-                log.info("Updated StyleInfo production times: styleId={}, assignee={}", styleId,
-                        styleInfo.getProductionAssignee());
-            }
-        } catch (Exception e) {
-            log.error("Failed to update StyleInfo production times: styleId={}", record.getStyleId(), e);
-        }
-    }
-
-    private void syncStyleInfoSampleStage(PatternProduction pattern) {
-        if (pattern == null || !StringUtils.hasText(pattern.getStyleId())) {
-            return;
-        }
-
-        try {
-            Long styleId = Long.parseLong(pattern.getStyleId());
-            StyleInfo styleInfo = styleInfoService.getById(styleId);
-            if (styleInfo == null) {
-                return;
-            }
-
-            String currentSampleStatus = String.valueOf(styleInfo.getSampleStatus() == null ? "" : styleInfo.getSampleStatus()).trim().toUpperCase();
-            boolean sampleFinished = "COMPLETED".equals(currentSampleStatus) || "PRODUCTION_COMPLETED".equals(currentSampleStatus);
-            int progress = calculatePatternProgressPercent(pattern);
-            String status = String.valueOf(pattern.getStatus() == null ? "" : pattern.getStatus()).trim().toUpperCase();
-            LocalDateTime now = LocalDateTime.now();
-            LocalDateTime resolvedCompleteTime = resolvePatternProductionCompleteTime(pattern);
-
-            StyleInfo patch = new StyleInfo();
-            patch.setId(styleId);
-            patch.setUpdateTime(now);
-
-            if (StringUtils.hasText(pattern.getReceiver()) && !StringUtils.hasText(styleInfo.getProductionAssignee())) {
-                patch.setProductionAssignee(pattern.getReceiver());
-            }
-
-            if (pattern.getReceiveTime() != null && styleInfo.getProductionStartTime() == null) {
-                patch.setProductionStartTime(pattern.getReceiveTime());
-            }
-
-            if ("PRODUCTION_COMPLETED".equals(status) || "COMPLETED".equals(status)) {
-                patch.setProductionCompletedTime(resolvedCompleteTime != null ? resolvedCompleteTime : now);
-                // 生产实际完成时，将样衣状态同步为 PRODUCTION_COMPLETED，使时间轴节点显示「生产完成」而非「进行中」
-                if (!sampleFinished) {
-                    patch.setSampleStatus("PRODUCTION_COMPLETED");
-                    patch.setSampleProgress(100);
-                    patch.setSampleCompletedTime(resolvedCompleteTime != null ? resolvedCompleteTime : now);
-                }
-            } else if (!sampleFinished && !"PENDING".equals(status)) {
-                patch.setSampleStatus("IN_PROGRESS");
-                patch.setSampleProgress(progress);
-                patch.setSampleCompletedTime(null);
-            }
-
-            styleInfoService.updateById(patch);
-        } catch (Exception e) {
-            log.error("Failed to sync style sample stage: patternId={}, styleId={}", pattern.getId(), pattern.getStyleId(), e);
-        }
-    }
-
-    private int calculatePatternProgressPercent(PatternProduction pattern) {
-        String status = String.valueOf(pattern.getStatus() == null ? "" : pattern.getStatus()).trim().toUpperCase();
-        if ("PRODUCTION_COMPLETED".equals(status) || "COMPLETED".equals(status)) {
-            return 100;
-        }
-
-        String progressNodes = pattern.getProgressNodes();
-        if (!StringUtils.hasText(progressNodes)) {
-            return "IN_PROGRESS".equals(status) ? 5 : 0;
-        }
-
-        try {
-            Map<String, Object> nodes = objectMapper.readValue(progressNodes, new TypeReference<Map<String, Object>>() {});
-            List<Integer> percents = new ArrayList<>();
-            for (Object value : nodes.values()) {
-                if (value instanceof Number) {
-                    percents.add(Math.max(0, Math.min(100, ((Number) value).intValue())));
-                    continue;
-                }
-                try {
-                    percents.add(Math.max(0, Math.min(100, Integer.parseInt(String.valueOf(value)))));
-                } catch (Exception ignored) {
-                }
-            }
-
-            if (percents.isEmpty()) {
-                return "IN_PROGRESS".equals(status) ? 5 : 0;
-            }
-
-            int sum = percents.stream().mapToInt(Integer::intValue).sum();
-            int avg = Math.round((float) sum / percents.size());
-            return Math.max("IN_PROGRESS".equals(status) ? 5 : 0, avg);
-        } catch (Exception e) {
-            log.warn("Failed to parse pattern progress nodes: patternId={}", pattern.getId(), e);
-            return "IN_PROGRESS".equals(status) ? 5 : 0;
-        }
-    }
-
-    private void updatePatternStatusByOperation(PatternProduction pattern, String operationType, String operatorName) {
-        boolean needUpdate = false;
-        LocalDateTime now = LocalDateTime.now();
-
-        if (!StringUtils.hasText(operationType)) {
-            return;
-        }
-
-        String normalizedOperation = operationType.trim();
-
-        switch (normalizedOperation) {
-            case "RECEIVE":
-                if (!"IN_PROGRESS".equals(pattern.getStatus())
-                        && !"PRODUCTION_COMPLETED".equals(pattern.getStatus())
-                        && !"COMPLETED".equals(pattern.getStatus())) {
-                    pattern.setStatus("IN_PROGRESS");
-                    pattern.setReceiver(operatorName);
-                    pattern.setReceiveTime(now);
-                    needUpdate = true;
-                }
-                break;
-            case "PLATE":
-                updateProgressNode(pattern, "裁剪", 100);
-                ensureInProgress(pattern, operatorName);
-                needUpdate = true;
-                break;
-            case "FOLLOW_UP":
-                updateProgressNode(pattern, "车缝", 100);
-                ensureInProgress(pattern, operatorName);
-                needUpdate = true;
-                break;
-            case "COMPLETE":
-                // 标记完成时，将所有进度节点都更新到100%
-                updateProgressNode(pattern, "采购", 100);
-                updateProgressNode(pattern, "裁剪", 100);
-                updateProgressNode(pattern, "二次工艺", 100);
-                updateProgressNode(pattern, "车缝", 100);
-                updateProgressNode(pattern, "尾部", 100);
-                updateProgressNode(pattern, "入库", 100);
-                markPatternProductionCompleted(pattern, now);
-                needUpdate = true;
-                break;
-            case "WAREHOUSE_IN":
-                updateProgressNode(pattern, "入库", 100);
-                pattern.setStatus("COMPLETED");
-                if (pattern.getCompleteTime() == null) {
-                    pattern.setCompleteTime(now);
-                }
-                if (!StringUtils.hasText(pattern.getReviewStatus())) {
-                    pattern.setReviewStatus("PENDING");
-                }
-                needUpdate = true;
-                break;
-            case "WAREHOUSE_OUT":
-                updateProgressNode(pattern, "出库", 100);
-                pattern.setStatus("COMPLETED");
-                needUpdate = true;
-                break;
-            case "WAREHOUSE_RETURN":
-                updateProgressNode(pattern, "归还", 100);
-                pattern.setStatus("COMPLETED");
-                needUpdate = true;
-                break;
-            case "PROCUREMENT":
-                updateProgressNode(pattern, "采购", 100);
-                ensureInProgress(pattern, operatorName);
-                needUpdate = true;
-                break;
-            case "CUTTING":
-                updateProgressNode(pattern, "裁剪", 100);
-                ensureInProgress(pattern, operatorName);
-                needUpdate = true;
-                break;
-            case "SECONDARY":
-                updateProgressNode(pattern, "二次工艺", 100);
-                ensureInProgress(pattern, operatorName);
-                needUpdate = true;
-                break;
-            case "SEWING":
-                updateProgressNode(pattern, "车缝", 100);
-                ensureInProgress(pattern, operatorName);
-                needUpdate = true;
-                break;
-            case "TAIL":
-                updateProgressNode(pattern, "尾部", 100);
-                markPatternProductionCompleted(pattern, now);
-                needUpdate = true;
-                break;
-            default:
-                ensureInProgress(pattern, operatorName);
-                String dynamicStage = resolveOperationProgressStage(pattern, normalizedOperation);
-                updateProgressNode(pattern, dynamicStage, 100);
-
-                if (isPatternAllProcessesCompleted(pattern.getId(), pattern.getStyleId())) {
-                    markPatternProductionCompleted(pattern, now);
-                }
-                needUpdate = true;
-        }
-
-        if (needUpdate) {
-            pattern.setUpdateTime(now);
-            patternProductionService.updateById(pattern);
-            syncStyleInfoSampleStage(pattern);
-        }
-    }
-
-    private void markPatternProductionCompleted(PatternProduction pattern, LocalDateTime completedTime) {
-        pattern.setStatus("PRODUCTION_COMPLETED");
-        if (pattern.getCompleteTime() == null) {
-            pattern.setCompleteTime(completedTime);
-        }
-        if (!StringUtils.hasText(pattern.getReviewStatus())) {
-            pattern.setReviewStatus("PENDING");
-        }
-        // 同步 StyleInfo 的 productionCompletedTime
-        syncStyleInfoOnComplete(pattern);
-    }
-
-    private LocalDateTime resolvePatternProductionCompleteTime(PatternProduction pattern) {
-        if (pattern == null) {
-            return null;
-        }
-        if (pattern.getCompleteTime() != null) {
-            return pattern.getCompleteTime();
-        }
-
-        String status = StringUtils.hasText(pattern.getStatus()) ? pattern.getStatus().trim().toUpperCase() : "";
-        if (!"PRODUCTION_COMPLETED".equals(status) && !"COMPLETED".equals(status)) {
-            return null;
-        }
-
-        LambdaQueryWrapper<PatternScanRecord> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(PatternScanRecord::getPatternProductionId, pattern.getId())
-                .eq(PatternScanRecord::getDeleteFlag, 0)
-                .in(PatternScanRecord::getOperationType, Arrays.asList("COMPLETE", "TAIL"))
-                .orderByDesc(PatternScanRecord::getScanTime)
-                .orderByDesc(PatternScanRecord::getCreateTime)
-                .last("limit 1");
-        PatternScanRecord completeRecord = patternScanRecordService.getOne(wrapper, false);
-        if (completeRecord != null) {
-            return completeRecord.getScanTime() != null ? completeRecord.getScanTime() : completeRecord.getCreateTime();
-        }
-
-        return pattern.getUpdateTime();
-    }
-
-    private void ensureInProgress(PatternProduction pattern, String operatorName) {
-        if (!"IN_PROGRESS".equals(pattern.getStatus())
-            && !"PRODUCTION_COMPLETED".equals(pattern.getStatus())
-            && !"COMPLETED".equals(pattern.getStatus())) {
-            pattern.setStatus("IN_PROGRESS");
-        }
-        if (!StringUtils.hasText(pattern.getReceiver()) && StringUtils.hasText(operatorName)) {
-            pattern.setReceiver(operatorName);
-        }
-        if (pattern.getReceiveTime() == null) {
-            pattern.setReceiveTime(LocalDateTime.now());
-        }
-    }
-
-    private String resolveOperationProgressStage(PatternProduction pattern, String operationType) {
-        if (!StringUtils.hasText(operationType)) {
-            return "车缝";
-        }
-
-        Map<String, String> legacyStageMap = new HashMap<>();
-        legacyStageMap.put("RECEIVE", "采购");
-        legacyStageMap.put("PLATE", "裁剪");
-        legacyStageMap.put("FOLLOW_UP", "车缝");
-        legacyStageMap.put("COMPLETE", "尾部");
-        legacyStageMap.put("WAREHOUSE_IN", "入库");
-        legacyStageMap.put("WAREHOUSE_OUT", "出库");
-        legacyStageMap.put("WAREHOUSE_RETURN", "归还");
-        legacyStageMap.put("PROCUREMENT", "采购");
-        legacyStageMap.put("CUTTING", "裁剪");
-        legacyStageMap.put("SECONDARY", "二次工艺");
-        legacyStageMap.put("SEWING", "车缝");
-        legacyStageMap.put("TAIL", "尾部");
-        if (legacyStageMap.containsKey(operationType)) {
-            return legacyStageMap.get(operationType);
-        }
-
-        Long styleId = parseStyleId(pattern.getStyleId());
-        if (styleId != null) {
-            LambdaQueryWrapper<StyleProcess> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(StyleProcess::getStyleId, styleId)
-                    .and(w -> w.eq(StyleProcess::getProcessName, operationType)
-                            .or().eq(StyleProcess::getProcessCode, operationType))
-                    .last("LIMIT 1");
-            StyleProcess process = styleProcessService.getOne(wrapper, false);
-            if (process != null && StringUtils.hasText(process.getProgressStage())) {
-                return process.getProgressStage().trim();
-            }
-        }
-
-        return operationType;
-    }
-
-    private boolean isPatternAllProcessesCompleted(String patternId, String styleIdStr) {
-        Long styleId = parseStyleId(styleIdStr);
-        if (styleId == null || !StringUtils.hasText(patternId)) {
-            return false;
-        }
-
-        LambdaQueryWrapper<StyleProcess> processWrapper = new LambdaQueryWrapper<>();
-        processWrapper.eq(StyleProcess::getStyleId, styleId);
-        List<StyleProcess> processes = styleProcessService.list(processWrapper);
-        if (processes == null || processes.isEmpty()) {
-            return false;
-        }
-
-        LambdaQueryWrapper<PatternScanRecord> recordWrapper = new LambdaQueryWrapper<>();
-        recordWrapper.eq(PatternScanRecord::getPatternProductionId, patternId)
-                .eq(PatternScanRecord::getDeleteFlag, 0);
-        List<PatternScanRecord> scanRecords = patternScanRecordService.list(recordWrapper);
-        if (scanRecords == null || scanRecords.isEmpty()) {
-            return false;
-        }
-
-        Set<String> scanned = scanRecords.stream()
-                .map(PatternScanRecord::getOperationType)
-                .filter(StringUtils::hasText)
-                .map(s -> s.trim().toLowerCase())
-                .collect(Collectors.toSet());
-
-        Set<String> legacyDone = new HashSet<>(Arrays.asList("complete"));
-        if (!scanned.isEmpty() && scanned.stream().anyMatch(legacyDone::contains)) {
-            return true;
-        }
-
-        for (StyleProcess process : processes) {
-            String processName = StringUtils.hasText(process.getProcessName()) ? process.getProcessName().trim() : "";
-            String progressStage = StringUtils.hasText(process.getProgressStage()) ? process.getProgressStage().trim() : "";
-
-            if ("入库".equals(progressStage)
-                    || "出库".equals(progressStage)
-                    || "归还".equals(progressStage)
-                    || "WAREHOUSE_IN".equalsIgnoreCase(processName)
-                    || "WAREHOUSE_OUT".equalsIgnoreCase(processName)
-                    || "WAREHOUSE_RETURN".equalsIgnoreCase(processName)) {
-                continue;
-            }
-
-            List<String> candidates = new ArrayList<>();
-            if (StringUtils.hasText(processName)) {
-                candidates.add(processName.toLowerCase());
-            }
-            if (StringUtils.hasText(progressStage)) {
-                candidates.add(progressStage.toLowerCase());
-            }
-            String legacyOp = mapLegacyOperationByStage(progressStage);
-            if (StringUtils.hasText(legacyOp)) {
-                candidates.add(legacyOp.toLowerCase());
-            }
-
-            boolean matched = candidates.stream().filter(StringUtils::hasText).anyMatch(scanned::contains);
-            if (!matched) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private String mapLegacyOperationByStage(String stage) {
-        if (!StringUtils.hasText(stage)) {
-            return null;
-        }
-        String normalized = stage.trim();
-        if (Objects.equals(normalized, "采购")) {
-            return "RECEIVE";
-        }
-        if (Objects.equals(normalized, "裁剪")) {
-            return "PLATE";
-        }
-        if (Objects.equals(normalized, "车缝")) {
-            return "FOLLOW_UP";
-        }
-        if (Objects.equals(normalized, "尾部")) {
-            return "COMPLETE";
-        }
-        if (Objects.equals(normalized, "入库")) {
-            return "WAREHOUSE_IN";
-        }
-        if (Objects.equals(normalized, "出库")) {
-            return "WAREHOUSE_OUT";
-        }
-        if (Objects.equals(normalized, "归还")) {
-            return "WAREHOUSE_RETURN";
-        }
-        return null;
-    }
-
-    private void validateWarehouseOperationFlow(String patternId, String operationType) {
-        if (!StringUtils.hasText(patternId) || !StringUtils.hasText(operationType)) {
-            return;
-        }
-        String op = operationType.trim();
-        // 只对仓库相关操作做流程校验
-        if (!"WAREHOUSE_IN".equals(op) && !"WAREHOUSE_OUT".equals(op) && !"WAREHOUSE_RETURN".equals(op)) {
-            return;
-        }
-
-        // 查询该样衣所有扫码记录
-        LambdaQueryWrapper<PatternScanRecord> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(PatternScanRecord::getPatternProductionId, patternId)
-                .eq(PatternScanRecord::getDeleteFlag, 0);
-        List<PatternScanRecord> records = patternScanRecordService.list(wrapper);
-        Set<String> scanned = records.stream()
-                .map(PatternScanRecord::getOperationType)
-                .filter(StringUtils::hasText)
-                .map(String::trim)
-                .collect(Collectors.toSet());
-
-        if ("WAREHOUSE_IN".equals(op)) {
-            // 入库：必须已完成生产，且不能重复入库
-            PatternProduction pattern = patternProductionService.getById(patternId);
-            if (pattern != null) {
-                String status = StringUtils.hasText(pattern.getStatus()) ? pattern.getStatus().trim().toUpperCase() : "";
-                if (!"PRODUCTION_COMPLETED".equals(status) && !"COMPLETED".equals(status)) {
-                    throw new IllegalStateException("样衣尚未完成生产，不能入库");
-                }
-            }
-            if (pattern != null && !isReviewApproved(pattern)) {
-                throw new IllegalStateException("样衣审核未通过，不能入库");
-            }
-            if (scanned.contains("WAREHOUSE_IN")) {
-                throw new IllegalStateException("该样衣已入库，不能重复入库");
-            }
-        }
-        if ("WAREHOUSE_OUT".equals(op)) {
-            // 出库：必须已入库
-            if (!scanned.contains("WAREHOUSE_IN")) {
-                throw new IllegalStateException("样衣未入库，不能出库");
-            }
-        }
-        if ("WAREHOUSE_RETURN".equals(op)) {
-            // 归还：必须有借出记录
-            if (!scanned.contains("WAREHOUSE_OUT")) {
-                throw new IllegalStateException("样衣未出库，不能归还");
-            }
-        }
-    }
-
-    private void updateProgressNode(PatternProduction pattern, String nodeName, int progress) {
-        try {
-            String progressNodes = pattern.getProgressNodes();
-            Map<String, Object> nodesMap;
-
-            if (StringUtils.hasText(progressNodes)) {
-                nodesMap = objectMapper.readValue(progressNodes, new TypeReference<Map<String, Object>>() {});
-            } else {
-                nodesMap = new HashMap<>();
-            }
-
-            String progressKey = resolveProgressKey(nodeName);
-            nodesMap.put(progressKey, progress);
-            if (!Objects.equals(progressKey, nodeName)) {
-                nodesMap.put(nodeName, progress);
-            }
-            pattern.setProgressNodes(objectMapper.writeValueAsString(nodesMap));
-        } catch (Exception e) {
-            log.error("更新进度节点失败: {}", nodeName, e);
-        }
-    }
-
-    private boolean isReviewApproved(PatternProduction pattern) {
-        if (pattern == null) {
-            return false;
-        }
-        String reviewStatus = StringUtils.hasText(pattern.getReviewStatus())
-                ? pattern.getReviewStatus().trim().toUpperCase()
-                : "";
-        String reviewResult = StringUtils.hasText(pattern.getReviewResult())
-                ? pattern.getReviewResult().trim().toUpperCase()
-                : "";
-        return "APPROVED".equals(reviewStatus) || "APPROVED".equals(reviewResult);
-    }
-
-    private String resolveProgressKey(String nodeName) {
-        if (!StringUtils.hasText(nodeName)) {
-            return "unknown";
-        }
-        String normalized = nodeName.trim();
-        Map<String, String> stageIdMap = new HashMap<>();
-        stageIdMap.put("采购", "procurement");
-        stageIdMap.put("裁剪", "cutting");
-        stageIdMap.put("车缝", "sewing");
-        stageIdMap.put("缝制", "sewing");
-        stageIdMap.put("生产", "sewing");
-        stageIdMap.put("尾部", "tail");
-        stageIdMap.put("后整", "tail");
-        stageIdMap.put("入库", "warehousing");
-        stageIdMap.put("出库", "warehouse_out");
-        stageIdMap.put("归还", "warehouse_return");
-        stageIdMap.put("质检", "quality");
-        stageIdMap.put("大烫", "ironing");
-        stageIdMap.put("二次工艺", "secondary");
-        stageIdMap.put("包装", "packaging");
-        if (stageIdMap.containsKey(normalized)) {
-            return stageIdMap.get(normalized);
-        }
-        return normalized;
-    }
-
-    private Long parseStyleId(String styleIdStr) {
-        if (!StringUtils.hasText(styleIdStr)) {
-            return null;
-        }
-        try {
-            return Long.parseLong(styleIdStr.trim());
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private List<Map<String, Object>> buildDefaultPatternProcessConfig() {
-        List<Map<String, Object>> defaults = new ArrayList<>();
-        defaults.add(buildProcessConfigItem("RECEIVE", "领取样衣", "采购", 1, BigDecimal.ZERO));
-        defaults.add(buildProcessConfigItem("PLATE", "车板", "裁剪", 2, BigDecimal.ZERO));
-        defaults.add(buildProcessConfigItem("FOLLOW_UP", "跟单确认", "车缝", 3, BigDecimal.ZERO));
-        defaults.add(buildProcessConfigItem("COMPLETE", "完成确认", "尾部", 4, BigDecimal.ZERO));
-        defaults.add(buildProcessConfigItem("WAREHOUSE_IN", "样衣入库", "入库", 5, BigDecimal.ZERO));
-        return defaults;
-    }
-
-    private Map<String, Object> buildProcessConfigItem(String operationType, String processName,
-                                                       String progressStage, int sortOrder,
-                                                       BigDecimal price) {
-        Map<String, Object> item = new LinkedHashMap<>();
-        item.put("operationType", operationType);
-        item.put("processName", processName);
-        item.put("progressStage", progressStage);
-        item.put("sortOrder", sortOrder);
-        item.put("scanType", inferPatternScanType(progressStage, processName));
-        item.put("price", price != null ? price : BigDecimal.ZERO);
-        return item;
-    }
-
-    private String inferPatternScanType(String progressStage, String processName) {
-        String stage = StringUtils.hasText(progressStage) ? progressStage.trim() : "";
-        String name = StringUtils.hasText(processName) ? processName.trim() : "";
-        if ("采购".equals(stage) || name.contains("采购") || name.contains("领取")) {
-            return "procurement";
-        }
-        if ("裁剪".equals(stage) || name.contains("裁剪")) {
-            return "cutting";
-        }
-        if ("入库".equals(stage) || name.contains("入库")) {
-            return "warehouse";
-        }
-        return "production";
-    }
 
     private void parseAndSetTime(Map<String, Object> params, String key, PatternProduction record) {
         if (params.containsKey(key)) {

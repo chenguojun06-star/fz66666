@@ -57,4 +57,14 @@ public class ProductOutstock {
 
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
+
+    // ==================== 收货字段 ====================
+
+    private String receiveStatus;
+
+    private LocalDateTime receiveTime;
+
+    private String receivedBy;
+
+    private String receivedByName;
 }

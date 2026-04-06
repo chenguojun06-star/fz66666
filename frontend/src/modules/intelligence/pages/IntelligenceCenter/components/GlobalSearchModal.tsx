@@ -179,11 +179,27 @@ const GlobalSearchModal: React.FC<Props> = ({ open, onClose }) => {
 
         {/* 结果列表 */}
         {totalCount === 0 && query && !loading && (
-          <div style={{ padding: '32px 0' }}>
+          <div style={{ padding: '32px 0', textAlign: 'center' }}>
             <Empty
               image={Empty.PRESENTED_IMAGE_SIMPLE}
               description={<span style={{ color: '#3a5a7a' }}>没有找到 "{query}" 相关结果</span>}
             />
+            <div
+              style={{
+                marginTop: 16, display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '8px 20px', borderRadius: 20, cursor: 'pointer',
+                background: 'rgba(0,229,255,0.08)', border: '1px solid rgba(0,229,255,0.25)',
+                color: '#00e5ff', fontSize: 13, fontWeight: 500, transition: 'all 0.2s',
+              }}
+              onClick={() => {
+                onClose();
+                window.dispatchEvent(new CustomEvent('openAiChat', { detail: { query } }));
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0,229,255,0.16)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(0,229,255,0.08)'; }}
+            >
+              🤖 让小云帮你找
+            </div>
           </div>
         )}
 

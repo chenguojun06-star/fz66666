@@ -102,6 +102,12 @@ public class StyleQuotation {
 
     private LocalDateTime auditTime;
 
+    /** 审核状态（0=待审核，1=审核通过，2=审核驳回） */
+    private Integer auditStatus;
+
+    /** 审核意见 */
+    private String auditRemark;
+
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 }

@@ -230,13 +230,6 @@ export const useStyleFormActions = ({
   const handleCompleteSample = async () => {
     if (!currentStyle?.id) return;
 
-    // 检查样衣生产模块是否已完成
-    const productionCompletedTime = (currentStyle as any)?.productionCompletedTime;
-    if (!productionCompletedTime) {
-      message.warning('请先完成样衣生产后，再标记开发完成');
-      return;
-    }
-
     setCompletingSample(true);
     try {
       const res = await api.post(`/style/info/${currentStyle.id}/stage-action?stage=sample&action=complete`, null, { timeout: 30000 });

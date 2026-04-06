@@ -411,7 +411,7 @@ public class TemplateStyleOrchestrator {
                         for (JsonNode partNode : partsNode) {
                             String partName = partNode.path("partName").asText(null);
                             String measureMethod = partNode.path("measureMethod").asText(null);
-                            BigDecimal tolerance = parseDecimal(partNode.get("tolerance"));
+                            String tolerance = partNode.path("tolerance").asText(null);
                             JsonNode valuesNode = partNode.get("values");
 
                             for (String sizeName : sizeNames) {

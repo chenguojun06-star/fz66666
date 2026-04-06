@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.ProductOutstock;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.integration.openapi.service.WebhookPushService;
@@ -143,6 +144,39 @@ public class ProductOutstockOrchestrator {
         }
 
         return true;
+    }
+
+    /**
+     * 确认收货 — 外发工厂发货后，内部确认收到货物
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public ProductOutstock receive(String id) {
+        String key = StringUtils.hasText(id) ? id.trim() : null;
+        if (!StringUtils.hasText(key)) {
+            throw new IllegalArgumentException("参数错误");
+        }
+        ProductOutstock outstock = productOutstockService.getById(key);
+        if (outstock == null || (outstock.getDeleteFlag() != null && outstock.getDeleteFlag() != 0)) {
+            throw new NoSuchElementException("出库单不存在");
+        }
+        if ("received".equals(outstock.getReceiveStatus())) {
+            throw new IllegalStateException("该出库单已收货，请勿重复操作");
+        }
+
+        ProductOutstock patch = new ProductOutstock();
+        patch.setId(key);
+        patch.setReceiveStatus("received");
+        patch.setReceiveTime(LocalDateTime.now());
+        UserContext ctx = UserContext.get();
+        if (ctx != null) {
+            patch.setReceivedBy(ctx.getUserId() != null ? String.valueOf(ctx.getUserId()) : null);
+            patch.setReceivedByName(ctx.getUsername());
+        }
+        patch.setUpdateTime(LocalDateTime.now());
+        productOutstockService.updateById(patch);
+
+        log.info("出库单已收货: outstockNo={}, id={}", outstock.getOutstockNo(), key);
+        return productOutstockService.getById(key);
     }
 
     @Transactional(rollbackFor = Exception.class)

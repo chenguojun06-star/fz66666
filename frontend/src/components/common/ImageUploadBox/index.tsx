@@ -112,7 +112,17 @@ export default function ImageUploadBox({
 
   const handlePaste = (e: React.ClipboardEvent) => {
     if (disabled || !enableDrop) return;
-    const file = e.clipboardData.files?.[0];
+    // files[] 适用于从文件管理器复制的文件；截图和浏览器复制的图片只在 items[] 中
+    let file: File | undefined = e.clipboardData.files?.[0];
+    if (!file) {
+      const items = e.clipboardData.items;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.startsWith('image/')) {
+          file = items[i].getAsFile() ?? undefined;
+          break;
+        }
+      }
+    }
     if (!file) return;
     e.preventDefault();
     void doUpload(file);

@@ -17,8 +17,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
@@ -37,9 +35,6 @@ import java.util.concurrent.ThreadLocalRandom;
 public class ProductWarehousingHelper {
 
     // ──────────── 常量 ────────────
-
-    static final BigDecimal WAREHOUSING_BATCH_MIN_RATIO = new BigDecimal("0.05");
-    static final BigDecimal WAREHOUSING_BATCH_MAX_RATIO = new BigDecimal("0.50");
 
     static final String STATUS_QUALIFIED = "qualified";
     static final String STATUS_UNQUALIFIED = "unqualified";
@@ -392,31 +387,6 @@ public class ProductWarehousingHelper {
         }
         if (existed + q > cutting) {
             return "入库数量超出裁剪数量上限（本次" + q + "/已入库" + existed + "/裁剪" + cutting + "）";
-        }
-        if (q == remaining) {
-            return null;
-        }
-
-        int min = BigDecimal.valueOf(cutting)
-                .multiply(WAREHOUSING_BATCH_MIN_RATIO)
-                .setScale(0, RoundingMode.CEILING)
-                .intValue();
-        int max = BigDecimal.valueOf(cutting)
-                .multiply(WAREHOUSING_BATCH_MAX_RATIO)
-                .setScale(0, RoundingMode.FLOOR)
-                .intValue();
-        if (max <= 0) {
-            max = 1;
-        }
-        if (min <= 0) {
-            min = 1;
-        }
-        if (min > max) {
-            min = max;
-        }
-        if (q < min || q > max) {
-            return "入库数量不符合规则（本次" + q + "/剩余" + remaining + "/裁剪" + cutting
-                    + "）。每次入库数量需在裁剪数量的5%~50%之间（末次可小于5%）";
         }
         return null;
     }

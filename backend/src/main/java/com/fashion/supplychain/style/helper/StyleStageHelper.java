@@ -182,6 +182,18 @@ public class StyleStageHelper {
                 .update();
     }
 
+    /** 生产要求取消修改后重新锁定 */
+    public void lockProductionRequirements(Long id) {
+        styleInfoService.lambdaUpdate()
+                .eq(StyleInfo::getId, id)
+                .set(StyleInfo::getDescriptionLocked, 1)
+                .set(StyleInfo::getDescriptionReturnComment, null)
+                .set(StyleInfo::getDescriptionReturnBy, null)
+                .set(StyleInfo::getDescriptionReturnTime, null)
+                .set(StyleInfo::getUpdateTime, LocalDateTime.now())
+                .update();
+    }
+
     public boolean startProductionStage(Long id) {
         StyleInfo current = styleInfoService.getById(id);
         if (current == null) {
@@ -304,38 +316,23 @@ public class StyleStageHelper {
         List<StyleAttachment> files = new java.util.ArrayList<>(
                 styleAttachmentService.listByStyleId(String.valueOf(id), "pattern"));
         files.addAll(styleAttachmentService.listByStyleId(String.valueOf(id), "pattern_final"));
-        boolean hasValid = files.stream().anyMatch((f) -> {
-            String name = f == null ? null : f.getFileName();
-            String n = name == null ? "" : name.trim().toLowerCase();
-            String url = f == null ? null : f.getFileUrl();
-            String u = url == null ? "" : url.trim().toLowerCase();
-            return n.endsWith(".dxf") || n.endsWith(".plt") || n.endsWith(".ets") || u.contains(".dxf")
-                    || u.contains(".plt")
-                    || u.contains(".ets");
-        });
+        boolean hasValid = !files.isEmpty();
         if (!hasValid) {
-            throw new IllegalStateException("请先上传纸样文件(dxf/plt/ets)后再标记完成");
+            throw new IllegalStateException("请先上传纸样文件后再标记完成");
         }
 
+        LocalDateTime now = LocalDateTime.now();
         boolean ok = styleInfoService.lambdaUpdate()
                 .eq(StyleInfo::getId, id)
                 .set(StyleInfo::getPatternStatus, "COMPLETED")
-                .set(StyleInfo::getPatternCompletedTime, LocalDateTime.now())
-                // 纸样完成时同步更新尺寸表时间（尺寸被纸样控制）
-                .set(StyleInfo::getSizeAssignee, current.getSizeAssignee() != null ? current.getSizeAssignee() : UserContext.username())
-                .set(StyleInfo::getSizeStartTime, current.getSizeStartTime() != null ? current.getSizeStartTime() : LocalDateTime.now())
-                .set(StyleInfo::getSizeCompletedTime, LocalDateTime.now())
-                // 纸样完成时同步更新生产制单时间（生产制单跟随纸样）
-                .set(StyleInfo::getProductionAssignee, current.getProductionAssignee() != null ? current.getProductionAssignee() : UserContext.username())
-                .set(StyleInfo::getProductionStartTime, current.getProductionStartTime() != null ? current.getProductionStartTime() : LocalDateTime.now())
-                .set(StyleInfo::getProductionCompletedTime, LocalDateTime.now())
-                // ⚠️ 2026-05-03 修复：样衣生产应由用户手动点击"完成"按钮，不应在纸样完成时自动标记完成
-                // 已删除的自动完成逻辑：.set(StyleInfo::getSampleStatus, "COMPLETED") / .set(StyleInfo::getSampleProgress, 100) 等
-                .set(StyleInfo::getUpdateTime, LocalDateTime.now())
+                .set(StyleInfo::getPatternCompletedTime, now)
+                // 纸样完成时同步标记尺寸表完成（尺寸由纸样控制，纸样done则尺寸done）
+                .set(StyleInfo::getSizeCompletedTime, now)
+                .set(StyleInfo::getUpdateTime, now)
                 .update();
         if (ok) {
             styleLogHelper.savePatternLog(id, "PATTERN_COMPLETED", null);
-            log.info("纸样完成，已同步更新尺寸表和生产制单时间: styleId={}", id);
+            log.info("纸样完成，已同步完成尺寸表: styleId={}", id);
         }
         if (!ok) {
             throw new IllegalStateException("操作失败");
@@ -363,6 +360,8 @@ public class StyleStageHelper {
                 .eq(StyleInfo::getId, id)
                 .set(StyleInfo::getPatternStatus, null)
                 .set(StyleInfo::getPatternCompletedTime, null)
+                // 退回纸样时同步清除尺寸完成时间（纸样控制尺寸，退回则尺寸也退回）
+                .set(StyleInfo::getSizeCompletedTime, null)
                 // 关联回退样衣状态
                 .set(StyleInfo::getSampleStatus, "IN_PROGRESS")
                 .set(StyleInfo::getSampleProgress, 0)

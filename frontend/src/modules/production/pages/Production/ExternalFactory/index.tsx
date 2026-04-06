@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { App, Button, Card, Space, Tag } from 'antd';
-import { ArrowUpOutlined, ArrowDownOutlined, ShopOutlined } from '@ant-design/icons';
+import { App, Button, Card, Space, Tabs, Tag } from 'antd';
+import { ArrowUpOutlined, ArrowDownOutlined, ShopOutlined, InboxOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
@@ -16,6 +16,7 @@ import '../../../styles.css';
 import { useProgressFilters } from '../ProgressDetail/hooks/useProgressFilters';
 import FactorySidebar, { FactoryStats } from './components/FactorySidebar';
 import ExternalFactorySmartView from './ExternalFactorySmartView';
+import FactoryShipmentTab from './components/FactoryShipmentTab';
 
 const ExternalFactory: React.FC = () => {
   const { message } = App.useApp();
@@ -206,58 +207,73 @@ const ExternalFactory: React.FC = () => {
           loading={loading}
         />
         <div style={{ flex: 1, overflow: 'auto', padding: 16 }}>
-          <StickyFilterBar>
-          <Card
-            size="small"
-            styles={{ body: { padding: '12px 16px' } }}
-            title={
-              <Space>
-                <ShopOutlined />
-                <span>外发工厂订单</span>
-                {selectedFactoryName && (
-                  <Tag color="blue">{selectedFactoryName}</Tag>
-                )}
-                <Tag color="orange">{total} 单</Tag>
-              </Space>
-            }
-            extra={
-              <Space>
-                <Button onClick={handleRefresh}>刷新</Button>
-                <Button
-                  icon={dateSortAsc ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
-                  onClick={toggleDateSort}
-                  title={dateSortAsc ? '按时间升序' : '按时间降序'}
-                  style={{ borderRadius: 16, minWidth: 32, width: 32, padding: 0 }}
-                />
-              </Space>
-            }
-          >
-            <StandardToolbar
-              left={
-                <StandardSearchBar
-                  searchPlaceholder="搜索款号/订单号..."
-                  searchValue={searchInput}
-                  onSearchChange={handleSearch}
-                  showDate={false}
-                  showStatus={false}
-                />
-              }
-            />
-          </Card>
-          </StickyFilterBar>
+          <Tabs defaultActiveKey="orders" items={[
+            {
+              key: 'orders',
+              label: <span><ShopOutlined /> 订单管理</span>,
+              children: (
+                <>
+                  <StickyFilterBar>
+                  <Card
+                    size="small"
+                    styles={{ body: { padding: '12px 16px' } }}
+                    title={
+                      <Space>
+                        <ShopOutlined />
+                        <span>外发工厂订单</span>
+                        {selectedFactoryName && (
+                          <Tag color="blue">{selectedFactoryName}</Tag>
+                        )}
+                        <Tag color="orange">{total} 单</Tag>
+                      </Space>
+                    }
+                    extra={
+                      <Space>
+                        <Button onClick={handleRefresh}>刷新</Button>
+                        <Button
+                          icon={dateSortAsc ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
+                          onClick={toggleDateSort}
+                          title={dateSortAsc ? '按时间升序' : '按时间降序'}
+                          style={{ borderRadius: 16, minWidth: 32, width: 32, padding: 0 }}
+                        />
+                      </Space>
+                    }
+                  >
+                    <StandardToolbar
+                      left={
+                        <StandardSearchBar
+                          searchPlaceholder="搜索款号/订单号..."
+                          searchValue={searchInput}
+                          onSearchChange={handleSearch}
+                          showDate={false}
+                          showStatus={false}
+                        />
+                      }
+                    />
+                  </Card>
+                  </StickyFilterBar>
 
-          {loading && orders.length === 0 ? (
-            <SkeletonLoader type="table" rows={8} loading={loading} />
-          ) : (
-            <ExternalFactorySmartView
-              data={sortedOrders}
-              loading={loading}
-              total={total}
-              pageSize={queryParams.pageSize}
-              currentPage={queryParams.page}
-              onPageChange={handlePageChange}
-            />
-          )}
+                  {loading && orders.length === 0 ? (
+                    <SkeletonLoader type="table" rows={8} loading={loading} />
+                  ) : (
+                    <ExternalFactorySmartView
+                      data={sortedOrders}
+                      loading={loading}
+                      total={total}
+                      pageSize={queryParams.pageSize}
+                      currentPage={queryParams.page}
+                      onPageChange={handlePageChange}
+                    />
+                  )}
+                </>
+              ),
+            },
+            {
+              key: 'shipments',
+              label: <span><InboxOutlined /> 收货管理</span>,
+              children: <FactoryShipmentTab selectedFactoryId={selectedFactoryId} />,
+            },
+          ]} />
         </div>
       </div>
     </Layout>

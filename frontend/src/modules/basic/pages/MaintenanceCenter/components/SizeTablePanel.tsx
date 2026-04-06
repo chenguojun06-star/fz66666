@@ -105,7 +105,7 @@ const SizeTablePanel: React.FC<SizeTablePanelProps> = ({ styleNo }) => {
 
   const [rollbackTarget, setRollbackTarget] = useState<TemplateLibrary | null>(null);
   const [rollbackLoading, setRollbackLoading] = useState(false);
-  const [cancelLocking, setCancelLocking] = useState(false);
+  const [, setCancelLocking] = useState(false);
 
   const [pendingDeleteTemplate, setPendingDeleteTemplate] = useState<TemplateLibrary | null>(null);
   const [deleteTemplateLoading, setDeleteTemplateLoading] = useState(false);

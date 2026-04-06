@@ -57,7 +57,7 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
   const [activeSection, setActiveSection] = useState<WorkbenchSection>('bom');
   const [productionSaving, setProductionSaving] = useState(false);
   const viewportRef = useRef<{ x: number; y: number } | null>(null);
-  const [productionReqRows, setProductionReqRows] = useState<string[]>(() => Array.from({ length: 15 }).map(() => ''));
+  const [productionReqRows, setProductionReqRows] = useState<string[]>(() => ['']);
   const [data, setData] = useState<WorkbenchData>({
     detail: null,
     bomList: [],
@@ -69,22 +69,13 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
 
   const parseProductionReqRows = useCallback((value: unknown) => {
     const raw = String(value ?? '');
-    const lines = raw
-      .split(/\r?\n/)
-      .map((line) => String(line || '').replace(/^\s*\d+\s*[.、)）-]?\s*/, '').trim());
-    const rows = Array.from({ length: 15 }).map(() => '');
-    for (let index = 0; index < Math.min(15, lines.length); index += 1) {
-      rows[index] = lines[index] || '';
-    }
-    return rows;
+    // 原文整串存 index 0，不拆行、不修改任何内容
+    return [raw];
   }, []);
 
   const serializeProductionReqRows = useCallback((rows: string[]) => {
-    const list = (Array.isArray(rows) ? rows : [])
-      .slice(0, 15)
-      .map((item) => String(item ?? '').replace(/\r/g, '').trim());
-    while (list.length && !String(list[list.length - 1] || '').trim()) list.pop();
-    return list.join('\n');
+    // 直接取 index 0 原文，不做任何 trim / 过滤 / 拼接
+    return String((Array.isArray(rows) ? rows[0] : '') ?? '');
   }, []);
 
   const captureViewport = useCallback(() => {

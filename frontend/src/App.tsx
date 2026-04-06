@@ -33,6 +33,7 @@ import {
   FinishedInventory,
   SampleInventory,
   EcommerceOrders,
+  OutstockReceive,
 } from './modules/warehouse';
 import { Dashboard } from './modules/dashboard';
 import { UserList, UserApproval, RoleList, OrganizationTree, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard } from './modules/system';
@@ -269,6 +270,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.finishedInventory} element={<Suspense fallback={routeFallback}><FinishedInventory /></Suspense>} />
           <Route path={paths.sampleInventory} element={<Suspense fallback={routeFallback}><SampleInventory /></Suspense>} />
           <Route path={paths.ecommerceOrders} element={<Suspense fallback={routeFallback}><EcommerceOrders /></Suspense>} />
+          <Route path={paths.outstockReceive} element={<Suspense fallback={routeFallback}><OutstockReceive /></Suspense>} />
 
           <Route path={paths.user} element={<Suspense fallback={routeFallback}><UserList /></Suspense>} />
           <Route path={paths.dict} element={<Suspense fallback={routeFallback}><DictManage /></Suspense>} />

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Row, Col, App } from 'antd';
+import { Form, Row, Col, App, Modal, Input } from 'antd';
 import { StyleQuotation, StyleBom, StyleProcess } from '@/types/style';
 import api from '@/utils/api';
+import { useAuth, isAdmin } from '@/utils/AuthContext';
 import QuotationBomSection, { type BomColorCosts } from './styleQuotation/QuotationBomSection';
 import QuotationProcessSection from './styleQuotation/QuotationProcessSection';
 import QuotationSecondarySection from './styleQuotation/QuotationSecondarySection';
@@ -10,22 +11,29 @@ import QuotationCostPanel from './styleQuotation/QuotationCostPanel';
 
 interface Props {
   styleId: string | number;
+  styleNo?: string;
   readOnly?: boolean;
   onSaved?: () => void;
   totalQty?: number;
 }
 
-const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQty = 0 }) => {
+const StyleQuotationTab: React.FC<Props> = ({ styleId, styleNo, readOnly, onSaved, totalQty = 0 }) => {
   const { message } = App.useApp();
+  const { user } = useAuth();
   const [form] = Form.useForm();
+  const [unlockModalOpen, setUnlockModalOpen] = useState(false);
+  const [unlockRemark, setUnlockRemark] = useState('');
   const [_loading, setLoading] = useState(false);
   const [quotation, setQuotation] = useState<StyleQuotation | null>(null);
   const [bomList, setBomList] = useState<StyleBom[]>([]);
   const [processList, setProcessList] = useState<StyleProcess[]>([]);
   const [secondaryProcessList, setSecondaryProcessList] = useState<any[]>([]);
   const [isLocked, setIsLocked] = useState(false);
+  const [auditStatus, setAuditStatus] = useState<number>(0);
   const [auditRemark, setAuditRemark] = useState('');
   const [auditSubmitting, setAuditSubmitting] = useState(false);
+  const [procBaseTotal, setProcBaseTotal] = useState(0);
+  const [secBaseTotal, setSecBaseTotal] = useState(0);
   const [bomColorCosts, setBomColorCosts] = useState<BomColorCosts>({
     costByColor: {},
     avgCost: 0,
@@ -41,6 +49,9 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQ
   const totalPrice = Number(form.getFieldValue('totalPrice')) || 0;
   const profit = totalPrice - totalCost;
   const actualProfitRate = totalPrice > 0 ? ((profit / totalPrice) * 100).toFixed(1) : '0.0';
+  const totalDevMaterialCost = bomList.reduce((sum: number, item: any) => {
+    return sum + (Number(item.devUsageAmount) || 0) * (Number(item.unitPrice) || 0);
+  }, 0);
 
   const calcBomCost = (items: any[]) => {
     return (items || []).reduce((sum: number, item: any) => {
@@ -102,11 +113,6 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQ
       let processData: StyleProcess[] = [];
       if (processResult.code === 200) {
         processData = (processResult.data || []) as StyleProcess[];
-        procCost = processData.reduce(
-          (sum: number, item: any) => sum + (Number(item.price) || 0) * (Number(item.rateMultiplier) || 1),
-          0,
-        );
-        setProcessList(processData);
       }
 
       const secondaryRes = await api.get<any[]>(`/style/secondary-process/list?styleId=${styleId}`);
@@ -122,6 +128,26 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQ
         setSecondaryProcessList(secondaryData);
       }
 
+      // 过滤：二次工艺的 processName（如"绣花"）是父节点 key，
+      // 主工序中凡 progressStage 命中该父节点的子工序全部排除（动态兼容新增子节点）
+      // processName 直接命中作兜底（progressStage 未赋值时）
+      const secondaryParentNames = new Set(
+        secondaryData.map((s: any) => String(s.processName || '').trim()).filter(Boolean),
+      );
+      const primaryDisplayList = processData.filter((p: any) => {
+        const stage = String((p as any).progressStage || '').trim();
+        const name = String(p.processName || '').trim();
+        return !(secondaryParentNames.has(stage) || secondaryParentNames.has(name));
+      });
+      procCost = primaryDisplayList.reduce(
+        (sum: number, item: any) => sum + (Number(item.price) || 0) * (Number(item.rateMultiplier) || 1),
+        0,
+      );
+      setProcessList(primaryDisplayList);
+
+      setProcBaseTotal(procCost);
+      setSecBaseTotal(secondaryCost);
+
       const totalProcessCost = procCost + secondaryCost;
       const baseValues = existing
         ? { ...existing, profitRate: existing.profitRate ?? 20, otherCost: existing.otherCost ?? 0 }
@@ -135,6 +161,9 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQ
       form.setFieldsValue(nextValues);
       if (existing && 'isLocked' in existing) {
         setIsLocked(existing.isLocked === 1);
+      }
+      if (existing && 'auditStatus' in existing) {
+        setAuditStatus(existing.auditStatus ?? 0);
       }
       calculateTotal();
     } catch {
@@ -159,6 +188,12 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQ
     });
   };
 
+  const handleProcessRateChange = (rate: number) => {
+    const newProcessCost = Number((procBaseTotal * rate + secBaseTotal).toFixed(2));
+    form.setFieldValue('processCost', newProcessCost);
+    calculateTotal();
+  };
+
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
@@ -177,13 +212,34 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQ
     }
   };
 
-  const handleUnlock = async () => {
+  const handleUnlockClick = () => {
+    if (!isAdmin(user)) {
+      message.error('权限不足，只有管理员以上才可以解锁');
+      return;
+    }
+    setUnlockModalOpen(true);
+  };
+
+  const handleUnlockConfirm = async () => {
+    if (!unlockRemark.trim()) {
+      message.warning('请填写解锁备注');
+      return;
+    }
     try {
-      await api.put('/style/quotation', { ...quotation, isLocked: 0 });
-      setIsLocked(false);
-      message.success('已解锁，可以编辑');
+      const res = (await api.post('/style/quotation/unlock', {
+        styleId: Number(styleId),
+        remark: unlockRemark,
+      })) as any;
+      if (res?.code === 200 || res?.data === true) {
+        setIsLocked(false);
+        setUnlockModalOpen(false);
+        setUnlockRemark('');
+        message.success('已解锁，可以编辑');
+      } else {
+        message.error(res?.message || '解锁失败');
+      }
     } catch (error: any) {
-      message.error(error.message || '解锁失败');
+      message.error(error?.message || '解锁失败');
     }
   };
 
@@ -209,34 +265,48 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQ
     }
   };
 
+  // 审核通过后，非管理员禁止修改参数
+  const isAuditLocked = auditStatus === 1 && !isAdmin(user);
+  const effectiveLocked = isLocked || isAuditLocked;
+
   return (
     <div className="style-quotation" style={{ padding: '0 8px' }}>
+      {styleNo && (
+        <div style={{ marginBottom: 12, fontWeight: 600, fontSize: 15, color: '#333' }}>
+          款号：{styleNo}
+        </div>
+      )}
+      <Modal
+        title="解锁报价单"
+        open={unlockModalOpen}
+        onOk={handleUnlockConfirm}
+        onCancel={() => { setUnlockModalOpen(false); setUnlockRemark(''); }}
+        okText="确认解锁"
+        cancelText="取消"
+      >
+        <div style={{ marginBottom: 8 }}>解锁原因/备注（必填）：</div>
+        <Input.TextArea
+          value={unlockRemark}
+          onChange={(e) => setUnlockRemark(e.target.value)}
+          rows={3}
+          placeholder="请填写解锁原因..."
+        />
+      </Modal>
       <Row gutter={16} align="top">
-        <Col span={17}>
+        <Col span={24}>
           <QuotationBomSection
             bomList={bomList}
             bomColorCosts={bomColorCosts}
             materialCost={materialCost}
           />
-          <QuotationProcessSection processList={processList} />
+          <QuotationProcessSection processList={processList} onRateChange={handleProcessRateChange} isLocked={effectiveLocked} />
           <QuotationSecondarySection
             secondaryProcessList={secondaryProcessList}
-            processList={processList}
-            processCost={processCost}
           />
-          <QuotationAuditSection
-            isLocked={isLocked}
-            quotation={quotation}
-            auditRemark={auditRemark}
-            onRemarkChange={setAuditRemark}
-            auditSubmitting={auditSubmitting}
-            onAudit={handleAudit}
-          />
-        </Col>
-        <Col span={7}>
           <QuotationCostPanel
             form={form}
-            isLocked={isLocked}
+            isLocked={effectiveLocked}
+            canUnlock={isAdmin(user) && isLocked}
             readOnly={readOnly}
             totalCost={totalCost}
             totalPrice={totalPrice}
@@ -245,10 +315,18 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, readOnly, onSaved, totalQ
             profit={profit}
             actualProfitRate={actualProfitRate}
             totalQty={totalQty}
-            processList={processList}
+            totalDevMaterialCost={totalDevMaterialCost}
             onSave={handleSave}
-            onUnlock={handleUnlock}
+            onUnlock={handleUnlockClick}
             onValuesChange={calculateTotal}
+          />
+          <QuotationAuditSection
+            isLocked={effectiveLocked}
+            quotation={quotation}
+            auditRemark={auditRemark}
+            onRemarkChange={setAuditRemark}
+            auditSubmitting={auditSubmitting}
+            onAudit={handleAudit}
           />
         </Col>
       </Row>

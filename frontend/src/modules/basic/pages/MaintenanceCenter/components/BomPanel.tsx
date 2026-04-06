@@ -75,7 +75,7 @@ const BomPanel: React.FC<BomPanelProps> = ({ styleNo }) => {
   const [data, setData] = useState<TemplateLibrary[]>([]);
 
   const [rollbackLoading, setRollbackLoading] = useState(false);
-  const [cancelLocking, setCancelLocking] = useState(false);
+  const [, setCancelLocking] = useState(false);
 
   const fetchList = useCallback(async () => {
     setLoading(true);

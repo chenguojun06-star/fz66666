@@ -747,7 +747,7 @@ const StyleInfoDetailPage: React.FC = () => {
                 key: '3',
                 label: '报价单',
                 disabled: !currentStyle?.id,
-                children: <StyleQuotationTab styleId={currentStyle?.id} totalQty={totalMatrixQty} />
+                children: <StyleQuotationTab styleId={currentStyle?.id} styleNo={currentStyle?.styleNo} totalQty={totalMatrixQty} />
               },
               {
                 key: '4',

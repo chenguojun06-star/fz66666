@@ -140,10 +140,11 @@ const useStyleBomActions = ({
   }, [data, isTempId, message, setCheckingStock, setData, sortBomRows, styleId]);
 
   const handleApplyPickup = useCallback((record: StyleBom) => {
+    const pickupQty = record.devUsageAmount ?? record.usageAmount;
     Modal.confirm({
       width: '40vw',
       title: '申请领取',
-      content: `确认申请领取「${record.materialCode || ''} ${record.materialName || ''}」，数量：${record.usageAmount ?? ''}${record.unit || ''}？`,
+      content: `确认申请领取「${record.materialCode || ''} ${record.materialName || ''}」，数量：${pickupQty ?? ''}${record.unit || ''}？`,
       okText: '确认申请',
       cancelText: '取消',
       onOk: async () => {
@@ -162,7 +163,7 @@ const useStyleBomActions = ({
               materialName: record.materialName,
               color: record.color ?? '',
               size: '',
-              quantity: record.usageAmount != null ? Number(record.usageAmount) : 1,
+              quantity: pickupQty != null ? Number(pickupQty) : 1,
               unit: record.unit ?? '',
             }],
           });

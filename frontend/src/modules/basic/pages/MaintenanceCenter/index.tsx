@@ -177,6 +177,7 @@ const MaintenanceCenter: React.FC = () => {
       displayCategory: toCategoryCn(record.category) || '未分类',
       latestMaintenanceRecord: latestMaintenanceRecord || (record.updateTime ? formatDateTime(record.updateTime) : '-'),
       pushedInfoTime: record.pushedToOrderTime ? formatDateTime(record.pushedToOrderTime) : '-',
+      pushedByName: (record as any).pushedByName || '',
     };
   }), [styles, buildStages]);
 
@@ -233,48 +234,12 @@ const MaintenanceCenter: React.FC = () => {
 
                   {rows.length > 0 ? (
                     <div className="maintenance-center__grid">
-                      {rows.map(({ record, stages, displayCategory, latestMaintenanceRecord, pushedInfoTime }) => {
+                      {rows.map(({ record, stages, displayCategory, latestMaintenanceRecord, pushedInfoTime, pushedByName }) => {
                         const processingCount = stages.filter((stage) => stage.processing).length;
                         return (
                           <div key={record.id ?? record.styleNo} className="maintenance-card">
                             <div className="maintenance-card__cover">
                               <AttachmentThumb styleId={record.id} width="100%" height="100%" />
-                            </div>
-                            <div className="maintenance-card__info-zone">
-                              <div className="maintenance-card__info">
-                                <div className="maintenance-card__info-row">
-                                  <span className="maintenance-card__info-item">
-                                    <span className="maintenance-card__info-label">款号</span>
-                                    <span className="maintenance-card__info-value">{record.styleNo || '-'}</span>
-                                  </span>
-                                  <span className="maintenance-card__info-item">
-                                    <span className="maintenance-card__info-label">品类</span>
-                                    <span className="maintenance-card__info-value">{displayCategory}</span>
-                                  </span>
-                                </div>
-                                <div className="maintenance-card__info-row">
-                                  <span className="maintenance-card__info-item">
-                                    <span className="maintenance-card__info-label">品名</span>
-                                    <span className="maintenance-card__info-value">{record.styleName || '-'}</span>
-                                  </span>
-                                  <span className="maintenance-card__info-item">
-                                    <span className="maintenance-card__info-label">工序</span>
-                                    <span className="maintenance-card__info-value">
-                                      {processingCount > 0 ? <span className="maintenance-card__processing-badge">{processingCount} 项待处理</span> : '已完成'}
-                                    </span>
-                                  </span>
-                                </div>
-                                <div className="maintenance-card__info-row">
-                                  <span className="maintenance-card__info-item">
-                                    <span className="maintenance-card__info-label">推送</span>
-                                    <span className="maintenance-card__info-value maintenance-card__info-value--time">{pushedInfoTime}</span>
-                                  </span>
-                                  <span className="maintenance-card__info-item">
-                                    <span className="maintenance-card__info-label">修改</span>
-                                    <span className="maintenance-card__info-value maintenance-card__info-value--time">{latestMaintenanceRecord}</span>
-                                  </span>
-                                </div>
-                              </div>
                               <div className="maintenance-card__overlay">
                                 <div className="maintenance-card__overlay-grid">
                                   {stages.map((stage) => (
@@ -295,6 +260,44 @@ const MaintenanceCenter: React.FC = () => {
                                     <PrinterOutlined /> 打印
                                   </button>
                                 </div>
+                              </div>
+                            </div>
+                            <div className="maintenance-card__info">
+                              <div className="maintenance-card__info-row">
+                                <span className="maintenance-card__info-item">
+                                  <span className="maintenance-card__info-label">款号</span>
+                                  <span className="maintenance-card__info-value">{record.styleNo || '-'}</span>
+                                </span>
+                                <span className="maintenance-card__info-item">
+                                  <span className="maintenance-card__info-label">品类</span>
+                                  <span className="maintenance-card__info-value">{displayCategory}</span>
+                                </span>
+                              </div>
+                              <div className="maintenance-card__info-row">
+                                <span className="maintenance-card__info-item">
+                                  <span className="maintenance-card__info-label">品名</span>
+                                  <span className="maintenance-card__info-value">{record.styleName || '-'}</span>
+                                </span>
+                                <span className="maintenance-card__info-item">
+                                  <span className="maintenance-card__info-label">工序</span>
+                                  <span className="maintenance-card__info-value">
+                                    {processingCount > 0 ? <span className="maintenance-card__processing-badge">{processingCount} 项待处理</span> : '已完成'}
+                                  </span>
+                                </span>
+                              </div>
+                              <div className="maintenance-card__info-row maintenance-card__info-row--single">
+                                <span className="maintenance-card__info-item">
+                                  <span className="maintenance-card__info-label">推送</span>
+                                  <span className="maintenance-card__info-value maintenance-card__info-value--time">
+                                    {pushedByName ? `${pushedByName} · ${pushedInfoTime}` : pushedInfoTime}
+                                  </span>
+                                </span>
+                              </div>
+                              <div className="maintenance-card__info-row maintenance-card__info-row--single">
+                                <span className="maintenance-card__info-item">
+                                  <span className="maintenance-card__info-label">修改</span>
+                                  <span className="maintenance-card__info-value maintenance-card__info-value--time">{latestMaintenanceRecord}</span>
+                                </span>
                               </div>
                             </div>
                           </div>

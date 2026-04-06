@@ -29,6 +29,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import com.fashion.supplychain.common.ProcessSynonymMapping;
+import com.fashion.supplychain.template.helper.TemplateStageNameHelper;
+import com.fashion.supplychain.template.helper.TemplateParseUtils;
 
 @Service
 @Slf4j
@@ -55,77 +57,13 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
             .maximumSize(500)
             .build();
 
-    private static final String STAGE_ORDER_CREATED = "下单";
-    private static final String STAGE_PROCUREMENT = "采购";
 
     @Autowired
     private ObjectMapper objectMapper;
 
-    private String normalizeStageName(String v) {
-        if (!StringUtils.hasText(v)) {
-            return "";
-        }
-        return v.trim().replaceAll("\\s+", "");
-    }
+    @Autowired
+    private TemplateStageNameHelper stageNameHelper;
 
-    private boolean isProgressProductionStageName(String name) {
-        String n = normalizeStageName(name);
-        if (!StringUtils.hasText(n)) {
-            return false;
-        }
-        return n.contains("生产") || n.contains("车缝") || n.contains("缝制") || n.contains("缝纫") || n.contains("车工") || n.contains("整件");
-    }
-
-    @Override
-    public boolean isProgressIroningStageName(String name) {
-        String n = normalizeStageName(name);
-        if (!StringUtils.hasText(n)) {
-            return false;
-        }
-        return n.contains("整烫") || n.contains("熨烫") || n.contains("大烫");
-    }
-
-    private boolean isProgressCuttingStageName(String name) {
-        String n = normalizeStageName(name);
-        if (!StringUtils.hasText(n)) {
-            return false;
-        }
-        return n.contains("裁剪") || n.contains("裁床") || n.contains("剪裁") || n.contains("开裁");
-    }
-
-    private boolean isProgressShipmentStageName(String name) {
-        String n = normalizeStageName(name);
-        if (!StringUtils.hasText(n)) {
-            return false;
-        }
-        return n.contains("出货") || n.contains("发货") || n.contains("发运");
-    }
-
-    private boolean isBaseStageName(String name) {
-        String n = normalizeStageName(name);
-        if (!StringUtils.hasText(n)) {
-            return false;
-        }
-        return progressStageNameMatches(STAGE_ORDER_CREATED, n) || progressStageNameMatches(STAGE_PROCUREMENT, n);
-    }
-
-    private boolean isProgressOrderCreatedStageName(String name) {
-        String n = normalizeStageName(name);
-        if (!StringUtils.hasText(n)) {
-            return false;
-        }
-        return n.contains(STAGE_ORDER_CREATED) || n.contains("订单创建") || n.contains("创建订单") || n.contains("开单")
-                || n.contains("制单");
-    }
-
-    private boolean isProgressProcurementStageName(String name) {
-        String n = normalizeStageName(name);
-        if (!StringUtils.hasText(n)) {
-            return false;
-        }
-        return n.contains(STAGE_PROCUREMENT) || n.contains("物料采购") || n.contains("面辅料采购") || n.contains("备料")
-                || n.contains("到料");
-    }
 
     private String buildTemplateCacheKey(String styleNo) {
         Long tenantId = UserContext.tenantId();
@@ -135,65 +73,27 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
     }
 
     @Override
+    public boolean isProgressIroningStageName(String name) {
+        return stageNameHelper.isProgressIroningStageName(name);
+    }
+
+    @Override
     public boolean isProgressQualityStageName(String name) {
-        String n = normalizeStageName(name);
-        if (!StringUtils.hasText(n)) {
-            return false;
-        }
+        return stageNameHelper.isProgressQualityStageName(name);
+    }
         return n.contains("质检") || n.contains("检验") || n.contains("品检") || n.contains("验货");
     }
 
     @Override
     public boolean isProgressPackagingStageName(String name) {
-        String n = normalizeStageName(name);
-        if (!StringUtils.hasText(n)) {
-            return false;
-        }
+        return stageNameHelper.isProgressPackagingStageName(name);
+    }
         return n.contains("包装") || n.contains("后整") || n.contains("打包") || n.contains("装箱");
     }
 
     @Override
     public boolean progressStageNameMatches(String stageName, String recordProcessName) {
-        String a = normalizeStageName(stageName);
-        String b = normalizeStageName(recordProcessName);
-        if (!StringUtils.hasText(a) || !StringUtils.hasText(b)) {
-            return false;
-        }
-        if (a.equals(b)) {
-            return true;
-        }
-        if (a.contains(b) || b.contains(a)) {
-            return true;
-        }
-        // 优先使用同义词映射表进行匹配
-        if (ProcessSynonymMapping.isEquivalent(a, b)) {
-            return true;
-        }
-        if (isProgressOrderCreatedStageName(a) && isProgressOrderCreatedStageName(b)) {
-            return true;
-        }
-        if (isProgressProcurementStageName(a) && isProgressProcurementStageName(b)) {
-            return true;
-        }
-        if (isProgressCuttingStageName(a) && isProgressCuttingStageName(b)) {
-            return true;
-        }
-        if (isProgressQualityStageName(a) && isProgressQualityStageName(b)) {
-            return true;
-        }
-        if (isProgressPackagingStageName(a) && isProgressPackagingStageName(b)) {
-            return true;
-        }
-        if (isProgressIroningStageName(a) && isProgressIroningStageName(b)) {
-            return true;
-        }
-        if (isProgressProductionStageName(a) && isProgressProductionStageName(b)) {
-            return true;
-        }
-        if (isProgressShipmentStageName(a) && isProgressShipmentStageName(b)) {
-            return true;
-        }
-        return false;
+        return stageNameHelper.progressStageNameMatches(stageName, recordProcessName);
     }
 
     private TemplateLibrary resolveProgressTemplate(String styleNo) {
@@ -402,7 +302,7 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
             if (n == null) {
                 continue;
             }
-            BigDecimal up = toBigDecimal(n.get("unitPrice"));
+            BigDecimal up = TemplateParseUtils.toBigDecimalOrZero(n.get("unitPrice"));
             if (up != null && up.compareTo(BigDecimal.ZERO) > 0) {
                 sum = sum.add(up);
             }
@@ -616,9 +516,9 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
         }
 
         Map<String, Object> content = parseContentMap(tpl.getTemplateContent());
-        List<Map<String, Object>> items = coerceListOfMap(content.get("steps"));
+        List<Map<String, Object>> items = TemplateParseUtils.coerceListOfMap(content.get("steps"));
         if (items == null || items.isEmpty()) {
-            items = coerceListOfMap(content.get("nodes"));
+            items = TemplateParseUtils.coerceListOfMap(content.get("nodes"));
         }
 
         for (Map<String, Object> item : items) {
@@ -637,7 +537,7 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
             }
 
             Object priceValue = item.containsKey("unitPrice") ? item.get("unitPrice") : item.get("price");
-            BigDecimal unitPrice = toBigDecimal(priceValue);
+            BigDecimal unitPrice = TemplateParseUtils.toBigDecimalOrZero(priceValue);
             if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) < 0) {
                 unitPrice = BigDecimal.ZERO;
             }
@@ -769,18 +669,18 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
 
         weights.clear();
         processOrder.clear();
-        processOrder.add(STAGE_ORDER_CREATED);
-        processOrder.add(STAGE_PROCUREMENT);
+        processOrder.add(TemplateStageNameHelper.STAGE_ORDER_CREATED);
+        processOrder.add(TemplateStageNameHelper.STAGE_PROCUREMENT);
 
-        weights.put(STAGE_ORDER_CREATED, new BigDecimal("5"));
-        weights.put(STAGE_PROCUREMENT, new BigDecimal("15"));
+        weights.put(TemplateStageNameHelper.STAGE_ORDER_CREATED, new BigDecimal("5"));
+        weights.put(TemplateStageNameHelper.STAGE_PROCUREMENT, new BigDecimal("15"));
 
         List<String> nodes = resolveProgressNodes(styleNo);
 
         // 确保裁剪环节存在（如果模板中未定义，则默认插入到采购之后）
         boolean hasCutting = false;
         for (String n : nodes) {
-            if (isProgressCuttingStageName(n)) {
+            if (stageNameHelper.isProgressCuttingStageName(n)) {
                 hasCutting = true;
                 break;
             }
@@ -812,7 +712,7 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
                 continue;
             }
             String pn = n.trim();
-            if (!isBaseStageName(pn)) {
+            if (!stageNameHelper.isBaseStageName(pn)) {
                 productionCount += 1;
             }
         }
@@ -825,7 +725,7 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
                     continue;
                 }
                 String pn = n.trim();
-                if (isBaseStageName(pn)) {
+                if (stageNameHelper.isBaseStageName(pn)) {
                     continue;
                 }
                 weights.putIfAbsent(pn, per);
@@ -969,7 +869,7 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
 
         try {
             Map<String, Object> content = objectMapper.readValue(processJson, new TypeReference<Map<String, Object>>() {});
-            List<Map<String, Object>> steps = coerceListOfMap(content.get("steps"));
+            List<Map<String, Object>> steps = TemplateParseUtils.coerceListOfMap(content.get("steps"));
 
             for (Map<String, Object> step : steps) {
                 if (step == null) continue;
@@ -981,7 +881,7 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
                 if (!StringUtils.hasText(processName)) continue;
 
                 Object priceObj = step.containsKey("unitPrice") ? step.get("unitPrice") : step.get("price");
-                BigDecimal price = toBigDecimal(priceObj);
+                BigDecimal price = TemplateParseUtils.toBigDecimalOrZero(priceObj);
                 result.put(processName, price);
             }
         } catch (Exception e) {
@@ -1000,9 +900,9 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
         Map<String, Object> content = parseContentMap(tpl.getTemplateContent());
 
         // 兼容两种格式：steps（旧格式）和 nodes（新格式）
-        List<Map<String, Object>> items = coerceListOfMap(content.get("steps"));
+        List<Map<String, Object>> items = TemplateParseUtils.coerceListOfMap(content.get("steps"));
         if (items == null || items.isEmpty()) {
-            items = coerceListOfMap(content.get("nodes"));
+            items = TemplateParseUtils.coerceListOfMap(content.get("nodes"));
         }
 
         LinkedHashMap<String, BigDecimal> out = new LinkedHashMap<>();
@@ -1019,7 +919,7 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
                 continue;
             }
             Object v = s.containsKey("unitPrice") ? s.get("unitPrice") : s.get("price");
-            BigDecimal p = toBigDecimal(v);
+            BigDecimal p = TemplateParseUtils.toBigDecimalOrZero(v);
             out.put(name, p);
         }
         return out;
@@ -1039,58 +939,4 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
         }
     }
 
-    private static Map<String, Object> coerceMap(Object v) {
-        if (v instanceof Map<?, ?> m) {
-            Map<String, Object> out = new LinkedHashMap<>();
-            for (Map.Entry<?, ?> e : m.entrySet()) {
-                if (e.getKey() == null)
-                    continue;
-                out.put(String.valueOf(e.getKey()), e.getValue());
-            }
-            return out;
-        }
-        return new LinkedHashMap<>();
-    }
-
-    private static List<Map<String, Object>> coerceListOfMap(Object v) {
-        if (!(v instanceof List)) {
-            return List.of();
-        }
-        List<?> list = (List<?>) v;
-        List<Map<String, Object>> out = new ArrayList<>();
-        for (Object item : list) {
-            if (item instanceof Map) {
-                out.add(coerceMap(item));
-            }
-        }
-        return out;
-    }
-
-    private static List<String> coerceListOfString(Object v) {
-        if (!(v instanceof List)) {
-            return List.of();
-        }
-        List<?> list = (List<?>) v;
-        List<String> out = new ArrayList<>();
-        for (Object item : list) {
-            if (item == null)
-                continue;
-            String s = String.valueOf(item).trim();
-            if (StringUtils.hasText(s))
-                out.add(s);
-        }
-        return out;
-    }
-
-    private static BigDecimal toBigDecimal(Object v) {
-        if (v == null)
-            return BigDecimal.ZERO;
-        if (v instanceof BigDecimal decimal)
-            return decimal;
-        try {
-            return new BigDecimal(String.valueOf(v));
-        } catch (Exception e) {
-            return BigDecimal.ZERO;
-        }
-    }
 }

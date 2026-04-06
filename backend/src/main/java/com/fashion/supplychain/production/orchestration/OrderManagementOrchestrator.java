@@ -82,6 +82,7 @@ public class OrderManagementOrchestrator {
         String currentUser = UserContext.username();
         style.setPushedToOrder(1);
         style.setPushedToOrderTime(LocalDateTime.now());
+        style.setPushedByName(StringUtils.hasText(currentUser) ? currentUser.trim() : null);
         if (StringUtils.hasText(currentUser) && !StringUtils.hasText(style.getOrderType())) {
             style.setOrderType(currentUser.trim());
         }

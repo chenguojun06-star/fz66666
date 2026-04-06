@@ -563,16 +563,13 @@ const ExternalFactorySmartView: React.FC<Props> = ({
                     ))}
                   </div>
                 </div>
+              </div>
+            </div>
 
-                {/* 侧栏 */}
-                <div className="style-smart-row__aside">
-                  <div className="style-smart-row__overview">
-                    <div className="style-smart-row__overview-value">{overallProgress}%</div>
-                    <div className="style-smart-row__overview-label">总进度</div>
-                    <Progress percent={overallProgress} showInfo={false} size="small" strokeColor={isScrapped ? '#9ca3af' : '#2d7ff9'} />
-                  </div>
-                  {/* 操作按钮 */}
-                  {(setPrintModalVisible || quickEditModal || handleCloseOrder || handleShareOrder) && (() => {
+            {/* 侧栏 — 右侧独立列 */}
+            <div className="style-smart-row__aside">
+              {/* 操作按钮 — 右上 */}
+              {(setPrintModalVisible || quickEditModal || handleCloseOrder || handleShareOrder) && (() => {
                     const frozen = isOrderFrozenByStatusOrStock(record);
                     const completed = isOrderFrozenByStatus(record);
                     const cardActions: RowAction[] = [
@@ -662,7 +659,10 @@ const ExternalFactorySmartView: React.FC<Props> = ({
                       </div>
                     ) : null;
                   })()}
-                </div>
+              {/* 进度 — 右下 */}
+              <div className="style-smart-row__overview">
+                <span className="style-smart-row__overview-value">{overallProgress}%</span>
+                <Progress percent={overallProgress} showInfo={false} size="small" strokeColor={isScrapped ? '#9ca3af' : '#2d7ff9'} />
               </div>
             </div>
           </div>

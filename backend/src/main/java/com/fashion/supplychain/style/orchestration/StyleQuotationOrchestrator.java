@@ -5,6 +5,7 @@ import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleProcess;
 import com.fashion.supplychain.style.entity.StyleQuotation;
+import com.fashion.supplychain.style.helper.StyleLogHelper;
 import com.fashion.supplychain.style.service.SecondaryProcessService;
 import com.fashion.supplychain.style.service.StyleBomService;
 import com.fashion.supplychain.style.service.StyleInfoService;
@@ -42,6 +43,9 @@ public class StyleQuotationOrchestrator {
 
     @Autowired
     private SecondaryProcessService secondaryProcessService;
+
+    @Autowired
+    private StyleLogHelper styleLogHelper;
 
     public StyleQuotation getByStyleId(Long styleId) {
         return styleQuotationService.getByStyleId(styleId);
@@ -180,6 +184,23 @@ public class StyleQuotationOrchestrator {
         }
 
         return true;
+    }
+
+    /**
+     * 解锁报价单倍率编辑权限，并记录操作日志
+     * 仅管理员以上权限调用（权限校验在 Controller 层完成）
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void unlockQuotation(Long styleId, String remark) {
+        StyleQuotation existing = styleQuotationService.getByStyleId(styleId);
+        if (existing == null) {
+            throw new RuntimeException("报价单不存在");
+        }
+        existing.setIsLocked(0);
+        existing.setUpdateTime(LocalDateTime.now());
+        styleQuotationService.updateById(existing);
+        styleLogHelper.saveStyleLog(styleId, "解锁报价单倍率", remark);
+        log.info("Quotation unlocked for styleId={}, remark={}", styleId, remark);
     }
 
     /**

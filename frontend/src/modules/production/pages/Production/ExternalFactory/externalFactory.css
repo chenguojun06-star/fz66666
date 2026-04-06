@@ -4,7 +4,7 @@
 .ef-compact .style-smart-row {
   padding: 10px 14px;
   gap: 14px;
-  grid-template-columns: 130px minmax(0, 1fr);
+  grid-template-columns: 130px minmax(0, 1fr) auto;
   border-radius: 14px;
 }
 
@@ -161,6 +161,7 @@
 
 .ef-compact .style-smart-row__timeline-track,
 .ef-compact .style-smart-row__timeline-progress {
+  top: 48px;
   left: calc(100% / var(--ef-stage-count) / 2);
   right: calc(100% / var(--ef-stage-count) / 2);
   width: auto;
@@ -191,4 +192,45 @@
 }
 .ef-card-row-actions {
   justify-content: flex-end;
+}
+
+/* 侧栏 — 右侧独立列 */
+.ef-compact .style-smart-row__aside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  align-self: stretch;
+  min-width: 80px;
+}
+
+/* 进度 — 右下角，百分比+进度条一行 */
+.ef-compact .style-smart-row__overview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  justify-content: flex-end;
+}
+
+.ef-compact .style-smart-row__overview-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ef-compact .style-smart-row__overview .ant-progress {
+  flex: 0 0 60px;
+  width: 60px;
+}
+
+/* 进度条纤细化 */
+.ef-compact .style-smart-row__overview .ant-progress-inner {
+  height: 1px !important;
+}
+
+.ef-compact .style-smart-row__aside .ef-card-actions {
+  margin-top: 0;
 }

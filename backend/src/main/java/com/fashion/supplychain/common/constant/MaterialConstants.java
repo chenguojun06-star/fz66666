@@ -11,6 +11,7 @@ public class MaterialConstants {
     public static final String STATUS_CANCELLED = "cancelled";
     public static final String STATUS_COMPLETED = "completed";
     public static final String STATUS_PARTIAL = "partial";
+    public static final String STATUS_PARTIAL_ARRIVAL = "partial_arrival";
     public static final String STATUS_RECEIVED = "received";
     public static final String STATUS_WAREHOUSE_PENDING = "warehouse_pending";
 

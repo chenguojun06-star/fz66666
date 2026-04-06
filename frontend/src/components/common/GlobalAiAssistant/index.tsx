@@ -147,6 +147,20 @@ const GlobalAiAssistant: React.FC = () => {
     window.addEventListener('ai:traceable_advice', handleAdvicePush);
     return () => window.removeEventListener('ai:traceable_advice', handleAdvicePush);
   }, []);
+
+  // 监听 ⌘K 搜索无结果 → 打开小云面板并预填问题
+  useEffect(() => {
+    const handleOpenAiChat = (event: Event) => {
+      const query = (event as CustomEvent).detail?.query;
+      if (query) {
+        setInputValue(query);
+      }
+      setIsOpen(true);
+    };
+    window.addEventListener('openAiChat', handleOpenAiChat);
+    return () => window.removeEventListener('openAiChat', handleOpenAiChat);
+  }, []);
+
   const dismissPendingItem = (orderNo: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setDismissedPending(prev => {
@@ -345,8 +359,10 @@ const GlobalAiAssistant: React.FC = () => {
       let accumulatedText = '';
       let toolStatus = '';
 
+      const pageContext = location.pathname + location.search;
       const ctrl = intelligenceApi.aiAdvisorChatStream(
         contextualText,
+        pageContext,
         (event) => {
           streamStarted = true;
           if (event.type === 'thinking') {

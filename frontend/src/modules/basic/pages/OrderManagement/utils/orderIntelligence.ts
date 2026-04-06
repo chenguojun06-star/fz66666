@@ -92,12 +92,15 @@ const parseWeightGsm = (text: unknown) => {
 const getRollBenchmarkMeters = (fabricFamily: '针织' | '梭织', subcategory: string, widthMeters = 1.6, weightGsm = 180) => {
   const text = subcategory.toLowerCase();
   if (fabricFamily === '针织') {
+    const isRib = text.includes('罗纹') || text.includes('坑条');
     const referenceKg = text.includes('卫衣') || text.includes('毛圈')
       ? 28
-      : text.includes('罗纹') || text.includes('坑条')
+      : isRib
         ? 18
         : 24;
-    return Number(((referenceKg * 1000) / Math.max(120, weightGsm) / Math.max(1.4, widthMeters)).toFixed(1));
+    // 罗纹/坑条幅宽通常 0.8~1.0m；其他针织幅宽通常 1.4~1.8m，下限分开设置
+    const minWidth = isRib ? 0.8 : 1.4;
+    return Number(((referenceKg * 1000) / Math.max(120, weightGsm) / Math.max(minWidth, widthMeters)).toFixed(1));
   }
   if (text.includes('牛仔')) return 75;
   if (text.includes('西装') || text.includes('风衣')) return 85;
@@ -216,15 +219,17 @@ export const analyzeOrderOrchestration = ({
       + (sizeSensitiveFabricRows.length > 0 ? 0.012 : 0)
       + (primaryRequiredMeters > 0 && primaryRequiredMeters < benchmarkRollMeters * 0.55 ? 0.018 : 0)
   );
-  const scatterPremiumPerPiece = totalQty > 0 ? Number((processBasedUnitPrice * scatterPremiumRate).toFixed(2)) : 0;
-  const scatterPremiumTotal = Number((scatterPremiumPerPiece * totalQty).toFixed(2));
   const scatterLevel = sizeSensitiveFabricRows.length === 0
     ? 'low'
-    : qtyGapToNoScatter <= 0 && comboCount <= 2
+    : qtyGapToNoScatter <= 0
       ? 'low'
       : qtyGapToNoScatter <= Math.max(18, Math.round(noScatterQtyThreshold * 0.2))
         ? 'medium'
         : 'high';
+  const scatterPremiumPerPiece = scatterLevel !== 'low' && totalQty > 0
+    ? Number((processBasedUnitPrice * scatterPremiumRate).toFixed(2))
+    : 0;
+  const scatterPremiumTotal = Number((scatterPremiumPerPiece * totalQty).toFixed(2));
   const scatterMode = scatterLevel === 'high' ? '建议散剪' : scatterLevel === 'medium' ? '临界观察' : '可不散剪';
   const scatterStatus = scatterLevel === 'high' ? 'error' : scatterLevel === 'medium' ? 'warning' : 'success';
   const scatterSummary = sizeSensitiveFabricRows.length === 0

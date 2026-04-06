@@ -22,6 +22,8 @@ import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
+import com.fashion.supplychain.system.helper.TenantBillingHelper;
+import com.fashion.supplychain.system.helper.TenantRoleInitHelper;
 
 /**
  * 租户管理编排器
@@ -77,6 +79,12 @@ public class TenantOrchestrator {
     private com.fashion.supplychain.websocket.service.WebSocketService webSocketService;
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
+    @Autowired
+    private TenantBillingHelper billingHelper;
+
+    @Autowired
+    private TenantRoleInitHelper roleInitHelper;
 
     // ========== 套餐定义常量 ==========
     // yearlyFee = monthlyFee × 10（年付打8.3折，等于买10个月送2个月）
@@ -140,7 +148,7 @@ public class TenantOrchestrator {
         tenantService.save(tenant);
 
         // 2. 为新租户初始化全套职位角色（克隆所有模板）—— 必须成功，失败则整体回滚
-        Role tenantAdminRole = initializeAllTenantRoles(tenant.getId(), tenantName, tenant.getTenantType());
+        Role tenantAdminRole = roleInitHelper.initializeAllTenantRoles(tenant.getId(), tenantName, tenant.getTenantType());
         // 强制校验：管理员角色必须存在且有效
         if (tenantAdminRole == null || tenantAdminRole.getId() == null) {
             throw new IllegalStateException("[数据完整性] 租户管理员角色创建失败，无法继续创建租户: " + tenantCode);
@@ -370,7 +378,7 @@ public class TenantOrchestrator {
         String tenantCode = "T" + String.format("%04d", tenantId);
 
         // 为新租户初始化全套职位角色（克隆所有模板），申请时未指定类型，默认 HYBRID
-        Role tenantAdminRole = initializeAllTenantRoles(tenant.getId(), tenant.getTenantName(), "HYBRID");
+        Role tenantAdminRole = roleInitHelper.initializeAllTenantRoles(tenant.getId(), tenant.getTenantName(), "HYBRID");
         if (tenantAdminRole == null || tenantAdminRole.getId() == null) {
             throw new IllegalStateException("租户管理员角色创建失败，请检查 full_admin 角色模板是否存在");
         }
@@ -494,402 +502,125 @@ public class TenantOrchestrator {
 
     // ========== 套餐与收费管理（超级管理员专用） ==========
 
-    /**
-     * 获取套餐方案定义列表
-     */
+
+    // ========== 套餐/账单/发票（委托 TenantBillingHelper）==========
+
     public List<Map<String, Object>> getPlanDefinitions() {
-        List<Map<String, Object>> result = new ArrayList<>();
-        PLAN_DEFINITIONS.forEach((code, def) -> {
-            Map<String, Object> item = new LinkedHashMap<>(def);
-            item.put("code", code);
-            result.add(item);
-        });
-        return result;
+        return billingHelper.getPlanDefinitions();
     }
 
-    /**
-     * 设置租户套餐（超级管理员专用）
-     * 可自定义价格和配额，也可使用预设方案
-     * @param billingCycle MONTHLY=月付, YEARLY=年付（年付自动设置12个月有效期）
-     */
     @Transactional(rollbackFor = Exception.class)
-    public Tenant updateTenantPlan(Long tenantId, String planType, BigDecimal monthlyFee,
-                                    Long storageQuotaMb, Integer maxUsers, String billingCycle) {
-        assertSuperAdmin();
-        Tenant tenant = tenantService.getById(tenantId);
-        if (tenant == null) throw new IllegalArgumentException("租户不存在");
-
-        // 标准化计费周期
-        if (billingCycle == null || (!"MONTHLY".equals(billingCycle) && !"YEARLY".equals(billingCycle))) {
-            billingCycle = "MONTHLY";
-        }
-
-        // 如果选择预设方案且没有自定义值，使用预设默认值
-        Map<String, Object> planDef = PLAN_DEFINITIONS.get(planType);
-        if (planDef != null) {
-            if (monthlyFee == null) monthlyFee = (BigDecimal) planDef.get("monthlyFee");
-            if (storageQuotaMb == null) storageQuotaMb = (Long) planDef.get("storageQuotaMb");
-            if (maxUsers == null) maxUsers = (Integer) planDef.get("maxUsers");
-        } else {
-            // 自定义方案，所有值必填
-            if (monthlyFee == null) monthlyFee = BigDecimal.ZERO;
-            if (storageQuotaMb == null) storageQuotaMb = 1024L;
-            if (maxUsers == null) maxUsers = 50;
-        }
-
-        tenant.setPlanType(planType);
-        tenant.setMonthlyFee(monthlyFee);
-        tenant.setStorageQuotaMb(storageQuotaMb);
-        tenant.setMaxUsers(maxUsers);
-        tenant.setBillingCycle(billingCycle);
-        // 非试用方案自动标记为已付费
-        if (!"TRIAL".equals(planType)) {
-            tenant.setPaidStatus("PAID");
-        }
-        // 年付设置12个月有效期，月付设置1个月（从当前时间起算）
-        if ("YEARLY".equals(billingCycle) && !"TRIAL".equals(planType)) {
-            tenant.setExpireTime(LocalDateTime.now().plusMonths(12));
-        } else if ("MONTHLY".equals(billingCycle) && !"TRIAL".equals(planType)) {
-            tenant.setExpireTime(LocalDateTime.now().plusMonths(1));
-        }
-        tenant.setUpdateTime(LocalDateTime.now());
-        tenantService.updateById(tenant);
-        log.info("租户[{}]套餐更新为 {}（{}），月费={}，存储配额={}MB，最大用户={}",
-                tenantId, planType, billingCycle, monthlyFee, storageQuotaMb, maxUsers);
-        return tenant;
+    public Tenant updateTenantPlan(Long tenantId, String planType, BigDecimal customFee,
+                                    Long billingCycleMonths, Integer maxUsers, String tenantType) {
+        return billingHelper.updateTenantPlan(tenantId, planType, customFee, billingCycleMonths, maxUsers, tenantType);
     }
 
-    /**
-     * 更新租户存储用量（由文件上传等服务调用）
-     */
-    public void updateStorageUsed(Long tenantId, Long usedMb) {
-        Tenant tenant = tenantService.getById(tenantId);
-        if (tenant == null) return;
-        tenant.setStorageUsedMb(usedMb);
-        tenant.setUpdateTime(LocalDateTime.now());
-        tenantService.updateById(tenant);
+    public void updateStorageUsed(Long tenantId, Long usedBytes) {
+        billingHelper.updateStorageUsed(tenantId, usedBytes);
     }
 
-    /**
-     * 获取租户存储与套餐概览
-     */
     public Map<String, Object> getTenantBillingOverview(Long tenantId) {
-        assertSuperAdmin();
-        Tenant tenant = tenantService.getById(tenantId);
-        if (tenant == null) throw new IllegalArgumentException("租户不存在");
-
-        long userCount = tenantService.countTenantUsers(tenantId);
-
-        Map<String, Object> overview = new LinkedHashMap<>();
-        overview.put("tenantId", tenant.getId());
-        overview.put("tenantName", tenant.getTenantName());
-        overview.put("planType", tenant.getPlanType());
-        overview.put("billingCycle", tenant.getBillingCycle());
-        overview.put("monthlyFee", tenant.getMonthlyFee());
-        long quotaMb = tenant.getStorageQuotaMb() != null ? tenant.getStorageQuotaMb() : 0L;
-        long usedMb = tenant.getStorageUsedMb() != null ? tenant.getStorageUsedMb() : 0L;
-        overview.put("storageQuotaMb", quotaMb);
-        overview.put("storageUsedMb", usedMb);
-        overview.put("storageUsedPercent", quotaMb > 0 ? Math.round(usedMb * 100.0 / quotaMb) : 0);
-        overview.put("maxUsers", tenant.getMaxUsers());
-        overview.put("currentUsers", userCount);
-        overview.put("paidStatus", tenant.getPaidStatus());
-        overview.put("expireTime", tenant.getExpireTime());
-
-        // 获取最近账单
-        QueryWrapper<com.fashion.supplychain.system.entity.TenantBillingRecord> bq = new QueryWrapper<>();
-        bq.eq("tenant_id", tenantId).orderByDesc("billing_month").last("LIMIT 6");
-        overview.put("recentBills", billingRecordService.list(bq));
-
-        return overview;
+        return billingHelper.getTenantBillingOverview(tenantId);
     }
 
-    /**
-     * 生成账单（超级管理员手动触发或定时任务）
-     * 月付：生成当月账单（baseFee = monthlyFee）
-     * 年付：生成年度账单（baseFee = yearlyFee，账期格式 2026-YEAR）
-     */
     @Transactional(rollbackFor = Exception.class)
-    public com.fashion.supplychain.system.entity.TenantBillingRecord generateMonthlyBill(Long tenantId, String billingMonth) {
-        assertSuperAdmin();
-        Tenant tenant = tenantService.getById(tenantId);
-        if (tenant == null) throw new IllegalArgumentException("租户不存在");
-
-        String cycle = tenant.getBillingCycle() != null ? tenant.getBillingCycle() : "MONTHLY";
-        boolean yearly = "YEARLY".equals(cycle);
-
-        // 确定账期标识
-        if (billingMonth == null) {
-            if (yearly) {
-                billingMonth = String.valueOf(java.time.Year.now().getValue()) + "-YEAR";
-            } else {
-                billingMonth = YearMonth.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
-            }
-        }
-
-        // 检查是否已有该期账单
-        QueryWrapper<com.fashion.supplychain.system.entity.TenantBillingRecord> check = new QueryWrapper<>();
-        check.eq("tenant_id", tenantId).eq("billing_month", billingMonth);
-        if (billingRecordService.count(check) > 0) {
-            throw new IllegalStateException(yearly ? "该租户本年度账单已存在" : "该租户本月账单已存在");
-        }
-
-        // 计算基础费用
-        BigDecimal baseFee;
-        if (yearly) {
-            Map<String, Object> planDef = PLAN_DEFINITIONS.get(tenant.getPlanType());
-            baseFee = planDef != null ? (BigDecimal) planDef.get("yearlyFee") : BigDecimal.ZERO;
-            // 如果有自定义月费，年付 = 月费 × 10
-            if (tenant.getMonthlyFee() != null && tenant.getMonthlyFee().compareTo(BigDecimal.ZERO) > 0) {
-                BigDecimal defaultMonthly = planDef != null ? (BigDecimal) planDef.get("monthlyFee") : BigDecimal.ZERO;
-                if (tenant.getMonthlyFee().compareTo(defaultMonthly) != 0) {
-                    baseFee = tenant.getMonthlyFee().multiply(new BigDecimal("10"));
-                }
-            }
-        } else {
-            baseFee = tenant.getMonthlyFee() != null ? tenant.getMonthlyFee() : BigDecimal.ZERO;
-        }
-
-        com.fashion.supplychain.system.entity.TenantBillingRecord bill = new com.fashion.supplychain.system.entity.TenantBillingRecord();
-        bill.setBillingNo(billingRecordService.generateBillingNo());
-        bill.setTenantId(tenantId);
-        bill.setTenantName(tenant.getTenantName());
-        bill.setBillingMonth(billingMonth);
-        bill.setPlanType(tenant.getPlanType());
-        bill.setBillingCycle(cycle);
-        bill.setBaseFee(baseFee);
-        bill.setStorageFee(BigDecimal.ZERO); // 超额存储费后续计算
-        bill.setUserFee(BigDecimal.ZERO);    // 超额用户费后续计算
-        bill.setTotalAmount(bill.getBaseFee().add(bill.getStorageFee()).add(bill.getUserFee()));
-        bill.setStatus("PENDING");
-        bill.setCreatedBy(UserContext.username());
-        billingRecordService.save(bill);
-
-        log.info("生成租户[{}]{}账单（{}），金额={}", tenantId, billingMonth, cycle, bill.getTotalAmount());
-        return bill;
+    public TenantBillingRecord generateMonthlyBill(Long tenantId, String billingMonth) {
+        return billingHelper.generateMonthlyBill(tenantId, billingMonth);
     }
 
-    /**
-     * 查询租户账单列表
-     */
-    public Page<com.fashion.supplychain.system.entity.TenantBillingRecord> listBillingRecords(
-            Long tenantId, Long page, Long pageSize, String status) {
-        assertSuperAdmin();
-        QueryWrapper<com.fashion.supplychain.system.entity.TenantBillingRecord> query = new QueryWrapper<>();
-        if (tenantId != null) query.eq("tenant_id", tenantId);
-        if (StringUtils.hasText(status)) query.eq("status", status);
-        query.orderByDesc("billing_month");
-        return billingRecordService.page(
-                new Page<>(page != null ? page : 1, pageSize != null ? pageSize : 20), query);
+    public Page<TenantBillingRecord> listBillingRecords(Long tenantId, Long page, Long pageSize, String status) {
+        return billingHelper.listBillingRecords(tenantId, page, pageSize, status);
     }
 
-    /**
-     * 标记账单已支付
-     */
     public boolean markBillPaid(Long billId) {
-        assertSuperAdmin();
-        com.fashion.supplychain.system.entity.TenantBillingRecord bill = billingRecordService.getById(billId);
-        if (bill == null) throw new IllegalArgumentException("账单不存在");
-        if ("PAID".equals(bill.getStatus())) throw new IllegalStateException("该账单已支付");
-        bill.setStatus("PAID");
-        bill.setPaidTime(LocalDateTime.now());
-        bill.setUpdateTime(LocalDateTime.now());
-        billingRecordService.updateById(bill);
-        return true;
+        return billingHelper.markBillPaid(billId);
     }
 
-    /**
-     * 减免账单
-     */
-    public boolean waiveBill(Long billId, String remark) {
-        assertSuperAdmin();
-        com.fashion.supplychain.system.entity.TenantBillingRecord bill = billingRecordService.getById(billId);
-        if (bill == null) throw new IllegalArgumentException("账单不存在");
-        bill.setStatus("WAIVED");
-        bill.setRemark(remark);
-        bill.setUpdateTime(LocalDateTime.now());
-        billingRecordService.updateById(bill);
-        return true;
+    public boolean waiveBill(Long billId, String reason) {
+        return billingHelper.waiveBill(billId, reason);
     }
 
-    // ========== 租户自助账单与发票 ==========
-
-    /**
-     * 租户查看自己的账单概览（无需超管权限）
-     * 包含：套餐信息、已用存储/用户、最近6期账单
-     */
     public Map<String, Object> getMyBilling() {
-        Long tenantId = UserContext.tenantId();
-        if (tenantId == null) throw new IllegalArgumentException("超级管理员无租户账单");
-
-        Tenant tenant = tenantService.getById(tenantId);
-        if (tenant == null) throw new IllegalArgumentException("租户不存在");
-
-        long userCount = tenantService.countTenantUsers(tenantId);
-
-        Map<String, Object> overview = new LinkedHashMap<>();
-        overview.put("tenantId", tenant.getId());
-        overview.put("tenantName", tenant.getTenantName());
-        overview.put("tenantCode", tenant.getTenantCode());
-        overview.put("planType", tenant.getPlanType());
-        overview.put("billingCycle", tenant.getBillingCycle());
-        overview.put("monthlyFee", tenant.getMonthlyFee());
-        overview.put("paidStatus", tenant.getPaidStatus());
-        overview.put("expireTime", tenant.getExpireTime());
-        long quotaMb2 = tenant.getStorageQuotaMb() != null ? tenant.getStorageQuotaMb() : 0L;
-        long usedMb2 = tenant.getStorageUsedMb() != null ? tenant.getStorageUsedMb() : 0L;
-        overview.put("storageQuotaMb", quotaMb2);
-        overview.put("storageUsedMb", usedMb2);
-        overview.put("storageUsedPercent", quotaMb2 > 0 ? Math.round(usedMb2 * 100.0 / quotaMb2) : 0);
-        overview.put("maxUsers", tenant.getMaxUsers());
-        overview.put("currentUsers", userCount);
-
-        // 默认开票信息
-        Map<String, String> invoiceDefaults = new LinkedHashMap<>();
-        invoiceDefaults.put("invoiceTitle", tenant.getInvoiceTitle());
-        invoiceDefaults.put("invoiceTaxNo", tenant.getInvoiceTaxNo());
-        invoiceDefaults.put("invoiceBankName", tenant.getInvoiceBankName());
-        invoiceDefaults.put("invoiceBankAccount", tenant.getInvoiceBankAccount());
-        invoiceDefaults.put("invoiceAddress", tenant.getInvoiceAddress());
-        invoiceDefaults.put("invoicePhone", tenant.getInvoicePhone());
-        overview.put("invoiceDefaults", invoiceDefaults);
-
-        // 最近6期账单
-        QueryWrapper<TenantBillingRecord> bq = new QueryWrapper<>();
-        bq.eq("tenant_id", tenantId).orderByDesc("billing_month").last("LIMIT 6");
-        overview.put("recentBills", billingRecordService.list(bq));
-
-        return overview;
+        return billingHelper.getMyBilling();
     }
 
-    /**
-     * 租户查看自己的账单列表（无需超管权限，自动按 tenantId 过滤）
-     */
     public Page<TenantBillingRecord> listMyBills(Long page, Long pageSize, String status) {
-        Long tenantId = UserContext.tenantId();
-        if (tenantId == null) throw new IllegalArgumentException("超级管理员无租户账单");
-
-        QueryWrapper<TenantBillingRecord> query = new QueryWrapper<>();
-        query.eq("tenant_id", tenantId);
-        if (StringUtils.hasText(status)) query.eq("status", status);
-        query.orderByDesc("billing_month");
-        return billingRecordService.page(
-                new Page<>(page != null ? page : 1, pageSize != null ? pageSize : 20), query);
+        return billingHelper.listMyBills(page, pageSize, status);
     }
 
-    /**
-     * 租户申请开票（对已支付账单申请发票）
-     * 自动携带租户默认开票信息，也允许本次覆盖
-     */
     @Transactional(rollbackFor = Exception.class)
     public boolean requestInvoice(Long billId, Map<String, String> invoiceInfo) {
-        Long tenantId = UserContext.tenantId();
-        if (tenantId == null) throw new IllegalArgumentException("超级管理员不能申请发票");
-
-        TenantBillingRecord bill = billingRecordService.getById(billId);
-        if (bill == null) throw new IllegalArgumentException("账单不存在");
-        if (!tenantId.equals(bill.getTenantId())) throw new AccessDeniedException("无权操作其他租户账单");
-        if (!"PAID".equals(bill.getStatus()) && !"PENDING".equals(bill.getStatus())) {
-            throw new IllegalStateException("仅待付款/已支付账单可申请发票");
-        }
-        if ("ISSUED".equals(bill.getInvoiceStatus()) || "MAILED".equals(bill.getInvoiceStatus())) {
-            throw new IllegalStateException("该账单发票已开具或已寄出");
-        }
-
-        // 优先使用本次传入的信息，否则使用租户默认信息
-        Tenant tenant = tenantService.getById(tenantId);
-        String title = getOrDefault(invoiceInfo, "invoiceTitle", tenant.getInvoiceTitle());
-        String taxNo = getOrDefault(invoiceInfo, "invoiceTaxNo", tenant.getInvoiceTaxNo());
-        if (!StringUtils.hasText(title)) throw new IllegalArgumentException("发票抬头不能为空");
-        if (!StringUtils.hasText(taxNo)) throw new IllegalArgumentException("纳税人识别号不能为空");
-
-        bill.setInvoiceRequired(true);
-        bill.setInvoiceStatus("PENDING");
-        bill.setInvoiceTitle(title);
-        bill.setInvoiceTaxNo(taxNo);
-        bill.setInvoiceBankName(getOrDefault(invoiceInfo, "invoiceBankName", tenant.getInvoiceBankName()));
-        bill.setInvoiceBankAccount(getOrDefault(invoiceInfo, "invoiceBankAccount", tenant.getInvoiceBankAccount()));
-        bill.setInvoiceAddress(getOrDefault(invoiceInfo, "invoiceAddress", tenant.getInvoiceAddress()));
-        bill.setInvoicePhone(getOrDefault(invoiceInfo, "invoicePhone", tenant.getInvoicePhone()));
-        bill.setInvoiceAmount(bill.getTotalAmount());
-        bill.setUpdateTime(LocalDateTime.now());
-        billingRecordService.updateById(bill);
-
-        log.info("[发票申请] tenantId={} billId={} 抬头={} 金额={}", tenantId, billId, title, bill.getTotalAmount());
-
-        // 通知超管有新的开票申请（复用入驻申请通知通道）
-        try {
-            if (webSocketService != null) {
-                LambdaQueryWrapper<User> adminQuery = new LambdaQueryWrapper<>();
-                adminQuery.eq(User::getIsSuperAdmin, true).eq(User::getStatus, "active").isNull(User::getTenantId);
-                List<User> superAdmins = userService.list(adminQuery);
-                for (User sa : superAdmins) {
-                    webSocketService.notifyTenantApplicationPending(
-                            String.valueOf(sa.getId()),
-                            tenant.getTenantName() + " 申请开票 ¥" + bill.getTotalAmount());
-                }
-            }
-        } catch (Exception e) {
-            log.warn("通知超管发票申请WebSocket失败: {}", e.getMessage());
-        }
-
-        return true;
+        return billingHelper.requestInvoice(billId, invoiceInfo);
     }
 
-    /**
-     * 超管确认开票（填写发票号码、实际开票日期）
-     */
     @Transactional(rollbackFor = Exception.class)
     public boolean issueInvoice(Long billId, String invoiceNo) {
-        assertSuperAdmin();
-        TenantBillingRecord bill = billingRecordService.getById(billId);
-        if (bill == null) throw new IllegalArgumentException("账单不存在");
-        if (!"PENDING".equals(bill.getInvoiceStatus())) {
-            throw new IllegalStateException("仅待开票的账单可操作");
-        }
-        if (!StringUtils.hasText(invoiceNo)) throw new IllegalArgumentException("发票号码不能为空");
-
-        bill.setInvoiceStatus("ISSUED");
-        bill.setInvoiceNo(invoiceNo);
-        bill.setInvoiceIssuedTime(LocalDateTime.now());
-        bill.setUpdateTime(LocalDateTime.now());
-        billingRecordService.updateById(bill);
-
-        log.info("[开票完成] billId={} invoiceNo={} 租户={}", billId, invoiceNo, bill.getTenantName());
-        return true;
+        return billingHelper.issueInvoice(billId, invoiceNo);
     }
 
-    /**
-     * 租户维护自己的默认开票信息（发票抬头、税号、银行等）
-     */
     @Transactional(rollbackFor = Exception.class)
     public boolean updateMyInvoiceInfo(Map<String, String> invoiceInfo) {
-        Long tenantId = UserContext.tenantId();
-        if (tenantId == null) throw new AccessDeniedException("超级管理员无需设置开票信息");
-        if (!UserContext.isTenantOwner() && !UserContext.isTopAdmin()) {
-            throw new AccessDeniedException("只有工厂主账号或管理员才能修改开票信息");
-        }
-
-        Tenant tenant = tenantService.getById(tenantId);
-        if (tenant == null) throw new IllegalArgumentException("租户不存在");
-
-        if (invoiceInfo.containsKey("invoiceTitle")) tenant.setInvoiceTitle(invoiceInfo.get("invoiceTitle"));
-        if (invoiceInfo.containsKey("invoiceTaxNo")) tenant.setInvoiceTaxNo(invoiceInfo.get("invoiceTaxNo"));
-        if (invoiceInfo.containsKey("invoiceBankName")) tenant.setInvoiceBankName(invoiceInfo.get("invoiceBankName"));
-        if (invoiceInfo.containsKey("invoiceBankAccount")) tenant.setInvoiceBankAccount(invoiceInfo.get("invoiceBankAccount"));
-        if (invoiceInfo.containsKey("invoiceAddress")) tenant.setInvoiceAddress(invoiceInfo.get("invoiceAddress"));
-        if (invoiceInfo.containsKey("invoicePhone")) tenant.setInvoicePhone(invoiceInfo.get("invoicePhone"));
-        tenant.setUpdateTime(LocalDateTime.now());
-        tenantService.updateById(tenant);
-
-        log.info("[开票信息更新] tenantId={} 抬头={}", tenantId, tenant.getInvoiceTitle());
-        return true;
+        return billingHelper.updateMyInvoiceInfo(invoiceInfo);
     }
 
-    private String getOrDefault(Map<String, String> map, String key, String defaultVal) {
-        if (map != null && StringUtils.hasText(map.get(key))) return map.get(key);
-        return defaultVal;
+    // ========== 角色模板/权限天花板/工人注册（委托 TenantRoleInitHelper）==========
+
+    public List<Role> listRoleTemplates() {
+        return roleInitHelper.listRoleTemplates();
     }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Role cloneRoleTemplate(Long tenantId, Long templateId) {
+        return roleInitHelper.cloneRoleTemplate(tenantId, templateId);
+    }
+
+    public List<Role> listTenantRoles(Long tenantId) {
+        return roleInitHelper.listTenantRoles(tenantId);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void updateTenantRolePermissions(Long roleId, List<Long> permissionIds) {
+        roleInitHelper.updateTenantRolePermissions(roleId, permissionIds);
+    }
+
+    public Map<String, Object> getTenantCeiling(Long tenantId) {
+        return roleInitHelper.getTenantCeiling(tenantId);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void setTenantCeiling(Long tenantId, List<Long> grantedPermissionIds) {
+        roleInitHelper.setTenantCeiling(tenantId, grantedPermissionIds);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> workerRegister(String username, String password, String name,
+                                                String phone, String tenantCode, String factoryId, String orgUnitId) {
+        return roleInitHelper.workerRegister(username, password, name, phone, tenantCode, factoryId, orgUnitId);
+    }
+
+    public Page<User> listPendingRegistrations(Long page, Long pageSize) {
+        return roleInitHelper.listPendingRegistrations(page, pageSize);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public boolean approveRegistration(Long userId, Long roleId) {
+        return roleInitHelper.approveRegistration(userId, roleId);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public boolean rejectRegistration(Long userId, String reason) {
+        return roleInitHelper.rejectRegistration(userId, reason);
+    }
+
+    public Map<String, Object> getUserPermissionOverrides(Long userId) {
+        return roleInitHelper.getUserPermissionOverrides(userId);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void setUserPermissionOverrides(Long userId, List<Long> grantIds, List<Long> revokeIds) {
+        roleInitHelper.setUserPermissionOverrides(userId, grantIds, revokeIds);
+    }
+    // ========== 租户自助账单与发票 ==========
 
     /**
      * 获取所有活跃租户列表（公开接口，无需认证）
@@ -1166,7 +897,6 @@ public class TenantOrchestrator {
         return tenantService.updateById(tenant);
     }
 
-    // ========== 辅助方法 ==========
 
     /**
      * 新开户赠送：自动激活财税导出模块（FINANCE_TAX），有效期1年。
@@ -1256,675 +986,9 @@ public class TenantOrchestrator {
         throw new IllegalStateException("无法为账号「" + baseUsername + "」生成唯一用户名，请手动修改申请信息");
     }
 
-    /**
-     * 为新租户创建管理员角色（强制成功，失败抛异常回滚事务）
-     *
-     * 核心保障：新租户主账号必须拥有完整的管理员角色和权限
-     * 流程：
-     *   1. 查找 full_admin 全局模板角色
-     *   2. 检查是否已存在（幂等性）
-     *   3. 克隆角色 + 克隆权限
-     *   4. 最终验证：确保角色和权限都已正确创建
-     *
-     * @throws IllegalStateException 模板不存在、克隆失败等情况，触发事务回滚
-     */
-    private Role createTenantAdminRole(Long tenantId, String tenantName, String tenantType) {
-        // 1. 查找 full_admin 模板（全局唯一，is_template=true）
-        LambdaQueryWrapper<Role> query = new LambdaQueryWrapper<>();
-        query.eq(Role::getIsTemplate, true)
-             .eq(Role::getRoleCode, "full_admin")
-             .eq(Role::getStatus, "active")
-             .last("LIMIT 1");
-        Role template = roleService.getOne(query);
-
-        if (template == null) {
-            // ❌ 严重错误：模板角色是系统基础数据，缺失意味着系统初始化有问题
-            log.error("[数据完整性-严重] 未找到 full_admin 角色模板 (is_template=true, role_code='full_admin', status='active')。" +
-                      "请检查 t_role 表是否缺少模板角色数据！租户 {} 创建中止。", tenantId);
-            throw new IllegalStateException(
-                    "系统缺少角色模板 full_admin，无法创建租户。请联系管理员初始化角色模板数据。");
-        }
-
-        // 2. 幂等性检查：如果此租户已有 full_admin 角色，直接返回
-        LambdaQueryWrapper<Role> dupCheck = new LambdaQueryWrapper<>();
-        dupCheck.eq(Role::getTenantId, tenantId)
-                .eq(Role::getRoleCode, template.getRoleCode());
-        Role existingRole = roleService.getOne(dupCheck);
-        if (existingRole != null) {
-            log.info("租户 {} 已有管理员角色 (roleId={})，跳过创建", tenantId, existingRole.getId());
-            return existingRole;
-        }
-
-        // 3. 克隆角色
-        Role cloned = new Role();
-        cloned.setRoleName(template.getRoleName());
-        cloned.setRoleCode(template.getRoleCode());
-        cloned.setDescription("租户" + tenantName + "的管理员角色（自动创建）");
-        cloned.setStatus("active");
-        cloned.setDataScope(template.getDataScope());
-        cloned.setTenantId(tenantId);
-        cloned.setIsTemplate(false);
-        cloned.setSourceTemplateId(template.getId());
-        cloned.setSortOrder(template.getSortOrder());
-        cloned.setCreateTime(LocalDateTime.now());
-        cloned.setUpdateTime(LocalDateTime.now());
-        boolean roleSaved = roleService.save(cloned);
-        if (!roleSaved || cloned.getId() == null) {
-            throw new IllegalStateException(
-                    "[数据完整性] 租户管理员角色保存失败，tenantId=" + tenantId);
-        }
-
-        // 4. 克隆权限关联
-        List<Long> templatePermIds = rolePermissionService.getPermissionIdsByRoleId(template.getId());
-        int permCount = 0;
-        if (templatePermIds != null && !templatePermIds.isEmpty()) {
-            // 天花板过滤：如果租户有天花板限制，仅克隆天花板内的权限
-            List<Long> ceilingGranted = ceilingService.getGrantedPermissionIds(tenantId);
-            List<Long> effectivePermIds;
-            if (ceilingGranted != null && !ceilingGranted.isEmpty()) {
-                Set<Long> ceilingSet = new HashSet<>(ceilingGranted);
-                effectivePermIds = templatePermIds.stream()
-                        .filter(ceilingSet::contains)
-                        .collect(Collectors.toList());
-            } else {
-                // 无天花板限制 → 按租户类型过滤权限包，再继承剩余权限
-                effectivePermIds = applyTenantTypePermissionFilter(templatePermIds, tenantType);
-            }
-            rolePermissionService.replaceRolePermissions(cloned.getId(), effectivePermIds);
-            permCount = effectivePermIds.size();
-        }
-
-        // 5. 最终验证：确保权限正确持久化
-        // ✅ roleSaved=true + cloned.getId() != null 已充分证明角色 INSERT 成功。
-        //    旧版二次查询 getOne(eq(tenant_id=X)) 在超管路径下因 MyBatis-Plus
-        //    fill 机制可能写入 null 而返回 null，导致误报失败，已移除。
-        List<Long> verifiedPerms = rolePermissionService.getPermissionIdsByRoleId(cloned.getId());
-        int verifiedPermCount = verifiedPerms != null ? verifiedPerms.size() : 0;
-        if (permCount > 0 && verifiedPermCount == 0) {
-            throw new IllegalStateException(
-                    "[数据完整性] 角色权限克隆失败: 预期 " + permCount + " 个权限，实际 0 个");
-        }
-
-        log.info("[租户角色创建成功] tenantId={}, roleId={}, roleName={}, 权限数={}（模板权限数={}）",
-                 tenantId, cloned.getId(), cloned.getRoleName(), verifiedPermCount,
-                 templatePermIds != null ? templatePermIds.size() : 0);
-        return cloned;
-    }
-
-    /**
-     * 按租户类型过滤权限 ID 列表：去除该类型不需要的菜单权限。
-     * <ul>
-     *   <li>SELF_FACTORY：去除 MENU_FACTORY（无外发工厂管理）</li>
-     *   <li>BRAND：去除 MENU_CUTTING（无自有裁剪产线）</li>
-     *   <li>HYBRID / null / 其他：不过滤，继承全部</li>
-     * </ul>
-     */
-    private List<Long> applyTenantTypePermissionFilter(List<Long> permIds, String tenantType) {
-        if (tenantType == null || "HYBRID".equalsIgnoreCase(tenantType)) {
-            return permIds;
-        }
-        Set<String> excludedCodes = new HashSet<>();
-        if ("SELF_FACTORY".equalsIgnoreCase(tenantType)) {
-            // 自建工厂：不开放外发工厂管理菜单
-            excludedCodes.add("MENU_FACTORY");
-        } else if ("BRAND".equalsIgnoreCase(tenantType)) {
-            // 纯品牌：不开放裁剪管理菜单（无自有产线）
-            excludedCodes.add("MENU_CUTTING");
-        }
-        if (excludedCodes.isEmpty()) return permIds;
-
-        // 查询需要排除的权限 ID
-        List<Permission> excludedPerms = permissionService.list(
-                new QueryWrapper<Permission>().in("permission_code", excludedCodes));
-        if (excludedPerms == null || excludedPerms.isEmpty()) return permIds;
-
-        Set<Long> excludedIds = excludedPerms.stream()
-                .map(Permission::getId)
-                .collect(Collectors.toSet());
-        List<Long> filtered = permIds.stream()
-                .filter(id -> !excludedIds.contains(id))
-                .collect(Collectors.toList());
-        log.info("[租户类型权限过滤] type={}, 排除权限码={}, 排除ID数={}, 最终权限数={}",
-                 tenantType, excludedCodes, excludedIds.size(), filtered.size());
-        return filtered;
-    }
-
     private User sanitizeUser(User user) {
-        if (user != null) {
-            user.setPassword(null);
-        }
+        if (user != null) { user.setPassword(null); }
         return user;
     }
 
-    // ========== 角色模板管理 ==========
-
-    /**
-     * 获取所有可用的角色模板列表
-     */
-    public List<Role> listRoleTemplates() {
-        LambdaQueryWrapper<Role> query = new LambdaQueryWrapper<>();
-        query.eq(Role::getIsTemplate, true)
-             .eq(Role::getStatus, "active")
-             .orderByAsc(Role::getSortOrder);
-        List<Role> templates = roleService.list(query);
-        // 附加权限数量
-        for (Role template : templates) {
-            List<Long> permIds = rolePermissionService.getPermissionIdsByRoleId(template.getId());
-            template.setPermissionCount(permIds != null ? permIds.size() : 0);
-        }
-        return templates;
-    }
-
-    /**
-     * 将角色模板克隆到租户中
-     * @param tenantId 目标租户ID
-     * @param templateId 源模板ID
-     * @return 克隆后的租户角色
-     */
-    @Transactional(rollbackFor = Exception.class)
-    public Role cloneRoleTemplate(Long tenantId, Long templateId) {
-        assertSuperAdminOrTenantOwner();
-
-        Role template = roleService.getById(templateId);
-        if (template == null || !Boolean.TRUE.equals(template.getIsTemplate())) {
-            throw new IllegalArgumentException("无效的角色模板ID: " + templateId);
-        }
-
-        // 检查是否已克隆（同一租户同一代码不重复）
-        LambdaQueryWrapper<Role> dupCheck = new LambdaQueryWrapper<>();
-        dupCheck.eq(Role::getTenantId, tenantId)
-                .eq(Role::getRoleCode, template.getRoleCode());
-        if (roleService.count(dupCheck) > 0) {
-            throw new IllegalArgumentException("该角色模板已克隆到此租户: " + template.getRoleName());
-        }
-
-        // 克隆角色
-        Role cloned = new Role();
-        cloned.setRoleName(template.getRoleName());
-        cloned.setRoleCode(template.getRoleCode());
-        cloned.setDescription(template.getDescription());
-        cloned.setStatus("active");
-        cloned.setDataScope(template.getDataScope());
-        cloned.setTenantId(tenantId);
-        cloned.setIsTemplate(false);
-        cloned.setSourceTemplateId(templateId);
-        cloned.setSortOrder(template.getSortOrder());
-        cloned.setCreateTime(LocalDateTime.now());
-        cloned.setUpdateTime(LocalDateTime.now());
-        roleService.save(cloned);
-
-        // 克隆权限关联
-        List<Long> templatePermIds = rolePermissionService.getPermissionIdsByRoleId(templateId);
-        if (templatePermIds != null && !templatePermIds.isEmpty()) {
-            // 天花板过滤：如果租户有天花板，仅克隆天花板内的权限
-            List<Long> ceilingGranted = ceilingService.getGrantedPermissionIds(tenantId);
-            List<Long> effectivePermIds;
-            if (ceilingGranted != null && !ceilingGranted.isEmpty()) {
-                Set<Long> ceilingSet = new HashSet<>(ceilingGranted);
-                effectivePermIds = templatePermIds.stream()
-                        .filter(ceilingSet::contains)
-                        .collect(Collectors.toList());
-            } else {
-                effectivePermIds = templatePermIds;
-            }
-            rolePermissionService.replaceRolePermissions(cloned.getId(), effectivePermIds);
-        }
-
-        log.info("角色模板克隆完成: template={} -> tenantRole={}, tenantId={}", templateId, cloned.getId(), tenantId);
-        return cloned;
-    }
-
-    /**
-     * 获取租户的角色列表（已克隆的角色）
-     */
-    public List<Role> listTenantRoles(Long tenantId) {
-        assertSuperAdminOrTenantOwner();
-        Long tid = tenantId != null ? tenantId : UserContext.tenantId();
-        if (tid == null) {
-            throw new IllegalArgumentException("租户ID不能为空");
-        }
-
-        LambdaQueryWrapper<Role> query = new LambdaQueryWrapper<>();
-        query.eq(Role::getTenantId, tid)
-             .eq(Role::getIsTemplate, false)
-             .eq(Role::getStatus, "active")
-             .orderByAsc(Role::getSortOrder);
-        List<Role> roles = roleService.list(query);
-        for (Role role : roles) {
-            List<Long> permIds = rolePermissionService.getPermissionIdsByRoleId(role.getId());
-            role.setPermissionCount(permIds != null ? permIds.size() : 0);
-        }
-        return roles;
-    }
-
-    /**
-     * 更新租户角色的权限（在天花板范围内微调）
-     */
-    @Transactional(rollbackFor = Exception.class)
-    public void updateTenantRolePermissions(Long roleId, List<Long> permissionIds) {
-        assertSuperAdminOrTenantOwner();
-
-        Role role = roleService.getById(roleId);
-        if (role == null) {
-            throw new IllegalArgumentException("角色不存在");
-        }
-        if (Boolean.TRUE.equals(role.getIsTemplate())) {
-            throw new IllegalArgumentException("不能修改角色模板的权限，请修改克隆后的租户角色");
-        }
-
-        Long tenantId = role.getTenantId();
-        // 天花板校验
-        if (tenantId != null && permissionIds != null) {
-            List<Long> ceilingGranted = ceilingService.getGrantedPermissionIds(tenantId);
-            if (ceilingGranted != null && !ceilingGranted.isEmpty()) {
-                Set<Long> ceilingSet = new HashSet<>(ceilingGranted);
-                List<Long> exceeding = permissionIds.stream()
-                        .filter(id -> !ceilingSet.contains(id))
-                        .collect(Collectors.toList());
-                if (!exceeding.isEmpty()) {
-                    throw new IllegalArgumentException("以下权限不在租户天花板范围内: " + exceeding);
-                }
-            }
-        }
-
-        rolePermissionService.replaceRolePermissions(roleId, permissionIds);
-        permissionEngine.evictRolePermissionCache(roleId);
-        log.info("租户角色权限更新: roleId={}, permCount={}", roleId, permissionIds != null ? permissionIds.size() : 0);
-    }
-
-    // ========== 租户权限天花板管理 ==========
-
-    /**
-     * 获取租户权限天花板（可用权限ID列表）
-     */
-    public Map<String, Object> getTenantCeiling(Long tenantId) {
-        assertSuperAdmin();
-        Tenant tenant = tenantService.getById(tenantId);
-        if (tenant == null) {
-            throw new IllegalArgumentException("租户不存在");
-        }
-
-        List<Long> grantedIds = ceilingService.getGrantedPermissionIds(tenantId);
-        List<Permission> allPerms = permissionService.list();
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("tenantId", tenantId);
-        result.put("tenantName", tenant.getTenantName());
-        result.put("grantedPermissionIds", grantedIds);
-        result.put("allPermissions", allPerms);
-        result.put("hasCeiling", grantedIds != null && !grantedIds.isEmpty());
-        return result;
-    }
-
-    /**
-     * 设置租户权限天花板
-     * @param tenantId 租户ID
-     * @param grantedPermissionIds 允许的权限ID列表（传空数组=不限制）
-     */
-    @Transactional(rollbackFor = Exception.class)
-    public void setTenantCeiling(Long tenantId, List<Long> grantedPermissionIds) {
-        assertSuperAdmin();
-        Tenant tenant = tenantService.getById(tenantId);
-        if (tenant == null) {
-            throw new IllegalArgumentException("租户不存在");
-        }
-
-        ceilingService.replaceCeiling(tenantId, grantedPermissionIds);
-        permissionEngine.evictTenantCeilingCache(tenantId);
-        log.info("租户权限天花板设置完成: tenantId={}, permCount={}", tenantId,
-                grantedPermissionIds != null ? grantedPermissionIds.size() : 0);
-    }
-
-    // ========== 工人自注册与审批 ==========
-
-    /**
-     * 工人通过小程序注册（无需登录）
-     */
-    @Transactional(rollbackFor = Exception.class)
-    public Map<String, Object> workerRegister(String username, String password, String name,
-                                                String phone, String tenantCode, String factoryId, String orgUnitId) {
-        // 验证租户码（统一错误消息防止枚举）
-        Tenant tenant = tenantService.findByTenantCode(tenantCode);
-        if (tenant == null || !"active".equals(tenant.getStatus())) {
-            throw new IllegalArgumentException("注册失败，请检查租户编码是否正确");
-        }
-
-        // 验证用户名唯一
-        QueryWrapper<User> userQuery = new QueryWrapper<>();
-        userQuery.eq("username", username);
-        if (userService.count(userQuery) > 0) {
-            throw new IllegalArgumentException("用户名已存在: " + username);
-        }
-
-        // 查找租户的 "工人" 角色
-        LambdaQueryWrapper<Role> roleQuery = new LambdaQueryWrapper<>();
-        roleQuery.eq(Role::getTenantId, tenant.getId())
-                 .eq(Role::getRoleCode, "worker")
-                 .eq(Role::getStatus, "active")
-                 .last("LIMIT 1");
-        Role workerRole = roleService.getOne(roleQuery);
-
-        // 创建待审批用户
-        User user = new User();
-        user.setUsername(username);
-        user.setPassword(passwordEncoder.encode(password));
-        user.setName(name);
-        user.setPhone(phone);
-        user.setTenantId(tenant.getId());
-        user.setIsTenantOwner(false);
-        user.setStatus("inactive"); // 注册中，未激活
-        user.setRegistrationStatus("PENDING");
-        user.setRegistrationTenantCode(tenantCode);
-        if (workerRole != null) {
-            user.setRoleId(workerRole.getId());
-            user.setRoleName(workerRole.getRoleName());
-        }
-        user.setPermissionRange("self");
-        if (org.springframework.util.StringUtils.hasText(factoryId)) {
-            user.setFactoryId(factoryId);
-        }
-        if (org.springframework.util.StringUtils.hasText(orgUnitId)) {
-            user.setOrgUnitId(orgUnitId);
-        }
-        user.setCreateTime(LocalDateTime.now());
-        user.setUpdateTime(LocalDateTime.now());
-        userService.save(user);
-
-        // 通知租户内管理主管以上用户（主账号 + admin/manager/supervisor角色），不含超管
-        try {
-            if (webSocketService != null) {
-                // 查找租户内的管理类角色 ID
-                LambdaQueryWrapper<Role> mgmtRolesQuery = new LambdaQueryWrapper<>();
-                mgmtRolesQuery.eq(Role::getTenantId, tenant.getId())
-                              .in(Role::getRoleCode, Arrays.asList(
-                                  "admin", "manager", "supervisor",
-                                  "tenant_admin", "tenant_manager"))
-                              .eq(Role::getStatus, "active");
-                List<Role> mgmtRoles = roleService.list(mgmtRolesQuery);
-                List<Long> mgmtRoleIds = mgmtRoles.stream()
-                        .map(Role::getId).collect(Collectors.toList());
-
-                // 查找需要通知的用户：主账号 或 管理角色，状态active
-                LambdaQueryWrapper<User> notifyQuery = new LambdaQueryWrapper<>();
-                notifyQuery.eq(User::getTenantId, tenant.getId())
-                           .eq(User::getStatus, "active")
-                           .and(w -> {
-                               w.eq(User::getIsTenantOwner, true);
-                               if (!mgmtRoleIds.isEmpty()) {
-                                   w.or().in(User::getRoleId, mgmtRoleIds);
-                               }
-                           });
-                List<User> managers = userService.list(notifyQuery);
-
-                String workerDisplay = name != null ? name : username;
-                for (User mgr : managers) {
-                    webSocketService.notifyWorkerRegistrationPending(
-                        String.valueOf(mgr.getId()),
-                        workerDisplay
-                    );
-                }
-                log.info("[注册通知] 已推送给 {} 位租户管理人员, tenantId={}", managers.size(), tenant.getId());
-            }
-        } catch (Exception e) {
-            log.warn("通知租户管理人员WebSocket失败，不影响注册流程: {}", e.getMessage());
-        }
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("userId", user.getId());
-        result.put("status", "PENDING");
-        result.put("message", "注册申请已提交，请等待管理员审批");
-        return result;
-    }
-
-    /**
-     * 获取待审批的注册用户列表（租户主账号查看）
-     */
-    public Page<User> listPendingRegistrations(Long page, Long pageSize) {
-        assertSuperAdminOrTenantOwner();
-
-        LambdaQueryWrapper<User> query = new LambdaQueryWrapper<>();
-        query.eq(User::getRegistrationStatus, "PENDING");
-
-        Long tenantId = UserContext.tenantId();
-        if (tenantId != null) {
-            // 租户主账号只能看到本租户的注册申请
-            query.eq(User::getTenantId, tenantId);
-        }
-        query.orderByDesc(User::getCreateTime);
-
-        Page<User> result = userService.page(
-                new Page<>(page != null ? page : 1, pageSize != null ? pageSize : 20), query);
-        if (result.getRecords() != null) {
-            // 填充租户名称
-            result.setRecords(result.getRecords().stream().map(user -> {
-                User sanitized = sanitizeUser(user);
-                if (sanitized.getTenantId() != null) {
-                    Tenant tenant = tenantService.getById(sanitized.getTenantId());
-                    if (tenant != null) {
-                        sanitized.setTenantName(tenant.getTenantName());
-                    }
-                }
-                return sanitized;
-            }).collect(Collectors.toList()));
-        }
-        return result;
-    }
-
-    /**
-     * 审批通过注册用户
-     */
-    @Transactional(rollbackFor = Exception.class)
-    public boolean approveRegistration(Long userId, Long roleId) {
-        assertSuperAdminOrTenantOwner();
-
-        User user = userService.getById(userId);
-        if (user == null) {
-            throw new IllegalArgumentException("用户不存在");
-        }
-        if (!"PENDING".equals(user.getRegistrationStatus())) {
-            throw new IllegalArgumentException("该用户不在待审批状态");
-        }
-
-        // 租户主账号只能审批自己租户的用户
-        Long tenantId = UserContext.tenantId();
-        if (tenantId != null && !tenantId.equals(user.getTenantId())) {
-            throw new AccessDeniedException("无权审批其他租户的注册申请");
-        }
-
-        // 如果指定了角色，更新角色
-        if (roleId != null) {
-            Role role = roleService.getById(roleId);
-            if (role != null) {
-                user.setRoleId(role.getId());
-                user.setRoleName(role.getRoleName());
-            }
-        }
-
-        user.setRegistrationStatus("ACTIVE");
-        user.setStatus("active");
-        user.setApprovalStatus("approved");
-        user.setApprovalTime(LocalDateTime.now());
-        user.setUpdateTime(LocalDateTime.now());
-
-        boolean success = userService.updateById(user);
-        if (success) {
-            log.info("注册审批通过: userId={}, username={}", userId, user.getUsername());
-        }
-        return success;
-    }
-
-    /**
-     * 拒绝注册用户
-     */
-    @Transactional(rollbackFor = Exception.class)
-    public boolean rejectRegistration(Long userId, String reason) {
-        assertSuperAdminOrTenantOwner();
-
-        User user = userService.getById(userId);
-        if (user == null) {
-            throw new IllegalArgumentException("用户不存在");
-        }
-        if (!"PENDING".equals(user.getRegistrationStatus())) {
-            throw new IllegalArgumentException("该用户不在待审批状态");
-        }
-
-        Long tenantId = UserContext.tenantId();
-        if (tenantId != null && !tenantId.equals(user.getTenantId())) {
-            throw new AccessDeniedException("无权拒绝其他租户的注册申请");
-        }
-
-        user.setRegistrationStatus("REJECTED");
-        user.setRejectReason(reason);
-        user.setStatus("inactive");
-        user.setApprovalStatus("rejected");
-        user.setApprovalTime(LocalDateTime.now());
-        user.setUpdateTime(LocalDateTime.now());
-
-        boolean success = userService.updateById(user);
-        if (success) {
-            log.info("注册申请拒绝: userId={}, username={}, reason={}", userId, user.getUsername(), reason);
-        }
-        return success;
-    }
-
-    // ========== 用户权限覆盖 ==========
-
-    /**
-     * 获取用户权限覆盖配置
-     */
-    public Map<String, Object> getUserPermissionOverrides(Long userId) {
-        assertSuperAdminOrTenantOwner();
-
-        User user = userService.getById(userId);
-        if (user == null) {
-            throw new IllegalArgumentException("用户不存在");
-        }
-
-        // 租户隔离检查
-        Long tenantId = UserContext.tenantId();
-        if (tenantId != null && !tenantId.equals(user.getTenantId())) {
-            throw new AccessDeniedException("无权操作其他租户的用户");
-        }
-
-        List<Long> grantIds = overrideService.getGrantPermissionIds(userId);
-        List<Long> revokeIds = overrideService.getRevokePermissionIds(userId);
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("userId", userId);
-        result.put("grantPermissionIds", grantIds);
-        result.put("revokePermissionIds", revokeIds);
-        return result;
-    }
-
-    /**
-     * 设置用户权限覆盖
-     */
-    @Transactional(rollbackFor = Exception.class)
-    public void setUserPermissionOverrides(Long userId, List<Long> grantIds, List<Long> revokeIds) {
-        assertSuperAdminOrTenantOwner();
-
-        User user = userService.getById(userId);
-        if (user == null) {
-            throw new IllegalArgumentException("用户不存在");
-        }
-
-        Long tenantId = UserContext.tenantId();
-        if (tenantId != null && !tenantId.equals(user.getTenantId())) {
-            throw new AccessDeniedException("无权操作其他租户的用户");
-        }
-
-        overrideService.replaceOverrides(userId, user.getTenantId(), grantIds, revokeIds);
-        permissionEngine.evictUserPermissionCache(userId);
-        log.info("用户权限覆盖设置完成: userId={}, grants={}, revokes={}",
-                userId, grantIds != null ? grantIds.size() : 0, revokeIds != null ? revokeIds.size() : 0);
-    }
-
-    // ========== 辅助方法 ==========
-
-    private void assertSuperAdminOrTenantOwner() {
-        if (UserContext.isSuperAdmin()) return;
-        if (UserContext.isTenantOwner()) return;
-        throw new AccessDeniedException("仅超级管理员或租户主账号可执行此操作");
-    }
-
-    // ========== 新租户职位体系初始化 ==========
-
-    /**
-     * 初始化新租户的完整职位角色体系：自动将所有 is_template=true 的职位模板克隆到租户。
-     * <p>
-     * 职位模板在 t_role 表中以 is_template=1, tenant_id=NULL 存储，模板的权限可由
-     * 超管在「系统设置→角色模板」中调整，租户管理员拿到克隆副本后也可在「角色管理」中
-     * 二次调整，所有权限逻辑来自数据库，不含任何硬编码权限列表。
-     * </p>
-     * <p>
-     * 新员工添加时只需选择对应职位，权限即刻生效，无需逐人配置。
-     * </p>
-     *
-     * @param tenantId   目标租户ID
-     * @param tenantName 租户名称（用于描述字段）
-     * @param tenantType 租户类型（影响天花板过滤，如 SELF_FACTORY/BRAND/HYBRID）
-     * @return 租户全能管理员角色（full_admin 克隆），供主账号绑定时使用
-     */
-    @Transactional(rollbackFor = Exception.class)
-    private Role initializeAllTenantRoles(Long tenantId, String tenantName, String tenantType) {
-        // Step 1: 必须先克隆 full_admin（主账号绑定角色）
-        Role adminRole = createTenantAdminRole(tenantId, tenantName, tenantType);
-
-        // Step 2: 查出所有其余活跃职位模板，逐一克隆到租户
-        LambdaQueryWrapper<Role> q = new LambdaQueryWrapper<>();
-        q.eq(Role::getIsTemplate, true)
-         .eq(Role::getStatus, "active")
-         .ne(Role::getRoleCode, "full_admin")  // full_admin 已在 Step 1 处理
-         .orderByAsc(Role::getSortOrder);
-        List<Role> otherTemplates = roleService.list(q);
-
-        for (Role tmpl : otherTemplates) {
-            try {
-                // 幂等：同租户已有同 role_code 则跳过
-                LambdaQueryWrapper<Role> dup = new LambdaQueryWrapper<>();
-                dup.eq(Role::getTenantId, tenantId).eq(Role::getRoleCode, tmpl.getRoleCode());
-                if (roleService.count(dup) > 0) {
-                    log.debug("[职位初始化] 租户 {} 已有角色 {}，跳过", tenantId, tmpl.getRoleCode());
-                    continue;
-                }
-
-                // 克隆角色行
-                Role cloned = new Role();
-                cloned.setRoleName(tmpl.getRoleName());
-                cloned.setRoleCode(tmpl.getRoleCode());
-                cloned.setDescription(tmpl.getDescription());
-                cloned.setStatus("active");
-                cloned.setDataScope(tmpl.getDataScope());
-                cloned.setTenantId(tenantId);
-                cloned.setIsTemplate(false);
-                cloned.setSourceTemplateId(tmpl.getId());
-                cloned.setSortOrder(tmpl.getSortOrder());
-                cloned.setCreateTime(LocalDateTime.now());
-                cloned.setUpdateTime(LocalDateTime.now());
-                roleService.save(cloned);
-
-                // 克隆权限（含天花板过滤 + 租户类型过滤，与 createTenantAdminRole 逻辑对齐）
-                List<Long> tmplPermIds = rolePermissionService.getPermissionIdsByRoleId(tmpl.getId());
-                if (tmplPermIds != null && !tmplPermIds.isEmpty()) {
-                    List<Long> ceilingGranted = ceilingService.getGrantedPermissionIds(tenantId);
-                    List<Long> effectiveIds;
-                    if (ceilingGranted != null && !ceilingGranted.isEmpty()) {
-                        Set<Long> ceilingSet = new HashSet<>(ceilingGranted);
-                        effectiveIds = tmplPermIds.stream().filter(ceilingSet::contains).collect(Collectors.toList());
-                    } else {
-                        effectiveIds = applyTenantTypePermissionFilter(tmplPermIds, tenantType);
-                    }
-                    rolePermissionService.replaceRolePermissions(cloned.getId(), effectiveIds);
-                }
-                log.info("[职位初始化] 克隆完成 tenantId={} 职位={}({})",
-                         tenantId, tmpl.getRoleName(), tmpl.getRoleCode());
-            } catch (Exception e) {
-                // 非 full_admin 克隆失败不阻断主流程，仅记录警告（租户管理员之后可手动克隆）
-                log.warn("[职位初始化] 克隆失败（非阻断）tenantId={} role={} err={}",
-                         tenantId, tmpl.getRoleCode(), e.getMessage());
-            }
-        }
-        log.info("[职位初始化] 完成 tenantId={} 已初始化角色数={}", tenantId, otherTemplates.size() + 1);
-        return adminRole;
-    }
 }

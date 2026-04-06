@@ -180,7 +180,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
   return (
     <div style={{ marginBottom: 12 }}>
       <div style={{ marginBottom: 8, fontWeight: 600 }}>图片资产</div>
-      {/* 大图 */}
+      {/* 大图（缩小版预览） */}
       <div
         style={{
           width: '100%',
@@ -191,7 +191,7 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          marginBottom: 16,
+          marginBottom: 12,
           overflow: 'hidden',
           background: '#fafafa',
           cursor: 'default',
@@ -228,127 +228,119 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
         )}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, width: '100%', maxWidth: 400, marginBottom: 12 }}>
-        {Array.from({ length: Math.max(displayImages.length, 4) }).map((_, idx) => {
-          const img = displayImages[idx];
-          const hover = hoverIndex === idx;
-          const canOperate = isNewMode || enabled;
-          const isCoverFallback = !!(img as any)?.isCoverFallback;
-          const assetMeta = resolveAssetMeta(img, idx);
-          return (
-            <div
-              key={idx}
-              onMouseEnter={() => setHoverIndex(idx)}
-              onMouseLeave={() => setHoverIndex(null)}
-              style={{
-                width: '100%',
-                aspectRatio: '1 / 1',
-                border: currentIndex === idx ? '2px solid var(--color-warning)' : '1px solid #d9d9d9',
-                borderRadius: 8,
-                overflow: 'hidden',
-                position: 'relative',
-                cursor: img && (isNewMode || enabled) ? 'pointer' : 'default',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: '#f0f0f0',
-              }}
-            >
-              {img ? (
-                <>
-                  <img
-                    src={getFullAuthedFileUrl(img.fileUrl)}
-                    alt={`thumb-${idx}`}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    onClick={() => setCurrentIndex(idx)}
-                  />
-                  {/* Hover显示操作按钮（兜底参考图不可编辑） */}
-                  {hover && canOperate && !isCoverFallback && (
+      {displayImages.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, width: '100%', maxWidth: 400, marginBottom: 10 }}>
+          {displayImages.map((img, idx) => {
+            const hover = hoverIndex === idx;
+            const canOperate = isNewMode || enabled;
+            const isCoverFallback = !!(img as any)?.isCoverFallback;
+            const assetMeta = resolveAssetMeta(img, idx);
+            return (
+              <div
+                key={idx}
+                onMouseEnter={() => setHoverIndex(idx)}
+                onMouseLeave={() => setHoverIndex(null)}
+                style={{
+                  width: '100%',
+                  aspectRatio: '1 / 1',
+                  border: currentIndex === idx ? '2px solid var(--color-warning)' : '1px solid #d9d9d9',
+                  borderRadius: 6,
+                  overflow: 'hidden',
+                  position: 'relative',
+                  cursor: (isNewMode || enabled) ? 'pointer' : 'default',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: '#f0f0f0',
+                }}
+              >
+                <img
+                  src={getFullAuthedFileUrl(img.fileUrl)}
+                  alt={`thumb-${idx}`}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  onClick={() => setCurrentIndex(idx)}
+                />
+                {/* Hover显示操作按钮（兜底参考图不可编辑） */}
+                {hover && canOperate && !isCoverFallback && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      background: 'rgba(0,0,0,0.5)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      borderRadius: 6,
+                    }}
+                  >
                     <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSetCover(idx);
+                      }}
                       style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        background: 'rgba(0,0,0,0.5)',
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        background: currentIndex === idx ? 'var(--color-warning)' : '#fff',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: 8,
-                        borderRadius: 8,
+                        cursor: 'pointer',
                       }}
+                      title="设置为主图"
                     >
-                      <div
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSetCover(idx);
-                        }}
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: '50%',
-                          background: currentIndex === idx ? 'var(--color-warning)' : '#fff',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                        }}
-                        title="设置为主图"
-                      >
-                        {currentIndex === idx ? (
-                          <StarFilled style={{ color: 'var(--neutral-white)', fontSize: "var(--font-size-base)" }} />
-                        ) : (
-                          <StarOutlined style={{ color: 'var(--color-warning)', fontSize: "var(--font-size-base)" }} />
-                        )}
-                      </div>
-                      <div
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(img.id, img.localIndex);
-                        }}
-                        style={{
-                          width: 28,
-                          height: 28,
-                          borderRadius: '50%',
-                          background: 'var(--color-bg-base)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                        }}
-                        title="删除图片"
-                      >
-                        <DeleteOutlined style={{ color: 'var(--color-danger)', fontSize: "var(--font-size-base)" }} />
-                      </div>
+                      {currentIndex === idx ? (
+                        <StarFilled style={{ color: 'var(--neutral-white)', fontSize: 12 }} />
+                      ) : (
+                        <StarOutlined style={{ color: 'var(--color-warning)', fontSize: 12 }} />
+                      )}
                     </div>
-                  )}
-                  {/* 主图/参考图标记 */}
-                  {img && (
                     <div
-                      style={{
-                        position: 'absolute',
-                        top: 2,
-                        right: 2,
-                        background: assetMeta.color,
-                        color: 'var(--neutral-white)',
-                        fontSize: 10,
-                        padding: '2px 6px',
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(img.id, img.localIndex);
                       }}
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        background: 'var(--color-bg-base)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                      }}
+                      title="删除图片"
                     >
-                      {assetMeta.label}
+                      <DeleteOutlined style={{ color: 'var(--color-danger)', fontSize: 12 }} />
                     </div>
-                  )}
-                </>
-              ) : (
-                <span style={{ color: 'var(--neutral-border)', fontSize: "var(--font-size-xs)" }}>细节图{idx + 1}</span>
-              )}
-            </div>
-          );
-        })}
-      </div>
+                  </div>
+                )}
+                {/* 主图/参考图标记 */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 2,
+                    right: 2,
+                    background: assetMeta.color,
+                    color: 'var(--neutral-white)',
+                    fontSize: 9,
+                    padding: '1px 4px',
+                    borderRadius: 2,
+                  }}
+                >
+                  {assetMeta.label}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {displayImages.length > 0 && (
         <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>

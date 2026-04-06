@@ -2,19 +2,14 @@ import React from 'react';
 import { Card } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import type { ColumnsType } from 'antd/es/table';
-import type { StyleProcess } from '@/types/style';
 import { toNumberSafe } from '@/utils/api';
 
 interface Props {
   secondaryProcessList: any[];
-  processList: StyleProcess[];
-  processCost: number;
 }
 
 const QuotationSecondarySection: React.FC<Props> = ({
   secondaryProcessList,
-  processList,
-  processCost,
 }) => {
   if (secondaryProcessList.length === 0) return null;
 
@@ -22,11 +17,6 @@ const QuotationSecondarySection: React.FC<Props> = ({
     (s, i) => s + (Number(i.unitPrice) || 0),
     0,
   );
-  const processSubtotal = processList.reduce(
-    (s, i) => s + (Number((i as any).price) || 0),
-    0,
-  );
-
   const columns: ColumnsType<any> = [
     {
       title: '序号', dataIndex: 'sortOrder', key: 'sortOrder', width: 70, align: 'center',
@@ -58,9 +48,6 @@ const QuotationSecondarySection: React.FC<Props> = ({
     },
   ];
 
-  // processCost prop 透传，用于卡片 extra 展示；实际求和用 processSubtotal+secondaryTotal
-  void processCost;
-
   return (
     <Card
       title={
@@ -71,11 +58,7 @@ const QuotationSecondarySection: React.FC<Props> = ({
           </span>
         </span>
       }
-      extra={
-        <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--color-warning)' }}>
-          小计：¥{secondaryTotal.toFixed(2)}
-        </span>
-      }
+
       size="small"
       style={{ marginBottom: 12 }}
       styles={{ body: { padding: '8px' } }}
@@ -88,31 +71,10 @@ const QuotationSecondarySection: React.FC<Props> = ({
         rowKey={(r) => String(r?.id || Math.random())}
         pagination={false}
         scroll={{ x: 960 }}
-        summary={() => (
-          <ResizableTable.Summary fixed>
-            <ResizableTable.Summary.Row>
-              <ResizableTable.Summary.Cell index={0} colSpan={5} align="right">
-                <strong>二次工艺小计：</strong>
-              </ResizableTable.Summary.Cell>
-              <ResizableTable.Summary.Cell index={5} align="right">
-                <strong style={{ color: 'var(--color-warning)', fontSize: '15px' }}>
-                  ¥{secondaryTotal.toFixed(2)}
-                </strong>
-              </ResizableTable.Summary.Cell>
-            </ResizableTable.Summary.Row>
-            <ResizableTable.Summary.Row>
-              <ResizableTable.Summary.Cell index={0} colSpan={5} align="right">
-                <strong>工序总费用（含二次工艺）：</strong>
-              </ResizableTable.Summary.Cell>
-              <ResizableTable.Summary.Cell index={5} align="right">
-                <strong style={{ color: 'var(--color-success)', fontSize: '15px' }}>
-                  ¥{(processSubtotal + secondaryTotal).toFixed(2)}
-                </strong>
-              </ResizableTable.Summary.Cell>
-            </ResizableTable.Summary.Row>
-          </ResizableTable.Summary>
-        )}
       />
+      <div style={{ textAlign: 'right', padding: '6px 12px', borderTop: '1px solid var(--color-border-secondary)', fontWeight: 600, fontSize: 14, color: 'var(--color-warning)' }}>
+        小计：¥{secondaryTotal.toFixed(2)}
+      </div>
     </Card>
   );
 };

@@ -359,6 +359,39 @@ export interface ProductOutstock {
   createTime?: string;
   updateTime?: string;
   deleteFlag?: number;
+  receiveStatus?: string;
+  receiveTime?: string;
+  receivedBy?: string;
+  receivedByName?: string;
+}
+
+export interface FactoryShipment {
+  id?: string;
+  shipmentNo: string;
+  orderId: string;
+  orderNo: string;
+  styleNo: string;
+  styleName?: string;
+  factoryId?: string;
+  factoryName?: string;
+  shipQuantity: number;
+  shipTime?: string;
+  shippedBy?: string;
+  shippedByName?: string;
+  trackingNo?: string;
+  expressCompany?: string;
+  shipMethod?: string;
+  receiveStatus: string;
+  receiveTime?: string;
+  receivedBy?: string;
+  receivedByName?: string;
+  remark?: string;
+  tenantId?: number;
+  creatorId?: string;
+  creatorName?: string;
+  createTime?: string;
+  updateTime?: string;
+  deleteFlag?: number;
 }
 
 export interface ProductionQueryParams {

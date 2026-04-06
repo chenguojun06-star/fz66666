@@ -1,3 +1,53 @@
+# 2026-07-21
+
+## 报价单散剪算法修复 + ESC 快捷键清除筛选
+
+### 1. 散剪溢价算法 BUG 修复（`orderIntelligence.ts`）
+- **问题**：500件/10组颜色组合等"数量远超免散剪线"的订单，仍显示散剪溢价（如 ¥630），与业务常识矛盾。
+- **根本原因一**：`scatterLevel` 的 `low` 分支附加了 `&& comboCount <= 2` 条件，导致多组合订单（>2组）即使数量已大幅超过阈值也无法进入 `low`，形成"只要组合多就永远散剪"的双重惩罚。实际上 `comboPenalty` 已将组合数纳入阈值计算，此处再判断属于冗余约束。
+- **根本原因二**：`scatterPremiumPerPiece` 在 `scatterLevel` 确定之前计算，无论 level 为何始终为正值，`low` 状态下无法归零。
+- **修复**：① 删除 `&& comboCount <= 2` 约束，`qtyGapToNoScatter <= 0` 即直接判定为 `low`；② 将溢价计算移至 `scatterLevel` 之后，`low` 时强制归零。
+- **效果**：500件/10组 → `noScatterQtyThreshold≈104` → `qtyGap=0` → `scatterLevel='low'` → 溢价 ¥0/件，符合实际业务。
+
+### 2. StyleInfoList ESC 快捷键清除智能筛选（`StyleInfoList/index.tsx`）
+- **场景**：用户点击"已延期"或"临近交期"标签进入筛选视图后，按 ESC 可立即清除筛选并恢复全量列表。
+- **实现**：新增 `useEffect` keydown 监听，仅在 `smartFilter !== 'all'` 时激活，ESC 触发 `setSmartFilter('all')` 并清除焦点状态，监听器在状态恢复后自动移除。
+- **架构说明**：ResizableModal 本身通过 `{...rest}` 传递 props，Ant Design Modal 默认 `keyboard={true}`，因此所有弹窗按 ESC 关闭已内置支持，无需额外修改。
+
+---
+
+# 2026-07-20
+
+## AI 体验三大升级 — 页面感知 + 搜索衔接 + 工具缓存
+
+- **升级方向**：聚焦用户真实价值而非堆功能，让小云"理解用户正在做什么、快速响应、减少等待"。
+
+### 1. 页面上下文感知（前端+后端 4 文件）
+- `intelligenceApi.ts`：`aiAdvisorChatStream()` 新增 `pageContext` 参数，自动将当前页面路径传给后端。
+- `GlobalAiAssistant/index.tsx`：使用 `useLocation()` 拼装 `pathname + search`，每次对话自动附带。
+- `IntelligenceController.java`：新增 `@RequestParam pageContext` 接收页面上下文。
+- `AiAgentOrchestrator.java`：`buildSystemPrompt()` 新增 `describePageContext()` 方法（14 条路由映射），将页面路径翻译为中文描述注入系统提示词。
+- **效果**：用户在生产进度页问"这些订单延期了吗"，小云自动知道上下文是生产进度，无需解释。
+
+### 2. ⌘K 搜索→AI 无缝衔接（前端 2 文件）
+- `GlobalSearchModal.tsx`：搜索结果为空时，展示"🤖 让小云帮你找"蓝色呼吸灯按钮。
+- `GlobalAiAssistant/index.tsx`：监听 `openAiChat` 自定义事件，自动打开 AI 面板并预填搜索关键词。
+- **效果**：⌘K 搜索没找到 → 一键把问题交给 AI，搜索词自动带入，不需要再打一遍。
+
+### 3. 对话内工具结果缓存（后端 1 文件 5 处修改）
+- `AiAgentOrchestrator.java`：`executeAgent()`、`executeAgentStreaming()` 各新增 `toolResultCache` Map，`executeToolsConcurrently()` 新增缓存逻辑。
+- 缓存 key = `toolName + ":" + rawArguments`，作用域限于单次对话请求，请求结束自动释放。
+- 命中时日志输出 `[AiAgent-Cache] 工具缓存命中`，`elapsedMs=0` 标识缓存结果。
+- **效果**：同一对话内 AI 多轮调用相同工具（如先查订单列表、后续再次引用）不再重复执行，响应秒级提升。
+
+- **对系统的帮助**：
+  - ✅ AI 从"被动问答"升级为"主动理解当前场景"，减少用户解释成本
+  - ✅ 搜索与 AI 打通闭环，空结果不再是死胡同
+  - ✅ 同轮对话工具不重复调用，降低后端压力和用户等待时间
+  - ✅ 三项升级零数据库变更，纯代码改进
+
+---
+
 # 2026-04-05
 
 ## 款式图片上传 / 云端 400 兼容修复

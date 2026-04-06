@@ -506,7 +506,8 @@ public class IntelligenceController {
 
     /** AI 顾问流式问答 — SSE 实时推送思考/工具调用/回答事件 */
     @GetMapping(value = "/ai-advisor/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter aiAdvisorChatStream(@RequestParam String question) {
+    public SseEmitter aiAdvisorChatStream(@RequestParam String question,
+                                          @RequestParam(required = false) String pageContext) {
         SseEmitter emitter = new SseEmitter(120_000L);
         if (question == null || question.isBlank()) {
             try {
@@ -531,7 +532,7 @@ public class IntelligenceController {
         Thread.startVirtualThread(() -> {
             try {
                 UserContext.set(snapshot);
-                aiAgentOrchestrator.executeAgentStreaming(question, emitter);
+                aiAgentOrchestrator.executeAgentStreaming(question, pageContext, emitter);
             } catch (Exception e) {
                 try {
                     emitter.send(SseEmitter.event().name("error").data("{\"message\":\"" + e.getMessage() + "\"}"));

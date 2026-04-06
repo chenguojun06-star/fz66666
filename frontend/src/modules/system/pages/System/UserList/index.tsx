@@ -13,8 +13,8 @@ import { Role, User as UserType, UserQueryParams } from '@/types/system';
 import api, { requestWithPathFallback } from '@/utils/api';
 import tenantService from '@/services/tenantService';
 import { useAuth } from '@/utils/AuthContext';
-import { formatDateTime } from '@/utils/datetime';
 import { useSync } from '@/utils/syncManager';
+import { RemarkModalState, buildFormRules, LOG_COLUMNS, buildPermissionsByModule } from './userListUtils';
 import { useViewport } from '@/utils/useViewport';
 import { useModal } from '@/hooks';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
@@ -56,13 +56,6 @@ const UserList: React.FC = () => {
 
   const [activeEditTab, setActiveEditTab] = useState<'base' | 'perm'>('base');
 
-  type RemarkModalState = {
-    open: boolean;
-    title: string;
-    okText: string;
-    okDanger: boolean;
-    onConfirm: (remark: string) => Promise<void>;
-  };
   const [remarkModalState, setRemarkModalState] = useState<RemarkModalState | null>(null);
   const [remarkLoading, setRemarkLoading] = useState(false);
 
@@ -87,36 +80,8 @@ const UserList: React.FC = () => {
     open: false, loading: false,
   });
 
-  // 表单验证规则
-  const formRules = {
-    username: [
-      { required: true, message: '请输入用户名', trigger: ['change', 'blur'] },
-      { min: 3, max: 20, message: '用户名长度在 3 到 20 个字符', trigger: ['change', 'blur'] }
-    ],
-    name: [
-      { required: true, message: '请输入姓名', trigger: ['change', 'blur'] },
-      { max: 20, message: '姓名长度不超过 20 个字符', trigger: ['change', 'blur'] }
-    ],
-    password: [
-      { required: !userModal.data, message: '请输入密码', trigger: ['change', 'blur'] },
-      { min: 6, max: 20, message: '密码长度在 6 到 20 个字符', trigger: ['change', 'blur'] }
-    ],
-    roleId: [
-      { required: true, message: '请选择角色', trigger: ['change', 'blur'] }
-    ],
-    permissionRange: [
-      { required: true, message: '请选择权限范围', trigger: ['change', 'blur'] }
-    ],
-    status: [
-      { required: true, message: '请选择状态', trigger: ['change', 'blur'] }
-    ],
-    phone: [
-      { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: ['change', 'blur'] }
-    ],
-    email: [
-      { type: 'email' as const, message: '请输入正确的邮箱地址', trigger: ['change', 'blur'] }
-    ]
-  };
+  // 表单验证规则（密码字段：编辑模式非必填，新建模式必填）
+  const formRules = useMemo(() => buildFormRules(!!userModal.data), [userModal.data]);
 
   const fetchRoleOptions = async () => {
     setRoleOptionsLoading(true);
@@ -336,33 +301,7 @@ const UserList: React.FC = () => {
     return hit?.roleName || '';
   }, [roleOptions, selectedRoleId]);
 
-  const permissionsByModule = useMemo(() => {
-    return (permTree || []).map((topNode: any) => {
-      const groups: Array<{ groupId: number; groupName: string; buttons: any[] }> = [];
-      const directButtons: any[] = [];
-      for (const child of (topNode.children || [])) {
-        const cType = String(child.permissionType || '').toLowerCase();
-        if (cType === 'menu') {
-          groups.push({
-            groupId: Number(child.id),
-            groupName: String(child.permissionName || ''),
-            buttons: (child.children || []).map((btn: any) => ({
-              id: Number(btn.id),
-              name: String(btn.permissionName || ''),
-            })),
-          });
-        } else {
-          directButtons.push({ id: Number(child.id), name: String(child.permissionName || '') });
-        }
-      }
-      return {
-        moduleId: Number(topNode.id),
-        moduleName: String(topNode.permissionName || ''),
-        groups,
-        directButtons,
-      };
-    });
-  }, [permTree]);
+  const permissionsByModule = useMemo(() => buildPermissionsByModule(permTree), [permTree]);
 
   const loadPermTreeAndChecked = async (roleId: string) => {
     const rid = String(roleId || '').trim();
@@ -687,35 +626,7 @@ const UserList: React.FC = () => {
   };
 
   // 表格列定义
-  const logColumns = [
-    {
-      title: '动作',
-      dataIndex: 'action',
-      key: 'action',
-      width: 120,
-      render: (v: string) => v || '-',
-    },
-    {
-      title: '操作人',
-      dataIndex: 'operator',
-      key: 'operator',
-      width: 120,
-      render: (v: string) => v || '-',
-    },
-    {
-      title: '原因',
-      dataIndex: 'remark',
-      key: 'remark',
-      render: (v: string) => v || '-',
-    },
-    {
-      title: '时间',
-      dataIndex: 'createTime',
-      key: 'createTime',
-      width: 180,
-      render: (v: string) => formatDateTime(v),
-    },
-  ];
+  const logColumns = LOG_COLUMNS;
   const { columns } = useUserListColumns({
     openDialog,
     applyRoleToUser,

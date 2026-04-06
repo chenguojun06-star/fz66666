@@ -34,7 +34,7 @@ const QuotationBomSection: React.FC<Props> = ({ bomList, bomColorCosts, material
       render: (v: unknown) => String(v || '').trim() || '-',
     },
     {
-      title: '规格/幅宽', dataIndex: 'specifications', key: 'specifications', width: 140, ellipsis: true,
+      title: '规格/幅宽', dataIndex: 'specification', key: 'specification', width: 140, ellipsis: true,
       render: (v: unknown) => String(v || '').trim() || '-',
     },
     {
@@ -43,7 +43,14 @@ const QuotationBomSection: React.FC<Props> = ({ bomList, bomColorCosts, material
     },
     {
       title: '用量', dataIndex: 'usageAmount', key: 'usageAmount', width: 90, align: 'right',
-      render: (v: unknown) => toNumberSafe(v).toFixed(2),
+      render: (v: unknown) => <span style={{ color: 'var(--primary-color)' }}>{toNumberSafe(v).toFixed(2)}</span>,
+    },
+    {
+      title: '开发采购用量', dataIndex: 'devUsageAmount', key: 'devUsageAmount', width: 110, align: 'right',
+      render: (v: unknown) => {
+        const n = toNumberSafe(v);
+        return n > 0 ? n.toFixed(2) : '-';
+      },
     },
     {
       title: '损耗率%', dataIndex: 'lossRate', key: 'lossRate', width: 90, align: 'right',
@@ -86,22 +93,13 @@ const QuotationBomSection: React.FC<Props> = ({ bomList, bomColorCosts, material
     <Card
       title={
         <span style={{ fontSize: '15px', fontWeight: 600 }}>
-          面辅料明细（BOM）
+          物料明细（BOM）
           <span style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)', marginLeft: 8 }}>
             共 {bomList.length} 项
           </span>
         </span>
       }
-      extra={
-        <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--primary-color)' }}>
-          物料成本：¥{materialCost.toFixed(2)}
-          {bomColorCosts.colors.length > 1 && (
-            <span style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)', marginLeft: 6 }}>
-              （{bomColorCosts.colors.length} 色平均）
-            </span>
-          )}
-        </span>
-      }
+
       size="small"
       style={{ marginBottom: 12 }}
       styles={{ body: { padding: '8px' } }}
@@ -137,21 +135,15 @@ const QuotationBomSection: React.FC<Props> = ({ bomList, bomColorCosts, material
         rowKey={(r) => String((r as any)?.id || Math.random())}
         pagination={false}
         scroll={{ x: 1100 }}
-        summary={() => (
-          <ResizableTable.Summary fixed>
-            <ResizableTable.Summary.Row>
-              <ResizableTable.Summary.Cell index={0} colSpan={8} align="right">
-                <strong>物料总成本：</strong>
-              </ResizableTable.Summary.Cell>
-              <ResizableTable.Summary.Cell index={8} align="right">
-                <strong style={{ color: 'var(--primary-color)', fontSize: '15px' }}>
-                  ¥{materialCost.toFixed(2)}
-                </strong>
-              </ResizableTable.Summary.Cell>
-            </ResizableTable.Summary.Row>
-          </ResizableTable.Summary>
-        )}
       />
+      <div style={{ textAlign: 'right', padding: '6px 12px', borderTop: '1px solid var(--color-border-secondary)', fontWeight: 600, fontSize: 14, color: 'var(--primary-color)' }}>
+        物料成本：¥{materialCost.toFixed(2)}
+        {bomColorCosts.colors.length > 1 && (
+          <span style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)', marginLeft: 6 }}>
+            （{bomColorCosts.colors.length} 色平均）
+          </span>
+        )}
+      </div>
     </Card>
   );
 };

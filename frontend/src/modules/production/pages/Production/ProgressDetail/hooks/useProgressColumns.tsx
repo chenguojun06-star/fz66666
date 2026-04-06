@@ -1,7 +1,7 @@
 import { Fragment, useMemo, type CSSProperties } from 'react';
 import dayjs from 'dayjs';
 import { Badge, Button, Popover, Tag, Tooltip } from 'antd';
-import { ExclamationCircleOutlined, ShareAltOutlined } from '@ant-design/icons';
+import { ExclamationCircleOutlined, ShareAltOutlined, SendOutlined } from '@ant-design/icons';
 import type { DeliveryRiskItem } from '@/services/intelligence/intelligenceApi';
 import OrderInfoGrid from '@/components/common/OrderInfoGrid';
 import { buildOrderColorSizeMatrixModel } from '@/components/common/OrderColorSizeMatrix';
@@ -117,6 +117,10 @@ interface UseProgressColumnsParams {
   /** 分享订单给客户的回调 */
   onShareOrder?: (order: ProductionOrder) => void;
   canManageOrderLifecycle?: boolean;
+  /** 是否工厂账号 */
+  isFactoryAccount?: boolean;
+  /** 工厂发货回调 */
+  onFactoryShip?: (order: ProductionOrder) => void;
 }
 
 /**
@@ -142,6 +146,8 @@ export const useProgressColumns = ({
   deliveryRiskMap,
   onShareOrder,
   canManageOrderLifecycle = false,
+  isFactoryAccount = false,
+  onFactoryShip,
 }: UseProgressColumnsParams) => {
   const { getPredictHint, triggerPredict } = usePredictFinishHint(formatCompletionTime);
 
@@ -692,6 +698,11 @@ export const useProgressColumns = ({
             <Button size="small" style={btnStyle} disabled={frozen} onClick={() => { void handlePrintLabel(record); }}>
               标签
             </Button>
+            {isFactoryAccount ? (
+              <Button size="small" type="primary" style={btnStyle} disabled={frozen} icon={<SendOutlined />} onClick={() => onFactoryShip?.(record)}>
+                发货
+              </Button>
+            ) : null}
             {canManageOrderLifecycle ? (
               <Button size="small" style={btnStyle} danger disabled={frozen} onClick={() => handleCloseOrder(record)}>
                 关单
@@ -713,6 +724,7 @@ export const useProgressColumns = ({
     setRemarkPopoverId, setRemarkText,
     getPredictHint, triggerPredict,
     deliveryRiskMap, onShareOrder,
+    isFactoryAccount, onFactoryShip,
   ]);
 
   return { columns };

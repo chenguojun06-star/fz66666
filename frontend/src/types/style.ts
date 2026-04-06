@@ -169,6 +169,7 @@ export interface StyleProcess extends Record<string, unknown> {
   description?: string; // 工序描述
   standardTime: number;
   price: number;
+  rateMultiplier?: number | null; // 工序倍率，null 或 1 表示不参与倍率计算
   sortOrder: number;
 }
 

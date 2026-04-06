@@ -9,6 +9,7 @@ import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+
 /**
  * 款号尺寸表实体类
  */
@@ -52,9 +53,9 @@ public class StyleSize {
     private BigDecimal standardValue;
 
     /**
-     * 公差 (+/-)
+     * 公差 (+/-) 支持任意文字如"正负5"或数值如"0.5"
      */
-    private BigDecimal tolerance;
+    private String tolerance;
 
     /**
      * 排序

@@ -266,6 +266,11 @@ public class StyleInfoOrchestrator {
         styleStageHelper.lockPatternRevision(id);
     }
 
+    public void lockProductionRequirements(Long id) {
+        ensureStyleNotScrapped(id);
+        styleStageHelper.lockProductionRequirements(id);
+    }
+
     private boolean isNumericKey(String key) {
         for (int i = 0; i < key.length(); i++) {
             if (!Character.isDigit(key.charAt(i))) {

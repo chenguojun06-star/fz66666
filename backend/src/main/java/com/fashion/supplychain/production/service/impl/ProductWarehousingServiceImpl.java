@@ -441,20 +441,6 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         if (STATUS_COMPLETED.equalsIgnoreCase(st)) {
             throw new IllegalStateException("订单已完成，已停止入库");
         }
-        int batchSum = 0;
-        for (ProductWarehousing w : list) {
-            if (w == null) {
-                continue;
-            }
-            int q = w.getWarehousingQuantity() == null ? 0 : w.getWarehousingQuantity();
-            if (q > 0) {
-                batchSum += q;
-            }
-        }
-        String msg = helper.warehousingQuantityRuleViolationMessage(order.getId(), batchSum, null);
-        if (StringUtils.hasText(msg)) {
-            throw new IllegalStateException(msg);
-        }
 
         LocalDateTime now = LocalDateTime.now();
         String warehousingNo = helper.findExistingWarehousingNoByOrderId(order.getId());

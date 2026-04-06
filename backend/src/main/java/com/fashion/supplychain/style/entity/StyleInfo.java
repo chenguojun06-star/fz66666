@@ -374,6 +374,11 @@ public class StyleInfo {
     private LocalDateTime pushedToOrderTime;
 
     /**
+     * 推送人姓名
+     */
+    private String pushedByName;
+
+    /**
      * 客户
      */
     private String customer;

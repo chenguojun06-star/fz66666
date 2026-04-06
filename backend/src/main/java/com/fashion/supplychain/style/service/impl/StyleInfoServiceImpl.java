@@ -263,6 +263,11 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                 LocalDateTime latestTime = null;
                 if (latestTimeObj instanceof LocalDateTime) {
                     latestTime = (LocalDateTime) latestTimeObj;
+                } else if (latestTimeObj instanceof java.sql.Timestamp) {
+                    latestTime = ((java.sql.Timestamp) latestTimeObj).toLocalDateTime();
+                } else if (latestTimeObj instanceof java.util.Date) {
+                    latestTime = ((java.util.Date) latestTimeObj).toInstant()
+                            .atZone(java.time.ZoneId.systemDefault()).toLocalDateTime();
                 }
                 String latestCreator = r.get("latestCreator") == null ? null : String.valueOf(r.get("latestCreator")).trim();
 

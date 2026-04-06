@@ -89,7 +89,7 @@ public class TenantFileController {
                 }
             }
 
-            // ✅ COS 已启用：代理屁流返回 COS 内容（不再 302 跳转）
+            // ✅ COS 已启用：代理流式返回 COS 内容（不再 302 跳转）
             // 原因：302 跳转后浏览器直接访问 COS 跨域链接，若 Content-Type 非 image/* ，Chrome ORB 会拦截图片
             if (cosService.isEnabled()) {
                 try {
@@ -116,6 +116,14 @@ public class TenantFileController {
                             .contentLength(contentLength)
                             .body(resource);
                 } catch (Exception e) {
+                    // NoSuchKey / 404：文件在 COS 中确实不存在（如历史本地上传数据）
+                    // 直接返回占位图，跳过预签名URL二次请求，节省一次无效网络往返
+                    if (e instanceof com.qcloud.cos.exception.CosServiceException cosEx
+                            && ("NoSuchKey".equals(cosEx.getErrorCode()) || cosEx.getStatusCode() == 404)) {
+                        log.debug("[COS] 文件不存在于COS: tenantId={}, fileName={}", tenantId, fileName);
+                        return missingFilePlaceholder(fileName);
+                    }
+                    // 其他错误（权限/网络抖动等）：走预签名 URL 兜底
                     log.warn("[COS] 流式获取失败，改用预签名URL代理: tenantId={}, fileName={}, error={}",
                             tenantId, fileName, e.getMessage());
                     // 回退：服务端代理下载预签名 URL 内容（避免 302 跳转后浏览器 ORB 拦截）

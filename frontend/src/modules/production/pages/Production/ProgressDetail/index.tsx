@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, App, Button, Card, Form, Input, Modal, Select, Space, Tag } from 'antd';
+import { Alert, App, Button, Card, Form, Input, InputNumber, Modal, Radio, Select, Space, Tag } from 'antd';
 import type { InputRef } from 'antd';
 import { AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -28,6 +28,8 @@ import type { TemplateLibrary } from '@/types/style';
 
 import { productionCuttingApi, productionOrderApi, productionScanApi, type ProductionOrderListParams } from '@/services/production/productionApi';
 import { getStyleInfoByRef } from '@/services/style/styleApi';
+import { factoryShipmentApi } from '@/services/production/factoryShipmentApi';
+import type { ShippableInfo } from '@/services/production/factoryShipmentApi';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 import { DEFAULT_PAGE_SIZE_OPTIONS, savePageSize } from '@/utils/pageSizeStore';
 import '../../../styles.css';
@@ -108,6 +110,46 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const focusClearTimerRef = useRef<number | null>(null);
   const focusedOrderNosRef = useRef<string[]>([]);
   const { handleShareOrder, shareOrderDialog } = useShareOrderDialog({ message });
+
+  // ── 工厂发货 ──
+  const [shipModalOpen, setShipModalOpen] = useState(false);
+  const [shipModalOrder, setShipModalOrder] = useState<ProductionOrder | null>(null);
+  const [shipForm] = Form.useForm();
+  const [shipLoading, setShipLoading] = useState(false);
+  const [shippableInfo, setShippableInfo] = useState<ShippableInfo | null>(null);
+
+  const handleFactoryShip = useCallback(async (record: ProductionOrder) => {
+    setShipModalOrder(record);
+    shipForm.resetFields();
+    setShippableInfo(null);
+    setShipModalOpen(true);
+    try {
+      const res = await factoryShipmentApi.shippable(record.id);
+      if (res?.data) setShippableInfo(res.data);
+    } catch { /* silent */ }
+  }, [shipForm]);
+
+  const handleShipSubmit = useCallback(async () => {
+    if (!shipModalOrder) return;
+    try {
+      const values = await shipForm.validateFields();
+      setShipLoading(true);
+      const res = await factoryShipmentApi.ship({
+        orderId: shipModalOrder.id,
+        shipQuantity: values.shipQuantity,
+        shipMethod: values.shipMethod,
+        trackingNo: values.shipMethod === 'EXPRESS' ? values.trackingNo : undefined,
+        expressCompany: values.shipMethod === 'EXPRESS' ? values.expressCompany : undefined,
+        remark: values.remark,
+      });
+      if (isApiSuccess(res)) {
+        message.success('发货成功');
+        setShipModalOpen(false);
+      } else {
+        message.error((res as any)?.message || '发货失败');
+      }
+    } catch { /* validation error */ } finally { setShipLoading(false); }
+  }, [shipModalOrder, shipForm, message]);
 
   const getOrderDomKey = useCallback((record: Partial<ProductionOrder> | null | undefined) => {
     return String(record?.id || record?.orderNo || '').trim();
@@ -1067,6 +1109,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     stagnantOrderIds,
     deliveryRiskMap,
     onShareOrder: handleShareOrder,
+    isFactoryAccount,
+    onFactoryShip: handleFactoryShip,
     canManageOrderLifecycle,
   });
   const { columns: cardColumns } = useCardGridLayout(10);
@@ -1291,6 +1335,13 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                   title: frozen ? frozenTitle : '打印标签',
                   onClick: () => void handlePrintLabel(record),
                 },
+                ...(isFactoryAccount ? [{
+                  key: 'ship',
+                  label: '发货',
+                  disabled: frozen,
+                  title: frozen ? frozenTitle : '发货',
+                  onClick: () => handleFactoryShip(record),
+                }] : []),
                 {
                   key: 'divider1',
                   type: 'divider' as const,
@@ -1559,6 +1610,13 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                   title: frozen ? frozenTitle : '关单',
                   onClick: () => handleCloseOrder(record),
                 }] : []),
+                ...(isFactoryAccount ? [{
+                  key: 'ship',
+                  label: '发货',
+                  disabled: frozen,
+                  title: frozen ? frozenTitle : '发货',
+                  onClick: () => handleFactoryShip(record),
+                }] : []),
                 {
                   key: 'divider1',
                   type: 'divider' as const,
@@ -1612,6 +1670,48 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         onCancel={() => closeScanConfirm()}
         onSubmit={submitConfirmedScan}
       />
+
+      {/* 工厂发货 Modal */}
+      <Modal
+        title={`发货 - ${shipModalOrder?.orderNo || ''}`}
+        open={shipModalOpen}
+        onOk={handleShipSubmit}
+        onCancel={() => setShipModalOpen(false)}
+        confirmLoading={shipLoading}
+        destroyOnClose
+      >
+        <Form form={shipForm} layout="vertical" initialValues={{ shipMethod: 'EXPRESS' }}>
+          {shippableInfo && (
+            <div style={{ marginBottom: 16, color: '#666' }}>
+              裁片总数: {shippableInfo.cuttingTotal} | 已发: {shippableInfo.shippedTotal} | 剩余可发: {shippableInfo.remaining}
+            </div>
+          )}
+          <Form.Item name="shipMethod" label="发货方式" rules={[{ required: true, message: '请选择发货方式' }]}>
+            <Radio.Group>
+              <Radio value="SELF_DELIVERY">自发货</Radio>
+              <Radio value="EXPRESS">快递</Radio>
+            </Radio.Group>
+          </Form.Item>
+          <Form.Item name="shipQuantity" label="发货数量" rules={[{ required: true, message: '请输入发货数量' }]}>
+            <InputNumber min={1} max={shippableInfo?.remaining} style={{ width: '100%' }} placeholder="请输入发货数量" />
+          </Form.Item>
+          <Form.Item noStyle shouldUpdate={(prev, cur) => prev.shipMethod !== cur.shipMethod}>
+            {({ getFieldValue }) => getFieldValue('shipMethod') === 'EXPRESS' ? (
+              <>
+                <Form.Item name="trackingNo" label="快递单号">
+                  <Input placeholder="选填" />
+                </Form.Item>
+                <Form.Item name="expressCompany" label="快递公司">
+                  <Input placeholder="选填" />
+                </Form.Item>
+              </>
+            ) : null}
+          </Form.Item>
+          <Form.Item name="remark" label="备注">
+            <Input.TextArea rows={2} placeholder="选填" />
+          </Form.Item>
+        </Form>
+      </Modal>
 
       {shareOrderDialog}
 
