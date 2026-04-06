@@ -5,7 +5,7 @@
  *   - Collapse 树状结构：父节点为可展开面板，子工序直接列于其下，父子关系清晰
  *   - 移除 Switch：点击父节点标题即可展开/折叠，添加子工序后自动标记为"已配置"
  *   - 修复 DOM 嵌套警告：Drawer 添加 getContainer={() => document.body}
- *   - 不影响父节点结构、下单单价与工资结算
+ *   - 不影响父节点结构、单价与工资结算
  */
 
 import React, { useState, useEffect } from 'react';
@@ -380,7 +380,7 @@ export default function SubProcessRemapDrawer({
         <strong> 使用方法：</strong>
         点击左侧父工序展开 → 在该节点下添加子工序步骤。
         <br />
-        <strong>不修改父节点结构、不影响下单单价与工资结算。</strong>
+        <strong>不修改父节点结构、不影响单价与工资结算。</strong>
       </div>
 
       {parentNodes.length === 0 ? (

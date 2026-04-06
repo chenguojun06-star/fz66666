@@ -36,7 +36,6 @@ export const paths = {
   patternProduction: '/pattern-production',
 
   orderManagementList: '/order-management',
-  orderManagementDetail: '/order-management/:styleNo',
 
   dataCenter: '/data-center',
   templateCenter: '/basic/template-center',

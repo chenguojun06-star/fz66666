@@ -43,7 +43,7 @@ const QuotationBomSection: React.FC<Props> = ({ bomList, bomColorCosts, material
     },
     {
       title: '用量', dataIndex: 'usageAmount', key: 'usageAmount', width: 90, align: 'right',
-      render: (v: unknown) => <span style={{ color: 'var(--primary-color)' }}>{toNumberSafe(v).toFixed(2)}</span>,
+      render: (v: unknown) => <span>{toNumberSafe(v).toFixed(2)}</span>,
     },
     {
       title: '开发采购用量', dataIndex: 'devUsageAmount', key: 'devUsageAmount', width: 110, align: 'right',
@@ -81,7 +81,7 @@ const QuotationBomSection: React.FC<Props> = ({ bomList, bomColorCosts, material
           total = usage * (1 + loss / 100) * price;
         }
         return (
-          <span style={{ color: 'var(--primary-color)', fontWeight: 600 }}>
+          <span style={{ fontWeight: 600 }}>
             ¥{total.toFixed(2)}
           </span>
         );
@@ -120,7 +120,7 @@ const QuotationBomSection: React.FC<Props> = ({ bomList, bomColorCosts, material
             ))}
             <Col>
               <span style={{ fontSize: '13px' }}>平均：</span>
-              <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--color-danger)' }}>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--primary-color)' }}>
                 ¥{bomColorCosts.avgCost.toFixed(2)}
               </span>
             </Col>

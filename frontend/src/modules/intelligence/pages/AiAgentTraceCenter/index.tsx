@@ -6,6 +6,7 @@ import dayjs from 'dayjs';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DEFAULT_PAGE_SIZE_OPTIONS, readPageSize, savePageSize } from '@/utils/pageSizeStore';
 import Layout from '../../../../components/Layout';
+import PageLayout from '@/components/common/PageLayout';
 import { intelligenceApi } from '../../../../services/intelligence/intelligenceApi';
 import { paths } from '../../../../routeConfig';
 
@@ -167,21 +168,20 @@ const AiAgentTraceCenter: React.FC = () => {
 
   return (
     <Layout>
-      <Card className="page-card">
-        <div className="page-header">
-          <div>
-            <h2 className="page-title">AI 执行记录中心</h2>
-            <div style={{ color: '#8c8c8c', fontSize: 13 }}>统一查看小云每次执行的 commandId、状态、耗时、工具轨迹与失败信息</div>
-          </div>
+      <PageLayout
+        title="AI 执行记录中心"
+        headerContent={<div style={{ color: '#8c8c8c', fontSize: 13 }}>统一查看小云每次执行的 commandId、状态、耗时、工具轨迹与失败信息</div>}
+        titleExtra={
           <Space>
             <Button onClick={() => navigate(paths.cockpit)}>返回智能运营中心</Button>
             <Button onClick={() => exportTraceRows(filteredRows)}>导出审计报表</Button>
             <Button type="primary" icon={<ReloadOutlined />} onClick={() => void fetchRecent()} loading={loading}>刷新</Button>
           </Space>
-        </div>
-
-        <Card size="small" style={{ marginBottom: 12 }}>
-          <Space wrap>
+        }
+        filterBar={
+          <>
+            <Card size="small" style={{ marginBottom: 12 }}>
+              <Space wrap>
             <Input
               allowClear
               value={keyword}
@@ -226,20 +226,22 @@ const AiAgentTraceCenter: React.FC = () => {
               仅看失败
             </Button>
             <Button type="primary" onClick={() => void fetchRecent()}>查询</Button>
-            <span style={{ color: '#8c8c8c', fontSize: 12 }}>共 {filteredRows.length} 条请求</span>
-          </Space>
-        </Card>
+                <span style={{ color: '#8c8c8c', fontSize: 12 }}>共 {filteredRows.length} 条请求</span>
+              </Space>
+            </Card>
 
-        <Alert
-          showIcon
-          type={filteredRows.some((item) => item.status === 'FAILED') ? 'warning' : 'info'}
-          style={{ marginBottom: 12 }}
-          title="追溯范围"
-          description={filteredRows.some((item) => item.status === 'FAILED')
-            ? '当前结果中包含失败记录，建议优先查看详情中的错误信息、工具参数与补救建议。'
-            : '这里展示的是小云 AI 请求主记录。点击“查看详情”后，可看到本次请求的工具调用链、状态、错误信息与耗时。'}
-        />
-
+            <Alert
+              showIcon
+              type={filteredRows.some((item) => item.status === 'FAILED') ? 'warning' : 'info'}
+              style={{ marginBottom: 12 }}
+              title="追溯范围"
+              description={filteredRows.some((item) => item.status === 'FAILED')
+                ? '当前结果中包含失败记录，建议优先查看详情中的错误信息、工具参数与补救建议。'
+                : '这里展示的是小云 AI 请求主记录。点击"查看详情"后，可看到本次请求的工具调用链、状态、错误信息与耗时。'}
+            />
+          </>
+        }
+      >
         <ResizableTable<TraceRow>
           rowKey={(record) => record.id || record.commandId || Math.random().toString(36)}
           loading={loading}
@@ -277,7 +279,7 @@ const AiAgentTraceCenter: React.FC = () => {
             },
           ]}
         />
-      </Card>
+      </PageLayout>
 
       <Drawer
         size="large"

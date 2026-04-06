@@ -41,7 +41,7 @@ const QuotationSecondarySection: React.FC<Props> = ({
     {
       title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 100, align: 'right',
       render: (v: unknown) => (
-        <span style={{ color: 'var(--color-warning)', fontWeight: 600 }}>
+        <span style={{ fontWeight: 600 }}>
           ¥{toNumberSafe(v).toFixed(2)}
         </span>
       ),
@@ -72,7 +72,7 @@ const QuotationSecondarySection: React.FC<Props> = ({
         pagination={false}
         scroll={{ x: 960 }}
       />
-      <div style={{ textAlign: 'right', padding: '6px 12px', borderTop: '1px solid var(--color-border-secondary)', fontWeight: 600, fontSize: 14, color: 'var(--color-warning)' }}>
+      <div style={{ textAlign: 'right', padding: '6px 12px', borderTop: '1px solid var(--color-border-secondary)', fontWeight: 600, fontSize: 14, color: 'var(--primary-color)' }}>
         小计：¥{secondaryTotal.toFixed(2)}
       </div>
     </Card>

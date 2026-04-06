@@ -14,6 +14,7 @@ export const MATERIAL_PURCHASE_STATUS = {
   RECEIVED: 'received',
   PARTIAL: 'partial',
   PARTIAL_ARRIVAL: 'partial_arrival',
+  AWAITING_CONFIRM: 'awaiting_confirm',
   COMPLETED: 'completed',
   CANCELLED: 'cancelled',
   WAREHOUSE_PENDING: 'warehouse_pending',

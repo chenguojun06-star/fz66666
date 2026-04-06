@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, Form, InputNumber, Button, Divider, Row, Col } from 'antd';
 import type { FormInstance } from 'antd/es/form';
-import { LockOutlined, SaveOutlined, UnlockOutlined } from '@ant-design/icons';
+import { LockOutlined, SaveOutlined, UnlockOutlined, DownOutlined, UpOutlined } from '@ant-design/icons';
 
 interface Props {
   form: FormInstance;
@@ -43,6 +43,7 @@ const QuotationCostPanel: React.FC<Props> = ({
       ? materialCost / totalQty + processCost + otherCost / totalQty
       : 0;
   const unitSavings = totalQty > 1 ? Math.max(0, totalCost - realUnitCost) : 0;
+  const [cardsExpanded, setCardsExpanded] = useState(false);
 
   return (
     <Form form={form} layout="vertical" onValuesChange={onValuesChange} size="small">
@@ -52,8 +53,8 @@ const QuotationCostPanel: React.FC<Props> = ({
           style={{ marginBottom: 12 }}
           styles={{ body: { padding: '12px' } }}
         >
-          {/* 第一行：物料成本 + 工序成本 */}
-          <Row gutter={8}>
+          {/* 第一行：物料成本 + 工序成本（隐藏） */}
+          <Row gutter={8} style={{ display: 'none' }}>
             <Col span={12}>
               <Form.Item
                 label={<span style={{ fontSize: '12px', fontWeight: 600 }}>物料成本（自动）</span>}
@@ -86,7 +87,7 @@ const QuotationCostPanel: React.FC<Props> = ({
             </Col>
           </Row>
 
-          {/* 第二行：目标利润率 + 预计利润 + 其他费用 */}
+          {/* 一行显示：目标利润率 + 预计利润 + 单件成本 + 最终报价 */}
           <Row gutter={8}>
             <Col span={6}>
               <Form.Item
@@ -122,7 +123,7 @@ const QuotationCostPanel: React.FC<Props> = ({
                     background: 'var(--color-bg-subtle)',
                     fontSize: 14,
                     fontWeight: 700,
-                    color: (totalPrice - totalCost) >= 0 ? 'var(--color-success)' : 'var(--color-danger)',
+                    color: 'var(--primary-color)',
                   }}
                 >
                   {totalPrice > 0
@@ -131,48 +132,71 @@ const QuotationCostPanel: React.FC<Props> = ({
                 </div>
               </Form.Item>
             </Col>
-            <Col span={12}>
+            <Col span={6}>
               <Form.Item
-                label={<span style={{ fontSize: '12px', fontWeight: 600 }}>其他费用</span>}
-                name="otherCost"
+                label={<span style={{ fontSize: '12px', fontWeight: 600 }}>单件成本</span>}
+                colon={false}
                 style={{ marginBottom: 8 }}
               >
-                <InputNumber
-                  prefix="¥"
-                  style={{ width: '100%' }}
-                  min={0}
-                  precision={2}
-                  disabled={isLocked}
-                />
+                <div
+                  style={{
+                    height: 32,
+                    display: 'flex',
+                    alignItems: 'center',
+                    paddingLeft: 10,
+                    borderRadius: 6,
+                    border: '1px solid var(--color-border)',
+                    background: 'var(--color-bg-subtle)',
+                    fontSize: 14,
+                    fontWeight: 700,
+                  }}
+                >
+                  ¥{totalCost.toFixed(2)}
+                </div>
+              </Form.Item>
+            </Col>
+            <Col span={6}>
+              <Form.Item
+                label={<span style={{ fontSize: '12px', fontWeight: 600 }}>最终报价</span>}
+                colon={false}
+                style={{ marginBottom: 8 }}
+              >
+                <div
+                  style={{
+                    height: 32,
+                    display: 'flex',
+                    alignItems: 'center',
+                    paddingLeft: 10,
+                    borderRadius: 6,
+                    border: '1px solid var(--color-border)',
+                    background: 'var(--color-bg-subtle)',
+                    fontSize: 14,
+                    fontWeight: 700,
+                    color: 'var(--primary-color)',
+                  }}
+                >
+                  ¥{totalPrice.toFixed(2)}
+                </div>
               </Form.Item>
             </Col>
           </Row>
 
-          <Divider style={{ margin: '8px 0' }} />
+          <Form.Item name="otherCost" hidden><InputNumber /></Form.Item>
 
-          {/* 左：单件成本+最终报价纵向叠加 | 右：两卡片并排，顶部对齐 */}
-          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-            {/* 左侧：数字区（垂直排列） */}
-            <div style={{ flexShrink: 0, minWidth: 110 }}>
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)', marginBottom: 2 }}>
-                  单件成本{totalQty > 1 ? '（1件基准）' : ''}
-                </div>
-                <div style={{ fontSize: '20px', fontWeight: 700 }}>¥{totalCost.toFixed(2)}</div>
+          {/* 卡片区（默认折叠） */}
+          {totalQty > 0 && totalCost > 0 && (
+            <>
+              <div
+                style={{ textAlign: 'center', marginTop: 8, cursor: 'pointer', userSelect: 'none' }}
+                onClick={() => setCardsExpanded(v => !v)}
+              >
+                <span style={{ fontSize: 12, color: 'var(--primary-color)' }}>
+                  {cardsExpanded ? '收起明细' : '展开成本明细'}{' '}
+                  {cardsExpanded ? <UpOutlined /> : <DownOutlined />}
+                </span>
               </div>
-              <div>
-                <div style={{ fontSize: '12px', color: 'var(--neutral-text-secondary)', marginBottom: 2 }}>
-                  最终报价（单件）
-                </div>
-                <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--color-danger)' }}>
-                  ¥{totalPrice.toFixed(2)}
-                </div>
-              </div>
-            </div>
-
-            {/* 右侧：卡片区（两卡片横向排列） */}
-            {totalQty > 0 && totalCost > 0 && (
-              <div style={{ flex: 1, display: 'flex', gap: 12 }}>
+              {cardsExpanded && (
+            <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
                 {/* 摊薄·真实单价卡片（仅多件可见） */}
                 {totalQty > 1 && (
                   <div
@@ -202,7 +226,7 @@ const QuotationCostPanel: React.FC<Props> = ({
                           ¥{realUnitCost.toFixed(2)}
                         </div>
                         {unitSavings > 0.005 && (
-                          <div style={{ fontSize: '11px', color: 'var(--color-success)', marginTop: 2 }}>
+                          <div style={{ fontSize: '11px', color: 'var(--primary-color)', marginTop: 2 }}>
                             较1件节省 ¥{unitSavings.toFixed(2)} / 件
                           </div>
                         )}
@@ -215,8 +239,8 @@ const QuotationCostPanel: React.FC<Props> = ({
                 <div
                   style={{
                     flex: 1,
-                    background: 'rgba(99,102,241,0.05)',
-                    border: '1px solid rgba(99,102,241,0.18)',
+                    background: 'rgba(59,130,246,0.06)',
+                    border: '1px solid rgba(59,130,246,0.18)',
                     borderRadius: 6,
                     padding: '10px 12px',
                   }}
@@ -225,7 +249,7 @@ const QuotationCostPanel: React.FC<Props> = ({
                     style={{
                       fontSize: '12px',
                       fontWeight: 600,
-                      color: 'rgba(99,102,241,0.9)',
+                      color: 'var(--primary-color)',
                       marginBottom: 8,
                     }}
                   >
@@ -251,24 +275,25 @@ const QuotationCostPanel: React.FC<Props> = ({
                   {/* 总开发成本大数字 */}
                   <div
                     style={{
-                      borderTop: '1px solid rgba(99,102,241,0.15)',
+                      borderTop: '1px solid rgba(59,130,246,0.15)',
                       paddingTop: 6,
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'baseline',
                     }}
                   >
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'rgba(99,102,241,0.9)' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--primary-color)' }}>
                       总开发成本
                     </span>
-                    <span style={{ fontSize: '20px', fontWeight: 800, color: 'rgba(99,102,241,0.9)' }}>
+                    <span style={{ fontSize: '20px', fontWeight: 800, color: 'var(--primary-color)' }}>
                       ¥{(totalDevMaterialCost + processCost * totalQty + otherCost * totalQty).toFixed(2)}
                     </span>
                   </div>
                 </div>
-              </div>
-            )}
-          </div>
+            </div>
+              )}
+            </>
+          )}
 
           {!readOnly && (
             <>
@@ -279,7 +304,7 @@ const QuotationCostPanel: React.FC<Props> = ({
                     解锁修改
                   </Button>
                 ) : (
-                  <div style={{ textAlign: 'center', padding: '8px 0', color: '#faad14', fontSize: 13 }}>
+                  <div style={{ textAlign: 'center', padding: '8px 0', color: 'var(--primary-color)', fontSize: 13 }}>
                     <LockOutlined style={{ marginRight: 4 }} />已锁定，仅管理员可操作
                   </div>
                 )

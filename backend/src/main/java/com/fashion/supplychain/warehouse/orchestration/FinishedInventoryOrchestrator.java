@@ -26,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.util.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -505,6 +506,12 @@ public class FinishedInventoryOrchestrator {
         String requestOrderId = trimToNull(params.get("orderId"));
         String requestOrderNo = trimToNull(params.get("orderNo"));
         String requestWarehouse = trimToNull(params.get("warehouseLocation"));
+        String trackingNo = trimToNull(params.get("trackingNo"));
+        String expressCompany = trimToNull(params.get("expressCompany"));
+        // 客户信息
+        String customerName = trimToNull(params.get("customerName"));
+        String customerPhone = trimToNull(params.get("customerPhone"));
+        String shippingAddress = trimToNull(params.get("shippingAddress"));
 
         for (Map<String, Object> item : items) {
             String skuCode = (String) item.get("sku");
@@ -530,15 +537,15 @@ public class FinishedInventoryOrchestrator {
             productSkuService.updateById(sku);
 
                 recordProductOutstock(sku, quantity, requestOrderId, requestOrderNo, requestWarehouse,
-                    "成品库存页面出库|sku=" + skuCode);
+                    "成品库存页面出库|sku=" + skuCode, trackingNo, expressCompany,
+                    customerName, customerPhone, shippingAddress);
         }
         // 出库后回写电商订单状态（如果同一批出库挺带了关联的生产单号 + 快递单号）
         String productionOrderNo = (String) params.get("productionOrderNo");
-        String trackingNo = (String) params.get("trackingNo");
-        String expressCompany = (String) params.getOrDefault("expressCompany", "");
         if (StringUtils.hasText(productionOrderNo)) {
             try {
-                ecommerceOrderOrchestrator.onWarehouseOutbound(productionOrderNo, trackingNo, expressCompany);
+                ecommerceOrderOrchestrator.onWarehouseOutbound(productionOrderNo,
+                        trackingNo != null ? trackingNo : "", expressCompany != null ? expressCompany : "");
             } catch (Exception ex) {
                 log.warn("[EC回写失败不阻塞主流程] productionOrderNo={} err={}", productionOrderNo, ex.getMessage());
             }
@@ -592,7 +599,12 @@ public class FinishedInventoryOrchestrator {
                                        String orderId,
                                        String orderNo,
                                        String warehouse,
-                                       String remark) {
+                                       String remark,
+                                       String trackingNo,
+                                       String expressCompany,
+                                       String customerName,
+                                       String customerPhone,
+                                       String shippingAddress) {
         ProductOutstock outstock = new ProductOutstock();
         LocalDateTime now = LocalDateTime.now();
         StyleInfo styleInfo = sku.getStyleId() == null ? null : styleInfoService.getById(sku.getStyleId());
@@ -610,10 +622,113 @@ public class FinishedInventoryOrchestrator {
         outstock.setOutstockType("shipment");
         outstock.setWarehouse(warehouse);
         outstock.setRemark(remark);
+
+        // SKU明细字段
+        outstock.setSkuCode(sku.getSkuCode());
+        outstock.setColor(sku.getColor());
+        outstock.setSize(sku.getSize());
+        outstock.setCostPrice(sku.getCostPrice());
+        outstock.setSalesPrice(sku.getSalesPrice());
+
+        // 物流字段
+        outstock.setTrackingNo(trackingNo);
+        outstock.setExpressCompany(expressCompany);
+
+        // 客户与收款字段
+        outstock.setCustomerName(customerName);
+        outstock.setCustomerPhone(customerPhone);
+        outstock.setShippingAddress(shippingAddress);
+        // 自动计算出库金额：售价 × 数量
+        if (sku.getSalesPrice() != null) {
+            outstock.setTotalAmount(sku.getSalesPrice().multiply(BigDecimal.valueOf(quantity)));
+        }
+        outstock.setPaidAmount(BigDecimal.ZERO);
+        outstock.setPaymentStatus("unpaid");
+
+        // 显式设置操作人/创建人（防止 MetaObjectHandler 取不到上下文导致默认"系统管理员"）
+        String ctxUserId = UserContext.userId();
+        String ctxUsername = UserContext.username();
+        outstock.setOperatorId(ctxUserId);
+        outstock.setOperatorName(ctxUsername);
+        outstock.setCreatorId(ctxUserId);
+        outstock.setCreatorName(ctxUsername);
+
         outstock.setCreateTime(now);
         outstock.setUpdateTime(now);
         outstock.setDeleteFlag(0);
         productOutstockService.save(outstock);
+    }
+
+    /**
+     * 分页查询出库记录
+     */
+    public IPage<ProductOutstock> listOutstockRecords(Map<String, Object> params) {
+        int page = Integer.parseInt(params.getOrDefault("page", "1").toString());
+        int pageSize = Integer.parseInt(params.getOrDefault("pageSize", "20").toString());
+        Long tenantId = UserContext.tenantId();
+
+        LambdaQueryWrapper<ProductOutstock> wrapper = new LambdaQueryWrapper<ProductOutstock>()
+                .eq(tenantId != null, ProductOutstock::getTenantId, tenantId)
+                .eq(ProductOutstock::getDeleteFlag, 0);
+
+        String keyword = trimToNull(params.get("keyword"));
+        if (keyword != null) {
+            wrapper.and(w -> w.like(ProductOutstock::getOutstockNo, keyword)
+                    .or().like(ProductOutstock::getOrderNo, keyword)
+                    .or().like(ProductOutstock::getStyleNo, keyword)
+                    .or().like(ProductOutstock::getSkuCode, keyword)
+                    .or().like(ProductOutstock::getTrackingNo, keyword));
+        }
+
+        String outstockType = trimToNull(params.get("outstockType"));
+        if (outstockType != null) {
+            wrapper.eq(ProductOutstock::getOutstockType, outstockType);
+        }
+
+        String paymentStatus = trimToNull(params.get("paymentStatus"));
+        if (paymentStatus != null) {
+            wrapper.eq(ProductOutstock::getPaymentStatus, paymentStatus);
+        }
+
+        // 支持客户名搜索
+        String customerName = trimToNull(params.get("customerName"));
+        if (customerName != null) {
+            wrapper.like(ProductOutstock::getCustomerName, customerName);
+        }
+
+        wrapper.orderByDesc(ProductOutstock::getCreateTime);
+        return productOutstockService.page(new Page<>(page, pageSize), wrapper);
+    }
+
+    /**
+     * 确认收款
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void confirmPayment(String id, BigDecimal paidAmount) {
+        if (!StringUtils.hasText(id)) {
+            throw new IllegalArgumentException("出库记录ID不能为空");
+        }
+        if (paidAmount == null || paidAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("收款金额必须大于0");
+        }
+        ProductOutstock outstock = productOutstockService.getById(id);
+        if (outstock == null) {
+            throw new IllegalArgumentException("出库记录不存在");
+        }
+
+        BigDecimal currentPaid = outstock.getPaidAmount() != null ? outstock.getPaidAmount() : BigDecimal.ZERO;
+        BigDecimal newPaid = currentPaid.add(paidAmount);
+        outstock.setPaidAmount(newPaid);
+
+        BigDecimal total = outstock.getTotalAmount();
+        if (total != null && newPaid.compareTo(total) >= 0) {
+            outstock.setPaymentStatus("paid");
+            outstock.setSettlementTime(LocalDateTime.now());
+        } else {
+            outstock.setPaymentStatus("partial");
+        }
+        outstock.setUpdateTime(LocalDateTime.now());
+        productOutstockService.updateById(outstock);
     }
 
     private String trimToNull(Object value) {

@@ -102,6 +102,9 @@ public class ScanRecordOrchestrator {
     @Autowired
     private com.fashion.supplychain.intelligence.orchestration.SmartNotificationOrchestrator smartNotificationOrchestrator;
 
+    @Autowired
+    private com.fashion.supplychain.production.helper.ScanRecordEnrichHelper scanRecordEnrichHelper;
+
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> execute(Map<String, Object> params) {
         TenantAssert.assertTenantContext(); // 扫码必须有租户上下文
@@ -322,7 +325,7 @@ public class ScanRecordOrchestrator {
         }
 
         // 下一生产环节已有成功记录则禁止撤回
-        String nextStageType = getNextStageScanType(target.getScanType());
+        String nextStageType = scanRecordEnrichHelper.getNextStageScanType(target.getScanType());
         if (hasText(nextStageType) && hasText(target.getCuttingBundleId())) {
             long nextCount = scanRecordService.count(new LambdaQueryWrapper<ScanRecord>()
                     .eq(ScanRecord::getOrderId, target.getOrderId())
@@ -460,7 +463,7 @@ public class ScanRecordOrchestrator {
         }
 
         // 下一生产环节已有成功记录则禁止退回重扫
-        String rescanNextStageType = getNextStageScanType(target.getScanType());
+        String rescanNextStageType = scanRecordEnrichHelper.getNextStageScanType(target.getScanType());
         if (hasText(rescanNextStageType) && hasText(target.getCuttingBundleId())) {
             long rescanNextCount = scanRecordService.count(new LambdaQueryWrapper<ScanRecord>()
                     .eq(ScanRecord::getOrderId, target.getOrderId())
@@ -756,66 +759,27 @@ public class ScanRecordOrchestrator {
 
     public IPage<ScanRecord> list(Map<String, Object> params) {
         IPage<ScanRecord> page = scanRecordQueryHelper.list(params);
-        enrichBedNo(page.getRecords());
+        scanRecordEnrichHelper.enrichBedNo(page.getRecords());
         return page;
     }
 
-    /**
-     * 批量填充床号：从 t_cutting_bundle 查询 bedNo 并写入扫码记录
-     */
-    private void enrichBedNo(List<ScanRecord> records) {
-        if (records == null || records.isEmpty()) return;
-        try {
-            List<String> orderNos = records.stream()
-                    .map(ScanRecord::getOrderNo)
-                    .filter(StringUtils::hasText)
-                    .map(String::trim)
-                    .distinct()
-                    .collect(java.util.stream.Collectors.toList());
-            if (orderNos.isEmpty()) {
-                return;
-            }
-            Map<String, Integer> bedNoMap = cuttingBundleService.list(
-                            new LambdaQueryWrapper<CuttingBundle>()
-                                    .select(CuttingBundle::getProductionOrderNo, CuttingBundle::getBundleNo, CuttingBundle::getBedNo)
-                                    .in(CuttingBundle::getProductionOrderNo, orderNos))
-                    .stream()
-                    .filter(b -> StringUtils.hasText(b.getProductionOrderNo()))
-                    .filter(b -> b.getBundleNo() != null)
-                    .filter(b -> b.getBedNo() != null)
-                    .collect(java.util.stream.Collectors.toMap(
-                            b -> buildBedNoKey(b.getProductionOrderNo(), b.getBundleNo()),
-                            CuttingBundle::getBedNo,
-                            (a, b) -> a));
-            records.forEach(r -> {
-                if (StringUtils.hasText(r.getOrderNo()) && r.getCuttingBundleNo() != null) {
-                    r.setBedNo(bedNoMap.get(buildBedNoKey(r.getOrderNo(), r.getCuttingBundleNo())));
-                }
-            });
-        } catch (Exception e) {
-            log.warn("Failed to enrich bedNo for scan records: recordCount={}", records.size(), e);
-        }
-    }
 
-    private String buildBedNoKey(String orderNo, Integer bundleNo) {
-        return (orderNo == null ? "" : orderNo.trim()) + "#" + bundleNo;
-    }
 
     public IPage<ScanRecord> getByOrderId(String orderId, int page, int pageSize) {
         IPage<ScanRecord> result = scanRecordQueryHelper.getByOrderId(orderId, page, pageSize);
-        enrichBedNo(result.getRecords());
+        scanRecordEnrichHelper.enrichBedNo(result.getRecords());
         return result;
     }
 
     public IPage<ScanRecord> getByStyleNo(String styleNo, int page, int pageSize) {
         IPage<ScanRecord> result = scanRecordQueryHelper.getByStyleNo(styleNo, page, pageSize);
-        enrichBedNo(result.getRecords());
+        scanRecordEnrichHelper.enrichBedNo(result.getRecords());
         return result;
     }
 
     public IPage<ScanRecord> getHistory(int page, int pageSize) {
         IPage<ScanRecord> result = scanRecordQueryHelper.getHistory(page, pageSize);
-        enrichBedNo(result.getRecords());
+        scanRecordEnrichHelper.enrichBedNo(result.getRecords());
         return result;
     }
 
@@ -823,9 +787,9 @@ public class ScanRecordOrchestrator {
             String orderNo, String bundleNo, String workerName, String operatorName) {
         IPage<ScanRecord> result = scanRecordQueryHelper.getMyHistory(page, pageSize, scanType, startTime, endTime,
                 orderNo, bundleNo, workerName, operatorName);
-        enrichBedNo(result.getRecords());
+        scanRecordEnrichHelper.enrichBedNo(result.getRecords());
         // 为每条记录注氨1「下一生产环节是否已扫码」，用于预防展示错误的「退回」按鈕
-        markHasNextStageScan(result.getRecords());
+        scanRecordEnrichHelper.markHasNextStageScan(result.getRecords());
         return result;
     }
 
@@ -943,69 +907,7 @@ public class ScanRecordOrchestrator {
         }
     }
 
-    /**
-     * 批量标注扫码记录的「下一生产环节是否已扫码」字段 (hasNextStageScan)
-     * 原理：只查这批菲号在后继环节的扫码情况，避免 N+1 查询
-     * cutting→production→quality→warehouse
-     */
-    private void markHasNextStageScan(List<ScanRecord> records) {
-        if (records == null || records.isEmpty()) return;
 
-        // 收集需要检查的 cuttingBundleId（只有有「下一环节」类型的材料才检查）
-        Set<String> bundleIdsToCheck = new HashSet<>();
-        for (ScanRecord r : records) {
-            if (r.getCuttingBundleId() == null) continue;
-            if (!"success".equalsIgnoreCase(r.getScanResult())) continue;
-            if (getNextStageScanType(r.getScanType()) != null) {
-                bundleIdsToCheck.add(r.getCuttingBundleId());
-            }
-        }
-        if (bundleIdsToCheck.isEmpty()) return;
-
-        // 批量查询：这些菲号在 production/quality/warehouse 三类中是否有 success 扫码
-        List<ScanRecord> nextScans = scanRecordService.list(
-                new LambdaQueryWrapper<ScanRecord>()
-                        .in(ScanRecord::getCuttingBundleId, bundleIdsToCheck)
-                        .in(ScanRecord::getScanType, Arrays.asList("production", "quality", "warehouse"))
-                        .eq(ScanRecord::getScanResult, "success")
-                        .select(ScanRecord::getCuttingBundleId, ScanRecord::getScanType));
-
-        // 构建「被阻断的 bundleId:prevScanType」集合
-        // 示例：发现 bundleX 有 quality 成功记录 → bundleX:production 被阻断
-        final Map<String, String> prevStageType = new HashMap<>();
-        prevStageType.put("production", "cutting");
-        prevStageType.put("quality", "production");
-        prevStageType.put("warehouse", "quality");
-
-        Set<String> blockedKeys = new HashSet<>();
-        for (ScanRecord ns : nextScans) {
-            String prev = prevStageType.get(ns.getScanType());
-            if (prev != null && ns.getCuttingBundleId() != null) {
-                blockedKeys.add(ns.getCuttingBundleId() + ":" + prev);
-            }
-        }
-
-        // 标注每条记录
-        for (ScanRecord r : records) {
-            if (r.getCuttingBundleId() != null && r.getScanType() != null) {
-                String key = r.getCuttingBundleId() + ":" + r.getScanType();
-                r.setHasNextStageScan(blockedKeys.contains(key));
-            }
-        }
-    }
-
-    /**
-     * 返回下一生产环节的 scanType：cutting→production→quality→warehouse→null
-     */
-    private String getNextStageScanType(String currentScanType) {
-        if (!hasText(currentScanType)) return null;
-        switch (currentScanType.trim().toLowerCase()) {
-            case "cutting":    return "production";
-            case "production": return "quality";
-            case "quality":    return "warehouse";
-            default:           return null;
-        }
-    }
 
     private void tryNotifyNextStage(Map<String, Object> params, Map<String, Object> result) {
         try {

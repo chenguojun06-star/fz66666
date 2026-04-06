@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Card, Input, Select, Form, InputNumber, Segmented, Tooltip, Tabs, Upload, Button, message } from 'antd';
+import { Card, Input, Select, Form, InputNumber, Segmented, Tooltip, Upload, Button, message } from 'antd';
 import { QuestionCircleOutlined, InboxOutlined, FileSearchOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import Layout from '@/components/Layout';
+import PageLayout from '@/components/common/PageLayout';
 import PageStatCards from '@/components/common/PageStatCards';
 import ResizableModal from '@/components/common/ResizableModal';
 import QuickEditModal from '@/components/common/QuickEditModal';
@@ -53,6 +54,7 @@ const MaterialPurchase: React.FC = () => {
     openPurchaseSheet, downloadPurchaseSheet,
     openQuickEditSafe, handleQuickEditSave,
     isSamplePurchaseView,
+    confirmComplete, confirmCompleteSubmitting,
   } = useMaterialPurchase();
 
   // 本弹窗用于 AI 识别时传递给 recognizeReturnEvidence 的文件引用
@@ -65,55 +67,27 @@ const MaterialPurchase: React.FC = () => {
       {contextHolder}
       <Form form={form} component={false} />
       <Form form={materialDatabaseForm} component={false} />
-        <Card className="page-card">
-          <Tabs
-            activeKey="purchase"
-            items={[
-              {
-                key: 'purchase',
-                label: '面料采购',
-                children: (
-                  <div>
-                    {showSmartErrorNotice && smartError ? (
-                      <Card size="small" style={{ marginBottom: 12 }}>
-                        <SmartErrorNotice error={smartError} onFix={fetchMaterialPurchaseList} />
-                      </Card>
-                    ) : null}
-                    <div className="page-header">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                        <Select
-                          value={queryParams.sourceType || ''}
-                          onChange={(value) => setQueryParams(prev => ({ ...prev, sourceType: value as 'order' | 'sample' | 'batch' | '', page: 1 }))}
-                          options={[
-                            { label: '全部', value: '' },
-                            { label: '订单', value: 'order' },
-                            { label: '样衣', value: 'sample' },
-                            { label: '批量采购', value: 'batch' },
-                          ]}
-                          style={{ width: 120 }}
-                          placeholder="订单类型"
-                        />
-                        <Segmented
-                          value={queryParams.materialType || ''}
-                          options={[
-                            { label: '面料', value: 'fabric' },
-                            { label: '里料', value: 'lining' },
-                            { label: '辅料', value: 'accessory' },
-                            { label: '全部', value: '' },
-                          ]}
-                          onChange={(value) => setQueryParams(prev => ({ ...prev, materialType: String(value), page: 1 }))}
-                        />
-                        <Tooltip
-                          title={
-                            '合并采购逻辑：从订单生成采购单时，会自动匹配同一天创建且同款的其它订单一起生成。\n'
-                            + '避免重复：若某订单已存在未删除的采购记录且未选择"覆盖生成"，该订单会被自动跳过。\n'
-                            + '合并方式：相同物料（类型/编码/名称/规格/单位/供应商相同）会共用同一采购单号，便于采购合单。'
-                          }
-                        >
-                          <QuestionCircleOutlined style={{ color: 'var(--neutral-text-disabled)', cursor: 'pointer' }} />
-                        </Tooltip>
-                      </div>
-                    </div>
+        <PageLayout
+          title="面料采购"
+          headerContent={
+            showSmartErrorNotice && smartError ? (
+              <Card size="small" style={{ marginBottom: 12 }}>
+                <SmartErrorNotice error={smartError} onFix={fetchMaterialPurchaseList} />
+              </Card>
+            ) : null
+          }
+          titleExtra={
+            <Tooltip
+              title={
+                '合并采购逻辑：从订单生成采购单时，会自动匹配同一天创建且同款的其它订单一起生成。\n'
+                + '避免重复：若某订单已存在未删除的采购记录且未选择"覆盖生成"，该订单会被自动跳过。\n'
+                + '合并方式：相同物料（类型/编码/名称/规格/单位/供应商相同）会共用同一采购单号，便于采购合单。'
+              }
+            >
+              <QuestionCircleOutlined style={{ color: 'var(--neutral-text-disabled)', cursor: 'pointer' }} />
+            </Tooltip>
+          }
+        >
 
                     {/* 状态统计卡片 - 点击筛选 */}
                     <PageStatCards
@@ -201,12 +175,7 @@ const MaterialPurchase: React.FC = () => {
                       onPurchaseSort={handlePurchaseSort}
                       isOrderFrozenForRecord={isOrderFrozenForRecord}
                     />
-                  </div>
-                ),
-              },
-            ]}
-          />
-        </Card>
+        </PageLayout>
 
         <PurchaseModal
           visible={visible}
@@ -240,6 +209,8 @@ const MaterialPurchase: React.FC = () => {
           }}
           onReceiveAll={handleReceiveAll}
           onBatchReturn={handleBatchReturn}
+          onConfirmComplete={confirmComplete}
+          confirmCompleteSubmitting={confirmCompleteSubmitting}
           isSamplePurchase={isSamplePurchaseView}
           onGeneratePurchaseSheet={openPurchaseSheet}
           onDownloadPurchaseSheet={downloadPurchaseSheet}

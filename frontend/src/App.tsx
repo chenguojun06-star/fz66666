@@ -295,7 +295,6 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.intelligenceCenter} element={<Suspense fallback={routeFallback}><IntelligenceCenter /></Suspense>} />
           <Route path={paths.aiAgentTraceCenter} element={<Navigate to={paths.cockpitTrace} replace />} />
           <Route path={paths.orderManagementList} element={<Suspense fallback={routeFallback}><OrderManagement /></Suspense>} />
-          <Route path={paths.orderManagementDetail} element={<Suspense fallback={routeFallback}><OrderManagement /></Suspense>} />
           <Route path={paths.dataCenter} element={<Suspense fallback={routeFallback}><DataCenter /></Suspense>} />
           <Route path={paths.templateCenter} element={<Suspense fallback={routeFallback}><TemplateCenter /></Suspense>} />
           <Route path={paths.maintenanceCenter} element={<Suspense fallback={routeFallback}><MaintenanceCenter /></Suspense>} />

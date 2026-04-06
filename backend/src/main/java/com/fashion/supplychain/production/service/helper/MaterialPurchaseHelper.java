@@ -207,12 +207,12 @@ public class MaterialPurchaseHelper {
                     : MaterialConstants.STATUS_PENDING;
         }
         if (purchaseQty <= 0) {
-            return MaterialConstants.STATUS_COMPLETED;
+            return MaterialConstants.STATUS_AWAITING_CONFIRM;
         }
         if (arrivedQty < purchaseQty) {
             return MaterialConstants.STATUS_PARTIAL;
         }
-        return MaterialConstants.STATUS_COMPLETED;
+        return MaterialConstants.STATUS_AWAITING_CONFIRM;
     }
 
     public static boolean looksLikeImage(StyleAttachment a) {

@@ -11,6 +11,8 @@ import com.fashion.supplychain.style.mapper.StyleInfoMapper;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.PatternProductionService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.production.entity.ProductWarehousing;
+import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleOperationLogService;
 import com.fashion.supplychain.style.service.StyleQuotationService;
@@ -52,6 +54,9 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
     // queryPage中的订单统计、附加统计量逻辑应迁移到StyleInfoOrchestrator
     @Autowired
     private ObjectProvider<ProductionOrderService> productionOrderServiceProvider;
+
+    @Autowired
+    private ObjectProvider<ProductWarehousingService> productWarehousingServiceProvider;
 
     @Autowired
     @Lazy
@@ -144,6 +149,7 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
         fillQuotationPriceFields(resultPage.getRecords());
         fillProgressFields(resultPage.getRecords());
         fillOrderCountFields(resultPage.getRecords());
+        fillScrapFields(resultPage.getRecords());
 
         return resultPage;
     }
@@ -310,6 +316,77 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                 s.setLatestOrderTime(latestOrderTimeByStyleNo.get(sno));
                 s.setLatestOrderCreator(latestOrderCreatorByStyleNo.get(sno));
             }
+        }
+    }
+
+    private void fillScrapFields(List<StyleInfo> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+        ProductWarehousingService warehousingService = productWarehousingServiceProvider.getIfAvailable();
+        if (warehousingService == null) {
+            return;
+        }
+
+        List<String> styleIds = new ArrayList<>();
+        Set<String> styleNos = new HashSet<>();
+        for (StyleInfo s : records) {
+            if (s == null) continue;
+            if (s.getId() != null) styleIds.add(String.valueOf(s.getId()));
+            if (StringUtils.hasText(s.getStyleNo())) styleNos.add(s.getStyleNo().trim());
+        }
+        if (styleIds.isEmpty() && styleNos.isEmpty()) return;
+
+        QueryWrapper<ProductWarehousing> qw = new QueryWrapper<>();
+        qw.select("style_id as styleId", "style_no as styleNo", "COALESCE(SUM(unqualified_quantity), 0) as scrapQty")
+                .eq("repair_status", "scrapped")
+                .and(w -> w.isNull("delete_flag").or().eq("delete_flag", 0))
+                .and(w -> {
+                    boolean hasPrev = false;
+                    if (!styleIds.isEmpty()) {
+                        w.in("style_id", styleIds);
+                        hasPrev = true;
+                    }
+                    if (!styleNos.isEmpty()) {
+                        if (hasPrev) w.or();
+                        w.in("style_no", styleNos);
+                    }
+                })
+                .groupBy("style_id", "style_no");
+
+        Map<String, Integer> scrapByStyleId = new HashMap<>();
+        Map<String, Integer> scrapByStyleNo = new HashMap<>();
+        try {
+            List<Map<String, Object>> rows = warehousingService.listMaps(qw);
+            for (Map<String, Object> r : rows) {
+                if (r == null) continue;
+                String sid = r.get("styleId") == null ? null : String.valueOf(r.get("styleId")).trim();
+                String sno = r.get("styleNo") == null ? null : String.valueOf(r.get("styleNo")).trim();
+                int qty;
+                try {
+                    qty = r.get("scrapQty") == null ? 0 : Integer.parseInt(String.valueOf(r.get("scrapQty")));
+                } catch (Exception e) {
+                    qty = 0;
+                }
+                if (qty <= 0) continue;
+                if (StringUtils.hasText(sid)) scrapByStyleId.put(sid, qty);
+                if (StringUtils.hasText(sno)) scrapByStyleNo.put(sno, qty);
+            }
+        } catch (Exception e) {
+            log.warn("fillScrapFields 查询报废数据异常: {}", e.getMessage());
+            return;
+        }
+
+        for (StyleInfo s : records) {
+            if (s == null) continue;
+            String idKey = s.getId() == null ? null : String.valueOf(s.getId());
+            Integer byId = StringUtils.hasText(idKey) ? scrapByStyleId.get(idKey) : null;
+            if (byId != null && byId > 0) {
+                s.setScrapQuantity(byId);
+                continue;
+            }
+            String sno = StringUtils.hasText(s.getStyleNo()) ? s.getStyleNo().trim() : null;
+            s.setScrapQuantity(StringUtils.hasText(sno) ? scrapByStyleNo.getOrDefault(sno, 0) : 0);
         }
     }
 

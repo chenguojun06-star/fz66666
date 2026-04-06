@@ -108,8 +108,7 @@ interface UseProgressColumnsParams {
   handlePrintLabel: (record: ProductionOrder) => void | Promise<void>;
   setQuickEditRecord: (record: ProductionOrder | null) => void;
   setQuickEditVisible: (v: boolean) => void;
-  setRemarkPopoverId: (id: string | null) => void;
-  setRemarkText: (text: string) => void;
+  openRemarkModal: (orderNo: string, merchandiser?: string) => void;
   /** 停滞订单 Map（orderId → 停滞天数） */
   stagnantOrderIds?: Map<string, number>;
   /** AI 交期风险 Map（orderNo → DeliveryRiskItem） */
@@ -140,8 +139,7 @@ export const useProgressColumns = ({
   handlePrintLabel,
   setQuickEditRecord,
   setQuickEditVisible,
-  setRemarkPopoverId,
-  setRemarkText,
+  openRemarkModal,
   stagnantOrderIds,
   deliveryRiskMap,
   onShareOrder,
@@ -180,9 +178,6 @@ export const useProgressColumns = ({
         const merchandiserName = String((record as Record<string, unknown>).merchandiser || '').trim();
         const customerName = String((record as Record<string, unknown>).company || '').trim();
         const remark = String((record as Record<string, unknown>).remarks || '').trim();
-        const orderId = String(record.id || '');
-        const tsMatch = remark.match(/^\[(\d{2}-\d{2} \d{2}:\d{2})\]\s*/);
-        const remarkBody = tsMatch ? remark.slice(tsMatch[0].length) : remark;
         const expectedShipDateRaw = (record as Record<string, unknown>).expectedShipDate;
         const expectedShipDate = expectedShipDateRaw ? dayjs(String(expectedShipDateRaw)).format('YYYY-MM-DD') : '-';
         const _orderLines = parseProductionOrderLines(record);
@@ -253,8 +248,7 @@ export const useProgressColumns = ({
                                 style={{ display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}
                                 onClick={(event) => {
                                   event.stopPropagation();
-                                  setRemarkPopoverId(orderId);
-                                  setRemarkText(remarkBody);
+                                  openRemarkModal(String(record.orderNo || ''), record.merchandiser);
                                 }}
                               >
                                 <span style={metaLabelStyle}>跟单员</span>
@@ -721,7 +715,7 @@ export const useProgressColumns = ({
     boardStatsByOrder, boardTimesByOrder, progressNodesByStyleNo,
     openNodeDetail, isSupervisorOrAbove, handleCloseOrder,
     setPrintingRecord, handlePrintLabel, setQuickEditRecord, setQuickEditVisible,
-    setRemarkPopoverId, setRemarkText,
+    openRemarkModal,
     getPredictHint, triggerPredict,
     deliveryRiskMap, onShareOrder,
     isFactoryAccount, onFactoryShip,

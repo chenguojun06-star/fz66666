@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { App, Card, Checkbox, Form, Input, Modal, Tabs } from 'antd';
 import dayjs from 'dayjs';
 import Layout from '@/components/Layout';
+import PageLayout from '@/components/common/PageLayout';
 import api from '@/utils/api';
 import { useStyleDetail } from './hooks/useStyleDetail';
 import { useStyleFormActions } from './hooks/useStyleFormActions';
@@ -550,7 +551,7 @@ const StyleInfoDetailPage: React.FC = () => {
 
   return (
     <Layout>
-      <Card className="page-card">
+      <PageLayout>
         {showSmartErrorNotice && smartError ? (
           <Card size="small" style={{ marginBottom: 12 }}>
             <SmartErrorNotice error={smartError} onFix={() => { if (styleIdParam) void fetchDetail(styleIdParam); }} />
@@ -759,7 +760,7 @@ const StyleInfoDetailPage: React.FC = () => {
             ]}
           />
         </Card>
-      </Card>
+      </PageLayout>
 
       {/* ===== 推送到订单弹窗 ===== */}
       <Modal

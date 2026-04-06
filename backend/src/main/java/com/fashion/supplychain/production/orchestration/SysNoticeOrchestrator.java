@@ -1,6 +1,8 @@
 package com.fashion.supplychain.production.orchestration;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.production.entity.MaterialPicking;
+import com.fashion.supplychain.production.entity.MaterialPickingItem;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.SysNotice;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -190,6 +192,85 @@ public class SysNoticeOrchestrator {
 
         sysNoticeService.save(notice);
         log.info("[SmartNotify] 工人提醒已发送 orderNo={} to={}", order.getOrderNo(), workerName);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // 物料领取通知 → 仓库
+    // ──────────────────────────────────────────────────────────────────────
+
+    /**
+     * BOM领取时通知仓库人员出库
+     *
+     * @param tenantId 租户ID
+     * @param picking  领料单（含 pickingNo / pickerName / styleNo / orderNo）
+     * @param items    领料明细
+     */
+    public void sendPickupNotification(Long tenantId, MaterialPicking picking, List<MaterialPickingItem> items) {
+        // 1. 查找仓库角色用户
+        List<User> warehouseUsers = userService.lambdaQuery()
+                .eq(User::getTenantId, tenantId)
+                .like(User::getRoleName, "仓库")
+                .eq(User::getStatus, "active")
+                .list();
+
+        // 兜底：无仓库用户时通知租户主账号
+        if (warehouseUsers.isEmpty()) {
+            User owner = userService.lambdaQuery()
+                    .eq(User::getTenantId, tenantId)
+                    .eq(User::getIsTenantOwner, true)
+                    .last("LIMIT 1")
+                    .one();
+            if (owner != null) {
+                warehouseUsers = List.of(owner);
+            }
+        }
+        if (warehouseUsers.isEmpty()) {
+            log.warn("[SysNotice] 无仓库用户也无租户主账号，跳过领取通知 pickingNo={}", picking.getPickingNo());
+            return;
+        }
+
+        // 2. 构建通知内容
+        String pickerName = picking.getPickerName() != null ? picking.getPickerName() : "未知";
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("%s 发起了物料领取申请（单号：%s）", pickerName, picking.getPickingNo()));
+        if (picking.getStyleNo() != null) {
+            sb.append("，款号：").append(picking.getStyleNo());
+        }
+        if (picking.getOrderNo() != null) {
+            sb.append("，订单：").append(picking.getOrderNo());
+        }
+        sb.append("。\n领取物料：");
+        if (items != null && !items.isEmpty()) {
+            for (MaterialPickingItem item : items) {
+                sb.append(String.format("\n  · %s × %d%s",
+                        item.getMaterialName() != null ? item.getMaterialName() : item.getMaterialCode(),
+                        item.getQuantity() != null ? item.getQuantity() : 0,
+                        item.getUnit() != null ? item.getUnit() : ""));
+            }
+        }
+        sb.append("\n请及时确认出库。");
+
+        String title = "📦 物料领取申请 — " + picking.getPickingNo();
+        String content = sb.toString();
+
+        // 3. 为每位仓库用户创建通知
+        List<SysNotice> notices = new ArrayList<>();
+        for (User u : warehouseUsers) {
+            String toName = u.getName() != null ? u.getName() : u.getUsername();
+            SysNotice notice = new SysNotice();
+            notice.setTenantId(tenantId);
+            notice.setToName(toName);
+            notice.setFromName(pickerName);
+            notice.setOrderNo(picking.getOrderNo() != null ? picking.getOrderNo() : "");
+            notice.setTitle(title);
+            notice.setContent(content);
+            notice.setNoticeType("pending_pickup");
+            notice.setIsRead(0);
+            notice.setCreatedAt(LocalDateTime.now());
+            notices.add(notice);
+        }
+        sysNoticeService.saveBatch(notices);
+        log.info("[SysNotice] 物料领取通知已发送 pickingNo={} toCount={}", picking.getPickingNo(), notices.size());
     }
 
     // ──────────────────────────────────────────────────────────────────────

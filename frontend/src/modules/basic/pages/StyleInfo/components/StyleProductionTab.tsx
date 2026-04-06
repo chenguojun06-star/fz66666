@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button, Input, Space, Form, Select, Tag } from 'antd';
 import api from '@/utils/api';
-import { buildProductionSheetHtml } from '../../DataCenter';
+import { buildProductionSheetHtml } from '../../DataCenter/buildProductionSheetHtml';
 
 import { safePrint } from '@/utils/safePrint';
 import SmallModal from '@/components/common/SmallModal';

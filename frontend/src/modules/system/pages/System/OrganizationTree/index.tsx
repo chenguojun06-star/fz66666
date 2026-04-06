@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Layout from '@/components/Layout';
+import PageLayout from '@/components/common/PageLayout';
 import ResizableModal from '@/components/common/ResizableModal';
 import SmallModal from '@/components/common/SmallModal';
 import { organizationApi } from '@/services/system/organizationApi';
@@ -10,7 +11,7 @@ import type { OrganizationUnit, User } from '@/types/system';
 import { useAuth } from '@/utils/AuthContext';
 import {
   App, Avatar, Button, Card, Checkbox, Col, Descriptions, Empty, Form, Input,
-  InputNumber, QRCode, Row, Select, Space, Tag, Typography,
+  InputNumber, QRCode, Row, Select, Space, Spin, Tag, Typography,
 } from 'antd';
 import type { TableColumnsType } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -58,7 +59,7 @@ import { TreeItem } from './components/TreeItem';
 const OrganizationTreePage: React.FC = () => {
   const { message, modal } = App.useApp();
   const { user } = useAuth();
-  
+
   const {
     loading,
     treeData,
@@ -171,9 +172,9 @@ const OrganizationTreePage: React.FC = () => {
           <p>仅允许删除没有子节点的部门，删除后该部门下成员将自动释放。</p>
           <div style={{ marginTop: 16 }}>
             <span style={{ color: 'red' }}>*</span> 删除原因：
-            <Input.TextArea 
-              rows={3} 
-              placeholder="请输入删除原因（必填）" 
+            <Input.TextArea
+              rows={3}
+              placeholder="请输入删除原因（必填）"
               onChange={e => { remarkValue = e.target.value; }}
             />
           </div>
@@ -308,32 +309,24 @@ const OrganizationTreePage: React.FC = () => {
 
   return (
     <Layout>
-      <Card className="page-card" loading={loading}>
-        <div className="page-header" style={{ marginBottom: 16 }}>
-          <div>
-            <h2 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
-              {currentFactoryName ? (
-                <>
-                  <BankOutlined style={{ marginRight: 6, color: '#1677ff', fontSize: 22 }} />
-                  <span style={{ fontSize: 22, fontWeight: 700, color: '#1677ff', marginRight: 14 }}>
-                    {currentFactoryName}
-                  </span>
-                  <span style={{ color: '#d9d9d9', fontWeight: 300, fontSize: 20, marginRight: 14 }}>|</span>
-                </>
-              ) : null}
-              <ApartmentOutlined style={{ marginRight: 8 }} />
-              组织架构
-            </h2>
-            {!isFactoryAccount && (
-              <div style={{ color: 'var(--neutral-text-secondary)', marginTop: 4 }}>
-                管理公司组织结构，包含部门、工厂及人员分配。
-                <span style={{ marginLeft: 12 }}>
-                  共 <strong>{departments.length}</strong> 个部门 · <strong>{totalMembers}</strong> 名人员
+      <PageLayout
+        title={
+          <span style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+            {currentFactoryName ? (
+              <>
+                <BankOutlined style={{ marginRight: 6, color: '#1677ff', fontSize: 22 }} />
+                <span style={{ fontSize: 22, fontWeight: 700, color: '#1677ff', marginRight: 14 }}>
+                  {currentFactoryName}
                 </span>
-              </div>
-            )}
-          </div>
-          {!isFactoryAccount && (
+                <span style={{ color: '#d9d9d9', fontWeight: 300, fontSize: 20, marginRight: 14 }}>|</span>
+              </>
+            ) : null}
+            <ApartmentOutlined style={{ marginRight: 8 }} />
+            组织架构
+          </span>
+        }
+        titleExtra={
+          !isFactoryAccount ? (
             <Space>
               <Button
                 icon={<SnippetsOutlined />}
@@ -345,9 +338,20 @@ const OrganizationTreePage: React.FC = () => {
                 新增部门
               </Button>
             </Space>
-          )}
-        </div>
-
+          ) : undefined
+        }
+        headerContent={
+          !isFactoryAccount ? (
+            <div style={{ color: 'var(--neutral-text-secondary)', marginTop: 4 }}>
+              管理公司组织结构，包含部门、工厂及人员分配。
+              <span style={{ marginLeft: 12 }}>
+                共 <strong>{departments.length}</strong> 个部门 · <strong>{totalMembers}</strong> 名人员
+              </span>
+            </div>
+          ) : undefined
+        }
+      >
+        <Spin spinning={loading}>
         {visibleTreeData.length === 0 && !loading ? (
           <Empty description="暂无组织架构数据" style={{ padding: '60px 0' }} />
         ) : (
@@ -432,7 +436,8 @@ const OrganizationTreePage: React.FC = () => {
             </div>
           </div>
         )}
-      </Card>
+        </Spin>
+      </PageLayout>
 
       {/* 新增/编辑部门弹窗 */}
       <ResizableModal

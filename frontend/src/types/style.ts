@@ -47,6 +47,7 @@ export interface StyleInfo extends Record<string, unknown> {
   latestOrderTime?: string;
   latestOrderCreator?: string;
   firstOrderTime?: string;
+  scrapQuantity?: number;
   pushedToOrder?: number | boolean;
   pushedToOrderTime?: string;
 

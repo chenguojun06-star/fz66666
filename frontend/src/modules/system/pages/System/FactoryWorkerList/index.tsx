@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { App, Button, Card, Form, Input, Select, Space, Tag } from 'antd';
 import { ArrowLeftOutlined, UserAddOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
+import PageLayout from '@/components/common/PageLayout';
 import { paths } from '@/routeConfig';
 import ResizableModal from '@/components/common/ResizableModal';
 import SmallModal from '@/components/common/SmallModal';
@@ -213,10 +214,9 @@ const FactoryWorkerList: React.FC = () => {
 
   return (
     <Layout>
-      <Card
-        className="page-card"
+      <PageLayout
         title={pageTitle}
-        extra={
+        titleExtra={
           readOnly ? (
             <Space>
               <Button
@@ -235,19 +235,21 @@ const FactoryWorkerList: React.FC = () => {
             </Button>
           )
         }
+        filterBar={
+          <Space style={{ marginBottom: 16 }}>
+            <Select
+              placeholder="状态筛选"
+              allowClear
+              style={{ width: 120 }}
+              onChange={(v) => setStatusFilter(v || '')}
+              options={[
+                { label: '在职', value: 'active' },
+                { label: '离职', value: 'inactive' },
+              ]}
+            />
+          </Space>
+        }
       >
-        <Space style={{ marginBottom: 16 }}>
-          <Select
-            placeholder="状态筛选"
-            allowClear
-            style={{ width: 120 }}
-            onChange={(v) => setStatusFilter(v || '')}
-            options={[
-              { label: '在职', value: 'active' },
-              { label: '离职', value: 'inactive' },
-            ]}
-          />
-        </Space>
         <ResizableTable
           rowKey="id"
           columns={columns}
@@ -256,7 +258,7 @@ const FactoryWorkerList: React.FC = () => {
           pagination={{ pageSize: 20, showSizeChanger: false }}
           scroll={{ x: 700 }}
         />
-      </Card>
+      </PageLayout>
 
       {!readOnly && (
         <ResizableModal

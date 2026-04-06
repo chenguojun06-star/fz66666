@@ -1,6 +1,5 @@
 import React from 'react';
 import { Space, Image } from 'antd';
-import { WarningOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import type { FormInstance } from 'antd/es/form';
 import MaterialTypeTag from '@/components/common/MaterialTypeTag';
@@ -169,9 +168,8 @@ export function useMaterialInventoryColumns({
             <div className="stock-grid">
               <div>
                 <div className="stock-label">可用库存</div>
-                <div className={`stock-value ${isLow ? 'stock-value--warn' : 'stock-value--ok'}`}>
+                <div className="stock-value stock-value--ok">
                   {availableQty.toLocaleString()}
-                  {isLow && <WarningOutlined style={{ marginLeft: 4, fontSize: "var(--font-size-base)" }} />}
                 </div>
                 <div className="stock-unit">{record.unit}</div>
               </div>
@@ -245,7 +243,7 @@ export function useMaterialInventoryColumns({
             borderTop: '1px solid #f0f0f0'
           }}>
             <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginBottom: 4, fontWeight: 500 }}>库存总值</div>
-            <div style={{ fontSize: "var(--font-size-xl)", fontWeight: 700, color: 'var(--primary-color)' }}>
+            <div style={{ fontSize: "var(--font-size-lg)", fontWeight: 700, color: 'var(--neutral-text)' }}>
               {canViewPrice(user) ? `¥${Number(record.totalValue ?? 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}` : '***'}
             </div>
           </div>
@@ -272,15 +270,15 @@ export function useMaterialInventoryColumns({
       width: 200,
       render: (_, record) => (
         <Space orientation="vertical" size={6} style={{ width: '100%' }}>
-          <div style={{ padding: '4px 8px', background: '#f0f9ff' }}>
-            <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--primary-color)', marginBottom: 2 }}> 最后入库</div>
+          <div style={{ padding: '4px 8px', background: '#fafafa' }}>
+            <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-secondary)', marginBottom: 2 }}> 最后入库</div>
             <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-secondary)' }}>{record.lastInboundDate}</div>
             {record.lastInboundBy && (
               <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)' }}>操作人: {record.lastInboundBy}</div>
             )}
           </div>
-          <div style={{ padding: '4px 8px', background: 'rgba(250, 140, 22, 0.1)' }}>
-            <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--warning-color-dark)', marginBottom: 2 }}> 最后出库</div>
+          <div style={{ padding: '4px 8px', background: '#fafafa' }}>
+            <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-secondary)', marginBottom: 2 }}> 最后出库</div>
             <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-secondary)' }}>{record.lastOutboundDate}</div>
             {record.lastOutboundBy && (
               <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)' }}>操作人: {record.lastOutboundBy}</div>

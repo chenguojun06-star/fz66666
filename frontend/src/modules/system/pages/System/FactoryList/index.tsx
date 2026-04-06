@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Layout from '@/components/Layout';
+import PageLayout from '@/components/common/PageLayout';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -529,15 +530,14 @@ const FactoryList: React.FC = () => {
 
   return (
     <Layout>
-      <Card className="page-card">
-        {showSmartErrorNotice && smartError ? (
+      <PageLayout
+        title={managementTab === 'customer' ? '客户管理' : '供应商管理'}
+        headerContent={showSmartErrorNotice && smartError ? (
           <Card size="small" style={{ marginBottom: 12 }}>
             <SmartErrorNotice error={smartError} onFix={() => { void fetchFactories(); }} />
           </Card>
         ) : null}
-        <div className="page-header">
-          <h2 className="page-title">{managementTab === 'customer' ? '客户管理' : '供应商管理'}</h2>
-        </div>
+      >
 
         <Tabs
           activeKey={managementTab}
@@ -659,7 +659,7 @@ const FactoryList: React.FC = () => {
             },
           ]}
         />
-      </Card>
+      </PageLayout>
 
       <ResizableModal
         open={factoryModal.visible}

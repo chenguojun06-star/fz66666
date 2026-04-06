@@ -271,7 +271,7 @@ export interface MaterialPurchase extends Record<string, unknown> {
   returnConfirmerName?: string;
   returnConfirmTime?: string;
   evidenceImageUrls?: string;  // 回料确认凭证图片，多个URL逗号分隔
-  status: 'pending' | 'received' | 'partial' | 'completed' | 'cancelled';
+  status: 'pending' | 'received' | 'partial' | 'awaiting_confirm' | 'completed' | 'cancelled';
   createTime?: string;
   updateTime?: string;
   // 到货日期字段

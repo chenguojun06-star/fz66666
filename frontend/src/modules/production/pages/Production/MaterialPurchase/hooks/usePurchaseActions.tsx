@@ -35,6 +35,9 @@ const postReturnConfirm = (payload: { purchaseId: string; confirmerId?: string; 
 const postReturnConfirmReset = (payload: { purchaseId: string; reason?: string }) =>
   api.post<{ code: number; message: string; data: boolean }>('/production/purchase/return-confirm/reset', payload);
 
+const postConfirmComplete = (payload: { purchaseId: string }) =>
+  api.post<{ code: number; message: string; data: any }>('/production/purchase/confirm-complete', payload);
+
 const normalizeStatus = (status?: string) => String(status || '').trim().toLowerCase();
 
 export function usePurchaseActions({
@@ -58,6 +61,7 @@ export function usePurchaseActions({
   const [returnEvidenceRecognizing, setReturnEvidenceRecognizing] = useState(false);
   const [returnResetSubmitting, setReturnResetSubmitting] = useState(false);
   const [quickEditSaving, setQuickEditSaving] = useState(false);
+  const [confirmCompleteSubmitting, setConfirmCompleteSubmitting] = useState(false);
   const [smartReceiveOpen, setSmartReceiveOpen] = useState(false);
   const [smartReceiveOrderNo, setSmartReceiveOrderNo] = useState('');
 
@@ -401,6 +405,29 @@ export function usePurchaseActions({
     }
   };
 
+  const confirmComplete = async () => {
+    const targets = detailPurchases.filter((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM);
+    if (!targets.length) { message.info('没有待确认完成的采购任务'); return; }
+    const orderKey = String(targets[0]?.orderId || targets[0]?.orderNo || '').trim();
+    if (orderKey) { const ok = await ensureOrderUnlocked(orderKey); if (!ok) return; }
+    try {
+      setConfirmCompleteSubmitting(true);
+      for (const t of targets) {
+        await postConfirmComplete({ purchaseId: String(t.id) });
+      }
+      message.success('确认完成成功');
+      await fetchMaterialPurchaseList();
+      const orderNo = String(targets[0]?.orderNo || '').trim();
+      const styleNo = String(targets[0]?.styleNo || '').trim();
+      if (orderNo && orderNo !== '-') { await loadDetailByOrderNo(orderNo); }
+      else if (styleNo) { await loadDetailByStyleNo(styleNo); }
+    } catch (e: any) {
+      message.error(e?.message || '确认完成失败');
+    } finally {
+      setConfirmCompleteSubmitting(false);
+    }
+  };
+
   const isSamplePurchaseView = useMemo(() => {
     const sourceType = String(currentPurchase?.sourceType || '').trim();
     const orderNo = String(currentPurchase?.orderNo || '').trim();
@@ -419,6 +446,7 @@ export function usePurchaseActions({
     handleReceiveAll, handleSmartReceiveSuccess, handleBatchReturn,
     openQuickEditSafe, handleQuickEditSave,
     handleExport,
+    confirmComplete, confirmCompleteSubmitting,
     isSamplePurchaseView, normalizeStatus,
   };
 }

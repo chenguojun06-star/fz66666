@@ -43,6 +43,8 @@ interface PurchaseModalProps {
   onQualityIssue: (record: MaterialPurchaseType) => void;
   onReceiveAll: () => void;
   onBatchReturn: () => void;
+  onConfirmComplete: () => void;
+  confirmCompleteSubmitting: boolean;
   isSamplePurchase: boolean;
   onGeneratePurchaseSheet: (autoPrint: boolean) => void;
   onDownloadPurchaseSheet: () => void;
@@ -80,6 +82,8 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
   onQualityIssue,
   onReceiveAll,
   onBatchReturn,
+  onConfirmComplete,
+  confirmCompleteSubmitting,
   isSamplePurchase,
   onGeneratePurchaseSheet,
   onDownloadPurchaseSheet,
@@ -113,6 +117,14 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
           onClick={onBatchReturn}
         >
           回料确认
+        </Button>,
+        <Button
+          key="confirmComplete"
+          disabled={!detailPurchases.some((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM)}
+          loading={confirmCompleteSubmitting}
+          onClick={onConfirmComplete}
+        >
+          确认完成
         </Button>,
         <Dropdown
           key="sheet"

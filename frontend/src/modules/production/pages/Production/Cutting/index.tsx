@@ -3,6 +3,7 @@ import { App, Button, Card, Form, Select, Space, Tag } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 
 import Layout from '@/components/Layout';
+import PageLayout from '@/components/common/PageLayout';
 import PageStatCards from '@/components/common/PageStatCards';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
@@ -278,19 +279,14 @@ const CuttingManagement: React.FC = () => {
   // ─── JSX ─────────────────────────────────────────────────
   return (
     <Layout>
-        <Card className="page-card">
-          {isEntryPage ? (
-            <div className="cutting-entry-nav">
-              <div className="cutting-entry-nav-title">裁剪明细</div>
-              <Button type="primary" className="cutting-entry-back-btn" onClick={() => resetActiveTask(true)}>
-                返回
-              </Button>
-            </div>
-          ) : (
-            <div className="page-header">
-              <h2 className="page-title" style={{ margin: 0 }}>裁剪管理</h2>
-            </div>
-          )}
+        <PageLayout
+          title={isEntryPage ? '裁剪明细' : '裁剪管理'}
+          titleExtra={isEntryPage ? (
+            <Button type="primary" className="cutting-entry-back-btn" onClick={() => resetActiveTask(true)}>
+              返回
+            </Button>
+          ) : undefined}
+        >
 
           {/* ====== 任务列表（非entry时显示） ====== */}
           {isEntryPage ? null : (
@@ -803,7 +799,7 @@ const CuttingManagement: React.FC = () => {
             onCancel={tasks.cancelRollback}
           />
 
-        </Card>
+        </PageLayout>
     </Layout>
   );
 };

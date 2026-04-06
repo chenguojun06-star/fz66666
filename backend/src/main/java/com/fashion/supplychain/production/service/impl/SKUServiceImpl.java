@@ -17,9 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
-import java.util.concurrent.TimeUnit;
+import com.fashion.supplychain.production.helper.SKUDataResolver;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -44,13 +42,8 @@ public class SKUServiceImpl implements SKUService {
     @Autowired(required = false)
     private TemplateLibraryService templateLibraryService;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
-
-    // Cache for parsed order details: Key=OrderNo, Value=List<Map>
-    private final Cache<String, List<Map<String, Object>>> orderDetailsCache = Caffeine.newBuilder()
-            .expireAfterWrite(5, TimeUnit.MINUTES)
-            .maximumSize(1000)
-            .build();
+    @Autowired
+    private SKUDataResolver skuDataResolver;
 
     /**
      * 扫码模式定义
@@ -165,9 +158,9 @@ public class SKUServiceImpl implements SKUService {
         }
 
         try {
-            List<Map<String, Object>> skuList = resolveSkuListFromOrderDetails(orderNo);
+            List<Map<String, Object>> skuList = skuDataResolver.resolveSkuListFromOrderDetails(orderNo);
             if (skuList != null && !skuList.isEmpty()) {
-                if (!isCompositeValue(color) && !isCompositeValue(size)) {
+                if (!skuDataResolver.isCompositeValue(color) && !skuDataResolver.isCompositeValue(size)) {
                     boolean matched = false;
                     for (Map<String, Object> sku : skuList) {
                         if (sku == null || sku.isEmpty()) {
@@ -222,7 +215,7 @@ public class SKUServiceImpl implements SKUService {
         }
 
         try {
-            List<Map<String, Object>> fromDetails = resolveSkuListFromOrderDetails(orderNo);
+            List<Map<String, Object>> fromDetails = skuDataResolver.resolveSkuListFromOrderDetails(orderNo);
             if (fromDetails != null && !fromDetails.isEmpty()) {
                 return fromDetails;
             }
@@ -261,7 +254,7 @@ public class SKUServiceImpl implements SKUService {
         progress.put("skuKey", normalizeSKUKey(orderNo, styleNo, color, size));
 
         try {
-            long totalCount = getOrderSkuQuantity(orderNo, styleNo, color, size);
+            long totalCount = skuDataResolver.getOrderSkuQuantity(orderNo, styleNo, color, size);
             if (totalCount <= 0) {
                 Long scannedTotal = scanRecordService.count(
                         new LambdaQueryWrapper<ScanRecord>()
@@ -338,7 +331,7 @@ public class SKUServiceImpl implements SKUService {
 
                 // 从内存Map获取已完成数量
                 long completed = statsMap.getOrDefault(color + "|" + size, 0L);
-                long totalCount = getOrderSkuQuantity(orderNo, styleNo, color, size);
+                long totalCount = skuDataResolver.getOrderSkuQuantity(orderNo, styleNo, color, size);
                 long remaining = Math.max(0, totalCount - completed);
 
                 // 更新SKU对象的进度信息 (用于前端展示)
@@ -364,160 +357,7 @@ public class SKUServiceImpl implements SKUService {
         return orderProgress;
     }
 
-    private ProductionOrder getActiveOrderByNo(String orderNo) {
-        String on = StringUtils.hasText(orderNo) ? orderNo.trim() : null;
-        if (!StringUtils.hasText(on)) {
-            return null;
-        }
-        try {
-            return productionOrderService.getOne(
-                    new LambdaQueryWrapper<ProductionOrder>()
-                            .eq(ProductionOrder::getOrderNo, on)
-                            .eq(ProductionOrder::getDeleteFlag, 0)
-                            .last("limit 1"));
-        } catch (Exception e) {
-            log.warn("[SKUService] 查询订单失败: {}", on, e);
-            return null;
-        }
-    }
 
-    private List<Map<String, Object>> resolveOrderLines(String details) {
-        if (!StringUtils.hasText(details)) {
-            return List.of();
-        }
-        try {
-            List<Map<String, Object>> list = objectMapper.readValue(details,
-                    new TypeReference<List<Map<String, Object>>>() {
-                    });
-            if (list != null) {
-                return list;
-            }
-        } catch (Exception ignore) {
-        }
-        try {
-            Map<String, Object> obj = objectMapper.readValue(details, new TypeReference<Map<String, Object>>() {
-            });
-            Object lines = obj == null ? null
-                    : (obj.get("lines") != null ? obj.get("lines")
-                            : (obj.get("items") != null ? obj.get("items")
-                                    : (obj.get("details") != null ? obj.get("details")
-                                            : (obj.get("orderLines") != null ? obj.get("orderLines")
-                                                    : obj.get("list")))));
-            if (lines instanceof List) {
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> cast = (List<Map<String, Object>>) lines;
-                return cast;
-            }
-        } catch (Exception ignore) {
-        }
-        return List.of();
-    }
-
-    private List<Map<String, Object>> resolveSkuListFromOrderDetails(String orderNo) {
-        // Try to get from cache first
-        List<Map<String, Object>> cached = orderDetailsCache.getIfPresent(orderNo);
-        if (cached != null) {
-            return cached;
-        }
-
-        ProductionOrder order = getActiveOrderByNo(orderNo);
-        if (order == null || !StringUtils.hasText(order.getOrderDetails())) {
-            return List.of();
-        }
-        List<Map<String, Object>> lines = resolveOrderLines(order.getOrderDetails());
-        if (lines == null || lines.isEmpty()) {
-            return List.of();
-        }
-        String styleNo = StringUtils.hasText(order.getStyleNo()) ? order.getStyleNo().trim() : "";
-        String on = StringUtils.hasText(order.getOrderNo()) ? order.getOrderNo().trim() : "";
-        Map<String, Map<String, Object>> agg = new LinkedHashMap<>();
-        for (Map<String, Object> r : lines) {
-            if (r == null || r.isEmpty()) {
-                continue;
-            }
-            String color = StringUtils.hasText(ParamUtils.toTrimmedString(r.get("color")))
-                    ? ParamUtils.toTrimmedString(r.get("color"))
-                    : "";
-            String size = StringUtils.hasText(ParamUtils.toTrimmedString(r.get("size")))
-                    ? ParamUtils.toTrimmedString(r.get("size"))
-                    : "";
-            if (!StringUtils.hasText(color) || !StringUtils.hasText(size)) {
-                continue;
-            }
-            int qty = parseQuantity(r.get("quantity"));
-            String key = color + "|" + size;
-            Map<String, Object> sku = agg.computeIfAbsent(key, k -> {
-                Map<String, Object> m = new HashMap<>();
-                m.put("orderNo", on);
-                m.put("styleNo", styleNo);
-                m.put("color", color);
-                m.put("size", size);
-                m.put("skuKey", normalizeSKUKey(on, styleNo, color, size));
-                m.put("quantity", 0);
-                return m;
-            });
-            int current = parseQuantity(sku.get("quantity"));
-            sku.put("quantity", current + Math.max(0, qty));
-        }
-
-        List<Map<String, Object>> result = new ArrayList<>(agg.values());
-        // Put into cache
-        orderDetailsCache.put(orderNo, result);
-        return result;
-    }
-
-    private int parseQuantity(Object obj) {
-        if (obj == null) {
-            return 0;
-        }
-        try {
-            return Math.max(0, Integer.parseInt(String.valueOf(obj).trim()));
-        } catch (Exception e) {
-            return 0;
-        }
-    }
-
-    private long getOrderSkuQuantity(String orderNo, String styleNo, String color, String size) {
-        List<Map<String, Object>> list = resolveSkuListFromOrderDetails(orderNo);
-        if (list == null || list.isEmpty()) {
-            return 0;
-        }
-        String c = StringUtils.hasText(color) ? color.trim() : "";
-        String s = StringUtils.hasText(size) ? size.trim() : "";
-        String sn = StringUtils.hasText(styleNo) ? styleNo.trim() : "";
-        long total = 0;
-        for (Map<String, Object> sku : list) {
-            if (sku == null || sku.isEmpty()) {
-                continue;
-            }
-            String sc = StringUtils.hasText(ParamUtils.toTrimmedString(sku.get("color")))
-                    ? ParamUtils.toTrimmedString(sku.get("color"))
-                    : "";
-            String ss = StringUtils.hasText(ParamUtils.toTrimmedString(sku.get("size")))
-                    ? ParamUtils.toTrimmedString(sku.get("size"))
-                    : "";
-            String st = StringUtils.hasText(ParamUtils.toTrimmedString(sku.get("styleNo")))
-                    ? ParamUtils.toTrimmedString(sku.get("styleNo"))
-                    : "";
-            if (!c.equals(sc) || !s.equals(ss)) {
-                continue;
-            }
-            if (StringUtils.hasText(sn) && StringUtils.hasText(st) && !sn.equals(st)) {
-                continue;
-            }
-            total += parseQuantity(sku.get("quantity"));
-        }
-        return total;
-    }
-
-    private boolean isCompositeValue(String value) {
-        if (!StringUtils.hasText(value)) {
-            return false;
-        }
-        String v = value.trim();
-        return v.contains(",") || v.contains("，") || v.contains("/") || v.contains("、") || v.contains(";")
-                || v.contains("|") || v.contains(" ");
-    }
 
     @Override
     public boolean updateSKUScanRecord(ScanRecord scanRecord) {

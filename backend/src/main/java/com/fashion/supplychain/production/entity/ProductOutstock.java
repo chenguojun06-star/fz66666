@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.TableField;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.Data;
 
@@ -58,7 +59,23 @@ public class ProductOutstock {
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 
-    // ==================== 收货字段 ====================
+    // ==================== SKU明细与物流字段 ====================
+
+    private String skuCode;
+
+    private String color;
+
+    private String size;
+
+    private BigDecimal costPrice;
+
+    private BigDecimal salesPrice;
+
+    private String trackingNo;
+
+    private String expressCompany;
+
+    // ==================== 收货字段（历史遗留，不再在出库流程使用）====================
 
     private String receiveStatus;
 
@@ -67,4 +84,20 @@ public class ProductOutstock {
     private String receivedBy;
 
     private String receivedByName;
+
+    // ==================== 客户与收款字段 ====================
+
+    private String customerName;
+
+    private String customerPhone;
+
+    private String shippingAddress;
+
+    private BigDecimal totalAmount;
+
+    private BigDecimal paidAmount;
+
+    private String paymentStatus;
+
+    private LocalDateTime settlementTime;
 }

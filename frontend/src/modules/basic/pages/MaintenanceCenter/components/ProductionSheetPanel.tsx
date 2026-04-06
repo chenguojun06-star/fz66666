@@ -14,7 +14,7 @@ import { formatDateTime } from '@/utils/datetime';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { isAdminUser as isAdminUserFn, useAuth } from '@/utils/AuthContext';
-import { buildProductionSheetHtml } from '../../DataCenter';
+import { buildProductionSheetHtml } from '../../DataCenter/buildProductionSheetHtml';
 
 const { TextArea } = Input;
 

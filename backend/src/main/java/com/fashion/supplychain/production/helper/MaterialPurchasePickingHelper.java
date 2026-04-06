@@ -602,7 +602,7 @@ public class MaterialPurchasePickingHelper {
             if (StringUtils.hasText(associatedPurchaseId)) {
                 purchase = materialPurchaseService.getById(associatedPurchaseId);
                 if (purchase != null) {
-                    purchase.setStatus(MaterialConstants.STATUS_COMPLETED);
+                    purchase.setStatus(MaterialConstants.STATUS_AWAITING_CONFIRM);
                     purchase.setReceivedTime(LocalDateTime.now());
                     purchase.setUpdateTime(LocalDateTime.now());
                     materialPurchaseService.updateById(purchase);
@@ -691,7 +691,7 @@ public class MaterialPurchasePickingHelper {
                     .eq(MaterialPurchase::getOrderNo, orderNo)
                     .eq(MaterialPurchase::getMaterialCode, item.getMaterialCode())
                     .eq(MaterialPurchase::getDeleteFlag, 0)
-                    .in(MaterialPurchase::getStatus, MaterialConstants.STATUS_COMPLETED, MaterialConstants.STATUS_PARTIAL, MaterialConstants.STATUS_WAREHOUSE_PENDING)
+                    .in(MaterialPurchase::getStatus, MaterialConstants.STATUS_COMPLETED, MaterialConstants.STATUS_AWAITING_CONFIRM, MaterialConstants.STATUS_PARTIAL, MaterialConstants.STATUS_WAREHOUSE_PENDING)
                     .list();
 
                 for (MaterialPurchase purchase : relatedPurchases) {
@@ -757,20 +757,20 @@ public class MaterialPurchasePickingHelper {
         body.put("materialId", purchase != null ? purchase.getMaterialId() : firstItem.getMaterialId());
         body.put("materialCode", purchase != null ? purchase.getMaterialCode() : firstItem.getMaterialCode());
         body.put("materialName", purchase != null ? purchase.getMaterialName() : firstItem.getMaterialName());
-        body.put("materialType", purchase != null ? purchase.getMaterialType() : null);
+        body.put("materialType", purchase != null ? purchase.getMaterialType() : firstItem.getMaterialType());
         body.put("color", purchase != null ? purchase.getColor() : firstItem.getColor());
-        body.put("specification", purchase != null ? purchase.getSpecifications() : firstItem.getSize());
-        body.put("fabricComposition", purchase != null ? purchase.getFabricComposition() : null);
-        body.put("fabricWidth", purchase != null ? purchase.getFabricWidth() : null);
+        body.put("specification", purchase != null ? purchase.getSpecifications() : firstItem.getSpecification());
+        body.put("fabricComposition", purchase != null ? purchase.getFabricComposition() : firstItem.getFabricComposition());
+        body.put("fabricWidth", purchase != null ? purchase.getFabricWidth() : firstItem.getFabricWidth());
         body.put("fabricWeight", purchase != null ? purchase.getFabricWeight() : null);
         body.put("unit", purchase != null ? purchase.getUnit() : firstItem.getUnit());
         body.put("quantity", pickedTotalQty);
-        body.put("unitPrice", purchase != null ? purchase.getUnitPrice() : null);
+        body.put("unitPrice", purchase != null ? purchase.getUnitPrice() : firstItem.getUnitPrice());
         body.put("receiverId", picking.getPickerId());
         body.put("receiverName", picking.getPickerName());
         body.put("issuerId", UserContext.userId());
         body.put("issuerName", UserContext.username());
-        body.put("warehouseLocation", resolveWarehouseLocation(items));
+        body.put("warehouseLocation", resolveWarehouseLocation(items) != null ? resolveWarehouseLocation(items) : firstItem.getWarehouseLocation());
         body.put("remark", syncRemark);
 
         materialPickupOrchestrator.create(body);

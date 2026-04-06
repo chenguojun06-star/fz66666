@@ -408,6 +408,52 @@ public class MaterialPurchaseStatusHelper {
         return result;
     }
 
+    /**
+     * 确认采购完成
+     * 将待确认完成(awaiting_confirm)状态的采购任务标记为已完成(completed)
+     * @param body { purchaseId }
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> confirmComplete(Map<String, Object> body) {
+        String purchaseId = ParamUtils.toTrimmedString(body == null ? null : body.get("purchaseId"));
+
+        if (!org.springframework.util.StringUtils.hasText(purchaseId)) {
+            throw new IllegalArgumentException("采购单ID不能为空");
+        }
+
+        MaterialPurchase purchase = materialPurchaseService.getById(purchaseId);
+        if (purchase == null || (purchase.getDeleteFlag() != null && purchase.getDeleteFlag() == 1)) {
+            throw new NoSuchElementException("采购单不存在或已删除");
+        }
+
+        String currentStatus = purchase.getStatus() == null ? "" : purchase.getStatus().trim();
+        if (!MaterialConstants.STATUS_AWAITING_CONFIRM.equals(currentStatus)) {
+            throw new IllegalStateException("该采购单当前状态为「" + currentStatus + "」，仅待确认完成状态可执行此操作");
+        }
+
+        String operator = UserContext.username();
+
+        LambdaUpdateWrapper<MaterialPurchase> uw = new LambdaUpdateWrapper<>();
+        uw.eq(MaterialPurchase::getId, purchaseId)
+          .set(MaterialPurchase::getStatus, MaterialConstants.STATUS_COMPLETED)
+          .set(MaterialPurchase::getUpdateTime, LocalDateTime.now());
+        materialPurchaseService.update(uw);
+
+        MaterialPurchase updated = materialPurchaseService.getById(purchaseId);
+        if (updated != null) {
+            syncAfterPurchaseChanged(updated);
+        }
+
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("purchaseId", purchaseId);
+        result.put("purchaseNo", purchase.getPurchaseNo());
+        result.put("materialName", purchase.getMaterialName());
+        result.put("status", MaterialConstants.STATUS_COMPLETED);
+        log.info("✅ 采购已确认完成: purchaseId={}, purchaseNo={}, operator={}",
+                purchaseId, purchase.getPurchaseNo(), operator);
+        return result;
+    }
+
     public boolean receiveAndSync(String purchaseId, String receiverId, String receiverName) {
         boolean ok = materialPurchaseService.receivePurchase(purchaseId, receiverId, receiverName);
         if (!ok) {

@@ -1,0 +1,43 @@
+/* PageLayout — fullheight flex 布局：头部固定 + 内容区滚动 */
+
+/*
+ * 高度计算说明：
+ *   视口高度 - 顶部导航栏(60px) - 上下内边距(2 × --spacing-md)
+ *   .layout-content { padding: var(--spacing-md); overflow: auto; }
+ *   该 calc 使 Card 恰好填满可视区域，不产生外层滚动条
+ */
+.page-layout-fullheight.page-card {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 60px - 2 * var(--spacing-md));
+  overflow: hidden;
+}
+
+/* ant-card-body 需要继承 flex 布局，占满卡片剩余空间 */
+.page-layout-fullheight.page-card > .ant-card-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  /* 覆盖 global.css 的 .page-card > .ant-card-body { padding: 16px } */
+}
+
+/* 头部区域：标题 + 统计卡片 + 筛选栏，不滚动 */
+.page-layout-header {
+  flex-shrink: 0;
+}
+
+/* 内容区域：表格等主内容，溢出时滚动 */
+.page-layout-body {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+
+/* 响应式：移动端 .layout-content padding 变为 12px */
+@media (max-width: 768px) {
+  .page-layout-fullheight.page-card {
+    height: calc(100vh - 60px - 24px); /* 2 × 12px */
+  }
+}

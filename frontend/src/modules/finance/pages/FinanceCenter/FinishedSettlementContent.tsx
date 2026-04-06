@@ -6,8 +6,7 @@ import api from '@/utils/api';
 import { isOrderFrozenByStatus } from '@/utils/api/production';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
-import StandardToolbar from '@/components/common/StandardToolbar';
-import StickyFilterBar from '@/components/common/StickyFilterBar';
+import PageLayout from '@/components/common/PageLayout';
 import RowActions from '@/components/common/RowActions';
 import StandardModal from '@/components/common/StandardModal';
 import SmallModal from '@/components/common/SmallModal';
@@ -557,22 +556,22 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
 
   return (
     <>
-      <Card>
-        {showSmartErrorNotice && smartError ? (
-          <Card size="small" style={{ marginBottom: 12 }}>
-            <SmartErrorNotice
-              error={smartError}
-              onFix={() => {
-                void loadData();
-              }}
-            />
-          </Card>
-        ) : null}
-
-        <StickyFilterBar>
-        <StandardToolbar
-          left={(
-            <>
+      <PageLayout
+        filterCard={false}
+        headerContent={
+          showSmartErrorNotice && smartError ? (
+            <Card size="small" style={{ marginBottom: 12 }}>
+              <SmartErrorNotice
+                error={smartError}
+                onFix={() => {
+                  void loadData();
+                }}
+              />
+            </Card>
+          ) : null
+        }
+        filterLeft={
+          <>
               <StandardSearchBar
                 searchValue={searchOrderNo}
                 onSearchChange={(value) => {
@@ -609,10 +608,10 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
                 style={{ minWidth: 110 }}
                 options={factoryTypeOptions}
               />
-            </>
-          )}
-          right={(
-            <>
+          </>
+        }
+        filterRight={
+          <>
               <Button
                 type="primary"
                 onClick={handleBatchAudit}
@@ -638,10 +637,9 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
               <Button onClick={handleExport}>
                 导出全部
               </Button>
-            </>
-          )}
-        />
-        </StickyFilterBar>
+          </>
+        }
+      >
 
         <ResizableTable<FinishedSettlementRow>
           storageKey="finance-finished-settlement"
@@ -665,7 +663,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
           }}
           onChange={handleTableChange}
         />
-      </Card>
+      </PageLayout>
 
       {/* 备注编辑弹窗 */}
       <SmallModal

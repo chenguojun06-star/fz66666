@@ -3,6 +3,7 @@ import { Alert, App, Button, Card, Checkbox, Form, Input, Select, Space, Tag } f
 import type { ButtonProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
+import PageLayout from '@/components/common/PageLayout';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -509,76 +510,81 @@ const RoleList: React.FC = () => {
 
   return (
     <Layout>
-        <Card className="page-card">
-          {showSmartErrorNotice && smartError ? (
-            <Card size="small" style={{ marginBottom: 12 }}>
-              <SmartErrorNotice error={smartError} onFix={fetchRoles} />
-            </Card>
-          ) : null}
-          {showSystemGuard && roleList.length > 0 && (() => {
-            const broadRoles = roleList.filter(
-              (r) => String(r.status || 'active') === 'active' && String(r.dataScope || '') === 'all'
-            );
-            if (broadRoles.length === 0) return null;
-            return (
-              <Alert
-                style={{ marginBottom: 12 }}
-                type="warning"
-                showIcon
-                icon={<span></span>}
-                title="权限防呆检测"
-                description={
-                  <span>
-                    当前有 <strong>{broadRoles.length}</strong> 个启用角色使用“全部数据”范围（
-                    {broadRoles.slice(0, 3).map((r) => String(r.roleName || r.roleCode)).join('、')}{broadRoles.length > 3 ? '等' : ''}
-                    ），建议审查是否需要半等权限范围，防止越权操作。
-                  </span>
-                }
-                banner={false}
-              />
-            );
-          })()}
-          <div className="page-header">
-            <h2 className="page-title">岗位管理</h2>
+        <PageLayout
+          title="岗位管理"
+          titleExtra={
             <Button type="primary" onClick={() => openDialog()}>
               新增角色
             </Button>
-          </div>
-
-          <Card size="small" className="filter-card mb-sm">
-            <Space wrap>
-              <Input
-                placeholder="角色名称"
-                style={{ width: 220 }}
-                allowClear
-                value={String(queryParams.roleName || '')}
-                onChange={(e) => setQueryParams((prev) => ({ ...prev, roleName: e.target.value, page: 1 }))}
-              />
-              <Input
-                placeholder="角色编码"
-                style={{ width: 220 }}
-                allowClear
-                value={String(queryParams.roleCode || '')}
-                onChange={(e) => setQueryParams((prev) => ({ ...prev, roleCode: e.target.value, page: 1 }))}
-              />
-              <Button type="primary" onClick={fetchRoles}>
-                查询
-              </Button>
-              <Button
-                onClick={() =>
-                  setQueryParams((prev) => ({
-                    page: 1,
-                    pageSize: prev.pageSize,
-                    roleName: '',
-                    roleCode: '',
-                  }))
-                }
-              >
-                重置
-              </Button>
-            </Space>
-          </Card>
-
+          }
+          headerContent={
+            <>
+              {showSmartErrorNotice && smartError ? (
+                <Card size="small" style={{ marginBottom: 12 }}>
+                  <SmartErrorNotice error={smartError} onFix={fetchRoles} />
+                </Card>
+              ) : null}
+              {showSystemGuard && roleList.length > 0 && (() => {
+                const broadRoles = roleList.filter(
+                  (r) => String(r.status || 'active') === 'active' && String(r.dataScope || '') === 'all'
+                );
+                if (broadRoles.length === 0) return null;
+                return (
+                  <Alert
+                    style={{ marginBottom: 12 }}
+                    type="warning"
+                    showIcon
+                    icon={<span></span>}
+                    title="权限防呆检测"
+                    description={
+                      <span>
+                        当前有 <strong>{broadRoles.length}</strong> 个启用角色使用"全部数据"范围（
+                        {broadRoles.slice(0, 3).map((r) => String(r.roleName || r.roleCode)).join('、')}{broadRoles.length > 3 ? '等' : ''}
+                        ），建议审查是否需要半等权限范围，防止越权操作。
+                      </span>
+                    }
+                    banner={false}
+                  />
+                );
+              })()}
+            </>
+          }
+          filterBar={
+            <Card size="small" className="filter-card mb-sm">
+              <Space wrap>
+                <Input
+                  placeholder="角色名称"
+                  style={{ width: 220 }}
+                  allowClear
+                  value={String(queryParams.roleName || '')}
+                  onChange={(e) => setQueryParams((prev) => ({ ...prev, roleName: e.target.value, page: 1 }))}
+                />
+                <Input
+                  placeholder="角色编码"
+                  style={{ width: 220 }}
+                  allowClear
+                  value={String(queryParams.roleCode || '')}
+                  onChange={(e) => setQueryParams((prev) => ({ ...prev, roleCode: e.target.value, page: 1 }))}
+                />
+                <Button type="primary" onClick={fetchRoles}>
+                  查询
+                </Button>
+                <Button
+                  onClick={() =>
+                    setQueryParams((prev) => ({
+                      page: 1,
+                      pageSize: prev.pageSize,
+                      roleName: '',
+                      roleCode: '',
+                    }))
+                  }
+                >
+                  重置
+                </Button>
+              </Space>
+            </Card>
+          }
+        >
           <div className="table-section">
             <ResizableTable<RoleRecord>
               storageKey="system-role-table"
@@ -599,7 +605,7 @@ const RoleList: React.FC = () => {
               scroll={{ x: 'max-content' }}
             />
           </div>
-        </Card>
+        </PageLayout>
 
       <ResizableModal
         open={roleModal.visible}

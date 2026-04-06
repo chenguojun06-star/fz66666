@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button, Card, Select, Space } from 'antd';
+import { Button, Card, Select, Segmented, Space } from 'antd';
 
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import { MaterialQueryParams } from '@/types/production';
@@ -71,6 +71,33 @@ const MaterialSearchForm: React.FC<MaterialSearchFormProps> = ({
             ]}
             style={{ width: 132 }}
             placeholder="工厂类型"
+          />
+          <Select
+            value={queryParams.sourceType || ''}
+            onChange={(value) => {
+              setQueryParams(prev => ({ ...prev, sourceType: value as 'order' | 'sample' | 'batch' | '', page: 1 }));
+              onSearch();
+            }}
+            options={[
+              { label: '采购类型', value: '' },
+              { label: '订单', value: 'order' },
+              { label: '样衣', value: 'sample' },
+              { label: '批量采购', value: 'batch' },
+            ]}
+            style={{ width: 110 }}
+          />
+          <Segmented
+            value={queryParams.materialType || ''}
+            options={[
+              { label: '面料', value: 'fabric' },
+              { label: '里料', value: 'lining' },
+              { label: '辅料', value: 'accessory' },
+              { label: '全部', value: '' },
+            ]}
+            onChange={(value) => {
+              setQueryParams(prev => ({ ...prev, materialType: String(value), page: 1 }));
+              onSearch();
+            }}
           />
         </div>
         <Space wrap>

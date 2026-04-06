@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, App, Button, Card, Form, Input, InputNumber, Modal, Radio, Select, Space, Tag } from 'antd';
+import { App, Button, Card, Form, Modal, Select, Space } from 'antd';
 import type { InputRef } from 'antd';
-import { AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
+import { AppstoreOutlined, UnorderedListOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import Layout from '@/components/Layout';
 import PageStatCards from '@/components/common/PageStatCards';
@@ -10,15 +10,12 @@ import UniversalCardView from '@/components/common/UniversalCardView';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardPagination from '@/components/common/StandardPagination';
 import { createOrderColorSizeGridFieldGroups } from '@/components/common/CardSizeQuantityFieldGroups';
-import QuickEditModal from '@/components/common/QuickEditModal';
-import StylePrintModal from '@/components/common/StylePrintModal';
-import LabelPrintModal from '../List/components/LabelPrintModal';
-import NodeDetailModal from '@/components/common/NodeDetailModal';
+
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
-import StickyFilterBar from '@/components/common/StickyFilterBar';
-import SmallModal from '@/components/common/SmallModal';
-import api, { generateRequestId, isDuplicateScanMessage, parseProductionOrderLines, isApiSuccess, isOrderFrozenByStatus, isOrderTerminal } from '@/utils/api';
+import PageLayout from '@/components/common/PageLayout';
+
+import api, { generateRequestId, isDuplicateScanMessage, isApiSuccess, isOrderFrozenByStatus, isOrderTerminal } from '@/utils/api';
 import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress';
 import { isSupervisorOrAboveUser as isSupervisorOrAboveUserFn, useAuth } from '@/utils/AuthContext';
 import { formatDateTimeCompact } from '@/utils/datetime';
@@ -27,9 +24,6 @@ import { CuttingBundle, ProductionOrder, ProductionQueryParams, ScanRecord } fro
 import type { TemplateLibrary } from '@/types/style';
 
 import { productionCuttingApi, productionOrderApi, productionScanApi, type ProductionOrderListParams } from '@/services/production/productionApi';
-import { getStyleInfoByRef } from '@/services/style/styleApi';
-import { factoryShipmentApi } from '@/services/production/factoryShipmentApi';
-import type { ShippableInfo } from '@/services/production/factoryShipmentApi';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 import { DEFAULT_PAGE_SIZE_OPTIONS, savePageSize } from '@/utils/pageSizeStore';
 import '../../../styles.css';
@@ -47,9 +41,10 @@ import {
   getCurrentWorkflowNodeForOrder,
 } from './utils';
 import { ProgressNode } from './types';
-import ScanConfirmModal from './components/ScanConfirmModal';
+
 import SmartOrderHoverCard from './components/SmartOrderHoverCard';
-import { ensureBoardStatsForOrder, clearBoardStatsTimestamps } from './hooks/useBoardStats';
+import { ensureBoardStatsForOrder } from './hooks/useBoardStats';
+import { useProgressData } from './hooks/useProgressData';
 import { useScanBundles } from './hooks/useScanBundles';
 import { useScanConfirm } from './hooks/useScanConfirm';
 import { useNodeStats } from './hooks/useNodeStats';
@@ -60,23 +55,26 @@ import { useInlineNodeOps } from './hooks/useInlineNodeOps';
 import { useOpenScan } from './hooks/useOpenScan';
 import { useOrderProgress } from './hooks/useOrderProgress';
 import { useCloseOrder } from './hooks/useCloseOrder';
-import RejectReasonModal from '@/components/common/RejectReasonModal';
+
 import { useScanFeedback } from './hooks/useScanFeedback';
 import { useNodeDetail } from './hooks/useNodeDetail';
 import { usePrintFlow } from './hooks/usePrintFlow';
-import { useRemarkModal } from './hooks/useRemarkModal';
+import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import { useQuickEdit } from './hooks/useQuickEdit';
 import { useProgressFilters } from './hooks/useProgressFilters';
 import { useProgressColumns } from './hooks/useProgressColumns';
 import { useShareOrderDialog } from './hooks/useShareOrderDialog';
+import { useFactoryShipment } from './hooks/useFactoryShipment';
+import { useOrderFocus } from './hooks/useOrderFocus';
+import { useLabelPrint } from './hooks/useLabelPrint';
+import ProgressModals from './components/ProgressModals';
+import ProgressAlerts from './components/ProgressAlerts';
+import { useCardViewConfig } from './hooks/useCardViewConfig';
 import { useStagnantDetection } from './hooks/useStagnantDetection';
 import { useCardGridLayout } from '@/hooks/useCardGridLayout';
 import { useDeliveryRiskMap } from './hooks/useDeliveryRiskMap';
 import MaterialShortageAlert from './components/MaterialShortageAlert';
 import { useProductionBoardStore } from '@/stores';
-import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
-import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
-import type { SmartErrorInfo } from '@/smart/core/types';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { BottleneckItem } from '@/services/intelligence/intelligenceApi';
 import { getOrderCardSizeQuantityItems } from '@/utils/cardSizeQuantity';
@@ -103,85 +101,14 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const isFactoryAccount = !!(user as any)?.factoryId;
   const canManageOrderLifecycle = !isFactoryAccount && isSupervisorOrAbove;
   const [smartQueueFilter, setSmartQueueFilter] = useState<'all' | 'urgent' | 'behind' | 'stagnant' | 'overdue'>('all');
-  const [pendingScrollOrderId, setPendingScrollOrderId] = useState<string | null>(null);
-  const [focusedOrderId, setFocusedOrderId] = useState<string | null>(null);
-  const [pendingFocusNode, setPendingFocusNode] = useState<{ orderNo: string; nodeName: string } | null>(null);
-  const [focusedOrderNos, setFocusedOrderNos] = useState<string[]>([]);
-  const focusClearTimerRef = useRef<number | null>(null);
-  const focusedOrderNosRef = useRef<string[]>([]);
+
   const { handleShareOrder, shareOrderDialog } = useShareOrderDialog({ message });
 
   // ── 工厂发货 ──
-  const [shipModalOpen, setShipModalOpen] = useState(false);
-  const [shipModalOrder, setShipModalOrder] = useState<ProductionOrder | null>(null);
-  const [shipForm] = Form.useForm();
-  const [shipLoading, setShipLoading] = useState(false);
-  const [shippableInfo, setShippableInfo] = useState<ShippableInfo | null>(null);
-
-  const handleFactoryShip = useCallback(async (record: ProductionOrder) => {
-    setShipModalOrder(record);
-    shipForm.resetFields();
-    setShippableInfo(null);
-    setShipModalOpen(true);
-    try {
-      const res = await factoryShipmentApi.shippable(record.id);
-      if (res?.data) setShippableInfo(res.data);
-    } catch { /* silent */ }
-  }, [shipForm]);
-
-  const handleShipSubmit = useCallback(async () => {
-    if (!shipModalOrder) return;
-    try {
-      const values = await shipForm.validateFields();
-      setShipLoading(true);
-      const res = await factoryShipmentApi.ship({
-        orderId: shipModalOrder.id,
-        shipQuantity: values.shipQuantity,
-        shipMethod: values.shipMethod,
-        trackingNo: values.shipMethod === 'EXPRESS' ? values.trackingNo : undefined,
-        expressCompany: values.shipMethod === 'EXPRESS' ? values.expressCompany : undefined,
-        remark: values.remark,
-      });
-      if (isApiSuccess(res)) {
-        message.success('发货成功');
-        setShipModalOpen(false);
-      } else {
-        message.error((res as any)?.message || '发货失败');
-      }
-    } catch { /* validation error */ } finally { setShipLoading(false); }
-  }, [shipModalOrder, shipForm, message]);
-
-  const getOrderDomKey = useCallback((record: Partial<ProductionOrder> | null | undefined) => {
-    return String(record?.id || record?.orderNo || '').trim();
-  }, []);
-
-  const triggerOrderFocus = useCallback((record: Partial<ProductionOrder> | null | undefined) => {
-    const key = getOrderDomKey(record);
-    if (!key) return;
-    setPendingScrollOrderId(key);
-  }, [getOrderDomKey]);
-
-  const normalizeFocusNodeName = useCallback((value: string) => {
-    const safeValue = String(value || '').trim();
-    if (!safeValue) return '';
-    if (safeValue.includes('质检') || safeValue.includes('品检') || safeValue.includes('验货')) return '质检';
-    if (safeValue.includes('入库') || safeValue.includes('入仓')) return '入库';
-    if (safeValue.includes('包装') || safeValue.includes('打包') || safeValue.includes('后整')) return '包装';
-    if (safeValue.includes('车缝') || safeValue.includes('车间')) return '车缝';
-    if (safeValue.includes('裁剪') || safeValue.includes('裁床')) return '裁剪';
-    return safeValue;
-  }, []);
-
-  const getFocusNodeType = useCallback((nodeName: string) => {
-    const normalized = normalizeFocusNodeName(nodeName);
-    if (normalized === '质检') return 'quality';
-    if (normalized === '入库') return 'warehousing';
-    return normalized;
-  }, [normalizeFocusNodeName]);
-
-  useEffect(() => {
-    focusedOrderNosRef.current = focusedOrderNos;
-  }, [focusedOrderNos]);
+  const {
+    shipModalOpen, setShipModalOpen, shipModalOrder, shipForm, shipLoading,
+    shippableInfo, handleFactoryShip, handleShipSubmit,
+  } = useFactoryShipment({ message });
 
   // ── 筛选 / 排序 / 统计卡片 ──────────────────────────────────────
   const {
@@ -194,6 +121,18 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     handleOrderSort, handleStatClick,
     dateSortAsc, toggleDateSort,
   } = useProgressFilters();
+
+  // ── 订单聚焦/滚动/智能导航 ──（依赖 viewMode，必须在 useProgressFilters 之后）
+  const {
+    pendingScrollOrderId, setPendingScrollOrderId,
+    focusedOrderId,
+    pendingFocusNode, setPendingFocusNode,
+    focusedOrderNos, setFocusedOrderNos,
+    focusedOrderNosRef,
+    getOrderDomKey, triggerOrderFocus,
+    normalizeFocusNodeName, getFocusNodeType,
+    clearSmartFocus, scrollToFocusedOrder,
+  } = useOrderFocus(viewMode);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -225,42 +164,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     }
   }, [location.search, normalizeFocusNodeName, setQueryParams]);
 
-  // ── 订单数据 ──────────────────────────────────────────────────
-  const [loading, setLoading] = useState(false);
-  const [total, setTotal] = useState(0);
-  const [orders, setOrders] = useState<ProductionOrder[]>([]);
-  const sortedOrders = useMemo(() => {
-    return [...orders].sort((a, b) => {
-      const aClose = isOrderTerminal(a) ? 1 : 0;
-      const bClose = isOrderTerminal(b) ? 1 : 0;
-      if (aClose !== bClose) return aClose - bClose;
-      const aTime = new Date(String(a.createTime || 0)).getTime();
-      const bTime = new Date(String(b.createTime || 0)).getTime();
-      return dateSortAsc ? aTime - bTime : bTime - aTime;
-    });
-  }, [orders, dateSortAsc]);
-  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
-  const [globalStats, setGlobalStats] = useState({
-    activeOrders: 0, activeQuantity: 0,
-    completedOrders: 0, completedQuantity: 0,
-    scrappedOrders: 0, scrappedQuantity: 0,
-    totalOrders: 0, totalQuantity: 0,
-    delayedOrders: 0, delayedQuantity: 0,
-    todayOrders: 0, todayQuantity: 0,
-  });
-  const [activeOrder, setActiveOrder] = useState<ProductionOrder | null>(null);
-  const [scanHistory, setScanHistory] = useState<ScanRecord[]>([]);
-  const [cuttingBundlesLoading, setCuttingBundlesLoading] = useState(false);
-  const [cuttingBundles, setCuttingBundles] = useState<CuttingBundle[]>([]);
-  const [nodeOps, setNodeOps] = useState<Record<string, any>>({});
-
-
-  // ── 工序节点 Workflow ─────────────────────────────────────────
-  const [nodes, setNodes] = useState<ProgressNode[]>(defaultNodes);
-  const [progressNodesByStyleNo, setProgressNodesByStyleNo] = useState<Record<string, ProgressNode[]>>({});
-  const progressNodesByStyleNoRef = useRef<Record<string, ProgressNode[]>>({});
-  const [nodeWorkflowLocked, setNodeWorkflowLocked] = useState(false);
-  const [, setNodeWorkflowDirty] = useState(false);
+  // ── 订单数据（委托 useProgressData hook）──────────────────────
   const boardStatsByOrder = useProductionBoardStore((s) => s.boardStatsByOrder);
   const boardTimesByOrder = useProductionBoardStore((s) => s.boardTimesByOrder);
   const boardStatsLoadingByOrder = useProductionBoardStore((s) => s.boardStatsLoadingByOrder);
@@ -274,7 +178,24 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const setBoardLoadingForOrder = useProductionBoardStore((s) => s.setBoardLoadingForOrder);
   const clearAllBoardCache = useProductionBoardStore((s) => s.clearAllBoardCache);
   const mergeProcessDataForOrder = useProductionBoardStore((s) => s.mergeProcessDataForOrder);
-  const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
+
+  const {
+    loading, total, orders, sortedOrders, setOrders,
+    smartError, setSmartError, globalStats, setGlobalStats,
+    progressNodesByStyleNo, setProgressNodesByStyleNo, progressNodesByStyleNoRef,
+    showSmartErrorNotice, fetchOrders, fetchGlobalStats, reportSmartError,
+  } = useProgressData({ queryParams, dateRange, dateSortAsc, focusedOrderNosRef, clearAllBoardCache });
+
+  const [activeOrder, setActiveOrder] = useState<ProductionOrder | null>(null);
+  const [scanHistory, setScanHistory] = useState<ScanRecord[]>([]);
+  const [cuttingBundlesLoading, setCuttingBundlesLoading] = useState(false);
+  const [cuttingBundles, setCuttingBundles] = useState<CuttingBundle[]>([]);
+  const [nodeOps, setNodeOps] = useState<Record<string, any>>({});
+
+  // ── 工序节点 Workflow ─────────────────────────────────────────
+  const [nodes, setNodes] = useState<ProgressNode[]>(defaultNodes);
+  const [nodeWorkflowLocked, setNodeWorkflowLocked] = useState(false);
+  const [, setNodeWorkflowDirty] = useState(false);
 
   // ─────── 工序瓶颈检测 ───────
   const [bottleneckItems, setBottleneckItems] = useState<BottleneckItem[]>([]);
@@ -314,17 +235,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     [boardStatsByOrder],
   );
 
-
-  const reportSmartError = (title: string, reason?: string, code?: string) => {
-    if (!showSmartErrorNotice) return;
-    setSmartError({
-      title,
-      reason,
-      code,
-      actionText: '刷新重试',
-    });
-  };
-
   // ── 扫码弹窗 ──────────────────────────────────────────────────
   const [scanOpen, setScanOpen] = useState(false);
   const [_scanSubmitting, setScanSubmitting] = useState(false);
@@ -354,210 +264,24 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   } = useNodeDetail();
   const { printingRecord, printModalVisible, setPrintingRecord, closePrintModal } = usePrintFlow();
 
-  // ===== 打印标签（洗水唛/吊牌）状态 =====
-  const [labelPrintOpen, setLabelPrintOpen] = useState(false);
-  const [labelPrintOrder, setLabelPrintOrder] = useState<ProductionOrder | null>(null);
-  const [labelPrintStyle, setLabelPrintStyle] = useState<{
-    fabricComposition?: string;
-    fabricCompositionParts?: string;
-    washInstructions?: string;
-    uCode?: string;
-    washTempCode?: string;
-    bleachCode?: string;
-    tumbleDryCode?: string;
-    ironCode?: string;
-    dryCleanCode?: string;
-  } | null>(null);
+  // ===== 打印标签（洗水唛/吊牌）=====
+  const { labelPrintOpen, labelPrintOrder, labelPrintStyle, handlePrintLabel, closeLabelPrint } = useLabelPrint();
 
-  const handlePrintLabel = async (record: ProductionOrder) => {
-    setLabelPrintOrder(record);
-    setLabelPrintStyle(null);
-    setLabelPrintOpen(true);
-    if (record.styleId || record.styleNo) {
-      const styleInfo = await getStyleInfoByRef(record.styleId, record.styleNo);
-      const d = styleInfo ?? {};
-      setLabelPrintStyle({
-        fabricComposition: d.fabricComposition,
-        fabricCompositionParts: d.fabricCompositionParts,
-        washInstructions: d.washInstructions,
-        uCode: d.uCode,
-        washTempCode: d.washTempCode,
-        bleachCode: d.bleachCode,
-        tumbleDryCode: d.tumbleDryCode,
-        ironCode: d.ironCode,
-        dryCleanCode: d.dryCleanCode,
-      });
-    }
-  };
-  const {
-    remarkPopoverId, remarkText, remarkSaving,
-    setRemarkPopoverId, setRemarkText, handleRemarkSave,
-  } = useRemarkModal({ message, fetchOrders: () => fetchOrders() });
+  const [remarkModalOpen, setRemarkModalOpen] = useState(false);
+  const [remarkOrderNo, setRemarkOrderNo] = useState('');
+  const [remarkMerchandiser, setRemarkMerchandiser] = useState<string | undefined>();
+  const openRemarkModal = useCallback((orderNo: string, merchandiser?: string) => {
+    setRemarkOrderNo(orderNo);
+    setRemarkMerchandiser(merchandiser);
+    setRemarkModalOpen(true);
+  }, []);
   const {
     quickEditVisible, quickEditRecord, quickEditSaving,
     setQuickEditVisible, setQuickEditRecord,
     handleQuickEdit, handleQuickEditSave,
   } = useQuickEdit({ message, fetchOrders: () => fetchOrders() });
 
-  const queryParamsRef = useRef(queryParams);
-  const dateRangeRef = useRef(dateRange);
-  useEffect(() => { queryParamsRef.current = queryParams; }, [queryParams]);
-  useEffect(() => { dateRangeRef.current = dateRange; }, [dateRange]);
-  useEffect(() => { progressNodesByStyleNoRef.current = progressNodesByStyleNo; }, [progressNodesByStyleNo]);
   useEffect(() => { activeOrderRef.current = activeOrder; }, [activeOrder]);
-
-
-  const fetchOrders = useCallback(async (options?: { silent?: boolean }) => {
-    const silent = options?.silent === true;
-    if (!silent) {
-      setLoading(true);
-    }
-    try {
-      const currentDateRange = dateRangeRef.current;
-      const params: ProductionOrderListParams = {
-        ...queryParamsRef.current,
-        ...(currentDateRange?.[0] && currentDateRange?.[1] ? {
-          startDate: currentDateRange[0].startOf('day').toISOString(),
-          endDate: currentDateRange[1].endOf('day').toISOString(),
-        } : {}),
-      };
-      const response = await productionOrderApi.list(params);
-      const result = response as { code: number; message?: string; data: { records: ProductionOrder[]; total: number } };
-      if (result.code === 200) {
-        const rawRecords = result.data.records || [];
-        const filteredRecords = (() => {
-          if (focusedOrderNosRef.current.length === 0) return rawRecords;
-          const orderNoSet = new Set(focusedOrderNosRef.current);
-          const orderIndex = new Map(focusedOrderNosRef.current.map((orderNo, index) => [orderNo, index]));
-          return rawRecords
-            .filter((record) => orderNoSet.has(String(record.orderNo || '').trim()))
-            .sort((a, b) => {
-              const aIndex = orderIndex.get(String(a.orderNo || '').trim()) ?? Number.MAX_SAFE_INTEGER;
-              const bIndex = orderIndex.get(String(b.orderNo || '').trim()) ?? Number.MAX_SAFE_INTEGER;
-              return aIndex - bIndex;
-            });
-        })();
-        setOrders(filteredRecords);
-        setTotal(focusedOrderNosRef.current.length > 0 ? filteredRecords.length : (result.data.total || 0));
-        if (showSmartErrorNotice) setSmartError(null);
-        // 仅非静默刷新（用户手动、换页、换过滤条件）才清空进度球缓存
-        // silent=true（轮询）保留旧缓存，避免进度球瞬间闪白再回来
-        if (!silent) {
-          clearAllBoardCache();
-          clearBoardStatsTimestamps();
-          // 同时清空工序节点缓存，确保模板改词汇后刷新能重新加载最新节点配置
-          setProgressNodesByStyleNo({});
-          progressNodesByStyleNoRef.current = {};
-        }
-        const styleNos = Array.from(
-          new Set(
-            filteredRecords
-              .map((r) => String(r.styleNo || '').trim())
-              .filter((sn) => sn)
-          )
-        );
-        if (styleNos.length) {
-          void (async () => {
-            const settled = await Promise.allSettled(
-              styleNos.map(async (sn) => {
-                const res = await templateLibraryApi.progressNodeUnitPrices(sn);
-                const r = res as Record<string, unknown>;
-                const rows = Array.isArray(r?.data) ? r.data : [];
-                const normalized: ProgressNode[] = rows
-                  .map((n: any) => {
-                    const name = String(n?.name || '').trim();
-                    const id = String(n?.id || name || '').trim() || name;
-                    const p = Number(n?.unitPrice);
-                    const unitPrice = Number.isFinite(p) && p >= 0 ? p : 0;
-                    //  保留 progressStage（父分类字段），用于进度球弹窗过滤和boardStats匹配
-                    const progressStage = String(n?.progressStage || '').trim() || undefined;
-                    return { id, name, unitPrice, progressStage };
-                  })
-                  .filter((n: ProgressNode) => n.name);
-                return { styleNo: sn, nodes: stripWarehousingNode(normalized) };
-              })
-            );
-            const next: Record<string, ProgressNode[]> = {};
-            for (const s of settled) {
-              if (s.status !== 'fulfilled') continue;
-              if (!s.value.nodes.length) continue;
-              next[s.value.styleNo] = s.value.nodes;
-            }
-            if (Object.keys(next).length) {
-              setProgressNodesByStyleNo((prev) => ({ ...prev, ...next }));
-            }
-          })();
-        }
-      } else if (!silent) {
-        const errMessage = result.message || '获取生产订单失败';
-        reportSmartError('生产进度加载失败', errMessage, 'PROGRESS_LIST_LOAD_FAILED');
-        message.error(errMessage);
-      }
-    } catch (err: any) {
-      if (!silent) {
-        reportSmartError('生产进度加载失败', err?.message || '网络异常或服务不可用，请稍后重试', 'PROGRESS_LIST_LOAD_EXCEPTION');
-        message.error(`获取生产订单失败: ${err?.message || '请检查网络连接'}`);
-      }
-    } finally {
-      if (!silent) {
-        setLoading(false);
-      }
-    }
-  }, []);
-
-  // 获取全局统计数据（根据当前筛选条件）
-  const fetchGlobalStats = useCallback(async (params?: typeof queryParams) => {
-    try {
-      // 只传递筛选参数，不传分页参数
-      const filterParams = params ? {
-        keyword: params.keyword,
-        factoryName: params.factoryName,
-        status: params.status,
-        excludeTerminal: params.excludeTerminal,
-        orderNo: params.orderNo,
-        styleNo: params.styleNo,
-      } : {};
-
-      const response = await api.get<{
-        activeOrders: number;
-        activeQuantity: number;
-        completedOrders: number;
-        completedQuantity: number;
-        scrappedOrders: number;
-        scrappedQuantity: number;
-        totalOrders: number;
-        totalQuantity: number;
-        delayedOrders: number;
-        delayedQuantity: number;
-        todayOrders: number;
-        todayQuantity: number;
-      }>('/production/order/stats', { params: filterParams });
-      if (isApiSuccess(response)) {
-        const data = (response.data || {}) as Record<string, unknown>;
-        setGlobalStats({
-          activeOrders: Number(data.activeOrders ?? data.totalOrders ?? 0),
-          activeQuantity: Number(data.activeQuantity ?? data.totalQuantity ?? 0),
-          completedOrders: Number(data.completedOrders ?? 0),
-          completedQuantity: Number(data.completedQuantity ?? 0),
-          scrappedOrders: Number(data.scrappedOrders ?? 0),
-          scrappedQuantity: Number(data.scrappedQuantity ?? 0),
-          totalOrders: Number(data.totalOrders ?? data.activeOrders ?? 0),
-          totalQuantity: Number(data.totalQuantity ?? data.activeQuantity ?? 0),
-          delayedOrders: Number(data.delayedOrders ?? 0),
-          delayedQuantity: Number(data.delayedQuantity ?? 0),
-          todayOrders: Number(data.todayOrders ?? 0),
-          todayQuantity: Number(data.todayQuantity ?? 0),
-        });
-      }
-    } catch (error) {
-      console.error('获取全局统计数据失败', error);
-    }
-  }, []);
-
-  // 筛选条件变化时更新统计数据
-  useEffect(() => {
-    fetchGlobalStats(queryParams);
-  }, [fetchGlobalStats, queryParams]);
 
   const closeScanConfirm = (silent?: boolean) => {
     closeScanConfirmState();
@@ -652,50 +376,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     }
   };
 
-  // 使用 ref 标记是否已经初始化加载
-  const initialLoadDone = useRef(false);
-
-  // 仅在组件首次挂载时获取数据
-  useEffect(() => {
-    fetchOrders();
-    initialLoadDone.current = true;
-  }, []);
-
-  // 每次重新切回该页面（浏览器 Tab 或 SPA 菜单）时静默刷新
-  useEffect(() => {
-    const onVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        fetchOrders({ silent: true });
-      }
-    };
-    document.addEventListener('visibilitychange', onVisibility);
-    return () => document.removeEventListener('visibilitychange', onVisibility);
-  }, [fetchOrders]);
-
-  // 当查询参数改变时获取数据
-  useEffect(() => {
-    // 跳过初始加载
-    if (!initialLoadDone.current) return;
-
-    const timer = setTimeout(() => {
-      fetchOrders();
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [
-    queryParams.page,
-    queryParams.pageSize,
-    queryParams.keyword,
-    queryParams.status,
-    (queryParams as any).factoryType,
-    (queryParams as any).factoryName,
-    (queryParams as any).delayedOnly,
-    (queryParams as any).todayOnly,
-    // 使用稳定的值，null 转换为固定字符串
-    dateRange?.[0]?.valueOf() ?? 'null-start',
-    dateRange?.[1]?.valueOf() ?? 'null-end'
-  ]);
-
-
   // ── 模板函数 ─────────────────────────────────────────────────────
   const fetchTemplateNodes = async (templateId: string): Promise<ProgressNode[]> => {
     const tid = String(templateId || '').trim();
@@ -706,7 +386,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     const tpl = result.data as TemplateLibrary;
     return parseProgressNodes(String(tpl?.templateContent ?? ''));
   };
-
 
   const ensureNodesFromTemplateIfNeeded = async (order: ProductionOrder) => {
     if (!order) return;
@@ -935,7 +614,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     Modal,
   });
 
-
   useOrderSync({
     fetchOrders,
     fetchOrderDetail,
@@ -958,8 +636,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     message,
   });
 
-
-
   const { handleCloseOrder, pendingCloseOrder, closeOrderLoading, confirmCloseOrder, cancelCloseOrder } = useCloseOrder({
     isSupervisorOrAbove,
     message,
@@ -971,6 +647,14 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     getCloseMinRequired,
   });
 
+  // ── 卡片视图统一 actions / titleTags ──
+  const { cardActions, titleTags } = useCardViewConfig({
+    isOrderFrozenByStatus, setPrintingRecord,
+    handlePrintLabel, handleFactoryShip, handleQuickEdit,
+    handleShareOrder, handleCloseOrder,
+    isFactoryAccount, canManageOrderLifecycle, embedded: !!embedded,
+  });
+
   // ── 停滞订单检测（≥3天无新扫码）─────────────────────────────────────
   const stagnantOrderIds = useStagnantDetection(orders, boardTimesByOrder);
   const stagnantOrderIdSet = useMemo(() => new Set(stagnantOrderIds.keys()), [stagnantOrderIds]);
@@ -980,10 +664,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const deliveryRiskMap = useDeliveryRiskMap(hasActiveOrders);
 
   // ── 分享订单给客户追踪链接（30天有效）────────────────────────────────
-  const clearSmartFocus = useCallback(() => {
-    setFocusedOrderId(null);
-    setPendingScrollOrderId(null);
-  }, []);
 
   const {
     smartQueueOrders,
@@ -1008,26 +688,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
       return dateSortAsc ? aTime - bTime : bTime - aTime;
     });
   }, [smartQueueOrders, dateSortAsc]);
-
-  const scrollToFocusedOrder = useCallback((orderId: string) => {
-    const safeId = orderId.replace(/"/g, '\\"');
-    const selector = viewMode === 'list'
-      ? `tr[data-row-key="${safeId}"]`
-      : `#progress-order-card-${safeId}`;
-    const node = document.querySelector(selector) as HTMLElement | null;
-    if (!node) return false;
-    node.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    setFocusedOrderId(orderId);
-    if (focusClearTimerRef.current) window.clearTimeout(focusClearTimerRef.current);
-    focusClearTimerRef.current = window.setTimeout(() => setFocusedOrderId(null), 2200);
-    return true;
-  }, [viewMode]);
-
-  useEffect(() => {
-    return () => {
-      if (focusClearTimerRef.current) window.clearTimeout(focusClearTimerRef.current);
-    };
-  }, []);
 
   useEffect(() => {
     if (!pendingScrollOrderId) return;
@@ -1105,7 +765,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     boardStatsByOrder, boardTimesByOrder, progressNodesByStyleNo,
     openNodeDetail, isSupervisorOrAbove, handleCloseOrder,
     setPrintingRecord, handlePrintLabel, setQuickEditRecord, setQuickEditVisible,
-    setRemarkPopoverId, setRemarkText,
+    openRemarkModal,
     stagnantOrderIds,
     deliveryRiskMap,
     onShareOrder: handleShareOrder,
@@ -1136,7 +796,6 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     show: true,
     type: 'liquid' as const,
   }), [calcCardProgress, isOrderFrozenByStatus]);
-
 
   const pageContent = (
     <div className="production-progress-detail-page">
@@ -1206,43 +865,14 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             />
           </Card>
 
-          {showSmartErrorNotice && smartError ? (
-            <Card size="small" className="mb-sm">
-              <SmartErrorNotice
-                error={smartError}
-                onFix={() => {
-                  void fetchOrders();
-                }}
-              />
-            </Card>
-          ) : null}
-
-          {bottleneckBannerVisible && bottleneckItems.length > 0 && (
-            <div style={{ marginBottom: 10 }}>
-              <Alert
-                type={bottleneckItems.some(i => i.severity === 'critical') ? 'error' : 'warning'}
-                showIcon
-                action={(
-                  <Button size="small" type="text" onClick={() => setBottleneckBannerVisible(false)}>
-                    关闭
-                  </Button>
-                )}
-                title={<span> 工序瓶颈：{bottleneckItems.length} 个阶段存在积压风险</span>}
-                description={
-                  <ul style={{ margin: 0, paddingLeft: 18 }}>
-                    {bottleneckItems.slice(0, 4).map((it, idx) => (
-                      <li key={idx}>
-                        <b>{it.stageName}</b>
-                        {it.backlog > 0 && <span style={{ marginLeft: 6, color: '#888' }}>积压 {it.backlog} 件</span>}
-                        {it.suggestion && <span style={{ marginLeft: 6, color: '#666' }}>{it.suggestion}</span>}
-                      </li>
-                    ))}
-                    {bottleneckItems.length > 4 && <li style={{ color: '#999' }}>还有 {bottleneckItems.length - 4} 个阶段...</li>}
-                  </ul>
-                }
-              />
-            </div>
-          )}
+          <ProgressAlerts
+            showSmartErrorNotice={showSmartErrorNotice}
+            smartError={smartError}
+            onFixError={() => { void fetchOrders(); }}
+            bottleneckBannerVisible={bottleneckBannerVisible}
+            bottleneckItems={bottleneckItems}
+            setBottleneckBannerVisible={setBottleneckBannerVisible}
+          />
 
           <MaterialShortageAlert />
 
@@ -1316,60 +946,9 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
               fields={[]}
               fieldGroups={productionCardFieldGroups}
               progressConfig={productionCardProgressConfig}
-              actions={(record: ProductionOrder) => {
-                const frozen = isOrderFrozenByStatus(record);
-                const frozenTitle = '订单已关单/报废/完成，无法操作';
-                return [
-                {
-                  key: 'print',
-                  label: '打印',
-                  disabled: frozen,
-                  title: frozen ? frozenTitle : '打印',
-                  iconOnly: true,
-                  onClick: () => setPrintingRecord(record),
-                },
-                {
-                  key: 'printLabel',
-                  label: '打印标签',
-                  disabled: frozen,
-                  title: frozen ? frozenTitle : '打印标签',
-                  onClick: () => void handlePrintLabel(record),
-                },
-                ...(isFactoryAccount ? [{
-                  key: 'ship',
-                  label: '发货',
-                  disabled: frozen,
-                  title: frozen ? frozenTitle : '发货',
-                  onClick: () => handleFactoryShip(record),
-                }] : []),
-                {
-                  key: 'divider1',
-                  type: 'divider' as const,
-                },
-                {
-                  key: 'edit',
-                  label: '编辑',
-                  disabled: frozen,
-                  title: frozen ? frozenTitle : '编辑',
-                  onClick: () => handleQuickEdit(record),
-                },
-                {
-                  key: 'share',
-                  label: '分享',
-                  disabled: frozen,
-                  title: frozen ? frozenTitle : '分享',
-                  onClick: () => handleShareOrder(record),
-                },
-              ].filter(Boolean);
-              }}
+              actions={cardActions}
               hoverRender={(record) => <SmartOrderHoverCard order={record as ProductionOrder} />}
-              titleTags={(record) => (
-                <>
-                  {(record as ProductionOrder).urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>急</Tag>}
-                  {String((record as any).plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>首单</Tag>}
-                  {String((record as any).plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>翻单</Tag>}
-                </>
-              )}
+              titleTags={titleTags}
             />
             <StandardPagination
               current={queryParams.page}
@@ -1386,52 +965,46 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           )}
         </>
       ) : (
-        <Card className="page-card">
-          <div className="page-header">
-            <h2 className="page-title">工序跟进</h2>
-          </div>
-
-          {/* 数据概览卡片 - 使用全局统计数据（不受分页影响，不受列设置控制） */}
-          <PageStatCards
-            activeKey={activeStatFilter}
-            cards={[
-              {
-                key: 'production',
-                items: [
-                  { label: '生产订单', value: Number(globalStats.activeOrders ?? globalStats.totalOrders ?? 0), unit: '个', color: 'var(--color-primary)' },
-                  { label: '生产数量', value: Number(globalStats.activeQuantity ?? globalStats.totalQuantity ?? 0), unit: '件', color: 'var(--color-success)' },
-                ],
-                onClick: () => handleStatClick('production'),
-                activeColor: 'var(--color-primary)',
-              },
-              {
-                key: 'delayed',
-                items: [
-                  { label: '延期订单', value: globalStats.delayedOrders, unit: '个', color: 'var(--color-danger)' },
-                  { label: '延期数量', value: globalStats.delayedQuantity, unit: '件', color: 'var(--color-danger)' },
-                ],
-                onClick: () => handleStatClick('delayed'),
-                activeColor: 'var(--color-danger)',
-              },
-              {
-                key: 'today',
-                items: [
-                  { label: '今日订单', value: globalStats.todayOrders, unit: '个', color: 'var(--color-primary)' },
-                  { label: '今日数量', value: globalStats.todayQuantity, unit: '件', color: 'var(--color-primary-light)' },
-                ],
-                onClick: () => handleStatClick('today'),
-                activeColor: 'var(--color-primary)',
-              },
-            ]}
-            hints={smartActionItems.map((item) => ({ ...item, count: item.value }))}
-            onClearHints={smartQueueFilter !== 'all' ? () => setSmartQueueFilter('all') : undefined}
-          />
-
-          <StickyFilterBar>
-          <Card size="small" className="filter-card mb-sm">
-            <StandardToolbar
-              left={(
-                <>
+        <PageLayout
+          title="工序跟进"
+          headerContent={
+            <PageStatCards
+              activeKey={activeStatFilter}
+              cards={[
+                {
+                  key: 'production',
+                  items: [
+                    { label: '生产订单', value: Number(globalStats.activeOrders ?? globalStats.totalOrders ?? 0), unit: '个', color: 'var(--color-primary)' },
+                    { label: '生产数量', value: Number(globalStats.activeQuantity ?? globalStats.totalQuantity ?? 0), unit: '件', color: 'var(--color-success)' },
+                  ],
+                  onClick: () => handleStatClick('production'),
+                  activeColor: 'var(--color-primary)',
+                },
+                {
+                  key: 'delayed',
+                  items: [
+                    { label: '延期订单', value: globalStats.delayedOrders, unit: '个', color: 'var(--color-danger)' },
+                    { label: '延期数量', value: globalStats.delayedQuantity, unit: '件', color: 'var(--color-danger)' },
+                  ],
+                  onClick: () => handleStatClick('delayed'),
+                  activeColor: 'var(--color-danger)',
+                },
+                {
+                  key: 'today',
+                  items: [
+                    { label: '今日订单', value: globalStats.todayOrders, unit: '个', color: 'var(--color-primary)' },
+                    { label: '今日数量', value: globalStats.todayQuantity, unit: '件', color: 'var(--color-primary-light)' },
+                  ],
+                  onClick: () => handleStatClick('today'),
+                  activeColor: 'var(--color-primary)',
+                },
+              ]}
+              hints={smartActionItems.map((item) => ({ ...item, count: item.value }))}
+              onClearHints={smartQueueFilter !== 'all' ? () => setSmartQueueFilter('all') : undefined}
+            />
+          }
+          filterLeft={
+            <>
                   <StandardSearchBar
                     searchValue={String(queryParams.keyword || '')}
                     onSearchChange={(value) =>
@@ -1477,10 +1050,10 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                       { label: '普通', value: 'normal' },
                     ]}
                   />
-                </>
-              )}
-              right={(
-                <Space>
+            </>
+          }
+          filterRight={
+            <Space>
                   <Button
                     onClick={() => fetchOrders()}
                   >
@@ -1498,49 +1071,18 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                   >
                     {viewMode === 'list' ? '卡片视图' : '列表视图'}
                   </Button>
-                </Space>
-              )}
-            />
-          </Card>
-          </StickyFilterBar>
+            </Space>
+          }
+        >
 
-          {showSmartErrorNotice && smartError ? (
-            <Card size="small" className="mb-sm">
-              <SmartErrorNotice
-                error={smartError}
-                onFix={() => {
-                  void fetchOrders();
-                }}
-              />
-            </Card>
-          ) : null}
-
-          {bottleneckBannerVisible && bottleneckItems.length > 0 && (
-            <div style={{ marginBottom: 10 }}>
-              <Alert
-                type={bottleneckItems.some(i => i.severity === 'critical') ? 'error' : 'warning'}
-                showIcon
-                action={(
-                  <Button size="small" type="text" onClick={() => setBottleneckBannerVisible(false)}>
-                    关闭
-                  </Button>
-                )}
-                title={<span> 工序瓶颈：{bottleneckItems.length} 个阶段存在积压风险</span>}
-                description={
-                  <ul style={{ margin: 0, paddingLeft: 18 }}>
-                    {bottleneckItems.slice(0, 4).map((it, idx) => (
-                      <li key={idx}>
-                        <b>{it.stageName}</b>
-                        {it.backlog > 0 && <span style={{ marginLeft: 6, color: '#888' }}>积压 {it.backlog} 件</span>}
-                        {it.suggestion && <span style={{ marginLeft: 6, color: '#666' }}>{it.suggestion}</span>}
-                      </li>
-                    ))}
-                    {bottleneckItems.length > 4 && <li style={{ color: '#999' }}>还有 {bottleneckItems.length - 4} 个阶段...</li>}
-                  </ul>
-                }
-              />
-            </div>
-          )}
+          <ProgressAlerts
+            showSmartErrorNotice={showSmartErrorNotice}
+            smartError={smartError}
+            onFixError={() => { void fetchOrders(); }}
+            bottleneckBannerVisible={bottleneckBannerVisible}
+            bottleneckItems={bottleneckItems}
+            setBottleneckBannerVisible={setBottleneckBannerVisible}
+          />
 
           {viewMode === 'list' ? (
             <ResizableTable
@@ -1585,66 +1127,9 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                 boxShadow: '0 0 0 2px rgba(24, 144, 255, 0.28), 0 10px 24px rgba(24, 144, 255, 0.18)',
                 transform: 'translateY(-2px)',
               } : undefined}
-              actions={(record: ProductionOrder) => {
-                const frozen = isOrderFrozenByStatus(record);
-                const frozenTitle = '订单已关单/报废/完成，无法操作';
-                return [
-                {
-                  key: 'print',
-                  label: '打印',
-                  disabled: frozen,
-                  title: frozen ? frozenTitle : '打印',
-                  onClick: () => setPrintingRecord(record),
-                },
-                {
-                  key: 'printLabel',
-                  label: '打印标签',
-                  disabled: frozen,
-                  title: frozen ? frozenTitle : '打印标签',
-                  onClick: () => void handlePrintLabel(record),
-                },
-                ...(canManageOrderLifecycle ? [{
-                  key: 'close',
-                  label: '关单',
-                  disabled: frozen,
-                  title: frozen ? frozenTitle : '关单',
-                  onClick: () => handleCloseOrder(record),
-                }] : []),
-                ...(isFactoryAccount ? [{
-                  key: 'ship',
-                  label: '发货',
-                  disabled: frozen,
-                  title: frozen ? frozenTitle : '发货',
-                  onClick: () => handleFactoryShip(record),
-                }] : []),
-                {
-                  key: 'divider1',
-                  type: 'divider' as const,
-                },
-                {
-                  key: 'edit',
-                  label: '编辑',
-                  disabled: frozen,
-                  title: frozen ? frozenTitle : '编辑',
-                  onClick: () => handleQuickEdit(record),
-                },
-                {
-                  key: 'share',
-                  label: '分享',
-                  disabled: frozen,
-                  title: frozen ? frozenTitle : '分享',
-                  onClick: () => handleShareOrder(record),
-                },
-              ].filter(Boolean);
-              }}
+              actions={cardActions}
               hoverRender={(record) => <SmartOrderHoverCard order={record as ProductionOrder} />}
-              titleTags={(record) => (
-                <>
-                  {(record as ProductionOrder).urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>急</Tag>}
-                  {String((record as any).plateType || '').toUpperCase() === 'FIRST' && <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>首单</Tag>}
-                  {String((record as any).plateType || '').toUpperCase() === 'REORDER' && <Tag color="gold" style={{ margin: 0, fontSize: 10, padding: '0 3px', lineHeight: '16px', height: 16 }}>翻单</Tag>}
-                </>
-              )}
+              titleTags={titleTags}
             />
             <StandardPagination
               current={queryParams.page}
@@ -1659,165 +1144,56 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             />
             </>
           )}
-        </Card>
+        </PageLayout>
       )}
 
-      <ScanConfirmModal
-        open={scanConfirmState.visible}
-        loading={scanConfirmState.loading}
-        remain={scanConfirmState.remain}
-        detail={scanConfirmState.detail}
-        onCancel={() => closeScanConfirm()}
-        onSubmit={submitConfirmedScan}
+      <ProgressModals
+        scanConfirmState={scanConfirmState}
+        closeScanConfirm={closeScanConfirm}
+        submitConfirmedScan={submitConfirmedScan}
+        shipModalOpen={shipModalOpen}
+        shipModalOrder={shipModalOrder}
+        shippableInfo={shippableInfo}
+        shipForm={shipForm}
+        shipLoading={shipLoading}
+        handleShipSubmit={handleShipSubmit}
+        setShipModalOpen={setShipModalOpen}
+        shareOrderDialog={shareOrderDialog}
+
+        quickEditVisible={quickEditVisible}
+        quickEditSaving={quickEditSaving}
+        quickEditRecord={quickEditRecord}
+        handleQuickEditSave={handleQuickEditSave}
+        setQuickEditVisible={setQuickEditVisible}
+        setQuickEditRecord={setQuickEditRecord}
+        labelPrintOpen={labelPrintOpen}
+        closeLabelPrint={closeLabelPrint}
+        labelPrintOrder={labelPrintOrder}
+        labelPrintStyle={labelPrintStyle}
+        printModalVisible={printModalVisible}
+        closePrintModal={closePrintModal}
+        printingRecord={printingRecord}
+        nodeDetailVisible={nodeDetailVisible}
+        closeNodeDetail={closeNodeDetail}
+        nodeDetailOrder={nodeDetailOrder}
+        nodeDetailType={nodeDetailType}
+        nodeDetailName={nodeDetailName}
+        nodeDetailStats={nodeDetailStats}
+        nodeDetailUnitPrice={nodeDetailUnitPrice}
+        nodeDetailProcessList={nodeDetailProcessList}
+        fetchOrders={fetchOrders}
+        pendingCloseOrder={pendingCloseOrder}
+        closeOrderLoading={closeOrderLoading}
+        confirmCloseOrder={confirmCloseOrder}
+        cancelCloseOrder={cancelCloseOrder}
       />
 
-      {/* 工厂发货 Modal */}
-      <Modal
-        title={`发货 - ${shipModalOrder?.orderNo || ''}`}
-        open={shipModalOpen}
-        onOk={handleShipSubmit}
-        onCancel={() => setShipModalOpen(false)}
-        confirmLoading={shipLoading}
-        destroyOnClose
-      >
-        <Form form={shipForm} layout="vertical" initialValues={{ shipMethod: 'EXPRESS' }}>
-          {shippableInfo && (
-            <div style={{ marginBottom: 16, color: '#666' }}>
-              裁片总数: {shippableInfo.cuttingTotal} | 已发: {shippableInfo.shippedTotal} | 剩余可发: {shippableInfo.remaining}
-            </div>
-          )}
-          <Form.Item name="shipMethod" label="发货方式" rules={[{ required: true, message: '请选择发货方式' }]}>
-            <Radio.Group>
-              <Radio value="SELF_DELIVERY">自发货</Radio>
-              <Radio value="EXPRESS">快递</Radio>
-            </Radio.Group>
-          </Form.Item>
-          <Form.Item name="shipQuantity" label="发货数量" rules={[{ required: true, message: '请输入发货数量' }]}>
-            <InputNumber min={1} max={shippableInfo?.remaining} style={{ width: '100%' }} placeholder="请输入发货数量" />
-          </Form.Item>
-          <Form.Item noStyle shouldUpdate={(prev, cur) => prev.shipMethod !== cur.shipMethod}>
-            {({ getFieldValue }) => getFieldValue('shipMethod') === 'EXPRESS' ? (
-              <>
-                <Form.Item name="trackingNo" label="快递单号">
-                  <Input placeholder="选填" />
-                </Form.Item>
-                <Form.Item name="expressCompany" label="快递公司">
-                  <Input placeholder="选填" />
-                </Form.Item>
-              </>
-            ) : null}
-          </Form.Item>
-          <Form.Item name="remark" label="备注">
-            <Input.TextArea rows={2} placeholder="选填" />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      {shareOrderDialog}
-
-      {/* 备注异常 Modal */}
-      <SmallModal
-        title={<><ExclamationCircleOutlined style={{ color: '#f59e0b', marginRight: 8 }} />备注异常</>}
-        open={remarkPopoverId !== null}
-        onCancel={() => { setRemarkPopoverId(null); setRemarkText(''); }}
-        onOk={() => { if (remarkPopoverId) handleRemarkSave(remarkPopoverId); }}
-        okText="保存"
-        cancelText="取消"
-        confirmLoading={remarkSaving}
-      >
-        <Input.TextArea
-          value={remarkText}
-          onChange={(e) => setRemarkText(e.target.value)}
-          rows={6}
-          maxLength={200}
-          showCount
-          placeholder="请输入异常备注..."
-          style={{ marginTop: 8 }}
-        />
-      </SmallModal>
-
-      {/* 快速编辑弹窗 */}
-      <QuickEditModal
-        visible={quickEditVisible}
-        loading={quickEditSaving}
-        initialValues={{
-          remarks: quickEditRecord?.remarks as string,
-          expectedShipDate: quickEditRecord?.expectedShipDate as string,
-        }}
-        onSave={handleQuickEditSave}
-        onCancel={() => {
-          setQuickEditVisible(false);
-          setQuickEditRecord(null);
-        }}
-      />
-
-      {/* 打印标签（洗水唛 / U编码）双 Tab 弹窗 */}
-      <LabelPrintModal
-        open={labelPrintOpen}
-        onClose={() => { setLabelPrintOpen(false); setLabelPrintOrder(null); setLabelPrintStyle(null); }}
-        order={labelPrintOrder}
-        styleInfo={labelPrintStyle}
-      />
-
-      {/* 打印预览弹窗 - 使用通用打印组件 */}
-      <StylePrintModal
-        visible={printModalVisible}
-        onClose={closePrintModal}
-        styleId={printingRecord?.styleId}
-        orderId={printingRecord?.id}
-        orderNo={printingRecord?.orderNo}
-        styleNo={printingRecord?.styleNo}
-        styleName={printingRecord?.styleName}
-        cover={printingRecord?.styleCover}
-        color={printingRecord?.color}
-        quantity={printingRecord?.orderQuantity}
-        category={(printingRecord as any)?.category}
-        mode="production"
-        extraInfo={{
-          '订单号': printingRecord?.orderNo,
-          '订单数量': printingRecord?.orderQuantity,
-          '加工厂': printingRecord?.factoryName,
-          '跟单员': printingRecord?.merchandiser,
-          '订单交期': printingRecord?.plannedEndDate,
-        }}
-        sizeDetails={printingRecord ? parseProductionOrderLines(printingRecord) : []}
-      />
-
-      {/* 节点详情弹窗 - 水晶球生产节点看板 */}
-      <NodeDetailModal
-        visible={nodeDetailVisible}
-        onClose={closeNodeDetail}
-        orderId={nodeDetailOrder?.id}
-        orderNo={nodeDetailOrder?.orderNo}
-        nodeType={nodeDetailType}
-        nodeName={nodeDetailName}
-        stats={nodeDetailStats}
-        unitPrice={nodeDetailUnitPrice}
-        processList={nodeDetailProcessList}
-        onSaved={() => {
-          void fetchOrders();
-        }}
-      />
-
-      <RejectReasonModal
-        open={pendingCloseOrder !== null}
-        title={`确认关单：${pendingCloseOrder?.orderNo || ''}`}
-        description={pendingCloseOrder ? (
-          <div>
-            <div>订单数量：{pendingCloseOrder.orderQty}</div>
-            <div>关单阈值（裁剪数90%）：{pendingCloseOrder.minRequired}</div>
-            <div>当前裁剪数：{pendingCloseOrder.cuttingQty}</div>
-            <div>当前合格入库：{pendingCloseOrder.warehousingQualified}</div>
-            <div style={{ marginTop: 8 }}>关单后订单状态将变为"已完成"，并自动生成对账记录。</div>
-          </div>
-        ) : undefined}
-        fieldLabel="关闭原因（可选，将记录到操作日志）"
-        required={false}
-        okDanger={false}
-        okText="确认关单"
-        loading={closeOrderLoading}
-        onOk={confirmCloseOrder}
-        onCancel={cancelCloseOrder}
+      <RemarkTimelineModal
+        open={remarkModalOpen}
+        onClose={() => setRemarkModalOpen(false)}
+        targetType="order"
+        targetNo={remarkOrderNo}
+        canAddRemark={isSupervisorOrAbove || isFactoryAccount || (!!user?.username && user.username === remarkMerchandiser)}
       />
 
     </div>

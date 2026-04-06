@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Form } from 'antd';
+import type { Dayjs } from 'dayjs';
 import { useModal, useTablePagination } from '@/hooks';
 import api from '@/utils/api';
 import { message } from '@/utils/antdStatic';
@@ -71,14 +72,16 @@ export function useMaterialPickupData() {
   const [dataSource, setDataSource] = useState<MaterialPickupRecord[]>([]);
 
   // 过滤条件
-  const [keyword, setKeyword]           = useState('');
-  const [pickupType, setPickupType]     = useState<string>('');
-  const [auditStatus, setAuditStatus]   = useState<string>('');
-  const [financeStatus, setFinanceStatus] = useState<string>('');
-  const [orderNo, setOrderNo]           = useState('');
-  const [styleNo, setStyleNo]           = useState('');
-  const [factoryName, setFactoryName]   = useState('');
-  const [factoryType, setFactoryType]   = useState<string>('');
+  const [keyword, setKeyword]       = useState('');
+  const [factoryType, setFactoryType] = useState<string>('');
+  const [factoryName, setFactoryName] = useState('');
+  const [pickupType, setPickupType] = useState<string | undefined>(undefined);
+  const [auditStatus, setAuditStatus] = useState<string | undefined>(undefined);
+  const [financeStatus, setFinanceStatus] = useState<string | undefined>(undefined);
+  const [orderNo, setOrderNo] = useState('');
+  const [styleNo, setStyleNo] = useState('');
+  const [pickupDateRange, setPickupDateRange] = useState<[Dayjs, Dayjs] | null>(null);
+  const [paymentDateRange, setPaymentDateRange] = useState<[Dayjs, Dayjs] | null>(null);
 
   const pagination = useTablePagination(20, 'material-pickup-records');
   const { current, pageSize } = pagination.pagination;
@@ -130,13 +133,15 @@ export function useMaterialPickupData() {
         page: opt?.page ?? current ?? 1,
         pageSize: pageSize ?? 20,
         keyword:       keyword       || undefined,
+        factoryType:   factoryType   || undefined,
+        factoryName:   factoryName   || undefined,
         pickupType:    pickupType    || undefined,
         auditStatus:   auditStatus   || undefined,
         financeStatus: financeStatus || undefined,
         orderNo:       orderNo       || undefined,
         styleNo:       styleNo       || undefined,
-        factoryName:   factoryName   || undefined,
-        factoryType:   factoryType   || undefined,
+        startDate: pickupDateRange?.[0]?.format('YYYY-MM-DD') || undefined,
+        endDate:   pickupDateRange?.[1]?.format('YYYY-MM-DD') || undefined,
       });
       const data = res?.data ?? res;
       setDataSource(Array.isArray(data?.records) ? data.records : []);
@@ -146,7 +151,7 @@ export function useMaterialPickupData() {
     } finally {
       if (!opt?.silent) setLoading(false);
     }
-  }, [auditStatus, current, factoryName, factoryType, financeStatus, keyword, orderNo, pageSize, pickupType, setTotal, styleNo]);
+  }, [current, factoryName, factoryType, keyword, pageSize, pickupDateRange, pickupType, auditStatus, financeStatus, orderNo, styleNo, setTotal]);
 
   useEffect(() => {
     void fetchData({ silent: true });
@@ -229,7 +234,11 @@ export function useMaterialPickupData() {
   const fetchPaymentCenter = useCallback(async (params?: object) => {
     setPaymentCenterLoading(true);
     try {
-      const res = await api.post('/warehouse/material-pickup/payment-center/list', params ?? {});
+      const res = await api.post('/warehouse/material-pickup/payment-center/list', {
+        startDate: paymentDateRange?.[0]?.format('YYYY-MM-DD') || undefined,
+        endDate:   paymentDateRange?.[1]?.format('YYYY-MM-DD') || undefined,
+        ...(params ?? {}),
+      });
       const data = res?.data ?? res;
       const records = Array.isArray(data) ? data : [];
       setPaymentCenterData(records);
@@ -239,7 +248,7 @@ export function useMaterialPickupData() {
     } finally {
       setPaymentCenterLoading(false);
     }
-  }, [setPaymentTotal]);
+  }, [paymentDateRange, setPaymentTotal]);
 
   const handlePaymentSettle = async (ids: string[], remark?: string) => {
     setPaymentSettling(true);
@@ -259,13 +268,15 @@ export function useMaterialPickupData() {
     loading, dataSource,
     // 过滤
     keyword, setKeyword,
+    factoryType, setFactoryType,
+    factoryName, setFactoryName,
     pickupType, setPickupType,
     auditStatus, setAuditStatus,
     financeStatus, setFinanceStatus,
     orderNo, setOrderNo,
     styleNo, setStyleNo,
-    factoryName, setFactoryName,
-    factoryType, setFactoryType,
+    pickupDateRange, setPickupDateRange,
+    paymentDateRange, setPaymentDateRange,
     // 分页
     pagination, paymentPagination,
     // 弹窗

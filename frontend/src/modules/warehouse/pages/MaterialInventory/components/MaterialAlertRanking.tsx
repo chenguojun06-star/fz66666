@@ -24,6 +24,7 @@ export interface MaterialStockAlertItem {
   minProductionQty?: number;
   maxProductionQty?: number;
   supplierName?: string;
+  supplierId?: string;
   fabricWidth?: string;
   fabricWeight?: string;
   fabricComposition?: string;

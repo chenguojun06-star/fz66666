@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { App, Button, Card, Input } from 'antd';
 import { AppstoreOutlined, ArrowUpOutlined, ArrowDownOutlined, RadarChartOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
+import PageLayout from '@/components/common/PageLayout';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import SmallModal from '@/components/common/SmallModal';
 import StylePrintModal from '@/components/common/StylePrintModal';
@@ -19,7 +20,6 @@ import { useStyleViewMode } from './hooks/useStyleViewMode';
 
 // Components
 import StyleFilterPanel from './components/StyleFilterPanel';
-import StickyFilterBar from '@/components/common/StickyFilterBar';
 import StyleStatsCard from './components/StyleStatsCard';
 import StyleTableView from './components/StyleTableView';
 import StyleCardView from './components/StyleCardView';
@@ -384,91 +384,89 @@ const StyleInfoListPage: React.FC = () => {
 
   return (
     <Layout>
-      <Card className="page-card">
-        {/* 页面头部 */}
-        <div className="page-header">
-          <h2 className="page-title">样衣开发与生产</h2>
-        </div>
+      <PageLayout
+        title="样衣开发与生产"
+        headerContent={
+          <>
+            {/* 开发费用统计看板 */}
+            <StyleStatsCard
+              stats={developmentStats}
+              loading={statsLoading}
+              rangeType={statsRangeType}
+              onRangeChange={handleStatsRangeChange}
+            />
 
-        {/* 开发费用统计看板 */}
-        <StyleStatsCard
-          stats={developmentStats}
-          loading={statsLoading}
-          rangeType={statsRangeType}
-          onRangeChange={handleStatsRangeChange}
-        />
-
-        <PageStatCards
-          cards={[]}
-          hints={[
-            {
-              key: 'overdue',
-              count: overdueStyleCount,
-              tone: 'red',
-              label: '已延期',
-              hint: overdueStyles[0]?.styleNo ? `点击定位到 ${overdueStyles[0].styleNo}` : '点击定位到延期款号',
-              active: smartFilter === 'overdue',
-              onClick: () => handleSmartFilterClick('overdue', overdueStyles),
-            },
-            {
-              key: 'warning',
-              count: warningStyleCount,
-              tone: 'orange',
-              label: '临近交期',
-              hint: warningStyles[0]?.styleNo ? `点击定位到 ${warningStyles[0].styleNo}` : '点击定位到临近交期款号',
-              active: smartFilter === 'warning',
-              onClick: () => handleSmartFilterClick('warning', warningStyles),
-            },
-          ]}
-          onClearHints={smartFilter !== 'all' ? () => {
-            setSmartFilter('all');
-            setPendingFocusStyleId(null);
-            setFocusedStyleId(null);
-          } : undefined}
-        />
-
-        {/* 筛选面板 */}
-        <StickyFilterBar>
-        <StyleFilterPanel
-          queryParams={queryParams}
-          onQueryChange={(params) => setQueryParams(prev => ({ ...prev, ...params }))}
-          onSearch={fetchList}
-          loading={loading}
-          extra={(
-            <>
-              <Button
-                onClick={() => fetchList()}
-                loading={loading}
-              >
-                刷新
-              </Button>
-              <Button
-                icon={dateSortAsc ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
-                onClick={() => setDateSortAsc(v => !v)}
-                title={dateSortAsc ? '按时间升序' : '按时间降序'}
-                style={{ borderRadius: 14, minWidth: 32, width: 32, padding: 0, fontSize: 13 }}
-              />
-              <Button
-                icon={viewMode === 'smart' ? <AppstoreOutlined /> : <RadarChartOutlined />}
-                onClick={() => {
-                  const next = viewMode === 'smart' ? 'card' : 'smart';
-                  setViewMode(next);
-                  setQueryParams((prev) => ({ ...prev, page: 1 }));
-                }}
-              >
-                {viewMode === 'smart' ? '卡片视图' : '智能视图'}
-              </Button>
-              <Button
-                type="primary"
-                onClick={() => navigate('/style-info/new')}
-              >
-                新建
-              </Button>
-            </>
-          )}
-        />
-        </StickyFilterBar>
-
+            <PageStatCards
+              cards={[]}
+              hints={[
+                {
+                  key: 'overdue',
+                  count: overdueStyleCount,
+                  tone: 'red',
+                  label: '已延期',
+                  hint: overdueStyles[0]?.styleNo ? `点击定位到 ${overdueStyles[0].styleNo}` : '点击定位到延期款号',
+                  active: smartFilter === 'overdue',
+                  onClick: () => handleSmartFilterClick('overdue', overdueStyles),
+                },
+                {
+                  key: 'warning',
+                  count: warningStyleCount,
+                  tone: 'orange',
+                  label: '临近交期',
+                  hint: warningStyles[0]?.styleNo ? `点击定位到 ${warningStyles[0].styleNo}` : '点击定位到临近交期款号',
+                  active: smartFilter === 'warning',
+                  onClick: () => handleSmartFilterClick('warning', warningStyles),
+                },
+              ]}
+              onClearHints={smartFilter !== 'all' ? () => {
+                setSmartFilter('all');
+                setPendingFocusStyleId(null);
+                setFocusedStyleId(null);
+              } : undefined}
+            />
+          </>
+        }
+        filterBar={
+          <StyleFilterPanel
+            queryParams={queryParams}
+            onQueryChange={(params) => setQueryParams(prev => ({ ...prev, ...params }))}
+            onSearch={fetchList}
+            loading={loading}
+            extra={(
+              <>
+                <Button
+                  onClick={() => fetchList()}
+                  loading={loading}
+                >
+                  刷新
+                </Button>
+                <Button
+                  icon={dateSortAsc ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
+                  onClick={() => setDateSortAsc(v => !v)}
+                  title={dateSortAsc ? '按时间升序' : '按时间降序'}
+                  style={{ borderRadius: 14, minWidth: 32, width: 32, padding: 0, fontSize: 13 }}
+                />
+                <Button
+                  icon={viewMode === 'smart' ? <AppstoreOutlined /> : <RadarChartOutlined />}
+                  onClick={() => {
+                    const next = viewMode === 'smart' ? 'card' : 'smart';
+                    setViewMode(next);
+                    setQueryParams((prev) => ({ ...prev, page: 1 }));
+                  }}
+                >
+                  {viewMode === 'smart' ? '卡片视图' : '智能视图'}
+                </Button>
+                <Button
+                  type="primary"
+                  onClick={() => navigate('/style-info/new')}
+                >
+                  新建
+                </Button>
+              </>
+            )}
+          />
+        }
+      >
         {/* 列表/卡片视图 */}
         {viewMode === 'smart' ? (
           <StyleTableView
@@ -503,7 +501,7 @@ const StyleInfoListPage: React.FC = () => {
             focusedStyleId={focusedStyleId}
           />
         )}
-      </Card>
+      </PageLayout>
 
       {/* 打印预览弹窗 */}
       <StylePrintModal

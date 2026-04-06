@@ -22,6 +22,7 @@ import { useNavigate } from 'react-router-dom';
 import api, { withQuery } from '@/utils/api';
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
+import StyleCopyModal from './StyleCopyModal';
 
 interface StyleTableViewProps {
   data: StyleInfo[];
@@ -76,8 +77,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
   const [reviewForm] = Form.useForm();
   const [copyModalOpen, setCopyModalOpen] = useState(false);
   const [copySource, setCopySource] = useState<StyleInfo | null>(null);
-  const [copying, setCopying] = useState(false);
-  const [copyForm] = Form.useForm();
+
   const [remarkTarget, setRemarkTarget] = useState<{ open: boolean; styleNo: string; defaultRole?: string }>({ open: false, styleNo: '' });
   const viewportRestoreRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -107,25 +107,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
     return isScrappedStyle(record);
   };
 
-  const handleCopy = async (values: { styleNo: string; color: string; styleName?: string }) => {
-    if (!copySource?.id) return;
-    setCopying(true);
-    try {
-      const res = await api.post(`/style/info/${copySource.id}/copy`, values);
-      if ((res as any).code === 200) {
-        message.success('复制成功');
-        setCopyModalOpen(false);
-        copyForm.resetFields();
-        onRefresh();
-      } else {
-        message.error((res as any).message || '复制失败');
-      }
-    } catch {
-      message.error('复制失败');
-    } finally {
-      setCopying(false);
-    }
-  };
+
 
   const openDevelopmentWorkbench = useCallback((record: StyleInfo, section: WorkbenchSection) => {
     const isSameRecord = String(developmentWorkbenchRecord?.id || '') === String(record.id || '');
@@ -918,7 +900,6 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                             <span className="style-smart-stage__check" />
                           </div>
                           <div className="style-smart-stage__label">{stage.label}</div>
-                          <div className="style-smart-stage__helper">{stage.helper}</div>
                         </button>
                       ))}
                     </div>
@@ -1183,33 +1164,12 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
         </Form>
       </SmallModal>
 
-      <Modal
-        title="复制款式"
+      <StyleCopyModal
         open={copyModalOpen}
-        onCancel={() => { setCopyModalOpen(false); copyForm.resetFields(); }}
-        onOk={() => copyForm.submit()}
-        confirmLoading={copying}
-        okText="确认复制"
-        cancelText="取消"
-        destroyOnHidden
-      >
-        {copySource && (
-          <div style={{ marginBottom: 12, color: '#666', fontSize: 13 }}>
-            源款式：{copySource.styleNo}（{(copySource as any).color || '无颜色'}）
-          </div>
-        )}
-        <Form form={copyForm} layout="vertical" onFinish={handleCopy}>
-          <Form.Item name="styleNo" label="新款号" rules={[{ required: true, message: '请输入新款号' }]}>
-            <Input placeholder="请输入新款号" />
-          </Form.Item>
-          <Form.Item name="color" label="新颜色" rules={[{ required: true, message: '请输入颜色' }]}>
-            <Input placeholder="如：黑色" />
-          </Form.Item>
-          <Form.Item name="styleName" label="新款名（留空则沿用原款名）">
-            <Input placeholder="可选" />
-          </Form.Item>
-        </Form>
-      </Modal>
+        onCancel={() => setCopyModalOpen(false)}
+        copySource={copySource}
+        onSuccess={onRefresh}
+      />
 
       {/* 通用备注记录弹窗 */}
       <RemarkTimelineModal

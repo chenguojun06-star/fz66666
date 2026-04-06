@@ -194,6 +194,8 @@ export function useMaterialPurchase() {
     handleQuickEditSave: actions.handleQuickEditSave,
     isSamplePurchaseView: actions.isSamplePurchaseView,
     normalizeStatus: actions.normalizeStatus,
+    confirmComplete: actions.confirmComplete,
+    confirmCompleteSubmitting: actions.confirmCompleteSubmitting,
     materialDatabaseList: db.materialDatabaseList,
     materialDatabaseLoading: db.materialDatabaseLoading,
     materialDatabaseTotal: db.materialDatabaseTotal,

@@ -139,11 +139,25 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, styleNo, readOnly, onSave
         const name = String(p.processName || '').trim();
         return !(secondaryParentNames.has(stage) || secondaryParentNames.has(name));
       });
-      procCost = primaryDisplayList.reduce(
-        (sum: number, item: any) => sum + (Number(item.price) || 0) * (Number(item.rateMultiplier) || 1),
+      // 按父进度阶段分组汇总（只展示父节点，不展示子工序）
+      const stageMap = new Map<string, number>();
+      primaryDisplayList.forEach((p: any) => {
+        const stage = String(p.progressStage || p.processName || '').trim();
+        const price = (Number(p.price) || 0) * (Number(p.rateMultiplier) || 1);
+        stageMap.set(stage, (stageMap.get(stage) || 0) + price);
+      });
+      const groupedByStage = Array.from(stageMap.entries()).map(([stage, total], idx) => ({
+        id: `stage-${idx}`,
+        progressStage: stage,
+        processName: stage,
+        price: Number(total.toFixed(2)),
+        rateMultiplier: 1,
+      }));
+      procCost = groupedByStage.reduce(
+        (sum: number, item: any) => sum + (Number(item.price) || 0),
         0,
       );
-      setProcessList(primaryDisplayList);
+      setProcessList(groupedByStage as any);
 
       setProcBaseTotal(procCost);
       setSecBaseTotal(secondaryCost);
@@ -188,8 +202,8 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, styleNo, readOnly, onSave
     });
   };
 
-  const handleProcessRateChange = (rate: number) => {
-    const newProcessCost = Number((procBaseTotal * rate + secBaseTotal).toFixed(2));
+  const handleProcessRateChange = (adjustedTotal: number) => {
+    const newProcessCost = Number((adjustedTotal + secBaseTotal).toFixed(2));
     form.setFieldValue('processCost', newProcessCost);
     calculateTotal();
   };

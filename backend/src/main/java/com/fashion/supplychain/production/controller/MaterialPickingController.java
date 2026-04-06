@@ -9,6 +9,7 @@ import com.fashion.supplychain.production.service.MaterialPickingService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import lombok.extern.slf4j.Slf4j;
 import java.util.List;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -16,6 +17,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.springframework.util.StringUtils;
 import lombok.Data;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/production/picking")
 @PreAuthorize("isAuthenticated()")
@@ -26,6 +28,9 @@ public class MaterialPickingController {
 
     @Autowired
     private MaterialPurchaseOrchestrator materialPurchaseOrchestrator;
+
+    @Autowired
+    private com.fashion.supplychain.production.orchestration.SysNoticeOrchestrator sysNoticeOrchestrator;
 
     @PostMapping
     public Result<String> create(@RequestBody PickingRequest request) {
@@ -38,12 +43,32 @@ public class MaterialPickingController {
      */
     @PostMapping("/pending")
     public Result<String> createPending(@RequestBody PickingRequest request) {
-        return Result.success(materialPickingService.savePendingPicking(
-                request.getPicking(), request.getItems()));
+        // 强制设置 status=pending，前端可能未传此字段
+        request.getPicking().setStatus("pending");
+        // BOM领取默认为样衣用料（开发场景），前端未传时兜底
+        if (request.getPicking().getUsageType() == null || request.getPicking().getUsageType().isEmpty()) {
+            request.getPicking().setUsageType("SAMPLE");
+        }
+        if (request.getPicking().getPickupType() == null || request.getPicking().getPickupType().isEmpty()) {
+            request.getPicking().setPickupType("INTERNAL");
+        }
+        String pickingId = materialPickingService.savePendingPicking(
+                request.getPicking(), request.getItems());
+        // 通知仓库人员（失败不影响领料单创建）
+        try {
+            Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+            sysNoticeOrchestrator.sendPickupNotification(tenantId, request.getPicking(), request.getItems());
+        } catch (Exception e) {
+            log.warn("[Picking] 发送仓库领取通知失败 pickingNo={}: {}", request.getPicking().getPickingNo(), e.getMessage());
+        }
+        return Result.success(pickingId);
     }
 
     @Autowired
     private com.fashion.supplychain.production.service.ProductionOrderService productionOrderService;
+
+    @Autowired
+    private com.fashion.supplychain.production.mapper.MaterialPickingItemMapper materialPickingItemMapper;
 
     @GetMapping("/list")
     public Result<IPage<MaterialPicking>> page(
@@ -62,6 +87,11 @@ public class MaterialPickingController {
 
         LambdaQueryWrapper<MaterialPicking> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(MaterialPicking::getDeleteFlag, 0);
+        // 租户隔离
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId != null) {
+            wrapper.eq(MaterialPicking::getTenantId, tenantId);
+        }
         if (factoryOrderIds != null) {
             wrapper.in(MaterialPicking::getOrderId, factoryOrderIds);
         }
@@ -111,6 +141,32 @@ public class MaterialPickingController {
     @PostMapping("/{id}/confirm-outbound")
     public Result<Void> confirmOutbound(@PathVariable String id) {
         materialPurchaseOrchestrator.confirmPickingOutbound(id);
+        return Result.success(null);
+    }
+
+    /**
+     * 取消待出库领料单（仅 pending 状态可操作，不涉及库存回退）
+     */
+    @PostMapping("/{id}/cancel-pending")
+    public Result<Void> cancelPending(@PathVariable String id) {
+        MaterialPicking picking = materialPickingService.getById(id);
+        if (picking == null) {
+            throw new java.util.NoSuchElementException("领料单不存在");
+        }
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId != null && !tenantId.equals(picking.getTenantId())) {
+            throw new IllegalStateException("无权操作此领料单");
+        }
+        if (!"pending".equals(picking.getStatus())) {
+            throw new IllegalStateException("仅待出库状态的领料单可取消");
+        }
+        // 删除领料明细
+        materialPickingItemMapper.delete(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialPickingItem>()
+                        .eq(MaterialPickingItem::getPickingId, id));
+        // 删除领料单
+        materialPickingService.removeById(id);
+        log.info("[Picking] 取消待出库领料单: pickingNo={}", picking.getPickingNo());
         return Result.success(null);
     }
 

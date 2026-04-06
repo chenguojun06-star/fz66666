@@ -13,6 +13,7 @@ import type { MaterialStockAlertItem } from '../components/MaterialAlertRanking'
 import type { MaterialOutboundPrintPayload } from '../components/MaterialOutboundPrintModal';
 import QRCode from 'qrcode';
 import { message } from '@/utils/antdStatic';
+import { useInstructionManager } from './useInstructionManager';
 
 // 物料批次明细接口
 export interface MaterialBatchDetail {
@@ -49,6 +50,14 @@ export interface PendingPicking {
     size?: string;
     quantity: number;
     unit?: string;
+    specification?: string;
+    unitPrice?: number;
+    supplierName?: string;
+    warehouseLocation?: string;
+    materialType?: string;
+    fabricWidth?: string;
+    fabricWeight?: string;
+    fabricComposition?: string;
   }>;
 }
 
@@ -108,15 +117,9 @@ export function useMaterialInventoryData() {
 
   const [alertLoading, setAlertLoading] = useState(false);
   const [alertList, setAlertList] = useState<MaterialStockAlertItem[]>([]);
-  const [dbMaterialOptions, setDbMaterialOptions] = useState<Array<{ label: string; value: string; dbRecord?: any }>>([]);
-  const [dbSearchLoading, setDbSearchLoading] = useState(false);
-  const [instructionVisible, setInstructionVisible] = useState(false);
-  const [instructionSubmitting, setInstructionSubmitting] = useState(false);
-  const [instructionTarget, setInstructionTarget] = useState<MaterialStockAlertItem | null>(null);
-  const [receiverOptions, setReceiverOptions] = useState<Array<{ label: string; value: string; name: string; roleName?: string }>>([]);
+  const instruction = useInstructionManager({ alertList, user });
   const [factoryOptions, setFactoryOptions] = useState<OutboundFactoryOption[]>([]);
   const [outboundOrderOptions, setOutboundOrderOptions] = useState<OutboundOrderOption[]>([]);
-  const [instructionForm] = Form.useForm();
 
   const [safetyStockVisible, setSafetyStockVisible] = useState(false);
   const [safetyStockTarget, setSafetyStockTarget] = useState<MaterialInventory | null>(null);
@@ -251,6 +254,9 @@ export function useMaterialInventoryData() {
       color: record.color,
       unit: record.unit,
       supplierName: record.supplierName,
+      fabricWidth: record.fabricWidth,
+      fabricWeight: record.fabricWeight,
+      fabricComposition: record.fabricComposition,
       orderNo: values.orderNo,
       styleNo: values.styleNo,
       factoryName: values.factoryName,
@@ -268,6 +274,8 @@ export function useMaterialInventoryData() {
         unit: record.unit,
         materialName: record.materialName,
         specification: record.specification,
+        color: record.color,
+        unitPrice: record.unitPrice,
       })),
     };
   };
@@ -277,7 +285,7 @@ export function useMaterialInventoryData() {
     outboundTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
     materialCode: record.items?.[0]?.materialCode || '-',
     materialName: record.items?.[0]?.materialName || '面辅料',
-    specification: record.items?.[0]?.size,
+    specification: record.items?.[0]?.specification || record.items?.[0]?.size,
     color: record.items?.[0]?.color,
     orderNo: record.orderNo,
     styleNo: record.styleNo,
@@ -288,13 +296,19 @@ export function useMaterialInventoryData() {
     receiverName: record.pickerName,
     issuerName: user?.name || user?.username || '系统',
     remark: record.remark,
+    supplierName: record.items?.[0]?.supplierName,
+    fabricWidth: record.items?.[0]?.fabricWidth,
+    fabricWeight: record.items?.[0]?.fabricWeight,
+    fabricComposition: record.items?.[0]?.fabricComposition,
     items: (record.items || []).map((item) => ({
       batchNo: '',
-      warehouseLocation: '',
+      warehouseLocation: item.warehouseLocation || '',
       quantity: item.quantity,
       unit: item.unit,
       materialName: item.materialName,
-      specification: item.size,
+      specification: item.specification || item.size,
+      color: item.color,
+      unitPrice: item.unitPrice,
     })),
   });
 
@@ -328,17 +342,41 @@ export function useMaterialInventoryData() {
   }, [fetchPendingPickings]);
 
   const handleConfirmOutbound = async (record: PendingPicking) => {
+    if (confirmingPickingId) return;
     setConfirmingPickingId(record.id);
     try {
       await api.post(`/production/picking/${record.id}/confirm-outbound`);
       message.success('出库确认成功！库存已扣减。');
+      setPendingPickings(prev => prev.filter(p => p.id !== record.id));
       openPrintModal(buildPickingPrintPayload(record));
       void fetchPendingPickings();
       void fetchData();
     } catch (e: any) {
-      message.error(e?.response?.data?.message || e?.message || '确认出库失败');
+      const msg = e?.response?.data?.message || e?.message || '确认出库失败';
+      if (msg.includes('不是待出库')) {
+        message.warning('该出库单已确认过，正在刷新列表…');
+        void fetchPendingPickings();
+      } else {
+        message.error(msg);
+      }
     } finally {
       setConfirmingPickingId(null);
+    }
+  };
+
+  const [cancellingPickingId, setCancellingPickingId] = useState<string | null>(null);
+  const handleCancelPending = async (record: PendingPicking) => {
+    if (cancellingPickingId) return;
+    setCancellingPickingId(record.id);
+    try {
+      await api.post(`/production/picking/${record.id}/cancel-pending`);
+      message.success('已取消该出库单');
+      setPendingPickings(prev => prev.filter(p => p.id !== record.id));
+      void fetchPendingPickings();
+    } catch (e: any) {
+      message.error(e?.response?.data?.message || '取消失败');
+    } finally {
+      setCancellingPickingId(null);
     }
   };
 
@@ -349,68 +387,6 @@ export function useMaterialInventoryData() {
       return { label, value: key };
     });
   }, [alertList]);
-
-  // 搜索面辅料数据库（全量，不限于预警列表）
-  const searchMaterialFromDatabase = async (keyword: string) => {
-    if (!keyword?.trim()) {
-      setDbMaterialOptions([]);
-      return;
-    }
-    setDbSearchLoading(true);
-    try {
-      const res = await api.get('/material/database/list', {
-        params: { keyword: keyword.trim(), pageSize: 30 },
-      });
-      const records: any[] = res?.data?.records || [];
-      const opts = records.map((m: any) => {
-        const isAlert = alertList.some((a) => a.materialCode === m.materialCode);
-        const labelBase = `${m.materialName || ''}（${m.materialCode || ''}）`;
-        return {
-          label: isAlert ? `${labelBase} 库存不足` : labelBase,
-          value: m.materialCode,
-          dbRecord: m,
-        };
-      });
-      setDbMaterialOptions(opts);
-    } catch {
-      setDbMaterialOptions([]);
-    } finally {
-      setDbSearchLoading(false);
-    }
-  };
-
-  const loadReceivers = async () => {
-    try {
-      const res = await api.get('/system/user/list', { params: { page: 1, pageSize: 200 } });
-      if (res?.code === 200 && res.data?.records) {
-        const items = res.data.records.map((item: any) => {
-          const name = String(item.name || item.username || item.id || '').trim();
-          return { label: name, value: String(item.id || ''), name, roleName: String(item.roleName || '') };
-        }).filter((item: any) => item.value);
-        setReceiverOptions(items);
-      }
-    } catch (e) {
-      message.error('加载接收人失败');
-    }
-  };
-
-  const loadFactoryWorkers = async (factoryId: string) => {
-    try {
-      const res = await api.get('/factory-worker/list', { params: { factoryId, status: 'active' } });
-      const records = res?.data || [];
-      if (Array.isArray(records) && records.length > 0) {
-        const items = records.map((item: any) => {
-          const name = String(item.workerName || '').trim();
-          return { label: name, value: String(item.id || ''), name, roleName: '工厂人员' };
-        }).filter((item: any) => item.value && item.name);
-        setReceiverOptions(items);
-      } else {
-        setReceiverOptions([]);
-      }
-    } catch {
-      message.error('加载工厂人员失败');
-    }
-  };
 
   const loadFactories = useCallback(async () => {
     try {
@@ -572,243 +548,6 @@ export function useMaterialInventoryData() {
     }
   }, [factoryOptions, outboundForm, searchOutboundOrders]);
 
-  const openInstruction = (alert: MaterialStockAlertItem) => {
-    if (!isSupervisorOrAbove(user) && !isAdminUser(user)) {
-      message.error('仅主管可下发采购需求');
-      return;
-    }
-    setInstructionTarget(alert);
-    // 若预警记录缺少颜色，异步从物料资料库补充（进销存与资料库可能未完全同步）
-    if (!alert.color && alert.materialCode) {
-      api.get('/material/database/list', { params: { keyword: alert.materialCode, pageSize: 10 } })
-        .then((res) => {
-          const records: any[] = res?.data?.records || [];
-          const dbMatch = records.find((r: any) => r.materialCode === alert.materialCode);
-          if (dbMatch) {
-            setInstructionTarget((prev) =>
-              prev ? {
-                ...prev,
-                color: prev.color || dbMatch.color || '',
-                supplierName: prev.supplierName || dbMatch.supplierName || '',
-                fabricWidth: prev.fabricWidth || dbMatch.fabricWidth || '',
-                fabricWeight: prev.fabricWeight || dbMatch.fabricWeight || '',
-                fabricComposition: prev.fabricComposition || dbMatch.fabricComposition || '',
-                specification: prev.specification || dbMatch.specification || '',
-                unitPrice: prev.unitPrice ?? dbMatch.unitPrice ?? undefined,
-              } : prev
-            );
-          }
-        })
-        .catch(() => {}); // 静默失败，不影响主流程
-    }
-    const suggested = Number(alert.suggestedSafetyStock ?? alert.safetyStock ?? 0);
-    const current = Number(alert.quantity ?? 0);
-    const shortage = Math.max(0, suggested - current);
-    const receiverId = String(user?.id || '').trim();
-    const receiverName = String(user?.name || user?.username || '').trim();
-    const materialKey = `${alert.materialCode || ''}|${alert.color || ''}|${alert.size || ''}`;
-    instructionForm.setFieldsValue({
-      materialSelect: materialKey,
-      purchaseQuantity: shortage > 0 ? shortage : 1,
-      receiverId: receiverId || undefined,
-      receiverName: receiverName || undefined,
-      remark: '',
-    });
-    // 立即将当前用户插入 options，确保 Select 能显示名字（不等异步加载）
-    if (receiverId) {
-      const selfOption = { label: receiverName || receiverId, value: receiverId, name: receiverName || receiverId, roleName: String((user as any)?.roleName || '') };
-      setReceiverOptions(prev => prev.some(o => o.value === receiverId) ? prev : [selfOption, ...prev]);
-    }
-    setInstructionVisible(true);
-    loadReceivers();
-  };
-
-  const openInstructionEmpty = () => {
-    if (!isSupervisorOrAbove(user) && !isAdminUser(user)) {
-      message.error('仅主管可下发采购需求');
-      return;
-    }
-    setInstructionTarget(null);
-    // 自动回填当前登录用户为采购人
-    const receiverId = String(user?.id || '').trim();
-    const receiverName = String(user?.name || user?.username || '').trim();
-    instructionForm.setFieldsValue({
-      purchaseQuantity: 1,
-      receiverId: receiverId || undefined,
-      receiverName: receiverName || undefined,
-      remark: '',
-    });
-    // 立即将当前用户插入 options，确保 Select 能显示名字（不等异步加载）
-    if (receiverId) {
-      const selfOption = { label: receiverName || receiverId, value: receiverId, name: receiverName || receiverId, roleName: String((user as any)?.roleName || '') };
-      setReceiverOptions(prev => prev.some(o => o.value === receiverId) ? prev : [selfOption, ...prev]);
-    }
-    setInstructionVisible(true);
-    loadReceivers();
-  };
-
-  const handleMaterialSelect = async (value: string) => {
-    // value 为 materialCode（来自 DB 搜索结果）
-    // 优先检查该物料是否有预警记录（有则自动填充缺口数量）
-    const alertMatch = alertList.find((item) => item.materialCode === value) || null;
-    if (alertMatch) {
-      // 用 DB 搜索结果补全预警记录中可能为空的颜色/规格等字段
-      const dbOpt0 = dbMaterialOptions.find((opt) => opt.value === value);
-      const dbRec0 = dbOpt0?.dbRecord;
-      setInstructionTarget({
-        ...alertMatch,
-        color: alertMatch.color || dbRec0?.color || '',
-        size: alertMatch.size || dbRec0?.size || '',
-        supplierName: alertMatch.supplierName || dbRec0?.supplierName || '',
-        fabricWidth: alertMatch.fabricWidth || dbRec0?.fabricWidth || '',
-        fabricWeight: alertMatch.fabricWeight || dbRec0?.fabricWeight || '',
-        fabricComposition: alertMatch.fabricComposition || dbRec0?.fabricComposition || '',
-        conversionRate: alertMatch.conversionRate || dbRec0?.conversionRate || undefined,
-        specification: alertMatch.specification || dbRec0?.specification || '',
-        unitPrice: alertMatch.unitPrice ?? dbRec0?.unitPrice ?? undefined,
-      });
-      const suggested = Number(alertMatch.suggestedSafetyStock ?? alertMatch.safetyStock ?? 0);
-      const current = Number(alertMatch.quantity ?? 0);
-      const shortage = Math.max(0, suggested - current);
-      instructionForm.setFieldsValue({ purchaseQuantity: shortage > 0 ? shortage : 1 });
-    } else {
-      // 无预警记录，从 DB 搜索结果中构建 instructionTarget，并实时查询进销存库存
-      const dbOpt = dbMaterialOptions.find((opt) => opt.value === value);
-      const m = dbOpt?.dbRecord;
-      if (m) {
-        // 先设置基本信息（含颜色、尺码）
-        setInstructionTarget({
-          materialId: String(m.id || ''),
-          materialCode: m.materialCode || '',
-          materialName: m.materialName || '',
-          materialType: m.materialType || '',
-          unit: m.unit || '',
-          color: m.color || '',
-          size: m.size || '',
-          supplierName: m.supplierName || '',
-          fabricWidth: m.fabricWidth || '',
-          fabricWeight: m.fabricWeight || '',
-          fabricComposition: m.fabricComposition || '',
-          conversionRate: m.conversionRate != null ? Number(m.conversionRate) : undefined,
-          specification: m.specification || '',
-          unitPrice: m.unitPrice != null ? Number(m.unitPrice) : undefined,
-        });
-        // 查询进销存获取真实库存，计算采购缺口
-        try {
-          const stockRes = await api.get('/production/material/stock/list', {
-            params: { materialCode: value, page: 1, pageSize: 1 },
-          });
-          const stockRecord = stockRes?.data?.records?.[0];
-          if (stockRecord) {
-            const availableQty =
-              Number(stockRecord.quantity || 0) - Number(stockRecord.lockedQuantity || 0);
-            const safetyStock = Number(stockRecord.safetyStock || 0);
-            const shortage = Math.max(0, safetyStock - availableQty);
-            instructionForm.setFieldsValue({ purchaseQuantity: shortage > 0 ? shortage : 1 });
-            // 同时更新 instructionTarget 中的库存字段，供提交时参考
-            setInstructionTarget((prev) =>
-              prev
-                ? {
-                    ...prev,
-                    quantity: availableQty,
-                    safetyStock,
-                    lockedQuantity: Number(stockRecord.lockedQuantity || 0),
-                    conversionRate: stockRecord.conversionRate != null ? Number(stockRecord.conversionRate) : prev.conversionRate,
-                  }
-                : prev,
-            );
-          } else {
-            // 进销存中暂无记录（物料刚建档未入库），采购量默认 1
-            instructionForm.setFieldsValue({ purchaseQuantity: 1 });
-          }
-        } catch {
-          // 查询失败不影响选料，采购量默认 1
-          instructionForm.setFieldsValue({ purchaseQuantity: 1 });
-        }
-      }
-    }
-  };
-
-  const closeInstruction = () => {
-    setInstructionVisible(false);
-    setInstructionTarget(null);
-    instructionForm.resetFields();
-  };
-
-  const handleSendInstruction = async () => {
-    if (!instructionTarget) {
-      message.error('请选择物料');
-      return;
-    }
-    try {
-      const values = await instructionForm.validateFields();
-      const receiverId = String(values.receiverId || '').trim();
-      const receiverName = String(values.receiverName || '').trim();
-      if (!receiverId || !receiverName) {
-        message.error('请选择采购人');
-        return;
-      }
-      setInstructionSubmitting(true);
-      const payload = {
-        materialId: instructionTarget.materialId,
-        materialCode: instructionTarget.materialCode,
-        materialName: instructionTarget.materialName,
-        materialType: instructionTarget.materialType,
-        unit: instructionTarget.unit,
-        conversionRate: instructionTarget.conversionRate,
-        color: instructionTarget.color,
-        size: instructionTarget.size,
-        purchaseQuantity: values.purchaseQuantity,
-        receiverId, receiverName,
-        remark: values.remark || '',
-      };
-      const res = await api.post('/production/purchase/instruction', payload);
-      if (res?.code === 200) {
-        message.success('指令已下发');
-        closeInstruction();
-      } else {
-        message.error(res?.message || '指令下发失败');
-      }
-    } catch (e: any) {
-      if (e?.errorFields) return;
-      message.error(e?.message || '指令下发失败');
-    } finally {
-      setInstructionSubmitting(false);
-    }
-  };
-
-  const buildAlertFromRecord = (record: MaterialInventory): MaterialStockAlertItem => {
-    const key = `${record.materialCode || ''}|${record.color || ''}|${record.size || ''}`;
-    const matched = alertList.find((item) => {
-      const itemKey = `${item.materialCode || ''}|${item.color || ''}|${item.size || ''}`;
-      return itemKey === key;
-    });
-    if (matched) return matched;
-    return {
-      materialId: record.id,
-      materialCode: record.materialCode,
-      materialName: record.materialName,
-      materialType: record.materialType,
-      unit: record.unit,
-      color: record.color,
-      size: record.size,
-      quantity: record.quantity,
-      safetyStock: record.safetyStock,
-      suggestedSafetyStock: record.safetyStock,
-      supplierName: record.supplierName,
-      fabricWidth: record.fabricWidth,
-      fabricWeight: record.fabricWeight,
-      fabricComposition: record.fabricComposition,
-      specification: record.specification,
-      unitPrice: record.unitPrice,
-    };
-  };
-
-  const openInstructionFromRecord = (record: MaterialInventory) => {
-    const alert = buildAlertFromRecord(record);
-    openInstruction(alert);
-  };
-
   const handleEditSafetyStock = (record: MaterialInventory) => {
     setSafetyStockTarget(record);
     setSafetyStockValue(record.safetyStock ?? 100);
@@ -968,8 +707,8 @@ export function useMaterialInventoryData() {
       receiverName: '',
     });
     outboundModal.open(record);
-    if (receiverOptions.length === 0) {
-      void loadReceivers();
+    if (instruction.receiverOptions.length === 0) {
+      void instruction.loadReceivers();
     }
     if (factoryOptions.length === 0) {
       void loadFactories();
@@ -1074,6 +813,9 @@ export function useMaterialInventoryData() {
       color: record.color,
       unit: record.unit,
       supplierName: record.supplierName,
+      fabricWidth: record.fabricWidth,
+      fabricWeight: record.fabricWeight,
+      fabricComposition: record.fabricComposition,
       receiverName: '',
       issuerName: user?.name || user?.username || '系统',
       warehouseLocation: record.warehouseLocation,
@@ -1085,6 +827,8 @@ export function useMaterialInventoryData() {
           materialName: record.materialName,
           specification: record.specification,
           warehouseLocation: record.warehouseLocation,
+          color: record.color,
+          unitPrice: record.unitPrice,
         },
       ],
     });
@@ -1103,26 +847,22 @@ export function useMaterialInventoryData() {
     // modals
     detailModal, inboundModal, outboundModal, rollModal, printModal,
     // forms
-    inboundForm, outboundForm, rollForm, instructionForm,
+    inboundForm, outboundForm, rollForm,
     // tx
     txLoading, txList,
     // batch
     batchDetails, setBatchDetails, generatingRolls,
     // alerts
     alertLoading, alertList, alertOptions,
-    dbMaterialOptions, dbSearchLoading, searchMaterialFromDatabase,
-    // instruction
-    instructionVisible, instructionSubmitting, instructionTarget, receiverOptions,
+    // instruction (from useInstructionManager)
+    ...instruction,
     // safety stock
     safetyStockVisible, setSafetyStockVisible, safetyStockTarget, safetyStockValue, setSafetyStockValue, safetyStockSubmitting,
     // pending pickings
-    pendingPickings, pendingPickingsLoading, confirmingPickingId,
+    pendingPickings, pendingPickingsLoading, confirmingPickingId, cancellingPickingId,
     // actions
     fetchData, fetchPendingPickings,
-    handleConfirmOutbound, handleMaterialSelect,
-    openInstruction, openInstructionEmpty, closeInstruction, handleSendInstruction,
-    openInstructionFromRecord,
-    loadReceivers, loadFactoryWorkers,
+    handleConfirmOutbound, handleCancelPending,
     handleEditSafetyStock, handleSafetyStockSave,
     handleViewDetail, handleInbound, handleInboundConfirm,
     handleGenerateRollLabels,

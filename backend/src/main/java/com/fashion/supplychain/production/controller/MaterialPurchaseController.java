@@ -220,6 +220,16 @@ public class MaterialPurchaseController {
     }
 
     /**
+     * 确认采购完成
+     * 将待确认完成的采购任务标记为已完成
+     * 参数：{ purchaseId }
+     */
+    @PostMapping("/confirm-complete")
+    public Result<?> confirmComplete(@RequestBody Map<String, Object> body) {
+        return Result.success(materialPurchaseOrchestrator.confirmComplete(body));
+    }
+
+    /**
      * 撤销出库单（主管以上权限）
      * 回退库存，恢复采购任务状态
      * 参数：{ pickingId, reason }

@@ -14,6 +14,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
+import PageLayout from '@/components/common/PageLayout';
 import api from '@/utils/api';
 import TopStats from '../../components/TopStats';
 import StandardToolbar from '@/components/common/StandardToolbar';
@@ -255,10 +256,7 @@ const Dashboard: React.FC = () => {
   return (
     <Layout>
       <div className="dashboard-container">
-        <Card className="page-card">
-          <div className="page-header">
-            <h2 className="page-title">仪表盘</h2>
-          </div>
+        <PageLayout title="仪表盘">
 
         {/* 错误提示 */}
         {hasError && (
@@ -416,7 +414,7 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
         </div>
-      </Card>
+      </PageLayout>
 
       {/* 快捷入口设置弹窗 */}
       <ResizableModal

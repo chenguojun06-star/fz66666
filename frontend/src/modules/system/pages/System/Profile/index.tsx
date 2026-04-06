@@ -4,9 +4,10 @@
  * Tab 2: 我的账单（MyBillingTab）— 仅租户主账号/管理员显示，工厂账号与普通员工不显示
  */
 import React from 'react';
-import { Card, Tabs, Typography } from 'antd';
+import { Tabs, Typography } from 'antd';
 import { UserOutlined, AccountBookOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
+import PageLayout from '@/components/common/PageLayout';
 import { useAuth } from '@/utils/AuthContext';
 import ProfileInfoTab from './components/ProfileInfoTab';
 import MyBillingTab from './components/MyBillingTab';
@@ -38,20 +39,19 @@ const Profile: React.FC = () => {
 
     return (
         <Layout>
-            <Card className="page-card">
-                <div className="page-header">
-                    <div>
-                        <h2 className="page-title" style={{ marginBottom: 4 }}>个人中心</h2>
-                        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                            {canViewBilling ? '个人信息、账单与发票管理' : '个人信息管理'}
-                        </Typography.Text>
-                    </div>
-                </div>
+            <PageLayout
+                title="个人中心"
+                headerContent={
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                        {canViewBilling ? '个人信息、账单与发票管理' : '个人信息管理'}
+                    </Typography.Text>
+                }
+            >
                 <Tabs
                     defaultActiveKey="profile"
                     items={tabItems}
                 />
-            </Card>
+            </PageLayout>
         </Layout>
     );
 };

@@ -2,11 +2,14 @@ package com.fashion.supplychain.warehouse.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.production.entity.ProductOutstock;
 import com.fashion.supplychain.warehouse.dto.FinishedInventoryDTO;
 import com.fashion.supplychain.warehouse.orchestration.FinishedInventoryOrchestrator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
 
 import java.util.List;
 import java.util.Map;
@@ -65,6 +68,29 @@ public class FinishedInventoryController {
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> items = (List<Map<String, Object>>) body.get("items");
         finishedInventoryOrchestrator.qrcodeOutbound(items);
+        return Result.success(null);
+    }
+
+    /**
+     * 分页查询出库记录
+     */
+    @PostMapping("/outstock-records")
+    public Result<IPage<ProductOutstock>> outstockRecords(@RequestBody Map<String, Object> params) {
+        IPage<ProductOutstock> page = finishedInventoryOrchestrator.listOutstockRecords(params);
+        return Result.success(page);
+    }
+
+    /**
+     * 确认收款
+     */
+    @PostMapping("/confirm-payment")
+    public Result<Void> confirmPayment(@RequestBody Map<String, Object> params) {
+        String id = (String) params.get("id");
+        Object amountObj = params.get("paidAmount");
+        BigDecimal paidAmount = amountObj instanceof Number
+                ? BigDecimal.valueOf(((Number) amountObj).doubleValue())
+                : new BigDecimal(String.valueOf(amountObj));
+        finishedInventoryOrchestrator.confirmPayment(id, paidAmount);
         return Result.success(null);
     }
 }

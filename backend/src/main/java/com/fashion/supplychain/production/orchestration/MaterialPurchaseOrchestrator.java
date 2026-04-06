@@ -191,8 +191,6 @@ public class MaterialPurchaseOrchestrator {
                 conversionRate = null;
             }
         }
-        String receiverId = ParamUtils.toTrimmedString(safeParams.get("receiverId"));
-        String receiverName = ParamUtils.toTrimmedString(safeParams.get("receiverName"));
         String remark = ParamUtils.toTrimmedString(safeParams.get("remark"));
         Integer qty = helper.coerceInt(safeParams.get("purchaseQuantity"));
         String supplierId = ParamUtils.toTrimmedString(safeParams.get("supplierId"));
@@ -237,10 +235,6 @@ public class MaterialPurchaseOrchestrator {
         if (qty == null || qty <= 0) {
             throw new IllegalArgumentException("采购数量必须大于0");
         }
-        if (!StringUtils.hasText(receiverId) || !StringUtils.hasText(receiverName)) {
-            throw new IllegalArgumentException("请指定采购人");
-        }
-
         MaterialPurchase purchase = new MaterialPurchase();
         purchase.setMaterialId(materialId);
         purchase.setMaterialCode(materialCode);
@@ -253,10 +247,7 @@ public class MaterialPurchaseOrchestrator {
         purchase.setSize(size);
         purchase.setPurchaseQuantity(BigDecimal.valueOf(qty));
         purchase.setArrivedQuantity(0);
-        purchase.setStatus(MaterialConstants.STATUS_RECEIVED);
-        purchase.setReceiverId(receiverId);
-        purchase.setReceiverName(receiverName);
-        purchase.setReceivedTime(LocalDateTime.now());
+        purchase.setStatus(MaterialConstants.STATUS_PENDING);
         purchase.setRemark(remark);
         purchase.setSourceType("stock");
         // 同步供应商与面料属性（前端从物料资料库选料时携带）
@@ -399,6 +390,11 @@ public class MaterialPurchaseOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> cancelReceive(Map<String, Object> body) {
         return statusHelper.cancelReceive(body);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> confirmComplete(Map<String, Object> body) {
+        return statusHelper.confirmComplete(body);
     }
 
     // ── Query aggregation (delegated to QueryHelper) ────────

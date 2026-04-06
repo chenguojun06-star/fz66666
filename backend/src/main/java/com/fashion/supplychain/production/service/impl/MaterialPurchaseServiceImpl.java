@@ -357,7 +357,8 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             materialPurchase.setStatus(MaterialPurchaseHelper.resolveStatusByArrived(status, arrived, purchaseQty));
         }
 
-        if (MaterialConstants.STATUS_COMPLETED.equalsIgnoreCase(materialPurchase.getStatus())
+        if ((MaterialConstants.STATUS_COMPLETED.equalsIgnoreCase(materialPurchase.getStatus())
+                || MaterialConstants.STATUS_AWAITING_CONFIRM.equalsIgnoreCase(materialPurchase.getStatus()))
                 && materialPurchase.getActualArrivalDate() == null) {
             materialPurchase.setActualArrivalDate(now);
         }
@@ -418,7 +419,8 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             materialPurchase.setStatus(MaterialPurchaseHelper.resolveStatusByArrived(status, arrived, purchaseQty));
         }
 
-        if (MaterialConstants.STATUS_COMPLETED.equalsIgnoreCase(materialPurchase.getStatus())
+        if ((MaterialConstants.STATUS_COMPLETED.equalsIgnoreCase(materialPurchase.getStatus())
+                || MaterialConstants.STATUS_AWAITING_CONFIRM.equalsIgnoreCase(materialPurchase.getStatus()))
                 && materialPurchase.getActualArrivalDate() == null) {
             materialPurchase.setActualArrivalDate(materialPurchase.getUpdateTime());
         }
@@ -727,7 +729,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
 
         String status = existed.getStatus() == null ? "" : existed.getStatus().trim();
         String normalizedStatus = status.toLowerCase();
-        if (MaterialConstants.STATUS_COMPLETED.equals(normalizedStatus) || MaterialConstants.STATUS_CANCELLED.equals(normalizedStatus)) {
+        if (MaterialConstants.STATUS_COMPLETED.equals(normalizedStatus) || MaterialConstants.STATUS_AWAITING_CONFIRM.equals(normalizedStatus) || MaterialConstants.STATUS_CANCELLED.equals(normalizedStatus)) {
             return false;
         }
 

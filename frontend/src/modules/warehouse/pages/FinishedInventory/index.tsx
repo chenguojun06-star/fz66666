@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Card, Button, Space, Tag, Row, Col, InputNumber, Input, Select, App } from 'antd';
+import { Card, Button, Space, Tag, Row, Col, Input, Select, App, Tabs } from 'antd';
 import { PlusOutlined, DownloadOutlined, ExportOutlined, HistoryOutlined, ScanOutlined } from '@ant-design/icons';
 import QrcodeOutboundModal from './QrcodeOutboundModal';
-import type { ColumnsType } from 'antd/es/table';
+import OutstockRecordTab from './OutstockRecordTab';
+import { getMainColumns, getSkuColumns } from './finishedInventoryColumns';
+import type { SKUDetail, FinishedInventory } from './finishedInventoryColumns';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardModal from '@/components/common/StandardModal';
@@ -10,63 +12,14 @@ import StandardPagination from '@/components/common/StandardPagination';
 import PageStatCards from '@/components/common/PageStatCards';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
-import RowActions from '@/components/common/RowActions';
 import { useModal, useTablePagination } from '@/hooks';
 import api from '@/utils/api';
-import { StyleCoverThumb } from '@/components/StyleAssets';
 import type { Dayjs } from 'dayjs';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { useOrganizationFilterOptions } from '@/hooks/useOrganizationFilterOptions';
 
-
-// SKU明细接口
-interface SKUDetail {
-  color: string;
-  size: string;
-  sku: string;
-  availableQty: number;
-  lockedQty: number;
-  defectQty: number;
-  warehouseLocation: string;
-  outboundQty?: number;  // 出库数量
-  selected?: boolean;     // 是否选中
-}
-
-interface FinishedInventory {
-  id: string;
-  orderId?: string;
-  orderNo: string;
-  factoryName?: string;
-  factoryType?: 'INTERNAL' | 'EXTERNAL';
-  orderBizType?: string;
-  parentOrgUnitId?: string;
-  parentOrgUnitName?: string;
-  orgPath?: string;
-  styleId?: string;
-  styleNo: string;
-  styleName: string;
-  styleImage?: string;
-  color: string;
-  size: string;
-  sku: string;
-  availableQty: number;
-  lockedQty: number;
-  defectQty: number;
-  warehouseLocation: string;
-  lastInboundDate: string;
-  qualityInspectionNo?: string;  // 质检入库号
-  lastInboundBy?: string;         // 最后入库操作人
-  lastOutboundDate?: string;
-  lastOutstockNo?: string;
-  lastOutboundBy?: string;
-  totalInboundQty?: number;        // 累计入库总量
-  costPrice?: number;              // 成本价
-  salesPrice?: number;             // 销售价
-  colors?: string[];               // 多颜色列表
-  sizes?: string[];                // 多尺码列表
-}
 
 const _FinishedInventory: React.FC = () => {
   const { message } = App.useApp();
@@ -91,6 +44,10 @@ const _FinishedInventory: React.FC = () => {
   const [outboundProductionOrderNo, setOutboundProductionOrderNo] = useState('');
   const [outboundTrackingNo, setOutboundTrackingNo] = useState('');
   const [outboundExpressCompany, setOutboundExpressCompany] = useState('');
+  // 客户信息
+  const [outboundCustomerName, setOutboundCustomerName] = useState('');
+  const [outboundCustomerPhone, setOutboundCustomerPhone] = useState('');
+  const [outboundShippingAddress, setOutboundShippingAddress] = useState('');
   const [loading, setLoading] = useState(false);
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
@@ -219,6 +176,8 @@ const _FinishedInventory: React.FC = () => {
             lockedQty: item.lockedQty ?? 0,
             defectQty: item.defectQty ?? 0,
             warehouseLocation: item.warehouseLocation || '-',
+            costPrice: item.costPrice,
+            salesPrice: item.salesPrice,
           }))
         );
       });
@@ -230,10 +189,15 @@ const _FinishedInventory: React.FC = () => {
       lockedQty: record.lockedQty ?? 0,
       defectQty: record.defectQty ?? 0,
       warehouseLocation: record.warehouseLocation || '-',
+      costPrice: record.costPrice,
+      salesPrice: record.salesPrice,
     }]);
     setOutboundProductionOrderNo('');
     setOutboundTrackingNo('');
     setOutboundExpressCompany('');
+    setOutboundCustomerName('');
+    setOutboundCustomerPhone('');
+    setOutboundShippingAddress('');
     outboundModal.open(record);
   };
 
@@ -279,12 +243,18 @@ const _FinishedInventory: React.FC = () => {
         ...(outboundProductionOrderNo ? { productionOrderNo: outboundProductionOrderNo } : {}),
         ...(outboundTrackingNo ? { trackingNo: outboundTrackingNo } : {}),
         ...(outboundExpressCompany ? { expressCompany: outboundExpressCompany } : {}),
+        ...(outboundCustomerName ? { customerName: outboundCustomerName } : {}),
+        ...(outboundCustomerPhone ? { customerPhone: outboundCustomerPhone } : {}),
+        ...(outboundShippingAddress ? { shippingAddress: outboundShippingAddress } : {}),
       });
       message.success(`出库成功，共 ${outboundItems.length} 个SKU已出库`);
       outboundModal.close();
       setOutboundProductionOrderNo('');
       setOutboundTrackingNo('');
       setOutboundExpressCompany('');
+      setOutboundCustomerName('');
+      setOutboundCustomerPhone('');
+      setOutboundShippingAddress('');
       setSkuDetails([]);
       loadData();
     } catch (error: any) {
@@ -323,328 +293,9 @@ const _FinishedInventory: React.FC = () => {
     inboundHistoryModal.open(record);
   };
 
-  const columns: ColumnsType<FinishedInventory> = [
-    {
-      title: '图片',
-      dataIndex: 'styleImage',
-      width: 72,
-      fixed: 'left',
-      align: 'center',
-      render: (_, record) => (
-        <StyleCoverThumb
-          src={record.styleImage || null}
-          styleNo={record.styleNo}
-          size={48}
-          borderRadius={4}
-        />
-      ),
-    },
-    {
-      title: '成品信息',
-      width: 280,
-      fixed: 'left',
-      render: (_, record) => (
-        <Space orientation="vertical" size={8} style={{ width: '100%' }}>
-          <Space size={8} align="center">
-            <strong style={{ fontSize: "var(--font-size-lg)", fontWeight: 700, color: 'var(--neutral-text)' }}>{record.styleNo}</strong>
-            <Tag color="blue" style={{ fontWeight: 600 }}>{record.orderNo}</Tag>
-          </Space>
-          <div style={{ fontSize: "var(--font-size-md)", color: 'var(--neutral-text)', fontWeight: 600, lineHeight: 1.4 }}>
-            {record.styleName}
-          </div>
-          {record.factoryName || record.orgPath || record.parentOrgUnitName || record.factoryType ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <div style={{ fontSize: 12, color: 'var(--neutral-text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                工厂：
-                {record.factoryType === 'INTERNAL' && <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>}
-                {record.factoryType === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>外</Tag>}
-                {record.factoryName || '-'}
-                {record.orderBizType && (() => {
-                  const colorMap: Record<string, string> = { FOB: 'cyan', ODM: 'purple', OEM: 'blue', CMT: 'orange' };
-                  return <Tag color={colorMap[record.orderBizType] ?? 'default'} style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>{record.orderBizType}</Tag>;
-                })()}
-              </div>
-              {record.orgPath || record.parentOrgUnitName ? (
-                <div style={{ fontSize: 12, color: 'var(--neutral-text-secondary)' }}>
-                  组织：{record.orgPath || record.parentOrgUnitName}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-          {record.qualityInspectionNo && (
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '8px',
-              paddingTop: 4,
-              borderTop: '1px solid #f0f0f0'
-            }}>
-              <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
-                <span style={{ color: 'var(--neutral-text-disabled)' }}>质检入库号:</span>{' '}
-                <span style={{ color: 'var(--primary-color)', fontWeight: 600 }}>{record.qualityInspectionNo}</span>
-              </div>
-            </div>
-          )}
-        </Space>
-      ),
-    },
-    {
-      title: '颜色 & 尺码',
-      width: 200,
-      render: (_, record) => (
-        <Space orientation="vertical" size={8} style={{ width: '100%' }}>
-          <div>
-            <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginBottom: 4, fontWeight: 500 }}>颜色</div>
-            <Space size={[4, 4]} wrap>
-              {record.colors && record.colors.length > 0 ? (
-                record.colors.map((color, index) => (
-                  <Tag
-                    key={index}
-                    color={color === record.color ? 'blue' : 'default'}
-                    style={{ fontWeight: color === record.color ? 700 : 500 }}
-                  >
-                    {color}
-                  </Tag>
-                ))
-              ) : (
-                <Tag color="blue" style={{ fontWeight: 700 }}>{record.color}</Tag>
-              )}
-            </Space>
-          </div>
-          <div>
-            <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginBottom: 4, fontWeight: 500 }}>尺码</div>
-            <Space size={[4, 4]} wrap>
-              {record.sizes && record.sizes.length > 0 ? (
-                record.sizes.map((size, index) => (
-                  <Tag
-                    key={index}
-                    color={size === record.size ? 'green' : 'default'}
-                    style={{ fontWeight: size === record.size ? 700 : 500 }}
-                  >
-                    {size}
-                  </Tag>
-                ))
-              ) : (
-                <Tag color="green" style={{ fontWeight: 700 }}>{record.size}</Tag>
-              )}
-            </Space>
-          </div>
-        </Space>
-      ),
-    },
-    {
-      title: '库存状态',
-      width: 260,
-      render: (_, record) => (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: '12px',
-          width: '100%'
-        }}>
-          <div>
-            <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginBottom: 4, fontWeight: 500 }}>可用</div>
-            <div style={{ fontSize: "var(--font-size-lg)", fontWeight: 700, color: 'var(--color-success)' }}>
-              {record.availableQty.toLocaleString()}
-            </div>
-            <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)', marginTop: 2 }}>件</div>
-          </div>
-          <div>
-            <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginBottom: 4, fontWeight: 500 }}>锁定</div>
-            <div style={{ fontSize: "var(--font-size-lg)", fontWeight: 700, color: 'var(--color-warning)' }}>
-              {record.lockedQty.toLocaleString()}
-            </div>
-            <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)', marginTop: 2 }}>件</div>
-          </div>
-          <div>
-            <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginBottom: 4, fontWeight: 500 }}>次品</div>
-            <div style={{ fontSize: "var(--font-size-lg)", fontWeight: 700, color: record.defectQty > 0 ? 'var(--color-danger)' : 'var(--color-success)' }}>
-              {record.defectQty.toLocaleString()}
-            </div>
-            <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)', marginTop: 2 }}>件</div>
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: '单价',
-      width: 130,
-      render: (_, record) => (
-        <div style={{ lineHeight: '22px' }}>
-          {record.salesPrice != null ? (
-            <div>
-              <span style={{ fontSize: 11, color: 'var(--neutral-text-disabled)' }}>售价 </span>
-              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-danger)' }}>¥{Number(record.salesPrice).toFixed(2)}</span>
-            </div>
-          ) : null}
-          {record.costPrice != null ? (
-            <div>
-              <span style={{ fontSize: 11, color: 'var(--neutral-text-disabled)' }}>成本 </span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--neutral-text-secondary)' }}>¥{Number(record.costPrice).toFixed(2)}</span>
-            </div>
-          ) : null}
-          {record.salesPrice != null && record.costPrice != null ? (
-            <div style={{ marginTop: 2 }}>
-              <span style={{ fontSize: 10, color: 'var(--neutral-text-disabled)' }}>毛利 </span>
-              <span style={{ fontSize: 11, color: Number(record.salesPrice) > Number(record.costPrice) ? 'var(--color-success)' : 'var(--color-danger)' }}>
-                ¥{(Number(record.salesPrice) - Number(record.costPrice)).toFixed(2)}
-              </span>
-            </div>
-          ) : null}
-          {record.salesPrice == null && record.costPrice == null ? (
-            <span style={{ fontSize: 12, color: 'var(--neutral-text-disabled)' }}>-</span>
-          ) : null}
-        </div>
-      ),
-    },
-    {
-      title: '出入库记录',
-      width: 260,
-      render: (_, record) => (
-        <Space orientation="vertical" size={4} style={{ width: '100%' }}>
-          <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
-            <span style={{ color: 'var(--neutral-text-disabled)' }}>入库时间:</span>{' '}
-            <span style={{ fontWeight: 600 }}>{record.lastInboundDate ? String(record.lastInboundDate).slice(0, 16).replace('T', ' ') : '-'}</span>
-          </div>
-          <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
-            <span style={{ color: 'var(--neutral-text-disabled)' }}>入库号:</span>{' '}
-            <span style={{ color: 'var(--primary-color)', fontWeight: 600 }}>{record.qualityInspectionNo || '-'}</span>
-          </div>
-          <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
-            <span style={{ color: 'var(--neutral-text-disabled)' }}>操作人:</span>{' '}
-            <span style={{ fontWeight: 600 }}>{record.lastInboundBy || '-'}</span>
-          </div>
-          <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
-            <span style={{ color: 'var(--neutral-text-disabled)' }}>入库数量:</span>{' '}
-            <span style={{ color: 'var(--color-success)', fontWeight: 700 }}>{record.totalInboundQty ?? record.availableQty ?? '-'}</span>
-            {(record.totalInboundQty != null || record.availableQty != null) && <span style={{ color: 'var(--neutral-text-disabled)', marginLeft: 2 }}>件</span>}
-          </div>
-          <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500, paddingTop: 4, borderTop: '1px dashed #f0f0f0' }}>
-            <span style={{ color: 'var(--neutral-text-disabled)' }}>最后出库:</span>{' '}
-            <span style={{ fontWeight: 600 }}>{record.lastOutboundDate ? String(record.lastOutboundDate).slice(0, 16).replace('T', ' ') : '-'}</span>
-          </div>
-          <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
-            <span style={{ color: 'var(--neutral-text-disabled)' }}>出库单号:</span>{' '}
-            <span style={{ color: 'var(--warning-color-dark)', fontWeight: 600 }}>{record.lastOutstockNo || '-'}</span>
-          </div>
-          <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
-            <span style={{ color: 'var(--neutral-text-disabled)' }}>出库人:</span>{' '}
-            <span style={{ fontWeight: 600 }}>{record.lastOutboundBy || '-'}</span>
-          </div>
-          <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
-            <span style={{ color: 'var(--neutral-text-disabled)' }}>库位:</span>{' '}
-            <span style={{ fontWeight: 600 }}>{record.warehouseLocation || '-'}</span>
-          </div>
-        </Space>
-      ),
-    },
-    {
-      title: '操作',
-      width: 150,
-      fixed: 'right',
-      render: (_, record) => (
-        <RowActions
-          actions={[
-            {
-              key: 'outbound',
-              label: '出库',
-              primary: true,
-              onClick: () => handleOutbound(record)
-            },
-            {
-              key: 'history',
-              label: '入库记录',
-              onClick: () => handleViewInboundHistory(record)
-            }
-          ]}
-        />
-      ),
-    },
-  ];
+  const columns = getMainColumns({ handleOutbound, handleViewInboundHistory });
 
-  // SKU明细表格列
-  const skuColumns: ColumnsType<SKUDetail> = [
-    {
-      title: '颜色',
-      dataIndex: 'color',
-      key: 'color',
-      width: 80,
-      align: 'center',
-      render: (color: string) => (
-        <Tag color="blue">{color}</Tag>
-      ),
-    },
-    {
-      title: '尺码',
-      dataIndex: 'size',
-      key: 'size',
-      width: 80,
-      align: 'center',
-      render: (size: string) => (
-        <Tag color="green">{size}</Tag>
-      ),
-    },
-    {
-      title: 'SKU编码',
-      dataIndex: 'sku',
-      key: 'sku',
-      width: 180,
-    },
-    {
-      title: '仓库位置',
-      dataIndex: 'warehouseLocation',
-      key: 'warehouseLocation',
-      width: 100,
-      align: 'center',
-    },
-    {
-      title: '可用库存',
-      dataIndex: 'availableQty',
-      key: 'availableQty',
-      width: 100,
-      align: 'center',
-      render: (qty: number) => (
-        <span style={{ color: 'var(--color-success)', fontWeight: 600 }}>{qty}</span>
-      ),
-    },
-    {
-      title: '锁定库存',
-      dataIndex: 'lockedQty',
-      key: 'lockedQty',
-      width: 100,
-      align: 'center',
-      render: (qty: number) => (
-        <span style={{ color: 'var(--color-warning)', fontWeight: 600 }}>{qty}</span>
-      ),
-    },
-    {
-      title: '次品库存',
-      dataIndex: 'defectQty',
-      key: 'defectQty',
-      width: 100,
-      align: 'center',
-      render: (qty: number) => (
-        <span style={{ color: 'var(--color-danger)', fontWeight: 600 }}>{qty}</span>
-      ),
-    },
-    {
-      title: '出库数量',
-      dataIndex: 'outboundQty',
-      key: 'outboundQty',
-      width: 120,
-      align: 'center',
-      render: (value: number, record: SKUDetail, index: number) => (
-        <InputNumber
-          min={0}
-          max={record.availableQty}
-          value={value}
-          onChange={(val) => handleSKUQtyChange(index, val)}
-          style={{ width: '100%' }}
-          placeholder="0"
-        />
-      ),
-    },
-  ];
+  const skuColumns = getSkuColumns({ handleSKUQtyChange });
 
   return (
     <Layout>
@@ -700,6 +351,16 @@ const _FinishedInventory: React.FC = () => {
           ]}
         />
 
+        <Tabs
+          defaultActiveKey="inventory"
+          size="large"
+          style={{ marginBottom: 0 }}
+          items={[
+            {
+              key: 'inventory',
+              label: '库存管理',
+              children: (
+                <>
         <Card>
           <div style={{ marginBottom: 16 }}>
             <h2 style={{ margin: 0 }}> 成品进销存</h2>
@@ -780,6 +441,9 @@ const _FinishedInventory: React.FC = () => {
             setOutboundProductionOrderNo('');
             setOutboundTrackingNo('');
             setOutboundExpressCompany('');
+            setOutboundCustomerName('');
+            setOutboundCustomerPhone('');
+            setOutboundShippingAddress('');
           }}
           onOk={handleOutboundConfirm}
           size="lg"
@@ -856,10 +520,71 @@ const _FinishedInventory: React.FC = () => {
                 />
               </div>
 
+              {/* 客户信息 */}
+              <Card size="small" style={{ background: '#f0f5ff', border: '1px solid #adc6ff' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, color: '#1d39c4' }}>
+                  👤 客户信息 —— 出库发送给哪个客户
+                </div>
+                <Row gutter={12}>
+                  <Col span={8}>
+                    <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>客户名称</div>
+                    <Input
+                      size="small"
+                      placeholder="输入客户/公司名称"
+                      value={outboundCustomerName}
+                      onChange={(e) => setOutboundCustomerName(e.target.value)}
+                    />
+                  </Col>
+                  <Col span={8}>
+                    <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>联系电话</div>
+                    <Input
+                      size="small"
+                      placeholder="输入联系电话"
+                      value={outboundCustomerPhone}
+                      onChange={(e) => setOutboundCustomerPhone(e.target.value)}
+                    />
+                  </Col>
+                  <Col span={8}>
+                    <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>收货地址</div>
+                    <Input
+                      size="small"
+                      placeholder="输入收货地址"
+                      value={outboundShippingAddress}
+                      onChange={(e) => setOutboundShippingAddress(e.target.value)}
+                    />
+                  </Col>
+                </Row>
+              </Card>
+
+              {/* 出库金额自动汇总 */}
+              {(() => {
+                const totalAmount = skuDetails.reduce((sum, item) => {
+                  const qty = item.outboundQty || 0;
+                  const price = item.salesPrice || 0;
+                  return sum + qty * price;
+                }, 0);
+                return totalAmount > 0 ? (
+                  <div style={{
+                    background: '#fff7e6',
+                    border: '1px solid #ffd591',
+                    padding: '8px 12px',
+                    fontSize: "var(--font-size-sm)",
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}>
+                    <span style={{ color: '#d46b08' }}>💰 出库金额（按单价 × 出库数量自动计算）</span>
+                    <strong style={{ color: '#d46b08', fontSize: "var(--font-size-lg)" }}>
+                      ¥ {totalAmount.toFixed(2)}
+                    </strong>
+                  </div>
+                ) : null;
+              })()}
+
               {/* 发货信息 — 填写后自动回写关联电商订单 */}
               <Card size="small" style={{ background: '#fffbe6', border: '1px solid #ffe58f' }}>
                 <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, color: '#d46b08' }}>
-                   发货信息（选填）—— 填写后将自动回写关联电商订单的发货状态和快递单号
+                  📦 发货信息（选填）—— 填写后将自动回写关联电商订单的发货状态和快递单号
                 </div>
                 <Row gutter={12}>
                   <Col span={8}>
@@ -1034,6 +759,16 @@ const _FinishedInventory: React.FC = () => {
           open={qrcodeOutboundOpen}
           onClose={() => setQrcodeOutboundOpen(false)}
           onSuccess={loadData}
+        />
+                </>
+              ),
+            },
+            {
+              key: 'outstock-records',
+              label: '出库记录',
+              children: <OutstockRecordTab />,
+            },
+          ]}
         />
     </Layout>
   );

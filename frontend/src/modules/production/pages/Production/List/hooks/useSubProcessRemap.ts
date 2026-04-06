@@ -31,7 +31,7 @@ export interface ParentNode {
   /** 阶段 key，如 carSewing / tailProcess */
   stageKey: string;
   name: string;
-  /** 下单单价（只读展示，不可修改） */
+  /** 单价（只读展示，不可修改） */
   unitPrice?: number;
   sortOrder: number;
 }

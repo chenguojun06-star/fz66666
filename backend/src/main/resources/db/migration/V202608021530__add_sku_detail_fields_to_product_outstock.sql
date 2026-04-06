@@ -1,0 +1,43 @@
+-- 出库记录表新增 SKU 明细与物流字段（幂等）
+
+-- sku_code: SKU编码（款号-颜色-尺码）
+SET @s = IF((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_product_outstock' AND COLUMN_NAME='sku_code')=0,
+    'ALTER TABLE `t_product_outstock` ADD COLUMN `sku_code` VARCHAR(100) DEFAULT NULL',
+    'SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- color: 颜色
+SET @s = IF((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_product_outstock' AND COLUMN_NAME='color')=0,
+    'ALTER TABLE `t_product_outstock` ADD COLUMN `color` VARCHAR(50) DEFAULT NULL',
+    'SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- size: 尺码
+SET @s = IF((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_product_outstock' AND COLUMN_NAME='size')=0,
+    'ALTER TABLE `t_product_outstock` ADD COLUMN `size` VARCHAR(50) DEFAULT NULL',
+    'SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- cost_price: 成本价
+SET @s = IF((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_product_outstock' AND COLUMN_NAME='cost_price')=0,
+    'ALTER TABLE `t_product_outstock` ADD COLUMN `cost_price` DOUBLE DEFAULT NULL',
+    'SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- sales_price: 销售价
+SET @s = IF((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_product_outstock' AND COLUMN_NAME='sales_price')=0,
+    'ALTER TABLE `t_product_outstock` ADD COLUMN `sales_price` DOUBLE DEFAULT NULL',
+    'SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- tracking_no: 快递单号
+SET @s = IF((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_product_outstock' AND COLUMN_NAME='tracking_no')=0,
+    'ALTER TABLE `t_product_outstock` ADD COLUMN `tracking_no` VARCHAR(100) DEFAULT NULL',
+    'SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- express_company: 快递公司
+SET @s = IF((SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='t_product_outstock' AND COLUMN_NAME='express_company')=0,
+    'ALTER TABLE `t_product_outstock` ADD COLUMN `express_company` VARCHAR(50) DEFAULT NULL',
+    'SELECT 1');
+PREPARE stmt FROM @s; EXECUTE stmt; DEALLOCATE PREPARE stmt;

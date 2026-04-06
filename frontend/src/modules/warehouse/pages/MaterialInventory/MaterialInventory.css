@@ -50,12 +50,12 @@
   background: #fafafa;
   border-radius: 6px;
   padding: 8px 10px;
-  border-left: 3px solid var(--primary-color);
+  border-left: 3px solid var(--neutral-border);
 }
 
 .material-info-section-title {
   font-size: 12px;
-  color: var(--primary-color);
+  color: var(--neutral-text);
   font-weight: 600;
   margin-bottom: 6px;
   display: flex;
@@ -94,15 +94,15 @@
 
 /* ============ 面料属性卡片 ============ */
 .fabric-properties-card {
-  background: linear-gradient(135deg, #e6f4ff 0%, #f0f9ff 100%);
-  border: 1px solid #91caff;
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
   border-radius: 8px;
   padding: 12px;
 }
 
 .fabric-properties-title {
   font-size: 13px;
-  color: var(--primary-color);
+  color: var(--neutral-text);
   font-weight: 700;
   margin-bottom: 10px;
   display: flex;
@@ -129,13 +129,13 @@
 }
 
 .fabric-property-label {
-  color: var(--primary-color);
+  color: var(--neutral-text-disabled);
   font-size: var(--font-size-sm);
   font-weight: 600;
 }
 
 .fabric-property-value {
-  color: #0958d9;
+  color: var(--neutral-text);
   font-size: var(--font-size-base);
   font-weight: 700;
   max-width: 100px;
@@ -188,19 +188,19 @@
 }
 
 .stock-value--ok {
-  color: var(--color-success);
+  color: var(--neutral-text);
 }
 
 .stock-value--warn {
-  color: var(--color-danger);
+  color: var(--neutral-text);
 }
 
 .stock-value--info {
-  color: var(--primary-color);
+  color: var(--neutral-text);
 }
 
 .stock-value--lock {
-  color: var(--color-warning);
+  color: var(--neutral-text);
 }
 
 .stock-unit {

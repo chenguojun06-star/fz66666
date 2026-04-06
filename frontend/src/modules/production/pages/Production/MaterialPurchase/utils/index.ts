@@ -125,6 +125,7 @@ export const getStatusConfig = (status: MaterialPurchaseType['status']) => {
     [MATERIAL_PURCHASE_STATUS.RECEIVED]: { text: '已领取', color: 'processing' },
     [MATERIAL_PURCHASE_STATUS.PARTIAL]: { text: '部分到货', color: 'warning' },
     [MATERIAL_PURCHASE_STATUS.PARTIAL_ARRIVAL]: { text: '部分到货', color: 'warning' },
+    [MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM]: { text: '待确认完成', color: 'cyan' },
     [MATERIAL_PURCHASE_STATUS.COMPLETED]: { text: '全部到货', color: 'success' },
     [MATERIAL_PURCHASE_STATUS.CANCELLED]: { text: '已取消', color: 'error' },
     [MATERIAL_PURCHASE_STATUS.WAREHOUSE_PENDING]: { text: '待仓库出库', color: 'blue' },

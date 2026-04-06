@@ -1,8 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Card, Col, Form, Input, Row, Select, Space, Tag, Tooltip } from 'antd';
+import React, { useEffect, useMemo, useState } from 'react';
+import { App, Button, Card, Col, Form, Input, Row, Select, Space, Tabs, Tag, Tooltip } from 'antd';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
 import { AppstoreOutlined, UnorderedListOutlined } from '@ant-design/icons';
-import { useSync } from '@/utils/syncManager';
 import { createCardSpecFieldGroups } from '@/components/common/CardSizeQuantityFieldGroups';
 import UniversalCardView from '@/components/common/UniversalCardView';
 import StylePrintModal from '@/components/common/StylePrintModal';
@@ -12,7 +11,8 @@ import { usePersistentState } from '@/hooks/usePersistentState';
 
 import dayjs from 'dayjs';
 import Layout from '@/components/Layout';
-import api, { parseProductionOrderLines } from '@/utils/api';
+import PageLayout from '@/components/common/PageLayout';
+import api from '@/utils/api';
 import { StyleBom, StyleInfo, StyleQueryParams } from '@/types/style';
 import { Factory } from '@/types/system';
 import { ProductionOrder } from '@/types/production';
@@ -20,8 +20,7 @@ import { formatDateTime } from '@/utils/datetime';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import { DEFAULT_PAGE_SIZE_OPTIONS, readPageSize, savePageSize } from '@/utils/pageSizeStore';
-import RowActions from '@/components/common/RowActions';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
 import StyleCoverGallery from '@/components/common/StyleCoverGallery';
 import { getMaterialTypeCategory } from '@/utils/materialType';
@@ -30,9 +29,7 @@ import { useDictOptions } from '@/hooks/useDictOptions';
 import { useViewport } from '@/utils/useViewport';
 import { useCardGridLayout } from '@/hooks/useCardGridLayout';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
-import { productionOrderApi, FactoryCapacityItem, intelligenceApi, DeliveryDateSuggestionResponse } from '@/services/production/productionApi';
-import { SchedulingSuggestionResponse } from '@/services/intelligence/intelligenceApi';
-import { generateUniqueId } from '@/utils/idGenerator';
+
 import { getStyleCardSizeQuantityItems } from '@/utils/cardSizeQuantity';
 import { getStyleSourceMeta, getStyleSourceText } from '@/utils/styleSource';
 import OrderRankingDashboard from './components/OrderRankingDashboard';
@@ -48,7 +45,8 @@ import { computeReferenceKilograms } from '@/modules/production/pages/Production
 import StandardToolbar from '@/components/common/StandardToolbar';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
-import { organizationApi } from '@/services/system/organizationApi';
+import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
+import OrderAnalysisTab from './components/OrderAnalysisTab';
 import StyleQuotePopover from './StyleQuotePopover';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
@@ -56,27 +54,16 @@ import { OrderLine, PricingProcess, ProgressNode, defaultProgressNodes } from '.
 import { buildOrderQtyStats, calcBomRequirementQty, getMatchedOrderQty, normalizeMatchKey } from './utils/orderBomMetrics';
 import { buildOrderSubmitPayload } from './utils/buildOrderSubmitPayload';
 import { analyzeOrderOrchestration, computeProcessBasedUnitPrice, SizePriceRecord } from './utils/orderIntelligence';
-import { orderLearningApi } from '@/services/intelligence/orderLearningApi';
-import type { OrderLearningRecommendationResponse } from '@/services/intelligence/orderLearningApi';
+import { useOrderColumns } from './hooks/useOrderColumns';
+import { useOrderDataFetch } from './hooks/useOrderDataFetch';
+import { useOrderIntelligence } from './hooks/useOrderIntelligence';
+
 
 const OrderManagement: React.FC = () => {
   const { modal, message } = App.useApp();
   const { options: categoryOptions } = useDictOptions('category', CATEGORY_CODE_OPTIONS);
 
-  const navigate = useNavigate();
   const location = useLocation();
-  const params = useParams();
-  const routeStyleNo = useMemo(() => {
-    const raw = String((params as Record<string, unknown>)?.styleNo || '').trim();
-    if (!raw) return '';
-    try {
-      return decodeURIComponent(raw).trim();
-    } catch {
-      // Intentionally empty
-      // 忽略错误
-      return raw;
-    }
-  }, [params]);
   const { isMobile, isTablet: _isTablet, modalWidth } = useViewport();
   const { columns: cardColumns, pageSize: _cardPageSize } = useCardGridLayout(10);
   const tooltipTheme = useMemo(() => {
@@ -96,16 +83,7 @@ const OrderManagement: React.FC = () => {
     pushedToOrderOnly: true,
     keyword: ''
   });
-  const [styles, setStyles] = useState<StyleInfo[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
-
-  const [factories, setFactories] = useState<Factory[]>([]);
-  const [factoryCapacities, setFactoryCapacities] = useState<FactoryCapacityItem[]>([]);
-
   const [factoryMode, setFactoryMode] = useState<'INTERNAL' | 'EXTERNAL'>('INTERNAL');
-  const [departments, setDepartments] = useState<Array<{ id: string; nodeName: string; nodeType: string; pathNames: string }>>([]);
-  const [users, setUsers] = useState<Array<{ id: number; name: string; username: string }>>([]);
 
   // ===== 弹窗状态（保留原状，未迁移到 useModal）=====
   const [visible, setVisible] = useState(false);
@@ -120,11 +98,9 @@ const OrderManagement: React.FC = () => {
   const [printModalVisible, setPrintModalVisible] = useState(false);
   const [printingRecord, setPrintingRecord] = useState<StyleInfo | null>(null);
 
-  // ===== 详情页分页状态 =====
-  const [detailQuery, setDetailQuery] = useState({ page: 1, pageSize: readPageSize(20) });
-  const [detailTotal, setDetailTotal] = useState(0);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [detailRows, setDetailRows] = useState<any[]>([]);
+  // ===== 备注弹窗状态 =====
+  const [remarkModalOpen, setRemarkModalOpen] = useState(false);
+  const [remarkStyleNo, setRemarkStyleNo] = useState('');
 
   const [, setActiveTabKey] = usePersistentState<string>('order-management-active-tab', 'base');
   const [_bomLoading, setBomLoading] = useState(false);
@@ -137,13 +113,9 @@ const OrderManagement: React.FC = () => {
   const [orderLines, setOrderLines] = useState<OrderLine[]>([]);
 
   const [progressNodes, setProgressNodes] = useState<ProgressNode[]>(defaultProgressNodes);
-  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
 
-  const reportSmartError = (title: string, reason?: string, code?: string) => {
-    if (!showSmartErrorNotice) return;
-    setSmartError({ title, reason, code });
-  };
+  const { styles, total, loading, factories, factoryCapacities, departments, users, smartError, setSmartError, reportSmartError, fetchStyles } = useOrderDataFetch({ queryParams, visible, showSmartErrorNotice, message });
 
   const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
@@ -151,213 +123,6 @@ const OrderManagement: React.FC = () => {
   const displaySizeLabel = (v: unknown) => normalizeSizeKey(v) || '-';
   const orderQtyStats = useMemo(() => buildOrderQtyStats(orderLines), [orderLines]);
 
-
-  const fetchOrderDetailRows = async (styleNo: string) => {
-    setDetailLoading(true);
-    try {
-      const response = await api.get<{ code: number; message: string; data: { records: ProductionOrder[]; total: number } }>('/production/order/list', {
-        params: {
-          page: detailQuery.page,
-          pageSize: detailQuery.pageSize,
-          styleNo,
-        },
-      });
-      if (response.code !== 200) {
-        reportSmartError('下单明细加载失败', response.message || '服务返回异常，请稍后重试', 'ORDER_DETAIL_LIST_FAILED');
-        message.error(response.message || '获取下单明细失败');
-        setDetailRows([]);
-        setDetailTotal(0);
-        return;
-      }
-
-      const orders = response?.data?.records || [];
-
-      // 获取每个订单的裁剪数据
-      const ordersWithCuttingData = await Promise.all(
-        orders.map(async (order) => {
-          try {
-            const flowRes = await api.get<{ code: number; data: { cuttingBundles?: Array<{ size?: string; quantity?: number }> } }>(
-              `/production/order/flow/${order.id}`
-            );
-            if (flowRes.code === 200) {
-              return {
-                ...order,
-                cuttingBundles: flowRes.data?.cuttingBundles || [],
-              };
-            }
-          } catch (e) {
-            // 获取裁剪数据失败
-          }
-          return { ...order, cuttingBundles: [] };
-        })
-      );
-
-      const rows: any[] = [];
-
-      const list = Array.isArray(ordersWithCuttingData) ? [...ordersWithCuttingData] : [];
-      list.sort((a: any, b: any) => {
-        const ta = dayjs(a?.createTime);
-        const tb = dayjs(b?.createTime);
-        const va = ta.isValid() ? ta.valueOf() : 0;
-        const vb = tb.isValid() ? tb.valueOf() : 0;
-        return va - vb;
-      });
-
-      const pickOrdererName = (o: any) => {
-        return (
-          String(o?.orderOperatorName || '').trim() ||
-          String(o?.createUserName || '').trim() ||
-          String(o?.createByName || '').trim() ||
-          String(o?.creatorName || '').trim() ||
-          String(o?.operatorName || '').trim() ||
-          '-'
-        );
-      };
-
-      const joinUniq = (items: any[]) => {
-        const set = new Set<string>();
-        for (const it of items) {
-          const t = String(it || '').trim();
-          if (t) set.add(t);
-        }
-        return Array.from(set).join(',');
-      };
-
-      const detailSizes = ['S', 'M', 'L', 'XL', 'XXL'];
-
-      const buildSizeQty = (lines: any[]) => {
-        const sizeQty: Record<string, number> = {};
-        detailSizes.forEach((s) => {
-          sizeQty[s] = 0;
-        });
-        for (const l of lines) {
-          const sizeRaw = String((l as Record<string, unknown>)?.size || '').trim();
-          if (!sizeRaw) continue;
-          const q = Number((l as Record<string, unknown>)?.quantity || 0) || 0;
-          if (!q) continue;
-          const matched = detailSizes.find((s) => normalizeMatchKey(s) === normalizeMatchKey(sizeRaw));
-          if (!matched) continue;
-          sizeQty[matched] = (sizeQty[matched] || 0) + q;
-        }
-        return sizeQty;
-      };
-
-      const buildCuttingSizeQty = (cuttingBundles: Array<{ size?: string; quantity?: number }>) => {
-        const sizeQty: Record<string, number> = {};
-        detailSizes.forEach((s) => {
-          sizeQty[s] = 0;
-        });
-        for (const bundle of cuttingBundles) {
-          const sizeRaw = String(bundle?.size || '').trim();
-          if (!sizeRaw) continue;
-          const q = Number(bundle?.quantity || 0) || 0;
-          if (!q) continue;
-          const matched = detailSizes.find((s) => normalizeMatchKey(s) === normalizeMatchKey(sizeRaw));
-          if (!matched) continue;
-          sizeQty[matched] = (sizeQty[matched] || 0) + q;
-        }
-        return sizeQty;
-      };
-
-      const pickCompletedQty = (o: any, fallbackOrderQty: number) => {
-        const candidates = [
-          (o as Record<string, unknown>)?.completedQuantity,
-          (o as Record<string, unknown>)?.completedQty,
-          (o as Record<string, unknown>)?.finishedQuantity,
-          (o as Record<string, unknown>)?.finishQuantity,
-          (o as Record<string, unknown>)?.actualQuantity,
-          (o as Record<string, unknown>)?.warehousingQualifiedQuantity,
-          (o as Record<string, unknown>)?.warehousingQuantity,
-          (o as Record<string, unknown>)?.inStockQuantity,
-        ];
-        for (const c of candidates) {
-          const n = Number(c);
-          if (Number.isFinite(n) && n >= 0) return n;
-        }
-        const status = String((o as Record<string, unknown>)?.status || '').trim().toLowerCase();
-        const closed = status === 'completed' || status === 'closed' || status === 'finished' || !!String((o as Record<string, unknown>)?.actualEndDate || '').trim();
-        if (closed) {
-          const orderQty = Number((o as Record<string, unknown>)?.orderQuantity);
-          return Number.isFinite(orderQty) && orderQty >= 0 ? orderQty : fallbackOrderQty;
-        }
-        return 0;
-      };
-
-      const buildRow = (o: any, key: string, lines: any[], baseOverride?: Partial<any>) => {
-        const base: any = {
-          orderId: o?.id,
-          orderNo: o?.orderNo,
-          styleNo,
-          orderOperatorName: pickOrdererName(o),
-          orderTime: o?.createTime,
-          completedTime: o?.actualEndDate,
-          ...baseOverride,
-        };
-
-        const effectiveLines = lines.length ? lines : [{ color: '-', size: '-', quantity: 0 }];
-        const sumQty = effectiveLines.reduce((acc, l) => acc + (Number((l as Record<string, unknown>)?.quantity || 0) || 0), 0);
-        const colors = joinUniq(effectiveLines.map((l) => (l as Record<string, unknown>)?.color)) || '-';
-        const sizeQty = buildSizeQty(effectiveLines);
-        const cuttingSizeQty = buildCuttingSizeQty(o?.cuttingBundles || []);
-        const completedQuantity = base?.completedQuantity != null ? (Number(base?.completedQuantity) || 0) : pickCompletedQty(o, sumQty);
-
-        rows.push({
-          key,
-          ...base,
-          color: base.color ?? colors,
-          sizeQty,
-          cuttingSizeQty,
-          orderQuantity: sumQty,
-          completedQuantity,
-        });
-      };
-
-      for (const o of list) {
-        const key = String(o?.id || o?.orderNo || '') ? `${String(o?.id || o?.orderNo)}-row` : `order-row-${generateUniqueId()}`;
-        buildRow(o, key, parseProductionOrderLines(o));
-      }
-
-      setDetailRows(rows);
-      setDetailTotal(Number(response?.data?.total || 0) || 0);
-      if (showSmartErrorNotice) setSmartError(null);
-    } catch (e: any) {
-      reportSmartError('下单明细加载失败', e?.message || '网络异常或服务不可用，请稍后重试', 'ORDER_DETAIL_LIST_EXCEPTION');
-      message.error(e?.message || '获取下单明细失败');
-      setDetailRows([]);
-      setDetailTotal(0);
-    } finally {
-      setDetailLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!routeStyleNo) return;
-    fetchOrderDetailRows(routeStyleNo);
-  }, [routeStyleNo, detailQuery.page, detailQuery.pageSize]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (!routeStyleNo) return;
-    const sn = String(routeStyleNo || '').trim();
-    if (!sn) return;
-    const id = window.setInterval(() => {
-      fetchOrderDetailRows(sn);
-    }, 10000);
-
-    const onFocus = () => fetchOrderDetailRows(sn);
-    const onVisibility = () => {
-      if (document.visibilityState === 'visible') fetchOrderDetailRows(sn);
-    };
-
-    window.addEventListener('focus', onFocus);
-    document.addEventListener('visibilitychange', onVisibility);
-
-    return () => {
-      window.clearInterval(id);
-      window.removeEventListener('focus', onFocus);
-      document.removeEventListener('visibilitychange', onVisibility);
-    };
-  }, [routeStyleNo, detailQuery.page, detailQuery.pageSize]);
 
   const getMatchedQty = (colorRaw: any, sizeRaw: any) => {
     return getMatchedOrderQty(orderQtyStats, colorRaw, sizeRaw);
@@ -503,37 +268,6 @@ const OrderManagement: React.FC = () => {
     return factoryCapacities.find(c => c.factoryName === factory.factoryName) ?? null;
   }, [watchedFactoryId, factoryCapacities, factories]);
 
-  // 交货期智能建议
-  const [deliverySuggestion, setDeliverySuggestion] = useState<DeliveryDateSuggestionResponse | null>(null);
-  const [suggestionLoading, setSuggestionLoading] = useState(false);
-  const [quoteReference, setQuoteReference] = useState<{ currentQuotation: number; totalCost: number; suggestedPrice: number } | null>(null);
-  const quotationUnitPrice = Number(quoteReference?.currentQuotation || 0);
-  const totalCostUnitPrice = Number(quoteReference?.totalCost || 0);
-  const suggestedQuotationUnitPrice = Number(quoteReference?.suggestedPrice || 0);
-  const [orderLearningLoading, setOrderLearningLoading] = useState(false);
-  const [orderLearningRecommendation, setOrderLearningRecommendation] = useState<OrderLearningRecommendationResponse | null>(null);
-
-  // AI 排产建议状态
-  const [schedulingResult, setSchedulingResult] = useState<SchedulingSuggestionResponse | null>(null);
-  const [schedulingLoading, setSchedulingLoading] = useState(false);
-
-  const fetchDeliverySuggestion = React.useCallback(async (factoryName?: string, qty?: number) => {
-    if (!factoryName && !qty) return;
-    setSuggestionLoading(true);
-    try {
-      const res = await intelligenceApi.getDeliveryDateSuggestion(factoryName, qty);
-      if ((res as any).code === 200 && (res as any).data) {
-        setDeliverySuggestion((res as any).data as DeliveryDateSuggestionResponse);
-      }
-    } catch { /* 静默失败 */ } finally {
-      setSuggestionLoading(false);
-    }
-  }, []);
-
-  // 工厂或数量变化时自动重新计算交货期建议（effect 移至 totalOrderQuantity 声明之后）
-
-  // 工厂或数量变化时自动重新计算建议（effect 移至 totalOrderQuantity 声明之后）
-
   function splitOptions(value?: string) {
     if (!value) return [] as string[];
     return value
@@ -579,203 +313,17 @@ const OrderManagement: React.FC = () => {
     return orderLines.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0);
   }, [orderLines]);
 
-  const fetchSchedulingSuggestion = React.useCallback(async () => {
-    const styleNo = selectedStyle?.styleNo || '';
-    const qty = totalOrderQuantity;
-    const deadline = form.getFieldValue('plannedEndDate');
-    if (!qty || qty <= 0) {
-      return;
-    }
-    const deadlineStr = deadline ? (deadline.format?.('YYYY-MM-DD') ?? String(deadline)) : '';
-    const productCategory = form.getFieldValue('productCategory') || selectedStyle?.category || '';
-    setSchedulingLoading(true);
-    try {
-      const res = await intelligenceApi.suggestScheduling({ styleNo, quantity: qty, deadline: deadlineStr, productCategory });
-      if ((res as any).code === 200 && (res as any).data) {
-        setSchedulingResult((res as any).data as SchedulingSuggestionResponse);
-      }
-    } catch { /* 静默失败 */ } finally {
-      setSchedulingLoading(false);
-    }
-  }, [selectedStyle, totalOrderQuantity, form, message]);
-
-  useEffect(() => {
-    if (!visible || !selectedStyle?.styleNo || totalOrderQuantity <= 0) {
-      return;
-    }
-    void fetchSchedulingSuggestion();
-  }, [visible, selectedStyle?.styleNo, totalOrderQuantity, fetchSchedulingSuggestion]);
-
-  useEffect(() => {
-    if (!visible || !selectedStyle?.styleNo) {
-      setQuoteReference(null);
-      return;
-    }
-    let cancelled = false;
-    Promise.all([
-      intelligenceApi.getStyleQuoteSuggestion(selectedStyle.styleNo).catch(() => null),
-      selectedStyle?.id ? api.get(`/style/quotation?styleId=${selectedStyle.id}`).catch(() => null) : Promise.resolve(null),
-    ]).then(([quoteSuggestionRes, quotationRes]: any[]) => {
-      if (cancelled) return;
-      const suggestion = quoteSuggestionRes?.data || {};
-      const quotation = quotationRes?.data || {};
-      const derivedQuotationTotalCost = Number(quotation?.totalCost)
-        || (Number(quotation?.materialCost || 0) + Number(quotation?.processCost || 0) + Number(quotation?.otherCost || 0))
-        || 0;
-      const fallbackTotalCost = Number(suggestion?.totalCost)
-        || derivedQuotationTotalCost
-        || Number((selectedStyle as any)?.totalCost)
-        || 0;
-      const fallbackQuotationPrice = Number(quotation?.totalPrice)
-        || Number(suggestion?.currentQuotation)
-        || Number((selectedStyle as any)?.totalPrice)
-        || Number(selectedStyle?.price)
-        || 0;
-      setQuoteReference({
-        currentQuotation: fallbackQuotationPrice,
-        totalCost: fallbackTotalCost,
-        suggestedPrice: Number(suggestion?.suggestedPrice) || 0,
-      });
-    }).catch(() => {
-      if (!cancelled) setQuoteReference(null);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [visible, selectedStyle]);
-
-  const processBasedUnitPrice = useMemo(() => {
-    const total = progressNodes.reduce((sum, node) => {
-      const nodeTotal = (Array.isArray(node.processes) ? node.processes : []).reduce((nodeSum, process) => {
-        return nodeSum + (Number(process?.unitPrice) || 0);
-      }, 0);
-      return sum + nodeTotal;
-    }, 0);
-    return Number(total.toFixed(2));
-  }, [progressNodes]);
-
-  const sizePriceBySize = useMemo(() => {
-    const grouped = new Map<string, number>();
-    for (const row of sizePriceRows) {
-      const sizeKey = normalizeSizeKey(row.size);
-      if (!sizeKey) continue;
-      grouped.set(sizeKey, (grouped.get(sizeKey) || 0) + (Number(row.price) || 0));
-    }
-    return grouped;
-  }, [normalizeSizeKey, sizePriceRows]);
-
-  const sizeBasedUnitPrice = useMemo(() => {
-    const effectiveLines = orderLines.filter((line) => (Number(line.quantity) || 0) > 0);
-    const totalQty = effectiveLines.reduce((sum, line) => sum + (Number(line.quantity) || 0), 0);
-    if (!totalQty) return 0;
-    const totalAmount = effectiveLines.reduce((sum, line) => {
-      const lineQty = Number(line.quantity) || 0;
-      const linePrice = sizePriceBySize.get(normalizeSizeKey(line.size)) || 0;
-      return sum + (linePrice * lineQty);
-    }, 0);
-    return Number((totalAmount / totalQty).toFixed(2));
-  }, [normalizeSizeKey, orderLines, sizePriceBySize]);
-
-  const resolvedOrderUnitPrice = useMemo(() => {
-    if (watchedPricingMode === 'MANUAL') {
-      return Number(watchedManualOrderUnitPrice.toFixed(2));
-    }
-    if (watchedPricingMode === 'COST') {
-      return Number(totalCostUnitPrice.toFixed(2));
-    }
-    if (watchedPricingMode === 'QUOTE') {
-      return Number(quotationUnitPrice.toFixed(2));
-    }
-    if (watchedPricingMode === 'SIZE') {
-      return Number(sizeBasedUnitPrice.toFixed(2));
-    }
-    return Number(processBasedUnitPrice.toFixed(2));
-  }, [processBasedUnitPrice, quotationUnitPrice, sizeBasedUnitPrice, totalCostUnitPrice, watchedManualOrderUnitPrice, watchedPricingMode]);
-
-  const lastOrderLearningRequestKeyRef = useRef('');
-
-  useEffect(() => {
-    if (!visible || !selectedStyle?.styleNo) {
-      lastOrderLearningRequestKeyRef.current = '';
-      setOrderLearningRecommendation(null);
-      return;
-    }
-    const requestKey = JSON.stringify({
-      styleNo: selectedStyle.styleNo,
-      orderQuantity: totalOrderQuantity || null,
-      factoryMode: factoryMode || null,
-      pricingMode: watchedPricingMode || null,
-      currentUnitPrice: resolvedOrderUnitPrice || null,
-    });
-    if (lastOrderLearningRequestKeyRef.current === requestKey) {
-      return;
-    }
-    let cancelled = false;
-    const timer = window.setTimeout(() => {
-      lastOrderLearningRequestKeyRef.current = requestKey;
-      setOrderLearningLoading(true);
-      orderLearningApi.getRecommendation({
-        styleNo: selectedStyle.styleNo,
-        orderQuantity: totalOrderQuantity || undefined,
-        factoryMode,
-        pricingMode: watchedPricingMode,
-        currentUnitPrice: resolvedOrderUnitPrice || undefined,
-      }).then((res: any) => {
-        if (!cancelled) {
-          setOrderLearningRecommendation(res?.data || null);
-        }
-      }).catch(() => {
-        if (!cancelled) {
-          setOrderLearningRecommendation(null);
-        }
-      }).finally(() => {
-        if (!cancelled) {
-          setOrderLearningLoading(false);
-        }
-      });
-    }, 250);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(timer);
-    };
-  }, [visible, selectedStyle?.styleNo, totalOrderQuantity, factoryMode, watchedPricingMode, resolvedOrderUnitPrice]);
-
-  const preferredPricingMode = useMemo<'PROCESS' | 'SIZE' | 'COST' | 'QUOTE' | 'MANUAL'>(() => {
-    if (factoryMode === 'EXTERNAL' && totalCostUnitPrice > 0) {
-      return 'COST';
-    }
-    if (processBasedUnitPrice > 0) {
-      return 'PROCESS';
-    }
-    if (quotationUnitPrice > 0) {
-      return 'QUOTE';
-    }
-    if (totalCostUnitPrice > 0) {
-      return 'COST';
-    }
-    if (sizeBasedUnitPrice > 0) {
-      return 'SIZE';
-    }
-    return 'MANUAL';
-  }, [factoryMode, processBasedUnitPrice, quotationUnitPrice, sizeBasedUnitPrice, totalCostUnitPrice]);
-
-  useEffect(() => {
-    if (!visible || pricingModeTouched) {
-      return;
-    }
-    form.setFieldValue('pricingMode', preferredPricingMode);
-  }, [form, preferredPricingMode, pricingModeTouched, visible]);
-
-  const schedulingPlans = schedulingResult?.plans || [];
-
-  // 工厂或数量变化时自动重新计算交货期建议
-  useEffect(() => {
-    if (!selectedFactoryStat || !totalOrderQuantity) {
-      setDeliverySuggestion(null);
-      return;
-    }
-    fetchDeliverySuggestion(selectedFactoryStat.factoryName, totalOrderQuantity);
-  }, [selectedFactoryStat?.factoryName, totalOrderQuantity]);
+  const {
+    deliverySuggestion, suggestionLoading, quoteReference, quotationUnitPrice,
+    totalCostUnitPrice, suggestedQuotationUnitPrice, orderLearningLoading,
+    orderLearningRecommendation, schedulingResult, schedulingLoading, setSchedulingResult,
+    processBasedUnitPrice, sizePriceBySize, sizeBasedUnitPrice, resolvedOrderUnitPrice,
+    preferredPricingMode, schedulingPlans, fetchDeliverySuggestion, resetIntelligence,
+  } = useOrderIntelligence({
+    visible, selectedStyle, totalOrderQuantity, form, factoryMode,
+    watchedPricingMode, watchedManualOrderUnitPrice, selectedFactoryStat,
+    orderLines, sizePriceRows, progressNodes, pricingModeTouched, normalizeSizeKey,
+  });
 
   const confirmPricingReady = () =>
     new Promise<boolean>((resolve) => {
@@ -951,134 +499,7 @@ const OrderManagement: React.FC = () => {
     form.setFieldsValue({ orderQuantity: totalOrderQuantity });
   }, [form, totalOrderQuantity]);
 
-  const fetchStyles = async () => {
-    setLoading(true);
-    try {
-      const response = await api.get<{ code: number; message: string; data: { records: StyleInfo[]; total: number } }>('/style/info/list', { params: queryParams });
-      if (response.code === 200) {
-        setStyles(response.data.records || []);
-        setTotal(response.data.total || 0);
-        if (showSmartErrorNotice) setSmartError(null);
-      } else {
-        reportSmartError('款号列表加载失败', response.message || '服务返回异常，请稍后重试', 'ORDER_STYLE_LIST_FAILED');
-        message.error(response.message || '获取款号列表失败');
-      }
-    } catch (error: any) {
-      reportSmartError('款号列表加载失败', error?.message || '网络异常或服务不可用，请稍后重试', 'ORDER_STYLE_LIST_EXCEPTION');
-      message.error(error?.message || '获取款号列表失败');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchFactories = async () => {
-    try {
-      const response = await api.get<{ code: number; data: { records: Factory[] } }>('/system/factory/list', { params: { page: 1, pageSize: 1000 } });
-      if (response.code === 200) {
-        setFactories(response.data.records || []);
-      }
-    } catch {
-      // Intentionally empty
-      // 忽略错误
-      setFactories([]);
-    }
-  };
-
-  const fetchDepartments = async () => {
-    try {
-      const res = await api.get<{ code: number; data: Array<{ id: string; nodeName: string; nodeType: string; pathNames: string }> }>('/system/organization/departments');
-      if (res.code === 200) {
-        setDepartments(
-          (res.data || [])
-            .filter((d: any) => d.nodeType === 'DEPARTMENT')
-            // 只显示生产相关部门（节点名或完整路径含"生产"）
-            .filter((d: any) => {
-              const name = (d.nodeName || '') as string;
-              const path = (d.pathNames || '') as string;
-              return name.includes('生产') || path.includes('生产');
-            })
-        );
-      }
-    } catch {
-      setDepartments([]);
-    }
-  };
-
-
-
-  const fetchUsers = async () => {
-    try {
-      // 优先从组织架构加载（含真实姓名），fallback 到系统用户列表
-      const orgUsers = await organizationApi.assignableUsers();
-      if (orgUsers.length > 0) {
-        const mapped = orgUsers
-          .filter(u => u.name || u.username)
-          .map(u => ({ id: Number(u.id) || 0, name: u.name || u.username, username: u.username }));
-        // 按 name 去重
-        const seen = new Set<string>();
-        setUsers(mapped.filter(u => {
-          if (seen.has(u.name)) return false;
-          seen.add(u.name);
-          return true;
-        }));
-        return;
-      }
-    } catch { /* 组织成员加载失败，回退到用户列表 */ }
-    try {
-      const response = await api.get<{ code: number; data: { records: Array<{ id: number; name: string; username: string }> } }>('/system/user/list', { params: { page: 1, pageSize: 1000, status: 'active' } });
-      if (response.code === 200) {
-        setUsers(response.data.records || []);
-      }
-    } catch {
-      setUsers([]);
-    }
-  };
-
-  useEffect(() => {
-    fetchStyles();
-  }, [queryParams]);
-
-  // 实时同步：60秒自动轮询更新款式列表
-  useSync(
-    'order-management-styles',
-    async () => {
-      try {
-        const response = await api.get<{ code: number; data: { records: StyleInfo[]; total: number } }>('/style/info/list', { params: queryParams });
-        if (response.code === 200) {
-          return {
-            records: response.data.records || [],
-            total: response.data.total || 0
-          };
-        }
-        return null;
-      } catch (error) {
-        console.error('[实时同步] 获取款式列表失败', error);
-        return null;
-      }
-    },
-    (newData, oldData) => {
-      if (oldData !== null && newData) {
-        setStyles(newData.records);
-        setTotal(newData.total);
-      }
-    },
-    {
-      interval: 60000,
-      enabled: !loading && !visible,
-      pauseOnHidden: true,
-      onError: (error) => console.error('[实时同步] 订单管理款式同步错误', error)
-    }
-  );
-
-  useEffect(() => {
-    fetchFactories();
-    fetchUsers();
-    void fetchDepartments();
-    // 拉取工厂产能（用于下单选厂时显示负荷）
-    productionOrderApi.getFactoryCapacity().then(res => {
-      if (res?.data) setFactoryCapacities(res.data);
-    }).catch(() => {/* 静默失败，不影响主流程 */});
-  }, []);
+  // data fetch logic provided by useOrderDataFetch hook
 
   const selectableColors = useMemo(() => {
     const parsed = parseSizeColorConfig((selectedStyle as any)?.sizeColorConfig);
@@ -1246,7 +667,7 @@ const OrderManagement: React.FC = () => {
       }
 
       if (resolvedOrderUnitPrice <= 0) {
-        message.error('下单单价必须大于0');
+        message.error('单价必须大于0');
         setActiveTabKey('base');
         return;
       }
@@ -1329,196 +750,24 @@ const OrderManagement: React.FC = () => {
     }
   };
 
-  const columns = [
-    {
-      title: '图片',
-      dataIndex: 'cover',
-      key: 'cover',
-      width: 72,
-      render: (_: any, record: StyleInfo) => (
-        <StyleCoverThumb styleId={(record as any).id} styleNo={record.styleNo} src={(record as any).cover || null} />
-      )
-    },
-    {
-      title: '款号',
-      dataIndex: 'styleNo',
-      key: 'styleNo',
-      width: 140,
-      render: (_: any, record: StyleInfo) => (
-        <a
-          style={{ cursor: 'pointer' }}
-          onClick={() => {
-            const sn = String((record as Record<string, unknown>)?.styleNo || '').trim();
-            if (!sn) return;
-            navigate(`/order-management/${encodeURIComponent(sn)}`);
-          }}
-        >
-          {record.styleNo}
-        </a>
-      ),
-    },
-    { title: 'SKC', dataIndex: 'skc', key: 'skc', width: 140, render: (v: any) => v || '-' },
-    { title: '款名', dataIndex: 'styleName', key: 'styleName', ellipsis: true },
-    {
-      title: '品类',
-      dataIndex: 'category',
-      key: 'category',
-      width: 120,
-      render: (v: unknown) => toCategoryCn(v),
-    },
-    {
-      title: '来源',
-      key: 'developmentSourceType',
-      width: 150,
-      render: (_: unknown, record: StyleInfo) => {
-        const source = getStyleSourceMeta(record);
-        return <Tag color={source.color}>{source.label}</Tag>;
-      },
-    },
-    {
-      title: '下单次数',
-      dataIndex: 'orderCount',
-      key: 'orderCount',
-      width: 110,
-      render: (v: unknown) => Number(v) || 0,
-    },
-    {
-      title: '最近下单',
-      dataIndex: 'latestOrderTime',
-      key: 'latestOrderTime',
-      width: 160,
-      render: (v: string) => v ? formatDateTime(v) : '-',
-    },
-    {
-      title: '下单人',
-      dataIndex: 'latestOrderCreator',
-      key: 'latestOrderCreator',
-      width: 100,
-      render: (v: string) => v || '-',
-    },
-    {
-      title: '是否下单',
-      key: 'hasOrder',
-      width: 100,
-      render: (_: any, record: StyleInfo) => {
-        const c = Number((record as Record<string, unknown>)?.orderCount || 0) || 0;
-        return c > 0 ? <Tag color="green">有</Tag> : <Tag>无</Tag>;
-      },
-    },
-    {
-      title: '附件',
-      key: 'attachments',
-      width: 100,
-      render: (_: any, record: StyleInfo) => (
-        <StyleAttachmentsButton
-          styleId={(record as any).id}
-          styleNo={record.styleNo}
-          modalTitle={`纸样附件（${record.styleNo}）`}
-          buttonText="附件"
-        />
-      )
-    },
-    {
-      title: '操作',
-      key: 'action',
-      width: 150,
-      render: (_: any, record: StyleInfo) => (
-        <RowActions
-          actions={[
-            {
-              key: 'print',
-              label: '打印',
-              title: '打印',
-              onClick: () => {
-                setPrintingRecord(record);
-                setPrintModalVisible(true);
-              },
-            },
-            {
-              key: 'create',
-              label: '下单',
-              title: '下单',
-              onClick: () => openCreate(record),
-              primary: true,
-            },
-          ]}
-        />
-      )
-    }
-  ];
-
-  if (routeStyleNo) {
-    return (
-      <Layout>
-        <Card className="page-card">
-          {showSmartErrorNotice && smartError ? (
-            <Card size="small" style={{ marginBottom: 12 }}>
-              <SmartErrorNotice error={smartError} onFix={() => { void fetchOrderDetailRows(routeStyleNo); }} />
-            </Card>
-          ) : null}
-          <div className="page-header">
-            <h2 className="page-title">下单明细（{routeStyleNo}）</h2>
-            <Space>
-              <Button onClick={() => fetchOrderDetailRows(routeStyleNo)} loading={detailLoading}>刷新</Button>
-              <Button onClick={() => navigate('/order-management')}>返回</Button>
-            </Space>
-          </div>
-
-          <ResizableTable
-            rowKey={(r) => String((r as Record<string, unknown>).key)}
-            loading={detailLoading}
-            dataSource={detailRows}
-            style={{ color: 'var(--neutral-text)' }}
-            stickyHeader
-            scroll={{ x: 'max-content' }}
-            size={isMobile ? 'small' : 'middle'}
-            pagination={{
-              current: detailQuery.page,
-              pageSize: detailQuery.pageSize,
-              total: detailTotal,
-              showTotal: (total) => `共 ${total} 条`,
-              showSizeChanger: true,
-              pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
-              onChange: (page, pageSize) => setDetailQuery({ page, pageSize }),
-            }}
-            columns={[
-              { title: <span style={{ color: 'var(--neutral-text)' }}>订单号</span>, dataIndex: 'orderNo', key: 'orderNo', width: 150 },
-              { title: <span style={{ color: 'var(--neutral-text)' }}>款号</span>, dataIndex: 'styleNo', key: 'styleNo', width: 140 },
-              { title: <span style={{ color: 'var(--neutral-text)' }}>颜色</span>, dataIndex: 'color', key: 'color', width: 140 },
-              { title: <span style={{ color: 'var(--neutral-text)' }}>S</span>, dataIndex: ['sizeQty', 'S'], key: 'size_S', width: 90, align: 'right', render: (v: unknown) => Number(v) || 0 },
-              { title: <span style={{ color: 'var(--neutral-text)' }}>M</span>, dataIndex: ['sizeQty', 'M'], key: 'size_M', width: 90, align: 'right', render: (v: unknown) => Number(v) || 0 },
-              { title: <span style={{ color: 'var(--neutral-text)' }}>L</span>, dataIndex: ['sizeQty', 'L'], key: 'size_L', width: 90, align: 'right', render: (v: unknown) => Number(v) || 0 },
-              { title: <span style={{ color: 'var(--neutral-text)' }}>XL</span>, dataIndex: ['sizeQty', 'XL'], key: 'size_XL', width: 90, align: 'right', render: (v: unknown) => Number(v) || 0 },
-              { title: <span style={{ color: 'var(--neutral-text)' }}>XXL</span>, dataIndex: ['sizeQty', 'XXL'], key: 'size_XXL', width: 90, align: 'right', render: (v: unknown) => Number(v) || 0 },
-              { title: <span style={{ color: 'var(--neutral-text)' }}>裁剪S</span>, dataIndex: ['cuttingSizeQty', 'S'], key: 'cutting_S', width: 90, align: 'right', render: (v: unknown) => <span style={{ color: 'var(--color-success)' }}>{Number(v) || 0}</span> },
-              { title: <span style={{ color: 'var(--neutral-text)' }}>裁剪M</span>, dataIndex: ['cuttingSizeQty', 'M'], key: 'cutting_M', width: 90, align: 'right', render: (v: unknown) => <span style={{ color: 'var(--color-success)' }}>{Number(v) || 0}</span> },
-              { title: <span style={{ color: 'var(--neutral-text)' }}>裁剪L</span>, dataIndex: ['cuttingSizeQty', 'L'], key: 'cutting_L', width: 90, align: 'right', render: (v: unknown) => <span style={{ color: 'var(--color-success)' }}>{Number(v) || 0}</span> },
-              { title: <span style={{ color: 'var(--neutral-text)' }}>裁剪XL</span>, dataIndex: ['cuttingSizeQty', 'XL'], key: 'cutting_XL', width: 90, align: 'right', render: (v: unknown) => <span style={{ color: 'var(--color-success)' }}>{Number(v) || 0}</span> },
-              { title: <span style={{ color: 'var(--neutral-text)' }}>裁剪XXL</span>, dataIndex: ['cuttingSizeQty', 'XXL'], key: 'cutting_XXL', width: 90, align: 'right', render: (v: unknown) => <span style={{ color: 'var(--color-success)' }}>{Number(v) || 0}</span> },
-              { title: <span style={{ color: 'var(--neutral-text)' }}>下单数</span>, dataIndex: 'orderQuantity', key: 'orderQuantity', width: 110, align: 'right', render: (v: unknown) => Number(v) || 0 },
-              { title: <span style={{ color: 'var(--neutral-text)' }}>完成数</span>, dataIndex: 'completedQuantity', key: 'completedQuantity', width: 110, align: 'right', render: (v: unknown) => Number(v) || 0 },
-              { title: <span style={{ color: 'var(--neutral-text)' }}>下单人</span>, dataIndex: 'orderOperatorName', key: 'orderOperatorName', width: 140 },
-              { title: <span style={{ color: 'var(--neutral-text)' }}>下单时间</span>, dataIndex: 'orderTime', key: 'orderTime', width: 170, render: (v: unknown) => formatDateTime(v) },
-              { title: <span style={{ color: 'var(--neutral-text)' }}>完成时间</span>, dataIndex: 'completedTime', key: 'completedTime', width: 170, render: (v: unknown) => formatDateTime(v) },
-            ] as any}
-          />
-        </Card>
-      </Layout>
-    );
-  }
+  const columns = useOrderColumns({ openCreate, setPrintModalVisible, setPrintingRecord, setRemarkStyleNo, setRemarkModalOpen });
 
   return (
     <Layout>
-      <Card className="page-card">
-        {showSmartErrorNotice && smartError ? (
+      <PageLayout
+        title="下单管理"
+        headerContent={showSmartErrorNotice && smartError ? (
           <Card size="small" style={{ marginBottom: 12 }}>
             <SmartErrorNotice error={smartError} onFix={fetchStyles} />
           </Card>
         ) : null}
-        <div className="page-header">
-          <h2 className="page-title">下单管理</h2>
-        </div>
+      >
 
+        <Tabs defaultActiveKey="list" items={[
+          {
+            key: 'list',
+            label: '下单管理',
+            children: (<>
         {/* 下单排行数据看板 */}
         <OrderRankingDashboard onOrderClick={openCreate} />
 
@@ -1627,7 +876,15 @@ const OrderManagement: React.FC = () => {
           />
           </>
         )}
-      </Card>
+        </>),
+        },
+        {
+          key: 'analysis',
+          label: '数据分析',
+          children: <OrderAnalysisTab />,
+        },
+        ]} />
+      </PageLayout>
 
       <ResizableModal
         open={visible}
@@ -1889,6 +1146,13 @@ const OrderManagement: React.FC = () => {
 
         </Form>
       </ResizableModal>
+
+      <RemarkTimelineModal
+        open={remarkModalOpen}
+        onClose={() => setRemarkModalOpen(false)}
+        targetType="style"
+        targetNo={remarkStyleNo}
+      />
 
       {/* 打印预览弹窗 - 使用通用打印组件 */}
       <StylePrintModal

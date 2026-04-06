@@ -513,7 +513,7 @@ const PricingTab: React.FC = () => {
         : <Text style={{ color: '#888' }}>{v != null ? `¥${v}` : <Text type="secondary">—</Text>}</Text>,
     },
     {
-      title: '售价 (¥)', dataIndex: 'salesPrice', width: 140,
+      title: '单价 (¥)', dataIndex: 'salesPrice', width: 140,
       render: (v, r) => editRow?.id === r.id
         ? <InputNumber size="small" value={editRow.salesPrice ?? undefined} min={0} precision={2}
             style={{ width: 110 }}
@@ -550,7 +550,7 @@ const PricingTab: React.FC = () => {
   return (
     <div>
       <Alert style={{ marginBottom: 14, fontSize: 12 }} type="info" showIcon
-        title="此处的【售价】和【成本价】将同步显示在成品仓库的单价列和毛利计算中。点击【定价】按钮直接修改，保存后实时生效。" />
+        title="此处的【单价】和【成本价】将同步显示在成品仓库的单价列和毛利计算中。点击【定价】按钮直接修改，保存后实时生效。" />
       <Card size="small" style={{ marginBottom: 10 }}>
         <Space>
           <Input placeholder="按款式号筛选" allowClear style={{ width: 180 }}
@@ -589,7 +589,7 @@ const EcommerceOrders: React.FC = () => (
             { title: '平台推单',  content: '各平台 Webhook 推入本系统',  icon: <ApiOutlined style={{ color: '#fa8c16' }} /> },
             { title: '关联排产',  content: '订单管理页手动关联生产单',   icon: <ShoppingCartOutlined style={{ color: '#722ed1' }} /> },
             { title: '仓库出库',  content: '出库自动更新仓库状态+快递', icon: <CarOutlined style={{ color: '#13c2c2' }} /> },
-            { title: '财务核算',  content: 'SKU定价页设置售价/成本看毛利', icon: <RiseOutlined style={{ color: '#eb2f96' }} /> },
+            { title: '财务核算',  content: 'SKU定价页设置单价/成本看毛利', icon: <RiseOutlined style={{ color: '#eb2f96' }} /> },
           ]}
         />
       }

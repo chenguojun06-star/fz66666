@@ -114,7 +114,7 @@ export const formatNodeTime = (value?: unknown) => {
   if (!value) return '待启动';
   const instance = dayjs(value as string | number | Date | null | undefined);
   if (instance.isValid()) {
-    return instance.format('MM-DD HH:mm');
+    return instance.format('MM-DD');
   }
   return String(value);
 };
@@ -126,7 +126,7 @@ export const getLatestTimeLabel = (values: unknown[]) => {
     .sort((a, b) => b.valueOf() - a.valueOf());
 
   if (!valid.length) return '待启动';
-  return valid[0].format('MM-DD HH:mm');
+  return valid[0].format('MM-DD');
 };
 
 export const getStyleCompletedTime = (record: StyleRecord) => {
@@ -182,7 +182,7 @@ export const formatStageTimeRange = (startTime: unknown, endTime: unknown) => {
     const startInstance = dayjs(startTime as string | number | Date | null | undefined);
     const endInstance = dayjs(endTime as string | number | Date | null | undefined);
     if (startInstance.isValid() && endInstance.isValid() && startInstance.isSame(endInstance, 'day')) {
-      return `${startInstance.format('MM-DD HH:mm')} → ${endInstance.format('HH:mm')}`;
+      return start;
     }
     return `${start} → ${end}`;
   }
@@ -493,7 +493,9 @@ export const buildSampleStage: StageBuilder = (record) => {
           ? '已领取生产'
           : '等待纸样',
     timeLabel: done
-      ? formatStageTimeRange(null, record.sampleCompletedTime)
+      ? (record.sampleCompletedTime
+          ? formatNodeTime(record.sampleCompletedTime)
+          : '已完成')
       : '',
     status: done ? 'done' : started ? 'active' : 'waiting',
     progress: done ? 100 : (started && sampleProgress > 0 ? sampleProgress : started ? 36 : 0),

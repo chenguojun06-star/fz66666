@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Card, Form, Image, Input, Select, Space, Tag, Tooltip, Typography } from 'antd';
+import { App, Button, Card, Form, Image, Input, Select, Space, Tabs, Tag, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import Layout from '@/components/Layout';
+import PageLayout from '@/components/common/PageLayout';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
@@ -766,15 +767,19 @@ const TemplateCenter: React.FC = () => {
 
   return (
     <Layout>
-      <Card
-        className="page-card"
+      <PageLayout
         title="单价维护"
-        tabList={[
-          { key: 'list', tab: '模板列表' },
-          ...(!isFactoryUser ? [{ key: 'knowledge', tab: '工序库' }] : []),
-        ]}
-        activeTabKey={cardTab}
-        onTabChange={(key) => setCardTab(key as 'list' | 'knowledge')}
+        headerContent={
+          <Tabs
+            activeKey={cardTab}
+            onChange={(key) => setCardTab(key as 'list' | 'knowledge')}
+            items={[
+              { key: 'list', label: '模板列表' },
+              ...(!isFactoryUser ? [{ key: 'knowledge', label: '工序库' }] : []),
+            ]}
+            style={{ marginBottom: 0 }}
+          />
+        }
       >
         {showSmartErrorNotice && smartError ? (
           <Card size="small" style={{ marginBottom: 12 }}>
@@ -884,7 +889,7 @@ const TemplateCenter: React.FC = () => {
         />
           </>
         )}
-      </Card>
+      </PageLayout>
 
       <CreateFromStyleModal
         open={createOpen}

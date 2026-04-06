@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Tabs, Input, Select, Space, Tag, Button, App } from 'antd';
 import Layout from '@/components/Layout';
+import PageLayout from '@/components/common/PageLayout';
 import ResizableTable from '@/components/common/ResizableTable';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
 import { formatDateTimeSecond } from '@/utils/datetime';
@@ -258,11 +259,7 @@ const SystemLogs: React.FC = () => {
   return (
     <Layout>
       <div className="system-logs-page">
-        <Card className="page-card">
-          <div className="page-header">
-            <h2 className="page-title">系统日志</h2>
-          </div>
-
+        <PageLayout title="系统日志">
           <Tabs
             activeKey={activeTab}
             onChange={(key) => setActiveTab(key as 'login' | 'operation')}
@@ -469,7 +466,7 @@ const SystemLogs: React.FC = () => {
             },
           ]}
         />
-      </Card>
+      </PageLayout>
       </div>
     </Layout>
   );

@@ -58,6 +58,7 @@ export default function ImageUploadBox({
 }: ImageUploadBoxProps) {
   const { message } = App.useApp();
   const inputRef = useRef<HTMLInputElement>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
   const [uploading, setUploading] = useState(false);
 
   const w = width ?? size;
@@ -146,10 +147,13 @@ export default function ImageUploadBox({
       />
       <Spin spinning={uploading}>
         <div
+          ref={dropRef}
           onClick={handleClick}
+          onMouseEnter={enableDrop && !disabled ? () => dropRef.current?.focus() : undefined}
           onDragOver={enableDrop ? handleDragOver : undefined}
           onDrop={enableDrop ? handleDrop : undefined}
           onPaste={enableDrop ? handlePaste : undefined}
+          tabIndex={enableDrop && !disabled ? 0 : undefined}
           style={{
             width: w,
             height: h,
@@ -162,6 +166,7 @@ export default function ImageUploadBox({
             justifyContent: 'center',
             cursor: disabled ? 'default' : 'pointer',
             flexShrink: 0,
+            outline: 'none',
           }}
         >
           {hasImage ? (

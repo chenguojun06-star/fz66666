@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { readPageSize } from '@/utils/pageSizeStore';
 import dayjs from 'dayjs';
+import AccountManagementModal from './components/AccountManagementModal';
 import {
   App,
   Button,
@@ -22,10 +23,8 @@ import {
 import {
   CheckCircleOutlined,
   DollarOutlined,
-  PlusOutlined,
   SearchOutlined,
   UploadOutlined,
-  DeleteOutlined,
   PayCircleOutlined,
   AccountBookOutlined,
   DownloadOutlined,
@@ -42,7 +41,6 @@ import {
   wagePaymentApi,
   PAYMENT_METHOD_OPTIONS,
   PAYMENT_STATUS_MAP,
-  ACCOUNT_TYPE_OPTIONS,
   OWNER_TYPE_OPTIONS,
   BIZ_TYPE_OPTIONS,
   BIZ_TYPE_MAP,
@@ -665,13 +663,13 @@ const PaymentCenterPage: React.FC = () => {
                 children: (
                   <>
                     {/* 统计行 */}
-                    <div style={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'center', 
-                      marginBottom: 20, 
-                      padding: '16px 24px', 
-                      background: '#f9f9f9', 
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: 20,
+                      padding: '16px 24px',
+                      background: '#f9f9f9',
                       borderRadius: '8px',
                       border: '1px solid #f0f0f0'
                     }}>
@@ -721,9 +719,9 @@ const PaymentCenterPage: React.FC = () => {
                             setSelectedPayableKeys([]);
                           }}
                         />
-                        <Button 
-                          size="small" 
-                          icon={<DownloadOutlined />} 
+                        <Button
+                          size="small"
+                          icon={<DownloadOutlined />}
                           style={{ marginLeft: 8 }}
                           onClick={() => {
                             if (payables.length === 0) {
@@ -798,13 +796,13 @@ const PaymentCenterPage: React.FC = () => {
                 children: (
                   <>
                     {/* 统计行 */}
-                    <div style={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'center', 
-                      marginBottom: 20, 
-                      padding: '16px 24px', 
-                      background: '#f9f9f9', 
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: 20,
+                      padding: '16px 24px',
+                      background: '#f9f9f9',
                       borderRadius: '8px',
                       border: '1px solid #f0f0f0'
                     }}>
@@ -859,8 +857,8 @@ const PaymentCenterPage: React.FC = () => {
                         <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>查询</Button>
                       </Form.Item>
                       <Form.Item>
-                        <Button 
-                          icon={<DownloadOutlined />} 
+                        <Button
+                          icon={<DownloadOutlined />}
                           onClick={() => {
                             if (payments.length === 0) {
                               message.warning('当前没有数据可导出');
@@ -1065,129 +1063,26 @@ const PaymentCenterPage: React.FC = () => {
         </ResizableModal>
 
         {/* ========================== 账户管理弹窗 ========================== */}
-        <ResizableModal
+        <AccountManagementModal
           open={accountModalOpen}
-          title={`收款账户管理 — ${accountOwnerName}`}
-          onCancel={() => setAccountModalOpen(false)}
-          width="40vw"
-          centered
-          footer={<Button onClick={() => setAccountModalOpen(false)}>关闭</Button>}
-        >
-          <div style={{ padding: '0 8px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-              <span style={{ color: '#999' }}>
-                {accountOwnerType === 'WORKER' ? '员工' : '工厂'}：{accountOwnerName}
-              </span>
-              <Button
-                type="primary"
-                size="small"
-                icon={<PlusOutlined />}
-                onClick={() => {
-                  setEditingAccount(null);
-                  accountForm.resetFields();
-                  setQrFileList([]);
-                  setAccountDetailOpen(true);
-                }}
-              >
-                添加账户
-              </Button>
-            </div>
-
-            {/* 账户列表 */}
-            {accounts.map(acc => (
-              <Card
-                key={acc.id}
-                size="small"
-                style={{ marginBottom: 8, border: acc.isDefault === 1 ? '2px solid var(--primary-color, #1677ff)' : undefined }}
-                extra={
-                  <Space>
-                    <Button type="link" size="small" onClick={() => handleEditAccount(acc)}>编辑</Button>
-                    <Button type="link" size="small" danger onClick={() => acc.id && handleDeleteAccount(acc.id)}>
-                      <DeleteOutlined />
-                    </Button>
-                  </Space>
-                }
-              >
-                <Space>
-                  <span style={{ fontSize: 20 }}>{accountTypeIconMap[acc.accountType]}</span>
-                  <div>
-                    <div style={{ fontWeight: 500 }}>
-                      {ACCOUNT_TYPE_OPTIONS.find(o => o.value === acc.accountType)?.label}
-                      {acc.isDefault === 1 && <Tag color="blue" style={{ marginLeft: 8 }}>默认</Tag>}
-                    </div>
-                    {acc.accountType === 'BANK' ? (
-                      <span style={{ color: '#666' }}>{acc.bankName} {acc.accountNo}</span>
-                    ) : (
-                      <span style={{ color: '#666' }}>{acc.accountName || '已上传二维码'}</span>
-                    )}
-                  </div>
-                </Space>
-              </Card>
-            ))}
-            {!accountsLoading && accounts.length === 0 && (
-              <div style={{ textAlign: 'center', color: '#999', padding: 32 }}>暂无收款账户，请点击"添加账户"</div>
-            )}
-
-            {/* 添加/编辑账户表单 */}
-            {accountDetailOpen && (
-              <Card title={editingAccount ? '编辑账户' : '添加账户'} size="small" style={{ marginTop: 16 }}>
-                <Form form={accountForm} layout="vertical" requiredMark="optional">
-                  <Form.Item label="账户类型" name="accountType" rules={[{ required: true, message: '请选择' }]}>
-                    <Select options={ACCOUNT_TYPE_OPTIONS} placeholder="选择账户类型" />
-                  </Form.Item>
-                  <Form.Item label="收款户名" name="accountName">
-                    <Input placeholder="收款人姓名" />
-                  </Form.Item>
-                  <Form.Item noStyle shouldUpdate={(prev, cur) => prev.accountType !== cur.accountType}>
-                    {({ getFieldValue }) =>
-                      getFieldValue('accountType') === 'BANK' ? (
-                        <div>
-                          <Form.Item label="银行卡号" name="accountNo" rules={[{ required: true, message: '请输入' }]}>
-                            <Input placeholder="银行卡号" />
-                          </Form.Item>
-                          <Form.Item label="开户银行" name="bankName" rules={[{ required: true, message: '请选择' }]}>
-                            <Input placeholder="如：中国工商银行" />
-                          </Form.Item>
-                          <Form.Item label="开户支行" name="bankBranch">
-                            <Input placeholder="选填" />
-                          </Form.Item>
-                        </div>
-                      ) : getFieldValue('accountType') ? (
-                        <div>
-                          <Form.Item label="收款二维码" name="qrCodeUrl" rules={[{ required: true, message: '请上传二维码' }]}>
-                            <Input placeholder="自动填充" disabled />
-                          </Form.Item>
-                          <Upload
-                            accept="image/*"
-                            listType="picture-card"
-                            maxCount={1}
-                            fileList={qrFileList}
-                            onRemove={() => { accountForm.setFieldsValue({ qrCodeUrl: undefined }); setQrFileList([]); return true; }}
-                            beforeUpload={(file) => { void uploadQrImage(file as File); return Upload.LIST_IGNORE; }}
-                          >
-                            {qrFileList.length === 0 && (
-                              <div><UploadOutlined /><div style={{ marginTop: 8 }}>上传二维码</div></div>
-                            )}
-                          </Upload>
-                        </div>
-                      ) : null
-                    }
-                  </Form.Item>
-                  <Form.Item name="isDefault">
-                    <Select
-                      options={[{ label: '是', value: true }, { label: '否', value: false }]}
-                      placeholder="设为默认账户"
-                    />
-                  </Form.Item>
-                  <Space>
-                    <Button type="primary" loading={accountSaving} onClick={handleSaveAccount}>保存</Button>
-                    <Button onClick={() => { setAccountDetailOpen(false); setEditingAccount(null); }}>取消</Button>
-                  </Space>
-                </Form>
-              </Card>
-            )}
-          </div>
-        </ResizableModal>
+          ownerName={accountOwnerName}
+          ownerType={accountOwnerType}
+          accounts={accounts}
+          accountsLoading={accountsLoading}
+          accountForm={accountForm}
+          accountDetailOpen={accountDetailOpen}
+          editingAccount={editingAccount}
+          qrFileList={qrFileList}
+          accountSaving={accountSaving}
+          onClose={() => setAccountModalOpen(false)}
+          setAccountDetailOpen={setAccountDetailOpen}
+          setEditingAccount={setEditingAccount}
+          setQrFileList={setQrFileList}
+          onEditAccount={handleEditAccount}
+          onDeleteAccount={handleDeleteAccount}
+          onSaveAccount={handleSaveAccount}
+          onUploadQrImage={uploadQrImage}
+        />
 
         {/* ========================== 支付详情弹窗 ========================== */}
         <ResizableModal

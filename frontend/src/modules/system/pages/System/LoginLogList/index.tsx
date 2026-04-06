@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Layout from '@/components/Layout';
+import PageLayout from '@/components/common/PageLayout';
 import { LoginLog, LoginLogQueryParams } from '@/types/system';
 import api from '@/utils/api';
 import { Button, Card, Input, Select, Space, Tag } from 'antd';
@@ -85,61 +86,60 @@ const LoginLogList: React.FC = () => {
 
   return (
     <Layout>
-      <Card className="page-card">
-        <div className="page-header">
-          <h2 className="page-title">登录日志</h2>
-        </div>
-
-        <Card size="small" className="filter-card mb-sm">
-          <Space wrap>
-            <Input
-              placeholder="用户名"
-              style={{ width: 200 }}
-              allowClear
-              value={String((queryParams as any)?.username || '')}
-              onChange={(e) => setQueryParams((prev) => ({ ...prev, username: e.target.value, page: 1 }))}
-            />
-            <Select
-              placeholder="登录状态"
-              style={{ width: 140 }}
-              allowClear
-              value={String((queryParams as any)?.loginStatus || '') || undefined}
-              options={[
-                { value: 'SUCCESS', label: '成功' },
-                { value: 'FAILED', label: '失败' },
-              ]}
-              onChange={(value) => setQueryParams((prev) => ({ ...prev, loginStatus: value, page: 1 }))}
-            />
-            <UnifiedDatePicker
-              placeholder="开始日期"
-              value={queryParams.startDate ? dayjs(String(queryParams.startDate)) : null}
-              onChange={(d) => setQueryParams((prev) => ({ ...prev, startDate: d ? (d as any).format('YYYY-MM-DD') : '', page: 1 }))}
-            />
-            <UnifiedDatePicker
-              placeholder="结束日期"
-              value={queryParams.endDate ? dayjs(String(queryParams.endDate)) : null}
-              onChange={(d) => setQueryParams((prev) => ({ ...prev, endDate: d ? (d as any).format('YYYY-MM-DD') : '', page: 1 }))}
-            />
-            <Button type="primary" onClick={fetchLogs}>
-              查询
-            </Button>
-            <Button
-              onClick={() =>
-                setQueryParams({
-                  page: 1,
-                  pageSize: queryParams.pageSize,
-                  username: '',
-                  loginStatus: '',
-                  startDate: '',
-                  endDate: '',
-                } as any)
-              }
-            >
-              重置
-            </Button>
-          </Space>
-        </Card>
-
+      <PageLayout
+        title="登录日志"
+        filterBar={
+          <Card size="small" className="filter-card mb-sm">
+            <Space wrap>
+              <Input
+                placeholder="用户名"
+                style={{ width: 200 }}
+                allowClear
+                value={String((queryParams as any)?.username || '')}
+                onChange={(e) => setQueryParams((prev) => ({ ...prev, username: e.target.value, page: 1 }))}
+              />
+              <Select
+                placeholder="登录状态"
+                style={{ width: 140 }}
+                allowClear
+                value={String((queryParams as any)?.loginStatus || '') || undefined}
+                options={[
+                  { value: 'SUCCESS', label: '成功' },
+                  { value: 'FAILED', label: '失败' },
+                ]}
+                onChange={(value) => setQueryParams((prev) => ({ ...prev, loginStatus: value, page: 1 }))}
+              />
+              <UnifiedDatePicker
+                placeholder="开始日期"
+                value={queryParams.startDate ? dayjs(String(queryParams.startDate)) : null}
+                onChange={(d) => setQueryParams((prev) => ({ ...prev, startDate: d ? (d as any).format('YYYY-MM-DD') : '', page: 1 }))}
+              />
+              <UnifiedDatePicker
+                placeholder="结束日期"
+                value={queryParams.endDate ? dayjs(String(queryParams.endDate)) : null}
+                onChange={(d) => setQueryParams((prev) => ({ ...prev, endDate: d ? (d as any).format('YYYY-MM-DD') : '', page: 1 }))}
+              />
+              <Button type="primary" onClick={fetchLogs}>
+                查询
+              </Button>
+              <Button
+                onClick={() =>
+                  setQueryParams({
+                    page: 1,
+                    pageSize: queryParams.pageSize,
+                    username: '',
+                    loginStatus: '',
+                    startDate: '',
+                    endDate: '',
+                  } as any)
+                }
+              >
+                重置
+              </Button>
+            </Space>
+          </Card>
+        }
+      >
         <ResizableTable<LoginLog>
           storageKey="system-loginlog-table"
           rowKey={(r) => String(r.id || `${r.username}-${r.loginTime}-${r.ip}`)}
@@ -159,7 +159,7 @@ const LoginLogList: React.FC = () => {
           stickyHeader
           scroll={{ x: 'max-content' }}
         />
-      </Card>
+      </PageLayout>
     </Layout>
   );
 };

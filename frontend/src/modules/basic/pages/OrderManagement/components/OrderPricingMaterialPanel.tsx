@@ -57,7 +57,7 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
         <div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: '#1f1f1f' }}>下单单价与面辅料分析</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: '#1f1f1f' }}>单价与面辅料分析</div>
           <div style={{ marginTop: 4, fontSize: 12, color: '#8c8c8c' }}>
             {factoryMode === 'EXTERNAL' ? '成本价格已匹配外发整件单价' : '内部工厂继续使用工序单价'} · 报价参考 {quotationUnitPrice > 0 ? `¥${quotationUnitPrice.toFixed(2)}` : '-'}
           </div>
@@ -74,7 +74,7 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
         }}
       >
         <div style={{ display: 'grid', gridTemplateColumns: '56px minmax(0, 1fr)', gap: 8, alignItems: 'start' }}>
-          <div style={{ paddingTop: 6, fontSize: 12, color: '#595959' }}>下单单价</div>
+          <div style={{ paddingTop: 6, fontSize: 12, color: '#595959' }}>单价</div>
           <div>
             <Form.Item name="pricingMode" initialValue="PROCESS" style={{ marginBottom: 0 }}>
               <Select
@@ -96,10 +96,10 @@ const OrderPricingMaterialPanel: React.FC<OrderPricingMaterialPanelProps> = ({
             {watchedPricingMode === 'MANUAL' ? (
               <Form.Item
                 name="manualOrderUnitPrice"
-                rules={[{ required: true, message: '请输入下单单价' }]}
+                rules={[{ required: true, message: '请输入单价' }]}
                 style={{ marginBottom: 0 }}
               >
-                <InputNumber min={0.01} precision={2} style={{ width: '100%' }} placeholder="输入下单单价" />
+                <InputNumber min={0.01} precision={2} style={{ width: '100%' }} placeholder="输入单价" />
               </Form.Item>
             ) : (
               <div style={{ minHeight: 32, display: 'flex', alignItems: 'center', fontSize: 12, color: '#595959' }}>

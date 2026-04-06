@@ -62,6 +62,15 @@ public class ProductOutstockOrchestrator {
         if (outstock == null) {
             throw new IllegalArgumentException("参数错误");
         }
+        // 显式设置操作人/创建人（防止 MetaObjectHandler 取不到上下文导致默认"系统管理员"）
+        if (!StringUtils.hasText(outstock.getOperatorName())) {
+            String ctxUserId = UserContext.userId();
+            String ctxUsername = UserContext.username();
+            outstock.setOperatorId(ctxUserId);
+            outstock.setOperatorName(ctxUsername);
+            outstock.setCreatorId(ctxUserId);
+            outstock.setCreatorName(ctxUsername);
+        }
         boolean ok = saveAndSync(outstock);
         if (!ok) {
             throw new IllegalStateException("保存失败");

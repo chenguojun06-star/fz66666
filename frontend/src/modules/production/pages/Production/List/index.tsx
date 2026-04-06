@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Button, Card, Input, Select, Tag, App, Popover, Checkbox, Alert, Tabs, Segmented } from 'antd';
+import { Button, Card, Input, Select, Tag, App, Popover, Checkbox, Tabs, Segmented } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined, RadarChartOutlined } from '@ant-design/icons';
 import ExternalFactorySmartView from '../ExternalFactory/ExternalFactorySmartView';
@@ -9,8 +9,7 @@ import StandardPagination from '@/components/common/StandardPagination';
 import PageStatCards from '@/components/common/PageStatCards';
 
 import StandardSearchBar from '@/components/common/StandardSearchBar';
-import StandardToolbar from '@/components/common/StandardToolbar';
-import StickyFilterBar from '@/components/common/StickyFilterBar';
+import PageLayout from '@/components/common/PageLayout';
 import QuickEditModal from '@/components/common/QuickEditModal';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
@@ -68,13 +67,14 @@ import {
   useProductionColumns,
 } from './hooks';
 import { safeString } from './utils';
+import TransferOrderModal from './TransferOrderModal';
+import AnomalyBanner from './AnomalyBanner';
 import { useProductionBoardStore } from '@/stores';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { useProductionSmartQueue } from '../useProductionSmartQueue';
 
-const { Option } = Select;
 const LIST_VIEW_MODE_STORAGE_KEY = 'production_list_view_mode';
 
 // 悬停卡预加载用的默认工序节点（与 SmartOrderHoverCard STAGES_DEF 对应）
@@ -92,7 +92,7 @@ const ProductionList: React.FC = () => {
   const { columns: cardColumns } = useCardGridLayout(10);
   const { handleShareOrder, shareOrderDialog } = useShareOrderDialog({ message });
   const quickEditModal = useModal<ProductionOrder>();
-  const [remarkTarget, setRemarkTarget] = useState<{ open: boolean; orderNo: string; defaultRole?: string }>({ open: false, orderNo: '' });
+  const [remarkTarget, setRemarkTarget] = useState<{ open: boolean; orderNo: string; defaultRole?: string; merchandiser?: string }>({ open: false, orderNo: '' });
   const { user } = useAuth();
   const isSupervisorOrAbove = useMemo(() => isSupervisorOrAboveUser(user), [user]);
   const isFactoryAccount = !!(user as any)?.factoryId;
@@ -659,7 +659,7 @@ const ProductionList: React.FC = () => {
     canManageOrderLifecycle,
     openSubProcessRemap,
     isFactoryAccount,
-    onOpenRemark: (record: ProductionOrder, defaultRole?: string) => setRemarkTarget({ open: true, orderNo: record.orderNo || '', defaultRole }),
+    onOpenRemark: (record: ProductionOrder, defaultRole?: string) => setRemarkTarget({ open: true, orderNo: record.orderNo || '', defaultRole, merchandiser: record.merchandiser }),
   });
 
   // 根据 visibleColumns 过滤列
@@ -685,81 +685,21 @@ const ProductionList: React.FC = () => {
 
   return (
     <Layout>
-        <Card className="page-card">
-          <div className="page-header">
-            <h2 className="page-title">我的订单</h2>
-          </div>
-
+        <PageLayout
+          title="我的订单"
+          headerContent={<>
           {showSmartErrorNotice && smartError ? (
             <div style={{ marginBottom: 12 }}>
               <SmartErrorNotice error={smartError} onFix={fetchProductionList} />
             </div>
           ) : null}
 
-          {anomalyBannerVisible && anomalyItems.length > 0 && (
-            <div style={{ marginBottom: 12 }}>
-              <Alert
-                type={anomalyItems.some(i => i.severity === 'critical') ? 'error' : 'warning'}
-                showIcon
-                closable
-                onClose={() => setAnomalyBannerVisible(false)}
-                title={
-                  <span style={{ fontWeight: 600, fontSize: 13 }}>
-                     智能异常检测：发现 {anomalyItems.length} 条异常
-                  </span>
-                }
-                description={
-                  <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    {anomalyItems.slice(0, 5).map((item, idx) => {
-                      const severityColor = item.severity === 'critical' ? '#ff4d4f' : '#fa8c16';
-                      const typeLabel: Record<string, string> = {
-                        output_spike: '产量异常',
-                        quality_spike: '质量异常',
-                        idle_worker: '工人空闲',
-                        night_scan: '夜间扫码',
-                      };
-                      return (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => handleAnomalyClick(item)}
-                          style={{
-                            fontSize: 12,
-                            color: 'var(--text-secondary)',
-                            display: 'flex',
-                            gap: 8,
-                            alignItems: 'center',
-                            width: '100%',
-                            border: 'none',
-                            background: 'transparent',
-                            padding: '4px 6px',
-                            borderRadius: 6,
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                          }}
-                          title="点击定位对应订单"
-                        >
-                          <span style={{ color: severityColor, fontWeight: 700, minWidth: 60 }}>
-                            [{typeLabel[item.type] ?? item.type}]
-                          </span>
-                          <span style={{ fontWeight: 500, color: 'var(--text-primary)', minWidth: 80 }}>{item.targetName}</span>
-                          <span>{item.description}</span>
-                          {item.deviationRatio > 0 && (
-                            <span style={{ color: severityColor, marginLeft: 4 }}>
-                              偏差 {(item.deviationRatio * 100).toFixed(0)}%
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                    {anomalyItems.length > 5 && (
-                      <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>…还有 {anomalyItems.length - 5} 条，建议继续按异常项逐条处理</div>
-                    )}
-                  </div>
-                }
-              />
-            </div>
-          )}
+          <AnomalyBanner
+            visible={anomalyBannerVisible}
+            items={anomalyItems}
+            onClose={() => setAnomalyBannerVisible(false)}
+            onItemClick={handleAnomalyClick}
+          />
 
           <PageStatCards
             activeKey={activeStatFilter}
@@ -795,12 +735,9 @@ const ProductionList: React.FC = () => {
             hints={smartActionItems.map((item) => ({ ...item, count: item.value }))}
             onClearHints={smartQueueFilter !== 'all' ? () => setSmartQueueFilter('all') : undefined}
           />
-
-          <StickyFilterBar>
-          <Card size="small" className="filter-card mb-sm">
-            <StandardToolbar
-              left={(
-                <>
+          </>}
+          filterLeft={
+            <>
                   <StandardSearchBar
                     searchValue={queryParams.keyword || ''}
                     onSearchChange={(value) => setQueryParams({ ...queryParams, keyword: value, page: 1 })}
@@ -858,9 +795,9 @@ const ProductionList: React.FC = () => {
                     ]}
                   />
                 </>
-              )}
-              right={(
-                <>
+          }
+          filterRight={
+            <>
                   <Button onClick={() => fetchProductionList()}>刷新</Button>
                   <Popover
                     trigger="click"
@@ -911,11 +848,8 @@ const ProductionList: React.FC = () => {
                     导出
                   </Button>
                 </>
-              )}
-            />
-          </Card>
-          </StickyFilterBar>
-
+          }
+        >
           {viewMode === 'smart' ? (
             <ExternalFactorySmartView
               data={sortedProductionList}
@@ -1049,7 +983,7 @@ const ProductionList: React.FC = () => {
             />
             </>
           )}
-        </Card>
+        </PageLayout>
 
         {/* 快速编辑弹窗 */}
         <QuickEditModal
@@ -1116,177 +1050,37 @@ const ProductionList: React.FC = () => {
         />
 
         {/* 转单弹窗 */}
-        <ResizableModal
-          title={`转单 - ${safeString((transferRecord as any)?.orderNo)}`}
-          open={transferModalVisible}
-          onCancel={closeTransferModal}
-          onOk={submitTransfer}
-          confirmLoading={transferSubmitting}
-          okText={transferType === 'factory' ? '确认转工厂' : '确认转人员'}
-          cancelText="取消"
-          width="60vw"
-          initialHeight={Math.round(window.innerHeight * 0.82)}
-          destroyOnHidden
-        >
-          <div style={{ padding: '8px 0' }}>
-            {/* 转单类型 Tab */}
-            <Tabs
-              activeKey={transferType}
-              onChange={(key) => setTransferType(key as 'user' | 'factory')}
-              style={{ marginBottom: 16 }}
-              items={[
-                { key: 'user', label: '转人员（系统内部）' },
-                { key: 'factory', label: '转工厂（系统内部）' },
-              ]}
-            />
-
-            {/* 转人员 */}
-            {transferType === 'user' && (
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ marginBottom: 6, fontWeight: 500 }}>转给谁：</div>
-                <Select
-                  showSearch placeholder="输入姓名搜索系统用户（仅限本系统内部）" value={transferUserId}
-                  onChange={(val) => setTransferUserId(val)} onSearch={searchTransferUsers}
-                  filterOption={false} loading={transferSearching}
-                  notFoundContent={transferSearching ? '搜索中...' : '输入姓名搜索'}
-                  style={{ width: '100%' }} allowClear
-                >
-                  {transferUsers.map(u => (
-                    <Option key={u.id} value={u.id}>
-                      {u.name}{u.username ? ` (${u.username})` : ''}
-                    </Option>
-                  ))}
-                </Select>
-              </div>
-            )}
-
-            {/* 转工厂 */}
-            {transferType === 'factory' && (
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ marginBottom: 6, fontWeight: 500 }}>转给哪个工厂：</div>
-                <Select
-                  showSearch placeholder="输入工厂名称搜索（仅限本系统内部工厂）" value={transferFactoryId}
-                  onChange={(val) => setTransferFactoryId(val)} onSearch={searchTransferFactories}
-                  filterOption={false} loading={transferFactorySearching}
-                  notFoundContent={transferFactorySearching ? '搜索中...' : '输入工厂名称搜索'}
-                  style={{ width: '100%' }} allowClear
-                >
-                  {transferFactories.map(f => (
-                    <Option key={f.id} value={f.id}>
-                      {f.factoryName}{f.factoryCode ? ` (${f.factoryCode})` : ''}
-                      {f.contactPerson ? ` · ${f.contactPerson}` : ''}
-                    </Option>
-                  ))}
-                </Select>
-              </div>
-            )}
-
-            {/* 菲号选择（共用） */}
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ marginBottom: 6, fontWeight: 500 }}>
-                选择菲号（可选）：
-                {transferSelectedBundleIds.length > 0 && (
-                  <span style={{ fontWeight: 400, color: 'var(--color-text-tertiary)', marginLeft: 8 }}>
-                    已选 {transferSelectedBundleIds.length} 个
-                  </span>
-                )}
-              </div>
-              <ResizableTable
-                storageKey="production-list-transfer"
-                size="small" loading={transferBundlesLoading} dataSource={transferBundles}
-                rowKey="id" pagination={false} scroll={{ y: 200 }}
-                rowClassName={(record: any) => {
-                  const s = record?.status;
-                  if (s === 'received' || s === 'qualified' || s === 'completed') return 'transfer-bundle-row-disabled';
-                  return '';
-                }}
-                rowSelection={{
-                  selectedRowKeys: transferSelectedBundleIds,
-                  onChange: (keys) => setTransferSelectedBundleIds(keys as string[]),
-                  getCheckboxProps: (record: any) => ({
-                    disabled: record?.status === 'received' || record?.status === 'qualified' || record?.status === 'completed',
-                  }),
-                }}
-                columns={[
-                  { title: '菲号', dataIndex: 'bundleNo', width: 80, render: (val: any) => val || '-' },
-                  { title: '颜色', dataIndex: 'color', width: 100 },
-                  { title: '尺码', dataIndex: 'size', width: 80 },
-                  { title: '数量', dataIndex: 'quantity', width: 70 },
-                  {
-                    title: '状态', dataIndex: 'status', width: 90,
-                    render: (v: string) => {
-                      const statusMap: Record<string, string> = {
-                        'created': '已创建', 'received': '已领取', 'qualified': '已质检',
-                        'completed': '已完成', 'in_progress': '生产中',
-                      };
-                      return statusMap[v] || v || '-';
-                    }
-                  },
-                ]}
-                locale={{ emptyText: transferBundlesLoading ? '加载中...' : '暂无菲号数据' }}
-              />
-            </div>
-
-            {/* 工序选择（共用） */}
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ marginBottom: 6, fontWeight: 500 }}>
-                选择工序（可选）：
-                {transferSelectedProcessCodes.length > 0 && (
-                  <span style={{ fontWeight: 400, color: 'var(--color-text-tertiary)', marginLeft: 8 }}>
-                    已选 {transferSelectedProcessCodes.length} 个工序
-                  </span>
-                )}
-              </div>
-              <Select
-                mode="multiple" placeholder="选择要转移的工序" value={transferSelectedProcessCodes}
-                onChange={(vals) => setTransferSelectedProcessCodes(vals)}
-                loading={transferProcessesLoading} style={{ width: '100%' }}
-                allowClear optionFilterProp="label" maxTagCount="responsive"
-              >
-                {transferProcesses.map((p: any) => {
-                  const price = Number(p.unitPrice || 0);
-                  const priceText = price > 0 ? ` - ¥${price.toFixed(2)}/件` : '';
-                  const label = `${p.processName}${priceText}${p.progressStage ? ` (${p.progressStage})` : ''}`;
-                  return (
-                    <Option key={p.processCode || p.id} value={p.processCode || p.id} label={label}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span>{p.processName}</span>
-                        <span style={{ color: 'var(--color-text-tertiary)', fontSize: '12px' }}>
-                          {p.progressStage && `${p.progressStage} | `}
-                          {price > 0 ? `¥${price.toFixed(2)}` : '未配置单价'}
-                        </span>
-                      </div>
-                    </Option>
-                  );
-                })}
-              </Select>
-              {transferProcesses.length === 0 && !transferProcessesLoading && (
-                <div style={{ color: 'var(--color-text-tertiary)', fontSize: '12px', marginTop: 4 }}>
-                  该订单暂无工序配置
-                </div>
-              )}
-            </div>
-
-            {/* 备注（时间戳由后端自动植入，格式 [2026-02-19 14:30] 备注内容） */}
-            <div>
-              <div style={{ marginBottom: 6, fontWeight: 500 }}>
-                备注（可选）：
-                <span style={{ fontWeight: 400, color: 'var(--color-text-tertiary)', fontSize: '12px', marginLeft: 6 }}>
-                  系统将自动记录备注时间
-                </span>
-              </div>
-              <Input.TextArea
-                placeholder="请输入转单备注"
-                value={transferType === 'factory' ? transferFactoryMessage : transferMessage}
-                onChange={(e) => transferType === 'factory'
-                  ? setTransferFactoryMessage(e.target.value)
-                  : setTransferMessage(e.target.value)
-                }
-                autoSize={{ minRows: 2, maxRows: 4 }} maxLength={200} showCount
-              />
-            </div>
-          </div>
-        </ResizableModal>
+        <TransferOrderModal
+          transferModalVisible={transferModalVisible}
+          transferRecord={transferRecord}
+          transferType={transferType}
+          setTransferType={setTransferType}
+          transferUserId={transferUserId}
+          setTransferUserId={setTransferUserId}
+          transferMessage={transferMessage}
+          setTransferMessage={setTransferMessage}
+          transferUsers={transferUsers}
+          transferSearching={transferSearching}
+          transferFactoryId={transferFactoryId}
+          setTransferFactoryId={setTransferFactoryId}
+          transferFactoryMessage={transferFactoryMessage}
+          setTransferFactoryMessage={setTransferFactoryMessage}
+          transferFactories={transferFactories}
+          transferFactorySearching={transferFactorySearching}
+          transferSubmitting={transferSubmitting}
+          transferBundles={transferBundles}
+          transferBundlesLoading={transferBundlesLoading}
+          transferSelectedBundleIds={transferSelectedBundleIds}
+          setTransferSelectedBundleIds={setTransferSelectedBundleIds}
+          transferProcesses={transferProcesses}
+          transferProcessesLoading={transferProcessesLoading}
+          transferSelectedProcessCodes={transferSelectedProcessCodes}
+          setTransferSelectedProcessCodes={setTransferSelectedProcessCodes}
+          searchTransferUsers={searchTransferUsers}
+          searchTransferFactories={searchTransferFactories}
+          submitTransfer={submitTransfer}
+          closeTransferModal={closeTransferModal}
+        />
 
         {shareOrderDialog}
 
@@ -1297,6 +1091,7 @@ const ProductionList: React.FC = () => {
           targetType="order"
           targetNo={remarkTarget.orderNo}
           defaultRole={remarkTarget.defaultRole}
+          canAddRemark={isSupervisorOrAbove || isFactoryAccount || (!!user?.username && user.username === remarkTarget.merchandiser)}
         />
 
         {/* 打印标签（洗水唛 / U编码）双 Tab 弹窗 */}

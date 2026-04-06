@@ -155,6 +155,8 @@ const useStyleBomActions = ({
               styleNo: currentStyleNo,
               pickerId: String(user?.id || ''),
               pickerName: String(user?.name || user?.username || ''),
+              pickupType: 'INTERNAL',
+              usageType: 'SAMPLE',
               remark: 'BOM_PICK',
             },
             items: [{

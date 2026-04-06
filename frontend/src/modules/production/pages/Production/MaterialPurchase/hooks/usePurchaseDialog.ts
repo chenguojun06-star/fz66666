@@ -100,7 +100,7 @@ export function usePurchaseDialog({
         ? MATERIAL_PURCHASE_STATUS.CANCELLED
         : arrivedQuantity <= 0 ? MATERIAL_PURCHASE_STATUS.PENDING
         : arrivedQuantity < purchaseQuantity ? MATERIAL_PURCHASE_STATUS.PARTIAL
-        : MATERIAL_PURCHASE_STATUS.COMPLETED;
+        : MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM;
       const payload = {
         ...values,
         totalAmount,

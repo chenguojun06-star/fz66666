@@ -21,7 +21,7 @@ export const useQuickEdit = ({ message, fetchOrders }: UseQuickEditOptions) => {
     setQuickEditVisible(true);
   };
 
-  const handleQuickEditSave = async (values: { remarks: string; expectedShipDate: string | null }) => {
+  const handleQuickEditSave = async (values: { remarks: string; expectedShipDate: string | null; urgencyLevel: string }) => {
     setQuickEditSaving(true);
     try {
       await productionOrderApi.quickEdit({ id: quickEditRecord?.id, ...values });

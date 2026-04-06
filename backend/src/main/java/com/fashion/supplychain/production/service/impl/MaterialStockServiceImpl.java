@@ -120,6 +120,9 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
         if (!StringUtils.hasText(color)) {
             query.and(w -> w.isNull(MaterialStock::getColor).or().eq(MaterialStock::getColor, ""));
         }
+        if (!StringUtils.hasText(size)) {
+            query.and(w -> w.isNull(MaterialStock::getSize).or().eq(MaterialStock::getSize, ""));
+        }
 
         MaterialStock stock = this.getOne(query, false);
         if (stock != null) {

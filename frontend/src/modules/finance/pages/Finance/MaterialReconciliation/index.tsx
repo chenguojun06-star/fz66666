@@ -3,6 +3,7 @@ import { Button, Card, Dropdown, Select, Tag, Form, message } from 'antd';
 
 import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
+import PageLayout from '@/components/common/PageLayout';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -693,18 +694,16 @@ const MaterialReconciliation: React.FC = () => {
 
   return (
     <Layout>
-        <Card className="page-card">
-          {/* 页面标题和操作区 */}
-          <div className="page-header">
-            <h2 className="page-title">物料对账</h2>
-          </div>
-
-          {showSmartErrorNotice && smartError ? (
-            <div style={{ marginBottom: 12 }}>
-              <SmartErrorNotice error={smartError} onFix={fetchReconciliationList} />
-            </div>
-          ) : null}
-
+        <PageLayout
+          title="物料对账"
+          headerContent={
+            showSmartErrorNotice && smartError ? (
+              <div style={{ marginBottom: 12 }}>
+                <SmartErrorNotice error={smartError} onFix={fetchReconciliationList} />
+              </div>
+            ) : null
+          }
+        >
           {/* 财务AI智能审核面板 */}
           {showSmartErrorNotice && (
             <Card
@@ -858,7 +857,7 @@ const MaterialReconciliation: React.FC = () => {
               onChange: (page, pageSize) => setQueryParams({ ...queryParams, page, pageSize }),
             }}
           />
-        </Card>
+        </PageLayout>
 
         {/* 物料对账详情弹窗 */}
         <ResizableModal

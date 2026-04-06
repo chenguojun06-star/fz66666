@@ -12,6 +12,8 @@ interface RemarkTimelineModalProps {
   targetType: 'order' | 'style';
   targetNo: string;
   defaultRole?: string;
+  /** 是否允许添加备注（默认 true），false 时隐藏输入区 */
+  canAddRemark?: boolean;
 }
 
 /**
@@ -23,6 +25,7 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
   targetType,
   targetNo,
   defaultRole,
+  canAddRemark = true,
 }) => {
   const { message } = App.useApp();
   const [remarks, setRemarks] = useState<OrderRemark[]>([]);
@@ -35,8 +38,10 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
     if (!targetNo) return;
     setLoading(true);
     try {
-      const res = await remarkApi.list({ targetType, targetNo });
-      setRemarks(Array.isArray(res) ? res : []);
+      const res: any = await remarkApi.list({ targetType, targetNo });
+      // axios 拦截器返回 Result<T> 包装：{ code, data, message }
+      const list = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : [];
+      setRemarks(list);
     } catch {
       message.error('加载备注失败');
     } finally {
@@ -90,7 +95,7 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
         {/* 输入区 */}
-        <div style={{ background: '#fafafa', padding: 12, borderRadius: 6 }}>
+        {canAddRemark ? <div style={{ background: '#fafafa', padding: 12, borderRadius: 6 }}>
           <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
             <Input
               placeholder="你的角色/工序（可选，如：裁剪、车缝、质检）"
@@ -111,7 +116,7 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
             maxLength={1000}
             showCount
           />
-        </div>
+        </div> : null}
 
         {/* 备注列表 */}
         <div style={{ flex: 1, overflow: 'auto', minHeight: 200 }}>
@@ -134,7 +139,7 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
                       <span>
                         <strong>{r.authorName || '匿名'}</strong>
                         {r.authorRole && (
-                          <Tag color="blue" style={{ marginLeft: 8 }}>{r.authorRole}</Tag>
+                          <Tag style={{ marginLeft: 8 }}>{r.authorRole}</Tag>
                         )}
                       </span>
                       <span style={{ color: '#999', fontSize: 12 }}>
