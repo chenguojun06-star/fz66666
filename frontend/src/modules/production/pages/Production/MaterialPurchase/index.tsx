@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card, Input, Select, Form, InputNumber, Segmented, Tooltip, Upload, Button, message } from 'antd';
+import { Card, Input, Form, InputNumber, Tooltip, Upload, Button, message } from 'antd';
 import { QuestionCircleOutlined, InboxOutlined, FileSearchOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import Layout from '@/components/Layout';

@@ -32,7 +32,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, styleNo, readOnly, onSave
   const [auditStatus, setAuditStatus] = useState<number>(0);
   const [auditRemark, setAuditRemark] = useState('');
   const [auditSubmitting, setAuditSubmitting] = useState(false);
-  const [procBaseTotal, setProcBaseTotal] = useState(0);
+  const [_procBaseTotal, setProcBaseTotal] = useState(0);
   const [secBaseTotal, setSecBaseTotal] = useState(0);
   const [bomColorCosts, setBomColorCosts] = useState<BomColorCosts>({
     costByColor: {},

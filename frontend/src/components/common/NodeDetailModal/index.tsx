@@ -11,7 +11,7 @@ import { useAuth } from '@/utils/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import ProcessTrackingTable from '@/components/production/ProcessTrackingTable';
 import { useNodeDetailData } from './useNodeDetailData';
-import type { NodeType, HistoryItem, NodeOperationData, NodeOperations, Factory, ScanRecord, BundleRecord, OperatorSummary, NodeDetailModalProps } from './types';
+import type { NodeType, HistoryItem, NodeOperationData, OperatorSummary, NodeDetailModalProps } from './types';
 
 const { Text } = Typography;
 
@@ -54,11 +54,11 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
 
   const {
     loading, factories, users, nodeOperations, setNodeOperations,
-    scanRecords, bundles, orderSummary, processTrackingRecords,
+    scanRecords: _scanRecords, bundles: _bundles, orderSummary, processTrackingRecords,
     trackingLoading, repairLoading, loadWarnings, prediction, predicting,
-    feedbackSentKeyRef, filteredScanRecords, operatorSummary, cuttingSizeItems,
-    childProcessNames, _cuttingTotalQty, handleUndoSuccess, handleRepairTracking,
-    normalizeText, _formatHistoryTime, _formatScanDetail,
+    feedbackSentKeyRef: _feedbackSentKeyRef, filteredScanRecords: _filteredScanRecords, operatorSummary, cuttingSizeItems,
+    childProcessNames: _childProcessNames, _cuttingTotalQty, handleUndoSuccess, handleRepairTracking,
+    normalizeText: _normalizeText, _formatHistoryTime, _formatScanDetail,
   } = useNodeDetailData({
     visible, orderId, orderNo, nodeType, nodeName, nodeStats,
     isPatternProduction, processList, onSaved,

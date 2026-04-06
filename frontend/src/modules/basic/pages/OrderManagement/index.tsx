@@ -14,24 +14,24 @@ import Layout from '@/components/Layout';
 import PageLayout from '@/components/common/PageLayout';
 import api from '@/utils/api';
 import { StyleBom, StyleInfo, StyleQueryParams } from '@/types/style';
-import { Factory } from '@/types/system';
+
 import { ProductionOrder } from '@/types/production';
-import { formatDateTime } from '@/utils/datetime';
+
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import { DEFAULT_PAGE_SIZE_OPTIONS, readPageSize, savePageSize } from '@/utils/pageSizeStore';
 import { useLocation } from 'react-router-dom';
-import { StyleAttachmentsButton, StyleCoverThumb } from '@/components/StyleAssets';
+import { StyleAttachmentsButton } from '@/components/StyleAssets';
 import StyleCoverGallery from '@/components/common/StyleCoverGallery';
 import { getMaterialTypeCategory } from '@/utils/materialType';
-import { CATEGORY_CODE_OPTIONS, normalizeCategoryQuery, toCategoryCn } from '@/utils/styleCategory';
+import { CATEGORY_CODE_OPTIONS, normalizeCategoryQuery } from '@/utils/styleCategory';
 import { useDictOptions } from '@/hooks/useDictOptions';
 import { useViewport } from '@/utils/useViewport';
 import { useCardGridLayout } from '@/hooks/useCardGridLayout';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 
 import { getStyleCardSizeQuantityItems } from '@/utils/cardSizeQuantity';
-import { getStyleSourceMeta, getStyleSourceText } from '@/utils/styleSource';
+import { getStyleSourceText } from '@/utils/styleSource';
 import OrderRankingDashboard from './components/OrderRankingDashboard';
 import OrderFactorySelector from './components/OrderFactorySelector';
 import InlineField from './components/InlineField';
@@ -49,7 +49,7 @@ import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import OrderAnalysisTab from './components/OrderAnalysisTab';
 import StyleQuotePopover from './StyleQuotePopover';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
-import type { SmartErrorInfo } from '@/smart/core/types';
+
 import { OrderLine, PricingProcess, ProgressNode, defaultProgressNodes } from './types';
 import { buildOrderQtyStats, calcBomRequirementQty, getMatchedOrderQty, normalizeMatchKey } from './utils/orderBomMetrics';
 import { buildOrderSubmitPayload } from './utils/buildOrderSubmitPayload';
@@ -115,7 +115,7 @@ const OrderManagement: React.FC = () => {
   const [progressNodes, setProgressNodes] = useState<ProgressNode[]>(defaultProgressNodes);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
 
-  const { styles, total, loading, factories, factoryCapacities, departments, users, smartError, setSmartError, reportSmartError, fetchStyles } = useOrderDataFetch({ queryParams, visible, showSmartErrorNotice, message });
+  const { styles, total, loading, factories, factoryCapacities, departments, users, smartError, setSmartError: _setSmartError, reportSmartError: _reportSmartError, fetchStyles } = useOrderDataFetch({ queryParams, visible, showSmartErrorNotice, message });
 
   const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
@@ -314,11 +314,11 @@ const OrderManagement: React.FC = () => {
   }, [orderLines]);
 
   const {
-    deliverySuggestion, suggestionLoading, quoteReference, quotationUnitPrice,
+    deliverySuggestion, suggestionLoading, quoteReference: _quoteReference, quotationUnitPrice,
     totalCostUnitPrice, suggestedQuotationUnitPrice, orderLearningLoading,
-    orderLearningRecommendation, schedulingResult, schedulingLoading, setSchedulingResult,
-    processBasedUnitPrice, sizePriceBySize, sizeBasedUnitPrice, resolvedOrderUnitPrice,
-    preferredPricingMode, schedulingPlans, fetchDeliverySuggestion, resetIntelligence,
+    orderLearningRecommendation, schedulingResult: _schedulingResult, schedulingLoading, setSchedulingResult,
+    processBasedUnitPrice, sizePriceBySize: _sizePriceBySize, sizeBasedUnitPrice, resolvedOrderUnitPrice,
+    preferredPricingMode: _preferredPricingMode, schedulingPlans, fetchDeliverySuggestion: _fetchDeliverySuggestion, resetIntelligence: _resetIntelligence,
   } = useOrderIntelligence({
     visible, selectedStyle, totalOrderQuantity, form, factoryMode,
     watchedPricingMode, watchedManualOrderUnitPrice, selectedFactoryStat,

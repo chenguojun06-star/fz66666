@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { Button, Card, Input, Select, Tag, App, Popover, Checkbox, Tabs, Segmented } from 'antd';
-import ResizableModal from '@/components/common/ResizableModal';
+import { Button, Input, Select, Tag, App, Popover, Checkbox, Segmented } from 'antd';
+
 import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined, RadarChartOutlined } from '@ant-design/icons';
 import ExternalFactorySmartView from '../ExternalFactory/ExternalFactorySmartView';
 import Layout from '@/components/Layout';

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { App, Button, Card, Input } from 'antd';
+import { App, Button, Input } from 'antd';
 import { AppstoreOutlined, ArrowUpOutlined, ArrowDownOutlined, RadarChartOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import PageLayout from '@/components/common/PageLayout';

@@ -5,6 +5,9 @@ import static org.mockito.Mockito.*;
 
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
+import com.fashion.supplychain.production.helper.ProductWarehousingQueryHelper;
+import com.fashion.supplychain.production.helper.ProductWarehousingRepairHelper;
+import com.fashion.supplychain.production.helper.ProductWarehousingRollbackHelper;
 import com.fashion.supplychain.production.service.*;
 import com.fashion.supplychain.style.service.ProductSkuService;
 import com.fashion.supplychain.style.service.StyleBomService;
@@ -47,6 +50,9 @@ class ProductWarehousingOrchestratorTest {
     @Mock private StyleInfoService styleInfoService;
     @Mock private StyleBomService styleBomService;
     @Mock private TemplateLibraryService templateLibraryService;
+    @Mock private ProductWarehousingQueryHelper queryHelper;
+    @Mock private ProductWarehousingRepairHelper repairHelper;
+    @Mock private ProductWarehousingRollbackHelper rollbackHelper;
 
     @InjectMocks
     private ProductWarehousingOrchestrator orchestrator;

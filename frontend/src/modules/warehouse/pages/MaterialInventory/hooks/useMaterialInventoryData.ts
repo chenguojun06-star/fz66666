@@ -3,7 +3,7 @@ import { Form } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import { useModal, useTablePagination } from '@/hooks';
-import { useAuth, isSupervisorOrAbove, isAdmin as isAdminUser } from '@/utils/AuthContext';
+import { useAuth } from '@/utils/AuthContext';
 import api from '@/utils/api';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';

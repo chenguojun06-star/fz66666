@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Alert, App, Button, Card, Checkbox, Empty, Input, Select, Space, Spin, Tabs, Tag, Form, Row, Col } from 'antd';
+import { Alert, Button, Card, Checkbox, Empty, Input, Select, Space, Spin, Tabs, Tag, Form, Row, Col } from 'antd';
 import { QrcodeOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import PageLayout from '@/components/common/PageLayout';
@@ -35,13 +35,13 @@ const UserList: React.FC = () => {
     activeEditTab, setActiveEditTab,
     remarkModalState, setRemarkModalState, remarkLoading,
     roleOptions, roleOptionsLoading,
-    permTree, permCheckedIds, setPermCheckedIds, permLoading, permSaving,
+    permTree: _permTree, permCheckedIds, setPermCheckedIds, permLoading, permSaving,
     pendingUserCount,
     logLoading, logRecords, setLogRecords, logTitle,
     inviteQr, setInviteQr,
     formRules, selectedRoleId, selectedRoleName, permissionsByModule,
     getUserList, openDialog, closeDialog, handleGenerateInvite,
-    openRemarkModal, handleRemarkConfirm, openLogModal,
+    openRemarkModal: _openRemarkModal, handleRemarkConfirm, openLogModal,
     toggleUserStatus, applyRoleToUser, handleSubmit, savePerms,
     loadPermTreeAndChecked,
   } = useUserListData({ user, isSuperAdmin, isTenantOwner, form, userModal, logModal, navigate });

@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, Spin, Button, Tabs, Alert, Descriptions, Tag, Image, Typography, Select, Space, Statistic, Row, Col, Form, InputNumber, Input, Popconfirm } from 'antd';
+import { Card, Spin, Button, Tabs, Alert, Descriptions, Tag, Image, Typography, Space, Statistic, Row, Col, Form } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import {
   ArrowLeftOutlined, CheckCircleOutlined,
-  InboxOutlined, OrderedListOutlined, ToolOutlined,
+  InboxOutlined, OrderedListOutlined,
 } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -13,10 +13,10 @@ import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { formatDateTime } from '@/utils/datetime';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 import { ProductWarehousing as WarehousingType, ProductionOrder } from '@/types/production';
-import { OrderLineWarehousingRow, WarehousingDetailRecord, CuttingBundleRow, OrderLine, BatchSelectBundleRow } from '../../types';
-import { getQualityStatusConfig, getDefectCategoryLabel, getDefectRemarkLabel, isBundleBlockedForWarehousing } from '../../utils';
-import { DEFECT_CATEGORY_OPTIONS, DEFECT_REMARK_OPTIONS } from '../../constants';
-import UnqualifiedUpload from '../../components/WarehousingModal/components/UnqualifiedUpload';
+import { OrderLineWarehousingRow, WarehousingDetailRecord, CuttingBundleRow, OrderLine } from '../../types';
+import { getQualityStatusConfig, getDefectCategoryLabel, getDefectRemarkLabel } from '../../utils';
+
+
 import BatchUnqualifiedModal from '../../components/WarehousingModal/BatchUnqualifiedModal';
 import { useWarehousingForm } from '../../components/WarehousingModal/hooks/useWarehousingForm';
 import StyleSizeTab from '@/modules/basic/pages/StyleInfo/components/StyleSizeTab';

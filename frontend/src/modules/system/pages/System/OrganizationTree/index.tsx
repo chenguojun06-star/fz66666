@@ -10,7 +10,7 @@ import type { Factory } from '@/services/system/factoryApi';
 import type { OrganizationUnit, User } from '@/types/system';
 import { useAuth } from '@/utils/AuthContext';
 import {
-  App, Avatar, Button, Card, Checkbox, Col, Descriptions, Empty, Form, Input,
+  App, Avatar, Button, Checkbox, Col, Descriptions, Empty, Form, Input,
   InputNumber, QRCode, Row, Select, Space, Spin, Tag, Typography,
 } from 'antd';
 import type { TableColumnsType } from 'antd';

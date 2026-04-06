@@ -13,7 +13,6 @@ import {
   Tooltip,
 } from 'antd';
 import {
-  CheckCircleOutlined,
   ClockCircleOutlined,
 } from '@ant-design/icons';
 import Layout from '@/components/Layout';
@@ -44,7 +43,7 @@ const _MaterialInventory: React.FC = () => {
     loading, dataSource, smartError, showSmartErrorNotice, showMaterialAI,
     stats, pagination, user,
     searchText, setSearchText, selectedType, setSelectedType, dateRange, setDateRange,
-    detailModal, inboundModal, outboundModal, rollModal, rollForm, printModal,
+    detailModal: _detailModal, inboundModal: _inboundModal, outboundModal: _outboundModal, rollModal, rollForm, printModal: _printModal,
     alertLoading, alertList, alertOptions: _alertOptions,
     pendingPickings, pendingPickingsLoading, confirmingPickingId, cancellingPickingId,
     fetchData, fetchPendingPickings,

@@ -15,7 +15,7 @@ import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import PageLayout from '@/components/common/PageLayout';
 
-import api, { generateRequestId, isDuplicateScanMessage, isApiSuccess, isOrderFrozenByStatus, isOrderTerminal } from '@/utils/api';
+import { generateRequestId, isDuplicateScanMessage, isOrderFrozenByStatus, isOrderTerminal } from '@/utils/api';
 import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress';
 import { isSupervisorOrAboveUser as isSupervisorOrAboveUserFn, useAuth } from '@/utils/AuthContext';
 import { formatDateTimeCompact } from '@/utils/datetime';
@@ -23,7 +23,7 @@ import { getProgressColorStatus, getRemainingDaysDisplay } from '@/utils/progres
 import { CuttingBundle, ProductionOrder, ProductionQueryParams, ScanRecord } from '@/types/production';
 import type { TemplateLibrary } from '@/types/style';
 
-import { productionCuttingApi, productionOrderApi, productionScanApi, type ProductionOrderListParams } from '@/services/production/productionApi';
+import { productionCuttingApi, productionOrderApi, productionScanApi } from '@/services/production/productionApi';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 import { DEFAULT_PAGE_SIZE_OPTIONS, savePageSize } from '@/utils/pageSizeStore';
 import '../../../styles.css';
@@ -127,7 +127,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     pendingScrollOrderId, setPendingScrollOrderId,
     focusedOrderId,
     pendingFocusNode, setPendingFocusNode,
-    focusedOrderNos, setFocusedOrderNos,
+    focusedOrderNos: _focusedOrderNos, setFocusedOrderNos,
     focusedOrderNosRef,
     getOrderDomKey, triggerOrderFocus,
     normalizeFocusNodeName, getFocusNodeType,
@@ -180,10 +180,10 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const mergeProcessDataForOrder = useProductionBoardStore((s) => s.mergeProcessDataForOrder);
 
   const {
-    loading, total, orders, sortedOrders, setOrders,
-    smartError, setSmartError, globalStats, setGlobalStats,
-    progressNodesByStyleNo, setProgressNodesByStyleNo, progressNodesByStyleNoRef,
-    showSmartErrorNotice, fetchOrders, fetchGlobalStats, reportSmartError,
+    loading, total, orders, sortedOrders, setOrders: _setOrders,
+    smartError, setSmartError: _setSmartError, globalStats, setGlobalStats: _setGlobalStats,
+    progressNodesByStyleNo, setProgressNodesByStyleNo, progressNodesByStyleNoRef: _progressNodesByStyleNoRef,
+    showSmartErrorNotice, fetchOrders, fetchGlobalStats: _fetchGlobalStats, reportSmartError: _reportSmartError,
   } = useProgressData({ queryParams, dateRange, dateSortAsc, focusedOrderNosRef, clearAllBoardCache });
 
   const [activeOrder, setActiveOrder] = useState<ProductionOrder | null>(null);

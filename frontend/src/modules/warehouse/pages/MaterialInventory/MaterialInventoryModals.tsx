@@ -24,7 +24,7 @@ import MaterialOutboundPrintModal from './components/MaterialOutboundPrintModal'
 import MaterialInfoCard from './components/MaterialInfoCard';
 import StandardModal from '@/components/common/StandardModal';
 import SmallModal from '@/components/common/SmallModal';
-import StandardPagination from '@/components/common/StandardPagination';
+
 import type { useMaterialInventoryData } from './hooks/useMaterialInventoryData';
 import type { MaterialBatchDetail } from './hooks/useMaterialInventoryData';
 import type { useMaterialPickupData } from './hooks/useMaterialPickupData';

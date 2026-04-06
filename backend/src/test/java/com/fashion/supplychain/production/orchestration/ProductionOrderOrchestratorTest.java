@@ -9,6 +9,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.orchestration.ProductionOrderCreationHelper;
+import com.fashion.supplychain.production.orchestration.ProductionOrderLifecycleHelper;
+import com.fashion.supplychain.production.orchestration.ProductionOrderWorkflowHelper;
 import com.fashion.supplychain.production.service.*;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -49,6 +52,9 @@ class ProductionOrderOrchestratorTest {
     @Mock private ProductionOrderFinanceOrchestrationService financeOrchestrationService;
     @Mock private ProductionOrderFlowOrchestrationService flowOrchestrationService;
     @Mock private ObjectMapper objectMapper;
+    @Mock private ProductionOrderLifecycleHelper lifecycleHelper;
+    @Mock private ProductionOrderWorkflowHelper workflowHelper;
+    @Mock private ProductionOrderCreationHelper creationHelper;
 
     @InjectMocks
     private ProductionOrderOrchestrator orchestrator;

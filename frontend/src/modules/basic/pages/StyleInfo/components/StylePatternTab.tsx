@@ -160,7 +160,7 @@ const StylePatternTab: React.FC<Props> = ({
   const childReadOnly = useMemo(() => Boolean(readOnly) || locked, [readOnly, locked]);
 
   // 只要有任意纸样文件即视为有效，不限制格式（含 paj/dxf/plt/ets 等所有 CAD 格式）
-  const hasValidPatternFile = useMemo(() => {
+  const _hasValidPatternFile = useMemo(() => {
     const list = Array.isArray(patternFiles) ? patternFiles : [];
     return list.length > 0;
   }, [patternFiles]);

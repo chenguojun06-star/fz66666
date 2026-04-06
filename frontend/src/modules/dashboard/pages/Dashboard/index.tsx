@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { App, AutoComplete, Button, Card, Checkbox, Space } from 'antd';
+import { App, AutoComplete, Button, Checkbox, Space } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import {
   AccountBookOutlined,
