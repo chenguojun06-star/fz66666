@@ -276,32 +276,32 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
         if (records == null || records.isEmpty()) {
             return;
         }
-        List<String> materialIds = records.stream()
-                .map(MaterialStock::getMaterialId)
+        List<String> codes = records.stream()
+                .map(MaterialStock::getMaterialCode)
                 .filter(StringUtils::hasText)
                 .distinct()
                 .collect(Collectors.toList());
-        if (materialIds.isEmpty()) {
+        if (codes.isEmpty()) {
             return;
         }
         Map<String, MaterialDatabase> dbMap = materialDatabaseService.list(
                 new LambdaQueryWrapper<MaterialDatabase>()
-                        .in(MaterialDatabase::getId, materialIds)
-                        .select(MaterialDatabase::getId, MaterialDatabase::getConversionRate,
+                        .in(MaterialDatabase::getMaterialCode, codes)
+                        .select(MaterialDatabase::getMaterialCode, MaterialDatabase::getConversionRate,
                                 MaterialDatabase::getFabricWidth, MaterialDatabase::getFabricWeight,
                                 MaterialDatabase::getFabricComposition, MaterialDatabase::getSupplierName,
                                 MaterialDatabase::getUnitPrice, MaterialDatabase::getColor))
                 .stream()
-                .filter(item -> item != null && StringUtils.hasText(item.getId()))
-                .collect(Collectors.toMap(MaterialDatabase::getId, d -> d, (a, b) -> a));
+                .filter(item -> item != null && StringUtils.hasText(item.getMaterialCode()))
+                .collect(Collectors.toMap(MaterialDatabase::getMaterialCode, d -> d, (a, b) -> a));
         if (dbMap.isEmpty()) {
             return;
         }
         for (MaterialStock record : records) {
-            if (record == null || !StringUtils.hasText(record.getMaterialId())) {
+            if (record == null || !StringUtils.hasText(record.getMaterialCode())) {
                 continue;
             }
-            MaterialDatabase db = dbMap.get(record.getMaterialId());
+            MaterialDatabase db = dbMap.get(record.getMaterialCode());
             if (db == null) continue;
             if (record.getConversionRate() == null && db.getConversionRate() != null) {
                 record.setConversionRate(db.getConversionRate());
