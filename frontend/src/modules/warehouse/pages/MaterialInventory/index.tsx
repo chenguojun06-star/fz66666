@@ -31,6 +31,7 @@ import { formatMaterialSpecWidth, getBaseMaterialTypeLabel, getMaterialTypeCateg
 import MaterialAlertRanking from './components/MaterialAlertRanking';
 import MaterialInventoryAISummary from './components/MaterialInventoryAISummary';
 import MaterialOutboundPrintModal from './components/MaterialOutboundPrintModal';
+import MaterialInfoCard from './components/MaterialInfoCard';
 import './MaterialInventory.css';
 import StandardModal from '@/components/common/StandardModal';
 import SmallModal from '@/components/common/SmallModal';
@@ -714,68 +715,19 @@ const _MaterialInventory: React.FC = () => {
             </Form.Item>
           )}
           <Form.Item label="物料信息">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', width: '100%' }}>
-              <div style={{ fontSize: 'var(--font-size-sm)' }}>
-                <div style={{ color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>物料编号</div>
-                <div style={{ fontWeight: 600 }}>{instructionTarget?.materialCode || '-'}</div>
-              </div>
-              <div style={{ fontSize: 'var(--font-size-sm)' }}>
-                <div style={{ color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>物料名称</div>
-                <div style={{ fontWeight: 600 }}>{instructionTarget?.materialName || '-'}</div>
-              </div>
-              <div style={{ fontSize: 'var(--font-size-sm)' }}>
-                <div style={{ color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>类型</div>
-                <div style={{ fontWeight: 600 }}>{getBaseMaterialTypeLabel(instructionTarget?.materialType)}</div>
-              </div>
-              <div style={{ fontSize: 'var(--font-size-sm)' }}>
-                <div style={{ color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>供应商</div>
-                <div style={{ fontWeight: 600 }}>{instructionTarget?.supplierName || '-'}</div>
-              </div>
-              <div style={{ fontSize: 'var(--font-size-sm)' }}>
-                <div style={{ color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>单位</div>
-                <div style={{ fontWeight: 600 }}>{instructionTarget?.unit || '-'}</div>
-              </div>
-              <div style={{ fontSize: 'var(--font-size-sm)' }}>
-                <div style={{ color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>颜色</div>
-                <div style={{ fontWeight: 600 }}>{instructionTarget?.color || '-'}</div>
-              </div>
-              <div style={{ fontSize: 'var(--font-size-sm)' }}>
-                <div style={{ color: 'var(--neutral-text-disabled)', marginBottom: 4 }}>单价</div>
-                <div style={{ fontWeight: 600 }}>{instructionTarget?.unitPrice != null ? `¥${instructionTarget.unitPrice}` : '-'}</div>
-              </div>
-            </div>
-
-            {/* 面料属性（仅面料显示） */}
-            {getMaterialTypeCategory(instructionTarget?.materialType) === 'fabric' && (
-              <div style={{ marginTop: 16 }}>
-                <div style={{
-                  fontSize: 'var(--font-size-sm)',
-                  fontWeight: 600,
-                  marginBottom: 8,
-                  color: 'var(--primary-color)'
-                }}>
-                   面料属性
-                </div>
-                <Space orientation="vertical" size={8} style={{ width: '100%' }}>
-                  <div style={{ fontSize: 'var(--font-size-sm)' }}>
-                    <span style={{ color: 'var(--neutral-text-disabled)' }}>规格/幅宽：</span>
-                    <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{formatMaterialSpecWidth(instructionTarget?.specification, instructionTarget?.fabricWidth)}</span>
-                  </div>
-                  <div style={{ fontSize: 'var(--font-size-sm)' }}>
-                    <span style={{ color: 'var(--neutral-text-disabled)' }}>克重：</span>
-                    <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{instructionTarget?.fabricWeight || '-'}</span>
-                  </div>
-                  <div style={{ fontSize: 'var(--font-size-sm)' }}>
-                    <span style={{ color: 'var(--neutral-text-disabled)' }}>成分：</span>
-                    <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{instructionTarget?.fabricComposition || '-'}</span>
-                  </div>
-                  <div style={{ fontSize: 'var(--font-size-sm)' }}>
-                    <span style={{ color: 'var(--neutral-text-disabled)' }}>单位：</span>
-                    <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{instructionTarget?.unit || '-'}</span>
-                  </div>
-                </Space>
-              </div>
-            )}
+            <MaterialInfoCard
+              materialCode={instructionTarget?.materialCode}
+              materialName={instructionTarget?.materialName}
+              materialType={instructionTarget?.materialType}
+              color={instructionTarget?.color}
+              unit={instructionTarget?.unit}
+              supplierName={instructionTarget?.supplierName}
+              specification={instructionTarget?.specification}
+              fabricWidth={instructionTarget?.fabricWidth}
+              fabricWeight={instructionTarget?.fabricWeight}
+              fabricComposition={instructionTarget?.fabricComposition}
+              unitPrice={instructionTarget?.unitPrice}
+            />
           </Form.Item>
           <Row gutter={16}>
             <Col span={12}>
@@ -1088,64 +1040,19 @@ const _MaterialInventory: React.FC = () => {
       >
         {outboundModal.data && (
           <Space direction="vertical" style={{ width: '100%' }} size={12}>
-            {/* 基础信息卡片 - 左右两栏 */}
-            <Card size="small" style={{ background: 'var(--color-bg-subtle)' }}>
-              <Row gutter={0}>
-                {/* 左栏：基本信息 */}
-                <Col
-                  span={getMaterialTypeCategory(outboundModal.data.materialType) === 'fabric' ? 13 : 24}
-                  style={getMaterialTypeCategory(outboundModal.data.materialType) === 'fabric' ? { borderRight: '1px solid #e8e8e8', paddingRight: 16 } : {}}
-                >
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px', alignItems: 'start' }}>
-                    <div style={{ fontSize: 'var(--font-size-sm)', gridColumn: '1 / -1' }}>
-                      <span style={{ color: 'var(--neutral-text-disabled)' }}>物料名称：</span>
-                      <span style={{ fontWeight: 600 }}>{outboundModal.data.materialName}</span>
-                    </div>
-                    <div style={{ fontSize: 'var(--font-size-sm)' }}>
-                      <span style={{ color: 'var(--neutral-text-disabled)' }}>物料编号：</span>
-                      <span style={{ fontWeight: 600 }}>{outboundModal.data.materialCode}</span>
-                    </div>
-                    <div style={{ fontSize: 'var(--font-size-sm)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <span style={{ color: 'var(--neutral-text-disabled)' }}>类型：</span>
-                      <Tag color={getMaterialTypeCategory(outboundModal.data.materialType) === 'fabric' ? 'blue' : getMaterialTypeCategory(outboundModal.data.materialType) === 'lining' ? 'cyan' : 'green'} style={{ margin: 0 }}>{getBaseMaterialTypeLabel(outboundModal.data.materialType)}</Tag>
-                    </div>
-                    <div style={{ fontSize: 'var(--font-size-sm)' }}>
-                      <span style={{ color: 'var(--neutral-text-disabled)' }}>颜色：</span>
-                      <span style={{ fontWeight: 600 }}>{outboundModal.data.color || '-'}</span>
-                    </div>
-                    <div style={{ fontSize: 'var(--font-size-sm)' }}>
-                      <span style={{ color: 'var(--neutral-text-disabled)' }}>规格/幅宽：</span>
-                      <span style={{ fontWeight: 600 }}>{formatMaterialSpecWidth(outboundModal.data.specification, outboundModal.data.fabricWidth)}</span>
-                    </div>
-                    <div style={{ fontSize: 'var(--font-size-sm)', gridColumn: '1 / -1' }}>
-                      <span style={{ color: 'var(--neutral-text-disabled)' }}>供应商：</span>
-                      <span style={{ fontWeight: 600 }}>{outboundModal.data.supplierName || '-'}</span>
-                    </div>
-                  </div>
-                </Col>
-
-                {/* 右栏：面料属性（仅面料显示） */}
-                {getMaterialTypeCategory(outboundModal.data.materialType) === 'fabric' && (
-                  <Col span={11} style={{ paddingLeft: 16 }}>
-                    <div style={{ fontSize: 'var(--font-size-sm)', fontWeight: 600, color: 'var(--primary-color)', marginBottom: 10 }}> 面料属性</div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px' }}>
-                      <div style={{ fontSize: 'var(--font-size-sm)' }}>
-                        <span style={{ color: 'var(--neutral-text-disabled)' }}>克重：</span>
-                        <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{outboundModal.data.fabricWeight || '-'}</span>
-                      </div>
-                      <div style={{ fontSize: 'var(--font-size-sm)' }}>
-                        <span style={{ color: 'var(--neutral-text-disabled)' }}>成分：</span>
-                        <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{outboundModal.data.fabricComposition || '-'}</span>
-                      </div>
-                      <div style={{ fontSize: 'var(--font-size-sm)' }}>
-                        <span style={{ color: 'var(--neutral-text-disabled)' }}>单位：</span>
-                        <span style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{outboundModal.data.unit || '-'}</span>
-                      </div>
-                    </div>
-                  </Col>
-                )}
-              </Row>
-            </Card>
+            <MaterialInfoCard
+              materialCode={outboundModal.data.materialCode}
+              materialName={outboundModal.data.materialName}
+              materialType={outboundModal.data.materialType}
+              color={outboundModal.data.color}
+              unit={outboundModal.data.unit}
+              supplierName={outboundModal.data.supplierName}
+              specification={outboundModal.data.specification}
+              fabricWidth={outboundModal.data.fabricWidth}
+              fabricWeight={outboundModal.data.fabricWeight}
+              fabricComposition={outboundModal.data.fabricComposition}
+              unitPrice={outboundModal.data.unitPrice}
+            />
 
             <Card size="small" title="出库流转信息">
               <Form form={outboundForm} layout="vertical">
@@ -1159,7 +1066,18 @@ const _MaterialInventory: React.FC = () => {
                       name="pickupType"
                       rules={[{ required: true, message: '请选择出库类型' }]}
                     >
-                      <Select placeholder="请选择">
+                      <Select
+                        placeholder="请选择"
+                        onChange={(value) => {
+                          const currentFactory = outboundForm.getFieldValue('factoryName');
+                          if (currentFactory) {
+                            const matched = factoryOptions.find(f => f.value === currentFactory || f.label === currentFactory);
+                            if (matched?.factoryType && matched.factoryType !== value) {
+                              outboundForm.setFieldsValue({ factoryName: undefined, factoryId: undefined, factoryType: undefined });
+                            }
+                          }
+                        }}
+                      >
                         <Option value="INTERNAL">内部</Option>
                         <Option value="EXTERNAL">外部</Option>
                       </Select>
@@ -1236,32 +1154,43 @@ const _MaterialInventory: React.FC = () => {
                     </Form.Item>
                   </Col>
                   <Col span={8}>
-                    <Form.Item
-                      label="关联工厂"
-                      name="factoryName"
-                      rules={[{ required: true, message: '请选择或填写关联工厂' }]}
-                    >
-                      <AutoComplete
-                        placeholder="可筛选选择，也可直接手填工厂"
-                        options={factoryOptions}
-                        filterOption={(inputValue, option) => String(option?.label || '').toLowerCase().includes(inputValue.toLowerCase())}
-                        onSearch={(value) => {
-                          void handleOutboundFactoryInput(value);
-                        }}
-                        onSelect={(value) => {
-                          void handleOutboundFactoryInput(String(value));
-                          if (outboundModal.data) {
-                            const matched = factoryOptions.find((item) => item.value === String(value));
-                            void autoMatchOutboundContext(outboundModal.data, {
-                              factoryName: String(value),
-                              factoryType: matched?.factoryType,
-                            });
-                          }
-                        }}
-                        onChange={(value) => {
-                          outboundForm.setFieldValue('factoryName', value);
-                        }}
-                      />
+                    <Form.Item noStyle shouldUpdate={(prev, cur) => prev.pickupType !== cur.pickupType}>
+                      {() => {
+                        const pickupType = outboundForm.getFieldValue('pickupType');
+                        const isExternal = pickupType === 'EXTERNAL';
+                        const filteredFactoryOptions = pickupType
+                          ? factoryOptions.filter(f => f.factoryType === pickupType)
+                          : factoryOptions;
+                        return (
+                          <Form.Item
+                            label={isExternal ? '外发工厂' : '关联工厂'}
+                            name="factoryName"
+                            rules={[{ required: true, message: isExternal ? '请选择外发工厂' : '请选择或填写关联工厂' }]}
+                          >
+                            <AutoComplete
+                              placeholder={isExternal ? '筛选选择外发工厂' : '可筛选选择，也可直接手填工厂'}
+                              options={filteredFactoryOptions}
+                              filterOption={(inputValue, option) => String(option?.label || '').toLowerCase().includes(inputValue.toLowerCase())}
+                              onSearch={(value) => {
+                                void handleOutboundFactoryInput(value);
+                              }}
+                              onSelect={(value) => {
+                                void handleOutboundFactoryInput(String(value));
+                                if (outboundModal.data) {
+                                  const matched = factoryOptions.find((item) => item.value === String(value));
+                                  void autoMatchOutboundContext(outboundModal.data, {
+                                    factoryName: String(value),
+                                    factoryType: matched?.factoryType,
+                                  });
+                                }
+                              }}
+                              onChange={(value) => {
+                                outboundForm.setFieldValue('factoryName', value);
+                              }}
+                            />
+                          </Form.Item>
+                        );
+                      }}
                     </Form.Item>
                     <Form.Item name="factoryId" hidden>
                       <Input />
