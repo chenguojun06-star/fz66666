@@ -159,7 +159,7 @@ export function useProductionColumns({
             >
             <a
               className="order-no-wrap"
-              style={{ cursor: 'pointer' }}
+              style={{ cursor: 'pointer', color: 'inherit' }}
               onClick={(e) => {
                 e.preventDefault();
                 navigate(withQuery('/production/order-flow', { orderId, orderNo, styleNo }));
@@ -246,7 +246,7 @@ export function useProductionColumns({
             {factoryType === 'INTERNAL' && <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>}
             {factoryType === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>外</Tag>}
             <span
-              style={{ cursor: 'pointer', color: '#1677ff', textDecoration: 'underline' }}
+              style={{ cursor: 'pointer' }}
               onClick={(e) => { e.stopPropagation(); onOpenRemark?.(record, '生产方 — ' + (v || '')); }}
             >{v || '-'}</span>
             {bizType && (
@@ -309,7 +309,7 @@ export function useProductionColumns({
       width: 100,
       render: (v: any, record: ProductionOrder) => (
         <span
-          style={{ cursor: v ? 'pointer' : 'default', color: v ? '#1677ff' : undefined, textDecoration: v ? 'underline' : undefined }}
+          style={{ cursor: v ? 'pointer' : 'default' }}
           onClick={() => v && onOpenRemark?.(record, '纸样师 — ' + v)}
         >{v || '-'}</span>
       ),
@@ -322,14 +322,14 @@ export function useProductionColumns({
       align: 'right' as const,
     },
     {
-      title: '下单单价',
+      title: '单价',
       key: 'factoryUnitPrice',
       width: 90,
       align: 'right' as const,
       render: (_: any, record: any) => {
         const v = Number(record?.factoryUnitPrice);
         return (Number.isFinite(v) && v > 0)
-          ? <span style={{ color: '#1677ff', fontWeight: 500 }}>¥{v.toFixed(2)}</span>
+          ? <span style={{ fontWeight: 500 }}>¥{v.toFixed(2)}</span>
           : <span style={{ color: '#bfbfbf' }}>-</span>;
       },
     },
@@ -342,7 +342,7 @@ export function useProductionColumns({
         const text = safeString(v);
         return (
           <span
-            style={{ cursor: text ? 'pointer' : 'default', color: text ? '#1677ff' : undefined, textDecoration: text ? 'underline' : undefined }}
+            style={{ cursor: text ? 'pointer' : 'default' }}
             onClick={() => text && onOpenRemark?.(record, '下单人 — ' + text)}
           >{text || '-'}</span>
         );
@@ -362,14 +362,7 @@ export function useProductionColumns({
       width: 170,
       render: renderStageTime,
     },
-    {
-      title: '备注',
-      dataIndex: 'remarks',
-      key: 'remarks',
-      width: 150,
-      ellipsis: true,
-      render: (v: any) => v || '-',
-    },
+
     {
       title: <SortableColumnTitle title="预计出货" sortField={sortField} fieldName="expectedShipDate" sortOrder={sortOrder} onSort={handleSort} />,
       dataIndex: 'expectedShipDate',

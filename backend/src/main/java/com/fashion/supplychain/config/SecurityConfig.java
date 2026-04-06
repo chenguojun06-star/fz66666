@@ -178,6 +178,9 @@ public class SecurityConfig implements WebMvcConfigurer {
                         .antMatchers(HttpMethod.GET, "/api/system/dict/list").authenticated()
                         .antMatchers(HttpMethod.GET, "/api/system/dict/by-type").authenticated()
 
+                        // 订单备注：所有登录用户可读写自己租户的订单备注（Orchestrator 层按 tenantId 隔离）
+                        .antMatchers("/api/system/order-remark/**").authenticated()
+
                         // ── 管理员兜底：/api/system/tenant/** 和 /api/system/** 其余端点仅管理员可访问 ──
                         .antMatchers("/api/system/tenant/**").hasAnyAuthority(
                                 "ROLE_admin",
