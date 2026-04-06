@@ -2,8 +2,10 @@ package com.fashion.supplychain.production.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
+import com.fashion.supplychain.production.entity.MaterialDatabase;
 import com.fashion.supplychain.production.mapper.MaterialPurchaseMapper;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
+import com.fashion.supplychain.production.service.MaterialDatabaseService;
 import com.fashion.supplychain.common.constant.MaterialConstants;
 import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.production.service.helper.MaterialPurchaseHelper;
@@ -42,6 +44,9 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
 
     @Autowired
     private ProductionOrderService productionOrderService;
+
+    @Autowired
+    private MaterialDatabaseService materialDatabaseService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -248,6 +253,35 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                     record.setFactoryName(order.getFactoryName());
                     record.setFactoryType(order.getFactoryType());
                 }
+            }
+        }
+
+        // 从物料资料库补全缺失属性（fabricWidth / fabricWeight / fabricComposition / supplierName / unitPrice 等）
+        List<String> matCodes = records2.stream()
+                .map(MaterialPurchase::getMaterialCode)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .collect(Collectors.toList());
+        if (!matCodes.isEmpty()) {
+            Map<String, MaterialDatabase> dbMap = materialDatabaseService.list(
+                    new LambdaQueryWrapper<MaterialDatabase>()
+                            .in(MaterialDatabase::getMaterialCode, matCodes)
+                            .select(MaterialDatabase::getId, MaterialDatabase::getMaterialCode,
+                                    MaterialDatabase::getFabricWidth, MaterialDatabase::getFabricWeight,
+                                    MaterialDatabase::getFabricComposition, MaterialDatabase::getSupplierName,
+                                    MaterialDatabase::getUnitPrice, MaterialDatabase::getColor))
+                    .stream()
+                    .filter(d -> d != null && StringUtils.hasText(d.getMaterialCode()))
+                    .collect(Collectors.toMap(MaterialDatabase::getMaterialCode, d -> d, (a, b) -> a));
+            for (MaterialPurchase record : records2) {
+                MaterialDatabase db = dbMap.get(record.getMaterialCode());
+                if (db == null) continue;
+                if (!StringUtils.hasText(record.getFabricWidth())) record.setFabricWidth(db.getFabricWidth());
+                if (!StringUtils.hasText(record.getFabricWeight())) record.setFabricWeight(db.getFabricWeight());
+                if (!StringUtils.hasText(record.getFabricComposition())) record.setFabricComposition(db.getFabricComposition());
+                if (!StringUtils.hasText(record.getSupplierName()) && StringUtils.hasText(db.getSupplierName())) record.setSupplierName(db.getSupplierName());
+                if ((record.getUnitPrice() == null || record.getUnitPrice().compareTo(BigDecimal.ZERO) == 0) && db.getUnitPrice() != null) record.setUnitPrice(db.getUnitPrice());
+                if (!StringUtils.hasText(record.getColor()) && StringUtils.hasText(db.getColor())) record.setColor(db.getColor());
             }
         }
 

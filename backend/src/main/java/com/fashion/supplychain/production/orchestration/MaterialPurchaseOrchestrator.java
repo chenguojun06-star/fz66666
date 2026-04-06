@@ -14,8 +14,10 @@ import com.fashion.supplychain.common.DataPermissionHelper;
 import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.common.constant.MaterialConstants;
 import com.fashion.supplychain.finance.orchestration.MaterialReconciliationOrchestrator;
+import com.fashion.supplychain.production.entity.MaterialDatabase;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.service.MaterialDatabaseService;
 import com.fashion.supplychain.production.helper.MaterialPurchasePickingHelper;
 import com.fashion.supplychain.production.helper.MaterialPurchaseQueryHelper;
 import com.fashion.supplychain.production.helper.MaterialPurchaseStatusHelper;
@@ -65,6 +67,9 @@ public class MaterialPurchaseOrchestrator {
 
     @Autowired
     private MaterialPurchaseQueryHelper queryHelper;
+
+    @Autowired
+    private MaterialDatabaseService materialDatabaseService;
 
     // ── Query ───────────────────────────────────────────────
 
@@ -203,6 +208,31 @@ public class MaterialPurchaseOrchestrator {
 
         if (!StringUtils.hasText(materialCode) && !StringUtils.hasText(materialName)) {
             throw new IllegalArgumentException("物料信息不能为空");
+        }
+
+        // 从物料资料库自动补全缺失属性（前端可能未传全部字段）
+        MaterialDatabase dbMaterial = null;
+        if (StringUtils.hasText(materialId)) {
+            dbMaterial = materialDatabaseService.getById(materialId);
+        }
+        if (dbMaterial == null && StringUtils.hasText(materialCode)) {
+            dbMaterial = materialDatabaseService.getOne(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialDatabase>()
+                            .eq(MaterialDatabase::getMaterialCode, materialCode)
+                            .last("LIMIT 1"));
+        }
+        if (dbMaterial != null) {
+            if (!StringUtils.hasText(color)) color = dbMaterial.getColor();
+            if (!StringUtils.hasText(fabricComposition)) fabricComposition = dbMaterial.getFabricComposition();
+            if (!StringUtils.hasText(fabricWidth)) fabricWidth = dbMaterial.getFabricWidth();
+            if (!StringUtils.hasText(fabricWeight)) fabricWeight = dbMaterial.getFabricWeight();
+            if (!StringUtils.hasText(specifications)) specifications = dbMaterial.getSpecifications();
+            if (!StringUtils.hasText(unit)) unit = dbMaterial.getUnit();
+            if (!StringUtils.hasText(supplierId)) supplierId = dbMaterial.getSupplierId();
+            if (!StringUtils.hasText(supplierName)) supplierName = dbMaterial.getSupplierName();
+            if (unitPrice == null) unitPrice = dbMaterial.getUnitPrice();
+            if (conversionRate == null) conversionRate = dbMaterial.getConversionRate();
+            if (!StringUtils.hasText(materialId)) materialId = dbMaterial.getId();
         }
         if (qty == null || qty <= 0) {
             throw new IllegalArgumentException("采购数量必须大于0");

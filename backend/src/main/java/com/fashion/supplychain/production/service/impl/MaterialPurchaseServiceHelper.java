@@ -2,10 +2,12 @@ package com.fashion.supplychain.production.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.constant.MaterialConstants;
+import com.fashion.supplychain.production.entity.MaterialDatabase;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.mapper.MaterialPurchaseMapper;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
+import com.fashion.supplychain.production.service.MaterialDatabaseService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.helper.MaterialPurchaseHelper;
 import com.fashion.supplychain.style.entity.StyleAttachment;
@@ -55,6 +57,9 @@ public class MaterialPurchaseServiceHelper {
 
     @Autowired
     private MaterialPurchaseMapper materialPurchaseMapper;
+
+    @Autowired
+    private MaterialDatabaseService materialDatabaseService;
 
     // ──────────── 工具方法 ────────────
 
@@ -385,7 +390,41 @@ public class MaterialPurchaseServiceHelper {
             }
         }
 
-        return new ArrayList<>(grouped.values());
+        List<MaterialPurchase> result = new ArrayList<>(grouped.values());
+
+        // 从物料资料库批量补全缺失属性（fabricWidth / fabricWeight / fabricComposition 等）
+        List<String> matCodes = result.stream()
+                .map(MaterialPurchase::getMaterialCode)
+                .filter(StringUtils::hasText)
+                .distinct()
+                .collect(java.util.stream.Collectors.toList());
+        if (!matCodes.isEmpty()) {
+            Map<String, MaterialDatabase> dbMap = materialDatabaseService.list(
+                    new LambdaQueryWrapper<MaterialDatabase>()
+                            .in(MaterialDatabase::getMaterialCode, matCodes)
+                            .select(MaterialDatabase::getId, MaterialDatabase::getMaterialCode,
+                                    MaterialDatabase::getFabricWidth, MaterialDatabase::getFabricWeight,
+                                    MaterialDatabase::getFabricComposition, MaterialDatabase::getSupplierName,
+                                    MaterialDatabase::getSupplierId, MaterialDatabase::getUnitPrice,
+                                    MaterialDatabase::getColor, MaterialDatabase::getSpecifications,
+                                    MaterialDatabase::getUnit, MaterialDatabase::getConversionRate))
+                    .stream()
+                    .filter(d -> d != null && StringUtils.hasText(d.getMaterialCode()))
+                    .collect(java.util.stream.Collectors.toMap(MaterialDatabase::getMaterialCode, d -> d, (a, b) -> a));
+            for (MaterialPurchase mp : result) {
+                MaterialDatabase db = dbMap.get(mp.getMaterialCode());
+                if (db == null) continue;
+                if (!StringUtils.hasText(mp.getFabricWidth())) mp.setFabricWidth(db.getFabricWidth());
+                if (!StringUtils.hasText(mp.getFabricWeight())) mp.setFabricWeight(db.getFabricWeight());
+                if (!StringUtils.hasText(mp.getFabricComposition())) mp.setFabricComposition(db.getFabricComposition());
+                if (!StringUtils.hasText(mp.getSupplierName()) && StringUtils.hasText(db.getSupplierName())) mp.setSupplierName(db.getSupplierName());
+                if (!StringUtils.hasText(mp.getSupplierId()) && StringUtils.hasText(db.getSupplierId())) mp.setSupplierId(db.getSupplierId());
+                if ((mp.getUnitPrice() == null || mp.getUnitPrice().compareTo(BigDecimal.ZERO) == 0) && db.getUnitPrice() != null) mp.setUnitPrice(db.getUnitPrice());
+                if (!StringUtils.hasText(mp.getColor()) && StringUtils.hasText(db.getColor())) mp.setColor(db.getColor());
+            }
+        }
+
+        return result;
     }
 
     // ──────────── 各码用量解析 ────────────

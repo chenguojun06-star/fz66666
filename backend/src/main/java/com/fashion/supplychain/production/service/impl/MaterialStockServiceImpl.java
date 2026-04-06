@@ -284,24 +284,33 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
         if (materialIds.isEmpty()) {
             return;
         }
-        Map<String, BigDecimal> conversionByMaterialId = materialDatabaseService.list(
+        Map<String, MaterialDatabase> dbMap = materialDatabaseService.list(
                 new LambdaQueryWrapper<MaterialDatabase>()
                         .in(MaterialDatabase::getId, materialIds)
-                        .select(MaterialDatabase::getId, MaterialDatabase::getConversionRate))
+                        .select(MaterialDatabase::getId, MaterialDatabase::getConversionRate,
+                                MaterialDatabase::getFabricWidth, MaterialDatabase::getFabricWeight,
+                                MaterialDatabase::getFabricComposition, MaterialDatabase::getSupplierName,
+                                MaterialDatabase::getUnitPrice, MaterialDatabase::getColor))
                 .stream()
-                .filter(item -> item != null && StringUtils.hasText(item.getId()) && item.getConversionRate() != null)
-                .collect(Collectors.toMap(MaterialDatabase::getId, MaterialDatabase::getConversionRate, (a, b) -> a));
-        if (conversionByMaterialId.isEmpty()) {
+                .filter(item -> item != null && StringUtils.hasText(item.getId()))
+                .collect(Collectors.toMap(MaterialDatabase::getId, d -> d, (a, b) -> a));
+        if (dbMap.isEmpty()) {
             return;
         }
         for (MaterialStock record : records) {
-            if (record == null || record.getConversionRate() != null || !StringUtils.hasText(record.getMaterialId())) {
+            if (record == null || !StringUtils.hasText(record.getMaterialId())) {
                 continue;
             }
-            BigDecimal conversionRate = conversionByMaterialId.get(record.getMaterialId());
-            if (conversionRate != null) {
-                record.setConversionRate(conversionRate);
+            MaterialDatabase db = dbMap.get(record.getMaterialId());
+            if (db == null) continue;
+            if (record.getConversionRate() == null && db.getConversionRate() != null) {
+                record.setConversionRate(db.getConversionRate());
             }
+            if (!StringUtils.hasText(record.getFabricWidth())) record.setFabricWidth(db.getFabricWidth());
+            if (!StringUtils.hasText(record.getFabricWeight())) record.setFabricWeight(db.getFabricWeight());
+            if (!StringUtils.hasText(record.getFabricComposition())) record.setFabricComposition(db.getFabricComposition());
+            if (!StringUtils.hasText(record.getSupplierName()) && StringUtils.hasText(db.getSupplierName())) record.setSupplierName(db.getSupplierName());
+            if ((record.getUnitPrice() == null || record.getUnitPrice().compareTo(java.math.BigDecimal.ZERO) == 0) && db.getUnitPrice() != null) record.setUnitPrice(db.getUnitPrice());
         }
     }
 
