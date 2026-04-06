@@ -70,6 +70,7 @@ const _MaterialInventory: React.FC = () => {
     handleConfirmOutbound, handleMaterialSelect,
     openInstruction, openInstructionEmpty, closeInstruction, handleSendInstruction,
     openInstructionFromRecord,
+    loadReceivers, loadFactoryWorkers,
     handleEditSafetyStock, handleSafetyStockSave,
     handleViewDetail, handleInbound, handleInboundConfirm,
     handleGenerateRollLabels,
@@ -930,7 +931,7 @@ const _MaterialInventory: React.FC = () => {
               </Form.Item>
             </Col>
             <Col span={5}>
-              <Form.Item label="规格" name="specification">
+              <Form.Item label="规格/幅宽" name="specification">
                 <Input placeholder="如: 150cm" />
               </Form.Item>
             </Col>
@@ -1101,7 +1102,6 @@ const _MaterialInventory: React.FC = () => {
                     <Form.Item
                       label="关联订单"
                       name="orderNo"
-                      rules={[{ required: true, message: '请填写关联订单' }]}
                     >
                       <AutoComplete
                         placeholder="按工厂自动匹配或手填订单号"
@@ -1121,9 +1121,8 @@ const _MaterialInventory: React.FC = () => {
                     <Form.Item
                       label="关联款号"
                       name="styleNo"
-                      rules={[{ required: true, message: '请填写关联款号' }]}
                     >
-                      <Input placeholder="必须关联款号" />
+                      <Input placeholder="选填关联款号" />
                     </Form.Item>
                   </Col>
                   <Col span={8}>
@@ -1163,9 +1162,9 @@ const _MaterialInventory: React.FC = () => {
                           : factoryOptions;
                         return (
                           <Form.Item
-                            label={isExternal ? '外发工厂' : '关联工厂'}
+                            label="关联内外部生产方"
                             name="factoryName"
-                            rules={[{ required: true, message: isExternal ? '请选择外发工厂' : '请选择或填写关联工厂' }]}
+                            rules={[{ required: true, message: '请选择关联生产方' }]}
                           >
                             <AutoComplete
                               placeholder={isExternal ? '筛选选择外发工厂' : '可筛选选择，也可直接手填工厂'}
@@ -1176,8 +1175,15 @@ const _MaterialInventory: React.FC = () => {
                               }}
                               onSelect={(value) => {
                                 void handleOutboundFactoryInput(String(value));
+                                const matched = factoryOptions.find((item) => item.value === String(value));
+                                if (matched?.factoryType === 'EXTERNAL' && matched?.factoryId) {
+                                  outboundForm.setFieldsValue({ receiverId: undefined, receiverName: undefined });
+                                  void loadFactoryWorkers(matched.factoryId);
+                                } else {
+                                  outboundForm.setFieldsValue({ receiverId: undefined, receiverName: undefined });
+                                  void loadReceivers();
+                                }
                                 if (outboundModal.data) {
-                                  const matched = factoryOptions.find((item) => item.value === String(value));
                                   void autoMatchOutboundContext(outboundModal.data, {
                                     factoryName: String(value),
                                     factoryType: matched?.factoryType,

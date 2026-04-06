@@ -394,6 +394,24 @@ export function useMaterialInventoryData() {
     }
   };
 
+  const loadFactoryWorkers = async (factoryId: string) => {
+    try {
+      const res = await api.get('/factory-worker/list', { params: { factoryId, status: 'active' } });
+      const records = res?.data || [];
+      if (Array.isArray(records) && records.length > 0) {
+        const items = records.map((item: any) => {
+          const name = String(item.workerName || '').trim();
+          return { label: name, value: String(item.id || ''), name, roleName: '工厂人员' };
+        }).filter((item: any) => item.value && item.name);
+        setReceiverOptions(items);
+      } else {
+        setReceiverOptions([]);
+      }
+    } catch {
+      message.error('加载工厂人员失败');
+    }
+  };
+
   const loadFactories = useCallback(async () => {
     try {
       const res = await factoryApi.list({ page: 1, pageSize: 200, status: 'active' });
@@ -1104,6 +1122,7 @@ export function useMaterialInventoryData() {
     handleConfirmOutbound, handleMaterialSelect,
     openInstruction, openInstructionEmpty, closeInstruction, handleSendInstruction,
     openInstructionFromRecord,
+    loadReceivers, loadFactoryWorkers,
     handleEditSafetyStock, handleSafetyStockSave,
     handleViewDetail, handleInbound, handleInboundConfirm,
     handleGenerateRollLabels,
