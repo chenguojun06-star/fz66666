@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { App, Button, Card, Input } from 'antd';
-import { AppstoreOutlined, RadarChartOutlined } from '@ant-design/icons';
+import { AppstoreOutlined, ArrowUpOutlined, ArrowDownOutlined, RadarChartOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import SmallModal from '@/components/common/SmallModal';
@@ -83,6 +83,7 @@ const StyleInfoListPage: React.FC = () => {
   const [smartFilter, setSmartFilter] = useState<StyleSmartFilter>('all');
   const [pendingFocusStyleId, setPendingFocusStyleId] = useState<string | null>(null);
   const [focusedStyleId, setFocusedStyleId] = useState<string | null>(null);
+  const [dateSortAsc, setDateSortAsc] = useState(false);
   const focusClearTimerRef = useRef<number | null>(null);
 
   // ESC 键清除智能筛选（逾期/临近交期标记）
@@ -308,10 +309,18 @@ const StyleInfoListPage: React.FC = () => {
   }, [warningStyles]);
 
   const displayData = useMemo(() => {
-    if (smartFilter === 'overdue') return overdueStyles;
-    if (smartFilter === 'warning') return warningStyles;
-    return data;
-  }, [smartFilter, data, overdueStyles, warningStyles]);
+    let base = smartFilter === 'overdue' ? overdueStyles
+             : smartFilter === 'warning' ? warningStyles
+             : data;
+    if (base.length > 1) {
+      base = [...base].sort((a, b) => {
+        const aTime = new Date((a.updatedAt || a.createdAt || 0) as string | number).getTime();
+        const bTime = new Date((b.updatedAt || b.createdAt || 0) as string | number).getTime();
+        return dateSortAsc ? aTime - bTime : bTime - aTime;
+      });
+    }
+    return base;
+  }, [smartFilter, data, overdueStyles, warningStyles, dateSortAsc]);
 
   const displayTotal = smartFilter !== 'all' ? displayData.length : total;
 
@@ -434,6 +443,12 @@ const StyleInfoListPage: React.FC = () => {
                 刷新
               </Button>
               <Button
+                icon={dateSortAsc ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
+                onClick={() => setDateSortAsc(v => !v)}
+                title={dateSortAsc ? '按时间升序' : '按时间降序'}
+                style={{ borderRadius: 14, minWidth: 32, width: 32, padding: 0, fontSize: 13 }}
+              />
+              <Button
                 icon={viewMode === 'smart' ? <AppstoreOutlined /> : <RadarChartOutlined />}
                 onClick={() => {
                   const next = viewMode === 'smart' ? 'card' : 'smart';
@@ -471,6 +486,7 @@ const StyleInfoListPage: React.FC = () => {
             categoryOptions={categoryOptions}
             onRefresh={fetchList}
             focusedStyleId={focusedStyleId}
+            dateSortAsc={dateSortAsc}
           />
         ) : (
           <StyleCardView
