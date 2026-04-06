@@ -438,10 +438,6 @@ const StylePatternTab: React.FC<Props> = ({
         readOnly={readOnly}
         onRefresh={onRefresh}
         onBeforeComplete={async () => {
-          if (!hasValidPatternFile) {
-            message.error('请先上传纸样文件后再标记完成');
-            return false;
-          }
           return true;
         }}
         extraInfo={
