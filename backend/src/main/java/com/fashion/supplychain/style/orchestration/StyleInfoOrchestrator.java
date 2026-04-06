@@ -4,19 +4,18 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.UserContext;
-import com.fashion.supplychain.production.entity.PatternProduction;
 import com.fashion.supplychain.system.orchestration.ChangeApprovalOrchestrator;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.entity.PatternProduction;
 import com.fashion.supplychain.production.service.PatternProductionService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
-import com.fashion.supplychain.selection.entity.SelectionCandidate;
-import com.fashion.supplychain.selection.service.SelectionCandidateService;
 import com.fashion.supplychain.style.entity.SecondaryProcess;
 import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleProcess;
 import com.fashion.supplychain.style.helper.StyleLogHelper;
 import com.fashion.supplychain.style.helper.StyleStageHelper;
+import com.fashion.supplychain.style.helper.StyleStageCompletionHelper;
 import com.fashion.supplychain.style.service.SecondaryProcessService;
 import com.fashion.supplychain.style.service.StyleBomService;
 import com.fashion.supplychain.style.service.StyleInfoService;
@@ -25,11 +24,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Objects;
-import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -42,10 +39,7 @@ import org.springframework.context.annotation.Lazy;
 @Slf4j
 public class StyleInfoOrchestrator {
 
-    private static final String SOURCE_TYPE_SELF = "SELF_DEVELOPED";
-    private static final String SOURCE_TYPE_SELECTION = "SELECTION_CENTER";
     private static final String STYLE_STATUS_SCRAPPED = "SCRAPPED";
-    private static final Set<String> SELECTION_SOURCE_DETAILS = Set.of("外部市场", "供应商", "客户定制", "内部选品", "选品中心");
 
     @Autowired
     private StyleInfoService styleInfoService;
@@ -54,7 +48,16 @@ public class StyleInfoOrchestrator {
     private StyleStageHelper styleStageHelper;
 
     @Autowired
+    private StyleStageCompletionHelper styleStageCompletionHelper;
+
+    @Autowired
     private StyleLogHelper styleLogHelper;
+
+    @Autowired
+    private StyleSelectionSourceHelper styleSelectionSourceHelper;
+
+    @Autowired
+    private StylePatternProductionHelper stylePatternProductionHelper;
 
     @Autowired
     private ProductionOrderService productionOrderService;
@@ -70,9 +73,6 @@ public class StyleInfoOrchestrator {
 
     @Autowired
     private SecondaryProcessService secondaryProcessService;
-
-    @Autowired(required = false)
-    private SelectionCandidateService selectionCandidateService;
 
     @Lazy
     @Autowired(required = false)
@@ -112,7 +112,7 @@ public class StyleInfoOrchestrator {
 
     public IPage<StyleInfo> list(Map<String, Object> params) {
         IPage<StyleInfo> page = styleInfoService.queryPage(params);
-        fillSelectionSourceAndCoverFallback(page.getRecords());
+        styleSelectionSourceHelper.fillSelectionSourceAndCoverFallback(page.getRecords());
         // 用实时BOM+工序成本覆盖列表中可能过期的price字段
         page.getRecords().forEach(style -> {
             try {
@@ -171,7 +171,15 @@ public class StyleInfoOrchestrator {
         if (currentTenantId != null && styleInfo.getTenantId() == null) {
             styleInfo.setTenantId(currentTenantId);
         }
-        normalizeManualSourceFields(styleInfo);
+        // 最终兜底：tenantId 仍为 null 则拒绝（防止 DB NOT NULL 约束报错）
+        // 超管没有 tenantId，需在请求体中明确传入 tenantId 才能创建款式
+        if (styleInfo.getTenantId() == null) {
+            throw new IllegalArgumentException(
+                    UserContext.isSuperAdmin()
+                            ? "超级管理员不能直接创建款式，请使用对应租户账号操作"
+                            : "租户信息异常，请退出重新登录后再试");
+        }
+        styleSelectionSourceHelper.normalizeManualSourceFields(styleInfo);
         validateStyleInfo(styleInfo);
         // 新建款式时：若款号已存在则自动追加 -1/-2/... 后缀，保证不冲突
         if (styleInfo.getId() == null && StringUtils.hasText(styleInfo.getStyleNo())) {
@@ -190,10 +198,10 @@ public class StyleInfoOrchestrator {
                                 .last("LIMIT 1")
                                 .one();
                         if (savedStyle != null) {
-                            createPatternProductionRecord(savedStyle);
+                            stylePatternProductionHelper.createPatternProductionRecord(savedStyle);
                         }
                     } else {
-                        createPatternProductionRecord(styleInfo);
+                        stylePatternProductionHelper.createPatternProductionRecord(styleInfo);
                     }
                 } catch (Exception e) {
                     log.error("自动创建样板生产记录失败: styleId={}, styleNo={}",
@@ -217,7 +225,7 @@ public class StyleInfoOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean update(StyleInfo styleInfo) {
-        normalizeManualSourceFields(styleInfo);
+        styleSelectionSourceHelper.normalizeManualSourceFields(styleInfo);
         validateStyleInfo(styleInfo);
         try {
             if (styleInfo.getId() != null) {
@@ -228,7 +236,7 @@ public class StyleInfoOrchestrator {
             if (result) {
                 // 同步更新样板生产记录的颜色和数量
                 try {
-                    syncPatternProductionInfo(styleInfo);
+                    stylePatternProductionHelper.syncPatternProductionInfo(styleInfo);
                 } catch (Exception e) {
                     log.warn("同步样板生产信息失败: styleId={}, error={}", styleInfo.getId(), e.getMessage());
                 }
@@ -446,282 +454,6 @@ public class StyleInfoOrchestrator {
         }
     }
 
-    /**
-     * 自动创建样板生产记录
-     */
-    private void createPatternProductionRecord(StyleInfo styleInfo) {
-        if (styleInfo == null || styleInfo.getId() == null) {
-            return;
-        }
-
-        // 检查是否已存在样板生产记录
-        long existingCount = patternProductionService.lambdaQuery()
-                .eq(PatternProduction::getStyleId, String.valueOf(styleInfo.getId()))
-                .count();
-
-        if (existingCount > 0) {
-            log.info("样板生产记录已存在，跳过自动创建: styleId={}", styleInfo.getId());
-            return;
-        }
-
-        // 初始化6个工序进度节点为0
-        String progressNodesJson = "{\"cutting\":0,\"sewing\":0,\"ironing\":0,\"quality\":0,\"secondary\":0,\"packaging\":0}";
-
-        PatternProduction patternProduction = new PatternProduction();
-        patternProduction.setStyleId(String.valueOf(styleInfo.getId()));
-        patternProduction.setStyleNo(styleInfo.getStyleNo());
-
-        // 从样衣信息复制颜色、数量、下板时间、交板时间
-        String color = styleInfo.getColor();
-        if (!StringUtils.hasText(color)) {
-            color = "-"; // 默认值
-        }
-        patternProduction.setColor(color);
-
-        // 使用 sampleQuantity，如果为空则默认为 1
-        Integer quantity = styleInfo.getSampleQuantity();
-        if (quantity == null || quantity == 0) {
-            quantity = 1; // 默认至少1件
-        }
-        patternProduction.setQuantity(quantity);
-
-        patternProduction.setReleaseTime(styleInfo.getCreateTime()); // 下板时间
-        patternProduction.setDeliveryTime(styleInfo.getDeliveryDate()); // 交板时间
-
-        patternProduction.setStatus("PENDING");
-        patternProduction.setProgressNodes(progressNodesJson);
-        patternProduction.setCreateTime(LocalDateTime.now());
-        patternProduction.setUpdateTime(LocalDateTime.now());
-        // 默认有二次工艺，PC端可按需切换
-        patternProduction.setHasSecondaryProcess(1);
-
-        UserContext ctx = UserContext.get();
-        if (ctx != null) {
-            patternProduction.setCreateBy(ctx.getUsername());
-        }
-
-        boolean saved = patternProductionService.save(patternProduction);
-        if (saved) {
-            log.info("自动创建样板生产记录成功: styleId={}, styleNo={}, patternId={}, color={}, quantity={}",
-                    styleInfo.getId(), styleInfo.getStyleNo(), patternProduction.getId(),
-                    styleInfo.getColor(), styleInfo.getSampleQuantity());
-        }
-    }
-
-    /**
-     * 同步样板生产记录的颜色和数量信息
-     * 当款式的颜色或数量更新时，同步更新对应的样板生产记录
-     */
-    private void syncPatternProductionInfo(StyleInfo styleInfo) {
-        if (styleInfo == null || styleInfo.getId() == null) {
-            return;
-        }
-
-        // 查询该款式对应的样板生产记录
-        LambdaQueryWrapper<PatternProduction> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(PatternProduction::getStyleId, String.valueOf(styleInfo.getId()))
-                .eq(PatternProduction::getDeleteFlag, 0);
-
-        List<PatternProduction> records = patternProductionService.list(wrapper);
-        if (records == null || records.isEmpty()) {
-            return;
-        }
-
-        // 更新颜色和数量
-        String color = styleInfo.getColor();
-        if (!StringUtils.hasText(color)) {
-            color = "-";
-        }
-        Integer quantity = styleInfo.getSampleQuantity();
-        if (quantity == null || quantity == 0) {
-            quantity = 1;
-        }
-
-        for (PatternProduction record : records) {
-            record.setColor(color);
-            record.setQuantity(quantity);
-            record.setDeliveryTime(styleInfo.getDeliveryDate()); // 同步交板时间
-            record.setUpdateTime(LocalDateTime.now());
-        }
-
-        boolean updated = patternProductionService.updateBatchById(records);
-        if (updated) {
-            log.info("同步样板生产记录成功: styleId={}, recordCount={}, color={}, quantity={}",
-                    styleInfo.getId(), records.size(), color, quantity);
-        }
-    }
-
-    private void fillSelectionSourceAndCoverFallback(List<StyleInfo> records) {
-        if (records == null || records.isEmpty() || selectionCandidateService == null) {
-            return;
-        }
-
-        List<Long> styleIds = records.stream()
-                .map(StyleInfo::getId)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
-        List<String> styleNos = records.stream()
-                .map(StyleInfo::getStyleNo)
-                .filter(StringUtils::hasText)
-                .map(String::trim)
-                .distinct()
-                .toList();
-
-        if (styleIds.isEmpty() && styleNos.isEmpty()) {
-            return;
-        }
-
-        LambdaQueryWrapper<SelectionCandidate> wrapper = new LambdaQueryWrapper<SelectionCandidate>()
-                .eq(SelectionCandidate::getDeleteFlag, 0)
-                .orderByDesc(SelectionCandidate::getUpdateTime)
-                .orderByDesc(SelectionCandidate::getId);
-        wrapper.and(w -> {
-            boolean appended = false;
-            if (!styleIds.isEmpty()) {
-                w.in(SelectionCandidate::getCreatedStyleId, styleIds);
-                appended = true;
-            }
-            if (!styleNos.isEmpty()) {
-                if (appended) {
-                    w.or();
-                }
-                w.in(SelectionCandidate::getCreatedStyleNo, styleNos);
-            }
-        });
-
-        List<SelectionCandidate> candidates = selectionCandidateService.list(wrapper);
-        Map<Long, SelectionCandidate> candidateByStyleId = new HashMap<>();
-        Map<String, SelectionCandidate> candidateByStyleNo = new HashMap<>();
-        for (SelectionCandidate candidate : candidates) {
-            if (candidate.getCreatedStyleId() != null) {
-                candidateByStyleId.putIfAbsent(candidate.getCreatedStyleId(), candidate);
-            }
-            if (StringUtils.hasText(candidate.getCreatedStyleNo())) {
-                candidateByStyleNo.putIfAbsent(candidate.getCreatedStyleNo().trim(), candidate);
-            }
-        }
-
-        for (StyleInfo style : records) {
-            SelectionCandidate candidate = style.getId() != null ? candidateByStyleId.get(style.getId()) : null;
-            if (candidate == null && StringUtils.hasText(style.getStyleNo())) {
-                candidate = candidateByStyleNo.get(style.getStyleNo().trim());
-            }
-
-            boolean looksLikeSelection = candidate != null || isSelectionDescription(style.getDescription());
-
-            String normalizedType = normalizeSourceType(style.getDevelopmentSourceType(), looksLikeSelection);
-            style.setDevelopmentSourceType(normalizedType);
-            style.setDevelopmentSourceDetail(normalizeResolvedSourceDetail(style, candidate, normalizedType));
-            if (!StringUtils.hasText(style.getCover()) && candidate != null) {
-                String fallbackCover = extractFirstReferenceImage(candidate.getReferenceImages());
-                if (StringUtils.hasText(fallbackCover)) {
-                    style.setCover(fallbackCover);
-                }
-            }
-        }
-    }
-
-    private boolean isSelectionDescription(String description) {
-        return StringUtils.hasText(description) && description.contains("选品中心");
-    }
-
-    private void normalizeManualSourceFields(StyleInfo styleInfo) {
-        if (styleInfo == null) {
-            return;
-        }
-        String normalizedType = normalizeSourceType(styleInfo.getDevelopmentSourceType(), false);
-        styleInfo.setDevelopmentSourceType(normalizedType);
-        styleInfo.setDevelopmentSourceDetail(normalizeResolvedSourceDetail(styleInfo, null, normalizedType));
-    }
-
-    private String normalizeSourceType(String sourceType, boolean looksLikeSelection) {
-        String normalized = sourceType == null ? "" : sourceType.trim().toUpperCase();
-        if (SOURCE_TYPE_SELECTION.equals(normalized) || looksLikeSelection) {
-            return SOURCE_TYPE_SELECTION;
-        }
-        return SOURCE_TYPE_SELF;
-    }
-
-    private String normalizeResolvedSourceDetail(StyleInfo style, SelectionCandidate candidate, String sourceType) {
-        String current = style == null ? "" : safeText(style.getDevelopmentSourceDetail());
-        if (isValidSourceDetail(sourceType, current)) {
-            return current;
-        }
-        return resolveSourceDetailFallback(style, candidate, sourceType);
-    }
-
-    private boolean isValidSourceDetail(String sourceType, String detail) {
-        if (!StringUtils.hasText(detail) || looksLikeMojibake(detail)) {
-            return false;
-        }
-        if (SOURCE_TYPE_SELECTION.equals(sourceType)) {
-            return SELECTION_SOURCE_DETAILS.contains(detail);
-        }
-        return "自主开发".equals(detail);
-    }
-
-    private boolean looksLikeMojibake(String value) {
-        String text = safeText(value);
-        if (!StringUtils.hasText(text)) {
-            return false;
-        }
-        if (text.length() > 12 || text.indexOf('�') >= 0) {
-            return true;
-        }
-        return text.codePoints().anyMatch(codePoint -> codePoint >= 0x00C0 && codePoint <= 0x024F);
-    }
-
-    private String resolveSourceDetailFallback(StyleInfo style, SelectionCandidate candidate, String sourceType) {
-        if (!SOURCE_TYPE_SELECTION.equals(sourceType)) {
-            return "自主开发";
-        }
-        if (candidate != null) {
-            String candidateSourceType = candidate.getSourceType() == null ? "" : candidate.getSourceType().trim().toUpperCase();
-            return switch (candidateSourceType) {
-                case "EXTERNAL" -> "外部市场";
-                case "SUPPLIER" -> "供应商";
-                case "CLIENT" -> "客户定制";
-                case "INTERNAL" -> "内部选品";
-                default -> "选品中心";
-            };
-        }
-        String description = style.getDescription() == null ? "" : style.getDescription();
-        if (description.contains("外部市场")) {
-            return "外部市场";
-        }
-        if (description.contains("供应商")) {
-            return "供应商";
-        }
-        if (description.contains("客户定制")) {
-            return "客户定制";
-        }
-        if (description.contains("选品中心")) {
-            return "选品中心";
-        }
-        return "选品中心";
-    }
-
-    private String safeText(String value) {
-        return value == null ? "" : value.trim();
-    }
-
-    private String extractFirstReferenceImage(String referenceImages) {
-        if (!StringUtils.hasText(referenceImages)) {
-            return null;
-        }
-        String raw = referenceImages.trim();
-        if (!raw.startsWith("[")) {
-            return raw;
-        }
-        try {
-            List<String> images = new com.fasterxml.jackson.databind.ObjectMapper().readValue(raw, new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {});
-            return images == null || images.isEmpty() ? null : images.get(0);
-        } catch (Exception e) {
-            log.warn("解析候选款参考图失败 referenceImages={}", raw, e);
-            return null;
-        }
-    }
 
     /** 为新款式生成一个当前不存在的款号，冲突时加 -1/-2/... 后缀 */
     private String generateUniqueStyleNo(String requested) {
@@ -766,7 +498,7 @@ public class StyleInfoOrchestrator {
      */
     public boolean startSize(Long id) {
         ensureStyleNotScrapped(id);
-        return styleStageHelper.startSize(id);
+        return styleStageCompletionHelper.startSize(id);
     }
 
     /**
@@ -774,77 +506,77 @@ public class StyleInfoOrchestrator {
      */
     public boolean completeSize(Long id) {
         ensureStyleNotScrapped(id);
-        return styleStageHelper.completeSize(id);
+        return styleStageCompletionHelper.completeSize(id);
     }
 
     public boolean resetSize(Long id, Map<String, Object> body) {
         ensureStyleNotScrapped(id);
-        return styleStageHelper.resetSize(id, body);
+        return styleStageCompletionHelper.resetSize(id, body);
     }
 
     public boolean startBom(Long id) {
         ensureStyleNotScrapped(id);
-        return styleStageHelper.startBom(id);
+        return styleStageCompletionHelper.startBom(id);
     }
 
     public boolean completeBom(Long id) {
         ensureStyleNotScrapped(id);
-        return styleStageHelper.completeBom(id);
+        return styleStageCompletionHelper.completeBom(id);
     }
 
     public boolean resetBom(Long id, Map<String, Object> body) {
         ensureStyleNotScrapped(id);
-        return styleStageHelper.resetBom(id, body);
+        return styleStageCompletionHelper.resetBom(id, body);
     }
 
     public boolean startProcess(Long id) {
         ensureStyleNotScrapped(id);
-        return styleStageHelper.startProcess(id);
+        return styleStageCompletionHelper.startProcess(id);
     }
 
     public boolean completeProcess(Long id) {
         ensureStyleNotScrapped(id);
-        return styleStageHelper.completeProcess(id);
+        return styleStageCompletionHelper.completeProcess(id);
     }
 
     public boolean resetProcess(Long id, Map<String, Object> body) {
         ensureStyleNotScrapped(id);
-        return styleStageHelper.resetProcess(id, body);
+        return styleStageCompletionHelper.resetProcess(id, body);
     }
 
     public boolean startSizePrice(Long id) {
         ensureStyleNotScrapped(id);
-        return styleStageHelper.startSizePrice(id);
+        return styleStageCompletionHelper.startSizePrice(id);
     }
 
     public boolean completeSizePrice(Long id) {
         ensureStyleNotScrapped(id);
-        return styleStageHelper.completeSizePrice(id);
+        return styleStageCompletionHelper.completeSizePrice(id);
     }
 
     public boolean resetSizePrice(Long id, Map<String, Object> body) {
         ensureStyleNotScrapped(id);
-        return styleStageHelper.resetSizePrice(id, body);
+        return styleStageCompletionHelper.resetSizePrice(id, body);
     }
 
     public boolean startSecondary(Long id) {
         ensureStyleNotScrapped(id);
-        return styleStageHelper.startSecondary(id);
+        return styleStageCompletionHelper.startSecondary(id);
     }
 
     public boolean completeSecondary(Long id) {
         ensureStyleNotScrapped(id);
-        return styleStageHelper.completeSecondary(id);
+        return styleStageCompletionHelper.completeSecondary(id);
     }
 
     public boolean skipSecondary(Long id) {
         ensureStyleNotScrapped(id);
-        return styleStageHelper.skipSecondary(id);
+        return styleStageCompletionHelper.skipSecondary(id);
     }
 
     public boolean resetSecondary(Long id, Map<String, Object> body) {
         ensureStyleNotScrapped(id);
-        return styleStageHelper.resetSecondary(id, body);
+        return styleStageCompletionHelper.resetSecondary(id, body);
     }
 
     private void ensureStyleNotScrapped(Long id) {
