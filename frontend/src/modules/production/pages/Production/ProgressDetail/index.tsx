@@ -15,16 +15,13 @@ import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import PageLayout from '@/components/common/PageLayout';
 
-import { generateRequestId, isDuplicateScanMessage, isOrderFrozenByStatus, isOrderTerminal } from '@/utils/api';
+import { generateRequestId, isOrderFrozenByStatus, isOrderTerminal } from '@/utils/api';
 import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress';
 import { isSupervisorOrAboveUser as isSupervisorOrAboveUserFn, useAuth } from '@/utils/AuthContext';
 import { formatDateTimeCompact } from '@/utils/datetime';
 import { getProgressColorStatus, getRemainingDaysDisplay } from '@/utils/progressColor';
 import { CuttingBundle, ProductionOrder, ProductionQueryParams, ScanRecord } from '@/types/production';
-import type { TemplateLibrary } from '@/types/style';
-
-import { productionCuttingApi, productionOrderApi, productionScanApi } from '@/services/production/productionApi';
-import { templateLibraryApi } from '@/services/template/templateLibraryApi';
+import { productionCuttingApi, productionOrderApi } from '@/services/production/productionApi';
 import { DEFAULT_PAGE_SIZE_OPTIONS, savePageSize } from '@/utils/pageSizeStore';
 import '../../../styles.css';
 
@@ -32,7 +29,6 @@ import {
   defaultNodes,
   stripWarehousingNode,
   getNodeIndexFromProgress,
-  parseProgressNodes,
   findPricingProcessForStage,
   getCloseMinRequired,
   calculateProgressFromBundles,
@@ -75,9 +71,10 @@ import { useCardGridLayout } from '@/hooks/useCardGridLayout';
 import { useDeliveryRiskMap } from './hooks/useDeliveryRiskMap';
 import MaterialShortageAlert from './components/MaterialShortageAlert';
 import { useProductionBoardStore } from '@/stores';
-import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
-import type { BottleneckItem } from '@/services/intelligence/intelligenceApi';
 import { getOrderCardSizeQuantityItems } from '@/utils/cardSizeQuantity';
+import { useBottleneckBanner } from './hooks/useBottleneckBanner';
+import { useTemplateNodes } from './hooks/useTemplateNodes';
+import { useScanExecution } from './hooks/useScanExecution';
 import {
   fetchScanHistory as fetchScanHistoryHelper,
   fetchCuttingBundles as fetchCuttingBundlesHelper,
@@ -198,28 +195,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const [, setNodeWorkflowDirty] = useState(false);
 
   // ─────── 工序瓶颈检测 ───────
-  const [bottleneckItems, setBottleneckItems] = useState<BottleneckItem[]>([]);
-  const [bottleneckBannerVisible, setBottleneckBannerVisible] = useState(false);
-  const bottleneckFetched = useRef(false);
-
-  const fetchBottleneck = useCallback(async () => {
-    if (bottleneckFetched.current) return;
-    bottleneckFetched.current = true;
-    try {
-      const res = await intelligenceApi.detectBottleneck() as any;
-      const detection = res?.data ?? res;
-      const items: BottleneckItem[] = detection?.items ?? [];
-      const significant = items.filter((i: BottleneckItem) => i.severity === 'critical' || i.severity === 'warning');
-      if (significant.length > 0) {
-        setBottleneckItems(significant);
-        setBottleneckBannerVisible(true);
-      }
-    } catch { /* silent */ }
-  }, []);
-
-  useEffect(() => {
-    if (orders.length > 0) void fetchBottleneck();
-  }, [orders.length]);
+  const { bottleneckItems, bottleneckBannerVisible, setBottleneckBannerVisible } = useBottleneckBanner(orders);
 
   /** 自动刷新计时器：每 2 分钟递增，触发 boardStats 过期重拉 */
   const [boardRefreshTick, setBoardRefreshTick] = useState(0);
@@ -283,130 +259,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
   useEffect(() => { activeOrderRef.current = activeOrder; }, [activeOrder]);
 
-  const closeScanConfirm = (silent?: boolean) => {
-    closeScanConfirmState();
-    if (!silent) {
-      message.info('已取消');
-    }
-  };
-
-  const submitConfirmedScan = async () => {
-    if (!scanConfirmState.payload || scanConfirmState.loading) return;
-    if (!activeOrder) return;
-    setScanConfirmLoading(true);
-    const meta = scanConfirmState.meta || {};
-    const attemptKey = meta.attemptKey || '';
-    const attemptRequestId = meta.attemptRequestId || '';
-    const values = meta.values || {};
-    try {
-      const response = await productionScanApi.execute(scanConfirmState.payload);
-      const result = response as Record<string, unknown>;
-      if (result.code === 200) {
-        lastFailedRequestRef.current = null;
-        const serverMsg = String((result?.data as any)?.message || '').trim();
-        const exceed = serverMsg.includes('裁剪') && serverMsg.includes('超出');
-        if (exceed) {
-          message.error('数量超出无法入库');
-          closeScanConfirm(true);
-          return;
-        }
-        const isDuplicate = isDuplicateScanMessage(serverMsg);
-        if (isDuplicate) {
-          message.info('已处理');
-        } else {
-          message.success(serverMsg || '扫码成功');
-          // 静默反馈闭环 — 扫码成功后向智能模型提交实际数据
-          submitScanFeedback({
-            orderId: String(activeOrder.id || ''),
-            orderNo: activeOrder.orderNo,
-            stageName: values.progressStage,
-            processName: values.processName,
-          });
-        }
-        const effectiveNodes = stripWarehousingNode(resolveNodesForOrder(activeOrder, progressNodesByStyleNo, nodes));
-        const isProd = String(values.scanType || '').trim() === 'production';
-        if (!isDuplicate && isProd) {
-          const updated = await fetchScanHistory(activeOrder);
-          const autoCalculatedProgress = calculateProgressFromBundles(activeOrder, cuttingBundles, updated, effectiveNodes);
-          await updateOrderProgress(activeOrder, autoCalculatedProgress);
-          const currentIdx = getNodeIndexFromProgress(effectiveNodes, autoCalculatedProgress);
-          const nextNode = effectiveNodes[currentIdx];
-          if (nextNode) {
-            scanForm.setFieldsValue({
-              progressStage: String(nextNode.name || '').trim() || undefined,
-              processCode: String(nextNode.id || '').trim(),
-              unitPrice: Number.isFinite(Number(nextNode.unitPrice)) && Number(nextNode.unitPrice) >= 0 ? Number(nextNode.unitPrice) : undefined,
-            });
-          }
-        } else {
-          await fetchOrders();
-          await fetchScanHistory(activeOrder);
-        }
-        scanForm.setFieldsValue({ scanCode: '', quantity: undefined });
-        setTimeout(() => scanInputRef.current?.focus?.(), 0);
-      } else {
-        const msg = String(result.message || '').trim();
-        const exceed = msg.includes('裁剪') && msg.includes('超出');
-        if (exceed) {
-          message.error('数量超出无法入库');
-        } else if (msg) {
-          message.error(msg);
-        } else {
-          message.error('系统繁忙');
-        }
-      }
-    } catch (error) {
-      const anyErr: any = error;
-      const hasStatus = anyErr?.status != null || anyErr?.response?.status != null;
-      if (!hasStatus) {
-        if (attemptKey && attemptRequestId) {
-          lastFailedRequestRef.current = { key: attemptKey, requestId: attemptRequestId };
-        }
-        message.error('连接失败');
-      } else {
-        lastFailedRequestRef.current = null;
-        console.error('scan_execute_failed', error);
-        message.error('系统繁忙');
-      }
-    } finally {
-      setScanConfirmLoading(false);
-      closeScanConfirm(true);
-      setScanSubmitting(false);
-      scanSubmittingRef.current = false;
-    }
-  };
-
   // ── 模板函数 ─────────────────────────────────────────────────────
-  const fetchTemplateNodes = async (templateId: string): Promise<ProgressNode[]> => {
-    const tid = String(templateId || '').trim();
-    if (!tid) return [];
-    const res = await templateLibraryApi.getById(tid);
-    const result = res as Record<string, unknown>;
-    if (result.code !== 200) return [];
-    const tpl = result.data as TemplateLibrary;
-    return parseProgressNodes(String(tpl?.templateContent ?? ''));
-  };
-
-  const ensureNodesFromTemplateIfNeeded = async (order: ProductionOrder) => {
-    if (!order) return;
-    const templateId = String((order as any)?.progressTemplateId || '').trim();
-    if (!templateId) return;
-
-    try {
-      const templateNodes = await fetchTemplateNodes(templateId);
-      if (templateNodes && templateNodes.length > 0) {
-        setNodes(templateNodes);
-        if (order.styleNo) {
-          setProgressNodesByStyleNo(prev => ({
-            ...prev,
-            [order.styleNo]: templateNodes
-          }));
-        }
-      }
-    } catch (error) {
-      // Silently ignore template loading errors
-    }
-  };
+  const { fetchTemplateNodes, ensureNodesFromTemplateIfNeeded } = useTemplateNodes({ setNodes, setProgressNodesByStyleNo });
 
   useEffect(() => {
     if (!orders.length) return;
@@ -634,6 +488,13 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     nodes,
     productionOrderApi,
     message,
+  });
+
+  const { submitConfirmedScan, closeScanConfirm } = useScanExecution({
+    scanConfirmState, closeScanConfirmState, setScanConfirmLoading,
+    activeOrder, message, submitScanFeedback, progressNodesByStyleNo, nodes,
+    cuttingBundles, updateOrderProgress, fetchScanHistory, fetchOrders,
+    scanForm, scanInputRef, setScanSubmitting, scanSubmittingRef, lastFailedRequestRef,
   });
 
   const { handleCloseOrder, pendingCloseOrder, closeOrderLoading, confirmCloseOrder, cancelCloseOrder } = useCloseOrder({
