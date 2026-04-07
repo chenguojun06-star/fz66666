@@ -40,9 +40,6 @@ import { processParentMappingApi } from '@/services/production/productionApi';
 import { useDeliveryRiskMap } from '../ProgressDetail/hooks/useDeliveryRiskMap';
 import { useShareOrderDialog } from '../ProgressDetail/hooks/useShareOrderDialog';
 import { useStagnantDetection } from '../ProgressDetail/hooks/useStagnantDetection';
-import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
-import type { AnomalyItem } from '@/services/intelligence/intelligenceApi';
-import { getStyleInfoByRef } from '@/services/style/styleApi';
 import ExportButton from '@/components/common/ExportButton';
 import { getOrderCardSizeQuantityItems } from '@/utils/cardSizeQuantity';
 import type { ProgressNode } from '../ProgressDetail/types';
@@ -65,11 +62,15 @@ import {
   useProgressTracking,
   useProductionStats,
   useProductionColumns,
+  useCardProgress,
+  useNodeDetailModal,
+  useLabelPrint,
+  useOrderFocus,
+  useAnomalyDetection,
 } from './hooks';
 import { safeString } from './utils';
 import TransferOrderModal from './TransferOrderModal';
 import AnomalyBanner from './AnomalyBanner';
-import { useProductionBoardStore } from '@/stores';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
@@ -105,72 +106,11 @@ const ProductionList: React.FC = () => {
   const [printModalVisible, setPrintModalVisible] = useState(false);
   const [printingRecord, setPrintingRecord] = useState<ProductionOrder | null>(null);
 
-  // ===== 打印标签（洗水唛/吊牌）状态 =====
-  const [labelPrintOpen, setLabelPrintOpen] = useState(false);
-  const [labelPrintOrder, setLabelPrintOrder] = useState<ProductionOrder | null>(null);
-  const [labelPrintStyle, setLabelPrintStyle] = useState<{
-    fabricComposition?: string;
-    fabricCompositionParts?: string;
-    washInstructions?: string;
-    uCode?: string;
-    washTempCode?: string;
-    bleachCode?: string;
-    tumbleDryCode?: string;
-    ironCode?: string;
-    dryCleanCode?: string;
-  } | null>(null);
-
-  // ===== NodeDetailModal 状态（进度球点击弹窗）=====
-  const [nodeDetailVisible, setNodeDetailVisible] = useState(false);
-  const [nodeDetailOrder, setNodeDetailOrder] = useState<ProductionOrder | null>(null);
-  const [nodeDetailType, setNodeDetailType] = useState('');
-  const [nodeDetailName, setNodeDetailName] = useState('');
-  const [nodeDetailStats, setNodeDetailStats] = useState<{ done: number; total: number; percent: number; remaining: number } | undefined>(undefined);
-  const [nodeDetailUnitPrice, setNodeDetailUnitPrice] = useState<number | undefined>(undefined);
-  const [nodeDetailProcessList, setNodeDetailProcessList] = useState<any[]>([]);
-
-  const openNodeDetail = useCallback((
-    order: ProductionOrder,
-    nodeType: string,
-    nodeName: string,
-    stats?: { done: number; total: number; percent: number; remaining: number },
-    unitPrice?: number,
-    processList?: any[]
-  ) => {
-    setNodeDetailOrder(order);
-    setNodeDetailType(nodeType);
-    setNodeDetailName(nodeName);
-    setNodeDetailStats(stats);
-    setNodeDetailUnitPrice(unitPrice);
-    setNodeDetailProcessList(processList || []);
-    setNodeDetailVisible(true);
-  }, []);
-
-  const closeNodeDetail = useCallback(() => {
-    setNodeDetailVisible(false);
-    setNodeDetailOrder(null);
-  }, []);
-
-  const handlePrintLabel = async (record: ProductionOrder) => {
-    setLabelPrintOrder(record);
-    setLabelPrintStyle(null);
-    setLabelPrintOpen(true);
-    if (record.styleId || record.styleNo) {
-      const styleInfo = await getStyleInfoByRef(record.styleId, record.styleNo);
-      const d = styleInfo ?? {};
-      setLabelPrintStyle({
-        fabricComposition: d.fabricComposition,
-        fabricCompositionParts: d.fabricCompositionParts,
-        washInstructions: d.washInstructions,
-        uCode: d.uCode,
-        washTempCode: d.washTempCode,
-        bleachCode: d.bleachCode,
-        tumbleDryCode: d.tumbleDryCode,
-        ironCode: d.ironCode,
-        dryCleanCode: d.dryCleanCode,
-      });
-    }
-  };
+    // ===== Hook 提取：进度/弹窗/打印/聚焦 =====
+    const orderFocusRef = useRef<{ triggerOrderFocus: (...args: any[]) => void; clearSmartFocus: () => void } | null>(null);
+    const { clearAllBoardCache, boardStatsByOrder, boardTimesByOrder, boardStatsLoadingByOrder, mergeBoardStatsForOrder, mergeBoardTimesForOrder, setBoardLoadingForOrder, mergeProcessDataForOrder, boardStatsByOrderRef, boardStatsLoadingByOrderRef, calcCardProgress } = useCardProgress();
+    const { nodeDetailVisible, nodeDetailOrder, nodeDetailType, nodeDetailName, nodeDetailStats, nodeDetailUnitPrice, nodeDetailProcessList, openNodeDetail, closeNodeDetail } = useNodeDetailModal();
+    const { labelPrintOpen, closeLabelPrint, labelPrintOrder, labelPrintStyle, handlePrintLabel } = useLabelPrint();
 
   // ===== 查询参数 =====
   // 跨页跳转精准定位：组件 mount 时就从 URL 读取 orderNo，避免初始 fetch 与 URL params effect 之间的竞态条件
@@ -206,115 +146,13 @@ const ProductionList: React.FC = () => {
   const [showDelayedOnly, setShowDelayedOnly] = useState(false);
   const [activeStatFilter, setActiveStatFilter] = useState<'production' | 'delayed' | 'today'>('production');
   const [smartQueueFilter, setSmartQueueFilter] = useState<'all' | 'urgent' | 'behind' | 'stagnant' | 'overdue'>('all');
-  const [pendingScrollOrderId, setPendingScrollOrderId] = useState<string | null>(null);
-  const [focusedOrderId, setFocusedOrderId] = useState<string | null>(null);
-  const focusClearTimerRef = useRef<number | null>(null);
 
   // AI 交期风险数据（背景静默加载，不阻塞表格渲染）
   const hasActiveOrders = useMemo(() => productionList.some(o => o.status !== 'completed'), [productionList]);
   const deliveryRiskMap = useDeliveryRiskMap(hasActiveOrders);
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
 
-  // ===== 异常检测 Banner =====
-  const [anomalyItems, setAnomalyItems] = useState<AnomalyItem[]>([]);
-  const [anomalyBannerVisible, setAnomalyBannerVisible] = useState(false);
-  const anomalyFetched = useRef(false);
-
-  const fetchAnomalies = useCallback(async () => {
-    if (anomalyFetched.current || !isSmartFeatureEnabled('smart.production.precheck.enabled')) return;
-    anomalyFetched.current = true;
-    try {
-      const res = await intelligenceApi.detectAnomalies() as any;
-      const items: AnomalyItem[] = res?.data?.items ?? res?.items ?? [];
-      const significant = items.filter(i => i.severity === 'critical' || i.severity === 'warning');
-      if (significant.length > 0) {
-        setAnomalyItems(significant);
-        setAnomalyBannerVisible(true);
-      }
-    } catch { /* silent — 不阻塞主列表 */ }
-  }, []);
-  const clearAllBoardCache = useProductionBoardStore((s) => s.clearAllBoardCache);
-  const boardStatsByOrder = useProductionBoardStore((s) => s.boardStatsByOrder);
-  const boardTimesByOrder = useProductionBoardStore((s) => s.boardTimesByOrder);
-  const boardStatsLoadingByOrder = useProductionBoardStore((s) => s.boardStatsLoadingByOrder);
-  const mergeBoardStatsForOrder = useProductionBoardStore((s) => s.mergeBoardStatsForOrder);
-  const mergeBoardTimesForOrder = useProductionBoardStore((s) => s.mergeBoardTimesForOrder);
-  const setBoardLoadingForOrder = useProductionBoardStore((s) => s.setBoardLoadingForOrder);
-  const mergeProcessDataForOrder = useProductionBoardStore((s) => s.mergeProcessDataForOrder);
-  // ref 版：避免放入 useEffect 依赖导致无限循环
-  const boardStatsByOrderRef = useRef(boardStatsByOrder);
-  const boardStatsLoadingByOrderRef = useRef(boardStatsLoadingByOrder);
-  useEffect(() => { boardStatsByOrderRef.current = boardStatsByOrder; }, [boardStatsByOrder]);
-  useEffect(() => { boardStatsLoadingByOrderRef.current = boardStatsLoadingByOrder; }, [boardStatsLoadingByOrder]);
-
-  // 卡片进度：取 boardStats 实时数据与 productionProgress DB值 的较大值，
-  // 但仅下单、无任何采购/裁剪/生产动作时，真实显示值必须是 0。
-  const calcCardProgress = useCallback((record: ProductionOrder): number => {
-    const dbProgress = Math.min(100, Math.max(0, Number(record.productionProgress) || 0));
-    if (record.status === 'completed') return 100;
-    if (isOrderFrozenByStatus(record)) return dbProgress;
-    const orderId = String(record.id || '');
-    const stats = boardStatsByOrder[orderId];
-    const hasProcurementAction = Boolean(record.procurementManuallyCompleted)
-      || Boolean(record.procurementConfirmedAt)
-      || (Number(record.materialArrivalRate) || 0) > 0;
-    const hasCuttingAction = (Number(record.cuttingCompletionRate) || 0) > 0
-      || (Number(record.cuttingQuantity) || 0) > 0;
-    const hasBoardAction = !!stats && Object.values(stats as Record<string, number>)
-      .some((value) => (Number(value) || 0) > 0);
-    const hasRealAction = hasProcurementAction || hasCuttingAction || hasBoardAction;
-    if (!hasRealAction) return 0;
-    if (!stats) return dbProgress;
-    const total = Math.max(1, Number(record.cuttingQuantity || record.orderQuantity) || 1);
-    const PIPELINE = hasProcurementStage(record as any)
-      ? ['采购', '裁剪', '二次工艺', '绣花', '车缝', '尾部', '剪线', '整烫', '后整', '质检', '包装', '入库']
-      : ['裁剪', '二次工艺', '绣花', '车缝', '尾部', '剪线', '整烫', '后整', '质检', '包装', '入库'];
-    const normalizeKey = (k: string) => {
-      if (k.includes('入库') || k.includes('入仓')) return '入库';
-      if (k.includes('质检') || k.includes('品检') || k.includes('验货')) return '质检';
-      if (k.includes('包装') || k.includes('后整') || k.includes('打包')) return '包装';
-      if (k.includes('裁剪') || k.includes('裁床')) return '裁剪';
-      if (k.includes('车缝') || k.includes('车间')) return '车缝';
-      return k;
-    };
-    const normMap = new Map<string, number>();
-    for (const [rawKey, rawQty] of Object.entries(stats as Record<string, number>)) {
-      const nk = normalizeKey(rawKey);
-      const pct = Math.min(100, Math.round(Number(rawQty) / total * 100));
-      if (pct > 0) normMap.set(nk, Math.max(normMap.get(nk) ?? 0, pct));
-    }
-    if (normMap.size === 0) return dbProgress;
-    let lastIdx = -1;
-    let lastPct = 0;
-    for (const [nk, pct] of normMap.entries()) {
-      const idx = PIPELINE.indexOf(nk);
-      if (idx > lastIdx || (idx === lastIdx && pct > lastPct)) {
-        lastIdx = idx;
-        lastPct = pct;
-      }
-    }
-    if (lastIdx < 0) return dbProgress;
-    const perStage = 100 / PIPELINE.length;
-    const boardProgress = Math.round(lastIdx * perStage + lastPct * perStage / 100);
-    return Math.min(100, Math.max(dbProgress, boardProgress));
-  }, [boardStatsByOrder]);
-
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
-
-  const getOrderDomKey = useCallback((record: Partial<ProductionOrder> | null | undefined) => {
-    return String(record?.id || record?.orderNo || '').trim();
-  }, []);
-
-  const triggerOrderFocus = useCallback((record: Partial<ProductionOrder> | null | undefined) => {
-    const key = getOrderDomKey(record);
-    if (!key) return;
-    setPendingScrollOrderId(key);
-  }, [getOrderDomKey]);
-
-  const clearSmartFocus = useCallback(() => {
-    setFocusedOrderId(null);
-    setPendingScrollOrderId(null);
-  }, []);
 
   // 停滞检测：返回 Map<orderId, stagnantDays>，与生产进度页保持一致
   const stagnantOrderIds = useStagnantDetection(productionList, boardTimesByOrder);
@@ -328,8 +166,8 @@ const ProductionList: React.FC = () => {
     stagnantOrderIds,
     smartQueueFilter,
     setSmartQueueFilter,
-    triggerOrderFocus,
-    clearFocus: clearSmartFocus,
+      triggerOrderFocus: (...args: any[]) => orderFocusRef.current?.triggerOrderFocus(...args),
+      clearFocus: () => orderFocusRef.current?.clearSmartFocus(),
   });
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
@@ -341,58 +179,6 @@ const ProductionList: React.FC = () => {
       actionText: '刷新重试',
     });
   };
-
-  const resolveAnomalyTargetOrder = useCallback((item: AnomalyItem) => {
-    const targetName = String(item.targetName || '').trim();
-    const description = String(item.description || '').trim();
-    const candidateTexts = [targetName, description].filter(Boolean);
-    const orderNoPattern = /[A-Z]{1,6}\d{6,}/g;
-
-    for (const text of candidateTexts) {
-      const matches = text.match(orderNoPattern) || [];
-      for (const match of matches) {
-        const order = productionList.find((record) => String(record.orderNo || '').trim() === match);
-        if (order) return order;
-      }
-      const exactOrder = productionList.find((record) => String(record.orderNo || '').trim() === text);
-      if (exactOrder) return exactOrder;
-    }
-
-    const factoryMatchedOrder = productionList.find((record) => {
-      const factoryName = String(record.factoryName || '').trim();
-      return !!factoryName && !!targetName && (factoryName === targetName || targetName.includes(factoryName) || factoryName.includes(targetName));
-    });
-    if (factoryMatchedOrder) return factoryMatchedOrder;
-
-    return null;
-  }, [productionList]);
-
-  const handleAnomalyClick = useCallback((item: AnomalyItem) => {
-    const targetOrder = resolveAnomalyTargetOrder(item);
-    if (!targetOrder) {
-      message.info(`暂未匹配到“${item.targetName}”对应订单`);
-      return;
-    }
-
-    const targetOrderNo = String(targetOrder.orderNo || '').trim();
-    if (item.type === 'quality_spike' && targetOrderNo) {
-      navigate(`/production/progress-detail?orderNo=${encodeURIComponent(targetOrderNo)}&focusNode=${encodeURIComponent('质检')}`);
-      return;
-    }
-
-    setActiveStatFilter('production');
-    setShowDelayedOnly(false);
-    setSmartQueueFilter('all');
-    setQueryParams((prev) => ({
-      ...prev,
-      page: 1,
-      status: '',
-      delayedOnly: undefined,
-      todayOnly: undefined,
-      keyword: targetOrderNo || prev.keyword,
-    }));
-    triggerOrderFocus(targetOrder);
-  }, [message, navigate, resolveAnomalyTargetOrder, triggerOrderFocus]);
 
   // ===== 提取的 Hooks =====
   const { visibleColumns, toggleColumnVisible, resetColumnSettings, columnOptions } = useColumnSettings();
@@ -522,12 +308,6 @@ const ProductionList: React.FC = () => {
   // boardStatsByOrder/boardStatsLoadingByOrder 通过 ref 传入，不放依赖数组，避免无限循环
   }, [productionList, mergeBoardStatsForOrder, mergeBoardTimesForOrder, setBoardLoadingForOrder, mergeProcessDataForOrder]);
 
-  // 首次加载到订单后，静默触发异常检测（仅检测一次，不阻塞主列表）
-  useEffect(() => {
-    if (productionList.length > 0) void fetchAnomalies();
-  // productionList.length 变化是触发时机，fetchAnomalies 是稳定回调
-  }, [productionList.length]);
-
   // URL 参数解析
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -612,37 +392,19 @@ const ProductionList: React.FC = () => {
     return filtered;
   }, [smartQueueOrders, sortField, sortOrder, showDelayedOnly, activeStatFilter]);
 
-  const scrollToFocusedOrder = useCallback((orderId: string) => {
-    const safeId = orderId.replace(/"/g, '\\"');
-    const selector = viewMode === 'list'
-      ? `tr[data-row-key="${safeId}"]`
-      : `#production-order-card-${safeId}`;
-    const node = document.querySelector(selector) as HTMLElement | null;
-    if (!node) return false;
-    node.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    setFocusedOrderId(orderId);
-    if (focusClearTimerRef.current) window.clearTimeout(focusClearTimerRef.current);
-    focusClearTimerRef.current = window.setTimeout(() => setFocusedOrderId(null), 2200);
-    return true;
-  }, [viewMode]);
+  // ===== useOrderFocus: 聚焦/滚动/高亮逻辑 =====
+  const { focusedOrderId, pendingScrollOrderId, getOrderDomKey, triggerOrderFocus, clearSmartFocus, scrollToFocusedOrder } = useOrderFocus(viewMode, sortedProductionList);
+  orderFocusRef.current = { triggerOrderFocus, clearSmartFocus };
 
-  useEffect(() => {
-    return () => {
-      if (focusClearTimerRef.current) window.clearTimeout(focusClearTimerRef.current);
-    };
-  }, []);
+  // ===== useAnomalyDetection: 异常检测横幅 =====
+  const { anomalyItems, anomalyBannerVisible, setAnomalyBannerVisible, fetchAnomalies, handleAnomalyClick } = useAnomalyDetection({
+    productionList, message, navigate, setActiveStatFilter, setShowDelayedOnly, setSmartQueueFilter, setQueryParams, triggerOrderFocus,
+  });
 
+  // 首次加载到订单后，静默触发异常检测（仅检测一次，不阻塞主列表）
   useEffect(() => {
-    if (!pendingScrollOrderId) return;
-    const exists = sortedProductionList.some((record) => getOrderDomKey(record) === pendingScrollOrderId);
-    if (!exists) return;
-    const timer = window.setTimeout(() => {
-      if (scrollToFocusedOrder(pendingScrollOrderId)) {
-        setPendingScrollOrderId(null);
-      }
-    }, 120);
-    return () => window.clearTimeout(timer);
-  }, [getOrderDomKey, pendingScrollOrderId, scrollToFocusedOrder, sortedProductionList, viewMode]);
+    if (productionList.length > 0) void fetchAnomalies();
+  }, [productionList.length]);
 
   // 表格列渲染辅助
   const allColumns = useProductionColumns({
@@ -1097,7 +859,7 @@ const ProductionList: React.FC = () => {
         {/* 打印标签（洗水唛 / U编码）双 Tab 弹窗 */}
         <LabelPrintModal
           open={labelPrintOpen}
-          onClose={() => { setLabelPrintOpen(false); setLabelPrintOrder(null); setLabelPrintStyle(null); }}
+          onClose={closeLabelPrint}
           order={labelPrintOrder}
           styleInfo={labelPrintStyle}
         />

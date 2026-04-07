@@ -40,9 +40,15 @@ export function useLabelPrint() {
     }
   }, []);
 
+  const closeLabelPrint = useCallback(() => {
+    setLabelPrintOpen(false);
+    setLabelPrintOrder(null);
+    setLabelPrintStyle(null);
+  }, []);
+
   return {
     labelPrintOpen,
-    setLabelPrintOpen,
+    closeLabelPrint,
     labelPrintOrder,
     labelPrintStyle,
     handlePrintLabel,
