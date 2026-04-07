@@ -269,7 +269,8 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                             .select(MaterialDatabase::getId, MaterialDatabase::getMaterialCode,
                                     MaterialDatabase::getFabricWidth, MaterialDatabase::getFabricWeight,
                                     MaterialDatabase::getFabricComposition, MaterialDatabase::getSupplierName,
-                                    MaterialDatabase::getUnitPrice, MaterialDatabase::getColor))
+                                    MaterialDatabase::getUnitPrice, MaterialDatabase::getColor,
+                                    MaterialDatabase::getSpecifications))
                     .stream()
                     .filter(d -> d != null && StringUtils.hasText(d.getMaterialCode()))
                     .collect(Collectors.toMap(MaterialDatabase::getMaterialCode, d -> d, (a, b) -> a));
@@ -282,6 +283,7 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                 if (!StringUtils.hasText(record.getSupplierName()) && StringUtils.hasText(db.getSupplierName())) record.setSupplierName(db.getSupplierName());
                 if ((record.getUnitPrice() == null || record.getUnitPrice().compareTo(BigDecimal.ZERO) == 0) && db.getUnitPrice() != null) record.setUnitPrice(db.getUnitPrice());
                 if (!StringUtils.hasText(record.getColor()) && StringUtils.hasText(db.getColor())) record.setColor(db.getColor());
+                if (!StringUtils.hasText(record.getSpecifications()) && StringUtils.hasText(db.getSpecifications())) record.setSpecifications(db.getSpecifications());
             }
         }
 

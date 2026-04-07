@@ -4,7 +4,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.stream.Collectors;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -131,6 +133,29 @@ public class MaterialPurchaseOrchestrator {
     public boolean batch(List<MaterialPurchase> purchases) {
         if (purchases == null || purchases.isEmpty()) {
             throw new IllegalArgumentException("采购明细不能为空");
+        }
+        // 从物料资料库补全缺失属性（颜色/规格/幅宽/克重/成分），确保仓库批量采购也能显示完整物料信息
+        List<String> matCodes = purchases.stream()
+                .map(MaterialPurchase::getMaterialCode)
+                .filter(org.springframework.util.StringUtils::hasText)
+                .distinct()
+                .collect(Collectors.toList());
+        if (!matCodes.isEmpty()) {
+            Map<String, MaterialDatabase> dbMap = materialDatabaseService.list(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialDatabase>()
+                            .in(MaterialDatabase::getMaterialCode, matCodes))
+                    .stream()
+                    .filter(d -> d != null && org.springframework.util.StringUtils.hasText(d.getMaterialCode()))
+                    .collect(Collectors.toMap(MaterialDatabase::getMaterialCode, d -> d, (a, b) -> a));
+            for (MaterialPurchase p : purchases) {
+                MaterialDatabase db = dbMap.get(p.getMaterialCode());
+                if (db == null) continue;
+                if (!org.springframework.util.StringUtils.hasText(p.getColor()) && org.springframework.util.StringUtils.hasText(db.getColor())) p.setColor(db.getColor());
+                if (!org.springframework.util.StringUtils.hasText(p.getSpecifications()) && org.springframework.util.StringUtils.hasText(db.getSpecifications())) p.setSpecifications(db.getSpecifications());
+                if (!org.springframework.util.StringUtils.hasText(p.getFabricWidth()) && org.springframework.util.StringUtils.hasText(db.getFabricWidth())) p.setFabricWidth(db.getFabricWidth());
+                if (!org.springframework.util.StringUtils.hasText(p.getFabricWeight()) && org.springframework.util.StringUtils.hasText(db.getFabricWeight())) p.setFabricWeight(db.getFabricWeight());
+                if (!org.springframework.util.StringUtils.hasText(p.getFabricComposition()) && org.springframework.util.StringUtils.hasText(db.getFabricComposition())) p.setFabricComposition(db.getFabricComposition());
+            }
         }
         boolean ok = batchAndSync(purchases);
         if (!ok) {
