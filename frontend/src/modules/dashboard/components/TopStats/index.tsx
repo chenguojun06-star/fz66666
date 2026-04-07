@@ -31,40 +31,39 @@ interface StatCardProps {
   icon: React.ReactNode;
   label: string;
   dataKey: keyof TopStatsData;
-  color: string;
   data: TimeRangeStats | null;
   loading: boolean;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ icon, label, color, data, loading }) => {
+const StatCard: React.FC<StatCardProps> = ({ icon, label, data, loading }) => {
   return (
-    <div className="top-stat-item" style={{ borderColor: color }}>
+    <div className="top-stat-item">
       <Spin spinning={loading}>
         <div className="stat-card-content">
           {/* 头部：图标 + 标签 + 汇总数量 同一行 */}
           <div className="stat-header">
-            <span className="stat-icon" style={{ color }}>{icon}</span>
-            <span className="stat-label" style={{ color }}>{label}</span>
-            <span className="stat-total" style={{ color }}>{data?.total?.toLocaleString() || 0}</span>
+            <span className="stat-icon">{icon}</span>
+            <span className="stat-label">{label}</span>
+            <span className="stat-total">{data?.total?.toLocaleString() || 0}</span>
           </div>
 
           {/* 底部：日/周/月/年 文字与数量同一行 */}
           <div className="stat-tags-row">
-            <div className="stat-tag" style={{ borderColor: `${color}33`, background: `${color}08` }}>
-              <span className="stat-tag-label" style={{ color: `${color}99` }}>日</span>
-              <span className="stat-tag-value" style={{ color }}>{data?.day?.toLocaleString() || 0}</span>
+            <div className="stat-tag">
+              <span className="stat-tag-label">日</span>
+              <span className="stat-tag-value">{data?.day?.toLocaleString() || 0}</span>
             </div>
-            <div className="stat-tag" style={{ borderColor: `${color}33`, background: `${color}08` }}>
-              <span className="stat-tag-label" style={{ color: `${color}99` }}>周</span>
-              <span className="stat-tag-value" style={{ color }}>{data?.week?.toLocaleString() || 0}</span>
+            <div className="stat-tag">
+              <span className="stat-tag-label">周</span>
+              <span className="stat-tag-value">{data?.week?.toLocaleString() || 0}</span>
             </div>
-            <div className="stat-tag" style={{ borderColor: `${color}33`, background: `${color}08` }}>
-              <span className="stat-tag-label" style={{ color: `${color}99` }}>月</span>
-              <span className="stat-tag-value" style={{ color }}>{data?.month?.toLocaleString() || 0}</span>
+            <div className="stat-tag">
+              <span className="stat-tag-label">月</span>
+              <span className="stat-tag-value">{data?.month?.toLocaleString() || 0}</span>
             </div>
-            <div className="stat-tag" style={{ borderColor: `${color}33`, background: `${color}08` }}>
-              <span className="stat-tag-label" style={{ color: `${color}99` }}>年</span>
-              <span className="stat-tag-value" style={{ color }}>{data?.year?.toLocaleString() || 0}</span>
+            <div className="stat-tag">
+              <span className="stat-tag-label">年</span>
+              <span className="stat-tag-value">{data?.year?.toLocaleString() || 0}</span>
             </div>
           </div>
         </div>
@@ -119,31 +118,26 @@ const TopStats: React.FC = () => {
       key: 'sampleDevelopment' as keyof TopStatsData,
       icon: <TagsOutlined />,
       label: '样衣开发',
-      color: '#8b5cf6', // 紫色
     },
     {
       key: 'bulkOrder' as keyof TopStatsData,
       icon: <ShoppingCartOutlined />,
       label: '大货下单',
-      color: '#3b82f6', // 蓝色
     },
     {
       key: 'cutting' as keyof TopStatsData,
       icon: <ScissorOutlined />,
       label: '裁剪数量',
-      color: '#f59e0b', // 橙色
     },
     {
       key: 'warehousingInbound' as keyof TopStatsData,
       icon: <InboxOutlined />,
       label: '入库数量',
-      color: '#10b981', // 绿色
     },
     {
       key: 'warehousingOutbound' as keyof TopStatsData,
       icon: <ExportOutlined />,
       label: '出库数量',
-      color: '#06b6d4',
     },
   ];
 
@@ -156,7 +150,6 @@ const TopStats: React.FC = () => {
             dataKey={config.key}
             icon={config.icon}
             label={config.label}
-            color={config.color}
             data={statsData?.[config.key] || null}
             loading={loading}
           />

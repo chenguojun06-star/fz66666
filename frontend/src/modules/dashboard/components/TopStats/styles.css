@@ -32,9 +32,35 @@
 .top-stat-item {
   padding: 12px 16px;
   border-radius: 12px;
-  border: 1.5px solid;
-  background: transparent;
+  border: 1.5px solid #e8e8e8;
+  background: #ffffff;
   transition: all 0.3s ease;
+}
+
+/* 中性颜色 */
+.stat-icon {
+  color: #595959;
+}
+
+.stat-label {
+  color: #595959;
+}
+
+.stat-total {
+  color: #1a1a1a;
+}
+
+.stat-tag {
+  border-color: #f0f0f0;
+  background: #fafafa;
+}
+
+.stat-tag-label {
+  color: #bfbfbf;
+}
+
+.stat-tag-value {
+  color: #434343;
 }
 
 .top-stat-item:hover {
