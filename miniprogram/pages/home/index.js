@@ -27,6 +27,20 @@ function buildMenuItems() {
   ];
 }
 
+/**
+ * 格式化扫码时间为简短显示
+ */
+function formatScanTime(timeStr) {
+  if (!timeStr) return '';
+  const d = new Date(timeStr.replace(/-/g, '/'));
+  if (isNaN(d.getTime())) return '';
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  const pad = n => String(n).padStart(2, '0');
+  if (isToday) return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 Page({
   data: {
     statusBarHeight: 0,
@@ -36,6 +50,8 @@ Page({
     todayWorkHours: 0,
     menuItems: [],
     unreadNoticeCount: 0,
+    monthlyStats: null,
+    recentScans: [],
   },
 
   onLoad() {
@@ -55,11 +71,17 @@ Page({
     this._loadUserName();
     this._loadTodayStats();
     this._loadUnreadCount();
+    this._loadMonthlyStats();
+    this._loadRecentScans();
   },
 
   onPullDownRefresh() {
-    Promise.all([this._loadTodayStats(), this._loadUnreadCount()])
-      .finally(() => wx.stopPullDownRefresh());
+    Promise.all([
+      this._loadTodayStats(),
+      this._loadUnreadCount(),
+      this._loadMonthlyStats(),
+      this._loadRecentScans(),
+    ]).finally(() => wx.stopPullDownRefresh());
   },
 
   /* ---- 私有方法 ---- */
@@ -94,20 +116,48 @@ Page({
       .catch(() => {});
   },
 
-  /* ---- 菜单点击 ---- */
+  _loadMonthlyStats() {
+    return api.production.personalScanStats({ period: 'month' })
+      .then(stats => {
+        this.setData({ monthlyStats: stats || null });
+      })
+      .catch(() => {});
+  },
+
+  _loadRecentScans() {
+    return api.production.myScanHistory({ page: 1, pageSize: 5 })
+      .then(res => {
+        const records = (res && res.records) || [];
+        const list = records
+          .filter(r => r.scanResult !== 'failure')
+          .map(r => ({
+            id: r.id || r.scanCode || Math.random(),
+            stageName: r.processName || r.progressStage || '生产',
+            orderNo: r.orderNo || '-',
+            quantity: r.quantity || 0,
+            timeDisplay: formatScanTime(r.scanTime),
+          }));
+        this.setData({ recentScans: list });
+      })
+      .catch(() => {});
+  },
+
+  /* ---- 菜单与导航 ---- */
 
   onMenuTap(e) {
     const idx = e.currentTarget.dataset.index;
     const item = this.data.menuItems[idx];
     if (!item) return;
 
-    // 带 tab 的条目：先存 tab 值再跳转到 work 页
     if (item.tab) {
       wx.setStorageSync('work_active_tab', item.tab);
     }
 
-    // tabBar 页面用 switchTab，分包页面用 navigateTo
     const isTabPage = ['/pages/home/index', '/pages/work/index', '/pages/scan/index', '/pages/admin/index'].includes(item.route);
     safeNavigate({ url: item.route }, isTabPage ? 'switchTab' : undefined);
+  },
+
+  onGoHistory() {
+    safeNavigate({ url: '/pages/scan/history/index' });
   },
 });

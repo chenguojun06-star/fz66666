@@ -337,6 +337,15 @@ intelligence:
     api-key: ${QDRANT_API_KEY:}                  # Qdrant Cloud 需要；本地部署留空
     timeout-seconds: ${QDRANT_TIMEOUT_SECONDS:10}
 
+# 小云 AI Agent 运行参数（运维可调，无需改代码）
+xiaoyun:
+  agent:
+    max-system-prompt-chars: ${XIAOYUN_MAX_PROMPT_CHARS:12000}
+    token-budget: ${XIAOYUN_TOKEN_BUDGET:30000}
+    rag:
+      recall-top-k: ${XIAOYUN_RAG_RECALL_TOP_K:3}
+      similarity-threshold: ${XIAOYUN_RAG_SIMILARITY_THRESHOLD:0.45}
+
 # SerpApi 趋势数据配置（Google Trends / Google Shopping）
 serpapi:
   api-key: 128e1b4ca5b24addc0a67f8cab12ed76e29804b54752a080a4c29cf605603580

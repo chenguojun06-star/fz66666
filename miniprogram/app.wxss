@@ -421,8 +421,9 @@ wx-vconsole,
 }
 
 .empty-img {
-  width: 200rpx;
-  margin-bottom: 20rpx;
+  width: 100px;
+  height: auto;
+  margin-bottom: 10px;
 }
 
 .empty-text {

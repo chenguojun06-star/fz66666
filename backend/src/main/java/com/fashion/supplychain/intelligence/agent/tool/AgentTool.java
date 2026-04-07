@@ -9,4 +9,7 @@ public interface AgentTool {
     String execute(String argumentsJson) throws Exception;
 
     String getName();
+
+    /** 工具所属业务领域，路由器据此筛选工具子集 */
+    default ToolDomain getDomain() { return ToolDomain.GENERAL; }
 }

@@ -1,201 +1,72 @@
 <view class="container">
-  <custom-nav
-    title="我的"
-    show-search="{{false}}"
-  />
+  <custom-nav title="我的" show-search="{{false}}" />
 
-  <view class="card">
-    <!-- 用户信息 -->
-    <view wx:if="{{userInfo}}" class="user-profile-card">
-      <view class="profile-header">
-        <view class="profile-avatar">
-          <image wx:if="{{avatarImgUrl}}" src="{{avatarImgUrl}}" mode="aspectFill" style="width:100%;height:100%;border-radius:50%;display:block;" binderror="onAvatarError"/>
-          <text wx:else>{{avatarLetter}}</text>
-        </view>
-        <view class="profile-info">
-          <view class="profile-name-row">
-            <text class="profile-name">{{userInfo.name || userInfo.username || '未知用户'}}</text>
-            <view class="logout-btn" hover-class="logout-btn-hover" hover-stay-time="100" bindtap="onLogout">
-              <text class="logout-text">退出</text>
-            </view>
-          </view>
-          <view class="profile-role">{{roleDisplayName || '普通用户'}}</view>
-          <view wx:if="{{showApprovalEntry}}" class="profile-online">
-            <text class="online-icon">👥</text>
-            <text>{{onlineCount}}人</text>
+  <!-- 用户信息卡 -->
+  <view wx:if="{{userInfo}}" class="user-profile-card">
+    <view class="profile-header">
+      <view class="profile-avatar">
+        <image wx:if="{{avatarImgUrl}}" src="{{avatarImgUrl}}" mode="aspectFill" style="width:100%;height:100%;border-radius:50%;display:block;" binderror="onAvatarError" />
+        <text wx:else>{{avatarLetter}}</text>
+      </view>
+      <view class="profile-info">
+        <view class="profile-name-row">
+          <text class="profile-name">{{userInfo.name || userInfo.username || '未知用户'}}</text>
+          <view class="logout-btn" hover-class="logout-btn-hover" hover-stay-time="100" bindtap="onLogout">
+            <text class="logout-text">退出</text>
           </view>
         </view>
-      </view>
-    </view>
-
-    <!-- 修改密码 + 工资查询（同一行） -->
-    <view class="action-row-pair">
-      <view class="action-card {{showChangePwd ? 'action-card--active' : ''}}" bindtap="onShowChangePwd">
-        <view class="action-card-left">
-          <text class="action-card-emoji">🔒</text>
-          <text class="action-card-label">修改密码</text>
+        <view class="profile-role">{{roleDisplayName || '普通用户'}}</view>
+        <view wx:if="{{showApprovalEntry}}" class="profile-online">
+          <text class="online-icon">👥</text>
+          <text>{{onlineCount}}人</text>
         </view>
-        <text class="action-card-arrow">{{showChangePwd ? '∨' : '›'}}</text>
-      </view>
-      <view class="action-card" bindtap="onNavigateToPayroll">
-        <view class="action-card-left">
-          <text class="action-card-emoji">💰</text>
-          <text class="action-card-label">工资查询</text>
-        </view>
-        <text class="action-card-arrow">›</text>
       </view>
     </view>
+  </view>
 
-    <!-- 修改密码表单（展开） -->
-    <view wx:if="{{showChangePwd}}" class="change-pwd-panel">
-      <view class="change-pwd-title">修改密码</view>
-      <view class="change-pwd-field">
-        <text class="field-label">原密码</text>
-        <input class="field-input" type="safe-password" placeholder="请输入原密码" bindinput="onOldPwdInput" value="{{pwdForm.oldPassword}}" password="{{true}}" />
-      </view>
-      <view class="change-pwd-field">
-        <text class="field-label">新密码</text>
-        <input class="field-input" type="safe-password" placeholder="新密码（至少6位）" bindinput="onNewPwdInput" value="{{pwdForm.newPassword}}" password="{{true}}" />
-      </view>
-      <view class="change-pwd-field">
-        <text class="field-label">确认新密码</text>
-        <input class="field-input" type="safe-password" placeholder="请再次输入新密码" bindinput="onConfirmPwdInput" value="{{pwdForm.confirmPassword}}" password="{{true}}" />
-      </view>
-      <view class="change-pwd-btns">
-        <view class="pwd-btn-cancel" bindtap="onCancelChangePwd">取消</view>
-        <view class="pwd-btn-confirm {{savingPwd ? 'disabled' : ''}}" bindtap="onSubmitChangePwd">{{savingPwd ? '提交中...' : '确认修改'}}</view>
-      </view>
+  <!-- 功能菜单 -->
+  <view class="menu-list">
+    <view class="menu-item" hover-class="menu-item-hover" data-url="/pages/admin/change-password/index" bindtap="onNavTo">
+      <text class="menu-icon">🔒</text>
+      <text class="menu-label">修改密码</text>
+      <text class="menu-arrow">›</text>
     </view>
+    <view class="menu-item" hover-class="menu-item-hover" data-url="/pages/payroll/payroll" bindtap="onNavTo">
+      <text class="menu-icon">💰</text>
+      <text class="menu-label">工资查询</text>
+      <text class="menu-arrow">›</text>
+    </view>
+    <view wx:if="{{showInviteSection}}" class="menu-item" hover-class="menu-item-hover" data-url="/pages/admin/invite/index" bindtap="onNavTo">
+      <text class="menu-icon">👥</text>
+      <text class="menu-label">邀请员工</text>
+      <text class="menu-arrow">›</text>
+    </view>
+    <view class="menu-item" hover-class="menu-item-hover" data-url="/pages/admin/feedback/index" bindtap="onNavTo">
+      <text class="menu-icon">📝</text>
+      <text class="menu-label">问题反馈</text>
+      <text class="menu-arrow">›</text>
+    </view>
+    <view wx:if="{{showApprovalEntry}}" class="menu-item" hover-class="menu-item-hover" data-url="/pkg-admin-notification/pages/index/index" bindtap="onNavTo">
+      <text class="menu-icon">🔔</text>
+      <text class="menu-label">消息通知</text>
+      <text class="menu-arrow">›</text>
+    </view>
+    <view wx:if="{{showApprovalEntry}}" class="menu-item" hover-class="menu-item-hover" data-url="/pkg-admin-approval/pages/index/index" bindtap="onNavTo">
+      <text class="menu-icon">✅</text>
+      <text class="menu-label">用户审批</text>
+      <text class="menu-arrow">›</text>
+    </view>
+    <view class="menu-item" hover-class="menu-item-hover" bindtap="onLanguageSwitchTap">
+      <text class="menu-icon">🌐</text>
+      <text class="menu-label">切换语言</text>
+      <text class="menu-value">{{currentLanguageName || '中文'}}</text>
+      <text class="menu-arrow">›</text>
+    </view>
+  </view>
 
-    <!-- 邀请员工加入工厂（租户管理员专用） -->
-    <view wx:if="{{showInviteSection}}" class="invite-card">
-      <view class="invite-title">
-        <text class="invite-icon">👥</text>
-        <text>邀请员工加入</text>
-      </view>
-      <view class="invite-desc">将以下工厂码发给员工，员工在注册页输入即可申请加入</view>
-      <view class="invite-code-row">
-        <view class="invite-code">{{tenantCode || '暂无工厂码'}}</view>
-        <view class="invite-copy-btn" bindtap="onCopyTenantCode">复制工厂码</view>
-      </view>
-      <view class="invite-link-row" bindtap="onCopyInviteUrl">
-        <text class="invite-link-text">🔗 复制PC端注册链接</text>
-      </view>
-    </view>
-
-    <!-- 问题反馈 + 我的反馈（同一行） -->
-    <view class="action-row-pair">
-      <view class="action-card {{showFeedbackForm ? 'action-card--active' : ''}}" bindtap="onShowFeedbackForm">
-        <view class="action-card-left">
-          <text class="action-card-emoji">📝</text>
-          <text class="action-card-label">问题反馈</text>
-        </view>
-        <text class="action-card-arrow">{{showFeedbackForm ? '∨' : '›'}}</text>
-      </view>
-      <view class="action-card {{showMyFeedbacks ? 'action-card--active' : ''}}" bindtap="onToggleMyFeedbacks">
-        <view class="action-card-left">
-          <text class="action-card-emoji">📋</text>
-          <text class="action-card-label">我的反馈</text>
-        </view>
-        <text class="action-card-arrow">{{showMyFeedbacks ? '∨' : '›'}}</text>
-      </view>
-    </view>
-
-    <!-- 问题反馈表单（展开） -->
-    <view wx:if="{{showFeedbackForm}}" class="change-pwd-panel">
-      <view class="change-pwd-title">提交问题反馈</view>
-      <view class="change-pwd-field">
-        <text class="field-label">问题类型</text>
-        <picker class="field-input" mode="selector" range="{{['Bug缺陷', '功能建议', '使用疑问', '其他']}}" value="{{['BUG','SUGGESTION','QUESTION','OTHER'].indexOf(feedbackForm.category)}}" bindchange="onFeedbackCategoryChange">
-          <view class="picker-value">{{feedbackForm.category === 'BUG' ? 'Bug缺陷' : feedbackForm.category === 'SUGGESTION' ? '功能建议' : feedbackForm.category === 'QUESTION' ? '使用疑问' : '其他'}}</view>
-        </picker>
-      </view>
-      <view class="change-pwd-field">
-        <text class="field-label">标题</text>
-        <input class="field-input" placeholder="简要描述问题" bindinput="onFeedbackTitleInput" value="{{feedbackForm.title}}" maxlength="100" />
-      </view>
-      <view class="change-pwd-field">
-        <text class="field-label">详细描述</text>
-        <textarea class="field-textarea" placeholder="请详细描述遇到的问题、操作步骤等" bindinput="onFeedbackContentInput" value="{{feedbackForm.content}}" maxlength="2000" auto-height="{{true}}" />
-      </view>
-      <view class="change-pwd-field">
-        <text class="field-label">联系方式</text>
-        <input class="field-input" placeholder="手机号或微信号（选填）" bindinput="onFeedbackContactInput" value="{{feedbackForm.contact}}" />
-      </view>
-      <view class="change-pwd-btns">
-        <view class="pwd-btn-cancel" bindtap="onCloseFeedbackForm">取消</view>
-        <view class="pwd-btn-confirm {{submittingFeedback ? 'disabled' : ''}}" bindtap="onSubmitFeedback">{{submittingFeedback ? '提交中...' : '提交反馈'}}</view>
-      </view>
-    </view>
-
-    <!-- 我的反馈列表（展开） -->
-    <view wx:if="{{showMyFeedbacks}}" class="feedback-list">
-      <view wx:if="{{myFeedbacks.length === 0}}" class="hint">暂无反馈记录</view>
-      <view wx:for="{{myFeedbacks}}" wx:key="id" class="feedback-item">
-        <view class="feedback-item-head">
-          <text class="feedback-item-title">{{item.title}}</text>
-          <text class="feedback-status feedback-status-{{item.status}}">{{item.status === 'PENDING' ? '待处理' : item.status === 'PROCESSING' ? '处理中' : item.status === 'RESOLVED' ? '已解决' : '已关闭'}}</text>
-        </view>
-        <view class="feedback-item-content">{{item.content}}</view>
-        <view wx:if="{{item.reply}}" class="feedback-item-reply">
-          <text class="reply-label">回复：</text>
-          <text>{{item.reply}}</text>
-        </view>
-        <view class="feedback-item-time">{{item.createTime}}</view>
-      </view>
-    </view>
-
-    <!-- 功能导航行 -->
-    <view class="nav-row">
-      <view class="user-info-item">
-        <text class="user-info-label">当月工资</text>
-        <text class="user-info-text">{{stats && stats.totalAmount != null ? stats.totalAmount : 0}}</text>
-      </view>
-      <view class="user-info-item {{loadingStats || loadingHistory ? 'disabled' : ''}}" hover-class="user-info-item-hover" hover-stay-time="100" bindtap="refreshAll">
-        <text class="user-info-label">刷新</text>
-      </view>
-    </view>
-
-    <!-- 工资明细面板（固定在上方） -->
-    <view class="section-title">工资明细（本月）</view>
-    <view wx:if="{{loadingStats}}" class="hint">加载中...</view>
-    <view wx:if="{{stats}}" class="stat-grid">
-      <view class="stat-card">
-        <view class="stat-value">{{stats.scanCount || 0}}</view>
-        <view class="stat-label">次数</view>
-      </view>
-      <view class="stat-card">
-        <view class="stat-value">{{stats.orderCount || 0}}</view>
-        <view class="stat-label">订单</view>
-      </view>
-      <view class="stat-card">
-        <view class="stat-value">{{stats.totalQuantity || 0}}</view>
-        <view class="stat-label">数量</view>
-      </view>
-      <view class="stat-card">
-        <view class="stat-value">{{stats.totalAmount || 0}}</view>
-        <view class="stat-label">金额</view>
-      </view>
-    </view>
-    <view wx:if="{{!stats && !loadingStats}}" class="hint">暂无统计</view>
-
-    <!-- 扫码记录列表（滚动区域） -->
-    <view class="section-title" style="margin-top: 32rpx;">扫码记录列表</view>
-    <view wx:if="{{history.list.length === 0 && !loadingHistory}}" class="hint">暂无记录</view>
-    <view wx:for="{{history.list}}" wx:key="id" class="list-item">
-      <view class="item-head">
-        <view class="item-title">{{item.orderNo || '-'}}</view>
-        <text class="tag">{{item.displayProcessName || item.processName || item.progressStage || item.scanType || '-'}}</text>
-      </view>
-      <view class="item-fields">
-        <text class="item-field">颜色：{{item.color || '-'}}</text>
-        <text class="item-field">尺码：{{item.size || '-'}}</text>
-        <text class="item-field">数量：{{item.quantity || 0}}</text>
-        <text class="item-field">单价：{{item.unitPrice == null || item.unitPrice === '' ? '-' : item.unitPrice}}</text>
-        <text class="item-field">金额：{{item.amount || item.totalAmount || item.salaryAmount || 0}}</text>
-      </view>
-      <view wx:if="{{item.scanTime}}" class="item-sub">时间：{{item.scanTime}}</view>
-    </view>
+  <!-- 版本信息 -->
+  <view class="version-info">
+    <text>云裳智立链 v2.0</text>
   </view>
 </view>
 

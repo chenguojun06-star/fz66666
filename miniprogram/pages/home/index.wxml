@@ -27,6 +27,27 @@
     </view>
   </view>
 
+  <!-- 本月概览 -->
+  <view class="monthly-section" wx:if="{{monthlyStats}}">
+    <view class="section-header">
+      <text class="section-title">📅 本月概览</text>
+    </view>
+    <view class="monthly-grid">
+      <view class="monthly-item">
+        <text class="monthly-value">{{monthlyStats.totalScans || 0}}</text>
+        <text class="monthly-label">扫码总数</text>
+      </view>
+      <view class="monthly-item">
+        <text class="monthly-value">{{monthlyStats.totalQuantity || 0}}</text>
+        <text class="monthly-label">完成件数</text>
+      </view>
+      <view class="monthly-item">
+        <text class="monthly-value">{{monthlyStats.workDays || 0}}</text>
+        <text class="monthly-label">出勤天数</text>
+      </view>
+    </view>
+  </view>
+
   <!-- 全部菜单 -->
   <view class="menu-section">
     <view class="menu-header">
@@ -37,8 +58,31 @@
       <view class="menu-item" wx:for="{{menuItems}}" wx:key="id" bindtap="onMenuTap" data-index="{{index}}">
         <view class="menu-icon-circle" style="background: {{item.bgColor}};">
           <text class="menu-emoji">{{item.icon}}</text>
+          <view class="menu-badge" wx:if="{{item.id === 'notice' && unreadNoticeCount > 0}}">
+            {{unreadNoticeCount > 99 ? '99+' : unreadNoticeCount}}
+          </view>
         </view>
         <text class="menu-name">{{item.name}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 最近扫码 -->
+  <view class="recent-section" wx:if="{{recentScans.length > 0}}">
+    <view class="section-header">
+      <text class="section-title">📜 最近扫码</text>
+      <text class="section-more" bindtap="onGoHistory">查看全部</text>
+    </view>
+    <view class="recent-list">
+      <view class="recent-item" wx:for="{{recentScans}}" wx:key="id">
+        <view class="recent-left">
+          <text class="recent-stage">{{item.stageName}}</text>
+          <text class="recent-order">{{item.orderNo}}</text>
+        </view>
+        <view class="recent-right">
+          <text class="recent-qty">{{item.quantity}}件</text>
+          <text class="recent-time">{{item.timeDisplay}}</text>
+        </view>
       </view>
     </view>
   </view>

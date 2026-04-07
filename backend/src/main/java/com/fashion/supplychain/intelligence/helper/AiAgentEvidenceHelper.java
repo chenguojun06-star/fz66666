@@ -40,12 +40,12 @@ public class AiAgentEvidenceHelper {
             int rawLimit = resolveRawExcerptLimit(toolName);
             if (rawLimit > 0) {
                 String raw = toolResult.length() > rawLimit ? toolResult.substring(0, rawLimit) + "…(截断)" : toolResult;
-                evidence.append("- 原始数据: ").append(raw).append("\n");
+                evidence.append("- 原始数据: ").append(StatusTranslator.sanitize(raw)).append("\n");
             }
             return evidence.toString();
         } catch (Exception e) {
             log.debug("[AiAgent] 工具证据构建回退原始文本: tool={}", toolName);
-            return "【工具证据】\n- 工具: " + toolName + "\n- 原始结果: " + truncate(toolResult, MAX_TOOL_RAW_CHARS);
+            return "【工具证据】\n- 工具: " + toolName + "\n- 原始结果: " + StatusTranslator.sanitize(truncate(toolResult, MAX_TOOL_RAW_CHARS));
         }
     }
 
@@ -175,9 +175,9 @@ public class AiAgentEvidenceHelper {
 
     private void appendGenericEvidence(StringBuilder evidence, JsonNode root) {
         if (root.hasNonNull("summary")) {
-            evidence.append("- 摘要: ").append(truncate(root.path("summary").asText(), 120)).append("\n");
+            evidence.append("- 摘要: ").append(StatusTranslator.sanitize(truncate(root.path("summary").asText(), 120))).append("\n");
         } else if (root.hasNonNull("message")) {
-            evidence.append("- 消息: ").append(truncate(root.path("message").asText(), 120)).append("\n");
+            evidence.append("- 消息: ").append(StatusTranslator.sanitize(truncate(root.path("message").asText(), 120))).append("\n");
         }
 
         JsonNode countNode = root.path("count");
@@ -190,11 +190,11 @@ public class AiAgentEvidenceHelper {
             for (int i = 0; i < Math.min(items.size(), 3); i++) {
                 JsonNode item = items.get(i);
                 evidence.append("- 条目").append(i + 1).append(": ")
-                        .append(extractBestLabel(item)).append("\n");
+                        .append(StatusTranslator.sanitize(extractBestLabel(item))).append("\n");
             }
         } else {
             List<String> keys = new ArrayList<>();
-            root.fieldNames().forEachRemaining(keys::add);
+            root.fieldNames().forEachRemaining(k -> keys.add(StatusTranslator.translateField(k)));
             if (!keys.isEmpty()) {
                 evidence.append("- 顶层字段: ").append(String.join(", ", keys.subList(0, Math.min(keys.size(), 8)))).append("\n");
             }

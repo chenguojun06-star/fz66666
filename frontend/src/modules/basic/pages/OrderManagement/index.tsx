@@ -6,6 +6,7 @@ import { createCardSpecFieldGroups } from '@/components/common/CardSizeQuantityF
 import UniversalCardView from '@/components/common/UniversalCardView';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import StandardPagination from '@/components/common/StandardPagination';
+import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import { usePersistentState } from '@/hooks/usePersistentState';
 
 import dayjs from 'dayjs';
@@ -22,10 +23,12 @@ import { DEFAULT_PAGE_SIZE_OPTIONS, readPageSize, savePageSize } from '@/utils/p
 import { useLocation } from 'react-router-dom';
 import { StyleAttachmentsButton } from '@/components/StyleAssets';
 import StyleCoverGallery from '@/components/common/StyleCoverGallery';
+import { getMaterialTypeCategory } from '@/utils/materialType';
 import { CATEGORY_CODE_OPTIONS, normalizeCategoryQuery } from '@/utils/styleCategory';
 import { useDictOptions } from '@/hooks/useDictOptions';
 import { useViewport } from '@/utils/useViewport';
 import { useCardGridLayout } from '@/hooks/useCardGridLayout';
+import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 
 import { getStyleCardSizeQuantityItems } from '@/utils/cardSizeQuantity';
 import { getStyleSourceText } from '@/utils/styleSource';
@@ -38,6 +41,7 @@ import OrderPricingMaterialPanel from './components/OrderPricingMaterialPanel';
 import OrderSidebarInsights from './components/OrderSidebarInsights';
 import { buildOrderColorSummary, buildStyleSampleColorSummary } from './components/orderInfoSummaryOrchestrator';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
+import { computeReferenceKilograms } from '@/modules/production/pages/Production/MaterialPurchase/utils';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
@@ -46,15 +50,13 @@ import OrderAnalysisTab from './components/OrderAnalysisTab';
 import StyleQuotePopover from './StyleQuotePopover';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 
-import { OrderLine, defaultProgressNodes } from './types';
-import { normalizeMatchKey } from './utils/orderBomMetrics';
+import { OrderLine, PricingProcess, ProgressNode, defaultProgressNodes } from './types';
+import { buildOrderQtyStats, calcBomRequirementQty, getMatchedOrderQty, normalizeMatchKey } from './utils/orderBomMetrics';
 import { buildOrderSubmitPayload } from './utils/buildOrderSubmitPayload';
 import { analyzeOrderOrchestration, computeProcessBasedUnitPrice } from './utils/orderIntelligence';
 import { useOrderColumns } from './hooks/useOrderColumns';
 import { useOrderDataFetch } from './hooks/useOrderDataFetch';
 import { useOrderIntelligence } from './hooks/useOrderIntelligence';
-import { useOrderBom } from './hooks/useOrderBom';
-import { useProgressWorkflow } from './hooks/useProgressWorkflow';
 
 
 const OrderManagement: React.FC = () => {
@@ -101,29 +103,124 @@ const OrderManagement: React.FC = () => {
   const [remarkStyleNo, setRemarkStyleNo] = useState('');
 
   const [, setActiveTabKey] = usePersistentState<string>('order-management-active-tab', 'base');
-
+  const [_bomLoading, setBomLoading] = useState(false);
+  const [bomList, setBomList] = useState<StyleBom[]>([]);
+  const [sizePriceRows, setSizePriceRows] = useState<SizePriceRecord[]>([]);
+  const [sizePriceLoading, setSizePriceLoading] = useState(false);
   const [pricingModeTouched, setPricingModeTouched] = useState(false);
   const [createdOrder, setCreatedOrder] = useState<any>(null);
 
   const [orderLines, setOrderLines] = useState<OrderLine[]>([]);
 
-  const {
-    bomList: _bomList, setBomList, bomLoading: _bomLoading, sizePriceRows, setSizePriceRows,
-    sizePriceLoading, bomColumns: _bomColumns, bomByType, normalizeSizeKey,
-    displaySizeLabel, orderQtyStats: _orderQtyStats, getMatchedQty: _getMatchedQty, calcBomBudgetQty: _calcBomBudgetQty,
-    calcBomTotalPrice: _calcBomTotalPrice, calcBomReferenceKg: _calcBomReferenceKg, fetchBom, fetchSizePrices,
-  } = useOrderBom(orderLines);
-  const {
-    progressNodes, setProgressNodes, buildProgressNodesFromTemplate: _buildProgressNodesFromTemplate,
-    loadProgressNodesForStyle, buildProgressWorkflowJson,
-  } = useProgressWorkflow();
-
+  const [progressNodes, setProgressNodes] = useState<ProgressNode[]>(defaultProgressNodes);
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
 
   const { styles, total, loading, factories, factoryCapacities, departments, users, smartError, setSmartError: _setSmartError, reportSmartError: _reportSmartError, fetchStyles } = useOrderDataFetch({ queryParams, visible, showSmartErrorNotice, message });
 
   const modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
+  const normalizeSizeKey = (v: unknown) => String(v || '').trim().toUpperCase().replace(/\s+/g, '');
+  const displaySizeLabel = (v: unknown) => normalizeSizeKey(v) || '-';
+  const orderQtyStats = useMemo(() => buildOrderQtyStats(orderLines), [orderLines]);
+
+
+  const getMatchedQty = (colorRaw: any, sizeRaw: any) => {
+    return getMatchedOrderQty(orderQtyStats, colorRaw, sizeRaw);
+  };
+
+  const calcBomBudgetQty = (record: StyleBom) => calcBomRequirementQty(record, orderQtyStats);
+
+  const calcBomTotalPrice = (record: StyleBom) => {
+    const unitPrice = Number((record as Record<string, unknown>).unitPrice) || 0;
+    const budgetQty = calcBomBudgetQty(record);
+    if (!Number.isFinite(budgetQty) || !Number.isFinite(unitPrice)) return 0;
+    return Number((budgetQty * unitPrice).toFixed(2));
+  };
+
+  const calcBomReferenceKg = (record: StyleBom) => {
+    const meters = calcBomBudgetQty(record);
+    if (!Number.isFinite(meters) || meters <= 0) return null;
+    return computeReferenceKilograms(meters, (record as Record<string, unknown>).conversionRate, '米');
+  };
+
+  const _bomColumns = [
+    { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 140 },
+    { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 180, ellipsis: true },
+    { title: '颜色', dataIndex: 'color', key: 'color', width: 90 },
+    { title: '规格', dataIndex: 'specification', key: 'specification', width: 140, ellipsis: true },
+    { title: '尺码', dataIndex: 'size', key: 'size', width: 90 },
+    { title: '单位', dataIndex: 'unit', key: 'unit', width: 90 },
+    {
+      title: '匹配订单数量',
+      key: 'matchedQty',
+      width: 130,
+      align: 'right' as const,
+      render: (_: any, record: StyleBom) => getMatchedQty((record as Record<string, unknown>).color, (record as Record<string, unknown>).size),
+    },
+    {
+      title: '单件用量',
+      key: 'usageAmount',
+      width: 120,
+      render: (_: any, record: StyleBom) => {
+        const rawMap = (record as Record<string, unknown>).sizeUsageMap as string | undefined;
+        if (rawMap) {
+          const matchedQty = getMatchedQty(
+            (record as Record<string, unknown>).color,
+            (record as Record<string, unknown>).size
+          );
+          const loss = Number((record as Record<string, unknown>).lossRate) || 0;
+          const divisor = matchedQty * (1 + loss / 100);
+          if (divisor > 0) {
+            const effectiveUnit = calcBomBudgetQty(record) / divisor;
+            return (
+              <span title="已配置码数用量，此处为加权平均值">
+                {Number(effectiveUnit.toFixed(4))}<span style={{ color: 'var(--warning-color, #f7a600)', marginLeft: 2 }}></span>
+              </span>
+            );
+          }
+          return <span style={{ color: 'var(--neutral-text-light)' }}>按配比</span>;
+        }
+        return <span>{Number((record as Record<string, unknown>).usageAmount) || 0}</span>;
+      },
+    },
+    { title: '损耗率(%)', dataIndex: 'lossRate', key: 'lossRate', width: 110 },
+    {
+      title: '需求数量(米)',
+      key: 'budgetQty',
+      width: 140,
+      render: (_: any, record: StyleBom) => calcBomBudgetQty(record),
+    },
+    {
+      title: '参考公斤数',
+      key: 'referenceKg',
+      width: 120,
+      render: (_: any, record: StyleBom) => {
+        const kg = calcBomReferenceKg(record);
+        return kg == null ? '-' : `${kg} kg`;
+      },
+    },
+    {
+      title: '供应商',
+      dataIndex: 'supplier',
+      key: 'supplier',
+      width: 140,
+      ellipsis: true,
+      render: (_: unknown, record: StyleBom) => (
+        <SupplierNameTooltip
+          name={record.supplier}
+          contactPerson={record.supplierContactPerson}
+          contactPhone={record.supplierContactPhone}
+        />
+      ),
+    },
+    { title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 100 },
+    {
+      title: '总价',
+      key: 'totalPrice',
+      width: 100,
+      render: (_: any, record: StyleBom) => calcBomTotalPrice(record),
+    },
+  ];
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -141,6 +238,13 @@ const OrderManagement: React.FC = () => {
       }));
     }
   }, [location.search]);
+
+  const bomByType = useMemo(() => {
+    const fabric = bomList.filter((b) => getMaterialTypeCategory((b as Record<string, unknown>).materialType) === 'fabric');
+    const lining = bomList.filter((b) => getMaterialTypeCategory((b as Record<string, unknown>).materialType) === 'lining');
+    const accessory = bomList.filter((b) => getMaterialTypeCategory((b as Record<string, unknown>).materialType) === 'accessory');
+    return { fabric, lining, accessory };
+  }, [bomList]);
 
   const orderOrchestration = useMemo(() => analyzeOrderOrchestration({
     bomMaterialRows: [...bomByType.fabric, ...bomByType.lining],
@@ -265,6 +369,114 @@ const OrderManagement: React.FC = () => {
       });
     });
 
+  const buildProgressNodesFromTemplate = (rows: any[]): ProgressNode[] => {
+    return (Array.isArray(rows) ? rows : [])
+      .map((n: any) => {
+        const name = String(n?.name || n?.processName || '').trim();
+        if (!name) return null;
+        const id = String(n?.id || n?.processCode || name || '').trim() || name;
+        const p = Number(n?.unitPrice);
+        const unitPrice = Number.isFinite(p) && p >= 0 ? p : 0;
+        // 保存完整的工序信息
+        const progressStage = String(n?.progressStage || name).trim();
+        const machineType = String(n?.machineType || '').trim();
+        const standardTime = Number(n?.standardTime) || 0;
+        return {
+          id,
+          name,
+          progressStage,
+          machineType,
+          standardTime,
+          processes: [{ id: `${id}-0`, processName: name, unitPrice, progressStage, machineType, standardTime }],
+        } as unknown as ProgressNode;
+      })
+      .filter(Boolean) as ProgressNode[];
+  };
+
+  const loadProgressNodesForStyle = async (styleNo: string) => {
+    const sn = String(styleNo || '').trim();
+    if (!sn) return;
+    try {
+      const res = await templateLibraryApi.progressNodeUnitPrices(sn);
+      const result = res as Record<string, unknown>;
+      if (result.code !== 200) return;
+      const rows = Array.isArray(result.data) ? result.data : [];
+      const normalized = buildProgressNodesFromTemplate(rows);
+      if (normalized.length) {
+        setProgressNodes(normalized);
+      }
+    } catch (e) {
+      console.error('[订单] 加载工序模板失败:', e);
+    }
+  };
+
+  const buildProgressWorkflowJson = (nodes: ProgressNode[]) => {
+    // 把所有工序扁平化存储，每个工序包含完整信息
+    const allProcesses: Array<{
+      id: string;
+      name: string;
+      unitPrice: number;
+      progressStage: string;
+      machineType: string;
+      standardTime: number;
+      sortOrder: number;
+    }> = [];
+
+    (Array.isArray(nodes) ? nodes : []).forEach((n, idx) => {
+      const name = String(n?.name || '').trim();
+      if (!name) return;
+
+      const id = String(n?.id || name || '').trim() || name;
+      const progressStage = String((n as any)?.progressStage || name).trim();
+      const machineType = String((n as any)?.machineType || '').trim();
+      const standardTime = Number((n as any)?.standardTime) || 0;
+
+      // 从 processes 数组获取单价（所有工序价格求和，与默认节点逻辑保持一致）
+      const processes = (Array.isArray(n?.processes) ? n.processes : []) as PricingProcess[];
+      const unitPrice = processes.reduce((sum, p) => sum + (Number(p?.unitPrice) || 0), 0);
+
+      allProcesses.push({
+        id,
+        name,
+        unitPrice,
+        progressStage,
+        machineType,
+        standardTime,
+        sortOrder: idx,
+      });
+    });
+
+    // 如果没有工序，使用默认值
+    const ensuredProcesses = allProcesses.length > 0
+      ? allProcesses
+      : defaultProgressNodes.map((n, idx) => ({
+        id: n.id,
+        name: n.name,
+        unitPrice: (Array.isArray(n.processes) ? n.processes : []).reduce((sum, p) => sum + (Number(p.unitPrice) || 0), 0),
+        progressStage: n.name,
+        machineType: '',
+        standardTime: 0,
+        sortOrder: idx,
+      }));
+
+
+    // 新格式：直接在 nodes 里保存所有工序的完整信息
+    // processesByNode 作为兼容字段也保存一份（按 progressStage 分组）
+    const processesByNode: Record<string, typeof ensuredProcesses> = {};
+    for (const p of ensuredProcesses) {
+      const stage = p.progressStage || p.name;
+      if (!processesByNode[stage]) {
+        processesByNode[stage] = [];
+      }
+      processesByNode[stage].push(p);
+    }
+
+    return JSON.stringify({
+      nodes: ensuredProcesses,
+      processesByNode,
+    });
+  };
+
   const orderLineColors = useMemo(() => {
     const set = new Set(orderLines.map(l => (l.color || '').trim()).filter(Boolean));
     return Array.from(set);
@@ -311,6 +523,41 @@ const OrderManagement: React.FC = () => {
     }
   };
 
+  const fetchBom = async (styleId: string | number) => {
+    setBomLoading(true);
+    try {
+      const res = await api.get<{ code: number; data: StyleBom[] }>(`/style/bom/list?styleId=${styleId}`);
+      if (res.code === 200) {
+        setBomList(res.data || []);
+      } else {
+        setBomList([]);
+      }
+    } catch {
+      // Intentionally empty
+      // 忽略错误
+      setBomList([]);
+    } finally {
+      setBomLoading(false);
+    }
+  };
+
+  const fetchSizePrices = async (styleId: string | number) => {
+    setSizePriceLoading(true);
+    try {
+      const res = await api.get<{ code: number; data: SizePriceRecord[] }>('/style/size-price/list', {
+        params: { styleId },
+      });
+      if (res.code === 200) {
+        setSizePriceRows(Array.isArray(res.data) ? res.data : []);
+      } else {
+        setSizePriceRows([]);
+      }
+    } catch {
+      setSizePriceRows([]);
+    } finally {
+      setSizePriceLoading(false);
+    }
+  };
 
   const openCreate = (style: StyleInfo) => {
     setSelectedStyle(style);

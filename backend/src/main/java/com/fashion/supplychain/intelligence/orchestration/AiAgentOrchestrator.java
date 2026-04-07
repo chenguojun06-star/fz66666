@@ -13,9 +13,12 @@ import com.fashion.supplychain.intelligence.helper.AiAgentEvidenceHelper;
 import com.fashion.supplychain.intelligence.helper.AiAgentMemoryHelper;
 import com.fashion.supplychain.intelligence.helper.AiAgentPromptHelper;
 import com.fashion.supplychain.intelligence.helper.AiAgentToolExecHelper;
+import com.fashion.supplychain.intelligence.routing.AiAgentDomainRouter;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
+import com.fashion.supplychain.intelligence.agent.tool.ToolDomain;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -41,8 +44,12 @@ public class AiAgentOrchestrator {
     @Autowired private AiAgentToolExecHelper toolExecHelper;
     @Autowired private AiAgentEvidenceHelper evidenceHelper;
     @Autowired private AiAgentMemoryHelper memoryHelper;
+    @Autowired private AiAgentDomainRouter domainRouter;
 
     private static final int STUCK_MAX_REPEAT = 3;
+    /** 单次请求 token 预算上限（prompt + completion 合计），超出后强制终止循环 */
+    @Value("${xiaoyun.agent.token-budget:30000}")
+    private int tokenBudget;
     private static final ObjectMapper JSON = new ObjectMapper();
 
     private final ThreadLocal<String> lastCommandIdHolder = new ThreadLocal<>();
@@ -58,6 +65,12 @@ public class AiAgentOrchestrator {
         long requestStartAt = System.currentTimeMillis();
         String userId = UserContext.userId();
         List<AgentTool> visibleTools = aiAgentToolAccessService.resolveVisibleTools(registeredTools);
+        // ── 领域路由裁剪：按用户意图缩减工具集，降低 token 消耗 ──
+        Set<ToolDomain> domains = domainRouter.route(userMessage);
+        if (!domains.isEmpty()) {
+            visibleTools = aiAgentToolAccessService.filterByDomains(visibleTools, domains);
+            log.info("[AiAgent] 领域路由裁剪: {} → {} 个工具", domains, visibleTools.size());
+        }
         Map<String, AgentTool> visibleToolMap = toolExecHelper.toToolLookup(visibleTools);
         List<AiTool> visibleApiTools = aiAgentToolAccessService.toApiTools(visibleTools);
         List<AiMessage> messages = new ArrayList<>();
@@ -72,6 +85,7 @@ public class AiAgentOrchestrator {
 
         int maxIterations = promptHelper.estimateMaxIterations(userMessage);
         int currentIter = 0;
+        long totalTokens = 0; // Token 预算追踪
         List<String> stuckSignatures = new ArrayList<>(); // Stuck 检测：跨轮次工具调用签名
         Map<String, AiAgentToolExecHelper.ToolExecRecord> toolResultCache = new HashMap<>(); // 对话内工具结果缓存
 
@@ -90,6 +104,15 @@ public class AiAgentOrchestrator {
                 log.error("[AiAgent] 推理失败: {}", result.getErrorMessage());
                 aiAgentTraceOrchestrator.finishRequest(commandId, null, result.getErrorMessage(), System.currentTimeMillis() - requestStartAt);
                 return Result.fail("推理服务暂时不可用: " + result.getErrorMessage());
+            }
+
+            // Token 预算追踪
+            totalTokens += result.getPromptTokens() + result.getCompletionTokens();
+            if (totalTokens > tokenBudget) {
+                log.warn("[AiAgent] Token 预算超限: {} > {}, 强制终止", totalTokens, tokenBudget);
+                String budgetMsg = "抱歉，本次对话消耗的计算资源已达上限，请分步提问以获得更好的回答。";
+                aiAgentTraceOrchestrator.finishRequest(commandId, budgetMsg, "token_budget_exceeded", System.currentTimeMillis() - requestStartAt);
+                return Result.success(budgetMsg);
             }
 
             // LLM Response
@@ -165,6 +188,12 @@ public class AiAgentOrchestrator {
 
             commandId = aiAgentTraceOrchestrator.startRequest(userMessage);
             List<AgentTool> visibleTools = aiAgentToolAccessService.resolveVisibleTools(registeredTools);
+            // ── 领域路由裁剪：按用户意图缩减工具集，降低 token 消耗 ──
+            Set<ToolDomain> domains = domainRouter.route(userMessage);
+            if (!domains.isEmpty()) {
+                visibleTools = aiAgentToolAccessService.filterByDomains(visibleTools, domains);
+                log.info("[AiAgent-Stream] 领域路由裁剪: {} → {} 个工具", domains, visibleTools.size());
+            }
             Map<String, AgentTool> visibleToolMap = toolExecHelper.toToolLookup(visibleTools);
             List<AiTool> visibleApiTools = aiAgentToolAccessService.toApiTools(visibleTools);
             List<AiMessage> messages = new ArrayList<>();
@@ -178,6 +207,7 @@ public class AiAgentOrchestrator {
             messages.add(AiMessage.user(userMessage));
 
             int maxIterations = promptHelper.estimateMaxIterations(userMessage);
+            long totalTokens = 0; // Token 预算追踪
             List<String> stuckSignatures = new ArrayList<>(); // Stuck 检测
             Map<String, AiAgentToolExecHelper.ToolExecRecord> toolResultCache = new HashMap<>(); // 对话内工具结果缓存
             for (int i = 1; i <= maxIterations; i++) {
@@ -193,6 +223,18 @@ public class AiAgentOrchestrator {
                 if (!result.isSuccess()) {
                     aiAgentTraceOrchestrator.finishRequest(commandId, null, result.getErrorMessage(), System.currentTimeMillis() - requestStartAt);
                     emitSse(emitter, "error", Map.of("message", "推理服务暂时不可用: " + result.getErrorMessage()));
+                    emitter.complete();
+                    return;
+                }
+
+                // Token 预算追踪
+                totalTokens += result.getPromptTokens() + result.getCompletionTokens();
+                if (totalTokens > tokenBudget) {
+                    log.warn("[AiAgent-Stream] Token 预算超限: {} > {}, 强制终止", totalTokens, tokenBudget);
+                    String budgetMsg = "抱歉，本次对话消耗的计算资源已达上限，请分步提问以获得更好的回答。";
+                    aiAgentTraceOrchestrator.finishRequest(commandId, budgetMsg, "token_budget_exceeded", System.currentTimeMillis() - requestStartAt);
+                    emitSse(emitter, "answer", Map.of("content", budgetMsg, "commandId", commandId));
+                    emitSse(emitter, "done", Map.of());
                     emitter.complete();
                     return;
                 }

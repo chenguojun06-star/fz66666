@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
@@ -31,12 +32,36 @@ import java.util.stream.Collectors;
  * <em>针对这件衣服的个性化质检指引</em>。AI 不可用时自动降级到规则引擎。
  *
  * <p>数据链：订单 → styleId → StyleInfo + BOM + Process → LLM → 结构化 checkpoints
+ *
+ * <p><b>v3 缓存优化</b>：同一款式的质检要点相同，按 styleId 缓存 LLM 结果，
+ * 仅在出现新次品记录或超过 24h 时才重新生成，历史次品率仍然每次实时计算。
  */
 @Service
 @Slf4j
 public class QualityAiSuggestionOrchestrator {
 
     private static final ObjectMapper JSON = new ObjectMapper();
+    private static final long CACHE_TTL_MS = 24 * 60 * 60 * 1000L; // 24小时
+
+    /** 按款式ID缓存LLM生成的质检要点，同一款式只调一次LLM */
+    private final Map<String, CachedStyleCheckpoints> styleCache = new ConcurrentHashMap<>();
+
+    /** 缓存的款式质检要点（与具体订单解耦，仅包含款式维度的信息） */
+    private static class CachedStyleCheckpoints {
+        final List<String> checkpoints;
+        final String llmUrgentTip;
+        final long createdAt;
+
+        CachedStyleCheckpoints(List<String> checkpoints, String llmUrgentTip) {
+            this.checkpoints = checkpoints;
+            this.llmUrgentTip = llmUrgentTip;
+            this.createdAt = System.currentTimeMillis();
+        }
+
+        boolean isExpired() {
+            return (System.currentTimeMillis() - createdAt) > CACHE_TTL_MS;
+        }
+    }
 
     @Autowired
     private ProductionOrderService productionOrderService;
@@ -156,15 +181,17 @@ public class QualityAiSuggestionOrchestrator {
             return buildEmpty();
         }
 
-        // 2. 历史次品率（已有质检记录）
+        // 2. 历史次品率（每次实时计算，不缓存）
         Double historicalDefectRate = null;
         String historicalVerdict = "good";
+        int defectRecordCount = 0;
         try {
             List<ProductWarehousing> records = productWarehousingService.list(
                 new LambdaQueryWrapper<ProductWarehousing>()
                     .eq(ProductWarehousing::getOrderId, orderId.trim())
                     .eq(ProductWarehousing::getDeleteFlag, 0)
             );
+            defectRecordCount = records.size();
             if (!records.isEmpty()) {
                 int totalQ  = records.stream().mapToInt(r -> r.getQualifiedQuantity()   == null ? 0 : r.getQualifiedQuantity()).sum();
                 int totalUQ = records.stream().mapToInt(r -> r.getUnqualifiedQuantity() == null ? 0 : r.getUnqualifiedQuantity()).sum();
@@ -179,12 +206,24 @@ public class QualityAiSuggestionOrchestrator {
             log.warn("[QualityAI] 历史数据查询失败: orderId={}", orderId, e);
         }
 
-        // 3. 优先走真实 LLM（读取款式/BOM/工序 → DeepSeek 生成个性化质检指引）
-        if (inferenceOrchestrator.isAnyModelEnabled()) {
+        // 3. 按款式缓存：同款式质检要点只调一次LLM
+        String styleId = order.getStyleId();
+        if (StringUtils.hasText(styleId) && inferenceOrchestrator.isAnyModelEnabled()) {
+            CachedStyleCheckpoints cached = styleCache.get(styleId);
+            if (cached != null && !cached.isExpired()) {
+                log.debug("[QualityAI] 命中款式缓存: styleId={}, orderId={}", styleId, orderId);
+                return buildFromCache(cached, order, historicalDefectRate, historicalVerdict);
+            }
+
+            // 缓存未命中或已过期 → 调LLM
             try {
                 QualityAiSuggestionResponse llmResult = callLLM(order, historicalDefectRate, historicalVerdict);
                 if (llmResult != null) {
-                    log.info("[QualityAI] LLM生成质检指引成功: orderId={}, checkpoints={}", orderId, llmResult.getCheckpoints().size());
+                    // 提取纯LLM质检要点（去除次品率警示行），存入缓存
+                    List<String> pureCheckpoints = new ArrayList<>(llmResult.getCheckpoints());
+                    pureCheckpoints.removeIf(cp -> cp.startsWith("🔴") || cp.startsWith("🟡"));
+                    styleCache.put(styleId, new CachedStyleCheckpoints(pureCheckpoints, llmResult.getUrgentTip()));
+                    log.info("[QualityAI] LLM生成质检指引成功并缓存: styleId={}, orderId={}, checkpoints={}", styleId, orderId, llmResult.getCheckpoints().size());
                     return llmResult;
                 }
             } catch (Exception e) {
@@ -194,6 +233,40 @@ public class QualityAiSuggestionOrchestrator {
 
         // 4. 规则引擎兜底
         return buildFromRules(order, historicalDefectRate, historicalVerdict);
+    }
+
+    /** 从缓存的款式质检要点重建完整响应（叠加订单级次品率和急单信息） */
+    private QualityAiSuggestionResponse buildFromCache(CachedStyleCheckpoints cached,
+                                                        ProductionOrder order,
+                                                        Double defectRate,
+                                                        String verdict) {
+        List<String> checkpoints = new ArrayList<>(cached.checkpoints);
+
+        // 叠加次品率警示
+        if ("critical".equals(verdict) && defectRate != null) {
+            checkpoints.add(0, "🔴 此订单历史次品率 " + Math.round(defectRate * 100) + "%（严重偏高），请严格全检，重点关注批次一致性");
+        } else if ("warn".equals(verdict) && defectRate != null) {
+            checkpoints.add(0, "🟡 此订单历史次品率 " + Math.round(defectRate * 100) + "%（偏高），需加强抽检力度");
+        }
+
+        // 急单提示：优先用LLM缓存的，否则兜底
+        String urgentTip = cached.llmUrgentTip;
+        if (urgentTip == null && "urgent".equalsIgnoreCase(order.getUrgencyLevel())) {
+            urgentTip = "⚠️ 此为急单，请优先处理！赶工不得降低质检标准，发现异常仍须如实记录。";
+        }
+
+        return QualityAiSuggestionResponse.builder()
+                .orderNo(order.getOrderNo())
+                .styleNo(order.getStyleNo())
+                .styleName(order.getStyleName())
+                .productCategory(order.getProductCategory())
+                .urgent("urgent".equalsIgnoreCase(order.getUrgencyLevel()))
+                .historicalDefectRate(defectRate)
+                .historicalVerdict(verdict)
+                .checkpoints(checkpoints)
+                .defectSuggestions(DEFECT_SUGGESTIONS)
+                .urgentTip(urgentTip)
+                .build();
     }
 
     // ─── 真实 LLM 调用 ────────────────────────────────────────────────

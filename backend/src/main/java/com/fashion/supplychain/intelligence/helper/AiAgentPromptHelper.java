@@ -10,6 +10,7 @@ import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.intelligence.service.AiContextBuilderService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -22,7 +23,14 @@ import java.util.stream.Collectors;
 @Component
 public class AiAgentPromptHelper {
 
-    private static final int MAX_SYSTEM_PROMPT_CHARS = 12000;
+    @Value("${xiaoyun.agent.max-system-prompt-chars:12000}")
+    private int maxSystemPromptChars;
+
+    @Value("${xiaoyun.agent.rag.recall-top-k:3}")
+    private int ragRecallTopK;
+
+    @Value("${xiaoyun.agent.rag.similarity-threshold:0.45}")
+    private float ragSimilarityThreshold;
 
     @Autowired private AiContextBuilderService aiContextBuilderService;
     @Autowired private AiAgentToolAccessService aiAgentToolAccessService;
@@ -102,11 +110,11 @@ public class AiAgentPromptHelper {
             if (userMessage != null && !userMessage.isBlank()) {
                 Long ragTenantId = UserContext.tenantId();
                 IntelligenceMemoryResponse ragResult =
-                        intelligenceMemoryOrchestrator.recallSimilar(ragTenantId, userMessage, 3);
+                        intelligenceMemoryOrchestrator.recallSimilar(ragTenantId, userMessage, ragRecallTopK);
                 List<IntelligenceMemoryResponse.MemoryItem> recalled = ragResult.getRecalled();
                 if (recalled != null && !recalled.isEmpty()) {
                     List<IntelligenceMemoryResponse.MemoryItem> relevant = recalled.stream()
-                            .filter(item -> item.getSimilarityScore() >= 0.45f)
+                            .filter(item -> item.getSimilarityScore() >= ragSimilarityThreshold)
                             .collect(Collectors.toList());
                     if (!relevant.isEmpty()) {
                         StringBuilder rag = new StringBuilder();
@@ -195,9 +203,9 @@ public class AiAgentPromptHelper {
                 "C) 用户要求催单/跟进出货/催出货日期时，为每个相关订单生成催单卡片（type=urge_order）：\n" +
                 "【ACTIONS】[{\"title\":\"催单通知\",\"desc\":\"请尽快填写最新预计出货日期并备注情况\",\"orderNo\":\"真实单号\",\"responsiblePerson\":\"订单跟单员或工厂老板姓名\",\"factoryName\":\"工厂名\",\"currentExpectedShipDate\":\"当前预计出货日期(如有,格式YYYY-MM-DD)\",\"actions\":[{\"label\":\"填写出货日期\",\"type\":\"urge_order\"}]}]【/ACTIONS】\n" +
                 "⚠️ 仅用真实数据，禁止用占位符。常规闲聊不生成这两个标记块。订单号必须是数据库中真实存在的。";
-        if (prompt.length() > MAX_SYSTEM_PROMPT_CHARS) {
-            log.warn("[AiAgent] systemPrompt过长({}字符)，截断至{}", prompt.length(), MAX_SYSTEM_PROMPT_CHARS);
-            prompt = prompt.substring(0, MAX_SYSTEM_PROMPT_CHARS) + "\n...(系统提示词已截断，请用工具查询补充信息)";
+        if (prompt.length() > maxSystemPromptChars) {
+            log.warn("[AiAgent] systemPrompt过长({}字符)，截断至{}", prompt.length(), maxSystemPromptChars);
+            prompt = prompt.substring(0, maxSystemPromptChars) + "\n...(系统提示词已截断，请用工具查询补充信息)";
         }
         return prompt;
     }
