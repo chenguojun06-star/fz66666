@@ -285,10 +285,12 @@ export interface MaterialPurchase extends Record<string, unknown> {
   factoryName?: string;
   factoryType?: 'INTERNAL' | 'EXTERNAL';
   orderBizType?: string;  // 下单类型: CMT / FOB / ODM / OEM
-  // 颜色/尺码/成分（从物料资料库或样衣同步）
+  // 颜色/尺码/成分/规格（从物料资料库或样衣同步）
   color?: string;
   size?: string;
   fabricComposition?: string;
+  fabricWidth?: string;   // 面料幅宽（从物料资料库同步）
+  fabricWeight?: string;  // 面料克重（从物料资料库同步）
   // 发票/单据图片URL列表（JSON数组字符串），用于财务留底
   invoiceUrls?: string;
   // 初审工作流（内部采购专属）
