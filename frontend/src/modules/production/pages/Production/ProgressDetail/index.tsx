@@ -28,11 +28,8 @@ import '../../../styles.css';
 import {
   defaultNodes,
   stripWarehousingNode,
-  getNodeIndexFromProgress,
   findPricingProcessForStage,
   getCloseMinRequired,
-  calculateProgressFromBundles,
-  resolveNodesForOrder,
   resolveNodesForListOrder,
   getCurrentWorkflowNodeForOrder,
 } from './utils';
@@ -260,7 +257,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   useEffect(() => { activeOrderRef.current = activeOrder; }, [activeOrder]);
 
   // ── 模板函数 ─────────────────────────────────────────────────────
-  const { fetchTemplateNodes, ensureNodesFromTemplateIfNeeded } = useTemplateNodes({ setNodes, setProgressNodesByStyleNo });
+  const { fetchTemplateNodes: _fetchTemplateNodes, ensureNodesFromTemplateIfNeeded } = useTemplateNodes({ setNodes, setProgressNodesByStyleNo });
 
   useEffect(() => {
     if (!orders.length) return;

@@ -12,7 +12,7 @@ import dayjs from 'dayjs';
 import Layout from '@/components/Layout';
 import PageLayout from '@/components/common/PageLayout';
 import api from '@/utils/api';
-import { StyleBom, StyleInfo, StyleQueryParams } from '@/types/style';
+import { StyleInfo, StyleQueryParams } from '@/types/style';
 
 import { ProductionOrder } from '@/types/production';
 
@@ -46,10 +46,10 @@ import OrderAnalysisTab from './components/OrderAnalysisTab';
 import StyleQuotePopover from './StyleQuotePopover';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 
-import { OrderLine, ProgressNode, defaultProgressNodes } from './types';
+import { OrderLine, defaultProgressNodes } from './types';
 import { normalizeMatchKey } from './utils/orderBomMetrics';
 import { buildOrderSubmitPayload } from './utils/buildOrderSubmitPayload';
-import { analyzeOrderOrchestration, computeProcessBasedUnitPrice, SizePriceRecord } from './utils/orderIntelligence';
+import { analyzeOrderOrchestration, computeProcessBasedUnitPrice } from './utils/orderIntelligence';
 import { useOrderColumns } from './hooks/useOrderColumns';
 import { useOrderDataFetch } from './hooks/useOrderDataFetch';
 import { useOrderIntelligence } from './hooks/useOrderIntelligence';
@@ -108,13 +108,13 @@ const OrderManagement: React.FC = () => {
   const [orderLines, setOrderLines] = useState<OrderLine[]>([]);
 
   const {
-    bomList, setBomList, bomLoading: _bomLoading, sizePriceRows, setSizePriceRows,
+    bomList: _bomList, setBomList, bomLoading: _bomLoading, sizePriceRows, setSizePriceRows,
     sizePriceLoading, bomColumns: _bomColumns, bomByType, normalizeSizeKey,
-    displaySizeLabel, orderQtyStats, getMatchedQty, calcBomBudgetQty,
-    calcBomTotalPrice, calcBomReferenceKg, fetchBom, fetchSizePrices,
+    displaySizeLabel, orderQtyStats: _orderQtyStats, getMatchedQty: _getMatchedQty, calcBomBudgetQty: _calcBomBudgetQty,
+    calcBomTotalPrice: _calcBomTotalPrice, calcBomReferenceKg: _calcBomReferenceKg, fetchBom, fetchSizePrices,
   } = useOrderBom(orderLines);
   const {
-    progressNodes, setProgressNodes, buildProgressNodesFromTemplate,
+    progressNodes, setProgressNodes, buildProgressNodesFromTemplate: _buildProgressNodesFromTemplate,
     loadProgressNodesForStyle, buildProgressWorkflowJson,
   } = useProgressWorkflow();
 
