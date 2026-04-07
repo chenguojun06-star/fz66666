@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import type { RefObject, MutableRefObject } from 'react';
 import type { ProductionOrder, CuttingBundle } from '@/types/production';
 import { productionScanApi } from '@/services/production/productionApi';
 import { isDuplicateScanMessage } from '@/utils/api';
@@ -26,10 +26,10 @@ interface UseScanExecutionParams {
   fetchScanHistory: (order: ProductionOrder, options?: { silent?: boolean }) => Promise<any[]>;
   fetchOrders: () => Promise<void>;
   scanForm: FormInstance;
-  scanInputRef: React.RefObject<InputRef | null>;
+  scanInputRef: RefObject<InputRef | null>;
   setScanSubmitting: (v: boolean) => void;
-  scanSubmittingRef: React.MutableRefObject<boolean>;
-  lastFailedRequestRef: React.MutableRefObject<{ key: string; requestId: string } | null>;
+  scanSubmittingRef: MutableRefObject<boolean>;
+  lastFailedRequestRef: MutableRefObject<{ key: string; requestId: string } | null>;
 }
 
 export function useScanExecution({

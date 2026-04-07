@@ -1,3 +1,4 @@
+import type { Dispatch, SetStateAction } from 'react';
 import type { ProgressNode } from '../types';
 import type { ProductionOrder } from '@/types/production';
 import type { TemplateLibrary } from '@/types/style';
@@ -5,8 +6,8 @@ import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 import { parseProgressNodes } from '../utils';
 
 interface UseTemplateNodesParams {
-  setNodes: React.Dispatch<React.SetStateAction<ProgressNode[]>>;
-  setProgressNodesByStyleNo: React.Dispatch<React.SetStateAction<Record<string, ProgressNode[]>>>;
+  setNodes: Dispatch<SetStateAction<ProgressNode[]>>;
+  setProgressNodesByStyleNo: Dispatch<SetStateAction<Record<string, ProgressNode[]>>>;
 }
 
 export function useTemplateNodes({ setNodes, setProgressNodesByStyleNo }: UseTemplateNodesParams) {
