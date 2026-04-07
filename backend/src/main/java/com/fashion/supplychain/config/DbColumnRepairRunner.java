@@ -601,6 +601,19 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             repaired += ensureColumn(conn, schema, "t_production_order", "skc",
                     "VARCHAR(64) DEFAULT NULL COMMENT 'SKC统一编号'");
 
+            // t_production_order 定价快照列 — V20260327001 COMMENT '' bug，Flyway 从未实际添加
+            repaired += ensureColumn(conn, schema, "t_production_order", "factory_unit_price",
+                    "DECIMAL(10,2) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "pricing_mode",
+                    "VARCHAR(20) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "scatter_pricing_mode",
+                    "VARCHAR(20) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "scatter_cutting_unit_price",
+                    "DECIMAL(10,2) DEFAULT NULL");
+            // t_production_order.material_arrival_rate — 从未写入任何 Flyway 脚本
+            repaired += ensureColumn(conn, schema, "t_production_order", "material_arrival_rate",
+                    "INT DEFAULT NULL");
+
             // --- t_style_process 补列 ---
             repaired += ensureColumn(conn, schema, "t_style_process", "difficulty",
                     "VARCHAR(10) DEFAULT NULL");
