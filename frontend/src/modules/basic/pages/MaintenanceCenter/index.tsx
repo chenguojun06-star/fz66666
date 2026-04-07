@@ -345,12 +345,13 @@ const MaintenanceCenter: React.FC = () => {
         width="60vw"
         initialHeight={Math.round(window.innerHeight * 0.82)}
         footer={null}
+        destroyOnClose
       >
-        {panelType === 'pattern' && <PatternPanel styleNo={activeStyleNo} />}
-        {panelType === 'sheet' && <ProductionSheetPanel styleNo={activeStyleNo} />}
-        {panelType === 'size' && <SizeTablePanel styleNo={activeStyleNo} />}
-        {panelType === 'bom' && <BomPanel styleNo={activeStyleNo} />}
-        {panelType === 'price' && <UnitPricePanel styleNo={activeStyleNo} />}
+        {panelType === 'pattern' && <PatternPanel key={activeStyleNo} styleNo={activeStyleNo} />}
+        {panelType === 'sheet' && <ProductionSheetPanel key={activeStyleNo} styleNo={activeStyleNo} />}
+        {panelType === 'size' && <SizeTablePanel key={activeStyleNo} styleNo={activeStyleNo} />}
+        {panelType === 'bom' && <BomPanel key={activeStyleNo} styleNo={activeStyleNo} />}
+        {panelType === 'price' && <UnitPricePanel key={activeStyleNo} styleNo={activeStyleNo} />}
       </ResizableModal>
 
       {/* ── Print Modal ── */}

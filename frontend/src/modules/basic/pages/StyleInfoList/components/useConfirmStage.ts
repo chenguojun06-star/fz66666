@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { Form } from 'antd';
 import dayjs from 'dayjs';
 import { StyleInfo } from '@/types/style';
@@ -13,7 +13,7 @@ type MessageInstance = { success: (msg: string) => void; error: (msg: string) =>
 
 interface UseConfirmStageParams {
   selectedStage: { record: StyleInfo; stage: SmartStage } | null;
-  setSelectedStage: React.Dispatch<React.SetStateAction<{ record: StyleInfo; stage: SmartStage } | null>>;
+  setSelectedStage: Dispatch<SetStateAction<{ record: StyleInfo; stage: SmartStage } | null>>;
   message: MessageInstance;
   onRefresh: () => void;
 }

@@ -7,11 +7,14 @@ import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.dto.OrderShareResponse;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.entity.ProductOutstock;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.production.service.ProductOutstockService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.production.service.SKUService;
 import com.fashion.supplychain.production.util.ProductionOrderUtils;
+import com.fashion.supplychain.warehouse.dto.OutstockShareResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -66,6 +69,9 @@ public class OrderShareOrchestrator {
 
     @Autowired
     private SKUService skuService;
+
+    @Autowired
+    private ProductOutstockService productOutstockService;
 
     public OrderShareOrchestrator(@Value("${app.auth.jwt-secret:}") String secret) {
         this.jwtSecret = (secret == null ? "" : secret.trim()).getBytes(StandardCharsets.UTF_8);
@@ -708,5 +714,115 @@ public class OrderShareOrchestrator {
             case "closed"     -> "已关单";
             default           -> status;
         };
+    }
+
+    // ───────────────────────────────────────────────────
+    // 出库记录分享（与订单分享同架构，JWT + 公开接口）
+    // ───────────────────────────────────────────────────
+
+    /**
+     * 为指定客户的出库记录批量生成分享令牌（30 天有效）
+     * payload: type=outstock_share, customerName, tenantId
+     */
+    public String generateOutstockShareToken(String customerName) {
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null) {
+            throw new IllegalStateException("未登录，无法生成分享链接");
+        }
+        if (customerName == null || customerName.isBlank()) {
+            throw new IllegalArgumentException("客户名称不能为空");
+        }
+
+        long now = System.currentTimeMillis();
+        String token = JWT.create()
+                .setPayload("type", "outstock_share")
+                .setPayload("customerName", customerName)
+                .setPayload("tenantId", String.valueOf(tenantId))
+                .setIssuedAt(new Date(now))
+                .setExpiresAt(new Date(now + SHARE_TTL_MS))
+                .setKey(jwtSecret)
+                .sign();
+
+        log.info("[OutstockShare] 生成出库分享令牌 customerName={} tenantId={}", customerName, tenantId);
+        return token;
+    }
+
+    /**
+     * 通过令牌获取出库记录公开摘要（无需登录）
+     */
+    public Result<OutstockShareResponse> resolveOutstockShare(String token) {
+        if (token == null || token.isBlank()) {
+            return Result.fail("无效的分享链接");
+        }
+        try {
+            JWT jwt = JWT.of(token).setKey(jwtSecret);
+            if (!jwt.verify() || !jwt.validate(0)) {
+                return Result.fail("分享链接已过期或无效");
+            }
+
+            String type = (String) jwt.getPayload("type");
+            if (!"outstock_share".equals(type)) {
+                return Result.fail("无效的分享类型");
+            }
+
+            String customerName = (String) jwt.getPayload("customerName");
+            String tenantIdStr = (String) jwt.getPayload("tenantId");
+            Long tenantId = Long.parseLong(tenantIdStr);
+
+            // 查询该客户的所有出库记录
+            List<ProductOutstock> records = productOutstockService.lambdaQuery()
+                    .eq(ProductOutstock::getTenantId, tenantId)
+                    .eq(ProductOutstock::getCustomerName, customerName)
+                    .eq(ProductOutstock::getDeleteFlag, 0)
+                    .orderByDesc(ProductOutstock::getCreateTime)
+                    .list();
+
+            OutstockShareResponse resp = new OutstockShareResponse();
+            resp.setToken(token);
+            resp.setCustomerName(customerName);
+            resp.setExpiresAt(((Date) jwt.getPayload("exp")).getTime());
+
+            // 从第一条记录获取客户联系信息
+            if (!records.isEmpty()) {
+                ProductOutstock first = records.get(0);
+                resp.setCustomerPhone(first.getCustomerPhone());
+                resp.setShippingAddress(first.getShippingAddress());
+            }
+
+            // 构建明细列表
+            List<OutstockShareResponse.OutstockItem> items = new ArrayList<>();
+            int totalQty = 0;
+            java.math.BigDecimal totalAmt = java.math.BigDecimal.ZERO;
+
+            for (ProductOutstock r : records) {
+                OutstockShareResponse.OutstockItem item = new OutstockShareResponse.OutstockItem();
+                item.setOutstockNo(r.getOutstockNo());
+                item.setOrderNo(r.getOrderNo());
+                item.setStyleNo(r.getStyleNo());
+                item.setStyleName(r.getStyleName());
+                item.setColor(r.getColor());
+                item.setSize(r.getSize());
+                item.setOutstockQuantity(r.getOutstockQuantity());
+                item.setSalesPrice(r.getSalesPrice());
+                item.setTotalAmount(r.getTotalAmount());
+                item.setTrackingNo(r.getTrackingNo());
+                item.setExpressCompany(r.getExpressCompany());
+                item.setOutstockTime(r.getCreateTime() != null ? r.getCreateTime().format(DATETIME_FMT) : null);
+                item.setPaymentStatus(r.getPaymentStatus());
+                items.add(item);
+
+                if (r.getOutstockQuantity() != null) totalQty += r.getOutstockQuantity();
+                if (r.getTotalAmount() != null) totalAmt = totalAmt.add(r.getTotalAmount());
+            }
+
+            resp.setItems(items);
+            resp.setTotalQuantity(totalQty);
+            resp.setTotalAmount(totalAmt);
+
+            return Result.success(resp);
+        } catch (Exception e) {
+            log.warn("[OutstockShare] 解析分享令牌失败: {}", e.getMessage());
+            return Result.fail("分享链接无效");
+        }
     }
 }

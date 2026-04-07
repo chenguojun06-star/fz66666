@@ -1,153 +1,45 @@
-<view class="container">
-  <custom-nav
-    title="首页"
-    show-search="{{true}}"
-    search-keyword="{{globalSearch.keyword}}"
-    search-placeholder="搜索订单号/款号"
-    bind:searchinput="onGlobalSearchInput"
-    bind:searchconfirm="doGlobalSearch"
-    bind:searchclear="clearGlobalSearch"
-  />
+<view class="page" style="padding-top: {{statusBarHeight + 12}}px;">
+  <!-- 顶部问候 -->
+  <view class="header">
+    <view class="greeting-name">{{userName}}，{{greeting}} 👋</view>
+    <view class="greeting-sub">欢迎使用云裳智立链</view>
+  </view>
 
-  <view class="card">
-    <view wx:if="{{globalSearch.hasSearched && globalSearch.results.length > 0}}" class="global-results">
-      <view class="results-header">
-        <text class="results-title">搜索结果 ({{globalSearch.results.length}})</text>
-        <text class="close-results" bindtap="closeGlobalSearch">✕</text>
+  <!-- 今日统计卡片 -->
+  <view class="stats-row">
+    <view class="stat-card stat-card--blue">
+      <view class="stat-icon-wrap stat-icon-wrap--blue">
+        <text class="stat-icon">📋</text>
       </view>
-      <scroll-view class="results-list" scroll-y enhanced="{{true}}">
-        <view wx:for="{{globalSearch.results}}" wx:key="id" class="result-item" hover-class="result-item-hover" hover-stay-time="100" bindtap="onResultItemTap" data-item="{{item}}">
-          <view class="result-header">
-            <text class="result-type">{{item.typeText}}</text>
-            <text class="result-status" style="color: {{item.statusColor}}">{{item.statusText}}</text>
-          </view>
-          <view class="result-info">
-            <text class="result-order">订单号: {{item.orderNo}}</text>
-            <text class="result-style">款号: {{item.styleNo}}</text>
-          </view>
-          <view wx:if="{{item.factoryName}}" class="result-detail">工厂: {{item.factoryName}}</view>
-        </view>
-      </scroll-view>
+      <view class="stat-info">
+        <view class="stat-value">{{todayProcessCount}}<text class="stat-unit">次</text></view>
+        <view class="stat-label">今日完成工序</view>
+      </view>
     </view>
-
-    <view wx:if="{{globalSearch.hasSearched && globalSearch.results.length === 0}}" class="no-results">
-      <text class="no-results-icon">🔍</text>
-      <text class="no-results-text">未找到匹配的订单</text>
-      <view class="close-btn" bindtap="closeGlobalSearch">关闭</view>
+    <view class="stat-card stat-card--green">
+      <view class="stat-icon-wrap stat-icon-wrap--green">
+        <text class="stat-icon">⏱</text>
+      </view>
+      <view class="stat-info">
+        <view class="stat-value">{{todayWorkHours}}<text class="stat-unit">h</text></view>
+        <view class="stat-label">今日工作时长</view>
+      </view>
     </view>
+  </view>
 
-    <view wx:if="{{!globalSearch.hasSearched}}">
-      <view wx:if="{{loading}}" class="hint">加载中...</view>
-      <view wx:if="{{!loading && !statsLoaded}}" class="hint">暂无统计</view>
-
-      <view wx:if="{{isTenantOwner}}">
-        <view class="home-section-title">数据概览</view>
-        <view class="home-stats-grid">
-          <view class="home-stat-card stat-bulk">
-            <view class="stat-head">
-              <text class="stat-card-emoji">🛒</text>
-              <text class="stat-card-label">大货下单</text>
-              <text class="stat-total">{{topStats.bulkOrder.total}}</text>
-            </view>
-            <view class="stat-tags-row">
-              <view class="stat-tag"><text class="tag-label">日</text><text class="tag-value">{{topStats.bulkOrder.day}}</text></view>
-              <view class="stat-tag"><text class="tag-label">周</text><text class="tag-value">{{topStats.bulkOrder.week}}</text></view>
-              <view class="stat-tag"><text class="tag-label">月</text><text class="tag-value">{{topStats.bulkOrder.month}}</text></view>
-              <view class="stat-tag"><text class="tag-label">年</text><text class="tag-value">{{topStats.bulkOrder.year}}</text></view>
-            </view>
-          </view>
-          <view class="home-stat-card stat-cutting">
-            <view class="stat-head">
-              <text class="stat-card-emoji">✂️</text>
-              <text class="stat-card-label">裁剪数量</text>
-              <text class="stat-total">{{topStats.cutting.total}}</text>
-            </view>
-            <view class="stat-tags-row">
-              <view class="stat-tag"><text class="tag-label">日</text><text class="tag-value">{{topStats.cutting.day}}</text></view>
-              <view class="stat-tag"><text class="tag-label">周</text><text class="tag-value">{{topStats.cutting.week}}</text></view>
-              <view class="stat-tag"><text class="tag-label">月</text><text class="tag-value">{{topStats.cutting.month}}</text></view>
-              <view class="stat-tag"><text class="tag-label">年</text><text class="tag-value">{{topStats.cutting.year}}</text></view>
-            </view>
-          </view>
+  <!-- 全部菜单 -->
+  <view class="menu-section">
+    <view class="menu-header">
+      <text class="menu-title">全部菜单</text>
+      <text class="menu-hint">长按可排序</text>
+    </view>
+    <view class="menu-grid">
+      <view class="menu-item" wx:for="{{menuItems}}" wx:key="id" bindtap="onMenuTap" data-index="{{index}}">
+        <view class="menu-icon-circle" style="background: {{item.bgColor}};">
+          <text class="menu-emoji">{{item.icon}}</text>
         </view>
+        <text class="menu-name">{{item.name}}</text>
       </view>
-
-      <view wx:elif="{{!isFactory}}">
-        <view class="home-section-title">数据概览</view>
-        <view class="home-stats-grid">
-          <view class="home-stat-card stat-bulk">
-            <view class="stat-head">
-              <text class="stat-card-emoji">🛒</text>
-              <text class="stat-card-label">大货下单</text>
-              <text class="stat-total">{{topStats.bulkOrder.total}}</text>
-            </view>
-            <view class="stat-tags-row">
-              <view class="stat-tag"><text class="tag-label">日</text><text class="tag-value">{{topStats.bulkOrder.day}}</text></view>
-              <view class="stat-tag"><text class="tag-label">周</text><text class="tag-value">{{topStats.bulkOrder.week}}</text></view>
-              <view class="stat-tag"><text class="tag-label">月</text><text class="tag-value">{{topStats.bulkOrder.month}}</text></view>
-              <view class="stat-tag"><text class="tag-label">年</text><text class="tag-value">{{topStats.bulkOrder.year}}</text></view>
-            </view>
-          </view>
-          <view class="home-stat-card stat-cutting">
-            <view class="stat-head">
-              <text class="stat-card-emoji">✂️</text>
-              <text class="stat-card-label">裁剪数量</text>
-              <text class="stat-total">{{topStats.cutting.total}}</text>
-            </view>
-            <view class="stat-tags-row">
-              <view class="stat-tag"><text class="tag-label">日</text><text class="tag-value">{{topStats.cutting.day}}</text></view>
-              <view class="stat-tag"><text class="tag-label">周</text><text class="tag-value">{{topStats.cutting.week}}</text></view>
-              <view class="stat-tag"><text class="tag-label">月</text><text class="tag-value">{{topStats.cutting.month}}</text></view>
-              <view class="stat-tag"><text class="tag-label">年</text><text class="tag-value">{{topStats.cutting.year}}</text></view>
-            </view>
-          </view>
-        </view>
-      </view>
-
-      <view wx:if="{{isTenantOwner}}">
-        <view class="home-section-title">快捷入口</view>
-        <view class="home-entries">
-          <view class="home-entry" hover-class="home-entry-hover" hover-stay-time="100" data-tab="orders_production" bindtap="goWork">生产</view>
-          <view class="home-entry" hover-class="home-entry-hover" hover-stay-time="100" bindtap="goScan">扫码</view>
-          <view class="home-entry" hover-class="home-entry-hover" hover-stay-time="100" bindtap="goAdmin">我的</view>
-        </view>
-      </view>
-
-      <view wx:elif="{{isFactory}}">
-        <view class="home-section-title">快捷入口</view>
-        <view class="home-entries">
-          <view class="home-entry" hover-class="home-entry-hover" hover-stay-time="100" bindtap="goScan">扫码</view>
-          <view class="home-entry" hover-class="home-entry-hover" hover-stay-time="100" bindtap="goPayroll">工资</view>
-          <view class="home-entry" hover-class="home-entry-hover" hover-stay-time="100" bindtap="goAdmin">我的</view>
-        </view>
-      </view>
-
-      <view wx:else>
-        <view class="home-section-title">快捷入口</view>
-        <view class="home-entries">
-          <view class="home-entry" hover-class="home-entry-hover" hover-stay-time="100" data-tab="orders_production" bindtap="goWork">生产</view>
-          <view class="home-entry" hover-class="home-entry-hover" hover-stay-time="100" bindtap="goScan">扫码</view>
-          <view class="home-entry" hover-class="home-entry-hover" hover-stay-time="100" bindtap="goAdmin">我的</view>
-        </view>
-      </view>
-
-      <block wx:if="{{!isFactory}}">
-      <view class="home-section-title">最近动态</view>
-      <view wx:if="{{activities.length === 0}}" class="hint">暂无动态</view>
-      <view wx:for="{{activities}}" wx:key="id" class="home-activity">
-        <view class="home-activity-row">
-          <view class="home-activity-icon home-activity-icon--{{item.type}}">
-            <text wx:if="{{item.type === 'style'}}">✂️</text>
-            <text wx:elif="{{item.type === 'production'}}">📋</text>
-            <text wx:elif="{{item.type === 'scan'}}">📱</text>
-            <text wx:elif="{{item.type === 'material'}}">📦</text>
-            <text wx:else>📌</text>
-          </view>
-          <view class="home-activity-content">{{item.content}}</view>
-          <view class="home-activity-time">{{item.time}}</view>
-        </view>
-      </view>
-      </block>
     </view>
   </view>
 

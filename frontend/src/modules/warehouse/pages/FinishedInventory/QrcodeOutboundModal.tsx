@@ -4,6 +4,7 @@ import { DeleteOutlined, PlusOutlined, ScanOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import api from '@/utils/api';
+import CustomerInfoSection from './CustomerInfoSection';
 
 interface QrcodeItem {
   key: string;
@@ -47,6 +48,9 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
   const [inputVal, setInputVal] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [shippingAddress, setShippingAddress] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleAdd = async () => {
@@ -118,10 +122,14 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
   };
 
   const handleSubmit = async () => {
+    if (!customerName.trim()) { message.warning('请填写客户名称，出库必须选择客户'); return; }
     if (items.length === 0) { message.warning('请先扫码添加出库明细'); return; }
     setSubmitting(true);
     try {
       await api.post('/warehouse/finished-inventory/qrcode-outbound', {
+        customerName: customerName.trim(),
+        ...(customerPhone.trim() ? { customerPhone: customerPhone.trim() } : {}),
+        ...(shippingAddress.trim() ? { shippingAddress: shippingAddress.trim() } : {}),
         items: items.map(it => ({ qrCode: it.qrCode, quantity: it.quantity })),
       });
       message.success(`出库成功，共 ${items.length} 项`);
@@ -138,6 +146,9 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
   const handleClose = () => {
     setItems([]);
     setInputVal('');
+    setCustomerName('');
+    setCustomerPhone('');
+    setShippingAddress('');
     onClose();
   };
 
@@ -260,6 +271,16 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
       <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 8, fontSize: 12 }}>
         二维码格式：款号-颜色-尺码-序号。扫码后会自动显示 SKU、颜色、码数、当前库存，再填写本次要出库的数量。
       </Typography.Text>
+
+      <CustomerInfoSection
+        variant="inline"
+        customerName={customerName}
+        onCustomerNameChange={setCustomerName}
+        customerPhone={customerPhone}
+        onCustomerPhoneChange={setCustomerPhone}
+        shippingAddress={shippingAddress}
+        onShippingAddressChange={setShippingAddress}
+      />
 
       <ResizableTable
         size="small"

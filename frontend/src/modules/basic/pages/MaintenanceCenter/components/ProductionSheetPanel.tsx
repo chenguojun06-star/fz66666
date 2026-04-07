@@ -216,6 +216,13 @@ const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo }) 
   };
 
   useEffect(() => { fetchStats(); }, []);
+  useEffect(() => {
+    setQueryParams(prev => {
+      const next = styleNo || undefined;
+      if (prev.styleNo === next) return prev;
+      return { ...prev, styleNo: next, page: 1 };
+    });
+  }, [styleNo]);
   useEffect(() => { fetchStyles(); }, [queryParams]);
 
   useEffect(() => {

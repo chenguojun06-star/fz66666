@@ -1,7 +1,7 @@
 {
   "navigationStyle": "custom",
+  "enablePullDownRefresh": true,
   "usingComponents": {
-    "custom-nav": "/components/common/custom-nav/index",
     "ai-assistant": "/components/ai-assistant/index"
   }
 }

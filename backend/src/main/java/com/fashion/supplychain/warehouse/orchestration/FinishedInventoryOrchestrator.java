@@ -508,8 +508,11 @@ public class FinishedInventoryOrchestrator {
         String requestWarehouse = trimToNull(params.get("warehouseLocation"));
         String trackingNo = trimToNull(params.get("trackingNo"));
         String expressCompany = trimToNull(params.get("expressCompany"));
-        // 客户信息
+        // 客户信息（出库必须选择客户）
         String customerName = trimToNull(params.get("customerName"));
+        if (!StringUtils.hasText(customerName)) {
+            throw new IllegalArgumentException("出库必须选择客户");
+        }
         String customerPhone = trimToNull(params.get("customerPhone"));
         String shippingAddress = trimToNull(params.get("shippingAddress"));
 
@@ -559,7 +562,9 @@ public class FinishedInventoryOrchestrator {
      * @param items 列表，每项含 qrCode 和 quantity
      */
     @Transactional(rollbackFor = Exception.class)
-    public void qrcodeOutbound(List<Map<String, Object>> items) {
+    public void qrcodeOutbound(Map<String, Object> params) {
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> items = (List<Map<String, Object>>) params.get("items");
         if (items == null || items.isEmpty()) {
             throw new IllegalArgumentException("出库明细不能为空");
         }
@@ -581,7 +586,7 @@ public class FinishedInventoryOrchestrator {
                     : qrCode;
             skuQtyMap.merge(skuCode, quantity, Integer::sum);
         }
-        // 构造 params 复用标准出库逻辑
+        // 构造 outbound params，保留客户信息复用标准出库逻辑
         List<Map<String, Object>> stdItems = new java.util.ArrayList<>();
         for (Map.Entry<String, Integer> e : skuQtyMap.entrySet()) {
             Map<String, Object> m = new java.util.HashMap<>();
@@ -589,9 +594,9 @@ public class FinishedInventoryOrchestrator {
             m.put("quantity", e.getValue());
             stdItems.add(m);
         }
-        Map<String, Object> params = new java.util.HashMap<>();
-        params.put("items", stdItems);
-        outbound(params);
+        Map<String, Object> outboundParams = new java.util.HashMap<>(params);
+        outboundParams.put("items", stdItems);
+        outbound(outboundParams);
     }
 
     private void recordProductOutstock(ProductSku sku,

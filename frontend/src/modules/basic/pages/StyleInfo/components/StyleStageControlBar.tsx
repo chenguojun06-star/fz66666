@@ -153,6 +153,7 @@ const StyleStageControlBar: React.FC<Props> = ({
 
   // 开始
   const handleStart = async () => {
+    if (saving) return;
     if (onBeforeStart) {
       const canStart = await onBeforeStart();
       if (!canStart) return;
@@ -162,6 +163,7 @@ const StyleStageControlBar: React.FC<Props> = ({
 
   // 完成
   const handleComplete = async () => {
+    if (saving) return;
     if (onBeforeComplete) {
       const canComplete = await onBeforeComplete();
       if (!canComplete) return;
@@ -250,7 +252,7 @@ const StyleStageControlBar: React.FC<Props> = ({
                 type="primary"
                 size="small"
                 loading={saving}
-                disabled={readOnly}
+                disabled={saving || readOnly}
                 onClick={handleStart}
               >
                 开始{stageName}
@@ -261,7 +263,7 @@ const StyleStageControlBar: React.FC<Props> = ({
                 type="primary"
                 size="small"
                 loading={saving}
-                disabled={readOnly}
+                disabled={saving || readOnly}
                 onClick={handleComplete}
               >
                 标记完成

@@ -10,16 +10,14 @@ import SmartStyleHoverCard from './SmartStyleHoverCard';
 import { StyleInfo, WorkbenchSection } from '@/types/style';
 import { getStyleSourceMeta } from '@/utils/styleSource';
 import {
-  SmartStage, PatternProductionSnapshot, StyleRecord, StageQuickAction,
+  SmartStage, StyleRecord, StageQuickAction,
   CATEGORY_MAP, SEASON_MAP, SAMPLE_PARENT_STAGES, STAGE_MIN_SLOT_WIDTH, REVIEW_STATUS_OPTIONS,
   buildConfirmStage, isScrappedStyle, resolveDisplayColor, resolveDisplaySize, resolveDisplayQuantity,
-  buildSmartStages, isMaintainedAfterCompletion, getDeliveryMeta, resolveStageTag, buildStageInsight,
-  isSampleSnapshotFullyCompleted, getSampleNodeProgress, isPassedReviewStatus, getReviewStatusLabel,
-  formatStageTimeRange, getProgressNodeColor, normalizePatternProductionSnapshot, isScrappedPatternSnapshot,
-  isRiskReviewStatus, clampPercent, formatNodeTime, resolveStageActionPath,
+  buildSmartStages, isMaintainedAfterCompletion, getDeliveryMeta,
+  getProgressNodeColor, clampPercent,
 } from './styleTableViewUtils';
 import { useNavigate } from 'react-router-dom';
-import api, { withQuery } from '@/utils/api';
+import { withQuery } from '@/utils/api';
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import StyleCopyModal from './StyleCopyModal';

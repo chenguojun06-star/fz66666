@@ -237,7 +237,8 @@ public class StyleStageHelper {
             throw new NoSuchElementException("款号不存在");
         }
         if (isCompleted(current.getPatternStatus())) {
-            throw new IllegalStateException("纸样已完成，无法修改，请联系管理员回退");
+            log.info("纸样已完成，跳过重复开始: styleId={}", id);
+            return true;
         }
 
         String currentUser = UserContext.username();
@@ -281,7 +282,8 @@ public class StyleStageHelper {
             throw new NoSuchElementException("款号不存在");
         }
         if (isCompleted(current.getPatternStatus())) {
-            throw new IllegalStateException("纸样已完成，无法修改，请联系管理员回退");
+            log.info("纸样已完成，跳过重复操作: styleId={}", id);
+            return true;
         }
 
         LocalDateTime now = LocalDateTime.now();

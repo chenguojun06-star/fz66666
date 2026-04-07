@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, Tag, Space, Select, App, Modal, InputNumber } from 'antd';
+import { Card, Tag, Space, Select, App, Modal, InputNumber, Button } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
@@ -10,6 +10,9 @@ import StandardSearchBar from '@/components/common/StandardSearchBar';
 import { useTablePagination } from '@/hooks';
 import api from '@/utils/api';
 import dayjs from 'dayjs';
+import { useOutstockShare } from './useOutstockShare';
+import { printOutstockRecord } from './outstockPrintHelper';
+import ShareLinkModal from './ShareLinkModal';
 
 interface OutstockRecord {
   id: number;
@@ -59,6 +62,9 @@ const OutstockRecordTab: React.FC = () => {
   const [paymentAmount, setPaymentAmount] = useState<number | null>(null);
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
 
+  // 分享
+  const { shareModalOpen, shareUrl, shareLoading, handleShare, handleCopyShareUrl, setShareModalOpen } = useOutstockShare(message);
+
   const loadRecords = useCallback(async () => {
     setLoading(true);
     try {
@@ -105,6 +111,8 @@ const OutstockRecordTab: React.FC = () => {
       setPaymentSubmitting(false);
     }
   };
+
+
 
   const paymentStatusMap: Record<string, { label: string; color: string }> = {
     unpaid: { label: '未收款', color: 'orange' },
@@ -276,7 +284,7 @@ const OutstockRecordTab: React.FC = () => {
     {
       title: '操作',
       key: 'actions',
-      width: 120,
+      width: 160,
       fixed: 'right',
       render: (_, record) => {
         const actions: RowAction[] = [];
@@ -292,6 +300,16 @@ const OutstockRecordTab: React.FC = () => {
             },
           });
         }
+        actions.push({
+          key: 'share',
+          label: '分享',
+          onClick: () => handleShare(record),
+        });
+        actions.push({
+          key: 'print',
+          label: '打印',
+          onClick: () => printOutstockRecord(record),
+        });
         return <RowActions actions={actions} />;
       },
     },
@@ -405,6 +423,15 @@ const OutstockRecordTab: React.FC = () => {
           </div>
         )}
       </Modal>
+
+      {/* 分享链接弹窗 */}
+      <ShareLinkModal
+        open={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        shareUrl={shareUrl}
+        shareLoading={shareLoading}
+        onCopy={handleCopyShareUrl}
+      />
     </Card>
   );
 };

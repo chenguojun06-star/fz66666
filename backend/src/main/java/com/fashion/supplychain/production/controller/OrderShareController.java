@@ -4,6 +4,7 @@ import com.fashion.supplychain.common.CosService;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.production.dto.OrderShareResponse;
 import com.fashion.supplychain.production.orchestration.OrderShareOrchestrator;
+import com.fashion.supplychain.warehouse.dto.OutstockShareResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -73,6 +74,14 @@ public class OrderShareController {
     @GetMapping("/api/public/share/order/{token:.+}")
     public Result<OrderShareResponse> getSharedOrder(@PathVariable("token") String token) {
         return orderShareOrchestrator.resolveShareOrder(token);
+    }
+
+    /**
+     * 通过分享令牌获取出库记录公开摘要（无需登录）
+     */
+    @GetMapping("/api/public/share/outstock/{token:.+}")
+    public Result<OutstockShareResponse> getSharedOutstock(@PathVariable("token") String token) {
+        return orderShareOrchestrator.resolveOutstockShare(token);
     }
 
     @GetMapping("/api/public/share/order/{token:.+}/style-cover")

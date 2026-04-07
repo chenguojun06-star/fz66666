@@ -3,6 +3,7 @@ import { Card, Button, Space, Tag, Row, Col, Input, Select, App, Tabs } from 'an
 import { PlusOutlined, DownloadOutlined, ExportOutlined, HistoryOutlined, ScanOutlined } from '@ant-design/icons';
 import QrcodeOutboundModal from './QrcodeOutboundModal';
 import OutstockRecordTab from './OutstockRecordTab';
+import CustomerInfoSection from './CustomerInfoSection';
 import { getMainColumns, getSkuColumns } from './finishedInventoryColumns';
 import type { SKUDetail, FinishedInventory } from './finishedInventoryColumns';
 import Layout from '@/components/Layout';
@@ -210,6 +211,10 @@ const _FinishedInventory: React.FC = () => {
 
   // 确认出库
   const handleOutboundConfirm = async () => {
+    if (!outboundCustomerName.trim()) {
+      message.warning('请填写客户名称，出库必须选择客户');
+      return;
+    }
     const selectedItems = skuDetails.filter(item => (item.outboundQty || 0) > 0);
     if (selectedItems.length === 0) {
       message.warning('请至少输入一个SKU的出库数量');
@@ -243,7 +248,7 @@ const _FinishedInventory: React.FC = () => {
         ...(outboundProductionOrderNo ? { productionOrderNo: outboundProductionOrderNo } : {}),
         ...(outboundTrackingNo ? { trackingNo: outboundTrackingNo } : {}),
         ...(outboundExpressCompany ? { expressCompany: outboundExpressCompany } : {}),
-        ...(outboundCustomerName ? { customerName: outboundCustomerName } : {}),
+        customerName: outboundCustomerName.trim(),
         ...(outboundCustomerPhone ? { customerPhone: outboundCustomerPhone } : {}),
         ...(outboundShippingAddress ? { shippingAddress: outboundShippingAddress } : {}),
       });
@@ -520,41 +525,15 @@ const _FinishedInventory: React.FC = () => {
                 />
               </div>
 
-              {/* 客户信息 */}
-              <Card size="small" style={{ background: '#f0f5ff', border: '1px solid #adc6ff' }}>
-                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, color: '#1d39c4' }}>
-                  👤 客户信息 —— 出库发送给哪个客户
-                </div>
-                <Row gutter={12}>
-                  <Col span={8}>
-                    <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>客户名称</div>
-                    <Input
-                      size="small"
-                      placeholder="输入客户/公司名称"
-                      value={outboundCustomerName}
-                      onChange={(e) => setOutboundCustomerName(e.target.value)}
-                    />
-                  </Col>
-                  <Col span={8}>
-                    <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>联系电话</div>
-                    <Input
-                      size="small"
-                      placeholder="输入联系电话"
-                      value={outboundCustomerPhone}
-                      onChange={(e) => setOutboundCustomerPhone(e.target.value)}
-                    />
-                  </Col>
-                  <Col span={8}>
-                    <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>收货地址</div>
-                    <Input
-                      size="small"
-                      placeholder="输入收货地址"
-                      value={outboundShippingAddress}
-                      onChange={(e) => setOutboundShippingAddress(e.target.value)}
-                    />
-                  </Col>
-                </Row>
-              </Card>
+              <CustomerInfoSection
+                variant="card"
+                customerName={outboundCustomerName}
+                onCustomerNameChange={setOutboundCustomerName}
+                customerPhone={outboundCustomerPhone}
+                onCustomerPhoneChange={setOutboundCustomerPhone}
+                shippingAddress={outboundShippingAddress}
+                onShippingAddressChange={setOutboundShippingAddress}
+              />
 
               {/* 出库金额自动汇总 */}
               {(() => {

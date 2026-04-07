@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.production.entity.ProductOutstock;
 import com.fashion.supplychain.warehouse.dto.FinishedInventoryDTO;
+import com.fashion.supplychain.production.orchestration.OrderShareOrchestrator;
 import com.fashion.supplychain.warehouse.orchestration.FinishedInventoryOrchestrator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -24,6 +25,7 @@ import java.util.Map;
 public class FinishedInventoryController {
 
     private final FinishedInventoryOrchestrator finishedInventoryOrchestrator;
+    private final OrderShareOrchestrator orderShareOrchestrator;
 
     /**
      * 分页查询成品库存
@@ -65,9 +67,7 @@ public class FinishedInventoryController {
      */
     @PostMapping("/qrcode-outbound")
     public Result<Void> qrcodeOutbound(@RequestBody Map<String, Object> body) {
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> items = (List<Map<String, Object>>) body.get("items");
-        finishedInventoryOrchestrator.qrcodeOutbound(items);
+        finishedInventoryOrchestrator.qrcodeOutbound(body);
         return Result.success(null);
     }
 
@@ -92,5 +92,15 @@ public class FinishedInventoryController {
                 : new BigDecimal(String.valueOf(amountObj));
         finishedInventoryOrchestrator.confirmPayment(id, paidAmount);
         return Result.success(null);
+    }
+
+    /**
+     * 生成出库记录分享令牌（按客户名称汇总）
+     */
+    @PostMapping("/outstock/share-token")
+    public Result<Map<String, String>> generateOutstockShareToken(@RequestBody Map<String, String> params) {
+        String customerName = params.get("customerName");
+        String token = orderShareOrchestrator.generateOutstockShareToken(customerName);
+        return Result.success(Map.of("token", token, "shareUrl", "/share/outstock/" + token));
     }
 }

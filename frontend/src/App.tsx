@@ -33,7 +33,6 @@ import {
   FinishedInventory,
   SampleInventory,
   EcommerceOrders,
-  OutstockReceive,
 } from './modules/warehouse';
 import { Dashboard } from './modules/dashboard';
 import { UserList, UserApproval, RoleList, OrganizationTree, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard } from './modules/system';
@@ -57,6 +56,7 @@ import {
 const NotFound = React.lazy(() => import('./pages/NotFound'));
 // 公开页面（无需登录）
 const ShareOrderPage = React.lazy(() => import('./modules/production/pages/ShareOrderPage/index'));
+const ShareOutstockPage = React.lazy(() => import('./modules/warehouse/pages/ShareOutstockPage/index'));
 
 const RootRedirect: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
@@ -270,7 +270,6 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.finishedInventory} element={<Suspense fallback={routeFallback}><FinishedInventory /></Suspense>} />
           <Route path={paths.sampleInventory} element={<Suspense fallback={routeFallback}><SampleInventory /></Suspense>} />
           <Route path={paths.ecommerceOrders} element={<Suspense fallback={routeFallback}><EcommerceOrders /></Suspense>} />
-          <Route path={paths.outstockReceive} element={<Suspense fallback={routeFallback}><OutstockReceive /></Suspense>} />
 
           <Route path={paths.user} element={<Suspense fallback={routeFallback}><UserList /></Suspense>} />
           <Route path={paths.dict} element={<Suspense fallback={routeFallback}><DictManage /></Suspense>} />
@@ -302,6 +301,7 @@ const AppRoutes: React.FC = () => {
         </Route>
         {/* 客户订单分享页（无需登录） */}
         <Route path="/share/:token" element={<Suspense fallback={routeFallback}><ShareOrderPage /></Suspense>} />
+        <Route path="/share/outstock/:token" element={<Suspense fallback={routeFallback}><ShareOutstockPage /></Suspense>} />
         <Route path="*" element={<Suspense fallback={routeFallback}><NotFound /></Suspense>} />
       </Routes>
 

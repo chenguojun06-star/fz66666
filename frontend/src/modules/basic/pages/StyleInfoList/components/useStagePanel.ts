@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type Dispatch, type SetStateAction } from 'react';
 import { Modal } from 'antd';
 import { NavigateFunction } from 'react-router-dom';
 import { StyleInfo } from '@/types/style';
@@ -15,7 +15,7 @@ type MessageInstance = { success: (msg: string) => void; error: (msg: string) =>
 
 interface UseStagePanelParams {
   selectedStage: { record: StyleInfo; stage: SmartStage } | null;
-  setSelectedStage: React.Dispatch<React.SetStateAction<{ record: StyleInfo; stage: SmartStage } | null>>;
+  setSelectedStage: Dispatch<SetStateAction<{ record: StyleInfo; stage: SmartStage } | null>>;
   navigate: NavigateFunction;
   message: MessageInstance;
   sampleHook: ReturnType<typeof useSampleStage>;

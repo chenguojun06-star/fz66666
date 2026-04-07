@@ -601,6 +601,36 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             repaired += ensureColumn(conn, schema, "t_production_order", "skc",
                     "VARCHAR(64) DEFAULT NULL COMMENT 'SKC统一编号'");
 
+            // --- t_style_process 补列 ---
+            repaired += ensureColumn(conn, schema, "t_style_process", "difficulty",
+                    "VARCHAR(10) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_style_process", "rate_multiplier",
+                    "DECIMAL(5,2) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_style_process", "tenant_id",
+                    "BIGINT DEFAULT NULL");
+
+            // --- t_style_quotation 补列 ---
+            repaired += ensureColumn(conn, schema, "t_style_quotation", "tenant_id",
+                    "BIGINT DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_style_quotation", "creator_id",
+                    "VARCHAR(32) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_style_quotation", "creator_name",
+                    "VARCHAR(100) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_style_quotation", "updater_id",
+                    "VARCHAR(32) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_style_quotation", "updater_name",
+                    "VARCHAR(100) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_style_quotation", "auditor_id",
+                    "VARCHAR(32) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_style_quotation", "auditor_name",
+                    "VARCHAR(100) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_style_quotation", "audit_time",
+                    "DATETIME DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_style_quotation", "audit_status",
+                    "INT NOT NULL DEFAULT 0");
+            repaired += ensureColumn(conn, schema, "t_style_quotation", "audit_remark",
+                    "VARCHAR(500) DEFAULT NULL");
+
             if (repaired > 0) {
                 log.warn("[DbRepair] 共修复 {} 个缺失列，Flyway 可能未正常执行对应迁移脚本", repaired);
             }

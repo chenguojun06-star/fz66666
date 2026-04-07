@@ -160,7 +160,13 @@ function buildPatternOperationOptions({ patternDetail, processConfig: _processCo
     return options;
   }
 
-  // ── 阶段二：生产完成，等待入库 ─────────────────────────────────────
+  // ── 阶段二：待领取 → 领取操作 ───────────────────────────────────────
+  if (status === 'PENDING') {
+    options.push({ value: 'RECEIVE', label: '领取样板', icon: '📋' });
+    return options; // 待领取状态只展示领取
+  }
+
+  // ── 阶段三：生产完成，等待入库 ─────────────────────────────────────
   if ((status === 'PRODUCTION_COMPLETED' || status === 'COMPLETED') && !reviewApproved) {
     options.push({ value: 'REVIEW', label: '样衣审核', icon: '🧾' });
     options.push({ value: 'WAREHOUSE_IN', label: '样衣入库（将先审核）', icon: '📦' });
@@ -172,7 +178,7 @@ function buildPatternOperationOptions({ patternDetail, processConfig: _processCo
     return options; // 已完成只展示入库，不展示其他生产工序
   }
 
-  // ── 阶段三：生产中，展示固定6个父进度工序（未扫的才显示）─────────
+  // ── 阶段四：生产中，展示固定6个父进度工序（未扫的才显示）─────────
   const PARENT_PRODUCTION_STAGES = [
     { value: 'PROCUREMENT', label: '采购',    icon: '🛒' },
     { value: 'CUTTING',     label: '裁剪',    icon: '✂️' },

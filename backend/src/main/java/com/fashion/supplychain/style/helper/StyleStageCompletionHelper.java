@@ -55,7 +55,8 @@ public class StyleStageCompletionHelper {
             throw new NoSuchElementException("款号不存在");
         }
         if (current.getSizeCompletedTime() != null) {
-            throw new IllegalStateException("尺寸表已完成，无法重新开始");
+            log.info("尺寸表已完成，跳过重新开始: styleId={}", id);
+            return true;
         }
 
         String currentUser = UserContext.username();
@@ -82,7 +83,8 @@ public class StyleStageCompletionHelper {
             throw new NoSuchElementException("款号不存在");
         }
         if (current.getSizeCompletedTime() != null) {
-            throw new IllegalStateException("尺寸表已完成，无法重复操作");
+            log.info("尺寸表已完成，跳过重复操作: styleId={}", id);
+            return true;
         }
         if (current.getSizeStartTime() == null) {
             throw new IllegalStateException("请先点击'开始尺寸表配置'");
@@ -137,7 +139,8 @@ public class StyleStageCompletionHelper {
             throw new NoSuchElementException("款号不存在");
         }
         if (current.getBomCompletedTime() != null) {
-            throw new IllegalStateException("BOM配置已完成，无法重新开始");
+            log.info("BOM配置已完成，跳过重新开始: styleId={}", id);
+            return true;
         }
 
         String currentUser = UserContext.username();
@@ -161,7 +164,8 @@ public class StyleStageCompletionHelper {
             throw new NoSuchElementException("款号不存在");
         }
         if (current.getBomCompletedTime() != null) {
-            throw new IllegalStateException("BOM配置已完成，无法重复操作");
+            log.info("BOM配置已完成，跳过重复操作: styleId={}", id);
+            return true;
         }
         if (current.getBomStartTime() == null) {
             throw new IllegalStateException("请先点击'开始BOM配置'");
