@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { readPageSize } from '@/utils/pageSizeStore';
 import dayjs from 'dayjs';
 import AccountManagementModal from './components/AccountManagementModal';
@@ -12,7 +12,6 @@ import {
   Image,
   Input,
   InputNumber,
-  Modal,
   Select,
   Space,
   Tabs,
@@ -34,26 +33,22 @@ import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import SmallModal from '@/components/common/SmallModal';
-import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { formatDateTime } from '@/utils/datetime';
 import {
-  wagePaymentApi,
   PAYMENT_METHOD_OPTIONS,
   PAYMENT_STATUS_MAP,
   OWNER_TYPE_OPTIONS,
   BIZ_TYPE_OPTIONS,
   BIZ_TYPE_MAP,
   type WagePayment,
-  type PaymentAccount,
-  type PaymentQueryRequest,
-  type PayableItem,
 } from '@/services/finance/wagePaymentApi';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
-import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
-import type { SmartErrorInfo } from '@/smart/core/types';
 import { usePaymentColumns, methodIconMap, accountTypeIconMap } from './hooks/usePaymentColumns';
-
+import { usePaymentData } from './hooks/usePaymentData';
+import { usePayModal } from './hooks/usePayModal';
+import { useAccountModal } from './hooks/useAccountModal';
+import { useProofModal } from './hooks/useProofModal';
 
 const { RangePicker } = DatePicker;
 import * as XLSX from 'xlsx';
@@ -72,557 +67,49 @@ export const exportToExcel = (data: any[], columns: any[], filename: string) => 
     XLSX.writeFile(workbook, `${filename}_${dayjs().format('YYYYMMDDHHmmss')}.xlsx`);
 };
 
-
 // ============================================================
 // 主组件 — 统一付款中心
 // ============================================================
 const PaymentCenterPage: React.FC = () => {
   const { message: msg } = App.useApp();
 
-  const [activeTab, setActiveTab] = useState<string>('pending');
-  const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
-  const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
+  // ---- 数据与业务逻辑 ----
+  const data = usePaymentData({ msg });
+  const pay = usePayModal({ msg, fetchPayables: data.fetchPayables, fetchPayments: data.fetchPayments, reportSmartError: data.reportSmartError });
+  const acct = useAccountModal({ msg, reportSmartError: data.reportSmartError, showSmartErrorNotice: data.showSmartErrorNotice, setSmartError: data.setSmartError });
+  const proof = useProofModal({ msg, reportSmartError: data.reportSmartError, showSmartErrorNotice: data.showSmartErrorNotice, setSmartError: data.setSmartError, fetchPayments: data.fetchPayments, fetchPayables: data.fetchPayables });
 
-  const reportSmartError = useCallback((title: string, reason?: string, code?: string) => {
-    if (!showSmartErrorNotice) return;
-    setSmartError({
-      title,
-      reason,
-      code,
-      actionText: '刷新重试',
-    });
-  }, [showSmartErrorNotice]);
-
-  // ---- 待付款列表 ----
-  const [payables, setPayables] = useState<PayableItem[]>([]);
-  const [payablesLoading, setPayablesLoading] = useState(true);
-  const [payableBizType, setPayableBizType] = useState<string>('');
-  const [payableDateRange, setPayableDateRange] = useState<[string, string]>(['', '']);
-
-  // ---- 待付款批量选择 ----
-  const [selectedPayableKeys, setSelectedPayableKeys] = useState<React.Key[]>([]);
-  const [batchPaySubmitting, setBatchPaySubmitting] = useState(false);
-
-  // ---- 驳回待付款弹窗 ----
-  const [pendingRejectPayable, setPendingRejectPayable] = useState<PayableItem | null>(null);
-  const [rejectPayableLoading, setRejectPayableLoading] = useState(false);
-
-  // ---- 支付记录列表 ----
-  const [payments, setPayments] = useState<WagePayment[]>([]);
-  const [paymentsLoading, setPaymentsLoading] = useState(false);
-  const [filterForm] = Form.useForm();
-
-  // ---- 发起支付弹窗 ----
-  const [payModalOpen, setPayModalOpen] = useState(false);
-  const [payForm] = Form.useForm();
-  const [payAccounts, setPayAccounts] = useState<PaymentAccount[]>([]);
-  const [selectedMethod, setSelectedMethod] = useState<string>('');
-  const [selectedAccount, setSelectedAccount] = useState<PaymentAccount | null>(null);
-  const [paySubmitting, setPaySubmitting] = useState(false);
-  const [currentPayable, setCurrentPayable] = useState<PayableItem | null>(null);
-
-  // ---- 账户管理弹窗 ----
-  const [accountModalOpen, setAccountModalOpen] = useState(false);
-  const [accountForm] = Form.useForm();
-  const [accounts, setAccounts] = useState<PaymentAccount[]>([]);
-  const [accountsLoading, setAccountsLoading] = useState(false);
-  const [accountOwnerType, setAccountOwnerType] = useState<string>('');
-  const [accountOwnerId, setAccountOwnerId] = useState<string>('');
-  const [accountOwnerName, setAccountOwnerName] = useState<string>('');
-  const [accountSaving, setAccountSaving] = useState(false);
-  const [editingAccount, setEditingAccount] = useState<PaymentAccount | null>(null);
-  const [accountDetailOpen, setAccountDetailOpen] = useState(false);
-
-  // ---- 支付详情弹窗 ----
+  // ---- 支付详情弹窗（仅 2 个 state，保留在主组件）----
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailRecord, setDetailRecord] = useState<WagePayment | null>(null);
 
-  // ---- 上传凭证弹窗 ----
-  const [proofModalOpen, setProofModalOpen] = useState(false);
-  const [proofForm] = Form.useForm();
-  const [proofPaymentId, setProofPaymentId] = useState<string>('');
-  const [proofSubmitting, setProofSubmitting] = useState(false);
-  const [proofFileList, setProofFileList] = useState<any[]>([]);
-
-  // ---- QR码上传 ----
-  const [qrFileList, setQrFileList] = useState<any[]>([]);
-
-  // ============================================================
-  //  数据加载
-  // ============================================================
-
-  /** 加载待付款单据 */
-  const fetchPayables = useCallback(async () => {
-    setPayablesLoading(true);
-    try {
-      const res: any = await wagePaymentApi.listPendingPayables(payableBizType || undefined);
-      setPayables(res?.data ?? res ?? []);
-      if (showSmartErrorNotice) setSmartError(null);
-    } catch (err: any) {
-      reportSmartError('待付款数据加载失败', err?.message || '网络异常或服务不可用，请稍后重试', 'WAGE_PAYABLES_LOAD_FAILED');
-      msg.error(`加载待付款数据失败: ${err?.message || '请检查网络连接'}`);
-    } finally {
-      setPayablesLoading(false);
-    }
-  }, [payableBizType, msg, reportSmartError, showSmartErrorNotice]);
-
-  /** 加载支付记录 */
-  const fetchPayments = useCallback(async () => {
-    setPaymentsLoading(true);
-    try {
-      const values = filterForm.getFieldsValue();
-      const query: PaymentQueryRequest = {};
-      if (values.payeeName) query.payeeName = values.payeeName;
-      if (values.status) query.status = values.status;
-      if (values.paymentMethod) query.paymentMethod = values.paymentMethod;
-      if (values.bizType) query.bizType = values.bizType;
-      if (values.dateRange?.[0]) query.startTime = values.dateRange[0].startOf('day').format('YYYY-MM-DDTHH:mm:ss');
-      if (values.dateRange?.[1]) query.endTime = values.dateRange[1].endOf('day').format('YYYY-MM-DDTHH:mm:ss');
-      const res: any = await wagePaymentApi.listPayments(query);
-      setPayments(res?.data ?? res ?? []);
-      if (showSmartErrorNotice) setSmartError(null);
-    } catch (err: any) {
-      reportSmartError('支付记录加载失败', err?.message || '网络异常或服务不可用，请稍后重试', 'WAGE_PAYMENTS_LOAD_FAILED');
-      msg.error(`加载支付记录失败: ${err?.message || '请检查网络连接'}`);
-    } finally {
-      setPaymentsLoading(false);
-    }
-  }, [filterForm, msg, reportSmartError, showSmartErrorNotice]);
-
-  useEffect(() => {
-    if (activeTab === 'pending') {
-      fetchPayables();
-    } else {
-      fetchPayments();
-    }
-  }, [activeTab, fetchPayables, fetchPayments]);
-
-  useEffect(() => {
-    if (!payModalOpen) {
-      payForm.resetFields();
-      return;
-    }
-
-    if (!currentPayable) {
-      return;
-    }
-
-    payForm.setFieldsValue({
-      payeeType: currentPayable.payeeType,
-      payeeId: currentPayable.payeeId,
-      payeeName: currentPayable.payeeName,
-      amount: Number(currentPayable.amount) - Number(currentPayable.paidAmount || 0),
-      bizType: currentPayable.bizType,
-      bizId: currentPayable.bizId,
-      bizNo: currentPayable.bizNo,
-    });
-  }, [currentPayable, payForm, payModalOpen]);
-
-  useEffect(() => {
-    if (!accountDetailOpen) {
-      accountForm.resetFields();
-      setQrFileList([]);
-      return;
-    }
-
-    if (!editingAccount) {
-      return;
-    }
-
-    accountForm.setFieldsValue({
-      accountType: editingAccount.accountType,
-      accountName: editingAccount.accountName,
-      accountNo: editingAccount.accountNo,
-      bankName: editingAccount.bankName,
-      bankBranch: editingAccount.bankBranch,
-      qrCodeUrl: editingAccount.qrCodeUrl,
-      isDefault: editingAccount.isDefault === 1,
-    });
-    if (editingAccount.qrCodeUrl) {
-      setQrFileList([{ uid: '-1', name: '二维码', status: 'done', url: editingAccount.qrCodeUrl }]);
-    } else {
-      setQrFileList([]);
-    }
-  }, [accountDetailOpen, accountForm, editingAccount]);
-
-  // ============================================================
-  //  发起支付（从待付款项目触发，或手动发起）
-  // ============================================================
-  const openPayModal = (payable?: PayableItem) => {
-    payForm.resetFields();
-    setSelectedMethod('');
-    setSelectedAccount(null);
-    setPayAccounts([]);
-    setCurrentPayable(payable ?? null);
-
-    if (payable) {
-      loadPayeeAccounts(payable.payeeType, payable.payeeId);
-    }
-    setPayModalOpen(true);
-  };
-
-  const loadPayeeAccounts = async (ownerType: string, ownerId: string) => {
-    try {
-      const res: any = await wagePaymentApi.listAccounts(ownerType, ownerId);
-      setPayAccounts(res?.data ?? res ?? []);
-    } catch {
-      // ignore
-    }
-  };
-
-  const handlePayeeChange = () => {
-    const payeeType = payForm.getFieldValue('payeeType');
-    const payeeId = payForm.getFieldValue('payeeId');
-    if (payeeType && payeeId) {
-      loadPayeeAccounts(payeeType, payeeId);
-    }
-  };
-
-  const handleMethodSelect = (method: string) => {
-    setSelectedMethod(method);
-    payForm.setFieldsValue({ paymentMethod: method });
-    if (method !== 'OFFLINE') {
-      const matchAccounts = payAccounts.filter(a => a.accountType === method);
-      const defaultOne = matchAccounts.find(a => a.isDefault === 1) ?? matchAccounts[0];
-      setSelectedAccount(defaultOne ?? null);
-      payForm.setFieldsValue({ paymentAccountId: defaultOne?.id });
-    } else {
-      setSelectedAccount(null);
-      payForm.setFieldsValue({ paymentAccountId: undefined });
-    }
-  };
-
-  const handlePaySubmit = async () => {
-    try {
-      const values = await payForm.validateFields();
-      setPaySubmitting(true);
-
-      const hasBiz = values.bizType && values.bizId;
-      const apiCall = hasBiz ? wagePaymentApi.initiateWithCallback : wagePaymentApi.initiatePayment;
-
-      const res: any = await apiCall({
-        payeeType: values.payeeType,
-        payeeId: values.payeeId,
-        payeeName: values.payeeName,
-        paymentAccountId: values.paymentAccountId,
-        paymentMethod: values.paymentMethod,
-        amount: values.amount,
-        bizType: values.bizType,
-        bizId: values.bizId,
-        bizNo: values.bizNo,
-        remark: values.remark,
-      });
-      const payment = res?.data ?? res;
-      if (payment) {
-        msg.success(`支付已发起，单号：${payment.paymentNo}`);
-        setPayModalOpen(false);
-        fetchPayables();
-        fetchPayments();
-      }
-    } catch (err: any) {
-      reportSmartError('支付发起失败', err?.message || '网络异常或服务不可用，请稍后重试', 'WAGE_PAY_SUBMIT_FAILED');
-      if (err?.message) msg.error(err.message);
-    } finally {
-      setPaySubmitting(false);
-    }
-  };
-
-  // ============================================================
-  //  账户管理
-  // ============================================================
-  const openAccountModal = (ownerType: string, ownerId: string, ownerName: string) => {
-    setAccountOwnerType(ownerType);
-    setAccountOwnerId(ownerId);
-    setAccountOwnerName(ownerName);
-    setEditingAccount(null);
-    setAccountDetailOpen(false);
-    accountForm.resetFields();
-    setQrFileList([]);
-    setAccountModalOpen(true);
-    loadAccounts(ownerType, ownerId);
-  };
-
-  const loadAccounts = async (ownerType: string, ownerId: string) => {
-    setAccountsLoading(true);
-    try {
-      const res: any = await wagePaymentApi.listAccounts(ownerType, ownerId);
-      setAccounts(res?.data ?? res ?? []);
-    } catch (err: any) {
-      reportSmartError('收款账户加载失败', err?.message || '网络异常或服务不可用，请稍后重试', 'WAGE_ACCOUNT_LOAD_FAILED');
-      msg.error(`加载收款账户失败: ${err?.message || '请检查网络连接'}`);
-    } finally {
-      setAccountsLoading(false);
-    }
-  };
-
-  const handleSaveAccount = async () => {
-    try {
-      const values = await accountForm.validateFields();
-      setAccountSaving(true);
-      const payload: PaymentAccount = {
-        ...editingAccount,
-        ownerType: accountOwnerType as 'WORKER' | 'FACTORY',
-        ownerId: accountOwnerId,
-        ownerName: accountOwnerName,
-        accountType: values.accountType,
-        accountName: values.accountName,
-        accountNo: values.accountNo,
-        bankName: values.bankName,
-        bankBranch: values.bankBranch,
-        qrCodeUrl: values.qrCodeUrl,
-        isDefault: values.isDefault ? 1 : 0,
-      };
-      await wagePaymentApi.saveAccount(payload);
-      msg.success('保存成功');
-      setAccountDetailOpen(false);
-      setEditingAccount(null);
-      accountForm.resetFields();
-      setQrFileList([]);
-      if (showSmartErrorNotice) setSmartError(null);
-      loadAccounts(accountOwnerType, accountOwnerId);
-    } catch (err: any) {
-      reportSmartError('收款账户保存失败', err?.message || '请检查输入后重试', 'WAGE_ACCOUNT_SAVE_FAILED');
-      if (err?.message) msg.error(err.message);
-    } finally {
-      setAccountSaving(false);
-    }
-  };
-
-  const handleDeleteAccount = async (id: string) => {
-    try {
-      await wagePaymentApi.removeAccount(id);
-      msg.success('已删除');
-      loadAccounts(accountOwnerType, accountOwnerId);
-    } catch (err: any) {
-      reportSmartError('收款账户删除失败', err?.message || '网络异常或服务不可用，请稍后重试', 'WAGE_ACCOUNT_DELETE_FAILED');
-      msg.error(`删除账户失败: ${err?.message || '未知错误'}`);
-    }
-  };
-
-  const handleEditAccount = (account: PaymentAccount) => {
-    setEditingAccount(account);
-    setAccountDetailOpen(true);
-  };
-
-  const uploadQrImage = async (file: File) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    try {
-      const res: any = await api.post('/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      const url = res?.data ?? res;
-      if (url) {
-        accountForm.setFieldsValue({ qrCodeUrl: url });
-        setQrFileList([{ uid: '-1', name: file.name, status: 'done', url }]);
-        msg.success('上传成功');
-      }
-    } catch (err: any) {
-      reportSmartError('账户二维码上传失败', err?.message || '请检查文件格式后重试', 'WAGE_ACCOUNT_QR_UPLOAD_FAILED');
-      msg.error(`上传二维码失败: ${err?.message || '请检查文件格式'}`);
-    }
-  };
-
-  // ============================================================
-  //  确认线下支付（上传凭证）
-  // ============================================================
-  const openProofModal = (paymentId: string) => {
-    setProofPaymentId(paymentId);
-    proofForm.resetFields();
-    setProofFileList([]);
-    setProofModalOpen(true);
-  };
-
-  const uploadProofImage = async (file: File) => {
-    const formData = new FormData();
-    formData.append('file', file);
-    try {
-      const res: any = await api.post('/common/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      const url = res?.data ?? res;
-      if (url) {
-        proofForm.setFieldsValue({ proofUrl: url });
-        setProofFileList([{ uid: '-1', name: file.name, status: 'done', url }]);
-      }
-    } catch (err: any) {
-      reportSmartError('支付凭证上传失败', err?.message || '请检查文件格式后重试', 'WAGE_PROOF_UPLOAD_FAILED');
-      msg.error(`上传凭证失败: ${err?.message || '请检查文件格式'}`);
-    }
-  };
-
-  const handleConfirmProof = async () => {
-    try {
-      setProofSubmitting(true);
-      const values = proofForm.getFieldsValue();
-      await wagePaymentApi.confirmOfflineWithCallback(proofPaymentId, values.proofUrl, values.remark);
-      msg.success('已确认支付');
-      setProofModalOpen(false);
-      fetchPayments();
-      fetchPayables();
-      if (showSmartErrorNotice) setSmartError(null);
-    } catch (err: any) {
-      reportSmartError('线下支付确认失败', err?.message || '网络异常或服务不可用，请稍后重试', 'WAGE_PROOF_CONFIRM_FAILED');
-      msg.error(err?.message || '操作失败');
-    } finally {
-      setProofSubmitting(false);
-    }
-  };
-
-  // ============================================================
-  //  取消支付
-  // ============================================================
-  const handleCancel = (record: WagePayment) => {
-    Modal.confirm({
-      width: '30vw',
-      title: '确认取消',
-      content: `确定取消支付单 ${record.paymentNo} 吗？`,
-      onOk: async () => {
-        try {
-          await wagePaymentApi.cancelPayment(record.id, '手动取消');
-          msg.success('已取消');
-          fetchPayments();
-        } catch (err: any) {
-          msg.error(`取消支付失败: ${err?.message || '未知错误'}`);
-        }
-      },
-    });
-  };
-
-  // ============================================================
-  //  驳回待付款项
-  // ============================================================
-  const handleRejectPayable = (record: PayableItem) => {
-    setPendingRejectPayable(record);
-  };
-
-  const handleRejectPayableConfirm = async (reason: string) => {
-    if (!pendingRejectPayable) return;
-    setRejectPayableLoading(true);
-    try {
-      await wagePaymentApi.rejectPayable({
-        bizType: pendingRejectPayable.bizType,
-        bizId: pendingRejectPayable.bizId,
-        reason: reason.trim(),
-      });
-      msg.success('已驳回');
-      setPendingRejectPayable(null);
-      fetchPayables();
-    } catch (err: any) {
-      msg.error(err?.message || '驳回失败');
-    } finally {
-      setRejectPayableLoading(false);
-    }
-  };
-
-  // ============================================================
-  //  统计（需在 handleBatchPay 之前声明，因为函数体内引用了 filteredPayables）
-  // ============================================================
-
-  /** 按 yearMonth 前端过滤（bizType 后端已过滤，yearMonth 前端再过滤） */
-  const filteredPayables = useMemo(() => {
-    if (!payableDateRange[0]) return payables;
-    return payables.filter(p => {
-      const ym = p.yearMonth ?? p.createTime?.substring(0, 7) ?? '';
-      return ym === payableDateRange[0];
-    });
-  }, [payables, payableDateRange[0]]);
-
-  const pendingStats = useMemo(() => {
-    const total = filteredPayables.length;
-    const totalAmount = filteredPayables.reduce((s, p) => s + Number(p.amount ?? 0), 0);
-    const reconCount = filteredPayables.filter(p => p.bizType === 'RECONCILIATION').length;
-    const reimbCount = filteredPayables.filter(p => p.bizType === 'REIMBURSEMENT').length;
-    const payrollCount = filteredPayables.filter(p => p.bizType === 'PAYROLL' || p.bizType === 'PAYROLL_SETTLEMENT').length;
-    const orderCount = filteredPayables.filter(p => p.bizType === 'ORDER_SETTLEMENT').length;
-    return { total, totalAmount, reconCount, reimbCount, payrollCount, orderCount };
-  }, [filteredPayables]);
-
-  // ---- 批量付款（线下方式，逐条发起）----
-  const handleBatchPay = () => {
-    const selected = filteredPayables.filter(p => selectedPayableKeys.includes(`${p.bizType}-${p.bizId}`));
-    if (selected.length === 0) return;
-    const totalAmt = selected.reduce((s, p) => s + Number(p.amount ?? 0), 0);
-    Modal.confirm({
-      width: '30vw',
-      title: `批量线下付款`,
-      content: (
-        <div>
-          <p>选中 <strong>{selected.length}</strong> 笔待付款，合计金额：<strong style={{ color: '#cf1322' }}>¥{totalAmt.toFixed(2)}</strong></p>
-          <p style={{ fontSize: 12, color: '#999' }}>将以「线下付款」方式逐笔发起，请在完成转账后分别上传凭证确认。</p>
-        </div>
-      ),
-      okText: '确认批量发起',
-      cancelText: '取消',
-      onOk: async () => {
-        setBatchPaySubmitting(true);
-        let successCount = 0;
-        let failCount = 0;
-        for (const item of selected) {
-          try {
-            await wagePaymentApi.initiateWithCallback({
-              payeeType: item.payeeType,
-              payeeId: item.payeeId ?? '',
-              payeeName: item.payeeName,
-              paymentMethod: 'OFFLINE',
-              amount: Number(item.amount) - Number(item.paidAmount || 0),
-              bizType: item.bizType,
-              bizId: item.bizId,
-              bizNo: item.bizNo,
-              remark: `批量付款 - ${item.description ?? ''}`,
-            });
-            successCount++;
-          } catch {
-            failCount++;
-          }
-        }
-        setBatchPaySubmitting(false);
-        setSelectedPayableKeys([]);
-        if (failCount === 0) {
-          msg.success(`批量发起成功：${successCount} 笔已进入支付流程`);
-        } else {
-          msg.warning(`批量发起完成：${successCount} 成功，${failCount} 失败`);
-        }
-        void fetchPayables();
-        void fetchPayments();
-      },
-    });
-  };
-
-  // ---- 表格列定义（usePaymentColumns hook）----
+  // ---- 表格列定义 ----
   const { payableColumns, paymentColumns } = usePaymentColumns({
-    openPayModal,
-    handleRejectPayable,
-    openAccountModal,
+    openPayModal: pay.openPayModal,
+    handleRejectPayable: data.handleRejectPayable,
+    openAccountModal: acct.openAccountModal,
     setDetailRecord,
     setDetailOpen,
-    openProofModal,
-    handleCancel,
-    fetchPayments,
+    openProofModal: proof.openProofModal,
+    handleCancel: data.handleCancel,
+    fetchPayments: data.fetchPayments,
     msg,
   });
-
-  // ============================================================
-  //  支付记录统计
-  // ============================================================
-  const paymentStats = useMemo(() => {
-    const total = payments.length;
-    const successCount = payments.filter(p => p.status === 'success').length;
-    const totalAmount = payments.reduce((s, p) => s + Number(p.amount ?? 0), 0);
-    const successAmount = payments.filter(p => p.status === 'success').reduce((s, p) => s + Number(p.amount ?? 0), 0);
-    return { total, successCount, totalAmount, successAmount };
-  }, [payments]);
 
   // ============================================================
   //  渲染
   // ============================================================
   return (
     <Layout>
-        {showSmartErrorNotice && smartError ? (
+        {data.showSmartErrorNotice && data.smartError ? (
           <Card size="small" style={{ marginBottom: 12 }}>
             <SmartErrorNotice
-              error={smartError}
+              error={data.smartError}
               onFix={() => {
-                if (activeTab === 'pending') {
-                  void fetchPayables();
+                if (data.activeTab === 'pending') {
+                  void data.fetchPayables();
                 } else {
-                  void fetchPayments();
+                  void data.fetchPayments();
                 }
               }}
             />
@@ -641,7 +128,7 @@ const PaymentCenterPage: React.FC = () => {
                 集中管理员工工资、工厂对账、费用报销的付款操作
               </span>
             </div>
-            <Button type="primary" icon={<DollarOutlined />} onClick={() => openPayModal()}>
+            <Button type="primary" icon={<DollarOutlined />} onClick={() => pay.openPayModal()}>
               手动发起支付
             </Button>
           </div>
@@ -650,14 +137,14 @@ const PaymentCenterPage: React.FC = () => {
         {/* Tab 切换 */}
         <Card className="page-card">
           <Tabs
-            activeKey={activeTab}
-            onChange={setActiveTab}
+            activeKey={data.activeTab}
+            onChange={data.setActiveTab}
             items={[
               {
                 key: 'pending',
                 label: (
                   <span>
-                    <AccountBookOutlined /> 待付款 {pendingStats.total > 0 && <Tag color="red">{pendingStats.total}</Tag>}
+                    <AccountBookOutlined /> 待付款 {data.pendingStats.total > 0 && <Tag color="red">{data.pendingStats.total}</Tag>}
                   </span>
                 ),
                 children: (
@@ -675,19 +162,19 @@ const PaymentCenterPage: React.FC = () => {
                     }}>
                       <div style={{ textAlign: 'center', flex: 1, borderRight: '1px solid #e8e8e8' }}>
                         <div style={{ color: '#8c8c8c', fontSize: 13, marginBottom: 4 }}>待付款总额</div>
-                        <div style={{ fontSize: 24, fontWeight: 'bold', color: '#cf1322' }}>¥ {Number(pendingStats.totalAmount || 0).toLocaleString('zh-CN', {minimumFractionDigits: 2})}</div>
+                        <div style={{ fontSize: 24, fontWeight: 'bold', color: '#cf1322' }}>¥ {Number(data.pendingStats.totalAmount || 0).toLocaleString('zh-CN', {minimumFractionDigits: 2})}</div>
                       </div>
                       <div style={{ textAlign: 'center', flex: 1, borderRight: '1px solid #e8e8e8' }}>
                         <div style={{ color: '#8c8c8c', fontSize: 13, marginBottom: 4 }}>工厂对账</div>
-                        <div style={{ fontSize: 20, fontWeight: 500, color: '#333' }}>{pendingStats.reconCount || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: '#8c8c8c'}}>笔</span></div>
+                        <div style={{ fontSize: 20, fontWeight: 500, color: '#333' }}>{data.pendingStats.reconCount || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: '#8c8c8c'}}>笔</span></div>
                       </div>
                       <div style={{ textAlign: 'center', flex: 1, borderRight: '1px solid #e8e8e8' }}>
                         <div style={{ color: '#8c8c8c', fontSize: 13, marginBottom: 4 }}>费用报销</div>
-                        <div style={{ fontSize: 20, fontWeight: 500, color: '#333' }}>{pendingStats.reimbCount || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: '#8c8c8c'}}>笔</span></div>
+                        <div style={{ fontSize: 20, fontWeight: 500, color: '#333' }}>{data.pendingStats.reimbCount || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: '#8c8c8c'}}>笔</span></div>
                       </div>
                       <div style={{ textAlign: 'center', flex: 1 }}>
                         <div style={{ color: '#8c8c8c', fontSize: 13, marginBottom: 4 }}>员工工资</div>
-                        <div style={{ fontSize: 20, fontWeight: 500, color: '#333' }}>{pendingStats.payrollCount || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: '#8c8c8c'}}>笔</span></div>
+                        <div style={{ fontSize: 20, fontWeight: 500, color: '#333' }}>{data.pendingStats.payrollCount || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: '#8c8c8c'}}>笔</span></div>
                       </div>
                     </div>
 
@@ -698,9 +185,9 @@ const PaymentCenterPage: React.FC = () => {
                         {BIZ_TYPE_OPTIONS.map(opt => (
                           <Button
                             key={opt.value}
-                            type={payableBizType === opt.value ? 'primary' : 'default'}
+                            type={data.payableBizType === opt.value ? 'primary' : 'default'}
                             size="small"
-                            onClick={() => { setPayableBizType(opt.value); setSelectedPayableKeys([]); }}
+                            onClick={() => { data.setPayableBizType(opt.value); data.setSelectedPayableKeys([]); }}
                           >
                             {opt.label}
                           </Button>
@@ -709,14 +196,14 @@ const PaymentCenterPage: React.FC = () => {
                         <RangePicker
                           size="small"
                           allowClear
-                          value={payableDateRange[0] && payableDateRange[1] ? [dayjs(payableDateRange[0], 'YYYY-MM-DD'), dayjs(payableDateRange[1], 'YYYY-MM-DD')] : null}
+                          value={data.payableDateRange[0] && data.payableDateRange[1] ? [dayjs(data.payableDateRange[0], 'YYYY-MM-DD'), dayjs(data.payableDateRange[1], 'YYYY-MM-DD')] : null}
                           onChange={(dates) => {
                             if (dates && dates[0] && dates[1]) {
-                              setPayableDateRange([dates[0].format('YYYY-MM-DD'), dates[1].format('YYYY-MM-DD')]);
+                              data.setPayableDateRange([dates[0].format('YYYY-MM-DD'), dates[1].format('YYYY-MM-DD')]);
                             } else {
-                              setPayableDateRange(['', '']);
+                              data.setPayableDateRange(['', '']);
                             }
-                            setSelectedPayableKeys([]);
+                            data.setSelectedPayableKeys([]);
                           }}
                         />
                         <Button
@@ -724,11 +211,11 @@ const PaymentCenterPage: React.FC = () => {
                           icon={<DownloadOutlined />}
                           style={{ marginLeft: 8 }}
                           onClick={() => {
-                            if (payables.length === 0) {
+                            if (data.payables.length === 0) {
                               message.warning('当前没有数据可导出');
                               return;
                             }
-                            exportToExcel(payables, [
+                            exportToExcel(data.payables, [
                                 { title: '业务类型', dataIndex: 'bizType' },
                                 { title: '单据编号', dataIndex: 'bizNo' },
                                 { title: '收款方', dataIndex: 'receiverName' },
@@ -741,21 +228,21 @@ const PaymentCenterPage: React.FC = () => {
                         >
                           导出Excel
                         </Button>
-                        {selectedPayableKeys.length > 0 && (
+                        {data.selectedPayableKeys.length > 0 && (
                           <>
                             <span style={{ color: '#1677ff', marginLeft: 8 }}>
-                              已选 {selectedPayableKeys.length} 笔
-                              （¥{filteredPayables.filter(p => selectedPayableKeys.includes(`${p.bizType}-${p.bizId}`)).reduce((s, p) => s + Number(p.amount ?? 0), 0).toFixed(2)}）
+                              已选 {data.selectedPayableKeys.length} 笔
+                              （¥{data.filteredPayables.filter(p => data.selectedPayableKeys.includes(`${p.bizType}-${p.bizId}`)).reduce((s, p) => s + Number(p.amount ?? 0), 0).toFixed(2)}）
                             </span>
                             <Button
                               type="primary"
                               size="small"
-                              loading={batchPaySubmitting}
-                              onClick={handleBatchPay}
+                              loading={data.batchPaySubmitting}
+                              onClick={data.handleBatchPay}
                             >
                               批量付款
                             </Button>
-                            <Button size="small" onClick={() => setSelectedPayableKeys([])}>
+                            <Button size="small" onClick={() => data.setSelectedPayableKeys([])}>
                               清空选择
                             </Button>
                           </>
@@ -766,19 +253,19 @@ const PaymentCenterPage: React.FC = () => {
                     {/* 待付款表格 */}
                     <ResizableTable
                       columns={payableColumns}
-                      dataSource={filteredPayables}
+                      dataSource={data.filteredPayables}
                       rowKey={(r) => `${r.bizType}-${r.bizId}`}
-                      loading={payablesLoading}
+                      loading={data.payablesLoading}
                       scroll={{ x: 1200 }}
                       pagination={{ defaultPageSize: readPageSize(20), showSizeChanger: true, showTotal: (t) => `共 ${t} 条` }}
                       rowSelection={{
-                        selectedRowKeys: selectedPayableKeys,
-                        onChange: (keys) => setSelectedPayableKeys(keys),
+                        selectedRowKeys: data.selectedPayableKeys,
+                        onChange: (keys) => data.setSelectedPayableKeys(keys),
                         selections: [
                           {
                             key: 'select-all-month',
-                            text: payableDateRange[0] ? `全选 ${payableDateRange[0]} 月` : '全选当前月份',
-                            onSelect: () => setSelectedPayableKeys(filteredPayables.map(p => `${p.bizType}-${p.bizId}`)),
+                            text: data.payableDateRange[0] ? `全选 ${data.payableDateRange[0]} 月` : '全选当前月份',
+                            onSelect: () => data.setSelectedPayableKeys(data.filteredPayables.map(p => `${p.bizType}-${p.bizId}`)),
                           },
                         ],
                       }}
@@ -808,24 +295,24 @@ const PaymentCenterPage: React.FC = () => {
                     }}>
                       <div style={{ textAlign: 'center', flex: 1, borderRight: '1px solid #e8e8e8' }}>
                         <div style={{ color: '#8c8c8c', fontSize: 13, marginBottom: 4 }}>支付总额</div>
-                        <div style={{ fontSize: 24, fontWeight: 'bold', color: '#333' }}>¥ {Number(paymentStats.totalAmount || 0).toLocaleString('zh-CN', {minimumFractionDigits: 2})}</div>
+                        <div style={{ fontSize: 24, fontWeight: 'bold', color: '#333' }}>¥ {Number(data.paymentStats.totalAmount || 0).toLocaleString('zh-CN', {minimumFractionDigits: 2})}</div>
                       </div>
                       <div style={{ textAlign: 'center', flex: 1, borderRight: '1px solid #e8e8e8' }}>
                         <div style={{ color: '#8c8c8c', fontSize: 13, marginBottom: 4 }}>已付金额</div>
-                        <div style={{ fontSize: 24, fontWeight: 'bold', color: '#389e0d' }}>¥ {Number(paymentStats.successAmount || 0).toLocaleString('zh-CN', {minimumFractionDigits: 2})}</div>
+                        <div style={{ fontSize: 24, fontWeight: 'bold', color: '#389e0d' }}>¥ {Number(data.paymentStats.successAmount || 0).toLocaleString('zh-CN', {minimumFractionDigits: 2})}</div>
                       </div>
                       <div style={{ textAlign: 'center', flex: 1, borderRight: '1px solid #e8e8e8' }}>
                         <div style={{ color: '#8c8c8c', fontSize: 13, marginBottom: 4 }}>总笔数</div>
-                        <div style={{ fontSize: 20, fontWeight: 500, color: '#333' }}>{paymentStats.total || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: '#8c8c8c'}}>笔</span></div>
+                        <div style={{ fontSize: 20, fontWeight: 500, color: '#333' }}>{data.paymentStats.total || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: '#8c8c8c'}}>笔</span></div>
                       </div>
                       <div style={{ textAlign: 'center', flex: 1 }}>
                         <div style={{ color: '#8c8c8c', fontSize: 13, marginBottom: 4 }}>成功</div>
-                        <div style={{ fontSize: 20, fontWeight: 500, color: '#389e0d' }}>{paymentStats.successCount || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: '#8c8c8c'}}>笔</span></div>
+                        <div style={{ fontSize: 20, fontWeight: 500, color: '#389e0d' }}>{data.paymentStats.successCount || 0} <span style={{fontSize: 14, fontWeight: 'normal', color: '#8c8c8c'}}>笔</span></div>
                       </div>
                     </div>
 
                     {/* 过滤器 */}
-                    <Form form={filterForm} layout="inline" onFinish={fetchPayments} style={{ marginBottom: 16 }}>
+                    <Form form={data.filterForm} layout="inline" onFinish={data.fetchPayments} style={{ marginBottom: 16 }}>
                       <Form.Item name="payeeName">
                         <Input placeholder="收款方姓名" allowClear prefix={<SearchOutlined />} style={{ width: 150 }} />
                       </Form.Item>
@@ -860,11 +347,11 @@ const PaymentCenterPage: React.FC = () => {
                         <Button
                           icon={<DownloadOutlined />}
                           onClick={() => {
-                            if (payments.length === 0) {
+                            if (data.payments.length === 0) {
                               message.warning('当前没有数据可导出');
                               return;
                             }
-                            exportToExcel(payments, [
+                            exportToExcel(data.payments, [
                                 { title: '支付单号', dataIndex: 'paymentNo' },
                                 { title: '业务类型', dataIndex: 'bizType' },
                                 { title: '收款方', dataIndex: 'payeeName' },
@@ -885,9 +372,9 @@ const PaymentCenterPage: React.FC = () => {
                     {/* 支付记录表格 */}
                     <ResizableTable
                       columns={paymentColumns}
-                      dataSource={payments}
+                      dataSource={data.payments}
                       rowKey="id"
-                      loading={paymentsLoading}
+                      loading={data.paymentsLoading}
                       scroll={{ x: 1400 }}
                       pagination={{ defaultPageSize: readPageSize(20), showSizeChanger: true, showTotal: (t) => `共 ${t} 条` }}
                     />
@@ -900,18 +387,18 @@ const PaymentCenterPage: React.FC = () => {
 
         {/* ========================== 发起支付弹窗 ========================== */}
         <ResizableModal
-          open={payModalOpen}
-          title={currentPayable
-            ? `付款 — ${BIZ_TYPE_MAP[currentPayable.bizType]?.text ?? ''} · ${currentPayable.bizNo}`
+          open={pay.payModalOpen}
+          title={pay.currentPayable
+            ? `付款 — ${BIZ_TYPE_MAP[pay.currentPayable.bizType]?.text ?? ''} · ${pay.currentPayable.bizNo}`
             : '手动发起支付'
           }
-          onCancel={() => setPayModalOpen(false)}
+          onCancel={() => pay.setPayModalOpen(false)}
           width="40vw"
           centered
           footer={
             <Space>
-              <Button onClick={() => setPayModalOpen(false)}>取消</Button>
-              <Button type="primary" loading={paySubmitting} onClick={handlePaySubmit} icon={<DollarOutlined />}>
+              <Button onClick={() => pay.setPayModalOpen(false)}>取消</Button>
+              <Button type="primary" loading={pay.paySubmitting} onClick={pay.handlePaySubmit} icon={<DollarOutlined />}>
                 确认支付
               </Button>
             </Space>
@@ -919,32 +406,32 @@ const PaymentCenterPage: React.FC = () => {
         >
           <div style={{ padding: '0 8px' }}>
             {/* 业务信息提示 */}
-            {currentPayable && (
+            {pay.currentPayable && (
               <Card size="small" style={{ marginBottom: 16, background: '#f6ffed', border: '1px solid #b7eb8f' }}>
                 <Descriptions size="small" column={2}>
                   <Descriptions.Item label="业务类型">
-                    <Tag color={BIZ_TYPE_MAP[currentPayable.bizType]?.color}>
-                      {BIZ_TYPE_MAP[currentPayable.bizType]?.text}
+                    <Tag color={BIZ_TYPE_MAP[pay.currentPayable.bizType]?.color}>
+                      {BIZ_TYPE_MAP[pay.currentPayable.bizType]?.text}
                     </Tag>
                   </Descriptions.Item>
-                  <Descriptions.Item label="单据编号">{currentPayable.bizNo}</Descriptions.Item>
-                  <Descriptions.Item label="收款方">{currentPayable.payeeName}</Descriptions.Item>
+                  <Descriptions.Item label="单据编号">{pay.currentPayable.bizNo}</Descriptions.Item>
+                  <Descriptions.Item label="收款方">{pay.currentPayable.payeeName}</Descriptions.Item>
                   <Descriptions.Item label="应付金额">
-                    <span style={{ fontWeight: 600, color: '#cf1322' }}>¥{Number(currentPayable.amount).toFixed(2)}</span>
+                    <span style={{ fontWeight: 600, color: '#cf1322' }}>¥{Number(pay.currentPayable.amount).toFixed(2)}</span>
                   </Descriptions.Item>
                 </Descriptions>
               </Card>
             )}
 
-            <Form form={payForm} layout="vertical" requiredMark="optional">
-              {!currentPayable && (
+            <Form form={pay.payForm} layout="vertical" requiredMark="optional">
+              {!pay.currentPayable && (
                 <>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
                     <Form.Item label="收款方类型" name="payeeType" rules={[{ required: true, message: '请选择收款方类型' }]}>
-                      <Select options={OWNER_TYPE_OPTIONS} onChange={handlePayeeChange} placeholder="选择员工或工厂" />
+                      <Select options={OWNER_TYPE_OPTIONS} onChange={pay.handlePayeeChange} placeholder="选择员工或工厂" />
                     </Form.Item>
                     <Form.Item label="收款方ID" name="payeeId" rules={[{ required: true, message: '请输入收款方ID' }]}>
-                      <Input placeholder="员工/工厂ID" onBlur={handlePayeeChange} />
+                      <Input placeholder="员工/工厂ID" onBlur={pay.handlePayeeChange} />
                     </Form.Item>
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
@@ -973,14 +460,14 @@ const PaymentCenterPage: React.FC = () => {
                   {PAYMENT_METHOD_OPTIONS.map(opt => (
                     <div
                       key={opt.value}
-                      onClick={() => handleMethodSelect(opt.value)}
+                      onClick={() => pay.handleMethodSelect(opt.value)}
                       style={{
-                        border: `2px solid ${selectedMethod === opt.value ? 'var(--primary-color, #1677ff)' : '#d9d9d9'}`,
+                        border: `2px solid ${pay.selectedMethod === opt.value ? 'var(--primary-color, #1677ff)' : '#d9d9d9'}`,
                         borderRadius: 8,
                         padding: '16px 12px',
                         cursor: 'pointer',
                         textAlign: 'center',
-                        background: selectedMethod === opt.value ? 'rgba(22,119,255,0.04)' : '#fff',
+                        background: pay.selectedMethod === opt.value ? 'rgba(22,119,255,0.04)' : '#fff',
                         transition: 'all 0.2s',
                       }}
                     >
@@ -992,7 +479,7 @@ const PaymentCenterPage: React.FC = () => {
               </Form.Item>
 
               {/* 显示选中的收款账户信息 */}
-              {selectedMethod && selectedMethod !== 'OFFLINE' && (
+              {pay.selectedMethod && pay.selectedMethod !== 'OFFLINE' && (
                 <div style={{ background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 8, padding: 12, marginBottom: 16 }}>
                   <div style={{ fontWeight: 500, marginBottom: 8 }}>
                     收款账户
@@ -1000,29 +487,29 @@ const PaymentCenterPage: React.FC = () => {
                       type="link"
                       size="small"
                       onClick={() => {
-                        const pt = payForm.getFieldValue('payeeType');
-                        const pi = payForm.getFieldValue('payeeId');
-                        const pn = payForm.getFieldValue('payeeName');
-                        if (pt && pi) openAccountModal(pt, pi, pn || '');
+                        const pt = pay.payForm.getFieldValue('payeeType');
+                        const pi = pay.payForm.getFieldValue('payeeId');
+                        const pn = pay.payForm.getFieldValue('payeeName');
+                        if (pt && pi) acct.openAccountModal(pt, pi, pn || '');
                       }}
                     >
                       管理账户
                     </Button>
                   </div>
-                  {selectedAccount ? (
+                  {pay.selectedAccount ? (
                     <div>
-                      {selectedAccount.accountType === 'BANK' ? (
+                      {pay.selectedAccount.accountType === 'BANK' ? (
                         <Space orientation="vertical" size={2}>
-                          <span>{accountTypeIconMap[selectedAccount.accountType]} {selectedAccount.bankName}</span>
+                          <span>{accountTypeIconMap[pay.selectedAccount.accountType]} {pay.selectedAccount.bankName}</span>
                           <span style={{ fontFamily: 'monospace' }}>
-                            {selectedAccount.accountNo?.replace(/(\d{4})(?=\d)/g, '$1 ')}
+                            {pay.selectedAccount.accountNo?.replace(/(\d{4})(?=\d)/g, '$1 ')}
                           </span>
-                          <span style={{ color: '#999' }}>{selectedAccount.accountName}</span>
+                          <span style={{ color: '#999' }}>{pay.selectedAccount.accountName}</span>
                         </Space>
                       ) : (
                         <div style={{ textAlign: 'center' }}>
-                          {selectedAccount.qrCodeUrl ? (
-                            <Image src={getFullAuthedFileUrl(selectedAccount.qrCodeUrl)} width={200} alt="收款二维码" />
+                          {pay.selectedAccount.qrCodeUrl ? (
+                            <Image src={getFullAuthedFileUrl(pay.selectedAccount.qrCodeUrl)} width={200} alt="收款二维码" />
                           ) : (
                             <span style={{ color: '#ff4d4f' }}>该账户未上传收款二维码</span>
                           )}
@@ -1031,12 +518,12 @@ const PaymentCenterPage: React.FC = () => {
                     </div>
                   ) : (
                     <span style={{ color: '#faad14' }}>
-                      收款方暂无{selectedMethod === 'BANK' ? '银行卡' : selectedMethod === 'WECHAT' ? '微信' : '支付宝'}账户，
+                      收款方暂无{pay.selectedMethod === 'BANK' ? '银行卡' : pay.selectedMethod === 'WECHAT' ? '微信' : '支付宝'}账户，
                       <a onClick={() => {
-                        const pt = payForm.getFieldValue('payeeType');
-                        const pi = payForm.getFieldValue('payeeId');
-                        const pn = payForm.getFieldValue('payeeName');
-                        if (pt && pi) openAccountModal(pt, pi, pn || '');
+                        const pt = pay.payForm.getFieldValue('payeeType');
+                        const pi = pay.payForm.getFieldValue('payeeId');
+                        const pn = pay.payForm.getFieldValue('payeeName');
+                        if (pt && pi) acct.openAccountModal(pt, pi, pn || '');
                       }}>点击添加</a>
                     </span>
                   )}
@@ -1044,10 +531,10 @@ const PaymentCenterPage: React.FC = () => {
               )}
 
               <Form.Item name="paymentAccountId" hidden><Input /></Form.Item>
-              {currentPayable && <Form.Item name="bizType" hidden><Input /></Form.Item>}
+              {pay.currentPayable && <Form.Item name="bizType" hidden><Input /></Form.Item>}
               <Form.Item name="bizId" hidden><Input /></Form.Item>
               <Form.Item name="bizNo" hidden><Input /></Form.Item>
-              {currentPayable && (
+              {pay.currentPayable && (
                 <>
                   <Form.Item name="payeeType" hidden><Input /></Form.Item>
                   <Form.Item name="payeeId" hidden><Input /></Form.Item>
@@ -1064,24 +551,24 @@ const PaymentCenterPage: React.FC = () => {
 
         {/* ========================== 账户管理弹窗 ========================== */}
         <AccountManagementModal
-          open={accountModalOpen}
-          ownerName={accountOwnerName}
-          ownerType={accountOwnerType}
-          accounts={accounts}
-          accountsLoading={accountsLoading}
-          accountForm={accountForm}
-          accountDetailOpen={accountDetailOpen}
-          editingAccount={editingAccount}
-          qrFileList={qrFileList}
-          accountSaving={accountSaving}
-          onClose={() => setAccountModalOpen(false)}
-          setAccountDetailOpen={setAccountDetailOpen}
-          setEditingAccount={setEditingAccount}
-          setQrFileList={setQrFileList}
-          onEditAccount={handleEditAccount}
-          onDeleteAccount={handleDeleteAccount}
-          onSaveAccount={handleSaveAccount}
-          onUploadQrImage={uploadQrImage}
+          open={acct.accountModalOpen}
+          ownerName={acct.accountOwnerName}
+          ownerType={acct.accountOwnerType}
+          accounts={acct.accounts}
+          accountsLoading={acct.accountsLoading}
+          accountForm={acct.accountForm}
+          accountDetailOpen={acct.accountDetailOpen}
+          editingAccount={acct.editingAccount}
+          qrFileList={acct.qrFileList}
+          accountSaving={acct.accountSaving}
+          onClose={() => acct.setAccountModalOpen(false)}
+          setAccountDetailOpen={acct.setAccountDetailOpen}
+          setEditingAccount={acct.setEditingAccount}
+          setQrFileList={acct.setQrFileList}
+          onEditAccount={acct.handleEditAccount}
+          onDeleteAccount={acct.handleDeleteAccount}
+          onSaveAccount={acct.handleSaveAccount}
+          onUploadQrImage={acct.uploadQrImage}
         />
 
         {/* ========================== 支付详情弹窗 ========================== */}
@@ -1147,19 +634,19 @@ const PaymentCenterPage: React.FC = () => {
 
         {/* ========================== 上传凭证弹窗 ========================== */}
         <SmallModal
-          open={proofModalOpen}
+          open={proof.proofModalOpen}
           title="确认线下支付"
-          onCancel={() => setProofModalOpen(false)}
+          onCancel={() => proof.setProofModalOpen(false)}
           centered
           footer={
             <Space>
-              <Button onClick={() => setProofModalOpen(false)}>取消</Button>
-              <Button type="primary" loading={proofSubmitting} onClick={handleConfirmProof}>确认</Button>
+              <Button onClick={() => proof.setProofModalOpen(false)}>取消</Button>
+              <Button type="primary" loading={proof.proofSubmitting} onClick={proof.handleConfirmProof}>确认</Button>
             </Space>
           }
         >
           <div style={{ padding: '0 8px' }}>
-            <Form form={proofForm} layout="vertical">
+            <Form form={proof.proofForm} layout="vertical">
               <Form.Item label="上传支付凭证" name="proofUrl">
                 <Input placeholder="自动填充" disabled />
               </Form.Item>
@@ -1167,11 +654,11 @@ const PaymentCenterPage: React.FC = () => {
                 accept="image/*"
                 listType="picture-card"
                 maxCount={1}
-                fileList={proofFileList}
-                onRemove={() => { proofForm.setFieldsValue({ proofUrl: undefined }); setProofFileList([]); return true; }}
-                beforeUpload={(file) => { void uploadProofImage(file as File); return Upload.LIST_IGNORE; }}
+                fileList={proof.proofFileList}
+                onRemove={() => { proof.proofForm.setFieldsValue({ proofUrl: undefined }); proof.setProofFileList([]); return true; }}
+                beforeUpload={(file) => { void proof.uploadProofImage(file as File); return Upload.LIST_IGNORE; }}
               >
-                {proofFileList.length === 0 && (
+                {proof.proofFileList.length === 0 && (
                   <div><UploadOutlined /><div style={{ marginTop: 8 }}>上传凭证</div></div>
                 )}
               </Upload>
@@ -1182,12 +669,12 @@ const PaymentCenterPage: React.FC = () => {
           </div>
         </SmallModal>
       <RejectReasonModal
-        open={!!pendingRejectPayable}
+        open={!!data.pendingRejectPayable}
         title="驳回待付款"
-        description={pendingRejectPayable ? `确定驳回 ${pendingRejectPayable.payeeName} 的待付款项？${BIZ_TYPE_MAP[pendingRejectPayable.bizType]?.text ? `\n${BIZ_TYPE_MAP[pendingRejectPayable.bizType].text} · ¥${Number(pendingRejectPayable.amount).toFixed(2)}` : ''}` : undefined}
-        onOk={handleRejectPayableConfirm}
-        onCancel={() => setPendingRejectPayable(null)}
-        loading={rejectPayableLoading}
+        description={data.pendingRejectPayable ? `确定驳回 ${data.pendingRejectPayable.payeeName} 的待付款项？${BIZ_TYPE_MAP[data.pendingRejectPayable.bizType]?.text ? `\n${BIZ_TYPE_MAP[data.pendingRejectPayable.bizType].text} · ¥${Number(data.pendingRejectPayable.amount).toFixed(2)}` : ''}` : undefined}
+        onOk={data.handleRejectPayableConfirm}
+        onCancel={() => data.setPendingRejectPayable(null)}
+        loading={data.rejectPayableLoading}
       />
     </Layout>
   );
