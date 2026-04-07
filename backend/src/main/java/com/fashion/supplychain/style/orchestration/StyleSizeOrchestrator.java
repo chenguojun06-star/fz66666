@@ -1,14 +1,10 @@
 package com.fashion.supplychain.style.orchestration;
 
-import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleSize;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleSizeService;
-import com.fashion.supplychain.template.orchestration.TemplateLibraryOrchestrator;
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,9 +19,6 @@ public class StyleSizeOrchestrator {
 
     @Autowired
     private StyleInfoService styleInfoService;
-
-    @Autowired
-    private TemplateLibraryOrchestrator templateLibraryOrchestrator;
 
     public List<StyleSize> listByStyleId(Long styleId) {
         if (styleId == null) {
@@ -46,10 +39,6 @@ public class StyleSizeOrchestrator {
         }
         styleSize.setUpdateTime(LocalDateTime.now());
         boolean ok = styleSizeService.save(styleSize);
-        // 样衣阶段不自动同步到模板库
-        // if (ok) {
-        //     tryCreateSizeTemplate(styleSize.getStyleId());
-        // }
         if (!ok) {
             throw new IllegalStateException("保存失败");
         }
@@ -70,10 +59,6 @@ public class StyleSizeOrchestrator {
         styleSize.setStyleId(current.getStyleId());
         styleSize.setUpdateTime(LocalDateTime.now());
         boolean ok = styleSizeService.updateNullableFieldsById(styleSize);
-        // 样衣阶段不自动同步到模板库
-        // if (ok) {
-        //     tryCreateSizeTemplate(current.getStyleId());
-        // }
         if (!ok) {
             throw new IllegalStateException("保存失败");
         }
@@ -97,20 +82,5 @@ public class StyleSizeOrchestrator {
             throw new IllegalStateException("删除失败");
         }
         return true;
-    }
-
-    private void tryCreateSizeTemplate(Long styleId) {
-        try {
-            StyleInfo style = styleId == null ? null : styleInfoService.getById(styleId);
-            String styleNo = style == null ? null : style.getStyleNo();
-            if (styleNo != null && !styleNo.trim().isEmpty()) {
-                Map<String, Object> body = new HashMap<>();
-                body.put("sourceStyleNo", styleNo.trim());
-                body.put("templateTypes", List.of("size"));
-                templateLibraryOrchestrator.createFromStyle(body);
-            }
-        } catch (Exception e) {
-            log.warn("Failed to sync templates from style size: styleId={}", styleId, e);
-        }
     }
 }

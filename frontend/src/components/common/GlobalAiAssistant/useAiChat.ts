@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
+import type { ChangeEvent } from 'react';
 import { useLocation } from 'react-router-dom';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import { normalizeXiaoyunChatPayload } from '@/services/intelligence/xiaoyunChatAdapter';
@@ -203,7 +204,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
     }
   }, [inputValue, isTyping, user, location, advisorSessionId, speak]);
 
-  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const allowed = ['.xlsx', '.xls', '.csv', '.jpg', '.jpeg', '.png', '.gif', '.pdf'];

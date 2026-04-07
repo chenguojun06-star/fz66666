@@ -6,7 +6,6 @@ import { createCardSpecFieldGroups } from '@/components/common/CardSizeQuantityF
 import UniversalCardView from '@/components/common/UniversalCardView';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import StandardPagination from '@/components/common/StandardPagination';
-import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import { usePersistentState } from '@/hooks/usePersistentState';
 
 import dayjs from 'dayjs';
@@ -41,7 +40,7 @@ import MultiColorOrderEditor from './components/MultiColorOrderEditor';
 import OrderPricingMaterialPanel from './components/OrderPricingMaterialPanel';
 import OrderSidebarInsights from './components/OrderSidebarInsights';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
-import { computeReferenceKilograms } from '@/modules/production/pages/Production/MaterialPurchase/utils';
+
 import StandardToolbar from '@/components/common/StandardToolbar';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
@@ -51,7 +50,7 @@ import StyleQuotePopover from './StyleQuotePopover';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 
 import { OrderLine, PricingProcess, ProgressNode, defaultProgressNodes } from './types';
-import { buildOrderQtyStats, calcBomRequirementQty, getMatchedOrderQty, normalizeMatchKey } from './utils/orderBomMetrics';
+import { normalizeMatchKey } from './utils/orderBomMetrics';
 import { buildOrderSubmitPayload } from './utils/buildOrderSubmitPayload';
 import { analyzeOrderOrchestration, computeProcessBasedUnitPrice } from './utils/orderIntelligence';
 import type { SizePriceRecord } from './utils/orderIntelligence';
@@ -122,27 +121,6 @@ const OrderManagement: React.FC = () => {
 
   const normalizeSizeKey = (v: unknown) => String(v || '').trim().toUpperCase().replace(/\s+/g, '');
   const displaySizeLabel = (v: unknown) => normalizeSizeKey(v) || '-';
-  const orderQtyStats = useMemo(() => buildOrderQtyStats(orderLines), [orderLines]);
-
-
-  const getMatchedQty = (colorRaw: any, sizeRaw: any) => {
-    return getMatchedOrderQty(orderQtyStats, colorRaw, sizeRaw);
-  };
-
-  const calcBomBudgetQty = (record: StyleBom) => calcBomRequirementQty(record, orderQtyStats);
-
-  const calcBomTotalPrice = (record: StyleBom) => {
-    const unitPrice = Number((record as Record<string, unknown>).unitPrice) || 0;
-    const budgetQty = calcBomBudgetQty(record);
-    if (!Number.isFinite(budgetQty) || !Number.isFinite(unitPrice)) return 0;
-    return Number((budgetQty * unitPrice).toFixed(2));
-  };
-
-  const calcBomReferenceKg = (record: StyleBom) => {
-    const meters = calcBomBudgetQty(record);
-    if (!Number.isFinite(meters) || meters <= 0) return null;
-    return computeReferenceKilograms(meters, (record as Record<string, unknown>).conversionRate, '米');
-  };
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);

@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { App, Button, Card, Col, Input, Row, Space, Form, Select, DatePicker, Upload } from 'antd';
 
 import PageStatCards from '@/components/common/PageStatCards';
@@ -16,7 +15,6 @@ import { StyleAttachmentsButton } from '@/components/StyleAssets';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { formatDateTime } from '@/utils/datetime';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
-import { useViewport } from '@/utils/useViewport';
 import dayjs from 'dayjs';
 import { readPageSize } from '@/utils/pageSizeStore';
 import { buildProductionSheetHtml } from './buildProductionSheetHtml';

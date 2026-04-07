@@ -47,15 +47,15 @@
   />
 
   <view wx:if="{{offlinePendingCount > 0}}" class="offline-badge-bar" bindtap="onManualSync">
-    <text class="offline-badge-icon">{{offlineSyncing ? '⏳' : '📤'}}</text>
+    <text class="offline-badge-icon">{{offlineSyncing ? '...' : '↑'}}</text>
     <text class="offline-badge-text">{{offlineSyncing ? '同步中...' : offlinePendingCount + ' 条待上传，点击立即同步'}}</text>
   </view>
   <!-- ① 今日统计（顶部） -->
   <view class="today-stats-card">
     <view class="tsc-head">
-      <text class="tsc-title">📊 今日统计</text>
+      <text class="tsc-title">今日统计</text>
       <view class="refresh-btn {{my.loadingStats ? 'refresh-btn-loading' : ''}}" bindtap="refreshMy" hover-class="refresh-btn-hover">
-        <text class="refresh-icon">{{my.loadingStats ? '⏳' : '🔄'}}</text>
+        <view class="line-icon line-icon--sm icon-refresh refresh-icon"></view>
         <text class="refresh-text">刷新</text>
       </view>
     </view>
@@ -114,19 +114,19 @@
       <text wx:if="{{lastResult.color}}">{{lastResult.color}}</text>
       <text wx:if="{{lastResult.size}}">{{lastResult.size}}</text>
       <text wx:if="{{lastResult.processName}}" class="res-proc">{{lastResult.processName}}</text>
-      <text wx:if="{{lastResult.unitPrice != null && !lastResult.hidePrice}}" class="{{lastResult.unitPriceHint ? 'res-price-warn' : ''}}">¥{{lastResult.unitPrice}}{{lastResult.unitPriceHint ? ' ⚠️' : ''}}</text>
+      <text wx:if="{{lastResult.unitPrice != null && !lastResult.hidePrice}}" class="{{lastResult.unitPriceHint ? 'res-price-warn' : ''}}">¥{{lastResult.unitPrice}}{{lastResult.unitPriceHint ? ' !' : ''}}</text>
     </view>
     <view wx:if="{{lastResult.success && lastResult.sessionQty > 0}}" class="res-session-bar">
-      <text class="res-session-text">📊 本工序今日累计 {{lastResult.sessionQty}} 件</text>
+      <text class="res-session-text">本工序今日累计 {{lastResult.sessionQty}} 件</text>
     </view>
     <view wx:if="{{lastResult.unitPriceHint}}" class="res-hint">
-      <text class="hint-icon">⚠️</text>
+      <view class="line-icon line-icon--sm icon-alert hint-icon"></view>
       <text class="hint-text">{{lastResult.unitPriceHint}}</text>
     </view>
     <!-- 失败后明确下一步操作按鈕 -->
     <view wx:if="{{!lastResult.success && lastResult.errorAction}}" class="res-actions">
-      <view wx:if="{{lastResult.errorAction === 'checkNetwork'}}" class="res-action-btn" hover-class="res-action-btn-hover" hover-stay-time="100" bindtap="onCheckNetwork">📶 检查网络</view>
-      <view wx:if="{{lastResult.errorAction === 'retry'}}" class="res-action-btn" hover-class="res-action-btn-hover" hover-stay-time="100" bindtap="onScan">🔄 重新扫码</view>
+      <view wx:if="{{lastResult.errorAction === 'checkNetwork'}}" class="res-action-btn" hover-class="res-action-btn-hover" hover-stay-time="100" bindtap="onCheckNetwork">检查网络</view>
+      <view wx:if="{{lastResult.errorAction === 'retry'}}" class="res-action-btn" hover-class="res-action-btn-hover" hover-stay-time="100" bindtap="onScan">重新扫码</view>
     </view>
   </view>
 
@@ -185,7 +185,7 @@
   <!-- ⑤ 我的裁剪任务 -->
   <view wx:if="{{my.cuttingTasks && my.cuttingTasks.length > 0}}" class="section">
     <view class="sec-head">
-      <text class="section-title">✂️ 我的裁剪任务</text>
+      <text class="section-title">我的裁剪任务</text>
     </view>
     <view wx:for="{{my.cuttingTasks}}" wx:key="id" class="procurement-task-card">
       <view class="ptc-header">
@@ -203,7 +203,7 @@
   <!-- ⑥ 我的采购任务 -->
   <view wx:if="{{my.procurementTasks && my.procurementTasks.length > 0}}" class="section">
     <view class="sec-head">
-      <text class="section-title">🛒 我的采购任务</text>
+      <text class="section-title">我的采购任务</text>
     </view>
     <view wx:for="{{my.procurementTasks}}" wx:key="orderNo" class="procurement-task-card">
       <view class="ptc-header">
@@ -221,7 +221,7 @@
   <!-- ⑦ 今日扫码记录（只显示当天） -->
   <view class="section">
     <view class="sec-head">
-      <text class="section-title">📋 今日记录</text>
+      <text class="section-title">今日记录</text>
     </view>
     <view wx:if="{{my.groupedHistory.length === 0 && !my.loadingHistory}}" class="empty">暂无今日记录</view>
 
@@ -314,7 +314,7 @@
           </view>
         </view>
         <view class="rescan-warning">
-          <text class="warning-icon">⚠️</text>
+          <view class="line-icon line-icon--sm icon-alert warning-icon"></view>
           <text class="warning-text">仅允许退回1小时内的扫码记录，退回后可重新扫码</text>
         </view>
       </view>
@@ -360,7 +360,7 @@
             />
           </view>
           <view wx:if="{{scanResultConfirm.imageInsight}}" class="result-item diff-hint-row">
-            <text class="item-label diff-hint-label">⚠️难度</text>
+            <text class="item-label diff-hint-label">难度</text>
             <text class="item-value diff-hint-text">{{scanResultConfirm.imageInsight}}</text>
           </view>
 
@@ -441,11 +441,11 @@
             <text class="hint-text">已选择入库工序，请选择目标仓库后领取</text>
           </view>
           <view wx:elif="{{scanResultConfirm.scanData.qualityStage === 'confirm'}}" class="result-hint">
-            <text class="hint-icon">💡</text>
+            <view class="line-icon line-icon--sm icon-bulb hint-icon"></view>
             <text class="hint-text">填写质检结果，点击“录入结果”提交</text>
           </view>
           <view wx:else class="result-hint">
-            <text class="hint-icon">💡</text>
+            <view class="line-icon line-icon--sm icon-bulb hint-icon"></view>
             <text class="hint-text">可一次勾选多个工序，确认后统一领取</text>
           </view>
         </view>
@@ -550,7 +550,7 @@
         <!-- AI 扫码工艺提醒 -->
         <view wx:if="{{!scanConfirm.detail.isPattern && scanConfirm.aiTipData}}" class="ai-tip-card">
           <view class="ai-tip-header">
-            <text class="ai-tip-icon">💡</text>
+            <view class="line-icon line-icon--sm icon-bulb ai-tip-icon"></view>
             <text class="ai-tip-title">工艺提醒</text>
           </view>
           <text class="ai-tip-content">{{scanConfirm.aiTipData.aiTip}}</text>
@@ -559,7 +559,7 @@
           </view>
         </view>
         <view wx:elif="{{!scanConfirm.detail.isPattern && scanConfirm.aiTipLoading}}" class="ai-tip-loading">
-          <text class="ai-tip-icon rotating">⏳</text>
+          <view class="line-icon line-icon--sm icon-refresh ai-tip-icon rotating"></view>
           <text class="ai-tip-loading-text">正在获取专家工艺提醒...</text>
         </view>
 
@@ -586,7 +586,7 @@
                         <view wx:if="{{!item.disabled && scanConfirm.detail.operationType == item.value}}" class="inline-selector-radio-dot"></view>
                         <text wx:if="{{item.disabled}}" style="color:#bfbfbf;font-size:16rpx;">—</text>
                       </view>
-                      <text class="inline-selector-label">{{item.icon || '🧵'}} {{item.label || item.value}}</text>
+                      <text class="inline-selector-label">{{item.icon || ''}} {{item.label || item.value}}</text>
                     </view>
                   </view>
                 </scroll-view>
@@ -594,7 +594,7 @@
             </view>
 
             <view wx:if="{{scanConfirm.detail.requiresReviewBeforeInbound}}" class="qc-receive-tip" style="margin-top: 8rpx; background: #fff7e6; border-color: #ffd591;">
-              <text class="qc-tip-text" style="color: #d46b08;">⚠️ 当前未完成样衣审核，本次会先提交审核再执行入库</text>
+              <text class="qc-tip-text" style="color: #d46b08;">当前未完成样衣审核，本次会先提交审核再执行入库</text>
             </view>
 
             <view class="pmi-row pmi-row-inline pmi-row-inline-spacious">
@@ -671,7 +671,7 @@
           <view wx:if="{{scanConfirm.cuttingRatio.hasUsageMap && scanConfirm.cuttingRatio.consumedFabric > 0}}" class="crp-fabric-tip {{scanConfirm.cuttingRatio.fabricOk ? '' : 'crp-fabric-warn'}}">
             <text>预计消耗 {{scanConfirm.cuttingRatio.consumedFabric}} m</text>
             <text wx:if="{{scanConfirm.cuttingRatio.arrivedFabric}}"> / 到货 {{scanConfirm.cuttingRatio.arrivedFabric}} m</text>
-            <text wx:if="{{!scanConfirm.cuttingRatio.fabricOk}}" class="crp-warn-badge">⚠️面料不足</text>
+            <text wx:if="{{!scanConfirm.cuttingRatio.fabricOk}}" class="crp-warn-badge">面料不足</text>
           </view>
           <view class="crp-ratio-list">
             <view class="crp-ratio-head">
@@ -728,7 +728,7 @@
           </view>
           <!-- BOM回退提示 -->
           <view wx:if="{{scanConfirm.bomFallback}}" class="bom-fallback-notice">
-            <text class="bom-fallback-icon">📋</text>
+            <view class="line-icon line-icon--sm icon-clipboard bom-fallback-icon"></view>
             <text class="bom-fallback-text">尚未创建采购任务，以下为BOM物料清单（仅供参考）</text>
           </view>
           <!-- 面料统计摘要 -->
@@ -969,13 +969,13 @@
       <!-- AI质检助手：质检要点 -->
       <view wx:if="{{qualityModal.aiSuggestion}}" class="qm-ai-section">
         <view class="qm-ai-header">
-          <text class="qm-ai-title">🤖 AI质检助手</text>
+          <text class="qm-ai-title">AI质检助手</text>
           <view wx:if="{{qualityModal.aiSuggestion.historicalVerdict === 'critical'}}" class="qm-ai-badge qm-ai-badge-red">历史严重 {{qualityModal.aiSuggestion.historicalDefectRateText}}</view>
           <view wx:elif="{{qualityModal.aiSuggestion.historicalVerdict === 'warn'}}" class="qm-ai-badge qm-ai-badge-orange">历史偏高 {{qualityModal.aiSuggestion.historicalDefectRateText}}</view>
           <view wx:elif="{{qualityModal.aiSuggestion.historicalVerdict === 'good'}}" class="qm-ai-badge qm-ai-badge-green">历史良好</view>
           <view wx:if="{{qualityModal.aiSuggestion.urgent}}" class="qm-ai-badge qm-ai-badge-orange">加急</view>
         </view>
-        <view wx:if="{{qualityModal.aiSuggestion.urgentTip}}" class="qm-ai-tip">⚠️ {{qualityModal.aiSuggestion.urgentTip}}</view>
+        <view wx:if="{{qualityModal.aiSuggestion.urgentTip}}" class="qm-ai-tip">{{qualityModal.aiSuggestion.urgentTip}}</view>
         <view wx:if="{{qualityModal.aiSuggestion.checkpoints && qualityModal.aiSuggestion.checkpoints.length > 0}}" class="qm-ai-checkpoints">
           <text class="qm-ai-checkpoints-label">质检要点：</text>
           <view class="qm-ai-points">
@@ -1065,7 +1065,7 @@
 
         <!-- AI异常建议（不合格时显示） -->
         <view wx:if="{{qualityModal.aiSuggestion}}" class="qm-ai-adopt-row">
-          <view class="qm-ai-suggest-text">💡 点击「采纳」可将AI处理建议填入备注</view>
+          <view class="qm-ai-suggest-text">点击「采纳」可将AI处理建议填入备注</view>
           <button class="qm-adopt-btn" bindtap="onAdoptAiSuggestion" hover-class="qm-adopt-btn-hover" hover-stay-time="80">采纳AI建议</button>
         </view>
 
@@ -1088,8 +1088,8 @@
       <!-- 提示：质检结果提交后请进行包装工序，包装完成后方可入库 -->
       <view class="qm-section">
         <view style="background:#f0f9eb;border-radius:8rpx;padding:16rpx 20rpx;color:#67c23a;font-size:24rpx;line-height:1.6;">
-          <text wx:if="{{qualityModal.result === 'qualified'}}">✅ 合格后请完成包装工序，再由仓库人员扫码入库</text>
-          <text wx:if="{{qualityModal.result === 'unqualified'}}">⚠️ 不合格品将记录在案，请安排返修处理</text>
+          <text wx:if="{{qualityModal.result === 'qualified'}}">合格后请完成包装工序，再由仓库人员扫码入库</text>
+          <text wx:if="{{qualityModal.result === 'unqualified'}}">不合格品将记录在案，请安排返修处理</text>
           <text wx:if="{{!qualityModal.result}}">请先选择质检结果</text>
         </view>
       </view>
