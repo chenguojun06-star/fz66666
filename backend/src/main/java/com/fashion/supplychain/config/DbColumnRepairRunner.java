@@ -71,6 +71,30 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                     "VARCHAR(64) DEFAULT NULL COMMENT '初审操作人ID'");
                 repaired += ensureColumn(conn, schema, "t_material_purchase", "audit_operator_name",
                     "VARCHAR(100) DEFAULT NULL COMMENT '初审操作人姓名'");
+            repaired += ensureColumn(conn, schema, "t_material_purchase", "fabric_width",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '面料门幅'");
+            repaired += ensureColumn(conn, schema, "t_material_purchase", "fabric_weight",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '面料克重'");
+            repaired += ensureColumn(conn, schema, "t_material_purchase", "supplier_contact_person",
+                    "VARCHAR(50) DEFAULT NULL COMMENT '供应商联系人'");
+            repaired += ensureColumn(conn, schema, "t_material_purchase", "supplier_contact_phone",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '供应商联系电话'");
+            repaired += ensureColumn(conn, schema, "t_material_purchase", "return_confirmed",
+                    "TINYINT(1) DEFAULT NULL COMMENT '是否确认退货'");
+            repaired += ensureColumn(conn, schema, "t_material_purchase", "return_quantity",
+                    "INT DEFAULT NULL COMMENT '退货数量'");
+            repaired += ensureColumn(conn, schema, "t_material_purchase", "return_confirmer_id",
+                    "VARCHAR(36) DEFAULT NULL COMMENT '退货确认人ID'");
+            repaired += ensureColumn(conn, schema, "t_material_purchase", "return_confirmer_name",
+                    "VARCHAR(50) DEFAULT NULL COMMENT '退货确认人姓名'");
+            repaired += ensureColumn(conn, schema, "t_material_purchase", "return_confirm_time",
+                    "DATETIME DEFAULT NULL COMMENT '退货确认时间'");
+            repaired += ensureColumn(conn, schema, "t_material_purchase", "expected_ship_date",
+                    "DATE DEFAULT NULL COMMENT '预计发货日期'");
+            repaired += ensureColumn(conn, schema, "t_material_purchase", "source_type",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '来源类型'");
+            repaired += ensureColumn(conn, schema, "t_material_purchase", "pattern_production_id",
+                    "VARCHAR(36) DEFAULT NULL COMMENT '关联样板生产ID'");
 
                 repaired += ensureColumn(conn, schema, "t_mind_push_rule", "notify_time_start",
                     "VARCHAR(5) NOT NULL DEFAULT '08:00' COMMENT '推送开始时间 HH:mm'");
@@ -123,6 +147,8 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                     "VARCHAR(100) DEFAULT NULL COMMENT '纸样退回人'");
             repaired += ensureColumn(conn, schema, "t_style_info", "pattern_rev_return_time",
                     "DATETIME DEFAULT NULL COMMENT '纸样退回时间'");
+            repaired += ensureColumn(conn, schema, "t_style_info", "pushed_by_name",
+                    "VARCHAR(50) DEFAULT NULL COMMENT '推版人姓名'");
             repaired += ensureColumn(conn, schema, "t_style_bom", "image_urls",
                     "TEXT DEFAULT NULL COMMENT '物料图片URLs(JSON数组)' ");
             repaired += ensureColumn(conn, schema, "t_style_bom", "fabric_composition",
@@ -165,6 +191,38 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                     "INT NOT NULL DEFAULT 0 COMMENT '不合格数量'");
             repaired += ensureColumnType(conn, schema, "t_production_process_tracking", "id",
                     "varchar", "MODIFY COLUMN `id` VARCHAR(64) NOT NULL COMMENT '主键ID（UUID）'");
+
+            // --- t_material_picking_item 补列 ---
+            repaired += ensureColumn(conn, schema, "t_material_picking_item", "specification",
+                    "VARCHAR(200) DEFAULT NULL COMMENT '规格'");
+            repaired += ensureColumn(conn, schema, "t_material_picking_item", "unit_price",
+                    "DECIMAL(12,2) DEFAULT NULL COMMENT '单价'");
+            repaired += ensureColumn(conn, schema, "t_material_picking_item", "fabric_width",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '面料门幅'");
+            repaired += ensureColumn(conn, schema, "t_material_picking_item", "fabric_composition",
+                    "VARCHAR(500) DEFAULT NULL COMMENT '面料成分'");
+            repaired += ensureColumn(conn, schema, "t_material_picking_item", "supplier_name",
+                    "VARCHAR(200) DEFAULT NULL COMMENT '供应商名称'");
+            repaired += ensureColumn(conn, schema, "t_material_picking_item", "warehouse_location",
+                    "VARCHAR(200) DEFAULT NULL COMMENT '仓库位置'");
+            repaired += ensureColumn(conn, schema, "t_material_picking_item", "material_type",
+                    "VARCHAR(50) DEFAULT NULL COMMENT '物料类型'");
+
+            // --- t_cutting_bundle 补列 ---
+            repaired += ensureColumn(conn, schema, "t_cutting_bundle", "root_bundle_id",
+                    "VARCHAR(64) DEFAULT NULL COMMENT '根菲号ID'");
+            repaired += ensureColumn(conn, schema, "t_cutting_bundle", "parent_bundle_id",
+                    "VARCHAR(64) DEFAULT NULL COMMENT '父菲号ID'");
+            repaired += ensureColumn(conn, schema, "t_cutting_bundle", "source_bundle_id",
+                    "VARCHAR(64) DEFAULT NULL COMMENT '来源菲号ID'");
+            repaired += ensureColumn(conn, schema, "t_cutting_bundle", "bundle_label",
+                    "VARCHAR(64) DEFAULT NULL COMMENT '菲号标签'");
+            repaired += ensureColumn(conn, schema, "t_cutting_bundle", "split_status",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '拆分状态'");
+            repaired += ensureColumn(conn, schema, "t_cutting_bundle", "split_seq",
+                    "INT NOT NULL DEFAULT 0 COMMENT '拆分序号'");
+            repaired += ensureColumn(conn, schema, "t_cutting_bundle", "bed_sub_no",
+                    "INT DEFAULT NULL COMMENT '床次子序号'");
 
             int repairedTables = 0;
                 repairedTables += ensureTable(conn, schema,
