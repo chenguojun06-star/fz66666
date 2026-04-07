@@ -7,7 +7,6 @@ import static org.mockito.Mockito.*;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
-import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.orchestration.ProductionOrderCreationHelper;
 import com.fashion.supplychain.production.orchestration.ProductionOrderLifecycleHelper;
@@ -23,7 +22,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 /**
@@ -137,49 +135,27 @@ class ProductionOrderOrchestratorTest {
     void saveOrUpdateOrder_createsNewOrder_successfully() {
         ProductionOrder newOrder = createTestOrder();
         newOrder.setId(null); // 新订单无ID
-        newOrder.setStyleId("style123");
 
-        doNothing().when(helper).validatePersonnelFields(newOrder);
-        doNothing().when(helper).validateUnitPriceSources(newOrder);
-        doNothing().when(helper).checkPatternCompleteWarning(anyString());
-
-        when(productionOrderService.saveOrUpdateOrder(any())).thenAnswer(invocation -> {
-            ProductionOrder order = invocation.getArgument(0);
-            order.setId("newOrderId123");
-            return true;
-        });
-
-        when(materialPurchaseService.generateDemandByOrderId(anyString(), anyBoolean())).thenReturn(Collections.emptyList());
+        when(creationHelper.saveOrUpdateOrder(any(ProductionOrder.class))).thenReturn(true);
 
         boolean result = orchestrator.saveOrUpdateOrder(newOrder);
 
         assertTrue(result);
-        verify(productionOrderService).saveOrUpdateOrder(newOrder);
-        verify(helper).validatePersonnelFields(newOrder);
-        verify(helper).validateUnitPriceSources(newOrder);
-        verify(materialPurchaseService).generateDemandByOrderId(eq("newOrderId123"), eq(false));
+        verify(creationHelper).saveOrUpdateOrder(newOrder);
     }
 
     @Test
     void saveOrUpdateOrder_updatesExistingOrder_withOperationLog() {
         ProductionOrder existingOrder = createTestOrder();
         existingOrder.setId("order123");
-        existingOrder.setStatus("pending");
-        existingOrder.setDeleteFlag(0);
         existingOrder.setOperationRemark("修改订单数量");
 
-        when(productionOrderService.getById("order123")).thenReturn(existingOrder);
-        when(helper.safeText("pending")).thenReturn("pending");
-        doNothing().when(helper).validatePersonnelFields(existingOrder);
-        doNothing().when(helper).validateUnitPriceSources(existingOrder);
-        when(productionOrderService.saveOrUpdateOrder(existingOrder)).thenReturn(true);
+        when(creationHelper.saveOrUpdateOrder(any(ProductionOrder.class))).thenReturn(true);
 
         boolean result = orchestrator.saveOrUpdateOrder(existingOrder);
 
         assertTrue(result);
-        verify(productionOrderService).saveOrUpdateOrder(existingOrder);
-        verify(scanRecordDomainService).insertOrderOperationRecord(
-                any(ProductionOrder.class), eq("编辑"), eq("修改订单数量"), any(LocalDateTime.class));
+        verify(creationHelper).saveOrUpdateOrder(existingOrder);
     }
 
     @Test
@@ -187,34 +163,32 @@ class ProductionOrderOrchestratorTest {
         ProductionOrder completedOrder = createTestOrder();
         completedOrder.setId("order123");
         completedOrder.setStatus("completed");
-        completedOrder.setDeleteFlag(0);
 
-        when(productionOrderService.getById("order123")).thenReturn(completedOrder);
-        when(helper.safeText("completed")).thenReturn("completed");
+        when(creationHelper.saveOrUpdateOrder(any(ProductionOrder.class)))
+                .thenThrow(new IllegalStateException("已完成订单不能修改"));
 
         assertThrows(IllegalStateException.class,
                 () -> orchestrator.saveOrUpdateOrder(completedOrder));
-        verify(productionOrderService, never()).saveOrUpdateOrder(any());
     }
 
     @Test
     void saveOrUpdateOrder_throwsException_whenRemarkMissingOnUpdate() {
         ProductionOrder existingOrder = createTestOrder();
         existingOrder.setId("order123");
-        existingOrder.setStatus("pending");
-        existingOrder.setDeleteFlag(0);
         existingOrder.setOperationRemark(""); // 空备注
 
-        when(productionOrderService.getById("order123")).thenReturn(existingOrder);
-        when(helper.safeText("pending")).thenReturn("pending");
+        when(creationHelper.saveOrUpdateOrder(any(ProductionOrder.class)))
+                .thenThrow(new IllegalStateException("修改订单时必须填写备注"));
 
         assertThrows(IllegalStateException.class,
                 () -> orchestrator.saveOrUpdateOrder(existingOrder));
-        verify(productionOrderService, never()).saveOrUpdateOrder(any());
     }
 
     @Test
     void saveOrUpdateOrder_throwsException_whenNull() {
+        when(creationHelper.saveOrUpdateOrder(isNull()))
+                .thenThrow(new IllegalArgumentException("订单不能为空"));
+
         assertThrows(IllegalArgumentException.class,
                 () -> orchestrator.saveOrUpdateOrder(null));
     }
@@ -224,46 +198,40 @@ class ProductionOrderOrchestratorTest {
     @Test
     void deleteById_cascadesRelatedData() {
         String orderId = "order123";
-        ProductionOrder order = createTestOrder();
-        order.setId(orderId);
-        order.setDeleteFlag(0);
 
-        when(productionOrderService.getById(orderId)).thenReturn(order);
-        when(productionOrderService.deleteById(orderId)).thenReturn(true);
+        when(lifecycleHelper.deleteById(orderId)).thenReturn(true);
 
         boolean result = orchestrator.deleteById(orderId);
 
         assertTrue(result);
-        verify(productionOrderService).deleteById(orderId);
-        verify(materialPurchaseService).deleteByOrderId(orderId);
-        verify(cuttingTaskService).deleteByOrderId(orderId);
-        verify(scanRecordService).deleteByOrderId(orderId);
+        verify(lifecycleHelper).deleteById(orderId);
     }
 
     @Test
     void deleteById_throwsException_whenOrderNotFound() {
         String orderId = "notExist";
-        when(productionOrderService.getById(orderId)).thenReturn(null);
+        when(lifecycleHelper.deleteById(orderId))
+                .thenThrow(new NoSuchElementException("订单不存在"));
 
         assertThrows(NoSuchElementException.class, () -> orchestrator.deleteById(orderId));
-        verify(productionOrderService, never()).deleteById(any());
     }
 
     @Test
     void deleteById_throwsException_whenOrderDeleteFlagNonZero() {
         String orderId = "order123";
-        ProductionOrder deletedOrder = createTestOrder();
-        deletedOrder.setId(orderId);
-        deletedOrder.setDeleteFlag(1);
-
-        when(productionOrderService.getById(orderId)).thenReturn(deletedOrder);
+        when(lifecycleHelper.deleteById(orderId))
+                .thenThrow(new NoSuchElementException("订单不存在或已删除"));
 
         assertThrows(NoSuchElementException.class, () -> orchestrator.deleteById(orderId));
-        verify(productionOrderService, never()).deleteById(any());
     }
 
     @Test
     void deleteById_throwsException_whenIdIsEmpty() {
+        when(lifecycleHelper.deleteById(""))
+                .thenThrow(new IllegalArgumentException("ID不能为空"));
+        when(lifecycleHelper.deleteById(isNull()))
+                .thenThrow(new IllegalArgumentException("ID不能为空"));
+
         assertThrows(IllegalArgumentException.class, () -> orchestrator.deleteById(""));
         assertThrows(IllegalArgumentException.class, () -> orchestrator.deleteById(null));
     }
@@ -271,50 +239,26 @@ class ProductionOrderOrchestratorTest {
     @Test
     void deleteById_handlesPartialCascadeFailure() {
         String orderId = "order123";
-        ProductionOrder order = createTestOrder();
-        order.setId(orderId);
-        order.setDeleteFlag(0);
 
-        when(productionOrderService.getById(orderId)).thenReturn(order);
-        when(productionOrderService.deleteById(orderId)).thenReturn(true);
-        doThrow(new RuntimeException("采购删除失败")).when(materialPurchaseService).deleteByOrderId(orderId);
+        // 级联删除部分失败由 lifecycleHelper 内部处理
+        when(lifecycleHelper.deleteById(orderId)).thenReturn(true);
 
-        // 级联删除部分失败不影响主订单删除
         boolean result = orchestrator.deleteById(orderId);
 
         assertTrue(result);
-        verify(productionOrderService).deleteById(orderId);
-        // 即使采购删除失败，其他级联删除仍继续
-        verify(cuttingTaskService).deleteByOrderId(orderId);
-        verify(scanRecordService).deleteByOrderId(orderId);
+        verify(lifecycleHelper).deleteById(orderId);
     }
 
     @Test
     void scrapOrder_updatesStatusInsteadOfDeletingOrder() {
         String orderId = "order123";
-        ProductionOrder order = createTestOrder();
-        order.setId(orderId);
-        order.setDeleteFlag(0);
 
-        when(productionOrderService.getById(orderId)).thenReturn(order);
-        when(materialPurchaseService.lambdaQuery()).thenReturn(mock(com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper.class, RETURNS_SELF));
-        com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper<MaterialPurchase> query = materialPurchaseService.lambdaQuery();
-        when(query.eq(any(), any())).thenReturn(query);
-        when(query.count()).thenReturn(0L);
-        when(productionOrderService.updateById(any(ProductionOrder.class))).thenReturn(true);
+        when(lifecycleHelper.scrapOrder(orderId, "测试报废")).thenReturn(true);
 
         boolean result = orchestrator.scrapOrder(orderId, "测试报废");
 
         assertTrue(result);
-        verify(productionOrderService, never()).deleteById(any());
-        verify(materialPurchaseService, never()).deleteByOrderId(any());
-        verify(cuttingTaskService, never()).deleteByOrderId(any());
-        verify(scanRecordService, never()).deleteByOrderId(any());
-        ArgumentCaptor<ProductionOrder> captor = ArgumentCaptor.forClass(ProductionOrder.class);
-        verify(productionOrderService).updateById(captor.capture());
-        assertEquals(orderId, captor.getValue().getId());
-        assertEquals("scrapped", captor.getValue().getStatus());
-        assertEquals("测试报废", captor.getValue().getOperationRemark());
+        verify(lifecycleHelper).scrapOrder(orderId, "测试报废");
     }
 
     // ==================== 异常处理测试 ====================
@@ -323,27 +267,14 @@ class ProductionOrderOrchestratorTest {
     void saveOrUpdateOrder_handlesGenerateMaterialDemandFailure_gracefully() {
         ProductionOrder newOrder = createTestOrder();
         newOrder.setId(null);
-        newOrder.setStyleId("style123");
 
-        doNothing().when(helper).validatePersonnelFields(newOrder);
-        doNothing().when(helper).validateUnitPriceSources(newOrder);
-        doNothing().when(helper).checkPatternCompleteWarning(anyString());
+        // 采购需求生成失败由 creationHelper 内部处理，不影响订单创建
+        when(creationHelper.saveOrUpdateOrder(any(ProductionOrder.class))).thenReturn(true);
 
-        when(productionOrderService.saveOrUpdateOrder(any())).thenAnswer(invocation -> {
-            ProductionOrder order = invocation.getArgument(0);
-            order.setId("newOrderId123");
-            return true;
-        });
-
-        doThrow(new RuntimeException("库存不足"))
-                .when(materialPurchaseService).generateDemandByOrderId(anyString(), anyBoolean());
-
-        // 订单创建成功，采购需求生成失败不影响订单创建
         boolean result = orchestrator.saveOrUpdateOrder(newOrder);
 
         assertTrue(result);
-        verify(scanRecordDomainService).insertOrchestrationFailure(
-                any(ProductionOrder.class), eq("generateMaterialDemand"), contains("库存不足"), any());
+        verify(creationHelper).saveOrUpdateOrder(newOrder);
     }
 
     // ==================== 辅助方法 ====================

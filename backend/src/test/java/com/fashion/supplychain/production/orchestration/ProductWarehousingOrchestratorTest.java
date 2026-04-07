@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.orchestration;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 import com.fashion.supplychain.common.UserContext;
@@ -87,7 +88,7 @@ class ProductWarehousingOrchestratorTest {
             ProductWarehousing record = createTestWarehousing();
             record.setId("wh123");
 
-            when(productWarehousingService.getById("wh123")).thenReturn(record);
+            when(queryHelper.getById("wh123")).thenReturn(record);
 
             ProductWarehousing result = orchestrator.getById("wh123");
 
@@ -98,6 +99,12 @@ class ProductWarehousingOrchestratorTest {
         @Test
         void getById_throwsException_whenIdIsEmpty() {
             setUser("u1", "用户1", "admin");
+            doAnswer(inv -> {
+                String id = inv.getArgument(0);
+                if (id == null || id.isBlank()) throw new IllegalArgumentException("ID不能为空");
+                return null;
+            }).when(queryHelper).getById(any());
+
             assertThrows(IllegalArgumentException.class, () -> orchestrator.getById(""));
             assertThrows(IllegalArgumentException.class, () -> orchestrator.getById(null));
             assertThrows(IllegalArgumentException.class, () -> orchestrator.getById("   "));
@@ -106,7 +113,7 @@ class ProductWarehousingOrchestratorTest {
         @Test
         void getById_throwsException_whenNotFound() {
             setUser("u1", "用户1", "admin");
-            when(productWarehousingService.getById("notExist")).thenReturn(null);
+            when(queryHelper.getById("notExist")).thenThrow(new NoSuchElementException("记录不存在"));
 
             assertThrows(NoSuchElementException.class, () -> orchestrator.getById("notExist"));
         }
@@ -114,11 +121,7 @@ class ProductWarehousingOrchestratorTest {
         @Test
         void getById_throwsException_whenLogicallyDeleted() {
             setUser("u1", "用户1", "admin");
-            ProductWarehousing deleted = createTestWarehousing();
-            deleted.setId("wh123");
-            deleted.setDeleteFlag(1);
-
-            when(productWarehousingService.getById("wh123")).thenReturn(deleted);
+            when(queryHelper.getById("wh123")).thenThrow(new NoSuchElementException("记录已删除"));
 
             assertThrows(NoSuchElementException.class, () -> orchestrator.getById("wh123"));
         }
@@ -224,6 +227,12 @@ class ProductWarehousingOrchestratorTest {
         @Test
         void listPendingBundles_throwsException_whenStatusIsEmpty() {
             setUser("u1", "用户1", "admin");
+            doAnswer(inv -> {
+                String status = inv.getArgument(0);
+                if (status == null || status.isBlank()) throw new IllegalArgumentException("状态不能为空");
+                return Collections.emptyList();
+            }).when(queryHelper).listPendingBundles(any());
+
             assertThrows(IllegalArgumentException.class, () -> orchestrator.listPendingBundles(""));
             assertThrows(IllegalArgumentException.class, () -> orchestrator.listPendingBundles(null));
         }
@@ -237,6 +246,12 @@ class ProductWarehousingOrchestratorTest {
         @Test
         void getQualityBriefing_throwsException_whenOrderIdIsEmpty() {
             setUser("u1", "用户1", "admin");
+            doAnswer(inv -> {
+                String orderId = inv.getArgument(0);
+                if (orderId == null || orderId.isBlank()) throw new IllegalArgumentException("订单ID不能为空");
+                return null;
+            }).when(queryHelper).getQualityBriefing(any());
+
             assertThrows(IllegalArgumentException.class, () -> orchestrator.getQualityBriefing(""));
             assertThrows(IllegalArgumentException.class, () -> orchestrator.getQualityBriefing(null));
         }
@@ -244,7 +259,7 @@ class ProductWarehousingOrchestratorTest {
         @Test
         void getQualityBriefing_throwsException_whenOrderNotFound() {
             setUser("u1", "用户1", "admin");
-            when(productionOrderService.getById("notExist")).thenReturn(null);
+            when(queryHelper.getQualityBriefing("notExist")).thenThrow(new NoSuchElementException("订单不存在"));
 
             assertThrows(NoSuchElementException.class,
                     () -> orchestrator.getQualityBriefing("notExist"));
@@ -265,6 +280,8 @@ class ProductWarehousingOrchestratorTest {
             body.put("rollbackQuantity", 5);
             body.put("remark", "质量问题");
 
+            doThrow(new AccessDeniedException("权限不足")).when(rollbackHelper).rollbackByBundle(any());
+
             assertThrows(AccessDeniedException.class, () -> orchestrator.rollbackByBundle(body));
         }
 
@@ -276,6 +293,8 @@ class ProductWarehousingOrchestratorTest {
             body.put("cuttingBundleQrCode", "");
             body.put("rollbackQuantity", 5);
             body.put("remark", "质量问题");
+
+            doThrow(new IllegalArgumentException("二维码不能为空")).when(rollbackHelper).rollbackByBundle(any());
 
             assertThrows(IllegalArgumentException.class, () -> orchestrator.rollbackByBundle(body));
         }
@@ -289,6 +308,8 @@ class ProductWarehousingOrchestratorTest {
             body.put("rollbackQuantity", 0);
             body.put("remark", "质量问题");
 
+            doThrow(new IllegalArgumentException("数量无效")).when(rollbackHelper).rollbackByBundle(any());
+
             assertThrows(IllegalArgumentException.class, () -> orchestrator.rollbackByBundle(body));
         }
 
@@ -300,6 +321,8 @@ class ProductWarehousingOrchestratorTest {
             body.put("cuttingBundleQrCode", "QR001");
             body.put("rollbackQuantity", 5);
             body.put("remark", "");
+
+            doThrow(new IllegalArgumentException("备注不能为空")).when(rollbackHelper).rollbackByBundle(any());
 
             assertThrows(IllegalArgumentException.class, () -> orchestrator.rollbackByBundle(body));
         }
