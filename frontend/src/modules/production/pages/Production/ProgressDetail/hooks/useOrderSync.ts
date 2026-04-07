@@ -35,8 +35,6 @@ export const useOrderSync = ({
   }, [fetchOrders]);
 
   useEffect(() => {
-    let _cancelled = false;
-
     const run = async () => {
       // 防止并发刷新
       if (syncingRef.current || orderSyncingRef.current) return;
@@ -55,7 +53,6 @@ export const useOrderSync = ({
     const timer = window.setInterval(run, 30000);
 
     return () => {
-      _cancelled = true;
       window.clearInterval(timer);
     };
   }, [orderSyncingRef]);

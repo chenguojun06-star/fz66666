@@ -1,5 +1,5 @@
 .qr-scanner {
-  padding: 20rpx;
+  padding: 10px;
 }
 
 .scan-button {
@@ -7,10 +7,10 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40rpx;
+  padding: 20px;
   background: var(--gradient-primary);
-  border-radius: 20rpx;
-  box-shadow: 0 10rpx 40rpx rgba(224, 242, 254, 0.4);
+  border-radius: 10px;
+  box-shadow: 0 5px 20px rgba(224, 242, 254, 0.4);
   transition: all 0.3s ease;
 }
 
@@ -20,9 +20,9 @@
 }
 
 .scan-icon {
-  width: 120rpx;
-  height: 120rpx;
-  margin-bottom: 20rpx;
+  width: 60px;
+  height: 60px;
+  margin-bottom: 10px;
 }
 
 .scan-button.scanning .scan-icon {
@@ -30,8 +30,8 @@
 }
 
 .scan-text {
-  color: #ffffff;
-  font-size: 32rpx;
+  color: var(--color-text-white);
+  font-size: 16px;
   font-weight: 500;
 }
 

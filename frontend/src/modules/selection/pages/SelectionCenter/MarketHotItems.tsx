@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Row, Col, Button, Tag, Space, Typography, Tooltip, Spin, Input, Empty, Popover, Rate, Tabs, App } from 'antd';
 import { SendOutlined, PlusOutlined, SearchOutlined, GoogleOutlined, FireOutlined, ReloadOutlined } from '@ant-design/icons';
 import { candidateSave, candidateStageAction, candidateCreateStyle, searchExternalMarket, fetchDailyHotItems, refreshDailyHotItems } from '@/services/selection/selectionApi';

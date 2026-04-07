@@ -2,11 +2,11 @@ import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { Popover } from 'antd';
 import { UpOutlined, DownOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { intelligenceApi } from '@/services/production/productionApi';
+import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type {
   BottleneckDetectionResponse, DeliveryRiskResponse, DeliveryRiskItem,
   AnomalyItem, DefectTraceResponse, FactoryBottleneckItem,
-} from '@/services/production/productionApi';
+} from '@/services/intelligence/intelligenceApi';
 import type { ProductionOrder } from '@/types/production';
 import {
   LiveDot, sev2c, risk2badge,

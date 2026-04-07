@@ -20,7 +20,7 @@ import {
   toUploadFileList,
   mapBundleStatusText
 } from '../../../utils';
-import { intelligenceApi } from '@/services/production/productionApi';
+import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import { message } from '@/utils/antdStatic';
 
 export const useWarehousingForm = (

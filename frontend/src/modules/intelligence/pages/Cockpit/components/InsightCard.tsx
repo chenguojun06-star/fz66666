@@ -4,7 +4,6 @@ import { ThunderboltOutlined, WarningOutlined, CheckCircleOutlined, BulbOutlined
 import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
 import { useNavigate } from 'react-router-dom';
 import { useTimeDimension } from '../contexts/TimeDimensionContext';
-import { useStyleLink } from '../contexts/StyleLinkContext';
 import api from '@/utils/api';
 import './InsightCard.css';
 
@@ -71,9 +70,8 @@ const levelColor = (level: string): string => {
   }
 };
 
-const InsightCard: React.FC<InsightCardProps> = ({ mode = 'sidebar', moduleKey: _moduleKey, position: _position }) => {
-  const { dimension, getDateRange: _getDateRange } = useTimeDimension();
-  const _styleLink = useStyleLink();
+const InsightCard: React.FC<InsightCardProps> = ({ mode = 'sidebar' }) => {
+  const { dimension } = useTimeDimension();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [brainData, setBrainData] = useState<AiBrainData | null>(null);

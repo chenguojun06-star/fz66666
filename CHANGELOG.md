@@ -1314,6 +1314,50 @@ curl -X POST https://backend-226678-6-1405390085.sh.run.tcloudbase.com/api/syste
 - ✅ 款式档案可结构化存储面料成分与品质追溯码（U编码），不再依赖备注字段人工维护
 - ✅ 标签打印入口（样板生产 + 生产列表两处）统一复用同一套护理图标渲染逻辑，输出一致
 
+
+# 2026-04-07
+
+## 小程序首页 / 消息页 / 我的页轻量化改造 + 大文件审计落地
+
+### 0. 入口纠偏：去掉错误和重复菜单
+- 首页 `pages/home` 移除 `样板单`、`小云待办`、`消息通知` 三个入口。
+- `样板单` 不再作为首页常驻入口；`待办` 与 `消息` 已统一收口到右下角小云红点，不再在首页和“我的”里重复出现。
+- “我的”页 `pages/admin` 同步移除 `消息通知` 菜单，避免出现两个消息中心并存。
+
+### 1. 视觉统一：去高饱和、去表情图标，改为线条图标体系
+- 新增 `miniprogram/styles/line-icons.wxss`，沉淀一套可复用的轻量 SVG 线条图标样式。
+- 首页 `pages/home`：菜单缩减为真实高频入口，并把顶部区域、统计卡、菜单卡重做为“暖白 + 浅蓝”双调性，保留一点呼吸感，但不再堆重复颜色。
+- 消息页 `pages/work/inbox`：通知类型图标、空状态、催单回复弹层标题全部替换为线条图标，未读态从高冲击色改成更克制的浅蓝边线提示。
+- 我的页 `pages/admin`：菜单列表改成统一的图标容器 + 文案结构，在线人数、修改密码、工资查询、邀请员工、问题反馈、用户审批、切换语言全部接入同一套线条图标。
+
+### 2. 结构轻量：我的页菜单改为数据驱动
+- `pages/admin/index.wxml` 原先多段重复菜单节点，改为 `menuItems` 数组渲染。
+- `pages/admin/index.js` 新增 `buildMenuItems()` + `refreshMenuItems()`，把展示逻辑收拢到 JS 层，后续继续扩展菜单或多语言时不需要再堆 WXML 分支。
+
+### 3. 请求节流：首页首屏请求由全并发改为错峰加载
+- `pages/home/index.js` 原来 `onShow()` 同时拉 4 个接口：今日统计、未读数、本月概览、最近扫码。
+- 现在改为：今日统计 + 未读数优先返回，本月概览和最近扫码使用短延时错峰触发。
+- 目的：减少首页进入瞬间的请求突刺，和近期日志里暴露的“小程序首页并发过高”问题对齐。
+
+### 4. 大文件审计快照（本轮已落档）
+- 当前前端 / 小程序源文件重度文件热点：
+  - `miniprogram/pages/scan/index.wxss` 3138 行
+  - `frontend/src/modules/basic/pages/OrderManagement/index.tsx` 1184 行
+  - `miniprogram/pages/scan/index.wxml` 1179 行
+  - `frontend/src/modules/basic/pages/StyleInfo/components/StyleSizeTab.tsx` 1127 行
+  - `frontend/src/modules/intelligence/pages/IntelligenceCenter/index.tsx` 1113 行
+  - `frontend/src/modules/production/pages/Production/ProgressDetail/index.tsx` 1065 行
+  - `frontend/src/components/common/GlobalAiAssistant/index.tsx` 1058 行
+  - `miniprogram/pages/login/index.wxss` 1054 行
+- 后续拆分优先级已明确：先拆扫码页，再拆订单管理页和全局 AI 组件。
+
+- **对系统的帮助**：
+  - ✅ 首页入口终于和真实产品结构一致，不再把已整合进小云的能力重复挂出来
+  - ✅ 消息与待办统一收口，用户不需要再在首页、我的页、小云之间来回判断点哪里
+  - ✅ 小程序首页、消息页、我的页风格统一，不再出现页面间图标语言不一致的问题
+  - ✅ 首页颜色从“发灰”调整为“克制但有温度”，更适合长期看也不至于没精神
+  - ✅ 首页首屏请求更平滑，降低进入页面时的瞬时并发压力
+  - ✅ 大文件热点已经量化，后续拆分不再凭感觉推进
 **稳定性补充**：
 - 新增 `DbColumnRepairRunner`：本地以 `FLYWAY_ENABLED=false` 启动时，启动阶段自动检测并补齐 `t_style_info` 的 8 个新字段，避免重建本地库后再次出现批量 500
 - 编译验证：后端 `mvn clean compile` → BUILD SUCCESS；前端 `npx tsc --noEmit` → 0 errors

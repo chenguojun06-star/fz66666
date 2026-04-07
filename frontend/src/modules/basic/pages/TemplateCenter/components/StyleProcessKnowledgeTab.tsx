@@ -5,7 +5,7 @@ import { SearchOutlined, RiseOutlined, FallOutlined, MinusOutlined } from '@ant-
 import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
 import type { ColumnsType, TableProps } from 'antd/es/table';
 import type { TableRowSelection } from 'antd/es/table/interface';
-import { intelligenceApi, ProcessKnowledgeItem, ProcessKnowledgeResponse, ProcessKnowledgeStyleRecord } from '@/services/production/productionApi';
+import { intelligenceApi, ProcessKnowledgeItem, ProcessKnowledgeResponse, ProcessKnowledgeStyleRecord } from '@/services/intelligence/intelligenceApi';
 
 // ───────────────────────────────────── 子表（展开明细）──────────────────────
 const RecentStylesTable: React.FC<{ records: ProcessKnowledgeStyleRecord[] }> = ({ records }) => {

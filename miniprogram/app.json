@@ -72,13 +72,28 @@
       "root": "pages/privacy",
       "name": "pkg-privacy",
       "pages": ["index"]
+    },
+    {
+      "root": "pages/admin/change-password",
+      "name": "pkg-admin-changepwd",
+      "pages": ["index"]
+    },
+    {
+      "root": "pages/admin/feedback",
+      "name": "pkg-admin-feedback",
+      "pages": ["index"]
+    },
+    {
+      "root": "pages/admin/invite",
+      "name": "pkg-admin-invite",
+      "pages": ["index"]
     }
   ],
   "preloadRule": {
     "pages/home/index":  { "network": "all", "packages": ["pkg-warehouse", "pkg-order", "pkg-register"] },
     "pages/work/index":  { "network": "all", "packages": ["pkg-work-inbox", "pkg-work-ai"] },
     "pages/scan/index":  { "network": "all", "packages": ["pkg-scan-history", "pkg-scan-monthly"] },
-    "pages/admin/index": { "network": "all", "packages": ["pkg-admin-notification", "pkg-admin-detail", "pkg-admin-approval", "pkg-payroll", "pkg-privacy"] }
+    "pages/admin/index": { "network": "all", "packages": ["pkg-admin-notification", "pkg-admin-detail", "pkg-admin-approval", "pkg-payroll", "pkg-privacy", "pkg-admin-changepwd", "pkg-admin-feedback", "pkg-admin-invite"] }
   },
   "usingComponents": {},
   "tabBar": {

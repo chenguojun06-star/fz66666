@@ -20,7 +20,6 @@ export {
   unwrapApiData,
   generateRequestId,
   toNumberSafe,
-  toUrlSearchParams,
   withQuery,
   createApiClient,
   requestWithPathFallback,
@@ -48,11 +47,6 @@ export {
   ensureProductionOrderUnlocked,
   useProductionOrderFrozenCache,
 } from './api/production';
-
-export {
-  updateFinanceReconciliationStatus,
-  returnFinanceReconciliation,
-} from './api/finance';
 
 // 默认导出
 import { createApiClient } from './api/core';

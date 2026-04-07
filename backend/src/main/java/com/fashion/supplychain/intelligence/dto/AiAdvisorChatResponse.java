@@ -18,4 +18,6 @@ public class AiAdvisorChatResponse {
     private List<String> suggestions = new ArrayList<>();
 
     private List<XiaoyunInsightCard> cards = new ArrayList<>();
+
+    private List<FollowUpAction> followUpActions = new ArrayList<>();
 }

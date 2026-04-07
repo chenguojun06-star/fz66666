@@ -18,54 +18,54 @@
 
 .form-container {
   position: absolute;
-  left: 40rpx;
-  right: 40rpx;
+  left: 20px;
+  right: 20px;
   top: 50%;
   transform: translateY(-50%);
   background: var(--color-bg-card);
-  border-radius: 20rpx;
+  border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 10rpx 40rpx rgba(0, 0, 0, 0.2);
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
 }
 
 .form-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 30rpx 40rpx;
-  border-bottom: 1rpx solid #f0f0f0;
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--color-bg-light);
 }
 
 .form-title {
-  font-size: 36rpx;
+  font-size: 18px;
   font-weight: 600;
   color: var(--color-text-primary);
 }
 
 .close-btn {
-  font-size: 60rpx;
+  font-size: 30px;
   color: var(--color-text-disabled);
   line-height: 1;
 }
 
 .form-body {
-  padding: 40rpx;
-  max-height: 800rpx;
+  padding: 20px;
+  max-height: 400px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
 
 .order-info {
-  background: #f8f9fa;
-  padding: 20rpx;
-  border-radius: 10rpx;
-  margin-bottom: 30rpx;
+  background: var(--color-bg-light);
+  padding: 10px;
+  border-radius: 5px;
+  margin-bottom: 15px;
 }
 
 .info-item {
   display: flex;
   align-items: center;
-  margin-bottom: 10rpx;
+  margin-bottom: 5px;
 }
 
 .info-item:last-child {
@@ -74,53 +74,53 @@
 
 .info-item .label {
   color: var(--color-text-secondary);
-  font-size: 28rpx;
+  font-size: 14px;
 }
 
 .info-item .value {
   color: var(--color-text-primary);
-  font-size: 28rpx;
+  font-size: 14px;
   font-weight: 500;
 }
 
 .form-item {
-  margin-bottom: 30rpx;
+  margin-bottom: 15px;
 }
 
 .form-label {
-  font-size: 28rpx;
+  font-size: 14px;
   color: var(--color-text-primary);
-  margin-bottom: 16rpx;
+  margin-bottom: 8px;
   font-weight: 500;
 }
 
 .form-input,
 .form-textarea {
   width: 100%;
-  padding: 20rpx;
-  border: 1rpx solid #e0e0e0;
-  border-radius: 10rpx;
-  font-size: 28rpx;
+  padding: 10px;
+  border: 1px solid var(--color-bg-gray);
+  border-radius: 5px;
+  font-size: 14px;
   box-sizing: border-box;
 }
 
 .form-textarea {
-  min-height: 120rpx;
+  min-height: 60px;
 }
 
 .form-footer {
   display: flex;
-  gap: 20rpx;
-  padding: 30rpx 40rpx;
-  border-top: 1rpx solid #f0f0f0;
+  gap: 10px;
+  padding: 15px 20px;
+  border-top: 1px solid var(--color-bg-light);
 }
 
 .cancel-btn,
 .submit-btn {
   flex: 1;
-  padding: 24rpx;
-  border-radius: 10rpx;
-  font-size: 32rpx;
+  padding: 12px;
+  border-radius: 5px;
+  font-size: 16px;
   font-weight: 500;
 }
 
@@ -130,6 +130,6 @@
 }
 
 .submit-btn {
-  background: linear-gradient(135deg, var(--color-primary) 0%, #764ba2 100%);
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-purple) 100%);
+  color: var(--color-text-white);
 }

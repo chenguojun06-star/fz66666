@@ -30,12 +30,12 @@
           <text>☁️ 小云助理</text>
         </view>
         <view class="tab-item {{currentTab === 'tasks' ? 'active' : ''}}" catchtap="switchTab" data-tab="tasks">
-          <text>📋 待办任务</text>
+          <view class="line-icon line-icon--sm icon-clipboard"></view><text>待办任务</text>
           <view class="tab-badge" wx:if="{{totalTasks > 0}}">{{totalTasks > 99 ? '99+' : totalTasks}}</view>
         </view>
       </view>
       <view class="chat-header-actions">
-        <view class="header-action-btn" hover-class="header-action-btn-hover" hover-stay-time="100" catchtap="clearMessages" title="清空对话" wx:if="{{currentTab === 'chat'}}">🗑</view>
+        <view class="header-action-btn" hover-class="header-action-btn-hover" hover-stay-time="100" catchtap="clearMessages" title="清空对话" wx:if="{{currentTab === 'chat'}}"><view class="line-icon line-icon--sm icon-trash"></view></view>
         <view class="header-action-btn close-btn" hover-class="header-action-btn-hover" hover-stay-time="100" catchtap="toggleChat">×</view>
       </view>
     </view>
@@ -43,14 +43,14 @@
     <view class="chat-main" wx:if="{{currentTab === 'chat'}}">
     <view class="quick-chips" wx:if="{{messages.length <= 1 && !isLoading}}">
       <block wx:if="{{isManager}}">
-        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="帮我生成今日智能日报">📊 生成日报</view>
-        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="当前有哪些逾期或高风险订单？">⚠️ 风险订单</view>
-        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="今天工厂扫码情况如何？">🔍 今日扫码</view>
+        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="帮我生成今日智能日报"><view class="line-icon line-icon--sm icon-stats"></view><text>生成日报</text></view>
+        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="当前有哪些逾期或高风险订单？"><view class="line-icon line-icon--sm icon-alert"></view><text>风险订单</text></view>
+        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="今天工厂扫码情况如何？"><view class="line-icon line-icon--sm icon-search"></view><text>今日扫码</text></view>
       </block>
       <block wx:else>
-        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="我今天负责的生产任务是什么？">📋 我的任务</view>
-        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="帮我查一下我最近的扫码记录">🔍 扫码记录</view>
-        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="我负责的订单当前进度怎么样？">📦 订单进度</view>
+        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="我今天负责的生产任务是什么？"><view class="line-icon line-icon--sm icon-clipboard"></view><text>我的任务</text></view>
+        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="帮我查一下我最近的扫码记录"><view class="line-icon line-icon--sm icon-search"></view><text>扫码记录</text></view>
+        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="我负责的订单当前进度怎么样？"><view class="line-icon line-icon--sm icon-package"></view><text>订单进度</text></view>
       </block>
     </view>
     <scroll-view class="chat-history" scroll-y enhanced="{{true}}" scroll-into-view="{{scrollTo}}">
@@ -89,14 +89,14 @@
 
     <scroll-view class="tasks-main" scroll-y enhanced="{{true}}" wx:if="{{currentTab === 'tasks'}}">
       <view class="empty-state" wx:if="{{totalTasks === 0}}">
-        <view class="empty-icon">🎉</view>
+        <view class="line-icon line-icon--lg icon-checkmark" style="margin-bottom:12rpx"></view>
         <view class="empty-text">太棒了！所有任务都处理完了</view>
       </view>
 
       <view class="task-section" wx:if="{{qualityTasks && qualityTasks.length > 0}}">
         <view class="section-header quality-header">
           <view class="section-header-left">
-            <text class="section-icon">🔍</text>
+            <view class="line-icon line-icon--sm icon-search"></view>
             <text class="section-name">待质检</text>
           </view>
           <view class="section-count-badge quality-badge">{{qualityTasks.length}}</view>
@@ -111,7 +111,7 @@
               </view>
               <text class="task-name">{{item.styleName || '暂无款式信息'}}</text>
               <view class="task-chips">
-                <view class="task-chip" wx:if="{{item.orderQuantity}}">📦 {{item.orderQuantity}}件</view>
+                <view class="task-chip" wx:if="{{item.orderQuantity}}">{{item.orderQuantity}}件</view>
                 <view class="task-chip" wx:if="{{item.customerName}}">{{item.customerName}}</view>
               </view>
             </view>
@@ -125,7 +125,7 @@
       <view class="task-section" wx:if="{{cuttingTasks && cuttingTasks.length > 0}}">
         <view class="section-header cutting-header">
           <view class="section-header-left">
-            <text class="section-icon">✂️</text>
+            <view class="line-icon line-icon--sm icon-cutting"></view>
             <text class="section-name">待裁剪</text>
           </view>
           <view class="section-count-badge cutting-badge">{{cuttingTasks.length}}</view>
@@ -139,7 +139,7 @@
                 <text class="task-style-tag cutting-tag">{{item.styleNo}}</text>
               </view>
               <view class="task-chips">
-                <view class="task-chip">📋 排单 {{item.orderQuantity || 0}}件</view>
+                <view class="task-chip">排单 {{item.orderQuantity || 0}}件</view>
               </view>
             </view>
             <view class="task-action-col">
@@ -152,7 +152,7 @@
       <view class="task-section" wx:if="{{purchaseTasks && purchaseTasks.length > 0}}">
         <view class="section-header purchase-header">
           <view class="section-header-left">
-            <text class="section-icon">🛒</text>
+            <view class="line-icon line-icon--sm icon-cart"></view>
             <text class="section-name">待采购</text>
           </view>
           <view class="section-count-badge purchase-badge">{{purchaseTasks.length}}</view>
@@ -167,7 +167,7 @@
               </view>
               <text class="task-name">{{item.materialName || '待采购物料'}}</text>
               <view class="task-chips">
-                <view class="task-chip">📦 {{item.purchaseQuantity || 0}}{{item.unit || ''}}</view>
+                <view class="task-chip">{{item.purchaseQuantity || 0}}{{item.unit || ''}}</view>
                 <view class="task-chip time-chip" wx:if="{{item.receivedTimeText}}">{{item.receivedTimeText}}</view>
               </view>
             </view>
@@ -181,7 +181,7 @@
       <view class="task-section" wx:if="{{repairTasks && repairTasks.length > 0}}">
         <view class="section-header repair-header">
           <view class="section-header-left">
-            <text class="section-icon">🔧</text>
+            <view class="line-icon line-icon--sm icon-wrench"></view>
             <text class="section-name">待返修</text>
           </view>
           <view class="section-count-badge repair-badge">{{repairTasks.length}}</view>
@@ -196,7 +196,7 @@
               </view>
               <text class="task-name">{{item.defectCategory || '次品待返修'}} · {{item.color}} {{item.size}}</text>
               <view class="task-chips">
-                <view class="task-chip">⚠️ 次品 {{item.defectQty}}件</view>
+                <view class="task-chip">次品 {{item.defectQty}}件</view>
               </view>
             </view>
           </view>
@@ -206,7 +206,7 @@
       <view class="task-section" wx:if="{{overdueOrders && overdueOrders.length > 0}}">
         <view class="section-header overdue-header">
           <view class="section-header-left">
-            <text class="section-icon">⏰</text>
+            <view class="line-icon line-icon--sm icon-clock"></view>
             <text class="section-name">延期订单</text>
           </view>
           <view class="section-count-badge overdue-badge">{{overdueOrders.length}}</view>
@@ -228,7 +228,7 @@
       <view class="task-section" wx:if="{{pendingUsers && pendingUsers.length > 0}}">
         <view class="section-header pending-header">
           <view class="section-header-left">
-            <text class="section-icon">👤</text>
+            <view class="line-icon line-icon--sm icon-user"></view>
             <text class="section-name">待审批用户</text>
           </view>
           <view class="section-count-badge pending-badge">{{pendingUsers.length}}</view>
@@ -241,7 +241,7 @@
                 <text class="task-order-no">{{item.name}}</text>
               </view>
               <view class="task-chips">
-                <view class="task-chip">📱 {{item.phone}}</view>
+                <view class="task-chip">{{item.phone}}</view>
                 <view class="task-chip time-chip">{{item.timeText}}</view>
               </view>
             </view>
@@ -252,7 +252,7 @@
       <view class="task-section" wx:if="{{pendingRegistrations && pendingRegistrations.length > 0}}">
         <view class="section-header pending-header">
           <view class="section-header-left">
-            <text class="section-icon">📝</text>
+            <view class="line-icon line-icon--sm icon-edit"></view>
             <text class="section-name">待审批注册</text>
           </view>
           <view class="section-count-badge pending-badge">{{pendingRegistrations.length}}</view>
@@ -265,7 +265,7 @@
                 <text class="task-order-no">{{item.name}}</text>
               </view>
               <view class="task-chips">
-                <view class="task-chip">📱 {{item.phone}}</view>
+                <view class="task-chip"><view class="line-icon line-icon--sm icon-phone"></view> {{item.phone}}</view>
                 <view class="task-chip time-chip">{{item.timeText}}</view>
               </view>
             </view>

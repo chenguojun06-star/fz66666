@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { intelligenceApi } from '@/services/production/productionApi';
+import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 
 type TriggerPredictParams = {
   orderId: string;

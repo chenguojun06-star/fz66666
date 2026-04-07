@@ -82,14 +82,14 @@
   <!-- ② 快捷入口卡片（历史记录 | 当月记录） -->
   <view class="quick-entry-row">
     <view class="quick-entry-card" hover-class="quick-entry-card-hover" hover-stay-time="100" bindtap="onGoToHistory">
-      <text class="qe-icon">📋</text>
+      <view class="line-icon icon-clipboard qe-icon"></view>
       <view class="qe-text">
         <text class="qe-title">历史记录</text>
         <text class="qe-desc">全部扫码记录</text>
       </view>
     </view>
     <view class="quick-entry-card" hover-class="quick-entry-card-hover" hover-stay-time="100" bindtap="onGoToMonthly">
-      <text class="qe-icon">📅</text>
+      <view class="line-icon icon-calendar qe-icon"></view>
       <view class="qe-text">
         <text class="qe-title">当月记录</text>
         <text class="qe-desc">本月汇总统计</text>
@@ -433,11 +433,11 @@
 
           <!-- 次品返修入库提示 -->
           <view wx:if="{{scanResultConfirm.isDefectiveReentry}}" class="result-hint defect-hint">
-            <text class="hint-icon">⚠️</text>
+            <view class="line-icon line-icon--sm icon-alert hint-icon"></view>
             <text class="hint-text">此菲号有 {{scanResultConfirm.defectQty}} 件次品，返修后直接入库，入库数量不能超过次品数</text>
           </view>
           <view wx:elif="{{scanResultConfirm.hasWarehouseSelected}}" class="result-hint">
-            <text class="hint-icon">🏠</text>
+            <view class="line-icon line-icon--sm icon-home hint-icon"></view>
             <text class="hint-text">已选择入库工序，请选择目标仓库后领取</text>
           </view>
           <view wx:elif="{{scanResultConfirm.scanData.qualityStage === 'confirm'}}" class="result-hint">

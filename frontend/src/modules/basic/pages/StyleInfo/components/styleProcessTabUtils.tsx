@@ -11,7 +11,7 @@ import { StyleProcess } from '@/types/style';
 import { toNumberSafe } from '@/utils/api';
 import RowActions from '@/components/common/RowActions';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
-import type { ProcessPriceHintResponse } from '@/services/production/productionApi';
+import type { ProcessPriceHintResponse } from '@/services/intelligence/intelligenceApi';
 import { STAGE_ACCENT, STAGE_ACCENT_LIGHT } from '@/utils/stageStyles';
 
 // ─────────────────────────────────────────────

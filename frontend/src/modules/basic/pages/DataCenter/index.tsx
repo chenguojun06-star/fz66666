@@ -93,9 +93,6 @@ const AttachmentThumb: React.FC<{ styleId?: string | number; cover?: string | nu
 
 const DataCenter: React.FC = () => {
   const { message } = App.useApp();
-  const { isMobile: _isMobile, modalWidth: _modalWidth } = useViewport();
-  const _navigate = useNavigate();
-  const _modalInitialHeight = typeof window !== 'undefined' ? window.innerHeight * 0.85 : 800;
 
   const [stats, setStats] = useState<DataCenterStats>({
     styleCount: 0,

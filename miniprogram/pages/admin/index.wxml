@@ -17,7 +17,7 @@
         </view>
         <view class="profile-role">{{roleDisplayName || '普通用户'}}</view>
         <view wx:if="{{showApprovalEntry}}" class="profile-online">
-          <text class="online-icon">👥</text>
+          <view class="line-icon line-icon--sm icon-user-group online-icon"></view>
           <text>{{onlineCount}}人</text>
         </view>
       </view>
@@ -26,48 +26,16 @@
 
   <!-- 功能菜单 -->
   <view class="menu-list">
-    <view class="menu-item" hover-class="menu-item-hover" data-url="/pages/admin/change-password/index" bindtap="onNavTo">
-      <text class="menu-icon">🔒</text>
-      <text class="menu-label">修改密码</text>
-      <text class="menu-arrow">›</text>
-    </view>
-    <view class="menu-item" hover-class="menu-item-hover" data-url="/pages/payroll/payroll" bindtap="onNavTo">
-      <text class="menu-icon">💰</text>
-      <text class="menu-label">工资查询</text>
-      <text class="menu-arrow">›</text>
-    </view>
-    <view wx:if="{{showInviteSection}}" class="menu-item" hover-class="menu-item-hover" data-url="/pages/admin/invite/index" bindtap="onNavTo">
-      <text class="menu-icon">👥</text>
-      <text class="menu-label">邀请员工</text>
-      <text class="menu-arrow">›</text>
-    </view>
-    <view class="menu-item" hover-class="menu-item-hover" data-url="/pages/admin/feedback/index" bindtap="onNavTo">
-      <text class="menu-icon">📝</text>
-      <text class="menu-label">问题反馈</text>
-      <text class="menu-arrow">›</text>
-    </view>
-    <view wx:if="{{showApprovalEntry}}" class="menu-item" hover-class="menu-item-hover" data-url="/pkg-admin-notification/pages/index/index" bindtap="onNavTo">
-      <text class="menu-icon">🔔</text>
-      <text class="menu-label">消息通知</text>
-      <text class="menu-arrow">›</text>
-    </view>
-    <view wx:if="{{showApprovalEntry}}" class="menu-item" hover-class="menu-item-hover" data-url="/pkg-admin-approval/pages/index/index" bindtap="onNavTo">
-      <text class="menu-icon">✅</text>
-      <text class="menu-label">用户审批</text>
-      <text class="menu-arrow">›</text>
-    </view>
-    <view class="menu-item" hover-class="menu-item-hover" bindtap="onLanguageSwitchTap">
-      <text class="menu-icon">🌐</text>
-      <text class="menu-label">切换语言</text>
-      <text class="menu-value">{{currentLanguageName || '中文'}}</text>
+    <view class="menu-item" wx:for="{{menuItems}}" wx:key="id" hover-class="menu-item-hover" data-index="{{index}}" bindtap="onMenuTap">
+      <view class="menu-icon-wrap">
+        <view class="line-icon {{item.iconClass}}"></view>
+      </view>
+      <text class="menu-label">{{item.label}}</text>
+      <text wx:if="{{item.value}}" class="menu-value">{{item.value}}</text>
       <text class="menu-arrow">›</text>
     </view>
   </view>
 
-  <!-- 版本信息 -->
-  <view class="version-info">
-    <text>云裳智立链 v2.0</text>
-  </view>
 </view>
 
 <!-- 小云 AI 助手（全页面悬浮） -->

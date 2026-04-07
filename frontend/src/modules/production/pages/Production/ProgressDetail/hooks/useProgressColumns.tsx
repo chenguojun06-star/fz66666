@@ -171,8 +171,6 @@ export const useProgressColumns = ({
         const quantity = Number(record.orderQuantity || 0);
         const { text, color } = getRemainingDaysDisplay(record.plannedEndDate, record.createTime, record.actualEndDate, record.status);
         const aiRisk = deliveryRiskMap?.get(String(record.orderNo || ''));
-        const _colorText = String(record.color || '').trim() || '-';
-        const _sizeText = String(record.size || '').trim() || '-';
         const factoryName = String(record.factoryName || '').trim() || '-';
         const factoryTypeText = record.factoryType === 'INTERNAL' ? '内部' : record.factoryType === 'EXTERNAL' ? '外发' : '';
         const merchandiserName = String((record as Record<string, unknown>).merchandiser || '').trim();
@@ -180,7 +178,6 @@ export const useProgressColumns = ({
         const remark = String((record as Record<string, unknown>).remarks || '').trim();
         const expectedShipDateRaw = (record as Record<string, unknown>).expectedShipDate;
         const expectedShipDate = expectedShipDateRaw ? dayjs(String(expectedShipDateRaw)).format('YYYY-MM-DD') : '-';
-        const _orderLines = parseProductionOrderLines(record);
         const softTagBaseStyle: CSSProperties = {
           margin: 0,
           fontSize: 11,

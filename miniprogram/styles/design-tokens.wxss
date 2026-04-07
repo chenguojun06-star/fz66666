@@ -44,6 +44,18 @@ page {
   --color-info: #2563eb;
   --color-purple: #7c3aed;
 
+  /* 状态浅底色 —— 用于提示条、状态背景、卡片内标签区域 */
+  --color-warning-bg: #fff7e6;
+  --color-error-bg: #fee2e2;
+  --color-success-bg: #dcfce7;
+  --color-info-bg: #dbeafe;
+
+  /* 状态边框色 —— 搭配对应浅底色使用（提示条/徽章/卡片边框） */
+  --color-warning-border: #fed7aa;
+  --color-error-border: #fca5a5;
+  --color-success-border: #a7f3d0;
+  --color-info-border: #93c5fd;
+
   /* 中性色 —— 页面背景略带蓝调，与白色卡片形成清晰层次 */
   --color-bg-page: #eef2f8;
   --color-bg-card: #ffffff;

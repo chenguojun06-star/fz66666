@@ -206,23 +206,7 @@ public class ProductWarehousingOrchestrator {
             }
         }
 
-        // 填充操作人（PC端表单不传operator字段，从当前登录用户补全）
-        String ctxUserId = UserContext.userId();
-        String ctxUsername = UserContext.username();
-        if (StringUtils.hasText(ctxUserId)) {
-            if (!StringUtils.hasText(productWarehousing.getWarehousingOperatorId())) {
-                productWarehousing.setWarehousingOperatorId(ctxUserId);
-                productWarehousing.setWarehousingOperatorName(ctxUsername);
-            }
-            if (!StringUtils.hasText(productWarehousing.getQualityOperatorId())) {
-                productWarehousing.setQualityOperatorId(ctxUserId);
-                productWarehousing.setQualityOperatorName(ctxUsername);
-            }
-            if (!StringUtils.hasText(productWarehousing.getReceiverId())) {
-                productWarehousing.setReceiverId(ctxUserId);
-                productWarehousing.setReceiverName(ctxUsername);
-            }
-        }
+        fillOperatorFromContext(productWarehousing);
 
         normalizeAndValidateDefectInfo(productWarehousing);
 
@@ -320,25 +304,7 @@ public class ProductWarehousingOrchestrator {
             validateProductionPrerequisiteForWarehousing(oid, bundleId);
         }
 
-        // 填充操作人（PC批量入库不传operator字段，从当前登录用户补全）
-        String batchCtxUserId = UserContext.userId();
-        String batchCtxUsername = UserContext.username();
-        if (StringUtils.hasText(batchCtxUserId)) {
-            for (ProductWarehousing w : list) {
-                if (!StringUtils.hasText(w.getWarehousingOperatorId())) {
-                    w.setWarehousingOperatorId(batchCtxUserId);
-                    w.setWarehousingOperatorName(batchCtxUsername);
-                }
-                if (!StringUtils.hasText(w.getQualityOperatorId())) {
-                    w.setQualityOperatorId(batchCtxUserId);
-                    w.setQualityOperatorName(batchCtxUsername);
-                }
-                if (!StringUtils.hasText(w.getReceiverId())) {
-                    w.setReceiverId(batchCtxUserId);
-                    w.setReceiverName(batchCtxUsername);
-                }
-            }
-        }
+        list.forEach(this::fillOperatorFromContext);
 
         boolean ok = productWarehousingService.saveBatchWarehousingAndUpdateOrder(list);
         if (!ok) {
@@ -601,5 +567,23 @@ public class ProductWarehousingOrchestrator {
     @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public void scrapBundle(String bundleId) {
         repairHelper.scrapBundle(bundleId);
+    }
+
+    private void fillOperatorFromContext(ProductWarehousing w) {
+        String userId = UserContext.userId();
+        String username = UserContext.username();
+        if (!StringUtils.hasText(userId)) return;
+        if (!StringUtils.hasText(w.getWarehousingOperatorId())) {
+            w.setWarehousingOperatorId(userId);
+            w.setWarehousingOperatorName(username);
+        }
+        if (!StringUtils.hasText(w.getQualityOperatorId())) {
+            w.setQualityOperatorId(userId);
+            w.setQualityOperatorName(username);
+        }
+        if (!StringUtils.hasText(w.getReceiverId())) {
+            w.setReceiverId(userId);
+            w.setReceiverName(username);
+        }
     }
 }

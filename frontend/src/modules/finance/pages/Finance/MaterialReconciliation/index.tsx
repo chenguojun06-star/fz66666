@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Card, Dropdown, Select, Tag, Form, message } from 'antd';
 
-import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import PageLayout from '@/components/common/PageLayout';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
@@ -28,14 +27,13 @@ import type { Dayjs } from 'dayjs';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
-import { intelligenceApi } from '@/services/production/productionApi';
-import type { FinanceAuditResponse } from '@/services/production/productionApi';
+import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
+import type { FinanceAuditResponse } from '@/services/intelligence/intelligenceApi';
 import { readPageSize } from '@/utils/pageSizeStore';
 
 const { Option } = Select;
 
 const MaterialReconciliation: React.FC = () => {
-  const _navigate = useNavigate();
   const { user } = useAuth(); // 获取当前用户信息
   const { isMobile, modalWidth } = useViewport();
   const reconModal = useModal<MaterialReconType>();

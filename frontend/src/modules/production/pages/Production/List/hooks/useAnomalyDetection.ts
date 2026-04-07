@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 import type { MessageInstance } from 'antd/es/message/interface';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { AnomalyItem } from '@/services/intelligence/intelligenceApi';
@@ -12,7 +13,7 @@ interface UseAnomalyDetectionParams {
   setActiveStatFilter: (v: 'production' | 'delayed' | 'today') => void;
   setShowDelayedOnly: (v: boolean) => void;
   setSmartQueueFilter: (v: 'all' | 'urgent' | 'behind' | 'stagnant' | 'overdue') => void;
-  setQueryParams: React.Dispatch<React.SetStateAction<ProductionQueryParams>>;
+  setQueryParams: Dispatch<SetStateAction<ProductionQueryParams>>;
   triggerOrderFocus: (record: Partial<ProductionOrder> | null | undefined) => void;
 }
 

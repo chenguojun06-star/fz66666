@@ -1,4 +1,3 @@
-import React from 'react';
 import { Tag, Space, InputNumber } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import RowActions from '@/components/common/RowActions';

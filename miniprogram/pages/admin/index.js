@@ -6,6 +6,27 @@ const { onDataRefresh } = require('../../utils/eventBus');
 const { safeNavigate } = require('../../utils/uiHelper');
 const i18n = require('../../utils/i18n/index');
 
+function buildMenuItems({ showInviteSection, showApprovalEntry, currentLanguageName }) {
+  const items = [
+    { id: 'password', label: '修改密码', iconClass: 'icon-lock', url: '/pages/admin/change-password/index' },
+    { id: 'payroll', label: '工资查询', iconClass: 'icon-payroll', url: '/pages/payroll/payroll' },
+    { id: 'feedback', label: '问题反馈', iconClass: 'icon-feedback', url: '/pages/admin/feedback/index' },
+  ];
+
+  if (showInviteSection) {
+    items.splice(2, 0, { id: 'invite', label: '邀请员工', iconClass: 'icon-user-group', url: '/pages/admin/invite/index' });
+  }
+
+  if (showApprovalEntry) {
+    items.push(
+      { id: 'approval', label: '用户审批', iconClass: 'icon-approval', url: '/pkg-admin-approval/pages/index/index' },
+    );
+  }
+
+  items.push({ id: 'language', label: '切换语言', iconClass: 'icon-globe', action: 'switchLanguage', value: currentLanguageName || '中文' });
+  return items;
+}
+
 Page({
   data: {
     userInfo: null,
@@ -23,6 +44,7 @@ Page({
       'vi-VN': 'Ti\u1ebfng Vi\u1ec7t',
       'km-KH': '\u1781\u17d2\u1798\u17c2\u179a',
     },
+    menuItems: [],
   },
 
   onShow() {
@@ -51,13 +73,29 @@ Page({
       currentLanguageName: languageNameMap[language] || '中文',
       languageNameMap,
     });
+    this.refreshMenuItems();
   },
 
-  /** 菜单项统一导航 */
-  onNavTo(e) {
-    const url = e.currentTarget.dataset.url;
-    if (url) {
-      wx.navigateTo({ url });
+  refreshMenuItems() {
+    this.setData({
+      menuItems: buildMenuItems({
+        showInviteSection: this.data.showInviteSection,
+        showApprovalEntry: this.data.showApprovalEntry,
+        currentLanguageName: this.data.currentLanguageName,
+      }),
+    });
+  },
+
+  onMenuTap(e) {
+    const { index } = e.currentTarget.dataset;
+    const item = this.data.menuItems[index];
+    if (!item) return;
+    if (item.action === 'switchLanguage') {
+      this.onLanguageSwitchTap();
+      return;
+    }
+    if (item.url) {
+      wx.navigateTo({ url: item.url });
     }
   },
 
@@ -134,6 +172,7 @@ Page({
       patch.showApprovalEntry = showApprovalEntry;
     }
     this.setData(patch);
+    this.refreshMenuItems();
 
     // 后台静默刷新用户信息（PC端改头像后小程序自动同步）
     api.system.getMe().then(res => {
@@ -168,7 +207,7 @@ Page({
       if (hasTenant && this.data.showApprovalEntry) {
         try {
           await api.tenant.myTenant();
-          this.setData({ showInviteSection: true });
+          this.setData({ showInviteSection: true }, () => this.refreshMenuItems());
         } catch (e) {
           console.error('加载租户信息失败', e);
         }

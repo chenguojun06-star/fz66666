@@ -64,7 +64,7 @@ export const toNumberSafe = (v: unknown) => {
   return Number.isFinite(n) ? n : 0;
 };
 
-export const toUrlSearchParams = (params: Record<string, unknown>): URLSearchParams => {
+const toUrlSearchParams = (params: Record<string, unknown>): URLSearchParams => {
   const searchParams = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null) {

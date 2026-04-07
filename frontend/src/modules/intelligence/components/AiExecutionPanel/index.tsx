@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, Button, Modal, Tag, Space, Drawer, Spin, Empty, Alert } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import { CheckCircleOutlined } from '@ant-design/icons';

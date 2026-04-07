@@ -5,29 +5,29 @@
 .page {
   min-height: 100vh;
   background: var(--color-bg-page);
-  padding-bottom: 40rpx;
+  padding-bottom: 20px;
 }
 
 /* 顶部统计卡片 */
 .summary-card {
-  margin: 24rpx;
-  padding: 32rpx;
+  margin: 12px;
+  padding: 16px;
   background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary) 100%);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
 }
 
 .summary-title {
-  font-size: 36rpx;
+  font-size: 18px;
   font-weight: 700;
-  color: #ffffff;
-  margin-bottom: 24rpx;
+  color: var(--color-text-white);
+  margin-bottom: 12px;
 }
 
 .summary-row {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 16rpx;
+  margin-bottom: 8px;
 }
 
 .summary-row:last-child {
@@ -37,10 +37,10 @@
 .summary-item {
   flex: 1;
   text-align: center;
-  padding: 16rpx;
+  padding: 8px;
   background: rgba(255, 255, 255, 0.15);
   border-radius: var(--radius-md);
-  margin: 0 8rpx;
+  margin: 0 4px;
 }
 
 .summary-item:first-child {
@@ -52,28 +52,28 @@
 }
 
 .summary-label {
-  font-size: 24rpx;
+  font-size: 12px;
   color: rgba(255, 255, 255, 0.9);
-  margin-bottom: 8rpx;
+  margin-bottom: 4px;
 }
 
 .summary-value {
-  font-size: 32rpx;
+  font-size: 16px;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--color-text-white);
 }
 
 .summary-value.primary {
-  font-size: 44rpx;
-  color: #ffd700;
+  font-size: 22px;
+  color: var(--color-warning);
 }
 
 /* 筛选器 */
 .filter-bar {
-  margin: 24rpx;
+  margin: 12px;
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
-  padding: 8rpx;
+  padding: 4px;
   box-shadow: var(--shadow-sm);
 }
 
@@ -85,8 +85,8 @@
 .filter-tab {
   flex: 1;
   text-align: center;
-  padding: 16rpx;
-  font-size: 28rpx;
+  padding: 8px;
+  font-size: 14px;
   color: var(--color-text-secondary);
   border-radius: var(--radius-md);
 }
@@ -97,7 +97,7 @@
 
 .filter-tab.active {
   background: var(--color-primary);
-  color: #ffffff;
+  color: var(--color-text-white);
   font-weight: 600;
 }
 
@@ -106,61 +106,61 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin: 0 24rpx 24rpx;
-  gap: 16rpx;
+  margin: 0 12px 12px;
+  gap: 8px;
 }
 
 .date-col {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8rpx;
+  gap: 4px;
 }
 
 .date-label {
-  font-size: 26rpx;
+  font-size: 13px;
   color: var(--color-text-secondary);
   font-weight: 500;
-  padding-left: 4rpx;
+  padding-left: 2px;
 }
 
 .date-picker {
-  padding: 20rpx;
+  padding: 10px;
   background: var(--color-bg-card);
   border-radius: var(--radius-md);
   text-align: center;
-  font-size: 28rpx;
+  font-size: 14px;
   color: var(--color-text-primary);
-  border: 2rpx solid var(--color-border);
+  border: 1px solid var(--color-border);
 }
 
 /* 明细区域 */
 .detail-section {
-  margin: 24rpx;
+  margin: 12px;
 }
 
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16rpx;
+  margin-bottom: 8px;
 }
 
 .section-title {
-  font-size: 32rpx;
+  font-size: 16px;
   font-weight: 700;
   color: var(--color-text-primary);
-  padding-left: 8rpx;
+  padding-left: 4px;
 }
 
 .sort-btn {
   display: flex;
   align-items: center;
-  gap: 8rpx;
-  padding: 12rpx 20rpx;
+  gap: 4px;
+  padding: 6px 10px;
   background: var(--color-primary);
   border-radius: var(--radius-md);
-  color: #ffffff;
+  color: var(--color-text-white);
 }
 
 .sort-btn-hover {
@@ -168,13 +168,13 @@
 }
 
 .sort-text {
-  font-size: 26rpx;
-  color: #ffffff;
+  font-size: 13px;
+  color: var(--color-text-white);
   font-weight: 600;
 }
 
 .sort-icon {
-  font-size: 24rpx;
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -184,8 +184,8 @@
 .record-item {
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
-  padding: 24rpx;
-  margin-bottom: 16rpx;
+  padding: 12px;
+  margin-bottom: 8px;
   box-shadow: var(--shadow-sm);
 }
 
@@ -193,39 +193,39 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12rpx;
+  margin-bottom: 6px;
 }
 
 .order-info {
-  font-size: 28rpx;
+  font-size: 14px;
   font-weight: 600;
   color: var(--color-primary);
 }
 
 .style-info {
-  font-size: 26rpx;
+  font-size: 13px;
   color: var(--color-text-secondary);
 }
 
 .record-detail {
   display: flex;
   align-items: center;
-  margin-bottom: 16rpx;
+  margin-bottom: 8px;
 }
 
 .color-size {
-  font-size: 26rpx;
+  font-size: 13px;
   color: var(--color-text-secondary);
-  margin-right: 16rpx;
+  margin-right: 8px;
 }
 
 .process {
   display: inline-block;
-  padding: 4rpx 12rpx;
+  padding: 2px 6px;
   background: var(--color-primary-light);
-  color: #ffffff;
+  color: var(--color-text-white);
   border-radius: var(--radius-sm);
-  font-size: 24rpx;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -233,14 +233,14 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 12rpx;
-  border-top: 2rpx solid var(--color-border-light);
+  padding-top: 6px;
+  border-top: 1px solid var(--color-border-light);
 }
 
 .calculation {
   display: flex;
   align-items: center;
-  font-size: 28rpx;
+  font-size: 14px;
 }
 
 .quantity {
@@ -251,7 +251,7 @@
 .multiply,
 .equals {
   color: var(--color-text-disabled);
-  margin: 0 8rpx;
+  margin: 0 4px;
 }
 
 .unit-price {
@@ -261,11 +261,11 @@
 .amount {
   color: var(--color-error);
   font-weight: 700;
-  font-size: 32rpx;
+  font-size: 16px;
 }
 
 .time {
-  font-size: 24rpx;
+  font-size: 12px;
   color: var(--color-text-disabled);
 }
 
@@ -274,24 +274,24 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 24rpx;
-  padding: 24rpx;
+  margin-top: 12px;
+  padding: 12px;
   background: linear-gradient(
     90deg,
     rgba(var(--color-primary-rgb), 0.1) 0%,
     rgba(var(--color-primary-rgb), 0.05) 100%
   );
   border-radius: var(--radius-lg);
-  border: 2rpx solid var(--color-primary-light);
+  border: 1px solid var(--color-primary-light);
 }
 
 .bottom-label {
-  font-size: 28rpx;
+  font-size: 14px;
   color: var(--color-text-secondary);
 }
 
 .bottom-amount {
-  font-size: 40rpx;
+  font-size: 20px;
   font-weight: 700;
   color: var(--color-error);
 }

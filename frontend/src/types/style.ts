@@ -203,6 +203,7 @@ export interface StyleAttachment extends Record<string, unknown> {
 
 export interface StyleQueryParams {
   styleNo?: string;
+  styleNoExact?: string;
   styleName?: string;
   category?: string;
   keyword?: string;

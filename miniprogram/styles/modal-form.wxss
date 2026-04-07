@@ -60,7 +60,7 @@
   line-height: 20px;
   font-size: var(--font-size-sm);
   color: var(--color-text-primary);
-  background: var(--color-bg-light, #f8fafc);
+  background: var(--color-bg-light, var(--color-bg-light));
   border: 1px solid var(--color-border);
   border-radius: 8px;
   box-sizing: border-box;
@@ -71,7 +71,7 @@
   padding: 7px 10px;
   font-size: var(--font-size-sm);
   color: var(--color-text-primary);
-  background: var(--color-bg-light, #f8fafc);
+  background: var(--color-bg-light, var(--color-bg-light));
   border: 1px solid var(--color-border);
   border-radius: 8px;
   box-sizing: border-box;
@@ -85,7 +85,7 @@
   box-sizing: border-box;
   font-size: var(--font-size-sm);
   color: var(--color-text-primary);
-  background: var(--color-bg-light, #f8fafc);
+  background: var(--color-bg-light, var(--color-bg-light));
   border: 1px solid var(--color-border);
   border-radius: 8px;
   display: flex;
@@ -187,7 +187,7 @@
   text-align: center;
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
-  background: var(--color-bg-light, #f8fafc);
+  background: var(--color-bg-light, var(--color-bg-light));
   border: 1px solid var(--color-border);
   border-radius: 6px;
 }
@@ -286,7 +286,7 @@
   padding: 4px 6px;
   font-size: var(--font-size-sm);
   color: var(--color-text-primary);
-  background: var(--color-bg-light, #f8fafc);
+  background: var(--color-bg-light, var(--color-bg-light));
   border: 1px solid var(--color-border);
   border-radius: 4px;
   box-sizing: border-box;
@@ -301,7 +301,7 @@
   justify-content: center;
   font-size: var(--font-size-xs);
   color: var(--color-text-disabled);
-  background: var(--color-bg-gray, #f1f5f9);
+  background: var(--color-bg-gray, var(--color-bg-light));
   border-radius: 50%;
 }
 
@@ -321,7 +321,7 @@
 /* 次要操作按钮（如"导入5码"）— 灰色描边风格 */
 .mf-import-btn {
   color: var(--color-text-secondary);
-  background: var(--color-bg-light, #f8fafc);
+  background: var(--color-bg-light, var(--color-bg-light));
   border: 1px solid var(--color-border);
 }
 
@@ -357,7 +357,7 @@
   text-align: center;
   font-size: var(--font-size-sm);
   color: var(--color-text-disabled);
-  background: var(--color-bg-light, #f8fafc);
+  background: var(--color-bg-light, var(--color-bg-light));
   border-radius: 6px;
 }
 
@@ -370,7 +370,7 @@
   margin-bottom: 6px;
   border: 1px solid var(--color-border);
   border-radius: 6px;
-  background: var(--color-bg-light, #f8fafc);
+  background: var(--color-bg-light, var(--color-bg-light));
 }
 
 .mf-select-item.active {
@@ -407,7 +407,7 @@
 
 .mf-btn.ok {
   background: var(--color-primary);
-  color: #fff;
+  color: var(--color-text-white);
 }
 
 .mf-btn.disabled {
@@ -416,8 +416,8 @@
 }
 
 .mf-btn.danger {
-  background: var(--color-error, #ff4d4f);
-  color: #fff;
+  background: var(--color-error, var(--color-danger));
+  color: var(--color-text-white);
 }
 
 /* ---- 关键值对列表（参照扫码 .cf-item） ---- */
@@ -429,7 +429,7 @@
   display: flex;
   justify-content: space-between;
   padding: 3px 0;
-  border-bottom: 1px solid var(--color-border-light, #f0f0f0);
+  border-bottom: 1px solid var(--color-border-light, var(--color-bg-light));
 }
 
 .mf-kv:last-child {

@@ -6,35 +6,35 @@
 
 /* ---- 卡片容器 ---- */
 .wc-card {
-  background: #fff;
-  border-radius: 12rpx;
-  padding: 20rpx;
-  margin-bottom: 20rpx;
+  background: var(--color-bg-card);
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 10px;
   display: flex;
   align-items: flex-start;
 }
 
 /* ---- 封面图 ---- */
 .wc-img {
-  width: 140rpx;
-  height: 140rpx;
-  border-radius: 8rpx;
-  margin-right: 20rpx;
+  width: 70px;
+  height: 70px;
+  border-radius: 4px;
+  margin-right: 10px;
   flex-shrink: 0;
 }
 
 .wc-img-placeholder {
-  width: 140rpx;
-  height: 140rpx;
-  border-radius: 8rpx;
-  margin-right: 20rpx;
+  width: 70px;
+  height: 70px;
+  border-radius: 4px;
+  margin-right: 10px;
   flex-shrink: 0;
-  background: #f5f6f8;
+  background: var(--color-bg-light);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22rpx;
-  color: #ccc;
+  font-size: 11px;
+  color: var(--color-bg-gray);
   text-align: center;
   line-height: 1.4;
 }
@@ -49,39 +49,39 @@
 .wc-head {
   display: flex;
   align-items: center;
-  gap: 10rpx;
-  margin-bottom: 4rpx;
+  gap: 5px;
+  margin-bottom: 2px;
 }
 
 /* ---- 操作按钮行（在 wc-head 内则自动 flex-shrink:0）---- */
 .wc-op-row {
   display: flex;
-  gap: 8rpx;
+  gap: 4px;
   flex-shrink: 0;
 }
 
 .wc-op-btn {
-  font-size: 22rpx;
-  padding: 6rpx 18rpx;
-  border-radius: 20rpx;
-  border: 1rpx solid #e5e7eb;
-  color: #666;
-  background: #f8f9fa;
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 10px;
+  border: 1px solid var(--color-bg-gray);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-light);
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .wc-op-btn-primary {
-  background: var(--color-primary, #1890ff);
-  color: #fff;
-  border-color: var(--color-primary, #1890ff);
+  background: var(--color-primary, var(--color-primary));
+  color: var(--color-text-white);
+  border-color: var(--color-primary, var(--color-primary));
 }
 
 /* ---- 款号（单独使用时 display:block；在 wc-head 内自动 flex:1）---- */
 .wc-title {
-  font-size: 30rpx;
+  font-size: 15px;
   font-weight: 700;
-  color: #222;
+  color: var(--color-text-primary);
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -92,10 +92,10 @@
 
 /* ---- 款式名称 ---- */
 .wc-subtitle {
-  font-size: 24rpx;
-  color: #666;
+  font-size: 12px;
+  color: var(--color-text-secondary);
   display: block;
-  margin-bottom: 8rpx;
+  margin-bottom: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -105,83 +105,83 @@
 .wc-tags-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8rpx;
-  margin-bottom: 6rpx;
+  gap: 4px;
+  margin-bottom: 3px;
 }
 
 .wc-tag {
-  font-size: 20rpx;
-  padding: 4rpx 14rpx;
-  border-radius: 20rpx;
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 10px;
   white-space: nowrap;
 }
 
 /* 颜色标签 — 玫红 */
 .wc-tag-color {
-  background: #fce8f3;
-  color: #c2185b;
+  background: var(--color-error-bg);
+  color: var(--color-danger);
 }
 
 /* 尺码标签 — 蓝 */
 .wc-tag-size {
-  background: #e3f2fd;
-  color: #1565c0;
+  background: var(--color-info-bg);
+  color: var(--color-primary);
 }
 
 /* 类型标签 — 绿 */
 .wc-tag-type {
-  background: #e8f5e9;
-  color: #2e7d32;
+  background: var(--color-success-bg);
+  color: var(--color-success);
 }
 
 /* ---- 库存数据行 ---- */
 .wc-stock {
   display: flex;
   flex-wrap: wrap;
-  gap: 20rpx;
-  margin-top: 10rpx;
-  padding-top: 10rpx;
-  border-top: 1rpx solid #f0f0f0;
+  gap: 10px;
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid var(--color-bg-light);
 }
 
 .wc-stock-item {
   display: flex;
   align-items: baseline;
-  gap: 4rpx;
+  gap: 2px;
 }
 
 .wc-stock-label {
-  font-size: 22rpx;
-  color: #aaa;
+  font-size: 11px;
+  color: var(--color-text-disabled);
 }
 
 .wc-stock-val {
-  font-size: 28rpx;
+  font-size: 14px;
   font-weight: 700;
-  color: #333;
+  color: var(--color-text-primary);
 }
 
-.wc-stock-val.green  { color: #52c41a; }
-.wc-stock-val.orange { color: #faad14; }
-.wc-stock-val.red    { color: #ff4d4f; }
+.wc-stock-val.green  { color: var(--color-success); }
+.wc-stock-val.orange { color: var(--color-warning); }
+.wc-stock-val.red    { color: var(--color-danger); }
 
 .wc-stock-unit {
-  font-size: 20rpx;
-  color: #aaa;
+  font-size: 10px;
+  color: var(--color-text-disabled);
 }
 
 /* ---- 底部操作链接（如「借调记录」）---- */
 .wc-actions {
   display: flex;
   justify-content: flex-end;
-  margin-top: 10rpx;
+  margin-top: 5px;
 }
 
 .wc-action-link {
-  font-size: 22rpx;
-  color: var(--color-primary, #1890ff);
-  padding: 4rpx 14rpx;
-  border: 1rpx solid #d6e8ff;
-  border-radius: 20rpx;
-  background: #f5f9ff;
+  font-size: 11px;
+  color: var(--color-primary, var(--color-primary));
+  padding: 2px 7px;
+  border: 1px solid var(--color-info-bg);
+  border-radius: 10px;
+  background: var(--color-bg-light);
 }

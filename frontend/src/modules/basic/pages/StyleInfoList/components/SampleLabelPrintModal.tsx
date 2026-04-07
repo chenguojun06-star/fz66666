@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Radio, InputNumber, Button, Space, App } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';

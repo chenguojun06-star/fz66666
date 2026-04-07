@@ -508,13 +508,6 @@ export const StyleAttachmentsButton: React.FC<{
     }
   }, [styleId, styleNo]);
 
-  // 检查纸样类型分布
-  const _patternTypeInfo = React.useMemo(() => {
-    const hasPattern = data.some((item) => item.bizType === 'pattern' || item.bizType === 'pattern_final');
-    const hasGrading = data.some((item) => item.bizType === 'pattern_grading' || item.bizType === 'pattern_grading_final');
-    return { hasPattern, hasGrading, onlyOneType: (hasPattern && !hasGrading) || (!hasPattern && hasGrading) };
-  }, [data]);
-
   // 当模态框打开时获取附件列表
   React.useEffect(() => {
     if (open) fetchList();

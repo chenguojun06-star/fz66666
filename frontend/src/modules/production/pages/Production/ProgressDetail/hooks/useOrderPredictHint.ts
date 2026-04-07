@@ -6,7 +6,7 @@
  */
 import { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
-import { intelligenceApi } from '@/services/production/productionApi';
+import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 
 interface PredictHint {
   text: string;         // "03-15 14:00"

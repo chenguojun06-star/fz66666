@@ -5,8 +5,8 @@
    设计规范：
      遮罩     rgba(0,0,0,0.45) / z-index 9999
      box宽度   90% / max-height 80vh（large=88vh）
-     圆角     12rpx
-     标题     28rpx / 600 / 居中 / 右侧绝对定位 ×
+     圆角     6px
+     标题     14px / 600 / 居中 / 右侧绝对定位 ×
      动画     scale(0.92) → scale(1)  0.2s ease-out
    ============================================================ */
 
@@ -28,11 +28,11 @@
 .mp-modal-box {
   width: 90%;
   max-height: 85vh;
-  background: #fff;
-  border-radius: 16rpx;
+  background: var(--color-bg-card);
+  border-radius: 8px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.14);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.14);
   overflow: hidden;
   animation: mpModalIn 0.2s ease-out;
 }
@@ -50,20 +50,20 @@
 /* 标题栏 */
 .mp-modal-head {
   position: relative;
-  padding: 22rpx 80rpx;
+  padding: 11px 40px;
   text-align: center;
-  font-size: 30rpx;
+  font-size: 15px;
   font-weight: 600;
-  color: #1a1a1a;
-  border-bottom: 1rpx solid #f0f0f0;
+  color: var(--color-text-primary);
+  border-bottom: 1px solid var(--color-bg-light);
   flex-shrink: 0;
   line-height: 1.5;
 }
 
 .mp-modal-title {
-  font-size: 30rpx;
+  font-size: 15px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--color-text-primary);
 }
 
 /* 内容区 —— scroll-view 原生滚动 */
@@ -73,7 +73,7 @@
 .mp-modal-body {
   max-height: 60vh;
   overflow: hidden;
-  padding: 12rpx 24rpx;
+  padding: 6px 12px;
   box-sizing: border-box;
 }
 
@@ -90,13 +90,13 @@
 /* 关闭按钮（右上角绝对定位） */
 .mp-modal-close {
   position: absolute;
-  right: 20rpx;
+  right: 10px;
   top: 50%;
   transform: translateY(-50%);
-  width: 52rpx;
-  height: 52rpx;
-  line-height: 52rpx;
+  width: 26px;
+  height: 26px;
+  line-height: 26px;
   text-align: center;
-  color: #bbb;
-  font-size: 28rpx;
+  color: var(--color-text-disabled);
+  font-size: 14px;
 }

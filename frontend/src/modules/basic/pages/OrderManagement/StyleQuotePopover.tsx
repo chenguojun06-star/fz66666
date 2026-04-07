@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Popover, Spin, Tag } from 'antd';
-import { intelligenceApi } from '@/services/production/productionApi';
+import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import DecisionInsightCard, { SMART_CARD_CONTENT_WIDTH, SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
 
 /* ===== 类型 ===== */

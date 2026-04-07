@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import type { CuttingBundle, ProductionOrder } from '@/types/production';
-import { intelligenceApi } from '@/services/production/productionApi';
+import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import { confirmPrecheckRisk } from '../components/SmartPrecheckModal';
 import type { ProgressNode } from '../types';
 import { getCurrentWorkflowNodeForOrder, isCuttingStageKey } from '../utils';

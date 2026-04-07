@@ -94,11 +94,6 @@ public class StyleBomOrchestrator {
         }
         styleBom.setUpdateTime(LocalDateTime.now());
         boolean ok = styleBomService.save(styleBom);
-        // 样衣阶段不自动同步到模板库
-        // if (ok) {
-        //     tryCreateBomTemplate(styleBom.getStyleId());
-        //     autoSyncBomRow(styleBom);
-        // }
         if (!ok) {
             throw new IllegalStateException("保存失败");
         }
@@ -154,23 +149,6 @@ public class StyleBomOrchestrator {
             }
         }
 
-        // 样衣阶段不自动同步到模板库
-        // if (ok) {
-        //     Long styleId = styleBom.getStyleId() != null ? styleBom.getStyleId() : current.getStyleId();
-        //     tryCreateBomTemplate(styleId);
-        //     StyleBom merged = new StyleBom();
-        //     merged.setId(styleBom.getId());
-        //     merged.setStyleId(styleId);
-        //     merged.setMaterialCode(StringUtils.hasText(styleBom.getMaterialCode()) ? styleBom.getMaterialCode() : current.getMaterialCode());
-        //     merged.setMaterialName(StringUtils.hasText(styleBom.getMaterialName()) ? styleBom.getMaterialName() : current.getMaterialName());
-        //     merged.setMaterialType(StringUtils.hasText(styleBom.getMaterialType()) ? styleBom.getMaterialType() : current.getMaterialType());
-        //     merged.setUnit(StringUtils.hasText(styleBom.getUnit()) ? styleBom.getUnit() : current.getUnit());
-        //     merged.setSupplier(StringUtils.hasText(styleBom.getSupplier()) ? styleBom.getSupplier() : current.getSupplier());
-        //     merged.setSpecification(StringUtils.hasText(styleBom.getSpecification()) ? styleBom.getSpecification() : current.getSpecification());
-        //     merged.setUnitPrice(styleBom.getUnitPrice() != null ? styleBom.getUnitPrice() : current.getUnitPrice());
-        //     merged.setRemark(StringUtils.hasText(styleBom.getRemark()) ? styleBom.getRemark() : current.getRemark());
-        //     autoSyncBomRow(merged);
-        // }
         if (!ok) {
             throw new IllegalStateException("保存失败");
         }

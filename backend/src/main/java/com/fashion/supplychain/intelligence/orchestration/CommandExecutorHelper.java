@@ -1,6 +1,8 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import com.fashion.supplychain.intelligence.dto.ExecutableCommand;
+import com.fashion.supplychain.intelligence.helper.CommandTargetResolver;
+import com.fashion.supplychain.production.entity.MaterialStock;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -8,10 +10,11 @@ import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.MaterialStockService;
 import com.fashion.supplychain.production.orchestration.ScanRecordOrchestrator;
 import com.fashion.supplychain.production.orchestration.CuttingTaskOrchestrator;
+import com.fashion.supplychain.finance.entity.PayrollSettlement;
 import com.fashion.supplychain.finance.orchestration.PayrollSettlementOrchestrator;
 import com.fashion.supplychain.finance.entity.FinishedProductSettlement;
-import com.fashion.supplychain.production.orchestration.ProductWarehousingOrchestrator;
 import com.fashion.supplychain.finance.service.FinishedProductSettlementService;
+import com.fashion.supplychain.production.orchestration.ProductWarehousingOrchestrator;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.style.service.StyleInfoService;
@@ -35,10 +38,11 @@ import java.util.concurrent.ConcurrentHashMap;
 public class CommandExecutorHelper {
 
     @Autowired private ProductionOrderService productionOrderService;
+    @Autowired private MaterialPurchaseService materialPurchaseService;
     @Autowired private MaterialStockService materialStockService;
     @Autowired private StyleInfoService styleInfoService;
     @Autowired private FinishedProductSettlementService finishedProductSettlementService;
-    @Autowired private MaterialPurchaseService materialPurchaseService;
+    @Autowired private CommandTargetResolver commandTargetResolver;
     @Autowired private SmartNotificationOrchestrator smartNotification;
     @Autowired private ScanRecordOrchestrator scanRecordOrchestrator;
     @Autowired private CuttingTaskOrchestrator cuttingTaskOrchestrator;
@@ -123,6 +127,7 @@ public class CommandExecutorHelper {
         if (newThreshold < 0) {
             throw new ExecutionEngineOrchestrator.BusinessException("安全库存不能为负数");
         }
+        requireMaterialStock(stockId);
         boolean ok = materialStockService.updateSafetyStock(stockId, newThreshold);
         if (!ok) {
             throw new ExecutionEngineOrchestrator.BusinessException("库存记录不存在或更新失败: " + stockId);
@@ -168,10 +173,7 @@ public class CommandExecutorHelper {
 
     public StyleInfo executeStyleApprove(ExecutableCommand command, Long executorId) {
         String styleId = command.getTargetId();
-        StyleInfo style = styleInfoService.getById(styleId);
-        if (style == null) {
-            throw new ExecutionEngineOrchestrator.BusinessException("款式不存在: " + styleId);
-        }
+        StyleInfo style = requireStyle(styleId);
         style.setSampleReviewStatus("PASS");
         style.setSampleReviewComment("[AI审核] " + command.getReason());
         style.setSampleReviewTime(LocalDateTime.now());
@@ -182,10 +184,7 @@ public class CommandExecutorHelper {
 
     public StyleInfo executeStyleReturn(ExecutableCommand command, Long executorId) {
         String styleId = command.getTargetId();
-        StyleInfo style = styleInfoService.getById(styleId);
-        if (style == null) {
-            throw new ExecutionEngineOrchestrator.BusinessException("款式不存在: " + styleId);
-        }
+        StyleInfo style = requireStyle(styleId);
         String returnReason = (String) command.getParams().getOrDefault("returnReason", command.getReason());
         style.setSampleReviewStatus("REWORK");
         style.setSampleReviewComment("[AI退回] " + returnReason);
@@ -206,10 +205,7 @@ public class CommandExecutorHelper {
 
     public FinishedProductSettlement executeSettlementApprove(ExecutableCommand command, Long executorId) {
         String settlementId = command.getTargetId();
-        FinishedProductSettlement settlement = finishedProductSettlementService.getById(settlementId);
-        if (settlement == null) {
-            throw new ExecutionEngineOrchestrator.BusinessException("结算单不存在: " + settlementId);
-        }
+        FinishedProductSettlement settlement = requireFinishedSettlement(settlementId);
         if ("approved".equals(settlement.getStatus())) {
             throw new ExecutionEngineOrchestrator.BusinessException("结算单已审批，无需重复操作");
         }
@@ -344,6 +340,7 @@ public class CommandExecutorHelper {
         String action = (String) command.getParams().getOrDefault("action", "approve");
         String settlementId = command.getTargetId();
         String remark = (String) command.getParams().getOrDefault("remark", "");
+        requirePayrollSettlement(settlementId);
         if ("cancel".equalsIgnoreCase(action)) {
             payrollSettlementOrchestrator.cancel(settlementId, remark);
             log.info("[PayrollApprove] AI取消工资结算: settlementId={}, executor={}", settlementId, executorId);
@@ -391,7 +388,7 @@ public class CommandExecutorHelper {
             switch (command.getAction()) {
                 case "order:hold", "order:expedite", "order:resume", "order:approve",
                      "order:reject", "order:remark", "quality:reject" -> {
-                    ProductionOrder o = productionOrderService.getByOrderNo(targetId);
+                    ProductionOrder o = commandTargetResolver.findOrder(targetId);
                     if (o != null) {
                         original.put("status", o.getStatus());
                         original.put("urgencyLevel", o.getUrgencyLevel());
@@ -399,14 +396,14 @@ public class CommandExecutorHelper {
                     }
                 }
                 case "style:approve", "style:return" -> {
-                    StyleInfo s = styleInfoService.getById(targetId);
+                    StyleInfo s = commandTargetResolver.findStyle(targetId);
                     if (s != null) {
                         original.put("sampleReviewStatus", s.getSampleReviewStatus());
                         original.put("sampleReviewComment", s.getSampleReviewComment());
                     }
                 }
                 case "settlement:approve" -> {
-                    FinishedProductSettlement st = finishedProductSettlementService.getById(targetId);
+                    FinishedProductSettlement st = commandTargetResolver.findFinishedSettlement(targetId);
                     if (st != null) original.put("status", st.getStatus());
                 }
                 default -> { /* material/notification/purchase 等不支持撤回 */ }
@@ -432,23 +429,20 @@ public class CommandExecutorHelper {
         switch (snap.action) {
             case "order:hold", "order:expedite", "order:resume", "order:approve",
                  "order:reject", "order:remark", "quality:reject" -> {
-                ProductionOrder o = productionOrderService.getByOrderNo(snap.targetId);
-                if (o == null) throw new ExecutionEngineOrchestrator.BusinessException("订单已被删除，无法撤回");
+                ProductionOrder o = requireOrder(snap.targetId);
                 o.setStatus((String) snap.originalValues.get("status"));
                 o.setUrgencyLevel((String) snap.originalValues.get("urgencyLevel"));
                 o.setOperationRemark((String) snap.originalValues.get("operationRemark"));
                 productionOrderService.updateById(o);
             }
             case "style:approve", "style:return" -> {
-                StyleInfo s = styleInfoService.getById(snap.targetId);
-                if (s == null) throw new ExecutionEngineOrchestrator.BusinessException("款式已被删除，无法撤回");
+                StyleInfo s = requireStyle(snap.targetId);
                 s.setSampleReviewStatus((String) snap.originalValues.get("sampleReviewStatus"));
                 s.setSampleReviewComment((String) snap.originalValues.get("sampleReviewComment"));
                 styleInfoService.updateById(s);
             }
             case "settlement:approve" -> {
-                FinishedProductSettlement st = finishedProductSettlementService.getById(snap.targetId);
-                if (st == null) throw new ExecutionEngineOrchestrator.BusinessException("结算单已被删除，无法撤回");
+                FinishedProductSettlement st = requireFinishedSettlement(snap.targetId);
                 st.setStatus((String) snap.originalValues.get("status"));
                 finishedProductSettlementService.updateById(st);
             }
@@ -461,10 +455,42 @@ public class CommandExecutorHelper {
     // ── 工具方法 ──
 
     private ProductionOrder requireOrder(String orderId) {
-        ProductionOrder order = productionOrderService.getByOrderNo(orderId);
-        if (order == null) {
-            throw new ExecutionEngineOrchestrator.BusinessException("订单不存在: " + orderId);
+        return commandTargetResolver.requireOrder(orderId);
+    }
+
+    private ProductionOrder findOrder(String orderId) {
+        return commandTargetResolver.findOrder(orderId);
+    }
+
+    private StyleInfo requireStyle(String styleId) {
+        return commandTargetResolver.requireStyle(styleId);
+    }
+
+    private StyleInfo findStyle(String styleId) {
+        return commandTargetResolver.findStyle(styleId);
+    }
+
+    private FinishedProductSettlement requireFinishedSettlement(String settlementId) {
+        return commandTargetResolver.requireFinishedSettlement(settlementId);
+    }
+
+    private FinishedProductSettlement findFinishedSettlement(String settlementId) {
+        return commandTargetResolver.findFinishedSettlement(settlementId);
+    }
+
+    private PayrollSettlement requirePayrollSettlement(String settlementId) {
+        return commandTargetResolver.requirePayrollSettlement(settlementId);
+    }
+
+    private MaterialStock requireMaterialStock(String stockId) {
+        return commandTargetResolver.requireMaterialStock(stockId);
+    }
+
+    private Long requireTenantId() {
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null) {
+            throw new ExecutionEngineOrchestrator.BusinessException("租户上下文丢失，请重新登录");
         }
-        return order;
+        return tenantId;
     }
 }

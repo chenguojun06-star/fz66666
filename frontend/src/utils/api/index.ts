@@ -10,7 +10,6 @@ export {
   unwrapApiData,
   generateRequestId,
   toNumberSafe,
-  toUrlSearchParams,
   withQuery,
   createApiClient,
   requestWithPathFallback,
@@ -37,22 +36,11 @@ export {
   useProductionOrderFrozenCache,
 } from './production';
 
-// 财务相关API
-export {
-  updateFinanceReconciliationStatus,
-  returnFinanceReconciliation,
-} from './finance';
-
 // 权限拦截器
 export {
   type PermissionCheckResult,
   type PermissionRequirement,
   checkPermissionRequirement,
-  createPermissionGuard,
-  usePermissionGuard,
-  withPermissionCheck,
-  PERMISSION_REQUIREMENTS,
-  type PermissionRequirementKey,
 } from './permissionGuard';
 
 // 为了保持向后兼容，默认导出 createApiClient

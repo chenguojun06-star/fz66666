@@ -2,33 +2,33 @@
 
 .container {
   min-height: 100vh;
-  background: var(--bg-page);
+  background: var(--color-bg-page);
   padding-top: env(safe-area-inset-top);
 }
 
 .invite-card {
   margin: 16px;
-  background: var(--bg-card);
+  background: var(--color-bg-card);
   border-radius: var(--radius-lg);
   padding: 24px 16px;
   box-shadow: var(--shadow-sm);
 }
 
 .section-title {
-  font-size: var(--font-md-lg);
-  font-weight: var(--weight-semibold);
-  color: var(--text-primary);
+  font-size: var(--font-size-md-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
   margin-bottom: 12px;
 }
 
 .code-display {
   text-align: center;
-  background: var(--bg-light);
+  background: var(--color-bg-light);
   border-radius: var(--radius-sm);
   padding: 16px;
-  font-size: var(--font-2xl);
-  font-weight: var(--weight-bold);
-  color: var(--primary);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
   letter-spacing: 4px;
   margin-bottom: 12px;
 }
@@ -38,10 +38,10 @@
   height: 44px;
   line-height: 44px;
   text-align: center;
-  background: var(--primary);
-  color: var(--text-white);
-  font-size: var(--font-base);
-  font-weight: var(--weight-semibold);
+  background: var(--color-primary);
+  color: var(--color-text-white);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
   border-radius: var(--radius-sm);
 }
 
@@ -51,39 +51,39 @@
 
 .copy-link {
   background: transparent;
-  color: var(--primary);
-  border: 1px solid var(--primary);
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
 }
 
 .divider {
   height: 1px;
-  background: var(--border-light);
+  background: var(--color-border-light);
   margin: 20px 0;
 }
 
 .hint-text {
-  font-size: var(--font-sm);
-  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
   margin-bottom: 12px;
 }
 
 .tips-card {
   margin: 0 16px 16px;
-  background: var(--bg-card);
+  background: var(--color-bg-card);
   border-radius: var(--radius-lg);
   padding: 16px;
   box-shadow: var(--shadow-sm);
 }
 
 .tips-title {
-  font-size: var(--font-md);
-  font-weight: var(--weight-semibold);
-  color: var(--text-primary);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
   margin-bottom: 10px;
 }
 
 .tips-item {
-  font-size: var(--font-sm);
-  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
   line-height: 1.8;
 }

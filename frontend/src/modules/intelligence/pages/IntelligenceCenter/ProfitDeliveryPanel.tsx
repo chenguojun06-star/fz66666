@@ -1,8 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import { Input, Tag } from 'antd';
 import { DollarOutlined, SearchOutlined, CalendarOutlined } from '@ant-design/icons';
-import { intelligenceApi } from '@/services/production/productionApi';
-import type { ProfitEstimationResponse, DeliveryPredictionResponse } from '@/services/production/productionApi';
+import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
+import type { ProfitEstimationResponse, DeliveryPredictionResponse } from '@/services/intelligence/intelligenceApi';
 
 const profitStatusColor: Record<string, string> = {
   // 后端返回中文字段

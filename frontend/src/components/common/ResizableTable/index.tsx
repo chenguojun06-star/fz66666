@@ -26,8 +26,6 @@ import {
 } from './utils';
 import ResizableHeaderCell from './ResizableHeaderCell';
 
-type _AnyRecord = Record<string, unknown>;
-
 type ResizableTableProps<T extends object> = TableProps<T> & {
   storageKey?: string;
   resizableColumns?: boolean;

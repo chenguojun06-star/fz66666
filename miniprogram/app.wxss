@@ -95,7 +95,7 @@ wx-vconsole,
 /* 主要按钮 */
 .btn-primary {
   background: var(--gradient-action);
-  color: #ffffff;
+  color: var(--color-text-white);
   border: none;
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.30);
   border-radius: var(--radius-full);
@@ -171,12 +171,12 @@ wx-vconsole,
   border-radius: var(--radius-full);
   font-size: var(--font-size-xs); /* 保持标签文字11px */
   background: rgba(16, 185, 129, 0.12);
-  color: #047857; /* 深绿色，确保对比度≥4.5:1 */
+  color: var(--color-success); /* 深绿色，确保对比度≥4.5:1 */
 }
 
 .tag-ok {
   background: rgba(52, 199, 89, 0.12);
-  color: #047857; /* 深绿色，确保对比度≥4.5:1 */
+  color: var(--color-success); /* 深绿色，确保对比度≥4.5:1 */
 }
 
 .tag-bad {
@@ -282,9 +282,9 @@ wx-vconsole,
 }
 
 .global-search .search-btn-clear {
-  background: #fff2f0;
-  border-color: #ffccc7;
-  color: #ff4d4f;
+  background: var(--color-error-bg);
+  border-color: var(--color-error-border);
+  color: var(--color-danger);
 }
 
 .global-search .search-btn:active {
@@ -510,7 +510,7 @@ wx-vconsole,
   justify-content: space-between;
   padding: 16px 20px;
   border-bottom: 1px solid var(--color-border);
-  background: linear-gradient(180deg, rgba(224, 242, 254, 0.3) 0%, #ffffff 100%);
+  background: linear-gradient(180deg, rgba(224, 242, 254, 0.3) 0%, var(--color-bg-card) 100%);
 }
 
 .modal-title {
@@ -575,7 +575,7 @@ wx-vconsole,
 
 .modal-btn.confirm {
   background: var(--gradient-action);
-  color: #ffffff;
+  color: var(--color-text-white);
   border: none;
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.30);
   box-shadow: var(--shadow-lg);
@@ -588,7 +588,7 @@ wx-vconsole,
 
 .modal-btn.danger {
   background: linear-gradient(135deg, var(--color-error) 0%, var(--color-error) 100%);
-  color: #fff;
+  color: var(--color-text-white);
   box-shadow: 0 4px 12px rgba(255, 77, 79, 0.25);
 }
 

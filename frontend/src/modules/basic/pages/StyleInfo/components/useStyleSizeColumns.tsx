@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { Button, Input, InputNumber, Select, Modal, Upload, Image } from 'antd';
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import api, { toNumberSafe } from '@/utils/api';

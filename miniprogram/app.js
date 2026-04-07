@@ -16,6 +16,41 @@ try {
 let redirectingToLogin = false;
 let redirectResetTimer = null;
 
+function getCurrentRoutePath() {
+  try {
+    const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : [];
+    const currentPage = pages && pages.length ? pages[pages.length - 1] : null;
+    return currentPage && currentPage.route ? `/${currentPage.route}` : '';
+  } catch (e) {
+    return '';
+  }
+}
+
+function navigateToLoginSafely() {
+  const loginUrl = '/pages/login/index';
+  const run = () => {
+    const currentRoute = getCurrentRoutePath();
+    if (currentRoute === loginUrl) {
+      return;
+    }
+
+    const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : [];
+    if (pages && pages.length > 0) {
+      wx.redirectTo({
+        url: loginUrl,
+        fail: () => {
+          wx.reLaunch({ url: loginUrl });
+        },
+      });
+      return;
+    }
+
+    wx.reLaunch({ url: loginUrl });
+  };
+
+  setTimeout(run, 120);
+}
+
 App({
   globalData: {
     token: '',
@@ -89,6 +124,9 @@ App({
     if (redirectingToLogin) {
       return;
     }
+    if (getCurrentRoutePath() === '/pages/login/index') {
+      return;
+    }
     redirectingToLogin = true;
     if (redirectResetTimer) {
       clearTimeout(redirectResetTimer);
@@ -97,12 +135,8 @@ App({
     redirectResetTimer = setTimeout(() => {
       redirectingToLogin = false;
       redirectResetTimer = null;
-    }, 800);
-    // 延迟 100ms 执行 reLaunch，避免 onShow 在 appLaunch 阶段同步触发 reLaunch
-    // 导致微信报 "appLaunch with non-empty page stack" system error
-    setTimeout(() => {
-      wx.reLaunch({ url: '/pages/login/index' });
-    }, 100);
+    }, 1000);
+    navigateToLoginSafely();
   },
 
   logout() {

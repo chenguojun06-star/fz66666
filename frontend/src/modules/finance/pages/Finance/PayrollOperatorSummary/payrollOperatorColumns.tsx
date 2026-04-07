@@ -1,4 +1,3 @@
-import React from 'react';
 import { Button, Tag, Tooltip } from 'antd';
 import dayjs from 'dayjs';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';

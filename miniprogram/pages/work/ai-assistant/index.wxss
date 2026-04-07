@@ -1,51 +1,51 @@
 .chat-wrapper {
   min-height: 100vh;
-  background: #f0f2ff;
+  background: var(--color-bg-light);
   display: flex;
   flex-direction: column;
-  padding-bottom: 140rpx; /* 留给 input-bar */
+  padding-bottom: 70px; /* 留给 input-bar */
 }
 
-/* ── 快捷芯片 ── */
+/* ==================== 快捷芯片 ==================== */
 .quick-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 14rpx;
-  padding: 24rpx 24rpx 8rpx;
+  gap: 7px;
+  padding: 12px 12px 4px;
 }
 .chip {
-  background: #fff;
-  border: 1rpx solid #dde0ff;
-  border-radius: 100rpx;
-  padding: 12rpx 24rpx;
-  font-size: 24rpx;
-  color: #5B6AF0;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-full);
+  padding: 6px 12px;
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
   white-space: nowrap;
 }
 /* 指令型芯片（需补充订单号） */
 .chip-cmd {
-  border-color: #f7a600;
-  color: #d48806;
-  background: #fffbe6;
+  border-color: var(--color-warning);
+  color: var(--color-warning);
+  background: var(--color-bg-light);
 }
 .chip-hint {
-  font-size: 20rpx;
-  color: #aaa;
-  margin-left: 4rpx;
+  font-size: 10px;
+  color: var(--color-text-disabled);
+  margin-left: 2px;
 }
 
-/* ── 消息列表 ── */
+/* ==================== 消息列表 ==================== */
 .msg-list {
   flex: 1;
-  padding: 16rpx 24rpx 24rpx;
+  padding: 8px 12px 12px;
   display: flex;
   flex-direction: column;
-  gap: 20rpx;
+  gap: 10px;
 }
 .msg-row {
   display: flex;
   align-items: flex-end;
-  gap: 12rpx;
+  gap: 6px;
 }
 .row-user {
   flex-direction: row-reverse; /* 用户消息靠右 */
@@ -56,58 +56,58 @@
 
 /* 头像 */
 .avatar {
-  width: 64rpx;
-  height: 64rpx;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 30rpx;
+  font-size: var(--font-size-base);
   flex-shrink: 0;
 }
 .avatar-ai {
-  background: #5B6AF0;
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-text-white);
 }
 .avatar-user {
-  background: #20c997;
-  color: #fff;
-  font-size: 24rpx;
-  font-weight: 700;
+  background: var(--color-success);
+  color: var(--color-text-white);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
 }
 
 /* 气泡 */
 .bubble {
   max-width: 72%;
-  padding: 20rpx 26rpx;
-  border-radius: 20rpx;
-  font-size: 28rpx;
+  padding: 10px 13px;
+  border-radius: 10px;
+  font-size: var(--font-size-md);
   line-height: 1.6;
   word-break: break-word;
 }
 .bubble-ai {
-  background: #fff;
-  color: #1a1a2e;
-  border-radius: 4rpx 20rpx 20rpx 20rpx;
+  background: var(--color-bg-card);
+  color: var(--color-text-primary);
+  border-radius: 2px 10px 10px 10px;
 }
 .bubble-user {
-  background: #5B6AF0;
-  color: #fff;
-  border-radius: 20rpx 4rpx 20rpx 20rpx;
+  background: var(--color-primary);
+  color: var(--color-text-white);
+  border-radius: 10px 2px 10px 10px;
 }
 
 /* 打字动画 */
 .typing-dots {
   display: flex;
-  gap: 10rpx;
-  height: 36rpx;
+  gap: 5px;
+  height: 18px;
   align-items: center;
 }
 .dot {
-  width: 10rpx;
-  height: 10rpx;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  background: #b0b8e8;
+  background: var(--color-primary-light);
   animation: blink 1.2s infinite;
 }
 .dot:nth-child(2) { animation-delay: 0.2s; }
@@ -117,7 +117,7 @@
   40% { opacity: 1; transform: scale(1); }
 }
 
-/* ── 输入栏 ── */
+/* ==================== 输入栏 ==================== */
 .input-bar {
   position: fixed;
   bottom: 0;
@@ -125,28 +125,28 @@
   right: 0;
   display: flex;
   align-items: center;
-  gap: 16rpx;
-  padding: 16rpx 24rpx;
-  background: #fff;
-  border-top: 1rpx solid #eee;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--color-bg-card);
+  border-top: 1px solid var(--color-border-light);
   box-sizing: border-box;
-  padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+  padding-bottom: calc(8px + env(safe-area-inset-bottom));
 }
 .msg-input {
   flex: 1;
-  background: #f0f2ff;
-  border-radius: 100rpx;
-  padding: 18rpx 28rpx;
-  font-size: 28rpx;
-  color: #1a1a2e;
+  background: var(--color-bg-light);
+  border-radius: var(--radius-full);
+  padding: 9px 14px;
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
 }
 .send-btn {
-  background: #5B6AF0;
-  color: #fff;
-  font-size: 28rpx;
-  font-weight: 600;
-  padding: 18rpx 32rpx;
-  border-radius: 12rpx;
+  background: var(--color-primary);
+  color: var(--color-text-white);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  padding: 9px 16px;
+  border-radius: var(--radius-md);
   white-space: nowrap;
 }
 .send-disabled {

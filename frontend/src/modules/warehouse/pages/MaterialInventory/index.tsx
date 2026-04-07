@@ -90,7 +90,6 @@ const _MaterialInventory: React.FC = () => {
 
   const inventoryPageSize = pagination.pagination.pageSize;
   const inventoryCurrent = pagination.pagination.current;
-  const _inventoryTotalPages = Math.max(1, Math.ceil((pagination.pagination.total || 0) / inventoryPageSize));
   const pickupPageSize = pickupData.pagination.pagination.pageSize;
   const pickupCurrent = pickupData.pagination.pagination.current;
   const paymentPageSize = pickupData.paymentPagination.pagination.pageSize;

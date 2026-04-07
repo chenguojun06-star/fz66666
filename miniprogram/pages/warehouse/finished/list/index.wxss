@@ -10,35 +10,35 @@
 }
 
 .search-bar {
-  padding: 20rpx;
+  padding: 10px;
   background-color: var(--color-bg-card);
 }
 
 .filter-row {
   display: flex;
-  gap: 16rpx;
-  padding: 0 20rpx 20rpx;
+  gap: 8px;
+  padding: 0 10px 10px;
   background-color: var(--color-bg-card);
 }
 
 .filter-pill {
-  min-width: 180rpx;
-  padding: 10rpx 18rpx;
+  min-width: 90px;
+  padding: 5px 9px;
   border-radius: var(--radius-full);
   background: var(--color-bg-gray);
-  border: 1rpx solid var(--color-border);
+  border: 1px solid var(--color-border);
   display: flex;
   align-items: center;
-  gap: 10rpx;
+  gap: 5px;
 }
 
 .filter-pill-label {
-  font-size: 22rpx;
+  font-size: 11px;
   color: var(--color-text-disabled);
 }
 
 .filter-pill-value {
-  font-size: 24rpx;
+  font-size: 12px;
   color: var(--color-text-primary);
   font-weight: 600;
 }
@@ -48,21 +48,21 @@
   align-items: center;
   background-color: var(--color-bg-gray);
   border-radius: var(--radius-full);
-  padding: 10rpx 20rpx;
+  padding: 5px 10px;
 }
 
 .search-input {
   flex: 1;
-  margin-left: 10rpx;
-  font-size: 28rpx;
+  margin-left: 5px;
+  font-size: 14px;
 }
 
 .summary-filter-bar {
   display: flex;
-  padding: 16rpx 20rpx;
-  gap: 16rpx;
+  padding: 8px 10px;
+  gap: 8px;
   background-color: var(--color-bg-card);
-  border-bottom: 1rpx solid var(--color-border-light);
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .summary-pill {
@@ -70,7 +70,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 12rpx 0;
+  padding: 6px 0;
   border-radius: var(--radius-md);
   background-color: var(--color-bg-gray);
 }
@@ -80,33 +80,33 @@
 }
 
 .summary-label {
-  font-size: 22rpx;
+  font-size: 11px;
   color: var(--color-text-disabled);
 }
 
 .summary-value {
-  font-size: 32rpx;
+  font-size: 16px;
   font-weight: 700;
   color: var(--color-text-primary);
-  margin-top: 4rpx;
+  margin-top: 2px;
 }
 
 .wc-meta-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8rpx;
-  margin-top: 8rpx;
+  gap: 4px;
+  margin-top: 4px;
 }
 
 .wc-meta-text {
-  font-size: 22rpx;
+  font-size: 11px;
   color: var(--color-text-secondary);
 }
 
 .wc-meta-tag {
-  padding: 2rpx 10rpx;
-  border-radius: 999rpx;
-  font-size: 20rpx;
+  padding: 1px 5px;
+  border-radius: 500px;
+  font-size: 10px;
   font-weight: 600;
 }
 
@@ -130,7 +130,7 @@
 
 .list-container {
   flex: 1;
-  padding: 20rpx;
+  padding: 10px;
   box-sizing: border-box;
 }
 
@@ -140,96 +140,96 @@
 
 /* SKU列表样式（页面专用） */
 .sku-section {
-  margin: 20rpx 0;
-  padding: 16rpx;
+  margin: 10px 0;
+  padding: 8px;
   background-color: var(--color-bg-gray);
-  border-radius: 12rpx;
+  border-radius: 6px;
 }
 
 .section-title {
-  font-size: 26rpx;
+  font-size: 13px;
   color: var(--color-text-primary);
   font-weight: 600;
-  margin-bottom: 16rpx;
+  margin-bottom: 8px;
 }
 
 .loading-skus, .empty-skus {
   text-align: center;
-  padding: 40rpx 0;
+  padding: 20px 0;
   color: var(--color-text-disabled);
-  font-size: 24rpx;
+  font-size: 12px;
 }
 
 .sku-list {
   display: flex;
   flex-direction: column;
-  gap: 12rpx;
+  gap: 6px;
 }
 
 .scan-toolbar {
-  margin: 20rpx 0 16rpx;
-  padding: 16rpx;
+  margin: 10px 0 8px;
+  padding: 8px;
   border-radius: var(--radius-sm);
   background: rgba(45, 127, 249, 0.08);
-  border: 1rpx solid rgba(45, 127, 249, 0.18);
+  border: 1px solid rgba(45, 127, 249, 0.18);
 }
 
 .scan-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 220rpx;
-  height: 60rpx;
-  padding: 0 20rpx;
-  border-radius: 12rpx;
+  min-width: 110px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 6px;
   background: var(--color-primary);
-  color: #fff;
-  font-size: 24rpx;
+  color: var(--color-text-white);
+  font-size: 12px;
   font-weight: 600;
 }
 
 .scan-tip {
   display: block;
-  margin-top: 10rpx;
-  font-size: 22rpx;
+  margin-top: 5px;
+  font-size: 11px;
   color: var(--color-text-secondary);
 }
 
 .scan-result-card {
-  margin-bottom: 16rpx;
-  padding: 16rpx;
-  border-radius: 12rpx;
+  margin-bottom: 8px;
+  padding: 8px;
+  border-radius: 6px;
   background: rgba(5, 150, 105, 0.08);
-  border: 1rpx solid rgba(5, 150, 105, 0.18);
+  border: 1px solid rgba(5, 150, 105, 0.18);
 }
 
 .scan-result-title {
-  font-size: 22rpx;
+  font-size: 11px;
   color: var(--color-text-secondary);
 }
 
 .scan-result-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 14rpx;
-  margin-top: 8rpx;
+  gap: 7px;
+  margin-top: 4px;
   align-items: center;
 }
 
 .scan-result-main {
-  font-size: 28rpx;
+  font-size: 14px;
   font-weight: 700;
   color: var(--color-text-primary);
 }
 
 .scan-result-stock {
-  font-size: 22rpx;
+  font-size: 11px;
   color: var(--color-success);
 }
 
 .scan-result-code {
-  margin-top: 8rpx;
-  font-size: 20rpx;
+  margin-top: 4px;
+  font-size: 10px;
   color: var(--color-text-secondary);
   word-break: break-all;
 }
@@ -239,14 +239,14 @@
   align-items: center;
   justify-content: space-between;
   background-color: var(--color-bg-card);
-  padding: 12rpx 16rpx;
+  padding: 6px 8px;
   border-radius: var(--radius-sm);
-  border: 1rpx solid var(--color-border);
+  border: 1px solid var(--color-border);
 }
 
 .sku-item-active {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 2rpx rgba(45, 127, 249, 0.12);
+  box-shadow: 0 0 0 1px rgba(45, 127, 249, 0.12);
 }
 
 .sku-info {
@@ -256,41 +256,41 @@
 .sku-header {
   display: flex;
   align-items: center;
-  gap: 12rpx;
-  margin-bottom: 6rpx;
+  gap: 6px;
+  margin-bottom: 3px;
 }
 
 .sku-color {
-  font-size: 26rpx;
+  font-size: 13px;
   font-weight: 600;
   color: var(--color-primary);
   background-color: var(--color-blue-light);
-  padding: 2rpx 12rpx;
-  border-radius: 4rpx;
+  padding: 1px 6px;
+  border-radius: 2px;
 }
 
 .sku-size {
-  font-size: 26rpx;
+  font-size: 13px;
   font-weight: 600;
   color: var(--color-success);
   background-color: rgba(5, 150, 105, 0.08);
-  padding: 2rpx 12rpx;
-  border-radius: 4rpx;
+  padding: 1px 6px;
+  border-radius: 2px;
 }
 
 .sku-stock {
   display: flex;
   align-items: center;
-  gap: 8rpx;
+  gap: 4px;
 }
 
 .stock-label {
-  font-size: 22rpx;
+  font-size: 11px;
   color: var(--color-text-disabled);
 }
 
 .stock-value {
-  font-size: 24rpx;
+  font-size: 12px;
   font-weight: 700;
   color: var(--color-success);
 }
@@ -298,15 +298,15 @@
 .sku-qty-input {
   display: flex;
   align-items: center;
-  gap: 8rpx;
+  gap: 4px;
 }
 
 .qty-input {
-  width: 100rpx;
-  height: 56rpx;
+  width: 50px;
+  height: 28px;
   text-align: center;
-  font-size: 26rpx;
-  border: 2rpx solid var(--color-primary);
+  font-size: 13px;
+  border: 1px solid var(--color-primary);
   border-radius: var(--radius-sm);
   background-color: var(--color-bg-card);
   font-weight: 600;
@@ -314,24 +314,24 @@
 }
 
 .max-btn {
-  min-width: 64rpx;
-  height: 56rpx;
-  line-height: 56rpx;
+  min-width: 32px;
+  height: 28px;
+  line-height: 28px;
   text-align: center;
   border-radius: var(--radius-sm);
   background-color: var(--color-primary);
   color: var(--color-text-white);
-  font-size: 20rpx;
+  font-size: 10px;
   font-weight: 600;
 }
 
 /* 汇总信息 */
 .summary-section {
-  margin: 20rpx 0;
-  padding: 16rpx;
+  margin: 10px 0;
+  padding: 8px;
   background-color: var(--color-blue-light);
   border-radius: var(--radius-sm);
-  border: 1rpx solid var(--color-border-blue);
+  border: 1px solid var(--color-border-blue);
 }
 
 .summary-row {
@@ -341,12 +341,12 @@
 }
 
 .summary-label {
-  font-size: 26rpx;
+  font-size: 13px;
   color: var(--color-text-disabled);
 }
 
 .summary-value {
-  font-size: 32rpx;
+  font-size: 16px;
   font-weight: 700;
   color: var(--color-primary);
 }

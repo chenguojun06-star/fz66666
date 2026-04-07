@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Button, Input, Select, Progress, Tag, Spin } from 'antd';
 import { RiseOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { runForecast, ForecastRequest, ForecastResult } from '@/services/intelligenceApi';

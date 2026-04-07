@@ -13,6 +13,7 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ProductionProcessTracking;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.helper.DuplicateScanPreventer;
+import com.fashion.supplychain.production.helper.ScanRecordPermissionHelper;
 import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.CuttingTaskService;
@@ -62,10 +63,6 @@ public class ScanRecordOrchestrator {
     @Autowired
     private ProductionProcessTrackingService processTrackingService;
 
-    // ⚠️ ProductionCleanupOrchestrator 临时禁用 - 编译错误待修复
-    // @Autowired
-    // private ProductionCleanupOrchestrator productionCleanupOrchestrator;
-
     @Autowired
     private ProductionOrderService productionOrderService;
 
@@ -80,6 +77,9 @@ public class ScanRecordOrchestrator {
 
     @Autowired
     private DuplicateScanPreventer duplicateScanPreventer;
+
+    @Autowired
+    private ScanRecordPermissionHelper scanRecordPermissionHelper;
 
     @Autowired
     private com.fashion.supplychain.production.helper.ScanRecordQueryHelper scanRecordQueryHelper;
@@ -261,12 +261,16 @@ public class ScanRecordOrchestrator {
         if (target == null && hasText(scanCode)) {
             UserContext ctx = UserContext.get();
             String operatorId = ctx == null ? null : ctx.getUserId();
+            Long tenantId = UserContext.tenantId();
             LambdaQueryWrapper<ScanRecord> qw = new LambdaQueryWrapper<ScanRecord>()
                     .eq(ScanRecord::getScanResult, "success")
                     .eq(ScanRecord::getScanCode, scanCode)
                     .orderByDesc(ScanRecord::getScanTime)
                     .orderByDesc(ScanRecord::getCreateTime)
                     .last("limit 1");
+            if (tenantId != null) {
+                qw.eq(ScanRecord::getTenantId, tenantId);
+            }
             if (hasText(scanType)) {
                 qw.eq(ScanRecord::getScanType, scanType);
             }
@@ -296,8 +300,11 @@ public class ScanRecordOrchestrator {
                 // 检查订单是否已完成
                 String fallbackOrderId = TextUtils.safeText(safeParams.get("orderId"));
                 if (hasText(fallbackOrderId)) {
-                    ProductionOrder fallbackOrder = productionOrderService.getById(fallbackOrderId);
-                    if (fallbackOrder != null && isTerminalOrderStatus(fallbackOrder.getStatus())) {
+                    ProductionOrder fallbackOrder = scanRecordPermissionHelper.findScopedOrder(fallbackOrderId, null);
+                    if (fallbackOrder == null) {
+                        throw new AccessDeniedException("无权操作该订单");
+                    }
+                    if (fallbackOrder != null && scanRecordPermissionHelper.isTerminalOrderStatus(fallbackOrder.getStatus())) {
                         throw new IllegalStateException("订单已关闭或完成，无法撤回扫码记录");
                 }
                 }
@@ -314,6 +321,8 @@ public class ScanRecordOrchestrator {
             }
             throw new IllegalStateException("未找到可撤销记录");
         }
+
+        scanRecordPermissionHelper.assertUndoRecordPermission(target);
 
         if (!"success".equalsIgnoreCase(target.getScanResult())) {
             throw new IllegalStateException("记录已失效");
@@ -357,8 +366,11 @@ public class ScanRecordOrchestrator {
         // 已完成订单禁止撤回
         String orderId = TextUtils.safeText(target.getOrderId());
         if (hasText(orderId)) {
-            ProductionOrder order = productionOrderService.getById(orderId);
-            if (order != null && isTerminalOrderStatus(order.getStatus())) {
+            ProductionOrder order = scanRecordPermissionHelper.findScopedOrder(orderId, null);
+            if (order == null) {
+                throw new AccessDeniedException("无权操作该订单");
+            }
+            if (scanRecordPermissionHelper.isTerminalOrderStatus(order.getStatus())) {
                 throw new IllegalStateException("订单已关闭或完成，无法撤回扫码记录");
             }
         }
@@ -484,8 +496,8 @@ public class ScanRecordOrchestrator {
         // 已完成订单禁止退回重扫
         String rescanOrderId = TextUtils.safeText(target.getOrderId());
         if (hasText(rescanOrderId)) {
-            ProductionOrder rescanOrder = productionOrderService.getById(rescanOrderId);
-            if (rescanOrder != null && isTerminalOrderStatus(rescanOrder.getStatus())) {
+            ProductionOrder rescanOrder = scanRecordPermissionHelper.findScopedOrder(rescanOrderId, null);
+            if (rescanOrder != null && scanRecordPermissionHelper.isTerminalOrderStatus(rescanOrder.getStatus())) {
                 throw new IllegalStateException("订单已关闭或完成，无法退回重扫");
             }
         }
@@ -809,10 +821,7 @@ public class ScanRecordOrchestrator {
         if (!UserContext.isTopAdmin()) {
             throw new AccessDeniedException("无权限操作");
         }
-        // ⚠️ ProductionCleanupOrchestrator 临时禁用
-        // LocalDateTime cutoff = parseCutoffOrDefault(from);
-        // return productionCleanupOrchestrator.cleanupSince(cutoff);
-        log.warn("[Temporary] ProductionCleanupOrchestrator cleanup disabled due to compilation errors");
+        log.warn("[Cleanup] cleanup 功能已禁用");
         return Collections.emptyMap();
     }
 
@@ -824,9 +833,7 @@ public class ScanRecordOrchestrator {
         if (!hasText(key)) {
             throw new IllegalArgumentException("参数错误");
         }
-        // ⚠️ ProductionCleanupOrchestrator 临时禁用
-        // return productionCleanupOrchestrator.deleteFullLinkByOrderKey(key);
-        log.warn("[Temporary] ProductionCleanupOrchestrator deleteFullLink disabled due to compilation errors");
+        log.warn("[Cleanup] deleteFullLink 功能已禁用");
         return Collections.emptyMap();
     }
 
@@ -856,15 +863,6 @@ public class ScanRecordOrchestrator {
 
     private boolean hasText(String value) {
         return value != null && !value.trim().isEmpty();
-    }
-
-    /**
-     * 判断订单是否处于终结状态（已完成/已关闭），终结状态不允许扫码或撤回。
-     */
-    private boolean isTerminalOrderStatus(String status) {
-        if (status == null) return false;
-        String s = status.trim().toLowerCase();
-        return "completed".equals(s) || "cancelled".equals(s) || "closed".equals(s);
     }
 
     /**

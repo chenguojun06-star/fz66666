@@ -6,7 +6,6 @@ export const buildProductionSheetHtml = (payload: any) => {
   const sizeList = Array.isArray(payload?.sizeList) ? payload.sizeList : [];
   const attachments = Array.isArray(payload?.attachments) ? payload.attachments : [];
 
-  const _origin = typeof window !== 'undefined' ? window.location.origin : '';
   const resolveUrl = (u: any) => {
     const s = String(u ?? '').trim();
     if (!s) return '';

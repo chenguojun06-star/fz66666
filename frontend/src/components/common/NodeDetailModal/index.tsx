@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Alert, App, Button, Input, InputNumber, Popconfirm, Select, Space, Spin, Tabs, Tag, Typography } from 'antd';
 import { FileTextOutlined, UserOutlined, WalletOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -8,7 +9,6 @@ import ResizableModal from '../ResizableModal';
 import dayjs from 'dayjs';
 import { productionOrderApi, productionScanApi } from '@/services/production/productionApi';
 import { useAuth } from '@/utils/AuthContext';
-import { useNavigate } from 'react-router-dom';
 import ProcessTrackingTable from '@/components/production/ProcessTrackingTable';
 import { useNodeDetailData } from './useNodeDetailData';
 import type { NodeType, HistoryItem, NodeOperationData, OperatorSummary, NodeDetailModalProps } from './types';
@@ -16,14 +16,6 @@ import type { NodeType, HistoryItem, NodeOperationData, OperatorSummary, NodeDet
 const { Text } = Typography;
 
 const formatDelegationTime = (value?: string) => (value ? dayjs(value).format('MM/DD HH:mm') : '-');
-
-const _patternOperationLabels: Record<string, { text: string; color: string }> = {
-  RECEIVE: { text: '领取', color: 'blue' },
-  PLATE: { text: '车板', color: 'purple' },
-  FOLLOW_UP: { text: '跟单', color: 'cyan' },
-  COMPLETE: { text: '完成', color: 'green' },
-  WAREHOUSE_IN: { text: '入库', color: 'orange' },
-};
 
 
 /**
@@ -45,8 +37,8 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
   onSaved,
 }) => {
   const { message } = App.useApp();
+  const navigate = useNavigate();
   const { user } = useAuth(); // 获取当前用户
-  const _navigate = useNavigate();
 
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('processTracking');
@@ -54,11 +46,10 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
 
   const {
     loading, factories, users, nodeOperations, setNodeOperations,
-    scanRecords: _scanRecords, bundles: _bundles, orderSummary, processTrackingRecords,
+    orderSummary, processTrackingRecords,
     trackingLoading, repairLoading, loadWarnings, prediction, predicting,
-    feedbackSentKeyRef: _feedbackSentKeyRef, filteredScanRecords: _filteredScanRecords, operatorSummary, cuttingSizeItems,
-    childProcessNames: _childProcessNames, _cuttingTotalQty, handleUndoSuccess, handleRepairTracking,
-    normalizeText: _normalizeText, _formatHistoryTime, _formatScanDetail,
+    operatorSummary, cuttingSizeItems,
+    handleUndoSuccess, handleRepairTracking,
   } = useNodeDetailData({
     visible, orderId, orderNo, nodeType, nodeName, nodeStats,
     isPatternProduction, processList, onSaved,
@@ -129,20 +120,6 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
         ...prev[nodeTypeKey],
         delegateFactoryId: factoryId,
         delegateFactoryName: factory?.factoryName,
-        updatedAt: new Date().toISOString(),
-        updatedBy: user?.id,
-        updatedByName: user?.name || user?.username || '未知',
-      }
-    }));
-  };
-
-  // 更新委派单价
-  const _handlePriceChange = (value: number | null) => {
-    setNodeOperations(prev => ({
-      ...prev,
-      [nodeTypeKey]: {
-        ...prev[nodeTypeKey],
-        delegatePrice: value ?? undefined,
         updatedAt: new Date().toISOString(),
         updatedBy: user?.id,
         updatedByName: user?.name || user?.username || '未知',
@@ -302,14 +279,6 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
     }
   };
 
-  // 进度百分比颜色
-  const _getProgressColor = (percent: number) => {
-    if (percent >= 100) return 'var(--color-success)';
-    if (percent >= 50) return 'var(--color-info)';
-    if (percent > 0) return 'var(--color-warning)';
-    return '#d9d9d9';
-  };
-
   // 格式化时间
   const formatTime = (time?: string) => {
     if (!time) return '-';
@@ -342,7 +311,6 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
       if (Number.isFinite(picked)) return picked;
       return Number(unitPrice) || 0;
     })();
-    const _delegateUser = currentNodeData.updatedByName || currentNodeData.updatedBy || currentNodeData.assignee || '-';
     const orderInfoLine = `${orderSummary.orderNo || orderNo || '-'}  款号：${orderSummary.styleNo || '-'}  数量：${orderSummary.orderQuantity || 0} 件`;
 
     return (
@@ -674,7 +642,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
             <Button
               size="small"
               style={(nodeStats?.percent || 0) >= 100 ? { color: '#999', borderColor: '#d9d9d9' } : {}}
-              onClick={() => _navigate(
+              onClick={() => navigate(
                 nodeTypeKey === 'cutting'
                   ? `/production/cutting?orderNo=${encodeURIComponent(orderSummary.orderNo || orderNo || '')}`
                   : `/production/material?orderNo=${encodeURIComponent(orderSummary.orderNo || orderNo || '')}`

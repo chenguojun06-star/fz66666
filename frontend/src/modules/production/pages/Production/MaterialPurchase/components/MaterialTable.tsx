@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useState } from 'react';
 import { Tag, App, Space, Tooltip } from 'antd';
 import MaterialTypeTag from '@/components/common/MaterialTypeTag';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
@@ -60,11 +60,6 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
   const [, setCancelLoading] = useState<string | null>(null);
   const [cancelTarget, setCancelTarget] = useState<MaterialPurchaseType | null>(null);
   const [cancelConfirmLoading, setCancelConfirmLoading] = useState(false);
-
-  /** 撤回采购领取/到货登记 */
-  const _handleCancelReceive = useCallback((record: MaterialPurchaseType) => {
-    setCancelTarget(record);
-  }, []);
 
   const handleCancelConfirm = async (reason: string) => {
     if (!cancelTarget) return;

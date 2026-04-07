@@ -3,7 +3,9 @@ package com.fashion.supplychain.intelligence.agent.tool;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.finance.orchestration.PayrollSettlementOrchestrator;
+import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -21,6 +23,9 @@ public class PayrollApproveTool implements AgentTool {
 
     @Autowired
     private PayrollSettlementOrchestrator payrollSettlementOrchestrator;
+
+    @Autowired
+    private AiAgentToolAccessService aiAgentToolAccessService;
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -65,6 +70,9 @@ public class PayrollApproveTool implements AgentTool {
 
     @Override
     public String execute(String argumentsJson) throws Exception {
+        if (!aiAgentToolAccessService.hasManagerAccess()) {
+            return MAPPER.writeValueAsString(Map.of("error", "当前角色无权执行该操作"));
+        }
         Map<String, Object> args = MAPPER.readValue(argumentsJson, new TypeReference<>() {});
 
         String action = (String) args.get("action");
@@ -73,6 +81,12 @@ public class PayrollApproveTool implements AgentTool {
 
         if (settlementId == null || settlementId.isBlank()) {
             return MAPPER.writeValueAsString(Map.of("error", "请提供工资结算单ID（settlementId）"));
+        }
+
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null) {
+            log.warn("[PayrollApproveTool] 租户上下文丢失，拒绝执行");
+            return MAPPER.writeValueAsString(Map.of("error", "租户上下文丢失，请重新登录"));
         }
 
         try {

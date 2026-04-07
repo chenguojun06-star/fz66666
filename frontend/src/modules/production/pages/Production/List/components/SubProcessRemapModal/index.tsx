@@ -7,7 +7,7 @@
  * v3 Table布局：左列子工序名称，右列进度节点 rowSpan 分组（与模板中心表格风格一致）
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Button,
   Switch,

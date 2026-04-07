@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Alert, Radio, Button, Spin } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';

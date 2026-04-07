@@ -299,6 +299,7 @@ public class IntelligenceController {
      * <p>重新计算当前租户的工序统计，并自动删除平匠名字层
      * （如 "质检领取" 等被错存为父阶段的子工序脱形行）。
      */
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
     @PostMapping("/learning/trigger")
     public Result<?> triggerLearning() {
         Long tenantId = UserContext.tenantId();
@@ -326,11 +327,13 @@ public class IntelligenceController {
         return Result.success(deliveryPredictionOrchestrator.predict(request));
     }
 
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
     @PostMapping("/profit-estimation")
     public Result<ProfitEstimationResponse> profitEstimation(@RequestBody ProfitEstimationRequest request) {
         return Result.success(profitEstimationOrchestrator.estimate(request));
     }
 
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
     @PostMapping("/factory-leaderboard")
     public Result<FactoryLeaderboardResponse> factoryLeaderboard() {
         return Result.success(factoryLeaderboardOrchestrator.rank());
@@ -371,6 +374,7 @@ public class IntelligenceController {
         return Result.success(defectHeatmapOrchestrator.analyze());
     }
 
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
     @PostMapping("/finance-audit")
     public Result<FinanceAuditResponse> financeAudit() {
         return Result.success(financeAuditOrchestrator.audit());
@@ -501,7 +505,8 @@ public class IntelligenceController {
         }
         Result<String> agentResult = aiAgentOrchestrator.executeAgent(question);
         String commandId = aiAgentOrchestrator.consumeLastCommandId();
-        return Result.success(aiAdvisorChatResponseOrchestrator.build(question, commandId, agentResult));
+        var toolRecords = aiAgentOrchestrator.consumeLastToolRecords();
+        return Result.success(aiAdvisorChatResponseOrchestrator.build(question, commandId, agentResult, toolRecords));
     }
 
     /** AI 顾问流式问答 — SSE 实时推送思考/工具调用/回答事件 */
@@ -573,6 +578,7 @@ public class IntelligenceController {
     }
 
     /** 供应商智能评分卡 — 近3个月工厂履约/质量综合评级 */
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
     @GetMapping("/supplier-scorecard")
     public Result<SupplierScorecardResponse> supplierScorecard() {
         return Result.success(supplierScorecardOrchestrator.scorecard());
@@ -635,6 +641,7 @@ public class IntelligenceController {
     }
 
     /** 触发学习闭环（分析近7天反馈，提炼规律沉淀到记忆库） */
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
     @PostMapping("/learning/loop")
     public Result<LearningLoopResponse> runLearningLoop() {
         return Result.success(learningLoopOrchestrator.runLoop());
@@ -647,6 +654,7 @@ public class IntelligenceController {
     }
 
     /** 下载专业运营报告（Excel 格式，支持 daily/weekly/monthly） */
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
     @GetMapping("/professional-report/download")
     public ResponseEntity<byte[]> downloadProfessionalReport(
             @RequestParam(defaultValue = "daily") String type,
@@ -700,12 +708,14 @@ public class IntelligenceController {
     }
 
     /** B5 - 对账异常优先级：扫描挂单对账单，按优先分降序输出异常列表 */
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
     @GetMapping("/reconciliation/anomaly-priority")
     public Result<ReconciliationAnomalyResponse> reconciliationAnomalyPriority() {
         return Result.success(reconciliationAnomalyOrchestrator.analyze());
     }
 
     /** B6 - 审批建议：对所有PENDING变更申请给出 APPROVE/REJECT/ESCALATE 建议 */
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
     @GetMapping("/approval/ai-advice")
     public Result<ApprovalAdvisorResponse> approvalAiAdvice() {
         return Result.success(approvalAdvisorOrchestrator.advise());
@@ -736,6 +746,7 @@ public class IntelligenceController {
      * 手动触发 AI 巡检（逾期/停滞/结算超时），与定时任务逻辑相同。
      * 返回本次推送通知条数。
      */
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
     @PostMapping("/ai-patrol/run")
     public Result<Integer> runAiPatrol() {
         int count = aiPatrolOrchestrator.patrolTenant(
@@ -752,12 +763,14 @@ public class IntelligenceController {
     @Autowired private VoiceCommandOrchestrator voiceCommandOrchestrator;
 
     /** Stage5 — 成本/需求/用量预测（POST body: forecastType/subjectId/horizon） */
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
     @PostMapping("/forecast")
     public Result<ForecastEngineResponse> forecast(@RequestBody ForecastEngineRequest req) {
         return Result.success(forecastEngineOrchestrator.forecast(req));
     }
 
     /** Stage6 — What-If 推演沙盘（多场景对比） */
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
     @PostMapping("/whatif/simulate")
     public Result<WhatIfResponse> whatIfSimulate(@RequestBody WhatIfRequest req) {
         return Result.success(whatIfSimulationOrchestrator.simulate(req));

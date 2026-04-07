@@ -52,7 +52,6 @@ const IndependentDetailModal: React.FC<IndependentDetailModalProps> = ({
 
   // Derive styleId/styleNo for production sheet and size chart tabs
   const styleId = orderDetail?.styleId || entryWarehousing?.styleId;
-  const _styleNo = String(orderDetail?.styleNo || entryWarehousing?.styleNo || '').trim();
   const plateTypeKey = String((orderDetail as any)?.plateType || (entryWarehousing as any)?.plateType || '').trim().toUpperCase();
   const urgencyKey = String((orderDetail as any)?.urgencyLevel || (entryWarehousing as any)?.urgencyLevel || '').trim().toLowerCase();
 

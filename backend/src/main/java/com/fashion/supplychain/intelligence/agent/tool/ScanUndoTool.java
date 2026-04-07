@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.agent.tool;
 
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.orchestration.ScanRecordOrchestrator;
@@ -24,6 +25,7 @@ public class ScanUndoTool extends AbstractAgentTool {
     @Autowired private ScanRecordOrchestrator scanRecordOrchestrator;
     @Autowired private ScanRecordService scanRecordService;
     @Autowired private ProductionOrderService productionOrderService;
+    @Autowired private AiAgentToolAccessService aiAgentToolAccessService;
 
     @Override
     public String getName() {
@@ -48,6 +50,9 @@ public class ScanUndoTool extends AbstractAgentTool {
 
     @Override
     protected String doExecute(String argumentsJson) throws Exception {
+        if (!aiAgentToolAccessService.hasManagerAccess()) {
+            return errorJson("当前角色无权执行该操作");
+        }
         Map<String, Object> args = parseArgs(argumentsJson);
 
         String recordId = optionalString(args, "recordId");
@@ -55,18 +60,6 @@ public class ScanUndoTool extends AbstractAgentTool {
 
         if (recordId == null && scanCode == null) {
             return errorJson("请提供扫码记录ID或扫码码值（菲号），才能定位要撤回的记录");
-        }
-
-        // 工厂账号：校验扫码记录所属订单归属本工厂
-        String userFactoryId = UserContext.factoryId();
-        if (userFactoryId != null && recordId != null) {
-            ScanRecord record = scanRecordService.getById(recordId);
-            if (record != null && record.getOrderId() != null) {
-                ProductionOrder order = productionOrderService.getById(record.getOrderId());
-                if (order == null || !userFactoryId.equals(order.getFactoryId())) {
-                    return errorJson("该扫码记录不属于您的工厂，无权撤回");
-                }
-            }
         }
 
         Map<String, Object> params = new HashMap<>();

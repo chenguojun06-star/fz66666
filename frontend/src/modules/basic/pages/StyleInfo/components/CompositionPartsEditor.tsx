@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Button, Input, Select, Space, Spin, Tag } from 'antd';
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { parseWashLabelPartsMap, parseWashNotePerPart, serializeWashLabelParts } from '@/utils/washLabel';

@@ -23,24 +23,6 @@ export interface RequestResult<T = any> {
 
 const globalCache = new Map<string, { data: any; expireAt: number }>();
 
-/**
- * 清除请求缓存。
- * 传 key 时会清除所有租户下该 key 的缓存（匹配 tenant:*:key 和 no-tenant:key）；
- * 不传 key 则清除全部缓存。
- */
-export function clearRequestCache(key?: string) {
-  if (!key) {
-    globalCache.clear();
-    return;
-  }
-  const suffix = `:${key}`;
-  for (const cacheKey of Array.from(globalCache.keys())) {
-    if (cacheKey === key || cacheKey.endsWith(suffix)) {
-      globalCache.delete(cacheKey);
-    }
-  }
-}
-
 function buildTenantCacheKey(key: string, tenantId: number | string | undefined): string {
   if (tenantId === undefined || tenantId === null) {
     return `no-tenant:${key}`;

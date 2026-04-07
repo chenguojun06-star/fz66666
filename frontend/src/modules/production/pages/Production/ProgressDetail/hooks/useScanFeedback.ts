@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { intelligenceApi } from '@/services/production/productionApi';
+import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 
 /**
  * 扫码成功后静默提交反馈闭环数据 — 独立 hook，不阻断主流程

@@ -2,7 +2,6 @@
  * KPI 卡片悬浮详情 Popover 内容。
  * 从 IntelligenceCenter/index.tsx 抽取，减少主文件 JSX 体积。
  */
-import React from 'react';
 import type { CockpitData } from './hooks/useCockpit';
 import type { KpiMetricSnapshot } from './kpiTypes';
 import { KpiPop, risk2color, grade2color } from './components/IntelligenceWidgets';

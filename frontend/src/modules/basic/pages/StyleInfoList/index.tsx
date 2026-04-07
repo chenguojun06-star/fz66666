@@ -241,7 +241,6 @@ const StyleInfoListPage: React.FC = () => {
 
     const node = String(record?.progressNode || '').trim();
     const sampleStatus = String(record?.sampleStatus ?? '').trim().toUpperCase();
-        const _patternStatus = String(record?.patternStatus ?? '').trim().toUpperCase();
     const reviewStatus = String(record?.sampleReviewStatus ?? '').trim().toUpperCase();
     const latestPatternStatus = String(record?.latestPatternStatus ?? '').trim().toUpperCase();
     const styleFullyCompleted = ['PASS', 'APPROVED'].includes(reviewStatus) && latestPatternStatus === 'COMPLETED';

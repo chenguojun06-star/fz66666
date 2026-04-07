@@ -62,28 +62,3 @@ export function safePrint(htmlContent: string, _title: string = '打印'): boole
     return false;
   }
 }
-
-/**
- * @deprecated 已废弃，调用 safePrint() 替代。保留仅为兼容旧调用点。
- */
-export function createSafePrintWindow(htmlContent: string, title: string = '打印'): Window | null {
-  safePrint(htmlContent, title);
-  return null;
-}
-
-/**
- * @deprecated 配合 createSafePrintWindow() 使用，现已废弃，无需调用。
- */
-export function executePrint(_printWindow: Window): void {
-  // noop — 打印已全部在 safePrint() 的 iframe 内完成
-}
-
-/**
- * 打印 DOM 元素的 innerHTML 内容。
- * 注意：不包含 <head><style>，建议改用 safePrint(completeHtmlString)。
- */
-export function printElement(element: HTMLElement, title: string = '打印'): boolean {
-  if (!element) return false;
-  const wrapped = `<!doctype html><html><head><title>${title}</title></head><body>${element.innerHTML}</body></html>`;
-  return safePrint(wrapped, title);
-}

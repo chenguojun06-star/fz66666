@@ -100,11 +100,3 @@ export function initFrontendErrorReporter(): void {
     if (prevOnunhandled) prevOnunhandled.call(window, event);
   };
 }
-
-/**
- * 供 React ErrorBoundary 手动调用
- * 使用方式：在 componentDidCatch(error, info) 中调用此函数
- */
-export function reportReactError(error: Error, componentStack?: string): void {
-  report('react', error.message, (error.stack ?? '') + '\n' + (componentStack ?? ''));
-}

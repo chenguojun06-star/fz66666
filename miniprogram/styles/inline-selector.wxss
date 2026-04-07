@@ -11,7 +11,7 @@
 
 /* === 选择器容器 === */
 .inline-selector {
-  background: var(--color-bg-gray, #f8f9fa);
+  background: var(--color-bg-gray, var(--color-bg-light));
   border-radius: 8px;
   overflow: hidden;
 }
@@ -26,7 +26,7 @@
 
 .inline-selector-title {
   font-size: 12px;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary, var(--color-text-secondary));
   font-weight: 600;
 }
 
@@ -49,7 +49,7 @@
   padding: 10px 12px;
   margin-bottom: 4px;
   border-radius: 8px;
-  background: var(--color-bg-card, #fff);
+  background: var(--color-bg-card, var(--color-bg-card));
   border: 2px solid transparent;
   transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
 }
@@ -65,19 +65,19 @@
 
 .inline-selector-item.active {
   background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
-  border-color: var(--color-primary, #667eea);
+  border-color: var(--color-primary, var(--color-primary));
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
 }
 
 /* === 禁用项（如"无二次工艺"信息提示） === */
 .inline-selector-item--disabled {
   opacity: 0.45;
-  background: #f9fafb;
-  border-color: #e2e8f0;
+  background: var(--color-bg-light);
+  border-color: var(--color-bg-gray);
   cursor: not-allowed;
 }
 .inline-selector-item--disabled .inline-selector-label {
-  color: var(--color-text-secondary, #94a3b8);
+  color: var(--color-text-secondary, var(--color-text-disabled));
   font-weight: 400;
 }
 
@@ -94,7 +94,7 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  border: 2px solid var(--color-border, #cbd5e1);
+  border: 2px solid var(--color-border, var(--color-bg-gray));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -103,20 +103,20 @@
 }
 
 .inline-selector-radio.checked {
-  border-color: var(--color-primary, #667eea);
-  background: var(--color-primary, #667eea);
+  border-color: var(--color-primary, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
 }
 
 .inline-selector-radio-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #fff;
+  background: var(--color-bg-card);
 }
 
 .inline-selector-label {
   font-size: 14px;
-  color: var(--color-text-primary, #1e293b);
+  color: var(--color-text-primary, var(--color-text-primary));
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -124,13 +124,13 @@
 }
 
 .inline-selector-item.active .inline-selector-label {
-  color: var(--color-primary, #667eea);
+  color: var(--color-primary, var(--color-primary));
 }
 
 /* === 右侧：副文本（可选） === */
 .inline-selector-extra {
   font-size: 13px;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary, var(--color-text-secondary));
   font-weight: 500;
   flex-shrink: 0;
   margin-left: 8px;

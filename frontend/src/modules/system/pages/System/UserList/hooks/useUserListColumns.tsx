@@ -1,4 +1,3 @@
-import React from 'react';
 import { Tag } from 'antd';
 import type { MenuProps } from 'antd';
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';

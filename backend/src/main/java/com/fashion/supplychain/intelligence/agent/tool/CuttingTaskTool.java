@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.agent.tool;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.orchestration.CuttingTaskOrchestrator;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +23,9 @@ public class CuttingTaskTool implements AgentTool {
 
     @Autowired
     private CuttingTaskOrchestrator cuttingTaskOrchestrator;
+
+    @Autowired
+    private AiAgentToolAccessService aiAgentToolAccessService;
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -95,6 +99,9 @@ public class CuttingTaskTool implements AgentTool {
 
     @Override
     public String execute(String argumentsJson) throws Exception {
+        if (!aiAgentToolAccessService.hasManagerAccess()) {
+            return MAPPER.writeValueAsString(Map.of("error", "当前角色无权执行该操作"));
+        }
         Map<String, Object> args = MAPPER.readValue(argumentsJson, new TypeReference<>() {});
 
         String styleNo = (String) args.get("styleNo");

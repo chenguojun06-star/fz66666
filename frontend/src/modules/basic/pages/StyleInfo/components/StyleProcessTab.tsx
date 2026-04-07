@@ -5,7 +5,7 @@ import { LoadingOutlined, DownOutlined, PlusOutlined } from '@ant-design/icons';
 import { StyleProcess, TemplateLibrary } from '@/types/style';
 import api, { toNumberSafe } from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
-import { intelligenceApi, ProcessPriceHintResponse, ProcessTemplateItem } from '@/services/production/productionApi';
+import { intelligenceApi, ProcessPriceHintResponse, ProcessTemplateItem } from '@/services/intelligence/intelligenceApi';
 import { CATEGORY_CODE_OPTIONS } from '@/utils/styleCategory';
 import { useDictOptions } from '@/hooks/useDictOptions';
 import StyleStageControlBar from './StyleStageControlBar';
@@ -40,7 +40,6 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
   const [sizes, setSizes] = useState<string[]>([]);
   const showSizePrices = true; // 始终显示多码单价列
   const [sizeOptions, setSizeOptions] = useState<Array<{ value: string; label: string }>>([]);
-  const _defaultSizes = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
 
   // AI 工序单价提示状态
   const [priceHints, setPriceHints] = useState<Record<string | number, ProcessPriceHintResponse | null>>({});

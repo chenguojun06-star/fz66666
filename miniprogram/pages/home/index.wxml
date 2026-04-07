@@ -1,28 +1,22 @@
 <view class="page" style="padding-top: {{statusBarHeight + 12}}px;">
   <!-- 顶部问候 -->
   <view class="header">
-    <view class="greeting-name">{{userName}}，{{greeting}} 👋</view>
-    <view class="greeting-sub">欢迎使用云裳智立链</view>
+    <view class="header-copy">
+      <view class="greeting-name">{{userName}}，{{greeting}}</view>
+      <view class="greeting-sub">欢迎使用衣智链</view>
+      <view class="header-hint">消息和待办都收进右下角小云，不再重复占首页</view>
+    </view>
   </view>
 
   <!-- 今日统计卡片 -->
   <view class="stats-row">
-    <view class="stat-card stat-card--blue">
-      <view class="stat-icon-wrap stat-icon-wrap--blue">
-        <text class="stat-icon">📋</text>
+    <view class="stat-card {{item.cardClass}}" wx:for="{{statCards}}" wx:key="key">
+      <view class="stat-icon-wrap {{item.iconWrapClass}}">
+        <view class="line-icon line-icon--lg {{item.iconClass}}"></view>
       </view>
       <view class="stat-info">
-        <view class="stat-value">{{todayProcessCount}}<text class="stat-unit">次</text></view>
-        <view class="stat-label">今日完成工序</view>
-      </view>
-    </view>
-    <view class="stat-card stat-card--green">
-      <view class="stat-icon-wrap stat-icon-wrap--green">
-        <text class="stat-icon">⏱</text>
-      </view>
-      <view class="stat-info">
-        <view class="stat-value">{{todayWorkHours}}<text class="stat-unit">h</text></view>
-        <view class="stat-label">今日工作时长</view>
+        <view class="stat-value">{{item.key === 'todayProcessCount' ? todayProcessCount : todayWorkHours}}<text class="stat-unit">{{item.unit}}</text></view>
+        <view class="stat-label">{{item.label}}</view>
       </view>
     </view>
   </view>
@@ -30,7 +24,7 @@
   <!-- 本月概览 -->
   <view class="monthly-section" wx:if="{{monthlyStats}}">
     <view class="section-header">
-      <text class="section-title">📅 本月概览</text>
+      <text class="section-title">本月概览</text>
     </view>
     <view class="monthly-grid">
       <view class="monthly-item">
@@ -52,15 +46,12 @@
   <view class="menu-section">
     <view class="menu-header">
       <text class="menu-title">全部菜单</text>
-      <text class="menu-hint">长按可排序</text>
+      <text class="menu-hint">只保留真实高频入口</text>
     </view>
     <view class="menu-grid">
       <view class="menu-item" wx:for="{{menuItems}}" wx:key="id" bindtap="onMenuTap" data-index="{{index}}">
-        <view class="menu-icon-circle" style="background: {{item.bgColor}};">
-          <text class="menu-emoji">{{item.icon}}</text>
-          <view class="menu-badge" wx:if="{{item.id === 'notice' && unreadNoticeCount > 0}}">
-            {{unreadNoticeCount > 99 ? '99+' : unreadNoticeCount}}
-          </view>
+        <view class="menu-icon-circle {{item.circleClass}}">
+          <view class="line-icon line-icon--lg {{item.iconClass}}"></view>
         </view>
         <text class="menu-name">{{item.name}}</text>
       </view>
@@ -70,7 +61,7 @@
   <!-- 最近扫码 -->
   <view class="recent-section" wx:if="{{recentScans.length > 0}}">
     <view class="section-header">
-      <text class="section-title">📜 最近扫码</text>
+      <text class="section-title">最近扫码</text>
       <text class="section-more" bindtap="onGoHistory">查看全部</text>
     </view>
     <view class="recent-list">
@@ -87,5 +78,5 @@
     </view>
   </view>
 
-  <ai-assistant notice-count="{{unreadNoticeCount}}" />
+  <ai-assistant id="homeAiAssistant" notice-count="{{unreadNoticeCount}}" />
 </view>

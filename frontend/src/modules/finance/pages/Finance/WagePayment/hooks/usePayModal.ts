@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Form } from 'antd';
 import {
   wagePaymentApi,
@@ -21,12 +21,16 @@ export function usePayModal({ msg, fetchPayables, fetchPayments, reportSmartErro
   const [selectedAccount, setSelectedAccount] = useState<PaymentAccount | null>(null);
   const [paySubmitting, setPaySubmitting] = useState(false);
   const [currentPayable, setCurrentPayable] = useState<PayableItem | null>(null);
+  const hasOpenedRef = useRef(false);
 
   useEffect(() => {
     if (!payModalOpen) {
-      payForm.resetFields();
+      if (hasOpenedRef.current) {
+        payForm.resetFields();
+      }
       return;
     }
+    hasOpenedRef.current = true;
 
     if (!currentPayable) {
       return;

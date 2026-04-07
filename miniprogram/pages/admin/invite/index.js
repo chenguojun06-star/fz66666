@@ -4,7 +4,7 @@ Page({
   data: {
     tenantCode: '',
     tenantName: '',
-    loading: false
+    loading: false,
   },
 
   onLoad() {
@@ -18,7 +18,7 @@ Page({
       if (app.globalData && app.globalData.tenantCode) {
         this.setData({
           tenantCode: app.globalData.tenantCode,
-          tenantName: app.globalData.tenantName || ''
+          tenantName: app.globalData.tenantName || '',
         });
       }
     } catch (err) {
@@ -36,7 +36,7 @@ Page({
     }
     wx.setClipboardData({
       data: code,
-      success: () => wx.showToast({ title: '工厂码已复制', icon: 'success' })
+      success: () => wx.showToast({ title: '工厂码已复制', icon: 'success' }),
     });
   },
 
@@ -62,7 +62,7 @@ Page({
 
     wx.setClipboardData({
       data: url,
-      success: () => wx.showToast({ title: '链接已复制', icon: 'success' })
+      success: () => wx.showToast({ title: '链接已复制', icon: 'success' }),
     });
-  }
+  },
 });

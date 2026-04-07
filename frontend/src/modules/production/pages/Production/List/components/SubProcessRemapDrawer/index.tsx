@@ -8,7 +8,7 @@
  *   - 不影响父节点结构、单价与工资结算
  */
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Drawer,
   Button,

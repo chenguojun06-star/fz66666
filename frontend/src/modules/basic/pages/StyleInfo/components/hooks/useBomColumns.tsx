@@ -97,7 +97,6 @@ export function useBomColumns({
     const unit = normalizeUnitText(value);
     return unit === 'kg' || unit === '公斤' || unit === '千克' || unit === 'kilogram' || unit === 'kilograms';
   };
-  const _isZipperRow = (record: StyleBom) => /拉链/.test(String(record.materialName || ''));
   const computeAverageMeterUsage = (record: StyleBom) => {
     const row = form.getFieldValue(String(record.id)) || {};
     const rowUsageMap = row.sizeUsageMapObject || parseSizeUsageMap(row.sizeUsageMap || record.patternSizeUsageMap || record.sizeUsageMap);

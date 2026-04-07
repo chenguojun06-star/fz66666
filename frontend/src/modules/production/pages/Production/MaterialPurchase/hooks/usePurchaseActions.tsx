@@ -3,7 +3,7 @@
  * ~230 lines (target ≤ 300)
  * NOTE: .tsx 扩展名因 receivePurchaseTask 中包含 JSX (Modal.confirm content)
  */
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Form, Modal } from 'antd';
 import type { UploadFile } from 'antd/es/upload/interface';
 import { useModal } from '@/hooks';

@@ -4,21 +4,33 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.intelligence.dto.AiAdvisorChatResponse;
+import com.fashion.supplychain.intelligence.dto.FollowUpAction;
 import com.fashion.supplychain.intelligence.dto.XiaoyunInsightCard;
+import com.fashion.supplychain.intelligence.helper.AiAgentToolExecHelper;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AiAdvisorChatResponseOrchestrator {
+
+    @Autowired
+    private FollowUpSuggestionEngine followUpSuggestionEngine;
 
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final Pattern INSIGHT_CARD_PATTERN = Pattern.compile("【INSIGHT_CARDS】([\\s\\S]*?)【/INSIGHT_CARDS】");
     private static final Pattern AI_META_BLOCK_PATTERN = Pattern.compile("【(?:CHART|ACTIONS|TEAM_STATUS|BUNDLE_SPLIT|INSIGHT_CARDS)】[\\s\\S]*?【/(?:CHART|ACTIONS|TEAM_STATUS|BUNDLE_SPLIT|INSIGHT_CARDS)】|```ACTIONS_JSON\\s*\\n[\\s\\S]*?\\n```");
 
     public AiAdvisorChatResponse build(String question, String commandId, Result<String> agentResult) {
+        return build(question, commandId, agentResult, Collections.emptyList());
+    }
+
+    public AiAdvisorChatResponse build(String question, String commandId, Result<String> agentResult,
+                                        List<AiAgentToolExecHelper.ToolExecRecord> toolRecords) {
         AiAdvisorChatResponse response = new AiAdvisorChatResponse();
         response.setCommandId(commandId);
         if (!Integer.valueOf(200).equals(agentResult.getCode())) {
@@ -32,6 +44,7 @@ public class AiAdvisorChatResponseOrchestrator {
         response.setSource("ai");
         response.setCards(extractInsightCards(agentResult.getData()));
         response.setSuggestions(buildSuggestions(question, response.getCards()));
+        response.setFollowUpActions(followUpSuggestionEngine.generate(toolRecords, question));
         return response;
     }
 

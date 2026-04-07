@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Button, Input, Select, Tag, App, Popover, Checkbox, Segmented } from 'antd';
 
 import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined, RadarChartOutlined } from '@ant-design/icons';
@@ -21,7 +21,6 @@ import { useSubProcessRemap } from './hooks/useSubProcessRemap';
 import { ProductionOrder, ProductionQueryParams } from '@/types/production';
 import type { PaginatedResponse } from '@/types/api';
 import api, {
-  hasProcurementStage,
   parseProductionOrderLines,
   isApiSuccess,
   isOrderFrozenByStatus,
@@ -108,7 +107,7 @@ const ProductionList: React.FC = () => {
 
     // ===== Hook 提取：进度/弹窗/打印/聚焦 =====
     const orderFocusRef = useRef<{ triggerOrderFocus: (...args: any[]) => void; clearSmartFocus: () => void } | null>(null);
-    const { clearAllBoardCache, boardStatsByOrder, boardTimesByOrder, boardStatsLoadingByOrder, mergeBoardStatsForOrder, mergeBoardTimesForOrder, setBoardLoadingForOrder, mergeProcessDataForOrder, boardStatsByOrderRef, boardStatsLoadingByOrderRef, calcCardProgress } = useCardProgress();
+    const { clearAllBoardCache, boardStatsByOrder: _boardStatsByOrder, boardTimesByOrder, boardStatsLoadingByOrder: _boardStatsLoadingByOrder, mergeBoardStatsForOrder, mergeBoardTimesForOrder, setBoardLoadingForOrder, mergeProcessDataForOrder, boardStatsByOrderRef, boardStatsLoadingByOrderRef, calcCardProgress } = useCardProgress();
     const { nodeDetailVisible, nodeDetailOrder, nodeDetailType, nodeDetailName, nodeDetailStats, nodeDetailUnitPrice, nodeDetailProcessList, openNodeDetail, closeNodeDetail } = useNodeDetailModal();
     const { labelPrintOpen, closeLabelPrint, labelPrintOrder, labelPrintStyle, handlePrintLabel } = useLabelPrint();
 
@@ -331,20 +330,6 @@ const ProductionList: React.FC = () => {
     }
   }, [location.search]);
 
-  // 跨页跳转精准聚焦：URL 含 orderNo 且列表首次加载完成后，自动滚动高亮目标订单
-  // 仅触发一次（urlFocusApplied ref 保护），避免后续定时刷新反复高亮
-  const urlFocusApplied = useRef(false);
-  useEffect(() => {
-    if (urlFocusApplied.current || productionList.length === 0) return;
-    const orderNo = (new URLSearchParams(window.location.search).get('orderNo') || '').trim();
-    if (!orderNo) return;
-    const targetOrder = productionList.find((o) => String(o.orderNo || '').trim() === orderNo);
-    if (targetOrder) {
-      urlFocusApplied.current = true;
-      triggerOrderFocus(targetOrder);
-    }
-  }, [productionList, triggerOrderFocus]);
-
   // 实时同步：30秒自动轮询更新数据
   useSync(
     'production-orders',
@@ -393,8 +378,22 @@ const ProductionList: React.FC = () => {
   }, [smartQueueOrders, sortField, sortOrder, showDelayedOnly, activeStatFilter]);
 
   // ===== useOrderFocus: 聚焦/滚动/高亮逻辑 =====
-  const { focusedOrderId, pendingScrollOrderId, getOrderDomKey, triggerOrderFocus, clearSmartFocus, scrollToFocusedOrder } = useOrderFocus(viewMode, sortedProductionList);
+  const { focusedOrderId, pendingScrollOrderId: _pendingScrollOrderId, getOrderDomKey, triggerOrderFocus, clearSmartFocus, scrollToFocusedOrder: _scrollToFocusedOrder } = useOrderFocus(viewMode, sortedProductionList);
   orderFocusRef.current = { triggerOrderFocus, clearSmartFocus };
+
+  // 跨页跳转精准聚焦：URL 含 orderNo 且列表首次加载完成后，自动滚动高亮目标订单
+  // 仅触发一次（urlFocusApplied ref 保护），避免后续定时刷新反复高亮
+  const urlFocusApplied = useRef(false);
+  useEffect(() => {
+    if (urlFocusApplied.current || productionList.length === 0) return;
+    const orderNo = (new URLSearchParams(window.location.search).get('orderNo') || '').trim();
+    if (!orderNo) return;
+    const targetOrder = productionList.find((o) => String(o.orderNo || '').trim() === orderNo);
+    if (targetOrder) {
+      urlFocusApplied.current = true;
+      triggerOrderFocus(targetOrder);
+    }
+  }, [productionList, triggerOrderFocus]);
 
   // ===== useAnomalyDetection: 异常检测横幅 =====
   const { anomalyItems, anomalyBannerVisible, setAnomalyBannerVisible, fetchAnomalies, handleAnomalyClick } = useAnomalyDetection({

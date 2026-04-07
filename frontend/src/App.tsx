@@ -185,7 +185,6 @@ const AppRoutes: React.FC = () => {
   }, []);
 
   React.useEffect(() => {
-    const _w = window as any;
     (window as any).__appAuthLogoutNavigate = () => navigate(paths.login, { replace: true });
   }, [navigate]);
 

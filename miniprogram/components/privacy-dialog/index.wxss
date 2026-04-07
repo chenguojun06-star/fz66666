@@ -13,61 +13,61 @@
 }
 
 .privacy-box {
-  width: 620rpx;
-  background: #fff;
-  border-radius: 24rpx;
-  padding: 48rpx 40rpx 36rpx;
-  box-shadow: 0 8rpx 40rpx rgba(0, 0, 0, 0.18);
+  width: 310px;
+  background: var(--color-bg-card);
+  border-radius: 12px;
+  padding: 24px 20px 18px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
 }
 
 .privacy-title {
-  font-size: 34rpx;
+  font-size: 17px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--color-text-primary);
   text-align: center;
-  margin-bottom: 32rpx;
+  margin-bottom: 16px;
 }
 
 .privacy-content {
-  font-size: 26rpx;
-  color: #555;
+  font-size: 13px;
+  color: var(--color-text-secondary);
   line-height: 1.8;
-  margin-bottom: 24rpx;
+  margin-bottom: 12px;
 }
 
 .privacy-link {
-  font-size: 26rpx;
-  color: #1677ff;
+  font-size: 13px;
+  color: var(--color-primary);
   text-align: center;
-  margin-bottom: 40rpx;
-  padding: 8rpx 0;
+  margin-bottom: 20px;
+  padding: 4px 0;
 }
 
 .privacy-actions {
   display: flex;
-  gap: 24rpx;
+  gap: 12px;
 }
 
 .privacy-btn-refuse {
   flex: 1;
-  height: 80rpx;
-  line-height: 80rpx;
+  height: 40px;
+  line-height: 40px;
   text-align: center;
-  background: #f5f5f5;
-  color: #666;
-  border-radius: 12rpx;
-  font-size: 28rpx;
+  background: var(--color-bg-light);
+  color: var(--color-text-secondary);
+  border-radius: 6px;
+  font-size: 14px;
 }
 
 .privacy-btn-agree {
   flex: 2;
-  height: 80rpx;
-  line-height: 80rpx;
+  height: 40px;
+  line-height: 40px;
   text-align: center;
-  background: #1677ff;
-  color: #fff;
-  border-radius: 12rpx;
-  font-size: 28rpx;
+  background: var(--color-primary);
+  color: var(--color-text-white);
+  border-radius: 6px;
+  font-size: 14px;
   font-weight: 500;
   /* 重置 button 默认样式 */
   border: none;

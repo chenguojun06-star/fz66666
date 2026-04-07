@@ -2,7 +2,7 @@
  * usePurchaseDetail — 采购单详情面板状态：订单信息/采购记录/颜码行
  * ~135 lines (target ≤ 200)
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import api, { parseProductionOrderLines } from '@/utils/api';
 import type { MaterialPurchase as MaterialPurchaseType, ProductionOrder } from '@/types/production';
 import { getMaterialTypeSortKey } from '@/utils/materialType';
@@ -38,8 +38,6 @@ export function usePurchaseDetail({ currentPurchase, visible, dialogMode }: UseP
   const [detailOrderLines, setDetailOrderLines] = useState<Array<{ color: string; size: string; quantity: number }>>([]);
   const [detailPurchases, setDetailPurchases] = useState<MaterialPurchaseType[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
-  const _orderExistCacheRef = useRef<Map<string, boolean>>(new Map());
-
   const detailSizePairs = useMemo(() => buildSizePairs(detailOrderLines), [detailOrderLines]);
 
   const loadDetailByOrderNo = useCallback(async (orderNo: string) => {

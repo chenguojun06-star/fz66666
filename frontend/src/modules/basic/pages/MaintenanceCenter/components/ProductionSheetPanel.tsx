@@ -115,7 +115,7 @@ const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo }) 
   const { user } = useAuth();
 
   const [stats, setStats] = useState<DataCenterStats>({ styleCount: 0, materialCount: 0, productionCount: 0 });
-  const [queryParams, setQueryParams] = useState<StyleQueryParams>({ page: 1, pageSize: readPageSize(10), onlyCompleted: true, styleNo: styleNo || undefined });
+  const [queryParams, setQueryParams] = useState<StyleQueryParams>({ page: 1, pageSize: readPageSize(10), onlyCompleted: true, ...(styleNo ? { styleNoExact: styleNo } : {}) });
   const [styles, setStyles] = useState<StyleInfo[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -137,7 +137,7 @@ const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo }) 
   const isAdminUser = useMemo(() => isAdminUserFn(user), [user]);
   const isFactoryUser = useMemo(() => !!user?.factoryId, [user]);
   const canManage = isAdminUser || isFactoryUser;
-  const directRow = styleNo ? (styles[0] ?? null) : null;
+  const directRow = styleNo ? (styles.find(s => s.styleNo === styleNo) ?? null) : null;
   const directLocked = Number((directRow as any)?.descriptionLocked) === 1;
   const directProcessing = !directLocked && !!String((directRow as any)?.descriptionReturnComment || '').trim();
 

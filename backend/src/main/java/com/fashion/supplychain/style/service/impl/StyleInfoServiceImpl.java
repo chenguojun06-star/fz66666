@@ -78,6 +78,7 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
 
         // 构建查询条件
         String styleNo = (String) params.getOrDefault("styleNo", "");
+        String styleNoExact = (String) params.getOrDefault("styleNoExact", "");
         String styleName = (String) params.getOrDefault("styleName", "");
         String category = (String) params.getOrDefault("category", "");
         String keyword = (String) params.getOrDefault("keyword", "");
@@ -100,7 +101,8 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
         // 使用条件构造器进行查询
         com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<StyleInfo> wrapper =
             new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<StyleInfo>()
-                .like(StringUtils.hasText(styleNo), StyleInfo::getStyleNo, styleNo)
+                .eq(StringUtils.hasText(styleNoExact), StyleInfo::getStyleNo, styleNoExact)
+                .like(!StringUtils.hasText(styleNoExact) && StringUtils.hasText(styleNo), StyleInfo::getStyleNo, styleNo)
                 .like(StringUtils.hasText(styleName), StyleInfo::getStyleName, styleName)
                 .eq(StringUtils.hasText(category), StyleInfo::getCategory, category)
                 .and(StringUtils.hasText(keyword), w -> w

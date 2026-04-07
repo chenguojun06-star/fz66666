@@ -1,7 +1,6 @@
 import api from '../../utils/api';
 import { downloadFile } from '../../utils/fileUrl';
-import type { ProductionQueryParams, PatternDevelopmentStats } from '../../types/production';
-import { intelligenceApi } from '../intelligence/intelligenceApi';
+import type { ProductionQueryParams } from '../../types/production';
 
 export type ProductionOrderListParams = ProductionQueryParams & {
   startDate?: string;
@@ -96,10 +95,8 @@ export const productionWarehousingApi = {
   rollbackByBundle: (payload: Record<string, unknown>) => api.post<{ code: number; message: string; data: boolean }>('/production/warehousing/rollback-by-bundle', payload),
 };
 
-// Intelligence API 已迁移至独立模块
-// 为保持向后兼容，此处保留 re-export；新代码请直接从以下路径导入：
+// Intelligence API 已迁移至独立模块，请直接从以下路径导入：
 //   import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
-export * from '../intelligence/intelligenceApi';
 
 // ─── ⌘K 全局搜索 ─────────────────────────────────────────────
 
@@ -152,14 +149,6 @@ export const materialPurchaseApi = {
       '/production/purchase/list',
       { params: { orderNo: String(orderNo || '').trim(), sourceType: 'order', pageSize: 200, page: 1 } },
     ),
-};
-
-export const patternProductionApi = {
-  // 获取样衣开发费用统计
-  getDevelopmentStats: (rangeType: 'day' | 'week' | 'month' = 'day') =>
-    api.get<{ code: number; data: PatternDevelopmentStats }>('/production/pattern/development-stats', {
-      params: { rangeType },
-    }),
 };
 
 /** 工序→父节点动态映射 API（替代硬编码关键词列表） */
@@ -224,8 +213,6 @@ export default {
   productionCuttingApi,
   productionScanApi,
   productionWarehousingApi,
-  intelligenceApi,
-  patternProductionApi,
   materialPurchaseApi,
   processParentMappingApi,
   qualityAiApi,

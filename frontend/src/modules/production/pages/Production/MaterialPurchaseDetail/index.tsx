@@ -136,15 +136,6 @@ const MaterialPurchaseDetail: React.FC = () => {
   const headerStyleId = order?.styleId ?? (purchaseList[0] as any)?.styleId;
   const headerStyleCover = order?.styleCover ?? (purchaseList[0] as any)?.styleCover ?? null;
   const headerColor = String(order?.color ?? (purchaseList[0] as any)?.color ?? '').trim();
-  const _headerQrValue = headerOrderNo
-    ? JSON.stringify({
-      type: 'order',
-      orderNo: headerOrderNo,
-      styleNo: headerStyleNo,
-      styleName: headerStyleName,
-    })
-    : '';
-
   useEffect(() => {
     loadData();
   }, [styleNo]);

@@ -68,17 +68,6 @@ interface ProductionPieChartProps {
   position?: { x: number; y: number; width: number; height: number };
 }
 
-interface _FactoryStats {
-  factoryName: string;
-  orderCount: number;
-  totalQuantity: number;
-  completedQuantity: number;
-  completionRate: number;
-  avgDeliveryDays: number;
-  overdueCount: number;
-  atRiskCount: number;
-}
-
 interface StageStat {
   key: string;
   label: string;

@@ -3,14 +3,14 @@ const api = require('../../../utils/api');
 // 通知类型 → 图标映射
 function typeIcon(noticeType) {
   const map = {
-    stagnant: '⏸',
-    deadline: '⏰',
-    quality: '🔴',
-    worker_alert: '⚠️',
-    manual: '📢',
-    urge_order: '📦',
+    stagnant: 'icon-pause',
+    deadline: 'icon-deadline',
+    quality: 'icon-quality',
+    worker_alert: 'icon-alert',
+    manual: 'icon-manual',
+    urge_order: 'icon-package',
   };
-  return map[noticeType] || '🔔';
+  return map[noticeType] || 'icon-notice';
 }
 
 // 简易时间格式化（x分钟前 / x小时前 / x天前）
@@ -46,7 +46,7 @@ Page({
       const list = await api.notice.myList();
       const notices = (list || []).map(n => ({
         ...n,
-        typeIcon: typeIcon(n.noticeType),
+        typeIconClass: typeIcon(n.noticeType),
         timeAgo: timeAgo(n.createdAt),
       }));
       const unreadCount = notices.filter(n => n.isRead === 0).length;
@@ -105,6 +105,8 @@ Page({
   onEditFormCancel() {
     this.setData({ editFormVisible: false, editForm: null });
   },
+
+  _noop() {},
 
   async onEditFormSubmit() {
     const { editForm } = this.data;

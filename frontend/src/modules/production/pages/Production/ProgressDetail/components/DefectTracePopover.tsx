@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Popover, Spin, Tag } from 'antd';
-import { intelligenceApi } from '@/services/production/productionApi';
+import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 
 /* ===== 类型定义 ===== */
 interface WorkerDefect {

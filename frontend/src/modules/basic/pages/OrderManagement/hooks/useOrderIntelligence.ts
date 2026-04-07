@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormInstance } from 'antd';
 import api from '@/utils/api';
-import { intelligenceApi, DeliveryDateSuggestionResponse, FactoryCapacityItem } from '@/services/production/productionApi';
-import { SchedulingSuggestionResponse } from '@/services/intelligence/intelligenceApi';
+import type { FactoryCapacityItem } from '@/services/production/productionApi';
+import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
+import type { DeliveryDateSuggestionResponse, SchedulingSuggestionResponse } from '@/services/intelligence/intelligenceApi';
 import { orderLearningApi } from '@/services/intelligence/orderLearningApi';
 import type { OrderLearningRecommendationResponse } from '@/services/intelligence/orderLearningApi';
 import type { StyleInfo } from '@/types/style';

@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { intelligenceApi, productionOrderApi } from '@/services/production/productionApi';
+import { productionOrderApi } from '@/services/production/productionApi';
+import type { FactoryCapacityItem, ProductionOrderStats } from '@/services/production/productionApi';
+import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type {
   LivePulseResponse, HealthIndexResponse, SmartNotificationResponse,
   WorkerEfficiencyResponse, DefectHeatmapResponse, FactoryLeaderboardResponse,
   MaterialShortageResult, SelfHealingResponse, FactoryBottleneckItem,
   IntelligenceBrainSnapshotResponse, ActionCenterResponse,
-  FactoryCapacityItem, ProductionOrderStats,
-} from '@/services/production/productionApi';
+} from '@/services/intelligence/intelligenceApi';
 import type { ProductionOrder } from '@/types/production';
 import { useAuth } from '@/utils/AuthContext';
 import { useWebSocket } from '@/hooks/useWebSocket';

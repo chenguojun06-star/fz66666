@@ -12,18 +12,15 @@ function getGreeting() {
 }
 
 /**
- * 构建菜单项（8 个固定入口）
+ * 构建首页菜单（去掉已被小云吸收的重复入口）
  */
 function buildMenuItems() {
   return [
-    { id: 'sample',   name: '样板单',   icon: '👗', bgColor: 'rgba(139,92,246,0.12)',  route: '/pages/work/index' },
-    { id: 'order',    name: '订单',     icon: '📋', bgColor: 'rgba(59,130,246,0.12)',   route: '/pages/work/index', tab: 'all' },
-    { id: 'task',     name: '待办任务', icon: '✅', bgColor: 'rgba(245,158,11,0.12)',   route: '/pages/work/index', tab: 'cutting' },
-    { id: 'progress', name: '工序进度', icon: '📊', bgColor: 'rgba(16,185,129,0.12)',   route: '/pages/work/index', tab: 'sewing' },
-    { id: 'quality',  name: '工序质检', icon: '🔍', bgColor: 'rgba(239,68,68,0.12)',    route: '/pages/scan/index' },
-    { id: 'history',  name: '历史记录', icon: '📜', bgColor: 'rgba(20,184,166,0.12)',   route: '/pages/scan/history/index' },
-    { id: 'notice',   name: '消息通知', icon: '🔔', bgColor: 'rgba(234,179,8,0.12)',    route: '/pages/admin/notification/index' },
-    { id: 'payroll',  name: '我的薪资', icon: '💰', bgColor: 'rgba(99,102,241,0.12)',   route: '/pages/payroll/payroll' },
+    { id: 'order', name: '订单', iconClass: 'icon-order', circleClass: 'menu-icon-circle--cool', route: '/pages/order/index' },
+    { id: 'progress', name: '工序进度', iconClass: 'icon-progress', circleClass: 'menu-icon-circle--warm', route: '/pages/work/index', tab: 'sewing' },
+    { id: 'quality', name: '扫码质检', iconClass: 'icon-quality', circleClass: 'menu-icon-circle--cool', route: '/pages/scan/index' },
+    { id: 'history', name: '历史记录', iconClass: 'icon-history', circleClass: 'menu-icon-circle--warm', route: '/pages/scan/history/index' },
+    { id: 'payroll', name: '当月工资', iconClass: 'icon-payroll', circleClass: 'menu-icon-circle--cool', route: '/pages/payroll/payroll' },
   ];
 }
 
@@ -52,6 +49,10 @@ Page({
     unreadNoticeCount: 0,
     monthlyStats: null,
     recentScans: [],
+    statCards: [
+      { key: 'todayProcessCount', label: '今日完成工序', unit: '次', iconClass: 'icon-activity', cardClass: 'stat-card--cool', iconWrapClass: 'stat-icon-wrap--cool' },
+      { key: 'todayWorkHours', label: '今日工作时长', unit: 'h', iconClass: 'icon-clock', cardClass: 'stat-card--warm', iconWrapClass: 'stat-icon-wrap--warm' },
+    ],
   },
 
   onLoad() {
@@ -68,31 +69,67 @@ Page({
     const app = getApp();
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) return;
     this.setData({ greeting: getGreeting() });
-    this._loadUserName();
-    this._loadTodayStats();
-    this._loadUnreadCount();
-    this._loadMonthlyStats();
-    this._loadRecentScans();
+    this._loadUserName(true);
+    this._refreshHomeData(true);
   },
 
   onPullDownRefresh() {
-    Promise.all([
-      this._loadTodayStats(),
-      this._loadUnreadCount(),
-      this._loadMonthlyStats(),
-      this._loadRecentScans(),
-    ]).finally(() => wx.stopPullDownRefresh());
+    this._refreshHomeData(false).finally(() => wx.stopPullDownRefresh());
+  },
+
+  onHide() {
+    this._clearDeferredTasks();
+  },
+
+  onUnload() {
+    this._clearDeferredTasks();
   },
 
   /* ---- 私有方法 ---- */
 
-  _loadUserName() {
+  _refreshHomeData(useDeferredSecondaryLoad = false) {
+    this._clearDeferredTasks();
+    const primaryTasks = [this._loadTodayStats(), this._loadUnreadCount()];
+    if (!useDeferredSecondaryLoad) {
+      primaryTasks.push(this._loadMonthlyStats(), this._loadRecentScans());
+      return Promise.allSettled(primaryTasks);
+    }
+
+    const secondaryTasks = [
+      setTimeout(() => this._loadMonthlyStats(), 80),
+      setTimeout(() => this._loadRecentScans(), 180),
+    ];
+    this._deferredTaskTimers = secondaryTasks;
+    return Promise.allSettled(primaryTasks);
+  },
+
+  _clearDeferredTasks() {
+    if (!Array.isArray(this._deferredTaskTimers)) return;
+    this._deferredTaskTimers.forEach(timer => clearTimeout(timer));
+    this._deferredTaskTimers = [];
+  },
+
+  _loadUserName(forceRemote = false) {
     const app = getApp();
-    const info = (app && app.globalData && app.globalData.userInfo) || {};
-    const name = info.realName || info.username || info.nickName || '用户';
+    const globalInfo = (app && app.globalData && app.globalData.userInfo) || {};
+    const cacheInfo = wx.getStorageSync('user_info') || wx.getStorageSync('userInfo') || {};
+    const info = Object.assign({}, cacheInfo, globalInfo);
+    const name = info.realName || info.username || info.nickName || info.nickname || '用户';
     if (name !== this.data.userName) {
       this.setData({ userName: name });
     }
+
+    if (!forceRemote && this._loadedUserNameFromRemote) return;
+    this._loadedUserNameFromRemote = true;
+    api.system.getMe()
+      .then(res => {
+        const me = (res && res.data) || res || {};
+        const remoteName = me.realName || me.username || me.nickName || me.nickname;
+        if (remoteName && remoteName !== this.data.userName) {
+          this.setData({ userName: remoteName });
+        }
+      })
+      .catch(() => {});
   },
 
   _loadTodayStats() {
@@ -151,6 +188,10 @@ Page({
 
     if (item.tab) {
       wx.setStorageSync('work_active_tab', item.tab);
+    }
+
+    if (item.id === 'quality') {
+      wx.setStorageSync('scan_pref_process', '质检');
     }
 
     const isTabPage = ['/pages/home/index', '/pages/work/index', '/pages/scan/index', '/pages/admin/index'].includes(item.route);

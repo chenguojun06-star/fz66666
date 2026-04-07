@@ -1,21 +1,5 @@
 import request, { unwrapApiData } from '@/utils/api';
 
-// ── 选品批次 ────────────────────────────────────────────────────────────────
-export const selectionBatchList = (params: Record<string, unknown>) =>
-  request.post('/selection/batch/list', params);
-
-export const selectionBatchSave = (data: Record<string, unknown>) =>
-  request.post('/selection/batch/save', data);
-
-export const selectionBatchUpdate = (id: number, data: Record<string, unknown>) =>
-  request.post(`/selection/batch/update/${id}`, data);
-
-export const selectionBatchStageAction = (id: number, action: string) =>
-  request.post(`/selection/batch/${id}/stage-action?action=${action}`);
-
-export const selectionBatchDelete = (id: number) =>
-  request.post(`/selection/batch/delete/${id}`);
-
 // ── 候选款 ──────────────────────────────────────────────────────────────────
 export const candidateList = async (params: Record<string, unknown>) => {
   const result = await request.post('/selection/candidate/list', params);
@@ -25,11 +9,6 @@ export const candidateList = async (params: Record<string, unknown>) => {
 export const candidateSave = async (data: Record<string, unknown>) => {
   const result = await request.post('/selection/candidate/save', data);
   return unwrapApiData(result, '保存候选款失败');
-};
-
-export const candidateUpdate = async (id: number, data: Record<string, unknown>) => {
-  const result = await request.post(`/selection/candidate/update/${id}`, data);
-  return unwrapApiData(result, '更新候选款失败');
 };
 
 export const candidateReview = async (data: Record<string, unknown>) => {
@@ -63,31 +42,6 @@ export const candidateDelete = async (id: number) => {
   const result = await request.post(`/selection/candidate/delete/${id}`);
   return unwrapApiData(result, '删除候选款失败');
 };
-
-// ── 趋势与历史分析 ────────────────────────────────────────────────────────────
-export const trendLatest = (params?: Record<string, unknown>) =>
-  request.get('/selection/trend/latest', { params });
-
-export const trendAddManual = (data: Record<string, unknown>) =>
-  request.post('/selection/trend/manual', data);
-
-export const historyList = (data?: Record<string, unknown>) =>
-  request.post('/selection/trend/history/list', data ?? {});
-
-export const topStyles = (top = 20) =>
-  request.get(`/selection/trend/top-styles?top=${top}`);
-
-/** 搜索系统真实款式数据（市场热品数据源） */
-export const searchMarketStyles = (params: { keyword?: string; category?: string; limit?: number }) => {
-  const qs = new URLSearchParams();
-  if (params.keyword) qs.set('keyword', params.keyword);
-  if (params.category && params.category !== '全部') qs.set('category', params.category);
-  if (params.limit) qs.set('limit', String(params.limit));
-  return request.get(`/selection/trend/market/search?${qs.toString()}`);
-};
-
-export const aiSuggestion = (data: Record<string, unknown>) =>
-  request.post('/selection/trend/ai-suggestion', data);
 
 /** 外部市场搜索（SerpApi 多源真实数据聚合） */
 export const searchExternalMarket = async (keyword: string, limit = 20) => {

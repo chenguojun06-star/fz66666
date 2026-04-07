@@ -27,6 +27,30 @@ export interface QuickAction {
   style?: 'primary' | 'danger' | 'default';
 }
 
+/* ── 上下文跟进动作（FollowUp Suggestion） ── */
+export interface ActionFieldOption {
+  label: string;
+  value: unknown;
+}
+
+export interface ActionField {
+  key: string;
+  label: string;
+  inputType: 'text' | 'number' | 'date' | 'select';
+  placeholder?: string;
+  defaultValue?: unknown;
+  options?: ActionFieldOption[];
+}
+
+export interface FollowUpAction {
+  label: string;
+  icon?: string;
+  actionType: 'EXECUTE' | 'NAVIGATE' | 'ASK';
+  command?: string;
+  prefilledParams?: Record<string, unknown>;
+  requiredInputs?: ActionField[];
+}
+
 /** 从 AI 原始回复中提取 CHART/ACTIONS 标记块，返回干净展示文本 + 结构化数据 */
 export function parseAiResponse(rawText: string): {
   displayText: string;
@@ -86,4 +110,6 @@ export interface Message {
     }>;
     confidenceScore?: number;
   };
+  /* ── 上下文跟进动作 ── */
+  followUpActions?: FollowUpAction[];
 }

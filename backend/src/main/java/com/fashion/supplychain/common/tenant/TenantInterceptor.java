@@ -74,8 +74,10 @@ public class TenantInterceptor implements InnerInterceptor {
         Long tenantId = ctx.getTenantId();
         String originalSql = boundSql.getSql();
 
-        // 超管判断：tenantId=null 是历史标准；同时兼容 superAdmin=true 但 tenantId 非 null 的账号
-        boolean isSuperAdmin = tenantId == null || Boolean.TRUE.equals(ctx.getSuperAdmin());
+        // 超管判断：仅当 tenantId 为 null 时启用超管隔离模式（业务表返回空行）。
+        // 超管登录到具体租户时（tenantId 非 null），按该租户身份查看业务数据，
+        // 避免超管在租户下创建款式/订单后看不到自己创建的记录。
+        boolean isSuperAdmin = tenantId == null;
 
         if (isSuperAdmin) {
             // 超级管理员分支

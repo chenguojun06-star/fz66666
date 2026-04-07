@@ -4,6 +4,34 @@ const { getToken, clearToken } = require('./storage');
 let redirectingToLogin = false;
 let redirectResetTimer = null;
 
+function getCurrentRoutePath() {
+  try {
+    const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : [];
+    const currentPage = pages && pages.length ? pages[pages.length - 1] : null;
+    return currentPage && currentPage.route ? `/${currentPage.route}` : '';
+  } catch (e) {
+    return '';
+  }
+}
+
+function fallbackRedirectToLogin() {
+  const loginUrl = '/pages/login/index';
+  setTimeout(() => {
+    if (getCurrentRoutePath() === loginUrl) {
+      return;
+    }
+    const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : [];
+    if (pages && pages.length > 0) {
+      wx.redirectTo({
+        url: loginUrl,
+        fail: () => wx.reLaunch({ url: loginUrl }),
+      });
+      return;
+    }
+    wx.reLaunch({ url: loginUrl });
+  }, 120);
+}
+
 function resolveEnvVersion() {
   try {
     if (wx && typeof wx.getAccountInfoSync === 'function') {
@@ -40,7 +68,7 @@ function triggerLoginRedirect() {
     redirectingToLogin = false;
     redirectResetTimer = null;
   }, 1000);
-  wx.reLaunch({ url: '/pages/login/index' });
+  fallbackRedirectToLogin();
 }
 
 function createError(errMsg, extra) {

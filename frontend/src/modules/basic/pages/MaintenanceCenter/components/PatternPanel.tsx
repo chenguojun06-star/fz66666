@@ -261,7 +261,7 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
   const { message } = App.useApp();
   const { user } = useAuth();
 
-  const [queryParams, setQueryParams] = useState<StyleQueryParams>({ page: 1, pageSize: readPageSize(10), onlyCompleted: true, styleNo: styleNo || undefined });
+  const [queryParams, setQueryParams] = useState<StyleQueryParams>({ page: 1, pageSize: readPageSize(10), onlyCompleted: true, ...(styleNo ? { styleNoExact: styleNo } : {}) });
   const [styles, setStyles] = useState<StyleInfo[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -280,7 +280,7 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
   const isAdminUser = useMemo(() => isAdminUserFn(user), [user]);
   const isFactoryUser = useMemo(() => !!user?.factoryId, [user]);
   const canManage = isAdminUser || isFactoryUser;
-  const directRow = styleNo ? (styles[0] ?? null) : null;
+  const directRow = styleNo ? (styles.find(s => s.styleNo === styleNo) ?? null) : null;
   const directLocked = Number(directRow?.patternRevLocked) === 1;
   const directHasUnlockRemark = !!String(directRow?.patternRevReturnComment || '').trim();
   const directProcessing = !directLocked && directHasUnlockRemark;

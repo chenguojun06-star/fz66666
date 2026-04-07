@@ -104,15 +104,15 @@ page {
 }
 
 .btn-approve {
-  background: linear-gradient(135deg, #10b981 0%, var(--color-success) 100%);
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--color-success) 0%, var(--color-success) 100%);
+  color: var(--color-text-white);
   border: none;
 }
 
 .btn-reject {
   background: var(--color-bg-card);
-  color: #ef4444;
-  border: 1px solid #ef4444;
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
 }
 
 .loading-more {
@@ -144,9 +144,9 @@ page {
 }
 
 .tab-active {
-  color: var(--color-primary, #2d7ff9);
+  color: var(--color-primary, var(--color-primary));
   font-weight: 600;
-  border-bottom-color: var(--color-primary, #2d7ff9);
+  border-bottom-color: var(--color-primary, var(--color-primary));
   background: rgba(45, 127, 249, 0.04);
 }
 
@@ -155,7 +155,7 @@ page {
   display: inline-block;
   font-size: var(--font-size-xs);
   background: rgba(45, 127, 249, 0.1);
-  color: var(--color-primary, #2d7ff9);
+  color: var(--color-primary, var(--color-primary));
   padding: 1px 6px;
   border-radius: 4px;
   margin-left: 8px;

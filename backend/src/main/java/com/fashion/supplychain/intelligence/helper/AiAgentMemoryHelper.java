@@ -1,5 +1,6 @@
 package com.fashion.supplychain.intelligence.helper;
 
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiMessage;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
 import com.fashion.supplychain.intelligence.orchestration.AiMemoryOrchestrator;
@@ -50,17 +51,23 @@ public class AiAgentMemoryHelper {
         memoryExecutor.shutdownNow();
     }
 
-    public List<AiMessage> getConversationHistory(String userId) {
+    /** 构建租户+用户维度的内存键，防止跨租户对话记忆泄漏 */
+    private String memoryKey(String userId, Long tenantId) {
+        return (tenantId != null ? tenantId : 0) + ":" + userId;
+    }
+
+    public List<AiMessage> getConversationHistory(String userId, Long tenantId) {
         if (userId == null || userId.isBlank()) return List.of();
-        List<AiMessage> history = conversationMemory.get(userId);
+        List<AiMessage> history = conversationMemory.get(memoryKey(userId, tenantId));
         if (history == null) return List.of();
         synchronized (history) {
             return new ArrayList<>(history);
         }
     }
 
-    public void saveConversationTurn(String userId, String userMsg, String assistantMsg) {
-        List<AiMessage> history = conversationMemory.computeIfAbsent(userId, k -> new ArrayList<>());
+    public void saveConversationTurn(String userId, Long tenantId, String userMsg, String assistantMsg) {
+        String key = memoryKey(userId, tenantId);
+        List<AiMessage> history = conversationMemory.computeIfAbsent(key, k -> new ArrayList<>());
         synchronized (history) {
             history.add(AiMessage.user(userMsg));
             history.add(AiMessage.assistant(assistantMsg));
@@ -109,47 +116,59 @@ public class AiAgentMemoryHelper {
     }
 
     public void saveCurrentConversationToMemory(String userId, Long tenantId) {
-        List<AiMessage> history = getConversationHistory(userId);
+        List<AiMessage> history = getConversationHistory(userId, tenantId);
         if (!history.isEmpty()) {
             aiMemoryOrchestrator.saveConversation(tenantId, userId, history);
         }
     }
 
-    public void enhanceMemoryAsync(String userId, String userMessage, String assistantResponse) {
+    public void enhanceMemoryAsync(String userId, Long tenantId, String userMessage, String assistantResponse) {
+        // 捕获调用方线程的租户上下文，在异步线程中恢复
+        final Long capturedTenantId = tenantId;
+        final String capturedUserId = userId;
         CompletableFuture.runAsync(() -> {
             try {
-                if (assistantResponse == null || assistantResponse.length() < 80) {
-                    return;
-                }
-                List<AiMessage> extractPrompt = List.of(
-                        AiMessage.system("你是知识提取助手。分析以下对话，如果其中包含有价值的业务洞察（如决策依据、" +
-                                "异常处理方案、数据分析结论），则输出一行标题和一段摘要，格式:\n" +
-                                "TITLE: 标题\nCONTENT: 摘要\n\n" +
-                                "如果对话是简单闲聊/查询且无新洞察，仅输出 SKIP"),
-                        AiMessage.user("用户: " + AiAgentEvidenceHelper.truncate(userMessage, 300) + "\n助手: " + AiAgentEvidenceHelper.truncate(assistantResponse, 600))
-                );
-                IntelligenceInferenceResult extractResult = inferenceOrchestrator.chat("memory-extract", extractPrompt, List.of());
-                if (!extractResult.isSuccess() || extractResult.getContent() == null) {
-                    return;
-                }
-                String extraction = extractResult.getContent().trim();
-                if (extraction.startsWith("SKIP") || !extraction.contains("TITLE:")) {
-                    return;
-                }
-                String title = "";
-                String content = "";
-                for (String line : extraction.split("\n")) {
-                    if (line.startsWith("TITLE:")) {
-                        title = line.substring(6).trim();
-                    } else if (line.startsWith("CONTENT:")) {
-                        content = line.substring(8).trim();
+                // 在异步线程中恢复租户上下文，确保 saveCase 能正确读取 tenantId
+                UserContext asyncCtx = new UserContext();
+                asyncCtx.setTenantId(capturedTenantId);
+                asyncCtx.setUserId(capturedUserId);
+                UserContext.set(asyncCtx);
+                try {
+                    if (assistantResponse == null || assistantResponse.length() < 80) {
+                        return;
                     }
+                    List<AiMessage> extractPrompt = List.of(
+                            AiMessage.system("你是知识提取助手。分析以下对话，如果其中包含有价值的业务洞察（如决策依据、" +
+                                    "异常处理方案、数据分析结论），则输出一行标题和一段摘要，格式:\n" +
+                                    "TITLE: 标题\nCONTENT: 摘要\n\n" +
+                                    "如果对话是简单闲聊/查询且无新洞察，仅输出 SKIP"),
+                            AiMessage.user("用户: " + AiAgentEvidenceHelper.truncate(userMessage, 300) + "\n助手: " + AiAgentEvidenceHelper.truncate(assistantResponse, 600))
+                    );
+                    IntelligenceInferenceResult extractResult = inferenceOrchestrator.chat("memory-extract", extractPrompt, List.of());
+                    if (!extractResult.isSuccess() || extractResult.getContent() == null) {
+                        return;
+                    }
+                    String extraction = extractResult.getContent().trim();
+                    if (extraction.startsWith("SKIP") || !extraction.contains("TITLE:")) {
+                        return;
+                    }
+                    String title = "";
+                    String content = "";
+                    for (String line : extraction.split("\n")) {
+                        if (line.startsWith("TITLE:")) {
+                            title = line.substring(6).trim();
+                        } else if (line.startsWith("CONTENT:")) {
+                            content = line.substring(8).trim();
+                        }
+                    }
+                    if (title.isEmpty() || content.isEmpty()) {
+                        return;
+                    }
+                    intelligenceMemoryOrchestrator.saveCase("agent_insight", "conversation", title, content);
+                    log.info("[AiAgent] 记忆增强成功: title={}, userId={}", title, userId);
+                } finally {
+                    UserContext.clear(); // 防止线程复用时上下文泄漏
                 }
-                if (title.isEmpty() || content.isEmpty()) {
-                    return;
-                }
-                intelligenceMemoryOrchestrator.saveCase("agent_insight", "conversation", title, content);
-                log.info("[AiAgent] 记忆增强成功: title={}, userId={}", title, userId);
             } catch (Exception e) {
                 log.debug("[AiAgent] 记忆增强异常（不影响主流程）: {}", e.getMessage());
             }

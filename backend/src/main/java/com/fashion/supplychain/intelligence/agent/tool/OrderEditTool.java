@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +29,9 @@ public class OrderEditTool implements AgentTool {
 
     @Autowired
     private ProductionOrderService productionOrderService;
+
+    @Autowired
+    private AiAgentToolAccessService aiAgentToolAccessService;
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -92,6 +96,9 @@ public class OrderEditTool implements AgentTool {
 
     @Override
     public String execute(String argumentsJson) throws Exception {
+        if (!aiAgentToolAccessService.hasManagerAccess()) {
+            return MAPPER.writeValueAsString(Map.of("error", "当前角色无权执行该操作"));
+        }
         Map<String, Object> args = MAPPER.readValue(argumentsJson, new TypeReference<>() {});
 
         String orderId = (String) args.get("orderId");

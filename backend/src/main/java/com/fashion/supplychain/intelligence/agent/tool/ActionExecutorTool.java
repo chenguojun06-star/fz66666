@@ -11,6 +11,7 @@ import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.SysNoticeService;
 import com.fashion.supplychain.intelligence.dto.ActionCenterResponse;
 import com.fashion.supplychain.intelligence.orchestration.FollowupTaskOrchestrator;
+import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.system.entity.OperationLog;
 import com.fashion.supplychain.system.service.OperationLogService;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +41,9 @@ public class ActionExecutorTool implements AgentTool {
 
     @Autowired
     private com.fashion.supplychain.production.service.MaterialPurchaseService materialPurchaseService;
+
+    @Autowired
+    private AiAgentToolAccessService aiAgentToolAccessService;
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -110,6 +114,9 @@ public class ActionExecutorTool implements AgentTool {
         }
 
         Long tenantId = UserContext.tenantId();
+        if (!aiAgentToolAccessService.hasManagerAccess()) {
+            return "{\"success\":false,\"error\":\"当前角色无权执行该操作\"}";
+        }
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("action", action);
 
@@ -297,7 +304,7 @@ public class ActionExecutorTool implements AgentTool {
             result.put("error", "缺少 orderNo 参数");
             return;
         }
-        
+
         ProductionOrder order = findOrder(tenantId, orderNo);
         if (order == null) {
             result.put("success", false);
@@ -353,13 +360,13 @@ public class ActionExecutorTool implements AgentTool {
         QueryWrapper<ProductionOrder> q = new QueryWrapper<>();
         q.eq("order_no", orderNo).eq("delete_flag", 0);
         if (tenantId != null) q.eq("tenant_id", tenantId);
-        
+
         // 【安全增强】工厂账号隔离：外发工厂账号只能操作自己工厂的订单
         String factoryId = UserContext.factoryId();
         if (factoryId != null && !factoryId.isBlank()) {
             q.eq("factory_id", factoryId);
         }
-        
+
         return productionOrderService.getOne(q, false);
     }
 

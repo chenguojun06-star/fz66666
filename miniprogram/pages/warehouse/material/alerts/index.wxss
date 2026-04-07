@@ -22,7 +22,7 @@
 }
 
 .tab {
-  padding: 8rpx 18rpx;
+  padding: 4px 9px;
   border-radius: var(--radius-sm);
   background: var(--color-bg-light);
   color: var(--color-text-secondary);
@@ -35,7 +35,7 @@
 }
 
 .need-switch {
-  padding: 8rpx 16rpx;
+  padding: 4px 8px;
   border-radius: var(--radius-sm);
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
@@ -85,28 +85,28 @@
 /* 标题行内的排名小圆圈 */
 .ri-rank-circle {
   flex-shrink: 0;
-  width: 40rpx;
-  height: 40rpx;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  background: var(--color-blue-light, #e3f2fd);
-  color: var(--color-primary, #1890ff);
-  font-size: 22rpx;
+  background: var(--color-blue-light, var(--color-info-bg));
+  color: var(--color-primary, var(--color-primary));
+  font-size: 11px;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
-  line-height: 40rpx;
+  line-height: 20px;
 }
 
 /* 充足 / 缺料 状态按钮 — 椭圆药丸形，居中 */
 .ri-btn-ok,
 .ri-btn-warn {
-  padding: 4rpx 16rpx;
-  font-size: 20rpx;
+  padding: 2px 8px;
+  font-size: 10px;
   font-weight: 700;
-  border-radius: 999rpx;
-  line-height: 28rpx;
+  border-radius: 500px;
+  line-height: 14px;
   text-align: center;
   white-space: nowrap;
   display: inline-flex;
@@ -116,21 +116,21 @@
 
 .ri-btn-ok {
   background: rgba(209, 250, 229, 0.9);
-  color: #059669;
-  border: 1rpx solid #a7f3d0;
+  color: var(--color-success);
+  border: 1px solid var(--color-success-border);
 }
 
 .ri-btn-warn {
   background: rgba(254, 243, 199, 0.9);
-  color: #d97706;
-  border: 1rpx solid #fde68a;
+  color: var(--color-warning);
+  border: 1px solid var(--color-warning-border);
 }
 
 /* 底部操作行：左右两按钮并列 */
 .ri-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 10rpx;
+  gap: 5px;
 }
 
 .btn {
@@ -142,7 +142,7 @@
 
 /* 采购数量选择器（弹窗专用） */
 .qty-input {
-  width: 140rpx;
+  width: 70px;
   text-align: center;
   background: var(--color-bg-light);
   border: 1px solid var(--color-border-light);
@@ -158,9 +158,9 @@
 }
 
 .qty-btn {
-  width: 52rpx;
-  height: 52rpx;
-  line-height: 52rpx;
+  width: 26px;
+  height: 26px;
+  line-height: 26px;
   text-align: center;
   border-radius: var(--radius-sm);
   border: 1px solid var(--color-border-light);
@@ -169,7 +169,7 @@
 }
 
 .qty-shortage {
-  padding: 10rpx 14rpx;
+  padding: 5px 7px;
   border-radius: var(--radius-sm);
   background: var(--color-blue-light);
   color: var(--color-primary);

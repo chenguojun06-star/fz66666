@@ -8,7 +8,7 @@
  *  · 纸张：7×4 cm（与菲号标签规格相同）
  *  · QR内容：款号-颜色-码数-序号（本地生成，不走外部API）
  */
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { InputNumber, Button, Alert, Checkbox, Tag, Typography, Spin } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
 import QRCode from 'qrcode';

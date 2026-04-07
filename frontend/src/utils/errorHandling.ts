@@ -8,7 +8,7 @@ import { message } from '@/utils/antdStatic';
 declare const process: { env?: { NODE_ENV?: string } };
 
 // 错误类型
-export enum ErrorType {
+enum ErrorType {
   Validation = 'VALIDATION',      // 表单验证错误
   Network = 'NETWORK',            // 网络错误
   Server = 'SERVER',              // 服务器错误
@@ -19,7 +19,7 @@ export enum ErrorType {
 }
 
 // 日志级别
-export enum LogLevel {
+enum LogLevel {
   Debug = 'DEBUG',
   Info = 'INFO',
   Warn = 'WARN',
@@ -294,153 +294,3 @@ class ErrorHandler {
 }
 
 export const errorHandler = new ErrorHandler();
-
-/**
- * 业务操作记录
- */
-class OperationLogger {
-  private operations: Array<{
-    timestamp: string;
-    action: string;
-    module: string;
-    status: 'success' | 'failure';
-    duration: number;
-    userId?: string;
-    details?: unknown;
-    traceId?: string;
-  }> = [];
-
-  private maxOperations = 5000;
-
-  /**
-   * 记录操作开始
-   */
-  startOperation(action: string, module: string) {
-    const startTime = Date.now();
-    const traceId = generateTraceId();
-
-    return {
-      traceId,
-      action,
-      module,
-      startTime,
-
-      /**
-       * 记录操作成功
-       */
-      success: (details?: unknown) => {
-        const duration = Date.now() - startTime;
-        this.logOperation(action, module, 'success', duration, traceId, details);
-        const detailObj = typeof details === 'object' && details !== null ? (details as any) : undefined;
-        logger.info(
-          `操作成功: ${module}.${action}`,
-          detailObj ? { traceId, duration: `${duration}ms`, ...detailObj } : { traceId, duration: `${duration}ms`, detail: details }
-        );
-      },
-
-      /**
-       * 记录操作失败
-       */
-      failure: (error: unknown) => {
-        const duration = Date.now() - startTime;
-        this.logOperation(action, module, 'failure', duration, traceId, error);
-        logger.error(`操作失败: ${module}.${action}`, { traceId, duration: `${duration}ms`, error });
-      }
-    };
-  }
-
-  private logOperation(
-    action: string,
-    module: string,
-    status: 'success' | 'failure',
-    duration: number,
-    traceId: string,
-    details?: unknown
-  ) {
-    const operation = {
-      timestamp: getTimestamp(),
-      action,
-      module,
-      status,
-      duration,
-      traceId,
-      details,
-      userId: localStorage.getItem('userId') || undefined
-    };
-
-    this.operations.push(operation);
-    if (this.operations.length > this.maxOperations) {
-      this.operations.shift();
-    }
-  }
-
-  /**
-   * 获取操作日志
-   */
-  getOperations(filter?: { module?: string; action?: string; status?: 'success' | 'failure' }) {
-    let result = this.operations;
-
-    if (filter?.module) {
-      result = result.filter(op => op.module === filter.module);
-    }
-    if (filter?.action) {
-      result = result.filter(op => op.action === filter.action);
-    }
-    if (filter?.status) {
-      result = result.filter(op => op.status === filter.status);
-    }
-
-    return result;
-  }
-
-  /**
-   * 获取统计信息
-   */
-  getStatistics() {
-    const total = this.operations.length;
-    const success = this.operations.filter(op => op.status === 'success').length;
-    const failure = this.operations.filter(op => op.status === 'failure').length;
-    const avgDuration = this.operations.length > 0
-      ? this.operations.reduce((sum, op) => sum + op.duration, 0) / this.operations.length
-      : 0;
-
-    return { total, success, failure, avgDuration };
-  }
-
-  /**
-   * 清空操作日志
-   */
-  clear() {
-    this.operations = [];
-  }
-
-  /**
-   * 导出操作日志为 JSON
-   */
-  exportJson(): string {
-    return JSON.stringify(this.operations, null, 2);
-  }
-}
-
-export const operationLogger = new OperationLogger();
-
-/**
- * 便捷函数：执行异步操作并自动处理错误
- */
-export async function executeWithErrorHandling<T>(
-  operation: () => Promise<T>,
-  action: string,
-  module: string
-): Promise<T | null> {
-  const opLogger = operationLogger.startOperation(action, module);
-
-  try {
-    const result = await operation();
-    opLogger.success();
-    return result;
-  } catch (error) {
-    opLogger.failure(error);
-    errorHandler.handleError(error, `${module}.${action} 失败`);
-    return null;
-  }
-}

@@ -30,6 +30,7 @@ import { renderSimpleMarkdown, sanitizeHtml } from './markdownUtils';
 import { INITIAL_MSG, SUGGESTIONS } from './constants';
 import { describeToolName, choose, extractOrderNo, isPurchaseDocFile, shouldAutoInbound, shouldAutoArrival } from './helpers';
 import ActionCardWidget from './ActionCardWidget';
+import FollowUpActionPanel from './FollowUpActionPanel';
 import { RiskIndicatorWidget, SimulationWidget, ClarificationCard, FeedbackWidget } from './HyperAdvisorWidgets';
 import { speakText } from './speechUtils';
 
@@ -322,6 +323,11 @@ const GlobalAiAssistant: React.FC = () => {
             setMessages(prev => prev.map(m => m.id === aiMsgId
               ? { ...m, text: accumulatedText, reportType: reportTypeToDownload, charts, cards, actionCards, quickActions, teamStatusCards, bundleSplitCards, agentCommandId: commandId }
               : m));
+          } else if (event.type === 'follow_up_actions') {
+            const actions = ((event.data as Record<string, unknown>)?.actions as import('./types').FollowUpAction[] | undefined) ?? [];
+            if (actions.length) {
+              setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, followUpActions: actions } : m));
+            }
           } else if (event.type === 'error') {
             accumulatedText = String(event.data.message || '智能分析暂时异常，请稍后再试。');
             setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, text: accumulatedText } : m));
@@ -368,7 +374,8 @@ const GlobalAiAssistant: React.FC = () => {
             setMessages(prev => {
               const existing = prev.find(m => m.id === aiMsgId);
               if (existing) {
-                return prev.map(m => m.id === aiMsgId ? {
+                const followUpActions = (payload as Record<string, unknown>)?.followUpActions as import('./types').FollowUpAction[] | undefined;
+              return prev.map(m => m.id === aiMsgId ? {
                   ...m,
                   text: displayAnswer || displayText,
                   intent: payload?.source,
@@ -380,8 +387,10 @@ const GlobalAiAssistant: React.FC = () => {
                   teamStatusCards,
                   bundleSplitCards,
                   agentCommandId: commandId,
+                  followUpActions,
                 } : m);
               }
+              const followUpActions2 = (payload as Record<string, unknown>)?.followUpActions as import('./types').FollowUpAction[] | undefined;
               return [...prev, {
                 id: aiMsgId,
                 role: 'ai' as const,
@@ -395,6 +404,7 @@ const GlobalAiAssistant: React.FC = () => {
                 teamStatusCards,
                 bundleSplitCards,
                 agentCommandId: commandId,
+                followUpActions: followUpActions2,
               }];
             });
             speak(displayAnswer || displayText);
@@ -923,6 +933,15 @@ const GlobalAiAssistant: React.FC = () => {
                         </div>
                       )}
                     </div>
+                  )}
+
+                  {/* ── 跟进建议快捷操作区 ── */}
+                  {msg.role === 'ai' && !!msg.followUpActions?.length && (
+                    <FollowUpActionPanel
+                      actions={msg.followUpActions}
+                      onExecute={(cmd, params) => handleSend(`执行 ${cmd} ${JSON.stringify(params)}`)}
+                      onAsk={(question) => handleSend(question)}
+                    />
                   )}
 
                   {/* ── hyper-advisor 增强区域 ── */}
