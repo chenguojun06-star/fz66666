@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Tag, Tooltip, Popover } from 'antd';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -7,8 +7,6 @@ import {
   FullscreenOutlined, FullscreenExitOutlined, SearchOutlined,
 } from '@ant-design/icons';
 import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
-import { intelligenceApi as execApi } from '@/services/intelligenceApi';
-import api from '@/utils/api';
 import Layout from '@/components/Layout';
 import { useAuth } from '@/utils/AuthContext';
 import ProfitDeliveryPanel from './ProfitDeliveryPanel';
@@ -31,6 +29,11 @@ import ABTestStatsPanel from '../../components/ABTestStatsPanel';
 import StageCapsulePanel from './components/StageCapsulePanel';
 import { useKpiMetrics } from './hooks/useKpiMetrics';
 import { useKpiPopovers } from './KpiPopoverContent';
+import { useRepairAction } from './hooks/useRepairAction';
+import { useAgentMeeting } from './hooks/useAgentMeeting';
+import { useTodayBrief } from './hooks/useTodayBrief';
+import { usePanelCollapse } from './hooks/usePanelCollapse';
+import { useTaskExecution } from './hooks/useTaskExecution';
 import { paths } from '@/routeConfig';
 import './styles.css';
 
@@ -46,84 +49,16 @@ const IntelligenceCenter: React.FC = () => {
   const [showSearch, setShowSearch] = useState(false);
 
   /* ── 自愈一键修复 ── */
-  const [repairing, setRepairing] = useState(false);
-  const [repairResult, setRepairResult] = useState<{ autoFixed: number; needManual: number } | null>(null);
-  const handleRepair = useCallback(async () => {
-    setRepairing(true);
-    setRepairResult(null);
-    try {
-      const res = await execApi.runSelfHealingRepair() as any;
-      const d = res?.data ?? res;
-      setRepairResult({ autoFixed: Number(d?.autoFixed ?? 0), needManual: Number(d?.needManual ?? 0) });
-      reload();
-    } catch { setRepairResult({ autoFixed: 0, needManual: -1 }); }
-    finally { setRepairing(false); }
-  }, [reload]);
-
+  const { repairing, repairResult, handleRepair } = useRepairAction(reload);
   /* ── Agent 例会 ── */
-  const [meetingTopic, setMeetingTopic] = useState('');
-  const [holdingMeeting, setHoldingMeeting] = useState(false);
-  const [meetingResult, setMeetingResult] = useState<any>(null);
-  const [meetingHistory, setMeetingHistory] = useState<any[]>([]);
-  const holdMeeting = useCallback(async () => {
-    if (!meetingTopic.trim()) return;
-    setHoldingMeeting(true);
-    setMeetingResult(null);
-    try {
-      const res = await execApi.holdAgentMeeting(meetingTopic.trim()) as any;
-      const d = res?.data ?? res;
-      setMeetingResult(d);
-      setMeetingTopic('');
-      // refresh history
-      const hRes = await execApi.listAgentMeetings(5) as any;
-      setMeetingHistory((hRes?.data ?? hRes) || []);
-    } catch { setMeetingResult({ error: true }); }
-    finally { setHoldingMeeting(false); }
-  }, [meetingTopic]);
-  useEffect(() => {
-    (execApi.listAgentMeetings(5) as any).then((r: any) => setMeetingHistory((r?.data ?? r) || [])).catch(() => {});
-  }, []);
+  const { meetingTopic, setMeetingTopic, holdingMeeting, meetingResult, meetingHistory, holdMeeting } = useAgentMeeting();
+  /* ── 今日日报 ── */
+  const todayBrief = useTodayBrief();
+  /* ── 主面板折叠/展开 ── */
+  const { collapsedPanels, toggleCollapse } = usePanelCollapse();
+  /* ── 任务执行 ── */
+  const { executingTask, executeTaskResult, handleExecuteTask } = useTaskExecution(reload);
 
-  /* ── 今日日报（下单数/入库数/出库数） ── */
-  const [todayBrief, setTodayBrief] = useState({ todayOrderCount: 0, todayOrderQuantity: 0, todayInboundCount: 0, todayInboundQuantity: 0, todayOutboundCount: 0, todayOutboundQuantity: 0 });
-  useEffect(() => {
-    const ac = new AbortController();
-    (api.get('/dashboard/daily-brief', { signal: ac.signal }) as Promise<any>)
-      .then((res: any) => {
-        const d = res?.data ?? res;
-        if (d) {
-          setTodayBrief({
-            todayOrderCount: Number(d.todayOrderCount ?? 0),
-            todayOrderQuantity: Number(d.todayOrderQuantity ?? 0),
-            todayInboundCount: Number(d.todayInboundCount ?? 0),
-            todayInboundQuantity: Number(d.todayInboundQuantity ?? 0),
-            todayOutboundCount: Number(d.todayOutboundCount ?? 0),
-            todayOutboundQuantity: Number(d.todayOutboundQuantity ?? 0),
-          });
-        }
-      })
-      .catch(() => {});
-    return () => ac.abort();
-  }, []);
-
-  /* ── 主面板折叠/展开（localStorage 持久化） ── */
-  const [collapsedPanels, setCollapsedPanels] = useState<Record<string, boolean>>(() => {
-    try {
-      const saved = localStorage.getItem('cockpit_main_panel_collapsed');
-      if (saved) return JSON.parse(saved);
-    } catch { /* ignore */ }
-    return {};
-  });
-  const toggleCollapse = useCallback((key: string) => {
-    setCollapsedPanels(prev => {
-      const next = { ...prev, [key]: !prev[key] };
-      localStorage.setItem('cockpit_main_panel_collapsed', JSON.stringify(next));
-      return next;
-    });
-  }, []);
-
-  const [executingTask, setExecutingTask] = useState<string | null>(null);
-  const [executeTaskResult, setExecuteTaskResult] = useState<{ taskCode: string; ok: boolean; msg: string } | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const rootRef  = useRef<HTMLDivElement>(null);
 
@@ -177,22 +112,6 @@ const IntelligenceCenter: React.FC = () => {
   }, [reload]);
 
   const handleReload = () => { reload(); setCountdown(30); };
-
-  const handleExecuteTask = useCallback(async (task: any) => {
-    if (!task?.taskCode) return;
-    setExecutingTask(task.taskCode);
-    setExecuteTaskResult(null);
-    try {
-      const result = await execApi.executeCommand(task) as any;
-      const ok = result?.status === 'SUCCESS' || result?.success === true || result?.code === 200;
-      setExecuteTaskResult({ taskCode: task.taskCode, ok, msg: result?.message || (ok ? '执行成功' : '执行失败') });
-      if (ok) reload();
-    } catch (err: any) {
-      setExecuteTaskResult({ taskCode: task.taskCode, ok: false, msg: err?.message || '执行失败' });
-    } finally {
-      setExecutingTask(null);
-    }
-  }, [reload]);
 
   const { pulse, health, notify, workers, heatmap, ranking, shortage, healing, bottleneck: _bottleneck, orders, brain, actionCenter, factoryCapacity } = data;
 
