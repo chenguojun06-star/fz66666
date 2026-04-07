@@ -597,6 +597,10 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             repaired += ensureColumn(conn, schema, "t_agent_execution_log", "feedback_note",
                     "VARCHAR(500) DEFAULT NULL COMMENT '反馈备注'");
 
+            // t_production_order.skc — V20260309 COMMENT '' bug 遗留，Flyway 从未成功添加此列
+            repaired += ensureColumn(conn, schema, "t_production_order", "skc",
+                    "VARCHAR(64) DEFAULT NULL COMMENT 'SKC统一编号'");
+
             if (repaired > 0) {
                 log.warn("[DbRepair] 共修复 {} 个缺失列，Flyway 可能未正常执行对应迁移脚本", repaired);
             }
