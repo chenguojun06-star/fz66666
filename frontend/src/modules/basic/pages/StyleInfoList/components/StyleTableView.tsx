@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { App, Button, Empty, Form, Input, InputNumber, Modal, Popover, Progress, Select, Skeleton, Tag } from 'antd';
+import { App, Button, Empty, Form, Input, InputNumber, Modal, Popover, Progress, QRCode, Select, Skeleton, Tag } from 'antd';
 import dayjs from 'dayjs';
 import { SMART_CARD_OVERLAY_WIDTH } from '@/components/common/DecisionInsightCard';
 import AttachmentThumb from '@/components/common/AttachmentThumb';
@@ -488,6 +488,16 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                       <div className="style-smart-stage-modal__fact">
                         <span>完成时间</span>
                         <strong>{sample.sampleCompletedTimeLabel}</strong>
+                      </div>
+                    </div>
+                    <div style={{ marginTop: 12, padding: '10px 0', borderTop: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: 14 }}>
+                      <QRCode
+                        value={JSON.stringify({ type: 'pattern', id: sample.sampleSnapshot.id })}
+                        size={80}
+                      />
+                      <div style={{ fontSize: 12, color: '#8c8c8c', lineHeight: 1.8 }}>
+                        <div style={{ fontWeight: 500, color: '#595959' }}>工人扫码领取/完成</div>
+                        <div>样衣单号: {sample.sampleSnapshot.id}</div>
                       </div>
                     </div>
                     {sample.shouldShowSampleStageProgress ? (
