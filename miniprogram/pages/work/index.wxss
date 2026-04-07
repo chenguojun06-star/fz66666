@@ -1,8 +1,5 @@
 page {
-  background:
-    radial-gradient(circle at 12% 6%, rgba(109, 155, 239, 0.12), transparent 18%),
-    radial-gradient(circle at 88% 10%, rgba(109, 155, 239, 0.08), transparent 16%),
-    linear-gradient(180deg, #fbfdff 0, #f7faff 120px, var(--color-bg-page) 120px);
+  background: var(--color-bg-page);
   padding-bottom: calc(80px + env(safe-area-inset-bottom));
 }
 
@@ -48,9 +45,9 @@ page {
   margin: 0 0 10px;
   background: var(--color-bg-card);
   border-radius: var(--radius-xl);
-  box-shadow: 0 8px 22px rgba(31, 117, 234, 0.04);
+  box-shadow: 0 8px 22px rgba(var(--color-primary-rgb), 0.04);
   overflow: hidden;
-  border: 1px solid rgba(31, 117, 234, 0.08);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.08);
   padding: 12px;
 }
 
@@ -74,7 +71,7 @@ page {
   padding: 4px 10px;
   background: rgba(255, 255, 255, 0.92);
   border-radius: var(--radius-full);
-  border: 1px solid rgba(31, 117, 234, 0.1);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.1);
   flex-shrink: 0;
 }
 
@@ -83,7 +80,7 @@ page {
 }
 
 .refresh-btn-hover {
-  background: rgba(240, 246, 255, 0.98);
+  background: rgba(255, 255, 255, 0.98);
 }
 
 .refresh-icon {
@@ -99,8 +96,8 @@ page {
 .tabbar {
   display: flex;
   padding: 6px;
-  background: rgba(243, 247, 255, 0.9);
-  border: 1px solid rgba(31, 117, 234, 0.08);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.08);
   border-radius: var(--radius-full);
   margin-bottom: 10px;
 }
@@ -132,8 +129,8 @@ page {
   display: flex;
   align-items: center;
   padding: 10px 14px;
-  background: rgba(243, 247, 255, 0.9);
-  border: 1px solid rgba(31, 117, 234, 0.08);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.08);
   border-radius: var(--radius-full);
   margin-bottom: 10px;
 }
@@ -154,7 +151,7 @@ page {
 }
 
 .stats-accent {
-  color: #1562d6;
+  color: var(--color-primary);
 }
 
 .stats-bar-sep {
@@ -211,10 +208,10 @@ page {
   flex-direction: column;
   padding: 10px 12px;
   background: #ffffff;
-  border: 1px solid rgba(31, 117, 234, 0.1);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.1);
   border-radius: var(--radius-lg);
   margin-bottom: 8px;
-  box-shadow: 0 6px 18px rgba(31, 117, 234, 0.04);
+  box-shadow: 0 6px 18px rgba(var(--color-primary-rgb), 0.04);
 }
 
 .list-item:last-child {
@@ -227,12 +224,12 @@ page {
 
 .list-item-highlight {
   background: #ffffff;
-  border-color: rgba(31, 117, 234, 0.28);
-  box-shadow: 0 0 0 2px rgba(31, 117, 234, 0.08);
+  border-color: rgba(var(--color-primary-rgb), 0.28);
+  box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb), 0.08);
 }
 
 .list-item-overdue {
-  border-left: 3px solid #ff4d4f;
+  border-left: 3px solid var(--color-error);
   background: #ffffff;
 }
 
@@ -247,8 +244,8 @@ page {
   border-radius: var(--radius-md);
   overflow: hidden;
   flex-shrink: 0;
-  background: #f7faff;
-  border: 1px solid rgba(31, 117, 234, 0.08);
+  background: var(--color-bg-page);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.08);
 }
 
 .item-cover {
@@ -315,23 +312,23 @@ page {
 }
 
 .order-tag-plate {
-  background: rgba(31, 117, 234, 0.1);
+  background: rgba(var(--color-primary-rgb), 0.1);
   color: var(--color-primary);
 }
 
 .order-tag-urgent {
-  background: rgba(255, 77, 79, 0.1);
-  color: #ff4d4f;
+  background: rgba(var(--color-error-rgb, 239, 68, 68), 0.1);
+  color: var(--color-error);
 }
 
 .order-tag-normal {
-  background: rgba(31, 117, 234, 0.08);
-  color: #1562d6;
+  background: rgba(var(--color-primary-rgb), 0.08);
+  color: var(--color-primary);
 }
 
 .overdue-indicator {
   font-size: 10px;
-  color: #ff4d4f;
+  color: var(--color-error);
   font-weight: 600;
 }
 
@@ -343,13 +340,13 @@ page {
 }
 
 .tag-completed {
-  background: rgba(31, 117, 234, 0.08);
-  color: #1562d6;
+  background: rgba(var(--color-primary-rgb), 0.08);
+  color: var(--color-primary);
 }
 
 .tag-process {
-  background: rgba(31, 117, 234, 0.08);
-  color: #1562d6;
+  background: rgba(var(--color-primary-rgb), 0.08);
+  color: var(--color-primary);
 }
 
 .item-meta {
@@ -407,7 +404,7 @@ page {
 
 .progress-divider .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary) 100%);
   border-radius: 2px;
   transition: width 0.3s ease;
 }
@@ -481,22 +478,22 @@ page {
 }
 
 .days-normal {
-  color: #1562d6;
-  background: rgba(31, 117, 234, 0.08);
+  color: var(--color-primary);
+  background: rgba(var(--color-primary-rgb), 0.08);
 }
 
 .days-warning {
-  color: #1562d6;
-  background: rgba(31, 117, 234, 0.08);
+  color: var(--color-primary);
+  background: rgba(var(--color-primary-rgb), 0.08);
 }
 
 .days-critical {
-  color: #ff4d4f;
+  color: var(--color-error);
   background: rgba(255, 77, 79, 0.08);
 }
 
 .days-overdue {
-  color: #ff4d4f;
+  color: var(--color-error);
   background: rgba(255, 77, 79, 0.08);
 }
 
@@ -519,7 +516,7 @@ page {
   align-items: center;
   justify-content: center;
   padding: 6px 20px;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary) 100%);
   border: none;
   border-radius: var(--radius-full);
   font-size: 16px;
@@ -639,13 +636,13 @@ page {
 
 .header-progress-bar .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary) 100%);
   border-radius: 2px;
   transition: width 0.3s ease;
 }
 
 .header-progress-bar.progress-completed .progress-fill {
-  background: linear-gradient(90deg, #52c41a 0%, #38a169 100%);
+  background: linear-gradient(90deg, var(--color-success) 0%, var(--color-success) 100%);
 }
 
 .header-progress-pct {
@@ -677,3 +674,5 @@ page {
   flex-direction: column;
   gap: 4px;
 }
+
+

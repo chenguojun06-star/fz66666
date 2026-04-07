@@ -21,7 +21,7 @@
 }
 .stats-unread {
   font-size: var(--font-size-sm);
-  color: #1f75ea;
+  color: var(--color-primary);
   font-weight: var(--font-weight-semibold);
 }
 .stats-read-all {
@@ -51,11 +51,11 @@
   border-radius: var(--radius-lg);
   padding: 14px 14px 10px;
   box-shadow: var(--shadow-sm);
-  border: 1px solid rgba(31, 117, 234, 0.1);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.1);
 }
 
 .notice-unread {
-  border-left: 3px solid rgba(31, 117, 234, 0.38);
+  border-left: 3px solid rgba(var(--color-primary-rgb), 0.38);
 }
 
 .notice-read {
@@ -89,9 +89,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(180deg, rgba(232, 242, 255, 0.98), rgba(245, 249, 255, 0.98));
-  border: 1px solid rgba(31, 117, 234, 0.14);
-  box-shadow: 0 4px 10px rgba(31, 117, 234, 0.08);
+  background: var(--color-bg-page);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.14);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
   flex-shrink: 0;
 }
 .notice-title {
@@ -149,9 +149,9 @@
   align-items: center;
   justify-content: center;
   margin: 0 auto 12px;
-  background: linear-gradient(180deg, rgba(232, 242, 255, 0.98), rgba(245, 249, 255, 0.98));
-  border: 1px solid rgba(31, 117, 234, 0.14);
-  box-shadow: 0 6px 14px rgba(31, 117, 234, 0.08);
+  background: var(--color-bg-page);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.14);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.04);
 }
 
 /* ==================== 催单回复编辑表单 ==================== */

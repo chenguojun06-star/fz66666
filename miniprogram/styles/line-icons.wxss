@@ -25,7 +25,7 @@
 }
 
 .line-icon--blue {
-  filter: drop-shadow(0 2px 4px rgba(31, 117, 234, 0.18));
+  filter: drop-shadow(0 2px 4px rgba(37, 99, 235, 0.18));
 }
 
 .icon-sample {
