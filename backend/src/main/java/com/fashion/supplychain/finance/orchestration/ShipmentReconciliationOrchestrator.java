@@ -318,7 +318,9 @@ public class ShipmentReconciliationOrchestrator {
             throw new IllegalStateException("当前状态不允许修改，请先退回到上一个环节");
         }
 
-        BigDecimal deductionAmount = BigDecimal.ZERO;
+        // 按类型分类汇总：SUPPLEMENT = 补款（增加金额），其余 = 扣款（减少金额）
+        BigDecimal totalDeduction = BigDecimal.ZERO;
+        BigDecimal totalSupplement = BigDecimal.ZERO;
         if (items != null) {
             for (DeductionItem it : items) {
                 if (it == null) {
@@ -326,16 +328,22 @@ public class ShipmentReconciliationOrchestrator {
                 }
                 BigDecimal amt = it.getDeductionAmount() == null ? BigDecimal.ZERO : it.getDeductionAmount();
                 if (amt.compareTo(BigDecimal.ZERO) < 0) {
-                    throw new IllegalArgumentException("扣款金额不能为负数");
+                    throw new IllegalArgumentException("扣补款金额不能为负数");
                 }
-                deductionAmount = deductionAmount.add(amt);
+                if ("SUPPLEMENT".equalsIgnoreCase(it.getDeductionType())) {
+                    totalSupplement = totalSupplement.add(amt);
+                } else {
+                    totalDeduction = totalDeduction.add(amt);
+                }
             }
         }
 
         BigDecimal unitPrice = current.getUnitPrice() == null ? BigDecimal.ZERO : current.getUnitPrice();
         int qty = current.getQuantity() == null ? 0 : current.getQuantity();
         BigDecimal totalAmount = unitPrice.multiply(BigDecimal.valueOf(qty));
-        BigDecimal finalAmount = totalAmount.subtract(deductionAmount);
+        // 净扣款 = 扣款总额 - 补款总额；最终金额 = 货款总额 - 扣款 + 补款
+        BigDecimal deductionAmount = totalDeduction.subtract(totalSupplement);
+        BigDecimal finalAmount = totalAmount.subtract(totalDeduction).add(totalSupplement);
 
         ShipmentReconciliation patch = new ShipmentReconciliation();
         patch.setId(rid);

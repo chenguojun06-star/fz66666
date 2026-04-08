@@ -222,7 +222,7 @@ public class ReceivableOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public int markOverdue() {
-        TenantAssert.assertTenantContext();
+        // 跨所有租户标记逾期，定时任务调用无需租户上下文
         List<Receivable> list = receivableService.list(
                 new LambdaQueryWrapper<Receivable>()
                         .eq(Receivable::getDeleteFlag, 0)

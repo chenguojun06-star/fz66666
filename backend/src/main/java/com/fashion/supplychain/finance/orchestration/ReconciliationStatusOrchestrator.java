@@ -8,7 +8,12 @@ import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
 import com.fashion.supplychain.finance.service.MaterialReconciliationService;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.integration.openapi.service.WebhookPushService;
+import com.fashion.supplychain.crm.entity.Receivable;
+import com.fashion.supplychain.crm.orchestration.ReceivableOrchestrator;
+import com.fashion.supplychain.crm.service.ReceivableService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
@@ -79,6 +84,12 @@ public class ReconciliationStatusOrchestrator {
 
     @Autowired(required = false)
     private WebhookPushService webhookPushService;
+
+    @Autowired(required = false)
+    private ReceivableOrchestrator receivableOrchestrator;
+
+    @Autowired(required = false)
+    private ReceivableService receivableService;
 
     @Transactional(rollbackFor = Exception.class)
     public String updateMaterialStatus(String id, String status) {
@@ -234,6 +245,34 @@ public class ReconciliationStatusOrchestrator {
                             );
                         } catch (Exception e) {
                             log.warn("Webhook推送对账审批通过失败: reconciliationId={}", rid, e);
+                        }
+                    }
+
+                    // 成品对账审批通过 → 自动生成客户应收单（幂等，不影响主流程）
+                    if (receivableOrchestrator != null && receivableService != null) {
+                        try {
+                            long existing = receivableService.count(
+                                new LambdaQueryWrapper<Receivable>()
+                                    .eq(Receivable::getSourceBizType, "SHIPMENT_RECONCILIATION")
+                                    .eq(Receivable::getSourceBizId, rid)
+                                    .eq(Receivable::getDeleteFlag, 0));
+                            if (existing == 0 && sr.getFinalAmount() != null
+                                    && sr.getFinalAmount().compareTo(BigDecimal.ZERO) > 0) {
+                                Receivable receivable = new Receivable();
+                                receivable.setCustomerId(sr.getCustomerId());
+                                receivable.setOrderId(sr.getOrderId());
+                                receivable.setOrderNo(sr.getOrderNo() != null ? sr.getOrderNo() : "");
+                                receivable.setAmount(sr.getFinalAmount());
+                                receivable.setDueDate(LocalDate.now().plusDays(30));
+                                receivable.setDescription("成品对账单审批自动生成");
+                                receivable.setSourceBizType("SHIPMENT_RECONCILIATION");
+                                receivable.setSourceBizId(rid);
+                                receivable.setSourceBizNo(sr.getOrderNo() != null ? sr.getOrderNo() : rid);
+                                receivableOrchestrator.create(receivable);
+                                log.info("成品对账审批通过，自动生成应收单: reconciliationId={}, amount={}", rid, sr.getFinalAmount());
+                            }
+                        } catch (Exception e) {
+                            log.warn("自动生成应收单失败（不影响主流程）: reconciliationId={}", rid, e);
                         }
                     }
                 }
