@@ -85,10 +85,17 @@ export interface PaymentQueryRequest {
  * 待付款项目 — 聚合工厂对账 + 费用报销 + 工资审批
  */
 export interface PayableItem {
-  bizType: 'PAYROLL' | 'PAYROLL_SETTLEMENT' | 'ORDER_SETTLEMENT' | 'RECONCILIATION' | 'REIMBURSEMENT';
+  bizType:
+    | 'PAYROLL'
+    | 'PAYROLL_SETTLEMENT'
+    | 'ORDER_SETTLEMENT'
+    | 'RECONCILIATION'
+    | 'REIMBURSEMENT'
+    | 'BILL_RECEIVABLE'
+    | 'BILL_PAYABLE';
   bizId: string;
   bizNo: string;
-  payeeType: 'WORKER' | 'FACTORY' | 'PERSON';
+  payeeType: 'WORKER' | 'FACTORY' | 'PERSON' | 'CUSTOMER';
   payeeId: string;
   payeeName: string;
   amount: number;
@@ -106,6 +113,8 @@ export const BIZ_TYPE_OPTIONS = [
   { label: '订单结算', value: 'ORDER_SETTLEMENT' },
   { label: '工厂对账', value: 'RECONCILIATION' },
   { label: '费用报销', value: 'REIMBURSEMENT' },
+  { label: '应收账款', value: 'BILL_RECEIVABLE' },
+  { label: '应付账款', value: 'BILL_PAYABLE' },
 ];
 
 export const BIZ_TYPE_MAP: Record<string, { text: string; color: string }> = {
@@ -114,6 +123,8 @@ export const BIZ_TYPE_MAP: Record<string, { text: string; color: string }> = {
   ORDER_SETTLEMENT: { text: '订单结算', color: 'cyan' },
   RECONCILIATION: { text: '工厂对账', color: 'orange' },
   REIMBURSEMENT: { text: '费用报销', color: 'purple' },
+  BILL_RECEIVABLE: { text: '应收账款', color: 'green' },
+  BILL_PAYABLE: { text: '应付账款', color: 'volcano' },
 };
 
 // ============================================================

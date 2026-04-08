@@ -3,10 +3,12 @@ package com.fashion.supplychain.finance.orchestration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.finance.entity.BillAggregation;
 import com.fashion.supplychain.finance.entity.ExpenseReimbursement;
 import com.fashion.supplychain.finance.entity.MaterialReconciliation;
 import com.fashion.supplychain.finance.entity.PaymentAccount;
 import com.fashion.supplychain.finance.entity.WagePayment;
+import com.fashion.supplychain.finance.service.BillAggregationService;
 import com.fashion.supplychain.finance.service.ExpenseReimbursementService;
 import com.fashion.supplychain.finance.service.MaterialReconciliationService;
 import com.fashion.supplychain.finance.service.PaymentAccountService;
@@ -26,7 +28,9 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 /**
  * 工资支付编排器
@@ -60,6 +64,9 @@ public class WagePaymentOrchestrator {
 
     @Autowired
     private ExpenseReimbursementService expenseReimbursementService;
+
+    @Autowired
+    private BillAggregationService billAggregationService;
 
     private static final AtomicLong PAYMENT_SEQ = new AtomicLong(1);
 
@@ -520,6 +527,59 @@ public class WagePaymentOrchestrator {
                 }
             } catch (Exception e) {
                 log.warn("[付款中心] 查询工厂订单结算待付款失败", e);
+            }
+        }
+
+        // 5. 账单汇总（BillAggregation）已确认账单 — 按对方+月份聚合
+        if (bizType == null || "BILL_RECEIVABLE".equals(bizType) || "BILL_PAYABLE".equals(bizType)) {
+            try {
+                LambdaQueryWrapper<BillAggregation> billWrapper = new LambdaQueryWrapper<BillAggregation>()
+                    .eq(BillAggregation::getTenantId, tenantId)
+                    .eq(BillAggregation::getStatus, "CONFIRMED")
+                    .eq(BillAggregation::getDeleteFlag, 0)
+                    .eq("BILL_RECEIVABLE".equals(bizType), BillAggregation::getBillType, "RECEIVABLE")
+                    .eq("BILL_PAYABLE".equals(bizType), BillAggregation::getBillType, "PAYABLE")
+                    .orderByDesc(BillAggregation::getCreateTime);
+                List<BillAggregation> confirmedBills = billAggregationService.list(billWrapper);
+                // 聚合：相同对方 + 账单类型 + 结算月份 → 合并为一条
+                Map<String, List<BillAggregation>> grouped = confirmedBills.stream().collect(
+                    Collectors.groupingBy(b ->
+                        String.valueOf(b.getBillType()) + "|" +
+                        String.valueOf(b.getCounterpartyType()) + "|" +
+                        String.valueOf(b.getCounterpartyId()) + "|" +
+                        (b.getSettlementMonth() != null ? b.getSettlementMonth() : "")
+                    )
+                );
+                for (Map.Entry<String, List<BillAggregation>> entry : grouped.entrySet()) {
+                    List<BillAggregation> group = entry.getValue();
+                    BillAggregation first = group.get(0);
+                    BigDecimal totalAmount = group.stream()
+                        .map(b -> b.getAmount() != null ? b.getAmount() : BigDecimal.ZERO)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    BigDecimal settledAmt = group.stream()
+                        .map(b -> b.getSettledAmount() != null ? b.getSettledAmount() : BigDecimal.ZERO)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    String aggBizType = "RECEIVABLE".equals(first.getBillType()) ? "BILL_RECEIVABLE" : "BILL_PAYABLE";
+                    String payeeTypeStr = "RECEIVABLE".equals(first.getBillType()) ? "CUSTOMER" : "FACTORY";
+                    String billDesc = ("RECEIVABLE".equals(first.getBillType()) ? "应收账款" : "应付账款")
+                        + " - " + group.size() + "笔";
+                    items.add(PayableItemDTO.builder()
+                        .bizType(aggBizType)
+                        .bizId(first.getCounterpartyId() + "_" + first.getSettlementMonth())
+                        .bizNo(group.size() + "笔账单")
+                        .payeeType(payeeTypeStr)
+                        .payeeId(first.getCounterpartyId())
+                        .payeeName(first.getCounterpartyName())
+                        .amount(totalAmount)
+                        .paidAmount(settledAmt)
+                        .description(billDesc)
+                        .sourceStatus("CONFIRMED")
+                        .createTime(first.getCreateTime())
+                        .yearMonth(first.getSettlementMonth())
+                        .build());
+                }
+            } catch (Exception e) {
+                log.warn("[付款中心] 查询账单汇总待收付款失败", e);
             }
         }
 
