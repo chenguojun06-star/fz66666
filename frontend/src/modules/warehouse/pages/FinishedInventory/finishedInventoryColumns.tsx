@@ -1,4 +1,4 @@
-import { Tag, Space, InputNumber } from 'antd';
+import { Tag, InputNumber } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import RowActions from '@/components/common/RowActions';
 import { StyleCoverThumb } from '@/components/StyleAssets';
@@ -74,95 +74,42 @@ export function getMainColumns(handlers: {
     },
     {
       title: '成品信息',
-      width: 280,
+      width: 220,
       fixed: 'left',
+      align: 'left' as const,
       render: (_, record) => (
-        <Space orientation="vertical" size={8} style={{ width: '100%' }}>
-          <Space size={8} align="center">
-            <strong style={{ fontSize: "var(--font-size-lg)", fontWeight: 700, color: 'var(--neutral-text)' }}>{record.styleNo}</strong>
-            <Tag color="blue" style={{ fontWeight: 600 }}>{record.orderNo}</Tag>
-          </Space>
-          <div style={{ fontSize: "var(--font-size-md)", color: 'var(--neutral-text)', fontWeight: 600, lineHeight: 1.4 }}>
-            {record.styleName}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4, lineHeight: 1.5, textAlign: 'left' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            <strong style={{ fontSize: 14, fontWeight: 700 }}>{record.styleNo}</strong>
+            <Tag color="blue" style={{ fontSize: 11, margin: 0 }}>{record.orderNo}</Tag>
           </div>
-          {record.factoryName || record.orgPath || record.parentOrgUnitName || record.factoryType ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <div style={{ fontSize: 12, color: 'var(--neutral-text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                工厂：
-                {record.factoryType === 'INTERNAL' && <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>}
-                {record.factoryType === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>外</Tag>}
-                {record.factoryName || '-'}
-                {record.orderBizType && (() => {
-                  const colorMap: Record<string, string> = { FOB: 'cyan', ODM: 'purple', OEM: 'blue', CMT: 'orange' };
-                  return <Tag color={colorMap[record.orderBizType] ?? 'default'} style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>{record.orderBizType}</Tag>;
-                })()}
-              </div>
-              {record.orgPath || record.parentOrgUnitName ? (
-                <div style={{ fontSize: 12, color: 'var(--neutral-text-secondary)' }}>
-                  组织：{record.orgPath || record.parentOrgUnitName}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-          {record.qualityInspectionNo && (
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '8px',
-              paddingTop: 4,
-              borderTop: '1px solid #f0f0f0'
-            }}>
-              <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
-                <span style={{ color: 'var(--neutral-text-disabled)' }}>质检入库号:</span>{' '}
-                <span style={{ color: 'var(--primary-color)', fontWeight: 600 }}>{record.qualityInspectionNo}</span>
-              </div>
-            </div>
-          )}
-        </Space>
+          <div style={{ fontSize: 13, color: 'var(--neutral-text)', fontWeight: 500 }}>{record.styleName || '-'}</div>
+          <div style={{ fontSize: 12, color: 'var(--neutral-text-secondary)' }}>
+            工厂: {record.factoryName || '-'}
+          </div>
+        </div>
       ),
     },
     {
       title: '颜色 & 尺码',
-      width: 200,
+      width: 180,
       render: (_, record) => (
-        <Space orientation="vertical" size={8} style={{ width: '100%' }}>
-          <div>
-            <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginBottom: 4, fontWeight: 500 }}>颜色</div>
-            <Space size={[4, 4]} wrap>
-              {record.colors && record.colors.length > 0 ? (
-                record.colors.map((color, index) => (
-                  <Tag
-                    key={index}
-                    color={color === record.color ? 'blue' : 'default'}
-                    style={{ fontWeight: color === record.color ? 700 : 500 }}
-                  >
-                    {color}
-                  </Tag>
-                ))
-              ) : (
-                <Tag color="blue" style={{ fontWeight: 700 }}>{record.color}</Tag>
-              )}
-            </Space>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+            {record.colors && record.colors.length > 0 ? (
+              record.colors.map((c, i) => <Tag key={i} color="blue" style={{ margin: 0 }}>{c}</Tag>)
+            ) : (
+              <Tag color="blue" style={{ margin: 0 }}>{record.color}</Tag>
+            )}
           </div>
-          <div>
-            <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-disabled)', marginBottom: 4, fontWeight: 500 }}>尺码</div>
-            <Space size={[4, 4]} wrap>
-              {record.sizes && record.sizes.length > 0 ? (
-                record.sizes.map((size, index) => (
-                  <Tag
-                    key={index}
-                    color={size === record.size ? 'green' : 'default'}
-                    style={{ fontWeight: size === record.size ? 700 : 500 }}
-                  >
-                    {size}
-                  </Tag>
-                ))
-              ) : (
-                <Tag color="green" style={{ fontWeight: 700 }}>{record.size}</Tag>
-              )}
-            </Space>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+            {record.sizes && record.sizes.length > 0 ? (
+              record.sizes.map((s, i) => <Tag key={i} style={{ margin: 0, background: '#f0f0f0', border: '1px solid #d9d9d9' }}>{s}</Tag>)
+            ) : (
+              <Tag style={{ margin: 0, background: '#f0f0f0', border: '1px solid #d9d9d9' }}>{record.size}</Tag>
+            )}
           </div>
-        </Space>
+        </div>
       ),
     },
     {
@@ -201,74 +148,34 @@ export function getMainColumns(handlers: {
     },
     {
       title: '单价',
-      width: 130,
+      dataIndex: 'salesPrice',
+      width: 90,
+      align: 'center' as const,
+      render: (v: number | null) => v != null
+        ? <span style={{ fontSize: 14, fontWeight: 700, color: '#cf1322' }}>¥{Number(v).toFixed(2)}</span>
+        : <span style={{ color: 'var(--neutral-text-disabled)' }}>-</span>,
+    },
+    {
+      title: '入库',
+      width: 190,
       render: (_, record) => (
-        <div style={{ lineHeight: '22px' }}>
-          {record.salesPrice != null ? (
-            <div>
-              <span style={{ fontSize: 11, color: 'var(--neutral-text-disabled)' }}>单价 </span>
-              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--color-danger)' }}>¥{Number(record.salesPrice).toFixed(2)}</span>
-            </div>
-          ) : null}
-          {record.costPrice != null ? (
-            <div>
-              <span style={{ fontSize: 11, color: 'var(--neutral-text-disabled)' }}>成本 </span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--neutral-text-secondary)' }}>¥{Number(record.costPrice).toFixed(2)}</span>
-            </div>
-          ) : null}
-          {record.salesPrice != null && record.costPrice != null ? (
-            <div style={{ marginTop: 2 }}>
-              <span style={{ fontSize: 10, color: 'var(--neutral-text-disabled)' }}>毛利 </span>
-              <span style={{ fontSize: 11, color: Number(record.salesPrice) > Number(record.costPrice) ? 'var(--color-success)' : 'var(--color-danger)' }}>
-                ¥{(Number(record.salesPrice) - Number(record.costPrice)).toFixed(2)}
-              </span>
-            </div>
-          ) : null}
-          {record.salesPrice == null && record.costPrice == null ? (
-            <span style={{ fontSize: 12, color: 'var(--neutral-text-disabled)' }}>-</span>
-          ) : null}
+        <div style={{ fontSize: 13, lineHeight: 2, color: 'var(--neutral-text)' }}>
+          <div>{record.lastInboundDate ? String(record.lastInboundDate).slice(0, 16).replace('T', ' ') : '-'}</div>
+          <div>数量: <strong style={{ color: 'var(--color-success)' }}>{record.totalInboundQty ?? record.availableQty ?? '-'}</strong> 件</div>
+          <div>操作人: <strong>{record.lastInboundBy || '-'}</strong></div>
+          <div style={{ color: 'var(--neutral-text-secondary)' }}>库位: {record.warehouseLocation || '-'}</div>
         </div>
       ),
     },
     {
-      title: '出入库记录',
-      width: 260,
+      title: '出库',
+      width: 190,
       render: (_, record) => (
-        <Space orientation="vertical" size={4} style={{ width: '100%' }}>
-          <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
-            <span style={{ color: 'var(--neutral-text-disabled)' }}>入库时间:</span>{' '}
-            <span style={{ fontWeight: 600 }}>{record.lastInboundDate ? String(record.lastInboundDate).slice(0, 16).replace('T', ' ') : '-'}</span>
-          </div>
-          <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
-            <span style={{ color: 'var(--neutral-text-disabled)' }}>入库号:</span>{' '}
-            <span style={{ color: 'var(--primary-color)', fontWeight: 600 }}>{record.qualityInspectionNo || '-'}</span>
-          </div>
-          <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
-            <span style={{ color: 'var(--neutral-text-disabled)' }}>操作人:</span>{' '}
-            <span style={{ fontWeight: 600 }}>{record.lastInboundBy || '-'}</span>
-          </div>
-          <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
-            <span style={{ color: 'var(--neutral-text-disabled)' }}>入库数量:</span>{' '}
-            <span style={{ color: 'var(--color-success)', fontWeight: 700 }}>{record.totalInboundQty ?? record.availableQty ?? '-'}</span>
-            {(record.totalInboundQty != null || record.availableQty != null) && <span style={{ color: 'var(--neutral-text-disabled)', marginLeft: 2 }}>件</span>}
-          </div>
-          <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500, paddingTop: 4, borderTop: '1px dashed #f0f0f0' }}>
-            <span style={{ color: 'var(--neutral-text-disabled)' }}>最后出库:</span>{' '}
-            <span style={{ fontWeight: 600 }}>{record.lastOutboundDate ? String(record.lastOutboundDate).slice(0, 16).replace('T', ' ') : '-'}</span>
-          </div>
-          <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
-            <span style={{ color: 'var(--neutral-text-disabled)' }}>出库单号:</span>{' '}
-            <span style={{ color: 'var(--warning-color-dark)', fontWeight: 600 }}>{record.lastOutstockNo || '-'}</span>
-          </div>
-          <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
-            <span style={{ color: 'var(--neutral-text-disabled)' }}>出库人:</span>{' '}
-            <span style={{ fontWeight: 600 }}>{record.lastOutboundBy || '-'}</span>
-          </div>
-          <div style={{ fontSize: "var(--font-size-sm)", color: 'var(--neutral-text-secondary)', fontWeight: 500 }}>
-            <span style={{ color: 'var(--neutral-text-disabled)' }}>库位:</span>{' '}
-            <span style={{ fontWeight: 600 }}>{record.warehouseLocation || '-'}</span>
-          </div>
-        </Space>
+        <div style={{ fontSize: 13, lineHeight: 2, color: 'var(--neutral-text)' }}>
+          <div>{record.lastOutboundDate ? String(record.lastOutboundDate).slice(0, 16).replace('T', ' ') : '-'}</div>
+          <div>单号: <strong style={{ color: 'var(--primary-color)' }}>{record.lastOutstockNo || '-'}</strong></div>
+          <div>出库人: <strong>{record.lastOutboundBy || '-'}</strong></div>
+        </div>
       ),
     },
     {

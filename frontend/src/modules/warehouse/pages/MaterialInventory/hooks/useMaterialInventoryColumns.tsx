@@ -150,21 +150,15 @@ export function useMaterialInventoryColumns({
     {
       title: '库存状态',
       key: 'stock',
-      width: 300,
+      width: 260,
       render: (_, record) => {
         const availableQty = record.availableQty ?? 0;
         const inTransitQty = record.inTransitQty ?? 0;
         const lockedQty = record.lockedQty ?? 0;
         const safetyStock = record.safetyStock ?? 0;
-        const conversionRate = Number(record.conversionRate ?? 0);
-        const referenceKg = isKilogramUnit(record.unit)
-          ? Number(availableQty.toFixed(2))
-          : isMeterUnit(record.unit) && conversionRate > 0
-            ? Number((availableQty / conversionRate).toFixed(2))
-            : null;
         const isLow = availableQty < safetyStock;
         return (
-          <Space orientation="vertical" size={10} style={{ width: '100%' }}>
+          <Space orientation="vertical" size={4} style={{ width: '100%' }}>
             <div className="stock-grid">
               <div>
                 <div className="stock-label">可用库存</div>
@@ -189,36 +183,25 @@ export function useMaterialInventoryColumns({
               </div>
             </div>
             <div style={{
-              fontSize: "var(--font-size-sm)",
-              color: 'var(--neutral-text-secondary)',
-              paddingTop: 8,
+              fontSize: "var(--font-size-xs)",
+              color: 'var(--neutral-text-disabled)',
+              paddingTop: 4,
               borderTop: '1px solid #f0f0f0',
-              fontWeight: 500
             }}>
-              <span style={{ color: 'var(--neutral-text-disabled)' }}>安全库存:</span> {safetyStock} {record.unit}
-              <span style={{ margin: '0 8px', color: 'var(--neutral-border)' }}>|</span>
-              <span style={{ color: 'var(--neutral-text-disabled)' }}>库位:</span> {record.warehouseLocation || '-'}
-            </div>
-            <div style={{
-              fontSize: "var(--font-size-sm)",
-              color: 'var(--neutral-text-secondary)',
-              fontWeight: 500
-            }}>
-              <span style={{ color: 'var(--neutral-text-disabled)' }}>参考公斤数:</span> {referenceKg == null ? '-' : `${referenceKg} kg`}
-              <span style={{ margin: '0 8px', color: 'var(--neutral-border)' }}>|</span>
-              <span style={{ color: 'var(--neutral-text-disabled)' }}>换算:</span> {conversionRate > 0 ? `${conversionRate} 米/公斤` : '-'}
+              <span>安全库存:</span> {safetyStock} {record.unit}
+              <span style={{ margin: '0 6px', color: 'var(--neutral-border)' }}>|</span>
+              <span>库位:</span> {record.warehouseLocation || '-'}
             </div>
             {isLow && (
               <div style={{
-                marginTop: 6,
                 background: '#fff7e6',
                 border: '1px solid #ffd591',
                 borderRadius: 4,
-                padding: '4px 8px',
-                fontSize: "var(--font-size-sm)",
+                padding: '2px 6px',
+                fontSize: "var(--font-size-xs)",
                 color: '#fa8c16',
               }}>
-                 建议补货 <strong>{Math.max(0, safetyStock * 2 - availableQty - inTransitQty).toLocaleString()}</strong> {record.unit}
+                建议补货 <strong>{Math.max(0, safetyStock * 2 - availableQty - inTransitQty).toLocaleString()}</strong> {record.unit}
               </div>
             )}
           </Space>

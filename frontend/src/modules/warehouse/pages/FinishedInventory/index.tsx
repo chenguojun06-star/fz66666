@@ -284,7 +284,7 @@ const _FinishedInventory: React.FC = () => {
           id: String(item.id || idx),
           inboundDate: item.warehousingEndTime || item.createTime || '-',
           qualityInspectionNo: item.warehousingNo || '-',
-          quantity: (item.qualifiedQuantity as number) ?? (item.warehousingQuantity as number) ?? 0,
+          quantity: (item.warehousingQuantity as number) ?? (item.qualifiedQuantity as number) ?? 0,
           operator: item.warehousingOperatorName || item.qualityOperatorName || item.receiverName || fallbackOperator,
           warehouseLocation: item.warehouse || item.warehouseLocation || fallbackWarehouse,
           remark: item.remark || '',
@@ -723,10 +723,7 @@ const _FinishedInventory: React.FC = () => {
                   <div>
                     <span style={{ color: 'var(--primary-color)' }}>累计入库数量:</span>
                     <strong style={{ marginLeft: 8, fontSize: "var(--font-size-lg)", color: 'var(--color-success)' }}>
-                      {Math.max(
-                        inboundHistory.reduce((sum, item) => sum + item.quantity, 0),
-                        Number(inboundHistoryModal.data?.availableQty || 0)
-                      )} 件
+                      {inboundHistory.reduce((sum, item) => sum + item.quantity, 0)} 件
                     </strong>
                   </div>
                 </Space>

@@ -172,18 +172,18 @@
 .stock-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: 8px;
 }
 
 .stock-label {
   font-size: var(--font-label);
   color: var(--neutral-text-light);
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   font-weight: 500;
 }
 
 .stock-value {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 700;
 }
 
