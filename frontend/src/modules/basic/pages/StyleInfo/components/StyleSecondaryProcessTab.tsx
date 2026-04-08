@@ -6,7 +6,7 @@ import RowActions from '@/components/common/RowActions';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import StyleStageControlBar from './StyleStageControlBar';
-import api, { toNumberSafe, type ApiResult, isApiSuccess } from '@/utils/api';
+import api, { toNumberSafe, isApiSuccess } from '@/utils/api';
 import { downloadFile, getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { useViewport } from '@/utils/useViewport';
 import { formatDateTime } from '@/utils/datetime';

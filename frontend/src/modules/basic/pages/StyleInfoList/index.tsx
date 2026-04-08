@@ -8,7 +8,7 @@ import RejectReasonModal from '@/components/common/RejectReasonModal';
 import SmallModal from '@/components/common/SmallModal';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import PageStatCards from '@/components/common/PageStatCards';
-import api, { type ApiResult } from '@/utils/api';
+import api from '@/utils/api';
 import { StyleInfo } from '@/types/style';
 import dayjs from 'dayjs';
 

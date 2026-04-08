@@ -19,7 +19,7 @@ import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
-import api, { toNumberSafe, type ApiResult, isApiSuccess, getApiMessage } from '@/utils/api';
+import api, { toNumberSafe, isApiSuccess, getApiMessage } from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 
 const { Text } = Typography;

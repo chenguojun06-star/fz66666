@@ -21,7 +21,7 @@ import EditTemplateModal from './components/EditTemplateModal';
 import StyleProcessKnowledgeTab from './components/StyleProcessKnowledgeTab';
 import type { EditTemplateModalRef } from './components/EditTemplateModal';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
-import { typeLabel, typeColor, formatTemplateKey, getErrorMessage, hasErrorFields, isSizeTableData, convertStyleSizeListToTable } from './utils/templateUtils';
+import { typeLabel, typeColor, formatTemplateKey, getErrorMessage, isSizeTableData, convertStyleSizeListToTable } from './utils/templateUtils';
 import type { TemplateLibraryRecord } from './utils/templateUtils';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
