@@ -127,6 +127,26 @@ public class ExpenseReimbursementController {
     }
 
     /**
+     * 批量审批（全部批准）
+     */
+    @PostMapping("/batch-approve")
+    public Result<List<ExpenseReimbursement>> batchApprove(@RequestBody Map<String, Object> body) {
+        try {
+            @SuppressWarnings("unchecked")
+            List<String> ids = (List<String>) body.get("ids");
+            String remark = (String) body.get("remark");
+            if (ids == null || ids.isEmpty()) {
+                return Result.fail("请选择要审批的报销单");
+            }
+            List<ExpenseReimbursement> results = orchestrator.batchApproveReimbursement(ids, remark);
+            return Result.success(results);
+        } catch (Exception e) {
+            log.error("批量审批报销单失败", e);
+            return Result.fail("批量审批失败: " + e.getMessage());
+        }
+    }
+
+    /**
      * 确认付款
      */
     @PostMapping("/{id}/pay")

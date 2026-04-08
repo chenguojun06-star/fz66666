@@ -65,7 +65,7 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
     openProofModal, handleCancel, fetchPayments, msg,
   } = props;
 
-  // ---- 待付款列 ----
+  // ---- 待收付款列 ----
   const payableColumns: ColumnsType<PayableItem> = useMemo(
     () => [
       {
@@ -163,7 +163,7 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
     [openPayModal, handleRejectPayable, openAccountModal],
   );
 
-  // ---- 支付记录列 ----
+  // ---- 收支记录列 ----
   const paymentColumns: ColumnsType<WagePayment> = useMemo(
     () => [
       {

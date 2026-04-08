@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 费用报销编排器
@@ -21,6 +23,9 @@ public class ExpenseReimbursementOrchestrator {
 
     @Autowired
     private ExpenseReimbursementService expenseReimbursementService;
+
+    @Autowired
+    private BillAggregationOrchestrator billAggregationOrchestrator;
 
     /**
      * 创建报销单
@@ -116,7 +121,46 @@ public class ExpenseReimbursementOrchestrator {
         }
 
         expenseReimbursementService.updateById(entity);
+
+        // 审批通过后自动推送到账单汇总
+        if ("approved".equals(entity.getStatus())) {
+            pushExpenseBill(entity);
+        }
         return entity;
+    }
+
+    /**
+     * 批量审批报销单
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public List<ExpenseReimbursement> batchApproveReimbursement(List<String> ids, String remark) {
+        List<ExpenseReimbursement> results = new ArrayList<>();
+        for (String id : ids) {
+            results.add(approveReimbursement(id, "approve", remark));
+        }
+        log.info("批量审批报销单完成: count={}", ids.size());
+        return results;
+    }
+
+    /**
+     * 审批通过后推送账单到汇总表
+     */
+    private void pushExpenseBill(ExpenseReimbursement entity) {
+        try {
+            BillAggregationOrchestrator.BillPushRequest req = new BillAggregationOrchestrator.BillPushRequest();
+            req.setBillType("PAYABLE");
+            req.setBillCategory("EXPENSE");
+            req.setSourceType("EXPENSE_REIMBURSEMENT");
+            req.setSourceId(entity.getId().toString());
+            req.setSourceNo(entity.getReimbursementNo());
+            req.setCounterpartyType("EMPLOYEE");
+            req.setCounterpartyName(entity.getApplicantName());
+            req.setAmount(entity.getAmount());
+            req.setRemark("费用报销审批通过: " + entity.getExpenseType());
+            billAggregationOrchestrator.pushBill(req);
+        } catch (Exception e) {
+            log.error("费用报销推送账单失败: no={}", entity.getReimbursementNo(), e);
+        }
     }
 
     /**

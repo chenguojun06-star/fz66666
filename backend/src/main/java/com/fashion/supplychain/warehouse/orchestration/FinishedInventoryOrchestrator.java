@@ -17,6 +17,7 @@ import com.fashion.supplychain.style.service.StyleAttachmentService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.warehouse.dto.FinishedInventoryDTO;
 import com.fashion.supplychain.integration.ecommerce.orchestration.EcommerceOrderOrchestrator;
+import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator;
 import com.fashion.supplychain.common.UserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -53,6 +54,9 @@ public class FinishedInventoryOrchestrator {
     @Lazy
     @Autowired
     private EcommerceOrderOrchestrator ecommerceOrderOrchestrator;
+
+    @Autowired
+    private BillAggregationOrchestrator billAggregationOrchestrator;
 
     /**
      * 分页查询成品库存
@@ -661,6 +665,7 @@ public class FinishedInventoryOrchestrator {
         }
         outstock.setPaidAmount(BigDecimal.ZERO);
         outstock.setPaymentStatus("unpaid");
+        outstock.setApprovalStatus("pending");
 
         // 显式设置操作人/创建人（防止 MetaObjectHandler 取不到上下文导致默认"系统管理员"）
         String ctxUserId = UserContext.userId();
@@ -746,6 +751,76 @@ public class FinishedInventoryOrchestrator {
         }
         outstock.setUpdateTime(LocalDateTime.now());
         productOutstockService.updateById(outstock);
+    }
+
+    // ==================== 审批流程 ====================
+
+    /**
+     * 审批单条出库记录
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> approveOutstock(String id, String remark) {
+        ProductOutstock outstock = productOutstockService.getById(id);
+        if (outstock == null) {
+            throw new IllegalArgumentException("出库记录不存在");
+        }
+        if ("approved".equals(outstock.getApprovalStatus())) {
+            throw new IllegalArgumentException("该记录已审批，不可重复操作");
+        }
+        outstock.setApprovalStatus("approved");
+        outstock.setApproveBy(UserContext.userId());
+        outstock.setApproveByName(UserContext.username());
+        outstock.setApproveTime(LocalDateTime.now());
+        outstock.setUpdateTime(LocalDateTime.now());
+        if (StringUtils.hasText(remark)) {
+            outstock.setRemark(outstock.getRemark() != null ? outstock.getRemark() + " | 审批: " + remark : "审批: " + remark);
+        }
+        productOutstockService.updateById(outstock);
+        pushOutstockBill(outstock);
+        log.info("[成品出库审批] outstockNo={}", outstock.getOutstockNo());
+        return Map.of("id", id, "status", "approved");
+    }
+
+    /**
+     * 批量审批出库记录
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public List<Map<String, Object>> batchApproveOutstocks(List<String> ids, String remark) {
+        List<Map<String, Object>> results = new java.util.ArrayList<>();
+        for (String id : ids) {
+            try {
+                Map<String, Object> r = approveOutstock(id, remark);
+                r = new java.util.HashMap<>(r);
+                r.put("success", true);
+                results.add(r);
+            } catch (Exception e) {
+                results.add(Map.of("id", id, "success", false, "message", e.getMessage()));
+            }
+        }
+        return results;
+    }
+
+    /**
+     * 出库记录审批通过后推送账单到汇总
+     */
+    private void pushOutstockBill(ProductOutstock outstock) {
+        try {
+            BillAggregationOrchestrator.BillPushRequest req = new BillAggregationOrchestrator.BillPushRequest();
+            req.setBillType("RECEIVABLE");
+            req.setBillCategory("PRODUCT");
+            req.setSourceType("PRODUCT_OUTSTOCK");
+            req.setSourceId(outstock.getId());
+            req.setSourceNo(outstock.getOutstockNo());
+            req.setCounterpartyType("CUSTOMER");
+            req.setCounterpartyName(outstock.getCustomerName());
+            req.setOrderNo(outstock.getOrderNo());
+            req.setStyleNo(outstock.getStyleNo());
+            req.setAmount(outstock.getTotalAmount());
+            req.setRemark("成品出库审批通过: " + outstock.getOutstockNo());
+            billAggregationOrchestrator.pushBill(req);
+        } catch (Exception e) {
+            log.error("[出库账单推送失败] outstockNo={} err={}", outstock.getOutstockNo(), e.getMessage());
+        }
     }
 
     private String trimToNull(Object value) {

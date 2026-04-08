@@ -13,7 +13,7 @@ import { usePersistentState } from '@/hooks/usePersistentState';
  *
  * 面板入口，包含4个 Tab：
  * - 渠道状态：查看支付/物流渠道是否已接入
- * - 支付流水：查看所有支付记录
+ * - 支付流水：查看所有收支记录
  * - 物流运单：查看所有物流记录
  * - 回调日志：查看第三方推送原始报文
  */

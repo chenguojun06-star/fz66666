@@ -37,6 +37,9 @@ public class EcSalesRevenueOrchestrator {
     @Autowired
     private EcSalesRevenueService ecSalesRevenueService;
 
+    @Autowired
+    private BillAggregationOrchestrator billAggregationOrchestrator;
+
     // ─────────────────────────────────────────────────────────────────────────
     // 1. 出库时自动生成收入流水（幂等：同一 EC 订单仅记录一次）
     // ─────────────────────────────────────────────────────────────────────────
@@ -113,6 +116,28 @@ public class EcSalesRevenueOrchestrator {
         rev.setCompleteTime(LocalDateTime.now());
         ecSalesRevenueService.updateById(rev);
         log.info("[EC收入] 已入账 id={} revenueNo={}", id, rev.getRevenueNo());
+
+        // 入账后自动推送到账单汇总
+        pushEcRevenueBill(rev);
+    }
+
+    private void pushEcRevenueBill(EcSalesRevenue rev) {
+        try {
+            BillAggregationOrchestrator.BillPushRequest req = new BillAggregationOrchestrator.BillPushRequest();
+            req.setBillType("RECEIVABLE");
+            req.setBillCategory("SHIPMENT");
+            req.setSourceType("EC_SALES_REVENUE");
+            req.setSourceId(String.valueOf(rev.getId()));
+            req.setSourceNo(rev.getRevenueNo());
+            req.setCounterpartyType("CUSTOMER");
+            req.setCounterpartyName(rev.getPlatform());
+            req.setOrderNo(rev.getEcOrderNo());
+            req.setAmount(rev.getPayAmount());
+            req.setRemark("EC销售收入入账: " + rev.getPlatform());
+            billAggregationOrchestrator.pushBill(req);
+        } catch (Exception e) {
+            log.error("EC收入推送账单失败: no={}", rev.getRevenueNo(), e);
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────

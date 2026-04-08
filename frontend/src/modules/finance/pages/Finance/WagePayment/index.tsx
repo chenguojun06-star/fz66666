@@ -154,7 +154,7 @@ const PaymentCenterPage: React.FC = () => {
                 key: 'pending',
                 label: (
                   <span>
-                    <AccountBookOutlined /> 待付款 {data.pendingStats.total > 0 && <Tag color="red">{data.pendingStats.total}</Tag>}
+                    <AccountBookOutlined /> 待收付款 {data.pendingStats.total > 0 && <Tag color="red">{data.pendingStats.total}</Tag>}
                   </span>
                 ),
                 children: (
@@ -171,7 +171,7 @@ const PaymentCenterPage: React.FC = () => {
                       border: '1px solid #f0f0f0'
                     }}>
                       <div style={{ textAlign: 'center', flex: 1, borderRight: '1px solid #e8e8e8' }}>
-                        <div style={{ color: '#8c8c8c', fontSize: 13, marginBottom: 4 }}>待付款总额</div>
+                        <div style={{ color: '#8c8c8c', fontSize: 13, marginBottom: 4 }}>待收付款总额</div>
                         <div style={{ fontSize: 24, fontWeight: 'bold', color: '#cf1322' }}>¥ {Number(data.pendingStats.totalAmount || 0).toLocaleString('zh-CN', {minimumFractionDigits: 2})}</div>
                       </div>
                       <div style={{ textAlign: 'center', flex: 1, borderRight: '1px solid #e8e8e8' }}>
@@ -233,7 +233,7 @@ const PaymentCenterPage: React.FC = () => {
                                 { title: '已付金额', dataIndex: 'paidAmount' },
                                 { title: '描述', dataIndex: 'description' },
                                 { title: '创建时间', dataIndex: 'createTime' }
-                            ], '待付款明细');
+                            ], '待收付款明细');
                           }}
                         >
                           导出Excel
@@ -260,7 +260,7 @@ const PaymentCenterPage: React.FC = () => {
                       </Space>
                     </div>
 
-                    {/* 待付款表格 */}
+                    {/* 待收付款表格 */}
                     <ResizableTable
                       columns={payableColumns}
                       dataSource={data.filteredPayables}
@@ -287,7 +287,7 @@ const PaymentCenterPage: React.FC = () => {
                 key: 'records',
                 label: (
                   <span>
-                    <CheckCircleOutlined /> 支付记录
+                    <CheckCircleOutlined /> 收支记录
                   </span>
                 ),
                 children: (
@@ -371,7 +371,7 @@ const PaymentCenterPage: React.FC = () => {
                                 { title: '业务单号', dataIndex: 'bizNo' },
                                 { title: '操作人', dataIndex: 'operatorName' },
                                 { title: '创建时间', dataIndex: 'createTime' }
-                            ], '支付记录明细');
+                            ], '收支记录明细');
                           }}
                         >
                           导出Excel
@@ -379,7 +379,7 @@ const PaymentCenterPage: React.FC = () => {
                       </Form.Item>
                     </Form>
 
-                    {/* 支付记录表格 */}
+                    {/* 收支记录表格 */}
                     <ResizableTable
                       columns={paymentColumns}
                       dataSource={data.payments}
@@ -680,8 +680,8 @@ const PaymentCenterPage: React.FC = () => {
         </SmallModal>
       <RejectReasonModal
         open={!!data.pendingRejectPayable}
-        title="驳回待付款"
-        description={data.pendingRejectPayable ? `确定驳回 ${data.pendingRejectPayable.payeeName} 的待付款项？${BIZ_TYPE_MAP[data.pendingRejectPayable.bizType]?.text ? `\n${BIZ_TYPE_MAP[data.pendingRejectPayable.bizType].text} · ¥${Number(data.pendingRejectPayable.amount).toFixed(2)}` : ''}` : undefined}
+        title="驳回待收付款"
+        description={data.pendingRejectPayable ? `确定驳回 ${data.pendingRejectPayable.payeeName} 的待收付款项？${BIZ_TYPE_MAP[data.pendingRejectPayable.bizType]?.text ? `\n${BIZ_TYPE_MAP[data.pendingRejectPayable.bizType].text} · ¥${Number(data.pendingRejectPayable.amount).toFixed(2)}` : ''}` : undefined}
         onOk={data.handleRejectPayableConfirm}
         onCancel={() => data.setPendingRejectPayable(null)}
         loading={data.rejectPayableLoading}

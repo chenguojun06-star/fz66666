@@ -212,7 +212,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
       cancelText: '取消',
       onOk: async () => {
         try {
-          // 推送到收付款中心：创建 ORDER_SETTLEMENT 待付款记录
+          // 推送到收付款中心：创建 ORDER_SETTLEMENT 待收付款记录
           await api.post('/finance/wage-payment/create-payable', {
             bizType: 'ORDER_SETTLEMENT',
             bizId: record.factoryId || record.factoryName,

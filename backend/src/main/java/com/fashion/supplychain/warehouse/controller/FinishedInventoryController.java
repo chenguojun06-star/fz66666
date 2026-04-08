@@ -103,4 +103,31 @@ public class FinishedInventoryController {
         String token = orderShareOrchestrator.generateOutstockShareToken(customerName);
         return Result.success(Map.of("token", token, "shareUrl", "/share/outstock/" + token));
     }
+
+    /**
+     * 审批出库记录
+     */
+    @PostMapping("/outstock/approve")
+    public Result<Map<String, Object>> approveOutstock(@RequestBody Map<String, String> params) {
+        String id = params.get("id");
+        if (id == null || id.isBlank()) {
+            return Result.fail("缺少出库记录ID");
+        }
+        String remark = params.get("remark");
+        return Result.success(finishedInventoryOrchestrator.approveOutstock(id, remark));
+    }
+
+    /**
+     * 批量审批出库记录
+     */
+    @SuppressWarnings("unchecked")
+    @PostMapping("/outstock/batch-approve")
+    public Result<List<Map<String, Object>>> batchApproveOutstock(@RequestBody Map<String, Object> params) {
+        List<String> ids = (List<String>) params.get("ids");
+        if (ids == null || ids.isEmpty()) {
+            return Result.fail("缺少出库记录ID列表");
+        }
+        String remark = (String) params.get("remark");
+        return Result.success(finishedInventoryOrchestrator.batchApproveOutstocks(ids, remark));
+    }
 }

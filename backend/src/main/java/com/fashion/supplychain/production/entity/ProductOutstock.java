@@ -100,4 +100,14 @@ public class ProductOutstock {
     private String paymentStatus;
 
     private LocalDateTime settlementTime;
+
+    // ==================== 审批字段 ====================
+
+    private String approvalStatus;
+
+    private String approveBy;
+
+    private String approveByName;
+
+    private LocalDateTime approveTime;
 }

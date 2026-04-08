@@ -26,7 +26,7 @@ export function usePaymentData({ msg }: UsePaymentDataOptions) {
   // ---- Tab ----
   const [activeTab, setActiveTab] = useState<string>('pending');
 
-  // ---- 待付款列表 ----
+  // ---- 待收付款列表 ----
   const [payables, setPayables] = useState<PayableItem[]>([]);
   const [payablesLoading, setPayablesLoading] = useState(true);
   const [payableBizType, setPayableBizType] = useState<string>('');
@@ -40,7 +40,7 @@ export function usePaymentData({ msg }: UsePaymentDataOptions) {
   const [pendingRejectPayable, setPendingRejectPayable] = useState<PayableItem | null>(null);
   const [rejectPayableLoading, setRejectPayableLoading] = useState(false);
 
-  // ---- 支付记录列表 ----
+  // ---- 收支记录列表 ----
   const [payments, setPayments] = useState<WagePayment[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [filterForm] = Form.useForm();
@@ -53,8 +53,8 @@ export function usePaymentData({ msg }: UsePaymentDataOptions) {
       setPayables(res?.data ?? res ?? []);
       if (showSmartErrorNotice) setSmartError(null);
     } catch (err: any) {
-      reportSmartError('待付款数据加载失败', err?.message || '网络异常或服务不可用，请稍后重试', 'WAGE_PAYABLES_LOAD_FAILED');
-      msg.error(`加载待付款数据失败: ${err?.message || '请检查网络连接'}`);
+      reportSmartError('待收付款数据加载失败', err?.message || '网络异常或服务不可用，请稍后重试', 'WAGE_PAYABLES_LOAD_FAILED');
+      msg.error(`加载待收付款数据失败: ${err?.message || '请检查网络连接'}`);
     } finally {
       setPayablesLoading(false);
     }
@@ -75,8 +75,8 @@ export function usePaymentData({ msg }: UsePaymentDataOptions) {
       setPayments(res?.data ?? res ?? []);
       if (showSmartErrorNotice) setSmartError(null);
     } catch (err: any) {
-      reportSmartError('支付记录加载失败', err?.message || '网络异常或服务不可用，请稍后重试', 'WAGE_PAYMENTS_LOAD_FAILED');
-      msg.error(`加载支付记录失败: ${err?.message || '请检查网络连接'}`);
+      reportSmartError('收支记录加载失败', err?.message || '网络异常或服务不可用，请稍后重试', 'WAGE_PAYMENTS_LOAD_FAILED');
+      msg.error(`加载收支记录失败: ${err?.message || '请检查网络连接'}`);
     } finally {
       setPaymentsLoading(false);
     }
@@ -124,7 +124,7 @@ export function usePaymentData({ msg }: UsePaymentDataOptions) {
       title: '批量线下付款',
       content: (
         <div>
-          <p>选中 <strong>{selected.length}</strong> 笔待付款，合计金额：<strong style={{ color: '#cf1322' }}>¥{totalAmt.toFixed(2)}</strong></p>
+          <p>选中 <strong>{selected.length}</strong> 笔待收付款，合计金额：<strong style={{ color: '#cf1322' }}>¥{totalAmt.toFixed(2)}</strong></p>
           <p style={{ fontSize: 12, color: '#999' }}>将以「线下付款」方式逐笔发起，请在完成转账后分别上传凭证确认。</p>
         </div>
       ),
@@ -165,7 +165,7 @@ export function usePaymentData({ msg }: UsePaymentDataOptions) {
     });
   };
 
-  // ---- 驳回待付款 ----
+  // ---- 驳回待收付款 ----
   const handleRejectPayable = (record: PayableItem) => {
     setPendingRejectPayable(record);
   };
