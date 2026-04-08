@@ -153,7 +153,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
     }
   }, [form, message]);
 
-  /** 加载已推送到付款中心的工厂ID（防重复推送） */
+  /** 加载已推送到收付款中心的工厂ID（防重复推送） */
   const loadPushedFactories = useCallback(async () => {
     try {
       const res: any = await wagePaymentApi.listPendingPayables('ORDER_SETTLEMENT');
@@ -202,17 +202,17 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
     message.success(`工厂「${record.factoryName}」的订单已驳回，请回「订单汇总」重新审核`);
   };
 
-  // 终审推送单个工厂结算到付款中心
+  // 终审推送单个工厂结算到收付款中心
   const handleApprove = async (record: FactorySummaryRow) => {
     modal.confirm({
       width: '30vw',
-      title: '推送到付款中心',
-      content: `确认将工厂「${record.factoryName}」的 ${record.orderCount} 个订单（总金额 ¥${toMoney(record.totalAmount)}）终审推送到付款中心？`,
+      title: '推送到收付款中心',
+      content: `确认将工厂「${record.factoryName}」的 ${record.orderCount} 个订单（总金额 ¥${toMoney(record.totalAmount)}）终审推送到收付款中心？`,
         okText: '确认终审',
       cancelText: '取消',
       onOk: async () => {
         try {
-          // 推送到付款中心：创建 ORDER_SETTLEMENT 待付款记录
+          // 推送到收付款中心：创建 ORDER_SETTLEMENT 待付款记录
           await api.post('/finance/wage-payment/create-payable', {
             bizType: 'ORDER_SETTLEMENT',
             bizId: record.factoryId || record.factoryName,
@@ -221,7 +221,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
             description: `工厂订单结算：${record.orderCount}个订单，共${record.totalWarehousedQuantity}件 | 面料:${record.totalMaterialCost || 0} · 工费:${record.totalProductionCost || 0} · 利润:${record.totalProfit || 0} · 次品:${record.totalDefectQuantity || 0} · 入库:${record.totalWarehousedQuantity || 0} · 订单量:${record.totalOrderQuantity || 0}`,
             orderNos: record.orderNos,
           });
-          message.success(`工厂「${record.factoryName}」已推送到付款中心`);
+          message.success(`工厂「${record.factoryName}」已推送到收付款中心`);
           // 标记为已推送，隐藏按钮
           setPushedFactoryIds(prev => new Set([...prev, record.factoryId || record.factoryName]));
           fetchData();
@@ -232,7 +232,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
     });
   };
 
-  // 批量终审推送到付款中心
+  // 批量终审推送到收付款中心
   const handleBatchApprove = () => {
     const selected = filteredData.filter(r =>
       selectedRowKeys.includes(r.factoryName)
@@ -249,7 +249,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
     modal.confirm({
       width: '30vw',
       title: '批量推送确认',
-      content: `确认将 ${selected.length} 个工厂（共 ${totalOrders} 个订单，总金额 ¥${toMoney(totalAmount)}）终审推送到付款中心？`,
+      content: `确认将 ${selected.length} 个工厂（共 ${totalOrders} 个订单，总金额 ¥${toMoney(totalAmount)}）终审推送到收付款中心？`,
         okText: '确认终审',
       cancelText: '取消',
       onOk: async () => {
@@ -266,7 +266,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
             });
             newPushedIds.push(record.factoryId || record.factoryName);
           }
-          message.success(`${selected.length} 个工厂已推送到付款中心`);
+          message.success(`${selected.length} 个工厂已推送到收付款中心`);
           setPushedFactoryIds(prev => new Set([...prev, ...newPushedIds]));
           setSelectedRowKeys([]);
           fetchData();

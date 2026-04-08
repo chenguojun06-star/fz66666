@@ -402,7 +402,7 @@ const PayrollOperatorSummary: React.FC = () => {
         message.success(`「${operName}」的明细已驳回，请回「工序明细」重新审核`);
     };
 
-    // Tab2: 终审推送单个人员工资到付款中心
+    // Tab2: 终审推送单个人员工资到收付款中心
     const handleFinalPush = async (operatorName: string) => {
         const summary = summaryRows.find((r: any) => r.operatorName === operatorName);
         if (!summary) {
@@ -424,14 +424,14 @@ const PayrollOperatorSummary: React.FC = () => {
                 }
                 return row;
             }));
-            message.success(`已终审并推送 ${operatorName} 的工资到付款中心`);
+            message.success(`已终审并推送 ${operatorName} 的工资到收付款中心`);
         } catch (error: any) {
             console.error('终审推送失败:', error);
             message.error(error?.message || '终审失败，请稍后重试');
         }
     };
 
-    // Tab2: 批量终审推送到付款中心
+    // Tab2: 批量终审推送到收付款中心
 
     const handlePrintWageSlips = () => {
         if (selectedRowKeys.length === 0) {
@@ -479,7 +479,7 @@ const PayrollOperatorSummary: React.FC = () => {
                 }
                 return row;
             }));
-            message.success(`已批量终审并推送 ${selectedRowKeys.length} 人到付款中心`);
+            message.success(`已批量终审并推送 ${selectedRowKeys.length} 人到收付款中心`);
             setSelectedRowKeys([]);
         } catch (error: any) {
             console.error('批量终审失败:', error);

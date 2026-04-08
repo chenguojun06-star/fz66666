@@ -245,7 +245,7 @@ export const menuConfig: MenuSection[] = [
       { label: '工资结算(内)', path: paths.payrollOperatorSummary, icon: React.createElement(AccountBookOutlined) },
       { label: '订单结算(外)', path: paths.financeCenter, icon: React.createElement(AccountBookOutlined) },
       { label: '费用报销', path: paths.expenseReimbursement, icon: React.createElement(AccountBookOutlined) },
-      { label: '付款中心', path: paths.wagePayment, icon: React.createElement(DollarOutlined) },
+      { label: '收付款中心', path: paths.wagePayment, icon: React.createElement(DollarOutlined) },
       { label: 'EC销售收入', path: paths.ecSalesRevenue, icon: React.createElement(AccountBookOutlined) },
       { label: '财税导出', path: paths.financeTaxExport, icon: React.createElement(DollarOutlined) },
     ],

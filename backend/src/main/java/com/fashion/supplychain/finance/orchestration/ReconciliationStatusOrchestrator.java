@@ -7,6 +7,7 @@ import com.fashion.supplychain.finance.entity.MaterialReconciliation;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
 import com.fashion.supplychain.finance.service.MaterialReconciliationService;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
+import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator.BillPushRequest;
 import com.fashion.supplychain.integration.openapi.service.WebhookPushService;
 import com.fashion.supplychain.crm.entity.Receivable;
 import com.fashion.supplychain.crm.orchestration.ReceivableOrchestrator;
@@ -90,6 +91,9 @@ public class ReconciliationStatusOrchestrator {
 
     @Autowired(required = false)
     private ReceivableService receivableService;
+
+    @Autowired(required = false)
+    private BillAggregationOrchestrator billAggregationOrchestrator;
 
     @Transactional(rollbackFor = Exception.class)
     public String updateMaterialStatus(String id, String status) {
@@ -177,6 +181,28 @@ public class ReconciliationStatusOrchestrator {
                 if (!ok) {
                     throw new IllegalStateException("状态更新失败");
                 }
+
+                // 物料对账审批通过 → 推送到账单汇总
+                if ("approved".equals(to) && billAggregationOrchestrator != null) {
+                    try {
+                        BillPushRequest pushReq = new BillPushRequest();
+                        pushReq.setBillType("PAYABLE");
+                        pushReq.setBillCategory("MATERIAL");
+                        pushReq.setSourceType("MATERIAL_RECONCILIATION");
+                        pushReq.setSourceId(rid);
+                        pushReq.setSourceNo(mr.getReconciliationNo());
+                        pushReq.setCounterpartyType("SUPPLIER");
+                        pushReq.setCounterpartyId(mr.getSupplierId());
+                        pushReq.setCounterpartyName(mr.getSupplierName());
+                        pushReq.setOrderId(mr.getOrderId());
+                        pushReq.setOrderNo(mr.getOrderNo());
+                        pushReq.setAmount(mr.getFinalAmount() != null ? mr.getFinalAmount() : mr.getTotalAmount());
+                        pushReq.setSettlementMonth(now.format(DateTimeFormatter.ofPattern("yyyy-MM")));
+                        billAggregationOrchestrator.pushBill(pushReq);
+                    } catch (Exception e) {
+                        log.warn("物料对账推送账单汇总失败（不影响主流程）: id={}", rid, e);
+                    }
+                }
                 return "状态更新成功";
             }
             if (scope == Scope.MATERIAL) {
@@ -230,6 +256,28 @@ public class ReconciliationStatusOrchestrator {
                 boolean ok = shipmentReconciliationService.updateById(sr);
                 if (!ok) {
                     throw new IllegalStateException("状态更新失败");
+                }
+
+                // 成品对账审批通过 → 推送到账单汇总（应收）
+                if ("approved".equals(to) && billAggregationOrchestrator != null) {
+                    try {
+                        BillPushRequest pushReq = new BillPushRequest();
+                        pushReq.setBillType("RECEIVABLE");
+                        pushReq.setBillCategory("PRODUCT");
+                        pushReq.setSourceType("SHIPMENT_RECONCILIATION");
+                        pushReq.setSourceId(rid);
+                        pushReq.setSourceNo(sr.getReconciliationNo());
+                        pushReq.setCounterpartyType("CUSTOMER");
+                        pushReq.setCounterpartyId(sr.getCustomerId());
+                        pushReq.setCounterpartyName(sr.getCustomerName());
+                        pushReq.setOrderId(sr.getOrderId());
+                        pushReq.setOrderNo(sr.getOrderNo());
+                        pushReq.setAmount(sr.getFinalAmount() != null ? sr.getFinalAmount() : sr.getTotalAmount());
+                        pushReq.setSettlementMonth(now.format(DateTimeFormatter.ofPattern("yyyy-MM")));
+                        billAggregationOrchestrator.pushBill(pushReq);
+                    } catch (Exception e) {
+                        log.warn("成品对账推送账单汇总失败（不影响主流程）: id={}", rid, e);
+                    }
                 }
 
                 // 订单结算审核通过后推送通知

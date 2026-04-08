@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { readPageSize } from '@/utils/pageSizeStore';
 import dayjs from 'dayjs';
 import AccountManagementModal from './components/AccountManagementModal';
+import BillSummaryTab from './components/BillSummaryTab';
 import {
   App,
   Button,
@@ -68,7 +69,7 @@ export const exportToExcel = (data: any[], columns: any[], filename: string) => 
 };
 
 // ============================================================
-// 主组件 — 统一付款中心
+// 主组件 — 收付款中心
 // ============================================================
 const PaymentCenterPage: React.FC = () => {
   const { message: msg } = App.useApp();
@@ -122,10 +123,10 @@ const PaymentCenterPage: React.FC = () => {
             <div>
               <h2 style={{ margin: 0 }}>
                 <PayCircleOutlined style={{ marginRight: 8 }} />
-                统一付款中心
+                收付款中心
               </h2>
               <span style={{ color: '#999', fontSize: 13 }}>
-                集中管理员工工资、工厂对账、费用报销的付款操作
+                集中管理账单汇总、待收付款、员工工资、工厂对账的收付款操作
               </span>
             </div>
             <Button type="primary" icon={<DollarOutlined />} onClick={() => pay.openPayModal()}>
@@ -140,6 +141,15 @@ const PaymentCenterPage: React.FC = () => {
             activeKey={data.activeTab}
             onChange={data.setActiveTab}
             items={[
+              {
+                key: 'bills',
+                label: (
+                  <span>
+                    <AccountBookOutlined /> 账单汇总
+                  </span>
+                ),
+                children: <BillSummaryTab />,
+              },
               {
                 key: 'pending',
                 label: (

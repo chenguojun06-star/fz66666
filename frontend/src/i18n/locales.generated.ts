@@ -100,7 +100,7 @@ export const LOCALES = {
         "payrollOperatorSummary": "工资结算(内)",
         "financeCenter": "订单结算(外)",
         "expenseReimbursement": "费用报销",
-        "wagePayment": "付款中心",
+        "wagePayment": "收付款中心",
         "profile": "个人中心",
         "user": "人员管理",
         "role": "岗位权限",

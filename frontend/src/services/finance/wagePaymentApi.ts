@@ -181,7 +181,7 @@ export const wagePaymentApi = {
   getPaymentDetail: (id: string) =>
     api.get(`/finance/wage-payments/${id}`),
 
-  // ---- 统一付款中心 ----
+  // ---- 收付款中心 ----
   /** 获取待付款单据列表（聚合工厂对账 + 费用报销） */
   listPendingPayables: (bizType?: string) =>
     api.post('/finance/wage-payments/pending-payables', bizType ? { bizType } : { bizType: null }),
