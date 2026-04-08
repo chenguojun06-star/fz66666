@@ -225,7 +225,30 @@ public class DailyBriefOrchestrator {
 
         brief.put("suggestions", suggestions);
 
+        // ⑦ 7日趋势数据（扫码/入库/下单）— 前端折线图使用
+        brief.put("trendData", buildTrendData(today));
+
         return brief;
+    }
+
+    /**
+     * 构建近7天每日趋势数据：扫码次数 / 入库单数 / 下单数
+     */
+    private List<Map<String, Object>> buildTrendData(LocalDate today) {
+        DateTimeFormatter labelFmt = DateTimeFormatter.ofPattern("MM-dd");
+        List<Map<String, Object>> trend = new ArrayList<>(7);
+        for (int i = 6; i >= 0; i--) {
+            LocalDate d = today.minusDays(i);
+            LocalDateTime dayStart = d.atStartOfDay();
+            LocalDateTime dayEnd = d.atTime(LocalTime.MAX);
+            Map<String, Object> point = new LinkedHashMap<>();
+            point.put("date", d.format(labelFmt));
+            point.put("scanCount", (int) dashboardQueryService.countScansBetween(dayStart, dayEnd));
+            point.put("warehousingCount", (int) dashboardQueryService.countWarehousingBetween(dayStart, dayEnd));
+            point.put("orderCount", (int) dashboardQueryService.countProductionOrdersBetween(dayStart, dayEnd));
+            trend.add(point);
+        }
+        return trend;
     }
 
     private String getTimedDailyAdvice(String contextSummary) {
