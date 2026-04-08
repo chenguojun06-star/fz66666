@@ -9,6 +9,7 @@ import type { SKUDetail, FinishedInventory } from './finishedInventoryColumns';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardModal from '@/components/common/StandardModal';
+import ResizableModal from '@/components/common/ResizableModal';
 import StandardPagination from '@/components/common/StandardPagination';
 import PageStatCards from '@/components/common/PageStatCards';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
@@ -622,7 +623,7 @@ const _FinishedInventory: React.FC = () => {
         </StandardModal>
 
         {/* 入库记录模态框 */}
-        <StandardModal
+        <ResizableModal
           title={
             <Space>
               <HistoryOutlined />
@@ -631,7 +632,8 @@ const _FinishedInventory: React.FC = () => {
           }
           open={inboundHistoryModal.visible}
           onCancel={inboundHistoryModal.close}
-          size="md"
+          width="60vw"
+          initialHeight={Math.round(window.innerHeight * 0.82)}
           footer={[
             <Button key="close" onClick={inboundHistoryModal.close}>
               关闭
@@ -704,7 +706,7 @@ const _FinishedInventory: React.FC = () => {
                 ]}
                 dataSource={inboundHistory}
                 rowKey="id"
-                pagination={false}
+                pagination={{ pageSize: 10, showSizeChanger: false, showTotal: (total) => `共 ${total} 条` }}
                 size="small"
                 bordered
               />
@@ -731,7 +733,7 @@ const _FinishedInventory: React.FC = () => {
               </Card>
             </Space>
           )}
-        </StandardModal>
+        </ResizableModal>
 
         {/* 扫码批量出库弹窗 */}
         <QrcodeOutboundModal

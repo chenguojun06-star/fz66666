@@ -23,13 +23,13 @@ interface OutstockRecord {
   skuCode?: string;
   color?: string;
   size?: string;
-  quantity: number;
+  outstockQuantity: number;
   costPrice?: number;
   salesPrice?: number;
   trackingNo?: string;
   expressCompany?: string;
   outstockType?: string;
-  createdByName?: string;
+  creatorName?: string;
   createTime?: string;
   remark?: string;
   customerName?: string;
@@ -162,7 +162,7 @@ const OutstockRecordTab: React.FC = () => {
     },
     {
       title: '出库数量',
-      dataIndex: 'quantity',
+      dataIndex: 'outstockQuantity',
       width: 100,
       align: 'center',
       render: (val) => (
@@ -266,7 +266,7 @@ const OutstockRecordTab: React.FC = () => {
     },
     {
       title: '操作人',
-      dataIndex: 'createdByName',
+      dataIndex: 'creatorName',
       width: 90,
     },
     {
