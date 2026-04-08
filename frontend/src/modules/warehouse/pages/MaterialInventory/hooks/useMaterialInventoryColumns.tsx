@@ -39,11 +39,11 @@ const compactInfoLabelStyle: React.CSSProperties = {
 };
 
 const normalizeUnit = (value?: string) => String(value || '').trim().toLowerCase();
-const isMeterUnit = (value?: string) => {
+const _isMeterUnit = (value?: string) => {
   const unit = normalizeUnit(value);
   return unit === '米' || unit === 'm' || unit === 'meter' || unit === 'meters';
 };
-const isKilogramUnit = (value?: string) => {
+const _isKilogramUnit = (value?: string) => {
   const unit = normalizeUnit(value);
   return unit === 'kg' || unit === '公斤' || unit === '千克' || unit === 'kilogram' || unit === 'kilograms';
 };

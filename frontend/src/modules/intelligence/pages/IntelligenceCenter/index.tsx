@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Tag, Tooltip, Popover } from 'antd';
+import { Tag, Tooltip } from 'antd';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ThunderboltOutlined, SyncOutlined,
@@ -16,7 +16,7 @@ import AgentMeetingCard from './AgentMeetingCard';
 import BrainActionGrid from './BrainActionGrid';
 
 import {
-  risk2color, grade2color, LiveDot, Sparkline,
+  risk2color, LiveDot, Sparkline,
   AnimatedNum, medalColor,
 } from './components/IntelligenceWidgets';
 import { OrderScrollPanel, AutoScrollBox, BottleneckRow } from './components/OrderScrollPanel';

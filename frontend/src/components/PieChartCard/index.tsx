@@ -78,7 +78,7 @@ const PieChartCard: React.FC<PieChartCardProps> = ({
   segments,
   loading = false,
   todayStats,
-  extraCompletedStat,
+  extraCompletedStat: _extraCompletedStat,
   todayLabel = '今日完成',
   avgLabel = '平均周期',
   totalLabel = '总数量',

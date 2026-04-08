@@ -130,7 +130,7 @@ const ProductionList: React.FC = () => {
   // ===== 数据状态 =====
   const [productionList, setProductionList] = useState<ProductionOrder[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  const [selectedRows, setSelectedRows] = useState<ProductionOrder[]>([]);
+  const [_selectedRows, setSelectedRows] = useState<ProductionOrder[]>([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [viewMode, setViewModeState] = useState<'list' | 'card' | 'smart'>(
@@ -220,7 +220,7 @@ const ProductionList: React.FC = () => {
     quickEditSaving, handleQuickEditSave: hookQuickEditSave,
     handleCloseOrder, pendingCloseOrder, closeOrderLoading, confirmCloseOrder, cancelCloseOrder,
     handleScrapOrder, pendingScrapOrder, scrapOrderLoading, confirmScrapOrder, cancelScrapOrder,
-    exportSelected,
+    exportSelected: _exportSelected,
     remarkPopoverId, setRemarkPopoverId, remarkText, setRemarkText, remarkSaving, handleRemarkSave,
   } = useProductionActions({ message, isSupervisorOrAbove, fetchProductionList });
 
