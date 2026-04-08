@@ -40,6 +40,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.security.access.AccessDeniedException;
+import com.fashion.supplychain.system.entity.OrderRemark;
+import com.fashion.supplychain.system.service.OrderRemarkService;
 
 @Service
 @Slf4j
@@ -92,6 +94,9 @@ public class CuttingTaskOrchestrator {
 
     @Autowired
     private MaterialPurchaseService materialPurchaseService;
+
+    @Autowired
+    private OrderRemarkService orderRemarkService;
 
     private boolean hasCuttingMaterialReady(ProductionOrder order, CuttingTask task) {
         if (isDirectCuttingOrder(order, task)) {
@@ -656,6 +661,28 @@ public class CuttingTaskOrchestrator {
         if (updated == null) {
             throw new IllegalStateException("领取失败");
         }
+
+        // 自动写入系统备注：裁剪任务领取节点
+        try {
+            if (updated != null && StringUtils.hasText(updated.getProductionOrderNo())) {
+                String updatedReceiverName = updated.getReceiverName();
+                OrderRemark sysRemark = new OrderRemark();
+                sysRemark.setTargetType("order");
+                sysRemark.setTargetNo(updated.getProductionOrderNo());
+                sysRemark.setAuthorId("system");
+                sysRemark.setAuthorName("系统");
+                sysRemark.setAuthorRole("裁剪");
+                sysRemark.setContent("裁剪任务已领取"
+                        + (StringUtils.hasText(updatedReceiverName) ? "，领取人：" + updatedReceiverName : ""));
+                sysRemark.setTenantId(updated.getTenantId());
+                sysRemark.setCreateTime(LocalDateTime.now());
+                sysRemark.setDeleteFlag(0);
+                orderRemarkService.save(sysRemark);
+            }
+        } catch (Exception e) {
+            log.warn("自动写入裁剪领取备注失败，不影响主流程", e);
+        }
+
         return updated;
     }
 

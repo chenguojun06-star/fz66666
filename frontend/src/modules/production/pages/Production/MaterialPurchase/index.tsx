@@ -13,6 +13,7 @@ import PurchaseModal from './components/PurchaseModal';
 import SmartReceiveModal from './components/SmartReceiveModal';
 import MaterialPurchaseAIBanner from './components/MaterialPurchaseAIBanner';
 import MaterialQualityIssueModal from './components/MaterialQualityIssueModal';
+import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import '../../../styles.css';
 import { useMaterialPurchase } from './hooks/useMaterialPurchase';
@@ -61,6 +62,8 @@ const MaterialPurchase: React.FC = () => {
   const [returnRecognizeFile, setReturnRecognizeFile] = useState<File | null>(null);
   const [qualityIssueOpen, setQualityIssueOpen] = useState(false);
   const [qualityIssuePurchase, setQualityIssuePurchase] = useState<MaterialPurchaseType | null>(null);
+  const [remarkOpen, setRemarkOpen] = useState(false);
+  const [remarkOrderNo, setRemarkOrderNo] = useState('');
 
   return (
     <Layout>
@@ -166,6 +169,7 @@ const MaterialPurchase: React.FC = () => {
                       isMobile={isMobile}
                       onView={(record) => openDialogSafe('view', record)}
                       onEdit={(record) => openQuickEditSafe(record)}
+                      onRemark={(record) => { setRemarkOrderNo(record.orderNo); setRemarkOpen(true); }}
                       onRefresh={() => setQueryParams(p => ({ ...p }))}
                       sortField={sortField}
                       sortOrder={sortOrder}
@@ -450,6 +454,13 @@ const MaterialPurchase: React.FC = () => {
           isSupervisorOrAbove={isSupervisorOrAbove}
           userId={String(user?.id || '').trim()}
           userName={String(user?.name || user?.username || '').trim()}
+        />
+        <RemarkTimelineModal
+          open={remarkOpen}
+          onClose={() => setRemarkOpen(false)}
+          targetType="order"
+          targetNo={remarkOrderNo}
+          canAddRemark={true}
         />
     </Layout>
   );

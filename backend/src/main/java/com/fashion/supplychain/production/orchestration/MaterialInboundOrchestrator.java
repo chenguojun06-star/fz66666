@@ -18,6 +18,8 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import com.fashion.supplychain.system.entity.OrderRemark;
+import com.fashion.supplychain.system.service.OrderRemarkService;
 
 /**
  * 面辅料入库编排器
@@ -48,6 +50,9 @@ public class MaterialInboundOrchestrator {
 
     @Autowired
     private MaterialPickupOrchestrator materialPickupOrchestrator;
+
+    @Autowired
+    private OrderRemarkService orderRemarkService;
 
     /**
      * 采购到货入库完整流程
@@ -144,6 +149,27 @@ public class MaterialInboundOrchestrator {
         }
 
         syncInboundTraceRecord(inbound, purchase, "PURCHASE_INBOUND");
+
+        // 自动写入系统备注：采购入库节点
+        try {
+            if (StringUtils.hasText(purchase.getOrderNo())) {
+                String statusText = "completed".equals(purchase.getStatus()) ? "采购完成" : "部分到货";
+                OrderRemark sysRemark = new OrderRemark();
+                sysRemark.setTargetType("order");
+                sysRemark.setTargetNo(purchase.getOrderNo());
+                sysRemark.setAuthorId("system");
+                sysRemark.setAuthorName("系统");
+                sysRemark.setAuthorRole("采购");
+                sysRemark.setContent("面料【" + purchase.getMaterialName() + "/" + purchase.getColor()
+                        + "】到货入库 " + arrivedQuantity + " 件，状态：" + statusText);
+                sysRemark.setTenantId(purchase.getTenantId());
+                sysRemark.setCreateTime(LocalDateTime.now());
+                sysRemark.setDeleteFlag(0);
+                orderRemarkService.save(sysRemark);
+            }
+        } catch (Exception e) {
+            log.warn("自动写入采购入库备注失败，不影响主流程", e);
+        }
 
         // 7. 返回结果
         Map<String, Object> result = new HashMap<>();

@@ -27,6 +27,7 @@ interface MaterialTableProps {
   isMobile: boolean;
   onView: (record: MaterialPurchaseType) => void;
   onEdit: (record: MaterialPurchaseType) => void;
+  onRemark: (record: MaterialPurchaseType) => void;
   onRefresh?: () => void;
   sortField: string;
   sortOrder: 'asc' | 'desc';
@@ -46,6 +47,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
   isMobile,
   onView,
   onEdit,
+  onRemark,
   onRefresh,
   sortField,
   sortOrder,
@@ -448,6 +450,11 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
                 label: '编辑',
                 onClick: () => onEdit(record),
                 disabled: frozen,
+              },
+              {
+                key: 'remark',
+                label: '备注',
+                onClick: () => onRemark(record),
               },
             ]}
           />

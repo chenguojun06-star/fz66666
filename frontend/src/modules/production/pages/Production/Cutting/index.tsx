@@ -7,6 +7,7 @@ import PageLayout from '@/components/common/PageLayout';
 import PageStatCards from '@/components/common/PageStatCards';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
+import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import QuickEditModal from '@/components/common/QuickEditModal';
 import api from '@/utils/api';
@@ -72,6 +73,10 @@ const CuttingManagement: React.FC = () => {
 
   // 裁剪单打印
   const [cuttingSheetPrintOpen, setCuttingSheetPrintOpen] = useState(false);
+
+  // 备注
+  const [remarkOpen, setRemarkOpen] = useState(false);
+  const [remarkOrderNo, setRemarkOrderNo] = useState('');
 
   // ─── Hooks ───────────────────────────────────────────────
   const tasks = useCuttingTasks({ message, isEntryPage });
@@ -548,6 +553,14 @@ const CuttingManagement: React.FC = () => {
                                   onClick: () => handleRollbackActive(record),
                                 }]
                               : []),
+                            {
+                              key: 'remark',
+                              label: '备注',
+                              onClick: () => {
+                                setRemarkOrderNo(record.productionOrderNo);
+                                setRemarkOpen(true);
+                              },
+                            },
                           ]}
                         />
                       );
@@ -800,6 +813,13 @@ const CuttingManagement: React.FC = () => {
           />
 
         </PageLayout>
+        <RemarkTimelineModal
+          open={remarkOpen}
+          onClose={() => setRemarkOpen(false)}
+          targetType="order"
+          targetNo={remarkOrderNo}
+          canAddRemark={true}
+        />
     </Layout>
   );
 };

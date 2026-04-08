@@ -29,6 +29,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import com.fashion.supplychain.system.entity.OrderRemark;
+import com.fashion.supplychain.system.service.OrderRemarkService;
 
 @Service
 @Slf4j
@@ -63,6 +65,9 @@ public class ProductWarehousingOrchestrator {
 
     @Autowired
     private ProductWarehousingRollbackHelper rollbackHelper;
+
+    @Autowired
+    private OrderRemarkService orderRemarkService;
 
     public IPage<ProductWarehousing> list(Map<String, Object> params) {
         return queryHelper.list(params);
@@ -240,6 +245,31 @@ public class ProductWarehousingOrchestrator {
 
             // 已禁用系统自动完成
         }
+
+        // 自动写入系统备注：质检入库节点
+        try {
+            if (StringUtils.hasText(productWarehousing.getOrderNo())) {
+                int qualified = productWarehousing.getQualifiedQuantity() != null
+                        ? productWarehousing.getQualifiedQuantity() : 0;
+                int unqualified = productWarehousing.getUnqualifiedQuantity() != null
+                        ? productWarehousing.getUnqualifiedQuantity() : 0;
+                OrderRemark sysRemark = new OrderRemark();
+                sysRemark.setTargetType("order");
+                sysRemark.setTargetNo(productWarehousing.getOrderNo());
+                sysRemark.setAuthorId("system");
+                sysRemark.setAuthorName("系统");
+                sysRemark.setAuthorRole("质检");
+                sysRemark.setContent("质检入库完成，合格 " + qualified + " 件"
+                        + (unqualified > 0 ? "，不合格 " + unqualified + " 件" : ""));
+                sysRemark.setTenantId(UserContext.tenantId());
+                sysRemark.setCreateTime(LocalDateTime.now());
+                sysRemark.setDeleteFlag(0);
+                orderRemarkService.save(sysRemark);
+            }
+        } catch (Exception e) {
+            log.warn("自动写入质检入库备注失败，不影响主流程", e);
+        }
+
         return true;
     }
 
