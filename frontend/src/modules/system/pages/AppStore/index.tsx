@@ -174,7 +174,7 @@ const AppStore: React.FC = () => {
       setWizardStep(0);
       setupForm.resetFields();
       setWizardVisible(true);
-    } catch (error: any) { message.error(error?.message || '开通试用失败'); }
+    } catch (error: unknown) { message.error(error instanceof Error ? error.message : '开通试用失败'); }
     finally { setTrialLoading(false); }
   };
 
@@ -227,7 +227,7 @@ const AppStore: React.FC = () => {
           </div>
         ),
       });
-    } catch (error: any) { if (error?.errorFields) return; message.error('提交失败'); }
+    } catch (error: unknown) { if (error && typeof error === 'object' && 'errorFields' in error) return; message.error('提交失败'); }
   };
 
   const isAppActivated = (appCode: string) => myApps.some(a => a.appCode === appCode && !a.isExpired);

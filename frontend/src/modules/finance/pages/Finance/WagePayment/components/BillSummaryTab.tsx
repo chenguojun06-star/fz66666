@@ -45,8 +45,8 @@ const BillSummaryTab: React.FC = () => {
       const page = res?.data ?? res;
       setBills(page?.records ?? []);
       setTotal(page?.total ?? 0);
-    } catch (err: any) {
-      msg.error(`加载账单失败: ${err?.message || '请检查网络'}`);
+    } catch (err: unknown) {
+      msg.error(`加载账单失败: ${err instanceof Error ? err.message : '请检查网络'}`);
     } finally {
       setLoading(false);
     }
@@ -71,8 +71,8 @@ const BillSummaryTab: React.FC = () => {
       msg.success('确认成功');
       fetchBills();
       fetchStats();
-    } catch (err: any) {
-      msg.error(`确认失败: ${err?.message || '未知错误'}`);
+    } catch (err: unknown) {
+      msg.error(`确认失败: ${err instanceof Error ? err.message : '未知错误'}`);
     }
   }, [fetchBills, fetchStats, msg]);
 
@@ -84,8 +84,8 @@ const BillSummaryTab: React.FC = () => {
       setSelectedKeys([]);
       fetchBills();
       fetchStats();
-    } catch (err: any) {
-      msg.error(`批量确认失败: ${err?.message || '未知错误'}`);
+    } catch (err: unknown) {
+      msg.error(`批量确认失败: ${err instanceof Error ? err.message : '未知错误'}`);
     }
   }, [selectedKeys, fetchBills, fetchStats, msg]);
 
@@ -99,8 +99,8 @@ const BillSummaryTab: React.FC = () => {
           msg.success('取消成功');
           fetchBills();
           fetchStats();
-        } catch (err: any) {
-          msg.error(`取消失败: ${err?.message || '未知错误'}`);
+        } catch (err: unknown) {
+          msg.error(`取消失败: ${err instanceof Error ? err.message : '未知错误'}`);
         }
       },
     });

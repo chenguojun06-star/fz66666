@@ -105,8 +105,8 @@ const useStyleBomMaterials = ({
       }
       message.success('已创建面辅料');
       await handleUseMaterial({ ...payload, color: localColor });
-    } catch (error: any) {
-      message.error(error?.message || '创建失败');
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '创建失败');
     }
   }, [currentStyleNo, handleUseMaterial, message]);
 

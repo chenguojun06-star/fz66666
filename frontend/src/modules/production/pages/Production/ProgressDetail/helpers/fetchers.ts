@@ -73,8 +73,8 @@ export const fetchCuttingBundles = async (args: {
       return records;
     }
     message.error(result.message || '获取扎号列表失败');
-  } catch (e: any) {
-    message.error((e as any)?.result?.message || (e as any)?.message || '获取扎号列表失败');
+  } catch (e: unknown) {
+    message.error(e instanceof Error ? e.message : '获取扎号列表失败');
   } finally {
     setCuttingBundlesLoading(false);
   }

@@ -7,7 +7,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import PaymentAccountManager from '@/components/common/PaymentAccountManager';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import { Factory as FactoryType, FactoryQueryParams, OrganizationUnit, User } from '@/types/system';
-import api from '@/utils/api';
+import api, { type ApiResult } from '@/utils/api';
 import { useModal } from '@/hooks';
 import { App, Button, Card, Col, Form, Input, InputNumber, Row, Select, Space, Tabs, Tag, Tooltip } from 'antd';
 import { QuestionCircleOutlined } from '@ant-design/icons';
@@ -101,8 +101,8 @@ const FactoryList: React.FC = () => {
     if (scorecardLoaded || scorecardLoading) return;
     setScorecardLoading(true);
     try {
-      const res = await intelligenceApi.getSupplierScorecard();
-      const scores: SupplierScore[] = (res as any)?.data?.scores ?? [];
+      const res = await intelligenceApi.getSupplierScorecard() as ApiResult<{ scores: SupplierScore[] }>;
+      const scores: SupplierScore[] = res?.data?.scores ?? [];
       const m: Record<string, SupplierScore> = {};
       scores.forEach((s) => { m[s.factoryName] = s; });
       setScorecardMap(m);
@@ -128,9 +128,9 @@ const FactoryList: React.FC = () => {
         reportSmartError('供应商列表加载失败', response.message || '服务返回异常，请稍后重试', 'SYSTEM_FACTORY_LIST_FAILED');
         message.error(response.message || '获取供应商列表失败');
       }
-    } catch (error: any) {
-      reportSmartError('供应商列表加载失败', error?.message || '网络异常或服务不可用，请稍后重试', 'SYSTEM_FACTORY_LIST_EXCEPTION');
-      message.error(error?.message || '获取供应商列表失败');
+    } catch (error: unknown) {
+      reportSmartError('供应商列表加载失败', error instanceof Error ? error.message : '网络异常或服务不可用，请稍后重试', 'SYSTEM_FACTORY_LIST_EXCEPTION');
+      message.error(error instanceof Error ? error.message : '获取供应商列表失败');
     } finally {
       setLoading(false);
     }
@@ -268,8 +268,8 @@ const FactoryList: React.FC = () => {
         message.error(result.message || '获取日志失败');
         setLogRecords([]);
       }
-    } catch (e: any) {
-      message.error(e?.message || '获取日志失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '获取日志失败');
       setLogRecords([]);
     } finally {
       setLogLoading(false);
@@ -300,8 +300,8 @@ const FactoryList: React.FC = () => {
         } else {
           message.error(response.message || '保存失败');
         }
-      } catch (error: any) {
-        message.error(error?.message || '保存失败');
+      } catch (error: unknown) {
+        message.error(error instanceof Error ? error.message : '保存失败');
       } finally {
         setSubmitLoading(false);
       }

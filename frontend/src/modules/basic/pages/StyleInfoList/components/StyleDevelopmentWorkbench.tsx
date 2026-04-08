@@ -188,8 +188,9 @@ const StyleDevelopmentWorkbench: React.FC<Props> = ({ record, onClose, initialSe
       });
       message.success('生产制单保存成功');
       await refreshWorkbenchView();
-    } catch (error: any) {
-      message.error(error?.response?.data?.message || error?.message || '生产制单保存失败');
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : '生产制单保存失败';
+      message.error(errMsg);
     } finally {
       setProductionSaving(false);
     }

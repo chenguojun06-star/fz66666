@@ -285,9 +285,9 @@ export function useInstructionManager({ alertList, user }: UseInstructionManager
       } else {
         message.error(res?.message || '指令下发失败');
       }
-    } catch (e: any) {
-      if (e?.errorFields) return;
-      message.error(e?.message || '指令下发失败');
+    } catch (e: unknown) {
+      if (typeof e === 'object' && e !== null && 'errorFields' in e) return;
+      message.error(e instanceof Error ? e.message : '指令下发失败');
     } finally {
       setInstructionSubmitting(false);
     }

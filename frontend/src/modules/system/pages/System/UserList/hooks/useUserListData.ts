@@ -161,9 +161,10 @@ export function useUserListData({ user, isSuperAdmin, isTenantOwner, form, userM
           message.error(result.message || '获取用户列表失败');
         }
       }
-    } catch (error: any) {
-      reportSmartError('用户列表加载失败', error?.message || '网络异常或服务不可用，请稍后重试', 'SYSTEM_USER_LIST_EXCEPTION');
-      message.error(error?.message || '获取用户列表失败');
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : '网络异常或服务不可用，请稍后重试';
+      reportSmartError('用户列表加载失败', errMsg, 'SYSTEM_USER_LIST_EXCEPTION');
+      message.error(error instanceof Error ? error.message : '获取用户列表失败');
     } finally {
       setLoading(false);
     }
@@ -202,8 +203,8 @@ export function useUserListData({ user, isSuperAdmin, isTenantOwner, form, userM
           return { records: response.data.records || [], total: response.data.total || 0 };
         }
         return null;
-      } catch (error: any) {
-        const status = error?.response?.status || error?.status;
+      } catch (error: unknown) {
+        const status = typeof error === 'object' && error !== null && 'response' in error ? (error as Record<string, any>).response?.status : (typeof error === 'object' && error !== null && 'status' in error ? (error as Record<string, any>).status : undefined);
         if (status !== 403) console.error('[实时同步] 获取用户列表失败', error);
         return null;
       }
@@ -330,7 +331,7 @@ export function useUserListData({ user, isSuperAdmin, isTenantOwner, form, userM
       const res = await api.get('/system/operation-log/list', { params: { bizType, bizId } });
       const result = res as any;
       if (result.code === 200) { setLogRecords(Array.isArray(result.data) ? result.data : []); } else { message.error(result.message || '获取日志失败'); setLogRecords([]); }
-    } catch (e: any) { message.error(e?.message || '获取日志失败'); setLogRecords([]); } finally { setLogLoading(false); }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '获取日志失败'); setLogRecords([]); } finally { setLogLoading(false); }
   };
 
   // ---- CRUD 操作 ----
@@ -354,7 +355,7 @@ export function useUserListData({ user, isSuperAdmin, isTenantOwner, form, userM
           message.success('状态更新成功');
           setUserList(prev => prev.map(u => u.id === id ? { ...u, status: newStatus } : u));
         } else { message.error(result.message || '状态更新失败'); }
-      } catch (error: any) { message.error(error?.message || '状态更新失败'); }
+      } catch (error: unknown) { message.error(error instanceof Error ? error.message : '状态更新失败'); }
     });
   };
 

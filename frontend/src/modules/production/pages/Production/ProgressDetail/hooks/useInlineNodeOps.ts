@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from 'react';
 import type { ProductionOrder } from '@/types/production';
+import { isApiSuccess, getApiMessage } from '@/utils/api';
 
 export type InlineNodeOpsDeps = {
   activeOrder: ProductionOrder | null;
@@ -59,11 +60,11 @@ export const useInlineNodeOps = ({
       };
       (updated as any)[k] = { ...current, history: [...history, item].slice(-20) };
       const res = await productionOrderApi.saveNodeOperations(String(activeOrder.id), JSON.stringify(updated));
-      if ((res as any)?.code === 200) {
+      if (isApiSuccess(res)) {
         message.success('保存成功');
         setNodeOps(updated);
       } else {
-        message.error((res as any)?.message || '保存失败');
+        message.error(getApiMessage(res, '保存失败'));
       }
     } catch {
       message.error('保存失败');

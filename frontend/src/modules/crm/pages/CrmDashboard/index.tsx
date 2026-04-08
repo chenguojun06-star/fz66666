@@ -15,6 +15,7 @@ import { useAuth } from '@/utils/AuthContext';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions, { type RowAction } from '@/components/common/RowActions';
 import { customerApi, receivableApi, type Customer, type Receivable } from '@/services/crm/customerApi';
+import type { ApiResult } from '@/utils/api';
 import { message } from '@/utils/antdStatic';
 import { readPageSize } from '@/utils/pageSizeStore';
 import type { ProductionOrder } from '@/types/production';
@@ -241,8 +242,8 @@ const CustomerManagement: React.FC = () => {
   const fetchList = useCallback(async (page = pagination.current, kw = keyword, st = statusFilter) => {
     setLoading(true);
     try {
-      const res = await customerApi.list({ page, pageSize: pagination.pageSize, keyword: kw, status: st });
-      const data = (res as any)?.data ?? res;
+      const res: ApiResult = await customerApi.list({ page, pageSize: pagination.pageSize, keyword: kw, status: st });
+      const data = res?.data ?? res;
       setCustomers(data?.records ?? []);
       setTotal(data?.total ?? 0);
     } catch {
@@ -254,8 +255,8 @@ const CustomerManagement: React.FC = () => {
 
   const fetchStats = useCallback(async () => {
     try {
-      const res = await customerApi.getStats();
-      const data = (res as any)?.data ?? res;
+      const res: ApiResult = await customerApi.getStats();
+      const data = res?.data ?? res;
       setStats({ total: data?.total ?? 0, activeCount: data?.activeCount ?? 0, newThisMonth: data?.newThisMonth ?? 0, vip: data?.vip ?? 0 });
     } catch { /* 统计失败不影响主流程 */ }
   }, []);

@@ -274,8 +274,8 @@ export function usePaymentColumns(props: UsePaymentColumnsProps) {
                   await wagePaymentApi.confirmReceived(record.id);
                   msg.success('已确认收款');
                   fetchPayments();
-                } catch (err: any) {
-                  msg.error(`确认收款失败: ${(err as any)?.message || '未知错误'}`);
+                } catch (err: unknown) {
+                  msg.error(`确认收款失败: ${err instanceof Error ? err.message : '未知错误'}`);
                 }
               },
             });

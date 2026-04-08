@@ -55,8 +55,10 @@ export function useProductionActions({
       setRemarkPopoverId(null);
       setRemarkText('');
       await fetchProductionList();
-    } catch (err: any) {
-      message.error(err?.response?.data?.message || '保存失败');
+    } catch (err: unknown) {
+      const respMsg = typeof err === 'object' && err !== null && 'response' in err
+        ? String((err as any).response?.data?.message || '') : '';
+      message.error(respMsg || (err instanceof Error ? err.message : '保存失败'));
     } finally {
       setRemarkSaving(false);
     }
@@ -78,8 +80,10 @@ export function useProductionActions({
       message.success('保存成功');
       closeModal();
       await fetchProductionList();
-    } catch (error: any) {
-      message.error(error?.response?.data?.message || '保存失败');
+    } catch (error: unknown) {
+      const respMsg = typeof error === 'object' && error !== null && 'response' in error
+        ? String((error as any).response?.data?.message || '') : '';
+      message.error(respMsg || (error instanceof Error ? error.message : '保存失败'));
       throw error;
     } finally {
       setQuickEditSaving(false);
@@ -169,8 +173,8 @@ export function useProductionActions({
       message.success('关单成功');
       setPendingCloseOrder(null);
       fetchProductionList();
-    } catch (e: any) {
-      message.error(e?.message || '关单失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '关单失败');
     } finally {
       setCloseOrderLoading(false);
     }
@@ -194,8 +198,8 @@ export function useProductionActions({
       message.success('报废成功');
       setPendingScrapOrder(null);
       fetchProductionList();
-    } catch (e: any) {
-      message.error(e?.message || '报废失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '报废失败');
     } finally {
       setScrapOrderLoading(false);
     }

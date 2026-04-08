@@ -324,8 +324,8 @@ export const useProductWarehousing = () => {
       message.success('入库完成');
       closeWarehousingModal();
       fetchWarehousingList();
-    } catch (e: any) {
-      message.error(e.message || '入库失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '入库失败');
     } finally {
       setWarehousingModalLoading(false);
     }

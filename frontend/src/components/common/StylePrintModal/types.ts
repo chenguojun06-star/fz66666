@@ -54,6 +54,8 @@ export interface StylePrintModalProps {
   season?: string;
   /** 打印模式：sample(样衣)、order(下单)、production(大货生产) */
   mode?: 'sample' | 'order' | 'production';
+  /** 样衣生产记录ID（用于生成扫码二维码），不传时组件自动通过 styleNo 查询 */
+  patternProductionId?: string | number;
   /** 额外的基本信息 */
   extraInfo?: Record<string, any>;
   /** 码数明细（大货生产使用） */

@@ -47,8 +47,8 @@ const RegistrationTab: React.FC = () => {
           await tenantService.approveApplication(record.id, { planType: 'TRIAL', trialDays: 30 });
           message.success('审批通过，工厂账户已激活');
           fetchTenantApps();
-        } catch (e: any) {
-          message.error(e?.message || '审批失败');
+        } catch (e: unknown) {
+          message.error(e instanceof Error ? e.message : '审批失败');
         }
       },
     });
@@ -66,8 +66,8 @@ const RegistrationTab: React.FC = () => {
       message.success('已拒绝');
       setPendingRejectTenant(null);
       fetchTenantApps();
-    } catch (e: any) {
-      message.error(e?.message || '操作失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '操作失败');
     } finally {
       setRejectTenantLoading(false);
     }
@@ -101,9 +101,9 @@ const RegistrationTab: React.FC = () => {
       editModal.close();
       editForm.resetFields();
       fetchTenantApps();
-    } catch (e: any) {
-      if (e?.errorFields?.length) return;
-      message.error(e?.message || '修改失败');
+    } catch (e: unknown) {
+      if (e && typeof e === 'object' && 'errorFields' in e && Array.isArray((e as any).errorFields) && (e as any).errorFields.length) return;
+      message.error(e instanceof Error ? e.message : '修改失败');
     } finally {
       setEditSaving(false);
     }

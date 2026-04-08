@@ -106,7 +106,7 @@ const ShareOrderPage: React.FC = () => {
         `/api/public/share/order/${encodeURIComponent(token)}`
       )
       .then((res) => {
-        const d = (res as any)?.data ?? res;
+        const d = res.data;
         if (d?.code !== undefined && d.code !== 200) {
           setError(d.message || '分享链接已失效');
         } else {

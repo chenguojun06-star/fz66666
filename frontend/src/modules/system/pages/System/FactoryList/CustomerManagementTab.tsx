@@ -67,8 +67,8 @@ const CustomerManagementTab: React.FC<Props> = ({ active }) => {
         return;
       }
       message.error(response.message || '获取客户列表失败');
-    } catch (error: any) {
-      message.error(error?.message || '获取客户列表失败');
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '获取客户列表失败');
     } finally {
       setLoading(false);
     }
@@ -144,8 +144,8 @@ const CustomerManagementTab: React.FC<Props> = ({ active }) => {
       message.success('保存成功');
       closeDialog();
       void fetchCustomers();
-    } catch (error: any) {
-      message.error(error?.message || '保存失败');
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '保存失败');
     } finally {
       setSaving(false);
     }

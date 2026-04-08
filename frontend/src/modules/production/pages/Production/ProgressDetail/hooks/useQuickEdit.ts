@@ -3,7 +3,7 @@ import { ProductionOrder } from '@/types/production';
 import { productionOrderApi } from '@/services/production/productionApi';
 
 interface UseQuickEditOptions {
-   
+
   message: any;
   fetchOrders: () => Promise<void>;
 }
@@ -29,8 +29,8 @@ export const useQuickEdit = ({ message, fetchOrders }: UseQuickEditOptions) => {
       setQuickEditVisible(false);
       setQuickEditRecord(null);
       await fetchOrders();
-    } catch (err: any) {
-      message.error(err?.response?.data?.message || '编辑失败');
+    } catch (err: unknown) {
+      message.error(typeof err === 'object' && err !== null && 'response' in err ? (err as any).response?.data?.message : '编辑失败');
       throw err;
     } finally {
       setQuickEditSaving(false);

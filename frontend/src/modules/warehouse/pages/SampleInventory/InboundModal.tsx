@@ -4,7 +4,7 @@ import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import type { InputRef } from 'antd';
 import { SampleTypeMap } from './types';
-import api from '@/utils/api';
+import api, { type ApiResult, isApiSuccess } from '@/utils/api';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
@@ -210,10 +210,10 @@ const InboundModal: React.FC<InboundModalProps> = ({ visible, onCancel, onSucces
     if (!styleKey || latestHydratedRef.current === styleKey) return;
     setPrefillLoading(true);
     try {
-      const res = await api.get(`/style/info/${encodeURIComponent(styleKey)}`);
-      if ((res as any)?.code === 200 && (res as any)?.data) {
-        const nextSnapshot = buildStyleSnapshot((res as any).data);
-        applySeedValues(buildInboundSeedFromStyle((res as any).data), overwrite);
+      const res = await api.get<ApiResult>(`/style/info/${encodeURIComponent(styleKey)}`);
+      if (isApiSuccess(res) && res?.data) {
+        const nextSnapshot = buildStyleSnapshot(res.data);
+        applySeedValues(buildInboundSeedFromStyle(res.data), overwrite);
         setStyleSnapshot(nextSnapshot);
         latestHydratedRef.current = styleKey;
       }

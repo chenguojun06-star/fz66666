@@ -32,7 +32,7 @@ const LABEL_SIZE_MAP: Record<LabelSize, [number, number]> = {
 const StylePrintModal: React.FC<StylePrintModalProps> = ({
   visible, onClose, styleId, orderId, orderNo,
   styleNo = '', styleName = '', cover, color, quantity,
-  category, season, mode = 'sample', extraInfo = {}, sizeDetails = [],
+  category, season, mode = 'sample', patternProductionId: propPatternId, extraInfo = {}, sizeDetails = [],
 }) => {
   const { user } = useAuth();
   const showPrice = canViewPrice(user);
@@ -44,6 +44,8 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
   const [labelSize, setLabelSize] = useState<LabelSize>('40x70');
   const [labelCount, setLabelCount] = useState(1);
   const [labelPrinting, setLabelPrinting] = useState(false);
+  const [autoPatternId, setAutoPatternId] = useState<string | null>(null);
+  const resolvedPatternId = propPatternId ? String(propPatternId) : autoPatternId;
 
   /* ---- 自动识别颜色×码数×数量 ---- */
   const labelItems = useMemo(() => {
@@ -86,6 +88,18 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
   useEffect(() => {
     if (!visible || !styleId) return;
     setLabelPrintMode(false);
+    setAutoPatternId(null);
+    // 样衣模式下自动查询样衣生产记录ID（用于二维码）
+    if (mode === 'sample' && !propPatternId && styleNo) {
+      api.get('/production/pattern/list', { params: { page: 1, pageSize: 20, keyword: styleNo } })
+        .then(res => {
+          const records = Array.isArray(res?.data?.records) ? res.data.records : [];
+          const matched = records.find((item: any) => String(item.styleId || '') === String(styleId || ''))
+            || records.find((item: any) => String(item.styleNo || '') === String(styleNo || ''));
+          if (matched?.id) setAutoPatternId(String(matched.id));
+        })
+        .catch(() => {});
+    }
     const loadData = async () => {
       setLoading(true);
       try {
@@ -122,7 +136,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
       finally { setLoading(false); }
     };
     loadData();
-  }, [visible, styleId]);
+  }, [visible, styleId, mode, propPatternId, styleNo]);
 
   const handlePrint = () => {
     const hasSelection = Object.values(options).some(v => v);
@@ -157,12 +171,10 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
     else { iframe.onload = triggerPrint; }
   };
 
-  const isPatternPrint = extraInfo?.isPattern === true;
-  const qrValue = JSON.stringify(
-    isPatternPrint
-      ? { type: 'pattern', id: String(orderId || styleId || '').trim(), styleNo, styleName, color }
-      : { type: mode === 'production' ? 'order' : 'style', styleNo, styleName, orderId, orderNo: orderNo || '' }
-  );
+  const isPatternPrint = extraInfo?.isPattern === true || (mode === 'sample' && !!resolvedPatternId);
+  const qrValue = isPatternPrint && resolvedPatternId
+    ? JSON.stringify({ type: 'pattern', id: resolvedPatternId })
+    : JSON.stringify({ type: mode === 'production' ? 'order' : 'style', styleNo, styleName, orderId, orderNo: orderNo || '' });
 
   /* ---- 标签打印（自动识别全部颜色×码数） ---- */
   const handleLabelPrint = useCallback(async () => {
@@ -193,11 +205,9 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
           Array.from({ length: batch }, (_, j) => {
             const itemIdx = Math.floor((i + j) / copies);
             const item = items[itemIdx];
-            const itemQrValue = JSON.stringify(
-              isPatternPrint
-                ? { type: 'pattern', id: String(orderId || styleId || '').trim(), styleNo, styleName, color: item.color, size: item.size }
-                : { type: mode === 'production' ? 'order' : 'style', styleNo, styleName, orderId, orderNo: orderNo || '', color: item.color, size: item.size },
-            );
+            const itemQrValue = isPatternPrint && resolvedPatternId
+              ? JSON.stringify({ type: 'pattern', id: resolvedPatternId })
+              : JSON.stringify({ type: mode === 'production' ? 'order' : 'style', styleNo, styleName, orderId, orderNo: orderNo || '', color: item.color, size: item.size });
             return QRCodeLib.toDataURL(itemQrValue, { width: qrPx, margin: 0, errorCorrectionLevel: 'M' }).catch(() => '');
           }),
         );
@@ -259,7 +269,7 @@ body{font-family:'PingFang SC','Heiti SC',Arial,sans-serif}
       message.success(`已发送 ${totalLabels} 张标签到打印机`);
     } catch { message.error('标签打印失败，请重试'); }
     finally { setLabelPrinting(false); }
-  }, [labelItems, isPatternPrint, orderId, styleId, styleNo, styleName, orderNo, color, quantity, mode, labelSize, labelCount]);
+  }, [labelItems, isPatternPrint, resolvedPatternId, orderId, styleId, styleNo, styleName, orderNo, color, quantity, mode, labelSize, labelCount]);
 
   const getModeTitle = () => {
     switch (mode) {

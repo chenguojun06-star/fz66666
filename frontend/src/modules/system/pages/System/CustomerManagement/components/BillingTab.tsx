@@ -143,9 +143,9 @@ const BillingTab: React.FC = () => {
       message.success('套餐已更新');
       planModal.close();
       fetchTenants();
-    } catch (e: any) {
-      if (e?.errorFields?.length) return;
-      message.error(e?.message || '保存失败');
+    } catch (e: unknown) {
+      if (e && typeof e === 'object' && 'errorFields' in e && Array.isArray((e as any).errorFields) && (e as any).errorFields.length) return;
+      message.error(e instanceof Error ? e.message : '保存失败');
     } finally {
       setPlanSaving(false);
     }
@@ -158,8 +158,8 @@ const BillingTab: React.FC = () => {
     try {
       const res: any = await tenantService.getTenantBillingOverview(record.id);
       setOverview(res?.data || res);
-    } catch (e: any) {
-      message.error(e?.message || '加载失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '加载失败');
     } finally {
       setOverviewLoading(false);
     }
@@ -182,8 +182,8 @@ const BillingTab: React.FC = () => {
           await tenantService.generateMonthlyBill(record.id);
           message.success('账单已生成');
           fetchBills();
-        } catch (e: any) {
-          message.error(e?.message || '生成失败');
+        } catch (e: unknown) {
+          message.error(e instanceof Error ? e.message : '生成失败');
         }
       },
     });
@@ -200,8 +200,8 @@ const BillingTab: React.FC = () => {
           await tenantService.markBillPaid(bill.id);
           message.success('已标记为已支付');
           fetchBills();
-        } catch (e: any) {
-          message.error(e?.message || '操作失败');
+        } catch (e: unknown) {
+          message.error(e instanceof Error ? e.message : '操作失败');
         }
       },
     });
@@ -219,8 +219,8 @@ const BillingTab: React.FC = () => {
       message.success('已减免');
       setPendingWaiveBill(null);
       fetchBills();
-    } catch (e: any) {
-      message.error(e?.message || '操作失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '操作失败');
     } finally {
       setWaiveBillLoading(false);
     }
@@ -240,8 +240,8 @@ const BillingTab: React.FC = () => {
       message.success('已确认开票');
       setPendingIssueInvoiceBill(null);
       fetchBills();
-    } catch (e: any) {
-      message.error(e?.message || '操作失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '操作失败');
     } finally {
       setIssueInvoiceLoading(false);
     }

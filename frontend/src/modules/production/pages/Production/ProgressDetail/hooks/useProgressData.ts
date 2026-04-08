@@ -162,10 +162,11 @@ export function useProgressData({
         reportSmartError('生产进度加载失败', errMessage, 'PROGRESS_LIST_LOAD_FAILED');
         message.error(errMessage);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (!silent) {
-        reportSmartError('生产进度加载失败', err?.message || '网络异常或服务不可用，请稍后重试', 'PROGRESS_LIST_LOAD_EXCEPTION');
-        message.error(`获取生产订单失败: ${err?.message || '请检查网络连接'}`);
+        const errMsg = err instanceof Error ? err.message : '网络异常或服务不可用，请稍后重试';
+        reportSmartError('生产进度加载失败', errMsg, 'PROGRESS_LIST_LOAD_EXCEPTION');
+        message.error(`获取生产订单失败: ${err instanceof Error ? err.message : '请检查网络连接'}`);
       }
     } finally {
       if (!silent) {

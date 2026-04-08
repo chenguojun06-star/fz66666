@@ -280,8 +280,8 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
           await productionScanApi.undo({ recordId: record.scanRecordId! });
           message.success('撤回成功');
           onUndoSuccess?.();
-        } catch (e: any) {
-          message.error(e?.response?.data?.message || e?.message || '撤回失败');
+        } catch (e: unknown) {
+          message.error(e instanceof Error ? e.message : '撤回失败');
         }
       },
     });
@@ -319,8 +319,8 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
           await productionScanApi.execute(payload);
           message.success('已手动完成，数据已按扫码链路同步');
           onUndoSuccess?.();
-        } catch (e: any) {
-          message.error(e?.response?.data?.message || e?.message || '手动完成失败');
+        } catch (e: unknown) {
+          message.error(e instanceof Error ? e.message : '手动完成失败');
         } finally {
           setActioningRecordId('');
         }
@@ -352,7 +352,7 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
       return;
     }
     const selectedRecords = flatData.filter(r => selectedRowKeys.includes(r.key));
-    const completableRecords = selectedRecords.filter(r => 
+    const completableRecords = selectedRecords.filter(r =>
       canManualCompleteTracking(r, orderStatus, orderNo, orderId)
     );
     if (completableRecords.length === 0) {
@@ -588,8 +588,8 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
               cancelText="取消"
               disabled={selectedCompletableCount === 0}
             >
-              <Button 
-                type="primary" 
+              <Button
+                type="primary"
                 size="small"
                 loading={batchCompleting}
                 disabled={selectedCompletableCount === 0}

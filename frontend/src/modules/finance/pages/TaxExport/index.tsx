@@ -829,8 +829,8 @@ const TaxExport: React.FC = () => {
       link.click();
       URL.revokeObjectURL(link.href);
       message.success(`${filename} 下载成功`);
-    } catch (e: any) {
-      message.error(e?.message || '导出失败，请稍后重试');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '导出失败，请稍后重试');
     } finally {
       setLoading(prev => ({ ...prev, [type]: false }));
     }

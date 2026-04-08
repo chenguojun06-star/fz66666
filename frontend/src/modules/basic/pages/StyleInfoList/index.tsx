@@ -8,7 +8,7 @@ import RejectReasonModal from '@/components/common/RejectReasonModal';
 import SmallModal from '@/components/common/SmallModal';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import PageStatCards from '@/components/common/PageStatCards';
-import api from '@/utils/api';
+import api, { type ApiResult } from '@/utils/api';
 import { StyleInfo } from '@/types/style';
 import dayjs from 'dayjs';
 
@@ -153,7 +153,7 @@ const StyleInfoListPage: React.FC = () => {
               recordStatus: 'active',
             },
           });
-          return { styleNo, records: (res as any)?.data?.records || [] };
+          return { styleNo, records: res?.data?.records || [] };
         }));
 
         const nextMap: Record<string, boolean> = {};
@@ -257,8 +257,8 @@ const StyleInfoListPage: React.FC = () => {
       } else {
         message.error(res.message || '维护失败');
       }
-    } catch (e: any) {
-      message.error(e?.message || '维护失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '维护失败');
     } finally {
       setMaintenanceSaving(false);
     }

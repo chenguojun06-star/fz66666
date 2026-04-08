@@ -123,8 +123,10 @@ const useStyleBomMutations = ({
       }
 
       message.error(String(result.message || '保存失败'));
-    } catch (errInfo: any) {
-      showValidationError(errInfo);
+    } catch (errInfo: unknown) {
+      if (typeof errInfo === 'object' && errInfo !== null && 'errorFields' in errInfo) {
+        showValidationError(errInfo);
+      }
     }
   }, [buildRequiredPaths, data, fetchBom, form, locked, message, persistItem, setEditingKey, showValidationError]);
 
@@ -163,8 +165,8 @@ const useStyleBomMutations = ({
       if (Array.isArray(next) && next.length) {
         enterTableEdit(next);
       }
-    } catch (error: any) {
-      message.error(error?.message || '导入失败');
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '导入失败');
     } finally {
       setLoading(false);
     }
@@ -195,8 +197,10 @@ const useStyleBomMutations = ({
       message.success('保存成功');
       setTableEditable(false);
       await fetchBom();
-    } catch (errInfo: any) {
-      showValidationError(errInfo);
+    } catch (errInfo: unknown) {
+      if (typeof errInfo === 'object' && errInfo !== null && 'errorFields' in errInfo) {
+        showValidationError(errInfo);
+      }
     } finally {
       setLoading(false);
     }

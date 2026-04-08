@@ -349,8 +349,8 @@ const DictManage: React.FC = () => {
           await api.delete(`/system/dict/${record.id}`);
           message.success('删除成功');
           fetchData();
-        } catch (error: any) {
-          message.error(error?.message || '删除失败，请重试');
+        } catch (error: unknown) {
+          message.error(error instanceof Error ? error.message : '删除失败，请重试');
         }
       }
     });
@@ -371,12 +371,12 @@ const DictManage: React.FC = () => {
 
       dictModal.close();
       fetchData();
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) {
         message.error('请检查表单输入');
       } else {
         // 展示后端返回的真实错误（如"字典编码已存在"）
-        const errMsg: string = error?.message || error?.data?.message || '';
+        const errMsg: string = error instanceof Error ? error.message : '';
         if (errMsg) {
           message.error(errMsg);
         } else {
@@ -406,10 +406,10 @@ const DictManage: React.FC = () => {
           try {
             await api.post('/system/dict', item);
             successCount++;
-          } catch (err: any) {
+          } catch (err: unknown) {
             // 后端返回 400/已存在 = 重复条目，正常跳过；其他错误计入失败
-            const msg: string = err?.message || '';
-            const isConflict = err?.response?.status === 400 || msg.includes('已存在') || msg.includes('重复');
+            const msg: string = err instanceof Error ? err.message : '';
+            const isConflict = msg.includes('已存在') || msg.includes('重复');
             if (isConflict) {
               skipCount++;
             } else {

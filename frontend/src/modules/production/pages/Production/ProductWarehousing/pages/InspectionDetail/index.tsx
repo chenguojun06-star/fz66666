@@ -8,7 +8,7 @@ import {
 } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
-import api, { toNumberSafe, parseProductionOrderLines, fetchProductionOrderDetail } from '@/utils/api';
+import api, { type ApiResult, toNumberSafe, parseProductionOrderLines, fetchProductionOrderDetail } from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { formatDateTime } from '@/utils/datetime';
 import { getMaterialTypeLabel } from '@/utils/materialType';
@@ -133,8 +133,8 @@ const InspectionDetail: React.FC = () => {
       );
       if (res.code === 200 && res.data) setBriefing(res.data);
       else message.error('获取质检简报失败');
-    } catch (err: any) {
-      message.error(`获取质检简报失败: ${err?.message || '请检查网络连接'}`);
+    } catch (err: unknown) {
+      message.error(`获取质检简报失败: ${err instanceof Error ? err.message : '请检查网络连接'}`);
     } finally {
       setLoading(false);
     }
@@ -175,7 +175,7 @@ const InspectionDetail: React.FC = () => {
     if (!orderId) return;
     setAiLoading(true);
     qualityAiApi.getSuggestion(orderId)
-      .then(res => { setAiSuggestion((res as any)?.data ?? null); })
+      .then((res: ApiResult) => { setAiSuggestion(res?.data ?? null); })
       .catch(() => {})
       .finally(() => setAiLoading(false));
   }, [orderId]);
@@ -307,8 +307,8 @@ const InspectionDetail: React.FC = () => {
       message.success('入库完成');
       setWarehouseValue('');
       fetchQcRecords();
-    } catch (e: any) {
-      message.error(e.message || '入库失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '入库失败');
     } finally {
       setWarehousingLoading(false);
     }
@@ -551,8 +551,8 @@ const InspectionDetail: React.FC = () => {
       } else {
         message.error(res.message || '标记失败');
       }
-    } catch (e: any) {
-      message.error(e?.message || '操作失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '操作失败');
     } finally {
       setMarkingRepairBundleId(null);
     }

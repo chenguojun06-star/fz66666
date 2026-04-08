@@ -161,8 +161,8 @@ const OverdueOrderTable: React.FC = () => {
                 }
                 setUrgedIds(prev => new Set([...Array.from(prev), record.id]));
                 message.success(`已发送催单通知：${record.orderNo}`);
-              } catch (err: any) {
-                message.error(err?.message || err?.response?.data?.message || '催单失败');
+              } catch (err: unknown) {
+                message.error(err instanceof Error ? err.message : ((err && typeof err === 'object' && 'response' in err ? (err as any)?.response?.data?.message : undefined) || '催单失败'));
               } finally {
                 setUrgingId(null);
               }

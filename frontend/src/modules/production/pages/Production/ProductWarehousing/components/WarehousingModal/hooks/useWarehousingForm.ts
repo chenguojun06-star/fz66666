@@ -665,8 +665,8 @@ export const useWarehousingForm = (
         return next;
       });
       message.success('上传成功');
-    } catch (e: any) {
-      message.error(e?.message || '上传失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '上传失败');
     }
     return Upload.LIST_IGNORE;
   };
@@ -721,12 +721,12 @@ export const useWarehousingForm = (
       } else {
         message.error(res.message || '批量入库失败');
       }
-    } catch (error: any) {
-      if (error.errorFields) {
-        const firstError = error.errorFields[0];
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error !== null && 'errorFields' in error) {
+        const firstError = (error as any).errorFields[0];
         message.error(firstError.errors[0] || '表单验证失败');
       } else {
-        message.error(error.message || '批量入库失败');
+        message.error(error instanceof Error ? error.message : '批量入库失败');
       }
     } finally {
       setSubmitLoading(false);
@@ -779,8 +779,8 @@ export const useWarehousingForm = (
       } else {
         message.error(res.message || '批量不合格质检失败');
       }
-    } catch (error: any) {
-      message.error(error.message || '批量不合格质检失败');
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '批量不合格质检失败');
     } finally {
       setSubmitLoading(false);
     }
@@ -848,12 +848,12 @@ export const useWarehousingForm = (
       } else {
         message.error(result.message || '保存失败');
       }
-    } catch (error: any) {
-      if (error.errorFields) {
-        const firstError = error.errorFields[0];
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error !== null && 'errorFields' in error) {
+        const firstError = (error as any).errorFields[0];
         message.error(firstError.errors[0] || '表单验证失败');
       } else {
-        message.error(error.message || '保存失败');
+        message.error(error instanceof Error ? error.message : '保存失败');
       }
     } finally {
       setSubmitLoading(false);

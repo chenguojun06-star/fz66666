@@ -169,8 +169,8 @@ export function useCuttingTasks({ message, isEntryPage }: UseCuttingTasksOptions
       } else {
         message.error(res.message || '获取裁剪任务失败');
       }
-    } catch (err: any) {
-      message.error(`获取裁剪任务失败: ${err?.message || '请检查网络连接'}`);
+    } catch (err: unknown) {
+      message.error(`获取裁剪任务失败: ${err instanceof Error ? err.message : '请检查网络连接'}`);
     } finally {
       setTaskLoading(false);
     }
@@ -193,8 +193,8 @@ export function useCuttingTasks({ message, isEntryPage }: UseCuttingTasksOptions
       } else {
         message.error(res.message || '领取任务失败');
       }
-    } catch (err: any) {
-      const errMsg = err?.response?.data?.message || err?.message || '领取任务失败';
+    } catch (err: unknown) {
+      const errMsg = (err && typeof err === 'object' && 'response' in err ? (err as any)?.response?.data?.message : undefined) || (err instanceof Error ? err.message : '领取任务失败');
       message.error(errMsg);
     } finally {
       setReceiveTaskLoading(false);
@@ -227,8 +227,8 @@ export function useCuttingTasks({ message, isEntryPage }: UseCuttingTasksOptions
       } else {
         message.error(res.message || '退回失败');
       }
-    } catch (err: any) {
-      message.error(`退回失败: ${err?.message || '未知错误'}`);
+    } catch (err: unknown) {
+      message.error(`退回失败: ${err instanceof Error ? err.message : '未知错误'}`);
     } finally {
       setRollbackTaskLoading(false);
     }
@@ -249,8 +249,8 @@ export function useCuttingTasks({ message, isEntryPage }: UseCuttingTasksOptions
       setQuickEditVisible(false);
       setQuickEditRecord(null);
       await fetchTasks();
-    } catch (err: any) {
-      message.error(err?.response?.data?.message || '编辑失败');
+    } catch (err: unknown) {
+      message.error((err && typeof err === 'object' && 'response' in err ? (err as any)?.response?.data?.message : undefined) || '编辑失败');
       throw err;
     } finally {
       setQuickEditSaving(false);

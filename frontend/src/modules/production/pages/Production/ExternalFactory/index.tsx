@@ -65,8 +65,8 @@ const ExternalFactory: React.FC = () => {
         setOrders(orderList);
         setTotal(res.data.total || 0);
       }
-    } catch (err: any) {
-      message.error(err?.message || '获取订单列表失败');
+    } catch (err: unknown) {
+      message.error(err instanceof Error ? err.message : '获取订单列表失败');
     } finally {
       setLoading(false);
     }

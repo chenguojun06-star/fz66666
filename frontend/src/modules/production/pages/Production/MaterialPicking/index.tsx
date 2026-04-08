@@ -42,9 +42,9 @@ const MaterialPickingList: React.FC = () => {
         setTotal(res.data.total);
         if (showSmartErrorNotice) setSmartError(null);
       }
-    } catch (err: any) {
-      reportSmartError('领料记录加载失败', err?.message || '网络异常或服务不可用，请稍后重试', 'MATERIAL_PICKING_LIST_LOAD_FAILED');
-      message.error(`获取领料记录失败: ${err?.message || '请检查网络连接'}`);
+    } catch (err: unknown) {
+      reportSmartError('领料记录加载失败', err instanceof Error ? err.message : '网络异常或服务不可用，请稍后重试', 'MATERIAL_PICKING_LIST_LOAD_FAILED');
+      message.error(`获取领料记录失败: ${err instanceof Error ? err.message : '请检查网络连接'}`);
     } finally {
       setLoading(false);
     }

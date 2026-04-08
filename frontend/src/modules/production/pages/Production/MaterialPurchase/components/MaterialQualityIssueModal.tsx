@@ -5,6 +5,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import type { MaterialPurchase } from '@/types/production';
 import { materialQualityIssueApi, type MaterialQualityIssue } from '@/services/production/materialQualityIssueApi';
 import { formatDateTime } from '@/utils/datetime';
+import type { ApiResult } from '@/utils/api';
 
 interface Props {
   open: boolean;
@@ -66,8 +67,8 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
     }
     setLoading(true);
     try {
-      const res = await materialQualityIssueApi.listByPurchaseId(purchaseId);
-      const data = (res as any)?.data ?? res;
+      const res = await materialQualityIssueApi.listByPurchaseId(purchaseId) as ApiResult<MaterialQualityIssue[]>;
+      const data = res?.data ?? res;
       setIssues(Array.isArray(data) ? data : []);
     } catch {
       message.error('加载品质异常记录失败');
@@ -110,8 +111,8 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
       createForm.setFieldValue('remark', '');
       await loadIssues();
       await onChanged?.();
-    } catch (error: any) {
-      message.error(error?.message || '品质异常登记失败');
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '品质异常登记失败');
     } finally {
       setSubmitting(false);
     }
@@ -141,8 +142,8 @@ const MaterialQualityIssueModal: React.FC<Props> = ({ open, purchase, onClose, o
       resolveForm.resetFields();
       await loadIssues();
       await onChanged?.();
-    } catch (error: any) {
-      message.error(error?.message || '处理失败');
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '处理失败');
     } finally {
       setResolveSubmitting(false);
     }

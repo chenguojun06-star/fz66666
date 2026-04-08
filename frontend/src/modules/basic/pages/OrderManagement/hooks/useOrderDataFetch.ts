@@ -42,9 +42,9 @@ export function useOrderDataFetch({ queryParams, visible, showSmartErrorNotice, 
         reportSmartError('款号列表加载失败', response.message || '服务返回异常，请稍后重试', 'ORDER_STYLE_LIST_FAILED');
         message.error(response.message || '获取款号列表失败');
       }
-    } catch (error: any) {
-      reportSmartError('款号列表加载失败', error?.message || '网络异常或服务不可用，请稍后重试', 'ORDER_STYLE_LIST_EXCEPTION');
-      message.error(error?.message || '获取款号列表失败');
+    } catch (error: unknown) {
+      reportSmartError('款号列表加载失败', error instanceof Error ? error.message : '网络异常或服务不可用，请稍后重试', 'ORDER_STYLE_LIST_EXCEPTION');
+      message.error(error instanceof Error ? error.message : '获取款号列表失败');
     } finally {
       setLoading(false);
     }

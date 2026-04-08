@@ -102,9 +102,10 @@ export function useOrderFlowData() {
         message.error(res.message || '获取订单全流程失败');
         setData(null);
       }
-    } catch (e: any) {
-      reportSmartError('订单全流程加载失败', e?.message || '网络异常或服务不可用，请稍后重试', 'ORDER_FLOW_LOAD_EXCEPTION');
-      message.error(e?.message || '获取订单全流程失败');
+    } catch (e: unknown) {
+      const errMsg = e instanceof Error ? e.message : '网络异常或服务不可用，请稍后重试';
+      reportSmartError('订单全流程加载失败', errMsg, 'ORDER_FLOW_LOAD_EXCEPTION');
+      message.error(e instanceof Error ? e.message : '获取订单全流程失败');
       setData(null);
     } finally {
       setLoading(false);

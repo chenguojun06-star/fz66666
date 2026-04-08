@@ -295,9 +295,10 @@ const PayrollOperatorSummary: React.FC = () => {
             const data = unwrapApiData<PayrollOperatorProcessSummaryRow[]>(res, '获取人员工序统计失败');
             setRows(Array.isArray(data) ? data : []);
             if (showSmartErrorNotice) setSmartError(null);
-        } catch (e: any) {
-            reportSmartError('工资结算数据加载失败', String(e?.message || '获取人员工序统计失败'), 'PAYROLL_OPERATOR_SUMMARY_LOAD_FAILED');
-            message.error(String(e?.message || '获取人员工序统计失败'));
+        } catch (e: unknown) {
+            const errMsg = e instanceof Error ? e.message : '获取人员工序统计失败';
+            reportSmartError('工资结算数据加载失败', errMsg, 'PAYROLL_OPERATOR_SUMMARY_LOAD_FAILED');
+            message.error(errMsg);
             setRows([]);
         } finally {
             setLoading(false);
@@ -425,9 +426,9 @@ const PayrollOperatorSummary: React.FC = () => {
                 return row;
             }));
             message.success(`已终审并推送 ${operatorName} 的工资到收付款中心`);
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('终审推送失败:', error);
-            message.error(error?.message || '终审失败，请稍后重试');
+            message.error(error instanceof Error ? error.message : '终审失败，请稍后重试');
         }
     };
 
@@ -481,9 +482,9 @@ const PayrollOperatorSummary: React.FC = () => {
             }));
             message.success(`已批量终审并推送 ${selectedRowKeys.length} 人到收付款中心`);
             setSelectedRowKeys([]);
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('批量终审失败:', error);
-            message.error(error?.message || '批量终审失败，请稍后重试');
+            message.error(error instanceof Error ? error.message : '批量终审失败，请稍后重试');
         }
     };
 

@@ -10,7 +10,7 @@ export function useOrganizationModals(
 ) {
   const { message } = App.useApp();
   const [form] = Form.useForm();
-  
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogMode, setDialogMode] = useState<DialogMode>('create');
   const [currentRecord, setCurrentRecord] = useState<OrganizationUnit | null>(null);
@@ -60,9 +60,9 @@ export function useOrganizationModals(
       message.success(dialogMode === 'edit' ? '部门更新成功' : '部门创建成功');
       closeDialog();
       await loadData();
-    } catch (error: any) {
-      if (error?.errorFields) return; // Form validation failed
-      message.error(error?.message || '保存失败');
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error !== null && 'errorFields' in error) return; // Form validation failed
+      message.error(error instanceof Error ? error.message : '保存失败');
     } finally {
       setSubmitLoading(false);
     }

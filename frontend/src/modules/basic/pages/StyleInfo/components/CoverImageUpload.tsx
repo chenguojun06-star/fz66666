@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { App } from 'antd';
 import { DeleteOutlined, StarFilled, StarOutlined } from '@ant-design/icons';
-import api from '@/utils/api';
+import api, { type ApiResult, isApiSuccess, getApiMessage } from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { setStyleCoverOverride } from '@/components/StyleAssets';
 
@@ -105,8 +105,8 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
     }
     if (!enabled) return;
     try {
-      const res = await api.delete(`/style/attachment/${attachmentId}`);
-      if ((res as any).code === 200 && (res as any).data === true) {
+      const res = await api.delete<ApiResult<boolean>>(`/style/attachment/${attachmentId}`);
+      if (isApiSuccess(res) && res?.data === true) {
         message.success('删除成功');
         const deletedUrl = String((displayImages.find((item) => String(item?.id) === String(attachmentId)) as any)?.fileUrl || '');
         if (deletedUrl === String(coverUrl || '')) {
@@ -116,10 +116,10 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
         }
         fetchImages();
       } else {
-        message.error((res as any).message || '删除失败');
+        message.error(getApiMessage(res, '删除失败'));
       }
-    } catch (error: any) {
-      message.error((error as any)?.message || '删除失败');
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '删除失败');
     }
   };
 
@@ -137,14 +137,14 @@ const CoverImageUpload: React.FC<CoverImageUploadProps> = ({
       return;
     }
     try {
-      const res = await api.post(`/style/attachment/${img.id}/set-cover`);
-      if ((res as any)?.code === 200 || res === true || (res as any)?.data === true) {
+      const res = await api.post<ApiResult<boolean>>(`/style/attachment/${img.id}/set-cover`);
+      if (isApiSuccess(res)) {
         setCurrentIndex(index);
         onCoverChange?.(String(img.fileUrl || ''));
         setStyleCoverOverride(styleId, undefined, String(img.fileUrl || ''));
         message.success('已设置为主图');
       } else {
-        message.error((res as any)?.message || '设置主图失败');
+        message.error(getApiMessage(res, '设置主图失败'));
       }
     } catch {
       message.error('设置主图失败，请重试');

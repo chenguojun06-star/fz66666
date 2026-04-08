@@ -251,9 +251,9 @@ export function useCuttingBundles({
           } else {
             message.error(res.message || '生成失败');
           }
-        } catch (err: any) {
-          const errMsg = err?.response?.data?.message || err?.message || '生成失败';
-          message.error(errMsg);
+        } catch (err: unknown) {
+          const respMsg = typeof err === 'object' && err !== null && 'response' in err ? String((err as Record<string, any>).response?.data?.message || '') : '';
+          message.error(respMsg || (err instanceof Error ? err.message : '生成失败'));
         } finally {
           setGenerateLoading(false);
         }

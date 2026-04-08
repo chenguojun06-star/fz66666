@@ -219,8 +219,8 @@ const UnitPricePanel: React.FC<UnitPricePanelProps> = ({ styleNo }) => {
       message.success('已删除');
       setPendingDeleteTemplate(null);
       fetchList({ page: 1 });
-    } catch (e: any) {
-      const msg = e instanceof Error ? e.message : (typeof e === 'object' && e && 'message' in e ? String((e as { message?: unknown }).message || '') : '');
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : (typeof e === 'object' && e !== null && 'message' in e ? String((e as { message?: unknown }).message || '') : '');
       message.error(msg || '删除失败');
     } finally {
       setDeleteTemplateLoading(false);
@@ -296,7 +296,7 @@ const UnitPricePanel: React.FC<UnitPricePanelProps> = ({ styleNo }) => {
       pageSizeRef.current = ps;
       setPage(p);
       setPageSize(ps);
-    } catch (e: any) {
+    } catch (e: unknown) {
       const errMsg = getErrorMessage(e, '获取模板列表失败');
       message.error(errMsg);
       if (showSmartErrorNotice && hasErrorFields(e)) {
@@ -376,7 +376,7 @@ const UnitPricePanel: React.FC<UnitPricePanelProps> = ({ styleNo }) => {
       setCreateOpen(false);
       createForm.resetFields();
       fetchList({ page: 1 });
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(getErrorMessage(e, '创建失败'));
     }
   }, [message, createForm, fetchList]);
@@ -391,7 +391,7 @@ const UnitPricePanel: React.FC<UnitPricePanelProps> = ({ styleNo }) => {
       setApplyOpen(false);
       applyForm.resetFields();
       fetchList({});
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(getErrorMessage(e, '应用失败'));
     }
   }, [message, applyForm, activeRow, fetchList]);

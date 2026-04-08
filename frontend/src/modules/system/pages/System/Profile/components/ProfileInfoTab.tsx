@@ -114,8 +114,8 @@ const ProfileInfoTab: React.FC = () => {
                 return;
             }
             message.error(res?.message || '加载个人信息失败');
-        } catch (e: any) {
-            message.error(e?.message || '加载个人信息失败');
+        } catch (e: unknown) {
+            message.error(e instanceof Error ? e.message : '加载个人信息失败');
         } finally {
             setLoading(false);
         }
@@ -136,8 +136,8 @@ const ProfileInfoTab: React.FC = () => {
         try {
             const profile = await tenantIntelligenceProfileService.getCurrent();
             syncSmartProfileForm(profile);
-        } catch (e: any) {
-            message.error(e?.message || '加载智能经营画像失败');
+        } catch (e: unknown) {
+            message.error(e instanceof Error ? e.message : '加载智能经营画像失败');
         } finally {
             setLoadingSmartProfile(false);
         }
@@ -229,9 +229,9 @@ const ProfileInfoTab: React.FC = () => {
                 return;
             }
             message.error(res?.message || '保存失败');
-        } catch (e: any) {
-            if (e?.errorFields?.length) return;
-            message.error(e?.message || '保存失败');
+        } catch (e: unknown) {
+            if (e && typeof e === 'object' && 'errorFields' in e) return;
+            message.error(e instanceof Error ? e.message : '保存失败');
         } finally {
             setSaving(false);
         }
@@ -255,9 +255,9 @@ const ProfileInfoTab: React.FC = () => {
                 return;
             }
             message.error(res?.message || '修改失败');
-        } catch (e: any) {
-            if (e?.errorFields?.length) return;
-            message.error(e?.message || '修改失败');
+        } catch (e: unknown) {
+            if (e && typeof e === 'object' && 'errorFields' in e) return;
+            message.error(e instanceof Error ? e.message : '修改失败');
         } finally {
             setSavingPwd(false);
         }
@@ -288,9 +288,9 @@ const ProfileInfoTab: React.FC = () => {
                 return;
             }
             message.error(res?.message || '提交失败');
-        } catch (e: any) {
-            if (e?.errorFields) return;
-            message.error(e?.message || '提交失败');
+        } catch (e: unknown) {
+            if (e && typeof e === 'object' && 'errorFields' in e) return;
+            message.error(e instanceof Error ? e.message : '提交失败');
         } finally {
             setSubmittingFeedback(false);
         }
@@ -306,8 +306,8 @@ const ProfileInfoTab: React.FC = () => {
             const saved = await tenantSmartFeatureService.save(nextFlags);
             setSmartFlags(replaceSmartFeatureFlags(saved));
             message.success(successText);
-        } catch (e: any) {
-            message.error(e?.message || '保存智能开关失败');
+        } catch (e: unknown) {
+            message.error(e instanceof Error ? e.message : '保存智能开关失败');
         } finally {
             setSavingSmartFlags(false);
         }
@@ -349,9 +349,9 @@ const ProfileInfoTab: React.FC = () => {
             });
             syncSmartProfileForm(profile);
             message.success('智能经营画像已保存');
-        } catch (e: any) {
-            if (e?.errorFields?.length) return;
-            message.error(e?.message || '保存智能经营画像失败');
+        } catch (e: unknown) {
+            if (e && typeof e === 'object' && 'errorFields' in e) return;
+            message.error(e instanceof Error ? e.message : '保存智能经营画像失败');
         } finally {
             setSavingSmartProfile(false);
         }
@@ -367,8 +367,8 @@ const ProfileInfoTab: React.FC = () => {
             const profile = await tenantIntelligenceProfileService.reset();
             syncSmartProfileForm(profile);
             message.success('已恢复为系统学习建议');
-        } catch (e: any) {
-            message.error(e?.message || '恢复学习建议失败');
+        } catch (e: unknown) {
+            message.error(e instanceof Error ? e.message : '恢复学习建议失败');
         } finally {
             setSavingSmartProfile(false);
         }

@@ -12,6 +12,7 @@ import { buildOrderColorSizeMatrixModel } from '@/components/common/OrderColorSi
 import { useNavigate } from 'react-router-dom';
 import RowActions, { type RowAction } from '@/components/common/RowActions';
 import { isOrderFrozenByStatus, isOrderFrozenByStatusOrStock, withQuery } from '@/utils/api';
+import type { ApiResult } from '@/utils/api';
 import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress';
 import '../../../../basic/pages/StyleInfo/styles.css';
 import './externalFactory.css';
@@ -28,7 +29,8 @@ async function loadOrderScans(orderId: string): Promise<Record<string, unknown>[
   const p = (async () => {
     try {
       const res = await productionScanApi.listByOrderId(orderId, { page: 1, pageSize: 500 });
-      const raw = (res as any)?.data?.records ?? (res as any)?.data ?? [];
+      const r = res as ApiResult<any>;
+      const raw = r?.data?.records ?? r?.data ?? [];
       const records: Record<string, unknown>[] = Array.isArray(raw)
         ? raw.filter((r: any) => String(r?.scanResult ?? '') === 'success' && Number(r?.quantity ?? 0) > 0)
         : [];

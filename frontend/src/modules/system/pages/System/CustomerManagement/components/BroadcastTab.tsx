@@ -25,8 +25,8 @@ const BroadcastTab: React.FC = () => {
       setLastResult({ sentCount, time: new Date().toLocaleString() });
       message.success(`已向 ${sentCount} 个租户发送通知`);
       form.resetFields();
-    } catch (e: any) {
-      message.error(e?.message || '发送失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '发送失败');
     } finally {
       setLoading(false);
     }

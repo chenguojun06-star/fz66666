@@ -37,8 +37,8 @@ export function useMemberActions(
       message.success('密码已重置');
       setResetPwdVisible(false);
       setResetPwdValue('');
-    } catch (e: any) {
-      message.error(e?.message || '重置失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '重置失败');
     } finally {
       setResetPwdLoading(false);
     }
@@ -69,8 +69,8 @@ export function useMemberActions(
       if (m.status === 'fulfilled' && m.value && typeof m.value === 'object') {
         setMembersMap(m.value);
       }
-    } catch (error: any) {
-      message.error(error?.message || '批量添加失败');
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '批量添加失败');
     } finally {
       setBatchAssignLoading(false);
     }
@@ -87,9 +87,9 @@ export function useMemberActions(
           <p>该成员将从当前组织节点移出，账号本身不受影响。</p>
           <div style={{ marginTop: 16 }}>
             <span style={{ color: 'red' }}>*</span> 移出原因：
-            <Input.TextArea 
-              rows={3} 
-              placeholder="请输入移出原因（必填）" 
+            <Input.TextArea
+              rows={3}
+              placeholder="请输入移出原因（必填）"
               onChange={e => { remarkValue = e.target.value; }}
             />
           </div>
@@ -107,8 +107,8 @@ export function useMemberActions(
           await organizationApi.removeMember(userId, remarkValue.trim());
           message.success('已移出');
           organizationApi.members().then((m: Record<string, User[]>) => setMembersMap(m && typeof m === 'object' ? m : {})).catch(() => {});
-        } catch (error: any) {
-          message.error(error?.message || '移出失败');
+        } catch (error: unknown) {
+          message.error(error instanceof Error ? error.message : '移出失败');
         }
       },
     });

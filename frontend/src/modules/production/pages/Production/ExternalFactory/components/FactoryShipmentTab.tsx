@@ -49,8 +49,8 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
         setShipments(res.data.records || []);
         setTotal(res.data.total || 0);
       }
-    } catch (err: any) {
-      message.error(err?.message || '获取发货记录失败');
+    } catch (err: unknown) {
+      message.error(err instanceof Error ? err.message : '获取发货记录失败');
     } finally {
       setLoading(false);
     }
@@ -125,9 +125,9 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
       message.success('发货成功');
       setShipModalOpen(false);
       fetchShipments();
-    } catch (err: any) {
-      if (err?.errorFields) return; // 表单校验失败
-      message.error(err?.message || '发货失败');
+    } catch (err: unknown) {
+      if (typeof err === 'object' && err !== null && 'errorFields' in err) return;
+      message.error(err instanceof Error ? err.message : '发货失败');
     } finally {
       setShipLoading(false);
     }
@@ -143,8 +143,8 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
           await factoryShipmentApi.receive(record.id!);
           message.success('收货成功');
           fetchShipments();
-        } catch (err: any) {
-          message.error(err?.message || '收货失败');
+        } catch (err: unknown) {
+          message.error(err instanceof Error ? err.message : '收货失败');
         }
       },
     });
@@ -156,8 +156,8 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
       await factoryShipmentApi.delete(record.id!);
       message.success('已删除');
       fetchShipments();
-    } catch (err: any) {
-      message.error(err?.message || '删除失败');
+    } catch (err: unknown) {
+      message.error(err instanceof Error ? err.message : '删除失败');
     }
   }, [message, fetchShipments]);
 

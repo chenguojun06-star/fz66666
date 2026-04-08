@@ -154,8 +154,8 @@ export default function useSampleStage({ selectedStage, message, onRefresh }: Us
       await api.post(`/production/pattern/${sampleSnapshot.id}/workflow-action`, {}, { params: { action: 'receive' } });
       message.success('样衣已领取');
       await reloadSampleStage();
-    } catch (error: any) {
-      message.error(error?.response?.data?.message || error?.message || '领取失败');
+    } catch (error: unknown) {
+      message.error(typeof error === 'object' && error !== null && 'response' in error ? (error as any).response?.data?.message : (error instanceof Error ? error.message : '领取失败'));
     } finally {
       setSampleActionLoading(false);
     }
@@ -176,8 +176,8 @@ export default function useSampleStage({ selectedStage, message, onRefresh }: Us
       message.success('样衣进度已更新');
       setProgressEditorOpen(false);
       await reloadSampleStage();
-    } catch (error: any) {
-      message.error(error?.response?.data?.message || error?.message || '进度更新失败');
+    } catch (error: unknown) {
+      message.error(typeof error === 'object' && error !== null && 'response' in error ? (error as any).response?.data?.message : (error instanceof Error ? error.message : '进度更新失败'));
     } finally {
       setSampleActionLoading(false);
     }

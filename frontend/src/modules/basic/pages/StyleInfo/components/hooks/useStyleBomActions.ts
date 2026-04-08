@@ -88,8 +88,8 @@ const useStyleBomActions = ({
         }
 
         message.error(errorMessage);
-      } catch (error: any) {
-        message.error(`生成失败：${error?.message || '请求失败'}`);
+      } catch (error: unknown) {
+        message.error(`生成失败：${error instanceof Error ? error.message : '请求失败'}`);
       } finally {
         setLoading(false);
       }
@@ -132,8 +132,8 @@ const useStyleBomActions = ({
         return;
       }
       message.error(String(result.message || '检查失败'));
-    } catch (error: any) {
-      message.error(`检查失败：${error?.message || '请求失败'}`);
+    } catch (error: unknown) {
+      message.error(`检查失败：${error instanceof Error ? error.message : '请求失败'}`);
     } finally {
       setCheckingStock(false);
     }
@@ -170,8 +170,8 @@ const useStyleBomActions = ({
             }],
           });
           message.success('申请领取成功，将在「面辅料进销存 → 待出库领料」中显示');
-        } catch (error: any) {
-          message.error(`申请失败：${error?.message || '请求错误'}`);
+        } catch (error: unknown) {
+          message.error(`申请失败：${error instanceof Error ? error.message : '请求错误'}`);
         }
       },
     });
@@ -213,8 +213,8 @@ const useStyleBomActions = ({
 
       const detail = `code:${debugValue(result?.code)}, data:${debugValue(result?.data)}`;
       message.error(`${result?.message || '删除失败'}（${detail}）`);
-    } catch (error: any) {
-      message.error(`删除失败（${error?.message || '请求失败'}）`);
+    } catch (error: unknown) {
+      message.error(`删除失败（${error instanceof Error ? error.message : '请求失败'}）`);
     }
   }, [debugValue, fetchBom, form, isTempId, locked, message, setData, sortBomRows, tableEditable]);
 

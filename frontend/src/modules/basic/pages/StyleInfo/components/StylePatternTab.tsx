@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { App, Button, Card, InputNumber, Modal, Select, Space, Spin, Typography, Collapse } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
-import api from '@/utils/api';
+import api, { type ApiResult } from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
 
 import type { StyleBom, StyleAttachment } from '@/types/style';
@@ -126,8 +126,8 @@ const StylePatternTab: React.FC<Props> = ({
     if (!styleId) return;
     setBomLoading(true);
     try {
-      const res = await api.get<StyleBom[]>(`/style/bom/list?styleId=${styleId}`);
-      const list = Array.isArray(res) ? res : (res as any)?.data ?? [];
+      const res = await api.get<ApiResult<StyleBom[]>>(`/style/bom/list?styleId=${styleId}`);
+      const list = Array.isArray(res?.data) ? res.data : [];
       const patternBoms = list.filter((b: StyleBom) => Boolean(String(b.materialName || b.materialCode || '').trim()));
       setBomList(patternBoms);
       // 从已保存的 sizeUsageMap 和 lossRate 初始化编辑状态

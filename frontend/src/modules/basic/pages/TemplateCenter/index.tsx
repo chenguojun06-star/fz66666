@@ -209,7 +209,7 @@ const TemplateCenter: React.FC = () => {
       setPage(p);
       setPageSize(ps);
       if (showSmartErrorNotice) setSmartError(null);
-    } catch (e: any) {
+    } catch (e: unknown) {
       reportSmartError('模板列表加载失败', getErrorMessage(e, '获取模板列表失败'), 'TEMPLATE_LIST_LOAD_EXCEPTION');
       message.error(getErrorMessage(e, '获取模板列表失败'));
     } finally {
@@ -254,8 +254,8 @@ const TemplateCenter: React.FC = () => {
       message.success('模板已生成/更新');
       setCreateOpen(false);
       fetchList({ page: 1 });
-    } catch (e: any) {
-      if (hasErrorFields(e)) return;
+    } catch (e: unknown) {
+      if (typeof e === 'object' && e !== null && 'errorFields' in e) return;
       message.error(getErrorMessage(e, '生成模板失败'));
     }
   };
@@ -288,8 +288,8 @@ const TemplateCenter: React.FC = () => {
       }
       message.success('已套用到目标款号');
       setApplyOpen(false);
-    } catch (e: any) {
-      if (hasErrorFields(e)) return;
+    } catch (e: unknown) {
+      if (typeof e === 'object' && e !== null && 'errorFields' in e) return;
       message.error(getErrorMessage(e, '套用失败'));
     }
   };
@@ -597,10 +597,10 @@ const TemplateCenter: React.FC = () => {
       message.success('已删除');
       setPendingDeleteTemplate(null);
       fetchList({ page: 1 });
-    } catch (e: any) {
+    } catch (e: unknown) {
       const msg = e instanceof Error
         ? e.message
-        : (typeof e === 'object' && e && 'message' in e ? String((e as { message?: unknown }).message || '') : '');
+        : (typeof e === 'object' && e !== null && 'message' in e ? String((e as { message?: unknown }).message || '') : '');
       message.error(msg || '删除失败');
     } finally {
       setDeleteTemplateLoading(false);

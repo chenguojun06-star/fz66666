@@ -121,9 +121,10 @@ const MaterialPurchaseDetail: React.FC = () => {
         setPurchaseList(purchaseResult?.data?.records || purchaseResult?.records || []);
       }
       if (showSmartErrorNotice) setSmartError(null);
-    } catch (error: any) {
-      reportSmartError('物料采购明细加载失败', error?.message || '网络异常或服务不可用，请稍后重试', 'MATERIAL_PURCHASE_DETAIL_LOAD_FAILED');
-      message.error(error?.message || '加载数据失败');
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : '网络异常或服务不可用，请稍后重试';
+      reportSmartError('物料采购明细加载失败', errMsg, 'MATERIAL_PURCHASE_DETAIL_LOAD_FAILED');
+      message.error(errMsg);
     } finally {
       setLoading(false);
     }
@@ -179,13 +180,14 @@ const MaterialPurchaseDetail: React.FC = () => {
 
       // 重新加载数据
       await loadData();
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error !== null && 'errorFields' in error) {
         // 表单验证错误
         return;
       }
-      reportSmartError('确认回料完成失败', error?.message || '网络异常或服务不可用，请稍后重试', 'MATERIAL_PURCHASE_CONFIRM_FAILED');
-      message.error(error.message || '确认失败');
+      const errMsg = error instanceof Error ? error.message : '网络异常或服务不可用，请稍后重试';
+      reportSmartError('确认回料完成失败', errMsg, 'MATERIAL_PURCHASE_CONFIRM_FAILED');
+      message.error(errMsg);
     } finally {
       setConfirmLoading(false);
     }

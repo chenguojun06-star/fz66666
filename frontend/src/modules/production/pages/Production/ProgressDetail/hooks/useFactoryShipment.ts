@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { Form } from 'antd';
 import { factoryShipmentApi } from '@/services/production/factoryShipmentApi';
 import type { ShippableInfo } from '@/services/production/factoryShipmentApi';
-import { isApiSuccess } from '@/utils/api';
+import { isApiSuccess, getApiMessage } from '@/utils/api';
 import type { ProductionOrder } from '@/types/production';
 
 export function useFactoryShipment({ message }: {
@@ -42,7 +42,7 @@ export function useFactoryShipment({ message }: {
         message.success('发货成功');
         setShipModalOpen(false);
       } else {
-        message.error((res as any)?.message || '发货失败');
+        message.error(getApiMessage(res, '发货失败'));
       }
     } catch { /* validation error */ } finally { setShipLoading(false); }
   }, [shipModalOrder, shipForm, message]);

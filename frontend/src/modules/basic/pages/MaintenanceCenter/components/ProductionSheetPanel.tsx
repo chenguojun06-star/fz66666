@@ -154,7 +154,7 @@ const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo }) 
       const response = await api.get<{ code: number; message: string; data: { records: any[]; total: number } }>('/style/info/list', { params: queryParams });
       if (response.code === 200) { setStyles(response.data.records || []); setTotal(response.data.total || 0); }
       else { message.error(response.message || '获取列表失败'); }
-    } catch (e: any) { message.error(e?.message || '获取列表失败'); }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '获取列表失败'); }
     finally { setLoading(false); }
   };
 
@@ -181,7 +181,7 @@ const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo }) 
       } else {
         message.error(res.message || '保存后状态未锁定，请刷新后重试');
       }
-    } catch (e: any) { message.error(e?.message || '保存失败'); }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '保存失败'); }
     finally { setEditSaving(false); }
   };
 
@@ -194,7 +194,7 @@ const ProductionSheetPanel: React.FC<ProductionSheetPanelProps> = ({ styleNo }) 
       const res = await api.post<{ code: number; message: string }>(`/style/info/${targetRecord.id}/production-requirements/rollback`, { reason: values.reason });
       if (res.code === 200) { message.success('已退回制单信息'); setReturnDescVisible(false); returnDescForm.resetFields(); fetchStyles(); }
       else { message.error(res.message || '退回失败'); }
-    } catch (e: any) { message.error(e?.message || '退回失败'); }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '退回失败'); }
     finally { setReturnDescSaving(false); }
   };
 

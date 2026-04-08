@@ -116,8 +116,8 @@ export default function useStagePanel({
                   await api.post(`/production/pattern/${sampleHook.sampleSnapshot!.id}/workflow-action`, {}, { params: { action: 'complete' } });
                   message.success('样衣生产已完成');
                   await sampleHook.reloadSampleStage();
-                } catch (error: any) {
-                  message.error(error?.response?.data?.message || error?.message || '完成失败');
+                } catch (error: unknown) {
+                  message.error(typeof error === 'object' && error !== null && 'response' in error ? (error as any).response?.data?.message : (error instanceof Error ? error.message : '完成失败'));
                 }
               },
             });

@@ -131,9 +131,10 @@ const ExpenseReimbursementPage: React.FC = () => {
         reportSmartError('费用报销列表加载失败', errMessage, 'EXPENSE_LIST_LOAD_FAILED');
         message.error(errMessage);
       }
-    } catch (err: any) {
-      reportSmartError('费用报销列表加载失败', err?.message || '网络异常或服务不可用，请稍后重试', 'EXPENSE_LIST_LOAD_EXCEPTION');
-      message.error(`加载报销列表失败: ${err?.message || '请检查网络连接'}`);
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : '网络异常或服务不可用，请稍后重试';
+      reportSmartError('费用报销列表加载失败', errMsg, 'EXPENSE_LIST_LOAD_EXCEPTION');
+      message.error(`加载报销列表失败: ${err instanceof Error ? err.message : '请检查网络连接'}`);
     } finally {
       setLoading(false);
     }
@@ -208,9 +209,9 @@ const ExpenseReimbursementPage: React.FC = () => {
         setUploadedDocs(prev => prev.filter(doc => doc.tempId !== tempId));
         message.error(res.message || '识别失败，请重新上传');
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       setUploadedDocs(prev => prev.filter(doc => doc.tempId !== tempId));
-      message.error(`上传失败：${e?.message || '未知错误'}`);
+      message.error(`上传失败：${e instanceof Error ? e.message : '未知错误'}`);
     }
     return false;
   };
@@ -259,12 +260,13 @@ const ExpenseReimbursementPage: React.FC = () => {
         reportSmartError('报销单提交失败', res.message || '请检查表单后重试', 'EXPENSE_FORM_SUBMIT_FAILED');
         message.error(res.message || '操作失败');
       }
-    } catch (err: any) {
-      if (err?.errorFields?.length) {
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'errorFields' in err) {
         return;
       }
-      reportSmartError('报销单提交失败', err?.message || '网络异常或服务不可用，请稍后重试', 'EXPENSE_FORM_SUBMIT_EXCEPTION');
-      message.error(err?.message || '报销单提交失败');
+      const errMsg = err instanceof Error ? err.message : '网络异常或服务不可用，请稍后重试';
+      reportSmartError('报销单提交失败', errMsg, 'EXPENSE_FORM_SUBMIT_EXCEPTION');
+      message.error(err instanceof Error ? err.message : '报销单提交失败');
     } finally {
       setSubmitting(false);
     }
@@ -281,9 +283,10 @@ const ExpenseReimbursementPage: React.FC = () => {
         reportSmartError('报销单删除失败', res.message || '请稍后重试', 'EXPENSE_DELETE_FAILED');
         message.error(res.message || '删除失败');
       }
-    } catch (err: any) {
-      reportSmartError('报销单删除失败', err?.message || '网络异常或服务不可用，请稍后重试', 'EXPENSE_DELETE_EXCEPTION');
-      message.error(`删除报销单失败: ${err?.message || '未知错误'}`);
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : '网络异常或服务不可用，请稍后重试';
+      reportSmartError('报销单删除失败', errMsg, 'EXPENSE_DELETE_EXCEPTION');
+      message.error(`删除报销单失败: ${err instanceof Error ? err.message : '未知错误'}`);
     }
   };
 
@@ -305,9 +308,10 @@ const ExpenseReimbursementPage: React.FC = () => {
         reportSmartError('报销单审批失败', res.message || '请稍后重试', 'EXPENSE_APPROVE_FAILED');
         message.error(res.message || '操作失败');
       }
-    } catch (err: any) {
-      reportSmartError('报销单审批失败', err?.message || '网络异常或服务不可用，请稍后重试', 'EXPENSE_APPROVE_EXCEPTION');
-      message.error(`审批失败: ${err?.message || '未知错误'}`);
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : '网络异常或服务不可用，请稍后重试';
+      reportSmartError('报销单审批失败', errMsg, 'EXPENSE_APPROVE_EXCEPTION');
+      message.error(`审批失败: ${err instanceof Error ? err.message : '未知错误'}`);
     }
   };
 
@@ -339,9 +343,10 @@ const ExpenseReimbursementPage: React.FC = () => {
             reportSmartError('报销单付款确认失败', res.message || '请稍后重试', 'EXPENSE_PAY_CONFIRM_FAILED');
             message.error(res.message || '操作失败');
           }
-        } catch (err: any) {
-          reportSmartError('报销单付款确认失败', err?.message || '网络异常或服务不可用，请稍后重试', 'EXPENSE_PAY_CONFIRM_EXCEPTION');
-          message.error(err?.message || '付款确认失败');
+        } catch (err: unknown) {
+          const errMsg = err instanceof Error ? err.message : '网络异常或服务不可用，请稍后重试';
+          reportSmartError('报销单付款确认失败', errMsg, 'EXPENSE_PAY_CONFIRM_EXCEPTION');
+          message.error(err instanceof Error ? err.message : '付款确认失败');
         }
       },
     });

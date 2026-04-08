@@ -394,7 +394,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
       setData(response.data?.records || []);
       setTotal(response.data?.total || 0);
       if (showSmartErrorNotice) setSmartError(null);
-    } catch (error: any) {
+    } catch (error: unknown) {
       const errMsg = error instanceof Error ? error.message : '加载数据失败';
       reportSmartError('成品结算列表加载失败', errMsg, 'FIN_SETTLEMENT_LIST_LOAD_FAILED');
       message.error(errMsg);
@@ -486,7 +486,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
       message.success('备注保存成功');
       setRemarkModalVisible(false);
       loadData();
-    } catch (error: any) {
+    } catch (error: unknown) {
       const errMsg = error instanceof Error ? error.message : '保存备注失败';
       reportSmartError('结算备注保存失败', errMsg, 'FIN_SETTLEMENT_REMARK_SAVE_FAILED');
       message.error(errMsg);
@@ -512,7 +512,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
         setOrderLogs([]);
       }
       setLogModalVisible(true);
-    } catch (error: any) {
+    } catch (error: unknown) {
       const errMsg = error instanceof Error ? error.message : '获取日志失败';
       reportSmartError('结算日志加载失败', errMsg, 'FIN_SETTLEMENT_LOG_LOAD_FAILED');
       message.error(errMsg);
@@ -532,7 +532,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
       downloadFile(`/api/finance/finished-settlement/export?${queryString}`);
 
       message.success({ content: '导出成功', key: 'export', duration: 2 });
-    } catch (error: any) {
+    } catch (error: unknown) {
       const errMsg = error instanceof Error ? error.message : '导出失败';
       message.error({ content: errMsg, key: 'export', duration: 2 });
     }

@@ -7,7 +7,7 @@
  *
  * 注意：services/production/productionApi.ts 已保留 re-export，旧导入路径仍兼容。
  */
-import api from '../../utils/api';
+import api, { type ApiResult } from '../../utils/api';
 import { downloadFile } from '../../utils/fileUrl';
 import type {
   ActionCenterResponse,
@@ -559,9 +559,8 @@ export const intelligenceApi = {
 
   /** 超级顾问：主对话 */
   hyperAdvisorAsk: async (sessionId: string, userMessage: string): Promise<HyperAdvisorResponse> => {
-    const resp = await api.post('/hyper-advisor/ask', { sessionId, userMessage });
-    const d = (resp as any)?.data ?? resp;
-    return (d?.data ?? d) as HyperAdvisorResponse;
+    const resp = await api.post<ApiResult<HyperAdvisorResponse>>('/hyper-advisor/ask', { sessionId, userMessage });
+    return (resp?.data ?? resp) as HyperAdvisorResponse;
   },
 
   /** 超级顾问：评分反馈 */
@@ -573,10 +572,8 @@ export const intelligenceApi = {
 
   /** 超级顾问：加载历史聊天记录（按 createTime 升序） */
   hyperAdvisorHistory: async (sessionId: string): Promise<ChatHistoryMessage[]> => {
-    const resp = await api.get(`/hyper-advisor/history/${sessionId}`);
-    const d = (resp as any)?.data ?? resp;
-    const list = Array.isArray(d?.data) ? d.data : Array.isArray(d) ? d : [];
-    return list as ChatHistoryMessage[];
+    const resp = await api.get<ApiResult<ChatHistoryMessage[]>>(`/hyper-advisor/history/${sessionId}`);
+    return Array.isArray(resp?.data) ? resp.data : [];
   },
 };
 

@@ -158,10 +158,9 @@ export function usePurchaseActions({
       fetchMaterialPurchaseList();
       const no = String(currentPurchase?.orderNo || '').trim();
       if (visible && dialogMode === 'view' && no) loadDetailByOrderNo(no);
-    } catch (e: any) {
-      const formError = e as { errorFields?: Array<{ errors?: string[] }> };
-      if (formError?.errorFields?.length) return;
-      message.error((e as Error)?.message || '回料确认失败');
+    } catch (e: unknown) {
+      if (typeof e === 'object' && e !== null && 'errorFields' in e) return;
+      message.error(e instanceof Error ? e.message : '回料确认失败');
     } finally { setReturnConfirmSubmitting(false); }
   };
 
@@ -184,10 +183,9 @@ export function usePurchaseActions({
       fetchMaterialPurchaseList();
       const no = String(currentPurchase?.orderNo || '').trim();
       if (visible && dialogMode === 'view' && no) loadDetailByOrderNo(no);
-    } catch (e: any) {
-      const formError = e as { errorFields?: Array<{ errors?: string[] }> };
-      if (formError?.errorFields?.length) return;
-      message.error((e as Error)?.message || '退回失败');
+    } catch (e: unknown) {
+      if (typeof e === 'object' && e !== null && 'errorFields' in e) return;
+      message.error(e instanceof Error ? e.message : '退回失败');
     } finally { setReturnResetSubmitting(false); }
   };
 
@@ -202,8 +200,10 @@ export function usePurchaseActions({
       messageApi.success('保存成功');
       quickEditModal.close();
       fetchMaterialPurchaseList();
-    } catch (error: any) {
-      messageApi.error(error?.response?.data?.message || '保存失败');
+    } catch (error: unknown) {
+      const respMsg = typeof error === 'object' && error !== null && 'response' in error
+        ? String((error as any).response?.data?.message || '') : '';
+      messageApi.error(respMsg || (error instanceof Error ? error.message : '保存失败'));
       throw error;
     } finally { setQuickEditSaving(false); }
   };
@@ -254,7 +254,7 @@ export function usePurchaseActions({
                 const no = String(currentPurchase?.orderNo || record?.orderNo || '').trim();
                 if (no) loadDetailByOrderNo(no);
               } else { message.error(batchRes.message || '合并领取失败'); }
-            } catch (err: any) { message.error((err as Error)?.message || '合并领取失败'); }
+            } catch (err: unknown) { message.error(err instanceof Error ? err.message : '合并领取失败'); }
             finally { setSubmitLoading(false); }
           },
           onCancel: async () => {
@@ -266,7 +266,7 @@ export function usePurchaseActions({
                 const no = String(currentPurchase?.orderNo || record?.orderNo || '').trim();
                 if (no) loadDetailByOrderNo(no);
               } else { message.error(res.message || '领取失败'); }
-            } catch (err: any) { message.error((err as Error)?.message || '领取失败'); }
+            } catch (err: unknown) { message.error(err instanceof Error ? err.message : '领取失败'); }
           },
         });
         return;
@@ -280,7 +280,7 @@ export function usePurchaseActions({
         return;
       }
       message.error(res.message || '领取失败');
-    } catch (e: any) { message.error((e as Error)?.message || '领取失败'); }
+    } catch (e: unknown) { message.error(e instanceof Error ? e.message : '领取失败'); }
   };
 
   const confirmReturnPurchaseTask = async (record: MaterialPurchaseType) => {
@@ -312,7 +312,7 @@ export function usePurchaseActions({
           if (styleNo) loadDetailByStyleNo(styleNo, purchaseNo);
           fetchMaterialPurchaseList();
         } else { message.error(res.message || '批量领取失败'); }
-      } catch (e: any) { message.error((e as Error)?.message || '批量领取失败'); }
+      } catch (e: unknown) { message.error(e instanceof Error ? e.message : '批量领取失败'); }
       finally { setSubmitLoading(false); }
       return;
     }
@@ -400,8 +400,8 @@ export function usePurchaseActions({
       a.remove();
       URL.revokeObjectURL(url);
       message.success('导出成功');
-    } catch (e: any) {
-      message.error((e as Error)?.message || '导出失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '导出失败');
     }
   };
 
@@ -421,8 +421,8 @@ export function usePurchaseActions({
       const styleNo = String(targets[0]?.styleNo || '').trim();
       if (orderNo && orderNo !== '-') { await loadDetailByOrderNo(orderNo); }
       else if (styleNo) { await loadDetailByStyleNo(styleNo); }
-    } catch (e: any) {
-      message.error(e?.message || '确认完成失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '确认完成失败');
     } finally {
       setConfirmCompleteSubmitting(false);
     }

@@ -80,9 +80,9 @@ const FeedbackTab: React.FC = () => {
       replyForm.resetFields();
       fetchData();
       fetchStats();
-    } catch (e: any) {
-      if (e?.errorFields) return;
-      message.error(e?.message || '回复失败');
+    } catch (e: unknown) {
+      if (e && typeof e === 'object' && 'errorFields' in e) return;
+      message.error(e instanceof Error ? e.message : '回复失败');
     } finally { setReplying(false); }
   };
 

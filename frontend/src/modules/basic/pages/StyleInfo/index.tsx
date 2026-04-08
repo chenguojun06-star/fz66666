@@ -4,7 +4,7 @@ import { App, Card, Checkbox, Form, Input, Modal, Tabs } from 'antd';
 import dayjs from 'dayjs';
 import Layout from '@/components/Layout';
 import PageLayout from '@/components/common/PageLayout';
-import api from '@/utils/api';
+import api, { type ApiResult, isApiSuccess, getApiMessage } from '@/utils/api';
 import { useStyleDetail } from './hooks/useStyleDetail';
 import { useStyleFormActions } from './hooks/useStyleFormActions';
 import StyleBasicInfoForm from './components/StyleBasicInfoForm';
@@ -220,10 +220,10 @@ const StyleInfoDetailPage: React.FC = () => {
     let mounted = true;
     void (async () => {
       try {
-        const res = await api.get('/style/attachment/list', {
+        const res = await api.get<ApiResult<any[]>>('/style/attachment/list', {
           params: resolvedStyleId ? { styleId: resolvedStyleId } : { styleNo: resolvedStyleNo },
         });
-        const list = Array.isArray((res as any)?.data) ? (res as any).data : [];
+        const list = Array.isArray(res?.data) ? res.data : [];
         const nextMap: Record<string, string> = {};
         list.forEach((item: any) => {
           const color = parseColorImageBizType(item?.bizType);
@@ -293,7 +293,7 @@ const StyleInfoDetailPage: React.FC = () => {
       const oldRes = await api.get('/style/attachment/list', {
         params: resolvedStyleId ? { styleId: resolvedStyleId } : { styleNo: resolvedStyleNo },
       });
-      const oldList = (Array.isArray((oldRes as any)?.data) ? (oldRes as any).data : []).filter((item: any) =>
+      const oldList = (Array.isArray(oldRes?.data) ? oldRes.data : []).filter((item: any) =>
         parseColorImageBizType(item?.bizType) === normalizedColor
       );
       await Promise.all(oldList.map((item: any) => api.delete(`/style/attachment/${item.id}`)));
@@ -306,11 +306,11 @@ const StyleInfoDetailPage: React.FC = () => {
         formData.append('styleNo', resolvedStyleNo);
       }
       formData.append('bizType', bizType);
-      const res = await api.post('/style/attachment/upload', formData, { timeout: 60000 } as any);
-      if ((res as any).code !== 200) {
-        throw new Error((res as any).message || '上传失败');
+      const res = await api.post<ApiResult<{ fileUrl?: string }>>('/style/attachment/upload', formData, { timeout: 60000 } as any);
+      if (!isApiSuccess(res)) {
+        throw new Error(getApiMessage(res, '上传失败'));
       }
-      const uploadedUrl = String((res as any)?.data?.fileUrl || '');
+      const uploadedUrl = String(res?.data?.fileUrl || '');
       if (uploadedUrl) {
         setColorImageMap((prev) => ({ ...prev, [color]: uploadedUrl }));
         handleCoverChange(uploadedUrl);
@@ -332,10 +332,10 @@ const StyleInfoDetailPage: React.FC = () => {
     const resolvedStyleNo = String(currentStyle?.styleNo || '').trim();
     if (resolvedStyleId || resolvedStyleNo) {
       const normalizedColor = String(color || '').trim();
-      const res = await api.get('/style/attachment/list', {
+      const res = await api.get<ApiResult<any[]>>('/style/attachment/list', {
         params: resolvedStyleId ? { styleId: resolvedStyleId } : { styleNo: resolvedStyleNo },
       });
-      const list = (Array.isArray((res as any)?.data) ? (res as any).data : []).filter((item: any) =>
+      const list = (Array.isArray(res?.data) ? res.data : []).filter((item: any) =>
         parseColorImageBizType(item?.bizType) === normalizedColor
       );
       await Promise.all(list.map((item: any) => api.delete(`/style/attachment/${item.id}`)));
@@ -474,9 +474,10 @@ const StyleInfoDetailPage: React.FC = () => {
       // 刷新详情
       fetchDetail(String(currentStyle.id));
       if (showSmartErrorNotice) setSmartError(null);
-    } catch (e: any) {
-      reportSmartError('生产制单保存失败', e?.response?.data?.message || e?.message || '服务返回异常，请稍后重试', 'STYLE_PRODUCTION_SAVE_FAILED');
-      message.error(e?.response?.data?.message || e?.message || '保存失败');
+    } catch (e: unknown) {
+      const errMsg = e instanceof Error ? e.message : '服务返回异常，请稍后重试';
+      reportSmartError('生产制单保存失败', errMsg, 'STYLE_PRODUCTION_SAVE_FAILED');
+      message.error(errMsg);
     } finally {
       setProductionSaving(false);
     }
@@ -511,9 +512,10 @@ const StyleInfoDetailPage: React.FC = () => {
       // 刷新详情
       fetchDetail(String(currentStyle.id));
       if (showSmartErrorNotice) setSmartError(null);
-    } catch (e: any) {
-      reportSmartError('生产制单回退失败', e?.response?.data?.message || e?.message || '服务返回异常，请稍后重试', 'STYLE_PRODUCTION_ROLLBACK_FAILED');
-      message.error(e?.response?.data?.message || e?.message || '回退失败');
+    } catch (e: unknown) {
+      const errMsg = e instanceof Error ? e.message : '服务返回异常，请稍后重试';
+      reportSmartError('生产制单回退失败', errMsg, 'STYLE_PRODUCTION_ROLLBACK_FAILED');
+      message.error(errMsg);
     } finally {
       setProductionRollbackSaving(false);
     }

@@ -60,8 +60,8 @@ export default function AiExecutionPanel() {
       const response = await intelligenceApi.getPendingCommands();
       setPendingCommands(response?.pending ?? []);
       setError(null);
-    } catch (err: any) {
-      setError(err.message || '获取待审批命令失败');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : '获取待审批命令失败');
       console.error('Failed to fetch pending commands:', err);
     } finally {
       setLoading(false);
@@ -104,10 +104,10 @@ export default function AiExecutionPanel() {
       // 刷新待审批列表
       await fetchPendingCommands();
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       setExecuteResult({
         success: false,
-        message: err.message || '批准并执行失败',
+        message: err instanceof Error ? err.message : '批准并执行失败',
         error: err
       });
       setShowResult(true);
@@ -145,10 +145,10 @@ export default function AiExecutionPanel() {
           setShowDetail(false);
           await fetchPendingCommands();
 
-        } catch (err: any) {
+        } catch (err: unknown) {
           Modal.error({
             title: '拒绝失败',
-            content: err.message || '拒绝命令出错'
+            content: err instanceof Error ? err.message : '拒绝命令出错'
           });
         } finally {
           setExecuting(false);

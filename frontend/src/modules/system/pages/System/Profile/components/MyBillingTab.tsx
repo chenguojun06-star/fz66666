@@ -136,9 +136,9 @@ const MyBillingTab: React.FC = () => {
       message.success('发票申请已提交');
       setInvoiceModalVisible(false);
       fetchData();
-    } catch (err: any) {
-      if (err?.errorFields) return;
-      message.error(err?.message || '申请失败');
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'errorFields' in err) return;
+      message.error(err instanceof Error ? err.message : '申请失败');
     }
   };
 
@@ -170,9 +170,9 @@ const MyBillingTab: React.FC = () => {
       message.success('开票信息已保存');
       setInvoiceInfoModalVisible(false);
       fetchData();
-    } catch (err: any) {
-      if (err?.errorFields) return;
-      message.error(err?.message || '保存失败');
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'errorFields' in err) return;
+      message.error(err instanceof Error ? err.message : '保存失败');
     }
   };
 

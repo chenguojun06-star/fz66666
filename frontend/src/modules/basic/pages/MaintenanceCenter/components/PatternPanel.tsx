@@ -410,8 +410,8 @@ const PatternPanel: React.FC<PatternPanelProps> = ({ styleNo }) => {
       } else {
         message.error(response.message || '获取款号列表失败');
       }
-    } catch (error: any) {
-      message.error(error?.message || '获取款号列表失败');
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '获取款号列表失败');
     } finally {
       setLoading(false);
     }

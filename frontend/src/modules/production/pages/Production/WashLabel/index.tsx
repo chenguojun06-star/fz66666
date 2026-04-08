@@ -15,6 +15,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import { productionOrderApi } from '@/services/production/productionApi';
 import api, { parseProductionOrderLines, sortSizeNames } from '@/utils/api';
+import type { ApiResult } from '@/utils/api';
 import type { ProductionOrder } from '@/types/production';
 import type { ColumnsType } from 'antd/es/table';
 import WashLabelBatchPrintModal, { WashLabelItem } from './components/WashLabelBatchPrintModal';
@@ -117,8 +118,8 @@ const WashLabelPage: React.FC = () => {
     await Promise.allSettled(
       uncached.map(async (styleId) => {
         try {
-          const res = await api.get<any>(`/style/info/${styleId}`);
-          const d = (res as any)?.data ?? res ?? {};
+          const res = await api.get<ApiResult<Record<string, any>>>(`/style/info/${styleId}`);
+          const d = res?.data ?? res ?? {};
           styleCache.current[styleId] = {
             fabricComposition: d.fabricComposition,
             fabricCompositionParts: d.fabricCompositionParts,
@@ -146,8 +147,9 @@ const WashLabelPage: React.FC = () => {
         styleNo: searchStyleNo.trim() || undefined,
         status: statusFilter || undefined,
       } as any);
-      const records = (res as any)?.data?.records ?? (res as any)?.records ?? [];
-      const tot = (res as any)?.data?.total ?? (res as any)?.total ?? records.length;
+      const raw = res as ApiResult<any>;
+      const records = raw?.data?.records ?? (raw as any)?.records ?? [];
+      const tot = raw?.data?.total ?? (raw as any)?.total ?? records.length;
       setOrders(records as ProductionOrder[]);
       setTotal(tot);
       void fetchStyleInfoForOrders(records as ProductionOrder[]);

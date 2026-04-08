@@ -96,8 +96,8 @@ export const useCloseOrder = ({
         const detail = await fetchOrderDetail(pendingCloseOrder.orderId);
         if (detail) setActiveOrder(detail);
       }
-    } catch (e: any) {
-      message.error(e?.message || '关单失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '关单失败');
     } finally {
       setCloseOrderLoading(false);
     }

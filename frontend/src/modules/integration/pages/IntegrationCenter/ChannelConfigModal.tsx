@@ -110,8 +110,8 @@ const ChannelConfigModal: React.FC<Props> = ({ open, channelCode, onClose, onSav
       } else {
         message.error(res.message || '保存失败');
       }
-    } catch (err: any) {
-      if (err?.errorFields) return; // 表单校验失败
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'errorFields' in err) return;
       message.error('保存失败');
     } finally {
       setSaving(false);

@@ -7,6 +7,7 @@ import { organizationApi } from '@/services/system/organizationApi';
 import { factoryApi } from '@/services/system/factoryApi';
 import tenantService from '@/services/tenantService';
 import type { Factory } from '@/services/system/factoryApi';
+import type { ApiResult } from '@/utils/api';
 import type { OrganizationUnit, User } from '@/types/system';
 import { useAuth } from '@/utils/AuthContext';
 import {
@@ -109,8 +110,8 @@ const OrganizationTreePage: React.FC = () => {
   // 打开模板弹窗时加载工厂列表
   useEffect(() => {
     if (tplModal.open) {
-      factoryApi.list({ pageSize: 500, status: 'active' }).then((res) => {
-        setFactories((res as any)?.data?.records ?? []);
+      factoryApi.list({ pageSize: 500, status: 'active' }).then((res: ApiResult<{ records: Factory[] }>) => {
+        setFactories(res?.data?.records ?? []);
       }).catch(() => setFactories([]));
     }
   }, [tplModal.open]);
@@ -146,8 +147,8 @@ const OrganizationTreePage: React.FC = () => {
       message.success('模板初始化成功！组织架构已创建');
       setTplModal({ open: false, type: null, rootName: '' });
       loadData();
-    } catch (e: any) {
-      message.error(e?.message || '创建失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '创建失败');
     } finally {
       setTplLoading(false);
     }
@@ -193,9 +194,9 @@ const OrganizationTreePage: React.FC = () => {
           await organizationApi.delete(String(record.id), remark);
           message.success('删除成功');
           await loadData();
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error('Failed to delete organization unit:', error);
-          const errorMsg = error?.response?.data?.message || error?.message || '删除失败，请检查该部门是否还有子节点或成员';
+          const errorMsg = error instanceof Error ? error.message : '删除失败，请检查该部门是否还有子节点或成员';
           message.error(errorMsg);
         }
       },
@@ -206,8 +207,8 @@ const OrganizationTreePage: React.FC = () => {
   const handleShowQRCode = useCallback(async (node: OrganizationUnit) => {
     let tenantCode = '';
     try {
-      const res = await (tenantService as any).myTenant();
-      tenantCode = (res as any)?.data?.tenantCode || (res as any)?.tenantCode || '';
+      const res: ApiResult<{ tenantCode?: string }> = await (tenantService as any).myTenant();
+      tenantCode = res?.data?.tenantCode || res?.tenantCode || '';
     } catch { /* 静默，二维码依然可以展示 */ }
     setQrModal({ open: true, unit: node, tenantCode });
   }, []);

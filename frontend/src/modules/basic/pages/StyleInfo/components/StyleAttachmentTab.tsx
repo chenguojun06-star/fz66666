@@ -113,8 +113,8 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, styleNo, bizType, upload
         const detail = `code:${debugValue(result?.code)}, data:${debugValue(result?.data)}`;
         message.error(`${result?.message || '删除失败'}（${detail}）`);
       }
-    } catch (error: any) {
-      message.error(`删除失败（${error?.message || '请求失败'}）`);
+    } catch (error: unknown) {
+      message.error(`删除失败（${error instanceof Error ? error.message : '请求失败'}）`);
     }
   };
 
@@ -150,8 +150,8 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, styleNo, bizType, upload
       } else {
         message.error(result.message || '上传失败');
       }
-    } catch (error: any) {
-      message.error(error?.message || '上传失败');
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '上传失败');
     }
     return Upload.LIST_IGNORE;
   };

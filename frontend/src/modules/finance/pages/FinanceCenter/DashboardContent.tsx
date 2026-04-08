@@ -3,7 +3,7 @@ import { Card, Row, Col, DatePicker, Tooltip, Spin, Space, Select } from 'antd';
 import { InfoCircleOutlined, CaretUpOutlined, CaretDownOutlined } from '@ant-design/icons';
 
 const ReactECharts = lazy(() => import('echarts-for-react'));
-import api from '@/utils/api';
+import api, { type ApiResult } from '@/utils/api';
 import dayjs from 'dayjs';
 import styles from './index.module.css';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
@@ -100,7 +100,7 @@ const DashboardContent: React.FC = () => {
     if (healthFetched.current) return;
     healthFetched.current = true;
     intelligenceApi.getHealthIndex()
-      .then(res => { setHealthData((res as any)?.data ?? (res as any) ?? null); })
+      .then((res: ApiResult<HealthIndexResponse>) => { setHealthData(res?.data ?? null); })
       .catch(() => {});
   }, []);
 
@@ -168,7 +168,7 @@ const DashboardContent: React.FC = () => {
       // 注意：有些后端的封装返回可能没有 code=200 这一层，直接是数组或者 data
       const resData = (response as any).data || response;
       const treeNodes = Array.isArray(resData) ? resData : (resData?.data || []);
-      
+
       if (treeNodes && treeNodes.length > 0) {
         // 递归展平树结构，筛选所有的生产相关组和工厂
         const flattenTree = (nodes: any[]): Factory[] => {
@@ -177,7 +177,7 @@ const DashboardContent: React.FC = () => {
             // 将工厂和生产相关的部门都纳入筛选范围
             // 后端返回的可能是 nodeName 或 unitName，注意不能取 id 当名字
             const name = node.unitName || node.nodeName || node.name || '';
-            
+
             // 只有当名字有效且不是一段纯哈希/ID（通常长度大于20）时，才加入列表
             if (name && name.length < 30) {
               if (node.nodeType === 'FACTORY' || node.ownerType === 'EXTERNAL' || name.includes('生产') || name.includes('车间')) {
@@ -194,7 +194,7 @@ const DashboardContent: React.FC = () => {
           return result;
         };
         const formattedFactories = flattenTree(treeNodes);
-        
+
         // 去重（避免有同名的或重复推入）
         const uniqueFactories = Array.from(new Map(formattedFactories.map(item => [item.id, item])).values());
         setFactories(uniqueFactories);
@@ -309,7 +309,7 @@ const DashboardContent: React.FC = () => {
       // 生成趋势数据
       const warehousedTrend: number[] = [];
       const orderTrend: number[] = [];
-      
+
       const dates: string[] = [];
       const amounts: number[] = [];
       const warehoused: number[] = [];
@@ -326,7 +326,7 @@ const DashboardContent: React.FC = () => {
           const countVal = hourRecords.reduce((sum, r) => sum + (r.warehousedQuantity || 0), 0);
           const orderVal = hourRecords.length;
           const defectVal = hourRecords.reduce((sum, r) => sum + (r.defectQuantity || 0), 0);
-          
+
           dates.push(hour);
           amounts.push(amountVal);
           warehoused.push(countVal);
@@ -788,12 +788,12 @@ const DashboardContent: React.FC = () => {
                 </div>
               </div>
             </div>
-            
+
             <Suspense fallback={<div style={{ height: 350, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Spin /></div>}>
               <ReactECharts option={chartOption} style={{ height: 350, width: '100%' }} />
             </Suspense>
           </Col>
-          
+
           <Col span={6}>
             <div className={styles.rankSection} style={{ marginTop: 0, height: '100%', paddingTop: 0 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>

@@ -143,8 +143,8 @@ const StyleStageControlBar: React.FC<Props> = ({
       }
       message.error((result.message as string) || '操作失败');
       return false;
-    } catch (error: any) {
-      message.error(error?.message || '操作失败');
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '操作失败');
       return false;
     } finally {
       setSaving(false);

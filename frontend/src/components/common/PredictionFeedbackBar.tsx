@@ -80,22 +80,31 @@ const PredictionFeedbackBar: React.FC<Props> = ({
       } else {
         message.error((result as any)?.message || '反馈记录失败');
       }
-    } catch (error: any) {
-      message.error(error?.message || '反馈记录失败');
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '反馈记录失败');
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px dashed #91caff', width: '100%' }}>
+    <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid #e0e0e0', width: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
-        <span style={{ color: '#555', fontSize: 12 }}>这条预测是否可执行？</span>
-        <Button size="small" type={mode === 'accept' ? 'primary' : 'default'} ghost={mode !== 'accept'} onClick={() => chooseMode('accept')}>
-          可执行
+        <span style={{ color: '#333', fontSize: 13, fontWeight: 500 }}>这条预测是否可执行？</span>
+        <Button
+          size="small"
+          type={mode === 'accept' ? 'primary' : 'default'}
+          onClick={() => chooseMode('accept')}
+        >
+          ✓ 可执行
         </Button>
-        <Button size="small" type="default" danger={mode === 'reject'} onClick={() => chooseMode('reject')}>
-          不可执行
+        <Button
+          size="small"
+          type={mode === 'reject' ? 'primary' : 'default'}
+          danger={mode === 'reject'}
+          onClick={() => chooseMode('reject')}
+        >
+          ✕ 不可执行
         </Button>
         {submitted && <Tag color="success">已记录</Tag>}
       </div>

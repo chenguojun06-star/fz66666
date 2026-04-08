@@ -14,8 +14,8 @@ export function useTaskExecution(reload: () => void) {
       const ok = result?.status === 'SUCCESS' || result?.success === true || result?.code === 200;
       setExecuteTaskResult({ taskCode: task.taskCode, ok, msg: result?.message || (ok ? '执行成功' : '执行失败') });
       if (ok) reload();
-    } catch (err: any) {
-      setExecuteTaskResult({ taskCode: task.taskCode, ok: false, msg: err?.message || '执行失败' });
+    } catch (err: unknown) {
+      setExecuteTaskResult({ taskCode: task.taskCode, ok: false, msg: err instanceof Error ? err.message : '执行失败' });
     } finally {
       setExecutingTask(null);
     }

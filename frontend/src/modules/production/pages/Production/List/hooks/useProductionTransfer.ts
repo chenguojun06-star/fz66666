@@ -207,8 +207,8 @@ export function useProductionTransfer({ message }: UseProductionTransferOptions)
         } else {
           message.error(result?.message || '转单失败');
         }
-      } catch (error: any) {
-        message.error(error?.message || '转单失败');
+      } catch (error: unknown) {
+        message.error(error instanceof Error ? error.message : '转单失败');
       } finally {
         setTransferSubmitting(false);
       }
@@ -234,8 +234,8 @@ export function useProductionTransfer({ message }: UseProductionTransferOptions)
         } else {
           message.error(result?.message || '转工厂失败');
         }
-      } catch (error: any) {
-        message.error(error?.message || '转工厂失败');
+      } catch (error: unknown) {
+        message.error(error instanceof Error ? error.message : '转工厂失败');
       } finally {
         setTransferSubmitting(false);
       }

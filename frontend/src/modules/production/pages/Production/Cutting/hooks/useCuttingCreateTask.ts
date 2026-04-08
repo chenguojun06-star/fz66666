@@ -224,7 +224,7 @@ export function useCuttingCreateTask({ message, navigate, fetchTasks }: UseCutti
         message.success('新建裁剪任务成功');
         setCreateTaskOpen(false);
         fetchTasks();
-        const on = String((res as any).data && (res.data as any)?.productionOrderNo || '').trim();
+        const on = String(res.data && (res.data as Record<string, unknown>)?.productionOrderNo || '').trim();
         if (on) {
           navigate(`/production/cutting/task/${encodeURIComponent(on)}`);
         }

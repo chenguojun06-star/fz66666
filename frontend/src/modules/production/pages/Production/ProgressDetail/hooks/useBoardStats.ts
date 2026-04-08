@@ -2,6 +2,7 @@ import { productionScanApi, materialPurchaseApi, processParentMappingApi } from 
 import type { ProductionOrder, ScanRecord } from '@/types/production';
 import type { ProgressNode } from '../types';
 import { getRecordStageName, stageNameMatches, getDynamicParentMapping, setDynamicParentMapping } from '../utils';
+import type { ApiResult } from '@/utils/api';
 
 /**
  * boardStats 缓存 TTL：2 分钟后自动过期重新拉取。
@@ -78,8 +79,8 @@ export const ensureBoardStatsForOrder = async ({
   // ── 懒加载动态映射（全局只请求一次） ──
   if (!getDynamicParentMapping()) {
     try {
-      const res = await processParentMappingApi.list();
-      const data = (res as any)?.data?.data ?? (res as any)?.data ?? {};
+      const res = await processParentMappingApi.list() as ApiResult<any>;
+      const data = res?.data?.data ?? res?.data ?? {};
       if (data && typeof data === 'object') {
         setDynamicParentMapping(data);
       }

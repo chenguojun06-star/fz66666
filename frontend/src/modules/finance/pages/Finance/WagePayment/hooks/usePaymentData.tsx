@@ -52,9 +52,10 @@ export function usePaymentData({ msg }: UsePaymentDataOptions) {
       const res: any = await wagePaymentApi.listPendingPayables(payableBizType || undefined);
       setPayables(res?.data ?? res ?? []);
       if (showSmartErrorNotice) setSmartError(null);
-    } catch (err: any) {
-      reportSmartError('待收付款数据加载失败', err?.message || '网络异常或服务不可用，请稍后重试', 'WAGE_PAYABLES_LOAD_FAILED');
-      msg.error(`加载待收付款数据失败: ${err?.message || '请检查网络连接'}`);
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : '网络异常或服务不可用，请稍后重试';
+      reportSmartError('待收付款数据加载失败', errMsg, 'WAGE_PAYABLES_LOAD_FAILED');
+      msg.error(`加载待收付款数据失败: ${err instanceof Error ? err.message : '请检查网络连接'}`);
     } finally {
       setPayablesLoading(false);
     }
@@ -74,9 +75,10 @@ export function usePaymentData({ msg }: UsePaymentDataOptions) {
       const res: any = await wagePaymentApi.listPayments(query);
       setPayments(res?.data ?? res ?? []);
       if (showSmartErrorNotice) setSmartError(null);
-    } catch (err: any) {
-      reportSmartError('收支记录加载失败', err?.message || '网络异常或服务不可用，请稍后重试', 'WAGE_PAYMENTS_LOAD_FAILED');
-      msg.error(`加载收支记录失败: ${err?.message || '请检查网络连接'}`);
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : '网络异常或服务不可用，请稍后重试';
+      reportSmartError('收支记录加载失败', errMsg, 'WAGE_PAYMENTS_LOAD_FAILED');
+      msg.error(`加载收支记录失败: ${err instanceof Error ? err.message : '请检查网络连接'}`);
     } finally {
       setPaymentsLoading(false);
     }
@@ -182,8 +184,8 @@ export function usePaymentData({ msg }: UsePaymentDataOptions) {
       msg.success('已驳回');
       setPendingRejectPayable(null);
       fetchPayables();
-    } catch (err: any) {
-      msg.error(err?.message || '驳回失败');
+    } catch (err: unknown) {
+      msg.error(err instanceof Error ? err.message : '驳回失败');
     } finally {
       setRejectPayableLoading(false);
     }
@@ -200,8 +202,8 @@ export function usePaymentData({ msg }: UsePaymentDataOptions) {
           await wagePaymentApi.cancelPayment(record.id, '手动取消');
           msg.success('已取消');
           fetchPayments();
-        } catch (err: any) {
-          msg.error(`取消支付失败: ${err?.message || '未知错误'}`);
+        } catch (err: unknown) {
+          msg.error(`取消支付失败: ${err instanceof Error ? err.message : '未知错误'}`);
         }
       },
     });

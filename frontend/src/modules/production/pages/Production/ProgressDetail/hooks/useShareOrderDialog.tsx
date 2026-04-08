@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { Button, Input, Modal } from 'antd';
 import { productionOrderApi } from '@/services/production/productionApi';
 import type { ProductionOrder } from '@/types/production';
+import type { ApiResult } from '@/utils/api';
 
 interface UseShareOrderDialogOptions {
   message: any;
@@ -66,8 +67,8 @@ export const useShareOrderDialog = ({ message }: UseShareOrderDialogOptions) => 
     if (!order.id) return;
     setShareModal({ open: true, shareUrl: '', loading: true });
     try {
-      const res = await productionOrderApi.generateShareToken(String(order.id));
-      const token = (res as any)?.token || (res as any)?.data?.token;
+      const res = await productionOrderApi.generateShareToken(String(order.id)) as ApiResult<{ token?: string }>;
+      const token = res?.data?.token;
       const shareUrl = token ? `${window.location.origin}/share/${token}` : '';
       if (!shareUrl) {
         closeShareModal();

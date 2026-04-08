@@ -335,8 +335,8 @@ export const useProductionOrderFrozenCache = (
       const opts = typeof onFrozenOrOptions === 'function' ? { rule } : onFrozenOrOptions;
       await ensureProductionOrderUnlocked(orderId, opts);
       return true;
-    } catch (err: any) {
-      if ((err as { frozen?: boolean })?.frozen) {
+    } catch (err: unknown) {
+      if (typeof err === 'object' && err !== null && (err as { frozen?: boolean }).frozen) {
         if (typeof onFrozenOrOptions === 'function') {
           onFrozenOrOptions();
         }

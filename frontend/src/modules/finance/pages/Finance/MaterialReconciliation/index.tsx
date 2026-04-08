@@ -12,6 +12,7 @@ import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import MaterialReconModalContent from '@/components/Finance/MaterialReconModalContent';
 import { MaterialReconciliation as MaterialReconType, MaterialReconQueryParams } from '@/types/finance';
 import materialReconciliationApi from '@/services/finance/materialReconciliationApi';
+import type { ApiResult } from '@/utils/api';
 import { errorHandler } from '@/utils/errorHandling';
 import { formatDateTime } from '@/utils/datetime';
 import { unwrapApiData } from '@/utils/api';
@@ -67,8 +68,8 @@ const MaterialReconciliation: React.FC = () => {
   const fetchFinanceAudit = React.useCallback(async () => {
     setAuditLoading(true);
     try {
-      const res = await intelligenceApi.getFinanceAudit();
-      const d = (res as any)?.data;
+      const res: ApiResult = await intelligenceApi.getFinanceAudit();
+      const d = res?.data;
       if (d) setFinanceAudit(d);
     } catch {
       /* 静默失败 */
@@ -185,7 +186,7 @@ const MaterialReconciliation: React.FC = () => {
       }
       const csv = buildMaterialReconCsv(rows);
       downloadTextFile(`物料对账_筛选_${fileStamp()}.csv`, csv, 'text/csv;charset=utf-8');
-    } catch (e: any) {
+    } catch (e: unknown) {
       errorHandler.handleApiError(e, '导出失败');
     } finally {
       setExporting(false);
@@ -284,7 +285,7 @@ const MaterialReconciliation: React.FC = () => {
       setSelectedRowKeys([]);
       // 刷新物料对账列表
       fetchReconciliationList();
-    } catch (e: any) {
+    } catch (e: unknown) {
       errorHandler.handleApiError(e, '操作失败');
     } finally {
       setApprovalSubmitting(false);
@@ -317,7 +318,7 @@ const MaterialReconciliation: React.FC = () => {
       setPendingRejectIds(null);
       setSelectedRowKeys([]);
       fetchReconciliationList();
-    } catch (e: any) {
+    } catch (e: unknown) {
       errorHandler.handleApiError(e, '驳回失败');
     } finally {
       setRejectIdsLoading(false);

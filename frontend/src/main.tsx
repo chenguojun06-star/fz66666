@@ -61,6 +61,9 @@ import { App as AntApp, ConfigProvider, theme } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import enUS from 'antd/locale/en_US';
 import viVN from 'antd/locale/vi_VN';
+import dayjs from 'dayjs';
+import 'dayjs/locale/zh-cn';
+dayjs.locale('zh-cn'); // 全局设置 dayjs 中文 locale，让所有 DatePicker 月份/星期显示中文
 import App from './App';
 import { setAntdStaticRefs } from './utils/antdStatic';
 import { AuthProvider } from './utils/AuthContext';

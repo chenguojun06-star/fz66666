@@ -118,9 +118,9 @@ export function usePayModal({ msg, fetchPayables, fetchPayments, reportSmartErro
         fetchPayables();
         fetchPayments();
       }
-    } catch (err: any) {
-      reportSmartError('支付发起失败', err?.message || '网络异常或服务不可用，请稍后重试', 'WAGE_PAY_SUBMIT_FAILED');
-      if (err?.message) msg.error(err.message);
+    } catch (err: unknown) {
+      reportSmartError('支付发起失败', err instanceof Error ? err.message : '网络异常或服务不可用，请稍后重试', 'WAGE_PAY_SUBMIT_FAILED');
+      if (err instanceof Error) msg.error(err.message);
     } finally {
       setPaySubmitting(false);
     }

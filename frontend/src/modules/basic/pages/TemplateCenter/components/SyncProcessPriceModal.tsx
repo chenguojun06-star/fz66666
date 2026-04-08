@@ -19,7 +19,7 @@ import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
-import api, { toNumberSafe } from '@/utils/api';
+import api, { toNumberSafe, type ApiResult, isApiSuccess, getApiMessage } from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 
 const { Text } = Typography;
@@ -126,7 +126,7 @@ const SyncProcessPriceModal: React.FC<SyncProcessPriceModalProps> = ({ open, onC
         params: { keyword: keyword.trim() },
       });
       if (seq !== styleNoSeq.current) return;
-      const records: any[] = Array.isArray((res as any)?.data) ? (res as any).data : [];
+      const records: any[] = Array.isArray(res?.data) ? res.data : [];
       setStyleNoOptions(
         records
           .map((record: any) => {
@@ -168,7 +168,7 @@ const SyncProcessPriceModal: React.FC<SyncProcessPriceModalProps> = ({ open, onC
       const res = await api.get<any>('/template-library/process-price-template', {
         params: { styleNo: String(styleNo || '').trim() },
       });
-      const payload = (res as any)?.data ?? {};
+      const payload = res?.data ?? {};
       const { rows, sizes: nextSizes } = buildRowsFromContent(payload?.content ?? {});
       setTemplateId(payload?.templateId || null);
       setMatchedScope((payload?.matchedScope as MatchedScope) || 'empty');
@@ -214,8 +214,8 @@ const SyncProcessPriceModal: React.FC<SyncProcessPriceModalProps> = ({ open, onC
       }
       setImageUrls((prev) => [...prev, res.data].slice(0, 4));
       message.success('图片已上传，保存后生效');
-    } catch (e: any) {
-      message.error(e?.message || '上传失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '上传失败');
     } finally {
       setImageUploading(false);
     }
@@ -384,16 +384,16 @@ const SyncProcessPriceModal: React.FC<SyncProcessPriceModalProps> = ({ open, onC
         },
       };
       const res = await api.post<any>('/template-library/process-price-template', payload);
-      if ((res as any)?.code !== 200) {
-        message.error((res as any)?.message || '保存失败');
+      if (!isApiSuccess(res)) {
+        message.error(getApiMessage(res, '保存失败'));
         return false;
       }
       resetEditingState();
       await loadTemplate(selectedStyleNo.trim());
       message.success('款号工序单价已保存');
       return true;
-    } catch (error: any) {
-      message.error(error?.message || '保存失败');
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '保存失败');
       return false;
     } finally {
       setSaving(false);
@@ -406,11 +406,11 @@ const SyncProcessPriceModal: React.FC<SyncProcessPriceModalProps> = ({ open, onC
       const res = await api.post<any>('/template-library/sync-process-prices', {
         styleNo: selectedStyleNo.trim(),
       });
-      if ((res as any)?.code !== 200) {
-        message.error((res as any)?.message || '同步失败');
+      if (!isApiSuccess(res)) {
+        message.error(getApiMessage(res, '同步失败'));
         return false;
       }
-      const result = (res as any)?.data || {};
+      const result = res?.data || {};
       message.success(
         `${result.scopeLabel || '同步完成'}：${result.totalOrders || 0} 个订单，更新 ${result.totalSynced || 0} 条跟踪单价，刷新 ${result.workflowUpdatedNodes || 0} 个订单工价节点`
       );

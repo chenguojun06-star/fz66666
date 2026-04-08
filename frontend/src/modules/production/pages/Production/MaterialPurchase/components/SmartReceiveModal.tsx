@@ -191,8 +191,8 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
           } else {
             message.error(res.message || '领取失败');
           }
-        } catch (e: any) {
-          message.error((e as Error)?.message || '领取失败');
+        } catch (e: unknown) {
+          message.error(e instanceof Error ? e.message : '领取失败');
         } finally {
           setActionLoading((prev) => ({ ...prev, [item.purchaseId]: false }));
         }
@@ -235,8 +235,8 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
           } else {
             message.error(res.message || '操作失败');
           }
-        } catch (e: any) {
-          message.error((e as Error)?.message || '操作失败');
+        } catch (e: unknown) {
+          message.error(e instanceof Error ? e.message : '操作失败');
         } finally {
           setActionLoading((prev) => ({ ...prev, [item.purchaseId]: false }));
         }
@@ -285,8 +285,8 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
           } else {
             message.error(res.message || '撤销失败');
           }
-        } catch (e: any) {
-          message.error((e as Error)?.message || '撤销失败');
+        } catch (e: unknown) {
+          message.error(e instanceof Error ? e.message : '撤销失败');
         }
       },
     });
@@ -472,8 +472,8 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
       } else {
         message.error(res.message || '智能领取失败');
       }
-    } catch (e: any) {
-      message.error((e as Error)?.message || '智能领取失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '智能领取失败');
     } finally {
       setActionLoading((prev) => ({ ...prev, _all: false }));
     }

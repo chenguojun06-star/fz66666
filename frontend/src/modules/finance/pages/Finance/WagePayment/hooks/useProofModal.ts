@@ -37,9 +37,9 @@ export function useProofModal({ msg, reportSmartError, showSmartErrorNotice, set
         proofForm.setFieldsValue({ proofUrl: url });
         setProofFileList([{ uid: '-1', name: file.name, status: 'done', url }]);
       }
-    } catch (err: any) {
-      reportSmartError('支付凭证上传失败', err?.message || '请检查文件格式后重试', 'WAGE_PROOF_UPLOAD_FAILED');
-      msg.error(`上传凭证失败: ${err?.message || '请检查文件格式'}`);
+    } catch (err: unknown) {
+      reportSmartError('支付凭证上传失败', err instanceof Error ? err.message : '请检查文件格式后重试', 'WAGE_PROOF_UPLOAD_FAILED');
+      msg.error(`上传凭证失败: ${err instanceof Error ? err.message : '请检查文件格式'}`);
     }
   };
 
@@ -53,9 +53,9 @@ export function useProofModal({ msg, reportSmartError, showSmartErrorNotice, set
       fetchPayments();
       fetchPayables();
       if (showSmartErrorNotice) setSmartError(null);
-    } catch (err: any) {
-      reportSmartError('线下支付确认失败', err?.message || '网络异常或服务不可用，请稍后重试', 'WAGE_PROOF_CONFIRM_FAILED');
-      msg.error(err?.message || '操作失败');
+    } catch (err: unknown) {
+      reportSmartError('线下支付确认失败', err instanceof Error ? err.message : '网络异常或服务不可用，请稍后重试', 'WAGE_PROOF_CONFIRM_FAILED');
+      msg.error(err instanceof Error ? err.message : '操作失败');
     } finally {
       setProofSubmitting(false);
     }

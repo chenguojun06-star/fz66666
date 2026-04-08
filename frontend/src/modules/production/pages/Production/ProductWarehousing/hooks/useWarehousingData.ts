@@ -199,9 +199,9 @@ export function useWarehousingData(options: UseWarehousingDataOptions): UseWareh
           setOrderDetail(null);
           setOrderWarehousingRecords([]);
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (!cancelled) {
-          const errMsg = (e as Error)?.message || '获取质检入库详情失败';
+          const errMsg = e instanceof Error ? e.message : '获取质检入库详情失败';
           message.error(errMsg);
           onErrorRef.current?.(errMsg);
           setEntryWarehousing(null);

@@ -230,8 +230,8 @@ const StyleColorSizeTable: React.FC<StyleColorSizeTableProps> = ({
     setMatrixRows(matrixRows.map((row, index) => (index === rowIndex ? { ...row, imageUrl: undefined } : row)));
     try {
       await onImageClear?.(color);
-    } catch (error: any) {
-      message.warning(error?.message || '已清空本地颜色图，但资产区同步失败');
+    } catch (error: unknown) {
+      message.warning(error instanceof Error ? error.message : '已清空本地颜色图，但资产区同步失败');
     }
   };
 

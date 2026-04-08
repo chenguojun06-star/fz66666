@@ -60,9 +60,10 @@ export function useAccountModal({ msg, reportSmartError, showSmartErrorNotice, s
     try {
       const res: any = await wagePaymentApi.listAccounts(ownerType, ownerId);
       setAccounts(res?.data ?? res ?? []);
-    } catch (err: any) {
-      reportSmartError('收款账户加载失败', err?.message || '网络异常或服务不可用，请稍后重试', 'WAGE_ACCOUNT_LOAD_FAILED');
-      msg.error(`加载收款账户失败: ${err?.message || '请检查网络连接'}`);
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : '网络异常或服务不可用，请稍后重试';
+      reportSmartError('收款账户加载失败', errMsg, 'WAGE_ACCOUNT_LOAD_FAILED');
+      msg.error(`加载收款账户失败: ${err instanceof Error ? err.message : '请检查网络连接'}`);
     } finally {
       setAccountsLoading(false);
     }
@@ -105,9 +106,9 @@ export function useAccountModal({ msg, reportSmartError, showSmartErrorNotice, s
       setQrFileList([]);
       if (showSmartErrorNotice) setSmartError(null);
       loadAccounts(accountOwnerType, accountOwnerId);
-    } catch (err: any) {
-      reportSmartError('收款账户保存失败', err?.message || '请检查输入后重试', 'WAGE_ACCOUNT_SAVE_FAILED');
-      if (err?.message) msg.error(err.message);
+    } catch (err: unknown) {
+      reportSmartError('收款账户保存失败', err instanceof Error ? err.message : '请检查输入后重试', 'WAGE_ACCOUNT_SAVE_FAILED');
+      if (err instanceof Error) msg.error(err.message);
     } finally {
       setAccountSaving(false);
     }
@@ -118,9 +119,10 @@ export function useAccountModal({ msg, reportSmartError, showSmartErrorNotice, s
       await wagePaymentApi.removeAccount(id);
       msg.success('已删除');
       loadAccounts(accountOwnerType, accountOwnerId);
-    } catch (err: any) {
-      reportSmartError('收款账户删除失败', err?.message || '网络异常或服务不可用，请稍后重试', 'WAGE_ACCOUNT_DELETE_FAILED');
-      msg.error(`删除账户失败: ${err?.message || '未知错误'}`);
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : '网络异常或服务不可用，请稍后重试';
+      reportSmartError('收款账户删除失败', errMsg, 'WAGE_ACCOUNT_DELETE_FAILED');
+      msg.error(`删除账户失败: ${err instanceof Error ? err.message : '未知错误'}`);
     }
   };
 
@@ -140,9 +142,9 @@ export function useAccountModal({ msg, reportSmartError, showSmartErrorNotice, s
         setQrFileList([{ uid: '-1', name: file.name, status: 'done', url }]);
         msg.success('上传成功');
       }
-    } catch (err: any) {
-      reportSmartError('账户二维码上传失败', err?.message || '请检查文件格式后重试', 'WAGE_ACCOUNT_QR_UPLOAD_FAILED');
-      msg.error(`上传二维码失败: ${err?.message || '请检查文件格式'}`);
+    } catch (err: unknown) {
+      reportSmartError('账户二维码上传失败', err instanceof Error ? err.message : '请检查文件格式后重试', 'WAGE_ACCOUNT_QR_UPLOAD_FAILED');
+      msg.error(`上传二维码失败: ${err instanceof Error ? err.message : '请检查文件格式'}`);
     }
   };
 

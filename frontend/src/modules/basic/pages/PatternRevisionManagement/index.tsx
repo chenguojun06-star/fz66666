@@ -82,9 +82,8 @@ const PatternRevisionManagement: React.FC = () => {
         } else {
           message.error(response.message || '获取数据失败');
         }
-      } catch (error: any) {
-        const err = error as Error;
-        message.error(err?.message || '获取数据失败');
+      } catch (error: unknown) {
+        message.error(error instanceof Error ? error.message : '获取数据失败');
       } finally {
         setLoading(false);
       }
@@ -172,13 +171,12 @@ const PatternRevisionManagement: React.FC = () => {
       } else {
         message.error(response.message || '操作失败');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Form validation error or API error
-      if (error && typeof error === 'object' && 'errorFields' in error) {
+      if (typeof error === 'object' && error !== null && 'errorFields' in error) {
         return; // Form validation error, don't show message
       }
-      const err = error as Error;
-      message.error(err?.message || '操作失败');
+      message.error(error instanceof Error ? error.message : '操作失败');
     } finally {
       setSaving(false);
     }
@@ -203,9 +201,8 @@ const PatternRevisionManagement: React.FC = () => {
           } else {
             message.error(response.message || '删除失败');
           }
-        } catch (error: any) {
-          const err = error as Error;
-          message.error(err?.message || '删除失败');
+        } catch (error: unknown) {
+          message.error(error instanceof Error ? error.message : '删除失败');
         }
       },
     });
@@ -229,9 +226,8 @@ const PatternRevisionManagement: React.FC = () => {
           } else {
             message.error(response.message || '提交失败');
           }
-        } catch (error: any) {
-          const err = error as Error;
-          message.error(err?.message || '提交失败');
+        } catch (error: unknown) {
+          message.error(error instanceof Error ? error.message : '提交失败');
         }
       },
     });
@@ -263,9 +259,8 @@ const PatternRevisionManagement: React.FC = () => {
           } else {
             message.error(response.message || '审核失败');
           }
-        } catch (error: any) {
-          const err = error as Error;
-          message.error(err?.message || '审核失败');
+        } catch (error: unknown) {
+          message.error(error instanceof Error ? error.message : '审核失败');
         }
       },
     });
@@ -302,9 +297,8 @@ const PatternRevisionManagement: React.FC = () => {
           } else {
             message.error(response.message || '操作失败');
           }
-        } catch (error: any) {
-          const err = error as Error;
-          message.error(err?.message || '操作失败');
+        } catch (error: unknown) {
+          message.error(error instanceof Error ? error.message : '操作失败');
         }
       },
     });
@@ -328,9 +322,8 @@ const PatternRevisionManagement: React.FC = () => {
           } else {
             message.error(response.message || '操作失败');
           }
-        } catch (error: any) {
-          const err = error as Error;
-          message.error(err?.message || '操作失败');
+        } catch (error: unknown) {
+          message.error(error instanceof Error ? error.message : '操作失败');
         }
       },
     });

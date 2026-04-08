@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { App, Form, Input, Modal } from 'antd';
 import { StyleInfo } from '@/types/style';
-import api from '@/utils/api';
+import api, { type ApiResult, isApiSuccess, getApiMessage } from '@/utils/api';
 
 interface StyleCopyModalProps {
   open: boolean;
@@ -19,14 +19,14 @@ const StyleCopyModal: React.FC<StyleCopyModalProps> = ({ open, onCancel, copySou
     if (!copySource?.id) return;
     setCopying(true);
     try {
-      const res = await api.post(`/style/info/${copySource.id}/copy`, values);
-      if ((res as any).code === 200) {
+      const res = await api.post<ApiResult>(`/style/info/${copySource.id}/copy`, values);
+      if (isApiSuccess(res)) {
         message.success('复制成功');
         onCancel();
         copyForm.resetFields();
         onSuccess();
       } else {
-        message.error((res as any).message || '复制失败');
+        message.error(getApiMessage(res, '复制失败'));
       }
     } catch {
       message.error('复制失败');

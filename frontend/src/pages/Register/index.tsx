@@ -47,8 +47,8 @@ const Register: React.FC = () => {
     setSubmitting(true);
     try {
       await handleApplyTenant(values);
-    } catch (error: any) {
-      message.error(error?.response?.data?.message || error?.message || '操作失败，请稍后重试');
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '操作失败，请稍后重试');
     } finally {
       setSubmitting(false);
     }

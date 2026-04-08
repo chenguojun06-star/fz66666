@@ -65,8 +65,8 @@ const UserApproval: React.FC = () => {
       } else {
         message.error(result.message || '获取待审批用户失败');
       }
-    } catch (error: any) {
-      message.error(error?.message || '获取待审批用户失败');
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '获取待审批用户失败');
     } finally {
       setLoading(false);
     }
@@ -123,8 +123,8 @@ const UserApproval: React.FC = () => {
       } else {
         message.error(approveResult.message || '批准失败');
       }
-    } catch (error: any) {
-      message.error(error?.message || '操作失败');
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '操作失败');
     }
   };
 
@@ -156,8 +156,8 @@ const UserApproval: React.FC = () => {
       } else {
         message.error(result.message || '拒绝失败');
       }
-    } catch (error: any) {
-      message.error(error?.message || '拒绝失败');
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '拒绝失败');
     }
   };
 

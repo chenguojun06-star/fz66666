@@ -8,6 +8,7 @@ import type {
   MaterialShortageResult, SelfHealingResponse, FactoryBottleneckItem,
   IntelligenceBrainSnapshotResponse, ActionCenterResponse,
 } from '@/services/intelligence/intelligenceApi';
+import type { ApiResult } from '@/utils/api';
 import type { ProductionOrder } from '@/types/production';
 import { useAuth } from '@/utils/AuthContext';
 import { useWebSocket } from '@/hooks/useWebSocket';
@@ -85,8 +86,8 @@ export function useCockpit() {
   /* 10 秒快刷：仅更新实时脉搏 */
   const fetchPulseOnly = useCallback(async () => {
     try {
-      const res = await intelligenceApi.getLivePulse();
-      const newPulse = (res as any)?.data ?? res;
+      const res: ApiResult<LivePulseResponse> = await intelligenceApi.getLivePulse();
+      const newPulse = (res?.data ?? res) as LivePulseResponse;
       if (newPulse) setData(prev => ({ ...prev, pulse: newPulse }));
     } catch { /* silent */ }
   }, []);

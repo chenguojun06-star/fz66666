@@ -446,8 +446,8 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
       setProcessTemplateKey(undefined);
       await fetchProcess();
       void enterEdit();
-    } catch (e: any) {
-      message.error(e?.message || '导入失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '导入失败');
     }
   };
 
@@ -598,8 +598,8 @@ const StyleProcessTab: React.FC<StyleProcessTabProps> = ({
       snapshotRef.current = null;
       await fetchProcess();
       if (onRefresh) onRefresh(); // 刷新父组件数据
-    } catch (e: any) {
-      message.error(e?.message || '保存失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '保存失败');
     } finally {
       setSaving(false);
     }

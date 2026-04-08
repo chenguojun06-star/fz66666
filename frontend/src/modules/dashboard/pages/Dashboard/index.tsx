@@ -162,7 +162,7 @@ const Dashboard: React.FC = () => {
         });
 
         setSearchOptions(options);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('搜索失败:', error);
         setSearchOptions([]);
       } finally {

@@ -3,7 +3,7 @@ import { App, Button, InputNumber, Space, Typography } from 'antd';
 import { DeleteOutlined, PlusOutlined, ScanOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
-import api from '@/utils/api';
+import api, { type ApiResult } from '@/utils/api';
 import CustomerInfoSection from './CustomerInfoSection';
 
 interface QrcodeItem {
@@ -66,8 +66,8 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
     setAdding(true);
     let stock: number | null = null;
     try {
-      const res = await (api as any).get(`/style/sku/inventory/${encodeURIComponent(parsed.skuCode)}`);
-      const rawStock = (res as any)?.data ?? res;
+      const res: ApiResult = await (api as any).get(`/style/sku/inventory/${encodeURIComponent(parsed.skuCode)}`);
+      const rawStock = res?.data ?? res;
       stock = Number(rawStock ?? 0);
       if (Number.isNaN(stock)) {
         stock = 0;
@@ -136,8 +136,8 @@ const QrcodeOutboundModal: React.FC<Props> = ({ open, onClose, onSuccess }) => {
       setItems([]);
       onSuccess?.();
       onClose();
-    } catch (err: any) {
-      message.error(err?.message || '出库失败，请检查库存或二维码格式');
+    } catch (err: unknown) {
+      message.error(err instanceof Error ? err.message : '出库失败，请检查库存或二维码格式');
     } finally {
       setSubmitting(false);
     }

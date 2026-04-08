@@ -195,8 +195,8 @@ export const useStyleFormActions = ({
               if (successCount > 0) {
                 message.success(`成功上传 ${successCount} 张图片`);
               }
-            } catch (error: any) {
-              message.error(error?.message || '图片上传失败');
+            } catch (error: unknown) {
+              message.error(error instanceof Error ? error.message : '图片上传失败');
             }
           }
 
@@ -212,11 +212,11 @@ export const useStyleFormActions = ({
         message.error(res.message || '保存失败');
         return false;
       }
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error !== null && 'errorFields' in error) {
         message.error('请完善表单信息');
       } else {
-        message.error(error?.message || '保存失败');
+        message.error(error instanceof Error ? error.message : '保存失败');
       }
       return false;
     } finally {
@@ -241,8 +241,8 @@ export const useStyleFormActions = ({
         message.error(res.message || '操作失败');
         return false;
       }
-    } catch (error: any) {
-      const errMsg = error?.response?.data?.message || error?.message || '操作失败';
+    } catch (error: unknown) {
+      const errMsg = typeof error === 'object' && error !== null && 'response' in error ? (error as any).response?.data?.message : (error instanceof Error ? error.message : '操作失败');
       message.error(errMsg);
       return false;
     } finally {
@@ -279,8 +279,8 @@ export const useStyleFormActions = ({
         message.error(res.message || '推送失败');
         return false;
       }
-    } catch (error: any) {
-      message.error(error?.message || '推送失败');
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '推送失败');
       return false;
     } finally {
       setPushingToOrder(false);

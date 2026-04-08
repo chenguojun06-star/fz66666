@@ -86,8 +86,8 @@ export const useAgentGraphStore = create<AgentGraphState>()((set, get) => ({
         : [];
       const data: GraphResult = await runMultiAgentGraph({ scene, orderIds: ids, question });
       set({ result: data, loading: false });
-    } catch (e: any) {
-      set({ error: e?.message ?? '执行失败', loading: false });
+    } catch (e: unknown) {
+      set({ error: e instanceof Error ? e.message : '执行失败', loading: false });
     }
   },
 

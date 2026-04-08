@@ -8,7 +8,7 @@ import {
   splitSizeNames, normalizeSizeList, resolveGroupName,
   resolveGroupToneMeta, normalizeRowSorts, normalizeChunkImageAssignments,
   createGradingZone, normalizeGradingZones, parseGradingRule, serializeGradingRule,
-} from './styleSizeTabUtils';
+} from './styleSize/shared';
 
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';

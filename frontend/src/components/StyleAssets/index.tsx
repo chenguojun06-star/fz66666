@@ -500,9 +500,9 @@ export const StyleAttachmentsButton: React.FC<{
         setData([]);
         message.error(res.message || '获取附件失败');
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       setData([]);
-      message.error((e as Error)?.message || '获取附件失败');
+      message.error(e instanceof Error ? e.message : '获取附件失败');
     } finally {
       setLoading(false);
     }

@@ -216,8 +216,8 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
               remark: 'PC同步',
               manual: true,
             });
-          } catch (syncErr: any) {
-            message.warning(syncErr?.message || 'PC同步扫码失败');
+          } catch (syncErr: unknown) {
+            message.warning(syncErr instanceof Error ? syncErr.message : 'PC同步扫码失败');
           }
         }
         setAdminUnlocked(false); // 保存后重置解锁状态
@@ -592,8 +592,9 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
         {/* 进度预测卡 */}
         {!isPatternProduction && orderId && (predicting || prediction) && (
           <div style={{
-            background: 'linear-gradient(135deg,#f0f7ff 0%,#e8f4fd 100%)',
-            border: '1px solid #91caff',
+            background: '#fff',
+            border: '1px solid #d6e8ff',
+            borderLeft: '4px solid #1677ff',
             borderRadius: 6,
             padding: '8px 12px',
             marginBottom: 8,
@@ -602,23 +603,23 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 16 }}></span>
               {predicting ? (
-                <span style={{ color: '#1677ff' }}>预测中…</span>
+                <span style={{ color: '#0958d9' }}>预测中…</span>
               ) : prediction?.predictedFinishTime ? (
                 <div>
-                  <span style={{ color: '#333' }}>
-                    预计完工：<b style={{ color: '#1677ff' }}>
+                  <span style={{ color: '#222' }}>
+                    预计完工：<b style={{ color: '#1677ff', fontSize: 14 }}>
                       {dayjs(prediction.predictedFinishTime).format('MM-DD HH:mm')}
                     </b>
                   </span>
                   {(prediction.confidence != null) && (
-                    <span style={{ color: '#888', marginLeft: 4 }}>
+                    <span style={{ color: '#555', marginLeft: 4 }}>
                       置信 <b style={{ color: prediction.confidence >= 70 ? '#52c41a' : prediction.confidence >= 40 ? '#fa8c16' : '#ff4d4f' }}>
                         {prediction.confidence}%
                       </b>
                     </span>
                   )}
                   {prediction.reasons && prediction.reasons.length > 0 && (
-                    <span style={{ color: '#aaa', fontSize: 11, marginLeft: 4 }}>
+                    <span style={{ color: '#666', fontSize: 12, marginLeft: 4 }}>
                       · {prediction.reasons[0]}
                     </span>
                   )}

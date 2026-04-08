@@ -6,7 +6,7 @@ import RowActions from '@/components/common/RowActions';
 import SupplierSelect from '@/components/common/SupplierSelect';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 import StyleStageControlBar from './StyleStageControlBar';
-import api, { toNumberSafe } from '@/utils/api';
+import api, { toNumberSafe, type ApiResult, isApiSuccess } from '@/utils/api';
 import { downloadFile, getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { useViewport } from '@/utils/useViewport';
 import { formatDateTime } from '@/utils/datetime';
@@ -337,8 +337,8 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
       const res = await api.get(`/style/secondary-process/list?styleId=${styleId}`, {
         validateStatus: (status: number) => status < 500,
       });
-      if (res && (res as any).code === 200) {
-        setDataSource((res as any).data || []);
+      if (res && isApiSuccess(res)) {
+        setDataSource(res?.data || []);
       } else {
         setDataSource([]);
       }
@@ -455,8 +455,8 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
           await api.delete(`/style/secondary-process/${record.id}`);
           message.success('删除成功');
           fetchData();
-        } catch (error: any) {
-          message.error(error?.message || '删除失败，请重试');
+        } catch (error: unknown) {
+          message.error(error instanceof Error ? error.message : '删除失败，请重试');
         }
       }
     });
@@ -497,11 +497,11 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
 
       setEditingKey(null);
       fetchData();
-    } catch (error: any) {
-      if (error.errorFields) {
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error !== null && 'errorFields' in error) {
         message.error('请检查表单输入');
       } else {
-        message.error(error?.message || '保存失败，请重试');
+        message.error(error instanceof Error ? error.message : '保存失败，请重试');
       }
     }
   };

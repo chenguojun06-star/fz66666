@@ -41,7 +41,7 @@ export const useDashboardStats = () => {
     setLoading(true);
     setHasError(false);
     setErrorMessage('');
-    
+
     try {
       const response = await api.get<{ code: number; data: any; message?: string }>('/dashboard');
       if (response.code === 200) {
@@ -63,8 +63,8 @@ export const useDashboardStats = () => {
         setHasError(true);
         setErrorMessage(errMsg);
       }
-    } catch (error: any) {
-      const errMsg = error?.message || '网络错误，无法加载数据';
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : '网络错误，无法加载数据';
       setHasError(true);
       setErrorMessage(errMsg);
     } finally {

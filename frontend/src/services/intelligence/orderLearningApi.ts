@@ -1,4 +1,4 @@
-import api from '@/utils/api';
+import api, { type ApiResult } from '@/utils/api';
 
 let recommendationEndpointUnavailable = false;
 const ENDPOINT_UNAVAILABLE_STORAGE_KEY = 'orderLearningRecommendationEndpointUnavailable';
@@ -100,7 +100,7 @@ export interface OrderLearningRecommendationResponse {
 export const orderLearningApi = {
   async getRecommendation(params: { styleNo: string; orderQuantity?: number; factoryMode?: string; pricingMode?: string; currentUnitPrice?: number }) {
     if (readEndpointUnavailable()) {
-      return { code: 200, data: null, message: 'order-learning recommendation endpoint unavailable' } as any;
+      return { code: 200, data: null, message: 'order-learning recommendation endpoint unavailable' } as ApiResult<null>;
     }
 
     const requestKey = normalizeParamsKey(params);
@@ -111,12 +111,12 @@ export const orderLearningApi = {
 
     const requestPromise = (async () => {
       try {
-        return await api.get<OrderLearningRecommendationResponse>('/intelligence/order-learning/recommendation', { params });
-      } catch (error: any) {
-        const status = Number(error?.response?.status || 0);
+        return await api.get<ApiResult<OrderLearningRecommendationResponse>>('/intelligence/order-learning/recommendation', { params });
+      } catch (error: unknown) {
+        const status = typeof error === 'object' && error !== null && 'response' in error ? Number((error as Record<string, any>).response?.status || 0) : 0;
         if (status === 404) {
           markEndpointUnavailable();
-          return { code: 200, data: null, message: 'order-learning recommendation endpoint unavailable' } as any;
+          return { code: 200, data: null, message: 'order-learning recommendation endpoint unavailable' } as ApiResult<null>;
         }
         throw error;
       } finally {

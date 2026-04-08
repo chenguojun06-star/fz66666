@@ -89,8 +89,8 @@ export default function ImageUploadBox({
         message.success('上传成功');
       }
       onChange?.(url);
-    } catch (e: any) {
-      message.error(String(e?.message || '上传失败'));
+    } catch (e: unknown) {
+      message.error(String(e instanceof Error ? e.message : '上传失败'));
     } finally {
       setUploading(false);
     }

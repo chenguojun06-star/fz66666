@@ -31,8 +31,8 @@ export const useStyleActions = (refreshCallback?: () => void) => {
       } else {
         message.error(res.message || '报废失败');
       }
-    } catch (error: any) {
-      message.error(error?.message || '报废失败');
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '报废失败');
     } finally {
       setScrapLoading(false);
     }
@@ -61,8 +61,8 @@ export const useStyleActions = (refreshCallback?: () => void) => {
         message.error(res.message || '操作失败');
         return false;
       }
-    } catch (error: any) {
-      message.error(error?.message || '操作失败');
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '操作失败');
       return false;
     }
   };

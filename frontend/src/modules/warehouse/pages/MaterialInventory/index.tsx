@@ -11,7 +11,10 @@ import {
   Popconfirm,
   Badge,
   Tooltip,
+  DatePicker,
 } from 'antd';
+import dayjs from 'dayjs';
+import type { Dayjs } from 'dayjs';
 import {
   ClockCircleOutlined,
 } from '@ant-design/icons';
@@ -94,11 +97,17 @@ const _MaterialInventory: React.FC = () => {
   const pickupCurrent = pickupData.pagination.pagination.current;
   const paymentPageSize = pickupData.paymentPagination.pagination.pageSize;
   const paymentCurrent = pickupData.paymentPagination.pagination.current;
-  const paymentTotal = pickupData.paymentPagination.pagination.total || pickupData.paymentCenterData.length;
+  const [paymentKeyword, setPaymentKeyword] = React.useState('');
+  const filteredPaymentData = React.useMemo(() => {
+    if (!paymentKeyword) return pickupData.paymentCenterData;
+    const kw = paymentKeyword.toLowerCase();
+    return pickupData.paymentCenterData.filter(r => r.factoryName?.toLowerCase().includes(kw));
+  }, [pickupData.paymentCenterData, paymentKeyword]);
+  const paymentTotal = filteredPaymentData.length;
   const paymentCenterPagedData = React.useMemo(() => {
     const start = Math.max(0, (paymentCurrent - 1) * paymentPageSize);
-    return pickupData.paymentCenterData.slice(start, start + paymentPageSize);
-  }, [paymentCurrent, paymentPageSize, pickupData.paymentCenterData]);
+    return filteredPaymentData.slice(start, start + paymentPageSize);
+  }, [paymentCurrent, paymentPageSize, filteredPaymentData]);
   const tabParam = searchParams.get('tab') || 'overview';
   const pickupNoParam = searchParams.get('pickupNo') || '';
   const factoryNameParam = searchParams.get('factoryName') || '';
@@ -456,7 +465,7 @@ const _MaterialInventory: React.FC = () => {
                         <Input
                           placeholder="搜索领取单号/物料/订单号/款号/工厂…"
                           allowClear
-                          style={{ width: 300 }}
+                          style={{ width: 280 }}
                           value={pickupData.keyword}
                           onChange={(e) => { pickupData.setKeyword(e.target.value); void pickupData.fetchData(); }}
                           onPressEnter={() => pickupData.fetchData()}
@@ -472,6 +481,12 @@ const _MaterialInventory: React.FC = () => {
                           <Option value="INTERNAL">内部工厂</Option>
                           <Option value="EXTERNAL">外部工厂</Option>
                         </Select>
+                        <DatePicker.RangePicker
+                          placeholder={['开始日期', '结束日期']}
+                          value={pickupData.pickupDateRange}
+                          onChange={(dates) => { pickupData.setPickupDateRange(dates as [Dayjs, Dayjs] | null); void pickupData.fetchData(); }}
+                          style={{ width: 240 }}
+                        />
                       </Space>
                     )}
                     right={(
@@ -525,9 +540,28 @@ const _MaterialInventory: React.FC = () => {
                       领取记录审核通过后会自动生成应收账单，这里按工厂汇总待收/已收金额，并推动到收款中心登记回款。
                     </div>
                   </div>
-                  <div style={{ marginBottom: 12 }}>
-                    <Button onClick={() => void pickupData.fetchPaymentCenter()}>刷新</Button>
-                  </div>
+                  <StandardToolbar
+                    left={(
+                      <Space>
+                        <Input
+                          placeholder="搜索工厂名称…"
+                          allowClear
+                          style={{ width: 220 }}
+                          value={paymentKeyword}
+                          onChange={(e) => setPaymentKeyword(e.target.value)}
+                        />
+                        <DatePicker.RangePicker
+                          placeholder={['开始日期', '结束日期']}
+                          value={pickupData.paymentDateRange}
+                          onChange={(dates) => { pickupData.setPaymentDateRange(dates as [Dayjs, Dayjs] | null); void pickupData.fetchPaymentCenter(); }}
+                          style={{ width: 240 }}
+                        />
+                      </Space>
+                    )}
+                    right={(
+                      <Button onClick={() => void pickupData.fetchPaymentCenter()}>刷新</Button>
+                    )}
+                  />
                   <ResizableTable
                     storageKey="material-payment-center"
                     rowKey="factoryName"
@@ -563,6 +597,17 @@ const _MaterialInventory: React.FC = () => {
                         title: '待收/已收/总笔数', key: 'counts', width: 160,
                         render: (_: unknown, r: PaymentCenterItem) =>
                           `${r.pendingCount} / ${r.settledCount} / ${r.totalCount}`,
+                      },
+                      {
+                        title: '最近时间', key: 'latestTime', width: 150,
+                        render: (_: unknown, r: PaymentCenterItem) => {
+                          const times = (r.records || [])
+                            .map(rec => rec.createTime || rec.pickupTime)
+                            .filter(Boolean)
+                            .sort()
+                            .reverse();
+                          return times[0] ? dayjs(times[0]).format('YYYY-MM-DD HH:mm') : '-';
+                        },
                       },
                       {
                         title: '操作', key: 'actions', width: 220,

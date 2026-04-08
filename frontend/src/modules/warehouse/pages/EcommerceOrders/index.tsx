@@ -10,7 +10,7 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
-import api from '@/utils/api';
+import api, { type ApiResult } from '@/utils/api';
 import { message } from '@/utils/antdStatic';
 import { readPageSize } from '@/utils/pageSizeStore';
 
@@ -109,14 +109,14 @@ const OrdersTab: React.FC = () => {
       if (filterPlatform) params.platform = filterPlatform;
       if (filterStatus !== undefined) params.status = filterStatus;
       if (keyword) params.keyword = keyword;
-      const res = await api.post('/ecommerce/orders/list', params);
-      const d = (res as any)?.data ?? {};
+      const res = await api.post<ApiResult>('/ecommerce/orders/list', params);
+      const d = res?.data ?? {};
       const records: EcOrder[] = d.records ?? [];
       setData(records);
       setTotal(d.total ?? 0);
       // 异步加载款式图片，不阻塞主流程
       fetchStyleImages(records);
-    } catch { message.error('加载失败'); }
+    } catch (err: unknown) { message.error(err instanceof Error ? err.message : '加载失败'); }
     finally { setLoading(false); }
   }, [page, pageSize, filterPlatform, filterStatus, keyword, fetchStyleImages]);
 
@@ -136,7 +136,7 @@ const OrdersTab: React.FC = () => {
       message.success('关联成功，出库时自动回写物流状态');
       setLinkTarget(null);
       fetchData();
-    } catch { message.error('关联失败'); }
+    } catch (err: unknown) { message.error(err instanceof Error ? err.message : '关联失败'); }
     finally { setLinking(false); }
   };
 
@@ -152,7 +152,7 @@ const OrdersTab: React.FC = () => {
       message.success('现货出库成功，收入流水已自动记录');
       setOutboundTarget(null);
       fetchData();
-    } catch { message.error('出库失败'); }
+    } catch (err: unknown) { message.error(err instanceof Error ? err.message : '出库失败'); }
     finally { setOutbounding(false); }
   };
 
@@ -467,11 +467,11 @@ const PricingTab: React.FC = () => {
     try {
       const params: Record<string, unknown> = { page, pageSize: 20 };
       if (styleNo) params.styleNo = styleNo;
-      const res = await api.get('/style/sku/list', { params });
-      const d = (res as any)?.data ?? {};
+      const res = await api.get<ApiResult>('/style/sku/list', { params });
+      const d = res?.data ?? {};
       setData(d.records ?? []);
       setTotal(d.total ?? 0);
-    } catch { message.error('加载SKU失败'); }
+    } catch (err: unknown) { message.error(err instanceof Error ? err.message : '加载SKU失败'); }
     finally { setLoading(false); }
   }, [page, styleNo]);
 
@@ -488,7 +488,7 @@ const PricingTab: React.FC = () => {
       message.success('价格已保存');
       setEditRow(null);
       fetchData();
-    } catch { message.error('保存失败'); }
+    } catch (err: unknown) { message.error(err instanceof Error ? err.message : '保存失败'); }
     finally { setSaving(false); }
   };
 

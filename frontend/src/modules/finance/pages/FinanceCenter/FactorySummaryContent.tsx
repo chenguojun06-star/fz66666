@@ -143,8 +143,8 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
       const list = res?.data ?? res ?? [];
       setData(Array.isArray(list) ? list : []);
       if (showSmartErrorNotice) setSmartError(null);
-    } catch (e: any) {
-      const errMessage = String((e as Error)?.message || '获取工厂汇总失败');
+    } catch (e: unknown) {
+      const errMessage = e instanceof Error ? e.message : '获取工厂汇总失败';
       reportSmartError('工厂汇总加载失败', errMessage, 'FIN_FACTORY_SUMMARY_LOAD_FAILED');
       message.error(errMessage);
       setData([]);
@@ -225,8 +225,8 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
           // 标记为已推送，隐藏按钮
           setPushedFactoryIds(prev => new Set([...prev, record.factoryId || record.factoryName]));
           fetchData();
-        } catch (e: any) {
-          message.error(String((e as Error)?.message || '推送失败'));
+        } catch (e: unknown) {
+          message.error(e instanceof Error ? e.message : '推送失败');
         }
       },
     });
@@ -270,8 +270,8 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
           setPushedFactoryIds(prev => new Set([...prev, ...newPushedIds]));
           setSelectedRowKeys([]);
           fetchData();
-        } catch (e: any) {
-          message.error(String((e as Error)?.message || '批量推送失败'));
+        } catch (e: unknown) {
+          message.error(e instanceof Error ? e.message : '批量推送失败');
         }
       },
     });

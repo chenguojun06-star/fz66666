@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { App } from 'antd';
 import dayjs from 'dayjs';
-import api from '@/utils/api';
+import api, { type ApiResult, isApiSuccess } from '@/utils/api';
 import { productionOrderApi, productionScanApi } from '@/services/production/productionApi';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import { matchRecordToStage } from '@/utils/productionStage';
@@ -128,9 +128,8 @@ export function useNodeDetailData(params: UseNodeDetailDataParams) {
       }
       try {
         const res = await productionOrderApi.list({ orderNo: orderId, page: 1, pageSize: 1 });
-        const result = res as any;
-        if (!cancelled && result.code === 200 && result.data) {
-          const data = result.data as { records?: unknown[] };
+        if (!cancelled && isApiSuccess(res) && res?.data) {
+          const data = res.data as { records?: unknown[] };
           const records = data?.records || [];
           if (records.length > 0) {
             const orderData = records[0] as any;
@@ -163,11 +162,12 @@ export function useNodeDetailData(params: UseNodeDetailDataParams) {
 
       while (page <= maxPages) {
         const res = await productionScanApi.listByOrderId(orderId, { page, pageSize });
-        const result = res as any;
-        const records = Array.isArray(result?.data?.records)
-          ? result.data.records
-          : Array.isArray(result?.data)
-            ? result.data
+        const resData: unknown = res?.data;
+        const pageObj = resData && typeof resData === 'object' && !Array.isArray(resData) ? resData as { records?: unknown[] } : null;
+        const records = Array.isArray(pageObj?.records)
+          ? pageObj!.records
+          : Array.isArray(resData)
+            ? resData
             : [];
         if (!records.length) break;
         all.push(...(records as ScanRecord[]));
@@ -232,8 +232,8 @@ export function useNodeDetailData(params: UseNodeDetailDataParams) {
     if (!orderId) return;
     setRepairLoading(true);
     try {
-      const res = await api.post(`/production/process-tracking/${orderId}/repair-warehousing`);
-      const data = (res as any)?.data || {};
+      const res = await api.post<ApiResult>(`/production/process-tracking/${orderId}/repair-warehousing`);
+      const data = res?.data || {};
       const repaired = data.repaired ?? 0;
       if (repaired > 0) {
         message.success(`同步成功，已修复 ${repaired} 条入库跟踪记录`);
@@ -241,8 +241,8 @@ export function useNodeDetailData(params: UseNodeDetailDataParams) {
       } else {
         message.info('没有需要修复的记录，已是最新状态');
       }
-    } catch (err: any) {
-      message.error(`同步失败: ${err?.message || '未知错误'}`);
+    } catch (err: unknown) {
+      message.error(`同步失败: ${err instanceof Error ? err.message : '未知错误'}`);
     } finally {
       setRepairLoading(false);
     }

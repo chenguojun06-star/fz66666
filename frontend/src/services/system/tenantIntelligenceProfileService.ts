@@ -1,4 +1,4 @@
-import api from '@/utils/api';
+import api, { type ApiResult } from '@/utils/api';
 
 export type TenantIntelligenceProfilePayload = {
   primaryGoal: 'DELIVERY' | 'PROFIT' | 'CASHFLOW';
@@ -26,18 +26,18 @@ export type TenantIntelligenceProfileResponse = TenantIntelligenceProfilePayload
 
 const tenantIntelligenceProfileService = {
   async getCurrent(): Promise<TenantIntelligenceProfileResponse> {
-    const res = await api.get<TenantIntelligenceProfileResponse>('/system/tenant-intelligence-profile/current');
-    return (res as any)?.data || (res as any) || {};
+    const res = await api.get<ApiResult<TenantIntelligenceProfileResponse>>('/system/tenant-intelligence-profile/current');
+    return (res?.data || {}) as TenantIntelligenceProfileResponse;
   },
 
   async save(profile: TenantIntelligenceProfilePayload): Promise<TenantIntelligenceProfileResponse> {
-    const res = await api.post<TenantIntelligenceProfileResponse>('/system/tenant-intelligence-profile/save', profile);
-    return (res as any)?.data || (res as any) || {};
+    const res = await api.post<ApiResult<TenantIntelligenceProfileResponse>>('/system/tenant-intelligence-profile/save', profile);
+    return (res?.data || {}) as TenantIntelligenceProfileResponse;
   },
 
   async reset(): Promise<TenantIntelligenceProfileResponse> {
-    const res = await api.post<TenantIntelligenceProfileResponse>('/system/tenant-intelligence-profile/reset');
-    return (res as any)?.data || (res as any) || {};
+    const res = await api.post<ApiResult<TenantIntelligenceProfileResponse>>('/system/tenant-intelligence-profile/reset');
+    return (res?.data || {}) as TenantIntelligenceProfileResponse;
   },
 };
 

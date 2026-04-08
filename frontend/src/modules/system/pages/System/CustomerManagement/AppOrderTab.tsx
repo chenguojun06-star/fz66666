@@ -94,8 +94,8 @@ const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActiv
       notifyModal.close();
       setServerChanKey('');
       fetchNotifyConfig();
-    } catch (e: any) {
-      message.error(e?.message || '保存失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '保存失败');
     } finally {
       setSavingNotify(false);
     }
@@ -127,8 +127,8 @@ const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActiv
       });
       // 通知父组件刷新待处理数量（清除红点）
       onOrderActivated?.();
-    } catch (e: any) {
-      message.error(e?.message || '激活失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '激活失败');
     } finally {
       setActivating(false);
     }

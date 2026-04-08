@@ -235,9 +235,9 @@ export function useProcessDetail({ message, fetchProductionList }: UseProcessDet
       if (processDetailRecord) {
         openProcessDetail(processDetailRecord, 'all');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[工序委派] 保存失败:', error);
-      message.error(error.message || '保存失败');
+      message.error(error instanceof Error ? error.message : '保存失败');
     }
   };
 

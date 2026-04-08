@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import { formatDateTime } from '@/utils/datetime';
-import api from '@/utils/api';
+import api, { type ApiResult } from '@/utils/api';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
 import { compareSizeAsc } from '@/utils/api/size';
 import type { CuttingBundle, ProcessDetailModalProps } from './types';
@@ -42,8 +42,7 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
     (async () => {
       try {
         const res = await templateLibraryApi.progressNodeUnitPrices(styleNo);
-        const r = res as any;
-        const rows: any[] = Array.isArray(r?.data) ? r.data : [];
+        const rows: any[] = Array.isArray(res?.data) ? res.data : [];
         // 存价格 Map
         const pm = new Map<string, number>();
         // 存完整节点列表（含 progressStage）
@@ -86,8 +85,8 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
           api.get(`/style/process/list?styleId=${styleId}`),
           api.get(`/style/secondary-process/list?styleId=${styleId}`),
         ]);
-        const processRows = Array.isArray((processRes as any)?.data) ? (processRes as any).data : [];
-        const secondaryRows = Array.isArray((secondaryRes as any)?.data) ? (secondaryRes as any).data : [];
+        const processRows = Array.isArray(processRes?.data) ? processRes.data : [];
+        const secondaryRows = Array.isArray(secondaryRes?.data) ? secondaryRes.data : [];
         const nextProcessMap = new Map<string, string>();
         const nextSecondaryMap = new Map<string, string>();
         processRows.forEach((item: any) => {
@@ -161,10 +160,10 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
     }
     (async () => {
       try {
-        const res = await api.get('/production/scan/sku/query', {
+        const res = await api.get<ApiResult<any[]>>('/production/scan/sku/query', {
           params: { type: 'list', orderNo: record.orderNo },
         });
-        const rows: any[] = Array.isArray(res) ? (res as any[]) : ((res as any)?.data ?? []);
+        const rows: any[] = Array.isArray(res) ? res : (res?.data ?? []);
         setWarehousingSkuRows(
           rows.map((r: any) => ({
             color: String(r.color || '-'),

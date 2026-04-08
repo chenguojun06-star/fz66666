@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ResizableModal from '@/components/common/ResizableModal';
-import { Form, Select, Input, InputNumber } from 'antd';
+import { Form, Modal, Select, Input, InputNumber } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
 import api from '@/utils/api';
 import { useAuth } from '@/utils/AuthContext';
@@ -27,6 +27,8 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
         if (res.code === 200) {
           setOrders(res.data.records);
         }
+      }).catch(() => {
+        message.error('加载工单列表失败');
       });
       form.setFieldsValue({ pickerName: user?.name });
     } else {
@@ -75,13 +77,13 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
       setMaterials(items);
 
     } catch (e) {
-      // 加载失败时忽略错误
+      message.error('加载物料数据失败');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleFinish = async (values: any) => {
+  const handleFinish = (values: Record<string, unknown>) => {
       const items = selectedMaterials.map(item => ({
           materialId: item.materialId,
           materialCode: item.materialCode,
@@ -98,31 +100,39 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
           return;
       }
 
-      const payload = {
-          picking: {
-              orderId: values.orderId,
-              orderNo: values.orderNo,
-              styleId: values.styleId,
-              styleNo: values.styleNo,
-              remark: values.remark,
-          },
-          items,
-      };
+      Modal.confirm({
+          title: '确认领料',
+          content: `确认提交本次领料申请吗？共选择 ${items.length} 项物料，提交后将扣减对应库存。`,
+          okText: '确认提交',
+          cancelText: '取消',
+          onOk: async () => {
+              const payload = {
+                  picking: {
+                      orderId: values.orderId,
+                      orderNo: values.orderNo,
+                      styleId: values.styleId,
+                      styleNo: values.styleNo,
+                      remark: values.remark,
+                  },
+                  items,
+              };
 
-      setLoading(true);
-      try {
-          const res: any = await api.post('/production/picking', payload);
-          if (res.code === 200) {
-              message.success('领料成功');
-              onSuccess();
-          } else {
-              message.error(res.message || '领料失败');
-          }
-      } catch (e) {
-          message.error(`领料提交失败: ${(e as any)?.message || '未知错误'}`);
-      } finally {
-          setLoading(false);
-      }
+              setLoading(true);
+              try {
+                  const res: any = await api.post('/production/picking', payload);
+                  if (res.code === 200) {
+                      message.success('领料成功');
+                      onSuccess();
+                  } else {
+                      message.error(res.message || '领料失败');
+                  }
+              } catch (e: unknown) {
+                  message.error(`领料提交失败: ${e instanceof Error ? e.message : '未知错误'}`);
+              } finally {
+                  setLoading(false);
+              }
+          },
+      });
   };
 
   const columns = [
@@ -131,7 +141,7 @@ const PickingForm: React.FC<PickingFormProps> = ({ visible, onCancel, onSuccess 
       { title: '颜色', dataIndex: 'color' },
       { title: '规格', dataIndex: 'specification' },
       { title: '库存选择', width: 300, render: (r: any) => {
-          if (!r.stocks || r.stocks.length === 0) return <span style={{color:'red'}}>无库存</span>;
+          if (!r.stocks || r.stocks.length === 0) return <span style={{color: 'var(--error-color, #ff4d4f)'}}>无库存</span>;
 
           const selected = selectedMaterials.find(m => m.key === r.key);
           const currentStockId = selected?.stockId;

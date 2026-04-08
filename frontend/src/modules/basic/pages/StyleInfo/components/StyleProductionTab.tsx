@@ -128,8 +128,8 @@ const StyleProductionTab: React.FC<Props> = ({
         return null;
       }
       return res.data;
-    } catch (e: any) {
-      message.error((e as any)?.message || '获取生产制单失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '获取生产制单失败');
       return null;
     }
   };

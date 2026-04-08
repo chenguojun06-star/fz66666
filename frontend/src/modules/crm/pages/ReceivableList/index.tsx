@@ -13,6 +13,7 @@ import SmallModal from '@/components/common/SmallModal';
 import RowActions, { type RowAction } from '@/components/common/RowActions';
 import { receivableApi, type Receivable, type ReceivableReceiptLog, type ReceivableStats } from '@/services/crm/customerApi';
 import { message } from '@/utils/antdStatic';
+import type { ApiResult } from '@/utils/api';
 import { paths } from '@/routeConfig';
 
 const { Text } = Typography;
@@ -81,18 +82,12 @@ const CreateReceivableModal: React.FC<{
         <Row gutter={16}>
           <Col span={12}>
             <Form.Item name="customerName" label="客户名称" rules={[{ required: true }]}>
-              <input
-                placeholder="客户公司全称"
-                className="ant-input"
-                style={{ width: '100%' }}
-                onChange={e => form.setFieldValue('customerName', e.target.value)}
-              />
+              <Input placeholder="客户公司全称" />
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item name="orderNo" label="关联订单号">
-              <input placeholder="可选" className="ant-input" style={{ width: '100%' }}
-                onChange={e => form.setFieldValue('orderNo', e.target.value)} />
+              <Input placeholder="可选" />
             </Form.Item>
           </Col>
         </Row>
@@ -211,8 +206,8 @@ const ReceivableDetailModal: React.FC<{
     }
     setLoading(true);
     void receivableApi.detail(receivableId)
-      .then((res) => {
-        const data = (res as any)?.data ?? res;
+      .then((res: ApiResult) => {
+        const data = res?.data ?? res;
         setDetail(data?.receivable ?? null);
         setLogs(Array.isArray(data?.receiptLogs) ? data.receiptLogs : []);
       })
@@ -301,7 +296,7 @@ const ReceivableList: React.FC = () => {
   ) => {
     setLoading(true);
     try {
-      const res = await receivableApi.list({
+      const res: ApiResult = await receivableApi.list({
         page,
         pageSize: pagination.pageSize,
         status: st || undefined,
@@ -309,7 +304,7 @@ const ReceivableList: React.FC = () => {
         sourceBizType: bizType || undefined,
         sourceBizNo: bizNo || undefined,
       });
-      const data = (res as any)?.data ?? res;
+      const data = res?.data ?? res;
       setRecords(data?.records ?? []);
       setTotal(data?.total ?? 0);
     } catch {
@@ -321,8 +316,8 @@ const ReceivableList: React.FC = () => {
 
   const fetchStats = useCallback(async () => {
     try {
-      const res = await receivableApi.stats();
-      const data = (res as any)?.data ?? res;
+      const res: ApiResult = await receivableApi.stats();
+      const data = res?.data ?? res;
       setStats(data ?? { totalPending: 0, totalOverdue: 0, overdueCount: 0, newThisMonth: 0 });
     } catch { /* 不影响主流程 */ }
   }, []);

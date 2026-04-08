@@ -732,11 +732,12 @@ const OrderManagement: React.FC = () => {
       } else {
         message.error(response.message || '下单失败');
       }
-    } catch (error: any) {
-      if (error?.errorFields) {
-        message.error(error.errorFields?.[0]?.errors?.[0] || '表单校验失败');
+    } catch (error: unknown) {
+      if (typeof error === 'object' && error !== null && 'errorFields' in error) {
+        const ef = error as { errorFields?: Array<{ errors?: string[] }> };
+        message.error(ef.errorFields?.[0]?.errors?.[0] || '表单校验失败');
       } else {
-        message.error(error?.message || '下单失败');
+        message.error(error instanceof Error ? error.message : '下单失败');
       }
     } finally {
       setSubmitLoading(false);

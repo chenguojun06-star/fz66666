@@ -21,7 +21,7 @@ function filterTreeByFactory(nodes: OrganizationUnit[], factoryId: string): Orga
 export function useOrganizationTreeData() {
   const { message } = App.useApp();
   const { user } = useAuth();
-  
+
   const [loading, setLoading] = useState(false);
   const [departments, setDepartments] = useState<OrganizationUnit[]>([]);
   const [treeData, setTreeData] = useState<OrganizationUnit[]>([]);
@@ -41,8 +41,8 @@ export function useOrganizationTreeData() {
       ]);
       setTreeData(Array.isArray(tree) ? tree : []);
       setDepartments(Array.isArray(departmentList) ? departmentList : []);
-    } catch (error: any) {
-      message.error(error?.message || '组织架构加载失败');
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '组织架构加载失败');
     } finally {
       setLoading(false);
     }
@@ -57,8 +57,8 @@ export function useOrganizationTreeData() {
     try {
       const users = await organizationApi.assignableUsers();
       setAssignableUsers(Array.isArray(users) ? users : []);
-    } catch (e: any) {
-      message.error('加载用户列表失败：' + (e?.message || '请重试'));
+    } catch (e: unknown) {
+      message.error('加载用户列表失败：' + (e instanceof Error ? e.message : '请重试'));
       setAssignableUsers([]);
     }
   }, [message]);

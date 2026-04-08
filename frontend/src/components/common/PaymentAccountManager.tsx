@@ -71,8 +71,8 @@ const PaymentAccountManager: React.FC<PaymentAccountManagerProps> = ({
     try {
       const res: any = await wagePaymentApi.listAccounts(ownerType, ownerId);
       setAccounts(res?.data ?? res ?? []);
-    } catch (err: any) {
-      msg.error(`加载收款账户失败: ${err?.message || '请检查网络连接'}`);
+    } catch (err: unknown) {
+      msg.error(`加载收款账户失败: ${err instanceof Error ? err.message : '请检查网络连接'}`);
     } finally {
       setLoading(false);
     }
@@ -102,8 +102,8 @@ const PaymentAccountManager: React.FC<PaymentAccountManagerProps> = ({
         setQrFileList([{ uid: '-1', name: file.name, status: 'done', url }]);
         msg.success('上传成功');
       }
-    } catch (err: any) {
-      msg.error(`上传二维码失败: ${err?.message || '请检查文件格式'}`);
+    } catch (err: unknown) {
+      msg.error(`上传二维码失败: ${err instanceof Error ? err.message : '请检查文件格式'}`);
     }
   };
 
@@ -132,8 +132,8 @@ const PaymentAccountManager: React.FC<PaymentAccountManagerProps> = ({
       form.resetFields();
       setQrFileList([]);
       loadAccounts();
-    } catch (err: any) {
-      if (err?.message) msg.error(err.message);
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message) msg.error(err.message);
     } finally {
       setSaving(false);
     }
@@ -145,8 +145,8 @@ const PaymentAccountManager: React.FC<PaymentAccountManagerProps> = ({
       await wagePaymentApi.removeAccount(id);
       msg.success('已删除');
       loadAccounts();
-    } catch (err: any) {
-      msg.error(`删除账户失败: ${err?.message || '未知错误'}`);
+    } catch (err: unknown) {
+      msg.error(`删除账户失败: ${err instanceof Error ? err.message : '未知错误'}`);
     }
   };
 

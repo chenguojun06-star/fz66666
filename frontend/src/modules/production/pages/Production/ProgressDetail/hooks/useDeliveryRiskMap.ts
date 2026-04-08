@@ -9,6 +9,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { DeliveryRiskItem } from '@/services/intelligence/intelligenceApi';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
+import type { ApiResult } from '@/utils/api';
 
 /** 模块级缓存（同页面多次渲染共享） */
 let _cachedMap: Map<string, DeliveryRiskItem> | null = null;
@@ -59,7 +60,8 @@ export const useDeliveryRiskMap = (
     intelligenceApi
       .assessDeliveryRisk()
       .then((res) => {
-        const items = (res as any)?.data?.items ?? (res as any)?.items ?? [];
+        const raw = res as ApiResult<{ items?: DeliveryRiskItem[] }>;
+        const items = raw?.data?.items ?? (raw as any)?.items ?? [];
         const map = new Map<string, DeliveryRiskItem>();
         (items as DeliveryRiskItem[]).forEach((item) => {
           if (item.orderNo) map.set(item.orderNo, item);

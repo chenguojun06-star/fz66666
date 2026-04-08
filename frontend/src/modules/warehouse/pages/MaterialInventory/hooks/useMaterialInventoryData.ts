@@ -351,8 +351,9 @@ export function useMaterialInventoryData() {
       openPrintModal(buildPickingPrintPayload(record));
       void fetchPendingPickings();
       void fetchData();
-    } catch (e: any) {
-      const msg = e?.response?.data?.message || e?.message || '确认出库失败';
+    } catch (e: unknown) {
+      const respMsg = typeof e === 'object' && e !== null && 'response' in e ? String((e as Record<string, any>).response?.data?.message || '') : '';
+      const msg = respMsg || (e instanceof Error ? e.message : '确认出库失败');
       if (msg.includes('不是待出库')) {
         message.warning('该出库单已确认过，正在刷新列表…');
         void fetchPendingPickings();
@@ -373,8 +374,9 @@ export function useMaterialInventoryData() {
       message.success('已取消该出库单');
       setPendingPickings(prev => prev.filter(p => p.id !== record.id));
       void fetchPendingPickings();
-    } catch (e: any) {
-      message.error(e?.response?.data?.message || '取消失败');
+    } catch (e: unknown) {
+      const respMsg = typeof e === 'object' && e !== null && 'response' in e ? String((e as Record<string, any>).response?.data?.message || '') : '';
+      message.error(respMsg || '取消失败');
     } finally {
       setCancellingPickingId(null);
     }
@@ -623,8 +625,9 @@ export function useMaterialInventoryData() {
       } else {
         message.error(response.data.message || '入库失败');
       }
-    } catch (error: any) {
-      message.error(error.response?.data?.message || error.message || '入库操作失败，请重试');
+    } catch (error: unknown) {
+      const errMsg = typeof error === 'object' && error !== null && 'response' in error ? String((error as Record<string, any>).response?.data?.message || '') : '';
+      message.error(errMsg || (error instanceof Error ? error.message : '入库操作失败，请重试'));
     }
   };
 
@@ -683,8 +686,8 @@ export function useMaterialInventoryData() {
       } else {
         message.error(res?.message || '生成失败');
       }
-    } catch (e: any) {
-      message.error(e.message || '操作失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '操作失败');
     } finally {
       setGeneratingRolls(false);
     }
@@ -797,8 +800,9 @@ export function useMaterialInventoryData() {
       } else {
         message.error(res?.message || res?.data?.message || '出库失败');
       }
-    } catch (error: any) {
-      message.error(error.response?.data?.message || error.message || '出库操作失败，请重试');
+    } catch (error: unknown) {
+      const errMsg = typeof error === 'object' && error !== null && 'response' in error ? String((error as Record<string, any>).response?.data?.message || '') : '';
+      message.error(errMsg || (error instanceof Error ? error.message : '出库操作失败，请重试'));
     }
   };
 

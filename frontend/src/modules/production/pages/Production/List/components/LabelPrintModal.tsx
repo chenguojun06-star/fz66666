@@ -8,6 +8,7 @@ import { Button, Checkbox, InputNumber, Radio, Space, Spin, Tabs, Tag } from 'an
 import { PrinterOutlined } from '@ant-design/icons';
 import QRCode from 'qrcode';
 import ResizableModal from '@/components/common/ResizableModal';
+import type { ApiResult } from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
 import api, { parseProductionOrderLines } from '@/utils/api';
 import type { ProductionOrder } from '@/types/production';
@@ -550,8 +551,8 @@ export default function LabelPrintModal({ open, onClose, order, styleInfo }: Pro
   useEffect(() => {
     if (!open || !order?.factoryId) { setOrderFactoryCode(''); return; }
     void (api as any).get(`/system/factory/${order.factoryId}`)
-      .then((res: any) => {
-        const d = (res as any)?.data ?? res ?? {};
+      .then((res: ApiResult<Record<string, any>>) => {
+        const d = res?.data ?? res ?? {};
         setOrderFactoryCode(String(d.factoryCode || ''));
       })
       .catch(() => setOrderFactoryCode(''));

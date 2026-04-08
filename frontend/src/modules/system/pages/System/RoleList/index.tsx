@@ -235,7 +235,7 @@ const RoleList: React.FC = () => {
         message.error(String(result.message || '获取日志失败'));
         setLogRecords([]);
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(getErrorMessage(e, '获取日志失败'));
       setLogRecords([]);
     } finally {
@@ -281,7 +281,7 @@ const RoleList: React.FC = () => {
       }
 
       await submit();
-    } catch (error: any) {
+    } catch (error: unknown) {
       message.error(getErrorMessage(error, '保存失败'));
     }
   };
@@ -305,7 +305,7 @@ const RoleList: React.FC = () => {
           return;
         }
         throw new Error(String(result.message || '删除失败'));
-      } catch (error: any) {
+      } catch (error: unknown) {
         message.error(getErrorMessage(error, '删除失败'));
         throw error;
       }

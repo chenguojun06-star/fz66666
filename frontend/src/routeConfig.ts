@@ -326,7 +326,11 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.materialPicking]: permissionCodes.materialPicking,
   [paths.progressDetail]: permissionCodes.progress,
   [paths.externalFactory]: permissionCodes.progress,
+  [paths.orderFlow]: permissionCodes.progress,
+  [paths.orderTransfer]: permissionCodes.orderTransfer,
   [paths.warehousing]: permissionCodes.warehousing,
+
+  [paths.patternRevision]: permissionCodes.patternRevision,
 
   [paths.materialReconciliation]: permissionCodes.materialRecon,
   [paths.payrollOperatorSummary]: permissionCodes.financeCenter, // 工资结算汇总，复用成品结算权限（MENU_FINISHED_SETTLEMENT）

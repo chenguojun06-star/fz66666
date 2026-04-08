@@ -76,8 +76,8 @@ const TenantListTab: React.FC = () => {
         message.warning(`以下模块开通失败：${d.failed.join('；')}`);
       }
       grantModal.close();
-    } catch (e: any) {
-      message.error(e?.message || '开通失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '开通失败');
     } finally {
       setGranting(false);
     }
@@ -195,9 +195,9 @@ const TenantListTab: React.FC = () => {
       modal.close();
       form.resetFields();
       fetchData();
-    } catch (e: any) {
-      if (e?.errorFields) return;
-      message.error(e?.message || '创建失败');
+    } catch (e: unknown) {
+      if (e && typeof e === 'object' && 'errorFields' in e) return;
+      message.error(e instanceof Error ? e.message : '创建失败');
     }
   };
 
@@ -230,9 +230,9 @@ const TenantListTab: React.FC = () => {
       } else {
         message.error(res?.message || '重置失败');
       }
-    } catch (e: any) {
-      if (e?.errorFields?.length) return;
-      message.error(e?.message || '重置失败');
+    } catch (e: unknown) {
+      if (e && typeof e === 'object' && 'errorFields' in e && Array.isArray((e as any).errorFields) && (e as any).errorFields.length) return;
+      message.error(e instanceof Error ? e.message : '重置失败');
     } finally {
       setResettingPwd(false);
     }
@@ -260,9 +260,9 @@ const TenantListTab: React.FC = () => {
       approveModal.close();
       approveForm.resetFields();
       fetchData();
-    } catch (e: any) {
-      if (e?.errorFields?.length) return;
-      message.error(e?.message || '审批失败');
+    } catch (e: unknown) {
+      if (e && typeof e === 'object' && 'errorFields' in e && Array.isArray((e as any).errorFields) && (e as any).errorFields.length) return;
+      message.error(e instanceof Error ? e.message : '审批失败');
     } finally {
       setProcessingId(null);
     }
@@ -285,8 +285,8 @@ const TenantListTab: React.FC = () => {
           await tenantService.deleteTenant(record.id);
           message.success('已删除');
           fetchData();
-        } catch (e: any) {
-          message.error(e?.message || '删除失败');
+        } catch (e: unknown) {
+          message.error(e instanceof Error ? e.message : '删除失败');
         }
       },
     });
@@ -303,9 +303,9 @@ const TenantListTab: React.FC = () => {
       rejectModal.close();
       rejectReasonForm.resetFields();
       fetchData();
-    } catch (e: any) {
-      if (e?.errorFields?.length) return;
-      message.error(e?.message || '操作失败');
+    } catch (e: unknown) {
+      if (e && typeof e === 'object' && 'errorFields' in e && Array.isArray((e as any).errorFields) && (e as any).errorFields.length) return;
+      message.error(e instanceof Error ? e.message : '操作失败');
     } finally {
       setProcessingId(null);
     }
@@ -323,8 +323,8 @@ const TenantListTab: React.FC = () => {
           await tenantService.markTenantPaid(record.id, isPaid ? 'TRIAL' : 'PAID');
           message.success(isPaid ? '已取消付费状态' : '已标记为已付费');
           fetchData();
-        } catch (e: any) {
-          message.error(e?.message || '操作失败');
+        } catch (e: unknown) {
+          message.error(e instanceof Error ? e.message : '操作失败');
         }
       },
     });

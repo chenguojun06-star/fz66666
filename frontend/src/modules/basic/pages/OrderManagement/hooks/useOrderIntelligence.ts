@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FormInstance } from 'antd';
-import api from '@/utils/api';
+import api, { isApiSuccess } from '@/utils/api';
 import type { FactoryCapacityItem } from '@/services/production/productionApi';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { DeliveryDateSuggestionResponse, SchedulingSuggestionResponse } from '@/services/intelligence/intelligenceApi';
@@ -52,8 +52,8 @@ export function useOrderIntelligence(params: UseOrderIntelligenceParams) {
     setSuggestionLoading(true);
     try {
       const res = await intelligenceApi.getDeliveryDateSuggestion(factoryName, qty);
-      if ((res as any).code === 200 && (res as any).data) {
-        setDeliverySuggestion((res as any).data as DeliveryDateSuggestionResponse);
+      if (isApiSuccess(res) && res?.data) {
+        setDeliverySuggestion(res.data as DeliveryDateSuggestionResponse);
       }
     } catch { /* 静默失败 */ } finally {
       setSuggestionLoading(false);
@@ -72,8 +72,8 @@ export function useOrderIntelligence(params: UseOrderIntelligenceParams) {
     setSchedulingLoading(true);
     try {
       const res = await intelligenceApi.suggestScheduling({ styleNo, quantity: qty, deadline: deadlineStr, productCategory });
-      if ((res as any).code === 200 && (res as any).data) {
-        setSchedulingResult((res as any).data as SchedulingSuggestionResponse);
+      if (isApiSuccess(res) && res?.data) {
+        setSchedulingResult(res.data as SchedulingSuggestionResponse);
       }
     } catch { /* 静默失败 */ } finally {
       setSchedulingLoading(false);

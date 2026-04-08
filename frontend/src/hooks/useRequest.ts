@@ -109,11 +109,11 @@ export const useRequest = <T = any>(
 
       onSuccessRef.current?.(result as T);
       return result as T;
-    } catch (err: any) {
-      const errorMsg = err?.message || err?.msg || '操作失败';
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : (typeof err === 'object' && err !== null && 'msg' in err ? String((err as Record<string, any>).msg) : '操作失败');
       message.error(errorMsg);
-      setError(err);
-      onErrorRef.current?.(err);
+      setError(err as Error);
+      onErrorRef.current?.(err as Error);
       throw err;
     } finally {
       setLoading(false);

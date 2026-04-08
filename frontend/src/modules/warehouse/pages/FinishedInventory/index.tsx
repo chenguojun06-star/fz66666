@@ -263,8 +263,8 @@ const _FinishedInventory: React.FC = () => {
       setOutboundShippingAddress('');
       setSkuDetails([]);
       loadData();
-    } catch (error: any) {
-      message.error(error?.message || '出库失败，请重试');
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '出库失败，请重试');
     }
   };
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, Tag, Space, Select, App, Button } from 'antd';
+import { Card, Tag, Space, Select, App, Button, Modal } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
@@ -89,34 +89,46 @@ const OutstockRecordTab: React.FC = () => {
     loadRecords();
   }, [loadRecords]);
 
-  const handleApprove = async (id: number) => {
-    setApproving(true);
-    try {
-      await api.post('/warehouse/finished-inventory/outstock/approve', { id: String(id) });
-      message.success('审核成功，账单已推送至汇总');
-      loadRecords();
-    } catch {
-      message.error('审核失败');
-    } finally {
-      setApproving(false);
-    }
+  const handleApprove = (id: number) => {
+    Modal.confirm({
+      title: '确认审核',
+      content: '审核后账单将推送至汇总，确认审核该出库记录？',
+      onOk: async () => {
+        setApproving(true);
+        try {
+          await api.post('/warehouse/finished-inventory/outstock/approve', { id: String(id) });
+          message.success('审核成功，账单已推送至汇总');
+          loadRecords();
+        } catch {
+          message.error('审核失败');
+        } finally {
+          setApproving(false);
+        }
+      },
+    });
   };
 
-  const handleBatchApprove = async () => {
+  const handleBatchApprove = () => {
     if (!selectedRowKeys.length) return;
-    setApproving(true);
-    try {
-      await api.post('/warehouse/finished-inventory/outstock/batch-approve', {
-        ids: selectedRowKeys.map(String),
-      });
-      message.success(`批量审核成功，共 ${selectedRowKeys.length} 条，账单已推送至汇总`);
-      setSelectedRowKeys([]);
-      loadRecords();
-    } catch {
-      message.error('批量审核失败');
-    } finally {
-      setApproving(false);
-    }
+    Modal.confirm({
+      title: '确认批量审核',
+      content: `审核后账单将推送至汇总，确认批量审核选中的 ${selectedRowKeys.length} 条出库记录？`,
+      onOk: async () => {
+        setApproving(true);
+        try {
+          await api.post('/warehouse/finished-inventory/outstock/batch-approve', {
+            ids: selectedRowKeys.map(String),
+          });
+          message.success(`批量审核成功，共 ${selectedRowKeys.length} 条，账单已推送至汇总`);
+          setSelectedRowKeys([]);
+          loadRecords();
+        } catch {
+          message.error('批量审核失败');
+        } finally {
+          setApproving(false);
+        }
+      },
+    });
   };
 
   const columns: ColumnsType<OutstockRecord> = [
@@ -172,24 +184,12 @@ const OutstockRecordTab: React.FC = () => {
     },
     {
       title: '单价',
-      width: 130,
-      render: (_, record) => {
-        const cost = Number(record.costPrice) || 0;
-        const sale = Number(record.salesPrice) || 0;
-        const profit = sale - cost;
-        return (
-          <div style={{ fontSize: 'var(--font-size-sm)' }}>
-            <div>单价: <span style={{ color: '#cf1322', fontWeight: 600 }}>¥{sale.toFixed(2)}</span></div>
-            <div>成本: <span style={{ color: 'var(--neutral-text-secondary)' }}>¥{cost.toFixed(2)}</span></div>
-            {sale > 0 && (
-              <div>
-                毛利: <span style={{ color: profit >= 0 ? 'var(--color-success)' : '#cf1322', fontWeight: 600 }}>
-                  ¥{profit.toFixed(2)}
-                </span>
-              </div>
-            )}
-          </div>
-        );
+      dataIndex: 'salesPrice',
+      width: 100,
+      align: 'center' as const,
+      render: (val: number) => {
+        const sale = Number(val) || 0;
+        return <span style={{ color: '#cf1322', fontWeight: 600 }}>¥{sale.toFixed(2)}</span>;
       },
     },
     {

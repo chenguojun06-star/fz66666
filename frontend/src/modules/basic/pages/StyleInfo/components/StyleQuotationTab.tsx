@@ -252,8 +252,8 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, styleNo, readOnly, onSave
       } else {
         message.error(res?.message || '解锁失败');
       }
-    } catch (error: any) {
-      message.error(error?.message || '解锁失败');
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '解锁失败');
     }
   };
 

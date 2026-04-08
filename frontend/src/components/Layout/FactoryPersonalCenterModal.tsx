@@ -44,8 +44,8 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
       } else {
         message.error(res.message || '加载成员失败');
       }
-    } catch (e: any) {
-      message.error(e?.message || '加载成员失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '加载成员失败');
     } finally {
       setMembersLoading(false);
     }
@@ -67,8 +67,8 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
       } else {
         message.error(res.message || '操作失败');
       }
-    } catch (e: any) {
-      message.error(e?.message || '操作失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '操作失败');
     }
   };
 
@@ -81,8 +81,8 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
       } else {
         message.error(res.message || '删除失败');
       }
-    } catch (e: any) {
-      message.error(e?.message || '删除失败');
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '删除失败');
     }
   };
 
@@ -99,9 +99,9 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
       } else {
         message.error(res.message || '新增失败');
       }
-    } catch (e: any) {
-      if (e?.errorFields) return;
-      message.error(e?.message || '新增失败');
+    } catch (e: unknown) {
+      if (e && typeof e === 'object' && 'errorFields' in e) return;
+      message.error(e instanceof Error ? e.message : '新增失败');
     } finally {
       setAddLoading(false);
     }
@@ -125,9 +125,9 @@ const FactoryPersonalCenterModal: React.FC<FactoryPersonalCenterModalProps> = ({
       } else {
         message.error(res.message || '密码修改失败');
       }
-    } catch (e: any) {
-      if (e?.errorFields) return;
-      message.error(e?.message || '密码修改失败');
+    } catch (e: unknown) {
+      if (e && typeof e === 'object' && 'errorFields' in e) return;
+      message.error(e instanceof Error ? e.message : '密码修改失败');
     } finally {
       setPwdLoading(false);
     }
