@@ -323,10 +323,11 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
         if (!StringUtils.hasText(on) || bn <= 0) {
             return null;
         }
+        // 优先返回非 split_parent 的记录（拆分后子菲号优先、未拆分菲号优先）
         return this.getOne(new LambdaQueryWrapper<CuttingBundle>()
                 .eq(CuttingBundle::getProductionOrderNo, on)
                 .eq(CuttingBundle::getBundleNo, bn)
-                .last("limit 1"));
+                .last("ORDER BY CASE WHEN split_status='split_parent' THEN 1 ELSE 0 END ASC LIMIT 1"));
     }
 
     @Override

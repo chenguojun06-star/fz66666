@@ -402,7 +402,33 @@ const AppWrapper: React.FC = () => {
         Button: {
           primaryShadow: '0 2px 0 rgba(59, 130, 246, 0.1)',
         },
-      } : undefined,
+      } : {
+        /* 白色主题：浅灰底+白卡片层次 */
+        Table: {
+          headerBg: '#f0f3f8',
+          rowHoverBg: '#edf2ff',
+          borderColor: '#e8ecf2',
+          headerSplitColor: '#e0e4eb',
+        },
+        Card: {
+          colorBgContainer: '#ffffff',
+        },
+        Modal: {
+          headerBg: '#f9fafb',
+          contentBg: '#ffffff',
+          footerBg: '#f9fafb',
+        },
+        Select: {
+          optionSelectedBg: 'rgba(45, 127, 249, 0.08)',
+        },
+        Input: {
+          activeBorderColor: '#2D7FF9',
+          hoverBorderColor: '#6ba3ff',
+        },
+        Button: {
+          primaryShadow: '0 2px 6px rgba(45, 127, 249, 0.25)',
+        },
+      },
     };
   };
 

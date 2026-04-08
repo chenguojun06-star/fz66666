@@ -30,7 +30,7 @@
     </view>
 
     <view wx:if="{{globalSearch.hasSearched && globalSearch.results.length === 0}}" class="no-results">
-      <text class="no-results-icon">🔍</text>
+      <view class="no-results-icon"><view class="line-icon line-icon--sm icon-search"></view></view>
       <text class="no-results-text">未找到匹配的订单</text>
       <view class="close-btn" bindtap="closeGlobalSearch">关闭</view>
     </view>
@@ -55,6 +55,7 @@
       <text class="stats-bar-value stats-accent">{{orderStats.totalQuantity}}</text>
     </view>
 
+
     <view class="org-filter-row">
       <picker mode="selector" range="{{factoryTypeOptions}}" range-key="label" value="{{selectedFactoryTypeIndex}}" bindchange="onFactoryTypeFilterChange">
         <view class="org-filter-pill">
@@ -63,11 +64,11 @@
         </view>
       </picker>
       <view class="org-filter-pill {{delayedOnly ? 'org-filter-pill-active' : ''}}" bindtap="toggleDelayedOnly">
-        <text class="org-filter-label">⏰</text>
+        <view class="line-icon line-icon--sm icon-clock org-filter-label"></view>
         <text class="org-filter-value">{{delayedOnly ? '全部' : '延期'}}</text>
       </view>
       <view class="refresh-btn {{orders.loading ? 'refresh-btn-loading' : ''}}" bindtap="onRefresh" hover-class="refresh-btn-hover">
-        <text class="refresh-icon">{{orders.loading ? '⏳' : '🔄'}}</text>
+        <view class="line-icon line-icon--sm icon-refresh refresh-icon {{orders.loading ? 'refresh-btn-loading' : ''}}"></view>
         <text class="refresh-text">刷新</text>
       </view>
     </view>
@@ -155,6 +156,7 @@
             <!-- 裁剪菲号操作（仅裁剪tab） -->
             <view wx:if="{{activeTab === 'cutting'}}" class="item-actions">
               <view class="action-btn action-btn-primary" bindtap="onGenerateBundle" data-order="{{item}}">&#9986;&#65039; 生成菲号</view>
+              <view class="action-btn action-btn-primary" bindtap="onSplitBundle" data-order="{{item}}">&#128260; 拆菲号</view>
             </view>
           </view>
         </view>
@@ -170,7 +172,7 @@
 <!-- 裁剪菲号生成弹窗 -->
 <view wx:if="{{bundleModal.visible}}" class="bundle-modal-mask">
   <view class="bundle-modal">
-    <view class="bundle-modal-title">✂️ 生成裁剪菲号</view>
+    <view class="bundle-modal-title">生成裁剪菲号</view>
     <view class="bundle-modal-meta">
       <text>订单: {{bundleModal.orderNo}}</text>
       <text>款号: {{bundleModal.styleNo}}</text>

@@ -60,10 +60,10 @@ const buildTraceRoute = (row?: TraceRow | null) => {
     return { label: '面辅料采购', path: `${paths.materialPurchase}?orderNo=${encodeURIComponent(targetId)}` };
   }
   if (toolSummary.includes('tool_team_dispatch')) {
-    return { label: '下单管理', path: `${paths.orderManagementList}?keyword=${encodeURIComponent(targetId)}` };
+    return { label: '生产管理', path: `${paths.productionList}?keyword=${encodeURIComponent(targetId)}` };
   }
   return extractOrderNo(row)
-    ? { label: '订单查询', path: `${paths.orderManagementList}?keyword=${encodeURIComponent(extractOrderNo(row) || '')}` }
+    ? { label: '生产订单', path: `${paths.productionList}?keyword=${encodeURIComponent(extractOrderNo(row) || '')}` }
     : null;
 };
 const exportTraceRows = (rows: TraceRow[]) => {
@@ -260,7 +260,7 @@ const AiAgentTraceCenter: React.FC = () => {
           columns={[
             { title: '时间', dataIndex: 'createdAt', width: 180 },
             { title: 'commandId', dataIndex: 'commandId', width: 240, ellipsis: true },
-            { title: '状态', dataIndex: 'status', width: 100, render: (value) => <Tag color={statusColor(value)}>{value || 'UNKNOWN'}</Tag> },
+            { title: '状态', dataIndex: 'status', width: 100, render: (value) => { const m: Record<string, string> = { SUCCESS: '成功', FAILED: '失败', EXECUTING: '执行中', TIMEOUT: '超时', PENDING: '待执行', UNKNOWN: '未知' }; return <Tag color={statusColor(value)}>{m[value] || value || '未知'}</Tag>; } },
             { title: '责任人', dataIndex: 'executorId', width: 120, ellipsis: true },
             { title: '目标单据', dataIndex: 'targetId', width: 140, ellipsis: true },
             { title: '工具', dataIndex: 'remark', width: 220, ellipsis: true },

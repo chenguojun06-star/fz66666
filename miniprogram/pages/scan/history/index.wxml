@@ -14,7 +14,7 @@
     </view>
     <view class="search-row">
       <view class="search-box">
-        <text class="search-icon">🔍</text>
+        <view class="line-icon line-icon--sm icon-search search-icon"></view>
         <input class="search-input" placeholder="订单号 / 菲号 / 工序" value="{{searchKeyword}}" bindinput="onKeywordInput" confirm-type="search" bindconfirm="onSearch" />
       </view>
       <view class="search-btn" bindtap="onSearch" hover-class="search-btn-hover" hover-stay-time="50">搜索</view>
@@ -45,7 +45,7 @@
 
   <!-- 空状态 -->
   <view wx:if="{{displayRecords.length === 0 && !loading}}" class="empty-state">
-    <text class="empty-icon">📋</text>
+    <view class="line-icon line-icon--sm icon-clipboard empty-icon"></view>
     <text class="empty-text" wx:if="{{showOnlyPayable}}">暂无计薪记录</text>
     <text class="empty-text" wx:else>暂无记录</text>
     <text class="empty-hint" wx:if="{{showOnlyPayable}}">当前筛选仅显示有单价且有数量的记录</text>

@@ -1,0 +1,87 @@
+<custom-nav title="采购任务" show-back="{{true}}" show-search="{{false}}" />
+
+<view class="page-container">
+  <!-- Filter Tabs -->
+  <view class="filter-bar">
+    <view
+      class="filter-tab {{activeStatus === item.key ? 'active' : ''}}"
+      wx:for="{{statusTabs}}"
+      wx:key="key"
+      data-key="{{item.key}}"
+      bindtap="onTabChange"
+    >
+      <text class="tab-label">{{item.label}}</text>
+      <text class="tab-count" wx:if="{{item.count > 0}}">{{item.count}}</text>
+    </view>
+  </view>
+
+  <!-- Loading -->
+  <view class="loading-wrap" wx:if="{{loading}}">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <!-- Empty State -->
+  <view class="empty-state" wx:elif="{{filteredTasks.length === 0}}">
+    <text class="empty-icon">📦</text>
+    <text class="empty-text">暂无采购任务</text>
+    <text class="empty-hint">下拉刷新试试</text>
+  </view>
+
+  <!-- Task Cards (grouped by orderNo) -->
+  <view class="task-list" wx:else>
+    <view class="task-card" wx:for="{{filteredTasks}}" wx:key="orderNo">
+      <!-- Card Header -->
+      <view class="card-header" bindtap="goDetail" data-order-no="{{item.orderNo}}" data-style-no="{{item.styleNo}}">
+        <view class="header-left">
+          <text class="order-no">{{item.orderNo}}</text>
+          <view class="status-tag tag-{{item.statusColor}}">{{item.statusText}}</view>
+        </view>
+        <view class="header-right">
+          <text class="arrow-icon">›</text>
+        </view>
+      </view>
+
+      <!-- Card Body -->
+      <view class="card-body" bindtap="goDetail" data-order-no="{{item.orderNo}}" data-style-no="{{item.styleNo}}">
+        <view class="info-row">
+          <text class="info-label">款号</text>
+          <text class="info-value">{{item.styleNo || '-'}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">款名</text>
+          <text class="info-value">{{item.styleName || '-'}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">物料数</text>
+          <text class="info-value">{{item.totalCount}}种</text>
+        </view>
+        <view class="info-row" wx:if="{{item.actionableCount > 0}}">
+          <text class="info-label">待处理</text>
+          <text class="info-value highlight">{{item.actionableCount}}种</text>
+        </view>
+      </view>
+
+      <!-- Card Footer Actions -->
+      <view class="card-footer" wx:if="{{item.canReceive || item.canOperate}}">
+        <view
+          class="action-btn btn-primary"
+          wx:if="{{item.canReceive}}"
+          data-order-no="{{item.orderNo}}"
+          bindtap="onReceive"
+        >
+          领取任务
+        </view>
+        <view
+          class="action-btn btn-primary"
+          wx:if="{{item.canOperate}}"
+          data-order-no="{{item.orderNo}}"
+          data-style-no="{{item.styleNo}}"
+          bindtap="goDetail"
+        >
+          填写到货
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

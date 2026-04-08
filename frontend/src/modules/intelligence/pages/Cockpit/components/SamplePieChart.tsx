@@ -1,9 +1,12 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
+import { Popover } from 'antd';
+import { useNavigate } from 'react-router-dom';
 import PieChartCard, { PieSegment, TodayStat } from '@/components/PieChartCard';
 import { useTimeDimension } from '../contexts/TimeDimensionContext';
 import { useStyleLink } from '../contexts/StyleLinkContext';
 import api from '@/utils/api';
 import type { StyleInfo } from '@/types/style';
+import './SamplePieChart.css';
 
 interface StageConfig {
   key: string;
@@ -169,6 +172,85 @@ const SamplePieChart: React.FC<SamplePieChartProps> = ({ mode = 'sidebar', modul
     };
   }, [styles]);
 
+  const todayCompletedCount = styles.filter(s => isToday(s.sampleCompletedTime)).length;
+
+  const overdueStyles = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return styles.filter(s =>
+      !s.sampleCompletedTime && s.deliveryDate && new Date(s.deliveryDate) < today
+    );
+  }, [styles]);
+
+  const navigate = useNavigate();
+  const hasOverdue = overdueStyles.length > 0;
+
+  const overduePopover = (
+    <div style={{ maxHeight: 240, overflowY: 'auto', minWidth: 200 }}>
+      {overdueStyles.slice(0, 15).map((s, i) => {
+        const days = Math.floor((Date.now() - new Date(s.deliveryDate!).getTime()) / 86400000);
+        return (
+          <div
+            key={s.styleNo || i}
+            onClick={() => navigate('/style-info')}
+            style={{
+              padding: '4px 0',
+              cursor: 'pointer',
+              fontSize: 12,
+              color: '#374151',
+              borderBottom: i < overdueStyles.length - 1 ? '1px solid #f3f4f6' : 'none',
+              display: 'flex',
+              justifyContent: 'space-between',
+              gap: 12,
+            }}
+          >
+            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {s.styleNo}{s.styleName ? ` ${s.styleName}` : ''}
+            </span>
+            <span style={{ color: '#ef4444', flexShrink: 0 }}>逾期{days}天</span>
+          </div>
+        );
+      })}
+      {overdueStyles.length > 15 && (
+        <div style={{ paddingTop: 4, fontSize: 11, color: '#9ca3af' }}>还有{overdueStyles.length - 15}条…</div>
+      )}
+      {overdueStyles.length === 0 && (
+        <div style={{ fontSize: 12, color: '#9ca3af', padding: '4px 0' }}>暂无逾期款式</div>
+      )}
+    </div>
+  );
+
+  const statusDot = (
+    <Popover content={overduePopover} trigger="hover" placement="bottomLeft">
+      <span className={`status-dot ${hasOverdue ? 'status-dot--red' : 'status-dot--green'}`} />
+    </Popover>
+  );
+
+  if (mode === 'stage') {
+    return (
+      <>
+        <div className="sample-stage-header">
+          <span className="sample-stage-title">样衣开发</span>
+          {statusDot}
+        </div>
+        <PieChartCard
+          mode={mode}
+          title="样衣开发"
+          total={stats.total}
+          inProgress={stats.inDev}
+          completed={stats.completed}
+          todayCompleted={todayCompletedCount}
+          todayCompletedUnit="款"
+          avgTime={formatDays(stats.avgDays)}
+          inProgressLabel="开发中"
+          segments={stats.stageCounts}
+          loading={loading}
+          todayStats={stats.todayStats}
+        />
+      </>
+    );
+  }
+
   return (
     <PieChartCard
       mode={mode}
@@ -176,7 +258,10 @@ const SamplePieChart: React.FC<SamplePieChartProps> = ({ mode = 'sidebar', modul
       total={stats.total}
       inProgress={stats.inDev}
       completed={stats.completed}
+      todayCompleted={todayCompletedCount}
+      todayCompletedUnit="款"
       avgTime={formatDays(stats.avgDays)}
+      inProgressLabel="开发中"
       segments={stats.stageCounts}
       loading={loading}
       todayStats={stats.todayStats}

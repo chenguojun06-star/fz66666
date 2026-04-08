@@ -9,7 +9,7 @@
   <!-- 扫码按钮（首次进入没有 rollCode 时显示） -->
   <view wx:if="{{!rollCode}}" class="scan-btn-wrap">
     <view class="scan-btn" bindtap="onScanTap">
-      <text class="scan-icon">📷</text>
+      <view class="line-icon icon-camera scan-icon"></view>
       <text class="scan-label">点击扫码</text>
     </view>
     <text class="scan-hint">请扫料卷/箱上的 MR 开头二维码</text>
@@ -32,14 +32,14 @@
 
     <!-- 错误信息 -->
     <view wx:elif="{{errorMsg}}" class="error-card">
-      <text class="error-icon">⚠️</text>
+      <view class="line-icon line-icon--sm icon-alert error-icon"></view>
       <text class="error-msg">{{errorMsg}}</text>
       <view class="btn-retry" bindtap="onScanTap">重新扫码</view>
     </view>
 
     <!-- 成功信息 -->
     <view wx:if="{{successMsg}}" class="success-banner">
-      <text class="success-icon">✅</text>
+      <view class="line-icon line-icon--sm icon-check success-icon"></view>
       <text class="success-text">{{successMsg}}</text>
     </view>
 
@@ -93,11 +93,11 @@
 
       <!-- 按钮 -->
       <view wx:if="{{rollInfo.currentStatus === 'IN_STOCK'}}" class="btn-issue {{submitting ? 'btn-disabled' : ''}}" bindtap="onIssueTap">
-        {{submitting ? '处理中...' : '✅ 确认发料出库'}}
+        {{submitting ? '处理中...' : '确认发料出库'}}
       </view>
 
       <view wx:elif="{{rollInfo.currentStatus === 'ISSUED'}}" class="btn-return {{submitting ? 'btn-disabled' : ''}}" bindtap="onReturnTap">
-        {{submitting ? '处理中...' : '↩️ 退回入库'}}
+        {{submitting ? '处理中...' : '退回入库'}}
       </view>
 
     </view>

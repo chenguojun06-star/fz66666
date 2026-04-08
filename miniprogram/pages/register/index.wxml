@@ -21,8 +21,8 @@
         </view>
       </view>
       <view wx:if="{{tenantName}}" class="tenant-info">
-        <text class="tenant-tag">✅ {{tenantName}}</text>
-        <text wx:if="{{factoryName}}" class="tenant-tag" style="margin-left: 8px;">🏭 {{factoryName}}</text>
+        <text class="tenant-tag">{{tenantName}}</text>
+        <text wx:if="{{factoryName}}" class="tenant-tag" style="margin-left: 8px;">{{factoryName}}</text>
       </view>
     </view>
 

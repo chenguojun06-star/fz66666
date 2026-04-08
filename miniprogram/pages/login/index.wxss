@@ -792,8 +792,7 @@ page {
   margin-top: 11px;
 }
 
-.login-btn,
-.login-btn-wechat {
+.login-btn {
   width: 100%;
   height: 44px;
   line-height: 44px;
@@ -810,15 +809,7 @@ page {
   box-shadow: 0 7px 15px rgba(var(--color-primary-rgb), 0.22);
 }
 
-.login-btn-wechat {
-  color: var(--color-text-white);
-  font-size: 14px;
-  background: var(--login-wechat);
-  box-shadow: 0 5px 12px rgba(7, 193, 96, 0.24);
-}
-
-.login-btn-hover,
-.login-btn-wechat-hover {
+.login-btn-hover {
   opacity: 0.88;
   transform: scale(0.98);
 }

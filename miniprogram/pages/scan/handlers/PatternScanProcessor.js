@@ -146,45 +146,45 @@ function buildPatternOperationOptions({ patternDetail, processConfig: _processCo
   // ── 阶段一：仓库操作（优先判断，状态明确）──────────────────────────
   // 已入库 → 只能出库
   if (scannedSet.has('WAREHOUSE_IN') && !scannedSet.has('WAREHOUSE_OUT')) {
-    options.push({ value: 'WAREHOUSE_OUT', label: '样衣出库', icon: '📤' });
+    options.push({ value: 'WAREHOUSE_OUT', label: '样衣出库', icon: '' });
     return options; // 已入库阶段只展示出库
   }
   // 已出库 → 只能归还
   if (scannedSet.has('WAREHOUSE_OUT') && !scannedSet.has('WAREHOUSE_RETURN')) {
-    options.push({ value: 'WAREHOUSE_RETURN', label: '样衣归还', icon: '↩️' });
+    options.push({ value: 'WAREHOUSE_RETURN', label: '样衣归还', icon: '' });
     return options; // 已出库阶段只展示归还
   }
   // 已归还 → 可再次出库（循环借还）
   if (scannedSet.has('WAREHOUSE_RETURN')) {
-    options.push({ value: 'WAREHOUSE_OUT', label: '样衣出库', icon: '📤' });
+    options.push({ value: 'WAREHOUSE_OUT', label: '样衣出库', icon: '' });
     return options;
   }
 
   // ── 阶段二：待领取 → 领取操作 ───────────────────────────────────────
   if (status === 'PENDING') {
-    options.push({ value: 'RECEIVE', label: '领取样板', icon: '📋' });
+    options.push({ value: 'RECEIVE', label: '领取样板', icon: '' });
     return options; // 待领取状态只展示领取
   }
 
   // ── 阶段三：生产完成，等待入库 ─────────────────────────────────────
   if ((status === 'PRODUCTION_COMPLETED' || status === 'COMPLETED') && !reviewApproved) {
-    options.push({ value: 'REVIEW', label: '样衣审核', icon: '🧾' });
-    options.push({ value: 'WAREHOUSE_IN', label: '样衣入库（将先审核）', icon: '📦' });
+    options.push({ value: 'REVIEW', label: '样衣审核', icon: '' });
+    options.push({ value: 'WAREHOUSE_IN', label: '样衣入库（将先审核）', icon: '' });
     return options;
   }
 
   if ((status === 'PRODUCTION_COMPLETED' || status === 'COMPLETED') && reviewApproved && !scannedSet.has('WAREHOUSE_IN')) {
-    options.push({ value: 'WAREHOUSE_IN', label: '样衣入库', icon: '📦' });
+    options.push({ value: 'WAREHOUSE_IN', label: '样衣入库', icon: '' });
     return options; // 已完成只展示入库，不展示其他生产工序
   }
 
   // ── 阶段四：生产中，展示固定6个父进度工序（未扫的才显示）─────────
   const PARENT_PRODUCTION_STAGES = [
-    { value: 'PROCUREMENT', label: '采购',    icon: '🛒' },
-    { value: 'CUTTING',     label: '裁剪',    icon: '✂️' },
-    { value: 'SECONDARY',   label: '二次工艺', icon: '🪡' },
-    { value: 'SEWING',      label: '车缝',    icon: '🧵' },
-    { value: 'TAIL',        label: '尾部',    icon: '🔧' },
+    { value: 'PROCUREMENT', label: '采购',    icon: '' },
+    { value: 'CUTTING',     label: '裁剪',    icon: '' },
+    { value: 'SECONDARY',   label: '二次工艺', icon: '' },
+    { value: 'SEWING',      label: '车缝',    icon: '' },
+    { value: 'TAIL',        label: '尾部',    icon: '' },
   ];
   PARENT_PRODUCTION_STAGES.forEach(stage => {
     if (stage.value === 'SECONDARY') {
@@ -204,10 +204,8 @@ function buildPatternOperationOptions({ patternDetail, processConfig: _processCo
     const fallbackType = determinePatternOperation(patternDetail, manualScanType);
     options.push({
       value: fallbackType,
-      label: getPatternSuccessMessage(fallbackType).replace('✅ ', ''),
-      icon: fallbackType === 'WAREHOUSE_IN' ? '📦'
-        : (fallbackType === 'WAREHOUSE_OUT' ? '📤'
-          : (fallbackType === 'WAREHOUSE_RETURN' ? '↩️' : '🧵')),
+      label: getPatternSuccessMessage(fallbackType),
+      icon: '',
     });
   }
 
@@ -340,21 +338,21 @@ async function submitPatternScan(handler, data) {
  */
 function getPatternSuccessMessage(operationType) {
   const messages = {
-    'RECEIVE': '✅ 领取成功',
-    'PLATE': '✅ 车板扫码成功',
-    'FOLLOW_UP': '✅ 跟单扫码成功',
-    'COMPLETE': '✅ 完成确认成功',
-    'PROCUREMENT': '✅ 采购完成',
-    'CUTTING': '✅ 裁剪完成',
-    'SECONDARY': '✅ 二次工艺完成',
-    'SEWING': '✅ 车缝完成',
-    'TAIL': '✅ 尾部完成',
-    'REVIEW': '✅ 样衣审核通过',
-    'WAREHOUSE_IN': '✅ 样衣入库成功',
-    'WAREHOUSE_OUT': '✅ 样衣出库成功',
-    'WAREHOUSE_RETURN': '✅ 样衣归还成功',
+    'RECEIVE': '领取成功',
+    'PLATE': '车板扫码成功',
+    'FOLLOW_UP': '跟单扫码成功',
+    'COMPLETE': '完成确认成功',
+    'PROCUREMENT': '采购完成',
+    'CUTTING': '裁剪完成',
+    'SECONDARY': '二次工艺完成',
+    'SEWING': '车缝完成',
+    'TAIL': '尾部完成',
+    'REVIEW': '样衣审核通过',
+    'WAREHOUSE_IN': '样衣入库成功',
+    'WAREHOUSE_OUT': '样衣出库成功',
+    'WAREHOUSE_RETURN': '样衣归还成功',
   };
-  return messages[operationType] || '✅ 操作成功';
+  return messages[operationType] || '操作成功';
 }
 
 module.exports = {

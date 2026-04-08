@@ -6,36 +6,38 @@ const api = require('../../utils/api');
 const { safeNavigate } = require('../../utils/uiHelper');
 
 /**
- * 处理裁剪任务 - 跳转扫码页
+ * 处理裁剪任务 - 跳转裁剪任务页
  * @param {Object} task - 任务对象
  * @returns {void}
  */
 function handleCuttingTask(task) {
   const orderNo = task.productionOrderNo || task.orderNo || '';
-  try {
-    wx.setStorageSync('pending_cutting_task', JSON.stringify(task));
-    wx.setStorageSync('pending_order_hint', orderNo);
-  } catch (e) {
-    console.error('存储失败', e);
+  const taskId = task.id || task.taskId || '';
+  const orderId = task.orderId || task.productionOrderId || '';
+
+  if (taskId && orderNo) {
+    const url = `/pages/cutting/task-detail/index?taskId=${taskId}&orderNo=${encodeURIComponent(orderNo)}&orderId=${encodeURIComponent(orderId)}`;
+    safeNavigate({ url }, 'navigateTo').catch(() => {});
+  } else {
+    safeNavigate({ url: '/pages/cutting/task-list/index' }, 'navigateTo').catch(() => {});
   }
-  safeNavigate({ url: '/pages/scan/index' }, 'switchTab').catch(() => {});
 }
 
 /**
- * 处理采购任务 - 跳转扫码页
+ * 处理采购任务 - 跳转采购任务页
  * @param {Object} task - 任务对象
  * @returns {void}
  */
 function handleProcurementTask(task) {
   const orderNo = task.orderNo || '';
-  try {
-    wx.setStorageSync('pending_procurement_task', JSON.stringify(task));
-    wx.setStorageSync('pending_order_hint', orderNo);
-    wx.setStorageSync('mp_scan_type_index', 2); // 采购模式
-  } catch (e) {
-    console.error('存储失败', e);
+  const styleNo = task.styleNo || '';
+
+  if (orderNo) {
+    const url = `/pages/procurement/task-detail/index?orderNo=${encodeURIComponent(orderNo)}&styleNo=${encodeURIComponent(styleNo)}`;
+    safeNavigate({ url }, 'navigateTo').catch(() => {});
+  } else {
+    safeNavigate({ url: '/pages/procurement/task-list/index' }, 'navigateTo').catch(() => {});
   }
-  safeNavigate({ url: '/pages/scan/index' }, 'switchTab').catch(() => {});
 }
 
 /**
@@ -195,14 +197,23 @@ function handleReminderTask(task) {
   const orderNo = task.orderNo || '';
   const type = task.type || '';
 
+  // 采购提醒 → 跳转采购任务列表页
+  if (type === '采购') {
+    safeNavigate({ url: '/pages/procurement/task-list/index' }, 'navigateTo').catch(() => {});
+    return;
+  }
+
+  // 裁剪提醒 → 跳转裁剪任务列表页
+  if (type === '裁剪') {
+    safeNavigate({ url: '/pages/cutting/task-list/index' }, 'navigateTo').catch(() => {});
+    return;
+  }
+
+  // 其他提醒类型 → 保持原有扫码页跳转
   try {
     wx.setStorageSync('pending_order_hint', orderNo);
   } catch (e) {
     console.error('存储失败', e);
-  }
-
-  if (type === '采购') {
-    wx.setStorageSync('mp_scan_type_index', 2);
   }
   safeNavigate({ url: '/pages/scan/index' }, 'switchTab').catch(() => {});
 }

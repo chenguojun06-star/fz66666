@@ -90,6 +90,9 @@ public class ProductionScanExecutor {
     private com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
 
     @Autowired
+    private com.fashion.supplychain.production.service.ProductionProcessTrackingService trackingService;
+
+    @Autowired
     private WebSocketService webSocketService;
 
     /**
@@ -229,6 +232,22 @@ public class ProductionScanExecutor {
         // ★ 阶段门控校验：进入当前父节点前，上一个父节点的全部子工序必须完成
         // 例如：扫描"尾部"子工序时，"车缝"的所有子工序必须全部有扫码记录
         stageSupport.validateParentStagePrerequisite(order, bundle, progressStage, childProcessName);
+
+        // ★ 拆分守卫：父菲号在拆分工序及之前工序不允许扫码，后续工序仍可扫码
+        if (bundle != null && "split_parent".equals(bundle.getSplitStatus()) && bundle.getSplitProcessOrder() != null) {
+            List<ProductionProcessTracking> bundleTrackings = trackingService.getByBundleId(bundle.getId());
+            final String matchChild = childProcessName;
+            final String matchStage = progressStage;
+            boolean hasActiveTracking = bundleTrackings.stream()
+                    .anyMatch(t -> (matchChild.equals(t.getProcessName()) || matchStage.equals(t.getProcessName()))
+                            && !"split_archived".equals(t.getScanStatus()));
+            if (!hasActiveTracking) {
+                String splitInfo = bundle.getSplitProcessName() != null
+                        ? "该菲号在「" + bundle.getSplitProcessName() + "」工序已拆分，请扫描子菲号"
+                        : "该菲号已拆分，请扫描子菲号";
+                throw new BusinessException(splitInfo);
+            }
+        }
 
         // 判断是否裁剪
         boolean isCutting = "cutting".equalsIgnoreCase(scanType) ||

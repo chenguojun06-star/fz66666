@@ -33,11 +33,12 @@ interface StatCardProps {
   dataKey: keyof TopStatsData;
   data: TimeRangeStats | null;
   loading: boolean;
+  colorClass?: string;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ icon, label, data, loading }) => {
+const StatCard: React.FC<StatCardProps> = ({ icon, label, data, loading, colorClass }) => {
   return (
-    <div className="top-stat-item">
+    <div className={`top-stat-item ${colorClass || ''}`}>
       <Spin spinning={loading}>
         <div className="stat-card-content">
           {/* 头部：图标 + 标签 + 汇总数量 同一行 */}
@@ -118,26 +119,31 @@ const TopStats: React.FC = () => {
       key: 'sampleDevelopment' as keyof TopStatsData,
       icon: <TagsOutlined />,
       label: '样衣开发',
+      colorClass: 'top-stat--sample',
     },
     {
       key: 'bulkOrder' as keyof TopStatsData,
       icon: <ShoppingCartOutlined />,
       label: '大货下单',
+      colorClass: 'top-stat--bulk',
     },
     {
       key: 'cutting' as keyof TopStatsData,
       icon: <ScissorOutlined />,
       label: '裁剪数量',
+      colorClass: 'top-stat--cutting',
     },
     {
       key: 'warehousingInbound' as keyof TopStatsData,
       icon: <InboxOutlined />,
       label: '入库数量',
+      colorClass: 'top-stat--inbound',
     },
     {
       key: 'warehousingOutbound' as keyof TopStatsData,
       icon: <ExportOutlined />,
       label: '出库数量',
+      colorClass: 'top-stat--outbound',
     },
   ];
 
@@ -152,6 +158,7 @@ const TopStats: React.FC = () => {
             label={config.label}
             data={statsData?.[config.key] || null}
             loading={loading}
+            colorClass={config.colorClass}
           />
         ))}
       </div>

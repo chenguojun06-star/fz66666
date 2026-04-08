@@ -83,10 +83,7 @@ const scanPageData = {
     historyPageSize: 20,
     historyHasMore: true,
 
-    // 采购任务列表
-    procurementTasks: [],
-    // 裁剪任务列表
-    cuttingTasks: [],
+
   },
 
   // 确认明细弹窗（订单扫码后）
@@ -108,10 +105,7 @@ const scanPageData = {
     },
     skuList: [],
     summary: [],
-    materialPurchases: [],
-    cuttingTaskReceived: false,
-    // 采购任务: 是否来自"我的任务"列表（已领取，只需提交）
-    fromMyTasks: false,
+
   },
 
   // 🔧 质检结果弹窗数据（简化版）

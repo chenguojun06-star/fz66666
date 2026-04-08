@@ -114,11 +114,17 @@ const LoanHistoryModal: React.FC<LoanHistoryModalProps> = ({ visible, stock, onC
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      render: (status: string) => (
-        <Tag color={status === 'borrowed' ? 'processing' : status === 'returned' ? 'success' : 'default'}>
-          {status === 'borrowed' ? '借出中' : status === 'returned' ? '已归还' : status}
-        </Tag>
-      ),
+      render: (status: string) => {
+        const statusMap: Record<string, { label: string; color: string }> = {
+          borrowed: { label: '借出中', color: 'processing' },
+          returned: { label: '已归还', color: 'success' },
+          lost: { label: '遗失', color: 'error' },
+          overdue: { label: '逾期', color: 'warning' },
+          damaged: { label: '损坏', color: 'error' },
+        };
+        const info = statusMap[status] || { label: status || '-', color: 'default' };
+        return <Tag color={info.color}>{info.label}</Tag>;
+      },
     },
     {
       title: '备注',

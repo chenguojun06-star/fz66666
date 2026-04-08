@@ -20,6 +20,14 @@ const toast = {
     });
   },
 
+  ok(title, duration = 1500) {
+    wx.showToast({
+      title,
+      icon: 'success',
+      duration,
+    });
+  },
+
   /**
    * 错误提示（无图标）
    * @param {string} title - 提示文字

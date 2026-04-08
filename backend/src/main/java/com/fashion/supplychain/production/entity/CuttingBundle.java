@@ -59,6 +59,10 @@ public class CuttingBundle {
 
     private Integer splitSeq;
 
+    private String splitProcessName;
+
+    private Integer splitProcessOrder;
+
     private LocalDateTime createTime;
 
     private LocalDateTime updateTime;

@@ -194,8 +194,8 @@
 
 .mf-toggle.active {
   color: var(--color-primary);
-  background: rgba(224, 242, 254, 0.6);
-  border-color: rgba(147, 197, 253, 0.5);
+  background: rgba(var(--color-primary-rgb), 0.12);
+  border-color: rgba(var(--color-primary-rgb), 0.2);
   font-weight: 600;
 }
 
@@ -250,8 +250,8 @@
   font-size: var(--font-size-sm);
   font-weight: 500;
   color: var(--color-text-primary);
-  background: rgba(224, 242, 254, 0.8);
-  border: 1px solid rgba(224, 242, 254, 0.9);
+  background: rgba(var(--color-primary-rgb), 0.15);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.2);
   border-radius: 6px;
   white-space: nowrap;
   flex-shrink: 0;
@@ -314,7 +314,7 @@
   font-size: var(--font-size-xs);
   color: var(--color-primary);
   padding: 2px 10px;
-  background: rgba(224, 242, 254, 0.5);
+  background: rgba(var(--color-primary-rgb), 0.1);
   border-radius: 20px;
 }
 
@@ -375,7 +375,7 @@
 
 .mf-select-item.active {
   border-color: var(--color-primary);
-  background: rgba(224, 242, 254, 0.4);
+  background: rgba(var(--color-primary-rgb), 0.08);
 }
 
 /* ---- 底部操作按钮 ---- */

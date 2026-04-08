@@ -100,7 +100,7 @@ test('patternScanProcessor: should submit review and warehouse-in flows', async 
     remark: '通过',
   });
   assert.equal(reviewRes.success, true);
-  assert.equal(reviewRes.message, '✅ 样衣审核通过');
+  assert.equal(reviewRes.message, '样衣审核通过');
 
   const warehouseRes = await submitPatternScan(handler, {
     patternId: 'P-200',
@@ -129,5 +129,5 @@ test('patternScanProcessor: should surface submission errors and fallback messag
   });
 
   assert.deepEqual(result, { success: false, message: '提交异常' });
-  assert.equal(getPatternSuccessMessage('UNKNOWN'), '✅ 操作成功');
+  assert.equal(getPatternSuccessMessage('UNKNOWN'), '操作成功');
 });

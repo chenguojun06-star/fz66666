@@ -245,9 +245,9 @@ public class SmartReportTool implements AgentTool {
     private Map<String, Object> buildRiskSummary(Long tenantId) {
         Map<String, Object> risk = new LinkedHashMap<>();
 
-        // 逾期未完成
+        // 逾期未完成（与页面一致，排除全部 5 种终态）
         QueryWrapper<ProductionOrder> overdueQ = baseOrderQuery(tenantId);
-        overdueQ.ne("status", "COMPLETED").ne("status", "CANCELLED")
+        overdueQ.notIn("status", "completed", "cancelled", "scrapped", "archived", "closed")
                 .isNotNull("planned_end_date").lt("planned_end_date", LocalDateTime.now());
         List<ProductionOrder> overdue = productionOrderService.list(overdueQ);
         risk.put("overdueCount", overdue.size());
@@ -337,7 +337,7 @@ public class SmartReportTool implements AgentTool {
         QueryWrapper<ScanRecord> q = new QueryWrapper<>();
         q.eq("scan_result", "success");
         if (tenantId != null) q.eq("tenant_id", tenantId);
-        
+
         // 工厂隔离
         String factoryId = UserContext.factoryId();
         if (factoryId != null && !factoryId.isBlank()) {
@@ -350,7 +350,7 @@ public class SmartReportTool implements AgentTool {
         QueryWrapper<ProductionOrder> q = new QueryWrapper<>();
         q.eq("delete_flag", 0);
         if (tenantId != null) q.eq("tenant_id", tenantId);
-        
+
         // 工厂隔离
         String factoryId = UserContext.factoryId();
         if (factoryId != null && !factoryId.isBlank()) {

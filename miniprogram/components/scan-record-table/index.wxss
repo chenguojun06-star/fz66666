@@ -14,7 +14,7 @@
   display: flex;
   align-items: center;
   padding: 8px 10px;
-  background: rgba(224, 242, 254, 0.5);
+  background: rgba(var(--color-primary-rgb), 0.1);
   border-bottom: 1px solid var(--color-border);
   position: sticky;
   top: 0;
@@ -42,7 +42,7 @@
 
 /* hover-class="srt-table-row-hover" 替代 :active */
 .srt-table-row-hover {
-  background: rgba(224, 242, 254, 0.2);
+  background: rgba(var(--color-primary-rgb), 0.04);
 }
 
 .srt-td {

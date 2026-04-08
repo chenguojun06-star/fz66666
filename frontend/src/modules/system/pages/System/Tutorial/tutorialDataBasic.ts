@@ -628,49 +628,6 @@ export const tutorialsBasic: Tutorial[] = [
       ],
     },
     {
-      id: 'order-management',
-      title: '下单管理流程',
-      category: 'sample',
-      difficulty: 'beginner',
-      duration: '6分钟',
-      tags: ['下单', '订单', '跟单'],
-      steps: [
-        {
-          title: '接收客户订单',
-          description: '从「样衣管理」→「下单管理」创建客户订单，填写客户信息和订单明细。',
-          tips: [
-            '记录客户联系方式',
-            '明确交货日期和地点',
-            '特殊要求需备注清楚',
-          ],
-        },
-        {
-          title: '转化为生产订单',
-          description: '审核通过后，一键转化为生产订单，自动流转到生产部门。',
-          tips: [
-            '转化时会自动关联款式BOM',
-            '生成采购需求单',
-            '创建生产排期',
-          ],
-        },
-        {
-          title: '跟踪订单状态',
-          description: '实时查看订单进度（采购→裁剪→生产→质检→入库→发货）。',
-          tips: [
-            '关键节点自动提醒',
-            '延期订单红色警示',
-            '可导出订单跟踪表',
-          ],
-        },
-      ],
-      faqs: [
-        {
-          question: '客户订单和生产订单有什么区别？',
-          answer: ' 两种订单用途不同：\n\n客户订单：\n• 面向销售管理\n• 记录客户信息和商务条款\n• 可包含多个款式\n\n生产订单：\n• 面向生产执行\n• 单一款式\n• 指导车间生产',
-        },
-      ],
-    },
-    {
       id: 'dashboard',
       title: '仪表盘数据分析',
       category: 'system',

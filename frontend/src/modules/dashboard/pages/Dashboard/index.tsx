@@ -21,7 +21,7 @@ import StandardToolbar from '@/components/common/StandardToolbar';
 import OrderCuttingChart from '../../components/OrderCuttingChart';
 import ScanCountChart from '../../components/ScanCountChart';
 import OverdueOrderTable from '../../components/OverdueOrderTable';
-import { useDashboardStats, RecentActivity } from './useDashboardStats';
+import { useDashboardStats } from './useDashboardStats';
 import './styles.css';
 
 interface QuickEntryConfig {
@@ -41,7 +41,6 @@ const ALL_QUICK_ENTRIES: QuickEntryConfig[] = [
   { id: 'warehousing', icon: <InboxOutlined />, label: '质检入库', href: '/production/warehousing', className: 'warehousing', enabled: true },
   { id: 'material-reconciliation', icon: <FileTextOutlined />, label: '物料对账', href: '/finance/material-reconciliation', className: 'report', enabled: true },
   { id: 'factory', icon: <ApartmentOutlined />, label: '供应商管理', href: '/system/factory', className: 'factory', enabled: true },
-  { id: 'order-management', icon: <FileTextOutlined />, label: '订单管理', href: '/order-management', className: 'order', enabled: false },
   { id: 'cutting', icon: <InboxOutlined />, label: '裁剪管理', href: '/production/cutting', className: 'cutting', enabled: false },
   { id: 'factory-reconciliation', icon: <AccountBookOutlined />, label: '工厂对账', href: '/finance/factory-reconciliation', className: 'factory-recon', enabled: false },
   { id: 'shipment-reconciliation', icon: <FileTextOutlined />, label: '发货对账', href: '/finance/shipment-reconciliation', className: 'shipment', enabled: false },
@@ -213,38 +212,6 @@ const Dashboard: React.FC = () => {
     return `${today} ${timePart}`;
   };
 
-  // 处理活动点击，跳转到对应页面
-  const handleActivityClick = (activity: RecentActivity) => {
-    const { type, id: _id, content } = activity;
-
-    switch (type) {
-      case 'style':
-        // 款式：跳转到样衣开发页面
-        navigate('/style-info');
-        break;
-      case 'production': {
-        // 生产订单：从content中提取订单号跳转
-        const orderNoMatch = content.match(/订单\s+([A-Z0-9]+)/);
-        if (orderNoMatch && orderNoMatch[1]) {
-          navigate(`/production?orderNo=${encodeURIComponent(orderNoMatch[1])}`);
-        } else {
-          navigate('/production');
-        }
-        break;
-      }
-      case 'scan':
-        // 扫码记录：跳转到扫码记录页面
-        navigate('/production/scan-records');
-        break;
-      case 'material':
-        // 物料采购：跳转到物料管理页面
-        navigate('/production/material');
-        break;
-      default:
-        // 未知的活动类型
-    }
-  };
-
   useEffect(() => {
     // 给body添加class标识首页
     document.body.classList.add('dashboard-page');
@@ -370,8 +337,6 @@ const Dashboard: React.FC = () => {
                     <li
                       key={activity.id}
                       className="activity-item"
-                      onClick={() => handleActivityClick(activity)}
-                      style={{ cursor: 'pointer' }}
                     >
                       <span className={`activity-icon activity-icon--${activity.type}`}>
                         {getActivityIcon(activity.type)}

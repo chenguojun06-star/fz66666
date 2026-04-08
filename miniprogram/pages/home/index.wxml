@@ -1,12 +1,9 @@
 <view class="page" style="padding-top: {{statusBarHeight + 12}}px;">
   <!-- 顶部问候 -->
-  <view class="header">
-    <view class="header-copy">
+    <view class="header">
       <view class="greeting-name">{{userName}}，{{greeting}}</view>
       <view class="greeting-sub">欢迎使用衣智链</view>
-      <view class="header-hint">消息和待办都收进右下角小云，不再重复占首页</view>
     </view>
-  </view>
 
   <!-- 今日统计卡片 -->
   <view class="stats-row">
@@ -44,9 +41,8 @@
 
   <!-- 全部菜单 -->
   <view class="menu-section">
-    <view class="menu-header">
-      <text class="menu-title">全部菜单</text>
-      <text class="menu-hint">只保留真实高频入口</text>
+    <view class="section-header">
+      <text class="section-title">全部菜单</text>
     </view>
     <view class="menu-grid">
       <view class="menu-item" wx:for="{{menuItems}}" wx:key="id" bindtap="onMenuTap" data-index="{{index}}">

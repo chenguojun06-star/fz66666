@@ -7,10 +7,10 @@
       </view>
       <text wx:if="{{title}}" class="nav-title-left">{{title}}</text>
     </view>
-    
+
     <view wx:if="{{showSearch}}" class="nav-center">
       <view class="search-box">
-        <text class="search-icon">🔍</text>
+        <view class="line-icon line-icon--sm icon-search search-icon"></view>
         <input
           class="search-input"
           placeholder="{{searchPlaceholder}}"
@@ -22,7 +22,7 @@
         <text wx:if="{{searchKeyword}}" class="clear-icon" bindtap="onSearchClear">✕</text>
       </view>
     </view>
-    
+
     <view class="nav-right">
       <slot name="right"></slot>
     </view>

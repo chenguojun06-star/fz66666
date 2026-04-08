@@ -1,3 +1,5 @@
+@import '/styles/line-icons.wxss';
+
 .container {
   padding: 12px;
   background: var(--color-bg-page, var(--color-bg-light));
@@ -18,7 +20,7 @@
   box-shadow: 0 2px 10px rgba(0,0,0,0.12);
   border: 2px solid var(--color-primary, var(--color-primary));
 }
-.scan-icon { font-size: 40px; }
+.scan-icon { width: 44px; height: 44px; }
 .scan-label { font-size: 14px; color: var(--color-primary, var(--color-primary)); margin-top: 4px; font-weight: bold; }
 .scan-hint { margin-top: 12px; font-size: 12px; color: var(--color-text-disabled, var(--color-text-disabled)); }
 

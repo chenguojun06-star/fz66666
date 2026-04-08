@@ -851,3 +851,149 @@
 :root[data-theme="dark"] .entry-label {
   color: var(--neutral-text);
 }
+
+/* ============= 白色主题覆盖规则 ============= */
+
+/* 搜索框：去掉透明玻璃拟态，用实心白底 + 精致边框 */
+:root[data-theme="white"] .dashboard-page .filter-card {
+  background: #ffffff !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid #e8ecf2 !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* 统计卡片：实心白底 + 左侧色线 + 清晰阴影 */
+:root[data-theme="white"] .stat-card {
+  background: #ffffff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: none;
+  border-left: 3px solid #e8ecf2;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+:root[data-theme="white"] .stat-card::before {
+  display: none; /* 去掉光泽扫过动画 */
+}
+
+:root[data-theme="white"] .stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0);
+}
+
+/* 8个统计卡片色系（白色主题下保持淡底+左色线） */
+:root[data-theme="white"] .stat-card--sample {
+  border-left-color: #1677ff;
+  background: #fafcff;
+}
+:root[data-theme="white"] .stat-card--production {
+  border-left-color: #13c2c2;
+  background: #f8fffe;
+}
+:root[data-theme="white"] .stat-card--quantity {
+  border-left-color: #52c41a;
+  background: #fbfff7;
+}
+:root[data-theme="white"] .stat-card--overdue {
+  border-left-color: #ff4d4f;
+  background: #fffbfb;
+}
+:root[data-theme="white"] .stat-card--today-warehousing {
+  border-left-color: #faad14;
+  background: #fffef8;
+}
+:root[data-theme="white"] .stat-card--total-warehousing {
+  border-left-color: #722ed1;
+  background: #fcfaff;
+}
+:root[data-theme="white"] .stat-card--defective {
+  border-left-color: #fa541c;
+  background: #fffcfa;
+}
+:root[data-theme="white"] .stat-card--payment {
+  border-left-color: #2f54eb;
+  background: #fafcff;
+}
+
+/* 图标容器：清爽实底 */
+:root[data-theme="white"] .stat-icon {
+  background: #f5f7fa;
+  box-shadow: none;
+}
+
+:root[data-theme="white"] .stat-card:hover .stat-icon {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+/* 数值和标签 */
+:root[data-theme="white"] .stat-value {
+  color: #1a1a1a;
+}
+
+:root[data-theme="white"] .stat-label {
+  color: #8c8c8c;
+}
+
+/* 业务卡片：实心白底 + 精致边框 */
+:root[data-theme="white"] .dashboard-card {
+  background: #ffffff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 1px solid #e8ecf2;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+:root[data-theme="white"] .dashboard-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  border-color: #dce1e8;
+}
+
+/* 卡片头部 */
+:root[data-theme="white"] .card-header {
+  background: #fafbfc;
+  border-bottom: 1px solid #eef0f4;
+}
+
+:root[data-theme="white"] .card-title {
+  color: #1a1a1a;
+}
+
+/* 快捷入口 */
+:root[data-theme="white"] .quick-entry-item {
+  background: #ffffff;
+  backdrop-filter: none;
+  border: 1px solid #e8ecf2;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+:root[data-theme="white"] .quick-entry-item:hover {
+  background: #fafcff;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+  border-color: #dce1e8;
+}
+
+/* 活动列表分隔线 */
+:root[data-theme="white"] .dashboard-page .activity-item {
+  border-bottom-color: #f0f2f5;
+}
+
+:root[data-theme="white"] .dashboard-page .activity-item:hover {
+  background: rgba(45, 127, 249, 0.03);
+}
+
+/* 入口标签和时间 */
+:root[data-theme="white"] .entry-label {
+  color: #1a1a1a;
+}
+
+:root[data-theme="white"] .activity-time {
+  color: #8c8c8c;
+}
+
+/* 页面背景 */
+:root[data-theme="white"] .dashboard-page .page-card {
+  background: var(--page-bg);
+}

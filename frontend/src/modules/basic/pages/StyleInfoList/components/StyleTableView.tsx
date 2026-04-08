@@ -17,7 +17,6 @@ import {
   getProgressNodeColor, clampPercent,
 } from './styleTableViewUtils';
 import { useNavigate } from 'react-router-dom';
-import { withQuery } from '@/utils/api';
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
 import StyleCopyModal from './StyleCopyModal';
@@ -35,7 +34,6 @@ interface StyleTableViewProps {
   onPageChange: (page: number, pageSize: number) => void;
   onScrap: (id: string) => void;
   onPrint: (record: StyleInfo) => void;
-  onLabelPrint: (record: StyleInfo) => void;
   onMaintenance: (record: StyleInfo) => void;
   categoryOptions: { label: string; value: string }[];
   onRefresh: () => void;
@@ -54,7 +52,6 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
   onPageChange,
   onScrap,
   onPrint,
-  onLabelPrint,
   onMaintenance,
   categoryOptions,
   onRefresh,
@@ -168,11 +165,11 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
       };
     });
 
-    // 完成的款号自动往后排（按时间排序）
+    // 报废 > 已完成 > 进行中，各组内按日期排序（报废始终最后，不受日期方向影响）
     mapped.sort((a, b) => {
-      const aCompleted = a.overallProgress >= 100 ? 1 : 0;
-      const bCompleted = b.overallProgress >= 100 ? 1 : 0;
-      if (aCompleted !== bCompleted) return aCompleted - bCompleted;
+      const aPriority = isScrappedStyle(a.record) ? 2 : a.overallProgress >= 100 ? 1 : 0;
+      const bPriority = isScrappedStyle(b.record) ? 2 : b.overallProgress >= 100 ? 1 : 0;
+      if (aPriority !== bPriority) return aPriority - bPriority;
       // 同组内按时间排序
       const aTime = new Date((a.record.updatedAt || a.record.createdAt || 0) as string | number).getTime();
       const bTime = new Date((b.record.updatedAt || b.record.createdAt || 0) as string | number).getTime();
@@ -205,10 +202,9 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
               const items = [
                 { key: 'detail', label: '详情', type: 'primary' as const, onClick: () => navigate(`/style-info/${record.id}`) },
                 hasPushedOrder(record)
-                  ? { key: 'order-view', label: '下单', type: 'default' as const, onClick: () => navigate(withQuery('/order-management', { styleNo: (record as any).styleNo, orderNo: (record as any).orderNo })) }
+                  ? { key: 'order-view', label: '生产订单', type: 'default' as const, onClick: () => navigate(`/production?keyword=${encodeURIComponent((record as any).orderNo || (record as any).styleNo || '')}`) }
                   : { key: 'order-push', label: '资料推送', type: 'default' as const, onClick: () => navigate(`/style-info/${record.id}`) },
                 { key: 'print', label: '打印', type: 'default' as const, onClick: () => onPrint(record) },
-                { key: 'labelPrint', label: '标签打印', type: 'default' as const, onClick: () => onLabelPrint(record) },
               ];
 
               if (isSupervisorOrAbove) {

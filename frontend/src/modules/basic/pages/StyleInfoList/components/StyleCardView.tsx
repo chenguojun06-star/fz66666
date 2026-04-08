@@ -8,7 +8,6 @@ import SmartStyleHoverCard from './SmartStyleHoverCard';
 import { StyleInfo } from '@/types/style';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { withQuery } from '@/utils/api';
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
 import { getStyleCardColorText, getStyleCardQuantityText, getStyleCardSizeQuantityItems, getStyleCardSizeText } from '@/utils/cardSizeQuantity';
 import { DEFAULT_PAGE_SIZE_OPTIONS } from '@/utils/pageSizeStore';
@@ -196,12 +195,12 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
           ];
         }
         if (isStageDoneRow(r)) {
-          // 已完成：下单 + 维护(主管+)
-          const items = [
+          // 已完成：生产订单 + 维护(主管+)
+          const items: { key: string; label: string; onClick: () => void }[] = [
             {
-              key: 'order',
-              label: '下单',
-              onClick: () => navigate(withQuery('/order-management', { styleNo: (r as any).styleNo })),
+              key: 'production',
+              label: '生产订单',
+              onClick: () => navigate(`/production?keyword=${encodeURIComponent((r as any).orderNo || (r as any).styleNo || '')}`),
             },
           ];
           if (isSupervisorOrAbove) {

@@ -30,7 +30,6 @@ export const defaultVisibleColumns: Record<string, boolean> = {
   unqualifiedQuantity: false,
   repairQuantity: false,
   inStockQuantity: false,
-  productionProgress: true,
   status: true,
   plannedEndDate: true,
 };
@@ -63,8 +62,7 @@ export const columnOptions = [
   { key: 'unqualifiedQuantity', label: '次品数' },
   { key: 'repairQuantity', label: '返修数' },
   { key: 'inStockQuantity', label: '库存' },
-  { key: 'productionProgress', label: '生产进度' },
-  { key: 'status', label: '状态' },
+  { key: 'status', label: '状态/进度' },
   { key: 'plannedEndDate', label: '订单交期' },
 ];
 

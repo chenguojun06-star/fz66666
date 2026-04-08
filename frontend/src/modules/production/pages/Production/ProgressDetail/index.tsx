@@ -921,7 +921,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
                     icon={dateSortAsc ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
                     onClick={toggleDateSort}
                     title={dateSortAsc ? '按时间升序（最早在前）' : '按时间降序（最新在前）'}
-                    style={{ borderRadius: 16, minWidth: 32, width: 32, padding: 0 }}
+                    shape="circle"
+                    size="small"
                   />
                   <Button
                     icon={viewMode === 'list' ? <AppstoreOutlined /> : <UnorderedListOutlined />}

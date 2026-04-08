@@ -32,7 +32,23 @@
   font-weight: 600;
   color: var(--color-primary, #4fd1c5);
   margin-bottom: var(--spacing-sm, 8px);
+  display: flex;
+  align-items: center;
 }
+
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-left: 6px;
+  cursor: pointer;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.status-dot--green { background: #10b981; }
+.status-dot--red   { background: #ef4444; }
 
 .production-stage-today {
   display: flex;
@@ -69,15 +85,19 @@
 }
 
 .summary-num--inprogress {
-  color: var(--color-info, #3b82f6);
+  color: var(--color-info, #60a5fa);
 }
 
 .summary-num--completed {
-  color: var(--color-success, #10b981);
+  color: var(--color-success, #34d399);
+}
+
+.summary-num--today {
+  color: #a78bfa;
 }
 
 .summary-num--time {
-  color: var(--color-warning, #f59e0b);
+  color: var(--color-warning, #fbbf24);
 }
 
 .summary-label {

@@ -17,25 +17,22 @@
  * 3. 支持手动输入 + 工序识别
  * 4. 模式切换: 单选(自动/订单/SKU) + 快捷模式(库存查询)
  * 5. 撤销功能 (UndoHandler)
- * 6. 采购任务支持 (ProcurementHandler + 列表触发)
- * 7. 质检入库弹窗 (QualityHandler)
- * 8. 退回重扫功能 (RescanHandler)
- * 9. 样板生产扫码确认 (PatternHandler)
+ * 6. 质检入库弹窗 (QualityHandler)
+ * 7. 退回重扫功能 (RescanHandler)
+ * 8. 样板生产扫码确认 (PatternHandler)
  * 10. 🆕 扫码结果确认页 - 识别工序后不自动提交 (ScanResultHandler)
  * 11. 历史分组折叠展开 (HistoryHandler)
- * 12. 🆕 采购/裁剪任务列表 + 从铃铛跳转的统一处理入口
- * 13. 修复: 使用 eventBus.on 替代 subscribe (2026-02-01)
- * 14. 🆕 扫码结果确认页 - 2026-02-06 - 混合模式 (手动+自动)
+ * 12. 修复: 使用 eventBus.on 替代 subscribe (2026-02-01)
+ * 13. 🆕 扫码结果确认页 - 2026-02-06 - 混合模式 (手动+自动)
+ * 14. 🆕 采购/裁剪任务已迁移到独立页面 (pkg-cutting/ + pkg-procurement/)，扫码页不再包含相关弹窗与处理器
  *
  * 业务处理器职责分配:
  * - ScanHandler: 扫码逻辑 + QRCodeParser
  * - UndoHandler: 撤销倒计时
- * - ProcurementHandler: 采购确认 + 提交
  * - QualityHandler: 质检入库弹窗
  * - RescanHandler: 退回重扫
  * - PatternHandler: 样板扫码
  * - ScanResultHandler: 混合模式扫码结果确认
- * - CuttingHandler: 裁剪确认 + 提交 + 任务列表
  * - HistoryHandler: 历史记录折叠/展开 + 分组
  * - ConfirmModalHandler: 通用确认弹窗 + SKU提交
  * - StockHandler: 库存查询
@@ -59,8 +56,6 @@ const PatternHandler = require('./handlers/PatternHandler');
 const UndoHandler = require('./handlers/UndoHandler');
 const StockHandler = require('./handlers/StockHandler');
 const RescanHandler = require('./handlers/RescanHandler');
-const ProcurementHandler = require('./handlers/ProcurementHandler');
-const CuttingHandler = require('./handlers/CuttingHandler');
 const ScanResultHandler = require('./handlers/ScanResultHandler');
 const ConfirmModalHandler = require('./handlers/ConfirmModalHandler');
 const HistoryHandler = require('./handlers/HistoryHandler');
@@ -203,23 +198,7 @@ Page({
     return RescanHandler.onConfirmRescan(this);
   },
 
-  // ==================== 采购/裁剪任务列表（委托 Handler）====================
 
-  /**
-   * 加载我的采购任务列表
-   * @returns {Promise<void>} 无返回值
-   */
-  async loadMyProcurementTasks() {
-    return ProcurementHandler.loadMyProcurementTasks(this);
-  },
-
-  /**
-   * 加载我的裁剪任务列表
-   * @returns {Promise<void>} 无返回值
-   */
-  async loadMyCuttingTasks() {
-    return CuttingHandler.loadMyCuttingTasks(this);
-  },
 
   // ==================== 库存查询（委托 StockHandler）====================
 
@@ -356,143 +335,7 @@ Page({
     return ConfirmModalHandler.processSKUSubmit(this, params);
   },
 
-  // ==================== 采购输入（委托 ProcurementHandler） ====================
 
-  /**
-   * 采购面料输入
-   * @param {Object} e - 事件对象
-   * @returns {void} 无返回值
-   */
-  onMaterialInput(e) {
-    ProcurementHandler.onMaterialInput(this, e);
-  },
-
-  /**
-   * 采购备注输入
-   * @param {Object} e - 事件对象
-   * @returns {void} 无返回值
-   */
-  onMaterialRemarkInput(e) {
-    ProcurementHandler.onMaterialRemarkInput(this, e);
-  },
-
-  // ==================== 裁剪输入（委托 CuttingHandler） ====================
-
-  /**
-   * 裁剪弹窗输入
-   * @param {Object} e - 事件对象
-   * @returns {void} 无返回值
-   */
-  onModalCuttingInput(e) {
-    CuttingHandler.onModalCuttingInput(this, e);
-  },
-
-  /**
-   * 自动导入裁剪数据
-   * @returns {void} 无返回值
-   */
-  onAutoImportCutting() {
-    CuttingHandler.onAutoImportCutting(this);
-  },
-
-  /**
-   * 清空裁剪输入
-   * @returns {void} 无返回值
-   */
-  onClearCuttingInput() {
-    CuttingHandler.onClearCuttingInput(this);
-  },
-
-  // --- 裁剪配比面板事件（委托 CuttingHandler）---
-  onCuttingTotalQtyInput(e) { CuttingHandler.onCuttingTotalQtyInput(this, e); },
-  onCuttingArrivedFabricInput(e) { CuttingHandler.onCuttingArrivedFabricInput(this, e); },
-  onCuttingPiecesPerBundleInput(e) { CuttingHandler.onCuttingPiecesPerBundleInput(this, e); },
-  onCuttingRatioInput(e) { CuttingHandler.onCuttingRatioInput(this, e); },
-  onCuttingSizeInput(e) { CuttingHandler.onCuttingSizeInput(this, e); },
-  onCuttingAddRow() { CuttingHandler.onCuttingAddRow(this); },
-  onCuttingRemoveRow(e) { CuttingHandler.onCuttingRemoveRow(this, e); },
-
-  // ==================== 采购任务操作（委托 ProcurementHandler） ====================
-
-  /**
-   * 处理采购任务点击
-   * @param {Object} e - 事件对象
-   * @returns {Promise<void>} 无返回值
-   */
-  async onHandleProcurement(e) {
-    return ProcurementHandler.onHandleProcurement(this, e);
-  },
-
-  /**
-   * 提交采购任务
-   * @returns {Promise<void>} 无返回值
-   */
-  async onSubmitProcurement() {
-    return ProcurementHandler.onSubmitProcurement(this);
-  },
-
-  /**
-   * 处理采购提交逻辑
-   * @param {Object} params - 提交参数
-   * @returns {Promise<void>} 无返回值
-   */
-  async processProcurementSubmit(params) {
-    return ProcurementHandler.processProcurementSubmit(this, params);
-  },
-
-  /**
-   * 验证采购数据
-   * @returns {boolean} 验证结果
-   */
-  validateProcurementData() {
-    return ProcurementHandler.validateProcurementData();
-  },
-
-  // ==================== 裁剪任务操作（委托 CuttingHandler） ====================
-
-  /**
-   * 处理裁剪任务点击
-   * @param {Object} e - 事件对象
-   * @returns {Promise<void>} 无返回值
-   */
-  async onHandleCutting(e) {
-    return CuttingHandler.onHandleCutting(this, e);
-  },
-
-  /**
-   * 重新生成裁剪菲号
-   * @returns {Promise<void>} 无返回值
-   */
-  async onRegenerateCuttingBundles() {
-    return CuttingHandler.onRegenerateCuttingBundles(this);
-  },
-
-  // ==================== 领取任务 ====================
-
-  /**
-   * 仅领取任务（不提交）
-   * @returns {Promise<void>} 无返回值
-   */
-  async onReceiveOnly() {
-    if (this.data.scanConfirm.loading) return;
-    this.setData({ 'scanConfirm.loading': true });
-    try {
-      const detail = this.data.scanConfirm.detail;
-      const userInfo = getUserInfo();
-      const uid = userInfo?.id || userInfo?.userId;
-      if (!userInfo || !uid) throw new Error('请先登录');
-
-      if (detail.progressStage === '裁剪') {
-        await CuttingHandler.receiveCuttingTask(this, detail, userInfo);
-      } else if (detail.isProcurement) {
-        await ProcurementHandler.receiveProcurementTask(this, userInfo);
-      }
-    } catch (e) {
-      toast.error(e.errMsg || e.message || '领取失败');
-    } finally {
-      this.setData({ 'scanConfirm.loading': false });
-    }
-  },
 
   // ==================== 质检/入库（委托 QualityHandler） ====================
 

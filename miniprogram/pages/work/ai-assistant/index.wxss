@@ -118,6 +118,35 @@
 }
 
 /* ==================== 输入栏 ==================== */
+/* 待发送图片预览 */
+.pending-preview {
+  position: fixed;
+  bottom: calc(50px + env(safe-area-inset-bottom));
+  left: 12px;
+  z-index: 10;
+  display: flex;
+  align-items: flex-start;
+}
+.pending-image {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-light);
+  background: var(--color-bg-light);
+}
+.pending-remove {
+  width: 28rpx;
+  height: 28rpx;
+  line-height: 28rpx;
+  text-align: center;
+  font-size: 18rpx;
+  color: var(--color-text-white);
+  background: rgba(0,0,0,0.5);
+  border-radius: 50%;
+  margin-left: -14rpx;
+  margin-top: -6rpx;
+}
+
 .input-bar {
   position: fixed;
   bottom: 0;
@@ -151,4 +180,87 @@
 }
 .send-disabled {
   opacity: 0.4;
+}
+
+/* 拍照按钮 */
+.photo-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--color-bg-light);
+}
+.photo-btn-hover {
+  opacity: 0.6;
+}
+
+/* 气泡内图片 */
+.bubble-image {
+  max-width: 100%;
+  border-radius: var(--radius-md);
+  margin-bottom: 6px;
+}
+
+/* ==================== 可执行命令卡片 ==================== */
+.action-card {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-light);
+  border-left: 3px solid var(--color-primary);
+}
+.action-card.card-danger { border-left-color: var(--color-danger); }
+.action-card.card-warning { border-left-color: var(--color-warning); }
+.action-card.card-normal { border-left-color: var(--color-primary); }
+
+.action-card-hd {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: 4px;
+}
+.action-card-desc {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+.action-card-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.action-btn {
+  font-size: var(--font-size-xs);
+  padding: 5px 14px;
+  border-radius: var(--radius-full);
+  color: var(--color-text-white);
+  text-align: center;
+}
+.btn-primary { background: var(--color-primary); }
+.btn-danger { background: var(--color-danger); }
+.btn-warning { background: var(--color-warning); }
+
+/* ==================== 图表/团队/菲号卡片 ==================== */
+.chart-card, .team-card, .bundle-card {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-light);
+  border-left: 3px solid var(--color-primary-light);
+}
+.chart-card-hd, .team-card-hd, .bundle-card-hd {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: 4px;
+}
+.chart-card-type, .team-card-desc {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
 }

@@ -97,9 +97,9 @@ const TenantListTab: React.FC = () => {
     { value: 0, label: '永久免费' },
   ];
 
-  // 基础版预设模块路径（仪表盘 + 单价维护 + 下单管理 + 工资/付款/报销 + 系统设置（无组织架构）+ 应用商店）
+  // 基础版预设模块路径（仪表盘 + 单价维护 + 工资/付款/报销 + 系统设置（无组织架构）+ 应用商店）
   const BASIC_PRESET_MODULES = [
-    '/dashboard', '/basic/template-center', '/order-management',
+    '/dashboard', '/basic/template-center',
     '/finance/payroll-operator-summary', '/finance/wage-payment', '/finance/expense-reimbursement',
     '/system/profile', '/system/user', '/system/role', '/production/partners',
     '/system/dict', '/system/logs', '/system/tutorial', '/system/data-import',
@@ -114,7 +114,6 @@ const TenantListTab: React.FC = () => {
       { path: '/data-center', label: '资料中心' },
       { path: '/basic/template-center', label: '单价维护' },
       { path: '/warehouse/sample', label: '样衣库存' },
-      { path: '/order-management', label: '下单管理' },
     ]},
     { key: 'procurement', title: '物料管理', paths: [
       { path: '/production/material', label: '物料采购' },

@@ -344,6 +344,36 @@
   background: rgba(105, 177, 255, 0.08) !important;
 }
 
+/* ========== 白色主题 - 主按钮改为实心填充 ========== */
+[data-theme="white"] .ant-btn-primary {
+  background: #2D7FF9 !important;
+  border-color: #2D7FF9 !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 6px rgba(45, 127, 249, 0.25) !important;
+}
+
+[data-theme="white"] .ant-btn-primary:hover {
+  background: #1E6FE8 !important;
+  border-color: #1E6FE8 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(45, 127, 249, 0.35) !important;
+}
+
+[data-theme="white"] .ant-btn-primary:active {
+  background: #1760D0 !important;
+  border-color: #1760D0 !important;
+  color: #ffffff !important;
+}
+
+[data-theme="white"] .ant-btn-primary:disabled,
+[data-theme="white"] .ant-btn-primary.ant-btn-disabled {
+  background: #d1d5db !important;
+  border-color: #d1d5db !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+  opacity: 0.65;
+}
+
 /* ========== 响应式优化 ========== */
 @media (max-width: 768px) {
   .ant-btn {

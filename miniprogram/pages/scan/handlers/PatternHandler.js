@@ -413,7 +413,7 @@ async function claimAllPatternOps(page) {
       }
     }
     if (successCount > 0) {
-      toast.success(`✅ 已领取 ${successCount} 个工序`);
+      toast.success(`已领取 ${successCount} 个工序`);
       closePatternConfirm(page);
       page.addToLocalHistory({
         time: new Date().toLocaleString(),

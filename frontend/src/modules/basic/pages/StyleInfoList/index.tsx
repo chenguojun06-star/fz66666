@@ -7,7 +7,6 @@ import PageLayout from '@/components/common/PageLayout';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import SmallModal from '@/components/common/SmallModal';
 import StylePrintModal from '@/components/common/StylePrintModal';
-import SampleLabelPrintModal from './components/SampleLabelPrintModal';
 import PageStatCards from '@/components/common/PageStatCards';
 import api from '@/utils/api';
 import { StyleInfo } from '@/types/style';
@@ -27,6 +26,7 @@ import { useCardGridLayout } from '@/hooks/useCardGridLayout';
 import { STYLE_INFO_LIST_REFRESH_KEY } from '@/modules/warehouse/pages/SampleInventory';
 import { savePageSize } from '@/utils/pageSizeStore';
 
+import { isScrappedStyle } from './components/styleTableViewUtils';
 import '../StyleInfo/styles.css';
 
 type StyleSmartFilter = 'all' | 'overdue' | 'warning';
@@ -66,10 +66,6 @@ const StyleInfoListPage: React.FC = () => {
   // 打印功能状态
   const [printModalVisible, setPrintModalVisible] = useState(false);
   const [printingRecord, setPrintingRecord] = useState<StyleInfo | null>(null);
-
-  // 样衣标签打印状态
-  const [sampleLabelModalOpen, setSampleLabelModalOpen] = useState(false);
-  const [sampleLabelRecord, setSampleLabelRecord] = useState<StyleInfo | null>(null);
 
   // 维护功能状态
   const [maintenanceOpen, setMaintenanceOpen] = useState(false);
@@ -212,12 +208,6 @@ const StyleInfoListPage: React.FC = () => {
     setPrintModalVisible(true);
   };
 
-  // 样衣标签打印处理
-  const handleLabelPrint = (record: StyleInfo) => {
-    setSampleLabelRecord(record);
-    setSampleLabelModalOpen(true);
-  };
-
   // 维护功能
   const openMaintenance = (record: StyleInfo) => {
     setMaintenanceRecord(record);
@@ -313,6 +303,10 @@ const StyleInfoListPage: React.FC = () => {
              : data;
     if (base.length > 1) {
       base = [...base].sort((a, b) => {
+        // 报废款式始终排在最后，不受日期排序方向影响
+        const aScrapped = isScrappedStyle(a) ? 1 : 0;
+        const bScrapped = isScrappedStyle(b) ? 1 : 0;
+        if (aScrapped !== bScrapped) return aScrapped - bScrapped;
         const aTime = new Date((a.updateTime || a.createTime || 0) as string | number).getTime();
         const bTime = new Date((b.updateTime || b.createTime || 0) as string | number).getTime();
         return dateSortAsc ? aTime - bTime : bTime - aTime;
@@ -478,7 +472,6 @@ const StyleInfoListPage: React.FC = () => {
             onPageChange={handlePageChange}
             onScrap={handleScrap}
             onPrint={handlePrintClick}
-            onLabelPrint={handleLabelPrint}
             onMaintenance={openMaintenance}
             categoryOptions={categoryOptions}
             onRefresh={fetchList}
@@ -514,15 +507,6 @@ const StyleInfoListPage: React.FC = () => {
         styleName={printingRecord?.styleName}
         cover={printingRecord?.cover}
         color={printingRecord?.color}
-      />
-
-      <SampleLabelPrintModal
-        open={sampleLabelModalOpen}
-        onClose={() => {
-          setSampleLabelModalOpen(false);
-          setSampleLabelRecord(null);
-        }}
-        record={sampleLabelRecord}
       />
 
       {/* 维护原因弹窗 */}

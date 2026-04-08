@@ -41,6 +41,7 @@ function clearBusinessCaches() {
     'pending_cutting_task',
     'pending_procurement_task',
     'pending_quality_task',
+    'pending_repair_task',
     'pending_order_hint',
     'highlight_order_no',
     'mp_scan_type_index',
@@ -616,6 +617,21 @@ Page({
 
     this.setData({ loading: true });
     try {
+      // 尝试获取微信 code（用于自动绑定 openid，下次可一键登录）
+      const code = await resolveLoginCode();
+
+      // 有有效 code → 走微信端点（验证账号密码 + 自动绑定 openid 一步完成）
+      if (code && !code.startsWith('mock_')) {
+        const result = await executeLogin(
+          { code, username, password, tenantId },
+          { expectedTenantId: tenantId }
+        );
+        if (result.success) return;
+        // needBind 不应出现（已传账号密码），其他错误 executeLogin 内部已 toast
+        return;
+      }
+
+      // 无法获取 code（开发工具 / 模拟器）→ 走传统密码登录
       const resp = await api.system.login({ username, password, tenantId });
       if (resp && resp.code === 200 && resp.data && resp.data.token) {
         finishLogin(resp.data.user || null, resp.data.token);
@@ -630,43 +646,6 @@ Page({
       } else {
         toast.error(i18n.t('login.networkError'));
       }
-    } finally {
-      this.setData({ loading: false });
-    }
-  },
-
-  async onWechatLogin() {
-    if (this.data.loading) {
-      return;
-    }
-
-    // 检查是否已选择公司
-    const tenantId = this.getSelectedTenantId();
-    if (!tenantId) {
-      toast.error(i18n.t('login.selectCompanyFirst'));
-      return;
-    }
-
-    // 验证并设置 API 地址
-    const apiBaseUrl = (this.data.apiBaseUrl || '').trim();
-    if (this.data.showDevFields && apiBaseUrl) {
-      const err = validateAndSetBaseUrl(apiBaseUrl);
-      if (err) {
-        toast.error(err);
-        return;
-      }
-    }
-
-    this.setData({ loading: true });
-    try {
-      const code = await resolveLoginCode();
-      if (!code) {
-        toast.error(i18n.t('login.getCodeFailed'));
-        return;
-      }
-
-      // 静默尝试：openid 已绑定则直接登录，未绑定则不弹错误提示，用户填写表单就可以
-      await executeLogin({ code, tenantId }, { silent: true, expectedTenantId: tenantId });
     } finally {
       this.setData({ loading: false });
     }

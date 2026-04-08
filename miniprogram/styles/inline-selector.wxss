@@ -60,7 +60,7 @@
 
 /* hover反馈 */
 .inline-selector-item-hover {
-  background: rgba(224, 242, 254, 0.6);
+  background: rgba(var(--color-primary-rgb), 0.12);
 }
 
 .inline-selector-item.active {

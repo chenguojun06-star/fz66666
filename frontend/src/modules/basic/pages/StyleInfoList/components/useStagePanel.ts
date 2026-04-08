@@ -172,19 +172,16 @@ export default function useStagePanel({
     if (!scrapped && selectedStage.stage.key === 'confirm' && String(selectedStage.record.sampleReviewStatus || '').trim().toUpperCase() === 'PASS') {
       actions.push(hasPushedOrder
         ? {
-            key: 'order-view', label: '下单',
+            key: 'order-view', label: '生产订单',
             onClick: () => {
-              navigate(withQuery('/order-management', {
-                styleNo: (selectedStage.record as StyleRecord).styleNo,
-                orderNo: (selectedStage.record as any).orderNo,
-              }));
+              navigate(`/production?keyword=${encodeURIComponent((selectedStage.record as any).orderNo || (selectedStage.record as StyleRecord).styleNo || '')}`);
               setSelectedStage(null);
             },
           }
         : {
             key: 'order-push', label: '资料推送', type: 'default',
             onClick: () => {
-              navigate(withQuery('/order-management', { styleNo: (selectedStage.record as StyleRecord).styleNo }));
+              navigate(`/style-info/${selectedStage.record.id}`);
               setSelectedStage(null);
             },
           });

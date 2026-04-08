@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -98,7 +99,7 @@ public class OrderShareOrchestrator {
             throw new IllegalArgumentException("订单不存在");
         }
         // 租户隔离：只能分享自己租户下的订单
-        if (!String.valueOf(tenantId).equals(String.valueOf(order.getTenantId()))) {
+        if (!Objects.equals(tenantId, order.getTenantId())) {
             throw new SecurityException("无权限分享此订单");
         }
 
@@ -283,8 +284,10 @@ public class OrderShareOrchestrator {
     private List<OrderShareResponse.StageProgress> buildStageProgress(ProductionOrder order, String statusText) {
         List<String> workflowNodes = parseWorkflowNodes(order);
         if (workflowNodes.isEmpty()) {
-            workflowNodes = new ArrayList<>(List.of("采购", "裁剪", "车缝", "尾部", "入库"));
+            workflowNodes = new ArrayList<>(List.of("采购", "裁剪", "车缝", "尾部", "质检", "入库"));
         }
+        // 确保质检和入库节点在分享页始终可见（客户需看到完整生产流程）
+        ensureTerminalStages(workflowNodes);
 
         String explicitCurrent = normalizeNodeName(order.getCurrentProcessName());
         int progressIndex = getNodeIndexFromProgress(workflowNodes, order.getProductionProgress());
@@ -426,6 +429,32 @@ public class OrderShareOrchestrator {
         return "出货".equals(name) || "发货".equals(name) || "发运".equals(name) || "shipment".equalsIgnoreCase(name);
     }
 
+    /**
+     * 确保分享页始终显示质检和入库两个终端节点。
+     * 即使订单的 progressWorkflowJson 未定义这两个阶段，客户也需要看到完整的生产进度。
+     */
+    private void ensureTerminalStages(List<String> nodes) {
+        boolean hasQuality = nodes.stream().anyMatch(n -> "质检".equals(normalizeNodeName(n)));
+        boolean hasWarehouse = nodes.stream().anyMatch(n -> "入库".equals(normalizeNodeName(n)));
+        if (!hasQuality) {
+            int warehouseIndex = -1;
+            for (int i = 0; i < nodes.size(); i++) {
+                if ("入库".equals(normalizeNodeName(nodes.get(i)))) {
+                    warehouseIndex = i;
+                    break;
+                }
+            }
+            if (warehouseIndex >= 0) {
+                nodes.add(warehouseIndex, "质检");
+            } else {
+                nodes.add("质检");
+            }
+        }
+        if (!hasWarehouse) {
+            nodes.add("入库");
+        }
+    }
+
     private String normalizeNodeName(String value) {
         if (value == null) {
             return null;
@@ -437,7 +466,8 @@ public class OrderShareOrchestrator {
         return switch (text) {
             case "采购备料", "采购", "procurement" -> "采购";
             case "缝制", "生产", "sewing" -> "车缝";
-            case "后整", "质检", "整烫", "包装", "finishing", "quality" -> "尾部";
+            case "后整", "整烫", "包装", "finishing" -> "尾部";
+            case "质检", "quality" -> "质检";
             case "warehouse", "warehousing" -> "入库";
             default -> text;
         };
@@ -496,7 +526,8 @@ public class OrderShareOrchestrator {
             case "裁剪" -> order.getCuttingCompletionRate();
             case "二次工艺" -> firstNonNull(order.getSecondaryProcessCompletionRate(), order.getSecondaryProcessRate());
             case "车缝" -> firstNonNull(order.getCarSewingCompletionRate(), order.getSewingCompletionRate());
-            case "尾部" -> firstNonNull(order.getPackagingCompletionRate(), order.getIroningCompletionRate(), order.getQualityCompletionRate());
+            case "尾部" -> firstNonNull(order.getPackagingCompletionRate(), order.getIroningCompletionRate());
+            case "质检" -> order.getQualityCompletionRate();
             case "入库" -> order.getWarehousingCompletionRate();
             default -> null;
         };
@@ -642,7 +673,9 @@ public class OrderShareOrchestrator {
                     return item;
                 })
                 .sorted((a, b) -> {
-                    int colorCompare = String.valueOf(a.getColor()).compareToIgnoreCase(String.valueOf(b.getColor()));
+                    String colorA = a.getColor() != null ? a.getColor() : "";
+                    String colorB = b.getColor() != null ? b.getColor() : "";
+                    int colorCompare = colorA.compareToIgnoreCase(colorB);
                     if (colorCompare != 0) {
                         return colorCompare;
                     }
@@ -775,6 +808,7 @@ public class OrderShareOrchestrator {
                     .eq(ProductOutstock::getCustomerName, customerName)
                     .eq(ProductOutstock::getDeleteFlag, 0)
                     .orderByDesc(ProductOutstock::getCreateTime)
+                    .last("LIMIT 500")
                     .list();
 
             OutstockShareResponse resp = new OutstockShareResponse();

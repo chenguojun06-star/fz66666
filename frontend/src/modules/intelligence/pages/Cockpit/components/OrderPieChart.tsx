@@ -183,7 +183,12 @@ const OrderPieChart: React.FC<OrderPieChartProps> = ({ mode = 'sidebar', moduleK
         total={stats.total}
         inProgress={stats.productionCount}
         completed={stats.completedCount}
-        avgTime={stats.totalOrderQty > 0 ? `共${stats.totalOrderQty}件` : undefined}
+        todayCompleted={stats.todayOrderCount}
+        todayCompletedUnit="单"
+        todayLabel="今日下单"
+        avgTime={stats.totalOrderQty > 0 ? `${stats.totalOrderQty}件` : '-'}
+        avgLabel="订单总量"
+        inProgressLabel="生产中"
         segments={segments}
         loading={loading}
         todayStats={todayStats}

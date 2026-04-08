@@ -207,7 +207,7 @@ wx-vconsole,
 .progress-bar {
   flex: 1;
   height: 6px;
-  background: rgba(224, 242, 254, 0.8);
+  background: rgba(var(--color-primary-rgb), 0.15);
   border-radius: var(--radius-full);
   overflow: hidden;
 }
@@ -252,8 +252,8 @@ wx-vconsole,
   display: flex;
   align-items: center;
   padding: 8px 14px;
-  background: rgba(224, 242, 254, 0.3);
-  border: 1px solid rgba(224, 242, 254, 0.5);
+  background: rgba(var(--color-primary-rgb), 0.06);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.1);
   border-radius: var(--radius-full);
 }
 
@@ -273,8 +273,8 @@ wx-vconsole,
   font-size: 15px;
   font-weight: 500;
   color: var(--color-text-primary);
-  background: rgba(224, 242, 254, 0.8);
-  border: 1px solid rgba(224, 242, 254, 0.9);
+  background: rgba(var(--color-primary-rgb), 0.15);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.2);
   border-radius: var(--radius-full);
   box-shadow: 0 2px 6px rgba(59, 130, 246, 0.15);
   white-space: nowrap;
@@ -306,7 +306,7 @@ wx-vconsole,
   align-items: center;
   justify-content: space-between;
   padding: 12px 14px;
-  background: rgba(224, 242, 254, 0.5);
+  background: rgba(var(--color-primary-rgb), 0.1);
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -346,8 +346,8 @@ wx-vconsole,
   align-items: center;
   gap: 6px;
   padding: 5px 10px;
-  background: rgba(224, 242, 254, 0.3);
-  border: 1px solid rgba(224, 242, 254, 0.5);
+  background: rgba(var(--color-primary-rgb), 0.06);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.1);
   border-radius: var(--radius-full);
 }
 .search-icon {
@@ -365,8 +365,8 @@ wx-vconsole,
   font-size: var(--font-size-sm);
   font-weight: 500;
   color: var(--color-text-primary);
-  background: rgba(224, 242, 254, 0.8);
-  border: 1px solid rgba(224, 242, 254, 0.9);
+  background: rgba(var(--color-primary-rgb), 0.15);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.2);
   border-radius: var(--radius-full);
   flex-shrink: 0;
   white-space: nowrap;
@@ -377,7 +377,7 @@ wx-vconsole,
   padding: 5px 12px;
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
-  background: rgba(224, 242, 254, 0.3);
+  background: rgba(var(--color-primary-rgb), 0.06);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-full);
   flex-shrink: 0;
@@ -451,7 +451,7 @@ wx-vconsole,
 .loading-spinner {
   width: 32px;
   height: 32px;
-  border: 3px solid rgba(224, 242, 254, 0.8);
+  border: 3px solid rgba(var(--color-primary-rgb), 0.15);
   border-top-color: var(--color-primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -510,7 +510,7 @@ wx-vconsole,
   justify-content: space-between;
   padding: 16px 20px;
   border-bottom: 1px solid var(--color-border);
-  background: linear-gradient(180deg, rgba(224, 242, 254, 0.3) 0%, var(--color-bg-card) 100%);
+  background: linear-gradient(180deg, rgba(var(--color-primary-rgb), 0.06) 0%, var(--color-bg-card) 100%);
 }
 
 .modal-title {
@@ -547,7 +547,7 @@ wx-vconsole,
   gap: 12px;
   padding: 16px 20px;
   border-top: 1px solid var(--color-border);
-  background: rgba(224, 242, 254, 0.2);
+  background: rgba(var(--color-primary-rgb), 0.04);
 }
 
 .modal-btn {

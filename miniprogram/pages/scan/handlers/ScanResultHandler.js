@@ -244,7 +244,7 @@ function handleSubmitSuccess({ ctx, confirm, result, confirmedQty, scanData, clo
   }
 
   if (!silent) {
-    toast.success(`✅ ${confirm.processName} ${result.message || '扫码成功'}`);
+    toast.success(`${confirm.processName} ${result.message || '扫码成功'}`);
   }
   if (closeAfter) {
     closeScanResultConfirm(ctx);
@@ -392,7 +392,7 @@ async function onConfirmScanResult(ctx) {
     }
 
     closeScanResultConfirm(ctx);
-    toast.success(`✅ 已完成 ${selectedOptions.length} 个工序扫码`);
+    toast.success(`已完成 ${selectedOptions.length} 个工序扫码`);
   } catch (e) {
     toast.error(buildFriendlyErrorMessage(e));
   } finally {

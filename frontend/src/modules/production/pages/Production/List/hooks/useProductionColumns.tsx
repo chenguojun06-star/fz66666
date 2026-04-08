@@ -14,7 +14,7 @@ import { StyleCoverThumb, StyleAttachmentsButton } from '@/components/StyleAsset
 import { isDirectCuttingOrder, isOrderFrozenByStatus, isOrderFrozenByStatusOrStock, withQuery } from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
 import { toCategoryCn } from '@/utils/styleCategory';
-import { getProgressColorStatus, getRemainingDaysDisplay } from '@/utils/progressColor';
+import { getRemainingDaysDisplay } from '@/utils/progressColor';
 import { getStatusConfig, safeString } from '../utils';
 import dayjs from 'dayjs';
 
@@ -103,7 +103,8 @@ export function useProductionColumns({
     const completed = Math.round((rate || 0) * total / 100);
     const percent = rate || 0;
     const frozen = isOrderFrozenByStatus(record);
-    const colorStatus = frozen ? 'default' : getProgressColorStatus(record.plannedEndDate);
+    // 进度条颜色基于实际完成率而非交期，避免一行5个红进度条导致视觉疲劳
+    const colorStatus = frozen ? 'default' : 'normal';
 
     return (
       <div
@@ -282,8 +283,8 @@ export function useProductionColumns({
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                 <span style={{ fontWeight: 500, color: '#1f2937' }}>{name || '-'}</span>
                 {remark && (
-                  <Badge dot color="#ef4444" offset={[0, -2]}>
-                    <ExclamationCircleOutlined style={{ fontSize: 12, color: '#ef4444' }} />
+                  <Badge dot color="var(--color-text-tertiary)" offset={[0, -2]}>
+                    <ExclamationCircleOutlined style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }} />
                   </Badge>
                 )}
               </div>
@@ -291,7 +292,7 @@ export function useProductionColumns({
             {remarkBody && (
               <Tooltip title={remarkBody} placement="bottom">
                 <div style={{
-                  fontSize: 10, color: '#ef4444', fontWeight: 500, lineHeight: 1.2, marginTop: 2,
+                  fontSize: 10, color: 'var(--color-text-secondary)', fontWeight: 500, lineHeight: 1.2, marginTop: 2,
                   maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>
                   {remarkBody.length > 6 ? remarkBody.substring(0, 6) + '...' : remarkBody}
@@ -379,7 +380,8 @@ export function useProductionColumns({
       render: (rate: number, record: ProductionOrder) => {
         const directCutting = isDirectCuttingOrder(record as any);
         const frozen = isOrderFrozenByStatus(record);
-        const colorStatus = frozen ? 'default' : getProgressColorStatus(record.plannedEndDate);
+        // 采购进度条颜色统一用中性色，交期信息由交期列专门展示
+        const colorStatus = frozen ? 'default' : 'normal';
 
         if (directCutting) {
           return (
@@ -551,24 +553,20 @@ export function useProductionColumns({
       render: (v: unknown) => Number(v ?? 0) || 0,
     },
     {
-      title: '生产进度',
-      dataIndex: 'productionProgress',
-      key: 'productionProgress',
-      width: 100,
-      render: (value: number) => `${value}%`,
-      align: 'right' as const,
-    },
-    {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      width: 110,
+      width: 120,
       render: (status: ProductionOrder['status'], record: ProductionOrder) => {
         const { text, color } = getStatusConfig(status);
         const stagnantDays = stagnantOrderIds?.get(String(record.id));
+        const progress = record.productionProgress ?? 0;
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <Tag color={color} style={{ margin: 0 }}>{text}</Tag>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Tag color={color} style={{ margin: 0 }}>{text}</Tag>
+              <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{progress}%</span>
+            </div>
             {stagnantDays !== undefined && (
               <div className="stagnant-pulse-badge" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <span className="stagnant-pulse-dot" />
@@ -587,36 +585,18 @@ export function useProductionColumns({
       render: (value: unknown, record: ProductionOrder) => {
         const dateStr = value ? formatDateTime(value as string) : '-';
         const { text, color } = getRemainingDaysDisplay(value as string, record.createTime, record.actualEndDate, record.status);
-        // 进度风险标签：综合 daysLeft + productionProgress 给出预警
-        const s = record.status;
-        const prog = Number(record.productionProgress) || 0;
-        const planEnd = value ? dayjs(value as string) : null;
-        const dLeft = planEnd ? planEnd.diff(dayjs(), 'day') : null;
-        let riskTag: { text: string; color: string } | null = null;
-        if (s !== 'completed' && dLeft !== null && prog < 100) {
-          if (dLeft < 0)                          riskTag = { text: ' 已逾期', color: '#ff4d4f' };
-          else if (dLeft <= 3  && prog < 80)      riskTag = { text: ' 严重偏慢', color: '#ff4d4f' };
-          else if (dLeft <= 7  && prog < 50)      riskTag = { text: ' 进度偏慢', color: '#fa8c16' };
-          else if (dLeft <= 14 && prog < 30)      riskTag = { text: ' 需关注', color: '#faad14' };
-          else if (prog >= 80 && dLeft >= 3)      riskTag = { text: ' 顺利', color: '#52c41a' };
-        }
         const aiRisk = deliveryRiskMap?.get(String(record.orderNo || ''));
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontSize: 12 }}>{dateStr}</span>
             <span style={{ fontSize: 11, fontWeight: 600, color }}>{text}</span>
-            {riskTag && (
-              <span style={{ fontSize: 10, fontWeight: 700, color: riskTag.color }}>
-                {riskTag.text}
-              </span>
-            )}
             {aiRisk && aiRisk.riskLevel !== 'safe' && aiRisk.predictedEndDate && (
               <span style={{
-                fontSize: 10, fontWeight: 700,
-                color: aiRisk.riskLevel === 'overdue' ? '#ff4d4f' : aiRisk.riskLevel === 'danger' ? '#fa8c16' : '#faad14',
+                fontSize: 10, fontWeight: 500,
+                color: 'var(--color-text-secondary)',
               }}>
-                 {dayjs(aiRisk.predictedEndDate).format('M/D完工')}
-                {aiRisk.riskLevel === 'overdue' ? '·逾期风险' : aiRisk.riskLevel === 'danger' ? '·存在风险' : '·需关注'}
+                AI {dayjs(aiRisk.predictedEndDate).format('M/D')}
+                {aiRisk.riskLevel === 'overdue' ? ' ⚠' : ''}
               </span>
             )}
           </div>

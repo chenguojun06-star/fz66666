@@ -1,0 +1,132 @@
+  <!-- 🆕 扫码结果确认弹窗（2026-02-06 混合模式） -->
+  <view wx:if="{{scanResultConfirm.visible}}" class="modal scan-result-modal">
+    <view class="modal-box">
+      <view class="modal-head">
+        扫码识别结果
+      </view>
+      <view class="modal-body">
+        <view class="scan-result-info">
+          <view class="result-item">
+            <text class="item-label">订单号</text>
+            <text class="item-value highlight">{{scanResultConfirm.orderNo}}</text>
+          </view>
+          <view class="result-item-row">
+            <view wx:if="{{scanResultConfirm.bundleNo}}" class="result-item result-item-half">
+              <text class="item-label">菲号</text>
+              <text class="item-value">{{scanResultConfirm.bundleNo}}</text>
+            </view>
+            <view wx:if="{{scanResultConfirm.styleNo}}" class="result-item result-item-half">
+              <text class="item-label">款号</text>
+              <text class="item-value">{{scanResultConfirm.styleNo}}</text>
+            </view>
+          </view>
+          <view class="result-item">
+            <text class="item-label">数量</text>
+            <input
+              class="result-qty-input"
+              type="number"
+              placeholder="请输入数量"
+              value="{{scanResultConfirm.quantity}}"
+              bindinput="onScanResultQuantityInput"
+            />
+          </view>
+          <view wx:if="{{scanResultConfirm.imageInsight}}" class="result-item diff-hint-row">
+            <text class="item-label diff-hint-label">难度</text>
+            <text class="item-value diff-hint-text">{{scanResultConfirm.imageInsight}}</text>
+          </view>
+
+          <!-- 工序选择器（支持多选，点击切换） -->
+          <view class="inline-selector process-scroll-selector">
+            <view class="process-scroll-header">
+              <text class="process-scroll-title">选择工序</text>
+              <text class="process-scroll-hint">点击可多选</text>
+            </view>
+            <view wx:if="{{scanResultConfirm.selectedProcessCount > 0}}" class="process-selected-summary">
+              <text class="process-selected-title">已选 {{scanResultConfirm.selectedProcessCount}} 个工序</text>
+              <view class="process-selected-list">
+                <text wx:for="{{scanResultConfirm.selectedProcessDetails}}" wx:key="value" class="process-selected-tag">{{item.value}} ¥{{item.unitPrice}}</text>
+              </view>
+            </view>
+            <scroll-view
+              class="process-scroll-list"
+              scroll-y="{{true}}"
+              scroll-into-view="process-item-{{scanResultConfirm.processIndex}}"
+              scroll-with-animation="{{true}}"
+              enhanced="{{true}}"
+              show-scrollbar="{{false}}">
+              <view
+                wx:for="{{scanResultConfirm.processOptions}}"
+                wx:key="value"
+                id="process-item-{{index}}"
+                class="inline-selector-item {{item.checked ? 'active' : ''}}"
+                data-index="{{index}}"
+                bindtap="onProcessScrollSelect"
+                hover-class="inline-selector-item-hover"
+                hover-stay-time="80">
+                <view class="inline-selector-left">
+                  <view class="inline-selector-radio {{item.checked ? 'checked' : ''}}">
+                    <view wx:if="{{item.checked}}" class="inline-selector-radio-dot"></view>
+                  </view>
+                  <text class="inline-selector-label">{{item.value}}</text>
+                </view>
+                <text wx:if="{{!item.hidePrice}}" class="process-item-price">¥{{item.unitPrice}}</text>
+              </view>
+            </scroll-view>
+          </view>
+
+          <!-- 入库模式：仓库选择 -->
+          <view wx:if="{{scanResultConfirm.hasWarehouseSelected}}" class="warehouse-input-row">
+            <view class="warehouse-label">目标仓库：</view>
+            <view class="warehouse-option-row">
+              <view
+                wx:for="{{warehouseOptions}}"
+                wx:key="index"
+                class="warehouse-chip {{scanResultConfirm.warehouseCode === item ? 'warehouse-chip--active' : ''}}"
+                bindtap="onResultWarehouseChipTap"
+                data-value="{{item}}"
+                hover-class="warehouse-chip-hover"
+                hover-stay-time="100"
+              >{{item}}</view>
+              <view
+                class="warehouse-chip warehouse-chip--clear {{scanResultConfirm.warehouseCode ? '' : 'warehouse-chip--disabled'}}"
+                bindtap="onResultWarehouseClear"
+                hover-class="warehouse-chip-hover"
+                hover-stay-time="100"
+              >清除</view>
+            </view>
+            <input
+              class="warehouse-input-field"
+              placeholder="或手动输入仓库编号"
+              value="{{scanResultConfirm.warehouseCode}}"
+              bindinput="onResultWarehouseInput"
+            />
+          </view>
+
+          <!-- 次品返修入库提示 -->
+          <view wx:if="{{scanResultConfirm.isDefectiveReentry}}" class="result-hint defect-hint">
+            <view class="line-icon line-icon--sm icon-alert hint-icon"></view>
+            <text class="hint-text">此菲号有 {{scanResultConfirm.defectQty}} 件次品，返修后直接入库，入库数量不能超过次品数</text>
+          </view>
+          <view wx:elif="{{scanResultConfirm.hasWarehouseSelected}}" class="result-hint">
+            <view class="line-icon line-icon--sm icon-home hint-icon"></view>
+            <text class="hint-text">已选择入库工序，请选择目标仓库后领取</text>
+          </view>
+          <view wx:elif="{{scanResultConfirm.scanData.qualityStage === 'confirm'}}" class="result-hint">
+            <view class="line-icon line-icon--sm icon-bulb hint-icon"></view>
+            <text class="hint-text">填写质检结果，点击“录入结果”提交</text>
+          </view>
+          <view wx:else class="result-hint">
+            <view class="line-icon line-icon--sm icon-bulb hint-icon"></view>
+            <text class="hint-text">可一次勾选多个工序，确认后统一领取</text>
+          </view>
+        </view>
+      </view>
+      <view class="modal-foot">
+        <view class="modal-btn cancel" hover-class="modal-btn-cancel-hover" bindtap="closeScanResultConfirm">取消</view>
+        <view class="modal-btn ok {{scanResultConfirm.loading ? 'loading' : ''}}" hover-class="modal-btn-confirm-hover" bindtap="onConfirmScanResult">
+          {{scanResultConfirm.loading ? '提交中...' : (scanResultConfirm.isDefectiveReentry ? '次品入库' : (scanResultConfirm.scanData.qualityStage === 'confirm' ? '录入结果' : '领取'))}}
+        </view>
+      </view>
+    </view>
+  </view>
+

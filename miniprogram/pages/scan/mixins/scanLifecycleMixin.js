@@ -10,8 +10,6 @@
 
 /* global Behavior */
 const ScanHandler = require('../handlers/ScanHandler');
-const ProcurementHandler = require('../handlers/ProcurementHandler');
-const CuttingHandler = require('../handlers/CuttingHandler');
 const api = require('../../../utils/api');
 // 修复: 解构导入 eventBus 实例（而非模块对象）
 const { eventBus } = require('../../../utils/eventBus');
@@ -103,11 +101,7 @@ const scanLifecycleMixin = Behavior({
     if (isLogin) {
       // ✅ 并行加载数据（try/catch 防止任一失败导致待办弹窗不弹出）
       try {
-        await Promise.all([
-          this.loadMyPanel(true),
-          this.loadMyProcurementTasks(), // 加载采购任务列表
-          this.loadMyCuttingTasks(),     // 加载裁剪任务列表
-        ]);
+        await this.loadMyPanel(true);
       } catch (err) {
         console.error('[scanLifecycleMixin] onShow 数据加载异常（不影响待办弹窗）:', err);
       }
@@ -175,12 +169,8 @@ const scanLifecycleMixin = Behavior({
      * @returns {void} 无返回值
      */
     checkPendingTasks() {
-      // 优先检查质检任务
+      // 检查质检任务
       this.checkPendingQualityTask();
-      // 检查裁剪任务
-      this.checkPendingCuttingTask();
-      // 检查采购任务
-      this.checkPendingProcurementTask();
     },
 
     /**
@@ -214,29 +204,7 @@ const scanLifecycleMixin = Behavior({
       }
     },
 
-    /**
-     * 检查是否有待处理的裁剪任务（从铃铛点击过来）
-     * @returns {void} 无返回值
-     */
-    checkPendingCuttingTask() {
-      CuttingHandler.checkPendingCuttingTask(this);
-    },
 
-    async handleCuttingTaskFromBell(task) {
-      return CuttingHandler.handleCuttingTaskFromBell(this, task);
-    },
-
-    /**
-     * 检查是否有待处理的采购任务（从铃铛点击过来）
-     * @returns {void} 无返回值
-     */
-    checkPendingProcurementTask() {
-      ProcurementHandler.checkPendingProcurementTask(this);
-    },
-
-    async handleProcurementTaskFromBell(task) {
-      return ProcurementHandler.handleProcurementTaskFromBell(this, task);
-    },
 
     /**
      * 处理数据刷新事件
@@ -268,11 +236,11 @@ const scanLifecycleMixin = Behavior({
         });
         this.setData({ offlineSyncing: false, offlinePendingCount: ScanOfflineQueue.count() });
         if (submitted > 0) {
-          wx.showToast({ title: '✅ 已同步 ' + submitted + ' 条扫码', icon: 'none', duration: 2200 });
+          wx.showToast({ title: '已同步 ' + submitted + ' 条扫码', icon: 'none', duration: 2200 });
           setTimeout(() => { if (this && this.data) this.loadMyPanel(true); }, 500);
         }
         if (failed > 0 && ScanOfflineQueue.count() > 0) {
-          wx.showToast({ title: '⚠️ ' + failed + ' 条暂时失败，稍后自动重试', icon: 'none', duration: 2500 });
+          wx.showToast({ title: failed + ' 条暂时失败，稍后自动重试', icon: 'none', duration: 2500 });
         }
       } catch (e) {
         console.warn('[lifecycle] _flushOfflineQueue 异常:', e);

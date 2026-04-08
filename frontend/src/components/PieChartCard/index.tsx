@@ -23,11 +23,23 @@ export interface PieChartCardProps {
   total: number;
   inProgress: number;
   completed: number;
+  todayCompleted?: number | string;
+  todayCompletedUnit?: string;
   avgTime?: string;
   segments: PieSegment[];
   loading?: boolean;
   todayStats?: TodayStat[];
   extraCompletedStat?: TodayStat;
+  /** stage 模式第4栏标签，默认「今日完成」 */
+  todayLabel?: string;
+  /** stage 模式第5栏标签，默认「平均周期」 */
+  avgLabel?: string;
+  /** stage 模式第1栏标签，默认「总数量」 */
+  totalLabel?: string;
+  /** stage 模式第2栏标签，默认「进行中」 */
+  inProgressLabel?: string;
+  /** stage 模式第3栏标签，默认「已完成」 */
+  completedLabel?: string;
 }
 
 const polarToCartesian = (cx: number, cy: number, r: number, angle: number) => ({
@@ -60,11 +72,18 @@ const PieChartCard: React.FC<PieChartCardProps> = ({
   total,
   inProgress,
   completed,
+  todayCompleted,
+  todayCompletedUnit = '',
   avgTime,
   segments,
   loading = false,
   todayStats,
   extraCompletedStat,
+  todayLabel = '今日完成',
+  avgLabel = '平均周期',
+  totalLabel = '总数量',
+  inProgressLabel = '进行中',
+  completedLabel = '已完成',
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -156,31 +175,25 @@ const PieChartCard: React.FC<PieChartCardProps> = ({
     <div ref={containerRef} className="pie-card pie-card--stage" style={{ '--pie-scale': scale } as React.CSSProperties}>
       <div className="pie-card-stats">
         <div className="pie-card-stat">
+          <span className="pie-card-stat-num">{total}</span>
+          <span className="pie-card-stat-label">{totalLabel}</span>
+        </div>
+        <div className="pie-card-stat">
           <span className="pie-card-stat-num pie-card-stat-num--dev">{inProgress}</span>
-          <span className="pie-card-stat-label">进行中</span>
+          <span className="pie-card-stat-label">{inProgressLabel}</span>
         </div>
         <div className="pie-card-stat">
           <span className="pie-card-stat-num pie-card-stat-num--done">{completed}</span>
-          <span className="pie-card-stat-label">已完成</span>
+          <span className="pie-card-stat-label">{completedLabel}</span>
         </div>
-        {extraCompletedStat && (
-          <div className="pie-card-stat pie-card-stat--extra">
-            <span className={`pie-card-stat-num ${extraCompletedStat.type === 'success' ? 'pie-card-stat-num--done' : ''}`}>
-              {extraCompletedStat.value}{extraCompletedStat.unit || ''}
-            </span>
-            <span className="pie-card-stat-label">{extraCompletedStat.label}</span>
-          </div>
-        )}
+        <div className="pie-card-stat pie-card-stat--today">
+          <span className="pie-card-stat-num pie-card-stat-num--today">{todayCompleted ?? '-'}{todayCompletedUnit}</span>
+          <span className="pie-card-stat-label">{todayLabel}</span>
+        </div>
         <div className="pie-card-stat">
-          <span className="pie-card-stat-num">{total}</span>
-          <span className="pie-card-stat-label">总数量</span>
+          <span className="pie-card-stat-num pie-card-stat-num--time">{avgTime || '-'}</span>
+          <span className="pie-card-stat-label">{avgLabel}</span>
         </div>
-        {avgTime && (
-          <div className="pie-card-stat">
-            <span className="pie-card-stat-num pie-card-stat-num--time">{avgTime}</span>
-            <span className="pie-card-stat-label">平均周期</span>
-          </div>
-        )}
       </div>
 
       <div className="pie-card-content">

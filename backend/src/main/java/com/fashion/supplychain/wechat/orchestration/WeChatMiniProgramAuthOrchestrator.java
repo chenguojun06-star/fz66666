@@ -72,7 +72,30 @@ public class WeChatMiniProgramAuthOrchestrator {
         String openid = session.getOpenid();
         result.put("openid", openid);
 
-        // ✅ 方案A：优先检查 openid 是否已绑定账号（一键登录，无需密码）
+        String u = username == null ? "" : username.trim();
+        String p = password == null ? "" : password.trim();
+
+        // ✅ 有账号密码 → 优先按凭证验证（同时绑定/重新绑定 openid）
+        if (StringUtils.hasText(u) && StringUtils.hasText(p)) {
+            User user = userService.login(u, p, tenantId);
+            if (user == null) {
+                result.put("success", false);
+                result.put("message", "用户名或密码错误");
+                return result;
+            }
+            // 自动绑定 openid（会先清除旧绑定，防止一个微信号绑多个账号）
+            if (StringUtils.hasText(openid) && !openid.startsWith("mock_")) {
+                try {
+                    userService.bindOpenid(user.getId(), openid);
+                    log.info("[WxLogin] openid 绑定成功 userId={}", user.getId());
+                } catch (Exception e) {
+                    log.warn("[WxLogin] openid 绑定失败 userId={}, openid={}", user.getId(), openid, e);
+                }
+            }
+            return buildLoginSuccess(result, user, openid);
+        }
+
+        // ✅ 无账号密码 → 检查 openid 是否已绑定（一键自动登录）
         if (StringUtils.hasText(openid) && !openid.startsWith("mock_")) {
             User boundUser = userService.findByOpenid(openid);
             if (boundUser != null) {
@@ -81,35 +104,10 @@ public class WeChatMiniProgramAuthOrchestrator {
             }
         }
 
-        // openid 未绑定 → 检查是否携带账号密码（首次绑定）
-        String u = username == null ? "" : username.trim();
-        String p = password == null ? "" : password.trim();
-        if (!StringUtils.hasText(u) || !StringUtils.hasText(p)) {
-            // 未绑定且无账号密码 → 要求用户输入账号绑定
-            result.put("success", true);
-            result.put("needBind", true);
-            return result;
-        }
-
-        User user = userService.login(u, p, tenantId);
-        if (user == null) {
-            result.put("success", false);
-            result.put("message", "用户名或密码错误");
-            return result;
-        }
-
-        // 首次绑定：将 openid 存入用户记录
-        if (StringUtils.hasText(openid) && !openid.startsWith("mock_")) {
-            try {
-                userService.bindOpenid(user.getId(), openid);
-                log.info("[WxLogin] openid 首次绑定成功 userId={}", user.getId());
-            } catch (Exception e) {
-                log.warn("[WxLogin] openid 绑定失败 userId={}, openid={}", user.getId(), openid, e);
-                // 绑定失败不影响本次登录
-            }
-        }
-
-        return buildLoginSuccess(result, user, openid);
+        // openid 未绑定且无账号密码 → 要求用户输入账号绑定
+        result.put("success", true);
+        result.put("needBind", true);
+        return result;
     }
 
     /**

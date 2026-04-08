@@ -16,11 +16,11 @@ function getGreeting() {
  */
 function buildMenuItems() {
   return [
-    { id: 'order', name: '订单', iconClass: 'icon-order', circleClass: 'menu-icon-circle--cool', route: '/pages/order/index' },
-    { id: 'progress', name: '工序进度', iconClass: 'icon-progress', circleClass: 'menu-icon-circle--warm', route: '/pages/work/index', tab: 'sewing' },
-    { id: 'quality', name: '扫码质检', iconClass: 'icon-quality', circleClass: 'menu-icon-circle--cool', route: '/pages/scan/index' },
-    { id: 'history', name: '历史记录', iconClass: 'icon-history', circleClass: 'menu-icon-circle--warm', route: '/pages/scan/history/index' },
-    { id: 'payroll', name: '当月工资', iconClass: 'icon-payroll', circleClass: 'menu-icon-circle--cool', route: '/pages/payroll/payroll' },
+    { id: 'progress', name: '工序进度', iconClass: 'icon-progress', circleClass: 'menu-icon-circle--blue', route: '/pages/work/index', tab: 'sewing' },
+    { id: 'quality', name: '扫码质检', iconClass: 'icon-quality', circleClass: 'menu-icon-circle--green', route: '/pages/scan/index' },
+    { id: 'bundleSplit', name: '拆菲号', iconClass: 'icon-cutting', circleClass: 'menu-icon-circle--orange', route: '/pages/work/bundle-split/index' },
+    { id: 'history', name: '历史记录', iconClass: 'icon-history', circleClass: 'menu-icon-circle--purple', route: '/pages/scan/history/index' },
+    { id: 'payroll', name: '当月工资', iconClass: 'icon-payroll', circleClass: 'menu-icon-circle--teal', route: '/pages/payroll/payroll' },
   ];
 }
 

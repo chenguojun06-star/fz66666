@@ -47,7 +47,7 @@ public class LivePulseResponse {
         private long todayQty;
         /** 今日扫码次数 */
         private int todayCount;
-        /** 是否活跃（<30分钟有扫码） */
+        /** 是否活跃（<60分钟有扫码） */
         private boolean active;
     }
 }

@@ -43,11 +43,6 @@
       "pages": ["index"]
     },
     {
-      "root": "pages/admin/production-detail",
-      "name": "pkg-admin-detail",
-      "pages": ["index"]
-    },
-    {
       "root": "pages/admin/user-approval",
       "name": "pkg-admin-approval",
       "pages": ["index"]
@@ -56,17 +51,8 @@
       "root": "pages/warehouse",
       "name": "pkg-warehouse",
       "pages": [
-        "sample/list/index",
-        "finished/list/index",
-        "material/alerts/index",
-        "material/detail-page/index",
         "material/scan/index"
       ]
-    },
-    {
-      "root": "pages/order",
-      "name": "pkg-order",
-      "pages": ["index"]
     },
     {
       "root": "pages/privacy",
@@ -87,13 +73,28 @@
       "root": "pages/admin/invite",
       "name": "pkg-admin-invite",
       "pages": ["index"]
+    },
+    {
+      "root": "pages/work/bundle-split",
+      "name": "pkg-bundle-split",
+      "pages": ["index"]
+    },
+    {
+      "root": "pages/cutting",
+      "name": "pkg-cutting",
+      "pages": ["task-list/index", "task-detail/index"]
+    },
+    {
+      "root": "pages/procurement",
+      "name": "pkg-procurement",
+      "pages": ["task-list/index", "task-detail/index"]
     }
   ],
   "preloadRule": {
-    "pages/home/index":  { "network": "all", "packages": ["pkg-warehouse", "pkg-order", "pkg-register"] },
-    "pages/work/index":  { "network": "all", "packages": ["pkg-work-inbox", "pkg-work-ai"] },
+    "pages/home/index":  { "network": "all", "packages": ["pkg-warehouse", "pkg-register", "pkg-bundle-split"] },
+    "pages/work/index":  { "network": "all", "packages": ["pkg-work-inbox", "pkg-bundle-split", "pkg-cutting", "pkg-procurement"] },
     "pages/scan/index":  { "network": "all", "packages": ["pkg-scan-history", "pkg-scan-monthly"] },
-    "pages/admin/index": { "network": "all", "packages": ["pkg-admin-notification", "pkg-admin-detail", "pkg-admin-approval", "pkg-payroll", "pkg-privacy", "pkg-admin-changepwd", "pkg-admin-feedback", "pkg-admin-invite"] }
+    "pages/admin/index": { "network": "all", "packages": ["pkg-admin-notification", "pkg-admin-approval", "pkg-payroll", "pkg-privacy", "pkg-admin-changepwd", "pkg-admin-feedback", "pkg-admin-invite"] }
   },
   "usingComponents": {},
   "tabBar": {

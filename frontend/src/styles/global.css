@@ -343,43 +343,48 @@ body {
 
 :root[data-theme="white"] {
   --primary-color: #2D7FF9;
-  /* 浅色主题 - 深色文字 */
+  /* 浅灰底+白卡片 — 层次分明的白色主题 */
   --neutral-white: #ffffff;
-  --neutral-light: #ffffff;
-  --neutral-medium: #f2f2f2;
-  --neutral-dark: #dedede;
+  --neutral-light: #f9fafb;
+  --neutral-medium: #eef0f4;
+  --neutral-dark: #dde1e8;
   --neutral-text: #1a1a1a;
   --neutral-text-light: #4a4a4a;
-  --neutral-text-lighter: #6b6b6b;
-  --app-bg: #ffffff;
-  --table-header-bg: #eff1f5;
+  --neutral-text-lighter: #6b7280;
+  --app-bg: #f5f7fa;
+  --table-header-bg: #eaeff6;
   --table-row-stripe-bg: #f8f9fc;
-  --table-row-hover-bg: #eef3ff;
-  /* 侧边栏 - 纯白色 */
-  --sidebar-bg: #ffffff;
+  --table-row-hover-bg: #edf2ff;
+  --table-border-color: #e0e4ea;
+  /* 侧边栏 - 浅灰底色，与页面主体区分 */
+  --sidebar-bg: #f0f1f3;
+
+  /* 字体渲染优化 */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   --sidebar-text: #1a1a1a;
   --sidebar-text-strong: #000000;
-  --sidebar-text-muted: rgba(0, 0, 0, 0.7);
-  --sidebar-text-disabled: rgba(0, 0, 0, 0.4);
-  --sidebar-item-bg-hover: rgba(45, 127, 249, 0.06);
-  --sidebar-item-border-hover: rgba(45, 127, 249, 0.12);
-  --sidebar-item-bg-active: rgba(45, 127, 249, 0.10);
-  --sidebar-item-border-active: rgba(45, 127, 249, 0.16);
-  --sidebar-icon-bg: rgba(45, 127, 249, 0.08);
-  --sidebar-icon-border: rgba(45, 127, 249, 0.12);
-  --sidebar-section-active-bg: rgba(45, 127, 249, 0.08);
-  --sidebar-section-active-border: rgba(45, 127, 249, 0.12);
+  --sidebar-text-muted: rgba(0, 0, 0, 0.65);
+  --sidebar-text-disabled: rgba(0, 0, 0, 0.35);
+  --sidebar-item-bg-hover: rgba(45, 127, 249, 0.08);
+  --sidebar-item-border-hover: rgba(45, 127, 249, 0.14);
+  --sidebar-item-bg-active: rgba(45, 127, 249, 0.12);
+  --sidebar-item-border-active: rgba(45, 127, 249, 0.20);
+  --sidebar-icon-bg: rgba(45, 127, 249, 0.10);
+  --sidebar-icon-border: rgba(45, 127, 249, 0.14);
+  --sidebar-section-active-bg: rgba(45, 127, 249, 0.10);
+  --sidebar-section-active-border: rgba(45, 127, 249, 0.14);
   --recent-tab-border: rgba(31, 31, 31, 0.12);
   --recent-tab-bg: rgba(31, 31, 31, 0.04);
   --header-user-border: rgba(31, 31, 31, 0.12);
-  --header-user-bg: rgba(255, 255, 255, 0.92);
+  --header-user-bg: rgba(255, 255, 255, 0.95);
   --header-user-bg-hover: rgba(255, 255, 255, 1);
   --header-caret: rgba(31, 31, 31, 0.55);
-  --glass-border: rgba(31, 31, 31, 0.14);
+  --glass-border: rgba(31, 31, 31, 0.10);
   --glass-text: rgba(31, 31, 31, 0.88);
   --glass-text-muted: rgba(31, 31, 31, 0.56);
   --glass-shadow: 0 10px 30px rgba(31, 31, 31, 0.06);
-  --glass-shadow-hover: 0 14px 36px rgba(31, 31, 31, 0.08);
+  --glass-shadow-hover: 0 14px 36px rgba(31, 31, 31, 0.10);
 }
 
 /* 深色背景浅色文字 */

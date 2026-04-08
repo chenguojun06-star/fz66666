@@ -1,6 +1,0 @@
-{
-  "navigationBarTitleText": "下单管理",
-  "usingComponents": {
-    "mp-modal": "/components/common/mp-modal/index"
-  }
-}

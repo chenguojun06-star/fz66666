@@ -1,6 +1,0 @@
-{
-  "navigationBarTitleText": "成品库存",
-  "usingComponents": {
-    "mp-modal": "/components/common/mp-modal/index"
-  }
-}

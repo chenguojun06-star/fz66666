@@ -141,21 +141,25 @@ public class FinishedInventoryOrchestrator {
                     .map(StyleInfo::getId)
                     .collect(Collectors.toList());
             if (!noCoverIds.isEmpty()) {
-                List<StyleAttachment> attachments = styleAttachmentService.list(
-                        new LambdaQueryWrapper<StyleAttachment>()
-                                .in(StyleAttachment::getStyleId, noCoverIds.stream()
-                                        .map(String::valueOf).collect(Collectors.toList()))
-                                .like(StyleAttachment::getFileType, "image")
-                                .eq(StyleAttachment::getStatus, "active")
-                                .orderByAsc(StyleAttachment::getCreateTime));
-                if (attachments != null) {
-                    for (StyleAttachment a : attachments) {
-                        if (a == null || !StringUtils.hasText(a.getFileUrl())) continue;
-                        try {
-                            Long sid = Long.valueOf(a.getStyleId());
-                            attachCoverByStyleId.putIfAbsent(sid, a.getFileUrl());
-                        } catch (NumberFormatException ignored) {}
+                try {
+                    List<StyleAttachment> attachments = styleAttachmentService.list(
+                            new LambdaQueryWrapper<StyleAttachment>()
+                                    .in(StyleAttachment::getStyleId, noCoverIds.stream()
+                                            .map(String::valueOf).collect(Collectors.toList()))
+                                    .like(StyleAttachment::getFileType, "image")
+                                    .eq(StyleAttachment::getStatus, "active")
+                                    .orderByAsc(StyleAttachment::getCreateTime));
+                    if (attachments != null) {
+                        for (StyleAttachment a : attachments) {
+                            if (a == null || !StringUtils.hasText(a.getFileUrl())) continue;
+                            try {
+                                Long sid = Long.valueOf(a.getStyleId());
+                                attachCoverByStyleId.putIfAbsent(sid, a.getFileUrl());
+                            } catch (NumberFormatException ignored) {}
+                        }
                     }
+                } catch (Exception e) {
+                    log.error("[FinishedInventory] 查询款式附件失败（t_style_attachment 可能缺列），跳过封面填充: {}", e.getMessage());
                 }
             }
         }
@@ -262,29 +266,37 @@ public class FinishedInventoryOrchestrator {
 
         Map<String, ProductOutstock> latestOutstockByStyleId = new HashMap<>();
         if (!styleIds.isEmpty()) {
-            productOutstockService.list(new LambdaQueryWrapper<ProductOutstock>()
-                            .in(ProductOutstock::getStyleId,
-                                    styleIds.stream().map(String::valueOf).collect(Collectors.toList()))
-                            .eq(ProductOutstock::getDeleteFlag, 0)
-                            .orderByDesc(ProductOutstock::getCreateTime))
-                    .forEach(outstock -> {
-                        if (outstock != null && StringUtils.hasText(outstock.getStyleId())) {
-                            latestOutstockByStyleId.putIfAbsent(outstock.getStyleId(), outstock);
-                        }
-                    });
+            try {
+                productOutstockService.list(new LambdaQueryWrapper<ProductOutstock>()
+                                .in(ProductOutstock::getStyleId,
+                                        styleIds.stream().map(String::valueOf).collect(Collectors.toList()))
+                                .eq(ProductOutstock::getDeleteFlag, 0)
+                                .orderByDesc(ProductOutstock::getCreateTime))
+                        .forEach(outstock -> {
+                            if (outstock != null && StringUtils.hasText(outstock.getStyleId())) {
+                                latestOutstockByStyleId.putIfAbsent(outstock.getStyleId(), outstock);
+                            }
+                        });
+            } catch (Exception e) {
+                log.error("[FinishedInventory] 查询出库记录(byStyleId)失败（t_product_outstock 可能不存在），跳过: {}", e.getMessage());
+            }
         }
 
         Map<String, ProductOutstock> latestOutstockByStyleNo = new HashMap<>();
         if (!styleNos.isEmpty()) {
-            productOutstockService.list(new LambdaQueryWrapper<ProductOutstock>()
-                            .in(ProductOutstock::getStyleNo, styleNos)
-                            .eq(ProductOutstock::getDeleteFlag, 0)
-                            .orderByDesc(ProductOutstock::getCreateTime))
-                    .forEach(outstock -> {
-                        if (outstock != null && StringUtils.hasText(outstock.getStyleNo())) {
-                            latestOutstockByStyleNo.putIfAbsent(outstock.getStyleNo(), outstock);
-                        }
-                    });
+            try {
+                productOutstockService.list(new LambdaQueryWrapper<ProductOutstock>()
+                                .in(ProductOutstock::getStyleNo, styleNos)
+                                .eq(ProductOutstock::getDeleteFlag, 0)
+                                .orderByDesc(ProductOutstock::getCreateTime))
+                        .forEach(outstock -> {
+                            if (outstock != null && StringUtils.hasText(outstock.getStyleNo())) {
+                                latestOutstockByStyleNo.putIfAbsent(outstock.getStyleNo(), outstock);
+                            }
+                        });
+            } catch (Exception e) {
+                log.error("[FinishedInventory] 查询出库记录(byStyleNo)失败（t_product_outstock 可能不存在），跳过: {}", e.getMessage());
+            }
         }
 
         // 统计每个 styleId 的总入库数量

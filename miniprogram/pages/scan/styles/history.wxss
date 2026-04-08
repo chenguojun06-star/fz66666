@@ -1,0 +1,64 @@
+/* ===== 历史记录 ===== */
+.empty {
+  text-align: center;
+  padding: 20px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary); /* 升级至secondary，确保对比度≥4.5:1 */
+}
+.hist {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--color-border-light);
+}
+.hist:last-of-type {
+  border-bottom: none;
+}
+.hist-left {
+  flex: 1;
+}
+.hist-order {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+.hist-detail {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary); /* 升级至secondary，确保对比度≥4.5:1 */
+  margin-top: 2px;
+}
+.hist-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.hist-tag {
+  padding: 2px 6px;
+  background: var(--color-bg-card);
+  color: var(--color-text-secondary);
+  border-radius: 6px;
+  font-size: var(--font-size-xs);
+}
+.hist-tag.pending {
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
+  font-weight: 500;
+}
+.hist-qty {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+.hist-action {
+  font-size: var(--font-size-xs);
+  color: var(--color-primary);
+  padding: 3px 8px;
+  border: 1px solid var(--color-primary);
+  border-radius: 4px;
+  margin-left: 4px;
+  background: var(--color-bg-light);
+  font-weight: 500;
+}

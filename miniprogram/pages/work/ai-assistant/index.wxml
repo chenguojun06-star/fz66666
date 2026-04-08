@@ -23,14 +23,52 @@
       class="msg-row {{item.role === 'user' ? 'row-user' : 'row-ai'}}"
     >
       <!-- AI 头像 -->
-      <view wx:if="{{item.role === 'ai'}}" class="avatar avatar-ai">🤖</view>
+      <view wx:if="{{item.role === 'ai'}}" class="avatar avatar-ai">☁️</view>
 
       <!-- 气泡 -->
       <view class="bubble {{item.role === 'user' ? 'bubble-user' : 'bubble-ai'}}">
         <view wx:if="{{item.loading}}" class="typing-dots">
           <view class="dot"></view><view class="dot"></view><view class="dot"></view>
         </view>
-        <text wx:else decode="{{true}}" space="nbsp" user-select>{{item.text}}</text>
+        <block wx:else>
+          <!-- 用户发送的图片 -->
+          <image wx:if="{{item.imageUrl}}" src="{{item.imageUrl}}" class="bubble-image" mode="widthFix" bindtap="previewImage" data-src="{{item.imageUrl}}" />
+          <text wx:if="{{item.text}}" decode="{{true}}" space="nbsp" user-select>{{item.text}}</text>
+
+          <!-- 可执行命令卡片 -->
+          <view wx:for="{{item.actionCards}}" wx:for-item="card" wx:for-index="ci" wx:key="ci" class="action-card {{card.actions[0].type === 'mark_urgent' ? 'card-danger' : card.actions[0].type === 'send_notification' ? 'card-warning' : 'card-normal'}}">
+            <view class="action-card-hd">⚡ {{card.title}}</view>
+            <view wx:if="{{card.desc}}" class="action-card-desc">{{card.desc}}</view>
+            <view class="action-card-btns">
+              <view
+                wx:for="{{card.actions}}" wx:for-item="act" wx:for-index="ai" wx:key="ai"
+                class="action-btn {{act.type === 'mark_urgent' ? 'btn-danger' : act.type === 'send_notification' ? 'btn-warning' : 'btn-primary'}}"
+                bindtap="onCardAction"
+                data-type="{{act.type}}"
+                data-path="{{act.path}}"
+                data-orderid="{{card.orderId}}"
+                data-cardtitle="{{card.title}}"
+              >{{act.label}}</view>
+            </view>
+          </view>
+
+          <!-- 图表卡片（简化文字摘要） -->
+          <view wx:for="{{item.charts}}" wx:for-item="chart" wx:for-index="chi" wx:key="chi" class="chart-card">
+            <view class="chart-card-hd">📊 {{chart.title || '数据图表'}}</view>
+            <view class="chart-card-type">类型：{{chart.chartType || '图表'}}</view>
+          </view>
+
+          <!-- 团队状态卡片 -->
+          <view wx:for="{{item.teamStatusCards}}" wx:for-item="ts" wx:for-index="ti" wx:key="ti" class="team-card">
+            <view class="team-card-hd">👥 {{ts.title || '团队状态'}}</view>
+            <view wx:if="{{ts.summary}}" class="team-card-desc">{{ts.summary}}</view>
+          </view>
+
+          <!-- 菲号拆分卡片 -->
+          <view wx:for="{{item.bundleSplitCards}}" wx:for-item="bs" wx:for-index="bi" wx:key="bi" class="bundle-card">
+            <view class="bundle-card-hd">✂️ {{bs.title || '菲号拆分'}}</view>
+          </view>
+        </block>
       </view>
 
       <!-- 用户头像 -->
@@ -39,7 +77,15 @@
   </view>
 
   <!-- 底部输入栏 -->
+  <!-- 待发送图片预览 -->
+  <view wx:if="{{pendingImage}}" class="pending-preview">
+    <image src="{{pendingImage}}" class="pending-image" mode="aspectFill" bindtap="previewImage" data-src="{{pendingImage}}" />
+    <view class="pending-remove" bindtap="removePendingImage">✕</view>
+  </view>
   <view class="input-bar">
+    <view class="photo-btn" bindtap="chooseImage" hover-class="photo-btn-hover">
+      <image src="/assets/tabbar/scan-active.png" mode="aspectFit" style="width:22px;height:22px;" />
+    </view>
     <input
       class="msg-input"
       placeholder="{{isManager ? '输入指令，如：加急订单PO2026001…' : '输入问题，如：今天做了多少件…'}}"
@@ -51,7 +97,7 @@
       adjust-position
     />
     <view
-      class="send-btn {{(!inputText || sending) ? 'send-disabled' : ''}}"
+      class="send-btn {{(!inputText && !pendingImage || sending) ? 'send-disabled' : ''}}"
       bindtap="onSend"
     >发送</view>
   </view>

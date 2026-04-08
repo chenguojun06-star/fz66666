@@ -87,7 +87,7 @@ export interface LearningReportResponse {
 
 // ── 第三批智能化 TS 类型定义（12大黑科技） ──
 
-export interface PulsePoint { time: string; count: number; }
+export interface PulsePoint { time: string; quantity: number; workers: number; }
 export interface StagnantFactory { factoryName: string; lastScanTime: string; minutesSilent: number; }
 export interface LivePulseResponse {
   activeFactories: number;

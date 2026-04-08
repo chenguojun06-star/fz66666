@@ -1,5 +1,5 @@
 <view class="container">
-  <custom-nav title="修改密码" show-search="{{false}}" />
+  <custom-nav title="修改密码" show-back="{{true}}" show-search="{{false}}" />
   <view class="card">
     <view class="form-section">
       <view class="form-field">

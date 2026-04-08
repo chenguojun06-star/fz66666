@@ -389,6 +389,7 @@ class ScanHandler {
    */
   _buildUCodeConfirmResult(parsedData, warehouse) {
     const workerInfo = this._getWorkerInfo();
+    const factoryInfo = this._getFactoryInfo(null);
     const scanData = {
       orderNo: parsedData.orderNo || '',
       bundleNo: '',
@@ -401,6 +402,7 @@ class ScanHandler {
       styleNo: parsedData.styleNo || '',
       color: parsedData.color || '',
       size: parsedData.size || '',
+      ...factoryInfo,
       ...workerInfo,
       scanTime: formatLocalDateTime(new Date()),
       warehouse: warehouse || '',

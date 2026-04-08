@@ -131,7 +131,7 @@ const HistoryTable: React.FC = () => {
     { title: '路由', dataIndex: 'route', width: 100, render: (v: string) => <RouteTag route={v} /> },
     { title: '置信', dataIndex: 'confidenceScore', width: 60, render: (v: number) => <span style={{ color: confColor(v) }}>{v}</span> },
     { title: '耗时', dataIndex: 'latencyMs', width: 70, render: (v: number) => `${v}ms` },
-    { title: '状态', dataIndex: 'status', width: 70, render: (v: string) => <Tag color={v === 'SUCCESS' ? 'green' : 'red'}>{v}</Tag> },
+    { title: '状态', dataIndex: 'status', width: 70, render: (v: string) => { const m: Record<string, string> = { SUCCESS: '成功', FAILED: '失败', EXECUTING: '执行中', TIMEOUT: '超时' }; return <Tag color={v === 'SUCCESS' ? 'green' : 'red'}>{m[v] || v || '未知'}</Tag>; } },
     {
       title: '评分', dataIndex: 'userFeedback', width: 130,
       render: (v: number, row: any) => (

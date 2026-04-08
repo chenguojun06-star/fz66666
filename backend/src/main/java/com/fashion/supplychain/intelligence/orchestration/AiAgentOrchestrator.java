@@ -51,7 +51,7 @@ public class AiAgentOrchestrator {
 
     private static final int STUCK_MAX_REPEAT = 3;
     /** 单次请求 token 预算上限（prompt + completion 合计），超出后强制终止循环 */
-    @Value("${xiaoyun.agent.token-budget:30000}")
+    @Value("${xiaoyun.agent.token-budget:60000}")
     private int tokenBudget;
     private static final ObjectMapper JSON = new ObjectMapper();
 

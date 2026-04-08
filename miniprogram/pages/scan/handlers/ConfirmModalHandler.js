@@ -13,7 +13,6 @@ const { toast } = require('../../../utils/uiHelper');
 const { normalizeScanType } = require('./helpers/ScanModeResolver');
 
 const SKUProcessor = require('../processors/SKUProcessor');
-const CuttingHandler = require('./CuttingHandler');
 
 /**
  * 显示确认弹窗
@@ -29,49 +28,24 @@ function showConfirmModal(ctx, data) {
     return;
   }
 
-  // 安全读取扫码类型（scanTypeOptions 可能未定义）
-  const scanTypeOptions = ctx.data.scanTypeOptions || [];
-  const scanTypeIndex = ctx.data.scanTypeIndex || 0;
-  const currentScanTypeValue = scanTypeOptions[scanTypeIndex]?.value || '';
-
-  const isProcurement =
-    currentScanTypeValue === 'procurement' ||
-    data.progressStage === '采购';
-
-  const { skuList, formItems, summary, materialPurchases } =
-    _buildConfirmModalData(data, isProcurement);
+  const { skuList, formItems, summary } = _buildConfirmModalData(data);
 
   const sizeDetails = _buildSizeDetails(skuList);
   const sizeSummaryGroups = _buildSizeSummaryGroups(skuList);
   const sizeSummaryMatrix = _buildSizeSummaryMatrix(skuList);
-  const cuttingTasks = _buildCuttingTasks(data);
-
-  const cuttingRatio = (data.progressStage === '裁剪' && data.skuItems)
-    ? CuttingHandler.buildCuttingRatioState(data.skuItems, data)
-    : null;
 
   ctx.setData({
     scanConfirm: {
       visible: true,
       loading: false,
-      detail: { ...data, isProcurement, sizeDetails, sizeSummaryGroups, sizeSummaryMatrix },
+      detail: { ...data, sizeDetails, sizeSummaryGroups, sizeSummaryMatrix },
       skuList: formItems,
       summary: summary,
-      cuttingTasks: cuttingTasks,
-      cuttingRatio: cuttingRatio,
-      materialPurchases: materialPurchases,
-      procurementRemark: '',
       bomFallback: data.bomFallback || false,
-      fromMyTasks: data.fromMyTasks || false,
       aiTipLoading: true,
       aiTipData: null
     },
   });
-
-  // 异步加载 BOM 纸样用量（裁剪模式）
-  if (data.progressStage === '裁剪' && data.styleNo) {
-    CuttingHandler.fetchBomAndUpdate(ctx, data.styleNo);
-  }
 
   // 异步获取 AI 扫码工艺提醒
   if (data.orderNo && data.processName) {
@@ -97,36 +71,18 @@ function showConfirmModal(ctx, data) {
 }
 
 /**
- * 构建确认弹窗的数据（采购/SKU模式分支）
+ * 构建确认弹窗的数据
  * @param {Object} data - 原始数据
- * @param {boolean} isProcurement - 是否采购模式
  * @returns {Object} 构建后的数据对象
  * @private
  */
-function _buildConfirmModalData(data, isProcurement) {
-  if (isProcurement && data.materialPurchases && data.materialPurchases.length > 0) {
-    return {
-      skuList: [],
-      formItems: [],
-      summary: {},
-      materialPurchases: data.materialPurchases.map((item, idx) => ({
-        id: item.id || idx,
-        materialName: item.materialName || '未知面料',
-        materialCode: item.materialCode || '',
-        specifications: item.specifications || '',
-        unit: item.unit || '米',
-        purchaseQuantity: item.purchaseQuantity || 0,
-        arrivedQuantity: item.arrivedQuantity || 0,
-        pendingQuantity: (item.purchaseQuantity || 0) - (item.arrivedQuantity || 0),
-        inputQuantity: (item.purchaseQuantity || 0) - (item.arrivedQuantity || 0),
-        supplierId: item.supplierId,
-        supplierName: item.supplierName,
-        unitPrice: item.unitPrice,
-        purchaseNo: item.purchaseNo || '',
-      })),
-    };
-  }
-
+/**
+ * 构建确认弹窗的数据（SKU模式）
+ * @param {Object} data - 原始数据
+ * @returns {Object} 构建后的数据对象
+ * @private
+ */
+function _buildConfirmModalData(data) {
   const skuList = data.skuItems
     ? SKUProcessor.normalizeOrderItems(data.skuItems, data.orderNo, data.styleNo)
     : [];
@@ -135,7 +91,6 @@ function _buildConfirmModalData(data, isProcurement) {
     skuList,
     formItems: SKUProcessor.buildSKUInputList(skuList),
     summary: SKUProcessor.getSummary(skuList),
-    materialPurchases: [],
   };
 }
 
@@ -201,46 +156,6 @@ function _buildSizeSummaryMatrix(skuList) {
 }
 
 /**
- * 构建裁剪任务列表
- * @param {Object} data - 弹窗原始数据
- * @returns {Array} 裁剪任务列表
- * @private
- */
-function _buildCuttingTasks(data) {
-  if (data.progressStage !== '裁剪' || !data.skuItems) return [];
-  const result = [];
-  for (const item of data.skuItems) {
-    const totalQty = item.quantity || item.num || 0;
-    const sizeStr = String(item.size || '').trim();
-    const sizes = sizeStr.includes(',')
-      ? sizeStr.split(',').map(s => s.trim()).filter(Boolean)
-      : [sizeStr || '均码'];
-
-    if (sizes.length <= 1) {
-      result.push({
-        color: item.color,
-        size: sizes[0],
-        plannedQuantity: totalQty,
-        cuttingInput: totalQty || '',
-      });
-    } else {
-      const perSize = Math.floor(totalQty / sizes.length);
-      const remainder = totalQty % sizes.length;
-      for (let i = 0; i < sizes.length; i++) {
-        const qty = perSize + (i < remainder ? 1 : 0);
-        result.push({
-          color: item.color,
-          size: sizes[i],
-          plannedQuantity: qty,
-          cuttingInput: qty || '',
-        });
-      }
-    }
-  }
-  return result;
-}
-
-/**
  * 取消扫码（关闭弹窗）
  * @param {Object} ctx - Page 上下文
  * @returns {void}
@@ -275,7 +190,7 @@ function onModalSkuInput(ctx, e) {
 }
 
 /**
- * 确认提交 - 路由到采购/裁剪/SKU提交
+ * 确认提交 - SKU批量提交
  * @param {Object} ctx - Page 上下文
  * @returns {Promise<void>} 提交完成后关闭弹窗
  */
@@ -286,23 +201,7 @@ async function onConfirmScan(ctx) {
   ctx.setData({ 'scanConfirm.loading': true });
 
   try {
-    const { detail, skuList, cuttingTasks, materialPurchases } = ctx.data.scanConfirm;
-
-    // 采购任务处理
-    if (detail.isProcurement && materialPurchases?.length > 0) {
-      ctx.validateProcurementData();
-      await ctx.processProcurementSubmit({ materialPurchases });
-      ctx.setData({
-        'scanConfirm.loading': false,
-        'scanConfirm.visible': false,
-      });
-      return;
-    }
-
-    // 裁剪特殊处理（菲号生成有单独按钮 onRegenerateCuttingBundles）
-    if (detail.progressStage === '裁剪' && cuttingTasks.length > 0) {
-      // 裁剪通常通过"生成菲号"按钮提交，这里按普通工序处理
-    }
+    const { detail, skuList } = ctx.data.scanConfirm;
 
     // 通用批量提交
     if (skuList?.length > 0) {

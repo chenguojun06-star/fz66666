@@ -6,12 +6,11 @@ import com.fashion.supplychain.intelligence.dto.HyperAdvisorResponse.RiskIndicat
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.orchestration.OrderHealthScoreOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderService;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,6 +30,10 @@ import org.springframework.stereotype.Service;
 @Service
 @Slf4j
 public class AdvisorRiskOrchestrator {
+
+    /** 与页面卡片一致的 5 种终态，排除后才是"活跃订单" */
+    private static final Set<String> TERMINAL_STATUSES =
+            Set.of("completed", "cancelled", "scrapped", "archived", "closed");
 
     @Autowired
     private ProductionOrderService productionOrderService;
@@ -60,12 +63,15 @@ public class AdvisorRiskOrchestrator {
     /** 逾期订单风险 */
     private RiskIndicator buildOverdueRisk(Long tenantId) {
         long activeCount = countActiveOrders(tenantId);
+        String factoryId = UserContext.factoryId();
         long overdueCount = productionOrderService.count(
                 new LambdaQueryWrapper<ProductionOrder>()
                         .eq(ProductionOrder::getTenantId, tenantId)
                         .eq(ProductionOrder::getDeleteFlag, 0)
-                        .notIn(ProductionOrder::getStatus, List.of("COMPLETED", "CANCELLED"))
-                        .lt(ProductionOrder::getPlannedEndDate, LocalDateTime.of(LocalDate.now(), LocalTime.MIN)));
+                        .notIn(ProductionOrder::getStatus, TERMINAL_STATUSES)
+                        .eq(factoryId != null && !factoryId.isBlank(), ProductionOrder::getFactoryId, factoryId)
+                        .isNotNull(ProductionOrder::getPlannedEndDate)
+                        .lt(ProductionOrder::getPlannedEndDate, LocalDateTime.now()));
         double prob = activeCount > 0 ? Math.round(overdueCount * 100.0 / activeCount) / 100.0 : 0;
         return new RiskIndicator("逾期订单",
                 Math.min(prob, 1.0),
@@ -75,11 +81,13 @@ public class AdvisorRiskOrchestrator {
 
     /** 健康度低于 50 的订单 */
     private RiskIndicator buildHealthRisk(Long tenantId) {
+        String factoryId = UserContext.factoryId();
         List<ProductionOrder> active = productionOrderService.list(
                 new LambdaQueryWrapper<ProductionOrder>()
                         .eq(ProductionOrder::getTenantId, tenantId)
                         .eq(ProductionOrder::getDeleteFlag, 0)
-                        .notIn(ProductionOrder::getStatus, List.of("COMPLETED", "CANCELLED"))
+                        .notIn(ProductionOrder::getStatus, TERMINAL_STATUSES)
+                        .eq(factoryId != null && !factoryId.isBlank(), ProductionOrder::getFactoryId, factoryId)
                         .last("LIMIT 200"));
         if (active.isEmpty()) return new RiskIndicator("高危订单", 0, "low", "无活跃订单");
 
@@ -98,12 +106,14 @@ public class AdvisorRiskOrchestrator {
     /** 停滞风险：3天无扫码 */
     private RiskIndicator buildStagnantRisk(Long tenantId) {
         long activeCount = countActiveOrders(tenantId);
-        LocalDateTime threeDaysAgo = LocalDateTime.of(LocalDate.now().minusDays(3), LocalTime.MIN);
+        String factoryId = UserContext.factoryId();
+        LocalDateTime threeDaysAgo = LocalDateTime.now().minusDays(3);
         long stagnant = productionOrderService.count(
                 new LambdaQueryWrapper<ProductionOrder>()
                         .eq(ProductionOrder::getTenantId, tenantId)
                         .eq(ProductionOrder::getDeleteFlag, 0)
-                        .notIn(ProductionOrder::getStatus, List.of("COMPLETED", "CANCELLED"))
+                        .notIn(ProductionOrder::getStatus, TERMINAL_STATUSES)
+                        .eq(factoryId != null && !factoryId.isBlank(), ProductionOrder::getFactoryId, factoryId)
                         .lt(ProductionOrder::getUpdateTime, threeDaysAgo));
         double prob = activeCount > 0 ? Math.round(stagnant * 100.0 / activeCount) / 100.0 : 0;
         return new RiskIndicator("停滞订单",
@@ -113,10 +123,12 @@ public class AdvisorRiskOrchestrator {
     }
 
     private long countActiveOrders(Long tenantId) {
+        String factoryId = UserContext.factoryId();
         return productionOrderService.count(
                 new LambdaQueryWrapper<ProductionOrder>()
                         .eq(ProductionOrder::getTenantId, tenantId)
                         .eq(ProductionOrder::getDeleteFlag, 0)
-                        .notIn(ProductionOrder::getStatus, List.of("COMPLETED", "CANCELLED")));
+                        .notIn(ProductionOrder::getStatus, TERMINAL_STATUSES)
+                        .eq(factoryId != null && !factoryId.isBlank(), ProductionOrder::getFactoryId, factoryId));
     }
 }

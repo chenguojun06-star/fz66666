@@ -601,13 +601,12 @@ const ProductionList: React.FC = () => {
                     ]}
                   />
                                     <ExportButton
-                    label="导出明细"
+                    label="导出"
                     url="/api/production/order/export-excel"
                     params={queryParams as unknown as Record<string, string>}
+                    type="primary"
+                    size="middle"
                   />
-                  <Button onClick={() => exportSelected(selectedRows)} disabled={!selectedRowKeys.length}>
-                    导出
-                  </Button>
                 </>
           }
         >

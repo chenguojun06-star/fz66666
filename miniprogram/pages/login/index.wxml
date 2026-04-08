@@ -124,12 +124,6 @@
           </view>
         </view>
 
-        <view class="login-btn-wrap" wx:if="{{!showDevFields}}">
-          <view class="login-btn-wechat {{loading || !selectedTenantId ? 'login-btn-disabled' : ''}}" bindtap="onWechatLogin" hover-class="login-btn-wechat-hover" hover-stay-time="50">
-            {{loading ? i18nTexts.submitting : i18nTexts.wechatQuickLogin}}
-          </view>
-        </view>
-
         <view wx:if="{{showDevFields}}" class="login-field login-field-dev">
           <view class="login-label">{{i18nTexts.serverUrl}}</view>
           <view class="login-input-wrap">

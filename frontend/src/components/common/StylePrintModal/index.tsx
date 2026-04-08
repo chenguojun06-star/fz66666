@@ -3,8 +3,10 @@
  * 支持选择性打印：基本信息、尺寸表、生产制单、BOM表、工序表、纸样附件等
  * 可在样衣开发、下单管理、大货生产等页面复用
  */
-import React, { useEffect, useState } from 'react';
-import { Checkbox, Button, Space, Spin, QRCode } from 'antd';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { Checkbox, Button, Space, Spin, QRCode, Radio, InputNumber } from 'antd';
+import { PrinterOutlined } from '@ant-design/icons';
+import QRCodeLib from 'qrcode';
 
 import api from '@/utils/api';
 import { sortSizeNames } from '@/utils/api/size';
@@ -21,6 +23,12 @@ import { canViewPrice } from '@/utils/sensitiveDataMask';
 import { toSeasonCn, PrintOptions, DEFAULT_PRINT_OPTIONS, StylePrintModalProps, PrintData } from './types';
 import { buildPrintHtml } from './printTemplate';
 
+type LabelSize = '40x70' | '50x100';
+const LABEL_SIZE_MAP: Record<LabelSize, [number, number]> = {
+  '40x70': [70, 40],
+  '50x100': [100, 50],
+};
+
 const StylePrintModal: React.FC<StylePrintModalProps> = ({
   visible, onClose, styleId, orderId, orderNo,
   styleNo = '', styleName = '', cover, color, quantity,
@@ -32,11 +40,52 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [resolvedCover, setResolvedCover] = useState<string | null>(cover || null);
   const [data, setData] = useState<PrintData>({ sizes: [], bom: [], process: [], attachments: [], productionSheet: null });
+  const [labelPrintMode, setLabelPrintMode] = useState(false);
+  const [labelSize, setLabelSize] = useState<LabelSize>('40x70');
+  const [labelCount, setLabelCount] = useState(1);
+  const [labelPrinting, setLabelPrinting] = useState(false);
+
+  /* ---- 自动识别颜色×码数×数量 ---- */
+  const labelItems = useMemo(() => {
+    // 优先使用 sizeDetails prop（调用方显式传入）
+    if (sizeDetails && sizeDetails.length > 0) {
+      return sizeDetails.filter(d => d.quantity > 0);
+    }
+    // 其次解析 productionSheet 的 sizeColorConfig
+    const raw = (data.productionSheet as any)?.sizeColorConfig;
+    if (raw) {
+      try {
+        const config = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        const sizes: string[] = config.sizes || [];
+        const matrixRows: Array<{ color: string; quantities: number[] }> = config.matrixRows || [];
+        if (matrixRows.length > 0 && sizes.length > 0) {
+          return matrixRows.flatMap(row =>
+            row.quantities.map((qty: number, idx: number) => ({
+              color: row.color,
+              size: sizes[idx] || '',
+              quantity: qty || 0,
+            }))
+          ).filter(item => item.quantity > 0 && item.size);
+        }
+        // 仅有 colors + sizes 无 matrixRows 时，生成空数量占位
+        const colors: string[] = config.colors || [];
+        if (colors.length > 0 && sizes.length > 0) {
+          return colors.flatMap(c => sizes.map(s => ({ color: c, size: s, quantity: 0 })));
+        }
+      } catch { /* ignore parse error */ }
+    }
+    // 兜底：使用 props 单色/单数量
+    if (color) {
+      return [{ color, size: '', quantity: quantity ?? 0 }];
+    }
+    return [];
+  }, [sizeDetails, data.productionSheet, color, quantity]);
 
   useEffect(() => { setResolvedCover(cover || null); }, [cover]);
 
   useEffect(() => {
     if (!visible || !styleId) return;
+    setLabelPrintMode(false);
     const loadData = async () => {
       setLoading(true);
       try {
@@ -108,6 +157,110 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
     else { iframe.onload = triggerPrint; }
   };
 
+  const isPatternPrint = extraInfo?.isPattern === true;
+  const qrValue = JSON.stringify(
+    isPatternPrint
+      ? { type: 'pattern', id: String(orderId || styleId || '').trim(), styleNo, styleName, color }
+      : { type: mode === 'production' ? 'order' : 'style', styleNo, styleName, orderId, orderNo: orderNo || '' }
+  );
+
+  /* ---- 标签打印（自动识别全部颜色×码数） ---- */
+  const handleLabelPrint = useCallback(async () => {
+    setLabelPrinting(true);
+    try {
+      const [w, h] = LABEL_SIZE_MAP[labelSize];
+      const today = new Date();
+      const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+      const sNo = styleNo || '';
+      const sName = styleName || '';
+      const qrMm = 26;
+      const qrPx = 480;
+      const fs = h >= 48 ? 6.2 : h >= 38 ? 5.4 : 4.9;
+
+      // 如果 labelItems 为空则兜底单条
+      const items = labelItems.length > 0
+        ? labelItems
+        : [{ color: color || '', size: '', quantity: quantity ?? 0 }];
+      const copies = Math.max(1, labelCount);
+      const totalLabels = items.length * copies;
+
+      // 批量生成 QR 码（每个颜色×码数生成独立二维码）
+      const BATCH = 20;
+      const qrUrls: string[] = new Array(totalLabels).fill('');
+      for (let i = 0; i < totalLabels; i += BATCH) {
+        const batch = Math.min(BATCH, totalLabels - i);
+        const urls = await Promise.all(
+          Array.from({ length: batch }, (_, j) => {
+            const itemIdx = Math.floor((i + j) / copies);
+            const item = items[itemIdx];
+            const itemQrValue = JSON.stringify(
+              isPatternPrint
+                ? { type: 'pattern', id: String(orderId || styleId || '').trim(), styleNo, styleName, color: item.color, size: item.size }
+                : { type: mode === 'production' ? 'order' : 'style', styleNo, styleName, orderId, orderNo: orderNo || '', color: item.color, size: item.size },
+            );
+            return QRCodeLib.toDataURL(itemQrValue, { width: qrPx, margin: 0, errorCorrectionLevel: 'M' }).catch(() => '');
+          }),
+        );
+        urls.forEach((u, j) => { qrUrls[i + j] = u; });
+      }
+
+      // 生成标签 HTML — 每个 item × copies 份
+      const labelsHtml = items.flatMap((item, itemIdx) =>
+        Array.from({ length: copies }, (_, copyIdx) => {
+          const qrIdx = itemIdx * copies + copyIdx;
+          const displayText = [sNo, item.color, item.size].filter(Boolean).join(' - ');
+          return `<div class="page"><div class="label">
+            <div class="qr-col"><img src="${qrUrls[qrIdx]}" style="width:${qrMm}mm;height:${qrMm}mm;display:block;"/></div>
+            <div class="info-col">
+              <div class="ucode-row">${displayText}</div>
+              <div class="info-row"><span class="lbl">款号</span><span class="val">${sNo}</span></div>
+              ${sName ? `<div class="info-row"><span class="lbl">款名</span><span class="val">${sName}</span></div>` : ''}
+              ${item.color ? `<div class="info-row"><span class="lbl">颜色</span><span class="val">${item.color}</span></div>` : ''}
+              ${item.size ? `<div class="info-row"><span class="lbl">码数</span><span class="val">${item.size}</span></div>` : ''}
+              ${item.quantity ? `<div class="info-row"><span class="lbl">数量</span><span class="val">${item.quantity}</span></div>` : ''}
+              <div class="info-row"><span class="lbl">类型</span><span class="val">${mode === 'production' ? '生产' : '样衣'}</span></div>
+              <div class="info-row date-row">${dateStr}</div>
+            </div>
+          </div></div>`;
+        }),
+      ).join('\n');
+
+      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+@page{size:${w}mm ${h}mm;margin:0}*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'PingFang SC','Heiti SC',Arial,sans-serif}
+.page{width:${w}mm;height:${h}mm;display:flex;align-items:center;justify-content:center;page-break-after:always}
+.page:last-child{page-break-after:auto}
+.label{width:calc(${w}mm - 3mm);height:calc(${h}mm - 3mm);border:0.8pt solid #333;display:flex;flex-direction:row;align-items:stretch;padding:1.5mm 2.5mm;gap:1.5mm}
+.qr-col{flex:0 0 ${qrMm + 1}mm;display:flex;align-items:center;justify-content:center}
+.qr-col img{display:block;object-fit:contain}
+.info-col{flex:1;display:flex;flex-direction:column;justify-content:center;min-width:0;overflow:hidden;padding:0 0 0 0.5mm}
+.ucode-row{font-size:${fs + 0.9}pt;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-bottom:1mm;border-bottom:0.8pt dashed #9a9a9a;margin-bottom:1.1mm}
+.info-row{font-size:${fs}pt;display:flex;align-items:baseline;flex-wrap:nowrap;min-width:0;margin-bottom:0.65mm}
+.lbl{color:#555;white-space:nowrap}.val{font-weight:600;margin-left:0.8mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.date-row{color:#777;font-size:${fs - 0.4}pt;margin-top:2mm;padding-top:0.4mm}
+</style></head><body>${labelsHtml}</body></html>`;
+
+      const fr = document.createElement('iframe');
+      fr.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:none;';
+      document.body.appendChild(fr);
+      const doc = fr.contentWindow?.document;
+      if (doc) {
+        doc.open(); doc.write(html); doc.close();
+        const imgs = doc.querySelectorAll('img');
+        await new Promise<void>(resolve => {
+          const doPrint = () => { fr.contentWindow?.focus(); fr.contentWindow?.print(); setTimeout(() => { try { document.body.removeChild(fr); } catch { /**/ } }, 1000); resolve(); };
+          if (imgs.length === 0) { setTimeout(doPrint, 100); return; }
+          let loaded = 0;
+          const onDone = () => { loaded++; if (loaded >= imgs.length) doPrint(); };
+          imgs.forEach(img => { if ((img as HTMLImageElement).complete) onDone(); else { img.onload = onDone; img.onerror = onDone; } });
+          setTimeout(() => { if (loaded < imgs.length) doPrint(); }, 5000);
+        });
+      }
+      message.success(`已发送 ${totalLabels} 张标签到打印机`);
+    } catch { message.error('标签打印失败，请重试'); }
+    finally { setLabelPrinting(false); }
+  }, [labelItems, isPatternPrint, orderId, styleId, styleNo, styleName, orderNo, color, quantity, mode, labelSize, labelCount]);
+
   const getModeTitle = () => {
     switch (mode) {
       case 'sample': return '样衣';
@@ -116,13 +269,6 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
       default: return '';
     }
   };
-
-  const isPatternPrint = extraInfo?.isPattern === true;
-  const qrValue = JSON.stringify(
-    isPatternPrint
-      ? { type: 'pattern', id: String(orderId || styleId || '').trim(), styleNo, styleName, color }
-      : { type: mode === 'production' ? 'order' : 'style', styleNo, styleName, orderId, orderNo: orderNo || '' }
-  );
 
   return (
     <StandardModal title={`打印预览 - ${styleNo}`} open={visible} onCancel={onClose} size="lg" footer={null}>
@@ -134,7 +280,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
           display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
           <div style={{ fontWeight: 600, color: '#1d39c4' }}> 打印预览</div>
           <Space>
-            <Button onClick={onClose}>取消</Button>
+            <Button icon={<PrinterOutlined />} onClick={() => setLabelPrintMode(v => !v)}>打印标签</Button>
             <Button type="primary" onClick={handlePrint}>打印</Button>
           </Space>
         </div>
@@ -157,6 +303,32 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
             </div>
           </div>
         </div>
+        {/* 标签打印选项 */}
+        {labelPrintMode && (
+          <div style={{ marginBottom: 16, padding: '12px 16px', background: '#fff7e6', borderRadius: 12, border: '1px solid #ffd591' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+              <span style={{ fontWeight: 600, color: '#d46b08', whiteSpace: 'nowrap' }}>标签打印：</span>
+              <Radio.Group value={labelSize} onChange={e => setLabelSize(e.target.value)} size="small">
+                <Radio.Button value="40x70">4 × 7 cm</Radio.Button>
+                <Radio.Button value="50x100">5 × 10 cm</Radio.Button>
+              </Radio.Group>
+              <span style={{ whiteSpace: 'nowrap' }}>每组份数：</span>
+              <InputNumber min={1} max={200} value={labelCount} onChange={v => setLabelCount(v ?? 1)} size="small" style={{ width: 80 }} />
+              <Button type="primary" size="small" icon={<PrinterOutlined />} loading={labelPrinting} onClick={handleLabelPrint}>
+                打印标签{labelItems.length > 0 ? ` (${labelItems.length * labelCount}张)` : ''}
+              </Button>
+            </div>
+            {labelItems.length > 0 && (
+              <div style={{ marginTop: 8, fontSize: 12, color: '#8c6d1f' }}>
+                检测到 {[...new Set(labelItems.map(i => i.color))].length} 颜色
+                {[...new Set(labelItems.map(i => i.size).filter(Boolean))].length > 0
+                  ? ` × ${[...new Set(labelItems.map(i => i.size).filter(Boolean))].length} 码数`
+                  : ''}
+                {' '}= {labelItems.length} 组，每组 {labelCount} 份，共 {labelItems.length * labelCount} 张标签
+              </div>
+            )}
+          </div>
+        )}
         {/* 打印内容预览区域 */}
         <div className="style-print-content" id="style-print-content" style={{ background: 'var(--color-bg-base)', padding: 20, border: '1px solid var(--color-border)', borderRadius: 12 }}>
           <style>{`

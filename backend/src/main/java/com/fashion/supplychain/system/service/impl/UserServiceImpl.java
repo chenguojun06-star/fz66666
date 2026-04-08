@@ -225,6 +225,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (userId == null || !StringUtils.hasText(openid)) {
             return false;
         }
+        // 先清除其他用户绑定的同一 openid（防止一个微信号绑定多个账号）
+        lambdaUpdate()
+                .eq(User::getOpenid, openid)
+                .ne(User::getId, userId)
+                .set(User::getOpenid, null)
+                .update();
+        // 绑定当前用户
         return lambdaUpdate()
                 .eq(User::getId, userId)
                 .set(User::getOpenid, openid)

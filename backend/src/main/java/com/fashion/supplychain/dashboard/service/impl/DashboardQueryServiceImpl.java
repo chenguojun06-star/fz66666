@@ -276,11 +276,24 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
             return java.util.Collections.emptyList();
         }
         int lim = Math.max(1, limit);
-        // 仅显示真实扫码操作，排除系统自动创建的记录；TenantInterceptor 追加 tenant_id 条件
+        // 仅显示真实用户扫码操作：
+        // 1. 排除 operator_name="system" 或 operator_id 为空的记录
+        // 2. 排除定时任务/进度重算自动生成的阶段记录（ORDER_PROCUREMENT / ORDER_CREATED / ORDER_OP / ORCH_FAIL 等）
+        //    这些系统记录的 request_id 以 "ORDER_" 或 "ORCH_" 开头
         return scanRecordService.lambdaQuery()
                 .select(ScanRecord::getId, ScanRecord::getOrderNo, ScanRecord::getScanTime)
                 .ne(ScanRecord::getOperatorName, "system")
                 .isNotNull(ScanRecord::getOperatorId)
+                .and(w -> w
+                        .isNull(ScanRecord::getRequestId)
+                        .or()
+                        .notLikeRight(ScanRecord::getRequestId, "ORDER_")
+                )
+                .and(w -> w
+                        .isNull(ScanRecord::getRequestId)
+                        .or()
+                        .notLikeRight(ScanRecord::getRequestId, "ORCH_")
+                )
                 .orderByDesc(ScanRecord::getScanTime)
                 .page(new Page<>(1, lim))
                 .getRecords();

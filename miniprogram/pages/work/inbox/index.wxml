@@ -8,7 +8,7 @@
 
   <!-- 空状态 -->
   <view wx:if="{{!loading && notices.length === 0}}" class="empty-state empty-state-card">
-    <text class="empty-icon">🔔</text>
+    <view class="empty-icon"><view class="line-icon line-icon--sm icon-bell"></view></view>
     <text class="empty-text">暂无智能提醒</text>
     <text class="empty-hint">系统检测到异常会第一时间通知你</text>
   </view>

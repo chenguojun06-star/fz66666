@@ -73,11 +73,12 @@ public class CuttingBundleSplitTransferOrchestrator {
         String rootBundleId = StringUtils.hasText(source.getRootBundleId()) ? source.getRootBundleId() : source.getId();
         int maxSeq = cuttingBundleService.lambdaQuery().eq(CuttingBundle::getRootBundleId, rootBundleId)
                 .orderByDesc(CuttingBundle::getSplitSeq).last("limit 1").oneOpt().map(item -> item.getSplitSeq() == null ? 0 : item.getSplitSeq()).orElse(0);
-        CuttingBundle completedBundle = buildChildBundle(source, request.getCompletedQuantity(), maxSeq + 1, request.getToWorkerId(), request.getToWorkerName(), false);
-        CuttingBundle transferBundle = buildChildBundle(source, request.getTransferQuantity(), maxSeq + 2, request.getToWorkerId(), request.getToWorkerName(), true);
+        String splitProcessName = currentTracking.getProcessName();
+        CuttingBundle completedBundle = buildChildBundle(source, request.getCompletedQuantity(), maxSeq + 1, request.getToWorkerId(), request.getToWorkerName(), false, splitProcessName, currentOrder);
+        CuttingBundle transferBundle = buildChildBundle(source, request.getTransferQuantity(), maxSeq + 2, request.getToWorkerId(), request.getToWorkerName(), true, splitProcessName, currentOrder);
         cuttingBundleService.saveBatch(List.of(completedBundle, transferBundle));
         persistTrackingAndScans(source, completedBundle, transferBundle, sourceTrackings, scanByProcess, currentOrder, request);
-        archiveSourceBundle(source);
+        archiveSourceBundle(source, splitProcessName, currentOrder);
         splitLogService.save(buildSplitLog(source, completedBundle, transferBundle, request));
         return buildResponse(source, rootBundleId, request, completedBundle, transferBundle);
     }
@@ -184,6 +185,10 @@ public class CuttingBundleSplitTransferOrchestrator {
         String currentUser = StringUtils.hasText(UserContext.username()) ? UserContext.username() : "system";
         for (ProductionProcessTracking sourceTracking : sourceTrackings) {
             int order = sourceTracking.getProcessOrder() == null ? Integer.MAX_VALUE : sourceTracking.getProcessOrder();
+            if (order > currentOrder) {
+                // 拆分只影响当前及之前的工序，后续工序保留在父菲号上不动
+                continue;
+            }
             boolean beforeCurrent = order < currentOrder;
             boolean current = order == currentOrder;
             newTrackings.add(cloneTracking(sourceTracking, completedBundle, request.getCompletedQuantity(), beforeCurrent || current, sourceTracking.getOperatorId(), sourceTracking.getOperatorName()));
@@ -212,7 +217,9 @@ public class CuttingBundleSplitTransferOrchestrator {
         }
     }
 
-    private CuttingBundle buildChildBundle(CuttingBundle source, Integer quantity, int splitSeq, String toWorkerId, String toWorkerName, boolean transferChild) {
+    private CuttingBundle buildChildBundle(CuttingBundle source, Integer quantity, int splitSeq,
+                                             String toWorkerId, String toWorkerName, boolean transferChild,
+                                             String splitProcessName, Integer splitProcessOrder) {
         CuttingBundle target = new CuttingBundle();
         target.setId(UUID.randomUUID().toString().replace("-", ""));
         target.setRootBundleId(StringUtils.hasText(source.getRootBundleId()) ? source.getRootBundleId() : source.getId());
@@ -232,6 +239,8 @@ public class CuttingBundleSplitTransferOrchestrator {
         target.setStatus(transferChild ? "pending" : "completed");
         target.setSplitStatus("split_child");
         target.setSplitSeq(splitSeq);
+        target.setSplitProcessName(splitProcessName);
+        target.setSplitProcessOrder(splitProcessOrder);
         target.setOperatorId(toWorkerId);
         target.setOperatorName(toWorkerName);
         target.setTenantId(UserContext.tenantId());
@@ -279,7 +288,11 @@ public class CuttingBundleSplitTransferOrchestrator {
         record.setSize(source.getSize());
         record.setQuantity(quantity);
         record.setUnitPrice(source.getUnitPrice());
-        record.setTotalAmount(source.getUnitPrice() == null ? source.getTotalAmount() : source.getUnitPrice().multiply(BigDecimal.valueOf(quantity)));
+        record.setTotalAmount(source.getUnitPrice() != null
+                ? source.getUnitPrice().multiply(BigDecimal.valueOf(quantity))
+                : (source.getTotalAmount() != null && source.getQuantity() != null && source.getQuantity() > 0
+                        ? source.getTotalAmount().multiply(BigDecimal.valueOf(quantity)).divide(BigDecimal.valueOf(source.getQuantity()), 2, java.math.RoundingMode.HALF_UP)
+                        : source.getTotalAmount()));
         record.setReceiveTime(source.getReceiveTime());
         record.setConfirmTime(source.getConfirmTime());
         record.setSettlementStatus("pending");
@@ -299,7 +312,11 @@ public class CuttingBundleSplitTransferOrchestrator {
         record.setCuttingBundleQrCode(target.getQrCode());
         record.setScanMode(source.getScanMode());
         record.setProcessUnitPrice(source.getProcessUnitPrice());
-        record.setScanCost(source.getProcessUnitPrice() == null ? source.getScanCost() : source.getProcessUnitPrice().multiply(BigDecimal.valueOf(quantity)));
+        record.setScanCost(source.getProcessUnitPrice() != null
+                ? source.getProcessUnitPrice().multiply(BigDecimal.valueOf(quantity))
+                : (source.getScanCost() != null && source.getQuantity() != null && source.getQuantity() > 0
+                        ? source.getScanCost().multiply(BigDecimal.valueOf(quantity)).divide(BigDecimal.valueOf(source.getQuantity()), 2, java.math.RoundingMode.HALF_UP)
+                        : source.getScanCost()));
         record.setDelegateTargetType(source.getDelegateTargetType());
         record.setDelegateTargetId(source.getDelegateTargetId());
         record.setDelegateTargetName(source.getDelegateTargetName());
@@ -308,9 +325,11 @@ public class CuttingBundleSplitTransferOrchestrator {
         return record;
     }
 
-    private void archiveSourceBundle(CuttingBundle source) {
+    private void archiveSourceBundle(CuttingBundle source, String splitProcessName, Integer splitProcessOrder) {
         source.setSplitStatus("split_parent");
-        source.setStatus("split");
+        // 不改 status — 父菲号在后续工序仍然活跃
+        source.setSplitProcessName(splitProcessName);
+        source.setSplitProcessOrder(splitProcessOrder);
         if (!StringUtils.hasText(source.getRootBundleId())) {
             source.setRootBundleId(source.getId());
         }
@@ -322,6 +341,8 @@ public class CuttingBundleSplitTransferOrchestrator {
 
     private void restoreSourceBundle(CuttingBundle source, CuttingBundleSplitLog splitLog, int currentOrder, List<ProductionProcessTracking> sourceTrackings) {
         source.setSplitStatus("normal");
+        source.setSplitProcessName(null);
+        source.setSplitProcessOrder(null);
         source.setStatus(sourceTrackings.stream()
                 .anyMatch(item -> (item.getProcessOrder() == null ? Integer.MAX_VALUE : item.getProcessOrder()) > currentOrder)
                 ? "pending" : "completed");
@@ -376,7 +397,7 @@ public class CuttingBundleSplitTransferOrchestrator {
                 throw new BusinessException("子菲号 " + resolveBundleLabel(bundle) + " 已参与结算，不能撤回拆菲");
             }
             if ("success".equalsIgnoreCase(item.getScanResult())
-                    && !String.valueOf(item.getRemark() == null ? "" : item.getRemark()).contains("拆菲转派生成")) {
+                    && (item.getRemark() == null || !item.getRemark().contains("拆菲转派生成"))) {
                 throw new BusinessException("子菲号 " + resolveBundleLabel(bundle) + " 已产生新的扫码记录，不能撤回拆菲");
             }
         }

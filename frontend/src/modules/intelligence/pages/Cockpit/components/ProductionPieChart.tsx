@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { Spin, Empty } from 'antd';
+import { Spin, Empty, Popover } from 'antd';
+import { useNavigate } from 'react-router-dom';
 import { useTimeDimension } from '../contexts/TimeDimensionContext';
 import { useStyleLink } from '../contexts/StyleLinkContext';
 import api from '@/utils/api';
@@ -261,6 +262,61 @@ const ProductionPieChart: React.FC<ProductionPieChartProps> = ({ mode = 'sidebar
     });
   }, [stats.stageStats]);
 
+  const navigate = useNavigate();
+
+  const overdueOrders = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return orders.filter(o =>
+      String(o.status || '').toUpperCase() !== 'COMPLETED' &&
+      o.plannedEndDate &&
+      new Date(o.plannedEndDate) < today
+    );
+  }, [orders]);
+
+  const hasOverdue = overdueOrders.length > 0;
+
+  const overduePopover = (
+    <div style={{ maxHeight: 240, overflowY: 'auto', minWidth: 200 }}>
+      {overdueOrders.slice(0, 15).map((o, i) => {
+        const days = Math.floor((Date.now() - new Date(o.plannedEndDate!).getTime()) / 86400000);
+        return (
+          <div
+            key={o.id || i}
+            onClick={() => navigate('/production')}
+            style={{
+              padding: '4px 0',
+              cursor: 'pointer',
+              fontSize: 12,
+              color: '#374151',
+              borderBottom: i < overdueOrders.length - 1 ? '1px solid #f3f4f6' : 'none',
+              display: 'flex',
+              justifyContent: 'space-between',
+              gap: 12,
+            }}
+          >
+            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {o.orderNo}{o.styleNo ? ` ${o.styleNo}` : ''}
+            </span>
+            <span style={{ color: '#ef4444', flexShrink: 0 }}>逾期{days}天</span>
+          </div>
+        );
+      })}
+      {overdueOrders.length > 15 && (
+        <div style={{ paddingTop: 4, fontSize: 11, color: '#9ca3af' }}>还有{overdueOrders.length - 15}条…</div>
+      )}
+      {overdueOrders.length === 0 && (
+        <div style={{ fontSize: 12, color: '#9ca3af', padding: '4px 0' }}>暂无逾期订单</div>
+      )}
+    </div>
+  );
+
+  const statusDot = (
+    <Popover content={overduePopover} trigger="hover" placement="bottomLeft">
+      <span className={`status-dot ${hasOverdue ? 'status-dot--red' : 'status-dot--green'}`} />
+    </Popover>
+  );
+
   if (loading) return <div className="pie-card-loading"><Spin /></div>;
   if (stats.totalQuantity === 0) return <div className="pie-card-empty"><Empty description="暂无数据" image={Empty.PRESENTED_IMAGE_SIMPLE} /></div>;
 
@@ -296,8 +352,12 @@ const ProductionPieChart: React.FC<ProductionPieChartProps> = ({ mode = 'sidebar
   return (
     <div ref={containerRef} className="production-stage-wrapper" style={{ '--pie-scale': scale } as React.CSSProperties}>
       <div className="production-stage-header">
-        <div className="production-stage-title">大货生产</div>
+        <div className="production-stage-title">大货生产{statusDot}</div>
         <div className="production-stage-summary">
+          <span className="summary-item">
+            <span className="summary-num">{stats.totalQuantity}</span>
+            <span className="summary-label">总数量</span>
+          </span>
           <span className="summary-item">
             <span className="summary-num summary-num--inprogress">{stats.inProgress}</span>
             <span className="summary-label">进行中</span>
@@ -307,8 +367,8 @@ const ProductionPieChart: React.FC<ProductionPieChartProps> = ({ mode = 'sidebar
             <span className="summary-label">已完成</span>
           </span>
           <span className="summary-item">
-            <span className="summary-num">{stats.totalQuantity}</span>
-            <span className="summary-label">总数量</span>
+            <span className="summary-num summary-num--today">{stats.todayCompletedCount}</span>
+            <span className="summary-label">今日完成</span>
           </span>
           <span className="summary-item">
             <span className="summary-num summary-num--time">{formatDays(stats.avgDays)}</span>

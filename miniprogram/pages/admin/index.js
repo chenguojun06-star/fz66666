@@ -19,11 +19,12 @@ function buildMenuItems({ showInviteSection, showApprovalEntry, currentLanguageN
 
   if (showApprovalEntry) {
     items.push(
-      { id: 'approval', label: '用户审批', iconClass: 'icon-approval', url: '/pkg-admin-approval/pages/index/index' },
+      { id: 'approval', label: '用户审批', iconClass: 'icon-approval', url: '/pages/admin/user-approval/index' },
     );
   }
 
-  items.push({ id: 'language', label: '切换语言', iconClass: 'icon-globe', action: 'switchLanguage', value: currentLanguageName || '中文' });
+  // 语言切换暂时隐藏（i18n 模块保留，仅隐藏入口）
+  // items.push({ id: 'language', label: '切换语言', iconClass: 'icon-globe', action: 'switchLanguage', value: currentLanguageName || '中文' });
   return items;
 }
 

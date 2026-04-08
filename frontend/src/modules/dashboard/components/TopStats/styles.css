@@ -165,3 +165,82 @@
 :root[data-theme="dark"] .stat-tag-value {
   color: var(--neutral-text);
 }
+
+/* ==================== 白色主题 — 彩色左边框 + 图标着色 ==================== */
+:root[data-theme="white"] .top-stat-item {
+  border: none;
+  border-left: 3px solid #dde1e8;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+:root[data-theme="white"] .top-stat-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+/* 标签文字对比度修复（#bfbfbf → #8c8c8c） */
+:root[data-theme="white"] .stat-tag-label {
+  color: #8c8c8c;
+}
+
+:root[data-theme="white"] .stat-tag {
+  background: #f5f7fa;
+  border-color: #eef0f4;
+}
+
+/* ── 样衣开发 蓝色 #1677ff ── */
+:root[data-theme="white"] .top-stat--sample {
+  border-left-color: #1677ff;
+}
+:root[data-theme="white"] .top-stat--sample .stat-icon {
+  color: #1677ff;
+}
+:root[data-theme="white"] .top-stat--sample .stat-total {
+  color: #1677ff;
+}
+
+/* ── 大货下单 青色 #13c2c2 ── */
+:root[data-theme="white"] .top-stat--bulk {
+  border-left-color: #13c2c2;
+}
+:root[data-theme="white"] .top-stat--bulk .stat-icon {
+  color: #13c2c2;
+}
+:root[data-theme="white"] .top-stat--bulk .stat-total {
+  color: #13c2c2;
+}
+
+/* ── 裁剪数量 绿色 #52c41a ── */
+:root[data-theme="white"] .top-stat--cutting {
+  border-left-color: #52c41a;
+}
+:root[data-theme="white"] .top-stat--cutting .stat-icon {
+  color: #52c41a;
+}
+:root[data-theme="white"] .top-stat--cutting .stat-total {
+  color: #389e0d;
+}
+
+/* ── 入库数量 金色 #faad14 ── */
+:root[data-theme="white"] .top-stat--inbound {
+  border-left-color: #faad14;
+}
+:root[data-theme="white"] .top-stat--inbound .stat-icon {
+  color: #faad14;
+}
+:root[data-theme="white"] .top-stat--inbound .stat-total {
+  color: #d48806;
+}
+
+/* ── 出库数量 紫色 #722ed1 ── */
+:root[data-theme="white"] .top-stat--outbound {
+  border-left-color: #722ed1;
+}
+:root[data-theme="white"] .top-stat--outbound .stat-icon {
+  color: #722ed1;
+}
+:root[data-theme="white"] .top-stat--outbound .stat-total {
+  color: #722ed1;
+}

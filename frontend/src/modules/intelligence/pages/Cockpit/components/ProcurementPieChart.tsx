@@ -299,7 +299,11 @@ const ProcurementPieChart: React.FC<ProcurementPieChartProps> = ({ mode = 'sideb
         total={stats.totalQuantity}
         inProgress={stats.totalPurchases - purchases.filter(p => p.status === 'completed').length}
         completed={purchases.filter(p => p.status === 'completed').length}
-        avgTime={stats.overdueCount > 0 ? `${stats.overdueCount}单逾期` : undefined}
+        todayCompleted={stats.todayCompletedCount}
+        todayCompletedUnit="单"
+        avgTime={stats.overdueCount > 0 ? `${stats.overdueCount}单` : '无'}
+        avgLabel="逾期预警"
+        completedLabel="已到货"
         segments={segments}
         loading={loading}
         todayStats={todayStats}

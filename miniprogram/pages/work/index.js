@@ -12,6 +12,8 @@ const { normalizeText, transformOrderData } = require('./utils/orderTransform');
 const BatchProgressHandler = require('./handlers/BatchProgressHandler');
 const RollbackHandler = require('./handlers/RollbackHandler');
 const BundleGenerateHandler = require('./handlers/BundleGenerateHandler');
+const GlobalSearchHandler = require('./handlers/GlobalSearchHandler');
+const OrderListHandler = require('./handlers/OrderListHandler');
 
 Page({
   data: {
@@ -178,6 +180,7 @@ Page({
     this.loadOrders(true);
   },
 
+
   async loadUnreadNoticeCount() {
     try {
       const count = await api.notice.unreadCount();
@@ -293,7 +296,13 @@ Page({
   onCancelBundle() { BundleGenerateHandler.onCancelBundle(this); },
   async onConfirmBundle() { return BundleGenerateHandler.onConfirmBundle(this); },
 
-
+  // ==================== 拆菲号（跳转独立页面） ====================
+  onSplitBundle(e) {
+    const order = e.currentTarget.dataset.order || {};
+    wx.navigateTo({
+      url: '/pages/work/bundle-split/index?orderNo=' + encodeURIComponent(order.orderNo || '')
+    });
+  },
 
   refreshActive() {
     return this.loadOrders(true);
@@ -303,119 +312,10 @@ Page({
     return this.loadOrders(false);
   },
 
-  loadOrders(reset) {
-    const app = getApp();
-    if (!app || typeof app.loadPagedList !== 'function') {
-      return Promise.resolve();
-    }
-
-    return app.loadPagedList(
-      this,
-      'orders',
-      reset === true,
-      async ({ page, pageSize }) => {
-        const f = this.data.filters;
-        const params = {
-          page,
-          pageSize,
-          orderNo: normalizeText(f.orderNo),
-          styleNo: normalizeText(f.styleNo),
-          factoryName: normalizeText(f.factoryName),
-          parentOrgUnitId: String(f.parentOrgUnitId || '').trim() || '',
-          factoryType: String(f.factoryType || '').trim() || '',
-          excludeTerminal: 'true',
-          delayedOnly: this.data.delayedOnly ? 'true' : undefined,
-        };
-
-        // 根据标签页添加当前工序节点过滤
-        const tab = this.data.activeTab;
-        const processMap = {
-          procurement: '采购',
-          cutting: '裁剪',
-          sewing: '车缝',
-          warehousing: '入库',
-        };
-        if (tab !== 'all' && processMap[tab]) {
-          params.currentProcessName = processMap[tab];
-        }
-
-        return api.production.listOrders(params);
-      },
-      r => transformOrderData(r)
-    ).then(() => {
-      // 按时间排序（从新到老）
-      const sortedList = [...this.data.orders.list].sort((a, b) => {
-        const timeA = new Date(a.createdAt || a.createTime || 0).getTime();
-        const timeB = new Date(b.createdAt || b.createTime || 0).getTime();
-        return timeB - timeA; // 降序：新订单在前
-      });
-
-      this.setData({ 'orders.list': sortedList });
-      this.updateOrderStats();
-    });
-  },
-
-  updateOrderStats(list) {
-    const source = Array.isArray(list) ? list : (this.data.orders.list || []);
-    const orderCount = source.length;
-    const totalQuantity = source.reduce((sum, item) => sum + Number(item.orderQuantity || 0), 0);
-    this.setData({
-      orderStats: {
-        orderCount,
-        totalQuantity,
-      },
-    });
-  },
-
-  /**
-   * 设置订单列表的实时同步
-   */
-  setupOrderSync() {
-    // 只在订单标签页启用同步
-    const syncFn = async () => {
-      try {
-        const f = this.data.filters;
-        const params = {
-          page: 1,
-          pageSize: 20, // 只同步前 20 条
-          orderNo: normalizeText(f.orderNo),
-          styleNo: normalizeText(f.styleNo),
-          factoryName: normalizeText(f.factoryName),
-          parentOrgUnitId: String(f.parentOrgUnitId || '').trim() || '',
-          factoryType: String(f.factoryType || '').trim() || '',
-          excludeTerminal: 'true', // 同步也只取进行中订单
-        };
-        return await api.production.listOrders(params);
-      } catch (error) {
-        errorHandler.logError(error, '[Work] Sync orders');
-        throw error;
-      }
-    };
-
-    // 数据变化时的处理
-    const onDataChange = newPage => {
-      if (!newPage || !Array.isArray(newPage.records)) {
-        return;
-      }
-
-      // 更新列表
-      const newList = newPage.records.map(r => transformOrderData(r));
-
-      this.setData({ 'orders.list': newList });
-      this.updateOrderStats(newList);
-    };
-
-    // 启动同步 (30 秒轮询一次)
-    syncManager.startSync('work_orders', syncFn, 30000, {
-      onDataChange,
-      onError: (error, errorCount) => {
-        if (errorCount > 3) {
-          // 连续3次失败时停止同步
-          syncManager.stopSync('work_orders');
-        }
-      },
-    });
-  },
+  // ==================== 订单列表（委托 OrderListHandler） ====================
+  loadOrders(reset) { return OrderListHandler.loadOrders(this, reset); },
+  updateOrderStats(list) { OrderListHandler.updateOrderStats(this, list); },
+  setupOrderSync() { OrderListHandler.setupOrderSync(this); },
 
 
 
@@ -439,149 +339,12 @@ Page({
     }
   },
 
-  // ==================== 全局搜索功能 ====================
-  /**
-   * 全局搜索输入
-   */
-  onGlobalSearchInput(e) {
-    const value = e && e.detail ? e.detail.value : '';
-    this.setData({ 'globalSearch.keyword': value });
-  },
-
-  /**
-   * 执行全局搜索
-   */
-  async doGlobalSearch() {
-    const keyword = String(this.data.globalSearch.keyword || '').trim();
-    if (!keyword) {
-      toast.error('请输入搜索关键词');
-      return;
-    }
-
-    this.setData({ 'globalSearch.loading': true });
-    wx.showLoading({ title: '搜索中...', mask: true });
-
-    try {
-      // 搜索订单（同时按订单号、款号、工厂名搜索）
-      const ordersRes = await api.production.listOrders({
-        page: 1,
-        pageSize: 50,
-        keyword,
-        parentOrgUnitId: String(this.data.filters.parentOrgUnitId || '').trim() || '',
-        factoryType: String(this.data.filters.factoryType || '').trim() || '',
-      }).catch(() => ({ records: [] }));
-
-      const results = (ordersRes.records || []).map(item => {
-        const transformed = transformOrderData(item);
-        return {
-          id: transformed.id,
-          type: 'order',
-          title: transformed.orderNo || '-',
-          subtitle: `款号: ${transformed.styleNo || '-'} | 工厂: ${transformed.factoryName || '-'}`,
-          statusText: transformed.statusText || '-',
-          statusColor: transformed.isClosed ? 'var(--color-success)' : 'var(--color-primary)',
-          orderNo: transformed.orderNo,
-          styleNo: transformed.styleNo,
-          progress: transformed.productionProgress || 0,
-          currentProcessName: transformed.currentProcessName || '',
-          rawData: transformed,
-        };
-      });
-
-      this.setData({
-        'globalSearch.results': results,
-        'globalSearch.hasSearched': true,
-        'globalSearch.loading': false,
-      });
-
-      wx.hideLoading();
-
-      if (results.length === 0) {
-        toast.info('未找到匹配的订单');
-      }
-    } catch (error) {
-      console.error('[doGlobalSearch] 搜索失败:', error);
-      this.setData({ 'globalSearch.loading': false });
-      wx.hideLoading();
-      toast.error('搜索失败，请重试');
-    }
-  },
-
-  /**
-   * 清空搜索
-   */
-  clearGlobalSearch() {
-    this.setData({
-      'globalSearch.keyword': '',
-      'globalSearch.hasSearched': false,
-      'globalSearch.results': [],
-    });
-  },
-
-  /**
-   * 关闭搜索结果
-   */
-  closeGlobalSearch() {
-    this.setData({
-      'globalSearch.hasSearched': false,
-      'globalSearch.results': [],
-    });
-  },
-
-  /**
-   * 点击搜索结果项 - 跳转到对应订单并高亮
-   */
-  onResultItemTap(e) {
-    const item = (e && e.detail && e.detail.item) ||
-                 (e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.item);
-    if (!item || item.type !== 'order') {
-      return;
-    }
-
-    // 关闭搜索结果
-    this.closeGlobalSearch();
-
-    // 根据订单状态切换到对应 tab
-    const status = item.rawData?.status || item.rawData?.currentStage;
-    let targetTab = 'all'; // 默认显示全部订单
-
-    if (status === 'cutting') {
-      targetTab = 'cutting';
-    } else if (status === 'sewing') {
-      targetTab = 'sewing';
-    } else if (status === 'procurement') {
-      targetTab = 'procurement';
-    }
-
-    // 切换 tab
-    this.setData({
-      activeTab: targetTab,
-      highlightOrderNo: item.orderNo
-    });
-
-    // 重新加载该 tab 的数据（确保订单在列表中）
-    this.loadOrders(true);
-
-    // 延迟滚动到订单位置（等待数据加载完成）
-    setTimeout(() => {
-      // 查找订单在列表中的索引
-      const orders = this.data.orders?.list || [];
-      const index = orders.findIndex(order => order.orderNo === item.orderNo);
-
-      if (index !== -1) {
-        // 滚动到该订单
-        wx.pageScrollTo({
-          selector: `.list-item:nth-child(${index + 1})`,
-          duration: 300,
-        });
-      }
-
-      // 3秒后取消高亮
-      setTimeout(() => {
-        this.setData({ highlightOrderNo: '' });
-      }, 3000);
-    }, 500);
-  },
+  // ==================== 全局搜索（委托 GlobalSearchHandler） ====================
+  onGlobalSearchInput(e) { GlobalSearchHandler.onGlobalSearchInput(this, e); },
+  async doGlobalSearch() { return GlobalSearchHandler.doGlobalSearch(this); },
+  clearGlobalSearch() { GlobalSearchHandler.clearGlobalSearch(this); },
+  closeGlobalSearch() { GlobalSearchHandler.closeGlobalSearch(this); },
+  onResultItemTap(e) { GlobalSearchHandler.onResultItemTap(this, e); },
 
   /** 卡片折叠/展开 */
   onCardToggle(e) {

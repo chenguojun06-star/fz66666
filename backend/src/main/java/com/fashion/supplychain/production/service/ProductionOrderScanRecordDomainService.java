@@ -450,17 +450,21 @@ public class ProductionOrderScanRecordDomainService {
             return;
         }
 
-        ScanRecord patch = new ScanRecord();
-        patch.setId(existing.getId());
-        patch.setQuantity(Math.max(0, quantity));
+        // UPDATE 路径：使用 LambdaUpdateWrapper 强制写入 null 值
+        // MyBatis-Plus updateById 默认 FieldStrategy.NOT_NULL 会跳过 null 字段，
+        // 导致系统记录的 operatorId=null 永远无法清除历史残留值
         String opId = trimToNull(operatorId);
-        patch.setOperatorId(opId);
-        patch.setOperatorName(resolveOperatorName(operatorName, opId, existing.getOperatorName()));
+        String resolvedOpName = resolveOperatorName(operatorName, opId, existing.getOperatorName());
+        LambdaUpdateWrapper<ScanRecord> uw = new LambdaUpdateWrapper<ScanRecord>()
+                .eq(ScanRecord::getId, existing.getId())
+                .set(ScanRecord::getQuantity, Math.max(0, quantity))
+                .set(ScanRecord::getOperatorId, opId)
+                .set(ScanRecord::getOperatorName, resolvedOpName)
+                .set(ScanRecord::getUpdateTime, now);
         if (scanTime != null) {
-            patch.setScanTime(scanTime);
+            uw.set(ScanRecord::getScanTime, scanTime);
         }
-        patch.setUpdateTime(now);
-        scanRecordMapper.updateById(patch);
+        scanRecordMapper.update(null, uw);
     }
 
     public void ensureBaseStageScanRecordsOnCreate(ProductionOrder order) {

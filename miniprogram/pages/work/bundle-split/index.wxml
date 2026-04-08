@@ -1,0 +1,127 @@
+<view class="container">
+  <custom-nav title="拆菲号" show-back="{{true}}" show-search="{{false}}" />
+
+  <!-- 搜索订单（从首页快捷入口进入时显示） -->
+  <view wx:if="{{needSearch}}" class="filter-section search-entry">
+    <view class="search-compact">
+      <view class="scan-icon-btn" bindtap="scanOrderQr" hover-class="scan-icon-btn-hover">
+        <view class="line-icon icon-camera icon-camera--white scan-btn-icon"></view>
+      </view>
+      <view class="search-box search-box-flex">
+        <input
+          class="search-input"
+          placeholder="输入订单号或扫码查单"
+          value="{{searchOrderNo}}"
+          bindinput="onSearchInput"
+          confirm-type="search"
+          bindconfirm="doSearch"
+        />
+      </view>
+      <view class="search-btn" bindtap="doSearch" hover-class="search-btn-hover">查询</view>
+    </view>
+  </view>
+
+  <!-- 已有订单号时的主内容 -->
+  <block wx:else>
+    <!-- 订单信息栏 -->
+    <view class="order-bar">
+      <view class="order-bar-left">
+        <text class="order-label">订单号</text>
+        <text class="order-no">{{orderNo}}</text>
+      </view>
+      <view class="change-btn" bindtap="changeOrder" hover-class="change-btn-hover">换单</view>
+    </view>
+
+    <!-- 加载中 -->
+    <view wx:if="{{loading}}" class="loading-state">
+      <text>加载菲号中...</text>
+    </view>
+
+    <!-- 菲号列表 -->
+    <view wx:elif="{{bundles.length}}" class="bundle-list">
+      <view
+        wx:for="{{bundles}}"
+        wx:key="id"
+        class="bundle-card {{selectedIdx === index ? 'selected' : ''}}"
+        bindtap="selectBundle"
+        data-idx="{{index}}"
+      >
+        <!-- 菲号摘要行 -->
+        <view class="bundle-row">
+          <text class="bundle-no">{{item.bundleLabel || item.bundleNo}}</text>
+          <text class="bundle-qty">{{item.quantity}} 件</text>
+        </view>
+        <view class="bundle-meta">
+          <text>{{item.color || '-'}}</text>
+          <text class="meta-sep">/</text>
+          <text>{{item.size || '-'}}</text>
+        </view>
+
+        <!-- 展开的拆分表单 -->
+        <view wx:if="{{selectedIdx === index}}" class="split-form" catchtap="">
+          <view class="form-row">
+            <text class="form-label">转出数量</text>
+            <input
+              class="form-input"
+              type="number"
+              placeholder="输入件数"
+              value="{{splitQty}}"
+              bindinput="onQtyInput"
+            />
+          </view>
+
+          <view class="form-row">
+            <text class="form-label">接手工人</text>
+            <picker
+              mode="selector"
+              range="{{workers}}"
+              range-key="workerName"
+              value="{{workerIdx}}"
+              bindchange="onWorkerChange"
+            >
+              <view class="picker-box">
+                <text class="{{workerIdx >= 0 ? '' : 'placeholder'}}">
+                  {{workerIdx >= 0 ? workers[workerIdx].workerName : '选择工人'}}
+                </text>
+                <text class="arrow">›</text>
+              </view>
+            </picker>
+          </view>
+
+          <view
+            class="submit-btn {{submitting ? 'disabled' : ''}}"
+            bindtap="submitSplit"
+            hover-class="submit-hover"
+          >
+            {{submitting ? '提交中...' : '确认拆分'}}
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 空状态 -->
+    <view wx:else class="empty-state empty-state-card">
+      <text class="empty-icon">📦</text>
+      <text class="empty-text">该订单暂无菲号</text>
+      <text class="empty-hint">请确认订单号是否正确</text>
+    </view>
+  </block>
+
+  <!-- 拆分记录 -->
+  <view wx:if="{{splitRecords.length}}" class="records-section">
+    <view class="records-header">
+      <text class="records-title">拆分记录</text>
+      <text class="records-clear" bindtap="clearRecords">清空</text>
+    </view>
+    <view class="record-item" wx:for="{{splitRecords}}" wx:key="time">
+      <view class="record-top">
+        <text class="record-order">{{item.orderNo}}</text>
+        <text class="record-time">{{item.timeLabel}}</text>
+      </view>
+      <view class="record-bottom">
+        <text class="record-bundle">{{item.bundleNo}}</text>
+        <text class="record-detail">{{item.qty}}件 → {{item.workerName}}</text>
+      </view>
+    </view>
+  </view>
+</view>

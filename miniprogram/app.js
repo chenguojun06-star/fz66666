@@ -149,6 +149,7 @@ App({
       'pending_cutting_task',
       'pending_procurement_task',
       'pending_quality_task',
+      'pending_repair_task',
       'pending_order_hint',
       'highlight_order_no',
       'mp_scan_type_index',

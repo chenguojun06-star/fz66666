@@ -58,7 +58,8 @@
         <view class="message-row {{item.role === 'user' ? 'my-message' : 'ai-message'}}" id="msg-{{item.id}}">
           <view class="avatar">{{item.role === 'user' ? '我' : '☁️'}}</view>
           <view class="bubble">
-            <text class="message-text" user-select>{{item.content}}</text>
+            <image class="msg-image" src="{{item.imageUrl}}" mode="widthFix" catchtap="previewImage" data-src="{{item.imageUrl}}" wx:if="{{item.imageUrl}}" />
+            <text class="message-text" user-select wx:if="{{item.content}}">{{item.content}}</text>
             <view class="recommend-wrapper" wx:if="{{item.recommendPills && item.recommendPills.length > 0}}">
               <view class="recommend-title">猜你想问</view>
               <view class="recommend-pills">
@@ -79,9 +80,19 @@
       </block>
       <view class="loading-indicator" wx:if="{{isLoading}}">小云正在思考...</view>
     </scroll-view>
+    <view class="pending-image-wrap" wx:if="{{pendingImage}}">
+      <image class="pending-image-preview" src="{{pendingImage}}" mode="aspectFill" catchtap="previewImage" data-src="{{pendingImage}}" />
+      <view class="pending-image-remove" catchtap="removePendingImage">✕</view>
+    </view>
+    <view class="uploading-mask" wx:if="{{uploading}}">
+      <text class="uploading-text">图片上传中...</text>
+    </view>
     <view class="chat-input-area">
-      <input class="chat-input" value="{{inputValue}}" placeholder="问点什么..." bindinput="onInput" confirm-type="send" bindconfirm="sendMessage" />
-      <view class="send-btn-mini {{(isLoading || !inputValue) ? 'btn-disabled' : ''}}" catchtap="sendMessage">
+      <view class="photo-btn" catchtap="chooseImage" hover-class="photo-btn-hover" hover-stay-time="100">
+        <view class="line-icon icon-camera photo-icon"></view>
+      </view>
+      <input class="chat-input chat-input-with-photo" value="{{inputValue}}" placeholder="问点什么..." bindinput="onInput" confirm-type="send" bindconfirm="sendMessage" />
+      <view class="send-btn-mini {{(isLoading || (!inputValue && !pendingImage)) ? 'btn-disabled' : ''}}" catchtap="sendMessage">
         <text class="send-icon">➤</text>
       </view>
     </view>
@@ -186,7 +197,7 @@
           </view>
           <view class="section-count-badge repair-badge">{{repairTasks.length}}</view>
         </view>
-        <view class="task-card task-type-repair" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{repairTasks}}" wx:key="id">
+        <view class="task-card task-type-repair" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{repairTasks}}" wx:key="id" catchtap="handleRepairTask" data-item="{{item}}">
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
             <view class="task-card-info">
@@ -198,6 +209,9 @@
               <view class="task-chips">
                 <view class="task-chip">次品 {{item.defectQty}}件</view>
               </view>
+            </view>
+            <view class="task-action-col">
+              <button class="task-action-btn repair-btn" size="mini" catchtap="handleRepairTask" data-item="{{item}}">去返修</button>
             </view>
           </view>
         </view>
@@ -211,7 +225,7 @@
           </view>
           <view class="section-count-badge overdue-badge">{{overdueOrders.length}}</view>
         </view>
-        <view class="task-card task-type-overdue" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{overdueOrders}}" wx:key="id">
+        <view class="task-card task-type-overdue" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{overdueOrders}}" wx:key="id" catchtap="handleOverdueOrder" data-item="{{item}}">
           <view class="task-accent-bar"></view>
           <view class="task-card-main">
             <view class="task-card-info">
@@ -220,6 +234,9 @@
                 <text class="task-style-tag overdue-tag">逾期</text>
               </view>
               <text class="task-name">{{item.styleName || item.styleNo || ''}}</text>
+            </view>
+            <view class="task-action-col">
+              <button class="task-action-btn default-btn" size="mini" catchtap="handleOverdueOrder" data-item="{{item}}">查看</button>
             </view>
           </view>
         </view>
@@ -245,6 +262,10 @@
                 <view class="task-chip time-chip">{{item.timeText}}</view>
               </view>
             </view>
+            <view class="task-action-col task-approve-col">
+              <button class="task-action-btn approve-btn" size="mini" catchtap="onApproveUser" data-user-id="{{item.id}}" data-action="approve">通过</button>
+              <button class="task-action-btn reject-btn" size="mini" catchtap="onApproveUser" data-user-id="{{item.id}}" data-action="reject">拒绝</button>
+            </view>
           </view>
         </view>
       </view>
@@ -268,6 +289,34 @@
                 <view class="task-chip"><view class="line-icon line-icon--sm icon-phone"></view> {{item.phone}}</view>
                 <view class="task-chip time-chip">{{item.timeText}}</view>
               </view>
+            </view>
+            <view class="task-action-col task-approve-col">
+              <button class="task-action-btn approve-btn" size="mini" catchtap="onApproveRegistration" data-user-id="{{item.id}}" data-action="approve">通过</button>
+              <button class="task-action-btn reject-btn" size="mini" catchtap="onApproveRegistration" data-user-id="{{item.id}}" data-action="reject">拒绝</button>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 超时提醒 -->
+      <view class="task-section" wx:if="{{timeoutReminders.length > 0}}">
+        <view class="task-section-header">
+          <view class="line-icon icon-clock"></view>
+          <text class="section-title">超时提醒</text>
+          <text class="section-badge">({{timeoutReminders.length}})</text>
+        </view>
+        <view class="task-card task-type-timeout" hover-class="task-card-hover" hover-stay-time="100" wx:for="{{timeoutReminders}}" wx:key="id" catchtap="handleReminderTask" data-item="{{item}}">
+          <view class="task-accent-bar"></view>
+          <view class="task-card-main">
+            <view class="task-card-info">
+              <view class="task-order-row">
+                <text class="task-order-no">{{item.orderNo || item.title}}</text>
+                <text class="task-style-tag timeout-tag">{{item.type || '超时'}}</text>
+              </view>
+              <text class="task-name">{{item.message || item.description || ''}}</text>
+            </view>
+            <view class="task-action-col">
+              <button class="task-action-btn default-btn" size="mini" catchtap="handleReminderTask" data-item="{{item}}">处理</button>
             </view>
           </view>
         </view>

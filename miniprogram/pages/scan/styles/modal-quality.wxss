@@ -1,0 +1,299 @@
+/* 弹窗遮罩层 */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+/* 弹窗容器 */
+.modal-wrap {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  max-width: 90vw;
+  width: auto;
+}
+
+/* 质检处理弹窗 */
+.quality-modal .modal-container {
+  max-height: 80vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 弹窗头部 */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.modal-title {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.modal-close {
+  font-size: var(--font-size-lg);
+  color: var(--color-text-disabled);
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-close-hover {
+  background: rgba(var(--color-primary-rgb), 0.15);
+  border-radius: 50%;
+}
+
+/* 弹窗内容区 */
+.modal-body {
+  padding: 10px 12px;
+}
+
+/* 弹窗底部按钮 */
+.modal-footer {
+  display: flex;
+  padding: 8px 12px;
+  border-top: 1px solid var(--color-border-light);
+  gap: 8px;
+}
+
+.modal-btn {
+  flex: 1;
+  height: 34px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  border: none;
+  font-weight: 500;
+}
+
+.modal-btn.cancel {
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.modal-btn.cancel-hover {
+  opacity: 0.8;
+  transform: scale(0.98);
+}
+
+.modal-btn.confirm {
+  background: var(--gradient-primary-alpha);
+  color: var(--color-text-primary);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.2);
+  box-shadow: 0 4px 12px rgba(var(--color-primary-rgb), 0.15);
+}
+
+.modal-btn.confirm-hover {
+  opacity: 0.8;
+  transform: scale(0.98);
+}
+
+/* 确认按钮禁用状态：显示灰色，防止误导操作人 */
+.modal-btn.confirm[disabled] {
+  background: rgba(0, 0, 0, 0.05) !important;
+  color: rgba(0, 0, 0, 0.28) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  box-shadow: none !important;
+}
+
+.qm-info {
+  display: flex;
+  align-items: center;
+  padding: 4px 0;
+  font-size: var(--font-size-xs);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.qm-label {
+  color: var(--color-text-disabled);
+  width: 60px;
+  flex-shrink: 0;
+  font-size: var(--font-size-xs);
+}
+
+.qm-value {
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+.qm-section {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+}
+
+.qm-section-title {
+  display: block;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin-bottom: 6px;
+}
+
+.qm-radio-group {
+  display: flex;
+  gap: 8px;
+}
+
+.qm-radio {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  background: var(--color-bg-card);
+  transition: background 0.15s, border-color 0.15s;
+}
+.qm-radio-hover {
+  background: rgba(var(--color-primary-rgb), 0.15);
+}
+
+.qm-radio.active {
+  border-color: rgba(var(--color-primary-rgb), 0.2);
+  background: rgba(var(--color-primary-rgb), 0.15);
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+.qm-radio-icon {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-white);
+}
+
+.qm-radio.active .qm-radio-icon {
+  background: rgba(var(--color-primary-rgb), 0.7);
+  border-color: rgba(var(--color-primary-rgb), 0.7);
+}
+
+.qm-defective {
+  margin-top: 8px;
+}
+
+.qm-field {
+  margin-bottom: 8px;
+}
+
+.qm-field-label {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-bottom: 4px;
+}
+
+.qm-input {
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: var(--font-size-xs);
+  background: var(--color-bg-card);
+}
+
+/* 旧 qm-picker 样式已废弃，改用 inline-selector 通用组件 */
+
+.qm-textarea {
+  width: 100%;
+  min-height: 60px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-size: var(--font-size-xs);
+  background: var(--color-bg-card);
+  line-height: 1.5;
+}
+
+/* 图片上传区域 */
+.qm-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.qm-image-item {
+  position: relative;
+  width: 64px;
+  height: 64px;
+}
+
+.qm-image {
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  border: 1px solid var(--color-border);
+}
+
+.qm-image-del {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  background: var(--color-error);
+  color: var(--color-text-white);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-base);
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.qm-image-upload {
+  width: 64px;
+  height: 64px;
+  border: 1px dashed var(--color-border);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-card);
+}
+
+.qm-image-upload-hover {
+  opacity: 0.7;
+}
+
+.qm-upload-icon {
+  font-size: var(--font-size-xl);
+  color: var(--color-text-disabled);
+  line-height: 1;
+}
+
+.qm-upload-text {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-disabled);
+  margin-top: 4px;
+}

@@ -88,3 +88,31 @@
 .today-stat-value--success {
   color: #10b981;
 }
+
+/* 状态指示点 — 样衣开发 stage 模式标题区 */
+.sample-stage-header {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-bottom: 10px;
+}
+
+.sample-stage-title {
+  font-size: var(--font-size-lg, 16px);
+  font-weight: 600;
+  color: var(--color-primary, #4fd1c5);
+}
+
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-left: 6px;
+  cursor: pointer;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.status-dot--green { background: #10b981; }
+.status-dot--red   { background: #ef4444; }

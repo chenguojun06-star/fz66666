@@ -1,6 +1,0 @@
-{
-  "navigationBarTitleText": "面辅料需求排行",
-  "usingComponents": {
-    "mp-modal": "/components/common/mp-modal/index"
-  }
-}

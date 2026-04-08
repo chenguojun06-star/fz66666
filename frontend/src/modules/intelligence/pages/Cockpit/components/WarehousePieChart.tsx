@@ -54,8 +54,8 @@ const WarehousePieChart: React.FC<WarehousePieChartProps> = ({ mode = 'sidebar',
         const { start, end } = getDateRange();
         const [ordersRes, inventoryRes] = await Promise.all([
           api.get<{ code: number; data: { records?: ProductionOrder[] } }>('/production/order/list', {
-            params: { 
-              page: 1, 
+            params: {
+              page: 1,
               pageSize: 500,
               startDate: start.toISOString(),
               endDate: end.toISOString(),
@@ -64,8 +64,8 @@ const WarehousePieChart: React.FC<WarehousePieChartProps> = ({ mode = 'sidebar',
           }),
           api.post<{ code: number; data: { records?: FinishedInventory[] } }>(
             '/warehouse/finished-inventory/list',
-            { 
-              page: 1, 
+            {
+              page: 1,
               pageSize: 500,
               startDate: start.toISOString(),
               endDate: end.toISOString(),
@@ -99,17 +99,17 @@ const WarehousePieChart: React.FC<WarehousePieChartProps> = ({ mode = 'sidebar',
 
   useEffect(() => {
     if (mode !== 'stage' || !styleLink || !moduleKey || !position || styleList.length === 0) return;
-    
+
     const styleListKey = styleList.map(s => s.styleNo).sort().join(',');
     const positionKey = `${position.x},${position.y},${position.width},${position.height}`;
-    
+
     if (prevStyleListRef.current === styleListKey && prevPositionRef.current === positionKey) {
       return;
     }
-    
+
     prevStyleListRef.current = styleListKey;
     prevPositionRef.current = positionKey;
-    
+
     styleLink.registerStyle(moduleKey, styleList, position);
   }, [mode, styleLink, moduleKey, position, styleList]);
 
@@ -177,12 +177,12 @@ const WarehousePieChart: React.FC<WarehousePieChartProps> = ({ mode = 'sidebar',
     const todayOutboundOrders = orders.filter(o => isToday(String(o.outstockTime || o.outstockDate)));
     const todayOutboundQty = todayOutboundOrders.reduce((sum, o) => sum + (o.outstockQuantity || 0), 0);
 
-    return { 
-      totalQty, 
-      totalPendingInbound, 
-      totalInStock, 
-      totalOutStock, 
-      stageQuantities, 
+    return {
+      totalQty,
+      totalPendingInbound,
+      totalInStock,
+      totalOutStock,
+      stageQuantities,
       styleStats,
       todayOutboundCount: todayOutboundOrders.length,
       todayOutboundQty,
@@ -206,12 +206,18 @@ const WarehousePieChart: React.FC<WarehousePieChartProps> = ({ mode = 'sidebar',
         total={stats.totalQty}
         inProgress={stats.totalPendingInbound}
         completed={stats.totalInStock}
-        avgTime={stats.totalOutStock > 0 ? `已出库${stats.totalOutStock}件` : undefined}
+        todayCompleted={stats.todayOutboundQty}
+        todayCompletedUnit="件"
+        todayLabel="今日出库"
+        avgTime={stats.totalOutStock > 0 ? `${stats.totalOutStock}件` : '-'}
+        avgLabel="累计出库"
+        inProgressLabel="待入库"
+        completedLabel="已入库"
         segments={segments}
         loading={loading}
         extraCompletedStat={extraCompletedStat}
       />
-      
+
       {mode === 'stage' && stats.styleStats.length > 0 && (
         <div className="style-stats">
           <div className="style-stats-header">款号库存统计</div>

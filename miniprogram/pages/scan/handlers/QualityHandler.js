@@ -191,7 +191,7 @@ async function submitQualityResult(page) {
     await api.production.executeScan(payload);
     const successMsg = qualityModal.result === 'qualified'
       ? '质检合格已记录，请进行包装工序'
-      : '不合格已记录✅';
+      : '不合格已记录';
     toast.success(successMsg);
     closeQualityModal(page);
     page.loadMyPanel(true);

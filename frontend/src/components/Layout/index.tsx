@@ -155,7 +155,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     [paths.styleInfoList]: 'menu.items.styleInfo',
     [paths.dataCenter]: 'menu.items.dataCenter',
     [paths.templateCenter]: 'menu.items.templateCenter',
-    [paths.orderManagementList]: 'menu.items.orderManagement',
     [paths.productionList]: 'menu.items.productionList',
     [paths.materialPurchase]: 'menu.items.materialPurchase',
     [paths.productionPartners]: 'menu.items.factory',
@@ -393,7 +392,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const resolveRecentTitle = (basePath: string | undefined, pathname: string) => {
     const base = basePath || pathname;
     if (base === '/style-info' && pathname !== base) return t('layout.styleInfoDetail', language);
-    if (base === '/order-management' && pathname !== base) return t('layout.orderDetail', language);
     if (base === '/production/cutting' && pathname.startsWith('/production/cutting/task/')) return t('layout.cuttingTask', language);
     if (base === '/production/warehousing' && pathname.startsWith('/production/warehousing/detail/')) return t('layout.warehousingDetail', language);
     if (base === '/cockpit') return '数据看板';

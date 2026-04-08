@@ -4,7 +4,7 @@
 
   <!-- 顶部统计卡片 -->
   <view class="summary-card">
-    <view class="summary-title">📱 我的工资</view>
+    <view class="summary-title">我的工资</view>
     <view class="summary-row">
       <view class="summary-item">
         <view class="summary-label">本月总金额</view>
@@ -65,7 +65,7 @@
     </view>
 
     <view wx:if="{{records.length === 0}}" class="empty-state">
-      <text class="empty-icon">📋</text>
+      <view class="empty-icon"><view class="line-icon line-icon--sm icon-clipboard"></view></view>
       <text class="empty-text">暂无工序记录</text>
     </view>
 

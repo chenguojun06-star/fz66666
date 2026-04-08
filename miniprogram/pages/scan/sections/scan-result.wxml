@@ -1,0 +1,33 @@
+  <!-- ③ 扫码结果 -->
+  <view wx:if="{{lastResult}}" class="result {{lastResult.success ? 'ok' : 'err'}}">
+    <view class="res-top">
+      <text class="res-tag {{lastResult.success ? 'ok' : 'err'}}">{{lastResult.success ? '成功' : '失败'}}</text>
+      <text class="res-msg">{{lastResult.message}}</text>
+      <text wx:if="{{lastResult.success && undo.canUndo}}" class="res-undo" hover-class="res-undo-hover" hover-stay-time="100" bindtap="onUndoLast">{{undo.loading ? '...' : '撤销'}}</text>
+    </view>
+    <view class="res-info">
+      <text wx:if="{{lastResult.orderNo}}" class="res-order">{{lastResult.orderNo}}</text>
+      <text wx:if="{{lastResult.styleNo}}" class="res-style">{{lastResult.styleNo}}</text>
+      <text wx:if="{{lastResult.factoryName}}">{{lastResult.factoryName}}</text>
+      <text wx:if="{{lastResult.orgPath}}">{{lastResult.orgPath}}</text>
+      <text wx:if="{{lastResult.factoryType === 'INTERNAL'}}" class="res-proc">内部</text>
+      <text wx:if="{{lastResult.factoryType === 'EXTERNAL'}}" class="res-proc">外部</text>
+      <text wx:if="{{lastResult.color}}">{{lastResult.color}}</text>
+      <text wx:if="{{lastResult.size}}">{{lastResult.size}}</text>
+      <text wx:if="{{lastResult.processName}}" class="res-proc">{{lastResult.processName}}</text>
+      <text wx:if="{{lastResult.unitPrice != null && !lastResult.hidePrice}}" class="{{lastResult.unitPriceHint ? 'res-price-warn' : ''}}">¥{{lastResult.unitPrice}}{{lastResult.unitPriceHint ? ' !' : ''}}</text>
+    </view>
+    <view wx:if="{{lastResult.success && lastResult.sessionQty > 0}}" class="res-session-bar">
+      <text class="res-session-text">本工序今日累计 {{lastResult.sessionQty}} 件</text>
+    </view>
+    <view wx:if="{{lastResult.unitPriceHint}}" class="res-hint">
+      <view class="line-icon line-icon--sm icon-alert hint-icon"></view>
+      <text class="hint-text">{{lastResult.unitPriceHint}}</text>
+    </view>
+    <!-- 失败后明确下一步操作按鈕 -->
+    <view wx:if="{{!lastResult.success && lastResult.errorAction}}" class="res-actions">
+      <view wx:if="{{lastResult.errorAction === 'checkNetwork'}}" class="res-action-btn" hover-class="res-action-btn-hover" hover-stay-time="100" bindtap="onCheckNetwork">检查网络</view>
+      <view wx:if="{{lastResult.errorAction === 'retry'}}" class="res-action-btn" hover-class="res-action-btn-hover" hover-stay-time="100" bindtap="onScan">重新扫码</view>
+    </view>
+  </view>
+

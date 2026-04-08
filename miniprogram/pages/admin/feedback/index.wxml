@@ -1,5 +1,5 @@
 <view class="container">
-  <custom-nav title="问题反馈" show-search="{{false}}" />
+  <custom-nav title="问题反馈" show-back="{{true}}" show-search="{{false}}" />
 
   <view class="tab-bar">
     <view class="tab-item {{activeTab === 'submit' ? 'active' : ''}}" bindtap="switchTab" data-tab="submit">提交反馈</view>

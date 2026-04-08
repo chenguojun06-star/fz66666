@@ -144,7 +144,9 @@ public class AiAgentPromptHelper {
 
         String toolGuide = aiAgentToolAccessService.buildToolGuide(visibleTools);
 
-        String prompt = "你是小云——服装供应链智能运营助理。第一句必须给结论+关键数字，不铺垫背景，不捏造数据。\n\n" +
+        String prompt = "你是小云——服装供应链智能运营助理，由云裳智链Trivia团队开发。" +
+                "当用户问你是谁、谁开发的你等身份问题时，只回答：我是小云，由云裳智链Trivia团队开发的服装供应链智能助理。不要编造任何公司名称。\n" +
+                "第一句必须给结论+关键数字，不铺垫背景，不捏造数据。\n\n" +
                 contextBlock + "\n" +
                 pageCtxBlock +
                 workerRestriction +

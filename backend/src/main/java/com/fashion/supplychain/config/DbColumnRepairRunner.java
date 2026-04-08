@@ -644,6 +644,67 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             repaired += ensureColumn(conn, schema, "t_style_quotation", "audit_remark",
                     "VARCHAR(500) DEFAULT NULL");
 
+            // ── t_product_outstock 表（成品出库记录，DataInitializer 在云端被禁用导致表不存在）
+            repairedTables += ensureTable(conn, schema, "t_product_outstock",
+                    "CREATE TABLE IF NOT EXISTS `t_product_outstock` ("
+                    + "`id` VARCHAR(64) NOT NULL, "
+                    + "`outstock_no` VARCHAR(64) DEFAULT NULL, "
+                    + "`order_id` VARCHAR(64) DEFAULT NULL, "
+                    + "`order_no` VARCHAR(64) DEFAULT NULL, "
+                    + "`style_id` VARCHAR(64) DEFAULT NULL, "
+                    + "`style_no` VARCHAR(64) DEFAULT NULL, "
+                    + "`style_name` VARCHAR(200) DEFAULT NULL, "
+                    + "`outstock_quantity` INT DEFAULT 0, "
+                    + "`outstock_type` VARCHAR(32) DEFAULT NULL, "
+                    + "`warehouse` VARCHAR(100) DEFAULT NULL, "
+                    + "`remark` TEXT, "
+                    + "`create_time` DATETIME DEFAULT NULL, "
+                    + "`update_time` DATETIME DEFAULT NULL, "
+                    + "`delete_flag` INT DEFAULT 0, "
+                    + "`operator_id` VARCHAR(64) DEFAULT NULL, "
+                    + "`operator_name` VARCHAR(100) DEFAULT NULL, "
+                    + "`creator_id` VARCHAR(64) DEFAULT NULL, "
+                    + "`creator_name` VARCHAR(100) DEFAULT NULL, "
+                    + "`tenant_id` BIGINT DEFAULT NULL, "
+                    + "`sku_code` VARCHAR(100) DEFAULT NULL, "
+                    + "`color` VARCHAR(50) DEFAULT NULL, "
+                    + "`size` VARCHAR(50) DEFAULT NULL, "
+                    + "`cost_price` DECIMAL(12,2) DEFAULT NULL, "
+                    + "`sales_price` DECIMAL(12,2) DEFAULT NULL, "
+                    + "`tracking_no` VARCHAR(100) DEFAULT NULL, "
+                    + "`express_company` VARCHAR(50) DEFAULT NULL, "
+                    + "`receive_status` VARCHAR(20) DEFAULT NULL, "
+                    + "`receive_time` DATETIME DEFAULT NULL, "
+                    + "`received_by` VARCHAR(36) DEFAULT NULL, "
+                    + "`received_by_name` VARCHAR(100) DEFAULT NULL, "
+                    + "`customer_name` VARCHAR(100) DEFAULT NULL, "
+                    + "`customer_phone` VARCHAR(50) DEFAULT NULL, "
+                    + "`shipping_address` VARCHAR(500) DEFAULT NULL, "
+                    + "`total_amount` DECIMAL(12,2) DEFAULT NULL, "
+                    + "`paid_amount` DECIMAL(12,2) DEFAULT 0.00, "
+                    + "`payment_status` VARCHAR(20) DEFAULT NULL, "
+                    + "`settlement_time` DATETIME DEFAULT NULL, "
+                    + "PRIMARY KEY (`id`)"
+                    + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin");
+
+            // ── t_product_sku 补齐 stock_quantity / tenant_id（V7 CREATE TABLE 遗漏）
+            repaired += ensureColumn(conn, schema, "t_product_sku", "stock_quantity",
+                    "INT NOT NULL DEFAULT 0");
+            repaired += ensureColumn(conn, schema, "t_product_sku", "tenant_id",
+                    "BIGINT DEFAULT NULL");
+
+            // ── t_style_attachment 补齐 5 列（V202608011400 可能因 Flyway 解析器截断未生效）
+            repaired += ensureColumn(conn, schema, "t_style_attachment", "version",
+                    "INT DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_style_attachment", "version_remark",
+                    "VARCHAR(200) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_style_attachment", "status",
+                    "VARCHAR(20) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_style_attachment", "parent_id",
+                    "VARCHAR(64) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_style_attachment", "tenant_id",
+                    "BIGINT DEFAULT NULL");
+
             if (repaired > 0) {
                 log.warn("[DbRepair] 共修复 {} 个缺失列，Flyway 可能未正常执行对应迁移脚本", repaired);
             }
