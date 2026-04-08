@@ -29,7 +29,37 @@
   color: var(--color-text-primary, #1e293b);
   margin-bottom: 16rpx;
 }
+.info-card-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 24rpx;
+}
+.cover-wrap {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 14rpx;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #f0f0f0;
+}
+.cover-img {
+  width: 100%;
+  height: 100%;
+}
+.cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+}
+.placeholder-icon {
+  font-size: 48rpx;
+}
 .info-grid {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-wrap: wrap;
   gap: 12rpx 0;

@@ -673,7 +673,13 @@ public class ScanRecordOrchestrator {
     private ProductionOrder resolveOrder(String orderId, String orderNo) {
         String oid = hasText(orderId) ? orderId.trim() : null;
         if (hasText(oid)) {
-            ProductionOrder o = productionOrderService.getById(oid);
+            ProductionOrder o = productionOrderService.getOne(new LambdaQueryWrapper<ProductionOrder>()
+                    .select(ProductionOrder::getId, ProductionOrder::getOrderNo, ProductionOrder::getDeleteFlag,
+                            ProductionOrder::getFactoryId, ProductionOrder::getFactoryType, ProductionOrder::getStatus,
+                            ProductionOrder::getStyleId, ProductionOrder::getStyleNo, ProductionOrder::getStyleName,
+                            ProductionOrder::getColor, ProductionOrder::getSize, ProductionOrder::getTenantId)
+                    .eq(ProductionOrder::getId, oid)
+                    .last("limit 1"));
             if (o == null || o.getDeleteFlag() == null || o.getDeleteFlag() != 0) {
                 return null;
             }
@@ -685,6 +691,10 @@ public class ScanRecordOrchestrator {
             return null;
         }
         return productionOrderService.getOne(new LambdaQueryWrapper<ProductionOrder>()
+                .select(ProductionOrder::getId, ProductionOrder::getOrderNo, ProductionOrder::getDeleteFlag,
+                        ProductionOrder::getFactoryId, ProductionOrder::getFactoryType, ProductionOrder::getStatus,
+                        ProductionOrder::getStyleId, ProductionOrder::getStyleNo, ProductionOrder::getStyleName,
+                        ProductionOrder::getColor, ProductionOrder::getSize, ProductionOrder::getTenantId)
                 .eq(ProductionOrder::getOrderNo, on)
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .last("limit 1"));

@@ -13,6 +13,7 @@ Page({
     taskId: '',
     orderNo: '',
     orderId: '',
+    coverImage: '',
     taskInfo: {},
     /* 自动填充的裁剪行 [{color, size, orderedQty, cuttingQty, bundleCount,
        lastBundleQty, defaultLastQty, bundleDisplay, lastBundleOverride, key}] */
@@ -52,8 +53,10 @@ Page({
         orderId: order?.id || this.data.orderId,
       };
 
+      const coverImage = order?.coverImage || order?.styleImage || '';
       this.setData({
         taskInfo,
+        coverImage,
         orderId: taskInfo.orderId || this.data.orderId,
         loading: false,
       });
@@ -72,6 +75,12 @@ Page({
     if (res?.records?.length) return res.records[0];
     if (res?.data?.length) return res.data[0];
     return res || null;
+  },
+
+  /** 点击封面图预览大图 */
+  previewImage() {
+    const url = this.data.coverImage;
+    if (url) wx.previewImage({ current: url, urls: [url] });
   },
 
   /**
