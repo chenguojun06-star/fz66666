@@ -84,11 +84,10 @@ function buildSelectionSummary(processOptions, selectedProcessNames) {
  */
 function showScanResultConfirm(ctx, data) {
   const {
-    processName, progressStage, scanType, quantity,
-    orderNo, bundleNo, scanData, orderDetail, stageResult, parsedData,
+    processName, progressStage, stageResult,
   } = data;
 
-  const { options: processOptions, index: processIndex } =
+  const { options: processOptions } =
     buildProcessOptions(processName, progressStage, stageResult);
 
   if (processOptions.length === 0) {
@@ -97,59 +96,9 @@ function showScanResultConfirm(ctx, data) {
     return;
   }
 
-  const selectedOption = processOptions[processIndex];
-  const selectedProcessNames = selectedOption ? [selectedOption.value] : [];
-  const processOptionsWithSelection = applySelectionState(processOptions, selectedProcessNames);
-  const selectionSummary = buildSelectionSummary(processOptionsWithSelection, selectedProcessNames);
-  const confirmedQty = normalizePositiveInt(quantity, 1);
-
-  ctx.setData({
-    'scanResultConfirm.visible': true,
-    'scanResultConfirm.processName': processName,
-    'scanResultConfirm.progressStage': progressStage,
-    'scanResultConfirm.scanType': scanType,
-    'scanResultConfirm.unitPrice': selectedOption?.unitPrice || 0,
-    'scanResultConfirm.quantity': confirmedQty,
-    'scanResultConfirm.orderNo': orderNo,
-    'scanResultConfirm.bundleNo': bundleNo,
-    'scanResultConfirm.styleNo': orderDetail?.styleNo || '',
-    'scanResultConfirm.processOptions': processOptionsWithSelection,
-    'scanResultConfirm.selectedProcessNames': selectedProcessNames,
-    'scanResultConfirm.selectedProcessDetails': selectionSummary.selectedProcessDetails,
-    'scanResultConfirm.selectedProcessCount': selectionSummary.selectedProcessCount,
-    'scanResultConfirm.selectedProcessAmount': selectionSummary.selectedProcessAmount,
-    'scanResultConfirm.processIndex': processIndex,
-    'scanResultConfirm.scanData': scanData,
-    'scanResultConfirm.orderDetail': orderDetail,
-    'scanResultConfirm.stageResult': stageResult,
-    'scanResultConfirm.parsedData': parsedData,
-    'scanResultConfirm.isDefectiveReentry': !!(stageResult && stageResult.isDefectiveReentry),
-    'scanResultConfirm.defectQty': (stageResult && stageResult.defectQty) || 0,
-    // 入库模式：仓库选择（重置）
-    'scanResultConfirm.warehouseCode': '',
-    // 新增：领取/开始时间与录入结果/完成时间
-    'scanResultConfirm.receiveTime': scanData && scanData.receiveTime ? scanData.receiveTime : '',
-    'scanResultConfirm.confirmTime': scanData && scanData.confirmTime ? scanData.confirmTime : '',
-    // 一行显示：开始时间 | 结束时间
-    'scanResultConfirm.timeDisplay': `${scanData && scanData.receiveTime ? scanData.receiveTime : '—'} | ${scanData && scanData.confirmTime ? scanData.confirmTime : '—'}`,
-    // 先清空，待异步拉取后补填
-    'scanResultConfirm.imageInsight': '',
-    'scanResultConfirm.hasWarehouseSelected': !!selectedOption && selectedOption.scanType === 'warehouse',
-  });
-
-  // 异步拉取款式难度提示（不阻塞确认弹窗显示）
-  const styleNo = orderDetail && orderDetail.styleNo;
-  if (styleNo && ctx.api && ctx.api.style) {
-    ctx.api.style.listStyles({ styleNo, page: 1, pageSize: 1 })
-      .then(res => {
-        const record = (res && (res.records || res.list || []))[0] || (res && !res.records ? res : null);
-        const hint = record && record.imageInsight;
-        if (hint) {
-          ctx.setData({ 'scanResultConfirm.imageInsight': hint });
-        }
-      })
-      .catch(() => { /* 静默失败，不影响主流程 */ });
-  }
+  // 跳转独立页面（原弹窗已转为页面）
+  getApp().globalData.scanResultData = data;
+  wx.navigateTo({ url: '/pages/scan/scan-result/index' });
 }
 
 /**

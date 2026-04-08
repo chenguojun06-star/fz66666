@@ -10,33 +10,9 @@ const toast = require('../../../utils/uiHelper').toast;
  * 显示质检弹窗
  */
 function showQualityModal(page, detail) {
-  page.setData({
-    'qualityModal.show': true,
-    'qualityModal.detail': detail,
-    'qualityModal.result': '', // 默认为空，强制用户选择
-    'qualityModal.unqualifiedQuantity': '',
-    'qualityModal.defectCategory': 0,
-    'qualityModal.handleMethod': 0,
-    'qualityModal.remark': '',
-    'qualityModal.images': [],
-    'qualityModal.aiSuggestion': null,
-  });
-  // 非阻塞加载AI质检建议
-  if (detail && detail.orderId) {
-    api.production.getQualityAiSuggestion(detail.orderId)
-      .then(res => {
-        if (res && res.code === 200 && res.data) {
-          const suggestion = res.data;
-          // 预格式化百分比文字，WXML 不支持 .toFixed() 等方法调用
-          suggestion.historicalDefectRateText =
-            suggestion.historicalDefectRate !== undefined
-              ? '(' + Math.round(suggestion.historicalDefectRate * 100) + '%)'
-              : '';
-          page.setData({ 'qualityModal.aiSuggestion': suggestion });
-        }
-      })
-      .catch(() => {});
-  }
+  // 跳转独立页面（原弹窗已转为页面）
+  getApp().globalData.qualityData = detail;
+  wx.navigateTo({ url: '/pages/scan/quality/index' });
 }
 
 function closeQualityModal(page) {

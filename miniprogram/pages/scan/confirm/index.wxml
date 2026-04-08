@@ -1,0 +1,90 @@
+<view class="container">
+
+  <!-- 订单信息卡 -->
+  <view class="info-card">
+    <view class="card-header">
+      <view class="cover-wrap" bindtap="previewImage">
+        <image wx:if="{{detail.coverImage}}" class="cover-img" src="{{detail.coverImage}}" mode="aspectFill" />
+        <view wx:else class="cover-placeholder"><text class="placeholder-icon">📦</text></view>
+      </view>
+      <view class="header-info">
+        <text class="style-no">{{detail.styleNo || detail.orderNo}}</text>
+        <text class="sub-info">订单 {{detail.orderNo}}</text>
+        <text wx:if="{{detail.bundleNo}}" class="sub-info">菲号 {{detail.bundleNo}}</text>
+        <text wx:if="{{detail.processName}}" class="sub-info tag-process">{{detail.processName}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- AI 工艺提醒 -->
+  <view wx:if="{{aiTipData}}" class="insight-card">
+    <text class="insight-icon">💡</text>
+    <text class="insight-text">{{aiTipData.aiTip}}</text>
+  </view>
+
+  <!-- BOM 提示 -->
+  <view wx:if="{{detail.bomFallback}}" class="warn-card">
+    <text class="warn-icon">⚠️</text>
+    <text class="warn-text">未匹配到BOM工价，当前使用默认工价</text>
+  </view>
+
+  <!-- SKU 输入列表 -->
+  <view class="section-card">
+    <text class="section-title">扫码明细（{{skuList.length}}项）</text>
+    <view class="sku-list">
+      <view wx:for="{{skuList}}" wx:key="id" class="sku-item">
+        <view class="sku-info">
+          <text class="sku-label">{{item.label}}</text>
+          <text class="sku-total">订单 {{item.totalQuantity}} 件</text>
+        </view>
+        <view class="sku-qty-wrap">
+          <input class="sku-qty-input" type="number"
+                 value="{{item.inputQuantity}}"
+                 data-index="{{index}}" bindinput="onSkuInput"
+                 placeholder="数量" />
+          <text class="sku-unit">件</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 汇总 -->
+  <view class="summary-card">
+    <view class="summary-row">
+      <text class="summary-label">总数量</text>
+      <text class="summary-value">{{summary.totalQuantity}} 件</text>
+    </view>
+    <view wx:if="{{summary.totalAmount > 0}}" class="summary-row">
+      <text class="summary-label">预估工价</text>
+      <text class="summary-value amount">¥{{summary.totalAmount}}</text>
+    </view>
+  </view>
+
+  <!-- 颜色尺码矩阵 -->
+  <view wx:if="{{sizeMatrix.rows.length > 0}}" class="section-card">
+    <text class="section-title">颜色尺码汇总</text>
+    <scroll-view scroll-x class="matrix-scroll">
+      <view class="matrix-table">
+        <!-- 表头 -->
+        <view class="matrix-row matrix-header">
+          <text class="matrix-cell cell-color">颜色</text>
+          <text wx:for="{{sizeMatrix.sizes}}" wx:key="*this" class="matrix-cell">{{item}}</text>
+        </view>
+        <!-- 数据行 -->
+        <view wx:for="{{sizeMatrix.rows}}" wx:key="color" class="matrix-row">
+          <text class="matrix-cell cell-color">{{item.color}}</text>
+          <text wx:for="{{item.cells}}" wx:for-item="c" wx:key="size" class="matrix-cell">{{c.quantity}}</text>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 底部操作栏 -->
+  <view class="footer-bar">
+    <view class="btn-cancel" hover-class="btn-hover" bindtap="goBack">取消</view>
+    <view class="btn-submit {{loading ? 'off' : ''}}" hover-class="btn-hover" bindtap="confirmScan">
+      {{loading ? '提交中...' : '确认扫码'}}
+    </view>
+  </view>
+
+</view>

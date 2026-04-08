@@ -29,19 +29,20 @@ function onRescanRecord(ctx, e) {
     return;
   }
 
-  ctx.setData({
-    rescanConfirm: {
-      visible: true,
-      loading: false,
-      recordId: record.id,
-      orderNo: record.orderNo || '-',
-      bundleNo: record.bundleNo || '-',
-      quantity: record.quantity || 0,
-      scanTime: record.createdAt || record.scanTime || '-',
-      groupId: groupId,
-      recordIdx: recordIdx,
-    },
-  });
+  // 跳转独立页面（原弹窗已转为页面）
+  getApp().globalData.rescanData = {
+    recordId: record.id,
+    orderNo: record.orderNo || '-',
+    bundleNo: record.bundleNo || '-',
+    quantity: record.quantity || 0,
+    scanTime: record.createdAt || record.scanTime || '-',
+    groupId: groupId,
+    recordIdx: recordIdx,
+    coverImage: record.coverImage || record.styleImage || '',
+    styleNo: record.styleNo || '',
+    processName: record.processName || '',
+  };
+  wx.navigateTo({ url: '/pages/scan/rescan/index' });
 }
 
 /**

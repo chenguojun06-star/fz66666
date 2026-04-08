@@ -21,53 +21,17 @@ const SKUProcessor = require('../processors/SKUProcessor');
  * @returns {void}
  */
 function showConfirmModal(ctx, data) {
-  // 样板生产模式 - 委托 PatternHandler
+  // 样板生产模式 - 跳转独立页面
   const isPatternMode = data.patternId || data.patternDetail;
   if (isPatternMode) {
-    ctx.showPatternConfirmModal(data);
+    getApp().globalData.patternScanData = data;
+    wx.navigateTo({ url: '/pages/scan/pattern/index' });
     return;
   }
 
-  const { skuList, formItems, summary } = _buildConfirmModalData(data);
-
-  const sizeDetails = _buildSizeDetails(skuList);
-  const sizeSummaryGroups = _buildSizeSummaryGroups(skuList);
-  const sizeSummaryMatrix = _buildSizeSummaryMatrix(skuList);
-
-  ctx.setData({
-    scanConfirm: {
-      visible: true,
-      loading: false,
-      detail: { ...data, sizeDetails, sizeSummaryGroups, sizeSummaryMatrix },
-      skuList: formItems,
-      summary: summary,
-      bomFallback: data.bomFallback || false,
-      aiTipLoading: true,
-      aiTipData: null
-    },
-  });
-
-  // 异步获取 AI 扫码工艺提醒
-  if (data.orderNo && data.processName) {
-    api.intelligence.getScanTips({
-      orderNo: data.orderNo,
-      processName: data.processName
-    }).then(res => {
-      if (res && res.aiTip) {
-        ctx.setData({
-          'scanConfirm.aiTipLoading': false,
-          'scanConfirm.aiTipData': res
-        });
-      } else {
-        ctx.setData({ 'scanConfirm.aiTipLoading': false });
-      }
-    }).catch(err => {
-      console.error('获取 AI 扫码工艺提醒失败', err);
-      ctx.setData({ 'scanConfirm.aiTipLoading': false });
-    });
-  } else {
-    ctx.setData({ 'scanConfirm.aiTipLoading': false });
-  }
+  // 普通扫码确认 - 跳转独立页面（原弹窗已转为页面）
+  getApp().globalData.confirmScanData = data;
+  wx.navigateTo({ url: '/pages/scan/confirm/index' });
 }
 
 /**

@@ -1,0 +1,68 @@
+<view class="container">
+  <!-- 信息卡片 -->
+  <view class="info-card">
+    <view class="card-header">
+      <view class="cover-wrap" bindtap="previewImage">
+        <image wx:if="{{detail.coverImage}}" class="cover-img" src="{{detail.coverImage}}" mode="aspectFill" />
+        <view wx:else class="cover-placeholder">
+          <text class="placeholder-icon">🔍</text>
+        </view>
+      </view>
+      <view class="header-info">
+        <text class="style-no">{{detail.styleNo || detail.orderNo}}</text>
+        <text class="sub-info">{{detail.orderNo}}</text>
+        <text wx:if="{{detail.bundleNo}}" class="sub-info">菲号 {{detail.bundleNo}}</text>
+        <text wx:if="{{detail.timeDisplay}}" class="sub-info time">{{detail.timeDisplay}}</text>
+      </view>
+    </view>
+    <view class="field-list">
+      <view class="field-row">
+        <text class="field-label">数量</text>
+        <text class="field-value highlight">{{quantity}} 件</text>
+      </view>
+      <view wx:if="{{detail.processName}}" class="field-row">
+        <text class="field-label">当前工序</text>
+        <text class="field-value">{{detail.processName}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- AI 洞察 -->
+  <view wx:if="{{imageInsight}}" class="insight-card">
+    <text class="insight-icon">🤖</text>
+    <text class="insight-text">{{imageInsight}}</text>
+  </view>
+
+  <!-- 工序选择 -->
+  <view class="section-card">
+    <text class="section-title">选择工序（可多选）</text>
+    <scroll-view class="process-scroll" scroll-x="{{true}}" enable-flex="{{true}}">
+      <view wx:for="{{processOptions}}" wx:key="value"
+            class="process-chip {{item.checked ? 'active' : ''}}"
+            data-value="{{item.value}}"
+            bindtap="onProcessTap">
+        <text class="chip-label">{{item.label}}</text>
+        <text wx:if="{{!item.hidePrice}}" class="chip-price">¥{{item.unitPrice}}</text>
+      </view>
+    </scroll-view>
+    <!-- 选择汇总 -->
+    <view class="summary-bar" wx:if="{{selectedCount > 0}}">
+      <text class="summary-text">已选 {{selectedCount}} 个工序</text>
+      <text wx:if="{{selectedAmount > 0}}" class="summary-amount">合计 ¥{{selectedAmount}}</text>
+    </view>
+  </view>
+
+  <!-- 仓库输入 -->
+  <view wx:if="{{showWarehouse}}" class="section-card">
+    <text class="section-title">仓库编号</text>
+    <input class="input-box" placeholder="请输入仓库编号" value="{{warehouseCode}}" bindinput="onWarehouseInput" />
+  </view>
+
+  <!-- 底部操作栏 -->
+  <view class="footer-bar">
+    <view class="btn-cancel" hover-class="btn-hover" bindtap="goBack">取消</view>
+    <view class="btn-submit {{loading || selectedCount === 0 ? 'off' : ''}}" hover-class="btn-hover" bindtap="submitScanResult">
+      {{loading ? '提交中...' : '确认提交'}}
+    </view>
+  </view>
+</view>

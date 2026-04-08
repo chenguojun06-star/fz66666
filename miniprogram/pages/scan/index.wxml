@@ -66,18 +66,8 @@
   <!-- ⑦ 今日扫码记录 -->
   <include src="./sections/scan-history.wxml" />
 
-  <!-- 退回重扫确认弹窗 -->
-  <include src="./sections/modal-rescan.wxml" />
-
-  <!-- 扫码结果确认弹窗 -->
-  <include src="./sections/modal-scan-result.wxml" />
-
-  <!-- 确认弹窗（通用 mp-modal 组件） -->
-  <include src="./sections/modal-scan-confirm.wxml" />
+  <!-- 弹窗已转为独立页面：rescan / scan-result / confirm / quality -->
 </view>
-
-<!-- 质检结果弹窗（全页面覆盖，在 page 容器外） -->
-<include src="./sections/modal-quality.wxml" />
 
 <!-- 小云 AI 助手（全页面悬浮） -->
 <ai-assistant />
