@@ -712,6 +712,11 @@ public class FinishedInventoryOrchestrator {
             wrapper.eq(ProductOutstock::getPaymentStatus, paymentStatus);
         }
 
+        String approvalStatus = trimToNull(params.get("approvalStatus"));
+        if (approvalStatus != null) {
+            wrapper.eq(ProductOutstock::getApprovalStatus, approvalStatus);
+        }
+
         // 支持客户名搜索
         String customerName = trimToNull(params.get("customerName"));
         if (customerName != null) {

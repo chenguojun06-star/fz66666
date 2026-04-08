@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, Tag, Space, Select, App, Modal, InputNumber } from 'antd';
+import { Card, Tag, Space, Select, App, Button } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
@@ -38,12 +38,16 @@ interface OutstockRecord {
   paidAmount?: number;
   paymentStatus?: string;
   settlementTime?: string;
+  approvalStatus?: string;
+  approveByName?: string;
+  approveTime?: string;
 }
 
 const outstockTypeMap: Record<string, { label: string; color: string }> = {
   normal: { label: '普通出库', color: 'blue' },
   qrcode: { label: '扫码出库', color: 'green' },
   batch: { label: '批量出库', color: 'purple' },
+  shipment: { label: '物流出库', color: 'cyan' },
 };
 
 const OutstockRecordTab: React.FC = () => {
@@ -52,15 +56,11 @@ const OutstockRecordTab: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [outstockTypeFilter, setOutstockTypeFilter] = useState<string>('');
-  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('');
+  const [approvalStatusFilter, setApprovalStatusFilter] = useState<string>('');
+  const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
+  const [approving, setApproving] = useState(false);
   const pagination = useTablePagination(20);
   const [total, setTotal] = useState(0);
-
-  // 确认收款弹窗
-  const [paymentModalVisible, setPaymentModalVisible] = useState(false);
-  const [paymentRecord, setPaymentRecord] = useState<OutstockRecord | null>(null);
-  const [paymentAmount, setPaymentAmount] = useState<number | null>(null);
-  const [paymentSubmitting, setPaymentSubmitting] = useState(false);
 
   // 分享
   const { shareModalOpen, shareUrl, shareLoading, handleShare, handleCopyShareUrl, setShareModalOpen } = useOutstockShare(message);
@@ -73,7 +73,7 @@ const OutstockRecordTab: React.FC = () => {
         pageSize: pagination.pagination.pageSize,
         keyword: searchText || undefined,
         outstockType: outstockTypeFilter || undefined,
-        paymentStatus: paymentStatusFilter || undefined,
+        approvalStatus: approvalStatusFilter || undefined,
       });
       const data = res.data || res;
       setRecords(data.records || []);
@@ -83,41 +83,40 @@ const OutstockRecordTab: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [pagination.pagination.current, pagination.pagination.pageSize, searchText, outstockTypeFilter, paymentStatusFilter, message]);
+  }, [pagination.pagination.current, pagination.pagination.pageSize, searchText, outstockTypeFilter, approvalStatusFilter, message]);
 
   useEffect(() => {
     loadRecords();
   }, [loadRecords]);
 
-  const handleConfirmPayment = async () => {
-    if (!paymentRecord || !paymentAmount || paymentAmount <= 0) {
-      message.warning('请输入有效的收款金额');
-      return;
-    }
-    setPaymentSubmitting(true);
+  const handleApprove = async (id: number) => {
+    setApproving(true);
     try {
-      await api.post('/warehouse/finished-inventory/confirm-payment', {
-        id: paymentRecord.id,
-        paidAmount: paymentAmount,
-      });
-      message.success('收款确认成功');
-      setPaymentModalVisible(false);
-      setPaymentRecord(null);
-      setPaymentAmount(null);
+      await api.post('/warehouse/finished-inventory/outstock/approve', { id: String(id) });
+      message.success('审核成功，账单已推送至汇总');
       loadRecords();
     } catch {
-      message.error('收款确认失败');
+      message.error('审核失败');
     } finally {
-      setPaymentSubmitting(false);
+      setApproving(false);
     }
   };
 
-
-
-  const paymentStatusMap: Record<string, { label: string; color: string }> = {
-    unpaid: { label: '未收款', color: 'orange' },
-    partial: { label: '部分收款', color: 'blue' },
-    paid: { label: '已收款', color: 'green' },
+  const handleBatchApprove = async () => {
+    if (!selectedRowKeys.length) return;
+    setApproving(true);
+    try {
+      await api.post('/warehouse/finished-inventory/outstock/batch-approve', {
+        ids: selectedRowKeys.map(String),
+      });
+      message.success(`批量审核成功，共 ${selectedRowKeys.length} 条，账单已推送至汇总`);
+      setSelectedRowKeys([]);
+      loadRecords();
+    } catch {
+      message.error('批量审核失败');
+    } finally {
+      setApproving(false);
+    }
   };
 
   const columns: ColumnsType<OutstockRecord> = [
@@ -229,7 +228,12 @@ const OutstockRecordTab: React.FC = () => {
       width: 100,
       align: 'center',
       render: (text) => {
-        const info = paymentStatusMap[text] || { label: text || '-', color: 'default' };
+        const map: Record<string, { label: string; color: string }> = {
+          unpaid: { label: '未收款', color: 'orange' },
+          partial: { label: '部分收款', color: 'blue' },
+          paid: { label: '已收款', color: 'green' },
+        };
+        const info = map[text] || { label: text || '-', color: 'default' };
         return <Tag color={info.color}>{info.label}</Tag>;
       },
     },
@@ -276,6 +280,15 @@ const OutstockRecordTab: React.FC = () => {
       render: (text) => text ? dayjs(text).format('YYYY-MM-DD HH:mm') : '-',
     },
     {
+      title: '审核状态',
+      dataIndex: 'approvalStatus',
+      width: 100,
+      align: 'center',
+      render: (text) => text === 'approved'
+        ? <Tag color="green">已审核</Tag>
+        : <Tag color="orange">待审核</Tag>,
+    },
+    {
       title: '出库时间',
       dataIndex: 'createTime',
       width: 160,
@@ -288,16 +301,12 @@ const OutstockRecordTab: React.FC = () => {
       fixed: 'right',
       render: (_, record) => {
         const actions: RowAction[] = [];
-        if (record.paymentStatus !== 'paid') {
+        if (record.approvalStatus !== 'approved') {
           actions.push({
-            key: 'confirmPayment',
-            label: '确认收款',
+            key: 'approve',
+            label: '审核',
             primary: true,
-            onClick: () => {
-              setPaymentRecord(record);
-              setPaymentAmount(null);
-              setPaymentModalVisible(true);
-            },
+            onClick: () => handleApprove(record.id),
           });
         }
         actions.push({
@@ -338,18 +347,23 @@ const OutstockRecordTab: React.FC = () => {
               <Select.Option value="normal">普通出库</Select.Option>
               <Select.Option value="qrcode">扫码出库</Select.Option>
               <Select.Option value="batch">批量出库</Select.Option>
+              <Select.Option value="shipment">物流出库</Select.Option>
             </Select>
             <Select
               allowClear
-              placeholder="收款状态"
-              style={{ width: 130 }}
-              value={paymentStatusFilter || undefined}
-              onChange={(v) => { setPaymentStatusFilter(v ?? ''); pagination.onChange(1, pagination.pagination.pageSize); }}
+              placeholder="审核状态"
+              style={{ width: 120 }}
+              value={approvalStatusFilter || undefined}
+              onChange={(v) => { setApprovalStatusFilter(v ?? ''); pagination.onChange(1, pagination.pagination.pageSize); }}
             >
-              <Select.Option value="unpaid">未收款</Select.Option>
-              <Select.Option value="partial">部分收款</Select.Option>
-              <Select.Option value="paid">已收款</Select.Option>
+              <Select.Option value="pending">待审核</Select.Option>
+              <Select.Option value="approved">已审核</Select.Option>
             </Select>
+            {selectedRowKeys.length > 0 && (
+              <Button type="primary" loading={approving} onClick={handleBatchApprove}>
+                批量审核（{selectedRowKeys.length}）
+              </Button>
+            )}
           </Space>
         }
       />
@@ -362,6 +376,13 @@ const OutstockRecordTab: React.FC = () => {
         stickyHeader
         scroll={{ x: 2400 }}
         pagination={false}
+        rowSelection={{
+          selectedRowKeys,
+          onChange: (keys) => setSelectedRowKeys(keys as number[]),
+          getCheckboxProps: (record) => ({
+            disabled: record.approvalStatus === 'approved',
+          }),
+        }}
       />
       <StandardPagination
         current={pagination.pagination.current}
@@ -370,59 +391,6 @@ const OutstockRecordTab: React.FC = () => {
         wrapperStyle={{ paddingTop: 12 }}
         onChange={pagination.onChange}
       />
-
-      {/* 确认收款弹窗 */}
-      <Modal
-        title="确认收款"
-        open={paymentModalVisible}
-        onCancel={() => { setPaymentModalVisible(false); setPaymentRecord(null); setPaymentAmount(null); }}
-        onOk={handleConfirmPayment}
-        confirmLoading={paymentSubmitting}
-        okText="确认收款"
-        width={480}
-      >
-        {paymentRecord && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ background: '#f6f8fa', padding: '12px 16px', borderRadius: 8 }}>
-              <div style={{ marginBottom: 8 }}>
-                <span style={{ color: 'var(--neutral-text-secondary)' }}>出库单号：</span>
-                <strong>{paymentRecord.outstockNo}</strong>
-              </div>
-              <div style={{ marginBottom: 8 }}>
-                <span style={{ color: 'var(--neutral-text-secondary)' }}>客户名称：</span>
-                <strong>{paymentRecord.customerName || '-'}</strong>
-              </div>
-              <div style={{ marginBottom: 8 }}>
-                <span style={{ color: 'var(--neutral-text-secondary)' }}>出库金额：</span>
-                <span style={{ color: '#cf1322', fontWeight: 600, fontSize: 16 }}>
-                  ¥{Number(paymentRecord.totalAmount || 0).toFixed(2)}
-                </span>
-              </div>
-              <div>
-                <span style={{ color: 'var(--neutral-text-secondary)' }}>已收金额：</span>
-                <span style={{ color: 'var(--color-success)', fontWeight: 600, fontSize: 16 }}>
-                  ¥{Number(paymentRecord.paidAmount || 0).toFixed(2)}
-                </span>
-              </div>
-            </div>
-            <div>
-              <div style={{ marginBottom: 6, fontWeight: 500 }}>本次收款金额（元）</div>
-              <InputNumber
-                style={{ width: '100%' }}
-                min={0.01}
-                max={Number(paymentRecord.totalAmount || 0) - Number(paymentRecord.paidAmount || 0)}
-                precision={2}
-                placeholder="请输入本次收到的金额"
-                value={paymentAmount}
-                onChange={(v) => setPaymentAmount(v)}
-              />
-              <div style={{ marginTop: 6, fontSize: 12, color: 'var(--neutral-text-disabled)' }}>
-                待收金额：¥{(Number(paymentRecord.totalAmount || 0) - Number(paymentRecord.paidAmount || 0)).toFixed(2)}
-              </div>
-            </div>
-          </div>
-        )}
-      </Modal>
 
       {/* 分享链接弹窗 */}
       <ShareLinkModal
