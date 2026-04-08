@@ -122,3 +122,61 @@
 .btn-submit { background: var(--primary-color, #6366f1); color: #fff; }
 .btn-submit.off { opacity: 0.5; }
 .btn-hover { opacity: 0.8; }
+
+/* ===== 采购模式样式 ===== */
+.procurement-card { border-left: 6rpx solid var(--primary-color, #6366f1); }
+.procurement-badge {
+  display: inline-block; align-self: flex-start;
+  background: var(--primary-color, #6366f1); color: #fff;
+  font-size: 22rpx; font-weight: 600; padding: 4rpx 16rpx;
+  border-radius: 8rpx; margin-bottom: 4rpx;
+}
+.procurement-placeholder {
+  background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(99,102,241,0.06));
+}
+
+/* ---- 面辅料列表 ---- */
+.material-list { display: flex; flex-direction: column; gap: 20rpx; }
+.material-item { background: #f8f9fb; border-radius: 14rpx; padding: 20rpx; }
+.material-header {
+  display: flex; align-items: center; gap: 12rpx; margin-bottom: 12rpx;
+}
+.material-name {
+  font-size: 28rpx; font-weight: 600; color: #1a1a2e;
+  flex: 1; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.material-code {
+  font-size: 22rpx; color: #999; background: #fff;
+  padding: 2rpx 12rpx; border-radius: 6rpx; flex-shrink: 0;
+}
+.material-details {
+  display: flex; flex-wrap: wrap; gap: 8rpx 24rpx; margin-bottom: 16rpx;
+}
+.material-field { display: flex; align-items: center; gap: 8rpx; }
+.field-label { font-size: 22rpx; color: #999; }
+.field-value { font-size: 24rpx; color: #333; }
+.field-value.price { color: var(--primary-color, #6366f1); font-weight: 500; }
+
+/* ---- 数量三栏 ---- */
+.material-qty-row {
+  display: flex; gap: 0; border-radius: 10rpx; overflow: hidden;
+}
+.qty-block {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  padding: 12rpx 0; background: #fff;
+}
+.qty-block + .qty-block { border-left: 1rpx solid #f0f0f0; }
+.qty-num { font-size: 32rpx; font-weight: 700; color: #1a1a2e; }
+.qty-num.demand { color: var(--primary-color, #6366f1); }
+.qty-num.arrived { color: #22c55e; }
+.qty-num.pending { color: #f59e0b; }
+.qty-label { font-size: 20rpx; color: #999; margin-top: 4rpx; }
+
+/* ---- 备注与汇总状态色 ---- */
+.material-remark {
+  margin-top: 12rpx; padding-top: 12rpx; border-top: 1rpx solid #eee;
+}
+.remark-text { font-size: 22rpx; color: #888; }
+.arrived-text { color: #22c55e; }
+.pending-text { color: #f59e0b; }

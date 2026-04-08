@@ -1,7 +1,22 @@
 <view class="container">
 
-  <!-- 订单信息卡 -->
-  <view class="info-card">
+  <!-- ===== 采购模式头部 ===== -->
+  <view wx:if="{{isProcurement}}" class="info-card procurement-card">
+    <view class="card-header">
+      <view class="cover-wrap" bindtap="previewImage">
+        <image wx:if="{{detail.coverImage}}" class="cover-img" src="{{detail.coverImage}}" mode="aspectFill" />
+        <view wx:else class="cover-placeholder procurement-placeholder"><text class="placeholder-icon">🧵</text></view>
+      </view>
+      <view class="header-info">
+        <view class="procurement-badge">面辅料采购</view>
+        <text class="style-no">{{detail.styleNo || detail.orderNo}}</text>
+        <text class="sub-info">订单 {{detail.orderNo}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- ===== 非采购模式头部 ===== -->
+  <view wx:else class="info-card">
     <view class="card-header">
       <view class="cover-wrap" bindtap="previewImage">
         <image wx:if="{{detail.coverImage}}" class="cover-img" src="{{detail.coverImage}}" mode="aspectFill" />
@@ -16,21 +31,91 @@
     </view>
   </view>
 
-  <!-- AI 工艺提醒 -->
-  <view wx:if="{{aiTipData}}" class="insight-card">
+  <!-- BOM 兜底提示（采购模式） -->
+  <view wx:if="{{isProcurement && detail.bomFallback}}" class="warn-card">
+    <text class="warn-icon">⚠️</text>
+    <text class="warn-text">未找到采购单，当前为BOM物料参考信息</text>
+  </view>
+
+  <!-- ===== 面辅料采购明细 ===== -->
+  <view wx:if="{{isProcurement && materialPurchases.length > 0}}" class="section-card">
+    <text class="section-title">面辅料采购明细（{{materialPurchases.length}}项）</text>
+    <view class="material-list">
+      <view wx:for="{{materialPurchases}}" wx:key="id" class="material-item">
+        <view class="material-header">
+          <text class="material-name">{{item.materialName || '未知物料'}}</text>
+          <text wx:if="{{item.materialCode}}" class="material-code">{{item.materialCode}}</text>
+        </view>
+        <view class="material-details">
+          <view wx:if="{{item.materialType}}" class="material-field">
+            <text class="field-label">类型</text>
+            <text class="field-value">{{item.materialType}}</text>
+          </view>
+          <view wx:if="{{item.specifications}}" class="material-field">
+            <text class="field-label">规格</text>
+            <text class="field-value">{{item.specifications}}</text>
+          </view>
+          <view class="material-field">
+            <text class="field-label">单位</text>
+            <text class="field-value">{{item.unit || '-'}}</text>
+          </view>
+          <view wx:if="{{item.unitPrice}}" class="material-field">
+            <text class="field-label">单价</text>
+            <text class="field-value price">¥{{item.unitPrice}}</text>
+          </view>
+        </view>
+        <view class="material-qty-row">
+          <view class="qty-block">
+            <text class="qty-num demand">{{item.purchaseQuantity || 0}}</text>
+            <text class="qty-label">需求</text>
+          </view>
+          <view class="qty-block">
+            <text class="qty-num arrived">{{item.arrivedQuantity || 0}}</text>
+            <text class="qty-label">已到</text>
+          </view>
+          <view class="qty-block">
+            <text class="qty-num pending">{{item.pendingQuantity || 0}}</text>
+            <text class="qty-label">待到</text>
+          </view>
+        </view>
+        <view wx:if="{{item.remark}}" class="material-remark">
+          <text class="remark-text">备注: {{item.remark}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 面辅料汇总（采购模式） -->
+  <view wx:if="{{isProcurement && materialPurchases.length > 0}}" class="summary-card">
+    <view class="summary-row">
+      <text class="summary-label">总需求量</text>
+      <text class="summary-value">{{materialSummary.totalDemand}}</text>
+    </view>
+    <view class="summary-row">
+      <text class="summary-label">已到货量</text>
+      <text class="summary-value arrived-text">{{materialSummary.totalArrived}}</text>
+    </view>
+    <view class="summary-row">
+      <text class="summary-label">待到货量</text>
+      <text class="summary-value pending-text">{{materialSummary.totalPending}}</text>
+    </view>
+  </view>
+
+  <!-- AI 工艺提醒（非采购模式） -->
+  <view wx:if="{{!isProcurement && aiTipData}}" class="insight-card">
     <text class="insight-icon">💡</text>
     <text class="insight-text">{{aiTipData.aiTip}}</text>
   </view>
 
-  <!-- BOM 提示 -->
-  <view wx:if="{{detail.bomFallback}}" class="warn-card">
+  <!-- BOM 提示（非采购模式） -->
+  <view wx:if="{{!isProcurement && detail.bomFallback}}" class="warn-card">
     <text class="warn-icon">⚠️</text>
     <text class="warn-text">未匹配到BOM工价，当前使用默认工价</text>
   </view>
 
   <!-- SKU 输入列表 -->
   <view class="section-card">
-    <text class="section-title">扫码明细（{{skuList.length}}项）</text>
+    <text class="section-title">{{isProcurement ? '领取明细' : '扫码明细'}}（{{skuList.length}}项）</text>
     <view class="sku-list">
       <view wx:for="{{skuList}}" wx:key="id" class="sku-item">
         <view class="sku-info">
@@ -48,8 +133,8 @@
     </view>
   </view>
 
-  <!-- 汇总 -->
-  <view class="summary-card">
+  <!-- 汇总（非采购模式） -->
+  <view wx:if="{{!isProcurement}}" class="summary-card">
     <view class="summary-row">
       <text class="summary-label">总数量</text>
       <text class="summary-value">{{summary.totalQuantity}} 件</text>
@@ -65,12 +150,10 @@
     <text class="section-title">颜色尺码汇总</text>
     <scroll-view scroll-x class="matrix-scroll">
       <view class="matrix-table">
-        <!-- 表头 -->
         <view class="matrix-row matrix-header">
           <text class="matrix-cell cell-color">颜色</text>
           <text wx:for="{{sizeMatrix.sizes}}" wx:key="*this" class="matrix-cell">{{item}}</text>
         </view>
-        <!-- 数据行 -->
         <view wx:for="{{sizeMatrix.rows}}" wx:key="color" class="matrix-row">
           <text class="matrix-cell cell-color">{{item.color}}</text>
           <text wx:for="{{item.cells}}" wx:for-item="c" wx:key="size" class="matrix-cell">{{c.quantity}}</text>
@@ -83,7 +166,7 @@
   <view class="footer-bar">
     <view class="btn-cancel" hover-class="btn-hover" bindtap="goBack">取消</view>
     <view class="btn-submit {{loading ? 'off' : ''}}" hover-class="btn-hover" bindtap="confirmScan">
-      {{loading ? '提交中...' : '确认扫码'}}
+      {{loading ? '提交中...' : buttonText}}
     </view>
   </view>
 

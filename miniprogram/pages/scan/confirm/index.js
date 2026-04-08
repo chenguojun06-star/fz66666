@@ -9,11 +9,15 @@ const SKUProcessor = require('../processors/SKUProcessor');
 
 Page({
   data: {
+    isProcurement: false,
     detail: {},
     skuList: [],
+    materialPurchases: [],
+    materialSummary: { totalDemand: 0, totalArrived: 0, totalPending: 0 },
     summary: { totalQuantity: 0, totalAmount: 0 },
     sizeMatrix: { sizes: [], rows: [] },
     aiTipData: null,
+    buttonText: '确认扫码',
     loading: false
   },
 
@@ -28,6 +32,13 @@ Page({
     this._scanContext = raw;
 
     var orderDetail = raw.orderDetail || {};
+    var isProcurement = raw.progressStage === '采购';
+
+    // 动态设置页面标题
+    if (isProcurement) {
+      wx.setNavigationBarTitle({ title: '面辅料采购确认' });
+    }
+
     var skuItems = raw.skuItems || orderDetail.orderItems || [];
 
     // Build SKU list via processor
@@ -38,7 +49,20 @@ Page({
 
     var coverImage = orderDetail.coverImage || orderDetail.styleImage || '';
 
+    // 采购模式：提取面辅料采购数据
+    var materialPurchases = [];
+    var materialSummary = { totalDemand: 0, totalArrived: 0, totalPending: 0 };
+    if (isProcurement && Array.isArray(raw.materialPurchases)) {
+      materialPurchases = raw.materialPurchases;
+      materialPurchases.forEach(function(item) {
+        materialSummary.totalDemand += Number(item.purchaseQuantity) || 0;
+        materialSummary.totalArrived += Number(item.arrivedQuantity) || 0;
+        materialSummary.totalPending += Number(item.pendingQuantity) || 0;
+      });
+    }
+
     this.setData({
+      isProcurement: isProcurement,
       detail: {
         coverImage: coverImage,
         styleNo: orderDetail.styleNo || raw.styleNo || '',
@@ -48,13 +72,16 @@ Page({
         progressStage: raw.progressStage || '',
         bomFallback: raw.bomFallback || false
       },
+      materialPurchases: materialPurchases,
+      materialSummary: materialSummary,
+      buttonText: isProcurement ? '领取采购' : '确认扫码',
       skuList: formItems,
       summary: summary,
       sizeMatrix: sizeMatrix
     });
 
-    // Async AI tip
-    if (raw.orderNo && raw.processName) {
+    // AI tip（非采购模式）
+    if (!isProcurement && raw.orderNo && raw.processName) {
       this._fetchAiTip(raw.orderNo, raw.processName);
     }
   },
