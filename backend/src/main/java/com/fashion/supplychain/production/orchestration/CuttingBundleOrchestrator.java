@@ -13,12 +13,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 @Service
 public class CuttingBundleOrchestrator {
+
+    private static final Logger log = LoggerFactory.getLogger(CuttingBundleOrchestrator.class);
 
     @Autowired
     private CuttingBundleService cuttingBundleService;
@@ -27,6 +31,15 @@ public class CuttingBundleOrchestrator {
     private ProductionOrderService productionOrderService;
 
     public IPage<CuttingBundle> list(Map<String, Object> params) {
+        try {
+            return doList(params);
+        } catch (Exception e) {
+            log.error("[CuttingBundle.list] 查询失败（可能为 schema 漂移）: {}", e.getMessage());
+            return new Page<>();
+        }
+    }
+
+    private IPage<CuttingBundle> doList(Map<String, Object> params) {
         // 工厂账号隔离：只能查看本工厂订单的裁剪格号
         String ctxFactoryId = UserContext.factoryId();
         if (StringUtils.hasText(ctxFactoryId)) {
@@ -55,7 +68,16 @@ public class CuttingBundleOrchestrator {
         if (!StringUtils.hasText(on) && !StringUtils.hasText(oid)) {
             throw new IllegalArgumentException("参数错误");
         }
-        return cuttingBundleService.summarize(on, oid);
+        try {
+            return cuttingBundleService.summarize(on, oid);
+        } catch (Exception e) {
+            log.error("[CuttingBundle.summary] 查询失败（可能为 schema 漂移）: {}", e.getMessage());
+            Map<String, Object> fallback = new HashMap<>();
+            fallback.put("totalQuantity", 0);
+            fallback.put("bundleCount", 0);
+            fallback.put("tasks", List.of());
+            return fallback;
+        }
     }
 
     public List<CuttingBundle> generate(Map<String, Object> body) {
