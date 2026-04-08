@@ -74,6 +74,23 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
         List<String> factoryOrderNos = (List<String>) params.get("_factoryOrderNos");
 
         LambdaQueryWrapper<CuttingBundle> wrapper = new LambdaQueryWrapper<CuttingBundle>()
+                .select(
+                        CuttingBundle::getId,
+                        CuttingBundle::getProductionOrderId,
+                        CuttingBundle::getProductionOrderNo,
+                        CuttingBundle::getStyleNo,
+                        CuttingBundle::getColor,
+                        CuttingBundle::getSize,
+                        CuttingBundle::getBundleNo,
+                        CuttingBundle::getBundleLabel,
+                        CuttingBundle::getQuantity,
+                        CuttingBundle::getBedNo,
+                        CuttingBundle::getBedSubNo,
+                        CuttingBundle::getQrCode,
+                        CuttingBundle::getStatus,
+                        CuttingBundle::getSplitStatus,
+                        CuttingBundle::getCreateTime
+                )
                 .eq(StringUtils.hasText(orderNo), CuttingBundle::getProductionOrderNo, orderNo)
                 .eq(StringUtils.hasText(styleNo), CuttingBundle::getStyleNo, styleNo)
                 .eq(StringUtils.hasText(color), CuttingBundle::getColor, color)
@@ -312,6 +329,15 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
         }
         return this.getOne(
                 new LambdaQueryWrapper<CuttingBundle>()
+                        .select(
+                                CuttingBundle::getId, CuttingBundle::getProductionOrderId,
+                                CuttingBundle::getProductionOrderNo, CuttingBundle::getStyleNo,
+                                CuttingBundle::getColor, CuttingBundle::getSize,
+                                CuttingBundle::getBundleNo, CuttingBundle::getBundleLabel,
+                                CuttingBundle::getQuantity, CuttingBundle::getBedNo,
+                                CuttingBundle::getBedSubNo, CuttingBundle::getQrCode,
+                                CuttingBundle::getStatus, CuttingBundle::getSplitStatus,
+                                CuttingBundle::getCreateTime)
                         .eq(CuttingBundle::getQrCode, qrCode)
                         .last("limit 1"));
     }
@@ -325,6 +351,15 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
         }
         // 优先返回非 split_parent 的记录（拆分后子菲号优先、未拆分菲号优先）
         return this.getOne(new LambdaQueryWrapper<CuttingBundle>()
+                .select(
+                        CuttingBundle::getId, CuttingBundle::getProductionOrderId,
+                        CuttingBundle::getProductionOrderNo, CuttingBundle::getStyleNo,
+                        CuttingBundle::getColor, CuttingBundle::getSize,
+                        CuttingBundle::getBundleNo, CuttingBundle::getBundleLabel,
+                        CuttingBundle::getQuantity, CuttingBundle::getBedNo,
+                        CuttingBundle::getBedSubNo, CuttingBundle::getQrCode,
+                        CuttingBundle::getStatus, CuttingBundle::getSplitStatus,
+                        CuttingBundle::getCreateTime)
                 .eq(CuttingBundle::getProductionOrderNo, on)
                 .eq(CuttingBundle::getBundleNo, bn)
                 .last("ORDER BY CASE WHEN split_status='split_parent' THEN 1 ELSE 0 END ASC LIMIT 1"));
@@ -340,6 +375,15 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
 
         // 查询所有裁剪包
         LambdaQueryWrapper<CuttingBundle> wrapper = new LambdaQueryWrapper<>();
+        wrapper.select(
+                CuttingBundle::getId, CuttingBundle::getProductionOrderId,
+                CuttingBundle::getProductionOrderNo, CuttingBundle::getStyleNo,
+                CuttingBundle::getColor, CuttingBundle::getSize,
+                CuttingBundle::getBundleNo, CuttingBundle::getBundleLabel,
+                CuttingBundle::getQuantity, CuttingBundle::getBedNo,
+                CuttingBundle::getBedSubNo, CuttingBundle::getQrCode,
+                CuttingBundle::getStatus, CuttingBundle::getSplitStatus,
+                CuttingBundle::getCreateTime);
         if (StringUtils.hasText(on)) {
             wrapper.eq(CuttingBundle::getProductionOrderNo, on);
         }

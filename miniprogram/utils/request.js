@@ -100,7 +100,7 @@ function extractServerMessage(body) {
   if (body && typeof body === 'object' && !(body instanceof ArrayBuffer)) {
     const candidates = [body.message, body.msg, body.error, body.detail];
     for (const v of candidates) {
-      if (v !== null && v !== '') {
+      if (v != null && v !== '') {
         return String(v);
       }
     }

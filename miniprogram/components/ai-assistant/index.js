@@ -233,10 +233,22 @@ Component({
         // step 2: call AI
         var aiResponse = '抱歉，我现在无法回答这个问题。';
         if (this.data.isManager) {
-          var mgrParams = { naturalLanguageCommand: text || (imageUrl ? '分析这张图片' : text) };
+          var mgrParams = { text: text || (imageUrl ? '分析这张图片' : text) };
           if (imageUrl) mgrParams.imageUrl = imageUrl;
-          var mgrRes = await api.intelligence.naturalLanguageExecute(mgrParams);
-          aiResponse = (mgrRes && (mgrRes.message || mgrRes.reply || mgrRes.content)) || '操作完成';
+          try {
+            var mgrRes = await api.intelligence.naturalLanguageExecute(mgrParams);
+            aiResponse = (mgrRes && (mgrRes.message || mgrRes.reply || mgrRes.content)) || '操作完成';
+          } catch (nlErr) {
+            // NL命令执行失败（如非指令类问题），降级为对话模式
+            console.warn('[XiaoYun] NL exec failed, fallback to chat:', nlErr && nlErr.errMsg);
+            var fallbackParams = { question: text || (imageUrl ? '请看这张图片' : text), context: 'manager_assistant' };
+            if (imageUrl) fallbackParams.imageUrl = imageUrl;
+            var fbRes = await api.intelligence.aiAdvisorChat(fallbackParams);
+            if (typeof fbRes === 'string') aiResponse = fbRes;
+            else if (fbRes && fbRes.answer) aiResponse = fbRes.answer;
+            else if (fbRes && fbRes.content) aiResponse = fbRes.content;
+            else if (fbRes && fbRes.reply) aiResponse = fbRes.reply;
+          }
         } else {
           var wkrParams = { question: text || (imageUrl ? '请看这张图片' : text) };
           if (imageUrl) wkrParams.imageUrl = imageUrl;
@@ -266,7 +278,8 @@ Component({
           wx.showToast({ title: '图片上传失败', icon: 'none' });
           this.setData({ uploading: false });
         }
-        var errMsg = { id: Date.now(), role: 'ai', content: '网络错误，请稍后再试。' };
+        var errContent = (err && err.errMsg && err.errMsg !== 'undefined') ? err.errMsg : 'AI暂时无法响应，请稍后再试。';
+        var errMsg = { id: Date.now(), role: 'ai', content: errContent };
         this.setData({ messages: [].concat(this.data.messages, [errMsg]), isLoading: false });
         this.scrollToBottom();
       }
@@ -281,6 +294,12 @@ Component({
         success: (res) => {
           var path = (res.tempFiles && res.tempFiles[0] && res.tempFiles[0].tempFilePath) || '';
           if (path) this.setData({ pendingImage: path });
+        },
+        fail: (err) => {
+          console.warn('[XiaoYun] chooseImage fail:', err);
+          if (err && err.errMsg && err.errMsg.indexOf('cancel') === -1) {
+            wx.showToast({ title: '无法打开相机/相册，请检查权限', icon: 'none' });
+          }
         },
       });
     },

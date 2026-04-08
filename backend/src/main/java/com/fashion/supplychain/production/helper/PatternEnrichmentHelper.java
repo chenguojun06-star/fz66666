@@ -104,6 +104,10 @@ public class PatternEnrichmentHelper {
         String patternDeveloper = null;
         String plateWorker = null;
         String merchandiser = null;
+        String styleName = null;
+        String category = null;
+        String customer = null;
+        String developmentSourceType = null;
 
         if (StringUtils.hasText(styleIdStr)) {
             try {
@@ -115,6 +119,10 @@ public class PatternEnrichmentHelper {
                     patternDeveloper = styleInfo.getSampleSupplier();
                     plateWorker = styleInfo.getPlateWorker();
                     merchandiser = styleInfo.getOrderType();
+                    styleName = styleInfo.getStyleName();
+                    category = styleInfo.getCategory();
+                    customer = styleInfo.getCustomer();
+                    developmentSourceType = styleInfo.getDevelopmentSourceType();
 
                     String sizeColorConfig = styleInfo.getSizeColorConfig();
                     if (StringUtils.hasText(sizeColorConfig)) {
@@ -122,6 +130,10 @@ public class PatternEnrichmentHelper {
                             Map<String, Object> configMap = objectMapper.readValue(sizeColorConfig,
                                     new TypeReference<Map<String, Object>>() {});
                             Object sizesObj = configMap.get("sizes");
+                            // Fallback: if no top-level "sizes", use "commonSizes"
+                            if (!(sizesObj instanceof List) || ((List<?>) sizesObj).isEmpty()) {
+                                sizesObj = configMap.get("commonSizes");
+                            }
                             if (sizesObj instanceof List) {
                                 for (Object sizeItem : (List<?>) sizesObj) {
                                     if (sizeItem != null) {
@@ -132,6 +144,19 @@ public class PatternEnrichmentHelper {
                                     }
                                 }
                             }
+                            // Extract size/color matrix for miniprogram display
+                            Object commonSizesObj = configMap.get("commonSizes");
+                            Object matrixRowsObj = configMap.get("matrixRows");
+                            if (commonSizesObj instanceof List && matrixRowsObj instanceof List
+                                    && !((List<?>) commonSizesObj).isEmpty()
+                                    && !((List<?>) matrixRowsObj).isEmpty()) {
+                                Map<String, Object> matrixData = new LinkedHashMap<>();
+                                matrixData.put("commonSizes", commonSizesObj);
+                                matrixData.put("matrixRows", matrixRowsObj);
+                                map.put("sizeColorMatrix", matrixData);
+                            }
+                            // Pass raw sizeColorConfig for JS fallback parsing
+                            map.put("sizeColorConfig", sizeColorConfig);
                         } catch (Exception e) {
                             log.warn("Failed to parse sizeColorConfig for styleId: {}", styleId, e);
                         }
@@ -147,6 +172,10 @@ public class PatternEnrichmentHelper {
         map.put("patternDeveloper", patternDeveloper);
         map.put("plateWorker", plateWorker);
         map.put("merchandiser", merchandiser);
+        map.put("styleName", styleName);
+        map.put("category", category);
+        map.put("customer", customer);
+        map.put("developmentSourceType", developmentSourceType);
     }
 
     private void enrichWithProcessPrices(Map<String, Object> map, String styleIdStr) {

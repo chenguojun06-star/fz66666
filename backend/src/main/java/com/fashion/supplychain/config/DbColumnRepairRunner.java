@@ -223,6 +223,10 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                     "INT NOT NULL DEFAULT 0 COMMENT '拆分序号'");
             repaired += ensureColumn(conn, schema, "t_cutting_bundle", "bed_sub_no",
                     "INT DEFAULT NULL COMMENT '床次子序号'");
+            repaired += ensureColumn(conn, schema, "t_cutting_bundle", "split_process_name",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '拆分工序名称'");
+            repaired += ensureColumn(conn, schema, "t_cutting_bundle", "split_process_order",
+                    "INT DEFAULT NULL COMMENT '拆分工序序号'");
 
             int repairedTables = 0;
                 repairedTables += ensureTable(conn, schema,

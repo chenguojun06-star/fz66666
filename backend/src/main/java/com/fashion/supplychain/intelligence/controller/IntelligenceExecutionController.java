@@ -484,7 +484,7 @@ public class IntelligenceExecutionController {
     @PostMapping("/crew/nl-execute")
     public Result<?> naturalLanguageExecute(@RequestBody Map<String, Object> body) {
         try {
-            String text = body != null ? (String) body.get("text") : null;
+            String text = body != null ? (String) body.getOrDefault("text", (String) body.get("naturalLanguageCommand")) : null;
             if (text == null || text.isBlank()) {
                 return Result.fail("指令内容不能为空");
             }

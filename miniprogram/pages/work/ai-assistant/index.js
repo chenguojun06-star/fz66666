@@ -89,6 +89,12 @@ Page({
         const path = (res.tempFiles && res.tempFiles[0] && res.tempFiles[0].tempFilePath) || '';
         if (path) this.setData({ pendingImage: path });
       },
+      fail: (err) => {
+        console.warn('[AI-Assistant] chooseImage fail:', err);
+        if (err && err.errMsg && err.errMsg.indexOf('cancel') === -1) {
+          wx.showToast({ title: '无法打开相机/相册，请检查权限', icon: 'none' });
+        }
+      },
     });
   },
 
@@ -135,12 +141,19 @@ Page({
         context: 'worker_assistant',
       };
       if (this.data.isManager) {
-        const res = await api.intelligence.naturalLanguageExecute({
-          naturalLanguageCommand: text || '分析这张图片',
-          imageUrl: imageUrl,
-          conversationId: this.data.conversationId,
-        });
-        reply = (res && (res.message || res.reply || res.content)) || '操作完成';
+        try {
+          const res = await api.intelligence.naturalLanguageExecute({
+            text: text || '分析这张图片',
+            imageUrl: imageUrl,
+            conversationId: this.data.conversationId,
+          });
+          reply = (res && (res.message || res.reply || res.content)) || '操作完成';
+        } catch (nlErr) {
+          // NL指令失败，降级为对话模式
+          console.warn('[AI-Page] NL exec failed, fallback to chat:', nlErr && nlErr.errMsg);
+          const fbRes = await api.intelligence.aiAdvisorChat(payload);
+          reply = (fbRes && (fbRes.reply || fbRes.content || fbRes.message)) || '（无回应）';
+        }
       } else {
         const res = await api.intelligence.aiAdvisorChat(payload);
         reply = (res && (res.reply || res.content || res.message)) || '（无回应）';
@@ -164,13 +177,23 @@ Page({
       let reply;
       if (this.data.isManager) {
         // 管理员走指令执行通道（LLM解析意图 → ExecutionEngine）
-        const res = await api.intelligence.naturalLanguageExecute({
-          naturalLanguageCommand: text,
-          conversationId: this.data.conversationId,
-        });
-        const success = res && res.success;
-        const msg = (res && (res.message || res.reply || res.content)) || '操作完成';
-        reply = msg;
+        try {
+          const res = await api.intelligence.naturalLanguageExecute({
+            text: text,
+            conversationId: this.data.conversationId,
+          });
+          const msg = (res && (res.message || res.reply || res.content)) || '操作完成';
+          reply = msg;
+        } catch (nlErr) {
+          // NL指令失败（如普通问答），降级为对话模式
+          console.warn('[AI-Page] NL exec failed, fallback to chat:', nlErr && nlErr.errMsg);
+          const fbRes = await api.intelligence.aiAdvisorChat({
+            message: text,
+            conversationId: this.data.conversationId,
+            context: 'manager_assistant',
+          });
+          reply = (fbRes && (fbRes.reply || fbRes.content || fbRes.message)) || '（无回应）';
+        }
       } else {
         // 工厂工人走查询通道
         const res = await api.intelligence.aiAdvisorChat({
@@ -182,7 +205,9 @@ Page({
       }
       this._updateMsg(loadingId, reply);
     } catch (err) {
-      const msg = (err && err.message) ? err.message : '网络异常，请稍后再试';
+      console.error('[AI-Page] send error:', err);
+      const errText = (err && err.errMsg && err.errMsg !== 'undefined') ? err.errMsg : (err && err.message && err.message !== 'undefined') ? err.message : '';
+      const msg = errText || 'AI暂时无法响应，请稍后再试。';
       this._updateMsg(loadingId, msg);
     } finally {
       this.setData({ sending: false });

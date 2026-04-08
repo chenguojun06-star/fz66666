@@ -36,10 +36,10 @@ const system = {
     return ok('/api/system/user/me/change-password', 'POST', data || {});
   },
   submitFeedback(data) {
-    return ok('/api/feedback', 'POST', data || {});
+    return ok('/api/system/feedback/submit', 'POST', data || {});
   },
   myFeedbackList(params) {
-    return ok('/api/feedback/list', 'GET', params || {});
+    return ok('/api/system/feedback/my-list', 'POST', params || {});
   },
   getDictList(type) {
     return ok('/api/system/dictionary/list', 'GET', { type });

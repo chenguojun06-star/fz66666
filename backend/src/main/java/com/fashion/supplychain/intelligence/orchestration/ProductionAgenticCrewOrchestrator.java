@@ -136,6 +136,9 @@ public class ProductionAgenticCrewOrchestrator {
 
             String targetId = resolveTargetId(tenantId, action, ref);
             if (targetId == null) {
+                if (ref == null || ref.isBlank()) {
+                    return ExecutionResult.failure("请指定具体的订单号或目标，例如：'暂停PO20250101001'");
+                }
                 return ExecutionResult.failure("找不到操作目标「" + ref + "」，请确认订单号或ID是否正确");
             }
 
