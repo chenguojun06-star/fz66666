@@ -260,14 +260,43 @@ Page({
 
     this.setData({ loading: true });
     try {
-      const result = await api.production.submitPatternScan({
-        patternId: d.patternId,
-        operationType: operationType,
-        operatorRole: 'PLATE_WORKER',
-        quantity: qty,
-        warehouseCode: d.warehouseCode,
-        remark: d.remark,
-      });
+      let result;
+
+      if (operationType === 'REVIEW') {
+        const res = await api.production.reviewPattern(d.patternId, 'APPROVED', remark);
+        result = res ? { success: true, message: '样衣审核通过' } : { success: false, message: '审核提交失败' };
+
+      } else if (operationType === 'WAREHOUSE_IN') {
+        // 入库前自动审核（如尚未审核通过）
+        const latestDetail = await api.production.getPatternDetail(d.patternId);
+        const reviewApproved =
+          latestDetail?.reviewStatus === 'APPROVED' || latestDetail?.reviewResult === 'APPROVED';
+        if (!reviewApproved) {
+          const reviewRes = await api.production.reviewPattern(d.patternId, 'APPROVED', remark);
+          if (!reviewRes) {
+            result = { success: false, message: '入库前自动审核失败' };
+          }
+        }
+        if (!result) {
+          const wiRes = await api.production.warehouseIn(d.patternId, d.warehouseCode || '', remark);
+          result = wiRes ? { success: true, message: '样衣入库成功' } : { success: false, message: '入库失败' };
+        }
+
+      } else if (operationType === 'RECEIVE') {
+        const rcvRes = await api.production.receivePattern(d.patternId, remark);
+        result = rcvRes ? { success: true, message: '领取成功' } : { success: false, message: '领取样板失败' };
+
+      } else {
+        // COMPLETE、PLATE、FOLLOW_UP 等走通用扫码接口
+        result = await api.production.submitPatternScan({
+          patternId: d.patternId,
+          operationType: operationType,
+          operatorRole: 'PLATE_WORKER',
+          quantity: qty,
+          warehouseCode: d.warehouseCode,
+          remark: remark,
+        });
+      }
 
       if (result && result.success) {
         toast.success(result.message || '操作成功');
