@@ -35,7 +35,7 @@
         <view class="matrix-table">
           <!-- 表头 -->
           <view class="matrix-row matrix-header">
-            <view class="matrix-cell matrix-label-cell">颜色\码数</view>
+            <view class="matrix-cell matrix-label-cell">码数</view>
             <view wx:for="{{detail.matrixSizes}}" wx:key="*this" class="matrix-cell">{{item}}</view>
           </view>
           <!-- 数据行 -->

@@ -1,0 +1,22 @@
+/* ---- compact 模式 ---- */
+.sku-matrix { margin-top: 10rpx; width: 100%; }
+.sku-matrix-row { display: flex; flex-direction: row; align-items: center; }
+.sku-matrix-header { margin-bottom: 4rpx; }
+.sku-cell { flex: 1; text-align: center; font-size: 22rpx; color: #555; min-width: 0; }
+.sku-col-label { text-align: left; color: #333; font-size: 22rpx; flex: 1.2; }
+
+/* ---- full 模式 ---- */
+.matrix-scroll { width: 100%; }
+.matrix-table { display: flex; flex-direction: column; min-width: 100%; }
+.matrix-row { display: flex; border-bottom: 1rpx solid #f0f0f0; }
+.matrix-row:last-child { border-bottom: none; }
+.matrix-header { background: #f8f9fb; font-weight: 600; }
+.matrix-cell {
+  min-width: 100rpx; padding: 14rpx 12rpx;
+  text-align: center; font-size: 24rpx; color: #333;
+  flex-shrink: 0;
+}
+.cell-color {
+  min-width: 120rpx; text-align: left; font-weight: 500;
+  color: #1a1a2e; background: rgba(99,102,241,0.03);
+}

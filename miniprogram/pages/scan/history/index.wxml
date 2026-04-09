@@ -44,22 +44,11 @@
   </view>
 
   <!-- 空状态 -->
-  <view wx:if="{{displayRecords.length === 0 && !loading}}" class="empty-state">
-    <view class="line-icon line-icon--sm icon-clipboard empty-icon"></view>
-    <text class="empty-text" wx:if="{{showOnlyPayable}}">暂无计薪记录</text>
-    <text class="empty-text" wx:else>暂无记录</text>
-    <text class="empty-hint" wx:if="{{showOnlyPayable}}">当前筛选仅显示有单价且有数量的记录</text>
-    <text class="empty-hint" wx:else>调整日期范围或搜索条件试试</text>
-  </view>
+  <empty-state wx:if="{{displayRecords.length === 0 && !loading}}" icon="icon-clipboard" text="{{emptyText}}" hint="{{emptyHint}}"></empty-state>
 
   <!-- 加载状态 -->
   <view wx:if="{{loading}}" class="loading-row">
     <text class="loading-text">加载中...</text>
   </view>
-  <view wx:if="{{!loading && hasMore && displayRecords.length > 0}}" class="load-more" bindtap="onLoadMore" hover-class="load-more-hover" hover-stay-time="50">
-    <text>加载更多</text>
-  </view>
-  <view wx:if="{{!loading && !hasMore && displayRecords.length > 0}}" class="load-more no-more-row">
-    <text class="no-more-text">— 已加载全部 —</text>
-  </view>
+  <load-more hasMore="{{hasMore}}" loading="{{loading}}" count="{{displayRecords.length}}" bind:loadmore="onLoadMore"></load-more>
 </view>

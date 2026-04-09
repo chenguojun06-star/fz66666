@@ -84,6 +84,8 @@ Page({
       patternRecordCount: 0,
       totalWage: '0.00',
     },
+    emptyText: '',
+    emptyHint: '',
   },
 
   /** 请求代际计数器（非 data 属性）：每次发起新请求时递增，用于丢弃过期请求的结果，防止下拉刷新时旧请求回来覆盖新数据 */
@@ -263,6 +265,8 @@ Page({
           patternRecordCount: patternRecords.length,
           totalWage: totalWage.toFixed(2),
         },
+        emptyText: this.data.showOnlyPayable ? '暂无计薪记录' : '暂无记录',
+        emptyHint: this.data.showOnlyPayable ? '当前筛选仅显示有单价且有数量的记录' : '调整日期范围或搜索条件试试',
       });
     } catch (e) {
       if (gen !== this._reqGeneration) return; // 过期请求的错误也不处理
@@ -292,6 +296,8 @@ Page({
     this.setData({
       showOnlyPayable,
       displayRecords,
+      emptyText: showOnlyPayable ? '暂无计薪记录' : '暂无记录',
+      emptyHint: showOnlyPayable ? '当前筛选仅显示有单价且有数量的记录' : '调整日期范围或搜索条件试试',
     });
   },
 

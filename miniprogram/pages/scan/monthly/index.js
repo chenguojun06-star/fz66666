@@ -85,6 +85,8 @@ Page({
       patternRecordCount: 0,
       totalWage: '0.00',
     },
+    emptyText: '',
+    emptyHint: '',
   },
 
   /** 请求代际计数器（非 data 属性） */
@@ -232,6 +234,8 @@ Page({
       hasMore: merged.length < total,
       summary,
       loading: false,
+      emptyText: this.data.showOnlyPayable ? '暂无计薪记录' : (this.data.displayMonth + ' 暂无记录'),
+      emptyHint: this.data.showOnlyPayable ? '点击工资汇总可切回全部记录' : '本月尚未扫码',
     });
   },
 
@@ -274,6 +278,8 @@ Page({
     this.setData({
       showOnlyPayable,
       displayRecords,
+      emptyText: showOnlyPayable ? '暂无计薪记录' : (this.data.displayMonth + ' 暂无记录'),
+      emptyHint: showOnlyPayable ? '点击工资汇总可切回全部记录' : '本月尚未扫码',
     });
   },
 

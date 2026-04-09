@@ -3,29 +3,7 @@
   <!-- 通用悬浮铃铛组件 -->
 
   <!-- 顶部统计卡片 -->
-  <view class="summary-card">
-    <view class="summary-title">我的工资</view>
-    <view class="summary-row">
-      <view class="summary-item">
-        <view class="summary-label">本月总金额</view>
-        <view class="summary-value primary">¥{{totalAmount}}</view>
-      </view>
-      <view class="summary-item">
-        <view class="summary-label">本月数量</view>
-        <view class="summary-value">{{totalQuantity}} 件</view>
-      </view>
-    </view>
-    <view class="summary-row">
-      <view class="summary-item">
-        <view class="summary-label">扫码次数</view>
-        <view class="summary-value">{{recordCount}} 次</view>
-      </view>
-      <view class="summary-item">
-        <view class="summary-label">参与订单</view>
-        <view class="summary-value">{{orderCount}} 个</view>
-      </view>
-    </view>
-  </view>
+  <summary-card title="我的工资" items="{{summaryItems}}"></summary-card>
 
   <!-- 筛选器 -->
   <view class="filter-bar">
@@ -64,10 +42,7 @@
       </view>
     </view>
 
-    <view wx:if="{{records.length === 0}}" class="empty-state">
-      <view class="empty-icon"><view class="line-icon line-icon--sm icon-clipboard"></view></view>
-      <text class="empty-text">暂无工序记录</text>
-    </view>
+    <empty-state wx:if="{{records.length === 0}}" icon="icon-clipboard" text="暂无工序记录"></empty-state>
 
     <view wx:for="{{records}}" wx:key="index" class="record-item">
       <view class="record-header">

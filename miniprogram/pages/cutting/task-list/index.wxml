@@ -21,11 +21,7 @@
   </view>
 
   <!-- 空状态 -->
-  <view wx:elif="{{!tasks.length}}" class="empty-state empty-state-card">
-    <text class="empty-icon">✂️</text>
-    <text class="empty-text">暂无裁剪任务</text>
-    <text class="empty-hint">当有新的订单分配时，任务将出现在这里</text>
-  </view>
+  <empty-state wx:elif="{{!tasks.length}}" iconEmoji="✂️" text="暂无裁剪任务" hint="当有新的订单分配时，任务将出现在这里" card="{{true}}"></empty-state>
 
   <!-- 任务列表 -->
   <block wx:else>

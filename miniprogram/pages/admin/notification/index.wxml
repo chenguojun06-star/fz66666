@@ -7,10 +7,7 @@
 
   <view wx:if="{{loading && pendingUsers.length === 0}}" class="loading">加载中...</view>
 
-  <view wx:if="{{!loading && pendingUsers.length === 0}}" class="empty">
-    <view class="empty-icon"><view class="line-icon line-icon--sm icon-check"></view></view>
-    <view class="empty-text">暂无待审批用户</view>
-  </view>
+  <empty-state wx:if="{{!loading && pendingUsers.length === 0}}" icon="icon-check" text="暂无待审批用户"></empty-state>
 
   <view class="user-list">
     <view wx:for="{{pendingUsers}}" wx:key="id" class="user-card">
@@ -59,15 +56,7 @@
     </view>
   </view>
 
-  <view wx:if="{{hasMore && !loading}}" class="load-more" bindtap="onLoadMore">
-    加载更多
-  </view>
-  <view wx:if="{{loading && pendingUsers.length > 0}}" class="load-more">
-    加载中...
-  </view>
-  <view wx:if="{{!hasMore && pendingUsers.length > 0}}" class="load-more disabled">
-    没有更多了
-  </view>
+  <load-more hasMore="{{hasMore}}" loading="{{loading}}" count="{{pendingUsers.length}}" bind:loadmore="onLoadMore"></load-more>
 
   <!-- 批准弹窗 —— mp-modal 通用组件 -->
   <mp-modal

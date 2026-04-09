@@ -67,6 +67,7 @@ Page({
 
     // 排序状态
     sortOrder: 'desc', // desc:降序(从高到低), asc:升序(从低到高)
+    summaryItems: [],
   },
 
   onLoad() {
@@ -257,6 +258,12 @@ Page({
       orderCount: orderNos.size,
       records,
       filteredTotalAmount: filteredTotalAmount.toFixed(2),
+      summaryItems: [
+        { label: '本月总金额', value: '¥' + totalAmount.toFixed(2), highlight: true },
+        { label: '本月数量',   value: totalQuantity + ' 件' },
+        { label: '扫码次数',   value: monthData.length + ' 次' },
+        { label: '参与订单',   value: orderNos.size + ' 个' },
+      ],
     });
   },
 

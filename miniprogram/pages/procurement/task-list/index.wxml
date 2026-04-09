@@ -22,11 +22,7 @@
   </view>
 
   <!-- Empty State -->
-  <view class="empty-state" wx:elif="{{filteredTasks.length === 0}}">
-    <text class="empty-icon">📦</text>
-    <text class="empty-text">暂无采购任务</text>
-    <text class="empty-hint">下拉刷新试试</text>
-  </view>
+  <empty-state wx:elif="{{filteredTasks.length === 0}}" iconEmoji="📦" text="暂无采购任务" hint="下拉刷新试试"></empty-state>
 
   <!-- Task Cards (grouped by orderNo) -->
   <view class="task-list" wx:else>

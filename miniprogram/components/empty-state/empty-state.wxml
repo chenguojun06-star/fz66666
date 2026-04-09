@@ -1,0 +1,8 @@
+<view class="empty-state {{card ? 'empty-state-card' : ''}}">
+  <view wx:if="{{iconEmoji}}" class="empty-icon">
+    <text>{{iconEmoji}}</text>
+  </view>
+  <view wx:else class="line-icon {{iconSize ? 'line-icon--' + iconSize : ''}} {{icon}} empty-icon"></view>
+  <text wx:if="{{text}}" class="empty-text">{{text}}</text>
+  <text wx:if="{{hint}}" class="empty-hint">{{hint}}</text>
+</view>

@@ -3,6 +3,8 @@
   "enablePullDownRefresh": true,
   "usingComponents": {
     "scan-record-table": "../../../components/scan-record-table",
-    "date-picker": "/components/common/date-picker/index"
+    "date-picker": "/components/common/date-picker/index",
+    "empty-state": "/components/empty-state/empty-state",
+    "load-more": "/components/load-more/load-more"
   }
 }

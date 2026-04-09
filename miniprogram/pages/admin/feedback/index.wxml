@@ -36,10 +36,7 @@
   </view>
 
   <view wx:if="{{activeTab === 'list'}}" class="feedback-list">
-    <view wx:if="{{!myFeedbacks.length}}" class="empty-state">
-      <text class="empty-icon">📭</text>
-      <text class="empty-text">暂无反馈记录</text>
-    </view>
+    <empty-state wx:if="{{!myFeedbacks.length}}" iconEmoji="📭" text="暂无反馈记录"></empty-state>
     <view wx:for="{{myFeedbacks}}" wx:key="id" class="feedback-item">
       <view class="feedback-head">
         <text class="feedback-title">{{item.title}}</text>

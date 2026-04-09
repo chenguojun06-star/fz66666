@@ -3,6 +3,8 @@
   "enablePullDownRefresh": true,
   "backgroundColor": "#f3f5f9",
   "usingComponents": {
-    "mp-modal": "/components/common/mp-modal/index"
+    "mp-modal": "/components/common/mp-modal/index",
+    "empty-state": "/components/empty-state/empty-state",
+    "load-more": "/components/load-more/load-more"
   }
 }
