@@ -846,8 +846,8 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                 materialStockService.increaseStock(existed, delta);
                 log.info("confirmReturnPurchase: 库存同步成功, purchaseId={}, delta={}", purchaseId, delta);
             } catch (Exception e) {
-                log.warn("confirmReturnPurchase: 库存同步失败, purchaseId={}, delta={}, error={}", purchaseId, delta, e.getMessage());
-                throw new RuntimeException("回料确认库存同步失败", e);
+                log.warn("confirmReturnPurchase: 库存同步失败(非致命), purchaseId={}, delta={}, error={}", purchaseId, delta, e.getMessage());
+                // 不阻断主流程 — 与 syncAfterPurchaseChanged 保持一致，库存同步失败不影响回料确认业务
             }
         }
 
