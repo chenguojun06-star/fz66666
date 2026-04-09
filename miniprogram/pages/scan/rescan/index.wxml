@@ -2,12 +2,7 @@
   <!-- 信息卡片 -->
   <view class="info-card">
     <view class="card-header">
-      <view class="cover-wrap" bindtap="previewImage">
-        <image wx:if="{{detail.coverImage}}" class="cover-img" src="{{detail.coverImage}}" mode="aspectFill" />
-        <view wx:else class="cover-placeholder">
-          <text class="placeholder-icon">📦</text>
-        </view>
-      </view>
+      <image-preview class="cover-wrap" src="{{detail.coverImage}}" mode="aspectFill" />
       <view class="header-info">
         <text class="style-no">{{detail.styleNo || detail.orderNo}}</text>
         <text class="style-name">{{detail.styleName || '扫码记录'}}</text>

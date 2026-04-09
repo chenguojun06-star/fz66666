@@ -153,6 +153,11 @@ Page({
         }).catch(function () {
           toast.error('图片上传失败');
         });
+      },
+      fail: function (err) {
+        if (err && err.errMsg && err.errMsg.indexOf('cancel') === -1) {
+          toast.error('无法打开相机/相册，请检查权限');
+        }
       }
     });
   },

@@ -3,10 +3,7 @@
   <!-- ===== 采购模式头部 ===== -->
   <view wx:if="{{isProcurement}}" class="info-card procurement-card">
     <view class="card-header">
-      <view class="cover-wrap" bindtap="previewImage">
-        <image wx:if="{{detail.coverImage}}" class="cover-img" src="{{detail.coverImage}}" mode="aspectFill" />
-        <view wx:else class="cover-placeholder procurement-placeholder"><text class="placeholder-icon">🧵</text></view>
-      </view>
+      <image-preview class="cover-wrap" src="{{detail.coverImage}}" mode="aspectFill" />
       <view class="header-info">
         <view class="procurement-badge">面辅料采购</view>
         <text class="style-no">{{detail.styleNo || detail.orderNo}}</text>
@@ -19,10 +16,7 @@
   <!-- ===== 非采购模式头部 ===== -->
   <view wx:else class="info-card">
     <view class="card-header">
-      <view class="cover-wrap" bindtap="previewImage">
-        <image wx:if="{{detail.coverImage}}" class="cover-img" src="{{detail.coverImage}}" mode="aspectFill" />
-        <view wx:else class="cover-placeholder"><text class="placeholder-icon">📦</text></view>
-      </view>
+      <image-preview class="cover-wrap" src="{{detail.coverImage}}" mode="aspectFill" />
       <view class="header-info">
         <text class="style-no">{{detail.styleNo || detail.orderNo}}</text>
         <text class="sub-info">订单 {{detail.orderNo}}</text>

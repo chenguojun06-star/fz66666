@@ -3,10 +3,7 @@
   <!-- 订单信息 -->
   <view class="info-card">
     <view class="card-header">
-      <view class="cover-wrap" bindtap="previewImage">
-        <image wx:if="{{coverImage}}" class="cover-img" src="{{coverImage}}" mode="aspectFill" />
-        <view wx:else class="cover-placeholder"><text class="placeholder-icon">🔍</text></view>
-      </view>
+      <image-preview class="cover-wrap" src="{{coverImage}}" mode="aspectFill" />
       <view class="header-info">
         <text class="style-no">{{detail.styleNo || detail.orderNo}}</text>
         <text class="sub-info">订单 {{detail.orderNo}}</text>
@@ -79,8 +76,7 @@
       <text class="form-label">不良品照片（最多5张）</text>
       <view class="photo-grid">
         <view wx:for="{{images}}" wx:key="*this" class="photo-item">
-          <image class="photo-img" src="{{item}}" mode="aspectFill"
-                 data-url="{{item}}" bindtap="onPreviewUpload" />
+          <image-preview class="photo-img" src="{{item}}" mode="aspectFill" />
           <view class="photo-del" data-index="{{index}}" catchtap="onDeleteImage">×</view>
         </view>
         <view wx:if="{{images.length < 5}}" class="photo-add" bindtap="onUploadImage">
