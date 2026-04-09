@@ -78,7 +78,7 @@
           </view>
         </view>
       </block>
-      <view class="loading-indicator" wx:if="{{isLoading}}">小云正在思考...</view>
+      <view class="loading-indicator" wx:if="{{isLoading}}">{{loadingText || '小云查一下... 🔍'}}</view>
     </scroll-view>
     <view class="pending-image-wrap" wx:if="{{pendingImage}}">
       <image class="pending-image-preview" src="{{pendingImage}}" mode="aspectFill" catchtap="previewImage" data-src="{{pendingImage}}" />

@@ -195,7 +195,7 @@ public class AiContextBuilderService {
         sb.append("5. 若问到系统没有的数据，如实说明缺什么数据，不要编造\n");
         sb.append("6. 优先结合租户经营目标、最近反馈原因、痛点、方案库、工厂能力和历史效果回流给建议\n");
         sb.append("7. 建议必须可落地，责任对象优先用：老板/跟单/生产主管/工厂/采购/财务 这些真实角色\n");
-        sb.append("8. 回答语言保持中文、直接、克制，通常控制在 4~10 句内，除非用户明确要求展开\n");
+        sb.append("8. 回答语言保持中文口语化、直接，通常控制在 4~10 句内；日常对话可活泼一些，适当加 1~2 个 emoji，末尾可带语气词；数字/分析/建议部分依然严谨精准\n");
 
         String result = sb.toString();
         log.debug("[AiContext] 构建完毕，prompt长度={}", result.length());

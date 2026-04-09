@@ -19,6 +19,7 @@ Component({
     inputValue: '',
     messages: [],
     isLoading: false,
+    loadingText: '',
     scrollTo: '',
     pendingImage: '',
     uploading: false,
@@ -61,12 +62,25 @@ Component({
           console.error('get user info error', err);
         }
 
-        const greetingSuffix = isManager
-          ? '可以直接点下面的快捷问题，或者问我订单、工厂、日报、库存、财务等任何管理问题！'
-          : '可以问我您的生产任务、扫码记录或负责的订单进度哦！';
-        const greeting = userName
-          ? `Hi ${userName}，我是小云～ 有什么可以帮您的？\n${greetingSuffix}`
-          : `Hi 我是小云～ 有什么可以帮您的？\n${greetingSuffix}`;
+        const hour = new Date().getHours();
+        let timeTag = '';
+        if (hour >= 5 && hour < 9) timeTag = '早安 ☀️，';
+        else if (hour >= 12 && hour < 14) timeTag = '饭点了，';
+        else if (hour >= 18 && hour < 22) timeTag = '下班前来一把，';
+        else if (hour >= 22 || hour < 5) timeTag = '这么晚还在 🌙，';
+        const name = userName || '你';
+        const mgrGreetings = [
+          `嗨 ${name}！${timeTag}我是小云 ☁️\n订单、日报、工厂风险——有什么我来搞，点下面快捷或直接说 👇`,
+          `${name} 来了！${timeTag}小云已就位 ☁️ 数据随时查，订单工厂财务都行 📊`,
+          `嘿 ${name}！${timeTag}我是小云，库存财务订单随便问 😎\n快捷按钮或直接说都行 👇`,
+        ];
+        const wkrGreetings = [
+          `嗨 ${name}！${timeTag}我是小云 ☁️\n今天的任务、扫码记录随便问 👀`,
+          `${name} 辛苦了！${timeTag}有啥要查的跟我说一声 🫡`,
+          `${name}！${timeTag}小云在这，今天任务帮你盯着呢 💼`,
+        ];
+        const pool = isManager ? mgrGreetings : wkrGreetings;
+        const greeting = pool[Math.floor(Math.random() * pool.length)];
 
         this.setData({
           isManager,
@@ -239,10 +253,13 @@ Component({
         content: hasImage ? (text || '发送了一张图片') : text,
       };
       if (hasImage) userMsg.imageUrl = tempPath;
+      const loadingPool = ['查一下... 🔍', '翻翻台账，稍等 📋', '算一下... 🧮', '手速拉满 💨', '数据飞来 ⚡'];
+      const loadingText = loadingPool[Math.floor(Math.random() * loadingPool.length)];
       if (hasImage) this.setData({ pendingImage: '', uploading: true });
       this.setData({
         messages: [].concat(this.data.messages, [userMsg]),
         isLoading: !hasImage,
+        loadingText,
       });
       this.scrollToBottom();
 
@@ -251,11 +268,11 @@ Component({
         // step 1: upload image if present
         if (tempPath) {
           imageUrl = await api.common.uploadImage(tempPath);
-          this.setData({ uploading: false, isLoading: true });
+          this.setData({ uploading: false, isLoading: true, loadingText });
         }
 
         // step 2: call AI
-        var aiResponse = '抱歉，我现在无法回答这个问题。';
+        var aiResponse = '嗯...这把我问住了 😅 换个方式说说看？';
         if (this.data.isManager) {
           var mgrParams = { text: text || (imageUrl ? '分析这张图片' : text) };
           if (imageUrl) mgrParams.imageUrl = imageUrl;
@@ -302,7 +319,8 @@ Component({
           wx.showToast({ title: '图片上传失败', icon: 'none' });
           this.setData({ uploading: false });
         }
-        var errContent = (err && err.errMsg && err.errMsg !== 'undefined') ? err.errMsg : 'AI暂时无法响应，请稍后再试。';
+        const funnyErrs = ['网络开小差了 🌐 稍后再试？', '出了点小故障 😅 要不等会再来？', '信号抖了一下，再发一次吧 🔧'];
+        var errContent = (err && err.errMsg && err.errMsg !== 'undefined') ? err.errMsg : funnyErrs[Math.floor(Math.random() * funnyErrs.length)];
         var errMsg = { id: Date.now(), role: 'ai', content: errContent };
         this.setData({ messages: [].concat(this.data.messages, [errMsg]), isLoading: false });
         this.scrollToBottom();
@@ -347,7 +365,14 @@ Component({
         // ignore
       }
 
-      const greeting = userName ? `Hi ${userName}，我是小云～ 有什么可以帮您的？\n可以直接点下面的快捷问题，或者问我任何关于订单、工厂、库存的问题哦！` : `Hi 我是小云～ 有什么可以帮您的？\n可以直接点下面的快捷问题，或者问我任何关于订单、工厂、库存的问题哦！`;
+      const freshPhrases = [
+        '记录清啦 👌 继续聊吧，我随时在！',
+        '好，重头来 😄 刚才的全忘了，有话直说！',
+        '清空完毕 ✨ 小云已归位～',
+        '一键清零 🧹 准备好接新问题了',
+      ];
+      const freshGreeting = freshPhrases[Math.floor(Math.random() * freshPhrases.length)];
+      const greeting = userName ? `嗨 ${userName}！${freshGreeting}` : freshGreeting;
 
       this.setData({
         messages: [{
