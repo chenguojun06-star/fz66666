@@ -60,6 +60,42 @@ Page({
       coverImage = raw.orderDetail.styleImage;
     }
 
+    // 辅助：查找多个可能的字段名并格式化为 YYYY-MM-DD
+    function pickField(src, keys) {
+      for (var i = 0; i < keys.length; i++) {
+        var k = keys[i];
+        if (src[k] != null && src[k] !== '') return src[k];
+        if (src.orderDetail && src.orderDetail[k] != null && src.orderDetail[k] !== '') return src.orderDetail[k];
+      }
+      return null;
+    }
+
+    function formatYMD(v) {
+      if (!v) return '-';
+      try {
+        // 如果已经是 YYYY-MM-DD 形式或 ISO 字符串，取前 10 位
+        if (typeof v === 'string') {
+          if (v.length >= 10) return v.substring(0, 10);
+          return v;
+        }
+        var d = new Date(v);
+        if (isNaN(d.getTime())) return '-';
+        var y = d.getFullYear();
+        var m = String(d.getMonth() + 1).padStart(2, '0');
+        var day = String(d.getDate()).padStart(2, '0');
+        return y + '-' + m + '-' + day;
+      } catch (e) {
+        return '-';
+      }
+    }
+
+    var color = pickField(raw, ['color', 'styleColor', 'orderColor', 'colour']);
+    var size = pickField(raw, ['size', 'sizeName', 'orderSize']);
+    var cuttingDateRaw = pickField(raw, ['cuttingDate', 'cutDate', 'plannedCutDate', 'plannedStartDate', 'cut_date']);
+    var deliveryDateRaw = pickField(raw, ['deliveryDate', 'expectedShipDate', 'shipDate', 'plannedShipDate', 'expected_ship_date']);
+    var bedNo = pickField(raw, ['bedNo', 'bed_number', 'bed']);
+    var displayQuantity = raw.quantity || (raw.orderDetail && (raw.orderDetail.orderQuantity || raw.orderDetail.quantity)) || 0;
+
     this.setData({
       detail: {
         coverImage: coverImage,
@@ -68,7 +104,14 @@ Page({
         bundleNo: raw.bundleNo || '',
         processName: raw.processName || '',
         progressStage: raw.progressStage || '',
-        timeDisplay: raw.timeDisplay || ''
+        timeDisplay: raw.timeDisplay || '',
+        // 额外展示字段
+        color: color || '',
+        size: size || '',
+        displayQuantity: displayQuantity,
+        bedNo: bedNo != null ? String(bedNo) : '-',
+        cuttingDateDisplay: formatYMD(cuttingDateRaw),
+        deliveryDateDisplay: formatYMD(deliveryDateRaw)
       },
       processOptions: processOptions,
       selectedNames: selectedNames,

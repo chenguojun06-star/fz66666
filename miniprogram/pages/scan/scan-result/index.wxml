@@ -2,23 +2,43 @@
   <!-- 信息卡片 -->
   <view class="info-card">
     <view class="card-header">
-      <view class="cover-wrap" bindtap="previewImage">
-        <image wx:if="{{detail.coverImage}}" class="cover-img" src="{{detail.coverImage}}" mode="aspectFill" />
-        <view wx:else class="cover-placeholder">
-          <text class="placeholder-icon">🔍</text>
-        </view>
-      </view>
+      <image-preview class="cover-wrap" src="{{detail.coverImage || detail.styleImage}}" mode="aspectFill" />
       <view class="header-info">
         <text class="style-no">{{detail.styleNo || detail.orderNo}}</text>
         <text class="sub-info">{{detail.orderNo}}</text>
         <text wx:if="{{detail.bundleNo}}" class="sub-info">菲号 {{detail.bundleNo}}</text>
+        <view class="tags" wx:if="{{detail.color || detail.size || detail.displayQuantity}}">
+          <text wx:if="{{detail.color}}" class="tag tag-color">{{detail.color}}</text>
+          <text wx:if="{{detail.size}}" class="tag tag-size">{{detail.size}}</text>
+          <text wx:if="{{detail.displayQuantity}}" class="tag tag-qty">{{detail.displayQuantity}} 件</text>
+        </view>
         <text wx:if="{{detail.timeDisplay}}" class="sub-info time">{{detail.timeDisplay}}</text>
       </view>
     </view>
     <view class="field-list">
       <view class="field-row">
         <text class="field-label">数量</text>
-        <text class="field-value highlight">{{quantity}} 件</text>
+        <text class="field-value highlight">{{detail.displayQuantity || quantity}} 件</text>
+      </view>
+      <view wx:if="{{detail.color}}" class="field-row">
+        <text class="field-label">颜色</text>
+        <text class="field-value">{{detail.color}}</text>
+      </view>
+      <view wx:if="{{detail.size}}" class="field-row">
+        <text class="field-label">尺码</text>
+        <text class="field-value">{{detail.size}}</text>
+      </view>
+      <view class="field-row">
+        <text class="field-label">床号</text>
+        <text class="field-value">{{detail.bedNo || '-'}}</text>
+      </view>
+      <view class="field-row">
+        <text class="field-label">裁床日期</text>
+        <text class="field-value">{{detail.cuttingDateDisplay || '-'}}</text>
+      </view>
+      <view class="field-row">
+        <text class="field-label">交货日期</text>
+        <text class="field-value">{{detail.deliveryDateDisplay || '-'}}</text>
       </view>
       <view wx:if="{{detail.processName}}" class="field-row">
         <text class="field-label">当前工序</text>

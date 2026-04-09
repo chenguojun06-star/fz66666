@@ -48,6 +48,21 @@
   flex-direction: column;
   gap: 6rpx;
 }
+
+.tags {
+  display: flex;
+  gap: 12rpx;
+  align-items: center;
+}
+.tag {
+  padding: 6rpx 12rpx;
+  border-radius: 12rpx;
+  font-size: 22rpx;
+  color: #fff;
+}
+.tag-color { background: rgba(45, 127, 249, 0.9); }
+.tag-size { background: rgba(99, 102, 241, 0.9); }
+.tag-qty  { background: rgba(16,185,129,0.95); }
 .style-no {
   font-size: 32rpx;
   font-weight: 700;
