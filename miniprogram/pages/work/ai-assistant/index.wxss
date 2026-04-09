@@ -160,6 +160,7 @@
   border-top: 1px solid var(--color-border-light);
   box-sizing: border-box;
   padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  z-index: 100;
 }
 .msg-input {
   flex: 1;
@@ -184,15 +185,23 @@
 
 /* 拍照按钮 */
 .photo-btn {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
   flex-shrink: 0;
   border-radius: 50%;
-  background: var(--color-bg-light);
+  background: #e8f4fd;
+  border: 1rpx solid #b8d4e8;
+}
+.photo-btn-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+.ocr-btn {
+  background: #fef7e0;
+  border-color: #e8d5a0;
 }
 .photo-btn-hover {
   opacity: 0.6;

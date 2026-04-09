@@ -103,6 +103,31 @@ Page({
     this.setData({ pendingImage: '' });
   },
 
+  /** 文档识别（拍照/选图 → OCR） */
+  chooseDocument() {
+    if (this.data.sending || this.data.uploading) return;
+    wx.chooseMedia({
+      count: 1,
+      mediaType: ['image'],
+      sourceType: ['camera', 'album'],
+      success: (res) => {
+        const path = (res.tempFiles && res.tempFiles[0] && res.tempFiles[0].tempFilePath) || '';
+        if (path) {
+          this.setData({
+            pendingImage: path,
+            inputText: '请识别这张图片中的文字内容，并整理成结构化信息'
+          });
+        }
+      },
+      fail: (err) => {
+        console.warn('[AI-OCR] chooseDocument fail:', err);
+        if (err && err.errMsg && err.errMsg.indexOf('cancel') === -1) {
+          wx.showToast({ title: '无法打开相机，请检查权限', icon: 'none' });
+        }
+      },
+    });
+  },
+
   /** 预览图片 */
   previewImage(e) {
     const src = e.currentTarget.dataset.src;
