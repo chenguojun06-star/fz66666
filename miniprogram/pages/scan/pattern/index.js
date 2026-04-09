@@ -31,6 +31,21 @@ const STATUS_LABELS = {
   RECEIVED: '已领取',
 };
 
+const SOURCE_LABELS = {
+  SELF_DEVELOPED: '自主开发',
+  OEM: '来料加工',
+  CUSTOMER: '客供',
+  LICENSED: '授权款',
+};
+const CATEGORY_LABELS = {
+  WOMAN: '女装',
+  MAN: '男装',
+  KIDS: '童装',
+  SPORT: '运动',
+  OUTDOOR: '户外',
+  HOME: '家居',
+};
+
 function normalizePositiveInt(value, fallback) {
   const num = parseInt(value, 10);
   if (!Number.isFinite(num) || num <= 0) return fallback;
@@ -55,20 +70,18 @@ Page({
     // 复用 PatternHandler.showPatternConfirmModal 的构建逻辑
     const patternDetail = data.patternDetail || {};
     const rawOptions = Array.isArray(data.operationOptions) ? data.operationOptions : [];
-    // 样衣页面只保留「领取」操作，简化工作流
-    const receiveOnly = rawOptions.filter(o => o.value === 'RECEIVE');
-    const operationOptions = receiveOnly.length > 0 ? receiveOnly : rawOptions.slice(0, 1);
-    const defaultOption = operationOptions[0] || null;
-    const operationType = defaultOption ? defaultOption.value : (data.operationType || '');
-    const operationLabel = defaultOption
-      ? defaultOption.label
-      : (OPERATION_LABELS[operationType] || data.operationLabel || '操作');
+    // 两步扫码：第一次→领取，已领取/进行中→完成
+    const status = String(data.status || '').toUpperCase();
+    const isSecondScan = status === 'RECEIVED' || status === 'IN_PROGRESS';
+    const autoOperationType = isSecondScan ? 'COMPLETE' : 'RECEIVE';
+    const submitLabel = isSecondScan ? '完成' : '领取';
+    const operationType = autoOperationType;
+    const operationLabel = OPERATION_LABELS[operationType] || '操作';
     const requiresWarehouseInput = WAREHOUSE_OPERATIONS.has(operationType);
     const reviewStatus = String(patternDetail.reviewStatus || '').toUpperCase();
     const reviewResult = String(patternDetail.reviewResult || '').toUpperCase();
     const reviewApproved = reviewStatus === 'APPROVED' || reviewResult === 'APPROVED';
     const requiresReviewBeforeInbound = operationType === 'WAREHOUSE_IN' && !reviewApproved;
-    const status = String(data.status || '').toUpperCase();
     const sizes = patternDetail.sizes || [];
 
     this.setData({
@@ -85,18 +98,21 @@ Page({
         sizesText: sizes.length ? sizes.join('/') : '-',
         operationType: operationType,
         operationLabel: operationLabel,
-        operationOptions: operationOptions,
+        operationOptions: [],
         requiresWarehouseInput: requiresWarehouseInput,
         requiresReviewBeforeInbound: requiresReviewBeforeInbound,
         reviewApproved: reviewApproved,
         designer: data.designer || patternDetail.designer || '-',
         patternDeveloper: data.patternDeveloper || patternDetail.patternDeveloper || '-',
         deliveryTime: patternDetail.deliveryTime || '-',
-        coverImage: patternDetail.coverImage || '',
+        coverImage: patternDetail.coverImage || patternDetail.styleImage || '',
         styleName: patternDetail.styleName || data.styleName || '',
         category: patternDetail.category || data.category || '',
         customer: patternDetail.customer || data.customer || '',
         source: patternDetail.developmentSourceType || data.developmentSourceType || '',
+        categoryLabel: CATEGORY_LABELS[patternDetail.category || data.category || ''] || patternDetail.category || data.category || '',
+        sourceLabel: SOURCE_LABELS[patternDetail.developmentSourceType || data.developmentSourceType || ''] || patternDetail.developmentSourceType || data.developmentSourceType || '',
+        submitLabel: submitLabel,
         remark: '',
       },
     });

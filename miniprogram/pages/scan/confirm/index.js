@@ -53,7 +53,16 @@ Page({
     var materialPurchases = [];
     var materialSummary = { totalDemand: 0, totalArrived: 0, totalPending: 0 };
     if (isProcurement && Array.isArray(raw.materialPurchases)) {
-      materialPurchases = raw.materialPurchases;
+      var MATERIAL_TYPE_MAP = {
+        fabricA: '主面料', fabricB: '辅面料',
+        liningA: '里料', liningB: '夹里', liningC: '衬布/粘合衬',
+        accessoryA: '拉链', accessoryB: '纽扣', accessoryC: '配件'
+      };
+      materialPurchases = raw.materialPurchases.map(function(item) {
+        return Object.assign({}, item, {
+          materialTypeCN: MATERIAL_TYPE_MAP[item.materialType] || item.materialType || ''
+        });
+      });
       materialPurchases.forEach(function(item) {
         materialSummary.totalDemand += Number(item.purchaseQuantity) || 0;
         materialSummary.totalArrived += Number(item.arrivedQuantity) || 0;

@@ -522,6 +522,8 @@ function onHandleQuality(page, e) {
     quantity: record.quantity || 1,
     scanCode: record.scanCode || '',
     recordId: record.id,
+    coverImage: group.coverImage || record.coverImage || group.styleImage || record.styleImage || '',
+    styleImage: group.styleImage || record.styleImage || group.coverImage || record.coverImage || '',
   });
 }
 
@@ -571,6 +573,8 @@ function onTapHistoryItem(page, e) {
       quantity: item.data.quantity || 1,
       scanCode: item.data.scanCode || '',
       recordId: item.data.scanId || item.data.recordId,
+      coverImage: item.data.coverImage || item.data.styleImage || '',
+      styleImage: item.data.styleImage || item.data.coverImage || '',
     });
   }
 }

@@ -196,6 +196,8 @@ const scanLifecycleMixin = Behavior({
               quantity: task.quantity || 1,
               scanCode: task.scanCode || '',
               recordId: task.id || task.scanId,
+              coverImage: task.coverImage || task.styleImage || '',
+              styleImage: task.styleImage || task.coverImage || '',
             });
           }, 300);
         }

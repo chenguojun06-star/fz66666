@@ -36,6 +36,8 @@
 .header-info { display: flex; flex-direction: column; gap: 8rpx; flex: 1; min-width: 0; }
 .style-no { font-size: 32rpx; font-weight: 600; color: #1a1a2e; }
 .sub-info { font-size: 24rpx; color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+
 .tag-process {
   display: inline-block; align-self: flex-start;
   background: rgba(99,102,241,0.08); color: var(--primary-color, #6366f1);
@@ -89,21 +91,7 @@
 .summary-value { font-size: 28rpx; font-weight: 600; color: #1a1a2e; }
 .summary-value.amount { color: var(--primary-color, #6366f1); }
 
-/* ---- size matrix ---- */
-.matrix-scroll { width: 100%; }
-.matrix-table { display: flex; flex-direction: column; min-width: 100%; }
-.matrix-row { display: flex; border-bottom: 1rpx solid #f0f0f0; }
-.matrix-row:last-child { border-bottom: none; }
-.matrix-header { background: #f8f9fb; font-weight: 600; }
-.matrix-cell {
-  min-width: 100rpx; padding: 14rpx 12rpx;
-  text-align: center; font-size: 24rpx; color: #333;
-  flex-shrink: 0;
-}
-.cell-color {
-  min-width: 120rpx; text-align: left; font-weight: 500;
-  color: #1a1a2e; background: rgba(99,102,241,0.03);
-}
+
 
 /* ---- footer ---- */
 .footer-bar {

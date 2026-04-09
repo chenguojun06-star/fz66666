@@ -21,25 +21,13 @@
 
     <!-- 详情字段列表 -->
     <view class="field-list">
-      <view class="field-row" wx:if="{{detail.source}}">
+      <view class="field-row" wx:if="{{detail.sourceLabel}}">
         <text class="field-label">来源</text>
-        <text class="field-value">{{detail.source}}</text>
+        <text class="field-value">{{detail.sourceLabel}}</text>
       </view>
-      <view class="field-row" wx:if="{{detail.category}}">
+      <view class="field-row" wx:if="{{detail.categoryLabel}}">
         <text class="field-label">品类</text>
-        <text class="field-value">{{detail.category}}</text>
-      </view>
-      <view class="field-row">
-        <text class="field-label">颜色</text>
-        <text class="field-value">{{detail.colorText || detail.color || '-'}}</text>
-      </view>
-      <view class="field-row">
-        <text class="field-label">码数</text>
-        <text class="field-value">{{detail.sizeText || detail.sizesText || '-'}}</text>
-      </view>
-      <view class="field-row">
-        <text class="field-label">数量</text>
-        <text class="field-value highlight">{{detail.quantityText || detail.quantity || '-'}} 件</text>
+        <text class="field-value">{{detail.categoryLabel}}</text>
       </view>
 
       <!-- 颜色码数聚合矩阵 -->
@@ -49,13 +37,11 @@
           <view class="matrix-row matrix-header">
             <view class="matrix-cell matrix-label-cell">颜色\码数</view>
             <view wx:for="{{detail.matrixSizes}}" wx:key="*this" class="matrix-cell">{{item}}</view>
-            <view class="matrix-cell">合计</view>
           </view>
           <!-- 数据行 -->
           <view wx:for="{{detail.matrixRows}}" wx:for-item="row" wx:key="color" class="matrix-row">
             <view class="matrix-cell matrix-label-cell">{{row.color}}</view>
             <view wx:for="{{row.quantities}}" wx:for-item="qty" wx:for-index="qIdx" wx:key="qIdx" class="matrix-cell">{{qty}}</view>
-            <view class="matrix-cell matrix-total-cell">{{row.rowTotal}}</view>
           </view>
         </view>
         <view class="matrix-footer">
@@ -86,22 +72,7 @@
   <view class="section-card">
     <view class="section-title">✂️ 样衣操作</view>
 
-    <!-- 工序选择器 -->
-    <view class="ops-label">选择工序</view>
-    <scroll-view class="selector-list" scroll-y="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}">
-      <view
-        wx:for="{{detail.operationOptions}}"
-        wx:key="value"
-        class="selector-item {{detail.operationType == item.value ? 'active' : ''}} {{item.disabled ? 'disabled' : ''}}"
-        data-type="{{item.value}}"
-        data-disabled="{{item.disabled}}"
-        bindtap="onOperationChange">
-        <view class="selector-radio {{!item.disabled && detail.operationType == item.value ? 'checked' : ''}}">
-          <view wx:if="{{!item.disabled && detail.operationType == item.value}}" class="selector-dot"></view>
-        </view>
-        <text class="selector-label">{{item.icon || ''}} {{item.label || item.value}}</text>
-      </view>
-    </scroll-view>
+
 
     <!-- 审核未完成提示 -->
     <view wx:if="{{detail.requiresReviewBeforeInbound}}" class="review-warning">
@@ -149,7 +120,7 @@
   <view class="footer-bar">
     <view class="btn-cancel" hover-class="btn-hover" bindtap="goBack">取消</view>
     <view class="btn-submit {{loading ? 'off' : ''}}" hover-class="btn-hover" bindtap="submitOp">
-      {{loading ? '提交中...' : '领取'}}
+      {{loading ? '提交中...' : (detail.submitLabel || '领取')}}
     </view>
   </view>
 </view>

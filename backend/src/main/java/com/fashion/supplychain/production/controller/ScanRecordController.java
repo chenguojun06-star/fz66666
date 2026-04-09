@@ -8,6 +8,10 @@ import com.fashion.supplychain.production.orchestration.ScanRecordOrchestrator;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.SKUService;
+import com.fashion.supplychain.style.entity.StyleInfo;
+import com.fashion.supplychain.style.service.StyleInfoService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -37,6 +41,9 @@ public class ScanRecordController {
 
     @Autowired
     private ProductionOrderService productionOrderService;
+
+    @Autowired
+    private StyleInfoService styleInfoService;
 
     /**
      * 执行扫码操作
@@ -219,10 +226,28 @@ public class ScanRecordController {
 
     /**
      * 获取我的质检待处理任务（已领取未确认结果）
+     * 已注入 coverImage/styleImage，修复小程序质检弹窗款式图不显示问题
      */
     @GetMapping("/my-quality-tasks")
     public Result<?> getMyQualityTasks() {
-        return Result.success(scanRecordOrchestrator.getMyQualityTasks());
+        List<?> tasks = scanRecordOrchestrator.getMyQualityTasks();
+        ObjectMapper mapper = new ObjectMapper();
+        List<Map<String, Object>> enriched = tasks.stream().map(task -> {
+            Map<String, Object> m = mapper.convertValue(task, new TypeReference<Map<String, Object>>() {});
+            Object orderIdObj = m.get("orderId");
+            if (orderIdObj != null && StringUtils.hasText(orderIdObj.toString())) {
+                ProductionOrder po = productionOrderService.getById(orderIdObj.toString());
+                if (po != null && StringUtils.hasText(po.getStyleId())) {
+                    StyleInfo si = styleInfoService.getById(po.getStyleId());
+                    if (si != null && StringUtils.hasText(si.getCover())) {
+                        m.put("coverImage", si.getCover());
+                        m.put("styleImage", si.getCover());
+                    }
+                }
+            }
+            return m;
+        }).collect(java.util.stream.Collectors.toList());
+        return Result.success(enriched);
     }
 
     /**

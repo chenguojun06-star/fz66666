@@ -11,6 +11,7 @@
         <view class="procurement-badge">面辅料采购</view>
         <text class="style-no">{{detail.styleNo || detail.orderNo}}</text>
         <text class="sub-info">订单 {{detail.orderNo}}</text>
+        <sku-matrix wx:if="{{sizeMatrix.rows.length > 0}}" size-matrix="{{sizeMatrix}}" mode="compact" />
       </view>
     </view>
   </view>
@@ -47,9 +48,9 @@
           <text wx:if="{{item.materialCode}}" class="material-code">{{item.materialCode}}</text>
         </view>
         <view class="material-details">
-          <view wx:if="{{item.materialType}}" class="material-field">
+          <view wx:if="{{item.materialTypeCN}}" class="material-field">
             <text class="field-label">类型</text>
-            <text class="field-value">{{item.materialType}}</text>
+            <text class="field-value">{{item.materialTypeCN}}</text>
           </view>
           <view wx:if="{{item.specifications}}" class="material-field">
             <text class="field-label">规格</text>
@@ -148,18 +149,7 @@
   <!-- 颜色尺码矩阵 -->
   <view wx:if="{{sizeMatrix.rows.length > 0}}" class="section-card">
     <text class="section-title">颜色尺码汇总</text>
-    <scroll-view scroll-x class="matrix-scroll">
-      <view class="matrix-table">
-        <view class="matrix-row matrix-header">
-          <text class="matrix-cell cell-color">颜色</text>
-          <text wx:for="{{sizeMatrix.sizes}}" wx:key="*this" class="matrix-cell">{{item}}</text>
-        </view>
-        <view wx:for="{{sizeMatrix.rows}}" wx:key="color" class="matrix-row">
-          <text class="matrix-cell cell-color">{{item.color}}</text>
-          <text wx:for="{{item.cells}}" wx:for-item="c" wx:key="size" class="matrix-cell">{{c.quantity}}</text>
-        </view>
-      </view>
-    </scroll-view>
+    <sku-matrix size-matrix="{{sizeMatrix}}" mode="full" />
   </view>
 
   <!-- 底部操作栏 -->

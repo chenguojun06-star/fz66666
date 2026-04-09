@@ -187,6 +187,17 @@ public class ProductionOrderController {
     @GetMapping("/detail/{id}")
     public Result<?> detail(@PathVariable String id) {
         ProductionOrder productionOrder = productionOrderOrchestrator.getDetailById(id);
+        // 注入 coverImage/styleImage，修复小程序扫码确认页款式图不显示问题（UUID路径）
+        if (productionOrder != null && StringUtils.hasText(productionOrder.getStyleId())) {
+            StyleInfo si = styleInfoService.getById(productionOrder.getStyleId());
+            if (si != null && StringUtils.hasText(si.getCover())) {
+                java.util.Map<String, Object> enriched = new com.fasterxml.jackson.databind.ObjectMapper()
+                        .convertValue(productionOrder, new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {});
+                enriched.put("coverImage", si.getCover());
+                enriched.put("styleImage", si.getCover());
+                return Result.success(enriched);
+            }
+        }
         return Result.success(productionOrder);
     }
 
