@@ -2,8 +2,10 @@ package com.fashion.supplychain.config;
 
 import com.fasterxml.jackson.core.json.JsonWriteFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
@@ -27,6 +29,9 @@ public class JacksonConfig {
         longModule.addSerializer(Long.class, ToStringSerializer.instance);
         longModule.addSerializer(long.class, ToStringSerializer.instance);
         objectMapper.registerModule(longModule);
+        // 支持 Java 8 日期时间类型（LocalDateTime 等），解决序列化 400 错误
+        objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         return objectMapper;
     }
 }
