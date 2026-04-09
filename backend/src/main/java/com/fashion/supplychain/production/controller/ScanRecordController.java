@@ -45,6 +45,9 @@ public class ScanRecordController {
     @Autowired
     private StyleInfoService styleInfoService;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
     /**
      * 执行扫码操作
      */
@@ -231,7 +234,7 @@ public class ScanRecordController {
     @GetMapping("/my-quality-tasks")
     public Result<?> getMyQualityTasks() {
         List<?> tasks = scanRecordOrchestrator.getMyQualityTasks();
-        ObjectMapper mapper = new ObjectMapper();
+        ObjectMapper mapper = objectMapper;
         List<Map<String, Object>> enriched = tasks.stream().map(task -> {
             Map<String, Object> m = mapper.convertValue(task, new TypeReference<Map<String, Object>>() {});
             Object orderIdObj = m.get("orderId");
