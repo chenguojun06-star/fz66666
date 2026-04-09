@@ -364,15 +364,14 @@
 
 .sidebar-menu.ant-menu .ant-menu-item:hover,
 .sidebar-menu.ant-menu .ant-menu-submenu-title:hover {
-  background: var(--sidebar-item-bg-hover);
+  background: transparent;
   color: var(--sidebar-text-strong);
 }
 
 .sidebar-menu.ant-menu .ant-menu-item-selected,
 .sidebar-menu.ant-menu .ant-menu-item-active {
-  background: var(--sidebar-item-bg-active) !important;
+  background: transparent !important;
   color: var(--sidebar-text-strong) !important;
-  font-weight: 600;
 }
 
 .sidebar-menu.ant-menu .ant-menu-item-selected::after {
@@ -381,7 +380,7 @@
 
 .sidebar-menu.ant-menu .ant-menu-submenu-selected > .ant-menu-submenu-title,
 .sidebar-menu.ant-menu .ant-menu-submenu-open > .ant-menu-submenu-title {
-  font-weight: 600;
+  color: var(--sidebar-text-strong);
 }
 
 .sidebar-menu.ant-menu .ant-menu-submenu-arrow {
@@ -457,7 +456,7 @@
 .layout-sidebar-submenu-popup.ant-menu-submenu-popup .ant-menu-submenu-title:hover,
 .layout-sidebar-submenu-popup.ant-menu-submenu-popup .ant-menu-item-active,
 .layout-sidebar-submenu-popup.ant-menu-submenu-popup .ant-menu-item-selected {
-  background: var(--sidebar-item-bg-hover);
+  background: transparent;
   color: var(--sidebar-text-strong);
 }
 
