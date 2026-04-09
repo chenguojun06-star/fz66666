@@ -117,7 +117,7 @@ function buildColorSizeMeta(order) {
     }
 
     allSizesSet.add(size);
-    
+
     if (!colorMap.has(color)) {
       colorMap.set(color, { color, sizeMap: new Map(), total: 0 });
     }

@@ -36,7 +36,7 @@ function handleProcurementTask(task) {
     const url = `/pages/procurement/task-detail/index?orderNo=${encodeURIComponent(orderNo)}&styleNo=${encodeURIComponent(styleNo)}`;
     safeNavigate({ url }, 'navigateTo').catch(() => {});
   } else {
-    safeNavigate({ url: '/pages/procurement/task-list/index' }, 'navigateTo').catch(() => {});
+    safeNavigate({ url: '/pages/work/index' }, 'switchTab').catch(() => {});
   }
 }
 
@@ -197,9 +197,9 @@ function handleReminderTask(task) {
   const orderNo = task.orderNo || '';
   const type = task.type || '';
 
-  // 采购提醒 → 跳转采购任务列表页
+  // 采购提醒 → 跳转工作台（采购任务列表页已移除）
   if (type === '采购') {
-    safeNavigate({ url: '/pages/procurement/task-list/index' }, 'navigateTo').catch(() => {});
+    safeNavigate({ url: '/pages/work/index' }, 'switchTab').catch(() => {});
     return;
   }
 

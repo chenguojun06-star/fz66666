@@ -178,36 +178,21 @@ function buildPatternOperationOptions({ patternDetail, processConfig: _processCo
     return options; // 已完成只展示入库，不展示其他生产工序
   }
 
-  // ── 阶段四：生产中，展示固定6个父进度工序（未扫的才显示）─────────
-  const PARENT_PRODUCTION_STAGES = [
-    { value: 'PROCUREMENT', label: '采购',    icon: '' },
-    { value: 'CUTTING',     label: '裁剪',    icon: '' },
-    { value: 'SECONDARY',   label: '二次工艺', icon: '' },
-    { value: 'SEWING',      label: '车缝',    icon: '' },
-    { value: 'TAIL',        label: '尾部',    icon: '' },
-  ];
-  PARENT_PRODUCTION_STAGES.forEach(stage => {
-    if (stage.value === 'SECONDARY') {
-      // 无二次工艺：显示不可点击的提示项（不计入已扫逻辑）
-      if (patternDetail.hasSecondaryProcess === 0) {
-        options.push({ value: 'NO_SECONDARY', label: '无二次工艺', icon: '⊘', disabled: true });
-        return;
-      }
-    }
-    if (!scannedSet.has(stage.value)) {
-      options.push(stage);
-    }
-  });
-
-  // 兜底
-  if (options.length === 0) {
-    const fallbackType = determinePatternOperation(patternDetail, manualScanType);
-    options.push({
-      value: fallbackType,
-      label: getPatternSuccessMessage(fallbackType),
-      icon: '',
-    });
+  // ── 阶段四：已领取/生产中，等待完成确认 ──────────────────────────
+  // 样板生产走 4 步流程：领取 → 完成确认 → 样衣审核 → 样衣入库
+  // 不需要展示采购/裁剪/车缝等生产中间工序（那是普通生产订单的流程）
+  if (!scannedSet.has('COMPLETE')) {
+    options.push({ value: 'COMPLETE', label: '完成确认', icon: '' });
+    return options;
   }
+
+  // 兜底：COMPLETE 已扫但状态未更新前的临时保底
+  const fallbackType = determinePatternOperation(patternDetail, manualScanType);
+  options.push({
+    value: fallbackType,
+    label: getPatternSuccessMessage(fallbackType),
+    icon: '',
+  });
 
   return options;
 }
