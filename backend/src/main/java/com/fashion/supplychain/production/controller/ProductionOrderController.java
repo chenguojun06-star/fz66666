@@ -70,6 +70,9 @@ public class ProductionOrderController {
     @Autowired
     private StyleInfoService styleInfoService;
 
+    @Autowired
+    private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+
     /**
      * 导出生产订单列表为Excel
      */
@@ -117,7 +120,7 @@ public class ProductionOrderController {
                         // 返回分页格式以保持前端兼容
                         // 创建伪分页对象，包装单个订单为records数组
                         // 注入 coverImage/styleImage，修复小程序扫码确认页款式图不显示问题
-                        java.util.Map<String, Object> enriched = new com.fasterxml.jackson.databind.ObjectMapper()
+                        java.util.Map<String, Object> enriched = objectMapper
                                 .convertValue(detail, new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {});
                         if (StringUtils.hasText(detail.getStyleId())) {
                             StyleInfo si = styleInfoService.getById(detail.getStyleId());
@@ -191,7 +194,7 @@ public class ProductionOrderController {
         if (productionOrder != null && StringUtils.hasText(productionOrder.getStyleId())) {
             StyleInfo si = styleInfoService.getById(productionOrder.getStyleId());
             if (si != null && StringUtils.hasText(si.getCover())) {
-                java.util.Map<String, Object> enriched = new com.fasterxml.jackson.databind.ObjectMapper()
+                java.util.Map<String, Object> enriched = objectMapper
                         .convertValue(productionOrder, new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {});
                 enriched.put("coverImage", si.getCover());
                 enriched.put("styleImage", si.getCover());
