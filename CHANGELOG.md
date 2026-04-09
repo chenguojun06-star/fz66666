@@ -1,3 +1,13 @@
+# 2026-08-08
+
+## 🔴 BUG修复 — 补建 t_order_remark 表（云端 /api/system/order-remark/list 持续 500）
+
+- **问题**：云端所有含"订单备注"组件的页面，`POST /api/system/order-remark/list` 返回 HTTP 500，每页面触发 3 次，本地正常。
+- **根本原因**：早期 Flyway 脚本（更早批次）在 `PREPARE/EXECUTE` 字符串内含 `COMMENT ''` 语法，MySQL 将首个 `''` 视为字符串结束符，导致 `ALTER TABLE` 语句被截断，Flyway 静默失败。链中断后，`V202608021400`（`create_order_remark_table`）从未在云端执行，`t_order_remark` 表不存在。
+- **排查结论**：`UserContext` NPE（已 null 守卫）、`ALTER TABLE` 漂移（无此表的 ALTER）、Entity-DDL 不一致（10字段完全吻合）全部排除。`DbColumnRepairRunner` 经确认也不覆盖 `t_order_remark`，无其他兜底。
+- **修复**：新增 `V202608081200__create_order_remark_if_missing.sql`，使用 `CREATE TABLE IF NOT EXISTS`（表已存在则静默跳过），完整 10 列 + 2 个复合索引，无 COMMENT 语法，幂等安全。
+- **对系统的帮助**：云端部署后 Flyway 自动建表，订单备注读写 500 消失；`IF NOT EXISTS` 保证在任意环境安全幂等执行，不影响已正常建表的其他环境。
+
 # 2026-04-09
 
 ## 小程序扫码/任务页统一色码矩阵 + 小云通知直达修复
