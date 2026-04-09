@@ -600,7 +600,7 @@ public class ScanRecordOrchestrator {
         if (order == null && !hasText(orderId) && !hasText(orderNo) && hasText(scanCode)) {
             order = resolveOrder(null, scanCode);
         }
-        validateOrderBelonging(order, ctx);
+        // 质检不做工厂归属校验：租户任何工人都可质检任何订单
         final ProductionOrder finalOrder = order;
 
         return qualityScanExecutor.execute(
