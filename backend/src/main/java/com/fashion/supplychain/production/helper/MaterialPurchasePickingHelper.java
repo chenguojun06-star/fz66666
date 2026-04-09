@@ -327,7 +327,20 @@ public class MaterialPurchasePickingHelper {
         }
 
         // 1. 查询订单的所有采购任务（不限状态，让前端看到全貌）
+        // 显式指定字段，规避云端 t_material_purchase 新增列未迁移导致的 Unknown column 500
         List<MaterialPurchase> allPurchases = materialPurchaseService.lambdaQuery()
+            .select(
+                MaterialPurchase::getId,
+                MaterialPurchase::getMaterialCode,
+                MaterialPurchase::getMaterialName,
+                MaterialPurchase::getMaterialType,
+                MaterialPurchase::getColor,
+                MaterialPurchase::getSize,
+                MaterialPurchase::getPurchaseQuantity,
+                MaterialPurchase::getStatus,
+                MaterialPurchase::getUnit,
+                MaterialPurchase::getArrivedQuantity
+            )
             .eq(MaterialPurchase::getOrderNo, orderNo.trim())
             .eq(MaterialPurchase::getDeleteFlag, 0)
             .list();
@@ -388,7 +401,16 @@ public class MaterialPurchasePickingHelper {
         }
 
         // 2. 查询已有的出库单
+        // 显式指定字段，规避云端 t_material_picking 新增列未迁移导致的 Unknown column 500
         List<MaterialPicking> existingPickings = materialPickingService.lambdaQuery()
+            .select(
+                MaterialPicking::getId,
+                MaterialPicking::getPickingNo,
+                MaterialPicking::getStatus,
+                MaterialPicking::getPickerName,
+                MaterialPicking::getPickTime,
+                MaterialPicking::getRemark
+            )
             .eq(MaterialPicking::getOrderNo, orderNo.trim())
             .eq(MaterialPicking::getDeleteFlag, 0)
             .orderByDesc(MaterialPicking::getCreateTime)
