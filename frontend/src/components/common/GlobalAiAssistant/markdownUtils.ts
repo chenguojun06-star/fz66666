@@ -63,7 +63,8 @@ export function renderSimpleMarkdown(text: string): string {
 function inlineFmt(s: string): string {
   return escHtml(s)
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/`([^`]+)`/g, '<code style="background:#f0f0f0;padding:1px 4px;border-radius:3px;font-size:12px">$1</code>');
+    .replace(/`([^`]+)`/g, '<code style="background:#f0f0f0;padding:1px 4px;border-radius:3px;font-size:12px">$1</code>')
+    .replace(/\b(PO\d{8,15})\b/g, '<a class="order-link" data-orderno="$1" style="color:#00e5ff;cursor:pointer;text-decoration:underline">$1</a>');
 }
 
 function escHtml(s: string): string {

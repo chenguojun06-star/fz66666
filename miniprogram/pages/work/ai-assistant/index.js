@@ -24,6 +24,22 @@ const MANAGER_PROMPTS = [
 
 const MAX_MESSAGES = 30;
 
+function buildTextSegments(text) {
+  if (!text) return null;
+  const re = /\b(PO\d{8,15})\b/g;
+  if (!re.test(text)) return null;
+  re.lastIndex = 0;
+  const segs = [];
+  let last = 0, m;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) segs.push({ content: text.slice(last, m.index), isOrder: false, orderNo: '' });
+    segs.push({ content: m[0], isOrder: true, orderNo: m[0] });
+    last = re.lastIndex;
+  }
+  if (last < text.length) segs.push({ content: text.slice(last), isOrder: false, orderNo: '' });
+  return segs;
+}
+
 Page({
   data: {
     messages: [],
@@ -235,6 +251,11 @@ Page({
     this._send(text);
   },
 
+  onSegmentTap(e) {
+    const { type, orderno } = e.currentTarget.dataset;
+    if (type === 'order' && orderno) this._send('查询订单 ' + orderno);
+  },
+
   _appendMsg(msg) {
     const id = Date.now() + '_' + Math.random().toString(36).slice(2, 7);
     const entry = { ...msg, id };
@@ -252,6 +273,7 @@ Page({
       m.id === id ? {
         ...m,
         text: parsed.displayText,
+        textSegments: buildTextSegments(parsed.displayText),
         actionCards: parsed.actionCards,
         charts: parsed.charts,
         teamStatusCards: parsed.teamStatusCards,

@@ -40,47 +40,50 @@
   </view>
 
   <!-- 空状态 -->
-  <view class="empty-state" wx:elif="{{materialPurchases.length === 0}}">
-    <text class="empty-icon">📦</text>
-    <text class="empty-text">暂无采购物料</text>
-  </view>
+  <empty-state wx:elif="{{materialPurchases.length === 0}}" icon="📦" text="暂无采购物料" />
 
   <!-- 物料列表 -->
   <view class="material-list" wx:else>
     <view class="material-card {{item.isComplete ? 'card-done' : ''}}" wx:for="{{materialPurchases}}" wx:key="id">
-      <!-- 物料名称 -->
-      <view class="card-title">{{item.materialName || '未知物料'}}</view>
-      <view class="card-divider"></view>
-      <!-- SKU信息 -->
-      <view class="info-row" wx:if="{{item.size}}">
-        <text class="info-label">码数</text>
-        <text class="info-value">{{item.size}}</text>
+
+      <!-- 头部：物料名 + 状态徽章 -->
+      <view class="card-header-row">
+        <text class="card-title-text">{{item.materialName || '未知物料'}}</text>
+        <text class="status-badge badge-{{item.statusColor}}">{{item.statusText}}</text>
       </view>
-      <view class="info-row" wx:if="{{item.color}}">
-        <text class="info-label">颜色</text>
-        <text class="info-value">{{item.color}}</text>
+
+      <!-- SKU 标签行 -->
+      <view class="sku-tag-row" wx:if="{{item.size || item.color || item.specifications || item.specification}}">
+        <view class="sku-tag" wx:if="{{item.size}}">
+          <text class="sku-tag-label">码</text>
+          <text class="sku-tag-value">{{item.size}}</text>
+        </view>
+        <view class="sku-tag" wx:if="{{item.color}}">
+          <text class="sku-tag-label">色</text>
+          <text class="sku-tag-value">{{item.color}}</text>
+        </view>
+        <view class="sku-tag" wx:if="{{item.specifications || item.specification}}">
+          <text class="sku-tag-label">规</text>
+          <text class="sku-tag-value">{{item.specifications || item.specification}}</text>
+        </view>
       </view>
-      <view class="info-row" wx:if="{{item.specifications || item.specification}}">
-        <text class="info-label">规格</text>
-        <text class="info-value">{{item.specifications || item.specification}}</text>
-      </view>
-      <view class="card-divider"></view>
-      <!-- 数量信息 -->
-      <view class="info-row">
-        <text class="info-label">采购数量</text>
-        <text class="info-value">{{item.purchaseQuantity || 0}}</text>
-      </view>
-      <view class="info-row">
-        <text class="info-label">已到货</text>
-        <text class="info-value">{{item.arrivedQuantity || 0}}</text>
-      </view>
-      <view class="info-row">
-        <text class="info-label">到货率</text>
-        <text class="info-value">{{item.arrivalRate || 0}}%</text>
-      </view>
-      <view class="info-row">
-        <text class="info-label">状态</text>
-        <text class="info-value">{{item.statusText}}</text>
+
+      <!-- 数量横条 -->
+      <view class="qty-strip">
+        <view class="qty-item">
+          <text class="qty-value">{{item.purchaseQuantity || 0}}</text>
+          <text class="qty-label">采购数量</text>
+        </view>
+        <view class="qty-divider"></view>
+        <view class="qty-item">
+          <text class="qty-value">{{item.arrivedQuantity || 0}}</text>
+          <text class="qty-label">已到货</text>
+        </view>
+        <view class="qty-divider"></view>
+        <view class="qty-item">
+          <text class="qty-value {{item.isComplete ? 'qty-value-done' : ''}}">{{item.arrivalRate || 0}}%</text>
+          <text class="qty-label">到货率</text>
+        </view>
       </view>
 
       <!-- 到货输入 -->

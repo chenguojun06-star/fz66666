@@ -48,6 +48,11 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       {msg.role === 'ai' ? (
         <div
           className={styles.mdContent}
+          onClick={(e) => {
+            const el = (e.target as HTMLElement).closest?.('[data-orderno]') as HTMLElement | null;
+            const orderNo = el?.dataset?.orderno;
+            if (orderNo) onSafeNavigate(`/production?orderNo=${encodeURIComponent(orderNo)}`);
+          }}
           dangerouslySetInnerHTML={{
             __html: sanitizeHtml(renderSimpleMarkdown(
               msg.text.includes('【推荐追问】：') ? msg.text.split('【推荐追问】：')[0] : msg.text

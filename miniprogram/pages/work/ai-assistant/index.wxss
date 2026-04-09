@@ -229,6 +229,13 @@
   margin-bottom: 8px;
   line-height: 1.5;
 }
+.text-segments {
+  display: inline;
+}
+.order-link-seg {
+  color: #00bfff;
+  text-decoration: underline;
+}
 .action-card-btns {
   display: flex;
   flex-wrap: wrap;

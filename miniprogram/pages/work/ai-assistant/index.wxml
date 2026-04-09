@@ -33,7 +33,16 @@
         <block wx:else>
           <!-- 用户发送的图片 -->
           <image wx:if="{{item.imageUrl}}" src="{{item.imageUrl}}" class="bubble-image" mode="widthFix" bindtap="previewImage" data-src="{{item.imageUrl}}" />
-          <text wx:if="{{item.text}}" decode="{{true}}" space="nbsp" user-select>{{item.text}}</text>
+          <view class="text-segments" wx:if="{{item.textSegments}}">
+            <text
+              wx:for="{{item.textSegments}}" wx:for-item="seg" wx:key="index"
+              class="{{seg.isOrder ? 'order-link-seg' : ''}}"
+              bindtap="onSegmentTap"
+              data-type="{{seg.isOrder ? 'order' : 'text'}}"
+              data-orderno="{{seg.orderNo}}"
+            >{{seg.content}}</text>
+          </view>
+          <text wx:elif="{{item.text}}" decode="{{true}}" space="nbsp" user-select>{{item.text}}</text>
 
           <!-- 可执行命令卡片 -->
           <view wx:for="{{item.actionCards}}" wx:for-item="card" wx:for-index="ci" wx:key="ci" class="action-card {{card.actions[0].type === 'mark_urgent' ? 'card-danger' : card.actions[0].type === 'send_notification' ? 'card-warning' : 'card-normal'}}">
