@@ -15,6 +15,7 @@ Component({
   },
   data: {
     isOpen: false,
+    ballOut: false,
     inputValue: '',
     messages: [],
     isLoading: false,
@@ -182,10 +183,33 @@ Component({
       bellTaskActions.handleReminderTask(task);
     },
 
+    onBallTap() {
+      if (!this.data.ballOut) {
+        // 第一下：球滑出来
+        this.setData({ ballOut: true });
+        // 3秒无操作自动缩回
+        clearTimeout(this._peekTimer);
+        this._peekTimer = setTimeout(() => {
+          if (!this.data.isOpen) {
+            this.setData({ ballOut: false });
+          }
+        }, 3000);
+      } else {
+        // 已滑出 → 打开 chat
+        clearTimeout(this._peekTimer);
+        this.toggleChat();
+      }
+    },
     toggleChat() {
-      this.setData({ isOpen: !this.data.isOpen });
-      if (this.data.isOpen) {
+      const opening = !this.data.isOpen;
+      this.setData({ isOpen: opening });
+      if (opening) {
         this.scrollToBottom();
+      } else {
+        // chat 关闭 → 1.5s 后球自动缩回
+        setTimeout(() => {
+          this.setData({ ballOut: false });
+        }, 1500);
       }
     },
     autoAsk(e) {

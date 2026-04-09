@@ -1,5 +1,5 @@
 <view class="ai-assistant-container" hover-class="none" hover-stop-propagation="false" wx:if="{{visible}}">
-  <view class="ai-trigger-btn" catchtap="toggleChat" hover-class="ai-trigger-hover" hover-stay-time="50" wx:if="{{!isOpen}}">
+  <view class="ai-trigger-btn {{ballOut ? 'ai-trigger-btn-out' : ''}}" catchtap="onBallTap" hover-class="ai-trigger-hover" hover-stay-time="50" wx:if="{{!isOpen}}">
     <view class="mini-cloud-wrapper">
       <view class="mini-cloud-glow"></view>
       <view class="mini-cloud">
