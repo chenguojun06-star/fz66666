@@ -127,15 +127,15 @@
   margin-bottom: 20rpx;
 }
 .process-scroll {
-  white-space: nowrap;
   padding: 4rpx 0;
 }
 .process-chip {
-  display: inline-flex;
-  flex-direction: column;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
   align-items: center;
-  padding: 16rpx 28rpx;
-  margin-right: 16rpx;
+  padding: 20rpx 28rpx;
+  margin-bottom: 16rpx;
   border-radius: 16rpx;
   background: #f1f5f9;
   border: 2rpx solid transparent;
@@ -157,7 +157,8 @@
 .chip-price {
   font-size: 22rpx;
   color: var(--color-text-tertiary, #94a3b8);
-  margin-top: 4rpx;
+  margin-left: 12rpx;
+  flex-shrink: 0;
 }
 .process-chip.active .chip-price {
   color: rgba(var(--color-primary-rgb,37,99,235),0.7);

@@ -2,7 +2,7 @@
 
 .container {
   min-height: 100vh;
-  background: radial-gradient(ellipse at 20% 0%, rgba(99,102,241,0.06) 0%, transparent 60%),
+  background: radial-gradient(ellipse at 20% 0%, rgba(var(--color-primary-rgb,37,99,235),0.06) 0%, transparent 60%),
               var(--page-bg, #f5f5f5);
   padding: 24rpx 24rpx calc(env(safe-area-inset-bottom) + 160rpx);
 }
@@ -33,7 +33,7 @@
 .sub-info { font-size: 24rpx; color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tag-process {
   display: inline-block; align-self: flex-start;
-  background: rgba(99,102,241,0.08); color: var(--primary-color, #6366f1);
+  background: rgba(var(--color-primary-rgb,37,99,235),0.08); color: var(--primary-color, #2563eb);
   font-size: 22rpx; padding: 4rpx 14rpx; border-radius: 8rpx; margin-top: 4rpx;
 }
 
@@ -41,7 +41,7 @@
 .insight-card {
   display: flex; align-items: flex-start; gap: 12rpx;
   border-radius: 16rpx; padding: 20rpx 24rpx; margin-bottom: 20rpx;
-  background: rgba(99,102,241,0.06); color: var(--primary-color, #6366f1);
+  background: rgba(var(--color-primary-rgb,37,99,235),0.06); color: var(--primary-color, #2563eb);
   font-size: 24rpx; line-height: 1.6;
 }
 .insight-icon { flex-shrink: 0; font-size: 30rpx; }
@@ -50,9 +50,9 @@
 .insight-action {
   align-self: flex-start; margin-top: 8rpx;
   font-size: 24rpx; font-weight: 600;
-  color: var(--primary-color, #6366f1);
+  color: var(--primary-color, #2563eb);
   padding: 6rpx 20rpx; border-radius: 8rpx;
-  background: rgba(99,102,241,0.1);
+  background: rgba(var(--color-primary-rgb,37,99,235),0.1);
 }
 
 /* ---- section ---- */
@@ -145,6 +145,6 @@
   font-size: 30rpx; font-weight: 600;
 }
 .btn-cancel { background: #f3f4f6; color: #666; }
-.btn-submit { background: var(--primary-color, #6366f1); color: #fff; }
+.btn-submit { background: var(--primary-color, #2563eb); color: #fff; }
 .btn-submit.off { opacity: 0.5; }
 .btn-hover { opacity: 0.8; }

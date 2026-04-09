@@ -54,9 +54,11 @@ Page({
 
     // 复用 PatternHandler.showPatternConfirmModal 的构建逻辑
     const patternDetail = data.patternDetail || {};
-    const operationOptions = Array.isArray(data.operationOptions) ? data.operationOptions : [];
-    const defaultOption = operationOptions.find(item => item.value === data.operationType)
-      || operationOptions[0] || null;
+    const rawOptions = Array.isArray(data.operationOptions) ? data.operationOptions : [];
+    // 样衣页面只保留「领取」操作，简化工作流
+    const receiveOnly = rawOptions.filter(o => o.value === 'RECEIVE');
+    const operationOptions = receiveOnly.length > 0 ? receiveOnly : rawOptions.slice(0, 1);
+    const defaultOption = operationOptions[0] || null;
     const operationType = defaultOption ? defaultOption.value : (data.operationType || '');
     const operationLabel = defaultOption
       ? defaultOption.label

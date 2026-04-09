@@ -79,9 +79,9 @@ Page({
       warehouseCode: raw.warehouseCode || ''
     });
 
-    // Async image insight
-    var styleNo = raw.styleNo || (raw.orderDetail && raw.orderDetail.styleNo);
-    this._fetchImageInsight(styleNo);
+    // Async image insight (disabled — API endpoint not available)
+    // var styleNo = raw.styleNo || (raw.orderDetail && raw.orderDetail.styleNo);
+    // this._fetchImageInsight(styleNo);
   },
 
   onUnload() {
@@ -125,16 +125,8 @@ Page({
     return { count: count, amount: Math.round(amount * 100) / 100 };
   },
 
-  async _fetchImageInsight(styleNo) {
-    if (!styleNo) return;
-    try {
-      var res = await api.style.listStyles({ styleNo: styleNo, page: 1, pageSize: 1 });
-      var records = (res && res.records) || (Array.isArray(res) ? res : []);
-      if (records.length > 0 && records[0].imageInsight) {
-        this.setData({ imageInsight: records[0].imageInsight });
-      }
-    } catch (e) { /* ignore */ }
-  },
+  // _fetchImageInsight disabled — style-info/list endpoint returns 404
+  // async _fetchImageInsight(styleNo) { ... },
 
   previewImage() {
     var img = this.data.detail.coverImage;

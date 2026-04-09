@@ -36,7 +36,7 @@
   <!-- 工序选择 -->
   <view class="section-card">
     <text class="section-title">选择工序（可多选）</text>
-    <scroll-view class="process-scroll" scroll-x="{{true}}" enable-flex="{{true}}">
+    <scroll-view class="process-scroll" scroll-y style="max-height:600rpx">
       <view wx:for="{{processOptions}}" wx:key="value"
             class="process-chip {{item.checked ? 'active' : ''}}"
             data-value="{{item.value}}"
