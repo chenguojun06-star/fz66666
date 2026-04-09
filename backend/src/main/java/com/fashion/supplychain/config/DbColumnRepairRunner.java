@@ -559,6 +559,25 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                             + "KEY `idx_tenant_status` (`tenant_id`, `feedback_status`, `create_time`)"
                             + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='动作中心任务回执表'");
 
+            // t_order_remark 订单/款式备注表（Flyway 链断裂时兜底建表）
+            repairedTables += ensureTable(conn, schema,
+                    "t_order_remark",
+                    "CREATE TABLE IF NOT EXISTS `t_order_remark` ("
+                            + "`id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',"
+                            + "`target_type` VARCHAR(20) NOT NULL COMMENT 'order=大货订单 style=样衣开发',"
+                            + "`target_no` VARCHAR(100) NOT NULL COMMENT '订单号或款号',"
+                            + "`author_id` VARCHAR(64) DEFAULT NULL COMMENT '填写人ID',"
+                            + "`author_name` VARCHAR(100) DEFAULT NULL COMMENT '填写人姓名',"
+                            + "`author_role` VARCHAR(100) DEFAULT NULL COMMENT '填写人角色/工序节点',"
+                            + "`content` TEXT NOT NULL COMMENT '备注内容',"
+                            + "`tenant_id` BIGINT NOT NULL COMMENT '租户ID',"
+                            + "`create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',"
+                            + "`delete_flag` INT NOT NULL DEFAULT 0 COMMENT '删除标记',"
+                            + "PRIMARY KEY (`id`),"
+                            + "KEY `idx_remark_target` (`tenant_id`,`target_type`,`target_no`),"
+                            + "KEY `idx_remark_time` (`tenant_id`,`create_time`)"
+                            + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='订单/款式备注'");
+
             // t_style_attachment.style_no — 云端手动添加时设为NOT NULL无DEFAULT，确保为可空
             // Flyway V202608011500 handles both EXISTS->MODIFY and NOT EXISTS->ADD cases
             repaired += ensureColumn(conn, schema, "t_style_attachment", "style_no",
