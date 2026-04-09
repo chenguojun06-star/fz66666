@@ -69,13 +69,54 @@
 
           <!-- 团队状态卡片 -->
           <view wx:for="{{item.teamStatusCards}}" wx:for-item="ts" wx:for-index="ti" wx:key="ti" class="team-card">
-            <view class="team-card-hd">👥 {{ts.title || '团队状态'}}</view>
+            <view class="team-card-hd-row">
+              <view class="team-card-hd">👥 {{ts.title || '团队状态'}}</view>
+              <view wx:if="{{ts.routePath}}" class="team-card-nav-btn"
+                bindtap="onTeamCardNavigate" data-path="{{ts.routePath}}">去处理页 →</view>
+            </view>
             <view wx:if="{{ts.summary}}" class="team-card-desc">{{ts.summary}}</view>
+            <view wx:if="{{ts.stats}}" class="team-card-stats">
+              <text wx:if="{{ts.stats.noticeCount}}">通知 {{ts.stats.noticeCount}} · </text>
+              <text wx:if="{{ts.stats.overdue}}" class="tag-overdue">已超期 · </text>
+              <text wx:if="{{ts.stats.dueAt}}">截止 {{ts.stats.dueAt}} · </text>
+              <text wx:if="{{ts.stats.nextStep}}">{{ts.stats.nextStep}}</text>
+            </view>
+            <view wx:for="{{ts.recipients}}" wx:for-item="r" wx:key="index" class="team-card-recipient-row">
+              <text class="r-name">{{r.displayName || r.roleName}}</text>
+              <text class="r-stage">{{r.processingStage}}</text>
+              <text class="r-status">{{r.dispatchStatus}}</text>
+            </view>
+            <view wx:if="{{ts.history.length}}" class="team-card-hist-label">处理记录</view>
+            <view wx:for="{{ts.history}}" wx:for-item="h" wx:key="index" class="team-card-hist-row">
+              <text class="h-time">{{h.createdAt}}</text>
+              <text class="h-actor">{{h.actor}}</text>
+              <text class="h-remark">{{h.stage}} {{h.remark}}</text>
+            </view>
           </view>
 
           <!-- 菲号拆分卡片 -->
           <view wx:for="{{item.bundleSplitCards}}" wx:for-item="bs" wx:for-index="bi" wx:key="bi" class="bundle-card">
             <view class="bundle-card-hd">✂️ {{bs.title || '菲号拆分'}}</view>
+            <view class="bundle-card-meta">
+              <text>{{bs.rootBundleLabel}}</text>
+              <text wx:if="{{bs.orderNo}}"> · {{bs.orderNo}}</text>
+              <text wx:if="{{bs.currentProcessName}}"> · {{bs.currentProcessName}}</text>
+              <text wx:if="{{bs.stats.activeChildren}}"> · {{bs.stats.activeChildren}}个子菲号</text>
+            </view>
+            <view wx:for="{{bs.bundles}}" wx:for-item="b" wx:key="index" class="bundle-row">
+              <view class="bundle-row-info">
+                <text class="b-label">{{b.bundleLabel}}</text>
+                <text class="b-no">{{b.bundleNo}}</text>
+                <text class="b-qty">×{{b.quantity}}</text>
+                <text class="b-status">{{b.splitStatus}}</text>
+                <text wx:if="{{b.operatorName}}" class="b-op">{{b.operatorName}}</text>
+              </view>
+              <image wx:if="{{b.qrUrl}}" src="{{b.qrUrl}}" class="bundle-qr" mode="aspectFit"/>
+            </view>
+            <view wx:if="{{bs.rootBundleLabel}}" class="bundle-card-btn"
+              bindtap="onCardAction" data-type="view_cutting" data-cardtitle="打印子菲号">
+              打印子菲号
+            </view>
           </view>
         </block>
       </view>

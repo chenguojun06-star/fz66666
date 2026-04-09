@@ -244,11 +244,17 @@ Page({
       remove_urgent: '取消订单紧急标记',
       send_notification: '通知相关人员跟进订单',
       urge_order: '催促工厂跟进订单',
+      view_cutting: '打印子菲号',
     };
     const label = cmdMap[type] || ('执行操作：' + (cardtitle || type));
     const text = orderid ? (label + ' ' + orderid) : label;
     this.setData({ inputText: '' });
     this._send(text);
+  },
+
+  onTeamCardNavigate(e) {
+    const { path } = e.currentTarget.dataset;
+    if (path) wx.navigateTo({ url: path, fail: () => wx.showToast({ title: '页面不存在', icon: 'none' }) });
   },
 
   onSegmentTap(e) {

@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -446,7 +447,11 @@ public class ProductionOrderScanRecordDomainService {
             sr.setTenantId(tenantId);
             sr.setCreateTime(now);
             sr.setUpdateTime(now);
-            scanRecordMapper.insert(sr);
+            try {
+                scanRecordMapper.insert(sr);
+            } catch (DuplicateKeyException dke) {
+                log.info("[upsertStageScanRecord] 记录已存在，幂等跳过: requestId={}", requestId);
+            }
             return;
         }
 
