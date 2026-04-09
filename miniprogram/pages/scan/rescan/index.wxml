@@ -2,7 +2,7 @@
   <!-- 信息卡片 -->
   <view class="info-card">
     <view class="card-header">
-      <image-preview class="cover-wrap" src="{{detail.coverImage}}" mode="aspectFill" />
+      <image-preview class="cover-wrap" src="{{detail.coverImage || ''}}" mode="aspectFill" />
       <view class="header-info">
         <text class="style-no">{{detail.styleNo || detail.orderNo}}</text>
         <text class="style-name">{{detail.styleName || '扫码记录'}}</text>

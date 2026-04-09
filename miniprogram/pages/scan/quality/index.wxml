@@ -3,7 +3,7 @@
   <!-- 订单信息 -->
   <view class="info-card">
     <view class="card-header">
-      <image-preview class="cover-wrap" src="{{coverImage}}" mode="aspectFill" />
+      <image-preview class="cover-wrap" src="{{coverImage || ''}}" mode="aspectFill" />
       <view class="header-info">
         <text class="style-no">{{detail.styleNo || detail.orderNo}}</text>
         <text class="sub-info">订单 {{detail.orderNo}}</text>

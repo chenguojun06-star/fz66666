@@ -8,7 +8,7 @@
 
     <!-- 头部：封面图 + 款号/品名 -->
     <view class="card-header">
-      <image-preview class="cover-wrap" src="{{detail.coverImage}}" mode="aspectFill" />
+      <image-preview class="cover-wrap" src="{{detail.coverImage || ''}}" mode="aspectFill" />
       <view class="header-info">
         <text class="style-no">{{(detail.styleNo || '-') + (detail.styleName ? ' · ' + detail.styleName : '')}}</text>
       </view>
