@@ -89,10 +89,11 @@ Page({
       return;
     }
 
-    // 有订单号则跳转到工作台并高亮订单
+    // 有订单号则切换到工作台 Tab 并滚动高亮该订单
     if (notice.orderNo) {
-      wx.setStorageSync('pending_order_hint', notice.orderNo);
-      wx.navigateBack({ delta: 1 });
+      wx.setStorageSync('scroll_to_order_no', notice.orderNo);
+      wx.setStorageSync('highlight_order_no', notice.orderNo);
+      wx.switchTab({ url: '/pages/work/index' });
     }
   },
 

@@ -17,18 +17,19 @@
     </view>
   </view>
 
-  <!-- 拍照区域 -->
-  <view wx:if="{{activeTask}}" class="photo-area" bind:tap="{{tempPath ? 'previewImage' : 'takePhoto'}}">
-    <image wx:if="{{tempPath}}" class="preview-img" src="{{tempPath}}" mode="aspectFit" />
-    <view wx:else class="photo-placeholder">
+  <!-- 拍照区域：无图片时点击拍照 -->
+  <view wx:if="{{activeTask && !tempPath}}" class="photo-area" bind:tap="takePhoto">
+    <view class="photo-placeholder">
       <view class="line-icon icon-camera--gray camera-icon"></view>
       <text class="photo-hint">点击拍照或选择图片</text>
     </view>
-    <!-- 上传中遮罩 -->
     <view wx:if="{{uploading}}" class="overlay">
       <text class="overlay-text">上传中…</text>
     </view>
-    <!-- 分析中遮罩 -->
+  </view>
+  <!-- 拍照区域：有图片时点击预览 -->
+  <view wx:if="{{activeTask && tempPath}}" class="photo-area" bind:tap="previewImage">
+    <image class="preview-img" src="{{tempPath}}" mode="aspectFit" />
     <view wx:if="{{analyzing}}" class="overlay">
       <text class="overlay-text">AI 分析中…</text>
     </view>
