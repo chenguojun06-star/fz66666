@@ -174,11 +174,3 @@
 .btn-primary:active {
   opacity: 0.85;
 }
-
-/* 码数颜色网格（与 work 页一致） */
-.size-compact { padding: 4px 0; }
-.size-compact-header { display: flex; align-items: center; padding: 1px 0; border-bottom: 1px dashed var(--color-border-light, #e5e7eb); }
-.size-compact-row { display: flex; align-items: center; padding: 1px 0; }
-.size-compact-label { font-size: 10px; color: var(--color-text-secondary, #6b7280); min-width: 36px; font-weight: 500; }
-.size-compact-cell { font-size: 10px; color: var(--color-text-primary, #1f2937); min-width: 24px; text-align: center; }
-.size-compact-qty { color: var(--color-primary, #2563eb) !important; font-weight: 600 !important; }

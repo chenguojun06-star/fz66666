@@ -122,14 +122,6 @@
     "pages/admin/index": { "network": "all", "packages": ["pkg-admin-notification", "pkg-admin-approval", "pkg-payroll", "pkg-privacy", "pkg-admin-changepwd", "pkg-admin-feedback", "pkg-admin-invite"] }
   },
   "usingComponents": {},
-  "permission": {
-    "scope.camera": {
-      "desc": "用于拍照上传质检照片和识别文档"
-    },
-    "scope.writePhotosAlbum": {
-      "desc": "用于保存图片到相册"
-    }
-  },
   "tabBar": {
     "custom": false,
     "color": "#999999",

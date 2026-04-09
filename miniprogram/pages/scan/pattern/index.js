@@ -55,8 +55,9 @@ Page({
     // 复用 PatternHandler.showPatternConfirmModal 的构建逻辑
     const patternDetail = data.patternDetail || {};
     const rawOptions = Array.isArray(data.operationOptions) ? data.operationOptions : [];
-    // 透传后端返回的全部可用操作（后端根据当前状态动态计算），支持完整工作流：领取→完成→审核→入库
-    const operationOptions = rawOptions.length > 0 ? rawOptions : [];
+    // 样衣页面只保留「领取」操作，简化工作流
+    const receiveOnly = rawOptions.filter(o => o.value === 'RECEIVE');
+    const operationOptions = receiveOnly.length > 0 ? receiveOnly : rawOptions.slice(0, 1);
     const defaultOption = operationOptions[0] || null;
     const operationType = defaultOption ? defaultOption.value : (data.operationType || '');
     const operationLabel = defaultOption

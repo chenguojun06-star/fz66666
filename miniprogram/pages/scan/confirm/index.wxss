@@ -21,8 +21,8 @@
   gap: 24rpx;
 }
 .cover-wrap {
-  width: 180rpx; height: 180rpx;
-  border-radius: 20rpx; overflow: hidden;
+  width: 140rpx; height: 140rpx;
+  border-radius: 14rpx; overflow: hidden;
   flex-shrink: 0;
   background: #f0f0f0;
 }
@@ -33,13 +33,13 @@
   background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
 }
 .placeholder-icon { font-size: 48rpx; }
-.header-info { display: flex; flex-direction: column; gap: 12rpx; flex: 1; min-width: 0; }
-.style-no { font-size: 36rpx; font-weight: 700; color: #1a1a2e; }
-.sub-info { font-size: 28rpx; color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.header-info { display: flex; flex-direction: column; gap: 8rpx; flex: 1; min-width: 0; }
+.style-no { font-size: 32rpx; font-weight: 600; color: #1a1a2e; }
+.sub-info { font-size: 24rpx; color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tag-process {
   display: inline-block; align-self: flex-start;
   background: rgba(99,102,241,0.08); color: var(--primary-color, #6366f1);
-  font-size: 26rpx; padding: 6rpx 16rpx; border-radius: 10rpx; margin-top: 4rpx;
+  font-size: 22rpx; padding: 4rpx 14rpx; border-radius: 8rpx; margin-top: 4rpx;
 }
 
 /* ---- insight / warn ---- */
@@ -180,16 +180,3 @@
 .remark-text { font-size: 22rpx; color: #888; }
 .arrived-text { color: #22c55e; }
 .pending-text { color: #f59e0b; }
-
-/* ---- 码数颜色网格 ---- */
-.size-compact { margin-top: 10rpx; overflow-x: auto; }
-.size-compact-header,
-.size-compact-row { display: flex; align-items: center; height: 56rpx; }
-.size-compact-header { background: #f5f6f8; border-radius: 8rpx; margin-bottom: 4rpx; }
-.size-compact-row { border-bottom: 1rpx solid #f0f0f0; }
-.size-compact-label { width: 80rpx; min-width: 80rpx; padding-left: 10rpx; font-size: 24rpx; }
-.size-compact-header .size-compact-label { color: #999; font-weight: 400; }
-.size-compact-row .size-compact-label { color: #333; font-weight: 600; }
-.size-compact-cell { flex: 1; min-width: 60rpx; text-align: center; font-size: 26rpx; }
-.size-compact-header .size-compact-cell { color: #555; font-weight: 600; }
-.size-compact-row .size-compact-cell { color: #1a1a2e; font-weight: 700; }

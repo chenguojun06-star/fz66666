@@ -1,6 +1,6 @@
 const api = require('../../../utils/api');
 const { isAdminOrSupervisor } = require('../../../utils/permission');
-const { parseChatReply, hasRichContent } = require('./chat-parser');
+const { parseChatReply } = require('./chat-parser');
 const { toast } = require('../../../utils/uiHelper');
 
 // 工厂工人快捷提问
@@ -101,31 +101,6 @@ Page({
   /** 移除待发送图片 */
   removePendingImage() {
     this.setData({ pendingImage: '' });
-  },
-
-  /** 文档识别（拍照/选图 → OCR） */
-  chooseDocument() {
-    if (this.data.sending || this.data.uploading) return;
-    wx.chooseMedia({
-      count: 1,
-      mediaType: ['image'],
-      sourceType: ['camera', 'album'],
-      success: (res) => {
-        const path = (res.tempFiles && res.tempFiles[0] && res.tempFiles[0].tempFilePath) || '';
-        if (path) {
-          this.setData({
-            pendingImage: path,
-            inputText: '请识别这张图片中的文字内容，并整理成结构化信息'
-          });
-        }
-      },
-      fail: (err) => {
-        console.warn('[AI-OCR] chooseDocument fail:', err);
-        if (err && err.errMsg && err.errMsg.indexOf('cancel') === -1) {
-          wx.showToast({ title: '无法打开相机，请检查权限', icon: 'none' });
-        }
-      },
-    });
   },
 
   /** 预览图片 */
@@ -260,18 +235,6 @@ Page({
     this._send(text);
   },
 
-  onEntityTap(e) {
-    const code = e.currentTarget.dataset.code;
-    if (!code) return;
-    // 订单号跳转到订单详情
-    if (/^PO\d+/.test(code)) {
-      wx.navigateTo({ url: '/pages/work/order-detail/index?orderNo=' + code });
-    } else {
-      // 其它实体码复制到剪贴板
-      wx.setClipboardData({ data: code });
-    }
-  },
-
   _appendMsg(msg) {
     const id = Date.now() + '_' + Math.random().toString(36).slice(2, 7);
     const entry = { ...msg, id };
@@ -293,9 +256,6 @@ Page({
         charts: parsed.charts,
         teamStatusCards: parsed.teamStatusCards,
         bundleSplitCards: parsed.bundleSplitCards,
-        sources: parsed.sources,
-        confidence: parsed.confidence,
-        entityLinks: parsed.entityLinks,
         loading: false,
       } : m
     );

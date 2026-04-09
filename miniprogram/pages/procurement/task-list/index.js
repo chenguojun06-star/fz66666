@@ -57,32 +57,6 @@ Page({
         grouped[orderNo].items.push(item);
       });
 
-      // --- 构建 colorGroups / allSizes（与 work 页保持一致的码数颜色网格）---
-      const SIZE_ORDER = ['XXS','XS','S','M','L','XL','2XL','XXL','3XL','XXXL','4XL','5XL'];
-      Object.values(grouped).forEach(group => {
-        const sizeSet = new Set();
-        const colorMap = {};
-        group.items.forEach(it => {
-          const sz = (it.size || '').trim();
-          const cl = (it.color || '').trim();
-          const qty = Number(it.purchaseQuantity) || 0;
-          if (sz) sizeSet.add(sz);
-          if (!cl) return;
-          if (!colorMap[cl]) colorMap[cl] = {};
-          colorMap[cl][sz] = (colorMap[cl][sz] || 0) + qty;
-        });
-        const allSizes = Array.from(sizeSet).sort((a, b) => {
-          const ia = SIZE_ORDER.indexOf(a), ib = SIZE_ORDER.indexOf(b);
-          return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib);
-        });
-        const colorGroups = Object.keys(colorMap).map(color => ({
-          color,
-          sizeQtyList: allSizes.map(sz => colorMap[color][sz] || 0)
-        }));
-        group.allSizes = allSizes;
-        group.colorGroups = colorGroups;
-      });
-
       const tasks = Object.values(grouped).map(group => {
         // Determine group status based on items
         const statuses = group.items.map(i => this._normalizeStatus(i.status));

@@ -39,7 +39,7 @@ Page({
       wx.setNavigationBarTitle({ title: '面辅料采购确认' });
     }
 
-    var skuItems = raw.skuItems || orderDetail.orderItems || orderDetail.items || [];
+    var skuItems = raw.skuItems || orderDetail.orderItems || [];
 
     // Build SKU list via processor
     var normalized = SKUProcessor.normalizeOrderItems(skuItems, raw.orderNo, raw.styleNo || orderDetail.styleNo);
@@ -60,8 +60,6 @@ Page({
         materialSummary.totalPending += Number(item.pendingQuantity) || 0;
       });
     }
-
-
 
     this.setData({
       isProcurement: isProcurement,

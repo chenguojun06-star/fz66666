@@ -19,9 +19,9 @@
   align-items: flex-start;
 }
 .cover-wrap {
-  width: 180rpx;
-  height: 180rpx;
-  border-radius: 20rpx;
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 16rpx;
   overflow: hidden;
   flex-shrink: 0;
   background: #f1f5f9;
@@ -46,15 +46,15 @@
   margin-left: 24rpx;
   display: flex;
   flex-direction: column;
-  gap: 12rpx;
+  gap: 8rpx;
 }
 .style-no {
-  font-size: 36rpx;
+  font-size: 32rpx;
   font-weight: 700;
   color: var(--color-text-primary, #1e293b);
 }
 .style-name {
-  font-size: 28rpx;
+  font-size: 24rpx;
   color: var(--color-text-secondary, #64748b);
 }
 

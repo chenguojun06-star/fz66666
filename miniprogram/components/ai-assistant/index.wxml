@@ -1,5 +1,5 @@
 <view class="ai-assistant-container" hover-class="none" hover-stop-propagation="false" wx:if="{{visible}}">
-  <view class="ai-trigger-btn {{ballOut ? 'ai-trigger-btn-out' : ''}}" catchtap="onBallTap" hover-class="ai-trigger-hover" hover-stay-time="50" wx:if="{{!isOpen}}">
+  <view class="ai-trigger-btn" catchtap="toggleChat" hover-class="ai-trigger-hover" hover-stay-time="50" wx:if="{{!isOpen}}">
     <view class="mini-cloud-wrapper">
       <view class="mini-cloud-glow"></view>
       <view class="mini-cloud">
@@ -78,7 +78,7 @@
           </view>
         </view>
       </block>
-      <view class="loading-indicator" wx:if="{{isLoading}}">{{loadingText || '小云查一下... 🔍'}}</view>
+      <view class="loading-indicator" wx:if="{{isLoading}}">小云正在思考...</view>
     </scroll-view>
     <view class="pending-image-wrap" wx:if="{{pendingImage}}">
       <image class="pending-image-preview" src="{{pendingImage}}" mode="aspectFill" catchtap="previewImage" data-src="{{pendingImage}}" />

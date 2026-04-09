@@ -13,17 +13,6 @@
         <text class="sub-info">订单 {{detail.orderNo}}</text>
       </view>
     </view>
-    <!-- 下单码数颜色网格 -->
-    <view wx:if="{{sizeMatrix.rows.length > 0}}" class="size-compact">
-      <view class="size-compact-header">
-        <view class="size-compact-label">码数</view>
-        <view wx:for="{{sizeMatrix.sizes}}" wx:key="*this" class="size-compact-cell">{{item}}</view>
-      </view>
-      <view wx:for="{{sizeMatrix.rows}}" wx:key="color" class="size-compact-row">
-        <view class="size-compact-label">{{item.color}}</view>
-        <view wx:for="{{item.cells}}" wx:for-item="cell" wx:key="size" class="size-compact-cell">{{cell.quantity || '-'}}</view>
-      </view>
-    </view>
   </view>
 
   <!-- ===== 非采购模式头部 ===== -->
@@ -38,17 +27,6 @@
         <text class="sub-info">订单 {{detail.orderNo}}</text>
         <text wx:if="{{detail.bundleNo}}" class="sub-info">菲号 {{detail.bundleNo}}</text>
         <text wx:if="{{detail.processName}}" class="sub-info tag-process">{{detail.processName}}</text>
-      </view>
-    </view>
-    <!-- 下单码数颜色网格（非采购模式） -->
-    <view wx:if="{{sizeMatrix.rows.length > 0}}" class="size-compact">
-      <view class="size-compact-header">
-        <view class="size-compact-label">码数</view>
-        <view wx:for="{{sizeMatrix.sizes}}" wx:key="*this" class="size-compact-cell">{{item}}</view>
-      </view>
-      <view wx:for="{{sizeMatrix.rows}}" wx:key="color" class="size-compact-row">
-        <view class="size-compact-label">{{item.color}}</view>
-        <view wx:for="{{item.cells}}" wx:for-item="cell" wx:key="size" class="size-compact-cell">{{cell.quantity || '-'}}</view>
       </view>
     </view>
   </view>
@@ -165,6 +143,23 @@
       <text class="summary-label">预估工价</text>
       <text class="summary-value amount">¥{{summary.totalAmount}}</text>
     </view>
+  </view>
+
+  <!-- 颜色尺码矩阵 -->
+  <view wx:if="{{sizeMatrix.rows.length > 0}}" class="section-card">
+    <text class="section-title">颜色尺码汇总</text>
+    <scroll-view scroll-x class="matrix-scroll">
+      <view class="matrix-table">
+        <view class="matrix-row matrix-header">
+          <text class="matrix-cell cell-color">颜色</text>
+          <text wx:for="{{sizeMatrix.sizes}}" wx:key="*this" class="matrix-cell">{{item}}</text>
+        </view>
+        <view wx:for="{{sizeMatrix.rows}}" wx:key="color" class="matrix-row">
+          <text class="matrix-cell cell-color">{{item.color}}</text>
+          <text wx:for="{{item.cells}}" wx:for-item="c" wx:key="size" class="matrix-cell">{{c.quantity}}</text>
+        </view>
+      </view>
+    </scroll-view>
   </view>
 
   <!-- 底部操作栏 -->

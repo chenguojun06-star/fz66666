@@ -74,21 +74,19 @@
       </picker>
     </view>
 
-  </view>
-
-  <!-- 质检拍照（始终可见） -->
-  <view class="section-card">
-    <text class="section-title">拍照记录（最多5张）</text>
-    <text style="font-size:12px;color:#999;margin:4px 0 8px;display:block;">可拍照记录质检现场，合格与不合格均可上传</text>
-    <view class="photo-grid">
-      <view wx:for="{{images}}" wx:key="*this" class="photo-item">
-        <image class="photo-img" src="{{item}}" mode="aspectFill"
-               data-url="{{item}}" bindtap="onPreviewUpload" />
-        <view class="photo-del" data-index="{{index}}" catchtap="onDeleteImage">×</view>
-      </view>
-      <view wx:if="{{images.length < 5}}" class="photo-add" bindtap="onUploadImage">
-        <text class="add-icon">📷</text>
-        <text class="add-text">拍照/选图</text>
+    <!-- 图片上传 -->
+    <view class="form-row-col">
+      <text class="form-label">不良品照片（最多5张）</text>
+      <view class="photo-grid">
+        <view wx:for="{{images}}" wx:key="*this" class="photo-item">
+          <image class="photo-img" src="{{item}}" mode="aspectFill"
+                 data-url="{{item}}" bindtap="onPreviewUpload" />
+          <view class="photo-del" data-index="{{index}}" catchtap="onDeleteImage">×</view>
+        </view>
+        <view wx:if="{{images.length < 5}}" class="photo-add" bindtap="onUploadImage">
+          <text class="add-icon">📷</text>
+          <text class="add-text">拍照/选图</text>
+        </view>
       </view>
     </view>
   </view>

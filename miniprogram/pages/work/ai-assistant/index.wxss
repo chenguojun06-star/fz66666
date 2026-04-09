@@ -160,7 +160,6 @@
   border-top: 1px solid var(--color-border-light);
   box-sizing: border-box;
   padding-bottom: calc(8px + env(safe-area-inset-bottom));
-  z-index: 100;
 }
 .msg-input {
   flex: 1;
@@ -185,23 +184,15 @@
 
 /* 拍照按钮 */
 .photo-btn {
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 20px;
   flex-shrink: 0;
   border-radius: 50%;
-  background: #e8f4fd;
-  border: 1rpx solid #b8d4e8;
-}
-.photo-btn-icon {
-  font-size: 22px;
-  line-height: 1;
-}
-.ocr-btn {
-  background: #fef7e0;
-  border-color: #e8d5a0;
+  background: var(--color-bg-light);
 }
 .photo-btn-hover {
   opacity: 0.6;
@@ -272,79 +263,4 @@
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   line-height: 1.5;
-}
-
-/* === 实体链接 === */
-.entity-links {
-  margin-top: 8rpx;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8rpx;
-}
-.entity-link {
-  display: inline-block;
-  font-size: var(--font-size-xs);
-  color: var(--color-primary);
-  background: rgba(91, 106, 240, 0.08);
-  padding: 4rpx 14rpx;
-  border-radius: var(--radius-sm);
-  text-decoration: underline;
-}
-
-/* === 引用来源 === */
-.source-block {
-  margin-top: 10rpx;
-  padding: 8rpx 0;
-}
-.source-hd {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  margin-bottom: 6rpx;
-  font-weight: var(--font-weight-medium);
-}
-.source-item {
-  display: inline-flex;
-  align-items: center;
-  margin-right: 10rpx;
-  margin-bottom: 6rpx;
-}
-.source-tag {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32rpx;
-  height: 32rpx;
-  border-radius: 50%;
-  background: var(--color-primary);
-  color: #fff;
-  font-size: 20rpx;
-  margin-right: 6rpx;
-  flex-shrink: 0;
-}
-.source-name {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-primary);
-}
-
-/* === 置信度指示器 === */
-.confidence-bar {
-  margin-top: 10rpx;
-  padding: 6rpx 0;
-}
-.confidence-label {
-  font-size: 22rpx;
-  color: var(--color-text-secondary);
-  margin-bottom: 6rpx;
-}
-.confidence-track {
-  height: 10rpx;
-  background: rgba(0, 0, 0, 0.06);
-  border-radius: 5rpx;
-  overflow: hidden;
-}
-.confidence-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-light, #8B96F8));
-  border-radius: 5rpx;
-  transition: width 0.4s ease;
 }
