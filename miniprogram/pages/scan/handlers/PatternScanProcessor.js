@@ -306,12 +306,27 @@ async function submitPatternScan(handler, data) {
           return handler._errorResult('入库前自动审核失败');
         }
       }
+      const wiRes = await handler.api.production.warehouseIn(
+        data.patternId, data.warehouseCode || '', String(data.remark || '').trim()
+      );
+      if (wiRes) {
+        return { success: true, message: getPatternSuccessMessage('WAREHOUSE_IN'), data: wiRes };
+      }
+      return handler._errorResult('入库失败');
+    }
+
+    if (operationType === 'RECEIVE') {
+      const receiveRemark = String(data.remark || '').trim();
+      const rcvRes = await handler.api.production.receivePattern(data.patternId, receiveRemark);
+      if (rcvRes) {
+        return { success: true, message: getPatternSuccessMessage('RECEIVE'), data: rcvRes };
+      }
+      return handler._errorResult('领取样板失败');
     }
 
     const res = await handler.api.production.submitPatternScan({
       patternId: data.patternId,
       operationType,
-      operatorRole: data.operatorRole || 'PLATE_WORKER',
       quantity: data.quantity,
       warehouseCode: data.warehouseCode,
       remark: data.remark,

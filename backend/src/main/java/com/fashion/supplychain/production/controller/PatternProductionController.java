@@ -42,6 +42,9 @@ public class PatternProductionController {
     @Autowired
     private com.fashion.supplychain.production.service.PatternScanRecordService patternScanRecordService;
 
+    @Autowired
+    private com.fashion.supplychain.production.helper.PatternEnrichmentHelper patternEnrichmentHelper;
+
     /**
      * 获取样衣开发费用统计
      */
@@ -77,13 +80,13 @@ public class PatternProductionController {
      * 获取单条记录详情
      */
     @GetMapping("/{id}")
-    public Result<PatternProduction> getById(@PathVariable String id) {
+    public Result<Map<String, Object>> getById(@PathVariable String id) {
         PatternProduction record = patternProductionService.getById(id);
         if (record == null || record.getDeleteFlag() == 1) {
             return Result.fail("记录不存在");
         }
         TenantAssert.assertBelongsToCurrentTenant(record.getTenantId(), "纸样");
-        return Result.success(record);
+        return Result.success(patternEnrichmentHelper.enrichRecord(record));
     }
 
     /**

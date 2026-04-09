@@ -144,6 +144,19 @@ const production = {
       remark,
     });
   },
+  receivePattern(patternId, remark) {
+    const id = String(patternId || '').trim();
+    return ok(`/api/production/pattern/${encodeURIComponent(id)}/workflow-action?action=receive`, 'POST', {
+      remark: remark || '',
+    });
+  },
+  warehouseIn(patternId, warehouseCode, remark) {
+    const id = String(patternId || '').trim();
+    return ok(`/api/production/pattern/${encodeURIComponent(id)}/workflow-action?action=warehouse-in`, 'POST', {
+      warehouseCode: warehouseCode || '',
+      remark: remark || '',
+    });
+  },
   getQualityAiSuggestion(orderId) {
     return ok(`/api/quality/ai-suggestion?orderId=${encodeURIComponent(orderId)}`, 'GET', {});
   },
