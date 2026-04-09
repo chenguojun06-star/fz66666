@@ -1,128 +1,79 @@
-<custom-nav title="采购详情" show-back="{{true}}" show-search="{{false}}" />
+<custom-nav title="采购到货" />
 
 <view class="page-container">
-  <!-- 订单信息头 -->
+  <!-- 订单头 -->
   <view class="order-header">
-    <view class="order-no-row">
-      <text class="order-label">订单号</text>
-      <text class="order-value">{{orderNo}}</text>
+    <view class="header-row">
+      <text class="header-label">订单号</text>
+      <text class="header-value">{{orderNo}}</text>
     </view>
-    <view class="style-row" wx:if="{{styleNo}}">
-      <text class="order-label">款号</text>
-      <text class="order-value">{{styleNo}}</text>
-    </view>
-  </view>
-
-  <!-- 汇总统计已移除 -->
-  <view class="summary-bar" style="display:none">
-    <view class="summary-item">
-      <text class="summary-num">{{summary.totalMaterials}}</text>
-      <text class="summary-label">物料种类</text>
-    </view>
-    <view class="summary-item">
-      <text class="summary-num">{{summary.totalPurchaseQty}}</text>
-      <text class="summary-label">采购总量</text>
-    </view>
-    <view class="summary-item">
-      <text class="summary-num">{{summary.totalArrivedQty}}</text>
-      <text class="summary-label">已到货</text>
-    </view>
-    <view class="summary-item">
-      <text class="summary-num {{summary.arrivalRate >= 70 ? 'rate-ok' : 'rate-warn'}}">{{summary.arrivalRate}}%</text>
-      <text class="summary-label">到货率</text>
+    <view class="header-row">
+      <text class="header-label">款号</text>
+      <text class="header-value">{{styleNo}}</text>
     </view>
   </view>
 
-  <!-- 加载态 -->
+  <!-- 加载中 -->
   <view class="loading-wrapper" wx:if="{{loading}}">
     <view class="loading-spinner"></view>
     <text class="loading-text">加载中...</text>
   </view>
 
   <!-- 空状态 -->
-  <empty-state wx:elif="{{materialPurchases.length === 0}}" icon="📦" text="暂无采购物料" />
+  <view class="empty-state" wx:elif="{{materialPurchases.length === 0}}">
+    <text class="empty-icon">📦</text>
+    <text class="empty-text">暂无采购物料</text>
+  </view>
 
   <!-- 物料列表 -->
   <view class="material-list" wx:else>
-    <view class="material-card {{item.isComplete ? 'card-done' : ''}}" wx:for="{{materialPurchases}}" wx:key="id">
+    <text class="list-title">物料明细（{{materialPurchases.length}}项）</text>
 
-      <!-- 头部：物料名 + 状态徽章 -->
-      <view class="card-header-row">
-        <text class="card-title-text">{{item.materialName || '未知物料'}}</text>
+    <view class="material-row {{item.isComplete ? 'row-done' : ''}}"
+      wx:for="{{materialPurchases}}" wx:key="id">
+
+      <!-- 主行：名称 + 状态 + 到货/采购 -->
+      <view class="row-main">
+        <text class="mat-name">{{item.materialName}}</text>
         <text class="status-badge badge-{{item.statusColor}}">{{item.statusText}}</text>
+        <text class="mat-qty">{{item.arrivedQuantity}}/{{item.purchaseQuantity}}</text>
       </view>
 
-      <!-- SKU 标签行 -->
-      <view class="sku-tag-row" wx:if="{{item.size || item.color || item.specifications || item.specification}}">
-        <view class="sku-tag" wx:if="{{item.size}}">
-          <text class="sku-tag-label">码</text>
-          <text class="sku-tag-value">{{item.size}}</text>
-        </view>
-        <view class="sku-tag" wx:if="{{item.color}}">
-          <text class="sku-tag-label">色</text>
-          <text class="sku-tag-value">{{item.color}}</text>
-        </view>
-        <view class="sku-tag" wx:if="{{item.specifications || item.specification}}">
-          <text class="sku-tag-label">规</text>
-          <text class="sku-tag-value">{{item.specifications || item.specification}}</text>
-        </view>
+      <!-- 规格行 -->
+      <view class="row-spec" wx:if="{{item.color || item.size || item.specification}}">
+        <text class="spec-text" wx:if="{{item.color}}">{{item.color}}</text>
+        <text class="spec-sep" wx:if="{{item.color && item.size}}">·</text>
+        <text class="spec-text" wx:if="{{item.size}}">{{item.size}}</text>
+        <text class="spec-sep" wx:if="{{(item.color || item.size) && item.specification}}">·</text>
+        <text class="spec-text" wx:if="{{item.specification}}">{{item.specification}}</text>
       </view>
 
-      <!-- 数量横条 -->
-      <view class="qty-strip">
-        <view class="qty-item">
-          <text class="qty-value">{{item.purchaseQuantity || 0}}</text>
-          <text class="qty-label">采购数量</text>
-        </view>
-        <view class="qty-divider"></view>
-        <view class="qty-item">
-          <text class="qty-value">{{item.arrivedQuantity || 0}}</text>
-          <text class="qty-label">已到货</text>
-        </view>
-        <view class="qty-divider"></view>
-        <view class="qty-item">
-          <text class="qty-value {{item.isComplete ? 'qty-value-done' : ''}}">{{item.arrivalRate || 0}}%</text>
-          <text class="qty-label">到货率</text>
-        </view>
+      <!-- 输入行 -->
+      <view class="row-input" wx:if="{{item.isActionable}}">
+        <text class="input-label">到货数量</text>
+        <input class="input-field" type="digit" placeholder="输入数量"
+          data-id="{{item.id || item.purchaseId}}"
+          bindinput="onMaterialInput" value="{{item.inputQuantity}}" />
       </view>
 
-      <!-- 到货输入 -->
-      <view class="input-row" wx:if="{{item.isActionable && !item.isComplete}}">
-        <text class="input-label">本次到货</text>
-        <input class="input-field"
-               type="digit"
-               placeholder="输入数量"
-               value="{{item.inputQuantity}}"
-               data-id="{{item.id || item.purchaseId}}"
-               bindinput="onMaterialInput" />
-        <text class="input-unit">件</text>
-      </view>
-
-      <!-- 领取提示 -->
-      <view class="receive-hint" wx:if="{{item.needsReceive && !item.isComplete}}">
-        <text class="hint-icon">💡</text>
-        <text class="hint-text">需先领取此任务才能提交到货</text>
+      <!-- 待领取提示 -->
+      <view class="receive-hint" wx:if="{{item.needsReceive}}">
+        <text class="hint-text">⚠ 领取后可登记到货</text>
       </view>
     </view>
   </view>
 
   <!-- 备注 -->
-  <view class="remark-section" wx:if="{{!loading && materialPurchases.length > 0}}">
-    <text class="remark-label">备注说明（到货不足70%时必填）</text>
-    <textarea class="remark-input"
-              placeholder="请填写备注或原因说明"
-              value="{{remark}}"
-              bindinput="onRemarkInput"
-              maxlength="300" />
+  <view class="remark-section" wx:if="{{materialPurchases.length > 0 && !loading}}">
+    <text class="remark-label">备注（到货率＜70%时必填）</text>
+    <textarea class="remark-input" placeholder="请输入备注"
+      bindinput="onRemarkInput" value="{{remark}}" maxlength="200" />
   </view>
+</view>
 
-  <!-- 底部按钮 -->
-  <view class="bottom-bar" wx:if="{{!loading && materialPurchases.length > 0}}">
-    <button class="btn-receive" bindtap="onReceiveAll">领取任务</button>
-    <button class="btn-submit {{!hasInput || submitting ? 'btn-disabled' : ''}}"
-            disabled="{{!hasInput || submitting}}"
-            bindtap="onSubmit">
-      {{submitting ? '提交中...' : '提交到货'}}
-    </button>
-  </view>
+<!-- 底部操作栏 -->
+<view class="bottom-bar" wx:if="{{materialPurchases.length > 0 && !loading}}">
+  <view class="btn-receive" bindtap="onReceiveAll">一键领取</view>
+  <view class="btn-submit {{(!hasInput || submitting) ? 'btn-disabled' : ''}}"
+    bindtap="onSubmit">提交到货</view>
 </view>

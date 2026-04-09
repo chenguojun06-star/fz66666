@@ -10,8 +10,7 @@ Page({
     submitting: false,
     materialPurchases: [],
     remark: '',
-    hasInput: false,
-    summary: { totalMaterials: 0, totalPurchaseQty: 0, totalArrivedQty: 0, arrivalRate: 0 }
+    hasInput: false
   },
 
   onLoad(options) {
@@ -55,7 +54,6 @@ Page({
       });
 
       this.setData({ materialPurchases, loading: false });
-      this._updateSummary();
     } catch (e) {
       console.error('加载采购详情失败:', e);
       this.setData({ loading: false });
@@ -199,20 +197,6 @@ Page({
       );
     }
     return remark;
-  },
-
-  _updateSummary() {
-    const { materialPurchases } = this.data;
-    const totalMaterials = materialPurchases.length;
-    let totalPurchaseQty = 0;
-    let totalArrivedQty = 0;
-    materialPurchases.forEach(m => {
-      totalPurchaseQty += Number(m.purchaseQuantity || 0);
-      totalArrivedQty += Number(m.arrivedQuantity || 0);
-    });
-    const arrivalRate = totalPurchaseQty > 0
-      ? Math.round(totalArrivedQty / totalPurchaseQty * 100) : 0;
-    this.setData({ summary: { totalMaterials, totalPurchaseQty, totalArrivedQty, arrivalRate } });
   },
 
   _normalizeToArray(res) {
