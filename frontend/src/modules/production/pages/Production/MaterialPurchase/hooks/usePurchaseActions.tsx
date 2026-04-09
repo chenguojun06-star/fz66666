@@ -62,8 +62,7 @@ export function usePurchaseActions({
   const [returnResetSubmitting, setReturnResetSubmitting] = useState(false);
   const [quickEditSaving, setQuickEditSaving] = useState(false);
   const [confirmCompleteSubmitting, setConfirmCompleteSubmitting] = useState(false);
-  const [smartReceiveOpen, setSmartReceiveOpen] = useState(false);
-  const [smartReceiveOrderNo, setSmartReceiveOrderNo] = useState('');
+
 
   const returnConfirmModal = useModal<MaterialPurchaseType[]>();
   const returnResetModal = useModal<MaterialPurchaseType>();
@@ -317,8 +316,33 @@ export function usePurchaseActions({
       return;
     }
     if (!orderNo || orderNo === '-') { message.error('缺少订单号'); return; }
-    setSmartReceiveOrderNo(orderNo);
-    setSmartReceiveOpen(true);
+    try {
+      const res = await api.get<any>('/production/purchase/smart-receive-preview', { params: { orderNo } });
+      const materials: any[] = res?.data?.materials || res?.materials || [];
+      if (!materials.length) { message.info('没有可领取的物料'); return; }
+      Modal.confirm({
+        title: '一键领取确认',
+        content: `共 ${materials.length} 项物料，确认从仓库出库领取？`,
+        okText: '确认领取',
+        cancelText: '取消',
+        onOk: async () => {
+          setSubmitLoading(true);
+          try {
+            for (const m of materials) {
+              if (Number(m.availableStock ?? 0) > 0) {
+                await api.post('/production/purchase/warehouse-pick', { purchaseId: m.purchaseId, pickQty: m.canPickQty, receiverId: user?.id, receiverName: String(user?.name || user?.username || '') });
+              } else {
+                await api.post('/production/purchase/receive', { purchaseId: m.purchaseId, receiverId: user?.id, receiverName: String(user?.name || user?.username || '') });
+              }
+            }
+            message.success('领取完成');
+            fetchMaterialPurchaseList();
+            if (orderNo && orderNo !== '-') loadDetailByOrderNo(orderNo);
+          } catch (e: unknown) { message.error(e instanceof Error ? e.message : '领取失败'); }
+          finally { setSubmitLoading(false); }
+        },
+      });
+    } catch { message.error('获取库存信息失败'); }
   };
 
   const handleSmartReceiveSuccess = () => {
@@ -439,7 +463,6 @@ export function usePurchaseActions({
     returnEvidenceFiles, setReturnEvidenceFiles, returnEvidenceRecognizing, recognizeReturnEvidence,
     returnResetModal, returnResetForm, returnResetSubmitting,
     quickEditModal, quickEditSaving,
-    smartReceiveOpen, smartReceiveOrderNo, setSmartReceiveOpen,
     openReturnConfirm, submitReturnConfirm,
     openReturnReset, submitReturnReset,
     receivePurchaseTask, confirmReturnPurchaseTask,

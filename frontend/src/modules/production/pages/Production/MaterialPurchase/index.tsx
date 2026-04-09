@@ -10,7 +10,6 @@ import QuickEditModal from '@/components/common/QuickEditModal';
 import MaterialSearchForm from './components/MaterialSearchForm';
 import MaterialTable from './components/MaterialTable';
 import PurchaseModal from './components/PurchaseModal';
-import SmartReceiveModal from './components/SmartReceiveModal';
 import MaterialPurchaseAIBanner from './components/MaterialPurchaseAIBanner';
 import MaterialQualityIssueModal from './components/MaterialQualityIssueModal';
 import RemarkTimelineModal from '@/components/common/RemarkTimelineModal';
@@ -42,7 +41,6 @@ const MaterialPurchase: React.FC = () => {
     submitLoading, modalInitialHeight,
     detailOrder, detailOrderLines, detailPurchases, detailLoading, detailSizePairs,
     detailFrozen,
-    smartReceiveOpen, smartReceiveOrderNo, setSmartReceiveOpen,
     returnConfirmModal, returnConfirmForm, returnConfirmSubmitting,
     returnEvidenceFiles, setReturnEvidenceFiles, returnEvidenceRecognizing, recognizeReturnEvidence,
     returnResetModal, returnResetForm, returnResetSubmitting,
@@ -445,16 +443,6 @@ const MaterialPurchase: React.FC = () => {
           }}
         />
 
-        {/* 智能领取弹窗 */}
-        <SmartReceiveModal
-          open={smartReceiveOpen}
-          orderNo={smartReceiveOrderNo}
-          onCancel={() => setSmartReceiveOpen(false)}
-          onSuccess={handleSmartReceiveSuccess}
-          isSupervisorOrAbove={isSupervisorOrAbove}
-          userId={String(user?.id || '').trim()}
-          userName={String(user?.name || user?.username || '').trim()}
-        />
         <RemarkTimelineModal
           open={remarkOpen}
           onClose={() => setRemarkOpen(false)}

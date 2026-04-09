@@ -101,6 +101,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
     parseInvoiceUrls((currentPurchase as any)?.invoiceUrls)
   );
   const [invoiceUploading, setInvoiceUploading] = useState(false);
+  const [stockMap, setStockMap] = useState<Record<string, number>>({});
 
   // currentPurchase 切换时同步解析
   useEffect(() => {
@@ -171,6 +172,20 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
   useEffect(() => {
     loadDocs();
   }, [loadDocs]);
+
+  useEffect(() => {
+    if (!currentPurchase?.orderNo) { setStockMap({}); return; }
+    const orderNo = String(currentPurchase.orderNo).trim();
+    if (!orderNo || orderNo === '-') { setStockMap({}); return; }
+    api.get<any>('/production/purchase/smart-receive-preview', { params: { orderNo } })
+      .then((res: any) => {
+        const materials: any[] = res?.data?.materials || res?.materials || [];
+        const map: Record<string, number> = {};
+        materials.forEach((m: any) => { if (m.purchaseId != null) map[String(m.purchaseId)] = Number(m.availableStock ?? 0); });
+        setStockMap(map);
+      })
+      .catch(() => setStockMap({}));
+  }, [currentPurchase?.orderNo]);
 
   return (
     <div className="purchase-detail-view">
@@ -264,6 +279,21 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                   { title: '采购数量', dataIndex: 'purchaseQuantity', key: 'purchaseQuantity', width: 110, align: 'right' as const, render: (v: unknown) => formatMaterialQuantity(v) },
                   { title: '参考公斤数', key: 'referenceKilograms', width: 120, align: 'right' as const, render: (_: unknown, r: MaterialPurchaseType) => formatReferenceKilograms(r.purchaseQuantity, r.conversionRate, r.unit) },
                   { title: '到货数量', dataIndex: 'arrivedQuantity', key: 'arrivedQuantity', width: 110, align: 'right' as const, render: (v: unknown) => formatMaterialQuantity(v) },
+                  {
+                    title: '仓库库存',
+                    key: 'warehouseStock',
+                    width: 90,
+                    align: 'right' as const,
+                    render: (_: unknown, r: MaterialPurchaseType) => {
+                      const stock = stockMap[String(r.id)];
+                      if (stock == null) return <span style={{ color: '#bbb' }}>-</span>;
+                      return (
+                        <span style={{ color: stock > 0 ? '#52c41a' : '#bbb' }}>
+                          {stock}{r.unit ? ` ${r.unit}` : ''}
+                        </span>
+                      );
+                    },
+                  },
                   {
                     title: '单价(元)',
                     dataIndex: 'unitPrice',
