@@ -6,6 +6,7 @@ const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { normalizeScanType } = require('../handlers/helpers/ScanModeResolver');
 const SKUProcessor = require('../processors/SKUProcessor');
+const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 
 Page({
   data: {
@@ -47,7 +48,7 @@ Page({
     var summary = SKUProcessor.getSummary(formItems);
     var sizeMatrix = this._buildSizeMatrix(normalized);
 
-    var coverImage = orderDetail.coverImage || orderDetail.styleImage || '';
+    var coverImage = getAuthedImageUrl(orderDetail.coverImage || orderDetail.styleImage || '');
 
     // 采购模式：提取面辅料采购数据
     var materialPurchases = [];

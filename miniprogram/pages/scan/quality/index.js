@@ -4,6 +4,7 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { getUserInfo } = require('../../../utils/storage');
+const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 
 const HANDLE_METHODS = ['返修', '报废', '退货', '降级使用', '其他'];
 
@@ -40,7 +41,7 @@ Page({
     }
     this._rawDetail = raw;
 
-    var coverImage = raw.coverImage || raw.styleImage || '';
+    var coverImage = getAuthedImageUrl(raw.coverImage || raw.styleImage || '');
 
     this.setData({
       detail: {

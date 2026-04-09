@@ -14,6 +14,7 @@ const api = require('../../../utils/api');
 // 修复: 解构导入 eventBus 实例（而非模块对象）
 const { eventBus } = require('../../../utils/eventBus');
 const ScanOfflineQueue = require('../services/ScanOfflineQueue');
+const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 
 /**
  * 生命周期 Mixin
@@ -196,8 +197,8 @@ const scanLifecycleMixin = Behavior({
               quantity: task.quantity || 1,
               scanCode: task.scanCode || '',
               recordId: task.id || task.scanId,
-              coverImage: task.coverImage || task.styleImage || '',
-              styleImage: task.styleImage || task.coverImage || '',
+              coverImage: getAuthedImageUrl(task.coverImage || task.styleImage || ''),
+              styleImage: getAuthedImageUrl(task.styleImage || task.coverImage || ''),
             });
           }, 300);
         }

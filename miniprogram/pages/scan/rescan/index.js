@@ -1,5 +1,6 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
+const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 
 Page({
   data: {
@@ -22,7 +23,7 @@ Page({
         bundleNo: raw.bundleNo || '-',
         quantity: raw.quantity || 0,
         scanTime: raw.scanTime || '-',
-        coverImage: raw.coverImage || '',
+        coverImage: getAuthedImageUrl(raw.coverImage || ''),
         styleNo: raw.styleNo || '',
         styleName: raw.styleName || '',
         processName: raw.processName || '',

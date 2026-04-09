@@ -4,6 +4,7 @@
  */
 const toast = require('../../../utils/uiHelper').toast;
 const api = require('../../../utils/api');
+const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 
 // ---- 常量（与 PatternHandler.js 保持一致） ----
 const OPERATION_LABELS = {
@@ -111,8 +112,8 @@ Page({
         designer: data.designer || patternDetail.designer || '-',
         patternDeveloper: data.patternDeveloper || patternDetail.patternDeveloper || '-',
         deliveryTime: patternDetail.deliveryTime || '-',
-        coverImage: patternDetail.coverImage || patternDetail.styleImage || '',
-        styleImage: patternDetail.styleImage || patternDetail.coverImage || '',
+        coverImage: getAuthedImageUrl(patternDetail.coverImage || patternDetail.styleImage || ''),
+        styleImage: getAuthedImageUrl(patternDetail.styleImage || patternDetail.coverImage || ''),
         styleName: patternDetail.styleName || data.styleName || '',
         category: patternDetail.category || data.category || '',
         customer: patternDetail.customer || data.customer || '',
