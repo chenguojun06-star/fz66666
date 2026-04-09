@@ -70,18 +70,24 @@ Page({
     // 复用 PatternHandler.showPatternConfirmModal 的构建逻辑
     const patternDetail = data.patternDetail || {};
     const rawOptions = Array.isArray(data.operationOptions) ? data.operationOptions : [];
-    // 两步扫码：第一次→领取，已领取/进行中→完成
+    // 四步扫码：领取 → 完成 → 审核 → 入库（与PC端对齐）
     const status = String(data.status || '').toUpperCase();
-    const isSecondScan = status === 'RECEIVED' || status === 'IN_PROGRESS';
-    const autoOperationType = isSecondScan ? 'COMPLETE' : 'RECEIVE';
-    const submitLabel = isSecondScan ? '完成' : '领取';
-    const operationType = autoOperationType;
-    const operationLabel = OPERATION_LABELS[operationType] || '操作';
-    const requiresWarehouseInput = WAREHOUSE_OPERATIONS.has(operationType);
     const reviewStatus = String(patternDetail.reviewStatus || '').toUpperCase();
     const reviewResult = String(patternDetail.reviewResult || '').toUpperCase();
     const reviewApproved = reviewStatus === 'APPROVED' || reviewResult === 'APPROVED';
+
+    // 直接使用 PatternScanProcessor 已正确计算好的 operationType，不再从 status 重新推导
+    const SUBMIT_LABEL_MAP = {
+      RECEIVE: '领取', COMPLETE: '完成', REVIEW: '审核',
+      WAREHOUSE_IN: '入库', WAREHOUSE_OUT: '出库', WAREHOUSE_RETURN: '归还',
+      PROCUREMENT: '采购', CUTTING: '裁剪', SECONDARY: '二次工艺',
+      SEWING: '车缝', TAIL: '尾部',
+    };
+    const operationType = String(data.operationType || '').toUpperCase() || 'RECEIVE';
+    const operationLabel = OPERATION_LABELS[operationType] || '操作';
+    const requiresWarehouseInput = WAREHOUSE_OPERATIONS.has(operationType);
     const requiresReviewBeforeInbound = operationType === 'WAREHOUSE_IN' && !reviewApproved;
+    const submitLabel = SUBMIT_LABEL_MAP[operationType] || operationLabel;
     const sizes = patternDetail.sizes || [];
 
     this.setData({
@@ -98,7 +104,7 @@ Page({
         sizesText: sizes.length ? sizes.join('/') : '-',
         operationType: operationType,
         operationLabel: operationLabel,
-        operationOptions: [],
+        operationOptions: rawOptions,
         requiresWarehouseInput: requiresWarehouseInput,
         requiresReviewBeforeInbound: requiresReviewBeforeInbound,
         reviewApproved: reviewApproved,
