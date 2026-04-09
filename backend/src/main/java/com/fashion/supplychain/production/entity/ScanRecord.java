@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 /**
@@ -61,12 +62,14 @@ public class ScanRecord {
          * 领取/开始时间
          */
         @TableField("receive_time")
+        @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
         private LocalDateTime receiveTime;
 
         /**
          * 录入结果/完成时间
          */
         @TableField("confirm_time")
+        @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
         private LocalDateTime confirmTime;
 
     private String settlementStatus;
@@ -92,6 +95,7 @@ public class ScanRecord {
     /**
      * 扫码时间
      */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime scanTime;
 
     /**
@@ -196,11 +200,13 @@ public class ScanRecord {
     /**
      * 创建时间
      */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;
 
     /**
      * 更新时间
      */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updateTime;
 
     @TableField(fill = FieldFill.INSERT)
