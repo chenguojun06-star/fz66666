@@ -221,10 +221,16 @@ public class ProductionOrderFlowOrchestrationService {
             throw new NoSuchElementException("生产订单不存在");
         }
 
-        List<ScanRecord> records = scanRecordMapper.selectList(new LambdaQueryWrapper<ScanRecord>()
-                .eq(ScanRecord::getOrderId, oid)
-                .orderByAsc(ScanRecord::getScanTime)
-                .orderByAsc(ScanRecord::getCreateTime));
+        List<ScanRecord> records;
+        try {
+            records = scanRecordMapper.selectList(new LambdaQueryWrapper<ScanRecord>()
+                    .eq(ScanRecord::getOrderId, oid)
+                    .orderByAsc(ScanRecord::getScanTime)
+                    .orderByAsc(ScanRecord::getCreateTime));
+        } catch (Exception e) {
+            log.warn("[OrderFlow] 查询ScanRecord失败，疑似云端缺列: orderId={}, err={}", oid, e.getMessage());
+            records = new ArrayList<>();
+        }
 
         List<Map<String, Object>> stages = buildProductionStageFlow(order, records);
 
@@ -254,11 +260,17 @@ public class ProductionOrderFlowOrchestrationService {
         }
         // ─────────────────────────────────────────────────────────────────────────
 
-        List<MaterialPurchase> materialPurchases = materialPurchaseMapper
-                .selectList(new LambdaQueryWrapper<MaterialPurchase>()
-                        .eq(MaterialPurchase::getOrderId, oid)
-                        .eq(MaterialPurchase::getDeleteFlag, 0)
-                        .orderByDesc(MaterialPurchase::getCreateTime));
+        List<MaterialPurchase> materialPurchases;
+        try {
+            materialPurchases = materialPurchaseMapper
+                    .selectList(new LambdaQueryWrapper<MaterialPurchase>()
+                            .eq(MaterialPurchase::getOrderId, oid)
+                            .eq(MaterialPurchase::getDeleteFlag, 0)
+                            .orderByDesc(MaterialPurchase::getCreateTime));
+        } catch (Exception e) {
+            log.warn("[OrderFlow] 查询MaterialPurchase失败，疑似云端缺列: orderId={}, err={}", oid, e.getMessage());
+            materialPurchases = new ArrayList<>();
+        }
 
         // 批量查 DB 补全采购记录中的 creatorName/updaterName
         try {
@@ -309,36 +321,72 @@ public class ProductionOrderFlowOrchestrationService {
             }
         }
 
-        List<CuttingTask> cuttingTasks = cuttingTaskService.list(new LambdaQueryWrapper<CuttingTask>()
-                .eq(CuttingTask::getProductionOrderId, oid)
-                .orderByDesc(CuttingTask::getCreateTime));
+        List<CuttingTask> cuttingTasks;
+        try {
+            cuttingTasks = cuttingTaskService.list(new LambdaQueryWrapper<CuttingTask>()
+                    .eq(CuttingTask::getProductionOrderId, oid)
+                    .orderByDesc(CuttingTask::getCreateTime));
+        } catch (Exception e) {
+            log.warn("[OrderFlow] 查询CuttingTask失败，疑似云端缺列: orderId={}, err={}", oid, e.getMessage());
+            cuttingTasks = new ArrayList<>();
+        }
 
-        List<CuttingBundle> cuttingBundles = cuttingBundleMapper.selectList(new LambdaQueryWrapper<CuttingBundle>()
-                .eq(CuttingBundle::getProductionOrderId, oid)
-                .orderByAsc(CuttingBundle::getBundleNo)
-                .orderByAsc(CuttingBundle::getCreateTime));
+        List<CuttingBundle> cuttingBundles;
+        try {
+            cuttingBundles = cuttingBundleMapper.selectList(new LambdaQueryWrapper<CuttingBundle>()
+                    .eq(CuttingBundle::getProductionOrderId, oid)
+                    .orderByAsc(CuttingBundle::getBundleNo)
+                    .orderByAsc(CuttingBundle::getCreateTime));
+        } catch (Exception e) {
+            log.warn("[OrderFlow] 查询CuttingBundle失败，疑似云端缺列: orderId={}, err={}", oid, e.getMessage());
+            cuttingBundles = new ArrayList<>();
+        }
 
-        List<ProductWarehousing> warehousings = productWarehousingService
-                .list(new LambdaQueryWrapper<ProductWarehousing>()
-                        .eq(ProductWarehousing::getOrderId, oid)
-                        .eq(ProductWarehousing::getDeleteFlag, 0)
-                        .orderByDesc(ProductWarehousing::getCreateTime));
+        List<ProductWarehousing> warehousings;
+        try {
+            warehousings = productWarehousingService
+                    .list(new LambdaQueryWrapper<ProductWarehousing>()
+                            .eq(ProductWarehousing::getOrderId, oid)
+                            .eq(ProductWarehousing::getDeleteFlag, 0)
+                            .orderByDesc(ProductWarehousing::getCreateTime));
+        } catch (Exception e) {
+            log.warn("[OrderFlow] 查询ProductWarehousing失败，疑似云端缺列: orderId={}, err={}", oid, e.getMessage());
+            warehousings = new ArrayList<>();
+        }
 
-        List<ProductOutstock> outstocks = productOutstockService.list(new LambdaQueryWrapper<ProductOutstock>()
-                .eq(ProductOutstock::getOrderId, oid)
-                .eq(ProductOutstock::getDeleteFlag, 0)
-                .orderByDesc(ProductOutstock::getCreateTime));
+        List<ProductOutstock> outstocks;
+        try {
+            outstocks = productOutstockService.list(new LambdaQueryWrapper<ProductOutstock>()
+                    .eq(ProductOutstock::getOrderId, oid)
+                    .eq(ProductOutstock::getDeleteFlag, 0)
+                    .orderByDesc(ProductOutstock::getCreateTime));
+        } catch (Exception e) {
+            log.warn("[OrderFlow] 查询ProductOutstock失败，疑似云端缺列: orderId={}, err={}", oid, e.getMessage());
+            outstocks = new ArrayList<>();
+        }
 
-        List<ShipmentReconciliation> shipmentReconciliations = shipmentReconciliationService.lambdaQuery()
-                .eq(ShipmentReconciliation::getOrderId, oid)
-                .orderByDesc(ShipmentReconciliation::getCreateTime)
-                .list();
+        List<ShipmentReconciliation> shipmentReconciliations;
+        try {
+            shipmentReconciliations = shipmentReconciliationService.lambdaQuery()
+                    .eq(ShipmentReconciliation::getOrderId, oid)
+                    .orderByDesc(ShipmentReconciliation::getCreateTime)
+                    .list();
+        } catch (Exception e) {
+            log.warn("[OrderFlow] 查询ShipmentReconciliation失败，疑似云端缺列: orderId={}, err={}", oid, e.getMessage());
+            shipmentReconciliations = new ArrayList<>();
+        }
 
-        List<MaterialReconciliation> materialReconciliations = materialReconciliationService.lambdaQuery()
-                .eq(MaterialReconciliation::getOrderId, oid)
-                .eq(MaterialReconciliation::getDeleteFlag, 0)
-                .orderByDesc(MaterialReconciliation::getCreateTime)
-                .list();
+        List<MaterialReconciliation> materialReconciliations;
+        try {
+            materialReconciliations = materialReconciliationService.lambdaQuery()
+                    .eq(MaterialReconciliation::getOrderId, oid)
+                    .eq(MaterialReconciliation::getDeleteFlag, 0)
+                    .orderByDesc(MaterialReconciliation::getCreateTime)
+                    .list();
+        } catch (Exception e) {
+            log.warn("[OrderFlow] 查询MaterialReconciliation失败，疑似云端缺列: orderId={}, err={}", oid, e.getMessage());
+            materialReconciliations = new ArrayList<>();
+        }
 
         // 查询款号报价单
         StyleQuotation styleQuotation = null;

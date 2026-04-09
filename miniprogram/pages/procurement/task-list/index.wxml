@@ -60,6 +60,20 @@
           <text class="info-label">待处理</text>
           <text class="info-value highlight">{{item.actionableCount}}种</text>
         </view>
+
+        <!-- 码数颜色网格 -->
+        <view wx:if="{{item.colorGroups && item.colorGroups.length}}" class="size-compact">
+          <view class="size-compact-header">
+            <text class="size-compact-label">码数</text>
+            <text wx:for="{{item.allSizes}}" wx:key="*this" wx:for-item="sz" class="size-compact-cell">{{sz}}</text>
+          </view>
+          <block wx:for="{{item.colorGroups}}" wx:key="color" wx:for-item="cg">
+            <view class="size-compact-row">
+              <text class="size-compact-label">{{cg.color || '-'}}</text>
+              <text wx:for="{{cg.sizeQtyList}}" wx:key="index" wx:for-item="qty" class="size-compact-cell size-compact-qty">{{qty}}</text>
+            </view>
+          </block>
+        </view>
       </view>
 
       <!-- Card Footer Actions -->

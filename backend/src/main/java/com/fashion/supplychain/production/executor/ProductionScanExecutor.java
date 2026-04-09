@@ -7,6 +7,7 @@ import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.production.entity.*;
 import com.fashion.supplychain.production.helper.DuplicateScanPreventer;
 import com.fashion.supplychain.production.helper.InventoryValidator;
+import com.fashion.supplychain.production.helper.MaterialPurchaseStatusHelper;
 import com.fashion.supplychain.production.helper.ProcessStageDetector;
 import com.fashion.supplychain.production.service.*;
 import com.fashion.supplychain.style.entity.StyleAttachment;
@@ -94,6 +95,9 @@ public class ProductionScanExecutor {
 
     @Autowired
     private WebSocketService webSocketService;
+
+    @Autowired
+    private MaterialPurchaseStatusHelper materialPurchaseStatusHelper;
 
     /**
      * 执行生产扫码（裁剪或生产工序）
@@ -480,6 +484,27 @@ public class ProductionScanExecutor {
             productionOrderService.recomputeProgressFromRecords(order.getId());
         } catch (Exception e) {
             log.error("重新计算订单进度失败: orderId={}", order.getId(), e);
+        }
+
+        // ★ 采购阶段：扫码领取后同步更新 MaterialPurchase 状态（解决PC端不同步问题）
+        if ("采购".equals(progressStage.trim())) {
+            try {
+                List<MaterialPurchase> pendingPurchases = materialPurchaseService.list(
+                    new LambdaQueryWrapper<MaterialPurchase>()
+                        .eq(MaterialPurchase::getOrderId, order.getId())
+                        .and(w -> w.isNull(MaterialPurchase::getStatus)
+                            .or().eq(MaterialPurchase::getStatus, "")
+                            .or().eq(MaterialPurchase::getStatus, "pending"))
+                );
+                for (MaterialPurchase mp : pendingPurchases) {
+                    materialPurchaseStatusHelper.receiveAndSync(mp.getId(), operatorId, operatorName);
+                }
+                if (!pendingPurchases.isEmpty()) {
+                    log.info("采购领取同步完成: orderId={}, 更新{}条", order.getId(), pendingPurchases.size());
+                }
+            } catch (Exception e) {
+                log.error("采购领取同步MaterialPurchase失败(不阻断扫码): orderId={}", order.getId(), e);
+            }
         }
 
         Map<String, Object> result = new HashMap<>();

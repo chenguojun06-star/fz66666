@@ -180,3 +180,16 @@
 .remark-text { font-size: 22rpx; color: #888; }
 .arrived-text { color: #22c55e; }
 .pending-text { color: #f59e0b; }
+
+/* ---- 码数颜色网格 ---- */
+.size-compact { margin-top: 10rpx; overflow-x: auto; }
+.size-compact-header,
+.size-compact-row { display: flex; align-items: center; height: 56rpx; }
+.size-compact-header { background: #f5f6f8; border-radius: 8rpx; margin-bottom: 4rpx; }
+.size-compact-row { border-bottom: 1rpx solid #f0f0f0; }
+.size-compact-label { width: 80rpx; min-width: 80rpx; padding-left: 10rpx; font-size: 24rpx; }
+.size-compact-header .size-compact-label { color: #999; font-weight: 400; }
+.size-compact-row .size-compact-label { color: #333; font-weight: 600; }
+.size-compact-cell { flex: 1; min-width: 60rpx; text-align: center; font-size: 26rpx; }
+.size-compact-header .size-compact-cell { color: #555; font-weight: 600; }
+.size-compact-row .size-compact-cell { color: #1a1a2e; font-weight: 700; }
