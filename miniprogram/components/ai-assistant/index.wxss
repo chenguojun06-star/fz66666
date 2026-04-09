@@ -385,7 +385,7 @@
   box-sizing: border-box;
 }
 .quality-badge  { background: var(--color-primary); }
-.cutting-badge  { background: var(--color-warning); }
+.cutting-badge  { background: var(--color-primary); }
 .purchase-badge { background: var(--color-purple); }
 .repair-badge   { background: var(--color-danger); }
 .overdue-badge  { background: var(--color-danger); }
@@ -405,7 +405,7 @@
 
 .task-accent-bar { width: 3px; flex-shrink: 0; }
 .task-type-quality  .task-accent-bar { background: var(--color-primary); }
-.task-type-cutting  .task-accent-bar { background: var(--color-warning); }
+.task-type-cutting  .task-accent-bar { background: var(--color-primary); }
 .task-type-purchase .task-accent-bar { background: var(--color-purple); }
 .task-type-repair   .task-accent-bar { background: var(--color-danger); }
 .task-type-overdue  .task-accent-bar { background: var(--color-danger); }
@@ -443,7 +443,7 @@
   border-radius: 4px;
   flex-shrink: 0;
 }
-.cutting-tag  { color: var(--color-warning); background: var(--color-warning-bg); border-color: var(--color-warning-border); }
+.cutting-tag  { color: var(--color-primary); background: var(--color-info-bg); border-color: var(--color-info-border); }
 .purchase-tag { color: var(--color-purple); background: var(--gradient-primary); border-color: var(--color-info-border); }
 .repair-tag   { color: var(--color-danger); background: var(--color-error-bg); border-color: var(--color-error-border); }
 .overdue-tag  { color: var(--color-danger); background: var(--color-error-bg); border-color: var(--color-error-border); }
@@ -485,13 +485,13 @@
   text-align: center;
 }
 .quality-btn  { background: var(--gradient-action); box-shadow: 0 3px 8px rgba(37,99,235,0.25); }
-.cutting-btn  { background: linear-gradient(135deg, var(--color-warning-border) 0%, var(--color-warning) 100%); box-shadow: 0 3px 8px rgba(217,119,6,0.25); }
+.cutting-btn  { background: var(--gradient-action); box-shadow: 0 3px 8px rgba(37,99,235,0.25); }
 .purchase-btn { background: linear-gradient(135deg, var(--color-info-border) 0%, var(--color-purple) 100%); box-shadow: 0 3px 8px rgba(124,58,237,0.22); }
 .default-btn  { background: linear-gradient(135deg, var(--color-success-border) 0%, var(--color-success) 100%); box-shadow: 0 3px 8px rgba(5,150,105,0.22); }
 .task-action-btn::after { border: none; }
 
 /* Backward compat tags */
-.tag-orange { color: var(--color-warning); background: rgba(250,173,20,0.12); }
+.tag-orange { color: var(--color-primary); background: rgba(24,144,255,0.12); }
 .tag-red    { color: var(--color-error); background: rgba(255,77,79,0.12); }
 .tag-green  { color: var(--color-success); background: rgba(82,196,26,0.12); }
 .tag-blue   { color: var(--color-primary); background: rgba(24,144,255,0.12); }
