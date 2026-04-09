@@ -16,7 +16,9 @@ function formatTimeAgo(time) {
   if (!time) {
     return '';
   }
-  const date = new Date(time);
+  // iOS 不支持 "yyyy-MM-dd HH:mm:ss" 空格格式，需将空格替换为 T 兼容 ISO 8601
+  const normalized = typeof time === 'string' ? time.replace(' ', 'T') : time;
+  const date = new Date(normalized);
   if (isNaN(date.getTime())) {
     return '';
   }

@@ -53,8 +53,9 @@ function loadOrders(ctx, reset) {
     r => transformOrderData(r)
   ).then(() => {
     const sortedList = [...ctx.data.orders.list].sort((a, b) => {
-      const timeA = new Date(a.createdAt || a.createTime || 0).getTime();
-      const timeB = new Date(b.createdAt || b.createTime || 0).getTime();
+      const safeDate = s => new Date(typeof s === 'string' ? s.replace(' ', 'T') : (s || 0));
+      const timeA = safeDate(a.createdAt || a.createTime).getTime();
+      const timeB = safeDate(b.createdAt || b.createTime).getTime();
       return timeB - timeA;
     });
 

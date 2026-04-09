@@ -9,7 +9,8 @@ const api = require('../../utils/api');
  */
 function formatTimeAgo(time) {
   if (!time) return '';
-  const date = new Date(time);
+  const normalized = typeof time === 'string' ? time.replace(' ', 'T') : time;
+  const date = new Date(normalized);
   if (isNaN(date.getTime())) return '';
   const now = Date.now();
   const diff = now - date.getTime();
@@ -32,7 +33,7 @@ function calculateOverdueDays(deadline) {
   if (!deadline) return 0;
 
   try {
-    const deadlineDate = new Date(deadline);
+    const deadlineDate = new Date(typeof deadline === 'string' ? deadline.replace(' ', 'T') : deadline);
     if (isNaN(deadlineDate.getTime())) return 0;
 
     const now = new Date();

@@ -191,7 +191,7 @@ function calcDeliveryInfo(source) {
     // 有 createTime 时，按剩余比例计算等级（与 PC 端 getRemainingDaysDisplay 一致）
     const createRaw = source.createTime || '';
     if (createRaw) {
-      const start = new Date(createRaw);
+      const start = new Date(typeof createRaw === 'string' ? createRaw.replace(' ', 'T') : createRaw);
       const totalDays = Math.ceil((target.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) || 1;
       const ratio = remainDays / totalDays;
       if (ratio <= 0.2) {
