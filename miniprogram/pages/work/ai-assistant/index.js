@@ -1,6 +1,6 @@
 const api = require('../../../utils/api');
 const { isAdminOrSupervisor } = require('../../../utils/permission');
-const { parseChatReply } = require('../../../utils/chat-parser');
+const { parseChatReply } = require('./chat-parser');
 const { toast } = require('../../../utils/uiHelper');
 
 // 工厂工人快捷提问
