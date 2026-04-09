@@ -68,6 +68,42 @@
           <view wx:for="{{item.bundleSplitCards}}" wx:for-item="bs" wx:for-index="bi" wx:key="bi" class="bundle-card">
             <view class="bundle-card-hd">✂️ {{bs.title || '菲号拆分'}}</view>
           </view>
+
+          <!-- 实体链接（可点击的订单号/款号等） -->
+          <view wx:if="{{item.entityLinks.length}}" class="entity-links">
+            <text
+              wx:for="{{item.entityLinks}}"
+              wx:for-item="el"
+              wx:for-index="ei"
+              wx:key="ei"
+              class="entity-link"
+              bindtap="onEntityTap"
+              data-code="{{el.code}}"
+            >🔗 {{el.code}}</text>
+          </view>
+
+          <!-- 引用来源 -->
+          <view wx:if="{{item.sources.length}}" class="source-block">
+            <view class="source-hd">📚 信息来源</view>
+            <view
+              wx:for="{{item.sources}}"
+              wx:for-item="src"
+              wx:for-index="si"
+              wx:key="si"
+              class="source-item"
+            >
+              <text class="source-tag">{{si + 1}}</text>
+              <text class="source-name">{{src}}</text>
+            </view>
+          </view>
+
+          <!-- 置信度指示器 -->
+          <view wx:if="{{item.confidence}}" class="confidence-bar">
+            <view class="confidence-label">置信度 {{item.confidence.score || item.confidence.level || ''}}</view>
+            <view class="confidence-track">
+              <view class="confidence-fill" style="width: {{item.confidence.score ? item.confidence.score + '%' : '70%'}};"></view>
+            </view>
+          </view>
         </block>
       </view>
 

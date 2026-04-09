@@ -61,17 +61,48 @@ function parseChatReply(rawText) {
     } catch (e) { /* ignore */ }
   }
 
+  // 【SOURCES】[...]【/SOURCES】— 引用来源
+  var sources = [];
+  var srcRe = /【SOURCES】([\s\S]*?)【\/SOURCES】/g;
+  while ((m = srcRe.exec(rawText)) !== null) {
+    try {
+      var sp = JSON.parse(m[1].trim());
+      if (Array.isArray(sp)) { sources = sources.concat(sp); }
+    } catch (e) { /* ignore */ }
+  }
+
+  // 【CONFIDENCE】{...}【/CONFIDENCE】— 置信度
+  var confidence = null;
+  var confRe = /【CONFIDENCE】([\s\S]*?)【\/CONFIDENCE】/g;
+  while ((m = confRe.exec(rawText)) !== null) {
+    try { confidence = JSON.parse(m[1].trim()); } catch (e) { /* ignore */ }
+  }
+
+  // 实体链接：#PO2026001# #FZ-001# 等
+  var entityLinks = [];
+  var entRe = /#([A-Za-z]{1,6}[\-]?\d{3,12})#/g;
+  while ((m = entRe.exec(rawText)) !== null) {
+    entityLinks.push({ code: m[1], raw: m[0] });
+  }
+
   // 剥离所有标记块 → 纯文本
   var displayText = rawText
     .replace(/【CHART】[\s\S]*?【\/CHART】/g, '')
     .replace(/【ACTIONS】[\s\S]*?【\/ACTIONS】/g, '')
     .replace(/【TEAM_STATUS】[\s\S]*?【\/TEAM_STATUS】/g, '')
     .replace(/【BUNDLE_SPLIT】[\s\S]*?【\/BUNDLE_SPLIT】/g, '')
+    .replace(/【SOURCES】[\s\S]*?【\/SOURCES】/g, '')
+    .replace(/【CONFIDENCE】[\s\S]*?【\/CONFIDENCE】/g, '')
     .replace(/【INSIGHT_CARDS】[\s\S]*?【\/INSIGHT_CARDS】/g, '')
     .replace(/```ACTIONS_JSON\s*\n[\s\S]*?\n```/g, '')
+    .replace(/#([A-Za-z]{1,6}[\-]?\d{3,12})#/g, '$1')
     .trim();
 
-  return { displayText: displayText, actionCards: actionCards, charts: charts, teamStatusCards: teamStatusCards, bundleSplitCards: bundleSplitCards };
+  return {
+    displayText: displayText, actionCards: actionCards, charts: charts,
+    teamStatusCards: teamStatusCards, bundleSplitCards: bundleSplitCards,
+    sources: sources, confidence: confidence, entityLinks: entityLinks
+  };
 }
 
 /**
@@ -83,7 +114,10 @@ function hasRichContent(msg) {
   return (msg.actionCards && msg.actionCards.length > 0)
     || (msg.charts && msg.charts.length > 0)
     || (msg.teamStatusCards && msg.teamStatusCards.length > 0)
-    || (msg.bundleSplitCards && msg.bundleSplitCards.length > 0);
+    || (msg.bundleSplitCards && msg.bundleSplitCards.length > 0)
+    || (msg.sources && msg.sources.length > 0)
+    || (msg.entityLinks && msg.entityLinks.length > 0)
+    || !!msg.confidence;
 }
 
 module.exports = { parseChatReply: parseChatReply, hasRichContent: hasRichContent };

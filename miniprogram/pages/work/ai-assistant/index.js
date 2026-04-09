@@ -1,6 +1,6 @@
 const api = require('../../../utils/api');
 const { isAdminOrSupervisor } = require('../../../utils/permission');
-const { parseChatReply } = require('./chat-parser');
+const { parseChatReply, hasRichContent } = require('./chat-parser');
 const { toast } = require('../../../utils/uiHelper');
 
 // 工厂工人快捷提问
@@ -235,6 +235,18 @@ Page({
     this._send(text);
   },
 
+  onEntityTap(e) {
+    const code = e.currentTarget.dataset.code;
+    if (!code) return;
+    // 订单号跳转到订单详情
+    if (/^PO\d+/.test(code)) {
+      wx.navigateTo({ url: '/pages/work/order-detail/index?orderNo=' + code });
+    } else {
+      // 其它实体码复制到剪贴板
+      wx.setClipboardData({ data: code });
+    }
+  },
+
   _appendMsg(msg) {
     const id = Date.now() + '_' + Math.random().toString(36).slice(2, 7);
     const entry = { ...msg, id };
@@ -256,6 +268,9 @@ Page({
         charts: parsed.charts,
         teamStatusCards: parsed.teamStatusCards,
         bundleSplitCards: parsed.bundleSplitCards,
+        sources: parsed.sources,
+        confidence: parsed.confidence,
+        entityLinks: parsed.entityLinks,
         loading: false,
       } : m
     );
