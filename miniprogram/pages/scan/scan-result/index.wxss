@@ -19,9 +19,9 @@
   align-items: flex-start;
 }
 .cover-wrap {
-  width: 140rpx;
-  height: 140rpx;
-  border-radius: 16rpx;
+  width: 180rpx;
+  height: 180rpx;
+  border-radius: 20rpx;
   overflow: hidden;
   flex-shrink: 0;
   background: #f1f5f9;
@@ -46,15 +46,15 @@
   margin-left: 24rpx;
   display: flex;
   flex-direction: column;
-  gap: 6rpx;
+  gap: 12rpx;
 }
 .style-no {
-  font-size: 32rpx;
+  font-size: 36rpx;
   font-weight: 700;
   color: var(--color-text-primary, #1e293b);
 }
 .sub-info {
-  font-size: 24rpx;
+  font-size: 28rpx;
   color: var(--color-text-secondary, #64748b);
 }
 .sub-info.time {

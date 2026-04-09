@@ -693,7 +693,48 @@ public class StyleInfoOrchestrator {
         style.setSampleReviewer(UserContext.username());
         style.setSampleReviewTime(LocalDateTime.now());
         styleInfoService.updateById(style);
+
+        // 同步审核结果到 PatternProduction（确保小程序入库校验 isReviewApproved 能通过）
+        // 映射：PC端 PASS→APPROVED, REJECT/REWORK→REJECTED
+        syncPatternProductionReviewFields(id, reviewStatus, reviewComment);
+
         return styleInfoService.getById(id);
+    }
+
+    /**
+     * PC端审核后同步审核结果到 PatternProduction 表。
+     * 与 PatternStatusHelper.syncStyleInfoReviewFields() 互为镜像：
+     *   小程序审核：PatternProduction → StyleInfo（APPROVED→PASS, REJECTED→REJECT）
+     *   PC端审核：  StyleInfo → PatternProduction（PASS→APPROVED, REJECT→REJECTED）
+     */
+    private void syncPatternProductionReviewFields(Long styleId, String reviewStatus, String reviewComment) {
+        try {
+            PatternProduction pattern = patternProductionService.lambdaQuery()
+                    .eq(PatternProduction::getStyleId, String.valueOf(styleId))
+                    .eq(PatternProduction::getDeleteFlag, 0)
+                    .last("LIMIT 1")
+                    .one();
+            if (pattern == null) {
+                return;
+            }
+            String mappedResult;
+            if ("PASS".equalsIgnoreCase(reviewStatus)) {
+                mappedResult = "APPROVED";
+            } else if ("REJECT".equalsIgnoreCase(reviewStatus) || "REWORK".equalsIgnoreCase(reviewStatus)) {
+                mappedResult = "REJECTED";
+            } else {
+                mappedResult = reviewStatus;
+            }
+            pattern.setReviewStatus(mappedResult);
+            pattern.setReviewResult(mappedResult);
+            pattern.setReviewRemark(reviewComment);
+            pattern.setReviewBy(UserContext.username());
+            pattern.setReviewById(UserContext.userId());
+            pattern.setReviewTime(LocalDateTime.now());
+            patternProductionService.updateById(pattern);
+        } catch (Exception e) {
+            log.error("PC审核同步到PatternProduction失败: styleId={}", styleId, e);
+        }
     }
 
     /**

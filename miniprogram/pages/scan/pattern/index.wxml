@@ -145,11 +145,11 @@
     </view>
   </view>
 
-  <!-- 底部按钮：取消 + 领取 -->
+  <!-- 底部按钮：取消 + 动态操作 -->
   <view class="footer-bar">
     <view class="btn-cancel" hover-class="btn-hover" bindtap="goBack">取消</view>
     <view class="btn-submit {{loading ? 'off' : ''}}" hover-class="btn-hover" bindtap="submitOp">
-      {{loading ? '提交中...' : '领取'}}
+      {{loading ? '提交中...' : (detail.operationLabel || '提交')}}
     </view>
   </view>
 </view>
