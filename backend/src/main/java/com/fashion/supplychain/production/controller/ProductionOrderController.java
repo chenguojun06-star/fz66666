@@ -17,6 +17,8 @@ import com.fashion.supplychain.production.orchestration.FactoryCapacityOrchestra
 import com.fashion.supplychain.production.orchestration.OrderHealthScoreOrchestrator;
 import com.fashion.supplychain.production.orchestration.SysNoticeOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.style.entity.StyleInfo;
+import com.fashion.supplychain.style.service.StyleInfoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -65,6 +67,9 @@ public class ProductionOrderController {
     @Autowired
     private SysNoticeOrchestrator sysNoticeOrchestrator;
 
+    @Autowired
+    private StyleInfoService styleInfoService;
+
     /**
      * 导出生产订单列表为Excel
      */
@@ -111,8 +116,18 @@ public class ProductionOrderController {
                     if (detail != null) {
                         // 返回分页格式以保持前端兼容
                         // 创建伪分页对象，包装单个订单为records数组
+                        // 注入 coverImage/styleImage，修复小程序扫码确认页款式图不显示问题
+                        java.util.Map<String, Object> enriched = new com.fasterxml.jackson.databind.ObjectMapper()
+                                .convertValue(detail, new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {});
+                        if (StringUtils.hasText(detail.getStyleId())) {
+                            StyleInfo si = styleInfoService.getById(detail.getStyleId());
+                            if (si != null && StringUtils.hasText(si.getCover())) {
+                                enriched.put("coverImage", si.getCover());
+                                enriched.put("styleImage", si.getCover());
+                            }
+                        }
                         java.util.Map<String, Object> pageResult = new java.util.HashMap<>();
-                        pageResult.put("records", java.util.Collections.singletonList(detail));
+                        pageResult.put("records", java.util.Collections.singletonList(enriched));
                         pageResult.put("total", 1L);
                         pageResult.put("size", 1L);
                         pageResult.put("current", 1L);

@@ -13,8 +13,8 @@
     </view>
   </view>
 
-  <!-- 汇总统计 -->
-  <view class="summary-bar">
+  <!-- 汇总统计已移除 -->
+  <view class="summary-bar" style="display:none">
     <view class="summary-item">
       <text class="summary-num">{{summary.totalMaterials}}</text>
       <text class="summary-label">物料种类</text>
@@ -48,38 +48,39 @@
   <!-- 物料列表 -->
   <view class="material-list" wx:else>
     <view class="material-card {{item.isComplete ? 'card-done' : ''}}" wx:for="{{materialPurchases}}" wx:key="id">
-      <!-- 物料头 -->
-      <view class="material-header">
-        <view class="material-name-row">
-          <text class="material-name">{{item.materialName || '未知物料'}}</text>
-          <view class="status-tag tag-{{item.statusColor}}">{{item.statusText}}</view>
-        </view>
-        <view class="material-specs" wx:if="{{item.specification || item.color}}">
-          <text class="spec-text" wx:if="{{item.specification}}">规格: {{item.specification}}</text>
-          <text class="spec-text" wx:if="{{item.color}}">颜色: {{item.color}}</text>
-        </view>
+      <!-- 物料名称 -->
+      <view class="card-title">{{item.materialName || '未知物料'}}</view>
+      <view class="card-divider"></view>
+      <!-- SKU信息 -->
+      <view class="info-row" wx:if="{{item.size}}">
+        <text class="info-label">码数</text>
+        <text class="info-value">{{item.size}}</text>
       </view>
-
-      <!-- 数量进度 -->
-      <view class="qty-row">
-        <view class="qty-item">
-          <text class="qty-label">采购数量</text>
-          <text class="qty-value">{{item.purchaseQuantity || 0}}</text>
-        </view>
-        <view class="qty-item">
-          <text class="qty-label">已到货</text>
-          <text class="qty-value arrived">{{item.arrivedQuantity || 0}}</text>
-        </view>
-        <view class="qty-item">
-          <text class="qty-label">到货率</text>
-          <text class="qty-value {{item.arrivalRate >= 70 ? 'rate-ok' : 'rate-warn'}}">{{item.arrivalRate}}%</text>
-        </view>
+      <view class="info-row" wx:if="{{item.color}}">
+        <text class="info-label">颜色</text>
+        <text class="info-value">{{item.color}}</text>
       </view>
-
-      <!-- 进度条 -->
-      <view class="progress-bar-bg">
-        <view class="progress-bar-fill {{item.arrivalRate >= 100 ? 'fill-done' : item.arrivalRate >= 70 ? 'fill-ok' : 'fill-warn'}}"
-              style="width: {{item.arrivalRate > 100 ? 100 : item.arrivalRate}}%"></view>
+      <view class="info-row" wx:if="{{item.specifications || item.specification}}">
+        <text class="info-label">规格</text>
+        <text class="info-value">{{item.specifications || item.specification}}</text>
+      </view>
+      <view class="card-divider"></view>
+      <!-- 数量信息 -->
+      <view class="info-row">
+        <text class="info-label">采购数量</text>
+        <text class="info-value">{{item.purchaseQuantity || 0}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">已到货</text>
+        <text class="info-value">{{item.arrivedQuantity || 0}}</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">到货率</text>
+        <text class="info-value">{{item.arrivalRate || 0}}%</text>
+      </view>
+      <view class="info-row">
+        <text class="info-label">状态</text>
+        <text class="info-value">{{item.statusText}}</text>
       </view>
 
       <!-- 到货输入 -->

@@ -109,9 +109,9 @@ public class ExecutableCommand implements Serializable {
     }
 
     /**
-     * 检查是否已过期
+     * 检查是否已过期（expiresAt 为 null 视为已过期）
      */
     public boolean isExpired() {
-        return System.currentTimeMillis() > expiresAt;
+        return expiresAt == null || System.currentTimeMillis() > expiresAt;
     }
 }

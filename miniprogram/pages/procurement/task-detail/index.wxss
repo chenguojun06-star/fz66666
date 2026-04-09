@@ -94,91 +94,42 @@
   padding: 28rpx 28rpx 24rpx;
   margin-bottom: 20rpx;
   box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04);
-  border-left: 6rpx solid var(--color-primary, #2563eb);
+  border: 1rpx solid #e5e7eb;
   transition: opacity 0.2s;
 }
 .card-done {
   opacity: 0.65;
-  border-left-color: var(--color-success, #22c55e);
 }
 
-.material-header { margin-bottom: 20rpx; }
-.material-name-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16rpx;
-}
-.material-name {
-  font-size: 30rpx;
+/* 物料卡片内容 */
+.card-title {
+  font-size: 34rpx;
   font-weight: 600;
-  color: var(--color-text-primary, #1f2937);
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  color: #1f2937;
+  margin-bottom: 16rpx;
+  display: block;
 }
-.material-specs {
+.card-divider {
+  height: 1rpx;
+  background: #f0f0f0;
+  margin: 12rpx 0;
+}
+.info-row {
   display: flex;
-  gap: 20rpx;
-  margin-top: 10rpx;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10rpx 0;
 }
-.spec-text {
-  font-size: 24rpx;
-  color: var(--color-text-secondary, #6b7280);
+.info-label {
+  font-size: 28rpx;
+  color: #888;
 }
-
-/* 状态标签 */
-.status-tag {
-  font-size: 22rpx;
-  padding: 4rpx 16rpx;
-  border-radius: 20rpx;
-  flex-shrink: 0;
+.info-value {
+  font-size: 28rpx;
+  color: #222;
   font-weight: 500;
 }
-.tag-orange { background: rgba(245,158,11,0.12); color: var(--color-warning, #d97706); }
-.tag-blue { background: rgba(37,99,235,0.10); color: var(--color-primary, #2563eb); }
-.tag-green { background: rgba(34,197,94,0.12); color: var(--color-success, #16a34a); }
-.tag-gray { background: rgba(107,114,128,0.10); color: var(--color-text-secondary, #6b7280); }
-
-/* 数量行 */
-.qty-row {
-  display: flex;
-  margin-bottom: 16rpx;
-}
-.qty-item {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4rpx;
-}
-.qty-label {
-  font-size: 22rpx;
-  color: var(--color-text-tertiary, #9ca3af);
-}
-.qty-value {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: var(--color-text-primary, #1f2937);
-}
-.qty-value.arrived { color: var(--color-primary, #2563eb); }
-
-/* 进度条 */
-.progress-bar-bg {
-  height: 10rpx;
-  background: var(--color-border, #e5e7eb);
-  border-radius: 5rpx;
-  overflow: hidden;
-  margin-bottom: 20rpx;
-}
-.progress-bar-fill {
-  height: 100%;
-  border-radius: 5rpx;
-  transition: width 0.3s ease;
-}
-.fill-done { background: var(--color-success, #22c55e); }
-.fill-ok { background: var(--color-primary, #2563eb); }
-.fill-warn { background: var(--color-warning, #f59e0b); }
 
 /* 到货输入 */
 .input-row {
