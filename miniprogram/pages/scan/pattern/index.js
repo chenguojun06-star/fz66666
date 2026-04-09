@@ -112,6 +112,7 @@ Page({
         patternDeveloper: data.patternDeveloper || patternDetail.patternDeveloper || '-',
         deliveryTime: patternDetail.deliveryTime || '-',
         coverImage: patternDetail.coverImage || patternDetail.styleImage || '',
+        styleImage: patternDetail.styleImage || patternDetail.coverImage || '',
         styleName: patternDetail.styleName || data.styleName || '',
         category: patternDetail.category || data.category || '',
         customer: patternDetail.customer || data.customer || '',
@@ -199,6 +200,7 @@ Page({
     this.setData({
       'detail.operationType': type,
       'detail.operationLabel': (selected && selected.label) || OPERATION_LABELS[type] || '操作',
+      'detail.submitLabel': (selected && selected.label) || OPERATION_LABELS[type] || '操作',
       'detail.requiresWarehouseInput': WAREHOUSE_OPERATIONS.has(type),
       'detail.requiresReviewBeforeInbound': type === 'WAREHOUSE_IN' && !reviewApproved,
     });

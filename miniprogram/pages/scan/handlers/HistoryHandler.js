@@ -103,6 +103,9 @@ function _createNewGroup(groupKey, record) {
     sizeList: [],
     sizeQtyList: [],
     sizeTotal: 0,
+    // 图片
+    coverImage: record.coverImage || record.styleImage || '',
+    styleImage: record.styleImage || record.coverImage || '',
     // 交期信息（由 enrichGroupsWithOrderData 填充）
     deliveryDateStr: '',
     remainDaysText: '',
@@ -202,6 +205,8 @@ function _addRecordToGroup(group, record) {
     canUndo: canRollbackCurrentScan && canRescan && !payrollSettled && !hasNextStageScan,
     payrollSettled: payrollSettled,
     cuttingBundleId: record.cuttingBundleId || '',
+    coverImage: record.coverImage || record.styleImage || '',
+    styleImage: record.styleImage || record.coverImage || '',
   });
 }
 

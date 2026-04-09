@@ -159,6 +159,7 @@ public class ProductionAgenticCrewOrchestrator {
                     .source("ai_nl_command")
                     .initiatorId(String.valueOf(operatorId))
                     .tenantId(tenantId)
+                    .expiresAt(System.currentTimeMillis() + 24 * 3600 * 1000L)
                     .build();
             command.generateCommandId();
 
