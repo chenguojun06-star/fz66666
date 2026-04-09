@@ -188,6 +188,7 @@ body {
   --sidebar-bg: #0b2d5c; /* @design-system: 纯色深蓝 */
   --sidebar-text: rgba(255, 255, 255, 0.95);
   --sidebar-text-strong: #ffffff;
+  --sidebar-text-active: #ffd700;
   --sidebar-text-muted: rgba(255, 255, 255, 0.75);
   --sidebar-text-disabled: rgba(255, 255, 255, 0.45);
   --sidebar-item-bg-hover: rgba(255, 255, 255, 0.12);
@@ -258,6 +259,7 @@ body {
   --sidebar-bg: #0b2d5c;
   --sidebar-text: rgba(255, 255, 255, 0.95);
   --sidebar-text-strong: #ffffff;
+  --sidebar-text-active: #ffd700;
   --sidebar-text-muted: rgba(255, 255, 255, 0.75);
   --sidebar-text-disabled: rgba(255, 255, 255, 0.45);
   /* @design-system: 删除用户头像渐变，使用纯色 */
@@ -305,6 +307,7 @@ body {
   --sidebar-bg: #e0f2fe;
   --sidebar-text: #000000;
   --sidebar-text-strong: #000000;
+  --sidebar-text-active: #2D7FF9;
   --sidebar-text-muted: rgba(0, 0, 0, 0.7);
   --sidebar-text-disabled: rgba(0, 0, 0, 0.4);
   --sidebar-item-bg-hover: rgba(59, 130, 246, 0.08);
@@ -364,6 +367,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   --sidebar-text: #1a1a1a;
   --sidebar-text-strong: #000000;
+  --sidebar-text-active: #2D7FF9;
   --sidebar-text-muted: rgba(0, 0, 0, 0.65);
   --sidebar-text-disabled: rgba(0, 0, 0, 0.35);
   --sidebar-item-bg-hover: rgba(45, 127, 249, 0.08);
@@ -417,6 +421,7 @@ body {
   --sidebar-bg: #1a1d24;
   --sidebar-text: rgba(240, 242, 245, 0.9);
   --sidebar-text-strong: #f0f2f5;
+  --sidebar-text-active: #6ba3ff;
   --sidebar-text-muted: rgba(240, 242, 245, 0.72);
   --sidebar-text-disabled: rgba(240, 242, 245, 0.45);
   --sidebar-item-bg-hover: rgba(255, 255, 255, 0.08);
