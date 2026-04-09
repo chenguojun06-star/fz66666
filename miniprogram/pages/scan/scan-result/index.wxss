@@ -49,21 +49,16 @@
   gap: 8rpx;
 }
 
-.tags {
+.bundle-meta {
   display: flex;
-  gap: 12rpx;
+  gap: 16rpx;
   align-items: center;
+  margin-top: 6rpx;
 }
-.tag {
-  padding: 8rpx 14rpx;
-  border-radius: 14rpx;
-  font-size: 24rpx;
-  color: #fff;
-  font-weight: 600;
+.meta-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
 }
-.tag-color { background: rgba(45, 127, 249, 0.95); }
-.tag-size { background: rgba(99, 102, 241, 0.95); }
-.tag-qty  { background: rgba(16,185,129,0.98); }
 .style-no {
   font-size: 36rpx;
   font-weight: 700;

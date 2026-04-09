@@ -1,6 +1,19 @@
 <view class="container">
-  <!-- 头部筛选区域 -->
-  <view class="filter-section">
+  <!-- 时间模式切换 -->
+  <view class="mode-tabs">
+    <view class="mode-tab {{dateMode === 'month' ? 'mode-tab-active' : ''}}" bindtap="onModeChange" data-mode="month">按月</view>
+    <view class="mode-tab {{dateMode === 'custom' ? 'mode-tab-active' : ''}}" bindtap="onModeChange" data-mode="custom">自定义</view>
+  </view>
+
+  <!-- 月份选择器（按月模式） -->
+  <view class="month-selector" wx:if="{{dateMode === 'month'}}">
+    <view class="month-arrow" hover-class="month-arrow-hover" hover-stay-time="100" bindtap="onPrevMonth">‹</view>
+    <text class="month-text">{{displayMonth}}</text>
+    <view class="month-arrow" hover-class="month-arrow-hover" hover-stay-time="100" bindtap="onNextMonth">›</view>
+  </view>
+
+  <!-- 日期范围选择（自定义模式） -->
+  <view class="filter-section" wx:if="{{dateMode === 'custom'}}">
     <view class="date-row">
       <view class="date-col">
         <text class="date-label">开始</text>
@@ -12,6 +25,10 @@
         <date-picker value="{{endDate}}" bindchange="onEndDateChange" />
       </view>
     </view>
+  </view>
+
+  <!-- 搜索 -->
+  <view class="filter-section">
     <view class="search-row">
       <view class="search-box">
         <view class="line-icon line-icon--sm icon-search search-icon"></view>
@@ -29,12 +46,16 @@
       <text class="summary-label">总数量</text>
     </view>
     <view class="summary-item">
+      <text class="summary-num">{{summary.orderCount || 0}}</text>
+      <text class="summary-label">订单数</text>
+    </view>
+    <view class="summary-item">
       <text class="summary-num">{{summary.recordCount || 0}}</text>
       <text class="summary-label">记录数（样衣{{summary.patternRecordCount || 0}}）</text>
     </view>
-    <view class="summary-item summary-hl summary-payable {{showOnlyPayable ? 'summary-payable-active' : ''}}" bindtap="onTogglePayableFilter" hover-class="summary-payable-hover" hover-stay-time="50">
+    <view class="summary-item summary-hl {{showOnlyPayable ? 'summary-payable-active' : ''}}" bindtap="onTogglePayableFilter" hover-class="summary-item-hl-hover" hover-stay-time="50">
       <text class="summary-num">¥{{summary.totalWage || '0.00'}}</text>
-      <text class="summary-label">工资汇总（{{summary.payableRecordCount || 0}}条）</text>
+      <text class="summary-label">工资（{{summary.payableRecordCount || 0}}条）</text>
     </view>
   </view>
 

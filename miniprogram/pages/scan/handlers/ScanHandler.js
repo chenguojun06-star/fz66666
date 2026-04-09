@@ -104,7 +104,6 @@ class ScanHandler {
       return null;
     }
 
-    // 采购模式特殊处理
     const isProcurementMode =
       manualScanType === 'procurement' ||
       orderDetail.currentProcessName === '采购' ||
@@ -114,7 +113,15 @@ class ScanHandler {
       return await this.dataProcessor.handleProcurementMode(parsedData, orderDetail, this.SCAN_MODE.ORDER);
     }
 
-    // 有SKU明细的订单
+    const isCuttingMode =
+      manualScanType === 'cutting' ||
+      orderDetail.currentProcessName === '裁剪' ||
+      orderDetail.current_process_name === '裁剪';
+
+    if (isCuttingMode) {
+      return await this.dataProcessor.handleCuttingMode(parsedData, orderDetail, this.SCAN_MODE.ORDER);
+    }
+
     if (orderDetail.items?.length > 0) {
       return await this.dataProcessor.handleOrderWithItems(
         parsedData,
@@ -124,9 +131,8 @@ class ScanHandler {
       );
     }
 
-    // 处理数量
     this.dataProcessor.handleOrderQuantity(parsedData, orderDetail);
-    return null; // 继续后续流程
+    return null;
   }
 
   /**

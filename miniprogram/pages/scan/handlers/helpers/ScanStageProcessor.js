@@ -38,12 +38,10 @@ class ScanStageProcessor {
     const SCAN_MODE = this.scanModeResolver.SCAN_MODE;
 
     if (scanMode === SCAN_MODE.BUNDLE) {
-      // 防护：orderNo 为空时不应进入菲号路径
       if (!hasOrderNo) {
         console.warn('[ScanStageProcessor] BUNDLE模式但orderNo为空，无法检测工序');
         throw new Error('订单号为空，请检查二维码格式');
       }
-      // 防回归护栏：采购/裁剪阶段不应走菲号路径
       if (!hasBundleNo && (currentProcessName === '采购' || currentProcessName === '裁剪')) {
         console.warn(
           `[ScanStageProcessor] 检测到疑似误路由: 当前阶段[${currentProcessName}]却进入BUNDLE分支, 已回退到订单工序检测`,
@@ -56,7 +54,6 @@ class ScanStageProcessor {
         return await this.stageDetector.detectNextStage(orderDetail);
       }
 
-      // 菲号模式：使用精确的扫码次数匹配
       return await this.stageDetector.detectByBundle(
         parsedData.orderNo,
         parsedData.bundleNo,
@@ -64,7 +61,17 @@ class ScanStageProcessor {
         orderDetail,
       );
     } else {
-      // 订单模式：使用订单当前进度判断（支持动态工序配置）
+      if (currentProcessName === '采购' || currentProcessName === '裁剪') {
+        return {
+          processName: currentProcessName,
+          progressStage: currentProcessName,
+          scanType: currentProcessName === '采购' ? 'procurement' : 'cutting',
+          quantity: parsedData.quantity || 0,
+          isDuplicate: false,
+          isCompleted: false,
+          _skipStageDetection: true,
+        };
+      }
       return await this.stageDetector.detectNextStage(orderDetail);
     }
   }

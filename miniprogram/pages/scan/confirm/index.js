@@ -1,22 +1,21 @@
-/**
- * 扫码确认页面 — 从弹窗迁移为独立页面
- * 对应原 ConfirmModalHandler 非样板分支
- */
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { normalizeScanType } = require('../handlers/helpers/ScanModeResolver');
 const SKUProcessor = require('../processors/SKUProcessor');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+const { getUserInfo } = require('../../../utils/storage');
 
 Page({
   data: {
     isProcurement: false,
+    isCutting: false,
     detail: {},
     skuList: [],
     materialPurchases: [],
     materialSummary: { totalDemand: 0, totalArrived: 0, totalPending: 0 },
     summary: { totalQuantity: 0, totalAmount: 0 },
     sizeMatrix: { sizes: [], rows: [] },
+    cuttingTask: null,
     aiTipData: null,
     buttonText: '确认扫码',
     loading: false
@@ -34,15 +33,16 @@ Page({
 
     var orderDetail = raw.orderDetail || {};
     var isProcurement = raw.progressStage === '采购';
+    var isCutting = raw.progressStage === '裁剪';
 
-    // 动态设置页面标题
     if (isProcurement) {
       wx.setNavigationBarTitle({ title: '面辅料采购确认' });
+    } else if (isCutting) {
+      wx.setNavigationBarTitle({ title: '裁剪任务领取' });
     }
 
     var skuItems = raw.skuItems || orderDetail.orderItems || [];
 
-    // Build SKU list via processor
     var normalized = SKUProcessor.normalizeOrderItems(skuItems, raw.orderNo, raw.styleNo || orderDetail.styleNo);
     var formItems = SKUProcessor.buildSKUInputList(normalized);
     var summary = SKUProcessor.getSummary(formItems);
@@ -50,7 +50,6 @@ Page({
 
     var coverImage = getAuthedImageUrl(orderDetail.coverImage || orderDetail.styleImage || '');
 
-    // 采购模式：提取面辅料采购数据
     var materialPurchases = [];
     var materialSummary = { totalDemand: 0, totalArrived: 0, totalPending: 0 };
     if (isProcurement && Array.isArray(raw.materialPurchases)) {
@@ -71,8 +70,24 @@ Page({
       });
     }
 
+    var cuttingTask = null;
+    if (isCutting && raw.cuttingTask) {
+      cuttingTask = raw.cuttingTask;
+      var statusMap = {
+        pending: '待领取', not_started: '待领取',
+        received: '已领取', in_progress: '进行中',
+        completed: '已完成', done: '已完成'
+      };
+      cuttingTask.statusText = statusMap[cuttingTask.status] || cuttingTask.status || '待领取';
+    }
+
+    var btnText = '确认扫码';
+    if (isProcurement) btnText = '一键领取';
+    else if (isCutting) btnText = cuttingTask ? '领取任务' : '返回';
+
     this.setData({
       isProcurement: isProcurement,
+      isCutting: isCutting,
       detail: {
         coverImage: coverImage,
         styleNo: orderDetail.styleNo || raw.styleNo || '',
@@ -80,18 +95,19 @@ Page({
         bundleNo: raw.bundleNo || '',
         processName: raw.processName || '',
         progressStage: raw.progressStage || '',
-        bomFallback: raw.bomFallback || false
+        bomFallback: raw.bomFallback || false,
+        quantity: raw.quantity || 0
       },
       materialPurchases: materialPurchases,
       materialSummary: materialSummary,
-      buttonText: isProcurement ? '领取采购' : '确认扫码',
+      cuttingTask: cuttingTask,
+      buttonText: btnText,
       skuList: formItems,
       summary: summary,
       sizeMatrix: sizeMatrix
     });
 
-    // AI tip（非采购模式）
-    if (!isProcurement && raw.orderNo && raw.processName) {
+    if (!isProcurement && !isCutting && raw.orderNo && raw.processName) {
       this._fetchAiTip(raw.orderNo, raw.processName);
     }
   },
@@ -99,8 +115,6 @@ Page({
   onUnload() {
     getApp().globalData.confirmScanData = null;
   },
-
-  /* ---- helpers ---- */
 
   _buildSizeMatrix(skuList) {
     if (!Array.isArray(skuList) || skuList.length === 0) {
@@ -135,10 +149,8 @@ Page({
           self.setData({ aiTipData: res });
         }
       })
-      .catch(function () { /* no-op */ });
+      .catch(function () {});
   },
-
-  /* ---- events ---- */
 
   previewImage() {
     var img = this.data.detail.coverImage;
@@ -161,6 +173,115 @@ Page({
 
   async confirmScan() {
     if (this.data.loading) return;
+
+    if (this.data.isProcurement) {
+      return this._confirmProcurement();
+    }
+
+    if (this.data.isCutting) {
+      return this._confirmCutting();
+    }
+
+    return this._confirmNormalScan();
+  },
+
+  async _confirmProcurement() {
+    var materialPurchases = this.data.materialPurchases;
+    if (!materialPurchases || materialPurchases.length === 0) {
+      toast.error('无采购物料');
+      return;
+    }
+
+    var userInfo = getUserInfo() || {};
+    var receiverId = String(userInfo.id || userInfo.userId || '').trim();
+    var receiverName = String(userInfo.name || userInfo.username || '').trim();
+
+    if (!receiverId && !receiverName) {
+      toast.error('领取人信息缺失，请重新登录');
+      return;
+    }
+
+    var pendingItems = materialPurchases.filter(function(item) {
+      var status = String(item.status || '').trim().toLowerCase();
+      return !status || status === 'pending';
+    });
+
+    if (pendingItems.length === 0) {
+      toast.success('所有物料均已领取');
+      this._emitRefresh();
+      wx.navigateBack();
+      return;
+    }
+
+    this.setData({ loading: true });
+    wx.showLoading({ title: '领取中...', mask: true });
+
+    try {
+      await Promise.all(pendingItems.map(function(item) {
+        return api.production.receivePurchase({
+          purchaseId: item.id || item.purchaseId,
+          receiverId: receiverId,
+          receiverName: receiverName
+        });
+      }));
+
+      wx.hideLoading();
+      this.setData({ loading: false });
+      toast.success('已领取 ' + pendingItems.length + ' 项物料');
+      this._emitRefresh();
+      wx.navigateBack();
+    } catch (e) {
+      wx.hideLoading();
+      this.setData({ loading: false });
+      toast.error(e.errMsg || e.message || '领取失败');
+    }
+  },
+
+  async _confirmCutting() {
+    var cuttingTask = this.data.cuttingTask;
+    if (!cuttingTask || !cuttingTask.id) {
+      toast.error('无裁剪任务可领取');
+      return;
+    }
+
+    var status = String(cuttingTask.status || '').trim().toLowerCase();
+    if (status === 'received' || status === 'in_progress' || status === 'completed' || status === 'done') {
+      toast.info('该任务已被领取');
+      wx.navigateBack();
+      return;
+    }
+
+    var userInfo = getUserInfo() || {};
+    var receiverId = String(userInfo.id || userInfo.userId || '').trim();
+    var receiverName = String(userInfo.name || userInfo.username || '').trim();
+
+    if (!receiverId && !receiverName) {
+      toast.error('领取人信息缺失，请重新登录');
+      return;
+    }
+
+    this.setData({ loading: true });
+    wx.showLoading({ title: '领取中...', mask: true });
+
+    try {
+      await api.production.receiveCuttingTaskById(cuttingTask.id, receiverId, receiverName);
+
+      wx.hideLoading();
+      this.setData({ loading: false });
+      toast.success('裁剪任务已领取');
+      this._emitRefresh();
+
+      wx.redirectTo({
+        url: '/pages/cutting/task-detail/index?orderNo=' + encodeURIComponent(this.data.detail.orderNo) + '&styleNo=' + encodeURIComponent(this.data.detail.styleNo)
+      });
+    } catch (e) {
+      wx.hideLoading();
+      this.setData({ loading: false });
+      toast.error(e.errMsg || e.message || '领取失败');
+    }
+  },
+
+  async _confirmNormalScan() {
     var raw = this._scanContext;
     if (!raw) { toast.error('数据异常'); return; }
 

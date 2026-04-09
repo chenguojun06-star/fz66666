@@ -10,7 +10,7 @@
 
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
-
+const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus } = require('../../../utils/eventBus');
 
 /**
@@ -38,7 +38,7 @@ function onRescanRecord(ctx, e) {
     scanTime: record.createdAt || record.scanTime || '-',
     groupId: groupId,
     recordIdx: recordIdx,
-    coverImage: record.coverImage || record.styleImage || '',
+    coverImage: getAuthedImageUrl(record.coverImage || record.styleImage || ''),
     styleNo: record.styleNo || '',
     processName: record.processName || '',
   };

@@ -91,7 +91,7 @@ function handleRepairTask(task) {
  * @returns {void} 无返回值
  */
 function handleApprovalTask(_task) { // eslint-disable-line no-unused-vars
-  safeNavigate({ url: '/pages/admin/notification/index' }).catch(() => {});
+  safeNavigate({ url: '/pages/admin/user-approval/index' }).catch(() => {});
 }
 
 /**

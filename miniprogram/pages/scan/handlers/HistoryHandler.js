@@ -11,6 +11,7 @@ const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { DEBUG_MODE } = require('../../../config');
 const { getStorageValue, setStorageValue } = require('../../../utils/storage');
+const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 
 // ==================== 交期计算 ====================
 
@@ -104,9 +105,8 @@ function _createNewGroup(groupKey, record) {
     sizeQtyList: [],
     sizeTotal: 0,
     // 图片
-    coverImage: record.coverImage || record.styleImage || '',
-    styleImage: record.styleImage || record.coverImage || '',
-    // 交期信息（由 enrichGroupsWithOrderData 填充）
+    coverImage: getAuthedImageUrl(record.coverImage || record.styleImage || ''),
+    styleImage: getAuthedImageUrl(record.styleImage || record.coverImage || ''),
     deliveryDateStr: '',
     remainDaysText: '',
     remainDaysClass: '',
@@ -205,8 +205,8 @@ function _addRecordToGroup(group, record) {
     canUndo: canRollbackCurrentScan && canRescan && !payrollSettled && !hasNextStageScan,
     payrollSettled: payrollSettled,
     cuttingBundleId: record.cuttingBundleId || '',
-    coverImage: record.coverImage || record.styleImage || '',
-    styleImage: record.styleImage || record.coverImage || '',
+    coverImage: getAuthedImageUrl(record.coverImage || record.styleImage || ''),
+    styleImage: getAuthedImageUrl(record.styleImage || record.coverImage || ''),
   });
 }
 
@@ -527,8 +527,8 @@ function onHandleQuality(page, e) {
     quantity: record.quantity || 1,
     scanCode: record.scanCode || '',
     recordId: record.id,
-    coverImage: group.coverImage || record.coverImage || group.styleImage || record.styleImage || '',
-    styleImage: group.styleImage || record.styleImage || group.coverImage || record.coverImage || '',
+    coverImage: getAuthedImageUrl(group.coverImage || record.coverImage || group.styleImage || record.styleImage || ''),
+    styleImage: getAuthedImageUrl(group.styleImage || record.styleImage || group.coverImage || record.coverImage || ''),
   });
 }
 
@@ -578,8 +578,8 @@ function onTapHistoryItem(page, e) {
       quantity: item.data.quantity || 1,
       scanCode: item.data.scanCode || '',
       recordId: item.data.scanId || item.data.recordId,
-      coverImage: item.data.coverImage || item.data.styleImage || '',
-      styleImage: item.data.styleImage || item.data.coverImage || '',
+      coverImage: getAuthedImageUrl(item.data.coverImage || item.data.styleImage || ''),
+      styleImage: getAuthedImageUrl(item.data.styleImage || item.data.coverImage || ''),
     });
   }
 }

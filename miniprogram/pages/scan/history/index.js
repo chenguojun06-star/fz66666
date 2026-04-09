@@ -1,23 +1,15 @@
 /**
- * 历史记录页面
- * 展示全部扫码记录 - 支持日期筛选、搜索、汇总
- * 表头：领取人, 订单号, 菲号, 工序, 单价, 数量, 扎号, 日期
+ * 历史记录页面（合并原 history + monthly）
+ * 支持"按月"和"自定义"两种时间筛选模式
  */
 const api = require('../../../utils/api');
 
-/**
- * 归一化质检子步骤名称：质检领取/质检验收 → 质检
- */
 function _normalizeQualityName(processName) {
   if (!processName) return processName;
-  // 兼容历史旧数据（确认）及现在的两步（领取/验收）
   if (/^质检(领取|验收|确认)$/.test(processName)) return '质检';
   return processName;
 }
 
-/**
- * 获取30天前日期 YYYY-MM-DD
- */
 function getDateBefore(days) {
   const d = new Date();
   d.setDate(d.getDate() - days);
@@ -27,26 +19,24 @@ function getDateBefore(days) {
   return `${y}-${m}-${day}`;
 }
 
-function getToday() {
-  return getDateBefore(0);
+function getToday() { return getDateBefore(0); }
+
+function getMonthRange(year, month) {
+  const m = String(month).padStart(2, '0');
+  const lastDay = new Date(year, month, 0).getDate();
+  return {
+    start: `${year}-${m}-01`,
+    end: `${year}-${m}-${String(lastDay).padStart(2, '0')}`,
+    display: `${year}年${month}月`,
+  };
 }
 
-/**
- * 格式化时间
- */
 function formatTime(timeStr) {
   if (!timeStr) return '-';
-  // 取 MM-DD HH:mm
-  if (timeStr.length >= 16) {
-    return timeStr.substring(5, 16);
-  }
+  if (timeStr.length >= 16) return timeStr.substring(5, 16);
   return timeStr;
 }
 
-/**
- * 将样板扫码记录格式化为与普通扫码记录一致的 displayRecord 格式
- * @param {Object} item - PatternScanRecord（来自 /scan-records/my-history）
- */
 function _formatPatternRecord(item) {
   return {
     ...item,
@@ -65,12 +55,18 @@ function _formatPatternRecord(item) {
   };
 }
 
+const _now = new Date();
+
 Page({
   data: {
+    dateMode: 'month',
+    year: _now.getFullYear(),
+    month: _now.getMonth() + 1,
+    displayMonth: '',
     startDate: getDateBefore(30),
     endDate: getToday(),
     searchKeyword: '',
-    records: [],          // 普通扫码记录（分页追加）
+    records: [],
     displayRecords: [],
     showOnlyPayable: false,
     loading: false,
@@ -79,6 +75,7 @@ Page({
     pageSize: 30,
     summary: {
       totalQuantity: 0,
+      orderCount: 0,
       recordCount: 0,
       payableRecordCount: 0,
       patternRecordCount: 0,
@@ -88,28 +85,25 @@ Page({
     emptyHint: '',
   },
 
-  /** 请求代际计数器（非 data 属性）：每次发起新请求时递增，用于丢弃过期请求的结果，防止下拉刷新时旧请求回来覆盖新数据 */
   _reqGeneration: 0,
 
   onLoad() {
     this._reqGeneration = 0;
-    this._showedOnce = false; // onLoad→onShow 初次连续触发时跳过 onShow 的重复加载
+    this._showedOnce = false;
+    this._updateMonthDisplay();
     this.loadData(true);
   },
 
   onShow() {
-    // 首次进入：onLoad 已调用 loadData，跳过；返回本页时才重新拉取最新数据
     if (!this._showedOnce) {
       this._showedOnce = true;
       return;
     }
-    this.setData({ loading: false }); // 重置 loading 守卫，防止上次请求未完成时卡住
+    this.setData({ loading: false });
     this.loadData(true);
   },
 
   onPullDownRefresh() {
-    // 强制刷新：先重置 loading，避免初始请求未完成时被 guard 拦截
-    // 代际递增在 loadData 内部完成，旧请求结果会被自动丢弃
     this.setData({ loading: false });
     this.loadData(true).finally(() => wx.stopPullDownRefresh());
   },
@@ -120,7 +114,42 @@ Page({
     }
   },
 
-  // ===== 日期 =====
+  _updateMonthDisplay() {
+    const range = getMonthRange(this.data.year, this.data.month);
+    this.setData({ displayMonth: range.display });
+  },
+
+  onModeChange(e) {
+    const mode = e.currentTarget.dataset.mode;
+    if (mode === this.data.dateMode) return;
+    this.setData({ dateMode: mode });
+    if (mode === 'month') {
+      this._updateMonthDisplay();
+    }
+    this.loadData(true);
+  },
+
+  onPrevMonth() {
+    let { year, month } = this.data;
+    month -= 1;
+    if (month < 1) { month = 12; year -= 1; }
+    this.setData({ year, month });
+    this._updateMonthDisplay();
+    this.loadData(true);
+  },
+
+  onNextMonth() {
+    let { year, month } = this.data;
+    const curYear = _now.getFullYear();
+    const curMonth = _now.getMonth() + 1;
+    if (year > curYear || (year === curYear && month >= curMonth)) return;
+    month += 1;
+    if (month > 12) { month = 1; year += 1; }
+    this.setData({ year, month });
+    this._updateMonthDisplay();
+    this.loadData(true);
+  },
+
   onStartDateChange(e) {
     this.setData({ startDate: e.detail.value });
     this.loadData(true);
@@ -130,7 +159,6 @@ Page({
     this.loadData(true);
   },
 
-  // ===== 搜索 =====
   onKeywordInput(e) {
     this.setData({ searchKeyword: e.detail.value });
   },
@@ -142,7 +170,14 @@ Page({
     this.loadData(true);
   },
 
-  // 将所有记录合并并按扫码时间倒序排列
+  _getDateRange() {
+    if (this.data.dateMode === 'month') {
+      const range = getMonthRange(this.data.year, this.data.month);
+      return { start: range.start, end: range.end };
+    }
+    return { start: this.data.startDate, end: this.data.endDate };
+  },
+
   _mergeAndSort(regularRecords, patternRecords) {
     return [...regularRecords, ...patternRecords].sort((a, b) => {
       const ta = a.scanTime || '';
@@ -153,43 +188,39 @@ Page({
     });
   },
 
-  // ===== 数据加载 =====
   async loadData(reset) {
     if (this.data.loading) return;
     if (!reset && !this.data.hasMore) return;
 
-    const gen = ++this._reqGeneration; // 记录本次请求的代际，用于识别过期结果
+    const gen = ++this._reqGeneration;
     const nextPage = reset ? 1 : this.data.page + 1;
     this.setData({ loading: true });
 
     try {
+      const { start, end } = this._getDateRange();
       const params = {
         currentUser: 'true',
         page: nextPage,
         pageSize: this.data.pageSize,
       };
 
-      if (this.data.startDate) {
-        params.startTime = this.data.startDate + ' 00:00:00';
-      }
-      if (this.data.endDate) {
-        params.endTime = this.data.endDate + ' 23:59:59';
-      }
+      if (start) params.startTime = start + ' 00:00:00';
+      if (end) params.endTime = end + ' 23:59:59';
+
       if (this.data.searchKeyword) {
         const keyword = this.data.searchKeyword.trim();
         if (/^\d+$/.test(keyword)) {
-          params.bundleNo = keyword;  // 纯数字 → 按捆号搜索
+          params.bundleNo = keyword;
         } else {
-          params.orderNo = keyword;   // 含字母 → 按订单号搜索
+          params.orderNo = keyword;
         }
       }
 
-      // 并发请求：大货记录（分页）+ 样衣记录（仅 reset 时全量加载）
       const requests = [api.production.myScanHistory(params)];
       if (reset) {
         const patternParams = {};
-        if (this.data.startDate) patternParams.startTime = this.data.startDate + ' 00:00:00';
-        if (this.data.endDate) patternParams.endTime = this.data.endDate + ' 23:59:59';
+        if (start) patternParams.startTime = start + ' 00:00:00';
+        if (end) patternParams.endTime = end + ' 23:59:59';
         requests.push(api.production.myPatternScanHistory(patternParams));
       }
 
@@ -199,7 +230,6 @@ Page({
         ? (settled[1] && settled[1].status === 'fulfilled' ? settled[1].value : [])
         : (this._patternRecords || []);
 
-      // 格式化大货记录
       const newRecords = (result?.records || []).filter(
         (item) => (item.scanResult || '').toLowerCase() !== 'failure'
       );
@@ -230,14 +260,13 @@ Page({
       const total = result?.total || 0;
       const hasMore = merged.length < total;
 
-      // 格式化样衣记录（reset 时重建，翻页时复用旧数据）
       const patternRecords = reset
         ? (Array.isArray(patternRaw) ? patternRaw : []).map((item) => _formatPatternRecord(item))
         : (this._patternRecords || []);
 
-      // 计算汇总（仅大货记录计入数量和工资）
       let totalQuantity = 0;
       let totalWage = 0;
+      const orderSet = new Set();
       merged.forEach((r) => {
         totalQuantity += r.quantity || 0;
         const price = Number(r.unitPrice) || 0;
@@ -245,12 +274,15 @@ Page({
         if (price > 0 && qty > 0) {
           totalWage += price * qty;
         }
+        if (r.orderNo && r.orderNo !== '-') {
+          orderSet.add(r.orderNo);
+        }
       });
 
       const allForDisplay = this._mergeAndSort(merged, patternRecords);
       const displayRecords = this._getDisplayRecords(allForDisplay);
 
-      if (gen !== this._reqGeneration) return; // 已被新请求（如下拉刷新）取代，丢弃本次过期结果
+      if (gen !== this._reqGeneration) return;
       this._patternRecords = patternRecords;
       this.setData({
         records: merged,
@@ -260,18 +292,19 @@ Page({
         loading: false,
         summary: {
           totalQuantity,
+          orderCount: orderSet.size,
           recordCount: merged.length + patternRecords.length,
           payableRecordCount: merged.filter((item) => item.isPayable).length,
           patternRecordCount: patternRecords.length,
           totalWage: totalWage.toFixed(2),
         },
         emptyText: this.data.showOnlyPayable ? '暂无计薪记录' : '暂无记录',
-        emptyHint: this.data.showOnlyPayable ? '当前筛选仅显示有单价且有数量的记录' : '调整日期范围或搜索条件试试',
+        emptyHint: this.data.showOnlyPayable ? '点击工资可切回全部记录' : '调整时间范围或搜索条件试试',
       });
     } catch (e) {
-      if (gen !== this._reqGeneration) return; // 过期请求的错误也不处理
+      if (gen !== this._reqGeneration) return;
       if (e && e.type === 'auth') {
-        this.setData({ loading: false }); // 修复：auth 错误也要还原 loading，避免页面永久卡住
+        this.setData({ loading: false });
         return;
       }
       wx.showToast({ title: `加载失败: ${(e && e.message) || '请稍后重试'}`, icon: 'none' });
@@ -297,7 +330,7 @@ Page({
       showOnlyPayable,
       displayRecords,
       emptyText: showOnlyPayable ? '暂无计薪记录' : '暂无记录',
-      emptyHint: showOnlyPayable ? '当前筛选仅显示有单价且有数量的记录' : '调整日期范围或搜索条件试试',
+      emptyHint: showOnlyPayable ? '点击工资可切回全部记录' : '调整时间范围或搜索条件试试',
     });
   },
 

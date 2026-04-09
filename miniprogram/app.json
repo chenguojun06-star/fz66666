@@ -28,19 +28,9 @@
       "pages": ["index"]
     },
     {
-      "root": "pages/scan/monthly",
-      "name": "pkg-scan-monthly",
-      "pages": ["index"]
-    },
-    {
       "root": "pages/payroll",
       "name": "pkg-payroll",
       "pages": ["payroll"]
-    },
-    {
-      "root": "pages/admin/notification",
-      "name": "pkg-admin-notification",
-      "pages": ["index"]
     },
     {
       "root": "pages/admin/user-approval",
@@ -123,8 +113,8 @@
   "preloadRule": {
     "pages/home/index":  { "network": "all", "packages": ["pkg-warehouse", "pkg-register", "pkg-bundle-split"] },
     "pages/work/index":  { "network": "all", "packages": ["pkg-work-inbox", "pkg-bundle-split", "pkg-cutting", "pkg-procurement", "pkg-work-ai-photo"] },
-    "pages/scan/index":  { "network": "all", "packages": ["pkg-scan-history", "pkg-scan-monthly", "pkg-scan-pattern", "pkg-scan-rescan", "pkg-scan-result", "pkg-scan-confirm", "pkg-scan-quality"] },
-    "pages/admin/index": { "network": "all", "packages": ["pkg-admin-notification", "pkg-admin-approval", "pkg-payroll", "pkg-privacy", "pkg-admin-changepwd", "pkg-admin-feedback", "pkg-admin-invite"] }
+    "pages/scan/index":  { "network": "all", "packages": ["pkg-scan-history", "pkg-scan-pattern", "pkg-scan-rescan", "pkg-scan-result", "pkg-scan-confirm", "pkg-scan-quality"] },
+    "pages/admin/index": { "network": "all", "packages": ["pkg-admin-approval", "pkg-payroll", "pkg-privacy", "pkg-admin-changepwd", "pkg-admin-feedback", "pkg-admin-invite"] }
   },
   "usingComponents": {
     "image-preview": "/components/common/image-preview/index"

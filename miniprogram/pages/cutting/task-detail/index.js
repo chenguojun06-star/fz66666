@@ -1,6 +1,7 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { parseProductionOrderLines } = require('../../../utils/orderParser');
+const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 
 /**
  * 裁剪分扎页 — 与 PC 端 CuttingRatioPanel 对齐
@@ -53,7 +54,7 @@ Page({
         orderId: order?.id || this.data.orderId,
       };
 
-      const coverImage = order?.coverImage || order?.styleImage || '';
+      const coverImage = getAuthedImageUrl(order?.coverImage || order?.styleImage || '');
       this.setData({
         taskInfo,
         coverImage,

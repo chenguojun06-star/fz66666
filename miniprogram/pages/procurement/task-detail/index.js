@@ -2,6 +2,12 @@ const api = require('../../../utils/api');
 const { getUserInfo } = require('../../../utils/storage');
 const { toast } = require('../../../utils/uiHelper');
 
+const MATERIAL_TYPE_MAP = {
+  fabricA: '主面料', fabricB: '辅面料',
+  liningA: '里料', liningB: '夹里', liningC: '衬布/粘合衬',
+  accessoryA: '拉链', accessoryB: '纽扣', accessoryC: '配件'
+};
+
 Page({
   data: {
     orderNo: '',
@@ -10,7 +16,9 @@ Page({
     submitting: false,
     materialPurchases: [],
     remark: '',
-    hasInput: false
+    hasInput: false,
+    canConfirmProcurement: false,
+    overallArrivalRate: -1,
   },
 
   onLoad(options) {
@@ -33,27 +41,48 @@ Page({
       const receiverId = String(userInfo.id || userInfo.userId || '').trim();
       const receiverName = String(userInfo.name || userInfo.username || '').trim();
 
+      let totalPurchased = 0;
+      let totalArrived = 0;
+      let hasUnconfirmed = false;
+
       const materialPurchases = list.map(item => {
         const status = this._normalizeStatus(item.status);
         const isComplete = status === 'completed';
         const isActionable = !isComplete && this._isActionableForUser(item, receiverId, receiverName);
         const needsReceive = this._shouldCallReceive(item, receiverId, receiverName);
+        const returnConfirmed = Number(item.returnConfirmed || 0) === 1;
+        const canConfirmReturn = !returnConfirmed && (status === 'received' || status === 'partial' || status === 'completed');
+
+        const purchaseQty = Number(item.purchaseQuantity || 0);
+        const arrivedQty = Number(item.arrivedQuantity || 0);
+        totalPurchased += purchaseQty;
+        totalArrived += arrivedQty;
+        if (!returnConfirmed) hasUnconfirmed = true;
+
+        const returnConfirmTimeText = item.returnConfirmTime
+          ? item.returnConfirmTime.substring(5, 16)
+          : '';
 
         return {
           ...item,
+          materialTypeCN: MATERIAL_TYPE_MAP[item.materialType] || item.materialType || '',
           statusText: this._getStatusText(status),
           statusColor: this._getStatusColor(status),
           isActionable,
           needsReceive,
           isComplete,
+          returnConfirmed,
+          canConfirmReturn,
           inputQuantity: '',
-          arrivalRate: item.purchaseQuantity > 0
-            ? Math.round((item.arrivedQuantity || 0) / item.purchaseQuantity * 100)
-            : 0
+          arrivalRate: purchaseQty > 0 ? Math.round(arrivedQty / purchaseQty * 100) : 0,
+          returnConfirmTimeText,
         };
       });
 
-      this.setData({ materialPurchases, loading: false });
+      const overallArrivalRate = totalPurchased > 0 ? Math.round(totalArrived / totalPurchased * 100) : 0;
+      const canConfirmProcurement = hasUnconfirmed && overallArrivalRate >= 50;
+
+      this.setData({ materialPurchases, loading: false, overallArrivalRate, canConfirmProcurement });
     } catch (e) {
       console.error('加载采购详情失败:', e);
       this.setData({ loading: false });
@@ -112,17 +141,90 @@ Page({
     }
   },
 
+  async onReturnConfirm(e) {
+    const { id, name, arrived, unit } = e.currentTarget.dataset;
+    if (!id) return;
+
+    wx.showModal({
+      title: '确认回料',
+      content: `确认「${name || '该物料'}」回料 ${arrived || 0}${unit || ''}？`,
+      confirmText: '确认回料',
+      confirmColor: '#1677ff',
+      success: async (res) => {
+        if (!res.confirm) return;
+
+        const userInfo = getUserInfo() || {};
+        const confirmerId = String(userInfo.id || userInfo.userId || '').trim();
+        const confirmerName = String(userInfo.name || userInfo.username || '').trim();
+
+        wx.showLoading({ title: '确认中...', mask: true });
+        try {
+          await api.production.confirmReturnPurchase({
+            purchaseId: id,
+            confirmerId,
+            confirmerName,
+            returnQuantity: Number(arrived) || 0,
+          });
+          wx.hideLoading();
+          toast.success('回料确认成功');
+
+          const eventBus = getApp()?.globalData?.eventBus;
+          if (eventBus) eventBus.emit('DATA_REFRESH', { type: 'procurement' });
+
+          this._loadDetail();
+        } catch (err) {
+          wx.hideLoading();
+          toast.error(err.errMsg || err.message || '确认失败');
+        }
+      }
+    });
+  },
+
+  async onConfirmProcurement() {
+    const { orderNo, overallArrivalRate } = this.data;
+    if (!orderNo) return;
+
+    wx.showModal({
+      title: '确认回料完成',
+      content: `当前到货率 ${overallArrivalRate}%，确认后采购阶段将流转到裁剪环节。确定？`,
+      confirmText: '确认完成',
+      confirmColor: '#1677ff',
+      editable: true,
+      placeholderText: '备注（选填）',
+      success: async (res) => {
+        if (!res.confirm) return;
+
+        wx.showLoading({ title: '确认中...', mask: true });
+        try {
+          const remark = (res.content || '').trim();
+          await api.production.confirmProcurementComplete({
+            orderNo,
+            remark,
+          });
+          wx.hideLoading();
+          toast.success('采购阶段已完成，已流转到裁剪');
+
+          const eventBus = getApp()?.globalData?.eventBus;
+          if (eventBus) eventBus.emit('DATA_REFRESH', { type: 'procurement' });
+
+          setTimeout(() => wx.navigateBack(), 1000);
+        } catch (err) {
+          wx.hideLoading();
+          toast.error(err.errMsg || err.message || '确认失败');
+        }
+      }
+    });
+  },
+
   async onSubmit() {
     const { materialPurchases, remark } = this.data;
 
-    // Validate at least one input
     const hasAny = materialPurchases.some(m => m.inputQuantity && Number(m.inputQuantity) > 0);
     if (!hasAny) {
       toast.error('请至少填写一种物料的到货数量');
       return;
     }
 
-    // Build updates with 70% validation
     let updates;
     try {
       updates = this._buildUpdates(materialPurchases, remark);
@@ -141,11 +243,8 @@ Page({
     try {
       await Promise.all(updates.map(u => api.production.updateArrivedQuantity(u)));
 
-      // Emit event for other pages to refresh
       const eventBus = getApp()?.globalData?.eventBus;
-      if (eventBus) {
-        eventBus.emit('DATA_REFRESH', { type: 'procurement' });
-      }
+      if (eventBus) eventBus.emit('DATA_REFRESH', { type: 'procurement' });
 
       wx.hideLoading();
       this.setData({ submitting: false });
@@ -168,7 +267,6 @@ Page({
       const prevArrived = Number(item.arrivedQuantity || 0);
       const newArrived = prevArrived + inputQty;
 
-      // 70% arrival validation (from ProcurementHandler)
       const remarkText = this._validateArrival(item, inputQty, newArrived, purchaseQty, globalRemark);
 
       updates.push({
@@ -186,7 +284,6 @@ Page({
     const arrivalRate = Math.round(newArrived * 100 / purchaseQty);
     if (arrivalRate >= 70) return globalRemark || '';
 
-    // Below 70% threshold — must have remark
     const remark = globalRemark || '';
     if (!remark.trim()) {
       const materialName = item.materialName || '未知物料';

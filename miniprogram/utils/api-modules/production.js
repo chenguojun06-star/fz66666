@@ -85,6 +85,15 @@ const production = {
   myProcurementTasks() {
     return ok('/api/production/purchase/list', 'GET', { myTasks: 'true' });
   },
+  confirmReturnPurchase(payload) {
+    return ok('/api/production/purchase/return-confirm', 'POST', payload || {});
+  },
+  resetReturnConfirm(payload) {
+    return ok('/api/production/purchase/return-confirm/reset', 'POST', payload || {});
+  },
+  confirmProcurementComplete(payload) {
+    return ok('/api/production/order/confirm-procurement', 'POST', payload || {});
+  },
   myCuttingTasks() {
     return ok('/api/production/cutting-task/list', 'GET', { myTasks: 'true' });
   },

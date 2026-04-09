@@ -1,6 +1,7 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { normalizeScanType } = require('../handlers/helpers/ScanModeResolver');
+const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 
 function normalizePositiveInt(value, fallback) {
   fallback = (fallback === undefined) ? 1 : fallback;
@@ -33,7 +34,6 @@ Page({
     }
     this._scanContext = raw;
 
-    // Build process options
     var processOptions = this._buildProcessOptions(raw);
     if (processOptions.length === 0 && raw.processName) {
       processOptions = [{
@@ -55,63 +55,36 @@ Page({
 
     var coverImage = '';
     if (raw.orderDetail && raw.orderDetail.coverImage) {
-      coverImage = raw.orderDetail.coverImage;
+      coverImage = getAuthedImageUrl(raw.orderDetail.coverImage);
     } else if (raw.orderDetail && raw.orderDetail.styleImage) {
-      coverImage = raw.orderDetail.styleImage;
+      coverImage = getAuthedImageUrl(raw.orderDetail.styleImage);
     }
 
-    // 辅助：查找多个可能的字段名并格式化为 YYYY-MM-DD
-    function pickField(src, keys) {
-      for (var i = 0; i < keys.length; i++) {
-        var k = keys[i];
-        if (src[k] != null && src[k] !== '') return src[k];
-        if (src.orderDetail && src.orderDetail[k] != null && src.orderDetail[k] !== '') return src.orderDetail[k];
-      }
-      return null;
-    }
+    var color = raw.color || '';
+    var size = raw.size || '';
+    var bundleNo = raw.bundleNo || '';
+    var displayQuantity = raw.quantity || 0;
 
-    function formatYMD(v) {
-      if (!v) return '-';
-      try {
-        // 如果已经是 YYYY-MM-DD 形式或 ISO 字符串，取前 10 位
-        if (typeof v === 'string') {
-          if (v.length >= 10) return v.substring(0, 10);
-          return v;
-        }
-        var d = new Date(v);
-        if (isNaN(d.getTime())) return '-';
-        var y = d.getFullYear();
-        var m = String(d.getMonth() + 1).padStart(2, '0');
-        var day = String(d.getDate()).padStart(2, '0');
-        return y + '-' + m + '-' + day;
-      } catch (e) {
-        return '-';
-      }
-    }
-
-    var color = pickField(raw, ['color', 'styleColor', 'orderColor', 'colour']);
-    var size = pickField(raw, ['size', 'sizeName', 'orderSize']);
-    var cuttingDateRaw = pickField(raw, ['cuttingDate', 'cutDate', 'plannedCutDate', 'plannedStartDate', 'cut_date']);
-    var deliveryDateRaw = pickField(raw, ['deliveryDate', 'expectedShipDate', 'shipDate', 'plannedShipDate', 'expected_ship_date']);
-    var bedNo = pickField(raw, ['bedNo', 'bed_number', 'bed']);
-    var displayQuantity = raw.quantity || (raw.orderDetail && (raw.orderDetail.orderQuantity || raw.orderDetail.quantity)) || 0;
+    var orderDetail = raw.orderDetail || {};
+    var bedNo = orderDetail.bedNo || orderDetail.bed_number || orderDetail.bed || '';
+    var cuttingDate = orderDetail.cuttingDate || orderDetail.cutDate || orderDetail.plannedCutDate || orderDetail.plannedStartDate || '';
+    var deliveryDate = orderDetail.deliveryDate || orderDetail.expectedShipDate || orderDetail.shipDate || orderDetail.plannedShipDate || '';
 
     this.setData({
       detail: {
         coverImage: coverImage,
-        styleNo: raw.styleNo || (raw.orderDetail && raw.orderDetail.styleNo) || '',
+        styleNo: raw.styleNo || orderDetail.styleNo || '',
         orderNo: raw.orderNo || '',
-        bundleNo: raw.bundleNo || '',
+        bundleNo: bundleNo,
         processName: raw.processName || '',
         progressStage: raw.progressStage || '',
         timeDisplay: raw.timeDisplay || '',
-        // 额外展示字段
-        color: color || '',
-        size: size || '',
+        color: color,
+        size: size,
         displayQuantity: displayQuantity,
-        bedNo: bedNo != null ? String(bedNo) : '-',
-        cuttingDateDisplay: formatYMD(cuttingDateRaw),
-        deliveryDateDisplay: formatYMD(deliveryDateRaw)
+        bedNo: bedNo ? String(bedNo) : '',
+        cuttingDateDisplay: this._formatYMD(cuttingDate),
+        deliveryDateDisplay: this._formatYMD(deliveryDate)
       },
       processOptions: processOptions,
       selectedNames: selectedNames,
@@ -121,14 +94,28 @@ Page({
       showWarehouse: isWarehouseStage,
       warehouseCode: raw.warehouseCode || ''
     });
-
-    // Async image insight (disabled — API endpoint not available)
-    // var styleNo = raw.styleNo || (raw.orderDetail && raw.orderDetail.styleNo);
-    // this._fetchImageInsight(styleNo);
   },
 
   onUnload() {
     getApp().globalData.scanResultData = null;
+  },
+
+  _formatYMD(v) {
+    if (!v) return '';
+    try {
+      if (typeof v === 'string') {
+        if (v.length >= 10) return v.substring(0, 10);
+        return v;
+      }
+      var d = new Date(v);
+      if (isNaN(d.getTime())) return '';
+      var y = d.getFullYear();
+      var m = String(d.getMonth() + 1).padStart(2, '0');
+      var day = String(d.getDate()).padStart(2, '0');
+      return y + '-' + m + '-' + day;
+    } catch (e) {
+      return '';
+    }
   },
 
   _buildProcessOptions(raw) {
@@ -167,9 +154,6 @@ Page({
     });
     return { count: count, amount: Math.round(amount * 100) / 100 };
   },
-
-  // _fetchImageInsight disabled — style-info/list endpoint returns 404
-  // async _fetchImageInsight(styleNo) { ... },
 
   previewImage() {
     var img = this.data.detail.coverImage;

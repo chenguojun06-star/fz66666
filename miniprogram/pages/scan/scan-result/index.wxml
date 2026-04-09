@@ -1,5 +1,4 @@
 <view class="container">
-  <!-- 信息卡片 -->
   <view class="info-card">
     <view class="card-header">
       <image-preview class="cover-wrap" src="{{detail.coverImage || ''}}" mode="aspectFill" />
@@ -7,53 +6,38 @@
         <text class="style-no">{{detail.styleNo || detail.orderNo}}</text>
         <text class="sub-info">{{detail.orderNo}}</text>
         <text wx:if="{{detail.bundleNo}}" class="sub-info">菲号 {{detail.bundleNo}}</text>
-        <view class="tags" wx:if="{{detail.color || detail.size || detail.displayQuantity}}">
-          <text wx:if="{{detail.color}}" class="tag tag-color">{{detail.color}}</text>
-          <text wx:if="{{detail.size}}" class="tag tag-size">{{detail.size}}</text>
-          <text wx:if="{{detail.displayQuantity}}" class="tag tag-qty">{{detail.displayQuantity}} 件</text>
+        <view wx:if="{{detail.color || detail.size || detail.displayQuantity}}" class="bundle-meta">
+          <text wx:if="{{detail.color}}" class="meta-text">{{detail.color}}</text>
+          <text wx:if="{{detail.size}}" class="meta-text">{{detail.size}}</text>
+          <text wx:if="{{detail.displayQuantity}}" class="meta-text">{{detail.displayQuantity}}件</text>
         </view>
-        <text wx:if="{{detail.timeDisplay}}" class="sub-info time">{{detail.timeDisplay}}</text>
       </view>
     </view>
     <view class="field-list">
-      <view class="field-row">
-        <text class="field-label">数量</text>
-        <text class="field-value highlight">{{detail.displayQuantity || quantity}} 件</text>
-      </view>
-      <view wx:if="{{detail.color}}" class="field-row">
-        <text class="field-label">颜色</text>
-        <text class="field-value">{{detail.color}}</text>
-      </view>
-      <view wx:if="{{detail.size}}" class="field-row">
-        <text class="field-label">尺码</text>
-        <text class="field-value">{{detail.size}}</text>
-      </view>
-      <view class="field-row">
-        <text class="field-label">床号</text>
-        <text class="field-value">{{detail.bedNo || '-'}}</text>
-      </view>
-      <view class="field-row">
-        <text class="field-label">裁床日期</text>
-        <text class="field-value">{{detail.cuttingDateDisplay || '-'}}</text>
-      </view>
-      <view class="field-row">
-        <text class="field-label">交货日期</text>
-        <text class="field-value">{{detail.deliveryDateDisplay || '-'}}</text>
-      </view>
       <view wx:if="{{detail.processName}}" class="field-row">
         <text class="field-label">当前工序</text>
-        <text class="field-value">{{detail.processName}}</text>
+        <text class="field-value highlight">{{detail.processName}}</text>
+      </view>
+      <view wx:if="{{detail.bedNo}}" class="field-row">
+        <text class="field-label">床号</text>
+        <text class="field-value">{{detail.bedNo}}</text>
+      </view>
+      <view wx:if="{{detail.cuttingDateDisplay}}" class="field-row">
+        <text class="field-label">裁床日期</text>
+        <text class="field-value">{{detail.cuttingDateDisplay}}</text>
+      </view>
+      <view wx:if="{{detail.deliveryDateDisplay}}" class="field-row">
+        <text class="field-label">交货日期</text>
+        <text class="field-value">{{detail.deliveryDateDisplay}}</text>
       </view>
     </view>
   </view>
 
-  <!-- AI 洞察 -->
   <view wx:if="{{imageInsight}}" class="insight-card">
     <text class="insight-icon">🤖</text>
     <text class="insight-text">{{imageInsight}}</text>
   </view>
 
-  <!-- 工序选择 -->
   <view class="section-card">
     <text class="section-title">选择工序（可多选）</text>
     <scroll-view class="process-scroll" scroll-y style="max-height:600rpx">
@@ -65,20 +49,17 @@
         <text wx:if="{{!item.hidePrice}}" class="chip-price">¥{{item.unitPrice}}</text>
       </view>
     </scroll-view>
-    <!-- 选择汇总 -->
     <view class="summary-bar" wx:if="{{selectedCount > 0}}">
       <text class="summary-text">已选 {{selectedCount}} 个工序</text>
       <text wx:if="{{selectedAmount > 0}}" class="summary-amount">合计 ¥{{selectedAmount}}</text>
     </view>
   </view>
 
-  <!-- 仓库输入 -->
   <view wx:if="{{showWarehouse}}" class="section-card">
     <text class="section-title">仓库编号</text>
     <input class="input-box" placeholder="请输入仓库编号" value="{{warehouseCode}}" bindinput="onWarehouseInput" />
   </view>
 
-  <!-- 底部操作栏 -->
   <view class="footer-bar">
     <view class="btn-cancel" hover-class="btn-hover" bindtap="goBack">取消</view>
     <view class="btn-submit {{loading || selectedCount === 0 ? 'off' : ''}}" hover-class="btn-hover" bindtap="submitScanResult">

@@ -34,18 +34,15 @@ class ScanDataProcessor {
         orderNo: parsedData.orderNo,
       });
 
-      // 兼容：API可能返回数组或分页对象 { records: [...] }
       let materialPurchases = Array.isArray(rawResult)
         ? rawResult
         : (rawResult && Array.isArray(rawResult.records) ? rawResult.records : []);
 
-      // 兜底：当采购单为空时，从BOM清单获取物料信息作为只读参考
       let bomFallback = false;
       if (materialPurchases.length === 0 && orderDetail) {
         const styleId = orderDetail.styleId || orderDetail.style_id;
         if (styleId) {
           try {
-            // 使用构造函数注入的 this.api（包含 style 模块）
             const bomList = await this.api.style.getBomList({ styleId });
             if (Array.isArray(bomList) && bomList.length > 0) {
               materialPurchases = bomList.map((item, idx) => ({
@@ -60,7 +57,7 @@ class ScanDataProcessor {
                 pendingQuantity: item.usageAmount || 0,
                 unitPrice: item.unitPrice,
                 remark: item.remark || '',
-                _fromBom: true, // 标记来源为BOM
+                _fromBom: true,
               }));
               bomFallback = true;
             }
@@ -70,7 +67,6 @@ class ScanDataProcessor {
         }
       }
 
-      // 计算订单总数量
       const orderQty = parsedData.quantity
         || orderDetail.quantity || orderDetail.totalQuantity
         || orderDetail.totalNum || orderDetail.orderQuantity || 0;
@@ -92,6 +88,48 @@ class ScanDataProcessor {
     } catch (e) {
       console.error('[ScanDataProcessor] 查询面料采购单失败:', e);
       return this._errorResult('查询采购单失败: ' + (e.errMsg || e.message || '未知错误'));
+    }
+  }
+
+  async handleCuttingMode(parsedData, orderDetail, scanMode) {
+    try {
+      const orderNo = parsedData.orderNo;
+      let cuttingTask = null;
+
+      const taskRes = await this.api.production.getCuttingTaskByOrderId(orderNo);
+      if (Array.isArray(taskRes) && taskRes.length > 0) {
+        cuttingTask = taskRes[0];
+      } else if (taskRes && taskRes.records && taskRes.records.length > 0) {
+        cuttingTask = taskRes.records[0];
+      } else if (taskRes && taskRes.data && taskRes.data.length > 0) {
+        cuttingTask = taskRes.data[0];
+      } else if (taskRes && taskRes.id) {
+        cuttingTask = taskRes;
+      }
+
+      const orderQty = parsedData.quantity
+        || orderDetail.quantity || orderDetail.totalQuantity
+        || orderDetail.totalNum || orderDetail.orderQuantity || 0;
+
+      const styleNo = orderDetail.styleNo || parsedData.styleNo || '';
+
+      return {
+        success: true,
+        needConfirm: true,
+        scanMode: scanMode,
+        data: {
+          ...parsedData,
+          quantity: Number(orderQty) || 0,
+          cuttingTask: cuttingTask,
+          progressStage: '裁剪',
+          orderDetail: orderDetail,
+          styleNo: styleNo,
+        },
+        message: cuttingTask ? '请确认领取裁剪任务' : '暂无裁剪任务，请稍后再试',
+      };
+    } catch (e) {
+      console.error('[ScanDataProcessor] 查询裁剪任务失败:', e);
+      return this._errorResult('查询裁剪任务失败: ' + (e.errMsg || e.message || '未知错误'));
     }
   }
 
