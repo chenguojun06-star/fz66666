@@ -342,6 +342,18 @@ const scanCoreMixin = Behavior({
      * @private
      */
     _handleScanResult(result, codeStr, scanType) {
+      // 样衣 U码 扫码 → 直接跳转样衣借调/归还操作页，不走旧订单确认弹窗
+      // U码格式: U-款号-颜色-尺码，由 ScanHandler._buildUCodeConfirmResult() 处理
+      if (result && result.data && result.data.scanMode === 'ucode') {
+        markRecent(codeStr, 30000);
+        const { styleNo, color, size } = result.data.scanData || {};
+        wx.navigateTo({
+          url: `/pages/warehouse/sample/scan-action/index?styleNo=${encodeURIComponent(styleNo || '')}&color=${encodeURIComponent(color || '')}&size=${encodeURIComponent(size || '')}`,
+        });
+        this.setData({ loading: false });
+        return;
+      }
+
       // 混合模式：识别工序后不自动提交，等待用户确认
       if (result && result.needConfirmProcess) {
         // 确认弹窗期间锁住同一码 30s，防止用户重复扫同一 QR 开多个弹窗
