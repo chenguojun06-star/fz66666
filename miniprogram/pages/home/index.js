@@ -16,7 +16,7 @@ function getGreeting() {
  */
 function buildMenuItems() {
   return [
-    { id: 'progress', name: '工序进度', iconClass: 'icon-progress', circleClass: 'menu-icon-circle--blue', route: '/pages/work/index', tab: 'sewing' },
+    { id: 'production', name: '生产', iconClass: 'icon-progress', circleClass: 'menu-icon-circle--blue', route: '/pages/work/index', tab: 'sewing' },
     { id: 'quality', name: '扫码质检', iconClass: 'icon-quality', circleClass: 'menu-icon-circle--green', route: '/pages/scan/index' },
     { id: 'bundleSplit', name: '拆菲号', iconClass: 'icon-cutting', circleClass: 'menu-icon-circle--orange', route: '/pages/work/bundle-split/index' },
     { id: 'history', name: '历史记录', iconClass: 'icon-history', circleClass: 'menu-icon-circle--purple', route: '/pages/scan/history/index' },
@@ -24,19 +24,7 @@ function buildMenuItems() {
   ];
 }
 
-/**
- * 格式化扫码时间为简短显示
- */
-function formatScanTime(timeStr) {
-  if (!timeStr) return '';
-  const d = new Date(timeStr.replace(/-/g, '/'));
-  if (isNaN(d.getTime())) return '';
-  const now = new Date();
-  const isToday = d.toDateString() === now.toDateString();
-  const pad = n => String(n).padStart(2, '0');
-  if (isToday) return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
+
 
 Page({
   data: {
@@ -48,7 +36,6 @@ Page({
     menuItems: [],
     unreadNoticeCount: 0,
     monthlyStats: null,
-    recentScans: [],
     statCards: [
       { key: 'todayProcessCount', label: '今日完成工序', unit: '次', iconClass: 'icon-activity', cardClass: 'stat-card--cool', iconWrapClass: 'stat-icon-wrap--cool' },
       { key: 'todayWorkHours', label: '今日工作时长', unit: 'h', iconClass: 'icon-clock', cardClass: 'stat-card--warm', iconWrapClass: 'stat-icon-wrap--warm' },
@@ -91,13 +78,12 @@ Page({
     this._clearDeferredTasks();
     const primaryTasks = [this._loadTodayStats(), this._loadUnreadCount()];
     if (!useDeferredSecondaryLoad) {
-      primaryTasks.push(this._loadMonthlyStats(), this._loadRecentScans());
+      primaryTasks.push(this._loadMonthlyStats());
       return Promise.allSettled(primaryTasks);
     }
 
     const secondaryTasks = [
       setTimeout(() => this._loadMonthlyStats(), 80),
-      setTimeout(() => this._loadRecentScans(), 180),
     ];
     this._deferredTaskTimers = secondaryTasks;
     return Promise.allSettled(primaryTasks);
@@ -161,23 +147,7 @@ Page({
       .catch(e => { console.warn('[home] _loadMonthlyStats失败:', e.message || e); });
   },
 
-  _loadRecentScans() {
-    return api.production.myScanHistory({ page: 1, pageSize: 5 })
-      .then(res => {
-        const records = (res && res.records) || [];
-        const list = records
-          .filter(r => r.scanResult !== 'failure')
-          .map(r => ({
-            id: r.id || r.scanCode || Math.random(),
-            stageName: r.processName || r.progressStage || '生产',
-            orderNo: r.orderNo || '-',
-            quantity: r.quantity || 0,
-            timeDisplay: formatScanTime(r.scanTime),
-          }));
-        this.setData({ recentScans: list });
-      })
-      .catch(e => { console.warn('[home] _loadRecentScans失败:', e.message || e); });
-  },
+
 
   /* ---- 菜单与导航 ---- */
 
@@ -194,11 +164,8 @@ Page({
       wx.setStorageSync('scan_pref_process', '质检');
     }
 
-    const isTabPage = ['/pages/home/index', '/pages/work/index', '/pages/scan/index', '/pages/admin/index'].includes(item.route);
+    const isTabPage = ['/pages/home/index', '/pages/scan/index', '/pages/admin/index'].includes(item.route);
     safeNavigate({ url: item.route }, isTabPage ? 'switchTab' : undefined);
   },
 
-  onGoHistory() {
-    safeNavigate({ url: '/pages/scan/history/index' });
-  },
 });

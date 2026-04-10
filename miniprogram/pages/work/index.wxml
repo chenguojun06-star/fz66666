@@ -1,6 +1,7 @@
 <view class="container">
   <custom-nav
     title="生产"
+    show-back="{{true}}"
     show-search="{{true}}"
     search-keyword="{{globalSearch.keyword}}"
     search-placeholder="搜索订单号/款号"

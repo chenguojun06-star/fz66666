@@ -383,10 +383,10 @@ export const useProgressColumns = ({
           }}>
             <div style={{
               display: 'flex',
+              flex: 1,
               gap: 0,
               alignItems: 'stretch',
               padding: '8px 12px 44px 12px',
-              width: '100%',
               minWidth: progressTrackMinWidth,
             }}>
             {(() => {
@@ -689,6 +689,14 @@ export const useProgressColumns = ({
               );
             })}
             </div>
+            <div className="progress-row-actions">
+              <Button size="small" onClick={() => { setQuickEditRecord(record); setQuickEditVisible(true); }}>编辑</Button>
+              <Button size="small" disabled={frozen} onClick={() => setPrintingRecord(record)}>打印</Button>
+              <Button size="small" disabled={frozen} onClick={() => { void handlePrintLabel(record); }}>标签</Button>
+              {isFactoryAccount ? <Button size="small" type="primary" disabled={frozen} icon={<SendOutlined />} onClick={() => onFactoryShip?.(record)}>发货</Button> : null}
+              {canManageOrderLifecycle ? <Button size="small" danger disabled={frozen} onClick={() => handleCloseOrder(record)}>关单</Button> : null}
+              <Button size="small" icon={<ShareAltOutlined />} onClick={() => onShareOrder?.(record)}>分享</Button>
+            </div>
           </div>
         );
       },
@@ -701,48 +709,7 @@ export const useProgressColumns = ({
         <ShipmentSumCell orderId={String(record.id)} />
       ),
     }] : []),
-    {
-      title: '',
-      key: 'action',
-      width: 72,
-      align: 'center' as const,
-      fixed: 'right' as const,
-      render: (_: any, record: ProductionOrder) => {
-        const frozen = isOrderFrozenByStatus(record);
-        const btnStyle: CSSProperties = {
-          fontSize: 12,
-          height: 28,
-          padding: '0 12px',
-          borderRadius: 14,
-        };
-        return (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-            <Button size="small" style={btnStyle} onClick={() => { setQuickEditRecord(record); setQuickEditVisible(true); }}>
-              编辑
-            </Button>
-            <Button size="small" style={btnStyle} disabled={frozen} onClick={() => setPrintingRecord(record)}>
-              打印
-            </Button>
-            <Button size="small" style={btnStyle} disabled={frozen} onClick={() => { void handlePrintLabel(record); }}>
-              标签
-            </Button>
-            {isFactoryAccount ? (
-              <Button size="small" type="primary" style={btnStyle} disabled={frozen} icon={<SendOutlined />} onClick={() => onFactoryShip?.(record)}>
-                发货
-              </Button>
-            ) : null}
-            {canManageOrderLifecycle ? (
-              <Button size="small" style={btnStyle} danger disabled={frozen} onClick={() => handleCloseOrder(record)}>
-                关单
-              </Button>
-            ) : null}
-            <Button size="small" style={btnStyle} icon={<ShareAltOutlined />} onClick={() => onShareOrder?.(record)}>
-              分享
-            </Button>
-          </div>
-        );
-      },
-    },
+
 
   ], [
     orderSortField, orderSortOrder, handleOrderSort,

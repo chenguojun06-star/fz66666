@@ -1,6 +1,6 @@
 import { Tag } from 'antd';
 import type { StyleInfo } from '@/types/style';
-import { formatDate } from '@/utils/datetime';
+import { formatDateTime } from '@/utils/datetime';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { getStyleSourceMeta } from '@/utils/styleSource';
 import RowActions from '@/components/common/RowActions';
@@ -62,7 +62,7 @@ export function useOrderColumns({ openCreate, setPrintModalVisible, setPrintingR
       dataIndex: 'latestOrderTime',
       key: 'latestOrderTime',
       width: 160,
-      render: (v: string) => v ? formatDate(v) : '-',
+      render: (v: string) => v ? formatDateTime(v) : '-',
     },
     {
       title: '下单人',

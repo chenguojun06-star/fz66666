@@ -1,6 +1,6 @@
 
 import { ProductionOrder } from '@/types/production';
-import { formatDate } from '@/utils/datetime';
+import { formatDateTime } from '@/utils/datetime';
 import { stageAliasMap, carSewingKeywords, tailProcessKeywords } from '@/utils/productionStage';
 
 /**
@@ -89,24 +89,24 @@ export const buildOrdersCsv = (rows: ProductionOrder[]) => {
     const line = [
       r.orderNo, r.styleNo, r.styleName, r.factoryName, r.orderQuantity,
       (r as any).orderOperatorName || '',
-      formatDate((r as any).createTime),
-      formatDate((r as any).procurementStartTime),
-      formatDate((r as any).procurementEndTime),
+      formatDateTime((r as any).createTime),
+      formatDateTime((r as any).procurementStartTime),
+      formatDateTime((r as any).procurementEndTime),
       (r as any).procurementOperatorName || '',
       (r as any).procurementCompletionRate == null ? '' : `${(r as any).procurementCompletionRate}%`,
-      formatDate((r as any).cuttingStartTime),
-      formatDate((r as any).cuttingEndTime),
+      formatDateTime((r as any).cuttingStartTime),
+      formatDateTime((r as any).cuttingEndTime),
       (r as any).cuttingOperatorName || '',
       (r as any).cuttingCompletionRate == null ? '' : `${(r as any).cuttingCompletionRate}%`,
-      formatDate((r as any).sewingStartTime),
-      formatDate((r as any).sewingEndTime),
+      formatDateTime((r as any).sewingStartTime),
+      formatDateTime((r as any).sewingEndTime),
       (r as any).sewingCompletionRate == null ? '' : `${(r as any).sewingCompletionRate}%`,
-      formatDate((r as any).qualityStartTime),
-      formatDate((r as any).qualityEndTime),
+      formatDateTime((r as any).qualityStartTime),
+      formatDateTime((r as any).qualityEndTime),
       (r as any).qualityOperatorName || '',
       (r as any).qualityCompletionRate == null ? '' : `${(r as any).qualityCompletionRate}%`,
-      formatDate((r as any).warehousingStartTime),
-      formatDate((r as any).warehousingEndTime),
+      formatDateTime((r as any).warehousingStartTime),
+      formatDateTime((r as any).warehousingEndTime),
       (r as any).warehousingOperatorName || '',
       (r as any).warehousingCompletionRate == null ? '' : `${(r as any).warehousingCompletionRate}%`,
       r.productionProgress == null ? '' : `${r.productionProgress}%`,

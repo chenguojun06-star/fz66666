@@ -308,63 +308,100 @@
   transition: background-color 0.25s ease;
 }
 
-.production-progress-list-table .ant-table-container,
-.production-progress-list-table .ant-table-content,
-.production-progress-list-table .ant-table,
-.production-progress-list-table .ant-table-wrapper,
-.production-progress-list-table .ant-spin-nested-loading {
-  border: none !important;
-  box-shadow: none !important;
+/* ══════════════════════════════════════════════════════════════
+   工序跟进 — 行卡片列表（样衣开发风格，不使用 Table）
+   ══════════════════════════════════════════════════════════════ */
+.progress-row-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 4px;
 }
 
-.production-progress-list-table table {
-  border-collapse: collapse !important;
-  border-spacing: 0 !important;
+.progress-row {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 28px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.96) 100%);
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.06);
+  align-items: stretch;
+  position: relative;
+  transition: box-shadow 0.2s ease, transform 0.15s ease;
 }
 
-.production-progress-list-table .ant-table-thead > tr > th,
-.production-progress-list-table .ant-table-tbody > tr > td {
-  border: none !important;
-  border-right: none !important;
-  border-inline-end: none !important;
-  border-bottom-color: transparent !important;
-  border-right-color: transparent !important;
-  outline: none !important;
-  box-shadow: none !important;
+.progress-row:hover {
+  transform: translateY(-1px);
+}
+.progress-row--normal:hover   { box-shadow: 0 16px 48px rgba(15,23,42,0.10), inset 1px 0 0 rgba(34,197,94,0.78); }
+.progress-row--warning:hover  { box-shadow: 0 16px 48px rgba(15,23,42,0.10), inset 1px 0 0 rgba(250,173,20,0.85); }
+.progress-row--danger:hover   { box-shadow: 0 16px 48px rgba(15,23,42,0.10), inset 1px 0 0 rgba(255,77,79,0.78); }
+.progress-row--scrapped:hover { box-shadow: 0 16px 48px rgba(15,23,42,0.10), inset 1px 0 0 rgba(148,163,184,0.88); }
+
+.progress-row--focus {
+  box-shadow: 0 0 0 2px rgba(250, 173, 20, 0.3), 0 16px 36px rgba(250, 173, 20, 0.16);
+  transform: translateY(-2px);
 }
 
-.production-progress-list-table .ant-table-thead > tr > th,
-.production-progress-list-table .ant-table-cell,
-.production-progress-list-table .ant-table-tbody > tr > th,
-.production-progress-list-table .ant-table-cell-scrollbar {
-  border: none !important;
-  border-right: none !important;
-  border-inline-end: none !important;
-  border-left: none !important;
-  border-top: none !important;
-  border-bottom: none !important;
-  box-shadow: none !important;
-  outline: none !important;
+/* ── 左边竖线（颜色逻辑与卡片视图 getProgressColorStatus 完全一致，线宽 1.5px）── */
+.progress-row--normal {
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.06), inset 1px 0 0 rgba(34, 197, 94, 0.78);
+}
+.progress-row--warning {
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.06), inset 1px 0 0 rgba(250, 173, 20, 0.85);
+}
+.progress-row--danger {
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.06), inset 1px 0 0 rgba(255, 77, 79, 0.78);
+}
+.progress-row--scrapped {
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.06), inset 1px 0 0 rgba(148, 163, 184, 0.88);
 }
 
-.production-progress-list-table .ant-table-container::before,
-.production-progress-list-table .ant-table-container::after,
-.production-progress-list-table .ant-table-ping-left .ant-table-container::before,
-.production-progress-list-table .ant-table-ping-right .ant-table-container::after,
-.production-progress-list-table .ant-table-fixed-column-sorters::after,
-.production-progress-list-table .ant-table-column-sorters::after,
-.production-progress-list-table .ant-table-tbody > tr > td::before,
-.production-progress-list-table .ant-table-tbody > tr::after,
-.production-progress-list-table .ant-table-thead > tr > th::before,
-.production-progress-list-table .ant-table-thead > tr::after,
-.production-progress-list-table .ant-table-cell::after,
-.production-progress-list-table .ant-table-cell-fix-left-last::after,
-.production-progress-list-table .ant-table-cell-fix-right-first::after {
-  display: none !important;
-  border: none !important;
-  box-shadow: none !important;
-  background: transparent !important;
-  content: none !important;
+.progress-row__cover {
+  flex: 0 0 auto;
+  min-height: 64px;
+}
+
+.progress-row__body {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  /* overflow-x 滚动时必须让子元素高度包含底部标签（44px padding已在内层轨道div中），
+     wrapper 需要足够高度让 align-items:center 能正确居中 */
+  overflow: visible;
+}
+
+/* ── 操作栏：hover 行时右上角横向胶囊浮层（与样衣开发一致） ─── */
+.progress-row-actions {
+  position: absolute;
+  top: 8px;
+  right: 16px;
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 4px 8px;
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  z-index: 10;
+}
+
+.progress-row:hover .progress-row-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.progress-row-actions .ant-btn {
+  border-radius: 999px;
+  padding-inline: 8px;
+  font-size: 11px;
+  min-width: 0;
 }
 
 .order-flow-summary-top {

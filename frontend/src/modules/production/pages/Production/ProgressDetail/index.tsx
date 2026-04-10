@@ -7,7 +7,7 @@ import Layout from '@/components/Layout';
 import PageStatCards from '@/components/common/PageStatCards';
 
 import UniversalCardView from '@/components/common/UniversalCardView';
-import ResizableTable from '@/components/common/ResizableTable';
+import ProgressRowList from './components/ProgressRowList';
 import StandardPagination from '@/components/common/StandardPagination';
 import { createOrderColorSizeGridFieldGroups } from '@/components/common/CardSizeQuantityFieldGroups';
 
@@ -770,28 +770,20 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           />
 
           {viewMode === 'list' ? (
-            <ResizableTable
-              className="production-progress-list-table"
-              rowKey={(r: ProductionOrder) => String(r.id || r.orderNo)}
-              loading={loading && orders.length === 0}
-              columns={columns}
+            <ProgressRowList
               dataSource={sortedOrders}
-              resizableColumns={false}
-              maxColumnWidth={1600}
+              columns={columns}
+              loading={loading && orders.length === 0}
               pagination={{
                 current: queryParams.page,
                 pageSize: queryParams.pageSize,
                 total,
-                showTotal: (total) => `共 ${total} 条`,
-                showSizeChanger: true,
                 pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
                 onChange: (page: number, pageSize: number) => {
                   savePageSize(pageSize);
                   setQueryParams((prev) => ({ ...prev, page, pageSize }));
                 },
               }}
-              scroll={{ x: 3000 }}
-              stickyHeader
             />
           ) : (
             <>
@@ -945,29 +937,22 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
           />
 
           {viewMode === 'list' ? (
-            <ResizableTable
-              className="production-progress-list-table"
-              rowKey={(r: ProductionOrder) => String(r.id || r.orderNo)}
-              loading={loading && orders.length === 0}
-              columns={columns}
+            <ProgressRowList
               dataSource={sortedSmartQueueOrders}
-              showHeader={false}
-              resizableColumns={false}
-              maxColumnWidth={1600}
-              rowClassName={(record: ProductionOrder) => getOrderDomKey(record) === focusedOrderId ? 'smart-order-focus-row' : ''}
+              columns={columns}
+              loading={loading && orders.length === 0}
+              focusedOrderId={focusedOrderId}
+              getRowDomKey={getOrderDomKey}
               pagination={{
                 current: queryParams.page,
                 pageSize: queryParams.pageSize,
                 total,
-                showTotal: (total) => `共 ${total} 条`,
-                showSizeChanger: true,
                 pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
                 onChange: (page: number, pageSize: number) => {
                   savePageSize(pageSize);
                   setQueryParams((prev) => ({ ...prev, page, pageSize }));
                 },
               }}
-              scroll={{ x: 'max-content' }}
             />
           ) : (
             <>

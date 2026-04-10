@@ -12,7 +12,7 @@ import { getProcessesByNodeFromOrder } from '../../ProgressDetail/utils';
 import SmartOrderHoverCard from '../../ProgressDetail/components/SmartOrderHoverCard';
 import { StyleCoverThumb, StyleAttachmentsButton } from '@/components/StyleAssets';
 import { isDirectCuttingOrder, isOrderFrozenByStatus, isOrderFrozenByStatusOrStock, withQuery } from '@/utils/api';
-import { formatDate } from '@/utils/datetime';
+import { formatDateTime } from '@/utils/datetime';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { getRemainingDaysDisplay } from '@/utils/progressColor';
 import { getStatusConfig, safeString } from '../utils';
@@ -64,7 +64,7 @@ export function useProductionColumns({
   isFactoryAccount = false,
   onOpenRemark,
 }: UseProductionColumnsProps) {
-  const renderStageTime = (value: unknown) => value ? formatDate(value) : '-';
+  const renderStageTime = (value: unknown) => value ? formatDateTime(value) : '-';
 
   // ===== 工序进度列共享逻辑 =====
   const PROGRESS_CELL_BASE: React.CSSProperties = { padding: '4px', transition: 'background 0.2s' };
@@ -369,7 +369,7 @@ export function useProductionColumns({
       dataIndex: 'expectedShipDate',
       key: 'expectedShipDate',
       width: 120,
-      render: (v: any) => v ? formatDate(v) : '-',
+      render: (v: any) => v ? formatDateTime(v) : '-',
     },
     {
       title: '采购',
@@ -580,7 +580,7 @@ export function useProductionColumns({
       key: 'plannedEndDate',
       width: 155,
       render: (value: unknown, record: ProductionOrder) => {
-        const dateStr = value ? formatDate(value as string) : '-';
+        const dateStr = value ? formatDateTime(value as string) : '-';
         const { text, color } = getRemainingDaysDisplay(value as string, record.createTime, record.actualEndDate, record.status);
         const aiRisk = deliveryRiskMap?.get(String(record.orderNo || ''));
         return (

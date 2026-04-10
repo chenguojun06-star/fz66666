@@ -104,20 +104,20 @@ page {
 .menu-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  row-gap: 14px;
+  row-gap: 20px;
 }
 
 .menu-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .menu-icon-circle {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -127,9 +127,9 @@ page {
 
 /* 菜单图标放大 */
 .menu-icon-circle .line-icon--lg {
-  width: 30px;
-  height: 30px;
-  background-size: 30px 30px;
+  width: 38px;
+  height: 38px;
+  background-size: 38px 38px;
 }
 
 .menu-name {
@@ -187,70 +187,4 @@ page {
   margin-top: var(--spacing-xs);
 }
 
-/* ---- 最近扫码 ---- */
-.recent-section {
-  padding: 16px 20px;
-  border-top: 1px solid var(--color-divider);
-}
 
-.recent-list {
-  display: flex;
-  flex-direction: column;
-}
-
-.recent-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--spacing-sm) 0;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.recent-item:last-child {
-  border-bottom: none;
-}
-
-.recent-left {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-}
-
-.recent-stage {
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.recent-order {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  margin-top: 2px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.recent-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  flex-shrink: 0;
-  margin-left: var(--spacing-sm);
-}
-
-.recent-qty {
-  font-size: var(--font-size-md);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-primary);
-}
-
-.recent-time {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-disabled);
-  margin-top: 2px;
-}

@@ -134,12 +134,6 @@
         "selectedIconPath": "/assets/tabbar/home-active.png"
       },
       {
-        "pagePath": "pages/work/index",
-        "text": "生产",
-        "iconPath": "/assets/tabbar/work.png",
-        "selectedIconPath": "/assets/tabbar/work-active.png"
-      },
-      {
         "pagePath": "pages/scan/index",
         "text": "扫码",
         "iconPath": "/assets/tabbar/scan.png",
