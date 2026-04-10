@@ -196,21 +196,6 @@ const SampleInventory: React.FC = () => {
 
   const columns: ColumnsType<SampleStock> = [
     {
-      title: '库存编号',
-      dataIndex: 'id',
-      key: 'id',
-      width: 180,
-      ellipsis: true,
-      render: (text) => text || '-',
-    },
-    {
-      title: '款式ID',
-      dataIndex: 'styleId',
-      key: 'styleId',
-      width: 110,
-      render: (text) => text || '-',
-    },
-    {
       title: '样衣图片',
       dataIndex: 'imageUrl',
       key: 'imageUrl',

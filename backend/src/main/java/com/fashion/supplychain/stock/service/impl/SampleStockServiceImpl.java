@@ -64,7 +64,7 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
                 .eq(tid != null, SampleStock::getTenantId, tid)
                 .like(StringUtils.hasText(styleNo), SampleStock::getStyleNo, styleNo)
                 .eq(StringUtils.hasText(sampleType), SampleStock::getSampleType, sampleType)
-                .orderByDesc(SampleStock::getUpdateTime);
+                .orderByDesc(SampleStock::getCreateTime);
 
         IPage<SampleStock> result = baseMapper.selectPage(pageInfo, wrapper);
         fillStyleFields(result.getRecords());
