@@ -73,4 +73,10 @@ public class IntelligencePredictionLog {
 
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
+
+    /**
+     * 软删除标志（0=正常，1=已删除）
+     * V202608141410 补列；全局 logic-delete-field=deleteFlag 自动生效
+     */
+    private Integer deleteFlag;
 }

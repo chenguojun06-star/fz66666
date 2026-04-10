@@ -2,7 +2,15 @@
  * API 通用工具函数
  * 提供 ok / raw / pickMessage / createBizError 四个核心方法
  */
-const { request, uploadFile } = require('../request');
+const { request, uploadFile: _rawUploadFile } = require('../request');
+
+/**
+ * 位置参数适配器：common.js 以 (url, filePath, name, formData) 调用，
+ * 而 request.js uploadFile 期望单个 options 对象 {url, filePath, name, formData}。
+ */
+function uploadFile(url, filePath, name, formData) {
+  return _rawUploadFile({ url: url, filePath: filePath, name: name, formData: formData });
+}
 
 function pickMessage(resp, fallback) {
   const msg = resp && resp.message !== null ? String(resp.message) : '';

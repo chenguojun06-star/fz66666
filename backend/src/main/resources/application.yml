@@ -91,6 +91,9 @@ mybatis-plus:
       logic-not-delete-value: 0
   configuration:
     map-underscore-to-camel-case: true
+    # 修复：防止 nullable Boolean/LocalDateTime 字段在 INSERT 时因 JdbcType.OTHER 导致 MySQL JDBC 抛出「setting parameters」异常
+    # 影响：feedbackAccepted(Boolean)、actualFinishTime(LocalDateTime)、repairCompletedTime 等可空字段 INSERT/UPDATE 全部修复
+    jdbc-type-for-null: 'null'
     log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
 
 logging:
