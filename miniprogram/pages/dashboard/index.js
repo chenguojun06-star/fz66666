@@ -1,45 +1,101 @@
 /**
  * 进度看板 — 老板/管理者移动端生产关键指标总览
- * 4 张摘要卡片：样衣开发 · 生产订单 · 今日入库 · 今日出库
+ *
+ * 顶部：4 张摘要卡片（样衣/生产/入库/出库）
+ * 中部：状态过滤条（全部/生产中/入库/已完成）
+ * 底部：完整订单列表（带封面图、工序进度明细、颜色尺码矩阵，可展开收起）
  *
  * 数据来源：
  *   dashboard.get()         → overdueOrderCount / todayScanCount / sampleDevelopmentCount
- *   dashboard.getTopStats() → warehousingInbound.day/week · warehousingOutbound.day/week
- *   production.listOrders   → status='production'(生产中) / status='completed'(已完成)
+ *   dashboard.getTopStats() → warehousingInbound/outbound .day/.week
+ *   production.listOrders   → 订单列表 + 状态计数
  */
 var api = require('../../utils/api');
+var { transformOrderData } = require('../work/utils/orderTransform');
+var { resolveNodesFromOrder, getNodeIndexFromProgress, clampPercent } = require('../work/utils/progressNodes');
+
+var app = getApp();
+
+/* 状态过滤映射（值 = 后端 status 字段） */
+var STATUS_FILTERS = [
+  { key: 'all',           label: '全部',   value: '' },
+  { key: 'in_production', label: '生产中', value: 'production' },
+  { key: 'warehousing',   label: '入库',   value: 'warehousing' },
+  { key: 'completed',     label: '已完成', value: 'completed' },
+];
+
+/**
+ * 根据订单整体进度 + 工序节点，计算每道工序的进度百分比
+ */
+function buildProcessNodes(order) {
+  var nodes = resolveNodesFromOrder(order);
+  if (!nodes || !nodes.length) return [];
+  var progress = Number(order.productionProgress) || 0;
+  var idx = getNodeIndexFromProgress(nodes, progress);
+  return nodes.map(function (n, i) {
+    var pct = 0;
+    if (i < idx) pct = 100;
+    else if (i === idx) pct = clampPercent(progress - idx * (100 / nodes.length));
+    return { name: n.name || n, percent: Math.round(pct) };
+  });
+}
+
+/** 为订单注入看板所需的扩展字段 */
+function enrichForDashboard(order) {
+  var completed = Number(order.completedQuantity) || 0;
+  var total = Number(order.orderQuantity) || Number(order.sizeTotal) || 0;
+  order.processNodes = buildProcessNodes(order);
+  order.remainQuantity = Math.max(0, total - completed);
+  order.expanded = false;
+  return order;
+}
 
 Page({
   data: {
     loading: true,
     todayStr: '',
+    /* 4 张摘要卡片 */
     cards: {
       sample:     { developing: 0, completed: 0 },
-      production: { total: 0, overdue: 0 },
+      production: { total: 0, overdue: 0, pieces: 0 },
       inbound:    { today: 0, week: 0 },
       outbound:   { today: 0, week: 0 },
     },
     todayScanCount: 0,
+    /* 状态过滤 */
+    statFilters: STATUS_FILTERS,
+    activeFilter: 'all',
+    statCounts: { all: 0, in_production: 0, warehousing: 0, completed: 0 },
+    /* 订单列表（分页） */
+    orders: { list: [], page: 0, pageSize: 15, loading: false, hasMore: true },
   },
 
   onLoad: function () {
     this.setData({ todayStr: this._formatToday() });
     this.refreshCards();
+    this.loadOrders(true);
   },
 
   onShow: function () {
-    if (this._loaded) this.refreshCards();
+    if (this._loaded) {
+      this.refreshCards();
+      this.loadOrders(true);
+    }
     this._loaded = true;
   },
 
   onPullDownRefresh: function () {
     var that = this;
-    this.refreshCards().then(function () {
+    Promise.all([this.refreshCards(), this.loadOrders(true)]).then(function () {
       wx.stopPullDownRefresh();
     });
   },
 
-  /* ======== 刷新四卡数据（5 个并发请求） ======== */
+  onReachBottom: function () {
+    this.loadOrders(false);
+  },
+
+  /* ======== 刷新摘要卡片（4 个并发请求） ======== */
   refreshCards: function () {
     var that = this;
     that.setData({ loading: true });
@@ -47,13 +103,19 @@ Page({
     return Promise.all([
       api.dashboard.get().catch(function () { return {}; }),
       api.dashboard.getTopStats().catch(function () { return {}; }),
-      api.production.listOrders({ deleteFlag: 0, status: 'production', page: 1, pageSize: 1 }).catch(function () { return {}; }),
+      api.production.listOrders({ deleteFlag: 0, status: 'production', page: 1, pageSize: 50 }).catch(function () { return {}; }),
       api.production.listOrders({ deleteFlag: 0, status: 'completed',  page: 1, pageSize: 1 }).catch(function () { return {}; }),
     ]).then(function (res) {
       var dash     = res[0] || {};
       var topStats = res[1] || {};
       var prodRes  = res[2] || {};
       var compRes  = res[3] || {};
+
+      var prodRecords = (prodRes && prodRes.records) || [];
+      var totalPieces = 0;
+      for (var i = 0; i < prodRecords.length; i++) {
+        totalPieces += Number(prodRecords[i].orderQuantity) || 0;
+      }
 
       that.setData({
         loading: false,
@@ -66,6 +128,7 @@ Page({
           production: {
             total:   prodRes.total || 0,
             overdue: Number(dash.overdueOrderCount) || 0,
+            pieces:  totalPieces,
           },
           inbound: {
             today: (topStats.warehousingInbound && topStats.warehousingInbound.day) || 0,
@@ -80,8 +143,71 @@ Page({
     }).catch(function (err) {
       console.error('[Dashboard] refreshCards error:', err);
       that.setData({ loading: false });
-      wx.showToast({ title: '数据加载失败', icon: 'none' });
     });
+  },
+
+  /* ======== 加载订单列表（分页 + 封面图 + 工序明细） ======== */
+  loadOrders: function (reset) {
+    var that = this;
+    var filterVal = '';
+    for (var i = 0; i < STATUS_FILTERS.length; i++) {
+      if (STATUS_FILTERS[i].key === this.data.activeFilter) {
+        filterVal = STATUS_FILTERS[i].value;
+        break;
+      }
+    }
+
+    return app.loadPagedList(this, 'orders', reset, function (p) {
+      var params = { deleteFlag: 0, page: p.page, pageSize: p.pageSize };
+      if (filterVal) params.status = filterVal;
+      return api.production.listOrders(params);
+    }, function (r) {
+      return enrichForDashboard(transformOrderData(r));
+    }).then(function () {
+      // 刷新状态计数
+      if (reset) that._refreshStatCounts();
+    });
+  },
+
+  /* ======== 刷新状态计数 ======== */
+  _refreshStatCounts: function () {
+    var that = this;
+    Promise.all([
+      api.production.listOrders({ deleteFlag: 0, page: 1, pageSize: 1 }).catch(function () { return {}; }),
+      api.production.listOrders({ deleteFlag: 0, status: 'production', page: 1, pageSize: 1 }).catch(function () { return {}; }),
+      api.production.listOrders({ deleteFlag: 0, status: 'warehousing', page: 1, pageSize: 1 }).catch(function () { return {}; }),
+      api.production.listOrders({ deleteFlag: 0, status: 'completed', page: 1, pageSize: 1 }).catch(function () { return {}; }),
+    ]).then(function (res) {
+      that.setData({
+        statCounts: {
+          all:            (res[0] && res[0].total) || 0,
+          in_production:  (res[1] && res[1].total) || 0,
+          warehousing:    (res[2] && res[2].total) || 0,
+          completed:      (res[3] && res[3].total) || 0,
+        },
+      });
+    });
+  },
+
+  /* ======== 状态筛选切换 ======== */
+  onStatTap: function (e) {
+    var key = e.currentTarget.dataset.key;
+    if (key === this.data.activeFilter) return;
+    this.setData({ activeFilter: key });
+    this.loadOrders(true);
+  },
+
+  /* ======== 展开/收起订单卡片 ======== */
+  onCardToggle: function (e) {
+    var idx = e.currentTarget.dataset.index;
+    var path = 'orders.list[' + idx + '].expanded';
+    this.setData({ [path]: !this.data.orders.list[idx].expanded });
+  },
+
+  /* ======== 跳转订单详情 ======== */
+  onOrderTap: function (e) {
+    var id = e.currentTarget.dataset.id;
+    if (id) wx.navigateTo({ url: '/pages/order/detail/index?id=' + id });
   },
 
   /* ======== 工具方法 ======== */

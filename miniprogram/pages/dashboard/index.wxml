@@ -1,4 +1,4 @@
-<!-- 进度看板 · 4 张指标摘要卡片 -->
+<!-- 进度看板 · 摘要卡片 + 订单明细 -->
 <custom-nav title="进度看板" show-back="{{true}}" />
 
 <view class="page">
@@ -53,6 +53,11 @@
         </view>
         <view class="metric-divider"></view>
         <view class="metric">
+          <text class="metric-val val--muted">{{cards.production.pieces}}</text>
+          <text class="metric-lbl">件数</text>
+        </view>
+        <view class="metric-divider"></view>
+        <view class="metric">
           <text class="metric-val val--danger">{{cards.production.overdue}}</text>
           <text class="metric-lbl">已延期</text>
         </view>
@@ -96,5 +101,108 @@
         </view>
       </view>
     </view>
+  </view>
+
+  <!-- ===== 状态过滤条 ===== -->
+  <view class="stats-bar">
+    <view class="stat-pill {{activeFilter === item.key ? 'stat-pill--active' : ''}}"
+          wx:for="{{statFilters}}" wx:key="key"
+          data-key="{{item.key}}" bindtap="onStatTap">
+      <text class="stat-count">{{statCounts[item.key] || 0}}</text>
+      <text class="stat-label">{{item.label}}</text>
+    </view>
+  </view>
+
+  <!-- ===== 订单列表（带封面图+工序明细+可展开） ===== -->
+  <view class="order-list" wx:if="{{orders.list.length > 0}}">
+    <view class="order-card {{item.remainDaysClass === 'overdue' ? 'order-card--overdue' : ''}}"
+          wx:for="{{orders.list}}" wx:key="id"
+          data-index="{{index}}" bindtap="onCardToggle">
+      <!-- 头部：封面图 + 基础信息 -->
+      <view class="order-header">
+        <view class="cover-box">
+          <image wx:if="{{item.styleCoverUrl}}" class="cover-img" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load />
+          <view wx:else class="cover-empty">👔</view>
+        </view>
+        <view class="header-info">
+          <view class="header-top">
+            <text class="order-no">{{item.orderNo}}</text>
+            <text wx:if="{{item.urgencyTagText}}" class="tag tag-urgent">{{item.urgencyTagText}}</text>
+            <text wx:if="{{item.plateTypeTagText}}" class="tag tag-plate">{{item.plateTypeTagText}}</text>
+          </view>
+          <view class="header-meta">
+            <text class="style-no">{{item.styleNo || '--'}}</text>
+            <text class="meta-factory" wx:if="{{item.factoryName}}">📍 {{item.factoryName}}</text>
+          </view>
+          <view class="header-delivery" wx:if="{{item.deliveryDateStr}}">
+            <text class="delivery-date">交期 {{item.deliveryDateStr}}</text>
+            <text class="remain-days days-{{item.remainDaysClass}}" wx:if="{{item.remainDaysText}}">{{item.remainDaysText}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 进度条 + 收起箭头 -->
+      <view class="progress-row">
+        <view class="progress-bar">
+          <view class="progress-fill" style="width:{{item.productionProgress > 100 ? 100 : item.productionProgress}}%"></view>
+        </view>
+        <text class="progress-pct">{{item.productionProgress || 0}}%</text>
+        <text class="collapse-arrow {{item.expanded ? 'collapse-arrow--open' : ''}}">▾</text>
+      </view>
+
+      <!-- 展开区域：数量统计 + 工序进度 + 颜色尺码矩阵 -->
+      <view class="order-body" wx:if="{{item.expanded}}" catchtap="">
+        <!-- 数量汇总 -->
+        <view class="body-stats">
+          <view class="body-stat"><text class="body-stat-val">{{item.totalQuantity || item.orderQuantity || 0}}</text><text class="body-stat-lbl">总数量</text></view>
+          <view class="body-stat"><text class="body-stat-val">{{item.completedQuantity || 0}}</text><text class="body-stat-lbl">已完成</text></view>
+          <view class="body-stat"><text class="body-stat-val">{{item.remainQuantity || 0}}</text><text class="body-stat-lbl">剩余</text></view>
+        </view>
+
+        <!-- 工序进度明细 -->
+        <view class="process-list" wx:if="{{item.processNodes.length > 0}}">
+          <view class="process-item" wx:for="{{item.processNodes}}" wx:for-item="node" wx:key="name">
+            <view class="process-header">
+              <text class="process-name">{{node.name}}</text>
+              <text class="process-pct">{{node.percent}}%</text>
+            </view>
+            <view class="process-bar">
+              <view class="process-bar-fill {{node.percent >= 100 ? 'process-bar-fill--done' : ''}}" style="width:{{node.percent}}%"></view>
+            </view>
+          </view>
+        </view>
+
+        <!-- 颜色尺码矩阵 -->
+        <view class="sku-section" wx:if="{{item.colorGroups && item.colorGroups.length > 0}}">
+          <view class="sku-table">
+            <view class="sku-row sku-row--head">
+              <text class="sku-cell sku-cell--color">颜色</text>
+              <text class="sku-cell" wx:for="{{item.allSizes}}" wx:for-item="sz" wx:key="*this">{{sz}}</text>
+              <text class="sku-cell sku-cell--total">合计</text>
+            </view>
+            <view class="sku-row" wx:for="{{item.colorGroups}}" wx:for-item="cg" wx:key="color">
+              <text class="sku-cell sku-cell--color">{{cg.color}}</text>
+              <text class="sku-cell" wx:for="{{item.allSizes}}" wx:for-item="sz" wx:key="*this">{{cg.sizeMap[sz] || '-'}}</text>
+              <text class="sku-cell sku-cell--total">{{cg.total}}</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 跳转详情按钮 -->
+        <view class="body-action" catchtap="onOrderTap" data-id="{{item.id}}">
+          <text class="body-action-text">查看详情 →</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 加载更多 / 没有更多 -->
+  <view class="loading-more" wx:if="{{orders.loading}}">加载中...</view>
+  <view class="no-more" wx:if="{{!orders.loading && !orders.hasMore && orders.list.length > 0}}">— 没有更多了 —</view>
+
+  <!-- 空状态 -->
+  <view class="empty-state" wx:if="{{!loading && !orders.loading && orders.list.length === 0}}">
+    <text class="empty-icon">📭</text>
+    <text class="empty-text">暂无订单数据</text>
   </view>
 </view>
