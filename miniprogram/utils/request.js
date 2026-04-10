@@ -1,5 +1,6 @@
 const { getBaseUrl } = require('../config');
 const { getToken, clearToken } = require('./storage');
+const { REQUEST_TIMEOUT, REQUEST_RETRY_COUNT, UPLOAD_TIMEOUT } = require('../config/debug');
 
 let redirectingToLogin = false;
 let redirectResetTimer = null;
@@ -233,7 +234,7 @@ function mapNetworkErrorMessage(errMsg, isDevEnv) {
  */
 function handleFail(err, context) {
   const { url, options, retryCount, resolve, reject, isDevEnv } = context;
-  const isRetryable = retryCount < 2;
+  const isRetryable = retryCount < REQUEST_RETRY_COUNT;
   const errMsg = (err && err.errMsg) || '网络异常';
   const mappedMsg = mapNetworkErrorMessage(errMsg, isDevEnv);
 
@@ -243,7 +244,7 @@ function handleFail(err, context) {
 
   if (isRetryable && isTimeoutOrNetwork) {
     const delayMs = 1000 * (Math.pow(2, retryCount) - 1);
-    console.warn(`[Request Retry] Retrying (${retryCount + 1}/2) after ${delayMs}ms: ${url}`);
+    console.warn(`[Request Retry] Retrying (${retryCount + 1}/${REQUEST_RETRY_COUNT}) after ${delayMs}ms: ${url}`);
 
     setTimeout(() => {
       const retryOptions = { ...options, _retryCount: retryCount + 1 };
@@ -323,7 +324,7 @@ function request(options) {
       url: `${baseUrl}${url}`,
       method,
       data,
-      timeout: (options && options.timeout) || 10000,
+      timeout: (options && options.timeout) || REQUEST_TIMEOUT,
       header: headers,
       success(res) {
         handleSuccess(res, { url, method, skipAuthRedirect, token, resolve, reject });
@@ -370,7 +371,7 @@ function uploadFile(options) {
       name,
       formData,
       header: headers,
-      timeout: 30000, // 上传超时设置为30秒
+      timeout: UPLOAD_TIMEOUT,
       success(res) {
         try {
           const statusCode = res.statusCode || 0;

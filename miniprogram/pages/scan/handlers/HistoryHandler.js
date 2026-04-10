@@ -241,7 +241,8 @@ function groupScanRecords(records) {
 
   groupedList.sort((a, b) => (b.latestTime || '').localeCompare(a.latestTime || ''));
 
-  // 下一生产环节已有成功记录则禁止撤回：cutting→production→quality→warehouse
+  // 撤回限制：下一工序已有成功记录则禁止撤回
+  // 标准流程：裁剪→车缝→质检→入库（如后端工序配置变更需同步更新此映射）
   const NEXT_STAGE_MAP = { cutting: 'production', production: 'quality', quality: 'warehouse' };
   groupedList.forEach(g => {
     g.items.forEach(item => {

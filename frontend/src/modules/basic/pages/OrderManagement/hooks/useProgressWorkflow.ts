@@ -7,7 +7,7 @@ export function useProgressWorkflow() {
   const [progressNodes, setProgressNodes] = useState<ProgressNode[]>(defaultProgressNodes);
 
   const buildProgressNodesFromTemplate = (rows: any[]): ProgressNode[] => {
-    return (Array.isArray(rows) ? rows : [])
+    const raw = (Array.isArray(rows) ? rows : [])
       .map((n: any) => {
         const name = String(n?.name || n?.processName || '').trim();
         if (!name) return null;
@@ -27,6 +27,14 @@ export function useProgressWorkflow() {
         } as unknown as ProgressNode;
       })
       .filter(Boolean) as ProgressNode[];
+
+    // 按工序名去重，保留首次出现（防止模板返回重复行导致工资翻倍）
+    const seen = new Set<string>();
+    return raw.filter(n => {
+      if (seen.has(n.name)) return false;
+      seen.add(n.name);
+      return true;
+    });
   };
 
   const loadProgressNodesForStyle = async (styleNo: string) => {
@@ -57,9 +65,13 @@ export function useProgressWorkflow() {
       sortOrder: number;
     }> = [];
 
+    const seenNames = new Set<string>();
     (Array.isArray(nodes) ? nodes : []).forEach((n, idx) => {
       const name = String(n?.name || '').trim();
       if (!name) return;
+      // 按工序名去重（防止重复节点写入 JSON 导致工资翻倍）
+      if (seenNames.has(name)) return;
+      seenNames.add(name);
 
       const id = String(n?.id || name || '').trim() || name;
       const progressStage = String((n as any)?.progressStage || name).trim();

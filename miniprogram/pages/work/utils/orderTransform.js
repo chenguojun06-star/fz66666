@@ -4,7 +4,7 @@
  */
 const { validateProductionOrder, normalizeData } = require('../../../utils/dataValidator');
 const { orderStatusText } = require('../../../utils/orderStatusHelper');
-const { parseProductionOrderLines } = require('../../../utils/orderParser');
+const { parseProductionOrderLines, SIZE_ORDER } = require('../../../utils/orderParser');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 
 /**
@@ -46,12 +46,11 @@ function mapFactoryTypeLabel(factoryType) {
 }
 
 function sortSizes(sizes) {
-  const order = ['XXS', 'XS', 'S', 'M', 'L', 'XL', '2XL', 'XXL', '3XL', 'XXXL', '4XL', '5XL'];
   return [...sizes].sort((a, b) => {
     const left = normalizeText(a).toUpperCase();
     const right = normalizeText(b).toUpperCase();
-    const leftIndex = order.indexOf(left);
-    const rightIndex = order.indexOf(right);
+    const leftIndex = SIZE_ORDER.indexOf(left);
+    const rightIndex = SIZE_ORDER.indexOf(right);
     if (leftIndex !== -1 && rightIndex !== -1) return leftIndex - rightIndex;
     if (leftIndex !== -1) return -1;
     if (rightIndex !== -1) return 1;

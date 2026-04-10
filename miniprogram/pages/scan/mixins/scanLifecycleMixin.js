@@ -268,8 +268,7 @@ const scanLifecycleMixin = Behavior({
           }
         }
       } catch (e) {
-        // 静默失败，保留默认 ['A仓', 'B仓']
-        console.warn('[scan] 加载仓库选项失败，使用默认值', e);
+        console.warn('[scan] 加载仓库选项失败，仓库选择不可用', e);
       }
     },
   },

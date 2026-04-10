@@ -162,7 +162,9 @@ Page({
           self.setData({ aiTipData: res });
         }
       })
-      .catch(function () {});
+      .catch(function (err) {
+        console.warn('[confirm] AI提示获取失败:', err);
+      });
   },
 
   previewImage() {

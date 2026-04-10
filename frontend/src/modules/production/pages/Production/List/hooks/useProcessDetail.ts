@@ -273,8 +273,16 @@ export function useProcessDetail({ message, fetchProductionList }: UseProcessDet
         sortOrder: idx,
       }));
 
-      const processesByNode: Record<string, typeof allProcesses> = {};
-      for (const p of allProcesses) {
+      // 按工序名去重，保留首次出现（防止模板返回重复行导致工资翻倍）
+      const seen = new Set<string>();
+      const uniqueProcesses = allProcesses.filter(p => {
+        if (!p.name || seen.has(p.name)) return false;
+        seen.add(p.name);
+        return true;
+      });
+
+      const processesByNode: Record<string, typeof uniqueProcesses> = {};
+      for (const p of uniqueProcesses) {
         const stage = p.progressStage || p.name;
         if (!processesByNode[stage]) {
           processesByNode[stage] = [];
@@ -283,7 +291,7 @@ export function useProcessDetail({ message, fetchProductionList }: UseProcessDet
       }
 
       const progressWorkflowJson = JSON.stringify({
-        nodes: allProcesses,
+        nodes: uniqueProcesses,
         processesByNode,
       });
 
@@ -297,7 +305,7 @@ export function useProcessDetail({ message, fetchProductionList }: UseProcessDet
         return;
       }
 
-      message.success(`已同步 ${allProcesses.length} 个工序`);
+      message.success(`已同步 ${uniqueProcesses.length} 个工序`);
       fetchProductionList();
     } catch (e) {
       console.error('同步工序失败:', e);

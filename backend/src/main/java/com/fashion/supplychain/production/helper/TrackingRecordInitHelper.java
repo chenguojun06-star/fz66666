@@ -21,8 +21,10 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -263,9 +265,15 @@ public class TrackingRecordInitHelper {
                     List<Map<String, Object>> templateNodes =
                             templateLibraryService.resolveProgressNodeUnitPrices(order.getStyleNo().trim());
                     if (templateNodes != null && !templateNodes.isEmpty()) {
+                        Set<String> seenNames = new HashSet<>();
                         for (Map<String, Object> node : templateNodes) {
                             String stage = getStringValue(node, "progressStage", "");
                             if ("采购".equals(stage) || "procurement".equals(stage)) continue;
+                            String name = getStringValue(node, "name", "");
+                            if (StringUtils.hasText(name) && !seenNames.add(name)) {
+                                log.warn("订单 {} 模板工序中发现重复工序「{}」，已跳过", order.getOrderNo(), name);
+                                continue;
+                            }
                             nodes.add(node);
                         }
                         log.info("订单 {} 从模板库兜底获取 {} 个工序节点（styleNo={}）",
@@ -284,9 +292,15 @@ public class TrackingRecordInitHelper {
             Object nodesObj = workflow.get("nodes");
             if (nodesObj instanceof List) {
                 List<Map<String, Object>> nodeList = (List<Map<String, Object>>) nodesObj;
+                Set<String> seenNames = new HashSet<>();
                 for (Map<String, Object> node : nodeList) {
                     String progressStage = getStringValue(node, "progressStage", "");
                     if ("采购".equals(progressStage) || "procurement".equals(progressStage)) {
+                        continue;
+                    }
+                    String name = getStringValue(node, "name", "");
+                    if (StringUtils.hasText(name) && !seenNames.add(name)) {
+                        log.warn("订单 {} 工序配置中发现重复工序「{}」，已跳过（保留首次出现）", order.getOrderNo(), name);
                         continue;
                     }
                     nodes.add(node);

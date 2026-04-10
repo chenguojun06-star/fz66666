@@ -179,16 +179,9 @@ const StylePatternSimpleTab: React.FC<Props> = ({ styleId, styleNo }) => {
                           resizableColumns={false}
                           dataSource={lines.map((line, idx) => ({
                             key: idx,
-                            index: idx + 1,
                             content: line
                           }))}
                           columns={[
-                            {
-                              title: '序号',
-                              dataIndex: 'index',
-                              width: 60,
-                              align: 'center'
-                            },
                             {
                               title: '生产要求',
                               dataIndex: 'content',

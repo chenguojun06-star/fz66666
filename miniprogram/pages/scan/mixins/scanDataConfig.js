@@ -119,8 +119,7 @@ const scanPageData = {
     remark: '', // 备注
     images: [], // 照片（可选）
   },
-  // 仓库选项（与PC端一致）
-  warehouseOptions: ['A仓', 'B仓'],
+  warehouseOptions: [],
   // 不合格原因大类（与PC端 DEFECT_CATEGORY_OPTIONS 完全一致）
   defectCategories: ['外观完整性问题', '尺寸精度问题', '工艺规范性问题', '功能有效性问题', '其他问题'],
   // 处理方式（与PC端 DEFECT_REMARK_OPTIONS 一致）

@@ -129,7 +129,7 @@ Page({
           this.setData({ userName: remoteName });
         }
       })
-      .catch(() => {});
+      .catch(e => { console.warn('[home] _loadUserName失败:', e.message || e); });
   },
 
   _loadTodayStats() {
@@ -141,7 +141,7 @@ Page({
           todayWorkHours: Number(d.todayWorkHours) || 0,
         });
       })
-      .catch(() => {});
+      .catch(e => { console.warn('[home] _loadTodayStats失败:', e.message || e); });
   },
 
   _loadUnreadCount() {
@@ -150,7 +150,7 @@ Page({
         const count = (res && res.data != null) ? Number(res.data) : (Number(res) || 0);
         this.setData({ unreadNoticeCount: count });
       })
-      .catch(() => {});
+      .catch(e => { console.warn('[home] _loadUnreadCount失败:', e.message || e); });
   },
 
   _loadMonthlyStats() {
@@ -158,7 +158,7 @@ Page({
       .then(stats => {
         this.setData({ monthlyStats: stats || null });
       })
-      .catch(() => {});
+      .catch(e => { console.warn('[home] _loadMonthlyStats失败:', e.message || e); });
   },
 
   _loadRecentScans() {
@@ -176,7 +176,7 @@ Page({
           }));
         this.setData({ recentScans: list });
       })
-      .catch(() => {});
+      .catch(e => { console.warn('[home] _loadRecentScans失败:', e.message || e); });
   },
 
   /* ---- 菜单与导航 ---- */

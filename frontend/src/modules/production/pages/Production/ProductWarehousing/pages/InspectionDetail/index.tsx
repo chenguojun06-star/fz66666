@@ -840,7 +840,6 @@ const InspectionDetail: React.FC = () => {
                                 resizableColumns={false}
                                 dataSource={fixedRows}
                                 columns={[
-                                  { title: '序号', dataIndex: 'seq', key: 'seq', width: 40, align: 'center' as const },
                                   {
                                     title: '内容',
                                     dataIndex: 'content',

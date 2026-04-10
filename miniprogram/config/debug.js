@@ -27,8 +27,7 @@ module.exports = {
    */
   REQUEST_TIMEOUT: 10000,
 
-  /**
-   * 请求重试次数
-   */
+  UPLOAD_TIMEOUT: 30000,
+
   REQUEST_RETRY_COUNT: 2,
 };

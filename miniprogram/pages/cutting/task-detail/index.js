@@ -1,6 +1,6 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
-const { parseProductionOrderLines } = require('../../../utils/orderParser');
+const { parseProductionOrderLines, SIZE_ORDER } = require('../../../utils/orderParser');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 
 /**
@@ -98,11 +98,10 @@ Page({
     }
 
     // 排序：先按颜色，再按标准服装尺码顺序
-    const sizeOrder = ['XXS', 'XS', 'S', 'M', 'L', 'XL', '2XL', 'XXL', '3XL', 'XXXL', '4XL', '5XL'];
     lines.sort((a, b) => {
       if (a.color !== b.color) return (a.color || '').localeCompare(b.color || '');
-      const ai = sizeOrder.indexOf(a.size);
-      const bi = sizeOrder.indexOf(b.size);
+      const ai = SIZE_ORDER.indexOf(a.size);
+      const bi = SIZE_ORDER.indexOf(b.size);
       return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
     });
 
