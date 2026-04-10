@@ -16,12 +16,11 @@ var { resolveNodesFromOrder, getNodeIndexFromProgress, clampPercent } = require(
 
 var app = getApp();
 
-/* 状态过滤映射（值 = 后端 status 字段） */
+/* 状态过滤映射（值 = 后端 status 字段；overdue 为客户端筛选） */
 var STATUS_FILTERS = [
   { key: 'all',           label: '全部',   value: '' },
   { key: 'in_production', label: '生产中', value: 'production' },
-  { key: 'warehousing',   label: '入库',   value: 'warehousing' },
-  { key: 'completed',     label: '已完成', value: 'completed' },
+  { key: 'overdue',       label: '延期',   value: '' },
 ];
 
 /**
@@ -65,7 +64,7 @@ Page({
     /* 状态过滤 */
     statFilters: STATUS_FILTERS,
     activeFilter: 'all',
-    statCounts: { all: 0, in_production: 0, warehousing: 0, completed: 0 },
+    statCounts: { all: 0, in_production: 0, overdue: 0 },
     /* 订单列表（分页） */
     orders: { list: [], page: 0, pageSize: 15, loading: false, hasMore: true },
   },
@@ -149,22 +148,37 @@ Page({
   /* ======== 加载订单列表（分页 + 封面图 + 工序明细） ======== */
   loadOrders: function (reset) {
     var that = this;
+    var activeKey = this.data.activeFilter;
+    var isOverdue = activeKey === 'overdue';
     var filterVal = '';
-    for (var i = 0; i < STATUS_FILTERS.length; i++) {
-      if (STATUS_FILTERS[i].key === this.data.activeFilter) {
-        filterVal = STATUS_FILTERS[i].value;
-        break;
+    if (!isOverdue) {
+      for (var i = 0; i < STATUS_FILTERS.length; i++) {
+        if (STATUS_FILTERS[i].key === activeKey) {
+          filterVal = STATUS_FILTERS[i].value;
+          break;
+        }
       }
     }
 
     return app.loadPagedList(this, 'orders', reset, function (p) {
-      var params = { deleteFlag: 0, page: p.page, pageSize: p.pageSize };
-      if (filterVal) params.status = filterVal;
+      // 延期订单加大 pageSize 弥补客户端过滤损失
+      var params = { deleteFlag: 0, page: p.page, pageSize: isOverdue ? 50 : p.pageSize };
+      if (isOverdue) {
+        params.status = 'production';
+      } else if (filterVal) {
+        params.status = filterVal;
+      }
       return api.production.listOrders(params);
     }, function (r) {
       return enrichForDashboard(transformOrderData(r));
     }).then(function () {
-      // 刷新状态计数
+      // 延期筛选：客户端根据交期过滤
+      if (isOverdue) {
+        var filtered = (that.data.orders.list || []).filter(function (o) {
+          return o.remainDaysClass === 'overdue';
+        });
+        that.setData({ 'orders.list': filtered });
+      }
       if (reset) that._refreshStatCounts();
     });
   },
@@ -175,15 +189,13 @@ Page({
     Promise.all([
       api.production.listOrders({ deleteFlag: 0, page: 1, pageSize: 1 }).catch(function () { return {}; }),
       api.production.listOrders({ deleteFlag: 0, status: 'production', page: 1, pageSize: 1 }).catch(function () { return {}; }),
-      api.production.listOrders({ deleteFlag: 0, status: 'warehousing', page: 1, pageSize: 1 }).catch(function () { return {}; }),
-      api.production.listOrders({ deleteFlag: 0, status: 'completed', page: 1, pageSize: 1 }).catch(function () { return {}; }),
+      api.dashboard.get().catch(function () { return {}; }),
     ]).then(function (res) {
       that.setData({
         statCounts: {
           all:            (res[0] && res[0].total) || 0,
           in_production:  (res[1] && res[1].total) || 0,
-          warehousing:    (res[2] && res[2].total) || 0,
-          completed:      (res[3] && res[3].total) || 0,
+          overdue:        Number((res[2] && res[2].overdueOrderCount) || 0),
         },
       });
     });
@@ -202,12 +214,6 @@ Page({
     var idx = e.currentTarget.dataset.index;
     var path = 'orders.list[' + idx + '].expanded';
     this.setData({ [path]: !this.data.orders.list[idx].expanded });
-  },
-
-  /* ======== 跳转订单详情 ======== */
-  onOrderTap: function (e) {
-    var id = e.currentTarget.dataset.id;
-    if (id) wx.navigateTo({ url: '/pages/order/detail/index?id=' + id });
   },
 
   /* ======== 工具方法 ======== */

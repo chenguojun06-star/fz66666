@@ -130,8 +130,12 @@ function buildColorSizeMeta(order) {
 
   return {
     groups: Array.from(colorMap.values()).map(group => {
+      // sizeMap 转为普通对象，供 WXML 模板 cg.sizeMap[sz] 访问
+      var sizeMapObj = {};
+      group.sizeMap.forEach(function (val, key) { sizeMapObj[key] = val; });
       return {
         color: group.color,
+        sizeMap: sizeMapObj,
         sizeQtyList: allSizes.map(size => group.sizeMap.get(size) || 0),
         total: group.total,
       };

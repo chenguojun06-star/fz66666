@@ -204,6 +204,11 @@
 }
 .stat-pill--active .stat-label { color: rgba(255, 255, 255, 0.85); }
 
+/* 延期标签高亮 */
+.stat-pill--overdue .stat-count { color: #ef4444; }
+.stat-pill--overdue.stat-pill--active { background: #ef4444; box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3); }
+.stat-pill--overdue.stat-pill--active .stat-count { color: #fff; }
+
 /* ===== 订单卡片列表 ===== */
 .order-list { margin-top: 4px; }
 
@@ -212,10 +217,14 @@
   border-radius: var(--radius-md, 12px);
   padding: 14px 16px 12px;
   margin-bottom: 12px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 .order-card--overdue {
   border-left: 3px solid #ef4444;
+  background: rgba(239, 68, 68, 0.04);
+}
+.order-card--overdue .order-no {
+  color: #dc2626;
 }
 
 /* — 头部：封面图 + 信息 — */
@@ -318,15 +327,15 @@
 }
 .progress-bar {
   flex: 1;
-  height: 6px;
+  height: 8px;
   background: rgba(0, 0, 0, 0.06);
-  border-radius: 3px;
+  border-radius: 4px;
   overflow: hidden;
 }
 .progress-fill {
   height: 100%;
   background: linear-gradient(90deg, #3b82f6, #60a5fa);
-  border-radius: 3px;
+  border-radius: 4px;
   transition: width 0.3s;
 }
 .progress-pct {
@@ -351,7 +360,7 @@
 .order-body {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  border-top: 1px dashed rgba(0, 0, 0, 0.08);
 }
 
 /* 数量汇总 */
