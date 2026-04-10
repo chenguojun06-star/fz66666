@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import org.springframework.context.annotation.Bean;
@@ -35,14 +34,16 @@ public class JacksonConfig {
         longModule.addSerializer(long.class, ToStringSerializer.instance);
         objectMapper.registerModule(longModule);
         // 支持 Java 8 日期时间类型（LocalDateTime 等）
-        // 兼容前端 "yyyy-MM-dd HH:mm:ss" 和 ISO "yyyy-MM-ddTHH:mm:ss" 两种格式
-        // 修复：前端传 "2026-04-10 12:09:23" 空格分隔导致反序列化 500 的问题
-        DateTimeFormatter readFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd[' ']['T']HH:mm:ss[.SSS]");
+        // 兼容前端 "yyyy-MM-dd HH:mm:ss"（空格）和 ISO "yyyy-MM-dd'T'HH:mm:ss" 两种格式
+        // ⚠️ 注意：不能用 new JavaTimeModule()，Spring Boot 自动配置已注册 JavaTimeModule，
+        //    objectMapper.registerModule(new JavaTimeModule()) 会被 Jackson 静默跳过（同 typeId 不重复注册）。
+        //    改用唯一名称的 SimpleModule 覆盖 LocalDateTime 的序列化/反序列化器。
+        DateTimeFormatter readFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd[' ']['T']HH:mm:ss[[.SSS][.SSSSSS][.SSSSSSSSS]]");
         DateTimeFormatter writeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        JavaTimeModule javaTimeModule = new JavaTimeModule();
-        javaTimeModule.addDeserializer(LocalDateTime.class, new LocalDateTimeDeserializer(readFormatter));
-        javaTimeModule.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(writeFormatter));
-        objectMapper.registerModule(javaTimeModule);
+        SimpleModule dateTimeOverride = new SimpleModule("fashion-datetime-override");
+        dateTimeOverride.addDeserializer(LocalDateTime.class, new LocalDateTimeDeserializer(readFormatter));
+        dateTimeOverride.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(writeFormatter));
+        objectMapper.registerModule(dateTimeOverride);
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         return objectMapper;
     }
