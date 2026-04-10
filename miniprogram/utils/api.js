@@ -9,7 +9,7 @@
 const production = require('./api-modules/production');
 const { system, serial, factory, factoryWorker, tenant } = require('./api-modules/system');
 const { intelligence, notice } = require('./api-modules/intelligence');
-const { style, warehouse, material, materialRoll, orderManagement } = require('./api-modules/style-warehouse');
+const { style, warehouse, material, materialRoll, orderManagement, sampleStock } = require('./api-modules/style-warehouse');
 const { dashboard, wechat, common } = require('./api-modules/common');
 
 // ── 聚合对象（与拆分前完全一致的接口） ──────────────────────
@@ -22,6 +22,7 @@ const api = {
   style,
   warehouse,
   orderManagement,
+  sampleStock,
   serial,
   factory,
   tenant,
@@ -46,6 +47,7 @@ module.exports.serial = serial;
 module.exports.factory = factory;
 module.exports.tenant = tenant;
 module.exports.wechat = wechat;
+module.exports.sampleStock = sampleStock;
 
 /* --- 拆分前原始代码已归档至 api-modules/ 各领域文件 --- */
 /* helpers.js       — ok / raw / pickMessage / createBizError / uploadFile */

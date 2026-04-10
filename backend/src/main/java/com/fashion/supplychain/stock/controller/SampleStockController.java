@@ -72,4 +72,12 @@ public class SampleStockController {
             .eq(SampleLoan::getSampleStockId, sampleStockId)
             .orderByDesc(SampleLoan::getCreateTime)));
     }
+
+    @PostMapping("/scan-query")
+    public Result<Map<String, Object>> scanQuery(@RequestBody Map<String, String> params) {
+        String styleNo = params.get("styleNo");
+        String color = params.get("color");
+        String size = params.get("size");
+        return Result.success(sampleStockService.scanQuery(styleNo, color, size));
+    }
 }

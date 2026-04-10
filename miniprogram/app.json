@@ -41,7 +41,8 @@
       "root": "pages/warehouse",
       "name": "pkg-warehouse",
       "pages": [
-        "material/scan/index"
+        "material/scan/index",
+        "sample/scan-action/index"
       ]
     },
     {

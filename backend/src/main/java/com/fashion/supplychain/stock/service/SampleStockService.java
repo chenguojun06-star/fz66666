@@ -30,4 +30,9 @@ public interface SampleStockService extends IService<SampleStock> {
     void returnSample(String loanId, Integer returnQuantity, String remark);
 
     void destroy(String stockId, String remark);
+
+    /**
+     * 扫码查询 — 根据款号+颜色+尺码查询样衣库存状态及可用操作
+     */
+    Map<String, Object> scanQuery(String styleNo, String color, String size);
 }

@@ -235,6 +235,54 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
         }
     }
 
+    @Override
+    public Map<String, Object> scanQuery(String styleNo, String color, String size) {
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (!StringUtils.hasText(styleNo) || !StringUtils.hasText(color) || !StringUtils.hasText(size)) {
+            throw new IllegalArgumentException("款号、颜色、尺码不能为空");
+        }
+
+        SampleStock stock = this.lambdaQuery()
+                .eq(SampleStock::getStyleNo, styleNo)
+                .eq(SampleStock::getColor, color)
+                .eq(SampleStock::getSize, size)
+                .eq(SampleStock::getDeleteFlag, 0)
+                .eq(tenantId != null, SampleStock::getTenantId, tenantId)
+                .one();
+
+        Map<String, Object> result = new HashMap<>();
+        List<String> actions = new ArrayList<>();
+
+        if (stock == null) {
+            result.put("found", false);
+            actions.add("inbound");
+        } else {
+            fillStyleFields(List.of(stock));
+            result.put("found", true);
+            result.put("stock", stock);
+
+            int qty = stock.getQuantity() == null ? 0 : stock.getQuantity();
+            int loaned = stock.getLoanedQuantity() == null ? 0 : stock.getLoanedQuantity();
+            int available = qty - loaned;
+            result.put("availableQuantity", available);
+
+            if (available > 0) {
+                actions.add("loan");
+            }
+            if (loaned > 0) {
+                actions.add("return");
+                List<SampleLoan> activeLoans = sampleLoanMapper.selectList(
+                        new LambdaQueryWrapper<SampleLoan>()
+                                .eq(SampleLoan::getSampleStockId, stock.getId())
+                                .eq(SampleLoan::getStatus, "borrowed")
+                                .eq(SampleLoan::getDeleteFlag, 0));
+                result.put("activeLoans", activeLoans);
+            }
+        }
+        result.put("actions", actions);
+        return result;
+    }
+
     private void fillStyleFields(List<SampleStock> records) {
         if (records == null || records.isEmpty()) {
             return;
