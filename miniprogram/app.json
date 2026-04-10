@@ -109,10 +109,15 @@
       "root": "pages/work/ai-photo",
       "name": "pkg-work-ai-photo",
       "pages": ["index"]
+    },
+    {
+      "root": "pages/dashboard",
+      "name": "pkg-dashboard",
+      "pages": ["index"]
     }
   ],
   "preloadRule": {
-    "pages/home/index":  { "network": "all", "packages": ["pkg-warehouse", "pkg-register", "pkg-bundle-split"] },
+    "pages/home/index":  { "network": "all", "packages": ["pkg-warehouse", "pkg-register", "pkg-bundle-split", "pkg-dashboard"] },
     "pages/work/index":  { "network": "all", "packages": ["pkg-work-inbox", "pkg-bundle-split", "pkg-cutting", "pkg-procurement", "pkg-work-ai-photo"] },
     "pages/scan/index":  { "network": "all", "packages": ["pkg-scan-history", "pkg-scan-pattern", "pkg-scan-rescan", "pkg-scan-result", "pkg-scan-confirm", "pkg-scan-quality"] },
     "pages/admin/index": { "network": "all", "packages": ["pkg-admin-approval", "pkg-payroll", "pkg-privacy", "pkg-admin-changepwd", "pkg-admin-feedback", "pkg-admin-invite"] }

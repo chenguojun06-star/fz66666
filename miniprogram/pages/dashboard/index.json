@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "进度看板",
+  "navigationStyle": "custom",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "custom-nav": "/components/common/custom-nav/index"
+  }
+}
