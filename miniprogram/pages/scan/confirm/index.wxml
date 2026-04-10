@@ -20,6 +20,19 @@
     </view>
   </view>
 
+  <!-- ===== AI智能提示气泡（所有阶段通用，可关闭） ===== -->
+  <view wx:if="{{aiTipVisible && aiTipData && aiTipData.aiTip}}" class="ai-bubble {{aiTipData.priority === 'high' ? 'ai-bubble-high' : 'ai-bubble-normal'}}">
+    <view class="ai-bubble-header">
+      <text class="ai-bubble-icon">{{aiTipData.priority === 'high' ? '🔴' : '💡'}}</text>
+      <text class="ai-bubble-stage" wx:if="{{aiTipData.stage}}">{{aiTipData.stage}}</text>
+      <view class="ai-bubble-close" bindtap="dismissAiTip">✕</view>
+    </view>
+    <text class="ai-bubble-text">{{aiTipData.aiTip}}</text>
+    <view wx:if="{{aiTipData.keywords.length > 0}}" class="ai-bubble-tags">
+      <text wx:for="{{aiTipData.keywords}}" wx:key="*this" class="ai-bubble-tag">{{item}}</text>
+    </view>
+  </view>
+
   <!-- ===== 采购模式：面辅料明细 ===== -->
   <block wx:if="{{isProcurement}}">
     <view wx:if="{{detail.bomFallback}}" class="warn-card">
@@ -111,10 +124,6 @@
 
   <!-- ===== 普通模式：SKU输入 ===== -->
   <block wx:else>
-    <view wx:if="{{aiTipData}}" class="insight-card">
-      <text class="insight-icon">💡</text>
-      <text class="insight-text">{{aiTipData.aiTip}}</text>
-    </view>
 
     <view wx:if="{{detail.bomFallback}}" class="warn-card">
       <text class="warn-icon">⚠️</text>

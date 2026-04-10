@@ -17,6 +17,7 @@ Page({
     sizeMatrix: { sizes: [], rows: [] },
     cuttingTask: null,
     aiTipData: null,
+    aiTipVisible: false,
     buttonText: '确认扫码',
     loading: false
   },
@@ -120,8 +121,9 @@ Page({
       return;
     }
 
-    if (!isProcurement && !isCutting && raw.orderNo && raw.processName) {
-      this._fetchAiTip(raw.orderNo, raw.processName);
+    // 所有阶段均可获取AI提示（采购/裁剪/车缝/质检/入库）
+    if (raw.orderNo) {
+      this._fetchAiTip(raw.orderNo, raw.processName || raw.progressStage || '');
     }
   },
 
@@ -159,12 +161,16 @@ Page({
     api.intelligence.getScanTips({ orderNo: orderNo, processName: processName })
       .then(function (res) {
         if (res && res.aiTip) {
-          self.setData({ aiTipData: res });
+          self.setData({ aiTipData: res, aiTipVisible: true });
         }
       })
       .catch(function (err) {
         console.warn('[confirm] AI提示获取失败:', err);
       });
+  },
+
+  dismissAiTip() {
+    this.setData({ aiTipVisible: false });
   },
 
   previewImage() {

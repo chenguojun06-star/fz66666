@@ -222,6 +222,14 @@ public class IntelligenceController {
         return Result.success(scanTipsOrchestrator.getScanTips(orderNo, processName));
     }
 
+    /** 小程序端通过 POST body 调用 */
+    @PostMapping("/scan-advisor/tips")
+    public Result<?> getScanTipsByPost(@RequestBody(required = false) java.util.Map<String, String> body) {
+        String orderNo = body != null ? body.get("orderNo") : null;
+        String processName = body != null ? body.get("processName") : null;
+        return Result.success(scanTipsOrchestrator.getScanTips(orderNo, processName));
+    }
+
     @GetMapping("/brain/snapshot")
     public Result<IntelligenceBrainSnapshotResponse> getBrainSnapshot() {
         return Result.success(intelligenceBrainOrchestrator.snapshot());

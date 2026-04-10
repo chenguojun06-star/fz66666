@@ -106,11 +106,20 @@ const AiQualityHelper: React.FC<AiQualityHelperProps> = ({ orderId, defectCatego
       {/* 质检要点 */}
       {data && data.checkpoints && data.checkpoints.length > 0 && (
         <div style={{ marginBottom: suggestion ? 8 : 0 }}>
-          <Text type="secondary" style={{ fontSize: 12 }}>质检要点：</Text>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
-            {data.checkpoints.map((point, idx) => (
-              <Tag key={idx} color="blue" style={{ fontSize: 11, margin: 0 }}>{point}</Tag>
-            ))}
+          <Text type="secondary" style={{ fontSize: 13 }}>质检要点：</Text>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
+            {data.checkpoints.map((point, idx) => {
+              const isRed = point.startsWith('🔴');
+              const isYellow = point.startsWith('🟡');
+              return (
+                <div key={idx} style={{
+                  padding: '4px 8px', fontSize: 13,
+                  background: isRed ? '#fff1f0' : isYellow ? '#fffbe6' : '#f0f7ff',
+                  borderLeft: `3px solid ${isRed ? '#ff4d4f' : isYellow ? '#faad14' : '#1677ff'}`,
+                  borderRadius: '0 4px 4px 0', color: '#333',
+                }}>{point}</div>
+              );
+            })}
           </div>
         </div>
       )}

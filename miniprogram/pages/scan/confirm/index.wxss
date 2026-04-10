@@ -320,4 +320,70 @@
   color: var(--color-text-tertiary);
 }
 
+/* ===== AI 智能提示气泡 ===== */
+.ai-bubble {
+  margin: 16rpx 0;
+  padding: 20rpx 24rpx;
+  border-radius: 16rpx;
+  background: #f0f7ff;
+  border-left: 6rpx solid #4096ff;
+  position: relative;
+}
+.ai-bubble-high {
+  background: #fff2f0;
+  border-left-color: #ff4d4f;
+}
+.ai-bubble-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8rpx;
+}
+.ai-bubble-icon {
+  font-size: 28rpx;
+  margin-right: 8rpx;
+}
+.ai-bubble-stage {
+  font-size: 22rpx;
+  color: #fff;
+  background: #4096ff;
+  padding: 2rpx 12rpx;
+  border-radius: 8rpx;
+  margin-right: 8rpx;
+}
+.ai-bubble-high .ai-bubble-stage {
+  background: #ff4d4f;
+}
+.ai-bubble-close {
+  position: absolute;
+  top: 12rpx;
+  right: 16rpx;
+  font-size: 28rpx;
+  color: #999;
+  padding: 8rpx;
+  line-height: 1;
+}
+.ai-bubble-text {
+  font-size: 24rpx;
+  color: #333;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.ai-bubble-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  margin-top: 10rpx;
+}
+.ai-bubble-tag {
+  font-size: 20rpx;
+  color: #4096ff;
+  background: rgba(64, 150, 255, 0.1);
+  padding: 2rpx 12rpx;
+  border-radius: 6rpx;
+}
+.ai-bubble-high .ai-bubble-tag {
+  color: #ff4d4f;
+  background: rgba(255, 77, 79, 0.1);
+}
+
 

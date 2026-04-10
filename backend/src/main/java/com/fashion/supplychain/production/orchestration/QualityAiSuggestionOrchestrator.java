@@ -83,89 +83,128 @@ public class QualityAiSuggestionOrchestrator {
 
     // ─── 规则库 ───────────────────────────────────────────────────────
 
-    /** 通用质检要点（所有品类适用） */
+    /** 通用质检要点（精简4条，按方向分） */
     private static final List<String> COMMON_CHECKPOINTS = Arrays.asList(
-        "检查缝线是否均匀、无跳线、断线",
-        "检查面料有无色差、污渍、破损",
-        "检查各部位对位是否准确（格纹/条纹需对齐）",
-        "检查线头是否已全部修剪干净",
-        "检查辅料（标签、吊牌、包装袋）是否完整"
+        "🔴 面料：检查色差/污渍/破损/抽丝",
+        "🔴 车缝：缝线均匀无跳线，线头修净",
+        "🟡 配饰：纽扣/拉链牢固，金属件无毛刺",
+        "🟡 标识：吊牌/洗标/尺码标完整正确"
     );
 
-    /** 按品类的专属质检要点 */
+    /** 按品类的专属质检要点（精简2条，与通用4条合计≤6条） */
     private static final Map<String, List<String>> CATEGORY_CHECKPOINTS = new HashMap<>();
     static {
         // 上衣/衬衫
         CATEGORY_CHECKPOINTS.put("shirt", Arrays.asList(
-            "检查领口/翻领形态是否端正，左右对称",
-            "检查扣眼位置是否均匀，纽扣牢固度测试",
-            "检查袖长左右是否一致，袖口折边平整",
-            "检查肩缝是否平整，无起拱"
+            "🔴 领型端正左右对称，扣眼均匀",
+            "🟡 袖长一致，肩缝平整无起拱"
         ));
-        CATEGORY_CHECKPOINTS.put("top", Arrays.asList(
-            "检查领口/翻领形态是否端正，左右对称",
-            "检查袖长左右是否一致，袖口折边平整",
-            "检查肩缝是否平整，无起拱"
-        ));
+        CATEGORY_CHECKPOINTS.put("top", CATEGORY_CHECKPOINTS.get("shirt"));
         // 裤子
         CATEGORY_CHECKPOINTS.put("pants", Arrays.asList(
-            "检查裤长左右是否一致（允差≤0.3cm）",
-            "检查裤腰内衬是否平整，无折叠凸起",
-            "检查拉链/钮扣开合顺畅，无卡顿",
-            "检查两侧口袋对称性及缝线质量"
+            "🔴 裤长左右允差≤0.3cm，腰头平整",
+            "🟡 拉链/钮扣开合顺畅，口袋对称"
         ));
         CATEGORY_CHECKPOINTS.put("trousers", CATEGORY_CHECKPOINTS.get("pants"));
         // 裙子
         CATEGORY_CHECKPOINTS.put("skirt", Arrays.asList(
-            "检查裙摆下摆是否均匀、平整",
-            "检查腰头宽度均匀，松紧适度",
-            "检查拉链或暗扣安装是否平整"
+            "🔴 裙摆下摆均匀平整，腰头均匀",
+            "🟡 拉链/暗扣安装平整无外露"
         ));
         // 连衣裙
         CATEGORY_CHECKPOINTS.put("dress", Arrays.asList(
-            "检查整衣上下比例，腰线定位准确",
-            "检查领口和下摆工整度",
-            "检查拉链/扣子位置对称，开合顺畅",
-            "检查里布与面料贴合，无起皱"
+            "🔴 腰线定位准确，领口下摆工整",
+            "🟡 里布贴合无起皱，功能件顺畅"
         ));
         // 外套/夹克
         CATEGORY_CHECKPOINTS.put("jacket", Arrays.asList(
-            "检查领子造型端正，驳头左右对称",
-            "检查拉链/扣子功能完好，开合流畅",
-            "检查口袋盖对称，缝制平整",
-            "检查里衬与面料无脱层，整体挺括"
+            "🔴 驳头对称，里衬无脱层挺括",
+            "🟡 口袋盖对称，拉链/扣子流畅"
         ));
         CATEGORY_CHECKPOINTS.put("coat", CATEGORY_CHECKPOINTS.get("jacket"));
         CATEGORY_CHECKPOINTS.put("outerwear", CATEGORY_CHECKPOINTS.get("jacket"));
         // T恤
         CATEGORY_CHECKPOINTS.put("t-shirt", Arrays.asList(
-            "检查领圈缝线牢固，领口弹性均匀",
-            "检查印花/绣花位置居中，无脱色",
-            "检查下摆折边均匀，宽窄一致"
+            "🔴 领圈牢固弹性均匀，下摆宽窄一致",
+            "🟡 印花/绣花居中无脱色偏移"
         ));
         CATEGORY_CHECKPOINTS.put("tshirt", CATEGORY_CHECKPOINTS.get("t-shirt"));
-        // 童装
+        // 童装（增加安全合规标准）
         CATEGORY_CHECKPOINTS.put("kids", Arrays.asList(
-            "严查小部件（纽扣、装饰件）牢固度，防脱落吞食风险",
-            "检查面料手感柔软，无刺激性材质",
-            "检查拉链头需有防夹手设计",
-            "检查成品尺寸是否符合童装尺码标准"
+            "🔴 GB31701/CPSC：小部件拉力≥70N防吞食",
+            "🟡 绳带≤7.5cm(CPSC)，金属件无镍超标"
         ));
+        // 婴幼儿装
+        CATEGORY_CHECKPOINTS.put("infant", Arrays.asList(
+            "🔴 GB18401-A类：甲醛≤20mg/kg，pH4.0-7.5",
+            "🟡 禁止绳带/可拆卸件，面料柔软无刺激"
+        ));
+        CATEGORY_CHECKPOINTS.put("baby", CATEGORY_CHECKPOINTS.get("infant"));
+        // ===== 面料类型专属要点 =====
+        // 牛仔
+        CATEGORY_CHECKPOINTS.put("denim", Arrays.asList(
+            "🔴 色差必查：同批次深浅对比，洗水后色牢度",
+            "🟡 车缝用粗线，针距均匀，铆钉牛固"
+        ));
+        CATEGORY_CHECKPOINTS.put("jeans", CATEGORY_CHECKPOINTS.get("denim"));
+        // 毛衣/针织
+        CATEGORY_CHECKPOINTS.put("sweater", Arrays.asList(
+            "🔴 检查拉毛/起球/脱线，罗口弹性恢复",
+            "🟡 缩水率≤5%，尺寸拉伸后回弹正常"
+        ));
+        CATEGORY_CHECKPOINTS.put("knitwear", CATEGORY_CHECKPOINTS.get("sweater"));
+        CATEGORY_CHECKPOINTS.put("毛衣", CATEGORY_CHECKPOINTS.get("sweater"));
+        // 真丝
+        CATEGORY_CHECKPOINTS.put("silk", Arrays.asList(
+            "🔴 轻拿轻放防勾丝，禁止针粗线粗车缝",
+            "🟡 擦洗变色必测，光泽均匀无水印"
+        ));
+        CATEGORY_CHECKPOINTS.put("真丝", CATEGORY_CHECKPOINTS.get("silk"));
+        // 色丁/缚面
+        CATEGORY_CHECKPOINTS.put("satin", Arrays.asList(
+            "🔴 表面禁止刺尖接触，防勾丝抽纱",
+            "🟡 缝边火封处理，裁片方向一致"
+        ));
+        CATEGORY_CHECKPOINTS.put("色丁", CATEGORY_CHECKPOINTS.get("satin"));
+        // 蕾丝
+        CATEGORY_CHECKPOINTS.put("lace", Arrays.asList(
+            "🔴 花型对花对条，接缝自然无断点",
+            "🟡 边缘不脱纱，底衣贴合不透光"
+        ));
+        CATEGORY_CHECKPOINTS.put("蕾丝", CATEGORY_CHECKPOINTS.get("lace"));
+        // 羽绒
+        CATEGORY_CHECKPOINTS.put("down", Arrays.asList(
+            "🔴 钻绒测试：揉压不得渗绒，接缝处密封",
+            "🟡 充绒量称重核对，左右均匀无结团"
+        ));
+        CATEGORY_CHECKPOINTS.put("羽绒", CATEGORY_CHECKPOINTS.get("down"));
+        // 纱料/雪纺
+        CATEGORY_CHECKPOINTS.put("chiffon", Arrays.asList(
+            "🔴 易滑丝用特氟龙压脚，放慢车速",
+            "🟡 裁片必须锁边，缝份放宽0.5cm"
+        ));
+        CATEGORY_CHECKPOINTS.put("雪纺", CATEGORY_CHECKPOINTS.get("chiffon"));
+        // 麻料
+        CATEGORY_CHECKPOINTS.put("linen", Arrays.asList(
+            "🔴 预缩必做，裁后及时码齐防变形",
+            "🟡 整烫温度≤180°C，避免缝份拉豁"
+        ));
+        CATEGORY_CHECKPOINTS.put("麻", CATEGORY_CHECKPOINTS.get("linen"));
     }
 
-    /** 按次品类别的AI建议（可直接采纳为返修备注） */
+    /** 按次品类别的AI建议（精简1句话，可采纳为返修备注） */
     private static final Map<String, String> DEFECT_SUGGESTIONS = new LinkedHashMap<>();
     static {
         DEFECT_SUGGESTIONS.put("appearance_integrity",
-            "外观完整性问题：检查起毛、破洞、抽丝部位，轻微可手工修补；严重需重新缝制。建议追溯该批次面料来源，若批量出现请及时反馈供应商。");
+            "轻微起毛/抽丝可修补，严重破损重做。批量出现请反馈供应商");
         DEFECT_SUGGESTIONS.put("size_accuracy",
-            "尺寸精度问题：先核对裁床版型是否偏差，若版型无误则为缝制拉伸导致。可尝试蒸汽定型回正；若尺差>1cm建议报废重做，避免客退。");
+            "先查裁床版型偏差，试蒸汽定型回正。尺差>1cm建议重做");
         DEFECT_SUGGESTIONS.put("process_compliance",
-            "工艺规范性问题：对照工艺单检查各步骤执行情况，重点核查缝份宽度、针距设置。建议组织工艺培训，对该工人本批次产品全检。");
+            "核查缝份/针距是否合规，本批次产品全检");
         DEFECT_SUGGESTIONS.put("functional_effectiveness",
-            "功能有效性问题：检查拉链/扣子/魔术贴等功能件更换或加固。功能性问题直接影响客户体验，建议同批次产品全部复检，不合格件一律返修。");
+            "拉链/扣子更换或加固，同批次全部复检");
         DEFECT_SUGGESTIONS.put("other",
-            "其他问题：请详细记录异常情况，拍照留档后交由品控主管确认处理方案。若为批量性问题请立即上报避免流入后续工序。");
+            "拍照留档交品控主管确认。批量问题立即上报");
     }
 
     // ─── 对外接口 ──────────────────────────────────────────────────────
@@ -302,17 +341,21 @@ public class QualityAiSuggestionOrchestrator {
     }
 
     private String buildSystemPrompt() {
-        return "你是一名拥有10年经验的服装品控专家AI助手。\n" +
-               "任务：根据用户提供的真实订单数据（品类、面料成分、BOM物料、工序），" +
-               "生成一份「专门针对这件衣服」的质检清单。\n\n" +
-               "要求：\n" +
-               "1. 每条要点必须具体、可执行，结合实际面料特性和工序难点（禁止输出【检查总体质量】这类废话）\n" +
-               "2. 面料层面：针对具体材质（雪纺/纯棉/弹力布/聚酯等）的检验要点\n" +
-               "3. 工序层面：高难度/高风险工序的特别关注点\n" +
-               "4. 历史次品率高时，要在要点中指明重点排查区域\n" +
-               "5. 输出「纯JSON」，不要任何多余文字\n\n" +
-               "输出格式：\n" +
-               "{\"checkpoints\":[\"要点1\",\"要点2\",...],\"urgentTip\":\"急单提示或null\",\"specialRisks\":\"本款特殊风险一句话\"}";
+        return "你是服装品控专家AI，任务：根据订单真实数据生成精准质检清单。\n\n" +
+               "【铁律】\n" +
+               "1. 最多6条，每条≤25字，只写最关键的。废话=扣分\n" +
+               "2. 必须围绕4个方向：面料→车缝→配饰/辅料→安全合规，每方向最多2条\n" +
+               "3. 面料层：根据实际材质写（雪纺查抽丝/纯棉查缩水/弹力布查回弹）\n" +
+               "4. 车缝层：结合工序难点（暗缝/拼接/包边/拉链等）\n" +
+               "5. 配饰层：纽扣拉力≥70N/金属件无毛刺/绳带长度合规\n" +
+               "6. 安全合规层（强制触发条件）：\n" +
+               "   - 童装/母婴：绳带禁令(CPSC 16CFR1120/GB 31701)、小部件吞食风险、甲醛≤20mg/kg\n" +
+               "   - 出口美国：CPSIA含铅≤100ppm、阻燃(16CFR1610/1615)\n" +
+               "   - 出口欧盟：REACH镍释放≤0.5μg/cm²、AZO偶氮≤30mg/kg\n" +
+               "   - 内销：GB 18401 pH 4.0-7.5、色牢度≥3-4级\n" +
+               "7. 每条标注重要级别：🔴关键(必查) 🟡注意(抽查)\n" +
+               "8. 历史次品率高时，第一条指明重点排查方向\n\n" +
+               "输出纯JSON：{\"checkpoints\":[\"🔴 xxx\",\"🟡 xxx\",...],\"urgentTip\":\"急单提示或null\",\"specialRisks\":\"一句话风险\"}";
     }
 
     private String buildUserMessage(ProductionOrder order,
@@ -390,7 +433,7 @@ public class QualityAiSuggestionOrchestrator {
             sb.append(processList).append("\n");
         }
 
-        sb.append("\n请基于以上真实数据，生成 8~12 条具体质检要点（JSON格式）。");
+        sb.append("\n请基于以上真实数据，生成 4~6 条精准质检要点（JSON格式），严禁超过6条。");
         return sb.toString();
     }
 
@@ -470,15 +513,21 @@ public class QualityAiSuggestionOrchestrator {
         List<String> checkpoints = new ArrayList<>(COMMON_CHECKPOINTS);
         checkpoints.addAll(resolveCategory(category));
 
-        String urgentTip = null;
-        if ("urgent".equalsIgnoreCase(order.getUrgencyLevel())) {
-            urgentTip = "⚠️ 此为急单，请优先处理！注意：赶工不得降低质检标准，发现异常仍需如实记录。";
+        // 历史次品率预警插入头部
+        if ("critical".equals(historicalVerdict)) {
+            checkpoints.add(0, "🔴 历史次品率>30%，严格全检");
+        } else if ("warn".equals(historicalVerdict)) {
+            checkpoints.add(0, "🟡 次品率偏高(" + Math.round(historicalDefectRate * 100) + "%)加强抽检");
         }
 
-        if ("critical".equals(historicalVerdict)) {
-            checkpoints.add(0, "🔴 此订单历史次品率超30%，请严格全检，重点关注批次一致性");
-        } else if ("warn".equals(historicalVerdict)) {
-            checkpoints.add(0, "🟡 此订单历史次品率偏高(" + Math.round(historicalDefectRate * 100) + "%)，需加强抽检力度");
+        // 严格限制总条数≤6条，超出截断
+        if (checkpoints.size() > 6) {
+            checkpoints = new ArrayList<>(checkpoints.subList(0, 6));
+        }
+
+        String urgentTip = null;
+        if ("urgent".equalsIgnoreCase(order.getUrgencyLevel())) {
+            urgentTip = "⚠️ 急单优先处理，不得降低质检标准";
         }
 
         return QualityAiSuggestionResponse.builder()
@@ -515,8 +564,18 @@ public class QualityAiSuggestionOrchestrator {
         if (category.contains("外套") || category.contains("夹克") || category.contains("大衣") || category.contains("风衣") || category.contains("棉服")) return CATEGORY_CHECKPOINTS.getOrDefault("jacket", Collections.emptyList());
         if (category.contains("T恤") || category.contains("t恤") || category.contains("polo") || category.contains("POLO")) return CATEGORY_CHECKPOINTS.getOrDefault("t-shirt", Collections.emptyList());
         if (category.contains("童")) return CATEGORY_CHECKPOINTS.getOrDefault("kids", Collections.emptyList());
-        // 通用上衣：含"衫"（显头衫、衬衫已被上面处理）、"毛衣"、"卫衣"、"上衣"等
-        if (category.contains("衫") || category.contains("毛衣") || category.contains("卫衣") || category.contains("上衣") || category.contains("针织")) return CATEGORY_CHECKPOINTS.getOrDefault("top", Collections.emptyList());
+        if (category.contains("婴") || category.contains("幼") || category.contains("baby") || category.contains("infant") || category.contains("新生")) return CATEGORY_CHECKPOINTS.getOrDefault("infant", Collections.emptyList());
+        // 面料类型匹配（优先于通用上衣）
+        if (category.contains("牛仔") || category.contains("denim") || category.contains("jeans")) return CATEGORY_CHECKPOINTS.getOrDefault("denim", Collections.emptyList());
+        if (category.contains("毛衣") || category.contains("针织") || category.contains("sweater") || category.contains("knitwear")) return CATEGORY_CHECKPOINTS.getOrDefault("sweater", Collections.emptyList());
+        if (category.contains("真丝") || category.contains("丝绸") || category.contains("silk")) return CATEGORY_CHECKPOINTS.getOrDefault("silk", Collections.emptyList());
+        if (category.contains("色丁") || category.contains("缎") || category.contains("satin")) return CATEGORY_CHECKPOINTS.getOrDefault("satin", Collections.emptyList());
+        if (category.contains("蕾丝") || category.contains("lace")) return CATEGORY_CHECKPOINTS.getOrDefault("lace", Collections.emptyList());
+        if (category.contains("羽绒") || category.contains("down")) return CATEGORY_CHECKPOINTS.getOrDefault("down", Collections.emptyList());
+        if (category.contains("雪纺") || category.contains("纱") || category.contains("chiffon")) return CATEGORY_CHECKPOINTS.getOrDefault("chiffon", Collections.emptyList());
+        if (category.contains("麻") || category.contains("linen")) return CATEGORY_CHECKPOINTS.getOrDefault("linen", Collections.emptyList());
+        // 通用上衣：含"衫"（衬衫已被上面处理）、"卫衣"、"上衣"等
+        if (category.contains("衫") || category.contains("卫衣") || category.contains("上衣")) return CATEGORY_CHECKPOINTS.getOrDefault("top", Collections.emptyList());
         return Collections.emptyList();
     }
 
