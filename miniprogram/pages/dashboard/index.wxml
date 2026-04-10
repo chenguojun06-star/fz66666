@@ -1,123 +1,98 @@
-<!-- 进度看板 — 老板/管理者移动端生产进度总览 -->
+<!-- 进度看板 · 4 张指标摘要卡片 -->
 <custom-nav title="进度看板" show-back="{{true}}" />
+
 <view class="page">
-  <!-- 顶部统计条 -->
-  <view class="stats-bar card">
-    <view class="stat-pill {{activeStat === 'all' ? 'stat-pill--active' : ''}}" bindtap="onStatTap" data-key="all">
-      <text class="stat-val">{{stats.total}}</text>
-      <text class="stat-label">全部</text>
-    </view>
-    <view class="stat-pill {{activeStat === 'development' ? 'stat-pill--active' : ''}}" bindtap="onStatTap" data-key="development">
-      <text class="stat-val">{{stats.development}}</text>
-      <text class="stat-label">开发</text>
-    </view>
-    <view class="stat-pill {{activeStat === 'in_production' ? 'stat-pill--active' : ''}}" bindtap="onStatTap" data-key="in_production">
-      <text class="stat-val">{{stats.inProduction}}</text>
-      <text class="stat-label">生产中</text>
-    </view>
-    <view class="stat-pill {{activeStat === 'warehousing' ? 'stat-pill--active' : ''}}" bindtap="onStatTap" data-key="warehousing">
-      <text class="stat-val">{{stats.warehousing}}</text>
-      <text class="stat-label">入库</text>
-    </view>
-    <view class="stat-pill {{activeStat === 'completed' ? 'stat-pill--active' : ''}}" bindtap="onStatTap" data-key="completed">
-      <text class="stat-val">{{stats.completed}}</text>
-      <text class="stat-label">已完成</text>
+  <!-- 日期标签 -->
+  <view class="date-bar">
+    <text class="date-text">📊 今日概览 · {{todayStr}}</text>
+    <text class="scan-badge" wx:if="{{todayScanCount > 0}}">今日扫码 {{todayScanCount}} 次</text>
+  </view>
+
+  <!-- 加载骨架 -->
+  <view class="card-grid" wx:if="{{loading}}">
+    <view class="summary-card skeleton" wx:for="{{4}}" wx:key="index">
+      <view class="skel-line skel-title"></view>
+      <view class="skel-line skel-num"></view>
+      <view class="skel-line skel-label"></view>
     </view>
   </view>
 
-  <!-- 订单卡片列表 -->
-  <view class="order-list">
-    <block wx:for="{{orders.list}}" wx:key="id">
-      <view class="order-card {{item.isClosed ? 'order-card--closed' : ''}} {{item.remainDaysClass === 'days-overdue' ? 'order-card--overdue' : ''}}">
-        <!-- 卡片头部：大图 + 信息 -->
-        <view class="order-header" bindtap="onCardToggle" data-index="{{index}}">
-          <view class="cover-box">
-            <image wx:if="{{item.styleCoverUrl}}" class="cover-img" src="{{item.styleCoverUrl}}" mode="aspectFill" lazy-load />
-            <view wx:else class="cover-empty">👗</view>
-          </view>
-          <view class="header-info">
-            <view class="header-top">
-              <text class="order-no">{{item.orderNo}}</text>
-              <text wx:if="{{item.urgencyTagText}}" class="tag tag-urgent">{{item.urgencyTagText}}</text>
-              <text wx:if="{{item.plateTypeTagText}}" class="tag tag-plate">{{item.plateTypeTagText}}</text>
-            </view>
-            <view class="header-meta">
-              <text class="style-no">{{item.styleNo}}</text>
-              <text class="meta-sep">|</text>
-              <text class="meta-factory">{{item.factoryName || '未分配'}}</text>
-            </view>
-            <view class="header-delivery">
-              <text class="delivery-date">交期 {{item.deliveryDateStr || '未定'}}</text>
-              <text wx:if="{{item.remainDaysText}}" class="remain-days {{item.remainDaysClass}}">{{item.remainDaysText}}</text>
-            </view>
-            <!-- 总进度条 -->
-            <view class="progress-row">
-              <view class="progress-bar">
-                <view class="progress-fill" style="width: {{item.productionProgress || 0}}%"></view>
-              </view>
-              <text class="progress-pct">{{item.productionProgress || 0}}%</text>
-            </view>
-          </view>
-          <view class="collapse-arrow {{item.expanded ? 'collapse-arrow--open' : ''}}">▾</view>
+  <!-- 实际卡片 -->
+  <view class="card-grid" wx:else>
+    <!-- 卡片 1：样衣开发 -->
+    <view class="summary-card card--purple">
+      <view class="card-hd">
+        <view class="card-icon icon--purple">✂️</view>
+        <text class="card-title">样衣开发</text>
+      </view>
+      <view class="card-bd">
+        <view class="metric">
+          <text class="metric-val">{{cards.sample.developing}}</text>
+          <text class="metric-lbl">开发中</text>
         </view>
-
-        <!-- 展开区域：数量统计 + 工序进度 -->
-        <view wx:if="{{item.expanded}}" class="order-body">
-          <!-- 数量信息 -->
-          <view class="body-stats">
-            <view class="body-stat">
-              <text class="body-stat-val">{{item.sizeTotal || item.orderQuantity || 0}}</text>
-              <text class="body-stat-label">总数量</text>
-            </view>
-            <view class="body-stat">
-              <text class="body-stat-val">{{item.completedQuantity || 0}}</text>
-              <text class="body-stat-label">已完成</text>
-            </view>
-            <view class="body-stat">
-              <text class="body-stat-val">{{item.remainQuantity}}</text>
-              <text class="body-stat-label">剩余</text>
-            </view>
-          </view>
-
-          <!-- 工序进度明细 -->
-          <view class="process-list">
-            <view class="process-item" wx:for="{{item.processNodes}}" wx:for-item="node" wx:key="id">
-              <view class="process-header">
-                <text class="process-name">{{node.name}}</text>
-                <text class="process-pct {{node.percent >= 100 ? 'process-done' : ''}}">{{node.percent}}%</text>
-              </view>
-              <view class="process-bar">
-                <view class="process-bar-fill {{node.percent >= 100 ? 'process-bar-fill--done' : ''}}" style="width: {{node.percent}}%"></view>
-              </view>
-            </view>
-          </view>
-
-          <!-- 颜色尺码矩阵 -->
-          <view wx:if="{{item.colorGroups.length > 0}}" class="sku-section">
-            <view class="sku-title">颜色尺码明细</view>
-            <view class="sku-table">
-              <view class="sku-row sku-row--header">
-                <text class="sku-cell sku-cell--color">颜色</text>
-                <text class="sku-cell" wx:for="{{item.allSizes}}" wx:for-item="sz" wx:key="*this">{{sz}}</text>
-                <text class="sku-cell sku-cell--total">合计</text>
-              </view>
-              <view class="sku-row" wx:for="{{item.colorGroups}}" wx:for-item="grp" wx:key="color">
-                <text class="sku-cell sku-cell--color">{{grp.color}}</text>
-                <text class="sku-cell" wx:for="{{grp.sizeQtyList}}" wx:for-item="qty" wx:key="*this">{{qty || '-'}}</text>
-                <text class="sku-cell sku-cell--total">{{grp.total}}</text>
-              </view>
-            </view>
-          </view>
+        <view class="metric-divider"></view>
+        <view class="metric">
+          <text class="metric-val val--muted">{{cards.sample.completed}}</text>
+          <text class="metric-lbl">已完成</text>
         </view>
       </view>
-    </block>
+    </view>
 
-    <!-- 加载状态 -->
-    <view wx:if="{{orders.loading}}" class="loading-more">加载中...</view>
-    <view wx:elif="{{!orders.hasMore && orders.list.length > 0}}" class="no-more">没有更多订单了</view>
-    <view wx:elif="{{!orders.loading && orders.list.length === 0}}" class="empty-state">
-      <text class="empty-icon">📋</text>
-      <text class="empty-text">暂无订单数据</text>
+    <!-- 卡片 2：生产订单 -->
+    <view class="summary-card card--blue">
+      <view class="card-hd">
+        <view class="card-icon icon--blue">📦</view>
+        <text class="card-title">生产订单</text>
+      </view>
+      <view class="card-bd">
+        <view class="metric">
+          <text class="metric-val">{{cards.production.total}}</text>
+          <text class="metric-lbl">生产中</text>
+        </view>
+        <view class="metric-divider"></view>
+        <view class="metric">
+          <text class="metric-val val--danger">{{cards.production.overdue}}</text>
+          <text class="metric-lbl">已延期</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 卡片 3：今日入库 -->
+    <view class="summary-card card--green">
+      <view class="card-hd">
+        <view class="card-icon icon--green">📥</view>
+        <text class="card-title">入库</text>
+      </view>
+      <view class="card-bd">
+        <view class="metric">
+          <text class="metric-val">{{cards.inbound.today}}</text>
+          <text class="metric-lbl">今日</text>
+        </view>
+        <view class="metric-divider"></view>
+        <view class="metric">
+          <text class="metric-val val--muted">{{cards.inbound.week}}</text>
+          <text class="metric-lbl">本周</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 卡片 4：今日出库 -->
+    <view class="summary-card card--orange">
+      <view class="card-hd">
+        <view class="card-icon icon--orange">📤</view>
+        <text class="card-title">出库</text>
+      </view>
+      <view class="card-bd">
+        <view class="metric">
+          <text class="metric-val">{{cards.outbound.today}}</text>
+          <text class="metric-lbl">今日</text>
+        </view>
+        <view class="metric-divider"></view>
+        <view class="metric">
+          <text class="metric-val val--muted">{{cards.outbound.week}}</text>
+          <text class="metric-lbl">本周</text>
+        </view>
+      </view>
     </view>
   </view>
 </view>
