@@ -114,7 +114,7 @@ class PatternProductionToolTest {
     @Test
     void warehouseIn_withPatternId_succeeds() throws Exception {
         Map<String, Object> warehouseResult = Map.of("id", 15L, "status", "WAREHOUSED");
-        when(patternProductionOrchestrator.warehouseIn("15", null)).thenReturn(warehouseResult);
+        when(patternProductionOrchestrator.warehouseIn("15", null, null)).thenReturn(warehouseResult);
 
         String result = tool.execute("{\"action\":\"warehouse_in\",\"patternId\":15}");
         JsonNode node = JSON.readTree(result);
@@ -127,7 +127,7 @@ class PatternProductionToolTest {
     void warehouseIn_missingPatternId_returnsError() throws Exception {
         String result = tool.execute("{\"action\":\"warehouse_in\"}");
         assertFalse(JSON.readTree(result).path("ok").asBoolean());
-        verify(patternProductionOrchestrator, never()).warehouseIn(anyString(), any());
+        verify(patternProductionOrchestrator, never()).warehouseIn(anyString(), any(), any());
     }
 
     // ─── unknown action ───────────────────────────────────────────────────────

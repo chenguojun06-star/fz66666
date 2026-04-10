@@ -220,6 +220,7 @@ Page({
     selectedNames.forEach(function(n) { selected[n] = true; });
     var selectedOptions = processOptions.filter(function(o) { return selected[o.value]; });
     var successCount = 0;
+    var failedItems = [];
 
     try {
       for (var i = 0; i < selectedOptions.length; i++) {
@@ -238,18 +239,42 @@ Page({
         if (raw.isDefectiveReentry) {
           scanPayload.isDefectiveReentry = true;
         }
-        var result = await api.production.executeScan(scanPayload);
-        if (result && (result.recordId || result.id)) {
-          successCount++;
+        try {
+          var result = await api.production.executeScan(scanPayload);
+          if (result && (result.recordId || result.id)) {
+            successCount++;
+          }
+        } catch (itemErr) {
+          failedItems.push({ processName: option.value, error: itemErr.message || itemErr.errMsg || '提交失败' });
         }
       }
-      toast.success('已完成 ' + successCount + ' 个工序扫码');
-      this._emitRefresh();
-      wx.navigateBack();
+
+      if (successCount > 0) {
+        this._emitRefresh();
+      }
+
+      if (failedItems.length === 0) {
+        toast.success('已完成 ' + successCount + ' 个工序扫码');
+        wx.navigateBack();
+      } else if (successCount > 0) {
+        this.setData({ loading: false });
+        var failNames = failedItems.map(function(f) { return f.processName; }).join('、');
+        wx.showModal({
+          title: '部分工序提交失败',
+          content: '成功 ' + successCount + ' 个，失败：' + failNames + '。请稍后重新扫码提交失败工序。',
+          showCancel: false,
+          confirmText: '知道了',
+          success: function() { wx.navigateBack(); }
+        });
+      } else {
+        this.setData({ loading: false });
+        var msg = failedItems[0].error || '提交失败，请稍后重试';
+        wx.showModal({ title: '扫码失败', content: msg, showCancel: false, confirmText: '知道了' });
+      }
     } catch (e) {
       this.setData({ loading: false });
-      var msg = this._buildFriendlyError(e);
-      wx.showModal({ title: '扫码失败', content: msg, showCancel: false, confirmText: '知道了' });
+      var errMsg = this._buildFriendlyError(e);
+      wx.showModal({ title: '扫码失败', content: errMsg, showCancel: false, confirmText: '知道了' });
     }
   },
 

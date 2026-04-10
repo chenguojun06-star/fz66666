@@ -243,7 +243,7 @@ public class PatternProductionOrchestrator {
      * 样衣入库（跨域：扫码 + 状态更新）
      */
     @Transactional(rollbackFor = Exception.class)
-    public Map<String, Object> warehouseIn(String patternId, String remark) {
+    public Map<String, Object> warehouseIn(String patternId, String remark, String warehouseCode) {
         PatternProduction pattern = patternProductionService.getById(patternId);
         if (pattern == null || pattern.getDeleteFlag() == 1) {
             throw new IllegalArgumentException("样板生产记录不存在");
@@ -256,7 +256,7 @@ public class PatternProductionOrchestrator {
             throw new IllegalStateException("样衣审核未通过，无法入库");
         }
 
-        Map<String, Object> result = submitScan(patternId, "WAREHOUSE_IN", "WAREHOUSE", remark, null, null);
+        Map<String, Object> result = submitScan(patternId, "WAREHOUSE_IN", "WAREHOUSE", remark, null, warehouseCode);
         result.put("message", "样衣入库成功");
         return result;
     }

@@ -12,7 +12,7 @@
       <view class="info-card-title">📋 订单信息</view>
       <view class="info-card-body">
         <view class="cover-wrap" bindtap="previewImage">
-          <image wx:if="{{coverImage}}" class="cover-img" src="{{coverImage}}" mode="aspectFill" />
+          <image-preview wx:if="{{coverImage}}" class="cover-img" src="{{coverImage}}" mode="aspectFill" />
           <view wx:else class="cover-placeholder"><text class="placeholder-icon">👗</text></view>
         </view>
         <view class="info-grid">

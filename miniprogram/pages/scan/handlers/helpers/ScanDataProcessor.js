@@ -67,6 +67,14 @@ class ScanDataProcessor {
         }
       }
 
+      // 非BOM兜底且所有物料已领取 → 阻止进入确认页
+      if (!bomFallback && materialPurchases.length > 0
+          && materialPurchases.every(function(item) { return (item.pendingQuantity || 0) <= 0; })) {
+        const err = new Error('所有物料均已领取，无需重复操作');
+        err.isCompleted = true;
+        throw err;
+      }
+
       const orderQty = parsedData.quantity
         || orderDetail.quantity || orderDetail.totalQuantity
         || orderDetail.totalNum || orderDetail.orderQuantity || 0;
@@ -105,6 +113,13 @@ class ScanDataProcessor {
         cuttingTask = taskRes.data[0];
       } else if (taskRes && taskRes.id) {
         cuttingTask = taskRes;
+      }
+
+      // 裁剪任务已完成 → 阻止进入确认页，走 _handleScanException 的 isCompleted 分支
+      if (cuttingTask && ['completed', 'done'].includes(cuttingTask.status)) {
+        const err = new Error('裁剪任务已完成，无需重复操作');
+        err.isCompleted = true;
+        throw err;
       }
 
       const orderQty = parsedData.quantity

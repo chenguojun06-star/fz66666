@@ -313,9 +313,7 @@ async function enrichGroupsWithOrderData(groups) {
       g.completedQuantity = order.completedQuantity || 0;
     });
   } catch (e) {
-    if (DEBUG_MODE) {
-      console.error('[enrichGroupsWithOrderData] error:', e);
-    }
+    console.warn('[enrichGroupsWithOrderData] 交期信息丰富失败:', e.message || e);
   }
 }
 

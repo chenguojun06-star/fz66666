@@ -150,7 +150,16 @@ public class PatternStockHelper {
 
         List<Map<String, Object>> specRows = extractConfiguredSpecRows(styleInfo, pattern.getColor());
         if (specRows.isEmpty()) {
-            throw new IllegalStateException("未配置有生产数量的颜色尺码，无法扫码入库");
+            // 兜底：sizeColorConfig 未配置或无匹配颜色时，用样板单自身的颜色/数量生成一条入库记录
+            String fallbackColor = StringUtils.hasText(pattern.getColor()) ? pattern.getColor() : "默认色";
+            int fallbackQty = (pattern.getQuantity() != null && pattern.getQuantity() > 0) ? pattern.getQuantity() : 1;
+            log.warn("[样衣入库兜底] styleNo={} color={} sizeColorConfig为空或无匹配，使用样板单自身颜色={} 数量={}",
+                    styleInfo.getStyleNo(), pattern.getColor(), fallbackColor, fallbackQty);
+            Map<String, Object> fallbackRow = new HashMap<>();
+            fallbackRow.put("color", fallbackColor);
+            fallbackRow.put("size", "均码");
+            fallbackRow.put("quantity", fallbackQty);
+            specRows = List.of(fallbackRow);
         }
 
         List<SampleStock> stocks = new ArrayList<>();

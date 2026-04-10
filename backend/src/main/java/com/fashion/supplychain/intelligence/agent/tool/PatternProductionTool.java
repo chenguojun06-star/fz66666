@@ -89,7 +89,7 @@ public class PatternProductionTool extends AbstractAgentTool {
                 String patternId = requireString(args, "patternId");
                 String remark = optionalString(args, "remark");
 
-                Map<String, Object> inResult = patternProductionOrchestrator.warehouseIn(patternId, remark);
+                Map<String, Object> inResult = patternProductionOrchestrator.warehouseIn(patternId, remark, null);
                 yield successJson("样板入库成功", inResult);
             }
             default -> errorJson("不支持的 action：" + action + "，可用：list / receive / review / warehouse_in");

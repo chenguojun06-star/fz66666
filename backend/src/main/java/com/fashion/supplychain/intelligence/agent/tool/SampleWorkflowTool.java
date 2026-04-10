@@ -167,7 +167,7 @@ public class SampleWorkflowTool implements AgentTool {
         Object result = switch (patternAction) {
             case "receive" -> patternProductionOrchestrator.receivePattern(pattern.getId(), Map.of());
             case "complete" -> patternProductionOrchestrator.submitScan(pattern.getId(), "COMPLETE", "PLATE_WORKER", null, null, null);
-            case "warehouse-in" -> patternProductionOrchestrator.warehouseIn(pattern.getId(), text(args.get("remark")));
+            case "warehouse-in" -> patternProductionOrchestrator.warehouseIn(pattern.getId(), text(args.get("remark")), null);
             case "review" -> patternProductionOrchestrator.reviewPattern(pattern.getId(), text(args.get("result")), text(args.get("remark")));
             case "maintenance" -> {
                 patternProductionOrchestrator.maintenance(pattern.getId(), required(args, "reason"));

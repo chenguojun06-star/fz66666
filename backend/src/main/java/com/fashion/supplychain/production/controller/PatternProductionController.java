@@ -160,7 +160,8 @@ public class PatternProductionController {
                     return Result.success(completeResult);
                 case "warehouse-in":
                     String remark = request != null ? (String) request.get("remark") : null;
-                    Map<String, Object> whResult = patternProductionOrchestrator.warehouseIn(id, remark);
+                    String warehouseCode = request != null ? (String) request.get("warehouseCode") : null;
+                    Map<String, Object> whResult = patternProductionOrchestrator.warehouseIn(id, remark, warehouseCode);
                     return Result.success(whResult);
                 case "review":
                     String result = request != null ? (String) request.get("result") : null;

@@ -296,7 +296,8 @@ class SyncManager {
     try {
       return JSON.parse(JSON.stringify(obj));
     } catch (e) {
-      return obj;
+      console.error('[syncManager] _deepClone失败，返回空对象避免引用污染:', e.message || e);
+      return {};
     }
   }
 }

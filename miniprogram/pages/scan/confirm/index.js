@@ -83,7 +83,13 @@ Page({
 
     var btnText = '确认扫码';
     if (isProcurement) btnText = '一键领取';
-    else if (isCutting) btnText = cuttingTask ? '领取任务' : '返回';
+    else if (isCutting) {
+      if (cuttingTask && ['completed', 'done'].includes(cuttingTask.status)) {
+        btnText = '裁剪已完成';
+      } else {
+        btnText = cuttingTask ? '领取任务' : '返回';
+      }
+    }
 
     this.setData({
       isProcurement: isProcurement,
@@ -106,6 +112,13 @@ Page({
       summary: summary,
       sizeMatrix: sizeMatrix
     });
+
+    // 防御性检查：裁剪已完成 → 自动提示并返回
+    if (isCutting && cuttingTask && ['completed', 'done'].includes(cuttingTask.status)) {
+      wx.showToast({ title: '裁剪任务已完成', icon: 'success' });
+      setTimeout(function() { wx.navigateBack(); }, 1500);
+      return;
+    }
 
     if (!isProcurement && !isCutting && raw.orderNo && raw.processName) {
       this._fetchAiTip(raw.orderNo, raw.processName);

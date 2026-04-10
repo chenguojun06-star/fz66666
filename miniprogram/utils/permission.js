@@ -332,6 +332,7 @@ function getCurrentUserId() {
     const userInfo = wx.getStorageSync('user_info');
     return userInfo ? userInfo.id || userInfo.userId : null;
   } catch (e) {
+    console.warn('[permission] getCurrentUserId失败:', e.message || e);
     return null;
   }
 }
@@ -345,6 +346,7 @@ function getCurrentFactoryId() {
     const userInfo = wx.getStorageSync('user_info');
     return userInfo ? userInfo.factoryId || userInfo.teamId : null;
   } catch (e) {
+    console.warn('[permission] getCurrentFactoryId失败:', e.message || e);
     return null;
   }
 }
