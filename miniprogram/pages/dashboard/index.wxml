@@ -2,10 +2,12 @@
 <custom-nav title="进度看板" show-back="{{true}}" />
 
 <view class="page">
-  <!-- 日期标签 -->
-  <view class="date-bar">
-    <text class="date-text">📊 今日概览 · {{todayStr}}</text>
-    <text class="scan-badge" wx:if="{{todayScanCount > 0}}">今日扫码 {{todayScanCount}} 次</text>
+  <!-- 概览头部卡片 -->
+  <view class="overview-card">
+    <view class="date-bar">
+      <text class="date-text">📊 今日概览 · {{todayStr}}</text>
+      <text class="scan-badge" wx:if="{{todayScanCount > 0}}">今日扫码 {{todayScanCount}} 次</text>
+    </view>
   </view>
 
   <!-- 加载骨架 -->
