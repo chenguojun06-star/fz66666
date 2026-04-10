@@ -49,7 +49,7 @@ const MaterialPurchase: React.FC = () => {
     handleSubmit, handleSavePreview,
     receivePurchaseTask, confirmReturnPurchaseTask,
     openReturnReset, submitReturnConfirm, submitReturnReset,
-    handleReceiveAll, handleSmartReceiveSuccess, handleBatchReturn,
+    handleReceiveAll, handleSmartReceiveSuccess: _handleSmartReceiveSuccess, handleBatchReturn,
     openPurchaseSheet, downloadPurchaseSheet,
     openQuickEditSafe, handleQuickEditSave,
     isSamplePurchaseView,
