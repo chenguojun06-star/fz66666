@@ -30,7 +30,7 @@
       <view class="card-bd">
         <view class="metric">
           <text class="metric-val">{{cards.sample.developing}}</text>
-          <text class="metric-lbl">开发中</text>
+          <text class="metric-lbl">款式总数</text>
         </view>
         <view class="metric-divider"></view>
         <view class="metric">

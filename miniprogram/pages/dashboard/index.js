@@ -3,9 +3,9 @@
  * 4 张摘要卡片：样衣开发 · 生产订单 · 今日入库 · 今日出库
  *
  * 数据来源：
- *   dashboard.get()         → overdueOrderCount / todayScanCount
+ *   dashboard.get()         → overdueOrderCount / todayScanCount / sampleDevelopmentCount
  *   dashboard.getTopStats() → warehousingInbound.day/week · warehousingOutbound.day/week
- *   production.listOrders   → 各状态订单计数
+ *   production.listOrders   → status='production'(生产中) / status='completed'(已完成)
  */
 var api = require('../../utils/api');
 
@@ -47,22 +47,20 @@ Page({
     return Promise.all([
       api.dashboard.get().catch(function () { return {}; }),
       api.dashboard.getTopStats().catch(function () { return {}; }),
-      api.production.listOrders({ deleteFlag: 0, status: 'DEVELOPMENT',   page: 1, pageSize: 1 }).catch(function () { return {}; }),
-      api.production.listOrders({ deleteFlag: 0, status: 'IN_PRODUCTION', page: 1, pageSize: 1 }).catch(function () { return {}; }),
-      api.production.listOrders({ deleteFlag: 0, status: 'COMPLETED',     page: 1, pageSize: 1 }).catch(function () { return {}; }),
+      api.production.listOrders({ deleteFlag: 0, status: 'production', page: 1, pageSize: 1 }).catch(function () { return {}; }),
+      api.production.listOrders({ deleteFlag: 0, status: 'completed',  page: 1, pageSize: 1 }).catch(function () { return {}; }),
     ]).then(function (res) {
       var dash     = res[0] || {};
       var topStats = res[1] || {};
-      var devRes   = res[2] || {};
-      var prodRes  = res[3] || {};
-      var compRes  = res[4] || {};
+      var prodRes  = res[2] || {};
+      var compRes  = res[3] || {};
 
       that.setData({
         loading: false,
         todayScanCount: Number(dash.todayScanCount) || 0,
         cards: {
           sample: {
-            developing: devRes.total || 0,
+            developing: Number(dash.sampleDevelopmentCount) || 0,
             completed:  compRes.total || 0,
           },
           production: {
