@@ -396,8 +396,8 @@ const ExpenseReimbursementPage: React.FC = () => {
       render: (val: string) => val || '-',
     },
     {
-      title: '提交时间', dataIndex: 'createTime', width: 150,
-      render: (val: string) => val ? dayjs(val).format('MM-DD HH:mm') : '-',
+      title: '提交时间', dataIndex: 'createTime', width: 120,
+      render: (val: string) => val ? dayjs(val).format('MM-DD') : '-',
     },
     {
       title: '操作', key: 'actions', width: 120, fixed: 'right' as const,
@@ -856,7 +856,7 @@ const ExpenseReimbursementPage: React.FC = () => {
                   </div>
                   <ModalFieldRow>
                     <ModalField label="审批人" value={detailRecord.approverName} />
-                    <ModalField label="审批时间" value={detailRecord.approvalTime ? dayjs(detailRecord.approvalTime).format('YYYY-MM-DD HH:mm') : '-'} />
+                    <ModalField label="审批时间" value={detailRecord.approvalTime ? dayjs(detailRecord.approvalTime).format('YYYY-MM-DD') : '-'} />
                   </ModalFieldRow>
                   {detailRecord.approvalRemark && (
                     <ModalFieldRow>
@@ -872,14 +872,14 @@ const ExpenseReimbursementPage: React.FC = () => {
                     <span style={{ fontWeight: 500, color: 'var(--color-text-primary)' }}>付款信息</span>
                   </div>
                   <ModalFieldRow>
-                    <ModalField label="付款时间" value={dayjs(detailRecord.paymentTime).format('YYYY-MM-DD HH:mm')} />
+                    <ModalField label="付款时间" value={dayjs(detailRecord.paymentTime).format('YYYY-MM-DD')} />
                     <ModalField label="付款人" value={detailRecord.paymentBy || '-'} />
                   </ModalFieldRow>
                 </>
               )}
 
               <ModalFieldRow>
-                <ModalField label="提交时间" value={detailRecord.createTime ? dayjs(detailRecord.createTime).format('YYYY-MM-DD HH:mm') : '-'} />
+                <ModalField label="提交时间" value={detailRecord.createTime ? dayjs(detailRecord.createTime).format('YYYY-MM-DD') : '-'} />
               </ModalFieldRow>
 
               {/* 审批操作区 */}

@@ -9,7 +9,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
+import com.fashion.supplychain.production.entity.FactoryShipmentDetail;
+import com.fashion.supplychain.production.service.FactoryShipmentDetailService;
 
 @RestController
 @RequestMapping("/api/production/factory-shipment")
@@ -20,6 +23,8 @@ public class FactoryShipmentController {
     private FactoryShipmentOrchestrator factoryShipmentOrchestrator;
     @Autowired
     private FactoryShipmentService factoryShipmentService;
+    @Autowired
+    private FactoryShipmentDetailService factoryShipmentDetailService;
 
     @PostMapping("/ship")
     public Result<FactoryShipment> ship(@RequestBody Map<String, Object> params) {
@@ -53,5 +58,10 @@ public class FactoryShipmentController {
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable("id") String id) {
         return factoryShipmentOrchestrator.deleteShipment(id);
+    }
+
+    @GetMapping("/{id}/details")
+    public Result<List<FactoryShipmentDetail>> getDetails(@PathVariable("id") String id) {
+        return Result.success(factoryShipmentDetailService.listByShipmentId(id));
     }
 }

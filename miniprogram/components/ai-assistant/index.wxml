@@ -1,5 +1,5 @@
 <view class="ai-assistant-container" hover-class="none" hover-stop-propagation="false" wx:if="{{visible}}">
-  <view class="ai-trigger-btn" catchtap="toggleChat" hover-class="ai-trigger-hover" hover-stay-time="50" wx:if="{{!isOpen}}">
+  <view class="ai-trigger-btn" catchtouchstart="onTriggerTouchStart" catchtouchmove="onTriggerTouchMove" catchtouchend="onTriggerTouchEnd" hover-class="ai-trigger-hover" hover-stay-time="50" style="left:{{triggerX}}px;top:{{triggerY}}px;border-radius:{{edgeSide==='left'?'0 16px 16px 0':'16px 0 0 16px'}};box-shadow:{{edgeSide==='left'?'3px 2px 10px rgba(0,0,0,0.14)':'-3px 2px 10px rgba(0,0,0,0.14)'}};z-index:{{isOpen?10003:9999}};">
     <view class="mini-cloud-wrapper">
       <view class="mini-cloud-glow"></view>
       <view class="mini-cloud">
@@ -19,7 +19,7 @@
       </view>
     </view>
   </view>
-  <view class="ai-badge" wx:if="{{!isOpen && (totalTasks > 0 || noticeCount > 0)}}">{{totalTasks + noticeCount > 99 ? '99+' : totalTasks + noticeCount}}</view>
+  <view class="ai-badge" wx:if="{{totalTasks > 0 || noticeCount > 0}}" style="left:{{edgeSide==='left'?triggerX+30:triggerX-8}}px;top:{{triggerY-8}}px;">{{totalTasks + noticeCount > 99 ? '99+' : totalTasks + noticeCount}}</view>
 
   <view class="chat-overlay" wx:if="{{isOpen}}" catchtap="toggleChat"></view>
 

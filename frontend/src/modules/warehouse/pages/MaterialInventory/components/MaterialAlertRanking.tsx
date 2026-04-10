@@ -80,7 +80,7 @@ const MaterialAlertRanking: React.FC<MaterialAlertRankingProps> = ({ loading, al
           <CalendarOutlined /> 最大可生产: <b>{item.maxProductionQty ?? '-'}</b>
         </div>
         <div className="tooltip-item">
-          <CalendarOutlined /> 最近出库: {item.lastOutTime ? dayjs(item.lastOutTime).format('MM-DD HH:mm') : '-'}
+          <CalendarOutlined /> 最近出库: {item.lastOutTime ? dayjs(item.lastOutTime).format('MM-DD') : '-'}
         </div>
         <div className="tooltip-hint">
           点击卡片发出采购指令

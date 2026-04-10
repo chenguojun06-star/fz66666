@@ -32,7 +32,7 @@ export function printOutstockRecord(record: OutstockPrintData): void {
     </style></head><body>
     <div class="header"><h2>出库单</h2><p>单号：${record.outstockNo || '-'}</p></div>
     <div class="info-row"><span>客户：${record.customerName || '-'}</span><span>电话：${record.customerPhone || '-'}</span></div>
-    <div class="info-row"><span>日期：${record.createTime ? dayjs(record.createTime).format('YYYY-MM-DD HH:mm') : '-'}</span><span>操作人：${record.creatorName || '-'}</span></div>
+    <div class="info-row"><span>日期：${record.createTime ? dayjs(record.createTime).format('YYYY-MM-DD') : '-'}</span><span>操作人：${record.creatorName || '-'}</span></div>
     <table><tr><th>款号</th><th>款式名称</th><th>颜色</th><th>尺码</th><th>数量</th><th>单价</th><th>金额</th></tr>
     <tr><td>${record.styleNo || '-'}</td><td>${record.styleName || '-'}</td><td>${record.color || '-'}</td><td>${record.size || '-'}</td>
     <td>${record.outstockQuantity ?? '-'}</td><td>${record.salesPrice != null ? `¥${Number(record.salesPrice).toFixed(2)}` : '-'}</td><td>${record.totalAmount != null ? `¥${record.totalAmount}` : '-'}</td></tr></table>

@@ -39,16 +39,16 @@ page {
   align-items: center;
   gap: var(--spacing-md);
   padding: 14px 12px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.8);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-card);
 }
 
 .stat-card--cool {
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--color-bg-card);
 }
 
 .stat-card--warm {
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--color-bg-card);
 }
 
 .stat-icon-wrap {

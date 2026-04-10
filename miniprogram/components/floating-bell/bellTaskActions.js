@@ -59,9 +59,28 @@ function handleQualityTask(task) {
   const currentPage = pages[pages.length - 1];
   if (currentPage && typeof currentPage.checkPendingQualityTask === 'function') {
     currentPage.checkPendingQualityTask();
-  } else {
-    safeNavigate({ url: '/pages/scan/index' }, 'switchTab').catch(() => {});
+    return;
   }
+
+  // switchTab 后主动触发弹窗，不依赖 onShow 的 checkLoginStatus 是否成功
+  // （checkLoginStatus 失败或 switchTab 到已激活 tab 时 onShow 可能不再调用 checkPendingTasks）
+  const invokeAfterNavigate = () => {
+    const newPages = getCurrentPages();
+    const newPage = newPages[newPages.length - 1];
+    if (newPage && typeof newPage.checkPendingQualityTask === 'function') {
+      newPage.checkPendingQualityTask();
+    }
+  };
+
+  safeNavigate({ url: '/pages/scan/index' }, 'switchTab')
+    .then(() => {
+      // 等待扫码页 onShow/onLoad 中的 mixin 挂载完成（约 200ms）
+      setTimeout(invokeAfterNavigate, 200);
+    })
+    .catch(() => {
+      // 导航失败时也尝试直接触发（兜底，防止存储残留）
+      invokeAfterNavigate();
+    });
 }
 
 /**

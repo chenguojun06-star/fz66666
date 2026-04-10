@@ -30,7 +30,7 @@ interface WorkbenchData {
 const formatTime = (value?: unknown) => {
   if (!value) return '待启动';
   const instance = dayjs(value as string | number | Date | null | undefined);
-  if (instance.isValid()) return instance.format('YYYY-MM-DD HH:mm');
+  if (instance.isValid()) return instance.format('YYYY-MM-DD');
   return String(value);
 };
 

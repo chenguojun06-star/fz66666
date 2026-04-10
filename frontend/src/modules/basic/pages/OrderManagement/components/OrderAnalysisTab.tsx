@@ -133,7 +133,7 @@ const OrderAnalysisTab: React.FC = () => {
       dataIndex: 'firstOrderTime',
       key: 'firstOrderTime',
       width: 160,
-      render: (v: string) => v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '-',
+      render: (v: string) => v ? dayjs(v).format('YYYY-MM-DD') : '-',
     },
     {
       title: '最近下单',
@@ -145,7 +145,7 @@ const OrderAnalysisTab: React.FC = () => {
         const tb = b.latestOrderTime ? dayjs(b.latestOrderTime).valueOf() : 0;
         return ta - tb;
       },
-      render: (v: string) => v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '-',
+      render: (v: string) => v ? dayjs(v).format('YYYY-MM-DD') : '-',
     },
     {
       title: '最近下单人',

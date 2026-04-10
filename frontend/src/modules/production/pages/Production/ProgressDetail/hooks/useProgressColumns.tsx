@@ -55,7 +55,7 @@ const NODE_TYPE_MAP: Record<string, string> = Object.fromEntries(
   )
 );
 
-/** 格式化完成时间为 MM-DD HH:mm */
+/** 格式化完成时间为 MM-DD */
 const formatCompletionTime = (timeStr: string): string => {
   if (!timeStr) return '';
   try {
@@ -63,9 +63,7 @@ const formatCompletionTime = (timeStr: string): string => {
     if (isNaN(d.getTime())) return '';
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
-    const hh = String(d.getHours()).padStart(2, '0');
-    const mi = String(d.getMinutes()).padStart(2, '0');
-    return `${mm}-${dd} ${hh}:${mi}`;
+    return `${mm}-${dd}`;
   } catch { return ''; }
 };
 
@@ -208,6 +206,13 @@ export const useProgressColumns = ({
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 168, paddingRight: 6, paddingTop: 6, paddingBottom: 6, textAlign: 'left' }}>
               <div style={{ width: 162, minWidth: 162, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'flex-start', gap: 6 }}>
+                <StyleCoverThumb
+                  styleId={record.styleId}
+                  styleNo={record.styleNo}
+                  src={(record as any).styleCover || null}
+                  size={148}
+                  borderRadius={14}
+                />
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', minHeight: 24 }}>
                   <Tag color={status.color} style={{ margin: 0, fontSize: 11 }}>{status.label}</Tag>
                   {record.urgencyLevel === 'urgent' && <Tag color="red" style={{ margin: 0, fontSize: 11 }}>急单</Tag>}
@@ -220,13 +225,6 @@ export const useProgressColumns = ({
                   })()}
                   {stagnantDays !== undefined ? <Tag color="orange" style={{ margin: 0, fontSize: 11 }}>停滞 {stagnantDays} 天</Tag> : null}
                 </div>
-                <StyleCoverThumb
-                  styleId={record.styleId}
-                  styleNo={record.styleNo}
-                  src={(record as any).styleCover || null}
-                  size={148}
-                  borderRadius={14}
-                />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, paddingTop: 2, textAlign: 'left' }}>
                 <OrderInfoGrid
@@ -294,9 +292,13 @@ export const useProgressColumns = ({
 
                     {
                       label: '交货日期',
-                      value: shipDate,
+                      value: (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          <span style={metaValueStyle}>{shipDate}</span>
+                          {text ? <span style={{ color, fontWeight: 700, fontSize: 12 }}>{text}</span> : null}
+                        </span>
+                      ),
                       labelStyle: { ...metaLabelStyle, fontWeight: 500 },
-                      valueStyle: metaValueStyle,
                     },
                     {
                       label: '预计交期',
@@ -308,7 +310,6 @@ export const useProgressColumns = ({
                 />
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span style={{ color, fontWeight: 700 }}>{text}</span>
                   {aiRisk ? (
                     <Tooltip title={[aiRisk.riskDescription, aiRisk.predictedEndDate ? `预测完成：${aiRisk.predictedEndDate}` : ''].filter(Boolean).join(' · ')}>
                       <Tag color={aiRisk.riskLevel === 'overdue' ? 'error' : aiRisk.riskLevel === 'danger' ? 'volcano' : aiRisk.riskLevel === 'warning' ? 'warning' : 'success'} style={aiRisk.riskLevel === 'overdue' ? softTagStyle('#f8ecec', '#b17a7a') : aiRisk.riskLevel === 'danger' ? softTagStyle('#f8efea', '#b08773') : aiRisk.riskLevel === 'warning' ? softTagStyle('#f7f1e8', '#a88a66') : softTagStyle('#edf6f0', '#66907b')}>

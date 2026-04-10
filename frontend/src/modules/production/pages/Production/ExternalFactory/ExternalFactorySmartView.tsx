@@ -195,7 +195,7 @@ function getDeliveryMeta(r: ProductionOrder): { tone: DeliveryTone; label: strin
 }
 
 function fmtTime(t?: string): string {
-  return t ? dayjs(t).format('MM-DD HH:mm') : '';
+  return t ? dayjs(t).format('MM-DD') : '';
 }
 
 /* ─── 节点 Popover 内容（懒加载真实扫码数据） ─── */

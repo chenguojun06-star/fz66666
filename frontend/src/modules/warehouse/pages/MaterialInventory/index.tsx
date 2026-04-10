@@ -606,7 +606,7 @@ const _MaterialInventory: React.FC = () => {
                             .filter(Boolean)
                             .sort()
                             .reverse();
-                          return times[0] ? dayjs(times[0]).format('YYYY-MM-DD HH:mm') : '-';
+                          return times[0] ? dayjs(times[0]).format('YYYY-MM-DD') : '-';
                         },
                       },
                       {

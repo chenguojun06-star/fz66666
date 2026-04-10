@@ -59,9 +59,28 @@ function handleQualityTask(task) {
   const currentPage = pages[pages.length - 1];
   if (currentPage && typeof currentPage.checkPendingQualityTask === 'function') {
     currentPage.checkPendingQualityTask();
-  } else {
-    safeNavigate({ url: '/pages/scan/index' }, 'switchTab').catch(() => {});
+    return;
   }
+
+  // switchTab 后主动触发弹窗，不依赖 onShow 的 checkLoginStatus 是否成功
+  // （checkLoginStatus 失败或 switchTab 到已激活 tab 时 onShow 可能不再调用 checkPendingTasks）
+  const invokeAfterNavigate = () => {
+    const newPages = getCurrentPages();
+    const newPage = newPages[newPages.length - 1];
+    if (newPage && typeof newPage.checkPendingQualityTask === 'function') {
+      newPage.checkPendingQualityTask();
+    }
+  };
+
+  safeNavigate({ url: '/pages/scan/index' }, 'switchTab')
+    .then(() => {
+      // 等待扫码页 onShow/onLoad 中的 mixin 挂载完成（约 200ms）
+      setTimeout(invokeAfterNavigate, 200);
+    })
+    .catch(() => {
+      // 导航失败时也尝试直接触发（兜底，防止存储残留）
+      invokeAfterNavigate();
+    });
 }
 
 /**
@@ -80,9 +99,8 @@ function handleRepairTask(task) {
     console.error('存储失败', e);
   }
   wx.showToast({ title: hint, icon: 'none', duration: 2500 });
-  setTimeout(() => {
-    safeNavigate({ url: '/pages/scan/index' }, 'switchTab').catch(() => {});
-  }, 800);
+  // 立即跳转，不再延迟 800ms（toast 会在跳转后继续显示）
+  safeNavigate({ url: '/pages/scan/index' }, 'switchTab').catch(() => {});
 }
 
 /**
@@ -209,20 +227,13 @@ function handleReminderTask(task) {
     return;
   }
 
-  // 其他提醒类型 → 保持原有扫码页跳转
+  // 其他提醒类型 → 直接跳转扫码页，扫码页 onShow 自动读取 pending_order_hint
   try {
     wx.setStorageSync('pending_order_hint', orderNo);
   } catch (e) {
     console.error('存储失败', e);
   }
-
-  const pages = getCurrentPages();
-  const currentPage = pages[pages.length - 1];
-  if (currentPage && currentPage.route === 'pages/scan/index' && typeof currentPage.checkPendingTasks === 'function') {
-    currentPage.checkPendingTasks();
-  } else {
-    safeNavigate({ url: '/pages/scan/index' }, 'switchTab').catch(() => {});
-  }
+  safeNavigate({ url: '/pages/scan/index' }, 'switchTab').catch(() => {});
 }
 
 /**

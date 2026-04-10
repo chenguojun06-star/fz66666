@@ -84,7 +84,7 @@ const columns: ColumnsType<SystemIssueItem> = [
     key: 'lastSeen',
     width: 130,
     render: (t: string | null) =>
-      t ? <Text style={{ fontSize: 12 }}>{dayjs(t).format('MM-DD HH:mm')}</Text> : <Text type="secondary">-</Text>,
+      t ? <Text style={{ fontSize: 12 }}>{dayjs(t).format('MM-DD')}</Text> : <Text type="secondary">-</Text>,
   },
 ];
 
@@ -176,7 +176,7 @@ export default function SystemIssueBoard() {
       title: '发生时间',
       dataIndex: 'occurredAt',
       width: 130,
-      render: (t: string) => <Text style={{ fontSize: 12 }}>{dayjs(t).format('MM-DD HH:mm:ss')}</Text>,
+      render: (t: string) => <Text style={{ fontSize: 12 }}>{dayjs(t).format('MM-DD')}</Text>,
     },
   ];
 
@@ -271,7 +271,7 @@ export default function SystemIssueBoard() {
         <Space>
           {summary && (
             <Text type="secondary" style={{ fontSize: 12 }}>
-              检查时间：{dayjs(summary.checkedAt).format('MM-DD HH:mm:ss')}
+              检查时间：{dayjs(summary.checkedAt).format('MM-DD')}
             </Text>
           )}
           <Button icon={<ReloadOutlined />} onClick={() => { refresh(); refreshFe(); }} loading={loading || feLoading}>

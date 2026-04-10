@@ -38,6 +38,16 @@ Component({
     isTenantOwner: false,
     isManager: false,
     taskLoading: false,
+    triggerX: 0,
+    triggerY: 110,
+    edgeSide: 'right',
+    isDragging: false,
+    dragStartX: 0,
+    dragStartY: 0,
+    dragStartTriggerX: 0,
+    dragStartTriggerY: 0,
+    screenWidth: 375,
+    screenHeight: 667,
   },
   lifetimes: {
     attached() {
@@ -67,8 +77,30 @@ Component({
           ? `Hi ${userName}，我是小云～ 有什么可以帮您的？\n${greetingSuffix}`
           : `Hi 我是小云～ 有什么可以帮您的？\n${greetingSuffix}`;
 
+        // --- 屏幕尺寸 & 保存的位置 ---
+        const sysInfo = wx.getSystemInfoSync();
+        const sw = sysInfo.windowWidth || 375;
+        const sh = sysInfo.windowHeight || 667;
+        let tx = sw - 20; // 挂壁探头：20px 露出，30px 藏在屏幕外
+        let ty = 110;
+        let edge = 'right';
+        try {
+          const saved = wx.getStorageSync('ai_trigger_position');
+          if (saved) {
+            // 始终用当前挂壁吸附位，仅保留纵向位置
+            edge = saved.edge || 'right';
+            tx = edge === 'left' ? -30 : sw - 20;
+            ty = Math.max(40, Math.min(saved.y != null ? saved.y : ty, sh - 60));
+          }
+        } catch (_e) { /* ignore */ }
+
         this.setData({
           isManager,
+          screenWidth: sw,
+          screenHeight: sh,
+          triggerX: tx,
+          triggerY: ty,
+          edgeSide: edge,
           messages: [{
             id: Date.now(),
             role: 'ai',
@@ -91,6 +123,7 @@ Component({
     },
   },
   detached() {
+    this._cancelIdleSnap();
     const app = getApp();
     if (this.boundLoadTasks && app && app.eventBus) {
       app.eventBus.off('tasksUpdated', this.boundLoadTasks);
@@ -99,6 +132,81 @@ Component({
   methods: {
     switchTab(e) {
       this.setData({ currentTab: e.currentTarget.dataset.tab });
+    },
+
+    /* ========= 拖拽相关 ========= */
+    onTriggerTouchStart(e) {
+      const touch = e.touches[0];
+      this._touchStartTime = Date.now();
+      this.setData({
+        isDragging: false,
+        dragStartX: touch.clientX,
+        dragStartY: touch.clientY,
+        dragStartTriggerX: this.data.triggerX,
+        dragStartTriggerY: this.data.triggerY,
+      });
+    },
+    onTriggerTouchMove(e) {
+      const touch = e.touches[0];
+      const dx = touch.clientX - this.data.dragStartX;
+      const dy = touch.clientY - this.data.dragStartY;
+      if (!this.data.isDragging && Math.abs(dx) + Math.abs(dy) < 5) return;
+      const sw = this.data.screenWidth;
+      const sh = this.data.screenHeight;
+      let nx = this.data.dragStartTriggerX + dx;
+      let ny = this.data.dragStartTriggerY + dy;
+      nx = Math.max(-30, Math.min(nx, sw - 20));
+      ny = Math.max(40, Math.min(ny, sh - 60));
+      this.setData({ triggerX: nx, triggerY: ny, isDragging: true });
+    },
+    onTriggerTouchEnd() {
+      if (!this.data.isDragging) {
+        // 短触 = 点击，直接在 touchEnd 里处理（比 catchtap 更可靠）
+        const willOpen = !this.data.isOpen;
+        this._cancelIdleSnap();
+        this.setData({ isOpen: willOpen });
+        if (willOpen) {
+          this._snapToVisible();
+          this.scrollToBottom();
+        } else {
+          this._startIdleSnap();
+        }
+        return;
+      }
+      // 拖拽结束 → 吸附到最近的屏幕边缘（挂壁探头）
+      const sw = this.data.screenWidth;
+      const midX = this.data.triggerX + 25; // 按钮中心
+      const edge = midX < sw / 2 ? 'left' : 'right';
+      const snapX = edge === 'left' ? -30 : sw - 20;
+      this.setData({ triggerX: snapX, edgeSide: edge, isDragging: false });
+      try {
+        wx.setStorageSync('ai_trigger_position', { x: snapX, y: this.data.triggerY, edge });
+      } catch (_e) { /* ignore */ }
+      // 拖拽结束后，若面板已关闭则启动空闲吸附倒计时
+      if (!this.data.isOpen) this._startIdleSnap();
+    },
+    /* ===== 挂壁空闲吸附辅助 ===== */
+    _snapToVisible() {
+      // 将形象拉到完全可见位置（打开面板时调用）
+      const sw = this.data.screenWidth;
+      const snapX = this.data.edgeSide === 'left' ? 0 : sw - 50;
+      this.setData({ triggerX: snapX });
+    },
+    _cancelIdleSnap() {
+      if (this._idleTimer) {
+        clearTimeout(this._idleTimer);
+        this._idleTimer = null;
+      }
+    },
+    _startIdleSnap() {
+      // 3秒无操作后自动缩回边缘（挂壁探头效果）
+      this._cancelIdleSnap();
+      const sw = this.data.screenWidth;
+      const snapX = this.data.edgeSide === 'left' ? -30 : sw - 20;
+      this._idleTimer = setTimeout(() => {
+        this.setData({ triggerX: snapX });
+        this._idleTimer = null;
+      }, 3000);
     },
     async loadTasks() {
       if (this.data.taskLoading) return;
@@ -183,9 +291,14 @@ Component({
     },
 
     toggleChat() {
-      this.setData({ isOpen: !this.data.isOpen });
-      if (this.data.isOpen) {
+      const willOpen = !this.data.isOpen;
+      this._cancelIdleSnap();
+      this.setData({ isOpen: willOpen });
+      if (willOpen) {
+        this._snapToVisible();
         this.scrollToBottom();
+      } else {
+        this._startIdleSnap();
       }
     },
     autoAsk(e) {

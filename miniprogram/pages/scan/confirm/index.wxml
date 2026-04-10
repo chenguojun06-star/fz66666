@@ -153,8 +153,8 @@
   </block>
 
   <view class="footer-bar">
-    <view class="btn-cancel" hover-class="btn-hover" bindtap="goBack">取消</view>
-    <view class="btn-submit {{loading ? 'off' : ''}}" hover-class="btn-hover" bindtap="confirmScan">
+    <view class="btn-cancel" hover-class="footer-bar-hover" bindtap="goBack">取消</view>
+    <view class="btn-submit {{loading ? 'btn-disabled' : ''}}" hover-class="footer-bar-hover" bindtap="confirmScan">
       {{loading ? '提交中...' : buttonText}}
     </view>
   </view>

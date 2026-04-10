@@ -503,7 +503,7 @@ export const buildSampleStage: StageBuilder = (record) => {
     actionLabel: '查看详情',
     details: buildStageDetails(
       started ? '样衣制作中' : '领取时间待更新',
-      done && record.sampleCompletedTime ? `完成时间：${dayjs(record.sampleCompletedTime as string | number | Date).format('YYYY-MM-DD HH:mm')}` : false
+      done && record.sampleCompletedTime ? `完成时间：${dayjs(record.sampleCompletedTime as string | number | Date).format('YYYY-MM-DD')}` : false
     ),
   };
 };

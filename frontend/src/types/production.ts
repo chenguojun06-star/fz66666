@@ -396,6 +396,14 @@ export interface FactoryShipment {
   deleteFlag?: number;
 }
 
+export interface FactoryShipmentDetail {
+  id: string;
+  shipmentId: string;
+  color: string;
+  sizeName: string;
+  quantity: number;
+}
+
 export interface ProductionQueryParams {
   orderNo?: string;
   styleNo?: string;

@@ -27,6 +27,52 @@ import java.util.List;
 @Slf4j
 public class InventoryValidator {
 
+    /**
+     * 数量校验结果（用于"超额保留记录 + 审批"场景）
+     */
+    public static class QuantityCheckResult {
+        private final boolean exceeded;
+        private final int limitQuantity;
+        private final int completedQuantity;
+        private final int incomingQuantity;
+        private final int totalQuantity;
+        private final String message;
+
+        public QuantityCheckResult(boolean exceeded, int limitQuantity, int completedQuantity,
+                                   int incomingQuantity, int totalQuantity, String message) {
+            this.exceeded = exceeded;
+            this.limitQuantity = limitQuantity;
+            this.completedQuantity = completedQuantity;
+            this.incomingQuantity = incomingQuantity;
+            this.totalQuantity = totalQuantity;
+            this.message = message;
+        }
+
+        public boolean isExceeded() {
+            return exceeded;
+        }
+
+        public int getLimitQuantity() {
+            return limitQuantity;
+        }
+
+        public int getCompletedQuantity() {
+            return completedQuantity;
+        }
+
+        public int getIncomingQuantity() {
+            return incomingQuantity;
+        }
+
+        public int getTotalQuantity() {
+            return totalQuantity;
+        }
+
+        public String getMessage() {
+            return message;
+        }
+    }
+
     @Autowired
     private ScanRecordService scanRecordService;
 
@@ -46,11 +92,25 @@ public class InventoryValidator {
     public void validateNotExceedOrderQuantity(ProductionOrder order, String scanType,
                                                String progressStage, int incomingQty,
                                                CuttingBundle bundle) {
+        QuantityCheckResult checkResult = checkOverQuantity(order, scanType, progressStage, incomingQty, bundle);
+        if (checkResult.isExceeded()) {
+            log.warn("库存验证失败: orderId={}, scanType={}, stage={}, {}",
+                    order == null ? null : order.getId(), scanType, progressStage, checkResult.getMessage());
+            throw new IllegalArgumentException(checkResult.getMessage());
+        }
+    }
+
+    /**
+     * 软判定：返回数量校验结果，不抛异常。
+     */
+    public QuantityCheckResult checkOverQuantity(ProductionOrder order, String scanType,
+                                                 String progressStage, int incomingQty,
+                                                 CuttingBundle bundle) {
         if (order == null || !hasText(order.getId())) {
-            return;
+            return new QuantityCheckResult(false, 0, 0, Math.max(incomingQty, 0), Math.max(incomingQty, 0), null);
         }
         if (incomingQty <= 0) {
-            return;
+            return new QuantityCheckResult(false, 0, 0, 0, 0, null);
         }
 
         // ★ 使用裁剪数量作为验证基准（所有菲号的裁剪数量总和）
@@ -59,7 +119,7 @@ public class InventoryValidator {
             // 如果没有裁剪数量，回退到订单数量
             Integer orderQty = order.getOrderQuantity();
             if (orderQty == null || orderQty <= 0) {
-                return; // 都没有设置，不做限制
+                return new QuantityCheckResult(false, 0, 0, incomingQty, incomingQty, null);
             }
             cuttingQty = orderQty;
         }
@@ -74,13 +134,12 @@ public class InventoryValidator {
             String msg = String.format(
                     "扫码数量超出裁剪数量限制！裁剪数量=%d，已完成=%d，本次扫码=%d，总计=%d",
                     cuttingQty, completedQty, incomingQty, totalQty);
-            log.warn("库存验证失败: orderId={}, scanType={}, stage={}, {}",
-                    order.getId(), scanType, progressStage, msg);
-            throw new IllegalArgumentException(msg);
+            return new QuantityCheckResult(true, cuttingQty, completedQty, incomingQty, totalQty, msg);
         }
 
-        log.debug("库存验证通过: orderId={}, scanType={}, stage={}, 裁剪数量={}, 已完成={}, 本次扫码={}",
+        log.debug("库存软校验通过: orderId={}, scanType={}, stage={}, 裁剪数量={}, 已完成={}, 本次扫码={}",
                 order.getId(), scanType, progressStage, cuttingQty, completedQty, incomingQty);
+        return new QuantityCheckResult(false, cuttingQty, completedQty, incomingQty, totalQty, null);
     }
 
     /**

@@ -1,44 +1,34 @@
 <view class="container">
-  <!-- 顶部统计条 -->
   <view class="stats-bar">
     <text class="stats-total">共 {{notices.length}} 条</text>
     <text wx:if="{{unreadCount > 0}}" class="stats-unread">{{unreadCount}} 条未读</text>
     <text wx:else class="stats-read-all">全部已读 ✓</text>
   </view>
 
-  <!-- 空状态 -->
   <empty-state wx:if="{{!loading && notices.length === 0}}" icon="icon-bell" text="暂无智能提醒" hint="系统检测到异常会第一时间通知你" card="{{true}}"></empty-state>
 
-  <!-- 加载中 -->
-  <view wx:if="{{loading}}" class="loading-box">
-    <text>加载中...</text>
+  <view wx:if="{{loading}}" class="loading-state">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
   </view>
 
-  <!-- 通知列表 -->
   <view wx:if="{{!loading && notices.length > 0}}" class="notice-list">
-    <view class="container">
-      <view class="stats-bar">
-        <text class="stats-total">共 {{notices.length}} 条</text>
-        <text wx:if="{{unreadCount > 0}}" class="stats-unread">{{unreadCount}} 条未读</text>
-        <text wx:else class="stats-read-all">全部已读</text>
-      </view>
-      <!-- 未读红点 -->
+    <view
+      wx:for="{{notices}}"
+      wx:key="id"
+      class="notice-card {{item.isRead === 0 ? 'notice-unread' : 'notice-read'}}"
+      data-id="{{item.id}}"
+      data-index="{{index}}"
+      bindtap="onTap"
+    >
       <view wx:if="{{item.isRead === 0}}" class="unread-dot"></view>
-
-        <view class="empty-icon-wrap">
-          <view class="line-icon line-icon--lg icon-notice"></view>
-        </view>
       <view class="notice-header">
         <view class="notice-icon-wrap">
           <view class="line-icon {{item.typeIconClass}}"></view>
         </view>
         <text class="notice-title">{{item.title}}</text>
       </view>
-
-      <!-- 内容 -->
       <text class="notice-content" user-select>{{item.content}}</text>
-
-      <!-- 底部元数据 -->
       <view class="notice-meta">
         <text class="meta-order" wx:if="{{item.orderNo}}" user-select>订单：{{item.orderNo}}</text>
         <text class="meta-time">{{item.timeAgo}}</text>
@@ -46,12 +36,10 @@
     </view>
   </view>
 
-  <!-- 全部标记已读按钮 -->
   <view wx:if="{{unreadCount > 0}}" class="mark-all-btn" bindtap="markAllRead">
     <text>全部标为已读</text>
   </view>
 
-  <!-- 催单回复编辑表单（蒙层+弹出卡片）-->
   <view wx:if="{{editFormVisible}}" class="edit-overlay" catchtap="onEditFormCancel">
     <view class="edit-card" catchtap="_noop">
       <view class="edit-card-title-row">

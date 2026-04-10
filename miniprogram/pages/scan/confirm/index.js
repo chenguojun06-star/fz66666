@@ -328,6 +328,21 @@ Page({
       });
 
       var results = await Promise.all(tasks);
+        // 超额审批处理：有任一结果要求审批，走审批流程
+        var approvalResult = (results || []).find(function (r) { return r && r.needApproval; });
+        if (approvalResult) {
+            this.setData({ loading: false });
+            wx.showModal({
+                title: '已提交主管审批',
+                content: '入库数量超出限制，已记录并提交主管【' +
+                         (approvalResult.approverName || '') + '】审批，审批通过后自动完成入库。\n' +
+                         (approvalResult.overQuantityDetail || ''),
+                showCancel: false,
+                confirmText: '知道了',
+                success: function () { wx.navigateBack(); }
+            });
+            return;
+        }
       var invalid = (results || []).find(function (r) {
         return !(r && r.scanRecord && (r.scanRecord.id || r.scanRecord.recordId));
       });

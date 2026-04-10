@@ -68,7 +68,7 @@ Page({
     var orderDetail = raw.orderDetail || {};
     var bedNo = orderDetail.bedNo || orderDetail.bed_number || orderDetail.bed || '';
     var cuttingDate = orderDetail.cuttingDate || orderDetail.cutDate || orderDetail.plannedCutDate || orderDetail.plannedStartDate || '';
-    var deliveryDate = orderDetail.deliveryDate || orderDetail.expectedShipDate || orderDetail.shipDate || orderDetail.plannedShipDate || '';
+    var deliveryDate = orderDetail.deliveryDate || orderDetail.expectedShipDate || orderDetail.shipDate || orderDetail.plannedShipDate || orderDetail.plannedEndDate || '';
 
     this.setData({
       detail: {
@@ -94,6 +94,8 @@ Page({
       showWarehouse: isWarehouseStage,
       warehouseCode: raw.warehouseCode || ''
     });
+
+    this._backfillBundleDisplayMeta(raw, orderDetail);
   },
 
   onUnload() {
@@ -115,6 +117,68 @@ Page({
       return y + '-' + m + '-' + day;
     } catch (e) {
       return '';
+    }
+  },
+
+  async _backfillBundleDisplayMeta(raw, orderDetail) {
+    if (!raw || !raw.orderNo || !raw.bundleNo) {
+      return;
+    }
+
+    var detail = this.data.detail || {};
+    var needColor = !detail.color;
+    var needSize = !detail.size;
+    var needDeliveryDate = !detail.deliveryDateDisplay;
+
+    if (!needColor && !needSize && !needDeliveryDate) {
+      return;
+    }
+
+    var patch = {};
+
+    if (needColor || needSize || !detail.styleNo) {
+      try {
+        var bundle = await api.production.getCuttingBundle(raw.orderNo, raw.bundleNo);
+        if (bundle) {
+          if (needColor && bundle.color) {
+            patch['detail.color'] = String(bundle.color);
+          }
+          if (needSize && bundle.size) {
+            patch['detail.size'] = String(bundle.size);
+          }
+          if (!detail.styleNo && bundle.styleNo) {
+            patch['detail.styleNo'] = String(bundle.styleNo);
+          }
+        }
+      } catch (e) {
+        console.warn('[scan-result] 回填菲号颜色/码数失败:', e);
+      }
+    }
+
+    if (needDeliveryDate) {
+      try {
+        var source = orderDetail || {};
+        var hasDelivery = source.deliveryDate || source.expectedShipDate || source.shipDate || source.plannedShipDate || source.plannedEndDate;
+        if (!hasDelivery) {
+          var orderRes = await api.production.orderDetailByOrderNo(raw.orderNo);
+          if (orderRes && Array.isArray(orderRes.records) && orderRes.records.length > 0) {
+            source = orderRes.records[0] || source;
+          } else if (orderRes && typeof orderRes === 'object') {
+            source = orderRes;
+          }
+        }
+        var dateVal = source.deliveryDate || source.expectedShipDate || source.shipDate || source.plannedShipDate || source.plannedEndDate || '';
+        var dateText = this._formatYMD(dateVal);
+        if (dateText) {
+          patch['detail.deliveryDateDisplay'] = dateText;
+        }
+      } catch (e) {
+        console.warn('[scan-result] 回填交货日期失败:', e);
+      }
+    }
+
+    if (Object.keys(patch).length > 0) {
+      this.setData(patch);
     }
   },
 

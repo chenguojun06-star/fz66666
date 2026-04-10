@@ -60,7 +60,14 @@
 
 .notice-read {
   border-left: 3px solid rgba(15, 23, 42, 0.06);
-  opacity: 0.85;
+}
+
+.notice-read .notice-title {
+  color: var(--color-text-secondary);
+}
+
+.notice-read .notice-content {
+  color: var(--color-text-tertiary);
 }
 
 /* 未读红点 */
@@ -202,6 +209,7 @@
 .edit-input {
   width: 100%;
   background: var(--color-bg-page);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: 10px 12px;
   font-size: var(--font-size-md);
@@ -211,6 +219,7 @@
 .edit-textarea {
   width: 100%;
   background: var(--color-bg-page);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: 10px 12px;
   font-size: var(--font-size-md);

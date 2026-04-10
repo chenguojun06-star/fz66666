@@ -1,7 +1,8 @@
 import React from 'react';
-import { Modal, Form, Radio, InputNumber, Input } from 'antd';
+import { Modal, Form, Radio, InputNumber, Input, Button, Table } from 'antd';
+import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { FormInstance } from 'antd';
-import type { ShippableInfo } from '@/services/production/factoryShipmentApi';
+import type { ShippableInfo, ShipDetailItem } from '@/services/production/factoryShipmentApi';
 
 interface FactoryShipModalProps {
   open: boolean;
@@ -9,6 +10,8 @@ interface FactoryShipModalProps {
   shippableInfo: ShippableInfo | null;
   form: FormInstance;
   loading: boolean;
+  shipDetails: ShipDetailItem[];
+  onShipDetailsChange: (details: ShipDetailItem[]) => void;
   onSubmit: () => void;
   onCancel: () => void;
 }
@@ -19,6 +22,8 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
   shippableInfo,
   form,
   loading,
+  shipDetails,
+  onShipDetailsChange,
   onSubmit,
   onCancel,
 }) => (
@@ -29,6 +34,7 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
     onCancel={onCancel}
     confirmLoading={loading}
     destroyOnClose
+    width={560}
   >
     <Form form={form} layout="vertical" initialValues={{ shipMethod: 'EXPRESS' }}>
       {shippableInfo && (
@@ -42,8 +48,87 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
           <Radio value="EXPRESS">快递</Radio>
         </Radio.Group>
       </Form.Item>
-      <Form.Item name="shipQuantity" label="发货数量" rules={[{ required: true, message: '请输入发货数量' }]}>
-        <InputNumber min={1} max={shippableInfo?.remaining} style={{ width: '100%' }} placeholder="请输入发货数量" />
+      <Form.Item label="发货明细（按颜色/尺码）" required>
+        <Table<ShipDetailItem>
+          size="small"
+          dataSource={shipDetails}
+          rowKey={(_, idx) => String(idx)}
+          pagination={false}
+          columns={[
+            {
+              title: '颜色',
+              dataIndex: 'color',
+              render: (val: string, _: ShipDetailItem, idx: number) => (
+                <Input
+                  value={val}
+                  onChange={e => {
+                    const d = [...shipDetails];
+                    d[idx] = { ...d[idx], color: e.target.value };
+                    onShipDetailsChange(d);
+                  }}
+                  placeholder="颜色"
+                  size="small"
+                />
+              ),
+            },
+            {
+              title: '尺码',
+              dataIndex: 'sizeName',
+              render: (val: string, _: ShipDetailItem, idx: number) => (
+                <Input
+                  value={val}
+                  onChange={e => {
+                    const d = [...shipDetails];
+                    d[idx] = { ...d[idx], sizeName: e.target.value };
+                    onShipDetailsChange(d);
+                  }}
+                  placeholder="尺码"
+                  size="small"
+                />
+              ),
+            },
+            {
+              title: '数量',
+              dataIndex: 'quantity',
+              width: 100,
+              render: (val: number, _: ShipDetailItem, idx: number) => (
+                <InputNumber
+                  min={0}
+                  value={val}
+                  onChange={v => {
+                    const d = [...shipDetails];
+                    d[idx] = { ...d[idx], quantity: v ?? 0 };
+                    onShipDetailsChange(d);
+                  }}
+                  size="small"
+                  style={{ width: '100%' }}
+                />
+              ),
+            },
+            {
+              title: '',
+              width: 40,
+              render: (_: unknown, __: ShipDetailItem, idx: number) => (
+                <Button
+                  danger
+                  size="small"
+                  icon={<DeleteOutlined />}
+                  onClick={() => onShipDetailsChange(shipDetails.filter((_, i) => i !== idx))}
+                  disabled={shipDetails.length <= 1}
+                />
+              ),
+            },
+          ]}
+          footer={() => (
+            <Button
+              size="small"
+              icon={<PlusOutlined />}
+              onClick={() => onShipDetailsChange([...shipDetails, { color: '', sizeName: '', quantity: 0 }])}
+            >
+              添加明细
+            </Button>
+          )}
+        />
       </Form.Item>
       <Form.Item noStyle shouldUpdate={(prev, cur) => prev.shipMethod !== cur.shipMethod}>
         {({ getFieldValue }) => getFieldValue('shipMethod') === 'EXPRESS' ? (

@@ -113,7 +113,7 @@ const OrderRankingDashboard: React.FC<OrderRankingDashboardProps> = ({ onOrderCl
           <UserOutlined /> 最新下单人: {item.latestOrderCreator || '-'}
         </div>
         <div className="tooltip-item">
-          <CalendarOutlined /> 最新下单: {item.latestOrderTime ? dayjs(item.latestOrderTime).format('MM-DD HH:mm') : '-'}
+          <CalendarOutlined /> 最新下单: {item.latestOrderTime ? dayjs(item.latestOrderTime).format('MM-DD') : '-'}
         </div>
         {item.avgOrderCycle > 0 && (
           <div className="tooltip-item">

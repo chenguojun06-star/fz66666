@@ -41,10 +41,9 @@
     </view>
   </view>
 
-  <!-- 底部操作栏 -->
   <view class="footer-bar">
-    <view class="btn-cancel" hover-class="btn-hover" bindtap="goBack">取消</view>
-    <view class="btn-submit {{loading ? 'off' : ''}}" hover-class="btn-hover" bindtap="confirmRescan">
+    <view class="btn-cancel" hover-class="footer-bar-hover" bindtap="goBack">取消</view>
+    <view class="btn-danger {{loading ? 'btn-disabled' : ''}}" hover-class="footer-bar-hover" bindtap="confirmRescan">
       {{loading ? '退回中...' : '确认退回'}}
     </view>
   </view>

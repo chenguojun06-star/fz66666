@@ -85,7 +85,7 @@ const MaterialPickingList: React.FC = () => {
       title: '领料时间',
       dataIndex: 'pickTime',
       width: 160,
-      render: (v: string) => v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '-',
+      render: (v: string) => v ? dayjs(v).format('YYYY-MM-DD') : '-',
     },
     {
       title: '状态',

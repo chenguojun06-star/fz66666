@@ -138,10 +138,10 @@
       </view>
     </view>
 
-    <!-- 提交按钮 -->
-    <view class="bottom-bar">
+    <view class="footer-bar">
       <view
-        class="submit-btn {{submitting || !hasData ? 'disabled' : ''}}"
+        class="btn-submit {{submitting || !hasData ? 'btn-disabled' : ''}}"
+        hover-class="footer-bar-hover"
         bindtap="onSubmit"
       >
         {{submitting ? '提交中…' : '确认生成菲号'}}

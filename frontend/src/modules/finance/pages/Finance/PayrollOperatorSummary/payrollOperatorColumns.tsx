@@ -54,7 +54,7 @@ export const createSortableTimeColumn = (
     key: dataIndex,
     width,
     ellipsis: true,
-    render: (v: unknown) => v ? dayjs(v as string).format('YYYY-MM-DD HH:mm:ss') : '-',
+    render: (v: unknown) => v ? dayjs(v as string).format('YYYY-MM-DD') : '-',
 });
 
 export const scanTypeText = (raw: any) => {
@@ -286,9 +286,9 @@ export function getDetailColumns(deps: DetailColumnDeps): any[] {
             />,
             dataIndex: 'startTime',
             key: 'startTime',
-            width: 160,
+            width: 130,
             ellipsis: true,
-            render: (v: unknown) => v ? dayjs(v as string).format('YYYY-MM-DD HH:mm:ss') : '-',
+            render: (v: unknown) => v ? dayjs(v as string).format('YYYY-MM-DD') : '-',
         },
         {
             title: <SortableColumnTitle
@@ -301,9 +301,9 @@ export function getDetailColumns(deps: DetailColumnDeps): any[] {
             />,
             dataIndex: 'endTime',
             key: 'endTime',
-            width: 160,
+            width: 130,
             ellipsis: true,
-            render: (v: unknown) => v ? dayjs(v as string).format('YYYY-MM-DD HH:mm:ss') : '-',
+            render: (v: unknown) => v ? dayjs(v as string).format('YYYY-MM-DD') : '-',
         },
         {
             title: '数量',

@@ -273,42 +273,4 @@
   box-sizing: border-box;
 }
 
-/* ===== 底部操作栏 ===== */
-.bottom-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  gap: 16rpx;
-  padding: 16rpx 24rpx calc(env(safe-area-inset-bottom) + 16rpx);
-  background: var(--color-bg-card);
-  border-top: 1rpx solid var(--color-border-light);
-  z-index: 99;
-}
-.btn-receive {
-  flex: 1;
-  height: 76rpx;
-  line-height: 76rpx;
-  text-align: center;
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-primary);
-  background: var(--color-info-bg);
-  border-radius: var(--radius-sm);
-}
-.btn-submit {
-  flex: 1;
-  height: 76rpx;
-  line-height: 76rpx;
-  text-align: center;
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-white);
-  background: var(--color-primary);
-  border-radius: var(--radius-sm);
-}
-.btn-disabled {
-  opacity: 0.45;
-  pointer-events: none;
-}
+

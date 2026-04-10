@@ -15,7 +15,9 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import com.fashion.supplychain.production.service.FactoryShipmentDetailService;
 
 @Service
 @Slf4j
@@ -27,6 +29,8 @@ public class FactoryShipmentOrchestrator {
     private CuttingBundleService cuttingBundleService;
     @Autowired
     private ProductionOrderService productionOrderService;
+    @Autowired
+    private FactoryShipmentDetailService factoryShipmentDetailService;
 
     @Transactional(rollbackFor = Exception.class)
     public Result<FactoryShipment> ship(Map<String, Object> params) {
@@ -34,10 +38,16 @@ public class FactoryShipmentOrchestrator {
         if (!StringUtils.hasText(orderId)) {
             return Result.fail("缺少 orderId");
         }
-        Object qtyObj = params.get("shipQuantity");
-        int shipQuantity = qtyObj instanceof Number ? ((Number) qtyObj).intValue() : 0;
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> details = (List<Map<String, Object>>) params.get("details");
+        if (details == null || details.isEmpty()) {
+            return Result.fail("请填写发货明细（颜色/尺码/数量）");
+        }
+        int shipQuantity = details.stream()
+                .mapToInt(d -> d.get("quantity") instanceof Number ? ((Number) d.get("quantity")).intValue() : 0)
+                .sum();
         if (shipQuantity <= 0) {
-            return Result.fail("发货数量必须大于 0");
+            return Result.fail("发货数量明细总量必须大于 0");
         }
 
         ProductionOrder order = productionOrderService.getById(orderId);
@@ -74,8 +84,9 @@ public class FactoryShipmentOrchestrator {
         fs.setReceiveStatus("pending");
 
         factoryShipmentService.save(fs);
-        log.info("[FactoryShipment] 发货 shipmentNo={} orderId={} qty={}",
-                fs.getShipmentNo(), orderId, shipQuantity);
+        factoryShipmentDetailService.saveDetails(fs.getId(), details, UserContext.tenantId());
+        log.info("[FactoryShipment] 发货 shipmentNo={} orderId={} qty={} skuLines={}",
+                fs.getShipmentNo(), orderId, shipQuantity, details.size());
         return Result.success(fs);
     }
 

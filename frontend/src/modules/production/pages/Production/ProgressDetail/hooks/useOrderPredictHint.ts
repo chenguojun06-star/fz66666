@@ -58,7 +58,7 @@ export function useOrderPredictHint(
       const d = resp?.data;
       if (d?.predictedFinishTime) {
         const h: PredictHint = {
-          text: dayjs(d.predictedFinishTime).format('MM-DD HH:mm'),
+          text: dayjs(d.predictedFinishTime).format('MM-DD'),
           confidence: d.confidence != null ? `${Math.round(d.confidence * 100)}%` : '',
           remaining: Number(d.remainingQuantity) || 0,
         };

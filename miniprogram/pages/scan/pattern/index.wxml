@@ -111,10 +111,9 @@
     </view>
   </view>
 
-  <!-- 底部按钮：取消 + 领取 -->
   <view class="footer-bar">
-    <view class="btn-cancel" hover-class="btn-hover" bindtap="goBack">取消</view>
-    <view class="btn-submit {{loading ? 'off' : ''}}" hover-class="btn-hover" bindtap="submitOp">
+    <view class="btn-cancel" hover-class="footer-bar-hover" bindtap="goBack">取消</view>
+    <view class="btn-submit {{loading ? 'btn-disabled' : ''}}" hover-class="footer-bar-hover" bindtap="submitOp">
       {{loading ? '提交中...' : (detail.submitLabel || '领取')}}
     </view>
   </view>

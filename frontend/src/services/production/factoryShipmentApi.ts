@@ -1,9 +1,15 @@
 import api from '../../utils/api';
-import type { FactoryShipment } from '../../types/production';
+import type { FactoryShipment, FactoryShipmentDetail } from '../../types/production';
+
+export interface ShipDetailItem {
+  color: string;
+  sizeName: string;
+  quantity: number;
+}
 
 export interface ShipParams {
   orderId: string;
-  shipQuantity: number;
+  details: ShipDetailItem[];
   shipMethod?: string;
   trackingNo?: string;
   expressCompany?: string;
@@ -34,4 +40,6 @@ export const factoryShipmentApi = {
 
   delete: (id: string) =>
     api.delete<{ code: number; message: string }>(`/production/factory-shipment/${encodeURIComponent(id)}`),
+  getDetails: (id: string) =>
+    api.get<{ code: number; data: FactoryShipmentDetail[] }>(`/production/factory-shipment/${encodeURIComponent(id)}/details`),
 };

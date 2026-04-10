@@ -3,7 +3,7 @@ import React from 'react';
 import type { FormInstance } from 'antd';
 import type { ProductionOrder } from '@/types/production';
 import { parseProductionOrderLines } from '@/utils/api';
-import type { ShippableInfo } from '@/services/production/factoryShipmentApi';
+import type { ShippableInfo, ShipDetailItem } from '@/services/production/factoryShipmentApi';
 import type { LabelPrintStyleInfo } from '../hooks/useLabelPrint';
 import ScanConfirmModal from './ScanConfirmModal';
 import FactoryShipModal from './FactoryShipModal';
@@ -26,6 +26,8 @@ export interface ProgressModalsProps {
   shipLoading: boolean;
   handleShipSubmit: () => void;
   setShipModalOpen: (open: boolean) => void;
+  shipDetails: ShipDetailItem[];
+  onShipDetailsChange: (details: ShipDetailItem[]) => void;
   /* Share dialog (ReactNode from useShareOrderDialog) */
   shareOrderDialog: React.ReactNode;
 
@@ -74,6 +76,7 @@ const ProgressModals: React.FC<ProgressModalsProps> = (props) => {
   const {
     scanConfirmState, closeScanConfirm, submitConfirmedScan,
     shipModalOpen, shipModalOrder, shippableInfo, shipForm, shipLoading, handleShipSubmit, setShipModalOpen,
+    shipDetails, onShipDetailsChange,
     shareOrderDialog,
 
     quickEditVisible, quickEditSaving, quickEditRecord, handleQuickEditSave, setQuickEditVisible, setQuickEditRecord,
@@ -101,6 +104,8 @@ const ProgressModals: React.FC<ProgressModalsProps> = (props) => {
         shippableInfo={shippableInfo}
         form={shipForm}
         loading={shipLoading}
+        shipDetails={shipDetails}
+        onShipDetailsChange={onShipDetailsChange}
         onSubmit={handleShipSubmit}
         onCancel={() => setShipModalOpen(false)}
       />

@@ -85,7 +85,7 @@ export const LOCALES = {
         "patternProduction": "样板生产",
         "dataCenter": "资料中心",
         "templateCenter": "单价维护",
-        "productionList": "我的订单",
+        "productionList": "订单管理",
         "materialPurchase": "物料采购",
         "cutting": "裁剪管理",
         "progressDetail": "工序跟进",

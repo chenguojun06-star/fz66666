@@ -96,19 +96,19 @@ const LoanHistoryModal: React.FC<LoanHistoryModalProps> = ({ visible, stock, onC
       title: '借出时间',
       dataIndex: 'loanDate',
       key: 'loanDate',
-      render: (text: string) => text ? dayjs(text).format('YYYY-MM-DD HH:mm') : '-',
+      render: (text: string) => text ? dayjs(text).format('YYYY-MM-DD') : '-',
     },
     {
       title: '预计归还',
       dataIndex: 'expectedReturnDate',
       key: 'expectedReturnDate',
-      render: (text: string) => text ? dayjs(text).format('YYYY-MM-DD HH:mm') : '-',
+      render: (text: string) => text ? dayjs(text).format('YYYY-MM-DD') : '-',
     },
     {
       title: '实际归还',
       dataIndex: 'returnDate',
       key: 'returnDate',
-      render: (text: string) => text ? dayjs(text).format('YYYY-MM-DD HH:mm') : '-',
+      render: (text: string) => text ? dayjs(text).format('YYYY-MM-DD') : '-',
     },
     {
       title: '状态',

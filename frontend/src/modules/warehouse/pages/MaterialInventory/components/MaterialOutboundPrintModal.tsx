@@ -232,7 +232,7 @@ const MaterialOutboundPrintModal: React.FC<MaterialOutboundPrintModalProps> = ({
             }}
           >
             <div><strong>出库单号：</strong>{data.outboundNo}</div>
-            <div><strong>出库时间：</strong>{dayjs(data.outboundTime).format('YYYY-MM-DD HH:mm')}</div>
+            <div><strong>出库时间：</strong>{dayjs(data.outboundTime).format('YYYY-MM-DD')}</div>
             <div>
               <strong>类型：</strong>
               <Space size={6}>

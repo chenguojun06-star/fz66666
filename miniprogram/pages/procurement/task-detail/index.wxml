@@ -94,8 +94,8 @@
   </block>
 </view>
 
-<view class="bottom-bar" wx:if="{{materialPurchases.length > 0 && !loading}}">
-  <view class="btn-receive" bindtap="onReceiveAll">一键领取</view>
+<view class="footer-bar" wx:if="{{materialPurchases.length > 0 && !loading}}">
+  <view class="btn-secondary" hover-class="footer-bar-hover" bindtap="onReceiveAll">一键领取</view>
   <view class="btn-submit {{(!hasInput || submitting) ? 'btn-disabled' : ''}}"
-    bindtap="onSubmit">提交到货</view>
+    hover-class="footer-bar-hover" bindtap="onSubmit">提交到货</view>
 </view>

@@ -27,6 +27,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased] - 2026-08-14 修复2026-04-10生产日志异常
+
+### Bug Fixes
+- **[交期预测] 补充预测日志写入失败的完整堆栈输出**
+  - 文件：`DeliveryPredictionOrchestrator.java` 第 187 行
+  - 问题：`predictionLogMapper.insert()` 抛出异常后，`catch` 块仅打印 `le.getMessage()`，
+    SLF4J 未收到 `Throwable` 参数，生产日志中看不到堆栈，难以定位根因。
+  - 修复：`log.warn("...{}", le.getMessage())` → `log.warn("...{}", le.getMessage(), le)`，
+    SLF4J 自动追加完整堆栈。
+
+- **[DB迁移] 补充 `t_intelligence_prediction_log` 的 Flyway 迁移脚本**
+  - 文件：新增 `V202608141100__create_intelligence_prediction_log_table.sql`
+  - 问题：该表历史上通过非标准方式创建，缺少 Flyway 脚本，导致新环境/CI 中
+    `DeliveryPredictionOrchestrator` 写日志时触发 `BadSqlGrammarException`，被 catch 静默吞掉。
+  - 修复：使用 `CREATE TABLE IF NOT EXISTS` 幂等模式补充迁移脚本，不影响已有环境。
+
+### Root Cause Analysis（2026-04-10 生产日志错误溯源）
+| 错误 | 根因 | 状态 |
+|---|---|---|
+| `[交期预测] 保存预测日志失败` | `t_intelligence_prediction_log` 部分环境缺表 + catch 无堆栈 | ✅ 已修复 |
+| `[付款中心] 查询账单汇总待收付款失败` | `t_bill_aggregation` 2026-04 时尚未建表（8月迁移脚本补齐） | ℹ️ 历史遗留，表已存在 |
+| HTTP 500 `GET /api/finance/bill-aggregation/stats` | 同上，`BadSqlGrammarException` → 500 | ℹ️ 历史遗留，表已存在 |
+| HTTP 500 `POST /api/finance/bill-aggregation/list` | 同上 | ℹ️ 历史遗留，表已存在 |
+
 ## [Unreleased] - 2026-03-07
 
 ### 🐛 Operation Log Capture Fixed

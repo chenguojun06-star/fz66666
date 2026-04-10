@@ -73,6 +73,14 @@ public class ChangeApprovalOrchestrator {
     @Autowired(required = false)
     private com.fashion.supplychain.finance.orchestration.ExpenseReimbursementOrchestrator expenseReimbursementOrchestrator;
 
+    @Lazy
+    @Autowired(required = false)
+    private com.fashion.supplychain.production.service.ProductWarehousingService productWarehousingService;
+
+    @Lazy
+    @Autowired(required = false)
+    private com.fashion.supplychain.production.service.ProductionOrderService productionOrderService;
+
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // 公共入口：提交审批申请
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -411,6 +419,43 @@ public class ChangeApprovalOrchestrator {
                     String action = (String) params.getOrDefault("action", "approve");
                     expenseReimbursementOrchestrator.approveReimbursement(expenseId, action, approval.getReviewRemark());
                     result.put("success", true);
+                    break;
+                }
+                case "OVER_QUANTITY_SCAN": {
+                    // 超额入库审批通过后，执行真正的入库操作
+                    if (productWarehousingService == null) {
+                        result.put("error", "ProductWarehousingService 未加载");
+                        break;
+                    }
+                    String orderId   = (String) params.get("orderId");
+                    String bundleId  = (String) params.get("bundleId");
+                    int qty          = ((Number) params.get("qty")).intValue();
+                    String warehouse = (String) params.get("warehouse");
+                    String operatorId   = (String) params.get("operatorId");
+                    String operatorName = (String) params.get("operatorName");
+
+                    com.fashion.supplychain.production.entity.ProductWarehousing w =
+                        new com.fashion.supplychain.production.entity.ProductWarehousing();
+                    w.setOrderId(orderId);
+                    w.setWarehousingType("scan");
+                    w.setWarehouse(warehouse);
+                    w.setWarehousingQuantity(qty);
+                    w.setCuttingBundleId(bundleId);
+                    w.setQualityStatus("qualified");
+                    w.setQualifiedQuantity(qty);
+                    w.setReceiverId(operatorId);
+                    w.setReceiverName(operatorName);
+                    w.setCreateTime(java.time.LocalDateTime.now());
+                    w.setUpdateTime(java.time.LocalDateTime.now());
+                    w.setDeleteFlag(0);
+
+                    boolean ok = productWarehousingService.saveWarehousingAndUpdateOrder(w);
+                    if (!ok) {
+                        result.put("error", "超额入库审批通过但入库记录保存失败");
+                        break;
+                    }
+                    result.put("success", true);
+                    result.put("message", "超额入库审批通过，已完成入库");
                     break;
                 }
                 default:

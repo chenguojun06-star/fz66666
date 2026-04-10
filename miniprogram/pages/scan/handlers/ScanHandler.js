@@ -300,6 +300,8 @@ class ScanHandler {
         scanMode,
         orderNo: parsedData.orderNo,
         bundleNo: parsedData.bundleNo,
+        color: parsedData.color || '',
+        size: parsedData.size || '',
         quantity: quantity,
         processName: stageResult.processName,
         progressStage: stageResult.progressStage,

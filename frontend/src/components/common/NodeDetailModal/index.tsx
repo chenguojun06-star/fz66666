@@ -15,7 +15,7 @@ import type { NodeType, HistoryItem, NodeOperationData, OperatorSummary, NodeDet
 
 const { Text } = Typography;
 
-const formatDelegationTime = (value?: string) => (value ? dayjs(value).format('MM/DD HH:mm') : '-');
+const formatDelegationTime = (value?: string) => (value ? dayjs(value).format('MM/DD') : '-');
 
 
 /**
@@ -608,7 +608,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                 <div>
                   <span style={{ color: '#222' }}>
                     预计完工：<b style={{ color: '#1677ff', fontSize: 14 }}>
-                      {dayjs(prediction.predictedFinishTime).format('MM-DD HH:mm')}
+                      {dayjs(prediction.predictedFinishTime).format('MM-DD')}
                     </b>
                   </span>
                   {(prediction.confidence != null) && (

@@ -94,10 +94,9 @@
               placeholder="可填写质检备注" maxlength="500" auto-height />
   </view>
 
-  <!-- 底部操作 -->
   <view class="footer-bar">
-    <view class="btn-cancel" hover-class="btn-hover" bindtap="goBack">取消</view>
-    <view class="btn-submit {{loading ? 'off' : ''}}" hover-class="btn-hover" bindtap="submitQuality">
+    <view class="btn-cancel" hover-class="footer-bar-hover" bindtap="goBack">取消</view>
+    <view class="btn-submit {{loading ? 'btn-disabled' : ''}}" hover-class="footer-bar-hover" bindtap="submitQuality">
       {{loading ? '提交中...' : '提交质检'}}
     </view>
   </view>

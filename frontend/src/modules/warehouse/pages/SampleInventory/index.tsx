@@ -35,7 +35,7 @@ export const STYLE_INFO_LIST_REFRESH_KEY = 'style-info-list:refresh-needed';
 const formatTime = (value?: string) => {
   if (!value) return '-';
   const instance = dayjs(value);
-  return instance.isValid() ? instance.format('YYYY-MM-DD HH:mm') : String(value);
+  return instance.isValid() ? instance.format('YYYY-MM-DD') : String(value);
 };
 
 const getRecordSwitchButtonStyle = (selected: boolean) => {

@@ -131,20 +131,4 @@
   box-sizing: border-box;
 }
 
-/* ---- footer ---- */
-.footer-bar {
-  position: fixed; left: 0; right: 0; bottom: 0;
-  display: flex; gap: 20rpx;
-  padding: 20rpx 32rpx calc(env(safe-area-inset-bottom) + 20rpx);
-  background: #fff; box-shadow: 0 -2rpx 12rpx rgba(0,0,0,0.06);
-  z-index: 99;
-}
-.btn-cancel, .btn-submit {
-  flex: 1; height: 88rpx; border-radius: 44rpx;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 30rpx; font-weight: 600;
-}
-.btn-cancel { background: #f3f4f6; color: #666; }
-.btn-submit { background: var(--primary-color, #2563eb); color: #fff; }
-.btn-submit.off { opacity: 0.5; }
-.btn-hover { opacity: 0.8; }
+

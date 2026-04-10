@@ -9,7 +9,7 @@ import com.fashion.supplychain.stock.entity.SampleStock;
 import java.util.Map;
 
 public interface SampleStockService extends IService<SampleStock> {
-    
+
     IPage<SampleStock> queryPage(Map<String, Object> params);
 
     /**

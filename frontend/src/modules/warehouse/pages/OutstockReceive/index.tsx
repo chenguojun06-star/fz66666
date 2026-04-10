@@ -73,12 +73,12 @@ const OutstockReceive: React.FC = () => {
     },
     {
       title: '收货时间', dataIndex: 'receiveTime', width: 160,
-      render: (val: string) => val ? dayjs(val).format('YYYY-MM-DD HH:mm') : '-',
+      render: (val: string) => val ? dayjs(val).format('YYYY-MM-DD') : '-',
     },
     { title: '收货人', dataIndex: 'receivedByName', width: 100, render: (v: string) => v || '-' },
     {
       title: '出库时间', dataIndex: 'createTime', width: 160,
-      render: (val: string) => val ? dayjs(val).format('YYYY-MM-DD HH:mm') : '-',
+      render: (val: string) => val ? dayjs(val).format('YYYY-MM-DD') : '-',
     },
     { title: '备注', dataIndex: 'remark', width: 140, ellipsis: true },
     {

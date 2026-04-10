@@ -101,7 +101,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   // ── 工厂发货 ──
   const {
     shipModalOpen, setShipModalOpen, shipModalOrder, shipForm, shipLoading,
-    shippableInfo, handleFactoryShip, handleShipSubmit,
+    shippableInfo, shipDetails, setShipDetails, handleFactoryShip, handleShipSubmit,
   } = useFactoryShipment({ message });
 
   // ── 筛选 / 排序 / 统计卡片 ──────────────────────────────────────
@@ -1013,6 +1013,8 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
         shipModalOpen={shipModalOpen}
         shipModalOrder={shipModalOrder}
         shippableInfo={shippableInfo}
+        shipDetails={shipDetails}
+        onShipDetailsChange={setShipDetails}
         shipForm={shipForm}
         shipLoading={shipLoading}
         handleShipSubmit={handleShipSubmit}

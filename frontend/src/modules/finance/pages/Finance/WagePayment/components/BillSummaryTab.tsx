@@ -167,7 +167,7 @@ const BillSummaryTab: React.FC = () => {
     },
     {
       title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 160,
-      render: (v: string) => v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '-',
+      render: (v: string) => v ? dayjs(v).format('YYYY-MM-DD') : '-',
     },
     {
       title: '操作', key: 'actions', width: 140, fixed: 'right',

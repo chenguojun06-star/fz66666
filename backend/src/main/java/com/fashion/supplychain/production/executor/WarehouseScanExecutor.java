@@ -15,6 +15,7 @@ import com.fashion.supplychain.style.entity.ProductSku;
 import com.fashion.supplychain.style.service.ProductSkuService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Component;
@@ -70,6 +71,10 @@ public class WarehouseScanExecutor {
 
     @Autowired
     private ProductSkuService productSkuService;
+
+    @Lazy
+    @Autowired(required = false)
+    private com.fashion.supplychain.system.orchestration.ChangeApprovalOrchestrator changeApprovalOrchestrator;
 
     /**
      * 执行仓库入库扫码
@@ -175,7 +180,15 @@ public class WarehouseScanExecutor {
             // ★ 质检前置校验：必须有质检验收记录（quality_receive + confirmTime 不为空）才能入库
             validateQualityConfirmBeforeWarehousing(order.getId(), bundle.getId());
             // 验证数量不超过订单/裁剪总量
-            inventoryValidator.validateNotExceedOrderQuantity(order, "warehouse", "入库", qty, bundle);
+            InventoryValidator.QuantityCheckResult qr =
+                inventoryValidator.checkOverQuantity(order, "warehouse", "入库", qty, bundle);
+            if (qr.isExceeded()) {
+                Map<String, Object> overResult = attemptOverQuantityApproval(
+                    qr, params, requestId, operatorId, operatorName,
+                    order, bundle, qty, warehouse, colorResolver, sizeResolver);
+                if (overResult != null) return overResult;
+                log.info("[OverQty] 管理员/无审批链，直接放行: orderId={}", order.getId());
+            }
         }
 
         // 创建入库记录（正常入库路径）
@@ -333,6 +346,65 @@ public class WarehouseScanExecutor {
 
         log.debug("单菲号数量验证通过: bundleId={}, bundleNo={}, 裁剪数={}, 报废={}, 有效={}, 已入库={}, 本次={}",
                 bundle.getId(), bundle.getBundleNo(), bundleQty, scrapQty, effectiveBundleQty, bundleWarehoused, incomingQty);
+    }
+
+    /**
+     * 尝试创建超额入库审批申请。
+     * 若审批链未配置（管理员操作或无审批人），返回 null，由调用方直接放行入库。
+     */
+    private Map<String, Object> attemptOverQuantityApproval(
+            InventoryValidator.QuantityCheckResult qr,
+            Map<String, Object> params,
+            String requestId, String operatorId, String operatorName,
+            ProductionOrder order, CuttingBundle bundle, int qty, String warehouse,
+            java.util.function.Function<String, String> colorResolver,
+            java.util.function.Function<String, String> sizeResolver) {
+
+        ScanRecord sr = new ScanRecord();
+        sr.setRequestId("OQ_" + requestId);
+        sr.setOrderId(order.getId());
+        sr.setOrderNo(order.getOrderNo());
+        sr.setQuantity(qty);
+        sr.setProcessCode("warehouse");
+        sr.setProgressStage("入库");
+        sr.setProcessName("入库");
+        sr.setScanType("warehouse");
+        sr.setScanResult("pending_approval");
+        sr.setOperatorId(operatorId);
+        sr.setOperatorName(operatorName);
+        sr.setCuttingBundleId(bundle != null ? bundle.getId() : null);
+        sr.setRemark("[超额待审批] " + qr.getMessage());
+        sr.setScanTime(java.time.LocalDateTime.now());
+        sr.setCreateTime(java.time.LocalDateTime.now());
+        try { scanRecordService.saveScanRecord(sr); }
+        catch (Exception e) { log.warn("[OverQty] 保存超额记录失败: {}", e.getMessage()); }
+
+        Map<String, Object> operationData = new HashMap<>();
+        operationData.put("orderId", order.getId());
+        operationData.put("bundleId", bundle != null ? bundle.getId() : null);
+        operationData.put("qty", qty);
+        operationData.put("warehouse", warehouse);
+        operationData.put("operatorId", operatorId);
+        operationData.put("operatorName", operatorName);
+        operationData.put("scanRecordId", sr.getId());
+
+        String reason = "入库超额：" + qr.getMessage();
+        Map<String, Object> approvalResp = changeApprovalOrchestrator == null ? null :
+            changeApprovalOrchestrator.checkAndCreateIfNeeded(
+                "OVER_QUANTITY_SCAN", order.getId(), order.getOrderNo(), operationData, reason);
+
+        if (approvalResp == null) return null;
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("needApproval", true);
+        result.put("approvalId", approvalResp.get("approvalId"));
+        result.put("approverName", approvalResp.get("approverName"));
+        result.put("message", "入库超出限制，已提交主管审批，审批通过后自动入库");
+        result.put("overQuantityDetail", qr.getMessage());
+        log.warn("[OverQty] 超额审批已提交: orderId={}, qty={}, limit={}",
+            order.getId(), qty, qr.getLimitQuantity());
+        return result;
     }
 
     /**

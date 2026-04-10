@@ -596,3 +596,77 @@ wx-vconsole,
   opacity: 0.8;
   transform: scale(0.98);
 }
+
+/* ============ 底部固定操作栏 ============ */
+.footer-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg) calc(var(--spacing-md) + env(safe-area-inset-bottom));
+  background: var(--color-bg-card);
+  border-top: 1px solid var(--color-border-light);
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.05);
+  z-index: 100;
+}
+
+.footer-bar .btn-cancel,
+.footer-bar .btn-secondary {
+  flex: 1;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  background: var(--color-bg-gray);
+  color: var(--color-text-secondary);
+  border: none;
+  transition: opacity 0.15s ease;
+}
+
+.footer-bar .btn-submit,
+.footer-bar .btn-primary {
+  flex: 1;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  background: var(--gradient-action);
+  color: var(--color-text-white);
+  border: none;
+  box-shadow: 0 4px 12px rgba(var(--color-primary-rgb), 0.25);
+  transition: opacity 0.15s ease;
+}
+
+.footer-bar .btn-danger {
+  flex: 1;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  background: var(--color-error);
+  color: var(--color-text-white);
+  border: none;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25);
+  transition: opacity 0.15s ease;
+}
+
+.footer-bar .btn-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.footer-bar-hover {
+  opacity: 0.8;
+  transform: scale(0.98);
+}

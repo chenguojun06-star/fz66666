@@ -118,44 +118,4 @@
   line-height: 1.6;
 }
 
-/* 底部操作栏 */
-.footer-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  padding: 20rpx 32rpx calc(env(safe-area-inset-bottom) + 20rpx);
-  background: #fff;
-  box-shadow: 0 -2rpx 12rpx rgba(0,0,0,0.06);
-  z-index: 100;
-  gap: 20rpx;
-}
-.btn-cancel {
-  flex: 1;
-  height: 88rpx;
-  line-height: 88rpx;
-  text-align: center;
-  border-radius: 16rpx;
-  font-size: 30rpx;
-  font-weight: 600;
-  background: #f1f5f9;
-  color: #64748b;
-}
-.btn-submit {
-  flex: 1;
-  height: 88rpx;
-  line-height: 88rpx;
-  text-align: center;
-  border-radius: 16rpx;
-  font-size: 30rpx;
-  font-weight: 600;
-  background: #ef4444;
-  color: #fff;
-}
-.btn-submit.off {
-  opacity: 0.5;
-}
-.btn-hover {
-  opacity: 0.7;
-}
+

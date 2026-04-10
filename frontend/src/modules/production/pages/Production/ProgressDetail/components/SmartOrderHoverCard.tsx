@@ -95,7 +95,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
           stageName:   pToStage(pName),
           qty,
           pct:         total > 0 ? Math.min(100, Math.round(qty / total * 100)) : 0,
-          lastTime:    pTimes[pName] ? dayjs(pTimes[pName]).format('MM-DD HH:mm') : null,
+          lastTime:    pTimes[pName] ? dayjs(pTimes[pName]).format('MM-DD') : null,
           workerCount: pWorkerCounts[pName] ?? 0,
         }));
 
@@ -158,7 +158,7 @@ const SmartOrderHoverCard: React.FC<Props> = ({ order }) => {
         ? Math.min(100, Math.round(fromBoard / total * 100))
         : fromField;
       const rawT = normBoardTimeMap.get(label);
-      const lastTime = rawT ? dayjs(rawT).format('MM-DD HH:mm') : null;
+      const lastTime = rawT ? dayjs(rawT).format('MM-DD') : null;
       return { label, stageName: '' as string, qty, pct, lastTime, workerCount: 0 };
     });
   }, [order, boardStats, boardTimes, total, processStats, processGroups, processTimes, processWorkers, directCutting]);

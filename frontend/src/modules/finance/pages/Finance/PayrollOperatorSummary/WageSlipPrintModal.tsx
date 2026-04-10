@@ -35,9 +35,9 @@ const WageSlipPrintModal: React.FC<WageSlipPrintModalProps> = ({
                     <title>工资条打印</title>
                     <style>
                         body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; padding: 20px; }
-                        .slip-container { 
-                            border: 1px solid #000; 
-                            margin-bottom: 30px; 
+                        .slip-container {
+                            border: 1px solid #000;
+                            margin-bottom: 30px;
                             padding: 15px;
                             page-break-inside: avoid;
                         }
@@ -109,7 +109,7 @@ const WageSlipPrintModal: React.FC<WageSlipPrintModalProps> = ({
                                         <td>{detail.orderNo || '-'}</td>
                                         <td>{detail.styleNo || '-'}</td>
                                         <td>{detail.processName || '-'}</td>
-                                        <td>{detail.endTime ? dayjs(detail.endTime).format('MM-DD HH:mm') : '-'}</td>
+                                        <td>{detail.endTime ? dayjs(detail.endTime).format('MM-DD') : '-'}</td>
                                         <td>{detail.quantity || 0}</td>
                                         <td>{detail.unitPrice ? Number(detail.unitPrice).toFixed(2) : '0.00'}</td>
                                         <td>{detail.totalAmount ? Number(detail.totalAmount).toFixed(2) : '0.00'}</td>

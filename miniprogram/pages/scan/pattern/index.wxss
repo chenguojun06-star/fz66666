@@ -298,45 +298,4 @@
   margin-top: 8rpx;
 }
 
-/* ========= 底部按钮栏 ========= */
-.footer-bar {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  gap: 20rpx;
-  padding: 20rpx 32rpx calc(env(safe-area-inset-bottom) + 20rpx);
-  background: var(--color-bg-card, #fff);
-  box-shadow: 0 -2rpx 16rpx rgba(0,0,0,0.06);
-  z-index: 100;
-}
-.btn-cancel {
-  flex: 1;
-  height: 88rpx;
-  line-height: 88rpx;
-  text-align: center;
-  border-radius: 16rpx;
-  font-size: 30rpx;
-  font-weight: 600;
-  background: var(--color-border-light, #f1f5f9);
-  color: var(--color-text-secondary, #64748b);
-}
-.btn-submit {
-  flex: 2;
-  height: 88rpx;
-  line-height: 88rpx;
-  text-align: center;
-  border-radius: 16rpx;
-  font-size: 30rpx;
-  font-weight: 600;
-  background: rgba(var(--color-primary-rgb, 37,99,235), 1);
-  color: #fff;
-}
-.btn-submit.off {
-  opacity: 0.5;
-  pointer-events: none;
-}
-.btn-hover {
-  opacity: 0.75;
-}
+

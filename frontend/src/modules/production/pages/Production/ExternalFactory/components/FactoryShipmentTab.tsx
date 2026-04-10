@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { App, Button, Form, Input, InputNumber, Radio, Space, Tag, Descriptions } from 'antd';
-import { SendOutlined, ReloadOutlined } from '@ant-design/icons';
+import { SendOutlined, ReloadOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
 import ResizableModal from '@/components/common/ResizableModal';
-import type { FactoryShipment } from '@/types/production';
-import { factoryShipmentApi, type ShipParams, type ShippableInfo } from '@/services/production/factoryShipmentApi';
+import type { FactoryShipment, FactoryShipmentDetail } from '@/types/production';
+import { factoryShipmentApi, type ShipDetailItem, type ShipParams, type ShippableInfo } from '@/services/production/factoryShipmentApi';
 import { productionOrderApi } from '@/services/production/productionApi';
 import type { ProductionOrder } from '@/types/production';
 
@@ -38,6 +38,9 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
   // 订单选择（用于发货弹窗）
   const [orderList, setOrderList] = useState<ProductionOrder[]>([]);
   const [orderLoading, setOrderLoading] = useState(false);
+  const [shipDetails, setShipDetails] = useState<ShipDetailItem[]>([{ color: '', sizeName: '', quantity: 0 }]);
+  const [expandedDetails, setExpandedDetails] = useState<Record<string, FactoryShipmentDetail[]>>({});
+  const [expandedLoading, setExpandedLoading] = useState<Record<string, boolean>>({});
 
   const fetchShipments = useCallback(async () => {
     setLoading(true);
@@ -110,12 +113,17 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
 
   // 提交发货
   const handleShip = useCallback(async () => {
+    const details = shipDetails.filter(d => d.color && d.sizeName && d.quantity > 0);
+    if (details.length === 0) {
+      message.warning('请至少填写一行发货明细（颜色、尺码、数量均不能为空）');
+      return;
+    }
     try {
       const values = await shipForm.validateFields();
       setShipLoading(true);
       const params: ShipParams = {
         orderId: values.orderId,
-        shipQuantity: values.shipQuantity,
+        details,
         shipMethod: values.shipMethod || 'EXPRESS',
         trackingNo: values.shipMethod === 'EXPRESS' ? (values.trackingNo || undefined) : undefined,
         expressCompany: values.shipMethod === 'EXPRESS' ? (values.expressCompany || undefined) : undefined,
@@ -124,6 +132,7 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
       await factoryShipmentApi.ship(params);
       message.success('发货成功');
       setShipModalOpen(false);
+      setShipDetails([{ color: '', sizeName: '', quantity: 0 }]);
       fetchShipments();
     } catch (err: unknown) {
       if (typeof err === 'object' && err !== null && 'errorFields' in err) return;
@@ -131,7 +140,7 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
     } finally {
       setShipLoading(false);
     }
-  }, [shipForm, message, fetchShipments]);
+  }, [shipForm, message, fetchShipments, shipDetails]);
 
   // 收货
   const handleReceive = useCallback(async (record: FactoryShipment) => {
@@ -278,6 +287,40 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
         rowKey="id"
         loading={loading}
         scroll={{ x: 'max-content' }}
+        expandable={{
+          expandedRowRender: (record) => {
+            const details = expandedDetails[record.id!] || [];
+            const isLoading = expandedLoading[record.id!];
+            if (isLoading) return <span style={{ color: '#999', fontSize: 12 }}>加载中...</span>;
+            if (details.length === 0) return <span style={{ color: '#999', fontSize: 12 }}>无明细</span>;
+            return (
+              <table style={{ fontSize: 12, borderCollapse: 'collapse' as const }}>
+                <thead><tr>
+                  <th style={{ padding: '2px 12px', borderBottom: '1px solid #eee' }}>颜色</th>
+                  <th style={{ padding: '2px 12px', borderBottom: '1px solid #eee' }}>尺码</th>
+                  <th style={{ padding: '2px 12px', borderBottom: '1px solid #eee' }}>数量</th>
+                </tr></thead>
+                <tbody>{details.map((d: FactoryShipmentDetail) => (
+                  <tr key={d.id}>
+                    <td style={{ padding: '2px 12px' }}>{d.color}</td>
+                    <td style={{ padding: '2px 12px' }}>{d.sizeName}</td>
+                    <td style={{ padding: '2px 12px' }}>{d.quantity}</td>
+                  </tr>
+                ))}</tbody>
+              </table>
+            );
+          },
+          onExpand: (expanded: boolean, record: FactoryShipment) => {
+            if (expanded && record.id && !expandedDetails[record.id]) {
+              setExpandedLoading(prev => ({ ...prev, [record.id!]: true }));
+              factoryShipmentApi.getDetails(record.id).then(res => {
+                setExpandedDetails(prev => ({ ...prev, [record.id!]: res?.data ?? [] }));
+              }).finally(() => {
+                setExpandedLoading(prev => ({ ...prev, [record.id!]: false }));
+              });
+            }
+          },
+        }}
         pagination={{
           current: page,
           pageSize,
@@ -330,30 +373,48 @@ const FactoryShipmentTab: React.FC<FactoryShipmentTabProps> = ({ selectedFactory
             </Descriptions>
           )}
 
-          <Form.Item
-            name="shipQuantity"
-            label="发货数量"
-            rules={[
-              { required: true, message: '请输入发货数量' },
-              {
-                validator: (_, value) => {
-                  if (value && shippableInfo && value > shippableInfo.remaining) {
-                    return Promise.reject(`发货数量不能超过可发货数量 (${shippableInfo.remaining})`);
-                  }
-                  if (value && value <= 0) {
-                    return Promise.reject('发货数量必须大于0');
-                  }
-                  return Promise.resolve();
-                },
-              },
-            ]}
-          >
-            <InputNumber
-              style={{ width: '100%' }}
-              min={1}
-              max={shippableInfo?.remaining}
-              placeholder="请输入发货数量"
-            />
+          <Form.Item label="发货明细（颜色/尺码/数量）" required>
+            {shipDetails.map((detail, idx) => (
+              <Space key={idx} style={{ marginBottom: 8, display: 'flex' }} align="baseline">
+                <Input
+                  placeholder="颜色"
+                  value={detail.color}
+                  style={{ width: 90 }}
+                  onChange={e => {
+                    const next = [...shipDetails];
+                    next[idx] = { ...next[idx], color: e.target.value };
+                    setShipDetails(next);
+                  }}
+                />
+                <Input
+                  placeholder="尺码"
+                  value={detail.sizeName}
+                  style={{ width: 70 }}
+                  onChange={e => {
+                    const next = [...shipDetails];
+                    next[idx] = { ...next[idx], sizeName: e.target.value };
+                    setShipDetails(next);
+                  }}
+                />
+                <InputNumber
+                  placeholder="数量"
+                  value={detail.quantity || undefined}
+                  min={1}
+                  style={{ width: 80 }}
+                  onChange={val => {
+                    const next = [...shipDetails];
+                    next[idx] = { ...next[idx], quantity: Number(val) || 0 };
+                    setShipDetails(next);
+                  }}
+                />
+                {shipDetails.length > 1 && (
+                  <Button danger size="small" icon={<DeleteOutlined />} onClick={() => setShipDetails(shipDetails.filter((_, i) => i !== idx))} />
+                )}
+              </Space>
+            ))}
+            <Button type="dashed" icon={<PlusOutlined />} onClick={() => setShipDetails([...shipDetails, { color: '', sizeName: '', quantity: 0 }])}>
+              添加行
+            </Button>
           </Form.Item>
 
           <Form.Item name="shipMethod" label="发货方式" rules={[{ required: true, message: '请选择发货方式' }]}>

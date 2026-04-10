@@ -184,7 +184,7 @@ public class DeliveryPredictionOrchestrator {
             plog.setCreateTime(LocalDateTime.now());
             predictionLogMapper.insert(plog);
         } catch (Exception le) {
-            log.warn("[交期预测] 保存预测日志失败（不影响响应）: {}", le.getMessage());
+            log.warn("[交期预测] 保存预测日志失败（不影响响应）: {}", le.getMessage(), le);
         }
 
         } catch (Exception e) {

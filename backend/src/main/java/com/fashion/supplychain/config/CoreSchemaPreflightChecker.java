@@ -89,6 +89,15 @@ public class CoreSchemaPreflightChecker implements ApplicationRunner, HealthIndi
         tableColumns.put("t_mind_push_rule", List.of(
             "notify_time_start", "notify_time_end"
         ));
+        tableColumns.put("t_intelligence_signal", List.of(
+            "tenant_id", "signal_type", "signal_code", "signal_level",
+            "status", "create_time", "delete_flag"
+        ));
+        tableColumns.put("t_intelligence_metrics", List.of(
+            "tenant_id", "scene", "provider", "model", "trace_id",
+            "success", "latency_ms", "prompt_tokens", "completion_tokens",
+            "create_time", "delete_flag"
+        ));
         REQUIRED_COLUMNS = Collections.unmodifiableMap(tableColumns);
     }
 
@@ -162,7 +171,7 @@ public class CoreSchemaPreflightChecker implements ApplicationRunner, HealthIndi
         lastCheckedAt = checkedAt;
 
         if (missing.isEmpty()) {
-            log.info("[SchemaPreflight] 核心表结构预检通过：生产/裁剪/质检入库/采购/领取/智能会议核心缺列为 0");
+            log.info("[SchemaPreflight] 核心表结构预检通过：生产/裁剪/质检入库/采购/领取/智能会议/智能信号/智能度量核心缺列为 0");
         } else {
             log.warn("[SchemaPreflight] 检测到核心表结构缺口：{}", formatSummary(missing));
             log.warn("[SchemaPreflight] 建议优先运行 deployment/cloud-db-core-schema-preflight-20260318.sql 做云端体检，再按缺列结果补库");

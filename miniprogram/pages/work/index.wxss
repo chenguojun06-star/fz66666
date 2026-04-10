@@ -208,7 +208,7 @@ page {
   display: flex;
   flex-direction: column;
   padding: 10px 12px;
-  background: #ffffff;
+  background: var(--color-bg-card);
   border: 1px solid rgba(var(--color-primary-rgb), 0.1);
   border-radius: var(--radius-lg);
   margin-bottom: 8px;
@@ -224,14 +224,14 @@ page {
 }
 
 .list-item-highlight {
-  background: #ffffff;
+  background: var(--color-bg-card);
   border-color: rgba(var(--color-primary-rgb), 0.28);
   box-shadow: 0 0 0 2px rgba(var(--color-primary-rgb), 0.08);
 }
 
 .list-item-overdue {
   border-left: 3px solid var(--color-error);
-  background: #ffffff;
+  background: var(--color-bg-card);
 }
 
 .item-body {
@@ -262,7 +262,7 @@ page {
   align-items: center;
   justify-content: center;
   font-size: 10px;
-  color: #999;
+  color: var(--color-text-disabled);
   text-align: center;
   white-space: pre-line;
 }
@@ -360,7 +360,7 @@ page {
 
 .meta-label {
   font-size: 10px;
-  color: #999;
+  color: var(--color-text-disabled);
 }
 
 .meta-value {
@@ -375,7 +375,7 @@ page {
 }
 
 .meta-sep {
-  color: #ddd;
+  color: var(--color-border);
   margin: 0 3px;
 }
 
@@ -398,7 +398,7 @@ page {
 .progress-divider .progress-bar {
   flex: 1;
   height: 4px;
-  background: #f0f0f0;
+  background: var(--color-border-light);
   border-radius: 2px;
   overflow: hidden;
 }
@@ -522,7 +522,7 @@ page {
   border-radius: var(--radius-full);
   font-size: 16px;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--color-text-white);
   box-shadow: 0 2px 6px rgba(59, 130, 246, 0.2);
 }
 
@@ -531,8 +531,8 @@ page {
 }
 
 .btn-disabled {
-  background: #f5f5f5;
-  color: #999;
+  background: var(--color-bg-gray);
+  color: var(--color-text-disabled);
   box-shadow: none;
 }
 
