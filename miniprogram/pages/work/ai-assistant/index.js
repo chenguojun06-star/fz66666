@@ -2,6 +2,7 @@ const api = require('../../../utils/api');
 const { isAdminOrSupervisor } = require('../../../utils/permission');
 const { parseChatReply } = require('./chat-parser');
 const { toast } = require('../../../utils/uiHelper');
+const { eventBus } = require('../../../utils/eventBus');
 
 // 工厂工人快捷提问
 const WORKER_PROMPTS = [
@@ -53,6 +54,15 @@ Page({
   },
 
   onLoad() {
+    // 隐私合规：监听隐私弹窗事件
+    if (eventBus && typeof eventBus.on === 'function') {
+      this._unsubPrivacy = eventBus.on('showPrivacyDialog', (resolve) => {
+        try {
+          var dialog = this.selectComponent('#privacyDialog');
+          if (dialog && typeof dialog.showDialog === 'function') dialog.showDialog(resolve);
+        } catch (_) {}
+      });
+    }
     const isManager = isAdminOrSupervisor();
     const conversationId = 'mp_' + Date.now();
     const welcomeId = conversationId + '_w';
@@ -96,19 +106,31 @@ Page({
 
   /** 选择图片（拍照/相册） */
   chooseImage() {
-    if (this.data.sending || this.data.uploading) return;
+    if (this.data.sending || this.data.uploading) {
+      console.warn('[AI-Assistant] chooseImage blocked: sending=', this.data.sending, 'uploading=', this.data.uploading);
+      return;
+    }
+    var self = this;
     wx.chooseMedia({
       count: 1,
       mediaType: ['image'],
       sourceType: ['camera', 'album'],
       success: (res) => {
         const path = (res.tempFiles && res.tempFiles[0] && res.tempFiles[0].tempFilePath) || '';
-        if (path) this.setData({ pendingImage: path });
+        if (path) self.setData({ pendingImage: path });
       },
       fail: (err) => {
         console.warn('[AI-Assistant] chooseImage fail:', err);
         if (err && err.errMsg && err.errMsg.indexOf('cancel') === -1) {
-          wx.showToast({ title: '无法打开相机/相册，请检查权限', icon: 'none' });
+          wx.showModal({
+            title: '相机/相册权限',
+            content: '需要相机或相册权限才能上传图片，请在设置中允许',
+            confirmText: '去设置',
+            cancelText: '取消',
+            success: function (modalRes) {
+              if (modalRes.confirm) wx.openSetting();
+            }
+          });
         }
       },
     });
@@ -292,5 +314,12 @@ Page({
 
   _scrollToBottom() {
     wx.pageScrollTo({ scrollTop: 99999, duration: 150 });
+  },
+
+  onUnload() {
+    if (this._unsubPrivacy) {
+      this._unsubPrivacy();
+      this._unsubPrivacy = null;
+    }
   },
 });

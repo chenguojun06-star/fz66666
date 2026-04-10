@@ -18,6 +18,7 @@ export interface PendingCloseOrder {
   minRequired: number;
   cuttingQty: number;
   warehousingQualified: number;
+  isSpecial?: boolean;
 }
 
 /**
@@ -119,17 +120,13 @@ export function useProductionActions({
       return;
     }
 
-    if (minRequired <= 0) {
-      message.warning('裁剪数量异常，无法关单');
+    if (minRequired <= 0 || warehousingQualified < minRequired) {
+      // 未满足关单条件 → 特需关单路径，必须填写原因
+      setPendingCloseOrder({ order, orderQty, minRequired, cuttingQty, warehousingQualified, isSpecial: true });
       return;
     }
 
-    if (warehousingQualified < minRequired) {
-      message.warning(`关单条件未满足：合格入库${warehousingQualified}/${minRequired}（裁剪${cuttingQty}，允许差异10%）`);
-      return;
-    }
-
-    setPendingCloseOrder({ order, orderQty, minRequired, cuttingQty, warehousingQualified });
+    setPendingCloseOrder({ order, orderQty, minRequired, cuttingQty, warehousingQualified, isSpecial: false });
   };
 
   /** 报废操作 */
@@ -163,7 +160,7 @@ export function useProductionActions({
       const orderId = safeString((pendingCloseOrder.order as any)?.id, '');
       const result = await api.post<{ code: number; message?: string; data: ProductionOrder }>(
         '/production/order/close',
-        { id: orderId, sourceModule: 'myOrders', remark: remark || undefined }
+        { id: orderId, sourceModule: 'myOrders', remark: remark || undefined, specialClose: !!pendingCloseOrder?.isSpecial }
       );
       if (!isApiSuccess(result)) {
         const msg = typeof result === 'object' && result !== null && 'message' in result

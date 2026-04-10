@@ -84,10 +84,14 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         String receiverId = (String) safeParams.getOrDefault("receiverId", "");
         String receiverName = (String) safeParams.getOrDefault("receiverName", "");
 
+        // 提前获取 tenantId（供 keywordMatchedOrderIds 及后续 notIn 优化复用）
+        Long tenantId = UserContext.tenantId();
+
         final List<String> keywordMatchedOrderIds = StringUtils.hasText(orderNo)
             ? productionOrderService.list(
                 new LambdaQueryWrapper<ProductionOrder>()
                     .select(ProductionOrder::getId)
+                    .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
                     .and(w -> w.like(ProductionOrder::getFactoryName, orderNo.trim())
                         .or().like(ProductionOrder::getOrderNo, orderNo.trim())
                         .or().like(ProductionOrder::getStyleNo, orderNo.trim()))
@@ -105,7 +109,6 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                 .eq(MaterialPurchase::getDeleteFlag, 0);
 
         // 🔒 多租户隔离：非工厂账号也必须按 tenantId 过滤，防止跨租户数据泄漏
-        Long tenantId = UserContext.tenantId();
         wrapper.eq(tenantId != null, MaterialPurchase::getTenantId, tenantId);
 
         // orderNo作为通用搜索关键词，支持订单号/采购单号/物料编码/物料名称的or查询
@@ -173,22 +176,55 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             wrapper.like(MaterialPurchase::getSupplierName, supplier);
         }
 
-        // 只有“我的订单”允许显示报废订单，采购页默认必须排除报废订单关联记录。
-        wrapper.apply("(order_id IS NULL OR order_id = '' OR order_id NOT IN (SELECT id FROM t_production_order WHERE delete_flag = 1 OR status = 'scrapped'))");
+        // 只有"我的订单"允许显示报废订单，采购页默认必须排除报废订单关联记录。
+        // 【性能优化】用预加载 ID 列表取代 NOT IN(SELECT...) 关联子查询，消除全表扫描（慢查询 1.4-2.5s 根因）
+        List<String> scrappedOrderIds = productionOrderService.list(
+                new LambdaQueryWrapper<ProductionOrder>()
+                        .select(ProductionOrder::getId)
+                        .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+                        .and(w -> w.eq(ProductionOrder::getDeleteFlag, 1)
+                                .or().eq(ProductionOrder::getStatus, "scrapped")))
+                .stream().map(ProductionOrder::getId).filter(StringUtils::hasText)
+                .collect(Collectors.toList());
+        if (!scrappedOrderIds.isEmpty()) {
+            wrapper.and(w -> w.isNull(MaterialPurchase::getOrderId)
+                    .or().eq(MaterialPurchase::getOrderId, "")
+                    .or().notIn(MaterialPurchase::getOrderId, scrappedOrderIds));
+        }
+        // scrappedOrderIds 为空时无需过滤（本租户无报废/删除订单，所有记录均有效）
 
-        // factoryType 过滤：通过子查询匹配关联订单工厂类型（INTERNAL/EXTERNAL）
+        // factoryType 过滤：预加载匹配订单 ID，替代 IN(SELECT...) 关联子查询
         // 无 order_id 的记录（batch/stock/manual）不受此过滤影响
         if (StringUtils.hasText(factoryType)) {
-            wrapper.apply("(order_id IS NULL OR order_id = '' OR order_id IN " +
-                    "(SELECT id FROM t_production_order WHERE factory_type = {0} AND (delete_flag IS NULL OR delete_flag = 0) AND status <> 'scrapped'))",
-                    factoryType.trim().toUpperCase());
+            List<String> ftOrderIds = productionOrderService.list(
+                    new LambdaQueryWrapper<ProductionOrder>()
+                            .select(ProductionOrder::getId)
+                            .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+                            .eq(ProductionOrder::getFactoryType, factoryType.trim().toUpperCase())
+                            .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
+                            .ne(ProductionOrder::getStatus, "scrapped"))
+                    .stream().map(ProductionOrder::getId).filter(StringUtils::hasText)
+                    .collect(Collectors.toList());
+            wrapper.and(w -> {
+                w.isNull(MaterialPurchase::getOrderId).or().eq(MaterialPurchase::getOrderId, "");
+                if (!ftOrderIds.isEmpty()) w.or().in(MaterialPurchase::getOrderId, ftOrderIds);
+            });
         }
         if (StringUtils.hasText(factoryName)) {
-            wrapper.apply("(order_id IS NULL OR order_id = '' OR order_id IN " +
-                    "(SELECT id FROM t_production_order WHERE factory_name LIKE CONCAT('%', {0}, '%') AND (delete_flag IS NULL OR delete_flag = 0) AND status <> 'scrapped'))",
-                    factoryName.trim());
+            List<String> fnOrderIds = productionOrderService.list(
+                    new LambdaQueryWrapper<ProductionOrder>()
+                            .select(ProductionOrder::getId)
+                            .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+                            .like(ProductionOrder::getFactoryName, factoryName.trim())
+                            .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0))
+                            .ne(ProductionOrder::getStatus, "scrapped"))
+                    .stream().map(ProductionOrder::getId).filter(StringUtils::hasText)
+                    .collect(Collectors.toList());
+            wrapper.and(w -> {
+                w.isNull(MaterialPurchase::getOrderId).or().eq(MaterialPurchase::getOrderId, "");
+                if (!fnOrderIds.isEmpty()) w.or().in(MaterialPurchase::getOrderId, fnOrderIds);
+            });
         }
-
         // 工厂账号隔离（由 MaterialPurchaseOrchestratorHelper 注入 _factoryOrderIds）
         @SuppressWarnings("unchecked")
         List<String> factoryOrderIds = (List<String>) safeParams.get("_factoryOrderIds");

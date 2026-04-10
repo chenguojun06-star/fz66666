@@ -49,7 +49,7 @@ export const productionOrderApi = {
   },
   list: (params: ProductionOrderListParams) => api.get<{ code: number; data: { records: unknown[]; total: number } }>('/production/order/list', { params }),
   // detail 已废弃，统一使用 list({ orderNo: 'xxx' }) 查询单个订单
-  close: (id: string, sourceModule: string, remark?: string) => api.post<{ code: number; message: string; data: boolean }>('/production/order/close', { id, sourceModule, remark }),
+  close: (id: string, sourceModule: string, remark?: string, specialClose?: boolean) => api.post<{ code: number; message: string; data: boolean }>('/production/order/close', { id, sourceModule, remark, specialClose }),
   updateProgress: (payload: Record<string, unknown>) => api.post<{ code: number; message: string; data: boolean }>('/production/order/update-progress', payload),
   saveProgressWorkflow: (payload: Record<string, unknown>) => api.post<{ code: number; message: string; data: boolean }>('/production/order/progress-workflow/lock', payload),
   rollbackProgressWorkflow: (payload: Record<string, unknown>) => api.post<{ code: number; message: string; data: boolean }>('/production/order/progress-workflow/rollback', payload),

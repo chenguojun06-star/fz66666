@@ -1,6 +1,7 @@
 var api = require('../../utils/api');
 var uiHelper = require('../../utils/uiHelper');
 var toast = uiHelper.toast;
+var eventBus = require('../../utils/eventBus').eventBus;
 
 var TASKS = [
   { type: 'fabric',    icon: '🧵', label: '面料检测', desc: '检测面料质量与缺陷' },
@@ -9,6 +10,25 @@ var TASKS = [
 ];
 
 Page({
+  onLoad: function () {
+    // 隐私合规：监听隐私弹窗事件
+    if (eventBus && typeof eventBus.on === 'function') {
+      this._unsubPrivacy = eventBus.on('showPrivacyDialog', function (resolve) {
+        try {
+          var dialog = this.selectComponent('#privacyDialog');
+          if (dialog && typeof dialog.showDialog === 'function') dialog.showDialog(resolve);
+        } catch (_) {}
+      }.bind(this));
+    }
+  },
+
+  onUnload: function () {
+    if (this._unsubPrivacy) {
+      this._unsubPrivacy();
+      this._unsubPrivacy = null;
+    }
+  },
+
   data: {
     tasks: TASKS,
     activeTask: '',

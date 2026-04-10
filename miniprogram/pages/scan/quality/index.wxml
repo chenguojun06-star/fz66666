@@ -19,8 +19,16 @@
     <text class="insight-icon">🤖</text>
     <view class="insight-body">
       <text wx:if="{{historicalDefectRate}}" class="insight-text">历史不良率 {{historicalDefectRate}}</text>
-      <text wx:if="{{aiSuggestion.suggestion}}" class="insight-text">{{aiSuggestion.suggestion}}</text>
-      <view class="insight-action" bindtap="onAdoptAiSuggestion">采纳建议</view>
+      <text wx:if="{{aiSuggestion.urgentTip}}" class="insight-text insight-urgent">⚠️ {{aiSuggestion.urgentTip}}</text>
+      <block wx:if="{{aiSuggestion.checkpoints && aiSuggestion.checkpoints.length > 0}}">
+        <text class="insight-label">质检要点：</text>
+        <text wx:for="{{aiSuggestion.checkpoints}}" wx:key="*this" class="insight-checkpoint">• {{item}}</text>
+      </block>
+      <block wx:if="{{aiSuggestionList.length > 0}}">
+        <text class="insight-label">缺陷提示：</text>
+        <text wx:for="{{aiSuggestionList}}" wx:key="category" class="insight-checkpoint">【{{item.label}}】{{item.text}}</text>
+      </block>
+      <view wx:if="{{aiSuggestionList.length > 0}}" class="insight-action" bindtap="onAdoptAiSuggestion">采纳建议</view>
     </view>
   </view>
 
@@ -101,4 +109,5 @@
     </view>
   </view>
 
+  <privacy-dialog id="privacyDialog" />
 </view>

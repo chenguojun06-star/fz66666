@@ -210,6 +210,15 @@ public class ProductionOrderFinanceOrchestrationService {
 
     @Transactional(rollbackFor = Exception.class)
     public ProductionOrder closeOrder(String id) {
+        return closeOrder(id, false);
+    }
+
+    /**
+     * 关闭订单
+     * @param specialClose true=特需关单，跳过90%入库率校验（适用于长期延期/生产事故等特殊情况），此时备注原因必须由上层保证非空
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public ProductionOrder closeOrder(String id, boolean specialClose) {
         if (!UserContext.isSupervisorOrAbove()) {
             throw new AccessDeniedException("无权限完成");
         }
@@ -252,13 +261,18 @@ public class ProductionOrderFinanceOrchestrationService {
         cuttingQty = Math.max(0, cuttingQty);
 
         int warehousingQualified = productWarehousingService.sumQualifiedByOrderId(oid);
-        if (cuttingQty <= 0) {
-            throw new IllegalStateException("裁剪数量不足，无法完成");
-        }
 
-        int minRequired = (int) Math.ceil(cuttingQty * 0.9);
-        if (warehousingQualified < minRequired) {
-            throw new IllegalStateException("成品合格入库数量不足，无法完成");
+        if (!specialClose) {
+            // 正常关单：严格校验90%入库率
+            if (cuttingQty <= 0) {
+                throw new IllegalStateException("裁剪数量不足，无法完成");
+            }
+            int minRequired = (int) Math.ceil(cuttingQty * 0.9);
+            if (warehousingQualified < minRequired) {
+                throw new IllegalStateException("成品合格入库数量不足，无法完成");
+            }
+        } else {
+            log.info("特需关单：orderId={}, specialClose=true, cuttingQty={}, warehousingQualified={}", oid, cuttingQty, warehousingQualified);
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -274,9 +288,12 @@ public class ProductionOrderFinanceOrchestrationService {
             throw new IllegalStateException("完成失败");
         }
 
+        // 同步内存对象，确保对账数量 = 实际合格入库数（DB 已写入但内存仍是旧值）
+        order.setCompletedQuantity(warehousingQualified);
+
         // 【关键】关单时自动创建订单结算（本厂+加工厂统一处理）
         try {
-            orderReconciliationHelper.createShipmentReconciliationOnClose(order);
+            orderReconciliationHelper.createShipmentReconciliationOnClose(order, specialClose);
         } catch (Exception e) {
             log.error("创建订单结算失败: orderId={}", oid, e);
             // 不阻断关单流程，只记录错误

@@ -302,11 +302,16 @@ public class ProductionOrderOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public ProductionOrder closeOrder(String id, String sourceModule) {
-        return closeOrder(id, sourceModule, null);
+        return closeOrder(id, sourceModule, null, false);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public ProductionOrder closeOrder(String id, String sourceModule, String remark) {
+        return closeOrder(id, sourceModule, remark, false);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public ProductionOrder closeOrder(String id, String sourceModule, String remark, boolean specialClose) {
         TenantAssert.assertTenantContext(); // 关闭订单必须有租户上下文
         String src = StringUtils.hasText(sourceModule) ? sourceModule.trim() : null;
         if (!StringUtils.hasText(src)) {
@@ -315,7 +320,7 @@ public class ProductionOrderOrchestrator {
         if (!CLOSE_SOURCE_MY_ORDERS.equals(src) && !CLOSE_SOURCE_PRODUCTION_PROGRESS.equals(src)) {
             throw new AccessDeniedException("仅允许在我的订单或工序跟进完成");
         }
-        ProductionOrder result = financeOrchestrationService.closeOrder(id);
+        ProductionOrder result = financeOrchestrationService.closeOrder(id, specialClose);
         // 记录关闭操作日志
         try {
             if (operationLogService != null && result != null) {

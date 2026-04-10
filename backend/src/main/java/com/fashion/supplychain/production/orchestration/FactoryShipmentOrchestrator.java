@@ -14,10 +14,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import com.fashion.supplychain.production.service.FactoryShipmentDetailService;
+import com.fashion.supplychain.production.entity.FactoryShipmentDetail;
 
 @Service
 @Slf4j
@@ -129,6 +132,46 @@ public class FactoryShipmentOrchestrator {
         factoryShipmentService.removeById(shipmentId);
         log.info("[FactoryShipment] 删除发货单 shipmentId={}", shipmentId);
         return Result.success(null);
+    }
+
+    /**
+     * 获取某订单所有发货单中明细的颜色×尺码汇总，用于进度表 发货数量 列展示。
+     * 返回格式：[{color, sizes:[{sizeName, quantity}], total}]
+     */
+    public List<Map<String, Object>> getOrderShipmentDetailSum(String orderId) {
+        List<FactoryShipment> shipments = factoryShipmentService.lambdaQuery()
+                .eq(FactoryShipment::getOrderId, orderId)
+                .eq(FactoryShipment::getDeleteFlag, 0)
+                .list();
+        // color -> sizeName -> totalQty
+        Map<String, Map<String, Integer>> colorSizeMap = new LinkedHashMap<>();
+        for (FactoryShipment fs : shipments) {
+            List<FactoryShipmentDetail> details = factoryShipmentDetailService.listByShipmentId(fs.getId());
+            for (FactoryShipmentDetail d : details) {
+                String color = d.getColor() != null ? d.getColor() : "";
+                String size  = d.getSizeName() != null ? d.getSizeName() : "";
+                colorSizeMap.computeIfAbsent(color, k -> new LinkedHashMap<>())
+                            .merge(size, d.getQuantity() != null ? d.getQuantity() : 0, Integer::sum);
+            }
+        }
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Map.Entry<String, Map<String, Integer>> e : colorSizeMap.entrySet()) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("color", e.getKey());
+            List<Map<String, Object>> sizes = new ArrayList<>();
+            int rowTotal = 0;
+            for (Map.Entry<String, Integer> se : e.getValue().entrySet()) {
+                Map<String, Object> sizeRow = new LinkedHashMap<>();
+                sizeRow.put("sizeName", se.getKey());
+                sizeRow.put("quantity", se.getValue());
+                sizes.add(sizeRow);
+                rowTotal += se.getValue();
+            }
+            row.put("sizes", sizes);
+            row.put("total", rowTotal);
+            result.add(row);
+        }
+        return result;
     }
 
     public Map<String, Object> getShippableInfo(String orderId) {

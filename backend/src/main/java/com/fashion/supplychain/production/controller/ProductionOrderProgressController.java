@@ -79,7 +79,11 @@ public class ProductionOrderProgressController {
      */
     @PostMapping("/confirm-procurement")
     public Result<?> confirmProcurement(@Valid @RequestBody ConfirmProcurementRequest body) {
-        ProductionOrder updated = productionOrderOrchestrator.confirmProcurement(body.getId(), body.getRemark());
+        String target = StringUtils.hasText(body.getId()) ? body.getId() : body.getOrderNo();
+        if (!StringUtils.hasText(target)) {
+            return Result.fail("缺少id或orderNo参数");
+        }
+        ProductionOrder updated = productionOrderOrchestrator.confirmProcurement(target, body.getRemark());
         return Result.success(updated);
     }
 
@@ -234,8 +238,9 @@ public class ProductionOrderProgressController {
     }
 
     public static class ConfirmProcurementRequest {
-        @NotBlank(message = "订单ID不能为空")
         private String id;
+
+        private String orderNo;
 
         @NotBlank(message = "确认备注不能为空")
         @Size(min = 10, message = "确认备注至少需要10个字符，请详细说明确认原因")
@@ -247,6 +252,14 @@ public class ProductionOrderProgressController {
 
         public void setId(String id) {
             this.id = id;
+        }
+
+        public String getOrderNo() {
+            return orderNo;
+        }
+
+        public void setOrderNo(String orderNo) {
+            this.orderNo = orderNo;
         }
 
         public String getRemark() {

@@ -133,6 +133,15 @@ public class ProductionOrderWorkflowHelper {
         }
 
         ProductionOrder order = productionOrderQueryService.getDetailById(oid);
+        if (order == null) {
+            order = productionOrderService.lambdaQuery()
+                    .eq(ProductionOrder::getOrderNo, oid)
+                    .last("LIMIT 1")
+                    .one();
+            if (order != null) {
+                oid = order.getId();
+            }
+        }
         if (order == null) { throw new IllegalArgumentException("订单不存在"); }
         TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "生产订单");
 
@@ -166,6 +175,11 @@ public class ProductionOrderWorkflowHelper {
                     String updatedJson = localMapper.writeValueAsString(workflow);
                     ProductionOrder updateEntity = new ProductionOrder();
                     updateEntity.setId(oid);
+                    updateEntity.setProcurementManuallyCompleted(1);
+                    updateEntity.setProcurementConfirmedBy(UserContext.userId());
+                    updateEntity.setProcurementConfirmedByName(UserContext.username());
+                    updateEntity.setProcurementConfirmedAt(LocalDateTime.now());
+                    updateEntity.setProcurementConfirmRemark(remark.trim());
                     updateEntity.setProgressWorkflowJson(updatedJson);
                     updateEntity.setUpdateTime(LocalDateTime.now());
                     productionOrderService.updateById(updateEntity);
@@ -173,6 +187,16 @@ public class ProductionOrderWorkflowHelper {
             } catch (Exception e) {
                 log.warn("confirmProcurement: update workflow JSON failed for orderId={}", oid, e);
             }
+        } else {
+            ProductionOrder updateEntity = new ProductionOrder();
+            updateEntity.setId(oid);
+            updateEntity.setProcurementManuallyCompleted(1);
+            updateEntity.setProcurementConfirmedBy(UserContext.userId());
+            updateEntity.setProcurementConfirmedByName(UserContext.username());
+            updateEntity.setProcurementConfirmedAt(LocalDateTime.now());
+            updateEntity.setProcurementConfirmRemark(remark.trim());
+            updateEntity.setUpdateTime(LocalDateTime.now());
+            productionOrderService.updateById(updateEntity);
         }
 
         return productionOrderQueryService.getDetailById(oid);

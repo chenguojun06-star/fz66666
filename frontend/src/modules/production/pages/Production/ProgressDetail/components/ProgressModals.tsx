@@ -3,7 +3,8 @@ import React from 'react';
 import type { FormInstance } from 'antd';
 import type { ProductionOrder } from '@/types/production';
 import { parseProductionOrderLines } from '@/utils/api';
-import type { ShippableInfo, ShipDetailItem } from '@/services/production/factoryShipmentApi';
+import type { ShippableInfo, ShipDetailItem, ShippedDetailSum } from '@/services/production/factoryShipmentApi';
+import type { FactoryShipment } from '@/types/production';
 import type { LabelPrintStyleInfo } from '../hooks/useLabelPrint';
 import ScanConfirmModal from './ScanConfirmModal';
 import FactoryShipModal from './FactoryShipModal';
@@ -28,6 +29,8 @@ export interface ProgressModalsProps {
   setShipModalOpen: (open: boolean) => void;
   shipDetails: ShipDetailItem[];
   onShipDetailsChange: (details: ShipDetailItem[]) => void;
+  shipHistory?: FactoryShipment[];
+  detailSum?: ShippedDetailSum[];
   /* Share dialog (ReactNode from useShareOrderDialog) */
   shareOrderDialog: React.ReactNode;
 
@@ -66,6 +69,7 @@ export interface ProgressModalsProps {
     cuttingQty: number;
     minRequired: number;
     warehousingQualified: number;
+    isSpecial?: boolean;
   } | null;
   closeOrderLoading: boolean;
   confirmCloseOrder: (reason?: string) => void;
@@ -101,6 +105,7 @@ const ProgressModals: React.FC<ProgressModalsProps> = (props) => {
       <FactoryShipModal
         open={shipModalOpen}
         orderNo={shipModalOrder?.orderNo}
+        orderRecord={shipModalOrder}
         shippableInfo={shippableInfo}
         form={shipForm}
         loading={shipLoading}
@@ -108,6 +113,8 @@ const ProgressModals: React.FC<ProgressModalsProps> = (props) => {
         onShipDetailsChange={onShipDetailsChange}
         onSubmit={handleShipSubmit}
         onCancel={() => setShipModalOpen(false)}
+        shipHistory={props.shipHistory}
+        detailSum={props.detailSum}
       />
 
       {shareOrderDialog}
@@ -173,20 +180,26 @@ const ProgressModals: React.FC<ProgressModalsProps> = (props) => {
 
       <RejectReasonModal
         open={pendingCloseOrder !== null}
-        title={`确认关单：${pendingCloseOrder?.orderNo || ''}`}
+        title={pendingCloseOrder?.isSpecial ? '特需关单确认' : `确认关单：${pendingCloseOrder?.orderNo || ''}`}
         description={pendingCloseOrder ? (
           <div>
+            {pendingCloseOrder.isSpecial && (
+              <div style={{ color: '#faad14', marginBottom: 8 }}>
+                ⚠️ 该订单未满足关单条件（合格入库 {pendingCloseOrder.warehousingQualified}/{pendingCloseOrder.minRequired}），特需关单不可撤销，请填写原因。
+              </div>
+            )}
             <div>订单数量：{pendingCloseOrder.orderQty}</div>
-            <div>关单阈值（裁剪数90%）：{pendingCloseOrder.minRequired}</div>
+            <div>关单閘値（裁剪数90%）：{pendingCloseOrder.minRequired}</div>
             <div>当前裁剪数：{pendingCloseOrder.cuttingQty}</div>
             <div>当前合格入库：{pendingCloseOrder.warehousingQualified}</div>
-            <div style={{ marginTop: 8 }}>关单后订单状态将变为"已完成"，并自动生成对账记录。</div>
+            <div style={{ marginTop: 8 }}>关单后订单状态将变为“已完成”，并自动生成对账记录。</div>
           </div>
         ) : undefined}
-        fieldLabel="关闭原因（可选，将记录到操作日志）"
-        required={false}
+        fieldLabel={pendingCloseOrder?.isSpecial ? '特需原因' : '关闭原因（可选，将记录到操作日志）'}
+        placeholder={pendingCloseOrder?.isSpecial ? '请说明特需关单具体原因（必填）' : undefined}
+        required={!!pendingCloseOrder?.isSpecial}
         okDanger={false}
-        okText="确认关单"
+        okText={pendingCloseOrder?.isSpecial ? '确认特需关单' : '确认关单'}
         loading={closeOrderLoading}
         onOk={confirmCloseOrder}
         onCancel={cancelCloseOrder}

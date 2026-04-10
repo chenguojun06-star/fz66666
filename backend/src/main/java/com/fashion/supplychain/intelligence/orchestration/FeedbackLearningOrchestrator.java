@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -43,6 +44,11 @@ public class FeedbackLearningOrchestrator {
 
     @Autowired
     private AiAdvisorService aiAdvisorService;
+
+    @Autowired(required = false)
+    private JdbcTemplate jdbcTemplate;
+
+    private volatile Boolean feedbackRecordTableReady;
 
     /**
      * 建议类型采纳统计： suggestionType → [accepted, rejected, total]
@@ -99,12 +105,19 @@ public class FeedbackLearningOrchestrator {
         }
 
         writeFeedbackRecord(request, deviationMinutes);
-        feedbackReasonOrchestrator.recordFeedbackReason(request);
+        try {
+            feedbackReasonOrchestrator.recordFeedbackReason(request);
+        } catch (Exception e) {
+            log.warn("[反馈闭环] 写入feedback_reason失败（不影响响应）: {}", e.getMessage());
+        }
         return response;
     }
 
     // 将反馈写入独立智能反馈记录表，供学习闭环使用
     private void writeFeedbackRecord(FeedbackRequest request, long deviationMinutes) {
+        if (!isFeedbackRecordTableReady()) {
+            return;
+        }
         try {
             UserContext ctx = UserContext.get();
             IntelligenceFeedbackRecord record = new IntelligenceFeedbackRecord();
@@ -141,6 +154,51 @@ public class FeedbackLearningOrchestrator {
             }
         } catch (Exception e) {
             log.warn("[反馈闭环] 写入feedback_record失败（不影响响应）: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 历史环境中 t_intelligence_feedback 曾被旧版执行引擎占用为另一套表结构。
+     * 这里仅在当前学习闭环所需列齐全且 id 为数值主键时才写入，避免运行时持续报 SQL 错。
+     */
+    private boolean isFeedbackRecordTableReady() {
+        if (feedbackRecordTableReady != null) {
+            return feedbackRecordTableReady;
+        }
+        synchronized (this) {
+            if (feedbackRecordTableReady != null) {
+                return feedbackRecordTableReady;
+            }
+            if (jdbcTemplate == null) {
+                feedbackRecordTableReady = false;
+                return false;
+            }
+            try {
+                Integer requiredColumns = jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                                + "WHERE TABLE_SCHEMA = DATABASE() "
+                                + "AND TABLE_NAME = 't_intelligence_feedback' "
+                                + "AND COLUMN_NAME IN ('prediction_id','suggestion_type','feedback_result',"
+                                + "'feedback_reason','feedback_analysis','deviation_minutes','create_time','update_time')",
+                        Integer.class);
+                String idType = jdbcTemplate.queryForObject(
+                        "SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS "
+                                + "WHERE TABLE_SCHEMA = DATABASE() "
+                                + "AND TABLE_NAME = 't_intelligence_feedback' "
+                                + "AND COLUMN_NAME = 'id'",
+                        String.class);
+                boolean ready = requiredColumns != null && requiredColumns == 8
+                        && idType != null
+                        && ("bigint".equalsIgnoreCase(idType) || "int".equalsIgnoreCase(idType));
+                feedbackRecordTableReady = ready;
+                if (!ready) {
+                    log.warn("[反馈闭环] 检测到 t_intelligence_feedback 仍为历史结构，跳过学习闭环写入，避免影响主接口响应");
+                }
+            } catch (Exception e) {
+                log.warn("[反馈闭环] 检测 t_intelligence_feedback 结构失败，按不写入处理: {}", e.getMessage());
+                feedbackRecordTableReady = false;
+            }
+            return feedbackRecordTableReady;
         }
     }
 

@@ -382,7 +382,7 @@ export function useNodeDetailData(params: UseNodeDetailDataParams) {
     return Array.from(map.values()).sort((a, b) => b.totalQty - a.totalQty);
   }, [filteredScanRecords]);
 
-  const _formatHistoryTime = useCallback((value?: string) => (value ? dayjs(value).format('YYYY-MM-DD') : '-'), []);
+  const _formatHistoryTime = useCallback((value?: string) => (value ? dayjs(value).format('YYYY-MM-DD HH:mm') : '-'), []);
 
   const _formatScanDetail = useCallback((record: ScanRecord) => {
     const parts: string[] = [];

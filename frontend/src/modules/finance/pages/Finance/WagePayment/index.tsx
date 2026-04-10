@@ -28,6 +28,7 @@ import {
   PayCircleOutlined,
   AccountBookOutlined,
   DownloadOutlined,
+  LineChartOutlined,
 } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -45,6 +46,7 @@ import {
   type WagePayment,
 } from '@/services/finance/wagePaymentApi';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
+import DashboardContent from '@/modules/finance/pages/FinanceCenter/DashboardContent';
 import { usePaymentColumns, methodIconMap, accountTypeIconMap } from './hooks/usePaymentColumns';
 import { usePaymentData } from './hooks/usePaymentData';
 import { usePayModal } from './hooks/usePayModal';
@@ -390,6 +392,15 @@ const PaymentCenterPage: React.FC = () => {
                     />
                   </>
                 ),
+              },
+              {
+                key: 'dashboard',
+                label: (
+                  <span>
+                    <LineChartOutlined /> 数据看板
+                  </span>
+                ),
+                children: <DashboardContent />,
               },
             ]}
           />

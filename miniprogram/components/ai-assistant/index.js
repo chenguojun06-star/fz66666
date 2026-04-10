@@ -78,7 +78,8 @@ Component({
           : `Hi 我是小云～ 有什么可以帮您的？\n${greetingSuffix}`;
 
         // --- 屏幕尺寸 & 保存的位置 ---
-        const sysInfo = wx.getSystemInfoSync();
+        // wx.getWindowInfo() 替代已废弃的 wx.getSystemInfoSync()（lib 2.20+）
+        const sysInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
         const sw = sysInfo.windowWidth || 375;
         const sh = sysInfo.windowHeight || 667;
         let tx = sw - 20; // 挂壁探头：20px 露出，30px 藏在屏幕外
@@ -399,19 +400,31 @@ Component({
     },
 
     chooseImage() {
-      if (this.data.isLoading || this.data.uploading) return;
+      if (this.data.isLoading || this.data.uploading) {
+        console.warn('[XiaoYun] chooseImage blocked: isLoading=', this.data.isLoading, 'uploading=', this.data.uploading);
+        return;
+      }
+      var self = this;
       wx.chooseMedia({
         count: 1,
         mediaType: ['image'],
         sourceType: ['camera', 'album'],
         success: (res) => {
           var path = (res.tempFiles && res.tempFiles[0] && res.tempFiles[0].tempFilePath) || '';
-          if (path) this.setData({ pendingImage: path });
+          if (path) self.setData({ pendingImage: path });
         },
         fail: (err) => {
           console.warn('[XiaoYun] chooseImage fail:', err);
           if (err && err.errMsg && err.errMsg.indexOf('cancel') === -1) {
-            wx.showToast({ title: '无法打开相机/相册，请检查权限', icon: 'none' });
+            wx.showModal({
+              title: '相机/相册权限',
+              content: '需要相机或相册权限才能上传图片，请在设置中允许',
+              confirmText: '去设置',
+              cancelText: '取消',
+              success: function (modalRes) {
+                if (modalRes.confirm) wx.openSetting();
+              }
+            });
           }
         },
       });

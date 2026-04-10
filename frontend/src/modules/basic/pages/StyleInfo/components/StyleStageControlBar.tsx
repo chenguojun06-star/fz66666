@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { App, Button, Space, Tag } from 'antd';
 import { isSupervisorOrAboveUser, useAuth } from '@/utils/AuthContext';
-import { formatDateTime } from '@/utils/datetime';
+import { formatDate } from '@/utils/datetime';
 import api from '@/utils/api';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 
@@ -123,8 +123,8 @@ const StyleStageControlBar: React.FC<Props> = ({
   }, [status]);
 
   // 格式化时间
-  const startTimeText = useMemo(() => formatDateTime(startTime), [startTime]);
-  const completedTimeText = useMemo(() => formatDateTime(completedTime), [completedTime]);
+  const startTimeText = useMemo(() => formatDate(startTime), [startTime]);
+  const completedTimeText = useMemo(() => formatDate(completedTime), [completedTime]);
 
   // 调用 API
   const callApi = async (action: 'start' | 'complete' | 'reset', reason?: string) => {

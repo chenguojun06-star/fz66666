@@ -68,7 +68,6 @@ public interface IntelligencePredictionLogMapper extends BaseMapper<Intelligence
             + "WHERE tenant_id    = #{tenantId} "
             + "  AND factory_name = #{factoryName} "
             + "  AND deviation_minutes IS NOT NULL "
-            + "  AND delete_flag  = 0 "
             + "  AND create_time  > DATE_SUB(NOW(), INTERVAL 90 DAY)")
     Double getAvgBiasDays(
             @Param("tenantId")     Long tenantId,

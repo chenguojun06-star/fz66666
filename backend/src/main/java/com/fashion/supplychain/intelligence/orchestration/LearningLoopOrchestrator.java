@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +43,11 @@ public class LearningLoopOrchestrator {
     @Autowired
     private IntelligenceMemoryOrchestrator memoryOrchestrator;
 
+    @Autowired(required = false)
+    private JdbcTemplate jdbcTemplate;
+
+    private volatile Boolean feedbackRecordTableReady;
+
     // ──────────────────────────────────────────────────────────────
 
     /**
@@ -59,6 +65,11 @@ public class LearningLoopOrchestrator {
         Long tenantId = UserContext.tenantId();
         LearningLoopResponse response = new LearningLoopResponse();
         response.setRunAt(LocalDateTime.now());
+
+        if (!isFeedbackRecordTableReady()) {
+            response.setSummary("学习闭环反馈表仍为历史结构，已跳过分析，避免触发运行时 SQL 异常");
+            return response;
+        }
 
         // 1. 查询待分析的反馈
         LocalDateTime since = LocalDateTime.now().minusDays(7);
@@ -175,5 +186,34 @@ public class LearningLoopOrchestrator {
             case "anomaly" -> "production";
             default -> "production";
         };
+    }
+
+    private boolean isFeedbackRecordTableReady() {
+        if (feedbackRecordTableReady != null) {
+            return feedbackRecordTableReady;
+        }
+        synchronized (this) {
+            if (feedbackRecordTableReady != null) {
+                return feedbackRecordTableReady;
+            }
+            if (jdbcTemplate == null) {
+                feedbackRecordTableReady = false;
+                return false;
+            }
+            try {
+                Integer requiredColumns = jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                                + "WHERE TABLE_SCHEMA = DATABASE() "
+                                + "AND TABLE_NAME = 't_intelligence_feedback' "
+                                + "AND COLUMN_NAME IN ('prediction_id','suggestion_type','feedback_result',"
+                                + "'feedback_reason','feedback_analysis','deviation_minutes','create_time','update_time')",
+                        Integer.class);
+                feedbackRecordTableReady = requiredColumns != null && requiredColumns == 8;
+            } catch (Exception e) {
+                log.warn("[学习闭环] 检测 t_intelligence_feedback 结构失败，按跳过处理: {}", e.getMessage());
+                feedbackRecordTableReady = false;
+            }
+            return feedbackRecordTableReady;
+        }
     }
 }

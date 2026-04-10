@@ -64,4 +64,9 @@ public class FactoryShipmentController {
     public Result<List<FactoryShipmentDetail>> getDetails(@PathVariable("id") String id) {
         return Result.success(factoryShipmentDetailService.listByShipmentId(id));
     }
+
+    @GetMapping("/order-detail-sum/{orderId}")
+    public Result<List<Map<String, Object>>> getOrderDetailSum(@PathVariable("orderId") String orderId) {
+        return Result.success(factoryShipmentOrchestrator.getOrderShipmentDetailSum(orderId));
+    }
 }

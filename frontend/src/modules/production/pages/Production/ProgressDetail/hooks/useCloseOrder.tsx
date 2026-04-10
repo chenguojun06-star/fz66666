@@ -10,12 +10,13 @@ type PendingCloseOrder = {
   cuttingQty: number;
   minRequired: number;
   warehousingQualified: number;
+  isSpecial?: boolean;
 };
 
 type UseCloseOrderParams = {
   isSupervisorOrAbove: boolean;
   message: { error: (msg: string) => void; info: (msg: string) => void; warning: (msg: string) => void; success: (msg: string) => void };
-  productionOrderApi: { close: (orderId: string, source: string, remark?: string) => Promise<unknown> };
+  productionOrderApi: { close: (orderId: string, source: string, remark?: string, specialClose?: boolean) => Promise<unknown> };
   fetchOrders: () => Promise<void>;
   fetchOrderDetail: (orderId: string) => Promise<ProductionOrder | null>;
   setActiveOrder: (order: ProductionOrder | null) => void;
@@ -69,25 +70,22 @@ export const useCloseOrder = ({
       return;
     }
 
-    if (minRequired <= 0) {
-      message.warning('裁剪数量异常，无法关单');
-      return;
-    }
-
-    if (warehousingQualified < minRequired) {
-      message.warning(`关单条件未满足：合格入库${warehousingQualified}/${minRequired}（裁剪${cuttingQty}，允许差异10%）`);
-      return;
-    }
-
     const orderNo = String((order as any)?.orderNo || '').trim();
-    setPendingCloseOrder({ order, orderId, orderNo, orderQty, cuttingQty, minRequired, warehousingQualified });
+
+    if (minRequired <= 0 || warehousingQualified < minRequired) {
+      // 未满足关单条件 → 特需关单路径，必须填写原因
+      setPendingCloseOrder({ order, orderId, orderNo, orderQty, cuttingQty, minRequired, warehousingQualified, isSpecial: true });
+      return;
+    }
+
+    setPendingCloseOrder({ order, orderId, orderNo, orderQty, cuttingQty, minRequired, warehousingQualified, isSpecial: false });
   }, [isSupervisorOrAbove, message, getCloseMinRequired]);
 
   const confirmCloseOrder = useCallback(async (remark: string) => {
     if (!pendingCloseOrder) return;
     setCloseOrderLoading(true);
     try {
-      const result = await productionOrderApi.close(pendingCloseOrder.orderId, 'productionProgress', remark || undefined);
+      const result = await productionOrderApi.close(pendingCloseOrder.orderId, 'productionProgress', remark || undefined, pendingCloseOrder.isSpecial);
       if ((result as any)?.code !== 200) throw new Error((result as any)?.message || '关单失败');
       message.success('关单成功');
       setPendingCloseOrder(null);

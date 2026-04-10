@@ -1,3 +1,86 @@
+# 2026-04-10
+
+## 🔧 工资明细跨订单数量虚高修复（PayrollAggregationOrchestrator 分组 key 补全）
+
+- **问题**：小程序"我的工资"页面，某个订单的某道工序（如"下单"）显示的件数大于实际件数（如：订单仅1件却显示2件）。
+- **根因**：`PayrollAggregationOrchestrator.aggregatePayrollByOperatorAndProcess()` 按 `operatorId + processName` 分组，**缺少 `orderId`**。同一工人对不同订单做了同名工序（如 A订单"下单"1件、B订单"下单"1件），会被合并成一条，数量累加为2件，并且订单号只显示 A 订单（第一条记录的 orderNo）。
+- **修复**：将分组 key 改为 `operatorId + orderId + processName`，每个订单单独展示，不再跨订单合并数量。
+- **对系统的帮助**：
+  - ✅ 工人"我的工资"每行数量与对应订单实际扫码数量一致，不再虚高
+  - ✅ 月度总金额计算不受影响（金额从 `totalAmount` 字段求和，仍正确）
+  - ✅ 不涉及 DB 结构变更，无 Flyway 脚本需求
+- **编译验证**：`mvn clean compile -q` → BUILD SUCCESS ✅
+
+## 🔧 采购确认流转与裁剪终态重复扫码修复
+
+- **问题1（核心业务）**：云端订单在采购页点击“确认回料完成”后，部分单据仍长期停留在“采购”阶段，二维码再次扫码时又回到采购确认页。
+- **根因1**：小程序提交的是 `orderNo`，后端接口原本只按 `id` 处理；同时生产订单工作流辅助器只更新了 workflow JSON，没有把 `procurementManuallyCompleted/procurementConfirmed*` 真正写回订单主表，导致当前工序重算后仍被识别为“采购”。
+- **修复1**：
+  - 后端 `confirm-procurement` 同时接受 `id/orderNo` 两种入参；
+  - `ProductionOrderWorkflowHelper.confirmProcurement()` 支持按订单号回查订单，并补齐 `procurementManuallyCompleted=1`、确认人、确认时间、确认备注等主表字段写入；
+  - 小程序采购详情页同步补传 `orderId`，避免再次走兼容兜底。
+
+- **问题2（核心业务）**：裁剪任务已完成后，同一个人再次扫码仍可能被判定为“领取成功”。
+- **根因2**：`CuttingTaskServiceImpl.receiveTask()` 对“非 pending 且同一领取人”的历史兼容逻辑覆盖过宽，把 `completed/done/cancelled` 终态也当成可重复领取场景处理。
+- **修复2**：在服务层增加终态硬拦截，`completed/done/cancelled` 一律禁止再次领取，避免已完成裁剪二维码重复进入业务链路。
+
+- **附带修复（小程序告警）**：
+  - `scan/confirm` 页的 `image-preview` 改为 `detail.coverImage || ''`，消除组件收到 `null` 的类型告警；
+  - 移除 `sku-matrix` 组件中不被微信组件样式支持的 `:last-child` 选择器，消除编译警告。
+
+- **对系统的帮助**：
+  - ✅ 采购完成后订单能真正流转到裁剪/下游工序，不会因主表未更新而反复识别成采购阶段。
+  - ✅ 裁剪终态二维码不会再被同人重复扫入，云端终态约束与小程序提示保持一致。
+  - ✅ 扫码确认页与 SKU 组件的真实编译告警一并收敛，减少小程序调试噪音。
+
+## 🔧 采购分页慢查询 + 交期预测日志写入失败联合修复
+
+- **问题1（性能）**：`MaterialPurchaseServiceImpl.queryPage(..)` 在高频访问下持续触发慢方法告警（1s~3.5s），日志显示同一时段批量超阈值。
+- **根因1**：`queryPage` 内 `factoryType/factoryName` 过滤块重复执行一遍，导致每次请求额外触发两轮 `t_production_order` 预加载查询，放大了请求耗时。
+- **修复1**：删除重复过滤块，保留单份 `factoryType/factoryName` 过滤逻辑，减少重复 IO 和重复构建 `IN` 条件。
+
+- **问题2（稳定性）**：`DeliveryPredictionOrchestrator` 记录预测日志时持续出现 `IntelligencePredictionLogMapper.insert-Inline` 参数设置异常，影响日志写入闭环。
+- **根因2**：历史环境存在 `t_intelligence_prediction_log` 列漂移（扩展列并非所有环境齐全），直接按完整实体插入会在缺列环境失败。
+- **修复2-代码侧**：
+  - `DeliveryPredictionOrchestrator` 新增启动后缓存式列探测，仅在 `factory_name/daily_velocity/remaining_qty` 三列齐全时写入扩展字段，否则自动降级为“核心字段写入”。
+  - `IntelligencePredictionLogMapper.getAvgBiasDays` 去除对 `delete_flag` 的硬依赖，避免历史库缺少该列导致校准查询异常。
+- **修复2-数据库侧**：
+  - 新增 Flyway：`V202608141410__repair_prediction_log_missing_columns.sql`，幂等补齐 `factory_name/daily_velocity/remaining_qty/delete_flag` 四列。
+  - `DbColumnRepairRunner` 同步补齐 `t_intelligence_prediction_log.delete_flag` 启动自愈，覆盖本地 `FLYWAY_ENABLED=false` 场景。
+
+- **对系统的帮助**：
+  - ✅ 采购列表在高并发下减少不必要查询，慢查询告警明显收敛。
+  - ✅ 交期预测日志在历史库结构不一致时不再频繁插入失败，数据飞轮链路恢复稳定。
+  - ✅ 形成“Flyway 补偿 + 启动自愈 + 运行时兼容写入”三层防线，降低后续同类 schema 漂移风险。
+
+## 🔧 日期字符串兼容解析止血修复
+
+- **问题**：多个接口的 `LocalDateTime` 字段在收到纯日期字符串时会直接 500。
+  - `POST /api/style/info`：`deliveryDate="2026-04-10"` 触发反序列化异常。
+  - `POST /api/intelligence/feedback`：历史页面/缓存回传空格时间字符串时也曾触发 500。
+- **根因**：`JacksonConfig` 仅兼容完整时间格式，未统一接受 `yyyy-MM-dd` 纯日期输入。
+- **修复**：将 `LocalDateTime` 反序列化器升级为兼容三类输入：
+  - `yyyy-MM-dd`
+  - `yyyy-MM-dd HH:mm[:ss[.SSS]]`
+  - `yyyy-MM-dd'T'HH:mm:ss`
+  纯日期会自动落到当天 `00:00:00`，从后端统一兜住样板资料、智能反馈等链路。
+- **对系统的帮助**：
+  - ✅ 避免前端日期控件/旧缓存回传纯日期时直接触发 500。
+  - ✅ 不再需要为单个页面单独拼接时间字符串，降低重复修补风险。
+  - ✅ 本地编译通过并重启验证后，重启后的日志未再出现新增 500 记录。
+
+## 🔧 智能反馈闭环历史表兼容止损
+
+- **问题**：`t_intelligence_feedback` 在历史环境中被旧执行引擎占用为另一套结构，当前学习闭环实体写入时会持续报 `Unknown column 'prediction_id' in 'field list'`。
+- **风险**：虽然主接口已降级为 200，不再直接 500，但日志会持续刷错，且手动触发学习闭环时有运行时 SQL 异常风险。
+- **修复**：
+  - `FeedbackLearningOrchestrator` 增加运行时表结构探测，仅在 `prediction_id/suggestion_type/feedback_result/...` 等学习闭环必需列齐全且 `id` 为数值主键时才写入反馈记录。
+  - `LearningLoopOrchestrator` 同步增加结构探测，历史旧表结构下直接跳过分析并返回提示，避免误查旧表导致新的异常。
+- **对系统的帮助**：
+  - ✅ 不改动历史旧表结构，不影响现有执行引擎旧数据。
+  - ✅ 先止住重复 SQL 错误和潜在运行时异常，风险控制在智能反馈闭环内部。
+  - ✅ 后续若要彻底统一反馈表结构，可单独做迁移，不与本轮稳定性修复耦合。
+
 # 2026-08-08
 
 ## 🔴 BUG修复 — 补建 t_order_remark 表（云端 /api/system/order-remark/list 持续 500）

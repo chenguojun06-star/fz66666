@@ -87,7 +87,7 @@ const WageSlipPrintModal: React.FC<WageSlipPrintModalProps> = ({
                         <div className="info-row">
                             <span><strong>姓名：</strong>{worker.operatorName}</span>
                             <span><strong>结算周期：</strong>{dateRange[0]} 至 {dateRange[1]}</span>
-                            <span><strong>打印时间：</strong>{dayjs().format('YYYY-MM-DD')}</span>
+                            <span><strong>打印时间：</strong>{dayjs().format('YYYY-MM-DD HH:mm')}</span>
                         </div>
                         <table>
                             <thead>

@@ -5,6 +5,7 @@ const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { getUserInfo } = require('../../../utils/storage');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+const { eventBus } = require('../../../utils/eventBus');
 
 const HANDLE_METHODS = ['返修', '报废', '退货', '降级使用', '其他'];
 
@@ -26,12 +27,22 @@ Page({
     handleMethods: HANDLE_METHODS,
     defectCategories: DEFECT_CATEGORIES,
     aiSuggestion: null,
+    aiSuggestionList: [],
     historicalDefectRate: '',
     loading: false,
     coverImage: ''
   },
 
   onLoad() {
+    // 隐私授权弹窗监听（拍照需隐私授权）
+    if (eventBus && typeof eventBus.on === 'function') {
+      this._unsubPrivacy = eventBus.on('showPrivacyDialog', resolve => {
+        try {
+          var dialog = this.selectComponent('#privacyDialog');
+          if (dialog && typeof dialog.showDialog === 'function') dialog.showDialog(resolve);
+        } catch (_) { /* 静默 */ }
+      });
+    }
     var app = getApp();
     var raw = app.globalData.qualityData;
     if (!raw) {
@@ -64,6 +75,7 @@ Page({
   },
 
   onUnload() {
+    if (this._unsubPrivacy) { this._unsubPrivacy(); this._unsubPrivacy = null; }
     getApp().globalData.qualityData = null;
   },
 
@@ -78,12 +90,28 @@ Page({
         if (res.historicalDefectRate != null) {
           rate = (res.historicalDefectRate * 100).toFixed(1) + '%';
         }
+        // 处理 defectSuggestions（Map<String,String>）为数组供模板渲染
+        var suggestionList = [];
+        var defectSuggestions = res.defectSuggestions || {};
+        var keys = Object.keys(defectSuggestions);
+        for (var i = 0; i < keys.length; i++) {
+          var catVal = keys[i];
+          var catIdx = CATEGORY_VALUE_MAP.indexOf(catVal);
+          suggestionList.push({
+            category: catVal,
+            label: catIdx >= 0 ? DEFECT_CATEGORIES[catIdx] : catVal,
+            text: defectSuggestions[catVal]
+          });
+        }
         self.setData({
           aiSuggestion: res,
+          aiSuggestionList: suggestionList,
           historicalDefectRate: rate
         });
       })
-      .catch(function () { /* no-op */ });
+      .catch(function (err) {
+        console.warn('[Quality] AI suggestion fetch failed:', err);
+      });
   },
 
   /* ---- events ---- */
@@ -119,16 +147,24 @@ Page({
     var ai = this.data.aiSuggestion;
     if (!ai) return;
     var updates = {};
-    if (ai.suggestedCategory != null) {
-      var idx = CATEGORY_VALUE_MAP.indexOf(ai.suggestedCategory);
+    // 从 defectSuggestions（Map<category, suggestion>）中提取第一条建议
+    var defectSuggestions = ai.defectSuggestions || {};
+    var keys = Object.keys(defectSuggestions);
+    if (keys.length > 0) {
+      var suggestedCategory = keys[0];
+      var idx = CATEGORY_VALUE_MAP.indexOf(suggestedCategory);
       if (idx >= 0) updates.defectCategoryIndex = idx;
+      updates.remark = defectSuggestions[suggestedCategory];
     }
-    if (ai.suggestedRemark) {
-      updates.remark = ai.suggestedRemark;
+    // 自动切换为不合格
+    if (!this.data.result) {
+      updates.result = 'unqualified';
     }
     if (Object.keys(updates).length > 0) {
       this.setData(updates);
       toast.success('已采纳建议');
+    } else {
+      toast.error('暂无可采纳的建议');
     }
   },
 
@@ -140,10 +176,15 @@ Page({
       toast.error('最多上传5张');
       return;
     }
+    self._doChooseMedia();
+  },
+
+  _doChooseMedia(sourceType) {
+    var self = this;
     wx.chooseMedia({
       count: 5 - self.data.images.length,
       mediaType: ['image'],
-      sourceType: ['album', 'camera'],
+      sourceType: sourceType || ['album', 'camera'],
       success: function (res) {
         var files = res.tempFiles || [];
         var tasks = files.map(function (f) {
@@ -156,8 +197,18 @@ Page({
         });
       },
       fail: function (err) {
+        console.warn('[Quality] chooseMedia fail:', err);
         if (err && err.errMsg && err.errMsg.indexOf('cancel') === -1) {
-          toast.error('无法打开相机/相册，请检查权限');
+          // 权限被拒绝时引导用户去设置页
+          wx.showModal({
+            title: '相机/相册权限',
+            content: '需要相机或相册权限才能上传照片，请在设置中允许',
+            confirmText: '去设置',
+            cancelText: '取消',
+            success: function (modalRes) {
+              if (modalRes.confirm) wx.openSetting();
+            }
+          });
         }
       }
     });

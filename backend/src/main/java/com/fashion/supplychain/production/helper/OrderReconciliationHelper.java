@@ -53,6 +53,14 @@ public class OrderReconciliationHelper {
      * - 加工厂订单：按单价×数量计算
      */
     public void createShipmentReconciliationOnClose(ProductionOrder order) {
+        createShipmentReconciliationOnClose(order, false);
+    }
+
+    /**
+     * 关单时创建订单结算记录（支持特需关单标记）
+     * @param specialClose true=特需关单，quantity 为实际合格入库数，remark 自动标注
+     */
+    public void createShipmentReconciliationOnClose(ProductionOrder order, boolean specialClose) {
         if (order == null) {
             log.warn("订单为空，无法创建结算记录");
             return;
@@ -115,6 +123,10 @@ public class OrderReconciliationHelper {
 
         recon.setStatus("pending");
         recon.setReconciliationDate(LocalDateTime.now());
+        if (specialClose) {
+            int actualQty = order.getCompletedQuantity() != null ? order.getCompletedQuantity() : 0;
+            recon.setRemark("特需关单，按实际合格入库数量 " + actualQty + " 件核算");
+        }
 
         boolean saved = shipmentReconciliationService.save(recon);
         if (saved) {

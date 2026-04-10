@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs } from 'antd';
-import { FileTextOutlined, LineChartOutlined, ShopOutlined, ScanOutlined } from '@ant-design/icons';
+import { FileTextOutlined, ShopOutlined, ScanOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/utils/AuthContext';
 import Layout from '@/components/Layout';
 import FinishedSettlementContent from './FinishedSettlementContent';
 import FactorySummaryContent from './FactorySummaryContent';
-import DashboardContent from './DashboardContent';
 import ExternalScanContent from './ExternalScanContent';
 import styles from './index.module.css';
 
-type TabKey = 'settlement' | 'factory' | 'dashboard' | 'scans';
+type TabKey = 'settlement' | 'factory' | 'scans';
 
 const FinanceCenter: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -22,7 +21,7 @@ const FinanceCenter: React.FC = () => {
   // 从 URL 参数读取初始 Tab，默认 settlement
   const getInitialTab = (): TabKey => {
     const tab = searchParams.get('tab');
-    if (tab === 'dashboard' || tab === 'settlement' || tab === 'factory' || tab === 'scans') {
+    if (tab === 'settlement' || tab === 'factory' || tab === 'scans') {
       return tab;
     }
     return 'settlement';
@@ -83,16 +82,6 @@ const FinanceCenter: React.FC = () => {
           onAuditNosChange={setAuditedOrderNos}
         />
       ),
-    },
-    {
-      key: 'dashboard',
-      label: (
-        <span className={styles.tabLabel}>
-          <LineChartOutlined />
-          数据看板
-        </span>
-      ),
-      children: <DashboardContent />,
     },
     {
       key: 'scans',

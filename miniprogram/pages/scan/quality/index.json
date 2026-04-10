@@ -1,4 +1,6 @@
 {
   "navigationBarTitleText": "质检录入",
-  "usingComponents": {}
+  "usingComponents": {
+    "privacy-dialog": "/components/privacy-dialog/index"
+  }
 }

@@ -43,7 +43,9 @@ export interface BillQueryRequest {
   billType?: string;
   billCategory?: string;
   status?: string;
-  settlementMonth?: string;
+  settlementMonth?: string;  // 向后兼容：单月筛选（已改为日期范围）
+  createTimeStart?: string;  // new: 创建时间范围 - 开始，格式 YYYY-MM-DD
+  createTimeEnd?: string;    // new: 创建时间范围 - 结束，格式 YYYY-MM-DD
   counterpartyName?: string;
   orderNo?: string;
 }

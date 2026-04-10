@@ -47,6 +47,9 @@
 .insight-icon { flex-shrink: 0; font-size: 30rpx; }
 .insight-body { display: flex; flex-direction: column; gap: 8rpx; flex: 1; }
 .insight-text { font-size: 24rpx; }
+.insight-urgent { color: #e8451a; font-weight: 500; }
+.insight-label { font-size: 22rpx; font-weight: 600; color: #1a1a2e; margin-top: 4rpx; }
+.insight-checkpoint { font-size: 22rpx; color: #555; line-height: 1.7; }
 .insight-action {
   align-self: flex-start; margin-top: 8rpx;
   font-size: 24rpx; font-weight: 600;

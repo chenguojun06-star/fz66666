@@ -60,7 +60,9 @@ export const formatDateTime = (input: DateInput): string => {
   const y = d.getFullYear();
   const m = pad2(d.getMonth() + 1);
   const day = pad2(d.getDate());
-  return `${y}-${m}-${day}`;
+  const h = pad2(d.getHours());
+  const min = pad2(d.getMinutes());
+  return `${y}-${m}-${day} ${h}:${min}`;
 };
 
 export const formatDateTimeSecond = (input: DateInput): string => {
@@ -72,7 +74,10 @@ export const formatDateTimeSecond = (input: DateInput): string => {
   const y = d.getFullYear();
   const m = pad2(d.getMonth() + 1);
   const day = pad2(d.getDate());
-  return `${y}-${m}-${day}`;
+  const h = pad2(d.getHours());
+  const min = pad2(d.getMinutes());
+  const sec = pad2(d.getSeconds());
+  return `${y}-${m}-${day} ${h}:${min}:${sec}`;
 };
 
 export const formatDateTimeCompact = (input: DateInput): string => {

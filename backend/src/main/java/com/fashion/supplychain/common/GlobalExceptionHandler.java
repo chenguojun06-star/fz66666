@@ -6,6 +6,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.jdbc.BadSqlGrammarException;
 import org.springframework.transaction.UnexpectedRollbackException;
 import org.springframework.validation.BindException;
@@ -121,6 +122,20 @@ public class GlobalExceptionHandler {
                 logger.warn("404: {} {}", request == null ? "" : request.getMethod(),
                                 request == null ? "" : request.getRequestURI());
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Result.fail(404, "请求的资源不存在"));
+        }
+
+        /**
+         * 处理请求体解析失败（JSON 格式错误、日期格式不匹配等）。
+         * 防止 Jackson 反序列化异常被兜底 Exception 处理器吃掉后返回 500。
+         */
+        @ExceptionHandler(HttpMessageNotReadableException.class)
+        public ResponseEntity<Result<?>> handleHttpMessageNotReadable(HttpMessageNotReadableException e,
+                        HttpServletRequest request) {
+                String method = request == null ? "" : request.getMethod();
+                String uri = request == null ? "" : request.getRequestURI();
+                logger.warn("请求体解析失败: {} {} - {}", method, uri, e.getMessage());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                .body(Result.fail(400, "请求参数格式错误，请检查日期或数值字段格式"));
         }
 
         /**

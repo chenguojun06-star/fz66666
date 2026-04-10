@@ -3,7 +3,7 @@
   <view class="info-card">
     <view class="card-header">
       <view class="cover-wrap" bindtap="previewImage">
-        <image-preview src="{{detail.coverImage}}" mode="aspectFill" />
+        <image-preview src="{{detail.coverImage || ''}}" mode="aspectFill" />
       </view>
       <view class="header-info">
         <view wx:if="{{isProcurement}}" class="procurement-badge">面辅料采购</view>

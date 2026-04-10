@@ -20,6 +20,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 /**
@@ -49,6 +50,11 @@ public class DeliveryPredictionOrchestrator {
 
     @Autowired
     private IntelligencePredictionLogMapper predictionLogMapper;
+
+    @Autowired(required = false)
+    private JdbcTemplate jdbcTemplate;
+
+    private volatile Boolean predictionLogExtraColumnsReady;
 
     public DeliveryPredictionResponse predict(DeliveryPredictionRequest request) {
         DeliveryPredictionResponse resp = new DeliveryPredictionResponse();
@@ -172,12 +178,15 @@ public class DeliveryPredictionOrchestrator {
             plog.setTenantId(UserContext.tenantId());
             plog.setOrderId(String.valueOf(order.getId()));
             plog.setOrderNo(order.getOrderNo());
-            plog.setFactoryName(order.getFactoryName());
             plog.setCurrentProgress(order.getProductionProgress());
             plog.setPredictedFinishTime(LocalDateTime.of(
                     today.plusDays(blendedMlDays), LocalTime.NOON));
-            plog.setDailyVelocity(velocity);
-            plog.setRemainingQty(remaining);
+            if (hasPredictionLogExtraColumns()) {
+                // 仅在扩展列已存在时写入，避免云端历史库缺列导致 insert 失败。
+                plog.setFactoryName(order.getFactoryName());
+                plog.setDailyVelocity(velocity);
+                plog.setRemainingQty(remaining);
+            }
             plog.setConfidence(BigDecimal.valueOf(confidence).movePointLeft(2));
             plog.setAlgorithmVersion("rule_v2_calibrated");
             plog.setSampleCount(7);
@@ -249,5 +258,37 @@ public class DeliveryPredictionOrchestrator {
             return order.getCuttingQuantity();
         }
         return order.getOrderQuantity() != null ? order.getOrderQuantity() : 0;
+    }
+
+    /**
+     * 检测 prediction_log 扩展列是否齐全（factory_name/daily_velocity/remaining_qty）。
+     * 只在首次调用时查询 INFORMATION_SCHEMA，结果缓存到内存，避免每次预测额外查询。
+     */
+    private boolean hasPredictionLogExtraColumns() {
+        if (predictionLogExtraColumnsReady != null) {
+            return predictionLogExtraColumnsReady;
+        }
+        synchronized (this) {
+            if (predictionLogExtraColumnsReady != null) {
+                return predictionLogExtraColumnsReady;
+            }
+            if (jdbcTemplate == null) {
+                predictionLogExtraColumnsReady = false;
+                return false;
+            }
+            try {
+                Integer count = jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                                + "WHERE TABLE_SCHEMA = DATABASE() "
+                                + "AND TABLE_NAME = 't_intelligence_prediction_log' "
+                                + "AND COLUMN_NAME IN ('factory_name','daily_velocity','remaining_qty')",
+                        Integer.class);
+                predictionLogExtraColumnsReady = count != null && count == 3;
+            } catch (Exception e) {
+                log.warn("[交期预测] 检测 prediction_log 扩展列失败，按兼容模式写入核心字段: {}", e.getMessage());
+                predictionLogExtraColumnsReady = false;
+            }
+            return predictionLogExtraColumnsReady;
+        }
     }
 }

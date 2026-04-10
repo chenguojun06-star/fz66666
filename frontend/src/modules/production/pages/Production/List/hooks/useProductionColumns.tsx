@@ -12,7 +12,7 @@ import { getProcessesByNodeFromOrder } from '../../ProgressDetail/utils';
 import SmartOrderHoverCard from '../../ProgressDetail/components/SmartOrderHoverCard';
 import { StyleCoverThumb, StyleAttachmentsButton } from '@/components/StyleAssets';
 import { isDirectCuttingOrder, isOrderFrozenByStatus, isOrderFrozenByStatusOrStock, withQuery } from '@/utils/api';
-import { formatDateTime } from '@/utils/datetime';
+import { formatDate } from '@/utils/datetime';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { getRemainingDaysDisplay } from '@/utils/progressColor';
 import { getStatusConfig, safeString } from '../utils';
@@ -64,7 +64,7 @@ export function useProductionColumns({
   isFactoryAccount = false,
   onOpenRemark,
 }: UseProductionColumnsProps) {
-  const renderStageTime = (value: unknown) => value ? formatDateTime(value) : '-';
+  const renderStageTime = (value: unknown) => value ? formatDate(value) : '-';
 
   // ===== 工序进度列共享逻辑 =====
   const PROGRESS_CELL_BASE: React.CSSProperties = { padding: '4px', transition: 'background 0.2s' };
@@ -369,7 +369,7 @@ export function useProductionColumns({
       dataIndex: 'expectedShipDate',
       key: 'expectedShipDate',
       width: 120,
-      render: (v: any) => v ? formatDateTime(v) : '-',
+      render: (v: any) => v ? formatDate(v) : '-',
     },
     {
       title: '采购',
@@ -507,21 +507,18 @@ export function useProductionColumns({
             onClick={(e) => { e.stopPropagation(); if (!frozen) openProcessDetail(record, 'warehousing'); }}
           >
             {renderCompletionTimeTag(record, '入库', rate || 0, 'left')}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ position: 'relative', width: '36px', height: '36px' }}>
-                <svg width="36" height="36" style={{ transform: 'rotate(-90deg)' }}>
-                  <circle cx="18" cy="18" r="16" fill="none" stroke="var(--color-bg-subtle)" strokeWidth="3" />
-                  <circle cx="18" cy="18" r="16" fill="none" stroke={getColor()} strokeWidth="3"
-                    strokeDasharray={`${(rate / 100) * 100.53} 100.53`} strokeLinecap="round"
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--neutral-text)' }}>{qualified}/{total}</span>
+              <div style={{ position: 'relative', width: '42px', height: '42px' }}>
+                <svg width="42" height="42" style={{ transform: 'rotate(-90deg)' }}>
+                  <circle cx="21" cy="21" r="19" fill="none" stroke="var(--color-bg-subtle)" strokeWidth="3" />
+                  <circle cx="21" cy="21" r="19" fill="none" stroke={getColor()} strokeWidth="3"
+                    strokeDasharray={`${(rate / 100) * 119.38} 119.38`} strokeLinecap="round"
                     style={{ transition: 'stroke-dasharray 0.3s ease' }} />
                 </svg>
                 <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: '10px', fontWeight: 700, color: getColor() }}>
                   {rate}%
                 </div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--neutral-text)' }}>{qualified}/{total}</span>
-                <span style={{ fontSize: '11px', color: 'var(--neutral-text-disabled)' }}>{qualified > 0 ? '已入库' : '未入库'}</span>
               </div>
             </div>
           </div>
@@ -583,7 +580,7 @@ export function useProductionColumns({
       key: 'plannedEndDate',
       width: 155,
       render: (value: unknown, record: ProductionOrder) => {
-        const dateStr = value ? formatDateTime(value as string) : '-';
+        const dateStr = value ? formatDate(value as string) : '-';
         const { text, color } = getRemainingDaysDisplay(value as string, record.createTime, record.actualEndDate, record.status);
         const aiRisk = deliveryRiskMap?.get(String(record.orderNo || ''));
         return (

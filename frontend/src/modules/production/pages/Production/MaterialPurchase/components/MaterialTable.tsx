@@ -350,13 +350,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       dataIndex: 'createTime',
       key: 'createTime',
       width: 160,
-      render: (v: string) => v ? new Date(v).toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-      }) : '-',
+      render: (v: string) => v ? formatDateTime(v) : '-',
     },
     {
       title: (
@@ -391,13 +385,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       dataIndex: 'receivedTime',
       key: 'receivedTime',
       width: 160,
-      render: (v: string) => v ? new Date(v).toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-      }) : '-',
+      render: (v: string) => v ? formatDateTime(v) : '-',
     },
     {
       title: '采购完成',

@@ -228,6 +228,16 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             repaired += ensureColumn(conn, schema, "t_cutting_bundle", "split_process_order",
                     "INT DEFAULT NULL COMMENT '拆分工序序号'");
 
+            // --- t_intelligence_prediction_log 补列（修复云端缺失列导致预测日志写入失败）---
+            repaired += ensureColumn(conn, schema, "t_intelligence_prediction_log", "factory_name",
+                    "VARCHAR(128) DEFAULT NULL COMMENT '生产工厂名称'");
+            repaired += ensureColumn(conn, schema, "t_intelligence_prediction_log", "daily_velocity",
+                    "DOUBLE DEFAULT NULL COMMENT '日均产量（件/天）'");
+            repaired += ensureColumn(conn, schema, "t_intelligence_prediction_log", "remaining_qty",
+                    "BIGINT DEFAULT NULL COMMENT '预测时剩余件数'");
+            repaired += ensureColumn(conn, schema, "t_intelligence_prediction_log", "delete_flag",
+                    "INT NOT NULL DEFAULT 0 COMMENT '删除标记：0正常 1删除'");
+
             int repairedTables = 0;
                 repairedTables += ensureTable(conn, schema,
                         "t_intelligence_audit_log",
@@ -727,6 +737,60 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                     "VARCHAR(64) DEFAULT NULL");
             repaired += ensureColumn(conn, schema, "t_style_attachment", "tenant_id",
                     "BIGINT DEFAULT NULL");
+
+            // ── t_factory_shipment + t_factory_shipment_detail（本地 FLYWAY_ENABLED=false，需启动自愈）
+            repairedTables += ensureTable(conn, schema,
+                    "t_factory_shipment",
+                    "CREATE TABLE IF NOT EXISTS `t_factory_shipment` ("
+                    + "`id` VARCHAR(36) NOT NULL,"
+                    + "`shipment_no` VARCHAR(50) NOT NULL,"
+                    + "`order_id` VARCHAR(36) NOT NULL,"
+                    + "`order_no` VARCHAR(50) DEFAULT NULL,"
+                    + "`style_no` VARCHAR(50) DEFAULT NULL,"
+                    + "`style_name` VARCHAR(200) DEFAULT NULL,"
+                    + "`factory_id` VARCHAR(36) DEFAULT NULL,"
+                    + "`factory_name` VARCHAR(100) DEFAULT NULL,"
+                    + "`ship_quantity` INT NOT NULL DEFAULT 0,"
+                    + "`ship_time` DATETIME DEFAULT NULL,"
+                    + "`shipped_by` VARCHAR(36) DEFAULT NULL,"
+                    + "`shipped_by_name` VARCHAR(50) DEFAULT NULL,"
+                    + "`tracking_no` VARCHAR(100) DEFAULT NULL,"
+                    + "`express_company` VARCHAR(100) DEFAULT NULL,"
+                    + "`ship_method` VARCHAR(32) DEFAULT 'EXPRESS',"
+                    + "`receive_status` VARCHAR(20) NOT NULL DEFAULT 'pending',"
+                    + "`receive_time` DATETIME DEFAULT NULL,"
+                    + "`received_by` VARCHAR(36) DEFAULT NULL,"
+                    + "`received_by_name` VARCHAR(50) DEFAULT NULL,"
+                    + "`remark` VARCHAR(500) DEFAULT NULL,"
+                    + "`tenant_id` BIGINT DEFAULT NULL,"
+                    + "`creator_id` VARCHAR(36) DEFAULT NULL,"
+                    + "`creator_name` VARCHAR(50) DEFAULT NULL,"
+                    + "`create_time` DATETIME DEFAULT NULL,"
+                    + "`update_time` DATETIME DEFAULT NULL,"
+                    + "`delete_flag` INT NOT NULL DEFAULT 0,"
+                    + "PRIMARY KEY (`id`),"
+                    + "KEY `idx_fs_order_id` (`order_id`),"
+                    + "KEY `idx_fs_factory_id` (`factory_id`),"
+                    + "KEY `idx_fs_tenant_status` (`tenant_id`, `receive_status`)"
+                    + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin");
+            // ship_method 可能已存在于早期建表但需补齐新增列
+            repaired += ensureColumn(conn, schema, "t_factory_shipment", "ship_method",
+                    "VARCHAR(32) DEFAULT 'EXPRESS'");
+
+            repairedTables += ensureTable(conn, schema,
+                    "t_factory_shipment_detail",
+                    "CREATE TABLE IF NOT EXISTS `t_factory_shipment_detail` ("
+                    + "`id` VARCHAR(64) NOT NULL,"
+                    + "`shipment_id` VARCHAR(64) NOT NULL,"
+                    + "`color` VARCHAR(50) NOT NULL DEFAULT '',"
+                    + "`size_name` VARCHAR(50) NOT NULL DEFAULT '',"
+                    + "`quantity` INT NOT NULL DEFAULT 0,"
+                    + "`tenant_id` BIGINT DEFAULT NULL,"
+                    + "`create_time` DATETIME DEFAULT NULL,"
+                    + "PRIMARY KEY (`id`),"
+                    + "KEY `idx_shipment_id` (`shipment_id`),"
+                    + "KEY `idx_tenant_id` (`tenant_id`)"
+                    + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
             if (repaired > 0) {
                 log.warn("[DbRepair] 共修复 {} 个缺失列，Flyway 可能未正常执行对应迁移脚本", repaired);

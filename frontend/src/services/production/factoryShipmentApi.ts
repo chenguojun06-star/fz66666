@@ -22,6 +22,12 @@ export interface ShippableInfo {
   remaining: number;
 }
 
+export interface ShippedDetailSum {
+  color: string;
+  sizes: Array<{ sizeName: string; quantity: number }>;
+  total: number;
+}
+
 export const factoryShipmentApi = {
   ship: (params: ShipParams) =>
     api.post<{ code: number; data: FactoryShipment }>('/production/factory-shipment/ship', params),
@@ -42,4 +48,8 @@ export const factoryShipmentApi = {
     api.delete<{ code: number; message: string }>(`/production/factory-shipment/${encodeURIComponent(id)}`),
   getDetails: (id: string) =>
     api.get<{ code: number; data: FactoryShipmentDetail[] }>(`/production/factory-shipment/${encodeURIComponent(id)}/details`),
+  getOrderDetailSum: (orderId: string) =>
+    api.get<{ code: number; data: ShippedDetailSum[] }>(
+      `/production/factory-shipment/order-detail-sum/${encodeURIComponent(orderId)}`
+    ),
 };

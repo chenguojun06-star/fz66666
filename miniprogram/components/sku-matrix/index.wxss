@@ -9,7 +9,6 @@
 .matrix-scroll { width: 100%; }
 .matrix-table { display: flex; flex-direction: column; min-width: 100%; }
 .matrix-row { display: flex; border-bottom: 1rpx solid var(--color-border-light); }
-.matrix-row:last-child { border-bottom: none; }
 .matrix-header { background: var(--color-bg-gray); font-weight: var(--font-weight-semibold); }
 .matrix-cell {
   min-width: 100rpx; padding: 14rpx 12rpx;

@@ -900,9 +900,14 @@ const ProductionList: React.FC = () => {
 
       <RejectReasonModal
         open={!!pendingCloseOrder}
-        title={`确认关单：${safeString((pendingCloseOrder?.order as any)?.orderNo)}`}
+        title={pendingCloseOrder?.isSpecial ? '特需关单确认' : `确认关单：${safeString((pendingCloseOrder?.order as any)?.orderNo)}`}
         description={pendingCloseOrder ? (
           <div>
+            {pendingCloseOrder.isSpecial && (
+              <div style={{ color: '#faad14', marginBottom: 8 }}>
+                ⚠️ 该订单未满足关单条件（合格入库 {pendingCloseOrder.warehousingQualified}/{pendingCloseOrder.minRequired}），特需关单不可撤销，请填写原因。
+              </div>
+            )}
             <div>订单数量：{pendingCloseOrder.orderQty}</div>
             <div>关单阈值（裁剪数90%）：{pendingCloseOrder.minRequired}</div>
             <div>当前裁剪数：{pendingCloseOrder.cuttingQty}</div>
@@ -910,10 +915,11 @@ const ProductionList: React.FC = () => {
             <div style={{ marginTop: 8 }}>关单后订单状态将变为"已完成"，并自动生成对账记录。</div>
           </div>
         ) : null}
-        fieldLabel="关闭原因"
-        required={false}
+        fieldLabel={pendingCloseOrder?.isSpecial ? '特需原因' : '关闭原因'}
+        placeholder={pendingCloseOrder?.isSpecial ? '请说明特需关单具体原因（必填）' : undefined}
+        required={!!pendingCloseOrder?.isSpecial}
         okDanger={false}
-        okText="确认关单"
+        okText={pendingCloseOrder?.isSpecial ? '确认特需关单' : '确认关单'}
         loading={closeOrderLoading}
         onOk={confirmCloseOrder}
         onCancel={cancelCloseOrder}

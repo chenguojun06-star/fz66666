@@ -93,10 +93,20 @@ public class PayrollAggregationOrchestrator {
         // 查询扫码记录
         List<ScanRecord> scanRecords = scanRecordService.list(qw);
 
-        // 按 operator_id + process_name 分组
+        // 按 operator_id + order_id + process_name + color + size 分组
+        // ★ 必须含 orderId：否则同一工人对不同订单做同名工序时，数量会被错误累加到第一个订单上
+        //    旧 key（只有 operatorId+processName）导致：李老板所有订单的"采购"扫码 → 合并成一行 2553 件
+        // ★ 含 color+size：同一订单不同颜色/尺码的扫码记录分开显示，与 PC 端工资结算行一一对应
         Map<String, List<ScanRecord>> grouped = scanRecords.stream()
                 .collect(Collectors.groupingBy(
-                        record -> record.getOperatorId() + "|" + record.getProcessName(),
+                        record -> {
+                            String oid = record.getOperatorId() != null ? record.getOperatorId() : "";
+                            String ordId = record.getOrderId() != null ? record.getOrderId() : "";
+                            String pn = record.getProcessName() != null ? record.getProcessName() : "";
+                            String color = record.getColor() != null ? record.getColor() : "";
+                            String size = record.getSize() != null ? record.getSize() : "";
+                            return oid + "|" + ordId + "|" + pn + "|" + color + "|" + size;
+                        },
                         Collectors.toList()
                 ));
 

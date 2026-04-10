@@ -10,6 +10,7 @@ const MATERIAL_TYPE_MAP = {
 
 Page({
   data: {
+    orderId: '',
     orderNo: '',
     styleNo: '',
     loading: false,
@@ -79,10 +80,11 @@ Page({
         };
       });
 
+      const orderId = (materialPurchases[0] && (materialPurchases[0].orderId || materialPurchases[0].order_id)) || '';
       const overallArrivalRate = totalPurchased > 0 ? Math.round(totalArrived / totalPurchased * 100) : 0;
       const canConfirmProcurement = hasUnconfirmed && overallArrivalRate >= 50;
 
-      this.setData({ materialPurchases, loading: false, overallArrivalRate, canConfirmProcurement });
+      this.setData({ orderId, materialPurchases, loading: false, overallArrivalRate, canConfirmProcurement });
     } catch (e) {
       console.error('加载采购详情失败:', e);
       this.setData({ loading: false });
@@ -181,7 +183,7 @@ Page({
   },
 
   async onConfirmProcurement() {
-    const { orderNo, overallArrivalRate } = this.data;
+    const { orderId, orderNo, overallArrivalRate } = this.data;
     if (!orderNo) return;
 
     wx.showModal({
@@ -198,6 +200,7 @@ Page({
         try {
           const remark = (res.content || '').trim();
           await api.production.confirmProcurementComplete({
+            id: orderId,
             orderNo,
             remark,
           });

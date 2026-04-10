@@ -9,7 +9,7 @@ import {
 import { StyleAttachment } from '@/types/style';
 import api from '@/utils/api';
 import RowActions from '@/components/common/RowActions';
-import { formatDateTime } from '@/utils/datetime';
+import { formatDate } from '@/utils/datetime';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 
 interface Props {
@@ -305,7 +305,7 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, styleNo, bizType, upload
       title: '上传时间',
       dataIndex: 'createTime',
       ellipsis: true,
-      render: (value: unknown) => formatDateTime(value),
+      render: (value: unknown) => formatDate(value),
     },
     {
       title: '操作',

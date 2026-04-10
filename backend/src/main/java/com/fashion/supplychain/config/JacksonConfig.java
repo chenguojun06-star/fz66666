@@ -1,18 +1,26 @@
 package com.fashion.supplychain.config;
 
 import com.fasterxml.jackson.core.json.JsonWriteFeature;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 
+import java.io.IOException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.List;
 
 /**
  * Jackson配置类
@@ -34,17 +42,67 @@ public class JacksonConfig {
         longModule.addSerializer(long.class, ToStringSerializer.instance);
         objectMapper.registerModule(longModule);
         // 支持 Java 8 日期时间类型（LocalDateTime 等）
-        // 兼容前端 "yyyy-MM-dd HH:mm:ss"（空格）和 ISO "yyyy-MM-dd'T'HH:mm:ss" 两种格式
+        // 兼容前端 "yyyy-MM-dd"、"yyyy-MM-dd HH:mm:ss"（空格）和 ISO "yyyy-MM-dd'T'HH:mm:ss"。
         // ⚠️ 注意：不能用 new JavaTimeModule()，Spring Boot 自动配置已注册 JavaTimeModule，
         //    objectMapper.registerModule(new JavaTimeModule()) 会被 Jackson 静默跳过（同 typeId 不重复注册）。
         //    改用唯一名称的 SimpleModule 覆盖 LocalDateTime 的序列化/反序列化器。
-        DateTimeFormatter readFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd[' ']['T']HH:mm:ss[[.SSS][.SSSSSS][.SSSSSSSSS]]");
         DateTimeFormatter writeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         SimpleModule dateTimeOverride = new SimpleModule("fashion-datetime-override");
-        dateTimeOverride.addDeserializer(LocalDateTime.class, new LocalDateTimeDeserializer(readFormatter));
+        dateTimeOverride.addDeserializer(LocalDateTime.class, new FlexibleLocalDateTimeDeserializer());
         dateTimeOverride.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(writeFormatter));
         objectMapper.registerModule(dateTimeOverride);
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         return objectMapper;
+    }
+
+    private static class FlexibleLocalDateTimeDeserializer extends JsonDeserializer<LocalDateTime> {
+
+        private static final DateTimeFormatter DATE_ONLY = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        private static final List<DateTimeFormatter> DATE_TIME_FORMATTERS = List.of(
+                DateTimeFormatter.ISO_LOCAL_DATE_TIME,
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss[.SSS][.SSSSSS][.SSSSSSSSS]"),
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+        );
+
+        @Override
+        public LocalDateTime deserialize(JsonParser parser, DeserializationContext context) throws IOException {
+            String raw = parser.getValueAsString();
+            if (raw == null) {
+                return null;
+            }
+            String text = raw.trim();
+            if (text.isEmpty()) {
+                return null;
+            }
+
+            if (text.length() == 10) {
+                try {
+                    return LocalDate.parse(text, DATE_ONLY).atStartOfDay();
+                } catch (DateTimeParseException ignored) {
+                    // 继续走下方统一报错，避免吞掉非法日期。
+                }
+            }
+
+            // 兼容前端 new Date().toISOString() 产生的 UTC 时间（"...Z"）
+            // 以及带偏移的 ISO 8601（"...+08:00" / "-05:00"）
+            // 将带时区的绝对时刻转换为服务器本地时间后存储
+            try {
+                OffsetDateTime odt = OffsetDateTime.parse(text, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+                return odt.atZoneSameInstant(ZoneId.systemDefault()).toLocalDateTime();
+            } catch (DateTimeParseException ignored) {
+                // 非带偏移格式，继续尝试无时区格式
+            }
+
+            for (DateTimeFormatter formatter : DATE_TIME_FORMATTERS) {
+                try {
+                    return LocalDateTime.parse(text, formatter);
+                } catch (DateTimeParseException ignored) {
+                    // 尝试下一个兼容格式。
+                }
+            }
+
+            throw context.weirdStringException(text, LocalDateTime.class,
+                    "支持格式：yyyy-MM-dd、yyyy-MM-dd HH:mm[:ss[.SSS]]、yyyy-MM-dd'T'HH:mm:ss[.SSS][Z|+HH:mm]");
+        }
     }
 }

@@ -76,4 +76,5 @@
     </view>
   </view>
 
+  <privacy-dialog id="privacyDialog" />
 </view>

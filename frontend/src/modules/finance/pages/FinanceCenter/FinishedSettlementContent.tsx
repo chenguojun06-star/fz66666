@@ -194,7 +194,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
       dataIndex: 'completeTime',
       key: 'completeTime',
       width: 160,
-      render: (val) => val ? dayjs(val).format('YYYY-MM-DD') : '-',
+      render: (val) => val ? dayjs(val).format('YYYY-MM-DD HH:mm') : '-',
     },
     {
       title: '颜色',
@@ -709,7 +709,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
                   <div style={{ color: 'var(--neutral-text-disabled)', fontSize: '12px' }}>
                     <span>{log.operatorName || log.userName || '系统'}</span>
                     <span style={{ margin: '0 8px' }}>·</span>
-                    <span>{log.createTime ? dayjs(log.createTime).format('YYYY-MM-DD') : '-'}</span>
+                    <span>{log.createTime ? dayjs(log.createTime).format('YYYY-MM-DD HH:mm') : '-'}</span>
                   </div>
                 </div>
               ),

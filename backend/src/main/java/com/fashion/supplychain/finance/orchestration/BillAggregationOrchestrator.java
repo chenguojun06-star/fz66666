@@ -94,6 +94,8 @@ public class BillAggregationOrchestrator {
 
     /**
      * 分页查询账单列表
+     * 支持按创建时间范围过滤(new: createTimeStart / createTimeEnd)
+     * 同时保持向后兼容 settlementMonth 单月筛选
      */
     public Page<BillAggregation> listBills(BillQueryRequest query) {
         Long tenantId = TenantAssert.requireTenantId();
@@ -108,6 +110,9 @@ public class BillAggregationOrchestrator {
                 .eq(StringUtils.hasText(query.getSettlementMonth()), BillAggregation::getSettlementMonth, query.getSettlementMonth())
                 .like(StringUtils.hasText(query.getCounterpartyName()), BillAggregation::getCounterpartyName, query.getCounterpartyName())
                 .like(StringUtils.hasText(query.getOrderNo()), BillAggregation::getOrderNo, query.getOrderNo())
+                // 日期范围过滤：若传入创建时间范围，则过滤 createTime 在该范围内的账单
+                .ge(StringUtils.hasText(query.getCreateTimeStart()), BillAggregation::getCreateTime, query.getCreateTimeStart())
+                .le(StringUtils.hasText(query.getCreateTimeEnd()), BillAggregation::getCreateTime, query.getCreateTimeEnd())
                 .orderByDesc(BillAggregation::getCreateTime);
 
         return billAggregationService.page(page, wrapper);
@@ -273,7 +278,9 @@ public class BillAggregationOrchestrator {
         private String billType;
         private String billCategory;
         private String status;
-        private String settlementMonth;
+        private String settlementMonth;      // 向后兼容：单月筛选
+        private String createTimeStart;      // new：创建时间范围 - 开始（YYYY-MM-DD 或 YYYY-MM-DD HH:mm:ss）
+        private String createTimeEnd;        // new：创建时间范围 - 结束（YYYY-MM-DD 或 YYYY-MM-DD HH:mm:ss）
         private String counterpartyName;
         private String orderNo;
     }

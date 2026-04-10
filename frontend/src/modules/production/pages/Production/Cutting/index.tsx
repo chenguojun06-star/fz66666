@@ -431,7 +431,14 @@ const CuttingManagement: React.FC = () => {
                   },
                   { title: '下单人', dataIndex: 'orderCreatorName', key: 'orderCreatorName', width: 110, render: (v: unknown) => String(v || '').trim() || '-' },
                   {
-                    title: '下单时间',
+                    title: <SortableColumnTitle
+                      title="下单时间"
+                      sortField={tasks.cuttingSortField}
+                      fieldName="orderTime"
+                      sortOrder={tasks.cuttingSortOrder}
+                      onSort={tasks.handleCuttingSort}
+                      align="left"
+                    />,
                     dataIndex: 'orderTime',
                     key: 'orderTime',
                     width: 170,

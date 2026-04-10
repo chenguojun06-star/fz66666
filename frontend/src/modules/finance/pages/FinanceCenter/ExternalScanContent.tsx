@@ -175,7 +175,7 @@ const ExternalScanContent: React.FC = () => {
       dataIndex: 'scanTime',
       key: 'scanTime',
       width: 160,
-      render: (v: string) => (v ? dayjs(v).format('YYYY-MM-DD') : '-'),
+      render: (v: string) => (v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '-'),
     },
     {
       title: '结果',

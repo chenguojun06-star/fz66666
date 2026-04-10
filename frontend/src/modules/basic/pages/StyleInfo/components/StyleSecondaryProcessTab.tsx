@@ -9,7 +9,7 @@ import StyleStageControlBar from './StyleStageControlBar';
 import api, { toNumberSafe, isApiSuccess } from '@/utils/api';
 import { downloadFile, getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { useViewport } from '@/utils/useViewport';
-import { formatDateTime } from '@/utils/datetime';
+import { formatDate } from '@/utils/datetime';
 import { useAuth } from '@/utils/AuthContext';
 import type { ColumnsType } from 'antd/es/table';
 
@@ -704,14 +704,14 @@ const StyleSecondaryProcessTab: React.FC<Props> = ({
       dataIndex: 'completedTime',
       key: 'completedTime',
       width: 140,
-      render: (text: string) => formatDateTime(text) || '-',
+      render: (text: string) => formatDate(text) || '-',
     },
     {
       title: '创建时间',
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 140,
-      render: (text: string) => formatDateTime(text) || '-',
+      render: (text: string) => formatDate(text) || '-',
     },
     ...(!readOnly ? [{
       title: '操作',

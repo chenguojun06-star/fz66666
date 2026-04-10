@@ -486,14 +486,22 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
         }
 
         String status = task.getStatus() == null ? "" : task.getStatus().trim();
+        String normalizedStatus = status.toLowerCase();
         String rid = StringUtils.hasText(receiverId) ? receiverId.trim() : null;
         String rname = StringUtils.hasText(receiverName) ? receiverName.trim() : null;
         if (!StringUtils.hasText(rid) && !StringUtils.hasText(rname)) {
             return false;
         }
 
+        // 终态任务绝不允许重复领取，避免已完成/已作废裁剪二维码再次被同人扫入。
+        if ("completed".equals(normalizedStatus)
+                || "done".equals(normalizedStatus)
+                || "cancelled".equals(normalizedStatus)) {
+            return false;
+        }
+
         // 如果不是 pending 状态，检查是否是同一个人重复领取
-        if (!"pending".equals(status)) {
+        if (!"pending".equals(normalizedStatus)) {
             // 如果是同一个人，也需要更新领取时间（用于退回后再次领取的场景）
             if (isSameReceiver(task, rid, rname)) {
                 LocalDateTime now = LocalDateTime.now();
@@ -775,7 +783,6 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
             return false;
         }
 
-        String status = task.getStatus() == null ? "" : task.getStatus().trim().toLowerCase();
         // bundled 状态同样允许退回，下方清理逻辑会删除已生成的菲号及相关记录
 
         String orderId = task.getProductionOrderId();

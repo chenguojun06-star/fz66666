@@ -151,4 +151,5 @@
       bindtap="onSend"
     >发送</view>
   </view>
+  <privacy-dialog id="privacyDialog" />
 </view>

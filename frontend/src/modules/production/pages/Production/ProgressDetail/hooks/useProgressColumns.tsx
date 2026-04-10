@@ -1,4 +1,5 @@
-import { Fragment, useMemo, type CSSProperties } from 'react';
+import { Fragment, useMemo, useState, useEffect } from 'react';
+import type { CSSProperties } from 'react';
 import dayjs from 'dayjs';
 import { Badge, Button, Popover, Tag, Tooltip } from 'antd';
 import { ExclamationCircleOutlined, ShareAltOutlined, SendOutlined } from '@ant-design/icons';
@@ -11,6 +12,7 @@ import SmartOrderHoverCard from '../components/SmartOrderHoverCard';
 import DefectTracePopover from '../components/DefectTracePopover';
 import { StyleCoverThumb } from '@/components/StyleAssets';
 import { isDirectCuttingOrder, isOrderFrozenByStatus } from '@/utils/api';
+import { factoryShipmentApi } from '@/services/production/factoryShipmentApi';
 import { parseProductionOrderLines } from '@/utils/api/production';
 import { getRemainingDaysDisplay } from '@/utils/progressColor';
 import { stageAliasMap } from '@/utils/productionStage';
@@ -119,6 +121,32 @@ interface UseProgressColumnsParams {
   /** 工厂发货回调 */
   onFactoryShip?: (order: ProductionOrder) => void;
 }
+
+/** 惰加载：工厂账号 - 订单已发货数量汇总（按颜色/码数）*/
+const ShipmentSumCell: React.FC<{ orderId: string }> = ({ orderId }) => {
+  const [data, setData] = useState<Array<{
+    color: string;
+    sizes: Array<{ sizeName: string; quantity: number }>;
+    total: number;
+  }> | null>(null);
+  useEffect(() => {
+    factoryShipmentApi.getOrderDetailSum(orderId)
+      .then(res => { if (res?.data?.length) setData(res.data); })
+      .catch(() => {});
+  }, [orderId]);
+  if (!data) return <span style={{ color: '#d9d9d9', fontSize: 11 }}>-</span>;
+  return (
+    <div style={{ fontSize: 11, lineHeight: '18px' }}>
+      {data.map(row => (
+        <div key={row.color} style={{ marginBottom: 1 }}>
+          <span style={{ color: '#595959' }}>{row.color}: </span>
+          {row.sizes.map(s => `${s.sizeName}:${s.quantity}`).join(' ')}
+          <span style={{ color: '#bfbfbf', marginLeft: 4 }}>共{row.total}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 /**
  * 生产进度表格列定义
@@ -665,6 +693,14 @@ export const useProgressColumns = ({
         );
       },
     },
+    ...(isFactoryAccount ? [{
+      title: '已发数量',
+      key: 'shipmentSum',
+      width: 160,
+      render: (_: any, record: ProductionOrder) => (
+        <ShipmentSumCell orderId={String(record.id)} />
+      ),
+    }] : []),
     {
       title: '',
       key: 'action',

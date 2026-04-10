@@ -167,7 +167,7 @@ const BillSummaryTab: React.FC = () => {
     },
     {
       title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 160,
-      render: (v: string) => v ? dayjs(v).format('YYYY-MM-DD') : '-',
+      render: (v: string) => v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '-',
     },
     {
       title: '操作', key: 'actions', width: 140, fixed: 'right',
@@ -208,8 +208,25 @@ const BillSummaryTab: React.FC = () => {
         <Select style={{ width: 100 }} options={BILL_TYPE_OPTIONS} value={query.billType || ''} onChange={v => updateQuery({ billType: v || undefined })} />
         <Select style={{ width: 100 }} options={BILL_CATEGORY_OPTIONS} value={query.billCategory || ''} onChange={v => updateQuery({ billCategory: v || undefined })} />
         <Select style={{ width: 100 }} options={BILL_STATUS_OPTIONS} value={query.status || ''} onChange={v => updateQuery({ status: v || undefined })} />
-        <DatePicker picker="month" placeholder="结算月" allowClear
-          onChange={(_d, ds) => updateQuery({ settlementMonth: (ds as string) || undefined })} />
+        {/* 日期范围选择：取代之前的月份选择器，用创建时间范围过滤 */}
+        <DatePicker.RangePicker
+          placeholder={['开始日期', '结束日期']}
+          style={{ width: 240 }}
+          allowClear
+          onChange={(dates) => {
+            if (dates && dates[0] && dates[1]) {
+              updateQuery({
+                createTimeStart: dates[0].format('YYYY-MM-DD'),
+                createTimeEnd: dates[1].format('YYYY-MM-DD'),
+              });
+            } else {
+              updateQuery({
+                createTimeStart: undefined,
+                createTimeEnd: undefined,
+              });
+            }
+          }}
+        />
         <Input style={{ width: 160 }} placeholder="对方名称" allowClear prefix={<SearchOutlined />}
           onPressEnter={e => updateQuery({ counterpartyName: (e.target as HTMLInputElement).value || undefined })} />
         <Input style={{ width: 160 }} placeholder="订单号" allowClear prefix={<FileTextOutlined />}

@@ -585,7 +585,7 @@ const PayrollOperatorSummary: React.FC = () => {
                                             <span style={{ color: 'var(--neutral-text-secondary)' }}>金额合计 {totalAmount.toFixed(2)}</span>
                                             {dateRange?.[0] && dateRange?.[1] && (
                                                 <span style={{ color: 'var(--neutral-text-secondary)' }}>
-                                                    统计周期：{dayjs(dateRange[0]).format('YYYY-MM-DD')} ~ {dayjs(dateRange[1]).format('YYYY-MM-DD')}
+                                                    统计周期：{dayjs(dateRange[0]).format('YYYY-MM-DD HH:mm')} ~ {dayjs(dateRange[1]).format('YYYY-MM-DD HH:mm')}
                                                 </span>
                                             )}
                                             <Button

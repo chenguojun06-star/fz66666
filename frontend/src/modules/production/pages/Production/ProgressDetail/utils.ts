@@ -1,4 +1,4 @@
-import { formatDateTime } from '@/utils/datetime';
+import { formatDate } from '@/utils/datetime';
 import { ProductionOrder, ScanRecord, CuttingBundle } from '@/types/production';
 import { StyleProcess } from '@/types/style';
 import { ProgressNode } from './types';
@@ -328,7 +328,7 @@ export const clampPercent = (value: number) => {
  * @param value 时间字符串
  * @returns 格式化后的时间字符串
  */
-export const formatTime = (value?: string) => formatDateTime(value);
+export const formatTime = (value?: string) => formatDate(value);
 
 /**
  * 获取订单发货时间

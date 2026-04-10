@@ -44,10 +44,14 @@ public class ProductionOrderOperationController {
 
     /**
      * 关闭订单
+     * specialClose=true 时为特需关单（跳过90%入库率校验），但原因必填
      */
     @PostMapping("/close")
     public Result<?> close(@Valid @RequestBody CloseOrderRequest body) {
-        ProductionOrder updated = productionOrderOrchestrator.closeOrder(body.getId(), body.getSourceModule(), body.getRemark());
+        ProductionOrder updated = productionOrderOrchestrator.closeOrder(
+            body.getId(), body.getSourceModule(), body.getRemark(),
+            Boolean.TRUE.equals(body.getSpecialClose())
+        );
         return Result.success(updated);
     }
 
@@ -125,6 +129,8 @@ public class ProductionOrderOperationController {
 
         private String remark;
 
+        private Boolean specialClose;
+
         public String getId() {
             return id;
         }
@@ -147,6 +153,14 @@ public class ProductionOrderOperationController {
 
         public void setRemark(String remark) {
             this.remark = remark;
+        }
+
+        public Boolean getSpecialClose() {
+            return specialClose;
+        }
+
+        public void setSpecialClose(Boolean specialClose) {
+            this.specialClose = specialClose;
         }
     }
 

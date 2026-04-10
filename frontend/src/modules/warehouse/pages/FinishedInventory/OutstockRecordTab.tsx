@@ -277,7 +277,7 @@ const OutstockRecordTab: React.FC = () => {
       title: '结算时间',
       dataIndex: 'settlementTime',
       width: 160,
-      render: (text) => text ? dayjs(text).format('YYYY-MM-DD') : '-',
+      render: (text) => text ? dayjs(text).format('YYYY-MM-DD HH:mm') : '-',
     },
     {
       title: '审核状态',
@@ -292,7 +292,7 @@ const OutstockRecordTab: React.FC = () => {
       title: '出库时间',
       dataIndex: 'createTime',
       width: 160,
-      render: (text) => text ? dayjs(text).format('YYYY-MM-DD') : '-',
+      render: (text) => text ? dayjs(text).format('YYYY-MM-DD HH:mm') : '-',
     },
     {
       title: '操作',

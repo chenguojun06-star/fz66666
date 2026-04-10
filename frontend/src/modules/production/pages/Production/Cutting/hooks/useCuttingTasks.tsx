@@ -122,7 +122,7 @@ export function useCuttingTasks({ message, isEntryPage }: UseCuttingTasksOptions
     sorted.sort((a: any, b: any) => {
       const aVal = a[cuttingSortField];
       const bVal = b[cuttingSortField];
-      if (cuttingSortField === 'receivedTime' || cuttingSortField === 'bundledTime') {
+      if (cuttingSortField === 'receivedTime' || cuttingSortField === 'bundledTime' || cuttingSortField === 'orderTime') {
         const aTime = aVal ? new Date(aVal).getTime() : 0;
         const bTime = bVal ? new Date(bVal).getTime() : 0;
         return cuttingSortOrder === 'desc' ? bTime - aTime : aTime - bTime;
