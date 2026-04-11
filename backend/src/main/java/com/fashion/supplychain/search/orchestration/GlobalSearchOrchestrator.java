@@ -48,12 +48,7 @@ public class GlobalSearchOrchestrator {
      */
     public GlobalSearchResult search(String query, Long tenantId) {
         if (!StringUtils.hasText(query) || query.trim().length() < 1) {
-            return GlobalSearchResult.builder()
-                    .query(query)
-                    .orders(List.of())
-                    .styles(List.of())
-                    .workers(List.of())
-                    .build();
+            return new GlobalSearchResult(query, List.of(), List.of(), List.of());
         }
 
         String q = query.trim();
@@ -69,16 +64,10 @@ public class GlobalSearchOrchestrator {
 
         try {
             CompletableFuture.allOf(orderFuture, styleFuture, workerFuture).join();
-            return GlobalSearchResult.builder()
-                    .query(q)
-                    .orders(orderFuture.get())
-                    .styles(styleFuture.get())
-                    .workers(workerFuture.get())
-                    .build();
+            return new GlobalSearchResult(q, orderFuture.get(), styleFuture.get(), workerFuture.get());
         } catch (Exception e) {
             log.error("[GlobalSearch] 搜索失败: query={}", q, e);
-            return GlobalSearchResult.builder().query(q)
-                    .orders(List.of()).styles(List.of()).workers(List.of()).build();
+            return new GlobalSearchResult(q, List.of(), List.of(), List.of());
         }
     }
 
@@ -106,16 +95,16 @@ public class GlobalSearchOrchestrator {
                 .filter(o -> !pinyin || PinyinSearchUtils.matchesPinyin(o.getStyleName(), q)
                         || PinyinSearchUtils.matchesPinyin(o.getFactoryName(), q))
                 .limit(10)
-                .map(o -> GlobalSearchResult.OrderItem.builder()
-                    .id(o.getId())
-                    .orderNo(o.getOrderNo())
-                    .styleName(o.getStyleName())
-                    .styleNo(o.getStyleNo())
-                    .factoryName(o.getFactoryName())
-                    .status(o.getStatus())
-                    .statusLabel(STATUS_LABELS.getOrDefault(o.getStatus(), o.getStatus()))
-                    .progress(o.getProductionProgress())
-                    .build())
+                .map(o -> new GlobalSearchResult.OrderItem(
+                    o.getId(),
+                    o.getOrderNo(),
+                    o.getStyleName(),
+                    o.getStyleNo(),
+                    o.getFactoryName(),
+                    o.getStatus(),
+                    STATUS_LABELS.getOrDefault(o.getStatus(), o.getStatus()),
+                    o.getProductionProgress()
+                ))
                 .collect(Collectors.toList());
         } catch (Exception e) {
             log.warn("[GlobalSearch] 订单搜索失败: {}", e.getMessage());
@@ -143,13 +132,13 @@ public class GlobalSearchOrchestrator {
             return styleInfoService.list(wrapper).stream()
                 .filter(s -> !pinyin || PinyinSearchUtils.matchesPinyin(s.getStyleName(), q))
                 .limit(8)
-                .map(s -> GlobalSearchResult.StyleItem.builder()
-                    .id(s.getId())
-                    .styleNo(s.getStyleNo())
-                    .styleName(s.getStyleName())
-                    .category(s.getCategory())
-                    .coverUrl(s.getCover())
-                    .build())
+                .map(s -> new GlobalSearchResult.StyleItem(
+                    s.getId(),
+                    s.getStyleNo(),
+                    s.getStyleName(),
+                    s.getCategory(),
+                    s.getCover()
+                ))
                 .collect(Collectors.toList());
         } catch (Exception e) {
             log.warn("[GlobalSearch] 款式搜索失败: {}", e.getMessage());
@@ -178,12 +167,13 @@ public class GlobalSearchOrchestrator {
             return userService.list(wrapper).stream()
                 .filter(u -> !pinyin || PinyinSearchUtils.matchesPinyin(u.getName(), q))
                 .limit(6)
-                .map(u -> GlobalSearchResult.WorkerItem.builder()
-                    .id(String.valueOf(u.getId()))
-                    .name(u.getName())
-                    .phone(u.getPhone())
-                    .role(u.getRoleName())
-                    .build())
+                .map(u -> new GlobalSearchResult.WorkerItem(
+                    String.valueOf(u.getId()),
+                    u.getName(),
+                    u.getPhone(),
+                    u.getRoleName(),
+                    null
+                ))
                 .collect(Collectors.toList());
         } catch (Exception e) {
             log.warn("[GlobalSearch] 工人搜索失败: {}", e.getMessage());

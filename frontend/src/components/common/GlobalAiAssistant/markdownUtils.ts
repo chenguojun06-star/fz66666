@@ -75,7 +75,11 @@ function escHtml(s: string): string {
 const ALLOWED_TAGS = /^<\/?(strong|em|code|pre|ul|li|ol|div|br|span|p|a|h[1-6]|table|thead|tbody|tr|td|th)(\s[^>]*)?\/?>$/i;
 
 export function sanitizeHtml(html: string): string {
-  return html.replace(/<\/?[^>]+(>|$)/g, (tag) => {
+  let result = html.replace(/(<a\s[^>]*)(href\s*=\s*["']?\s*)(javascript:|vbscript:|data:\s*text\/html)[^"'\s>]*(["']?[^>]*>)/gi,
+    '$1$2#$4');
+  result = result.replace(/\s+on\w+\s*=\s*["'][^"']*["']/gi, '');
+  result = result.replace(/\s+on\w+\s*=\s*[^\s>]+/gi, '');
+  return result.replace(/<\/?[^>]+(>|$)/g, (tag) => {
     if (ALLOWED_TAGS.test(tag)) return tag;
     return tag.replace(/</g, '&lt;').replace(/>/g, '&gt;');
   });

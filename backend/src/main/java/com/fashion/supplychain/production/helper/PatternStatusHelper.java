@@ -294,7 +294,7 @@ public class PatternStatusHelper {
             }
 
             String currentSampleStatus = String.valueOf(styleInfo.getSampleStatus() == null ? "" : styleInfo.getSampleStatus()).trim().toUpperCase();
-            boolean sampleFinished = "COMPLETED".equals(currentSampleStatus) || "PRODUCTION_COMPLETED".equals(currentSampleStatus);
+            boolean sampleFinished = "COMPLETED".equals(currentSampleStatus);
             int progress = calculatePatternProgressPercent(pattern);
             String status = String.valueOf(pattern.getStatus() == null ? "" : pattern.getStatus()).trim().toUpperCase();
             LocalDateTime now = LocalDateTime.now();
@@ -314,9 +314,11 @@ public class PatternStatusHelper {
 
             if ("PRODUCTION_COMPLETED".equals(status) || "COMPLETED".equals(status)) {
                 patch.setProductionCompletedTime(resolvedCompleteTime != null ? resolvedCompleteTime : now);
-                // 生产实际完成时，将样衣状态同步为 PRODUCTION_COMPLETED，使时间轴节点显示「生产完成」而非「进行中」
                 if (!sampleFinished) {
-                    patch.setSampleStatus("PRODUCTION_COMPLETED");
+                    // COMPLETED 表示已入库，sampleStatus 应设为 COMPLETED 使 progressNode 显示"样衣完成"
+                    // PRODUCTION_COMPLETED 表示生产完成待入库，sampleStatus 设为 PRODUCTION_COMPLETED
+                    String targetSampleStatus = "COMPLETED".equals(status) ? "COMPLETED" : "PRODUCTION_COMPLETED";
+                    patch.setSampleStatus(targetSampleStatus);
                     patch.setSampleProgress(100);
                     patch.setSampleCompletedTime(resolvedCompleteTime != null ? resolvedCompleteTime : now);
                 }

@@ -870,4 +870,31 @@ public class IntelligenceController {
     public Result<?> recentJobRuns(@RequestParam(defaultValue = "50") int limit) {
         return Result.success(jobRunLogService.queryRecent(limit));
     }
+
+    @Autowired
+    private com.fashion.supplychain.intelligence.service.QdrantService qdrantService;
+
+    @Autowired
+    private com.fashion.supplychain.style.service.StyleInfoService styleInfoService;
+
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+    @PostMapping("/qdrant/backfill-style-images-tenant-id")
+    public Result<?> backfillStyleImagesTenantId() {
+        java.util.Map<Long, Long> styleIdToTenantId = new java.util.LinkedHashMap<>();
+        com.fashion.supplychain.style.entity.StyleInfo query = new com.fashion.supplychain.style.entity.StyleInfo();
+        styleInfoService.lambdaQuery()
+                .select(com.fashion.supplychain.style.entity.StyleInfo::getId,
+                        com.fashion.supplychain.style.entity.StyleInfo::getTenantId)
+                .isNotNull(com.fashion.supplychain.style.entity.StyleInfo::getTenantId)
+                .list()
+                .forEach(s -> styleIdToTenantId.put(s.getId(), s.getTenantId()));
+        if (styleIdToTenantId.isEmpty()) {
+            return Result.success(java.util.Map.of("message", "无需补刷，未找到款式数据", "updated", 0));
+        }
+        int updated = qdrantService.backfillStyleImageTenantIds(styleIdToTenantId);
+        return Result.success(java.util.Map.of(
+                "message", "style_images tenant_id补刷完成",
+                "totalStyles", styleIdToTenantId.size(),
+                "updated", updated));
+    }
 }

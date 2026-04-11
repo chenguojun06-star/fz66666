@@ -221,6 +221,11 @@ public class ProductionOrderCommandService {
         if (factory == null || factory.getDeleteFlag() != null && factory.getDeleteFlag() == 1) {
             throw new IllegalArgumentException("所选工厂不存在");
         }
+        Long currentTenantId = UserContext.tenantId();
+        if (currentTenantId != null && factory.getTenantId() != null
+                && !currentTenantId.equals(factory.getTenantId())) {
+            throw new IllegalArgumentException("所选工厂不属于当前租户");
+        }
         if (!StringUtils.hasText(productionOrder.getFactoryName())) {
             productionOrder.setFactoryName(factory.getFactoryName());
         }

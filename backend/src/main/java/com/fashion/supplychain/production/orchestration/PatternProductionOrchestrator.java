@@ -214,8 +214,8 @@ public class PatternProductionOrchestrator {
         // 更新样板状态
         statusHelper.updatePatternStatusByOperation(pattern, operationType, operatorName);
 
-        // COMPLETE 操作后同步样衣阶段状态到 t_style_info
-        if ("COMPLETE".equals(operationType.trim())) {
+        if ("COMPLETE".equals(operationType.trim())
+                || "WAREHOUSE_IN".equals(operationType.trim())) {
             statusHelper.syncStyleInfoSampleStage(pattern);
         }
 

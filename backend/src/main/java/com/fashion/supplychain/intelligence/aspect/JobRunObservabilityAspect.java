@@ -1,5 +1,6 @@
 package com.fashion.supplychain.intelligence.aspect;
 
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.service.AiJobRunLogService;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -46,19 +47,17 @@ public class JobRunObservabilityAspect {
         String methodName = pjp.getSignature().getName();
         LocalDateTime startTime = LocalDateTime.now();
         long startMs = System.currentTimeMillis();
+        Long tenantId = UserContext.tenantId();
 
         try {
             Object result = pjp.proceed();
             long durationMs = System.currentTimeMillis() - startMs;
-            // 成功 — 异步写日志，捕获摘要（toString 供 debugging，截断防超长）
             String summary = result != null ? truncate(result.toString(), 490) : "completed";
-            jobRunLogService.logSuccess(jobName, methodName, startTime, durationMs, summary);
+            jobRunLogService.logSuccess(jobName, methodName, startTime, durationMs, summary, tenantId);
             return result;
         } catch (Throwable t) {
             long durationMs = System.currentTimeMillis() - startMs;
-            // 失败 — 异步写日志，保留原始异常消息
-            jobRunLogService.logFailed(jobName, methodName, startTime, durationMs, t.getMessage());
-            // 原样重抛，不掩盖任务异常
+            jobRunLogService.logFailed(jobName, methodName, startTime, durationMs, t.getMessage(), tenantId);
             throw t;
         }
     }

@@ -1,3 +1,10 @@
+## 2026-04-11
+
+- 修复 `GET /api/search/global` 在命令面板中持续返回 500 的问题。
+- 根因：`GlobalSearchResult` 及其内部类依赖 Lombok `@Builder` 生成的内部 builder 类，热更新/类加载阶段出现 `NoClassDefFoundError`（`GlobalSearchResult$GlobalSearchResultBuilder`、`OrderItemBuilder`）。
+- 处理：移除全局搜索 DTO 的 `@Builder` 依赖，并将 `GlobalSearchOrchestrator` 从 builder 映射改为构造器创建对象，彻底规避运行时 builder 类缺失。
+- 影响：全局搜索接口不再因为 builder 类加载失败触发 `NestedServletException`，前端命令面板恢复可用。
+
 ## 2026-03-20
 
 - 权限缓存链路从 `RedisTemplate<Object>` 多态反序列化切换为 `StringRedisTemplate + ObjectMapper` 显式 JSON 字符串存储，修复 `role:perms:*` / `user:perms:*` / `tenant:ceiling:*` 在旧缓存格式混杂时反复出现的 Jackson `START_ARRAY` 告警。

@@ -549,9 +549,7 @@ public class QdrantService {
             payloadNode.put("style_no", styleNo != null ? styleNo : "");
             payloadNode.put("difficulty_level", difficultyLevel != null ? difficultyLevel : "MEDIUM");
             payloadNode.put("difficulty_score", difficultyScore);
-            if (tenantId != null) {
-                payloadNode.put("tenant_id", tenantId);
-            }
+            payloadNode.put("tenant_id", tenantId != null ? tenantId : 0L);
             String url = qdrantUrl + "/collections/" + STYLE_IMAGE_COLLECTION + "/points";
             ResponseEntity<String> resp = restTemplate.exchange(url, HttpMethod.PUT,
                     jsonEntity(body.toString()), String.class);
@@ -623,6 +621,34 @@ public class QdrantService {
         } catch (Exception ex) {
             log.warn("[Qdrant] style_images集合创建失败: {}", ex.getMessage());
         }
+    }
+
+    public int backfillStyleImageTenantIds(java.util.Map<Long, Long> styleIdToTenantId) {
+        if (styleIdToTenantId == null || styleIdToTenantId.isEmpty()) return 0;
+        int updated = 0;
+        try {
+            ensureStyleImageCollectionExists();
+            ObjectNode body = objectMapper.createObjectNode();
+            ArrayNode points = body.putArray("points");
+            for (Map.Entry<Long, Long> entry : styleIdToTenantId.entrySet()) {
+                Long styleId = entry.getKey();
+                Long tenantId = entry.getValue();
+                ObjectNode point = points.addObject();
+                point.put("id", styleId);
+                ObjectNode payload = point.putObject("payload");
+                payload.put("tenant_id", tenantId != null ? tenantId : 0L);
+            }
+            String url = qdrantUrl + "/collections/" + STYLE_IMAGE_COLLECTION + "/points/payload";
+            ResponseEntity<String> resp = restTemplate.exchange(url, HttpMethod.POST,
+                    jsonEntity(body.toString()), String.class);
+            if (resp.getStatusCode().is2xxSuccessful()) {
+                updated = styleIdToTenantId.size();
+                log.info("[Qdrant] style_images tenant_id补刷完成, 共{}条", updated);
+            }
+        } catch (Exception e) {
+            log.warn("[Qdrant] style_images tenant_id补刷失败: {}", e.getMessage());
+        }
+        return updated;
     }
 
     // ──────────────────────────────────────────────────────────────

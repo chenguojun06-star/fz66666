@@ -24,6 +24,8 @@ public class AiJobRunLog {
     @TableId(type = IdType.AUTO)
     private Long id;
 
+    private Long tenantId;
+
     /** 任务类名，如 AiPatrolOrchestrator */
     private String jobName;
 

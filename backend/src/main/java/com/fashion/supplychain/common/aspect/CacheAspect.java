@@ -1,5 +1,6 @@
 package com.fashion.supplychain.common.aspect;
 
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.annotation.Cacheable;
 import com.fashion.supplychain.service.RedisService;
 import lombok.RequiredArgsConstructor;
@@ -78,6 +79,8 @@ public class CacheAspect {
     private String generateKey(String value, String key, Method method, Object[] args) {
         StringBuilder sb = new StringBuilder();
         sb.append(value).append(":");
+        Long tenantId = UserContext.tenantId();
+        sb.append(tenantId != null ? "t" + tenantId : "shared").append(":");
         sb.append(method.getDeclaringClass().getSimpleName()).append(":");
         sb.append(method.getName()).append(":");
 

@@ -1,6 +1,7 @@
 package com.fashion.supplychain.style.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.orchestration.StyleBomOrchestrator;
@@ -32,8 +33,10 @@ public class StyleBomController {
             @RequestParam(required = false) String styleNo) {
         Long resolvedStyleId = styleId;
         if (resolvedStyleId == null && StringUtils.hasText(styleNo)) {
+            Long currentTenantId = UserContext.tenantId();
             StyleInfo style = styleInfoService.lambdaQuery()
                     .eq(StyleInfo::getStyleNo, styleNo.trim())
+                    .eq(currentTenantId != null, StyleInfo::getTenantId, currentTenantId)
                     .orderByDesc(StyleInfo::getId)
                     .last("limit 1")
                     .one();

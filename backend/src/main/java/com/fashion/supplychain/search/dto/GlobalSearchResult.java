@@ -1,7 +1,6 @@
 package com.fashion.supplychain.search.dto;
 
 import lombok.Data;
-import lombok.Builder;
 import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 
@@ -12,7 +11,6 @@ import java.util.List;
  * 按业务领域分组返回，前端按类型渲染分组标题
  */
 @Data
-@Builder
 @AllArgsConstructor
 @NoArgsConstructor
 public class GlobalSearchResult {
@@ -32,7 +30,6 @@ public class GlobalSearchResult {
     // ─── 内部类 ──────────────────────────────────────────
 
     @Data
-    @Builder
     @AllArgsConstructor
     @NoArgsConstructor
     public static class OrderItem {
@@ -49,7 +46,6 @@ public class GlobalSearchResult {
     }
 
     @Data
-    @Builder
     @AllArgsConstructor
     @NoArgsConstructor
     public static class StyleItem {
@@ -61,7 +57,6 @@ public class GlobalSearchResult {
     }
 
     @Data
-    @Builder
     @AllArgsConstructor
     @NoArgsConstructor
     public static class WorkerItem {

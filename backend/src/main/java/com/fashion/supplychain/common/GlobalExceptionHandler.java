@@ -145,7 +145,8 @@ public class GlobalExceptionHandler {
         public ResponseEntity<Result<?>> handleIllegalState(RuntimeException e, HttpServletRequest request) {
                 logger.warn("请求处理失败: {} {} - {}", request == null ? "" : request.getMethod(),
                                 request == null ? "" : request.getRequestURI(), e.getMessage());
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Result.fail(400, e.getMessage()));
+                String safeMessage = sanitizeClientMessage(e.getMessage());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Result.fail(400, safeMessage));
         }
 
         /**
@@ -155,7 +156,7 @@ public class GlobalExceptionHandler {
         public ResponseEntity<Result<?>> handleNoSuchElement(NoSuchElementException e, HttpServletRequest request) {
                 logger.warn("资源不存在: {} {} - {}", request == null ? "" : request.getMethod(),
                                 request == null ? "" : request.getRequestURI(), e.getMessage());
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Result.fail(404, e.getMessage()));
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Result.fail(404, "请求的资源不存在"));
         }
 
         /**
@@ -234,5 +235,20 @@ public class GlobalExceptionHandler {
                 logger.error("系统异常: {} {}", method, uri, e);
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                                 .body(Result.fail(500, "系统内部错误，请联系管理员"));
+        }
+
+        private String sanitizeClientMessage(String message) {
+                if (message == null) return "请求处理失败";
+                String sanitized = message
+                                .replaceAll("(?i)(password|secret|token|key|credential)\\s*[:=]\\s*\\S+", "$1=***")
+                                .replaceAll("(?i)(jdbc|mysql|redis)://\\S+", "$1://***")
+                                .replaceAll("(?i)(table|column)\\s+['\"]?\\w+", "$1=***")
+                                .replaceAll("(?i)SELECT\\s+.+?\\s+FROM", "SQL=***")
+                                .replaceAll("(?i)INSERT\\s+.+?\\s+INTO", "SQL=***")
+                                .replaceAll("(?i)UPDATE\\s+.+?\\s+SET", "SQL=***");
+                if (sanitized.length() > 200) {
+                        sanitized = sanitized.substring(0, 200) + "...";
+                }
+                return sanitized;
         }
 }

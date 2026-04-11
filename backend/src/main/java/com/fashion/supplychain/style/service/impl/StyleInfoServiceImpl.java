@@ -72,6 +72,8 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
     public IPage<StyleInfo> queryPage(Map<String, Object> params) {
         Integer page = ParamUtils.getPage(params);
         Integer pageSize = ParamUtils.getPageSize(params);
+        Long readableTenantId = resolveReadableTenantId();
+        boolean tenantScopedRead = isTenantScopedRead();
 
         // 创建分页对象
         Page<StyleInfo> pageInfo = new Page<>(page, pageSize);
@@ -101,6 +103,7 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
         // 使用条件构造器进行查询
         com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<StyleInfo> wrapper =
             new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<StyleInfo>()
+                .eq(tenantScopedRead, StyleInfo::getTenantId, readableTenantId)
                 .eq(StringUtils.hasText(styleNoExact), StyleInfo::getStyleNo, styleNoExact)
                 .like(!StringUtils.hasText(styleNoExact) && StringUtils.hasText(styleNo), StyleInfo::getStyleNo, styleNo)
                 .like(StringUtils.hasText(styleName), StyleInfo::getStyleName, styleName)
@@ -160,6 +163,8 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
         if (records == null || records.isEmpty()) {
             return;
         }
+        Long readableTenantId = resolveReadableTenantId();
+        boolean tenantScopedRead = isTenantScopedRead();
 
         List<String> styleIds = new ArrayList<>();
         Set<String> styleNos = new HashSet<>();
@@ -192,6 +197,7 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
 
             QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
             qw.select("style_id as styleId", "style_no as styleNo", "count(1) as cnt", "COALESCE(SUM(order_quantity), 0) as totalQty")
+                    .eq(tenantScopedRead, "tenant_id", readableTenantId)
                     .and(w -> {
                         boolean hasPrev = false;
                         if (!styleIds.isEmpty()) {
@@ -242,8 +248,10 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
             timeQw.select("style_id as styleId", "style_no as styleNo", "MAX(create_time) as latestTime",
                          "(SELECT created_by_name FROM t_production_order po2 WHERE " +
                          "(po2.style_id = t_production_order.style_id OR po2.style_no = t_production_order.style_no) " +
+                        (tenantScopedRead ? ("AND po2.tenant_id = " + readableTenantId + " ") : "") +
                          "AND (po2.delete_flag IS NULL OR po2.delete_flag = 0) " +
                          "ORDER BY po2.create_time DESC LIMIT 1) as latestCreator")
+                    .eq(tenantScopedRead, "tenant_id", readableTenantId)
                     .and(w -> {
                         boolean hasPrev = false;
                         if (!styleIds.isEmpty()) {
@@ -325,6 +333,8 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
         if (records == null || records.isEmpty()) {
             return;
         }
+        Long readableTenantId = resolveReadableTenantId();
+        boolean tenantScopedRead = isTenantScopedRead();
         ProductWarehousingService warehousingService = productWarehousingServiceProvider.getIfAvailable();
         if (warehousingService == null) {
             return;
@@ -341,6 +351,7 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
 
         QueryWrapper<ProductWarehousing> qw = new QueryWrapper<>();
         qw.select("style_id as styleId", "style_no as styleNo", "COALESCE(SUM(unqualified_quantity), 0) as scrapQty")
+            .eq(tenantScopedRead, "tenant_id", readableTenantId)
                 .eq("repair_status", "scrapped")
                 .and(w -> w.isNull("delete_flag").or().eq("delete_flag", 0))
                 .and(w -> {
@@ -452,6 +463,8 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
         if (records == null || records.isEmpty()) {
             return;
         }
+        Long readableTenantId = resolveReadableTenantId();
+        boolean tenantScopedRead = isTenantScopedRead();
 
         Set<Long> ids = new HashSet<>();
         for (StyleInfo s : records) {
@@ -466,6 +479,7 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
         if (!ids.isEmpty()) {
             List<StyleOperationLog> logs = styleOperationLogService.lambdaQuery()
                     .in(StyleOperationLog::getStyleId, ids)
+                    .eq(tenantScopedRead, StyleOperationLog::getTenantId, readableTenantId)
                     .eq(StyleOperationLog::getBizType, "maintenance")
                     .orderByDesc(StyleOperationLog::getCreateTime)
                     .list();
@@ -481,6 +495,7 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
             List<String> styleIdStrings = ids.stream().map(String::valueOf).toList();
             List<PatternProduction> patterns = patternProductionService.lambdaQuery()
                     .in(PatternProduction::getStyleId, styleIdStrings)
+                    .eq(tenantScopedRead, PatternProduction::getTenantId, readableTenantId)
                     .eq(PatternProduction::getDeleteFlag, 0)
                     .orderByDesc(PatternProduction::getUpdateTime)
                     .orderByDesc(PatternProduction::getCreateTime)
@@ -509,6 +524,7 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                     .and(wrapper -> wrapper.in("style_id", styleIdStringsForStock)
                             .or()
                             .in(!styleNosForStock.isEmpty(), "style_no", styleNosForStock))
+                    .eq(tenantScopedRead, "tenant_id", readableTenantId)
                     .eq("sample_type", "development")
                     .eq("delete_flag", 0));
             for (SampleStock stock : stocks) {
@@ -600,9 +616,12 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
 
     @Override
     public StyleInfo getDetailById(Long id) {
+        Long readableTenantId = resolveReadableTenantId();
+        boolean tenantScopedRead = isTenantScopedRead();
         StyleInfo style = baseMapper.selectOne(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<StyleInfo>()
                         .eq(StyleInfo::getId, id)
+                .eq(tenantScopedRead, StyleInfo::getTenantId, readableTenantId)
                 .and(w -> w.eq(StyleInfo::getStatus, STYLE_STATUS_ENABLED)
                     .or()
                     .eq(StyleInfo::getStatus, STYLE_STATUS_SCRAPPED)));
@@ -674,6 +693,15 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
         }
 
         return style;
+    }
+
+    private boolean isTenantScopedRead() {
+        return !UserContext.isSuperAdmin();
+    }
+
+    private Long resolveReadableTenantId() {
+        Long tenantId = UserContext.tenantId();
+        return tenantId != null ? tenantId : -1L;
     }
 
     @Override

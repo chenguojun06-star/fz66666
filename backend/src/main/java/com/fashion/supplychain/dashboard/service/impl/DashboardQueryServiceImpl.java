@@ -317,14 +317,10 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
     public long sumTotalOrderQuantity() {
         Number cached = getFromCache("totalOrderQuantity");
         if (cached != null) return cached.longValue();
-        // 计算所有生产订单的总数量（包括已完成订单，与小程序和PC端保持一致）
-        List<ProductionOrder> orders = productionOrderService.lambdaQuery()
-                .eq(ProductionOrder::getDeleteFlag, 0)
-                .select(ProductionOrder::getOrderQuantity)
-                .list();
-        long result = orders.stream()
-                .mapToLong(order -> order.getOrderQuantity() != null ? order.getOrderQuantity() : 0L)
-                .sum();
+        QueryWrapper<ProductionOrder> qw = new QueryWrapper<ProductionOrder>()
+                .select("COALESCE(SUM(COALESCE(order_quantity, 0)), 0) as total")
+                .eq("delete_flag", 0);
+        long result = extractLongScalar(productionOrderMapper.selectMaps(qw), "total");
         putToCache("totalOrderQuantity", result);
         return result;
     }
@@ -381,26 +377,18 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
 
     @Override
     public long sumTotalQualifiedQuantity() {
-        // 统计所有合格品数量
-        List<ProductWarehousing> warehouses = productWarehousingService.lambdaQuery()
-                .eq(ProductWarehousing::getDeleteFlag, 0)
-                .select(ProductWarehousing::getQualifiedQuantity)
-                .list();
-        return warehouses.stream()
-                .mapToLong(w -> w.getQualifiedQuantity() != null ? w.getQualifiedQuantity() : 0L)
-                .sum();
+        QueryWrapper<ProductWarehousing> qw = new QueryWrapper<ProductWarehousing>()
+                .select("COALESCE(SUM(COALESCE(qualified_quantity, 0)), 0) as total")
+                .eq("delete_flag", 0);
+        return extractLongScalar(productWarehousingMapper.selectMaps(qw), "total");
     }
 
     @Override
     public long sumTotalUnqualifiedQuantity() {
-        // 统计所有次品数量
-        List<ProductWarehousing> warehouses = productWarehousingService.lambdaQuery()
-                .eq(ProductWarehousing::getDeleteFlag, 0)
-                .select(ProductWarehousing::getUnqualifiedQuantity)
-                .list();
-        return warehouses.stream()
-                .mapToLong(w -> w.getUnqualifiedQuantity() != null ? w.getUnqualifiedQuantity() : 0L)
-                .sum();
+        QueryWrapper<ProductWarehousing> qw = new QueryWrapper<ProductWarehousing>()
+                .select("COALESCE(SUM(COALESCE(unqualified_quantity, 0)), 0) as total")
+                .eq("delete_flag", 0);
+        return extractLongScalar(productWarehousingMapper.selectMaps(qw), "total");
     }
 
     @Override
@@ -415,16 +403,12 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
 
     @Override
     public long sumQualifiedQuantityBetween(LocalDateTime start, LocalDateTime end) {
-        // 统计指定时间范围内的合格品数量
-        List<ProductWarehousing> warehouses = productWarehousingService.lambdaQuery()
-                .eq(ProductWarehousing::getDeleteFlag, 0)
-                .ge(start != null, ProductWarehousing::getWarehousingEndTime, start)
-                .le(end != null, ProductWarehousing::getWarehousingEndTime, end)
-                .select(ProductWarehousing::getQualifiedQuantity)
-                .list();
-        return warehouses.stream()
-                .mapToLong(w -> w.getQualifiedQuantity() != null ? w.getQualifiedQuantity() : 0L)
-                .sum();
+        QueryWrapper<ProductWarehousing> qw = new QueryWrapper<ProductWarehousing>()
+                .select("COALESCE(SUM(COALESCE(qualified_quantity, 0)), 0) as total")
+                .eq("delete_flag", 0)
+                .ge(start != null, "warehousing_end_time", start)
+                .le(end != null, "warehousing_end_time", end);
+        return extractLongScalar(productWarehousingMapper.selectMaps(qw), "total");
     }
 
     @Override
@@ -720,23 +704,17 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         LocalDate today = LocalDate.now();
         LocalDateTime startOfDay = LocalDateTime.of(today, LocalTime.MIN);
         LocalDateTime endOfDay = LocalDateTime.of(today, LocalTime.MAX);
-        List<ScanRecord> scans = scanRecordService.lambdaQuery()
-                .ge(ScanRecord::getScanTime, startOfDay)
-                .le(ScanRecord::getScanTime, endOfDay)
-                .select(ScanRecord::getQuantity)
-                .list();
-        return scans.stream()
-                .mapToLong(s -> s.getQuantity() != null ? s.getQuantity() : 0L)
-                .sum();
+        QueryWrapper<ScanRecord> qw = new QueryWrapper<ScanRecord>()
+                .select("COALESCE(SUM(COALESCE(quantity, 0)), 0) as total")
+                .ge("scan_time", startOfDay)
+                .le("scan_time", endOfDay);
+        return extractLongScalar(scanRecordService.getBaseMapper().selectMaps(qw), "total");
     }
 
     @Override
     public long sumTotalScanQuantity() {
-        List<ScanRecord> scans = scanRecordService.lambdaQuery()
-                .select(ScanRecord::getQuantity)
-                .list();
-        return scans.stream()
-                .mapToLong(s -> s.getQuantity() != null ? s.getQuantity() : 0L)
-                .sum();
+        QueryWrapper<ScanRecord> qw = new QueryWrapper<ScanRecord>()
+                .select("COALESCE(SUM(COALESCE(quantity, 0)), 0) as total");
+        return extractLongScalar(scanRecordService.getBaseMapper().selectMaps(qw), "total");
     }
 }

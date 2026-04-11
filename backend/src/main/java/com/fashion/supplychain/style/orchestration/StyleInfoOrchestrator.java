@@ -131,6 +131,8 @@ public class StyleInfoOrchestrator {
         if (!StringUtils.hasText(key)) {
             throw new NoSuchElementException("款号不存在");
         }
+        Long readableTenantId = resolveReadableTenantId();
+        boolean tenantScopedRead = !UserContext.isSuperAdmin();
 
         if (isNumericKey(key)) {
             StyleInfo styleInfo = styleInfoService.getDetailById(Long.parseLong(key));
@@ -141,6 +143,7 @@ public class StyleInfoOrchestrator {
 
         StyleInfo matched = styleInfoService.getOne(new LambdaQueryWrapper<StyleInfo>()
             .select(StyleInfo::getId)
+            .eq(tenantScopedRead, StyleInfo::getTenantId, readableTenantId)
             .eq(StyleInfo::getStyleNo, key)
             .last("limit 1"));
         if (matched == null || matched.getId() == null) {
@@ -156,6 +159,11 @@ public class StyleInfoOrchestrator {
 
     public StyleInfo detail(Long id) {
         return detail(id == null ? null : String.valueOf(id));
+    }
+
+    private Long resolveReadableTenantId() {
+        Long tenantId = UserContext.tenantId();
+        return tenantId != null ? tenantId : -1L;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -599,9 +607,13 @@ public class StyleInfoOrchestrator {
         LocalDateTime startTime = getStartTimeByRange(rangeType);
         LocalDateTime endTime = LocalDateTime.now();
 
-        // 查询时间范围内已完成的样衣
+        boolean tenantScopedRead = !UserContext.isSuperAdmin();
+        Long readableTenantId = resolveReadableTenantId();
+
+        // 查询时间范围内已完成的样衣（租户隔离：非超管只查本租户数据）
         List<StyleInfo> completedStyles = styleInfoService.lambdaQuery()
                 .eq(StyleInfo::getSampleStatus, "COMPLETED")
+                .eq(tenantScopedRead, StyleInfo::getTenantId, readableTenantId)
                 .ge(StyleInfo::getSampleCompletedTime, startTime)
                 .le(StyleInfo::getSampleCompletedTime, endTime)
                 .list();

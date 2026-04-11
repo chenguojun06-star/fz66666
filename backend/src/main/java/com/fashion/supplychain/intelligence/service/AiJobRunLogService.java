@@ -33,9 +33,10 @@ public class AiJobRunLogService extends ServiceImpl<AiJobRunLogMapper, AiJobRunL
      */
     @Async
     public void logSuccess(String jobName, String methodName, LocalDateTime startTime,
-                           long durationMs, String resultSummary) {
+                           long durationMs, String resultSummary, Long tenantId) {
         try {
             AiJobRunLog log = new AiJobRunLog()
+                    .setTenantId(tenantId)
                     .setJobName(jobName)
                     .setMethodName(methodName)
                     .setStartTime(startTime)
@@ -44,19 +45,16 @@ public class AiJobRunLogService extends ServiceImpl<AiJobRunLogMapper, AiJobRunL
                     .setResultSummary(truncate(resultSummary, 490));
             save(log);
         } catch (Exception e) {
-            // 日志写入失败不干扰任务主流程
             log.warn("[JobRunLog] 写入成功日志失败: {}", e.getMessage());
         }
     }
 
-    /**
-     * 异步记录任务失败日志
-     */
     @Async
     public void logFailed(String jobName, String methodName, LocalDateTime startTime,
-                          long durationMs, String errorMessage) {
+                          long durationMs, String errorMessage, Long tenantId) {
         try {
             AiJobRunLog record = new AiJobRunLog()
+                    .setTenantId(tenantId)
                     .setJobName(jobName)
                     .setMethodName(methodName)
                     .setStartTime(startTime)
