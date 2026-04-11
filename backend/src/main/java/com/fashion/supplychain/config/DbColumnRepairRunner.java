@@ -238,6 +238,72 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             repaired += ensureColumn(conn, schema, "t_intelligence_prediction_log", "delete_flag",
                     "INT NOT NULL DEFAULT 0 COMMENT '删除标记：0正常 1删除'");
 
+            // --- t_scan_record 补列（Phase 3/5/6 扩展字段，高频业务热路径）---
+            repaired += ensureColumn(conn, schema, "t_scan_record", "scan_mode",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '扫码模式:ORDER/BUNDLE/SKU'");
+            repaired += ensureColumn(conn, schema, "t_scan_record", "sku_completed_count",
+                    "INT DEFAULT NULL COMMENT 'SKU已完成数'");
+            repaired += ensureColumn(conn, schema, "t_scan_record", "sku_total_count",
+                    "INT DEFAULT NULL COMMENT 'SKU总数'");
+            repaired += ensureColumn(conn, schema, "t_scan_record", "process_unit_price",
+                    "DECIMAL(12,4) DEFAULT NULL COMMENT '工序单价'");
+            repaired += ensureColumn(conn, schema, "t_scan_record", "scan_cost",
+                    "DECIMAL(12,4) DEFAULT NULL COMMENT '本次扫码工序成本'");
+            repaired += ensureColumn(conn, schema, "t_scan_record", "delegate_target_type",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '指派目标类型:internal/external/none'");
+            repaired += ensureColumn(conn, schema, "t_scan_record", "delegate_target_id",
+                    "VARCHAR(64) DEFAULT NULL COMMENT '指派目标ID'");
+            repaired += ensureColumn(conn, schema, "t_scan_record", "delegate_target_name",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '指派目标名称'");
+            repaired += ensureColumn(conn, schema, "t_scan_record", "actual_operator_id",
+                    "VARCHAR(64) DEFAULT NULL COMMENT '实际操作员ID（追溯）'");
+            repaired += ensureColumn(conn, schema, "t_scan_record", "actual_operator_name",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '实际操作员名称'");
+            repaired += ensureColumn(conn, schema, "t_scan_record", "cutting_bundle_qr_code",
+                    "VARCHAR(200) DEFAULT NULL COMMENT '裁剪菲号二维码原始串'");
+            repaired += ensureColumn(conn, schema, "t_scan_record", "progress_stage",
+                    "VARCHAR(30) DEFAULT NULL COMMENT '生产阶段:cutting/production/quality/warehouse'");
+            repaired += ensureColumn(conn, schema, "t_scan_record", "payroll_settlement_id",
+                    "VARCHAR(64) DEFAULT NULL COMMENT '关联工资结算单ID'");
+            repaired += ensureColumn(conn, schema, "t_scan_record", "factory_id",
+                    "VARCHAR(64) DEFAULT NULL COMMENT '扫码时归属外发工厂ID'");
+
+            // --- t_production_order 补列（PreflightChecker已监控，RepairRunner同步覆盖）---
+            repaired += ensureColumn(conn, schema, "t_production_order", "progress_workflow_json",
+                    "LONGTEXT DEFAULT NULL COMMENT '生产进度工作流JSON'");
+            repaired += ensureColumn(conn, schema, "t_production_order", "progress_workflow_locked",
+                    "TINYINT(1) NOT NULL DEFAULT 0 COMMENT '进度流程是否锁定'");
+            repaired += ensureColumn(conn, schema, "t_production_order", "skc",
+                    "VARCHAR(100) DEFAULT NULL COMMENT 'SKC编码'");
+            repaired += ensureColumn(conn, schema, "t_production_order", "urgency_level",
+                    "INT NOT NULL DEFAULT 0 COMMENT '紧急程度:0普通 1加急 2特急'");
+            repaired += ensureColumn(conn, schema, "t_production_order", "plate_type",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '板型:SAMPLE/BATCH'");
+            repaired += ensureColumn(conn, schema, "t_production_order", "order_biz_type",
+                    "VARCHAR(30) DEFAULT NULL COMMENT '订单业务类型'");
+            repaired += ensureColumn(conn, schema, "t_production_order", "factory_type",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '工厂类型:internal/external'");
+            repaired += ensureColumn(conn, schema, "t_production_order", "procurement_manually_completed",
+                    "TINYINT(1) DEFAULT NULL COMMENT '采购是否手动标记完成'");
+
+            // --- t_payroll_settlement 补列（审核/确认字段，工资结算高频写路径）---
+            repaired += ensureColumn(conn, schema, "t_payroll_settlement", "settlement_no",
+                    "VARCHAR(64) DEFAULT NULL COMMENT '结算单号'");
+            repaired += ensureColumn(conn, schema, "t_payroll_settlement", "auditor_id",
+                    "VARCHAR(64) DEFAULT NULL COMMENT '审核人ID'");
+            repaired += ensureColumn(conn, schema, "t_payroll_settlement", "auditor_name",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '审核人姓名'");
+            repaired += ensureColumn(conn, schema, "t_payroll_settlement", "audit_time",
+                    "DATETIME DEFAULT NULL COMMENT '审核时间'");
+            repaired += ensureColumn(conn, schema, "t_payroll_settlement", "confirmer_id",
+                    "VARCHAR(64) DEFAULT NULL COMMENT '确认人ID'");
+            repaired += ensureColumn(conn, schema, "t_payroll_settlement", "confirmer_name",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '确认人姓名'");
+            repaired += ensureColumn(conn, schema, "t_payroll_settlement", "confirm_time",
+                    "DATETIME DEFAULT NULL COMMENT '确认时间'");
+            repaired += ensureColumn(conn, schema, "t_payroll_settlement", "tenant_id",
+                    "BIGINT DEFAULT NULL COMMENT '租户ID'");
+
             int repairedTables = 0;
                 repairedTables += ensureTable(conn, schema,
                         "t_intelligence_audit_log",
@@ -791,6 +857,9 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                     + "KEY `idx_shipment_id` (`shipment_id`),"
                     + "KEY `idx_tenant_id` (`tenant_id`)"
                     + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+            repaired += ensureColumn(conn, schema, "t_production_order", "transfer_log_json",
+                    "LONGTEXT DEFAULT NULL");
 
             if (repaired > 0) {
                 log.warn("[DbRepair] 共修复 {} 个缺失列，Flyway 可能未正常执行对应迁移脚本", repaired);

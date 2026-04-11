@@ -8,6 +8,7 @@ import java.util.NoSuchElementException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Slf4j
@@ -26,6 +27,7 @@ public class StyleProcessOrchestrator {
         return styleProcessService.listByStyleId(styleId);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean save(StyleProcess styleProcess) {
         if (styleProcess == null || styleProcess.getStyleId() == null) {
             throw new IllegalArgumentException("styleId不能为空");
@@ -49,6 +51,7 @@ public class StyleProcessOrchestrator {
         return true;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean update(StyleProcess styleProcess) {
         if (styleProcess == null || styleProcess.getId() == null) {
             throw new IllegalArgumentException("id不能为空");
@@ -74,6 +77,7 @@ public class StyleProcessOrchestrator {
         return true;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean delete(String id) {
         StyleProcess current = styleProcessService.getById(id);
         if (current == null) {

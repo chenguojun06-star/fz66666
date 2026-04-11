@@ -9,6 +9,7 @@ import java.util.NoSuchElementException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Slf4j
@@ -27,6 +28,7 @@ public class StyleSizeOrchestrator {
         return styleSizeService.listByStyleId(styleId);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean save(StyleSize styleSize) {
         if (styleSize == null || styleSize.getStyleId() == null) {
             throw new IllegalArgumentException("styleId不能为空");
@@ -45,6 +47,7 @@ public class StyleSizeOrchestrator {
         return true;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean update(StyleSize styleSize) {
         if (styleSize == null || styleSize.getId() == null) {
             throw new IllegalArgumentException("id不能为空");
@@ -65,6 +68,7 @@ public class StyleSizeOrchestrator {
         return true;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean delete(String id) {
         StyleSize current = styleSizeService.getById(id);
         if (current == null) {
