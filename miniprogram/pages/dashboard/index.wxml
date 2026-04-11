@@ -149,12 +149,12 @@
         </view>
         <view class="qty-divider"></view>
         <view class="qty-item">
-          <text class="qty-val qty-val--done">{{item.completedQuantity || 0}}</text>
+          <text class="qty-val">{{item.completedQuantity || 0}}</text>
           <text class="qty-lbl">已完成</text>
         </view>
         <view class="qty-divider"></view>
         <view class="qty-item">
-          <text class="qty-val qty-val--remain">{{item.remainQuantity || 0}}</text>
+          <text class="qty-val">{{item.remainQuantity || 0}}</text>
           <text class="qty-lbl">剩余</text>
         </view>
       </view>

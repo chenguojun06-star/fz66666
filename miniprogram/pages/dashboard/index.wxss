@@ -215,13 +215,12 @@
 .order-card {
   background: var(--color-bg-card, #ffffff);
   border-radius: var(--radius-md, 12px);
-  padding: 14px 16px 12px;
-  margin-bottom: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  padding: 10px 12px 8px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
 }
 .order-card--overdue {
-  border-left: 3px solid #ef4444;
-  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid #ef4444;
 }
 .order-card--overdue .order-no {
   color: #dc2626;
@@ -234,47 +233,41 @@
 .qty-row {
   display: flex;
   align-items: center;
-  margin-top: 10px;
-  padding: 6px 0;
-  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  margin-top: 6px;
+  padding: 4px 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.04);
 }
 .qty-item {
   flex: 1;
   display: flex;
   align-items: baseline;
   justify-content: center;
-  gap: 4px;
+  gap: 3px;
 }
 .qty-val {
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--color-text-primary, #1a1a2e);
 }
-.qty-val--done {
-  color: #22c55e;
-}
-.qty-val--remain {
-  color: #f59e0b;
-}
 .qty-lbl {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--color-text-secondary, #8c8c8c);
 }
 .qty-divider {
   width: 1px;
-  height: 20px;
-  background: rgba(0, 0, 0, 0.08);
+  height: 14px;
+  background: rgba(0, 0, 0, 0.06);
 }
 
 /* — 头部：封面图 + 信息 — */
 .order-header {
   display: flex;
-  gap: 12px;
+  gap: 10px;
 }
 .cover-box {
-  width: 80px;
-  height: 80px;
-  border-radius: 10px;
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
   overflow: hidden;
   flex-shrink: 0;
   background: #f5f6fa;
@@ -361,20 +354,20 @@
 .progress-row {
   display: flex;
   align-items: center;
-  margin-top: 10px;
+  margin-top: 6px;
   gap: 8px;
 }
 .progress-bar {
   flex: 1;
-  height: 8px;
+  height: 4px;
   background: rgba(0, 0, 0, 0.06);
-  border-radius: 4px;
+  border-radius: 2px;
   overflow: hidden;
 }
 .progress-fill {
   height: 100%;
   background: linear-gradient(90deg, #3b82f6, #60a5fa);
-  border-radius: 4px;
+  border-radius: 2px;
   transition: width 0.3s;
 }
 .progress-fill--overdue {
