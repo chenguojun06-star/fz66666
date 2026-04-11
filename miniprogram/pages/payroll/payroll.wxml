@@ -53,7 +53,8 @@
         <text class="color-size">{{item.color}} {{item.size}}</text>
         <text class="process">{{item.processName}}</text>
       </view>
-      <view class="record-footer">
+      <view wx:if="{{item.operatorName}}" class="operator-name">扫码人：{{item.operatorName}}</view>
+  <view class="record-footer">
         <view class="calculation">
           <text class="quantity" user-select>{{item.quantity}}件</text>
           <text class="multiply">×</text>

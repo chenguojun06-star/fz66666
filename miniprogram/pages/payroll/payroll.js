@@ -229,6 +229,7 @@ Page({
       color: item.color || '-',
       size: item.size || '-',
       processName: item.processName || '-',
+      operatorName: item.operatorName || '',
       quantity: item.quantity || 0,
       unitPrice: (item.unitPrice || 0).toFixed(2),
       totalAmount: (item.totalAmount || 0).toFixed(2),

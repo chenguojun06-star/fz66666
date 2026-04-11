@@ -199,7 +199,13 @@
 .order-info {
   font-size: 14px;
   font-weight: 600;
-  color: var(--color-primary);
+  color: var(--color-text-primary);
+}
+
+.operator-name {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin-top: 4px;
 }
 
 .style-info {
