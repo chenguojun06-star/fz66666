@@ -168,3 +168,4 @@
 
   <!-- 小云 AI 助手浮动入口 -->
   <ai-assistant id="bundleSplitAiAssistant" notice-count="{{unreadNoticeCount}}" />
+</view>
