@@ -351,5 +351,5 @@ xiaoyun:
 
 # SerpApi 趋势数据配置（Google Trends / Google Shopping）
 serpapi:
-  api-key: ${SERPAPI_KEY:128e1b4ca5b24addc0a67f8cab12ed76e29804b54752a080a4c29cf605603580}
-  enabled: ${SERPAPI_ENABLED:true}
+  api-key: ${SERPAPI_KEY:}
+  enabled: ${SERPAPI_ENABLED:false}

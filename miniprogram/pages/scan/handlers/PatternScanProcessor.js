@@ -265,7 +265,8 @@ async function submitPatternScan(handler, data) {
 
     if (operationType === 'REVIEW') {
       const reviewRemark = String(data.remark || '').trim();
-      const reviewResult = 'APPROVED';
+      // BUG5 修复：支持从调用方传入审核结果，不再硬编码 APPROVED（允许 REJECTED 驳回）
+      const reviewResult = data.reviewResult || 'APPROVED';
       const res = await handler.api.production.reviewPattern(data.patternId, reviewResult, reviewRemark);
       if (res) {
         return {

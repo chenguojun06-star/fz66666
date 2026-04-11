@@ -11,6 +11,7 @@ import com.fashion.supplychain.intelligence.dto.*;
 import com.fashion.supplychain.intelligence.orchestration.*;
 import com.fashion.supplychain.intelligence.service.AiAdvisorService;
 import com.fashion.supplychain.intelligence.service.AiContextBuilderService;
+import com.fashion.supplychain.intelligence.service.AiJobRunLogService;
 import com.fashion.supplychain.intelligence.service.ProcessStatsEngine;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -852,5 +853,21 @@ public class IntelligenceController {
     public Result<java.util.List<com.fashion.supplychain.intelligence.entity.AgentMeeting>> listMeetings(
             @RequestParam(defaultValue = "10") int limit) {
         return Result.success(agentMeetingOrchestrator.listByTenant(UserContext.tenantId(), limit));
+    }
+
+    // ── 任务可观测性（JobRunObservabilityAspect 自动写入） ──
+
+    @Autowired
+    private AiJobRunLogService jobRunLogService;
+
+    /**
+     * 查询最近 N 条定时任务执行日志。
+     * 超管专属，返回 jobName / methodName / status / durationMs / startTime / resultSummary / errorMessage。
+     * 用于快速判断哪个后台任务失败或超时。
+     */
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+    @GetMapping("/jobs/recent")
+    public Result<?> recentJobRuns(@RequestParam(defaultValue = "50") int limit) {
+        return Result.success(jobRunLogService.queryRecent(limit));
     }
 }

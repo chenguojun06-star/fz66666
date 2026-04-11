@@ -7,8 +7,11 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.ParamUtils;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.PatternProduction;
+import com.fashion.supplychain.production.entity.PatternScanRecord;
 import com.fashion.supplychain.production.service.PatternProductionService;
+import com.fashion.supplychain.production.service.PatternScanRecordService;
 import com.fashion.supplychain.stock.dto.SampleStockInboundBatchRequest;
 import com.fashion.supplychain.stock.entity.SampleLoan;
 import com.fashion.supplychain.stock.entity.SampleStock;
@@ -48,6 +51,9 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
     @Autowired
     private PatternProductionService patternProductionService;
 
+    @Autowired
+    private PatternScanRecordService patternScanRecordService;
+
     @Override
     public IPage<SampleStock> queryPage(Map<String, Object> params) {
         Integer page = ParamUtils.getPage(params);
@@ -74,10 +80,23 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void inbound(SampleStock stock) {
-        Long currentTenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        Long currentTenantId = UserContext.tenantId();
         StyleInfo style = resolveStyleForInbound(stock, currentTenantId);
         syncInboundBaseFields(stock, style);
         validateInboundPayload(stock, style, currentTenantId);
+
+        // ===== BUG2 修复：入库前校验审核状态（对齐小程序 PatternProductionOrchestrator.warehouseIn 逻辑） =====
+        PatternProduction matchedPattern = findPatternForStock(stock);
+        if (matchedPattern != null) {
+            String reviewStatus = matchedPattern.getReviewStatus() != null
+                    ? matchedPattern.getReviewStatus().trim().toUpperCase() : "";
+            String reviewResult = matchedPattern.getReviewResult() != null
+                    ? matchedPattern.getReviewResult().trim().toUpperCase() : "";
+            boolean approved = "APPROVED".equals(reviewStatus) || "APPROVED".equals(reviewResult);
+            if (!approved) {
+                throw new IllegalStateException("样衣审核未通过，不能入库。请先在小程序或PC端完成样衣审核。");
+            }
+        }
 
         // Check if exists (style + color + size + type + tenantId)
         LambdaQueryWrapper<SampleStock> query = new LambdaQueryWrapper<SampleStock>()
@@ -101,6 +120,41 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
         this.save(stock);
 
         syncPatternCompletion(stock);
+
+        // ===== BUG3 修复：PC入库同步创建扫码记录（对齐小程序 submitScan 逻辑） =====
+        if (matchedPattern != null) {
+            try {
+                PatternScanRecord scanRecord = new PatternScanRecord();
+                scanRecord.setPatternProductionId(matchedPattern.getId());
+                scanRecord.setStyleId(matchedPattern.getStyleId());
+                scanRecord.setStyleNo(matchedPattern.getStyleNo());
+                scanRecord.setColor(matchedPattern.getColor());
+                scanRecord.setOperationType("WAREHOUSE_IN");
+                scanRecord.setOperatorId(UserContext.userId());
+                scanRecord.setOperatorName(UserContext.username());
+                scanRecord.setOperatorRole("WAREHOUSE");
+                scanRecord.setScanTime(LocalDateTime.now());
+                scanRecord.setRemark("PC端样衣库存入库");
+                scanRecord.setCreateTime(LocalDateTime.now());
+                scanRecord.setDeleteFlag(0);
+                patternScanRecordService.save(scanRecord);
+            } catch (Exception e) {
+                log.warn("PC入库创建扫码记录失败（不阻断入库）: styleNo={}, color={}", stock.getStyleNo(), stock.getColor(), e);
+            }
+        }
+
+        // ===== BUG4 修复：入库后同步 StyleInfo.sampleCompletedTime（对齐小程序 statusHelper.syncStyleInfoOnScan 逻辑） =====
+        try {
+            Long styleId = style.getId();
+            if (styleId != null && style.getSampleCompletedTime() == null) {
+                style.setSampleCompletedTime(LocalDateTime.now());
+                style.setUpdateTime(LocalDateTime.now());
+                styleInfoMapper.updateById(style);
+                log.info("PC入库同步 StyleInfo.sampleCompletedTime: styleId={}", styleId);
+            }
+        } catch (Exception e) {
+            log.warn("PC入库同步StyleInfo失败（不阻断入库）: styleNo={}", stock.getStyleNo(), e);
+        }
     }
 
     @Override
@@ -370,11 +424,14 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
         }
     }
 
-    private void syncPatternCompletion(SampleStock stock) {
+    /**
+     * 根据库存记录查找对应的样板生产记录（按 styleId/styleNo + color 匹配，取最近更新的一条）
+     * 供 inbound() 审核校验 + 扫码记录创建 + syncPatternCompletion 共用
+     */
+    private PatternProduction findPatternForStock(SampleStock stock) {
         if (stock == null) {
-            return;
+            return null;
         }
-
         LambdaQueryWrapper<PatternProduction> query = new LambdaQueryWrapper<PatternProduction>()
                 .eq(PatternProduction::getDeleteFlag, 0)
                 .eq(StringUtils.hasText(stock.getStyleId()), PatternProduction::getStyleId, stock.getStyleId())
@@ -383,8 +440,11 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
                 .orderByDesc(PatternProduction::getUpdateTime)
                 .orderByDesc(PatternProduction::getCreateTime)
                 .last("LIMIT 1");
+        return patternProductionService.getOne(query, false);
+    }
 
-        PatternProduction pattern = patternProductionService.getOne(query, false);
+    private void syncPatternCompletion(SampleStock stock) {
+        PatternProduction pattern = findPatternForStock(stock);
         if (pattern == null) {
             log.warn("样衣库存入库后未找到对应样板生产记录: styleId={}, styleNo={}, color={}",
                     stock.getStyleId(), stock.getStyleNo(), stock.getColor());

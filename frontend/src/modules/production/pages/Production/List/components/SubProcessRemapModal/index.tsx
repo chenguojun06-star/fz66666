@@ -310,7 +310,7 @@ export default function SubProcessRemapModal({
     : '子工序配置';
 
   return (
-    <ResizableModal title={title} open={visible} onCancel={onClose} width="60vw" initialHeight={Math.round(window.innerHeight * 0.82)} destroyOnClose footer={null}>
+    <ResizableModal title={title} open={visible} onCancel={onClose} width="60vw" initialHeight={Math.round(window.innerHeight * 0.82)} destroyOnHidden footer={null}>
       {/* ══ 顶部操作栏 ══ */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',

@@ -41,6 +41,16 @@
     </view>
 
     <view class="chat-main" wx:if="{{currentTab === 'chat'}}">
+    <!-- 页面上下文感知建议 -->
+    <view class="page-context-chips" wx:if="{{pageSuggestions.length > 0 && messages.length <= 1 && !isLoading}}">
+      <view class="page-context-label">📍 当前页面相关</view>
+      <view class="page-context-list">
+        <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="{{item.question}}" wx:for="{{pageSuggestions}}" wx:key="question">
+          <view class="line-icon line-icon--sm {{item.icon}}"></view><text>{{item.label}}</text>
+        </view>
+      </view>
+    </view>
+    <!-- 角色默认建议 -->
     <view class="quick-chips" wx:if="{{messages.length <= 1 && !isLoading}}">
       <block wx:if="{{isManager}}">
         <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="帮我生成今日智能日报"><view class="line-icon line-icon--sm icon-stats"></view><text>生成日报</text></view>

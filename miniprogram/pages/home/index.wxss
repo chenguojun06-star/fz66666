@@ -115,9 +115,9 @@ page {
 }
 
 .menu-icon-circle {
-  width: 72px;
-  height: 72px;
-  border-radius: 20px;
+  width: 80px;
+  height: 80px;
+  border-radius: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -127,9 +127,9 @@ page {
 
 /* 菜单图标放大 */
 .menu-icon-circle .line-icon--lg {
-  width: 38px;
-  height: 38px;
-  background-size: 38px 38px;
+  width: 46px;
+  height: 46px;
+  background-size: 46px 46px;
 }
 
 .menu-name {
@@ -140,8 +140,11 @@ page {
 
 /* ---- 本月概览 ---- */
 .monthly-section {
-  padding: 16px 20px;
-  border-top: 1px solid var(--color-divider);
+  margin: 0 20px 16px;
+  padding: 16px;
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
 }
 
 .section-header {

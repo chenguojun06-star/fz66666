@@ -6,16 +6,16 @@ const { ok } = require('./helpers');
 
 const style = {
   listStyles(params) {
-    return ok('/api/style-info/list', 'GET', params || {});
+    return ok('/api/style/info/list', 'GET', params || {});
   },
   getBomList(styleId) {
-    return ok(`/api/style-info/${styleId}/bom`, 'GET', {});
+    return ok('/api/style/bom/list', 'GET', { styleId });
   },
   getInventory(styleId) {
-    return ok(`/api/style-info/${styleId}/inventory`, 'GET', {});
+    return ok('/api/warehouse/finished/inventory/list', 'GET', { styleId });
   },
   updateInventory(styleId, data) {
-    return ok(`/api/style-info/${styleId}/inventory`, 'PUT', data || {});
+    return ok('/api/warehouse/finished/inventory/outbound', 'POST', data || {});
   },
 };
 

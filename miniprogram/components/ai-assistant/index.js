@@ -48,6 +48,7 @@ Component({
     dragStartTriggerY: 0,
     screenWidth: 375,
     screenHeight: 667,
+    pageSuggestions: [],
   },
   lifetimes: {
     attached() {
@@ -121,6 +122,7 @@ Component({
   pageLifetimes: {
     show() {
       setTimeout(() => this.loadTasks(), 0);
+      this._refreshPageSuggestions();
     },
   },
   detached() {
@@ -197,6 +199,53 @@ Component({
       if (this._idleTimer) {
         clearTimeout(this._idleTimer);
         this._idleTimer = null;
+      }
+    },
+    _refreshPageSuggestions() {
+      try {
+        const pages = getCurrentPages();
+        const currentPage = pages.length > 0 ? pages[pages.length - 1] : null;
+        const route = currentPage ? (currentPage.route || '') : '';
+        let suggestions = [];
+        if (route.includes('scan')) {
+          suggestions = [
+            { icon: 'icon-search', label: '扫码问题', question: '扫码提示重复怎么处理？' },
+            { icon: 'icon-package', label: '菲号查询', question: '帮我查一下当前菲号的扫码记录' },
+            { icon: 'icon-stats', label: '工序进展', question: '当前工序完成了多少件？' },
+          ];
+        } else if (route.includes('payroll')) {
+          suggestions = [
+            { icon: 'icon-stats', label: '工资明细', question: '帮我查一下我这个月的工资明细' },
+            { icon: 'icon-search', label: '计件汇总', question: '我最近一周的计件数据是多少？' },
+            { icon: 'icon-clipboard', label: '结算状态', question: '当前有哪些未结算的工资单？' },
+          ];
+        } else if (route.includes('warehouse') || route.includes('finished')) {
+          suggestions = [
+            { icon: 'icon-package', label: '库存查询', question: '当前库存有多少？有没有低库存预警？' },
+            { icon: 'icon-search', label: '入库记录', question: '帮我查一下最近的入库记录' },
+            { icon: 'icon-alert', label: '待返修', question: '有没有待返修的入库单？' },
+          ];
+        } else if (route.includes('order')) {
+          suggestions = [
+            { icon: 'icon-package', label: '订单进度', question: '帮我查一下订单的生产进度' },
+            { icon: 'icon-alert', label: '逾期订单', question: '有没有逾期的订单？' },
+            { icon: 'icon-stats', label: '交期预估', question: '帮我预估一下剩余订单的交货时间' },
+          ];
+        } else if (route.includes('admin/notification')) {
+          suggestions = [
+            { icon: 'icon-clipboard', label: '未读通知', question: '有哪些未读通知？' },
+            { icon: 'icon-alert', label: '催单消息', question: '有没有催单消息需要处理？' },
+          ];
+        } else if (route.includes('bundle-split')) {
+          suggestions = [
+            { icon: 'icon-search', label: '分菲查询', question: '当前分菲号的拆分明细是什么？' },
+            { icon: 'icon-package', label: '数量校验', question: '拆分后总数量与订单是否一致？' },
+          ];
+        }
+        this.setData({ pageSuggestions: suggestions });
+      } catch (err) {
+        console.warn('[AiAssistant] _refreshPageSuggestions error:', err);
+        this.setData({ pageSuggestions: [] });
       }
     },
     _startIdleSnap() {
@@ -297,6 +346,7 @@ Component({
       this.setData({ isOpen: willOpen });
       if (willOpen) {
         this._snapToVisible();
+        this._refreshPageSuggestions();
         this.scrollToBottom();
       } else {
         this._startIdleSnap();

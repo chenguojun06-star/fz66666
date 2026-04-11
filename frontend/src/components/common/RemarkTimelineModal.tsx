@@ -91,7 +91,7 @@ const RemarkTimelineModal: React.FC<RemarkTimelineModalProps> = ({
       onCancel={onClose}
       width="40vw"
       footer={null}
-      destroyOnClose
+      destroyOnHidden
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: '100%' }}>
         {/* 输入区 */}

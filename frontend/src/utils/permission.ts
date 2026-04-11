@@ -1,26 +1,11 @@
 import React from 'react';
-import { UserInfo } from './AuthContext';
+import { UserInfo, isAdmin, useAuth } from './AuthContext';
 
-/**
- * 权限检查工具函数
- */
-
-/**
- * 检查用户是否拥有指定权限
- * @param user 用户信息
- * @param permissionCode 权限编码
- * @returns 是否拥有权限
- */
 export function hasPermission(user: UserInfo | null, permissionCode: string): boolean {
   if (!user) return false;
 
-  // 管理员拥有所有权限
-  const role = (user.role || '').toLowerCase();
-  if (role.includes('admin') || role.includes('管理员') || user.roleId === '1') {
-    return true;
-  }
+  if (isAdmin(user)) return true;
 
-  // 检查权限列表
   const permissions = user.permissions || [];
   if (permissions.includes('all')) return true;
 
@@ -56,12 +41,15 @@ export function withPermission<P extends object>(
   Component: React.ComponentType<P>,
   permissionCode: string
 ): React.FC<P> {
-  return (props: P) => {
-    void permissionCode;
-    // 这个组件需要在AuthContext中使用
-    // 实际使用时需要配合useAuth hook
+  const Wrapped: React.FC<P> = (props: P) => {
+    const { user } = useAuth();
+    if (!hasPermission(user, permissionCode)) {
+      return null;
+    }
     return React.createElement(Component, props);
   };
+  Wrapped.displayName = `withPermission(${Component.displayName || Component.name || 'Component'})`;
+  return Wrapped;
 }
 
 // 功能按钮权限编码定义

@@ -1,5 +1,42 @@
 @import '/styles/page-utils.wxss';
 
+/* ======== 搜索栏（两个面板共用）======== */
+.search-bar-wrap {
+  padding: 24rpx 32rpx 8rpx;
+}
+.search-bar-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  background: #fff;
+  border-radius: 20rpx;
+  border: 2rpx solid #e5e7eb;
+  padding: 0 16rpx 0 20rpx;
+  height: 96rpx;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  overflow: hidden;
+}
+.search-bar-input {
+  flex: 1;
+  height: 96rpx;
+  font-size: 34rpx;
+  color: #1e293b;
+  background: transparent;
+}
+.search-bar-btn {
+  flex-shrink: 0;
+  height: 72rpx;
+  line-height: 72rpx;
+  padding: 0 40rpx;
+  background: #3b82f6;
+  color: #fff;
+  border-radius: 16rpx;
+  font-size: 34rpx;
+  font-weight: 600;
+  margin-left: 12rpx;
+}
+.search-bar-btn-hover { opacity: 0.85; }
+
 .container {
   min-height: 100vh;
   background: var(--color-bg-page, #f5f7fa);

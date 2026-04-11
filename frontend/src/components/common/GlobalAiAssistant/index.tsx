@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   SendOutlined,
   CloseOutlined,
@@ -17,15 +17,24 @@ import { useAuth } from '@/utils/AuthContext';
 import XiaoyunCloudAvatar, { CuteCloudTrigger, type XiaoyunCloudMood } from '@/components/common/XiaoyunCloudAvatar';
 import styles from './index.module.css';
 import { loadDismissedPending, saveDismissedPending } from './sessionUtils';
-import { INITIAL_MSG, SUGGESTIONS, EMOJI_GROUPS } from './constants';
+import { INITIAL_MSG, EMOJI_GROUPS, getPageSuggestions } from './constants';
 import { choose } from './helpers';
 import { useAiChat } from './useAiChat';
+import { useDragSnap } from './useDragSnap';
 import MessageBubble from './MessageBubble';
 
 const GlobalAiAssistant: React.FC = () => {
   const { message } = App.useApp();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // ── 拖拽 + 边缘吸附 ──
+  const {
+    triggerPos, isDocked, isActiveDrag, setIsActiveDrag,
+    moveTo, snapToEdge, snapToVisible,
+    startIdleSnap, cancelIdleSnap,
+  } = useDragSnap();
 
   // ── parent-local state ──
   const [isOpen, setIsOpen] = useState(false);
@@ -41,6 +50,12 @@ const GlobalAiAssistant: React.FC = () => {
   const chatAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const emojiPanelRef = useRef<HTMLDivElement>(null);
+
+  // ── 拖拽辅助 refs ──
+  const hasDragRef = useRef(false);
+  const dragStartRef = useRef({ mx: 0, my: 0, tx: 0, ty: 0 });
+  const isOpenRef = useRef(isOpen);
+  useEffect(() => { isOpenRef.current = isOpen; }, [isOpen]);
 
   // ── chat hook ──
   const {
@@ -261,11 +276,61 @@ const GlobalAiAssistant: React.FC = () => {
     }
   }, [message, setMessages]);
 
+  // ── 浮标拖拽事件 ──
+  const handleTriggerMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    hasDragRef.current = false;
+    dragStartRef.current = { mx: e.clientX, my: e.clientY, tx: triggerPos.x, ty: triggerPos.y };
+    cancelIdleSnap();
+    const onMove = (ev: MouseEvent) => {
+      const dx = ev.clientX - dragStartRef.current.mx;
+      const dy = ev.clientY - dragStartRef.current.my;
+      if (!hasDragRef.current && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+        hasDragRef.current = true;
+        setIsActiveDrag(true);
+      }
+      if (!hasDragRef.current) return;
+      moveTo(
+        Math.max(-28, Math.min(dragStartRef.current.tx + dx, window.innerWidth - 28)),
+        Math.max(10, Math.min(dragStartRef.current.ty + dy, window.innerHeight - 56)),
+      );
+    };
+    const onUp = () => {
+      setIsActiveDrag(false);
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      if (hasDragRef.current) {
+        snapToEdge();
+      } else {
+        // 点击（非拖拽）→ 切换面板
+        setIsOpen(prev => {
+          if (prev) { startIdleSnap(); } else { snapToVisible(); }
+          return !prev;
+        });
+      }
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }, [triggerPos.x, triggerPos.y, cancelIdleSnap, setIsActiveDrag, moveTo, snapToEdge, startIdleSnap, snapToVisible]);
+
+  // ── 页面上下文感知建议 ──
+  const pageSuggestions = useMemo(() => getPageSuggestions(location.pathname), [location.pathname]);
+
+  // ── 面板定位样式（根据浮标边缘侧计算） ──
+  const panelStyle: React.CSSProperties = useMemo(() => ({
+    position: 'fixed' as const,
+    zIndex: 9998,
+    bottom: 16,
+    ...(triggerPos.edge === 'left'
+      ? { left: 16, transformOrigin: 'bottom left' }
+      : { right: 16, transformOrigin: 'bottom right' }),
+  }), [triggerPos.edge]);
+
   // ── JSX ──
   return (
-    <div className={styles.assistantWrapper}>
+    <>
       {isOpen && (
-        <div className={styles.chatPanel}>
+        <div className={styles.chatPanel} style={panelStyle}>
           {/* Header */}
           <div className={styles.panelHeader}>
             <div className={styles.avatarContainer}>
@@ -300,7 +365,7 @@ const GlobalAiAssistant: React.FC = () => {
               />
               <CloseOutlined
                 className={`${styles.headerActionBtn} ${styles.closeBtnIcon}`}
-                onClick={() => setIsOpen(false)}
+                onClick={() => { setIsOpen(false); startIdleSnap(); }}
                 title="关闭"
               />
             </div>
@@ -337,7 +402,7 @@ const GlobalAiAssistant: React.FC = () => {
                   直接自然语言输入就可以，下面只是常用示例
                 </div>
                 <div className={styles.suggestionChips}>
-                  {SUGGESTIONS.map(q => (
+                  {pageSuggestions.map(q => (
                     <div key={q} className={styles.chip} onClick={() => handleSend(q)}>
                       {q}
                     </div>
@@ -477,20 +542,19 @@ const GlobalAiAssistant: React.FC = () => {
         </div>
       )}
 
-      {/* 悬浮图标开关 */}
-      {!isOpen && (
-        <div
-          className={styles.triggerBtn}
-          onClick={() => setIsOpen(true)}
-          title="召唤小云智能助手"
-        >
-          <CuteCloudTrigger size={56} />
-          {visiblePendingItems.length > 0 && (
-            <span className={styles.triggerBadge}>{visiblePendingItems.length}</span>
-          )}
-        </div>
-      )}
-    </div>
+      {/* 悬浮浮标 — 始终可见、可拖拽、吸附边缘 */}
+      <div
+        className={`${styles.triggerBtn} ${isActiveDrag ? styles.triggerDragging : ''} ${isDocked && !isOpen ? styles.triggerDocked : ''}`}
+        style={{ left: triggerPos.x, top: triggerPos.y }}
+        onMouseDown={handleTriggerMouseDown}
+        title="召唤小云智能助手"
+      >
+        <CuteCloudTrigger size={56} active={isOpen} />
+        {!isOpen && visiblePendingItems.length > 0 && (
+          <span className={styles.triggerBadge}>{visiblePendingItems.length}</span>
+        )}
+      </div>
+    </>
   );
 };
 

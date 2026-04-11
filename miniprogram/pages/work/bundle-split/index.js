@@ -10,9 +10,9 @@ function showTip(msg) { toast.info(msg); }
 Page({
   data: {
     /* ---- Tab 切换 ---- */
-    activeTab: 0,                // 0=拆菲号  1=单价调整
+    activeTab: 0,                // 0=菲号单价  1=单价调整
 
-    /* ---- Tab0 拆菲号 ---- */
+    /* ---- Tab0 菲号单价 ---- */
     orderNo: '',
     bundles: [],
     selectedIdx: -1,
@@ -66,7 +66,7 @@ Page({
     this.setData({ activeTab: tab });
   },
 
-  /* ========== Tab0 拆菲号 ========== */
+  /* ========== Tab0 菲号单价 ========== */
 
   onSearchInput(e) {
     this.setData({ searchOrderNo: e.detail.value || '' });

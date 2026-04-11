@@ -131,7 +131,7 @@ function isTokenExpired() {
     return decoded.exp < (nowSec + 300);
   } catch (e) {
     console.warn('[storage] isTokenExpired解析失败:', e.message || e);
-    return false;
+    return true;
   }
 }
 

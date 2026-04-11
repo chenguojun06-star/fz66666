@@ -242,6 +242,9 @@
 .quick-chips { display: flex; flex-direction: row; padding: 8px 12px 0; gap: 8px; flex-wrap: wrap; }
 .quick-chip { background: var(--color-bg-light); color: var(--color-primary); border-radius: 16px; padding: 6px 12px; font-size: 12px; line-height: 1.4; border: 1px solid var(--color-info-bg); }
 .quick-chip-hover { background: var(--color-info-bg); }
+.page-context-chips { padding: 10px 12px 0; }
+.page-context-label { font-size: 11px; color: var(--color-text-disabled); margin-bottom: 6px; }
+.page-context-list { display: flex; flex-direction: row; gap: 8px; flex-wrap: wrap; }
 .chat-history { flex: 1; height: 0; width: 100%; box-sizing: border-box; padding: 12px; background: var(--color-bg-light); }
 .message-row { display: flex; margin-bottom: 12px; align-items: flex-start; }
 .my-message { flex-direction: row-reverse; }

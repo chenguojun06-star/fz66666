@@ -7,19 +7,14 @@
     <view class="tab-item {{activeTab === 1 ? 'tab-active' : ''}}" data-tab="1" bindtap="switchTab">单价调整</view>
   </view>
 
-  <!-- ======== Panel 0: 拆菲号 ======== -->
+  <!-- ======== Panel 0: 菲号单价 ======== -->
   <view wx:if="{{activeTab === 0}}">
 
     <!-- 搜索订单 -->
-    <view wx:if="{{needSearch}}" class="filter-section search-entry">
-      <view class="search-compact">
-        <view class="scan-icon-btn" bindtap="scanOrderQr" hover-class="scan-icon-btn-hover">
-          <view class="line-icon icon-camera icon-camera--white scan-btn-icon"></view>
-        </view>
-        <view class="search-box search-box-flex">
-          <input class="search-input" placeholder="输入订单号或扫码查单" value="{{searchOrderNo}}" bindinput="onSearchInput" confirm-type="search" bindconfirm="doSearch" />
-        </view>
-        <view class="search-btn" bindtap="doSearch" hover-class="search-btn-hover">查询</view>
+    <view wx:if="{{needSearch}}" class="search-bar-wrap">
+      <view class="search-bar-row">
+        <input class="search-bar-input" placeholder="输入订单号或扫码查单" value="{{searchOrderNo}}" bindinput="onSearchInput" confirm-type="search" bindconfirm="doSearch" />
+        <view class="search-bar-btn" bindtap="doSearch" hover-class="search-bar-btn-hover">查询</view>
       </view>
     </view>
 
@@ -96,15 +91,10 @@
   <view wx:if="{{activeTab === 1}}">
 
     <!-- 搜索订单 -->
-    <view class="filter-section search-entry">
-      <view class="search-compact">
-        <view class="scan-icon-btn" bindtap="scanPriceOrderQr" hover-class="scan-icon-btn-hover">
-          <view class="line-icon icon-camera icon-camera--white scan-btn-icon"></view>
-        </view>
-        <view class="search-box search-box-flex">
-          <input class="search-input" placeholder="输入订单号查询工序" value="{{priceSearchInput}}" bindinput="onPriceSearchInput" confirm-type="search" bindconfirm="doPriceSearch" />
-        </view>
-        <view class="search-btn" bindtap="doPriceSearch" hover-class="search-btn-hover">查询</view>
+    <view class="search-bar-wrap">
+      <view class="search-bar-row">
+        <input class="search-bar-input" placeholder="输入订单号查询工序" value="{{priceSearchInput}}" bindinput="onPriceSearchInput" confirm-type="search" bindconfirm="doPriceSearch" />
+        <view class="search-bar-btn" bindtap="doPriceSearch" hover-class="search-bar-btn-hover">查询</view>
       </view>
     </view>
 

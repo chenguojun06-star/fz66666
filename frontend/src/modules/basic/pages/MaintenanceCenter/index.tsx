@@ -345,7 +345,7 @@ const MaintenanceCenter: React.FC = () => {
         width="60vw"
         initialHeight={Math.round(window.innerHeight * 0.82)}
         footer={null}
-        destroyOnClose
+        destroyOnHidden
       >
         {panelType === 'pattern' && <PatternPanel key={activeStyleNo} styleNo={activeStyleNo} />}
         {panelType === 'sheet' && <ProductionSheetPanel key={activeStyleNo} styleNo={activeStyleNo} />}

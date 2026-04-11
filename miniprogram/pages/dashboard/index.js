@@ -61,6 +61,7 @@ Page({
       outbound:   { today: 0, week: 0 },
     },
     todayScanCount: 0,
+    unreadNoticeCount: 0,
     /* 状态过滤 */
     statFilters: STATUS_FILTERS,
     activeFilter: 'all',
@@ -81,6 +82,7 @@ Page({
       this.loadOrders(true);
     }
     this._loaded = true;
+    this._loadUnreadCount();
   },
 
   onPullDownRefresh: function () {
@@ -214,6 +216,16 @@ Page({
     var idx = e.currentTarget.dataset.index;
     var path = 'orders.list[' + idx + '].expanded';
     this.setData({ [path]: !this.data.orders.list[idx].expanded });
+  },
+
+  /* ======== 通知数量（小云 AI 助手浮标） ======== */
+  _loadUnreadCount: function () {
+    return api.notice.unreadCount()
+      .then(function (res) {
+        var count = (res && res.data != null) ? Number(res.data) : (Number(res) || 0);
+        this.setData({ unreadNoticeCount: count });
+      }.bind(this))
+      .catch(function (e) { console.warn('[dashboard] _loadUnreadCount失败:', e.message || e); });
   },
 
   /* ======== 工具方法 ======== */

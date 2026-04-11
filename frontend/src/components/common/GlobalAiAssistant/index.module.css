@@ -27,10 +27,8 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  margin-bottom: 20px;
   pointer-events: auto;
   animation: popupBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-  transform-origin: bottom right;
   border: 1px solid rgba(230, 247, 255, 0.8);
 }
 
@@ -482,7 +480,7 @@
   cursor: not-allowed;
 }
 
-/* 悬浮呼吸云朵 (触发器) - 移除原来的渐变圆底色 */
+/* 悬浮云朵触发器 — 固定定位、可拖拽、吸附边缘 */
 .triggerBtn {
   width: 56px;
   height: 56px;
@@ -491,14 +489,33 @@
   justify-content: center;
   cursor: pointer;
   pointer-events: auto;
-  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  animation: floatTrigger 4s ease-in-out infinite;
+  transition: left 0.3s ease, top 0.3s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
   user-select: none;
-  position: relative;
+  position: fixed;
+  z-index: 10000;
 }
 
 .triggerBtn:hover {
   transform: scale(1.15) rotate(5deg);
+}
+
+/* 拖拽中禁用过渡+hover效果 */
+.triggerDragging {
+  transition: none !important;
+  cursor: grabbing !important;
+}
+.triggerDragging:hover {
+  transform: none !important;
+}
+
+/* 吸附到边缘时：保持较高不透明度 + 深色投影增强对比度，避免浅色背景下看不到 */
+.triggerDocked {
+  opacity: 0.88;
+  filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.45)) drop-shadow(0 1px 4px rgba(0, 50, 180, 0.35));
+}
+.triggerDocked:hover {
+  opacity: 1;
+  filter: none;
 }
 
 .triggerBadge {

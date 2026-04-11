@@ -168,11 +168,19 @@ function _addRecordToGroup(group, record) {
     qtyArr = [totalQty];
   }
 
-  // 是否在1小时内（用于控制「退回重扫」和「撤回」按钮是否显示）
-  let canRescan = false;
+  // 时间窗口控制（对齐后端 ScanRecordOrchestrator）：
+  //   退回重扫(rescan)：所有用户 30 分钟
+  //   撤回(undo)：管理员 5 小时 / 普通用户 30 分钟（超时由后端拒绝并返回清晰提示）
+  // 前端用 5 小时上限宽松放行，后端做精确角色判断
+  let withinRescanWindow = false;
+  let withinUndoWindow = false;
   if (record.scanTime) {
     const scanTimeMs = new Date(String(record.scanTime).replace(' ', 'T')).getTime();
-    canRescan = !isNaN(scanTimeMs) && (Date.now() - scanTimeMs < 3600 * 1000);
+    if (!isNaN(scanTimeMs)) {
+      const elapsed = Date.now() - scanTimeMs;
+      withinRescanWindow = elapsed < 30 * 60 * 1000;       // 30 分钟
+      withinUndoWindow   = elapsed < 5 * 60 * 60 * 1000;   // 5 小时
+    }
   }
 
   // 是否已参与工资结算（已结算禁止撤回/退回）
@@ -201,8 +209,8 @@ function _addRecordToGroup(group, record) {
     operatorName: record.operatorName || record.operator_name || '',
     operatorId: record.operatorId || record.operator_id || '',
     displayOperator: record.operatorName || record.operator_name || record.operatorId || record.operator_id || '',
-    canRescan: canRollbackCurrentScan && canRescan && !payrollSettled && !hasNextStageScan,
-    canUndo: canRollbackCurrentScan && canRescan && !payrollSettled && !hasNextStageScan,
+    canRescan: canRollbackCurrentScan && withinRescanWindow && !payrollSettled && !hasNextStageScan,
+    canUndo: canRollbackCurrentScan && withinUndoWindow && !payrollSettled && !hasNextStageScan,
     payrollSettled: payrollSettled,
     cuttingBundleId: record.cuttingBundleId || '',
     coverImage: getAuthedImageUrl(record.coverImage || record.styleImage || ''),

@@ -54,7 +54,7 @@ const serial = {
 
 const factory = {
   list(params) {
-    return ok('/api/system/factories/list', 'GET', params || {});
+    return ok('/api/system/factory/list', 'GET', params || {});
   },
 };
 

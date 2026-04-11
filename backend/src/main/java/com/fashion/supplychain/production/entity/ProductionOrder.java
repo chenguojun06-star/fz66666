@@ -58,6 +58,14 @@ public class ProductionOrder {
     private String progressWorkflowLockedByName;
 
     /**
+     * 转厂操作历史日志（JSON 数组）
+     * 每次转厂追加一条记录，支持撤回（最近一条 status=active 的记录可以 undo）
+     * 结构：[{"seq":1,"timestamp":"...","operator":"...","oldFactoryId":"...","oldFactoryName":"...","newFactoryId":"...","newFactoryName":"...","isFullTransfer":true,"transferQuantity":null,"colorSizeLines":null,"reason":"...","status":"active"}]
+     */
+    @TableField("transfer_log_json")
+    private String transferLogJson;
+
+    /**
      * 款号ID
      */
     private String styleId;

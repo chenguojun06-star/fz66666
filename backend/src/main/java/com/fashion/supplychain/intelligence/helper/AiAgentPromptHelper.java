@@ -144,6 +144,45 @@ public class AiAgentPromptHelper {
 
         String toolGuide = aiAgentToolAccessService.buildToolGuide(visibleTools);
 
+        // ── 领域感知提示注入（从 classpath:agents/*-domain.md 加载）──
+        // 统计 visibleTools 中最多的非 GENERAL/SYSTEM/ANALYSIS 业务域，动态注入对应的行为规范片段。
+        // 若文件不存在或加载失败则静默降级为空串，不影响主流程。
+        String domainHint = "";
+        try {
+            if (visibleTools != null && !visibleTools.isEmpty()) {
+                java.util.Map<String, Long> domainCount = visibleTools.stream()
+                        .filter(t -> t.getDomain() != null)
+                        .filter(t -> {
+                            String dn = t.getDomain().name();
+                            return !"GENERAL".equals(dn) && !"SYSTEM".equals(dn) && !"ANALYSIS".equals(dn);
+                        })
+                        .collect(java.util.stream.Collectors.groupingBy(
+                                t -> t.getDomain().name().toLowerCase(),
+                                java.util.stream.Collectors.counting()));
+                if (!domainCount.isEmpty()) {
+                    String topDomain = domainCount.entrySet().stream()
+                            .max(java.util.Map.Entry.comparingByValue())
+                            .map(java.util.Map.Entry::getKey)
+                            .orElse(null);
+                    if (topDomain != null) {
+                        org.springframework.core.io.ClassPathResource res =
+                                new org.springframework.core.io.ClassPathResource("agents/" + topDomain + "-domain.md");
+                        if (res.exists()) {
+                            String mdContent = new String(res.getInputStream().readAllBytes(),
+                                    java.nio.charset.StandardCharsets.UTF_8);
+                            if (!mdContent.isBlank()) {
+                                domainHint = "\n### 业务领域行为规范（" + topDomain + "）\n"
+                                        + mdContent.trim() + "\n\n";
+                                log.debug("[AiAgent] 已注入领域规范: {}-domain.md", topDomain);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.debug("[AiAgent] 领域提示加载跳过: {}", e.getMessage());
+        }
+
         String prompt = "你是小云——服装供应链智能运营助理，由云裳智链Trivia团队开发。" +
                 "当用户问你是谁、谁开发的你等身份问题时，只回答：我是小云，由云裳智链Trivia团队开发的服装供应链智能助理。不要编造任何公司名称。\n" +
                 "第一句必须给结论+关键数字，不铺垫背景，不捏造数据。\n\n" +
@@ -154,6 +193,7 @@ public class AiAgentPromptHelper {
                 memoryContext +
                 ragContext +
                 toolGuide +
+                domainHint +
                 "【协作原则 — 必须遵守】\n" +
                 "1. 先判断，再解释，再给动作。不要先铺垫背景。第一句必须给出当前最关键的判断。\n" +
                 "2. 你的每个判断都要能落回真实数据、真实对象、真实风险，不允许用空泛词代替结论。\n" +

@@ -28,6 +28,9 @@ public class AuthTokenService {
         if ("dev-secret-change-me".equals(s)) {
             throw new IllegalStateException("app.auth.jwt-secret 不能使用默认占位值");
         }
+        if ("fashion-supply-chain-jwt-secret-key-2026".equals(s)) {
+            throw new IllegalStateException("app.auth.jwt-secret 不能使用代码仓库中的默认密钥，请配置环境变量 APP_AUTH_JWT_SECRET");
+        }
         if (s.length() < 32) {
             throw new IllegalStateException("app.auth.jwt-secret 长度过短，至少 32 位");
         }

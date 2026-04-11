@@ -219,4 +219,7 @@
     <text class="empty-icon">📭</text>
     <text class="empty-text">暂无订单数据</text>
   </view>
+
+  <!-- 小云 AI 助手浮动入口 -->
+  <ai-assistant id="dashboardAiAssistant" notice-count="{{unreadNoticeCount}}" />
 </view>

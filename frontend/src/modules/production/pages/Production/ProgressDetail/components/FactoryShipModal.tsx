@@ -104,7 +104,7 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
       okText="确认发货"
       cancelText="取消"
       confirmLoading={loading}
-      destroyOnClose
+      destroyOnHidden
       styles={{ body: { maxHeight: '80vh', overflowY: 'auto', paddingRight: 8 } }}
     >
       {/* ── Part 1: 摘要栏 ── */}

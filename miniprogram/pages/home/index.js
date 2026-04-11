@@ -19,7 +19,7 @@ function buildMenuItems() {
     { id: 'dashboard', name: '进度看板', iconClass: 'icon-dashboard', circleClass: 'menu-icon-circle--indigo', route: '/pages/dashboard/index' },
     { id: 'production', name: '生产', iconClass: 'icon-progress', circleClass: 'menu-icon-circle--blue', route: '/pages/work/index', tab: 'sewing' },
     { id: 'quality', name: '扫码质检', iconClass: 'icon-quality', circleClass: 'menu-icon-circle--green', route: '/pages/scan/index' },
-    { id: 'bundleSplit', name: '拆菲号', iconClass: 'icon-cutting', circleClass: 'menu-icon-circle--orange', route: '/pages/work/bundle-split/index' },
+    { id: 'bundleSplit', name: '菲号单价', iconClass: 'icon-cutting', circleClass: 'menu-icon-circle--orange', route: '/pages/work/bundle-split/index' },
     { id: 'history', name: '历史记录', iconClass: 'icon-history', circleClass: 'menu-icon-circle--purple', route: '/pages/scan/history/index' },
     { id: 'payroll', name: '当月工资', iconClass: 'icon-payroll', circleClass: 'menu-icon-circle--teal', route: '/pages/payroll/payroll' },
   ];

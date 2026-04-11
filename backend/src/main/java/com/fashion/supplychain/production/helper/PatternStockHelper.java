@@ -150,10 +150,13 @@ public class PatternStockHelper {
 
         List<Map<String, Object>> specRows = extractConfiguredSpecRows(styleInfo, pattern.getColor());
         if (specRows.isEmpty()) {
-            // 兜底：sizeColorConfig 未配置或无匹配颜色时，用样板单自身的颜色/数量生成一条入库记录
+            // ===== 均码兜底策略（设计决策，非bug） =====
+            // 当 sizeColorConfig 未配置或无匹配颜色时，使用"均码"作为兜底尺码。
+            // 这与 PC 端 SampleStockServiceImpl 的入库逻辑对齐：PC 端同样允许均码入库。
+            // 样板/样衣场景下，尺码信息经常缺失或不精确，"均码"是行业通用兜底值。
             String fallbackColor = StringUtils.hasText(pattern.getColor()) ? pattern.getColor() : "默认色";
             int fallbackQty = (pattern.getQuantity() != null && pattern.getQuantity() > 0) ? pattern.getQuantity() : 1;
-            log.warn("[样衣入库兜底] styleNo={} color={} sizeColorConfig为空或无匹配，使用样板单自身颜色={} 数量={}",
+            log.warn("[样衣入库兜底] styleNo={} color={} sizeColorConfig为空或无匹配，使用均码兜底: color={} qty={}",
                     styleInfo.getStyleNo(), pattern.getColor(), fallbackColor, fallbackQty);
             Map<String, Object> fallbackRow = new HashMap<>();
             fallbackRow.put("color", fallbackColor);
