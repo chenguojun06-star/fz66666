@@ -9,6 +9,10 @@ function showTip(msg) { toast.info(msg); }
 
 Page({
   data: {
+    /* ---- Tab 切换 ---- */
+    activeTab: 0,                // 0=拆菲号  1=单价调整
+
+    /* ---- Tab0 拆菲号 ---- */
     orderNo: '',
     bundles: [],
     selectedIdx: -1,
@@ -20,11 +24,32 @@ Page({
     needSearch: false,
     searchOrderNo: '',
     splitRecords: [],
+
+    /* ---- Tab1 单价调整 ---- */
+    priceOrderNo: '',
+    priceSearchInput: '',
+    processes: [],
+    priceLoading: false,
+    selectedProcessIdx: -1,
+    adjustPrice: '',
+    adjustReason: '',
+    adjustSubmitting: false,
+    adjustHistory: [],
+    isAdmin: false,
+
+    /* ---- 通用 ---- */
+    unreadNoticeCount: 0,
+  },
+
+  onShow() {
+    this._loadUnreadCount();
+    this._checkAdmin();
   },
 
   onLoad(options) {
     const orderNo = decodeURIComponent(options.orderNo || '');
     this.loadSplitRecords();
+    this._checkAdmin();
     if (!orderNo) {
       this.setData({ needSearch: true });
       this.loadWorkers();
@@ -35,7 +60,14 @@ Page({
     this.loadWorkers();
   },
 
-  /* ---------- 手动输入订单号后查询 ---------- */
+  /* ========== Tab 切换 ========== */
+  switchTab(e) {
+    const tab = Number(e.currentTarget.dataset.tab);
+    this.setData({ activeTab: tab });
+  },
+
+  /* ========== Tab0 拆菲号 ========== */
+
   onSearchInput(e) {
     this.setData({ searchOrderNo: e.detail.value || '' });
   },
@@ -47,7 +79,6 @@ Page({
     this.fetchBundles();
   },
 
-  /* ---------- 扫描订单二维码 ---------- */
   scanOrderQr() {
     wx.scanCode({
       onlyFromCamera: false,
@@ -61,12 +92,10 @@ Page({
     });
   },
 
-  /* ---------- 返回搜索界面重新选择订单 ---------- */
   changeOrder() {
     this.setData({ needSearch: true, orderNo: '', bundles: [], selectedIdx: -1 });
   },
 
-  /* ---------- 查询该订单所有菲号 ---------- */
   async fetchBundles() {
     this.setData({ loading: true, bundles: [], selectedIdx: -1 });
     try {
@@ -82,7 +111,6 @@ Page({
     }
   },
 
-  /* ---------- 加载工人列表 ---------- */
   async loadWorkers() {
     try {
       const app = getApp();
@@ -96,7 +124,6 @@ Page({
     }
   },
 
-  /* ---------- 选择菲号 ---------- */
   selectBundle(e) {
     const idx = Number(e.currentTarget.dataset.idx);
     this.setData({
@@ -106,7 +133,6 @@ Page({
     });
   },
 
-  /* ---------- 表单事件 ---------- */
   onQtyInput(e) {
     this.setData({ splitQty: e.detail.value || '' });
   },
@@ -115,7 +141,6 @@ Page({
     this.setData({ workerIdx: Number(e.detail.value) });
   },
 
-  /* ---------- 拆分记录本地存储 ---------- */
   loadSplitRecords() {
     try {
       const list = wx.getStorageSync('bundle_split_records') || [];
@@ -145,7 +170,6 @@ Page({
     });
   },
 
-  /* ---------- 提交拆分 ---------- */
   async submitSplit() {
     const { bundles, selectedIdx, splitQty, workers, workerIdx } = this.data;
     const bundle = bundles[selectedIdx];
@@ -181,5 +205,128 @@ Page({
       showTip('拆分失败');
       this.setData({ submitting: false });
     }
+  },
+
+  /* ========== Tab1 工序单价调整 ========== */
+
+  _checkAdmin() {
+    const app = getApp();
+    const role = (app.globalData && app.globalData.role) || '';
+    const isTenantOwner = !!(app.globalData && app.globalData.isTenantOwner);
+    const isAdmin = isTenantOwner || /admin|管理员/i.test(role);
+    this.setData({ isAdmin });
+  },
+
+  onPriceSearchInput(e) {
+    this.setData({ priceSearchInput: e.detail.value || '' });
+  },
+
+  doPriceSearch() {
+    const orderNo = (this.data.priceSearchInput || '').trim();
+    if (!orderNo) return showTip('请输入订单号');
+    this.setData({ priceOrderNo: orderNo, selectedProcessIdx: -1, adjustPrice: '', adjustReason: '' });
+    this.fetchProcesses();
+    this.fetchAdjustHistory();
+  },
+
+  scanPriceOrderQr() {
+    wx.scanCode({
+      onlyFromCamera: false,
+      success: (res) => {
+        const code = (res.result || '').trim();
+        if (!code) return showTip('未识别到内容');
+        this.setData({ priceOrderNo: code, priceSearchInput: code, selectedProcessIdx: -1, adjustPrice: '', adjustReason: '' });
+        this.fetchProcesses();
+        this.fetchAdjustHistory();
+      },
+      fail: () => showTip('扫码取消'),
+    });
+  },
+
+  async fetchProcesses() {
+    const orderNo = this.data.priceOrderNo;
+    if (!orderNo) return;
+    this.setData({ priceLoading: true, processes: [] });
+    try {
+      const res = await api.production.queryOrderProcesses(orderNo);
+      const list = (res && res.data) || res || [];
+      this.setData({ processes: Array.isArray(list) ? list : [], priceLoading: false });
+      if (!list.length) showTip('该订单暂无工序数据');
+    } catch (e) {
+      console.error('[price-adjust] fetchProcesses fail', e);
+      showTip('加载工序失败');
+      this.setData({ priceLoading: false });
+    }
+  },
+
+  async fetchAdjustHistory() {
+    const orderNo = this.data.priceOrderNo;
+    if (!orderNo) return;
+    try {
+      const res = await api.production.priceAdjustHistory(orderNo);
+      const list = (res && res.data) || res || [];
+      this.setData({ adjustHistory: Array.isArray(list) ? list.slice(0, 20) : [] });
+    } catch (e) {
+      console.warn('[price-adjust] fetchHistory fail', e);
+    }
+  },
+
+  selectProcess(e) {
+    const idx = Number(e.currentTarget.dataset.idx);
+    const isSame = this.data.selectedProcessIdx === idx;
+    this.setData({
+      selectedProcessIdx: isSame ? -1 : idx,
+      adjustPrice: isSame ? '' : String(this.data.processes[idx].unitPrice || ''),
+      adjustReason: '',
+    });
+  },
+
+  onAdjustPriceInput(e) {
+    this.setData({ adjustPrice: e.detail.value || '' });
+  },
+
+  onAdjustReasonInput(e) {
+    this.setData({ adjustReason: e.detail.value || '' });
+  },
+
+  async submitAdjust() {
+    if (!this.data.isAdmin) return showTip('仅管理员可调整单价');
+
+    const { processes, selectedProcessIdx, adjustPrice, adjustReason, priceOrderNo } = this.data;
+    const proc = processes[selectedProcessIdx];
+    if (!proc) return showTip('请先选择工序');
+
+    const price = parseFloat(adjustPrice);
+    if (isNaN(price) || price < 0) return showTip('请输入有效单价');
+    if (!adjustReason || !adjustReason.trim()) return showTip('请填写调整原因');
+
+    this.setData({ adjustSubmitting: true });
+    try {
+      await api.production.adjustProcessPrice({
+        orderNo: priceOrderNo,
+        processName: proc.processName,
+        newPrice: price,
+        reason: adjustReason.trim(),
+      });
+      showTip('调整成功');
+      this.setData({ adjustSubmitting: false, selectedProcessIdx: -1, adjustPrice: '', adjustReason: '' });
+      this.fetchProcesses();
+      this.fetchAdjustHistory();
+    } catch (e) {
+      console.error('[price-adjust] submit fail', e);
+      const msg = (e && e.message) || '调整失败';
+      showTip(msg);
+      this.setData({ adjustSubmitting: false });
+    }
+  },
+
+  /* -------- 通知数量（小云 AI 助手浮标） -------- */
+  _loadUnreadCount() {
+    api.notice.unreadCount()
+      .then(res => {
+        const count = (res && res.data != null) ? Number(res.data) : (Number(res) || 0);
+        this.setData({ unreadNoticeCount: count });
+      })
+      .catch(e => { console.warn('[bundle-split] _loadUnreadCount失败:', e.message || e); });
   },
 });

@@ -169,6 +169,17 @@ const production = {
   getQualityAiSuggestion(orderId) {
     return ok(`/api/quality/ai-suggestion?orderId=${encodeURIComponent(orderId)}`, 'GET', {});
   },
+
+  /* -------- 工序单价调整 -------- */
+  queryOrderProcesses(orderNo) {
+    return ok(`/api/production/process-price/processes?orderNo=${encodeURIComponent(orderNo)}`, 'GET', {});
+  },
+  adjustProcessPrice(payload) {
+    return ok('/api/production/process-price/adjust', 'POST', payload);
+  },
+  priceAdjustHistory(orderNo) {
+    return ok(`/api/production/process-price/history?orderNo=${encodeURIComponent(orderNo)}`, 'GET', {});
+  },
 };
 
 module.exports = production;
