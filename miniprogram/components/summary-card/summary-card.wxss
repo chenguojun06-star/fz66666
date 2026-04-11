@@ -1,5 +1,3 @@
-@import '/styles/design-tokens.wxss';
-
 .summary-card {
   margin: 12px;
   padding: 16px;

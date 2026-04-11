@@ -1,5 +1,3 @@
-@import '/styles/design-tokens.wxss';
-
 .sku-matrix { margin-top: 10rpx; width: 100%; }
 .sku-matrix-row { display: flex; flex-direction: row; align-items: center; }
 .sku-matrix-header { margin-bottom: 4rpx; }

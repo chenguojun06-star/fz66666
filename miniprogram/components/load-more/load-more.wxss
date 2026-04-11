@@ -1,5 +1,3 @@
-@import '/styles/design-tokens.wxss';
-
 .load-more {
   text-align: center;
   padding: 12px 10px;
