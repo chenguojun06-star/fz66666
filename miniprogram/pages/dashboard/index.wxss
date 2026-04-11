@@ -221,10 +221,49 @@
 }
 .order-card--overdue {
   border-left: 3px solid #ef4444;
-  background: rgba(239, 68, 68, 0.04);
+  background: rgba(239, 68, 68, 0.06);
 }
 .order-card--overdue .order-no {
   color: #dc2626;
+}
+.order-card--overdue .progress-pct {
+  color: #dc2626;
+}
+
+/* — 数量概览行（折叠也可见） — */
+.qty-row {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+  padding: 6px 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+.qty-item {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+}
+.qty-val {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text-primary, #1a1a2e);
+}
+.qty-val--done {
+  color: #22c55e;
+}
+.qty-val--remain {
+  color: #f59e0b;
+}
+.qty-lbl {
+  font-size: 11px;
+  color: var(--color-text-secondary, #8c8c8c);
+}
+.qty-divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(0, 0, 0, 0.08);
 }
 
 /* — 头部：封面图 + 信息 — */
@@ -337,6 +376,9 @@
   background: linear-gradient(90deg, #3b82f6, #60a5fa);
   border-radius: 4px;
   transition: width 0.3s;
+}
+.progress-fill--overdue {
+  background: linear-gradient(90deg, #ef4444, #f87171);
 }
 .progress-pct {
   font-size: 12px;

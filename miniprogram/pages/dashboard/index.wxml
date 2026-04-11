@@ -115,7 +115,7 @@
 
   <!-- ===== 订单列表（带封面图+工序明细+可展开） ===== -->
   <view class="order-list" wx:if="{{orders.list.length > 0}}">
-    <view class="order-card {{item.remainDaysClass === 'overdue' ? 'order-card--overdue' : ''}}"
+    <view class="order-card {{item.remainDaysClass === 'days-overdue' ? 'order-card--overdue' : ''}}"
           wx:for="{{orders.list}}" wx:key="id"
           data-index="{{index}}" bindtap="onCardToggle">
       <!-- 头部：封面图 + 基础信息 -->
@@ -136,15 +136,33 @@
           </view>
           <view class="header-delivery" wx:if="{{item.deliveryDateStr}}">
             <text class="delivery-date">交期 {{item.deliveryDateStr}}</text>
-            <text class="remain-days days-{{item.remainDaysClass}}" wx:if="{{item.remainDaysText}}">{{item.remainDaysText}}</text>
+            <text class="remain-days {{item.remainDaysClass}}" wx:if="{{item.remainDaysText}}">{{item.remainDaysText}}</text>
           </view>
+        </view>
+      </view>
+
+      <!-- 数量概览（折叠状态也可见） -->
+      <view class="qty-row">
+        <view class="qty-item">
+          <text class="qty-val">{{item.totalQuantity || item.orderQuantity || 0}}</text>
+          <text class="qty-lbl">总数量</text>
+        </view>
+        <view class="qty-divider"></view>
+        <view class="qty-item">
+          <text class="qty-val qty-val--done">{{item.completedQuantity || 0}}</text>
+          <text class="qty-lbl">已完成</text>
+        </view>
+        <view class="qty-divider"></view>
+        <view class="qty-item">
+          <text class="qty-val qty-val--remain">{{item.remainQuantity || 0}}</text>
+          <text class="qty-lbl">剩余</text>
         </view>
       </view>
 
       <!-- 进度条 + 收起箭头 -->
       <view class="progress-row">
         <view class="progress-bar">
-          <view class="progress-fill" style="width:{{item.productionProgress > 100 ? 100 : item.productionProgress}}%"></view>
+          <view class="progress-fill {{item.remainDaysClass === 'days-overdue' ? 'progress-fill--overdue' : ''}}" style="width:{{item.productionProgress > 100 ? 100 : item.productionProgress}}%"></view>
         </view>
         <text class="progress-pct">{{item.productionProgress || 0}}%</text>
         <text class="collapse-arrow {{item.expanded ? 'collapse-arrow--open' : ''}}">▾</text>

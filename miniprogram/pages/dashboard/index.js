@@ -175,7 +175,7 @@ Page({
       // 延期筛选：客户端根据交期过滤
       if (isOverdue) {
         var filtered = (that.data.orders.list || []).filter(function (o) {
-          return o.remainDaysClass === 'overdue';
+          return o.remainDaysClass === 'days-overdue';
         });
         that.setData({ 'orders.list': filtered });
       }
