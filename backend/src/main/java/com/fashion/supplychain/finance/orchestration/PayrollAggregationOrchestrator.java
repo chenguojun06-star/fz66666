@@ -87,6 +87,12 @@ public class PayrollAggregationOrchestrator {
         // 此过滤对所有角色（管理员/老板/工厂账号）均有效，彻底阻止外发工厂数据进入内部工资结算
         qw.isNull("factory_id");
 
+        // 防御性过滤：排除系统编排阶段（采购/下单等）历史遗留 scan_type='production' 记录，
+        // 防止这些 ¥0.00 记录出现在小程序「我的工资」页面。
+        // 根本修复在 ProductionOrderScanRecordDomainService.isSystemStage()，此处为双保险。
+        qw.notIn("progress_stage", "下单", "采购", "物料采购", "面辅料采购",
+                "备料", "到料", "订单创建", "创建订单", "开单", "制单");
+
         // 应用数据权限过滤（根据角色：all=全部, team=团队, own=仅自己）
         DataPermissionHelper.applyOperatorFilter(qw, "operator_id", "operator_name");
 

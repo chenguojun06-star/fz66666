@@ -30,6 +30,25 @@ public class ProductionOrderScanRecordDomainService {
     private static final int REQUEST_SCOPE_MAX_LEN = 16;
     private static final int REQUEST_NONCE_LEN = 12;
 
+    /**
+     * 系统编排阶段名称集合 — 这些阶段由系统自动写入，不对应任何工人工序操作，
+     * 不应参与工资计算。scanType 应写 "orchestration" 而非 "production"。
+     * 修复背景：历史上 upsertStageScanRecord() 对所有阶段统一写 scanType="production"，
+     * 导致"采购""下单"等系统阶段记录出现在小程序「我的工资」页，显示 ¥0.00。
+     */
+    private static final java.util.Set<String> SYSTEM_STAGE_NAMES = new java.util.HashSet<>(java.util.Arrays.asList(
+            STAGE_ORDER_CREATED, // "下单"
+            STAGE_PROCUREMENT,   // "采购"
+            "物料采购", "面辅料采购", "备料", "到料",
+            "订单创建", "创建订单", "开单", "制单"));
+
+    /** 判断阶段名是否属于系统编排阶段（非工人生产工序）*/
+    private static boolean isSystemStage(String processName) {
+        if (!StringUtils.hasText(processName)) return false;
+        String n = processName.trim();
+        return SYSTEM_STAGE_NAMES.stream().anyMatch(s -> n.equals(s) || n.contains(s));
+    }
+
     @Autowired
     private ScanRecordMapper scanRecordMapper;
 
@@ -436,7 +455,8 @@ public class ProductionOrderScanRecordDomainService {
             String opId = trimToNull(operatorId);
             sr.setOperatorId(opId);
             sr.setOperatorName(resolveOperatorName(operatorName, opId, null));
-            sr.setScanType("production");
+            // isSystemStage 判断：采购/下单等系统编排阶段写 "orchestration"，避免污染工资统计
+            sr.setScanType(isSystemStage(processName) ? "orchestration" : "production");
             sr.setScanResult("success");
             sr.setRemark(processName);
             sr.setScanTime(scanTime == null ? now : scanTime);
@@ -465,6 +485,7 @@ public class ProductionOrderScanRecordDomainService {
                 .set(ScanRecord::getQuantity, Math.max(0, quantity))
                 .set(ScanRecord::getOperatorId, opId)
                 .set(ScanRecord::getOperatorName, resolvedOpName)
+                .set(ScanRecord::getScanType, isSystemStage(processName) ? "orchestration" : "production")
                 .set(ScanRecord::getUpdateTime, now);
         if (scanTime != null) {
             uw.set(ScanRecord::getScanTime, scanTime);
