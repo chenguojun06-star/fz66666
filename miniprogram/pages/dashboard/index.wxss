@@ -220,7 +220,7 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
 }
 .order-card--overdue {
-  border: 1px solid #ef4444;
+  border-left: 3px solid #ef4444;
 }
 .order-card--overdue .order-no {
   color: #dc2626;
