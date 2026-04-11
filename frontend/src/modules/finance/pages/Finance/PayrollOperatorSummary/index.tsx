@@ -377,15 +377,19 @@ const PayrollOperatorSummary: React.FC = () => {
 
     // Tab1: 批量审核已选明细行
     const handleBatchAuditDetails = () => {
+        // rowKey 含 @@N 后缀确保 React key 唯一，业务对比时需先剥离后缀
+        const stripSuffix = (k: string) => k.replace(/\|@@\d+$/, '');
         const eligibleKeys = detailSelectedKeys.filter(key => {
-            const row = rows.find(r => getDetailRowKey(r) === key);
-            return row && isOrderFrozenByStatus({ status: row.orderStatus }) && !auditedDetailKeys.has(key);
+            const businessKey = stripSuffix(key);
+            const row = rows.find(r => getDetailRowKey(r) === businessKey);
+            return row && isOrderFrozenByStatus({ status: row.orderStatus }) && !auditedDetailKeys.has(businessKey);
         });
         if (eligibleKeys.length === 0) {
             message.warning('请选择状态为「已完成」且未审核的行');
             return;
         }
-        setAuditedDetailKeys(prev => new Set([...prev, ...eligibleKeys]));
+        const businessKeys = eligibleKeys.map(k => stripSuffix(k));
+        setAuditedDetailKeys(prev => new Set([...prev, ...businessKeys]));
         setDetailSelectedKeys([]);
         message.success(`已批量审核 ${eligibleKeys.length} 条记录`);
     };
@@ -600,13 +604,14 @@ const PayrollOperatorSummary: React.FC = () => {
 
                                     <ResizableTable
                                         storageKey="finance-payroll-operator-detail"
-                                        rowKey={(r: Record<string, unknown>) =>
+                                        rowKey={(r: Record<string, unknown>, index?: number) =>
                                             [
                                                 String(r?.orderNo || ''),
                                                 String(r?.styleNo || ''),
                                                 String(r?.operatorId || r?.operatorName || ''),
                                                 String(r?.processName || ''),
                                                 String(r?.scanType || ''),
+                                                `@@${index ?? 0}`,
                                             ].join('|')
                                         }
                                         rowSelection={{

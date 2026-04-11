@@ -80,7 +80,8 @@ const CustomerManagementTab: React.FC<Props> = ({ active }) => {
 
   useEffect(() => {
     if (!modalOpen) {
-      form.resetFields();
+      // closeDialog() 已调用 form.resetFields()，此处无需重复重置
+      // 且 Modal 未打开时 <Form> 尚未挂载，调用会触发 useForm not connected 警告
       return;
     }
 
