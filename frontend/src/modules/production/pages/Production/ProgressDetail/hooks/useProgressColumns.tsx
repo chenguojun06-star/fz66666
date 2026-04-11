@@ -13,6 +13,7 @@ import DefectTracePopover from '../components/DefectTracePopover';
 import { StyleCoverThumb } from '@/components/StyleAssets';
 import { isDirectCuttingOrder, isOrderFrozenByStatus } from '@/utils/api';
 import { factoryShipmentApi } from '@/services/production/factoryShipmentApi';
+import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import { parseProductionOrderLines } from '@/utils/api/production';
 import { getRemainingDaysDisplay } from '@/utils/progressColor';
 import { stageAliasMap } from '@/utils/productionStage';
@@ -263,7 +264,13 @@ export const useProgressColumns = ({
                       labelStyle: metaLabelStyle,
                       value: (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                          <span style={{ ...metaValueStyle }}>{factoryName}</span>
+                          <SupplierNameTooltip
+                            name={factoryName}
+                            contactPerson={(record as Record<string, unknown>).factoryContactPerson}
+                            contactPhone={(record as Record<string, unknown>).factoryContactPhone}
+                            label="工厂"
+                            style={metaValueStyle}
+                          />
                           {factoryTypeText ? <Tag color={record.factoryType === 'INTERNAL' ? 'blue' : 'purple'} style={record.factoryType === 'INTERNAL' ? softTagStyle('#edf3fb', '#6283a8') : softTagStyle('#f2edf9', '#8c78b1')}>{factoryTypeText}</Tag> : null}
                           {merchandiserName ? (
                             <Tooltip title={remark ? `备注：${remark}` : '点击添加备注'} placement="top">

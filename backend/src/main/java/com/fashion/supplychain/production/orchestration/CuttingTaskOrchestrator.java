@@ -457,7 +457,8 @@ public class CuttingTaskOrchestrator {
         try {
             int value = Integer.parseInt(String.valueOf(v).trim());
             return value > 0 ? value : null;
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.warn("CuttingTaskOrchestrator.getPositiveInteger 解析异常: key={}, value={}", key, v, e);
             return null;
         }
     }
@@ -483,7 +484,8 @@ public class CuttingTaskOrchestrator {
                             if (parsed > 0) {
                                 quantity = parsed;
                             }
-                        } catch (Exception ignored) {
+                        } catch (Exception e) {
+                            log.warn("CuttingTaskOrchestrator.resolveRequestedOrderLines 数量解析异常: quantityRaw={}", quantityRaw, e);
                             quantity = null;
                         }
                     }

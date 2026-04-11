@@ -107,17 +107,20 @@ public class AppStoreOrchestrator {
             String body = "title=" + URLEncoder.encode(title, StandardCharsets.UTF_8)
                     + "&desp=" + URLEncoder.encode(content, StandardCharsets.UTF_8);
             HttpURLConnection conn = (HttpURLConnection) new URL(apiUrl).openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-            conn.setConnectTimeout(5000);
-            conn.setReadTimeout(5000);
-            conn.setDoOutput(true);
-            try (OutputStream os = conn.getOutputStream()) {
-                os.write(body.getBytes(StandardCharsets.UTF_8));
+            try {
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+                conn.setConnectTimeout(5000);
+                conn.setReadTimeout(5000);
+                conn.setDoOutput(true);
+                try (OutputStream os = conn.getOutputStream()) {
+                    os.write(body.getBytes(StandardCharsets.UTF_8));
+                }
+                int code = conn.getResponseCode();
+                log.info("[Server酱通知] 发送结果: HTTP {}, title={}", code, title);
+            } finally {
+                conn.disconnect();
             }
-            int code = conn.getResponseCode();
-            log.info("[Server酱通知] 发送结果: HTTP {}, title={}", code, title);
-            conn.disconnect();
         } catch (Exception e) {
             log.warn("[Server酱通知] 发送失败（不影响主流程）: {}", e.getMessage());
         }

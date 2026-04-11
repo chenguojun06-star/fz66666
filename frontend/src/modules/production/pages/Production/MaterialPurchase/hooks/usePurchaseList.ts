@@ -222,6 +222,20 @@ export function usePurchaseList({
       onError: (err) => console.error('[实时同步] 物料采购数据同步错误', err) },
   );
 
+  const handleDeleteOrphan = useCallback(async (record: MaterialPurchaseType) => {
+    try {
+      const res = await api.delete<{ code: number; message?: string }>(`/production/purchase/${record.id}`);
+      if ((res as { code: number }).code === 200) {
+        message.success('孤儿采购单已删除');
+        await fetchMaterialPurchaseList();
+      } else {
+        message.error((res as { message?: string }).message || '删除失败');
+      }
+    } catch {
+      message.error('删除失败，请重试');
+    }
+  }, [fetchMaterialPurchaseList, message]);
+
   return {
     purchaseList, loading, total,
     queryParams, setQueryParams,
@@ -231,5 +245,6 @@ export function usePurchaseList({
     fetchMaterialPurchaseList, fetchPurchaseStats,
     handleSort, handlePurchaseSort, handleStatClick,
     ensureOrderUnlocked, isOrderFrozenForRecord,
+    handleDeleteOrphan,
   };
 }

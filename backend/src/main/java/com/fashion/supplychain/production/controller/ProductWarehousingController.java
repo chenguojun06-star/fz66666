@@ -20,6 +20,7 @@ public class ProductWarehousingController {
 
     @GetMapping("/list")
     public Result<?> list(@RequestParam Map<String, Object> params) {
+        // 工厂账号数据隔离：ProductWarehousingQueryHelper.list() 已内部处理 factoryId 过滤，无需重复添加
         IPage<ProductWarehousing> page = productWarehousingOrchestrator.list(params);
         return Result.success(page);
     }

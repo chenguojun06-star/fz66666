@@ -1,5 +1,4 @@
 @import '/styles/page-utils.wxss';
-@import '/styles/line-icons.wxss';
 
 .page {
   padding: 24rpx 28rpx 60rpx;

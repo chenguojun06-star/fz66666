@@ -1,4 +1,3 @@
-@import '/styles/design-tokens.wxss';
 
 .page-container {
   min-height: 100vh;

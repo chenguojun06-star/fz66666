@@ -211,6 +211,11 @@ public class MaterialPurchaseOrchestratorHelper {
         map.put("factoryName", factoryName);
         map.put("factoryType", factoryType);
         map.put("orderBizType", orderBizType);
+        // 孤儿单检测：sourceType=order 但父订单已被删除（不在 orderQuantityMap 中）
+        boolean isOrphan = "order".equals(sourceType)
+                && StringUtils.hasText(record.getOrderId())
+                && !orderQuantityMap.containsKey(record.getOrderId());
+        map.put("isOrphan", isOrphan);
         return map;
     }
 

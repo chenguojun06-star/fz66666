@@ -163,13 +163,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
 
         // 恢复用户主题设置
+        // 注意：此处只写 localStorage，不再调用 applyThemeValue()。
+        // 原因：之后会立即 dispatch 'user-login' 事件，AppWrapper.handleUserLogin
+        //      会读取同一 key 并调用 applyTheme()，重复 setAttribute 会造成全屏闪烁。
         const restoreUserTheme = (userId: string) => {
           try {
             const userThemeKey = `app.theme.user.${userId}`;
             const userTheme = localStorage.getItem(userThemeKey);
             const resolvedTheme = userTheme || fallbackTheme;
             localStorage.setItem('app.theme', resolvedTheme);
-            applyThemeValue(resolvedTheme);
+            // 不调用 applyThemeValue()：user-login 事件的处理器 (AppWrapper) 已负责 DOM 写入
           } catch {
             // Intentionally empty
             // 忽略错误

@@ -116,6 +116,9 @@ public class QualityInboundTool implements AgentTool {
 
     @Override
     public String execute(String argumentsJson) throws Exception {
+        if (UserContext.tenantId() == null) {
+            return error("租户上下文丢失，请重新登录");
+        }
         // 安全门禁1：外发工厂账号不允许触发写操作
         if (UserContext.factoryId() != null) {
             return error("外发工厂账号无权执行质检入库，请联系内部质检人员");

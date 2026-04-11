@@ -1,4 +1,3 @@
-@import '/styles/design-tokens.wxss';
 
 /* ========= 页面容器（参考裁剪详情风格） ========= */
 .container {

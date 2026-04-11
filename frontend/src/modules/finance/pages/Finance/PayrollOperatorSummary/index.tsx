@@ -22,7 +22,6 @@ import type { WorkerEfficiencyItem } from '@/services/intelligence/intelligenceA
 import { readPageSize } from '@/utils/pageSizeStore';
 import { usePersistentSort } from '@/hooks/usePersistentSort';
 import { usePersistentState } from '@/hooks/usePersistentState';
-import * as XLSX from 'xlsx';
 
 
 const PayrollOperatorSummary: React.FC = () => {
@@ -318,7 +317,8 @@ const PayrollOperatorSummary: React.FC = () => {
         hasAutoFetched.current = false;
     };
 
-    const exportToExcel = () => {
+    const exportToExcel = async () => {
+        const XLSX = await import('xlsx');
         if (activeTab === 'summary') {
             if (summaryRows.length === 0) {
                 message.warning('无汇总数据可导出');

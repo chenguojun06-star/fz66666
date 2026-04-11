@@ -15,4 +15,6 @@ public class ExceptionReportRequest {
     private String exceptionType;
 
     private String description;
+
+    private Long tenantId;
 }

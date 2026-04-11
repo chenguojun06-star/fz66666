@@ -92,14 +92,22 @@ export function useCockpit() {
     } catch { /* silent */ }
   }, []);
 
+  const pulseIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   useEffect(() => {
-    const t = setInterval(fetchPulseOnly, 10_000);
-    return () => clearInterval(t);
+    pulseIntervalRef.current = setInterval(fetchPulseOnly, 10_000);
+    return () => {
+      if (pulseIntervalRef.current) {
+        clearInterval(pulseIntervalRef.current);
+        pulseIntervalRef.current = null;
+      }
+    };
   }, [fetchPulseOnly]);
 
   /* WebSocket: 扫码事件 → todayScanQty 立刻跳 + 2s 防抖刷新工厂心跳 */
   const { subscribe } = useWebSocket({
     userId: user?.id,
+    tenantId: user?.tenantId,
     enabled: isAuthenticated && !!user?.id,
   });
   const wsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -119,8 +127,10 @@ export function useCockpit() {
   }, [subscribe, fetchPulseOnly]);
 
   /* 每分钟本地递增 minutesSinceLastScan / minutesSilent */
+  const minuteIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   useEffect(() => {
-    const t = setInterval(() => {
+    minuteIntervalRef.current = setInterval(() => {
       setData(prev => {
         if (!prev.pulse) return prev;
         return {
@@ -140,7 +150,12 @@ export function useCockpit() {
         };
       });
     }, 60_000);
-    return () => clearInterval(t);
+    return () => {
+      if (minuteIntervalRef.current) {
+        clearInterval(minuteIntervalRef.current);
+        minuteIntervalRef.current = null;
+      }
+    };
   }, []);
 
   return { data, reload: load };

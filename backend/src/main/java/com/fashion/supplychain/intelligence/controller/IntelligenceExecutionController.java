@@ -190,12 +190,13 @@ public class IntelligenceExecutionController {
         try {
             String userId = UserContext.userId();
             String remark = body != null ? body.get("remark") : "用户已批准";
+            Long tenantId = UserContext.tenantId();
 
             log.info("[Controller] 用户 {} 批准命令: {}", userId, commandId);
 
-            // 从DB中查询待审批命令
             QueryWrapper<IntelligenceAuditLog> qw = new QueryWrapper<>();
-            qw.eq("command_id", commandId).eq("status", "PENDING_APPROVAL");
+            qw.eq("command_id", commandId).eq("status", "PENDING_APPROVAL")
+              .eq(tenantId != null, "tenant_id", tenantId);
             IntelligenceAuditLog pendingLog = auditLogMapper.selectOne(qw);
             if (pendingLog == null) {
                 return Result.fail("待审批命令不存在或已处理: " + commandId);
@@ -246,13 +247,14 @@ public class IntelligenceExecutionController {
         try {
             String userId = UserContext.userId();
             String rejectReason = body != null ? body.get("reason") : "用户已拒绝";
+            Long tenantId = UserContext.tenantId();
 
             log.info("[Controller] 用户 {} 拒绝命令: {} 原因: {}",
                 userId, commandId, rejectReason);
 
-            // 从 DB 查询待审批命令
             QueryWrapper<IntelligenceAuditLog> qw = new QueryWrapper<>();
-            qw.eq("command_id", commandId).eq("status", "PENDING_APPROVAL");
+            qw.eq("command_id", commandId).eq("status", "PENDING_APPROVAL")
+              .eq(tenantId != null, "tenant_id", tenantId);
             IntelligenceAuditLog pendingLog = auditLogMapper.selectOne(qw);
             if (pendingLog == null) {
                 return Result.fail("待审批命令不存在或已处理: " + commandId);
@@ -441,11 +443,13 @@ public class IntelligenceExecutionController {
     @GetMapping("/commands/{commandId}")
     public Result<?> getCommandDetail(@PathVariable String commandId) {
         try {
+            Long tenantId = UserContext.tenantId();
             log.debug("[Controller] 查询命令详情: {}", commandId);
 
-            // 从审计日志查询命令执行详情
             QueryWrapper<IntelligenceAuditLog> qw = new QueryWrapper<>();
-            qw.eq("command_id", commandId).orderByDesc("created_at").last("LIMIT 1");
+            qw.eq("command_id", commandId)
+              .eq(tenantId != null, "tenant_id", tenantId)
+              .orderByDesc("created_at").last("LIMIT 1");
             IntelligenceAuditLog auditLog = auditLogMapper.selectOne(qw);
             if (auditLog == null) {
                 return Result.fail("命令记录不存在: " + commandId);

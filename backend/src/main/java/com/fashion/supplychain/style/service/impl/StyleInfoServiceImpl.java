@@ -441,7 +441,8 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                     patch.setPrice(target);
                     patch.setUpdateTime(LocalDateTime.now());
                     this.updateById(patch);
-                } catch (Exception ignored) {
+                } catch (Exception e) {
+                    log.warn("StyleInfoServiceImpl.fillQuotationPriceFields 更新价格异常: styleId={}", s.getId(), e);
                 }
             }
         }
@@ -494,7 +495,8 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                     if (!latestPatternByStyleKey.containsKey(key)) {
                         latestPatternByStyleKey.put(key, pattern);
                     }
-                } catch (Exception ignored) {
+                } catch (Exception e) {
+                    log.warn("StyleInfoServiceImpl.fillProgressFields styleId解析异常: styleId={}", pattern.getStyleId(), e);
                 }
             }
 
@@ -517,7 +519,8 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                     try {
                         Long styleId = Long.valueOf(stock.getStyleId().trim());
                         stockedStyleKeys.add(buildStyleColorKey(styleId, stock.getColor()));
-                    } catch (Exception ignored) {
+                    } catch (Exception e) {
+                        log.warn("StyleInfoServiceImpl.fillProgressFields stock styleId解析异常: styleId={}", stock.getStyleId(), e);
                     }
                 } else if (StringUtils.hasText(stock.getStyleNo())) {
                     for (StyleInfo style : records) {
@@ -642,7 +645,8 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                     }
                 }
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.warn("StyleInfoServiceImpl.getDetailById 更新报价价格异常: styleId={}", id, e);
         }
 
         // 设置进度节点（与列表页逻辑一致）

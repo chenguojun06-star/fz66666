@@ -150,7 +150,8 @@ public class ReconciliationStatusOrchestrator {
                     UserContext ctx = UserContext.get();
                     uid = ctx == null ? null : ctx.getUserId();
                     uid = (uid == null || uid.trim().isEmpty()) ? null : uid.trim();
-                } catch (Exception ignored) {
+                } catch (Exception e) {
+                    log.warn("ReconciliationStatusOrchestrator.updateStatus 获取用户ID异常(物料): {}", e.getMessage());
                     uid = null;
                 }
                 if (uid != null) {
@@ -159,6 +160,7 @@ public class ReconciliationStatusOrchestrator {
                         mr.setCreateBy(uid);
                     }
                 }
+
                 if (!from.equals(to)) {
                     mr.setRemark(appendAuditRemark(mr.getRemark(), "STATUS", from + " -> " + to));
                 }
@@ -226,7 +228,8 @@ public class ReconciliationStatusOrchestrator {
                     UserContext ctx = UserContext.get();
                     uid = ctx == null ? null : ctx.getUserId();
                     uid = (uid == null || uid.trim().isEmpty()) ? null : uid.trim();
-                } catch (Exception ignored) {
+                } catch (Exception e) {
+                    log.warn("ReconciliationStatusOrchestrator.updateStatus 获取用户ID异常(成品): {}", e.getMessage());
                     uid = null;
                 }
                 if (uid != null) {
@@ -363,7 +366,8 @@ public class ReconciliationStatusOrchestrator {
                     UserContext ctx = UserContext.get();
                     uid = ctx == null ? null : ctx.getUserId();
                     uid = (uid == null || uid.trim().isEmpty()) ? null : uid.trim();
-                } catch (Exception ignored) {
+                } catch (Exception e) {
+                    log.warn("ReconciliationStatusOrchestrator.returnToPrevious 获取用户ID异常(物料): {}", e.getMessage());
                     uid = null;
                 }
                 if (uid != null) {
@@ -430,7 +434,8 @@ public class ReconciliationStatusOrchestrator {
                     UserContext ctx = UserContext.get();
                     uid = ctx == null ? null : ctx.getUserId();
                     uid = (uid == null || uid.trim().isEmpty()) ? null : uid.trim();
-                } catch (Exception ignored) {
+                } catch (Exception e) {
+                    log.warn("ReconciliationStatusOrchestrator.returnToPrevious 获取用户ID异常(成品): {}", e.getMessage());
                     uid = null;
                 }
                 if (uid != null) {

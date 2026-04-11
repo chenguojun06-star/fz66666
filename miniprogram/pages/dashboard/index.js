@@ -13,6 +13,8 @@
 var api = require('../../utils/api');
 var { transformOrderData } = require('../work/utils/orderTransform');
 var { resolveNodesFromOrder, getNodeIndexFromProgress, clampPercent } = require('../work/utils/progressNodes');
+var { isAdminOrSupervisor } = require('../../utils/permission');
+var { isTenantOwner } = require('../../utils/storage');
 
 var app = getApp();
 
@@ -71,6 +73,12 @@ Page({
   },
 
   onLoad: function () {
+    // 进度看板仅限租户老板/管理员/主管/跟单，普通工厂工人无权访问
+    if (!isTenantOwner() && !isAdminOrSupervisor()) {
+      wx.showToast({ title: '无权限访问', icon: 'none', duration: 1500 });
+      wx.navigateBack({ delta: 1, fail: function () { wx.switchTab({ url: '/pages/home/index' }); } });
+      return;
+    }
     this.setData({ todayStr: this._formatToday() });
     this.refreshCards();
     this.loadOrders(true);

@@ -3,6 +3,19 @@ import type { AxiosInstance, AxiosRequestConfig } from 'axios';
 
 let __authRedirectTs = 0;
 
+function navigateToLogin() {
+  const nowTs = Date.now();
+  if (nowTs - __authRedirectTs > 1000) {
+    __authRedirectTs = nowTs;
+    const w = window as any;
+    if (typeof w.__appAuthLogoutNavigate === 'function') {
+      w.__appAuthLogoutNavigate();
+    } else {
+      window.location.href = '/login';
+    }
+  }
+}
+
 export type ApiResult<T = any> = {
   code: number;
   data: T;
@@ -256,13 +269,7 @@ export const createApiClient = (): ApiClient => {
             } catch {
               // Ignore
             }
-            {
-              const nowTs = Date.now();
-              if (nowTs - __authRedirectTs > 1000) {
-                __authRedirectTs = nowTs;
-                window.location.href = '/login';
-              }
-            }
+            navigateToLogin();
             break;
           case 403: {
             const isExpired = msg && (msg.includes('过期') || msg.includes('expired') || msg.includes('invalid token'));
@@ -274,11 +281,7 @@ export const createApiClient = (): ApiClient => {
               } catch {
                 // Ignore
               }
-              const nowTs403 = Date.now();
-              if (nowTs403 - __authRedirectTs > 1000) {
-                __authRedirectTs = nowTs403;
-                window.location.href = '/login';
-              }
+              navigateToLogin();
             } else {
               errorMessage = msg || '没有权限执行此操作';
             }

@@ -34,7 +34,7 @@ public class CuttingBundleController {
      */
     @GetMapping("/list")
     public Result<?> list(@RequestParam Map<String, Object> params) {
-        // 智能路由：二维码查询
+        // 工厂账号数据隔离：CuttingBundleOrchestrator.doList() 已内部处理 factoryId 过滤，无需重复添加
         if (params.containsKey("qrCode")) {
             String qrCode = String.valueOf(params.get("qrCode"));
             return Result.success(cuttingBundleOrchestrator.getByCode(qrCode));

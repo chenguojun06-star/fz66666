@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.agent.tool;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.mapper.AgentExecutionLogMapper;
 import com.fashion.supplychain.intelligence.mapper.CrewSessionMapper;
@@ -53,8 +54,6 @@ public class CriticEvolutionTool implements AgentTool {
     @Override
     public AiTool getToolDefinition() {
         Map<String, Object> props = new LinkedHashMap<>();
-        props.put("tenant_id", prop("integer",
-                "租户 ID（必填）"));
         props.put("days", prop("integer",
                 "回溯分析的天数（默认 7）"));
         props.put("min_feedback", prop("number",
@@ -68,7 +67,7 @@ public class CriticEvolutionTool implements AgentTool {
                 + "当用户说'让 AI 自我改进''更新 AI 记忆''分析近期失败案例'时调用。");
         AiTool.AiParameters params = new AiTool.AiParameters();
         params.setProperties(props);
-        params.setRequired(List.of("tenant_id"));
+        params.setRequired(List.of());
         fn.setParameters(params);
         tool.setFunction(fn);
         return tool;
@@ -76,8 +75,12 @@ public class CriticEvolutionTool implements AgentTool {
 
     @Override
     public String execute(String argumentsJson) throws Exception {
+        Long ctxTenantId = UserContext.tenantId();
+        if (ctxTenantId == null) {
+            return JSON.writeValueAsString(Map.of("success", false, "error", "租户上下文丢失，请重新登录"));
+        }
+        long tenantId = ctxTenantId;
         JsonNode args = JSON.readTree(argumentsJson);
-        long tenantId = args.path("tenant_id").asLong();
         int days = args.path("days").asInt(7);
         double minFeedback = args.path("min_feedback").asDouble(3.5);
 

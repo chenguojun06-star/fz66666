@@ -33,6 +33,7 @@ const MaterialPurchase: React.FC = () => {
     fetchMaterialPurchaseList,
     reloadCurrentDetail,
     isOrderFrozenForRecord,
+    handleDeleteOrphan,
     handleExport,
     location,
     visible, dialogMode, currentPurchase,
@@ -176,6 +177,7 @@ const MaterialPurchase: React.FC = () => {
                       purchaseSortOrder={purchaseSortOrder}
                       onPurchaseSort={handlePurchaseSort}
                       isOrderFrozenForRecord={isOrderFrozenForRecord}
+                      onDelete={handleDeleteOrphan}
                     />
         </PageLayout>
 

@@ -1,4 +1,3 @@
-@import '/styles/design-tokens.wxss';
 
 .container {
   min-height: 100vh;
@@ -21,13 +20,6 @@
   border-radius: 14rpx; overflow: hidden;
   flex-shrink: 0; background: #f0f0f0;
 }
-.cover-img { width: 100%; height: 100%; }
-.cover-placeholder {
-  width: 100%; height: 100%;
-  display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
-}
-.placeholder-icon { font-size: 48rpx; }
 .header-info { display: flex; flex-direction: column; gap: 8rpx; flex: 1; min-width: 0; }
 .style-no { font-size: 32rpx; font-weight: 600; color: #1a1a2e; }
 .sub-info { font-size: 24rpx; color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

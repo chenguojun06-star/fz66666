@@ -353,7 +353,8 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
             if (StringUtils.hasText(stock.getStyleId())) {
                 try {
                     styleIds.add(Long.valueOf(stock.getStyleId().trim()));
-                } catch (Exception ignored) {
+                } catch (Exception e) {
+                    log.warn("SampleStockServiceImpl.fillStyleFields styleId解析异常: styleId={}", stock.getStyleId(), e);
                 }
             }
             if (StringUtils.hasText(stock.getStyleNo())) {
@@ -404,7 +405,8 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
             if (StringUtils.hasText(stock.getStyleId())) {
                 try {
                     style = byId.get(Long.valueOf(stock.getStyleId().trim()));
-                } catch (Exception ignored) {
+                } catch (Exception e) {
+                    log.warn("SampleStockServiceImpl.fillStyleFields styleId查找异常: styleId={}", stock.getStyleId(), e);
                 }
             }
             if (style == null && StringUtils.hasText(stock.getStyleNo())) {
@@ -616,7 +618,8 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
                     return quantity instanceof Number ? ((Number) quantity).intValue() : Integer.parseInt(String.valueOf(quantity));
                 }
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.warn("SampleStockServiceImpl.resolveMatrixPlannedQuantity 解析异常: {}", e.getMessage());
         }
         return 0;
     }
@@ -684,7 +687,8 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
                     }
                 }
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.warn("SampleStockServiceImpl.collectValidSpecMap 解析异常: {}", e.getMessage());
         }
 
         if (!values.isEmpty()) {
@@ -737,7 +741,8 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
             stock.setDestroyRemark(remarkText);
             try {
                 stock.setDestroyTime(LocalDateTime.parse(timeText, DESTROY_TIME_FORMATTER));
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.warn("SampleStockServiceImpl.fillDestroyMeta 时间解析异常: timeText={}", timeText, e);
             }
             return;
         }

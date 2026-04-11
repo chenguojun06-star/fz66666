@@ -299,6 +299,7 @@ export interface MaterialPurchase extends Record<string, unknown> {
   auditTime?: string;
   auditOperatorId?: string;
   auditOperatorName?: string;
+  isOrphan?: boolean;  // 孤儿单：父订单已被删除（由后端 enrichRecord 填充）
 }
 
 export interface ProductWarehousing extends Record<string, unknown> {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Tag, App, Space, Tooltip } from 'antd';
+import { Tag, App, Space, Tooltip, Modal } from 'antd';
 import MaterialTypeTag from '@/components/common/MaterialTypeTag';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
@@ -36,6 +36,7 @@ interface MaterialTableProps {
   purchaseSortOrder: 'asc' | 'desc';
   onPurchaseSort: (field: string, order: 'asc' | 'desc') => void;
   isOrderFrozenForRecord: (record?: Record<string, unknown> | null) => boolean;
+  onDelete?: (record: MaterialPurchaseType) => void;
 }
 
 const MaterialTable: React.FC<MaterialTableProps> = ({
@@ -56,6 +57,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
   purchaseSortOrder,
   onPurchaseSort,
   isOrderFrozenForRecord,
+  onDelete,
 }) => {
   const navigate = useNavigate();
   const { message } = App.useApp();
@@ -444,6 +446,21 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
                 label: '备注',
                 onClick: () => onRemark(record),
               },
+              ...(record.isOrphan ? [{
+                key: 'delete-orphan',
+                label: '删除孤儿单',
+                danger: true as const,
+                onClick: () => {
+                  Modal.confirm({
+                    title: '确认删除此孤儿采购单？',
+                    content: '该采购单的父订单已被删除，确认删除此孤儿单？此操作不可撤回。',
+                    okText: '确认删除',
+                    okType: 'danger',
+                    cancelText: '取消',
+                    onOk: () => onDelete?.(record),
+                  });
+                },
+              }] : []),
             ]}
           />
         );

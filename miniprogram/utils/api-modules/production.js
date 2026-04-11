@@ -31,7 +31,7 @@ const production = {
     return ok('/api/production/order/update-progress', 'POST', payload || {});
   },
   quickEditOrder(payload) {
-    return ok('/api/production/orders/quick-edit', 'PUT', payload || {});
+    return ok('/api/production/order/quick-edit', 'PUT', payload || {});
   },
   listWarehousing(params) {
     return ok('/api/production/warehousing/list', 'GET', params || {});

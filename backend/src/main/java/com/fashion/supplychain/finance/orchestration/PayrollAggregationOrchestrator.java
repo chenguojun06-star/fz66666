@@ -96,7 +96,8 @@ public class PayrollAggregationOrchestrator {
         // 应用数据权限过滤（根据角色：all=全部, team=团队, own=仅自己）
         DataPermissionHelper.applyOperatorFilter(qw, "operator_id", "operator_name");
 
-        // 查询扫码记录
+        // 查询扫码记录（安全上限，防止无限制全表扫描）
+        qw.last("LIMIT 10000");
         List<ScanRecord> scanRecords = scanRecordService.list(qw);
 
         // 按 operator_id + order_id + process_name + color + size 分组
@@ -135,6 +136,7 @@ public class PayrollAggregationOrchestrator {
         if (!orderNos.isEmpty()) {
             QueryWrapper<ProductionOrder> orderQw = new QueryWrapper<>();
             orderQw.in("order_no", orderNos);
+            orderQw.last("LIMIT 10000");
             Map<String, String> orderNoToStatus = productionOrderService.list(orderQw).stream()
                     .collect(Collectors.toMap(
                             ProductionOrder::getOrderNo,

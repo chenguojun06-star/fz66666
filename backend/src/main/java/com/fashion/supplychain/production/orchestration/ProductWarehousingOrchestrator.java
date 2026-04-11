@@ -435,7 +435,8 @@ public class ProductWarehousingOrchestrator {
                     color = b.getColor();
                     size = b.getSize();
                 }
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.warn("ProductWarehousingOrchestrator.updateSkuStock 加载菲号异常: bundleId={}", w.getCuttingBundleId(), e);
             }
         }
         // ⚠️ 不再使用 order.getColor()/getSize() 兜底：多码订单的 order.size 是单值字段，
@@ -475,7 +476,9 @@ public class ProductWarehousingOrchestrator {
             if (StringUtils.hasText(current.getCuttingBundleId())) {
                 try {
                     bundleForDelete = cuttingBundleService.getById(current.getCuttingBundleId());
-                } catch (Exception ignored) {}
+                } catch (Exception e) {
+                    log.warn("ProductWarehousingOrchestrator.delete 加载菲号异常: bundleId={}", current.getCuttingBundleId(), e);
+                }
             }
             if (bundleForDelete != null) {
                 updateSkuStock(current, null, bundleForDelete, -current.getQualifiedQuantity());

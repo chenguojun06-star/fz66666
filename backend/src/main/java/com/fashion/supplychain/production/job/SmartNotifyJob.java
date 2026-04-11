@@ -76,19 +76,37 @@ public class SmartNotifyJob {
     /** 每天凌晨3点清理30天以上的旧通知，防止无限堆积 */
     @Scheduled(cron = "0 0 3 * * ?")
     public void cleanupOldNotices() {
+        List<Long> tenantIds;
         try {
-            LocalDateTime cutoff = LocalDateTime.now().minusDays(30);
-            long deleted = sysNoticeService.lambdaQuery()
-                    .le(com.fashion.supplychain.production.entity.SysNotice::getCreatedAt, cutoff)
-                    .count();
-            if (deleted > 0) {
-                sysNoticeService.lambdaUpdate()
-                        .le(com.fashion.supplychain.production.entity.SysNotice::getCreatedAt, cutoff)
-                        .remove();
-                log.info("[SmartNotify] 清理 {} 条30天以上旧通知", deleted);
-            }
+            tenantIds = processStatsEngine.findActiveTenantIds();
         } catch (Exception e) {
-            log.warn("[SmartNotify] 旧通知清理失败: {}", e.getMessage());
+            log.error("[SmartNotify] 获取活跃租户列表失败，旧通知清理中止", e);
+            return;
+        }
+
+        int totalDeleted = 0;
+        for (Long tenantId : tenantIds) {
+            if (tenantId == null) continue;
+            TenantAssert.bindTenantForTask(tenantId, "旧通知清理");
+            try {
+                LocalDateTime cutoff = LocalDateTime.now().minusDays(30);
+                long deleted = sysNoticeService.lambdaQuery()
+                        .le(SysNotice::getCreatedAt, cutoff)
+                        .count();
+                if (deleted > 0) {
+                    sysNoticeService.lambdaUpdate()
+                            .le(SysNotice::getCreatedAt, cutoff)
+                            .remove();
+                    totalDeleted += deleted;
+                }
+            } catch (Exception e) {
+                log.warn("[SmartNotify] 租户 {} 旧通知清理失败: {}", tenantId, e.getMessage());
+            } finally {
+                TenantAssert.clearTenantContext();
+            }
+        }
+        if (totalDeleted > 0) {
+            log.info("[SmartNotify] 共清理 {} 条30天以上旧通知，涉及 {} 个租户", totalDeleted, tenantIds.size());
         }
     }
 

@@ -1,5 +1,7 @@
 const api = require('../../utils/api');
 const { safeNavigate } = require('../../utils/uiHelper');
+const { isAdminOrSupervisor } = require('../../utils/permission');
+const { isTenantOwner } = require('../../utils/storage');
 
 /**
  * 根据当前小时返回问候语
@@ -12,17 +14,18 @@ function getGreeting() {
 }
 
 /**
- * 构建首页菜单（去掉已被小云吸收的重复入口）
+ * 构建首页菜单（进度看板仅对租户老板/管理员/主管/跟单角色显示）
  */
 function buildMenuItems() {
+  const canSeeDashboard = isTenantOwner() || isAdminOrSupervisor();
   return [
-    { id: 'dashboard', name: '进度看板', iconClass: 'icon-dashboard', circleClass: 'menu-icon-circle--indigo', route: '/pages/dashboard/index' },
+    canSeeDashboard ? { id: 'dashboard', name: '进度看板', iconClass: 'icon-dashboard', circleClass: 'menu-icon-circle--indigo', route: '/pages/dashboard/index' } : null,
     { id: 'production', name: '生产', iconClass: 'icon-progress', circleClass: 'menu-icon-circle--blue', route: '/pages/work/index', tab: 'sewing' },
     { id: 'quality', name: '扫码质检', iconClass: 'icon-quality', circleClass: 'menu-icon-circle--green', route: '/pages/scan/index' },
     { id: 'bundleSplit', name: '菲号单价', iconClass: 'icon-cutting', circleClass: 'menu-icon-circle--orange', route: '/pages/work/bundle-split/index' },
     { id: 'history', name: '历史记录', iconClass: 'icon-history', circleClass: 'menu-icon-circle--purple', route: '/pages/scan/history/index' },
     { id: 'payroll', name: '当月工资', iconClass: 'icon-payroll', circleClass: 'menu-icon-circle--teal', route: '/pages/payroll/payroll' },
-  ];
+  ].filter(Boolean);
 }
 
 

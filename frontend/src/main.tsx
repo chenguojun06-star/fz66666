@@ -55,7 +55,7 @@
 import { initFrontendErrorReporter } from './utils/frontendErrorReporter';
 initFrontendErrorReporter();
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import { App as AntApp, ConfigProvider, theme } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
@@ -265,7 +265,8 @@ const AppWrapper: React.FC = () => {
           const userThemeKey = `app.theme.user.${userId}`;
           const userTheme = localStorage.getItem(userThemeKey) || fallbackTheme;
           localStorage.setItem(themeStorageKey, userTheme);
-          setCurrentTheme(userTheme);
+          // 仅在主题值真正变化时才触发 React 状态更新，避免 ConfigProvider 无意义重渲染造成全屏闪烁
+          setCurrentTheme(prev => (prev === userTheme ? prev : userTheme));
           applyTheme(userTheme);
         }
       } catch {
@@ -435,7 +436,9 @@ const AppWrapper: React.FC = () => {
     };
   };
 
-  const themeConfig = getThemeConfig();
+  // useMemo 确保只有 currentTheme 真正变化时才重建主题对象，
+  // 防止每次父组件渲染时 ConfigProvider 收到新引用而触发全量 CSS-in-JS 重算（全屏闪烁根因）
+  const themeConfig = useMemo(() => getThemeConfig(), [currentTheme]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const resolveAntdLocale = (lang: AppLanguage) => {
     if (lang === 'en-US') return enUS;

@@ -96,6 +96,10 @@ public class SecondaryProcessTool extends AbstractAgentTool {
 
                 SecondaryProcess process = secondaryProcessService.getById(processId);
                 if (process == null) throw new IllegalStateException("工序记录不存在：" + processId);
+                Long currentTenantId = UserContext.tenantId();
+                if (process.getTenantId() != null && !process.getTenantId().equals(currentTenantId)) {
+                    throw new IllegalStateException("无权操作其他租户的工序记录");
+                }
 
                 process.setStatus(status);
                 secondaryProcessService.updateById(process);

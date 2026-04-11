@@ -36,10 +36,14 @@ public class RealTimeWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        // 从URL参数中获取用户ID和客户端类型
         String query = session.getUri().getQuery();
         String userId = extractParam(query, "userId");
         String clientType = extractParam(query, "clientType");
+        String tenantIdStr = extractParam(query, "tenantId");
+        Long tenantId = null;
+        if (tenantIdStr != null && !tenantIdStr.isBlank()) {
+            try { tenantId = Long.parseLong(tenantIdStr); } catch (NumberFormatException ignored) {}
+        }
 
         if (userId == null || clientType == null) {
             log.warn("[WebSocket] 连接参数缺失，关闭连接: sessionId={}", session.getId());
@@ -47,10 +51,9 @@ public class RealTimeWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
-        sessionManager.addSession(session, userId, clientType);
+        sessionManager.addSession(session, userId, clientType, tenantId);
         lastPingTime.put(session.getId(), System.currentTimeMillis());
 
-        // 发送连接成功消息
         sendMessage(session, WebSocketMessage.create(
             WebSocketMessageType.DATA_CHANGED,
             Map.of("message", "连接成功", "userId", userId, "clientType", clientType)
@@ -226,6 +229,19 @@ public class RealTimeWebSocketHandler extends TextWebSocketHandler {
 
         log.info("[WebSocket] 全局广播: type={}, to {} sessions",
                 message.getType(), allSessions.size());
+    }
+
+    public void broadcastToTenant(Long tenantId, WebSocketMessage<?> message) {
+        if (tenantId == null) {
+            log.warn("[WebSocket] broadcastToTenant called with null tenantId, skipping");
+            return;
+        }
+        Set<WebSocketSession> sessions = sessionManager.getTenantSessions(tenantId);
+        for (WebSocketSession session : sessions) {
+            sendMessage(session, message);
+        }
+        log.info("[WebSocket] 租户广播: type={}, tenantId={}, to {} sessions",
+                message.getType(), tenantId, sessions.size());
     }
 
     /**

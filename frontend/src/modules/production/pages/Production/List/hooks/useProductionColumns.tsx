@@ -13,6 +13,7 @@ import SmartOrderHoverCard from '../../ProgressDetail/components/SmartOrderHover
 import { StyleCoverThumb, StyleAttachmentsButton } from '@/components/StyleAssets';
 import { isDirectCuttingOrder, isOrderFrozenByStatus, isOrderFrozenByStatusOrStock, withQuery } from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
+import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { getRemainingDaysDisplay } from '@/utils/progressColor';
 import { getStatusConfig, safeString } from '../utils';
@@ -160,7 +161,7 @@ export function useProductionColumns({
             >
             <a
               className="order-no-wrap"
-              style={{ cursor: 'pointer', color: 'inherit' }}
+              style={{ cursor: 'pointer', color: 'var(--primary-color, #1677ff)' }}
               onClick={(e) => {
                 e.preventDefault();
                 navigate(withQuery('/production/order-flow', { orderId, orderNo, styleNo }));
@@ -246,10 +247,14 @@ export function useProductionColumns({
           <Space size={4} style={{ flexWrap: 'nowrap' }}>
             {factoryType === 'INTERNAL' && <Tag color="blue" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>内</Tag>}
             {factoryType === 'EXTERNAL' && <Tag color="purple" style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>外</Tag>}
-            <span
+            <SupplierNameTooltip
+              name={v}
+              contactPerson={record.factoryContactPerson}
+              contactPhone={record.factoryContactPhone}
+              label="工厂"
               style={{ cursor: 'pointer' }}
               onClick={(e) => { e.stopPropagation(); onOpenRemark?.(record, '生产方 — ' + (v || '')); }}
-            >{v || '-'}</span>
+            />
             {bizType && (
               <Tag color={colorMap[bizType] ?? 'default'} style={{ margin: 0, fontSize: 10, padding: '0 4px', lineHeight: '16px', height: 16 }}>{bizType}</Tag>
             )}

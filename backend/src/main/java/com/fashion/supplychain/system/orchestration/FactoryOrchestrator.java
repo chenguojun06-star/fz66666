@@ -18,7 +18,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 public class FactoryOrchestrator {
 
@@ -71,6 +73,10 @@ public class FactoryOrchestrator {
         Factory factory = factoryService.getById(id);
         if (factory == null || (factory.getDeleteFlag() != null && factory.getDeleteFlag() == 1)) {
             throw new NoSuchElementException("供应商不存在");
+        }
+        Long currentTenantId = UserContext.tenantId();
+        if (!UserContext.isSuperAdmin() && currentTenantId != null && !currentTenantId.equals(factory.getTenantId())) {
+            throw new IllegalStateException("无权访问其他租户的工厂信息");
         }
         applySnapshot(factory, organizationUnitBindingHelper.getFactorySnapshot(factory));
         return factory;
@@ -204,6 +210,7 @@ public class FactoryOrchestrator {
             String operator = (ctx != null ? ctx.getUsername() : null);
             loginLogService.recordOperation(bizType, bizId, targetName, action, operator, remark);
         } catch (Exception e) {
+            log.warn("FactoryOrchestrator.saveOperationLog 记录操作日志异常: bizType={}, bizId={}", bizType, bizId, e);
         }
     }
 

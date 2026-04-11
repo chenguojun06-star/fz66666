@@ -545,7 +545,7 @@ export const intelligenceApi = {
     urgencyLevel?: string;
   }): Promise<void> => {
     const token = localStorage.getItem('authToken') || '';
-    const res = await fetch('/api/production/orders/quick-edit', {
+    const res = await fetch('/api/production/order/quick-edit', {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

@@ -203,5 +203,6 @@ export function useMaterialPurchase() {
     materialDatabaseModal: db.materialDatabaseModal,
     fetchMaterialDatabaseList: db.fetchMaterialDatabaseList,
     openMaterialDatabaseDialog: db.openMaterialDatabaseDialog,
+    handleDeleteOrphan: list.handleDeleteOrphan,
   };
 }

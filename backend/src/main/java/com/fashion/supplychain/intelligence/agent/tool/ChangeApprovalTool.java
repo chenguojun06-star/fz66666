@@ -67,6 +67,9 @@ public class ChangeApprovalTool implements AgentTool {
 
     @Override
     public String execute(String argumentsJson) throws Exception {
+        if (com.fashion.supplychain.common.UserContext.tenantId() == null) {
+            return "{\"success\":false,\"error\":\"租户上下文丢失，请重新登录\"}";
+        }
         Map<String, Object> args = MAPPER.readValue(argumentsJson, new TypeReference<>() {});
         String action = (String) args.get("action");
 

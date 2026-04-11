@@ -6,6 +6,8 @@
 
 /* 引入设计 Token */
 @import './styles/design-tokens.wxss';
+/* 图标库（全局共享，7个页面/组件使用，统一在此引入避免分散 @import） */
+@import './styles/line-icons.wxss';
 
 page {
   background: var(--color-bg-page);
@@ -15,14 +17,6 @@ page {
   font-family:
     -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
     'Microsoft YaHei', Arial, sans-serif;
-}
-
-/* 隐藏微信开发者工具的真机调试浮层 */
-wx-vconsole,
-.wx-vconsole,
-.vconsole-switch,
-#__vconsole {
-  display: none !important;
 }
 
 .container {
@@ -53,13 +47,6 @@ wx-vconsole,
   color: var(--color-text-primary);
 }
 
-/* 三级标题 - 小标题 */
-.sub-title {
-  font-size: var(--font-size-base);
-  font-weight: 500;
-  color: var(--color-text-primary);
-}
-
 .field {
   margin-bottom: 10px;
 }
@@ -77,15 +64,6 @@ wx-vconsole,
   padding: 8px 12px;
   background: var(--color-bg-card);
   font-size: var(--font-size-base); /* 统一为正文字体14px */
-}
-
-.row {
-  display: flex;
-  gap: 10px;
-}
-
-.col {
-  flex: 1;
 }
 
 .btn {
@@ -174,16 +152,6 @@ wx-vconsole,
   color: var(--color-success); /* 深绿色，确保对比度≥4.5:1 */
 }
 
-.tag-ok {
-  background: rgba(52, 199, 89, 0.12);
-  color: var(--color-success); /* 深绿色，确保对比度≥4.5:1 */
-}
-
-.tag-bad {
-  background: rgba(255, 59, 48, 0.12);
-  color: var(--color-error);
-}
-
 /* 列表项 */
 .list-item {
   display: block;
@@ -197,13 +165,6 @@ wx-vconsole,
 }
 
 /* 进度条 */
-.progress-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 6px;
-}
-
 .progress-bar {
   flex: 1;
   height: 6px;
@@ -223,73 +184,9 @@ wx-vconsole,
   background: var(--color-text-disabled);
 }
 
-.progress-text {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  min-width: 36px;
-  text-align: right;
-}
-
 /* ============================================================================= */
 /* 全局通用组件样式 - 从各页面提取统一                                             */
 /* ============================================================================= */
-
-/* ============ 全局搜索栏（home/work 通用） ============ */
-.global-search {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 10px;
-  padding: 6px 8px;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.06);
-}
-
-.global-search .search-box {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  padding: 8px 14px;
-  background: rgba(var(--color-primary-rgb), 0.06);
-  border: 1px solid rgba(var(--color-primary-rgb), 0.1);
-  border-radius: var(--radius-full);
-}
-
-.global-search .search-icon {
-  font-size: 16px;
-  margin-right: 6px;
-}
-
-.global-search .search-input {
-  flex: 1;
-  font-size: 15px;
-  color: var(--color-text-primary);
-}
-
-.global-search .search-btn {
-  padding: 8px 20px;
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--color-text-primary);
-  background: rgba(var(--color-primary-rgb), 0.15);
-  border: 1px solid rgba(var(--color-primary-rgb), 0.2);
-  border-radius: var(--radius-full);
-  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.15);
-  white-space: nowrap;
-  transition: all 0.2s ease;
-}
-
-.global-search .search-btn-clear {
-  background: var(--color-error-bg);
-  border-color: var(--color-error-border);
-  color: var(--color-danger);
-}
-
-.global-search .search-btn:active {
-  opacity: 0.8;
-}
 
 /* ============ 全局搜索结果 ============ */
 .global-results {
@@ -582,17 +479,6 @@ wx-vconsole,
 }
 
 .modal-btn-confirm-hover {
-  opacity: 0.8;
-  transform: scale(0.98);
-}
-
-.modal-btn.danger {
-  background: linear-gradient(135deg, var(--color-error) 0%, var(--color-error) 100%);
-  color: var(--color-text-white);
-  box-shadow: 0 4px 12px rgba(255, 77, 79, 0.25);
-}
-
-.modal-btn-danger-hover {
   opacity: 0.8;
   transform: scale(0.98);
 }

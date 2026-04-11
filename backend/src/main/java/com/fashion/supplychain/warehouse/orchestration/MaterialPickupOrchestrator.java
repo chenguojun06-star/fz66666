@@ -94,7 +94,7 @@ public class MaterialPickupOrchestrator {
         MaterialPickupRecord record = new MaterialPickupRecord();
 
         Long tenantId = currentTenantId();
-        record.setTenantId(tenantId != null ? String.valueOf(tenantId) : null);
+        record.setTenantId(tenantId);
         record.setPickupNo(generatePickupNo());
         String bodyFactoryType = strOf(body.get("factoryType"));
         String normalizedPickupType = StringUtils.hasText(strOf(body.get("pickupType")))

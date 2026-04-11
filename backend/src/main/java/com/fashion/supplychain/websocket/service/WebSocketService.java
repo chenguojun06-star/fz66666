@@ -3,6 +3,7 @@ package com.fashion.supplychain.websocket.service;
 import com.fashion.supplychain.websocket.RealTimeWebSocketHandler;
 import com.fashion.supplychain.websocket.dto.WebSocketMessage;
 import com.fashion.supplychain.websocket.enums.WebSocketMessageType;
+import com.fashion.supplychain.common.UserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -35,7 +36,7 @@ public class WebSocketService {
                 "timestamp", System.currentTimeMillis()
             )
         );
-        webSocketHandler.broadcast(message);
+        webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
         log.info("[WebSocket] 广播扫码成功: orderNo={}, quantity={}", orderNo, quantity);
     }
 
@@ -51,7 +52,7 @@ public class WebSocketService {
                 "timestamp", System.currentTimeMillis()
             )
         );
-        webSocketHandler.broadcast(message);
+        webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
         log.info("[WebSocket] 广播扫码撤销: orderNo={}, recordId={}", orderNo, recordId);
     }
 
@@ -68,7 +69,7 @@ public class WebSocketService {
                 "timestamp", System.currentTimeMillis()
             )
         );
-        webSocketHandler.broadcast(message);
+        webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
         log.info("[WebSocket] 广播订单状态变更: orderNo={}, {} -> {}", orderNo, oldStatus, newStatus);
     }
 
@@ -85,7 +86,7 @@ public class WebSocketService {
                 "timestamp", System.currentTimeMillis()
             )
         );
-        webSocketHandler.broadcast(message);
+        webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
         log.info("[WebSocket] 广播订单进度变更: orderNo={}, progress={}%", orderNo, progress);
     }
 
@@ -103,7 +104,7 @@ public class WebSocketService {
                 "timestamp", System.currentTimeMillis()
             )
         );
-        webSocketHandler.broadcast(message);
+        webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
         log.info("[WebSocket] 广播任务领取: orderNo={}, worker={}", orderNo, workerName);
     }
 
@@ -121,7 +122,7 @@ public class WebSocketService {
                 "timestamp", System.currentTimeMillis()
             )
         );
-        webSocketHandler.broadcast(message);
+        webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
         log.info("[WebSocket] 广播质检完成: orderNo={}, result={}", orderNo, checkResult);
     }
 
@@ -138,7 +139,7 @@ public class WebSocketService {
                 "timestamp", System.currentTimeMillis()
             )
         );
-        webSocketHandler.broadcast(message);
+        webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
         log.info("[WebSocket] 广播入库: orderNo={}, quantity={}", orderNo, quantity);
     }
 
@@ -155,7 +156,7 @@ public class WebSocketService {
                 "timestamp", System.currentTimeMillis()
             )
         );
-        webSocketHandler.broadcast(message);
+        webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
         log.info("[WebSocket] 广播数据变更: {} {} {}", entityType, entityId, action);
     }
 
@@ -197,7 +198,7 @@ public class WebSocketService {
         WebSocketMessage<Map<String, Object>> message = WebSocketMessage.create(type, payload);
         webSocketHandler.sendToUser(payeeId, message);
         // 同时广播给管理端
-        webSocketHandler.broadcast(message);
+        webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
         log.info("[WebSocket] 支付通知: event={}, payee={}, amount={}, no={}", event, payeeName, amount, paymentNo);
     }
 
@@ -344,7 +345,7 @@ public class WebSocketService {
                 "timestamp",     System.currentTimeMillis()
             )
         );
-        webSocketHandler.broadcast(message);
+        webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
         log.warn("[WebSocket] 质检异常预警: orderNo={}, stage={}, defectRate={}%",
                 orderNo, processStageName, defectRate);
     }
@@ -365,7 +366,7 @@ public class WebSocketService {
                 "timestamp",    System.currentTimeMillis()
             )
         );
-        webSocketHandler.broadcast(message);
+        webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
     }
 
     /**
@@ -379,7 +380,7 @@ public class WebSocketService {
                 "timestamp", System.currentTimeMillis()
             )
         );
-        webSocketHandler.broadcast(message);
+        webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
         log.info("[WebSocket] 广播刷新所有: reason={}", reason);
     }
 
@@ -392,7 +393,7 @@ public class WebSocketService {
             adviceCard
         );
         // 为了演示，这里直接全站广播，实际应用中可以给 RealTimeWebSocketHandler 增加 broadcastToTenant 方法
-        webSocketHandler.broadcast(message);
+        webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
         log.info("[WebSocket] 已向租户 {} 推送小云智能决策卡片", tenantId);
     }
 }

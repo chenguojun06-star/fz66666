@@ -1,7 +1,6 @@
 {
   "navigationBarTitleText": "扫码结果确认",
   "usingComponents": {
-    "image-preview": "/components/common/image-preview/index",
-    "mp-modal": "/components/common/mp-modal/index"
+    "image-preview": "/components/common/image-preview/index"
   }
 }

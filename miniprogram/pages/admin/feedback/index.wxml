@@ -29,7 +29,7 @@
       <input class="form-input" placeholder="手机号或微信号" bindinput="onContactInput" value="{{form.contactInfo}}" maxlength="30" />
     </view>
     <view class="form-actions">
-      <view class="btn-submit {{submitting ? 'disabled' : ''}}" bindtap="onSubmitFeedback">
+      <view class="btn-submit {{submitting ? 'disabled' : ''}}" hover-class="btn-submit-hover" bindtap="onSubmitFeedback">
         {{submitting ? '提交中...' : '提交反馈'}}
       </view>
     </view>

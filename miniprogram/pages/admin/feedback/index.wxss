@@ -1,4 +1,3 @@
-@import '/styles/design-tokens.wxss';
 @import '/styles/modal-form.wxss';
 
 .container {
@@ -116,7 +115,7 @@
   transition: opacity 0.2s;
 }
 
-.btn-submit:active {
+.btn-submit-hover {
   opacity: 0.85;
 }
 
@@ -161,26 +160,6 @@
   font-weight: var(--font-weight-medium);
   flex-shrink: 0;
   margin-left: 8px;
-}
-
-.status-PENDING {
-  background: var(--color-warning-bg);
-  color: #92400e;
-}
-
-.status-PROCESSING {
-  background: var(--color-info-bg);
-  color: #1e40af;
-}
-
-.status-RESOLVED {
-  background: var(--color-success-bg);
-  color: #065f46;
-}
-
-.status-CLOSED {
-  background: var(--color-bg-gray);
-  color: var(--color-text-secondary);
 }
 
 .feedback-content {

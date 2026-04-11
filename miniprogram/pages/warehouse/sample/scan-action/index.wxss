@@ -1,5 +1,4 @@
 /* 样衣扫码动作页 — 遵循 material/scan 设计规范 */
-@import '/styles/line-icons.wxss';
 
 .container {
   padding: 12px;

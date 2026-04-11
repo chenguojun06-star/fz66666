@@ -73,6 +73,9 @@ public class OrderFactoryTransferTool implements AgentTool {
     @Override
     public String execute(String arguments) {
         try {
+            if (com.fashion.supplychain.common.UserContext.tenantId() == null) {
+                return "{\"success\":false,\"error\":\"租户上下文丢失，请重新登录\"}";
+            }
             if (!aiAgentToolAccessService.hasManagerAccess()) {
                 return "{\"success\":false,\"error\":\"当前角色无权执行转厂操作，需要跟单员或以上权限\"}";
             }

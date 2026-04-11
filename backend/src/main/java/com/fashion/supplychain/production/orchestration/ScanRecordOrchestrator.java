@@ -105,10 +105,23 @@ public class ScanRecordOrchestrator {
     @Autowired
     private com.fashion.supplychain.production.helper.ScanRecordEnrichHelper scanRecordEnrichHelper;
 
+    @Autowired
+    private com.fashion.supplychain.common.lock.DistributedLockService distributedLockService;
+
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> execute(Map<String, Object> params) {
-        TenantAssert.assertTenantContext(); // 扫码必须有租户上下文
+        TenantAssert.assertTenantContext();
         Map<String, Object> safeParams = params == null ? new HashMap<>() : new HashMap<>(params);
+        String operatorId = safeParams.get("operatorId") == null ? null : String.valueOf(safeParams.get("operatorId"));
+
+        String orderNo = safeParams.get("orderNo") == null ? null : String.valueOf(safeParams.get("orderNo"));
+        String lockKey = "scan:" + (orderNo != null ? orderNo : "unknown");
+        return distributedLockService.executeWithLock(lockKey, 10, java.util.concurrent.TimeUnit.SECONDS, () -> {
+            return doExecute(safeParams);
+        });
+    }
+
+    private Map<String, Object> doExecute(Map<String, Object> safeParams) {
         String operatorId = safeParams.get("operatorId") == null ? null : String.valueOf(safeParams.get("operatorId"));
         String operatorName = safeParams.get("operatorName") == null ? null
                 : String.valueOf(safeParams.get("operatorName"));

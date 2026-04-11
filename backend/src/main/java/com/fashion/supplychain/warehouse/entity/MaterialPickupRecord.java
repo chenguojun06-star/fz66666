@@ -19,7 +19,7 @@ public class MaterialPickupRecord {
     private String id;
 
     /** 租户 ID */
-    private String tenantId;
+    private Long tenantId;
 
     /** 领取单号（自动生成，格式：PK + yyyyMMdd + 序号） */
     private String pickupNo;

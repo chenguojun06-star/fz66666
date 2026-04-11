@@ -3,29 +3,30 @@ package com.fashion.supplychain.production.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.lock.DistributedLockService;
 import com.fashion.supplychain.production.entity.MaterialRoll;
 import com.fashion.supplychain.production.mapper.MaterialRollMapper;
 import com.fashion.supplychain.production.service.MaterialRollService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
-/**
- * 面辅料料卷 Service 实现
- */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class MaterialRollServiceImpl extends ServiceImpl<MaterialRollMapper, MaterialRoll>
         implements MaterialRollService {
 
+    private final DistributedLockService distributedLockService;
+
     @Override
     public String generateRollCode() {
-        synchronized (this) {
-            return doGenerate();
-        }
+        return distributedLockService.executeWithLock("materialRoll:generateRollCode", 10, TimeUnit.SECONDS, this::doGenerate);
     }
 
     private String doGenerate() {

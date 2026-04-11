@@ -63,13 +63,12 @@ public class EcommerceOrderOrchestrator {
         }
 
         // 幂等：已存在则返回现有记录 ID
-        Long tenantId = null;
-        try { tenantId = UserContext.tenantId(); } catch (Exception ignored) {}
+        Long tenantId = UserContext.tenantId();
 
         LambdaQueryWrapper<EcommerceOrder> exist = new LambdaQueryWrapper<EcommerceOrder>()
                 .eq(EcommerceOrder::getPlatformOrderNo, platformOrderNo)
-                .eq(EcommerceOrder::getSourcePlatformCode, platformCode);
-        if (tenantId != null) exist.eq(EcommerceOrder::getTenantId, tenantId);
+                .eq(EcommerceOrder::getSourcePlatformCode, platformCode)
+                .eq(EcommerceOrder::getTenantId, tenantId);
         EcommerceOrder found = ecOrderService.getOne(exist, false);
         if (found != null) {
             return Map.of("id", found.getId(), "orderNo", found.getOrderNo(), "duplicate", true);
@@ -156,9 +155,8 @@ public class EcommerceOrderOrchestrator {
         LambdaQueryWrapper<EcommerceOrder> wrapper = new LambdaQueryWrapper<EcommerceOrder>()
                 .orderByDesc(EcommerceOrder::getCreateTime);
 
-        Long tenantId = null;
-        try { tenantId = UserContext.tenantId(); } catch (Exception ignored) {}
-        if (tenantId != null) wrapper.eq(EcommerceOrder::getTenantId, tenantId);
+        Long tenantId = UserContext.tenantId();
+        wrapper.eq(EcommerceOrder::getTenantId, tenantId);
 
         String platform = (String) params.get("platform");
         if (StringUtils.hasText(platform)) wrapper.eq(EcommerceOrder::getSourcePlatformCode, platform);

@@ -54,9 +54,9 @@ import { useAccountModal } from './hooks/useAccountModal';
 import { useProofModal } from './hooks/useProofModal';
 
 const { RangePicker } = DatePicker;
-import * as XLSX from 'xlsx';
 
-export const exportToExcel = (data: any[], columns: any[], filename: string) => {
+export const exportToExcel = async (data: any[], columns: any[], filename: string) => {
+    const XLSX = await import('xlsx');
     const formattedData = data.map(item => {
         const row: any = {};
         columns.forEach(col => {

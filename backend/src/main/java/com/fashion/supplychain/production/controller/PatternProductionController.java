@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.DataPermissionHelper;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
@@ -71,6 +72,9 @@ public class PatternProductionController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String startDate,
             @RequestParam(required = false) String endDate) {
+        if (DataPermissionHelper.isFactoryAccount()) {
+            return Result.success(Map.of("records", java.util.List.of(), "total", 0, "page", page, "size", size));
+        }
         Map<String, Object> result = patternProductionOrchestrator.listWithEnrichment(
                 page, size, keyword, status, startDate, endDate);
         return Result.success(result);

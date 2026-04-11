@@ -374,6 +374,14 @@ const scanCoreMixin = Behavior({
 
       // 处理需要输入数量的情况
       if (result && result.needInput) {
+        if (!this._needInputRetryCount) this._needInputRetryCount = 0;
+        this._needInputRetryCount++;
+        if (this._needInputRetryCount > 3) {
+          toast.error('多次输入无效，请检查订单数据后重试');
+          this.setData({ loading: false });
+          this._needInputRetryCount = 0;
+          return;
+        }
         wx.showModal({
           title: '请输入数量',
           content: '无法自动获取订单数量，请输入本次完成数量',

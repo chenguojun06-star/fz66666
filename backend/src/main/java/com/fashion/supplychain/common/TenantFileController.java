@@ -6,6 +6,7 @@ import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -13,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -69,7 +71,7 @@ public class TenantFileController {
      */
     @GetMapping("/tenant-download/{tenantId}/**")
     @SuppressWarnings("null")
-    public ResponseEntity<Resource> tenantDownload(
+    public ResponseEntity<?> tenantDownload(
             @PathVariable Long tenantId,
             @RequestParam(value = "download", required = false, defaultValue = "0") String download,
             HttpServletRequest request) {
@@ -109,12 +111,19 @@ public class TenantFileController {
                     long contentLength = cosObject.getObjectMetadata().getContentLength();
                     InputStream cosStream = cosObject.getObjectContent();
                     InputStreamResource resource = new InputStreamResource(cosStream);
-                    return ResponseEntity.ok()
-                            .header(HttpHeaders.CONTENT_TYPE, contentType)
-                            .header(HttpHeaders.CACHE_CONTROL, "max-age=3600")
-                            .header(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-                            .contentLength(contentLength)
-                            .body(resource);
+                    try {
+                        return ResponseEntity.ok()
+                                .header(HttpHeaders.CONTENT_TYPE, contentType)
+                                .header(HttpHeaders.CACHE_CONTROL, "max-age=3600")
+                                .header(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*")
+                                .contentLength(contentLength)
+                                .body(resource);
+                    } catch (Exception e) {
+                        try { cosStream.close(); } catch (Exception closeEx) {
+                            log.warn("[COS] 关闭COS流失败: {}", closeEx.getMessage());
+                        }
+                        throw e;
+                    }
                 } catch (Exception e) {
                     // NoSuchKey / 404：文件在 COS 中确实不存在（如历史本地上传数据）
                     // 直接返回占位图，跳过预签名URL二次请求，节省一次无效网络往返
@@ -131,34 +140,38 @@ public class TenantFileController {
                         String presignedUrl = cosService.getPresignedUrl(tenantId, fileName);
                         URL cosUrl = java.net.URI.create(presignedUrl).toURL();
                         HttpURLConnection conn = (HttpURLConnection) cosUrl.openConnection();
-                        conn.setConnectTimeout(5000);
-                        conn.setReadTimeout(15000);
-                        conn.setRequestMethod("GET");
-                        int httpStatus = conn.getResponseCode();
-                        if (httpStatus != 200) {
-                            log.warn("[COS] 文件不存在于COS（{}）: tenantId={}, fileName={}",
-                                    httpStatus, tenantId, fileName);
+                        try {
+                            conn.setConnectTimeout(5000);
+                            conn.setReadTimeout(15000);
+                            conn.setRequestMethod("GET");
+                            int httpStatus = conn.getResponseCode();
+                            if (httpStatus != 200) {
+                                log.warn("[COS] 文件不存在于COS（{}）: tenantId={}, fileName={}",
+                                        httpStatus, tenantId, fileName);
+                                return missingFilePlaceholder(fileName);
+                            }
+                            String proxyContentType = conn.getContentType();
+                            if (proxyContentType == null || proxyContentType.startsWith("application/octet-stream")) {
+                                String lowerName = fileName.toLowerCase();
+                                if (lowerName.endsWith(".png")) proxyContentType = "image/png";
+                                else if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg")) proxyContentType = "image/jpeg";
+                                else if (lowerName.endsWith(".gif")) proxyContentType = "image/gif";
+                                else if (lowerName.endsWith(".webp")) proxyContentType = "image/webp";
+                                else if (lowerName.endsWith(".pdf")) proxyContentType = "application/pdf";
+                                else proxyContentType = "application/octet-stream";
+                            }
+                            long proxyLen = conn.getContentLengthLong();
+                            InputStream proxyInputStream = conn.getInputStream();
+                            InputStreamResource proxyResource = new InputStreamResource(proxyInputStream);
+                            var builder = ResponseEntity.ok()
+                                    .header(HttpHeaders.CONTENT_TYPE, proxyContentType)
+                                    .header(HttpHeaders.CACHE_CONTROL, "max-age=3600");
+                            if (proxyLen > 0) builder.contentLength(proxyLen);
+                            ResponseEntity<?> response = builder.body(proxyResource);
+                            return response;
+                        } finally {
                             conn.disconnect();
-                            return missingFilePlaceholder(fileName);
                         }
-                        // 从文件名推断 Content-Type（COS 可能返回 octet-stream）
-                        String proxyContentType = conn.getContentType();
-                        if (proxyContentType == null || proxyContentType.startsWith("application/octet-stream")) {
-                            String lowerName = fileName.toLowerCase();
-                            if (lowerName.endsWith(".png")) proxyContentType = "image/png";
-                            else if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg")) proxyContentType = "image/jpeg";
-                            else if (lowerName.endsWith(".gif")) proxyContentType = "image/gif";
-                            else if (lowerName.endsWith(".webp")) proxyContentType = "image/webp";
-                            else if (lowerName.endsWith(".pdf")) proxyContentType = "application/pdf";
-                            else proxyContentType = "application/octet-stream";
-                        }
-                        long proxyLen = conn.getContentLengthLong();
-                        InputStreamResource proxyResource = new InputStreamResource(conn.getInputStream());
-                        var builder = ResponseEntity.ok()
-                                .header(HttpHeaders.CONTENT_TYPE, proxyContentType)
-                                .header(HttpHeaders.CACHE_CONTROL, "max-age=3600");
-                        if (proxyLen > 0) builder.contentLength(proxyLen);
-                        return builder.body(proxyResource);
                     } catch (Exception ex) {
                         log.warn("[COS] 预签名URL代理也失败（文件可能不存在）: tenantId={}, fileName={}, err={}",
                                 tenantId, fileName, ex.getMessage());

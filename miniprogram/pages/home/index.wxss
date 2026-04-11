@@ -1,5 +1,3 @@
-@import '/styles/line-icons.wxss';
-
 /* ============ 首页 ============ */
 page {
   background: var(--color-bg-page);
@@ -158,11 +156,6 @@ page {
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
-}
-
-.section-more {
-  font-size: var(--font-size-sm);
-  color: var(--color-primary);
 }
 
 .monthly-grid {

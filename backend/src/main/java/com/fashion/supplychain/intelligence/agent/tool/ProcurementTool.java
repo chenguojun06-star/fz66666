@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.agent.tool;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.procurement.orchestration.ProcurementOrchestrator;
@@ -71,6 +72,7 @@ public class ProcurementTool extends AbstractAgentTool {
                 String status = optionalString(args, "status");
                 if (keyword != null) params.put("keyword", keyword);
                 if (status != null) params.put("status", status);
+                params.put("tenantId", UserContext.tenantId());
 
                 IPage<MaterialPurchase> pageResult = procurementOrchestrator.listPurchaseOrders(params);
                 yield successJson("查询采购单成功", Map.of(
@@ -88,7 +90,9 @@ public class ProcurementTool extends AbstractAgentTool {
                 yield successJson("查询采购单详情成功", Map.of("detail", detail));
             }
             case "stats" -> {
-                Map<String, Object> statsResult = procurementOrchestrator.getStats(new HashMap<>());
+                Map<String, Object> statsParams = new HashMap<>();
+                statsParams.put("tenantId", UserContext.tenantId());
+                Map<String, Object> statsResult = procurementOrchestrator.getStats(statsParams);
                 yield successJson("采购统计查询成功", statsResult);
             }
             case "create" -> {

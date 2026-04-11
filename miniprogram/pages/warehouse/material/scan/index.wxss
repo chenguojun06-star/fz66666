@@ -1,5 +1,3 @@
-@import '/styles/line-icons.wxss';
-
 .container {
   padding: 12px;
   background: var(--color-bg-page, var(--color-bg-light));

@@ -1,5 +1,6 @@
 package com.fashion.supplychain.intelligence.agent.tool;
 
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.production.dto.ExceptionReportRequest;
 import com.fashion.supplychain.production.entity.ProductionExceptionReport;
@@ -61,6 +62,7 @@ public class ProductionExceptionTool extends AbstractAgentTool {
                 request.setProcessName(processName);
                 request.setExceptionType(exceptionType);
                 request.setDescription(description);
+                request.setTenantId(UserContext.tenantId());
 
                 ProductionExceptionReport report = exceptionReportOrchestrator.reportException(request);
 

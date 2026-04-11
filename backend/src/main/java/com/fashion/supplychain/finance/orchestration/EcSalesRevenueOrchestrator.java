@@ -148,13 +148,12 @@ public class EcSalesRevenueOrchestrator {
         int page     = parseIntSafe(params.get("page"), 1);
         int pageSize = parseIntSafe(params.get("pageSize"), 20);
 
-        Long tenantId = null;
-        try { tenantId = UserContext.tenantId(); } catch (Exception ignored) {}
+        Long tenantId = UserContext.tenantId();
 
         LambdaQueryWrapper<EcSalesRevenue> wrapper = new LambdaQueryWrapper<EcSalesRevenue>()
                 .orderByDesc(EcSalesRevenue::getCreateTime);
 
-        if (tenantId != null) wrapper.eq(EcSalesRevenue::getTenantId, tenantId);
+        wrapper.eq(EcSalesRevenue::getTenantId, tenantId);
 
         String status = (String) params.get("status");
         if (StringUtils.hasText(status)) wrapper.eq(EcSalesRevenue::getStatus, status);
@@ -177,11 +176,10 @@ public class EcSalesRevenueOrchestrator {
     // ─────────────────────────────────────────────────────────────────────────
 
     public Map<String, Object> summary(Map<String, Object> params) {
-        Long tenantId = null;
-        try { tenantId = UserContext.tenantId(); } catch (Exception ignored) {}
+        Long tenantId = UserContext.tenantId();
 
         LambdaQueryWrapper<EcSalesRevenue> wrapper = new LambdaQueryWrapper<EcSalesRevenue>();
-        if (tenantId != null) wrapper.eq(EcSalesRevenue::getTenantId, tenantId);
+        wrapper.eq(EcSalesRevenue::getTenantId, tenantId);
 
         String platform = (String) params.get("platform");
         if (StringUtils.hasText(platform)) wrapper.eq(EcSalesRevenue::getPlatform, platform);
@@ -224,15 +222,9 @@ public class EcSalesRevenueOrchestrator {
     }
 
     private void checkTenant(Long recordTenantId) {
-        try {
-            Long current = UserContext.tenantId();
-            if (current != null && !current.equals(recordTenantId)) {
-                throw new IllegalStateException("无权操作其他租户的收入记录");
-            }
-        } catch (IllegalStateException e) {
-            throw e;
-        } catch (Exception ignored) {
-            // 未登录或上下文不存在，跳过租户校验
+        Long current = UserContext.tenantId();
+        if (current != null && !current.equals(recordTenantId)) {
+            throw new IllegalStateException("无权操作其他租户的收入记录");
         }
     }
 

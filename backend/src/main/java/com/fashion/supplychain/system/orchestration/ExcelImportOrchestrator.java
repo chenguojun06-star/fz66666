@@ -265,6 +265,7 @@ public class ExcelImportOrchestrator {
                 StyleInfo existing = styleInfoService.getOne(
                         new LambdaQueryWrapper<StyleInfo>()
                                 .eq(StyleInfo::getStyleNo, styleNo)
+                                .eq(StyleInfo::getTenantId, tenantId)
                                 .last("LIMIT 1")
                 );
                 if (existing != null) {
@@ -799,6 +800,7 @@ public class ExcelImportOrchestrator {
                 StyleInfo existing = styleInfoService.getOne(
                         new LambdaQueryWrapper<StyleInfo>()
                                 .eq(StyleInfo::getStyleNo, styleNo)
+                                .eq(StyleInfo::getTenantId, tenantId)
                                 .last("LIMIT 1"));
 
                 // 款号已存在则覆盖更新，不存在则新增

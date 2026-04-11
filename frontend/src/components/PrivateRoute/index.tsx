@@ -1,6 +1,6 @@
 import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { isAdminUser as isAdminUserFn, useAuth } from '../../utils/AuthContext';
+import { isAdmin, useAuth } from '../../utils/AuthContext';
 import { paths, resolvePermissionCode, superAdminOnlyPaths } from '../../routeConfig';
 import XiaoyunPageLoader from '../common/XiaoyunPageLoader';
 
@@ -49,9 +49,9 @@ const PrivateRoute: React.FC = () => {
 
   const required = resolvePermissionCode(location.pathname);
 
-  const isAdmin = isAdminUserFn(user);
+  const isAdminUser = isAdmin(user);
 
-  if (!required || isAdmin) {
+  if (!required || isAdminUser) {
     return <Outlet />;
   }
 

@@ -230,7 +230,7 @@ page {
 }
 
 .list-item-overdue {
-  border-left: 3px solid var(--color-error);
+  border-left: 1px solid var(--color-danger);
   background: var(--color-bg-card);
 }
 

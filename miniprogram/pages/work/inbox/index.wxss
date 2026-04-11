@@ -1,5 +1,4 @@
 @import '/styles/page-utils.wxss';
-@import '/styles/line-icons.wxss';
 
 .container {
   min-height: 100vh;

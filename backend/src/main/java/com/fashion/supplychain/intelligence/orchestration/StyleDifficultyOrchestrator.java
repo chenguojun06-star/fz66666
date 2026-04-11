@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import com.fashion.supplychain.common.CosService;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.dto.StyleIntelligenceProfileResponse.DifficultyAssessment;
 import com.fashion.supplychain.intelligence.service.AiAdvisorService;
 import com.fashion.supplychain.intelligence.service.QdrantService;
@@ -340,7 +341,7 @@ public class StyleDifficultyOrchestrator {
         if (imageUrl != null && !imageUrl.isBlank()) {
             try {
                 imageVec = qdrantService.computeMultimodalEmbedding(imageUrl);
-                List<QdrantService.SimilarStyle> similar = qdrantService.searchSimilarStyleImages(imageVec, 3);
+                List<QdrantService.SimilarStyle> similar = qdrantService.searchSimilarStyleImages(imageVec, 3, UserContext.tenantId());
                 List<String> refs = new ArrayList<>();
                 for (QdrantService.SimilarStyle ss : similar) {
                     if (ss.getSimilarity() >= 0.72f) {
@@ -503,7 +504,9 @@ public class StyleDifficultyOrchestrator {
             try {
                 qdrantService.upsertStyleImageVector(style.getId(),
                         style.getStyleNo() != null ? style.getStyleNo() : "",
-                        imageVec, base.getDifficultyLevel(), base.getDifficultyScore());
+                        imageVec, base.getDifficultyLevel(),
+                        base.getDifficultyScore() != null ? base.getDifficultyScore() : 5,
+                        UserContext.tenantId());
                 log.info("[StyleDifficulty] \u6b3e\u5f0f\u56fe\u7247\u5411\u91cf\u5df2\u5165\u5e93 styleId={}", style.getId());
             } catch (Exception e) {
                 log.warn("[StyleDifficulty] \u6b3e\u5f0f\u56fe\u5411\u91cf\u5165\u5e93\u5931\u8d25: {}", e.getMessage());

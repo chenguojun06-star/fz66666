@@ -28,6 +28,8 @@ interface UseWebSocketOptions {
   heartbeatInterval?: number;
   /** 最大重连次数，默认 10 */
   maxReconnectAttempts?: number;
+  /** 租户ID，用于隔离WebSocket广播 */
+  tenantId?: string | number;
 }
 
 /**
@@ -44,6 +46,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
     userId,
     clientType = 'pc',
     enabled = true,
+    tenantId,
     reconnectInterval = 10000,  // 初始10s，减少噪音（微信云托管偶发断连属正常）
     heartbeatInterval = 18000, // 微信云托管负载均衡器60s超时，18s心跳确保不被切断
     maxReconnectAttempts = 5,  // 最多5次，避免控制台刷满错误
@@ -62,8 +65,8 @@ export function useWebSocket(options: UseWebSocketOptions) {
     // 开发环境: ws://localhost:5173/ws/realtime (Vite proxy)
     // 生产环境: wss://xxx.com/ws/realtime (nginx proxy)
     const protocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
-    return `${protocol}//${loc.host}/ws/realtime?userId=${userId}&clientType=${clientType}`;
-  }, [userId, clientType]);
+    return `${protocol}//${loc.host}/ws/realtime?userId=${userId}&clientType=${clientType}&tenantId=${tenantId ?? ''}`;
+  }, [userId, clientType, tenantId]);
 
   /** 发送心跳 */
   const startHeartbeat = useCallback((ws: WebSocket) => {
@@ -192,7 +195,6 @@ export function useWebSocket(options: UseWebSocketOptions) {
         if (ws.readyState === WebSocket.OPEN) {
           ws.close();
         } else if (ws.readyState === WebSocket.CONNECTING) {
-          // 等连接建立后再关，避免 "closed before established" 浏览器原生警告（React StrictMode 双执行场景）
           ws.addEventListener('open', () => { try { ws.close(); } catch { /* ignore */ } });
         }
       }
@@ -200,6 +202,18 @@ export function useWebSocket(options: UseWebSocketOptions) {
     };
 
   }, [userId, enabled]);
+
+  // 页面可见性变化时恢复连接
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (!document.hidden && enabled && userId && !wsRef.current) {
+        reconnectCountRef.current = 0;
+        connect();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [enabled, userId, connect]);
 
   return { connected, subscribe };
 }

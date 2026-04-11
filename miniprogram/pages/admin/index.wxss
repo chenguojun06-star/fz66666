@@ -1,6 +1,3 @@
-@import '/styles/design-tokens.wxss';
-@import '/styles/line-icons.wxss';
-
 page {
   background: var(--color-bg-page);
   padding-bottom: calc(60px + env(safe-area-inset-bottom));

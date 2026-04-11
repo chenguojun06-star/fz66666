@@ -38,20 +38,29 @@ public class WebSocketSessionManager {
      */
     private final Map<String, String> sessionClientTypeMap = new ConcurrentHashMap<>();
 
-    /**
-     * 添加会话
-     */
+    private final Map<String, Long> sessionTenantMap = new ConcurrentHashMap<>();
+
+    private final Map<Long, Set<String>> tenantSessions = new ConcurrentHashMap<>();
+
     public void addSession(WebSocketSession session, String userId, String clientType) {
+        addSession(session, userId, clientType, null);
+    }
+
+    public void addSession(WebSocketSession session, String userId, String clientType, Long tenantId) {
         String sessionId = session.getId();
         
         sessions.put(sessionId, session);
         sessionUserMap.put(sessionId, userId);
         sessionClientTypeMap.put(sessionId, clientType);
+        if (tenantId != null) {
+            sessionTenantMap.put(sessionId, tenantId);
+            tenantSessions.computeIfAbsent(tenantId, k -> new CopyOnWriteArraySet<>()).add(sessionId);
+        }
         
         userSessions.computeIfAbsent(userId, k -> new CopyOnWriteArraySet<>()).add(sessionId);
         
-        log.info("[WebSocket] 会话连接成功: sessionId={}, userId={}, clientType={}", 
-                sessionId, userId, clientType);
+        log.info("[WebSocket] 会话连接成功: sessionId={}, userId={}, clientType={}, tenantId={}", 
+                sessionId, userId, clientType, tenantId);
     }
 
     /**
@@ -61,6 +70,7 @@ public class WebSocketSessionManager {
         WebSocketSession session = sessions.remove(sessionId);
         String userId = sessionUserMap.remove(sessionId);
         String clientType = sessionClientTypeMap.remove(sessionId);
+        Long tenantId = sessionTenantMap.remove(sessionId);
         
         if (userId != null) {
             Set<String> userSessionIds = userSessions.get(userId);
@@ -68,6 +78,16 @@ public class WebSocketSessionManager {
                 userSessionIds.remove(sessionId);
                 if (userSessionIds.isEmpty()) {
                     userSessions.remove(userId);
+                }
+            }
+        }
+
+        if (tenantId != null) {
+            Set<String> tenantSessionIds = tenantSessions.get(tenantId);
+            if (tenantSessionIds != null) {
+                tenantSessionIds.remove(sessionId);
+                if (tenantSessionIds.isEmpty()) {
+                    tenantSessions.remove(tenantId);
                 }
             }
         }
@@ -178,5 +198,27 @@ public class WebSocketSessionManager {
      */
     public String getClientTypeBySession(String sessionId) {
         return sessionClientTypeMap.get(sessionId);
+    }
+
+    public Set<WebSocketSession> getTenantSessions(Long tenantId) {
+        if (tenantId == null) {
+            return Set.of();
+        }
+        Set<String> sessionIds = tenantSessions.get(tenantId);
+        if (sessionIds == null) {
+            return Set.of();
+        }
+        Set<WebSocketSession> result = new CopyOnWriteArraySet<>();
+        for (String sessionId : sessionIds) {
+            WebSocketSession session = sessions.get(sessionId);
+            if (session != null && session.isOpen()) {
+                result.add(session);
+            }
+        }
+        return result;
+    }
+
+    public Long getTenantIdBySession(String sessionId) {
+        return sessionTenantMap.get(sessionId);
     }
 }

@@ -1,7 +1,8 @@
 .summary-card {
   margin: 12px;
   padding: 16px;
-  background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary) 100%);
+  /* 降低饱和度：从 #3b82f6→#2563eb(刺眼蓝) 改为更柔和的商务蓝 */
+  background: linear-gradient(135deg, #4d84d9 0%, #2358b8 100%);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
 }
@@ -23,7 +24,7 @@
   flex: 1;
   text-align: center;
   padding: 8px;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.2);
   border-radius: var(--radius-md);
   margin: 0 4px;
 }
@@ -44,6 +45,7 @@
   color: var(--color-text-white);
 }
 .summary-value.primary {
-  font-size: 22px;
-  color: var(--color-warning);
+  /* 大金额：橙色在蓝底上刺眼，改为纯白更清晰 */
+  font-size: 20px;
+  color: rgba(255, 255, 255, 0.98);
 }

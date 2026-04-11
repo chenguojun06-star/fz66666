@@ -233,16 +233,17 @@ function mapNetworkErrorMessage(errMsg, isDevEnv) {
  * 处理请求失败（网络错误）
  */
 function handleFail(err, context) {
-  const { url, options, retryCount, resolve, reject, isDevEnv } = context;
+  const { url, method, options, retryCount, resolve, reject, isDevEnv } = context;
   const isRetryable = retryCount < REQUEST_RETRY_COUNT;
   const errMsg = (err && err.errMsg) || '网络异常';
   const mappedMsg = mapNetworkErrorMessage(errMsg, isDevEnv);
 
-  // 判断是否应该重试
   const isTimeoutOrNetwork =
     errMsg.includes('timeout') || errMsg.includes('request:fail') || errMsg.includes('network');
 
-  if (isRetryable && isTimeoutOrNetwork) {
+  const isIdempotentMethod = !method || method === 'GET' || method === 'HEAD' || method === 'OPTIONS';
+
+  if (isRetryable && isIdempotentMethod && isTimeoutOrNetwork) {
     const delayMs = 1000 * (Math.pow(2, retryCount) - 1);
     console.warn(`[Request Retry] Retrying (${retryCount + 1}/${REQUEST_RETRY_COUNT}) after ${delayMs}ms: ${url}`);
 
@@ -330,7 +331,7 @@ function request(options) {
         handleSuccess(res, { url, method, skipAuthRedirect, token, resolve, reject });
       },
       fail(err) {
-        handleFail(err, { url, options, retryCount, resolve, reject, isDevEnv });
+        handleFail(err, { url, method, options, retryCount, resolve, reject, isDevEnv });
       },
     });
   });

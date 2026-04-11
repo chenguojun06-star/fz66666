@@ -23,6 +23,7 @@ const WebSocketNotification: React.FC = () => {
 
   const { subscribe } = useWebSocket({
     userId: user?.id,
+    tenantId: user?.tenantId,
     enabled: isAuthenticated && !!user?.id,
   });
 

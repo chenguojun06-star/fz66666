@@ -55,6 +55,7 @@ const LiveScanFeed: React.FC<LiveScanFeedProps> = ({ minMinutesSinceLastScan, cu
 
   const { subscribe } = useWebSocket({
     userId: user?.id,
+    tenantId: user?.tenantId,
     enabled: isAuthenticated && !!user?.id,
   });
 

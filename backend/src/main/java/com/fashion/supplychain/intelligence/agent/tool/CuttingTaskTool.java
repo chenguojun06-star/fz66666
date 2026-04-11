@@ -99,6 +99,9 @@ public class CuttingTaskTool implements AgentTool {
 
     @Override
     public String execute(String argumentsJson) throws Exception {
+        if (com.fashion.supplychain.common.UserContext.tenantId() == null) {
+            return MAPPER.writeValueAsString(Map.of("success", false, "error", "租户上下文丢失，请重新登录"));
+        }
         if (!aiAgentToolAccessService.hasManagerAccess()) {
             return MAPPER.writeValueAsString(Map.of("error", "当前角色无权执行该操作"));
         }

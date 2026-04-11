@@ -232,13 +232,20 @@ public class QdrantService {
         return payload;
     }
 
-    /** 删除指定向量点 */
-    public void deleteVector(String pointId) {
+    /** 删除指定向量点（需提供 tenantId 校验归属） */
+    public void deleteVector(String pointId, Long tenantId) {
         try {
             ObjectNode body = objectMapper.createObjectNode();
-            ObjectNode points = body.putObject("points");
-            ArrayNode ids = points.putArray("values");
-            ids.add(pointId);
+            ObjectNode filter = body.putObject("filter");
+            ArrayNode must = filter.putArray("must");
+            ObjectNode idCond = must.addObject();
+            idCond.put("key", "id");
+            idCond.putObject("match").put("value", pointId);
+            if (tenantId != null) {
+                ObjectNode tenantCond = must.addObject();
+                tenantCond.put("key", "tenant_id");
+                tenantCond.putObject("match").put("integer", tenantId);
+            }
 
             String url = qdrantUrl + "/collections/" + collectionName + "/points/delete";
             restTemplate.exchange(url, HttpMethod.POST, jsonEntity(body.toString()), String.class);
@@ -528,7 +535,8 @@ public class QdrantService {
      * 将款式图片向量存入 style_images 集合，供后续相似款式搜索。
      */
     public boolean upsertStyleImageVector(Long styleId, String styleNo, float[] embedding,
-                                          String difficultyLevel, int difficultyScore) {
+                                          String difficultyLevel, int difficultyScore,
+                                          Long tenantId) {
         try {
             ensureStyleImageCollectionExists();
             ObjectNode body = objectMapper.createObjectNode();
@@ -541,6 +549,9 @@ public class QdrantService {
             payloadNode.put("style_no", styleNo != null ? styleNo : "");
             payloadNode.put("difficulty_level", difficultyLevel != null ? difficultyLevel : "MEDIUM");
             payloadNode.put("difficulty_score", difficultyScore);
+            if (tenantId != null) {
+                payloadNode.put("tenant_id", tenantId);
+            }
             String url = qdrantUrl + "/collections/" + STYLE_IMAGE_COLLECTION + "/points";
             ResponseEntity<String> resp = restTemplate.exchange(url, HttpMethod.PUT,
                     jsonEntity(body.toString()), String.class);
@@ -554,7 +565,7 @@ public class QdrantService {
     /**
      * 搜索视觉相似的历史款式（仅在 style_images 集合中检索）。
      */
-    public List<SimilarStyle> searchSimilarStyleImages(float[] embedding, int topK) {
+    public List<SimilarStyle> searchSimilarStyleImages(float[] embedding, int topK, Long tenantId) {
         List<SimilarStyle> results = new ArrayList<>();
         try {
             ObjectNode body = objectMapper.createObjectNode();
@@ -562,6 +573,16 @@ public class QdrantService {
             for (float v : embedding) vec.add(v);
             body.put("limit", topK);
             body.put("with_payload", true);
+            if (tenantId != null) {
+                ObjectNode filter = body.putObject("filter");
+                ArrayNode should = filter.putArray("should");
+                ObjectNode tenantCond = should.addObject();
+                tenantCond.put("key", "tenant_id");
+                tenantCond.putObject("match").put("integer", tenantId);
+                ObjectNode publicCond = should.addObject();
+                publicCond.put("key", "tenant_id");
+                publicCond.putObject("match").put("integer", 0);
+            }
             String url = qdrantUrl + "/collections/" + STYLE_IMAGE_COLLECTION + "/points/search";
             ResponseEntity<String> resp = restTemplate.postForEntity(url, jsonEntity(body.toString()), String.class);
             if (resp.getStatusCode().is2xxSuccessful() && resp.getBody() != null) {

@@ -1,5 +1,4 @@
 /* pages/payroll/payroll.wxss */
-@import '../../styles/design-tokens.wxss';
 @import '../../styles/page-utils.wxss';
 
 .page {
@@ -8,65 +7,6 @@
   padding-bottom: 20px;
 }
 
-/* 顶部统计卡片 */
-.summary-card {
-  margin: 12px;
-  padding: 16px;
-  background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary) 100%);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-}
-
-.summary-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--color-text-white);
-  margin-bottom: 12px;
-}
-
-.summary-row {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.summary-row:last-child {
-  margin-bottom: 0;
-}
-
-.summary-item {
-  flex: 1;
-  text-align: center;
-  padding: 8px;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: var(--radius-md);
-  margin: 0 4px;
-}
-
-.summary-item:first-child {
-  margin-left: 0;
-}
-
-.summary-item:last-child {
-  margin-right: 0;
-}
-
-.summary-label {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.9);
-  margin-bottom: 4px;
-}
-
-.summary-value {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--color-text-white);
-}
-
-.summary-value.primary {
-  font-size: 22px;
-  color: var(--color-warning);
-}
 
 /* 筛选器 */
 .filter-bar {
@@ -122,16 +62,6 @@
   color: var(--color-text-secondary);
   font-weight: 500;
   padding-left: 2px;
-}
-
-.date-picker {
-  padding: 10px;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-md);
-  text-align: center;
-  font-size: 14px;
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border);
 }
 
 /* 明细区域 */
@@ -227,9 +157,10 @@
 
 .process {
   display: inline-block;
-  padding: 2px 6px;
-  background: var(--color-primary-light);
-  color: var(--color-text-white);
+  padding: 2px 8px;
+  /* 工序 tag 改为柔和浅蓝底 + 深蓝文字，视觉更轻盈 */
+  background: rgba(59, 130, 246, 0.12);
+  color: #2358b8;
   border-radius: var(--radius-sm);
   font-size: 12px;
   font-weight: 600;

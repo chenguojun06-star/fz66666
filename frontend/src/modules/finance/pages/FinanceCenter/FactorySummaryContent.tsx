@@ -9,7 +9,6 @@ import {
   DownloadOutlined,
 } from '@ant-design/icons';
 import api from '@/utils/api';
-import * as XLSX from 'xlsx';
 import { wagePaymentApi } from '@/services/finance/wagePaymentApi';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import type { FactoryRank } from '@/services/intelligence/intelligenceApi';
@@ -277,7 +276,8 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
     });
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    const XLSX = await import('xlsx');
     if (data.length === 0) {
       message.warning('无数据可导出');
       return;
