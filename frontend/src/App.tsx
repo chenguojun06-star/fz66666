@@ -13,48 +13,19 @@ import WebSocketNotification from './components/common/WebSocketNotification';
 import CommandPalette from './components/common/CommandPalette';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import { StyleInfo, StyleInfoList, OrderManagement, DataCenter, TemplateCenter, PatternRevisionManagement, MaintenanceCenter } from './modules/basic';
-import {
-  MaterialReconciliation,
-  PayrollOperatorSummary,
-  FinanceCenter,
-  ExpenseReimbursement,
-  WagePayment,
-  EcSalesRevenue,
-  TaxExport,
-} from './modules/finance';
-import { CrmDashboard, ReceivableList } from './modules/crm';
 
+import { StyleInfo, StyleInfoList, OrderManagement, DataCenter, TemplateCenter, PatternRevisionManagement, MaintenanceCenter } from './modules/basic';
+import { MaterialReconciliation, PayrollOperatorSummary, FinanceCenter, ExpenseReimbursement, WagePayment, EcSalesRevenue, TaxExport } from './modules/finance';
+import { CrmDashboard, ReceivableList } from './modules/crm';
 import { SelectionCenter } from './modules/selection';
-import {
-  // WarehouseDashboard,
-  MaterialInventory,
-  MaterialDatabase,
-  FinishedInventory,
-  SampleInventory,
-  EcommerceOrders,
-} from './modules/warehouse';
+import { MaterialInventory, MaterialDatabase, FinishedInventory, SampleInventory, EcommerceOrders } from './modules/warehouse';
 import { Dashboard } from './modules/dashboard';
 import { UserList, UserApproval, RoleList, OrganizationTree, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard } from './modules/system';
 import { IntegrationCenter } from './modules/integration';
 import { AiAgentTraceCenter, CockpitPage, IntelligenceCenter } from './modules/intelligence';
-import {
-  ProductionList,
-  CuttingManagement,
-  MaterialPurchase,
-  MaterialPurchaseDetail,
-  ProductWarehousing,
-  InspectionDetail,
-  OrderTransfer,
-  OrderFlow,
-  ProgressDetail,
-  MaterialPicking,
-  ExternalFactory,
-} from './modules/production';
+import { ProductionList, CuttingManagement, MaterialPurchase, MaterialPurchaseDetail, ProductWarehousing, InspectionDetail, OrderTransfer, OrderFlow, ProgressDetail, MaterialPicking, ExternalFactory } from './modules/production';
 
-// 懒加载组件
 const NotFound = React.lazy(() => import('./pages/NotFound'));
-// 公开页面（无需登录）
 const ShareOrderPage = React.lazy(() => import('./modules/production/pages/ShareOrderPage/index'));
 const ShareOutstockPage = React.lazy(() => import('./modules/warehouse/pages/ShareOutstockPage/index'));
 
