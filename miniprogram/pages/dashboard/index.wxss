@@ -222,12 +222,6 @@
 .order-card--overdue {
   border-left: 1px solid #ef4444;
 }
-.order-card--overdue .order-no {
-  color: #dc2626;
-}
-.order-card--overdue .progress-pct {
-  color: #dc2626;
-}
 
 /* — 数量概览行（折叠也可见） — */
 .qty-row {
