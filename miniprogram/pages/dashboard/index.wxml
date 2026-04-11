@@ -127,12 +127,12 @@
         <view class="header-info">
           <view class="header-top">
             <text class="order-no">{{item.orderNo}}</text>
-            <text wx:if="{{item.urgencyTagText}}" class="tag tag-urgent">{{item.urgencyTagText}}</text>
-            <text wx:if="{{item.plateTypeTagText}}" class="tag tag-plate">{{item.plateTypeTagText}}</text>
+            <text wx:if="{{item.urgencyTagText}}" class="tag {{item.urgencyTagText === '急' ? 'tag-urgent' : 'tag-normal'}}">{{item.urgencyTagText}}</text>
+            <text wx:if="{{item.plateTypeTagText}}" class="tag tag-normal">{{item.plateTypeTagText}}</text>
           </view>
           <view class="header-meta">
             <text class="style-no">{{item.styleNo || '--'}}</text>
-            <text class="meta-factory" wx:if="{{item.factoryName}}">📍 {{item.factoryName}}</text>
+            <text class="meta-factory" wx:if="{{item.factoryName}}">{{item.factoryName}}</text>
           </view>
           <view class="header-delivery" wx:if="{{item.deliveryDateStr}}">
             <text class="delivery-date">交期 {{item.deliveryDateStr}}</text>
