@@ -12,6 +12,25 @@ frontend/.eslintcache
 # Miniprogram (WeChat)
 miniprogram/node_modules/
 
+# ⚠️ 测试代码（永久本地保留，不提交仓库）
+# Backend 测试代码
+backend/src/test/
+backend/pom-test.xml
+
+# Frontend 测试代码
+frontend/src/**/*.test.ts
+frontend/src/**/*.test.tsx
+frontend/src/**/*.spec.ts
+frontend/src/**/*.spec.tsx
+frontend/src/**/*.test.js
+frontend/src/**/__tests__/
+frontend/src/**/tests/
+
+# Miniprogram 测试代码
+miniprogram/test/
+miniprogram/**/*.test.js
+miniprogram/**/*.spec.js
+
 # Env / local run files
 .env
 .env.*
