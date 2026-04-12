@@ -74,7 +74,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
         purchaseId: cancelTarget.id,
         reason,
       });
-      message.success('领取已撤回，采购单已恢复为待处理');
+      message.success('撤回成功，采购单已恢复为待处理');
       setCancelTarget(null);
       onRefresh?.();
     } catch {
@@ -431,7 +431,7 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
             actions={[
               {
                 key: 'view',
-                label: isPending ? '领取' : '查看',
+                label: isPending ? '采购' : '查看',
                 onClick: () => onView(record),
                 primary: true,
               },
@@ -473,10 +473,10 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
     <style>{`.material-row-overdue { background-color: rgba(255, 77, 79, 0.06) !important; }`}</style>
     <RejectReasonModal
       open={cancelTarget !== null}
-      title="撤回采购领取"
+      title="撤回采购"
       description={cancelTarget ? (
         <div>
-          <p style={{ marginBottom: 8 }}>确定撤回「{cancelTarget.materialName || cancelTarget.materialCode}」的领取记录？</p>
+          <p style={{ marginBottom: 8 }}>确定撤回「{cancelTarget.materialName || cancelTarget.materialCode}」的采购记录？</p>
           <p style={{ color: 'var(--text-secondary)', fontSize: 12, marginBottom: 4 }}>领取人：{cancelTarget.receiverName || '-'}，到货数量：{formatMaterialQuantityWithUnit(cancelTarget.arrivedQuantity || 0, cancelTarget.unit)}</p>
         </div>
       ) : null}

@@ -37,7 +37,7 @@ const getStatusConfig = (status?: string) => {
     case 'IN_PROGRESS':
       return { color: 'warning', text: '采购中' };
     case MATERIAL_PURCHASE_STATUS.RECEIVED:
-      return { color: 'processing', text: '已领取' };
+      return { color: 'processing', text: '已采购' };
     case 'procurement_completed':
     case MATERIAL_PURCHASE_STATUS.COMPLETED:
       return { color: 'success', text: '已完成' };

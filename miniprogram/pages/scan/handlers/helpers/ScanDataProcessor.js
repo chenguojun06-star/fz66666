@@ -76,7 +76,7 @@ class ScanDataProcessor {
       }
 
       const orderQty = parsedData.quantity
-        || orderDetail.quantity || orderDetail.totalQuantity
+        || orderDetail.cuttingQty || orderDetail.quantity || orderDetail.totalQuantity
         || orderDetail.totalNum || orderDetail.orderQuantity || 0;
 
       return {
@@ -123,7 +123,7 @@ class ScanDataProcessor {
       }
 
       const orderQty = parsedData.quantity
-        || orderDetail.quantity || orderDetail.totalQuantity
+        || orderDetail.cuttingQty || orderDetail.quantity || orderDetail.totalQuantity
         || orderDetail.totalNum || orderDetail.orderQuantity || 0;
 
       const styleNo = orderDetail.styleNo || parsedData.styleNo || '';
@@ -200,7 +200,7 @@ class ScanDataProcessor {
 
     // 计算订单总数量（parsedData中可能没有quantity）
     const orderQty = parsedData.quantity
-      || orderDetail.quantity || orderDetail.totalQuantity
+      || orderDetail.cuttingQty || orderDetail.quantity || orderDetail.totalQuantity
       || orderDetail.totalNum || orderDetail.orderQuantity || 0;
 
     return {
@@ -266,7 +266,7 @@ class ScanDataProcessor {
       return;
     } // 有明细，无需总数
 
-    const orderQuantity = orderDetail.quantity || orderDetail.totalQuantity || orderDetail.totalNum;
+    const orderQuantity = orderDetail.cuttingQty || orderDetail.quantity || orderDetail.totalQuantity || orderDetail.totalNum;
 
     if (orderQuantity && orderQuantity > 0) {
       parsedData.quantity = Number(orderQuantity);

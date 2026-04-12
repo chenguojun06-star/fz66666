@@ -115,17 +115,17 @@ Page({
     const receiverName = String(userInfo.name || userInfo.username || '').trim();
 
     if (!receiverId && !receiverName) {
-      toast.error('领取人信息缺失，请重新登录');
+      toast.error('采购人信息缺失，请重新登录');
       return;
     }
 
     const pendingItems = this.data.materialPurchases.filter(item => item.needsReceive);
     if (pendingItems.length === 0) {
-      toast.success('所有物料均已领取');
+      toast.success('所有物料均已采购');
       return;
     }
 
-    wx.showLoading({ title: '领取中...', mask: true });
+    wx.showLoading({ title: '采购中...', mask: true });
     try {
       await Promise.all(pendingItems.map(item =>
         api.production.receivePurchase({
@@ -135,11 +135,11 @@ Page({
         })
       ));
       wx.hideLoading();
-      toast.success(`已领取 ${pendingItems.length} 项`);
+      toast.success(`已采购 ${pendingItems.length} 项`);
       this._loadDetail();
     } catch (e) {
       wx.hideLoading();
-      toast.error(e.errMsg || e.message || '领取失败');
+      toast.error(e.errMsg || e.message || '采购失败');
     }
   },
 
@@ -311,8 +311,8 @@ Page({
   },
 
   _getStatusText(status) {
-    const map = { pending: '待领取', received: '已领取', partial: '部分到货', completed: '已完成', cancelled: '已取消' };
-    return map[status] || '待领取';
+    const map = { pending: '待采购', received: '已采购', partial: '部分到货', completed: '已完成', cancelled: '已取消' };
+    return map[status] || '待采购';
   },
 
   _getStatusColor(status) {

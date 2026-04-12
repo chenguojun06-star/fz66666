@@ -52,7 +52,7 @@ const MaterialSearchForm: React.FC<MaterialSearchFormProps> = ({
             statusOptions={[
               { label: '全部', value: '' },
               { label: '待采购', value: MATERIAL_PURCHASE_STATUS.PENDING },
-              { label: '已领取', value: MATERIAL_PURCHASE_STATUS.RECEIVED },
+              { label: '已采购', value: MATERIAL_PURCHASE_STATUS.RECEIVED },
               { label: '部分到货', value: MATERIAL_PURCHASE_STATUS.PARTIAL },
               { label: '全部到货', value: MATERIAL_PURCHASE_STATUS.COMPLETED },
               { label: '已取消', value: MATERIAL_PURCHASE_STATUS.CANCELLED },

@@ -47,10 +47,18 @@ public class OrgQueryTool extends AbstractAgentTool {
         return switch (action) {
             case "tree" -> {
                 List<OrganizationUnit> tree = orgOrchestrator.tree();
+                Long tenantId = UserContext.tenantId();
+                if (tenantId != null && !UserContext.isSuperAdmin()) {
+                    tree = tree.stream().filter(u -> tenantId.equals(u.getTenantId())).toList();
+                }
                 yield successJson("获取组织架构树成功", Map.of("tree", tree, "total", tree.size()));
             }
             case "departments" -> {
                 List<OrganizationUnit> depts = orgOrchestrator.departmentOptions();
+                Long tenantId = UserContext.tenantId();
+                if (tenantId != null && !UserContext.isSuperAdmin()) {
+                    depts = depts.stream().filter(u -> tenantId.equals(u.getTenantId())).toList();
+                }
                 yield successJson("获取部门列表成功", Map.of("departments", depts, "total", depts.size()));
             }
             case "members" -> {

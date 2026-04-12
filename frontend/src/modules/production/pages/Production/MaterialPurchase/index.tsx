@@ -112,7 +112,7 @@ const MaterialPurchase: React.FC = () => {
                         },
                         {
                           key: 'received',
-                          items: [{ label: '已领取', value: purchaseStats.receivedCount, unit: '条', color: 'var(--color-primary)' }],
+                          items: [{ label: '已采购', value: purchaseStats.receivedCount, unit: '条', color: 'var(--color-primary)' }],
                           onClick: () => handleStatClick('received'),
                           activeColor: 'var(--color-primary)',
                         },

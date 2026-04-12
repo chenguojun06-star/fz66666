@@ -49,6 +49,9 @@ Page({
   },
 
   onShow() {
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({ selected: 3 });
+    }
     const lang = i18n.getLanguage();
     if (lang !== this.data.currentLanguage) {
       this.applyLanguage(lang);

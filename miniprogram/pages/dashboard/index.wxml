@@ -103,9 +103,19 @@
     </view>
   </view>
 
+  <!-- ===== 搜索栏 ===== -->
+  <view class="search-bar">
+    <view class="search-input-wrap">
+      <text class="search-icon">🔍</text>
+      <input class="search-input" placeholder="搜索订单号 / 款号" value="{{searchKey}}"
+             bindinput="onSearchInput" confirm-type="search" />
+      <text class="search-clear" wx:if="{{searchKey}}" catchtap="onSearchClear">✕</text>
+    </view>
+  </view>
+
   <!-- ===== 状态过滤条 ===== -->
   <view class="stats-bar">
-    <view class="stat-pill {{activeFilter === item.key ? 'stat-pill--active' : ''}} {{item.key === 'overdue' ? 'stat-pill--overdue' : ''}}"
+    <view class="stat-pill {{activeFilter === item.key ? 'stat-pill--active' : ''}} {{item.key === 'overdue' ? 'stat-pill--overdue' : ''}} {{item.key === 'completed' ? 'stat-pill--completed' : ''}}"
           wx:for="{{statFilters}}" wx:key="key"
           data-key="{{item.key}}" bindtap="onStatTap">
       <text class="stat-count">{{statCounts[item.key] || 0}}</text>
@@ -144,7 +154,7 @@
       <!-- 数量概览（折叠状态也可见） -->
       <view class="qty-row">
         <view class="qty-item">
-          <text class="qty-val">{{item.totalQuantity || item.orderQuantity || 0}}</text>
+          <text class="qty-val">{{item.cuttingQty || item.totalQuantity || item.orderQuantity || 0}}</text>
           <text class="qty-lbl">总数量</text>
         </view>
         <view class="qty-divider"></view>
@@ -172,7 +182,7 @@
       <view class="order-body" wx:if="{{item.expanded}}" catchtap="">
         <!-- 数量汇总 -->
         <view class="body-stats">
-          <view class="body-stat"><text class="body-stat-val">{{item.totalQuantity || item.orderQuantity || 0}}</text><text class="body-stat-lbl">总数量</text></view>
+          <view class="body-stat"><text class="body-stat-val">{{item.cuttingQty || item.totalQuantity || item.orderQuantity || 0}}</text><text class="body-stat-lbl">总数量</text></view>
           <view class="body-stat"><text class="body-stat-val">{{item.completedQuantity || 0}}</text><text class="body-stat-lbl">已完成</text></view>
           <view class="body-stat"><text class="body-stat-val">{{item.remainQuantity || 0}}</text><text class="body-stat-lbl">剩余</text></view>
         </view>
@@ -204,6 +214,11 @@
               <text class="sku-cell sku-cell--total">{{cg.total}}</text>
             </view>
           </view>
+        </view>
+
+        <!-- 快捷操作 -->
+        <view class="card-actions">
+          <view class="card-action-btn" catchtap="onCopyOrderNo" data-order-no="{{item.orderNo}}">📋 复制订单号</view>
         </view>
 
       </view>

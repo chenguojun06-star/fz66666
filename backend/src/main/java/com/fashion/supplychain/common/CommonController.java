@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -26,6 +27,17 @@ import java.util.UUID;
 @Slf4j
 @PreAuthorize("isAuthenticated()")
 public class CommonController {
+
+    private static final Set<String> ALLOWED_EXTENSIONS = Set.of(
+            ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg",
+            ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+            ".zip", ".rar", ".7z",
+            ".txt", ".csv", ".json", ".xml",
+            ".mp4", ".mp3", ".wav", ".avi",
+            ".dxf", ".plt", ".ets", ".prj"
+    );
+
+    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
 
     @Value("${fashion.upload-path}")
     private String uploadPath;
@@ -43,14 +55,19 @@ public class CommonController {
         if (file == null || file.isEmpty()) {
             return Result.fail("文件为空");
         }
+        if (file.getSize() > MAX_FILE_SIZE) {
+            return Result.fail("文件大小超过10MB限制");
+        }
         try {
-            // ✅ 必须做1：自动从 Token 获取 tenantId，前端不传
             TenantAssert.assertTenantContext();
 
             String originalFilename = file.getOriginalFilename();
             String safeOriginal = originalFilename == null ? "file" : originalFilename;
             int dot = safeOriginal.lastIndexOf('.');
-            String extension = dot >= 0 ? safeOriginal.substring(dot) : "";
+            String extension = dot >= 0 ? safeOriginal.substring(dot).toLowerCase() : "";
+            if (!ALLOWED_EXTENSIONS.contains(extension)) {
+                return Result.fail("不支持的文件类型: " + extension + "，允许的类型: " + ALLOWED_EXTENSIONS);
+            }
             String newFilename = UUID.randomUUID().toString() + extension;
 
             // ✅ 文件存储到 tenants/{tenantId}/ 子目录

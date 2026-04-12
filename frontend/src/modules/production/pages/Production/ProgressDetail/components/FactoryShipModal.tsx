@@ -88,7 +88,7 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
     onShipDetailsChange(next.length > 0 ? next : [{ color: '', sizeName: '', quantity: 0 }]);
   };
 
-  const shipType = Form.useWatch('shipType', form) ?? 'self';
+  const shipType = Form.useWatch('shipMethod', form) ?? 'SELF_DELIVERY';
 
   // ── 渲染参考表头 ──
   const hasMatrix = allSizes.length > 0 && refColors.length > 0;
@@ -200,10 +200,10 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
 
       {/* ── Part 4: 发货表单 ── */}
       <Form form={form} layout="vertical" size="small">
-        <Form.Item label="发货方式" name="shipType" initialValue="self" style={{ marginBottom: 10 }}>
+        <Form.Item label="发货方式" name="shipMethod" initialValue="SELF_DELIVERY" style={{ marginBottom: 10 }}>
           <Radio.Group>
-            <Radio value="self">自发货</Radio>
-            <Radio value="express">快递发货</Radio>
+            <Radio value="SELF_DELIVERY">自发货</Radio>
+            <Radio value="EXPRESS">快递发货</Radio>
           </Radio.Group>
         </Form.Item>
 
@@ -353,7 +353,7 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
           </Button>
         </Form.Item>
 
-        {shipType === 'express' && (
+        {shipType === 'EXPRESS' && (
           <>
             <Form.Item label="快递公司" name="expressCompany" style={{ marginBottom: 8 }}>
               <AutoComplete
@@ -361,7 +361,7 @@ const FactoryShipModal: React.FC<FactoryShipModalProps> = ({
                 placeholder="请填写快递公司"
               />
             </Form.Item>
-            <Form.Item label="快递单号" name="trackingNumber" style={{ marginBottom: 8 }}>
+            <Form.Item label="快递单号" name="trackingNo" style={{ marginBottom: 8 }}>
               <Input placeholder="请填写快递单号" />
             </Form.Item>
           </>

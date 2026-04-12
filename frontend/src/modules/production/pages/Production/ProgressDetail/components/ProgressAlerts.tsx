@@ -11,6 +11,8 @@ export interface ProgressAlertsProps {
   bottleneckBannerVisible: boolean;
   bottleneckItems: BottleneckItem[];
   setBottleneckBannerVisible: (v: boolean) => void;
+  /** 工序瓶颈 AI 接口加载中：预占位防止 Banner 出现时表格下移（CLS 优化） */
+  bottleneckLoading?: boolean;
 }
 
 const ProgressAlerts: React.FC<ProgressAlertsProps> = ({
@@ -20,6 +22,7 @@ const ProgressAlerts: React.FC<ProgressAlertsProps> = ({
   bottleneckBannerVisible,
   bottleneckItems,
   setBottleneckBannerVisible,
+  bottleneckLoading = false,
 }) => (
   <>
     {showSmartErrorNotice && smartError ? (
@@ -28,7 +31,10 @@ const ProgressAlerts: React.FC<ProgressAlertsProps> = ({
       </Card>
     ) : null}
 
-    {bottleneckBannerVisible && bottleneckItems.length > 0 && (
+    {/* 工序瓶颈横幅：加载期间预占位（minHeight=54），避免 Banner 出现时表格下移 (CLS) */}
+    {bottleneckLoading && !bottleneckBannerVisible ? (
+      <div style={{ marginBottom: 10, minHeight: 54 }} aria-hidden="true" />
+    ) : bottleneckBannerVisible && bottleneckItems.length > 0 ? (
       <div style={{ marginBottom: 10 }}>
         <Alert
           type={bottleneckItems.some(i => i.severity === 'critical') ? 'error' : 'warning'}
@@ -53,7 +59,7 @@ const ProgressAlerts: React.FC<ProgressAlertsProps> = ({
           }
         />
       </div>
-    )}
+    ) : null}
   </>
 );
 

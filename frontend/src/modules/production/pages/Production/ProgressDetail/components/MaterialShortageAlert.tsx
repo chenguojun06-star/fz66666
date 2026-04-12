@@ -30,9 +30,14 @@ interface ShortageData {
 /**
  * 面料缺口预警横幅组件
  */
+// CLS-ALERT-HEIGHT：Alert 组件标准高度，用于 loading 占位防止布局偏移
+const ALERT_PLACEHOLDER_HEIGHT = 56;
+
 const MaterialShortageAlert: React.FC = () => {
   const [data, setData] = useState<ShortageData | null>(null);
   const [dismissed, setDismissed] = useState(false);
+  // loading=true 期间预占位，避免 Alert 出现时页面内容下移（CLS）
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // 背景静默加载
@@ -44,8 +49,14 @@ const MaterialShortageAlert: React.FC = () => {
           setData(d as ShortageData);
         }
       })
-      .catch(() => {/* 静默失败 */});
+      .catch(() => {/* 静默失败 */})
+      .finally(() => { setLoading(false); });
   }, []);
+
+  // 加载期间：预占位（与 Alert 等高），数据返回后平滑填充或收缩
+  if (loading) {
+    return <div style={{ minHeight: ALERT_PLACEHOLDER_HEIGHT, marginBottom: 8 }} aria-hidden="true" />;
+  }
 
   if (!data || dismissed) return null;
 

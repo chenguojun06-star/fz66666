@@ -312,9 +312,7 @@ App({
    * 全局错误捕获 - 捕获页面脚本错误
    */
   onError(msg) {
-    // 防御性处理：框架初始化期间 console 可能未就绪，避免二次崩溃
     try {
-      // 静默忽略微信框架内部 setInterval 时序报错（开发工具环境特有，生产不出现）
       if (typeof msg === 'string' && (
         msg.indexOf('__subPageFrameEndTime__') !== -1 ||
         msg.indexOf('__appServiceEngine__') !== -1 ||
@@ -322,17 +320,33 @@ App({
       )) {
         return;
       }
-      // eslint-disable-next-line no-console
       console.error('[App] 全局错误:', msg);
+      this._reportError('onError', typeof msg === 'string' ? msg : String(msg));
     } catch (_) {
-      // 框架初始化阶段 console 未就绪，静默失败
     }
   },
 
-  /**
-   * 全局未处理 Promise 拒绝捕获
-   */
   onUnhandledRejection(res) {
-    console.error('[App] 未处理的Promise拒绝:', res.reason);
+    const reason = res && res.reason ? String(res.reason) : 'unknown';
+    console.error('[App] 未处理的Promise拒绝:', reason);
+    this._reportError('unhandledRejection', reason);
+  },
+
+  _reportError(type, detail) {
+    try {
+      const token = getToken();
+      if (!token) return;
+      wx.request({
+        url: require('./config').API_BASE + '/api/system/error-report',
+        method: 'POST',
+        header: { Authorization: 'Bearer ' + token },
+        data: {
+          type,
+          detail: (detail || '').substring(0, 500),
+          timestamp: Date.now(),
+        },
+        fail() {},
+      });
+    } catch (_) {}
   },
 });

@@ -119,7 +119,10 @@ public class StyleAttachmentOrchestrator {
             String extension = dot >= 0 ? safeOriginal.substring(dot) : "";
 
             String newFilename = UUID.randomUUID().toString() + extension;
-            // ✅ 存储文件：COS 优先，本地降级
+            String extForCheck = extension.length() > 1 ? extension.substring(1).toLowerCase() : "";
+            if (!extForCheck.isEmpty() && !isAllowedExtension(extForCheck)) {
+                throw new IllegalArgumentException("不支持的文件类型: " + extension);
+            }
             if (cosService.isEnabled()) {
                 cosService.upload(com.fashion.supplychain.common.UserContext.tenantId(), newFilename, file);
             } else {
@@ -127,7 +130,6 @@ public class StyleAttachmentOrchestrator {
                 file.transferTo(dest);
             }
 
-            // 获取当前版本号
             StyleAttachment latest = styleAttachmentService.getLatestPattern(resolvedStyleId, type);
             int nextVersion = 1;
             String parentId = null;
@@ -334,7 +336,10 @@ public class StyleAttachmentOrchestrator {
             String extension = dot >= 0 ? safeOriginal.substring(dot) : "";
 
             String newFilename = UUID.randomUUID().toString() + extension;
-            // ✅ 存储文件：COS 优先，本地降级
+            String extForCheck = extension.length() > 1 ? extension.substring(1).toLowerCase() : "";
+            if (!extForCheck.isEmpty() && !isAllowedExtension(extForCheck)) {
+                throw new IllegalArgumentException("不支持的文件类型: " + extension);
+            }
             if (cosService.isEnabled()) {
                 cosService.upload(com.fashion.supplychain.common.UserContext.tenantId(), newFilename, file);
             } else {
@@ -523,5 +528,17 @@ public class StyleAttachmentOrchestrator {
             throw new NoSuchElementException("款号不存在");
         }
         return styleInfoService.isPatternLocked(sid);
+    }
+
+    private static final java.util.Set<String> UPLOAD_ALLOWED_EXTENSIONS = java.util.Set.of(
+            "jpg", "jpeg", "png", "gif", "bmp", "webp", "svg",
+            "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "csv", "txt", "json", "xml",
+            "zip", "rar", "7z",
+            "mp4", "mp3", "wav", "avi",
+            "dxf", "plt", "ets", "prj"
+    );
+
+    private boolean isAllowedExtension(String ext) {
+        return UPLOAD_ALLOWED_EXTENSIONS.contains(ext);
     }
 }

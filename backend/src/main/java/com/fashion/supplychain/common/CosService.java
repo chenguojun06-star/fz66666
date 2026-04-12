@@ -139,9 +139,10 @@ public class CosService {
 
     /** 允许上传的文件扩展名白名单 */
     private static final java.util.Set<String> ALLOWED_EXTENSIONS = java.util.Set.of(
-            "jpg", "jpeg", "png", "gif", "bmp", "webp",
-            "pdf", "doc", "docx", "xls", "xlsx", "csv", "txt",
+            "jpg", "jpeg", "png", "gif", "bmp", "webp", "svg",
+            "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "csv", "txt", "json", "xml",
             "zip", "rar", "7z",
+            "mp4", "mp3", "wav", "avi",
             "dxf", "plt", "ets", "prj"
     );
     /** 单文件最大 50MB */
@@ -209,6 +210,16 @@ public class CosService {
      * @param contentType MIME 类型
      */
     public void upload(Long tenantId, String filename, byte[] content, String contentType) {
+        if (content.length > MAX_FILE_SIZE) {
+            throw new RuntimeException("文件大小超过限制（最大50MB）");
+        }
+        String ext = "";
+        if (filename != null && filename.contains(".")) {
+            ext = filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
+        }
+        if (!ext.isEmpty() && !ALLOWED_EXTENSIONS.contains(ext)) {
+            throw new RuntimeException("不允许上传此类型文件（" + ext + "）");
+        }
         // ── 本地开发模式（无 COS 配置）降级为本地文件存储 ──
         if (!isEnabled()) {
             java.io.File localFile = new java.io.File(uploadPath + "tenants/" + tenantId + "/" + filename);

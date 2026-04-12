@@ -102,7 +102,7 @@ const PurchaseModal: React.FC<PurchaseModalProps> = ({
           loading={submitLoading}
           onClick={onReceiveAll}
         >
-          采购领取
+          采购全部
         </Button>,
         <Button
           key="returnAll"

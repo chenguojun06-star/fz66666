@@ -280,7 +280,7 @@ public class PatternEnrichmentHelper {
         }
 
         String status = StringUtils.hasText(pattern.getStatus()) ? pattern.getStatus().trim().toUpperCase() : "";
-        if (!"PRODUCTION_COMPLETED".equals(status) && !"COMPLETED".equals(status)) {
+        if (!"PRODUCTION_COMPLETED".equals(status) && !"COMPLETED".equals(status) && !"WAREHOUSE_OUT".equals(status)) {
             return null;
         }
 
@@ -344,6 +344,7 @@ public class PatternEnrichmentHelper {
             item.put("sortOrder", process.getSortOrder() != null ? process.getSortOrder() : sort);
             item.put("scanType", inferPatternScanType(progressStage, processName));
             item.put("price", process.getPrice() != null ? process.getPrice() : BigDecimal.ZERO);
+            item.put("unitPrice", process.getPrice() != null ? process.getPrice() : BigDecimal.ZERO);
             result.add(item);
             sort++;
         }
@@ -374,6 +375,7 @@ public class PatternEnrichmentHelper {
         item.put("sortOrder", sortOrder);
         item.put("scanType", inferPatternScanType(progressStage, processName));
         item.put("price", price != null ? price : BigDecimal.ZERO);
+        item.put("unitPrice", price != null ? price : BigDecimal.ZERO);
         return item;
     }
 

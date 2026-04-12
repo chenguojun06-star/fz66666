@@ -318,7 +318,7 @@ async function enrichGroupsWithOrderData(groups) {
       g.remainDaysClass = delivery.remainDaysClass || '';
 
       // 订单数量信息
-      g.orderQuantity = order.orderQuantity || order.totalQuantity || 0;
+      g.orderQuantity = order.cuttingQty || order.orderQuantity || order.totalQuantity || 0;
       g.completedQuantity = order.completedQuantity || 0;
     });
   } catch (e) {

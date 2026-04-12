@@ -122,7 +122,7 @@ export const getStatusConfig = (status: MaterialPurchaseType['status']) => {
 
   const statusMap: Record<string, { text: string; color: string }> = {
     [MATERIAL_PURCHASE_STATUS.PENDING]: { text: '待采购', color: 'default' },
-    [MATERIAL_PURCHASE_STATUS.RECEIVED]: { text: '已领取', color: 'processing' },
+    [MATERIAL_PURCHASE_STATUS.RECEIVED]: { text: '已采购', color: 'processing' },
     [MATERIAL_PURCHASE_STATUS.PARTIAL]: { text: '部分到货', color: 'warning' },
     [MATERIAL_PURCHASE_STATUS.PARTIAL_ARRIVAL]: { text: '部分到货', color: 'warning' },
     [MATERIAL_PURCHASE_STATUS.AWAITING_CONFIRM]: { text: '待确认完成', color: 'cyan' },

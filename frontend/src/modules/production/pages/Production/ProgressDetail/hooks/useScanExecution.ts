@@ -91,8 +91,7 @@ export function useScanExecution({
           });
         }
         const effectiveNodes = stripWarehousingNode(resolveNodesForOrder(activeOrder, progressNodesByStyleNo, nodes));
-        const isProd = String(values.scanType || '').trim() === 'production';
-        if (!isDuplicate && isProd) {
+        if (!isDuplicate) {
           const updated = await fetchScanHistory(activeOrder);
           const autoCalculatedProgress = calculateProgressFromBundles(activeOrder, cuttingBundles, updated, effectiveNodes);
           await updateOrderProgress(activeOrder, autoCalculatedProgress);

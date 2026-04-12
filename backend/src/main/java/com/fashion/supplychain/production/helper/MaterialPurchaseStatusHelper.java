@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.common.DataPermissionHelper;
 import com.fashion.supplychain.common.ParamUtils;
@@ -19,6 +20,7 @@ import com.fashion.supplychain.production.orchestration.MaterialPurchaseOrchestr
 import com.fashion.supplychain.production.orchestration.MaterialQualityIssueOrchestrator;
 import com.fashion.supplychain.production.orchestration.ProductionOrderOrchestrator;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
+import com.fashion.supplychain.production.service.MaterialPickingService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 
@@ -53,6 +55,9 @@ public class MaterialPurchaseStatusHelper {
 
     @Autowired
     private MaterialQualityIssueOrchestrator materialQualityIssueOrchestrator;
+
+    @Autowired
+    private MaterialPickingService materialPickingService;
 
     public MaterialPurchase receive(Map<String, Object> body) {
         String purchaseId = body == null ? null
@@ -160,12 +165,19 @@ public class MaterialPurchaseStatusHelper {
         int skipCount = 0;
         List<String> failMessages = new ArrayList<>();
 
-        for (String idRaw : purchaseIds) {
-            String pid = StringUtils.hasText(idRaw) ? idRaw.trim() : null;
-            if (!StringUtils.hasText(pid)) continue;
+        List<String> validIds = purchaseIds.stream()
+                .filter(id -> StringUtils.hasText(id))
+                .map(String::trim)
+                .distinct()
+                .toList();
+        Map<String, MaterialPurchase> purchaseMap = validIds.isEmpty()
+                ? Map.of()
+                : materialPurchaseService.listByIds(validIds).stream()
+                        .collect(java.util.stream.Collectors.toMap(p -> String.valueOf(p.getId()).trim(), p -> p, (a, b) -> a));
 
+        for (String pid : validIds) {
             try {
-                MaterialPurchase purchase = materialPurchaseService.getById(pid);
+                MaterialPurchase purchase = purchaseMap.get(pid);
                 if (purchase == null || (purchase.getDeleteFlag() != null && purchase.getDeleteFlag() != 0)) {
                     skipCount++;
                     continue;
@@ -382,9 +394,19 @@ public class MaterialPurchaseStatusHelper {
             throw new IllegalStateException("该采购单已取消，不可操作");
         }
 
+        com.fashion.supplychain.production.entity.MaterialPicking pendingPicking = materialPickingService.getOne(
+                new LambdaQueryWrapper<com.fashion.supplychain.production.entity.MaterialPicking>()
+                        .eq(com.fashion.supplychain.production.entity.MaterialPicking::getOrderNo, purchase.getOrderNo())
+                        .eq(com.fashion.supplychain.production.entity.MaterialPicking::getStatus, "pending")
+                        .orderByDesc(com.fashion.supplychain.production.entity.MaterialPicking::getCreateTime)
+                        .last("LIMIT 1"), false);
+        if (pendingPicking != null) {
+            throw new IllegalStateException("该采购单存在待确认出库单（" + pendingPicking.getPickingNo() + "），请先撤销出库单");
+        }
+
         String operator = UserContext.username();
         String existingRemark = purchase.getRemark() != null ? purchase.getRemark() : "";
-        String newRemark = "【撤回领取】" + reason + " | 操作人: " + operator + (existingRemark.isEmpty() ? "" : " | 原备注: " + existingRemark);
+        String newRemark = "【撤回采购】" + reason + " | 操作人: " + operator + (existingRemark.isEmpty() ? "" : " | 原备注: " + existingRemark);
 
         LambdaUpdateWrapper<MaterialPurchase> uw = new LambdaUpdateWrapper<>();
         uw.eq(MaterialPurchase::getId, purchaseId)
@@ -403,7 +425,7 @@ public class MaterialPurchaseStatusHelper {
         result.put("materialName", purchase.getMaterialName());
         result.put("status", MaterialConstants.STATUS_PENDING);
         result.put("reason", reason);
-        log.info("✅ 采购领取已撤回: purchaseId={}, purchaseNo={}, operator={}, reason={}",
+        log.info("采购已撤回: purchaseId={}, purchaseNo={}, operator={}, reason={}",
                 purchaseId, purchase.getPurchaseNo(), operator, reason);
         return result;
     }

@@ -5,38 +5,19 @@
       <view class="greeting-sub">欢迎使用衣智链</view>
     </view>
 
-  <!-- 今日统计卡片 -->
-  <view class="stats-row">
-    <view class="stat-card {{item.cardClass}}" wx:for="{{statCards}}" wx:key="key">
-      <view class="stat-icon-wrap {{item.iconWrapClass}}">
-        <view class="line-icon line-icon--lg {{item.iconClass}}"></view>
+  <!-- 日期卡片 -->
+  <view class="weather-card">
+    <view class="weather-top">
+      <view class="weather-left">
+        <text class="weather-emoji">{{dateInfo.icon}}</text>
+        <view class="weather-temp-wrap">
+          <text class="weather-temp">{{dateInfo.date}}</text>
+          <text class="weather-desc">{{dateInfo.day}}</text>
+        </view>
       </view>
-      <view class="stat-info">
-        <view class="stat-value">{{item.key === 'todayProcessCount' ? todayProcessCount : todayWorkHours}}<text class="stat-unit">{{item.unit}}</text></view>
-        <view class="stat-label">{{item.label}}</view>
-      </view>
+      <text class="weather-season">{{dateInfo.season}}</text>
     </view>
-  </view>
-
-  <!-- 本月概览 -->
-  <view class="monthly-section" wx:if="{{monthlyStats}}">
-    <view class="section-header">
-      <text class="section-title">本月概览</text>
-    </view>
-    <view class="monthly-grid">
-      <view class="monthly-item">
-        <text class="monthly-value">{{monthlyStats.totalScans || 0}}</text>
-        <text class="monthly-label">扫码总数</text>
-      </view>
-      <view class="monthly-item">
-        <text class="monthly-value">{{monthlyStats.totalQuantity || 0}}</text>
-        <text class="monthly-label">完成件数</text>
-      </view>
-      <view class="monthly-item">
-        <text class="monthly-value">{{monthlyStats.workDays || 0}}</text>
-        <text class="monthly-label">出勤天数</text>
-      </view>
-    </view>
+    <view class="weather-tip">{{dateInfo.dailyTip}}</view>
   </view>
 
   <!-- 全部菜单 -->

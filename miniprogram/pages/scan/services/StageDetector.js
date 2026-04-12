@@ -786,7 +786,7 @@ class StageDetector {
         requestId.startsWith('SYSTEM:');
 
       // 统计 production 和 quality 类型的扫码记录
-      const isValidScan = scanType === 'production' || scanType === 'quality';
+      const isValidScan = scanType === 'production' || scanType === 'quality' || scanType === 'cutting' || scanType === 'warehouse';
 
       // ✅ 修复：只统计扫码成功的记录，失败记录不应阻断工序流转
       // 原因：若某次扫码 scanResult='fail'，该工序实际未完成，

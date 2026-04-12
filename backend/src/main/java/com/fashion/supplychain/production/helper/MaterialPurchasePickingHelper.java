@@ -28,6 +28,10 @@ import com.fashion.supplychain.production.service.MaterialPickingService;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.MaterialStockService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
+import com.fashion.supplychain.finance.entity.DeductionItem;
+import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
+import com.fashion.supplychain.finance.mapper.DeductionItemMapper;
+import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.warehouse.entity.MaterialPickupRecord;
 import com.fashion.supplychain.warehouse.mapper.MaterialPickupRecordMapper;
 import com.fashion.supplychain.warehouse.orchestration.MaterialPickupOrchestrator;
@@ -72,6 +76,12 @@ public class MaterialPurchasePickingHelper {
 
     @Autowired
     private ProductionOrderOrchestrator productionOrderOrchestrator;
+
+    @Autowired
+    private ShipmentReconciliationService shipmentReconciliationService;
+
+    @Autowired
+    private DeductionItemMapper deductionItemMapper;
 
     // ──────────────────────────────────────────────────────────────
     // 智能一键领取
@@ -595,16 +605,23 @@ public class MaterialPurchasePickingHelper {
                 materialPickingService.getItemsByPickingId(pickingId);
         LocalDateTime outboundTime = LocalDateTime.now();
         int pickedTotalQty = 0;
+        List<String> stockIds = items.stream()
+                .map(com.fashion.supplychain.production.entity.MaterialPickingItem::getMaterialStockId)
+                .filter(id -> id != null)
+                .distinct()
+                .toList();
+        Map<String, MaterialStock> stockMap = stockIds.isEmpty()
+                ? Map.of()
+                : materialStockService.listByIds(stockIds).stream()
+                        .collect(java.util.stream.Collectors.toMap(MaterialStock::getId, s -> s, (a, b) -> a));
         for (com.fashion.supplychain.production.entity.MaterialPickingItem item : items) {
             if (item.getQuantity() != null && item.getQuantity() > 0) {
                 pickedTotalQty += item.getQuantity();
                 MaterialStock stock = null;
                 if (item.getMaterialStockId() != null) {
-                    // 两步流（采购入库场景）：直接按 stockId 精确扣减
-                    stock = materialStockService.getById(item.getMaterialStockId());
+                    stock = stockMap.get(item.getMaterialStockId());
                     materialStockService.decreaseStockById(item.getMaterialStockId(), item.getQuantity());
                 } else {
-                    // BOM 申请领取场景：按 materialId/color/size 匹配库存扣减
                     materialStockService.decreaseStock(
                             item.getMaterialId(), item.getColor(), item.getSize(), item.getQuantity());
                 }
@@ -642,6 +659,12 @@ public class MaterialPurchasePickingHelper {
         }
 
         syncPickupRecordAfterOutbound(picking, purchase, items, pickedTotalQty);
+
+        // 外发工厂领面料出库 → 自动产生扣款记录
+        FactorySnapshot factorySnapshot = resolveFactorySnapshot(purchase, picking);
+        if ("EXTERNAL".equalsIgnoreCase(factorySnapshot.factoryType)) {
+            applyMaterialDeductionForExternalFactory(picking, purchase, items, factorySnapshot);
+        }
 
         log.info("✅ 仓库确认出库完成: pickingId={}, itemCount={}", pickingId, items.size());
     }
@@ -979,6 +1002,64 @@ public class MaterialPurchasePickingHelper {
                 .map(String::trim)
                 .distinct()
                 .collect(Collectors.joining("、"));
+    }
+
+    private void applyMaterialDeductionForExternalFactory(
+            MaterialPicking picking,
+            MaterialPurchase purchase,
+            List<MaterialPickingItem> items,
+            FactorySnapshot factorySnapshot) {
+        try {
+            String orderId = purchase != null ? purchase.getOrderId() : picking.getOrderId();
+            String orderNo = purchase != null ? purchase.getOrderNo() : picking.getOrderNo();
+            if (!StringUtils.hasText(orderId) && !StringUtils.hasText(orderNo)) {
+                return;
+            }
+
+            BigDecimal totalMaterialCost = BigDecimal.ZERO;
+            for (MaterialPickingItem item : items) {
+                BigDecimal unitPrice = item.getUnitPrice() != null ? item.getUnitPrice() : BigDecimal.ZERO;
+                int qty = item.getQuantity() != null ? item.getQuantity() : 0;
+                totalMaterialCost = totalMaterialCost.add(unitPrice.multiply(BigDecimal.valueOf(qty)));
+            }
+
+            if (totalMaterialCost.compareTo(BigDecimal.ZERO) <= 0) {
+                return;
+            }
+
+            ShipmentReconciliation recon = shipmentReconciliationService.lambdaQuery()
+                    .and(w -> {
+                        if (StringUtils.hasText(orderId)) w.eq(ShipmentReconciliation::getOrderId, orderId);
+                        if (StringUtils.hasText(orderNo)) w.or().eq(ShipmentReconciliation::getOrderNo, orderNo);
+                    })
+                    .orderByDesc(ShipmentReconciliation::getCreateTime)
+                    .last("LIMIT 1")
+                    .one();
+
+            if (recon == null) {
+                log.info("外发工厂面料扣款: 暂无出货对账单，扣款将在关单时自动归集, orderNo={}", orderNo);
+                return;
+            }
+
+            DeductionItem deduction = new DeductionItem();
+            deduction.setReconciliationId(recon.getId());
+            deduction.setDeductionType("MATERIAL_PICKUP");
+            deduction.setDeductionAmount(totalMaterialCost);
+            deduction.setDescription("外发工厂领料扣款|" + (factorySnapshot.factoryName != null ? factorySnapshot.factoryName : "")
+                    + "|pickingNo=" + picking.getPickingNo()
+                    + "|物料" + items.size() + "项|金额" + totalMaterialCost.setScale(2, java.math.RoundingMode.HALF_UP));
+            deductionItemMapper.insert(deduction);
+
+            BigDecimal existingDeduction = recon.getDeductionAmount() != null ? recon.getDeductionAmount() : BigDecimal.ZERO;
+            recon.setDeductionAmount(existingDeduction.add(totalMaterialCost));
+            recon.setFinalAmount(recon.getTotalAmount() != null ? recon.getTotalAmount().subtract(recon.getDeductionAmount()) : BigDecimal.ZERO);
+            shipmentReconciliationService.updateById(recon);
+
+            log.info("外发工厂面料扣款已记录: orderNo={}, pickingNo={}, deductionAmount={}, totalDeduction={}",
+                    orderNo, picking.getPickingNo(), totalMaterialCost, recon.getDeductionAmount());
+        } catch (Exception e) {
+            log.error("外发工厂面料扣款记录失败: pickingId={}", picking.getId(), e);
+        }
     }
 
     private static class FactorySnapshot {

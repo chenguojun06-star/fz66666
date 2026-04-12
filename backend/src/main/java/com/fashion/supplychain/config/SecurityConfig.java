@@ -50,6 +50,7 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -75,6 +76,9 @@ public class SecurityConfig implements WebMvcConfigurer {
     @Autowired(required = false)
     private StringRedisTemplate stringRedisTemplate;
     private final ConcurrentHashMap<String, String> tenantInfoCache = new ConcurrentHashMap<>();
+    private static final long TENANT_CACHE_TTL_MS = 5 * 60 * 1000L;
+    private volatile long tenantCacheLastSweep = System.currentTimeMillis();
+    private static final long TENANT_CACHE_SWEEP_INTERVAL_MS = 30 * 60 * 1000L;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, AuthTokenService authTokenService,
@@ -381,8 +385,7 @@ public class SecurityConfig implements WebMvcConfigurer {
             //       导致 isTenantOwner 永远从 JWT 读到 false → isTopAdmin() 错误返回 false → 403
             if (ctx.getUserId() != null && jdbcTemplate != null && !ctx.getSuperAdmin()) {
                 String cacheKey = "u:" + ctx.getUserId();
-                // 缓存结构：tenantId + "|" + isTenantOwner + "|" + isSuperAdmin + "|" + factoryId
-                String cached = tenantInfoCache.get(cacheKey);
+                String cached = getTenantCache(cacheKey);
                 boolean isOldCache = cached != null && (cached.split("\\|", -1).length < 4 || "".equals(cached.split("\\|", -1)[3]));
                 boolean shouldRefreshFromDb = cached == null || isOldCache;
                 boolean wasCacheMiss = (cached == null);
@@ -401,7 +404,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                         );
                         if (!rows.isEmpty()) {
                             cached = rows.get(0);
-                            tenantInfoCache.put(cacheKey, cached);
+                            putTenantCache(cacheKey, cached);
                         }
                     } catch (Exception e) {
                         log.warn("[UserContextInterceptor] 补全用户租户信息失败, userId={}", ctx.getUserId(), e);
@@ -443,7 +446,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                                     "UPDATE t_user SET tenant_id = ? WHERE id = ? AND tenant_id IS NULL",
                                     recoveredTenantId, Long.parseLong(ctx.getUserId())
                                 );
-                                tenantInfoCache.remove("u:" + ctx.getUserId()); // 失效缓存，下次重新读取修复后的值（key必须与put时一致）
+                                invalidateTenantCache("u:" + ctx.getUserId());
                                 log.warn("[UserContextInterceptor] 自愈修复: 租户主 userId={} tenant_id 已回填为 {}（请检查 V20260323 迁移是否已执行）",
                                         ctx.getUserId(), recoveredTenantId);
                             } else {
@@ -496,7 +499,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                                     "UPDATE t_user SET tenant_id = ? WHERE id = ? AND tenant_id IS NULL",
                                     recoveredTenantId, Long.parseLong(userId)
                                 );
-                                tenantInfoCache.remove("u:" + userId);
+                                invalidateTenantCache("u:" + userId);
                                 log.warn("[UserContextInterceptor] 非owner用户自愈: userId={} tenant_id 已回填为 {}",
                                         userId, recoveredTenantId);
                             } else {
@@ -517,7 +520,7 @@ public class SecurityConfig implements WebMvcConfigurer {
             if (ctx.getUserId() == null && jdbcTemplate != null && !ctx.getSuperAdmin()
                     && org.springframework.util.StringUtils.hasText(ctx.getUsername())) {
                 String cacheKey = "u:" + ctx.getUsername();
-                String cached = tenantInfoCache.get(cacheKey);
+                String cached = getTenantCache(cacheKey);
                 boolean isOldCache = cached != null && (cached.split("\\|", -1).length < 5 || "".equals(cached.split("\\|", -1)[4]));
                 if (cached == null || isOldCache) {
                     try {
@@ -538,7 +541,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                         );
                         if (!rows.isEmpty()) {
                             cached = rows.get(0);
-                            tenantInfoCache.put(cacheKey, cached);
+                            putTenantCache(cacheKey, cached);
                         }
                     } catch (Exception e) {
                         log.warn("[UserContextInterceptor] username-fallback 补全失败, username={}", ctx.getUsername(), e);
@@ -642,21 +645,56 @@ public class SecurityConfig implements WebMvcConfigurer {
         if (request == null) {
             return false;
         }
-        String ip = resolveClientIp(request);
-        if (ip == null || ip.isBlank()) {
+        String remoteAddr = request.getRemoteAddr();
+        if (remoteAddr == null || remoteAddr.isBlank()) {
             return false;
         }
-        String v = ip.trim();
+        String remote = remoteAddr.trim();
 
-        if (trustedIps != null && trustedIps.contains(v)) {
+        boolean isDirectLocal = "127.0.0.1".equals(remote) || "0:0:0:0:0:0:0:1".equals(remote) || "::1".equals(remote);
+        if (isDirectLocal) {
+            return true;
+        }
+
+        if (trustedIps != null && trustedIps.contains(remote)) {
             return true;
         }
 
         if (trustedIpPrefixes != null) {
             for (String prefix : trustedIpPrefixes) {
-                if (v.startsWith(prefix)) {
+                if (remote.startsWith(prefix)) {
                     return true;
                 }
+            }
+        }
+
+        if (isBehindTrustedProxy(request, remote)) {
+            String forwardedFor = request.getHeader("X-Forwarded-For");
+            if (forwardedFor != null && !forwardedFor.isBlank()) {
+                String clientIp = forwardedFor.split(",")[0].trim();
+                if (trustedIps != null && trustedIps.contains(clientIp)) {
+                    return true;
+                }
+                if (trustedIpPrefixes != null) {
+                    for (String prefix : trustedIpPrefixes) {
+                        if (clientIp.startsWith(prefix)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private boolean isBehindTrustedProxy(HttpServletRequest request, String remoteAddr) {
+        if (trustedIpPrefixes == null || trustedIpPrefixes.isEmpty()) {
+            return false;
+        }
+        for (String prefix : trustedIpPrefixes) {
+            if (remoteAddr.startsWith(prefix)) {
+                return true;
             }
         }
         return false;
@@ -675,5 +713,64 @@ public class SecurityConfig implements WebMvcConfigurer {
             return real.trim();
         }
         return request.getRemoteAddr();
+    }
+
+    private String getTenantCache(String key) {
+        String raw = tenantInfoCache.get(key);
+        if (raw == null) {
+            return null;
+        }
+        int sep = raw.indexOf('|');
+        if (sep <= 0) {
+            tenantInfoCache.remove(key);
+            return null;
+        }
+        try {
+            long ts = Long.parseLong(raw.substring(0, sep));
+            if (System.currentTimeMillis() - ts > TENANT_CACHE_TTL_MS) {
+                tenantInfoCache.remove(key);
+                return null;
+            }
+            return raw.substring(sep + 1);
+        } catch (NumberFormatException e) {
+            tenantInfoCache.remove(key);
+            return null;
+        }
+    }
+
+    private void putTenantCache(String key, String value) {
+        tenantInfoCache.put(key, System.currentTimeMillis() + "|" + value);
+        sweepTenantCacheIfNeeded();
+    }
+
+    private void invalidateTenantCache(String key) {
+        tenantInfoCache.remove(key);
+    }
+
+    private void sweepTenantCacheIfNeeded() {
+        long now = System.currentTimeMillis();
+        if (now - tenantCacheLastSweep < TENANT_CACHE_SWEEP_INTERVAL_MS) {
+            return;
+        }
+        tenantCacheLastSweep = now;
+        for (Map.Entry<String, String> entry : tenantInfoCache.entrySet()) {
+            String raw = entry.getValue();
+            if (raw == null) {
+                continue;
+            }
+            int sep = raw.indexOf('|');
+            if (sep <= 0) {
+                tenantInfoCache.remove(entry.getKey());
+                continue;
+            }
+            try {
+                long ts = Long.parseLong(raw.substring(0, sep));
+                if (now - ts > TENANT_CACHE_TTL_MS) {
+                    tenantInfoCache.remove(entry.getKey());
+                }
+            } catch (NumberFormatException e) {
+                tenantInfoCache.remove(entry.getKey());
+            }
+        }
     }
 }

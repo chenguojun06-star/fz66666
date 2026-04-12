@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.agent.tool;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleProcess;
 import com.fashion.supplychain.style.orchestration.StyleInfoOrchestrator;
@@ -32,6 +33,7 @@ public class StyleInfoTool extends AbstractAgentTool {
     @Autowired private StyleInfoService styleInfoService;
     @Autowired private StyleProcessService styleProcessService;
     @Autowired private StyleInfoOrchestrator styleInfoOrchestrator;
+    @Autowired private AiAgentToolAccessService toolAccessService;
 
     @Override
     public String getName() {
@@ -113,6 +115,9 @@ public class StyleInfoTool extends AbstractAgentTool {
     // ——— 新建款式 ———
     private String createStyle(Map<String, Object> args) {
         try {
+            if (!toolAccessService.hasManagerAccess()) {
+                return errorJson("新建款式需要管理员权限");
+            }
             String styleNo = requireString(args, "styleNo");
             String styleName = requireString(args, "styleName");
 
@@ -141,6 +146,9 @@ public class StyleInfoTool extends AbstractAgentTool {
     // ——— 更新款式字段 ———
     private String updateStyle(Map<String, Object> args) {
         try {
+            if (!toolAccessService.hasManagerAccess()) {
+                return errorJson("更新款式需要管理员权限");
+            }
             String idStr = requireString(args, "id");
             Long id = Long.parseLong(idStr);
             StyleInfo info = styleInfoOrchestrator.detail(id);
@@ -168,6 +176,9 @@ public class StyleInfoTool extends AbstractAgentTool {
     // ——— 推进开发阶段 ———
     private String advanceStage(Map<String, Object> args) {
         try {
+            if (!toolAccessService.hasManagerAccess()) {
+                return errorJson("推进开发阶段需要管理员权限");
+            }
             String idStr = requireString(args, "id");
             String stage = requireString(args, "stage");
             Long id = Long.parseLong(idStr);

@@ -43,8 +43,9 @@ public interface ProductWarehousingMapper extends BaseMapper<ProductWarehousing>
     @Select("SELECT HOUR(warehousing_end_time) as hour, CAST(SUM(qualified_quantity) AS SIGNED) as count " +
             "FROM t_product_warehousing " +
             "WHERE DATE(warehousing_end_time) = #{today} AND delete_flag = 0 " +
+            "AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) " +
             "GROUP BY HOUR(warehousing_end_time)")
-    List<Map<String, Object>> selectTodayInboundByHour(@Param("today") LocalDate today);
+    List<Map<String, Object>> selectTodayInboundByHour(@Param("today") LocalDate today, @Param("tenantId") Long tenantId);
 
     /**
      * 查询最近7天入库数量（按日期分组）
@@ -52,8 +53,9 @@ public interface ProductWarehousingMapper extends BaseMapper<ProductWarehousing>
     @Select("SELECT DATE(warehousing_end_time) as date, CAST(SUM(qualified_quantity) AS SIGNED) as count " +
             "FROM t_product_warehousing " +
             "WHERE warehousing_end_time >= DATE_SUB(#{today}, INTERVAL 7 DAY) AND delete_flag = 0 " +
+            "AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) " +
             "GROUP BY DATE(warehousing_end_time)")
-    List<Map<String, Object>> selectLast7DaysInbound(@Param("today") LocalDate today);
+    List<Map<String, Object>> selectLast7DaysInbound(@Param("today") LocalDate today, @Param("tenantId") Long tenantId);
 
     /**
      * 查询最近30天入库数量（按日期分组）
@@ -62,8 +64,9 @@ public interface ProductWarehousingMapper extends BaseMapper<ProductWarehousing>
             "FROM t_product_warehousing " +
             "WHERE YEAR(warehousing_end_time) = YEAR(#{today}) " +
             "AND MONTH(warehousing_end_time) = MONTH(#{today}) AND delete_flag = 0 " +
+            "AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) " +
             "GROUP BY DAY(warehousing_end_time)")
-    List<Map<String, Object>> selectLast30DaysInbound(@Param("today") LocalDate today);
+    List<Map<String, Object>> selectLast30DaysInbound(@Param("today") LocalDate today, @Param("tenantId") Long tenantId);
 
     /**
      * 查询年度入库数量（按月分组）
@@ -71,8 +74,9 @@ public interface ProductWarehousingMapper extends BaseMapper<ProductWarehousing>
     @Select("SELECT MONTH(warehousing_end_time) as month, CAST(SUM(qualified_quantity) AS SIGNED) as count " +
             "FROM t_product_warehousing " +
             "WHERE YEAR(warehousing_end_time) = #{year} AND delete_flag = 0 " +
+            "AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) " +
             "GROUP BY MONTH(warehousing_end_time)")
-    List<Map<String, Object>> selectYearInboundByMonth(@Param("year") int year);
+    List<Map<String, Object>> selectYearInboundByMonth(@Param("year") int year, @Param("tenantId") Long tenantId);
 
     /**
      * 质检入库页面顶部统计：用SQL聚合替代全量加载到内存

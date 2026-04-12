@@ -55,7 +55,6 @@ public class PatternStockHelper {
                         .eq(SampleStock::getStyleNo, stock.getStyleNo())
                         .eq(SampleStock::getColor, stock.getColor())
                         .eq(SampleStock::getSize, stock.getSize())
-                        .eq(SampleStock::getSampleType, "development")
                         .eq(tenantId != null, SampleStock::getTenantId, tenantId);
                 SampleStock existing = sampleStockService.getOne(q);
                 if (existing != null) {
@@ -70,7 +69,6 @@ public class PatternStockHelper {
                     .eq(SampleStock::getDeleteFlag, 0)
                     .eq(SampleStock::getStyleNo, pattern.getStyleNo())
                     .eq(SampleStock::getColor, pattern.getColor())
-                    .eq(SampleStock::getSampleType, "development")
                     .eq(tenantId != null, SampleStock::getTenantId, tenantId);
             SampleStock stock = sampleStockService.getOne(q);
             if (stock == null) {
@@ -104,7 +102,6 @@ public class PatternStockHelper {
                     .eq(SampleStock::getDeleteFlag, 0)
                     .eq(SampleStock::getStyleNo, pattern.getStyleNo())
                     .eq(SampleStock::getColor, pattern.getColor())
-                    .eq(SampleStock::getSampleType, "development")
                     .eq(tenantId != null, SampleStock::getTenantId, tenantId);
             SampleStock stock = sampleStockService.getOne(sq);
             if (stock == null) {
@@ -125,7 +122,13 @@ public class PatternStockHelper {
             loan.setStatus("returned");
             loan.setReturnDate(LocalDateTime.now());
             loan.setUpdateTime(LocalDateTime.now());
-            loan.setRemark("扫码归还");
+            String existingRemark = loan.getRemark();
+            String returnRemark = "扫码归还";
+            if (StringUtils.hasText(existingRemark)) {
+                loan.setRemark(existingRemark + " | " + returnRemark);
+            } else {
+                loan.setRemark(returnRemark);
+            }
             sampleLoanMapper.updateById(loan);
             sampleStockMapper.updateLoanedQuantity(stock.getId(), -loan.getQuantity());
             log.info("[样衣归还] loanId={} stockId={} qty=-{}", loan.getId(), stock.getId(), loan.getQuantity());
@@ -174,8 +177,19 @@ public class PatternStockHelper {
             stock.setImageUrl(styleInfo.getCover());
             stock.setColor(String.valueOf(row.get("color")));
             stock.setSize(String.valueOf(row.get("size")));
-            stock.setSampleType("development");
-            stock.setQuantity((Integer) row.get("quantity"));
+            String resolvedSampleType = "development";
+            if (scanRecord != null && StringUtils.hasText(scanRecord.getRemark())) {
+                String remark = scanRecord.getRemark().trim().toLowerCase();
+                if (remark.contains("production") || remark.contains("大货")) {
+                    resolvedSampleType = "production";
+                } else if (remark.contains("展示") || remark.contains("display")) {
+                    resolvedSampleType = "display";
+                }
+            }
+            stock.setSampleType(resolvedSampleType);
+            Object qtyObj = row.get("quantity");
+            int qtyVal = (qtyObj instanceof Number) ? ((Number) qtyObj).intValue() : 1;
+            stock.setQuantity(qtyVal);
             stock.setLoanedQuantity(0);
             stock.setLocation(scanRecord == null ? null : scanRecord.getWarehouseCode());
             stock.setRemark("扫码自动入库");

@@ -289,7 +289,7 @@ class ScanHandler {
     // 订单扫码时 quantity 可能为空，从 orderDetail 中取订单总数量
     const quantity = stageResult.quantity
       || parsedData.quantity
-      || (orderDetail && (orderDetail.orderQuantity || orderDetail.totalQuantity || orderDetail.quantity))
+      || (orderDetail && (orderDetail.cuttingQty || orderDetail.orderQuantity || orderDetail.totalQuantity || orderDetail.quantity))
       || 0;
 
     return {

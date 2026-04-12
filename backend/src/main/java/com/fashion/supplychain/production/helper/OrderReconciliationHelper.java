@@ -3,8 +3,10 @@ package com.fashion.supplychain.production.helper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
+import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
+import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -31,13 +33,15 @@ public class OrderReconciliationHelper {
     @Autowired
     private ScanRecordService scanRecordService;
 
-    /**
-     * 判断是否本厂
-     * 本厂：factory_name = "本厂" 或 "最美服装工厂"
-     */
+    @Autowired
+    private MaterialPurchaseService materialPurchaseService;
+
     public boolean isOwnFactory(ProductionOrder order) {
         if (order == null) {
             return false;
+        }
+        if (StringUtils.hasText(order.getFactoryType())) {
+            return "INTERNAL".equalsIgnoreCase(order.getFactoryType().trim());
         }
         String factoryName = order.getFactoryName();
         if (!StringUtils.hasText(factoryName)) {
@@ -100,6 +104,10 @@ public class OrderReconciliationHelper {
         BigDecimal scanCost = calculateScanCostForOrder(orderId);
         recon.setScanCost(scanCost);
 
+        // 计算物料采购成本（从物料采购单汇总）
+        BigDecimal materialCost = calculateMaterialCostForOrder(orderId, orderNo);
+        recon.setMaterialCost(materialCost);
+
         // 计算金额
         if (isOwn) {
             // 本厂：只用扫码工资成本
@@ -154,6 +162,24 @@ public class OrderReconciliationHelper {
             return total;
         } catch (Exception e) {
             log.error("计算扫码成本失败: orderId={}", orderId, e);
+            return BigDecimal.ZERO;
+        }
+    }
+
+    private BigDecimal calculateMaterialCostForOrder(String orderId, String orderNo) {
+        try {
+            List<MaterialPurchase> purchases = materialPurchaseService.list(
+                new LambdaQueryWrapper<MaterialPurchase>()
+                    .and(w -> w.eq(MaterialPurchase::getOrderId, orderId)
+                            .or().eq(MaterialPurchase::getOrderNo, orderNo))
+                    .isNotNull(MaterialPurchase::getTotalAmount)
+            );
+            BigDecimal total = purchases.stream()
+                .map(p -> p.getTotalAmount() != null ? p.getTotalAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+            return total;
+        } catch (Exception e) {
+            log.error("计算物料成本失败: orderId={}, orderNo={}", orderId, orderNo, e);
             return BigDecimal.ZERO;
         }
     }

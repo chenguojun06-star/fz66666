@@ -9,7 +9,7 @@ Component({
     },
     showSearch: {
       type: Boolean,
-      value: true,
+      value: false,
     },
     searchPlaceholder: {
       type: String,

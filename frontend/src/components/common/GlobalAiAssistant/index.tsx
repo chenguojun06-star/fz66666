@@ -207,8 +207,11 @@ const GlobalAiAssistant: React.FC = () => {
 
   // ── 滚动到底部 ──
   useEffect(() => {
-    if (chatAreaRef.current) {
+    if (!chatAreaRef.current) return;
+    if (messages.length > 1 || isTyping) {
       chatAreaRef.current.scrollTop = chatAreaRef.current.scrollHeight;
+    } else if (isOpen && messages.length <= 1) {
+      chatAreaRef.current.scrollTop = 0;
     }
   }, [messages, isTyping, isOpen]);
 

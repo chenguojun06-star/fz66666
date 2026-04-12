@@ -13,9 +13,11 @@ import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
@@ -108,6 +110,33 @@ public class GlobalExceptionHandler {
                                 request == null ? "" : request.getRequestURI(), e.getMessage());
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                                 .body(Result.fail(400, "上传请求格式错误，请重新选择文件后再试"));
+        }
+
+        @ExceptionHandler(MaxUploadSizeExceededException.class)
+        public ResponseEntity<Result<?>> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException e,
+                        HttpServletRequest request) {
+                logger.warn("文件大小超限: {} {} - {}", request == null ? "" : request.getMethod(),
+                                request == null ? "" : request.getRequestURI(), e.getMessage());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                .body(Result.fail(400, "文件大小超出限制，请压缩后重新上传"));
+        }
+
+        @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+        public ResponseEntity<Result<?>> handleMethodNotSupported(HttpRequestMethodNotSupportedException e,
+                        HttpServletRequest request) {
+                logger.warn("请求方法不支持: {} {} - {}", request == null ? "" : request.getMethod(),
+                                request == null ? "" : request.getRequestURI(), e.getMethod());
+                return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+                                .body(Result.fail(405, "不支持的请求方法：" + e.getMethod()));
+        }
+
+        @ExceptionHandler(NullPointerException.class)
+        public ResponseEntity<Result<?>> handleNullPointer(NullPointerException e, HttpServletRequest request) {
+                String method = request == null ? "" : request.getMethod();
+                String uri = request == null ? "" : request.getRequestURI();
+                logger.error("空指针异常: {} {}", method, uri, e);
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                .body(Result.fail(500, "系统内部错误，请联系管理员"));
         }
 
         /**

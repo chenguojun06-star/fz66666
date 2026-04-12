@@ -109,7 +109,7 @@ public class PatternStatusHelper {
                 break;
             case "WAREHOUSE_OUT":
                 updateProgressNode(pattern, "出库", 100);
-                pattern.setStatus("COMPLETED");
+                pattern.setStatus("WAREHOUSE_OUT");
                 needUpdate = true;
                 break;
             case "WAREHOUSE_RETURN":
@@ -312,12 +312,17 @@ public class PatternStatusHelper {
                 patch.setProductionStartTime(pattern.getReceiveTime());
             }
 
-            if ("PRODUCTION_COMPLETED".equals(status) || "COMPLETED".equals(status)) {
+            if ("PRODUCTION_COMPLETED".equals(status) || "COMPLETED".equals(status) || "WAREHOUSE_OUT".equals(status)) {
                 patch.setProductionCompletedTime(resolvedCompleteTime != null ? resolvedCompleteTime : now);
                 if (!sampleFinished) {
-                    // COMPLETED 表示已入库，sampleStatus 应设为 COMPLETED 使 progressNode 显示"样衣完成"
-                    // PRODUCTION_COMPLETED 表示生产完成待入库，sampleStatus 设为 PRODUCTION_COMPLETED
-                    String targetSampleStatus = "COMPLETED".equals(status) ? "COMPLETED" : "PRODUCTION_COMPLETED";
+                    String targetSampleStatus;
+                    if ("COMPLETED".equals(status)) {
+                        targetSampleStatus = "COMPLETED";
+                    } else if ("WAREHOUSE_OUT".equals(status)) {
+                        targetSampleStatus = "COMPLETED";
+                    } else {
+                        targetSampleStatus = "PRODUCTION_COMPLETED";
+                    }
                     patch.setSampleStatus(targetSampleStatus);
                     patch.setSampleProgress(100);
                     patch.setSampleCompletedTime(resolvedCompleteTime != null ? resolvedCompleteTime : now);
@@ -368,7 +373,7 @@ public class PatternStatusHelper {
 
     public int calculatePatternProgressPercent(PatternProduction pattern) {
         String status = String.valueOf(pattern.getStatus() == null ? "" : pattern.getStatus()).trim().toUpperCase();
-        if ("PRODUCTION_COMPLETED".equals(status) || "COMPLETED".equals(status)) {
+        if ("PRODUCTION_COMPLETED".equals(status) || "COMPLETED".equals(status) || "WAREHOUSE_OUT".equals(status)) {
             return 100;
         }
 
@@ -432,7 +437,7 @@ public class PatternStatusHelper {
             PatternProduction pattern = patternProductionService.getById(patternId);
             if (pattern != null) {
                 String status = StringUtils.hasText(pattern.getStatus()) ? pattern.getStatus().trim().toUpperCase() : "";
-                if (!"PRODUCTION_COMPLETED".equals(status) && !"COMPLETED".equals(status)) {
+                if (!"PRODUCTION_COMPLETED".equals(status) && !"COMPLETED".equals(status) && !"WAREHOUSE_OUT".equals(status)) {
                     throw new IllegalStateException("样衣尚未完成生产，不能入库");
                 }
             }
@@ -501,7 +506,8 @@ public class PatternStatusHelper {
     private void ensureInProgress(PatternProduction pattern, String operatorName) {
         if (!"IN_PROGRESS".equals(pattern.getStatus())
             && !"PRODUCTION_COMPLETED".equals(pattern.getStatus())
-            && !"COMPLETED".equals(pattern.getStatus())) {
+            && !"COMPLETED".equals(pattern.getStatus())
+            && !"WAREHOUSE_OUT".equals(pattern.getStatus())) {
             pattern.setStatus("IN_PROGRESS");
         }
         if (!StringUtils.hasText(pattern.getReceiver()) && StringUtils.hasText(operatorName)) {

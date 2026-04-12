@@ -129,6 +129,8 @@ const PageStatCards: React.FC<PageStatCardsProps> = ({
         flexWrap: 'wrap',
         alignItems: 'center',
         marginBottom: CONTAINER_MB,
+        // CLS 防抖：预留最小高度，避免智能提示行在数据加载后突然撑开导致布局偏移
+        minHeight: 32,
         ...style,
       }}
     >

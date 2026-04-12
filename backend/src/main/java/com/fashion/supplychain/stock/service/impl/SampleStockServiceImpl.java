@@ -12,6 +12,8 @@ import com.fashion.supplychain.production.entity.PatternProduction;
 import com.fashion.supplychain.production.entity.PatternScanRecord;
 import com.fashion.supplychain.production.service.PatternProductionService;
 import com.fashion.supplychain.production.service.PatternScanRecordService;
+import com.fashion.supplychain.production.helper.PatternStatusHelper;
+import com.fashion.supplychain.production.orchestration.PatternProductionOrchestrator;
 import com.fashion.supplychain.stock.dto.SampleStockInboundBatchRequest;
 import com.fashion.supplychain.stock.entity.SampleLoan;
 import com.fashion.supplychain.stock.entity.SampleStock;
@@ -54,6 +56,12 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
     @Autowired
     private PatternScanRecordService patternScanRecordService;
 
+    @Autowired
+    private PatternProductionOrchestrator patternProductionOrchestrator;
+
+    @Autowired
+    private PatternStatusHelper patternStatusHelper;
+
     @Override
     public IPage<SampleStock> queryPage(Map<String, Object> params) {
         Integer page = ParamUtils.getPage(params);
@@ -85,7 +93,6 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
         syncInboundBaseFields(stock, style);
         validateInboundPayload(stock, style, currentTenantId);
 
-        // ===== BUG2 修复：入库前校验审核状态（对齐小程序 PatternProductionOrchestrator.warehouseIn 逻辑） =====
         PatternProduction matchedPattern = findPatternForStock(stock);
         if (matchedPattern != null) {
             String reviewStatus = matchedPattern.getReviewStatus() != null
@@ -98,7 +105,6 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
             }
         }
 
-        // Check if exists (style + color + size + type + tenantId)
         LambdaQueryWrapper<SampleStock> query = new LambdaQueryWrapper<SampleStock>()
                 .eq(SampleStock::getDeleteFlag, 0)
                 .eq(SampleStock::getStyleNo, stock.getStyleNo())
@@ -119,41 +125,28 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
         stock.setTenantId(currentTenantId);
         this.save(stock);
 
-        syncPatternCompletion(stock);
-
-        // ===== BUG3 修复：PC入库同步创建扫码记录（对齐小程序 submitScan 逻辑） =====
         if (matchedPattern != null) {
-            try {
-                PatternScanRecord scanRecord = new PatternScanRecord();
-                scanRecord.setPatternProductionId(matchedPattern.getId());
-                scanRecord.setStyleId(matchedPattern.getStyleId());
-                scanRecord.setStyleNo(matchedPattern.getStyleNo());
-                scanRecord.setColor(matchedPattern.getColor());
-                scanRecord.setOperationType("WAREHOUSE_IN");
-                scanRecord.setOperatorId(UserContext.userId());
-                scanRecord.setOperatorName(UserContext.username());
-                scanRecord.setOperatorRole("WAREHOUSE");
-                scanRecord.setScanTime(LocalDateTime.now());
-                scanRecord.setRemark("PC端样衣库存入库");
-                scanRecord.setCreateTime(LocalDateTime.now());
-                scanRecord.setDeleteFlag(0);
-                patternScanRecordService.save(scanRecord);
-            } catch (Exception e) {
-                log.warn("PC入库创建扫码记录失败（不阻断入库）: styleNo={}, color={}", stock.getStyleNo(), stock.getColor(), e);
-            }
-        }
+            PatternScanRecord scanRecord = new PatternScanRecord();
+            scanRecord.setPatternProductionId(matchedPattern.getId());
+            scanRecord.setStyleId(matchedPattern.getStyleId());
+            scanRecord.setStyleNo(matchedPattern.getStyleNo());
+            scanRecord.setColor(matchedPattern.getColor());
+            scanRecord.setOperationType("WAREHOUSE_IN");
+            scanRecord.setOperatorId(UserContext.userId());
+            scanRecord.setOperatorName(UserContext.username());
+            scanRecord.setOperatorRole("WAREHOUSE");
+            scanRecord.setScanTime(LocalDateTime.now());
+            scanRecord.setRemark(stock.getRemark() != null ? stock.getRemark() : "PC端样衣库存入库");
+            scanRecord.setWarehouseCode(stock.getLocation());
+            scanRecord.setCreateTime(LocalDateTime.now());
+            scanRecord.setDeleteFlag(0);
+            patternScanRecordService.save(scanRecord);
 
-        // ===== BUG4 修复：入库后同步 StyleInfo.sampleCompletedTime（对齐小程序 statusHelper.syncStyleInfoOnScan 逻辑） =====
-        try {
-            Long styleId = style.getId();
-            if (styleId != null && style.getSampleCompletedTime() == null) {
-                style.setSampleCompletedTime(LocalDateTime.now());
-                style.setUpdateTime(LocalDateTime.now());
-                styleInfoMapper.updateById(style);
-                log.info("PC入库同步 StyleInfo.sampleCompletedTime: styleId={}", styleId);
-            }
-        } catch (Exception e) {
-            log.warn("PC入库同步StyleInfo失败（不阻断入库）: styleNo={}", stock.getStyleNo(), e);
+            patternStatusHelper.updatePatternStatusByOperation(matchedPattern, "WAREHOUSE_IN", UserContext.username());
+
+            log.info("PC入库同步完成: styleNo={}, patternId={}", stock.getStyleNo(), matchedPattern.getId());
+        } else {
+            log.warn("PC入库未找到对应样板生产记录，仅创建库存记录: styleNo={}, color={}", stock.getStyleNo(), stock.getColor());
         }
     }
 
@@ -209,11 +202,35 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
         loan.setUpdateTime(LocalDateTime.now());
         loan.setStatus("borrowed");
         loan.setDeleteFlag(0);
-        loan.setTenantId(currentTenantId);  // ✅ 设置租户ID
+        loan.setTenantId(currentTenantId);
         sampleLoanMapper.insert(loan);
 
-        // Update stock loaned quantity
         baseMapper.updateLoanedQuantity(stock.getId(), loanQty);
+
+        PatternProduction loanPattern = findPatternForStock(stock);
+        if (loanPattern != null) {
+            try {
+                PatternScanRecord scanRecord = new PatternScanRecord();
+                scanRecord.setPatternProductionId(loanPattern.getId());
+                scanRecord.setStyleId(loanPattern.getStyleId());
+                scanRecord.setStyleNo(loanPattern.getStyleNo());
+                scanRecord.setColor(loanPattern.getColor());
+                scanRecord.setOperationType("WAREHOUSE_OUT");
+                scanRecord.setOperatorId(UserContext.userId());
+                scanRecord.setOperatorName(UserContext.username());
+                scanRecord.setOperatorRole("WAREHOUSE");
+                scanRecord.setScanTime(LocalDateTime.now());
+                scanRecord.setRemark("PC端样衣借出");
+                scanRecord.setCreateTime(LocalDateTime.now());
+                scanRecord.setDeleteFlag(0);
+                patternScanRecordService.save(scanRecord);
+
+                patternStatusHelper.updatePatternStatusByOperation(loanPattern, "WAREHOUSE_OUT", UserContext.username());
+                log.info("PC端借出同步PatternProduction状态: patternId={}", loanPattern.getId());
+            } catch (Exception e) {
+                log.error("PC端借出同步PatternProduction状态失败: styleNo={}", stock.getStyleNo(), e);
+            }
+        }
     }
 
     @Override
@@ -240,12 +257,44 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
         loan.setReturnDate(LocalDateTime.now());
         loan.setUpdateTime(LocalDateTime.now());
         if (StringUtils.hasText(remark)) {
-            loan.setRemark(remark);
+            String existingRemark = loan.getRemark();
+            if (StringUtils.hasText(existingRemark)) {
+                loan.setRemark(existingRemark + " | 归还备注: " + remark);
+            } else {
+                loan.setRemark("归还备注: " + remark);
+            }
         }
         sampleLoanMapper.updateById(loan);
 
-        // Update stock loaned quantity (decrease)
         baseMapper.updateLoanedQuantity(loan.getSampleStockId(), -qty);
+
+        SampleStock returnStock = this.getById(loan.getSampleStockId());
+        if (returnStock != null) {
+            PatternProduction returnPattern = findPatternForStock(returnStock);
+            if (returnPattern != null) {
+                try {
+                    PatternScanRecord scanRecord = new PatternScanRecord();
+                    scanRecord.setPatternProductionId(returnPattern.getId());
+                    scanRecord.setStyleId(returnPattern.getStyleId());
+                    scanRecord.setStyleNo(returnPattern.getStyleNo());
+                    scanRecord.setColor(returnPattern.getColor());
+                    scanRecord.setOperationType("WAREHOUSE_RETURN");
+                    scanRecord.setOperatorId(UserContext.userId());
+                    scanRecord.setOperatorName(UserContext.username());
+                    scanRecord.setOperatorRole("WAREHOUSE");
+                    scanRecord.setScanTime(LocalDateTime.now());
+                    scanRecord.setRemark("PC端样衣归还");
+                    scanRecord.setCreateTime(LocalDateTime.now());
+                    scanRecord.setDeleteFlag(0);
+                    patternScanRecordService.save(scanRecord);
+
+                    patternStatusHelper.updatePatternStatusByOperation(returnPattern, "WAREHOUSE_RETURN", UserContext.username());
+                    log.info("PC端归还同步PatternProduction状态: patternId={}", returnPattern.getId());
+                } catch (Exception e) {
+                    log.error("PC端归还同步PatternProduction状态失败: stockId={}", loan.getSampleStockId(), e);
+                }
+            }
+        }
     }
 
     @Override
@@ -286,6 +335,19 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
                 .update();
         if (!updated) {
             throw new IllegalStateException("销毁失败，请刷新后重试");
+        }
+
+        PatternProduction destroyedPattern = findPatternForStock(stock);
+        if (destroyedPattern != null) {
+            try {
+                destroyedPattern.setStatus("DESTROYED");
+                destroyedPattern.setUpdateTime(now);
+                patternProductionService.updateById(destroyedPattern);
+                patternStatusHelper.updatePatternStatusByOperation(destroyedPattern, "DESTROY", UserContext.username());
+                log.info("样衣销毁同步PatternProduction状态: patternId={}", destroyedPattern.getId());
+            } catch (Exception e) {
+                log.error("样衣销毁同步PatternProduction状态失败: styleNo={}", stock.getStyleNo(), e);
+            }
         }
     }
 
@@ -443,27 +505,6 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
                 .orderByDesc(PatternProduction::getCreateTime)
                 .last("LIMIT 1");
         return patternProductionService.getOne(query, false);
-    }
-
-    private void syncPatternCompletion(SampleStock stock) {
-        PatternProduction pattern = findPatternForStock(stock);
-        if (pattern == null) {
-            log.warn("样衣库存入库后未找到对应样板生产记录: styleId={}, styleNo={}, color={}",
-                    stock.getStyleId(), stock.getStyleNo(), stock.getColor());
-            return;
-        }
-
-        String status = String.valueOf(pattern.getStatus() == null ? "" : pattern.getStatus()).trim().toUpperCase();
-        if ("COMPLETED".equals(status)) {
-            return;
-        }
-
-        pattern.setStatus("COMPLETED");
-        if (pattern.getCompleteTime() == null) {
-            pattern.setCompleteTime(LocalDateTime.now());
-        }
-        pattern.setUpdateTime(LocalDateTime.now());
-        patternProductionService.updateById(pattern);
     }
 
     private StyleInfo resolveStyleForInbound(SampleStock stock, Long tenantId) {

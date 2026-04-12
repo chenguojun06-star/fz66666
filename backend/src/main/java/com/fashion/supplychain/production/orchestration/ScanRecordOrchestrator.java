@@ -795,6 +795,7 @@ public class ScanRecordOrchestrator {
     public IPage<ScanRecord> list(Map<String, Object> params) {
         IPage<ScanRecord> page = scanRecordQueryHelper.list(params);
         scanRecordEnrichHelper.enrichBedNo(page.getRecords());
+        scanRecordEnrichHelper.markHasNextStageScan(page.getRecords());
         return page;
     }
 
@@ -803,18 +804,21 @@ public class ScanRecordOrchestrator {
     public IPage<ScanRecord> getByOrderId(String orderId, int page, int pageSize) {
         IPage<ScanRecord> result = scanRecordQueryHelper.getByOrderId(orderId, page, pageSize);
         scanRecordEnrichHelper.enrichBedNo(result.getRecords());
+        scanRecordEnrichHelper.markHasNextStageScan(result.getRecords());
         return result;
     }
 
     public IPage<ScanRecord> getByStyleNo(String styleNo, int page, int pageSize) {
         IPage<ScanRecord> result = scanRecordQueryHelper.getByStyleNo(styleNo, page, pageSize);
         scanRecordEnrichHelper.enrichBedNo(result.getRecords());
+        scanRecordEnrichHelper.markHasNextStageScan(result.getRecords());
         return result;
     }
 
     public IPage<ScanRecord> getHistory(int page, int pageSize) {
         IPage<ScanRecord> result = scanRecordQueryHelper.getHistory(page, pageSize);
         scanRecordEnrichHelper.enrichBedNo(result.getRecords());
+        scanRecordEnrichHelper.markHasNextStageScan(result.getRecords());
         return result;
     }
 

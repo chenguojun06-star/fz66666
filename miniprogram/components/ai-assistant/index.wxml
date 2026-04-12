@@ -63,33 +63,35 @@
         <view class="quick-chip" hover-class="quick-chip-hover" hover-stay-time="100" catchtap="autoAsk" data-question="我负责的订单当前进度怎么样？"><view class="line-icon line-icon--sm icon-package"></view><text>订单进度</text></view>
       </block>
     </view>
-    <scroll-view class="chat-history" scroll-y enhanced="{{true}}" scroll-into-view="{{scrollTo}}">
-      <block wx:for="{{messages}}" wx:key="id">
-        <view class="message-row {{item.role === 'user' ? 'my-message' : 'ai-message'}}" id="msg-{{item.id}}">
-          <view class="avatar">{{item.role === 'user' ? '我' : '☁️'}}</view>
-          <view class="bubble">
-            <image class="msg-image" src="{{item.imageUrl}}" mode="widthFix" catchtap="previewImage" data-src="{{item.imageUrl}}" wx:if="{{item.imageUrl}}" />
-            <text class="message-text" user-select wx:if="{{item.content}}">{{item.content}}</text>
-            <view class="recommend-wrapper" wx:if="{{item.recommendPills && item.recommendPills.length > 0}}">
-              <view class="recommend-title">猜你想问</view>
-              <view class="recommend-pills">
-                <view
-                  class="recommend-pill"
-                  hover-class="recommend-pill-hover"
-                  hover-stay-time="100"
-                  wx:for="{{item.recommendPills}}"
-                  wx:for-item="pill"
-                  wx:key="*this"
-                  data-question="{{pill}}"
-                  catchtap="autoAsk"
-                >{{pill}}</view>
+    <view class="chat-history-wrapper">
+      <scroll-view class="chat-history" scroll-y enhanced="{{true}}" scroll-into-view="{{scrollTo}}">
+        <block wx:for="{{messages}}" wx:key="id">
+          <view class="message-row {{item.role === 'user' ? 'my-message' : 'ai-message'}}" id="msg-{{item.id}}">
+            <view class="avatar">{{item.role === 'user' ? '我' : '☁️'}}</view>
+            <view class="bubble">
+              <image class="msg-image" src="{{item.imageUrl}}" mode="widthFix" catchtap="previewImage" data-src="{{item.imageUrl}}" wx:if="{{item.imageUrl}}" />
+              <text class="message-text" user-select wx:if="{{item.content}}">{{item.content}}</text>
+              <view class="recommend-wrapper" wx:if="{{item.recommendPills && item.recommendPills.length > 0}}">
+                <view class="recommend-title">猜你想问</view>
+                <view class="recommend-pills">
+                  <view
+                    class="recommend-pill"
+                    hover-class="recommend-pill-hover"
+                    hover-stay-time="100"
+                    wx:for="{{item.recommendPills}}"
+                    wx:for-item="pill"
+                    wx:key="*this"
+                    data-question="{{pill}}"
+                    catchtap="autoAsk"
+                  >{{pill}}</view>
+                </view>
               </view>
             </view>
           </view>
-        </view>
-      </block>
-      <view class="loading-indicator" wx:if="{{isLoading}}">小云正在思考...</view>
-    </scroll-view>
+        </block>
+        <view class="loading-indicator" wx:if="{{isLoading}}">小云正在思考...</view>
+      </scroll-view>
+    </view>
     <view class="pending-image-wrap" wx:if="{{pendingImage}}">
       <image class="pending-image-preview" src="{{pendingImage}}" mode="aspectFill" catchtap="previewImage" data-src="{{pendingImage}}" />
       <view class="pending-image-remove" catchtap="removePendingImage">✕</view>

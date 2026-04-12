@@ -189,13 +189,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
   flex-shrink: 0;
   border-radius: 50%;
-  background: var(--color-bg-light);
+  background: var(--color-info-bg);
+  border: 1px solid var(--color-info-border);
 }
 .photo-btn-hover {
-  opacity: 0.6;
+  background: var(--color-bg-light);
 }
 
 /* 气泡内图片 */

@@ -121,7 +121,7 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         "  sr.style_no AS styleNo,",
                         "  sr.operator_id AS operatorId,",
                         "  sr.operator_name AS operatorName,",
-                        "  COALESCE(NULLIF(TRIM(sr.process_name), ''), NULLIF(TRIM(sr.progress_stage), ''), '未知环节') AS processName,",
+                        "  COALESCE(NULLIF(TRIM(sr.process_name), ''), '未知工序') AS processName,",
                         "  sr.scan_type AS scanType,",
                         "  COALESCE(SUM(sr.quantity), 0) AS quantity,",
                         /* 与 selectPersonalStats 保持一致：total_amount → scan_cost → unit_price×quantity 兜底 */
@@ -153,7 +153,7 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         "  AND sr.scan_type = #{scanType}",
                         "</if>",
                         "<if test='processName != null and processName != \"\"'>",
-                        "  AND (sr.process_name = #{processName} OR sr.progress_stage = #{processName})",
+                        "  AND sr.process_name = #{processName}",
                         "</if>",
                         "<if test='startTime != null'>",
                         "  AND sr.scan_time &gt;= #{startTime}",

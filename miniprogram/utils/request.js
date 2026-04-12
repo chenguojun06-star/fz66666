@@ -244,7 +244,7 @@ function handleFail(err, context) {
   const isIdempotentMethod = !method || method === 'GET' || method === 'HEAD' || method === 'OPTIONS';
 
   if (isRetryable && isIdempotentMethod && isTimeoutOrNetwork) {
-    const delayMs = 1000 * (Math.pow(2, retryCount) - 1);
+    const delayMs = 1000 * Math.pow(2, retryCount);
     console.warn(`[Request Retry] Retrying (${retryCount + 1}/${REQUEST_RETRY_COUNT}) after ${delayMs}ms: ${url}`);
 
     setTimeout(() => {

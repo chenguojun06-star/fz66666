@@ -63,8 +63,9 @@ public interface MaterialOutboundLogMapper extends BaseMapper<MaterialOutboundLo
             "     OR (#{materialType} = 'fabric' AND s.material_type = '面料') " +
             "     OR (#{materialType} = 'accessory' AND s.material_type = '辅料')) " +
             "AND (m.delete_flag IS NULL OR m.delete_flag = 0) " +
+            "AND (#{tenantId} IS NULL OR m.tenant_id = #{tenantId}) " +
             "GROUP BY HOUR(COALESCE(m.outbound_time, m.create_time))")
-    List<Map<String, Object>> selectTodayOutboundByHourAndType(@Param("today") LocalDate today, @Param("materialType") String materialType);
+    List<Map<String, Object>> selectTodayOutboundByHourAndType(@Param("today") LocalDate today, @Param("materialType") String materialType, @Param("tenantId") Long tenantId);
 
     @Select("SELECT DATE(COALESCE(m.outbound_time, m.create_time)) AS date, COUNT(*) AS count " +
             "FROM t_material_outbound_log m " +
@@ -75,8 +76,9 @@ public interface MaterialOutboundLogMapper extends BaseMapper<MaterialOutboundLo
             "     OR (#{materialType} = 'fabric' AND s.material_type = '面料') " +
             "     OR (#{materialType} = 'accessory' AND s.material_type = '辅料')) " +
             "AND (m.delete_flag IS NULL OR m.delete_flag = 0) " +
+            "AND (#{tenantId} IS NULL OR m.tenant_id = #{tenantId}) " +
             "GROUP BY DATE(COALESCE(m.outbound_time, m.create_time))")
-    List<Map<String, Object>> selectLast7DaysOutboundByType(@Param("startDate") LocalDate startDate, @Param("today") LocalDate today, @Param("materialType") String materialType);
+    List<Map<String, Object>> selectLast7DaysOutboundByType(@Param("startDate") LocalDate startDate, @Param("today") LocalDate today, @Param("materialType") String materialType, @Param("tenantId") Long tenantId);
 
     @Select("SELECT DAY(COALESCE(m.outbound_time, m.create_time)) AS day, COUNT(*) AS count " +
             "FROM t_material_outbound_log m " +
@@ -87,8 +89,9 @@ public interface MaterialOutboundLogMapper extends BaseMapper<MaterialOutboundLo
             "     OR (#{materialType} = 'fabric' AND s.material_type = '面料') " +
             "     OR (#{materialType} = 'accessory' AND s.material_type = '辅料')) " +
             "AND (m.delete_flag IS NULL OR m.delete_flag = 0) " +
+            "AND (#{tenantId} IS NULL OR m.tenant_id = #{tenantId}) " +
             "GROUP BY DAY(COALESCE(m.outbound_time, m.create_time))")
-    List<Map<String, Object>> selectLast30DaysOutboundByType(@Param("startDate") LocalDate startDate, @Param("today") LocalDate today, @Param("materialType") String materialType);
+    List<Map<String, Object>> selectLast30DaysOutboundByType(@Param("startDate") LocalDate startDate, @Param("today") LocalDate today, @Param("materialType") String materialType, @Param("tenantId") Long tenantId);
 
     @Select("SELECT MONTH(COALESCE(m.outbound_time, m.create_time)) AS month, COUNT(*) AS count " +
             "FROM t_material_outbound_log m " +
@@ -99,6 +102,7 @@ public interface MaterialOutboundLogMapper extends BaseMapper<MaterialOutboundLo
             "     OR (#{materialType} = 'fabric' AND s.material_type = '面料') " +
             "     OR (#{materialType} = 'accessory' AND s.material_type = '辅料')) " +
             "AND (m.delete_flag IS NULL OR m.delete_flag = 0) " +
+            "AND (#{tenantId} IS NULL OR m.tenant_id = #{tenantId}) " +
             "GROUP BY MONTH(COALESCE(m.outbound_time, m.create_time))")
-    List<Map<String, Object>> selectYearOutboundByMonthAndType(@Param("year") int year, @Param("materialType") String materialType);
+    List<Map<String, Object>> selectYearOutboundByMonthAndType(@Param("year") int year, @Param("materialType") String materialType, @Param("tenantId") Long tenantId);
 }

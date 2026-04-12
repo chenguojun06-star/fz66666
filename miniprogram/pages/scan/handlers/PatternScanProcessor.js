@@ -167,7 +167,7 @@ function buildPatternOperationOptions({ patternDetail, processConfig: _processCo
   }
 
   // ── 阶段三：生产完成，等待入库 ─────────────────────────────────────
-  if ((status === 'PRODUCTION_COMPLETED' || status === 'COMPLETED') && !reviewApproved) {
+  if ((status === 'PRODUCTION_COMPLETED' || status === 'COMPLETED') && !reviewApproved && !scannedSet.has('WAREHOUSE_IN')) {
     options.push({ value: 'REVIEW', label: '样衣审核', icon: '' });
     options.push({ value: 'WAREHOUSE_IN', label: '样衣入库（将先审核）', icon: '' });
     return options;
@@ -175,7 +175,12 @@ function buildPatternOperationOptions({ patternDetail, processConfig: _processCo
 
   if ((status === 'PRODUCTION_COMPLETED' || status === 'COMPLETED') && reviewApproved && !scannedSet.has('WAREHOUSE_IN')) {
     options.push({ value: 'WAREHOUSE_IN', label: '样衣入库', icon: '' });
-    return options; // 已完成只展示入库，不展示其他生产工序
+    return options;
+  }
+
+  if (status === 'WAREHOUSE_OUT' && !scannedSet.has('WAREHOUSE_RETURN')) {
+    options.push({ value: 'WAREHOUSE_RETURN', label: '样衣归还', icon: '' });
+    return options;
   }
 
   // ── 阶段四：已领取/生产中，等待完成确认 ──────────────────────────
@@ -237,9 +242,9 @@ function determinePatternOperation(patternDetail, manualScanType) {
   const status = patternDetail.status;
   switch (status) {
     case 'PENDING':
-      return 'RECEIVE';      // 待领取 → 领取
+      return 'RECEIVE';
     case 'IN_PROGRESS':
-      return 'PLATE';        // 制作中 → 车板
+      return 'PLATE';
     case 'PRODUCTION_COMPLETED':
       if ((String(patternDetail?.reviewStatus || '').toUpperCase() === 'APPROVED')
         || (String(patternDetail?.reviewResult || '').toUpperCase() === 'APPROVED')) {
@@ -247,7 +252,9 @@ function determinePatternOperation(patternDetail, manualScanType) {
       }
       return 'REVIEW';
     case 'COMPLETED':
-      return 'WAREHOUSE_IN'; // 已完成 → 入库
+      return 'WAREHOUSE_IN';
+    case 'WAREHOUSE_OUT':
+      return 'WAREHOUSE_RETURN';
     default:
       return 'PLATE';
   }
@@ -266,7 +273,7 @@ async function submitPatternScan(handler, data) {
     if (operationType === 'REVIEW') {
       const reviewRemark = String(data.remark || '').trim();
       // BUG5 修复：支持从调用方传入审核结果，不再硬编码 APPROVED（允许 REJECTED 驳回）
-      const reviewResult = data.reviewResult || 'APPROVED';
+      const reviewResult = data.reviewResult || 'PENDING';
       const res = await handler.api.production.reviewPattern(data.patternId, reviewResult, reviewRemark);
       if (res) {
         return {
@@ -285,12 +292,7 @@ async function submitPatternScan(handler, data) {
       const reviewApproved = latestReviewStatus === 'APPROVED' || latestReviewResult === 'APPROVED';
 
       if (!reviewApproved) {
-        const reviewRemark = String(data.remark || '').trim();
-        const reviewResult = 'APPROVED';
-        const reviewRes = await handler.api.production.reviewPattern(data.patternId, reviewResult, reviewRemark);
-        if (!reviewRes) {
-          return handler._errorResult('入库前自动审核失败');
-        }
+        return handler._errorResult('样衣审核未通过，无法入库。请先完成样衣审核后再入库。');
       }
       const wiRes = await handler.api.production.warehouseIn(
         data.patternId, data.warehouseCode || '', String(data.remark || '').trim()

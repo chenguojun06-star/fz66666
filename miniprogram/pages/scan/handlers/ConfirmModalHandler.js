@@ -69,7 +69,7 @@ function _buildSizeDetails(skuList) {
   return skuList
     .map(
       item =>
-        `${item.color || '-'}${item.size ? `/${item.size}` : ''}×${Number(item.totalQuantity || 0)}`,
+        `${item.color || '-'}${item.size ? `/${item.size}` : ''}×${Number(item.cuttingQty || item.totalQuantity || 0)}`,
     )
     .join('，');
 }
@@ -80,7 +80,7 @@ function _buildSizeSummaryGroups(skuList) {
   skuList.forEach((item) => {
     const color = String(item.color || '').trim() || '默认';
     const size = String(item.size || '').trim() || '均码';
-    const quantity = Number(item.totalQuantity || item.quantity || 0);
+    const quantity = Number(item.cuttingQty || item.totalQuantity || item.quantity || 0);
     if (!groupMap.has(color)) {
       groupMap.set(color, []);
     }
@@ -101,7 +101,7 @@ function _buildSizeSummaryMatrix(skuList) {
   skuList.forEach((item) => {
     const color = String(item.color || '').trim() || '默认';
     const size = String(item.size || '').trim() || '均码';
-    const quantity = Number(item.totalQuantity || item.quantity || 0);
+    const quantity = Number(item.cuttingQty || item.totalQuantity || item.quantity || 0);
     sizeSet.add(size);
     if (!colorMap.has(color)) {
       colorMap.set(color, new Map());

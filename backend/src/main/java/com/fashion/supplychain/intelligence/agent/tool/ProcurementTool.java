@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.agent.tool;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.procurement.orchestration.ProcurementOrchestrator;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +25,9 @@ public class ProcurementTool extends AbstractAgentTool {
 
     @Autowired
     private ProcurementOrchestrator procurementOrchestrator;
+
+    @Autowired
+    private AiAgentToolAccessService toolAccessService;
 
     @Override
     public String getName() {
@@ -96,6 +100,9 @@ public class ProcurementTool extends AbstractAgentTool {
                 yield successJson("采购统计查询成功", statsResult);
             }
             case "create" -> {
+                if (!toolAccessService.hasManagerAccess()) {
+                    yield errorJson("创建采购单需要管理员权限");
+                }
                 String materialName = requireString(args, "materialName");
                 String purchaseQtyStr = requireString(args, "purchaseQuantity");
 
@@ -128,6 +135,9 @@ public class ProcurementTool extends AbstractAgentTool {
                         "purchaseQuantity", purchaseQtyStr));
             }
             case "confirm_arrival" -> {
+                if (!toolAccessService.hasManagerAccess()) {
+                    yield errorJson("确认到货入库需要管理员权限");
+                }
                 String id = requireString(args, "id");
                 Integer arrivedQty = optionalInt(args, "arrivedQuantity");
 

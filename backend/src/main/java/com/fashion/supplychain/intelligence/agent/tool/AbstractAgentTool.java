@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
@@ -36,6 +37,10 @@ public abstract class AbstractAgentTool implements AgentTool {
             if (tenantId == null) {
                 log.warn("[{}] 租户上下文丢失，拒绝执行", getName());
                 return errorJson("租户上下文丢失，请重新登录");
+            }
+            if (!new AiAgentToolAccessService().canUseTool(getName())) {
+                log.warn("[{}] 权限不足，拒绝执行: userId={}", getName(), UserContext.userId());
+                return errorJson("权限不足，该操作需要管理员权限");
             }
             return doExecute(argumentsJson);
         } catch (IllegalArgumentException e) {

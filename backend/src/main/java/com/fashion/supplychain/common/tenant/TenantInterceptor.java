@@ -193,12 +193,20 @@ public class TenantInterceptor implements InnerInterceptor {
      * 仅在最外层（depth=0）被识别，避免破坏子查询。</p>
      * @param isSharedTable 如果为 true，使用 (tenant_id = X OR tenant_id IS NULL) 来包含系统共享数据
      */
-    private String addWhereCondition(String sql, Long tenantId, boolean isSharedTable) {
+    private String addWhereCondition(String sql, Long tenantId, boolean isSharedTable) throws SQLException {
+        if (tenantId == null) {
+            return sql;
+        }
+        String tenantIdStr = String.valueOf(tenantId);
+        if (!tenantIdStr.matches("\\d+")) {
+            log.error("[TenantInterceptor] tenantId contains unexpected characters, rejecting request: {}", tenantId);
+            throw new SQLException("租户标识异常，拒绝执行查询");
+        }
         String condition;
         if (isSharedTable) {
-            condition = " AND (tenant_id = " + tenantId + " OR tenant_id IS NULL)";
+            condition = " AND (tenant_id = " + tenantIdStr + " OR tenant_id IS NULL)";
         } else {
-            condition = " AND tenant_id = " + tenantId;
+            condition = " AND tenant_id = " + tenantIdStr;
         }
 
         // 使用深度感知查找，只匹配最外层关键字（忽略子查询内部的）
@@ -220,7 +228,7 @@ public class TenantInterceptor implements InnerInterceptor {
             return sql.substring(0, insertPos) + condition + sql.substring(insertPos);
         } else {
             // 无外层 WHERE，在外层结束关键字前插入 WHERE tenant_id = X
-            return sql.substring(0, insertPos) + " WHERE tenant_id = " + tenantId + sql.substring(insertPos);
+            return sql.substring(0, insertPos) + " WHERE tenant_id = " + tenantIdStr + sql.substring(insertPos);
         }
     }
 

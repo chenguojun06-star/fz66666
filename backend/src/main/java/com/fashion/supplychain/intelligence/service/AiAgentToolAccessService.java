@@ -60,11 +60,16 @@ public class AiAgentToolAccessService {
         // ── SYSTEM / GENERAL 领域 ──
         register("tool_knowledge_search", "知识库问答：行业术语、系统操作、业务规则与 FAQ", true, ToolDomain.GENERAL);
         register("tool_team_dispatch", "协同派单：把任务分配给跟单、采购、财务、仓库、主管等岗位", false, ToolDomain.SYSTEM);
+        register("tool_code_diagnostic", "系统代码诊断：扫描日志异常、分析根因、系统健康检查（仅超级管理员）", false, ToolDomain.SYSTEM);
+        register("tool_create_production_order", "AI完整建单：按正式链路创建生产订单（仅管理员）", false, ToolDomain.PRODUCTION);
+        register("tool_procurement", "采购管理：查询/创建采购单、确认到货入库（写操作仅管理员）", false, ToolDomain.WAREHOUSE);
+        register("tool_org_query", "组织架构查询：部门树、部门列表、成员分布", false, ToolDomain.SYSTEM);
     }
 
     private static final Set<String> HIGH_RISK_TOOLS = Set.of(
             "tool_scan_undo", "tool_cutting_task_create", "tool_order_edit",
-            "tool_payroll_approve", "tool_action_executor", "tool_bundle_split_transfer");
+            "tool_payroll_approve", "tool_action_executor", "tool_bundle_split_transfer",
+            "tool_code_diagnostic", "tool_create_production_order");
 
     public static boolean isHighRisk(String toolName) {
         return toolName != null && HIGH_RISK_TOOLS.contains(toolName);

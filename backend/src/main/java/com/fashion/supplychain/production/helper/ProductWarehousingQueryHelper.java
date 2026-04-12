@@ -398,19 +398,10 @@ public class ProductWarehousingQueryHelper {
         Set<String> orderIds = new HashSet<>(bundleOrderIds.values());
         Map<String, ProductionOrder> orderMap = new HashMap<>();
         if (!orderIds.isEmpty()) {
-            List<ProductionOrder> orderList = new ArrayList<>();
-            for (String oid : orderIds) {
-                try {
-                    ProductionOrder order = productionOrderService.getById(oid);
-                    if (order != null) {
-                        orderMap.put(oid.trim(), order);
-                        orderList.add(order);
-                    }
-                } catch (Exception e) {
-                    log.warn("查询订单失败: {}", oid, e);
-                }
+            List<ProductionOrder> orderList = productionOrderService.listByIds(orderIds);
+            for (ProductionOrder order : orderList) {
+                orderMap.put(String.valueOf(order.getId()).trim(), order);
             }
-            // 批量填充款式封面图（styleCover 为运行时计算字段，不存储于 DB）
             if (!orderList.isEmpty()) {
                 productionOrderQueryService.fillStyleCover(orderList);
             }

@@ -94,8 +94,9 @@ const scanLifecycleMixin = Behavior({
    * @returns {Promise<void>} 无返回值
    */
   async onShow() {
-    // tab-bar 选中状态由 custom-tab-bar 的 pageLifetimes.show 自动处理
-    // 不再手动设置，避免竞态条件
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({ selected: 2 });
+    }
 
     // 每次显示都检查登录状态和更新统计
     const isLogin = await this.checkLoginStatus();

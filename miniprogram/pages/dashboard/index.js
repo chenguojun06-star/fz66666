@@ -12,7 +12,7 @@
  */
 var api = require('../../utils/api');
 var { transformOrderData } = require('../work/utils/orderTransform');
-var { resolveNodesFromOrder, getNodeIndexFromProgress, clampPercent } = require('../work/utils/progressNodes');
+var { resolveNodesFromOrder, clampPercent } = require('../work/utils/progressNodes');
 var { isAdminOrSupervisor } = require('../../utils/permission');
 var { isTenantOwner } = require('../../utils/storage');
 
@@ -22,29 +22,37 @@ var app = getApp();
 var STATUS_FILTERS = [
   { key: 'all',           label: '全部',   value: '' },
   { key: 'in_production', label: '生产中', value: 'production' },
+  { key: 'completed',     label: '已完成', value: 'completed' },
   { key: 'overdue',       label: '延期',   value: '' },
 ];
 
 /**
  * 根据订单整体进度 + 工序节点，计算每道工序的进度百分比
+ * 每个节点均匀分摊进度区间，按比例映射到 0-100%
  */
 function buildProcessNodes(order) {
   var nodes = resolveNodesFromOrder(order);
   if (!nodes || !nodes.length) return [];
   var progress = Number(order.productionProgress) || 0;
-  var idx = getNodeIndexFromProgress(nodes, progress);
+  var len = nodes.length;
+  var perNode = 100 / len;
   return nodes.map(function (n, i) {
+    var nodeStart = i * perNode;
+    var nodeEnd = (i + 1) * perNode;
     var pct = 0;
-    if (i < idx) pct = 100;
-    else if (i === idx) pct = clampPercent(progress - idx * (100 / nodes.length));
-    return { name: n.name || n, percent: Math.round(pct) };
+    if (progress >= nodeEnd) {
+      pct = 100;
+    } else if (progress > nodeStart) {
+      pct = Math.round(((progress - nodeStart) / perNode) * 100);
+    }
+    return { name: n.name || n, percent: clampPercent(pct) };
   });
 }
 
 /** 为订单注入看板所需的扩展字段 */
 function enrichForDashboard(order) {
   var completed = Number(order.completedQuantity) || 0;
-  var total = Number(order.orderQuantity) || Number(order.sizeTotal) || 0;
+  var total = Number(order.cuttingQty) || Number(order.orderQuantity) || Number(order.sizeTotal) || 0;
   order.processNodes = buildProcessNodes(order);
   order.remainQuantity = Math.max(0, total - completed);
   order.expanded = false;
@@ -67,7 +75,8 @@ Page({
     /* 状态过滤 */
     statFilters: STATUS_FILTERS,
     activeFilter: 'all',
-    statCounts: { all: 0, in_production: 0, overdue: 0 },
+    statCounts: { all: 0, in_production: 0, completed: 0, overdue: 0 },
+    searchKey: '',
     /* 订单列表（分页） */
     orders: { list: [], page: 0, pageSize: 15, loading: false, hasMore: true },
   },
@@ -178,6 +187,8 @@ Page({
       } else if (filterVal) {
         params.status = filterVal;
       }
+      var searchKey = that.data.searchKey;
+      if (searchKey) params.orderNo = searchKey;
       return api.production.listOrders(params);
     }, function (r) {
       return enrichForDashboard(transformOrderData(r));
@@ -199,13 +210,15 @@ Page({
     Promise.all([
       api.production.listOrders({ deleteFlag: 0, page: 1, pageSize: 1 }).catch(function () { return {}; }),
       api.production.listOrders({ deleteFlag: 0, status: 'production', page: 1, pageSize: 1 }).catch(function () { return {}; }),
+      api.production.listOrders({ deleteFlag: 0, status: 'completed', page: 1, pageSize: 1 }).catch(function () { return {}; }),
       api.dashboard.get().catch(function () { return {}; }),
     ]).then(function (res) {
       that.setData({
         statCounts: {
           all:            (res[0] && res[0].total) || 0,
           in_production:  (res[1] && res[1].total) || 0,
-          overdue:        Number((res[2] && res[2].overdueOrderCount) || 0),
+          completed:      (res[2] && res[2].total) || 0,
+          overdue:        Number((res[3] && res[3].overdueOrderCount) || 0),
         },
       });
     });
@@ -224,6 +237,32 @@ Page({
     var idx = e.currentTarget.dataset.index;
     var path = 'orders.list[' + idx + '].expanded';
     this.setData({ [path]: !this.data.orders.list[idx].expanded });
+  },
+
+  /* ======== 复制订单号 ======== */
+  onCopyOrderNo: function (e) {
+    var orderNo = e.currentTarget.dataset.orderNo;
+    if (!orderNo) return;
+    wx.setClipboardData({ data: orderNo, success: function () {
+      wx.showToast({ title: '已复制', icon: 'success', duration: 1000 });
+    }});
+  },
+
+  /* ======== 搜索：输入（防抖 500ms） ======== */
+  onSearchInput: function (e) {
+    var that = this;
+    var val = (e.detail.value || '').trim();
+    that.setData({ searchKey: val });
+    clearTimeout(that._searchTimer);
+    that._searchTimer = setTimeout(function () {
+      that.loadOrders(true);
+    }, 500);
+  },
+
+  /* ======== 搜索：清除 ======== */
+  onSearchClear: function () {
+    this.setData({ searchKey: '' });
+    this.loadOrders(true);
   },
 
   /* ======== 通知数量（小云 AI 助手浮标） ======== */

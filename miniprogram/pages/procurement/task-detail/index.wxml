@@ -81,7 +81,7 @@
         </view>
 
         <view class="receive-hint" wx:if="{{item.needsReceive}}">
-          <text>需领取后可登记</text>
+          <text>需采购后可登记</text>
         </view>
       </view>
     </view>
@@ -95,7 +95,7 @@
 </view>
 
 <view class="footer-bar" wx:if="{{materialPurchases.length > 0 && !loading}}">
-  <view class="btn-secondary" hover-class="footer-bar-hover" bindtap="onReceiveAll">一键领取</view>
+  <view class="btn-secondary" hover-class="footer-bar-hover" bindtap="onReceiveAll">一键采购</view>
   <view class="btn-submit {{(!hasInput || submitting) ? 'btn-disabled' : ''}}"
     hover-class="footer-bar-hover" bindtap="onSubmit">提交到货</view>
 </view>

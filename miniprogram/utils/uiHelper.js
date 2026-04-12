@@ -160,9 +160,18 @@ function prompt({
 let navigating = false;
 let navigateTimer = null;
 
+// tabBar 页面路径集合（与 app.json tabBar.list 保持一致）
+const TAB_BAR_PAGES = new Set([
+  '/pages/home/index',
+  '/pages/work/index',
+  '/pages/scan/index',
+  '/pages/admin/index',
+]);
+
 /**
- * 安全导航（带防抖保护）
+ * 安全导航（带防抖保护 + tabBar 自动检测）
  * 防止用户快速点击导致 "routeDone with a webviewId xxx is not found" 错误
+ * 自动检测 tabBar 页面并切换为 switchTab，避免 navigateTo 报错
  * @param {Object} options - 导航参数 { url, ... }
  * @param {string} method - 导航方式: navigateTo | switchTab | redirectTo | reLaunch
  * @returns {Promise} - 导航结果
@@ -171,6 +180,12 @@ function safeNavigate(options, method = 'navigateTo') {
   if (navigating) {
     console.warn('[SafeNavigate] 导航进行中，忽略重复调用:', options.url);
     return Promise.reject(new Error('导航进行中，请稍候'));
+  }
+
+  // 自动检测 tabBar 页面：如果目标是 tabBar 页面且当前不是 switchTab，自动纠正
+  const urlPath = (options.url || '').split('?')[0];
+  if (TAB_BAR_PAGES.has(urlPath) && method !== 'switchTab') {
+    method = 'switchTab';
   }
 
   navigating = true;

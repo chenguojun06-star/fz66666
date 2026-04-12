@@ -219,7 +219,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
               disabled={detailFrozen || !detailPurchases.some((p) => normalizeStatus(p.status) === MATERIAL_PURCHASE_STATUS.PENDING)}
               onClick={onReceiveAll}
             >
-              一键领取全部
+              采购全部
             </Button>
             <Button
               size="small"
@@ -352,12 +352,14 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                   },
                   { title: '备注', dataIndex: 'remark', key: 'remark', width: 220, ellipsis: true, render: (v: unknown) => v || '-' },
                   {
-                    title: '确认',
+                    title: '操作',
                     key: 'confirm',
-                    width: 200,
+                    width: 220,
                     render: (_: any, record: MaterialPurchaseType) => {
                       const frozen = isOrderFrozenForRecord(record);
                       const status = normalizeStatus(record.status);
+                      const stock = stockMap[String(record.id)];
+                      const hasStock = stock != null && stock > 0;
                       return (
                         <Space size={4}>
                           <Button
@@ -366,7 +368,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                             disabled={frozen || status !== MATERIAL_PURCHASE_STATUS.PENDING}
                             onClick={() => onReceive(record)}
                           >
-                            领取
+                            {hasStock ? '出库领取' : '采购'}
                           </Button>
                           <Button
                             type="link"

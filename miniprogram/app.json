@@ -123,7 +123,7 @@
     "pages/admin/index": { "network": "all", "packages": ["pkg-admin-approval", "pkg-payroll", "pkg-privacy", "pkg-admin-changepwd", "pkg-admin-feedback", "pkg-admin-invite"] }
   },
   "tabBar": {
-    "custom": false,
+    "custom": true,
     "color": "#999999",
     "selectedColor": "#3b82f6",
     "backgroundColor": "#ffffff",
@@ -134,6 +134,12 @@
         "text": "首页",
         "iconPath": "/assets/tabbar/home.png",
         "selectedIconPath": "/assets/tabbar/home-active.png"
+      },
+      {
+        "pagePath": "pages/work/index",
+        "text": "生产",
+        "iconPath": "/assets/tabbar/work.png",
+        "selectedIconPath": "/assets/tabbar/work-active.png"
       },
       {
         "pagePath": "pages/scan/index",
@@ -158,5 +164,7 @@
   "lazyCodeLoading": "requiredComponents",
   "style": "v2",
   "sitemapLocation": "sitemap.json",
-  "__usePrivacyCheck__": true
+  "__usePrivacyCheck__": true,
+  "requiredBackgroundModes": [],
+  "miniprogramBaseLibVersion": "3.3.4"
 }

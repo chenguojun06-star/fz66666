@@ -140,7 +140,7 @@ Page({
     skuList.forEach(function (item) {
       var color = (item.color || '').trim() || '默认';
       var size = (item.size || '').trim() || '均码';
-      var qty = Number(item.totalQuantity || item.quantity || 0);
+      var qty = Number(item.cuttingQty || item.totalQuantity || item.quantity || 0);
       if (sizeSet.indexOf(size) === -1) sizeSet.push(size);
       if (!colorMap[color]) colorMap[color] = {};
       colorMap[color][size] = qty;

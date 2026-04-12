@@ -7,38 +7,7 @@ page {
   padding: 10px;
 }
 
-/* ===== 智能提醒入口 ===== */
-.inbox-banner {
-  display: flex;
-  align-items: center;
-  margin: 0 0 10px;
-  padding: 12px 16px;
-  background: var(--color-bg-light);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-sm);
-}
 
-.inbox-banner-icon {
-  font-size: 20px;
-  margin-right: 10px;
-}
-
-.inbox-banner-text {
-  flex: 1;
-  font-size: 14px;
-  color: var(--color-primary);
-  font-weight: 500;
-}
-
-.inbox-banner-arrow {
-  font-size: 18px;
-  color: var(--color-primary);
-}
-
-.inbox-banner-hover {
-  opacity: 0.8;
-}
 
 /* ===== 卡片容器 ===== */
 .card {
@@ -69,7 +38,7 @@ page {
   align-items: center;
   gap: 4px;
   padding: 4px 10px;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--color-bg-card, rgba(255, 255, 255, 0.92));
   border-radius: var(--radius-full);
   border: 1px solid rgba(var(--color-primary-rgb), 0.1);
   flex-shrink: 0;
@@ -96,7 +65,7 @@ page {
 .tabbar {
   display: flex;
   padding: 6px;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--color-bg-card, rgba(255, 255, 255, 0.9));
   border: 1px solid rgba(var(--color-primary-rgb), 0.08);
   border-radius: var(--radius-full);
   margin-bottom: 10px;
@@ -129,7 +98,7 @@ page {
   display: flex;
   align-items: center;
   padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--color-bg-card, rgba(255, 255, 255, 0.9));
   border: 1px solid rgba(var(--color-primary-rgb), 0.08);
   border-radius: var(--radius-full);
   margin-bottom: 10px;
@@ -146,10 +115,7 @@ page {
   margin-left: 4px;
 }
 
-.stats-primary {
-  color: var(--color-primary);
-}
-
+.stats-primary,
 .stats-accent {
   color: var(--color-primary);
 }
@@ -194,14 +160,6 @@ page {
   font-weight: 600;
 }
 
-.org-filter-clear {
-  padding: 8px 14px;
-  font-size: 14px;
-  color: var(--color-primary);
-  border-radius: var(--radius-full);
-  border: 1px solid var(--color-primary);
-  background: var(--color-bg-card);
-}
 
 /* ===== 订单列表 ===== */
 .list-item {
@@ -234,11 +192,6 @@ page {
   background: var(--color-bg-card);
 }
 
-.item-body {
-  display: flex;
-  gap: 8px;
-}
-
 .item-cover-box {
   width: 80px;
   height: 80px;
@@ -265,14 +218,6 @@ page {
   color: var(--color-text-disabled);
   text-align: center;
   white-space: pre-line;
-}
-
-.item-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
 }
 
 .item-head {
@@ -327,12 +272,6 @@ page {
   color: var(--color-primary);
 }
 
-.overdue-indicator {
-  font-size: 10px;
-  color: var(--color-error);
-  font-weight: 600;
-}
-
 .tag {
   padding: 1px 5px;
   border-radius: var(--radius-sm);
@@ -379,45 +318,6 @@ page {
   margin: 0 3px;
 }
 
-.meta-factory {
-  font-size: 10px;
-  color: var(--color-text-secondary);
-}
-
-/* ===== 进度条分隔线 ===== */
-.progress-divider {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 4px 0;
-  padding: 3px 0;
-  border-top: 1px solid var(--color-border-light);
-  border-bottom: 1px solid var(--color-border-light);
-}
-
-.progress-divider .progress-bar {
-  flex: 1;
-  height: 4px;
-  background: var(--color-border-light);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.progress-divider .progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-primary) 100%);
-  border-radius: 2px;
-  transition: width 0.3s ease;
-}
-
-.progress-divider .progress-percent {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--color-primary);
-  min-width: 32px;
-  text-align: right;
-}
-
 /* ===== 码数明细（紧凑版） ===== */
 .size-compact {
   padding: 4px 0;
@@ -451,51 +351,25 @@ page {
 }
 
 .size-compact-qty {
-  color: var(--color-primary) !important;
-  font-weight: 600 !important;
+  color: var(--color-primary);
+  font-weight: 600;
 }
 
-/* ===== 交期信息 ===== */
-.delivery-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--color-border-light);
-}
-
-.delivery-label {
-  font-size: 13px;
-  color: var(--color-text-secondary);
-  font-weight: 500;
-}
-
-.delivery-days {
-  font-size: 12px;
-  font-weight: 700;
-  padding: 4px 12px;
-  border-radius: var(--radius-full);
-}
-
+/* ===== 交期天数色（动态 class: item.remainDaysClass） ===== */
 .days-normal {
   color: var(--color-primary);
-  background: rgba(var(--color-primary-rgb), 0.08);
 }
 
 .days-warning {
-  color: var(--color-primary);
-  background: rgba(var(--color-primary-rgb), 0.08);
+  color: var(--color-warning);
 }
 
 .days-critical {
   color: var(--color-error);
-  background: rgba(255, 77, 79, 0.08);
 }
 
 .days-overdue {
   color: var(--color-error);
-  background: rgba(255, 77, 79, 0.08);
 }
 
 /* ===== 提示 ===== */
@@ -614,9 +488,9 @@ page {
 .header-remain-days {
   font-size: 11px;
   font-weight: 600;
-  padding: 0 !important;
-  background: transparent !important;
-  border-radius: 0 !important;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
 }
 
 .header-progress-row {

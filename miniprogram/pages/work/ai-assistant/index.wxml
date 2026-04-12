@@ -134,7 +134,7 @@
   </view>
   <view class="input-bar">
     <view class="photo-btn" bindtap="chooseImage" hover-class="photo-btn-hover">
-      <image src="/assets/tabbar/scan-active.png" mode="aspectFit" style="width:22px;height:22px;" />
+      <view class="line-icon icon-camera"></view>
     </view>
     <input
       class="msg-input"

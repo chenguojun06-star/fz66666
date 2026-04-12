@@ -701,7 +701,6 @@ export const calculateProgressFromBundles = (
 
     const doneQtyForNode = scanHistory
       .filter((r) => String(r?.scanResult || '').trim() === 'success')
-      .filter((r) => String(r?.scanType || '').trim() === 'production')
       .filter((r) => stageNameMatches(nodeName, getRecordStageName(r)))
       .reduce((acc, r) => acc + (Number(r?.quantity) || 0), 0);
 

@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.agent.tool;
 
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.common.UserContext;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -143,6 +144,9 @@ public class CodeDiagnosticTool extends AbstractAgentTool {
 
     @Override
     protected String doExecute(String argumentsJson) throws Exception {
+        if (!UserContext.isSuperAdmin()) {
+            return errorJson("代码诊断工具仅限超级管理员使用");
+        }
         Map<String, Object> args = parseArgs(argumentsJson);
         String action = requireString(args, "action");
         return switch (action) {

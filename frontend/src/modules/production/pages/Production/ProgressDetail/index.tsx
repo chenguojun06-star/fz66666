@@ -193,7 +193,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   const [, setNodeWorkflowDirty] = useState(false);
 
   // ─────── 工序瓶颈检测 ───────
-  const { bottleneckItems, bottleneckBannerVisible, setBottleneckBannerVisible } = useBottleneckBanner(orders);
+  const { bottleneckItems, bottleneckBannerVisible, setBottleneckBannerVisible, bottleneckLoading } = useBottleneckBanner(orders);
 
   /** 自动刷新计时器：每 2 分钟递增，触发 boardStats 过期重拉 */
   const [boardRefreshTick, setBoardRefreshTick] = useState(0);
@@ -731,6 +731,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             bottleneckBannerVisible={bottleneckBannerVisible}
             bottleneckItems={bottleneckItems}
             setBottleneckBannerVisible={setBottleneckBannerVisible}
+            bottleneckLoading={bottleneckLoading}
           />
 
           <MaterialShortageAlert />
@@ -934,6 +935,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
             bottleneckBannerVisible={bottleneckBannerVisible}
             bottleneckItems={bottleneckItems}
             setBottleneckBannerVisible={setBottleneckBannerVisible}
+            bottleneckLoading={bottleneckLoading}
           />
 
           {viewMode === 'list' ? (
