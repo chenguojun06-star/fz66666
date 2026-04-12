@@ -842,6 +842,7 @@ public class ExcelImportOrchestrator {
                         } else {
                             File dest = TenantFilePathResolver.resolveStoragePath(uploadPath, newFilename);
                             java.nio.file.Files.write(dest.toPath(), imgBytes);
+                            cosService.safeRefreshTenantStorageUsage(tenantId);
                         }
                         String coverUrl = TenantFilePathResolver.buildDownloadUrl(newFilename);
                         // 更新 cover 字段

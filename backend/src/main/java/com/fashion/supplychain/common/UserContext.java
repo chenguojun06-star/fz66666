@@ -265,6 +265,10 @@ public class UserContext {
         return ctx == null ? null : ctx.getFactoryId();
     }
 
+    public static boolean isFactoryUser() {
+        return factoryId() != null;
+    }
+
     public String getFactoryId() {
         return factoryId;
     }

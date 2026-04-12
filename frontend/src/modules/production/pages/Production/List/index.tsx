@@ -222,6 +222,7 @@ const ProductionList: React.FC = () => {
     handleScrapOrder, pendingScrapOrder, scrapOrderLoading, confirmScrapOrder, cancelScrapOrder,
     exportSelected: _exportSelected,
     remarkPopoverId, setRemarkPopoverId, remarkText, setRemarkText, remarkSaving, handleRemarkSave,
+    handleCopyOrder,
   } = useProductionActions({ message, isSupervisorOrAbove, fetchProductionList });
 
   const {
@@ -408,7 +409,7 @@ const ProductionList: React.FC = () => {
   // 表格列渲染辅助
   const allColumns = useProductionColumns({
     sortField, sortOrder, handleSort,
-    handleCloseOrder, handleScrapOrder, handleTransferOrder,
+    handleCloseOrder, handleScrapOrder, handleTransferOrder, handleCopyOrder,
     navigate, openProcessDetail, openNodeDetail, syncProcessFromTemplate,
     setPrintModalVisible, setPrintingRecord,
     setRemarkPopoverId, setRemarkText,

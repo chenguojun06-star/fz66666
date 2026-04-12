@@ -18,13 +18,9 @@ import { appStoreService } from '@/services/system/appStore';
 import type { MyAppInfo } from '@/services/system/appStore';
 import ResizableTable from '@/components/common/ResizableTable';
 import { DEFAULT_PAGE_SIZE } from '@/utils/pageSizeStore';
+import { PLAN_LABELS, SUB_TYPE_LABELS, formatPlanFee, formatSubscriptionPrice } from './billingDisplay';
 
 const { Text } = Typography;
-
-// ========== 常量配置 ==========
-const PLAN_LABELS: Record<string, string> = {
-  TRIAL: '免费试用', BASIC: '基础版', PRO: '专业版', ENTERPRISE: '企业版',
-};
 
 const INVOICE_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   NOT_REQUIRED: { label: '无需开票', color: 'default' },
@@ -38,10 +34,6 @@ const BILL_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   PAID: { label: '已支付', color: 'success' },
   OVERDUE: { label: '逾期', color: 'error' },
   WAIVED: { label: '已减免', color: 'default' },
-};
-
-const SUB_TYPE_LABELS: Record<string, string> = {
-  TRIAL: '免费试用', MONTHLY: '月付', YEARLY: '年付', PERPETUAL: '买断', FREE: '免费',
 };
 
 const SUB_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
@@ -68,7 +60,12 @@ function expiryColor(days: number | null): string {
 }
 
 // ========== 组件 ==========
-const MyBillingTab: React.FC = () => {
+interface MyBillingTabProps {
+  /** 嵌入模式：隐藏与 MyModulesTab 重复的概览卡片和应用订阅表格 */
+  embedded?: boolean;
+}
+
+const MyBillingTab: React.FC<MyBillingTabProps> = ({ embedded = false }) => {
   const { message } = App.useApp();
   const [overview, setOverview] = useState<any>(null);
   const [bills, setBills] = useState<any[]>([]);
@@ -239,6 +236,12 @@ const MyBillingTab: React.FC = () => {
       render: (v: string) => <Tag color="blue">{SUB_TYPE_LABELS[v] || v}</Tag>,
     },
     {
+      title: '费用', key: 'price', width: 110,
+      render: (_: unknown, record: MyAppInfo) => (
+        <Text strong style={{ color: 'var(--color-primary)' }}>{formatSubscriptionPrice(record)}</Text>
+      ),
+    },
+    {
       title: '开始时间', dataIndex: 'startTime', width: 120,
       render: (v: string) => v ? v.slice(0, 10) : '—',
     },
@@ -305,8 +308,8 @@ const MyBillingTab: React.FC = () => {
           closable
         />
       )}
-      {/* 套餐概览卡片 */}
-      {overview && (
+      {/* 套餐概览卡片（嵌入模式下隐藏，由 MyModulesTab 展示） */}
+      {!embedded && overview && (
         <Row gutter={16} style={{ marginBottom: 24 }}>
           <Col span={6}>
             <Card size="small">
@@ -316,7 +319,7 @@ const MyBillingTab: React.FC = () => {
                 styles={{ content: { color: 'var(--color-primary)', fontSize: 20 } }}
               />
               <div style={{ marginTop: 8, color: 'var(--text-secondary)' }}>
-                {overview.paidStatus === 'TRIAL' ? '免费试用中' : `¥${overview.monthlyFee}/月`}
+                {formatPlanFee(overview)}
                 {overview.expireTime && <span> · 到期: {overview.expireTime?.slice(0, 10)}</span>}
               </div>
             </Card>
@@ -357,8 +360,8 @@ const MyBillingTab: React.FC = () => {
         </Row>
       )}
 
-      {/* ===== 我的应用订阅 ===== */}
-      {myApps.length > 0 && (
+      {/* ===== 我的应用订阅（嵌入模式下隐藏，由 MyModulesTab 展示） ===== */}
+      {!embedded && myApps.length > 0 && (
         <Card
           title={<Space><AppstoreOutlined />我的应用订阅</Space>}
           size="small"

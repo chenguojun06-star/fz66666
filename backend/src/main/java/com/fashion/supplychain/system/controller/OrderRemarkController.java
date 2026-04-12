@@ -11,6 +11,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -73,5 +74,34 @@ public class OrderRemarkController {
 
         orderRemarkService.save(remark);
         return Result.success(remark);
+    }
+
+    /**
+     * 批量查询各记录最新备注（用于列表导出）
+     * 请求体：{ "targetType": "STYLE", "targetNos": ["FZ001", "FZ002", ...] }
+     * 返回：{ "FZ001": "最新备注内容", "FZ002": "..." }
+     */
+    @PostMapping("/batch-latest")
+    public Result<Map<String, String>> batchLatest(@RequestBody Map<String, Object> params) {
+        String targetType = (String) params.get("targetType");
+        @SuppressWarnings("unchecked")
+        List<String> targetNos = (List<String>) params.get("targetNos");
+        if (!StringUtils.hasText(targetType) || targetNos == null || targetNos.isEmpty()) {
+            return Result.success(new HashMap<>());
+        }
+        Long tenantId = UserContext.tenantId();
+        // 一次性查出所有匹配行，按 createTime DESC，再取每个 targetNo 的第一条
+        List<OrderRemark> all = orderRemarkService.lambdaQuery()
+                .eq(tenantId != null, OrderRemark::getTenantId, tenantId)
+                .eq(OrderRemark::getTargetType, targetType)
+                .in(OrderRemark::getTargetNo, targetNos)
+                .eq(OrderRemark::getDeleteFlag, 0)
+                .orderByDesc(OrderRemark::getCreateTime)
+                .list();
+        Map<String, String> result = new HashMap<>();
+        for (OrderRemark r : all) {
+            result.putIfAbsent(r.getTargetNo(), r.getContent());
+        }
+        return Result.success(result);
     }
 }

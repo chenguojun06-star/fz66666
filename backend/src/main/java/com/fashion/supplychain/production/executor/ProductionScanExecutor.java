@@ -272,6 +272,9 @@ public class ProductionScanExecutor {
             unitPrice = BigDecimal.ZERO;
         }
 
+        // 单价为0时在响应中添加警告提示
+        boolean unitPriceZero = unitPrice.compareTo(BigDecimal.ZERO) <= 0;
+
         // processCode 使用子工序名（用于去重和工序跟踪）
         String processCode = hasText(TextUtils.safeText(params.get("processCode")))
                              ? TextUtils.safeText(params.get("processCode"))
@@ -512,6 +515,10 @@ public class ProductionScanExecutor {
         result.put("message", "扫码成功");
         result.put("scanRecord", sr);
         result.put("orderInfo", buildOrderInfo(order));
+
+        if (unitPriceZero) {
+            result.put("unitPriceHint", "该工序未设置单价，扫码后工资为0，请联系管理员设置单价");
+        }
 
         // 附加面料清单（采购阶段）
         if ("采购".equals(progressStage.trim())) {

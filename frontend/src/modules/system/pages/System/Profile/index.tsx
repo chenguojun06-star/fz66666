@@ -5,12 +5,12 @@
  */
 import React from 'react';
 import { Tabs, Typography } from 'antd';
-import { UserOutlined, AccountBookOutlined } from '@ant-design/icons';
+import { UserOutlined, AppstoreOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import PageLayout from '@/components/common/PageLayout';
 import { useAuth } from '@/utils/AuthContext';
 import ProfileInfoTab from './components/ProfileInfoTab';
-import MyBillingTab from './components/MyBillingTab';
+import MyModulesTab from './components/MyModulesTab';
 import './styles.css';
 
 const Profile: React.FC = () => {
@@ -31,9 +31,9 @@ const Profile: React.FC = () => {
             children: <ProfileInfoTab />,
         },
         ...(canViewBilling ? [{
-            key: 'billing',
-            label: <span><AccountBookOutlined /> 我的账单</span>,
-            children: <MyBillingTab />,
+            key: 'modules',
+            label: <span><AppstoreOutlined /> 已开通模块与账单</span>,
+            children: <MyModulesTab />,
         }] : []),
     ];
 
@@ -43,7 +43,7 @@ const Profile: React.FC = () => {
                 title="个人中心"
                 headerContent={
                     <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                        {canViewBilling ? '个人信息、账单与发票管理' : '个人信息管理'}
+                        {canViewBilling ? '个人信息与模块账单管理' : '个人信息管理'}
                     </Typography.Text>
                 }
             >

@@ -18,8 +18,6 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.YearMonth;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 import com.fashion.supplychain.system.helper.TenantBillingHelper;
@@ -56,15 +54,6 @@ public class TenantOrchestrator {
 
     @Autowired
     private TenantPermissionCeilingService ceilingService;
-
-    @Autowired
-    private UserPermissionOverrideService overrideService;
-
-    @Autowired
-    private PermissionService permissionService;
-
-    @Autowired
-    private PermissionCalculationEngine permissionEngine;
 
     @Autowired
     private TenantBillingRecordService billingRecordService;
@@ -109,17 +98,19 @@ public class TenantOrchestrator {
                                              String contactName, String contactPhone,
                                              String ownerUsername, String ownerPassword,
                                              String ownerName, Integer maxUsers,
+                                             String planType,
                                              String tenantType) {
         assertSuperAdmin();
         // TenantInterceptor 已通过 SUPERADMIN_MANAGED_TABLES 精确放行 t_user/t_role
         return doCreateTenant(tenantName, tenantCode, contactName, contactPhone,
-                              ownerUsername, ownerPassword, ownerName, maxUsers, tenantType);
+                              ownerUsername, ownerPassword, ownerName, maxUsers, planType, tenantType);
     }
 
     private Map<String, Object> doCreateTenant(String tenantName, String tenantCode,
                                                 String contactName, String contactPhone,
                                                 String ownerUsername, String ownerPassword,
                                                 String ownerName, Integer maxUsers,
+                                                String planType,
                                                 String tenantType) {
         // 验证租户编码唯一
         if (tenantService.findByTenantCode(tenantCode) != null) {
@@ -140,7 +131,7 @@ public class TenantOrchestrator {
         tenant.setContactName(contactName);
         tenant.setContactPhone(contactPhone);
         tenant.setStatus("active");
-        tenant.setMaxUsers(maxUsers != null ? maxUsers : (Integer) PLAN_DEFINITIONS.get("TRIAL").get("maxUsers")); // 未指定时默认 TRIAL 套餐的5人上限
+        applyPlanSettings(tenant, planType, maxUsers, true);
         // 租户类型：决定初始权限包范围
         tenant.setTenantType(tenantType != null && !tenantType.isBlank() ? tenantType : "HYBRID");
         tenant.setCreateTime(LocalDateTime.now());
@@ -328,14 +319,8 @@ public class TenantOrchestrator {
         // 审批通过后设置套餐和试用期
         Tenant tenant = tenantService.getById(tenantId);
         if (tenant != null) {
-            String plan = (planType != null && PLAN_DEFINITIONS.containsKey(planType)) ? planType : "TRIAL";
-            Map<String, Object> planDef = PLAN_DEFINITIONS.get(plan);
-            if (planDef != null) {
-                tenant.setPlanType(plan);
-                tenant.setMonthlyFee((java.math.BigDecimal) planDef.get("monthlyFee"));
-                tenant.setStorageQuotaMb((Long) planDef.get("storageQuotaMb"));
-                tenant.setMaxUsers((Integer) planDef.get("maxUsers"));
-            }
+            String plan = normalizePlanType(planType);
+            applyPlanSettings(tenant, plan, null, false);
             // 设置试用/有效期
             if ("TRIAL".equals(plan)) {
                 tenant.setPaidStatus("TRIAL");
@@ -691,6 +676,22 @@ public class TenantOrchestrator {
     }
 
     /**
+     * 单独更新租户菜单白名单，支持显式清空为 null（全部开放）。
+     */
+    public boolean updateTenantEnabledModules(Long tenantId, String enabledModules) {
+        assertSuperAdmin();
+        Tenant tenant = tenantService.getById(tenantId);
+        if (tenant == null) {
+            throw new IllegalArgumentException("租户不存在");
+        }
+        LambdaUpdateWrapper<Tenant> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(Tenant::getId, tenantId)
+                .set(Tenant::getEnabledModules, StringUtils.hasText(enabledModules) ? enabledModules : null)
+                .set(Tenant::getUpdateTime, LocalDateTime.now());
+        return tenantService.update(wrapper);
+    }
+
+    /**
      * 禁用/启用租户（超级管理员专用）
      */
     public boolean toggleTenantStatus(Long tenantId, String status) {
@@ -865,6 +866,31 @@ public class TenantOrchestrator {
             result.put("contactPhone", tenant != null ? tenant.getContactPhone() : null);
         }
         return result;
+    }
+
+    private String normalizePlanType(String planType) {
+        return StringUtils.hasText(planType) && PLAN_DEFINITIONS.containsKey(planType) ? planType : "TRIAL";
+    }
+
+    private void applyPlanSettings(Tenant tenant, String planType, Integer maxUsersOverride, boolean initializeExpireTime) {
+        String normalizedPlan = normalizePlanType(planType);
+        Map<String, Object> planDef = PLAN_DEFINITIONS.get(normalizedPlan);
+        tenant.setPlanType(normalizedPlan);
+        tenant.setMonthlyFee((BigDecimal) planDef.get("monthlyFee"));
+        tenant.setStorageQuotaMb((Long) planDef.get("storageQuotaMb"));
+        tenant.setMaxUsers(maxUsersOverride != null ? maxUsersOverride : (Integer) planDef.get("maxUsers"));
+        tenant.setBillingCycle("MONTHLY");
+        if ("TRIAL".equals(normalizedPlan)) {
+            tenant.setPaidStatus("TRIAL");
+            if (initializeExpireTime) {
+                tenant.setExpireTime(LocalDateTime.now().plusDays(30));
+            }
+        } else {
+            tenant.setPaidStatus("PAID");
+            if (initializeExpireTime) {
+                tenant.setExpireTime(LocalDateTime.now().plusMonths(1));
+            }
+        }
     }
 
     /**

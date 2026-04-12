@@ -1,5 +1,6 @@
 package com.fashion.supplychain.production.orchestration;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.dto.ExceptionReportRequest;
 import com.fashion.supplychain.production.entity.ProductionExceptionReport;
@@ -8,8 +9,10 @@ import com.fashion.supplychain.production.service.ProductionExceptionReportServi
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 @Slf4j
 @Service
@@ -29,6 +32,19 @@ public class ExceptionReportOrchestrator {
         Long tenantId = UserContext.tenantId();
         String userId = UserContext.userId();
         String username = UserContext.username();
+
+        // 工厂账号只能对本工厂的订单上报异常，防止跨工厂写入
+        String userFactoryId = UserContext.factoryId();
+        if (StringUtils.hasText(userFactoryId)) {
+            ProductionOrder scopeCheck = productionOrderService.getOne(
+                    new LambdaQueryWrapper<ProductionOrder>()
+                            .eq(ProductionOrder::getOrderNo, request.getOrderNo())
+                            .eq(ProductionOrder::getTenantId, tenantId)
+                            .select(ProductionOrder::getFactoryId));
+            if (scopeCheck == null || !userFactoryId.equals(scopeCheck.getFactoryId())) {
+                throw new AccessDeniedException("无权对该订单上报异常");
+            }
+        }
 
         // 1. 保存异常记录
         ProductionExceptionReport report = new ProductionExceptionReport();

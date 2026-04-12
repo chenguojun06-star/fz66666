@@ -1,0 +1,16 @@
+var money = {
+  toFixed2: function(v) {
+    if (v === undefined || v === null) return '0.00';
+    var n = parseFloat(v);
+    if (n !== n) return '0.00';
+    return n.toFixed(2);
+  },
+  format: function(v) {
+    return money.toFixed2(v);
+  },
+  formatWithSymbol: function(v) {
+    return '\u00A5' + money.toFixed2(v);
+  }
+};
+
+module.exports = money;

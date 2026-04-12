@@ -374,7 +374,7 @@ const TemplateCenter: React.FC = () => {
               {nodes.filter((n) => n?.unitPrice != null && n.unitPrice !== 0).map((n, idx) => (
                 <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: "var(--font-size-sm)" }}>
                   <span>{String(n?.name || '-')}</span>
-                  <span style={{ fontWeight: 500 }}>¥ {Number(n?.unitPrice || 0).toFixed(2)}</span>
+                  <span style={{ fontWeight: 500 }}>¥{Number(n?.unitPrice || 0).toFixed(2)}</span>
                 </div>
               ))}
               {nodes.filter((n) => n?.unitPrice != null && n.unitPrice !== 0).length === 0 &&
@@ -435,7 +435,7 @@ const TemplateCenter: React.FC = () => {
                 return (
                   <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: "var(--font-size-sm)" }}>
                     <span>{String(s?.processName || '-')}</span>
-                    <span style={{ fontWeight: 500 }}>¥ {price.toFixed(2)}</span>
+                    <span style={{ fontWeight: 500 }}>¥{price.toFixed(2)}</span>
                   </div>
                 );
               })}

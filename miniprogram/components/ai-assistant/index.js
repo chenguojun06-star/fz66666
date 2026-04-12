@@ -2,59 +2,75 @@ const api = require('../../utils/api.js');
 const bellTaskLoader = require('./bellTaskLoader.js');
 const bellTaskActions = require('./bellTaskActions.js');
 
+var TOOL_NAMES = {
+  tool_query_production_progress: '生产进度', tool_order_edit: '订单编辑',
+  tool_query_warehouse_stock: '库存查询', tool_finished_product_stock: '成品库存',
+  tool_deep_analysis: '深度分析', tool_knowledge_search: '知识搜索',
+  tool_material_receive: '物料收货', tool_finished_outbound: '成品出库',
+  tool_quality_inbound: '质检入库', tool_finance_workflow: '财务审批',
+  tool_smart_report: '智能报表', tool_delay_trend: '延期趋势',
+  tool_root_cause_analysis: '根因分析', tool_whatif: '假设模拟',
+  tool_action_executor: '执行操作', tool_procurement: '采购管理',
+};
+
+function describeTool(name) {
+  return TOOL_NAMES[name] || (name || '').replace(/^tool_/, '').replace(/_/g, '');
+}
+
+function parseAiCards(text) {
+  var cards = [];
+  var actions = [];
+  var acMatch = text.match(/【ACTIONS】([\s\S]*?)【\/ACTIONS】/);
+  if (acMatch) {
+    text = text.replace(acMatch[0], '');
+    try {
+      var acData = JSON.parse(acMatch[1]);
+      if (Array.isArray(acData)) actions = acData;
+      else if (acData && acData.actions) actions = acData.actions;
+    } catch (_e) {
+      acMatch[1].split('\n').forEach(function (line) {
+        var m = line.match(/[-*]\s*(.+)/);
+        if (m) actions.push({ label: m[1].trim(), type: 'navigate' });
+      });
+    }
+  }
+  return { text: text.trim(), cards: cards, actions: actions };
+}
+
 Component({
   properties: {
-    visible: {
-      type: Boolean,
-      value: true,
-    },
-    noticeCount: {
-      type: Number,
-      value: 0,
-    },
+    visible: { type: Boolean, value: true },
+    noticeCount: { type: Number, value: 0 },
   },
   data: {
     isOpen: false,
     inputValue: '',
     messages: [],
     isLoading: false,
+    streamingText: '',
+    streamingTool: '',
     scrollTo: '',
     pendingImage: '',
     uploading: false,
-
     currentTab: 'chat',
     totalTasks: 0,
-    qualityTasks: [],
-    cuttingTasks: [],
-    warehouseTasks: [],
-    purchaseTasks: [],
-    repairTasks: [],
-    overdueOrders: [],
-    overdueSummary: null,
-    pendingUsers: [],
-    pendingRegistrations: [],
-    timeoutReminders: [],
-    isAdmin: false,
-    isTenantOwner: false,
-    isManager: false,
-    taskLoading: false,
-    triggerX: 0,
-    triggerY: 110,
-    edgeSide: 'right',
-    isDragging: false,
-    dragStartX: 0,
-    dragStartY: 0,
-    dragStartTriggerX: 0,
-    dragStartTriggerY: 0,
-    screenWidth: 375,
-    screenHeight: 667,
+    qualityTasks: [], cuttingTasks: [], warehouseTasks: [],
+    purchaseTasks: [], repairTasks: [], overdueOrders: [],
+    overdueSummary: null, pendingUsers: [], pendingRegistrations: [],
+    timeoutReminders: [], isAdmin: false, isTenantOwner: false,
+    isManager: false, taskLoading: false,
+    triggerX: 0, triggerY: 110, edgeSide: 'right',
+    isDragging: false, dragStartX: 0, dragStartY: 0,
+    dragStartTriggerX: 0, dragStartTriggerY: 0,
+    screenWidth: 375, screenHeight: 667,
     pageSuggestions: [],
+    conversationId: '',
+    dynamicSuggestions: [],
   },
   lifetimes: {
     attached() {
       setTimeout(() => {
         if (!this.data) return;
-
         let userName = '';
         let isManager = false;
         try {
@@ -62,53 +78,48 @@ Component({
           if (userInfo.realName) userName = userInfo.realName;
           else if (userInfo.username) userName = userInfo.username;
           else if (userInfo.nickname) userName = userInfo.nickname;
-
           const role = String(userInfo.role || userInfo.roleCode || '').toLowerCase();
           isManager = userInfo.isTenantOwner === true ||
             ['admin', 'super_admin', 'manager', 'supervisor',
               'tenant_admin', 'tenant_manager', 'merchandiser'].some(r => role.includes(r));
-        } catch (err) {
-          console.error('get user info error', err);
-        }
+        } catch (err) { console.error('get user info error', err); }
 
         const greetingSuffix = isManager
           ? '可以直接点下面的快捷问题，或者问我订单、工厂、日报、库存、财务等任何管理问题！'
           : '可以问我您的生产任务、扫码记录或负责的订单进度哦！';
         const greeting = userName
-          ? `Hi ${userName}，我是小云～ 有什么可以帮您的？\n${greetingSuffix}`
-          : `Hi 我是小云～ 有什么可以帮您的？\n${greetingSuffix}`;
+          ? 'Hi ' + userName + '，我是小云～ 有什么可以帮您的？\n' + greetingSuffix
+          : 'Hi 我是小云～ 有什么可以帮您的？\n' + greetingSuffix;
 
-        // --- 屏幕尺寸 & 保存的位置 ---
-        // wx.getWindowInfo() 替代已废弃的 wx.getSystemInfoSync()（lib 2.20+）
         const sysInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
         const sw = sysInfo.windowWidth || 375;
         const sh = sysInfo.windowHeight || 667;
-        let tx = sw - 20; // 挂壁探头：20px 露出，30px 藏在屏幕外
-        let ty = 110;
-        let edge = 'right';
+        let tx = sw - 20; let ty = 110; let edge = 'right';
         try {
           const saved = wx.getStorageSync('ai_trigger_position');
           if (saved) {
-            // 始终用当前挂壁吸附位，仅保留纵向位置
             edge = saved.edge || 'right';
             tx = edge === 'left' ? -30 : sw - 20;
             ty = Math.max(40, Math.min(saved.y != null ? saved.y : ty, sh - 60));
           }
-        } catch (_e) { /* ignore */ }
+        } catch (_e) {}
+
+        var conversationId = 'mp_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+        var savedMessages = [];
+        try {
+          savedMessages = wx.getStorageSync('ai_chat_history') || [];
+          if (!Array.isArray(savedMessages) || savedMessages.length === 0) savedMessages = [];
+        } catch (_e) {}
 
         this.setData({
-          isManager,
-          screenWidth: sw,
-          screenHeight: sh,
-          triggerX: tx,
-          triggerY: ty,
-          edgeSide: edge,
-          messages: [{
-            id: Date.now(),
-            role: 'ai',
-            content: greeting,
+          isManager, screenWidth: sw, screenHeight: sh,
+          triggerX: tx, triggerY: ty, edgeSide: edge,
+          conversationId: conversationId,
+          messages: savedMessages.length > 0 ? savedMessages : [{
+            id: Date.now(), role: 'ai', content: greeting,
           }],
         });
+        this._loadDynamicSuggestions();
       }, 0);
     },
   },
@@ -123,10 +134,12 @@ Component({
     show() {
       setTimeout(() => this.loadTasks(), 0);
       this._refreshPageSuggestions();
+      this._loadDynamicSuggestions();
     },
   },
   detached() {
     this._cancelIdleSnap();
+    this._abortStream();
     const app = getApp();
     if (this.boundLoadTasks && app && app.eventBus) {
       app.eventBus.off('tasksUpdated', this.boundLoadTasks);
@@ -137,16 +150,13 @@ Component({
       this.setData({ currentTab: e.currentTarget.dataset.tab });
     },
 
-    /* ========= 拖拽相关 ========= */
     onTriggerTouchStart(e) {
       const touch = e.touches[0];
       this._touchStartTime = Date.now();
       this.setData({
         isDragging: false,
-        dragStartX: touch.clientX,
-        dragStartY: touch.clientY,
-        dragStartTriggerX: this.data.triggerX,
-        dragStartTriggerY: this.data.triggerY,
+        dragStartX: touch.clientX, dragStartY: touch.clientY,
+        dragStartTriggerX: this.data.triggerX, dragStartTriggerY: this.data.triggerY,
       });
     },
     onTriggerTouchMove(e) {
@@ -164,43 +174,36 @@ Component({
     },
     onTriggerTouchEnd() {
       if (!this.data.isDragging) {
-        // 短触 = 点击，直接在 touchEnd 里处理（比 catchtap 更可靠）
         const willOpen = !this.data.isOpen;
         this._cancelIdleSnap();
         this.setData({ isOpen: willOpen });
-        if (willOpen) {
-          this._snapToVisible();
-          this.scrollToBottom();
-        } else {
-          this._startIdleSnap();
-        }
+        if (willOpen) { this._snapToVisible(); this.scrollToBottom(); }
+        else { this._startIdleSnap(); }
         return;
       }
-      // 拖拽结束 → 吸附到最近的屏幕边缘（挂壁探头）
       const sw = this.data.screenWidth;
-      const midX = this.data.triggerX + 25; // 按钮中心
+      const midX = this.data.triggerX + 25;
       const edge = midX < sw / 2 ? 'left' : 'right';
       const snapX = edge === 'left' ? -30 : sw - 20;
       this.setData({ triggerX: snapX, edgeSide: edge, isDragging: false });
-      try {
-        wx.setStorageSync('ai_trigger_position', { x: snapX, y: this.data.triggerY, edge });
-      } catch (_e) { /* ignore */ }
-      // 拖拽结束后，若面板已关闭则启动空闲吸附倒计时
+      try { wx.setStorageSync('ai_trigger_position', { x: snapX, y: this.data.triggerY, edge }); } catch (_e) {}
       if (!this.data.isOpen) this._startIdleSnap();
     },
-    /* ===== 挂壁空闲吸附辅助 ===== */
     _snapToVisible() {
-      // 将形象拉到完全可见位置（打开面板时调用）
       const sw = this.data.screenWidth;
       const snapX = this.data.edgeSide === 'left' ? 0 : sw - 50;
       this.setData({ triggerX: snapX });
     },
     _cancelIdleSnap() {
-      if (this._idleTimer) {
-        clearTimeout(this._idleTimer);
-        this._idleTimer = null;
-      }
+      if (this._idleTimer) { clearTimeout(this._idleTimer); this._idleTimer = null; }
     },
+    _startIdleSnap() {
+      this._cancelIdleSnap();
+      const sw = this.data.screenWidth;
+      const snapX = this.data.edgeSide === 'left' ? -30 : sw - 20;
+      this._idleTimer = setTimeout(() => { this.setData({ triggerX: snapX }); this._idleTimer = null; }, 3000);
+    },
+
     _refreshPageSuggestions() {
       try {
         const pages = getCurrentPages();
@@ -217,47 +220,63 @@ Component({
           suggestions = [
             { icon: 'icon-stats', label: '工资明细', question: '帮我查一下我这个月的工资明细' },
             { icon: 'icon-search', label: '计件汇总', question: '我最近一周的计件数据是多少？' },
-            { icon: 'icon-clipboard', label: '结算状态', question: '当前有哪些未结算的工资单？' },
           ];
         } else if (route.includes('warehouse') || route.includes('finished')) {
           suggestions = [
             { icon: 'icon-package', label: '库存查询', question: '当前库存有多少？有没有低库存预警？' },
             { icon: 'icon-search', label: '入库记录', question: '帮我查一下最近的入库记录' },
-            { icon: 'icon-alert', label: '待返修', question: '有没有待返修的入库单？' },
           ];
         } else if (route.includes('order')) {
           suggestions = [
             { icon: 'icon-package', label: '订单进度', question: '帮我查一下订单的生产进度' },
             { icon: 'icon-alert', label: '逾期订单', question: '有没有逾期的订单？' },
-            { icon: 'icon-stats', label: '交期预估', question: '帮我预估一下剩余订单的交货时间' },
-          ];
-        } else if (route.includes('admin/notification')) {
-          suggestions = [
-            { icon: 'icon-clipboard', label: '未读通知', question: '有哪些未读通知？' },
-            { icon: 'icon-alert', label: '催单消息', question: '有没有催单消息需要处理？' },
           ];
         } else if (route.includes('bundle-split')) {
           suggestions = [
             { icon: 'icon-search', label: '分菲查询', question: '当前分菲号的拆分明细是什么？' },
-            { icon: 'icon-package', label: '数量校验', question: '拆分后总数量与订单是否一致？' },
           ];
         }
         this.setData({ pageSuggestions: suggestions });
       } catch (err) {
-        console.warn('[AiAssistant] _refreshPageSuggestions error:', err);
         this.setData({ pageSuggestions: [] });
       }
     },
-    _startIdleSnap() {
-      // 3秒无操作后自动缩回边缘（挂壁探头效果）
-      this._cancelIdleSnap();
-      const sw = this.data.screenWidth;
-      const snapX = this.data.edgeSide === 'left' ? -30 : sw - 20;
-      this._idleTimer = setTimeout(() => {
-        this.setData({ triggerX: snapX });
-        this._idleTimer = null;
-      }, 3000);
+
+    _loadDynamicSuggestions() {
+      var self = this;
+      api.intelligence.getMyPendingTaskSummary().then(function (res) {
+        var data = res && res.data ? res.data : res;
+        if (!data) return;
+        var suggestions = [];
+        if (data.overdueOrderCount > 0) {
+          suggestions.push({ icon: 'icon-alert', label: '🚨 ' + data.overdueOrderCount + '个逾期', question: '当前有哪些逾期订单？帮我分析一下' });
+        }
+        if (data.qualityTaskCount > 0) {
+          suggestions.push({ icon: 'icon-clipboard', label: '📋 ' + data.qualityTaskCount + '个待质检', question: '有哪些待质检的任务？' });
+        }
+        if (data.materialShortageCount > 0) {
+          suggestions.push({ icon: 'icon-alert', label: '⚠️ 面料缺口', question: '当前有哪些面料缺口预警？' });
+        }
+        if (suggestions.length > 0) {
+          self.setData({ dynamicSuggestions: suggestions });
+        }
+      }).catch(function () {});
     },
+
+    _saveChatHistory() {
+      try {
+        var msgs = this.data.messages.slice(-20);
+        wx.setStorageSync('ai_chat_history', msgs);
+      } catch (_e) {}
+    },
+
+    _abortStream() {
+      if (this._streamTask) {
+        try { this._streamTask.abort(); } catch (_e) {}
+        this._streamTask = null;
+      }
+    },
+
     async loadTasks() {
       if (this.data.taskLoading) return;
       this.setData({ taskLoading: true });
@@ -284,85 +303,32 @@ Component({
           },
         };
         await bellTaskLoader.loadAllTasks(mockCtx);
-      } catch (err) {
-        console.error('[AiAssistant] loadTasks error', err);
-      } finally {
-        this.setData({ taskLoading: false });
-      }
+      } catch (err) { console.error('[AiAssistant] loadTasks error', err); }
+      finally { this.setData({ taskLoading: false }); }
     },
 
-    handleQualityTask(e) {
-      const task = e.currentTarget.dataset.item;
-      if (!task) return;
-      this.setData({ isOpen: false });
-      bellTaskActions.handleQualityTask(task);
-    },
-    handleCuttingTask(e) {
-      const task = e.currentTarget.dataset.item;
-      if (!task) return;
-      this.setData({ isOpen: false });
-      bellTaskActions.handleCuttingTask(task);
-    },
-    handleWarehouseTask(e) {
-      const task = e.currentTarget.dataset.item;
-      if (!task) return;
-      this.setData({ isOpen: false });
-      bellTaskActions.handleProcurementTask(task);
-    },
-    handlePurchaseTask(e) {
-      const task = e.currentTarget.dataset.item;
-      if (!task) return;
-      this.setData({ isOpen: false });
-      bellTaskActions.handleProcurementTask(task);
-    },
-    handleRepairTask(e) {
-      const task = e.currentTarget.dataset.item;
-      if (!task) return;
-      this.setData({ isOpen: false });
-      bellTaskActions.handleRepairTask(task);
-    },
-    handleOverdueOrder(e) {
-      const task = e.currentTarget.dataset.item;
-      if (!task) return;
-      this.setData({ isOpen: false });
-      bellTaskActions.handleOverdueOrder(task);
-    },
-    onApproveUser(e) {
-      bellTaskActions.onApproveUser(this, e);
-    },
-    onApproveRegistration(e) {
-      bellTaskActions.onApproveRegistration(this, e);
-    },
-    handleReminderTask(e) {
-      const task = e.currentTarget.dataset.item;
-      if (!task) return;
-      this.setData({ isOpen: false });
-      bellTaskActions.handleReminderTask(task);
-    },
+    handleQualityTask(e) { const t = e.currentTarget.dataset.item; if (!t) return; this.setData({ isOpen: false }); bellTaskActions.handleQualityTask(t); },
+    handleCuttingTask(e) { const t = e.currentTarget.dataset.item; if (!t) return; this.setData({ isOpen: false }); bellTaskActions.handleCuttingTask(t); },
+    handleWarehouseTask(e) { const t = e.currentTarget.dataset.item; if (!t) return; this.setData({ isOpen: false }); bellTaskActions.handleProcurementTask(t); },
+    handlePurchaseTask(e) { const t = e.currentTarget.dataset.item; if (!t) return; this.setData({ isOpen: false }); bellTaskActions.handleProcurementTask(t); },
+    handleRepairTask(e) { const t = e.currentTarget.dataset.item; if (!t) return; this.setData({ isOpen: false }); bellTaskActions.handleRepairTask(t); },
+    handleOverdueOrder(e) { const t = e.currentTarget.dataset.item; if (!t) return; this.setData({ isOpen: false }); bellTaskActions.handleOverdueOrder(t); },
+    onApproveUser(e) { bellTaskActions.onApproveUser(this, e); },
+    onApproveRegistration(e) { bellTaskActions.onApproveRegistration(this, e); },
+    handleReminderTask(e) { const t = e.currentTarget.dataset.item; if (!t) return; this.setData({ isOpen: false }); bellTaskActions.handleReminderTask(t); },
 
     toggleChat() {
       const willOpen = !this.data.isOpen;
       this._cancelIdleSnap();
       this.setData({ isOpen: willOpen });
-      if (willOpen) {
-        this._snapToVisible();
-        this._refreshPageSuggestions();
-        this.scrollToBottom();
-      } else {
-        this._startIdleSnap();
-      }
+      if (willOpen) { this._snapToVisible(); this._refreshPageSuggestions(); this.scrollToBottom(); }
+      else { this._startIdleSnap(); }
     },
     autoAsk(e) {
       const question = e.currentTarget.dataset.question;
-      if (question) {
-        this.setData({ inputValue: question }, () => {
-          this.sendMessage();
-        });
-      }
+      if (question) { this.setData({ inputValue: question }, () => { this.sendMessage(); }); }
     },
-    onInput(e) {
-      this.setData({ inputValue: e.detail.value });
-    },
+    onInput(e) { this.setData({ inputValue: e.detail.value }); },
 
     async sendMessage() {
       var text = this.data.inputValue.trim();
@@ -372,10 +338,8 @@ Component({
       this.setData({ inputValue: '' });
       var tempPath = hasImage ? this.data.pendingImage : '';
 
-      // show user message
       var userMsg = {
-        id: Date.now(),
-        role: 'user',
+        id: Date.now(), role: 'user',
         content: hasImage ? (text || '发送了一张图片') : text,
       };
       if (hasImage) userMsg.imageUrl = tempPath;
@@ -383,59 +347,162 @@ Component({
       this.setData({
         messages: [].concat(this.data.messages, [userMsg]),
         isLoading: !hasImage,
+        streamingText: '', streamingTool: '',
       });
       this.scrollToBottom();
 
       var imageUrl = '';
       try {
-        // step 1: upload image if present
         if (tempPath) {
           imageUrl = await api.common.uploadImage(tempPath);
           this.setData({ uploading: false, isLoading: true });
         }
 
-        // step 2: call AI
-        var aiResponse = '抱歉，我现在无法回答这个问题。';
-        if (this.data.isManager) {
-          var mgrParams = { text: text || (imageUrl ? '分析这张图片' : text) };
-          if (imageUrl) mgrParams.imageUrl = imageUrl;
-          try {
-            var mgrRes = await api.intelligence.naturalLanguageExecute(mgrParams);
-            aiResponse = (mgrRes && (mgrRes.message || mgrRes.reply || mgrRes.content)) || '操作完成';
-          } catch (nlErr) {
-            // NL命令执行失败（如非指令类问题），降级为对话模式
-            console.warn('[XiaoYun] NL exec failed, fallback to chat:', nlErr && nlErr.errMsg);
-            var fallbackParams = { question: text || (imageUrl ? '请看这张图片' : text), context: 'manager_assistant' };
-            if (imageUrl) fallbackParams.imageUrl = imageUrl;
-            var fbRes = await api.intelligence.aiAdvisorChat(fallbackParams);
-            if (typeof fbRes === 'string') aiResponse = fbRes;
-            else if (fbRes && fbRes.answer) aiResponse = fbRes.answer;
-            else if (fbRes && fbRes.content) aiResponse = fbRes.content;
-            else if (fbRes && fbRes.reply) aiResponse = fbRes.reply;
-          }
-        } else {
-          var wkrParams = { question: text || (imageUrl ? '请看这张图片' : text) };
-          if (imageUrl) wkrParams.imageUrl = imageUrl;
-          var wkrRes = await api.intelligence.aiAdvisorChat(wkrParams);
-          if (typeof wkrRes === 'string') aiResponse = wkrRes;
-          else if (wkrRes && wkrRes.answer) aiResponse = wkrRes.answer;
-          else if (wkrRes && wkrRes.content) aiResponse = wkrRes.content;
-          else if (wkrRes && wkrRes.reply) aiResponse = wkrRes.reply;
-        }
+        var chatContext = this.data.isManager ? 'manager_assistant' : 'worker_assistant';
+        var streamPayload = {
+          question: text || (imageUrl ? '请看这张图片' : text),
+          pageContext: chatContext,
+          conversationId: this.data.conversationId,
+        };
+        if (imageUrl) streamPayload.imageUrl = imageUrl;
 
-        // step 3: parse recommend pills
-        var recommendPills = [];
-        if (aiResponse.includes('【推荐追问】：')) {
-          var parts = aiResponse.split('【推荐追问】：');
-          aiResponse = parts[0].trim();
-          if (parts[1]) {
-            recommendPills = parts[1].split('|').map(function (p) { return p.trim(); }).filter(function (p) { return !!p; });
-          }
-        }
+        var self = this;
+        var accumulatedText = '';
+        var streamStarted = false;
+        var streamFailed = false;
+        var pendingFollowUpActions = null;
 
-        var aiMsg = { id: Date.now(), role: 'ai', content: aiResponse, recommendPills: recommendPills };
-        this.setData({ messages: [].concat(this.data.messages, [aiMsg]), isLoading: false });
-        this.scrollToBottom();
+        var aiMsgId = Date.now() + 1;
+
+        var requestTask = api.intelligence.aiAdvisorChatStream(
+          streamPayload,
+          function (event) {
+            streamStarted = true;
+            if (event.type === 'thinking') {
+              self.setData({ streamingTool: '小云正在整理思路…' });
+            } else if (event.type === 'tool_call') {
+              var toolName = describeTool(String(event.data.tool || ''));
+              self.setData({ streamingTool: '正在处理：' + toolName + '…' });
+            } else if (event.type === 'tool_result') {
+              var tn = describeTool(String(event.data.tool || ''));
+              if (event.data.success) {
+                self.setData({ streamingTool: tn + ' 已完成，继续整理…' });
+              } else {
+                self.setData({ streamingTool: tn + ' 未成功，重新组织…' });
+              }
+            } else if (event.type === 'answer') {
+              var content = String(event.data.content || '');
+              if (content) {
+                accumulatedText += content;
+                self.setData({ streamingText: accumulatedText, streamingTool: '' });
+              }
+            } else if (event.type === 'follow_up_actions') {
+              if (event.data && event.data.actions) {
+                pendingFollowUpActions = event.data.actions;
+              }
+            }
+          },
+          function () {
+            self._streamTask = null;
+            var parsed = parseAiCards(accumulatedText || '抱歉，我现在无法回答这个问题。');
+            var recommendPills = [];
+            if (parsed.text.includes('【推荐追问】：')) {
+              var parts = parsed.text.split('【推荐追问】：');
+              parsed.text = parts[0].trim();
+              if (parts[1]) recommendPills = parts[1].split('|').map(function (p) { return p.trim(); }).filter(function (p) { return !!p; });
+            }
+            var actions = parsed.actions && parsed.actions.length > 0 ? parsed.actions : null;
+            if (!actions && pendingFollowUpActions && pendingFollowUpActions.length > 0) {
+              actions = pendingFollowUpActions.map(function (a) {
+                return {
+                  label: a.label || a.command || '',
+                  type: a.actionType ? String(a.actionType).toLowerCase() : 'navigate',
+                  description: a.dataSummary || '',
+                  command: a.command || '',
+                  urgency: a.icon === 'alert' ? 'high' : 'medium',
+                  buttonText: a.actionType === 'EXECUTE' ? '执行' : a.actionType === 'ASK' ? '追问' : '查看',
+                };
+              });
+            }
+            var aiMsg = {
+              id: aiMsgId, role: 'ai', content: parsed.text,
+              recommendPills: recommendPills,
+              actions: actions,
+            };
+            self.setData({
+              messages: [].concat(self.data.messages, [aiMsg]),
+              isLoading: false, streamingText: '', streamingTool: '',
+            });
+            self.scrollToBottom();
+            self._saveChatHistory();
+          },
+          async function (err) {
+            console.warn('[XiaoYun] SSE failed, fallback to sync:', err);
+            self._streamTask = null;
+            if (streamStarted && accumulatedText) {
+              var aiMsg = { id: aiMsgId, role: 'ai', content: accumulatedText };
+              self.setData({ messages: [].concat(self.data.messages, [aiMsg]), isLoading: false, streamingText: '', streamingTool: '' });
+              self.scrollToBottom();
+              self._saveChatHistory();
+              return;
+            }
+            try {
+              var chatParams = { question: text || (imageUrl ? '请看这张图片' : text), context: chatContext };
+              if (imageUrl) chatParams.imageUrl = imageUrl;
+              var chatRes = await api.intelligence.aiAdvisorChat(chatParams);
+              var aiResponse = '';
+              var syncActions = null;
+              var syncSuggestions = [];
+              if (chatRes && typeof chatRes === 'object') {
+                aiResponse = chatRes.displayAnswer || chatRes.answer || chatRes.content || chatRes.reply || chatRes.message || '';
+                if (chatRes.followUpActions && chatRes.followUpActions.length > 0) {
+                  syncActions = chatRes.followUpActions.map(function (a) {
+                    return {
+                      label: a.label || a.command || '',
+                      type: a.actionType ? String(a.actionType).toLowerCase() : 'navigate',
+                      description: a.dataSummary || '',
+                      command: a.command || '',
+                      urgency: a.icon === 'alert' ? 'high' : 'medium',
+                      buttonText: a.actionType === 'EXECUTE' ? '执行' : a.actionType === 'ASK' ? '追问' : '查看',
+                    };
+                  });
+                }
+                if (chatRes.suggestions && chatRes.suggestions.length > 0) {
+                  syncSuggestions = chatRes.suggestions;
+                }
+              } else if (typeof chatRes === 'string') {
+                aiResponse = chatRes;
+              }
+              if (!aiResponse) aiResponse = '抱歉，我现在无法回答这个问题。';
+
+              var parsed = parseAiCards(aiResponse);
+              var recommendPills = syncSuggestions.length > 0 ? syncSuggestions : [];
+              if (parsed.text.includes('【推荐追问】：')) {
+                var parts = parsed.text.split('【推荐追问】：');
+                parsed.text = parts[0].trim();
+                if (parts[1]) {
+                  var extraPills = parts[1].split('|').map(function (p) { return p.trim(); }).filter(function (p) { return !!p; });
+                  recommendPills = recommendPills.concat(extraPills);
+                }
+              }
+              var actions = parsed.actions && parsed.actions.length > 0 ? parsed.actions : syncActions;
+              var aiMsg = {
+                id: aiMsgId, role: 'ai', content: parsed.text,
+                recommendPills: recommendPills.length > 0 ? recommendPills : null,
+                actions: actions,
+              };
+              self.setData({ messages: [].concat(self.data.messages, [aiMsg]), isLoading: false, streamingText: '', streamingTool: '' });
+              self.scrollToBottom();
+              self._saveChatHistory();
+            } catch (syncErr) {
+              var errMsg = { id: aiMsgId, role: 'ai', content: 'AI暂时无法响应，请稍后再试。' };
+              self.setData({ messages: [].concat(self.data.messages, [errMsg]), isLoading: false, streamingText: '', streamingTool: '' });
+              self.scrollToBottom();
+            }
+          }
+        );
+        this._streamTask = requestTask;
+
       } catch (err) {
         console.error('[XiaoYun] sendMessage error:', err);
         if (tempPath && !imageUrl) {
@@ -444,50 +511,46 @@ Component({
         }
         var errContent = (err && err.errMsg && err.errMsg !== 'undefined') ? err.errMsg : 'AI暂时无法响应，请稍后再试。';
         var errMsg = { id: Date.now(), role: 'ai', content: errContent };
-        this.setData({ messages: [].concat(this.data.messages, [errMsg]), isLoading: false });
+        this.setData({ messages: [].concat(this.data.messages, [errMsg]), isLoading: false, streamingText: '', streamingTool: '' });
         this.scrollToBottom();
       }
     },
 
-    chooseImage() {
-      if (this.data.isLoading || this.data.uploading) {
-        console.warn('[XiaoYun] chooseImage blocked: isLoading=', this.data.isLoading, 'uploading=', this.data.uploading);
-        return;
+    onActionTap(e) {
+      var action = e.currentTarget.dataset.action;
+      if (!action) return;
+      if (action.type === 'execute' || action.type === 'urge_order' || action.type === 'mark_urgent') {
+        this.setData({ inputValue: action.label || action.command || '', isOpen: true });
+      } else if (action.actionCommand && action.actionCommand !== 'IGNORE') {
+        this.setData({ inputValue: action.actionCommand }, () => { this.sendMessage(); });
+      } else if (action.command) {
+        this.setData({ inputValue: action.command }, () => { this.sendMessage(); });
       }
+    },
+
+    chooseImage() {
+      if (this.data.isLoading || this.data.uploading) return;
       var self = this;
       wx.chooseMedia({
-        count: 1,
-        mediaType: ['image'],
-        sourceType: ['camera', 'album'],
+        count: 1, mediaType: ['image'], sourceType: ['camera', 'album'],
         success: (res) => {
           var path = (res.tempFiles && res.tempFiles[0] && res.tempFiles[0].tempFilePath) || '';
           if (path) self.setData({ pendingImage: path });
         },
         fail: (err) => {
-          console.warn('[XiaoYun] chooseImage fail:', err);
           if (err && err.errMsg && err.errMsg.indexOf('cancel') === -1) {
             wx.showModal({
-              title: '相机/相册权限',
-              content: '需要相机或相册权限才能上传图片，请在设置中允许',
-              confirmText: '去设置',
-              cancelText: '取消',
-              success: function (modalRes) {
-                if (modalRes.confirm) wx.openSetting();
-              }
+              title: '相机/相册权限', content: '需要相机或相册权限才能上传图片，请在设置中允许',
+              confirmText: '去设置', cancelText: '取消',
+              success: function (modalRes) { if (modalRes.confirm) wx.openSetting(); },
             });
           }
         },
       });
     },
+    removePendingImage() { this.setData({ pendingImage: '' }); },
+    previewImage(e) { var src = e.currentTarget.dataset.src; if (src) wx.previewImage({ current: src, urls: [src] }); },
 
-    removePendingImage() {
-      this.setData({ pendingImage: '' });
-    },
-
-    previewImage(e) {
-      var src = e.currentTarget.dataset.src;
-      if (src) wx.previewImage({ current: src, urls: [src] });
-    },
     clearMessages() {
       let userName = '';
       try {
@@ -495,27 +558,19 @@ Component({
         if (userInfo.realName) userName = userInfo.realName;
         else if (userInfo.username) userName = userInfo.username;
         else if (userInfo.nickname) userName = userInfo.nickname;
-      } catch (err) {
-        // ignore
-      }
-
-      const greeting = userName ? `Hi ${userName}，我是小云～ 有什么可以帮您的？\n可以直接点下面的快捷问题，或者问我任何关于订单、工厂、库存的问题哦！` : `Hi 我是小云～ 有什么可以帮您的？\n可以直接点下面的快捷问题，或者问我任何关于订单、工厂、库存的问题哦！`;
-
+      } catch (err) {}
+      const greeting = userName ? 'Hi ' + userName + '，我是小云～ 有什么可以帮您的？' : 'Hi 我是小云～ 有什么可以帮您的？';
+      var newConvId = 'mp_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
       this.setData({
-        messages: [{
-          id: Date.now(),
-          role: 'ai',
-          content: greeting,
-        }],
-        inputValue: '',
+        messages: [{ id: Date.now(), role: 'ai', content: greeting }],
+        inputValue: '', conversationId: newConvId,
       });
+      try { wx.removeStorageSync('ai_chat_history'); } catch (_e) {}
     },
     scrollToBottom() {
       setTimeout(() => {
         const len = this.data.messages.length;
-        if (len > 0) {
-          this.setData({ scrollTo: `msg-${this.data.messages[len - 1].id}` });
-        }
+        if (len > 0) this.setData({ scrollTo: 'msg-' + this.data.messages[len - 1].id });
       }, 100);
     },
   },

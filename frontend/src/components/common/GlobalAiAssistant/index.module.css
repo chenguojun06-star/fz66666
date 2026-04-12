@@ -67,14 +67,14 @@
 }
 
 .headerTitle {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 600;
   color: #003a8c;
   margin-bottom: 4px;
 }
 
 .headerSubtitle {
-  font-size: 12px;
+  font-size: 14px;
   color: #096dd9;
 }
 
@@ -171,7 +171,7 @@
 .messageBubble {
   padding: 10px 14px;
   border-radius: 12px;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.5;
   word-break: break-word;
   position: relative;
@@ -193,7 +193,7 @@
 
 .mdContent {
   line-height: 1.6;
-  font-size: 12px;
+  font-size: 14px;
 }
 .mdContent ul { margin: 4px 0; padding-left: 20px; }
 .mdContent li { margin: 2px 0; }
@@ -225,7 +225,7 @@
   background: linear-gradient(135deg, #fff7e6 0%, #ffe7ba 100%);
   border: 1px solid #ffd591;
   border-radius: 10px;
-  font-size: 12px;
+  font-size: 14px;
   color: #874d00;
   cursor: pointer;
   transition: all 0.2s;
@@ -263,12 +263,27 @@
   opacity: 1;
 }
 
+.pendingMoreBtn {
+  text-align: center;
+  font-size: 14px;
+  color: #1890ff;
+  cursor: pointer;
+  padding: 6px 0 2px;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.pendingMoreBtn:hover {
+  color: #096dd9;
+  text-decoration: underline;
+}
+
 .chip {
   padding: 5px 10px;
   background: #fff;
   border: 1px solid #91d5ff;
   border-radius: 16px;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.3;
   color: #1890ff;
   cursor: pointer;
@@ -293,7 +308,7 @@
 }
 
 .reportDownloadLabel {
-  font-size: 12px;
+  font-size: 14px;
   color: #389e0d;
   font-weight: 600;
   margin-bottom: 8px;
@@ -314,7 +329,7 @@
   background: #fff;
   border: 1px solid #91d5ff;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 15px;
   color: #1890ff;
   cursor: pointer;
   transition: all 0.2s;
@@ -337,7 +352,7 @@
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px dashed rgba(24, 144, 255, 0.2);
-  font-size: 12px;
+  font-size: 14px;
   color: #1890ff;
   display: flex;
   align-items: center;
@@ -356,7 +371,7 @@
 }
 
 .recommendTitle {
-  font-size: 12px;
+  font-size: 14px;
   color: #666;
   margin-bottom: 8px;
 }
@@ -368,7 +383,7 @@
 }
 
 .recommendPill {
-  font-size: 13px;
+  font-size: 15px;
   color: #1890ff;
   background: rgba(24, 144, 255, 0.05);
   border: 1px solid rgba(24, 144, 255, 0.2);
@@ -392,7 +407,7 @@
 }
 .typingText {
   color: #5c6b8a;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.6;
   padding: 2px 0;
 }
@@ -432,13 +447,13 @@
   background: #f5f5f5;
   padding: 10px 16px;
   border-radius: 20px;
-  font-size: 11px;
+  font-size: 13px;
   outline: none;
   transition: all 0.3s;
 }
 
 .chatInput::placeholder {
-  font-size: 11px;
+  font-size: 13px;
   color: #a3a3a3;
 }
 
@@ -460,7 +475,7 @@
   justify-content: center;
   gap: 4px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
   transition: all 0.2s;
   flex-shrink: 0;
@@ -520,8 +535,8 @@
 
 .triggerBadge {
   position: absolute;
-  top: 0;
-  right: 0;
+  top: -6px;
+  right: 4px;         /* 默认：吸左边缘时 badge 在按钮右侧（可见区域内） */
   background: #ff4d4f;
   color: #fff;
   font-size: 11px;
@@ -538,6 +553,12 @@
   border: 2px solid #fff;
   pointer-events: none;
   animation: badgePulse 2s ease-in-out infinite;
+}
+
+/* 吸右边缘时：badge 切换到按钮左侧（可见区域），避免被屏幕边缘裁切 */
+.triggerDockedRight .triggerBadge {
+  right: auto;
+  left: 4px;
 }
 
 @keyframes badgePulse {
@@ -1449,6 +1470,15 @@
   border-radius: 4px;
   background: rgba(0, 229, 255, 0.15);
   color: #00e5ff;
+}
+.followUpSummary {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+  padding: 3px 12px 0;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .followUpForm {
   margin-top: 6px;

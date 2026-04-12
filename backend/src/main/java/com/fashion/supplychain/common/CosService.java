@@ -6,12 +6,17 @@ import com.qcloud.cos.auth.BasicCOSCredentials;
 import com.qcloud.cos.auth.COSCredentials;
 import com.qcloud.cos.http.HttpMethodName;
 import com.qcloud.cos.model.COSObject;
+import com.qcloud.cos.model.COSObjectSummary;
 import com.qcloud.cos.model.GeneratePresignedUrlRequest;
 import com.qcloud.cos.model.GetObjectRequest;
+import com.qcloud.cos.model.ObjectListing;
 import com.qcloud.cos.model.ObjectMetadata;
 import com.qcloud.cos.region.Region;
+import com.fashion.supplychain.system.entity.Tenant;
+import com.fashion.supplychain.system.service.TenantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -19,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -41,6 +47,9 @@ import java.util.Date;
 @Service
 @Slf4j
 public class CosService {
+
+    @Autowired(required = false)
+    private TenantService tenantService;
 
     @Value("${fashion.cos.secret-id:}")
     private String secretId;
@@ -156,6 +165,7 @@ public class CosService {
      * @param file     待上传文件
      */
     public void upload(Long tenantId, String filename, MultipartFile file) throws IOException {
+        assertStorageQuota(tenantId, file.getSize());
         // 文件大小校验
         if (file.getSize() > MAX_FILE_SIZE) {
             throw new IOException("文件大小超过限制（最大50MB）");
@@ -180,6 +190,7 @@ public class CosService {
             }
             file.transferTo(localFile);
             log.info("[COS-LOCAL] 文件已保存到本地: {}", localFile.getAbsolutePath());
+            safeRefreshTenantStorageUsage(tenantId);
             return;
         }
         String key = buildKey(tenantId, filename);
@@ -199,6 +210,7 @@ public class CosService {
             throw new IOException("文件存储服务异常: " + e.getErrorMessage(), e);
         }
         log.info("[COS] 文件上传成功: key={}, size={}", key, file.getSize());
+        safeRefreshTenantStorageUsage(tenantId);
     }
 
     /**
@@ -210,6 +222,7 @@ public class CosService {
      * @param contentType MIME 类型
      */
     public void upload(Long tenantId, String filename, byte[] content, String contentType) {
+        assertStorageQuota(tenantId, content.length);
         if (content.length > MAX_FILE_SIZE) {
             throw new RuntimeException("文件大小超过限制（最大50MB）");
         }
@@ -231,6 +244,7 @@ public class CosService {
                 throw new RuntimeException("本地文件写入失败: " + localFile.getAbsolutePath(), e);
             }
             log.info("[COS-LOCAL] 文件(bytes)已保存到本地: {}", localFile.getAbsolutePath());
+            safeRefreshTenantStorageUsage(tenantId);
             return;
         }
         String key = buildKey(tenantId, filename);
@@ -252,6 +266,7 @@ public class CosService {
             throw new RuntimeException("COS 上传失败: " + key, e);
         }
         log.info("[COS] 文件上传成功 (bytes): key={}, size={}", key, content.length);
+        safeRefreshTenantStorageUsage(tenantId);
     }
 
     /**
@@ -314,6 +329,115 @@ public class CosService {
         } catch (Exception e) {
             log.error("[COS] exists检查未知异常: key={}, error={}", key, e.getMessage());
             throw new RuntimeException("COS文件检查失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 重新统计租户当前已使用存储，并回写到 t_tenant.storage_used_mb。
+     * 统一在 COS/本地文件存储层统计，避免各业务上传链路重复累计导致口径漂移。
+     */
+    public long refreshTenantStorageUsage(Long tenantId) {
+        if (tenantId == null || tenantService == null) {
+            return 0L;
+        }
+        Tenant tenant = tenantService.getById(tenantId);
+        if (tenant == null) {
+            return 0L;
+        }
+
+        long usedBytes = isEnabled() ? sumCosBytes(tenantId) : sumLocalBytes(tenantId);
+        long usedMb = bytesToMb(usedBytes);
+
+        tenant.setStorageUsedMb(usedMb);
+        tenant.setUpdateTime(java.time.LocalDateTime.now());
+        tenantService.updateById(tenant);
+        log.info("[COS] 已同步租户存储用量: tenantId={}, usedBytes={}, usedMb={}", tenantId, usedBytes, usedMb);
+        return usedMb;
+    }
+
+    public void safeRefreshTenantStorageUsage(Long tenantId) {
+        try {
+            refreshTenantStorageUsage(tenantId);
+        } catch (Exception e) {
+            log.warn("[COS] 租户存储用量同步失败 tenantId={}: {}", tenantId, e.getMessage());
+        }
+    }
+
+    private long sumCosBytes(Long tenantId) {
+        if (cosClient == null) {
+            return 0L;
+        }
+        String prefix = "tenants/" + tenantId + "/";
+        long totalBytes = 0L;
+        ObjectListing listing = cosClient.listObjects(bucket, prefix);
+        while (listing != null) {
+            for (COSObjectSummary summary : listing.getObjectSummaries()) {
+                if (summary.getKey() != null && summary.getKey().startsWith(prefix)) {
+                    totalBytes += summary.getSize();
+                }
+            }
+            if (!listing.isTruncated()) {
+                break;
+            }
+            listing = cosClient.listNextBatchOfObjects(listing);
+        }
+        return totalBytes;
+    }
+
+    private long sumLocalBytes(Long tenantId) {
+        File tenantDir = new File(uploadPath + "tenants/" + tenantId + "/");
+        if (!tenantDir.exists()) {
+            return 0L;
+        }
+        return sumDirectoryBytes(tenantDir);
+    }
+
+    private long sumDirectoryBytes(File dir) {
+        File[] children = dir.listFiles();
+        if (children == null || children.length == 0) {
+            return 0L;
+        }
+        long total = 0L;
+        for (File child : children) {
+            if (child.isDirectory()) {
+                total += sumDirectoryBytes(child);
+            } else {
+                total += child.length();
+            }
+        }
+        return total;
+    }
+
+    private long bytesToMb(long bytes) {
+        if (bytes <= 0) {
+            return 0L;
+        }
+        return (bytes + 1024 * 1024 - 1) / (1024 * 1024);
+    }
+
+    private void assertStorageQuota(Long tenantId, long fileSizeBytes) {
+        if (tenantId == null || tenantService == null) {
+            return;
+        }
+        try {
+            Tenant tenant = tenantService.getById(tenantId);
+            if (tenant == null) {
+                return;
+            }
+            Long quotaMb = tenant.getStorageQuotaMb();
+            Long usedMb = tenant.getStorageUsedMb();
+            if (quotaMb == null || quotaMb <= 0) {
+                return;
+            }
+            long currentUsedMb = usedMb != null ? usedMb : 0L;
+            long incomingMb = bytesToMb(fileSizeBytes);
+            if (currentUsedMb + incomingMb > quotaMb) {
+                throw new RuntimeException("存储空间不足：已用 " + currentUsedMb + "MB / 配额 " + quotaMb + "MB，本次上传需 " + incomingMb + "MB");
+            }
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("[COS] 存储配额检查失败 tenantId={}: {}", tenantId, e.getMessage());
         }
     }
 

@@ -164,6 +164,23 @@ async function submitQualityResult(page) {
     if (qualityModal.result === 'unqualified') {
       _handleUnqualifiedInfo(page, qualityModal, payload);
     }
+    // 自动领取：confirm 前先发 receive 请求（后端要求先领取再确认）
+    // 同一操作员重复领取后端幂等返回成功
+    const receivePayload = {
+      orderNo: payload.orderNo, bundleNo: payload.cuttingBundleNo,
+      quantity: payload.quantity, scanCode: payload.scanCode,
+      scanType: 'quality', qualityStage: 'receive',
+      operatorId: payload.operatorId, operatorName: payload.operatorName,
+    };
+    try {
+      await api.production.executeScan(receivePayload);
+    } catch (recvErr) {
+      const recvMsg = (recvErr && (recvErr.message || recvErr.errMsg)) || '';
+      if (recvMsg.indexOf('已被') >= 0 && recvMsg.indexOf('领取') >= 0) {
+        throw recvErr; // 被其他人领取 → 阻断
+      }
+      // 已领取/网络异常 → 继续尝试 confirm
+    }
     await api.production.executeScan(payload);
     const successMsg = qualityModal.result === 'qualified'
       ? '质检合格已记录，请进行包装工序'

@@ -53,6 +53,8 @@ export function useScanExecution({
 }: UseScanExecutionParams) {
   const closeScanConfirm = (silent?: boolean) => {
     closeScanConfirmState();
+    setScanSubmitting(false);
+    scanSubmittingRef.current = false;
     if (!silent) {
       message.info('已取消');
     }

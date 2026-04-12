@@ -70,11 +70,30 @@ public class ProductionScanStageSupport {
         return n;
     }
 
+    private static final java.time.LocalDateTime GATE_EFFECTIVE_DATE = java.time.LocalDateTime.of(2026, 4, 1, 0, 0);
+
     public void validateParentStagePrerequisite(ProductionOrder order, CuttingBundle bundle,
                                                 String progressStage, String childProcessName) {
         if (order == null || bundle == null || !StringUtils.hasText(bundle.getId())) {
             return;
         }
+
+        // 历史订单兼容：创建时间早于门禁生效日期的订单跳过门禁校验
+        if (order.getCreateTime() != null && order.getCreateTime().isBefore(GATE_EFFECTIVE_DATE)) {
+            log.debug("历史订单跳过子工序门禁: orderNo={}, createTime={}", order.getOrderNo(), order.getCreateTime());
+            return;
+        }
+
+        // 管理员跳过门禁校验
+        com.fashion.supplychain.common.UserContext ctx = com.fashion.supplychain.common.UserContext.get();
+        if (ctx != null) {
+            String role = ctx.getRole();
+            if (role != null && (role.contains("admin") || role.contains("ADMIN") || role.contains("manager") || role.contains("主管") || role.contains("管理员"))) {
+                log.debug("管理员跳过子工序门禁: orderNo={}, role={}", order.getOrderNo(), role);
+                return;
+            }
+        }
+
         String targetParent = normalizeFixedProductionNodeName(progressStage);
         int currentIdx = indexOfFixedNode(targetParent);
         if (currentIdx <= 0) {

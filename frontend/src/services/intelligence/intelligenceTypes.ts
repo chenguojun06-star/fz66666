@@ -976,3 +976,35 @@ export interface ChatHistoryMessage {
   content: string;
   createTime: string;
 }
+
+// ── 小云全域待办任务 ──
+export interface PendingTaskDTO {
+  id: string;
+  taskType: 'CUTTING_TASK' | 'QUALITY_INSPECT' | 'REPAIR' | 'MATERIAL_PURCHASE' | 'OVERDUE_ORDER' | 'EXCEPTION_REPORT' | 'STYLE_DEVELOPMENT' | 'PAYROLL_SETTLEMENT' | 'MATERIAL_RECON' | 'EXPENSE_REIMBURSE';
+  module: string;
+  title: string;
+  description: string;
+  orderNo: string;
+  styleNo?: string;
+  deepLinkPath: string;
+  priority: 'high' | 'medium' | 'low';
+  createdAt: string | null;
+  categoryLabel?: string;
+  categoryIcon?: string;
+}
+
+export interface PendingTaskCategoryCount {
+  taskType: string;
+  label: string;
+  icon: string;
+  count: number;
+  highCount: number;
+}
+
+export interface PendingTaskSummaryDTO {
+  totalCount: number;
+  highPriorityCount: number;
+  categoryCounts: Record<string, PendingTaskCategoryCount>;
+  topUrgentTitle?: string;
+  topUrgentDeepLinkPath?: string;
+}

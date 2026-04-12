@@ -1,4 +1,5 @@
   <!-- 🆕 扫码结果确认弹窗（2026-02-06 混合模式） -->
+  <wxs src="../../../utils/money.wxs" module="money" />
   <view wx:if="{{scanResultConfirm.visible}}" class="modal scan-result-modal">
     <view class="modal-box">
       <view class="modal-head">
@@ -44,7 +45,7 @@
             <view wx:if="{{scanResultConfirm.selectedProcessCount > 0}}" class="process-selected-summary">
               <text class="process-selected-title">已选 {{scanResultConfirm.selectedProcessCount}} 个工序</text>
               <view class="process-selected-list">
-                <text wx:for="{{scanResultConfirm.selectedProcessDetails}}" wx:key="value" class="process-selected-tag">{{item.value}} ¥{{item.unitPrice}}</text>
+                <text wx:for="{{scanResultConfirm.selectedProcessDetails}}" wx:key="value" class="process-selected-tag">{{item.value}} ¥{{money.toFixed2(item.unitPrice)}}</text>
               </view>
             </view>
             <scroll-view
@@ -69,7 +70,7 @@
                   </view>
                   <text class="inline-selector-label">{{item.value}}</text>
                 </view>
-                <text wx:if="{{!item.hidePrice}}" class="process-item-price">¥{{item.unitPrice}}</text>
+                <text wx:if="{{!item.hidePrice}}" class="process-item-price">¥{{money.toFixed2(item.unitPrice)}}</text>
               </view>
             </scroll-view>
           </view>

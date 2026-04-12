@@ -4,6 +4,21 @@ const { parseChatReply } = require('./chat-parser');
 const { toast } = require('../../../utils/uiHelper');
 const { eventBus } = require('../../../utils/eventBus');
 
+var TOOL_NAMES = {
+  tool_query_production_progress: '生产进度', tool_order_edit: '订单编辑',
+  tool_query_warehouse_stock: '库存查询', tool_finished_product_stock: '成品库存',
+  tool_deep_analysis: '深度分析', tool_knowledge_search: '知识搜索',
+  tool_material_receive: '物料收货', tool_finished_outbound: '成品出库',
+  tool_quality_inbound: '质检入库', tool_finance_workflow: '财务审批',
+  tool_smart_report: '智能报表', tool_delay_trend: '延期趋势',
+  tool_root_cause_analysis: '根因分析', tool_whatif: '假设模拟',
+  tool_action_executor: '执行操作', tool_procurement: '采购管理',
+};
+
+function describeTool(name) {
+  return TOOL_NAMES[name] || (name || '').replace(/^tool_/, '').replace(/_/g, '');
+}
+
 // 工厂工人快捷提问
 const WORKER_PROMPTS = [
   { label: '今日做了多少件', text: '我今天做了多少件？', cmd: false },
@@ -46,11 +61,14 @@ Page({
     messages: [],
     inputText: '',
     sending: false,
+    streamingText: '',
+    streamingTool: '',
     quickPrompts: WORKER_PROMPTS,
     conversationId: '',
     isManager: false,
-    pendingImage: '',     // 待发送的本地图片临时路径
-    uploading: false,     // 图片上传中
+    pendingImage: '',
+    uploading: false,
+    dynamicSuggestions: [],
   },
 
   onLoad() {
@@ -75,6 +93,7 @@ Page({
       quickPrompts: isManager ? MANAGER_PROMPTS : WORKER_PROMPTS,
       messages: [{ id: welcomeId, role: 'ai', text: welcomeText }],
     });
+    this._loadDynamicSuggestions();
   },
 
   onInputChange(e) {
@@ -209,46 +228,83 @@ Page({
   async _send(text) {
     this._appendMsg({ role: 'user', text });
     const loadingId = this._appendMsg({ role: 'ai', text: '', loading: true });
-    this.setData({ sending: true });
+    this.setData({ sending: true, streamingText: '', streamingTool: '' });
+
+    var self = this;
+    var accumulatedText = '';
+    var streamStarted = false;
+    var chatContext = this.data.isManager ? 'manager_assistant' : 'worker_assistant';
 
     try {
-      let reply;
-      if (this.data.isManager) {
-        // 管理员走指令执行通道（LLM解析意图 → ExecutionEngine）
-        try {
-          const res = await api.intelligence.naturalLanguageExecute({
-            text: text,
-            conversationId: this.data.conversationId,
-          });
-          const msg = (res && (res.message || res.reply || res.content)) || '操作完成';
-          reply = msg;
-        } catch (nlErr) {
-          // NL指令失败（如普通问答），降级为对话模式
-          console.warn('[AI-Page] NL exec failed, fallback to chat:', nlErr && nlErr.errMsg);
-          const fbRes = await api.intelligence.aiAdvisorChat({
-            message: text,
-            conversationId: this.data.conversationId,
-            context: 'manager_assistant',
-          });
-          reply = (fbRes && (fbRes.reply || fbRes.content || fbRes.message)) || '（无回应）';
-        }
-      } else {
-        // 工厂工人走查询通道
-        const res = await api.intelligence.aiAdvisorChat({
-          message: text,
+      var requestTask = api.intelligence.aiAdvisorChatStream(
+        {
+          question: text,
+          pageContext: chatContext,
           conversationId: this.data.conversationId,
-          context: 'worker_assistant',
-        });
-        reply = (res && (res.reply || res.content || res.message)) || '（无回应）';
-      }
-      this._updateMsg(loadingId, reply);
+        },
+        function (event) {
+          streamStarted = true;
+          if (event.type === 'thinking') {
+            self.setData({ streamingTool: '小云正在整理思路…' });
+          } else if (event.type === 'tool_call') {
+            var toolName = describeTool(String(event.data.tool || ''));
+            self.setData({ streamingTool: '正在处理：' + toolName + '…' });
+          } else if (event.type === 'tool_result') {
+            var tn = describeTool(String(event.data.tool || ''));
+            self.setData({ streamingTool: event.data.success ? (tn + ' 已完成，继续整理…') : (tn + ' 未成功，重新组织…') });
+          } else if (event.type === 'answer') {
+            var content = String(event.data.content || '');
+            if (content) {
+              accumulatedText += content;
+              self.setData({ streamingText: accumulatedText, streamingTool: '' });
+            }
+          }
+        },
+        function () {
+          self._streamTask = null;
+          var rawText = accumulatedText || '抱歉，我现在无法回答这个问题。';
+          self._updateMsg(loadingId, rawText);
+          self.setData({ sending: false, streamingText: '', streamingTool: '' });
+          self._scrollToBottom();
+        },
+        async function (err) {
+          console.warn('[AI-Page] SSE failed, fallback:', err);
+          self._streamTask = null;
+          if (streamStarted && accumulatedText) {
+            self._updateMsg(loadingId, accumulatedText);
+            self.setData({ sending: false, streamingText: '', streamingTool: '' });
+            self._scrollToBottom();
+            return;
+          }
+          try {
+            var reply;
+            if (self.data.isManager) {
+              try {
+                var res = await api.intelligence.naturalLanguageExecute({ text: text, conversationId: self.data.conversationId });
+                reply = (res && (res.message || res.reply || res.content)) || '操作完成';
+              } catch (nlErr) {
+                var fbRes = await api.intelligence.aiAdvisorChat({ message: text, conversationId: self.data.conversationId, context: 'manager_assistant' });
+                reply = (fbRes && (fbRes.reply || fbRes.content || fbRes.message)) || '（无回应）';
+              }
+            } else {
+              var res2 = await api.intelligence.aiAdvisorChat({ message: text, conversationId: self.data.conversationId, context: 'worker_assistant' });
+              reply = (res2 && (res2.reply || res2.content || res2.message)) || '（无回应）';
+            }
+            self._updateMsg(loadingId, reply);
+          } catch (syncErr) {
+            self._updateMsg(loadingId, 'AI暂时无法响应，请稍后再试。');
+          } finally {
+            self.setData({ sending: false, streamingText: '', streamingTool: '' });
+            self._scrollToBottom();
+          }
+        }
+      );
+      this._streamTask = requestTask;
     } catch (err) {
       console.error('[AI-Page] send error:', err);
-      const errText = (err && err.errMsg && err.errMsg !== 'undefined') ? err.errMsg : (err && err.message && err.message !== 'undefined') ? err.message : '';
-      const msg = errText || 'AI暂时无法响应，请稍后再试。';
-      this._updateMsg(loadingId, msg);
-    } finally {
-      this.setData({ sending: false });
+      var errText = (err && err.errMsg && err.errMsg !== 'undefined') ? err.errMsg : (err && err.message && err.message !== 'undefined') ? err.message : '';
+      this._updateMsg(loadingId, errText || 'AI暂时无法响应，请稍后再试。');
+      this.setData({ sending: false, streamingText: '', streamingTool: '' });
       this._scrollToBottom();
     }
   },
@@ -316,7 +372,36 @@ Page({
     wx.pageScrollTo({ scrollTop: 99999, duration: 150 });
   },
 
+  _loadDynamicSuggestions() {
+    var self = this;
+    api.intelligence.getMyPendingTaskSummary().then(function (res) {
+      var data = res && res.data ? res.data : res;
+      if (!data) return;
+      var suggestions = [];
+      if (data.overdueOrderCount > 0) {
+        suggestions.push({ label: '🚨 ' + data.overdueOrderCount + '个逾期', text: '当前有哪些逾期订单？帮我分析一下' });
+      }
+      if (data.qualityTaskCount > 0) {
+        suggestions.push({ label: '📋 ' + data.qualityTaskCount + '个待质检', text: '有哪些待质检的任务？' });
+      }
+      if (data.materialShortageCount > 0) {
+        suggestions.push({ label: '⚠️ 面料缺口', text: '当前有哪些面料缺口预警？' });
+      }
+      if (suggestions.length > 0) {
+        self.setData({ dynamicSuggestions: suggestions });
+      }
+    }).catch(function () {});
+  },
+
+  _abortStream() {
+    if (this._streamTask) {
+      try { this._streamTask.abort(); } catch (_e) {}
+      this._streamTask = null;
+    }
+  },
+
   onUnload() {
+    this._abortStream();
     if (this._unsubPrivacy) {
       this._unsubPrivacy();
       this._unsubPrivacy = null;

@@ -109,7 +109,7 @@ Page({
         if (v.length >= 10) return v.substring(0, 10);
         return v;
       }
-      var d = new Date(v);
+      var d = new Date(String(v).replace(' ', 'T'));
       if (isNaN(d.getTime())) return '';
       var y = d.getFullYear();
       var m = String(d.getMonth() + 1).padStart(2, '0');
@@ -295,7 +295,9 @@ Page({
           quantity: quantity
         });
         if (raw.progressStage === 'quality' || raw.progressStage === '质检') {
-          scanPayload.qualityStage = 'confirm';
+          // qualityStage 优先使用 StageDetector 已计算的值（在 raw.scanData / raw.qualityStage 中），
+          // 未传入时兜底为 'receive'（领取），避免跳过领取步骤导致后端 400
+          scanPayload.qualityStage = scanPayload.qualityStage || raw.qualityStage || 'receive';
         }
         if (warehouseCode) {
           scanPayload.warehouseCode = warehouseCode;

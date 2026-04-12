@@ -87,26 +87,32 @@ public class FollowUpSuggestionEngine {
         String styleNo = extractString(args, "styleNo", "style_no", "keyword");
         String color = extractString(result, "color");
         int quantity = extractInt(result, "quantity", "stockQuantity", "availableQty");
+        String location = extractString(result, "warehouseName", "location");
+
+        // 构建库存摘要
+        String summary = buildSummary("款号", styleNo, "颜色", color,
+                "库存", quantity > 0 ? quantity + "件" : null,
+                "仓库", location);
 
         if (quantity > 0) {
-            // 出库动作，预填款号和数量，用户需输入接收人
             actions.add(FollowUpAction.builder()
                     .label("出库 " + (styleNo != null ? styleNo : "该款") + (quantity > 0 ? " (" + quantity + "件)" : ""))
                     .icon("export")
                     .actionType(ActionType.EXECUTE)
                     .command("sample:checkout")
+                    .dataSummary(summary)
                     .prefilledParams(buildMap("styleNo", styleNo, "color", color, "quantity", quantity))
                     .requiredInputs(List.of(
                             ActionField.builder().key("recipient").label("接收人/工厂").inputType("text").placeholder("输入接收人或工厂名").build()
                     ))
                     .build());
 
-            // 借调动作
             actions.add(FollowUpAction.builder()
                     .label("借调给其他工厂")
                     .icon("swap")
                     .actionType(ActionType.EXECUTE)
                     .command("sample:borrow")
+                    .dataSummary(summary)
                     .prefilledParams(buildMap("styleNo", styleNo, "color", color))
                     .requiredInputs(List.of(
                             ActionField.builder().key("targetFactory").label("目标工厂").inputType("text").placeholder("借调到哪个工厂").build(),
@@ -115,13 +121,13 @@ public class FollowUpSuggestionEngine {
                     .build());
         }
 
-        // 追问：查看其他颜色/尺码
         if (styleNo != null) {
             actions.add(FollowUpAction.builder()
                     .label("查看 " + styleNo + " 全部颜色库存")
                     .icon("search")
                     .actionType(ActionType.ASK)
                     .command(styleNo + " 所有颜色的库存明细")
+                    .dataSummary(summary)
                     .build());
         }
 
@@ -139,27 +145,39 @@ public class FollowUpSuggestionEngine {
         String orderNo = extractString(result, "orderNo", "order_no");
         if (orderNo == null) orderNo = extractString(args, "orderNo", "order_no", "keyword");
         String factoryName = extractString(result, "factoryName");
+        String styleNo = extractString(result, "styleNo", "style_no");
+        int orderQty = extractInt(result, "orderQuantity", "totalQuantity", "quantity");
+        String shipDate = extractString(result, "expectedShipDate", "plannedEndDate");
+        String status = extractString(result, "status", "statusLabel");
+        int progress = extractInt(result, "productionProgress");
+
+        // 构建订单摘要
+        String summary = buildSummary("订单", orderNo, "款号", styleNo,
+                "数量", orderQty > 0 ? orderQty + "件" : null,
+                "工厂", factoryName, "交期", shipDate,
+                "进度", progress > 0 ? progress + "%" : null,
+                "状态", status);
 
         if (orderNo != null) {
-            // 修改交期
             actions.add(FollowUpAction.builder()
                     .label("修改 " + orderNo + " 交期")
                     .icon("edit")
                     .actionType(ActionType.EXECUTE)
                     .command("order:ship_date")
+                    .dataSummary(summary)
                     .prefilledParams(buildMap("orderId", orderId, "orderNo", orderNo))
                     .requiredInputs(List.of(
                             ActionField.builder().key("expectedShipDate").label("新交期").inputType("date").placeholder("选择交货日期").build()
                     ))
                     .build());
 
-            // 催单
             if (factoryName != null) {
                 actions.add(FollowUpAction.builder()
                         .label("催单 " + factoryName)
                         .icon("notification")
                         .actionType(ActionType.EXECUTE)
                         .command("factory:urge")
+                        .dataSummary(summary)
                         .prefilledParams(buildMap("orderId", orderId, "orderNo", orderNo, "factoryName", factoryName))
                         .requiredInputs(List.of(
                                 ActionField.builder().key("remark").label("催单备注").inputType("text").placeholder("可选备注").build()
@@ -167,12 +185,12 @@ public class FollowUpSuggestionEngine {
                         .build());
             }
 
-            // 跳转订单详情
             actions.add(FollowUpAction.builder()
                     .label("查看订单详情")
                     .icon("eye")
                     .actionType(ActionType.NAVIGATE)
                     .command("/production/progress")
+                    .dataSummary(summary)
                     .prefilledParams(buildMap("orderNo", orderNo))
                     .build());
         }
@@ -184,9 +202,17 @@ public class FollowUpSuggestionEngine {
 
     private List<FollowUpAction> deriveFromStyleQuery(ToolExecRecord rec) {
         List<FollowUpAction> actions = new ArrayList<>();
+        JsonNode result = parseJson(rec.rawResult);
         JsonNode args = parseJson(rec.args);
 
         String styleNo = extractString(args, "styleNo", "style_no", "keyword");
+        if (styleNo == null) styleNo = extractString(result, "styleNo", "style_no");
+        String styleName = extractString(result, "styleName", "name");
+        String category = extractString(result, "category", "categoryName");
+        String designer = extractString(result, "designer", "designerName");
+
+        String summary = buildSummary("款号", styleNo, "款名", styleName,
+                "类别", category, "设计师", designer);
 
         if (styleNo != null) {
             actions.add(FollowUpAction.builder()
@@ -194,6 +220,7 @@ public class FollowUpSuggestionEngine {
                     .icon("plus")
                     .actionType(ActionType.ASK)
                     .command("帮我用款号 " + styleNo + " 建一个生产订单")
+                    .dataSummary(summary)
                     .build());
 
             actions.add(FollowUpAction.builder()
@@ -201,6 +228,7 @@ public class FollowUpSuggestionEngine {
                     .icon("calculator")
                     .actionType(ActionType.ASK)
                     .command("计算 " + styleNo + " 的BOM成本")
+                    .dataSummary(summary)
                     .build());
         }
 
@@ -215,6 +243,13 @@ public class FollowUpSuggestionEngine {
 
         String orderNo = extractString(result, "orderNo", "order_no");
         int defectCount = extractInt(result, "defectCount", "unqualifiedQuantity");
+        int totalQty = extractInt(result, "totalQuantity", "inspectedQuantity");
+        String defectCategory = extractString(result, "defectCategory", "mainDefect");
+
+        String summary = buildSummary("订单", orderNo,
+                "不良品", defectCount > 0 ? defectCount + "件" : null,
+                "已检", totalQty > 0 ? totalQty + "件" : null,
+                "主要缺陷", defectCategory);
 
         if (defectCount > 0 && orderNo != null) {
             actions.add(FollowUpAction.builder()
@@ -222,6 +257,7 @@ public class FollowUpSuggestionEngine {
                     .icon("warning")
                     .actionType(ActionType.EXECUTE)
                     .command("defective:handle")
+                    .dataSummary(summary)
                     .prefilledParams(buildMap("orderNo", orderNo, "defectCount", defectCount))
                     .requiredInputs(List.of(
                             ActionField.builder().key("action").label("处理方式").inputType("select")
@@ -240,15 +276,24 @@ public class FollowUpSuggestionEngine {
     // ────────────────────── BOM 成本计算后 ──────────────────────
 
     private List<FollowUpAction> deriveFromBomCost(ToolExecRecord rec) {
+        JsonNode result = parseJson(rec.rawResult);
         JsonNode args = parseJson(rec.args);
         String styleNo = extractString(args, "styleNo", "keyword");
         if (styleNo == null) return List.of();
+
+        String totalCost = extractString(result, "totalCost", "total");
+        String materialCost = extractString(result, "materialCost");
+        String processCost = extractString(result, "processCost");
+
+        String summary = buildSummary("款号", styleNo,
+                "总成本", totalCost, "物料", materialCost, "工序", processCost);
 
         return List.of(FollowUpAction.builder()
                 .label("用 " + styleNo + " 建单")
                 .icon("plus")
                 .actionType(ActionType.ASK)
                 .command("帮我用 " + styleNo + " 建一个生产订单")
+                .dataSummary(summary)
                 .build());
     }
 
@@ -260,6 +305,13 @@ public class FollowUpSuggestionEngine {
 
         String orderNo = extractString(result, "orderNo", "order_no");
         String orderId = extractString(result, "orderId", "id");
+        String styleNo = extractString(result, "styleNo", "style_no");
+        int totalQty = extractInt(result, "totalQuantity", "orderQuantity", "quantity");
+        String factoryName = extractString(result, "factoryName");
+
+        String summary = buildSummary("订单", orderNo, "款号", styleNo,
+                "数量", totalQty > 0 ? totalQty + "件" : null,
+                "工厂", factoryName);
 
         if (orderNo != null) {
             actions.add(FollowUpAction.builder()
@@ -267,6 +319,7 @@ public class FollowUpSuggestionEngine {
                     .icon("eye")
                     .actionType(ActionType.NAVIGATE)
                     .command("/production/progress")
+                    .dataSummary(summary)
                     .prefilledParams(buildMap("orderNo", orderNo))
                     .build());
 
@@ -275,6 +328,7 @@ public class FollowUpSuggestionEngine {
                     .icon("scissor")
                     .actionType(ActionType.ASK)
                     .command("帮我为订单 " + orderNo + " 创建裁剪单")
+                    .dataSummary(summary)
                     .build());
         }
 
@@ -308,11 +362,18 @@ public class FollowUpSuggestionEngine {
     private List<FollowUpAction> deriveFromCuttingCreate(ToolExecRecord rec) {
         JsonNode result = parseJson(rec.rawResult);
         String orderNo = extractString(result, "orderNo", "order_no");
+        String styleNo = extractString(result, "styleNo", "style_no");
+        int totalQty = extractInt(result, "totalQuantity", "orderQuantity");
+
+        String summary = buildSummary("订单", orderNo, "款号", styleNo,
+                "数量", totalQty > 0 ? totalQty + "件" : null);
+
         return List.of(FollowUpAction.builder()
                 .label("查看裁剪进度")
                 .icon("eye")
                 .actionType(ActionType.NAVIGATE)
                 .command("/production/cutting")
+                .dataSummary(summary)
                 .prefilledParams(orderNo != null ? buildMap("orderNo", orderNo) : Map.of())
                 .build());
     }
@@ -430,5 +491,21 @@ public class FollowUpSuggestionEngine {
     private String truncate(String text, int maxLen) {
         if (text == null) return "";
         return text.length() <= maxLen ? text : text.substring(0, maxLen) + "…";
+    }
+
+    /**
+     * 构建 "key1: val1 · key2: val2" 格式的数据摘要，跳过 null/空值。
+     */
+    private String buildSummary(String... keyValues) {
+        StringJoiner joiner = new StringJoiner(" · ");
+        for (int i = 0; i < keyValues.length - 1; i += 2) {
+            String key = keyValues[i];
+            String val = keyValues[i + 1];
+            if (val != null && !val.isBlank()) {
+                joiner.add(key + ": " + val);
+            }
+        }
+        String result = joiner.toString();
+        return result.isEmpty() ? null : result;
     }
 }

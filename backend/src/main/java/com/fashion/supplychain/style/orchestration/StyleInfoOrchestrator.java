@@ -24,9 +24,12 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -113,17 +116,79 @@ public class StyleInfoOrchestrator {
     public IPage<StyleInfo> list(Map<String, Object> params) {
         IPage<StyleInfo> page = styleInfoService.queryPage(params);
         styleSelectionSourceHelper.fillSelectionSourceAndCoverFallback(page.getRecords());
-        // 用实时BOM+工序成本覆盖列表中可能过期的price字段
-        page.getRecords().forEach(style -> {
+
+        List<StyleInfo> records = page.getRecords();
+        if (records == null || records.isEmpty()) {
+            return page;
+        }
+
+        List<Long> styleIds = records.stream()
+                .map(StyleInfo::getId)
+                .filter(id -> id != null)
+                .collect(Collectors.toList());
+        if (styleIds.isEmpty()) {
+            return page;
+        }
+
+        Map<Long, List<StyleBom>> bomByStyleId = styleBomService.lambdaQuery()
+                .in(StyleBom::getStyleId, styleIds)
+                .list()
+                .stream()
+                .collect(Collectors.groupingBy(StyleBom::getStyleId));
+
+        Map<Long, List<StyleProcess>> processByStyleId = styleProcessService.lambdaQuery()
+                .in(StyleProcess::getStyleId, styleIds)
+                .list()
+                .stream()
+                .collect(Collectors.groupingBy(StyleProcess::getStyleId));
+
+        Map<Long, List<SecondaryProcess>> secondaryByStyleId = secondaryProcessService.lambdaQuery()
+                .in(SecondaryProcess::getStyleId, styleIds)
+                .list()
+                .stream()
+                .collect(Collectors.groupingBy(SecondaryProcess::getStyleId));
+
+        records.forEach(style -> {
             try {
                 if (style.getId() != null) {
-                    style.setPrice(computeLiveDevCost(style.getId()));
+                    style.setPrice(computeLiveDevCostFromBatch(
+                            style.getId(), bomByStyleId, processByStyleId, secondaryByStyleId));
                 }
             } catch (Exception e) {
                 log.warn("计算款式{}实时成本失败: {}", style.getId(), e.getMessage());
             }
         });
         return page;
+    }
+
+    private BigDecimal computeLiveDevCostFromBatch(
+            Long styleId,
+            Map<Long, List<StyleBom>> bomByStyleId,
+            Map<Long, List<StyleProcess>> processByStyleId,
+            Map<Long, List<SecondaryProcess>> secondaryByStyleId) {
+
+        List<StyleBom> bomItems = bomByStyleId.getOrDefault(styleId, Collections.emptyList());
+        double materialTotal = bomItems.stream().mapToDouble(bom -> {
+            BigDecimal tp = bom.getTotalPrice();
+            if (tp != null) return tp.doubleValue();
+            double usage = bom.getUsageAmount() != null ? bom.getUsageAmount().doubleValue() : 0.0;
+            double loss  = bom.getLossRate()    != null ? bom.getLossRate().doubleValue()    : 0.0;
+            double up    = bom.getUnitPrice()   != null ? bom.getUnitPrice().doubleValue()   : 0.0;
+            return usage * (1.0 + loss / 100.0) * up;
+        }).sum();
+
+        List<StyleProcess> processes = processByStyleId.getOrDefault(styleId, Collections.emptyList());
+        double processTotal = processes.stream()
+                .mapToDouble(p -> p.getPrice() != null ? p.getPrice().doubleValue() : 0.0)
+                .sum();
+
+        List<SecondaryProcess> secondaryList = secondaryByStyleId.getOrDefault(styleId, Collections.emptyList());
+        double otherTotal = secondaryList.stream()
+                .mapToDouble(sp -> sp.getTotalPrice() != null ? sp.getTotalPrice().doubleValue() : 0.0)
+                .sum();
+
+        return BigDecimal.valueOf(materialTotal + processTotal + otherTotal)
+                .setScale(2, java.math.RoundingMode.HALF_UP);
     }
 
     public StyleInfo detail(String idOrStyleNo) {

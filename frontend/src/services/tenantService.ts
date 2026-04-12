@@ -30,6 +30,7 @@ export interface TenantInfo {
   ownerUserId: number;
   ownerUsername?: string;
   applyUsername?: string;
+  enabledModules?: string | null;
   expireTime?: string;
   remark?: string;
   /** 租户类型: SELF_FACTORY=自建工厂 HYBRID=混合型 BRAND=纯品牌/贸易 */
@@ -91,6 +92,8 @@ const tenantService = {
   createTenant: (data: Record<string, unknown>) => api.post(`${BASE}/create`, data),
   listTenants: (params: Record<string, unknown>) => api.post(`${BASE}/list`, params),
   updateTenant: (id: number, data: Record<string, unknown>) => api.put(`${BASE}/${id}`, data),
+  updateTenantEnabledModules: (id: number, enabledModules: string | null) =>
+    api.post(`${BASE}/${id}/enabled-modules`, { enabledModules }),
   deleteTenant: (id: number) => api.delete(`${BASE}/${id}`),
   toggleTenantStatus: (id: number, status: string) => api.post(`${BASE}/${id}/toggle-status`, { status }),
   approveApplication: (id: number, params?: { planType?: string; trialDays?: number; enabledModules?: string }) =>

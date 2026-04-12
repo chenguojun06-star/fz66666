@@ -333,6 +333,20 @@ export const intelligenceApi = {
   }) =>
     api.get<{ code: number; data: Array<Record<string, unknown>> }>('/intelligence/ai-agent/traces/recent', { params }),
 
+  getAgentActivityList: () =>
+    api.get<{ code: number; data: Array<Record<string, unknown>> }>('/intelligence/agent-activity/agents'),
+
+  getAgentTrajectory: (agentId: string, startTime?: string, endTime?: string) =>
+    api.get<{ code: number; data: Array<Record<string, unknown>> }>(`/intelligence/agent-activity/agents/${agentId}/trajectory`, {
+      params: { startTime, endTime },
+    }),
+
+  getAgentDepartmentStats: () =>
+    api.get<{ code: number; data: Array<Record<string, unknown>> }>('/intelligence/agent-activity/departments'),
+
+  getAgentAlerts: () =>
+    api.get<{ code: number; data: Array<Record<string, unknown>> }>('/intelligence/agent-activity/alerts'),
+
   /** SafeAdvisor — RAG 增强问答（知识库召回 + DeepSeek 推理，精度更高） */
   safeAdvisorAnalyze: (question: string) =>
     api.post<{ answer: string; source: string }>(
@@ -575,5 +589,13 @@ export const intelligenceApi = {
     const resp = await api.get<ApiResult<ChatHistoryMessage[]>>(`/hyper-advisor/history/${sessionId}`);
     return Array.isArray(resp?.data) ? resp.data : [];
   },
+
+  /** 小云全域待办任务聚合：裁剪/质检/返修/物料/逾期订单/异常/样衣/工资/对账/报销 */
+  getMyPendingTasks: () =>
+    api.get<{ code: number; data: import('./intelligenceTypes').PendingTaskDTO[] }>('/intelligence/pending-tasks/my'),
+
+  /** 小云待办任务统计摘要（气泡通知用，轻量级） */
+  getMyPendingTaskSummary: () =>
+    api.get<{ code: number; data: import('./intelligenceTypes').PendingTaskSummaryDTO }>('/intelligence/pending-tasks/summary'),
 };
 

@@ -37,6 +37,7 @@ Page({
     onlineCount: 0,
     showApprovalEntry: false,
     showInviteSection: false,
+    recruitInfo: { show: false, tenantCode: '', tenantName: '' },
     currentLanguage: 'zh-CN',
     currentLanguageName: '中文',
     languageNameMap: {
@@ -208,9 +209,16 @@ Page({
       const onlineCount = await api.system.getOnlineCount();
       const userInfo = getUserInfo();
       const hasTenant = !!(userInfo && userInfo.tenantId);
-      if (hasTenant && this.data.showApprovalEntry) {
+      // 所有有租户的用户均加载招募卡（管理员/工人/工厂主均可见）
+      if (hasTenant) {
         try {
-          await api.tenant.myTenant();
+          const tenantResp = await api.tenant.myTenant();
+          const tenantCode = (tenantResp && tenantResp.tenantCode) || '';
+          const tenantName = (tenantResp && tenantResp.tenantName) || '';
+          if (tenantCode) {
+            this.setData({ recruitInfo: { show: true, tenantCode, tenantName } });
+          }
+          // 所有有租户的用户均显示「邀请员工」菜单项（工人/管理员均可扫码邀请同事）
           this.setData({ showInviteSection: true }, () => this.refreshMenuItems());
         } catch (e) {
           console.error('加载租户信息失败', e);
@@ -222,6 +230,40 @@ Page({
     } finally {
       this._loadingSystemInfo = false;
     }
+  },
+
+  onCopyRecruitCode() {
+    const code = this.data.recruitInfo.tenantCode;
+    if (!code) {
+      wx.showToast({ title: '暂无工厂码', icon: 'none' });
+      return;
+    }
+    wx.setClipboardData({
+      data: code,
+      success: () => wx.showToast({ title: '工厂码已复制', icon: 'success' }),
+    });
+  },
+
+  onCopyRecruitUrl() {
+    const { tenantCode, tenantName } = this.data.recruitInfo;
+    if (!tenantCode) {
+      wx.showToast({ title: '暂无工厂码', icon: 'none' });
+      return;
+    }
+    let baseUrl = '';
+    try {
+      const app = getApp();
+      baseUrl = (app.globalData && app.globalData.baseUrl) || getBaseUrl();
+    } catch (e) {
+      baseUrl = getBaseUrl();
+    }
+    const origin = baseUrl.replace(/\/api\/?$/, '');
+    const url = origin + '/register?tenantCode=' + encodeURIComponent(tenantCode)
+      + '&tenantName=' + encodeURIComponent(tenantName || '');
+    wx.setClipboardData({
+      data: url,
+      success: () => wx.showToast({ title: '注册链接已复制', icon: 'success' }),
+    });
   },
 
   onLogout() {

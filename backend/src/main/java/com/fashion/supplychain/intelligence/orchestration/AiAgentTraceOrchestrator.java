@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.entity.IntelligenceAuditLog;
 import com.fashion.supplychain.intelligence.mapper.IntelligenceAuditLogMapper;
+import com.fashion.supplychain.intelligence.service.AsyncIntelligenceAuditService;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -24,6 +25,8 @@ public class AiAgentTraceOrchestrator {
 
     @Autowired
     private IntelligenceAuditLogMapper auditLogMapper;
+    @Autowired
+    private AsyncIntelligenceAuditService asyncAuditService;
 
     public String startRequest(String userMessage) {
         String commandId = UUID.randomUUID().toString().replace("-", "");
@@ -31,7 +34,7 @@ public class AiAgentTraceOrchestrator {
         logEntry.setStatus("EXECUTING");
         logEntry.setReason(truncate(userMessage, 500));
         logEntry.setRemark("小云请求开始");
-        auditLogMapper.insert(logEntry);
+        asyncAuditService.asyncInsert(logEntry);
         return commandId;
     }
 
@@ -44,7 +47,7 @@ public class AiAgentTraceOrchestrator {
         logEntry.setDurationMs(durationMs);
         logEntry.setRemark("工具调用");
         logEntry.setTargetId(resolveTargetId(args, result));
-        auditLogMapper.insert(logEntry);
+        asyncAuditService.asyncInsert(logEntry);
         updateRequestToolSummary(commandId, toolName, success, logEntry.getTargetId());
     }
 
@@ -62,10 +65,10 @@ public class AiAgentTraceOrchestrator {
         requestLog.setRemark(errorMessage == null ? "小云请求完成" : "小云请求失败");
         if (requestLog.getCreatedAt() == null) {
             requestLog.setCreatedAt(LocalDateTime.now());
-            auditLogMapper.insert(requestLog);
+            asyncAuditService.asyncInsert(requestLog);
             return;
         }
-        auditLogMapper.updateById(requestLog);
+        asyncAuditService.asyncUpdate(requestLog);
     }
 
     public Map<String, Object> queryTrace(String commandId) {
@@ -153,7 +156,7 @@ public class AiAgentTraceOrchestrator {
         if ((requestLog.getTargetId() == null || requestLog.getTargetId().isBlank()) && targetId != null && !targetId.isBlank()) {
             requestLog.setTargetId(targetId);
         }
-        auditLogMapper.updateById(requestLog);
+        asyncAuditService.asyncUpdate(requestLog);
     }
 
     private IntelligenceAuditLog baseLog(String commandId, String action) {

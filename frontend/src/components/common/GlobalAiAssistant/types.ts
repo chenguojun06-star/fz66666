@@ -47,6 +47,7 @@ export interface FollowUpAction {
   icon?: string;
   actionType: 'EXECUTE' | 'NAVIGATE' | 'ASK';
   command?: string;
+  dataSummary?: string;
   prefilledParams?: Record<string, unknown>;
   requiredInputs?: ActionField[];
 }

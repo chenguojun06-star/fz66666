@@ -61,6 +61,11 @@ const FollowUpCard: React.FC<{
         {action.actionType === 'EXECUTE' && <span className={styles.followUpExecBadge}>可执行</span>}
       </button>
 
+      {/* 数据摘要（订单号+数量+工厂等关键信息，一眼可决策） */}
+      {action.dataSummary && (
+        <div className={styles.followUpSummary}>{action.dataSummary}</div>
+      )}
+
       {/* 展开的表单区 */}
       {expanded && hasInputs && (
         <div className={styles.followUpForm}>

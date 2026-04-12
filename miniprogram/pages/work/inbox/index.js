@@ -16,7 +16,7 @@ function typeIcon(noticeType) {
 // 简易时间格式化（x分钟前 / x小时前 / x天前）
 function timeAgo(createdAt) {
   if (!createdAt) return '';
-  const created = new Date(createdAt.replace('T', ' '));
+  const created = new Date(String(createdAt).replace(' ', 'T'));
   const now = new Date();
   const diffMs = now - created;
   const diffMin = Math.floor(diffMs / 60000);

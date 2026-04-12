@@ -1,4 +1,5 @@
   <!-- ① 今日统计（顶部） -->
+  <wxs src="../../../utils/money.wxs" module="money" />
   <view class="today-stats-card">
     <view class="tsc-head">
       <text class="tsc-title">今日统计</text>
@@ -21,7 +22,7 @@
         <text class="tsc-label">数量</text>
       </view>
       <view class="tsc-item tsc-hl">
-        <text class="tsc-num">¥{{my.stats.totalAmount || 0}}</text>
+        <text class="tsc-num">¥{{money.toFixed2(my.stats.totalAmount || 0)}}</text>
         <text class="tsc-label">收入</text>
       </view>
     </view>

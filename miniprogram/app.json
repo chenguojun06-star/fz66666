@@ -166,5 +166,5 @@
   "sitemapLocation": "sitemap.json",
   "__usePrivacyCheck__": true,
   "requiredBackgroundModes": [],
-  "miniprogramBaseLibVersion": "3.3.4"
+  "requiredBaseLibVersion": "3.3.4"
 }

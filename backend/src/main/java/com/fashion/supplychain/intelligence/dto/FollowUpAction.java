@@ -39,6 +39,12 @@ public class FollowUpAction {
      */
     private String command;
 
+    /**
+     * 数据摘要 — 在卡片上直接展示关键业务数据，让用户一眼做决策。
+     * 格式："订单号: PO123 · 数量: 500件 · 工厂: 最美服装 · 交期: 06/15"
+     */
+    private String dataSummary;
+
     /** 已由 AI 上下文预填的参数（如 styleNo, orderId, quantity） */
     private Map<String, Object> prefilledParams;
 

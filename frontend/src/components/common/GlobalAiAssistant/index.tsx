@@ -9,6 +9,7 @@ import {
   ClearOutlined,
   PaperClipOutlined,
   SmileOutlined,
+  UnorderedListOutlined,
 } from '@ant-design/icons';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import { App } from 'antd';
@@ -21,7 +22,10 @@ import { INITIAL_MSG, EMOJI_GROUPS, getPageSuggestions } from './constants';
 import { choose } from './helpers';
 import { useAiChat } from './useAiChat';
 import { useDragSnap } from './useDragSnap';
+import { usePendingTasks } from './usePendingTasks';
 import MessageBubble from './MessageBubble';
+import SmartBubble from './SmartBubble';
+import TaskAggregationPanel from './TaskAggregationPanel';
 
 const GlobalAiAssistant: React.FC = () => {
   const { message } = App.useApp();
@@ -38,9 +42,10 @@ const GlobalAiAssistant: React.FC = () => {
 
   // ── parent-local state ──
   const [isOpen, setIsOpen] = useState(false);
+  const [isTaskPanelOpen, setIsTaskPanelOpen] = useState(false);
   const [_mood, setMood] = useState<XiaoyunCloudMood>('normal');
   const [hasFetchedMood, setHasFetchedMood] = useState(false);
-  const [pendingItems, setPendingItems] = useState<Array<{orderNo: string; styleNo: string; factoryName: string; progress: number; daysLeft: number}>>([]);
+  const { tasks: pendingItems, refresh: refreshPendingTasks } = usePendingTasks();
   const [dismissedPending, setDismissedPending] = useState<Set<string>>(loadDismissedPending);
 
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -118,13 +123,13 @@ const GlobalAiAssistant: React.FC = () => {
     return () => window.removeEventListener('openAiChat', handleOpenAiChat);
   }, []);
 
-  const dismissPendingItem = (orderNo: string, e: React.MouseEvent) => {
+  const dismissPendingItem = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setDismissedPending(prev => {
-      const next = new Set(prev); next.add(orderNo); saveDismissedPending(next); return next;
+      const next = new Set(prev); next.add(id); saveDismissedPending(next); return next;
     });
   };
-  const visiblePendingItems = pendingItems.filter(item => !dismissedPending.has(item.orderNo));
+  const visiblePendingItems = pendingItems.filter(item => !dismissedPending.has(item.id));
 
   // ── mood / greeting ──
   useEffect(() => {
@@ -144,12 +149,6 @@ const GlobalAiAssistant: React.FC = () => {
           let newMood: XiaoyunCloudMood = 'normal';
           let greeting = INITIAL_MSG.text;
           const seed = overdueOrderCount * 17 + highRiskOrderCount * 11 + todayScanCount;
-
-          if (apiPendingItems && apiPendingItems.length > 0) {
-            setPendingItems(apiPendingItems);
-          } else if (topPriorityOrder) {
-            setPendingItems([topPriorityOrder]);
-          }
 
           if (overdueOrderCount >= 5 || highRiskOrderCount >= 3) {
             newMood = 'urgent';
@@ -260,11 +259,27 @@ const GlobalAiAssistant: React.FC = () => {
   };
 
   const onSafeNavigate = useCallback((path: string) => {
-    const knownPrefixes = ['/production', '/finance', '/warehouse', '/intelligence', '/system', '/dashboard', '/style', '/crm', '/procurement', '/basic', '/cockpit'];
+    const knownPrefixes = ['/production', '/finance', '/warehouse', '/intelligence', '/system', '/dashboard', '/style', '/crm', '/procurement', '/basic', '/cockpit', '/style-info', '/order-management', '/pattern-production'];
     const safePath = path && knownPrefixes.some(p => path.startsWith(p)) ? path : '/production';
     setIsOpen(false);
+    setIsTaskPanelOpen(false);
     navigate(safePath);
   }, [navigate]);
+
+  const openTaskPanel = useCallback(() => {
+    setIsTaskPanelOpen(true);
+    setIsOpen(false);
+    refreshPendingTasks();
+  }, [refreshPendingTasks]);
+
+  const closeTaskPanel = useCallback(() => {
+    setIsTaskPanelOpen(false);
+  }, []);
+
+  const backToChat = useCallback(() => {
+    setIsTaskPanelOpen(false);
+    setIsOpen(true);
+  }, []);
 
   const onPurchaseDocAction = useCallback(async (msgId: string, mode: string, card: any) => {
     try {
@@ -332,7 +347,25 @@ const GlobalAiAssistant: React.FC = () => {
   // ── JSX ──
   return (
     <>
-      {isOpen && (
+      {/* 智能通知气泡 */}
+      <SmartBubble
+        onOpenTaskPanel={openTaskPanel}
+        triggerEdge={triggerPos.edge}
+      />
+
+      {/* 待办聚合面板 */}
+      {isTaskPanelOpen && (
+        <div className={styles.chatPanel} style={panelStyle}>
+          <TaskAggregationPanel
+            tasks={pendingItems}
+            onClose={closeTaskPanel}
+            onNavigate={onSafeNavigate}
+            onBackToChat={backToChat}
+          />
+        </div>
+      )}
+
+      {isOpen && !isTaskPanelOpen && (
         <div className={styles.chatPanel} style={panelStyle}>
           {/* Header */}
           <div className={styles.panelHeader}>
@@ -344,6 +377,11 @@ const GlobalAiAssistant: React.FC = () => {
               <div className={styles.headerSubtitle}>云裳智链 · 实时判断与执行协作</div>
             </div>
             <div className={styles.headerActions}>
+              <UnorderedListOutlined
+                className={styles.headerActionBtn}
+                onClick={() => { setIsOpen(false); openTaskPanel(); }}
+                title="待办任务面板"
+              />
               {isMuted ? (
                 <AudioMutedOutlined
                   className={styles.headerActionBtn}
@@ -361,7 +399,7 @@ const GlobalAiAssistant: React.FC = () => {
                 className={styles.headerActionBtn}
                 onClick={() => {
                   clearChat();
-                  setPendingItems([]);
+                  refreshPendingTasks();
                   setHasFetchedMood(false);
                 }}
                 title="清空对话"
@@ -379,24 +417,47 @@ const GlobalAiAssistant: React.FC = () => {
             {/* 预警待办 */}
             {messages.length === 1 && visiblePendingItems.length > 0 && (
               <div className={styles.pendingItems}>
-                {visiblePendingItems.map((item: any) => {
+                {visiblePendingItems.slice(0, 6).map((item: any) => {
+                  const isPendingTask = !!item.taskType;
                   const dl = item.daysLeft;
-                  const status = dl < 0 ? `已逾期${Math.abs(dl)}天` : dl === 0 ? '今天到期' : `剩${dl}天`;
+                  const status = dl !== undefined
+                    ? (dl < 0 ? `已逾期${Math.abs(dl)}天` : dl === 0 ? '今天到期' : `剩${dl}天`)
+                    : (item.categoryLabel || item.taskType || '');
+                  const navPath = isPendingTask && item.deepLinkPath
+                    ? (() => {
+                        let p = item.deepLinkPath;
+                        const params: string[] = [];
+                        if (item.orderNo) params.push(`orderNo=${encodeURIComponent(item.orderNo)}`);
+                        if (item.styleNo) params.push(`styleNo=${encodeURIComponent(item.styleNo)}`);
+                        if (params.length) p += (p.includes('?') ? '&' : '?') + params.join('&');
+                        return p;
+                      })()
+                    : `/production?orderNo=${encodeURIComponent(item.orderNo || '')}`;
                   return (
-                    <div key={item.orderNo} className={styles.pendingItem} style={{position:'relative'}}
-                      onClick={() => { setIsOpen(false); navigate(`/production?orderNo=${encodeURIComponent(item.orderNo)}`); }}
+                    <div key={item.id || item.orderNo} className={styles.pendingItem} style={{position:'relative'}}
+                      onClick={() => { setIsOpen(false); onSafeNavigate(navPath); }}
                     >
-                      <span>⚠️</span>
-                      <span style={{flex:1}}>{item.orderNo}{item.styleNo ? `（${item.styleNo}）` : ''} — {status}，进度{item.progress}%</span>
+                      <span>{item.categoryIcon || '⚠️'}</span>
+                      <span style={{flex:1}}>
+                        {isPendingTask
+                          ? `${item.title}${item.description ? ' — ' + item.description : ''}`
+                          : `${item.orderNo}${item.styleNo ? `（${item.styleNo}）` : ''} — ${status}，进度${item.progress}%`
+                        }
+                      </span>
                       <span style={{color:'#1890ff',fontSize:11}}>查看 →</span>
                       <button
                         className={styles.pendingDismissBtn}
-                        onClick={(e) => dismissPendingItem(item.orderNo, e)}
+                        onClick={(e) => dismissPendingItem(item.id || item.orderNo, e)}
                         title="今日不再提醒"
                       >×</button>
                     </div>
                   );
                 })}
+                {visiblePendingItems.length > 6 && (
+                  <div className={styles.pendingMoreBtn} onClick={() => { setIsOpen(false); openTaskPanel(); }}>
+                    还有 {visiblePendingItems.length - 6} 项待办，查看全部 →
+                  </div>
+                )}
               </div>
             )}
             {messages.length === 1 && (
@@ -547,14 +608,14 @@ const GlobalAiAssistant: React.FC = () => {
 
       {/* 悬浮浮标 — 始终可见、可拖拽、吸附边缘 */}
       <div
-        className={`${styles.triggerBtn} ${isActiveDrag ? styles.triggerDragging : ''} ${isDocked && !isOpen ? styles.triggerDocked : ''}`}
+        className={`${styles.triggerBtn} ${isActiveDrag ? styles.triggerDragging : ''} ${isDocked && !isOpen && !isTaskPanelOpen ? styles.triggerDocked : ''} ${isDocked && triggerPos.edge === 'right' ? styles.triggerDockedRight : ''}`}
         style={{ left: triggerPos.x, top: triggerPos.y }}
         onMouseDown={handleTriggerMouseDown}
         title="召唤小云智能助手"
       >
-        <CuteCloudTrigger size={56} active={isOpen} />
-        {!isOpen && visiblePendingItems.length > 0 && (
-          <span className={styles.triggerBadge}>{visiblePendingItems.length}</span>
+        <CuteCloudTrigger size={56} active={isOpen || isTaskPanelOpen} />
+        {!isOpen && !isTaskPanelOpen && visiblePendingItems.length > 0 && (
+          <span className={styles.triggerBadge} onClick={(e) => { e.stopPropagation(); openTaskPanel(); }}>{visiblePendingItems.length}</span>
         )}
       </div>
     </>

@@ -2,16 +2,15 @@ package com.fashion.supplychain.system.helper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.CosService;
 import com.fashion.supplychain.system.entity.Tenant;
 import com.fashion.supplychain.system.entity.TenantBillingRecord;
 import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.system.orchestration.TenantOrchestrator;
 import com.fashion.supplychain.system.service.TenantBillingRecordService;
 import com.fashion.supplychain.system.service.TenantService;
-import com.fashion.supplychain.system.service.TenantSubscriptionService;
 import com.fashion.supplychain.system.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,11 +41,11 @@ public class TenantBillingHelper {
     @Autowired
     private TenantBillingRecordService billingRecordService;
 
-    @Autowired
-    private TenantSubscriptionService tenantSubscriptionService;
-
     @Autowired(required = false)
     private com.fashion.supplychain.websocket.service.WebSocketService webSocketService;
+
+    @Autowired(required = false)
+    private CosService cosService;
 
     private void assertSuperAdmin() {
         if (!UserContext.isSuperAdmin()) {
@@ -134,6 +133,7 @@ public class TenantBillingHelper {
      */
     public Map<String, Object> getTenantBillingOverview(Long tenantId) {
         assertSuperAdmin();
+        syncStorageUsageQuietly(tenantId);
         Tenant tenant = tenantService.getById(tenantId);
         if (tenant == null) throw new IllegalArgumentException("租户不存在");
 
@@ -278,6 +278,8 @@ public class TenantBillingHelper {
         Long tenantId = UserContext.tenantId();
         if (tenantId == null) throw new IllegalArgumentException("超级管理员无租户账单");
 
+        syncStorageUsageQuietly(tenantId);
+
         Tenant tenant = tenantService.getById(tenantId);
         if (tenant == null) throw new IllegalArgumentException("租户不存在");
 
@@ -331,6 +333,17 @@ public class TenantBillingHelper {
         query.orderByDesc("billing_month");
         return billingRecordService.page(
                 new Page<>(page != null ? page : 1, pageSize != null ? pageSize : 20), query);
+    }
+
+    private void syncStorageUsageQuietly(Long tenantId) {
+        if (tenantId == null || cosService == null) {
+            return;
+        }
+        try {
+            cosService.refreshTenantStorageUsage(tenantId);
+        } catch (Exception e) {
+            log.warn("[TenantBilling] 同步租户存储用量失败 tenantId={}: {}", tenantId, e.getMessage());
+        }
     }
 
     /**

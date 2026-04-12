@@ -257,9 +257,38 @@ Page({
       operatorName: userInfo.name || userInfo.username || ''
     };
 
+    // 自动领取：confirm 前先发 receive 请求（后端要求先领取再确认）
+    // 同一操作员重复领取后端幂等返回成功，不会报错
+    var receivePayload = {
+      orderNo: payload.orderNo,
+      bundleNo: payload.bundleNo,
+      quantity: payload.quantity,
+      processName: payload.processName,
+      progressStage: payload.progressStage,
+      scanCode: payload.scanCode,
+      scanType: 'quality',
+      qualityStage: 'receive',
+      operatorId: payload.operatorId,
+      operatorName: payload.operatorName
+    };
+    this.setData({ loading: true });
+    try {
+      await api.production.executeScan(receivePayload);
+    } catch (recvErr) {
+      var recvMsg = (recvErr && (recvErr.message || recvErr.errMsg)) || '';
+      // 被其他人领取 → 不允许继续
+      if (recvMsg.indexOf('已被') >= 0 && recvMsg.indexOf('领取') >= 0) {
+        this.setData({ loading: false });
+        wx.showModal({ title: '无法质检', content: recvMsg, showCancel: false, confirmText: '知道了' });
+        return;
+      }
+      // 其他错误（如已领取/网络异常）继续尝试 confirm
+    }
+
     if (d.result === 'unqualified') {
       var qty = parseInt(d.defectQuantity, 10);
       if (!qty || qty <= 0) {
+        this.setData({ loading: false });
         toast.error('请输入不良数量');
         return;
       }
@@ -277,8 +306,6 @@ Page({
     }
 
     if (d.remark) payload.remark = d.remark;
-
-    this.setData({ loading: true });
 
     try {
       await api.production.executeScan(payload);

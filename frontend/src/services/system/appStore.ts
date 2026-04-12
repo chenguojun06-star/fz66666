@@ -5,6 +5,7 @@ export interface MyAppInfo {
   appCode: string;
   appName: string;
   subscriptionType: string;
+  price?: number | string;
   status: string;
   startTime: string;
   endTime?: string;

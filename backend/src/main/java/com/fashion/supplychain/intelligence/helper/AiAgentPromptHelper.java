@@ -154,28 +154,34 @@ public class AiAgentPromptHelper {
                         .filter(t -> t.getDomain() != null)
                         .filter(t -> {
                             String dn = t.getDomain().name();
-                            return !"GENERAL".equals(dn) && !"SYSTEM".equals(dn) && !"ANALYSIS".equals(dn);
+                            return !"GENERAL".equals(dn);
                         })
                         .collect(java.util.stream.Collectors.groupingBy(
                                 t -> t.getDomain().name().toLowerCase(),
                                 java.util.stream.Collectors.counting()));
                 if (!domainCount.isEmpty()) {
-                    String topDomain = domainCount.entrySet().stream()
-                            .max(java.util.Map.Entry.comparingByValue())
+                    // 取 Top 2 领域，支持跨域场景（如生产+财务、仓储+生产）
+                    java.util.List<String> topDomains = domainCount.entrySet().stream()
+                            .sorted(java.util.Map.Entry.<String, Long>comparingByValue().reversed())
+                            .limit(2)
                             .map(java.util.Map.Entry::getKey)
-                            .orElse(null);
-                    if (topDomain != null) {
+                            .collect(java.util.stream.Collectors.toList());
+                    StringBuilder domainBuilder = new StringBuilder();
+                    for (String domain : topDomains) {
                         org.springframework.core.io.ClassPathResource res =
-                                new org.springframework.core.io.ClassPathResource("agents/" + topDomain + "-domain.md");
+                                new org.springframework.core.io.ClassPathResource("agents/" + domain + "-domain.md");
                         if (res.exists()) {
                             String mdContent = new String(res.getInputStream().readAllBytes(),
                                     java.nio.charset.StandardCharsets.UTF_8);
                             if (!mdContent.isBlank()) {
-                                domainHint = "\n### 业务领域行为规范（" + topDomain + "）\n"
-                                        + mdContent.trim() + "\n\n";
-                                log.debug("[AiAgent] 已注入领域规范: {}-domain.md", topDomain);
+                                domainBuilder.append("\n### 业务领域行为规范（").append(domain).append("）\n")
+                                        .append(mdContent.trim()).append("\n\n");
                             }
                         }
+                    }
+                    if (domainBuilder.length() > 0) {
+                        domainHint = domainBuilder.toString();
+                        log.debug("[AiAgent] 已注入 {} 个领域规范: {}", topDomains.size(), topDomains);
                     }
                 }
             }

@@ -1,5 +1,16 @@
 <view class="container">
-  <custom-nav title="邀请员工" />
+  <custom-nav title="邀请员工" show-back="{{true}}" />
+
+  <!-- 二维码区域：员工扫码即可跳转注册页 -->
+  <view class="qr-section">
+    <block wx:if="{{loading}}">
+      <text class="qr-hint">加载中...</text>
+    </block>
+    <block wx:elif="{{qrUrl}}">
+      <image class="qr-image" src="{{qrUrl}}" mode="widthFix" />
+      <text class="qr-hint">扫码即可注册加入工厂</text>
+    </block>
+  </view>
 
   <view class="invite-card">
     <view class="section-title">工厂邀请码</view>

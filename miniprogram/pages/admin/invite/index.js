@@ -1,9 +1,11 @@
 const config = require('../../../config');
+const api = require('../../../utils/api');
 
 Page({
   data: {
     tenantCode: '',
     tenantName: '',
+    qrUrl: '',
     loading: false,
   },
 
@@ -14,15 +16,32 @@ Page({
   async loadTenantInfo() {
     this.setData({ loading: true });
     try {
-      const app = getApp();
-      if (app.globalData && app.globalData.tenantCode) {
-        this.setData({
-          tenantCode: app.globalData.tenantCode,
-          tenantName: app.globalData.tenantName || '',
-        });
+      // 修复：原来读 app.globalData.tenantCode（从未被设置），改为直接调用 API
+      const resp = await api.tenant.myTenant();
+      const tenantCode = (resp && resp.tenantCode) || '';
+      const tenantName = (resp && resp.tenantName) || '';
+
+      // 生成二维码 URL：用外部免费 QR API 渲染小程序端没有库可用）
+      let qrUrl = '';
+      if (tenantCode) {
+        let baseUrl = '';
+        try {
+          const app = getApp();
+          baseUrl = (app.globalData && app.globalData.baseUrl) || config.getBaseUrl();
+        } catch (e) {
+          baseUrl = config.getBaseUrl();
+        }
+        const origin = baseUrl.replace(/\/api\/?$/, '');
+        const registrationUrl = origin + '/register?tenantCode=' + encodeURIComponent(tenantCode)
+          + '&tenantName=' + encodeURIComponent(tenantName);
+        qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data='
+          + encodeURIComponent(registrationUrl);
       }
+
+      this.setData({ tenantCode, tenantName, qrUrl });
     } catch (err) {
       console.error('[invite] loadTenantInfo failed', err);
+      wx.showToast({ title: '加载失败，请重试', icon: 'none' });
     } finally {
       this.setData({ loading: false });
     }

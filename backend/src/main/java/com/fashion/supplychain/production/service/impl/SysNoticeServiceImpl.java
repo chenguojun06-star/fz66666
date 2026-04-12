@@ -17,10 +17,16 @@ public class SysNoticeServiceImpl extends ServiceImpl<SysNoticeMapper, SysNotice
 
     @Override
     public List<SysNotice> queryForUser(Long tenantId, String name, String username) {
+        // system_broadcast（超管全局公告）对同租户所有用户可见；
+        // 其他类型通知只匹配当前用户的 displayName 或 username
         return lambdaQuery()
                 .eq(SysNotice::getTenantId, tenantId)
-                .and(w -> w.eq(SysNotice::getToName, name)
-                           .or().eq(SysNotice::getToName, username))
+                .and(w -> w
+                        .eq(SysNotice::getNoticeType, "system_broadcast")
+                        .or(inner -> inner
+                                .ne(SysNotice::getNoticeType, "system_broadcast")
+                                .and(u -> u.eq(SysNotice::getToName, name)
+                                           .or().eq(SysNotice::getToName, username))))
                 .orderByDesc(SysNotice::getCreatedAt)
                 .last("LIMIT 30")
                 .list();
@@ -28,11 +34,16 @@ public class SysNoticeServiceImpl extends ServiceImpl<SysNoticeMapper, SysNotice
 
     @Override
     public long countUnread(Long tenantId, String name, String username) {
+        // system_broadcast 对同租户所有用户计入未读数
         return lambdaQuery()
                 .eq(SysNotice::getTenantId, tenantId)
                 .eq(SysNotice::getIsRead, 0)
-                .and(w -> w.eq(SysNotice::getToName, name)
-                           .or().eq(SysNotice::getToName, username))
+                .and(w -> w
+                        .eq(SysNotice::getNoticeType, "system_broadcast")
+                        .or(inner -> inner
+                                .ne(SysNotice::getNoticeType, "system_broadcast")
+                                .and(u -> u.eq(SysNotice::getToName, name)
+                                           .or().eq(SysNotice::getToName, username))))
                 .count();
     }
 

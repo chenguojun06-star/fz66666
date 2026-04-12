@@ -1,3 +1,4 @@
+<wxs src="../../../utils/money.wxs" module="money" />
 <view class="container">
 
   <view class="info-card">
@@ -49,6 +50,11 @@
             <text wx:if="{{item.materialCode}}" class="mat-text">编号 {{item.materialCode}}</text>
             <text wx:if="{{item.specifications}}" class="mat-text">规格 {{item.specifications}}</text>
             <text class="mat-text">单位 {{item.unit || '米'}}</text>
+          </view>
+          <view wx:if="{{item.fabricComposition || item.fabricWeight || item.fabricWidth}}" class="mat-row">
+            <text wx:if="{{item.fabricComposition}}" class="mat-text">成分 {{item.fabricComposition}}</text>
+            <text wx:if="{{item.fabricWeight}}" class="mat-text">克重 {{item.fabricWeight}}</text>
+            <text wx:if="{{item.fabricWidth}}" class="mat-text">幅宽 {{item.fabricWidth}}</text>
           </view>
           <view class="mat-row mat-row-qty">
             <view class="qty-item">
@@ -156,7 +162,7 @@
       </view>
       <view wx:if="{{summary.totalAmount > 0}}" class="summary-row">
         <text class="summary-label">预估工价</text>
-        <text class="summary-value amount">¥{{summary.totalAmount}}</text>
+        <text class="summary-value amount">¥{{money.toFixed2(summary.totalAmount)}}</text>
       </view>
     </view>
   </block>

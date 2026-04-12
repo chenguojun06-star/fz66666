@@ -1,3 +1,4 @@
+<wxs src="../../../utils/money.wxs" module="money" />
 <view class="container">
   <view class="info-card">
     <view class="card-header">
@@ -46,12 +47,12 @@
             data-value="{{item.value}}"
             bindtap="onProcessTap">
         <text class="chip-label">{{item.label}}</text>
-        <text wx:if="{{!item.hidePrice}}" class="chip-price">¥{{item.unitPrice}}</text>
+        <text wx:if="{{!item.hidePrice}}" class="chip-price">¥{{money.toFixed2(item.unitPrice)}}</text>
       </view>
     </scroll-view>
     <view class="summary-bar" wx:if="{{selectedCount > 0}}">
       <text class="summary-text">已选 {{selectedCount}} 个工序</text>
-      <text wx:if="{{selectedAmount > 0}}" class="summary-amount">合计 ¥{{selectedAmount}}</text>
+      <text wx:if="{{selectedAmount > 0}}" class="summary-amount">合计 ¥{{money.toFixed2(selectedAmount)}}</text>
     </view>
   </view>
 

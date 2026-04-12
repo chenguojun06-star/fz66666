@@ -1,3 +1,4 @@
+<wxs src="../../utils/money.wxs" module="money" />
 <wxs module="utils">
   // 格式化相对时间
   function formatRelativeTime(timeStr) {

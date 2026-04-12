@@ -533,6 +533,10 @@ public class AppStoreOrchestrator {
                 appInfo.put("appCode", app.getAppCode());
                 appInfo.put("appName", app.getAppName());
                 appInfo.put("subscriptionType", "PERMANENT");
+                appInfo.put("price", BigDecimal.ZERO);
+                appInfo.put("priceMonthly", app.getPriceMonthly());
+                appInfo.put("priceYearly", app.getPriceYearly());
+                appInfo.put("priceOnce", app.getPriceOnce());
                 appInfo.put("status", "ACTIVE");
                 appInfo.put("isExpired", false);
                 appInfo.put("configured", true);
@@ -581,6 +585,7 @@ public class AppStoreOrchestrator {
             appInfo.put("appCode", sub.getAppCode());
             appInfo.put("appName", sub.getAppName());
             appInfo.put("subscriptionType", sub.getSubscriptionType());
+            appInfo.put("price", sub.getPrice());
             appInfo.put("status", sub.getStatus());
             appInfo.put("startTime", sub.getStartTime());
             appInfo.put("endTime", sub.getEndTime());

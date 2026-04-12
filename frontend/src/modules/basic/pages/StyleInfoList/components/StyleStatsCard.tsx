@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card, Segmented, Spin } from 'antd';
+import { DownOutlined, RightOutlined } from '@ant-design/icons';
 import type { PatternDevelopmentStats } from '@/types/production';
 import type { StatsRangeType } from '../../StyleInfo/hooks/useStyleStats';
 
@@ -8,31 +9,69 @@ interface StyleStatsCardProps {
   loading: boolean;
   rangeType: StatsRangeType;
   onRangeChange: (value: string | number) => void;
+  /** 是否折叠，默认 false；折叠时仅显示标题栏 */
+  collapsed?: boolean;
+  /** 点击标题时的展开/折叠回调 */
+  onToggle?: () => void;
 }
 
 const fmt = (v: number) => v.toFixed(2);
 
 /**
- * 开发费用统计迷你看板（紧凑单行版）
+ * 开发费用统计迷你看板（紧凑单行版，支持折叠）
+ * collapsed=true 时仅显示标题栏，点击可展开
  */
 const StyleStatsCard: React.FC<StyleStatsCardProps> = ({
   stats,
   loading,
   rangeType,
   onRangeChange,
+  collapsed = false,
+  onToggle,
 }) => {
+  const cardBase = {
+    size: 'small' as const,
+    className: 'development-stats-card mb-sm',
+    styles: { body: { padding: '6px 12px' } },
+    style: { background: '#f8f9fa', border: '1px solid #e9ecef' },
+  };
+
+  /* 折叠状态：只渲染标题行 */
+  if (collapsed) {
+    return (
+      <Card {...cardBase}>
+        <span
+          onClick={onToggle}
+          style={{
+            fontSize: 12, fontWeight: 600, color: 'var(--neutral-text)',
+            whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none',
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+          }}
+        >
+          <RightOutlined style={{ fontSize: 10 }} />
+          开发费用统计
+        </span>
+      </Card>
+    );
+  }
+
+  /* 展开状态：完整费用看板 */
   return (
-    <Card
-      size="small"
-      className="development-stats-card mb-sm"
-      styles={{ body: { padding: '6px 12px' } }}
-      style={{ background: '#f8f9fa', border: '1px solid #e9ecef' }}
-    >
+    <Card {...cardBase}>
       <Spin spinning={loading} size="small">
         <div style={{ display: 'flex', alignItems: 'center', gap: 0, flexWrap: 'nowrap' }}>
-          {/* 标题 */}
-          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--neutral-text)', whiteSpace: 'nowrap', marginRight: 16 }}>
-             开发费用统计
+          {/* 标题（点击折叠） */}
+          <span
+            onClick={onToggle}
+            style={{
+              fontSize: 12, fontWeight: 600, color: 'var(--neutral-text)',
+              whiteSpace: 'nowrap', marginRight: 16,
+              cursor: onToggle ? 'pointer' : 'default',
+              userSelect: 'none', display: 'inline-flex', alignItems: 'center', gap: 4,
+            }}
+          >
+            <DownOutlined style={{ fontSize: 10 }} />
+            开发费用统计
           </span>
 
           {/* 数据条目 */}

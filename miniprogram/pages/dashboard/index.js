@@ -52,7 +52,7 @@ function buildProcessNodes(order) {
 /** 为订单注入看板所需的扩展字段 */
 function enrichForDashboard(order) {
   var completed = Number(order.completedQuantity) || 0;
-  var total = Number(order.cuttingQty) || Number(order.orderQuantity) || Number(order.sizeTotal) || 0;
+  var total = Number(order.cuttingQuantity) || Number(order.cuttingQty) || Number(order.orderQuantity) || Number(order.sizeTotal) || 0;
   order.processNodes = buildProcessNodes(order);
   order.remainQuantity = Math.max(0, total - completed);
   order.expanded = false;

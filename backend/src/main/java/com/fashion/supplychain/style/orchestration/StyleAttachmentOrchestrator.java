@@ -128,6 +128,7 @@ public class StyleAttachmentOrchestrator {
             } else {
                 File dest = TenantFilePathResolver.resolveStoragePath(uploadPath, newFilename);
                 file.transferTo(dest);
+                cosService.safeRefreshTenantStorageUsage(com.fashion.supplychain.common.UserContext.tenantId());
             }
 
             StyleAttachment latest = styleAttachmentService.getLatestPattern(resolvedStyleId, type);
@@ -212,6 +213,7 @@ public class StyleAttachmentOrchestrator {
             } else {
                 File dest = TenantFilePathResolver.resolveStoragePath(uploadPath, newFilename);
                 Files.write(dest.toPath(), content);
+                cosService.safeRefreshTenantStorageUsage(tenantId);
             }
 
             StyleAttachment attachment = new StyleAttachment();
@@ -346,6 +348,7 @@ public class StyleAttachmentOrchestrator {
                 File dest = TenantFilePathResolver.resolveStoragePath(uploadPath, newFilename);
                 log.info("目标文件路径: {}", dest.getAbsolutePath());
                 file.transferTo(dest);
+                cosService.safeRefreshTenantStorageUsage(com.fashion.supplychain.common.UserContext.tenantId());
             }
             log.info("文件保存成功");
 

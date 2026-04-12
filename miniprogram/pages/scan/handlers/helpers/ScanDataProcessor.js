@@ -51,6 +51,9 @@ class ScanDataProcessor {
                 materialCode: item.materialCode || '',
                 materialType: item.materialType || '',
                 specifications: item.specification || '',
+                fabricComposition: item.fabricComposition || '',
+                fabricWeight: item.fabricWeight || '',
+                fabricWidth: item.fabricWidth || '',
                 unit: item.unit || '米',
                 purchaseQuantity: item.usageAmount || 0,
                 arrivedQuantity: 0,
@@ -76,7 +79,7 @@ class ScanDataProcessor {
       }
 
       const orderQty = parsedData.quantity
-        || orderDetail.cuttingQty || orderDetail.quantity || orderDetail.totalQuantity
+        || orderDetail.cuttingQuantity || orderDetail.cuttingQty || orderDetail.quantity || orderDetail.totalQuantity
         || orderDetail.totalNum || orderDetail.orderQuantity || 0;
 
       return {
@@ -123,7 +126,7 @@ class ScanDataProcessor {
       }
 
       const orderQty = parsedData.quantity
-        || orderDetail.cuttingQty || orderDetail.quantity || orderDetail.totalQuantity
+        || orderDetail.cuttingQuantity || orderDetail.cuttingQty || orderDetail.quantity || orderDetail.totalQuantity
         || orderDetail.totalNum || orderDetail.orderQuantity || 0;
 
       const styleNo = orderDetail.styleNo || parsedData.styleNo || '';
@@ -200,7 +203,7 @@ class ScanDataProcessor {
 
     // 计算订单总数量（parsedData中可能没有quantity）
     const orderQty = parsedData.quantity
-      || orderDetail.cuttingQty || orderDetail.quantity || orderDetail.totalQuantity
+      || orderDetail.cuttingQuantity || orderDetail.cuttingQty || orderDetail.quantity || orderDetail.totalQuantity
       || orderDetail.totalNum || orderDetail.orderQuantity || 0;
 
     return {

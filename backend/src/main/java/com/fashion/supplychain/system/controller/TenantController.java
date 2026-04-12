@@ -86,12 +86,13 @@ public class TenantController {
         String ownerUsername = (String) params.get("ownerUsername");
         String ownerPassword = (String) params.get("ownerPassword");
         String ownerName = (String) params.get("ownerName");
+        String planType = params.get("planType") != null ? params.get("planType").toString() : null;
         Integer maxUsers = params.get("maxUsers") != null ? Integer.valueOf(params.get("maxUsers").toString()) : null;
         String tenantType = (String) params.getOrDefault("tenantType", "HYBRID");
 
         Map<String, Object> result = tenantOrchestrator.createTenant(
                 tenantName, tenantCode, contactName, contactPhone,
-                ownerUsername, ownerPassword, ownerName, maxUsers, tenantType);
+            ownerUsername, ownerPassword, ownerName, maxUsers, planType, tenantType);
         return Result.success(result);
     }
 
@@ -116,6 +117,18 @@ public class TenantController {
     public Result<Boolean> updateTenant(@PathVariable Long id, @RequestBody Tenant tenant) {
         tenant.setId(id);
         return Result.success(tenantOrchestrator.updateTenant(tenant));
+    }
+
+    /**
+     * 单独更新租户菜单白名单，支持设置为 null 表示全部开放。
+     */
+    @PostMapping("/{id}/enabled-modules")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+    public Result<Boolean> updateTenantEnabledModules(@PathVariable Long id,
+                                                      @RequestBody(required = false) Map<String, Object> params) {
+        Object raw = params != null ? params.get("enabledModules") : null;
+        String enabledModules = raw != null ? raw.toString() : null;
+        return Result.success(tenantOrchestrator.updateTenantEnabledModules(id, enabledModules));
     }
 
     /**

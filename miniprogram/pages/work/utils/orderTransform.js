@@ -281,6 +281,8 @@ function transformOrderData(r) {
 
   return {
     ...source,
+    cuttingQty: source.cuttingQuantity != null ? source.cuttingQuantity : (source.cuttingQty || 0),
+    orderedQty: source.orderQuantity || 0,
     styleCoverUrl,
     statusText: orderStatusText(source.status),
     isClosed: isClosedStatus(source.status),

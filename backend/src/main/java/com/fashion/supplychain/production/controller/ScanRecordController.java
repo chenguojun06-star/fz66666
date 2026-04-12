@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.SensitiveDataMaskHelper;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
@@ -53,7 +54,9 @@ public class ScanRecordController {
      */
     @PostMapping("/execute")
     public Result<?> execute(@RequestBody Map<String, Object> params) {
-        return Result.success(scanRecordOrchestrator.execute(params));
+        Map<String, Object> result = scanRecordOrchestrator.execute(params);
+        SensitiveDataMaskHelper.maskPriceInMap(result);
+        return Result.success(result);
     }
 
     /**
@@ -162,7 +165,9 @@ public class ScanRecordController {
 
     @PostMapping("/unit-price")
     public Result<?> resolveUnitPrice(@RequestBody Map<String, Object> params) {
-        return Result.success(scanRecordOrchestrator.resolveUnitPrice(params));
+        Map<String, Object> result = scanRecordOrchestrator.resolveUnitPrice(params);
+        SensitiveDataMaskHelper.maskPriceInMap(result);
+        return Result.success(result);
     }
 
     @PostMapping("/undo")
@@ -213,6 +218,9 @@ public class ScanRecordController {
 
         // 默认分页查询
         IPage<ScanRecord> pageResult = scanRecordOrchestrator.list(params);
+        if (SensitiveDataMaskHelper.shouldMaskPrice() && pageResult.getRecords() != null) {
+            pageResult.getRecords().forEach(r -> r.setUnitPrice(null));
+        }
         return Result.success(pageResult);
     }
 
@@ -235,13 +243,39 @@ public class ScanRecordController {
     public Result<?> getMyQualityTasks() {
         List<?> tasks = scanRecordOrchestrator.getMyQualityTasks();
         ObjectMapper mapper = objectMapper;
-        List<Map<String, Object>> enriched = tasks.stream().map(task -> {
-            Map<String, Object> m = mapper.convertValue(task, new TypeReference<Map<String, Object>>() {});
+
+        // 批量收集所有 orderId，一次性查询订单和款式，避免 N+1
+        List<Map<String, Object>> taskMaps = tasks.stream()
+                .map(task -> mapper.convertValue(task, new TypeReference<Map<String, Object>>() {}))
+                .collect(java.util.stream.Collectors.toList());
+
+        java.util.Set<String> orderIds = taskMaps.stream()
+                .map(m -> m.get("orderId"))
+                .filter(id -> id != null && StringUtils.hasText(id.toString()))
+                .map(id -> id.toString())
+                .collect(java.util.stream.Collectors.toSet());
+
+        java.util.Map<String, ProductionOrder> orderCache = new java.util.HashMap<>();
+        if (!orderIds.isEmpty()) {
+            productionOrderService.listByIds(orderIds).forEach(po -> orderCache.put(po.getId(), po));
+        }
+
+        java.util.Set<String> styleIds = orderCache.values().stream()
+                .filter(po -> StringUtils.hasText(po.getStyleId()))
+                .map(ProductionOrder::getStyleId)
+                .collect(java.util.stream.Collectors.toSet());
+
+        java.util.Map<String, StyleInfo> styleCache = new java.util.HashMap<>();
+        if (!styleIds.isEmpty()) {
+            styleInfoService.listByIds(styleIds).forEach(si -> styleCache.put(String.valueOf(si.getId()), si));
+        }
+
+        List<Map<String, Object>> enriched = taskMaps.stream().map(m -> {
             Object orderIdObj = m.get("orderId");
             if (orderIdObj != null && StringUtils.hasText(orderIdObj.toString())) {
-                ProductionOrder po = productionOrderService.getById(orderIdObj.toString());
+                ProductionOrder po = orderCache.get(orderIdObj.toString());
                 if (po != null && StringUtils.hasText(po.getStyleId())) {
-                    StyleInfo si = styleInfoService.getById(po.getStyleId());
+                    StyleInfo si = styleCache.get(po.getStyleId());
                     if (si != null && StringUtils.hasText(si.getCover())) {
                         m.put("coverImage", si.getCover());
                         m.put("styleImage", si.getCover());

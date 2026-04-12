@@ -1,4 +1,5 @@
   <!-- ③ 扫码结果 -->
+  <wxs src="../../../utils/money.wxs" module="money" />
   <view wx:if="{{lastResult}}" class="result {{lastResult.success ? 'ok' : 'err'}}">
     <view class="res-top">
       <text class="res-tag {{lastResult.success ? 'ok' : 'err'}}">{{lastResult.success ? '成功' : '失败'}}</text>
@@ -15,7 +16,7 @@
       <text wx:if="{{lastResult.color}}">{{lastResult.color}}</text>
       <text wx:if="{{lastResult.size}}">{{lastResult.size}}</text>
       <text wx:if="{{lastResult.processName}}" class="res-proc">{{lastResult.processName}}</text>
-      <text wx:if="{{lastResult.unitPrice != null && !lastResult.hidePrice}}" class="{{lastResult.unitPriceHint ? 'res-price-warn' : ''}}">¥{{lastResult.unitPrice}}{{lastResult.unitPriceHint ? ' !' : ''}}</text>
+      <text wx:if="{{lastResult.unitPrice != null && !lastResult.hidePrice}}" class="{{lastResult.unitPriceHint ? 'res-price-warn' : ''}}">¥{{money.toFixed2(lastResult.unitPrice)}}{{lastResult.unitPriceHint ? ' !' : ''}}</text>
     </view>
     <view wx:if="{{lastResult.success && lastResult.sessionQty > 0}}" class="res-session-bar">
       <text class="res-session-text">本工序今日累计 {{lastResult.sessionQty}} 件</text>

@@ -217,6 +217,20 @@ public class IntelligenceController {
     @Autowired
     private SafeAdvisorOrchestrator safeAdvisorOrchestrator;
 
+    @Autowired
+    private PendingTaskOrchestrator pendingTaskOrchestrator;
+
+    // ── 小云待办任务聚合 ──
+    @GetMapping("/pending-tasks/my")
+    public Result<List<com.fashion.supplychain.intelligence.dto.PendingTaskDTO>> getMyPendingTasks() {
+        return Result.success(pendingTaskOrchestrator.getMyPendingTasks());
+    }
+
+    @GetMapping("/pending-tasks/summary")
+    public Result<com.fashion.supplychain.intelligence.dto.PendingTaskSummaryDTO> getMyPendingTaskSummary() {
+        return Result.success(pendingTaskOrchestrator.getMyPendingTaskSummary());
+    }
+
     @GetMapping("/scan-tips")
     public Result<?> getScanTips(@RequestParam(required = false) String orderNo,
                                  @RequestParam(required = false) String processName) {

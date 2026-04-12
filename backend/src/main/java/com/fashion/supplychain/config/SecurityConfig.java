@@ -125,9 +125,9 @@ public class SecurityConfig implements WebMvcConfigurer {
                         .antMatchers("/api/system/user/me*", "/api/system/user/me/**").authenticated()
                         .antMatchers("/api/system/user/permissions*", "/api/system/user/permissions/**").authenticated()
                         .antMatchers("/api/system/user/online-count").authenticated()
-                        .antMatchers("/api/system/user/pending").hasAnyAuthority("ROLE_admin", "ROLE_ADMIN", "ROLE_1", "ROLE_tenant_owner")
-                        .antMatchers("/api/system/user/*/approve").hasAnyAuthority("ROLE_admin", "ROLE_ADMIN", "ROLE_1", "ROLE_tenant_owner")
-                        .antMatchers("/api/system/user/*/reject").hasAnyAuthority("ROLE_admin", "ROLE_ADMIN", "ROLE_1", "ROLE_tenant_owner")
+                        .antMatchers("/api/system/user/pending").hasAnyAuthority("ROLE_ADMIN", "ROLE_admin", "ROLE_1", "ROLE_tenant_owner", "ROLE_主管", "ROLE_管理员")
+                        .antMatchers("/api/system/user/*/approve").hasAnyAuthority("ROLE_ADMIN", "ROLE_admin", "ROLE_1", "ROLE_tenant_owner", "ROLE_主管", "ROLE_管理员")
+                        .antMatchers("/api/system/user/*/reject").hasAnyAuthority("ROLE_ADMIN", "ROLE_admin", "ROLE_1", "ROLE_tenant_owner", "ROLE_主管", "ROLE_管理员")
                         .antMatchers("/api/wechat/mini-program/login").permitAll()
                         .antMatchers("/api/production/order/by-order-no/**").authenticated()
                         .antMatchers("/api/production/order/detail/**").authenticated()
@@ -140,13 +140,17 @@ public class SecurityConfig implements WebMvcConfigurer {
                         .permitAll()
                         .antMatchers("/api/warehouse/dashboard/**").authenticated()
                         .antMatchers("/actuator/**").hasAnyAuthority(
-                                "ROLE_admin",
                                 "ROLE_ADMIN",
-                                "ROLE_1")
+                                "ROLE_admin",
+                                "ROLE_1",
+                                "ROLE_主管",
+                                "ROLE_管理员")
                         .antMatchers("/api/system/diag/**").hasAnyAuthority(
-                                "ROLE_admin",
                                 "ROLE_ADMIN",
-                                "ROLE_1")
+                                "ROLE_admin",
+                                "ROLE_1",
+                                "ROLE_主管",
+                                "ROLE_管理员")
                         .antMatchers("/api/system/serial/**").authenticated()
                         .antMatchers("/api/system/tenant/my").authenticated()
                         .antMatchers("/api/system/tenant/sub/**").authenticated()

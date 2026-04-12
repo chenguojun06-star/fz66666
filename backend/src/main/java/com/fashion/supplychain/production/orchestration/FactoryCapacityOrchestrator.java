@@ -10,10 +10,12 @@ import lombok.Data;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -34,6 +36,12 @@ public class FactoryCapacityOrchestrator {
 
     @Autowired
     private ScanRecordService scanRecordService;
+
+    @Autowired(required = false)
+    private StringRedisTemplate stringRedisTemplate;
+
+    private static final String CACHE_KEY_PREFIX = "factory_capacity:";
+    private static final long CACHE_TTL_MINUTES = 5;
 
     /** 高风险预警：距截止日期不超过多少天 */
     private static final int AT_RISK_DAYS = 7;
@@ -64,6 +72,21 @@ public class FactoryCapacityOrchestrator {
      */
     public List<FactoryCapacityItem> getFactoryCapacity() {
         Long tenantId = UserContext.tenantId();
+
+        // 尝试从Redis缓存读取
+        if (stringRedisTemplate != null && tenantId != null) {
+            try {
+                String cacheKey = CACHE_KEY_PREFIX + tenantId;
+                String cached = stringRedisTemplate.opsForValue().get(cacheKey);
+                if (cached != null) {
+                    com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
+                    return om.readValue(cached, om.getTypeFactory().constructCollectionType(List.class, FactoryCapacityItem.class));
+                }
+            } catch (Exception e) {
+                log.debug("[工厂产能] 缓存读取失败，降级直查: {}", e.getMessage());
+            }
+        }
+
         LocalDateTime now = LocalDateTime.now();
 
         // 查询进行中（非 completed）且未删除的订单
@@ -138,6 +161,17 @@ public class FactoryCapacityOrchestrator {
 
         // 基于扫码记录计算生产人数、日均产量、预计完工天数
         fillScanBasedCapacity(orders, result, now);
+
+        // 写入Redis缓存
+        if (stringRedisTemplate != null && tenantId != null) {
+            try {
+                String cacheKey = CACHE_KEY_PREFIX + tenantId;
+                com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
+                stringRedisTemplate.opsForValue().set(cacheKey, om.writeValueAsString(result), CACHE_TTL_MINUTES, TimeUnit.MINUTES);
+            } catch (Exception e) {
+                log.debug("[工厂产能] 缓存写入失败: {}", e.getMessage());
+            }
+        }
 
         return result;
     }

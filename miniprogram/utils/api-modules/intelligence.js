@@ -1,7 +1,3 @@
-/**
- * 智能运营 API（intelligence / notice）
- * AI对话、NL执行引擎、消息通知
- */
 const { ok } = require('./helpers');
 
 const intelligence = {
@@ -14,6 +10,74 @@ const intelligence = {
   aiAdvisorChat(payload) {
     return ok('/api/intelligence/ai-advisor/chat', 'POST', payload || {}, { timeout: 90000 });
   },
+  aiAdvisorChatStream(payload, onEvent, onDone, onError) {
+    var token = '';
+    try { token = wx.getStorageSync('authToken') || wx.getStorageSync('token') || ''; } catch (_e) {}
+    var question = encodeURIComponent(payload.question || '');
+    var pageContext = payload.pageContext ? encodeURIComponent(payload.pageContext) : '';
+    var conversationId = payload.conversationId || '';
+    var url = '/api/intelligence/ai-advisor/chat/stream?question=' + question;
+    if (pageContext) url += '&pageContext=' + pageContext;
+    if (conversationId) url += '&conversationId=' + encodeURIComponent(conversationId);
+
+    var requestTask = wx.request({
+      url: (getApp().globalData && getApp().globalData.baseUrl || '') + url,
+      method: 'GET',
+      header: { 'Authorization': token ? 'Bearer ' + token : '' },
+      enableChunked: true,
+      responseType: 'text',
+      timeout: 120000,
+      success: function () {
+        if (onDone) onDone();
+      },
+      fail: function (err) {
+        if (onError) onError(err);
+      },
+    });
+
+    if (requestTask && requestTask.onChunkReceived) {
+      var buf = '';
+      var eventName = '';
+      requestTask.onChunkReceived(function (res) {
+        try {
+          var str = '';
+          if (res.data && res.data instanceof ArrayBuffer) {
+            var arr = new Uint8Array(res.data);
+            for (var i = 0; i < arr.length; i++) str += String.fromCharCode(arr[i]);
+            str = decodeURIComponent(escape(str));
+          } else if (typeof res.data === 'string') {
+            str = res.data;
+          }
+          if (!str) return;
+          buf += str;
+          var lines = buf.split('\n');
+          buf = lines.pop() || '';
+          for (var li = 0; li < lines.length; li++) {
+            var line = lines[li];
+            if (line.startsWith('event:')) {
+              eventName = line.slice(6).trim();
+            } else if (line.startsWith('data:') && eventName) {
+              var dataStr = line.slice(5).trim();
+              try {
+                var parsed = JSON.parse(dataStr);
+                if (eventName === 'done') {
+                  if (onDone) onDone();
+                } else {
+                  if (onEvent) onEvent({ type: eventName, data: parsed });
+                }
+              } catch (_pe) {
+                if (onEvent) onEvent({ type: eventName, data: { content: dataStr } });
+              }
+              eventName = '';
+            }
+          }
+        } catch (e) {
+          console.warn('[SSE] chunk parse error:', e);
+        }
+      });
+    }
+    return requestTask;
+  },
   naturalLanguageExecute(payload) {
     return ok('/api/intelligence/crew/nl-execute', 'POST', payload || {}, { timeout: 90000 });
   },
@@ -24,14 +88,22 @@ const intelligence = {
     return ok('/api/intelligence/execution-engine/pending', 'GET', {});
   },
   approveCommand(commandId) {
-    return ok(`/api/intelligence/execution-engine/${commandId}/approve`, 'POST', {});
+    return ok('/api/intelligence/execution-engine/' + commandId + '/approve', 'POST', {});
   },
   rejectCommand(commandId) {
-    return ok(`/api/intelligence/execution-engine/${commandId}/reject`, 'POST', {});
+    return ok('/api/intelligence/execution-engine/' + commandId + '/reject', 'POST', {});
   },
-  /** 视觉AI分析（拍照识别缺陷/款式/色差） */
   visualAnalyze(payload) {
     return ok('/api/intelligence/visual/analyze', 'POST', payload || {}, { timeout: 60000 });
+  },
+  getAgentActivityList() {
+    return ok('/api/intelligence/agent-activity/agents', 'GET', {});
+  },
+  getAgentAlerts() {
+    return ok('/api/intelligence/agent-activity/alerts', 'GET', {});
+  },
+  getMyPendingTaskSummary() {
+    return ok('/api/intelligence/pending-tasks/summary', 'GET', {});
   },
 };
 
@@ -43,7 +115,7 @@ const notice = {
     return ok('/api/production/notice/unread-count', 'GET', {});
   },
   markRead(id) {
-    return ok(`/api/production/notice/${id}/read`, 'POST', {});
+    return ok('/api/production/notice/' + id + '/read', 'POST', {});
   },
 };
 

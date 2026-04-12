@@ -213,6 +213,37 @@ public class ProductionOrderController {
     }
 
     /**
+     * 复制生产订单（同款不同色/不同码等场景）
+     */
+    @PostMapping("/copy/{id}")
+    @PreAuthorize("isAuthenticated()")
+    public Result<?> copyOrder(@PathVariable String id) {
+        TenantAssert.assertTenantContext();
+        ProductionOrder source = productionOrderService.getById(id);
+        if (source == null) {
+            return Result.fail("源订单不存在");
+        }
+        ProductionOrder copy = new ProductionOrder();
+        copy.setStyleNo(source.getStyleNo());
+        copy.setStyleName(source.getStyleName());
+        copy.setFactoryId(source.getFactoryId());
+        copy.setFactoryName(source.getFactoryName());
+        copy.setOrderQuantity(source.getOrderQuantity());
+        copy.setProductCategory(source.getProductCategory());
+        copy.setMerchandiser(source.getMerchandiser());
+        copy.setCompany(source.getCompany());
+        copy.setPatternMaker(source.getPatternMaker());
+        copy.setUrgencyLevel(source.getUrgencyLevel());
+        copy.setOrderDetails(source.getOrderDetails());
+        copy.setProgressWorkflowJson(source.getProgressWorkflowJson());
+        copy.setNodeOperations(source.getNodeOperations());
+        copy.setRemarks("复制自订单: " + source.getOrderNo());
+        copy.setStatus("pending");
+        copy.setProductionProgress(0);
+        return upsert(copy);
+    }
+
+    /**
      * 保存或更新生产订单
      */
     @PostMapping

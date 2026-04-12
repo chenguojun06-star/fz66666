@@ -203,6 +203,27 @@ export function useProductionActions({
   };
   const cancelScrapOrder = () => setPendingScrapOrder(null);
 
+  /** 复制订单 */
+  const handleCopyOrder = async (order: ProductionOrder) => {
+    const orderId = safeString((order as any)?.id, '');
+    if (!orderId) {
+      message.error('订单ID为空，无法复制');
+      return;
+    }
+    try {
+      const result = await productionOrderApi.copy(orderId);
+      if (!isApiSuccess(result)) {
+        const msg = typeof result === 'object' && result !== null && 'message' in result
+          ? String((result as any).message) || '复制失败' : '复制失败';
+        throw new Error(msg);
+      }
+      message.success('订单复制成功');
+      fetchProductionList();
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '复制订单失败');
+    }
+  };
+
   /** 导出已选订单为 CSV */
   const exportSelected = (selectedRows: ProductionOrder[]) => {
     if (!selectedRows.length) {
@@ -237,5 +258,6 @@ export function useProductionActions({
     confirmScrapOrder,
     cancelScrapOrder,
     exportSelected,
+    handleCopyOrder,
   };
 }

@@ -74,6 +74,25 @@
   box-shadow: var(--shadow-sm);
 }
 
+.qr-section {
+  text-align: center;
+  padding: 28rpx 0 16rpx;
+}
+
+.qr-image {
+  width: 240rpx;
+  display: block;
+  margin: 0 auto 16rpx;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+}
+
+.qr-hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  display: block;
+}
+
 .tips-title {
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-semibold);

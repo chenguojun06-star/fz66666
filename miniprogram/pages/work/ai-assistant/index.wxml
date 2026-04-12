@@ -1,5 +1,15 @@
 <view class="chat-wrapper">
 
+  <!-- 动态实时提醒 -->
+  <view class="dynamic-suggestions" wx:if="{{dynamicSuggestions.length > 0 && messages.length <= 1 && !sending}}">
+    <view class="dynamic-suggestions-label">🔔 实时提醒</view>
+    <view class="dynamic-suggestions-list">
+      <view class="dynamic-suggestion-chip" hover-class="dynamic-suggestion-chip-hover" hover-stay-time="100" bindtap="onQuickPrompt" data-text="{{item.text}}" data-cmd="{{false}}" wx:for="{{dynamicSuggestions}}" wx:key="label">
+        <text>{{item.label}}</text>
+      </view>
+    </view>
+  </view>
+
   <!-- 快捷提问芯片（查询型直接发送；指令型填入输入框等待补充订单号） -->
   <view class="quick-chips">
     <view
@@ -123,6 +133,17 @@
 
       <!-- 用户头像 -->
       <view wx:if="{{item.role === 'user'}}" class="avatar avatar-user">我</view>
+    </view>
+
+    <!-- 流式输出区域 -->
+    <view class="streaming-row" wx:if="{{sending && streamingText}}">
+      <view class="avatar avatar-ai">☁️</view>
+      <view class="bubble bubble-ai streaming-bubble">
+        <text class="streaming-text">{{streamingText}}<text class="streaming-cursor">▍</text></text>
+      </view>
+    </view>
+    <view class="streaming-tool-bar" wx:if="{{sending && streamingTool && !streamingText}}">
+      <text class="streaming-tool-text">{{streamingTool}}</text>
     </view>
   </view>
 

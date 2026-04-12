@@ -251,6 +251,16 @@ public class ScanRecordOrchestrator {
         TenantAssert.assertTenantContext(); // 撤销扫码必须有租户上下文
         Map<String, Object> safeParams = params == null ? new HashMap<>() : new HashMap<>(params);
 
+        String orderNo = TextUtils.safeText(safeParams.get("orderNo"));
+        String orderId = TextUtils.safeText(safeParams.get("orderId"));
+        String lockKey = "scan:" + (hasText(orderNo) ? orderNo : (hasText(orderId) ? orderId : "undo"));
+        return distributedLockService.executeWithLock(lockKey, 10, java.util.concurrent.TimeUnit.SECONDS, () -> {
+            return doUndo(safeParams);
+        });
+    }
+
+    private Map<String, Object> doUndo(Map<String, Object> safeParams) {
+
         String recordId = TextUtils.safeText(safeParams.get("recordId"));
         String requestId = TextUtils.safeText(safeParams.get("requestId"));
         String scanCode = TextUtils.safeText(safeParams.get("scanCode"));
@@ -459,10 +469,25 @@ public class ScanRecordOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> rescan(Map<String, Object> params) {
         TenantAssert.assertTenantContext(); // 重新扫码必须有租户上下文
-        String recordId = TextUtils.safeText(params == null ? null : params.get("recordId"));
+        Map<String, Object> safeParams = params == null ? new HashMap<>() : new HashMap<>(params);
+        String recordId = TextUtils.safeText(safeParams.get("recordId"));
         if (!hasText(recordId)) {
             throw new IllegalArgumentException("记录ID不能为空");
         }
+
+        // 先查出记录获取orderId用于锁key
+        ScanRecord preCheck = scanRecordService.getById(recordId);
+        if (preCheck == null) {
+            throw new IllegalStateException("未找到扫码记录");
+        }
+        String rescanOrderId = TextUtils.safeText(preCheck.getOrderId());
+        String lockKey = "scan:" + (hasText(rescanOrderId) ? rescanOrderId : ("rescan:" + recordId));
+        return distributedLockService.executeWithLock(lockKey, 10, java.util.concurrent.TimeUnit.SECONDS, () -> {
+            return doRescan(safeParams, recordId);
+        });
+    }
+
+    private Map<String, Object> doRescan(Map<String, Object> safeParams, String recordId) {
 
         // 查找扫码记录
         ScanRecord target = scanRecordService.getById(recordId);

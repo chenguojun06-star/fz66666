@@ -38,10 +38,10 @@ function buildProcessOptions(processName, progressStage, stageResult) {
   const options = allBundleProcesses
     .filter(p => !scannedSet.has(p.processName))
     .map(p => ({
-      label: hidePrice ? p.processName : `${p.processName}（¥${Number(p.price || p.unitPrice || 0).toFixed(1)}）`,
+      label: hidePrice ? p.processName : `${p.processName}（¥${Number(p.unitPrice || p.price || 0).toFixed(2)}）`,
       value: p.processName,
       scanType: normalizeScanType(p.processName, p.scanType),
-      unitPrice: Number(p.price || p.unitPrice || 0),
+      unitPrice: Number(p.unitPrice || p.price || 0),
       hidePrice: hidePrice,
     }));
   let index = options.findIndex(opt => opt.value === processName || opt.value === progressStage);

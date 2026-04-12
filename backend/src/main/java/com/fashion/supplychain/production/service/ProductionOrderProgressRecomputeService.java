@@ -1,7 +1,6 @@
 package com.fashion.supplychain.production.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.entity.CuttingBundle;
@@ -473,13 +472,25 @@ public class ProductionOrderProgressRecomputeService {
         }
 
         LocalDateTime now = LocalDateTime.now();
-        int updated = productionOrderMapper.update(null, new LambdaUpdateWrapper<ProductionOrder>()
-                .eq(ProductionOrder::getId, oid)
-                .set(ProductionOrder::getCompletedQuantity, lastDoneQty)
-                .set(ProductionOrder::getProductionProgress, newProgress)
-                .set(ProductionOrder::getStatus, newStatus)
-                .set(ProductionOrder::getUpdateTime, now));
+        int maxRetries = 3;
+        int updated = 0;
+        for (int attempt = 0; attempt < maxRetries; attempt++) {
+            ProductionOrder latestOrder = productionOrderMapper.selectById(oid);
+            if (latestOrder == null) {
+                return null;
+            }
+            latestOrder.setCompletedQuantity(lastDoneQty);
+            latestOrder.setProductionProgress(newProgress);
+            latestOrder.setStatus(newStatus);
+            latestOrder.setUpdateTime(now);
+            updated = productionOrderMapper.updateById(latestOrder);
+            if (updated > 0) {
+                break;
+            }
+            log.warn("乐观锁冲突，重试进度更新: orderId={}, attempt={}/{}", oid, attempt + 1, maxRetries);
+        }
         if (updated <= 0) {
+            log.error("进度更新失败（乐观锁冲突耗尽重试次数）: orderId={}", oid);
             return null;
         }
         return productionOrderMapper.selectById(oid);

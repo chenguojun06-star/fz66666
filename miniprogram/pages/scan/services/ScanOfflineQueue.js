@@ -12,7 +12,8 @@
  */
 
 const QUEUE_KEY = 'scan_offline_queue';
-const MAX_QUEUE_SIZE = 50; // 最多缓存 50 条，超出则丢弃最新（保护 storage）
+const MAX_QUEUE_SIZE = 50;
+const ITEM_TTL_MS = 24 * 60 * 60 * 1000;
 const { DEBUG } = require('../../../config/debug');
 
 // ─── 私有实现 ────────────────────────────────────────────────────────────────
@@ -20,7 +21,15 @@ const { DEBUG } = require('../../../config/debug');
 function _load() {
   try {
     const raw = wx.getStorageSync(QUEUE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const queue = JSON.parse(raw);
+    const now = Date.now();
+    const valid = queue.filter(i => !i.queuedAt || (now - i.queuedAt) < ITEM_TTL_MS);
+    if (valid.length !== queue.length) {
+      _save(valid);
+      if (DEBUG) console.log('[ScanOfflineQueue] 清理过期条目:', queue.length - valid.length);
+    }
+    return valid;
   } catch (e) {
     return [];
   }
@@ -61,7 +70,11 @@ const ScanOfflineQueue = {
   enqueue(scanData) {
     const queue = _load();
     if (queue.length >= MAX_QUEUE_SIZE) {
-      if (DEBUG) console.warn('[ScanOfflineQueue] 队列已满（' + MAX_QUEUE_SIZE + '条），丢弃');
+      wx.showToast({
+        title: '离线缓存已满(' + MAX_QUEUE_SIZE + '条)，请联网后同步',
+        icon: 'none',
+        duration: 3000,
+      });
       return false;
     }
     const item = {

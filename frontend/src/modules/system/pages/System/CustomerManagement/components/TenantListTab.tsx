@@ -39,6 +39,9 @@ const TenantListTab: React.FC = () => {
   const [granting, setGranting] = useState(false);
   // null=全部开放，空数组=全不选，有值=白名单
   const [approveEnabledModules, setApproveEnabledModules] = useState<string[] | null>(null);
+  const moduleModal = useModal<TenantInfo>();
+  const [editingEnabledModules, setEditingEnabledModules] = useState<string[] | null>(null);
+  const [savingModules, setSavingModules] = useState(false);
 
   const MODULE_OPTIONS = [
     { value: 'CRM_MODULE', label: 'CRM 客户管理' },
@@ -84,10 +87,10 @@ const TenantListTab: React.FC = () => {
   };
 
   const PLAN_OPTIONS = [
-    { value: 'TRIAL', label: '免费试用', description: '5用户 / 1GB存储' },
-    { value: 'BASIC', label: '基础版 ¥199/月', description: '20用户 / 5GB存储' },
-    { value: 'PRO', label: '专业版 ¥499/月', description: '50用户 / 20GB存储' },
-    { value: 'ENTERPRISE', label: '企业版 ¥999/月', description: '200用户 / 100GB存储' },
+    { value: 'TRIAL', label: '免费试用', monthlyFee: 0, storageQuotaMb: 1024, maxUsers: 5 },
+    { value: 'BASIC', label: '基础版', monthlyFee: 199, storageQuotaMb: 5120, maxUsers: 20 },
+    { value: 'PRO', label: '专业版', monthlyFee: 499, storageQuotaMb: 20480, maxUsers: 50 },
+    { value: 'ENTERPRISE', label: '企业版', monthlyFee: 999, storageQuotaMb: 102400, maxUsers: 200 },
   ];
 
   const TRIAL_OPTIONS = [
@@ -179,6 +182,96 @@ const TenantListTab: React.FC = () => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  const parseEnabledModules = useCallback((raw?: string | null): string[] | null => {
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return null;
+      return parsed.filter((item): item is string => typeof item === 'string' && item.length > 0);
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const ALL_MODULE_PATHS = MODULE_SECTIONS.flatMap(section => section.paths.map(item => item.path));
+
+  const renderModuleConfigPanel = (
+    selectedModules: string[] | null,
+    setSelectedModules: React.Dispatch<React.SetStateAction<string[] | null>>,
+  ) => (
+    <div style={{ marginTop: 16, borderTop: '1px dashed #e8e8e8', paddingTop: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <span style={{ fontWeight: 600, fontSize: 14 }}>
+          菜单模块配置
+          <span style={{ fontSize: 12, color: '#999', fontWeight: 400, marginLeft: 8 }}>
+            （不勾选 = 全部开放；勾选后只显示已配置模块）
+          </span>
+        </span>
+        <Space size={4}>
+          <Button size="small" onClick={() => setSelectedModules(null)}>全部开放</Button>
+          <Button size="small" onClick={() => setSelectedModules([...BASIC_PRESET_MODULES])}>基础版预设</Button>
+          <Button size="small" onClick={() => setSelectedModules(ALL_MODULE_PATHS)}>全选</Button>
+          <Button size="small" onClick={() => setSelectedModules([])}>全不选</Button>
+        </Space>
+      </div>
+      {selectedModules === null ? (
+        <Alert title="当前：全部开放，账户可访问所有菜单。点击「基础版预设」快速配置基础套餐。" type="success" showIcon style={{ marginBottom: 10 }} />
+      ) : selectedModules.length === 0 ? (
+        <Alert title="警告：白名单为空，账户登录后将没有任何菜单，请至少勾选一个模块。" type="error" showIcon style={{ marginBottom: 10 }} />
+      ) : (
+        <Alert title={`已配置 ${selectedModules.length} 个模块路径，仅显示勾选的菜单项。`} type="info" showIcon style={{ marginBottom: 10 }} />
+      )}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, maxHeight: 340, overflowY: 'auto', padding: 2 }}>
+        {MODULE_SECTIONS.map(section => {
+          const sectionPaths = section.paths.map(item => item.path);
+          const checkedCount = selectedModules === null ? 0 : sectionPaths.filter(path => selectedModules.includes(path)).length;
+          const allChecked = selectedModules !== null && checkedCount === sectionPaths.length;
+          const someChecked = checkedCount > 0 && !allChecked;
+          return (
+            <div key={section.key} style={{ border: '1px solid #f0f0f0', borderRadius: 6, padding: '8px 10px', background: '#fafafa' }}>
+              <Checkbox
+                checked={allChecked}
+                indeterminate={someChecked}
+                style={{ fontWeight: 600, marginBottom: 4 }}
+                onChange={(e) => {
+                  setSelectedModules(prev => {
+                    const base = prev === null ? [] : [...prev];
+                    if (e.target.checked) {
+                      return [...new Set([...base, ...sectionPaths])];
+                    }
+                    return base.filter(path => !sectionPaths.includes(path));
+                  });
+                }}
+              >
+                {section.title}
+              </Checkbox>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingLeft: 4 }}>
+                {section.paths.map(item => (
+                  <Checkbox
+                    key={item.path}
+                    checked={selectedModules !== null && selectedModules.includes(item.path)}
+                    style={{ fontSize: 12, marginLeft: 0 }}
+                    onChange={(e) => {
+                      setSelectedModules(prev => {
+                        const base = prev === null ? [] : [...prev];
+                        if (e.target.checked) {
+                          return [...new Set([...base, item.path])];
+                        }
+                        return base.filter(path => path !== item.path);
+                      });
+                    }}
+                  >
+                    {item.label}
+                  </Checkbox>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
   useEffect(() => {
     if (!approveModal.visible || !approveModal.data) {
       setTimeout(() => approveForm?.resetFields(), 50);
@@ -186,6 +279,36 @@ const TenantListTab: React.FC = () => {
     }
     setTimeout(() => approveForm?.setFieldsValue({ planType: 'TRIAL', trialDays: 30 }), 50);
   }, [approveForm, approveModal.data, approveModal.visible]);
+
+  const handleCreatePlanChange = (value: string) => {
+    const plan = PLAN_OPTIONS.find((item) => item.value === value);
+    if (!plan) return;
+    form.setFieldsValue({ maxUsers: plan.maxUsers });
+  };
+
+  const handleOpenModuleConfig = (record: TenantInfo) => {
+    setEditingEnabledModules(parseEnabledModules(record.enabledModules));
+    moduleModal.open(record);
+  };
+
+  const handleSaveModuleConfig = async () => {
+    const record = moduleModal.data;
+    if (!record) return;
+    try {
+      setSavingModules(true);
+      const enabledModules = editingEnabledModules !== null && editingEnabledModules.length > 0
+        ? JSON.stringify(editingEnabledModules)
+        : null;
+      await tenantService.updateTenantEnabledModules(record.id, enabledModules);
+      message.success('菜单模块配置已更新');
+      moduleModal.close();
+      fetchData();
+    } catch (e: unknown) {
+      message.error(e instanceof Error ? e.message : '保存失败');
+    } finally {
+      setSavingModules(false);
+    }
+  };
 
   const handleCreate = async () => {
     try {
@@ -408,6 +531,10 @@ const TenantListTab: React.FC = () => {
             },
           },
           {
+            key: 'menuModules', label: '菜单模块',
+            onClick: () => handleOpenModuleConfig(record),
+          },
+          {
             key: 'markPaid', label: record.paidStatus === 'PAID' ? '取消付费' : '标记已付费',
             onClick: () => handleMarkPaid(record),
           },
@@ -582,6 +709,32 @@ const TenantListTab: React.FC = () => {
             </Radio.Group>
           </Form.Item>
 
+          <Form.Item label="初始套餐" name="planType" initialValue="TRIAL" rules={[{ required: true }]} style={{ marginBottom: 12 }}>
+            <Select onChange={handleCreatePlanChange}>
+              {PLAN_OPTIONS.map(plan => (
+                <Select.Option key={plan.value} value={plan.value}>
+                  {plan.label}（{plan.monthlyFee === 0 ? '免费试用' : `¥${plan.monthlyFee}/月`}，{plan.maxUsers}用户，{plan.storageQuotaMb >= 1024 ? `${plan.storageQuotaMb / 1024}GB` : `${plan.storageQuotaMb}MB`}）
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item noStyle shouldUpdate={(prev, cur) => prev.planType !== cur.planType}>
+            {({ getFieldValue }) => {
+              const plan = PLAN_OPTIONS.find((item) => item.value === getFieldValue('planType'));
+              if (!plan) return null;
+              return (
+                <Alert
+                  type="info"
+                  showIcon
+                  style={{ marginBottom: 12 }}
+                  title={`当前套餐：${plan.label}`}
+                  description={`${plan.monthlyFee === 0 ? '免费试用' : `¥${plan.monthlyFee}/月`} · ${plan.maxUsers} 用户 · ${plan.storageQuotaMb >= 1024 ? `${plan.storageQuotaMb / 1024}GB` : `${plan.storageQuotaMb}MB`} 存储`}
+                />
+              );
+            }}
+          </Form.Item>
+
           {/* 租户名称 + 租户编码 — 一行 */}
           <div style={{ display: 'flex', gap: 12 }}>
             <Form.Item label="租户名称" name="tenantName" rules={[{ required: true }]} style={{ flex: 1, marginBottom: 12 }}>
@@ -601,7 +754,7 @@ const TenantListTab: React.FC = () => {
               <Input />
             </Form.Item>
             <Form.Item label="最大用户数" name="maxUsers" style={{ flex: '0 0 120px', marginBottom: 12 }}>
-              <InputNumber min={1} max={9999} defaultValue={50} style={{ width: '100%' }} />
+              <InputNumber min={1} max={9999} style={{ width: '100%' }} disabled />
             </Form.Item>
           </div>
           <div style={{ background: 'rgba(45, 127, 249, 0.08)', borderRadius: 8, padding: '12px 16px', marginTop: 8 }}>
@@ -759,7 +912,7 @@ const TenantListTab: React.FC = () => {
             <Select>
               {PLAN_OPTIONS.map(p => (
                 <Select.Option key={p.value} value={p.value}>
-                  {p.label}（{p.description}）
+                  {p.label}（{p.monthlyFee === 0 ? '免费试用' : `¥${p.monthlyFee}/月`}，{p.maxUsers}用户，{p.storageQuotaMb >= 1024 ? `${p.storageQuotaMb / 1024}GB` : `${p.storageQuotaMb}MB`}）
                 </Select.Option>
               ))}
             </Select>
@@ -783,81 +936,29 @@ const TenantListTab: React.FC = () => {
             )}
           </Form.Item>
         </Form>
+        {renderModuleConfigPanel(approveEnabledModules, setApproveEnabledModules)}
+      </ResizableModal>
 
-        {/* 菜单模块配置区 */}
-        <div style={{ marginTop: 16, borderTop: '1px dashed #e8e8e8', paddingTop: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <span style={{ fontWeight: 600, fontSize: 14 }}>
-              菜单模块配置
-              <span style={{ fontSize: 12, color: '#999', fontWeight: 400, marginLeft: 8 }}>
-                （不勾选 = 全部开放；勾选后只显示已配置模块）
-              </span>
-            </span>
-            <Space size={4}>
-              <Button size="small" onClick={() => setApproveEnabledModules(null)}>全部开放</Button>
-              <Button size="small" onClick={() => setApproveEnabledModules([...BASIC_PRESET_MODULES])}>基础版预设</Button>
-              <Button size="small" onClick={() => setApproveEnabledModules(MODULE_SECTIONS.flatMap(s => s.paths.map(p => p.path)))}>全选</Button>
-              <Button size="small" onClick={() => setApproveEnabledModules([])}>全不选</Button>
-            </Space>
-          </div>
-          {approveEnabledModules === null ? (
-            <Alert title="当前：全部开放，账户可访问所有菜单。点击「基础版预设」快速配置基础套餐。" type="success" showIcon style={{ marginBottom: 10 }} />
-          ) : approveEnabledModules.length === 0 ? (
-            <Alert title="警告：白名单为空，账户登录后将没有任何菜单，请至少勾选一个模块。" type="error" showIcon style={{ marginBottom: 10 }} />
-          ) : (
-            <Alert title={`已配置 ${approveEnabledModules.length} 个模块路径，仅显示勾选的菜单项。`} type="info" showIcon style={{ marginBottom: 10 }} />
-          )}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, maxHeight: 340, overflowY: 'auto', padding: 2 }}>
-            {MODULE_SECTIONS.map(section => {
-              const sectionPaths = section.paths.map(p => p.path);
-              const checkedCount = approveEnabledModules === null ? 0 : sectionPaths.filter(p => approveEnabledModules.includes(p)).length;
-              const allChecked = approveEnabledModules !== null && checkedCount === sectionPaths.length;
-              const someChecked = checkedCount > 0 && !allChecked;
-              return (
-                <div key={section.key} style={{ border: '1px solid #f0f0f0', borderRadius: 6, padding: '8px 10px', background: '#fafafa' }}>
-                  <Checkbox
-                    checked={allChecked}
-                    indeterminate={someChecked}
-                    style={{ fontWeight: 600, marginBottom: 4 }}
-                    onChange={(e) => {
-                      setApproveEnabledModules(prev => {
-                        const base = prev === null ? [] : [...prev];
-                        if (e.target.checked) {
-                          return [...new Set([...base, ...sectionPaths])];
-                        } else {
-                          return base.filter(p => !sectionPaths.includes(p));
-                        }
-                      });
-                    }}
-                  >
-                    {section.title}
-                  </Checkbox>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingLeft: 4 }}>
-                    {section.paths.map(item => (
-                      <Checkbox
-                        key={item.path}
-                        checked={approveEnabledModules !== null && approveEnabledModules.includes(item.path)}
-                        style={{ fontSize: 12, marginLeft: 0 }}
-                        onChange={(e) => {
-                          setApproveEnabledModules(prev => {
-                            const base = prev === null ? [] : [...prev];
-                            if (e.target.checked) {
-                              return [...new Set([...base, item.path])];
-                            } else {
-                              return base.filter(p => p !== item.path);
-                            }
-                          });
-                        }}
-                      >
-                        {item.label}
-                      </Checkbox>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+      <ResizableModal
+        open={moduleModal.visible}
+        title={`编辑菜单模块 - ${moduleModal.data?.tenantName || ''}`}
+        onCancel={() => moduleModal.close()}
+        width="60vw"
+        initialHeight={Math.round(window.innerHeight * 0.82)}
+        footer={
+          <Space>
+            <Button onClick={() => moduleModal.close()}>取消</Button>
+            <Button type="primary" loading={savingModules} onClick={handleSaveModuleConfig}>保存配置</Button>
+          </Space>
+        }
+      >
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+          title="这里修改的是租户登录后的菜单白名单。应用商店和集成中心始终可见，不在白名单范围内。"
+        />
+        {renderModuleConfigPanel(editingEnabledModules, setEditingEnabledModules)}
       </ResizableModal>
     </div>
   );

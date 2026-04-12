@@ -26,6 +26,7 @@ export interface UseProductionColumnsProps {
   handleCloseOrder: (record: ProductionOrder) => void;
   handleScrapOrder: (record: ProductionOrder) => void;
   handleTransferOrder: (record: ProductionOrder) => void;
+  handleCopyOrder?: (record: ProductionOrder) => void;
   navigate: NavigateFunction;
   openProcessDetail: (record: ProductionOrder, type: string) => void;
   openNodeDetail?: (record: ProductionOrder, nodeType: string, nodeName: string, stats?: { done: number; total: number; percent: number; remaining: number }, unitPrice?: number, processList?: { name: string; unitPrice?: number; processCode?: string }[]) => void;
@@ -53,7 +54,7 @@ export interface UseProductionColumnsProps {
  */
 export function useProductionColumns({
   sortField, sortOrder, handleSort,
-  handleCloseOrder, handleScrapOrder, handleTransferOrder,
+  handleCloseOrder, handleScrapOrder, handleTransferOrder, handleCopyOrder,
   navigate, openProcessDetail, openNodeDetail, syncProcessFromTemplate,
   setPrintModalVisible, setPrintingRecord,
   quickEditModal, isSupervisorOrAbove, renderCompletionTimeTag, deliveryRiskMap,
@@ -684,6 +685,12 @@ export function useProductionColumns({
                   title: frozen ? '转单（订单已关单）' : '转给其他人员处理',
                   disabled: frozen,
                   onClick: () => handleTransferOrder(record),
+                },
+                {
+                  key: 'copy',
+                  label: '复制订单',
+                  title: '复制此订单（同款不同色/码）',
+                  onClick: () => handleCopyOrder?.(record),
                 }
               ] : []),
               {

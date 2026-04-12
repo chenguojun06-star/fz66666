@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Card, DatePicker, Descriptions, Drawer, Empty, Input, Select, Space, Tag, Timeline, Typography } from 'antd';
+import { Alert, Button, Card, DatePicker, Descriptions, Drawer, Empty, Input, Select, Space, Tabs, Tag, Timeline, Typography } from 'antd';
 import ResizableTable from '@/components/common/ResizableTable';
-import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
+import { ReloadOutlined, SearchOutlined, RobotOutlined, UnorderedListOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DEFAULT_PAGE_SIZE_OPTIONS, readPageSize, savePageSize } from '@/utils/pageSizeStore';
@@ -9,6 +9,7 @@ import Layout from '../../../../components/Layout';
 import PageLayout from '@/components/common/PageLayout';
 import { intelligenceApi } from '../../../../services/intelligence/intelligenceApi';
 import { paths } from '../../../../routeConfig';
+import AgentActivityPanel from './AgentActivityPanel';
 
 type TraceRow = {
   id?: string;
@@ -113,6 +114,7 @@ const AiAgentTraceCenter: React.FC = () => {
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detail, setDetail] = useState<{ commandId?: string; logs?: TraceRow[]; count?: number } | null>(null);
+  const [activeTab, setActiveTab] = useState<string>('activity');
 
   const fetchRecent = useCallback(async () => {
     setLoading(true);
@@ -178,103 +180,119 @@ const AiAgentTraceCenter: React.FC = () => {
             <Button type="primary" icon={<ReloadOutlined />} onClick={() => void fetchRecent()} loading={loading}>刷新</Button>
           </Space>
         }
-        filterBar={
-          <>
-            <Card size="small" style={{ marginBottom: 12 }}>
-              <Space wrap>
-            <Input
-              allowClear
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              placeholder="搜索 commandId / 指令 / 时间"
-              prefix={<SearchOutlined />}
-              style={{ width: 280 }}
-            />
-            <Select
-              allowClear
-              placeholder="按状态筛选"
-              value={status}
-              onChange={setStatus}
-              style={{ width: 160 }}
-              options={[
-                { label: '执行中', value: 'EXECUTING' },
-                { label: '成功', value: 'SUCCESS' },
-                { label: '失败', value: 'FAILED' },
-              ]}
-            />
-            <Select
-              allowClear
-              placeholder="按工具名筛选"
-              value={toolName}
-              onChange={setToolName}
-              style={{ width: 220 }}
-              options={toolOptions}
-            />
-            <Input
-              allowClear
-              value={executorKeyword}
-              onChange={(e) => setExecutorKeyword(e.target.value)}
-              placeholder="按责任人筛选"
-              style={{ width: 180 }}
-            />
-            <DatePicker.RangePicker
-              showTime
-              value={timeRange as any}
-              onChange={(values) => setTimeRange(values as [dayjs.Dayjs | null, dayjs.Dayjs | null] | null)}
-            />
-            <Button type={failedOnly ? 'primary' : 'default'} danger={failedOnly} onClick={() => setFailedOnly((prev) => !prev)}>
-              仅看失败
-            </Button>
-            <Button type="primary" onClick={() => void fetchRecent()}>查询</Button>
-                <span style={{ color: '#8c8c8c', fontSize: 12 }}>共 {filteredRows.length} 条请求</span>
-              </Space>
-            </Card>
-
-            <Alert
-              showIcon
-              type={filteredRows.some((item) => item.status === 'FAILED') ? 'warning' : 'info'}
-              style={{ marginBottom: 12 }}
-              title="追溯范围"
-              description={filteredRows.some((item) => item.status === 'FAILED')
-                ? '当前结果中包含失败记录，建议优先查看详情中的错误信息、工具参数与补救建议。'
-                : '这里展示的是小云 AI 请求主记录。点击"查看详情"后，可看到本次请求的工具调用链、状态、错误信息与耗时。'}
-            />
-          </>
-        }
       >
-        <ResizableTable<TraceRow>
-          rowKey={(record) => record.id || record.commandId || Math.random().toString(36)}
-          loading={loading}
-          dataSource={filteredRows}
-          pagination={{
-            pageSize,
-            showSizeChanger: true,
-            pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
-            onChange: (_page, nextPageSize) => {
-              if (!nextPageSize || nextPageSize === pageSize) return;
-              savePageSize(nextPageSize);
-              setPageSize(nextPageSize);
-            },
-          }}
-          locale={{ emptyText: <Empty description="暂无 AI 执行记录" /> }}
-          columns={[
-            { title: '时间', dataIndex: 'createdAt', width: 180 },
-            { title: 'commandId', dataIndex: 'commandId', width: 240, ellipsis: true },
-            { title: '状态', dataIndex: 'status', width: 100, render: (value) => { const m: Record<string, string> = { SUCCESS: '成功', FAILED: '失败', EXECUTING: '执行中', TIMEOUT: '超时', PENDING: '待执行', UNKNOWN: '未知' }; return <Tag color={statusColor(value)}>{m[value] || value || '未知'}</Tag>; } },
-            { title: '责任人', dataIndex: 'executorId', width: 120, ellipsis: true },
-            { title: '目标单据', dataIndex: 'targetId', width: 140, ellipsis: true },
-            { title: '工具', dataIndex: 'remark', width: 220, ellipsis: true },
-            { title: '耗时', dataIndex: 'durationMs', width: 90, render: (value) => typeof value === 'number' ? `${value}ms` : '-' },
-            { title: '用户指令', dataIndex: 'reason', ellipsis: true },
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          items={[
             {
-              title: '操作',
-              key: 'action',
-              width: 120,
-              render: (_, record) => (
-                <Space size={4}>
-                  <Button type="link" onClick={() => void openDetail(record.commandId)}>查看详情</Button>
-                  {buildTraceRoute(record) ? <Button type="link" onClick={() => navigate(buildTraceRoute(record)!.path)}>{buildTraceRoute(record)!.label}</Button> : null}
-                </Space>
+              key: 'activity',
+              label: <span><RobotOutlined /> 智能体活动追踪</span>,
+              children: <AgentActivityPanel />,
+            },
+            {
+              key: 'records',
+              label: <span><UnorderedListOutlined /> 执行记录</span>,
+              children: (
+                <>
+                  <Card size="small" style={{ marginBottom: 12 }}>
+                    <Space wrap>
+                  <Input
+                    allowClear
+                    value={keyword}
+                    onChange={(e) => setKeyword(e.target.value)}
+                    placeholder="搜索 commandId / 指令 / 时间"
+                    prefix={<SearchOutlined />}
+                    style={{ width: 280 }}
+                  />
+                  <Select
+                    allowClear
+                    placeholder="按状态筛选"
+                    value={status}
+                    onChange={setStatus}
+                    style={{ width: 160 }}
+                    options={[
+                      { label: '执行中', value: 'EXECUTING' },
+                      { label: '成功', value: 'SUCCESS' },
+                      { label: '失败', value: 'FAILED' },
+                    ]}
+                  />
+                  <Select
+                    allowClear
+                    placeholder="按工具名筛选"
+                    value={toolName}
+                    onChange={setToolName}
+                    style={{ width: 220 }}
+                    options={toolOptions}
+                  />
+                  <Input
+                    allowClear
+                    value={executorKeyword}
+                    onChange={(e) => setExecutorKeyword(e.target.value)}
+                    placeholder="按责任人筛选"
+                    style={{ width: 180 }}
+                  />
+                  <DatePicker.RangePicker
+                    showTime
+                    value={timeRange as any}
+                    onChange={(values) => setTimeRange(values as [dayjs.Dayjs | null, dayjs.Dayjs | null] | null)}
+                  />
+                  <Button type={failedOnly ? 'primary' : 'default'} danger={failedOnly} onClick={() => setFailedOnly((prev) => !prev)}>
+                    仅看失败
+                  </Button>
+                  <Button type="primary" onClick={() => void fetchRecent()}>查询</Button>
+                      <span style={{ color: '#8c8c8c', fontSize: 12 }}>共 {filteredRows.length} 条请求</span>
+                    </Space>
+                  </Card>
+
+                  <Alert
+                    showIcon
+                    type={filteredRows.some((item) => item.status === 'FAILED') ? 'warning' : 'info'}
+                    style={{ marginBottom: 12 }}
+                    title="追溯范围"
+                    description={filteredRows.some((item) => item.status === 'FAILED')
+                      ? '当前结果中包含失败记录，建议优先查看详情中的错误信息、工具参数与补救建议。'
+                      : '这里展示的是小云 AI 请求主记录。点击"查看详情"后，可看到本次请求的工具调用链、状态、错误信息与耗时。'}
+                  />
+
+                  <ResizableTable<TraceRow>
+                    rowKey={(record) => record.id || record.commandId || Math.random().toString(36)}
+                    loading={loading}
+                    dataSource={filteredRows}
+                    pagination={{
+                      pageSize,
+                      showSizeChanger: true,
+                      pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
+                      onChange: (_page, nextPageSize) => {
+                        if (!nextPageSize || nextPageSize === pageSize) return;
+                        savePageSize(nextPageSize);
+                        setPageSize(nextPageSize);
+                      },
+                    }}
+                    locale={{ emptyText: <Empty description="暂无 AI 执行记录" /> }}
+                    columns={[
+                      { title: '时间', dataIndex: 'createdAt', width: 180 },
+                      { title: 'commandId', dataIndex: 'commandId', width: 240, ellipsis: true },
+                      { title: '状态', dataIndex: 'status', width: 100, render: (value) => { const m: Record<string, string> = { SUCCESS: '成功', FAILED: '失败', EXECUTING: '执行中', TIMEOUT: '超时', PENDING: '待执行', UNKNOWN: '未知' }; return <Tag color={statusColor(value)}>{m[value] || value || '未知'}</Tag>; } },
+                      { title: '责任人', dataIndex: 'executorId', width: 120, ellipsis: true },
+                      { title: '目标单据', dataIndex: 'targetId', width: 140, ellipsis: true },
+                      { title: '工具', dataIndex: 'remark', width: 220, ellipsis: true },
+                      { title: '耗时', dataIndex: 'durationMs', width: 90, render: (value) => typeof value === 'number' ? `${value}ms` : '-' },
+                      { title: '用户指令', dataIndex: 'reason', ellipsis: true },
+                      {
+                        title: '操作',
+                        key: 'action',
+                        width: 120,
+                        render: (_, record) => (
+                          <Space size={4}>
+                            <Button type="link" onClick={() => void openDetail(record.commandId)}>查看详情</Button>
+                            {buildTraceRoute(record) ? <Button type="link" onClick={() => navigate(buildTraceRoute(record)!.path)}>{buildTraceRoute(record)!.label}</Button> : null}
+                          </Space>
+                        ),
+                      },
+                    ]}
+                  />
+                </>
               ),
             },
           ]}

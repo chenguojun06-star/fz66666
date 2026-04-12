@@ -78,6 +78,7 @@ public class CommonController {
             } else {
                 File dest = TenantFilePathResolver.resolveStoragePath(uploadPath, newFilename);
                 file.transferTo(dest);
+                cosService.safeRefreshTenantStorageUsage(UserContext.tenantId());
             }
 
             // ✅ 返回租户隔离的 URL

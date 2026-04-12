@@ -1,3 +1,31 @@
+# 2026-04-12
+
+## 🔧 租户套餐/已开通模块/存储统计链路补齐
+
+- **问题1（P0）**：租户 `storageUsedMb` 一直为 0，套餐页和超管账单页的存储用量形同虚设。
+- **根因1**：文件统一经过 `CosService` 上传，但上传成功后从未回写租户存储用量，`TenantBillingHelper.updateStorageUsed()` 也没有任何调用方。
+- **修复1**：
+  - `CosService` 新增按租户实时重算存储占用能力，兼容 COS 与本地文件存储两种模式；
+  - 每次上传成功后自动重算并回写 `t_tenant.storage_used_mb`；
+  - `TenantBillingHelper.getTenantBillingOverview()` 与 `getMyBilling()` 增加只读兜底同步，历史租户即使没有新上传也会在查看账单时自动校准。
+
+- **问题2（P1）**：已审批租户的菜单白名单只能在审批时设置，审批通过后没有独立编辑入口。
+- **修复2**：
+  - 后端新增 `POST /api/system/tenant/{id}/enabled-modules`，支持显式保存白名单或清空为 `null`（全部开放）；
+  - 超管租户列表新增“菜单模块”入口，已激活/已停用租户可独立编辑菜单白名单，不再需要重新走审批或直接改库。
+
+- **问题3（体验）**：新建租户时没有套餐选择，个人中心“已开通模块”也没展示套餐价格和增值模块费用，套餐/结算/模块三处口径不一致。
+- **修复3**：
+  - 超管“新建租户”弹窗新增初始套餐选择，创建即同步 `planType/monthlyFee/storageQuotaMb/maxUsers/paidStatus/expireTime`；
+  - `MyModulesTab` 增加当前套餐费用、存储配额、用户数，并显示增值模块订阅价格；
+  - `MyBillingTab` 的套餐金额显示改为按 `billingCycle` 输出，应用订阅表新增“费用”列；
+  - `AppStoreOrchestrator.getMyApps()` 返回订阅价格字段，保证个人中心与应用商店订阅数据口径一致。
+
+- **对系统的帮助**：
+  - ✅ 套餐里的“存储配额”终于有真实占用值，不再长期显示 0MB
+  - ✅ 超管可以在租户激活后继续维护菜单白名单，菜单权限调整不再卡死在审批环节
+  - ✅ 新建租户、账单、已开通模块三条链路统一按同一套餐/订阅价格显示，减少运营和租户对账误差
+
 # 2026-04-10
 
 ## 🔧 工资明细跨订单数量虚高修复（PayrollAggregationOrchestrator 分组 key 补全）
