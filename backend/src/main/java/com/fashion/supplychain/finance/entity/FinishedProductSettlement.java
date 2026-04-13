@@ -135,6 +135,12 @@ public class FinishedProductSettlement implements Serializable {
      */
     private LocalDateTime updateTime;
 
+    /**
+     * 完成时间：优先取 t_production_order.actual_end_date，兜底取最晚入库时间
+     * 由视图 v_finished_product_settlement 中 COALESCE(po.actual_end_date, wh.last_warehoused_time) 提供
+     */
+    private LocalDateTime completeTime;
+
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 }
