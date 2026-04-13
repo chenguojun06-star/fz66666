@@ -59,6 +59,13 @@ const TaskAggregationPanel: React.FC<TaskAggregationPanelProps> = ({ tasks, onCl
         (t.styleNo && t.styleNo.toLowerCase().includes(kw))
       );
     }
+    // 防御性去重：按 id 保留首次出现的任务（正常应由后端保证唯一）
+    const seenIds = new Set<string>();
+    result = result.filter(t => {
+      if (!t.id || seenIds.has(t.id)) return false;
+      seenIds.add(t.id);
+      return true;
+    });
     return result;
   }, [tasks, activeFilter, searchKeyword]);
 

@@ -100,6 +100,9 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
             pushedToOrderOnly = "1".equals(s) || "true".equalsIgnoreCase(s) || "yes".equalsIgnoreCase(s);
         }
 
+        // 是否排除已报废款式（待办任务等场景只关心进行中的款式）
+        boolean excludeScrapped = Boolean.TRUE.equals(params.get("excludeScrapped"));
+
         // 使用条件构造器进行查询
         com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<StyleInfo> wrapper =
             new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<StyleInfo>()
@@ -115,10 +118,15 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                     .or()
                     .like(StyleInfo::getCategory, keyword))
                 .eq(onlyCompleted, StyleInfo::getSampleStatus, "COMPLETED")
-                .eq(pushedToOrderOnly, StyleInfo::getPushedToOrder, 1)
-                .and(w -> w.eq(StyleInfo::getStatus, STYLE_STATUS_ENABLED)
+                .eq(pushedToOrderOnly, StyleInfo::getPushedToOrder, 1);
+        // 状态过滤：excludeScrapped=true 时只查进行中款式，否则同时包含已报废款式（样衣列表页需要展示报废记录）
+        if (excludeScrapped) {
+            wrapper.eq(StyleInfo::getStatus, STYLE_STATUS_ENABLED);
+        } else {
+            wrapper.and(w -> w.eq(StyleInfo::getStatus, STYLE_STATUS_ENABLED)
                     .or()
                     .eq(StyleInfo::getStatus, STYLE_STATUS_SCRAPPED));
+        }
 
         if (StringUtils.hasText(progressNode)) {
             String node = progressNode.trim();

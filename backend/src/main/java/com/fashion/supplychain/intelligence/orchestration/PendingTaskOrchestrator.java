@@ -36,8 +36,10 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -84,10 +86,16 @@ public class PendingTaskOrchestrator {
         collectSafely("payroll", this::collectPayrollSettlementTasks, all);
         collectSafely("materialRecon", this::collectMaterialReconciliationTasks, all);
         collectSafely("expenseReimburse", this::collectExpenseReimbursementTasks, all);
-        all.sort(Comparator.comparingInt(PendingTaskDTO::getPriorityOrder)
+        // 全局去重：防止不同 collector 因条件交叉产生重复 id（保留首次出现的那条）
+        Map<String, PendingTaskDTO> deduped = new LinkedHashMap<>();
+        for (PendingTaskDTO task : all) {
+            if (task.getId() != null) deduped.putIfAbsent(task.getId(), task);
+        }
+        List<PendingTaskDTO> dedupedAll = new ArrayList<>(deduped.values());
+        dedupedAll.sort(Comparator.comparingInt(PendingTaskDTO::getPriorityOrder)
                 .thenComparing(t -> t.getCreatedAt() != null ? t.getCreatedAt() : LocalDateTime.MIN,
                         Comparator.reverseOrder()));
-        return all;
+        return dedupedAll;
     }
 
     public PendingTaskSummaryDTO getMyPendingTaskSummary() {
@@ -273,6 +281,8 @@ public class PendingTaskOrchestrator {
         Long tenantId = UserContext.tenantId();
         Map<String, Object> params = new HashMap<>();
         params.put("tenantId", tenantId);
+        // 待办任务只关心进行中的样衣开发，明确排除已报废款式
+        params.put("excludeScrapped", Boolean.TRUE);
         List<String> devNodes = List.of("未开始", "纸样开发中", "样衣制作中");
         List<StyleInfo> styles = new ArrayList<>();
         for (String node : devNodes) {
@@ -283,7 +293,12 @@ public class PendingTaskOrchestrator {
             }
             if (styles.size() >= MAX_PER_CATEGORY) break;
         }
-        return styles.stream().limit(MAX_PER_CATEGORY).map(s -> {
+        // 按 ID 去重：防止同一款式因 progressNode 条件交叉在多次查询中重复出现
+        Set<Long> seenIds = new LinkedHashSet<>();
+        List<StyleInfo> uniqueStyles = styles.stream()
+                .filter(s -> s.getId() != null && seenIds.add(s.getId()))
+                .collect(Collectors.toList());
+        return uniqueStyles.stream().limit(MAX_PER_CATEGORY).map(s -> {
             PendingTaskDTO dto = new PendingTaskDTO();
             dto.setId("STY_" + s.getId());
             dto.setTaskType("STYLE_DEVELOPMENT");
