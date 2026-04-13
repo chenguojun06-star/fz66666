@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { CloseOutlined, RightOutlined, FilterOutlined, MessageOutlined } from '@ant-design/icons';
+import { CloseOutlined, RightOutlined, MessageOutlined } from '@ant-design/icons';
 import type { PendingTaskDTO } from '@/services/intelligence/intelligenceApi';
 import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
 import styles from './TaskAggregationPanel.module.css';

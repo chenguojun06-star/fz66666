@@ -145,7 +145,7 @@ const GlobalAiAssistant: React.FC = () => {
         // @ts-ignore
         const actualData = res?.code === 200 ? res.data : (res?.data || res);
         if (actualData) {
-          const { overdueOrderCount = 0, highRiskOrderCount = 0, todayScanCount = 0, pendingItems: apiPendingItems = [], topPriorityOrder } = actualData;
+          const { overdueOrderCount = 0, highRiskOrderCount = 0, todayScanCount = 0, topPriorityOrder } = actualData;
           let newMood: XiaoyunCloudMood = 'normal';
           let greeting = INITIAL_MSG.text;
           const seed = overdueOrderCount * 17 + highRiskOrderCount * 11 + todayScanCount;
