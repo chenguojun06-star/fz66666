@@ -59,6 +59,8 @@ Page({
         orderNo: raw.orderNo || '',
         bundleNo: raw.bundleNo || '',
         styleNo: raw.styleNo || '',
+        color: raw.color || '',
+        size: raw.size || raw.sizeSpec || '',
         processName: raw.processName || '',
         quantity: raw.quantity || 0,
         progressStage: raw.progressStage || '',

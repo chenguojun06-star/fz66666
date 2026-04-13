@@ -8,6 +8,8 @@
         <text class="style-no">{{detail.styleNo || detail.orderNo}}</text>
         <text class="sub-info">订单 {{detail.orderNo}}</text>
         <text wx:if="{{detail.bundleNo}}" class="sub-info">菲号 {{detail.bundleNo}}</text>
+        <text wx:if="{{detail.color}}" class="sub-info">颜色 {{detail.color}}</text>
+        <text wx:if="{{detail.size}}" class="sub-info">码数 {{detail.size}}</text>
         <text class="sub-info">数量 {{detail.quantity}} 件</text>
         <text wx:if="{{detail.processName}}" class="sub-info tag-process">{{detail.processName}}</text>
       </view>
