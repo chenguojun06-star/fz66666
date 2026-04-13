@@ -15,9 +15,11 @@ import com.fashion.supplychain.finance.service.ExpenseReimbursementService;
 import com.fashion.supplychain.finance.service.FinishedProductSettlementService;
 import com.fashion.supplychain.finance.service.FinishedSettlementApprovalStatusService;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -34,6 +36,11 @@ public class FinanceWorkflowTool implements AgentTool {
     @Autowired private ExpenseReimbursementOrchestrator expenseReimbursementOrchestrator;
     @Autowired private FinishedProductSettlementService finishedProductSettlementService;
     @Autowired private FinishedSettlementApprovalStatusService finishedSettlementApprovalStatusService;
+    @Autowired private AiAgentToolAccessService toolAccessService;
+
+    private static final Set<String> WRITE_ACTIONS = Set.of(
+            "initiate_payment", "confirm_offline_payment", "reject_payable",
+            "approve_expense", "reject_expense", "approve_finished_settlement");
 
     @Override
     public AiTool getToolDefinition() {
@@ -72,6 +79,9 @@ public class FinanceWorkflowTool implements AgentTool {
         }
         Map<String, Object> args = MAPPER.readValue(argumentsJson == null || argumentsJson.isBlank() ? "{}" : argumentsJson, new TypeReference<Map<String, Object>>() {});
         String action = text(args.get("action"));
+        if (WRITE_ACTIONS.contains(action) && !toolAccessService.hasManagerAccess()) {
+            return "{\"success\":false,\"error\":\"该财务操作需要管理员权限\"}";
+        }
         return switch (action) {
             case "list_pending_payables" -> listPendingPayables(args);
             case "list_finance_approvals" -> listFinanceApprovals(args);

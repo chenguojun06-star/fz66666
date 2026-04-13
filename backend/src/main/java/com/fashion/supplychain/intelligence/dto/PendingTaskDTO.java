@@ -23,6 +23,15 @@ public class PendingTaskDTO {
     private String categoryLabel;
     private String categoryIcon;
 
+    /** 样衣开发：样板数量 */
+    private Integer quantity;
+    /** 样衣开发：当前阶段开始时间（ISO格式字符串） */
+    private String startTime;
+    /** 样衣开发：交板日期（截止时间，ISO格式字符串） */
+    private String endTime;
+    /** 样衣开发：当前阶段领取人名字 */
+    private String assigneeName;
+
     public int getPriorityOrder() {
         if ("high".equals(priority)) return 0;
         if ("medium".equals(priority)) return 1;

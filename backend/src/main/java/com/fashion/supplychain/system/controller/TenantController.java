@@ -522,6 +522,13 @@ public class TenantController {
         return Result.success(tenantOrchestrator.listPendingRegistrations(page, pageSize));
     }
 
+    @PostMapping("/registrations/factory-pending")
+    public Result<Page<User>> listFactoryPendingRegistrations(@RequestBody(required = false) Map<String, Object> params) {
+        Long page = params != null && params.get("page") != null ? Long.valueOf(params.get("page").toString()) : 1L;
+        Long pageSize = params != null && params.get("pageSize") != null ? Long.valueOf(params.get("pageSize").toString()) : 20L;
+        return Result.success(tenantOrchestrator.listFactoryPendingRegistrations(page, pageSize));
+    }
+
     /**
      * 审批通过注册用户
      */

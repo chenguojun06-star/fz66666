@@ -64,12 +64,55 @@ public class AiAgentToolAccessService {
         register("tool_create_production_order", "AI完整建单：按正式链路创建生产订单（仅管理员）", false, ToolDomain.PRODUCTION);
         register("tool_procurement", "采购管理：查询/创建采购单、确认到货入库（写操作仅管理员）", false, ToolDomain.WAREHOUSE);
         register("tool_org_query", "组织架构查询：部门树、部门列表、成员分布", false, ToolDomain.SYSTEM);
+        // ── ANALYSIS 补充 ──
+        register("tool_management_dashboard", "管理层经营仪表盘：实时KPI快照、风险等级、利润排名", false, ToolDomain.ANALYSIS);
+        register("tool_rca_analysis", "根因分析：深入分析问题根因，适合\u201c为什么\u201d\u201c根因是什么\u201d", false, ToolDomain.ANALYSIS);
+        register("tool_pattern_discovery", "模式发现：识别数据规律与异常模式", false, ToolDomain.ANALYSIS);
+        register("tool_goal_decompose", "目标分解：将经营目标拆解为可执行子任务", false, ToolDomain.ANALYSIS);
+        register("tool_agent_meeting", "智能体会议：多Agent讨论形成共识建议", false, ToolDomain.ANALYSIS);
+        register("tool_critic_evolution", "批判进化：优化系统自身审查能力", false, ToolDomain.ANALYSIS);
+        register("tool_delay_trend", "延期趋势分析：延期率走势、延期集中领域", false, ToolDomain.ANALYSIS);
+        register("tool_sample_delay_analysis", "样板延期分析：样板开发延期原因与影响", false, ToolDomain.ANALYSIS);
+        register("tool_personnel_delay_analysis", "人员延期分析：跟单员/岗位延期分布", false, ToolDomain.ANALYSIS);
+        register("tool_supplier_scorecard", "供应商评分卡：工厂综合评分与对比", false, ToolDomain.ANALYSIS);
+        register("tool_scenario_simulator", "场景模拟：不同假设下的经营预测", false, ToolDomain.ANALYSIS);
+        register("tool_new_order_simulation", "新单模拟：模拟新订单对产能和交期的影响", false, ToolDomain.ANALYSIS);
+        // ── PRODUCTION 补充 ──
+        register("tool_defective_board", "次品看板：次品分布、返修/报废操作", false, ToolDomain.PRODUCTION);
+        register("tool_production_exception", "生产异常：上报/查看生产异常事件", false, ToolDomain.PRODUCTION);
+        register("tool_secondary_process", "二次工序：创建/更新二次加工工序", false, ToolDomain.PRODUCTION);
+        register("tool_order_factory_transfer", "订单转厂：将订单从一家工厂转到另一家", false, ToolDomain.PRODUCTION);
+        register("tool_order_factory_transfer_undo", "撤回转厂：撤销订单转厂操作", false, ToolDomain.PRODUCTION);
+        register("tool_order_contact_urge", "催单通知：向跟单员/工厂发送催单提醒", false, ToolDomain.PRODUCTION);
+        register("tool_quality_inbound", "成品质检入库：质检通过后登记入库", false, ToolDomain.PRODUCTION);
+        register("tool_pattern_production", "样板生产：查看样板生产进度与状态", false, ToolDomain.PRODUCTION);
+        // ── FINANCE 补充 ──
+        register("tool_shipment_reconciliation", "出货对账查询：出货单与结算对账状态", false, ToolDomain.FINANCE);
+        register("tool_payroll_anomaly_detector", "工资异常检测：识别计件工资异常波动", false, ToolDomain.FINANCE);
+        // ── WAREHOUSE 补充 ──
+        register("tool_finished_outbound", "成品出库：登记成品出库记录", false, ToolDomain.WAREHOUSE);
+        register("tool_material_calculation", "物料计算：根据BOM计算物料需求量", false, ToolDomain.WAREHOUSE);
+        register("tool_material_picking", "领料单：创建面辅料领料记录", false, ToolDomain.WAREHOUSE);
+        // ── STYLE 补充 ──
+        register("tool_style_difficulty_query", "款式难度查询：评估款式生产难度系数", false, ToolDomain.STYLE);
+        // ── SYSTEM 补充 ──
+        register("tool_change_approval", "变更审批：查看/通过/驳回变更申请", false, ToolDomain.SYSTEM);
+        register("tool_crm_customer", "CRM客户查询：客户信息与交易记录", false, ToolDomain.SYSTEM);
+        register("tool_system_user", "系统用户查询：用户账号与角色信息", false, ToolDomain.SYSTEM);
+        // ── GENERAL 补充 ──
+        register("tool_think", "内部推理：复杂问题分步思考，无副作用", true, ToolDomain.GENERAL);
     }
 
     private static final Set<String> HIGH_RISK_TOOLS = Set.of(
             "tool_scan_undo", "tool_cutting_task_create", "tool_order_edit",
             "tool_payroll_approve", "tool_action_executor", "tool_bundle_split_transfer",
-            "tool_code_diagnostic", "tool_create_production_order");
+            "tool_code_diagnostic", "tool_create_production_order",
+            "tool_change_approval", "tool_order_factory_transfer", "tool_order_factory_transfer_undo",
+            "tool_finance_workflow", "tool_quality_inbound", "tool_finished_outbound",
+            "tool_sample_workflow", "tool_style_template", "tool_team_dispatch",
+            "tool_material_doc_receive", "tool_material_receive", "tool_material_audit",
+            "tool_material_reconciliation", "tool_defective_board"
+    );
 
     public static boolean isHighRisk(String toolName) {
         return toolName != null && HIGH_RISK_TOOLS.contains(toolName);

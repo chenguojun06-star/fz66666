@@ -162,10 +162,16 @@ public class SelfHealingOrchestrator {
                 .collect(Collectors.toSet());
 
         int ghost = 0;
-        for (String orderId : scanOrderIds) {
-            ProductionOrder order = productionOrderService.getById(orderId);
-            if (order == null || order.getDeleteFlag() != null && order.getDeleteFlag() == 1) {
-                ghost++;
+        if (!scanOrderIds.isEmpty()) {
+            Map<String, ProductionOrder> orderMap = productionOrderService
+                    .listByIds(scanOrderIds)
+                    .stream()
+                    .collect(Collectors.toMap(o -> String.valueOf(o.getId()), o -> o, (a, b) -> a));
+            for (String orderId : scanOrderIds) {
+                ProductionOrder order = orderMap.get(orderId);
+                if (order == null || order.getDeleteFlag() != null && order.getDeleteFlag() == 1) {
+                    ghost++;
+                }
             }
         }
 

@@ -147,13 +147,23 @@ const MaterialDatabasePage: React.FC = () => {
 
   // ===== 优化弹窗打开/关闭逻辑 =====
   // 打开新建/编辑弹窗
-  const openDialog = (dialogMode: 'create' | 'edit', record?: MaterialDatabase) => {
-    if (dialogMode === 'edit' && record) {
-      open(record); // 自动设置 visible=true + data=record
-      form.setFieldsValue({
+  const openDialog = (dialogMode: 'create' | 'edit' | 'copy', record?: MaterialDatabase) => {
+    if ((dialogMode === 'edit' || dialogMode === 'copy') && record) {
+      open(dialogMode === 'copy' ? undefined as any : record);
+      const formValues: Record<string, unknown> = {
         ...record,
         materialType: getBaseMaterialType(record.materialType || 'accessory'),
-      });
+      };
+      if (dialogMode === 'copy') {
+        delete formValues.id;
+        delete formValues.status;
+        delete formValues.createTime;
+        delete formValues.completedTime;
+        delete formValues.updateTime;
+        formValues.materialCode = '';
+        formValues.status = 'pending';
+      }
+      form.setFieldsValue(formValues);
       if (record.image) {
         setImageFiles([
           {
@@ -163,9 +173,11 @@ const MaterialDatabasePage: React.FC = () => {
             url: record.image,
           },
         ]);
+      } else {
+        setImageFiles([]);
       }
     } else {
-      open(); // 仅设置 visible=true（create模式）
+      open();
       form.resetFields();
       setImageFiles([]);
     }
@@ -192,7 +204,8 @@ const MaterialDatabasePage: React.FC = () => {
         image: String(values?.image || '').trim() || undefined,
       };
 
-      const mode = currentMaterial ? 'edit' : 'create';
+      const isCopy = !currentMaterial?.id;
+      const mode = isCopy ? 'create' : 'edit';
 
       if (mode === 'create') {
         unwrapApiData<boolean>(
@@ -463,6 +476,19 @@ const MaterialDatabasePage: React.FC = () => {
         const isCompleted = record.status === 'completed';
         const moreItems = (() => {
           const items: MenuProps['items'] = [];
+          items.push({
+            key: 'copy',
+            label: '复制新建',
+            onClick: () => openDialog('copy', record),
+          });
+          if (isCompleted) {
+            items.push({
+              key: 'return',
+              label: '退回编辑',
+              danger: true,
+              onClick: () => void handleReturn(record),
+            });
+          }
           if (!isCompleted) {
             items.push({
               key: 'complete',
@@ -474,14 +500,6 @@ const MaterialDatabasePage: React.FC = () => {
               label: '删除',
               danger: true,
               onClick: () => void handleDelete(record),
-            });
-          }
-          if (isCompleted) {
-            items.push({
-              key: 'return',
-              label: '退回编辑',
-              danger: true,
-              onClick: () => void handleReturn(record),
             });
           }
           return items;
@@ -584,7 +602,7 @@ const MaterialDatabasePage: React.FC = () => {
 
         {/* 新增/编辑弹窗 */}
         <StandardModal
-          title={currentMaterial ? '编辑物料信息' : '新增物料信息'}
+          title={currentMaterial?.id ? '编辑物料信息' : (currentMaterial ? '复制物料信息' : '新增物料信息')}
           open={visible}
           onCancel={closeDialog}
           size="lg"
@@ -593,7 +611,7 @@ const MaterialDatabasePage: React.FC = () => {
               取消
             </Button>,
             <Button key="submit" type="primary" loading={submitLoading} onClick={() => handleSubmit()}>
-              {currentMaterial ? '保存' : '创建'}
+              {currentMaterial?.id ? '保存' : '创建'}
             </Button>,
           ]}
         >

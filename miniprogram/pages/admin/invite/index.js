@@ -1,6 +1,19 @@
 const config = require('../../../config');
 const api = require('../../../utils/api');
 
+const MINIAPP_APPID = 'wx6d92fb9db5a7bfb4';
+
+function getFrontendOrigin() {
+  let baseUrl = '';
+  try {
+    const app = getApp();
+    baseUrl = (app.globalData && app.globalData.baseUrl) || config.getBaseUrl();
+  } catch (e) {
+    baseUrl = config.getBaseUrl();
+  }
+  return baseUrl.replace(/^(https?:\/\/)api\./, '$1www.').replace(/\/api\/?$/, '');
+}
+
 Page({
   data: {
     tenantCode: '',
@@ -16,26 +29,18 @@ Page({
   async loadTenantInfo() {
     this.setData({ loading: true });
     try {
-      // 修复：原来读 app.globalData.tenantCode（从未被设置），改为直接调用 API
       const resp = await api.tenant.myTenant();
       const tenantCode = (resp && resp.tenantCode) || '';
       const tenantName = (resp && resp.tenantName) || '';
 
-      // 生成二维码 URL：用外部免费 QR API 渲染小程序端没有库可用）
       let qrUrl = '';
       if (tenantCode) {
-        let baseUrl = '';
-        try {
-          const app = getApp();
-          baseUrl = (app.globalData && app.globalData.baseUrl) || config.getBaseUrl();
-        } catch (e) {
-          baseUrl = config.getBaseUrl();
-        }
-        const origin = baseUrl.replace(/\/api\/?$/, '');
-        const registrationUrl = origin + '/register?tenantCode=' + encodeURIComponent(tenantCode)
+        const query = 'tenantCode=' + encodeURIComponent(tenantCode)
           + '&tenantName=' + encodeURIComponent(tenantName);
+        const wechatScheme = 'weixin://dl/business/?appid=' + MINIAPP_APPID
+          + '&path=pages/register/index&query=' + encodeURIComponent(query);
         qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data='
-          + encodeURIComponent(registrationUrl);
+          + encodeURIComponent(wechatScheme);
       }
 
       this.setData({ tenantCode, tenantName, qrUrl });
@@ -67,15 +72,7 @@ Page({
       return;
     }
 
-    let baseUrl = '';
-    try {
-      const app = getApp();
-      baseUrl = (app.globalData && app.globalData.baseUrl) || config.getBaseUrl();
-    } catch (e) {
-      baseUrl = config.getBaseUrl();
-    }
-    // Strip /api suffix to get frontend origin
-    const origin = baseUrl.replace(/\/api\/?$/, '');
+    const origin = getFrontendOrigin();
     const url = origin + '/register?tenantCode=' + encodeURIComponent(code)
       + '&tenantName=' + encodeURIComponent(name);
 

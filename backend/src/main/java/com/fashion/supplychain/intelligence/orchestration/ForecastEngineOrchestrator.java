@@ -36,6 +36,9 @@ public class ForecastEngineOrchestrator {
     @Autowired
     private IntelligenceInferenceOrchestrator inferenceOrchestrator;
 
+    @Autowired
+    private AiAgentTraceOrchestrator traceOrchestrator;
+
     // ──────────────────────────────────────────────────────────────────
     // 公共入口
     // ──────────────────────────────────────────────────────────────────
@@ -44,12 +47,31 @@ public class ForecastEngineOrchestrator {
         if (req == null || req.getForecastType() == null) {
             return errorResponse("forecastType 不能为空");
         }
-        switch (req.getForecastType().toUpperCase()) {
-            case "COST":     return forecastCost(req);
-            case "DEMAND":   return forecastDemand(req);
-            case "MATERIAL": return forecastMaterial(req);
-            default:         return errorResponse("未知预测类型: " + req.getForecastType());
+        String commandId = null;
+        long startTime = System.currentTimeMillis();
+        try {
+            commandId = traceOrchestrator.startRequest(
+                    req.getForecastType() + ":" + req.getSubjectId(), "forecast:request");
+        } catch (Exception e) {
+            log.debug("[Forecast] trace startRequest 失败: {}", e.getMessage());
         }
+        ForecastEngineResponse resp;
+        switch (req.getForecastType().toUpperCase()) {
+            case "COST":     resp = forecastCost(req); break;
+            case "DEMAND":   resp = forecastDemand(req); break;
+            case "MATERIAL": resp = forecastMaterial(req); break;
+            default:         resp = errorResponse("未知预测类型: " + req.getForecastType()); break;
+        }
+        if (commandId != null) {
+            try {
+                traceOrchestrator.finishRequest(commandId,
+                        resp.getPredictedValue() != null ? String.valueOf(resp.getPredictedValue()) : null,
+                        null, System.currentTimeMillis() - startTime);
+            } catch (Exception e) {
+                log.debug("[Forecast] trace finishRequest 失败: {}", e.getMessage());
+            }
+        }
+        return resp;
     }
 
     // ──────────────────────────────────────────────────────────────────

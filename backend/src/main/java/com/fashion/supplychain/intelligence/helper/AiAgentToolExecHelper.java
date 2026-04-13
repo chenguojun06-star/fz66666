@@ -39,8 +39,8 @@ public class AiAgentToolExecHelper {
     private Map<String, AgentTool> toolMap;
 
     private final ExecutorService toolExecutor = new ThreadPoolExecutor(
-            4, 8, 60L, TimeUnit.SECONDS,
-            new LinkedBlockingQueue<>(64),
+            8, 16, 60L, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(128),
             new ThreadFactory() {
                 private final AtomicInteger seq = new AtomicInteger(1);
                 @Override
@@ -180,7 +180,7 @@ public class AiAgentToolExecHelper {
                 try {
                     if (!hook.preToolUse(toolName, arguments)) {
                         log.info("[AiAgent] Hook 拦截工具调用: {}", toolName);
-                        rawResult = "{\"error\":\"工具调用被安全策略拦截: " + toolName + "\"}";
+                        rawResult = "{\"success\":false,\"needsConfirmation\":true,\"error\":\"该操作属于高风险操作，需要二次确认。请向用户确认是否要执行此操作，如果用户确认，请使用完全相同的参数再次调用该工具。\"}";
                         long elapsed = System.currentTimeMillis() - start;
                         return new ToolExecRecord(toolCallId, toolName, arguments, rawResult,
                                 evidenceHelper.buildToolEvidenceMessage(toolName, rawResult), elapsed);
@@ -198,9 +198,9 @@ public class AiAgentToolExecHelper {
                 success = true;
             } catch (Exception e) {
                 if (isTransientError(e)) {
-                    log.warn("[AiAgent] 工具瞬态异常，500ms 后重试: tool={}, error={}", toolName, e.getMessage());
+                    log.warn("[AiAgent] 工具瞬态异常，退避后重试: tool={}, error={}", toolName, e.getMessage());
                     try {
-                        Thread.sleep(500);
+                        Thread.sleep(300 + (long)(Math.random() * 200));
                         rawResult = tool.execute(arguments);
                         success = true;
                     } catch (Exception retryEx) {
@@ -229,7 +229,7 @@ public class AiAgentToolExecHelper {
         }
 
         try {
-            aiAgentTraceOrchestrator.logToolCall(commandId, toolName, arguments, rawResult, elapsed, true);
+            aiAgentTraceOrchestrator.logToolCall(commandId, toolName, arguments, rawResult, elapsed, success);
         } catch (Exception e) {
             log.debug("[AiAgent] trace logToolCall 失败: {}", e.getMessage());
         }

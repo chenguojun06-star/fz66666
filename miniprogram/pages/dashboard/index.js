@@ -12,7 +12,7 @@
  */
 var api = require('../../utils/api');
 var { transformOrderData } = require('../work/utils/orderTransform');
-var { resolveNodesFromOrder, clampPercent } = require('../work/utils/progressNodes');
+var { resolveNodesFromOrder, clampPercent, buildProcessNodesWithRates } = require('../work/utils/progressNodes');
 var { isAdminOrSupervisor } = require('../../utils/permission');
 var { isTenantOwner } = require('../../utils/storage');
 
@@ -26,27 +26,8 @@ var STATUS_FILTERS = [
   { key: 'overdue',       label: '延期',   value: '' },
 ];
 
-/**
- * 根据订单整体进度 + 工序节点，计算每道工序的进度百分比
- * 每个节点均匀分摊进度区间，按比例映射到 0-100%
- */
 function buildProcessNodes(order) {
-  var nodes = resolveNodesFromOrder(order);
-  if (!nodes || !nodes.length) return [];
-  var progress = Number(order.productionProgress) || 0;
-  var len = nodes.length;
-  var perNode = 100 / len;
-  return nodes.map(function (n, i) {
-    var nodeStart = i * perNode;
-    var nodeEnd = (i + 1) * perNode;
-    var pct = 0;
-    if (progress >= nodeEnd) {
-      pct = 100;
-    } else if (progress > nodeStart) {
-      pct = Math.round(((progress - nodeStart) / perNode) * 100);
-    }
-    return { name: n.name || n, percent: clampPercent(pct) };
-  });
+  return buildProcessNodesWithRates(order);
 }
 
 /** 为订单注入看板所需的扩展字段 */

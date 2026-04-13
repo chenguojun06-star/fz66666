@@ -2,10 +2,12 @@ package com.fashion.supplychain.intelligence.agent.tool;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.dto.CollaborationDispatchRequest;
 import com.fashion.supplychain.intelligence.dto.CollaborationDispatchResponse;
 import com.fashion.supplychain.intelligence.orchestration.CollaborationDispatchOrchestrator;
+import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +22,8 @@ public class TeamDispatchTool implements AgentTool {
 
     @Autowired
     private CollaborationDispatchOrchestrator collaborationDispatchOrchestrator;
+    @Autowired
+    private AiAgentToolAccessService toolAccessService;
 
     @Override
     public AiTool getToolDefinition() {
@@ -49,11 +53,18 @@ public class TeamDispatchTool implements AgentTool {
 
     @Override
     public String execute(String argumentsJson) throws Exception {
+        if (UserContext.tenantId() == null) {
+            return "{\"success\":false,\"error\":\"租户上下文丢失，请重新登录\"}";
+        }
         log.info("Tool: {} called with args: {}", getName(), argumentsJson);
         Map<String, Object> args = OBJECT_MAPPER.readValue(
                 argumentsJson == null || argumentsJson.isBlank() ? "{}" : argumentsJson,
                 new TypeReference<Map<String, Object>>() {});
         String action = asString(args.get("action"));
+        boolean isWriteAction = !"query_status".equalsIgnoreCase(action) && !"list_tasks".equalsIgnoreCase(action);
+        if (isWriteAction && !toolAccessService.hasManagerAccess()) {
+            return "{\"success\":false,\"error\":\"派单/接单/完成任务需要管理员权限\"}";
+        }
         if ("query_status".equalsIgnoreCase(action)) {
             CollaborationDispatchResponse response = collaborationDispatchOrchestrator.queryStatus(
                     asString(args.get("orderNo")),

@@ -45,6 +45,32 @@ function formatDateTime(date) {
   return `${year}-${month}-${day} ${hours}:${minutes}`;
 }
 
+function _scanTypeText(raw) {
+  const v = String(raw || '').trim();
+  if (!v) return '-';
+  if (v === 'production') return '生产';
+  if (v === 'cutting') return '裁剪';
+  if (v === 'procurement') return '采购';
+  if (v === 'quality') return '质检';
+  if (v === 'pressing') return '大烫';
+  if (v === 'packaging') return '包装';
+  if (v === 'warehousing') return '入库';
+  if (v === 'sewing' || v === 'carSewing') return '车缝';
+  return v;
+}
+
+function _orderStatusText(status) {
+  const s = String(status || '').toLowerCase();
+  if (s === 'completed') return '已完成';
+  if (s === 'closed') return '已关单';
+  if (s === 'production') return '生产中';
+  if (s === 'pending') return '待生产';
+  if (s === 'delayed') return '已延期';
+  if (s === 'cancelled') return '已取消';
+  if (s === 'paused') return '已暂停';
+  return s || '-';
+}
+
 Page({
   data: {
     // 筛选条件
@@ -66,6 +92,7 @@ Page({
     loading: false,
 
     // 排序状态
+    sortField: 'time', // 'amount' 或 'time'
     sortOrder: 'desc', // desc:降序(从高到低), asc:升序(从低到高)
     summaryItems: [],
   },
@@ -230,22 +257,23 @@ Page({
       size: item.size || '-',
       processName: item.processName || '-',
       operatorName: item.operatorName || '',
+      scanType: item.scanType || '',
+      scanTypeText: _scanTypeText(item.scanType),
+      delegateTargetType: item.delegateTargetType || '',
+      delegateTargetName: item.delegateTargetName || '',
+      actualOperatorName: item.actualOperatorName || '',
+      orderStatus: item.orderStatus || '',
+      orderStatusText: _orderStatusText(item.orderStatus),
       quantity: item.quantity || 0,
       unitPrice: (item.unitPrice || 0).toFixed(2),
       totalAmount: (item.totalAmount || 0).toFixed(2),
-      totalAmountNum: item.totalAmount || 0, // 用于排序
+      totalAmountNum: item.totalAmount || 0,
       scanTime: item.startTime ? formatDateTime(parseDateSafe(item.startTime)) : '-',
+      rawScanTime: item.startTime || '',
     }));
 
-    // 按总金额排序
-    const { sortOrder } = this.data;
-    records.sort((a, b) => {
-      if (sortOrder === 'desc') {
-        return b.totalAmountNum - a.totalAmountNum; // 降序
-      } else {
-        return a.totalAmountNum - b.totalAmountNum; // 升序
-      }
-    });
+    // 排序
+    this._sortRecords(records);
 
     const filteredTotalAmount = records.reduce(
       (sum, item) => sum + parseFloat(item.totalAmount),
@@ -269,20 +297,45 @@ Page({
   },
 
   /**
-   * 切换排序
+   * 排序记录（内部方法）
+   */
+  _sortRecords(records) {
+    const { sortField, sortOrder } = this.data;
+    const dir = sortOrder === 'desc' ? -1 : 1;
+    if (sortField === 'time') {
+      records.sort((a, b) => {
+        const ta = a.rawScanTime || '';
+        const tb = b.rawScanTime || '';
+        if (ta > tb) return -1 * dir;
+        if (ta < tb) return 1 * dir;
+        return 0;
+      });
+    } else {
+      records.sort((a, b) => dir * (b.totalAmountNum - a.totalAmountNum));
+    }
+  },
+
+  /**
+   * 切换排序字段（金额 / 时间）
    */
   toggleSort() {
-    const newSortOrder = this.data.sortOrder === 'desc' ? 'asc' : 'desc';
-    this.setData({ sortOrder: newSortOrder }, () => {
-      // 重新排序当前数据
+    const { sortField } = this.data;
+    const newField = sortField === 'amount' ? 'time' : 'amount';
+    this.setData({ sortField: newField, sortOrder: 'desc' }, () => {
       const records = [...this.data.records];
-      records.sort((a, b) => {
-        if (newSortOrder === 'desc') {
-          return b.totalAmountNum - a.totalAmountNum;
-        } else {
-          return a.totalAmountNum - b.totalAmountNum;
-        }
-      });
+      this._sortRecords(records);
+      this.setData({ records });
+    });
+  },
+
+  /**
+   * 切换排序方向
+   */
+  toggleSortOrder() {
+    const newOrder = this.data.sortOrder === 'desc' ? 'asc' : 'desc';
+    this.setData({ sortOrder: newOrder }, () => {
+      const records = [...this.data.records];
+      this._sortRecords(records);
       this.setData({ records });
     });
   },

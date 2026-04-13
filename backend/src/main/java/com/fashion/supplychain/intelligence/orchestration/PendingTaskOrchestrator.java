@@ -150,6 +150,14 @@ public class PendingTaskOrchestrator {
             dto.setDeepLinkPath("/production/cutting");
             dto.setPriority("medium");
             dto.setCreatedAt(t.getReceivedTime());
+            dto.setQuantity(t.getOrderQuantity());
+            if (t.getReceivedTime() != null) {
+                dto.setStartTime(t.getReceivedTime().toString());
+            }
+            if (t.getExpectedShipDate() != null) {
+                dto.setEndTime(t.getExpectedShipDate().toString());
+            }
+            dto.setAssigneeName(t.getReceiverName());
             fillCategoryMeta(dto);
             return dto;
         }).collect(Collectors.toList());
@@ -319,6 +327,26 @@ public class PendingTaskOrchestrator {
             dto.setDeepLinkPath("/style-info");
             dto.setPriority("medium");
             dto.setCreatedAt(null);
+            // 数量：样板数
+            dto.setQuantity(s.getSampleQuantity());
+            // 交板日期作为截止时间
+            if (s.getDeliveryDate() != null) {
+                dto.setEndTime(s.getDeliveryDate().toString());
+            }
+            // 当前阶段的领取人 + 开始时间（按 progressNode 匹配对应字段）
+            if ("纸样开发中".equals(node)) {
+                dto.setAssigneeName(s.getPatternAssignee());
+                if (s.getPatternStartTime() != null) dto.setStartTime(s.getPatternStartTime().toString());
+            } else if ("样衣制作中".equals(node)) {
+                dto.setAssigneeName(s.getProductionAssignee());
+                if (s.getProductionStartTime() != null) dto.setStartTime(s.getProductionStartTime().toString());
+            } else {
+                // 未开始：默认展示纸样阶段领取人；若未设置再回退到样衣领取人
+                dto.setAssigneeName(StringUtils.hasText(s.getPatternAssignee())
+                        ? s.getPatternAssignee() : s.getProductionAssignee());
+                // 未开始阶段没有流程开始时间，以创建时间作为开始时间展示
+                if (s.getCreateTime() != null) dto.setStartTime(s.getCreateTime().toString());
+            }
             fillCategoryMeta(dto);
             return dto;
         }).collect(Collectors.toList());

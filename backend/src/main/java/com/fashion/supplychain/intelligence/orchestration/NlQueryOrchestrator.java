@@ -26,6 +26,7 @@ public class NlQueryOrchestrator {
     @Autowired private NlQueryLearningTracker learningTracker;
     @Autowired private AiAdvisorService aiAdvisorService;
     @Autowired private NlQueryDataHandlers dataHandlers;
+    @Autowired private AiAgentTraceOrchestrator traceOrchestrator;
 
     /** 会话上下文缓存: sessionKey → 最近3轮 [question, answer] */
     private final ConcurrentHashMap<String, LinkedList<String[]>> sessionContexts = new ConcurrentHashMap<>();
@@ -38,6 +39,13 @@ public class NlQueryOrchestrator {
 
         String sessionId = req.getSessionId() != null ? req.getSessionId() : "";
         String sessionKey = tenantId + ":" + sessionId;
+        String commandId = null;
+        long startTime = System.currentTimeMillis();
+        try {
+            commandId = traceOrchestrator.startRequest(question, "nl-query:request");
+        } catch (Exception e) {
+            log.debug("[NlQuery] trace startRequest 失败: {}", e.getMessage());
+        }
 
         NlQueryResponse resp;
         try {
@@ -50,15 +58,24 @@ public class NlQueryOrchestrator {
             resp.setConfidence(0);
         }
 
-        // ── 保存会话上下文（多轮对话记忆） ──
         if (!sessionId.isEmpty()) {
             saveToSession(sessionKey, question, resp.getAnswer() != null ? resp.getAnswer() : "");
         }
 
-        // ── 全系统学习：记录每次查询 ──
         try {
             learningTracker.recordQuery(question, resp.getIntent(), resp.getConfidence());
-        } catch (Exception ignore) { /* 学习记录不影响业务 */ }
+        } catch (Exception ignore) { }
+
+        if (commandId != null) {
+            try {
+                long elapsed = System.currentTimeMillis() - startTime;
+                String answer = resp.getAnswer();
+                String error = "error".equals(resp.getIntent()) ? "查询处理异常" : null;
+                traceOrchestrator.finishRequest(commandId, answer, error, elapsed);
+            } catch (Exception e) {
+                log.debug("[NlQuery] trace finishRequest 失败: {}", e.getMessage());
+            }
+        }
 
         return resp;
     }

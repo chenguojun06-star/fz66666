@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.procurement.orchestration.ProcurementOrchestrator;
@@ -27,6 +28,11 @@ public class MaterialAuditTool implements AgentTool {
     @Autowired private ProcurementOrchestrator procurementOrchestrator;
     @Autowired private MaterialPickupRecordMapper materialPickupRecordMapper;
     @Autowired private MaterialPickupOrchestrator materialPickupOrchestrator;
+    @Autowired private AiAgentToolAccessService toolAccessService;
+
+    private static final java.util.Set<String> WRITE_ACTIONS = java.util.Set.of(
+            "initiate_purchase_audit", "approve_purchase_audit", "reject_purchase_audit",
+            "approve_pickup_audit", "reject_pickup_audit");
 
     @Override
     public AiTool getToolDefinition() {
@@ -57,6 +63,9 @@ public class MaterialAuditTool implements AgentTool {
         }
         Map<String, Object> args = MAPPER.readValue(argumentsJson == null || argumentsJson.isBlank() ? "{}" : argumentsJson, new TypeReference<Map<String, Object>>() {});
         String action = stringOf(args.get("action"));
+        if (WRITE_ACTIONS.contains(action) && !toolAccessService.hasManagerAccess()) {
+            return "{\"success\":false,\"error\":\"审核操作需要管理员权限\"}";
+        }
         return switch (action) {
             case "list_material_audits" -> listMaterialAudits(args);
             case "initiate_purchase_audit" -> initiatePurchaseAudit(args);

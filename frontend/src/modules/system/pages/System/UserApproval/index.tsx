@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Button, Card, Empty, Input, Modal, Select, Space } from 'antd';
+import { Alert, Button, Card, Empty, Input, Modal, Select, Space, Tabs, Tag } from 'antd';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import SmallModal from '@/components/common/SmallModal';
 import { User } from '@/types/system';
 import api from '@/utils/api';
+import tenantService from '@/services/tenantService';
 import { formatDateTime } from '@/utils/datetime';
 import { useViewport } from '@/utils/useViewport';
+import { useAuth } from '@/utils/auth';
 import './styles.css';
 import { message } from '@/utils/antdStatic';
 import { readPageSize } from '@/utils/pageSizeStore';
@@ -16,6 +18,8 @@ const { TextArea } = Input;
 
 const UserApproval: React.FC = () => {
   const { isMobile } = useViewport();
+  const { isTenantOwner } = useAuth();
+  const [activeTab, setActiveTab] = useState('tenant');
   const [loading, setLoading] = useState(false);
   const [pendingUsers, setPendingUsers] = useState<User[]>([]);
   const [total, setTotal] = useState(0);
@@ -30,9 +34,16 @@ const UserApproval: React.FC = () => {
   const [roleOptions, setRoleOptions] = useState<any[]>([]);
   const [roleLoading, setRoleLoading] = useState(false);
 
+  const [factoryLoading, setFactoryLoading] = useState(false);
+  const [factoryPending, setFactoryPending] = useState<User[]>([]);
+  const [factoryTotal, setFactoryTotal] = useState(0);
+
   useEffect(() => {
     fetchPendingUsers();
     fetchRoleOptions();
+    if (isTenantOwner) {
+      fetchFactoryPending();
+    }
   }, [page, pageSize]);
 
   const fetchRoleOptions = async () => {
@@ -72,6 +83,22 @@ const UserApproval: React.FC = () => {
     }
   };
 
+  const fetchFactoryPending = async () => {
+    setFactoryLoading(true);
+    try {
+      const response = await tenantService.listFactoryPendingRegistrations({ page: 1, pageSize: 100 });
+      const result = response as any;
+      if (result.code === 200) {
+        setFactoryPending(result.data?.records || []);
+        setFactoryTotal(result.data?.total || 0);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setFactoryLoading(false);
+    }
+  };
+
   const handleApprove = (user: User) => {
     setCurrentUser(user);
     setSelectedRoleId(user.roleId ? String(user.roleId) : '');
@@ -93,14 +120,12 @@ const UserApproval: React.FC = () => {
     }
 
     try {
-      // 先批准用户
       const approveResponse = await api.post(`/system/user/${currentUser.id}/approval-action`, {
         operationRemark: approveReason
       }, { params: { action: 'approve' } });
       const approveResult = approveResponse as any;
 
       if (approveResult.code === 200) {
-        // 更新用户角色
         const updateResponse = await api.put(`/system/user`, {
           id: currentUser.id,
           roleId: Number(selectedRoleId),
@@ -162,72 +187,100 @@ const UserApproval: React.FC = () => {
   };
 
   const columns = [
+    { title: '用户名', dataIndex: 'username', key: 'username', width: 120 },
+    { title: '姓名', dataIndex: 'name', key: 'name', width: 100 },
+    { title: '角色', dataIndex: 'roleName', key: 'roleName', width: 120, render: (text: string) => text || '-' },
+    { title: '手机号', dataIndex: 'phone', key: 'phone', width: 120, render: (text: string) => text || '-' },
+    { title: '邮箱', dataIndex: 'email', key: 'email', width: 180, render: (text: string) => text || '-' },
+    { title: '注册时间', dataIndex: 'createTime', key: 'createTime', width: 160, render: (time: string) => formatDateTime(time) },
     {
-      title: '用户名',
-      dataIndex: 'username',
-      key: 'username',
-      width: 120,
-    },
-    {
-      title: '姓名',
-      dataIndex: 'name',
-      key: 'name',
-      width: 100,
-    },
-    {
-      title: '角色',
-      dataIndex: 'roleName',
-      key: 'roleName',
-      width: 120,
-      render: (text: string) => text || '-',
-    },
-    {
-      title: '手机号',
-      dataIndex: 'phone',
-      key: 'phone',
-      width: 120,
-      render: (text: string) => text || '-',
-    },
-    {
-      title: '邮箱',
-      dataIndex: 'email',
-      key: 'email',
-      width: 180,
-      render: (text: string) => text || '-',
-    },
-    {
-      title: '注册时间',
-      dataIndex: 'createTime',
-      key: 'createTime',
-      width: 160,
-      render: (time: string) => formatDateTime(time),
-    },
-    {
-      title: '操作',
-      key: 'action',
-      width: 120,
-      fixed: 'right' as const,
+      title: '操作', key: 'action', width: 120, fixed: 'right' as const,
       render: (_: any, record: User) => (
         <RowActions
           actions={[
-            {
-              key: 'approve',
-              label: '批准',
-              title: '批准',
-              onClick: () => handleApprove(record),
-              primary: true,
-            },
-            {
-              key: 'reject',
-              label: '拒绝',
-              title: '拒绝',
-              onClick: () => handleReject(record),
-              danger: true,
-            },
+            { key: 'approve', label: '批准', title: '批准', onClick: () => handleApprove(record), primary: true },
+            { key: 'reject', label: '拒绝', title: '拒绝', onClick: () => handleReject(record), danger: true },
           ]}
         />
       ),
     },
+  ];
+
+  const factoryColumns = [
+    { title: '用户名', dataIndex: 'username', key: 'username', width: 120 },
+    { title: '姓名', dataIndex: 'name', key: 'name', width: 100 },
+    { title: '手机号', dataIndex: 'phone', key: 'phone', width: 120, render: (text: string) => text || '-' },
+    {
+      title: '所属工厂', dataIndex: 'factoryId', key: 'factoryId', width: 140,
+      render: (v: string) => v ? <Tag color="blue">外发工厂</Tag> : '-',
+    },
+    { title: '注册时间', dataIndex: 'createTime', key: 'createTime', width: 160, render: (time: string) => formatDateTime(time) },
+    {
+      title: '状态', key: 'status', width: 100,
+      render: (_: any, record: User) => <Tag color="orange">待外发工厂审批</Tag>,
+    },
+  ];
+
+  const tabItems = [
+    {
+      key: 'tenant',
+      label: `租户员工审批 (${total})`,
+      children: (
+        <>
+          {pendingUsers.length === 0 && !loading ? (
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无待审批用户" />
+          ) : (
+            <>
+              <Alert message={`当前有 ${total} 个租户员工待审批`} type="info" showIcon style={{ marginBottom: 16 }} />
+              <ResizableTable
+                columns={columns}
+                dataSource={pendingUsers}
+                rowKey="id"
+                loading={loading}
+                pagination={{
+                  current: page, pageSize, total,
+                  showSizeChanger: true, showQuickJumper: true,
+                  showTotal: (t) => `共 ${t} 条`,
+                  pageSizeOptions: ['10', '20', '50', '100'],
+                  onChange: (p, ps) => { setPage(p); setPageSize(ps); },
+                }}
+                stickyHeader
+                scroll={{ x: isMobile ? 'max-content' : undefined }}
+              />
+            </>
+          )}
+        </>
+      ),
+    },
+    ...(isTenantOwner ? [{
+      key: 'factory',
+      label: `外发工厂员工（只读）(${factoryTotal})`,
+      children: (
+        <>
+          {factoryPending.length === 0 && !factoryLoading ? (
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无外发工厂待审批员工" />
+          ) : (
+            <>
+              <Alert
+                message="以下为外发工厂的待审批员工，由各外发工厂管理员自行审批，租户仅可查看"
+                type="warning"
+                showIcon
+                style={{ marginBottom: 16 }}
+              />
+              <ResizableTable
+                columns={factoryColumns}
+                dataSource={factoryPending}
+                rowKey="id"
+                loading={factoryLoading}
+                pagination={false}
+                stickyHeader
+                scroll={{ x: isMobile ? 'max-content' : undefined }}
+              />
+            </>
+          )}
+        </>
+      ),
+    }] : []),
   ];
 
   return (
@@ -239,51 +292,13 @@ const UserApproval: React.FC = () => {
               <p className="page-description">审批新注册的用户账号</p>
             </div>
             <Space>
-              <Button
-                onClick={fetchPendingUsers}
-                loading={loading}
-              >
+              <Button onClick={() => { fetchPendingUsers(); if (isTenantOwner) fetchFactoryPending(); }} loading={loading}>
                 刷新
               </Button>
             </Space>
           </div>
 
-          {pendingUsers.length === 0 && !loading ? (
-            <Empty
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-              description="暂无待审批用户"
-            />
-          ) : (
-            <>
-              <Alert
-                title={`当前有 ${total} 个用户待审批`}
-                type="info"
-                showIcon
-                style={{ marginBottom: 16 }}
-              />
-              <ResizableTable
-                columns={columns}
-                dataSource={pendingUsers}
-                rowKey="id"
-                loading={loading}
-                pagination={{
-                  current: page,
-                  pageSize: pageSize,
-                  total: total,
-                  showSizeChanger: true,
-                  showQuickJumper: true,
-                  showTotal: (total) => `共 ${total} 条`,
-                  pageSizeOptions: ['10', '20', '50', '100'],
-                  onChange: (page, pageSize) => {
-                    setPage(page);
-                    setPageSize(pageSize);
-                  },
-                }}
-                stickyHeader
-                scroll={{ x: isMobile ? 'max-content' : undefined }}
-              />
-            </>
-          )}
+          <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} />
         </Card>
 
         <Modal

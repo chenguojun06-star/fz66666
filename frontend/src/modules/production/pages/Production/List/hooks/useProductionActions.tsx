@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ProductionOrder } from '@/types/production';
 import api, { isApiSuccess, isOrderFrozenByStatus } from '@/utils/api';
 import { productionOrderApi } from '@/services/production/productionApi';
+import { remarkApi } from '@/services/system/remarkApi';
 import dayjs from 'dayjs';
 import { safeString, getCloseMinRequired, buildOrdersCsv, downloadTextFile } from '../utils';
 
@@ -52,6 +53,20 @@ export function useProductionActions({
         id: orderId,
         remarks: finalText,
       });
+      if (remarkText.trim()) {
+        try {
+          const orderRes: any = await api.get(`/production/order/${orderId}`);
+          const orderNo = orderRes?.data?.data?.orderNo || orderRes?.data?.orderNo || '';
+          if (orderNo) {
+            await remarkApi.add({
+              targetType: 'order',
+              targetNo: orderNo,
+              content: remarkText.trim(),
+              authorRole: '跟单员',
+            });
+          }
+        } catch { /* non-critical */ }
+      }
       message.success('备注已保存');
       setRemarkPopoverId(null);
       setRemarkText('');
@@ -78,6 +93,16 @@ export function useProductionActions({
         ...values,
         urgencyLevel: values.urgencyLevel || 'normal',
       });
+      if (values.remarks?.trim() && editData) {
+        try {
+          await remarkApi.add({
+            targetType: 'order',
+            targetNo: (editData as any).orderNo || '',
+            content: values.remarks.trim(),
+            authorRole: '快速编辑',
+          });
+        } catch { /* non-critical */ }
+      }
       message.success('保存成功');
       closeModal();
       await fetchProductionList();

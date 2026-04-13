@@ -231,6 +231,33 @@ public class IntelligenceController {
         return Result.success(pendingTaskOrchestrator.getMyPendingTaskSummary());
     }
 
+    @Autowired
+    private com.fashion.supplychain.intelligence.orchestration.OrphanDataDetector orphanDataDetector;
+
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
+    @GetMapping("/orphan-data/scan")
+    public Result<com.fashion.supplychain.intelligence.dto.OrphanDataScanResultDTO> scanOrphanData() {
+        return Result.success(orphanDataDetector.scan());
+    }
+
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
+    @GetMapping("/orphan-data/list")
+    public Result<List<com.fashion.supplychain.intelligence.dto.OrphanDataItemDTO>> listOrphanData(
+            @RequestParam String tableName,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "20") int pageSize) {
+        return Result.success(orphanDataDetector.listOrphanData(tableName, page, pageSize));
+    }
+
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
+    @PostMapping("/orphan-data/delete")
+    public Result<Integer> deleteOrphanData(@RequestBody Map<String, Object> body) {
+        String tableName = (String) body.get("tableName");
+        @SuppressWarnings("unchecked")
+        List<String> ids = (List<String>) body.get("ids");
+        return Result.success(orphanDataDetector.deleteOrphanData(tableName, ids));
+    }
+
     @GetMapping("/scan-tips")
     public Result<?> getScanTips(@RequestParam(required = false) String orderNo,
                                  @RequestParam(required = false) String processName) {

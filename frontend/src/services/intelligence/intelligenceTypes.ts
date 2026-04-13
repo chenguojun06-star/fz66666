@@ -991,6 +991,14 @@ export interface PendingTaskDTO {
   createdAt: string | null;
   categoryLabel?: string;
   categoryIcon?: string;
+  /** 样衣开发：样板数量 */
+  quantity?: number | null;
+  /** 样衣开发：当前阶段开始时间 */
+  startTime?: string | null;
+  /** 样衣开发：交板日期（截止时间） */
+  endTime?: string | null;
+  /** 样衣开发：当前阶段领取人名字 */
+  assigneeName?: string | null;
 }
 
 export interface PendingTaskCategoryCount {
@@ -1007,4 +1015,32 @@ export interface PendingTaskSummaryDTO {
   categoryCounts: Record<string, PendingTaskCategoryCount>;
   topUrgentTitle?: string;
   topUrgentDeepLinkPath?: string;
+}
+
+export interface OrphanDataItemDTO {
+  id: string;
+  tableName: string;
+  tableLabel: string;
+  module: string;
+  orderId: string;
+  orderNo: string;
+  styleNo: string;
+  summary: string;
+  createTime: string | null;
+  orphanReason: string;
+  orderStatus: string;
+}
+
+export interface OrphanDataCategoryStat {
+  tableName: string;
+  tableLabel: string;
+  module: string;
+  count: number;
+  icon: string;
+}
+
+export interface OrphanDataScanResultDTO {
+  totalOrphanCount: number;
+  categoryStats: Record<string, OrphanDataCategoryStat>;
+  scanTime: string;
 }

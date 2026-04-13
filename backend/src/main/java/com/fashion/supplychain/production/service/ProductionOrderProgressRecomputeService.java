@@ -325,7 +325,12 @@ public class ProductionOrderProgressRecomputeService {
                 if (w == null) {
                     continue;
                 }
-                long prodDone = 0L;
+                int baseQty = orderQty;
+                if (actualCuttingQty > 0 && templateLibraryService.progressStageNameMatches("裁剪", pn)) {
+                    baseQty = actualCuttingQty;
+                }
+
+                List<Long> childDoneQuantities = new ArrayList<>();
                 for (Map.Entry<String, Long> e : prodDoneByProcess.entrySet()) {
                     if (e == null) {
                         continue;
@@ -336,13 +341,12 @@ public class ProductionOrderProgressRecomputeService {
                     }
                     long v = e.getValue() == null ? 0L : e.getValue();
                     if (v > 0) {
-                        prodDone += v;
+                        childDoneQuantities.add(v);
                     }
                 }
 
-                long done = prodDone;
+                List<Long> qualityChildDoneQuantities = new ArrayList<>();
                 if (templateLibraryService.isProgressQualityStageName(pn) && !qualityDoneByProcess.isEmpty()) {
-                    long qualityDone = 0L;
                     for (Map.Entry<String, Long> e : qualityDoneByProcess.entrySet()) {
                         if (e == null) {
                             continue;
@@ -353,34 +357,47 @@ public class ProductionOrderProgressRecomputeService {
                         }
                         long v = e.getValue() == null ? 0L : e.getValue();
                         if (v > 0) {
-                            qualityDone += v;
+                            qualityChildDoneQuantities.add(v);
                         }
-                    }
-                    done = Math.max(prodDone, qualityDone);
-                }
-                if (done < 0) {
-                    done = 0;
-                }
-
-                // 如果是裁剪阶段，使用实际裁剪数量而不是订单数量
-                int baseQty = orderQty;
-                if (actualCuttingQty > 0 && templateLibraryService.progressStageNameMatches("裁剪", pn)) {
-                    baseQty = actualCuttingQty;
-                    log.debug("裁剪阶段使用实际裁剪数量: stage={}, actualQty={}, orderQty={}",
-                            pn, actualCuttingQty, orderQty);
-                    // 不限制done值，允许超过订单数量
-                    if (done > actualCuttingQty) {
-                        done = actualCuttingQty;
-                    }
-                } else {
-                    if (done > orderQty) {
-                        done = orderQty;
                     }
                 }
 
                 BigDecimal ratio = BigDecimal.ZERO;
-                if (baseQty > 0 && done > 0) {
-                    ratio = BigDecimal.valueOf(done).divide(BigDecimal.valueOf(baseQty), 6, RoundingMode.HALF_UP);
+                if (baseQty > 0) {
+                    if (!childDoneQuantities.isEmpty()) {
+                        if (childDoneQuantities.size() == 1) {
+                            long done = Math.min(childDoneQuantities.get(0), baseQty);
+                            ratio = BigDecimal.valueOf(done).divide(BigDecimal.valueOf(baseQty), 6, RoundingMode.HALF_UP);
+                        } else {
+                            BigDecimal minChildRatio = BigDecimal.ONE;
+                            for (Long childDone : childDoneQuantities) {
+                                long capped = Math.min(childDone, baseQty);
+                                BigDecimal childRatio = BigDecimal.valueOf(capped).divide(BigDecimal.valueOf(baseQty), 6, RoundingMode.HALF_UP);
+                                if (childRatio.compareTo(minChildRatio) < 0) {
+                                    minChildRatio = childRatio;
+                                }
+                            }
+                            ratio = minChildRatio;
+                        }
+                        if (!qualityChildDoneQuantities.isEmpty()) {
+                            BigDecimal qualityRatio;
+                            if (qualityChildDoneQuantities.size() == 1) {
+                                long qDone = Math.min(qualityChildDoneQuantities.get(0), baseQty);
+                                qualityRatio = BigDecimal.valueOf(qDone).divide(BigDecimal.valueOf(baseQty), 6, RoundingMode.HALF_UP);
+                            } else {
+                                BigDecimal minQRatio = BigDecimal.ONE;
+                                for (Long qDone : qualityChildDoneQuantities) {
+                                    long capped = Math.min(qDone, baseQty);
+                                    BigDecimal qRatio = BigDecimal.valueOf(capped).divide(BigDecimal.valueOf(baseQty), 6, RoundingMode.HALF_UP);
+                                    if (qRatio.compareTo(minQRatio) < 0) {
+                                        minQRatio = qRatio;
+                                    }
+                                }
+                                qualityRatio = minQRatio;
+                            }
+                            ratio = ratio.max(qualityRatio);
+                        }
+                    }
                     if (ratio.compareTo(BigDecimal.ONE) > 0) {
                         ratio = BigDecimal.ONE;
                     }

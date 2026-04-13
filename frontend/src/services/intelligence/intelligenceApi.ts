@@ -597,5 +597,16 @@ export const intelligenceApi = {
   /** 小云待办任务统计摘要（气泡通知用，轻量级） */
   getMyPendingTaskSummary: () =>
     api.get<{ code: number; data: import('./intelligenceTypes').PendingTaskSummaryDTO }>('/intelligence/pending-tasks/summary'),
+
+  scanOrphanData: () =>
+    api.get<{ code: number; data: import('./intelligenceTypes').OrphanDataScanResultDTO }>('/intelligence/orphan-data/scan'),
+
+  listOrphanData: (tableName: string, page = 1, pageSize = 20) =>
+    api.get<{ code: number; data: import('./intelligenceTypes').OrphanDataItemDTO[] }>('/intelligence/orphan-data/list', {
+      params: { tableName, page, pageSize },
+    }),
+
+  deleteOrphanData: (tableName: string, ids: string[]) =>
+    api.post<{ code: number; data: number }>('/intelligence/orphan-data/delete', { tableName, ids }),
 };
 

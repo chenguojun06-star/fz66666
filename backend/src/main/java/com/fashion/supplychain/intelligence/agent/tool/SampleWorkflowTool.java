@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.production.entity.PatternProduction;
 import com.fashion.supplychain.production.orchestration.OrderManagementOrchestrator;
 import com.fashion.supplychain.production.orchestration.PatternProductionOrchestrator;
@@ -15,6 +16,7 @@ import com.fashion.supplychain.style.service.StyleInfoService;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -31,6 +33,10 @@ public class SampleWorkflowTool implements AgentTool {
     @Autowired private PatternProductionService patternProductionService;
     @Autowired private PatternProductionOrchestrator patternProductionOrchestrator;
     @Autowired private OrderManagementOrchestrator orderManagementOrchestrator;
+    @Autowired private AiAgentToolAccessService toolAccessService;
+
+    private static final Set<String> WRITE_ACTIONS = Set.of(
+            "style_stage_action", "save_sample_review", "push_to_order_management", "pattern_workflow_action");
 
     @Override
     public AiTool getToolDefinition() {
@@ -66,8 +72,14 @@ public class SampleWorkflowTool implements AgentTool {
 
     @Override
     public String execute(String argumentsJson) throws Exception {
+        if (UserContext.tenantId() == null) {
+            return "{\"success\":false,\"error\":\"租户上下文丢失，请重新登录\"}";
+        }
         Map<String, Object> args = MAPPER.readValue(argumentsJson == null || argumentsJson.isBlank() ? "{}" : argumentsJson, new TypeReference<Map<String, Object>>() {});
         String action = text(args.get("action"));
+        if (WRITE_ACTIONS.contains(action) && !toolAccessService.hasManagerAccess()) {
+            return "{\"success\":false,\"error\":\"该操作需要管理员权限\"}";
+        }
         return switch (action) {
             case "list_sample_workflow" -> listSampleWorkflow(args);
             case "style_stage_action" -> styleStageAction(args);

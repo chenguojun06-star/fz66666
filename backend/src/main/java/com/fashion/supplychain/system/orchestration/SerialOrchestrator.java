@@ -1,16 +1,19 @@
 package com.fashion.supplychain.system.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 @Service
 public class SerialOrchestrator {
@@ -22,6 +25,9 @@ public class SerialOrchestrator {
 
     @Autowired
     private ProductionOrderService productionOrderService;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     public String generate(String ruleCode) {
         String code = StringUtils.hasText(ruleCode) ? ruleCode.trim().toUpperCase() : "";
@@ -66,17 +72,16 @@ public class SerialOrchestrator {
     private String nextOrderNo() {
         String day = LocalDate.now().format(DAY_FMT);
         String prefix = "PO" + day;
-        ProductionOrder latest = productionOrderService.getOne(new LambdaQueryWrapper<ProductionOrder>()
-                .likeRight(ProductionOrder::getOrderNo, prefix)
-                .orderByDesc(ProductionOrder::getOrderNo)
-                .last("limit 1"));
+        Long tenantId = UserContext.tenantId();
 
-        int seq = resolveNextSeq(prefix, latest == null ? null : latest.getOrderNo());
+        // 使用 JdbcTemplate 绕过 MyBatis-Plus 全局逻辑删除过滤
+        // 确保已软删除的订单号也被纳入查重，避免命中 uk_tenant_order_no 唯一约束导致 409
+        String latestOrderNo = findLatestOrderNo(prefix, tenantId);
+        int seq = resolveNextSeq(prefix, latestOrderNo);
+
         for (int i = 0; i < 200; i++) {
             String candidate = prefix + "%03d".formatted(seq);
-            Long cnt = productionOrderService.count(new LambdaQueryWrapper<ProductionOrder>()
-                    .eq(ProductionOrder::getOrderNo, candidate));
-            if (cnt == null || cnt == 0) {
+            if (countOrderNoIncludingDeleted(candidate, tenantId) == 0) {
                 return candidate;
             }
             seq += 1;
@@ -85,6 +90,36 @@ public class SerialOrchestrator {
         String fallback = String.valueOf(System.nanoTime());
         String suffix = fallback.length() > 6 ? fallback.substring(fallback.length() - 6) : fallback;
         return prefix + suffix;
+    }
+
+    /** 查询最新订单号（包含已软删除的记录），绕过 logic-delete 过滤 */
+    private String findLatestOrderNo(String prefix, Long tenantId) {
+        String sql;
+        Object[] params;
+        if (tenantId != null) {
+            sql = "SELECT order_no FROM t_production_order WHERE tenant_id = ? AND order_no LIKE ? ORDER BY order_no DESC LIMIT 1";
+            params = new Object[]{tenantId, prefix + "%"};
+        } else {
+            sql = "SELECT order_no FROM t_production_order WHERE order_no LIKE ? ORDER BY order_no DESC LIMIT 1";
+            params = new Object[]{prefix + "%"};
+        }
+        List<String> results = jdbcTemplate.queryForList(sql, String.class, params);
+        return results.isEmpty() ? null : results.get(0);
+    }
+
+    /** 检查订单号是否已存在（包含已软删除的记录），绕过 logic-delete 过滤 */
+    private int countOrderNoIncludingDeleted(String orderNo, Long tenantId) {
+        String sql;
+        Object[] params;
+        if (tenantId != null) {
+            sql = "SELECT COUNT(*) FROM t_production_order WHERE tenant_id = ? AND order_no = ?";
+            params = new Object[]{tenantId, orderNo};
+        } else {
+            sql = "SELECT COUNT(*) FROM t_production_order WHERE order_no = ?";
+            params = new Object[]{orderNo};
+        }
+        Integer cnt = jdbcTemplate.queryForObject(sql, Integer.class, params);
+        return cnt != null ? cnt : 0;
     }
 
     private int resolveNextSeq(String prefix, String latestValue) {

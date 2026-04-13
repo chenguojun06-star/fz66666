@@ -166,7 +166,7 @@ Page({
    * @returns {void} 无返回值
    */
   onGoToMonthly() {
-    safeNavigate({ url: '/pages/scan/history/index' }).catch(() => {
+    safeNavigate({ url: '/pages/payroll/payroll' }).catch(() => {
       // 导航失败忽略（通常是重复点击）
     });
   },

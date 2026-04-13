@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleSizePrice;
 import com.fashion.supplychain.style.service.StyleInfoService;
@@ -17,6 +18,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -31,6 +33,10 @@ public class StyleTemplateTool implements AgentTool {
     @Autowired private TemplateLibraryOrchestrator templateLibraryOrchestrator;
     @Autowired private StyleInfoService styleInfoService;
     @Autowired private StyleSizePriceService styleSizePriceService;
+    @Autowired private AiAgentToolAccessService toolAccessService;
+
+    private static final Set<String> WRITE_ACTIONS = Set.of(
+            "create_template_from_style", "apply_template_to_style", "sync_process_prices", "save_size_prices");
 
     @Override
     public AiTool getToolDefinition() {
@@ -61,8 +67,14 @@ public class StyleTemplateTool implements AgentTool {
 
     @Override
     public String execute(String argumentsJson) throws Exception {
+        if (UserContext.tenantId() == null) {
+            return "{\"success\":false,\"error\":\"租户上下文丢失，请重新登录\"}";
+        }
         Map<String, Object> args = MAPPER.readValue(argumentsJson == null || argumentsJson.isBlank() ? "{}" : argumentsJson, new TypeReference<Map<String, Object>>() {});
         String action = text(args.get("action"));
+        if (WRITE_ACTIONS.contains(action) && !toolAccessService.hasManagerAccess()) {
+            return "{\"success\":false,\"error\":\"该操作需要管理员权限\"}";
+        }
         return switch (action) {
             case "create_template_from_style" -> createTemplateFromStyle(args);
             case "apply_template_to_style" -> applyTemplateToStyle(args);

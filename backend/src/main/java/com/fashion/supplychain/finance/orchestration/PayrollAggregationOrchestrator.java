@@ -229,7 +229,15 @@ public class PayrollAggregationOrchestrator {
         dto.setQuantity(totalQuantity);
         dto.setUnitPrice(unitPrice);
         dto.setTotalAmount(totalAmount);
-        dto.setScanType("production"); // Phase 5 默认为 production
+        String dominantScanType = records.stream()
+                .map(ScanRecord::getScanType)
+                .filter(Objects::nonNull)
+                .collect(Collectors.groupingBy(st -> st, Collectors.counting()))
+                .entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse("production");
+        dto.setScanType(dominantScanType);
         dto.setRecordCount((long) records.size());
         dto.setStartTime(startTime);
         dto.setEndTime(endTime);

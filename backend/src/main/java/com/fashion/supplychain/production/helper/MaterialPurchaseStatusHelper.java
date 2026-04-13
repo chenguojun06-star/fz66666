@@ -535,8 +535,16 @@ public class MaterialPurchaseStatusHelper {
 
         if (StringUtils.hasText(purchase.getOrderId())) {
             String oid = purchase.getOrderId().trim();
-            helper.ensureOrderStatusProduction(oid);
-            helper.recomputeAndUpdateMaterialArrivalRate(oid, productionOrderOrchestrator);
+            try {
+                helper.ensureOrderStatusProduction(oid);
+            } catch (Exception e) {
+                log.warn("syncAfterPurchaseChanged: ensureOrderStatusProduction failed, orderId={}, error={}", oid, e.getMessage());
+            }
+            try {
+                helper.recomputeAndUpdateMaterialArrivalRate(oid, productionOrderOrchestrator);
+            } catch (Exception e) {
+                log.warn("syncAfterPurchaseChanged: recomputeAndUpdateMaterialArrivalRate failed, orderId={}, error={}", oid, e.getMessage());
+            }
         }
     }
 

@@ -8,6 +8,7 @@ import com.fashion.supplychain.finance.entity.MaterialReconciliation;
 import com.fashion.supplychain.finance.orchestration.ReconciliationStatusOrchestrator;
 import com.fashion.supplychain.finance.service.MaterialReconciliationService;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.intelligence.dto.CollaborationDispatchRequest;
 import com.fashion.supplychain.intelligence.dto.CollaborationDispatchResponse;
 import com.fashion.supplychain.intelligence.orchestration.CollaborationDispatchOrchestrator;
@@ -30,6 +31,10 @@ public class MaterialReconciliationTool implements AgentTool {
     @Autowired private MaterialReconciliationService materialReconciliationService;
     @Autowired private ReconciliationStatusOrchestrator reconciliationStatusOrchestrator;
     @Autowired private CollaborationDispatchOrchestrator collaborationDispatchOrchestrator;
+    @Autowired private AiAgentToolAccessService toolAccessService;
+
+    private static final java.util.Set<String> WRITE_ACTIONS = java.util.Set.of(
+            "update_status", "return_previous", "dispatch_followup");
 
     @Override
     public AiTool getToolDefinition() {
@@ -64,6 +69,9 @@ public class MaterialReconciliationTool implements AgentTool {
         }
         Map<String, Object> args = MAPPER.readValue(argumentsJson == null || argumentsJson.isBlank() ? "{}" : argumentsJson, new TypeReference<Map<String, Object>>() {});
         String action = text(args.get("action"));
+        if (WRITE_ACTIONS.contains(action) && !toolAccessService.hasManagerAccess()) {
+            return "{\"success\":false,\"error\":\"对账写操作需要管理员权限\"}";
+        }
         return switch (action) {
             case "list_material_reconciliation" -> listReconciliations(args);
             case "update_status" -> updateStatus(args);

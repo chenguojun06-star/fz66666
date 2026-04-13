@@ -35,6 +35,7 @@ public class HyperAdvisorOrchestrator {
     @Autowired private AdvisorSimulationOrchestrator simulationOrchestrator;
     @Autowired private IntelligenceInferenceOrchestrator inferenceOrchestrator;
     @Autowired private LangfuseTraceOrchestrator langfuseTraceOrchestrator;
+    @Autowired private AiAgentTraceOrchestrator traceOrchestrator;
 
     private static final String SYSTEM_PROMPT_TEMPLATE = """
             你是服装供应链高级 AI 顾问。
@@ -51,34 +52,46 @@ public class HyperAdvisorOrchestrator {
         String userId = UserContext.userId();
         if (sessionId == null) sessionId = UUID.randomUUID().toString();
 
+        String commandId = null;
+        long startTime = System.currentTimeMillis();
+        try {
+            commandId = traceOrchestrator.startRequest(userMessage, "hyper-advisor:request");
+        } catch (Exception e) {
+            log.debug("[HyperAdvisor] trace startRequest 失败: {}", e.getMessage());
+        }
+
         HyperAdvisorResponse resp = new HyperAdvisorResponse();
         resp.setSessionId(sessionId);
 
-        // 1. 会话上下文
         String historyContext = sessionOrchestrator.loadSessionContext(tenantId, sessionId);
-
-        // 2. 用户画像
         String profileContext = profileOrchestrator.buildProfilePrompt(tenantId, userId);
 
-        // 3. LLM 推理
         String systemPrompt = String.format(SYSTEM_PROMPT_TEMPLATE, historyContext, profileContext);
         IntelligenceInferenceResult llmResult;
         try {
             llmResult = inferenceOrchestrator.chat("hyper_advisor", systemPrompt, userMessage);
+            if (commandId != null) {
+                try {
+                    traceOrchestrator.recordStep(commandId, "llm-inference", userMessage,
+                            llmResult.getContent(), llmResult.getLatencyMs(), llmResult.isSuccess());
+                } catch (Exception e) { log.debug("[HyperAdvisor] trace recordStep 失败: {}", e.getMessage()); }
+            }
         } catch (Exception e) {
             log.error("[HyperAdvisor] LLM调用失败: {}", e.getMessage());
             resp.setAnalysis("AI 推理服务暂时不可用，请稍后重试");
+            if (commandId != null) {
+                try {
+                    traceOrchestrator.finishRequest(commandId, null, e.getMessage(), System.currentTimeMillis() - startTime);
+                } catch (Exception ex) { log.debug("[HyperAdvisor] trace finishRequest 失败: {}", ex.getMessage()); }
+            }
             return resp;
         }
         resp.setTraceId(llmResult.getTraceId());
 
         String analysis = llmResult.isSuccess() ? llmResult.getContent() : "AI 未能成功生成回答";
         resp.setAnalysis(analysis);
-
-        // 4. 多轮澄清检测
         resp.setNeedsClarification(analysis.contains("[需要澄清]"));
 
-        // 5. 风险量化（每次附带，供前端 ECharts 渲染）
         try {
             List<RiskIndicator> risks = riskOrchestrator.quantifyRisks();
             resp.setRiskIndicators(risks);
@@ -86,17 +99,16 @@ public class HyperAdvisorOrchestrator {
             log.warn("[HyperAdvisor] 风险量化失败: {}", e.getMessage());
         }
 
-        // 6. 模拟（仅当用户提问中涉及假设场景）
         attachSimulationIfRequested(userMessage, resp);
-
-        // 7. 画像提示
         resp.setProfileHint(profileContext.isEmpty() ? null : "已加载个性化画像");
-
-        // 8. 异步：保存会话 + 更新画像
         persistAsync(tenantId, userId, sessionId, userMessage, analysis);
-
-        // 9. 推送 Langfuse trace
         pushTraceAsync(tenantId, userId, llmResult);
+
+        if (commandId != null) {
+            try {
+                traceOrchestrator.finishRequest(commandId, analysis, null, System.currentTimeMillis() - startTime);
+            } catch (Exception e) { log.debug("[HyperAdvisor] trace finishRequest 失败: {}", e.getMessage()); }
+        }
 
         return resp;
     }
@@ -119,7 +131,7 @@ public class HyperAdvisorOrchestrator {
     }
 
     @Async
-    protected void persistAsync(Long tenantId, String userId, String sessionId,
+    public void persistAsync(Long tenantId, String userId, String sessionId,
                                 String userMessage, String analysis) {
         try {
             sessionOrchestrator.saveMessage(tenantId, userId, sessionId, "user", userMessage, null);

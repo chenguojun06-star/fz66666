@@ -225,7 +225,7 @@ public class ProductionAgenticCrewOrchestrator {
     // =========================================================================
 
     @Async
-    protected void postProcessAsync(String sessionId, Long tenantId, String userId,
+    public void postProcessAsync(String sessionId, Long tenantId, String userId,
                                     String orderNo, String content, int score,
                                     IntelligenceInferenceResult result) {
         // 写 Qdrant，供历史记忆召回

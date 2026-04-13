@@ -300,3 +300,34 @@
   color: #52c41a;
   font-weight: 500;
 }
+
+/* 样衣开发扩展信息行 */
+.taskExtraInfo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 5px;
+}
+
+.taskExtraItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #f0f5ff;
+  border: 1px solid #d6e4ff;
+  border-radius: 4px;
+  padding: 1px 7px;
+  font-size: 11px;
+  color: #2f54eb;
+  white-space: nowrap;
+}
+
+.taskExtraLabel {
+  color: #8c8c8c;
+  font-size: 10px;
+}
+
+.taskExtraValue {
+  color: #2f54eb;
+  font-weight: 500;
+}

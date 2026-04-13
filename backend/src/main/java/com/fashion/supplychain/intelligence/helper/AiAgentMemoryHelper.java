@@ -30,7 +30,7 @@ public class AiAgentMemoryHelper {
 
     private static final int MAX_MEMORY_TURNS = 6;
     private static final int MAX_USERS_CACHED = 200;
-    private static final int COMPACT_THRESHOLD_TURNS = 8;
+    private static final int COMPACT_THRESHOLD_TURNS = 12;
 
     @Autowired private IntelligenceInferenceOrchestrator inferenceOrchestrator;
     @Autowired private IntelligenceMemoryOrchestrator intelligenceMemoryOrchestrator;

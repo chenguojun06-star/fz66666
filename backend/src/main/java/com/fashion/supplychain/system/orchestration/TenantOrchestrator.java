@@ -587,6 +587,10 @@ public class TenantOrchestrator {
         return roleInitHelper.listPendingRegistrations(page, pageSize);
     }
 
+    public Page<User> listFactoryPendingRegistrations(Long page, Long pageSize) {
+        return roleInitHelper.listFactoryPendingRegistrations(page, pageSize);
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public boolean approveRegistration(Long userId, Long roleId) {
         return roleInitHelper.approveRegistration(userId, roleId);

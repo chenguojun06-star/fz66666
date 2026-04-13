@@ -106,14 +106,25 @@ public class IntelligenceInferenceOrchestrator {
         long start = System.currentTimeMillis();
         String traceId = UUID.randomUUID().toString();
         IntelligenceInferenceResult result;
-        if (intelligenceModelGatewayOrchestrator.isGatewayReady()) {
+        boolean gatewayUsed = false;
+        if (intelligenceModelGatewayOrchestrator.isGatewayReady()
+                && !intelligenceModelGatewayOrchestrator.isCircuitOpen()) {
+            gatewayUsed = true;
             result = invokeLitellm(scene, messages, tools, traceId);
-            if (!result.isSuccess() && intelligenceModelGatewayOrchestrator.isFallbackEnabled()) {
-                IntelligenceInferenceResult fallback = invokeDirect(scene, messages, tools, traceId);
-                fallback.setFallbackUsed(true);
-                result = fallback;
+            if (result.isSuccess()) {
+                intelligenceModelGatewayOrchestrator.recordSuccess();
+            } else {
+                intelligenceModelGatewayOrchestrator.recordFailure();
+                if (intelligenceModelGatewayOrchestrator.isFallbackEnabled()) {
+                    IntelligenceInferenceResult fallback = invokeDirect(scene, messages, tools, traceId);
+                    fallback.setFallbackUsed(true);
+                    result = fallback;
+                }
             }
         } else {
+            if (gatewayUsed) {
+                intelligenceModelGatewayOrchestrator.recordFailure();
+            }
             result = invokeDirect(scene, messages, tools, traceId);
         }
         result.setTraceId(traceId);
@@ -190,8 +201,8 @@ public class IntelligenceInferenceOrchestrator {
             }
             // F12: 5xx 状态码也走重试通道
             if (allowRetryOnTimeout && response.statusCode() >= 500) {
-                log.warn("[IntelligenceInference] {} 返回 {}，1.5s后重试", provider, response.statusCode());
-                Thread.sleep(1500);
+                log.warn("[IntelligenceInference] {} 返回 {}，指数退避后重试", provider, response.statusCode());
+                Thread.sleep(1000 + (long)(Math.random() * 500));
                 HttpResponse<String> retryResp = client.send(request, HttpResponse.BodyHandlers.ofString());
                 if (retryResp.statusCode() == 200) {
                     result.setSuccess(true);
@@ -213,9 +224,9 @@ public class IntelligenceInferenceOrchestrator {
                 log.warn("[IntelligenceInference] {} 场景={} 异常(不重试): {}", provider, scene, e.getMessage());
                 return result;
             }
-            log.warn("[IntelligenceInference] {} 场景={} 可恢复异常，1.5s后重试: {}", provider, scene, e.getMessage());
+            log.warn("[IntelligenceInference] {} 场景={} 可恢复异常，指数退避后重试: {}", provider, scene, e.getMessage());
             try {
-                Thread.sleep(1500);
+                Thread.sleep(1000 + (long)(Math.random() * 500));
                 HttpResponse<String> retryResp = client.send(request, HttpResponse.BodyHandlers.ofString());
                 if (retryResp.statusCode() == 200) {
                     result.setSuccess(true);

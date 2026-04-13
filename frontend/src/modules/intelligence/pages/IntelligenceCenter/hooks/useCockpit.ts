@@ -46,12 +46,12 @@ export function useCockpit() {
 
   const load = useCallback(async () => {
     setData(d => ({ ...d, loading: true }));
-    const [rPulse, rHealth, rNotify, rWorkers, rHeatmap, rRanking, rShortage, rHealing, rBottleneck, rOrders, rBrain, rActionCenter, rFactoryCap, rProductionStats] =
+    const [rPulse, rHealth, rNotify, rWorkers, rHeatmap, rRanking, rShortage, rBottleneck, rOrders, rBrain, rActionCenter, rFactoryCap, rProductionStats] =
       await Promise.allSettled([
         intelligenceApi.getLivePulse(), intelligenceApi.getHealthIndex(),
         intelligenceApi.getSmartNotifications(), intelligenceApi.getWorkerEfficiency(),
         intelligenceApi.getDefectHeatmap(), intelligenceApi.getFactoryLeaderboard(),
-        intelligenceApi.getMaterialShortage(), intelligenceApi.runSelfHealing(),
+        intelligenceApi.getMaterialShortage(),
         intelligenceApi.getFactoryBottleneck(),
         productionOrderApi.list({ pageSize: 200, excludeTerminal: true } as any),
         intelligenceApi.getBrainSnapshot(),
@@ -72,7 +72,7 @@ export function useCockpit() {
       : null;
     setData({
       pulse: v(rPulse), health: v(rHealth), notify: v(rNotify), workers: v(rWorkers),
-      heatmap: v(rHeatmap), ranking: v(rRanking), shortage: v(rShortage), healing: v(rHealing),
+      heatmap: v(rHeatmap), ranking: v(rRanking), shortage: v(rShortage), healing: null,
       bottleneck: v(rBottleneck), brain: v(rBrain), actionCenter: v(rActionCenter),
       orders: orderResult.filter(o => !['completed', 'cancelled', 'scrapped'].includes(String(o.status || '').trim())),
       factoryCapacity: factoryCapResult,

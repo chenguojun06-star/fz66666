@@ -257,7 +257,7 @@ Page({
     } catch (e) {
       baseUrl = getBaseUrl();
     }
-    const origin = baseUrl.replace(/\/api\/?$/, '');
+    const origin = baseUrl.replace(/^(https?:\/\/)api\./, '$1www.').replace(/\/api\/?$/, '');
     const url = origin + '/register?tenantCode=' + encodeURIComponent(tenantCode)
       + '&tenantName=' + encodeURIComponent(tenantName || '');
     wx.setClipboardData({

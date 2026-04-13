@@ -29,6 +29,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -65,6 +67,9 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
 
     @Autowired
     private ObjectProvider<StyleBomService> styleBomServiceProvider;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Autowired
     private ObjectProvider<ProductionOrderProgressOrchestrationService> progressOrchestrationServiceProvider;
@@ -142,7 +147,17 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
             }
         }
 
-        boolean ok = this.saveOrUpdate(productionOrder);
+        boolean ok;
+        try {
+            ok = this.saveOrUpdate(productionOrder);
+        } catch (DuplicateKeyException e) {
+            // 订单号冲突（跨租户同号或并发竞争），自动重新生成订单号后重试
+            log.warn("订单号 {} 冲突，自动重新生成: {}", productionOrder.getOrderNo(), e.getMessage());
+            productionOrder.setId(null);
+            productionOrder.setOrderNo(nextOrderNo());
+            productionOrder.setQrCode(productionOrder.getOrderNo());
+            ok = this.saveOrUpdate(productionOrder);
+        }
         if (ok && isCreate) {
             cuttingTaskService.createTaskIfAbsent(productionOrder);
             // 采购需求由 ProductionOrderOrchestrator.saveOrUpdateOrder() 统一调用
@@ -183,17 +198,34 @@ public class ProductionOrderServiceImpl extends ServiceImpl<ProductionOrderMappe
     private String nextOrderNo() {
         LocalDateTime now = LocalDateTime.now();
         String ts = now.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
+        Long tenantId = UserContext.tenantId();
         for (int i = 0; i < 6; i++) {
             int rand = (int) (ThreadLocalRandom.current().nextDouble() * 900) + 100;
             String candidate = "ORD" + ts + rand;
-            long cnt = this.count(new LambdaQueryWrapper<ProductionOrder>().eq(ProductionOrder::getOrderNo, candidate));
-            if (cnt == 0) {
+            // 使用 JdbcTemplate 绕过 MyBatis-Plus 全局逻辑删除过滤
+            // 确保已软删除的订单号也被纳入查重，避免 DuplicateKeyException (409)
+            if (countOrderNoIncludingDeleted(candidate, tenantId) == 0) {
                 return candidate;
             }
         }
         String nano = String.valueOf(System.nanoTime());
         String suffix = nano.length() > 6 ? nano.substring(nano.length() - 6) : nano;
         return "ORD" + ts + suffix;
+    }
+
+    /** 检查订单号是否已存在（包含已软删除的记录），绕过 logic-delete 过滤 */
+    private int countOrderNoIncludingDeleted(String orderNo, Long tenantId) {
+        String sql;
+        Object[] params;
+        if (tenantId != null) {
+            sql = "SELECT COUNT(*) FROM t_production_order WHERE tenant_id = ? AND order_no = ?";
+            params = new Object[]{tenantId, orderNo};
+        } else {
+            sql = "SELECT COUNT(*) FROM t_production_order WHERE order_no = ?";
+            params = new Object[]{orderNo};
+        }
+        Integer cnt = jdbcTemplate.queryForObject(sql, Integer.class, params);
+        return cnt != null ? cnt : 0;
     }
 
     @Override

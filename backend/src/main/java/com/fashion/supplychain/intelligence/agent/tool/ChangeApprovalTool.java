@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.system.entity.ChangeApproval;
 import com.fashion.supplychain.system.orchestration.ChangeApprovalOrchestrator;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +24,8 @@ public class ChangeApprovalTool implements AgentTool {
 
     @Autowired
     private ChangeApprovalOrchestrator changeApprovalOrchestrator;
+    @Autowired
+    private AiAgentToolAccessService toolAccessService;
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("MM-dd HH:mm");
@@ -81,9 +84,11 @@ public class ChangeApprovalTool implements AgentTool {
             case "list_pending":
                 return handleListPending();
             case "approve":
-                return handleApprove(args);
             case "reject":
-                return handleReject(args);
+                if (!toolAccessService.hasManagerAccess()) {
+                    return "{\"success\":false,\"error\":\"审批/驳回操作需要管理员权限\"}";
+                }
+                return "approve".equals(action) ? handleApprove(args) : handleReject(args);
             default:
                 return "{\"error\": \"未知操作: " + action + "，支持 list_pending/approve/reject\"}";
         }

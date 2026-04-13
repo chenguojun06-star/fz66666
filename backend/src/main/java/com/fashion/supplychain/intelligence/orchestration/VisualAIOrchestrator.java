@@ -33,6 +33,9 @@ public class VisualAIOrchestrator {
     @Autowired
     private VisualAiLogMapper visualAiLogMapper;
 
+    @Autowired
+    private AiAgentTraceOrchestrator traceOrchestrator;
+
     // ──────────────────────────────────────────────────────────────────
     // 公共入口
     // ──────────────────────────────────────────────────────────────────
@@ -43,27 +46,55 @@ public class VisualAIOrchestrator {
         }
         String taskType = req.getTaskType() != null ? req.getTaskType().toUpperCase() : "DEFECT_DETECT";
 
+        String commandId = null;
+        long startTime = System.currentTimeMillis();
+        try {
+            commandId = traceOrchestrator.startRequest(
+                    taskType + ":" + req.getImageUrl(), "visual-ai:request");
+        } catch (Exception e) {
+            log.debug("[VisualAI] trace startRequest 失败: {}", e.getMessage());
+        }
+
         String systemPrompt = buildSystemPrompt(taskType);
         String userMsg = buildUserMessage(taskType, req.getImageUrl());
 
         String llmRaw;
         try {
             var result = inferenceOrchestrator.chat("visual-ai-" + taskType.toLowerCase(), systemPrompt, userMsg);
+            if (commandId != null) {
+                try {
+                    traceOrchestrator.recordStep(commandId, "llm-vision", userMsg,
+                            result.getContent(), result.getLatencyMs(), result.isSuccess());
+                } catch (Exception e) { log.debug("[VisualAI] trace recordStep 失败: {}", e.getMessage()); }
+            }
             if (!result.isSuccess()) {
+                if (commandId != null) {
+                    try { traceOrchestrator.finishRequest(commandId, null, result.getContent(), System.currentTimeMillis() - startTime); }
+                    catch (Exception e) { log.debug("[VisualAI] trace finishRequest 失败: {}", e.getMessage()); }
+                }
                 return errorResponse("视觉AI分析失败：" + result.getContent(), req);
             }
             llmRaw = result.getContent();
         } catch (Exception e) {
             log.warn("[VisualAI] LLM call failed: {}", e.getMessage());
+            if (commandId != null) {
+                try { traceOrchestrator.finishRequest(commandId, null, e.getMessage(), System.currentTimeMillis() - startTime); }
+                catch (Exception ex) { log.debug("[VisualAI] trace finishRequest 失败: {}", ex.getMessage()); }
+            }
             return errorResponse("视觉AI服务暂时不可用", req);
         }
 
         VisualAIResponse resp = parseResponse(llmRaw, taskType);
         resp.setTaskType(taskType);
 
-        // 持久化日志
         Long logId = persistLog(req, resp);
         resp.setLogId(logId);
+
+        if (commandId != null) {
+            try {
+                traceOrchestrator.finishRequest(commandId, taskType + "分析完成", null, System.currentTimeMillis() - startTime);
+            } catch (Exception e) { log.debug("[VisualAI] trace finishRequest 失败: {}", e.getMessage()); }
+        }
         return resp;
     }
 

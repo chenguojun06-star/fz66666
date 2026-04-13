@@ -171,6 +171,7 @@ const PayrollOperatorSummary: React.FC = () => {
             if (!acc[name]) {
                 acc[name] = {
                     operatorName: name,
+                    operatorId: String((row as Record<string, unknown>)?.operatorId || ''),
                     totalQuantity: 0,
                     totalAmount: 0,
                     recordCount: 0,
@@ -195,6 +196,7 @@ const PayrollOperatorSummary: React.FC = () => {
 
         const result = Object.values(grouped).map((item: any) => ({
             operatorName: item.operatorName,
+            operatorId: item.operatorId,
             totalQuantity: item.totalQuantity,
             totalAmount: item.totalAmount,
             recordCount: item.recordCount,
@@ -413,7 +415,7 @@ const PayrollOperatorSummary: React.FC = () => {
         try {
             await api.post('/finance/wage-payment/create-payable', {
                 bizType: 'PAYROLL_SETTLEMENT',
-                bizId: operatorName,
+                bizId: summary.operatorId || operatorName,
                 payeeName: operatorName,
                 amount: toNumberOrZero(summary.totalAmount),
                 description: `工资结算：${summary.recordCount}次扫码，共${toNumberOrZero(summary.totalQuantity)}件`,
@@ -467,7 +469,7 @@ const PayrollOperatorSummary: React.FC = () => {
                 if (!summary) continue;
                 await api.post('/finance/wage-payment/create-payable', {
                     bizType: 'PAYROLL_SETTLEMENT',
-                    bizId: String(key),
+                    bizId: summary.operatorId || String(key),
                     payeeName: String(key),
                     amount: toNumberOrZero(summary.totalAmount),
                     description: `工资结算：${summary.recordCount}次扫码，共${toNumberOrZero(summary.totalQuantity)}件`,

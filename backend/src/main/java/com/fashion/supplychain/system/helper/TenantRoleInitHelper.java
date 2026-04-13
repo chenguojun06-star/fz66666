@@ -66,6 +66,16 @@ public class TenantRoleInitHelper {
         throw new AccessDeniedException("仅超级管理员或租户主账号可执行此操作");
     }
 
+    private void assertSuperAdminOrTenantOwnerOrFactoryOwner() {
+        if (UserContext.isSuperAdmin()) return;
+        if (UserContext.isTenantOwner()) return;
+        if (UserContext.isFactoryUser()) {
+            User current = userService.getById(UserContext.userId());
+            if (current != null && Boolean.TRUE.equals(current.getIsFactoryOwner())) return;
+        }
+        throw new AccessDeniedException("仅超级管理员、租户主账号或外发工厂管理员可执行此操作");
+    }
+
     /**
      * 为新租户创建管理员角色（强制成功，失败抛异常回滚事务）
      *
@@ -360,6 +370,36 @@ public class TenantRoleInitHelper {
         return result;
     }
 
+    public Page<User> listFactoryPendingRegistrations(Long page, Long pageSize) {
+        assertSuperAdminOrTenantOwner();
+
+        LambdaQueryWrapper<User> query = new LambdaQueryWrapper<>();
+        query.eq(User::getRegistrationStatus, "PENDING");
+
+        Long tenantId = UserContext.tenantId();
+        if (tenantId != null) {
+            query.eq(User::getTenantId, tenantId);
+        }
+        query.isNotNull(User::getFactoryId).ne(User::getFactoryId, "");
+        query.orderByDesc(User::getCreateTime);
+
+        Page<User> result = userService.page(
+                new Page<>(page != null ? page : 1, pageSize != null ? pageSize : 20), query);
+        if (result.getRecords() != null) {
+            result.setRecords(result.getRecords().stream().map(user -> {
+                User sanitized = sanitizeUser(user);
+                if (sanitized.getTenantId() != null) {
+                    Tenant tenant = tenantService.getById(sanitized.getTenantId());
+                    if (tenant != null) {
+                        sanitized.setTenantName(tenant.getTenantName());
+                    }
+                }
+                return sanitized;
+            }).collect(Collectors.toList()));
+        }
+        return result;
+    }
+
     /**
      * 设置租户权限天花板
      * @param tenantId 租户ID
@@ -480,22 +520,33 @@ public class TenantRoleInitHelper {
      * 获取待审批的注册用户列表（租户主账号查看）
      */
     public Page<User> listPendingRegistrations(Long page, Long pageSize) {
-        assertSuperAdminOrTenantOwner();
+        assertSuperAdminOrTenantOwnerOrFactoryOwner();
 
         LambdaQueryWrapper<User> query = new LambdaQueryWrapper<>();
         query.eq(User::getRegistrationStatus, "PENDING");
 
         Long tenantId = UserContext.tenantId();
         if (tenantId != null) {
-            // 租户主账号只能看到本租户的注册申请
             query.eq(User::getTenantId, tenantId);
         }
+
+        String currentFactoryId = UserContext.factoryId();
+        if (currentFactoryId != null) {
+            User current = userService.getById(UserContext.userId());
+            if (current != null && Boolean.TRUE.equals(current.getIsFactoryOwner())) {
+                query.eq(User::getFactoryId, currentFactoryId);
+            } else {
+                query.isNull(User::getFactoryId);
+            }
+        } else if (tenantId != null && UserContext.isTenantOwner()) {
+            query.isNull(User::getFactoryId);
+        }
+
         query.orderByDesc(User::getCreateTime);
 
         Page<User> result = userService.page(
                 new Page<>(page != null ? page : 1, pageSize != null ? pageSize : 20), query);
         if (result.getRecords() != null) {
-            // 填充租户名称
             result.setRecords(result.getRecords().stream().map(user -> {
                 User sanitized = sanitizeUser(user);
                 if (sanitized.getTenantId() != null) {
@@ -514,7 +565,7 @@ public class TenantRoleInitHelper {
      * 审批通过注册用户
      */
     public boolean approveRegistration(Long userId, Long roleId) {
-        assertSuperAdminOrTenantOwner();
+        assertSuperAdminOrTenantOwnerOrFactoryOwner();
 
         User user = userService.getById(userId);
         if (user == null) {
@@ -524,13 +575,28 @@ public class TenantRoleInitHelper {
             throw new IllegalArgumentException("该用户不在待审批状态");
         }
 
-        // 租户主账号只能审批自己租户的用户
         Long tenantId = UserContext.tenantId();
         if (tenantId != null && !tenantId.equals(user.getTenantId())) {
             throw new AccessDeniedException("无权审批其他租户的注册申请");
         }
 
-        // 如果指定了角色，更新角色
+        String currentFactoryId = UserContext.factoryId();
+        boolean isFactoryOwner = false;
+        if (currentFactoryId != null) {
+            User current = userService.getById(UserContext.userId());
+            isFactoryOwner = current != null && Boolean.TRUE.equals(current.getIsFactoryOwner());
+        }
+
+        if (isFactoryOwner) {
+            if (!currentFactoryId.equals(user.getFactoryId())) {
+                throw new AccessDeniedException("外发工厂管理员只能审批本工厂的注册申请");
+            }
+        } else if (UserContext.isTenantOwner()) {
+            if (user.getFactoryId() != null && !user.getFactoryId().isEmpty()) {
+                throw new AccessDeniedException("外发工厂的员工由外发工厂管理员审批，租户不可操作");
+            }
+        }
+
         if (roleId != null) {
             Role role = roleService.getById(roleId);
             if (role != null) {
@@ -556,7 +622,7 @@ public class TenantRoleInitHelper {
      * 拒绝注册用户
      */
     public boolean rejectRegistration(Long userId, String reason) {
-        assertSuperAdminOrTenantOwner();
+        assertSuperAdminOrTenantOwnerOrFactoryOwner();
 
         User user = userService.getById(userId);
         if (user == null) {
@@ -569,6 +635,23 @@ public class TenantRoleInitHelper {
         Long tenantId = UserContext.tenantId();
         if (tenantId != null && !tenantId.equals(user.getTenantId())) {
             throw new AccessDeniedException("无权拒绝其他租户的注册申请");
+        }
+
+        String currentFactoryId = UserContext.factoryId();
+        boolean isFactoryOwner = false;
+        if (currentFactoryId != null) {
+            User current = userService.getById(UserContext.userId());
+            isFactoryOwner = current != null && Boolean.TRUE.equals(current.getIsFactoryOwner());
+        }
+
+        if (isFactoryOwner) {
+            if (!currentFactoryId.equals(user.getFactoryId())) {
+                throw new AccessDeniedException("外发工厂管理员只能拒绝本工厂的注册申请");
+            }
+        } else if (UserContext.isTenantOwner()) {
+            if (user.getFactoryId() != null && !user.getFactoryId().isEmpty()) {
+                throw new AccessDeniedException("外发工厂的员工由外发工厂管理员审批，租户不可操作");
+            }
         }
 
         user.setRegistrationStatus("REJECTED");

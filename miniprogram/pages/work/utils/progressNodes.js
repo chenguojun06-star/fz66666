@@ -19,10 +19,12 @@ function stripWarehousingNode(list) {
 }
 
 const defaultNodes = [
+  { id: 'procurement', name: '采购' },
   { id: 'cutting', name: '裁剪' },
-  { id: 'production', name: '生产' },
-  { id: 'quality', name: '质检' },
-  { id: 'packaging', name: '包装' },
+  { id: 'secondaryProcess', name: '二次工艺' },
+  { id: 'carSewing', name: '车缝' },
+  { id: 'tailProcess', name: '尾部' },
+  { id: 'warehousing', name: '入库' },
 ];
 
 /**
@@ -103,6 +105,65 @@ function resolveNodesFromOrder(order) {
   return parsed.length ? parsed : defaultNodes;
 }
 
+const STAGE_RATE_MAP = [
+  { match: '采购',   fields: ['procurementCompletionRate'] },
+  { match: '裁剪',   fields: ['cuttingCompletionRate'] },
+  { match: '二次工艺', fields: ['secondaryProcessRate', 'secondaryProcessCompletionRate'] },
+  { match: '车缝',   fields: ['carSewingCompletionRate', 'sewingCompletionRate'] },
+  { match: '尾部',   fields: ['tailProcessRate', 'ironingCompletionRate'] },
+  { match: '入库',   fields: ['warehousingCompletionRate'] },
+  { match: '质检',   fields: ['qualityCompletionRate'] },
+  { match: '包装',   fields: ['packagingCompletionRate'] },
+];
+
+function getNodeRateFromOrder(nodeName, order) {
+  const name = (nodeName || '').trim();
+  for (let i = 0; i < STAGE_RATE_MAP.length; i++) {
+    const entry = STAGE_RATE_MAP[i];
+    if (name === entry.match || name.indexOf(entry.match) >= 0 || entry.match.indexOf(name) >= 0) {
+      for (let j = 0; j < entry.fields.length; j++) {
+        const val = Number(order[entry.fields[j]]) || 0;
+        if (val > 0) return clampPercent(val);
+      }
+    }
+  }
+  return -1;
+}
+
+function buildProcessNodesWithRates(order) {
+  const nodes = resolveNodesFromOrder(order);
+  if (!nodes || !nodes.length) return [];
+  const progress = Number(order.productionProgress) || 0;
+  let hasAnyRate = false;
+  const result = nodes.map(function (n) {
+    const name = n.name || n;
+    const rate = getNodeRateFromOrder(name, order);
+    if (rate >= 0) {
+      hasAnyRate = true;
+      return { name, percent: rate };
+    }
+    return { name, percent: -1 };
+  });
+  if (hasAnyRate) {
+    return result.map(function (r) {
+      return { name: r.name, percent: r.percent >= 0 ? r.percent : 0 };
+    });
+  }
+  const len = nodes.length;
+  const perNode = 100 / len;
+  return nodes.map(function (n, i) {
+    const nodeStart = i * perNode;
+    const nodeEnd = (i + 1) * perNode;
+    let pct = 0;
+    if (progress >= nodeEnd) {
+      pct = 100;
+    } else if (progress > nodeStart) {
+      pct = Math.round(((progress - nodeStart) / perNode) * 100);
+    }
+    return { name: n.name || n, percent: clampPercent(pct) };
+  });
+}
+
 module.exports = {
   stripWarehousingNode,
   defaultNodes,
@@ -111,4 +172,7 @@ module.exports = {
   getProgressFromNodeIndex,
   parseProgressNodes,
   resolveNodesFromOrder,
+  getNodeRateFromOrder,
+  buildProcessNodesWithRates,
+  STAGE_RATE_MAP,
 };

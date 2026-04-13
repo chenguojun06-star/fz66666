@@ -210,7 +210,7 @@ public class CrewGraphOrchestrator {
      * 3. 广播通知
      */
     @Async
-    protected void asyncEvolveAndNotify(String sessionId, Long tenantId, String userId,
+    public void asyncEvolveAndNotify(String sessionId, Long tenantId, String userId,
                                          String goal, String insight, int healthScore) {
         // 1. 写入 Qdrant 向量记忆（crew 执行洞察）
         try {

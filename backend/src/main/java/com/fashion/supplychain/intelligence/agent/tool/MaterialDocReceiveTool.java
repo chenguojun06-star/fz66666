@@ -2,7 +2,9 @@ package com.fashion.supplychain.intelligence.agent.tool;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.production.orchestration.MaterialPurchaseDocOrchestrator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -16,6 +18,7 @@ public class MaterialDocReceiveTool implements AgentTool {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Autowired private MaterialPurchaseDocOrchestrator materialPurchaseDocOrchestrator;
+    @Autowired private AiAgentToolAccessService toolAccessService;
 
     @Override
     public AiTool getToolDefinition() {
@@ -38,8 +41,14 @@ public class MaterialDocReceiveTool implements AgentTool {
 
     @Override
     public String execute(String argumentsJson) throws Exception {
+        if (UserContext.tenantId() == null) {
+            return "{\"success\":false,\"error\":\"租户上下文丢失，请重新登录\"}";
+        }
         Map<String, Object> args = MAPPER.readValue(argumentsJson == null || argumentsJson.isBlank() ? "{}" : argumentsJson, new TypeReference<Map<String, Object>>() {});
         String action = text(args.get("action"));
+        if (!"replay_saved_doc".equals(action) && !toolAccessService.hasManagerAccess()) {
+            return "{\"success\":false,\"error\":\"该操作需要管理员权限\"}";
+        }
         String docId = text(args.get("docId"));
         String orderNo = text(args.get("orderNo"));
         String warehouseLocation = text(args.get("warehouseLocation"));

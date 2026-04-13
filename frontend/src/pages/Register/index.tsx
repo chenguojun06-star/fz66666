@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Form, Input, Button, Typography, App, Alert } from 'antd';
-import { UserOutlined, LockOutlined, IdcardOutlined, BankOutlined, PhoneOutlined } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+import { UserOutlined, LockOutlined, IdcardOutlined, PhoneOutlined, BankOutlined } from '@ant-design/icons';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import tenantService from '../../services/tenantService';
 import '../Login/styles.css';
 
@@ -12,9 +12,18 @@ declare const __BUILD_TIME__: string;
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
   const { message } = App.useApp();
+
+  const tenantCode = searchParams.get('tenantCode') || '';
+  const factoryId = searchParams.get('factoryId') || '';
+  const factoryName = searchParams.get('factoryName') || searchParams.get('tenantName') || '';
+  const orgUnitId = searchParams.get('orgUnitId') || '';
+  const inviteType = searchParams.get('type') || '';
+  const isFactoryInvite = inviteType === 'FACTORY_INVITE';
+  const isWorkerInvite = !!tenantCode;
 
   const year = useMemo(() => new Date().getFullYear(), []);
   const buildCommit = typeof __BUILD_COMMIT__ === 'string' ? __BUILD_COMMIT__ : 'unknown';
@@ -25,6 +34,12 @@ const Register: React.FC = () => {
     if (Number.isNaN(d.getTime())) return buildTime;
     return d.toLocaleString('zh-CN', { hour12: false });
   }, [buildTime]);
+
+  const belongLabel = isWorkerInvite
+    ? isFactoryInvite
+      ? `外发工厂：${factoryName}`
+      : `工厂：${factoryName}`
+    : '';
 
   const handleApplyTenant = async (values: any) => {
     const res: any = await tenantService.applyForTenant({
@@ -42,11 +57,33 @@ const Register: React.FC = () => {
     }
   };
 
+  const handleWorkerRegister = async (values: any) => {
+    const res: any = await tenantService.workerRegister({
+      tenantCode,
+      factoryId: factoryId || undefined,
+      orgUnitId: orgUnitId || undefined,
+      username: values.username,
+      password: values.password,
+      name: values.name,
+      phone: values.phone || undefined,
+    });
+    if (res?.code === 200 || res?.data) {
+      message.success('注册申请已提交，请等待管理员审批通过后即可登录');
+      setTimeout(() => navigate('/login'), 2500);
+    } else {
+      message.error(res?.message || '注册失败，请联系管理员');
+    }
+  };
+
   const handleSubmit = async (values: any) => {
     if (submitting) return;
     setSubmitting(true);
     try {
-      await handleApplyTenant(values);
+      if (isWorkerInvite) {
+        await handleWorkerRegister(values);
+      } else {
+        await handleApplyTenant(values);
+      }
     } catch (error: unknown) {
       message.error(error instanceof Error ? error.message : '操作失败，请稍后重试');
     } finally {
@@ -77,10 +114,18 @@ const Register: React.FC = () => {
             <div className="login-showcase-copy">
               <div className="login-kicker">MARS｜注册引导</div>
               <Title level={2} className="login-showcase-title">
-                提交工厂入驻申请
+                {isWorkerInvite
+                  ? isFactoryInvite
+                    ? '扫码加入外发工厂'
+                    : '扫码加入工厂'
+                  : '提交工厂入驻申请'}
               </Title>
               <div className="login-showcase-desc">
-                填写工厂与联系人信息，审批通过后即可启用正式账号。
+                {isWorkerInvite
+                  ? isFactoryInvite
+                    ? '填写姓名和账号密码即可注册，注册后自动归属到该外发工厂，由外发工厂管理员审批。'
+                    : '填写姓名和账号密码即可注册，注册后由工厂管理员审批通过即可登录。'
+                  : '填写工厂与联系人信息，审批通过后即可启用正式账号。'}
               </div>
             </div>
             <div className="login-showcase-visual">
@@ -103,8 +148,8 @@ const Register: React.FC = () => {
                   <strong className="tech-float-value">在线跟踪</strong>
                 </div>
                 <div className="tech-float-card tech-float-card-left">
-                  <span className="tech-float-label">入驻申请</span>
-                  <strong className="tech-float-value">平台审核</strong>
+                  <span className="tech-float-label">{isWorkerInvite ? '扫码注册' : '入驻申请'}</span>
+                  <strong className="tech-float-value">{isWorkerInvite ? '快速加入' : '平台审核'}</strong>
                 </div>
                 <div className="tech-float-card tech-float-card-right">
                   <span className="tech-float-label">登录切换</span>
@@ -135,15 +180,15 @@ const Register: React.FC = () => {
           <div className="login-showcase-highlights">
             <div className="showcase-highlight-card">
               <span className="highlight-label">注册模式</span>
-              <strong className="highlight-value">工厂入驻申请</strong>
+              <strong className="highlight-value">{isWorkerInvite ? (isFactoryInvite ? '外发工厂工人注册' : '工人扫码注册') : '工厂入驻申请'}</strong>
             </div>
             <div className="showcase-highlight-card">
               <span className="highlight-label">流程特点</span>
-              <strong className="highlight-value">审核通过后启用</strong>
+              <strong className="highlight-value">{isWorkerInvite ? (isFactoryInvite ? '外发工厂管理员审批' : '工厂管理员审批') : '审核通过后启用'}</strong>
             </div>
             <div className="showcase-highlight-card">
               <span className="highlight-label">系统目标</span>
-              <strong className="highlight-value">账号归属清晰 · 登录切换准确</strong>
+              <strong className="highlight-value">{isWorkerInvite ? '工厂绑定 · 账号归属清晰' : '账号归属清晰 · 登录切换准确'}</strong>
             </div>
           </div>
         </section>
@@ -160,7 +205,11 @@ const Register: React.FC = () => {
                 云裳智链
               </Title>
               <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.7)', marginTop: 8 }}>
-                工厂注册申请
+                {isWorkerInvite
+                  ? isFactoryInvite
+                    ? '外发工厂工人注册'
+                    : '工人注册'
+                  : '工厂入驻申请'}
               </p>
             </div>
 
@@ -175,59 +224,118 @@ const Register: React.FC = () => {
           className="login-form"
           layout="vertical"
         >
-          <Form.Item
-            name="tenantName"
-            rules={[{ required: true, message: '请输入工厂名称' }]}
-            label="工厂名称"
-          >
-            <Input
-              id="tenantName"
-              prefix={<BankOutlined className="site-form-item-icon" />}
-              placeholder="请输入工厂 / 公司名称"
-              size="large"
-              allowClear
-              disabled={submitting}
-              autoComplete="organization"
+          {isWorkerInvite && (
+            <Alert
+              message={belongLabel}
+              description={isFactoryInvite
+                ? '注册后将归属到该外发工厂，由外发工厂管理员审批。'
+                : '注册后将归属到该工厂，由工厂管理员审批。'}
+              type="info"
+              showIcon
+              icon={<BankOutlined />}
+              style={{ marginBottom: 16, borderRadius: 8 }}
             />
-          </Form.Item>
-          <Form.Item
-            name="contactName"
-            rules={[{ required: true, message: '请输入联系人姓名' }]}
-            label="联系人"
-          >
-            <Input
-              id="contactName"
-              prefix={<IdcardOutlined className="site-form-item-icon" />}
-              placeholder="请输入联系人姓名"
-              size="large"
-              allowClear
-              disabled={submitting}
-              autoComplete="name"
+          )}
+
+          {!isWorkerInvite && (
+            <Form.Item
+              name="tenantName"
+              rules={[{ required: true, message: '请输入工厂名称' }]}
+              label="工厂名称"
+            >
+              <Input
+                id="tenantName"
+                prefix={<BankOutlined className="site-form-item-icon" />}
+                placeholder="请输入工厂 / 公司名称"
+                size="large"
+                allowClear
+                disabled={submitting}
+                autoComplete="organization"
+              />
+            </Form.Item>
+          )}
+
+          {!isWorkerInvite && (
+            <Form.Item
+              name="contactName"
+              rules={[{ required: true, message: '请输入联系人姓名' }]}
+              label="联系人"
+            >
+              <Input
+                id="contactName"
+                prefix={<IdcardOutlined className="site-form-item-icon" />}
+                placeholder="请输入联系人姓名"
+                size="large"
+                allowClear
+                disabled={submitting}
+                autoComplete="name"
+              />
+            </Form.Item>
+          )}
+
+          {!isWorkerInvite && (
+            <Form.Item
+              name="contactPhone"
+              rules={[
+                { required: true, message: '请输入联系电话' },
+                { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号' },
+              ]}
+              label="联系电话"
+            >
+              <Input
+                prefix={<PhoneOutlined className="site-form-item-icon" />}
+                placeholder="请输入手机号"
+                size="large"
+                allowClear
+                disabled={submitting}
+                autoComplete="tel"
+              />
+            </Form.Item>
+          )}
+
+          {isWorkerInvite && (
+            <Form.Item
+              name="name"
+              rules={[{ required: true, message: '请输入您的姓名' }]}
+              label="姓名"
+            >
+              <Input
+                id="name"
+                prefix={<IdcardOutlined className="site-form-item-icon" />}
+                placeholder="请输入您的真实姓名"
+                size="large"
+                allowClear
+                disabled={submitting}
+                autoComplete="name"
+              />
+            </Form.Item>
+          )}
+
+          {isWorkerInvite && (
+            <Form.Item
+              name="phone"
+              rules={[{ pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号' }]}
+              label="手机号（选填）"
+            >
+              <Input
+                prefix={<PhoneOutlined className="site-form-item-icon" />}
+                placeholder="选填，方便联系"
+                size="large"
+                allowClear
+                disabled={submitting}
+                autoComplete="tel"
+              />
+            </Form.Item>
+          )}
+
+          {!isWorkerInvite && (
+            <Alert
+              message="以下账号信息用于审批通过后登录系统"
+              type="info"
+              showIcon
+              style={{ marginBottom: 16, borderRadius: 8 }}
             />
-          </Form.Item>
-          <Form.Item
-            name="contactPhone"
-            rules={[
-              { required: true, message: '请输入联系电话' },
-              { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号' },
-            ]}
-            label="联系电话"
-          >
-            <Input
-              prefix={<PhoneOutlined className="site-form-item-icon" />}
-              placeholder="请输入手机号"
-              size="large"
-              allowClear
-              disabled={submitting}
-              autoComplete="tel"
-            />
-          </Form.Item>
-          <Alert
-            title="以下账号信息用于审批通过后登录系统"
-            type="info"
-            showIcon
-            style={{ marginBottom: 16, borderRadius: 8 }}
-          />
+          )}
 
           <Form.Item
             name="username"
@@ -304,7 +412,7 @@ const Register: React.FC = () => {
               size="large"
               loading={submitting}
             >
-              提交入驻申请
+              {isWorkerInvite ? '提交注册' : '提交入驻申请'}
             </Button>
           </Form.Item>
           <Form.Item style={{ marginBottom: 0 }}>

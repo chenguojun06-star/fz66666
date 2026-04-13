@@ -9,6 +9,7 @@ import {
   CrownOutlined,
   DashboardOutlined,
   DatabaseOutlined,
+  DeleteOutlined,
   DollarOutlined,
   FileSearchOutlined,
   FileTextOutlined,
@@ -88,6 +89,7 @@ export const paths = {
   appStore: '/system/app-store',
   dataImport: '/system/data-import',
   systemIssues: '/system/issues',
+  orphanData: '/system/orphan-data',
   integrationCenter: '/integration/center',
   cockpit: '/cockpit',
   cockpitTrace: '/cockpit/agent-traces',
@@ -263,6 +265,7 @@ export const menuConfig: MenuSection[] = [
       { label: '系统日志', path: paths.systemLogs, icon: React.createElement(FileSearchOutlined) },
       { label: '系统教学', path: paths.tutorial, icon: React.createElement(BookOutlined) },
       { label: '数据导入', path: paths.dataImport, icon: React.createElement(FileTextOutlined) },
+      { label: '孤立数据', path: paths.orphanData, icon: React.createElement(DeleteOutlined) },
     ],
   },
   {

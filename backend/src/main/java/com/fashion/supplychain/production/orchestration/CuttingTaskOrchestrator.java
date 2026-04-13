@@ -803,7 +803,9 @@ public class CuttingTaskOrchestrator {
                         CuttingTask::getStyleNo,
                         CuttingTask::getColor,
                         CuttingTask::getOrderQuantity,
-                        CuttingTask::getReceivedTime
+                        CuttingTask::getReceiverName,
+                        CuttingTask::getReceivedTime,
+                        CuttingTask::getExpectedShipDate
                 )
                 .eq(CuttingTask::getReceiverId, userId)
                 .eq(CuttingTask::getStatus, "received")

@@ -21,6 +21,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -40,10 +47,22 @@ public class AiAgentPromptHelper {
     @Autowired private AiAgentToolAccessService aiAgentToolAccessService;
     @Autowired private AiMemoryOrchestrator aiMemoryOrchestrator;
     @Autowired private IntelligenceMemoryOrchestrator intelligenceMemoryOrchestrator;
-    // 工人岗位画像注入，让小云了解该工人的效率水平并给出个性化建议（缺口3修复）
     @Autowired private WorkerProfileOrchestrator workerProfileOrchestrator;
-    // 管理层经营洞察注入，让小云成为老板/管理者的战略顾问
     @Autowired private ManagementInsightOrchestrator managementInsightOrchestrator;
+
+    private final ExecutorService promptBuildExecutor = new ThreadPoolExecutor(
+            4, 8, 60L, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(32),
+            new ThreadFactory() {
+                private final AtomicInteger seq = new AtomicInteger(1);
+                @Override
+                public Thread newThread(Runnable r) {
+                    Thread t = new Thread(r, "ai-prompt-build-" + seq.getAndIncrement());
+                    t.setDaemon(true);
+                    return t;
+                }
+            },
+            new ThreadPoolExecutor.CallerRunsPolicy());
 
     public int estimateMaxIterations(String userMessage) {
         if (userMessage == null || userMessage.length() < 8) return 3;
@@ -53,13 +72,12 @@ public class AiAgentPromptHelper {
         }
         // 操作型任务：需要查询+执行，轮次最多（最高优先级）
         if (msg.matches("(?s).*(入库|建单|创建订单|审批|结算|撤回扫码|分配|派单|新建|快速建单|帮我.*做|去做|执行.*操作).*")) {
-            return 12;
+            return 8;
         }
-        // 多维分析 / 复杂调查（含"什么问题/什么情况/看一下"等口语化问法）
         if (msg.matches("(?s).*(对比|排名|趋势|分析|汇总|所有|每个|各个|评估|预测|方案|为什么|怎么办|如何优化|哪些.*风险|哪些.*问题|什么问题|什么情况|什么原因|看一下|查一下|帮我查|告诉我).*")) {
-            return 10;
+            return 6;
         }
-        return 8;
+        return 5;
     }
 
 
@@ -71,38 +89,21 @@ public class AiAgentPromptHelper {
         boolean isSuperAdmin = UserContext.isSuperAdmin();
         boolean isTenantOwner = UserContext.isTenantOwner();
         boolean isManager = aiAgentToolAccessService.hasManagerAccess();
-        String intelligenceContext;
-        try {
-            intelligenceContext = aiContextBuilderService.buildSystemPrompt();
-        } catch (Exception e) {
-            log.warn("[AiAgent] 构建实时智能上下文失败: {}", e.getMessage());
-            intelligenceContext = "【实时经营上下文】暂时获取失败，请优先通过工具查询后再下结论。\n";
-        }
+        Long tenantId = UserContext.tenantId();
+        String userId = UserContext.userId();
 
-        String contextBlock = "【当前环境】\n" +
-                "- 当前时间：" + currentTime + "\n" +
-                "- 今日日期：" + currentDate + "\n" +
-                "- 当前用户：" + (userName != null ? userName : "未知") + "\n" +
-                "- 用户角色：" + (userRole != null ? userRole : "普通用户") +
-                (isSuperAdmin ? "（超级管理员）" : isTenantOwner ? "（租户老板）" : isManager ? "（管理人员）" : "（生产员工）") + "\n";
+        CompletableFuture<String> intelligenceContextFuture = CompletableFuture.supplyAsync(() -> {
+            try {
+                return aiContextBuilderService.buildSystemPrompt();
+            } catch (Exception e) {
+                log.warn("[AiAgent] 构建实时智能上下文失败: {}", e.getMessage());
+                return "【实时经营上下文】暂时获取失败，请优先通过工具查询后再下结论。\n";
+            }
+        }, promptBuildExecutor);
 
-        // 页面上下文感知
-        String pageCtxBlock = "";
-        if (pageContext != null && !pageContext.isBlank()) {
-            pageCtxBlock = "【当前页面上下文】用户正在浏览：" + describePageContext(pageContext) + "（路径：" + pageContext + "）\n" +
-                    "请优先围绕该页面的业务场景来理解用户的提问意图。\n\n";
-        }
-
-        // 普通生产员工的访问限制提示 + 效率画像注入（缺口3）
-        String workerRestriction = "";
-        if (!isManager) {
-            workerRestriction = "\n【⚠️ 权限说明】\n" +
-                    "当前用户是生产员工，仅允许查询与自己相关的生产信息。\n" +
-                    "可以回答：本人负责订单的进度、相关扫码记录、当前生产任务状态、系统操作与SOP说明、本人计件工资明细。\n" +
-                    "禁止回答：全厂汇总数据、财务结算总览、他人工资数据、管理层报告、仓库/CRM/采购等管理功能。\n" +
-                    "当用户询问超出权限范围的问题时，友好说明：该信息需管理员权限，同时引导用户可以查什么。\n";
-            // 注入工人效率画像，让小云能给出个性化建议
-            if (userName != null && !userName.isBlank()) {
+        CompletableFuture<String> workerProfileFuture = CompletableFuture.completedFuture("");
+        if (!isManager && userName != null && !userName.isBlank()) {
+            workerProfileFuture = CompletableFuture.supplyAsync(() -> {
                 try {
                     WorkerProfileRequest profileReq = new WorkerProfileRequest();
                     profileReq.setOperatorName(userName);
@@ -123,14 +124,118 @@ public class AiAgentPromptHelper {
                                     vsDir, Math.abs(sp.getVsFactoryAvgPct())));
                         }
                         pb.append("回答该工人问题时，可结合以上画像给出有针对性的改进建议。\n");
-                        workerRestriction += pb.toString();
+                        return pb.toString();
                     }
                 } catch (Exception e) {
                     log.debug("[AiAgent] 工人画像注入跳过: {}", e.getMessage());
                 }
+                return "";
+            }, promptBuildExecutor);
+        }
+
+        CompletableFuture<String> mgmtInsightFuture = CompletableFuture.completedFuture("");
+        if (isManager) {
+            mgmtInsightFuture = CompletableFuture.supplyAsync(() -> {
+                try {
+                    if (tenantId != null) {
+                        java.util.Map<String, Object> summary = managementInsightOrchestrator.getExecutiveSummary(tenantId);
+                        Object headline = summary.get("headline");
+                        Object riskLevel = summary.get("overallRiskLevel");
+                        if (headline != null) {
+                            StringBuilder sb = new StringBuilder();
+                            sb.append("【实时经营快照】\n");
+                            sb.append(headline).append("\n");
+                            if (riskLevel != null) {
+                                sb.append("整体风险等级：").append(riskLevel).append("\n");
+                            }
+                            sb.append("（以上为系统预计算摘要，详细数据请通过 tool_management_dashboard 工具查询）\n\n");
+                            return sb.toString();
+                        }
+                    }
+                } catch (Exception e) {
+                    log.debug("[AiAgent] 管理层经营快照注入跳过: {}", e.getMessage());
+                }
+                return "";
+            }, promptBuildExecutor);
+        }
+
+        CompletableFuture<String> memoryContextFuture = CompletableFuture.supplyAsync(() -> {
+            try {
+                return aiMemoryOrchestrator.getMemoryContext(tenantId, userId);
+            } catch (Exception e) {
+                log.debug("[AiAgent] 加载历史对话记忆失败，跳过: {}", e.getMessage());
+                return "";
+            }
+        }, promptBuildExecutor);
+
+        CompletableFuture<String> ragContextFuture = CompletableFuture.supplyAsync(() -> {
+            try {
+                if (userMessage != null && !userMessage.isBlank()) {
+                    IntelligenceMemoryResponse ragResult =
+                            intelligenceMemoryOrchestrator.recallSimilar(tenantId, userMessage, ragRecallTopK);
+                    List<IntelligenceMemoryResponse.MemoryItem> recalled = ragResult.getRecalled();
+                    if (recalled != null && !recalled.isEmpty()) {
+                        List<IntelligenceMemoryResponse.MemoryItem> relevant = recalled.stream()
+                                .filter(item -> item.getSimilarityScore() >= ragSimilarityThreshold)
+                                .collect(Collectors.toList());
+                        if (!relevant.isEmpty()) {
+                            StringBuilder rag = new StringBuilder();
+                            rag.append("【混合检索 RAG — 相关历史经验参考（融合分≥0.45）】\n");
+                            for (int ri = 0; ri < relevant.size(); ri++) {
+                                IntelligenceMemoryResponse.MemoryItem item = relevant.get(ri);
+                                String c = item.getContent();
+                                if (c != null && c.length() > 150) c = c.substring(0, 150) + "…";
+                                rag.append(String.format("  %d. [%s/%s] %s（融合分%.2f，采纳%d次）\n     %s\n",
+                                        ri + 1,
+                                        item.getMemoryType() != null ? item.getMemoryType() : "case",
+                                        item.getBusinessDomain() != null ? item.getBusinessDomain() : "general",
+                                        item.getTitle() != null ? item.getTitle() : "",
+                                        item.getSimilarityScore(),
+                                        item.getAdoptedCount(),
+                                        c != null ? c : ""));
+                            }
+                            rag.append("（以上为历史经验参考，判断须以工具查询的实时数据为准）\n\n");
+                            log.debug("[AiAgent-RAG] 本次问题混合检索到 {} 条相关经验", relevant.size());
+                            return rag.toString();
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("[AiAgent-RAG] 混合检索跳过（Qdrant 未启用或记忆链失败）: {}", e.getMessage());
+            }
+            return "";
+        }, promptBuildExecutor);
+
+        String intelligenceContext = intelligenceContextFuture.join();
+        String workerProfileBlock = workerProfileFuture.join();
+        String mgmtInsightBlock = mgmtInsightFuture.join();
+        String memoryContext = memoryContextFuture.join();
+        String ragContext = ragContextFuture.join();
+
+        String contextBlock = "【当前环境】\n" +
+                "- 当前时间：" + currentTime + "\n" +
+                "- 今日日期：" + currentDate + "\n" +
+                "- 当前用户：" + (userName != null ? userName : "未知") + "\n" +
+                "- 用户角色：" + (userRole != null ? userRole : "普通用户") +
+                (isSuperAdmin ? "（超级管理员）" : isTenantOwner ? "（租户老板）" : isManager ? "（管理人员）" : "（生产员工）") + "\n";
+
+        String pageCtxBlock = "";
+        if (pageContext != null && !pageContext.isBlank()) {
+            pageCtxBlock = "【当前页面上下文】用户正在浏览：" + describePageContext(pageContext) + "（路径：" + pageContext + "）\n" +
+                    "请优先围绕该页面的业务场景来理解用户的提问意图。\n\n";
+        }
+
+        String workerRestriction = "";
+        if (!isManager) {
+            workerRestriction = "\n【⚠️ 权限说明】\n" +
+                    "当前用户是生产员工，仅允许查询与自己相关的生产信息。\n" +
+                    "可以回答：本人负责订单的进度、相关扫码记录、当前生产任务状态、系统操作与SOP说明、本人计件工资明细。\n" +
+                    "禁止回答：全厂汇总数据、财务结算总览、他人工资数据、管理层报告、仓库/CRM/采购等管理功能。\n" +
+                    "当用户询问超出权限范围的问题时，友好说明：该信息需管理员权限，同时引导用户可以查什么。\n";
+            if (!workerProfileBlock.isEmpty()) {
+                workerRestriction += workerProfileBlock;
             }
         } else {
-            // 管理层/老板角色：注入战略顾问身份 + 实时经营 KPI 快照
             StringBuilder mgmt = new StringBuilder();
             mgmt.append("\n【🎯 管理层战略顾问模式】\n");
             mgmt.append("当前用户是管理人员，小云将以「供应链经营顾问」身份提供决策支持。\n");
@@ -143,81 +248,14 @@ public class AiAgentPromptHelper {
             mgmt.append("  - 客户/订单结构分析\n");
             mgmt.append("面对管理层用户，回答风格：数据驱动、结论先行、对比鲜明、建议可执行。\n");
             mgmt.append("遇到「最近怎么样」「经营状况」「该关注什么」等概览型问题时，优先使用 tool_management_dashboard 获取实时经营快照。\n\n");
-
-            // 尝试注入实时经营 KPI 快照（轻量，不阻塞）
-            try {
-                Long mgmtTenantId = UserContext.tenantId();
-                if (mgmtTenantId != null) {
-                    java.util.Map<String, Object> summary = managementInsightOrchestrator.getExecutiveSummary(mgmtTenantId);
-                    Object headline = summary.get("headline");
-                    Object riskLevel = summary.get("overallRiskLevel");
-                    if (headline != null) {
-                        mgmt.append("【实时经营快照】\n");
-                        mgmt.append(headline).append("\n");
-                        if (riskLevel != null) {
-                            mgmt.append("整体风险等级：").append(riskLevel).append("\n");
-                        }
-                        mgmt.append("（以上为系统预计算摘要，详细数据请通过 tool_management_dashboard 工具查询）\n\n");
-                    }
-                }
-            } catch (Exception e) {
-                log.debug("[AiAgent] 管理层经营快照注入跳过: {}", e.getMessage());
+            if (!mgmtInsightBlock.isEmpty()) {
+                mgmt.append(mgmtInsightBlock);
             }
             workerRestriction = mgmt.toString();
         }
 
-        // ── 历史对话记忆注入 ──
-        String memoryContext = "";
-        try {
-            memoryContext = aiMemoryOrchestrator.getMemoryContext(
-                    UserContext.tenantId(), UserContext.userId());
-        } catch (Exception e) {
-            log.debug("[AiAgent] 加载历史对话记忆失败，跳过: {}", e.getMessage());
-        }
-
-        // ── 混合检索 RAG — 相关历史经验（语义 + 关键词 + 热度）──
-        String ragContext = "";
-        try {
-            if (userMessage != null && !userMessage.isBlank()) {
-                Long ragTenantId = UserContext.tenantId();
-                IntelligenceMemoryResponse ragResult =
-                        intelligenceMemoryOrchestrator.recallSimilar(ragTenantId, userMessage, ragRecallTopK);
-                List<IntelligenceMemoryResponse.MemoryItem> recalled = ragResult.getRecalled();
-                if (recalled != null && !recalled.isEmpty()) {
-                    List<IntelligenceMemoryResponse.MemoryItem> relevant = recalled.stream()
-                            .filter(item -> item.getSimilarityScore() >= ragSimilarityThreshold)
-                            .collect(Collectors.toList());
-                    if (!relevant.isEmpty()) {
-                        StringBuilder rag = new StringBuilder();
-                        rag.append("【混合检索 RAG — 相关历史经验参考（融合分≥0.45）】\n");
-                        for (int ri = 0; ri < relevant.size(); ri++) {
-                            IntelligenceMemoryResponse.MemoryItem item = relevant.get(ri);
-                            String c = item.getContent();
-                            if (c != null && c.length() > 150) c = c.substring(0, 150) + "…";
-                            rag.append(String.format("  %d. [%s/%s] %s（融合分%.2f，采纳%d次）\n     %s\n",
-                                    ri + 1,
-                                    item.getMemoryType() != null ? item.getMemoryType() : "case",
-                                    item.getBusinessDomain() != null ? item.getBusinessDomain() : "general",
-                                    item.getTitle() != null ? item.getTitle() : "",
-                                    item.getSimilarityScore(),
-                                    item.getAdoptedCount(),
-                                    c != null ? c : ""));
-                        }
-                        rag.append("（以上为历史经验参考，判断须以工具查询的实时数据为准）\n\n");
-                        ragContext = rag.toString();
-                        log.debug("[AiAgent-RAG] 本次问题混合检索到 {} 条相关经验", relevant.size());
-                    }
-                }
-            }
-        } catch (Exception e) {
-            log.debug("[AiAgent-RAG] 混合检索跳过（Qdrant 未启用或记忆链失败）: {}", e.getMessage());
-        }
-
         String toolGuide = aiAgentToolAccessService.buildToolGuide(visibleTools);
 
-        // ── 领域感知提示注入（从 classpath:agents/*-domain.md 加载）──
-        // 统计 visibleTools 中最多的非 GENERAL/SYSTEM/ANALYSIS 业务域，动态注入对应的行为规范片段。
-        // 若文件不存在或加载失败则静默降级为空串，不影响主流程。
         String domainHint = "";
         try {
             if (visibleTools != null && !visibleTools.isEmpty()) {
@@ -231,7 +269,6 @@ public class AiAgentPromptHelper {
                                 t -> t.getDomain().name().toLowerCase(),
                                 java.util.stream.Collectors.counting()));
                 if (!domainCount.isEmpty()) {
-                    // 取 Top 2 领域，支持跨域场景（如生产+财务、仓储+生产）
                     java.util.List<String> topDomains = domainCount.entrySet().stream()
                             .sorted(java.util.Map.Entry.<String, Long>comparingByValue().reversed())
                             .limit(2)

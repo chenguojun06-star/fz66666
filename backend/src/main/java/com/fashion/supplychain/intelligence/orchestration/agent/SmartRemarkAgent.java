@@ -7,7 +7,9 @@ import com.fashion.supplychain.production.entity.SysNotice;
 import com.fashion.supplychain.production.mapper.ScanRecordMapper;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.SysNoticeService;
+import com.fashion.supplychain.system.entity.OrderRemark;
 import com.fashion.supplychain.system.entity.Tenant;
+import com.fashion.supplychain.system.service.OrderRemarkService;
 import com.fashion.supplychain.system.service.TenantService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +44,8 @@ public class SmartRemarkAgent {
     private WxAlertNotifyService wxAlertNotifyService;
     @Autowired(required = false)
     private DistributedLockService distributedLockService;
+    @Autowired
+    private OrderRemarkService orderRemarkService;
 
     @Scheduled(cron = "0 20 * * * ?")
     public void runSmartRemark() {
@@ -144,7 +148,10 @@ public class SmartRemarkAgent {
             }
         }
 
-        if (order.getMaterialArrivalRate() != null && order.getMaterialArrivalRate() < 50) {
+        // materialArrivalRate=0 通常表示"无采购数据"而非"实际0%到位"，
+        // 仅在有记录且偏低(>0 且 <50)时才加分，避免未录采购的订单被批量误报
+        if (order.getMaterialArrivalRate() != null && order.getMaterialArrivalRate() > 0
+                && order.getMaterialArrivalRate() < 50) {
             score += 10;
         }
 
@@ -203,7 +210,9 @@ public class SmartRemarkAgent {
             }
         }
 
-        if (order.getMaterialArrivalRate() != null && order.getMaterialArrivalRate() < 50) {
+        // 仅在有进度记录且偏低时显示物料到位提示；=0 通常表示未录入采购数据，否则会对所有订单误报
+        if (order.getMaterialArrivalRate() != null && order.getMaterialArrivalRate() > 0
+                && order.getMaterialArrivalRate() < 50) {
             sb.append("，物料到位仅").append(order.getMaterialArrivalRate()).append("%");
         }
 
@@ -226,6 +235,22 @@ public class SmartRemarkAgent {
         }
         order.setRemarks(newRemarks);
         productionOrderService.updateById(order);
+
+        try {
+            String contentBody = remark.replaceFirst("^\\[AI巡检\\]\\d{2}-\\d{2}\\s+\\d{2}:\\d{2}\\]\\s*", "");
+            OrderRemark orderRemark = new OrderRemark();
+            orderRemark.setTargetType("order");
+            orderRemark.setTargetNo(order.getOrderNo());
+            orderRemark.setAuthorName("AI巡检");
+            orderRemark.setAuthorRole("AI巡检");
+            orderRemark.setContent(contentBody);
+            orderRemark.setTenantId(order.getTenantId());
+            orderRemark.setCreateTime(LocalDateTime.now());
+            orderRemark.setDeleteFlag(0);
+            orderRemarkService.save(orderRemark);
+        } catch (Exception e) {
+            log.warn("AI巡检备注写入t_order_remark失败: orderId={}, error={}", order.getId(), e.getMessage());
+        }
     }
 
     private void pushNotification(Long tenantId, ProductionOrder order, LocalDateTime lastScan, LocalDateTime now, int score) {

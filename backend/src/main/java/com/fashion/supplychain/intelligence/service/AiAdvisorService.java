@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -49,6 +50,12 @@ public class AiAdvisorService {
      * 不同日期的 key 自动过期（不再被读写），内存占用可忽略不计
      */
     private final ConcurrentHashMap<String, AtomicInteger> dailyCounters = new ConcurrentHashMap<>();
+
+    @Scheduled(fixedRate = 3600000)
+    public void cleanupStaleCounters() {
+        String todaySuffix = "_" + LocalDate.now();
+        dailyCounters.keySet().removeIf(key -> !key.endsWith(todaySuffix));
+    }
 
     /**
      * 是否已启用 AI（有 API Key）
@@ -113,7 +120,7 @@ public class AiAdvisorService {
      * @param contextSummary 业务摘要（如：今日逾期3单，高风险2单，停滞1单）
      * @return 1~3句建议文案，未启用时返回 null
      */
-    @Cacheable(value = "daily-brief", key = "T(com.fashion.supplychain.common.UserContext).tenantId() + ':' + #contextSummary")
+    @Cacheable(value = "daily-brief", key = "T(com.fashion.supplychain.common.UserContext).tenantId() + ':' + T(java.time.LocalDate).now()")
     public String getDailyAdvice(String contextSummary) {
         String systemPrompt = "你是一名服装供应链管理顾问，根据工厂今日生产数据，" +
                 "用简洁中文给出1~3条可执行的管理建议。每条建议一行，不超过30字。不要废话。";

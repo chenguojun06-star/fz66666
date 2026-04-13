@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.production.entity.MaterialPurchase;
 import com.fashion.supplychain.production.orchestration.MaterialPurchaseOrchestrator;
 import com.fashion.supplychain.procurement.orchestration.ProcurementOrchestrator;
@@ -23,6 +24,10 @@ public class MaterialReceiveTool implements AgentTool {
 
     @Autowired private MaterialPurchaseOrchestrator materialPurchaseOrchestrator;
     @Autowired private ProcurementOrchestrator procurementOrchestrator;
+    @Autowired private AiAgentToolAccessService toolAccessService;
+
+    private static final java.util.Set<String> MANAGER_ONLY_ACTIONS = java.util.Set.of(
+            "smart_receive_all", "confirm_arrival", "cancel_receive");
 
     @Override
     public AiTool getToolDefinition() {
@@ -58,6 +63,9 @@ public class MaterialReceiveTool implements AgentTool {
         }
         Map<String, Object> args = MAPPER.readValue(argumentsJson == null || argumentsJson.isBlank() ? "{}" : argumentsJson, new TypeReference<Map<String, Object>>() {});
         String action = text(args.get("action"));
+        if (MANAGER_ONLY_ACTIONS.contains(action) && !toolAccessService.hasManagerAccess()) {
+            return "{\"success\":false,\"error\":\"该收货操作需要管理员权限\"}";
+        }
         return switch (action) {
             case "preview_smart_receive" -> previewSmartReceive(args);
             case "smart_receive_all" -> smartReceiveAll(args);

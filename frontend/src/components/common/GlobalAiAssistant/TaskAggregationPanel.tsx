@@ -47,7 +47,8 @@ const TaskAggregationPanel: React.FC<TaskAggregationPanelProps> = ({ tasks, onCl
 
   const filteredTasks = useMemo(() => {
     let result = tasks;
-    if (activeFilter !== 'all') {
+    // '__high__' 是紧急优先级筛选，不按 taskType 过滤，后续在渲染层用 priority==='high' 筛选
+    if (activeFilter !== 'all' && activeFilter !== '__high__') {
       result = result.filter(t => t.taskType === activeFilter);
     }
     if (searchKeyword.trim()) {
@@ -186,12 +187,36 @@ const TaskAggregationPanel: React.FC<TaskAggregationPanelProps> = ({ tasks, onCl
   );
 };
 
+/** 将时间字符串格式化为 MM-DD HH:mm（纯日期则仅显示 MM-DD） */
+function fmtDateTime(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  try {
+    const normalized = iso.includes(' ') ? iso.replace(' ', 'T') : iso;
+    const d = new Date(normalized);
+    if (Number.isNaN(d.getTime())) return null;
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    if (!normalized.includes('T')) {
+      return `${m}-${day}`;
+    }
+    const h = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${m}-${day} ${h}:${min}`;
+  } catch {
+    return null;
+  }
+}
+
 const TaskItem: React.FC<{
   task: PendingTaskDTO;
   onClick: (task: PendingTaskDTO) => void;
 }> = ({ task, onClick }) => {
   const prio = PRIORITY_CONFIG[task.priority] || PRIORITY_CONFIG.medium;
   const moduleLabel = MODULE_LABELS[task.module] || task.module;
+
+  const startText = fmtDateTime(task.startTime);
+  const endText = fmtDateTime(task.endTime);
+  const showExtra = task.quantity != null || !!startText || !!endText || !!task.assigneeName;
 
   return (
     <div
@@ -216,6 +241,34 @@ const TaskItem: React.FC<{
         )}
         <RightOutlined className={styles.taskArrow} />
       </div>
+      {showExtra && (
+        <div className={styles.taskExtraInfo}>
+          {task.quantity != null && (
+            <span className={styles.taskExtraItem}>
+              <span className={styles.taskExtraLabel}>数量</span>
+              <span className={styles.taskExtraValue}>{task.quantity}件</span>
+            </span>
+          )}
+          {startText && (
+            <span className={styles.taskExtraItem}>
+              <span className={styles.taskExtraLabel}>开始</span>
+              <span className={styles.taskExtraValue}>{startText}</span>
+            </span>
+          )}
+          {endText && (
+            <span className={styles.taskExtraItem}>
+              <span className={styles.taskExtraLabel}>截止</span>
+              <span className={styles.taskExtraValue}>{endText}</span>
+            </span>
+          )}
+          {task.assigneeName && (
+            <span className={styles.taskExtraItem}>
+              <span className={styles.taskExtraLabel}>领取人</span>
+              <span className={styles.taskExtraValue}>{task.assigneeName}</span>
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 };

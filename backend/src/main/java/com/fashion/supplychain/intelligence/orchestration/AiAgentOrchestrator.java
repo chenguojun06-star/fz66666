@@ -50,10 +50,23 @@ public class AiAgentOrchestrator {
     @Autowired private FollowUpSuggestionEngine followUpSuggestionEngine;
 
     private static final int STUCK_MAX_REPEAT = 3;
+    private static final int CRICIC_SKIP_MAX_ITERATIONS = 2;
+    private static final int CRITIC_SKIP_MAX_TOOLS = 1;
     /** 单次请求 token 预算上限（prompt + completion 合计），超出后强制终止循环 */
     @Value("${xiaoyun.agent.token-budget:60000}")
     private int tokenBudget;
     private static final ObjectMapper JSON = new ObjectMapper();
+
+    private boolean shouldSkipCritic(String userMessage, int currentIteration, int totalToolCalls) {
+        if (currentIteration <= CRICIC_SKIP_MAX_ITERATIONS && totalToolCalls <= CRITIC_SKIP_MAX_TOOLS) {
+            return true;
+        }
+        if (userMessage != null && userMessage.length() < 25
+                && userMessage.matches("(?s).*(你好|hi|hello|谢谢|再见|你是谁|在吗|怎么样|辛苦了|好的|收到).*")) {
+            return true;
+        }
+        return false;
+    }
 
     private final ThreadLocal<String> lastCommandIdHolder = new ThreadLocal<>();
     private final ThreadLocal<List<AiAgentToolExecHelper.ToolExecRecord>> lastToolRecordsHolder = new ThreadLocal<>();
@@ -154,7 +167,13 @@ public class AiAgentOrchestrator {
             } else {
                 // Done!
                 log.info("[AiAgent] 完成任务，进入自反思审查层");
-                String revisedContent = criticOrchestrator.reviewAndRevise(userMessage, result.getContent());
+                String revisedContent;
+                if (shouldSkipCritic(userMessage, currentIter, allExecRecords.size())) {
+                    log.info("[AiAgent] 简单场景跳过Critic审查 (iter={}, tools={})", currentIter, allExecRecords.size());
+                    revisedContent = result.getContent();
+                } else {
+                    revisedContent = criticOrchestrator.reviewAndRevise(userMessage, result.getContent());
+                }
                 revisedContent = evidenceHelper.appendTeamDispatchCards(revisedContent, teamDispatchCards);
                 revisedContent = evidenceHelper.appendBundleSplitCards(revisedContent, bundleSplitCards);
                 revisedContent = xiaoyunInsightCardOrchestrator.appendToContent(revisedContent, xiaoyunInsightCards);
@@ -297,8 +316,15 @@ public class AiAgentOrchestrator {
                     allExecRecords.addAll(execRecords);
                 } else {
                     // == 自反思审查 ==
-                    emitSse(emitter, "thinking", Map.of("message", "小云正在进行最终思考核对与完善..."));
-                    String revisedContent = criticOrchestrator.reviewAndRevise(userMessage, result.getContent());
+                    String revisedContent;
+                    int streamIter = i;
+                    if (shouldSkipCritic(userMessage, streamIter, allExecRecords.size())) {
+                        log.info("[AiAgent-Stream] 简单场景跳过Critic审查 (iter={}, tools={})", streamIter, allExecRecords.size());
+                        revisedContent = result.getContent();
+                    } else {
+                        emitSse(emitter, "thinking", Map.of("message", "小云正在进行最终思考核对与完善..."));
+                        revisedContent = criticOrchestrator.reviewAndRevise(userMessage, result.getContent());
+                    }
                     revisedContent = evidenceHelper.appendTeamDispatchCards(revisedContent, teamDispatchCards);
                     revisedContent = evidenceHelper.appendBundleSplitCards(revisedContent, bundleSplitCards);
                     revisedContent = xiaoyunInsightCardOrchestrator.appendToContent(revisedContent, xiaoyunInsightCards);

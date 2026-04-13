@@ -425,7 +425,11 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
       fixed: 'right' as const,
       render: (_: any, record: MaterialPurchaseType) => {
         const frozen = isOrderFrozenForRecord(record);
-        const isPending = String(record?.status || '').trim().toLowerCase() === MATERIAL_PURCHASE_STATUS.PENDING;
+        const status = String(record?.status || '').trim().toLowerCase();
+        const isPending = status === MATERIAL_PURCHASE_STATUS.PENDING;
+        const canCancelReceive = !isPending
+          && !['completed', 'cancelled'].includes(status)
+          && !frozen;
         return (
           <RowActions
             actions={[
@@ -446,6 +450,12 @@ const MaterialTable: React.FC<MaterialTableProps> = ({
                 label: '备注',
                 onClick: () => onRemark(record),
               },
+              ...(canCancelReceive ? [{
+                key: 'cancel-receive',
+                label: '取消领取',
+                danger: true as const,
+                onClick: () => setCancelTarget(record),
+              }] : []),
               ...(record.isOrphan ? [{
                 key: 'delete-orphan',
                 label: '删除孤儿单',

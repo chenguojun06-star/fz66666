@@ -5,24 +5,37 @@ import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/**
- * 高风险工具审计钩子。
- * 对订单编辑、工资审批、裁剪创建、扫码撤回等敏感操作记录审计日志，
- * 便于事后追溯与安全审查。
- */
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 @Slf4j
 @Component
 public class HighRiskAuditHook implements ToolExecutionHook {
 
+    private static final long CONFIRM_WINDOW_MS = 60_000;
+    private final Map<String, Long> pendingConfirmations = new ConcurrentHashMap<>();
+
     @Override
     public boolean preToolUse(String toolName, String arguments) {
-        if (AiAgentToolAccessService.isHighRisk(toolName)) {
-            String userId = UserContext.userId();
-            Long tenantId = UserContext.tenantId();
-            log.warn("[HighRisk-Audit] 敏感工具调用 tool={}, user={}, tenant={}, args={}",
-                    toolName, userId, tenantId, truncate(arguments, 500));
+        if (!AiAgentToolAccessService.isHighRisk(toolName)) {
+            return true;
         }
-        return true; // 当前仅审计，不拦截
+        String userId = UserContext.userId();
+        Long tenantId = UserContext.tenantId();
+        String confirmKey = userId + ":" + toolName + ":" + hashArgs(arguments);
+        Long pendingAt = pendingConfirmations.get(confirmKey);
+
+        if (pendingAt != null && (System.currentTimeMillis() - pendingAt) < CONFIRM_WINDOW_MS) {
+            pendingConfirmations.remove(confirmKey);
+            log.warn("[HighRisk-Audit] 二次确认通过，执行高风险工具 tool={}, user={}, tenant={}",
+                    toolName, userId, tenantId);
+            return true;
+        }
+
+        pendingConfirmations.put(confirmKey, System.currentTimeMillis());
+        log.warn("[HighRisk-Audit] 高风险工具需二次确认 tool={}, user={}, tenant={}, args={}",
+                toolName, userId, tenantId, truncate(arguments, 500));
+        return false;
     }
 
     @Override
@@ -31,6 +44,17 @@ public class HighRiskAuditHook implements ToolExecutionHook {
             log.warn("[HighRisk-Audit] 敏感工具完成 tool={}, success={}, elapsed={}ms, resultLen={}",
                     toolName, success, elapsedMs, result == null ? 0 : result.length());
         }
+    }
+
+    public boolean hasPendingConfirmation(String userId, String toolName, String arguments) {
+        String confirmKey = userId + ":" + toolName + ":" + hashArgs(arguments);
+        Long pendingAt = pendingConfirmations.get(confirmKey);
+        return pendingAt != null && (System.currentTimeMillis() - pendingAt) < CONFIRM_WINDOW_MS;
+    }
+
+    private String hashArgs(String arguments) {
+        if (arguments == null || arguments.length() < 32) return arguments != null ? arguments : "";
+        return arguments.substring(0, 32);
     }
 
     private String truncate(String s, int maxLen) {

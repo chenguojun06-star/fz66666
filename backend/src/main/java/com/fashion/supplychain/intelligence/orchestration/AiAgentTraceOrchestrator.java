@@ -29,13 +29,28 @@ public class AiAgentTraceOrchestrator {
     private AsyncIntelligenceAuditService asyncAuditService;
 
     public String startRequest(String userMessage) {
+        return startRequest(userMessage, "ai-agent:request");
+    }
+
+    public String startRequest(String userMessage, String scene) {
         String commandId = UUID.randomUUID().toString().replace("-", "");
-        IntelligenceAuditLog logEntry = baseLog(commandId, "ai-agent:request");
+        IntelligenceAuditLog logEntry = baseLog(commandId, scene);
         logEntry.setStatus("EXECUTING");
         logEntry.setReason(truncate(userMessage, 500));
-        logEntry.setRemark("小云请求开始");
+        logEntry.setRemark(sceneToRemark(scene) + "开始");
         asyncAuditService.asyncInsert(logEntry);
         return commandId;
+    }
+
+    public void recordStep(String commandId, String stepName, String input, String output, long durationMs, boolean success) {
+        IntelligenceAuditLog logEntry = baseLog(commandId, "ai-agent:step:" + stepName);
+        logEntry.setStatus(success ? "SUCCESS" : "FAILED");
+        logEntry.setReason(truncate(input, 500));
+        logEntry.setResultData(truncate(output, 4000));
+        logEntry.setErrorMessage(success ? null : truncate(output, 500));
+        logEntry.setDurationMs(durationMs);
+        logEntry.setRemark("执行步骤: " + stepName);
+        asyncAuditService.asyncInsert(logEntry);
     }
 
     public void logToolCall(String commandId, String toolName, String args, String result, long durationMs, boolean success) {
@@ -177,6 +192,38 @@ public class AiAgentTraceOrchestrator {
             return text;
         }
         return text.substring(0, maxLength);
+    }
+
+    private String sceneToRemark(String scene) {
+        if (scene == null) return "AI请求";
+        if (scene.contains("nl-query")) return "自然语言查询";
+        if (scene.contains("hyper-advisor")) return "超级顾问";
+        if (scene.contains("forecast")) return "预测引擎";
+        if (scene.contains("visual")) return "视觉AI";
+        if (scene.contains("voice")) return "语音指令";
+        if (scene.contains("meeting")) return "Agent例会";
+        if (scene.contains("whatif")) return "推演仿真";
+        if (scene.contains("style-difficulty")) return "款式难度分析";
+        if (scene.contains("signal")) return "信号采集";
+        if (scene.contains("learning")) return "学习闭环";
+        if (scene.contains("feedback")) return "反馈学习";
+        if (scene.contains("smart-assignment")) return "智能派工";
+        if (scene.contains("process-template")) return "工序模板";
+        if (scene.contains("style-quote")) return "报价建议";
+        if (scene.contains("supervisor")) return "监督代理";
+        if (scene.contains("crew")) return "Agent团队";
+        if (scene.contains("debate")) return "多Agent辩论";
+        if (scene.contains("rca")) return "根因分析";
+        if (scene.contains("goal")) return "目标拆解";
+        if (scene.contains("pattern")) return "规律发现";
+        if (scene.contains("reflection")) return "反思引擎";
+        if (scene.contains("decision")) return "决策链";
+        if (scene.contains("memory")) return "AI记忆";
+        if (scene.contains("knowledge")) return "知识收割";
+        if (scene.contains("benchmark")) return "基准洞察";
+        if (scene.contains("brain")) return "统一大脑";
+        if (scene.contains("work-plan")) return "工作计划";
+        return "AI请求";
     }
 
     public String toJson(Object value) {

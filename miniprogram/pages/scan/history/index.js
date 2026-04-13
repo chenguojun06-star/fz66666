@@ -3,6 +3,7 @@
  * 支持"按月"和"自定义"两种时间筛选模式
  */
 const api = require('../../../utils/api');
+const { request } = require('../../../utils/request');
 
 function _normalizeQualityName(processName) {
   if (!processName) return processName;
@@ -222,6 +223,16 @@ Page({
         if (start) patternParams.startTime = start + ' 00:00:00';
         if (end) patternParams.endTime = end + ' 23:59:59';
         requests.push(api.production.myPatternScanHistory(patternParams));
+        // 并行调用工资 API 获取准确工资总额
+        requests.push(request({
+          url: '/api/finance/payroll-settlement/operator-summary',
+          method: 'POST',
+          data: {
+            startTime: start + ' 00:00:00',
+            endTime: end + ' 23:59:59',
+            includeSettled: true,
+          },
+        }));
       }
 
       const settled = await Promise.allSettled(requests);
@@ -246,12 +257,13 @@ Page({
           '-',
         displayQuantity: item.quantity || 0,
         displayUnitPrice: item.unitPrice == null || item.unitPrice === '' ? '-' : Number(item.unitPrice).toFixed(2),
-        lineAmount: (Number(item.unitPrice) || 0) * (Number(item.quantity) || 0),
-        displayLineAmount:
-          (Number(item.unitPrice) || 0) > 0 && (Number(item.quantity) || 0) > 0
-            ? ((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0)).toFixed(2)
-            : '-',
-        isPayable: (Number(item.unitPrice) || 0) > 0 && (Number(item.quantity) || 0) > 0,
+        // 金额优先级与后端 selectPayrollAggregation SQL 一致：totalAmount → scanCost → unitPrice×quantity
+        lineAmount: Number(item.totalAmount) || Number(item.scanCost) || ((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0)),
+        displayLineAmount: (function() {
+          var amt = Number(item.totalAmount) || Number(item.scanCost) || ((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0));
+          return amt > 0 ? amt.toFixed(2) : '-';
+        })(),
+        isPayable: (Number(item.totalAmount) > 0) || (Number(item.scanCost) > 0) || ((Number(item.unitPrice) || 0) > 0 && (Number(item.quantity) || 0) > 0),
         displayBedNo: item.bedNo != null ? String(item.bedNo) : '-',
       }));
 
@@ -269,15 +281,29 @@ Page({
       const orderSet = new Set();
       merged.forEach((r) => {
         totalQuantity += r.quantity || 0;
-        const price = Number(r.unitPrice) || 0;
-        const qty = Number(r.quantity) || 0;
-        if (price > 0 && qty > 0) {
-          totalWage += price * qty;
-        }
         if (r.orderNo && r.orderNo !== '-') {
           orderSet.add(r.orderNo);
         }
       });
+
+      // 优先使用工资 API 返回的准确总额，回退到客户端计算
+      if (reset && settled[2] && settled[2].status === 'fulfilled') {
+        const payrollRes = settled[2].value;
+        if (payrollRes && payrollRes.code === 200 && Array.isArray(payrollRes.data)) {
+          payrollRes.data.forEach((item) => {
+            totalWage += Number(item.totalAmount) || 0;
+          });
+        }
+      }
+      if (totalWage === 0) {
+        // 工资 API 不可用时回退到客户端估算（与后端 COALESCE 优先级一致）
+        merged.forEach((r) => {
+          var amt = Number(r.totalAmount) || Number(r.scanCost) || ((Number(r.unitPrice) || 0) * (Number(r.quantity) || 0));
+          if (amt > 0) {
+            totalWage += amt;
+          }
+        });
+      }
 
       const allForDisplay = this._mergeAndSort(merged, patternRecords);
       const displayRecords = this._getDisplayRecords(allForDisplay);

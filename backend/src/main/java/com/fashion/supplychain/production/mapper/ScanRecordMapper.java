@@ -87,6 +87,8 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         "WHERE sr.operator_id = #{operatorId}",
                         "  AND sr.scan_result = 'success'",
                         "  AND sr.quantity &gt; 0",
+                        /* factory_id IS NULL = 本厂内部员工扫码；非空 = 外发工厂（走订单结算，不计入工资） */
+                        "  AND sr.factory_id IS NULL",
                         "<choose>",
                         "  <when test='period != null and period == \"month\"'>",
                         /* 用范围查询替代 YEAR()/MONTH() 函数，允许走 operator_id+scan_time 联合索引 */
@@ -129,6 +131,8 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         "FROM t_scan_record sr",
                         "WHERE sr.scan_result = 'success'",
                         "  AND sr.quantity &gt; 0",
+                        /* factory_id IS NULL = 本厂内部员工扫码；非空 = 外发工厂（走订单结算，不计入工资） */
+                        "  AND sr.factory_id IS NULL",
                         /* 与 selectPersonalStats 保持一致：排除已取消/已删除订单的扫码记录 */
                         "  AND NOT EXISTS (",
                         "    SELECT 1 FROM t_production_order po",

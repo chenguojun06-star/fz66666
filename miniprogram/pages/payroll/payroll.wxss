@@ -158,12 +158,52 @@
 .process {
   display: inline-block;
   padding: 2px 8px;
-  /* 工序 tag 改为柔和浅蓝底 + 深蓝文字，视觉更轻盈 */
   background: rgba(59, 130, 246, 0.12);
   color: #2358b8;
   border-radius: var(--radius-sm);
   font-size: 12px;
   font-weight: 600;
+}
+
+.scan-type-tag {
+  display: inline-block;
+  padding: 2px 6px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 500;
+  margin-left: 6px;
+}
+
+.delegate-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.delegate-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.delegate-external {
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+}
+
+.delegate-internal {
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563eb;
+}
+
+.delegate-name {
+  color: var(--color-text-secondary);
 }
 
 .record-footer {

@@ -20,7 +20,7 @@ import { CrmDashboard, ReceivableList } from './modules/crm';
 import { SelectionCenter } from './modules/selection';
 import { MaterialInventory, MaterialDatabase, FinishedInventory, SampleInventory, EcommerceOrders } from './modules/warehouse';
 import { Dashboard } from './modules/dashboard';
-import { UserList, UserApproval, RoleList, OrganizationTree, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard } from './modules/system';
+import { UserList, UserApproval, RoleList, OrganizationTree, FactoryList, FactoryWorkerList, LoginLogList, SystemLogs, Profile, DictManage, Tutorial, TenantManagement, CustomerManagement, AppStore, DataImport, SystemIssueBoard, OrphanDataPage } from './modules/system';
 import { IntegrationCenter } from './modules/integration';
 import { AiAgentTraceCenter, CockpitPage, IntelligenceCenter } from './modules/intelligence';
 import { ProductionList, CuttingManagement, MaterialPurchase, MaterialPurchaseDetail, ProductWarehousing, InspectionDetail, OrderTransfer, OrderFlow, ProgressDetail, MaterialPicking, ExternalFactory } from './modules/production';
@@ -256,6 +256,7 @@ const AppRoutes: React.FC = () => {
           <Route path={paths.tenantManagement} element={<Suspense fallback={routeFallback}><TenantManagement /></Suspense>} />
           <Route path={paths.customerManagement} element={<Suspense fallback={routeFallback}><CustomerManagement /></Suspense>} />
           <Route path={paths.systemIssues} element={<Suspense fallback={routeFallback}><SystemIssueBoard /></Suspense>} />
+          <Route path={paths.orphanData} element={<Suspense fallback={routeFallback}><OrphanDataPage /></Suspense>} />
           <Route path={paths.appStore} element={<Suspense fallback={routeFallback}><AppStore /></Suspense>} />
           <Route path={paths.dataImport} element={<Suspense fallback={routeFallback}><DataImport /></Suspense>} />
           <Route path={paths.integrationCenter} element={<Suspense fallback={routeFallback}><IntegrationCenter /></Suspense>} />

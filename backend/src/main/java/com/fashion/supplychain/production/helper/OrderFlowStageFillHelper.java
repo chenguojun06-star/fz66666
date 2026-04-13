@@ -341,8 +341,20 @@ public class OrderFlowStageFillHelper {
                 Integer packagingRate = computeRate(packagingQty, baseQtyForRate);
                 o.setPackagingCompletionRate(packagingRate);
 
-                // 尾部工序：使用包装完成率作为近似（剪线等尾部工序与包装阶段对齐）
-                o.setTailProcessRate(packagingRate);
+                int tailQty = ironingQty;
+                if (!trackingByProcess.isEmpty()) {
+                    Integer tailMinRate = resolveTrackingMinRate(trackingByProcess, baseQtyForRate,
+                            new String[]{"尾部", "大烫", "整烫", "剪线", "尾工", "ironing", "tailprocess", "tail_process"},
+                            new String[]{"包装", "packaging"});
+                    if (tailMinRate != null) {
+                        o.setTailProcessRate(tailMinRate);
+                    } else {
+                        o.setTailProcessRate(packagingRate);
+                    }
+                } else {
+                    Integer elseIroningRate = computeRate(ironingQty, baseQtyForRate);
+                    o.setTailProcessRate(elseIroningRate != null ? elseIroningRate : packagingRate);
+                }
 
                 o.setQualityStartTime(qualityStart);
                 o.setQualityEndTime(qualityEnd);
@@ -880,26 +892,25 @@ public class OrderFlowStageFillHelper {
             int orderQty    = o.getOrderQuantity() == null ? 0 : o.getOrderQuantity();
             int cuttingQty  = o.getCuttingQuantity() == null ? 0 : o.getCuttingQuantity();
             int wareQty     = o.getWarehousingQualifiedQuantity() == null ? 0 : o.getWarehousingQualifiedQuantity();
-            // 裁剪完成率分母：裁剪量 > 0 时以裁剪量为基准，否则以订单量
+            int completedQty = o.getCompletedQuantity() == null ? 0 : o.getCompletedQuantity();
             int baseQty = cuttingQty > 0 ? cuttingQty : orderQty;
 
-            // ── 裁剪完成率 ──────────────────────────────────────────────
             int cuttingRate = computeRate(cuttingQty, baseQty);
             o.setCuttingCompletionRate(cuttingRate);
 
-            // ── 成衣各工序完成率（用入库量 / 裁剪或订单量近似）────────────
             int sewBase = baseQty > 0 ? baseQty : 1;
-            int sewRate = computeRate(wareQty, sewBase);
+            int wareRate = computeRate(wareQty, sewBase);
+            int completedRate = computeRate(completedQty, sewBase);
 
-            o.setSewingCompletionRate(sewRate);
-            o.setCarSewingCompletionRate(sewRate);
-            o.setIroningCompletionRate(sewRate);
-            o.setSecondaryProcessCompletionRate(sewRate);
-            o.setSecondaryProcessRate(sewRate);   // 前端 secondaryProcessRate 别名
-            o.setTailProcessRate(sewRate);         // 前端 tailProcessRate（剪线等尾部工序）
-            o.setPackagingCompletionRate(sewRate);
-            o.setQualityCompletionRate(sewRate);
-            o.setWarehousingCompletionRate(sewRate);
+            o.setSewingCompletionRate(wareRate);
+            o.setCarSewingCompletionRate(completedRate > 0 ? completedRate : wareRate);
+            o.setIroningCompletionRate(wareRate);
+            o.setSecondaryProcessCompletionRate(completedRate > 0 ? completedRate : wareRate);
+            o.setSecondaryProcessRate(completedRate > 0 ? completedRate : wareRate);
+            o.setTailProcessRate(wareRate);
+            o.setPackagingCompletionRate(wareRate);
+            o.setQualityCompletionRate(wareRate);
+            o.setWarehousingCompletionRate(wareRate);
         }
     }
 
@@ -919,5 +930,60 @@ public class OrderFlowStageFillHelper {
             }
         }
         return Math.max(viewQty, trackingTotal);
+    }
+
+    private Integer resolveTrackingMinRate(Map<String, Integer> trackingByProcess, int baseQty,
+            String[] parentKeywords, String[] subProcessKeywords) {
+        if (trackingByProcess.isEmpty() || baseQty <= 0) {
+            return null;
+        }
+        Map<String, Integer> subProcessQtys = new HashMap<>();
+        for (Map.Entry<String, Integer> entry : trackingByProcess.entrySet()) {
+            String pname = entry.getKey() == null ? "" : entry.getKey().trim();
+            if (pname.isEmpty() || entry.getValue() == null || entry.getValue() <= 0) {
+                continue;
+            }
+            boolean isParent = false;
+            for (String kw : parentKeywords) {
+                if (pname.toLowerCase().contains(kw.toLowerCase())) {
+                    isParent = true;
+                    break;
+                }
+            }
+            if (isParent) {
+                continue;
+            }
+            boolean isSubProcess = false;
+            for (String kw : subProcessKeywords) {
+                if (pname.toLowerCase().contains(kw.toLowerCase())) {
+                    isSubProcess = true;
+                    break;
+                }
+            }
+            if (!isSubProcess) {
+                boolean matchesAnyParent = false;
+                for (String kw : parentKeywords) {
+                    if (pname.toLowerCase().contains(kw.toLowerCase())) {
+                        matchesAnyParent = true;
+                        break;
+                    }
+                }
+                if (!matchesAnyParent) {
+                    continue;
+                }
+            }
+            subProcessQtys.merge(pname, entry.getValue(), Integer::sum);
+        }
+        if (subProcessQtys.isEmpty()) {
+            return null;
+        }
+        int minRate = 100;
+        for (Map.Entry<String, Integer> e : subProcessQtys.entrySet()) {
+            int rate = computeRate(e.getValue(), baseQty);
+            if (rate < minRate) {
+                minRate = rate;
+            }
+        }
+        return minRate;
     }
 }

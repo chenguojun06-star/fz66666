@@ -164,8 +164,24 @@ const tenantService = {
     applyUsername: string;
     applyPassword: string;
   }) => api.post(`${BASE}/apply`, data),
+
+  /**
+   * 工人注册（通过扫码/链接加入已有工厂，无需登录）
+   * 对应后端 POST /api/system/tenant/registration/register
+   */
+  workerRegister: (data: {
+    tenantCode: string;
+    factoryId?: string;
+    orgUnitId?: string;
+    username: string;
+    password: string;
+    name: string;
+    phone: string;
+  }) => api.post(`${BASE}/registration/register`, data),
   listPendingRegistrations: (params: Record<string, unknown>) =>
     api.post(`${BASE}/registrations/pending`, params),
+  listFactoryPendingRegistrations: (params: Record<string, unknown>) =>
+    api.post(`${BASE}/registrations/factory-pending`, params),
   approveRegistration: (userId: number, roleId?: number) =>
     api.post(`${BASE}/registrations/${userId}/approve`, { roleId }),
   rejectRegistration: (userId: number, reason: string) =>
