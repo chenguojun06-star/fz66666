@@ -47,13 +47,8 @@ public class SmsLoginHelper {
     @org.springframework.beans.factory.annotation.Value("${app.auth.sms-login.send-interval-seconds:60}")
     private long smsLoginSendIntervalSeconds;
 
-    @org.springframework.beans.factory.annotation.Value("${app.auth.sms-login.expose-code-in-response:false}")
-    private boolean smsLoginExposeCodeInResponse;
-
     private final Map<String, ExpiringValue> smsLoginCodeFallbackStore = new ConcurrentHashMap<>();
     private final Map<String, ExpiringValue> smsLoginSendFallbackStore = new ConcurrentHashMap<>();
-
-    // --- Getters for @Value fields (used by UserOrchestrator) ---
 
     public long getCodeTtlSeconds() {
         return smsLoginCodeTtlSeconds;
@@ -61,10 +56,6 @@ public class SmsLoginHelper {
 
     public long getSendIntervalSeconds() {
         return smsLoginSendIntervalSeconds;
-    }
-
-    public boolean isExposeCodeInResponse() {
-        return smsLoginExposeCodeInResponse;
     }
 
     public boolean isGatewayConfigured() {
@@ -124,7 +115,7 @@ public class SmsLoginHelper {
 
     public void dispatchSmsLoginCode(String phone, String code) {
         if (tencentSmsProperties == null || !tencentSmsProperties.isConfigured()) {
-            log.warn("[SmsLogin] 未配置腾讯云短信，验证码仅写入日志 phone={}, code={}", maskPhone(phone), code);
+            log.warn("[SmsLogin] 未配置腾讯云短信，验证码已生成 phone={}, code=***", maskPhone(phone));
             return;
         }
         try {

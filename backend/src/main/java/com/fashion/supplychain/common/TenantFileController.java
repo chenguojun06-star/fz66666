@@ -115,7 +115,6 @@ public class TenantFileController {
                         return ResponseEntity.ok()
                                 .header(HttpHeaders.CONTENT_TYPE, contentType)
                                 .header(HttpHeaders.CACHE_CONTROL, "max-age=3600")
-                                .header(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*")
                                 .contentLength(contentLength)
                                 .body(resource);
                     } catch (Exception e) {

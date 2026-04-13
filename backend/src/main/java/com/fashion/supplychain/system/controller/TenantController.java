@@ -86,6 +86,11 @@ public class TenantController {
         String ownerUsername = (String) params.get("ownerUsername");
         String ownerPassword = (String) params.get("ownerPassword");
         String ownerName = (String) params.get("ownerName");
+        if (tenantName == null || tenantName.isBlank()) return Result.fail("租户名称不能为空");
+        if (tenantCode == null || tenantCode.isBlank()) return Result.fail("租户编码不能为空");
+        if (ownerUsername == null || ownerUsername.isBlank()) return Result.fail("管理员用户名不能为空");
+        if (ownerPassword == null || ownerPassword.length() < 6) return Result.fail("管理员密码不能少于6个字符");
+        if (ownerName == null || ownerName.isBlank()) return Result.fail("管理员姓名不能为空");
         String planType = params.get("planType") != null ? params.get("planType").toString() : null;
         Integer maxUsers = params.get("maxUsers") != null ? Integer.valueOf(params.get("maxUsers").toString()) : null;
         String tenantType = (String) params.getOrDefault("tenantType", "HYBRID");

@@ -116,7 +116,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                         .antMatchers("/api/auth/register").permitAll()
                         // 文件下载：旧公共下载保持 permitAll（无租户信息），租户隔离文件要求认证
                         // 前端通过 getAuthedFileUrl() 在 URL 追加 ?token=xxx，TokenAuthFilter 会解析
-                        .antMatchers("/api/common/download/**").permitAll()
+                        .antMatchers("/api/common/download/**").authenticated()
                         .antMatchers("/api/file/tenant-download/**").authenticated()
                         .antMatchers("/openapi/**").permitAll()  // 客户开放API（使用appKey+签名鉴权）
                         .antMatchers("/api/webhook/**").permitAll()  // 第三方回调（支付宝/微信支付/顺丰/申通），通过签名验证防伪造，不需要JWT

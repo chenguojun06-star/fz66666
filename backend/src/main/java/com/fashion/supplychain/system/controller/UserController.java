@@ -16,6 +16,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
+
 /**
  * 用户控制器
  */
@@ -84,7 +86,7 @@ public class UserController {
      * @return 操作结果
      */
     @PostMapping
-    public Result<?> addUser(@RequestBody User user) {
+    public Result<?> addUser(@Valid @RequestBody User user) {
         userOrchestrator.add(user);
         return Result.successMessage("新增成功");
     }

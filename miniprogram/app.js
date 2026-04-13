@@ -71,8 +71,13 @@ App({
     if (typeof wx.onNeedPrivacyAuthorization === 'function') {
       wx.onNeedPrivacyAuthorization(resolve => {
         this.globalData.privacyResolve = resolve;
-        // 通知当前活跃页面显示隐私弹窗
         eventBus.emit('showPrivacyDialog', resolve);
+        setTimeout(function () {
+          if (getApp().globalData.privacyResolve === resolve) {
+            try { resolve({ buttonAction: 'disagree' }); } catch (_e) {}
+            getApp().globalData.privacyResolve = null;
+          }
+        }, 10000);
       });
     }
 
@@ -337,7 +342,7 @@ App({
       const token = getToken();
       if (!token) return;
       wx.request({
-        url: require('./config').API_BASE + '/api/system/error-report',
+        url: require('./config').getBaseUrl() + '/api/system/error-report',
         method: 'POST',
         header: { Authorization: 'Bearer ' + token },
         data: {

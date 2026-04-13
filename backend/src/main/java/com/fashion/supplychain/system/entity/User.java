@@ -9,6 +9,9 @@ import java.time.LocalDateTime;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Size;
+
 /**
  * 用户实体类
  */
@@ -19,11 +22,17 @@ public class User {
     @TableId(type = IdType.AUTO)
     private Long id;
 
+    @NotBlank(message = "用户名不能为空", groups = {Create.class, Register.class})
+    @Size(min = 2, max = 50, message = "用户名长度2-50字符")
     private String username;
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @NotBlank(message = "密码不能为空", groups = {Create.class, Register.class})
+    @Size(min = 6, max = 100, message = "密码长度6-100字符")
     private String password;
 
+    @NotBlank(message = "姓名不能为空", groups = {Create.class, Register.class})
+    @Size(max = 50, message = "姓名最长50字符")
     private String name;
 
     private Long roleId;
@@ -99,4 +108,7 @@ public class User {
 
     /** 所属组织路径 */
     private String orgPath;
+
+    public interface Create {}
+    public interface Register {}
 }

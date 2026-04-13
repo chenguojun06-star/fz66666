@@ -262,9 +262,6 @@ public class UserOrchestrator {
         payload.put("expiresInSeconds", smsLoginHelper.getCodeTtlSeconds());
         payload.put("cooldownSeconds", smsLoginHelper.getSendIntervalSeconds());
         payload.put("gatewayConfigured", smsLoginHelper.isGatewayConfigured());
-        if (smsLoginHelper.isExposeCodeInResponse()) {
-            payload.put("debugCode", code);
-        }
         return payload;
     }
 

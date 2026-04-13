@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.validation.Valid;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -42,7 +43,7 @@ public class AuthController {
      * @return 注册结果
      */
     @PostMapping("/register")
-    public Result<?> register(@RequestBody User registerData, HttpServletRequest request) {
+    public Result<?> register(@Valid @RequestBody User registerData, HttpServletRequest request) {
         try {
             // Redis 限流：每个 IP 每小时最多注册 5 次
             if (stringRedisTemplate != null) {
