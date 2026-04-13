@@ -135,6 +135,22 @@ Component({
       setTimeout(() => this.loadTasks(), 0);
       this._refreshPageSuggestions();
       this._loadDynamicSuggestions();
+      // 修复：tabBar页面常驻不销毁，attached()只执行一次。
+      // 用户在其他页面拖动按钮后，当前页面实例不会感知到 storage 变化。
+      // 每次页面 show 时主动同步一次位置，确保所有页面保持一致。
+      try {
+        const saved = wx.getStorageSync('ai_trigger_position');
+        if (saved) {
+          const sw = this.data.screenWidth || 375;
+          const sh = this.data.screenHeight || 667;
+          const edge = saved.edge || 'right';
+          const tx = edge === 'left' ? -30 : sw - 20;
+          const ty = Math.max(40, Math.min(saved.y != null ? saved.y : this.data.triggerY, sh - 60));
+          if (ty !== this.data.triggerY || edge !== this.data.edgeSide) {
+            this.setData({ triggerX: tx, triggerY: ty, edgeSide: edge });
+          }
+        }
+      } catch (_e) {}
     },
   },
   detached() {
