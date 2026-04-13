@@ -106,9 +106,11 @@ public class DailyBriefOrchestrator {
         long todayOutboundQty = dashboardQueryService.sumOutstockQuantityBetween(tdStart, tdEnd);
         brief.put("todayOutboundQuantity", (int) todayOutboundQty);
 
-        // ④ 逾期订单数
+        // ④ 逾期订单数 + 拉取逾期订单明细（用于决策卡工厂分布展示）
         long overdueCount = dashboardQueryService.countOverdueOrders();
         brief.put("overdueOrderCount", (int) overdueCount);
+        List<com.fashion.supplychain.production.entity.ProductionOrder> overdueOrders =
+            dashboardQueryService.listOverdueOrders(60);
 
         // ④ 高风险订单（进行中 + 7天内到期但【尚未逾期】 + 进度 < 50%）
         // 注意：已逾期订单已在 overdueOrderCount 中计数，此处排除避免双重计数
@@ -123,7 +125,9 @@ public class DailyBriefOrchestrator {
                     ProductionOrder::getStyleNo,
                     ProductionOrder::getFactoryName,
                     ProductionOrder::getProductionProgress,
-                    ProductionOrder::getPlannedEndDate
+                    ProductionOrder::getPlannedEndDate,
+                    ProductionOrder::getOrderQuantity,
+                    ProductionOrder::getMerchandiser
                 )
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .eq(ProductionOrder::getTenantId, UserContext.tenantId())  // 🔒 租户隔离
@@ -172,7 +176,8 @@ public class DailyBriefOrchestrator {
             todayScan,
             ydCount,
             ydQty,
-            highRisk
+            highRisk,
+            overdueOrders
         );
         brief.put("decisionCards", decisionCards);
 

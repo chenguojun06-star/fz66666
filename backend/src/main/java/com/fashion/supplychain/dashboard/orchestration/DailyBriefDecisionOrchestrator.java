@@ -8,7 +8,9 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -24,10 +26,11 @@ public class DailyBriefDecisionOrchestrator {
             long todayScanCount,
             long yesterdayWarehousingCount,
             long yesterdayWarehousingQuantity,
-            List<ProductionOrder> highRiskOrders) {
+            List<ProductionOrder> highRiskOrders,
+            List<ProductionOrder> overdueOrders) {
         List<BriefDecisionCard> cards = new ArrayList<>();
         if (overdueCount > 0) {
-            cards.add(buildOverdueCard(today, overdueCount, highRiskOrders));
+            cards.add(buildOverdueCard(today, overdueCount, overdueOrders));
         }
         if (!highRiskOrders.isEmpty()) {
             cards.add(buildHighRiskCard(today, highRiskOrders.get(0), highRiskOrders.size()));
@@ -43,18 +46,66 @@ public class DailyBriefDecisionOrchestrator {
         return cards.stream().limit(3).collect(Collectors.toList());
     }
 
-    private BriefDecisionCard buildOverdueCard(LocalDate today, long overdueCount, List<ProductionOrder> highRiskOrders) {
+    /**
+     * 逾期卡：工厂分组展示件数/逾期天数/跟单员
+     */
+    private BriefDecisionCard buildOverdueCard(LocalDate today, long overdueCount,
+            List<ProductionOrder> overdueOrders) {
         List<String> evidence = new ArrayList<>();
-        evidence.add("逾期 " + overdueCount + " 张");
-        if (!highRiskOrders.isEmpty()) {
-            ProductionOrder top = highRiskOrders.get(0);
-            long daysLeft = ChronoUnit.DAYS.between(today, top.getPlannedEndDate().toLocalDate());
-            evidence.add(formatOrderEvidence(top, daysLeft));
+
+        if (overdueOrders.isEmpty()) {
+            // 兜底：没有详细数据时仅显示计数
+            evidence.add("共 " + overdueCount + " 张订单超交期");
+        } else {
+            // 按工厂分组，取件数最多的前 5 家
+            Map<String, List<ProductionOrder>> byFactory = overdueOrders.stream()
+                .collect(Collectors.groupingBy(o ->
+                    (o.getFactoryName() != null && !o.getFactoryName().isBlank())
+                        ? o.getFactoryName() : "未填工厂"));
+
+            byFactory.entrySet().stream()
+                .sorted(Comparator.<Map.Entry<String, List<ProductionOrder>>>comparingInt(
+                    e -> e.getValue().stream().mapToInt(o ->
+                        o.getOrderQuantity() == null ? 0 : o.getOrderQuantity()).sum()).reversed())
+                .limit(5)
+                .forEach(entry -> {
+                    String fName = entry.getKey();
+                    List<ProductionOrder> fOrders = entry.getValue();
+                    int fQty = fOrders.stream()
+                        .mapToInt(o -> o.getOrderQuantity() == null ? 0 : o.getOrderQuantity()).sum();
+                    long maxOverdue = fOrders.stream()
+                        .filter(o -> o.getPlannedEndDate() != null)
+                        .mapToLong(o -> ChronoUnit.DAYS.between(
+                            o.getPlannedEndDate().toLocalDate(), today))
+                        .max().orElse(0);
+                    String merch = fOrders.stream()
+                        .map(ProductionOrder::getMerchandiser)
+                        .filter(m -> m != null && !m.isBlank())
+                        .distinct().limit(2).collect(Collectors.joining("/"));
+                    StringBuilder sb = new StringBuilder();
+                    sb.append(fName).append(": ").append(fOrders.size()).append("单");
+                    if (fQty > 0) sb.append("/").append(fQty).append("件");
+                    sb.append(" · 逾期最长").append(maxOverdue).append("天");
+                    if (!merch.isBlank()) sb.append(" · 跟单: ").append(merch);
+                    evidence.add(sb.toString());
+                });
         }
+
+        // 合计件数用于标题
+        int totalQty = overdueOrders.stream()
+            .mapToInt(o -> o.getOrderQuantity() == null ? 0 : o.getOrderQuantity()).sum();
+        long factoryCount = overdueOrders.stream()
+            .map(o -> o.getFactoryName() != null ? o.getFactoryName() : "")
+            .filter(n -> !n.isBlank()).distinct().count();
+        String titleQtySuffix = totalQty > 0 ? " / " + totalQty + "件" : "";
+        String summary = overdueCount + " 张订单已超交期"
+            + (factoryCount > 0 ? "，波及 " + factoryCount + " 家工厂" : "")
+            + "，需逐单确认。";
+
         return buildCard(
             "danger",
-            "逾期 " + overdueCount + " 单待处理",
-            overdueCount + " 张订单已超交期，需逐单确认。",
+            "逾期 " + overdueCount + " 单" + titleQtySuffix + " 待处理",
+            summary,
             "违约风险",
             "高置信",
             "规则判断",
@@ -67,11 +118,21 @@ public class DailyBriefDecisionOrchestrator {
     private BriefDecisionCard buildHighRiskCard(LocalDate today, ProductionOrder top, int highRiskCount) {
         long daysLeft = ChronoUnit.DAYS.between(today, top.getPlannedEndDate().toLocalDate());
         Integer progress = top.getProductionProgress() == null ? 0 : top.getProductionProgress();
-        List<String> evidence = Arrays.asList(
+        Integer qty = top.getOrderQuantity();
+        List<String> evidence = new ArrayList<>(Arrays.asList(
                 "高风险 " + highRiskCount + " 张",
-                formatOrderEvidence(top, daysLeft),
-                "进度 " + progress + "%"
-        );
+                formatOrderEvidence(top, daysLeft)
+        ));
+        if (qty != null && qty > 0) {
+            int gap = (100 - progress) * qty / 100;
+            evidence.add("共 " + qty + " 件 · 进度 " + progress + "% · 预估缺口约 " + gap + " 件");
+        } else {
+            evidence.add("进度 " + progress + "%");
+        }
+        String merch = top.getMerchandiser();
+        if (merch != null && !merch.isBlank()) {
+            evidence.add("跟单员: " + merch);
+        }
         return buildCard(
             daysLeft <= 3 ? "danger" : "warning",
             "先催 " + safe(top.getOrderNo()),

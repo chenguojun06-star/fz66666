@@ -363,7 +363,17 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         Long tenantId = UserContext.tenantId();
         String factoryId = UserContext.factoryId(); // 🔒 工厂账号只看自己工厂的数据
         return productionOrderService.lambdaQuery()
-                .select(ProductionOrder::getId, ProductionOrder::getOrderNo, ProductionOrder::getPlannedEndDate)
+                .select(
+                    ProductionOrder::getId,
+                    ProductionOrder::getOrderNo,
+                    ProductionOrder::getStyleNo,
+                    ProductionOrder::getPlannedEndDate,
+                    ProductionOrder::getFactoryName,
+                    ProductionOrder::getFactoryId,
+                    ProductionOrder::getOrderQuantity,
+                    ProductionOrder::getMerchandiser,
+                    ProductionOrder::getProductionProgress
+                )
                 .eq(ProductionOrder::getDeleteFlag, 0)
                 .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)  // 🔒 租户隔离
                 .eq(org.springframework.util.StringUtils.hasText(factoryId), ProductionOrder::getFactoryId, factoryId)  // 🔒 工厂隔离

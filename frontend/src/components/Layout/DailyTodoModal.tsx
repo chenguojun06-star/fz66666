@@ -146,7 +146,7 @@ const DecisionCardRow: React.FC<{
       )}
       {card.evidence?.length > 0 && (
         <div style={{ fontSize: 12, color: '#8c8c8c', marginBottom: 6 }}>
-          {card.evidence.slice(0, 3).map((e, i) => (
+          {card.evidence.slice(0, 6).map((e, i) => (
             <div key={i} style={{ marginBottom: 2 }}>· {e}</div>
           ))}
         </div>
