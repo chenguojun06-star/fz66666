@@ -217,7 +217,7 @@ const UserApproval: React.FC = () => {
     { title: '注册时间', dataIndex: 'createTime', key: 'createTime', width: 160, render: (time: string) => formatDateTime(time) },
     {
       title: '状态', key: 'status', width: 100,
-      render: (_: any, record: User) => <Tag color="orange">待外发工厂审批</Tag>,
+      render: () => <Tag color="orange">待外发工厂审批</Tag>,
     },
   ];
 
