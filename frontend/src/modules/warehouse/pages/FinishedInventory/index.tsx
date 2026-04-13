@@ -273,7 +273,8 @@ const _FinishedInventory: React.FC = () => {
     try {
       const params = new URLSearchParams();
       if (record.styleNo) params.append('styleNo', record.styleNo);
-      if (record.orderNo) params.append('orderNo', record.orderNo);
+      // 不过滤 orderNo：当前库存 (availableQty) 聚合了该款式所有订单的入库，
+      // 历史记录也必须跨订单展示，否则多订单分批入库时记录会缺失
       params.append('page', '1');
       params.append('size', '100');
       const res = await api.get(`/production/warehousing/list?${params.toString()}`);

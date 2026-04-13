@@ -21,7 +21,7 @@ const MODULE_LABELS: Record<string, string> = {
   production: '生产管理',
   style: '样衣管理',
   finance: '财务管理',
-  warehouse: '仓库管理',
+  warehouse: '成品管理',
   system: '系统',
 };
 

@@ -132,7 +132,7 @@ const TenantListTab: React.FC = () => {
     { key: 'supplierManagement', title: '供应商管理', paths: [
       { path: '/production/partners', label: '供应商管理' },
     ]},
-    { key: 'warehouse', title: '仓库管理', paths: [
+    { key: 'warehouse', title: '成品管理', paths: [
       { path: '/warehouse/finished', label: '成品进销存' },
       { path: '/warehouse/ecommerce', label: '电商订单' },
     ]},

@@ -287,6 +287,9 @@ public class QualityScanExecutor {
                 // ★ 质检不合格时推送通知给扫码记录人（触发次品入库）
                 notifyDefectiveQuality(order, bundle, dq, operatorName, defectCategory);
             }
+        } else {
+            // ★ 合格时也创建 ProductWarehousing 记录，使 PC 端质检入库页面能看到小程序的合格质检结果
+            createQualifiedScanRecord(order, bundle, qty, operatorId, operatorName);
         }
 
         // 更新工序跟踪记录：质检验收时将 tracking 表中对应子工序状态置为已扫码
@@ -594,6 +597,68 @@ public class QualityScanExecutor {
                     order.getId(), bundle.getId());
         } catch (Exception e) {
             log.warn("[QualityScan] 创建 quality_scan 记录失败（不阻断主流程）: orderId={}, bundleId={}, error={}",
+                    order.getId(), bundle.getId(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 质检合格时创建 product_warehousing 记录，使 PC 端质检入库页面能看到小程序端的合格质检结果。
+     * 幂等：同一订单 + 同一菲号只创建一条 quality_scan 合格记录。
+     */
+    private void createQualifiedScanRecord(ProductionOrder order, CuttingBundle bundle,
+                                           int qualifiedQty, String operatorId, String operatorName) {
+        try {
+            // 幂等：同一菲号已有 quality_scan 记录则跳过（可能先前不合格已创建）
+            List<ProductWarehousing> existing = productWarehousingService.list(
+                    new LambdaQueryWrapper<ProductWarehousing>()
+                            .eq(ProductWarehousing::getOrderId, order.getId())
+                            .eq(ProductWarehousing::getCuttingBundleId, bundle.getId())
+                            .eq(ProductWarehousing::getWarehousingType, "quality_scan")
+                            .eq(ProductWarehousing::getDeleteFlag, 0));
+            if (existing != null && !existing.isEmpty()) {
+                log.info("[QualityScan] quality_scan 记录已存在，跳过合格记录创建: orderId={}, bundleId={}",
+                        order.getId(), bundle.getId());
+                return;
+            }
+
+            LocalDateTime now = LocalDateTime.now();
+            ProductWarehousing w = new ProductWarehousing();
+            w.setOrderId(order.getId());
+            w.setOrderNo(order.getOrderNo());
+            w.setStyleId(order.getStyleId());
+            w.setStyleNo(order.getStyleNo());
+            w.setStyleName(order.getStyleName());
+            w.setWarehousingType("quality_scan");
+            w.setWarehouse("待分配");
+            w.setWarehousingQuantity(0);            // 不产生库存变动（质检≠入库）
+            w.setQualifiedQuantity(qualifiedQty);   // 合格数量
+            w.setUnqualifiedQuantity(0);
+            w.setQualityStatus("qualified");
+            w.setCuttingBundleId(bundle.getId());
+            w.setCuttingBundleNo(bundle.getBundleNo());
+            w.setCuttingBundleQrCode(bundle.getQrCode());
+            if (hasText(operatorId)) {
+                w.setQualityOperatorId(operatorId);
+            }
+            if (hasText(operatorName)) {
+                w.setQualityOperatorName(operatorName);
+            }
+            w.setCreateTime(now);
+            w.setUpdateTime(now);
+            w.setDeleteFlag(0);
+
+            productWarehousingService.save(w);
+            log.info("[QualityScan] 已创建 quality_scan 合格记录: orderId={}, bundleId={}, qualifiedQty={}",
+                    order.getId(), bundle.getId(), qualifiedQty);
+
+            // 更新菲号状态
+            syncBundleStatusAfterQualityScan(order.getId(), bundle);
+
+        } catch (org.springframework.dao.DuplicateKeyException dke) {
+            log.info("[QualityScan] quality_scan 合格记录重复（幂等）: orderId={}, bundleId={}",
+                    order.getId(), bundle.getId());
+        } catch (Exception e) {
+            log.warn("[QualityScan] 创建合格质检记录失败（不阻断主流程）: orderId={}, bundleId={}, error={}",
                     order.getId(), bundle.getId(), e.getMessage(), e);
         }
     }

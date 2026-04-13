@@ -66,12 +66,12 @@ public class AdvisorSimulationOrchestrator {
             if (afterDelay < 0 && daysRemaining >= 0) {
                 newOverdue++;
                 Map<String, Object> row = new LinkedHashMap<>();
-                row.put("orderNo", order.getOrderNo());
-                row.put("styleName", order.getStyleName());
-                row.put("originalDeadline", deadline.toString());
-                row.put("currentProgress", progress + "%");
-                row.put("afterDelayDays", Math.abs(afterDelay));
-                row.put("impact", "将由准期变为逾期");
+                row.put("订单号", order.getOrderNo());
+                row.put("款名", order.getStyleName());
+                row.put("原截止日", deadline.toString());
+                row.put("当前进度", progress + "%");
+                row.put("超期天数", Math.abs(afterDelay));
+                row.put("影响", "将由准期变为逾期");
                 rows.add(row);
             }
         }
@@ -116,11 +116,11 @@ public class AdvisorSimulationOrchestrator {
             if (savedDays > 0) {
                 benefited++;
                 Map<String, Object> row = new LinkedHashMap<>();
-                row.put("orderNo", order.getOrderNo());
-                row.put("styleName", order.getStyleName());
-                row.put("currentProgress", progress + "%");
-                row.put("estimatedSaveDays", savedDays);
-                row.put("impact", savedDays >= 3 ? "显著加速" : "小幅提升");
+                row.put("订单号", order.getOrderNo());
+                row.put("款名", order.getStyleName());
+                row.put("当前进度", progress + "%");
+                row.put("预计节省天数", savedDays);
+                row.put("影响", savedDays >= 3 ? "显著加速" : "小幅提升");
                 rows.add(row);
                 if (rows.size() >= 15) break;
             }

@@ -169,6 +169,7 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
         fillProgressFields(resultPage.getRecords());
         fillOrderCountFields(resultPage.getRecords());
         fillScrapFields(resultPage.getRecords());
+        fillWarehousedFields(resultPage.getRecords());
 
         return resultPage;
     }
@@ -414,6 +415,79 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
             }
             String sno = StringUtils.hasText(s.getStyleNo()) ? s.getStyleNo().trim() : null;
             s.setScrapQuantity(StringUtils.hasText(sno) ? scrapByStyleNo.getOrDefault(sno, 0) : 0);
+        }
+    }
+
+    private void fillWarehousedFields(List<StyleInfo> records) {
+        if (records == null || records.isEmpty()) {
+            return;
+        }
+        Long readableTenantId = resolveReadableTenantId();
+        boolean tenantScopedRead = isTenantScopedRead();
+        ProductWarehousingService warehousingService = productWarehousingServiceProvider.getIfAvailable();
+        if (warehousingService == null) {
+            return;
+        }
+
+        List<String> styleIds = new ArrayList<>();
+        Set<String> styleNos = new HashSet<>();
+        for (StyleInfo s : records) {
+            if (s == null) continue;
+            if (s.getId() != null) styleIds.add(String.valueOf(s.getId()));
+            if (StringUtils.hasText(s.getStyleNo())) styleNos.add(s.getStyleNo().trim());
+        }
+        if (styleIds.isEmpty() && styleNos.isEmpty()) return;
+
+        QueryWrapper<ProductWarehousing> qw = new QueryWrapper<>();
+        qw.select("style_id as styleId", "style_no as styleNo", "COALESCE(SUM(qualified_quantity), 0) as warehousedQty")
+            .eq(tenantScopedRead, "tenant_id", readableTenantId)
+            .and(w -> w.isNull("delete_flag").or().eq("delete_flag", 0))
+            .and(w -> {
+                boolean hasPrev = false;
+                if (!styleIds.isEmpty()) {
+                    w.in("style_id", styleIds);
+                    hasPrev = true;
+                }
+                if (!styleNos.isEmpty()) {
+                    if (hasPrev) w.or();
+                    w.in("style_no", styleNos);
+                }
+            })
+            .groupBy("style_id", "style_no");
+
+        Map<String, Integer> warehousedByStyleId = new HashMap<>();
+        Map<String, Integer> warehousedByStyleNo = new HashMap<>();
+        try {
+            List<Map<String, Object>> rows = warehousingService.listMaps(qw);
+            for (Map<String, Object> r : rows) {
+                if (r == null) continue;
+                String sid = r.get("styleId") == null ? null : String.valueOf(r.get("styleId")).trim();
+                String sno = r.get("styleNo") == null ? null : String.valueOf(r.get("styleNo")).trim();
+                int qty;
+                try {
+                    qty = r.get("warehousedQty") == null ? 0 : Integer.parseInt(String.valueOf(r.get("warehousedQty")));
+                } catch (Exception e) {
+                    qty = 0;
+                }
+                if (qty <= 0) continue;
+                if (StringUtils.hasText(sid)) warehousedByStyleId.put(sid, qty);
+                if (StringUtils.hasText(sno)) warehousedByStyleNo.put(sno, qty);
+            }
+        } catch (Exception e) {
+            log.warn("fillWarehousedFields 查询入库数据异常: {}", e.getMessage());
+            return;
+        }
+
+        for (StyleInfo s : records) {
+            if (s == null) continue;
+            String idKey = s.getId() == null ? null : String.valueOf(s.getId());
+            Integer byId = StringUtils.hasText(idKey) ? warehousedByStyleId.get(idKey) : null;
+            if (byId != null && byId > 0) {
+                s.setTotalWarehousedQuantity(byId);
+                continue;
+            }
+            String sno = StringUtils.hasText(s.getStyleNo()) ? s.getStyleNo().trim() : null;
+            s.setTotalWarehousedQuantity(StringUtils.hasText(sno) ? warehousedByStyleNo.getOrDefault(sno, 0) : 0);
         }
     }
 

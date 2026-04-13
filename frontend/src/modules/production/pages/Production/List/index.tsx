@@ -329,6 +329,14 @@ const ProductionList: React.FC = () => {
     if (['overdue', 'urgent', 'behind', 'stagnant'].includes(filterParam)) {
       setSmartQueueFilter(filterParam as 'overdue' | 'urgent' | 'behind' | 'stagnant');
     }
+    // URL factoryName 参数 → 按工厂过滤（来自仪表盘延期订单分布点击跳转）
+    const factoryNameParam = (params.get('factoryName') || '').trim();
+    if (factoryNameParam) {
+      setQueryParams((prev) => {
+        if ((prev.factoryName || '') === factoryNameParam) return prev;
+        return { ...prev, factoryName: factoryNameParam, page: 1 };
+      });
+    }
   }, [location.search]);
 
   // 实时同步：30秒自动轮询更新数据

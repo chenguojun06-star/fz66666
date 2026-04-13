@@ -92,12 +92,18 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
 
     setMessages(prev => [...prev, { id: `u-${Date.now()}`, role: 'user', text }]);
     if (!manualText) setInputValue('');
-    setIsTyping(true);
 
+    // 报告类请求直接触发下载，不走 AI（避免 AI 返回"需要更多信息"的错误响应）
     let reportTypeToDownload: 'daily' | 'weekly' | 'monthly' | undefined;
     if (text.includes('日报')) reportTypeToDownload = 'daily';
     if (text.includes('周报')) reportTypeToDownload = 'weekly';
     if (text.includes('月报')) reportTypeToDownload = 'monthly';
+    if (reportTypeToDownload) {
+      void handleDownloadReport(reportTypeToDownload);
+      return;
+    }
+
+    setIsTyping(true);
 
     const aiMsgId = `a-${Date.now()}`;
 

@@ -362,7 +362,7 @@ const SystemLogs: React.FC = () => {
                           { value: '下单管理', label: '下单管理' },
                           { value: '大货生产', label: '大货生产' },
                           { value: '物料采购', label: '物料采购' },
-                          { value: '仓库管理', label: '仓库管理' },
+                          { value: '成品管理', label: '成品管理' },
                           { value: '财务管理', label: '财务管理' },
                           { value: '系统设置', label: '系统设置' },
                         ]}

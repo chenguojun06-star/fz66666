@@ -328,6 +328,12 @@ public class StyleInfo {
     private Integer scrapQuantity;
 
     /**
+     * 入库总数量（来自 t_product_warehousing.qualified_quantity 聚合）
+     */
+    @TableField(exist = false)
+    private Integer totalWarehousedQuantity;
+
+    /**
      * 码数颜色配置（JSON格式）
      * 存储样板的尺码、颜色、数量配置信息
      */

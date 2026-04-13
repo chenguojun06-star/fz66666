@@ -277,7 +277,7 @@ const AppStore: React.FC = () => {
                     SUPPLY_CHAIN: '供应链',
                     CORE: '核心对接',
                     PRODUCTION: '生产管理',
-                    WAREHOUSE: '仓库管理',
+                    WAREHOUSE: '成品管理',
                   }[app.category] ?? app.category}</Tag>
                 </div>
               }

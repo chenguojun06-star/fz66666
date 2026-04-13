@@ -125,3 +125,84 @@
   color: #fca5a5;
   background: rgba(239, 68, 68, 0.2);
 }
+
+/* 工厂分布汇总区（chip 标签横排，可点击跳转） */
+.overdue-factory-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 16px 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  background: #fafafa;
+}
+
+.overdue-factory-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 16px;
+  background: #f0f0f0;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  font-size: 12px;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.overdue-factory-row:hover {
+  background: #ff7875;
+  color: #fff;
+}
+
+.overdue-factory-row-total {
+  background: #fff2e8;
+  border: 1px solid #ffbb96;
+  color: #d4380d;
+  font-weight: 600;
+}
+
+.overdue-factory-row-total:hover {
+  background: #ff4d4f;
+  color: #fff;
+  border-color: #ff4d4f;
+}
+
+.overdue-factory-label {
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.overdue-factory-count {
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* 深色主题 */
+:root[data-theme="dark"] .overdue-factory-summary {
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+:root[data-theme="dark"] .overdue-factory-row {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+:root[data-theme="dark"] .overdue-factory-row:hover {
+  background: #a8071a;
+  color: #fff;
+}
+
+:root[data-theme="dark"] .overdue-factory-row-total {
+  background: rgba(255, 77, 79, 0.15);
+  border-color: rgba(255, 77, 79, 0.4);
+  color: #ff7875;
+}
+
+:root[data-theme="dark"] .overdue-factory-row-total:hover {
+  background: #a8071a;
+  color: #fff;
+}

@@ -72,7 +72,7 @@ export const LOCALES = {
         "dashboard": "仪表盘",
         "basic": "样衣管理",
         "production": "生产管理",
-        "warehouse": "仓库管理",
+        "warehouse": "成品管理",
         "finance": "财务管理",
         "system": "系统设置",
         "appStore": "应用商店",

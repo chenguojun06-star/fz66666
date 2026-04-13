@@ -96,6 +96,15 @@ const OrderAnalysisTab: React.FC = () => {
       render: (v: number) => v || 0,
     },
     {
+      title: '入库总数',
+      dataIndex: 'totalWarehousedQuantity',
+      key: 'totalWarehousedQuantity',
+      width: 100,
+      align: 'right' as const,
+      sorter: (a: StyleInfo, b: StyleInfo) => (a.totalWarehousedQuantity || 0) - (b.totalWarehousedQuantity || 0),
+      render: (v: number) => v || 0,
+    },
+    {
       title: '下单总金额',
       key: 'totalOrderAmount',
       width: 120,

@@ -164,6 +164,5 @@
   "style": "v2",
   "sitemapLocation": "sitemap.json",
   "__usePrivacyCheck__": true,
-  "requiredBackgroundModes": [],
-  "requiredBaseLibVersion": "3.3.4"
+  "requiredBackgroundModes": []
 }

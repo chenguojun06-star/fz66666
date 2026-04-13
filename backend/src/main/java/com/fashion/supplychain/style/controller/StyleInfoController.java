@@ -2,7 +2,10 @@ package com.fashion.supplychain.style.controller;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.style.entity.StyleInfo;
+import com.fashion.supplychain.style.orchestration.StyleDocOcrOrchestrator;
 import com.fashion.supplychain.style.orchestration.StyleInfoOrchestrator;
+import org.springframework.http.MediaType;
+import org.springframework.web.multipart.MultipartFile;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,6 +23,9 @@ public class StyleInfoController {
 
     @Autowired
     private StyleInfoOrchestrator styleInfoOrchestrator;
+
+    @Autowired
+    private StyleDocOcrOrchestrator styleDocOcrOrchestrator;
 
     /**
      * 分页查询款号资料列表
@@ -252,5 +258,15 @@ public class StyleInfoController {
         String newColor     = body.get("color");
         String newStyleName = body.get("styleName");
         return Result.success(styleInfoOrchestrator.copyStyle(id, newStyleNo, newColor, newStyleName));
+    }
+
+    /**
+     * AI识别工艺单图片，提取生产要求文本
+     */
+    @PostMapping(value = "/{id}/recognize-requirement", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Result<?> recognizeRequirement(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file) {
+        return Result.success(styleDocOcrOrchestrator.recognizeRequirementDoc(file));
     }
 }

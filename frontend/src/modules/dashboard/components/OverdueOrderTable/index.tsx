@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button, Card, Spin } from 'antd';
 import { ColumnsType } from 'antd/es/table';
+import { useNavigate } from 'react-router-dom';
 import api, { getApiMessage, isApiSuccess } from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
 import { StyleCoverThumb } from '@/components/StyleAssets';
@@ -21,6 +22,7 @@ interface OverdueOrder {
 }
 
 const OverdueOrderTable: React.FC = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [dataSource, setDataSource] = useState<OverdueOrder[]>([]);
   const { sortField, sortOrder, handleSort } = usePersistentSort<'deliveryDate' | 'overdueDays', 'asc' | 'desc'>({
@@ -74,6 +76,18 @@ const OverdueOrderTable: React.FC = () => {
     });
     return sorted;
   }, [dataSource, sortField, sortOrder]);
+
+  // 按工厂统计延期订单数量，用于顶部分布汇总
+  const factoryDistribution = useMemo(() => {
+    const map = new Map<string, number>();
+    dataSource.forEach((order) => {
+      const name = order.factoryName || '未分配工厂';
+      map.set(name, (map.get(name) || 0) + 1);
+    });
+    return Array.from(map.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [dataSource]);
 
   const columns: ColumnsType<OverdueOrder> = [
     {
@@ -181,6 +195,28 @@ const OverdueOrderTable: React.FC = () => {
       className="overdue-order-table-card"
       variant="borderless"
     >
+      {/* 工厂分布汇总：总数 + 各工厂订单数，点击可跳转到对应生产列表 */}
+      {dataSource.length > 0 && (
+        <div className="overdue-factory-summary">
+          <div
+            className="overdue-factory-row overdue-factory-row-total"
+            onClick={() => navigate('/production?filter=overdue')}
+          >
+            <span className="overdue-factory-label">全部延期</span>
+            <span className="overdue-factory-count">{dataSource.length} 单</span>
+          </div>
+          {factoryDistribution.map(({ name, count }) => (
+            <div
+              key={name}
+              className="overdue-factory-row"
+              onClick={() => navigate(`/production?filter=overdue&factoryName=${encodeURIComponent(name)}`)}
+            >
+              <span className="overdue-factory-label">{name}</span>
+              <span className="overdue-factory-count">{count} 单</span>
+            </div>
+          ))}
+        </div>
+      )}
       <Spin spinning={loading}>
         <ResizableTable
           storageKey="overdue-order-dashboard-v2"
@@ -188,7 +224,7 @@ const OverdueOrderTable: React.FC = () => {
           dataSource={sortedDataSource}
           rowKey="id"
           resizableColumns={false}
-          scroll={{ y: 520 }}
+          scroll={{ y: 400 }}
           pagination={{
             defaultPageSize: 10,
             showSizeChanger: true,

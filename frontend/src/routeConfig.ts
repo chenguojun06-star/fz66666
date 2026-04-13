@@ -219,7 +219,7 @@ export const menuConfig: MenuSection[] = [
     path: paths.productionPartners,
   },
   {
-    title: '仓库管理',
+    title: '成品管理',
     key: 'warehouse',
     icon: React.createElement(InboxOutlined),
     items: [

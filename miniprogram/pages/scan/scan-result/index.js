@@ -273,12 +273,13 @@ Page({
 
   async _loadWarehouseOptions() {
     try {
+      // getDictList 使用 ok() 帮助函数，已自动解包 resp.data，res 直接是数组
       var res = await api.system.getDictList('warehouse_location');
-      var records = (res && res.data) ? (Array.isArray(res.data) ? res.data : (res.data.records || [])) : [];
-      if (Array.isArray(records) && records.length > 0) {
+      var records = Array.isArray(res) ? res : ((res && res.records) ? res.records : []);
+      if (records.length > 0) {
         var options = records
           .filter(function(item) { return item.dictLabel; })
-          .sort(function(a, b) { return (a.sortOrder || 0) - (b.sortOrder || 0); })
+          .sort(function(a, b) { return (a.sort || a.sortOrder || 0) - (b.sort || b.sortOrder || 0); })
           .map(function(item) { return item.dictLabel; });
         if (options.length > 0) {
           this.setData({ warehouseOptions: options });
@@ -341,7 +342,7 @@ Page({
           scanPayload.qualityStage = scanPayload.qualityStage || raw.qualityStage || 'receive';
         }
         if (warehouseCode) {
-          scanPayload.warehouseCode = warehouseCode;
+          scanPayload.warehouse = warehouseCode;
         }
         if (raw.isDefectiveReentry) {
           scanPayload.isDefectiveReentry = true;

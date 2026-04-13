@@ -21,7 +21,7 @@ const CORE_MODULES = [
   { code: 'PRODUCTION',   name: '生产管理', icon: '🏭', desc: '生产订单、裁剪分菲、工序扫码、进度跟踪' },
   { code: 'STYLE',        name: '款式管理', icon: '👗', desc: '款式档案、BOM物料清单、样衣制作' },
   { code: 'MATERIAL',     name: '物料管理', icon: '🧵', desc: '面辅料采购、库存管理、出入库记录' },
-  { code: 'WAREHOUSE',    name: '仓库管理', icon: '📦', desc: '成品入库、发货管理、库存盘点' },
+  { code: 'WAREHOUSE',    name: '成品管理', icon: '📦', desc: '成品入库、发货管理、库存盘点' },
   { code: 'FINANCE',      name: '财务管理', icon: '💰', desc: '工资结算、对账单、财务报表' },
   { code: 'CRM',          name: 'CRM客户管理', icon: '🤝', desc: '客户档案、跟单记录、信用评级' },
   { code: 'PROCUREMENT',  name: '供应商管理', icon: '🛒', desc: '供应商档案、采购协同' },

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button, Input, Space, Form, Select, Tag } from 'antd';
+import { Button, Input, Space, Form, Select, Tag, Upload } from 'antd';
 import api from '@/utils/api';
 import { buildProductionSheetHtml } from '../../DataCenter/buildProductionSheetHtml';
 
@@ -77,6 +77,13 @@ const StyleProductionTab: React.FC<Props> = ({
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
   const [reviewSaving, setReviewSaving] = useState(false);
   const [reviewForm] = Form.useForm();
+
+  // ---- 工艺单 OCR Modal ----
+  const [ocrModalOpen, setOcrModalOpen] = useState(false);
+  const [ocrFile, setOcrFile] = useState<File | null>(null);
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrText, setOcrText] = useState('');
+  const [ocrError, setOcrError] = useState('');
 
   const openReviewModal = () => {
     reviewForm.setFieldsValue({
@@ -165,6 +172,52 @@ const StyleProductionTab: React.FC<Props> = ({
     if (!success) {
       message.error('打印失败，请重试');
     }
+  };
+
+  const handleOcrOpen = () => {
+    setOcrModalOpen(true);
+    setOcrFile(null);
+    setOcrText('');
+    setOcrError('');
+  };
+
+  const handleOcrRecognize = async () => {
+    if (!ocrFile) return;
+    setOcrLoading(true);
+    setOcrText('');
+    setOcrError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', ocrFile);
+      const res = await api.post<{ code: number; message: string; data: { rawText: string } }>(
+        `/style/info/${styleId}/recognize-requirement`,
+        formData
+      );
+      if (res.code !== 200) {
+        setOcrError(res.message || 'AI识别失败');
+      } else {
+        setOcrText(res.data?.rawText || '');
+      }
+    } catch (e: unknown) {
+      setOcrError(e instanceof Error ? e.message : 'AI识别失败，请重试');
+    } finally {
+      setOcrLoading(false);
+    }
+  };
+
+  const handleOcrAppend = () => {
+    const joined = allRequirements ? allRequirements + '\n' + ocrText : ocrText;
+    onProductionReqChange(0, joined);
+    setOcrModalOpen(false);
+    setOcrFile(null);
+    setOcrText('');
+  };
+
+  const handleOcrReplace = () => {
+    onProductionReqChange(0, ocrText);
+    setOcrModalOpen(false);
+    setOcrFile(null);
+    setOcrText('');
   };
 
   // 直接读取原文，不做任何合并 / 过滤 / trim
@@ -260,6 +313,11 @@ const StyleProductionTab: React.FC<Props> = ({
           <Button size="small" onClick={printWorkorder}>
             打印制单
           </Button>
+          {!productionReqLocked && (
+            <Button size="small" onClick={handleOcrOpen}>
+              AI识别工艺单
+            </Button>
+          )}
         </Space>
       </div>
       <Input.TextArea
@@ -306,6 +364,57 @@ const StyleProductionTab: React.FC<Props> = ({
             />
           </Form.Item>
         </Form>
+      </SmallModal>
+
+      {/* AI识别工艺单 Modal */}
+      <SmallModal
+        title="AI识别工艺单"
+        open={ocrModalOpen}
+        onCancel={() => setOcrModalOpen(false)}
+        footer={null}
+        width={480}
+      >
+        <Upload.Dragger
+          accept="image/*,.pdf"
+          maxCount={1}
+          beforeUpload={(file) => { setOcrFile(file); setOcrText(''); setOcrError(''); return false; }}
+          fileList={ocrFile ? [{ uid: '-1', name: ocrFile.name, status: 'done' }] : []}
+          onRemove={() => { setOcrFile(null); setOcrText(''); }}
+          style={{ marginBottom: 12 }}
+        >
+          <p style={{ margin: '12px 0 4px' }}>点击或将工艺单图片拖拽到此处</p>
+          <p style={{ color: 'var(--neutral-text-secondary)', fontSize: 'var(--font-size-xs)' }}>
+            支持 JPG / PNG / WEBP / PDF
+          </p>
+        </Upload.Dragger>
+        <Button
+          type="primary"
+          block
+          disabled={!ocrFile}
+          loading={ocrLoading}
+          onClick={handleOcrRecognize}
+        >
+          开始 AI 识别
+        </Button>
+        {ocrError && (
+          <div style={{ color: 'var(--error-color, #ff4d4f)', marginTop: 8, fontSize: 'var(--font-size-xs)' }}>
+            {ocrError}
+          </div>
+        )}
+        {ocrText && (
+          <>
+            <Input.TextArea
+              value={ocrText}
+              readOnly
+              autoSize={{ minRows: 4, maxRows: 10 }}
+              style={{ marginTop: 12, fontFamily: 'monospace', fontSize: 'var(--font-size-sm)' }}
+            />
+            <Space style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
+              <Button onClick={handleOcrAppend}>追加到生产要求</Button>
+              <Button type="primary" onClick={handleOcrReplace}>替换生产要求</Button>
+            </Space>
+          </>
+        )}
       </SmallModal>
     </div>
   );
