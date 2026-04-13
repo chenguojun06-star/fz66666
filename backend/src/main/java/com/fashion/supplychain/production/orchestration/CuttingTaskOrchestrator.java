@@ -132,21 +132,23 @@ public class CuttingTaskOrchestrator {
             Map<String, Object> mutableParams = new java.util.HashMap<>(params != null ? params : new java.util.HashMap<>());
             mutableParams.put("_factoryOrderIds", factoryOrderIds);
             IPage<CuttingTask> factoryPage = cuttingTaskService.queryPage(mutableParams);
-            factoryPage.getRecords().forEach(t -> {
-                if (StringUtils.hasText(t.getProductionOrderId())) {
-                    t.setHasScanRecords(scanRecordDomainService.hasProductionTypeScanRecords(t.getProductionOrderId()));
-                }
-            });
+            java.util.Set<String> scannedIds = scanRecordDomainService.batchHasProductionTypeScanRecords(
+                    factoryPage.getRecords().stream()
+                            .map(CuttingTask::getProductionOrderId)
+                            .filter(StringUtils::hasText)
+                            .collect(Collectors.toList()));
+            factoryPage.getRecords().forEach(t -> t.setHasScanRecords(scannedIds.contains(t.getProductionOrderId())));
             return factoryPage;
         }
         // PC端透传参数，factoryType 由前端明确传递（全部/内部/外发），不在后端强制覆盖
         Map<String, Object> pcParams = params != null ? new java.util.HashMap<>(params) : new java.util.HashMap<>();
         IPage<CuttingTask> page = cuttingTaskService.queryPage(pcParams);
-        page.getRecords().forEach(t -> {
-            if (StringUtils.hasText(t.getProductionOrderId())) {
-                t.setHasScanRecords(scanRecordDomainService.hasProductionTypeScanRecords(t.getProductionOrderId()));
-            }
-        });
+        java.util.Set<String> scannedIds = scanRecordDomainService.batchHasProductionTypeScanRecords(
+                page.getRecords().stream()
+                        .map(CuttingTask::getProductionOrderId)
+                        .filter(StringUtils::hasText)
+                        .collect(Collectors.toList()));
+        page.getRecords().forEach(t -> t.setHasScanRecords(scannedIds.contains(t.getProductionOrderId())));
         return page;
     }
 
@@ -211,20 +213,12 @@ public class CuttingTaskOrchestrator {
 
         List<CuttingTask> allTasks = cuttingTaskService.list(baseWrapper);
 
-        long totalCount = allTasks.size();
-        long pendingCount = allTasks.stream().filter(t -> "pending".equals(t.getStatus())).count();
-        long receivedCount = allTasks.stream().filter(t -> "received".equals(t.getStatus())).count();
-        long bundledCount = allTasks.stream().filter(t -> "bundled".equals(t.getStatus())).count();
-        long totalQuantity = allTasks.stream()
-                .mapToLong(t -> t.getOrderQuantity() != null ? t.getOrderQuantity() : 0)
-                .sum();
-
         Map<String, Object> stats = new java.util.LinkedHashMap<>();
-        stats.put("totalCount", totalCount);
-        stats.put("totalQuantity", totalQuantity);
-        stats.put("pendingCount", pendingCount);
-        stats.put("receivedCount", receivedCount);
-        stats.put("bundledCount", bundledCount);
+        stats.put("totalCount", (long) allTasks.size());
+        stats.put("totalQuantity", allTasks.stream().mapToLong(t -> t.getOrderQuantity() != null ? t.getOrderQuantity() : 0).sum());
+        stats.put("pendingCount", allTasks.stream().filter(t -> "pending".equals(t.getStatus())).count());
+        stats.put("receivedCount", allTasks.stream().filter(t -> "received".equals(t.getStatus())).count());
+        stats.put("bundledCount", allTasks.stream().filter(t -> "bundled".equals(t.getStatus())).count());
         return stats;
     }
 

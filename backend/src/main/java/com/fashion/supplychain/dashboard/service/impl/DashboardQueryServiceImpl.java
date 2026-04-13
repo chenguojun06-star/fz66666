@@ -529,163 +529,114 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         if (start == null || end == null) {
             return 0;
         }
-        List<ProductOutstock> list = productOutstockService.lambdaQuery()
-                .eq(ProductOutstock::getDeleteFlag, 0)
-                .between(ProductOutstock::getCreateTime, start, end)
-                .select(ProductOutstock::getOutstockQuantity)
-                .list();
-        return list.stream()
-                .mapToInt(o -> o.getOutstockQuantity() != null ? o.getOutstockQuantity() : 0)
-                .sum();
+        QueryWrapper<ProductOutstock> qw = new QueryWrapper<ProductOutstock>()
+                .select("COALESCE(SUM(COALESCE(outstock_quantity, 0)), 0) as total")
+                .eq("delete_flag", 0)
+                .between("create_time", start, end);
+        return extractLongScalar(productOutstockService.getBaseMapper().selectMaps(qw), "total");
     }
 
     @Override
     public List<Integer> getDailyOrderQuantities(LocalDateTime start, LocalDateTime end) {
-        // 获取每天的订单总数量
-        List<ProductionOrder> orders = productionOrderService.lambdaQuery()
-                .eq(ProductionOrder::getDeleteFlag, 0)
-                .ge(start != null, ProductionOrder::getCreateTime, start)
-                .le(end != null, ProductionOrder::getCreateTime, end)
-                .select(ProductionOrder::getCreateTime, ProductionOrder::getOrderQuantity)
-                .orderByAsc(ProductionOrder::getCreateTime)
-                .list();
-
-        // 按日期分组统计数量
-        Map<String, Integer> dailyQuantities = new java.util.HashMap<>();
-        for (ProductionOrder order : orders) {
-            String date = order.getCreateTime().toLocalDate().toString();
-            int quantity = order.getOrderQuantity() != null ? order.getOrderQuantity() : 0;
-            dailyQuantities.merge(date, quantity, Integer::sum);
+        if (start == null || end == null) return java.util.Collections.nCopies(30, 0);
+        QueryWrapper<ProductionOrder> qw = new QueryWrapper<ProductionOrder>()
+                .select("DATE(create_time) as d", "COALESCE(SUM(COALESCE(order_quantity, 0)), 0) as total")
+                .eq("delete_flag", 0)
+                .ge(start != null, "create_time", start)
+                .le(end != null, "create_time", end)
+                .groupBy("DATE(create_time)");
+        List<Map<String, Object>> rows = productionOrderMapper.selectMaps(qw);
+        java.util.Map<String, Integer> dailyMap = new java.util.HashMap<>();
+        for (Map<String, Object> row : rows) {
+            String d = String.valueOf(row.get("d") != null ? row.get("d") : row.get("D"));
+            long total = ((Number) row.getOrDefault("total", row.getOrDefault("TOTAL", 0))).longValue();
+            dailyMap.put(d, (int) total);
         }
-
-        // 生成完整的30天数据列表
         List<Integer> result = new java.util.ArrayList<>();
         for (int i = 0; i < 30; i++) {
             String date = start.plusDays(i).toLocalDate().toString();
-            result.add(dailyQuantities.getOrDefault(date, 0));
+            result.add(dailyMap.getOrDefault(date, 0));
         }
         return result;
     }
 
     @Override
     public List<Integer> getDailyCuttingQuantities(LocalDateTime start, LocalDateTime end) {
-        // 获取每天的裁剪总数量：只统计已完成（status='bundled'）的裁剪任务
-        // 使用完成时间（bundledTime）而不是创建时间
-        log.debug("查询裁剪数量: start={}, end={}", start, end);
-
-        List<CuttingTask> tasks = cuttingTaskService.lambdaQuery()
-                .eq(CuttingTask::getStatus, "bundled")  // 只统计已完成的裁剪任务
-                .ge(start != null, CuttingTask::getBundledTime, start)
-                .le(end != null, CuttingTask::getBundledTime, end)
-                .isNotNull(CuttingTask::getBundledTime)  // 必须有完成时间
-                .isNotNull(CuttingTask::getOrderQuantity)
-                .orderByAsc(CuttingTask::getBundledTime)
-                .list();
-
-        log.debug("查询到{}条已完成的裁剪任务", tasks.size());
-        if (!tasks.isEmpty()) {
-            log.info("前3条数据: {}", tasks.stream().limit(3).map(t ->
-                String.format("[%s: %d件, bundled=%s]", t.getProductionOrderNo(), t.getOrderQuantity(), t.getBundledTime())
-            ).toList());
+        if (start == null || end == null) return java.util.Collections.nCopies(30, 0);
+        QueryWrapper<CuttingTask> qw = new QueryWrapper<CuttingTask>()
+                .select("DATE(bundled_time) as d", "COALESCE(SUM(COALESCE(order_quantity, 0)), 0) as total")
+                .eq("status", "bundled")
+                .ge(start != null, "bundled_time", start)
+                .le(end != null, "bundled_time", end)
+                .isNotNull("bundled_time")
+                .isNotNull("order_quantity")
+                .groupBy("DATE(bundled_time)");
+        List<Map<String, Object>> rows = cuttingTaskService.getBaseMapper().selectMaps(qw);
+        java.util.Map<String, Integer> dailyMap = new java.util.HashMap<>();
+        for (Map<String, Object> row : rows) {
+            String d = String.valueOf(row.get("d") != null ? row.get("d") : row.get("D"));
+            long total = ((Number) row.getOrDefault("total", row.getOrDefault("TOTAL", 0))).longValue();
+            dailyMap.put(d, (int) total);
         }
-
-        // 按日期分组统计数量（使用完成日期）
-        Map<String, Integer> dailyQuantities = new java.util.HashMap<>();
-        for (CuttingTask task : tasks) {
-            String date = task.getBundledTime().toLocalDate().toString();
-            int quantity = task.getOrderQuantity();
-            dailyQuantities.merge(date, quantity, Integer::sum);
-        }
-
-        log.info("按日期分组后: {}", dailyQuantities);
-
-        // 生成完整的30天数据列表
         List<Integer> result = new java.util.ArrayList<>();
         for (int i = 0; i < 30; i++) {
             String date = start.plusDays(i).toLocalDate().toString();
-            result.add(dailyQuantities.getOrDefault(date, 0));
+            result.add(dailyMap.getOrDefault(date, 0));
         }
-
-        log.info("最终30天裁剪数量: {}", result);
         return result;
     }
 
     @Override
     public List<Integer> getDailyScanCounts(LocalDateTime start, LocalDateTime end) {
-        // 获取每天的扫菲次数：只统计真实的扫码操作（排除系统自动创建的记录）
-        // 判断标准：operator_name != 'system' 且 operator_id 不为空
-        log.debug("查询扫菲次数: start={}, end={}", start, end);
-
-        List<ScanRecord> scans;
-        scans = scanRecordService.lambdaQuery()
-                .ge(start != null, ScanRecord::getScanTime, start)
-                .le(end != null, ScanRecord::getScanTime, end)
-                .eq(ScanRecord::getScanResult, "success")   // 只统计成功的扫码
-                .ne(ScanRecord::getOperatorName, "system")  // 排除系统自动创建的记录
-                .isNotNull(ScanRecord::getOperatorId)        // 只统计有真实操作人的记录
-                .isNotNull(ScanRecord::getScanTime)
-                .orderByAsc(ScanRecord::getScanTime)
-                .list();
-
-        log.debug("查询到{}条扫码记录", scans.size());
-
-        // 按日期分组统计次数
-        Map<String, Integer> dailyCounts = new java.util.HashMap<>();
-        for (ScanRecord scan : scans) {
-            String date = scan.getScanTime().toLocalDate().toString();
-            dailyCounts.merge(date, 1, Integer::sum);
+        if (start == null || end == null) return java.util.Collections.nCopies(30, 0);
+        QueryWrapper<ScanRecord> qw = new QueryWrapper<ScanRecord>()
+                .select("DATE(scan_time) as d", "COUNT(*) as total")
+                .ge("scan_time", start)
+                .le("scan_time", end)
+                .eq("scan_result", "success")
+                .ne("operator_name", "system")
+                .isNotNull("operator_id")
+                .isNotNull("scan_time")
+                .groupBy("DATE(scan_time)");
+        List<Map<String, Object>> rows = scanRecordService.getBaseMapper().selectMaps(qw);
+        java.util.Map<String, Integer> dailyMap = new java.util.HashMap<>();
+        for (Map<String, Object> row : rows) {
+            String d = String.valueOf(row.get("d") != null ? row.get("d") : row.get("D"));
+            long total = ((Number) row.getOrDefault("total", row.getOrDefault("TOTAL", 0))).longValue();
+            dailyMap.put(d, (int) total);
         }
-
-        log.info("按日期分组扫菲次数: {}", dailyCounts);
-
-        // 生成完整的30天数据列表
         List<Integer> result = new java.util.ArrayList<>();
         for (int i = 0; i < 30; i++) {
             String date = start.plusDays(i).toLocalDate().toString();
-            result.add(dailyCounts.getOrDefault(date, 0));
+            result.add(dailyMap.getOrDefault(date, 0));
         }
-
-        log.info("最终30天扫菲次数: {}", result);
         return result;
     }
 
     @Override
     public List<Integer> getDailyScanQuantities(LocalDateTime start, LocalDateTime end) {
-        // 获取每天的扫菲数量：只统计真实的扫码操作（排除系统自动创建的记录）
-        // 判断标准：operator_name != 'system' 且 operator_id 不为空
-        log.debug("查询扫菲数量: start={}, end={}", start, end);
-
-        List<ScanRecord> scans;
-        scans = scanRecordService.lambdaQuery()
-                .ge(start != null, ScanRecord::getScanTime, start)
-                .le(end != null, ScanRecord::getScanTime, end)
-                .eq(ScanRecord::getScanResult, "success")   // 只统计成功的扫码
-                .ne(ScanRecord::getOperatorName, "system")  // 排除系统自动创建的记录
-                .isNotNull(ScanRecord::getOperatorId)        // 只统计有真实操作人的记录
-                .isNotNull(ScanRecord::getScanTime)
-                .orderByAsc(ScanRecord::getScanTime)
-                .list();
-
-        log.debug("查询到{}条扫码记录（数量统计）", scans.size());
-
-        // 按日期分组统计数量
-        Map<String, Integer> dailyQuantities = new java.util.HashMap<>();
-        for (ScanRecord scan : scans) {
-            String date = scan.getScanTime().toLocalDate().toString();
-            Integer quantity = scan.getQuantity() != null ? scan.getQuantity() : 0;
-            dailyQuantities.merge(date, quantity, Integer::sum);
+        if (start == null || end == null) return java.util.Collections.nCopies(30, 0);
+        QueryWrapper<ScanRecord> qw = new QueryWrapper<ScanRecord>()
+                .select("DATE(scan_time) as d", "COALESCE(SUM(COALESCE(quantity, 0)), 0) as total")
+                .ge("scan_time", start)
+                .le("scan_time", end)
+                .eq("scan_result", "success")
+                .ne("operator_name", "system")
+                .isNotNull("operator_id")
+                .isNotNull("scan_time")
+                .groupBy("DATE(scan_time)");
+        List<Map<String, Object>> rows = scanRecordService.getBaseMapper().selectMaps(qw);
+        java.util.Map<String, Integer> dailyMap = new java.util.HashMap<>();
+        for (Map<String, Object> row : rows) {
+            String d = String.valueOf(row.get("d") != null ? row.get("d") : row.get("D"));
+            long total = ((Number) row.getOrDefault("total", row.getOrDefault("TOTAL", 0))).longValue();
+            dailyMap.put(d, (int) total);
         }
-
-        log.info("按日期分组扫菲数量: {}", dailyQuantities);
-
-        // 生成完整的30天数据列表
         List<Integer> result = new java.util.ArrayList<>();
         for (int i = 0; i < 30; i++) {
             String date = start.plusDays(i).toLocalDate().toString();
-            result.add(dailyQuantities.getOrDefault(date, 0));
+            result.add(dailyMap.getOrDefault(date, 0));
         }
-
-        log.info("最终30天扫菲数量: {}", result);
         return result;
     }
 

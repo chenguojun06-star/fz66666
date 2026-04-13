@@ -417,6 +417,28 @@ public class ProductionOrderScanRecordDomainService {
         }
     }
 
+    public java.util.Set<String> batchHasProductionTypeScanRecords(java.util.Collection<String> orderIds) {
+        if (orderIds == null || orderIds.isEmpty()) return java.util.Collections.emptySet();
+        try {
+            java.util.Set<String> result = new java.util.HashSet<>();
+            List<ScanRecord> records = scanRecordMapper.selectList(
+                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ScanRecord>()
+                            .in(ScanRecord::getOrderId, orderIds)
+                            .eq(ScanRecord::getScanType, "production")
+                            .eq(ScanRecord::getScanResult, "success")
+                            .gt(ScanRecord::getQuantity, 0)
+                            .select(ScanRecord::getOrderId)
+                            .groupBy(ScanRecord::getOrderId));
+            for (ScanRecord r : records) {
+                if (r.getOrderId() != null) result.add(r.getOrderId());
+            }
+            return result;
+        } catch (Exception e) {
+            log.warn("Failed to batch check production scan records: {}", e.getMessage());
+            return java.util.Collections.emptySet();
+        }
+    }
+
     public void upsertStageScanRecord(
             String requestId,
             String orderId,
