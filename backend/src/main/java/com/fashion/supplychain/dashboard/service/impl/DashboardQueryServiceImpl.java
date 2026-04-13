@@ -169,7 +169,11 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         if (start == null || end == null) {
             return 0;
         }
-        return scanRecordService.lambdaQuery().between(ScanRecord::getScanTime, start, end).count();
+        // 排除 orchestration 类型：该类型是系统自动生成的批量编排记录，非工人实际扫码动作
+        return scanRecordService.lambdaQuery()
+                .between(ScanRecord::getScanTime, start, end)
+                .ne(ScanRecord::getScanType, "orchestration")
+                .count();
     }
 
     @Override

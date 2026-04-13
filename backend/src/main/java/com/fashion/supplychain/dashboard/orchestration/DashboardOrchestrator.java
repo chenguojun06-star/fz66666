@@ -128,7 +128,10 @@ public class DashboardOrchestrator {
         data.setProductionOrderCount(productionCount);  // 生产订单
         data.setOrderQuantityTotal(dashboardQueryService.sumTotalOrderQuantity());  // 订单数量总和
         data.setOverdueOrderCount(dashboardQueryService.countOverdueOrders());  // 延期订单
-        data.setTodayScanCount(dashboardQueryService.sumTodayScanQuantity());  // 当天生产件数
+        // 今日实际扫码次数（排除orchestration系统编排记录，只统计工人真实扫码动作）
+        LocalDateTime todayStart = LocalDateTime.of(today, LocalTime.MIN);
+        LocalDateTime todayEnd   = LocalDateTime.of(today, LocalTime.MAX);
+        data.setTodayScanCount(dashboardQueryService.countScansBetween(todayStart, todayEnd));
         data.setTotalScanCount(dashboardQueryService.sumTotalScanQuantity());  // 生产总件数
         data.setTodayWarehousingCount(warehousingOrderCount);  // 当天入库
         data.setTotalWarehousingCount(dashboardQueryService.countTotalWarehousing());  // 入库总数

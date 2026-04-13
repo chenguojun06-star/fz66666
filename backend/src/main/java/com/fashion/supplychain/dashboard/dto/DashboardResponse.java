@@ -10,7 +10,7 @@ public class DashboardResponse {
     private long productionOrderCount;       // 生产订单
     private long orderQuantityTotal;         // 订单数量
     private long overdueOrderCount;          // 延期订单
-    private long todayScanCount;             // 当天生产件数
+    private long todayScanCount;             // 今日实际扫码次数（排除orchestration系统记录）
     private long totalScanCount;             // 生产总件数
     private long todayWarehousingCount;      // 当天入库
     private long totalWarehousingCount;      // 入库总数
