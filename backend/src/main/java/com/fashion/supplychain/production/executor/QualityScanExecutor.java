@@ -125,12 +125,18 @@ public class QualityScanExecutor {
             throw new IllegalStateException("进度节点已完成，该订单已结束质检");
         }
 
-        inventoryValidator.validateNotExceedOrderQuantity(order, "quality", "质检", qty, bundle);
+        // ★ 先解析质检阶段，用于决定是否需要数量预检
+        String qualityStage = parseQualityStageFromParams(params);
+
+        // 质检确认阶段只更新已有领取记录（写 confirmTime + 质检结果），不新增扫码数量，
+        // 因此跳过数量校验；否则 receive 记录的 quantity 会被重复计入 completedQty，
+        // 导致 "扫码数量超出裁剪数量限制" 误报（尤其单菲号订单必现）。
+        if (!"confirm".equals(qualityStage)) {
+            inventoryValidator.validateNotExceedOrderQuantity(order, "quality", "质检", qty, bundle);
+        }
 
         // ★ 生产前置校验：车缝 + 尾部父节点下所有子工序都有归属人才能质检
         validateProductionPrerequisite(order, bundle);
-
-        String qualityStage = parseQualityStageFromParams(params);
 
         // 领取或验收阶段
         Map<String, Object> result;
