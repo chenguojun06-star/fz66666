@@ -114,7 +114,7 @@ public class ProductionScanStageSupport {
                     .eq(ScanRecord::getOrderId, order.getId())
                     .and(bw -> bw.isNull(ScanRecord::getCuttingBundleId)
                             .or().eq(ScanRecord::getCuttingBundleId, bundle.getId()))
-                    .in(ScanRecord::getScanType, java.util.Arrays.asList("production", "cutting"))
+                    .in(ScanRecord::getScanType, java.util.Arrays.asList("production", "cutting", "quality"))
                     .eq(ScanRecord::getScanResult, "success")
                     .and(w -> w.eq(ScanRecord::getProcessCode, process)
                             .or().eq(ScanRecord::getProcessName, process)));

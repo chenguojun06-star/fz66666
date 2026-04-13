@@ -20,6 +20,7 @@ Page({
     quantity: 1,
     warehouseCode: '',
     showWarehouse: false,
+    isQualityReceive: false,
     imageInsight: '',
     loading: false
   },
@@ -52,6 +53,7 @@ Page({
     }
     var summary = this._buildSummary(processOptions, selectedNames);
     var isWarehouseStage = raw.progressStage === 'warehouse' || raw.progressStage === '入库';
+    var isQualityReceive = raw.progressStage === 'quality' || raw.progressStage === '质检';
 
     var coverImage = '';
     if (raw.orderDetail && raw.orderDetail.coverImage) {
@@ -92,6 +94,7 @@ Page({
       selectedAmount: summary.amount,
       quantity: normalizePositiveInt(raw.quantity, 1),
       showWarehouse: isWarehouseStage,
+      isQualityReceive: isQualityReceive,
       warehouseCode: raw.warehouseCode || ''
     });
 
@@ -289,8 +292,14 @@ Page({
     try {
       for (var i = 0; i < selectedOptions.length; i++) {
         var option = selectedOptions[i];
+        // 质检工序强制路由为 quality，避免 normalizeScanType 因传入 'production' 直接返回
+        // 而跳过质检分支（Bug #1: 'production' 是标准值会被直接返回，不会检查 progressStage）
+        var effectiveScanType = option.scanType || 'production';
+        if (raw.progressStage === 'quality' || raw.progressStage === '质检') {
+          effectiveScanType = 'quality';
+        }
         var scanPayload = Object.assign({}, raw.scanData || {}, {
-          scanType: normalizeScanType(raw.progressStage, option.scanType || 'production'),
+          scanType: normalizeScanType(raw.progressStage, effectiveScanType),
           processName: option.value,
           quantity: quantity
         });
@@ -320,8 +329,18 @@ Page({
       }
 
       if (failedItems.length === 0) {
-        toast.success('已完成 ' + successCount + ' 个工序扫码');
-        wx.navigateBack();
+        if (this.data.isQualityReceive) {
+          wx.showModal({
+            title: '已领取质检任务',
+            content: '请在小云待办中点击该任务，录入质检结果（合格/不合格）。',
+            showCancel: false,
+            confirmText: '知道了',
+            success: function() { wx.navigateBack(); }
+          });
+        } else {
+          toast.success('已完成 ' + successCount + ' 个工序扫码');
+          wx.navigateBack();
+        }
       } else if (successCount > 0) {
         this.setData({ loading: false });
         var failNames = failedItems.map(function(f) { return f.processName; }).join('、');

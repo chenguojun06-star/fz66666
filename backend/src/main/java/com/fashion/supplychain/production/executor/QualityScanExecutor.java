@@ -372,8 +372,9 @@ public class QualityScanExecutor {
                 if (productionCount <= 0) {
                     throw new IllegalStateException("温馨提示：该菲号还未完成生产扫码哦～请先完成所有生产工序（车缝/尾部）后再进行质检");
                 }
-                // 仍需校验尾部
-                stageSupport.validateParentStagePrerequisite(order, bundle, "入库", null);
+                // 校验车缝子工序是否都完成（目标"尾部" → 检查上一个父节点"车缝"的子工序）
+                // 注意：不能传"入库"，否则会检查"尾部"的子工序——质检本身就在"尾部"下，形成循环依赖
+                stageSupport.validateParentStagePrerequisite(order, bundle, "尾部", null);
                 return;
             }
 
@@ -403,9 +404,10 @@ public class QualityScanExecutor {
                                 + "。完成这些工序后就可以进行质检啦！（尾部工序也需全部完成）");
             }
 
-            // 3. 尾部子工序全部完成校验（基于模板配置）
-            // 质检在流程上位于“尾部”之后，入库之前，必须确保尾部所有子工序已完成
-            stageSupport.validateParentStagePrerequisite(order, bundle, "入库", null);
+            // 3. 车缝子工序全部完成校验（基于模板配置）
+            // 质检属于"尾部"下的子工序，传"尾部"作为目标 → 检查上一个父节点"车缝"是否全部完成
+            // 注意：不能传"入库"，否则会检查"尾部"的子工序——质检本身就在"尾部"下，形成循环依赖
+            stageSupport.validateParentStagePrerequisite(order, bundle, "尾部", null);
 
         } catch (IllegalStateException e) {
             throw e;
