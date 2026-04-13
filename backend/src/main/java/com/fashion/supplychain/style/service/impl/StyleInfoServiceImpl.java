@@ -127,6 +127,12 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                     .or()
                     .eq(StyleInfo::getStatus, STYLE_STATUS_SCRAPPED));
         }
+        // 排除已推大货：excludePushedToOrder=true 时过滤掉 pushedToOrder=1 的款式（样衣开发待办只关心还未推大货的款）
+        boolean excludePushedToOrder = Boolean.TRUE.equals(params.get("excludePushedToOrder"));
+        if (excludePushedToOrder) {
+            // pushedToOrder IS NULL 或 pushedToOrder != 1，涵盖未设置和明确未推大货两种情况
+            wrapper.and(w -> w.isNull(StyleInfo::getPushedToOrder).or().ne(StyleInfo::getPushedToOrder, 1));
+        }
 
         if (StringUtils.hasText(progressNode)) {
             String node = progressNode.trim();

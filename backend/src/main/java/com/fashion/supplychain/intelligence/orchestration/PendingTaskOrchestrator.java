@@ -283,6 +283,8 @@ public class PendingTaskOrchestrator {
         params.put("tenantId", tenantId);
         // 待办任务只关心进行中的样衣开发，明确排除已报废款式
         params.put("excludeScrapped", Boolean.TRUE);
+        // 排除已推大货（pushedToOrder=1）的款：样衣已完成并推大货，无需再出现在待办中
+        params.put("excludePushedToOrder", Boolean.TRUE);
         List<String> devNodes = List.of("未开始", "纸样开发中", "样衣制作中");
         List<StyleInfo> styles = new ArrayList<>();
         for (String node : devNodes) {
@@ -297,6 +299,12 @@ public class PendingTaskOrchestrator {
         Set<Long> seenIds = new LinkedHashSet<>();
         List<StyleInfo> uniqueStyles = styles.stream()
                 .filter(s -> s.getId() != null && seenIds.add(s.getId()))
+                // 防御过滤：排除已报废和已完成的款式（双重保险，DB层已过滤但此处兜底）
+                .filter(s -> {
+                    String pn = s.getProgressNode();
+                    return pn != null && !pn.equals("开发样报废")
+                            && !pn.equals("样衣完成") && !pn.equals("纸样完成");
+                })
                 .collect(Collectors.toList());
         return uniqueStyles.stream().limit(MAX_PER_CATEGORY).map(s -> {
             PendingTaskDTO dto = new PendingTaskDTO();
