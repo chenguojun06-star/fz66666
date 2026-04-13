@@ -9,7 +9,7 @@ import api from '@/utils/api';
 import tenantService from '@/services/tenantService';
 import { formatDateTime } from '@/utils/datetime';
 import { useViewport } from '@/utils/useViewport';
-import { useAuth } from '@/utils/auth';
+import { useAuth } from '@/utils/AuthContext';
 import './styles.css';
 import { message } from '@/utils/antdStatic';
 import { readPageSize } from '@/utils/pageSizeStore';
