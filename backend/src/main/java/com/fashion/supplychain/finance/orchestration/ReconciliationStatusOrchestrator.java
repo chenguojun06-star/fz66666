@@ -205,6 +205,13 @@ public class ReconciliationStatusOrchestrator {
                         log.warn("物料对账推送账单汇总失败（不影响主流程）: id={}", rid, e);
                     }
                 }
+                if ("rejected".equals(to) && billAggregationOrchestrator != null) {
+                    try {
+                        billAggregationOrchestrator.cancelBySource("MATERIAL_RECONCILIATION", rid);
+                    } catch (Exception e) {
+                        log.warn("物料对账驳回联动取消账单失败（不影响主流程）: id={}", rid, e);
+                    }
+                }
                 return "状态更新成功";
             }
             if (scope == Scope.MATERIAL) {
@@ -280,6 +287,13 @@ public class ReconciliationStatusOrchestrator {
                         billAggregationOrchestrator.pushBill(pushReq);
                     } catch (Exception e) {
                         log.warn("成品对账推送账单汇总失败（不影响主流程）: id={}", rid, e);
+                    }
+                }
+                if ("rejected".equals(to) && billAggregationOrchestrator != null) {
+                    try {
+                        billAggregationOrchestrator.cancelBySource("SHIPMENT_RECONCILIATION", rid);
+                    } catch (Exception e) {
+                        log.warn("成品对账驳回联动取消账单失败（不影响主流程）: id={}", rid, e);
                     }
                 }
 

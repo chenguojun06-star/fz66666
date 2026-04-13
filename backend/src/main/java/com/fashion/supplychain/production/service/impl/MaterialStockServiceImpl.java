@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -454,5 +455,24 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
         patch.setSafetyStock(safetyStock);
         patch.setUpdateTime(java.time.LocalDateTime.now());
         return this.updateById(patch);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void decreaseStockForCancelReceive(MaterialPurchase purchase, int quantity) {
+        if (quantity <= 0) {
+            return;
+        }
+        MaterialStock stock = findOrCreateStock(purchase);
+        if (stock == null) {
+            log.warn("decreaseStockForCancelReceive: 库存记录不存在，跳过: materialCode={}", purchase.getMaterialCode());
+            return;
+        }
+        this.update(null, new LambdaUpdateWrapper<MaterialStock>()
+                .eq(MaterialStock::getId, stock.getId())
+                .setSql("quantity = GREATEST(0, quantity - " + quantity + ")")
+                .setSql("total_value = ROUND(GREATEST(0, quantity - " + quantity + ") * COALESCE(unit_price, 0), 2)")
+                .set(MaterialStock::getUpdateTime, java.time.LocalDateTime.now()));
+        log.info("Decreased stock for cancelReceive: id={}, delta={}", stock.getId(), quantity);
     }
 }

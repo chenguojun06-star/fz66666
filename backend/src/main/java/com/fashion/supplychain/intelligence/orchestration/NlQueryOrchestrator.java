@@ -268,7 +268,7 @@ public class NlQueryOrchestrator {
             "self_healing", "learning", "root_cause", "pattern", "goal", "meeting",
             "quote", "supplier_scorecard", "smart_assignment",
             "execution", "finance_audit", "help", "summary",
-            "personnel_delay", "sample_delay", "delay_trend"
+            "personnel_delay", "sample_delay", "delay_trend", "inventory_check"
     );
 
     private static final String LLM_INTENT_PROMPT =
@@ -295,6 +295,7 @@ public class NlQueryOrchestrator {
             + "scheduling - 排期/排产/调度\n"
             + "notification - 通知/消息/提醒\n"
             + "self_healing - 自动修复/自愈/系统修复\n"
+            + "inventory_check - 盘点/库存盘点/物料盘点/成品盘点/库存对账\n"
             + "learning - 学习/报告/培训\n"
             + "root_cause - 根因/原因分析/为什么会发生\n"
             + "pattern - 规律/模式/反复出现的问题\n"
@@ -367,6 +368,7 @@ public class NlQueryOrchestrator {
             case "personnel_delay":  return smartHandlers.handlePersonnelDelayQuery();
             case "sample_delay":     return smartHandlers.handleSampleDelayQuery();
             case "delay_trend":      return smartHandlers.handleDelayTrendQuery();
+            case "inventory_check":  return smartHandlers.handleInventoryCheckQuery();
             default:                  return null;
         }
     }

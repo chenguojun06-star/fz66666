@@ -43,6 +43,16 @@ public class BillAggregationOrchestrator {
     /**
      * 推送账单到汇总表（幂等 — 基于 source_type + source_id + tenant_id 唯一索引）
      */
+    public boolean billExists(String sourceType, String sourceId) {
+        Long tenantId = TenantAssert.requireTenantId();
+        return billAggregationService.lambdaQuery()
+                .eq(BillAggregation::getSourceType, sourceType)
+                .eq(BillAggregation::getSourceId, sourceId)
+                .eq(BillAggregation::getTenantId, tenantId)
+                .eq(BillAggregation::getDeleteFlag, 0)
+                .exists();
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public BillAggregation pushBill(BillPushRequest request) {
         Long tenantId = TenantAssert.requireTenantId();
@@ -55,7 +65,17 @@ public class BillAggregationOrchestrator {
                 .eq(BillAggregation::getDeleteFlag, 0)
                 .one();
         if (existing != null) {
-            log.info("[BillAggregation] 账单已存在，跳过推送: sourceType={}, sourceId={}, billNo={}",
+            if (request.getAmount() != null && existing.getAmount() != null
+                    && request.getAmount().compareTo(existing.getAmount()) != 0
+                    && !"SETTLED".equals(existing.getStatus()) && !"CANCELLED".equals(existing.getStatus())) {
+                existing.setAmount(request.getAmount());
+                existing.setRemark((existing.getRemark() != null ? existing.getRemark() + " | " : "")
+                        + "金额同步更新: " + existing.getAmount() + "→" + request.getAmount());
+                billAggregationService.updateById(existing);
+                log.info("[BillAggregation] 账单金额同步: billNo={}, old={}, new={}",
+                        existing.getBillNo(), existing.getAmount(), request.getAmount());
+            }
+            log.info("[BillAggregation] 账单已存在: sourceType={}, sourceId={}, billNo={}",
                     request.getSourceType(), request.getSourceId(), existing.getBillNo());
             return existing;
         }
@@ -234,6 +254,29 @@ public class BillAggregationOrchestrator {
         bill.setRemark(reason);
         billAggregationService.updateById(bill);
         log.info("[BillAggregation] 取消账单: billNo={}, reason={}", bill.getBillNo(), reason);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void cancelBySource(String sourceType, String sourceId) {
+        Long tenantId = TenantAssert.requireTenantId();
+        BillAggregation existing = billAggregationService.lambdaQuery()
+                .eq(BillAggregation::getSourceType, sourceType)
+                .eq(BillAggregation::getSourceId, sourceId)
+                .eq(BillAggregation::getTenantId, tenantId)
+                .eq(BillAggregation::getDeleteFlag, 0)
+                .one();
+        if (existing == null) {
+            return;
+        }
+        if ("SETTLED".equals(existing.getStatus())) {
+            log.warn("[BillAggregation] 已结清账单不可取消: billNo={}, source={}:{}",
+                    existing.getBillNo(), sourceType, sourceId);
+            return;
+        }
+        existing.setStatus("CANCELLED");
+        existing.setRemark("上游单据操作自动取消: sourceType=" + sourceType);
+        billAggregationService.updateById(existing);
+        log.info("[BillAggregation] 联动取消账单: billNo={}, source={}:{}", existing.getBillNo(), sourceType, sourceId);
     }
 
     // ==================== 内部方法 ====================

@@ -90,7 +90,7 @@ public class OrderFlowStageFillHelper {
         // 从 process_tracking 加载各工序实际已扫数量（与弹窗同源，修正视图匹配遗漏问题）
         Map<String, Map<String, Integer>> trackingQtyMap = new HashMap<>();
         try {
-            List<Map<String, Object>> trackingRows = processTrackingMapper.selectScannedQtySummaryByOrderIds(orderIds);
+            List<Map<String, Object>> trackingRows = processTrackingMapper.selectScannedQtySummaryByOrderIds(orderIds, com.fashion.supplychain.common.UserContext.tenantId());
             if (trackingRows != null) {
                 for (Map<String, Object> row : trackingRows) {
                     String toid = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(row, "productionOrderId"));

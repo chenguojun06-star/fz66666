@@ -79,6 +79,9 @@ public class InventoryValidator {
     @Autowired
     private CuttingBundleService cuttingBundleService;
 
+    @Autowired
+    private com.fashion.supplychain.production.service.ProductionOrderService productionOrderService;
+
     /**
      * 验证扫码数量不超出裁剪数量
      *
@@ -237,9 +240,14 @@ public class InventoryValidator {
      */
     public int getRemainingQuantity(String orderId, String scanType, String progressStage) {
         try {
-            // 这里需要查询订单获取总数量，简化处理
-            // 实际使用时应注入 ProductionOrderService
-            return Integer.MAX_VALUE; // 暂时返回最大值
+            ProductionOrder order = productionOrderService.getById(orderId);
+            if (order == null) return 0;
+            int totalQty = calculateTotalCuttingQuantity(order.getId());
+            if (totalQty <= 0) {
+                totalQty = order.getOrderQuantity() != null ? order.getOrderQuantity() : 0;
+            }
+            int completedQty = calculateCompletedQuantity(order.getId(), scanType, progressStage, null);
+            return Math.max(0, totalQty - completedQty);
         } catch (Exception e) {
             log.error("获取剩余数量失败: orderId={}", orderId, e);
             return 0;

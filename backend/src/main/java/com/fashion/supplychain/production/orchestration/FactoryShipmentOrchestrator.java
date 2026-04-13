@@ -41,6 +41,15 @@ public class FactoryShipmentOrchestrator {
         if (!StringUtils.hasText(orderId)) {
             return Result.fail("缺少 orderId");
         }
+        ProductionOrder order = productionOrderService.getById(orderId);
+        if (order == null) {
+            return Result.fail("订单不存在");
+        }
+        String ctxFactoryId = UserContext.factoryId();
+        if (StringUtils.hasText(ctxFactoryId) && !ctxFactoryId.equals(order.getFactoryId())) {
+            return Result.fail("无权操作其他工厂的订单");
+        }
+
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> details = (List<Map<String, Object>>) params.get("details");
         if (details == null || details.isEmpty()) {
@@ -51,11 +60,6 @@ public class FactoryShipmentOrchestrator {
                 .sum();
         if (shipQuantity <= 0) {
             return Result.fail("发货数量明细总量必须大于 0");
-        }
-
-        ProductionOrder order = productionOrderService.getById(orderId);
-        if (order == null) {
-            return Result.fail("订单不存在");
         }
 
         // 裁剪总量（上限）
@@ -105,6 +109,10 @@ public class FactoryShipmentOrchestrator {
         if ("received".equals(fs.getReceiveStatus())) {
             return Result.fail("该发货单已收货，请勿重复操作");
         }
+        String ctxFactoryId = UserContext.factoryId();
+        if (StringUtils.hasText(ctxFactoryId) && !ctxFactoryId.equals(fs.getFactoryId())) {
+            return Result.fail("无权操作其他工厂的发货单");
+        }
 
         fs.setReceiveStatus("received");
         fs.setReceiveTime(LocalDateTime.now());
@@ -128,6 +136,10 @@ public class FactoryShipmentOrchestrator {
         }
         if ("received".equals(fs.getReceiveStatus())) {
             return Result.fail("已收货的发货单不可删除");
+        }
+        String ctxFactoryId = UserContext.factoryId();
+        if (StringUtils.hasText(ctxFactoryId) && !ctxFactoryId.equals(fs.getFactoryId())) {
+            return Result.fail("无权操作其他工厂的发货单");
         }
         factoryShipmentService.removeById(shipmentId);
         log.info("[FactoryShipment] 删除发货单 shipmentId={}", shipmentId);

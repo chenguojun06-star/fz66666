@@ -59,4 +59,6 @@ public interface MaterialStockService extends IService<MaterialStock> {
      * @param safetyStock 新的安全库存值
      */
     boolean updateSafetyStock(String stockId, Integer safetyStock);
+
+    void decreaseStockForCancelReceive(MaterialPurchase purchase, int quantity);
 }

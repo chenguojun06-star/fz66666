@@ -27,8 +27,10 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
@@ -531,8 +533,16 @@ public class WagePaymentOrchestrator {
         }
 
         // 5. 账单汇总（BillAggregation）已确认账单 — 按对方+月份聚合
+        // 去重：排除已在1-4部分直接查原始单据出现的来源
         if (bizType == null || "BILL_RECEIVABLE".equals(bizType) || "BILL_PAYABLE".equals(bizType)) {
             try {
+                Set<String> existingSources = new HashSet<>();
+                for (PayableItemDTO existing : items) {
+                    if (existing.getBizId() != null && existing.getBizType() != null) {
+                        existingSources.add(existing.getBizType() + ":" + existing.getBizId());
+                    }
+                }
+
                 LambdaQueryWrapper<BillAggregation> billWrapper = new LambdaQueryWrapper<BillAggregation>()
                     .eq(BillAggregation::getTenantId, tenantId)
                     .eq(BillAggregation::getStatus, "CONFIRMED")
@@ -552,17 +562,21 @@ public class WagePaymentOrchestrator {
                 );
                 for (Map.Entry<String, List<BillAggregation>> entry : grouped.entrySet()) {
                     List<BillAggregation> group = entry.getValue();
-                    BillAggregation first = group.get(0);
-                    BigDecimal totalAmount = group.stream()
+                    List<BillAggregation> dedupedGroup = group.stream()
+                        .filter(b -> !existingSources.contains(b.getSourceType() + ":" + b.getSourceId()))
+                        .collect(Collectors.toList());
+                    if (dedupedGroup.isEmpty()) continue;
+                    BillAggregation first = dedupedGroup.get(0);
+                    BigDecimal totalAmount = dedupedGroup.stream()
                         .map(b -> b.getAmount() != null ? b.getAmount() : BigDecimal.ZERO)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
-                    BigDecimal settledAmt = group.stream()
+                    BigDecimal settledAmt = dedupedGroup.stream()
                         .map(b -> b.getSettledAmount() != null ? b.getSettledAmount() : BigDecimal.ZERO)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
                     String aggBizType = "RECEIVABLE".equals(first.getBillType()) ? "BILL_RECEIVABLE" : "BILL_PAYABLE";
                     String payeeTypeStr = "RECEIVABLE".equals(first.getBillType()) ? "CUSTOMER" : "FACTORY";
                     String billDesc = ("RECEIVABLE".equals(first.getBillType()) ? "应收账款" : "应付账款")
-                        + " - " + group.size() + "笔";
+                        + " - " + dedupedGroup.size() + "笔";
                     items.add(PayableItemDTO.builder()
                         .bizType(aggBizType)
                         .bizId(first.getCounterpartyId() + "_" + first.getSettlementMonth())

@@ -224,10 +224,11 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         "  WHERE cutting_bundle_id IS NOT NULL",
                         "    AND cutting_bundle_id != ''",
                         "    AND scan_result = 'success'",
+                        "    AND (#{tenantId} IS NULL OR tenant_id = #{tenantId})",
                         "  GROUP BY cutting_bundle_id, tenant_id",
                         ") t"
         })
-        Map<String, Object> selectBundlePendingStats();
+        Map<String, Object> selectBundlePendingStats(@Param("tenantId") Long tenantId);
 
         /**
          * 批量查询订单最后一次成功扫码时间（用于AI巡检停滞检测）

@@ -29,55 +29,24 @@ public interface ProductionProcessTrackingMapper extends BaseMapper<ProductionPr
      * @param productionOrderId 订单ID（String类型）
      * @return 跟踪记录列表
      */
-    List<ProductionProcessTracking> selectByOrderId(@Param("productionOrderId") String productionOrderId);
+    List<ProductionProcessTracking> selectByOrderId(@Param("productionOrderId") String productionOrderId, @Param("tenantId") Long tenantId);
 
-    /**
-     * 查询某菲号的所有工序记录
-     *
-     * @param cuttingBundleId 菲号ID（String类型）
-     * @return 跟踪记录列表
-     */
-    List<ProductionProcessTracking> selectByBundleId(@Param("cuttingBundleId") String cuttingBundleId);
+    List<ProductionProcessTracking> selectByBundleId(@Param("cuttingBundleId") String cuttingBundleId, @Param("tenantId") Long tenantId);
 
-    /**
-     * 查询某菲号+某工序的跟踪记录
-     *
-     * @param cuttingBundleId 菲号ID（String类型）
-     * @param processCode 工序编号
-     * @return 跟踪记录（唯一）
-     */
     ProductionProcessTracking selectByBundleAndProcess(
         @Param("cuttingBundleId") String cuttingBundleId,
-        @Param("processCode") String processCode
+        @Param("processCode") String processCode,
+        @Param("tenantId") Long tenantId
     );
 
-    /**
-     * 按菲号+工序名称查询（processCode不匹配时的fallback）
-     *
-     * @param cuttingBundleId 菲号ID（String类型）
-     * @param processName 工序名称
-     * @return 跟踪记录（唯一）
-     */
     ProductionProcessTracking selectByBundleAndProcessName(
         @Param("cuttingBundleId") String cuttingBundleId,
-        @Param("processName") String processName
+        @Param("processName") String processName,
+        @Param("tenantId") Long tenantId
     );
 
-    /**
-     * 按订单批量查询各工序已扫码数量汇总（用于列表进度条与弹窗保持同源）
-     *
-     * @param orderIds 订单ID列表
-     * @return [{productionOrderId, processName, scannedQty}]
-     */
-    List<Map<String, Object>> selectScannedQtySummaryByOrderIds(@Param("orderIds") List<String> orderIds);
+    List<Map<String, Object>> selectScannedQtySummaryByOrderIds(@Param("orderIds") List<String> orderIds, @Param("tenantId") Long tenantId);
 
-    /**
-     * 删除订单的所有跟踪记录（裁剪撤回/重新初始化时使用）
-     * 使用 production_order_no（VARCHAR列）而非 production_order_id（BIGINT列），避免类型隐式转换丢失精度
-     *
-     * @param productionOrderNo 订单号（如 PO20260304001）
-     * @return 删除数量
-     */
-    @Delete("DELETE FROM t_production_process_tracking WHERE production_order_no = #{productionOrderNo}")
-    int deleteByOrderNo(@Param("productionOrderNo") String productionOrderNo);
+    @Delete("DELETE FROM t_production_process_tracking WHERE production_order_no = #{productionOrderNo} AND tenant_id = #{tenantId}")
+    int deleteByOrderNo(@Param("productionOrderNo") String productionOrderNo, @Param("tenantId") Long tenantId);
 }

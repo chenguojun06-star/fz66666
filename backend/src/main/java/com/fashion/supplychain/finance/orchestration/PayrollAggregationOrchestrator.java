@@ -103,7 +103,7 @@ public class PayrollAggregationOrchestrator {
         DataPermissionHelper.applyOperatorFilter(qw, "operator_id", "operator_name");
 
         // 查询扫码记录（安全上限，防止无限制全表扫描）
-        qw.last("LIMIT 10000");
+        qw.last("LIMIT 50000");
         List<ScanRecord> scanRecords = scanRecordService.list(qw);
 
         // 按 operator_id + order_id + process_name + color + size 分组

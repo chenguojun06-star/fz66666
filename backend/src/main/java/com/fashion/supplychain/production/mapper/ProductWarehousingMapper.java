@@ -100,7 +100,8 @@ public interface ProductWarehousingMapper extends BaseMapper<ProductWarehousing>
             "  COALESCE(SUM(CASE WHEN create_time >= CURDATE() AND create_time < DATE_ADD(CURDATE(), INTERVAL 1 DAY)",
             "    THEN warehousing_quantity ELSE 0 END), 0) AS todayQuantity",
             "FROM t_product_warehousing",
-            "WHERE (delete_flag = 0 OR delete_flag IS NULL)"
+            "WHERE (delete_flag = 0 OR delete_flag IS NULL)",
+            "AND (#{tenantId} IS NULL OR tenant_id = #{tenantId})"
     })
-    Map<String, Object> selectWarehousingStats();
+    Map<String, Object> selectWarehousingStats(@Param("tenantId") Long tenantId);
 }

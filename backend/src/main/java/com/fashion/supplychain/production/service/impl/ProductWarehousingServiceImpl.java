@@ -682,7 +682,7 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
 
     @Override
     public Map<String, Object> getWarehousingStats() {
-        return baseMapper.selectWarehousingStats();
+        return baseMapper.selectWarehousingStats(com.fashion.supplychain.common.UserContext.tenantId());
     }
 
     /**

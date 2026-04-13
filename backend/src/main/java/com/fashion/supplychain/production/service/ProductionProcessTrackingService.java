@@ -1,24 +1,16 @@
 package com.fashion.supplychain.production.service;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.ProductionProcessTracking;
 import com.fashion.supplychain.production.mapper.ProductionProcessTrackingMapper;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-/**
- * 生产工序跟踪记录 Service
- */
 @Service
 public class ProductionProcessTrackingService extends ServiceImpl<ProductionProcessTrackingMapper, ProductionProcessTracking> {
 
-    /**
-     * 批量插入记录
-     *
-     * @param records 跟踪记录列表
-     * @return 插入数量
-     */
     public int batchInsert(List<ProductionProcessTracking> records) {
         if (records == null || records.isEmpty()) {
             return 0;
@@ -26,56 +18,23 @@ public class ProductionProcessTrackingService extends ServiceImpl<ProductionProc
         return baseMapper.batchInsert(records);
     }
 
-    /**
-     * 查询某订单的所有跟踪记录
-     *
-     * @param productionOrderId 订单ID（String类型）
-     * @return 跟踪记录列表
-     */
     public List<ProductionProcessTracking> getByOrderId(String productionOrderId) {
-        return baseMapper.selectByOrderId(productionOrderId);
+        return baseMapper.selectByOrderId(productionOrderId, UserContext.tenantId());
     }
 
-    /**
-     * 查询某菲号的所有工序记录
-     *
-     * @param cuttingBundleId 菲号ID（String类型）
-     * @return 跟踪记录列表
-     */
     public List<ProductionProcessTracking> getByBundleId(String cuttingBundleId) {
-        return baseMapper.selectByBundleId(cuttingBundleId);
+        return baseMapper.selectByBundleId(cuttingBundleId, UserContext.tenantId());
     }
 
-    /**
-     * 查询某菲号+某工序的跟踪记录
-     *
-     * @param cuttingBundleId 菲号ID（String类型）
-     * @param processCode 工序编号
-     * @return 跟踪记录（唯一）
-     */
     public ProductionProcessTracking getByBundleAndProcess(String cuttingBundleId, String processCode) {
-        return baseMapper.selectByBundleAndProcess(cuttingBundleId, processCode);
+        return baseMapper.selectByBundleAndProcess(cuttingBundleId, processCode, UserContext.tenantId());
     }
 
-    /**
-     * 按菲号+工序名称查询（processCode不匹配时的fallback）
-     *
-     * @param cuttingBundleId 菲号ID（String类型）
-     * @param processName 工序名称
-     * @return 跟踪记录（唯一）
-     */
     public ProductionProcessTracking getByBundleAndProcessName(String cuttingBundleId, String processName) {
-        return baseMapper.selectByBundleAndProcessName(cuttingBundleId, processName);
+        return baseMapper.selectByBundleAndProcessName(cuttingBundleId, processName, UserContext.tenantId());
     }
 
-    /**
-     * 删除订单的所有跟踪记录（裁剪撤回/重新初始化时使用）
-     * 使用订单号（VARCHAR列 production_order_no），避免 BIGINT 类型转换问题
-     *
-     * @param productionOrderNo 订单号（如 PO20260304001）
-     * @return 删除数量
-     */
     public int deleteByOrderNo(String productionOrderNo) {
-        return baseMapper.deleteByOrderNo(productionOrderNo);
+        return baseMapper.deleteByOrderNo(productionOrderNo, UserContext.tenantId());
     }
 }

@@ -595,6 +595,14 @@ public class PayrollSettlementOrchestrator {
                 .set(ScanRecord::getUpdateTime, LocalDateTime.now())
                 .eq(ScanRecord::getPayrollSettlementId, settlementId.trim());
         scanRecordMapper.update(new ScanRecord(), scanUw);
+
+        try {
+            if (billAggregationOrchestrator != null) {
+                billAggregationOrchestrator.cancelBySource("PAYROLL_SETTLEMENT", settlementId.trim());
+            }
+        } catch (Exception e) {
+            log.warn("工资结算取消联动账单取消失败（不影响主流程）: settlementId={}, err={}", settlementId, e.getMessage());
+        }
     }
 
     /**

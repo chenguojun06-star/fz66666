@@ -29,10 +29,11 @@ import java.util.Set;
 import java.util.NoSuchElementException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-// @Service  // 暂时禁用：编译缓存问题，待后续修复
+@Service
 @Slf4j
 public class ProductionCleanupOrchestrator {
 

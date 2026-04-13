@@ -1,6 +1,7 @@
 package com.fashion.supplychain.warehouse.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
@@ -547,13 +548,15 @@ public class FinishedInventoryOrchestrator {
             if (sku == null) {
                 throw new IllegalArgumentException("SKU不存在: " + skuCode);
             }
-            int current = sku.getStockQuantity() != null ? sku.getStockQuantity() : 0;
-            if (current < quantity) {
+            boolean updated = productSkuService.update(null, new LambdaUpdateWrapper<ProductSku>()
+                    .eq(ProductSku::getSkuCode, skuCode)
+                    .ge(ProductSku::getStockQuantity, quantity)
+                    .setSql("stock_quantity = stock_quantity - " + quantity));
+            if (!updated) {
+                int current = sku.getStockQuantity() != null ? sku.getStockQuantity() : 0;
                 throw new IllegalArgumentException(
                         "库存不足: " + skuCode + "，可用库存:" + current + "件，申请出库:" + quantity + "件");
             }
-            sku.setStockQuantity(current - quantity);
-            productSkuService.updateById(sku);
 
                 recordProductOutstock(sku, quantity, requestOrderId, requestOrderNo, requestWarehouse,
                     "成品库存页面出库|sku=" + skuCode, trackingNo, expressCompany,
@@ -810,6 +813,14 @@ public class FinishedInventoryOrchestrator {
      */
     private void pushOutstockBill(ProductOutstock outstock) {
         try {
+            if (outstock.getOrderId() != null) {
+                boolean hasShipmentBill = billAggregationOrchestrator.billExists("SHIPMENT_RECONCILIATION", outstock.getOrderId());
+                if (hasShipmentBill) {
+                    log.info("[出库账单推送跳过] 订单{}已有成品对账账单，避免重复应收: outstockNo={}",
+                            outstock.getOrderId(), outstock.getOutstockNo());
+                    return;
+                }
+            }
             BillAggregationOrchestrator.BillPushRequest req = new BillAggregationOrchestrator.BillPushRequest();
             req.setBillType("RECEIVABLE");
             req.setBillCategory("PRODUCT");

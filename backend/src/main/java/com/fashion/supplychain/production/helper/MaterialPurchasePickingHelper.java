@@ -712,12 +712,10 @@ public class MaterialPurchasePickingHelper {
         // 2. 回退库存
         for (MaterialPickingItem item : items) {
             if (item.getMaterialStockId() != null) {
-                MaterialStock stock = materialStockService.getById(item.getMaterialStockId());
-                if (stock != null) {
-                    stock.setQuantity((stock.getQuantity() != null ? stock.getQuantity() : 0) + item.getQuantity());
-                    stock.setUpdateTime(LocalDateTime.now());
-                    materialStockService.updateById(stock);
-                }
+                materialStockService.update(null, new LambdaUpdateWrapper<com.fashion.supplychain.production.entity.MaterialStock>()
+                        .eq(com.fashion.supplychain.production.entity.MaterialStock::getId, item.getMaterialStockId())
+                        .setSql("quantity = quantity + " + item.getQuantity())
+                        .set(com.fashion.supplychain.production.entity.MaterialStock::getUpdateTime, LocalDateTime.now()));
             }
         }
 

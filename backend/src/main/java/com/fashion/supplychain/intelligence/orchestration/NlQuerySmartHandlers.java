@@ -39,6 +39,7 @@ public class NlQuerySmartHandlers {
     @Autowired private PersonnelDelayAnalysisOrchestrator personnelDelayAnalysisOrchestrator;
     @Autowired private SampleDelayAnalysisOrchestrator sampleDelayAnalysisOrchestrator;
     @Autowired private DelayTrendOrchestrator delayTrendOrchestrator;
+    @Autowired private com.fashion.supplychain.warehouse.orchestration.InventoryCheckOrchestrator inventoryCheckOrchestrator;
 
     // ── 系统健康指数 ──
     public NlQueryResponse handleHealthQuery() {
@@ -677,6 +678,28 @@ public class NlQuerySmartHandlers {
             fallback(resp, "延期趋势分析", e);
         }
         resp.setSuggestions(Arrays.asList("人员延期分析", "样板延期分析", "逾期订单查询"));
+        return resp;
+    }
+
+    public NlQueryResponse handleInventoryCheckQuery() {
+        NlQueryResponse resp = build("inventory_check");
+        try {
+            java.util.Map<String, Object> summary = inventoryCheckOrchestrator.getInventorySummary();
+            StringBuilder sb = new StringBuilder("📋 库存盘点概览：\n");
+            sb.append(String.format("• 面辅料有库存品种：%d 种\n", summary.getOrDefault("materialStockCount", 0)));
+            sb.append(String.format("• 成品有库存SKU：%d 个\n", summary.getOrDefault("skuStockCount", 0)));
+            sb.append(String.format("• 待处理盘点单：%d 张\n", summary.getOrDefault("pendingChecks", 0)));
+            sb.append("\n💡 您可以说：\n");
+            sb.append("• \"创建物料盘点\" — 生成物料库存盘点单\n");
+            sb.append("• \"创建成品盘点\" — 生成成品库存盘点单\n");
+            sb.append("• \"查看盘点单\" — 查看盘点单列表\n");
+            resp.setAnswer(sb.toString().trim());
+            resp.setConfidence(90);
+            resp.setData(summary);
+        } catch (Exception e) {
+            fallback(resp, "库存盘点", e);
+        }
+        resp.setSuggestions(Arrays.asList("创建物料盘点", "创建成品盘点", "查看盘点单"));
         return resp;
     }
 

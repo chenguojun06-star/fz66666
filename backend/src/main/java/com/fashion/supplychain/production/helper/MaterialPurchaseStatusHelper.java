@@ -59,6 +59,9 @@ public class MaterialPurchaseStatusHelper {
     @Autowired
     private MaterialPickingService materialPickingService;
 
+    @Autowired
+    private com.fashion.supplychain.production.service.MaterialStockService materialStockService;
+
     public MaterialPurchase receive(Map<String, Object> body) {
         String purchaseId = body == null ? null
                 : (body.get("purchaseId") == null ? null : String.valueOf(body.get("purchaseId")));
@@ -418,6 +421,36 @@ public class MaterialPurchaseStatusHelper {
           .set(MaterialPurchase::getRemark, newRemark)
           .set(MaterialPurchase::getUpdateTime, LocalDateTime.now());
         materialPurchaseService.update(uw);
+
+        try {
+            int arrivedQty = purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : 0;
+            if (arrivedQty > 0) {
+                String sourceType = purchase.getSourceType();
+                boolean isOrderDriven = "order".equals(sourceType) || "sample".equals(sourceType);
+                if (!isOrderDriven) {
+                    materialStockService.decreaseStockForCancelReceive(purchase, arrivedQty);
+                    log.info("cancelReceive 已回退库存: purchaseId={}, qty={}", purchaseId, arrivedQty);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("cancelReceive 回退库存失败（不影响主流程）: purchaseId={}, err={}", purchaseId, e.getMessage());
+        }
+
+        try {
+            materialReconciliationOrchestrator.upsertFromPurchaseId(purchaseId);
+            log.info("cancelReceive 已同步物料对账: purchaseId={}", purchaseId);
+        } catch (Exception e) {
+            log.warn("cancelReceive 同步物料对账失败（不影响主流程）: purchaseId={}, err={}", purchaseId, e.getMessage());
+        }
+
+        try {
+            if (StringUtils.hasText(purchase.getOrderId())) {
+                helper.recomputeAndUpdateMaterialArrivalRate(purchase.getOrderId(), productionOrderOrchestrator);
+                log.info("cancelReceive 已重算面料到货率: orderId={}", purchase.getOrderId());
+            }
+        } catch (Exception e) {
+            log.warn("cancelReceive 重算面料到货率失败（不影响主流程）: orderId={}, err={}", purchase.getOrderId(), e.getMessage());
+        }
 
         Map<String, Object> result = new java.util.LinkedHashMap<>();
         result.put("purchaseId", purchaseId);

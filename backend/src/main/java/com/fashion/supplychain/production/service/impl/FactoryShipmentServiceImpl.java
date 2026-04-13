@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fashion.supplychain.common.ParamUtils;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.FactoryShipment;
 import com.fashion.supplychain.production.mapper.FactoryShipmentMapper;
 import com.fashion.supplychain.production.service.FactoryShipmentService;
@@ -33,6 +34,16 @@ public class FactoryShipmentServiceImpl
 
         LambdaQueryWrapper<FactoryShipment> qw = new LambdaQueryWrapper<>();
         qw.eq(FactoryShipment::getDeleteFlag, 0);
+
+        String ctxFactoryId = UserContext.factoryId();
+        if (StringUtils.hasText(ctxFactoryId)) {
+            qw.eq(FactoryShipment::getFactoryId, ctxFactoryId);
+        }
+
+        List<String> factoryOrderIds = (List<String>) params.get("_factoryOrderIds");
+        if (factoryOrderIds != null && !factoryOrderIds.isEmpty()) {
+            qw.in(FactoryShipment::getOrderId, factoryOrderIds);
+        }
 
         String orderId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(params, "orderId"));
         if (StringUtils.hasText(orderId)) {
