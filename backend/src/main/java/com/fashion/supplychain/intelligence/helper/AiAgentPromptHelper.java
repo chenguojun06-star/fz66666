@@ -4,8 +4,12 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.agent.tool.AgentTool;
 import com.fashion.supplychain.intelligence.dto.IntelligenceMemoryResponse;
+import com.fashion.supplychain.intelligence.dto.WorkerProfileRequest;
+import com.fashion.supplychain.intelligence.dto.WorkerProfileResponse;
 import com.fashion.supplychain.intelligence.orchestration.AiMemoryOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceMemoryOrchestrator;
+import com.fashion.supplychain.intelligence.orchestration.ManagementInsightOrchestrator;
+import com.fashion.supplychain.intelligence.orchestration.WorkerProfileOrchestrator;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.intelligence.service.AiContextBuilderService;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +40,10 @@ public class AiAgentPromptHelper {
     @Autowired private AiAgentToolAccessService aiAgentToolAccessService;
     @Autowired private AiMemoryOrchestrator aiMemoryOrchestrator;
     @Autowired private IntelligenceMemoryOrchestrator intelligenceMemoryOrchestrator;
+    // 工人岗位画像注入，让小云了解该工人的效率水平并给出个性化建议（缺口3修复）
+    @Autowired private WorkerProfileOrchestrator workerProfileOrchestrator;
+    // 管理层经营洞察注入，让小云成为老板/管理者的战略顾问
+    @Autowired private ManagementInsightOrchestrator managementInsightOrchestrator;
 
     public int estimateMaxIterations(String userMessage) {
         if (userMessage == null || userMessage.length() < 8) return 3;
@@ -85,7 +93,7 @@ public class AiAgentPromptHelper {
                     "请优先围绕该页面的业务场景来理解用户的提问意图。\n\n";
         }
 
-        // 普通生产员工的访问限制提示
+        // 普通生产员工的访问限制提示 + 效率画像注入（缺口3）
         String workerRestriction = "";
         if (!isManager) {
             workerRestriction = "\n【⚠️ 权限说明】\n" +
@@ -93,6 +101,69 @@ public class AiAgentPromptHelper {
                     "可以回答：本人负责订单的进度、相关扫码记录、当前生产任务状态、系统操作与SOP说明、本人计件工资明细。\n" +
                     "禁止回答：全厂汇总数据、财务结算总览、他人工资数据、管理层报告、仓库/CRM/采购等管理功能。\n" +
                     "当用户询问超出权限范围的问题时，友好说明：该信息需管理员权限，同时引导用户可以查什么。\n";
+            // 注入工人效率画像，让小云能给出个性化建议
+            if (userName != null && !userName.isBlank()) {
+                try {
+                    WorkerProfileRequest profileReq = new WorkerProfileRequest();
+                    profileReq.setOperatorName(userName);
+                    WorkerProfileResponse profile = workerProfileOrchestrator.getProfile(profileReq);
+                    if (profile != null && profile.getStages() != null && !profile.getStages().isEmpty()) {
+                        StringBuilder pb = new StringBuilder();
+                        pb.append("\n【本人效率画像（近期）】\n");
+                        pb.append("- 工人：").append(userName)
+                          .append("，统计周期：").append(profile.getDateDays()).append("天")
+                          .append("，合计完成：").append(profile.getTotalQty()).append("件\n");
+                        for (WorkerProfileResponse.StageProfile sp : profile.getStages()) {
+                            String lvl = "excellent".equals(sp.getLevel()) ? "🌟优秀" :
+                                         "good".equals(sp.getLevel())      ? "✅良好" :
+                                         "below".equals(sp.getLevel())     ? "⚠️待提升" : "普通";
+                            String vsDir = sp.getVsFactoryAvgPct() >= 0 ? "高于" : "低于";
+                            pb.append(String.format("  - %s：日均%.1f件，%s（%s工厂均值%.1f%%）\n",
+                                    sp.getStageName(), sp.getAvgPerDay(), lvl,
+                                    vsDir, Math.abs(sp.getVsFactoryAvgPct())));
+                        }
+                        pb.append("回答该工人问题时，可结合以上画像给出有针对性的改进建议。\n");
+                        workerRestriction += pb.toString();
+                    }
+                } catch (Exception e) {
+                    log.debug("[AiAgent] 工人画像注入跳过: {}", e.getMessage());
+                }
+            }
+        } else {
+            // 管理层/老板角色：注入战略顾问身份 + 实时经营 KPI 快照
+            StringBuilder mgmt = new StringBuilder();
+            mgmt.append("\n【🎯 管理层战略顾问模式】\n");
+            mgmt.append("当前用户是管理人员，小云将以「供应链经营顾问」身份提供决策支持。\n");
+            mgmt.append("你可以主动分析并建议：\n");
+            mgmt.append("  - 款式利润排名（哪些款赚钱、哪些亏钱）\n");
+            mgmt.append("  - 工厂绩效对比（完成率、准时率、综合评分）\n");
+            mgmt.append("  - 交期风险预警（逾期订单、高风险订单、停滞紧急单）\n");
+            mgmt.append("  - 产能评估与工厂选型建议\n");
+            mgmt.append("  - 采购与库存优化方向\n");
+            mgmt.append("  - 客户/订单结构分析\n");
+            mgmt.append("面对管理层用户，回答风格：数据驱动、结论先行、对比鲜明、建议可执行。\n");
+            mgmt.append("遇到「最近怎么样」「经营状况」「该关注什么」等概览型问题时，优先使用 tool_management_dashboard 获取实时经营快照。\n\n");
+
+            // 尝试注入实时经营 KPI 快照（轻量，不阻塞）
+            try {
+                Long mgmtTenantId = UserContext.tenantId();
+                if (mgmtTenantId != null) {
+                    java.util.Map<String, Object> summary = managementInsightOrchestrator.getExecutiveSummary(mgmtTenantId);
+                    Object headline = summary.get("headline");
+                    Object riskLevel = summary.get("overallRiskLevel");
+                    if (headline != null) {
+                        mgmt.append("【实时经营快照】\n");
+                        mgmt.append(headline).append("\n");
+                        if (riskLevel != null) {
+                            mgmt.append("整体风险等级：").append(riskLevel).append("\n");
+                        }
+                        mgmt.append("（以上为系统预计算摘要，详细数据请通过 tool_management_dashboard 工具查询）\n\n");
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("[AiAgent] 管理层经营快照注入跳过: {}", e.getMessage());
+            }
+            workerRestriction = mgmt.toString();
         }
 
         // ── 历史对话记忆注入 ──

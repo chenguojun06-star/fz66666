@@ -55,19 +55,17 @@ import { useProofModal } from './hooks/useProofModal';
 
 const { RangePicker } = DatePicker;
 
-export const exportToExcel = async (data: any[], columns: any[], filename: string) => {
-    const XLSX = await import('xlsx');
+export const exportToExcelFile = async (data: any[], columns: any[], filename: string) => {
+    const { exportToExcel } = await import('@/utils/excelExport');
     const formattedData = data.map(item => {
         const row: any = {};
-        columns.forEach(col => {
+        columns.forEach((col: any) => {
             row[col.title] = item[col.dataIndex] || '';
         });
         return row;
     });
-    const worksheet = XLSX.utils.json_to_sheet(formattedData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
-    XLSX.writeFile(workbook, `${filename}_${dayjs().format('YYYYMMDDHHmmss')}.xlsx`);
+    const cols = columns.map((col: any) => ({ header: col.title, key: col.title }));
+    await exportToExcel(formattedData, cols, `${filename}_${dayjs().format('YYYYMMDDHHmmss')}.xlsx`);
 };
 
 // ============================================================
@@ -227,7 +225,7 @@ const PaymentCenterPage: React.FC = () => {
                               message.warning('当前没有数据可导出');
                               return;
                             }
-                            exportToExcel(data.payables, [
+                            exportToExcelFile(data.payables, [
                                 { title: '业务类型', dataIndex: 'bizType' },
                                 { title: '单据编号', dataIndex: 'bizNo' },
                                 { title: '收款方', dataIndex: 'receiverName' },
@@ -363,7 +361,7 @@ const PaymentCenterPage: React.FC = () => {
                               message.warning('当前没有数据可导出');
                               return;
                             }
-                            exportToExcel(data.payments, [
+                            exportToExcelFile(data.payments, [
                                 { title: '支付单号', dataIndex: 'paymentNo' },
                                 { title: '业务类型', dataIndex: 'bizType' },
                                 { title: '收款方', dataIndex: 'payeeName' },

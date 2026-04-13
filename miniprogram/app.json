@@ -123,7 +123,6 @@
     "pages/admin/index": { "network": "all", "packages": ["pkg-admin-approval", "pkg-payroll", "pkg-privacy", "pkg-admin-changepwd", "pkg-admin-feedback", "pkg-admin-invite"] }
   },
   "tabBar": {
-    "custom": true,
     "color": "#999999",
     "selectedColor": "#3b82f6",
     "backgroundColor": "#ffffff",

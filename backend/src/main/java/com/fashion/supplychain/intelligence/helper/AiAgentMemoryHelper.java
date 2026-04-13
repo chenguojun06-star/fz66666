@@ -3,12 +3,16 @@ package com.fashion.supplychain.intelligence.helper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiMessage;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
+import com.fashion.supplychain.intelligence.entity.KnowledgeBase;
+import com.fashion.supplychain.intelligence.mapper.KnowledgeBaseMapper;
 import com.fashion.supplychain.intelligence.orchestration.AiMemoryOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceMemoryOrchestrator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import java.time.LocalDateTime;
 
 import javax.annotation.PreDestroy;
 import java.util.ArrayList;
@@ -31,6 +35,8 @@ public class AiAgentMemoryHelper {
     @Autowired private IntelligenceInferenceOrchestrator inferenceOrchestrator;
     @Autowired private IntelligenceMemoryOrchestrator intelligenceMemoryOrchestrator;
     @Autowired private AiMemoryOrchestrator aiMemoryOrchestrator;
+    // 用于将高质量 AI 洞察沉淀到知识库，供 RAG 问答检索复用（缺口2修复）
+    @Autowired private KnowledgeBaseMapper knowledgeBaseMapper;
 
     private final Map<String, List<AiMessage>> conversationMemory = Collections.synchronizedMap(
             new LinkedHashMap<String, List<AiMessage>>(64, 0.75f, true) {
@@ -166,6 +172,26 @@ public class AiAgentMemoryHelper {
                     }
                     intelligenceMemoryOrchestrator.saveCase("agent_insight", "conversation", title, content);
                     log.info("[AiAgent] 记忆增强成功: title={}, userId={}", title, userId);
+                    // 高质量洞察（内容>120字符）同步沉淀知识库，供 KnowledgeSearchTool RAG 检索复用
+                    if (content.length() > 120) {
+                        try {
+                            KnowledgeBase kb = new KnowledgeBase();
+                            kb.setTenantId(capturedTenantId);
+                            kb.setCategory("faq");
+                            kb.setTitle(title);
+                            kb.setContent(content);
+                            kb.setSource("agent_derived");
+                            kb.setViewCount(0);
+                            kb.setHelpfulCount(0);
+                            kb.setDeleteFlag(0);
+                            kb.setCreateTime(LocalDateTime.now());
+                            kb.setUpdateTime(LocalDateTime.now());
+                            knowledgeBaseMapper.insert(kb);
+                            log.info("[AiAgent] 洞察已沉淀知识库: title={}", title);
+                        } catch (Exception kbEx) {
+                            log.debug("[AiAgent] 知识库写入跳过（不影响主流程）: {}", kbEx.getMessage());
+                        }
+                    }
                 } finally {
                     UserContext.clear(); // 防止线程复用时上下文泄漏
                 }

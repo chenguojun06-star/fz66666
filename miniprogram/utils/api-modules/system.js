@@ -42,7 +42,7 @@ const system = {
     return ok('/api/system/feedback/my-list', 'POST', params || {});
   },
   getDictList(type) {
-    return ok('/api/system/dictionary/list', 'GET', { type });
+    return ok('/api/system/dict/by-type', 'GET', { type });
   },
 };
 

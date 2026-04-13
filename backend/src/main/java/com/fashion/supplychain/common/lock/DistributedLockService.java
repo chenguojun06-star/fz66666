@@ -145,4 +145,16 @@ public class DistributedLockService {
             return supplier.get();
         }
     }
+
+    public <T> T executeWithStrictLock(String key, long timeout, TimeUnit unit, Supplier<T> supplier) {
+        String lockValue = tryLock(key, timeout, unit);
+        if (lockValue == null) {
+            throw new IllegalStateException("系统繁忙，请稍后重试 [lock:" + key + "]");
+        }
+        try {
+            return supplier.get();
+        } finally {
+            unlock(key, lockValue);
+        }
+    }
 }

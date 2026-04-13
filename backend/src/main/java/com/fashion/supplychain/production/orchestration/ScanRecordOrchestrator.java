@@ -108,16 +108,24 @@ public class ScanRecordOrchestrator {
     @Autowired
     private com.fashion.supplychain.common.lock.DistributedLockService distributedLockService;
 
-    @Transactional(rollbackFor = Exception.class)
+    @Autowired
+    private org.springframework.transaction.support.TransactionTemplate transactionTemplate;
+
     public Map<String, Object> execute(Map<String, Object> params) {
         TenantAssert.assertTenantContext();
         Map<String, Object> safeParams = params == null ? new HashMap<>() : new HashMap<>(params);
-        String operatorId = safeParams.get("operatorId") == null ? null : String.valueOf(safeParams.get("operatorId"));
 
         String orderNo = safeParams.get("orderNo") == null ? null : String.valueOf(safeParams.get("orderNo"));
         String lockKey = "scan:" + (orderNo != null ? orderNo : "unknown");
         return distributedLockService.executeWithLock(lockKey, 10, java.util.concurrent.TimeUnit.SECONDS, () -> {
-            return doExecute(safeParams);
+            return transactionTemplate.execute(status -> {
+                try {
+                    return doExecute(safeParams);
+                } catch (Exception e) {
+                    status.setRollbackOnly();
+                    throw e;
+                }
+            });
         });
     }
 

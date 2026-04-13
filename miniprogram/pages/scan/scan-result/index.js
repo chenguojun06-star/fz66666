@@ -19,6 +19,7 @@ Page({
     selectedAmount: 0,
     quantity: 1,
     warehouseCode: '',
+    warehouseOptions: [],
     showWarehouse: false,
     isQualityReceive: false,
     imageInsight: '',
@@ -97,6 +98,10 @@ Page({
       isQualityReceive: isQualityReceive,
       warehouseCode: raw.warehouseCode || ''
     });
+
+    if (isWarehouseStage) {
+      this._loadWarehouseOptions();
+    }
 
     this._backfillBundleDisplayMeta(raw, orderDetail);
   },
@@ -253,8 +258,35 @@ Page({
     });
   },
 
+  onWarehouseChipTap(e) {
+    var val = e.currentTarget.dataset.value || '';
+    this.setData({ warehouseCode: val });
+  },
+
+  onWarehouseClear() {
+    this.setData({ warehouseCode: '' });
+  },
+
   onWarehouseInput(e) {
     this.setData({ warehouseCode: e.detail.value || '' });
+  },
+
+  async _loadWarehouseOptions() {
+    try {
+      var res = await api.system.getDictList('warehouse_location');
+      var records = (res && res.data) ? (Array.isArray(res.data) ? res.data : (res.data.records || [])) : [];
+      if (Array.isArray(records) && records.length > 0) {
+        var options = records
+          .filter(function(item) { return item.dictLabel; })
+          .sort(function(a, b) { return (a.sortOrder || 0) - (b.sortOrder || 0); })
+          .map(function(item) { return item.dictLabel; });
+        if (options.length > 0) {
+          this.setData({ warehouseOptions: options });
+        }
+      }
+    } catch (e) {
+      console.warn('[scan-result] 加载仓库选项失败', e);
+    }
   },
 
   goBack() {

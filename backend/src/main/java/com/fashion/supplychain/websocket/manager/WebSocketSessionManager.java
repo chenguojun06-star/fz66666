@@ -1,10 +1,13 @@
 package com.fashion.supplychain.websocket.manager;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -220,5 +223,21 @@ public class WebSocketSessionManager {
 
     public Long getTenantIdBySession(String sessionId) {
         return sessionTenantMap.get(sessionId);
+    }
+
+    @Scheduled(fixedDelay = 60000, initialDelay = 30000)
+    public void cleanupClosedSessions() {
+        List<String> closed = new ArrayList<>();
+        for (Map.Entry<String, WebSocketSession> entry : sessions.entrySet()) {
+            if (entry.getValue() == null || !entry.getValue().isOpen()) {
+                closed.add(entry.getKey());
+            }
+        }
+        if (!closed.isEmpty()) {
+            log.info("[WebSocket] 清理{}个已关闭的会话", closed.size());
+            for (String sessionId : closed) {
+                removeSession(sessionId);
+            }
+        }
     }
 }

@@ -1,3 +1,78 @@
+# 2026-05-06
+
+## 🎯 管理层 AI 智能决策支持（小云战略顾问模式）
+
+### 新增 — ManagementInsightOrchestrator（管理层经营洞察编排器）
+- **背景**：系统 63 个 AI 工具全部面向生产/操作层，管理层用户得不到战略级分析能力。
+- **新增**：`intelligence/orchestration/ManagementInsightOrchestrator.java`（~220行，4个核心方法）
+  - `getStyleProfitability()` — 款式利润排名（Top3 盈利 + Bottom3 亏损，含利润率/物料成本/生产成本拆解）
+  - `getFactoryPerformance()` — 工厂绩效对比（完成率×40% + 准时率×30% + 平均进度×30% 综合评分排名）
+  - `getKeyRisks()` — 风险预警汇总（逾期订单/7天内高危/紧急停滞，四级风险等级 RED/ORANGE/YELLOW/GREEN）
+  - `getExecutiveSummary()` — 综合经营快照（合并以上三项，生成带 emoji 风险指示的一句话摘要）
+- **对系统的帮助**：老板/跟单主管通过小云直接获取经营全貌，无需手动翻看多个页面
+
+### 新增 — ManagementDashboardTool（管理层仪表板 AI 工具）
+- **新增**：`intelligence/agent/tool/ManagementDashboardTool.java`（~85行）
+  - 工具名：`tool_management_dashboard`，领域：ANALYSIS
+  - 参数 `section`：profitability / factory_performance / risks / summary
+  - 仅管理层用户可见（hasManagerAccess 权限守卫）
+- **对系统的帮助**：老板在小云对话中说「经营状况怎样」「哪个款赚钱」即可触发该工具
+
+### 增强 — AiAgentPromptHelper（管理层战略顾问 Prompt 注入）
+- **修改**：`intelligence/helper/AiAgentPromptHelper.java`
+  - 管理层用户进入对话时，System Prompt 自动切换为「供应链经营顾问」角色
+  - 注入 6 大分析方向提示：款式利润排名、工厂绩效对比、交期风险预警、产能评估、采购优化、客户分析
+  - 实时注入经营 KPI 快照（风险等级 + 核心指标摘要），让小云首次回复即有数据支撑
+- **对系统的帮助**：管理层用户的 AI 对话体验从「通用助手」升级为「数据驱动的经营顾问」
+
+**涉及文件（3个新增/修改）**：
+- `backend/src/main/java/com/fashion/supplychain/intelligence/orchestration/ManagementInsightOrchestrator.java`（新增）
+- `backend/src/main/java/com/fashion/supplychain/intelligence/agent/tool/ManagementDashboardTool.java`（新增）
+- `backend/src/main/java/com/fashion/supplychain/intelligence/helper/AiAgentPromptHelper.java`（修改）
+
+**DB 影响**：无新增表/列
+
+---
+
+## 🧠 小云 AI 三大智能增强（缺口1/2/3 对齐）
+
+### 缺口1 — 采纳感知记忆召回（IntelligenceMemoryOrchestrator）
+- **问题**：`computeAdoptionScore()` 仅占 10% 权重，且公式灵敏度低，用户采纳过的经验在下次召回时不能优先显现。
+- **修复**：
+  - `adoptionScore` 权重 `0.10 → 0.15`；`semantic` 权重 `0.58 → 0.53`（总和保持 1.0）
+  - 公式灵敏度调整：`adopted × 2.0 → 3.0`，`recalled × 0.3 → 0.5`
+  - 效果：被用户采纳 2 次的经验，得分提升约 8%，排名明显上升
+
+### 缺口2 — AI 洞察沉淀知识库（AiAgentMemoryHelper）
+- **问题**：`enhanceMemoryAsync()` 提取的高质量 AI 洞察只写入 `t_intelligence_memory`，`KnowledgeSearchTool` RAG 检索不到，无法复用。
+- **修复**：
+  - 新增 `@Autowired KnowledgeBaseMapper`
+  - `saveCase()` 成功后，当 content > 120 字符时自动将 title/content 写入 `t_knowledge_base`（category=`faq`, source=`agent_derived`）
+  - 异常只打 `debug` 日志，不影响主流程
+  - 效果：AI 对话产生的业务洞察沉淀为可检索知识，后续 RAG 问答可直接引用
+
+### 缺口3 — 工人效率画像注入 Prompt（AiAgentPromptHelper）
+- **问题**：工人角色的 `buildSystemPrompt()` 只有权限限制块，没有该工人的生产效率数据，小云无法给出个性化建议。
+- **修复**：
+  - 新增 `@Autowired WorkerProfileOrchestrator`
+  - 在 `!isManager` 分支内调用 `workerProfileOrchestrator.getProfile()`，取近期各工序效率画像
+  - 将工人名称、统计天数、总件数、各工序日均件数和与工厂均值对比注入 System Prompt
+  - 等级映射：excellent→🌟优秀，good→✅良好，below→⚠️待提升，normal→普通
+  - 失败时静默跳过，不影响 Prompt 核心内容
+  - 效果：小云回答工人问题时有实际数据支撑，能说"你最近尾部工序日均 42 件，高于工厂均值 15%"
+
+### 未实现
+- 缺口4（工厂工人效率波动主动推送）— 用户明确拒绝，不实现
+
+**涉及文件（3个）**：
+- `backend/src/main/java/com/fashion/supplychain/intelligence/orchestration/IntelligenceMemoryOrchestrator.java`
+- `backend/src/main/java/com/fashion/supplychain/intelligence/helper/AiAgentMemoryHelper.java`
+- `backend/src/main/java/com/fashion/supplychain/intelligence/helper/AiAgentPromptHelper.java`
+
+**DB 影响**：无新增表/列（`t_knowledge_base` 已存在，缺口2 仅新增行数据）
+
+---
+
 # 2026-04-12
 
 ## 🔧 租户套餐/已开通模块/存储统计链路补齐

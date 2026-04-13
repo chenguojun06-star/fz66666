@@ -196,3 +196,33 @@
   font-size: 28rpx;
   color: var(--color-text-primary);
 }
+
+.warehouse-option-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-bottom: 20rpx;
+}
+.warehouse-chip {
+  padding: 12rpx 28rpx;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-gray);
+  border: 2rpx solid transparent;
+  font-size: 26rpx;
+  color: var(--color-text-primary);
+}
+.warehouse-chip--active {
+  background: var(--color-blue-light);
+  border-color: var(--color-border-blue);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+.warehouse-chip--clear {
+  color: var(--color-text-secondary);
+}
+.warehouse-chip--disabled {
+  opacity: 0.35;
+}
+.warehouse-chip-hover {
+  opacity: 0.7;
+}

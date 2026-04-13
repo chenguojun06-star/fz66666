@@ -277,7 +277,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
   };
 
   const handleExport = async () => {
-    const XLSX = await import('xlsx');
+    const { exportToExcel } = await import('@/utils/excelExport');
     if (data.length === 0) {
       message.warning('无数据可导出');
       return;
@@ -294,10 +294,12 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
       '利润': item.totalProfit || 0,
       '订单号列表': item.orderNos?.join(', ') || '-'
     }));
-    const worksheet = XLSX.utils.json_to_sheet(formattedData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
-    XLSX.writeFile(workbook, `工厂订单汇总_${dayjs().format('YYYYMMDDHHmmss')}.xlsx`);
+    const headers = ['工厂名称','订单数','下单总量','入库总量','次品量','面辅料成本','生产成本','总金额','利润','订单号列表'];
+    await exportToExcel(
+      formattedData,
+      headers.map(h => ({ header: h, key: h })),
+      `工厂订单汇总_${dayjs().format('YYYYMMDDHHmmss')}.xlsx`
+    );
   };
 
   // 表格列定义

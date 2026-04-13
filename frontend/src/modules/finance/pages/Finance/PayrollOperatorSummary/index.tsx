@@ -317,8 +317,8 @@ const PayrollOperatorSummary: React.FC = () => {
         hasAutoFetched.current = false;
     };
 
-    const exportToExcel = async () => {
-        const XLSX = await import('xlsx');
+    const exportToExcelFn = async () => {
+        const { exportToExcel } = await import('@/utils/excelExport');
         if (activeTab === 'summary') {
             if (summaryRows.length === 0) {
                 message.warning('无汇总数据可导出');
@@ -334,10 +334,8 @@ const PayrollOperatorSummary: React.FC = () => {
                 '审核时间': item.approvalTime ? dayjs(item.approvalTime).format('YYYY-MM-DD HH:mm:ss') : '-',
                 '付款时间': item.paymentTime ? dayjs(item.paymentTime).format('YYYY-MM-DD HH:mm:ss') : '-',
             }));
-            const worksheet = XLSX.utils.json_to_sheet(formattedData);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, '工资汇总');
-            XLSX.writeFile(workbook, `工资汇总_${dayjs().format('YYYYMMDDHHmmss')}.xlsx`);
+            const cols = ['人员','总数量','总金额(元)','扫码次数','订单数','备注','审核时间','付款时间'].map(h => ({ header: h, key: h }));
+            await exportToExcel(formattedData, cols, `工资汇总_${dayjs().format('YYYYMMDDHHmmss')}.xlsx`);
             message.success('汇总导出成功');
         } else if (activeTab === 'detail') {
             if (rows.length === 0) {
@@ -358,10 +356,8 @@ const PayrollOperatorSummary: React.FC = () => {
                 '单价(元)': toNumberOrZero(r?.unitPrice),
                 '金额(元)': toNumberOrZero(r?.totalAmount),
             }));
-            const worksheet = XLSX.utils.json_to_sheet(formattedData);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, '工序明细');
-            XLSX.writeFile(workbook, `工资结算明细_${dayjs().format('YYYYMMDDHHmmss')}.xlsx`);
+            const cols = ['订单号','款号','颜色','尺码','人员','工序','生产节点','开始时间','完成时间','数量','单价(元)','金额(元)'].map(h => ({ header: h, key: h }));
+            await exportToExcel(formattedData, cols, `工资结算明细_${dayjs().format('YYYYMMDDHHmmss')}.xlsx`);
             message.success('明细导出成功');
         } else {
             message.warning('当前标签页不支持导出');
@@ -565,7 +561,7 @@ const PayrollOperatorSummary: React.FC = () => {
                             重置
                         </Button>
                         <Button
-                            onClick={exportToExcel}
+                            onClick={exportToExcelFn}
                             disabled={loading || rows.length === 0}
                         >
                             导出Excel

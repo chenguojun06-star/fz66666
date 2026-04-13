@@ -296,6 +296,15 @@ public class ProductionOrderController {
         }
         TenantAssert.assertBelongsToCurrentTenant(order.getTenantId(), "订单");
 
+        Object clientVersion = payload.get("version");
+        if (clientVersion != null) {
+            int expected = Integer.parseInt(String.valueOf(clientVersion));
+            int actual = order.getVersion() != null ? order.getVersion() : 0;
+            if (expected != actual) {
+                return Result.fail("订单已被其他人修改，请刷新后重试");
+            }
+        }
+
         // 更新备注
         if (payload.containsKey("remarks")) {
             String remarks = (String) payload.get("remarks");

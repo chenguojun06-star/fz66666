@@ -210,7 +210,8 @@ public class IntelligenceMemoryOrchestrator {
         double keywordScore = computeKeywordScore(memory, queryText);
         double adoptionScore = computeAdoptionScore(memory);
         double semantic = Math.max(0d, semanticScore);
-        double rawScore = semantic * 0.58d + keywordScore * 0.32d + adoptionScore * 0.10d;
+        // 采纳率权重：0.10→0.15，让被用户采纳过的经验更容易被召回；语义权重相应微降 0.58→0.53
+        double rawScore = semantic * 0.53d + keywordScore * 0.32d + adoptionScore * 0.15d;
 
         // 记忆时间衰减：半衰期90天，越旧的记忆权重越低，避免过时建议误导决策
         double decayFactor = 1.0d;
@@ -258,7 +259,8 @@ public class IntelligenceMemoryOrchestrator {
     private double computeAdoptionScore(IntelligenceMemory memory) {
         int adopted = memory.getAdoptedCount() == null ? 0 : memory.getAdoptedCount();
         int recalled = memory.getRecallCount() == null ? 0 : memory.getRecallCount();
-        double raw = Math.log1p(adopted * 2.0d + recalled * 0.3d) / 10.0d;
+        // 系数调大：adopted 2.0→3.0，recalled 0.3→0.5，让少量采纳也能显著影响排序
+        double raw = Math.log1p(adopted * 3.0d + recalled * 0.5d) / 10.0d;
         return Math.min(raw, 1.0d);
     }
 

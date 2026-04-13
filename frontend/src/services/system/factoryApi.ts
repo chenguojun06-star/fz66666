@@ -60,8 +60,8 @@ export const factoryApi = {
   /**
    * 更新工厂/供应商
    */
-  update: (_id: string, data: Partial<Factory>) =>
-    api.put<{ code: number; message: string; data: Factory }>(`/system/factory`, data),
+  update: (id: string, data: Partial<Factory>) =>
+    api.put<{ code: number; message: string; data: Factory }>('/system/factory', { ...data, id }),
 
   /**
    * 删除工厂/供应商
