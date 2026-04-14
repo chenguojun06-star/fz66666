@@ -84,7 +84,7 @@ public class ProgressPredictOrchestrator {
                 // 2b. 已完成件数：查 v_production_order_stage_done_agg
                 if (StringUtils.hasText(stageName)) {
                     List<Map<String, Object>> aggs = scanRecordMapper.selectStageDoneAgg(
-                            Collections.singletonList(orderId));
+                            Collections.singletonList(orderId), com.fashion.supplychain.common.UserContext.tenantId());
                     if (aggs != null) {
                         for (Map<String, Object> row : aggs) {
                             String rowStage = row.get("stageName") == null

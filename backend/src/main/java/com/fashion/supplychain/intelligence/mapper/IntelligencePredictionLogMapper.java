@@ -15,8 +15,8 @@ import org.apache.ibatis.annotations.Update;
 public interface IntelligencePredictionLogMapper extends BaseMapper<IntelligencePredictionLog> {
 
     /** 根据预测ID查询记录（用于反馈回填） */
-    @Select("SELECT * FROM t_intelligence_prediction_log WHERE prediction_id = #{predictionId} LIMIT 1")
-    IntelligencePredictionLog findByPredictionId(@Param("predictionId") String predictionId);
+    @Select("SELECT * FROM t_intelligence_prediction_log WHERE prediction_id = #{predictionId} AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) LIMIT 1")
+    IntelligencePredictionLog findByPredictionId(@Param("predictionId") String predictionId, @Param("tenantId") Long tenantId);
 
     /**
      * 用户反馈回填：更新实际完成时间、偏差分钟数、是否接受建议
@@ -28,12 +28,14 @@ public interface IntelligencePredictionLogMapper extends BaseMapper<Intelligence
             + "    deviation_minutes  = #{deviationMinutes}, "
             + "    feedback_accepted  = #{feedbackAccepted}, "
             + "    update_time        = NOW() "
-            + "WHERE prediction_id = #{predictionId}")
+            + "WHERE prediction_id = #{predictionId} "
+            + "  AND (#{tenantId} IS NULL OR tenant_id = #{tenantId})")
     int updateFeedback(
             @Param("predictionId")     String predictionId,
             @Param("actualFinishTime") LocalDateTime actualFinishTime,
             @Param("deviationMinutes") Long deviationMinutes,
-            @Param("feedbackAccepted") Boolean feedbackAccepted);
+            @Param("feedbackAccepted") Boolean feedbackAccepted,
+            @Param("tenantId")         Long tenantId);
 
     /**
      * 订单完成时自动回填实际完成时间（数据飞轮自动闭环）
@@ -50,10 +52,12 @@ public interface IntelligencePredictionLogMapper extends BaseMapper<Intelligence
             + "    deviation_minutes  = TIMESTAMPDIFF(MINUTE, predicted_finish_time, #{finishTime}), "
             + "    update_time        = NOW() "
             + "WHERE order_id = #{orderId} "
-            + "  AND actual_finish_time IS NULL")
+            + "  AND actual_finish_time IS NULL "
+            + "  AND (#{tenantId} IS NULL OR tenant_id = #{tenantId})")
     int backfillByOrderId(
             @Param("orderId")     String orderId,
-            @Param("finishTime")  LocalDateTime finishTime);
+            @Param("finishTime")  LocalDateTime finishTime,
+            @Param("tenantId")    Long tenantId);
 
     /**
      * 查询指定工厂的历史预测平均偏差（天）。

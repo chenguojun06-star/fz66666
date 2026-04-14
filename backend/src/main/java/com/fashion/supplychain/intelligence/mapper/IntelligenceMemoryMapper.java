@@ -10,18 +10,18 @@ import org.apache.ibatis.annotations.Update;
 public interface IntelligenceMemoryMapper extends BaseMapper<IntelligenceMemory> {
 
     @Update("UPDATE t_intelligence_memory SET recall_count = recall_count + 1 " +
-            "WHERE id=#{id}")
-    int incrementRecall(@Param("id") Long id);
+            "WHERE id=#{id} AND (#{tenantId} IS NULL OR tenant_id = #{tenantId})")
+    int incrementRecall(@Param("id") Long id, @Param("tenantId") Long tenantId);
 
     @Update("UPDATE t_intelligence_memory SET adopted_count = adopted_count + 1 " +
-            "WHERE id=#{id}")
-    int incrementAdopted(@Param("id") Long id);
+            "WHERE id=#{id} AND (#{tenantId} IS NULL OR tenant_id = #{tenantId})")
+    int incrementAdopted(@Param("id") Long id, @Param("tenantId") Long tenantId);
 
         default int incrementRecallCount(Long id) {
-                return incrementRecall(id);
+                return incrementRecall(id, com.fashion.supplychain.common.UserContext.tenantId());
         }
 
         default int incrementAdoptedCount(Long id) {
-                return incrementAdopted(id);
+                return incrementAdopted(id, com.fashion.supplychain.common.UserContext.tenantId());
         }
 }

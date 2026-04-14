@@ -95,7 +95,7 @@ public class AiJobRunLogService extends ServiceImpl<AiJobRunLogMapper, AiJobRunL
         }
         try {
             int safeLimit = Math.min(Math.max(limit, 1), 200);
-            return getBaseMapper().selectRecent(safeLimit);
+            return getBaseMapper().selectRecent(safeLimit, com.fashion.supplychain.common.UserContext.tenantId());
         } catch (Exception e) {
             onWriteFailure(e, "查询日志失败");
             return Collections.emptyList();

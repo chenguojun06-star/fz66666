@@ -221,7 +221,7 @@ public class IntegrationRecordService {
 
     /** 查询未处理的回调日志（用于补偿/重跑） */
     public List<IntegrationCallbackLog> getUnprocessedCallbacks(int limit) {
-        return callbackLogMapper.findUnprocessed(limit);
+        return callbackLogMapper.findUnprocessed(limit, com.fashion.supplychain.common.UserContext.tenantId());
     }
 
     // =========================================================

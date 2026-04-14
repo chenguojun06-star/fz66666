@@ -26,6 +26,7 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
             "  SUM(IFNULL(p.arrived_quantity, 0)) AS arrivedQuantity",
             "FROM t_material_purchase p",
             "WHERE p.delete_flag = 0",
+            "  AND (#{tenantId} IS NULL OR p.tenant_id = #{tenantId})",
             "  AND p.order_id IS NOT NULL",
             "  AND p.order_id &lt;&gt; ''",
             "  AND p.order_id IN",
@@ -33,7 +34,7 @@ public interface MaterialPurchaseMapper extends BaseMapper<MaterialPurchase> {
             "GROUP BY p.order_id",
             "</script>"
     })
-    List<Map<String, Object>> selectProcurementSnapshot(@Param("orderIds") List<String> orderIds);
+    List<Map<String, Object>> selectProcurementSnapshot(@Param("orderIds") List<String> orderIds, @Param("tenantId") Long tenantId);
 
     /**
      * 统计今日到货次数

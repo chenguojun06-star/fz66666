@@ -64,7 +64,7 @@ public class OrderDeliveryRiskOrchestrator {
 
         List<String> orderIds = orders.stream()
                 .map(ProductionOrder::getId).collect(Collectors.toList());
-        List<Map<String, Object>> allAggs = scanRecordMapper.selectStageDoneAgg(orderIds);
+        List<Map<String, Object>> allAggs = scanRecordMapper.selectStageDoneAgg(orderIds, tenantId);
         Map<String, Map<String, Integer>> orderStageMap = buildStageMap(allAggs);
 
         for (ProductionOrder order : orders) {

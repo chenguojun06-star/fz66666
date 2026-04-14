@@ -297,7 +297,7 @@ public class ShipmentReconciliationOrchestrator {
         if (!StringUtils.hasText(rid)) {
             throw new IllegalArgumentException("参数错误");
         }
-        return deductionItemMapper.selectByReconciliationId(rid);
+        return deductionItemMapper.selectByReconciliationId(rid, com.fashion.supplychain.common.UserContext.tenantId());
     }
 
     @Transactional(rollbackFor = Exception.class)

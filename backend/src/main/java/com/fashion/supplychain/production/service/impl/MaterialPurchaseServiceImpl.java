@@ -929,7 +929,25 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                     .set(MaterialPurchase::getReturnConfirmTime, null)
                     .set(MaterialPurchase::getRemark, remark)
                     .set(MaterialPurchase::getUpdateTime, LocalDateTime.now());
-        return this.update(retConfirmUw);
+        boolean ok = this.update(retConfirmUw);
+
+        if (ok && !isOrderDrivenPurchase(existed)) {
+            try {
+                Integer returnQty = existed.getReturnQuantity();
+                Integer arrivedQty = existed.getArrivedQuantity();
+                if (returnQty != null && returnQty > 0 && arrivedQty != null) {
+                    int delta = returnQty - arrivedQty;
+                    if (delta > 0) {
+                        materialStockService.decreaseStockForCancelReceive(existed, delta);
+                        log.info("resetReturnConfirm 已回退库存: purchaseId={}, delta={}", purchaseId, delta);
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("resetReturnConfirm 回退库存失败（不影响主流程）: purchaseId={}, err={}", purchaseId, e.getMessage());
+            }
+        }
+
+        return ok;
     }
 
     /**

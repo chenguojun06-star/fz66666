@@ -241,7 +241,7 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
 
         @Override
         public Map<String, Object> getPersonalStats(String operatorId, String scanType, String period) {
-                return baseMapper.selectPersonalStats(operatorId, scanType, period);
+                return baseMapper.selectPersonalStats(operatorId, scanType, period, com.fashion.supplychain.common.UserContext.tenantId());
         }
 
         @Override

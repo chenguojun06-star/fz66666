@@ -194,7 +194,7 @@ public class ProductionOrderFinanceOrchestrationService {
         // 【智能学习】订单完成时回填预测记录，自动闭合数据飞轮
         if (intelligencePredictionLogMapper != null) {
             try {
-                int backfilled = intelligencePredictionLogMapper.backfillByOrderId(oid, now);
+                int backfilled = intelligencePredictionLogMapper.backfillByOrderId(oid, now, com.fashion.supplychain.common.UserContext.tenantId());
                 if (backfilled > 0) {
                     log.info("[智能回填] 订单 {} 完成（completeProduction），回填 {} 条预测记录", oid, backfilled);
                 }
@@ -302,7 +302,7 @@ public class ProductionOrderFinanceOrchestrationService {
         // 【智能学习】关单时回填预测记录，自动闭合数据飞轮
         if (intelligencePredictionLogMapper != null) {
             try {
-                int backfilled = intelligencePredictionLogMapper.backfillByOrderId(oid, now);
+                int backfilled = intelligencePredictionLogMapper.backfillByOrderId(oid, now, com.fashion.supplychain.common.UserContext.tenantId());
                 if (backfilled > 0) {
                     log.info("[智能回填] 订单 {} 关单（closeOrder），回填 {} 条预测记录", oid, backfilled);
                 }
@@ -387,7 +387,7 @@ public class ProductionOrderFinanceOrchestrationService {
         // 【智能学习】自动关单时同步回填预测记录，自动闭合数据飞轮
         if (intelligencePredictionLogMapper != null) {
             try {
-                int backfilled = intelligencePredictionLogMapper.backfillByOrderId(oid, now);
+                int backfilled = intelligencePredictionLogMapper.backfillByOrderId(oid, now, com.fashion.supplychain.common.UserContext.tenantId());
                 if (backfilled > 0) {
                     log.info("[智能回填] 订单 {} 自动关单，回填 {} 条预测记录", oid, backfilled);
                 }

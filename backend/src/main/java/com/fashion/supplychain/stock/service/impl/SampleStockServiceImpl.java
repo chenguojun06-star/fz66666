@@ -205,7 +205,7 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
         loan.setTenantId(currentTenantId);
         sampleLoanMapper.insert(loan);
 
-        baseMapper.updateLoanedQuantity(stock.getId(), loanQty);
+        baseMapper.updateLoanedQuantity(stock.getId(), loanQty, currentTenantId);
 
         PatternProduction loanPattern = findPatternForStock(stock);
         if (loanPattern != null) {
@@ -266,7 +266,7 @@ public class SampleStockServiceImpl extends ServiceImpl<SampleStockMapper, Sampl
         }
         sampleLoanMapper.updateById(loan);
 
-        baseMapper.updateLoanedQuantity(loan.getSampleStockId(), -qty);
+        baseMapper.updateLoanedQuantity(loan.getSampleStockId(), -qty, com.fashion.supplychain.common.UserContext.tenantId());
 
         SampleStock returnStock = this.getById(loan.getSampleStockId());
         if (returnStock != null) {

@@ -340,7 +340,7 @@ public class SmartRemarkAgent {
         List<String> ids = orders.stream().map(ProductionOrder::getId).collect(Collectors.toList());
         if (ids.isEmpty()) return Collections.emptyMap();
 
-        List<Map<String, Object>> lastScans = scanRecordMapper.selectLastScanTimeByOrderIds(ids);
+        List<Map<String, Object>> lastScans = scanRecordMapper.selectLastScanTimeByOrderIds(ids, com.fashion.supplychain.common.UserContext.tenantId());
         Map<String, LocalDateTime> map = new HashMap<>();
         for (Map<String, Object> row : lastScans) {
             String ordId = (String) row.get("orderId");

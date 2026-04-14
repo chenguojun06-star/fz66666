@@ -81,7 +81,7 @@ public class OrderFlowStageFillHelper {
         boolean flowSnapshotOk = false;
         List<Map<String, Object>> flowRows = null;
         try {
-            flowRows = scanRecordMapper.selectFlowStageSnapshot(orderIds);
+            flowRows = scanRecordMapper.selectFlowStageSnapshot(orderIds, com.fashion.supplychain.common.UserContext.tenantId());
             flowSnapshotOk = true;
         } catch (Exception e) {
             log.warn("Failed to query flow stage snapshot: orderIdsCount={}", orderIds.size(), e);
@@ -115,7 +115,7 @@ public class OrderFlowStageFillHelper {
         boolean procurementSnapshotOk = false;
         List<Map<String, Object>> procurementRows = null;
         try {
-            procurementRows = materialPurchaseMapper.selectProcurementSnapshot(orderIds);
+            procurementRows = materialPurchaseMapper.selectProcurementSnapshot(orderIds, com.fashion.supplychain.common.UserContext.tenantId());
             procurementSnapshotOk = true;
         } catch (Exception e) {
             log.warn("Failed to query procurement snapshot: orderIdsCount={}", orderIds.size(), e);
@@ -825,7 +825,7 @@ public class OrderFlowStageFillHelper {
         Map<String, Map<String, Object>> procByOrder = new HashMap<>();
         if (!orderIds.isEmpty()) {
             try {
-                List<Map<String, Object>> rows = materialPurchaseMapper.selectProcurementSnapshot(orderIds);
+                List<Map<String, Object>> rows = materialPurchaseMapper.selectProcurementSnapshot(orderIds, com.fashion.supplychain.common.UserContext.tenantId());
                 if (rows != null) {
                     for (Map<String, Object> row : rows) {
                         String oid = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(row, "orderId"));

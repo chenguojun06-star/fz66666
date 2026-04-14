@@ -68,7 +68,7 @@ public class RhythmDnaOrchestrator {
                 .map(com.fashion.supplychain.production.entity.ProductionOrder::getId)
                 .collect(Collectors.toList());
 
-        List<Map<String, Object>> snapshots = scanRecordMapper.selectFlowStageSnapshot(orderIds);
+        List<Map<String, Object>> snapshots = scanRecordMapper.selectFlowStageSnapshot(orderIds, com.fashion.supplychain.common.UserContext.tenantId());
         Map<String, Map<String, Object>> snapshotMap = snapshots.stream()
                 .collect(Collectors.toMap(
                         m -> String.valueOf(m.get("orderId")), m -> m, (a, b) -> a));

@@ -9,9 +9,9 @@ import org.apache.ibatis.annotations.Update;
 @Mapper
 public interface SampleStockMapper extends BaseMapper<SampleStock> {
 
-    @Update("UPDATE t_sample_stock SET quantity = quantity + #{quantity}, update_time = NOW() WHERE id = #{id} AND delete_flag = 0")
-    int updateStockQuantity(@Param("id") String id, @Param("quantity") int quantity);
+    @Update("UPDATE t_sample_stock SET quantity = quantity + #{quantity}, update_time = NOW() WHERE id = #{id} AND delete_flag = 0 AND (#{tenantId} IS NULL OR tenant_id = #{tenantId})")
+    int updateStockQuantity(@Param("id") String id, @Param("quantity") int quantity, @Param("tenantId") Long tenantId);
 
-    @Update("UPDATE t_sample_stock SET loaned_quantity = loaned_quantity + #{quantity}, update_time = NOW() WHERE id = #{id} AND delete_flag = 0 AND (quantity - loaned_quantity) >= CASE WHEN #{quantity} < 0 THEN 0 ELSE #{quantity} END")
-    int updateLoanedQuantity(@Param("id") String id, @Param("quantity") int quantity);
+    @Update("UPDATE t_sample_stock SET loaned_quantity = loaned_quantity + #{quantity}, update_time = NOW() WHERE id = #{id} AND delete_flag = 0 AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) AND (quantity - loaned_quantity) >= CASE WHEN #{quantity} < 0 THEN 0 ELSE #{quantity} END")
+    int updateLoanedQuantity(@Param("id") String id, @Param("quantity") int quantity, @Param("tenantId") Long tenantId);
 }

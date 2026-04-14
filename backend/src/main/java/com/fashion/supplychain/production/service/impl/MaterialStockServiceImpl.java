@@ -475,4 +475,43 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
                 .set(MaterialStock::getUpdateTime, java.time.LocalDateTime.now()));
         log.info("Decreased stock for cancelReceive: id={}, delta={}", stock.getId(), quantity);
     }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void lockStock(String stockId, int quantity) {
+        if (quantity <= 0 || !StringUtils.hasText(stockId)) {
+            return;
+        }
+        int rows = baseMapper.lockStock(stockId, quantity);
+        if (rows == 0) {
+            log.warn("lockStock failed: stockId={}", stockId);
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void unlockStock(String stockId, int quantity) {
+        if (quantity <= 0 || !StringUtils.hasText(stockId)) {
+            return;
+        }
+        int rows = baseMapper.unlockStock(stockId, quantity);
+        if (rows == 0) {
+            log.warn("unlockStock failed: stockId={}", stockId);
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void decreaseStockAndUnlock(String stockId, int quantity) {
+        if (quantity <= 0 || !StringUtils.hasText(stockId)) {
+            return;
+        }
+        int rows = baseMapper.decreaseStockAndUnlock(stockId, quantity);
+        if (rows == 0) {
+            MaterialStock stock = this.getById(stockId);
+            String name = stock != null ? stock.getMaterialName() : "Unknown";
+            throw new IllegalStateException("库存不足，扣减失败: " + name);
+        }
+        log.info("Decreased stock and unlocked: id={}, delta={}", stockId, quantity);
+    }
 }

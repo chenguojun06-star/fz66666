@@ -82,7 +82,8 @@ public class FeedbackLearningOrchestrator {
                         request.getPredictionId(),
                         request.getActualFinishTime(),
                         deviationMinutes,
-                        request.getAcceptedSuggestion());
+                        request.getAcceptedSuggestion(),
+                        com.fashion.supplychain.common.UserContext.tenantId());
 
                 if (rows > 0) {
                     log.info("[反馈闭环] predictionId={} 偏差={}分钟 已持久化",

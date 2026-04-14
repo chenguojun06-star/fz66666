@@ -99,11 +99,12 @@ Page({
     var that = this;
     that.setData({ loading: true });
 
+    var apiFailCount = 0;
     return Promise.all([
-      api.dashboard.get().catch(function () { return {}; }),
-      api.dashboard.getTopStats().catch(function () { return {}; }),
-      api.production.listOrders({ deleteFlag: 0, status: 'production', page: 1, pageSize: 50 }).catch(function () { return {}; }),
-      api.production.listOrders({ deleteFlag: 0, status: 'completed',  page: 1, pageSize: 1 }).catch(function () { return {}; }),
+      api.dashboard.get().catch(function (e) { console.warn('[Dashboard] dash API失败:', e.message || e); apiFailCount++; return {}; }),
+      api.dashboard.getTopStats().catch(function (e) { console.warn('[Dashboard] topStats API失败:', e.message || e); apiFailCount++; return {}; }),
+      api.production.listOrders({ deleteFlag: 0, status: 'production', page: 1, pageSize: 50 }).catch(function (e) { console.warn('[Dashboard] prodOrders API失败:', e.message || e); apiFailCount++; return {}; }),
+      api.production.listOrders({ deleteFlag: 0, status: 'completed',  page: 1, pageSize: 1 }).catch(function (e) { console.warn('[Dashboard] compOrders API失败:', e.message || e); apiFailCount++; return {}; }),
     ]).then(function (res) {
       var dash     = res[0] || {};
       var topStats = res[1] || {};
@@ -139,6 +140,11 @@ Page({
           },
         },
       });
+      if (apiFailCount >= 4) {
+        wx.showToast({ title: '数据加载失败，请下拉刷新', icon: 'none', duration: 2500 });
+      } else if (apiFailCount > 0) {
+        wx.showToast({ title: '部分数据加载失败', icon: 'none', duration: 2000 });
+      }
     }).catch(function (err) {
       console.error('[Dashboard] refreshCards error:', err);
       that.setData({ loading: false });

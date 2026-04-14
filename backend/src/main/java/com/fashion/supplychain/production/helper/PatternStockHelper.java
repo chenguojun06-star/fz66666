@@ -95,7 +95,7 @@ public class PatternStockHelper {
             loan.setDeleteFlag(0);
             loan.setTenantId(tenantId);
             sampleLoanMapper.insert(loan);
-            sampleStockMapper.updateLoanedQuantity(stock.getId(), qty);
+            sampleStockMapper.updateLoanedQuantity(stock.getId(), qty, tenantId);
             log.info("[样衣出库] loanId={} stockId={} qty={}", loan.getId(), stock.getId(), qty);
         } else if ("WAREHOUSE_RETURN".equals(operationType)) {
             LambdaQueryWrapper<SampleStock> sq = new LambdaQueryWrapper<SampleStock>()
@@ -130,7 +130,7 @@ public class PatternStockHelper {
                 loan.setRemark(returnRemark);
             }
             sampleLoanMapper.updateById(loan);
-            sampleStockMapper.updateLoanedQuantity(stock.getId(), -loan.getQuantity());
+            sampleStockMapper.updateLoanedQuantity(stock.getId(), -loan.getQuantity(), tenantId);
             log.info("[样衣归还] loanId={} stockId={} qty=-{}", loan.getId(), stock.getId(), loan.getQuantity());
         }
     }

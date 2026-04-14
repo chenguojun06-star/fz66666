@@ -187,8 +187,8 @@ public class IntelligenceMemoryOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public void markAdopted(Long memoryId) {
-        memoryMapper.incrementAdopted(memoryId);
-        memoryMapper.incrementRecall(memoryId);
+        memoryMapper.incrementAdoptedCount(memoryId);
+        memoryMapper.incrementRecallCount(memoryId);
     }
 
     // ──────────────────────────────────────────────────────────────

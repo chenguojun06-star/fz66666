@@ -306,10 +306,12 @@ public class MaterialPurchasePickingHelper {
             item.setCreateTime(LocalDateTime.now());
             items.add(item);
 
+            materialStockService.lockStock(stock.getId(), pickFromThis);
+
             remainingQty -= pickFromThis;
         }
 
-        // 3. 保存待出库单（不扣库存）
+        // 3. 保存待出库单（不扣库存，但已锁定）
         String pickingId = materialPickingService.savePendingPicking(picking, items);
 
         // 4. 更新采购任务状态为「仓库待出库」（尚未完成，等仓库出库后变 completed）
@@ -554,6 +556,8 @@ public class MaterialPurchasePickingHelper {
             item.setCreateTime(LocalDateTime.now());
             items.add(item);
 
+            materialStockService.lockStock(stock.getId(), pickFromThis);
+
             // 不扣库存，仓库确认出库时再扣（避免采购侧点击即扣减，仓库尚未实际发货）
             remainingQty -= pickFromThis;
         }
@@ -620,7 +624,9 @@ public class MaterialPurchasePickingHelper {
                 MaterialStock stock = null;
                 if (item.getMaterialStockId() != null) {
                     stock = stockMap.get(item.getMaterialStockId());
-                    materialStockService.decreaseStockById(item.getMaterialStockId(), item.getQuantity());
+                    if (stock != null) {
+                        materialStockService.decreaseStockAndUnlock(item.getMaterialStockId(), item.getQuantity());
+                    }
                 } else {
                     materialStockService.decreaseStock(
                             item.getMaterialId(), item.getColor(), item.getSize(), item.getQuantity());
@@ -709,13 +715,19 @@ public class MaterialPurchasePickingHelper {
         // 1. 获取出库明细
         List<MaterialPickingItem> items = materialPickingService.getItemsByPickingId(pickingId);
 
+        boolean wasCompleted = "completed".equalsIgnoreCase(picking.getStatus());
+
         // 2. 回退库存
         for (MaterialPickingItem item : items) {
             if (item.getMaterialStockId() != null) {
-                materialStockService.update(null, new LambdaUpdateWrapper<com.fashion.supplychain.production.entity.MaterialStock>()
-                        .eq(com.fashion.supplychain.production.entity.MaterialStock::getId, item.getMaterialStockId())
-                        .setSql("quantity = quantity + " + item.getQuantity())
-                        .set(com.fashion.supplychain.production.entity.MaterialStock::getUpdateTime, LocalDateTime.now()));
+                if (wasCompleted) {
+                    materialStockService.update(null, new LambdaUpdateWrapper<com.fashion.supplychain.production.entity.MaterialStock>()
+                            .eq(com.fashion.supplychain.production.entity.MaterialStock::getId, item.getMaterialStockId())
+                            .setSql("quantity = quantity + " + item.getQuantity())
+                            .set(com.fashion.supplychain.production.entity.MaterialStock::getUpdateTime, LocalDateTime.now()));
+                } else {
+                    materialStockService.unlockStock(item.getMaterialStockId(), item.getQuantity());
+                }
             }
         }
 

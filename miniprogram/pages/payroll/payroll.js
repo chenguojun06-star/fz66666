@@ -249,8 +249,7 @@ Page({
     const totalQuantity = monthData.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
     const orderNos = new Set(monthData.map(item => item.orderNo).filter(Boolean));
 
-    // 处理明细数据（当前筛选）
-    const records = data.map(item => ({
+    const records = monthData.map(item => ({
       orderNo: item.orderNo || '-',
       styleNo: item.styleNo || '-',
       color: item.color || '-',
@@ -265,18 +264,17 @@ Page({
       orderStatus: item.orderStatus || '',
       orderStatusText: _orderStatusText(item.orderStatus),
       quantity: item.quantity || 0,
-      unitPrice: (item.unitPrice || 0).toFixed(2),
-      totalAmount: (item.totalAmount || 0).toFixed(2),
-      totalAmountNum: item.totalAmount || 0,
+      unitPrice: (Number(item.unitPrice) || 0).toFixed(2),
+      totalAmount: (Number(item.totalAmount) || 0).toFixed(2),
+      totalAmountNum: Number(item.totalAmount) || 0,
       scanTime: item.startTime ? formatDateTime(parseDateSafe(item.startTime)) : '-',
       rawScanTime: item.startTime || '',
     }));
 
-    // 排序
     this._sortRecords(records);
 
     const filteredTotalAmount = records.reduce(
-      (sum, item) => sum + parseFloat(item.totalAmount),
+      (sum, item) => sum + item.totalAmountNum,
       0
     );
 

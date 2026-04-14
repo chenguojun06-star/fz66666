@@ -56,11 +56,12 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         "  v.warehousing_operator_name AS warehousingOperatorName,",
                         "  v.warehousing_quantity AS warehousingQuantity",
                         "FROM v_production_order_flow_stage_snapshot v",
-                        "WHERE v.order_id IN",
+                        "WHERE (#{tenantId} IS NULL OR v.tenant_id = #{tenantId})",
+                        "  AND v.order_id IN",
                         "<foreach collection='orderIds' item='id' open='(' separator=',' close=')'>#{id}</foreach>",
                         "</script>"
         })
-        List<Map<String, Object>> selectFlowStageSnapshot(@Param("orderIds") List<String> orderIds);
+        List<Map<String, Object>> selectFlowStageSnapshot(@Param("orderIds") List<String> orderIds, @Param("tenantId") Long tenantId);
 
         @Select({
                         "<script>",
@@ -70,11 +71,12 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         "  v.done_quantity AS doneQuantity,",
                         "  v.last_scan_time AS lastScanTime",
                         "FROM v_production_order_stage_done_agg v",
-                        "WHERE v.order_id IN",
+                        "WHERE (#{tenantId} IS NULL OR v.tenant_id = #{tenantId})",
+                        "  AND v.order_id IN",
                         "<foreach collection='orderIds' item='id' open='(' separator=',' close=')'>#{id}</foreach>",
                         "</script>"
         })
-        List<Map<String, Object>> selectStageDoneAgg(@Param("orderIds") List<String> orderIds);
+        List<Map<String, Object>> selectStageDoneAgg(@Param("orderIds") List<String> orderIds, @Param("tenantId") Long tenantId);
 
         @Select({
                         "<script>",
@@ -87,8 +89,8 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         "WHERE sr.operator_id = #{operatorId}",
                         "  AND sr.scan_result = 'success'",
                         "  AND sr.quantity &gt; 0",
-                        /* factory_id IS NULL = 本厂内部员工扫码；非空 = 外发工厂（走订单结算，不计入工资） */
                         "  AND sr.factory_id IS NULL",
+                        "  AND (#{tenantId} IS NULL OR sr.tenant_id = #{tenantId})",
                         "<choose>",
                         "  <when test='period != null and period == \"month\"'>",
                         /* 用范围查询替代 YEAR()/MONTH() 函数，允许走 operator_id+scan_time 联合索引 */
@@ -113,7 +115,8 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
         })
         Map<String, Object> selectPersonalStats(@Param("operatorId") String operatorId,
                         @Param("scanType") String scanType,
-                        @Param("period") String period);
+                        @Param("period") String period,
+                        @Param("tenantId") Long tenantId);
 
         @Select({
                         "<script>",
@@ -131,8 +134,8 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         "FROM t_scan_record sr",
                         "WHERE sr.scan_result = 'success'",
                         "  AND sr.quantity &gt; 0",
-                        /* factory_id IS NULL = 本厂内部员工扫码；非空 = 外发工厂（走订单结算，不计入工资） */
                         "  AND sr.factory_id IS NULL",
+                        "  AND (#{tenantId} IS NULL OR sr.tenant_id = #{tenantId})",
                         /* 与 selectPersonalStats 保持一致：排除已取消/已删除订单的扫码记录 */
                         "  AND NOT EXISTS (",
                         "    SELECT 1 FROM t_production_order po",
@@ -240,10 +243,11 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                 "WHERE sr.order_id IN",
                 "<foreach collection='orderIds' item='id' open='(' separator=',' close=')'>#{id}</foreach>",
                 "  AND sr.scan_result='success'",
+                "  AND (#{tenantId} IS NULL OR sr.tenant_id = #{tenantId})",
                 "GROUP BY sr.order_id",
                 "</script>"
         })
-        List<Map<String, Object>> selectLastScanTimeByOrderIds(@Param("orderIds") List<String> orderIds);
+        List<Map<String, Object>> selectLastScanTimeByOrderIds(@Param("orderIds") List<String> orderIds, @Param("tenantId") Long tenantId);
 
         /**
          * 按时间段统计各工人扫码产量与金额（用于工资异常检测）

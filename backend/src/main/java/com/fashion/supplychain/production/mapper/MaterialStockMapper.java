@@ -10,6 +10,23 @@ import org.apache.ibatis.annotations.Update;
 public interface MaterialStockMapper extends BaseMapper<MaterialStock> {
 
     @Update("UPDATE t_material_stock SET " +
+            "locked_quantity = locked_quantity + #{delta}, " +
+            "update_time = NOW() WHERE id = #{id} AND delete_flag = 0")
+    int lockStock(@Param("id") String id, @Param("delta") int delta);
+
+    @Update("UPDATE t_material_stock SET " +
+            "locked_quantity = GREATEST(0, locked_quantity - #{delta}), " +
+            "update_time = NOW() WHERE id = #{id} AND delete_flag = 0")
+    int unlockStock(@Param("id") String id, @Param("delta") int delta);
+
+    @Update("UPDATE t_material_stock SET " +
+            "quantity = quantity - #{delta}, " +
+            "locked_quantity = GREATEST(0, locked_quantity - #{delta}), " +
+            "total_value = ROUND(GREATEST(0, quantity - #{delta}) * COALESCE(unit_price, 0), 2), " +
+            "update_time = NOW() WHERE id = #{id} AND quantity >= #{delta} AND delete_flag = 0")
+    int decreaseStockAndUnlock(@Param("id") String id, @Param("delta") int delta);
+
+    @Update("UPDATE t_material_stock SET " +
             "quantity = quantity + #{delta}, " +
             "total_value = ROUND(GREATEST(0, quantity + #{delta}) * COALESCE(unit_price, 0), 2), " +
             "update_time = NOW() WHERE id = #{id}")

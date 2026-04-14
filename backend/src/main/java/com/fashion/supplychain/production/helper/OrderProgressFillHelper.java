@@ -62,7 +62,7 @@ public class OrderProgressFillHelper {
         Map<String, LinkedHashMap<String, Long>> doneByOrder = new HashMap<>();
         boolean doneAggOk = false;
         try {
-            List<Map<String, Object>> rows = scanRecordMapper.selectStageDoneAgg(orderIds);
+            List<Map<String, Object>> rows = scanRecordMapper.selectStageDoneAgg(orderIds, com.fashion.supplychain.common.UserContext.tenantId());
             Map<String, List<Object[]>> tmp = new HashMap<>();
             if (rows != null) {
                 for (Map<String, Object> row : rows) {

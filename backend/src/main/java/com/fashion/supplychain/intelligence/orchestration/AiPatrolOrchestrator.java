@@ -137,7 +137,7 @@ public class AiPatrolOrchestrator {
         if (inProg.isEmpty()) return 0;
 
         List<String> ids = inProg.stream().map(ProductionOrder::getId).collect(Collectors.toList());
-        List<Map<String, Object>> lastScans = scanRecordMapper.selectLastScanTimeByOrderIds(ids);
+        List<Map<String, Object>> lastScans = scanRecordMapper.selectLastScanTimeByOrderIds(ids, com.fashion.supplychain.common.UserContext.tenantId());
 
         // orderId → lastScanTime
         Map<String, LocalDateTime> lastScanMap = new HashMap<>();

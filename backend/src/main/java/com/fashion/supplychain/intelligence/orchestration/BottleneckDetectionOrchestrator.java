@@ -56,7 +56,7 @@ public class BottleneckDetectionOrchestrator {
                 .map(ProductionOrder::getId).collect(Collectors.toList());
 
         // 批量查询所有订单的各工序完成件数
-        List<Map<String, Object>> allAggs = scanRecordMapper.selectStageDoneAgg(orderIds);
+        List<Map<String, Object>> allAggs = scanRecordMapper.selectStageDoneAgg(orderIds, com.fashion.supplychain.common.UserContext.tenantId());
         Map<String, Map<String, Integer>> orderStageMap = buildOrderStageMap(allAggs);
 
         // 逐订单分析瓶颈

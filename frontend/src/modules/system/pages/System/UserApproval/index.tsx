@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Button, Card, Empty, Input, Modal, Select, Space, Tabs, Tag } from 'antd';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -38,15 +38,7 @@ const UserApproval: React.FC = () => {
   const [factoryPending, setFactoryPending] = useState<User[]>([]);
   const [factoryTotal, setFactoryTotal] = useState(0);
 
-  useEffect(() => {
-    fetchPendingUsers();
-    fetchRoleOptions();
-    if (isTenantOwner) {
-      fetchFactoryPending();
-    }
-  }, [page, pageSize]);
-
-  const fetchRoleOptions = async () => {
+  const fetchRoleOptions = useCallback(async () => {
     setRoleLoading(true);
     try {
       const response = await api.get('/system/role/list', {
@@ -58,12 +50,13 @@ const UserApproval: React.FC = () => {
       }
     } catch (error) {
       console.error('获取角色选项失败', error);
+      message.error('获取角色选项失败');
     } finally {
       setRoleLoading(false);
     }
-  };
+  }, []);
 
-  const fetchPendingUsers = async () => {
+  const fetchPendingUsers = useCallback(async () => {
     setLoading(true);
     try {
       const response = await api.get('/system/user/pending', {
@@ -81,23 +74,33 @@ const UserApproval: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, pageSize]);
 
-  const fetchFactoryPending = async () => {
+  const fetchFactoryPending = useCallback(async () => {
     setFactoryLoading(true);
     try {
-      const response = await tenantService.listFactoryPendingRegistrations({ page: 1, pageSize: 100 });
+      const response = await tenantService.listPendingRegistrations({ page: 1, pageSize: 100 });
       const result = response as any;
       if (result.code === 200) {
         setFactoryPending(result.data?.records || []);
         setFactoryTotal(result.data?.total || 0);
+      } else {
+        message.error(result.message || '获取外发工厂待审批员工失败');
       }
-    } catch {
-      // ignore
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '获取外发工厂待审批员工失败');
     } finally {
       setFactoryLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchPendingUsers();
+    fetchRoleOptions();
+    if (isTenantOwner) {
+      fetchFactoryPending();
+    }
+  }, [fetchPendingUsers, fetchRoleOptions, fetchFactoryPending, isTenantOwner]);
 
   const handleApprove = (user: User) => {
     setCurrentUser(user);
@@ -211,8 +214,8 @@ const UserApproval: React.FC = () => {
     { title: '姓名', dataIndex: 'name', key: 'name', width: 100 },
     { title: '手机号', dataIndex: 'phone', key: 'phone', width: 120, render: (text: string) => text || '-' },
     {
-      title: '所属工厂', dataIndex: 'factoryId', key: 'factoryId', width: 140,
-      render: (v: string) => v ? <Tag color="blue">外发工厂</Tag> : '-',
+      title: '所属工厂', dataIndex: 'factoryName', key: 'factoryName', width: 140,
+      render: (v: string, record: User) => v ? <Tag color="blue">{v}</Tag> : (record.factoryId ? <Tag color="blue">外发工厂</Tag> : '-'),
     },
     { title: '注册时间', dataIndex: 'createTime', key: 'createTime', width: 160, render: (time: string) => formatDateTime(time) },
     {
