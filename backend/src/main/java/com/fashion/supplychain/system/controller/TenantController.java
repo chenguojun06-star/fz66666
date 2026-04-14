@@ -484,6 +484,7 @@ public class TenantController {
      * 工人自注册（无需登录）
      */
     @PostMapping("/registration/register")
+    @org.springframework.security.access.prepost.PreAuthorize("permitAll()")
     public Result<Map<String, Object>> workerRegister(@RequestBody Map<String, String> params,
                                                       HttpServletRequest request) {
         // Redis IP 限流：每 IP 每小时最多 10 次工人注册

@@ -245,7 +245,12 @@ public class MaterialPurchaseStatusHelper {
             throw new IllegalArgumentException("参数错误");
         }
 
-        MaterialPurchase purchase = materialPurchaseService.getById(purchaseId);
+        // 只查验证所需字段，避免未迁移列导致全字段SELECT 500
+        MaterialPurchase purchase = materialPurchaseService.getOne(
+                new LambdaQueryWrapper<MaterialPurchase>()
+                        .select(MaterialPurchase::getId, MaterialPurchase::getDeleteFlag,
+                                MaterialPurchase::getStatus)
+                        .eq(MaterialPurchase::getId, purchaseId));
         if (purchase == null || (purchase.getDeleteFlag() != null && purchase.getDeleteFlag() != 0)) {
             throw new NoSuchElementException("采购任务不存在");
         }
@@ -287,7 +292,44 @@ public class MaterialPurchaseStatusHelper {
             throw new IllegalStateException("回料确认失败");
         }
 
-        MaterialPurchase updated = materialPurchaseService.getById(purchaseId);
+        // 优先全字段查询；若schema仍有缺列则降级到原始字段查询，并手动填充业务字段
+        MaterialPurchase updated;
+        try {
+            updated = materialPurchaseService.getById(purchaseId);
+        } catch (Exception e) {
+            log.warn("[returnConfirm] 全字段查询失败(schema漂移)，降级安全查询: {}", e.getMessage());
+            updated = materialPurchaseService.getOne(
+                    new LambdaQueryWrapper<MaterialPurchase>()
+                            .select(MaterialPurchase::getId, MaterialPurchase::getPurchaseNo,
+                                    MaterialPurchase::getMaterialId, MaterialPurchase::getMaterialCode,
+                                    MaterialPurchase::getMaterialName, MaterialPurchase::getMaterialType,
+                                    MaterialPurchase::getSpecifications, MaterialPurchase::getUnit,
+                                    MaterialPurchase::getPurchaseQuantity, MaterialPurchase::getArrivedQuantity,
+                                    MaterialPurchase::getInboundRecordId, MaterialPurchase::getSupplierId,
+                                    MaterialPurchase::getSupplierName, MaterialPurchase::getUnitPrice,
+                                    MaterialPurchase::getTotalAmount, MaterialPurchase::getReceiverId,
+                                    MaterialPurchase::getReceiverName, MaterialPurchase::getReceivedTime,
+                                    MaterialPurchase::getRemark, MaterialPurchase::getOrderId,
+                                    MaterialPurchase::getOrderNo, MaterialPurchase::getStyleId,
+                                    MaterialPurchase::getStyleNo, MaterialPurchase::getStyleName,
+                                    MaterialPurchase::getColor, MaterialPurchase::getSize,
+                                    MaterialPurchase::getStatus, MaterialPurchase::getCreateTime,
+                                    MaterialPurchase::getUpdateTime, MaterialPurchase::getDeleteFlag,
+                                    MaterialPurchase::getCreatorId, MaterialPurchase::getCreatorName,
+                                    MaterialPurchase::getUpdaterId, MaterialPurchase::getUpdaterName,
+                                    MaterialPurchase::getExpectedArrivalDate, MaterialPurchase::getActualArrivalDate,
+                                    MaterialPurchase::getTenantId)
+                            .eq(MaterialPurchase::getId, purchaseId));
+            if (updated != null) {
+                // returnConfirmAndSync 已成功执行，手动填充回料确认字段
+                updated.setReturnConfirmed(true);
+                updated.setReturnQuantity(returnQuantity);
+                updated.setReturnConfirmerId(confirmerId);
+                updated.setReturnConfirmerName(confirmerName);
+                updated.setReturnConfirmTime(LocalDateTime.now());
+                updated.setUpdateTime(LocalDateTime.now());
+            }
+        }
         if (updated == null) {
             throw new IllegalStateException("回料确认失败");
         }
@@ -313,7 +355,13 @@ public class MaterialPurchaseStatusHelper {
             throw new AccessDeniedException("仅主管级别及以上可执行退回");
         }
 
-        MaterialPurchase purchase = materialPurchaseService.getById(purchaseId);
+        // 只查验证所需字段，避免未迁移列导致全字段SELECT 500
+        MaterialPurchase purchase = materialPurchaseService.getOne(
+                new LambdaQueryWrapper<MaterialPurchase>()
+                        .select(MaterialPurchase::getId, MaterialPurchase::getDeleteFlag,
+                                MaterialPurchase::getOrderId, MaterialPurchase::getOrderNo,
+                                MaterialPurchase::getStyleId, MaterialPurchase::getStyleNo)
+                        .eq(MaterialPurchase::getId, purchaseId));
         if (purchase == null || (purchase.getDeleteFlag() != null && purchase.getDeleteFlag() != 0)) {
             throw new NoSuchElementException("采购任务不存在");
         }
@@ -362,7 +410,26 @@ public class MaterialPurchaseStatusHelper {
                     LocalDateTime.now());
         }
 
-        MaterialPurchase updated = materialPurchaseService.getById(purchaseId);
+        MaterialPurchase updated;
+        try {
+            updated = materialPurchaseService.getById(purchaseId);
+        } catch (Exception e) {
+            log.warn("[resetReturnConfirm] 全字段查询失败(schema漂移)，降级安全查询: {}", e.getMessage());
+            updated = materialPurchaseService.getOne(
+                    new LambdaQueryWrapper<MaterialPurchase>()
+                            .select(MaterialPurchase::getId, MaterialPurchase::getPurchaseNo,
+                                    MaterialPurchase::getMaterialId, MaterialPurchase::getMaterialCode,
+                                    MaterialPurchase::getMaterialName, MaterialPurchase::getStatus,
+                                    MaterialPurchase::getOrderId, MaterialPurchase::getOrderNo,
+                                    MaterialPurchase::getStyleId, MaterialPurchase::getStyleNo,
+                                    MaterialPurchase::getCreateTime, MaterialPurchase::getUpdateTime,
+                                    MaterialPurchase::getDeleteFlag, MaterialPurchase::getTenantId)
+                            .eq(MaterialPurchase::getId, purchaseId));
+            if (updated != null) {
+                updated.setReturnConfirmed(false);
+                updated.setUpdateTime(LocalDateTime.now());
+            }
+        }
         if (updated == null) {
             throw new IllegalStateException("退回处理失败");
         }
@@ -533,7 +600,14 @@ public class MaterialPurchaseStatusHelper {
         if (!ok) {
             return false;
         }
-        MaterialPurchase updated = materialPurchaseService.getById(purchaseId);
+        // 只查sync所需字段，避免未迁移列导致全字段SELECT 500
+        MaterialPurchase updated = materialPurchaseService.getOne(
+                new LambdaQueryWrapper<MaterialPurchase>()
+                        .select(MaterialPurchase::getId, MaterialPurchase::getDeleteFlag,
+                                MaterialPurchase::getOrderId, MaterialPurchase::getOrderNo,
+                                MaterialPurchase::getStyleId, MaterialPurchase::getStyleNo,
+                                MaterialPurchase::getStatus)
+                        .eq(MaterialPurchase::getId, purchaseId));
         if (updated != null) {
             syncAfterPurchaseChanged(updated);
         }

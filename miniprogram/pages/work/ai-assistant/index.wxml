@@ -62,6 +62,7 @@
               <view
                 wx:for="{{card.actions}}" wx:for-item="act" wx:for-index="ai" wx:key="ai"
                 class="action-btn {{act.type === 'mark_urgent' ? 'btn-danger' : act.type === 'send_notification' ? 'btn-warning' : 'btn-primary'}}"
+                hover-class="btn-primary-hover" hover-stay-time="100"
                 bindtap="onCardAction"
                 data-type="{{act.type}}"
                 data-path="{{act.path}}"

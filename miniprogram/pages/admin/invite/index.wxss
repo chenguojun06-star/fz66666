@@ -44,7 +44,7 @@
   border-radius: var(--radius-sm);
 }
 
-.copy-btn:active {
+.copy-btn-hover {
   opacity: 0.85;
 }
 

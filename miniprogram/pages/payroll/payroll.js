@@ -238,63 +238,68 @@ Page({
    * 处理数据
    */
   processData(data) {
-    // 计算汇总数据（按当前筛选日期范围）
     const filterStart = this.data.startDate ? new Date(this.data.startDate + 'T00:00:00') : null;
     const filterEnd = this.data.endDate ? new Date(this.data.endDate + 'T23:59:59') : null;
 
-    const monthData = data.filter(item => {
-      if (!item.startTime) {
-        return false;
-      }
+    let totalAmount = 0;
+    let totalQuantity = 0;
+    const orderNoSet = new Set();
+    const records = [];
+
+    for (let i = 0; i < data.length; i++) {
+      const item = data[i];
+      if (!item.startTime) continue;
       const time = parseDateSafe(item.startTime);
-      return (!filterStart || time >= filterStart) && (!filterEnd || time <= filterEnd);
-    });
+      if ((filterStart && time < filterStart) || (filterEnd && time > filterEnd)) continue;
 
-    const totalAmount = monthData.reduce((sum, item) => sum + (Number(item.totalAmount) || 0), 0);
-    const totalQuantity = monthData.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
-    const orderNos = new Set(monthData.map(item => item.orderNo).filter(Boolean));
+      const amt = Number(item.totalAmount) || 0;
+      const qty = Number(item.quantity) || 0;
+      totalAmount += amt;
+      totalQuantity += qty;
+      if (item.orderNo) orderNoSet.add(item.orderNo);
 
-    const records = monthData.map(item => ({
-      orderNo: item.orderNo || '-',
-      styleNo: item.styleNo || '-',
-      color: item.color || '-',
-      size: item.size || '-',
-      processName: item.processName || '-',
-      operatorName: item.operatorName || '',
-      scanType: item.scanType || '',
-      scanTypeText: _scanTypeText(item.scanType),
-      delegateTargetType: item.delegateTargetType || '',
-      delegateTargetName: item.delegateTargetName || '',
-      actualOperatorName: item.actualOperatorName || '',
-      orderStatus: item.orderStatus || '',
-      orderStatusText: _orderStatusText(item.orderStatus),
-      quantity: item.quantity || 0,
-      unitPrice: (Number(item.unitPrice) || 0).toFixed(2),
-      totalAmount: (Number(item.totalAmount) || 0).toFixed(2),
-      totalAmountNum: Number(item.totalAmount) || 0,
-      scanTime: item.startTime ? formatDateTime(parseDateSafe(item.startTime)) : '-',
-      rawScanTime: item.startTime || '',
-    }));
+      records.push({
+        orderNo: item.orderNo || '-',
+        styleNo: item.styleNo || '-',
+        color: item.color || '-',
+        size: item.size || '-',
+        processName: item.processName || '-',
+        operatorName: item.operatorName || '',
+        scanType: item.scanType || '',
+        scanTypeText: _scanTypeText(item.scanType),
+        delegateTargetType: item.delegateTargetType || '',
+        delegateTargetName: item.delegateTargetName || '',
+        actualOperatorName: item.actualOperatorName || '',
+        orderStatus: item.orderStatus || '',
+        orderStatusText: _orderStatusText(item.orderStatus),
+        quantity: qty,
+        unitPrice: (Number(item.unitPrice) || 0).toFixed(2),
+        totalAmount: amt.toFixed(2),
+        totalAmountNum: amt,
+        scanTime: item.startTime ? formatDateTime(parseDateSafe(item.startTime)) : '-',
+        rawScanTime: item.startTime || '',
+      });
+    }
 
     this._sortRecords(records);
 
-    const filteredTotalAmount = records.reduce(
-      (sum, item) => sum + item.totalAmountNum,
-      0
-    );
+    let filteredTotalAmount = 0;
+    for (let i = 0; i < records.length; i++) {
+      filteredTotalAmount += records[i].totalAmountNum;
+    }
 
     this.setData({
       totalAmount: totalAmount.toFixed(2),
       totalQuantity,
-      recordCount: monthData.length,
-      orderCount: orderNos.size,
+      recordCount: records.length,
+      orderCount: orderNoSet.size,
       records,
       filteredTotalAmount: filteredTotalAmount.toFixed(2),
       summaryItems: [
         { label: '本月总金额', value: '¥' + totalAmount.toFixed(2), highlight: true },
         { label: '本月数量',   value: totalQuantity + ' 件' },
-        { label: '扫码次数',   value: monthData.length + ' 次' },
-        { label: '参与订单',   value: orderNos.size + ' 个' },
+        { label: '扫码次数',   value: records.length + ' 次' },
+        { label: '参与订单',   value: orderNoSet.size + ' 个' },
       ],
     });
   },

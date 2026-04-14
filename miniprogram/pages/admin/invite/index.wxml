@@ -15,13 +15,13 @@
   <view class="invite-card">
     <view class="section-title">工厂邀请码</view>
     <view class="code-display">{{tenantCode || '--'}}</view>
-    <view class="copy-btn" bindtap="onCopyTenantCode">复制工厂码</view>
+    <view class="copy-btn" hover-class="copy-btn-hover" hover-stay-time="100" bindtap="onCopyTenantCode">复制工厂码</view>
 
     <view class="divider"></view>
 
     <view class="section-title">PC端注册链接</view>
     <view class="hint-text">员工可通过此链接在电脑端注册账号</view>
-    <view class="copy-btn copy-link" bindtap="onCopyInviteUrl">复制注册链接</view>
+    <view class="copy-btn copy-link" hover-class="copy-btn-hover" hover-stay-time="100" bindtap="onCopyInviteUrl">复制注册链接</view>
   </view>
 
   <view class="tips-card">

@@ -58,9 +58,10 @@ Page({
       const tenantCode = (tenantResp && tenantResp.tenantCode) || '';
       const tenantName = (tenantResp && tenantResp.tenantName) || '';
 
-      const qrCodeBase64 = (qrResp && qrResp.qrCodeBase64) || '';
-      const inviteToken = (qrResp && qrResp.inviteToken) || '';
-      const expiresAt = (qrResp && qrResp.expiresAt) || '';
+      const qrData = (qrResp && qrResp.code === 200 && qrResp.data) || {};
+      const qrCodeBase64 = qrData.qrCodeBase64 || '';
+      const inviteToken = qrData.inviteToken || '';
+      const expiresAt = qrData.expiresAt || '';
 
       this.setData({ tenantCode, tenantName, qrUrl: qrCodeBase64, inviteToken, expiresAt });
     } catch (err) {

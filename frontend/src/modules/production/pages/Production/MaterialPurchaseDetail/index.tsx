@@ -13,6 +13,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { MATERIAL_ARRIVAL_RATE_THRESHOLD, REMARK_MIN_LENGTH, MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import { MaterialPurchase as MaterialPurchaseType } from '@/types/production';
 import api, { parseProductionOrderLines } from '@/utils/api';
+import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { formatDateTime } from '@/utils/datetime';
 import { ProductionOrderHeader } from '@/components/StyleAssets';
 import { useViewport } from '@/utils/useViewport';
@@ -319,11 +320,11 @@ const MaterialPurchaseDetail: React.FC = () => {
             {urls.map((url, i) => (
               <Image
                 key={i}
-                src={url}
+                src={getFullAuthedFileUrl(url)}
                 width={40}
                 height={40}
                 style={{ objectFit: 'cover', borderRadius: 4, cursor: 'pointer' }}
-                preview={{ src: url }}
+                preview={{ src: getFullAuthedFileUrl(url) }}
               />
             ))}
           </Image.PreviewGroup>

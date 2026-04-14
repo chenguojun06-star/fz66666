@@ -92,7 +92,7 @@ page {
   -webkit-backdrop-filter: blur(8px);
 }
 
-.btn-primary:active {
+.btn-primary-hover {
   opacity: 0.8;
   transform: scale(0.98);
 }
@@ -317,12 +317,6 @@ page {
   opacity: 0.4;
 }
 
-.empty-img {
-  width: 100px;
-  height: auto;
-  margin-bottom: 10px;
-}
-
 .empty-text {
   font-size: var(--font-size-base);
   color: var(--color-text-secondary);
@@ -428,7 +422,7 @@ page {
   color: var(--color-text-secondary);
 }
 
-.modal-close:active {
+.modal-close-hover {
   opacity: 0.6;
   transform: scale(0.9);
 }
@@ -514,8 +508,7 @@ page {
   transition: opacity 0.15s ease;
 }
 
-.footer-bar .btn-submit,
-.footer-bar .btn-primary {
+.footer-bar .btn-submit {
   flex: 1;
   height: 44px;
   display: flex;

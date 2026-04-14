@@ -88,7 +88,7 @@
 
     <!-- 提交按钮 -->
     <view class="btn">
-      <view class="btn-primary {{loading ? 'btn-disabled' : ''}}" bindtap="onSubmit">
+      <view class="btn-primary {{loading ? 'btn-disabled' : ''}}" hover-class="{{loading ? '' : 'btn-primary-hover'}}" hover-stay-time="100" bindtap="onSubmit">
         {{loading ? '提交中...' : '提交注册申请'}}
       </view>
     </view>

@@ -40,12 +40,6 @@ Page({
     recruitInfo: { show: false, tenantCode: '', tenantName: '' },
     currentLanguage: 'zh-CN',
     currentLanguageName: '中文',
-    languageNameMap: {
-      'zh-CN': '中文',
-      'en-US': 'English',
-      'vi-VN': 'Ti\u1ebfng Vi\u1ec7t',
-      'km-KH': '\u1781\u17d2\u1798\u17c2\u179a',
-    },
     menuItems: [],
   },
 
@@ -73,10 +67,10 @@ Page({
       'vi-VN': i18n.t('language.names.vi-VN', language),
       'km-KH': i18n.t('language.names.km-KH', language),
     };
+    this._languageNameMap = languageNameMap;
     this.setData({
       currentLanguage: language,
       currentLanguageName: languageNameMap[language] || '中文',
-      languageNameMap,
     });
     this.refreshMenuItems();
   },
@@ -105,7 +99,7 @@ Page({
   },
 
   onLanguageSwitchTap() {
-    const { languageNameMap } = this.data;
+    const languageNameMap = this._languageNameMap || { 'zh-CN': '中文', 'en-US': 'English', 'vi-VN': 'Tiếng Việt', 'km-KH': 'ភាសាខ្មែរ' };
     const langList = ['zh-CN', 'en-US', 'vi-VN', 'km-KH'];
     const itemList = langList.map((lang) => languageNameMap[lang] || lang);
     wx.showActionSheet({

@@ -18,6 +18,10 @@ const FLUSH_LOCK_KEY = 'scan_offline_flush_lock';
 const FLUSH_LOCK_TTL_MS = 30 * 1000;
 const { DEBUG } = require('../../../config/debug');
 
+let _cache = null;
+let _cacheTime = 0;
+const CACHE_TTL_MS = 5000;
+
 function _deepClone(obj) {
   try {
     return JSON.parse(JSON.stringify(obj));
@@ -27,16 +31,21 @@ function _deepClone(obj) {
 }
 
 function _load() {
+  const now = Date.now();
+  if (_cache && (now - _cacheTime) < CACHE_TTL_MS) {
+    return _cache;
+  }
   try {
     const raw = wx.getStorageSync(QUEUE_KEY);
-    if (!raw) return [];
+    if (!raw) { _cache = []; _cacheTime = now; return []; }
     const queue = JSON.parse(raw);
-    const now = Date.now();
     const valid = queue.filter(i => !i.queuedAt || (now - i.queuedAt) < ITEM_TTL_MS);
     if (valid.length !== queue.length) {
       _save(valid);
       if (DEBUG) console.log('[ScanOfflineQueue] 清理过期条目:', queue.length - valid.length);
     }
+    _cache = valid;
+    _cacheTime = now;
     return valid;
   } catch (e) {
     if (DEBUG) console.error('[ScanOfflineQueue] _load 解析失败，尝试恢复备份:', e);
@@ -47,6 +56,8 @@ function _load() {
         if (Array.isArray(recovered) && recovered.length > 0) {
           if (DEBUG) console.warn('[ScanOfflineQueue] 从备份恢复:', recovered.length, '条');
           _save(recovered);
+          _cache = recovered;
+          _cacheTime = now;
           return recovered;
         }
       }
@@ -58,11 +69,15 @@ function _load() {
         if (DEBUG) console.warn('[ScanOfflineQueue] 已备份损坏数据到:', QUEUE_KEY + '_backup');
       }
     } catch (_) {}
+    _cache = [];
+    _cacheTime = now;
     return [];
   }
 }
 
 function _save(queue) {
+  _cache = queue;
+  _cacheTime = Date.now();
   try {
     wx.setStorageSync(QUEUE_KEY, JSON.stringify(queue));
     return true;

@@ -33,10 +33,8 @@ export function getAuthedFileUrl(fileUrl: string | undefined | null): string {
   if (url.startsWith('http://') || url.startsWith('https://')) {
     try {
       const parsed = new URL(url, window.location.origin);
-      const isSameOrigin = parsed.origin === window.location.origin;
-      const isSameHost = parsed.hostname === window.location.hostname;
       const isFileApi = parsed.pathname.startsWith('/api/file/tenant-download/') || parsed.pathname.startsWith('/api/common/download/');
-      if ((!isSameOrigin && !isSameHost) || !isFileApi) {
+      if (!isFileApi) {
         return url;
       }
       if (!parsed.searchParams.has('token')) {

@@ -249,29 +249,33 @@ function groupScanRecords(records) {
 
   groupedList.sort((a, b) => (b.latestTime || '').localeCompare(a.latestTime || ''));
 
-  // 撤回限制：下一工序已有成功记录则禁止撤回
-  // 标准流程：裁剪→车缝→质检→入库（如后端工序配置变更需同步更新此映射）
   const NEXT_STAGE_MAP = { cutting: 'production', production: 'quality', quality: 'warehouse' };
+
+  const scanTypeIndex = {};
+  records.forEach(r => {
+    if (r.scanResult !== 'success') return;
+    if (!scanTypeIndex[r.scanType]) scanTypeIndex[r.scanType] = [];
+    scanTypeIndex[r.scanType].push(r);
+  });
+
   groupedList.forEach(g => {
     g.items.forEach(item => {
-      if (!item.canRescan) return; // 已禁止的不需再判断
+      if (!item.canRescan) return;
       const nextType = NEXT_STAGE_MAP[item.scanType];
-      if (nextType) {
-        // 优先用 cuttingBundleId 精确匹配；若 cuttingBundleId 缺失则用 orderNo+bundleNo 兜底
-        const hasNext = records.some(r => {
-          if (r.scanType !== nextType || r.scanResult !== 'success') return false;
-          if (item.cuttingBundleId && r.cuttingBundleId) {
-            return r.cuttingBundleId === item.cuttingBundleId;
-          }
-          // cuttingBundleId 缺失时，用 orderNo + cuttingBundleNo/bundleNo 作兜底匹配
-          const itemBundle = String(item.cuttingBundleNo || item.bundleNo || '');
-          const rBundle = String(r.cuttingBundleNo || r.bundleNo || '');
-          return r.orderNo === item.orderNo && itemBundle && rBundle && itemBundle === rBundle;
-        });
-        if (hasNext) {
-          item.canRescan = false;
-          item.canUndo = false;
+      if (!nextType) return;
+      const candidates = scanTypeIndex[nextType];
+      if (!candidates) return;
+      const hasNext = candidates.some(r => {
+        if (item.cuttingBundleId && r.cuttingBundleId) {
+          return r.cuttingBundleId === item.cuttingBundleId;
         }
+        const itemBundle = String(item.cuttingBundleNo || item.bundleNo || '');
+        const rBundle = String(r.cuttingBundleNo || r.bundleNo || '');
+        return r.orderNo === item.orderNo && itemBundle && rBundle && itemBundle === rBundle;
+      });
+      if (hasNext) {
+        item.canRescan = false;
+        item.canUndo = false;
       }
     });
   });
@@ -561,7 +565,7 @@ function onHandleQuality(page, e) {
  */
 function loadLocalHistory(page) {
   const history = getStorageValue('scan_history_v2') || [];
-  page.setData({ scanHistory: history });
+  page._scanHistory = history;
 }
 
 /**
@@ -571,8 +575,8 @@ function loadLocalHistory(page) {
  * @returns {void}
  */
 function addToLocalHistory(page, record) {
-  const history = [record, ...page.data.scanHistory].slice(0, 20);
-  page.setData({ scanHistory: history });
+  const history = [record, ...(page._scanHistory || [])].slice(0, 20);
+  page._scanHistory = history;
   setStorageValue('scan_history_v2', history);
 }
 
@@ -584,7 +588,7 @@ function addToLocalHistory(page, record) {
  */
 function onTapHistoryItem(page, e) {
   const index = Number(e.currentTarget.dataset.index);
-  const item = page.data.scanHistory[index];
+  const item = (page._scanHistory || [])[index];
 
   if (!item) {
     return;

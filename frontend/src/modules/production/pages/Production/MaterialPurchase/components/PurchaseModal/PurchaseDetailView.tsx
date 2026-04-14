@@ -11,6 +11,7 @@ import { ProductionOrderHeader } from '@/components/StyleAssets';
 import { MaterialPurchase as MaterialPurchaseType, ProductionOrder } from '@/types/production';
 import { formatMaterialSpecWidth, getMaterialTypeCategory } from '@/utils/materialType';
 import { formatDateTime } from '@/utils/datetime';
+import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import { MATERIAL_PURCHASE_STATUS } from '@/constants/business';
 import { getStatusConfig, buildColorSummary, getOrderQtyTotal, formatMaterialQuantity, formatReferenceKilograms } from '../../utils';
 
@@ -447,7 +448,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                   }}
                 >
                   <Image
-                    src={doc.imageUrl}
+                    src={getFullAuthedFileUrl(doc.imageUrl)}
                     width={144}
                     height={100}
                     style={{ objectFit: 'cover', borderRadius: 4 }}
@@ -511,7 +512,7 @@ const PurchaseDetailView: React.FC<PurchaseDetailViewProps> = ({
                   style={{ position: 'relative', width: 64, height: 64 }}
                 >
                   <Image
-                    src={url}
+                    src={getFullAuthedFileUrl(url)}
                     width={64}
                     height={64}
                     style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid #f0f0f0' }}

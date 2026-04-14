@@ -38,7 +38,7 @@
   <!-- 操作按钮 -->
   <view wx:if="{{imageUrl && !analyzing}}" class="btn-row">
     <view class="btn btn-outline" bind:tap="retake">重新拍照</view>
-    <view class="btn btn-primary" bind:tap="reset">换个检测</view>
+    <view class="btn btn-primary" hover-class="btn-primary-hover" hover-stay-time="100" bind:tap="reset">换个检测</view>
   </view>
 
   <!-- 分析结果 -->

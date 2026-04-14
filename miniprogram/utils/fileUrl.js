@@ -26,15 +26,19 @@ function getAuthedImageUrl(fileUrl) {
   const url = String(fileUrl).trim();
   if (!url) return '';
 
-  // 已是完整外部 URL，直接返回
   if (url.startsWith('http://') || url.startsWith('https://')) {
+    if (url.includes('/api/file/tenant-download/')) {
+      const token = getToken();
+      if (token) {
+        const sep = url.includes('?') ? '&' : '?';
+        return url + sep + 'token=' + encodeURIComponent(token);
+      }
+    }
     return url;
   }
 
-  // 拼接后端地址
   const fullUrl = getBaseUrl() + url;
 
-  // tenant-download 端点需要认证，追加 token 查询参数
   if (url.includes('/api/file/tenant-download/')) {
     const token = getToken();
     if (token) {

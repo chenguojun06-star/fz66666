@@ -140,7 +140,6 @@ Page({
     if (index >= 0) {
       this.setData({
         highlightOrderNo: orderNo,
-        scrollToIndex: index,
       });
 
       this._highlightTimer = setTimeout(() => {
