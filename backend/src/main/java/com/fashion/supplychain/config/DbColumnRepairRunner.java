@@ -861,6 +861,37 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             repaired += ensureColumn(conn, schema, "t_production_order", "transfer_log_json",
                     "LONGTEXT DEFAULT NULL");
 
+            // t_process_price_adjustment 工序调价记录（V202607201400 本地未执行时缺失）
+            repairedTables += ensureTable(conn, schema,
+                    "t_process_price_adjustment",
+                    "CREATE TABLE IF NOT EXISTS `t_process_price_adjustment` ("
+                    + "`id` VARCHAR(36) NOT NULL,"
+                    + "`tenant_id` BIGINT NOT NULL,"
+                    + "`order_id` VARCHAR(36) NOT NULL,"
+                    + "`order_no` VARCHAR(50) DEFAULT NULL,"
+                    + "`bundle_id` VARCHAR(36) DEFAULT NULL,"
+                    + "`bundle_no` VARCHAR(50) DEFAULT NULL,"
+                    + "`process_name` VARCHAR(100) NOT NULL,"
+                    + "`process_code` VARCHAR(50) DEFAULT NULL,"
+                    + "`progress_stage` VARCHAR(50) DEFAULT NULL,"
+                    + "`original_price` DECIMAL(10,2) NOT NULL DEFAULT 0.00,"
+                    + "`adjusted_price` DECIMAL(10,2) NOT NULL,"
+                    + "`reason` TEXT NOT NULL,"
+                    + "`adjusted_by` VARCHAR(36) NOT NULL,"
+                    + "`adjusted_by_name` VARCHAR(50) DEFAULT NULL,"
+                    + "`adjusted_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                    + "`delete_flag` INT NOT NULL DEFAULT 0,"
+                    + "`create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,"
+                    + "`update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+                    + "PRIMARY KEY (`id`),"
+                    + "INDEX `idx_ppa_tenant` (`tenant_id`),"
+                    + "INDEX `idx_ppa_order` (`order_id`),"
+                    + "INDEX `idx_ppa_order_no` (`order_no`)"
+                    + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+            // v_finished_product_settlement 视图若缺少 complete_time 列则重建（V202609021000 本地未执行）
+            repaired += ensureSettlementViewHasCompleteTime(conn, schema);
+
             if (repaired > 0) {
                 log.warn("[DbRepair] 共修复 {} 个缺失列，Flyway 可能未正常执行对应迁移脚本", repaired);
             }
@@ -915,6 +946,95 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             }
         } catch (Exception e) {
             log.error("[DbRepair] 创建表 {} 失败: {}", table, e.getMessage());
+        }
+        return 0;
+    }
+
+    /**
+     * 重建 v_finished_product_settlement 视图以补充 complete_time 字段。
+     * 本地 FLYWAY_ENABLED=false 时 V202609021000 未执行，视图无 complete_time 列，
+     * 而 FinishedProductSettlement 实体有 completeTime 字段（无 @TableField(exist=false)），
+     * 导致 MyBatis-Plus 生成 SELECT ..., complete_time, ... → MySQL 报 Unknown column → 500。
+     */
+    private int ensureSettlementViewHasCompleteTime(Connection conn, String schema) {
+        try {
+            if (!columnExists(conn, schema, "v_finished_product_settlement", "complete_time")) {
+                try (Statement stmt = conn.createStatement()) {
+                    stmt.executeUpdate("DROP VIEW IF EXISTS `v_finished_product_settlement`");
+                    String createView = "CREATE VIEW `v_finished_product_settlement` AS"
+                        + " SELECT `po`.`id` AS `order_id`,"
+                        + " `po`.`order_no` AS `order_no`,"
+                        + " `po`.`status` AS `status`,"
+                        + " `po`.`style_no` AS `style_no`,"
+                        + " `po`.`factory_id` AS `factory_id`,"
+                        + " `po`.`factory_name` AS `factory_name`,"
+                        + " `po`.`order_quantity` AS `order_quantity`,"
+                        + " COALESCE(`sq`.`total_price`,`si`.`price`,0) AS `style_final_price`,"
+                        + " COALESCE(`sq`.`profit_rate`,0) AS `target_profit_rate`,"
+                        + " COALESCE(`wh`.`total_warehoused`,0) AS `warehoused_quantity`,"
+                        + " COALESCE(`wh`.`total_defects`,0) AS `defect_quantity`,"
+                        + " COALESCE(`wh`.`colors`,'') AS `colors`,"
+                        + " COALESCE(`mat`.`total_material_cost`,0) AS `material_cost`,"
+                        + " COALESCE(`scan`.`total_production_cost`,0) AS `production_cost`,"
+                        + " (CASE WHEN (`po`.`order_quantity`>0)"
+                        + "   THEN ROUND(COALESCE(`wh`.`total_defects`,0)"
+                        + "     *((COALESCE(`mat`.`total_material_cost`,0)+COALESCE(`scan`.`total_production_cost`,0))"
+                        + "     /`po`.`order_quantity`),2) ELSE 0 END) AS `defect_loss`,"
+                        + " ROUND(COALESCE(`sq`.`total_price`,`si`.`price`,0)*COALESCE(`wh`.`total_warehoused`,0),2) AS `total_amount`,"
+                        + " ROUND((COALESCE(`sq`.`total_price`,`si`.`price`,0)*COALESCE(`wh`.`total_warehoused`,0))"
+                        + "   -COALESCE(`mat`.`total_material_cost`,0)-COALESCE(`scan`.`total_production_cost`,0)"
+                        + "   -(CASE WHEN (`po`.`order_quantity`>0)"
+                        + "     THEN COALESCE(`wh`.`total_defects`,0)"
+                        + "       *((COALESCE(`mat`.`total_material_cost`,0)+COALESCE(`scan`.`total_production_cost`,0))"
+                        + "       /`po`.`order_quantity`) ELSE 0 END),2) AS `profit`,"
+                        + " (CASE WHEN (COALESCE(`sq`.`total_price`,`si`.`price`,0)*COALESCE(`wh`.`total_warehoused`,0))>0"
+                        + "   THEN ROUND(((COALESCE(`sq`.`total_price`,`si`.`price`,0)*COALESCE(`wh`.`total_warehoused`,0))"
+                        + "     -COALESCE(`mat`.`total_material_cost`,0)-COALESCE(`scan`.`total_production_cost`,0)"
+                        + "     -(CASE WHEN (`po`.`order_quantity`>0)"
+                        + "       THEN COALESCE(`wh`.`total_defects`,0)"
+                        + "         *((COALESCE(`mat`.`total_material_cost`,0)+COALESCE(`scan`.`total_production_cost`,0))"
+                        + "         /`po`.`order_quantity`) ELSE 0 END))"
+                        + "     /(COALESCE(`sq`.`total_price`,`si`.`price`,0)*COALESCE(`wh`.`total_warehoused`,0))*100,2)"
+                        + "   ELSE 0 END) AS `profit_margin`,"
+                        + " COALESCE(`po`.`actual_end_date`,`wh`.`last_warehoused_time`) AS `complete_time`,"
+                        + " `po`.`create_time` AS `create_time`,"
+                        + " `po`.`update_time` AS `update_time`,"
+                        + " `po`.`tenant_id` AS `tenant_id`"
+                        + " FROM `t_production_order` `po`"
+                        + " LEFT JOIN `t_style_info` `si` ON `po`.`style_no`=`si`.`style_no`"
+                        + " LEFT JOIN (SELECT sq1.`style_id`,sq1.`total_price`,sq1.`profit_rate`"
+                        + "   FROM `t_style_quotation` sq1"
+                        + "   INNER JOIN (SELECT `style_id`,MAX(`update_time`) AS max_update_time"
+                        + "     FROM `t_style_quotation` GROUP BY `style_id`) sq_latest"
+                        + "   ON sq1.`style_id`=sq_latest.`style_id` AND sq1.`update_time`=sq_latest.`max_update_time`"
+                        + " ) `sq` ON `sq`.`style_id`=`si`.`id`"
+                        + " LEFT JOIN (SELECT `pw`.`order_no`,"
+                        + "   SUM(COALESCE(`pw`.`qualified_quantity`,0)) AS `total_warehoused`,"
+                        + "   SUM(COALESCE(`pw`.`unqualified_quantity`,0)) AS `total_defects`,"
+                        + "   MAX(`pw`.`create_time`) AS `last_warehoused_time`,"
+                        + "   GROUP_CONCAT(DISTINCT CASE WHEN `cb`.`color` IS NOT NULL THEN `cb`.`color` ELSE '' END"
+                        + "     ORDER BY `cb`.`color` ASC SEPARATOR ', ') AS `colors`"
+                        + "   FROM `t_product_warehousing` `pw`"
+                        + "   LEFT JOIN `t_cutting_bundle` `cb` ON `pw`.`cutting_bundle_id`=`cb`.`id`"
+                        + "   WHERE `pw`.`delete_flag`=0 GROUP BY `pw`.`order_no`"
+                        + " ) `wh` ON `po`.`order_no`=`wh`.`order_no`"
+                        + " LEFT JOIN (SELECT `order_no`,SUM(`total_amount`) AS `total_material_cost`"
+                        + "   FROM `t_material_purchase` WHERE `status` IN ('RECEIVED','COMPLETED')"
+                        + "   GROUP BY `order_no`) `mat` ON `po`.`order_no`=`mat`.`order_no`"
+                        + " LEFT JOIN (SELECT `order_no`,SUM(`scan_cost`) AS `total_production_cost`"
+                        + "   FROM `t_scan_record` WHERE `scan_cost` IS NOT NULL GROUP BY `order_no`"
+                        + " ) `scan` ON `po`.`order_no`=`scan`.`order_no`"
+                        + " WHERE `po`.`delete_flag`=0"
+                        + "   AND `po`.`status` NOT IN ('CANCELLED','cancelled','DELETED','deleted','废弃','已取消')"
+                        + "   AND `po`.`order_no` NOT LIKE 'CUT%'"
+                        + " ORDER BY `po`.`create_time` DESC";
+                    stmt.executeUpdate(createView);
+                }
+                log.warn("[DbRepair] 已重建视图 v_finished_product_settlement（补齐 complete_time 字段）");
+                return 1;
+            }
+        } catch (Exception e) {
+            log.error("[DbRepair] 重建视图 v_finished_product_settlement 失败: {}", e.getMessage());
         }
         return 0;
     }

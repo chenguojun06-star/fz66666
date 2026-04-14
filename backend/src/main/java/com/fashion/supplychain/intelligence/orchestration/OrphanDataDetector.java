@@ -118,7 +118,7 @@ public class OrphanDataDetector {
         counts.put("t_cutting_task",               countCuttingTasks(orphanOrderIds, tenantId));
         counts.put("t_cutting_bundle",             countCuttingBundles(orphanOrderIds, tenantId));
         counts.put("t_production_process_tracking", countProcessTrackings(orphanOrderIds, tenantId));
-        counts.put("t_process_price_adjustment",   countProcessPriceAdjustments(orphanOrderIds, tenantId));
+        counts.put("t_process_price_adjustment",   safeCount(() -> countProcessPriceAdjustments(orphanOrderIds, tenantId), "t_process_price_adjustment"));
         counts.put("t_material_picking",           countMaterialPickings(orphanOrderIds, tenantId));
         counts.put("t_material_quality_issue",     countMaterialQualityIssues(orphanOrderIds, tenantId));
         counts.put("t_production_exception_report", countExceptionReports(orphanOrderIds, tenantId));
@@ -301,6 +301,14 @@ public class OrphanDataDetector {
         if (deadIds.isEmpty()) return 0;
         return processPriceAdjustmentService.lambdaQuery().in(ProcessPriceAdjustment::getOrderId, deadIds)
                 .eq(tenantId != null, ProcessPriceAdjustment::getTenantId, tenantId).count();
+    }
+    /** 安全统计：若表不存在则返回 0，避免孤儿数据扫描因缺表整体 500 */
+    private long safeCount(java.util.function.Supplier<Long> fn, String tableName) {
+        try { return fn.get(); }
+        catch (Exception e) {
+            log.warn("[OrphanDetector] 统计跳过 — 表可能不存在: {} ({})", tableName, e.getMessage());
+            return 0L;
+        }
     }
     private long countMaterialPickings(Set<String> deadIds, Long tenantId) {
         if (deadIds.isEmpty()) return 0;
