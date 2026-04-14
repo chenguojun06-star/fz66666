@@ -50,7 +50,7 @@ const Register: React.FC = () => {
       applyPassword: values.password,
     });
     if (res?.code === 200 || res?.data) {
-      message.success('入驻申请已提交，请等待平台审核，审核通过后可登录使用');
+      message.success(`入驻申请已提交${values.tenantName ? `，欢迎「${values.tenantName}」加入云裳智链` : ''}，请等待平台审核，审核通过后可登录使用`);
       setTimeout(() => navigate('/login'), 2500);
     } else {
       message.error(res?.message || '申请失败');
@@ -68,7 +68,7 @@ const Register: React.FC = () => {
       phone: values.phone || undefined,
     });
     if (res?.code === 200 || res?.data) {
-      message.success('注册申请已提交，请等待管理员审批通过后即可登录');
+      message.success(factoryName ? `注册申请已提交，欢迎加入「${factoryName}」，请耐心等待管理员审批通过后即可登录` : '注册申请已提交，请等待管理员审批通过后即可登录');
       setTimeout(() => navigate('/login'), 2500);
     } else {
       message.error(res?.message || '注册失败，请联系管理员');
@@ -123,8 +123,8 @@ const Register: React.FC = () => {
               <div className="login-showcase-desc">
                 {isWorkerInvite
                   ? isFactoryInvite
-                    ? '填写姓名和账号密码即可注册，注册后自动归属到该外发工厂，由外发工厂管理员审批。'
-                    : '填写姓名和账号密码即可注册，注册后由工厂管理员审批通过即可登录。'
+                    ? `填写姓名和账号密码即可注册，注册后自动归属到「${factoryName}」外发工厂，由外发工厂管理员审批。`
+                    : `填写姓名和账号密码即可注册，注册后归属到「${factoryName}」，由工厂管理员审批通过即可登录。`
                   : '填写工厂与联系人信息，审批通过后即可启用正式账号。'}
               </div>
             </div>
@@ -228,8 +228,8 @@ const Register: React.FC = () => {
             <Alert
               message={belongLabel}
               description={isFactoryInvite
-                ? '注册后将归属到该外发工厂，由外发工厂管理员审批。'
-                : '注册后将归属到该工厂，由工厂管理员审批。'}
+                ? `注册后将归属到「${factoryName}」外发工厂，由外发工厂管理员审批。`
+                : `注册后将归属到「${factoryName}」工厂，由工厂管理员审批通过即可登录。`}
               type="info"
               showIcon
               icon={<BankOutlined />}
