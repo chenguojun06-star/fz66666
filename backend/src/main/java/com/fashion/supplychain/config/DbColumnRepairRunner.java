@@ -791,6 +791,11 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                     "INT NOT NULL DEFAULT 0");
             repaired += ensureColumn(conn, schema, "t_product_sku", "tenant_id",
                     "BIGINT DEFAULT NULL");
+            // t_product_sku.version — @Version 乐观锁注解要求此列必须存在；
+            // V202609151001 使用了 DELIMITER $$ 语法，Flyway JDBC 解析器无法处理，
+            // 导致云端该列从未被添加 → ProductSku 所有 SELECT 抛 Unknown column 'version' → HTTP 500
+            repaired += ensureColumn(conn, schema, "t_product_sku", "version",
+                    "INT NOT NULL DEFAULT 0");
 
             // ── t_style_attachment 补齐 5 列（V202608011400 可能因 Flyway 解析器截断未生效）
             repaired += ensureColumn(conn, schema, "t_style_attachment", "version",

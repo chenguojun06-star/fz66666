@@ -109,21 +109,24 @@ public class OrphanDataDetector {
         Map<String, OrphanDataScanResultDTO.CategoryStat> categoryStats = new LinkedHashMap<>();
         long totalOrphanCount = 0;
 
+        // 所有统计均用 safeCount 包裹：云端若某表缺失或有缺列，直接跳过返回 0，
+        // 而不是整个扫描接口 500。之前仅 t_process_price_adjustment 被包裹，其余 13 个裸调用
+        // 会因 t_bill_aggregation / t_receivable 等表在云端不存在而抛异常导致全接口 500。
         Map<String, Long> counts = new HashMap<>();
-        counts.put("t_scan_record",               countScanRecords(orphanOrderIds, tenantId));
-        counts.put("t_material_purchase",          countMaterialPurchases(orphanOrderIds, tenantId));
-        counts.put("t_product_warehousing",        countProductWarehousing(orphanOrderIds, tenantId));
-        counts.put("t_product_outstock",           countProductOutstocks(orphanOrderIds, tenantId));
-        counts.put("t_factory_shipment",           countFactoryShipments(orphanOrderIds, tenantId));
-        counts.put("t_cutting_task",               countCuttingTasks(orphanOrderIds, tenantId));
-        counts.put("t_cutting_bundle",             countCuttingBundles(orphanOrderIds, tenantId));
-        counts.put("t_production_process_tracking", countProcessTrackings(orphanOrderIds, tenantId));
-        counts.put("t_process_price_adjustment",   safeCount(() -> countProcessPriceAdjustments(orphanOrderIds, tenantId), "t_process_price_adjustment"));
-        counts.put("t_material_picking",           countMaterialPickings(orphanOrderIds, tenantId));
-        counts.put("t_material_quality_issue",     countMaterialQualityIssues(orphanOrderIds, tenantId));
-        counts.put("t_production_exception_report", countExceptionReports(orphanOrderIds, tenantId));
-        counts.put("t_bill_aggregation",           countBillAggregations(orphanOrderIds, tenantId));
-        counts.put("t_receivable",                 countReceivables(orphanOrderIds, tenantId));
+        counts.put("t_scan_record",                safeCount(() -> countScanRecords(orphanOrderIds, tenantId), "t_scan_record"));
+        counts.put("t_material_purchase",           safeCount(() -> countMaterialPurchases(orphanOrderIds, tenantId), "t_material_purchase"));
+        counts.put("t_product_warehousing",         safeCount(() -> countProductWarehousing(orphanOrderIds, tenantId), "t_product_warehousing"));
+        counts.put("t_product_outstock",            safeCount(() -> countProductOutstocks(orphanOrderIds, tenantId), "t_product_outstock"));
+        counts.put("t_factory_shipment",            safeCount(() -> countFactoryShipments(orphanOrderIds, tenantId), "t_factory_shipment"));
+        counts.put("t_cutting_task",                safeCount(() -> countCuttingTasks(orphanOrderIds, tenantId), "t_cutting_task"));
+        counts.put("t_cutting_bundle",              safeCount(() -> countCuttingBundles(orphanOrderIds, tenantId), "t_cutting_bundle"));
+        counts.put("t_production_process_tracking", safeCount(() -> countProcessTrackings(orphanOrderIds, tenantId), "t_production_process_tracking"));
+        counts.put("t_process_price_adjustment",    safeCount(() -> countProcessPriceAdjustments(orphanOrderIds, tenantId), "t_process_price_adjustment"));
+        counts.put("t_material_picking",            safeCount(() -> countMaterialPickings(orphanOrderIds, tenantId), "t_material_picking"));
+        counts.put("t_material_quality_issue",      safeCount(() -> countMaterialQualityIssues(orphanOrderIds, tenantId), "t_material_quality_issue"));
+        counts.put("t_production_exception_report", safeCount(() -> countExceptionReports(orphanOrderIds, tenantId), "t_production_exception_report"));
+        counts.put("t_bill_aggregation",            safeCount(() -> countBillAggregations(orphanOrderIds, tenantId), "t_bill_aggregation"));
+        counts.put("t_receivable",                  safeCount(() -> countReceivables(orphanOrderIds, tenantId), "t_receivable"));
 
         for (Map.Entry<String, Long> entry : counts.entrySet()) {
             String table = entry.getKey();
