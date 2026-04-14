@@ -215,10 +215,11 @@ Page({
 
     this.setData({ loading: true });
     try {
-      const { tenantCode, factoryId, username, name, phone, password } = this.data;
+      const { tenantCode, factoryId, tenantName, username, name, phone, password } = this.data;
       const resp = await api.tenant.workerRegister({
         tenantCode: tenantCode.trim(),
         factoryId: factoryId || undefined,
+        factoryName: tenantName || undefined,
         username: username.trim(),
         name: name.trim(),
         phone: phone.trim(),
@@ -229,7 +230,7 @@ Page({
       if (resp && resp.code === 200) {
         wx.showModal({
           title: '注册成功',
-          content: '注册申请已提交，请等待工厂管理员审批通过后使用账号登录。',
+          content: '注册申请已提交，请耐心等待管理员审批通过后即可登录。',
           showCancel: false,
           confirmText: '返回登录',
           success: () => {

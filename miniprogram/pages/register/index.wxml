@@ -1,7 +1,7 @@
 <view class="container">
   <view class="card register-card">
     <view class="title">员工注册</view>
-    <view class="subtitle">填写信息后等待工厂管理员审批</view>
+    <view class="subtitle">填写信息后请耐心等待管理员审批</view>
 
     <!-- 工厂编码 -->
     <view class="field">
