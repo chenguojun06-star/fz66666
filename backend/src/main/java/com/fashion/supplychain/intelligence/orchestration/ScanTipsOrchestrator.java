@@ -60,8 +60,9 @@ public class ScanTipsOrchestrator {
         if (order == null) return response;
 
         StyleInfo style = loadStyle(order.getStyleNo());
-        // 核心：加载真实BOM面辅料数据
         List<String> fabricTypes = loadBomFabricTypes(style);
+        String productionDesc = style != null ? nvl(style.getDescription(), "") : "";
+        List<String> processKeywords = extractProcessKeywords(productionDesc);
 
         // 根据进度阶段生成专属提示
         String stage = resolveStage(processName);
@@ -76,6 +77,13 @@ public class ScanTipsOrchestrator {
         if (fabricTip != null) {
             tip.append(fabricTip);
             priority = "high";
+        }
+
+        // —— 基于工艺制单的工序精准提示 ——
+        String processTip = buildProcessTipForStage(stage, processKeywords, productionDesc);
+        if (processTip != null) {
+            tip.append(processTip);
+            if (!"high".equals(priority)) priority = "high";
         }
 
         // —— 阶段专属提示（1句，不重复面料内容） ——
@@ -358,9 +366,90 @@ public class ScanTipsOrchestrator {
             new LambdaQueryWrapper<StyleInfo>()
                 .eq(StyleInfo::getStyleNo, styleNo)
                 .select(StyleInfo::getId, StyleInfo::getStyleNo, StyleInfo::getStyleName,
-                        StyleInfo::getFabricComposition, StyleInfo::getSampleReviewComment)
+                        StyleInfo::getFabricComposition, StyleInfo::getSampleReviewComment,
+                        StyleInfo::getDescription)
                 .last("LIMIT 1")
         );
+    }
+
+    // ─── 工艺制单工序关键词提取 ──────────────────────────────
+
+    private List<String> extractProcessKeywords(String description) {
+        if (!StringUtils.hasText(description)) return Collections.emptyList();
+        List<String> keywords = new ArrayList<>();
+        String lower = description.toLowerCase();
+        if (lower.contains("印花") || lower.contains("print")) keywords.add("印花");
+        if (lower.contains("绣花") || lower.contains("embroid") || lower.contains("刺绣")) keywords.add("绣花");
+        if (lower.contains("洗水") || lower.contains("wash") || lower.contains("水洗")) keywords.add("洗水");
+        if (lower.contains("压褶") || lower.contains("pleat")) keywords.add("压褶");
+        if (lower.contains("复合") || lower.contains("贴合") || lower.contains("laminate")) keywords.add("复合");
+        if (lower.contains("植绒") || lower.contains("flock")) keywords.add("植绒");
+        if (lower.contains("烫金") || lower.contains("烫银") || lower.contains("foil")) keywords.add("烫金");
+        if (lower.contains("激光") || lower.contains("laser")) keywords.add("激光切割");
+        if (lower.contains("包边") || lower.contains("bind")) keywords.add("包边");
+        if (lower.contains("打枣") || lower.contains("bar tack")) keywords.add("打枣");
+        if (lower.contains("锁眼") || lower.contains("buttonhole")) keywords.add("锁眼");
+        if (lower.contains("钉扣") || lower.contains("button")) keywords.add("钉扣");
+        return keywords;
+    }
+
+    private String buildProcessTipForStage(String stage, List<String> processKeywords, String description) {
+        if (processKeywords.isEmpty()) return null;
+        switch (stage) {
+            case "采购":
+                if (processKeywords.contains("印花"))
+                    return "🔴 印花工序：确认花型版与样衣一致，到料核对颜色牢度\n";
+                if (processKeywords.contains("绣花"))
+                    return "🔴 绣花工序：确认绣花版/线色卡，到料核对绣线色号\n";
+                if (processKeywords.contains("洗水"))
+                    return "🟡 洗水工序：确认洗水配方和助剂齐备\n";
+                break;
+            case "裁剪":
+                if (processKeywords.contains("印花"))
+                    return "🔴 印花工序注意：核对花型位置与样衣一致，控制印花温度150-160℃，确保图案无错位、无漏印\n";
+                if (processKeywords.contains("绣花"))
+                    return "🔴 绣花工序注意：核对绣花位置与样衣一致，检查线色/密度/针迹，防止跳线断线\n";
+                if (processKeywords.contains("激光切割"))
+                    return "🔴 激光切割：注意切割边缘熔融，需冷却后分拣\n";
+                break;
+            case "车缝":
+                if (processKeywords.contains("印花"))
+                    return "🔴 印花部位车缝：沿印花边缘走线，避免缝穿图案\n";
+                if (processKeywords.contains("绣花"))
+                    return "🔴 绣花部位车缝：避开绣花区域1-2mm，防止绣线脱散\n";
+                if (processKeywords.contains("包边"))
+                    return "🟡 包边工序：包边条宽度均匀，转角处平整不起皱\n";
+                if (processKeywords.contains("打枣"))
+                    return "🟡 打枣位置按制单标注，加固受力点\n";
+                break;
+            case "尾部":
+                if (processKeywords.contains("洗水"))
+                    return "🔴 洗水工序：严格按洗水配方执行，核对洗后效果与样衣一致\n";
+                if (processKeywords.contains("压褶"))
+                    return "🔴 压褶工序：温度/压力/时间按制单参数，褶型与样衣一致\n";
+                if (processKeywords.contains("烫金"))
+                    return "🔴 烫金/烫银：控制温度和压力，检查附着力与光泽度\n";
+                break;
+            case "质检":
+                if (processKeywords.contains("印花"))
+                    return "🔴 印花质检：核对花型位置/颜色/对位，无错位漏印色差\n";
+                if (processKeywords.contains("绣花"))
+                    return "🔴 绣花质检：检查针迹密度/线色/位置，无跳线断线浮线\n";
+                if (processKeywords.contains("洗水"))
+                    return "🔴 洗水质检：核对洗后手感/色差/缩率与样衣一致\n";
+                if (processKeywords.contains("植绒"))
+                    return "🔴 植绒质检：摩擦测试不脱落，绒面均匀无斑驳\n";
+                break;
+            case "入库":
+                if (processKeywords.contains("印花") || processKeywords.contains("烫金"))
+                    return "🟡 印花/烫金部位避免叠压摩擦，防止图案磨损\n";
+                if (processKeywords.contains("压褶"))
+                    return "🟡 压褶服装挂装存放，防褶型变形\n";
+                break;
+            default:
+                break;
+        }
+        return null;
     }
 
     private boolean hasSecondaryProcess(ProductionOrder order) {

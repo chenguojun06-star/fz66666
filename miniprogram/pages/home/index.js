@@ -41,7 +41,7 @@ Page({
   },
 
   onLoad() {
-    const sysInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
+    const sysInfo = wx.getWindowInfo();
     this.setData({
       statusBarHeight: sysInfo.statusBarHeight || 44,
       greeting: getGreeting(),

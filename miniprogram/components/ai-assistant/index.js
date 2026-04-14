@@ -92,7 +92,7 @@ Component({
           ? 'Hi ' + userName + '，我是小云～ 有什么可以帮您的？\n' + greetingSuffix
           : 'Hi 我是小云～ 有什么可以帮您的？\n' + greetingSuffix;
 
-        const sysInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
+        const sysInfo = wx.getWindowInfo();
         const sw = sysInfo.windowWidth || 375;
         const sh = sysInfo.windowHeight || 667;
         let tx = sw - 20; let ty = 110; let edge = 'right';
@@ -564,7 +564,7 @@ Component({
             wx.showModal({
               title: '相机/相册权限', content: '需要相机或相册权限才能上传图片，请在设置中允许',
               confirmText: '去设置', cancelText: '取消',
-              success: function (modalRes) { if (modalRes.confirm) wx.openSetting(); },
+              success: function (modalRes) { if (modalRes.confirm) wx.openSetting({ success: function () {} }); },
             });
           }
         },

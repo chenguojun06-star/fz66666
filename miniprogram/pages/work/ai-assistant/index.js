@@ -150,7 +150,7 @@ Page({
             confirmText: '去设置',
             cancelText: '取消',
             success: function (modalRes) {
-              if (modalRes.confirm) wx.openSetting();
+              if (modalRes.confirm) wx.openSetting({ success: function () {} });
             }
           });
         }
