@@ -123,8 +123,8 @@ const Register: React.FC = () => {
               <div className="login-showcase-desc">
                 {isWorkerInvite
                   ? isFactoryInvite
-                    ? `填写姓名和账号密码即可注册，注册后自动归属到「${factoryName}」外发工厂，由外发工厂管理员审批。`
-                    : `填写姓名和账号密码即可注册，注册后归属到「${factoryName}」，由工厂管理员审批通过即可登录。`
+                    ? `欢迎注册「${factoryName}」，请您耐心等待管理员审批通过后即可登录。`
+                    : `欢迎注册「${factoryName}」，请您耐心等待管理员审批通过后即可登录。`
                   : '填写工厂与联系人信息，审批通过后即可启用正式账号。'}
               </div>
             </div>
@@ -184,7 +184,7 @@ const Register: React.FC = () => {
             </div>
             <div className="showcase-highlight-card">
               <span className="highlight-label">流程特点</span>
-              <strong className="highlight-value">{isWorkerInvite ? (isFactoryInvite ? '外发工厂管理员审批' : '工厂管理员审批') : '审核通过后启用'}</strong>
+              <strong className="highlight-value">{isWorkerInvite ? '管理员审批' : '审核通过后启用'}</strong>
             </div>
             <div className="showcase-highlight-card">
               <span className="highlight-label">系统目标</span>
@@ -228,8 +228,8 @@ const Register: React.FC = () => {
             <Alert
               message={belongLabel}
               description={isFactoryInvite
-                ? `注册后将归属到「${factoryName}」外发工厂，由外发工厂管理员审批。`
-                : `注册后将归属到「${factoryName}」工厂，由工厂管理员审批通过即可登录。`}
+                ? `欢迎加入「${factoryName}」，请您耐心等待管理员审批通过后即可登录。`
+                : `欢迎加入「${factoryName}」，请您耐心等待管理员审批通过后即可登录。`}
               type="info"
               showIcon
               icon={<BankOutlined />}
