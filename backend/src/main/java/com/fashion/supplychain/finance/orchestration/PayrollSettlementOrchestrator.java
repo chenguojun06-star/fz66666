@@ -126,7 +126,8 @@ public class PayrollSettlementOrchestrator {
                 q.processName,
                 q.startTime,
                 q.endTime,
-                q.includeSettled);
+                q.includeSettled,
+                com.fashion.supplychain.common.UserContext.tenantId());
 
         if (rows == null) {
             return List.of();
@@ -172,7 +173,8 @@ public class PayrollSettlementOrchestrator {
                 null,
                 q.startTime,
                 q.endTime,
-                q.includeSettled);
+                q.includeSettled,
+                com.fashion.supplychain.common.UserContext.tenantId());
 
         if (rows == null || rows.isEmpty()) {
             throw new IllegalStateException("无可结算扫码记录");

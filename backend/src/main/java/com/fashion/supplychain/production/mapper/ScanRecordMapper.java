@@ -192,7 +192,8 @@ public interface ScanRecordMapper extends BaseMapper<ScanRecord> {
                         @Param("processName") String processName,
                         @Param("startTime") java.time.LocalDateTime startTime,
                         @Param("endTime") java.time.LocalDateTime endTime,
-                        @Param("includeSettled") boolean includeSettled);
+                        @Param("includeSettled") boolean includeSettled,
+                        @Param("tenantId") Long tenantId);
 
         /**
          * 按菲号聚合扫码类型，统计待质检/待入库的菲号数和数量

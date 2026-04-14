@@ -251,16 +251,15 @@ public class InventoryCheckOrchestrator {
     }
 
     private void applyStockAdjustments(InventoryCheck check, List<InventoryCheckItem> items) {
+        Long tenantId = UserContext.tenantId();
         for (InventoryCheckItem item : items) {
             if (item.getDiffQuantity() == null || item.getDiffQuantity() == 0) continue;
             try {
                 if ("MATERIAL".equals(check.getCheckType()) && StringUtils.hasText(item.getStockId())) {
                     int delta = item.getDiffQuantity();
-                    materialStockService.update(null, new LambdaQueryWrapper<MaterialStock>()
-                            .eq(MaterialStock::getId, item.getStockId())
-                            .last("LIMIT 1"));
                     materialStockService.update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<MaterialStock>()
                             .eq(MaterialStock::getId, item.getStockId())
+                            .eq(tenantId != null, MaterialStock::getTenantId, tenantId)
                             .setSql("quantity = GREATEST(0, quantity + " + delta + ")")
                             .set(MaterialStock::getUpdateTime, LocalDateTime.now()));
                     log.info("盘点调整物料库存: stockId={}, delta={}", item.getStockId(), delta);
@@ -268,6 +267,7 @@ public class InventoryCheckOrchestrator {
                     int delta = item.getDiffQuantity();
                     productSkuService.update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<ProductSku>()
                             .eq(ProductSku::getId, item.getStockId())
+                            .eq(tenantId != null, ProductSku::getTenantId, tenantId)
                             .setSql("stock_quantity = GREATEST(0, stock_quantity + " + delta + ")")
                             .set(ProductSku::getUpdateTime, LocalDateTime.now()));
                     log.info("盘点调整成品库存: skuId={}, delta={}", item.getStockId(), delta);

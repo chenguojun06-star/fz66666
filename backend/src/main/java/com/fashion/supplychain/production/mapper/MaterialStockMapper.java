@@ -11,37 +11,38 @@ public interface MaterialStockMapper extends BaseMapper<MaterialStock> {
 
     @Update("UPDATE t_material_stock SET " +
             "locked_quantity = locked_quantity + #{delta}, " +
-            "update_time = NOW() WHERE id = #{id} AND delete_flag = 0")
-    int lockStock(@Param("id") String id, @Param("delta") int delta);
+            "update_time = NOW() WHERE id = #{id} AND delete_flag = 0 " +
+            "AND (#{tenantId} IS NULL OR tenant_id = #{tenantId})")
+    int lockStock(@Param("id") String id, @Param("delta") int delta, @Param("tenantId") Long tenantId);
 
     @Update("UPDATE t_material_stock SET " +
             "locked_quantity = GREATEST(0, locked_quantity - #{delta}), " +
-            "update_time = NOW() WHERE id = #{id} AND delete_flag = 0")
-    int unlockStock(@Param("id") String id, @Param("delta") int delta);
+            "update_time = NOW() WHERE id = #{id} AND delete_flag = 0 " +
+            "AND (#{tenantId} IS NULL OR tenant_id = #{tenantId})")
+    int unlockStock(@Param("id") String id, @Param("delta") int delta, @Param("tenantId") Long tenantId);
 
     @Update("UPDATE t_material_stock SET " +
             "quantity = quantity - #{delta}, " +
             "locked_quantity = GREATEST(0, locked_quantity - #{delta}), " +
             "total_value = ROUND(GREATEST(0, quantity - #{delta}) * COALESCE(unit_price, 0), 2), " +
-            "update_time = NOW() WHERE id = #{id} AND quantity >= #{delta} AND delete_flag = 0")
-    int decreaseStockAndUnlock(@Param("id") String id, @Param("delta") int delta);
+            "update_time = NOW() WHERE id = #{id} AND quantity >= #{delta} AND delete_flag = 0 " +
+            "AND (#{tenantId} IS NULL OR tenant_id = #{tenantId})")
+    int decreaseStockAndUnlock(@Param("id") String id, @Param("delta") int delta, @Param("tenantId") Long tenantId);
 
     @Update("UPDATE t_material_stock SET " +
             "quantity = quantity + #{delta}, " +
             "total_value = ROUND(GREATEST(0, quantity + #{delta}) * COALESCE(unit_price, 0), 2), " +
-            "update_time = NOW() WHERE id = #{id}")
-    int updateStockQuantity(@Param("id") String id, @Param("delta") int delta);
+            "update_time = NOW() WHERE id = #{id} AND delete_flag = 0 " +
+            "AND (#{tenantId} IS NULL OR tenant_id = #{tenantId})")
+    int updateStockQuantity(@Param("id") String id, @Param("delta") int delta, @Param("tenantId") Long tenantId);
 
     @Update("UPDATE t_material_stock SET " +
             "quantity = quantity - #{delta}, " +
             "total_value = ROUND(GREATEST(0, quantity - #{delta}) * COALESCE(unit_price, 0), 2), " +
-            "update_time = NOW() WHERE id = #{id} AND quantity >= #{delta}")
-    int decreaseStockWithCheck(@Param("id") String id, @Param("delta") int delta);
+            "update_time = NOW() WHERE id = #{id} AND quantity >= #{delta} AND delete_flag = 0 " +
+            "AND (#{tenantId} IS NULL OR tenant_id = #{tenantId})")
+    int decreaseStockWithCheck(@Param("id") String id, @Param("delta") int delta, @Param("tenantId") Long tenantId);
 
-    /**
-     * 入库时更新库存：数量+仓位+单价+总值+供应商+入库日期
-     * 使用加权平均单价：新单价 = (旧数量×旧单价 + 入库数量×采购单价) / (旧数量+入库数量)
-     */
     @Update("UPDATE t_material_stock SET " +
             "quantity = quantity + #{delta}, " +
             "location = COALESCE(#{location}, location), " +
@@ -56,10 +57,12 @@ public interface MaterialStockMapper extends BaseMapper<MaterialStock> {
             "supplier_name = COALESCE(#{supplierName}, supplier_name), " +
             "last_inbound_date = NOW(), " +
             "update_time = NOW() " +
-            "WHERE id = #{id}")
+            "WHERE id = #{id} AND delete_flag = 0 " +
+            "AND (#{tenantId} IS NULL OR tenant_id = #{tenantId})")
     int updateStockOnInbound(@Param("id") String id,
                              @Param("delta") int delta,
                              @Param("location") String location,
                              @Param("unitPrice") java.math.BigDecimal unitPrice,
-                             @Param("supplierName") String supplierName);
+                             @Param("supplierName") String supplierName,
+                             @Param("tenantId") Long tenantId);
 }

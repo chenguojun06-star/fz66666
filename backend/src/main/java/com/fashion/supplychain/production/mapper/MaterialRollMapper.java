@@ -4,23 +4,20 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.fashion.supplychain.production.entity.MaterialRoll;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
 
-/**
- * 面辅料料卷 Mapper
- */
 @Mapper
 public interface MaterialRollMapper extends BaseMapper<MaterialRoll> {
 
-    /**
-     * 按入库单ID查询该批料卷列表
-     */
-    List<MaterialRoll> selectByInboundId(@Param("inboundId") String inboundId);
+    @Select("SELECT * FROM t_material_roll WHERE inbound_id = #{inboundId} AND delete_flag = 0 " +
+            "AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) ORDER BY create_time ASC")
+    List<MaterialRoll> selectByInboundId(@Param("inboundId") String inboundId, @Param("tenantId") Long tenantId);
 
-    /**
-     * 按物料编码查询在库料卷
-     */
+    @Select("SELECT * FROM t_material_roll WHERE material_code = #{materialCode} " +
+            "AND status = 'IN_STOCK' AND delete_flag = 0 " +
+            "AND (#{tenantId} IS NULL OR tenant_id = #{tenantId}) ORDER BY create_time ASC")
     List<MaterialRoll> selectInStockByMaterialCode(@Param("materialCode") String materialCode,
                                                     @Param("tenantId") Long tenantId);
 }

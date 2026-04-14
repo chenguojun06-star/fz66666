@@ -86,7 +86,7 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
         // 使用增强的入库更新：同步单价、仓位、供应商、总值、入库日期
         java.math.BigDecimal unitPrice = purchase.getUnitPrice();
         String supplierName = purchase.getSupplierName();
-        baseMapper.updateStockOnInbound(stock.getId(), quantity, warehouseLocation, unitPrice, supplierName);
+        baseMapper.updateStockOnInbound(stock.getId(), quantity, warehouseLocation, unitPrice, supplierName, com.fashion.supplychain.common.UserContext.tenantId());
 
         log.info("Increased material stock: id={}, delta={}, location={}, unitPrice={}, supplier={}",
                 stock.getId(), quantity, warehouseLocation, unitPrice, supplierName);
@@ -99,7 +99,7 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
             return;
         }
         MaterialStock stock = findOrCreateStock(purchase);
-        int rows = baseMapper.decreaseStockWithCheck(stock.getId(), quantity);
+        int rows = baseMapper.decreaseStockWithCheck(stock.getId(), quantity, com.fashion.supplychain.common.UserContext.tenantId());
         if (rows == 0) {
             throw new IllegalStateException("库存不足，扣减失败: " + stock.getMaterialName());
         }
@@ -127,8 +127,8 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
 
         MaterialStock stock = this.getOne(query, false);
         if (stock != null) {
-            int rows = baseMapper.decreaseStockWithCheck(stock.getId(), quantity);
-            if (rows == 0) {
+            int rows2 = baseMapper.decreaseStockWithCheck(stock.getId(), quantity, com.fashion.supplychain.common.UserContext.tenantId());
+            if (rows2 == 0) {
                 throw new IllegalStateException("库存不足，扣减失败: " + stock.getMaterialName());
             }
         } else {
@@ -146,7 +146,7 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
         if (!StringUtils.hasText(stockId)) {
             throw new IllegalArgumentException("库存ID不能为空");
         }
-        int rows = baseMapper.decreaseStockWithCheck(stockId, quantity);
+        int rows = baseMapper.decreaseStockWithCheck(stockId, quantity, com.fashion.supplychain.common.UserContext.tenantId());
         if (rows == 0) {
             MaterialStock stock = this.getById(stockId);
             String name = stock != null ? stock.getMaterialName() : "Unknown";
@@ -482,7 +482,7 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
         if (quantity <= 0 || !StringUtils.hasText(stockId)) {
             return;
         }
-        int rows = baseMapper.lockStock(stockId, quantity);
+        int rows = baseMapper.lockStock(stockId, quantity, com.fashion.supplychain.common.UserContext.tenantId());
         if (rows == 0) {
             log.warn("lockStock failed: stockId={}", stockId);
         }
@@ -494,7 +494,7 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
         if (quantity <= 0 || !StringUtils.hasText(stockId)) {
             return;
         }
-        int rows = baseMapper.unlockStock(stockId, quantity);
+        int rows = baseMapper.unlockStock(stockId, quantity, com.fashion.supplychain.common.UserContext.tenantId());
         if (rows == 0) {
             log.warn("unlockStock failed: stockId={}", stockId);
         }
@@ -506,7 +506,7 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
         if (quantity <= 0 || !StringUtils.hasText(stockId)) {
             return;
         }
-        int rows = baseMapper.decreaseStockAndUnlock(stockId, quantity);
+        int rows = baseMapper.decreaseStockAndUnlock(stockId, quantity, com.fashion.supplychain.common.UserContext.tenantId());
         if (rows == 0) {
             MaterialStock stock = this.getById(stockId);
             String name = stock != null ? stock.getMaterialName() : "Unknown";
