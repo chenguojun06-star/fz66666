@@ -34,6 +34,39 @@
     </view>
   </view>
 
+  <!-- ===== 工艺制单（基于实际款式数据动态展示） ===== -->
+  <view wx:if="{{description}}" class="section-card">
+    <text class="section-title">工艺制单</text>
+    <view class="description-content">
+      <text class="description-text">{{description}}</text>
+    </view>
+  </view>
+
+  <!-- ===== 二次工艺详情（重点突出特殊工序） ===== -->
+  <view wx:if="{{secondaryProcesses.length > 0}}" class="section-card process-highlight-card">
+    <text class="section-title process-highlight-title">二次工艺（{{secondaryProcesses.length}}项）</text>
+    <view class="process-list">
+      <view wx:for="{{secondaryProcesses}}" wx:key="id" class="process-item">
+        <view class="process-item-header">
+          <text wx:if="{{item.processTypeCN}}" class="process-type-tag">{{item.processTypeCN}}</text>
+          <text class="process-name">{{item.processName || item.processTypeCN || '-'}}</text>
+          <text class="process-status {{item.status === 'completed' ? 'status-done' : 'status-active'}}">{{item.statusCN}}</text>
+        </view>
+        <view wx:if="{{item.description}}" class="process-item-desc">
+          <text class="process-desc-text">{{item.description}}</text>
+        </view>
+        <view class="process-item-detail">
+          <text wx:if="{{item.quantity}}" class="process-detail-text">数量 {{item.quantity}}</text>
+          <text wx:if="{{item.unitPrice}}" class="process-detail-text">单价 ¥{{item.unitPrice}}</text>
+          <text wx:if="{{item.factoryName}}" class="process-detail-text">工厂 {{item.factoryName}}</text>
+        </view>
+        <view wx:if="{{item.remark}}" class="process-item-remark">
+          <text class="process-remark-text">备注：{{item.remark}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
   <!-- ===== 采购模式：面辅料明细 ===== -->
   <block wx:if="{{isProcurement}}">
     <view wx:if="{{detail.bomFallback}}" class="warn-card">

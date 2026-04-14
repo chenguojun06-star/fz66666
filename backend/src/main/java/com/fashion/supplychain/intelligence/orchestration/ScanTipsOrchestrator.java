@@ -171,8 +171,8 @@ public class ScanTipsOrchestrator {
             if (allText.contains("牛仔") || allText.contains("denim")) types.add("denim");
             if (allText.contains("针织") || allText.contains("毛衣") || allText.contains("knitwear")) types.add("knitwear");
             if (allText.contains("羽绒") || allText.contains("down")) types.add("down");
-            if (allText.contains("麻") || allText.contains("linen")) types.add("linen");
-            if (allText.contains("皮") || allText.contains("pu") || allText.contains("leather")) types.add("leather");
+            if (allText.contains("麻料") || allText.contains("亚麻") || allText.contains("苎麻") || allText.contains("linen")) types.add("linen");
+            if (allText.contains("皮料") || allText.contains("皮革") || allText.contains("真皮") || allText.contains("pu皮") || allText.contains("leather")) types.add("leather");
             if (allText.contains("弹力") || allText.contains("莱卡") || allText.contains("spandex")) types.add("stretch");
             if (allText.contains("格") || allText.contains("条纹") || allText.contains("plaid") || allText.contains("stripe")) types.add("pattern");
             if (allText.contains("绒") || allText.contains("灯芯绒") || allText.contains("corduroy")) types.add("velvet");
@@ -278,7 +278,7 @@ public class ScanTipsOrchestrator {
         String text = nvl(style.getStyleName(), "") + " " + nvl(style.getFabricComposition(), "");
         String lower = text.toLowerCase();
         if (lower.contains("真丝") || lower.contains("silk")) return "🔴 真丝面料轻拿轻放\n";
-        if (lower.contains("皮") || lower.contains("leather")) return "🔴 皮料不可返工\n";
+        if (lower.contains("皮料") || lower.contains("皮革") || lower.contains("leather")) return "🔴 皮料不可返工\n";
         if (lower.contains("针织") || lower.contains("弹力")) return "🟡 弹力面料注意松量\n";
         return null;
     }
@@ -302,8 +302,9 @@ public class ScanTipsOrchestrator {
                                    ProductionOrder order, StyleInfo style,
                                    List<String> fabricTypes) {
         keywords.add("裁剪");
-        // BOM已给了面料相关提示，这里补充通用要点
-        tip.append("💡 核对色号批次一致，防止色差混裁\n");
+        if (tip.length() == 0) {
+            tip.append("💡 核对色号批次一致，防止色差混裁\n");
+        }
     }
 
     private void appendSewingTips(StringBuilder tip, List<String> keywords,
@@ -328,7 +329,9 @@ public class ScanTipsOrchestrator {
     private void appendTailTips(StringBuilder tip, List<String> keywords,
                                 ProductionOrder order, List<String> fabricTypes) {
         keywords.add("尾部");
-        tip.append("💡 线头剪净，整烫温度匹配面料\n");
+        if (tip.length() == 0) {
+            tip.append("💡 线头剪净，整烫温度匹配面料\n");
+        }
         if (hasSecondaryProcess(order)) {
             tip.append("🟡 含二次工艺，检查洗水/印花效果\n");
         }
@@ -342,13 +345,17 @@ public class ScanTipsOrchestrator {
             tip.append("🔴 童装：小部件/绳带/甲醛必检\n");
             keywords.add("童装安全");
         }
-        tip.append("💡 重点检查面料+车缝+配饰三方向\n");
+        if (tip.length() == 0) {
+            tip.append("💡 重点检查面料+车缝+配饰三方向\n");
+        }
     }
 
     private void appendWarehouseTips(StringBuilder tip, List<String> keywords,
                                      ProductionOrder order, List<String> fabricTypes) {
         keywords.add("入库");
-        tip.append("💡 核对数量与装箱单一致，抽检外观\n");
+        if (tip.length() == 0) {
+            tip.append("💡 核对数量与装箱单一致，抽检外观\n");
+        }
     }
 
     private void appendGenericTips(StringBuilder tip, List<String> keywords,
@@ -389,67 +396,88 @@ public class ScanTipsOrchestrator {
         if (lower.contains("包边") || lower.contains("bind")) keywords.add("包边");
         if (lower.contains("打枣") || lower.contains("bar tack")) keywords.add("打枣");
         if (lower.contains("锁眼") || lower.contains("buttonhole")) keywords.add("锁眼");
-        if (lower.contains("钉扣") || lower.contains("button")) keywords.add("钉扣");
+        if (lower.contains("钉扣") || lower.contains("button attach")) keywords.add("钉扣");
         return keywords;
     }
 
     private String buildProcessTipForStage(String stage, List<String> processKeywords, String description) {
         if (processKeywords.isEmpty()) return null;
+
+        String descExcerpt = extractRelevantExcerpt(description, processKeywords);
+
         switch (stage) {
             case "采购":
                 if (processKeywords.contains("印花"))
-                    return "🔴 印花工序：确认花型版与样衣一致，到料核对颜色牢度\n";
+                    return "🔴 印花工序：确认花型版与样衣一致，到料核对颜色牢度" + appendDesc(descExcerpt) + "\n";
                 if (processKeywords.contains("绣花"))
-                    return "🔴 绣花工序：确认绣花版/线色卡，到料核对绣线色号\n";
+                    return "🔴 绣花工序：确认绣花版/线色卡，到料核对绣线色号" + appendDesc(descExcerpt) + "\n";
                 if (processKeywords.contains("洗水"))
-                    return "🟡 洗水工序：确认洗水配方和助剂齐备\n";
+                    return "🟡 洗水工序：确认洗水配方和助剂齐备" + appendDesc(descExcerpt) + "\n";
                 break;
             case "裁剪":
                 if (processKeywords.contains("印花"))
-                    return "🔴 印花工序注意：核对花型位置与样衣一致，控制印花温度150-160℃，确保图案无错位、无漏印\n";
+                    return "🔴 印花工序注意：核对花型位置与样衣一致，控制印花温度150-160℃，确保图案无错位、无漏印" + appendDesc(descExcerpt) + "\n";
                 if (processKeywords.contains("绣花"))
-                    return "🔴 绣花工序注意：核对绣花位置与样衣一致，检查线色/密度/针迹，防止跳线断线\n";
+                    return "🔴 绣花工序注意：核对绣花位置与样衣一致，检查线色/密度/针迹，防止跳线断线" + appendDesc(descExcerpt) + "\n";
                 if (processKeywords.contains("激光切割"))
-                    return "🔴 激光切割：注意切割边缘熔融，需冷却后分拣\n";
+                    return "🔴 激光切割：注意切割边缘熔融，需冷却后分拣" + appendDesc(descExcerpt) + "\n";
                 break;
             case "车缝":
                 if (processKeywords.contains("印花"))
-                    return "🔴 印花部位车缝：沿印花边缘走线，避免缝穿图案\n";
+                    return "🔴 印花部位车缝：沿印花边缘走线，避免缝穿图案" + appendDesc(descExcerpt) + "\n";
                 if (processKeywords.contains("绣花"))
-                    return "🔴 绣花部位车缝：避开绣花区域1-2mm，防止绣线脱散\n";
+                    return "🔴 绣花部位车缝：避开绣花区域1-2mm，防止绣线脱散" + appendDesc(descExcerpt) + "\n";
                 if (processKeywords.contains("包边"))
-                    return "🟡 包边工序：包边条宽度均匀，转角处平整不起皱\n";
+                    return "🟡 包边工序：包边条宽度均匀，转角处平整不起皱" + appendDesc(descExcerpt) + "\n";
                 if (processKeywords.contains("打枣"))
-                    return "🟡 打枣位置按制单标注，加固受力点\n";
+                    return "🟡 打枣位置按制单标注，加固受力点" + appendDesc(descExcerpt) + "\n";
                 break;
             case "尾部":
                 if (processKeywords.contains("洗水"))
-                    return "🔴 洗水工序：严格按洗水配方执行，核对洗后效果与样衣一致\n";
+                    return "🔴 洗水工序：严格按洗水配方执行，核对洗后效果与样衣一致" + appendDesc(descExcerpt) + "\n";
                 if (processKeywords.contains("压褶"))
-                    return "🔴 压褶工序：温度/压力/时间按制单参数，褶型与样衣一致\n";
+                    return "🔴 压褶工序：温度/压力/时间按制单参数，褶型与样衣一致" + appendDesc(descExcerpt) + "\n";
                 if (processKeywords.contains("烫金"))
-                    return "🔴 烫金/烫银：控制温度和压力，检查附着力与光泽度\n";
+                    return "🔴 烫金/烫银：控制温度和压力，检查附着力与光泽度" + appendDesc(descExcerpt) + "\n";
                 break;
             case "质检":
                 if (processKeywords.contains("印花"))
-                    return "🔴 印花质检：核对花型位置/颜色/对位，无错位漏印色差\n";
+                    return "🔴 印花质检：核对花型位置/颜色/对位，无错位漏印色差" + appendDesc(descExcerpt) + "\n";
                 if (processKeywords.contains("绣花"))
-                    return "🔴 绣花质检：检查针迹密度/线色/位置，无跳线断线浮线\n";
+                    return "🔴 绣花质检：检查针迹密度/线色/位置，无跳线断线浮线" + appendDesc(descExcerpt) + "\n";
                 if (processKeywords.contains("洗水"))
-                    return "🔴 洗水质检：核对洗后手感/色差/缩率与样衣一致\n";
+                    return "🔴 洗水质检：核对洗后手感/色差/缩率与样衣一致" + appendDesc(descExcerpt) + "\n";
                 if (processKeywords.contains("植绒"))
-                    return "🔴 植绒质检：摩擦测试不脱落，绒面均匀无斑驳\n";
+                    return "🔴 植绒质检：摩擦测试不脱落，绒面均匀无斑驳" + appendDesc(descExcerpt) + "\n";
                 break;
             case "入库":
                 if (processKeywords.contains("印花") || processKeywords.contains("烫金"))
-                    return "🟡 印花/烫金部位避免叠压摩擦，防止图案磨损\n";
+                    return "🟡 印花/烫金部位避免叠压摩擦，防止图案磨损" + appendDesc(descExcerpt) + "\n";
                 if (processKeywords.contains("压褶"))
-                    return "🟡 压褶服装挂装存放，防褶型变形\n";
+                    return "🟡 压褶服装挂装存放，防褶型变形" + appendDesc(descExcerpt) + "\n";
                 break;
             default:
                 break;
         }
         return null;
+    }
+
+    private String extractRelevantExcerpt(String description, List<String> processKeywords) {
+        if (!StringUtils.hasText(description) || processKeywords.isEmpty()) return "";
+        String[] sentences = description.split("[。；\n]");
+        for (String keyword : processKeywords) {
+            for (String sentence : sentences) {
+                if (sentence.contains(keyword) && sentence.length() > 2 && sentence.length() <= 60) {
+                    return sentence.trim();
+                }
+            }
+        }
+        return "";
+    }
+
+    private String appendDesc(String descExcerpt) {
+        if (!StringUtils.hasText(descExcerpt)) return "";
+        return "（制单：" + descExcerpt + "）";
     }
 
     private boolean hasSecondaryProcess(ProductionOrder order) {

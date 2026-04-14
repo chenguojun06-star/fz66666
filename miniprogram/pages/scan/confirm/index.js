@@ -18,6 +18,8 @@ Page({
     cuttingTask: null,
     aiTipData: null,
     aiTipVisible: false,
+    description: '',
+    secondaryProcesses: [],
     buttonText: '确认扫码',
     loading: false
   },
@@ -92,6 +94,25 @@ Page({
       }
     }
 
+    var PROCESS_TYPE_MAP = {
+      embroidery: '绣花', printing: '印花', washing: '洗水',
+      dyeing: '染色', ironing: '整烫', pleating: '压褶',
+      beading: '钉珠', other: '其他'
+    };
+    var STATUS_MAP = {
+      pending: '待处理', processing: '进行中',
+      completed: '已完成', cancelled: '已取消'
+    };
+    var rawProcesses = orderDetail.secondaryProcesses || raw.secondaryProcesses || [];
+    var secondaryProcesses = rawProcesses.map(function(item) {
+      return Object.assign({}, item, {
+        processTypeCN: PROCESS_TYPE_MAP[item.processType] || item.processType || '',
+        statusCN: STATUS_MAP[item.status] || item.status || ''
+      });
+    });
+
+    var description = orderDetail.description || raw.description || '';
+
     this.setData({
       isProcurement: isProcurement,
       isCutting: isCutting,
@@ -108,6 +129,8 @@ Page({
       materialPurchases: materialPurchases,
       materialSummary: materialSummary,
       cuttingTask: cuttingTask,
+      description: description,
+      secondaryProcesses: secondaryProcesses,
       buttonText: btnText,
       skuList: formItems,
       summary: summary,

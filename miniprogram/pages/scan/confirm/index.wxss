@@ -123,6 +123,102 @@
   display: block;
 }
 
+/* ===== 工艺制单 ===== */
+.description-content {
+  background: var(--color-bg-gray);
+  border-radius: var(--radius-md);
+  padding: 20rpx;
+}
+.description-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  line-height: var(--line-height-relaxed);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* ===== 二次工艺（重点突出） ===== */
+.process-highlight-card {
+  border: 2rpx solid var(--color-warning);
+  background: var(--color-bg-card);
+}
+.process-highlight-title {
+  color: var(--color-warning);
+}
+.process-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+.process-item {
+  background: var(--color-bg-gray);
+  border-radius: var(--radius-md);
+  padding: 20rpx;
+  border-left: 6rpx solid var(--color-warning);
+}
+.process-item-header {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  flex-wrap: wrap;
+}
+.process-type-tag {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-white);
+  background: var(--color-warning);
+  padding: 4rpx 16rpx;
+  border-radius: var(--radius-xs);
+}
+.process-name {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  flex: 1;
+}
+.process-status {
+  font-size: var(--font-size-xs);
+  padding: 2rpx 12rpx;
+  border-radius: var(--radius-xs);
+}
+.status-done {
+  color: var(--color-success);
+  background: rgba(82, 196, 26, 0.1);
+}
+.status-active {
+  color: var(--color-warning);
+  background: rgba(250, 173, 20, 0.1);
+}
+.process-item-desc {
+  margin-top: 12rpx;
+  padding-top: 12rpx;
+  border-top: 1rpx solid var(--color-border-light);
+}
+.process-desc-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-normal);
+  white-space: pre-wrap;
+}
+.process-item-detail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-top: 10rpx;
+}
+.process-detail-text {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+.process-item-remark {
+  margin-top: 8rpx;
+}
+.process-remark-text {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  font-style: italic;
+}
+
 /* ===== 面辅料列表 ===== */
 .material-list {
   display: flex;

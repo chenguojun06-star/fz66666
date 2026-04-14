@@ -85,6 +85,12 @@ public class ProductionScanExecutor {
     private StyleAttachmentService styleAttachmentService;
 
     @Autowired
+    private com.fashion.supplychain.style.service.StyleInfoService styleInfoService;
+
+    @Autowired
+    private com.fashion.supplychain.style.service.SecondaryProcessService secondaryProcessService;
+
+    @Autowired
     private ProcessParentMappingService processParentMappingService;
 
     @Autowired
@@ -1019,12 +1025,34 @@ public class ProductionScanExecutor {
     }
 
     /**
-     * 构建订单信息
+     * 构建订单信息（含工艺制单和二次工艺）
      */
     private Map<String, Object> buildOrderInfo(ProductionOrder order) {
         Map<String, Object> info = new HashMap<>();
         info.put("orderNo", order.getOrderNo());
         info.put("styleNo", order.getStyleNo());
+
+        if (hasText(order.getStyleId())) {
+            try {
+                com.fashion.supplychain.style.entity.StyleInfo si = styleInfoService.getById(order.getStyleId());
+                if (si != null && hasText(si.getDescription())) {
+                    info.put("description", si.getDescription());
+                }
+            } catch (Exception e) {
+                log.warn("buildOrderInfo查询款式描述失败: styleId={}", order.getStyleId(), e);
+            }
+
+            try {
+                java.util.List<com.fashion.supplychain.style.entity.SecondaryProcess> processes =
+                        secondaryProcessService.listByStyleId(Long.valueOf(order.getStyleId()));
+                if (processes != null && !processes.isEmpty()) {
+                    info.put("secondaryProcesses", processes);
+                }
+            } catch (Exception e) {
+                log.warn("buildOrderInfo查询二次工艺失败: styleId={}", order.getStyleId(), e);
+            }
+        }
+
         return info;
     }
 

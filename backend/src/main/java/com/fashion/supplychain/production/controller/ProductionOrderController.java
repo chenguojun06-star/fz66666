@@ -71,6 +71,9 @@ public class ProductionOrderController {
     private StyleInfoService styleInfoService;
 
     @Autowired
+    private com.fashion.supplychain.style.service.SecondaryProcessService secondaryProcessService;
+
+    @Autowired
     private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     /**
@@ -124,9 +127,23 @@ public class ProductionOrderController {
                                 .convertValue(detail, new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {});
                         if (StringUtils.hasText(detail.getStyleId())) {
                             StyleInfo si = styleInfoService.getById(detail.getStyleId());
-                            if (si != null && StringUtils.hasText(si.getCover())) {
-                                enriched.put("coverImage", si.getCover());
-                                enriched.put("styleImage", si.getCover());
+                            if (si != null) {
+                                if (StringUtils.hasText(si.getCover())) {
+                                    enriched.put("coverImage", si.getCover());
+                                    enriched.put("styleImage", si.getCover());
+                                }
+                                if (StringUtils.hasText(si.getDescription())) {
+                                    enriched.put("description", si.getDescription());
+                                }
+                            }
+                            try {
+                                java.util.List<com.fashion.supplychain.style.entity.SecondaryProcess> processes =
+                                        secondaryProcessService.listByStyleId(Long.valueOf(detail.getStyleId()));
+                                if (processes != null && !processes.isEmpty()) {
+                                    enriched.put("secondaryProcesses", processes);
+                                }
+                            } catch (Exception spEx) {
+                                log.warn("查询二次工艺失败: styleId={}", detail.getStyleId(), spEx);
                             }
                         }
                         java.util.Map<String, Object> pageResult = new java.util.HashMap<>();
