@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.List;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -31,6 +32,8 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/api/production/scan")
 @PreAuthorize("isAuthenticated()")
 public class ScanRecordController {
+
+    private static final Set<String> TERMINAL_STATUSES = Set.of("completed", "cancelled", "scrapped", "archived", "closed");
 
     @Autowired
     private ScanRecordOrchestrator scanRecordOrchestrator;
@@ -122,8 +125,8 @@ public class ScanRecordController {
             }
             if (order != null) {
                 report.put("step4_order", "✅ 找到订单 id=" + order.getId() + " status=" + order.getStatus() + " styleNo=" + order.getStyleNo());
-                if ("completed".equalsIgnoreCase(order.getStatus())) {
-                    report.put("step4_order_warn", "🚫 订单状态=completed，扫码会被拦截！");
+                if (order.getStatus() != null && TERMINAL_STATUSES.contains(order.getStatus().trim().toLowerCase())) {
+                    report.put("step4_order_warn", "🚫 订单状态=" + order.getStatus() + "，扫码会被拦截！");
                 }
             } else {
                 report.put("step4_order", "❌ 未找到订单（orderNo='" + orderNo + "'）");

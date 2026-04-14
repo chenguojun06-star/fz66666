@@ -48,6 +48,7 @@ import java.util.stream.Collectors;
 public class PendingTaskOrchestrator {
 
     private static final int MAX_PER_CATEGORY = 10;
+    private static final Set<String> TERMINAL_STATUSES = Set.of("completed", "cancelled", "scrapped", "archived", "closed");
 
     private static final Map<String, String[]> CATEGORY_META = new LinkedHashMap<>();
     static {
@@ -233,8 +234,7 @@ public class PendingTaskOrchestrator {
                         ProductionOrder::getProductionProgress)
                 .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
                 .eq(StringUtils.hasText(factoryId), ProductionOrder::getFactoryId, factoryId)
-                .ne(ProductionOrder::getStatus, "completed")
-                .ne(ProductionOrder::getStatus, "cancelled")
+                .notIn(ProductionOrder::getStatus, TERMINAL_STATUSES)
                 .isNotNull(ProductionOrder::getExpectedShipDate)
                 .lt(ProductionOrder::getExpectedShipDate, today)
                 .last("LIMIT " + MAX_PER_CATEGORY)

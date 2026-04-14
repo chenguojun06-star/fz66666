@@ -63,11 +63,14 @@ function _orderStatusText(status) {
   const s = String(status || '').toLowerCase();
   if (s === 'completed') return '已完成';
   if (s === 'closed') return '已关单';
+  if (s === 'archived') return '已归档';
   if (s === 'production') return '生产中';
   if (s === 'pending') return '待生产';
-  if (s === 'delayed') return '已延期';
-  if (s === 'cancelled') return '已取消';
+  if (s === 'delayed') return '已逾期';
+  if (s === 'scrapped') return '已报废';
+  if (s === 'cancelled' || s === 'canceled') return '已取消';
   if (s === 'paused') return '已暂停';
+  if (s === 'returned') return '已退回';
   return s || '-';
 }
 
@@ -110,7 +113,7 @@ Page({
   onPullDownRefresh() {
     this.loadData().then(() => {
       wx.stopPullDownRefresh();
-    });
+    }).catch(() => { wx.stopPullDownRefresh(); });
   },
 
   /**
@@ -289,10 +292,6 @@ Page({
     }
 
     this.setData({
-      totalAmount: totalAmount.toFixed(2),
-      totalQuantity,
-      recordCount: records.length,
-      orderCount: orderNoSet.size,
       records,
       filteredTotalAmount: filteredTotalAmount.toFixed(2),
       summaryItems: [

@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Alert, Button, Card, Checkbox, Empty, Input, Select, Space, Spin, Tabs, Tag, Form, Row, Col } from 'antd';
-import { QrcodeOutlined } from '@ant-design/icons';
+import { QrcodeOutlined, LinkOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import PageLayout from '@/components/common/PageLayout';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import SmallModal from '@/components/common/SmallModal';
+import { message } from '@/utils/antdStatic';
 import { useUserListColumns } from './hooks/useUserListColumns';
 import { useUserListData } from './hooks/useUserListData';
 import PaymentAccountManager from '@/components/common/PaymentAccountManager';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import { User as UserType } from '@/types/system';
 import { useAuth } from '@/utils/AuthContext';
+import tenantService from '@/services/tenantService';
 import { LOG_COLUMNS } from './userListUtils';
 import { useViewport } from '@/utils/useViewport';
 import { useModal } from '@/hooks';
@@ -442,7 +444,7 @@ const UserList: React.FC = () => {
           <div style={{ textAlign: 'center', padding: '16px 0' }}>
             {inviteQr.loading ? (
               <div style={{ padding: '48px 0' }}>
-                <span>正在生成二维码...</span>
+                <Spin tip="正在生成二维码..." />
               </div>
             ) : inviteQr.qrBase64 ? (
               <>
@@ -459,6 +461,28 @@ const UserList: React.FC = () => {
                     有效期至：{inviteQr.expiresAt.replace('T', ' ').slice(0, 16)}
                   </div>
                 )}
+                <div style={{ marginTop: 16, display: 'flex', justifyContent: 'center', gap: 8 }}>
+                  <Button
+                    icon={<LinkOutlined />}
+                    size="small"
+                    onClick={async () => {
+                      try {
+                        const res: any = await tenantService.myTenant();
+                        const tc = res?.data?.tenantCode || res?.tenantCode || '';
+                        const tn = res?.data?.tenantName || res?.tenantName || user?.tenantName || '';
+                        if (!tc) { message.warning('未获取到工厂码，请稍后重试'); return; }
+                        const origin = window.location.origin;
+                        const url = `${origin}/register?tenantCode=${encodeURIComponent(tc)}&tenantName=${encodeURIComponent(tn)}`;
+                        await navigator.clipboard.writeText(url);
+                        message.success('注册链接已复制');
+                      } catch {
+                        message.error('复制失败，请稍后重试');
+                      }
+                    }}
+                  >
+                    复制注册链接
+                  </Button>
+                </div>
               </>
             ) : (
               <div style={{ color: '#999', padding: '24px 0' }}>二维码生成失败，请重试</div>

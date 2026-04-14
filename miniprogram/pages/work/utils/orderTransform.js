@@ -65,7 +65,8 @@ function sortSizes(sizes) {
  */
 function isClosedStatus(status) {
   const s = normalizeText(status).toLowerCase();
-  return s === 'completed' || s === 'cancelled' || s === 'canceled' || s === 'paused';
+  return s === 'completed' || s === 'cancelled' || s === 'canceled'
+    || s === 'scrapped' || s === 'closed' || s === 'archived';
 }
 
 /**
@@ -155,7 +156,7 @@ function buildColorSizeMeta(order) {
 function calcDeliveryInfo(source) {
   // 已关单 / 已完成：停止倒计时，直接显示关单状态
   const status = String(source.status || '').toLowerCase();
-  if (status === 'completed' || status === 'cancelled' || status === 'canceled') {
+  if (status === 'completed' || status === 'cancelled' || status === 'canceled' || status === 'scrapped' || status === 'closed' || status === 'archived') {
     const raw = source.plannedEndDate || source.expectedShipDate || '';
     const dateStr = raw ? String(raw).substring(0, 10) : '';
     return {
@@ -185,38 +186,36 @@ function calcDeliveryInfo(source) {
   let remainDaysClass = '';
 
   if (remainDays < 0) {
-    remainDaysText = `超期${Math.abs(remainDays)}天`;
+    remainDaysText = `逾${Math.abs(remainDays)}天`;
     remainDaysClass = 'days-overdue';
   } else if (remainDays === 0) {
-    remainDaysText = '今天到期❗';
+    remainDaysText = '今天';
     remainDaysClass = 'days-urgent';
   } else {
-    // 有 createTime 时，按剩余比例计算等级（与 PC 端 getRemainingDaysDisplay 一致）
     const createRaw = source.createTime || '';
     if (createRaw) {
       const start = new Date(typeof createRaw === 'string' ? createRaw.replace(' ', 'T') : createRaw);
       const totalDays = Math.ceil((target.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) || 1;
       const ratio = remainDays / totalDays;
       if (ratio <= 0.2) {
-        remainDaysText = `剩${remainDays}天❗`;
+        remainDaysText = `${remainDays}天`;
         remainDaysClass = 'days-urgent';
       } else if (ratio <= 0.5) {
-        remainDaysText = `剩${remainDays}天`;
+        remainDaysText = `${remainDays}天`;
         remainDaysClass = 'days-warn';
       } else {
-        remainDaysText = `剩${remainDays}天`;
+        remainDaysText = `${remainDays}天`;
         remainDaysClass = 'days-safe';
       }
     } else {
-      // 无 createTime，退化为固定阈值
       if (remainDays <= 3) {
-        remainDaysText = `剩${remainDays}天❗`;
+        remainDaysText = `${remainDays}天`;
         remainDaysClass = 'days-urgent';
       } else if (remainDays <= 7) {
-        remainDaysText = `剩${remainDays}天`;
+        remainDaysText = `${remainDays}天`;
         remainDaysClass = 'days-warn';
       } else {
-        remainDaysText = `剩${remainDays}天`;
+        remainDaysText = `${remainDays}天`;
         remainDaysClass = 'days-safe';
       }
     }

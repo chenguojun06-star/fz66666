@@ -111,6 +111,10 @@ public class MaterialPurchase {
 
     private LocalDateTime returnConfirmTime;
 
+    /**
+     * 状态(pending:待采购, received:已领取, partial:部分到货, partial_arrival:部分到货,
+     * awaiting_confirm:待确认完成, completed:全部到货, cancelled:已取消, warehouse_pending:待仓库出库)
+     */
     private String status;
 
     private LocalDateTime createTime;

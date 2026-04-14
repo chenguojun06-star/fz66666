@@ -202,7 +202,7 @@
         <text class="col-color">{{item.color}}</text>
         <text class="col-size">{{item.size}}</text>
         <text class="col-qty">{{item.orderedQty}}件</text>
-        <text class="col-cutting" style="{{item.cuttingQty !== item.orderedQty ? 'color:#fa8c16;font-weight:bold;' : ''}}">{{item.cuttingQty}}件</text>
+        <text class="col-cutting {{item.cuttingQty !== item.orderedQty ? 'col-cutting-warn' : ''}}">{{item.cuttingQty}}件</text>
         <view class="col-count">
           <text class="col-count-num">{{item.bundleCount > 0 ? item.bundleCount + '扎' : '--'}}</text>
           <view wx:if="{{item.bundleCount > 0}}" class="last-bundle-edit">

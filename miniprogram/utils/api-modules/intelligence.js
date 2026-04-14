@@ -1,4 +1,6 @@
 const { ok } = require('./helpers');
+const { getToken } = require('../storage');
+const config = require('../../config');
 
 const intelligence = {
   precheckScan(payload) {
@@ -11,8 +13,7 @@ const intelligence = {
     return ok('/api/intelligence/ai-advisor/chat', 'POST', payload || {}, { timeout: 90000 });
   },
   aiAdvisorChatStream(payload, onEvent, onDone, onError) {
-    var token = '';
-    try { token = wx.getStorageSync('authToken') || wx.getStorageSync('token') || ''; } catch (_e) {}
+    var token = getToken();
     var question = encodeURIComponent(payload.question || '');
     var pageContext = payload.pageContext ? encodeURIComponent(payload.pageContext) : '';
     var conversationId = payload.conversationId || '';
@@ -21,7 +22,7 @@ const intelligence = {
     if (conversationId) url += '&conversationId=' + encodeURIComponent(conversationId);
 
     var requestTask = wx.request({
-      url: (getApp().globalData && getApp().globalData.baseUrl || '') + url,
+      url: config.getBaseUrl() + url,
       method: 'GET',
       header: { 'Authorization': token ? 'Bearer ' + token : '' },
       enableChunked: true,
@@ -44,7 +45,13 @@ const intelligence = {
           if (res.data && res.data instanceof ArrayBuffer) {
             var arr = new Uint8Array(res.data);
             for (var i = 0; i < arr.length; i++) str += String.fromCharCode(arr[i]);
-            str = decodeURIComponent(escape(str));
+            try {
+              var bytes = new Uint8Array(str.length);
+              for (var j = 0; j < str.length; j++) bytes[j] = str.charCodeAt(j);
+              str = new TextDecoder('utf-8').decode(bytes);
+            } catch (_de) {
+              str = decodeURIComponent(escape(str));
+            }
           } else if (typeof res.data === 'string') {
             str = res.data;
           }

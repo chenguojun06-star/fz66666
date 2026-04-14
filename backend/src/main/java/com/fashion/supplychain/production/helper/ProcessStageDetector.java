@@ -58,7 +58,10 @@ public class ProcessStageDetector {
             int r = order == null || order.getMaterialArrivalRate() == null ? 0 : order.getMaterialArrivalRate();
             if (r < 0) r = 0;
             if (r > 100) r = 100;
-            return r >= 100;
+            if (r >= 100) return true;
+            if (order != null && order.getProcurementManuallyCompleted() != null
+                    && order.getProcurementManuallyCompleted() == 1) return true;
+            return false;
         }
         return false;
     }
@@ -156,7 +159,9 @@ public class ProcessStageDetector {
                 int r = order.getMaterialArrivalRate() == null ? 0 : order.getMaterialArrivalRate();
                 if (r < 0) r = 0;
                 if (r > 100) r = 100;
-                if (r >= 100) {
+                if (r >= 100
+                        || (order.getProcurementManuallyCompleted() != null
+                            && order.getProcurementManuallyCompleted() == 1)) {
                     continue;
                 }
             }

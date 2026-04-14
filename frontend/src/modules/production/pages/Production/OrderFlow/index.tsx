@@ -544,9 +544,13 @@ const OrderFlow: React.FC = () => {
                                 render: (v: any) => {
                                   const statusMap: Record<string, { text: string; color: string }> = {
                                     'pending': { text: '待采购', color: 'default' },
-                                    'ordering': { text: '订购中', color: 'processing' },
-                                    'received': { text: '已到货', color: 'success' },
-                                    'partial': { text: '部分到货', color: 'warning' }
+                                    'received': { text: '已领取', color: 'processing' },
+                                    'partial': { text: '部分到货', color: 'warning' },
+                                    'partial_arrival': { text: '部分到货', color: 'warning' },
+                                    'awaiting_confirm': { text: '待确认完成', color: 'cyan' },
+                                    'completed': { text: '全部到货', color: 'success' },
+                                    'cancelled': { text: '已取消', color: 'error' },
+                                    'warehouse_pending': { text: '待仓库出库', color: 'blue' },
                                   };
                                   const status = statusMap[v] || { text: v || '未知', color: 'default' };
                                   return <Tag color={status.color}>{status.text}</Tag>;

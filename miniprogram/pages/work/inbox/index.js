@@ -37,6 +37,8 @@ Page({
   },
 
   onShow() {
+    var app = getApp();
+    if (app.requireAuth && !app.requireAuth()) return;
     this.loadNotices();
   },
 

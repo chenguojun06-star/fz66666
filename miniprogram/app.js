@@ -90,7 +90,6 @@ App({
   },
 
   onShow() {
-    // 小程序从后台进入前台时检查提醒
     try {
       if (this._reminderTimerId) { clearTimeout(this._reminderTimerId); }
       this._reminderTimerId = setTimeout(() => {
@@ -99,6 +98,18 @@ App({
     } catch (e) {
       console.error('检查提醒失败', e);
     }
+  },
+
+  onHide() {
+    if (this._reminderTimerId) {
+      clearTimeout(this._reminderTimerId);
+      this._reminderTimerId = null;
+    }
+  },
+
+  onPageNotFound(res) {
+    console.warn('[App] 页面不存在:', res.path);
+    wx.reLaunch({ url: '/pages/home/index' });
   },
 
   setTabSelected(page, selected) {
@@ -349,6 +360,11 @@ App({
           type,
           detail: (detail || '').substring(0, 500),
           timestamp: Date.now(),
+        },
+        success(res) {
+          if (res.statusCode === 404) {
+            console.warn('[App] error-report端点未部署，跳过上报');
+          }
         },
         fail() {},
       });

@@ -22,6 +22,8 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class DelayTrendOrchestrator {
 
+    private static final Set<String> TERMINAL_STATUSES = Set.of("completed", "cancelled", "scrapped", "archived", "closed");
+
     @Autowired
     private ProductionOrderService productionOrderService;
     @Autowired
@@ -118,7 +120,7 @@ public class DelayTrendOrchestrator {
         }
         return o.getPlannedEndDate() != null
                 && o.getPlannedEndDate().toLocalDate().isBefore(asOf)
-                && !"completed".equalsIgnoreCase(o.getStatus());
+                && !TERMINAL_STATUSES.contains(o.getStatus() == null ? "" : o.getStatus().trim().toLowerCase());
     }
 
     private boolean isSampleDelayed(PatternProduction s, LocalDate asOf) {

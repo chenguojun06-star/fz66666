@@ -319,7 +319,7 @@ public class OrderProcessStatusHelper {
             getProcessNodeName(processNode),
             factoryId,
             unitPrice != null ? unitPrice : 0.0,
-            new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date()),
+            java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")),
             operatorName
         );
 

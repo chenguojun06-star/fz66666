@@ -566,8 +566,10 @@ public class TenantRoleInitHelper {
             if (current != null && Boolean.TRUE.equals(current.getIsFactoryOwner())) {
                 query.eq(User::getFactoryId, currentFactoryId);
             } else {
-                query.isNull(User::getFactoryId);
+                query.and(w -> w.isNull(User::getFactoryId).or().eq(User::getFactoryId, ""));
             }
+        } else {
+            query.and(w -> w.isNull(User::getFactoryId).or().eq(User::getFactoryId, ""));
         }
 
         query.orderByDesc(User::getCreateTime);

@@ -122,6 +122,16 @@ function setStorageValue(key, value) {
   }
 }
 
+function utf8Decode(str) {
+  try {
+    var bytes = new Uint8Array(str.length);
+    for (var i = 0; i < str.length; i++) bytes[i] = str.charCodeAt(i);
+    return new TextDecoder('utf-8').decode(bytes);
+  } catch (_e) {
+    return decodeURIComponent(escape(str));
+  }
+}
+
 function isTokenExpired() {
   try {
     const token = getToken();
@@ -130,8 +140,8 @@ function isTokenExpired() {
     if (parts.length !== 3) return true;
     let payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
     while (payload.length % 4 !== 0) payload += '=';
-    const decoded = JSON.parse(decodeURIComponent(escape(base64Decode(payload))));
-    if (!decoded.exp) return false;
+    const decoded = JSON.parse(utf8Decode(base64Decode(payload)));
+    if (!decoded.exp) return true;
     const nowSec = Math.floor(Date.now() / 1000);
     return decoded.exp < (nowSec + 300);
   } catch (e) {

@@ -33,6 +33,9 @@ public class ProactivePatrolAgent {
     @Autowired(required = false)
     private DistributedLockService distributedLockService;
 
+    @Autowired
+    private com.fashion.supplychain.intelligence.orchestration.AiAgentTraceOrchestrator traceOrchestrator;
+
     @Scheduled(cron = "0 0 * * * ?")
     public void runPatrolTask() {
         if (distributedLockService != null) {
@@ -63,24 +66,49 @@ public class ProactivePatrolAgent {
             return;
         }
 
-        int diagnosed = 0;
-        for (ProductionOrder order : activeOrders) {
+        java.util.Map<Long, List<ProductionOrder>> byTenant = new java.util.LinkedHashMap<>();
+        for (ProductionOrder o : activeOrders) {
+            byTenant.computeIfAbsent(o.getTenantId(), k -> new java.util.ArrayList<>()).add(o);
+        }
+
+        int totalDiagnosed = 0;
+        for (java.util.Map.Entry<Long, List<ProductionOrder>> entry : byTenant.entrySet()) {
+            Long tenantId = entry.getKey();
+            List<ProductionOrder> tenantOrders = entry.getValue();
+            long start = System.currentTimeMillis();
+            String commandId = null;
             try {
-                String context = buildOrderGlobalContext(order);
-
-                if (isAtRisk(order, context)) {
-                    log.info("[ProactivePatrol] 发现高危订单: {}, 移交多智能体进行会诊", order.getOrderNo());
-
-                    SmartNotification notification = debateOrchestrator.diagnoseOrderWithMultiAgent(order, context);
-
-                    pushToMessageCenter(notification);
-                    diagnosed++;
+                commandId = traceOrchestrator.startPatrolRequest(tenantId, "proactive-patrol",
+                        "主动巡检Agent：高危订单多智能体会诊");
+                int diagnosed = 0;
+                for (ProductionOrder order : tenantOrders) {
+                    try {
+                        String context = buildOrderGlobalContext(order);
+                        if (isAtRisk(order, context)) {
+                            log.info("[ProactivePatrol] 发现高危订单: {}, 移交多智能体进行会诊", order.getOrderNo());
+                            SmartNotification notification = debateOrchestrator.diagnoseOrderWithMultiAgent(order, context);
+                            pushToMessageCenter(notification);
+                            diagnosed++;
+                        }
+                    } catch (Exception e) {
+                        log.error("[ProactivePatrol] 巡检订单 {} 时发生异常", order.getOrderNo(), e);
+                    }
                 }
+                totalDiagnosed += diagnosed;
+                traceOrchestrator.recordPatrolStep(tenantId, commandId, "proactiveDiagnose",
+                        "扫描" + tenantOrders.size() + "个活跃订单，" + diagnosed + "个高危已推送",
+                        System.currentTimeMillis() - start, true);
+                traceOrchestrator.finishPatrolRequest(tenantId, commandId,
+                        diagnosed + "个高危已推送建议", null, System.currentTimeMillis() - start);
             } catch (Exception e) {
-                log.error("[ProactivePatrol] 巡检订单 {} 时发生异常", order.getOrderNo(), e);
+                log.error("[ProactivePatrol] 租户{}巡检异常", tenantId, e);
+                if (commandId != null) {
+                    traceOrchestrator.finishPatrolRequest(tenantId, commandId,
+                            null, "巡检异常: " + e.getMessage(), System.currentTimeMillis() - start);
+                }
             }
         }
-        log.info("[ProactivePatrol] 巡检完成，共 {} 个活跃订单，{} 个高危已推送建议", activeOrders.size(), diagnosed);
+        log.info("[ProactivePatrol] 巡检完成，共 {} 个活跃订单，{} 个高危已推送建议", activeOrders.size(), totalDiagnosed);
     }
 
     private String buildOrderGlobalContext(ProductionOrder order) {

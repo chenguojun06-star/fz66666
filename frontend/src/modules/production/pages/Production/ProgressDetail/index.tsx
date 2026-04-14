@@ -649,7 +649,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
   ], []);
   const productionCardProgressConfig = useMemo(() => ({
     calculate: calcCardProgress,
-    getStatus: (record: ProductionOrder) => (isOrderFrozenByStatus(record) ? 'default' : getProgressColorStatus(record.plannedEndDate)),
+    getStatus: (record: ProductionOrder) => (isOrderFrozenByStatus(record) ? 'default' : getProgressColorStatus(record.plannedEndDate, record.status)),
     isCompleted: (record: ProductionOrder) => record.status === 'completed',
     minVisiblePercent: (record: ProductionOrder) => String(record.status || '').trim().toLowerCase() === 'in_progress' ? 5 : 0,
     show: true,

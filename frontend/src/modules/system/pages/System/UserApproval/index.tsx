@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Alert, Button, Card, Empty, Input, Modal, Select, Space, Tabs, Tag } from 'antd';
 import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -9,7 +10,8 @@ import api from '@/utils/api';
 import tenantService from '@/services/tenantService';
 import { formatDateTime } from '@/utils/datetime';
 import { useViewport } from '@/utils/useViewport';
-import { useAuth } from '@/utils/AuthContext';
+import { useAuth, isSupervisorOrAbove } from '@/utils/AuthContext';
+import { paths } from '@/routeConfig';
 import './styles.css';
 import { message } from '@/utils/antdStatic';
 import { readPageSize } from '@/utils/pageSizeStore';
@@ -18,7 +20,9 @@ const { TextArea } = Input;
 
 const UserApproval: React.FC = () => {
   const { isMobile } = useViewport();
-  const { isTenantOwner } = useAuth();
+  const { isTenantOwner, user } = useAuth();
+  const navigate = useNavigate();
+  const canApproveFactory = isTenantOwner || isSupervisorOrAbove(user);
   const [activeTab, setActiveTab] = useState('tenant');
   const [loading, setLoading] = useState(false);
   const [pendingUsers, setPendingUsers] = useState<User[]>([]);
@@ -75,6 +79,83 @@ const UserApproval: React.FC = () => {
       setLoading(false);
     }
   }, [page, pageSize]);
+
+  const [factoryApproveLoading, setFactoryApproveLoading] = useState(false);
+  const [factoryRejectReason, setFactoryRejectReason] = useState('');
+  const [factoryRejectModalVisible, setFactoryRejectModalVisible] = useState(false);
+  const [factoryApproveModalVisible, setFactoryApproveModalVisible] = useState(false);
+  const [factorySelectedRole, setFactorySelectedRole] = useState<string>('');
+
+  const handleFactoryApprove = async (factoryUser: User) => {
+    setCurrentUser(factoryUser);
+    setFactorySelectedRole(factoryUser.roleId ? String(factoryUser.roleId) : '');
+    setFactoryApproveModalVisible(true);
+  };
+
+  const confirmFactoryApprove = async () => {
+    if (!currentUser) return;
+    if (!factorySelectedRole) {
+      message.warning('请选择角色');
+      return;
+    }
+    setFactoryApproveLoading(true);
+    try {
+      const approveResponse = await tenantService.approveRegistration(Number(currentUser.id), Number(factorySelectedRole));
+      const approveResult = approveResponse as any;
+      if (approveResult.code === 200 || approveResult.data) {
+        message.success('外发工厂员工已批准');
+        setFactoryApproveModalVisible(false);
+        setCurrentUser(null);
+        setFactorySelectedRole('');
+        fetchFactoryPending();
+      } else {
+        message.error(approveResult.message || '批准失败');
+      }
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '操作失败');
+    } finally {
+      setFactoryApproveLoading(false);
+    }
+  };
+
+  const handleFactoryReject = (factoryUser: User) => {
+    setCurrentUser(factoryUser);
+    setFactoryRejectReason('');
+    setFactoryRejectModalVisible(true);
+  };
+
+  const confirmFactoryReject = async () => {
+    if (!currentUser) return;
+    if (!factoryRejectReason.trim()) {
+      message.warning('请输入拒绝原因');
+      return;
+    }
+    setFactoryApproveLoading(true);
+    try {
+      const response = await tenantService.rejectRegistration(Number(currentUser.id), factoryRejectReason.trim());
+      const result = response as any;
+      if (result.code === 200 || result.data) {
+        message.success('已拒绝该外发工厂员工');
+        setFactoryRejectModalVisible(false);
+        setCurrentUser(null);
+        setFactoryRejectReason('');
+        fetchFactoryPending();
+      } else {
+        message.error(result.message || '拒绝失败');
+      }
+    } catch (error: unknown) {
+      message.error(error instanceof Error ? error.message : '操作失败');
+    } finally {
+      setFactoryApproveLoading(false);
+    }
+  };
+
+  const navigateToFactoryWorkers = (factoryId: string, factoryName: string) => {
+    const params = new URLSearchParams();
+    if (factoryId) params.set('factoryId', factoryId);
+    if (factoryName) params.set('factoryName', factoryName);
+    navigate(`${paths.factoryWorkers}?${params.toString()}`);
+  };
 
   const fetchFactoryPending = useCallback(async () => {
     setFactoryLoading(true);
@@ -219,8 +300,23 @@ const UserApproval: React.FC = () => {
     },
     { title: '注册时间', dataIndex: 'createTime', key: 'createTime', width: 160, render: (time: string) => formatDateTime(time) },
     {
-      title: '状态', key: 'status', width: 100,
-      render: () => <Tag color="orange">待外发工厂审批</Tag>,
+      title: '操作', key: 'factoryAction', width: canApproveFactory ? 220 : 120, fixed: 'right' as const,
+      render: (_: any, record: User) => (
+        <RowActions
+          actions={[
+            ...(canApproveFactory ? [
+              { key: 'approve', label: '批准', title: '批准', onClick: () => handleFactoryApprove(record), primary: true },
+              { key: 'reject', label: '拒绝', title: '拒绝', onClick: () => handleFactoryReject(record), danger: true },
+            ] : []),
+            ...(record.factoryId ? [{
+              key: 'workers',
+              label: '人员名册',
+              title: '查看工厂人员名册',
+              onClick: () => navigateToFactoryWorkers(String(record.factoryId ?? ''), String(record.factoryName ?? '')),
+            }] : []),
+          ]}
+        />
+      ),
     },
   ];
 
@@ -255,9 +351,9 @@ const UserApproval: React.FC = () => {
         </>
       ),
     },
-    ...(isTenantOwner ? [{
+    ...(isTenantOwner || canApproveFactory ? [{
       key: 'factory',
-      label: `外发工厂员工（只读）(${factoryTotal})`,
+      label: `外发工厂员工审批 (${factoryTotal})`,
       children: (
         <>
           {factoryPending.length === 0 && !factoryLoading ? (
@@ -265,8 +361,10 @@ const UserApproval: React.FC = () => {
           ) : (
             <>
               <Alert
-                message="以下为外发工厂的待审批员工，由各外发工厂管理员自行审批，租户仅可查看"
-                type="warning"
+                message={canApproveFactory
+                  ? `当前有 ${factoryTotal} 个外发工厂员工待审批，您可以直接审批或跳转到对应工厂的人员名册管理`
+                  : "以下为外发工厂的待审批员工，由各外发工厂管理员自行审批，租户仅可查看"}
+                type={canApproveFactory ? "info" : "warning"}
                 showIcon
                 style={{ marginBottom: 16 }}
               />
@@ -378,6 +476,81 @@ const UserApproval: React.FC = () => {
             placeholder="请输入拒绝原因"
             value={rejectReason}
             onChange={(e) => setRejectReason(e.target.value)}
+            rows={4}
+            maxLength={200}
+            showCount
+          />
+        </SmallModal>
+
+        <Modal
+          title="批准外发工厂员工"
+          open={factoryApproveModalVisible}
+          onOk={confirmFactoryApprove}
+          onCancel={() => {
+            setFactoryApproveModalVisible(false);
+            setCurrentUser(null);
+            setFactorySelectedRole('');
+          }}
+          okText="批准并分配角色"
+          cancelText="取消"
+          confirmLoading={factoryApproveLoading}
+          width="40vw"
+        >
+          <div style={{ marginBottom: 16 }}>
+            <p>
+              批准外发工厂员工"<strong>{currentUser?.name || currentUser?.username}</strong>"
+            </p>
+            {currentUser?.factoryName && (
+              <p style={{ color: '#1677ff' }}>所属工厂：{String(currentUser.factoryName)}</p>
+            )}
+            <p style={{ color: 'var(--neutral-text-disabled)', fontSize: "var(--font-size-xs)", marginBottom: 16 }}>
+              批准后该员工可以正常登录系统
+            </p>
+            <div>
+              <div style={{ display: 'block', marginBottom: 8, fontWeight: 500 }}>
+                选择角色<span style={{ color: 'var(--color-danger)' }}>*</span>
+              </div>
+              <Select
+                style={{ width: '100%' }}
+                placeholder="请选择角色"
+                value={factorySelectedRole}
+                onChange={setFactorySelectedRole}
+                loading={roleLoading}
+                options={roleOptions.map(role => ({
+                  label: role.roleName || role.name,
+                  value: String(role.id)
+                }))}
+              />
+            </div>
+          </div>
+        </Modal>
+
+        <SmallModal
+          title="拒绝外发工厂员工"
+          open={factoryRejectModalVisible}
+          onOk={confirmFactoryReject}
+          onCancel={() => {
+            setFactoryRejectModalVisible(false);
+            setCurrentUser(null);
+            setFactoryRejectReason('');
+          }}
+          okText="确定拒绝"
+          cancelText="取消"
+          okButtonProps={{ danger: true, type: 'default' }}
+        >
+          <div style={{ marginBottom: 16 }}>
+            <p>
+              确定拒绝外发工厂员工"<strong>{currentUser?.name || currentUser?.username}</strong>"吗？
+            </p>
+            {currentUser?.factoryName && (
+              <p style={{ color: '#1677ff' }}>所属工厂：{String(currentUser.factoryName)}</p>
+            )}
+            <p style={{ color: 'var(--neutral-text-disabled)', fontSize: "var(--font-size-xs)" }}>拒绝后该员工将无法登录系统</p>
+          </div>
+          <TextArea
+            placeholder="请输入拒绝原因"
+            value={factoryRejectReason}
+            onChange={(e) => setFactoryRejectReason(e.target.value)}
             rows={4}
             maxLength={200}
             showCount

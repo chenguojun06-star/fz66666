@@ -143,7 +143,7 @@ public class AdvisorSimulationOrchestrator {
                 new LambdaQueryWrapper<ProductionOrder>()
                         .eq(ProductionOrder::getTenantId, tenantId)
                         .eq(ProductionOrder::getDeleteFlag, 0)
-                        .notIn(ProductionOrder::getStatus, List.of("COMPLETED", "CANCELLED"))
+                        .notIn(ProductionOrder::getStatus, List.of("completed", "cancelled", "scrapped", "archived", "closed"))
                         .last("LIMIT 100"));
     }
 

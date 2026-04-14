@@ -116,10 +116,11 @@ Component({
           id: Date.now(), role: 'ai', content: greeting,
         }];
         this._setMessages(initMsgs, {
-          isManager, screenWidth: sw, screenHeight: sh,
-          triggerX: tx, triggerY: ty, edgeSide: edge,
+          isManager, triggerX: tx, triggerY: ty, edgeSide: edge,
           conversationId: conversationId,
         });
+        this._screenWidth = sw;
+        this._screenHeight = sh;
         this._loadDynamicSuggestions();
       }, 0);
     },
@@ -142,8 +143,8 @@ Component({
       try {
         const saved = wx.getStorageSync('ai_trigger_position');
         if (saved) {
-          const sw = this.data.screenWidth || 375;
-          const sh = this.data.screenHeight || 667;
+          const sw = this._screenWidth || 375;
+          const sh = this._screenHeight || 667;
           const edge = saved.edge || 'right';
           const tx = edge === 'left' ? -30 : sw - 20;
           const ty = Math.max(40, Math.min(saved.y != null ? saved.y : this.data.triggerY, sh - 60));
@@ -162,15 +163,16 @@ Component({
       app.eventBus.off('tasksUpdated', this.boundLoadTasks);
     }
   },
-  _setMessages(msgs, extra) {
-    var MAX_VISIBLE = 30;
-    var visible = msgs.length > MAX_VISIBLE ? msgs.slice(msgs.length - MAX_VISIBLE) : msgs;
-    var data = { messages: msgs, visibleMessages: visible };
-    if (extra) Object.assign(data, extra);
-    this.setData(data);
-  },
 
   methods: {
+    _setMessages(msgs, extra) {
+      var MAX_VISIBLE = 30;
+      var visible = msgs.length > MAX_VISIBLE ? msgs.slice(msgs.length - MAX_VISIBLE) : msgs;
+      var data = { messages: msgs, visibleMessages: visible };
+      if (extra) Object.assign(data, extra);
+      this.setData(data);
+    },
+
     switchTab(e) {
       this.setData({ currentTab: e.currentTarget.dataset.tab });
     },
@@ -178,27 +180,28 @@ Component({
     onTriggerTouchStart(e) {
       const touch = e.touches[0];
       this._touchStartTime = Date.now();
-      this.setData({
-        isDragging: false,
-        dragStartX: touch.clientX, dragStartY: touch.clientY,
-        dragStartTriggerX: this.data.triggerX, dragStartTriggerY: this.data.triggerY,
-      });
+      this._isDragging = false;
+      this._dragStartX = touch.clientX;
+      this._dragStartY = touch.clientY;
+      this._dragStartTriggerX = this.data.triggerX;
+      this._dragStartTriggerY = this.data.triggerY;
     },
     onTriggerTouchMove(e) {
       const touch = e.touches[0];
-      const dx = touch.clientX - this.data.dragStartX;
-      const dy = touch.clientY - this.data.dragStartY;
-      if (!this.data.isDragging && Math.abs(dx) + Math.abs(dy) < 5) return;
-      const sw = this.data.screenWidth;
-      const sh = this.data.screenHeight;
-      let nx = this.data.dragStartTriggerX + dx;
-      let ny = this.data.dragStartTriggerY + dy;
+      const dx = touch.clientX - this._dragStartX;
+      const dy = touch.clientY - this._dragStartY;
+      if (!this._isDragging && Math.abs(dx) + Math.abs(dy) < 5) return;
+      const sw = this._screenWidth;
+      const sh = this._screenHeight;
+      let nx = this._dragStartTriggerX + dx;
+      let ny = this._dragStartTriggerY + dy;
       nx = Math.max(-30, Math.min(nx, sw - 20));
       ny = Math.max(40, Math.min(ny, sh - 60));
-      this.setData({ triggerX: nx, triggerY: ny, isDragging: true });
+      this.setData({ triggerX: nx, triggerY: ny });
+      this._isDragging = true;
     },
     onTriggerTouchEnd() {
-      if (!this.data.isDragging) {
+      if (!this._isDragging) {
         const willOpen = !this.data.isOpen;
         this._cancelIdleSnap();
         this.setData({ isOpen: willOpen });
@@ -206,11 +209,12 @@ Component({
         else { this._startIdleSnap(); }
         return;
       }
-      const sw = this.data.screenWidth;
+      const sw = this._screenWidth;
       const midX = this.data.triggerX + 25;
       const edge = midX < sw / 2 ? 'left' : 'right';
       const snapX = edge === 'left' ? -30 : sw - 20;
-      this.setData({ triggerX: snapX, edgeSide: edge, isDragging: false });
+      this.setData({ triggerX: snapX, edgeSide: edge });
+      this._isDragging = false;
       try { wx.setStorageSync('ai_trigger_position', { x: snapX, y: this.data.triggerY, edge }); } catch (_e) {}
       if (!this.data.isOpen) this._startIdleSnap();
     },

@@ -9,7 +9,7 @@
 
 .hist-group-header {
   padding: 8px 10px;
-  background: linear-gradient(135deg, var(--color-bg-light) 0%, var(--color-bg-light) 100%);
+  background: var(--color-bg-light);
   cursor: pointer;
 }
 .hist-group-header-hover {
@@ -51,7 +51,7 @@
   padding: 2px 9px;
   background: var(--color-bg-light);
   color: var(--color-primary);
-  border-radius: 999px;
+  border-radius: var(--radius-full);
 }
 
 .delivery-days-tag {
@@ -168,7 +168,7 @@
   color: var(--color-primary);
   padding: 4px 10px;
   border: 1px solid var(--color-primary);
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   background: var(--color-bg-light);
   font-weight: 500;
 }

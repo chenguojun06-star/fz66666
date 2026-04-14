@@ -365,75 +365,37 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
             return null;
         }
 
-        // 检查是否已经创建过该订单的任何裁剪任务
         List<CuttingTask> existing = this.list(
                 new LambdaQueryWrapper<CuttingTask>()
                         .eq(CuttingTask::getProductionOrderId, order.getId())
                         .orderByAsc(CuttingTask::getCreateTime)
         );
         if (existing != null && !existing.isEmpty()) {
-            return existing.get(0);  // 返回第一个创建的任务
+            return existing.get(0);
         }
 
         LocalDateTime now = LocalDateTime.now();
-        List<CuttingTask> createdTasks = new ArrayList<>();
 
-        // 尝试从 orderDetails JSON 中解析颜色行
-        List<Map<String, Object>> orderLines = parseOrderDetails(order);
+        CuttingTask task = new CuttingTask();
+        task.setProductionOrderId(order.getId());
+        task.setProductionOrderNo(order.getOrderNo());
+        task.setOrderQrCode(order.getQrCode());
+        task.setStyleId(order.getStyleId());
+        task.setStyleNo(order.getStyleNo());
+        task.setStyleName(order.getStyleName());
+        task.setColor(order.getColor());
+        task.setSize(order.getSize());
+        task.setOrderQuantity(order.getOrderQuantity());
+        task.setFactoryType(order.getFactoryType());
+        task.setStatus("pending");
+        task.setCreateTime(now);
+        task.setUpdateTime(now);
+        this.save(task);
 
-        if (orderLines != null && !orderLines.isEmpty() && orderLines.size() > 1) {
-            // 多行颜色：为每一行创建独立的 CuttingTask
-            int lineIndex = 0;
-            for (Map<String, Object> line : orderLines) {
-                lineIndex++;
-                String lineColor = line.get("color") == null ? "" : String.valueOf(line.get("color")).trim();
-                String lineSize = line.get("size") == null ? "" : String.valueOf(line.get("size")).trim();
-                Integer lineQuantity = (Integer) line.get("quantity");
+        log.info("创建裁剪任务: orderNo={}, color={}, size={}, quantity={}",
+                order.getOrderNo(), order.getColor(), order.getSize(), order.getOrderQuantity());
 
-                if (lineQuantity == null || lineQuantity <= 0) {
-                    continue;
-                }
-
-                CuttingTask task = new CuttingTask();
-                task.setProductionOrderId(order.getId());
-                task.setProductionOrderNo(order.getOrderNo() + "-" + lineIndex);  // 追加 -1, -2, -3 标记颜色行
-                task.setOrderQrCode(order.getQrCode());
-                task.setStyleId(order.getStyleId());
-                task.setStyleNo(order.getStyleNo());
-                task.setStyleName(order.getStyleName());
-                task.setColor(lineColor);  // 单个颜色，而非汇总的"多色"
-                task.setSize(lineSize);
-                task.setOrderQuantity(lineQuantity);  // 该颜色行的数量
-                task.setFactoryType(order.getFactoryType());
-                task.setStatus("pending");
-                task.setCreateTime(now);
-                task.setUpdateTime(now);
-                this.save(task);
-                createdTasks.add(task);
-                log.info("按颜色分菲创建裁剪任务: orderNo={}, color={}, size={}, quantity={}",
-                        order.getOrderNo(), lineColor, lineSize, lineQuantity);
-            }
-        } else {
-            // 单颜色或无详细行信息：创建一个汇总任务（兼容旧数据）
-            CuttingTask task = new CuttingTask();
-            task.setProductionOrderId(order.getId());
-            task.setProductionOrderNo(order.getOrderNo());
-            task.setOrderQrCode(order.getQrCode());
-            task.setStyleId(order.getStyleId());
-            task.setStyleNo(order.getStyleNo());
-            task.setStyleName(order.getStyleName());
-            task.setColor(order.getColor());
-            task.setSize(order.getSize());
-            task.setOrderQuantity(order.getOrderQuantity());
-            task.setFactoryType(order.getFactoryType());
-            task.setStatus("pending");
-            task.setCreateTime(now);
-            task.setUpdateTime(now);
-            this.save(task);
-            createdTasks.add(task);
-        }
-
-        return createdTasks.isEmpty() ? null : createdTasks.get(0);
+        return task;
     }
 
     /**
@@ -555,6 +517,7 @@ public class CuttingTaskServiceImpl extends ServiceImpl<CuttingTaskMapper, Cutti
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public boolean markBundledByOrderId(String productionOrderId) {
         if (!StringUtils.hasText(productionOrderId)) {
             return false;

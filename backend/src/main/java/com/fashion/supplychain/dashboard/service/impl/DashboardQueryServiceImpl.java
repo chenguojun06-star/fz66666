@@ -224,10 +224,9 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         // 1. 订单超期：已超过计划结束日期但未完成的订单
         long delayedOrders = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getDeleteFlag, 0)
-                .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)                                                          // 🔒 租户隔离
-                .eq(org.springframework.util.StringUtils.hasText(factoryId), ProductionOrder::getFactoryId, factoryId)                // 🔒 工厂隔离
-                .ne(ProductionOrder::getStatus, "completed")
-                .ne(ProductionOrder::getStatus, "cancelled")
+                .eq(tenantId != null, ProductionOrder::getTenantId, tenantId)
+                .eq(org.springframework.util.StringUtils.hasText(factoryId), ProductionOrder::getFactoryId, factoryId)
+                .notIn(ProductionOrder::getStatus, "completed", "cancelled", "scrapped", "closed", "archived")
                 .isNotNull(ProductionOrder::getPlannedEndDate)
                 .lt(ProductionOrder::getPlannedEndDate, now)
                 .count();

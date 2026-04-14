@@ -10,9 +10,13 @@ export type ProgressStatus = 'normal' | 'warning' | 'danger';
  * @param plannedEndDate 订单交期
  * @returns 颜色状态: normal(绿色) | warning(黄色/微红) | danger(红色/深红)
  */
-export const getProgressColorStatus = (plannedEndDate?: string | null): ProgressStatus => {
+export const getProgressColorStatus = (plannedEndDate?: string | null, status?: string | null): ProgressStatus => {
   if (!plannedEndDate) {
-    return 'normal'; // 没有交期时默认绿色
+    return 'normal';
+  }
+  const s = (status || '').toLowerCase();
+  if (s === 'scrapped' || s === 'closed' || s === 'archived' || s === 'cancelled' || s === 'completed') {
+    return 'normal';
   }
 
   const now = new Date();
@@ -50,9 +54,11 @@ export const getRemainingDaysDisplay = (
   status?: string | null
 ): { text: string; color: string } => {
   if (!endDate) return { text: '-', color: '#999' };
-  // 终态订单：停止倒计时，显示对应状态文字
-  if (status === 'scrapped') return { text: '已报废', color: '#8c8c8c' };
-  if (status === 'cancelled' || actualEndDate) return { text: '已关单', color: '#8c8c8c' };
+  const s = (status || '').toLowerCase();
+  if (s === 'scrapped') return { text: '已报废', color: '#8c8c8c' };
+  if (s === 'closed' || s === 'archived') return { text: '已关单', color: '#8c8c8c' };
+  if (s === 'completed') return { text: '已完成', color: '#52c41a' };
+  if (s === 'cancelled' || actualEndDate) return { text: '已关单', color: '#8c8c8c' };
 
   const now = new Date();
   const deadline = new Date(endDate);

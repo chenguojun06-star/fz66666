@@ -66,7 +66,7 @@ public class FactoryBottleneckOrchestrator {
                 new LambdaQueryWrapper<ProductionOrder>()
                         .eq(ProductionOrder::getTenantId, tenantId)
                         .eq(StringUtils.hasText(factoryId), ProductionOrder::getFactoryId, factoryId)
-                        .notIn(ProductionOrder::getStatus, "completed", "cancelled")
+                        .notIn(ProductionOrder::getStatus, "completed", "cancelled", "scrapped", "archived", "closed")
                         .eq(ProductionOrder::getDeleteFlag, 0)
                         .isNotNull(ProductionOrder::getFactoryName)
                         .ne(ProductionOrder::getFactoryName, "")

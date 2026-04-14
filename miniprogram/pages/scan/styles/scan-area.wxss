@@ -26,7 +26,7 @@
   height: 52px;
   box-sizing: border-box;
   overflow: hidden;
-  background: var(--gradient-action);
+  background: var(--color-primary);
   color: var(--color-text-white);
   border-radius: var(--radius-full);
   font-size: var(--font-size-lg);
@@ -44,7 +44,7 @@
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
 }
 .scan-btn-icon {
-  font-size: 20px;
+  font-size: var(--font-size-xl);
 }
 .scan-btn-icon-svg {
   width: 28px;
@@ -57,17 +57,17 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  line-height: 1.1;
+  line-height: var(--line-height-tight);
 }
 
 .scan-btn-main {
-  font-size: 18px;
+  font-size: var(--font-size-lg-xl);
   font-weight: 800;
   white-space: nowrap;
 }
 
 .scan-btn-sub {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: rgba(255, 255, 255, 0.8);
   white-space: nowrap;

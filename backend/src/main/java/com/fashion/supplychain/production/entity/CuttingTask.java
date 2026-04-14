@@ -33,6 +33,9 @@ public class CuttingTask {
 
     private Integer orderQuantity;
 
+    /**
+     * 状态(pending:待领取, received:已领取, bundled:已完成)
+     */
     private String status;
 
     private String receiverId;

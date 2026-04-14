@@ -14,6 +14,7 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import java.time.LocalDateTime;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,8 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Service
 public class FactoryOrchestrator {
+
+    private static final Set<String> TERMINAL_STATUSES = Set.of("completed", "cancelled", "scrapped", "archived", "closed");
 
     @Autowired
     private FactoryService factoryService;
@@ -161,7 +164,7 @@ public class FactoryOrchestrator {
                 new LambdaQueryWrapper<ProductionOrder>()
                         .eq(ProductionOrder::getFactoryId, id)
                         .eq(ProductionOrder::getDeleteFlag, 0)
-                        .ne(ProductionOrder::getStatus, "completed"));
+                        .notIn(ProductionOrder::getStatus, TERMINAL_STATUSES));
         if (activeOrders > 0) {
             throw new IllegalStateException(
                     "该工厂存在 " + activeOrders + " 个未完成的生产订单，请在订单结算完成后再删除");

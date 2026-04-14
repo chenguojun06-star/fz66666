@@ -58,9 +58,9 @@
   padding: 0 4px;
 }
 .scan-mode-tip text {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
-  line-height: 1.4;
+  line-height: var(--line-height-normal);
 }
 .res-order {
   color: var(--color-text-primary);
@@ -102,7 +102,7 @@
   flex: 1;
   font-size: var(--font-size-xs);
   color: var(--color-warning);
-  line-height: 1.4;
+  line-height: var(--line-height-normal);
 }
 
 /* 失败结果下一步操作按鈕 */

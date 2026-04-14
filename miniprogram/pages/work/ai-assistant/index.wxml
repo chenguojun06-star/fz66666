@@ -71,6 +71,7 @@
                 data-cardtitle="{{card.title}}"
               >{{act.label}}</view>
             </view>
+          </view>
           </block>
 
           <!-- 图表卡片（简化文字摘要） -->
@@ -78,6 +79,7 @@
           <view class="chart-card">
             <view class="chart-card-hd">📊 {{chart.title || '数据图表'}}</view>
             <view class="chart-card-type">类型：{{chart.chartType || '图表'}}</view>
+          </view>
           </block>
 
           <!-- 团队状态卡片 -->
@@ -106,6 +108,7 @@
               <text class="h-actor">{{h.actor}}</text>
               <text class="h-remark">{{h.stage}} {{h.remark}}</text>
             </view>
+          </view>
           </block>
 
           <!-- 菲号拆分卡片 -->
@@ -132,6 +135,7 @@
               bindtap="onCardAction" data-type="view_cutting" data-cardtitle="打印子菲号">
               打印子菲号
             </view>
+          </view>
           </block>
         </block>
       </view>

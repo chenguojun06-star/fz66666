@@ -13,26 +13,26 @@
 }
 
 .title {
-  font-size: 18px;
+  font-size: var(--font-size-lg-xl);
   font-weight: 700;
   color: var(--color-text-primary);
   margin-bottom: 6px;
 }
 
 .update-date {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-disabled);
 }
 
 .heading {
-  font-size: 15px;
+  font-size: var(--font-size-base);
   font-weight: 600;
   color: var(--color-text-primary);
   margin-bottom: 8px;
 }
 
 .sub-heading {
-  font-size: 14px;
+  font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--color-text-secondary);
   margin-top: 10px;
@@ -40,14 +40,14 @@
 }
 
 .body {
-  font-size: 14px;
+  font-size: var(--font-size-md);
   color: var(--color-text-secondary);
   line-height: var(--line-height-relaxed);
 }
 
 .footer {
   text-align: center;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-disabled);
   padding: 16px 0 24px;
 }

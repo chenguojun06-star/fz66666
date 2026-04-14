@@ -31,6 +31,8 @@ public class SmartRemarkAgent {
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("MM-dd HH:mm");
     private static final String AI_REMARK_PREFIX = "[AI巡检]";
     private static final int URGENT_THRESHOLD = 60;
+    private static final Set<String> TERMINAL_STATUSES =
+            Set.of("completed", "cancelled", "scrapped", "archived", "closed");
 
     @Autowired
     private TenantService tenantService;
@@ -46,6 +48,8 @@ public class SmartRemarkAgent {
     private DistributedLockService distributedLockService;
     @Autowired
     private OrderRemarkService orderRemarkService;
+    @Autowired
+    private com.fashion.supplychain.intelligence.orchestration.AiAgentTraceOrchestrator traceOrchestrator;
 
     @Scheduled(cron = "0 20 * * * ?")
     public void runSmartRemark() {
@@ -73,17 +77,27 @@ public class SmartRemarkAgent {
 
         for (Tenant t : tenants) {
             if (isDisabled(t)) continue;
+            long start = System.currentTimeMillis();
+            String commandId = null;
             try {
+                commandId = traceOrchestrator.startPatrolRequest(t.getId(), "smart-remark",
+                        "智能备注巡检：紧急度评分>=60的订单自动备注");
                 List<ProductionOrder> orders = productionOrderService.lambdaQuery()
                         .eq(ProductionOrder::getTenantId, t.getId())
                         .eq(ProductionOrder::getDeleteFlag, 0)
-                        .notIn(ProductionOrder::getStatus, "COMPLETED", "CANCELLED", "completed", "cancelled")
+                        .notIn(ProductionOrder::getStatus, TERMINAL_STATUSES)
                         .list();
 
-                if (orders.isEmpty()) continue;
+                if (orders.isEmpty()) {
+                    traceOrchestrator.finishPatrolRequest(t.getId(), commandId,
+                            "无活跃订单", null, System.currentTimeMillis() - start);
+                    continue;
+                }
 
                 Map<String, LocalDateTime> lastScanMap = buildLastScanMap(orders);
                 LocalDateTime now = LocalDateTime.now();
+                int remarks = 0;
+                int notices = 0;
 
                 for (ProductionOrder order : orders) {
                     int score = computeUrgencyScore(order, lastScanMap.get(order.getId()), now);
@@ -92,17 +106,28 @@ public class SmartRemarkAgent {
                     if (shouldRemark(order)) {
                         String remark = buildRemark(order, lastScanMap.get(order.getId()), now, score);
                         appendRemark(order, remark);
-                        totalRemarks++;
+                        remarks++;
                         log.info("[SmartRemark] 已备注订单 {}: 紧急度={}, 备注={}", order.getOrderNo(), score, remark);
                     }
 
                     if (shouldNotify(order)) {
                         pushNotification(t.getId(), order, lastScanMap.get(order.getId()), now, score);
-                        totalNotices++;
+                        notices++;
                     }
                 }
+                totalRemarks += remarks;
+                totalNotices += notices;
+                traceOrchestrator.recordPatrolStep(t.getId(), commandId, "smartRemark",
+                        "扫描" + orders.size() + "个订单，新增备注" + remarks + "条，通知" + notices + "条",
+                        System.currentTimeMillis() - start, true);
+                traceOrchestrator.finishPatrolRequest(t.getId(), commandId,
+                        "备注" + remarks + "条，通知" + notices + "条", null, System.currentTimeMillis() - start);
             } catch (Exception e) {
                 log.warn("[SmartRemark] 租户{}巡检异常: {}", t.getId(), e.getMessage());
+                if (commandId != null) {
+                    traceOrchestrator.finishPatrolRequest(t.getId(), commandId,
+                            null, "巡检异常: " + e.getMessage(), System.currentTimeMillis() - start);
+                }
             }
         }
         log.info("[SmartRemark] 完成，新增备注{}条，新增通知{}条", totalRemarks, totalNotices);
@@ -340,7 +365,8 @@ public class SmartRemarkAgent {
         List<String> ids = orders.stream().map(ProductionOrder::getId).collect(Collectors.toList());
         if (ids.isEmpty()) return Collections.emptyMap();
 
-        List<Map<String, Object>> lastScans = scanRecordMapper.selectLastScanTimeByOrderIds(ids, com.fashion.supplychain.common.UserContext.tenantId());
+        Long tid = orders.get(0).getTenantId();
+        List<Map<String, Object>> lastScans = scanRecordMapper.selectLastScanTimeByOrderIds(ids, tid);
         Map<String, LocalDateTime> map = new HashMap<>();
         for (Map<String, Object> row : lastScans) {
             String ordId = (String) row.get("orderId");

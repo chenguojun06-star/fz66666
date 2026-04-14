@@ -37,11 +37,15 @@ public class AiPatrolOrchestrator {
 
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("MM-dd");
 
+    private static final Set<String> TERMINAL_STATUSES =
+            Set.of("completed", "cancelled", "scrapped", "archived", "closed");
+
     @Autowired private TenantService tenantService;
     @Autowired private ProductionOrderService productionOrderService;
     @Autowired private ScanRecordMapper scanRecordMapper;
     @Autowired private SysNoticeService sysNoticeService;
     @Autowired(required = false) private DistributedLockService distributedLockService;
+    @Autowired private AiAgentTraceOrchestrator traceOrchestrator;
 
     // ─── 定时调度 ─────────────────────────────────────────────────────────────
 
@@ -73,10 +77,21 @@ public class AiPatrolOrchestrator {
         int total = 0;
         for (Tenant t : tenants) {
             if (isDisabled(t)) continue;
+            long start = System.currentTimeMillis();
+            String commandId = null;
             try {
-                total += patrolTenant(t.getId());
+                commandId = traceOrchestrator.startPatrolRequest(t.getId(), "ai-patrol",
+                        "定时巡检：逾期订单+停滞订单扫描");
+                int n = patrolTenantInternal(t.getId(), commandId);
+                total += n;
+                traceOrchestrator.finishPatrolRequest(t.getId(), commandId,
+                        "巡检完成，推送" + n + "条通知", null, System.currentTimeMillis() - start);
             } catch (Exception e) {
                 log.warn("[AiPatrol] 租户{}巡检异常: {}", t.getId(), e.getMessage());
+                if (commandId != null) {
+                    traceOrchestrator.finishPatrolRequest(t.getId(), commandId,
+                            null, "巡检异常: " + e.getMessage(), System.currentTimeMillis() - start);
+                }
             }
         }
         log.info("[AiPatrol] 巡检完成，本轮推送 {} 条通知", total);
@@ -87,9 +102,28 @@ public class AiPatrolOrchestrator {
      * @return 推送通知数量
      */
     public int patrolTenant(Long tenantId) {
+        long start = System.currentTimeMillis();
+        String commandId = traceOrchestrator.startPatrolRequest(tenantId, "ai-patrol",
+                "手动触发巡检：逾期订单+停滞订单扫描");
+        int n = patrolTenantInternal(tenantId, commandId);
+        traceOrchestrator.finishPatrolRequest(tenantId, commandId,
+                "巡检完成，推送" + n + "条通知", null, System.currentTimeMillis() - start);
+        return n;
+    }
+
+    private int patrolTenantInternal(Long tenantId, String commandId) {
         int n = 0;
-        n += scanOverdueOrders(tenantId);
-        n += scanStagnantOrders(tenantId);
+        long s1 = System.currentTimeMillis();
+        int overdue = scanOverdueOrders(tenantId);
+        traceOrchestrator.recordPatrolStep(tenantId, commandId, "scanOverdue",
+                "逾期订单扫描，发现" + overdue + "条需通知", System.currentTimeMillis() - s1, true);
+        n += overdue;
+
+        long s2 = System.currentTimeMillis();
+        int stagnant = scanStagnantOrders(tenantId);
+        traceOrchestrator.recordPatrolStep(tenantId, commandId, "scanStagnant",
+                "停滞订单扫描，发现" + stagnant + "条需通知", System.currentTimeMillis() - s2, true);
+        n += stagnant;
         return n;
     }
 
@@ -100,7 +134,7 @@ public class AiPatrolOrchestrator {
         List<ProductionOrder> orders = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getTenantId, tenantId)
                 .eq(ProductionOrder::getDeleteFlag, 0)
-                .notIn(ProductionOrder::getStatus, List.of("COMPLETED", "CANCELLED", "cancelled"))
+                .notIn(ProductionOrder::getStatus, TERMINAL_STATUSES)
                 .isNotNull(ProductionOrder::getPlannedEndDate)
                 .lt(ProductionOrder::getPlannedEndDate, now)
                 .last("LIMIT 20")
@@ -131,13 +165,13 @@ public class AiPatrolOrchestrator {
         List<ProductionOrder> inProg = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getTenantId, tenantId)
                 .eq(ProductionOrder::getDeleteFlag, 0)
-                .notIn(ProductionOrder::getStatus, List.of("COMPLETED", "CANCELLED", "cancelled"))
+                .notIn(ProductionOrder::getStatus, TERMINAL_STATUSES)
                 .last("LIMIT 50")
                 .list();
         if (inProg.isEmpty()) return 0;
 
         List<String> ids = inProg.stream().map(ProductionOrder::getId).collect(Collectors.toList());
-        List<Map<String, Object>> lastScans = scanRecordMapper.selectLastScanTimeByOrderIds(ids, com.fashion.supplychain.common.UserContext.tenantId());
+        List<Map<String, Object>> lastScans = scanRecordMapper.selectLastScanTimeByOrderIds(ids, tenantId);
 
         // orderId → lastScanTime
         Map<String, LocalDateTime> lastScanMap = new HashMap<>();

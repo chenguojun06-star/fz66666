@@ -421,6 +421,17 @@ public class ProductionScanExecutor {
                 log.debug("WebSocket广播失败(不阻断): orderNo={}", order.getOrderNo(), e);
             }
 
+            // 🔔 WebSocket进度变更推送：扫码成功后通知前端刷新进度数据
+            try {
+                webSocketService.broadcastOrderProgressChanged(
+                    order.getOrderNo(),
+                    0,
+                    progressStage != null ? progressStage : ""
+                );
+            } catch (Exception e) {
+                log.debug("WebSocket进度推送失败(不阻断): orderNo={}", order.getOrderNo(), e);
+            }
+
             // ✅ 扫码成功后，更新工序跟踪记录（用于工资结算）—— 仅在有菲号时才更新
             // tracking 表用 node["name"]（即progressStage父节点名，如"尾部"）作为 process_code 初始化
             // 兼容策略：先用 processCode（子工序名，如"剪线"）匹配，找不到再用 progressStage（父节点名）回退

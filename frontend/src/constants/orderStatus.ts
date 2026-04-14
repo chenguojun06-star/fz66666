@@ -15,6 +15,7 @@ export const ORDER_STATUS_LABEL: Record<string, string> = {
   paused:     '已暂停',
   returned:   '已退回',
   closed:     '已关单',
+  archived:   '已归档',
 };
 
 export const ORDER_STATUS_COLOR: Record<string, string> = {
@@ -28,6 +29,7 @@ export const ORDER_STATUS_COLOR: Record<string, string> = {
   paused:     'orange',
   returned:   'volcano',
   closed:     'blue',
+  archived:   'default',
 };
 
 /**

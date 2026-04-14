@@ -167,8 +167,7 @@ public class SerpApiTrendService {
                     + "?engine=google_trends"
                     + "&q=" + URLEncoder.encode(searchKeyword, StandardCharsets.UTF_8)
                     + "&date=today+3-m"
-                    + "&data_type=TIMESERIES"
-                    + "&api_key=" + apiKey;
+                    + "&data_type=TIMESERIES";
 
             log.debug("[SerpApi] Trends 查询: 原词={} → 搜索词={}", keyword, searchKeyword);
 
@@ -230,8 +229,7 @@ public class SerpApiTrendService {
                     + "&q=" + URLEncoder.encode(keyword, StandardCharsets.UTF_8)
                     + "&gl=cn"
                     + "&hl=zh-cn"
-                    + "&num=10"
-                    + "&api_key=" + apiKey;
+                    + "&num=10";
 
             String body = doGet(url);
             if (body == null) return List.of();
@@ -367,8 +365,7 @@ public class SerpApiTrendService {
         StringBuilder url = new StringBuilder(BASE_URL)
                 .append("?engine=").append(source.engine)
                 .append("&q=").append(URLEncoder.encode(searchKeyword.trim(), StandardCharsets.UTF_8))
-                .append("&num=").append(Math.max(limit, 10))
-                .append("&api_key=").append(apiKey);
+                .append("&num=").append(Math.max(limit, 10));
 
         if ("google_shopping".equals(source.engine)) {
             url.append("&hl=zh-cn");
@@ -534,6 +531,7 @@ public class SerpApiTrendService {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .header("Accept", "application/json")
+                    .header("Authorization", "Bearer " + apiKey)
                     .timeout(Duration.ofSeconds(15))
                     .GET()
                     .build();

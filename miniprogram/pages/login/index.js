@@ -136,7 +136,7 @@ async function resolveLoginCode() {
   const envVersion = resolveEnvVersion();
 
   if (!appId || appId === 'touristappid') {
-    console.log('[Login] 未获取到有效 AppID，使用 Mock 模式跳过微信登录');
+    console.warn('[Login] 未获取到有效 AppID，使用 Mock 模式跳过微信登录');
     return 'mock_dev';
   }
 

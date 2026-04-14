@@ -33,6 +33,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,8 @@ import org.springframework.stereotype.Service;
 @Service
 @Slf4j
 public class StyleIntelligenceProfileOrchestrator {
+
+    private static final Set<String> TERMINAL_STATUSES = Set.of("completed", "cancelled", "scrapped", "archived", "closed");
 
     private static final DateTimeFormatter DATE_TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -79,34 +82,37 @@ public class StyleIntelligenceProfileOrchestrator {
             return response;
         }
 
-        List<ProductionOrder> orders = loadOrders(style.getStyleNo());
-        List<ScanRecord> scanRecords = loadScanRecords(style.getStyleNo());
-        TenantPreferenceProfile tenantProfile = tenantIntelligenceProfileViewOrchestrator.getCurrentTenantPreferenceProfile();
-        response.setTenantProfile(tenantProfile);
+        List<ProductionOrder> orders = safeLoadOrders(style.getStyleNo());
+        List<ScanRecord> scanRecords = safeLoadScanRecords(style.getStyleNo());
+        TenantPreferenceProfile tenantProfile = safeGetTenantProfile();
+        response.setTenantProfile(tenantProfile != null ? tenantProfile : new TenantPreferenceProfile());
 
         fillBaseInfo(response, style, tenantProfile);
         fillProductionSummary(response.getProduction(), orders, tenantProfile);
         fillScanSummary(response.getScan(), scanRecords, tenantProfile);
 
-        List<SampleStock> sampleStocks = loadSampleStocks(style.getStyleNo());
+        List<SampleStock> sampleStocks = safeLoadSampleStocks(style.getStyleNo());
         fillStockSummary(response.getStock(), sampleStocks);
 
-        StyleQuoteSuggestionResponse quoteSuggestion = styleQuoteSuggestionOrchestrator.suggest(style.getStyleNo());
-        StyleQuotation quotation = style.getId() == null ? null : styleQuotationService.getByStyleId(style.getId());
+        StyleQuoteSuggestionResponse quoteSuggestion = safeGetQuoteSuggestion(style.getStyleNo());
+        StyleQuotation quotation = safeGetQuotation(style.getId());
         fillFinanceSummary(response.getFinance(), quotation, quoteSuggestion, orders);
 
         response.setStages(buildStages(style));
         response.setInsights(buildInsights(style, response, quoteSuggestion));
-        // 难度评估（结构化自动计算，不走 AI 避免影响接口响应时间）
-        StyleIntelligenceProfileResponse.DifficultyAssessment difficulty = styleDifficultyOrchestrator.assess(style);
-        // 若已有 AI 建议报价，叠加难度倍率生成调整后建议价
-        if (response.getFinance() != null && response.getFinance().getSuggestedQuotation() != null) {
-            java.math.BigDecimal adjusted = response.getFinance().getSuggestedQuotation()
-                    .multiply(difficulty.getPricingMultiplier())
-                    .setScale(2, java.math.RoundingMode.HALF_UP);
-            difficulty.setAdjustedSuggestedPrice(adjusted);
+        try {
+            StyleIntelligenceProfileResponse.DifficultyAssessment difficulty = styleDifficultyOrchestrator.assess(style);
+            if (response.getFinance() != null && response.getFinance().getSuggestedQuotation() != null) {
+                java.math.BigDecimal adjusted = response.getFinance().getSuggestedQuotation()
+                        .multiply(difficulty.getPricingMultiplier())
+                        .setScale(2, java.math.RoundingMode.HALF_UP);
+                difficulty.setAdjustedSuggestedPrice(adjusted);
+            }
+            response.setDifficulty(difficulty);
+        } catch (Exception e) {
+            log.warn("[style-profile] 难度评估失败(styleNo={}): {}", style.getStyleNo(), e.getMessage());
+            response.setDifficulty(new StyleIntelligenceProfileResponse.DifficultyAssessment());
         }
-        response.setDifficulty(difficulty);
         return response;
     }
 
@@ -171,7 +177,7 @@ public class StyleIntelligenceProfileOrchestrator {
     private void fillProductionSummary(ProductionSummary summary, List<ProductionOrder> orders, TenantPreferenceProfile tenantProfile) {
         summary.setOrderCount(orders.size());
         summary.setActiveOrderCount((int) orders.stream()
-                .filter(order -> !"completed".equalsIgnoreCase(order.getStatus()) && !"cancelled".equalsIgnoreCase(order.getStatus()))
+                .filter(order -> !TERMINAL_STATUSES.contains(order.getStatus() == null ? "" : order.getStatus().trim().toLowerCase()))
                 .count());
         summary.setDelayedOrderCount((int) orders.stream()
                 .filter(order -> "delayed".equalsIgnoreCase(order.getStatus()))
@@ -514,5 +520,59 @@ public class StyleIntelligenceProfileOrchestrator {
 
     private boolean hasText(String value) {
         return value != null && !value.trim().isEmpty();
+    }
+
+    private List<ProductionOrder> safeLoadOrders(String styleNo) {
+        try {
+            return loadOrders(styleNo);
+        } catch (Exception e) {
+            log.warn("[style-profile] 加载生产订单失败(styleNo={}): {}", styleNo, e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    private List<ScanRecord> safeLoadScanRecords(String styleNo) {
+        try {
+            return loadScanRecords(styleNo);
+        } catch (Exception e) {
+            log.warn("[style-profile] 加载扫码记录失败(styleNo={}): {}", styleNo, e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    private TenantPreferenceProfile safeGetTenantProfile() {
+        try {
+            return tenantIntelligenceProfileViewOrchestrator.getCurrentTenantPreferenceProfile();
+        } catch (Exception e) {
+            log.warn("[style-profile] 获取租户偏好失败: {}", e.getMessage());
+            return new TenantPreferenceProfile();
+        }
+    }
+
+    private List<SampleStock> safeLoadSampleStocks(String styleNo) {
+        try {
+            return loadSampleStocks(styleNo);
+        } catch (Exception e) {
+            log.warn("[style-profile] 加载样衣库存失败(styleNo={}): {}", styleNo, e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    private StyleQuoteSuggestionResponse safeGetQuoteSuggestion(String styleNo) {
+        try {
+            return styleQuoteSuggestionOrchestrator.suggest(styleNo);
+        } catch (Exception e) {
+            log.warn("[style-profile] 获取报价建议失败(styleNo={}): {}", styleNo, e.getMessage());
+            return new StyleQuoteSuggestionResponse();
+        }
+    }
+
+    private StyleQuotation safeGetQuotation(Long styleId) {
+        try {
+            return styleId == null ? null : styleQuotationService.getByStyleId(styleId);
+        } catch (Exception e) {
+            log.warn("[style-profile] 获取报价单失败(styleId={}): {}", styleId, e.getMessage());
+            return null;
+        }
     }
 }

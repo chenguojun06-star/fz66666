@@ -76,8 +76,8 @@ Page({
       cuttingTask = raw.cuttingTask;
       var statusMap = {
         pending: '待领取', not_started: '待领取',
-        received: '已领取', in_progress: '进行中',
-        completed: '已完成', done: '已完成'
+        received: '已领取', in_progress: '已领取',
+        bundled: '已完成', completed: '已完成', done: '已完成'
       };
       cuttingTask.statusText = statusMap[cuttingTask.status] || cuttingTask.status || '待领取';
     }
@@ -249,6 +249,7 @@ Page({
       wx.hideLoading();
       this.setData({ loading: false });
       toast.success('已领取 ' + pendingItems.length + ' 项物料');
+
       this._emitRefresh();
       wx.navigateBack();
     } catch (e) {

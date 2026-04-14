@@ -190,6 +190,13 @@ export const formatStageTimeRange = (startTime: unknown, endTime: unknown) => {
 };
 
 export const getDeliveryMeta = (record: StyleRecord, completed = false): { tone: DeliveryTone; label: string } => {
+  const sampleStatus = String((record as any)?.sampleStatus || '').trim().toUpperCase();
+  if (sampleStatus === 'SCRAPPED' || isScrappedStyle(record as any)) {
+    return { tone: 'scrapped', label: '已报废' };
+  }
+  if (sampleStatus === 'CLOSED') {
+    return { tone: 'scrapped', label: '已关单' };
+  }
   if (completed) {
     const completedTime = getStyleCompletedTime(record);
     const createdTime = record.createTime ? dayjs(record.createTime) : null;

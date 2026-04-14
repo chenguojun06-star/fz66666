@@ -137,8 +137,8 @@ const scanCoreMixin = Behavior({
       if (JSON.stringify(user) !== JSON.stringify(this.data.currentUser)) {
         updates.currentUser = user;
       }
-      if (JSON.stringify(factory) !== JSON.stringify(this.data.currentFactory)) {
-        updates.currentFactory = factory;
+      if (JSON.stringify(factory) !== JSON.stringify(this._currentFactory)) {
+        this._currentFactory = factory;
       }
 
       if (Object.keys(updates).length > 0) {
@@ -215,7 +215,7 @@ const scanCoreMixin = Behavior({
 
       // 验证输入是否为空
       if (value === '' || value === null || value === undefined) {
-        this.setData({ quantity: '' });
+        this._quantity = '';
         return;
       }
 
@@ -240,7 +240,7 @@ const scanCoreMixin = Behavior({
         return;
       }
 
-      this.setData({ quantity: num });
+      this._quantity = num;
     },
 
     /**
@@ -316,7 +316,7 @@ const scanCoreMixin = Behavior({
       // 3. 准备参数
       const options = {
         scanType: scanType,
-        quantity: this.data.quantity,
+        quantity: this._quantity,
         warehouse: this.data.warehouse,
       };
 
@@ -389,7 +389,7 @@ const scanCoreMixin = Behavior({
           placeholderText: '例如: 100',
           success: res => {
             if (res.confirm && res.content) {
-              this.setData({ quantity: res.content });
+              this._quantity = res.content;
               this.processScanCode(codeStr, scanType);
             }
           },
@@ -434,7 +434,12 @@ const scanCoreMixin = Behavior({
 
       // 已完成：显示完成提示
       if (e.isCompleted) {
-        toast.success(e.message || '进度节点已完成');
+        var msg = e.message || '进度节点已完成';
+        if (msg.indexOf('物料均已领取') >= 0) {
+          toast.info('物料已全部领取，请扫描订单二维码进入裁剪工序');
+        } else {
+          toast.success(msg);
+        }
         this.setData({ loading: false });
         return;
       }

@@ -30,7 +30,7 @@ Page({
   },
 
   onPullDownRefresh() {
-    this._loadDetail().then(() => wx.stopPullDownRefresh());
+    this._loadDetail().then(() => wx.stopPullDownRefresh()).catch(() => wx.stopPullDownRefresh());
   },
 
   async _loadDetail() {
@@ -311,12 +311,24 @@ Page({
   },
 
   _getStatusText(status) {
-    const map = { pending: '待采购', received: '已采购', partial: '部分到货', completed: '已完成', cancelled: '已取消' };
+    const map = {
+      pending: '待采购', received: '已领取', partial: '部分到货',
+      partial_arrival: '部分到货', awaiting_confirm: '待确认完成',
+      completed: '全部到货', cancelled: '已取消', warehouse_pending: '待仓库出库',
+      waiting_procurement: '待采购', procurement_in_progress: '采购中',
+      procurement_completed: '已完成',
+    };
     return map[status] || '待采购';
   },
 
   _getStatusColor(status) {
-    const map = { pending: 'orange', received: 'blue', partial: 'blue', completed: 'green', cancelled: 'gray' };
+    const map = {
+      pending: 'orange', received: 'blue', partial: 'blue',
+      partial_arrival: 'blue', awaiting_confirm: 'gold', completed: 'green',
+      cancelled: 'gray', warehouse_pending: 'cyan',
+      waiting_procurement: 'orange', procurement_in_progress: 'blue',
+      procurement_completed: 'green',
+    };
     return map[status] || 'orange';
   },
 

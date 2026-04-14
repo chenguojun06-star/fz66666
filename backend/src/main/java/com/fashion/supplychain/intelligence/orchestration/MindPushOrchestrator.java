@@ -70,6 +70,9 @@ public class MindPushOrchestrator {
     @Autowired
     private ScanRecordService scanRecordService;
 
+    @Autowired
+    private com.fashion.supplychain.production.service.SysNoticeService sysNoticeService;
+
     // ─── 查询当前状态 ──────────────────────────────────────────────
 
     public MindPushStatusResponse getStatus() {
@@ -368,18 +371,44 @@ public class MindPushOrchestrator {
 
     private void writePushLog(Long tenantId, String ruleCode, String orderId,
                                String orderNo, String title, String content) {
-        MindPushLog log = new MindPushLog();
-        log.setTenantId(tenantId);
-        log.setRuleCode(ruleCode);
-        log.setOrderId(orderId);
-        log.setOrderNo(orderNo);
-        log.setTitle(title);
-        log.setContent(content);
-        log.setChannel("IN_APP");
-        log.setPushedAt(LocalDateTime.now());
-        mindPushLogMapper.insert(log);
-        // 同步推送微信订阅消息（跟单员 + 工厂主账号）
+        String dedupKey = (orderNo != null ? orderNo : "SYS") + "_" + ruleCode;
+        if (!noRecentNotice(tenantId, dedupKey, ruleCode)) {
+            log.debug("[MindPush] 24h内已推送过 tenant={} key={} type={}，跳过", tenantId, dedupKey, ruleCode);
+            return;
+        }
+        MindPushLog pushLog = new MindPushLog();
+        pushLog.setTenantId(tenantId);
+        pushLog.setRuleCode(ruleCode);
+        pushLog.setOrderId(orderId);
+        pushLog.setOrderNo(orderNo);
+        pushLog.setTitle(title);
+        pushLog.setContent(content);
+        pushLog.setChannel("IN_APP");
+        pushLog.setPushedAt(LocalDateTime.now());
+        mindPushLogMapper.insert(pushLog);
+
+        com.fashion.supplychain.production.entity.SysNotice notice = new com.fashion.supplychain.production.entity.SysNotice();
+        notice.setTenantId(tenantId);
+        notice.setFromName("AI小云");
+        notice.setOrderNo(dedupKey);
+        notice.setTitle(title);
+        notice.setContent(content);
+        notice.setNoticeType(ruleCode);
+        notice.setIsRead(0);
+        notice.setCreatedAt(LocalDateTime.now());
+        sysNoticeService.save(notice);
+
         wxAlertNotifyService.notifyAlert(tenantId, title, content, orderNo, null);
+    }
+
+    private boolean noRecentNotice(Long tenantId, String orderNo, String noticeType) {
+        long count = sysNoticeService.lambdaQuery()
+                .eq(com.fashion.supplychain.production.entity.SysNotice::getTenantId, tenantId)
+                .eq(com.fashion.supplychain.production.entity.SysNotice::getOrderNo, orderNo)
+                .eq(com.fashion.supplychain.production.entity.SysNotice::getNoticeType, noticeType)
+                .ge(com.fashion.supplychain.production.entity.SysNotice::getCreatedAt, LocalDateTime.now().minusHours(24))
+                .count();
+        return count == 0;
     }
 
     private List<MindPushRule> fetchRules(Long tenantId) {

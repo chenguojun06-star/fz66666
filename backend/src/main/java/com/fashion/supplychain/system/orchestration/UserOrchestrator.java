@@ -455,6 +455,7 @@ public class UserOrchestrator {
         result.put("avatarUrl", user.getAvatarUrl());
         result.put("tenantId", user.getTenantId());
         result.put("isTenantOwner", Boolean.TRUE.equals(user.getIsTenantOwner()));
+        result.put("isFactoryOwner", Boolean.TRUE.equals(user.getIsFactoryOwner()));
         result.put("isSuperAdmin", Boolean.TRUE.equals(user.getIsSuperAdmin()));
         // 外发工厂联系人：返回 factoryId，前端据此进入工厂端视图
         if (user.getFactoryId() != null && !user.getFactoryId().isBlank()) {
@@ -628,6 +629,11 @@ public class UserOrchestrator {
                .isNull("approval_status")
                .or()
                .eq("registration_status", "PENDING")
+        );
+        wrapper.and(w -> w
+               .isNull("factory_id")
+               .or()
+               .eq("factory_id", "")
         );
         wrapper.orderByDesc("create_time");
 

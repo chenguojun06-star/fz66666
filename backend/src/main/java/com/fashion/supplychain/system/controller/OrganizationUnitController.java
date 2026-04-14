@@ -36,6 +36,11 @@ public class OrganizationUnitController {
         return Result.success(organizationUnitOrchestrator.departmentOptions());
     }
 
+    @GetMapping("/production-groups")
+    public Result<List<OrganizationUnit>> productionGroups() {
+        return Result.success(organizationUnitOrchestrator.productionGroupOptions());
+    }
+
     @GetMapping("/members")
     public Result<Map<String, List<User>>> members() {
         return Result.success(organizationUnitOrchestrator.membersByOrgUnit());

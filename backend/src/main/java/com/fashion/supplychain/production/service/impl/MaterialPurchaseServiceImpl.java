@@ -881,7 +881,9 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         patch.setReturnConfirmed(1);
         patch.setReturnQuantity(rq);
 
-        patch.setArrivedQuantity(rq);
+        // ★ 保留原始到货数量，不再覆盖arrivedQuantity
+        // 旧逻辑 patch.setArrivedQuantity(rq) 会覆盖原始到货数量，导致财务审计无法追溯
+        // 回料数量独立记录在 returnQuantity 字段，arrivedQuantity 保持原始值
         BigDecimal unitPrice = existed.getUnitPrice() == null ? BigDecimal.ZERO : existed.getUnitPrice();
         patch.setTotalAmount(unitPrice.multiply(BigDecimal.valueOf(rq)));
 
@@ -918,7 +920,6 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
                         .eq(MaterialPurchase::getId, purchaseId)
                         .set(MaterialPurchase::getReturnConfirmed, 1)
                         .set(MaterialPurchase::getReturnQuantity, rq)
-                        .set(MaterialPurchase::getArrivedQuantity, rq)
                         .set(MaterialPurchase::getTotalAmount, unitPrice.multiply(BigDecimal.valueOf(rq)))
                         .set(MaterialPurchase::getStatus, newStatus)
                         .set(MaterialPurchase::getReturnConfirmerId, StringUtils.hasText(confirmerId) ? confirmerId.trim() : null)

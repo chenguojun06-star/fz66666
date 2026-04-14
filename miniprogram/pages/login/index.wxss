@@ -307,7 +307,7 @@ page {
   border-radius: 500px;
   background: var(--color-primary);
   color: var(--color-text-white);
-  font-size: 10px;
+  font-size: var(--font-size-2xs);
   font-weight: 800;
   letter-spacing: 1px;
   box-shadow: 0 5px 13px rgba(var(--color-primary-rgb), 0.2);
@@ -348,7 +348,7 @@ page {
 .login-title {
   color: var(--login-text-main);
   font-weight: 700;
-  font-size: 22px;
+  font-size: var(--font-size-2xl);
   letter-spacing: 1px;
 }
 
@@ -376,8 +376,8 @@ page {
 .login-subtitle {
   margin-top: 5px;
   color: var(--color-text-disabled);
-  font-size: 11px;
-  line-height: 1.7;
+  font-size: var(--font-size-xxs);
+  line-height: var(--line-height-relaxed);
 }
 
 .wechat-checking {
@@ -393,14 +393,14 @@ page {
   border-radius: 50%;
   background: var(--login-wechat);
   color: var(--color-text-white);
-  font-size: 14px;
+  font-size: var(--font-size-md);
   font-weight: 600;
   box-shadow: 0 8px 15px rgba(7, 193, 96, 0.22);
 }
 
 .wechat-checking-title {
   color: var(--login-text-main);
-  font-size: 15px;
+  font-size: var(--font-size-base);
   font-weight: 600;
 }
 
@@ -415,7 +415,7 @@ page {
 }
 
 .invite-banner-icon {
-  font-size: 15px;
+  font-size: var(--font-size-base);
   color: var(--login-primary);
   margin-right: 7px;
 }
@@ -423,8 +423,8 @@ page {
 .invite-banner-text {
   flex: 1;
   color: var(--login-primary);
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-relaxed);
 }
 
 .login-field {
@@ -441,7 +441,7 @@ page {
 .login-label {
   margin-bottom: 6px;
   color: var(--login-text-body);
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   font-weight: 600;
 }
 
@@ -472,7 +472,7 @@ page {
 .login-input-icon {
   width: 17px;
   color: var(--color-text-disabled);
-  font-size: 14px;
+  font-size: var(--font-size-md);
   text-align: center;
 }
 
@@ -481,20 +481,20 @@ page {
   height: 44px;
   margin-left: 8px;
   color: var(--login-text-main);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
 }
 
 .login-input-clear,
 .login-input-eye {
   color: var(--color-text-disabled);
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   padding: 5px;
 }
 
 .tenant-selected-tag {
   margin-top: 5px;
   color: var(--login-text-body);
-  font-size: 10px;
+  font-size: var(--font-size-2xs);
 }
 
 .tenant-results {
@@ -511,7 +511,7 @@ page {
 .tenant-result-item {
   padding: 11px 13px;
   color: var(--color-text-primary);
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   border-bottom: 1px solid rgba(0, 0, 0, 0.04);
 }
 
@@ -526,7 +526,7 @@ page {
 .tenant-result-empty {
   padding: 12px 14px;
   color: var(--color-text-disabled);
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   text-align: center;
 }
 
@@ -539,13 +539,13 @@ page {
   height: 44px;
   line-height: 44px;
   text-align: center;
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   font-weight: 600;
 }
 
 .login-btn {
   color: var(--color-text-white);
-  font-size: 15px;
+  font-size: var(--font-size-base);
   letter-spacing: 4px;
   background: linear-gradient(90deg, var(--login-primary), var(--login-primary-alt));
   box-shadow: 0 7px 15px rgba(var(--color-primary-rgb), 0.22);
@@ -569,7 +569,7 @@ page {
   display: inline-block;
   padding: 5px 10px;
   color: var(--login-text-body);
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   font-weight: 500;
 }
 

@@ -20,6 +20,8 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class PersonnelDelayAnalysisOrchestrator {
 
+    private static final Set<String> TERMINAL_STATUSES = Set.of("completed", "cancelled", "scrapped", "archived", "closed");
+
     @Autowired
     private ProductionOrderService productionOrderService;
 
@@ -47,7 +49,7 @@ public class PersonnelDelayAnalysisOrchestrator {
             }
             if (o.getPlannedEndDate() != null && o.getActualEndDate() == null) {
                 boolean pastDue = o.getPlannedEndDate().toLocalDate().isBefore(today);
-                boolean notDone = !"completed".equalsIgnoreCase(o.getStatus());
+                boolean notDone = !TERMINAL_STATUSES.contains(o.getStatus() == null ? "" : o.getStatus().trim().toLowerCase());
                 return pastDue && notDone;
             }
             return false;

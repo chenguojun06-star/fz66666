@@ -8,9 +8,9 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  background: #fff;
+  background: var(--color-bg-card);
   border-radius: 20rpx;
-  border: 2rpx solid #e5e7eb;
+  border: 2rpx solid var(--color-border);
   padding: 0 16rpx 0 20rpx;
   height: 96rpx;
   box-shadow: 0 2px 12px rgba(0,0,0,0.06);
@@ -19,8 +19,8 @@
 .search-bar-input {
   flex: 1;
   height: 96rpx;
-  font-size: 34rpx;
-  color: #1e293b;
+  font-size: var(--font-size-lg);
+  color: var(--color-text-primary);
   background: transparent;
 }
 .search-bar-btn {
@@ -28,10 +28,10 @@
   height: 72rpx;
   line-height: 72rpx;
   padding: 0 40rpx;
-  background: #3b82f6;
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-text-white);
   border-radius: 16rpx;
-  font-size: 34rpx;
+  font-size: var(--font-size-lg);
   font-weight: 600;
   margin-left: 12rpx;
 }
@@ -39,28 +39,28 @@
 
 .container {
   min-height: 100vh;
-  background: var(--color-bg-page, #f5f7fa);
+  background: var(--color-bg-page);
   padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
 }
 
 /* ======== Tab 切换栏 ======== */
 .tab-bar {
   display: flex;
-  background: var(--color-bg-card, #fff);
-  border-bottom: 1rpx solid var(--color-border, #e5e7eb);
+  background: var(--color-bg-card);
+  border-bottom: 1rpx solid var(--color-border);
 }
 .tab-item {
   flex: 1;
   text-align: center;
   padding: 24rpx 0;
-  font-size: 32rpx;
+  font-size: var(--font-size-md-lg);
   font-weight: 500;
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
   position: relative;
   transition: color 0.2s;
 }
 .tab-item.tab-active {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary);
   font-weight: 700;
 }
 .tab-item.tab-active::after {
@@ -71,7 +71,7 @@
   width: 50%;
   height: 6rpx;
   border-radius: 3rpx;
-  background: var(--color-primary, #3b82f6);
+  background: var(--color-primary);
 }
 
 /* ======== 订单栏 ======== */
@@ -81,25 +81,25 @@
   gap: 12rpx;
   margin: 24rpx 32rpx 16rpx;
   padding: 20rpx 24rpx;
-  background: var(--color-bg-card, #fff);
+  background: var(--color-bg-card);
   border-radius: var(--radius-lg, 16rpx);
   box-shadow: var(--shadow-sm, 0 2px 8px rgba(0,0,0,0.04));
 }
 .order-bar-left { flex: 1; display: flex; align-items: center; gap: 12rpx; }
 .order-label {
-  font-size: 30rpx;
-  color: var(--color-text-secondary, #64748b);
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
 }
 .order-no {
-  font-size: 32rpx;
+  font-size: var(--font-size-md-lg);
   font-weight: 600;
-  color: var(--color-text-primary, #1e293b);
+  color: var(--color-text-primary);
 }
 .change-btn {
-  font-size: 28rpx;
-  color: var(--color-primary, #3b82f6);
+  font-size: var(--font-size-md);
+  color: var(--color-primary);
   padding: 8rpx 20rpx;
-  border: 1rpx solid var(--color-primary, #3b82f6);
+  border: 1rpx solid var(--color-primary);
   border-radius: var(--radius-lg, 16rpx);
 }
 .change-btn-hover { opacity: 0.7; }
@@ -108,8 +108,8 @@
 .loading-state {
   text-align: center;
   padding: 120rpx 0;
-  color: var(--color-text-secondary, #64748b);
-  font-size: 30rpx;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
 }
 
 /* ======== 菲号列表 ======== */
@@ -117,7 +117,7 @@
   padding: 0 32rpx;
 }
 .bundle-card {
-  background: var(--color-bg-card, #fff);
+  background: var(--color-bg-card);
   border-radius: var(--radius-lg, 16rpx);
   margin-bottom: 20rpx;
   padding: 28rpx;
@@ -126,7 +126,7 @@
   transition: border-color 0.2s;
 }
 .bundle-card.selected {
-  border-color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary);
 }
 .bundle-row {
   display: flex;
@@ -134,13 +134,13 @@
   align-items: center;
 }
 .bundle-no {
-  font-size: 34rpx;
+  font-size: var(--font-size-lg);
   font-weight: 600;
-  color: var(--color-text-primary, #1e293b);
+  color: var(--color-text-primary);
 }
 .bundle-qty {
-  font-size: 32rpx;
-  color: var(--color-primary, #3b82f6);
+  font-size: var(--font-size-md-lg);
+  color: var(--color-primary);
   font-weight: 500;
 }
 .bundle-meta {
@@ -148,18 +148,18 @@
   align-items: center;
   gap: 8rpx;
   margin-top: 8rpx;
-  font-size: 28rpx;
-  color: var(--color-text-secondary, #64748b);
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
 }
 .meta-sep {
-  color: var(--color-border, #e5e7eb);
+  color: var(--color-border);
 }
 
 /* ======== 拆分表单 ======== */
 .split-form {
   margin-top: 20rpx;
   padding-top: 20rpx;
-  border-top: 1rpx solid var(--color-border, #e5e7eb);
+  border-bottom: 1rpx solid var(--color-border);
 }
 .form-row {
   display: flex;
@@ -169,19 +169,19 @@
 .form-row-full { flex-direction: column; align-items: stretch; }
 .form-label {
   width: 170rpx;
-  font-size: 30rpx;
-  color: var(--color-text-secondary, #64748b);
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
   flex-shrink: 0;
 }
 .form-row-full .form-label { width: auto; margin-bottom: 12rpx; }
 .form-input {
   flex: 1;
   height: 76rpx;
-  background: var(--color-bg-page, #f5f7fa);
-  border: 1rpx solid var(--color-border, #e5e7eb);
+  background: var(--color-bg-page);
+  border-bottom: 1rpx solid var(--color-border);
   border-radius: var(--radius-lg, 16rpx);
   padding: 0 20rpx;
-  font-size: 32rpx;
+  font-size: var(--font-size-md-lg);
 }
 
 .picker-box {
@@ -190,19 +190,19 @@
   justify-content: space-between;
   align-items: center;
   height: 76rpx;
-  background: var(--color-bg-page, #f5f7fa);
-  border: 1rpx solid var(--color-border, #e5e7eb);
+  background: var(--color-bg-page);
+  border-bottom: 1rpx solid var(--color-border);
   border-radius: var(--radius-lg, 16rpx);
   padding: 0 20rpx;
-  font-size: 30rpx;
-  color: var(--color-text-primary, #1e293b);
+  font-size: var(--font-size-base);
+  color: var(--color-text-primary);
 }
 .picker-box .placeholder {
-  color: var(--color-text-secondary, #64748b);
+  color: var(--color-text-secondary);
 }
 .picker-box .arrow {
-  font-size: 30rpx;
-  color: var(--color-text-secondary, #64748b);
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
 }
 
 /* ======== 提交按钮 ======== */
@@ -211,10 +211,10 @@
   height: 84rpx;
   line-height: 84rpx;
   text-align: center;
-  background: var(--color-primary, #3b82f6);
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-text-white);
   border-radius: var(--radius-lg, 16rpx);
-  font-size: 34rpx;
+  font-size: var(--font-size-lg);
   font-weight: 600;
 }
 .submit-hover { opacity: 0.85; }
@@ -225,7 +225,7 @@
   padding: 0 32rpx;
 }
 .process-card {
-  background: var(--color-bg-card, #fff);
+  background: var(--color-bg-card);
   border-radius: var(--radius-lg, 16rpx);
   margin-bottom: 20rpx;
   padding: 28rpx;
@@ -234,7 +234,7 @@
   transition: border-color 0.2s;
 }
 .process-card.selected {
-  border-color: var(--color-primary, #3b82f6);
+  border-color: var(--color-primary);
 }
 .process-row {
   display: flex;
@@ -242,48 +242,48 @@
   align-items: center;
 }
 .process-name {
-  font-size: 34rpx;
+  font-size: var(--font-size-lg);
   font-weight: 600;
-  color: var(--color-text-primary, #1e293b);
+  color: var(--color-text-primary);
 }
 .process-price {
-  font-size: 34rpx;
+  font-size: var(--font-size-lg);
   font-weight: 700;
-  color: #f59e0b;
+  color: var(--color-warning);
 }
 .process-meta {
   display: flex;
   align-items: center;
   gap: 8rpx;
   margin-top: 8rpx;
-  font-size: 28rpx;
-  color: var(--color-text-secondary, #64748b);
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
 }
 
 /* ======== 调整表单 ======== */
 .adjust-form {
   margin-top: 20rpx;
   padding-top: 20rpx;
-  border-top: 1rpx solid var(--color-border, #e5e7eb);
+  border-bottom: 1rpx solid var(--color-border);
 }
 .admin-tip {
-  font-size: 28rpx;
-  color: #f59e0b;
+  font-size: var(--font-size-md);
+  color: var(--color-warning);
   margin-bottom: 16rpx;
   padding: 12rpx 16rpx;
-  background: #fffbeb;
+  background: var(--color-warning-bg);
   border-radius: var(--radius-lg, 16rpx);
 }
 .reason-textarea {
   width: 100%;
   min-height: 160rpx;
-  background: var(--color-bg-page, #f5f7fa);
-  border: 1rpx solid var(--color-border, #e5e7eb);
+  background: var(--color-bg-page);
+  border-bottom: 1rpx solid var(--color-border);
   border-radius: var(--radius-lg, 16rpx);
   padding: 16rpx 20rpx;
-  font-size: 30rpx;
+  font-size: var(--font-size-base);
   box-sizing: border-box;
-  line-height: 1.6;
+  line-height: var(--line-height-relaxed);
 }
 
 /* ======== 记录区域（拆分记录 + 调整历史共用）======== */
@@ -297,16 +297,16 @@
   margin-bottom: 16rpx;
 }
 .records-title {
-  font-size: 32rpx;
+  font-size: var(--font-size-md-lg);
   font-weight: 600;
-  color: var(--color-text-primary, #1e293b);
+  color: var(--color-text-primary);
 }
 .records-clear {
-  font-size: 28rpx;
-  color: var(--color-text-secondary, #64748b);
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
 }
 .record-item {
-  background: var(--color-bg-card, #fff);
+  background: var(--color-bg-card);
   border-radius: var(--radius-lg, 16rpx);
   padding: 20rpx 24rpx;
   margin-bottom: 16rpx;
@@ -318,13 +318,13 @@
   align-items: center;
 }
 .record-order {
-  font-size: 30rpx;
+  font-size: var(--font-size-base);
   font-weight: 600;
-  color: var(--color-text-primary, #1e293b);
+  color: var(--color-text-primary);
 }
 .record-time {
-  font-size: 24rpx;
-  color: var(--color-text-secondary, #64748b);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
 }
 .record-bottom {
   display: flex;
@@ -333,19 +333,19 @@
   margin-top: 8rpx;
 }
 .record-bundle {
-  font-size: 28rpx;
-  color: var(--color-text-primary, #1e293b);
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
 }
 .record-detail {
-  font-size: 26rpx;
-  color: var(--color-text-secondary, #64748b);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
 }
 .adjust-by {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary);
 }
 .record-reason {
   margin-top: 8rpx;
-  font-size: 26rpx;
-  color: var(--color-text-secondary, #64748b);
-  line-height: 1.5;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-medium);
 }

@@ -113,6 +113,15 @@ const WebSocketNotification: React.FC = () => {
     });
   }, [subscribe]);
 
+  //  订单进度变更通知：扫码/入库/状态变更后触发前端刷新
+  useEffect(() => {
+    return subscribe('order:progress:changed', (msg) => {
+      const p = msg.payload as { orderNo?: string; progress?: number; currentStage?: string };
+      const event = new CustomEvent('order:progress:changed', { detail: p });
+      window.dispatchEvent(event);
+    });
+  }, [subscribe]);
+
   // 不渲染任何 DOM
   return null;
 };

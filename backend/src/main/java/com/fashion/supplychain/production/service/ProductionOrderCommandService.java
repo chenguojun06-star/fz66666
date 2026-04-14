@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 /**
  * 生产订单命令服务
@@ -65,8 +66,8 @@ public class ProductionOrderCommandService {
             }
 
             String status = ProductionOrderUtils.safeText(existed.getStatus()).toLowerCase();
-            if ("completed".equals(status)) {
-                throw new IllegalStateException("订单已完成，无法编辑");
+            if (isTerminalStatus(status)) {
+                throw new IllegalStateException("订单已终态(" + status + ")，无法编辑");
             }
 
             String remark = productionOrder.getOperationRemark();
@@ -115,8 +116,8 @@ public class ProductionOrderCommandService {
 
         // 检查订单状态
         String status = ProductionOrderUtils.safeText(order.getStatus()).toLowerCase();
-        if ("completed".equals(status) || "in_progress".equals(status)) {
-            throw new IllegalStateException("订单进行中或已完成，无法删除");
+        if (isTerminalStatus(status) || "in_progress".equals(status)) {
+            throw new IllegalStateException("订单进行中或已终态，无法删除");
         }
 
         return productionOrderService.removeById(id.trim());
@@ -141,8 +142,8 @@ public class ProductionOrderCommandService {
 
         // 检查订单状态
         String status = ProductionOrderUtils.safeText(order.getStatus()).toLowerCase();
-        if ("completed".equals(status)) {
-            throw new IllegalStateException("订单已完成，无法报废");
+        if (isTerminalStatus(status)) {
+            throw new IllegalStateException("订单已终态(" + status + ")，无法报废");
         }
 
         // 更新订单状态为报废
@@ -241,5 +242,12 @@ public class ProductionOrderCommandService {
         productionOrder.setParentOrgUnitName(snapshot.getParentOrgUnitName());
         productionOrder.setOrgPath(snapshot.getOrgPath());
         productionOrder.setFactoryType(snapshot.getFactoryType());
+    }
+
+    private static final Set<String> TERMINAL_STATUSES =
+            Set.of("completed", "cancelled", "scrapped", "archived", "closed");
+
+    private boolean isTerminalStatus(String status) {
+        return status != null && TERMINAL_STATUSES.contains(status.trim().toLowerCase());
     }
 }

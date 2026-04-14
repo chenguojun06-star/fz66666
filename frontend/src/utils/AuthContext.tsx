@@ -22,6 +22,8 @@ export interface UserInfo extends Record<string, unknown> {
   tenantName?: string;
   /** 是否为租户主账号 */
   isTenantOwner?: boolean;
+  /** 是否为工厂老板 */
+  isFactoryOwner?: boolean;
   /** 是否为平台超级管理员 */
   isSuperAdmin?: boolean;
   /**
@@ -210,6 +212,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               tenantId: u.tenantId != null ? String(u.tenantId) : undefined,
               tenantName: u.tenantName != null ? String(u.tenantName) : undefined,
               isTenantOwner: u.isTenantOwner === true,
+              isFactoryOwner: u.isFactoryOwner === true,
               isSuperAdmin: u.isSuperAdmin === true,
               factoryId: u.factoryId != null ? String(u.factoryId) : undefined,
               tenantType: u.tenantType != null ? (u.tenantType as 'SELF_FACTORY' | 'HYBRID' | 'BRAND') : undefined,
@@ -308,6 +311,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         tenantId: u.tenantId != null ? String(u.tenantId) : undefined,
         tenantName: u.tenantName != null ? String(u.tenantName) : undefined,
         isTenantOwner: u.isTenantOwner === true,
+        isFactoryOwner: u.isFactoryOwner === true,
         isSuperAdmin: u.isSuperAdmin === true,
         factoryId: u.factoryId != null ? String(u.factoryId) : undefined,
         tenantType: u.tenantType != null ? (u.tenantType as 'SELF_FACTORY' | 'HYBRID' | 'BRAND') : undefined,

@@ -75,6 +75,9 @@ public class CuttingTaskOrchestrator {
     private ProductionOrderScanRecordDomainService scanRecordDomainService;
 
     @Autowired
+    private com.fashion.supplychain.production.service.SysNoticeService sysNoticeService;
+
+    @Autowired
     private TemplateLibraryService templateLibraryService;
 
     @Autowired
@@ -324,107 +327,79 @@ public class CuttingTaskOrchestrator {
         String progressWorkflowJson = buildProgressWorkflowJson(styleNo);
         com.fashion.supplychain.common.UserContext ctx = com.fashion.supplychain.common.UserContext.get();
 
-        // ── 按颜色分菲：为每个 orderLine（color+size+qty 组合）创建独立的 CuttingTask ────────────
-        List<CuttingTask> createdTasks = new ArrayList<>();
-        int lineIndex = 0;
+        // ── 创建单一 ProductionOrder，包含所有颜色/尺码 ────────────
+        String primaryColor = resolvePrimaryValue(requestedOrderLines, "color", "多色");
+        String primarySize = resolvePrimaryValue(requestedOrderLines, "size", "多码");
 
-        for (Map<String, Object> orderLine : requestedOrderLines) {
-            lineIndex++;
-            String lineColor = String.valueOf(orderLine.get("color")).trim();
-            String lineSize = String.valueOf(orderLine.get("size")).trim();
-            int lineQuantity = Integer.parseInt(String.valueOf(orderLine.get("quantity")));
-
-            // 为每条颜色行生成唯一订单号
-            String finalOrderNo = baseOrderNo;
-            if (requestedOrderLines.size() > 1) {
-                // 多颜色时，按顺序追加 -1, -2, -3...
-                finalOrderNo = baseOrderNo + "-" + lineIndex;
-            }
-
-            // 检查重复
-            CuttingTask existed = cuttingTaskService.getOne(
-                    new LambdaQueryWrapper<CuttingTask>()
-                            .eq(CuttingTask::getProductionOrderNo, finalOrderNo)
-                            .last("limit 1"));
-            if (existed != null) {
-                finalOrderNo = finalOrderNo + "-" + String.valueOf(System.nanoTime()).substring(8);
-            }
-
-            // 创建该颜色/尺码的 ProductionOrder
-            ProductionOrder order = new ProductionOrder();
-            order.setOrderNo(finalOrderNo);
-            order.setQrCode(finalOrderNo);
-            order.setStyleId(resolvedStyleId);
-            order.setStyleNo(styleNo);
-            order.setStyleName(resolvedStyleName);
-            order.setColor(lineColor);
-            order.setSize(lineSize);
-            order.setOrderQuantity(lineQuantity);
-            order.setOrderDetails(buildOrderDetailsJson(List.of(orderLine)));
-            order.setCompletedQuantity(0);
-            order.setProductionProgress(0);
-            // 模板裁剪任务从裁剪起点直接开始，不经过采购回料链路，避免生成菲号时被采购校验误拦截。
-            order.setMaterialArrivalRate(100);
-            order.setStatus("pending");
-            order.setDeleteFlag(0);
-            order.setPlannedEndDate(requestedDeliveryDate);
-            order.setProgressWorkflowJson(progressWorkflowJson);
-            order.setCreateTime(orderCreateTime);
-            order.setUpdateTime(now);
-            if ("INTERNAL".equals(resolvedFactoryType)) {
-                order.setFactoryId(null);
-                order.setFactoryName(StringUtils.hasText(factoryName) ? factoryName : internalUnit.getNodeName());
-                order.setFactoryContactPerson(null);
-                order.setFactoryContactPhone(null);
-                order.setFactoryType("INTERNAL");
-                order.setOrgUnitId(internalUnit.getId());
-                order.setParentOrgUnitId(internalParentUnit != null ? internalParentUnit.getId() : internalUnit.getParentId());
-                order.setParentOrgUnitName(internalParentUnit != null ? internalParentUnit.getNodeName() : null);
-                order.setOrgPath(internalUnit.getPathNames());
-            } else {
-                order.setFactoryId(factory.getId());
-                order.setFactoryName(StringUtils.hasText(factoryName) ? factoryName : factory.getFactoryName());
-                order.setFactoryContactPerson(factory.getContactPerson());
-                order.setFactoryContactPhone(factory.getContactPhone());
-                order.setFactoryType(factorySnapshot.getFactoryType());
-                order.setOrgUnitId(factorySnapshot.getOrgUnitId());
-                order.setParentOrgUnitId(factorySnapshot.getParentOrgUnitId());
-                order.setParentOrgUnitName(factorySnapshot.getParentOrgUnitName());
-                order.setOrgPath(factorySnapshot.getOrgPath());
-            }
-            // 设置租户 ID 及创建人
-            if (ctx != null && ctx.getTenantId() != null) {
-                order.setTenantId(ctx.getTenantId());
-            }
-            if (ctx != null) {
-                order.setCreatedById(ctx.getUserId() == null ? null : String.valueOf(ctx.getUserId()));
-                order.setCreatedByName(ctx.getUsername());
-            }
-
-            boolean orderOk = productionOrderService.save(order);
-            if (!orderOk) {
-                throw new IllegalStateException("创建颜色 " + lineColor + " 的生产订单失败");
-            }
-
-            CuttingTask task = cuttingTaskService.createTaskIfAbsent(order);
-            if (task == null) {
-                throw new IllegalStateException("创建颜色 " + lineColor + " 的裁剪任务失败");
-            }
-
-            try {
-                scanRecordDomainService.ensureBaseStageScanRecordsOnCreate(order);
-                productionOrderService.recomputeProgressFromRecords(order.getId().trim());
-            } catch (Exception e) {
-                log.warn("颜色 {} 的裁剪任务创建后初始化基础记录失败: orderId={}", lineColor, order.getId(), e);
-            }
-
-            createdTasks.add(task);
-            log.info("已创建颜色分菲裁剪任务: orderNo={}, color={}, size={}, quantity={}, orderId={}",
-                    finalOrderNo, lineColor, lineSize, lineQuantity, order.getId());
+        ProductionOrder order = new ProductionOrder();
+        order.setOrderNo(baseOrderNo);
+        order.setQrCode(baseOrderNo);
+        order.setStyleId(resolvedStyleId);
+        order.setStyleNo(styleNo);
+        order.setStyleName(resolvedStyleName);
+        order.setColor(primaryColor);
+        order.setSize(primarySize);
+        order.setOrderQuantity(totalOrderQuantity);
+        order.setOrderDetails(buildOrderDetailsJson(requestedOrderLines));
+        order.setCompletedQuantity(0);
+        order.setProductionProgress(0);
+        order.setMaterialArrivalRate(100);
+        order.setStatus("pending");
+        order.setDeleteFlag(0);
+        order.setPlannedEndDate(requestedDeliveryDate);
+        order.setProgressWorkflowJson(progressWorkflowJson);
+        order.setCreateTime(orderCreateTime);
+        order.setUpdateTime(now);
+        if ("INTERNAL".equals(resolvedFactoryType)) {
+            order.setFactoryId(null);
+            order.setFactoryName(StringUtils.hasText(factoryName) ? factoryName : internalUnit.getNodeName());
+            order.setFactoryContactPerson(null);
+            order.setFactoryContactPhone(null);
+            order.setFactoryType("INTERNAL");
+            order.setOrgUnitId(internalUnit.getId());
+            order.setParentOrgUnitId(internalParentUnit != null ? internalParentUnit.getId() : internalUnit.getParentId());
+            order.setParentOrgUnitName(internalParentUnit != null ? internalParentUnit.getNodeName() : null);
+            order.setOrgPath(internalUnit.getPathNames());
+        } else {
+            order.setFactoryId(factory.getId());
+            order.setFactoryName(StringUtils.hasText(factoryName) ? factoryName : factory.getFactoryName());
+            order.setFactoryContactPerson(factory.getContactPerson());
+            order.setFactoryContactPhone(factory.getContactPhone());
+            order.setFactoryType(factorySnapshot.getFactoryType());
+            order.setOrgUnitId(factorySnapshot.getOrgUnitId());
+            order.setParentOrgUnitId(factorySnapshot.getParentOrgUnitId());
+            order.setParentOrgUnitName(factorySnapshot.getParentOrgUnitName());
+            order.setOrgPath(factorySnapshot.getOrgPath());
+        }
+        if (ctx != null && ctx.getTenantId() != null) {
+            order.setTenantId(ctx.getTenantId());
+        }
+        if (ctx != null) {
+            order.setCreatedById(ctx.getUserId() == null ? null : String.valueOf(ctx.getUserId()));
+            order.setCreatedByName(ctx.getUsername());
         }
 
-        // 返回最后一个创建的任务，或首个任务（用于前端响应）
-        return createdTasks.isEmpty() ? null : createdTasks.get(0);
+        boolean orderOk = productionOrderService.save(order);
+        if (!orderOk) {
+            throw new IllegalStateException("创建生产订单失败");
+        }
+
+        try {
+            scanRecordDomainService.ensureBaseStageScanRecordsOnCreate(order);
+            productionOrderService.recomputeProgressFromRecords(order.getId().trim());
+        } catch (Exception e) {
+            log.warn("裁剪任务创建后初始化基础记录失败: orderId={}", order.getId(), e);
+        }
+
+        CuttingTask firstTask = cuttingTaskService.createTaskIfAbsent(order);
+        if (firstTask == null) {
+            throw new IllegalStateException("创建裁剪任务失败");
+        }
+
+        log.info("已创建裁剪订单(含{}行颜色尺码): orderNo={}, totalQty={}, orderId={}",
+                requestedOrderLines.size(), baseOrderNo, totalOrderQuantity, order.getId());
+
+        return firstTask;
     }
 
     private LocalDateTime parseDate(Map<String, Object> body, String key, boolean endOfDay) {
@@ -531,6 +506,18 @@ public class CuttingTaskOrchestrator {
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("构造订单明细失败", e);
         }
+    }
+
+    private String resolvePrimaryValue(List<Map<String, Object>> orderLines, String field, String multiLabel) {
+        if (orderLines == null || orderLines.isEmpty()) return "";
+        java.util.Set<String> values = new java.util.LinkedHashSet<>();
+        for (Map<String, Object> line : orderLines) {
+            String v = line.get(field) == null ? "" : String.valueOf(line.get(field)).trim();
+            if (!v.isEmpty()) values.add(v);
+        }
+        if (values.isEmpty()) return "";
+        if (values.size() == 1) return values.iterator().next();
+        return multiLabel;
     }
 
     private String buildProgressWorkflowJson(String styleNo) {
@@ -677,6 +664,25 @@ public class CuttingTaskOrchestrator {
             }
         } catch (Exception e) {
             log.warn("自动写入裁剪领取备注失败，不影响主流程", e);
+        }
+
+        try {
+            Long tenantId = updated.getTenantId();
+            String orderNo = updated.getProductionOrderNo() != null ? updated.getProductionOrderNo() : "";
+            String receiver = updated.getReceiverName() != null ? updated.getReceiverName() : "未知";
+            com.fashion.supplychain.production.entity.SysNotice notice = new com.fashion.supplychain.production.entity.SysNotice();
+            notice.setTenantId(tenantId);
+            notice.setFromName(receiver);
+            notice.setOrderNo(orderNo);
+            notice.setTitle("✂️ 裁剪任务已领取 — " + orderNo);
+            notice.setContent(String.format("%s 已领取裁剪任务%s，请安排生产排期。",
+                receiver, orderNo.isEmpty() ? "" : "（订单 " + orderNo + "）"));
+            notice.setNoticeType("cutting_received");
+            notice.setIsRead(0);
+            notice.setCreatedAt(LocalDateTime.now());
+            sysNoticeService.save(notice);
+        } catch (Exception e) {
+            log.warn("[裁剪领取] 发送通知失败: {}", e.getMessage());
         }
 
         return updated;

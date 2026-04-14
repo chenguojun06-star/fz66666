@@ -11,11 +11,14 @@ import com.fashion.supplychain.system.helper.OrganizationUnitBindingHelper;
 import com.fashion.supplychain.system.service.FactoryService;
 import com.fashion.supplychain.system.service.OrganizationUnitService;
 import com.fashion.supplychain.system.service.UserService;
+import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +30,8 @@ import org.springframework.util.StringUtils;
 
 @Service
 public class OrganizationUnitOrchestrator {
+
+    private static final Set<String> TERMINAL_STATUSES = Set.of("completed", "cancelled", "scrapped", "archived", "closed");
 
     @Autowired
     private OrganizationUnitService organizationUnitService;
@@ -48,6 +53,9 @@ public class OrganizationUnitOrchestrator {
 
     @Autowired
     private com.fashion.supplychain.system.service.LoginLogService loginLogService;
+
+    @Autowired
+    private ProductionOrderService productionOrderService;
 
     public List<OrganizationUnit> tree() {
         // 对于超级管理员（平台方），如果不传递特定租户，应该允许他查看“当前自己”能看到的数据（系统层级），或者直接绕过租户限制查看全部数据。
@@ -87,6 +95,20 @@ public class OrganizationUnitOrchestrator {
     public List<OrganizationUnit> departmentOptions() {
         LambdaQueryWrapper<OrganizationUnit> wrapper = new LambdaQueryWrapper<OrganizationUnit>()
                 .eq(OrganizationUnit::getDeleteFlag, 0)
+                .in(OrganizationUnit::getNodeType, "DEPARTMENT", "FACTORY")
+                .orderByAsc(OrganizationUnit::getSortOrder)
+                .orderByAsc(OrganizationUnit::getCreateTime);
+        Long tenantId = UserContext.tenantId();
+        if (tenantId != null) {
+            wrapper.eq(OrganizationUnit::getTenantId, tenantId);
+        }
+        return organizationUnitService.list(wrapper);
+    }
+
+    public List<OrganizationUnit> productionGroupOptions() {
+        LambdaQueryWrapper<OrganizationUnit> wrapper = new LambdaQueryWrapper<OrganizationUnit>()
+                .eq(OrganizationUnit::getDeleteFlag, 0)
+                .eq(OrganizationUnit::getOwnerType, "INTERNAL")
                 .in(OrganizationUnit::getNodeType, "DEPARTMENT", "FACTORY")
                 .orderByAsc(OrganizationUnit::getSortOrder)
                 .orderByAsc(OrganizationUnit::getCreateTime);
@@ -248,14 +270,32 @@ public class OrganizationUnitOrchestrator {
         if (children > 0) {
             throw new IllegalStateException("请先移走下级部门或工厂");
         }
+        long activeOrdersByOrgUnit = productionOrderService.count(
+                new LambdaQueryWrapper<ProductionOrder>()
+                        .eq(ProductionOrder::getOrgUnitId, id)
+                        .eq(ProductionOrder::getDeleteFlag, 0)
+                        .notIn(ProductionOrder::getStatus, TERMINAL_STATUSES));
+        if (activeOrdersByOrgUnit > 0) {
+            throw new IllegalStateException(
+                    "该组织存在 " + activeOrdersByOrgUnit + " 个未完成的生产订单，请在订单结算完成后再删除");
+        }
+        if (StringUtils.hasText(existing.getFactoryId())) {
+            long activeOrdersByFactory = productionOrderService.count(
+                    new LambdaQueryWrapper<ProductionOrder>()
+                            .eq(ProductionOrder::getFactoryId, existing.getFactoryId())
+                            .eq(ProductionOrder::getDeleteFlag, 0)
+                            .notIn(ProductionOrder::getStatus, TERMINAL_STATUSES));
+            if (activeOrdersByFactory > 0) {
+                throw new IllegalStateException(
+                        "该外发工厂存在 " + activeOrdersByFactory + " 个未完成的生产订单，请在订单结算完成后再删除");
+            }
+        }
         organizationUnitService.removeById(id);
-        // 级联清除该部门下所有人员的组织归属
         userService.lambdaUpdate()
                 .eq(User::getOrgUnitId, id)
                 .set(User::getOrgUnitId, null)
                 .update();
 
-        // 记录操作日志
         saveOperationLog("organization", id, existing.getNodeName(), "DELETE_DEPARTMENT", remark);
 
         return true;
@@ -339,7 +379,9 @@ public class OrganizationUnitOrchestrator {
      */
     @Transactional(rollbackFor = Exception.class)
     public void setFactoryOwner(String userId, String factoryId) {
-        assertAdmin();
+        if (!UserContext.isSupervisorOrAbove()) {
+            throw new AccessDeniedException("仅主管级别及以上可设置工厂主账号");
+        }
         if (!StringUtils.hasText(userId) || !StringUtils.hasText(factoryId)) {
             throw new IllegalArgumentException("参数不完整");
         }
@@ -442,13 +484,14 @@ public class OrganizationUnitOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public void createFactoryAccount(String factoryId, String username, String password,
                                       String name, String phone) {
-        assertAdmin();
+        if (!UserContext.isSupervisorOrAbove()) {
+            throw new AccessDeniedException("仅主管级别及以上可为外发工厂创建账号");
+        }
         if (!StringUtils.hasText(factoryId) || !StringUtils.hasText(username)
                 || !StringUtils.hasText(password)) {
             throw new IllegalArgumentException("工厂ID、用户名、密码不能为空");
         }
         Long tenantId = UserContext.tenantId();
-        // 验证工厂存在且属于当前租户
         LambdaQueryWrapper<Factory> fq = new LambdaQueryWrapper<Factory>()
                 .eq(Factory::getId, factoryId)
                 .eq(Factory::getDeleteFlag, 0);
@@ -457,14 +500,15 @@ public class OrganizationUnitOrchestrator {
         }
         Factory factory = factoryService.getOne(fq);
         if (factory == null) {
-            throw new IllegalArgumentException("工厂不存在");
+            throw new IllegalArgumentException("工厂不存在或无权操作该工厂");
         }
-        // 验证用户名全局唯一
+        if ("INTERNAL".equalsIgnoreCase(factory.getFactoryType())) {
+            throw new IllegalArgumentException("内部工厂无需创建独立登录账号");
+        }
         QueryWrapper<User> uq = new QueryWrapper<User>().eq("username", username);
         if (userService.count(uq) > 0) {
             throw new IllegalArgumentException("用户名已存在: " + username);
         }
-        // 创建工厂账号（直接激活，不需要审批）
         User user = new User();
         user.setUsername(username);
         user.setPassword(passwordEncoder.encode(password));
@@ -478,7 +522,6 @@ public class OrganizationUnitOrchestrator {
         user.setPermissionRange("self");
         user.setCreateTime(LocalDateTime.now());
         user.setUpdateTime(LocalDateTime.now());
-        // 清除同工厂其他账号的主账号标记
         userService.lambdaUpdate()
                 .eq(User::getFactoryId, factoryId)
                 .set(User::getIsFactoryOwner, false)

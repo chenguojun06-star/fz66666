@@ -28,9 +28,9 @@ spring:
       max-file-size: 50MB
       max-request-size: 50MB
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3308/fashion_supplychain?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true&useLocalSessionState=true}
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://127.0.0.1:3308/fashion_supplychain?useUnicode=true&characterEncoding=UTF-8&useSSL=true&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true&useLocalSessionState=true}
     username: ${SPRING_DATASOURCE_USERNAME:root}
-    password: ${DB_PASSWORD:CHANGE_ME_IN_PRODUCTION}
+    password: ${DB_PASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       initialization-fail-timeout: 0

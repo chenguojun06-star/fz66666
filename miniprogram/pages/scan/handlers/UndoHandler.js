@@ -28,27 +28,22 @@ function startUndoTimer(page, record) {
   const scanType = String(record && record.scanType || '').trim().toLowerCase();
   const canUndoCurrentScan = scanType !== 'warehouse';
 
+  page._undoRecord = record;
+  page._undoCountdown = UNDO_COUNTDOWN_SECONDS;
   page.setData({
-    undoVisible: true,
-    undoCountdown: UNDO_COUNTDOWN_SECONDS,
-    undoRecord: record,
-    // 让 WXML 撤回按钮可见（wx:if="{{lastResult.success && undo.canUndo}}"）
     'undo.canUndo': canUndoCurrentScan,
     'undo.loading': false,
   });
 
   undoTimer = setInterval(() => {
-    // 防御性检查：页面可能已卸载或框架重载，page.data 为 null 时自动清除定时器
     if (!page || !page.data) {
       clearInterval(undoTimer);
       undoTimer = null;
       return;
     }
-    const next = page.data.undoCountdown - 1;
-    if (next <= 0) {
+    page._undoCountdown -= 1;
+    if (page._undoCountdown <= 0) {
       stopUndoTimer(page);
-    } else {
-      page.setData({ undoCountdown: next });
     }
   }, UNDO_TIMER_INTERVAL_MS);
 }
@@ -62,11 +57,9 @@ function stopUndoTimer(page) {
     undoTimer = null;
   }
   if (!page || !page.data) return;
+  page._undoRecord = null;
+  page._undoCountdown = 0;
   page.setData({
-    undoVisible: false,
-    undoCountdown: 0,
-    undoRecord: null,
-    // 隐藏撤回按钮
     'undo.canUndo': false,
     'undo.loading': false,
   });
@@ -76,7 +69,7 @@ function stopUndoTimer(page) {
  * 执行撤销操作
  */
 async function handleUndo(page) {
-  const record = page.data.undoRecord;
+  const record = page._undoRecord;
   const recordId = record?.recordId || record?.data?.recordId || record?.data?.id;
   const scanType = String(record && record.scanType || '').trim().toLowerCase();
 

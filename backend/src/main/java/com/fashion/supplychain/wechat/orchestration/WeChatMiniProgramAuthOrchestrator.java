@@ -211,6 +211,7 @@ public class WeChatMiniProgramAuthOrchestrator {
         m.put("status", user.getStatus());
         m.put("tenantId", user.getTenantId());
         m.put("isTenantOwner", Boolean.TRUE.equals(user.getIsTenantOwner()));
+        m.put("isFactoryOwner", Boolean.TRUE.equals(user.getIsFactoryOwner()));
         // 外发工厂账号标识：小程序扫码时展示工人选择器
         m.put("factoryId", user.getFactoryId());
         return m;

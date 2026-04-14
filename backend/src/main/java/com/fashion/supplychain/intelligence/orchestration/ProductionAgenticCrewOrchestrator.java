@@ -180,7 +180,7 @@ public class ProductionAgenticCrewOrchestrator {
     public List<CrewAdvice> scanAndAdvise(Long tenantId, String userId, int maxOrders) {
         List<ProductionOrder> orders = productionOrderService.lambdaQuery()
                 .eq(ProductionOrder::getTenantId, tenantId)
-                .notIn(ProductionOrder::getStatus, "COMPLETED", "CANCELLED")
+                .notIn(ProductionOrder::getStatus, "completed", "cancelled", "scrapped", "archived", "closed")
                 .last("LIMIT " + Math.min(maxOrders, 20))
                 .list();
 

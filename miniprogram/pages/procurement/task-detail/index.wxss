@@ -82,7 +82,7 @@
   align-items: center;
   padding: 120rpx 0;
 }
-.empty-icon { font-size: 80rpx; opacity: 0.4; }
+.empty-icon { font-size: var(--font-size-5xl); opacity: 0.4; }
 .empty-text {
   font-size: var(--font-size-base);
   color: var(--color-text-secondary);
@@ -159,7 +159,7 @@
   padding: 2rpx 14rpx;
   border-radius: 6rpx;
   flex-shrink: 0;
-  line-height: 1.6;
+  line-height: var(--line-height-relaxed);
   font-weight: var(--font-weight-medium);
 }
 .tag-orange { background: var(--color-warning-bg); color: var(--color-warning); }

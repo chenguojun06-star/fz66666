@@ -74,7 +74,7 @@ export function useCockpit() {
       pulse: v(rPulse), health: v(rHealth), notify: v(rNotify), workers: v(rWorkers),
       heatmap: v(rHeatmap), ranking: v(rRanking), shortage: v(rShortage), healing: null,
       bottleneck: v(rBottleneck), brain: v(rBrain), actionCenter: v(rActionCenter),
-      orders: orderResult.filter(o => !['completed', 'cancelled', 'scrapped'].includes(String(o.status || '').trim())),
+      orders: orderResult.filter(o => !['completed', 'cancelled', 'scrapped', 'archived', 'closed'].includes(String(o.status || '').trim())),
       factoryCapacity: factoryCapResult,
       productionStats: productionStatsResult,
       loading: false, ts: Date.now(),

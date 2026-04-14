@@ -211,7 +211,7 @@ Page({
         if (res.confirm) {
           wx.showLoading({ title: '处理中...', mask: true });
           try {
-            await api.tenant.approveRegistration(user.id);
+            await api.tenant.approveRegistration(user.id, { roleId: this.data.factorySelectedRole });
             wx.hideLoading();
             toast.success('已批准');
             this.loadTenantRegistrations();
@@ -240,7 +240,7 @@ Page({
           const reason = res.content?.trim() || '管理员拒绝';
           wx.showLoading({ title: '处理中...', mask: true });
           try {
-            await api.tenant.rejectRegistration(user.id, reason);
+            await api.tenant.rejectRegistration(user.id, { reason: reason });
             wx.hideLoading();
             toast.success('已拒绝');
             this.loadTenantRegistrations();

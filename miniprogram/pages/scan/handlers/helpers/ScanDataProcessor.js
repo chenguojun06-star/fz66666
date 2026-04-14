@@ -70,12 +70,10 @@ class ScanDataProcessor {
         }
       }
 
-      // 非BOM兜底且所有物料已领取 → 阻止进入确认页
+      // ★ 所有物料已领取 → 流转到裁剪工序而非标记isCompleted
       if (!bomFallback && materialPurchases.length > 0
           && materialPurchases.every(function(item) { return (item.pendingQuantity || 0) <= 0; })) {
-        const err = new Error('所有物料均已领取，无需重复操作');
-        err.isCompleted = true;
-        throw err;
+        return await this.handleCuttingMode(parsedData, orderDetail, scanMode);
       }
 
       const orderQty = parsedData.quantity

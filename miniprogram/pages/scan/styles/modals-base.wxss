@@ -5,11 +5,11 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--color-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 999;
+  z-index: var(--z-overlay);
   padding: 10px;
 }
 .modal-box {
@@ -70,7 +70,7 @@
 
 /* AI 扫码工艺提醒 */
 .ai-tip-card {
-  background: linear-gradient(135deg, var(--color-bg-light) 0%, var(--color-bg-light) 100%);
+  background: var(--color-bg-light);
   border: 1px solid var(--color-info-bg);
   border-radius: var(--radius-sm);
   padding: 12px;
@@ -85,20 +85,20 @@
 }
 
 .ai-tip-icon {
-  font-size: 16px;
+  font-size: var(--font-size-md-lg);
   margin-right: 4px;
 }
 
 .ai-tip-title {
-  font-size: 14px;
+  font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--color-primary);
 }
 
 .ai-tip-content {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-primary);
-  line-height: 1.5;
+  line-height: var(--line-height-medium);
   display: block;
 }
 
@@ -112,7 +112,7 @@
 .ai-tip-kw {
   background: var(--color-info-bg);
   color: var(--color-primary);
-  font-size: 11px;
+  font-size: var(--font-size-xxs);
   padding: 1px 5px;
   border-radius: 2px;
 }
@@ -129,7 +129,7 @@
 }
 
 .ai-tip-loading-text {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-disabled);
   margin-left: 4px;
 }
@@ -150,13 +150,13 @@
   padding: 6px 10px;
   background: var(--color-bg-light);
   border-left: 3px solid var(--color-primary);
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
 }
 
 .qc-tip-text {
   font-size: var(--font-size-sm);
   color: var(--color-primary);
-  line-height: 1.5;
+  line-height: var(--line-height-medium);
 }
 
 /* 次品详情 - 弹窗内 */

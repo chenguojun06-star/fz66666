@@ -21,13 +21,17 @@ const { getToken } = require('./storage');
  *   - 完整路径：http://192.168.x.x:8088/api/file/...
  * @returns {string} 可在 <image> 标签直接使用的完整URL
  */
+function isAuthedPath(url) {
+  return url.includes('/api/file/tenant-download/') || url.includes('/api/common/download/');
+}
+
 function getAuthedImageUrl(fileUrl) {
   if (!fileUrl) return '';
   const url = String(fileUrl).trim();
   if (!url) return '';
 
   if (url.startsWith('http://') || url.startsWith('https://')) {
-    if (url.includes('/api/file/tenant-download/')) {
+    if (isAuthedPath(url)) {
       const token = getToken();
       if (token) {
         const sep = url.includes('?') ? '&' : '?';
@@ -39,7 +43,7 @@ function getAuthedImageUrl(fileUrl) {
 
   const fullUrl = getBaseUrl() + url;
 
-  if (url.includes('/api/file/tenant-download/')) {
+  if (isAuthedPath(url)) {
     const token = getToken();
     if (token) {
       const sep = fullUrl.includes('?') ? '&' : '?';

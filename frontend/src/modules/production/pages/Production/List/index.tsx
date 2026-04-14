@@ -369,6 +369,17 @@ const ProductionList: React.FC = () => {
     }
   );
 
+  // WebSocket进度变更即时刷新
+  const wsRefreshRef = useRef(0);
+  useEffect(() => {
+    const handleProgressChanged = () => {
+      wsRefreshRef.current += 1;
+      fetchProductionList();
+    };
+    window.addEventListener('order:progress:changed', handleProgressChanged);
+    return () => window.removeEventListener('order:progress:changed', handleProgressChanged);
+  }, [fetchProductionList]);
+
   // 排序：终态订单（关单/报废/完成）始终排到最后，智能条筛选结果也走同一套共享逻辑
   const sortedProductionList = useMemo(() => {
     const filtered = [...smartQueueOrders];
@@ -706,7 +717,7 @@ const ProductionList: React.FC = () => {
               ]}
               progressConfig={{
                 calculate: calcCardProgress,
-                getStatus: (record: ProductionOrder) => (isOrderFrozenByStatus(record) ? 'default' : getProgressColorStatus(record.plannedEndDate)),
+                getStatus: (record: ProductionOrder) => (isOrderFrozenByStatus(record) ? 'default' : getProgressColorStatus(record.plannedEndDate, record.status)),
                 isCompleted: (record: ProductionOrder) => record.status === 'completed',
                 minVisiblePercent: (record: ProductionOrder) => String(record.status || '').trim().toLowerCase() === 'in_progress' ? 5 : 0,
                 show: true,

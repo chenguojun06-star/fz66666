@@ -83,7 +83,21 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             user.setPassword(passwordEncoder.encode(user.getPassword().trim()));
         }
 
-        // 角色同步逻辑已移至 UserOrchestrator，此处不再调用 RoleService
+        if (user.getFactoryId() == null) {
+            user.setFactoryId(existing.getFactoryId());
+        }
+        if (user.getOrgUnitId() == null) {
+            user.setOrgUnitId(existing.getOrgUnitId());
+        }
+        if (user.getTenantId() == null) {
+            user.setTenantId(existing.getTenantId());
+        }
+        if (user.getIsTenantOwner() == null) {
+            user.setIsTenantOwner(existing.getIsTenantOwner());
+        }
+        if (user.getIsFactoryOwner() == null) {
+            user.setIsFactoryOwner(existing.getIsFactoryOwner());
+        }
 
         return updateById(user);
     }

@@ -47,10 +47,17 @@ export type OrderLine = {
 export const orderStatusTag = (status: any) => {
   const s = String(status || '').trim();
   const map: Record<string, { color: string; label: string }> = {
-    pending: { color: 'default', label: '待开始' },
+    pending: { color: 'default', label: '待生产' },
     production: { color: 'success', label: '生产中' },
     completed: { color: 'default', label: '已完成' },
     delayed: { color: 'warning', label: '已逾期' },
+    scrapped: { color: 'default', label: '已报废' },
+    cancelled: { color: 'error', label: '已取消' },
+    canceled: { color: 'error', label: '已取消' },
+    closed: { color: 'default', label: '已关单' },
+    archived: { color: 'default', label: '已归档' },
+    paused: { color: 'default', label: '已暂停' },
+    returned: { color: 'error', label: '已退回' },
   };
   const t = map[s] || { color: 'default', label: '未知' };
   return React.createElement(Tag, { color: t.color }, t.label);

@@ -9,7 +9,7 @@ import { isOrderFrozenByStatus } from '@/utils/api';
 function getRowVariant(record: ProductionOrder): 'normal' | 'warning' | 'danger' | 'scrapped' {
   if (isOrderFrozenByStatus(record)) return 'scrapped';
   if (record.status === 'completed') return 'normal'; // 已完成用绿色 normal
-  return getProgressColorStatus(record.plannedEndDate);
+  return getProgressColorStatus(record.plannedEndDate, record.status);
 }
 
 interface ProgressRowListProps {

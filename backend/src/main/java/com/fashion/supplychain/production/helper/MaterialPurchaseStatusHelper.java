@@ -60,6 +60,12 @@ public class MaterialPurchaseStatusHelper {
     private MaterialPickingService materialPickingService;
 
     @Autowired
+    private com.fashion.supplychain.production.orchestration.SysNoticeOrchestrator sysNoticeOrchestrator;
+
+    @Autowired
+    private com.fashion.supplychain.production.service.SysNoticeService sysNoticeService;
+
+    @Autowired
     private com.fashion.supplychain.production.service.MaterialStockService materialStockService;
 
     public MaterialPurchase receive(Map<String, Object> body) {
@@ -138,6 +144,25 @@ public class MaterialPurchaseStatusHelper {
         }
         if (updated.getUpdateTime() == null) {
             updated.setUpdateTime(LocalDateTime.now());
+        }
+        try {
+            Long tenantId = UserContext.tenantId();
+            String orderNo = updated.getOrderNo() != null ? updated.getOrderNo() : "";
+            String materialName = updated.getMaterialName() != null ? updated.getMaterialName() : "物料";
+            String receiver = rname != null && !rname.isEmpty() ? rname : rid;
+            com.fashion.supplychain.production.entity.SysNotice notice = new com.fashion.supplychain.production.entity.SysNotice();
+            notice.setTenantId(tenantId);
+            notice.setFromName(receiver);
+            notice.setOrderNo(orderNo);
+            notice.setTitle("📦 采购已领取 — " + materialName);
+            notice.setContent(String.format("%s 已领取采购任务「%s」%s，请及时跟进到货进度。",
+                receiver, materialName, orderNo.isEmpty() ? "" : "（订单 " + orderNo + "）"));
+            notice.setNoticeType("procurement_received");
+            notice.setIsRead(0);
+            notice.setCreatedAt(LocalDateTime.now());
+            sysNoticeService.save(notice);
+        } catch (Exception e) {
+            log.warn("[采购领取] 发送通知失败: {}", e.getMessage());
         }
         return updated;
     }
@@ -494,34 +519,22 @@ public class MaterialPurchaseStatusHelper {
           .set(MaterialPurchase::getUpdateTime, LocalDateTime.now());
         materialPurchaseService.update(uw);
 
-        try {
-            int arrivedQty = purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : 0;
-            if (arrivedQty > 0) {
-                String sourceType = purchase.getSourceType();
-                boolean isOrderDriven = "order".equals(sourceType) || "sample".equals(sourceType);
-                if (!isOrderDriven) {
-                    materialStockService.decreaseStockForCancelReceive(purchase, arrivedQty);
-                    log.info("cancelReceive 已回退库存: purchaseId={}, qty={}", purchaseId, arrivedQty);
-                }
+        int arrivedQty = purchase.getArrivedQuantity() != null ? purchase.getArrivedQuantity() : 0;
+        if (arrivedQty > 0) {
+            String sourceType = purchase.getSourceType();
+            boolean isOrderDriven = "order".equals(sourceType) || "sample".equals(sourceType);
+            if (!isOrderDriven) {
+                materialStockService.decreaseStockForCancelReceive(purchase, arrivedQty);
+                log.info("cancelReceive 已回退库存: purchaseId={}, qty={}", purchaseId, arrivedQty);
             }
-        } catch (Exception e) {
-            log.warn("cancelReceive 回退库存失败（不影响主流程）: purchaseId={}, err={}", purchaseId, e.getMessage());
         }
 
-        try {
-            materialReconciliationOrchestrator.upsertFromPurchaseId(purchaseId);
-            log.info("cancelReceive 已同步物料对账: purchaseId={}", purchaseId);
-        } catch (Exception e) {
-            log.warn("cancelReceive 同步物料对账失败（不影响主流程）: purchaseId={}, err={}", purchaseId, e.getMessage());
-        }
+        materialReconciliationOrchestrator.upsertFromPurchaseId(purchaseId);
+        log.info("cancelReceive 已同步物料对账: purchaseId={}", purchaseId);
 
-        try {
-            if (StringUtils.hasText(purchase.getOrderId())) {
-                helper.recomputeAndUpdateMaterialArrivalRate(purchase.getOrderId(), productionOrderOrchestrator);
-                log.info("cancelReceive 已重算面料到货率: orderId={}", purchase.getOrderId());
-            }
-        } catch (Exception e) {
-            log.warn("cancelReceive 重算面料到货率失败（不影响主流程）: orderId={}, err={}", purchase.getOrderId(), e.getMessage());
+        if (StringUtils.hasText(purchase.getOrderId())) {
+            helper.recomputeAndUpdateMaterialArrivalRate(purchase.getOrderId(), productionOrderOrchestrator);
+            log.info("cancelReceive 已重算面料到货率: orderId={}", purchase.getOrderId());
         }
 
         Map<String, Object> result = new java.util.LinkedHashMap<>();
@@ -656,6 +669,11 @@ public class MaterialPurchaseStatusHelper {
                 helper.recomputeAndUpdateMaterialArrivalRate(oid, productionOrderOrchestrator);
             } catch (Exception e) {
                 log.warn("syncAfterPurchaseChanged: recomputeAndUpdateMaterialArrivalRate failed, orderId={}, error={}", oid, e.getMessage());
+            }
+            try {
+                productionOrderService.recomputeProgressFromRecords(oid);
+            } catch (Exception e) {
+                log.warn("syncAfterPurchaseChanged: recomputeProgressFromRecords failed, orderId={}, error={}", oid, e.getMessage());
             }
         }
     }

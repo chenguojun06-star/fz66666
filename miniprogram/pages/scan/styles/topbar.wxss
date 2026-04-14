@@ -34,10 +34,10 @@
   background: var(--color-bg-light);
 }
 .refresh-icon {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
 }
 .refresh-text {
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
 }
 .tsc-refresh {
@@ -103,7 +103,7 @@
   opacity: 1;
 }
 .qe-icon {
-  font-size: 22px;
+  font-size: var(--font-size-2xl);
   flex-shrink: 0;
 }
 .qe-text {
@@ -112,14 +112,14 @@
   gap: 1px;
 }
 .qe-title {
-  font-size: 15px;
+  font-size: var(--font-size-base);
   font-weight: 500;
   color: var(--color-primary-light);
-  line-height: 1.2;
+  line-height: var(--line-height-tight);
 }
 .qe-desc {
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
-  line-height: 1.2;
+  line-height: var(--line-height-tight);
 }
 

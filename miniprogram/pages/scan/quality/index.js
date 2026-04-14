@@ -7,9 +7,9 @@ const { getUserInfo } = require('../../../utils/storage');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { eventBus } = require('../../../utils/eventBus');
 
-const HANDLE_METHODS = ['返修', '报废', '退货', '降级使用', '其他'];
+const HANDLE_METHODS = ['返修', '报废'];
 
-const DEFECT_CATEGORIES = ['外观完整性', '尺寸精度', '工艺合规性', '功能有效性', '其他'];
+const DEFECT_CATEGORIES = ['外观完整性问题', '尺寸精度问题', '工艺规范性问题', '功能有效性问题', '其他问题'];
 
 const CATEGORY_VALUE_MAP = [
   'appearance_integrity', 'size_accuracy', 'process_compliance', 'functional_effectiveness', 'other'

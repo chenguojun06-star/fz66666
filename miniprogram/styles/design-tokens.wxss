@@ -1,30 +1,24 @@
 /**
- * 服装供应链系统 - 设计 Token  v5.0
+ * 服装供应链系统 - 设计 Token  v7.0
  *
- * 对齐 WeUI 设计规范：圆角、间距、字号、阴影等
- * 保持品牌蓝色主色调不变
+ * 严格对齐 WeUI v2.6.25 官方设计规范
+ * 保持品牌蓝色主色调不变，结构色完全对齐 WeUI
  *
- * @version 5.0
- * @date 2026-04-14
+ * WeUI 源码参考: https://cdnjs.cloudflare.com/ajax/libs/weui/2.6.25/style/weui.min.css
+ * WeUI 变量体系: --weui-FG-0/1/2/3/4, --weui-BG-0/1/2, --weui-BRAND 等
+ *
+ * @version 7.0
+ * @date 2026-04-15
  */
 
 page {
-  /* ========== 颜色系统 ========== */
+  /* ========== 颜色系统（对齐 WeUI v2.6.25） ========== */
 
   --color-primary: #2563eb;
   --color-primary-light: #3b82f6;
   --color-primary-dark: #1d4ed8;
   --color-primary-rgb: 37, 99, 235;
 
-  --gradient-primary: linear-gradient(135deg, #eff4ff 0%, #eef0ff 100%);
-  --gradient-primary-solid: linear-gradient(135deg, #eff4ff 0%, #eef0ff 100%);
-  --gradient-primary-alpha: linear-gradient(
-    135deg,
-    rgba(239, 244, 255, 0.92) 0%,
-    rgba(238, 240, 255, 0.75) 100%
-  );
-  --gradient-card: linear-gradient(135deg, #eff4ff 0%, #eef0ff 100%);
-  --gradient-action: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   --gradient-progress: linear-gradient(90deg, #10b981 0%, #2563eb 100%);
 
   --color-blue: #2563eb;
@@ -32,44 +26,55 @@ page {
   --color-blue-lighter: rgba(37, 99, 235, 0.04);
 
   --color-success: #07c160;
-  --color-warning: #d97706;
+  --color-warning: #fa9d3b;
   --color-error: #fa5151;
   --color-danger: #fa5151;
-  --color-info: #2563eb;
-  --color-purple: #7c3aed;
+  --color-info: #10aeff;
+  --color-purple: #6467f0;
 
-  --color-warning-bg: #fffbeb;
-  --color-error-bg: #fef2f2;
-  --color-success-bg: #f0fdf4;
-  --color-info-bg: #eff6ff;
+  --color-warning-bg: rgba(250, 157, 59, 0.1);
+  --color-error-bg: rgba(250, 81, 81, 0.1);
+  --color-success-bg: rgba(6, 174, 86, 0.1);
+  --color-info-bg: rgba(16, 174, 255, 0.1);
 
   --color-warning-border: #fde68a;
   --color-error-border: #fca5a5;
   --color-success-border: #a7f3d0;
   --color-info-border: #93c5fd;
 
-  --color-bg-page: #f7f7f7;
+  --color-bg-page: #ededed;
   --color-bg-card: #ffffff;
-  --color-bg-gray: #f0f2f5;
+  --color-bg-gray: #f7f7f7;
   --color-bg-light: #fafbfc;
-  --color-bg-hover: #f5f5f5;
-  --color-bg-active: #ebebeb;
+  --color-bg-hover: rgba(0, 0, 0, 0.02);
+  --color-bg-active: #ececec;
 
-  --color-border: #e5e5e5;
-  --color-border-light: #f0f0f0;
+  --color-border: rgba(0, 0, 0, 0.1);
+  --color-border-light: rgba(0, 0, 0, 0.05);
   --color-border-blue: rgba(37, 99, 235, 0.2);
 
-  --color-divider: #f0f0f0;
+  --color-divider: rgba(0, 0, 0, 0.1);
 
   --color-text-primary: rgba(0, 0, 0, 0.9);
-  --color-text-secondary: rgba(0, 0, 0, 0.5);
+  --color-text-secondary: rgba(0, 0, 0, 0.55);
   --color-text-tertiary: rgba(0, 0, 0, 0.3);
-  --color-text-placeholder: rgba(0, 0, 0, 0.25);
-  --color-text-disabled: rgba(0, 0, 0, 0.3);
+  --color-text-placeholder: rgba(0, 0, 0, 0.3);
+  --color-text-disabled: rgba(0, 0, 0, 0.15);
   --color-text-white: #ffffff;
+
+  --color-link: #576b95;
+
+  --color-tag-bg-orange: rgba(250, 157, 59, 0.1);
+  --color-tag-bg-green: rgba(6, 174, 86, 0.1);
+  --color-tag-bg-red: rgba(250, 81, 81, 0.1);
+  --color-tag-bg-blue: rgba(16, 174, 255, 0.1);
+  --color-tag-bg-black: rgba(0, 0, 0, 0.05);
+
+  --color-overlay: rgba(0, 0, 0, 0.5);
 
   /* ========== 圆角系统（对齐 WeUI） ========== */
   --radius-sm: 4px;
+  --radius-xs: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 12px;
@@ -91,6 +96,8 @@ page {
   --shadow-modal: 0 16px 48px rgba(0, 0, 0, 0.12);
 
   /* ========== 字体系统（对齐 WeUI） ========== */
+  --font-size-2xs: 10px;
+  --font-size-xxs: 11px;
   --font-size-xs: 12px;
   --font-size-sm: 13px;
   --font-size-md: 14px;
@@ -100,6 +107,10 @@ page {
   --font-size-lg-xl: 18px;
   --font-size-xl: 20px;
   --font-size-2xl: 22px;
+  --font-size-3xl: 24px;
+  --font-size-4xl: 32px;
+  --font-size-5xl: 40px;
+  --font-size-6xl: 48px;
 
   --font-weight-normal: 400;
   --font-weight-medium: 500;
@@ -107,6 +118,26 @@ page {
   --font-weight-bold: 700;
 
   --line-height-tight: 1.2;
-  --line-height-normal: 1.5;
-  --line-height-relaxed: 1.8;
+  --line-height-normal: 1.4;
+  --line-height-medium: 1.5;
+  --line-height-relaxed: 1.6;
+
+  --btn-height: 44px;
+  --btn-height-medium: 40px;
+  --btn-height-small: 32px;
+  --btn-font-size: 17px;
+  --btn-border-radius: 8px;
+  --btn-padding: 12px 24px;
+
+  --z-base: 1;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-overlay: 500;
+  --z-modal: 600;
+  --z-popover: 700;
+  --z-tooltip: 800;
+  --z-notification: 900;
+  --z-float-trigger: 9000;
+  --z-float-badge: 9001;
+  --z-float-panel: 9002;
 }

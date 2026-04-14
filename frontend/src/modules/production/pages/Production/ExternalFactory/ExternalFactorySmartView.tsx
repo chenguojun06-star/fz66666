@@ -176,6 +176,8 @@ const STATUS_MAP: Record<string, { text: string; color: string }> = {
   delayed: { text: '已延期', color: 'error' },
   scrapped: { text: '已废弃', color: 'default' },
   cancelled: { text: '已取消', color: 'default' },
+  closed: { text: '已关单', color: 'default' },
+  archived: { text: '已归档', color: 'default' },
   paused: { text: '暂停', color: 'warning' },
   returned: { text: '已退回', color: 'error' },
 };
@@ -184,7 +186,7 @@ const STATUS_MAP: Record<string, { text: string; color: string }> = {
 const clamp = (v: number) => Math.max(0, Math.min(100, Math.round(v)));
 
 function getDeliveryMeta(r: ProductionOrder): { tone: DeliveryTone; label: string } {
-  if (r.status === 'scrapped' || r.status === 'cancelled') return { tone: 'scrapped', label: '已废弃' };
+  if (r.status === 'scrapped' || r.status === 'cancelled' || r.status === 'closed' || r.status === 'archived') return { tone: 'scrapped', label: r.status === 'closed' ? '已关单' : r.status === 'archived' ? '已归档' : '已废弃' };
   if (r.status === 'completed') return { tone: 'success', label: '已完成' };
   const target = (r as any).expectedShipDate || r.plannedEndDate;
   if (!target) return { tone: 'normal', label: '未定' };

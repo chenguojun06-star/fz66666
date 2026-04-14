@@ -63,17 +63,9 @@ export function useOrderDataFetch({ queryParams, visible, showSmartErrorNotice, 
 
   const fetchDepartments = async () => {
     try {
-      const res = await api.get<{ code: number; data: Array<{ id: string; nodeName: string; nodeType: string; pathNames: string }> }>('/system/organization/departments');
+      const res = await api.get<{ code: number; data: Array<{ id: string; nodeName: string; nodeType: string; pathNames: string }> }>('/system/organization/production-groups');
       if (res.code === 200) {
-        setDepartments(
-          (res.data || [])
-            .filter((d: any) => d.nodeType === 'DEPARTMENT')
-            .filter((d: any) => {
-              const name = (d.nodeName || '') as string;
-              const path = (d.pathNames || '') as string;
-              return name.includes('生产') || path.includes('生产');
-            })
-        );
+        setDepartments(res.data || []);
       }
     } catch {
       setDepartments([]);

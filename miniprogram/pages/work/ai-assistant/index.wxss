@@ -29,7 +29,7 @@
   background: var(--color-bg-light);
 }
 .chip-hint {
-  font-size: 10px;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-disabled);
   margin-left: 2px;
 }
@@ -82,7 +82,7 @@
   padding: 10px 13px;
   border-radius: 10px;
   font-size: var(--font-size-md);
-  line-height: 1.6;
+  line-height: var(--line-height-relaxed);
   word-break: break-word;
 }
 .bubble-ai {
@@ -139,9 +139,9 @@
   height: 28rpx;
   line-height: 28rpx;
   text-align: center;
-  font-size: 18rpx;
+  font-size: var(--font-size-2xs);
   color: var(--color-text-white);
-  background: rgba(0,0,0,0.5);
+  background: var(--color-overlay);
   border-radius: 50%;
   margin-left: -14rpx;
   margin-top: -6rpx;
@@ -227,13 +227,13 @@
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   margin-bottom: 8px;
-  line-height: 1.5;
+  line-height: var(--line-height-medium);
 }
 .text-segments {
   display: inline;
 }
 .order-link-seg {
-  color: #00bfff;
+  color: var(--color-info);
   text-decoration: underline;
 }
 .action-card-btns {
@@ -269,7 +269,7 @@
 .chart-card-type, .team-card-desc {
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
-  line-height: 1.5;
+  line-height: var(--line-height-medium);
 }
 
 /* ── 团队状态卡 子样式 ── */
@@ -280,8 +280,8 @@
 .team-card-recipient-row { display: flex; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--color-border-light); font-size: var(--font-size-xs); color: var(--color-text-primary); }
 .r-name { font-weight: var(--font-weight-semibold); }
 .r-stage, .r-status { color: var(--color-text-secondary); }
-.team-card-hist-label { font-size: 10px; color: var(--color-text-disabled); margin-top: 8px; margin-bottom: 2px; }
-.team-card-hist-row { display: flex; gap: 6px; padding: 2px 0; font-size: 10px; color: var(--color-text-secondary); }
+.team-card-hist-label { font-size: var(--font-size-2xs); color: var(--color-text-disabled); margin-top: 8px; margin-bottom: 2px; }
+.team-card-hist-row { display: flex; gap: 6px; padding: 2px 0; font-size: var(--font-size-2xs); color: var(--color-text-secondary); }
 .h-time { color: var(--color-text-disabled); }
 
 /* ── 菲号拆分卡 子样式 ── */
@@ -290,7 +290,7 @@
 .bundle-row-info { display: flex; gap: 6px; flex-wrap: wrap; font-size: var(--font-size-xs); color: var(--color-text-primary); }
 .b-label { font-weight: var(--font-weight-semibold); }
 .b-status, .b-op { color: var(--color-text-secondary); }
-.bundle-qr { width: 58px; height: 58px; flex-shrink: 0; border-radius: 4px; }
+.bundle-qr { width: 58px; height: 58px; flex-shrink: 0; border-radius: var(--radius-sm); }
 .bundle-card-btn { margin-top: 10px; text-align: center; padding: 7px; border-radius: var(--radius-md); background: var(--color-primary); color: var(--color-text-white); font-size: var(--font-size-xs); }
 
 .streaming-row {
@@ -306,7 +306,7 @@
 .streaming-text {
   word-break: break-all;
   white-space: pre-wrap;
-  line-height: 1.6;
+  line-height: var(--line-height-relaxed);
 }
 .streaming-cursor {
   animation: cursorBlink 0.8s step-end infinite;
@@ -337,7 +337,7 @@
   padding: 10px 12px 0;
 }
 .dynamic-suggestions-label {
-  font-size: 11px;
+  font-size: var(--font-size-xxs);
   color: var(--color-danger);
   margin-bottom: 6px;
   font-weight: 600;
@@ -354,7 +354,7 @@
   border-radius: var(--radius-full);
   padding: 6px 12px;
   font-size: var(--font-size-xs);
-  line-height: 1.4;
+  line-height: var(--line-height-normal);
   border: 1px solid var(--color-error-border);
 }
 .dynamic-suggestion-chip-hover {

@@ -215,10 +215,11 @@ Page({
 
     this.setData({ loading: true });
     try {
-      const { tenantCode, factoryId, tenantName, username, name, phone, password } = this.data;
+      const { tenantCode, factoryId, orgUnitId, tenantName, username, name, phone, password } = this.data;
       const resp = await api.tenant.workerRegister({
         tenantCode: tenantCode.trim(),
         factoryId: factoryId || undefined,
+        orgUnitId: orgUnitId || undefined,
         factoryName: tenantName || undefined,
         username: username.trim(),
         name: name.trim(),

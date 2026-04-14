@@ -12,7 +12,7 @@ Page({
       { key: 'all', label: '全部', count: 0 },
       { key: 'pending', label: '待领取', count: 0 },
       { key: 'received', label: '已领取', count: 0 },
-      { key: 'bundled', label: '已分菲', count: 0 },
+      { key: 'bundled', label: '已完成', count: 0 },
     ],
   },
 
@@ -25,7 +25,7 @@ Page({
   },
 
   onPullDownRefresh() {
-    this.loadTasks().then(() => wx.stopPullDownRefresh());
+    this.loadTasks().then(() => wx.stopPullDownRefresh()).catch(() => wx.stopPullDownRefresh());
   },
 
   /* ---- 加载任务 ---- */
@@ -142,7 +142,7 @@ Page({
       canReceive = false;
       canOperate = isMine;
     } else if (status === 'bundled') {
-      statusText = '已分菲';
+      statusText = '已完成';
       statusColor = 'green';
     }
 

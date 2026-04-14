@@ -99,4 +99,12 @@ Page({
       success: () => wx.showToast({ title: '链接已复制', icon: 'success' }),
     });
   },
+
+  onShareAppMessage() {
+    const name = this.data.tenantName || '工厂';
+    return {
+      title: name + ' · 邀请你加入',
+      path: '/pages/login/index?inviteToken=' + encodeURIComponent(this.data.inviteToken),
+    };
+  },
 });

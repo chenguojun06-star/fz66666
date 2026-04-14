@@ -12,7 +12,7 @@
 /* === 选择器容器 === */
 .inline-selector {
   background: var(--color-bg-gray, var(--color-bg-light));
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   overflow: hidden;
 }
 
@@ -29,7 +29,7 @@
   justify-content: space-between;
   padding: 10px 12px;
   margin-bottom: 4px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--color-bg-card, var(--color-bg-card));
   border: 2px solid transparent;
   transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
@@ -96,7 +96,7 @@
 }
 
 .inline-selector-label {
-  font-size: 14px;
+  font-size: var(--font-size-md);
   color: var(--color-text-primary, var(--color-text-primary));
   font-weight: 600;
   overflow: hidden;

@@ -209,7 +209,9 @@ public class ProductionOrder {
     private Integer productionProgress;
 
     /**
-     * 状态(pending:待生产, production:生产中, completed:已完成, delayed:已逾期)
+     * 状态(pending:待生产, production:生产中, completed:已完成, delayed:已逾期,
+     * scrapped:已报废, cancelled:已取消, closed:已关单, archived:已归档,
+     * paused:已暂停, returned:已退回)
      */
     private String status;
 

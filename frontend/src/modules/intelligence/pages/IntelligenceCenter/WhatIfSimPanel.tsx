@@ -24,7 +24,7 @@ import api from '@/utils/api';
 
 const { Text } = Typography;
 
-const TERMINAL_STATUSES = new Set(['completed', 'cancelled', 'scrapped', 'closed']);
+const TERMINAL_STATUSES = new Set(['completed', 'cancelled', 'scrapped', 'closed', 'archived']);
 
 interface OrderOption {
   id: string;

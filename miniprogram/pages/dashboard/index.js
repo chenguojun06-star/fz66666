@@ -75,6 +75,8 @@ Page({
   },
 
   onShow: function () {
+    var app = getApp();
+    if (app.requireAuth && !app.requireAuth()) return;
     if (this._loaded) {
       this.refreshCards();
       this.loadOrders(true);
@@ -86,7 +88,7 @@ Page({
   onPullDownRefresh: function () {
     Promise.all([this.refreshCards(), this.loadOrders(true)]).then(function () {
       wx.stopPullDownRefresh();
-    });
+    }).catch(function (e) { console.warn('[dashboard] 下拉刷新失败:', e.message || e); wx.stopPullDownRefresh(); });
   },
 
   onReachBottom: function () {
@@ -189,7 +191,6 @@ Page({
     }, function (r) {
       return enrichForDashboard(transformOrderData(r));
     }).then(function () {
-      // 延期筛选：客户端根据交期过滤
       if (isOverdue) {
         var filtered = (that.data.orders.list || []).filter(function (o) {
           return o.remainDaysClass === 'days-overdue';
@@ -197,7 +198,7 @@ Page({
         that.setData({ 'orders.list': filtered });
       }
       if (reset) that._refreshStatCounts();
-    });
+    }).catch(function (e) { console.warn('[dashboard] loadOrders失败:', e.message || e); });
   },
 
   /* ======== 刷新状态计数 ======== */
@@ -217,7 +218,7 @@ Page({
           overdue:        Number((res[3] && res[3].overdueOrderCount) || 0),
         },
       });
-    });
+    }).catch(function () {});
   },
 
   /* ======== 状态筛选切换 ======== */

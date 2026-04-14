@@ -465,7 +465,7 @@ public class MaterialPurchaseOrchestrator {
     // ── Private transaction wrappers ────────────────────────
 
     @Transactional(rollbackFor = Exception.class)
-    private boolean saveAndSync(MaterialPurchase materialPurchase) {
+    public boolean saveAndSync(MaterialPurchase materialPurchase) {
         helper.fillUnitPriceFromBom(materialPurchase);
         if (!StringUtils.hasText(materialPurchase.getSourceType())
                 && !StringUtils.hasText(materialPurchase.getOrderId())) {
@@ -480,7 +480,7 @@ public class MaterialPurchaseOrchestrator {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    private boolean updateAndSync(MaterialPurchase materialPurchase) {
+    public boolean updateAndSync(MaterialPurchase materialPurchase) {
         boolean ok = materialPurchaseService.updatePurchaseAndUpdateOrder(materialPurchase);
         if (!ok) {
             return false;
@@ -490,7 +490,7 @@ public class MaterialPurchaseOrchestrator {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    private boolean batchAndSync(List<MaterialPurchase> purchases) {
+    public boolean batchAndSync(List<MaterialPurchase> purchases) {
         boolean allOk = true;
         for (MaterialPurchase p : purchases) {
             if (p == null) {
@@ -507,7 +507,7 @@ public class MaterialPurchaseOrchestrator {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    private boolean updateArrivedQuantityAndSync(String purchaseId, Integer arrivedQuantity, String remark) {
+    public boolean updateArrivedQuantityAndSync(String purchaseId, Integer arrivedQuantity, String remark) {
         boolean ok = materialPurchaseService.updateArrivedQuantity(purchaseId, arrivedQuantity, remark);
         if (!ok) {
             return false;

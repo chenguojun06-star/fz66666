@@ -8,9 +8,8 @@ import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomai
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
-import java.util.Date;
+import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -220,7 +219,7 @@ public class ProductionOrderWorkflowHelper {
                 factoryId != null ? factoryId : "未指定",
                 unitPrice != null ? unitPrice.toString() : "未指定",
                 UserContext.username(),
-                new SimpleDateFormat("yyyy-MM-dd HH:mm").format(new Date()));
+                LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
 
         String wfJson = order.getProgressWorkflowJson();
         if (StringUtils.hasText(wfJson)) {

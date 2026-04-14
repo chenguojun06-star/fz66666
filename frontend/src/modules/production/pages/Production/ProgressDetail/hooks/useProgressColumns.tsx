@@ -184,12 +184,16 @@ export const useProgressColumns = ({
       align: 'left' as const,
       render: (_: any, record: ProductionOrder) => {
         const statusMap: Record<string, { color: string; label: string }> = {
-          pending: { color: 'default', label: '未开始' },
+          pending: { color: 'default', label: '待生产' },
           production: { color: 'processing', label: '生产中' },
           completed: { color: 'success', label: '已完成' },
-          delayed: { color: 'warning', label: '已延期' },
-          scrapped: { color: 'error', label: '已报废' },
+          delayed: { color: 'warning', label: '已逾期' },
+          scrapped: { color: 'default', label: '已报废' },
           cancelled: { color: 'default', label: '已取消' },
+          closed: { color: 'default', label: '已关单' },
+          archived: { color: 'default', label: '已归档' },
+          paused: { color: 'default', label: '已暂停' },
+          returned: { color: 'error', label: '已退回' },
         };
         const status = statusMap[String(record.status || '').trim()] || { color: 'default', label: String(record.status || '未知') };
         const stagnantDays = stagnantOrderIds?.get(String(record.id));

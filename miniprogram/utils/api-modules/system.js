@@ -17,11 +17,11 @@ const system = {
   updateUser(data) {
     return ok('/api/system/user', 'PUT', data);
   },
-  approveUser(userId) {
-    return ok(`/api/system/user/${userId}/approval-action?action=approve`, 'POST', {});
+  approveUser(userId, data) {
+    return ok(`/api/system/user/${userId}/approval-action?action=approve`, 'POST', data || {});
   },
-  rejectUser(userId) {
-    return ok(`/api/system/user/${userId}/approval-action?action=reject`, 'POST', {});
+  rejectUser(userId, data) {
+    return ok(`/api/system/user/${userId}/approval-action?action=reject`, 'POST', data || {});
   },
   listRoles() {
     return ok('/api/system/roles/list', 'GET', {});
@@ -83,11 +83,11 @@ const tenant = {
   listPendingRegistrations() {
     return ok('/api/system/tenant/registrations/pending', 'POST', {});
   },
-  approveRegistration(id) {
-    return ok(`/api/system/tenant/registrations/${id}/approve`, 'POST', {});
+  approveRegistration(id, data) {
+    return ok(`/api/system/tenant/registrations/${id}/approve`, 'POST', data || {});
   },
-  rejectRegistration(id) {
-    return ok(`/api/system/tenant/registrations/${id}/reject`, 'POST', {});
+  rejectRegistration(id, data) {
+    return ok(`/api/system/tenant/registrations/${id}/reject`, 'POST', data || {});
   },
 };
 

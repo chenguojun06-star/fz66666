@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 /**
  * 仓库入库扫码执行器
@@ -41,6 +42,8 @@ import java.util.NoSuchElementException;
 @Component
 @Slf4j
 public class WarehouseScanExecutor {
+
+    private static final Set<String> TERMINAL_STATUSES = Set.of("completed", "cancelled", "scrapped", "archived", "closed");
 
     @Autowired
     private ProductionScanStageSupport stageSupport;
@@ -135,8 +138,8 @@ public class WarehouseScanExecutor {
 
         // ★ 订单完成状态检查：所有环节统一拦截
         String orderStatus = order.getStatus() == null ? "" : order.getStatus().trim();
-        if ("completed".equalsIgnoreCase(orderStatus)) {
-            throw new IllegalStateException("进度节点已完成，该订单已结束入库");
+        if (TERMINAL_STATUSES.contains(orderStatus.toLowerCase())) {
+            throw new IllegalStateException("订单已终态(" + orderStatus + ")，无法继续入库");
         }
 
         // isDefectiveReentry 已在方法入口处解析（方法顶部）
@@ -250,7 +253,6 @@ public class WarehouseScanExecutor {
             scanRecordService.saveScanRecord(sr);
         } catch (DuplicateKeyException dke) {
             log.info("仓库扫码记录重复: requestId={}", requestId, dke);
-            // 重复时尝试查找已有记录
             try {
                 ScanRecord existing = scanRecordService.lambdaQuery()
                         .eq(ScanRecord::getRequestId, requestId)
@@ -261,12 +263,35 @@ public class WarehouseScanExecutor {
                 log.warn("查找已有入库扫码记录失败: requestId={}", requestId, ex);
             }
         } catch (Exception dbEx) {
-            // ★ 兜底：捕获所有异常（DataAccessException/BadSqlGrammarException/其他），防止500
-            log.error("[ScanSave-Warehouse] t_scan_record保存失败: requestId={}, exType={}, error={}",
+            log.error("[ScanSave-Warehouse] t_scan_record保存失败，回滚入库: requestId={}, exType={}, error={}",
                     requestId, dbEx.getClass().getSimpleName(), dbEx.getMessage(), dbEx);
-            // 入库记录已保存成功，扫码记录保存失败不应阻断入库
-            // 记录详细错误日志供排查，但不抛异常，让入库操作正常返回
-            log.warn("[ScanSave-Warehouse] 扫码记录保存失败但入库已成功，继续返回成功: requestId={}", requestId);
+            throw new IllegalStateException("入库扫码记录保存失败，入库已回滚，请重试: " + dbEx.getMessage());
+        }
+
+        // ★ SKU库存同步：菲号模式入库后更新SKU库存
+        try {
+            if (productSkuService != null && order != null && bundle != null) {
+                String skuCode = order.getStyleNo() + "-" + bundle.getColor() + "-" + bundle.getSize();
+                ProductSku sku = productSkuService.lambdaQuery()
+                        .eq(ProductSku::getSkuCode, skuCode)
+                        .last("limit 1")
+                        .one();
+                if (sku == null) {
+                    sku = new ProductSku();
+                    sku.setSkuCode(skuCode);
+                    sku.setStyleNo(order.getStyleNo());
+                    sku.setColor(bundle.getColor());
+                    sku.setSize(bundle.getSize());
+                    sku.setStockQuantity(0);
+                    sku.setTenantId(order.getTenantId());
+                    productSkuService.save(sku);
+                }
+                productSkuService.updateStock(skuCode, qty);
+                log.info("[WarehouseScan] SKU库存已更新: skuCode={}, qty={}", skuCode, qty);
+            }
+        } catch (Exception e) {
+            log.warn("[WarehouseScan] SKU库存同步失败（不阻断入库）: styleNo={}, error={}",
+                    order.getStyleNo(), e.getMessage(), e);
         }
 
         // 更新工序跟踪记录（工序跟踪表以节点名"入库"作为 processCode 初始化）
@@ -657,8 +682,8 @@ public class WarehouseScanExecutor {
         if (order == null) {
             return Map.of("success", false, "message", "未找到关联订单，请指定订单号");
         }
-        if ("completed".equalsIgnoreCase(order.getStatus())) {
-            return Map.of("success", false, "message", "订单已完成，无法继续入库");
+        if (order.getStatus() != null && TERMINAL_STATUSES.contains(order.getStatus().trim().toLowerCase())) {
+            return Map.of("success", false, "message", "订单已终态，无法继续入库");
         }
 
         // SKU 查找或自动创建

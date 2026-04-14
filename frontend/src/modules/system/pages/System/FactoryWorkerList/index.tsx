@@ -141,18 +141,26 @@ const FactoryWorkerList: React.FC = () => {
   };
 
   const handleCreateAccount = async (values: { username: string; password: string; name?: string; phone?: string }) => {
-    if (!effectiveFactoryId) return;
+    if (!effectiveFactoryId) {
+      message.error('缺少工厂信息，请从供应商管理页面进入');
+      return;
+    }
     setAccountSaving(true);
     try {
       await api.post('/system/organization/factory/create-account', {
         factoryId: effectiveFactoryId,
-        ...values,
+        username: values.username?.trim(),
+        password: values.password,
+        name: values.name?.trim() || undefined,
+        phone: values.phone?.trim() || undefined,
       });
       message.success('账号创建成功，外发工厂可用此账号登录');
       accountModal.close();
       accountForm.resetFields();
-    } catch {
-      message.error('创建账号失败');
+    } catch (err: unknown) {
+      const respMsg = typeof err === 'object' && err !== null && 'response' in err
+        ? String((err as any).response?.data?.message || '') : '';
+      message.error(respMsg || (err instanceof Error ? err.message : '创建账号失败'));
     } finally {
       setAccountSaving(false);
     }

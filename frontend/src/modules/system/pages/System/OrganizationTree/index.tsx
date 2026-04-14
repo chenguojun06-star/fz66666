@@ -171,6 +171,7 @@ const OrganizationTreePage: React.FC = () => {
       content: (
         <div>
           <p>仅允许删除没有子节点的部门，删除后该部门下成员将自动释放。</p>
+          <p style={{ color: '#ff4d4f', fontWeight: 500 }}>若该部门/工厂有未完成的生产订单，将无法删除。</p>
           <div style={{ marginTop: 16 }}>
             <span style={{ color: 'red' }}>*</span> 删除原因：
             <Input.TextArea
@@ -614,6 +615,22 @@ const OrganizationTreePage: React.FC = () => {
           <Typography.Text type="secondary" style={{ display: 'block', marginTop: 16, fontSize: 13 }}>
             外发工厂工人扫码注册，自动归属到「{qrModal.unit?.unitName}」
           </Typography.Text>
+          <div style={{ marginTop: 12 }}>
+            <Button
+              size="small"
+              onClick={() => {
+                if (!qrModal.unit) return;
+                const url = `${window.location.origin}/register?type=FACTORY_INVITE&tenantCode=${encodeURIComponent(qrModal.tenantCode)}&factoryId=${encodeURIComponent(qrModal.unit.factoryId || String(qrModal.unit.id))}&factoryName=${encodeURIComponent(qrModal.unit.unitName)}&orgUnitId=${encodeURIComponent(String(qrModal.unit.id))}`;
+                navigator.clipboard.writeText(url).then(() => {
+                  message.success('注册链接已复制');
+                }).catch(() => {
+                  message.error('复制失败');
+                });
+              }}
+            >
+              复制注册链接
+            </Button>
+          </div>
         </div>
       </ResizableModal>
 

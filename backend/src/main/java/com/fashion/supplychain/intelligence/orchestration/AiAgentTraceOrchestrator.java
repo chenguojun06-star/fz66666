@@ -42,6 +42,47 @@ public class AiAgentTraceOrchestrator {
         return commandId;
     }
 
+    public String startPatrolRequest(Long tenantId, String scene, String description) {
+        String commandId = UUID.randomUUID().toString().replace("-", "");
+        IntelligenceAuditLog logEntry = baseLogWithTenant(tenantId, commandId, scene);
+        logEntry.setStatus("EXECUTING");
+        logEntry.setReason(truncate(description, 500));
+        logEntry.setRemark(sceneToRemark(scene) + "开始");
+        asyncAuditService.asyncInsert(logEntry);
+        return commandId;
+    }
+
+    public void recordPatrolStep(Long tenantId, String commandId, String stepName, String detail, long durationMs, boolean success) {
+        IntelligenceAuditLog logEntry = baseLogWithTenant(tenantId, commandId, "ai-agent:step:" + stepName);
+        logEntry.setStatus(success ? "SUCCESS" : "FAILED");
+        logEntry.setReason(truncate(detail, 500));
+        logEntry.setResultData(success ? truncate(detail, 4000) : null);
+        logEntry.setErrorMessage(success ? null : truncate(detail, 500));
+        logEntry.setDurationMs(durationMs);
+        logEntry.setRemark("巡检步骤: " + stepName);
+        asyncAuditService.asyncInsert(logEntry);
+    }
+
+    public void finishPatrolRequest(Long tenantId, String commandId, String summary, String error, long durationMs) {
+        QueryWrapper<IntelligenceAuditLog> query = new QueryWrapper<>();
+        query.eq("command_id", commandId).eq("action", "ai-agent:request").last("LIMIT 1");
+        IntelligenceAuditLog requestLog = auditLogMapper.selectOne(query);
+        if (requestLog == null) {
+            requestLog = baseLogWithTenant(tenantId, commandId, "ai-agent:request");
+        }
+        requestLog.setStatus(error == null ? "SUCCESS" : "FAILED");
+        requestLog.setResultData(truncate(summary, 4000));
+        requestLog.setErrorMessage(truncate(error, 500));
+        requestLog.setDurationMs(durationMs);
+        requestLog.setRemark(error == null ? "巡检完成" : "巡检失败");
+        if (requestLog.getCreatedAt() == null) {
+            requestLog.setCreatedAt(LocalDateTime.now());
+            asyncAuditService.asyncInsert(requestLog);
+            return;
+        }
+        asyncAuditService.asyncUpdate(requestLog);
+    }
+
     public void recordStep(String commandId, String stepName, String input, String output, long durationMs, boolean success) {
         IntelligenceAuditLog logEntry = baseLog(commandId, "ai-agent:step:" + stepName);
         logEntry.setStatus(success ? "SUCCESS" : "FAILED");
@@ -187,6 +228,19 @@ public class AiAgentTraceOrchestrator {
         return logEntry;
     }
 
+    private IntelligenceAuditLog baseLogWithTenant(Long tenantId, String commandId, String action) {
+        IntelligenceAuditLog logEntry = new IntelligenceAuditLog();
+        logEntry.setId(UUID.randomUUID().toString().replace("-", ""));
+        logEntry.setTenantId(tenantId);
+        logEntry.setCommandId(commandId);
+        logEntry.setAction(action);
+        logEntry.setTargetId("AI巡检");
+        logEntry.setExecutorId("system");
+        logEntry.setCreatedAt(LocalDateTime.now());
+        logEntry.setRequiresApproval(false);
+        return logEntry;
+    }
+
     private String truncate(String text, int maxLength) {
         if (text == null || text.length() <= maxLength) {
             return text;
@@ -223,6 +277,9 @@ public class AiAgentTraceOrchestrator {
         if (scene.contains("benchmark")) return "基准洞察";
         if (scene.contains("brain")) return "统一大脑";
         if (scene.contains("work-plan")) return "工作计划";
+        if (scene.contains("ai-patrol")) return "AI巡检";
+        if (scene.contains("smart-remark")) return "智能备注巡检";
+        if (scene.contains("proactive-patrol")) return "主动巡检Agent";
         return "AI请求";
     }
 

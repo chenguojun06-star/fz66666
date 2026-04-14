@@ -312,17 +312,18 @@ async function loadAllTasks(ctx) {
   try {
     const isAdmin = checkIsAdmin();
     const canManageRegistrations = checkCanManageRegistrations();
+    const isSuperAdmin = isAdmin && !canManageRegistrations;
     ctx.setData({ isAdmin, isTenantOwner: canManageRegistrations });
 
     const [cutting, procurement, quality, repair, timeouts, pending, tenantRegistrations, overdueOrders] = await Promise.all([
       loadCuttingTasks(),
       loadProcurementTasks(),
       loadQualityTasks(),
-      loadRepairTasks(),         // 次品待返修
+      loadRepairTasks(),
       loadTimeoutReminders(),
-      isAdmin ? loadPendingUsers() : Promise.resolve([]),
+      isSuperAdmin ? loadPendingUsers() : Promise.resolve([]),
       canManageRegistrations ? loadTenantPendingRegistrations() : Promise.resolve([]),
-      loadOverdueOrders(), // 加载延期订单
+      loadOverdueOrders(),
     ]);
 
     const urgentEvents = [];

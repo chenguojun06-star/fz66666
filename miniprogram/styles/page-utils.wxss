@@ -43,7 +43,7 @@
 .no-more {
   text-align: center;
   padding: 10px 0;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-disabled);
 }
 
@@ -51,7 +51,7 @@
 .loading-more {
   text-align: center;
   padding: 10px 0;
-  font-size: 12px;
+  font-size: var(--font-size-xs);
   color: var(--color-text-disabled);
 }
 
@@ -66,9 +66,9 @@
 /* 基础形态 */
 .tag {
   display: inline-block;
-  font-size: 10px;
+  font-size: var(--font-size-2xs);
   padding: 1px 6px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
 }
 
 /* 蓝色 — 颜色标签（同 tag-color） */

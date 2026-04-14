@@ -4,6 +4,7 @@ const { getBaseUrl } = require('../../config');
 const { getRoleDisplayName, isAdminOrSupervisor } = require('../../utils/permission');
 const { onDataRefresh } = require('../../utils/eventBus');
 const { safeNavigate } = require('../../utils/uiHelper');
+const { getAuthedImageUrl } = require('../../utils/fileUrl');
 const i18n = require('../../utils/i18n/index');
 
 function buildMenuItems({ showInviteSection, showApprovalEntry, currentLanguageName }) {
@@ -156,14 +157,7 @@ Page({
     let avatarImgUrl = '';
     const rawAvatar = userInfo?.avatarUrl || userInfo?.avatar || userInfo?.headUrl || '';
     if (rawAvatar) {
-      if (rawAvatar.startsWith('http://') || rawAvatar.startsWith('https://')) {
-        avatarImgUrl = rawAvatar;
-      } else {
-        const token = getToken();
-        const base = getBaseUrl().replace(/\/$/, '');
-        const sep = rawAvatar.includes('?') ? '&' : '?';
-        avatarImgUrl = `${base}${rawAvatar}${sep}token=${encodeURIComponent(token)}`;
-      }
+      avatarImgUrl = getAuthedImageUrl(rawAvatar);
     }
 
     const patch = { userInfo, roleDisplayName, avatarLetter, avatarImgUrl };

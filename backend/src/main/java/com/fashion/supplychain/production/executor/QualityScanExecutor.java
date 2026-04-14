@@ -9,6 +9,7 @@ import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.helper.InventoryValidator;
+import com.fashion.supplychain.production.helper.DuplicateScanPreventer;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.ProductWarehousingService;
 import com.fashion.supplychain.production.service.SKUService;
@@ -59,6 +60,9 @@ public class QualityScanExecutor {
     private InventoryValidator inventoryValidator;
 
     @Autowired
+    private DuplicateScanPreventer duplicateScanPreventer;
+
+    @Autowired
     private SKUService skuService;
 
     @Autowired
@@ -91,6 +95,10 @@ public class QualityScanExecutor {
         String scanCode = TextUtils.safeText(params.get("scanCode"));
         if (!hasText(scanCode)) {
             throw new IllegalArgumentException("扫码内容不能为空");
+        }
+
+        if (duplicateScanPreventer.hasRecentDuplicateScan(scanCode, "quality", qty, null)) {
+            throw new IllegalStateException("操作过快，请稍后再试（防重复扫码保护）");
         }
 
         CuttingBundle bundle = cuttingBundleService.getByQrCode(scanCode);
@@ -249,9 +257,12 @@ public class QualityScanExecutor {
         // 将质检结果存入 remark；不合格时格式：unqualified|[category]|[remark]|defectQty=N
         String defectCategory = TextUtils.safeText(params.get("defectCategory"));
         String defectRemark = TextUtils.safeText(params.get("defectRemark"));
+        Integer defectQtyParam = NumberUtils.toInt(params.get("defectQuantity"));
+        int defectQty = (defectQtyParam != null && defectQtyParam > 0) ? defectQtyParam : 0;
+        if (defectQty == 0 && isUnqualified) {
+            defectQty = qty;
+        }
         if (isUnqualified) {
-            Integer defectQtyParam = NumberUtils.toInt(params.get("defectQuantity"));
-            int defectQty = (defectQtyParam != null && defectQtyParam > 0) ? defectQtyParam : qty;
             String remarkBase = hasText(defectCategory)
                     ? "unqualified|" + defectCategory
                       + (hasText(defectRemark) ? "|" + defectRemark : "")
@@ -278,8 +289,7 @@ public class QualityScanExecutor {
         //   报废 → quality_scan_scrap 记录，不建返修池，不流回待质检
         boolean isScrap = "报废".equals(defectRemark);
         if (isUnqualified) {
-            Integer defectQtyForRecord = NumberUtils.toInt(params.get("defectQuantity"));
-            int dq = (defectQtyForRecord != null && defectQtyForRecord > 0) ? defectQtyForRecord : qty;
+            int dq = defectQty;
             if (isScrap) {
                 createScrapRecord(order, bundle, dq, operatorId, operatorName);
             } else {

@@ -195,7 +195,7 @@ public class GlobalExceptionHandler {
         public ResponseEntity<Result<?>> handleAccessDenied(AccessDeniedException e, HttpServletRequest request) {
                 logger.warn("权限不足: {} {} - {}", request == null ? "" : request.getMethod(),
                                 request == null ? "" : request.getRequestURI(), e.getMessage());
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Result.fail(403, e.getMessage()));
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Result.fail(403, sanitizeClientMessage(e.getMessage())));
         }
 
         /**

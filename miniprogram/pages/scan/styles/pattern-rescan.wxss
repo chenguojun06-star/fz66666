@@ -4,13 +4,13 @@
 }
 
 .undo-btn {
-  color: var(--color-danger) !important;
-  border-color: var(--color-danger) !important;
-  background: var(--color-error-bg) !important;
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+  background: var(--color-error-bg);
   margin-left: auto;
 }
 .undo-btn-hover {
-  background: var(--color-error-bg) !important;
+  background: var(--color-error-bg);
 }
 
 .rescan-modal {
@@ -19,11 +19,11 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--color-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: var(--z-modal);
 }
 
 .rescan-box {
@@ -45,7 +45,7 @@
 }
 
 .rescan-head .modal-close {
-  font-size: 20px;
+  font-size: var(--font-size-xl);
   color: var(--color-text-tertiary);
   padding: 4px;
 }
@@ -62,15 +62,15 @@
 }
 
 .rescan-warning .warning-icon {
-  font-size: 14px;
+  font-size: var(--font-size-md);
   flex-shrink: 0;
-  line-height: 1.5;
+  line-height: var(--line-height-medium);
 }
 
 .rescan-warning .warning-text {
   font-size: var(--font-size-sm);
   color: var(--color-warning);
-  line-height: 1.5;
+  line-height: var(--line-height-medium);
 }
 
 .modal-foot {

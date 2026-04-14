@@ -109,7 +109,7 @@ public class PersonalWorkPlanOrchestrator {
                 )
                 .eq(ProductionOrder::getTenantId, tenantId)
                 .eq(ProductionOrder::getDeleteFlag, 0)
-                .notIn(ProductionOrder::getStatus, Arrays.asList("completed", "scrapped"))
+                .notIn(ProductionOrder::getStatus, Arrays.asList("completed", "cancelled", "scrapped", "archived", "closed"))
                 .and(q -> q
                         .eq(ProductionOrder::getMerchandiser, userName)
                         .or()

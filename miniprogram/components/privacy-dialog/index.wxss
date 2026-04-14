@@ -6,7 +6,7 @@
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.55);
-  z-index: 9999;
+  z-index: var(--z-notification);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -15,13 +15,13 @@
 .privacy-box {
   width: 310px;
   background: var(--color-bg-card);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   padding: 24px 20px 18px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
 }
 
 .privacy-title {
-  font-size: 17px;
+  font-size: var(--font-size-lg);
   font-weight: 600;
   color: var(--color-text-primary);
   text-align: center;
@@ -29,14 +29,14 @@
 }
 
 .privacy-content {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
-  line-height: 1.8;
+  line-height: var(--line-height-relaxed);
   margin-bottom: 12px;
 }
 
 .privacy-link {
-  font-size: 13px;
+  font-size: var(--font-size-sm);
   color: var(--color-primary);
   text-align: center;
   margin-bottom: 20px;
@@ -55,8 +55,8 @@
   text-align: center;
   background: var(--color-bg-light);
   color: var(--color-text-secondary);
-  border-radius: 6px;
-  font-size: 14px;
+  border-radius: var(--radius-xs);
+  font-size: var(--font-size-md);
 }
 
 .privacy-btn-agree {
@@ -66,8 +66,8 @@
   text-align: center;
   background: var(--color-primary);
   color: var(--color-text-white);
-  border-radius: 6px;
-  font-size: 14px;
+  border-radius: var(--radius-xs);
+  font-size: var(--font-size-md);
   font-weight: 500;
   /* 重置 button 默认样式 */
   border: none;

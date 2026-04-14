@@ -37,7 +37,7 @@
   background: var(--color-bg-gray);
 }
 .placeholder-icon {
-  font-size: 48rpx;
+  font-size: var(--font-size-3xl);
 }
 .header-info {
   flex: 1;
@@ -58,16 +58,16 @@
   color: var(--color-text-secondary);
 }
 .style-no {
-  font-size: 36rpx;
+  font-size: var(--font-size-lg-xl);
   font-weight: 700;
   color: var(--color-text-primary);
 }
 .sub-info {
-  font-size: 22rpx;
+  font-size: var(--font-size-xxs);
   color: var(--color-text-secondary);
 }
 .sub-info.time {
-  font-size: 22rpx;
+  font-size: var(--font-size-xxs);
   color: var(--color-text-tertiary);
 }
 
@@ -83,13 +83,13 @@
 }
 .field-label {
   width: 160rpx;
-  font-size: 22rpx;
+  font-size: var(--font-size-xxs);
   color: var(--color-text-secondary);
   flex-shrink: 0;
 }
 .field-value {
   flex: 1;
-  font-size: 28rpx;
+  font-size: var(--font-size-md);
   font-weight: 600;
   color: var(--color-text-primary);
 }
@@ -107,15 +107,15 @@
   margin-bottom: 24rpx;
 }
 .insight-icon {
-  font-size: 36rpx;
+  font-size: var(--font-size-lg-xl);
   margin-right: 12rpx;
   flex-shrink: 0;
 }
 .insight-text {
   flex: 1;
-  font-size: 24rpx;
+  font-size: var(--font-size-xs);
   color: var(--color-text-primary);
-  line-height: 1.6;
+  line-height: var(--line-height-relaxed);
 }
 
 .section-card {
@@ -127,7 +127,7 @@
 }
 .section-title {
   display: block;
-  font-size: 26rpx;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-text-primary);
   margin-bottom: 20rpx;
@@ -152,7 +152,7 @@
   border-color: var(--color-border-blue);
 }
 .chip-label {
-  font-size: 26rpx;
+  font-size: var(--font-size-sm);
   font-weight: 500;
   color: var(--color-text-primary);
 }
@@ -161,7 +161,7 @@
   font-weight: 600;
 }
 .chip-price {
-  font-size: 22rpx;
+  font-size: var(--font-size-xxs);
   color: var(--color-text-tertiary);
   margin-left: 12rpx;
   flex-shrink: 0;
@@ -179,11 +179,11 @@
   border-top: 1rpx solid var(--color-border);
 }
 .summary-text {
-  font-size: 24rpx;
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
 }
 .summary-amount {
-  font-size: 28rpx;
+  font-size: var(--font-size-md);
   font-weight: 700;
   color: var(--color-primary);
 }
@@ -193,7 +193,7 @@
   padding: 0 24rpx;
   border: 2rpx solid var(--color-border);
   border-radius: var(--radius-md);
-  font-size: 28rpx;
+  font-size: var(--font-size-md);
   color: var(--color-text-primary);
 }
 
@@ -208,7 +208,7 @@
   border-radius: var(--radius-md);
   background: var(--color-bg-gray);
   border: 2rpx solid transparent;
-  font-size: 26rpx;
+  font-size: var(--font-size-sm);
   color: var(--color-text-primary);
 }
 .warehouse-chip--active {
