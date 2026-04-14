@@ -12,6 +12,7 @@ import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.MaterialQualityIssueService;
 import com.fashion.supplychain.production.service.helper.MaterialPurchaseHelper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -28,6 +29,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class MaterialQualityIssueOrchestrator {
 
     private final MaterialQualityIssueService materialQualityIssueService;
@@ -49,14 +51,19 @@ public class MaterialQualityIssueOrchestrator {
         if (!StringUtils.hasText(purchaseId)) {
             return false;
         }
-        TenantAssert.assertTenantContext();
-        Long tenantId = UserContext.tenantId();
-        return materialQualityIssueService.lambdaQuery()
-                .eq(MaterialQualityIssue::getPurchaseId, purchaseId.trim())
-                .eq(MaterialQualityIssue::getDeleteFlag, 0)
-                .eq(tenantId != null, MaterialQualityIssue::getTenantId, tenantId)
-                .eq(MaterialQualityIssue::getStatus, "OPEN")
-                .count() > 0;
+        try {
+            TenantAssert.assertTenantContext();
+            Long tenantId = UserContext.tenantId();
+            return materialQualityIssueService.lambdaQuery()
+                    .eq(MaterialQualityIssue::getPurchaseId, purchaseId.trim())
+                    .eq(MaterialQualityIssue::getDeleteFlag, 0)
+                    .eq(tenantId != null, MaterialQualityIssue::getTenantId, tenantId)
+                    .eq(MaterialQualityIssue::getStatus, "OPEN")
+                    .count() > 0;
+        } catch (Exception e) {
+            log.warn("[hasOpenIssue] 查询品质异常失败(t_material_quality_issue表可能不存在)，跳过检查: {}", e.getMessage());
+            return false;
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
