@@ -1,6 +1,6 @@
 const api = require('../../../utils/api');
 const { isAdminOrSupervisor } = require('../../../utils/permission');
-const { isTenantOwner } = require('../../../utils/storage');
+const { isTenantOwner, isFactoryOwner } = require('../../../utils/storage');
 const { toast } = require('../../../utils/uiHelper');
 
 Page({
@@ -14,6 +14,7 @@ Page({
     tenantRegistrations: [],
     tenantTotal: 0,
     isTenantOwner: false,
+    isFactoryOwner: false,
     activeTab: 'system',
     showApprovalModal: false,
     showRejectModal: false,
@@ -31,9 +32,10 @@ Page({
     }
 
     const ownerFlag = isTenantOwner();
-    this.setData({ isTenantOwner: ownerFlag });
+    const factoryOwnerFlag = isFactoryOwner();
+    this.setData({ isTenantOwner: ownerFlag, isFactoryOwner: factoryOwnerFlag });
 
-    if (!isAdminOrSupervisor() && !ownerFlag) {
+    if (!isAdminOrSupervisor() && !ownerFlag && !factoryOwnerFlag) {
       toast.error('仅管理员可访问', 2000);
       setTimeout(() => wx.navigateBack(), 2000);
       return;
@@ -41,11 +43,13 @@ Page({
 
     if (ownerFlag && !isAdminOrSupervisor()) {
       this.setData({ activeTab: 'tenant' });
+    } else if (factoryOwnerFlag && !isAdminOrSupervisor()) {
+      this.setData({ activeTab: 'tenant' });
     }
 
     this.loadPendingUsers(true);
     this.loadRoleOptions();
-    if (ownerFlag) {
+    if (ownerFlag || factoryOwnerFlag) {
       this.loadTenantRegistrations();
     }
   },

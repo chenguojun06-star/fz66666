@@ -1,5 +1,5 @@
 const api = require('../../utils/api');
-const { getUserInfo, getToken, setUserInfo } = require('../../utils/storage');
+const { getUserInfo, getToken, setUserInfo, isFactoryOwner } = require('../../utils/storage');
 const { getBaseUrl } = require('../../config');
 const { getRoleDisplayName, isAdminOrSupervisor } = require('../../utils/permission');
 const { onDataRefresh } = require('../../utils/eventBus');
@@ -55,7 +55,7 @@ Page({
     if (app && typeof app.requireAuth === 'function' && !app.requireAuth()) {
       return;
     }
-    this.loadUserInfo(isAdminOrSupervisor());
+    this.loadUserInfo(isAdminOrSupervisor() || isFactoryOwner());
     this.loadSystemInfo();
     this.setupDataRefreshListener();
   },

@@ -113,26 +113,6 @@
   box-shadow: none !important;
 }
 
-.qm-info {
-  display: flex;
-  align-items: center;
-  padding: 4px 0;
-  font-size: var(--font-size-xs);
-  border-bottom: 1px solid var(--color-border-light);
-}
-
-.qm-label {
-  color: var(--color-text-disabled);
-  width: 60px;
-  flex-shrink: 0;
-  font-size: var(--font-size-xs);
-}
-
-.qm-value {
-  color: var(--color-text-primary);
-  font-weight: 500;
-}
-
 .qm-section {
   margin-top: 8px;
   padding-top: 8px;
@@ -290,10 +270,4 @@
   font-size: var(--font-size-xl);
   color: var(--color-text-disabled);
   line-height: 1;
-}
-
-.qm-upload-text {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-disabled);
-  margin-top: 4px;
 }

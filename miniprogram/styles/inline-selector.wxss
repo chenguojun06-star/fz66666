@@ -16,25 +16,6 @@
   overflow: hidden;
 }
 
-/* === 标题行 === */
-.inline-selector-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px 4px;
-}
-
-.inline-selector-title {
-  font-size: 12px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  font-weight: 600;
-}
-
-.inline-selector-hint {
-  font-size: 11px; /* 从10px提升刱1px，字件越小对比度要求越高 */
-  color: var(--color-text-secondary, #475569); /* 升级至secondary，disabled(#94a3b8)对比度仅基基 2:1 */
-}
-
 /* === 滚动列表 === */
 .inline-selector-list {
   max-height: 160px;
@@ -127,16 +108,3 @@
   color: var(--color-primary, var(--color-primary));
 }
 
-/* === 右侧：副文本（可选） === */
-.inline-selector-extra {
-  font-size: 13px;
-  color: var(--color-text-secondary, var(--color-text-secondary));
-  font-weight: 500;
-  flex-shrink: 0;
-  margin-left: 8px;
-}
-
-.inline-selector-item.active .inline-selector-extra {
-  color: var(--color-primary, #2563eb); /* 修正fallback为正确的深蓝色，原#667eea对比度仅3.4:1不足 */
-  font-weight: 600;
-}

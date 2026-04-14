@@ -99,6 +99,11 @@ function isSuperAdmin() {
   return !userInfo.tenantId && (role === 'admin' || role === '管理员');
 }
 
+function isFactoryOwner() {
+  const userInfo = getUserInfo();
+  return userInfo && userInfo.isFactoryOwner === true;
+}
+
 function getStorageValue(key, fallback) {
   try {
     const v = wx.getStorageSync(key);
@@ -147,6 +152,7 @@ module.exports = {
   getUserTenantId,
   isTenantOwner,
   isSuperAdmin,
+  isFactoryOwner,
   getStorageValue,
   setStorageValue,
   isTokenExpired,

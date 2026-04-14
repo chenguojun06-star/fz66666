@@ -374,7 +374,7 @@ public class TenantRoleInitHelper {
     }
 
     public Page<User> listFactoryPendingRegistrations(Long page, Long pageSize) {
-        assertSuperAdminOrTenantOwner();
+        assertSuperAdminOrTenantOwnerOrFactoryOwner();
 
         LambdaQueryWrapper<User> query = new LambdaQueryWrapper<>();
         query.eq(User::getRegistrationStatus, "PENDING");
@@ -384,6 +384,15 @@ public class TenantRoleInitHelper {
             query.eq(User::getTenantId, tenantId);
         }
         query.isNotNull(User::getFactoryId).ne(User::getFactoryId, "");
+
+        String currentFactoryId = UserContext.factoryId();
+        if (currentFactoryId != null) {
+            User current = userService.getById(UserContext.userId());
+            if (current != null && Boolean.TRUE.equals(current.getIsFactoryOwner())) {
+                query.eq(User::getFactoryId, currentFactoryId);
+            }
+        }
+
         query.orderByDesc(User::getCreateTime);
 
         Page<User> result = userService.page(
