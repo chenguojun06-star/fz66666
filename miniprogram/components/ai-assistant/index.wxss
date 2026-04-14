@@ -479,9 +479,6 @@
 .default-btn  { background: linear-gradient(135deg, var(--color-success-border) 0%, var(--color-success) 100%); box-shadow: 0 3px 8px rgba(5,150,105,0.22); }
 .task-action-btn::after { border: none; }
 
-/* Backward compat tags */
-.tag-orange { color: var(--color-primary); background: rgba(24,144,255,0.12); }
-.tag-green  { color: var(--color-success); background: rgba(82,196,26,0.12); }
 
 .recommend-wrapper {
   margin-top: 8px;

@@ -404,12 +404,21 @@ const OrganizationTreePage: React.FC = () => {
                       包括下级成员
                     </Checkbox>
                     {!isFactoryAccount && (isExternalSelected ? (
-                      <Button
-                        icon={<QrcodeOutlined />}
-                        onClick={() => selectedUnit && handleShowQRCode(selectedUnit)}
-                      >
-                        注册二维码
-                      </Button>
+                      <>
+                        <Button
+                          type="primary"
+                          icon={<UserAddOutlined />}
+                          onClick={() => selectedUnit && handleOpenAssign(selectedUnit)}
+                        >
+                          添加成员
+                        </Button>
+                        <Button
+                          icon={<QrcodeOutlined />}
+                          onClick={() => selectedUnit && handleShowQRCode(selectedUnit)}
+                        >
+                          注册二维码
+                        </Button>
+                      </>
                     ) : (
                       <Button
                         type="primary"
@@ -430,7 +439,7 @@ const OrganizationTreePage: React.FC = () => {
                       showSizeChanger: true,
                       pageSizeOptions: [...DEFAULT_PAGE_SIZE_OPTIONS],
                     } : false}
-                    locale={{ emptyText: isExternalSelected ? '外发工厂成员通过扫码二维码注册' : '暂无成员，点击「添加成员」分配' }}
+                    locale={{ emptyText: isExternalSelected ? '暂无成员，可点击「添加成员」或通过扫码二维码注册' : '暂无成员，点击「添加成员」分配' }}
                   />
                 </>
               )}

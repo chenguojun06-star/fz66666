@@ -357,7 +357,7 @@
   top: 12rpx;
   right: 16rpx;
   font-size: 28rpx;
-  color: #999;
+  color: var(--color-text-tertiary);
   padding: 8rpx;
   line-height: 1;
 }

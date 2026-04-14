@@ -300,6 +300,9 @@ public class OrganizationUnitOrchestrator {
         User patch = new User();
         patch.setId(userIdLong);
         patch.setOrgUnitId(orgUnitId);
+        if (StringUtils.hasText(unit.getFactoryId()) && !"INTERNAL".equals(unit.getOwnerType())) {
+            patch.setFactoryId(unit.getFactoryId());
+        }
         userService.updateById(patch);
     }
 

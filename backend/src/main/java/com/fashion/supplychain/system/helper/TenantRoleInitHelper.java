@@ -52,6 +52,9 @@ public class TenantRoleInitHelper {
     @Autowired(required = false)
     private com.fashion.supplychain.websocket.service.WebSocketService webSocketService;
 
+    @Autowired
+    private FactoryWorkerService factoryWorkerService;
+
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     private void assertSuperAdmin() {
@@ -470,6 +473,24 @@ public class TenantRoleInitHelper {
         user.setUpdateTime(LocalDateTime.now());
         userService.save(user);
 
+        if (org.springframework.util.StringUtils.hasText(factoryId)) {
+            try {
+                FactoryWorker fw = new FactoryWorker();
+                fw.setFactoryId(factoryId);
+                fw.setTenantId(tenant.getId());
+                fw.setWorkerName(name);
+                fw.setPhone(phone);
+                fw.setStatus("active");
+                fw.setDeleteFlag(0);
+                fw.setCreateTime(LocalDateTime.now());
+                fw.setUpdateTime(LocalDateTime.now());
+                factoryWorkerService.save(fw);
+                log.info("[工人注册] 已自动收录到工厂名册: factoryId={}, workerName={}", factoryId, name);
+            } catch (Exception e) {
+                log.warn("[工人注册] 自动收录工厂名册失败(不影响注册): {}", e.getMessage());
+            }
+        }
+
         // 通知租户内管理主管以上用户（主账号 + admin/manager/supervisor角色），不含超管
         try {
             if (webSocketService != null) {
@@ -538,8 +559,6 @@ public class TenantRoleInitHelper {
             } else {
                 query.isNull(User::getFactoryId);
             }
-        } else if (tenantId != null && UserContext.isTenantOwner()) {
-            query.isNull(User::getFactoryId);
         }
 
         query.orderByDesc(User::getCreateTime);
@@ -590,10 +609,6 @@ public class TenantRoleInitHelper {
         if (isFactoryOwner) {
             if (!currentFactoryId.equals(user.getFactoryId())) {
                 throw new AccessDeniedException("外发工厂管理员只能审批本工厂的注册申请");
-            }
-        } else if (UserContext.isTenantOwner()) {
-            if (user.getFactoryId() != null && !user.getFactoryId().isEmpty()) {
-                throw new AccessDeniedException("外发工厂的员工由外发工厂管理员审批，租户不可操作");
             }
         }
 

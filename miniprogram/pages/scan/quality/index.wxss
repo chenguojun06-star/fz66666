@@ -96,7 +96,7 @@
   display: flex; align-items: center; gap: 8rpx;
   font-size: 26rpx; color: #333;
 }
-.picker-arrow { font-size: 20rpx; color: #999; }
+.picker-arrow { font-size: 20rpx; color: var(--color-text-tertiary); }
 
 /* ---- photo grid ---- */
 .photo-grid { display: flex; flex-wrap: wrap; gap: 16rpx; }
@@ -116,7 +116,7 @@
   background: #fafafa;
 }
 .add-icon { font-size: 40rpx; }
-.add-text { font-size: 20rpx; color: #999; }
+.add-text { font-size: 20rpx; color: var(--color-text-tertiary); }
 
 /* ---- remark ---- */
 .remark-area {
