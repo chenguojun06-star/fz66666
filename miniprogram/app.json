@@ -117,10 +117,10 @@
     }
   ],
   "preloadRule": {
-    "pages/home/index":  { "network": "all", "packages": ["pkg-warehouse", "pkg-register", "pkg-bundle-split", "pkg-dashboard"] },
-    "pages/work/index":  { "network": "all", "packages": ["pkg-work-inbox", "pkg-bundle-split", "pkg-cutting", "pkg-procurement", "pkg-work-ai-photo"] },
-    "pages/scan/index":  { "network": "all", "packages": ["pkg-scan-history", "pkg-scan-pattern", "pkg-scan-rescan", "pkg-scan-result", "pkg-scan-confirm", "pkg-scan-quality"] },
-    "pages/admin/index": { "network": "all", "packages": ["pkg-admin-approval", "pkg-payroll", "pkg-privacy", "pkg-admin-changepwd", "pkg-admin-feedback", "pkg-admin-invite"] }
+    "pages/home/index":  { "network": "wifi", "packages": ["pkg-warehouse", "pkg-register", "pkg-bundle-split", "pkg-dashboard"] },
+    "pages/work/index":  { "network": "wifi", "packages": ["pkg-work-inbox", "pkg-bundle-split", "pkg-cutting", "pkg-procurement", "pkg-work-ai-photo"] },
+    "pages/scan/index":  { "network": "wifi", "packages": ["pkg-scan-history", "pkg-scan-pattern", "pkg-scan-rescan", "pkg-scan-result", "pkg-scan-confirm", "pkg-scan-quality"] },
+    "pages/admin/index": { "network": "wifi", "packages": ["pkg-admin-approval", "pkg-payroll", "pkg-privacy", "pkg-admin-changepwd", "pkg-admin-feedback", "pkg-admin-invite"] }
   },
   "tabBar": {
     "color": "#999999",

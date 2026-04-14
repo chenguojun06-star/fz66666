@@ -408,10 +408,11 @@ async function loadMyHistory(page, refresh = false) {
     const total = res.total || 0;
     const hasMore = pageNum * pageSize < total;
 
-    // 刷新时若今日API返回空，保留本地缓存（避免"重新进入后记录消失"）
-    if (refresh && records.length === 0 && my.groupedHistory && my.groupedHistory.length > 0) {
-      return;
-    }
+    // 修复：移除旧的"API返回空时保留旧缓存"的逻辑。
+    // 该逻辑原本为了防止重新进入后今日记录闪消，但副作用是：
+    // 跨天后（新的一天无扫码记录），会持续显示昨天的旧数据，
+    // 用户不得不手动下拉刷新才能看到正确的"暂无今日记录"状态。
+    // 现在改为完全信任 API 返回值：API 说今日无记录即显示空。
 
     let groupedHistory = groupScanRecords(records);
 

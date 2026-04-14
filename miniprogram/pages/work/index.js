@@ -101,9 +101,9 @@ Page({
       console.error('读取tab失败:', e);
     }
 
-    if (!this.data.orders.list || this.data.orders.list.length === 0) {
-      this.loadOrders(true);
-    }
+    // 每次显示时都刷新订单列表，确保今日数据实时展示（修复：原来只有列表为空才刷新，
+    // 导致已有缓存数据时切回此 Tab 后不更新今日最新状态）
+    this.loadOrders(true);
 
     this.loadUnreadNoticeCount();
 

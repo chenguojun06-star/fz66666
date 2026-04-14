@@ -99,6 +99,11 @@ Page({
 
   onLoad() {
     this.initDates();
+    // 数据加载由 onShow 统一处理（onLoad 后立即触发 onShow，首次也会加载）
+  },
+
+  // 每次进入页面（包括首次、从子页面返回）都刷新最新工资数据
+  onShow() {
     this.loadData();
   },
 
