@@ -822,7 +822,18 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             log.warn("confirmReturnPurchase: purchaseId为空");
             return false;
         }
-        MaterialPurchase existed = this.getById(purchaseId);
+        MaterialPurchase existed = this.getOne(
+                new LambdaQueryWrapper<MaterialPurchase>()
+                        .select(MaterialPurchase::getId, MaterialPurchase::getDeleteFlag,
+                                MaterialPurchase::getStatus, MaterialPurchase::getPurchaseQuantity,
+                                MaterialPurchase::getArrivedQuantity, MaterialPurchase::getUnitPrice,
+                                MaterialPurchase::getRemark, MaterialPurchase::getOrderId,
+                                MaterialPurchase::getMaterialId, MaterialPurchase::getMaterialCode,
+                                MaterialPurchase::getMaterialName, MaterialPurchase::getSpecifications,
+                                MaterialPurchase::getUnit, MaterialPurchase::getSupplierId,
+                                MaterialPurchase::getSupplierName, MaterialPurchase::getTenantId,
+                                MaterialPurchase::getSourceType)
+                        .eq(MaterialPurchase::getId, purchaseId));
         if (existed == null) {
             log.warn("confirmReturnPurchase: 采购记录不存在, purchaseId={}", purchaseId);
             return false;
@@ -898,7 +909,30 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
             }
         }
 
-        return this.updateById(patch);
+        try {
+            return this.updateById(patch);
+        } catch (Exception e) {
+            log.warn("[confirmReturnPurchase] updateById失败(可能schema缺列)，降级LambdaUpdate: {}", e.getMessage());
+            try {
+                this.lambdaUpdate()
+                        .eq(MaterialPurchase::getId, purchaseId)
+                        .set(MaterialPurchase::getReturnConfirmed, 1)
+                        .set(MaterialPurchase::getReturnQuantity, rq)
+                        .set(MaterialPurchase::getArrivedQuantity, rq)
+                        .set(MaterialPurchase::getTotalAmount, unitPrice.multiply(BigDecimal.valueOf(rq)))
+                        .set(MaterialPurchase::getStatus, newStatus)
+                        .set(MaterialPurchase::getReturnConfirmerId, StringUtils.hasText(confirmerId) ? confirmerId.trim() : null)
+                        .set(MaterialPurchase::getReturnConfirmerName, StringUtils.hasText(confirmerName) ? confirmerName.trim() : who)
+                        .set(MaterialPurchase::getReturnConfirmTime, LocalDateTime.now())
+                        .set(MaterialPurchase::getRemark, remark)
+                        .set(MaterialPurchase::getUpdateTime, LocalDateTime.now())
+                        .update();
+                return true;
+            } catch (Exception e2) {
+                log.error("[confirmReturnPurchase] LambdaUpdate也失败: {}", e2.getMessage());
+                return false;
+            }
+        }
     }
 
     @Override
@@ -906,7 +940,17 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         if (!StringUtils.hasText(purchaseId)) {
             return false;
         }
-        MaterialPurchase existed = this.getById(purchaseId);
+        MaterialPurchase existed = this.getOne(
+                new LambdaQueryWrapper<MaterialPurchase>()
+                        .select(MaterialPurchase::getId, MaterialPurchase::getDeleteFlag,
+                                MaterialPurchase::getReturnConfirmed, MaterialPurchase::getArrivedQuantity,
+                                MaterialPurchase::getRemark, MaterialPurchase::getOrderId,
+                                MaterialPurchase::getMaterialId, MaterialPurchase::getMaterialCode,
+                                MaterialPurchase::getMaterialName, MaterialPurchase::getSpecifications,
+                                MaterialPurchase::getUnit, MaterialPurchase::getSupplierId,
+                                MaterialPurchase::getSupplierName, MaterialPurchase::getTenantId,
+                                MaterialPurchase::getSourceType, MaterialPurchase::getReturnQuantity)
+                        .eq(MaterialPurchase::getId, purchaseId));
         if (existed == null) {
             return false;
         }

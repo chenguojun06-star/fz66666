@@ -73,7 +73,7 @@
     </view>
     <view class="chat-history-wrapper">
       <scroll-view class="chat-history" scroll-y enhanced="{{true}}" scroll-into-view="{{scrollTo}}">
-        <block wx:for="{{messages}}" wx:key="id">
+        <block wx:for="{{visibleMessages}}" wx:key="id">
           <view class="message-row {{item.role === 'user' ? 'my-message' : 'ai-message'}}" id="msg-{{item.id}}">
             <view class="avatar">{{item.role === 'user' ? '我' : '☁️'}}</view>
             <view class="bubble">

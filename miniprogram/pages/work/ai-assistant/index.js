@@ -59,6 +59,7 @@ function buildTextSegments(text) {
 Page({
   data: {
     messages: [],
+    visibleMessages: [],
     inputText: '',
     sending: false,
     streamingText: '',
@@ -87,11 +88,13 @@ Page({
     const welcomeText = isManager
       ? '你好！我是小云\n可以帮你查逾期订单、分析风险，也可以直接下指令操作系统——如「暂停订单PO2026001」「催工厂跟进PO2026002」，我来帮你执行。'
       : '你好！我是你的 AI 助手\n可以帮你查产量、估工资、看订单进度，有什么想问的尽管说～';
+    var initMsgs = [{ id: welcomeId, role: 'ai', text: welcomeText }];
     this.setData({
       conversationId,
       isManager,
       quickPrompts: isManager ? MANAGER_PROMPTS : WORKER_PROMPTS,
-      messages: [{ id: welcomeId, role: 'ai', text: welcomeText }],
+      messages: initMsgs,
+      visibleMessages: initMsgs,
     });
     this._loadDynamicSuggestions();
   },
@@ -346,7 +349,9 @@ Page({
     if (msg.imageUrl) entry.imageUrl = msg.imageUrl;
     const messages = [...this.data.messages, entry];
     if (messages.length > MAX_MESSAGES) messages.shift();
-    this.setData({ messages });
+    var MAX_VISIBLE = 30;
+    var visibleMessages = messages.length > MAX_VISIBLE ? messages.slice(messages.length - MAX_VISIBLE) : messages;
+    this.setData({ messages, visibleMessages });
     this._scrollToBottom();
     return id;
   },
@@ -365,7 +370,9 @@ Page({
         loading: false,
       } : m
     );
-    this.setData({ messages });
+    var MAX_VISIBLE = 30;
+    var visibleMessages = messages.length > MAX_VISIBLE ? messages.slice(messages.length - MAX_VISIBLE) : messages;
+    this.setData({ messages, visibleMessages });
   },
 
   _scrollToBottom() {

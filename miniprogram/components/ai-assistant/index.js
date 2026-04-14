@@ -46,6 +46,7 @@ Component({
     isOpen: false,
     inputValue: '',
     messages: [],
+    visibleMessages: [],
     isLoading: false,
     streamingText: '',
     streamingTool: '',
@@ -111,13 +112,13 @@ Component({
           if (!Array.isArray(savedMessages) || savedMessages.length === 0) savedMessages = [];
         } catch (_e) {}
 
-        this.setData({
+        var initMsgs = savedMessages.length > 0 ? savedMessages : [{
+          id: Date.now(), role: 'ai', content: greeting,
+        }];
+        this._setMessages(initMsgs, {
           isManager, screenWidth: sw, screenHeight: sh,
           triggerX: tx, triggerY: ty, edgeSide: edge,
           conversationId: conversationId,
-          messages: savedMessages.length > 0 ? savedMessages : [{
-            id: Date.now(), role: 'ai', content: greeting,
-          }],
         });
         this._loadDynamicSuggestions();
       }, 0);
@@ -161,6 +162,14 @@ Component({
       app.eventBus.off('tasksUpdated', this.boundLoadTasks);
     }
   },
+  _setMessages(msgs, extra) {
+    var MAX_VISIBLE = 30;
+    var visible = msgs.length > MAX_VISIBLE ? msgs.slice(msgs.length - MAX_VISIBLE) : msgs;
+    var data = { messages: msgs, visibleMessages: visible };
+    if (extra) Object.assign(data, extra);
+    this.setData(data);
+  },
+
   methods: {
     switchTab(e) {
       this.setData({ currentTab: e.currentTarget.dataset.tab });
@@ -360,11 +369,7 @@ Component({
       };
       if (hasImage) userMsg.imageUrl = tempPath;
       if (hasImage) this.setData({ pendingImage: '', uploading: true });
-      this.setData({
-        messages: [].concat(this.data.messages, [userMsg]),
-        isLoading: !hasImage,
-        streamingText: '', streamingTool: '',
-      });
+      this._setMessages([].concat(this.data.messages, [userMsg]), { isLoading: !hasImage, streamingText: '', streamingTool: '' });
       this.scrollToBottom();
 
       var imageUrl = '';
@@ -445,10 +450,7 @@ Component({
               recommendPills: recommendPills,
               actions: actions,
             };
-            self.setData({
-              messages: [].concat(self.data.messages, [aiMsg]),
-              isLoading: false, streamingText: '', streamingTool: '',
-            });
+            self._setMessages([].concat(self.data.messages, [aiMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
             self.scrollToBottom();
             self._saveChatHistory();
           },
@@ -457,7 +459,7 @@ Component({
             self._streamTask = null;
             if (streamStarted && accumulatedText) {
               var aiMsg = { id: aiMsgId, role: 'ai', content: accumulatedText };
-              self.setData({ messages: [].concat(self.data.messages, [aiMsg]), isLoading: false, streamingText: '', streamingTool: '' });
+              self._setMessages([].concat(self.data.messages, [aiMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
               self.scrollToBottom();
               self._saveChatHistory();
               return;
@@ -507,12 +509,12 @@ Component({
                 recommendPills: recommendPills.length > 0 ? recommendPills : null,
                 actions: actions,
               };
-              self.setData({ messages: [].concat(self.data.messages, [aiMsg]), isLoading: false, streamingText: '', streamingTool: '' });
+              self._setMessages([].concat(self.data.messages, [aiMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
               self.scrollToBottom();
               self._saveChatHistory();
             } catch (syncErr) {
               var errMsg = { id: aiMsgId, role: 'ai', content: 'AI暂时无法响应，请稍后再试。' };
-              self.setData({ messages: [].concat(self.data.messages, [errMsg]), isLoading: false, streamingText: '', streamingTool: '' });
+              self._setMessages([].concat(self.data.messages, [errMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
               self.scrollToBottom();
             }
           }
@@ -527,7 +529,7 @@ Component({
         }
         var errContent = (err && err.errMsg && err.errMsg !== 'undefined') ? err.errMsg : 'AI暂时无法响应，请稍后再试。';
         var errMsg = { id: Date.now(), role: 'ai', content: errContent };
-        this.setData({ messages: [].concat(this.data.messages, [errMsg]), isLoading: false, streamingText: '', streamingTool: '' });
+        this._setMessages([].concat(this.data.messages, [errMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
         this.scrollToBottom();
       }
     },
@@ -577,10 +579,7 @@ Component({
       } catch (err) {}
       const greeting = userName ? 'Hi ' + userName + '，我是小云～ 有什么可以帮您的？' : 'Hi 我是小云～ 有什么可以帮您的？';
       var newConvId = 'mp_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
-      this.setData({
-        messages: [{ id: Date.now(), role: 'ai', content: greeting }],
-        inputValue: '', conversationId: newConvId,
-      });
+      this._setMessages([{ id: Date.now(), role: 'ai', content: greeting }], { inputValue: '', conversationId: newConvId });
       try { wx.removeStorageSync('ai_chat_history'); } catch (_e) {}
     },
     scrollToBottom() {

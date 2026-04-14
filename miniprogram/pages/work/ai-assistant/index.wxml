@@ -28,7 +28,7 @@
   <!-- 对话气泡区 -->
   <view class="msg-list">
     <view
-      wx:for="{{messages}}"
+      wx:for="{{visibleMessages}}"
       wx:key="id"
       class="msg-row {{item.role === 'user' ? 'row-user' : 'row-ai'}}"
     >
@@ -55,7 +55,8 @@
           <text wx:elif="{{item.text}}" decode="{{true}}" space="nbsp" user-select>{{item.text}}</text>
 
           <!-- 可执行命令卡片 -->
-          <view wx:for="{{item.actionCards}}" wx:for-item="card" wx:for-index="ci" wx:key="ci" class="action-card {{card.actions[0].type === 'mark_urgent' ? 'card-danger' : card.actions[0].type === 'send_notification' ? 'card-warning' : 'card-normal'}}">
+          <block wx:for="{{item.actionCards}}" wx:for-item="card" wx:for-index="ci" wx:key="ci">
+          <view class="action-card {{card.actions[0].type === 'mark_urgent' ? 'card-danger' : card.actions[0].type === 'send_notification' ? 'card-warning' : 'card-normal'}}">
             <view class="action-card-hd">⚡ {{card.title}}</view>
             <view wx:if="{{card.desc}}" class="action-card-desc">{{card.desc}}</view>
             <view class="action-card-btns">
@@ -70,16 +71,18 @@
                 data-cardtitle="{{card.title}}"
               >{{act.label}}</view>
             </view>
-          </view>
+          </block>
 
           <!-- 图表卡片（简化文字摘要） -->
-          <view wx:for="{{item.charts}}" wx:for-item="chart" wx:for-index="chi" wx:key="chi" class="chart-card">
+          <block wx:for="{{item.charts}}" wx:for-item="chart" wx:for-index="chi" wx:key="chi">
+          <view class="chart-card">
             <view class="chart-card-hd">📊 {{chart.title || '数据图表'}}</view>
             <view class="chart-card-type">类型：{{chart.chartType || '图表'}}</view>
-          </view>
+          </block>
 
           <!-- 团队状态卡片 -->
-          <view wx:for="{{item.teamStatusCards}}" wx:for-item="ts" wx:for-index="ti" wx:key="ti" class="team-card">
+          <block wx:for="{{item.teamStatusCards}}" wx:for-item="ts" wx:for-index="ti" wx:key="ti">
+          <view class="team-card">
             <view class="team-card-hd-row">
               <view class="team-card-hd">👥 {{ts.title || '团队状态'}}</view>
               <view wx:if="{{ts.routePath}}" class="team-card-nav-btn"
@@ -103,10 +106,11 @@
               <text class="h-actor">{{h.actor}}</text>
               <text class="h-remark">{{h.stage}} {{h.remark}}</text>
             </view>
-          </view>
+          </block>
 
           <!-- 菲号拆分卡片 -->
-          <view wx:for="{{item.bundleSplitCards}}" wx:for-item="bs" wx:for-index="bi" wx:key="bi" class="bundle-card">
+          <block wx:for="{{item.bundleSplitCards}}" wx:for-item="bs" wx:for-index="bi" wx:key="bi">
+          <view class="bundle-card">
             <view class="bundle-card-hd">✂️ {{bs.title || '菲号拆分'}}</view>
             <view class="bundle-card-meta">
               <text>{{bs.rootBundleLabel}}</text>
@@ -128,7 +132,7 @@
               bindtap="onCardAction" data-type="view_cutting" data-cardtitle="打印子菲号">
               打印子菲号
             </view>
-          </view>
+          </block>
         </block>
       </view>
 
