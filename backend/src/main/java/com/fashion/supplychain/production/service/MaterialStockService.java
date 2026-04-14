@@ -67,4 +67,6 @@ public interface MaterialStockService extends IService<MaterialStock> {
     void unlockStock(String stockId, int quantity);
 
     void decreaseStockAndUnlock(String stockId, int quantity);
+
+    void updateStockQuantity(String stockId, int delta);
 }

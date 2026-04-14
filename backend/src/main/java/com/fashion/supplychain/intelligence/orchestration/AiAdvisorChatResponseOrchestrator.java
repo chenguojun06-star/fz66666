@@ -14,7 +14,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 public class AiAdvisorChatResponseOrchestrator {
 
@@ -59,8 +61,7 @@ public class AiAdvisorChatResponseOrchestrator {
             try {
                 List<XiaoyunInsightCard> parsed = JSON.readValue(json, new TypeReference<List<XiaoyunInsightCard>>() {});
                 cards.addAll(parsed);
-            } catch (Exception ignored) {
-            }
+            } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
         }
         return cards;
     }

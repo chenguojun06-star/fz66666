@@ -1272,3 +1272,29 @@
 }
 .sap-ai-suggestion-btn:hover:not(:disabled) { background: rgba(109, 40, 217, 0.15); }
 .sap-ai-suggestion-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── 4K / 超宽屏适配 ── */
+@media (min-width: 2560px) {
+  .layout-sidebar {
+    width: 280px !important;
+    min-width: 280px !important;
+    max-width: 280px !important;
+  }
+  .layout-sidebar.ant-layout-sider-collapsed {
+    width: 72px !important;
+    min-width: 72px !important;
+    max-width: 72px !important;
+  }
+}
+@media (min-width: 3840px) {
+  .layout-sidebar {
+    width: 320px !important;
+    min-width: 320px !important;
+    max-width: 320px !important;
+  }
+  .layout-sidebar.ant-layout-sider-collapsed {
+    width: 80px !important;
+    min-width: 80px !important;
+    max-width: 80px !important;
+  }
+}

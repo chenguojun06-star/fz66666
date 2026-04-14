@@ -895,14 +895,14 @@ public class OrderFlowStageFillHelper {
             int completedQty = o.getCompletedQuantity() == null ? 0 : o.getCompletedQuantity();
             int baseQty = cuttingQty > 0 ? cuttingQty : orderQty;
 
-            int cuttingRate = computeRate(cuttingQty, baseQty);
+            int cuttingRate = computeRate(cuttingQty, orderQty);
             o.setCuttingCompletionRate(cuttingRate);
 
             int sewBase = baseQty > 0 ? baseQty : 1;
             int wareRate = computeRate(wareQty, sewBase);
             int completedRate = computeRate(completedQty, sewBase);
 
-            o.setSewingCompletionRate(wareRate);
+            o.setSewingCompletionRate(completedRate > 0 ? completedRate : wareRate);
             o.setCarSewingCompletionRate(completedRate > 0 ? completedRate : wareRate);
             o.setIroningCompletionRate(wareRate);
             o.setSecondaryProcessCompletionRate(completedRate > 0 ? completedRate : wareRate);

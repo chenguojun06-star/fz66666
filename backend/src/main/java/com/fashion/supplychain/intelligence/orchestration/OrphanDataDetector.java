@@ -152,22 +152,23 @@ public class OrphanDataDetector {
         if (orphanOrderIds.isEmpty()) return List.of();
 
         int offset = (page - 1) * pageSize;
+        Map<String, String> statusCache = batchGetOrderStatus(orphanOrderIds);
 
         switch (tableName) {
-            case "t_scan_record":               return listScanRecords(orphanOrderIds, tenantId, offset, pageSize);
-            case "t_material_purchase":          return listMaterialPurchases(orphanOrderIds, tenantId, offset, pageSize);
-            case "t_product_warehousing":        return listProductWarehousing(orphanOrderIds, tenantId, offset, pageSize);
-            case "t_product_outstock":           return listProductOutstocks(orphanOrderIds, tenantId, offset, pageSize);
-            case "t_factory_shipment":           return listFactoryShipments(orphanOrderIds, tenantId, offset, pageSize);
-            case "t_cutting_task":               return listCuttingTasks(orphanOrderIds, tenantId, offset, pageSize);
-            case "t_cutting_bundle":             return listCuttingBundles(orphanOrderIds, tenantId, offset, pageSize);
-            case "t_production_process_tracking": return listProcessTrackings(orphanOrderIds, tenantId, offset, pageSize);
-            case "t_process_price_adjustment":   return listProcessPriceAdjustments(orphanOrderIds, tenantId, offset, pageSize);
-            case "t_material_picking":           return listMaterialPickings(orphanOrderIds, tenantId, offset, pageSize);
-            case "t_material_quality_issue":     return listMaterialQualityIssues(orphanOrderIds, tenantId, offset, pageSize);
-            case "t_production_exception_report": return listExceptionReports(orphanOrderIds, tenantId, offset, pageSize);
-            case "t_bill_aggregation":           return listBillAggregations(orphanOrderIds, tenantId, offset, pageSize);
-            case "t_receivable":                 return listReceivables(orphanOrderIds, tenantId, offset, pageSize);
+            case "t_scan_record":               return listScanRecords(orphanOrderIds, tenantId, offset, pageSize, statusCache);
+            case "t_material_purchase":          return listMaterialPurchases(orphanOrderIds, tenantId, offset, pageSize, statusCache);
+            case "t_product_warehousing":        return listProductWarehousing(orphanOrderIds, tenantId, offset, pageSize, statusCache);
+            case "t_product_outstock":           return listProductOutstocks(orphanOrderIds, tenantId, offset, pageSize, statusCache);
+            case "t_factory_shipment":           return listFactoryShipments(orphanOrderIds, tenantId, offset, pageSize, statusCache);
+            case "t_cutting_task":               return listCuttingTasks(orphanOrderIds, tenantId, offset, pageSize, statusCache);
+            case "t_cutting_bundle":             return listCuttingBundles(orphanOrderIds, tenantId, offset, pageSize, statusCache);
+            case "t_production_process_tracking": return listProcessTrackings(orphanOrderIds, tenantId, offset, pageSize, statusCache);
+            case "t_process_price_adjustment":   return listProcessPriceAdjustments(orphanOrderIds, tenantId, offset, pageSize, statusCache);
+            case "t_material_picking":           return listMaterialPickings(orphanOrderIds, tenantId, offset, pageSize, statusCache);
+            case "t_material_quality_issue":     return listMaterialQualityIssues(orphanOrderIds, tenantId, offset, pageSize, statusCache);
+            case "t_production_exception_report": return listExceptionReports(orphanOrderIds, tenantId, offset, pageSize, statusCache);
+            case "t_bill_aggregation":           return listBillAggregations(orphanOrderIds, tenantId, offset, pageSize, statusCache);
+            case "t_receivable":                 return listReceivables(orphanOrderIds, tenantId, offset, pageSize, statusCache);
             default: return List.of();
         }
     }
@@ -244,10 +245,20 @@ public class OrphanDataDetector {
         return nos;
     }
 
-    private String getOrderStatus(String orderId) {
+    private String resolveOrderStatus(Map<String, String> statusCache, String orderId) {
         if (!StringUtils.hasText(orderId)) return "";
-        ProductionOrder o = productionOrderService.getById(orderId);
-        return o != null ? o.getStatus() : "订单不存在";
+        String status = statusCache.get(orderId);
+        return status != null ? status : "订单不存在";
+    }
+
+    private Map<String, String> batchGetOrderStatus(Set<String> orderIds) {
+        if (orderIds == null || orderIds.isEmpty()) return java.util.Collections.emptyMap();
+        Map<String, String> result = new java.util.HashMap<>();
+        productionOrderService.lambdaQuery()
+                .in(ProductionOrder::getId, orderIds)
+                .select(ProductionOrder::getId, ProductionOrder::getStatus)
+                .list().forEach(o -> result.put(o.getId(), o.getStatus()));
+        return result;
     }
 
     private String buildOrphanReason(String orderStatus) {
@@ -343,7 +354,7 @@ public class OrphanDataDetector {
 
     // ── list methods ──
 
-    private List<OrphanDataItemDTO> listScanRecords(Set<String> deadIds, Long tenantId, int offset, int limit) {
+    private List<OrphanDataItemDTO> listScanRecords(Set<String> deadIds, Long tenantId, int offset, int limit, Map<String, String> statusCache) {
         return scanRecordService.lambdaQuery().in(ScanRecord::getOrderId, deadIds)
                 .eq(tenantId != null, ScanRecord::getTenantId, tenantId)
                 .last("LIMIT " + limit + " OFFSET " + offset).list().stream().map(r -> {
@@ -351,12 +362,12 @@ public class OrphanDataDetector {
                     d.setId(r.getId()); d.setTableName("t_scan_record"); d.setTableLabel("扫码记录"); d.setModule("生产管理");
                     d.setOrderId(r.getOrderId()); d.setOrderNo(r.getOrderNo()); d.setStyleNo(r.getStyleNo());
                     d.setSummary(r.getProcessName() + " " + r.getQuantity() + "件");
-                    String status = getOrderStatus(r.getOrderId());
+                    String status = resolveOrderStatus(statusCache, r.getOrderId());
                     d.setCreateTime(r.getScanTime()); d.setOrphanReason(buildOrphanReason(status)); d.setOrderStatus(status);
                     return d;
                 }).collect(Collectors.toList());
     }
-    private List<OrphanDataItemDTO> listMaterialPurchases(Set<String> deadIds, Long tenantId, int offset, int limit) {
+    private List<OrphanDataItemDTO> listMaterialPurchases(Set<String> deadIds, Long tenantId, int offset, int limit, Map<String, String> statusCache) {
         return materialPurchaseService.lambdaQuery().in(MaterialPurchase::getOrderId, deadIds)
                 .eq(tenantId != null, MaterialPurchase::getTenantId, tenantId).ne(MaterialPurchase::getDeleteFlag, 1)
                 .last("LIMIT " + limit + " OFFSET " + offset).list().stream().map(p -> {
@@ -364,12 +375,12 @@ public class OrphanDataDetector {
                     d.setId(p.getId()); d.setTableName("t_material_purchase"); d.setTableLabel("面料采购"); d.setModule("生产管理");
                     d.setOrderId(p.getOrderId()); d.setOrderNo(p.getOrderNo()); d.setStyleNo(p.getStyleNo());
                     d.setSummary(p.getMaterialName() + " " + (p.getPurchaseQuantity() != null ? p.getPurchaseQuantity() : 0) + (p.getUnit() != null ? p.getUnit() : ""));
-                    String status = getOrderStatus(p.getOrderId());
+                    String status = resolveOrderStatus(statusCache, p.getOrderId());
                     d.setCreateTime(p.getCreateTime()); d.setOrphanReason(buildOrphanReason(status)); d.setOrderStatus(status);
                     return d;
                 }).collect(Collectors.toList());
     }
-    private List<OrphanDataItemDTO> listProductWarehousing(Set<String> deadIds, Long tenantId, int offset, int limit) {
+    private List<OrphanDataItemDTO> listProductWarehousing(Set<String> deadIds, Long tenantId, int offset, int limit, Map<String, String> statusCache) {
         return productWarehousingService.lambdaQuery().in(ProductWarehousing::getOrderId, deadIds)
                 .eq(tenantId != null, ProductWarehousing::getTenantId, tenantId).ne(ProductWarehousing::getDeleteFlag, 1)
                 .last("LIMIT " + limit + " OFFSET " + offset).list().stream().map(w -> {
@@ -377,12 +388,12 @@ public class OrphanDataDetector {
                     d.setId(w.getId()); d.setTableName("t_product_warehousing"); d.setTableLabel("成品入库"); d.setModule("生产管理");
                     d.setOrderId(w.getOrderId()); d.setOrderNo(w.getOrderNo()); d.setStyleNo(w.getStyleNo());
                     d.setSummary("入库" + (w.getWarehousingQuantity() != null ? w.getWarehousingQuantity() : 0) + "件");
-                    String status = getOrderStatus(w.getOrderId());
+                    String status = resolveOrderStatus(statusCache, w.getOrderId());
                     d.setCreateTime(w.getCreateTime()); d.setOrphanReason(buildOrphanReason(status)); d.setOrderStatus(status);
                     return d;
                 }).collect(Collectors.toList());
     }
-    private List<OrphanDataItemDTO> listProductOutstocks(Set<String> deadIds, Long tenantId, int offset, int limit) {
+    private List<OrphanDataItemDTO> listProductOutstocks(Set<String> deadIds, Long tenantId, int offset, int limit, Map<String, String> statusCache) {
         return productOutstockService.lambdaQuery().in(ProductOutstock::getOrderId, deadIds)
                 .eq(tenantId != null, ProductOutstock::getTenantId, tenantId)
                 .last("LIMIT " + limit + " OFFSET " + offset).list().stream().map(o -> {
@@ -390,12 +401,12 @@ public class OrphanDataDetector {
                     d.setId(o.getId()); d.setTableName("t_product_outstock"); d.setTableLabel("成品出库"); d.setModule("生产管理");
                     d.setOrderId(o.getOrderId()); d.setOrderNo(o.getOrderNo()); d.setStyleNo(o.getStyleNo());
                     d.setSummary("出库记录");
-                    String status = getOrderStatus(o.getOrderId());
+                    String status = resolveOrderStatus(statusCache, o.getOrderId());
                     d.setCreateTime(o.getCreateTime()); d.setOrphanReason(buildOrphanReason(status)); d.setOrderStatus(status);
                     return d;
                 }).collect(Collectors.toList());
     }
-    private List<OrphanDataItemDTO> listFactoryShipments(Set<String> deadIds, Long tenantId, int offset, int limit) {
+    private List<OrphanDataItemDTO> listFactoryShipments(Set<String> deadIds, Long tenantId, int offset, int limit, Map<String, String> statusCache) {
         return factoryShipmentService.lambdaQuery().in(FactoryShipment::getOrderId, deadIds)
                 .eq(tenantId != null, FactoryShipment::getTenantId, tenantId)
                 .last("LIMIT " + limit + " OFFSET " + offset).list().stream().map(s -> {
@@ -403,12 +414,12 @@ public class OrphanDataDetector {
                     d.setId(s.getId()); d.setTableName("t_factory_shipment"); d.setTableLabel("工厂发货"); d.setModule("生产管理");
                     d.setOrderId(s.getOrderId()); d.setOrderNo(s.getOrderNo()); d.setStyleNo(s.getStyleNo());
                     d.setSummary("发货记录");
-                    String status = getOrderStatus(s.getOrderId());
+                    String status = resolveOrderStatus(statusCache, s.getOrderId());
                     d.setCreateTime(s.getCreateTime()); d.setOrphanReason(buildOrphanReason(status)); d.setOrderStatus(status);
                     return d;
                 }).collect(Collectors.toList());
     }
-    private List<OrphanDataItemDTO> listCuttingTasks(Set<String> deadIds, Long tenantId, int offset, int limit) {
+    private List<OrphanDataItemDTO> listCuttingTasks(Set<String> deadIds, Long tenantId, int offset, int limit, Map<String, String> statusCache) {
         return cuttingTaskService.lambdaQuery().in(CuttingTask::getProductionOrderId, deadIds)
                 .eq(tenantId != null, CuttingTask::getTenantId, tenantId)
                 .last("LIMIT " + limit + " OFFSET " + offset).list().stream().map(t -> {
@@ -416,12 +427,12 @@ public class OrphanDataDetector {
                     d.setId(t.getId()); d.setTableName("t_cutting_task"); d.setTableLabel("裁剪任务"); d.setModule("生产管理");
                     d.setOrderId(t.getProductionOrderId()); d.setOrderNo(t.getProductionOrderNo()); d.setStyleNo(t.getStyleNo());
                     d.setSummary("裁剪" + (t.getOrderQuantity() != null ? t.getOrderQuantity() : 0) + "件");
-                    String status = getOrderStatus(t.getProductionOrderId());
+                    String status = resolveOrderStatus(statusCache, t.getProductionOrderId());
                     d.setCreateTime(t.getCreateTime()); d.setOrphanReason(buildOrphanReason(status)); d.setOrderStatus(status);
                     return d;
                 }).collect(Collectors.toList());
     }
-    private List<OrphanDataItemDTO> listCuttingBundles(Set<String> deadIds, Long tenantId, int offset, int limit) {
+    private List<OrphanDataItemDTO> listCuttingBundles(Set<String> deadIds, Long tenantId, int offset, int limit, Map<String, String> statusCache) {
         return cuttingBundleService.lambdaQuery().in(CuttingBundle::getProductionOrderId, deadIds)
                 .eq(tenantId != null, CuttingBundle::getTenantId, tenantId)
                 .last("LIMIT " + limit + " OFFSET " + offset).list().stream().map(b -> {
@@ -429,12 +440,12 @@ public class OrphanDataDetector {
                     d.setId(b.getId()); d.setTableName("t_cutting_bundle"); d.setTableLabel("裁剪扎条"); d.setModule("生产管理");
                     d.setOrderId(b.getProductionOrderId()); d.setOrderNo(b.getProductionOrderNo()); d.setStyleNo(b.getStyleNo());
                     d.setSummary(b.getQrCode() != null ? b.getQrCode() : "扎条记录");
-                    String status = getOrderStatus(b.getProductionOrderId());
+                    String status = resolveOrderStatus(statusCache, b.getProductionOrderId());
                     d.setCreateTime(b.getCreateTime()); d.setOrphanReason(buildOrphanReason(status)); d.setOrderStatus(status);
                     return d;
                 }).collect(Collectors.toList());
     }
-    private List<OrphanDataItemDTO> listProcessTrackings(Set<String> deadIds, Long tenantId, int offset, int limit) {
+    private List<OrphanDataItemDTO> listProcessTrackings(Set<String> deadIds, Long tenantId, int offset, int limit, Map<String, String> statusCache) {
         return processTrackingService.lambdaQuery().in(ProductionProcessTracking::getProductionOrderId, deadIds)
                 .eq(tenantId != null, ProductionProcessTracking::getTenantId, tenantId)
                 .last("LIMIT " + limit + " OFFSET " + offset).list().stream().map(t -> {
@@ -442,12 +453,12 @@ public class OrphanDataDetector {
                     d.setId(t.getId()); d.setTableName("t_production_process_tracking"); d.setTableLabel("工序追踪"); d.setModule("生产管理");
                     d.setOrderId(t.getProductionOrderId()); d.setOrderNo(t.getProductionOrderNo()); d.setStyleNo("");
                     d.setSummary(t.getProcessName() != null ? t.getProcessName() : "追踪记录");
-                    String status = getOrderStatus(t.getProductionOrderId());
+                    String status = resolveOrderStatus(statusCache, t.getProductionOrderId());
                     d.setCreateTime(null); d.setOrphanReason(buildOrphanReason(status)); d.setOrderStatus(status);
                     return d;
                 }).collect(Collectors.toList());
     }
-    private List<OrphanDataItemDTO> listProcessPriceAdjustments(Set<String> deadIds, Long tenantId, int offset, int limit) {
+    private List<OrphanDataItemDTO> listProcessPriceAdjustments(Set<String> deadIds, Long tenantId, int offset, int limit, Map<String, String> statusCache) {
         return processPriceAdjustmentService.lambdaQuery().in(ProcessPriceAdjustment::getOrderId, deadIds)
                 .eq(tenantId != null, ProcessPriceAdjustment::getTenantId, tenantId)
                 .last("LIMIT " + limit + " OFFSET " + offset).list().stream().map(a -> {
@@ -455,12 +466,12 @@ public class OrphanDataDetector {
                     d.setId(a.getId()); d.setTableName("t_process_price_adjustment"); d.setTableLabel("工序调价"); d.setModule("生产管理");
                     d.setOrderId(a.getOrderId()); d.setOrderNo(a.getOrderNo()); d.setStyleNo("");
                     d.setSummary("调价记录");
-                    String status = getOrderStatus(a.getOrderId());
+                    String status = resolveOrderStatus(statusCache, a.getOrderId());
                     d.setCreateTime(a.getCreateTime()); d.setOrphanReason(buildOrphanReason(status)); d.setOrderStatus(status);
                     return d;
                 }).collect(Collectors.toList());
     }
-    private List<OrphanDataItemDTO> listMaterialPickings(Set<String> deadIds, Long tenantId, int offset, int limit) {
+    private List<OrphanDataItemDTO> listMaterialPickings(Set<String> deadIds, Long tenantId, int offset, int limit, Map<String, String> statusCache) {
         return materialPickingService.lambdaQuery().in(MaterialPicking::getOrderId, deadIds)
                 .eq(tenantId != null, MaterialPicking::getTenantId, tenantId)
                 .last("LIMIT " + limit + " OFFSET " + offset).list().stream().map(p -> {
@@ -468,12 +479,12 @@ public class OrphanDataDetector {
                     d.setId(p.getId()); d.setTableName("t_material_picking"); d.setTableLabel("物料出库单"); d.setModule("生产管理");
                     d.setOrderId(p.getOrderId()); d.setOrderNo(p.getOrderNo()); d.setStyleNo(p.getStyleNo());
                     d.setSummary(p.getPickingNo() != null ? p.getPickingNo() : "出库单");
-                    String status = getOrderStatus(p.getOrderId());
+                    String status = resolveOrderStatus(statusCache, p.getOrderId());
                     d.setCreateTime(p.getCreateTime()); d.setOrphanReason(buildOrphanReason(status)); d.setOrderStatus(status);
                     return d;
                 }).collect(Collectors.toList());
     }
-    private List<OrphanDataItemDTO> listMaterialQualityIssues(Set<String> deadIds, Long tenantId, int offset, int limit) {
+    private List<OrphanDataItemDTO> listMaterialQualityIssues(Set<String> deadIds, Long tenantId, int offset, int limit, Map<String, String> statusCache) {
         return materialQualityIssueService.lambdaQuery().in(MaterialQualityIssue::getOrderId, deadIds)
                 .eq(tenantId != null, MaterialQualityIssue::getTenantId, tenantId).eq(MaterialQualityIssue::getDeleteFlag, 0)
                 .last("LIMIT " + limit + " OFFSET " + offset).list().stream().map(i -> {
@@ -481,12 +492,12 @@ public class OrphanDataDetector {
                     d.setId(i.getId()); d.setTableName("t_material_quality_issue"); d.setTableLabel("物料品质异常"); d.setModule("生产管理");
                     d.setOrderId(i.getOrderId()); d.setOrderNo(i.getOrderNo()); d.setStyleNo(i.getStyleNo());
                     d.setSummary(i.getMaterialName() + " " + (i.getIssueType() != null ? i.getIssueType() : ""));
-                    String status = getOrderStatus(i.getOrderId());
+                    String status = resolveOrderStatus(statusCache, i.getOrderId());
                     d.setCreateTime(i.getCreateTime()); d.setOrphanReason(buildOrphanReason(status)); d.setOrderStatus(status);
                     return d;
                 }).collect(Collectors.toList());
     }
-    private List<OrphanDataItemDTO> listExceptionReports(Set<String> deadIds, Long tenantId, int offset, int limit) {
+    private List<OrphanDataItemDTO> listExceptionReports(Set<String> deadIds, Long tenantId, int offset, int limit, Map<String, String> statusCache) {
         Set<String> orphanOrderNos = getOrphanOrderNos(tenantId);
         if (orphanOrderNos.isEmpty()) return List.of();
         return exceptionReportService.lambdaQuery().in(ProductionExceptionReport::getOrderNo, orphanOrderNos)
@@ -500,7 +511,7 @@ public class OrphanDataDetector {
                     return d;
                 }).collect(Collectors.toList());
     }
-    private List<OrphanDataItemDTO> listBillAggregations(Set<String> deadIds, Long tenantId, int offset, int limit) {
+    private List<OrphanDataItemDTO> listBillAggregations(Set<String> deadIds, Long tenantId, int offset, int limit, Map<String, String> statusCache) {
         return billAggregationService.lambdaQuery().in(BillAggregation::getOrderId, deadIds)
                 .eq(tenantId != null, BillAggregation::getTenantId, tenantId)
                 .last("LIMIT " + limit + " OFFSET " + offset).list().stream().map(b -> {
@@ -508,12 +519,12 @@ public class OrphanDataDetector {
                     d.setId(b.getId()); d.setTableName("t_bill_aggregation"); d.setTableLabel("账单汇总"); d.setModule("财务管理");
                     d.setOrderId(b.getOrderId()); d.setOrderNo(b.getOrderNo()); d.setStyleNo(b.getStyleNo());
                     d.setSummary("账单" + (b.getBillNo() != null ? b.getBillNo() : ""));
-                    String status = getOrderStatus(b.getOrderId());
+                    String status = resolveOrderStatus(statusCache, b.getOrderId());
                     d.setCreateTime(b.getCreateTime()); d.setOrphanReason(buildOrphanReason(status)); d.setOrderStatus(status);
                     return d;
                 }).collect(Collectors.toList());
     }
-    private List<OrphanDataItemDTO> listReceivables(Set<String> deadIds, Long tenantId, int offset, int limit) {
+    private List<OrphanDataItemDTO> listReceivables(Set<String> deadIds, Long tenantId, int offset, int limit, Map<String, String> statusCache) {
         return receivableService.lambdaQuery().in(Receivable::getOrderId, deadIds)
                 .eq(tenantId != null, Receivable::getTenantId, tenantId)
                 .last("LIMIT " + limit + " OFFSET " + offset).list().stream().map(r -> {
@@ -521,7 +532,7 @@ public class OrphanDataDetector {
                     d.setId(r.getId()); d.setTableName("t_receivable"); d.setTableLabel("应收款"); d.setModule("客户管理");
                     d.setOrderId(r.getOrderId()); d.setOrderNo(r.getOrderNo()); d.setStyleNo("");
                     d.setSummary("应收款" + (r.getAmount() != null ? r.getAmount().toPlainString() : ""));
-                    String status = getOrderStatus(r.getOrderId());
+                    String status = resolveOrderStatus(statusCache, r.getOrderId());
                     d.setCreateTime(r.getCreateTime()); d.setOrphanReason(buildOrphanReason(status)); d.setOrderStatus(status);
                     return d;
                 }).collect(Collectors.toList());

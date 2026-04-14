@@ -56,7 +56,7 @@ public class ProfitEstimationOrchestrator {
         ProductionOrder order = null;
         // 纯数字时先按主键查（兼容按DB主键调用的场景）
         if (idStr.matches("\\d+")) {
-            try { order = productionOrderService.getById(Long.parseLong(idStr)); } catch (Exception ignored) {}
+            try { order = productionOrderService.getById(Long.parseLong(idStr)); } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
         }
         // 主键未命中或含字母（如 PO20260228001），改按订单号查，支持带/不带 PO 前缀
         if (order == null) {

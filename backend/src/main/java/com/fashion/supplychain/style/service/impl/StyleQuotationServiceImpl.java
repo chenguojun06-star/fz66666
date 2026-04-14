@@ -22,9 +22,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class StyleQuotationServiceImpl extends ServiceImpl<StyleQuotationMapper, StyleQuotation> implements StyleQuotationService {
+
+    private static final Logger LOG = LoggerFactory.getLogger(StyleQuotationServiceImpl.class);
 
     @Autowired
     @Lazy
@@ -147,8 +151,7 @@ public class StyleQuotationServiceImpl extends ServiceImpl<StyleQuotationMapper,
                         if (tp != null && tp.compareTo(BigDecimal.ZERO) > 0) {
                             out.put(sid, tp.setScale(2, RoundingMode.HALF_UP));
                         }
-                    } catch (Exception ignored) {
-                    }
+                    } catch (Exception e) { LOG.debug("Non-critical error: {}", e.getMessage()); }
                 }
             }
         } catch (Exception e) {
@@ -206,8 +209,7 @@ public class StyleQuotationServiceImpl extends ServiceImpl<StyleQuotationMapper,
                     materialSum.put(sid, materialSum.getOrDefault(sid, BigDecimal.ZERO).add(itemTotal));
                 }
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception e) { LOG.debug("Non-critical error: {}", e.getMessage()); }
 
         Map<Long, BigDecimal> processSum = new HashMap<>();
         try {
@@ -227,8 +229,7 @@ public class StyleQuotationServiceImpl extends ServiceImpl<StyleQuotationMapper,
                     processSum.put(p.getStyleId(), processSum.getOrDefault(p.getStyleId(), BigDecimal.ZERO).add(v));
                 }
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception e) { LOG.debug("Non-critical error: {}", e.getMessage()); }
 
         BigDecimal multiplier = BigDecimal.ONE.add(new BigDecimal("20").movePointLeft(2));
 

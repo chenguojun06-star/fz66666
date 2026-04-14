@@ -25,7 +25,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/intelligence")
 @PreAuthorize("isAuthenticated()")
@@ -568,7 +570,7 @@ public class IntelligenceController {
             try {
                 emitter.send(SseEmitter.event().name("error").data("{\"message\":\"问题不能为空\"}"));
                 emitter.complete();
-            } catch (Exception ignored) {}
+            } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
             return emitter;
         }
         // 捕获当前线程的用户上下文，传递到异步线程
@@ -592,7 +594,7 @@ public class IntelligenceController {
                 try {
                     emitter.send(SseEmitter.event().name("error").data("{\"message\":\"" + e.getMessage() + "\"}"));
                     emitter.complete();
-                } catch (Exception ignored) {}
+                } catch (Exception ex) { log.debug("Non-critical error: {}", ex.getMessage()); }
             } finally {
                 UserContext.clear();
             }

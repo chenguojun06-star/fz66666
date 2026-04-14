@@ -25,7 +25,7 @@ export function useCardGridLayout(maxCards = 10): CardGridLayout {
     const availW = Math.max(300, w - 272);
 
     // 每张卡片最小宽度 200px，计算能塞下几列（上限 6）
-    const columns = Math.min(6, Math.max(1, Math.floor(availW / 200)));
+    const columns = Math.min(w >= 3840 ? 12 : w >= 2560 ? 8 : 6, Math.max(1, Math.floor(availW / 200)));
 
     // 可用高度 = 总高 - UI 固定区（导航 + 筛选栏 + 操作栏 + 分页 + 内边距，约 280px）
     const availH = Math.max(200, h - 280);

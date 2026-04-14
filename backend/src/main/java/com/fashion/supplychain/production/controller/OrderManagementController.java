@@ -42,8 +42,7 @@ public class OrderManagementController {
           styleId = Long.parseLong(s);
         }
       }
-    } catch (Exception ignored) {
-    }
+    } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
 
     try {
       List<String> targetTypes = parseTargetTypes(payload == null ? null : payload.get("targetTypes"));

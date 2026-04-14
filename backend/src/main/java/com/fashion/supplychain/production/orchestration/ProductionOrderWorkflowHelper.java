@@ -52,7 +52,7 @@ public class ProductionOrderWorkflowHelper {
         TenantAssert.assertBelongsToCurrentTenant(existed.getTenantId(), "生产订单");
 
         boolean isAdmin = false;
-        try { isAdmin = UserContext.isSupervisorOrAbove(); } catch (Exception ignored) {}
+        try { isAdmin = UserContext.isSupervisorOrAbove(); } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
         if (!isAdmin) {
             throw new AccessDeniedException("仅主管及以上角色可锁定工序流程");
         }
@@ -64,8 +64,8 @@ public class ProductionOrderWorkflowHelper {
 
         String userId = null;
         String userName = null;
-        try { userId = UserContext.userId(); } catch (Exception ignored) {}
-        try { userName = UserContext.username(); } catch (Exception ignored) {}
+        try { userId = UserContext.userId(); } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
+        try { userName = UserContext.username(); } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
 
         final String w = text;
         boolean ok = productionOrderService.lambdaUpdate()
@@ -98,7 +98,7 @@ public class ProductionOrderWorkflowHelper {
         TenantAssert.assertBelongsToCurrentTenant(existed.getTenantId(), "生产订单");
 
         boolean isTop = false;
-        try { isTop = UserContext.isTopAdmin(); } catch (Exception ignored) {}
+        try { isTop = UserContext.isTopAdmin(); } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
         if (!isTop) {
             throw new AccessDeniedException("仅最高管理员可回滚工序流程");
         }

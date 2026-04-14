@@ -585,7 +585,7 @@ public class UserOrchestrator {
                     User found = userService.getOne(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<User>()
                             .eq(User::getUsername, safeTrim(username)).last("LIMIT 1"), false);
                     if (found != null) tenantId = found.getTenantId();
-                } catch (Exception ignored) { }
+                } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
             }
             loginLog.setTenantId(tenantId);
             if (loginLog.getUsername() != null && !loginLog.getUsername().isBlank()) {

@@ -106,7 +106,7 @@ public class CosService {
                 log.info("[COS] COS 全部权限验证成功 ✅ (list/write/read/delete)");
             } catch (Exception e) {
                 // 清理可能残留的测试文件
-                try { cosClient.deleteObject(bucket, testKey); } catch (Exception ignored) {}
+                try { cosClient.deleteObject(bucket, testKey); } catch (Exception ex) { log.debug("Non-critical error: {}", ex.getMessage()); }
                 String errMsg = e.getMessage();
                 if (errMsg != null && errMsg.contains("AccessDenied")) {
                     log.error("[COS] ⛔⛔⛔ COS 权限验证失败（AccessDenied）！" +

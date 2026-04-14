@@ -123,8 +123,7 @@ public class OrderDecisionCaptureOrchestrator {
                     sizes.add(size.trim());
                 }
             }
-        } catch (Exception ignore) {
-        }
+        } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
     }
 
     private BigDecimal decimalValue(JsonNode node, String field) {

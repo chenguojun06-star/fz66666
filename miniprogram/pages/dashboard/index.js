@@ -12,7 +12,7 @@
  */
 var api = require('../../utils/api');
 var { transformOrderData } = require('../work/utils/orderTransform');
-var { resolveNodesFromOrder, clampPercent, buildProcessNodesWithRates } = require('../work/utils/progressNodes');
+var { buildProcessNodesWithRates } = require('../work/utils/progressNodes');
 var { isAdminOrSupervisor } = require('../../utils/permission');
 var { isTenantOwner } = require('../../utils/storage');
 
@@ -84,7 +84,6 @@ Page({
   },
 
   onPullDownRefresh: function () {
-    var that = this;
     Promise.all([this.refreshCards(), this.loadOrders(true)]).then(function () {
       wx.stopPullDownRefresh();
     });
@@ -92,6 +91,16 @@ Page({
 
   onReachBottom: function () {
     this.loadOrders(false);
+  },
+
+  onHide: function () {
+    clearTimeout(this._searchTimer);
+    this._searchTimer = null;
+  },
+
+  onUnload: function () {
+    clearTimeout(this._searchTimer);
+    this._searchTimer = null;
   },
 
   /* ======== 刷新摘要卡片（4 个并发请求） ======== */

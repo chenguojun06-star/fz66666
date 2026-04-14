@@ -392,8 +392,7 @@ public class PatternStatusHelper {
                 }
                 try {
                     percents.add(Math.max(0, Math.min(100, Integer.parseInt(String.valueOf(value)))));
-                } catch (Exception ignored) {
-                }
+                } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
             }
 
             if (percents.isEmpty()) {

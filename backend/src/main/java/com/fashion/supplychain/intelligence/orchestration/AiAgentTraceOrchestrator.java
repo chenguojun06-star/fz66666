@@ -252,8 +252,7 @@ public class AiAgentTraceOrchestrator {
                     return truncate(value.asText().trim(), 120);
                 }
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
         return null;
     }
 }

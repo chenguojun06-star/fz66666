@@ -489,26 +489,10 @@ public class ProductionScanExecutor {
             log.error("重新计算订单进度失败: orderId={}", order.getId(), e);
         }
 
-        // ★ 采购阶段：扫码领取后同步更新 MaterialPurchase 状态（解决PC端不同步问题）
-        if ("采购".equals(progressStage.trim())) {
-            try {
-                List<MaterialPurchase> pendingPurchases = materialPurchaseService.list(
-                    new LambdaQueryWrapper<MaterialPurchase>()
-                        .eq(MaterialPurchase::getOrderId, order.getId())
-                        .and(w -> w.isNull(MaterialPurchase::getStatus)
-                            .or().eq(MaterialPurchase::getStatus, "")
-                            .or().eq(MaterialPurchase::getStatus, "pending"))
-                );
-                for (MaterialPurchase mp : pendingPurchases) {
-                    materialPurchaseStatusHelper.receiveAndSync(mp.getId(), operatorId, operatorName);
-                }
-                if (!pendingPurchases.isEmpty()) {
-                    log.info("采购领取同步完成: orderId={}, 更新{}条", order.getId(), pendingPurchases.size());
-                }
-            } catch (Exception e) {
-                log.error("采购领取同步MaterialPurchase失败(不阻断扫码): orderId={}", order.getId(), e);
-            }
-        }
+        // ★ 采购阶段：不再自动批量领取全部采购任务
+        // 旧逻辑会将该订单下所有 pending 采购任务自动分配给扫码工人，
+        // 导致"下单后面辅料采购自动领取"的 Bug — 正确流程是由工人手动领取各自的采购任务
+        // 保留附加面料清单逻辑（见下方 attachMaterialPurchaseList）
 
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);

@@ -129,8 +129,7 @@ public class OrderShareController {
             if (contentType != null && !contentType.isBlank()) {
                 try {
                     mediaType = MediaType.parseMediaType(contentType);
-                } catch (Exception ignored) {
-                }
+                } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
             }
             return ResponseEntity.ok()
                     .contentType(mediaType)

@@ -819,26 +819,32 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
     public boolean confirmReturnPurchase(String purchaseId, String confirmerId, String confirmerName,
             Integer returnQuantity) {
         if (!StringUtils.hasText(purchaseId)) {
+            log.warn("confirmReturnPurchase: purchaseId为空");
             return false;
         }
         MaterialPurchase existed = this.getById(purchaseId);
         if (existed == null) {
+            log.warn("confirmReturnPurchase: 采购记录不存在, purchaseId={}", purchaseId);
             return false;
         }
         if (existed.getDeleteFlag() != null && existed.getDeleteFlag() != 0) {
+            log.warn("confirmReturnPurchase: 记录已删除, purchaseId={}", purchaseId);
             return false;
         }
 
         String status = existed.getStatus() == null ? "" : existed.getStatus().trim();
         if (MaterialConstants.STATUS_CANCELLED.equals(status)) {
+            log.warn("confirmReturnPurchase: 采购已取消, purchaseId={}", purchaseId);
             return false;
         }
 
         if (returnQuantity == null) {
+            log.warn("confirmReturnPurchase: returnQuantity为null, purchaseId={}", purchaseId);
             return false;
         }
         int rq = returnQuantity;
         if (rq < 0) {
+            log.warn("confirmReturnPurchase: returnQuantity为负数, purchaseId={}, rq={}", purchaseId, rq);
             return false;
         }
         int purchaseQty = existed.getPurchaseQuantity() == null ? 0 : existed.getPurchaseQuantity().intValue();
@@ -846,6 +852,8 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         int max = arrivedQty > 0 ? arrivedQty : purchaseQty;
         // 数量 ≤ 10 的面料/辅料（按米/克计量），不限制回料数量上限，与 Orchestrator 保持一致
         if (max > 10 && rq > max) {
+            log.warn("confirmReturnPurchase: 回料数量超限, purchaseId={}, rq={}, max={}, arrivedQty={}, purchaseQty={}",
+                    purchaseId, rq, max, arrivedQty, purchaseQty);
             return false;
         }
 
@@ -866,8 +874,11 @@ public class MaterialPurchaseServiceImpl extends ServiceImpl<MaterialPurchaseMap
         BigDecimal unitPrice = existed.getUnitPrice() == null ? BigDecimal.ZERO : existed.getUnitPrice();
         patch.setTotalAmount(unitPrice.multiply(BigDecimal.valueOf(rq)));
 
-        int pq = existed.getPurchaseQuantity() == null ? 0 : existed.getPurchaseQuantity().intValue();
-        patch.setStatus(MaterialPurchaseHelper.resolveStatusByArrived(status, rq, pq));
+        // 回料确认后采购流程完结 → 直接设为 COMPLETED
+        // 旧逻辑 resolveStatusByArrived 返回 awaiting_confirm（语义矛盾：回料已确认却仍"等待确认"）
+        // 导致下游裁剪物料就绪检查失败，以及状态显示不正确
+        String newStatus = rq > 0 ? MaterialConstants.STATUS_COMPLETED : status;
+        patch.setStatus(newStatus);
 
         patch.setReturnConfirmerId(StringUtils.hasText(confirmerId) ? confirmerId.trim() : null);
         patch.setReturnConfirmerName(StringUtils.hasText(confirmerName) ? confirmerName.trim() : who);

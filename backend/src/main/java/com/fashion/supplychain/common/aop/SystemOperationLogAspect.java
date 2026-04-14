@@ -26,7 +26,9 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.servlet.HandlerMapping;
 import javax.servlet.http.HttpServletRequest;
 import javax.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Aspect
 @Component
 public class SystemOperationLogAspect {
@@ -227,7 +229,7 @@ public class SystemOperationLogAspect {
                 if (v != null) return v;
             }
             return styleNo;
-        } catch (Exception ignored) {}
+        } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
         return null;
     }
 
@@ -249,8 +251,8 @@ public class SystemOperationLogAspect {
                 v = ((Map<?,?>) arg).get("reason");
                 if (v != null) return String.valueOf(v);
             } else if (!(arg instanceof String) && !(arg instanceof Number)) {
-                try { Object v = arg.getClass().getMethod("getRemark").invoke(arg); if (v != null) return String.valueOf(v); } catch (Exception ignored) {}
-                try { Object v = arg.getClass().getMethod("getReason").invoke(arg); if (v != null) return String.valueOf(v); } catch (Exception ignored) {}
+                try { Object v = arg.getClass().getMethod("getRemark").invoke(arg); if (v != null) return String.valueOf(v); } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
+                try { Object v = arg.getClass().getMethod("getReason").invoke(arg); if (v != null) return String.valueOf(v); } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
             }
         }
         return null;
@@ -552,7 +554,7 @@ public class SystemOperationLogAspect {
             try {
                 Object id = pickIdByGetter(a);
                 if (id != null) return String.valueOf(id);
-            } catch (Exception ignored) {}
+            } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
         }
         return null;
     }
@@ -716,7 +718,7 @@ public class SystemOperationLogAspect {
                     String s = String.valueOf(id).trim();
                     if (!s.isEmpty()) return s;
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
         }
         // 3. 从 Map 参数中取 id 字段
         for (Object a : args) {

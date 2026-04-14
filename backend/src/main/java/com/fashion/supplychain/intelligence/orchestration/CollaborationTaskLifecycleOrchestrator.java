@@ -12,10 +12,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+@Slf4j
 @Service
 public class CollaborationTaskLifecycleOrchestrator {
 
@@ -189,8 +191,7 @@ public class CollaborationTaskLifecycleOrchestrator {
     private void save(String key, TaskState state) {
         try {
             redisService.set(key, MAPPER.writeValueAsString(state), 7, TimeUnit.DAYS);
-        } catch (Exception ignored) {
-        }
+        } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
     }
 
     private void addToIndex(String taskKey) {
@@ -202,8 +203,7 @@ public class CollaborationTaskLifecycleOrchestrator {
                 keys = new ArrayList<>(keys.subList(0, 200));
             }
             redisService.set(resolveIndexKey(), MAPPER.writeValueAsString(keys), 7, TimeUnit.DAYS);
-        } catch (Exception ignored) {
-        }
+        } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
     }
 
     private TaskState load(String key) {

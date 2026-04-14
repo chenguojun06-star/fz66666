@@ -142,7 +142,7 @@ public class PayrollAnomalyDetectorTool implements AgentTool {
             JsonNode args = OM.readTree(json);
             String p = args.path("period").asText("").trim();
             if (!p.isEmpty() && p.matches("\\d{4}-\\d{2}")) return p;
-        } catch (Exception ignored) {}
+        } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
         return LocalDate.now().format(YM);
     }
 

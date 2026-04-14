@@ -7,6 +7,7 @@ import XiaoyunPageLoader from './components/common/XiaoyunPageLoader';
 import { useAuth } from './utils/AuthContext';
 import ResizableModal from './components/common/ResizableModal';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import RouteErrorBoundary from './components/common/RouteErrorBoundary';
 import { paths } from './routeConfig';
 import { useViewport } from './utils/useViewport';
 import WebSocketNotification from './components/common/WebSocketNotification';
@@ -192,83 +193,87 @@ const AppRoutes: React.FC = () => {
         <Route path="/register" element={<Register />} />
 
         <Route element={<PrivateRoute />}>
-          <Route path={paths.dashboard} element={<Suspense fallback={routeFallback}><Dashboard /></Suspense>} />
-          <Route path={paths.styleInfoList} element={<Suspense fallback={routeFallback}><StyleInfoList /></Suspense>} />
-          <Route path="/style-info/new" element={<Suspense fallback={routeFallback}><StyleInfo /></Suspense>} />
-          <Route path={paths.styleInfoDetail} element={<Suspense fallback={routeFallback}><StyleInfo /></Suspense>} />
-          <Route path={paths.productionList} element={<Suspense fallback={routeFallback}><ProductionList /></Suspense>} />
-          <Route path={paths.cutting} element={<Suspense fallback={routeFallback}><CuttingManagement /></Suspense>} />
-          <Route path={paths.cuttingTask} element={<Suspense fallback={routeFallback}><CuttingManagement /></Suspense>} />
-          <Route path={paths.materialPurchase} element={<Suspense fallback={routeFallback}><MaterialPurchase /></Suspense>} />
-          <Route path={paths.materialPurchaseDetail} element={<Suspense fallback={routeFallback}><MaterialPurchaseDetail /></Suspense>} />
-          <Route path={paths.warehousing} element={<Suspense fallback={routeFallback}><ProductWarehousing /></Suspense>} />
-          <Route path={paths.warehousingInspect} element={<Suspense fallback={routeFallback}><InspectionDetail /></Suspense>} />
-          <Route path={paths.materialPicking} element={<Suspense fallback={routeFallback}><MaterialPicking /></Suspense>} />
-          <Route path={paths.warehousingDetail} element={<Suspense fallback={routeFallback}><ProductWarehousing /></Suspense>} />
-          <Route path={paths.orderTransfer} element={<Suspense fallback={routeFallback}><OrderTransfer /></Suspense>} />
+          <Route path={paths.dashboard} element={<RouteErrorBoundary pageName="仪表盘"><Suspense fallback={routeFallback}><Dashboard /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.styleInfoList} element={<RouteErrorBoundary pageName="款号列表"><Suspense fallback={routeFallback}><StyleInfoList /></Suspense></RouteErrorBoundary>} />
+          <Route path="/style-info/new" element={<RouteErrorBoundary pageName="新建款号"><Suspense fallback={routeFallback}><StyleInfo /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.styleInfoDetail} element={<RouteErrorBoundary pageName="款号详情"><Suspense fallback={routeFallback}><StyleInfo /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.productionList} element={<RouteErrorBoundary pageName="生产订单"><Suspense fallback={routeFallback}><ProductionList /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.cutting} element={<RouteErrorBoundary pageName="裁床管理"><Suspense fallback={routeFallback}><CuttingManagement /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.cuttingTask} element={<RouteErrorBoundary pageName="裁床任务"><Suspense fallback={routeFallback}><CuttingManagement /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.materialPurchase} element={<RouteErrorBoundary pageName="面辅料采购"><Suspense fallback={routeFallback}><MaterialPurchase /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.materialPurchaseDetail} element={<RouteErrorBoundary pageName="采购详情"><Suspense fallback={routeFallback}><MaterialPurchaseDetail /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.warehousing} element={<RouteErrorBoundary pageName="成品入库"><Suspense fallback={routeFallback}><ProductWarehousing /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.warehousingInspect} element={<RouteErrorBoundary pageName="质检详情"><Suspense fallback={routeFallback}><InspectionDetail /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.materialPicking} element={<RouteErrorBoundary pageName="领料出库"><Suspense fallback={routeFallback}><MaterialPicking /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.warehousingDetail} element={<RouteErrorBoundary pageName="入库详情"><Suspense fallback={routeFallback}><ProductWarehousing /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.orderTransfer} element={<RouteErrorBoundary pageName="订单转交"><Suspense fallback={routeFallback}><OrderTransfer /></Suspense></RouteErrorBoundary>} />
           <Route
             path={paths.progressDetail}
             element={
-              <Suspense fallback={routeFallback}>
-                <ProgressDetail />
-              </Suspense>
+              <RouteErrorBoundary pageName="工序跟进">
+                <Suspense fallback={routeFallback}>
+                  <ProgressDetail />
+                </Suspense>
+              </RouteErrorBoundary>
             }
           />
           <Route
             path={paths.externalFactory}
             element={
-              <Suspense fallback={routeFallback}>
-                <ExternalFactory />
-              </Suspense>
+              <RouteErrorBoundary pageName="外发工厂">
+                <Suspense fallback={routeFallback}>
+                  <ExternalFactory />
+                </Suspense>
+              </RouteErrorBoundary>
             }
           />
-          <Route path={paths.materialPurchaseDetail} element={<Suspense fallback={routeFallback}><MaterialPurchaseDetail /></Suspense>} />
-          <Route path={paths.orderFlow} element={<Suspense fallback={routeFallback}><OrderFlow /></Suspense>} />
-          <Route path={paths.materialReconciliation} element={<Suspense fallback={routeFallback}><MaterialReconciliation /></Suspense>} />
-          <Route path={paths.payrollOperatorSummary} element={<Suspense fallback={routeFallback}><PayrollOperatorSummary /></Suspense>} />
-          <Route path={paths.financeCenter} element={<Suspense fallback={routeFallback}><FinanceCenter /></Suspense>} />
-          <Route path={paths.expenseReimbursement} element={<Suspense fallback={routeFallback}><ExpenseReimbursement /></Suspense>} />
-          <Route path={paths.wagePayment} element={<Suspense fallback={routeFallback}><WagePayment /></Suspense>} />
-          <Route path={paths.ecSalesRevenue} element={<Suspense fallback={routeFallback}><EcSalesRevenue /></Suspense>} />
-          <Route path={paths.financeTaxExport} element={<Suspense fallback={routeFallback}><TaxExport /></Suspense>} />
-          <Route path={paths.crm} element={<Suspense fallback={routeFallback}><CrmDashboard /></Suspense>} />
-          <Route path={paths.crmReceivables} element={<Suspense fallback={routeFallback}><ReceivableList /></Suspense>} />
-          <Route path={paths.selectionBatch} element={<SelectionCenter />} />
+          <Route path={paths.materialPurchaseDetail} element={<RouteErrorBoundary pageName="采购详情"><Suspense fallback={routeFallback}><MaterialPurchaseDetail /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.orderFlow} element={<RouteErrorBoundary pageName="订单流程"><Suspense fallback={routeFallback}><OrderFlow /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.materialReconciliation} element={<RouteErrorBoundary pageName="物料对账"><Suspense fallback={routeFallback}><MaterialReconciliation /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.payrollOperatorSummary} element={<RouteErrorBoundary pageName="工资汇总"><Suspense fallback={routeFallback}><PayrollOperatorSummary /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.financeCenter} element={<RouteErrorBoundary pageName="财务中心"><Suspense fallback={routeFallback}><FinanceCenter /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.expenseReimbursement} element={<RouteErrorBoundary pageName="报销管理"><Suspense fallback={routeFallback}><ExpenseReimbursement /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.wagePayment} element={<RouteErrorBoundary pageName="工资发放"><Suspense fallback={routeFallback}><WagePayment /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.ecSalesRevenue} element={<RouteErrorBoundary pageName="电商销售"><Suspense fallback={routeFallback}><EcSalesRevenue /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.financeTaxExport} element={<RouteErrorBoundary pageName="税务导出"><Suspense fallback={routeFallback}><TaxExport /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.crm} element={<RouteErrorBoundary pageName="CRM"><Suspense fallback={routeFallback}><CrmDashboard /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.crmReceivables} element={<RouteErrorBoundary pageName="应收管理"><Suspense fallback={routeFallback}><ReceivableList /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.selectionBatch} element={<RouteErrorBoundary pageName="选品中心"><SelectionCenter /></RouteErrorBoundary>} />
 
-          <Route path={paths.materialInventory} element={<Suspense fallback={routeFallback}><MaterialInventory /></Suspense>} />
-          <Route path={paths.materialDatabase} element={<Suspense fallback={routeFallback}><MaterialDatabase /></Suspense>} />
-          <Route path={paths.finishedInventory} element={<Suspense fallback={routeFallback}><FinishedInventory /></Suspense>} />
-          <Route path={paths.sampleInventory} element={<Suspense fallback={routeFallback}><SampleInventory /></Suspense>} />
-          <Route path={paths.ecommerceOrders} element={<Suspense fallback={routeFallback}><EcommerceOrders /></Suspense>} />
+          <Route path={paths.materialInventory} element={<RouteErrorBoundary pageName="物料库存"><Suspense fallback={routeFallback}><MaterialInventory /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.materialDatabase} element={<RouteErrorBoundary pageName="物料库"><Suspense fallback={routeFallback}><MaterialDatabase /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.finishedInventory} element={<RouteErrorBoundary pageName="成品库存"><Suspense fallback={routeFallback}><FinishedInventory /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.sampleInventory} element={<RouteErrorBoundary pageName="样衣库存"><Suspense fallback={routeFallback}><SampleInventory /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.ecommerceOrders} element={<RouteErrorBoundary pageName="电商订单"><Suspense fallback={routeFallback}><EcommerceOrders /></Suspense></RouteErrorBoundary>} />
 
-          <Route path={paths.user} element={<Suspense fallback={routeFallback}><UserList /></Suspense>} />
-          <Route path={paths.dict} element={<Suspense fallback={routeFallback}><DictManage /></Suspense>} />
-          <Route path={paths.tutorial} element={<Suspense fallback={routeFallback}><Tutorial /></Suspense>} />
-          <Route path={paths.userApproval} element={<Suspense fallback={routeFallback}><UserApproval /></Suspense>} />
-          <Route path={paths.role} element={<Suspense fallback={routeFallback}><RoleList /></Suspense>} />
-          <Route path={paths.organization} element={<Suspense fallback={routeFallback}><OrganizationTree /></Suspense>} />
-          <Route path={paths.productionPartners} element={<Suspense fallback={routeFallback}><FactoryList /></Suspense>} />
-          <Route path={paths.factory} element={<Suspense fallback={routeFallback}><FactoryList /></Suspense>} />
-          <Route path={paths.factoryWorkers} element={<Suspense fallback={routeFallback}><FactoryWorkerList /></Suspense>} />
-          <Route path={paths.loginLog} element={<Suspense fallback={routeFallback}><LoginLogList /></Suspense>} />
-          <Route path={paths.systemLogs} element={<Suspense fallback={routeFallback}><SystemLogs /></Suspense>} />
-          <Route path={paths.profile} element={<Suspense fallback={routeFallback}><Profile /></Suspense>} />
-          <Route path={paths.tenantManagement} element={<Suspense fallback={routeFallback}><TenantManagement /></Suspense>} />
-          <Route path={paths.customerManagement} element={<Suspense fallback={routeFallback}><CustomerManagement /></Suspense>} />
-          <Route path={paths.systemIssues} element={<Suspense fallback={routeFallback}><SystemIssueBoard /></Suspense>} />
-          <Route path={paths.orphanData} element={<Suspense fallback={routeFallback}><OrphanDataPage /></Suspense>} />
-          <Route path={paths.appStore} element={<Suspense fallback={routeFallback}><AppStore /></Suspense>} />
-          <Route path={paths.dataImport} element={<Suspense fallback={routeFallback}><DataImport /></Suspense>} />
-          <Route path={paths.integrationCenter} element={<Suspense fallback={routeFallback}><IntegrationCenter /></Suspense>} />
-          <Route path={paths.cockpit} element={<Suspense fallback={routeFallback}><CockpitPage /></Suspense>} />
-          <Route path={paths.cockpitTrace} element={<Suspense fallback={routeFallback}><AiAgentTraceCenter /></Suspense>} />
-          <Route path={paths.intelligenceCenter} element={<Suspense fallback={routeFallback}><IntelligenceCenter /></Suspense>} />
+          <Route path={paths.user} element={<RouteErrorBoundary pageName="用户管理"><Suspense fallback={routeFallback}><UserList /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.dict} element={<RouteErrorBoundary pageName="字典管理"><Suspense fallback={routeFallback}><DictManage /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.tutorial} element={<RouteErrorBoundary pageName="教程"><Suspense fallback={routeFallback}><Tutorial /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.userApproval} element={<RouteErrorBoundary pageName="用户审批"><Suspense fallback={routeFallback}><UserApproval /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.role} element={<RouteErrorBoundary pageName="角色管理"><Suspense fallback={routeFallback}><RoleList /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.organization} element={<RouteErrorBoundary pageName="组织架构"><Suspense fallback={routeFallback}><OrganizationTree /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.productionPartners} element={<RouteErrorBoundary pageName="生产伙伴"><Suspense fallback={routeFallback}><FactoryList /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.factory} element={<RouteErrorBoundary pageName="工厂管理"><Suspense fallback={routeFallback}><FactoryList /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.factoryWorkers} element={<RouteErrorBoundary pageName="工厂员工"><Suspense fallback={routeFallback}><FactoryWorkerList /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.loginLog} element={<RouteErrorBoundary pageName="登录日志"><Suspense fallback={routeFallback}><LoginLogList /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.systemLogs} element={<RouteErrorBoundary pageName="系统日志"><Suspense fallback={routeFallback}><SystemLogs /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.profile} element={<RouteErrorBoundary pageName="个人设置"><Suspense fallback={routeFallback}><Profile /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.tenantManagement} element={<RouteErrorBoundary pageName="租户管理"><Suspense fallback={routeFallback}><TenantManagement /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.customerManagement} element={<RouteErrorBoundary pageName="客户管理"><Suspense fallback={routeFallback}><CustomerManagement /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.systemIssues} element={<RouteErrorBoundary pageName="问题反馈"><Suspense fallback={routeFallback}><SystemIssueBoard /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.orphanData} element={<RouteErrorBoundary pageName="孤儿数据"><Suspense fallback={routeFallback}><OrphanDataPage /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.appStore} element={<RouteErrorBoundary pageName="应用商店"><Suspense fallback={routeFallback}><AppStore /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.dataImport} element={<RouteErrorBoundary pageName="数据导入"><Suspense fallback={routeFallback}><DataImport /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.integrationCenter} element={<RouteErrorBoundary pageName="集成中心"><Suspense fallback={routeFallback}><IntegrationCenter /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.cockpit} element={<RouteErrorBoundary pageName="智能驾驶舱"><Suspense fallback={routeFallback}><CockpitPage /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.cockpitTrace} element={<RouteErrorBoundary pageName="执行轨迹"><Suspense fallback={routeFallback}><AiAgentTraceCenter /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.intelligenceCenter} element={<RouteErrorBoundary pageName="智能中心"><Suspense fallback={routeFallback}><IntelligenceCenter /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.aiAgentTraceCenter} element={<Navigate to={paths.cockpitTrace} replace />} />
-          <Route path={paths.orderManagementList} element={<Suspense fallback={routeFallback}><OrderManagement /></Suspense>} />
-          <Route path={paths.dataCenter} element={<Suspense fallback={routeFallback}><DataCenter /></Suspense>} />
-          <Route path={paths.templateCenter} element={<Suspense fallback={routeFallback}><TemplateCenter /></Suspense>} />
-          <Route path={paths.maintenanceCenter} element={<Suspense fallback={routeFallback}><MaintenanceCenter /></Suspense>} />
-          <Route path={paths.patternRevision} element={<Suspense fallback={routeFallback}><PatternRevisionManagement /></Suspense>} />
+          <Route path={paths.orderManagementList} element={<RouteErrorBoundary pageName="订单管理"><Suspense fallback={routeFallback}><OrderManagement /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.dataCenter} element={<RouteErrorBoundary pageName="数据中心"><Suspense fallback={routeFallback}><DataCenter /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.templateCenter} element={<RouteErrorBoundary pageName="模板中心"><Suspense fallback={routeFallback}><TemplateCenter /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.maintenanceCenter} element={<RouteErrorBoundary pageName="维护中心"><Suspense fallback={routeFallback}><MaintenanceCenter /></Suspense></RouteErrorBoundary>} />
+          <Route path={paths.patternRevision} element={<RouteErrorBoundary pageName="纸样修改"><Suspense fallback={routeFallback}><PatternRevisionManagement /></Suspense></RouteErrorBoundary>} />
         </Route>
         {/* 客户订单分享页（无需登录） */}
         <Route path="/share/:token" element={<Suspense fallback={routeFallback}><ShareOrderPage /></Suspense>} />

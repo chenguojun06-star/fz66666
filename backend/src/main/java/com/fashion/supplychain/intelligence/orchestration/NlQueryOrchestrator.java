@@ -64,7 +64,7 @@ public class NlQueryOrchestrator {
 
         try {
             learningTracker.recordQuery(question, resp.getIntent(), resp.getConfidence());
-        } catch (Exception ignore) { }
+        } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
 
         if (commandId != null) {
             try {

@@ -138,8 +138,7 @@ public class ProductionOrderOrchestratorHelper {
             if (list != null) {
                 return list;
             }
-        } catch (Exception ignore) {
-        }
+        } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
         try {
             Map<String, Object> obj = objectMapper.readValue(details, new TypeReference<Map<String, Object>>() {
             });
@@ -152,8 +151,7 @@ public class ProductionOrderOrchestratorHelper {
                 List<Map<String, Object>> cast = (List<Map<String, Object>>) lines;
                 return cast;
             }
-        } catch (Exception ignore) {
-        }
+        } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
         return List.of();
     }
 

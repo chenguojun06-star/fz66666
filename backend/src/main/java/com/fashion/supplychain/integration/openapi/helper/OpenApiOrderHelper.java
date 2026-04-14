@@ -233,7 +233,7 @@ public class OpenApiOrderHelper {
             if (request.get("expectedShipDate") != null) {
                 try {
                     order.setExpectedShipDate(LocalDate.parse((String) request.get("expectedShipDate")));
-                } catch (Exception ignored) { }
+                } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
             }
 
             // 设置计划开工/完工日期
@@ -241,12 +241,12 @@ public class OpenApiOrderHelper {
             if (request.get("plannedStartDate") != null) {
                 try {
                     order.setPlannedStartDate(LocalDate.parse((String) request.get("plannedStartDate"), dateFormatter).atStartOfDay());
-                } catch (Exception ignored) { }
+                } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
             }
             if (request.get("plannedEndDate") != null) {
                 try {
                     order.setPlannedEndDate(LocalDate.parse((String) request.get("plannedEndDate"), dateFormatter).atTime(23, 59, 59));
-                } catch (Exception ignored) { }
+                } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
             }
 
             // ===== 构建工序单价 progressWorkflowJson =====
@@ -311,7 +311,7 @@ public class OpenApiOrderHelper {
                     @SuppressWarnings("unchecked")
                     List<Map<String, Object>> nodes = (List<Map<String, Object>>) wf.get("nodes");
                     if (nodes != null) processInfo = nodes;
-                } catch (Exception ignored) { }
+                } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
             }
 
             // 构建返回

@@ -446,8 +446,7 @@ public class PermissionCalculationEngine {
             if (stringRedisTemplate != null) {
                 stringRedisTemplate.delete(key);
             }
-        } catch (Exception ignored) {
-        }
+        } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
     }
 
     private void writeCache(String key, List<?> value, String cacheName) {

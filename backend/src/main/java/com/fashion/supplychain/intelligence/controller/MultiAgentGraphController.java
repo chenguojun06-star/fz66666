@@ -68,7 +68,7 @@ public class MultiAgentGraphController {
                 graphOrchestrator.runGraphStreaming(req, emitter);
             } catch (Exception e) {
                 log.error("[Graph-SSE] 流式执行异常: {}", e.getMessage(), e);
-                try { emitter.complete(); } catch (Exception ignored) {}
+                try { emitter.complete(); } catch (Exception ex) { log.debug("Non-critical error: {}", ex.getMessage()); }
             } finally {
                 UserContext.clear();
             }

@@ -333,7 +333,7 @@ public class ProductionOrderOrchestrator {
                 opLog.setTargetName(result.getOrderNo());
                 opLog.setReason(remark);
                 opLog.setOperatorName(UserContext.username());
-                try { String uid = UserContext.userId(); if (uid != null) opLog.setOperatorId(Long.parseLong(uid)); } catch (Exception ignored) {}
+                try { String uid = UserContext.userId(); if (uid != null) opLog.setOperatorId(Long.parseLong(uid)); } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
                 opLog.setTenantId(UserContext.tenantId());
                 opLog.setOperationTime(LocalDateTime.now());
                 opLog.setStatus("success");

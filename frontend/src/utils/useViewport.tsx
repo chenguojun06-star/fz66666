@@ -3,11 +3,12 @@ import { useEffect, useMemo, useState } from 'react';
 type ViewportOptions = {
   mobileMax?: number;
   tabletMax?: number;
+  largeMax?: number;
   ssrWidth?: number;
 };
 
 export const useViewport = (options: ViewportOptions = {}) => {
-  const { mobileMax = 768, tabletMax = 1024, ssrWidth = 1200 } = options;
+  const { mobileMax = 768, tabletMax = 1024, largeMax = 2560, ssrWidth = 1200 } = options;
   const [width, setWidth] = useState<number>(() => (typeof window === 'undefined' ? ssrWidth : window.innerWidth));
 
   useEffect(() => {
@@ -17,13 +18,14 @@ export const useViewport = (options: ViewportOptions = {}) => {
     return () => window.removeEventListener('resize', onResize);
   }, []);
 
-  const { isMobile, isTablet, modalWidth, tableScrollY } = useMemo(() => {
+  const { isMobile, isTablet, is4K, modalWidth, tableScrollY } = useMemo(() => {
     const mobile = width < mobileMax;
     const tablet = width >= mobileMax && width < tabletMax;
-    const modal = mobile ? '96vw' : tablet ? '60vw' : '60vw';
-    const scrollY = mobile ? 260 : 420;
-    return { isMobile: mobile, isTablet: tablet, modalWidth: modal, tableScrollY: scrollY };
-  }, [mobileMax, tabletMax, width]);
+    const is4KScreen = width >= largeMax;
+    const modal = mobile ? '96vw' : is4KScreen ? '50vw' : '60vw';
+    const scrollY = mobile ? 260 : is4KScreen ? 600 : 420;
+    return { isMobile: mobile, isTablet: tablet, is4K: is4KScreen, modalWidth: modal, tableScrollY: scrollY };
+  }, [mobileMax, tabletMax, largeMax, width]);
 
-  return { width, isMobile, isTablet, modalWidth, tableScrollY };
+  return { width, isMobile, isTablet, is4K, modalWidth, tableScrollY };
 };

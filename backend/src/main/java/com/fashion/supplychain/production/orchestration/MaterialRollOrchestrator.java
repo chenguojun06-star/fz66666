@@ -257,11 +257,7 @@ public class MaterialRollOrchestrator {
         if (stock != null) {
             int qty = roll.getQuantity().intValue();
             if (qty > 0) {
-                materialStockService.update(
-                        new LambdaUpdateWrapper<MaterialStock>()
-                                .eq(MaterialStock::getId, stock.getId())
-                                .setSql("quantity = quantity + " + qty)
-                );
+                materialStockService.updateStockQuantity(stock.getId(), qty);
                 log.info("退料归还面辅料库存: stockId={}, materialCode={}, qty={}",
                         stock.getId(), roll.getMaterialCode(), qty);
             }

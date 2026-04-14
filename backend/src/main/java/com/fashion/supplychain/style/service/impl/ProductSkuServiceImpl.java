@@ -76,11 +76,9 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
         if (!StringUtils.hasText(skuCode)) {
             return;
         }
-        // 原子更新：单条 SQL 防止并发丢失更新
-        boolean updated = this.update(null, new LambdaUpdateWrapper<ProductSku>()
-                .eq(ProductSku::getSkuCode, skuCode)
-                .setSql("stock_quantity = GREATEST(COALESCE(stock_quantity, 0) + (" + quantity + "), 0)"));
-        if (updated) {
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        int rows = baseMapper.updateStockBySkuCode(skuCode, quantity, tenantId);
+        if (rows > 0) {
             log.info("Atomically updated stock for SKU {}: delta={}", skuCode, quantity);
             return;
         }
@@ -122,6 +120,29 @@ public class ProductSkuServiceImpl extends ServiceImpl<ProductSkuMapper, Product
             } else {
                 log.warn("SKU not found for stock update: {}", skuCode);
             }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateStockById(Long id, int delta) {
+        if (delta == 0 || id == null) {
+            return;
+        }
+        int rows = baseMapper.updateStockById(id, delta, com.fashion.supplychain.common.UserContext.tenantId());
+        if (rows == 0) {
+            throw new IllegalStateException("SKU库存更新失败: id=" + id);
+        }
+        log.info("Updated SKU stock by id: id={}, delta={}", id, delta);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean decreaseStockBySkuCode(String skuCode, int delta) {
+        if (delta <= 0 || !StringUtils.hasText(skuCode)) {
+            return false;
+        }
+        int rows = baseMapper.decreaseStockBySkuCode(skuCode, delta, com.fashion.supplychain.common.UserContext.tenantId());
+        return rows > 0;
     }
 
     private void createOrUpdateSku(StyleInfo style, String color, String size) {

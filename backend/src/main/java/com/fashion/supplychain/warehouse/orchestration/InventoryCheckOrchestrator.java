@@ -254,26 +254,18 @@ public class InventoryCheckOrchestrator {
         Long tenantId = UserContext.tenantId();
         for (InventoryCheckItem item : items) {
             if (item.getDiffQuantity() == null || item.getDiffQuantity() == 0) continue;
-            try {
-                if ("MATERIAL".equals(check.getCheckType()) && StringUtils.hasText(item.getStockId())) {
-                    int delta = item.getDiffQuantity();
-                    materialStockService.update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<MaterialStock>()
-                            .eq(MaterialStock::getId, item.getStockId())
-                            .eq(tenantId != null, MaterialStock::getTenantId, tenantId)
-                            .setSql("quantity = GREATEST(0, quantity + " + delta + ")")
-                            .set(MaterialStock::getUpdateTime, LocalDateTime.now()));
-                    log.info("盘点调整物料库存: stockId={}, delta={}", item.getStockId(), delta);
-                } else if ("FINISHED".equals(check.getCheckType()) && StringUtils.hasText(item.getStockId())) {
-                    int delta = item.getDiffQuantity();
-                    productSkuService.update(null, new com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper<ProductSku>()
-                            .eq(ProductSku::getId, item.getStockId())
-                            .eq(tenantId != null, ProductSku::getTenantId, tenantId)
-                            .setSql("stock_quantity = GREATEST(0, stock_quantity + " + delta + ")")
-                            .set(ProductSku::getUpdateTime, LocalDateTime.now()));
-                    log.info("盘点调整成品库存: skuId={}, delta={}", item.getStockId(), delta);
+            if ("MATERIAL".equals(check.getCheckType()) && StringUtils.hasText(item.getStockId())) {
+                int delta = item.getDiffQuantity();
+                int rows = ((com.fashion.supplychain.production.mapper.MaterialStockMapper) materialStockService.getBaseMapper()).updateStockQuantity(
+                        item.getStockId(), delta, tenantId);
+                if (rows == 0) {
+                    throw new IllegalStateException("盘点调整物料库存失败: stockId=" + item.getStockId());
                 }
-            } catch (Exception e) {
-                log.warn("盘点库存调整失败: itemId={}, err={}", item.getId(), e.getMessage());
+                log.info("盘点调整物料库存: stockId={}, delta={}", item.getStockId(), delta);
+            } else if ("FINISHED".equals(check.getCheckType()) && StringUtils.hasText(item.getStockId())) {
+                int delta = item.getDiffQuantity();
+                productSkuService.updateStockById(Long.valueOf(item.getStockId()), delta);
+                log.info("盘点调整成品库存: skuId={}, delta={}", item.getStockId(), delta);
             }
         }
     }

@@ -721,10 +721,7 @@ public class MaterialPurchasePickingHelper {
         for (MaterialPickingItem item : items) {
             if (item.getMaterialStockId() != null) {
                 if (wasCompleted) {
-                    materialStockService.update(null, new LambdaUpdateWrapper<com.fashion.supplychain.production.entity.MaterialStock>()
-                            .eq(com.fashion.supplychain.production.entity.MaterialStock::getId, item.getMaterialStockId())
-                            .setSql("quantity = quantity + " + item.getQuantity())
-                            .set(com.fashion.supplychain.production.entity.MaterialStock::getUpdateTime, LocalDateTime.now()));
+                    materialStockService.updateStockQuantity(item.getMaterialStockId(), item.getQuantity());
                 } else {
                     materialStockService.unlockStock(item.getMaterialStockId(), item.getQuantity());
                 }

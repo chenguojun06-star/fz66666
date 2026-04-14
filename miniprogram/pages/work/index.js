@@ -143,8 +143,9 @@ Page({
         scrollToIndex: index,
       });
 
-      setTimeout(() => {
+      this._highlightTimer = setTimeout(() => {
         this.setData({ highlightOrderNo: '' });
+        this._highlightTimer = null;
       }, 3000);
     }
   },
@@ -323,13 +324,13 @@ Page({
 
 
   onHide() {
-    // 页面隐藏时停止同步（节省资源）
     syncManager.stopSync('work_orders');
+    if (this._highlightTimer) { clearTimeout(this._highlightTimer); this._highlightTimer = null; }
   },
 
   onUnload() {
-    // 页面卸载时清理所有资源
     syncManager.stopSync('work_orders');
+    if (this._highlightTimer) { clearTimeout(this._highlightTimer); this._highlightTimer = null; }
 
     // 清理数据刷新监听
     if (this._unsubscribeRefresh) {

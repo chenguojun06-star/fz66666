@@ -548,10 +548,7 @@ public class FinishedInventoryOrchestrator {
             if (sku == null) {
                 throw new IllegalArgumentException("SKU不存在: " + skuCode);
             }
-            boolean updated = productSkuService.update(null, new LambdaUpdateWrapper<ProductSku>()
-                    .eq(ProductSku::getSkuCode, skuCode)
-                    .ge(ProductSku::getStockQuantity, quantity)
-                    .setSql("stock_quantity = stock_quantity - " + quantity));
+            boolean updated = productSkuService.decreaseStockBySkuCode(skuCode, quantity);
             if (!updated) {
                 int current = sku.getStockQuantity() != null ? sku.getStockQuantity() : 0;
                 throw new IllegalArgumentException(

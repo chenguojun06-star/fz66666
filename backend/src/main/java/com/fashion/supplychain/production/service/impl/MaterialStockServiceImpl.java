@@ -468,11 +468,7 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
             log.warn("decreaseStockForCancelReceive: 库存记录不存在，跳过: materialCode={}", purchase.getMaterialCode());
             return;
         }
-        this.update(null, new LambdaUpdateWrapper<MaterialStock>()
-                .eq(MaterialStock::getId, stock.getId())
-                .setSql("quantity = GREATEST(0, quantity - " + quantity + ")")
-                .setSql("total_value = ROUND(GREATEST(0, quantity - " + quantity + ") * COALESCE(unit_price, 0), 2)")
-                .set(MaterialStock::getUpdateTime, java.time.LocalDateTime.now()));
+        this.updateStockQuantity(stock.getId(), -quantity);
         log.info("Decreased stock for cancelReceive: id={}, delta={}", stock.getId(), quantity);
     }
 
@@ -513,5 +509,18 @@ public class MaterialStockServiceImpl extends ServiceImpl<MaterialStockMapper, M
             throw new IllegalStateException("库存不足，扣减失败: " + name);
         }
         log.info("Decreased stock and unlocked: id={}, delta={}", stockId, quantity);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateStockQuantity(String stockId, int delta) {
+        if (delta == 0 || !StringUtils.hasText(stockId)) {
+            return;
+        }
+        int rows = baseMapper.updateStockQuantity(stockId, delta, com.fashion.supplychain.common.UserContext.tenantId());
+        if (rows == 0) {
+            throw new IllegalStateException("库存更新失败: stockId=" + stockId);
+        }
+        log.info("Updated stock quantity: id={}, delta={}", stockId, delta);
     }
 }

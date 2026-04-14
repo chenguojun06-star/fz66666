@@ -264,14 +264,14 @@ public class WeChatMiniProgramAuthOrchestrator {
 
     public void recordLoginAttempt(String username, String ip, String userAgent, String status, String message) {
         try {
-            LoginLog log = new LoginLog();
-            log.setLogType("LOGIN"); // 设置日志类型为登录
-            log.setUsername(safeTrim(username));
-            log.setIp(safeTrim(ip));
-            log.setLoginTime(LocalDateTime.now());
-            log.setLoginStatus(safeTrim(status));
-            log.setMessage(safeTrim(message));
-            log.setUserAgent(limitLength(safeTrim(userAgent), 200));
+            LoginLog loginLog = new LoginLog();
+            loginLog.setLogType("LOGIN"); // 设置日志类型为登录
+            loginLog.setUsername(safeTrim(username));
+            loginLog.setIp(safeTrim(ip));
+            loginLog.setLoginTime(LocalDateTime.now());
+            loginLog.setLoginStatus(safeTrim(status));
+            loginLog.setMessage(safeTrim(message));
+            loginLog.setUserAgent(limitLength(safeTrim(userAgent), 200));
             // 多租户隔离：尝试通过 UserContext 或用户名查找租户ID
             Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
             if (tenantId == null && username != null && !username.isBlank()) {
@@ -280,11 +280,11 @@ public class WeChatMiniProgramAuthOrchestrator {
                         new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<User>()
                             .eq(User::getUsername, safeTrim(username)).last("LIMIT 1"), false);
                     if (found != null) tenantId = found.getTenantId();
-                } catch (Exception ignored) { }
+                } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
             }
-            log.setTenantId(tenantId);
-            if (log.getUsername() != null && !log.getUsername().isBlank()) {
-                loginLogService.save(log);
+            loginLog.setTenantId(tenantId);
+            if (loginLog.getUsername() != null && !loginLog.getUsername().isBlank()) {
+                loginLogService.save(loginLog);
             }
         } catch (Exception e) {
             log.warn("Failed to record mini program login attempt: username={}, ip={}, status={}", username, ip,

@@ -776,7 +776,7 @@ const InspectionDetail: React.FC = () => {
                             { title: '尺码', dataIndex: 'size', key: 's', width: 60 },
                             { title: '单位', dataIndex: 'unit', key: 'u', width: 50 },
                             { title: '用量', dataIndex: 'usageAmount', key: 'ua', width: 60, render: (v: number) => v?.toFixed(2) },
-                            { title: '损耗率', dataIndex: 'lossRate', key: 'lr', width: 70, render: (v: number) => v ? `${(v * 100).toFixed(1)}%` : '-' },
+                            { title: '损耗率(%)', dataIndex: 'lossRate', key: 'lr', width: 70, render: (v: number) => v != null ? `${v.toFixed(1)}%` : '-' },
                           ]}
                         />
                       </div>

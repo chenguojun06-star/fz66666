@@ -179,7 +179,7 @@ const OrderFlow: React.FC = () => {
                 ...(data?.order?.styleId ? [
                   {
                     key: 'style-pattern',
-                    label: '纸样详情',
+                    label: '资料详情',
                     children: (
                       <StylePatternSimpleTab
                         styleId={data.order.styleId}

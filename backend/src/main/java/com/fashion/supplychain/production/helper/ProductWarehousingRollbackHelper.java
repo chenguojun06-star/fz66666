@@ -80,8 +80,7 @@ public class ProductWarehousingRollbackHelper {
                     color = b.getColor();
                     size = b.getSize();
                 }
-            } catch (Exception ignored) {
-            }
+            } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
         }
         // ⚠️ 不再使用 order.getColor()/getSize() 兜底：多码订单的 order.size 是单值字段，
         // 用于多码情景会写入错误的 SKU 条目

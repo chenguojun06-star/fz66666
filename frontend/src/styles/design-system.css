@@ -504,3 +504,20 @@ html.dark-mode {
 6. 动画：
    animation: slideInUp 0.6s var(--ease-smooth);
 */
+
+
+/* ── 4K / 超宽屏适配 ── */
+@media (min-width: 2560px) {
+  :root {
+    --spacing-base: 18px;
+    --spacing-md: 28px;
+    --spacing-lg: 36px;
+  }
+}
+@media (min-width: 3840px) {
+  :root {
+    --spacing-base: 20px;
+    --spacing-md: 32px;
+    --spacing-lg: 40px;
+  }
+}

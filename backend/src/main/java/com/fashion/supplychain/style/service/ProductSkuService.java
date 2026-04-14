@@ -18,4 +18,8 @@ public interface ProductSkuService extends IService<ProductSku> {
      * @param quantity 变更数量 (正数增加，负数减少)
      */
     void updateStock(String skuCode, int quantity);
+
+    void updateStockById(Long id, int delta);
+
+    boolean decreaseStockBySkuCode(String skuCode, int delta);
 }

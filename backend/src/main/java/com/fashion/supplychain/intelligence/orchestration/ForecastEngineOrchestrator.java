@@ -208,13 +208,15 @@ public class ForecastEngineOrchestrator {
 
         // 平均耗损率（裁剪用料/订单数量 - 1）
         double totalWasteRatio = 0.0;
+        int validCount = 0;
         for (ProductionOrder o : history) {
             if (o.getOrderQuantity() != null && o.getOrderQuantity() > 0
                     && o.getCuttingQuantity() != null) {
                 totalWasteRatio += (double) o.getCuttingQuantity() / o.getOrderQuantity() - 1.0;
+                validCount++;
             }
         }
-        double avgWasteRatio = totalWasteRatio / history.size();
+        double avgWasteRatio = validCount > 0 ? totalWasteRatio / validCount : 0;
         BigDecimal wasteCoeff = BigDecimal.valueOf(1 + avgWasteRatio).setScale(4, RoundingMode.HALF_UP);
 
         // 预计物料用量 = 目标件数 × 耗损系数 × 平均单件用料 1.0（需根据BOM调整）

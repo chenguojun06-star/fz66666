@@ -21,10 +21,12 @@ import org.springframework.web.bind.annotation.*;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.List;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 扫码记录Controller
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/production/scan")
 @PreAuthorize("isAuthenticated()")
@@ -97,7 +99,7 @@ public class ScanRecordController {
         // Step3: getByBundleNo 第三回退
         try {
             int bundleNoInt = 0;
-            try { bundleNoInt = Integer.parseInt(bundleNoRaw); } catch (Exception ignored) {}
+            try { bundleNoInt = Integer.parseInt(bundleNoRaw); } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
             if (StringUtils.hasText(orderNo) && bundleNoInt > 0) {
                 CuttingBundle b2 = cuttingBundleService.getByBundleNo(orderNo, bundleNoInt);
                 if (b2 != null && StringUtils.hasText(b2.getId())) {
@@ -133,7 +135,7 @@ public class ScanRecordController {
         // Step5: 最近扫码记录（有没有历史）
         try {
             int bundleNoInt2 = 0;
-            try { bundleNoInt2 = Integer.parseInt(bundleNoRaw); } catch (Exception ignored) {}
+            try { bundleNoInt2 = Integer.parseInt(bundleNoRaw); } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
             if (StringUtils.hasText(orderNo) && bundleNoInt2 > 0) {
                 java.util.Map<String, Object> listParams = new java.util.HashMap<>();
                 listParams.put("orderNo", orderNo);

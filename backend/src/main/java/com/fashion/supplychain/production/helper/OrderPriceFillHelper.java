@@ -171,7 +171,7 @@ public class OrderPriceFillHelper {
             if (o == null) continue;
             String sidRaw = o.getStyleId();
             if (!StringUtils.hasText(sidRaw)) continue;
-            try { styleIds.add(Long.parseLong(sidRaw.trim())); } catch (Exception ignore) {}
+            try { styleIds.add(Long.parseLong(sidRaw.trim())); } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
         }
 
         if (styleIds.isEmpty()) {
@@ -280,7 +280,7 @@ public class OrderPriceFillHelper {
                         BigDecimal multiplier = BigDecimal.ONE.add(profitRate.movePointLeft(2));
                         unitPrice = freshCost.multiply(multiplier).setScale(2, RoundingMode.HALF_UP);
                     }
-                } catch (Exception ignore) {}
+                } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
             }
             o.setQuotationUnitPrice(unitPrice.compareTo(BigDecimal.ZERO) > 0
                     ? unitPrice : BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP));

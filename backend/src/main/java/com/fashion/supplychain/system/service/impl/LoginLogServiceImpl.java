@@ -17,9 +17,13 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class LoginLogServiceImpl extends ServiceImpl<LoginLogMapper, LoginLog> implements LoginLogService {
+
+    private static final Logger LOG = LoggerFactory.getLogger(LoginLogServiceImpl.class);
 
     @javax.annotation.Resource
     private OperationLogService operationLogService;
@@ -63,18 +67,18 @@ public class LoginLogServiceImpl extends ServiceImpl<LoginLogMapper, LoginLog> i
 
     @Override
     public void recordOperation(String bizType, String bizId, String targetName, String action, String operator, String remark) {
-        LoginLog log = new LoginLog();
-        log.setLogType("OPERATION");
-        log.setBizType(bizType);
-        log.setBizId(bizId);
-        log.setAction(action);
-        log.setUsername(operator);
-        log.setRemark(remark);
-        log.setLoginTime(LocalDateTime.now());
-        log.setLoginStatus("SUCCESS"); // 操作日志默认成功
+        LoginLog loginLog = new LoginLog();
+        loginLog.setLogType("OPERATION");
+        loginLog.setBizType(bizType);
+        loginLog.setBizId(bizId);
+        loginLog.setAction(action);
+        loginLog.setUsername(operator);
+        loginLog.setRemark(remark);
+        loginLog.setLoginTime(LocalDateTime.now());
+        loginLog.setLoginStatus("SUCCESS"); // 操作日志默认成功
         // 多租户隔离：记录当前租户ID，防止跨租户数据泄漏
-        log.setTenantId(UserContext.tenantId());
-        save(log);
+        loginLog.setTenantId(UserContext.tenantId());
+        save(loginLog);
 
         // 同步记录到统一的 t_operation_log，供操作日志页面展示
         try {
@@ -94,8 +98,7 @@ public class LoginLogServiceImpl extends ServiceImpl<LoginLogMapper, LoginLog> i
                 opl.setTenantId(tid);
             }
             operationLogService.save(opl);
-        } catch (Exception ignored) {
-        }
+        } catch (Exception e) { LOG.debug("Non-critical error: {}", e.getMessage()); }
     }
 
     @Override

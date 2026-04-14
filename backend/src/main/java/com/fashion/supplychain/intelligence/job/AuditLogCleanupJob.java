@@ -22,7 +22,7 @@ public class AuditLogCleanupJob {
                         "SELECT config_value FROM t_param_config WHERE config_key = 'system.auditLog.retentionDays' AND delete_flag = 0 LIMIT 1",
                         String.class);
                 if (val != null) retentionDays = Integer.parseInt(val);
-            } catch (Exception ignored) {}
+            } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
 
             int deleted = jdbcTemplate.update(
                     "DELETE FROM t_intelligence_audit_log WHERE create_time < DATE_SUB(NOW(), INTERVAL ? DAY)",

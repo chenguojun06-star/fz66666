@@ -244,8 +244,7 @@ public class StyleAttachmentOrchestrator {
         StyleInfo style = null;
         try {
             style = styleInfoService.getById(Long.valueOf(String.valueOf(current.getStyleId())));
-        } catch (Exception ignore) {
-        }
+        } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
         String type = StringUtils.hasText(current.getBizType()) ? current.getBizType().trim() : null;
         // 纸样锁定检查已移除：全部开放
         boolean ok = styleAttachmentService.removeById(id);

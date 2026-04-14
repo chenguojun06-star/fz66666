@@ -516,10 +516,11 @@ const scanCoreMixin = Behavior({
       // 1. 给后端事务足够时间落库，确保历史 API 能返回刚提交的扫码记录
       // 2. 避免立即调用 + eventBus 二次触发并发竞争 my.loadingHistory 锁
       //    （两次并发时第二次会被 loadingHistory 守卫直接退出，导致列表不更新）
-      setTimeout(() => {
+      this._scanRefreshTimer = setTimeout(() => {
         if (this && this.data) {
           this.loadMyPanel(true);
         }
+        this._scanRefreshTimer = null;
       }, 800);
     },
 

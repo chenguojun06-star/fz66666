@@ -607,8 +607,7 @@ public class QdrantService {
             ResponseEntity<String> r = restTemplate.getForEntity(
                     qdrantUrl + "/collections/" + STYLE_IMAGE_COLLECTION, String.class);
             if (r.getStatusCode().is2xxSuccessful()) return;
-        } catch (Exception ignored) {
-        }
+        } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
         try {
             ObjectNode body = objectMapper.createObjectNode();
             ObjectNode params = body.putObject("vectors");

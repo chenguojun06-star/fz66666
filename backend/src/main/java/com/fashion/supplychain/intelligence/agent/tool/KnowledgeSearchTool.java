@@ -174,7 +174,7 @@ public class KnowledgeSearchTool extends AbstractAgentTool {
                         payload.put("source", safe(kb.getSource()));
                         qdrantService.upsertVector("kb_" + kb.getId(), kbTenantId, kbContent,
                             payload);
-                    } catch (Exception ignored) {} // 非关键路径，失败不影响主流程
+                    } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); } // 非关键路径，失败不影响主流程
                 }
             }
 
@@ -195,7 +195,7 @@ public class KnowledgeSearchTool extends AbstractAgentTool {
                     update.setId(kb.getId());
                     update.setViewCount(kb.getViewCount() == null ? 1 : kb.getViewCount() + 1);
                     knowledgeBaseService.updateById(update);
-                } catch (Exception ignored) {}
+                } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
             }
 
             Map<String, Object> result = new HashMap<>();

@@ -173,8 +173,7 @@ public class IntelligenceMemoryOrchestrator {
                 update.setId(hit.getMemory().getId());
                 update.setRelevanceScore(BigDecimal.valueOf(hit.getHybridScore()).setScale(4, RoundingMode.HALF_UP));
                 memoryMapper.updateById(update);
-            } catch (Exception ignored) {
-            }
+            } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
         }
 
         response.setRecalled(items);

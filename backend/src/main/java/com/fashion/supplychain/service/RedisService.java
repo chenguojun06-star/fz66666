@@ -58,7 +58,7 @@ public class RedisService {
             // 反序列化失败：可能是新旧序列化格式不兼容（版本升级/部署后旧缓存未清理）
             // 自动删除损坏的 key，使其在下次写入时以当前格式重建，实现自愈
             log.warn("Redis get failed (cache miss), key={} err={} — 自动删除损坏key", key, e.getMessage());
-            try { redisTemplate.delete(key); } catch (Exception ignored) {}
+            try { redisTemplate.delete(key); } catch (Exception ex) { log.debug("Non-critical error: {}", ex.getMessage()); }
             return null;
         }
     }
@@ -118,7 +118,7 @@ public class RedisService {
                         Boolean existed = redisTemplate.delete(keyStr);
                         if (Boolean.TRUE.equals(existed)) count++;
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception e) { log.debug("Non-critical error: {}", e.getMessage()); }
             }
             if (count > 0) {
                 log.info("Redis deleteByPattern: pattern={}, deleted={}", pattern, count);
