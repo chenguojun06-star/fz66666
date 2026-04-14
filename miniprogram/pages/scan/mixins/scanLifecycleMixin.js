@@ -104,6 +104,22 @@ const scanLifecycleMixin = Behavior({
       // ✅ 并行加载数据（try/catch 防止任一失败导致待办弹窗不弹出）
       try {
         await this.loadMyPanel(true);
+
+        // 兜底重拉：首轮请求可能命中后端落库延迟/并发竞争，避免用户必须手动刷新
+        if (this._myPanelRevalidateTimer) {
+          clearTimeout(this._myPanelRevalidateTimer);
+          this._myPanelRevalidateTimer = null;
+        }
+        this._myPanelRevalidateTimer = setTimeout(() => {
+          if (!this || !this.data) return;
+          const stats = (this.data.my && this.data.my.stats) || {};
+          const hasAnyStat = Number(stats.scanCount || 0) > 0 || Number(stats.totalQuantity || 0) > 0;
+          const hasAnyHistory = !!(this.data.my && this.data.my.groupedHistory && this.data.my.groupedHistory.length > 0);
+          if (!hasAnyStat && !hasAnyHistory && !this.data.my.loadingStats && !this.data.my.loadingHistory) {
+            this.loadMyPanel(true);
+          }
+          this._myPanelRevalidateTimer = null;
+        }, 600);
       } catch (err) {
         console.error('[scanLifecycleMixin] onShow 数据加载异常（不影响待办弹窗）:', err);
       }
@@ -129,6 +145,7 @@ const scanLifecycleMixin = Behavior({
   onHide() {
     if (this._flushTimerId) { clearTimeout(this._flushTimerId); this._flushTimerId = null; }
     if (this._scanRefreshTimer) { clearTimeout(this._scanRefreshTimer); this._scanRefreshTimer = null; }
+    if (this._myPanelRevalidateTimer) { clearTimeout(this._myPanelRevalidateTimer); this._myPanelRevalidateTimer = null; }
     this.stopUndoTimer();
   },
 
@@ -139,6 +156,7 @@ const scanLifecycleMixin = Behavior({
   onUnload() {
     if (this._flushTimerId) { clearTimeout(this._flushTimerId); this._flushTimerId = null; }
     if (this._scanRefreshTimer) { clearTimeout(this._scanRefreshTimer); this._scanRefreshTimer = null; }
+    if (this._myPanelRevalidateTimer) { clearTimeout(this._myPanelRevalidateTimer); this._myPanelRevalidateTimer = null; }
 
     // 取消订阅
     if (this.unsubscribeEvents) {

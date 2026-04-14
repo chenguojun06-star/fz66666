@@ -382,6 +382,10 @@ function _getToday() {
 async function loadMyHistory(page, refresh = false) {
   const { my } = page.data;
   if (my.loadingHistory) {
+    // 强制刷新在并发场景下不应被直接丢弃，改为排队到当前请求结束后执行
+    if (refresh) {
+      page.__pendingMyHistoryRefresh = true;
+    }
     return;
   }
 
@@ -391,6 +395,10 @@ async function loadMyHistory(page, refresh = false) {
 
   const pageNum = refresh ? 1 : my.history.page;
   const pageSize = my.history.pageSize || 20;
+
+  if (refresh) {
+    page.__pendingMyHistoryRefresh = false;
+  }
 
   page.setData({ 'my.loadingHistory': true });
 
@@ -460,6 +468,12 @@ async function loadMyHistory(page, refresh = false) {
     wx.showToast({ title: '加载记录失败，请下拉刷新', icon: 'none', duration: 2500 });
   } finally {
     page.setData({ 'my.loadingHistory': false });
+
+    // 若加载期间又收到了一次强制刷新，当前请求结束后立即补跑一次
+    if (page.__pendingMyHistoryRefresh) {
+      page.__pendingMyHistoryRefresh = false;
+      loadMyHistory(page, true);
+    }
   }
 }
 

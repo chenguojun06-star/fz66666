@@ -78,10 +78,12 @@ const scanPageData = {
     // 扫码历史
     loadingHistory: false,
     groupedHistory: [],
-    history: [],
-    historyPage: 1,
-    historyPageSize: 20,
-    historyHasMore: true,
+    // 与 HistoryHandler 约定保持一致：分页字段收敛到 history 对象内
+    history: {
+      page: 1,
+      pageSize: 20,
+      hasMore: true,
+    },
 
 
   },

@@ -231,6 +231,7 @@ public class MaterialPurchaseStatusHelper {
         return result;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public MaterialPurchase returnConfirm(Map<String, Object> body) {
         String purchaseId = body == null ? null
                 : (body.get("purchaseId") == null ? null : String.valueOf(body.get("purchaseId")));
@@ -270,10 +271,14 @@ public class MaterialPurchaseStatusHelper {
         if (rawUrls != null) {
             String urls = String.valueOf(rawUrls).trim();
             if (!urls.isEmpty()) {
-                MaterialPurchase toUpdate = new MaterialPurchase();
-                toUpdate.setId(purchaseId);
-                toUpdate.setEvidenceImageUrls(urls);
-                materialPurchaseService.updateById(toUpdate);
+                try {
+                    MaterialPurchase toUpdate = new MaterialPurchase();
+                    toUpdate.setId(purchaseId);
+                    toUpdate.setEvidenceImageUrls(urls);
+                    materialPurchaseService.updateById(toUpdate);
+                } catch (Exception e) {
+                    log.warn("[returnConfirm] 保存凭证图片失败(列可能缺失): {}", e.getMessage());
+                }
             }
         }
 
