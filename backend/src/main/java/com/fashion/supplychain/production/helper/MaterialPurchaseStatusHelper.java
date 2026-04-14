@@ -322,7 +322,7 @@ public class MaterialPurchaseStatusHelper {
                             .eq(MaterialPurchase::getId, purchaseId));
             if (updated != null) {
                 // returnConfirmAndSync 已成功执行，手动填充回料确认字段
-                updated.setReturnConfirmed(true);
+                updated.setReturnConfirmed(1);
                 updated.setReturnQuantity(returnQuantity);
                 updated.setReturnConfirmerId(confirmerId);
                 updated.setReturnConfirmerName(confirmerName);
@@ -426,7 +426,7 @@ public class MaterialPurchaseStatusHelper {
                                     MaterialPurchase::getDeleteFlag, MaterialPurchase::getTenantId)
                             .eq(MaterialPurchase::getId, purchaseId));
             if (updated != null) {
-                updated.setReturnConfirmed(false);
+                updated.setReturnConfirmed(0);
                 updated.setUpdateTime(LocalDateTime.now());
             }
         }
