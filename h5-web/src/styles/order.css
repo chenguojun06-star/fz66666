@@ -100,33 +100,56 @@
 .date-label { font-size: var(--font-size-xs); color: var(--color-text-secondary); display: block; margin-bottom: 2px; }
 .date-separator { font-size: var(--font-size-sm); color: var(--color-text-disabled); flex-shrink: 0; padding: 0 2px; margin-top: 16px; }
 
-.card-item { background: var(--color-bg-card); border-radius: var(--radius-lg); border: 1px solid rgba(var(--color-primary-rgb), 0.08); box-shadow: 0 2px 8px rgba(var(--color-primary-rgb), 0.04); padding: 14px; }
+.card-item { background: var(--color-bg-card); border-radius: var(--radius-lg); border: 1px solid rgba(var(--color-primary-rgb), 0.08); box-shadow: 0 2px 8px rgba(var(--color-primary-rgb), 0.04); padding: 16px; }
 .card-item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .card-item-title { font-size: var(--font-size-base); font-weight: 700; }
 .card-item-meta { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: 4px; }
 .card-item-cover { width: 100%; max-height: 160px; object-fit: cover; border-radius: var(--radius-md); margin-bottom: 12px; }
 
-.order-card-header { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
-.order-card-thumb { width: 72px; height: 72px; border-radius: var(--radius-md); overflow: hidden; flex-shrink: 0; background: var(--color-bg-gray); border: 1px solid var(--color-border-light); position: relative; }
-.order-card-img { width: 100%; height: 100%; object-fit: cover; }
-.order-card-no-img { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--color-text-disabled); text-align: center; line-height: 1.3; }
-.order-card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.order-card-title-row { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
-.order-card-order-no { font-size: var(--font-size-sm); font-weight: 700; color: var(--color-text-primary); }
-.order-card-sub { font-size: var(--font-size-xs); color: var(--color-text-secondary); }
+.order-card-item { padding: 16px; }
+.order-card-item--overdue { border-left: 3px solid var(--color-danger); }
+
+.order-card-header { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; }
+.order-card-thumb { width: 80px; height: 80px; border-radius: var(--radius-md); overflow: hidden; flex-shrink: 0; background: var(--color-bg-gray); position: relative; }
+.order-card-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.order-card-no-img { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--color-text-disabled); text-align: center; line-height: 1.3; }
+.order-card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.order-card-title-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.order-card-order-no { font-size: var(--font-size-base); font-weight: 700; color: var(--color-text-primary); }
+.order-card-sub { font-size: var(--font-size-sm); color: var(--color-text-secondary); }
 .order-card-stats { display: flex; align-items: center; gap: 4px; font-size: var(--font-size-xs); color: var(--color-text-secondary); }
-.order-card-stat { display: inline-flex; align-items: center; gap: 2px; }
+.order-card-stat { display: inline-flex; align-items: center; gap: 2px; font-size: var(--font-size-sm); }
 .order-card-divider { color: var(--color-border); margin: 0 2px; }
-.order-card-delivery { display: flex; align-items: center; gap: 6px; font-size: var(--font-size-xs); }
+.order-card-delivery { display: flex; align-items: center; gap: 6px; font-size: var(--font-size-sm); }
 .order-card-progress-row { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
-.order-card-progress-track { flex: 1; height: 4px; background: var(--color-border-light); border-radius: 2px; overflow: hidden; }
+.order-card-progress-track { flex: 1; height: 3px; background: rgba(0,0,0,0.06); border-radius: 2px; overflow: hidden; }
 .order-card-progress-bar { height: 100%; border-radius: 2px; transition: width 0.3s ease; }
-.order-card-progress-text { font-size: var(--font-size-xs); font-weight: 700; white-space: nowrap; flex-shrink: 0; }
+.order-card-progress-text { font-size: var(--font-size-xs); font-weight: 700; white-space: nowrap; flex-shrink: 0; min-width: 36px; text-align: right; }
 .order-card-chevron { flex-shrink: 0; align-self: center; color: var(--color-text-tertiary); }
-.order-card-expanded { border-top: 1px solid var(--color-border-light); margin-top: 10px; padding-top: 10px; }
+
+.order-card-qty-row { display: flex; align-items: center; margin-top: 10px; padding: 10px 0; border-top: 1px solid var(--color-border-light); }
+.order-card-qty-item { flex: 1; display: flex; align-items: baseline; justify-content: center; gap: 4px; }
+.order-card-qty-val { font-size: var(--font-size-lg); font-weight: 700; color: var(--color-text-primary); }
+.order-card-qty-lbl { font-size: var(--font-size-xs); color: var(--color-text-secondary); }
+.order-card-qty-divider { width: 1px; height: 16px; background: var(--color-border-light); }
+
+.order-card-expanded { border-top: 1px solid var(--color-border-light); margin-top: 10px; padding-top: 12px; }
+
+.order-card-process-list { margin-bottom: 14px; }
+.order-card-process-item { margin-bottom: 10px; }
+.order-card-process-item:last-child { margin-bottom: 0; }
+.order-card-process-header { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.order-card-process-name { font-size: var(--font-size-sm); color: var(--color-text-primary); font-weight: 500; }
+.order-card-process-pct { font-size: var(--font-size-xs); color: var(--color-text-secondary); font-weight: 600; }
+.order-card-process-bar { height: 3px; background: rgba(0,0,0,0.06); border-radius: 2px; overflow: hidden; }
+.order-card-process-bar-fill { height: 100%; background: var(--color-primary); border-radius: 2px; transition: width 0.3s ease; }
+.order-card-process-bar-fill--done { background: var(--color-success); }
+
 .order-card-color-groups { display: flex; flex-direction: column; gap: 6px; }
 .order-card-color-group { display: flex; flex-direction: column; gap: 4px; }
 .order-card-color-row { display: flex; align-items: center; justify-content: space-between; }
 .order-card-size-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.order-card-meta-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: var(--font-size-sm); }
+.order-card-meta-label { color: var(--color-text-secondary); }
 .order-card-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 .order-stats-row { display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: var(--color-bg-gray); border-radius: 8px; font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-bottom: 8px; }

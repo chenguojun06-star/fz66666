@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.service;
 
 import com.fashion.supplychain.intelligence.agent.tool.AgentTool;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +17,7 @@ import java.util.stream.Collectors;
 public class McpProtocolService {
 
     private final List<AgentTool> registeredTools;
+    private final ObjectMapper objectMapper;
 
     @Data
     public static class McpTool {
@@ -47,7 +49,7 @@ public class McpProtocolService {
         response.setTools(registeredTools.stream().map(tool -> {
             McpTool mcpTool = new McpTool();
             mcpTool.setName(tool.getName());
-            mcpTool.setDescription(tool.getDescription());
+            mcpTool.setDescription(tool.getName());
             return mcpTool;
         }).collect(Collectors.toList()));
         return response;
@@ -65,7 +67,8 @@ public class McpProtocolService {
                 result.setError("Tool not found: " + request.getName());
                 return result;
             }
-            String toolResult = tool.execute(request.getArguments());
+            String toolResult = tool.execute(request.getArguments() != null
+                    ? objectMapper.writeValueAsString(request.getArguments()) : "{}");
             result.setSuccess(true);
             result.setData(toolResult);
         } catch (Exception e) {

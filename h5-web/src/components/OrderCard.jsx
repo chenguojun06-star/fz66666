@@ -7,9 +7,19 @@ const OrderCard = memo(function OrderCard({ order, isExpanded, onToggle, activeT
   const isOverdue = order.remainDays !== null && order.remainDays < 0;
   const isClosed = order.isClosed;
   const progress = order.productionProgress || 0;
+  const completedQty = order.completedQuantity || 0;
+  const totalQty = order.totalQuantity || order.orderQuantity || 0;
+  const remainQty = order.remainQuantity || Math.max(0, totalQty - completedQty);
+  const processNodes = order.processNodes || [];
+
+  const progressColor = isClosed
+    ? 'var(--color-text-tertiary)'
+    : isOverdue
+      ? 'var(--color-danger)'
+      : 'var(--color-primary)';
 
   return (
-    <div className="card-item">
+    <div className={`card-item order-card-item${isOverdue ? ' order-card-item--overdue' : ''}`}>
       <div className="order-card-header" onClick={() => onToggle(order.id || order.orderNo)}>
         <div className="order-card-thumb">
           {imgUrl ? (
@@ -24,15 +34,13 @@ const OrderCard = memo(function OrderCard({ order, isExpanded, onToggle, activeT
             {order.plateTypeTagText && (
               <span className="tag tag-blue">{order.plateTypeTagText === '首' ? '首单' : '翻单'}</span>
             )}
+            {order.urgencyTagText && (
+              <span className="tag tag-red">{order.urgencyTagText === '急' ? '急单' : order.urgencyTagText}</span>
+            )}
           </div>
           <div className="order-card-sub">
             {order.styleNo || '-'}
             {order.factoryName && <span style={{ marginLeft: 8 }}>{order.factoryName}</span>}
-          </div>
-          <div className="order-card-stats">
-            <span className="order-card-stat">数量 <strong>{order.totalQuantity || order.orderQuantity || 0}</strong></span>
-            <span className="order-card-divider">|</span>
-            <span className="order-card-stat">完成 <strong className="text-success">{order.completedQuantity || 0}</strong></span>
           </div>
           <div className="order-card-delivery">
             {order.deliveryDateStr ? (
@@ -40,18 +48,18 @@ const OrderCard = memo(function OrderCard({ order, isExpanded, onToggle, activeT
             ) : (
               <span className="text-tertiary">交期待定</span>
             )}
-            {isOverdue && <span className="days-tag days-overdue">逾{Math.abs(order.remainDays)}天</span>}
+            {order.remainDaysText && (
+              <span className={`days-tag ${order.remainDaysClass || ''}`}>{order.remainDaysText}</span>
+            )}
           </div>
           <div className="order-card-progress-row">
             <div className="order-card-progress-track">
               <div className="order-card-progress-bar" style={{
-                width: `${progress}%`,
-                background: isClosed ? 'var(--color-text-tertiary)' : 'var(--color-success)',
+                width: `${Math.min(progress, 100)}%`,
+                background: progressColor,
               }} />
             </div>
-            <span className="order-card-progress-text" style={{
-              color: isClosed ? 'var(--color-text-tertiary)' : 'var(--color-success)',
-            }}>{progress}%</span>
+            <span className="order-card-progress-text" style={{ color: progressColor }}>{progress}%</span>
           </div>
         </div>
         <div className="order-card-chevron">
@@ -59,8 +67,42 @@ const OrderCard = memo(function OrderCard({ order, isExpanded, onToggle, activeT
         </div>
       </div>
 
+      <div className="order-card-qty-row">
+        <div className="order-card-qty-item">
+          <span className="order-card-qty-val">{totalQty}</span>
+          <span className="order-card-qty-lbl">总数量</span>
+        </div>
+        <div className="order-card-qty-divider" />
+        <div className="order-card-qty-item">
+          <span className="order-card-qty-val" style={{ color: 'var(--color-success)' }}>{completedQty}</span>
+          <span className="order-card-qty-lbl">已完成</span>
+        </div>
+        <div className="order-card-qty-divider" />
+        <div className="order-card-qty-item">
+          <span className="order-card-qty-val" style={{ color: isOverdue ? 'var(--color-danger)' : 'var(--color-text-primary)' }}>{remainQty}</span>
+          <span className="order-card-qty-lbl">剩余</span>
+        </div>
+      </div>
+
       {isExpanded && (
         <div className="order-card-expanded">
+          {processNodes.length > 0 && (
+            <div className="order-card-process-list">
+              {processNodes.map((node, i) => (
+                <div key={i} className="order-card-process-item">
+                  <div className="order-card-process-header">
+                    <span className="order-card-process-name">{node.name}</span>
+                    <span className="order-card-process-pct">{node.percent}%</span>
+                  </div>
+                  <div className="order-card-process-bar">
+                    <div className={`order-card-process-bar-fill${node.percent >= 100 ? ' order-card-process-bar-fill--done' : ''}`}
+                      style={{ width: `${node.percent}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {order.colorGroups && order.colorGroups.length > 0 && (
             <div className="order-card-color-groups">
               {order.colorGroups.map((g, gi) => (
@@ -81,13 +123,14 @@ const OrderCard = memo(function OrderCard({ order, isExpanded, onToggle, activeT
               ))}
             </div>
           )}
-          {(!order.colorGroups || order.colorGroups.length === 0) && order.sizeList && order.sizeList.length > 0 && (
-            <div className="order-card-size-tags">
-              {order.sizeList.map((s, i) => (
-                <span key={i} className="tag tag-muted">{s}: {order.sizeQtyList[i]}</span>
-              ))}
+
+          {order.factoryTypeText && (
+            <div className="order-card-meta-row">
+              <span className="order-card-meta-label">工厂类型</span>
+              <span className={`tag ${order.factoryTypeText === '内部' ? 'tag-blue' : 'tag-orange'}`}>{order.factoryTypeText}</span>
             </div>
           )}
+
           <div className="order-card-actions">
             {activeTab === 'cutting' && (
               <>

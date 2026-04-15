@@ -16,6 +16,7 @@ import com.fashion.supplychain.intelligence.helper.AiAgentToolExecHelper;
 import com.fashion.supplychain.intelligence.dto.FollowUpAction;
 import com.fashion.supplychain.intelligence.routing.AiAgentDomainRouter;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
+import com.fashion.supplychain.intelligence.service.AgentStateStore;
 import com.fashion.supplychain.intelligence.agent.tool.ToolDomain;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +49,7 @@ public class AiAgentOrchestrator {
     @Autowired private AiAgentMemoryHelper memoryHelper;
     @Autowired private AiAgentDomainRouter domainRouter;
     @Autowired private FollowUpSuggestionEngine followUpSuggestionEngine;
+    @Autowired private AgentStateStore agentStateStore;
 
     private static final int STUCK_MAX_REPEAT = 3;
     private static final int CRICIC_SKIP_MAX_ITERATIONS = 2;
@@ -78,10 +80,12 @@ public class AiAgentOrchestrator {
 
         String commandId = aiAgentTraceOrchestrator.startRequest(userMessage);
         lastCommandIdHolder.set(commandId);
+        String stateSessionId = null;
         try { // F31: finally 块强制清理 ThreadLocal，防止线程池复用泄漏
         long requestStartAt = System.currentTimeMillis();
         String userId = UserContext.userId();
         Long tenantId = UserContext.tenantId();
+        try { stateSessionId = agentStateStore.createSession(tenantId, userId, userMessage); } catch (Exception e) { log.debug("[AiAgent] 状态会话创建跳过: {}", e.getMessage()); }
         List<AgentTool> visibleTools = aiAgentToolAccessService.resolveVisibleTools(registeredTools);
         // ── 领域路由裁剪：按用户意图缩减工具集，降低 token 消耗 ──
         Set<ToolDomain> domains = domainRouter.route(userMessage);
