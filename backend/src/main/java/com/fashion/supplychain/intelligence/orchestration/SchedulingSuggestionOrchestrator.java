@@ -18,6 +18,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 /**
@@ -44,6 +45,9 @@ public class SchedulingSuggestionOrchestrator {
 
     @Autowired
     private ScanRecordService scanRecordService;
+
+    @Autowired(required = false)
+    private OptimizationSolverOrchestrator optimizationSolverOrchestrator;
 
     /** 标准工序及时间占比 */
     private static final LinkedHashMap<String, Double> STAGE_RATIO = new LinkedHashMap<>() {{
@@ -280,6 +284,31 @@ public class SchedulingSuggestionOrchestrator {
             // 按匹配分倒序，取前5
             plans.sort(Comparator.comparingInt(SchedulePlan::getMatchScore).reversed());
             resp.setPlans(plans.size() > 5 ? plans.subList(0, 5) : plans);
+
+            // ── 优化求解增强：当请求包含约束描述时，调用 OptimizationSolverOrchestrator ──
+            if (optimizationSolverOrchestrator != null && req.getStyleNo() != null && !req.getStyleNo().isBlank()) {
+                try {
+                    String optRequest = String.format("排产 %d 件 %s 品类 %s",
+                            quantity,
+                            req.getStyleNo(),
+                            requestedCategory != null ? requestedCategory : "");
+                    OptimizationSolverOrchestrator.SchedulingSolution optSolution =
+                            optimizationSolverOrchestrator.solveScheduling(optRequest, "");
+                    if (optSolution != null && optSolution.getAssignments() != null
+                            && !optSolution.getAssignments().isEmpty()) {
+                        Map<String, Object> optHint = new LinkedHashMap<>();
+                        optHint.put("totalScore", optSolution.getTotalScore());
+                        optHint.put("totalCost", optSolution.getTotalCost());
+                        optHint.put("feasible", optSolution.isFeasible());
+                        optHint.put("assignments", optSolution.getAssignments().size());
+                        optHint.put("explanation", optSolution.getExplanation());
+                        resp.setOptimizationHint(optHint);
+                        log.info("[排产建议] 优化求解增强完成: totalScore={}", optSolution.getTotalScore());
+                    }
+                } catch (Exception e) {
+                    log.debug("[排产建议] 优化求解增强跳过（不影响主流程）: {}", e.getMessage());
+                }
+            }
 
             log.info("[排产建议] 租户={} 款式={} 数量={} 品类={} 历史完成订单数={} 推荐{}个方案",
                     tenantId, req.getStyleNo(), quantity, requestedCategory, completed.size(), resp.getPlans().size());

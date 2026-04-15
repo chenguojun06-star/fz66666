@@ -61,7 +61,7 @@ public class AiAgentMemoryHelper {
 
     public List<AiMessage> getConversationHistory(String userId, Long tenantId) {
         if (userId == null || userId.isBlank()) return List.of();
-        List<AiMessage> history = conversationMemory.get(memoryKey(userId, tenantId));
+        List<AiMessage> history = conversationMemory.getIfPresent(memoryKey(userId, tenantId));
         if (history == null) return List.of();
         synchronized (history) {
             return new ArrayList<>(history);
@@ -70,7 +70,7 @@ public class AiAgentMemoryHelper {
 
     public void saveConversationTurn(String userId, Long tenantId, String userMsg, String assistantMsg) {
         String key = memoryKey(userId, tenantId);
-        List<AiMessage> history = conversationMemory.computeIfAbsent(key, k -> new ArrayList<>());
+        List<AiMessage> history = conversationMemory.get(key, k -> new ArrayList<>());
         synchronized (history) {
             history.add(AiMessage.user(userMsg));
             history.add(AiMessage.assistant(assistantMsg));

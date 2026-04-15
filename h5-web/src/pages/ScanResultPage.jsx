@@ -21,6 +21,23 @@ const HTTP_ERROR_MAP = {
   500: '服务器异常，请稍后重试',
 };
 
+const PROCESS_TYPE_MAP = {
+  embroidery: '绣花', printing: '印花', washing: '洗水',
+  dyeing: '染色', ironing: '整烫', pleating: '压褶',
+  beading: '钉珠', other: '其他'
+};
+
+const STATUS_MAP = {
+  pending: '待处理', processing: '进行中',
+  completed: '已完成', cancelled: '已取消'
+};
+
+const MATERIAL_TYPE_MAP = {
+  fabricA: '主面料', fabricB: '辅面料',
+  liningA: '里料', liningB: '夹里', liningC: '衬布/粘合衬',
+  accessoryA: '拉链', accessoryB: '纽扣', accessoryC: '配件'
+};
+
 import { normalizeScanType } from '@/utils/scanHelpers';
 
 export default function ScanResultPage() {
@@ -38,6 +55,12 @@ export default function ScanResultPage() {
   const [showWarehouse, setShowWarehouse] = useState(false);
   const [isQualityReceive, setIsQualityReceive] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [aiTipData, setAiTipData] = useState(null);
+  const [aiTipVisible, setAiTipVisible] = useState(false);
+  const [description, setDescription] = useState('');
+  const [secondaryProcesses, setSecondaryProcesses] = useState([]);
+  const [materialPurchases, setMaterialPurchases] = useState([]);
+  const [materialSummary, setMaterialSummary] = useState({ totalDemand: 0, totalArrived: 0, totalPending: 0 });
 
   useEffect(() => {
     return () => { clearScanResultData(); };
@@ -77,8 +100,49 @@ export default function ScanResultPage() {
     setIsQualityReceive(isQuality);
     setWarehouseCode(raw.warehouseCode || '');
 
+    setDescription(orderDetail.description || raw.description || '');
+
+    const rawProcesses = orderDetail.secondaryProcesses || raw.secondaryProcesses || [];
+    setSecondaryProcesses(rawProcesses.map(item => ({
+      ...item,
+      processTypeCN: PROCESS_TYPE_MAP[item.processType] || item.processType || '',
+      statusCN: STATUS_MAP[item.status] || item.status || ''
+    })));
+
+    const isProcurement = raw.progressStage === 'procurement' || raw.progressStage === '采购';
+    const rawMaterials = isProcurement ? (raw.materialPurchases || []) : [];
+    let totalDemand = 0, totalArrived = 0, totalPending = 0;
+    const mappedMaterials = rawMaterials.map(item => {
+      totalDemand += Number(item.purchaseQuantity) || 0;
+      totalArrived += Number(item.arrivedQuantity) || 0;
+      totalPending += Number(item.pendingQuantity) || 0;
+      return { ...item, materialTypeCN: MATERIAL_TYPE_MAP[item.materialType] || item.materialType || '' };
+    });
+    setMaterialPurchases(mappedMaterials);
+    setMaterialSummary({ totalDemand, totalArrived, totalPending });
+
     if (isWarehouseStage) loadWarehouseOptions();
+
+    if (raw.orderNo) {
+      fetchAiTip(raw.orderNo, raw.processName || raw.progressStage || '');
+    }
   }, [scanResultData]);
+
+  const fetchAiTip = async (orderNo, processName) => {
+    try {
+      const res = await api.intelligence.getScanTips({ orderNo, processName });
+      if (res && res.aiTip) {
+        setAiTipData(res);
+        setAiTipVisible(true);
+      }
+    } catch (err) {
+      console.warn('[ScanResultPage] AI提示获取失败:', err);
+    }
+  };
+
+  const dismissAiTip = () => {
+    setAiTipVisible(false);
+  };
 
   const buildProcessOptions = (raw) => {
     const stageResult = raw.stageResult || {};
@@ -177,6 +241,8 @@ export default function ScanResultPage() {
     }
   };
 
+  const isHigh = aiTipData?.priority === 'high';
+
   return (
     <div className="scan-result-stack">
       {detail.coverImage && (
@@ -197,6 +263,110 @@ export default function ScanResultPage() {
           工序: {detail.processName} · 阶段: {detail.progressStage}
         </div>
       </div>
+
+      {aiTipVisible && aiTipData && aiTipData.aiTip && (
+        <div className={`ai-bubble${isHigh ? ' ai-bubble-high' : ' ai-bubble-normal'}`}>
+          <div className="ai-bubble-header">
+            <span className="ai-bubble-icon">{isHigh ? '🔴' : '💡'}</span>
+            {aiTipData.stage && <span className={`ai-bubble-stage${isHigh ? ' high' : ''}`}>{aiTipData.stage}</span>}
+            <span className="ai-bubble-close" onClick={dismissAiTip}>✕</span>
+          </div>
+          <div className="ai-bubble-text">{aiTipData.aiTip}</div>
+          {aiTipData.keywords && aiTipData.keywords.length > 0 && (
+            <div className="ai-bubble-tags">
+              {aiTipData.keywords.map((kw, i) => (
+                <span key={i} className={`ai-bubble-tag${isHigh ? ' high' : ''}`}>{kw}</span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {description && (
+        <div className="section-card">
+          <div className="section-title">工艺制单</div>
+          <div className="description-content">{description}</div>
+        </div>
+      )}
+
+      {secondaryProcesses.length > 0 && (
+        <div className="section-card process-highlight-card">
+          <div className="section-title process-highlight-title">二次工艺（{secondaryProcesses.length}项）</div>
+          <div className="process-list">
+            {secondaryProcesses.map((item, idx) => (
+              <div key={item.id || idx} className="process-item">
+                <div className="process-item-header">
+                  {item.processTypeCN && <span className="process-type-tag">{item.processTypeCN}</span>}
+                  <span className="process-name">{item.processName || item.processTypeCN || '-'}</span>
+                  <span className={`process-status${item.status === 'completed' ? ' status-done' : ' status-active'}`}>{item.statusCN}</span>
+                </div>
+                {item.description && <div className="process-item-desc">{item.description}</div>}
+                <div className="process-item-detail">
+                  {item.quantity && <span className="process-detail-text">数量 {item.quantity}</span>}
+                  {item.unitPrice && <span className="process-detail-text">单价 ¥{item.unitPrice}</span>}
+                  {item.factoryName && <span className="process-detail-text">工厂 {item.factoryName}</span>}
+                </div>
+                {item.remark && <div className="process-item-remark">备注：{item.remark}</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {materialPurchases.length > 0 && (
+        <>
+          <div className="section-card">
+            <div className="section-title">面辅料采购明细（{materialPurchases.length}项）</div>
+            <div className="material-list">
+              {materialPurchases.map((item, idx) => (
+                <div key={item.id || idx} className="material-item">
+                  <div className="mat-row">
+                    {item.materialTypeCN && <span className="mat-tag">{item.materialTypeCN}</span>}
+                    {item.materialCode && <span className="mat-text">编号 {item.materialCode}</span>}
+                    {item.specifications && <span className="mat-text">规格 {item.specifications}</span>}
+                    <span className="mat-text">单位 {item.unit || '米'}</span>
+                  </div>
+                  {(item.fabricComposition || item.fabricWeight || item.fabricWidth) && (
+                    <div className="mat-row">
+                      {item.fabricComposition && <span className="mat-text">成分 {item.fabricComposition}</span>}
+                      {item.fabricWeight && <span className="mat-text">克重 {item.fabricWeight}</span>}
+                      {item.fabricWidth && <span className="mat-text">幅宽 {item.fabricWidth}</span>}
+                    </div>
+                  )}
+                  <div className="mat-row mat-row-qty">
+                    <div className="qty-item">
+                      <span className="qty-lbl">需求</span>
+                      <span className="qty-val">{item.purchaseQuantity || 0}</span>
+                    </div>
+                    <div className="qty-item">
+                      <span className="qty-lbl">已到</span>
+                      <span className="qty-val arrived">{item.arrivedQuantity || 0}</span>
+                    </div>
+                    <div className="qty-item">
+                      <span className="qty-lbl">待到</span>
+                      <span className="qty-val pending">{item.pendingQuantity || 0}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="material-summary-card">
+            <div className="material-summary-row">
+              <span className="material-summary-label">总需求</span>
+              <span className="material-summary-value">{materialSummary.totalDemand}</span>
+            </div>
+            <div className="material-summary-row">
+              <span className="material-summary-label">已到货</span>
+              <span className="material-summary-value arrived">{materialSummary.totalArrived}</span>
+            </div>
+            <div className="material-summary-row">
+              <span className="material-summary-label">待到货</span>
+              <span className="material-summary-value pending">{materialSummary.totalPending}</span>
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="field-block">
         <label>选择工序（可多选，已选 {selectedCount} 个，单价合计 ¥{selectedAmount.toFixed(2)}）</label>

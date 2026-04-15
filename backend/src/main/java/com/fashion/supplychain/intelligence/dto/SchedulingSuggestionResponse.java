@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.dto;
 
 import java.util.List;
+import java.util.Map;
 import lombok.Data;
 
 /**
@@ -10,6 +11,8 @@ import lombok.Data;
 public class SchedulingSuggestionResponse {
     /** 推荐方案列表（按优先级排列） */
     private List<SchedulePlan> plans;
+    /** 优化求解增强提示（可选，当 OptimizationSolverOrchestrator 可用时填充） */
+    private Map<String, Object> optimizationHint;
 
     @Data
     public static class SchedulePlan {

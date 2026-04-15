@@ -6,7 +6,18 @@ import EmptyState from '@/components/EmptyState';
 
 function parseDateSafe(dateStr) {
   if (!dateStr) return new Date(NaN);
+  if (Array.isArray(dateStr)) {
+    const [y, m, d, h = 0, min = 0, s = 0] = dateStr;
+    return new Date(y, (m || 1) - 1, d || 1, h, min, s);
+  }
   return new Date(String(dateStr).replace(' ', 'T'));
+}
+
+function formatScanTime(val) {
+  if (!val) return '-';
+  const d = parseDateSafe(val);
+  if (isNaN(d.getTime())) return '-';
+  return formatDateTime(d);
 }
 
 export default function PayrollPage() {
@@ -55,11 +66,14 @@ export default function PayrollPage() {
       const res = await api.finance.payrollSummary({
         startTime: `${s} 00:00:00`, endTime: `${e} 23:59:59`, includeSettled: true,
       });
-      if (res?.code === 200 && Array.isArray(res.data)) {
-        processData(res.data, s, e);
-      } else if (Array.isArray(res)) {
-        processData(res, s, e);
-      } else { toast.error('加载失败'); }
+      const rawData = res?.code === 200
+        ? (Array.isArray(res.data) ? res.data : [])
+        : Array.isArray(res) ? res : [];
+      if (rawData.length === 0 && res?.code && res.code !== 200) {
+        toast.error(res?.message || '加载失败');
+      } else {
+        processData(rawData, s, e);
+      }
     } catch (error) {
       toast.error(error.message || '加载失败');
     } finally { setLoading(false); }
@@ -72,9 +86,13 @@ export default function PayrollPage() {
     const orderNoSet = new Set();
     const recs = [];
     for (const item of data) {
-      if (!item.startTime) continue;
-      const time = parseDateSafe(item.startTime);
-      if ((fs && time < fs) || (fe && time > fe)) continue;
+      const timeVal = item.startTime || item.scanTime || item.createTime;
+      if (timeVal) {
+        const time = parseDateSafe(timeVal);
+        if (!isNaN(time.getTime())) {
+          if ((fs && time < fs) || (fe && time > fe)) continue;
+        }
+      }
       const amt = Number(item.totalAmount) || 0;
       const qty = Number(item.quantity) || 0;
       totalAmount += amt;
@@ -82,10 +100,11 @@ export default function PayrollPage() {
       if (item.orderNo) orderNoSet.add(item.orderNo);
       recs.push({
         orderNo: item.orderNo || '-', styleNo: item.styleNo || '-', color: item.color || '-', size: item.size || '-',
-        processName: item.processName || '-', operatorName: item.operatorName || '', scanTypeText: scanTypeText(item.scanType),
+        processName: item.processName || '-', operatorName: item.operatorName || item.actualOperatorName || '',
+        scanTypeText: scanTypeText(item.scanType),
         orderStatusText: orderStatusText(item.orderStatus), quantity: qty,
         unitPrice: (Number(item.unitPrice) || 0).toFixed(2), totalAmount: amt.toFixed(2), totalAmountNum: amt,
-        scanTime: item.startTime ? formatDateTime(parseDateSafe(item.startTime)) : '-', rawScanTime: item.startTime || '',
+        scanTime: formatScanTime(timeVal), rawScanTime: timeVal || '',
       });
     }
     sortRecords(recs, sortField, sortOrder);
@@ -154,14 +173,14 @@ export default function PayrollPage() {
       ) : (
         <div className="list-stack">
           {records.map((r, idx) => (
-            <div key={idx} className="card-item" style={{ padding: 10, fontSize: 'var(--font-size-sm)' }}>
+            <div key={idx} className="card-item" style={{ padding: 12, fontSize: 'var(--font-size-sm)' }}>
               <div className="sub-page-row" style={{ justifyContent: 'space-between' }}>
                 <span style={{ fontWeight: 600 }}>{r.orderNo}</span>
                 <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>¥{r.totalAmount}</span>
               </div>
-              <div className="card-item-meta" style={{ marginTop: 2 }}>
+              <div style={{ marginTop: 4, color: 'var(--color-text-secondary)' }}>
                 {r.processName} · {r.scanTypeText} · {r.quantity}件 · ¥{r.unitPrice}/件
-                {r.operatorName && <span> · 扫码人：{r.operatorName}</span>}
+                {r.operatorName && <span> · {r.operatorName}</span>}
               </div>
               <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginTop: 2 }}>{r.scanTime}</div>
             </div>

@@ -125,10 +125,16 @@ const intelligence = {
     const pageContext = params.pageContext ? encodeURIComponent(params.pageContext) : '';
     const conversationId = params.conversationId || '';
     const imageUrl = params.imageUrl || '';
+    const orderNo = params.orderNo || '';
+    const processName = params.processName ? encodeURIComponent(params.processName) : '';
+    const stage = params.stage ? encodeURIComponent(params.stage) : '';
     let url = `${baseUrl}/api/intelligence/ai-advisor/chat/stream?question=${question}`;
     if (pageContext) url += `&pageContext=${pageContext}`;
     if (conversationId) url += `&conversationId=${encodeURIComponent(conversationId)}`;
     if (imageUrl) url += `&imageUrl=${encodeURIComponent(imageUrl)}`;
+    if (orderNo) url += `&orderNo=${encodeURIComponent(orderNo)}`;
+    if (processName) url += `&processName=${processName}`;
+    if (stage) url += `&stage=${stage}`;
 
     const controller = new AbortController();
     fetch(url, {

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import api from '@/api';
 import { useAuthStore } from '@/stores/authStore';
+import { useGlobalStore } from '@/stores/globalStore';
 import { isAdminOrSupervisor } from '@/utils/permission';
 import { toast } from '@/utils/uiHelper';
 import useVoiceInput from '@/hooks/useVoiceInput';
@@ -51,6 +52,7 @@ export default function AiAssistantFloat() {
   const scrollRef = useRef(null);
   const fileInputRef = useRef(null);
   const user = useAuthStore((s) => s.user);
+  const scanResultData = useGlobalStore(s => s.scanResultData);
   const aiStream = useAiChatStream();
 
   const [pos, setPos] = useState({ x: -1, y: -1 });
@@ -173,8 +175,14 @@ export default function AiAssistantFloat() {
 
     let fullText = '';
     try {
+      const streamParams = { question: msg, pageContext: window.location.pathname, imageUrl };
+      if (scanResultData) {
+        if (scanResultData.orderNo) streamParams.orderNo = scanResultData.orderNo;
+        if (scanResultData.processName) streamParams.processName = scanResultData.processName;
+        if (scanResultData.progressStage) streamParams.stage = scanResultData.progressStage;
+      }
       await aiStream.startStream(
-        { question: msg, pageContext: window.location.pathname, imageUrl },
+        streamParams,
         {
           onEvent: (event) => {
             if (event.type === 'text') { fullText = event.text; setStreamingText(fullText); }

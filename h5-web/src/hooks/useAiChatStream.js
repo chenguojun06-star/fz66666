@@ -4,12 +4,15 @@ import api from '@/api';
 export default function useAiChatStream() {
   const abortRef = useRef(null);
 
-  const startStream = useCallback(async ({ question, pageContext, conversationId, imageUrl }, { onEvent, onComplete, onError, onFallback }) => {
+  const startStream = useCallback(async ({ question, pageContext, conversationId, imageUrl, orderNo, processName, stage }, { onEvent, onComplete, onError, onFallback }) => {
     if (abortRef.current) abortRef.current.abort();
 
     const streamPayload = { question: question || (imageUrl ? '请看这张图片' : ''), pageContext: pageContext || window.location.pathname };
     if (conversationId) streamPayload.conversationId = conversationId;
     if (imageUrl) streamPayload.imageUrl = imageUrl;
+    if (orderNo) streamPayload.orderNo = orderNo;
+    if (processName) streamPayload.processName = processName;
+    if (stage) streamPayload.stage = stage;
 
     let accumulatedText = '';
     let streamStarted = false;

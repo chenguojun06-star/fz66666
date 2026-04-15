@@ -15,7 +15,7 @@ const OrderCard = memo(function OrderCard({ order, isExpanded, onToggle, activeT
   const progressColor = isClosed
     ? 'var(--color-text-tertiary)'
     : isOverdue
-      ? 'var(--color-danger)'
+      ? 'var(--color-warning)'
       : 'var(--color-primary)';
 
   return (
@@ -79,7 +79,7 @@ const OrderCard = memo(function OrderCard({ order, isExpanded, onToggle, activeT
         </div>
         <div className="order-card-qty-divider" />
         <div className="order-card-qty-item">
-          <span className="order-card-qty-val" style={{ color: isOverdue ? 'var(--color-danger)' : 'var(--color-text-primary)' }}>{remainQty}</span>
+          <span className="order-card-qty-val" style={{ color: isOverdue ? 'var(--color-warning)' : 'var(--color-text-primary)' }}>{remainQty}</span>
           <span className="order-card-qty-lbl">剩余</span>
         </div>
       </div>
