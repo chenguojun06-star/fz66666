@@ -940,4 +940,105 @@ public class IntelligenceController {
                 "totalStyles", styleIdToTenantId.size(),
                 "updated", updated));
     }
+
+    // ══════════════════════════════════════════════════════════════════
+    //   AI基础设施升级 — 知识图谱 / 优化求解 / 工作流 / Agent状态
+    // ══════════════════════════════════════════════════════════════════
+
+    @Autowired
+    private com.fashion.supplychain.intelligence.orchestration.KnowledgeGraphOrchestrator knowledgeGraphOrchestrator;
+
+    @Autowired
+    private com.fashion.supplychain.intelligence.orchestration.OptimizationSolverOrchestrator optimizationSolverOrchestrator;
+
+    @Autowired
+    private com.fashion.supplychain.intelligence.orchestration.WorkflowExecutionOrchestrator workflowExecutionOrchestrator;
+
+    @Autowired
+    private com.fashion.supplychain.intelligence.service.AgentStateStore agentStateStore;
+
+    /** 知识图谱推理 — 从查询出发多跳遍历图谱，返回推理路径 */
+    @PostMapping("/knowledge-graph/reason")
+    public Result<List<com.fashion.supplychain.intelligence.orchestration.KnowledgeGraphOrchestrator.ReasoningPath>> knowledgeGraphReason(
+            @RequestBody java.util.Map<String, Object> body) {
+        String query = (String) body.getOrDefault("query", "");
+        if (query == null || query.isBlank()) {
+            return Result.fail("查询不能为空");
+        }
+        int maxHops = body.get("maxHops") != null ? ((Number) body.get("maxHops")).intValue() : 3;
+        return Result.success(knowledgeGraphOrchestrator.reason(UserContext.tenantId(), query, maxHops));
+    }
+
+    /** 知识图谱构建 — 从业务数据异步构建知识图谱 */
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
+    @PostMapping("/knowledge-graph/build")
+    public Result<Void> buildKnowledgeGraph() {
+        knowledgeGraphOrchestrator.buildGraphFromBusinessData(UserContext.tenantId());
+        return Result.success(null);
+    }
+
+    /** 排产优化求解 — LLM提取约束 + 启发式求解 */
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
+    @PostMapping("/optimization/scheduling")
+    public Result<com.fashion.supplychain.intelligence.orchestration.OptimizationSolverOrchestrator.SchedulingSolution> optimizeScheduling(
+            @RequestBody java.util.Map<String, String> body) {
+        String userRequest = body.getOrDefault("request", "");
+        String context = body.getOrDefault("context", "");
+        if (userRequest == null || userRequest.isBlank()) {
+            return Result.fail("请求不能为空");
+        }
+        return Result.success(optimizationSolverOrchestrator.solveScheduling(userRequest, context));
+    }
+
+    /** 采购优化求解 — LLM提取约束 + 启发式求解 */
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
+    @PostMapping("/optimization/procurement")
+    public Result<com.fashion.supplychain.intelligence.orchestration.OptimizationSolverOrchestrator.ProcurementSolution> optimizeProcurement(
+            @RequestBody java.util.Map<String, String> body) {
+        String userRequest = body.getOrDefault("request", "");
+        String context = body.getOrDefault("context", "");
+        if (userRequest == null || userRequest.isBlank()) {
+            return Result.fail("请求不能为空");
+        }
+        return Result.success(optimizationSolverOrchestrator.solveProcurement(userRequest, context));
+    }
+
+    /** 工作流执行 — 按DAG拓扑排序执行工作流节点 */
+    @PostMapping("/workflow/execute")
+    public Result<com.fashion.supplychain.intelligence.entity.WorkflowExecution> executeWorkflow(
+            @RequestBody java.util.Map<String, Object> body) {
+        String workflowId = (String) body.get("workflowId");
+        if (workflowId == null || workflowId.isBlank()) {
+            return Result.fail("workflowId不能为空");
+        }
+        @SuppressWarnings("unchecked")
+        java.util.Map<String, Object> inputVars = (java.util.Map<String, Object>) body.get("inputVariables");
+        return Result.success(workflowExecutionOrchestrator.execute(
+                workflowId, UserContext.tenantId(), UserContext.userId(), inputVars));
+    }
+
+    /** Agent会话状态查询 — 获取会话详情和检查点列表 */
+    @GetMapping("/agent-state/session/{sessionId}")
+    public Result<java.util.Map<String, Object>> getAgentSession(
+            @org.springframework.web.bind.annotation.PathVariable String sessionId) {
+        com.fashion.supplychain.intelligence.entity.AgentSession session = agentStateStore.getSession(sessionId);
+        if (session == null) {
+            return Result.fail("会话不存在");
+        }
+        java.util.List<com.fashion.supplychain.intelligence.entity.AgentCheckpoint> checkpoints = agentStateStore.getCheckpoints(sessionId);
+        java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("session", session);
+        result.put("checkpoints", checkpoints);
+        return Result.success(result);
+    }
+
+    /** Agent会话回滚 — 回滚到指定检查点 */
+    @PostMapping("/agent-state/session/{sessionId}/rollback")
+    public Result<Void> rollbackAgentSession(
+            @org.springframework.web.bind.annotation.PathVariable String sessionId,
+            @RequestBody java.util.Map<String, Object> body) {
+        int targetIteration = ((Number) body.get("targetIteration")).intValue();
+        agentStateStore.rollbackToCheckpoint(sessionId, targetIteration);
+        return Result.success(null);
+    }
 }

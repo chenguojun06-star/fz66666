@@ -13,6 +13,12 @@ const STATUS_FILTERS = [
   { key: 'completed', label: '已完成' },
 ];
 
+const FACTORY_TYPES = [
+  { key: '', label: '全部' },
+  { key: 'INTERNAL', label: '内部' },
+  { key: 'EXTERNAL', label: '外部' },
+];
+
 const SUMMARY_CARDS = [
   { key: 'sample', title: '样衣开发', icon: 'scissors', color: 'var(--color-purple)', bg: 'rgba(124,92,252,0.1)', tone: 'purple' },
   { key: 'production', title: '生产订单', icon: 'package', color: 'var(--color-primary)', bg: 'rgba(59,130,246,0.1)', tone: 'blue' },
@@ -23,6 +29,7 @@ const SUMMARY_CARDS = [
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('all');
+  const [factoryType, setFactoryType] = useState('');
   const [cards, setCards] = useState({
     sample: { developing: 0, completed: 0 },
     production: { total: 0, overdue: 0, pieces: 0 },
@@ -69,6 +76,7 @@ export default function DashboardPage() {
       else if (activeFilter === 'completed') params.status = 'completed';
       else if (activeFilter === 'overdue') params.status = 'production';
       if (searchKey) params.orderNo = searchKey;
+      if (factoryType) params.factoryType = factoryType;
       const res = await api.production.orderList(params);
       const data = res?.data || res || {};
       let rawList = data?.records || data?.list || [];
@@ -83,13 +91,18 @@ export default function DashboardPage() {
     } catch (e) {
       console.error('Dashboard loadOrders failed:', e);
     }
-  }, [activeFilter, searchKey]);
+  }, [activeFilter, searchKey, factoryType]);
 
-  useEffect(() => { loadOrders(true); }, [activeFilter]);
+  useEffect(() => { loadOrders(true); }, [activeFilter, factoryType]);
 
   const toggleExpand = useCallback((id) => {
     setExpandedId(prev => prev === id ? null : id);
   }, []);
+
+  const handleRefresh = useCallback(() => {
+    refreshCards();
+    loadOrders(true);
+  }, [loadOrders]);
 
   const renderCardMetrics = useCallback((key) => {
     const c = cards[key];
@@ -135,11 +148,14 @@ export default function DashboardPage() {
     <div className="dashboard-stack">
       <div className="sub-page-header" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
         <span className="sub-page-title">今日概览</span>
-        {todayScanCount > 0 && (
-          <span className="today-scan-badge">
-            今日扫码 {todayScanCount} 次
-          </span>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {todayScanCount > 0 && (
+            <span className="today-scan-badge">今日扫码 {todayScanCount} 次</span>
+          )}
+          <button className="refresh-btn" onClick={handleRefresh} style={{ margin: 0 }}>
+            <Icon name="refresh" size={12} /> 刷新
+          </button>
+        </div>
       </div>
 
       <div className="card-grid">
@@ -156,12 +172,19 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      <div className="scan-type-bar">
+      <div className="filter-row">
         {STATUS_FILTERS.map(f => (
           <button key={f.key} className={`filter-btn${activeFilter === f.key ? ' active' : ''}`}
             onClick={() => setActiveFilter(f.key)}>
             {f.label}
           </button>
+        ))}
+      </div>
+
+      <div className="filter-row">
+        {FACTORY_TYPES.map(f => (
+          <button key={f.key} className={`filter-btn${factoryType === f.key ? ' active' : ''}`}
+            onClick={() => setFactoryType(f.key)}>{f.label}</button>
         ))}
       </div>
 

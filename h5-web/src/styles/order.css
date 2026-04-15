@@ -22,6 +22,8 @@
 .filter-btn:active { opacity: 0.7; }
 .filter-btn.active { background: var(--color-primary); color: #fff; font-weight: 600; }
 
+.filter-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+
 .search-box { display: flex; gap: 8px; margin-bottom: 12px; }
 .search-row { display: flex; gap: 8px; align-items: center; }
 .search-row .text-input { flex: 1; }
@@ -107,7 +109,7 @@
 .card-item-cover { width: 100%; max-height: 160px; object-fit: cover; border-radius: var(--radius-md); margin-bottom: 12px; }
 
 .order-card-item { padding: 16px; }
-.order-card-item--overdue { border-left: 3px solid var(--color-danger); }
+.order-card-item--overdue { border-left: 2px solid var(--color-danger); }
 
 .order-card-header { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; }
 .order-card-thumb { width: 80px; height: 80px; border-radius: var(--radius-md); overflow: hidden; flex-shrink: 0; background: var(--color-bg-gray); position: relative; }

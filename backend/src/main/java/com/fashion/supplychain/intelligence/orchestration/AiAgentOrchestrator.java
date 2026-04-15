@@ -168,6 +168,7 @@ public class AiAgentOrchestrator {
                     messages.add(AiMessage.tool(rec.evidence, rec.toolCallId, rec.toolName));
                 }
                 allExecRecords.addAll(execRecords);
+                if (stateSessionId != null) { try { agentStateStore.saveCheckpoint(stateSessionId, currentIter, messages, execRecords, (int) totalTokens); } catch (Exception e) { log.debug("[AiAgent] 检查点保存跳过: {}", e.getMessage()); } }
             } else {
                 // Done!
                 log.info("[AiAgent] 完成任务，进入自反思审查层");
@@ -188,11 +189,13 @@ public class AiAgentOrchestrator {
                 // ── 租户级 AI 记忆增强：异步提取对话洞察 ──
                 memoryHelper.enhanceMemoryAsync(userId, tenantId, userMessage, revisedContent);
                 lastToolRecordsHolder.set(allExecRecords);
+                if (stateSessionId != null) { try { agentStateStore.completeSession(stateSessionId, revisedContent, (int) totalTokens, currentIter); } catch (Exception e) { log.debug("[AiAgent] 状态完成跳过: {}", e.getMessage()); } }
                 return Result.success(revisedContent);
             }
         }
 
         aiAgentTraceOrchestrator.finishRequest(commandId, null, "对话轮数超过限制", System.currentTimeMillis() - requestStartAt);
+        if (stateSessionId != null) { try { agentStateStore.failSession(stateSessionId, "对话轮数超过限制"); } catch (Exception e) { log.debug("[AiAgent] 状态失败跳过: {}", e.getMessage()); } }
         return Result.fail("对话轮数超过限制 (" + maxIterations + ")，可能陷入了死循环。");
         } finally { // F31: 强制清理 ThreadLocal
             lastCommandIdHolder.remove();
@@ -216,6 +219,7 @@ public class AiAgentOrchestrator {
 
     public void executeAgentStreaming(String userMessage, String pageContext, SseEmitter emitter) {
         String commandId = null;
+        String stateSessionId = null;
         long requestStartAt = System.currentTimeMillis();
         try {
             if (!inferenceOrchestrator.isAnyModelEnabled()) {
@@ -225,6 +229,9 @@ public class AiAgentOrchestrator {
             }
 
             commandId = aiAgentTraceOrchestrator.startRequest(userMessage);
+            String userId = UserContext.userId();
+            Long tenantId = UserContext.tenantId();
+            try { stateSessionId = agentStateStore.createSession(tenantId, userId, userMessage); } catch (Exception e) { log.debug("[AiAgent-Stream] 状态会话创建跳过: {}", e.getMessage()); }
             List<AgentTool> visibleTools = aiAgentToolAccessService.resolveVisibleTools(registeredTools);
             // ── 领域路由裁剪：按用户意图缩减工具集，降低 token 消耗 ──
             Set<ToolDomain> domains = domainRouter.route(userMessage);
@@ -239,8 +246,6 @@ public class AiAgentOrchestrator {
             List<JsonNode> bundleSplitCards = new ArrayList<>();
             List<JsonNode> xiaoyunInsightCards = new ArrayList<>();
             messages.add(AiMessage.system(promptHelper.buildSystemPrompt(userMessage, pageContext, visibleTools)));
-            String userId = UserContext.userId();
-            Long tenantId = UserContext.tenantId();
             List<AiMessage> history = memoryHelper.getConversationHistory(userId, tenantId);
             messages.addAll(memoryHelper.compactConversationHistory(history));
             messages.add(AiMessage.user(userMessage));
@@ -318,6 +323,7 @@ public class AiAgentOrchestrator {
                         messages.add(AiMessage.tool(rec.evidence, rec.toolCallId, rec.toolName));
                     }
                     allExecRecords.addAll(execRecords);
+                    if (stateSessionId != null) { try { agentStateStore.saveCheckpoint(stateSessionId, i, messages, execRecords, (int) totalTokens); } catch (Exception e) { log.debug("[AiAgent-Stream] 检查点保存跳过: {}", e.getMessage()); } }
                 } else {
                     // == 自反思审查 ==
                     String revisedContent;
@@ -338,6 +344,7 @@ public class AiAgentOrchestrator {
                     aiAgentTraceOrchestrator.finishRequest(commandId, revisedContent, null, System.currentTimeMillis() - requestStartAt);
                     // ── 租户级 AI 记忆增强：异步提取对话洞察 ──
                     memoryHelper.enhanceMemoryAsync(userId, tenantId, userMessage, revisedContent);
+                    if (stateSessionId != null) { try { agentStateStore.completeSession(stateSessionId, revisedContent, (int) totalTokens, i); } catch (Exception e) { log.debug("[AiAgent-Stream] 状态完成跳过: {}", e.getMessage()); } }
                     emitSse(emitter, "answer", Map.of("content", revisedContent, "commandId", commandId));
                     // 生成上下文关联的后续建议动作
                     try {
@@ -355,6 +362,7 @@ public class AiAgentOrchestrator {
             }
 
             aiAgentTraceOrchestrator.finishRequest(commandId, null, "对话轮数超过限制", System.currentTimeMillis() - requestStartAt);
+            if (stateSessionId != null) { try { agentStateStore.failSession(stateSessionId, "对话轮数超过限制"); } catch (Exception e) { log.debug("[AiAgent-Stream] 状态失败跳过: {}", e.getMessage()); } }
             emitSse(emitter, "error", Map.of("message", "对话轮数超过限制"));
             emitter.complete();
 
@@ -363,6 +371,7 @@ public class AiAgentOrchestrator {
             if (commandId != null) {
                 aiAgentTraceOrchestrator.finishRequest(commandId, null, e.getMessage(), System.currentTimeMillis() - requestStartAt);
             }
+            if (stateSessionId != null) { try { agentStateStore.failSession(stateSessionId, e.getMessage()); } catch (Exception ex) { log.debug("[AiAgent-Stream] 状态失败跳过: {}", ex.getMessage()); } }
             try {
                 emitSse(emitter, "error", Map.of("message", "系统异常: " + e.getMessage()));
                 emitter.complete();

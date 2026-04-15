@@ -8,6 +8,8 @@ import com.fashion.supplychain.intelligence.entity.KnowledgeBase;
 import com.fashion.supplychain.intelligence.service.KnowledgeBaseService;
 import com.fashion.supplychain.intelligence.service.CohereRerankService;
 import com.fashion.supplychain.intelligence.service.QdrantService;
+import com.fashion.supplychain.intelligence.orchestration.KnowledgeGraphOrchestrator;
+import com.fashion.supplychain.intelligence.util.RrfFusion;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -35,6 +37,10 @@ public class KnowledgeSearchTool extends AbstractAgentTool {
     /** Cohere Reranker 精排服务 — 未配置时自动降级为混合评分排序 */
     @Autowired(required = false)
     private CohereRerankService cohereRerankService;
+
+    /** 知识图谱推理引擎 — 可用时提供第三路召回 */
+    @Autowired(required = false)
+    private KnowledgeGraphOrchestrator knowledgeGraphOrchestrator;
 
     @Override
     public String getName() {
@@ -113,27 +119,97 @@ public class KnowledgeSearchTool extends AbstractAgentTool {
                 semanticKbList = knowledgeBaseService.list(semanticQw);
             }
 
-                        // ── STEP 4: 混合重排（语义 + 关键词 + 热度）──
-                        LinkedHashMap<String, KnowledgeBase> candidateMap = new LinkedHashMap<>();
-                        for (KnowledgeBase kb : semanticKbList) {
-                        candidateMap.put(kb.getId(), kb);
-            }
-                        for (KnowledgeBase kb : sqlResults) {
-                        candidateMap.putIfAbsent(kb.getId(), kb);
+            // ── STEP 3.5: 知识图谱推理召回（第三路）──
+            List<KnowledgeGraphOrchestrator.ReasoningPath> graphPaths = new ArrayList<>();
+            Set<String> graphEntityIds = new HashSet<>();
+            boolean graphEnabled = knowledgeGraphOrchestrator != null;
+            if (graphEnabled) {
+                try {
+                    graphPaths = knowledgeGraphOrchestrator.reason(tenantId, query, 3);
+                    for (KnowledgeGraphOrchestrator.ReasoningPath path : graphPaths) {
+                        if (path.getEntityNames() != null) {
+                            for (String entityName : path.getEntityNames()) {
+                                QueryWrapper<KnowledgeBase> graphQw = new QueryWrapper<KnowledgeBase>()
+                                        .eq("delete_flag", 0)
+                                        .and(w -> w.isNull("tenant_id").or().eq(tenantId != null, "tenant_id", tenantId))
+                                        .and(w -> w.like("title", entityName).or().like("keywords", entityName));
+                                if (!category.isEmpty()) graphQw.eq("category", category);
+                                graphQw.last("LIMIT 3");
+                                for (KnowledgeBase kb : knowledgeBaseService.list(graphQw)) {
+                                    graphEntityIds.add(kb.getId());
+                                }
+                            }
                         }
+                    }
+                    if (!graphPaths.isEmpty()) {
+                        log.debug("[KnowledgeSearch] 知识图谱推理命中 {} 条路径, 关联KB {} 条", graphPaths.size(), graphEntityIds.size());
+                    }
+                } catch (Exception e) {
+                    log.debug("[KnowledgeSearch] 知识图谱推理跳过: {}", e.getMessage());
+                }
+            }
 
-                        // 有 Reranker 时扩大初排候选数（15条 → 精排后取5），无则直接 limit 5
-                        int candidateLimit = (cohereRerankService != null && cohereRerankService.isAvailable()) ? 15 : 5;
-                        List<KnowledgeHit> candidateHits = candidateMap.values().stream()
-                            .map(kb -> buildKnowledgeHit(kb, query, category, semanticScoreMap.containsKey(kb.getId())
-                                ? semanticScoreMap.get(kb.getId()) : 0f))
-                            .sorted(Comparator.comparing(KnowledgeHit::getHybridScore).reversed()
-                                .thenComparing(KnowledgeHit::getKeywordScore).reversed()
-                                .thenComparing(KnowledgeHit::getSemanticScore).reversed())
-                            .limit(candidateLimit)
-                            .collect(Collectors.toList());
+            // ── STEP 4: RRF多路融合（语义 + 关键词 + 图谱）──
+            LinkedHashMap<String, KnowledgeBase> candidateMap = new LinkedHashMap<>();
+            for (KnowledgeBase kb : semanticKbList) {
+                candidateMap.put(kb.getId(), kb);
+            }
+            for (KnowledgeBase kb : sqlResults) {
+                candidateMap.putIfAbsent(kb.getId(), kb);
+            }
+            if (!graphEntityIds.isEmpty()) {
+                QueryWrapper<KnowledgeBase> graphKbQw = new QueryWrapper<KnowledgeBase>()
+                        .eq("delete_flag", 0)
+                        .in("id", graphEntityIds)
+                        .and(w -> w.isNull("tenant_id").or().eq(tenantId != null, "tenant_id", tenantId));
+                if (!category.isEmpty()) graphKbQw.eq("category", category);
+                for (KnowledgeBase kb : knowledgeBaseService.list(graphKbQw)) {
+                    candidateMap.putIfAbsent(kb.getId(), kb);
+                }
+            }
 
-                        // ── STEP 4.5: Cohere Reranker 精排（可选，不可用时自动降级）──
+            Map<String, List<RrfFusion.RankedItem<String>>> rrfInput = new LinkedHashMap<>();
+            List<RrfFusion.RankedItem<String>> semanticRanked = new ArrayList<>();
+            for (KnowledgeBase kb : semanticKbList) {
+                semanticRanked.add(new RrfFusion.RankedItem<String>(kb.getId(), safe(kb.getTitle()), (double) semanticScoreMap.getOrDefault(kb.getId(), 0f)));
+            }
+            rrfInput.put("semantic", semanticRanked);
+
+            List<RrfFusion.RankedItem<String>> keywordRanked = new ArrayList<>();
+            for (KnowledgeBase kb : sqlResults) {
+                keywordRanked.add(new RrfFusion.RankedItem<String>(kb.getId(), safe(kb.getTitle()), computeKeywordScore(kb, query)));
+            }
+            rrfInput.put("keyword", keywordRanked);
+
+            if (!graphEntityIds.isEmpty()) {
+                List<RrfFusion.RankedItem<String>> graphRanked = new ArrayList<>();
+                for (String eid : new ArrayList<>(graphEntityIds)) {
+                    graphRanked.add(new RrfFusion.RankedItem<String>(eid, "graph:" + eid, 0.5d));
+                }
+                rrfInput.put("graph", graphRanked);
+            }
+
+            List<RrfFusion.RankedItem<String>> fusedResults = RrfFusion.fuse(rrfInput);
+            Map<String, Double> rrfScoreMap = new LinkedHashMap<>();
+            for (RrfFusion.RankedItem<String> item : fusedResults) {
+                rrfScoreMap.put(item.getItem(), item.getScore());
+            }
+
+            int candidateLimit = (cohereRerankService != null && cohereRerankService.isAvailable()) ? 15 : 5;
+            List<KnowledgeHit> candidateHits = new ArrayList<>();
+            for (RrfFusion.RankedItem<String> fused : fusedResults.stream().limit(candidateLimit).collect(Collectors.toList())) {
+                KnowledgeBase kb = candidateMap.get(fused.getItem());
+                if (kb == null) continue;
+                KnowledgeHit hit = new KnowledgeHit();
+                hit.setKnowledgeBase(kb);
+                hit.setSemanticScore(semanticScoreMap.containsKey(kb.getId()) ? semanticScoreMap.get(kb.getId()) : 0d);
+                hit.setKeywordScore(computeKeywordScore(kb, query));
+                hit.setHybridScore(fused.getScore());
+                hit.setGraphBoosted(graphEntityIds.contains(kb.getId()));
+                candidateHits.add(hit);
+            }
+
+            // ── STEP 4.5: Cohere Reranker 精排（可选，不可用时自动降级）──
                         List<KnowledgeHit> rankedHits;
                         if (cohereRerankService != null && cohereRerankService.isAvailable()) {
                             List<KnowledgeBase> candidateKbs = candidateHits.stream()
@@ -202,9 +278,20 @@ public class KnowledgeSearchTool extends AbstractAgentTool {
             result.put("count", finalList.size());
             result.put("items", formatted);
             result.put("semantic", !semanticKbList.isEmpty());
-            result.put("retrievalMode", cohereRerankService != null && cohereRerankService.isAvailable() ? "reranked" : "hybrid");
+            result.put("retrievalMode", graphEnabled && !graphPaths.isEmpty() ? "rrf_graph" : (cohereRerankService != null && cohereRerankService.isAvailable() ? "reranked" : "hybrid"));
             result.put("semanticHits", semanticKbList.size());
             result.put("keywordHits", sqlResults.size());
+            result.put("graphHits", graphEntityIds.size());
+            if (!graphPaths.isEmpty()) {
+                List<Map<String, Object>> pathSummaries = new ArrayList<>();
+                for (KnowledgeGraphOrchestrator.ReasoningPath path : graphPaths.stream().limit(3).collect(Collectors.toList())) {
+                    Map<String, Object> ps = new HashMap<>();
+                    ps.put("description", path.getPathDescription());
+                    ps.put("confidence", path.getConfidence());
+                    pathSummaries.add(ps);
+                }
+                result.put("graphPaths", pathSummaries);
+            }
             return MAPPER.writeValueAsString(result);
     }
 
@@ -292,5 +379,6 @@ public class KnowledgeSearchTool extends AbstractAgentTool {
         private double semanticScore;
         private double keywordScore;
         private double hybridScore;
+        private boolean graphBoosted;
     }
 }

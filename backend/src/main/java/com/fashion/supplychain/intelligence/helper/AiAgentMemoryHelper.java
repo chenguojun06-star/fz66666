@@ -8,6 +8,8 @@ import com.fashion.supplychain.intelligence.mapper.KnowledgeBaseMapper;
 import com.fashion.supplychain.intelligence.orchestration.AiMemoryOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceMemoryOrchestrator;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -16,35 +18,30 @@ import java.time.LocalDateTime;
 
 import javax.annotation.PreDestroy;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
 public class AiAgentMemoryHelper {
 
     private static final int MAX_MEMORY_TURNS = 6;
-    private static final int MAX_USERS_CACHED = 200;
+    private static final int MAX_USERS_CACHED = 500;
     private static final int COMPACT_THRESHOLD_TURNS = 12;
 
     @Autowired private IntelligenceInferenceOrchestrator inferenceOrchestrator;
     @Autowired private IntelligenceMemoryOrchestrator intelligenceMemoryOrchestrator;
     @Autowired private AiMemoryOrchestrator aiMemoryOrchestrator;
-    // 用于将高质量 AI 洞察沉淀到知识库，供 RAG 问答检索复用（缺口2修复）
     @Autowired private KnowledgeBaseMapper knowledgeBaseMapper;
 
-    private final Map<String, List<AiMessage>> conversationMemory = Collections.synchronizedMap(
-            new LinkedHashMap<String, List<AiMessage>>(64, 0.75f, true) {
-                @Override
-                protected boolean removeEldestEntry(Map.Entry<String, List<AiMessage>> eldest) {
-                    return size() > MAX_USERS_CACHED;
-                }
-            });
+    private final Cache<String, List<AiMessage>> conversationMemory = Caffeine.newBuilder()
+            .maximumSize(MAX_USERS_CACHED)
+            .expireAfterAccess(30, TimeUnit.MINUTES)
+            .recordStats()
+            .build();
 
     private final ExecutorService memoryExecutor = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "ai-memory-enhance");
