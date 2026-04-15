@@ -160,6 +160,11 @@ jobs:
 
     - name: 创建版本标签
       run: |
+        CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+        if echo "$CHANGED_FILES" | grep -q "^\.github/workflows/"; then
+          echo "跳过打标签: 本次提交包含 workflow 文件变更，GITHUB_TOKEN 无 workflows 权限"
+          exit 0
+        fi
         VERSION=$(grep -m1 '<version>' backend/pom.xml | sed 's/.*<version>\(.*\)<\/version>.*/\1/' | tr -d '[:space:]')
         TAG="v${VERSION}-$(date +%Y%m%d-%H%M%S)"
         git config user.name "github-actions[bot]"
