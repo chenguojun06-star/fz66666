@@ -7,19 +7,7 @@ import { getAuthedImageUrl } from '@/utils/fileUrl';
 import { getUserInfo } from '@/utils/storage';
 import { eventBus } from '@/utils/eventBus';
 
-const MATERIAL_TYPE_MAP = {
-  fabricA: '主面料', fabricB: '辅面料', liningA: '里料', liningB: '夹里', liningC: '衬布/粘合衬',
-  accessoryA: '拉链', accessoryB: '纽扣', accessoryC: '配件',
-};
-
-function normalizeScanType(progressStage, scanType) {
-  const stage = String(progressStage || '').trim();
-  if (stage === 'quality' || stage === '质检') return 'quality';
-  if (stage === 'warehouse' || stage === '入库') return 'warehousing';
-  if (stage === 'cutting' || stage === '裁剪') return 'cutting';
-  if (stage === 'procurement' || stage === '采购') return 'procurement';
-  return scanType || 'production';
-}
+import { normalizeScanType, MATERIAL_TYPE_MAP } from '@/utils/scanHelpers';
 
 export default function ScanConfirmPage() {
   const navigate = useNavigate();

@@ -13,7 +13,7 @@ export default function useVoiceInput({ lang = 'zh-CN', continuous = false, onRe
   useEffect(() => {
     return () => {
       if (recognitionRef.current) {
-        try { recognitionRef.current.abort(); } catch (_) {}
+        try { recognitionRef.current.abort(); } catch (e) { console.warn('Voice abort:', e.message); }
         recognitionRef.current = null;
       }
     };
@@ -75,7 +75,7 @@ export default function useVoiceInput({ lang = 'zh-CN', continuous = false, onRe
 
   const stop = useCallback(() => {
     if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch (_) {}
+      try { recognitionRef.current.stop(); } catch (e) { console.warn('Voice stop:', e.message); }
       recognitionRef.current = null;
     }
     setListening(false);

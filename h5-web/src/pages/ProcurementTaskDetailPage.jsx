@@ -4,11 +4,7 @@ import api from '@/api';
 import { getUserInfo } from '@/utils/storage';
 import { toast } from '@/utils/uiHelper';
 import { eventBus } from '@/utils/eventBus';
-
-const MATERIAL_TYPE_MAP = {
-  fabricA: '主面料', fabricB: '辅面料', liningA: '里料', liningB: '夹里', liningC: '衬布/粘合衬',
-  accessoryA: '拉链', accessoryB: '纽扣', accessoryC: '配件',
-};
+import { MATERIAL_TYPE_MAP } from '@/utils/scanHelpers';
 
 export default function ProcurementTaskDetailPage() {
   const navigate = useNavigate();

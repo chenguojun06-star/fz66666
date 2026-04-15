@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '@/api';
+import { useAuthStore } from '@/stores/authStore';
 import { toast } from '@/utils/uiHelper';
-import { http } from '@/services/http';
+import { canUndo } from '@/utils/scanHelpers';
 
 const _now = new Date();
 
@@ -23,15 +24,11 @@ function _normalizeQualityName(processName) {
   return processName;
 }
 
-function canUndo(record) {
-  if (!record.scanTime && !record.createTime) return false;
-  const t = new Date(record.scanTime || record.createTime).getTime();
-  return Date.now() - t < 3600000 && (record.scanResult || '').toLowerCase() === 'success';
-}
-
 export default function ScanHistoryPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = (() => { const r = (user?.role || '').toLowerCase(); return r === 'admin' || r === 'supervisor' || r === 'tenant_owner'; })();
   const [dateMode, setDateMode] = useState(() => searchParams.get('mode') === 'monthly' ? 'month' : 'month');
   const [year, setYear] = useState(_now.getFullYear());
   const [month, setMonth] = useState(_now.getMonth() + 1);
@@ -71,7 +68,7 @@ export default function ScanHistoryPage() {
       const [scanRes, patternRes, payrollRes] = await Promise.allSettled([
         api.production.myScanHistory(params),
         reset ? api.production.myPatternScanHistory({ startTime: start + ' 00:00:00', endTime: end + ' 23:59:59' }) : Promise.resolve(null),
-        reset ? http.post('/api/finance/payroll-settlement/operator-summary', { startTime: start + ' 00:00:00', endTime: end + ' 23:59:59', includeSettled: true }) : Promise.resolve(null),
+        reset ? api.finance.payrollSummary({ startTime: start + ' 00:00:00', endTime: end + ' 23:59:59', includeSettled: true }) : Promise.resolve(null),
       ]);
 
       const scanData = scanRes.status === 'fulfilled' ? scanRes.value : null;
@@ -99,7 +96,7 @@ export default function ScanHistoryPage() {
         displayLineAmount: (Number(item.totalAmount) || Number(item.scanCost) || ((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0))).toFixed(2),
         lineAmount: Number(item.totalAmount) || Number(item.scanCost) || ((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0)),
         isPayable: (Number(item.totalAmount) > 0) || (Number(item.scanCost) > 0) || ((Number(item.unitPrice) || 0) > 0 && (Number(item.quantity) || 0) > 0),
-        canUndo: canUndo(item),
+        canUndo: canUndo(item, isAdmin),
       }));
 
       const patternFormatted = patternRecords.map(item => ({
@@ -174,7 +171,7 @@ export default function ScanHistoryPage() {
     if (!window.confirm('确定撤回此条扫码记录？')) return;
     setUndoingId(record.id);
     try {
-      await api.production.undoScan(record.id);
+      await api.production.undoScan({ recordId: record.id });
       toast.success('撤回成功');
       setRecords(prev => prev.filter(r => r.id !== record.id));
       setSummary(prev => ({
@@ -233,22 +230,25 @@ export default function ScanHistoryPage() {
         </div>
       </div>
 
-      <div className="summary-grid-2col">
-        <div className="summary-grid-item">
-          <span className="summary-num">{summary.totalQuantity}</span>
-          <span className="summary-label">总数量</span>
+      <div className="card-item" style={{ display: 'flex', textAlign: 'center' }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-primary)' }}>{summary.totalQuantity}</div>
+          <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>总数量</div>
         </div>
-        <div className="summary-grid-item">
-          <span className="summary-num">{summary.orderCount}</span>
-          <span className="summary-label">订单数</span>
+        <div style={{ width: 1, background: 'var(--color-border-light)' }} />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-primary)' }}>{summary.orderCount}</div>
+          <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>订单数</div>
         </div>
-        <div className="summary-grid-item">
-          <span className="summary-num">{summary.recordCount}</span>
-          <span className="summary-label">记录数(样衣{summary.patternRecordCount})</span>
+        <div style={{ width: 1, background: 'var(--color-border-light)' }} />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--color-success)' }}>{summary.recordCount}</div>
+          <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>记录数(样衣{summary.patternRecordCount})</div>
         </div>
-        <div className={`summary-grid-item summary-hl${showOnlyPayable ? ' summary-payable-active' : ''}`} onClick={() => setShowOnlyPayable(!showOnlyPayable)} style={{ cursor: 'pointer' }}>
-          <span className="summary-num">¥{summary.totalWage}</span>
-          <span className="summary-label">工资({summary.payableRecordCount}条)</span>
+        <div style={{ width: 1, background: 'var(--color-border-light)' }} />
+        <div style={{ flex: 1, cursor: 'pointer' }} onClick={() => setShowOnlyPayable(!showOnlyPayable)}>
+          <div style={{ fontSize: 20, fontWeight: 700, color: showOnlyPayable ? 'var(--color-primary)' : 'var(--color-warning)' }}>¥{summary.totalWage}</div>
+          <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>工资({summary.payableRecordCount}条)</div>
         </div>
       </div>
 
@@ -275,7 +275,6 @@ export default function ScanHistoryPage() {
               <span className="srt-th srt-th-amount">金额</span>
               <span className="srt-th srt-th-bed">床号</span>
               <span className="srt-th srt-th-time">日期</span>
-              <span className="srt-th srt-th-action">操作</span>
             </div>
             {displayRecords.map((r, idx) => (
               <div key={r.id || idx} className="srt-table-row">
@@ -290,13 +289,6 @@ export default function ScanHistoryPage() {
                 <span className="srt-td srt-td-amount">{r.displayLineAmount}</span>
                 <span className="srt-td srt-td-bed">{r.displayBedNo}</span>
                 <span className="srt-td srt-td-time">{r.displayTime}</span>
-                <span className="srt-td srt-td-action">
-                  {r.canUndo ? (
-                    <button className="undo-btn" disabled={undoingId === r.id} onClick={() => handleUndo(r)}>
-                      {undoingId === r.id ? '...' : '撤回'}
-                    </button>
-                  ) : null}
-                </span>
               </div>
             ))}
           </div>

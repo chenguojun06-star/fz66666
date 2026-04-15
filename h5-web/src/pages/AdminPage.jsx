@@ -29,7 +29,7 @@ export default function AdminPage() {
     if (isAdminOrSupervisor()) {
       api.system.getOnlineCount().then((res) => {
         setOnlineCount(Number((res?.data ?? res) || 0));
-      }).catch(() => {});
+      }).catch((e) => console.error('getOnlineCount error:', e));
     }
   }, []);
 

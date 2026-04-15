@@ -5,6 +5,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { isAdminOrSupervisor } from '@/utils/permission';
 import { toast } from '@/utils/uiHelper';
 import useVoiceInput from '@/hooks/useVoiceInput';
+import useAiChatStream from '@/hooks/useAiChatStream';
 import Icon from '@/components/Icon';
 
 const QUICK_PROMPTS_WORKER = ['内部资料: 扫码规范', '内部资料: 质检流程', '内部资料: 入库流程', '内部资料: 常见问题'];
@@ -47,10 +48,10 @@ export default function AiAssistantFloat() {
   const [streamingText, setStreamingText] = useState('');
   const [pendingImage, setPendingImage] = useState(null);
   const [uploading, setUploading] = useState(false);
-  const abortRef = useRef(null);
   const scrollRef = useRef(null);
   const fileInputRef = useRef(null);
   const user = useAuthStore((s) => s.user);
+  const aiStream = useAiChatStream();
 
   const [pos, setPos] = useState({ x: -1, y: -1 });
   const dragging = useRef(false);
@@ -77,9 +78,7 @@ export default function AiAssistantFloat() {
   }, []);
 
   useEffect(() => {
-    return () => {
-      if (abortRef.current) abortRef.current.abort();
-    };
+    return () => { aiStream.abort(); };
   }, []);
 
   useEffect(() => {
@@ -174,35 +173,35 @@ export default function AiAssistantFloat() {
 
     let fullText = '';
     try {
-      await new Promise((resolve, reject) => {
-        const streamPayload = { question: msg || (imageUrl ? '请看这张图片' : ''), pageContext: window.location.pathname };
-        if (imageUrl) streamPayload.imageUrl = imageUrl;
-
-        const handle = api.intelligence.aiAdvisorChatStream(
-          streamPayload,
-          (data) => {
-            if (data.type === 'answer' && data.content) { fullText += data.content; setStreamingText(fullText); }
-            else if (data.type === 'tool_call') { fullText += `\n🔧 调用工具: ${data.toolName || data.tool || ''}\n`; setStreamingText(fullText); }
-            else if (data.type === 'tool_result' && data.content) { fullText += `📋 ${data.content}\n`; setStreamingText(fullText); }
+      await aiStream.startStream(
+        { question: msg, pageContext: window.location.pathname, imageUrl },
+        {
+          onEvent: (event) => {
+            if (event.type === 'text') { fullText = event.text; setStreamingText(fullText); }
           },
-          () => { setStreamingText(''); setMessages((prev) => [...prev, { role: 'ai', text: fullText || '（无回复）' }]); resolve(); },
-          (err) => {
+          onComplete: (finalText) => {
             setStreamingText('');
-            if (fullText) { setMessages((prev) => [...prev, { role: 'ai', text: fullText }]); resolve(); }
-            else {
-              api.intelligence.naturalLanguageExecute({ query: msg }).then((res) => {
-                const r = res?.data || res;
-                setMessages((prev) => [...prev, { role: 'ai', text: r?.result || r?.message || '暂无回复' }]);
-                resolve();
-              }).catch(() => { setMessages((prev) => [...prev, { role: 'ai', text: '抱歉，小云暂时无法回复，请稍后再试。' }]); resolve(); });
-            }
-          }
-        );
-        abortRef.current = handle;
-      });
-    } catch (e) { /* handled */ }
-    setSending(false);
-    setPendingImage(null);
+            setMessages((prev) => [...prev, { role: 'ai', text: finalText || fullText || '（无回复）' }]);
+            setSending(false);
+            setPendingImage(null);
+          },
+          onError: () => {
+            setMessages((prev) => [...prev, { role: 'ai', text: '抱歉，小云暂时无法回复，请稍后再试。' }]);
+            setSending(false);
+            setPendingImage(null);
+          },
+          onFallback: async (q) => {
+            const res = await api.intelligence.naturalLanguageExecute({ query: q });
+            const r = res?.data || res;
+            return r?.result || r?.message || '暂无回复';
+          },
+        }
+      );
+    } catch (e) {
+      setMessages((prev) => [...prev, { role: 'ai', text: '抱歉，小云暂时无法回复，请稍后再试。' }]);
+      setSending(false);
+      setPendingImage(null);
+    }
   }, [inputText, sending, pendingImage]);
 
   const prompts = isAdminOrSupervisor() ? QUICK_PROMPTS_ADMIN : QUICK_PROMPTS_WORKER;
@@ -232,77 +231,67 @@ export default function AiAssistantFloat() {
     </div>
   ) : (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--color-bg-page)', zIndex: 99999, display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', background: 'var(--color-bg-card)', borderBottom: '1px solid var(--color-border)', paddingTop: 'calc(12px + var(--safe-area-top, 0px))' }}>
-        <button onClick={() => { setOpen(false); voice.stop(); }} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--color-text-primary)', padding: '4px 8px' }}>✕</button>
+      <div className="chat-header">
+        <button onClick={() => { setOpen(false); voice.stop(); }} className="chat-close-btn">✕</button>
         <MiniCloud size={28} />
-        <span style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700 }}>小云帮助中心</span>
+        <span className="chat-header-title">小云帮助中心</span>
       </div>
 
-      <div ref={scrollRef} style={{ flex: 1, overflow: 'auto', padding: 16 }}>
+      <div ref={scrollRef} className="chat-msg-scroll">
         {messages.map((msg, i) => (
-          <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start', marginBottom: 12 }}>
-            <div style={{
-              maxWidth: '80%', padding: '10px 14px', borderRadius: 16,
-              background: msg.role === 'user' ? 'var(--color-primary)' : 'var(--color-bg-card)',
-              color: msg.role === 'user' ? '#fff' : 'var(--color-text-primary)',
-              fontSize: 14, lineHeight: 1.6, boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
-              whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-            }}>
-              {msg.image && <img src={msg.image} alt="" style={{ maxWidth: '100%', borderRadius: 8, marginBottom: 6, display: 'block' }} />}
+          <div key={i} className={`chat-msg-row ${msg.role === 'user' ? 'user' : ''}`}>
+            <div className={`chat-bubble ${msg.role === 'user' ? 'user' : 'ai'}`}>
+              {msg.image && <img src={msg.image} alt="" className="chat-bubble-img" />}
               {msg.text}
             </div>
           </div>
         ))}
         {streamingText && (
-          <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 12 }}>
-            <div style={{ maxWidth: '80%', padding: '10px 14px', borderRadius: 16, background: 'var(--color-bg-card)', color: 'var(--color-text-primary)', fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-              {streamingText}<span style={{ animation: 'cursorBlink 1s step-end infinite' }}>▌</span>
-            </div>
+          <div className="chat-msg-row">
+            <div className="chat-bubble ai">{streamingText}<span className="cursor-blink">▌</span></div>
           </div>
         )}
         {sending && !streamingText && (
-          <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 12 }}>
-            <div style={{ padding: '10px 14px', borderRadius: 16, background: 'var(--color-bg-card)', color: 'var(--color-text-secondary)', fontSize: 14 }}>小云正在整理思路...</div>
+          <div className="chat-msg-row">
+            <div className="chat-bubble ai thinking">小云正在整理思路...</div>
           </div>
         )}
       </div>
 
       {!sending && messages.length <= 1 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '0 16px 8px' }}>
+        <div className="chat-quick-chips">
           {prompts.map((p) => (
-            <button key={p} onClick={() => handleSend(p)} style={{ padding: '6px 12px', borderRadius: 999, border: '1px solid var(--color-border)', background: 'var(--color-bg-card)', fontSize: 12, cursor: 'pointer', color: 'var(--color-text-secondary)' }}>{p}</button>
+            <button key={p} onClick={() => handleSend(p)} className="chat-chip">{p}</button>
           ))}
         </div>
       )}
 
       {pendingImage && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 16px', background: 'var(--color-bg-light)' }}>
-          <img src={pendingImage.url} alt="" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--color-border)' }} />
-          <span style={{ flex: 1, fontSize: 12, color: 'var(--color-text-secondary)' }}>已选图片，发送时将上传识别</span>
-          <button onClick={removePendingImage} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-tertiary)', fontSize: 18 }}>✕</button>
+        <div className="chat-pending-image">
+          <img src={pendingImage.url} alt="" className="chat-pending-img" />
+          <span className="chat-pending-image-text">已选图片，发送时将上传识别</span>
+          <button onClick={removePendingImage} className="chat-pending-image-del">✕</button>
         </div>
       )}
 
       <input ref={fileInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleFileChange} />
 
-      <div style={{ display: 'flex', gap: 8, padding: '8px 16px', paddingBottom: 'calc(8px + var(--safe-area-bottom, 0px))', background: 'var(--color-bg-card)', borderTop: '1px solid var(--color-border)', alignItems: 'center' }}>
+      <div className="chat-input-bar">
         <button onClick={() => fileInputRef.current?.click()} disabled={sending || uploading}
-          style={{ width: 36, height: 36, borderRadius: 10, border: '1px solid var(--color-border)', background: 'var(--color-bg-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, opacity: (sending || uploading) ? 0.5 : 1 }}
-          title="拍照/选图">
+          className="chat-tool-btn" title="拍照/选图">
           <Icon name="camera" size={18} color="var(--color-text-secondary)" />
         </button>
         <button onClick={voice.toggle} disabled={sending}
           className={`chat-tool-btn${voice.listening ? ' active' : ''}`}
-          style={{ width: 36, height: 36, borderRadius: 10, border: voice.listening ? '1px solid var(--color-error)' : '1px solid var(--color-border)', background: voice.listening ? 'rgba(239,68,68,0.1)' : 'var(--color-bg-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, opacity: sending ? 0.5 : 1 }}
           title="语音输入">
           <Icon name={voice.listening ? 'micOff' : 'mic'} size={18} color={voice.listening ? 'var(--color-error)' : 'var(--color-text-secondary)'} />
         </button>
         <input value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()}
           placeholder={voice.listening ? '正在聆听...' : '输入关键字查询内部资料'}
           disabled={sending}
-          style={{ flex: 1, border: '1px solid var(--color-border)', borderRadius: 12, padding: '10px 14px', fontSize: 14, background: 'var(--color-bg-light)', minWidth: 0 }} />
+          className="chat-input-field" />
         <button onClick={() => handleSend()} disabled={(!inputText.trim() && !pendingImage) || sending || uploading}
-          style={{ padding: '10px 16px', borderRadius: 12, border: 'none', background: ((!inputText.trim() && !pendingImage) || sending || uploading) ? 'var(--color-bg-gray)' : 'var(--color-primary)', color: ((!inputText.trim() && !pendingImage) || sending || uploading) ? 'var(--color-text-disabled)' : '#fff', fontWeight: 700, cursor: ((!inputText.trim() && !pendingImage) || sending || uploading) ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>
+          className="chat-send-btn">
           {uploading ? '上传中' : '发送'}
         </button>
       </div>

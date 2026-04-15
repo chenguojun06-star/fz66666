@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import api from '@/api';
 import { isAdminOrSupervisor } from '@/utils/permission';
 import { toast } from '@/utils/uiHelper';
 import useVoiceInput from '@/hooks/useVoiceInput';
+import useAiChatStream from '@/hooks/useAiChatStream';
 import Icon from '@/components/Icon';
 
 const WORKER_PROMPTS = [
@@ -46,9 +47,9 @@ export default function AiAssistantPage() {
   const [dynamicSuggestions, setDynamicSuggestions] = useState([]);
   const [pendingImage, setPendingImage] = useState(null);
   const [uploading, setUploading] = useState(false);
-  const streamTaskRef = useRef(null);
   const bottomRef = useRef(null);
   const fileInputRef = useRef(null);
+  const aiStream = useAiChatStream();
 
   const voice = useVoiceInput({
     lang: 'zh-CN',
@@ -75,10 +76,8 @@ export default function AiAssistantPage() {
       if (data.qualityTaskCount > 0) suggestions.push({ label: data.qualityTaskCount + '个待质检', text: '有哪些待质检的任务？', alert: true });
       if (data.materialShortageCount > 0) suggestions.push({ label: '面料缺口', text: '当前有哪些面料缺口预警？', alert: true });
       if (suggestions.length > 0) setDynamicSuggestions(suggestions);
-    }).catch(() => {});
-    return () => {
-      if (streamTaskRef.current) streamTaskRef.current.abort();
-    };
+    }).catch((e) => { console.error('getMyPendingTaskSummary failed:', e); });
+    return () => { aiStream.abort(); };
   }, []);
 
   useEffect(() => {
@@ -108,7 +107,7 @@ export default function AiAssistantPage() {
     return pendingImage.url;
   };
 
-  const _send = async (text, imageUrl) => {
+  const _send = useCallback(async (text, imageUrl) => {
     const displayText = imageUrl ? (text || '请看这张图片') : text;
     const userMsg = { id: Date.now() + '_u', role: 'user', text: displayText, image: imageUrl ? imageUrl : (pendingImage?.url || null) };
     const loadingId = Date.now() + '_l';
@@ -118,60 +117,46 @@ export default function AiAssistantPage() {
     setStreamingTool('');
     setPendingImage(null);
 
-    let accumulatedText = '';
-    let streamStarted = false;
     const chatContext = isManager ? 'manager_assistant' : 'worker_assistant';
 
     try {
-      const streamPayload = { question: text || (imageUrl ? '请看这张图片' : ''), pageContext: chatContext, conversationId };
-      if (imageUrl) streamPayload.imageUrl = imageUrl;
-
-      streamTaskRef.current = api.intelligence.aiAdvisorChatStream(
-        streamPayload,
-        (event) => {
-          streamStarted = true;
-          if (event.type === 'thinking') setStreamingTool('小云正在整理思路…');
-          else if (event.type === 'tool_call') setStreamingTool('正在处理：' + describeTool(String(event.data?.tool || '')) + '…');
-          else if (event.type === 'tool_result') setStreamingTool(event.data?.success ? '已完成，继续整理…' : '重新组织…');
-          else if (event.type === 'answer') {
-            const content = String(event.data?.content || '');
-            if (content) { accumulatedText += content; setStreamingText(accumulatedText); setStreamingTool(''); }
-          }
-        },
-        () => {
-          streamTaskRef.current = null;
-          const rawText = accumulatedText || '抱歉，我暂时无法回答这个问题。';
-          setMessages(prev => prev.map(m => m.id === loadingId ? { ...m, text: rawText, loading: false } : m));
-          setSending(false); setStreamingText(''); setStreamingTool('');
-        },
-        async (err) => {
-          streamTaskRef.current = null;
-          if (streamStarted && accumulatedText) {
-            setMessages(prev => prev.map(m => m.id === loadingId ? { ...m, text: accumulatedText, loading: false } : m));
+      await aiStream.startStream(
+        { question: text, pageContext: chatContext, conversationId, imageUrl },
+        {
+          onEvent: (event) => {
+            if (event.type === 'thinking') setStreamingTool('小云正在整理思路…');
+            else if (event.type === 'tool_call') setStreamingTool('正在处理：' + describeTool(String(event.name || '')) + '…');
+            else if (event.type === 'tool_result') setStreamingTool(event.success ? '已完成，继续整理…' : '重新组织…');
+            else if (event.type === 'text') { setStreamingText(event.text); setStreamingTool(''); }
+          },
+          onComplete: (finalText) => {
+            const rawText = finalText || '抱歉，我暂时无法回答这个问题。';
+            setMessages(prev => prev.map(m => m.id === loadingId ? { ...m, text: rawText, loading: false } : m));
             setSending(false); setStreamingText(''); setStreamingTool('');
-            return;
-          }
-          try {
+          },
+          onError: () => {
+            setMessages(prev => prev.map(m => m.id === loadingId ? { ...m, text: '服务暂时无法响应，请稍后再试。', loading: false } : m));
+            setSending(false); setStreamingText(''); setStreamingTool('');
+          },
+          onFallback: async (q) => {
             let reply;
-            const chatPayload = { message: text, conversationId, context: chatContext };
+            const chatPayload = { message: q, conversationId, context: chatContext };
             if (imageUrl) chatPayload.imageUrl = imageUrl;
             if (isManager) {
-              try { const res = await api.intelligence.naturalLanguageExecute({ text, conversationId }); reply = res?.message || res?.reply || res?.content || '操作完成'; }
+              try { const res = await api.intelligence.naturalLanguageExecute({ text: q, conversationId }); reply = res?.message || res?.reply || res?.content || '操作完成'; }
               catch (_) { const res = await api.intelligence.aiAdvisorChat(chatPayload); reply = res?.reply || res?.content || res?.message || '（无回应）'; }
             } else {
               const res = await api.intelligence.aiAdvisorChat(chatPayload); reply = res?.reply || res?.content || res?.message || '（无回应）';
             }
-            setMessages(prev => prev.map(m => m.id === loadingId ? { ...m, text: reply, loading: false } : m));
-          } catch (_) {
-            setMessages(prev => prev.map(m => m.id === loadingId ? { ...m, text: '服务暂时无法响应，请稍后再试。', loading: false } : m));
-          } finally { setSending(false); setStreamingText(''); setStreamingTool(''); }
+            return reply;
+          },
         }
       );
     } catch (err) {
       setMessages(prev => prev.map(m => m.id === loadingId ? { ...m, text: '服务暂时无法响应，请稍后再试。', loading: false } : m));
       setSending(false); setStreamingText(''); setStreamingTool('');
     }
-  };
+  }, [conversationId, isManager, pendingImage]);
 
   const onSend = async () => {
     const text = inputText.trim();
@@ -192,7 +177,7 @@ export default function AiAssistantPage() {
 
       {(dynamicSuggestions.length > 0) && (
         <div style={{ padding: '10px 12px 0' }}>
-          <div style={{ fontSize: 'var(--font-size-xxs)', color: 'var(--color-danger)', fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div className="alert-header">
             <Icon name="bell" size={12} /> 实时提醒
           </div>
           <div className="chat-quick-chips">
@@ -228,7 +213,7 @@ export default function AiAssistantPage() {
         {streamingText && (
           <div className="chat-msg-row">
             <div className="chat-avatar ai"><Icon name="cloud" size={14} /></div>
-            <div className="chat-bubble ai">{streamingText}<span style={{ animation: 'cursorBlink 0.8s step-end infinite', color: 'var(--color-primary)' }}>▍</span></div>
+            <div className="chat-bubble ai">{streamingText}<span className="cursor-blink-page">▍</span></div>
           </div>
         )}
         <div ref={bottomRef} />

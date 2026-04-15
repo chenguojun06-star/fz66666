@@ -44,7 +44,7 @@ export default function LoginPage() {
           setSelectedTenant(t);
           setTenantSearch(t.tenantName || '');
         }
-      }).catch(() => {});
+      }).catch((e) => console.error('inviteInfo error:', e));
     }
     loadTenants();
   }, []);
@@ -55,7 +55,7 @@ export default function LoginPage() {
       const arr = Array.isArray(list) ? list : [];
       setTenants(arr);
       setFilteredTenants(arr);
-    }).catch(() => {});
+    }).catch((e) => console.error('publicList error:', e));
   };
 
   useEffect(() => {

@@ -14,7 +14,7 @@ if (isWechat) {
       title: '小云供应链 - 智能生产管理',
       desc: '服装供应链智能管理平台，扫码生产、进度追踪、AI助手',
     });
-  }).catch(() => {});
+  }).catch((e) => console.error('WxJsSdk init error:', e));
 
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {

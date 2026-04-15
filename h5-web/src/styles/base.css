@@ -1,0 +1,25 @@
+:root {
+  color: var(--color-text-primary);
+  background: var(--color-bg-page);
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { -webkit-text-size-adjust: 100%; -webkit-font-smoothing: antialiased; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  background: var(--color-bg-page);
+  overscroll-behavior-y: contain;
+}
+
+input, textarea, select { font-size: 16px !important; }
+a { color: inherit; text-decoration: none; }
+button, input, textarea { font: inherit; }
+
+.text-success { color: var(--color-success); }
+.text-tertiary { color: var(--color-text-tertiary); }

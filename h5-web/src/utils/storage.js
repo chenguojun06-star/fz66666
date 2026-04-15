@@ -116,7 +116,7 @@ function clearBusinessCaches() {
     'pending_reminders', 'bundle_split_records', 'ai_chat_history',
     'ai_trigger_position', 'warehouse_chips',
   ];
-  keys.forEach((k) => { try { localStorage.removeItem(k); } catch (_) {} });
+  keys.forEach((k) => { try { localStorage.removeItem(k); } catch (e) { console.warn('Storage removeItem:', e.message); } });
 }
 
 export {

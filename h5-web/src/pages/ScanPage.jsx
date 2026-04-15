@@ -2,10 +2,17 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import wx from '@/adapters/wx';
 import api from '@/api';
+import { useAuthStore } from '@/stores/authStore';
 import { useGlobalStore } from '@/stores/globalStore';
 import { toast } from '@/utils/uiHelper';
 import CameraScanner from '@/components/CameraScanner';
 import Icon from '@/components/Icon';
+
+function canUndoScan(record, isAdmin) {
+  if (!record.scanTime && !record.createTime) return false;
+  const t = new Date(record.scanTime || record.createTime).getTime();
+  return Date.now() - t < 3600000 && (record.scanResult || '').toLowerCase() === 'success' && isAdmin;
+}
 
 const RECENT_SCAN_TTL = 2000;
 
@@ -20,14 +27,10 @@ function formatRelativeTime(timeStr) {
   return timeStr.length >= 16 ? timeStr.substring(5, 16) : timeStr;
 }
 
-function canUndo(record) {
-  if (!record.scanTime && !record.createTime) return false;
-  const t = new Date(record.scanTime || record.createTime).getTime();
-  return Date.now() - t < 3600000 && (record.scanResult || '').toLowerCase() === 'success';
-}
-
 export default function ScanPage() {
   const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = (() => { const r = (user?.role || '').toLowerCase(); return r === 'admin' || r === 'supervisor' || r === 'tenant_owner'; })();
   const [scanType] = useState('production');
   const [loading, setLoading] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
@@ -37,6 +40,7 @@ export default function ScanPage() {
   const [todayRecords, setTodayRecords] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [undoingId, setUndoingId] = useState(null);
+  const [expandedGroupId, setExpandedGroupId] = useState(null);
   const setScanResultData = useGlobalStore((s) => s.setScanResultData);
   const setQualityData = useGlobalStore((s) => s.setQualityData);
   const setPatternScanData = useGlobalStore((s) => s.setPatternScanData);
@@ -64,23 +68,27 @@ export default function ScanPage() {
     try {
       const today = new Date().toISOString().split('T')[0];
       const res = await api.production.myScanHistory({
-        currentUser: 'true', page: 1, pageSize: 20,
+        currentUser: 'true', page: 1, pageSize: 50,
         startTime: today + ' 00:00:00', endTime: today + ' 23:59:59',
       });
       const data = res?.data || res || {};
       const list = (data?.records || data?.list || []).filter(item => (item.scanResult || '').toLowerCase() !== 'failure');
-      setTodayRecords(list.map(item => ({
+      const formatted = list.map(item => ({
         ...item,
         displayTime: formatRelativeTime(item.scanTime || item.createTime),
+        displayRawTime: item.scanTime || item.createTime || '',
         displayProcess: item.processName || item.progressStage || '-',
         displayOrderNo: item.orderNo || '-',
         displayStyleNo: item.styleNo || '-',
         displayBundleNo: item.bundleNo || item.cuttingBundleQrCode || '-',
         displayColor: item.color || '-',
+        displaySize: item.size || '-',
         displayQuantity: item.quantity || 0,
-        displayWorker: item.workerName || item.operatorName || '-',
-        canUndo: canUndo(item),
-      })));
+        displayUnitPrice: item.unitPrice ? `¥${Number(item.unitPrice).toFixed(2)}` : '-',
+        displayOperator: item.workerName || item.operatorName || item.displayName || '-',
+        canUndo: canUndoScan(item, isAdmin),
+      }));
+      setTodayRecords(formatted);
     } catch (e) {
       setTodayRecords([]);
     } finally {
@@ -138,7 +146,7 @@ export default function ScanPage() {
 
   const handleCameraScan = () => {
     if (wx.isWechat) {
-      wx.scanCode({ onlyFromCamera: true }).then((res) => { handleScanResult(res.result); }).catch(() => {});
+      wx.scanCode({ onlyFromCamera: true }).then((res) => { handleScanResult(res.result); }).catch((e) => { if (e?.errMsg && !e.errMsg.includes('cancel')) console.error('wx.scanCode error:', e); });
     } else {
       setCameraActive(true);
     }
@@ -149,7 +157,7 @@ export default function ScanPage() {
     if (!window.confirm('确定撤回此条扫码记录？')) return;
     setUndoingId(record.id);
     try {
-      await api.production.undoScan(record.id);
+      await api.production.undoScan({ recordId: record.id });
       toast.success('撤回成功');
       setTodayRecords(prev => prev.filter(r => r.id !== record.id));
       setStats(prev => prev ? { ...prev, scanCount: Math.max(0, prev.scanCount - 1), totalQuantity: Math.max(0, prev.totalQuantity - (record.displayQuantity || 0)) } : prev);
@@ -226,12 +234,12 @@ export default function ScanPage() {
       )}
 
       {/* === 中区：扫码按钮 === */}
-      <div className="card-item" style={{ textAlign: 'center', padding: '28px 16px' }}>
+      <div className="card-item" style={{ textAlign: 'center', padding: '14px 16px' }}>
         <button className="scan-big-btn" onClick={handleCameraScan} disabled={loading}>
           {loading ? '...' : <Icon name="scan" size={36} color="#fff" />}
         </button>
-        <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--color-text-primary)', marginTop: 12 }}>{loading ? '识别中...' : '扫码识别'}</div>
-        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 4 }}>自动匹配工序</div>
+        <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--color-text-primary)', marginTop: 8 }}>{loading ? '识别中...' : '扫码识别'}</div>
+        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>自动匹配工序</div>
       </div>
 
       {/* === 下区：今日记录 === */}
@@ -246,25 +254,61 @@ export default function ScanPage() {
           <div style={{ textAlign: 'center', padding: 24, fontSize: 13, color: 'var(--color-text-secondary)' }}>暂无今日记录</div>
         ) : (
           <div className="today-records-list">
-            {todayRecords.map((r, idx) => (
-              <div key={r.id || idx} className="today-record-item">
-                <div className="today-record-row">
-                  <span className="today-record-order">{r.displayOrderNo}</span>
-                  <span className="today-record-process">{r.displayProcess}</span>
-                  <span className="today-record-time">{r.displayTime}</span>
-                </div>
-                <div className="today-record-detail">
-                  <span>菲号: {r.displayBundleNo}</span>
-                  <span>颜色: {r.displayColor}</span>
-                  <span>{r.displayQuantity}件</span>
-                  {r.canUndo && (
-                    <button className="filter-btn" style={{ fontSize: 11, padding: '2px 8px', marginLeft: 'auto' }} disabled={undoingId === r.id} onClick={() => handleUndoRecord(r)}>
-                      {undoingId === r.id ? '...' : '撤回'}
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
+            {(() => {
+              const groups = {};
+              todayRecords.forEach(r => {
+                const key = `${r.displayOrderNo}|${r.displayProcess}`;
+                if (!groups[key]) groups[key] = { id: key, orderNo: r.displayOrderNo, styleNo: r.displayStyleNo, process: r.displayProcess, items: [], totalQty: 0, latestTime: '' };
+                groups[key].items.push(r);
+                groups[key].totalQty += r.displayQuantity;
+                if (!groups[key].latestTime || (r.displayRawTime > groups[key].latestTime)) groups[key].latestTime = r.displayRawTime;
+              });
+              const groupList = Object.values(groups).sort((a, b) => b.latestTime.localeCompare(a.latestTime));
+              return groupList.map(g => {
+                const isExpanded = expandedGroupId === g.id;
+                return (
+                  <div key={g.id} className="today-record-group">
+                    <div className="today-record-group-header" onClick={() => setExpandedGroupId(isExpanded ? null : g.id)}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--color-text-primary)' }}>{g.orderNo}</span>
+                        <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{g.styleNo}</span>
+                        <span className="tag tag-blue" style={{ fontSize: 11 }}>{g.process}</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, fontSize: 12 }}>
+                        <span style={{ color: 'var(--color-text-tertiary)' }}>{formatRelativeTime(g.latestTime)}</span>
+                        <span style={{ color: 'var(--color-text-secondary)' }}>共{g.totalQty}件</span>
+                        <span style={{ color: 'var(--color-primary)', marginLeft: 'auto' }}>{isExpanded ? '收起' : '展开'} ›</span>
+                      </div>
+                    </div>
+                    {isExpanded && (
+                      <div className="today-record-group-details">
+                        {g.items.map((r, ri) => (
+                          <div key={r.id || ri} className="today-record-detail-item">
+                            <div style={{ display: 'flex', gap: 12, fontSize: 12, color: 'var(--color-text-secondary)' }}>
+                              <span>颜色: <strong style={{ color: 'var(--color-text-primary)' }}>{r.displayColor}</strong></span>
+                              <span>单价: <strong style={{ color: 'var(--color-text-primary)' }}>{r.displayUnitPrice}</strong></span>
+                            </div>
+                            <div style={{ display: 'flex', gap: 12, fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 3 }}>
+                              <span>码数: <strong style={{ color: 'var(--color-text-primary)' }}>{r.displaySize}</strong></span>
+                              <span>数量: <strong style={{ color: 'var(--color-text-primary)' }}>{r.displayQuantity}件</strong></span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 3 }}>
+                              <span>{r.displayRawTime.length >= 16 ? r.displayRawTime.substring(5, 16) : r.displayRawTime}</span>
+                              {r.displayOperator && r.displayOperator !== '-' && <span>{r.displayOperator}</span>}
+                              {r.canUndo && (
+                                <button className="filter-btn" style={{ fontSize: 10, padding: '1px 8px', marginLeft: 'auto' }} disabled={undoingId === r.id} onClick={() => handleUndoRecord(r)}>
+                                  {undoingId === r.id ? '...' : '撤回'}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              });
+            })()}
           </div>
         )}
       </div>

@@ -14,10 +14,10 @@ export default function CameraScanner({ active, onScan, onError }) {
       if (state === 2 || state === 3) {
         await scannerRef.current.stop();
       }
-    } catch (_) {}
+    } catch (e) { console.warn('CameraScanner stop:', e.message); }
     try {
       scannerRef.current.clear();
-    } catch (_) {}
+    } catch (e) { console.warn('CameraScanner clear:', e.message); }
     scannerRef.current = null;
     if (mountedRef.current) setRunning(false);
   }, []);

@@ -21,15 +21,7 @@ const HTTP_ERROR_MAP = {
   500: '服务器异常，请稍后重试',
 };
 
-function normalizeScanType(progressStage, scanType) {
-  const stage = String(progressStage || '').trim();
-  if (stage === 'quality' || stage === '质检') return 'quality';
-  if (stage === 'warehouse' || stage === '入库') return 'warehousing';
-  if (stage === 'cutting' || stage === '裁剪') return 'cutting';
-  if (stage === 'procurement' || stage === '采购') return 'procurement';
-  if (stage === 'packaging' || stage === '包装') return 'packaging';
-  return scanType || 'production';
-}
+import { normalizeScanType } from '@/utils/scanHelpers';
 
 export default function ScanResultPage() {
   const navigate = useNavigate();

@@ -45,7 +45,7 @@ export default function RegisterPage() {
           setTenantCode(result.trim());
           setScannedCode(true);
         }
-      }).catch(() => {});
+      }).catch((e) => console.error('RegisterPage error:', e));
     } else {
       toast.info('请在微信中使用扫码功能');
     }
@@ -59,7 +59,7 @@ export default function RegisterPage() {
       if (parsed && parsed.type === 'FACTORY_INVITE' && parsed.tenantCode) {
         return { tenantCode: parsed.tenantCode, factoryId: parsed.factoryId || '', factoryName: parsed.factoryName || '', tenantName: '' };
       }
-    } catch (_) {}
+    } catch (e) { console.warn('Register parse error:', e.message); }
     if (text.indexOf('tenantCode=') !== -1) {
       const match = text.match(/[?&]tenantCode=([^&]+)/);
       if (match) result.tenantCode = decodeURIComponent(match[1]);

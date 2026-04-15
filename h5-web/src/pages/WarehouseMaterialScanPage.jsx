@@ -26,7 +26,7 @@ export default function WarehouseMaterialScanPage() {
         const code = String(res.result || '').trim();
         if (/^MR\d{13}$/.test(code)) { setRollCode(code); setRollInfo(null); setErrorMsg(''); setSuccessMsg(''); queryRoll(code); }
         else toast.error('不是料卷二维码');
-      }).catch(() => {});
+      }).catch((e) => console.error('WarehouseMaterialScan error:', e));
     } else {
       toast.info('请在微信中使用扫码功能');
     }

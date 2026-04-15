@@ -1,24 +1,12 @@
 import { useState, useEffect } from 'react';
 import api from '@/api';
-import { http } from '@/services/http';
 import { toast, formatDate, formatDateTime } from '@/utils/uiHelper';
+import { scanTypeText, orderStatusText } from '@/utils/scanHelpers';
+import EmptyState from '@/components/EmptyState';
 
 function parseDateSafe(dateStr) {
   if (!dateStr) return new Date(NaN);
   return new Date(String(dateStr).replace(' ', 'T'));
-}
-
-function _scanTypeText(raw) {
-  const v = String(raw || '').trim();
-  if (!v) return '-';
-  const map = { production: '生产', cutting: '裁剪', procurement: '采购', quality: '质检', pressing: '大烫', packaging: '包装', warehousing: '入库', sewing: '车缝', carSewing: '车缝' };
-  return map[v] || v;
-}
-
-function _orderStatusText(status) {
-  const s = String(status || '').toLowerCase();
-  const map = { completed: '已完成', closed: '已关单', archived: '已归档', production: '生产中', pending: '待生产', delayed: '已逾期', scrapped: '已报废', cancelled: '已取消', canceled: '已取消', paused: '已暂停', returned: '已退回' };
-  return map[s] || s || '-';
 }
 
 export default function PayrollPage() {
@@ -64,11 +52,13 @@ export default function PayrollPage() {
     const s = sd || startDate, e = ed || endDate;
     setLoading(true);
     try {
-      const res = await http.post('/api/finance/payroll-settlement/operator-summary', {
+      const res = await api.finance.payrollSummary({
         startTime: `${s} 00:00:00`, endTime: `${e} 23:59:59`, includeSettled: true,
       });
       if (res?.code === 200 && Array.isArray(res.data)) {
         processData(res.data, s, e);
+      } else if (Array.isArray(res)) {
+        processData(res, s, e);
       } else { toast.error('加载失败'); }
     } catch (error) {
       toast.error(error.message || '加载失败');
@@ -92,8 +82,8 @@ export default function PayrollPage() {
       if (item.orderNo) orderNoSet.add(item.orderNo);
       recs.push({
         orderNo: item.orderNo || '-', styleNo: item.styleNo || '-', color: item.color || '-', size: item.size || '-',
-        processName: item.processName || '-', operatorName: item.operatorName || '', scanTypeText: _scanTypeText(item.scanType),
-        orderStatusText: _orderStatusText(item.orderStatus), quantity: qty,
+        processName: item.processName || '-', operatorName: item.operatorName || '', scanTypeText: scanTypeText(item.scanType),
+        orderStatusText: orderStatusText(item.orderStatus), quantity: qty,
         unitPrice: (Number(item.unitPrice) || 0).toFixed(2), totalAmount: amt.toFixed(2), totalAmountNum: amt,
         scanTime: item.startTime ? formatDateTime(parseDateSafe(item.startTime)) : '-', rawScanTime: item.startTime || '',
       });
@@ -160,11 +150,7 @@ export default function PayrollPage() {
       {loading ? (
         <div className="loading-state">加载中...</div>
       ) : records.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">💰</div>
-          <div className="empty-state-title">暂无记录</div>
-          <div className="empty-state-desc">扫码后工资记录会在这里显示</div>
-        </div>
+        <EmptyState icon="💰" title="暂无记录" desc="扫码后工资记录会在这里显示" />
       ) : (
         <div className="list-stack">
           {records.map((r, idx) => (
@@ -184,7 +170,7 @@ export default function PayrollPage() {
       )}
 
       {records.length > 0 && (
-        <div style={{ textAlign: 'center', padding: '8px 0', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
+        <div className="list-end-text">
           当前筛选总计：¥{summaryItems[0]?.value?.replace('¥', '') || '0.00'}
         </div>
       )}
