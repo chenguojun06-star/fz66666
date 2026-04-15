@@ -5,7 +5,7 @@ RUN npm ci
 COPY . .
 ARG VITE_API_BASE_URL=https://api.webyszl.cn
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-RUN npm run build
+RUN npx vite build
 
 FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
