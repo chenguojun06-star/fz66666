@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { Tag } from 'antd';
 import type { ProductionOrder } from '@/types/production';
+import { buildCommonOrderActions } from '../../components/buildCommonOrderActions';
 
 interface UseCardViewConfigParams {
   isOrderFrozenByStatus: (record: ProductionOrder) => boolean;
@@ -10,6 +11,7 @@ interface UseCardViewConfigParams {
   handleQuickEdit: (record: ProductionOrder) => void;
   handleShareOrder: (record: ProductionOrder) => void;
   handleCloseOrder: (record: ProductionOrder) => void;
+  onOpenRemark?: (record: ProductionOrder) => void;
   isFactoryAccount: boolean;
   canManageOrderLifecycle: boolean;
   embedded: boolean;
@@ -23,6 +25,7 @@ export function useCardViewConfig({
   handleQuickEdit,
   handleShareOrder,
   handleCloseOrder,
+  onOpenRemark,
   isFactoryAccount,
   canManageOrderLifecycle,
   embedded,
@@ -30,6 +33,18 @@ export function useCardViewConfig({
   const cardActions = useCallback((record: ProductionOrder) => {
     const frozen = isOrderFrozenByStatus(record);
     const frozenTitle = '订单已关单/报废/完成，无法操作';
+    const commonActions = buildCommonOrderActions({
+      record,
+      frozen,
+      completed: frozen,
+      canManageOrderLifecycle: !embedded && canManageOrderLifecycle,
+      isSupervisorOrAbove: false,
+      onQuickEdit: handleQuickEdit,
+      handleCloseOrder,
+      handleShareOrder,
+      onOpenRemark,
+    });
+
     return [
       {
         key: 'print',
@@ -46,13 +61,6 @@ export function useCardViewConfig({
         title: frozen ? frozenTitle : '打印标签',
         onClick: () => void handlePrintLabel(record),
       },
-      ...(!embedded && canManageOrderLifecycle ? [{
-        key: 'close',
-        label: '关单',
-        disabled: frozen,
-        title: frozen ? frozenTitle : '关单',
-        onClick: () => handleCloseOrder(record),
-      }] : []),
       ...(isFactoryAccount ? [{
         key: 'ship',
         label: '发货',
@@ -60,26 +68,13 @@ export function useCardViewConfig({
         title: frozen ? frozenTitle : '发货',
         onClick: () => handleFactoryShip(record),
       }] : []),
-      {
+      ...(commonActions.length ? [{
         key: 'divider1',
         type: 'divider' as const,
-      },
-      {
-        key: 'edit',
-        label: '编辑',
-        disabled: frozen,
-        title: frozen ? frozenTitle : '编辑',
-        onClick: () => handleQuickEdit(record),
-      },
-      {
-        key: 'share',
-        label: '分享',
-        disabled: frozen,
-        title: frozen ? frozenTitle : '分享',
-        onClick: () => handleShareOrder(record),
-      },
+      }] : []),
+      ...commonActions,
     ].filter(Boolean);
-  }, [isOrderFrozenByStatus, setPrintingRecord, handlePrintLabel, handleFactoryShip, handleQuickEdit, handleShareOrder, handleCloseOrder, isFactoryAccount, canManageOrderLifecycle, embedded]);
+  }, [isOrderFrozenByStatus, setPrintingRecord, handlePrintLabel, handleFactoryShip, handleQuickEdit, handleShareOrder, handleCloseOrder, onOpenRemark, isFactoryAccount, canManageOrderLifecycle, embedded]);
 
   const titleTags = useCallback((record: any) => (
     <>

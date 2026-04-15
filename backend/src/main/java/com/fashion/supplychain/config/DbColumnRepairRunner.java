@@ -897,6 +897,56 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             // v_finished_product_settlement 视图若缺少 complete_time 列则重建（V202609021000 本地未执行）
             repaired += ensureSettlementViewHasCompleteTime(conn, schema);
 
+            // ── t_ai_job_run_log（V20260413001 创建时遗漏 tenant_id，V202608151001 受 Flyway 链断裂阻塞）──
+            repairedTables += ensureTable(conn, schema,
+                    "t_ai_job_run_log",
+                    "CREATE TABLE IF NOT EXISTS `t_ai_job_run_log` ("
+                    + "`id` BIGINT NOT NULL AUTO_INCREMENT,"
+                    + "`tenant_id` BIGINT DEFAULT NULL,"
+                    + "`job_name` VARCHAR(100) DEFAULT NULL,"
+                    + "`method_name` VARCHAR(100) DEFAULT NULL,"
+                    + "`start_time` DATETIME DEFAULT NULL,"
+                    + "`duration_ms` BIGINT DEFAULT NULL,"
+                    + "`status` VARCHAR(20) DEFAULT NULL,"
+                    + "`tenant_count` INT DEFAULT NULL,"
+                    + "`result_summary` VARCHAR(500) DEFAULT NULL,"
+                    + "`error_message` TEXT DEFAULT NULL,"
+                    + "`created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,"
+                    + "PRIMARY KEY (`id`),"
+                    + "INDEX `idx_ajrl_tenant` (`tenant_id`),"
+                    + "INDEX `idx_ajrl_job_time` (`job_name`, `start_time`)"
+                    + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+            repaired += ensureColumn(conn, schema, "t_ai_job_run_log", "tenant_id",
+                    "BIGINT DEFAULT NULL AFTER `id`");
+
+            // ── t_shipment_reconciliation 审核人三列（V20260223b CONTINUE HANDLER 吞错导致缺失）──
+            repaired += ensureColumn(conn, schema, "t_shipment_reconciliation", "auditor_id",
+                    "VARCHAR(32) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_shipment_reconciliation", "auditor_name",
+                    "VARCHAR(100) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_shipment_reconciliation", "audit_time",
+                    "DATETIME DEFAULT NULL");
+
+            // ── t_sys_notice（V20260322b 可能因 Flyway 链断裂未创建，content 原 VARCHAR(512) 需扩容）──
+            repairedTables += ensureTable(conn, schema,
+                    "t_sys_notice",
+                    "CREATE TABLE IF NOT EXISTS `t_sys_notice` ("
+                    + "`id` BIGINT NOT NULL AUTO_INCREMENT,"
+                    + "`tenant_id` BIGINT DEFAULT NULL,"
+                    + "`to_name` VARCHAR(50) DEFAULT NULL,"
+                    + "`from_name` VARCHAR(50) DEFAULT NULL,"
+                    + "`order_no` VARCHAR(50) DEFAULT NULL,"
+                    + "`title` VARCHAR(200) DEFAULT NULL,"
+                    + "`content` TEXT DEFAULT NULL,"
+                    + "`notice_type` VARCHAR(50) DEFAULT NULL,"
+                    + "`is_read` INT NOT NULL DEFAULT 0,"
+                    + "`created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,"
+                    + "PRIMARY KEY (`id`),"
+                    + "INDEX `idx_sn_tenant` (`tenant_id`),"
+                    + "INDEX `idx_sn_to_name` (`to_name`),"
+                    + "INDEX `idx_sn_created_at` (`created_at`)"
+                    + ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
             if (repaired > 0) {
                 log.warn("[DbRepair] 共修复 {} 个缺失列，Flyway 可能未正常执行对应迁移脚本", repaired);
             }

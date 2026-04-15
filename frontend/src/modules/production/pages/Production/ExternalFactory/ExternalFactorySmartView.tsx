@@ -14,6 +14,7 @@ import RowActions, { type RowAction } from '@/components/common/RowActions';
 import { isOrderFrozenByStatus, isOrderFrozenByStatusOrStock, withQuery } from '@/utils/api';
 import type { ApiResult } from '@/utils/api';
 import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress';
+import { buildCommonOrderActions } from '../components/buildCommonOrderActions';
 import '../../../../basic/pages/StyleInfo/styles.css';
 import './externalFactory.css';
 
@@ -148,11 +149,21 @@ interface Props {
   setPrintingRecord?: (r: ProductionOrder | null) => void;
   quickEditModal?: { open: (r: ProductionOrder) => void };
   handleShareOrder?: (record: ProductionOrder) => void;
+  onOpenRemark?: (record: ProductionOrder) => void;
   handlePrintLabel?: (record: ProductionOrder) => void;
   canManageOrderLifecycle?: boolean;
   isSupervisorOrAbove?: boolean;
   openSubProcessRemap?: (record: ProductionOrder) => void;
   isFactoryAccount?: boolean;
+  /** 点击节点球时打开工序详情弹窗（与列表视图的 NodeDetailModal 同源） */
+  openNodeDetail?: (
+    order: ProductionOrder,
+    nodeType: string,
+    nodeName: string,
+    stats?: { done: number; total: number; percent: number; remaining: number },
+    unitPrice?: number,
+    processList?: Array<{ id?: string; name: string; unitPrice?: number }>
+  ) => void;
 }
 
 /* ─── 常量 ─── */
@@ -317,8 +328,9 @@ interface StageNodeProps {
   stage: SmartStage;
   record: ProductionOrder;
   totalQty: number;
+  openNodeDetail?: Props['openNodeDetail'];
 }
-const StageNode: React.FC<StageNodeProps> = ({ stage, record, totalQty }) => {
+const StageNode: React.FC<StageNodeProps> = ({ stage, record, totalQty, openNodeDetail }) => {
   const [open, setOpen] = useState(false);
   return (
     <Popover
@@ -343,7 +355,29 @@ const StageNode: React.FC<StageNodeProps> = ({ stage, record, totalQty }) => {
       overlayStyle={{ maxWidth: 240, zIndex: 1100 }}
       getPopupContainer={() => document.body}
     >
-      <div className={`style-smart-stage style-smart-stage--${stage.status}`} style={{ cursor: 'default' }}>
+      <div
+        className={`style-smart-stage style-smart-stage--${stage.status}`}
+        style={{ cursor: openNodeDetail ? 'pointer' : 'default' }}
+        onClick={() => {
+          if (!openNodeDetail) return;
+          // 智能视图 stage.key 与列表视图 nodeType 不同，需要映射
+          const SMART_KEY_TO_NODE_TYPE: Record<string, string> = {
+            secondary: 'secondaryProcess',
+            sewing: 'carSewing',
+            tail: 'tailProcess',
+          };
+          const nodeType = SMART_KEY_TO_NODE_TYPE[stage.key] ?? stage.key;
+          const completedQty = Math.round((stage.progress / 100) * totalQty);
+          openNodeDetail(
+            record,
+            nodeType,
+            stage.label,
+            { done: completedQty, total: totalQty, percent: stage.progress, remaining: totalQty - completedQty },
+            undefined,
+            []
+          );
+        }}
+      >
         <div className="style-smart-stage__time">{stage.timeLabel}</div>
         <div className="style-smart-stage__node">
           <span className="style-smart-stage__ring" />
@@ -391,9 +425,10 @@ const ExternalFactorySmartView: React.FC<Props> = ({
   handleCloseOrder, handleScrapOrder, handleTransferOrder,
   openProcessDetail, syncProcessFromTemplate,
   setPrintModalVisible, setPrintingRecord,
-  quickEditModal, handleShareOrder, handlePrintLabel,
+  quickEditModal, handleShareOrder, onOpenRemark, handlePrintLabel,
   canManageOrderLifecycle, isSupervisorOrAbove,
   openSubProcessRemap, isFactoryAccount,
+  openNodeDetail,
 }) => {
   const navigate = useNavigate();
   const rows = useMemo(() => data.map(record => {
@@ -563,7 +598,7 @@ const ExternalFactorySmartView: React.FC<Props> = ({
                       </div>
                     </Popover>
                     {stages.map(stage => (
-                      <StageNode key={stage.key} stage={stage} record={record} totalQty={totalQty} />
+                      <StageNode key={stage.key} stage={stage} record={record} totalQty={totalQty} openNodeDetail={openNodeDetail} />
                     ))}
                   </div>
                 </div>
@@ -611,41 +646,19 @@ const ExternalFactorySmartView: React.FC<Props> = ({
                         disabled: frozen,
                         onClick: () => openSubProcessRemap(record),
                       }] : []),
-                      ...(quickEditModal ? [{
-                        key: 'quickEdit',
-                        label: '编辑',
-                        title: frozen ? '编辑（订单已关单）' : '快速编辑备注和预计出货',
-                        disabled: frozen,
-                        onClick: () => { quickEditModal.open(record); },
-                      }] : []),
-                      ...(canManageOrderLifecycle && handleCloseOrder ? [
-                        {
-                          key: 'close',
-                          label: <span style={{ color: frozen ? undefined : 'var(--primary-color)' }}>{frozen ? '关单(已完成)' : '关单'}</span>,
-                          disabled: frozen,
-                          onClick: () => handleCloseOrder(record),
-                        },
-                        ...(isSupervisorOrAbove && handleScrapOrder ? [{
-                          key: 'scrap',
-                          label: completed ? '报废(已完成)' : '报废',
-                          danger: true as const,
-                          disabled: completed,
-                          onClick: () => handleScrapOrder(record),
-                        }] : []),
-                        ...(handleTransferOrder ? [{
-                          key: 'transfer',
-                          label: '转单',
-                          title: frozen ? '转单（订单已关单）' : '转给其他人员处理',
-                          disabled: frozen,
-                          onClick: () => handleTransferOrder(record),
-                        }] : []),
-                      ] : []),
-                      ...(handleShareOrder ? [{
-                        key: 'share',
-                        label: ' 分享',
-                        title: '生成客户查看链接（30天有效）',
-                        onClick: () => handleShareOrder(record),
-                      }] : []),
+                      ...buildCommonOrderActions({
+                        record,
+                        frozen,
+                        completed,
+                        canManageOrderLifecycle: !!canManageOrderLifecycle,
+                        isSupervisorOrAbove: !!isSupervisorOrAbove,
+                        onQuickEdit: quickEditModal ? (r) => quickEditModal.open(r) : undefined,
+                        handleCloseOrder,
+                        handleScrapOrder,
+                        handleTransferOrder,
+                        handleShareOrder,
+                        onOpenRemark,
+                      }),
                       ...(isFactoryAccount ? [{
                         key: 'orderFlow',
                         label: '全流程',

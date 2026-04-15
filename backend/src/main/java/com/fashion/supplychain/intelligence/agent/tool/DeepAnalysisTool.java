@@ -34,6 +34,8 @@ public class DeepAnalysisTool implements AgentTool {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
+    private static final java.util.Set<String> TERMINAL_STATUSES = java.util.Set.of("completed", "cancelled", "scrapped", "archived", "closed");
+
     @Override
     public String getName() {
         return "tool_deep_analysis";
@@ -352,7 +354,7 @@ public class DeepAnalysisTool implements AgentTool {
 
     private List<Map<String, Object>> analyzeMerchandiserLoad(Long tenantId) {
         QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId);
-        q.ne("status", "COMPLETED").ne("status", "CANCELLED").isNotNull("merchandiser");
+        q.notIn("status", TERMINAL_STATUSES).isNotNull("merchandiser");
         List<ProductionOrder> active = productionOrderService.list(q);
 
         Map<String, List<ProductionOrder>> byMerchandiser = active.stream()
@@ -389,7 +391,7 @@ public class DeepAnalysisTool implements AgentTool {
 
     private List<Map<String, Object>> analyzeDeliveryRisk(Long tenantId) {
         QueryWrapper<ProductionOrder> q = baseOrderQuery(tenantId);
-        q.ne("status", "COMPLETED").ne("status", "CANCELLED").isNotNull("planned_end_date");
+        q.notIn("status", TERMINAL_STATUSES).isNotNull("planned_end_date");
         List<ProductionOrder> orders = productionOrderService.list(q);
 
         LocalDateTime now = LocalDateTime.now();

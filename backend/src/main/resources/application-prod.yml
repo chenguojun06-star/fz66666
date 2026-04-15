@@ -4,7 +4,7 @@
 spring:
   datasource:
     hikari:
-      maximum-pool-size: 20
+      maximum-pool-size: 50
       # 云托管容器会休眠，minimum-idle=0 避免保留空闲连接被 MySQL 断掉后唤醒失败
       minimum-idle: 0
       connection-timeout: 30000

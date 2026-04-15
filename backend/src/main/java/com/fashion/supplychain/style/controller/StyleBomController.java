@@ -29,9 +29,16 @@ public class StyleBomController {
 
     @GetMapping("/list")
     public Result<List<StyleBom>> listByStyleId(
-            @RequestParam(required = false) Long styleId,
+            @RequestParam(required = false) String styleId,
             @RequestParam(required = false) String styleNo) {
-        Long resolvedStyleId = styleId;
+        Long resolvedStyleId = null;
+        if (StringUtils.hasText(styleId)) {
+            try {
+                resolvedStyleId = Long.parseLong(styleId.trim());
+            } catch (NumberFormatException e) {
+                styleNo = styleId.trim();
+            }
+        }
         if (resolvedStyleId == null && StringUtils.hasText(styleNo)) {
             Long currentTenantId = UserContext.tenantId();
             StyleInfo style = styleInfoService.lambdaQuery()

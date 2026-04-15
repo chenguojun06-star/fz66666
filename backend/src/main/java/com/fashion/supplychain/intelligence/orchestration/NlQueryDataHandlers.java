@@ -37,6 +37,8 @@ public class NlQueryDataHandlers {
 
     static final Pattern ORDER_NO_PATTERN = Pattern.compile("PO\\d{8,}");
 
+    private static final java.util.Set<String> TERMINAL_STATUSES = java.util.Set.of("completed", "cancelled", "scrapped", "archived", "closed");
+
     // ── 订单查询 ──
 
     public NlQueryResponse handleOrderQuery(String question, Long tenantId, String factoryId) {
@@ -87,7 +89,7 @@ public class NlQueryDataHandlers {
             QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
             qw.eq(tenantId != null, "tenant_id", tenantId)
               .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
-              .eq("delete_flag", 0).ne("status", "completed");
+              .eq("delete_flag", 0).notIn("status", TERMINAL_STATUSES);
             long inProgress = productionOrderService.count(qw);
             resp.setAnswer(String.format("当前有 %d 个进行中订单。请提供具体订单号（如PO20260301001）以查看详情。", inProgress));
             resp.setConfidence(70);
@@ -329,7 +331,7 @@ public class NlQueryDataHandlers {
         QueryWrapper<ProductionOrder> ipQw = new QueryWrapper<>();
         ipQw.eq(tenantId != null, "tenant_id", tenantId)
             .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
-            .eq("delete_flag", 0).ne("status", "completed");
+            .eq("delete_flag", 0).notIn("status", TERMINAL_STATUSES);
         long inProgress = productionOrderService.count(ipQw);
         long overdue = dashboardQueryService.countOverdueOrders();
         long todayScan = dashboardQueryService.sumTodayScanQuantity();

@@ -17,6 +17,7 @@ import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import { toCategoryCn } from '@/utils/styleCategory';
 import { getRemainingDaysDisplay } from '@/utils/progressColor';
 import { getStatusConfig, safeString } from '../utils';
+import { buildCommonOrderActions } from '../../components/buildCommonOrderActions';
 import dayjs from 'dayjs';
 
 export interface UseProductionColumnsProps {
@@ -658,52 +659,20 @@ export function useProductionColumns({
                 disabled: frozen,
                 onClick: () => openSubProcessRemap(record),
               }] : []),
-              {
-                key: 'quickEdit',
-                label: '编辑',
-                title: frozen ? '编辑（订单已关单）' : '快速编辑备注和预计出货',
-                disabled: frozen,
-                onClick: () => { quickEditModal.open(record); },
-              },
-              ...(canManageOrderLifecycle ? [
-                {
-                  key: 'close',
-                  label: <span style={{ color: frozen ? undefined : 'var(--primary-color)' }}>{frozen ? '关单(已完成)' : '关单'}</span>,
-                  disabled: frozen,
-                  onClick: () => handleCloseOrder(record),
-                },
-                ...(isSupervisorOrAbove ? [{
-                  key: 'scrap',
-                  label: completed ? '报废(已完成)' : '报废',
-                  danger: true,
-                  disabled: completed,
-                  onClick: () => handleScrapOrder(record),
-                }] : []),
-                {
-                  key: 'transfer',
-                  label: '转单',
-                  title: frozen ? '转单（订单已关单）' : '转给其他人员处理',
-                  disabled: frozen,
-                  onClick: () => handleTransferOrder(record),
-                },
-                {
-                  key: 'copy',
-                  label: '复制订单',
-                  title: '复制此订单（同款不同色/码）',
-                  onClick: () => handleCopyOrder?.(record),
-                }
-              ] : []),
-              {
-                key: 'share',
-                label: ' 分享',
-                title: '生成客户查看链接（30天有效）',
-                onClick: () => handleShareOrder(record),
-              },
-              {
-                key: 'remark',
-                label: '备注记录',
-                onClick: () => onOpenRemark?.(record),
-              },
+              ...buildCommonOrderActions({
+                record,
+                frozen,
+                completed,
+                canManageOrderLifecycle,
+                isSupervisorOrAbove,
+                onQuickEdit: (r) => quickEditModal.open(r),
+                handleCloseOrder,
+                handleScrapOrder,
+                handleTransferOrder,
+                handleCopyOrder,
+                handleShareOrder,
+                onOpenRemark,
+              }),
             ]}
           />
         );

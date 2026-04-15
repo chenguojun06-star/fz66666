@@ -9,7 +9,7 @@ server {
     server_name _;
 
     # 普通图片/文件: 前端限 15MB；ZIP 批量导入包最大 500MB
-    client_max_body_size 500m;
+    client_max_body_size 50m;
 
     root /usr/share/nginx/html;
     index index.html;
@@ -49,7 +49,7 @@ server {
         set $backend "${BACKEND_URL}";
         proxy_pass $backend;
         proxy_ssl_server_name on;
-        proxy_ssl_verify off;
+        proxy_ssl_verify on;
         proxy_http_version 1.1;
         proxy_set_header Host $proxy_host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -63,9 +63,6 @@ server {
         proxy_read_timeout 180s;
         proxy_send_timeout 180s;
 
-        add_header Access-Control-Allow-Origin *;
-        add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS";
-        add_header Access-Control-Allow-Headers "Authorization, Content-Type";
         if ($request_method = OPTIONS) {
             return 204;
         }
@@ -79,7 +76,7 @@ server {
         set $backend "${BACKEND_URL}";
         proxy_pass $backend;
         proxy_ssl_server_name on;
-        proxy_ssl_verify off;
+        proxy_ssl_verify on;
         proxy_http_version 1.1;
         proxy_set_header Host $proxy_host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -89,10 +86,6 @@ server {
         proxy_read_timeout 60s;
         proxy_send_timeout 60s;
 
-        # 跨域头
-        add_header Access-Control-Allow-Origin *;
-        add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS";
-        add_header Access-Control-Allow-Headers "Authorization, Content-Type";
         if ($request_method = OPTIONS) {
             return 204;
         }
@@ -104,7 +97,7 @@ server {
         set $backend "${BACKEND_URL}";
         proxy_pass $backend;
         proxy_ssl_server_name on;
-        proxy_ssl_verify off;
+        proxy_ssl_verify on;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";

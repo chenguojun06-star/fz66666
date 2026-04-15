@@ -38,6 +38,8 @@ public class SmartReportTool implements AgentTool {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
+    private static final java.util.Set<String> TERMINAL_STATUSES = java.util.Set.of("completed", "cancelled", "scrapped", "archived", "closed");
+
     @Override
     public String getName() {
         return "tool_smart_report";
@@ -189,7 +191,7 @@ public class SmartReportTool implements AgentTool {
 
         // 紧急订单数
         QueryWrapper<ProductionOrder> urgentQ = baseOrderQuery(tenantId);
-        urgentQ.eq("urgency_level", "urgent").ne("status", "COMPLETED").ne("status", "CANCELLED");
+        urgentQ.eq("urgency_level", "urgent").notIn("status", TERMINAL_STATUSES);
         stats.put("urgentOrderCount", productionOrderService.count(urgentQ));
 
         return stats;

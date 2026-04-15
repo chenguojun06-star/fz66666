@@ -396,6 +396,8 @@ Component({
         var streamStarted = false;
         var streamFailed = false;
         var pendingFollowUpActions = null;
+        var _streamPendingUpdate = false;
+        var _streamUpdateTimer = null;
 
         var aiMsgId = Date.now() + 1;
 
@@ -419,7 +421,14 @@ Component({
               var content = String(event.data.content || '');
               if (content) {
                 accumulatedText += content;
-                self.setData({ streamingText: accumulatedText, streamingTool: '' });
+                if (!_streamPendingUpdate) {
+                  _streamPendingUpdate = true;
+                  _streamUpdateTimer = setTimeout(function () {
+                    _streamPendingUpdate = false;
+                    _streamUpdateTimer = null;
+                    self.setData({ streamingText: accumulatedText, streamingTool: '' });
+                  }, 100);
+                }
               }
             } else if (event.type === 'follow_up_actions') {
               if (event.data && event.data.actions) {

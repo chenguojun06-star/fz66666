@@ -124,7 +124,7 @@ const TenantListTab: React.FC = () => {
       { path: '/warehouse/material-database', label: '物料新增' },
     ]},
     { key: 'production', title: '生产管理', paths: [
-      { path: '/production', label: '我的订单' },
+      { path: '/production', label: '订单管理' },
       { path: '/production/cutting', label: '裁剪管理' },
       { path: '/production/progress-detail', label: '工序跟进' },
       { path: '/production/warehousing', label: '质检入库' },

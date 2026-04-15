@@ -38,6 +38,8 @@ public class SelfHealingOrchestrator {
     @Autowired
     private ScanRecordService scanRecordService;
 
+    private static final java.util.Set<String> TERMINAL_STATUSES = java.util.Set.of("completed", "cancelled", "scrapped", "archived", "closed");
+
     public SelfHealingResponse diagnose() {
         SelfHealingResponse resp = new SelfHealingResponse();
         try {
@@ -121,8 +123,7 @@ public class SelfHealingOrchestrator {
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
         qw.eq(tenantId != null, "tenant_id", tenantId)
           .eq("delete_flag", 0)
-          .ne("status", "completed")
-          .ne("status", "cancelled");
+          .notIn("status", TERMINAL_STATUSES);
         List<ProductionOrder> orders = productionOrderService.list(qw);
 
         int abnormal = 0;
@@ -312,8 +313,7 @@ public class SelfHealingOrchestrator {
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
         qw.eq(tenantId != null, "tenant_id", tenantId)
           .eq("delete_flag", 0)
-          .ne("status", "completed")
-          .ne("status", "cancelled");
+          .notIn("status", TERMINAL_STATUSES);
         List<ProductionOrder> orders = productionOrderService.list(qw);
 
         int fixed = 0;

@@ -35,6 +35,8 @@ public class ManagementInsightOrchestrator {
     @Autowired
     private ProductionOrderService productionOrderService;
 
+    private static final java.util.Set<String> TERMINAL_STATUSES = java.util.Set.of("completed", "cancelled", "scrapped", "archived", "closed");
+
     // ────────────────────── 1. 款式利润排名 ──────────────────────
     public Map<String, Object> getStyleProfitability(Long tenantId) {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -177,7 +179,7 @@ public class ManagementInsightOrchestrator {
 
         QueryWrapper<ProductionOrder> q = new QueryWrapper<>();
         q.eq("tenant_id", tenantId).eq("delete_flag", 0)
-                .ne("status", "COMPLETED").ne("status", "CANCELLED");
+                .notIn("status", TERMINAL_STATUSES);
         List<ProductionOrder> activeOrders = productionOrderService.list(q);
 
         // 逾期订单

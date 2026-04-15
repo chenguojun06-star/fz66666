@@ -112,6 +112,18 @@ public class CoreSchemaPreflightChecker implements ApplicationRunner, HealthIndi
             "auditor_id", "auditor_name", "audit_time",
             "confirmer_id", "confirmer_name", "confirm_time"
         ));
+        tableColumns.put("t_ai_job_run_log", List.of(
+            "id", "tenant_id", "job_name", "method_name", "start_time",
+            "duration_ms", "status", "tenant_count", "result_summary",
+            "error_message", "created_at"
+        ));
+        tableColumns.put("t_shipment_reconciliation", List.of(
+            "tenant_id", "auditor_id", "auditor_name", "audit_time"
+        ));
+        tableColumns.put("t_sys_notice", List.of(
+            "id", "tenant_id", "to_name", "from_name", "order_no",
+            "title", "content", "notice_type", "is_read", "created_at"
+        ));
         REQUIRED_COLUMNS = Collections.unmodifiableMap(tableColumns);
     }
 

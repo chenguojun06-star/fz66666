@@ -307,7 +307,14 @@ public class WarehouseScanExecutor {
                 if (trackingUpdated) {
                     log.info("入库工序跟踪记录更新成功: bundleId={}, orderId={}", bundle.getId(), order.getId());
                 } else {
-                    log.warn("入库工序跟踪记录未找到（不阻断入库）: bundleId={}, orderId={}", bundle.getId(), order.getId());
+                    log.info("入库工序跟踪记录未找到，自动创建: bundleId={}, orderId={}", bundle.getId(), order.getId());
+                    try {
+                        processTrackingOrchestrator.createWarehousingTrackingOnScan(
+                                bundle, order, operatorId, operatorName, sr.getId());
+                    } catch (Exception createEx) {
+                        log.warn("自动创建入库工序跟踪记录失败（不阻断入库）: bundleId={}, orderId={}, msg={}",
+                                bundle.getId(), order.getId(), createEx.getMessage());
+                    }
                 }
             } catch (Exception e) {
                 // 工序跟踪更新失败不应阻断入库操作（ProductWarehousing 已提交）

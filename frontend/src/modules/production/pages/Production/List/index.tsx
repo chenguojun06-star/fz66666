@@ -467,7 +467,7 @@ const ProductionList: React.FC = () => {
   return (
     <Layout>
         <PageLayout
-          title="我的订单"
+          title="订单管理"
           headerContent={<>
           {showSmartErrorNotice && smartError ? (
             <div style={{ marginBottom: 12 }}>
@@ -645,6 +645,7 @@ const ProductionList: React.FC = () => {
               handleScrapOrder={handleScrapOrder}
               handleTransferOrder={handleTransferOrder}
               openProcessDetail={openProcessDetail}
+              openNodeDetail={openNodeDetail}
               syncProcessFromTemplate={syncProcessFromTemplate}
               setPrintModalVisible={setPrintModalVisible}
               setPrintingRecord={setPrintingRecord}
@@ -655,6 +656,7 @@ const ProductionList: React.FC = () => {
               isSupervisorOrAbove={isSupervisorOrAbove}
               openSubProcessRemap={openSubProcessRemap}
               isFactoryAccount={isFactoryAccount}
+              onOpenRemark={(record) => setRemarkTarget({ open: true, orderNo: record.orderNo || '', merchandiser: record.merchandiser })}
             />
           ) : viewMode === 'list' ? (
             <ResizableTable<any>

@@ -511,6 +511,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
     isOrderFrozenByStatus, setPrintingRecord,
     handlePrintLabel, handleFactoryShip, handleQuickEdit,
     handleShareOrder, handleCloseOrder,
+    onOpenRemark: (record) => openRemarkModal(record.orderNo ?? '', record.merchandiser ?? undefined),
     isFactoryAccount, canManageOrderLifecycle, embedded: !!embedded,
   });
 

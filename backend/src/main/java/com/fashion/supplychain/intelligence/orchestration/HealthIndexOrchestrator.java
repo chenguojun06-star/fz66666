@@ -48,6 +48,8 @@ public class HealthIndexOrchestrator {
     @Autowired
     private DashboardQueryService dashboardQueryService;
 
+    private static final java.util.Set<String> TERMINAL_STATUSES = java.util.Set.of("completed", "cancelled", "scrapped", "archived", "closed");
+
     public HealthIndexResponse calculate() {
         HealthIndexResponse resp = new HealthIndexResponse();
         try {
@@ -189,7 +191,7 @@ public class HealthIndexOrchestrator {
         total.eq(tenantId != null, "tenant_id", tenantId)
              .eq(StringUtils.hasText(factoryId), "factory_id", factoryId)
              .eq("delete_flag", 0)
-             .ne("status", "cancelled");
+             .notIn("status", TERMINAL_STATUSES);
         long totalOrders = productionOrderService.count(total);
         if (totalOrders == 0) return 20;
 

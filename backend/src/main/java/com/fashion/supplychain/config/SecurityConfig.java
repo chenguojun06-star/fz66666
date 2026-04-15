@@ -108,7 +108,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                         .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .antMatchers("/ws/**").permitAll()  // WebSocket握手是HTTP升级请求，自行鉴权(userId query param)
                         .antMatchers("/error").permitAll()  // Spring Boot 错误转发端点，需放行否则自身产生 403 噪音日志
-                        .antMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        .antMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").authenticated()
                         .antMatchers("/api/system/tenant/apply").permitAll()
                         .antMatchers("/api/system/tenant/public-list").permitAll()
                         .antMatchers("/api/system/user/login").permitAll()
@@ -672,35 +672,6 @@ public class SecurityConfig implements WebMvcConfigurer {
             }
         }
 
-        if (isBehindTrustedProxy(request, remote)) {
-            String forwardedFor = request.getHeader("X-Forwarded-For");
-            if (forwardedFor != null && !forwardedFor.isBlank()) {
-                String clientIp = forwardedFor.split(",")[0].trim();
-                if (trustedIps != null && trustedIps.contains(clientIp)) {
-                    return true;
-                }
-                if (trustedIpPrefixes != null) {
-                    for (String prefix : trustedIpPrefixes) {
-                        if (clientIp.startsWith(prefix)) {
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
-
-        return false;
-    }
-
-    private boolean isBehindTrustedProxy(HttpServletRequest request, String remoteAddr) {
-        if (trustedIpPrefixes == null || trustedIpPrefixes.isEmpty()) {
-            return false;
-        }
-        for (String prefix : trustedIpPrefixes) {
-            if (remoteAddr.startsWith(prefix)) {
-                return true;
-            }
-        }
         return false;
     }
 

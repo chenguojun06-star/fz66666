@@ -39,6 +39,8 @@ public class SystemOverviewTool implements AgentTool {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
+    private static final java.util.Set<String> TERMINAL_STATUSES = java.util.Set.of("completed", "cancelled", "scrapped", "archived", "closed");
+
     @Override
     public String getName() {
         return "tool_system_overview";
@@ -157,7 +159,7 @@ public class SystemOverviewTool implements AgentTool {
         // 逾期订单（planned_end_date < now 且未完成）
         QueryWrapper<ProductionOrder> overdueQuery = new QueryWrapper<>();
         overdueQuery.eq("delete_flag", 0)
-                .ne("status", "COMPLETED").ne("status", "CANCELLED")
+                .notIn("status", TERMINAL_STATUSES)
                 .isNotNull("planned_end_date")
                 .lt("planned_end_date", LocalDateTime.now());
         if (tenantId != null) overdueQuery.eq("tenant_id", tenantId);
@@ -280,7 +282,7 @@ public class SystemOverviewTool implements AgentTool {
 
         // 已逾期订单 — 最高优先级
         QueryWrapper<ProductionOrder> overdueQ = new QueryWrapper<>();
-        overdueQ.eq("delete_flag", 0).ne("status", "COMPLETED").ne("status", "CANCELLED")
+        overdueQ.eq("delete_flag", 0).notIn("status", TERMINAL_STATUSES)
                 .isNotNull("planned_end_date").lt("planned_end_date", LocalDateTime.now());
         if (tenantId != null) overdueQ.eq("tenant_id", tenantId);
         overdueQ.eq(StringUtils.hasText(factoryId), "factory_id", factoryId);

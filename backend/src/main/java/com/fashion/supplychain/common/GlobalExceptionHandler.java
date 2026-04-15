@@ -17,6 +17,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.servlet.NoHandlerFoundException;
@@ -99,6 +100,21 @@ public class GlobalExceptionHandler {
                                 request == null ? "" : request.getRequestURI(), e.getMessage());
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                                 .body(Result.fail(400, "缺少必填参数：" + e.getParameterName()));
+        }
+
+        @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+        public ResponseEntity<Result<?>> handleMethodArgumentTypeMismatch(
+                        MethodArgumentTypeMismatchException e,
+                        HttpServletRequest request) {
+                String paramName = e.getName();
+                String paramValue = e.getValue() != null ? e.getValue().toString() : "null";
+                String requiredType = e.getRequiredType() != null ? e.getRequiredType().getSimpleName() : "未知";
+                logger.warn("参数类型不匹配: {} {} - 参数 {} 的值 '{}' 无法转换为类型 {}",
+                                request == null ? "" : request.getMethod(),
+                                request == null ? "" : request.getRequestURI(),
+                                paramName, paramValue, requiredType);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                .body(Result.fail(400, "参数 " + paramName + " 格式错误，期望类型：" + requiredType));
         }
 
         /**
