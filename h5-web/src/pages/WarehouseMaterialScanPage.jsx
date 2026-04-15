@@ -65,7 +65,7 @@ export default function WarehouseMaterialScanPage() {
   return (
     <div className="sub-page">
       <div className="search-row" style={{ marginBottom: 12 }}>
-        <input className="text-input" value={rollCode} onChange={e => setRollCode(e.target.value)} placeholder="料卷码(MR开头)" />
+        <input className="text-input" value={rollCode} onChange={e => setRollCode(e.target.value)} placeholder="扫描箱/卷上的MR开头二维码" />
         <button className="secondary-button" onClick={onScanTap}>📷</button>
         <button className="primary-button" onClick={() => queryRoll(rollCode)} disabled={loading}>查询</button>
       </div>
@@ -100,14 +100,14 @@ export default function WarehouseMaterialScanPage() {
           </div>
           <div className="field-block" style={{ marginTop: 8 }}>
             <label>关联裁剪单号（选填）</label>
-            <input className="text-input" value={cuttingOrderNo} onChange={e => setCuttingOrderNo(e.target.value)} placeholder="输入裁剪单号" />
+            <input className="text-input" value={cuttingOrderNo} onChange={e => setCuttingOrderNo(e.target.value)} placeholder="输入裁剪单号，如 CO20260219001" />
           </div>
           <div className="sub-page-row-stretch" style={{ marginTop: 8 }}>
             {rollInfo.currentStatus === 'IN_STOCK' && (
-              <button className="primary-button" onClick={onIssueTap} disabled={submitting}>发料</button>
+              <button className="primary-button" onClick={onIssueTap} disabled={submitting}>{submitting ? '处理中...' : '确认发料出库'}</button>
             )}
             {rollInfo.currentStatus === 'ISSUED' && (
-              <button className="secondary-button" onClick={onReturnTap} disabled={submitting}>退回</button>
+              <button className="secondary-button" onClick={onReturnTap} disabled={submitting}>{submitting ? '处理中...' : '退回入库'}</button>
             )}
           </div>
         </div>

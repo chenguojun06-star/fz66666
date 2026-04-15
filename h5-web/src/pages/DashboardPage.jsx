@@ -17,8 +17,8 @@ const STATUS_FILTERS = [
 const SUMMARY_CARDS = [
   { key: 'sample', title: '样衣开发', icon: 'scissors', color: 'var(--color-purple)', bg: 'rgba(124,92,252,0.1)', tone: 'purple' },
   { key: 'production', title: '生产订单', icon: 'package', color: 'var(--color-primary)', bg: 'rgba(59,130,246,0.1)', tone: 'blue' },
-  { key: 'inbound', title: '今日入库', icon: 'package', color: 'var(--color-success)', bg: 'rgba(34,197,94,0.1)', tone: 'green' },
-  { key: 'outbound', title: '今日出库', icon: 'package', color: 'var(--color-warning)', bg: 'rgba(245,158,11,0.1)', tone: 'orange' },
+  { key: 'inbound', title: '入库', icon: 'package', color: 'var(--color-success)', bg: 'rgba(34,197,94,0.1)', tone: 'green' },
+  { key: 'outbound', title: '出库', icon: 'package', color: 'var(--color-warning)', bg: 'rgba(245,158,11,0.1)', tone: 'orange' },
 ];
 
 export default function DashboardPage() {
@@ -33,6 +33,7 @@ export default function DashboardPage() {
   });
   const [orders, setOrders] = useState([]);
   const [searchKey, setSearchKey] = useState('');
+  const [todayScanCount, setTodayScanCount] = useState(0);
 
   useEffect(() => {
     if (!isTenantOwner() && !isAdminOrSupervisor()) {
@@ -47,26 +48,18 @@ export default function DashboardPage() {
   const refreshCards = async () => {
     setLoading(true);
     try {
-      const [dashRes, topStatsRes, prodRes, compRes] = await Promise.allSettled([
+      const [dashRes, topStatsRes] = await Promise.allSettled([
         api.dashboard.get(),
         api.dashboard.getTopStats(),
-        api.production.orderList({ deleteFlag: 0, status: 'production', page: 1, pageSize: 50 }),
-        api.production.orderList({ deleteFlag: 0, status: 'completed', page: 1, pageSize: 1 }),
       ]);
       const dash = dashRes.status === 'fulfilled' ? (dashRes.value?.data || dashRes.value || {}) : {};
       const topStats = topStatsRes.status === 'fulfilled' ? (topStatsRes.value?.data || topStatsRes.value || {}) : {};
-      const prodData = prodRes.status === 'fulfilled' ? (prodRes.value?.data || prodRes.value || {}) : {};
-      const compData = compRes.status === 'fulfilled' ? (compRes.value?.data || compRes.value || {}) : {};
-      const prodRecords = prodData?.records || prodData?.list || [];
-      let totalPieces = 0;
-      if (Array.isArray(prodRecords)) {
-        prodRecords.forEach(o => { totalPieces += Number(o.orderQuantity || o.totalQuantity || 0); });
-      }
+      setTodayScanCount(Number(dash.todayScanCount || 0));
       setCards({
-        sample: { developing: Number(dash.sampleDevelopmentCount || dash.sampleCount || 0), completed: Number(compData?.total || 0) },
-        production: { total: Number(prodData?.total || prodRecords.length || 0), overdue: Number(dash.overdueOrderCount || dash.overdueCount || 0), pieces: totalPieces },
-        inbound: { today: Number(topStats.warehousingInbound?.day || topStats.inboundToday || 0), week: Number(topStats.warehousingInbound?.week || topStats.inboundWeek || 0) },
-        outbound: { today: Number(topStats.warehousingOutbound?.day || topStats.outboundToday || 0), week: Number(topStats.warehousingOutbound?.week || topStats.outboundWeek || 0) },
+        sample: { developing: Number(dash.sampleDevelopmentCount || 0), completed: Number(topStats.sampleDevelopment?.total || 0) },
+        production: { total: Number(dash.productionOrderCount || 0), overdue: Number(dash.overdueOrderCount || 0), pieces: Number(dash.orderQuantityTotal || 0) },
+        inbound: { today: Number(topStats.warehousingInbound?.day || 0), week: Number(topStats.warehousingInbound?.week || 0) },
+        outbound: { today: Number(topStats.warehousingOutbound?.day || 0), week: Number(topStats.warehousingOutbound?.week || 0) },
       });
     } catch (e) {
       toast.error('数据加载失败');
@@ -153,6 +146,15 @@ export default function DashboardPage() {
 
   return (
     <div className="dashboard-stack">
+      <div className="sub-page-header" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+        <span className="sub-page-title">今日概览</span>
+        {todayScanCount > 0 && (
+          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-primary)', background: 'rgba(59,130,246,0.08)', padding: '2px 10px', borderRadius: 12 }}>
+            今日扫码 {todayScanCount} 次
+          </span>
+        )}
+      </div>
+
       <div className="card-grid">
         {SUMMARY_CARDS.map(card => (
           <div key={card.key} className={`summary-card card--${card.tone}`}>
@@ -186,7 +188,7 @@ export default function DashboardPage() {
       {loading ? (
         <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-secondary)' }}>加载中...</div>
       ) : orders.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-secondary)' }}>暂无订单</div>
+        <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-secondary)' }}>暂无订单数据</div>
       ) : (
         orders.map((order, idx) => {
           const remainDays = getRemainDays(order);

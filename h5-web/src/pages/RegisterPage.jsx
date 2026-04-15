@@ -110,6 +110,7 @@ export default function RegisterPage() {
           <div className="login-title-row">
             <span className="login-title">员工注册</span>
           </div>
+          <div className="login-subtitle" style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginTop: 4 }}>填写信息后请耐心等待管理员审批</div>
         </div>
         <div className="form-stack">
           <div className="login-field">
@@ -139,7 +140,7 @@ export default function RegisterPage() {
             <div className="login-label">手机号（选填）</div>
             <div className="login-input-wrap">
               <span className="login-input-icon">◎</span>
-              <input className="login-input" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="11位手机号" />
+              <input className="login-input" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="用于通知联系，可不填" />
             </div>
           </div>
           <div className="login-field">
@@ -162,7 +163,7 @@ export default function RegisterPage() {
           </label>
           <div className="login-btn-wrap">
             <button className={`login-btn${loading ? ' login-btn-disabled' : ''}`} onClick={onSubmit} disabled={loading}>
-              {loading ? '注册中...' : '注 册'}
+              {loading ? '提交中...' : '提交注册申请'}
             </button>
           </div>
           <button className="ghost-button" onClick={() => navigate('/login')} style={{ marginTop: 8 }}>返回登录</button>

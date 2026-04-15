@@ -79,24 +79,25 @@ export default function InboxPage() {
   return (
     <div className="inbox-stack">
       <div className="sub-page-header">
-        <span className="sub-page-title">通知列表</span>
+        <span className="sub-page-title">智能提醒</span>
         {unreadCount > 0 && (
           <button className="ghost-button" onClick={markAllRead} style={{ fontSize: 'var(--font-size-xs)', padding: '4px 10px' }}>
-            全部已读 ({unreadCount})
+            全部标为已读 ({unreadCount})
           </button>
         )}
       </div>
 
       {editForm && (
         <div className="card-item" style={{ border: '1px solid var(--color-primary)' }}>
-          <div className="card-item-title" style={{ marginBottom: 8 }}>回复催单: {editForm.orderNo}</div>
+          <div className="card-item-title" style={{ marginBottom: 8 }}>催单回复: {editForm.orderNo}</div>
+          <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginBottom: 8 }}>请确认排期并回复跟单员</div>
           <div className="field-block">
             <label>预计出货日期</label>
             <input className="text-input" type="date" value={editForm.expectedShipDate}
               onChange={e => setEditForm({ ...editForm, expectedShipDate: e.target.value })} />
           </div>
           <div className="field-block">
-            <label>备注</label>
+            <label>工厂备注</label>
             <input className="text-input" value={editForm.remarks}
               onChange={e => setEditForm({ ...editForm, remarks: e.target.value })} />
           </div>

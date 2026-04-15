@@ -61,7 +61,7 @@ export default function HomePage() {
   return (
     <div className="page-home">
       <div className="home-header">
-        <div className="greeting-name">{storeUser?.name || storeUser?.realName || storeUser?.username || '用户'}，{getGreeting()}</div>
+        <div className="greeting-name">{storeUser?.name || storeUser?.realName || storeUser?.username || '未知用户'}，{getGreeting()}</div>
         <div className="greeting-sub">欢迎使用衣智链</div>
       </div>
 

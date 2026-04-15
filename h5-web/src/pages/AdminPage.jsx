@@ -55,7 +55,8 @@ export default function AdminPage() {
   });
 
   const avatarUrl = user?.avatarImgUrl || user?.avatar || '';
-  const displayName = user?.name || user?.realName || user?.username || '用户';
+  const displayName = user?.name || user?.realName || user?.username || '未知用户';
+  const displayRole = getRoleDisplayName(user?.role) || '普通用户';
   const initial = displayName.charAt(0).toUpperCase();
 
   return (
@@ -76,7 +77,7 @@ export default function AdminPage() {
                 <span className="logout-text">退出</span>
               </button>
             </div>
-            <div className="profile-role">{getRoleDisplayName(user?.role)}</div>
+            <div className="profile-role">{displayRole}</div>
             {onlineCount > 0 && (
               <div className="profile-online">
                 <span>👥</span>
@@ -96,6 +97,21 @@ export default function AdminPage() {
           </button>
         ))}
       </div>
+
+      {(isAdminOrSupervisor() || user?.role === 'tenant_owner') && (
+        <div className="admin-menu-list" style={{ marginTop: 12 }}>
+          <div className="admin-menu-item" style={{ cursor: 'default' }}>
+            <div className="admin-menu-icon-wrap">🏭</div>
+            <span className="admin-menu-label" style={{ flex: 1 }}>工厂码</span>
+            <button className="ghost-button" style={{ fontSize: 'var(--font-size-xs)', padding: '2px 10px' }} onClick={copyFactoryCode}>复制</button>
+          </div>
+          <div className="admin-menu-item" style={{ cursor: 'default' }}>
+            <div className="admin-menu-icon-wrap">🔗</div>
+            <span className="admin-menu-label" style={{ flex: 1 }}>注册链接</span>
+            <button className="ghost-button" style={{ fontSize: 'var(--font-size-xs)', padding: '2px 10px' }} onClick={copyRegisterLink}>复制</button>
+          </div>
+        </div>
+      )}
 
       <button className="admin-logout-btn" onClick={handleLogout}>退出登录</button>
     </div>

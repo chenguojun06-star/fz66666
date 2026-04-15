@@ -151,7 +151,7 @@ export default function PayrollPage() {
       </div>
 
       <div className="sub-page-row" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
-        <span style={{ fontWeight: 600 }}>工资明细</span>
+        <span style={{ fontWeight: 600 }}>【工序明细】</span>
         <button className="ghost-button" style={{ fontSize: 'var(--font-size-xs)' }} onClick={toggleSort}>
           按{sortField === 'time' ? '时间' : '金额'}排序 {sortOrder === 'desc' ? '↓' : '↑'}
         </button>
@@ -175,10 +175,17 @@ export default function PayrollPage() {
               </div>
               <div className="card-item-meta" style={{ marginTop: 2 }}>
                 {r.processName} · {r.scanTypeText} · {r.quantity}件 · ¥{r.unitPrice}/件
+                {r.operatorName && <span> · 扫码人：{r.operatorName}</span>}
               </div>
               <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginTop: 2 }}>{r.scanTime}</div>
             </div>
           ))}
+        </div>
+      )}
+
+      {records.length > 0 && (
+        <div style={{ textAlign: 'center', padding: '8px 0', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
+          当前筛选总计：¥{summaryItems[0]?.value?.replace('¥', '') || '0.00'}
         </div>
       )}
     </div>

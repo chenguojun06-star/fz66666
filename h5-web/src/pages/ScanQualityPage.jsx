@@ -127,7 +127,7 @@ export default function ScanQualityPage() {
 
     if (result === 'unqualified') {
       const qty = parseInt(defectQuantity, 10);
-      if (!qty || qty <= 0) { setLoading(false); toast.error('请输入不良数量'); return; }
+      if (!qty || qty <= 0) { setLoading(false); toast.error('请输入不合格数量'); return; }
       payload.defectQuantity = qty;
       if (defectCategoryIndex >= 0) payload.defectCategory = CATEGORY_VALUE_MAP[defectCategoryIndex];
       if (handleMethodIndex >= 0) payload.defectRemark = HANDLE_METHODS[handleMethodIndex];
@@ -171,11 +171,22 @@ export default function ScanQualityPage() {
         <div className="insight-card">
           <div className="insight-icon"><Icon name="cloud" size={14} /></div>
           <div className="insight-body">
-            <div style={{ fontWeight: 600, marginBottom: 4 }}>AI建议 · 历史不良率: {historicalDefectRate}</div>
-            {aiSuggestionList.map((s, i) => (
-              <div key={i} style={{ marginTop: 2 }}><strong>{s.label}:</strong> {s.text}</div>
-            ))}
-            <button className="insight-action-btn" onClick={onAdoptAiSuggestion}>采纳建议</button>
+            <div style={{ fontWeight: 600, marginBottom: 4 }}>AI质检助手 · 历史不良率: {historicalDefectRate}</div>
+            {aiSuggestion?.checkpoints && aiSuggestion.checkpoints.length > 0 && (
+              <div style={{ marginTop: 4 }}>
+                <strong>质检要点：</strong>
+                <div>{aiSuggestion.checkpoints.join('；')}</div>
+              </div>
+            )}
+            {aiSuggestionList.length > 0 && (
+              <div style={{ marginTop: 4 }}>
+                <strong>缺陷提示：</strong>
+                {aiSuggestionList.map((s, i) => (
+                  <div key={i} style={{ marginTop: 2 }}>{s.label}: {s.text}</div>
+                ))}
+              </div>
+            )}
+            <button className="insight-action-btn" onClick={onAdoptAiSuggestion}>采纳AI建议</button>
           </div>
         </div>
       )}
@@ -197,12 +208,12 @@ export default function ScanQualityPage() {
       {result === 'unqualified' && (
         <div className="hero-card compact">
           <div className="field-block">
-            <label>不良数量</label>
+            <label>不合格数量</label>
             <input className="text-input" type="number" value={defectQuantity} min={1}
-              onChange={e => setDefectQuantity(e.target.value)} placeholder="输入不良数量" />
+              onChange={e => setDefectQuantity(e.target.value)} placeholder="请输入不合格数量" />
           </div>
           <div className="field-block">
-            <label>不良类别</label>
+            <label>缺陷类别</label>
             <select className="text-input" value={defectCategoryIndex}
               onChange={e => setDefectCategoryIndex(Number(e.target.value))}>
               <option value={-1}>请选择</option>
@@ -218,7 +229,7 @@ export default function ScanQualityPage() {
             </select>
           </div>
           <div className="field-block">
-            <label>拍照上传（最多5张）</label>
+            <label>质检照片（选填，最多5张）</label>
             <div className="photo-grid">
               {images.map((url, idx) => (
                 <div key={idx} className="photo-item">

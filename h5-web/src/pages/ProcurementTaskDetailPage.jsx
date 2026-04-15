@@ -108,7 +108,7 @@ export default function ProcurementTaskDetailPage() {
       </div>
 
       <div className="sub-page-row-stretch" style={{ marginBottom: 12 }}>
-        <button className="primary-button" onClick={onReceiveAll}>一键领取</button>
+        <button className="primary-button" onClick={onReceiveAll}>一键采购</button>
         {canConfirmProcurement && (
           <button className="secondary-button" onClick={async () => {
             try {
@@ -161,8 +161,8 @@ export default function ProcurementTaskDetailPage() {
       {hasInput && (
         <>
           <div className="field-block" style={{ marginTop: 12 }}>
-            <label>备注</label>
-            <input className="text-input" value={remark} onChange={e => setRemark(e.target.value)} placeholder="备注（选填）" />
+            <label>备注（到货率＜70%时必填）</label>
+            <input className="text-input" value={remark} onChange={e => setRemark(e.target.value)} placeholder="请输入备注" />
           </div>
           <button className="primary-button" onClick={onSubmit} disabled={submitting}>
             {submitting ? '提交中...' : '提交到货登记'}

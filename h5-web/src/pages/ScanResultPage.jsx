@@ -194,7 +194,7 @@ export default function ScanResultPage() {
       </div>
 
       <div className="field-block">
-        <label>选择工序（已选 {selectedCount} 个，单价合计 ¥{selectedAmount.toFixed(2)}）</label>
+        <label>选择工序（可多选，已选 {selectedCount} 个，单价合计 ¥{selectedAmount.toFixed(2)}）</label>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {processOptions.map(opt => (
             <button key={opt.value}
@@ -217,21 +217,30 @@ export default function ScanResultPage() {
 
       {showWarehouse && (
         <div className="field-block">
-          <label>仓库编号</label>
+          <label>目标仓库</label>
           {warehouseOptions.length > 0 ? (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {warehouseOptions.map(opt => (
-                <button key={opt} className={`scan-type-chip${warehouseCode === opt ? ' active' : ''}`}
-                  onClick={() => setWarehouseCode(opt)}
-                  style={{ padding: '6px 10px', borderRadius: 16, border: '1px solid var(--color-border)',
-                    background: warehouseCode === opt ? 'var(--color-primary)' : 'var(--color-bg-light)',
-                    color: warehouseCode === opt ? '#fff' : 'var(--color-text-primary)', cursor: 'pointer', fontSize: 12 }}>
-                  {opt}
-                </button>
-              ))}
+            <div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {warehouseOptions.map(opt => (
+                  <button key={opt} className={`scan-type-chip${warehouseCode === opt ? ' active' : ''}`}
+                    onClick={() => setWarehouseCode(opt)}
+                    style={{ padding: '6px 10px', borderRadius: 16, border: '1px solid var(--color-border)',
+                      background: warehouseCode === opt ? 'var(--color-primary)' : 'var(--color-bg-light)',
+                      color: warehouseCode === opt ? '#fff' : 'var(--color-text-primary)', cursor: 'pointer', fontSize: 12 }}>
+                    {opt}
+                  </button>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 6, marginTop: 6, alignItems: 'center' }}>
+                <input className="text-input" value={warehouseCode} onChange={e => setWarehouseCode(e.target.value)} placeholder="或手动输入仓库编号" style={{ flex: 1 }} />
+                {warehouseCode && <button className="ghost-button" style={{ fontSize: 12, padding: '4px 8px' }} onClick={() => setWarehouseCode('')}>清除</button>}
+              </div>
             </div>
           ) : (
-            <input className="text-input" value={warehouseCode} onChange={e => setWarehouseCode(e.target.value)} placeholder="输入仓库编号" />
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <input className="text-input" value={warehouseCode} onChange={e => setWarehouseCode(e.target.value)} placeholder="请输入仓库编号" style={{ flex: 1 }} />
+              {warehouseCode && <button className="ghost-button" style={{ fontSize: 12, padding: '4px 8px' }} onClick={() => setWarehouseCode('')}>清除</button>}
+            </div>
           )}
         </div>
       )}

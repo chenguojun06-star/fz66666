@@ -93,7 +93,7 @@ export default function FeedbackPage() {
       {activeTab === 'submit' ? (
         <div className="card-item">
           <div className="field-block">
-            <label>类别</label>
+            <label>反馈类型</label>
             <select className="text-input" value={categoryIndex}
               onChange={e => { const idx = Number(e.target.value); setCategoryIndex(idx); setForm({ ...form, category: CATEGORY_LIST[idx].value }); }}>
               {CATEGORY_LIST.map((c, i) => <option key={i} value={i}>{c.label}</option>)}

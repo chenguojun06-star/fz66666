@@ -64,6 +64,21 @@ export default function ScanPage() {
 
   return (
     <div className="scan-container">
+      <div className="sub-page-row" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+        <span style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>今日统计</span>
+        <button className="ghost-button" style={{ fontSize: 'var(--font-size-xs)', padding: '2px 10px' }} onClick={() => {
+          api.production.personalScanStats().then((res) => {
+            const p = res?.data || res;
+            setStats({
+              scanCount: Number(p?.scanCount || 0),
+              orderCount: Number(p?.orderCount || 0),
+              totalQuantity: Number(p?.totalQuantity || 0),
+              totalAmount: Number(p?.totalAmount || 0),
+            });
+          }).catch(() => {});
+        }}>刷新</button>
+      </div>
+
       <div className="today-stats-card">
         <div className="today-stat-item">
           <div className="today-stat-value">{stats.scanCount}</div>
@@ -87,10 +102,12 @@ export default function ScanPage() {
         <div className="quick-entry-card" onClick={() => navigate('/scan/history')}>
           <Icon name="clipboard" size={18} />
           <span className="quick-entry-text">历史记录</span>
+          <span className="quick-entry-desc">全部扫码记录</span>
         </div>
         <div className="quick-entry-card" onClick={() => navigate('/scan/history?mode=monthly')}>
           <Icon name="calendar" size={18} />
           <span className="quick-entry-text">当月记录</span>
+          <span className="quick-entry-desc">本月汇总统计</span>
         </div>
       </div>
 
@@ -122,7 +139,10 @@ export default function ScanPage() {
           {loading ? '...' : <Icon name="scan" size={36} color="#fff" />}
         </button>
         <div className="scan-btn-label">{loading ? '识别中...' : '扫码识别'}</div>
-        <div className="scan-btn-hint">系统自动识别工序</div>
+        <div className="scan-btn-hint">自动匹配工序</div>
+        <div style={{ fontSize: 'var(--font-size-xxs)', color: 'var(--color-text-disabled)', marginTop: 6, textAlign: 'center', lineHeight: 1.4 }}>
+          说明：系统会按订单工序模板与历史扫码自动识别当前应执行工序，仅允许流转到未完成工序。
+        </div>
       </div>
 
       {cameraActive && (

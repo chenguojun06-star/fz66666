@@ -93,7 +93,7 @@ export default function CuttingTaskListPage() {
         <div className="empty-state">
           <div className="empty-state-icon">✂️</div>
           <div className="empty-state-title">暂无裁剪任务</div>
-          <div className="empty-state-desc">有新任务时会显示在这里</div>
+          <div className="empty-state-desc">当有新的订单分配时，任务将出现在这里</div>
         </div>
       ) : (
         <div className="list-stack">
@@ -108,7 +108,10 @@ export default function CuttingTaskListPage() {
               </div>
               <div className="sub-page-row" style={{ marginTop: 8 }}>
                 {task.canReceive && (
-                  <button className="primary-button" style={{ fontSize: 'var(--font-size-xs)', padding: '4px 12px' }} onClick={() => onReceive(task)}>领取</button>
+                  <button className="primary-button" style={{ fontSize: 'var(--font-size-xs)', padding: '4px 12px' }} onClick={() => onReceive(task)}>领取任务</button>
+                )}
+                {task.canOperate && (
+                  <button className="primary-button" style={{ fontSize: 'var(--font-size-xs)', padding: '4px 12px' }} onClick={() => goDetail(task)}>开始裁剪</button>
                 )}
                 <button className="secondary-button" style={{ fontSize: 'var(--font-size-xs)', padding: '4px 12px' }} onClick={() => goDetail(task)}>详情</button>
               </div>

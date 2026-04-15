@@ -198,6 +198,18 @@ export default function WorkPage() {
                       </>
                     )}
                   </div>
+                  {order.color && (
+                    <div className="item-meta">
+                      <span className="meta-label">颜色</span>
+                      <span className="meta-value">{order.color}</span>
+                    </div>
+                  )}
+                  {order.size && (
+                    <div className="item-meta">
+                      <span className="meta-label">码数</span>
+                      <span className="meta-value">{order.size}</span>
+                    </div>
+                  )}
                   {activeTab === 'cutting' && (
                     <div className="item-actions">
                       <button className="action-btn action-btn-primary" onClick={() => navigate(`/work/bundle-split?orderNo=${order.orderNo || order.orderNumber}`)}>生成菲号</button>

@@ -874,6 +874,12 @@ button, input, textarea { font: inherit; }
   font-weight: 600;
 }
 
+.quick-entry-desc {
+  font-size: var(--font-size-xxs);
+  color: var(--color-text-tertiary);
+  margin-top: 2px;
+}
+
 .scan-area-card {
   margin: 0 16px 12px;
   padding: 24px 20px;

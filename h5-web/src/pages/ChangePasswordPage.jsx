@@ -28,9 +28,9 @@ export default function ChangePasswordPage() {
       <div className="card-item">
         <div className="card-item-title" style={{ marginBottom: 16 }}>修改密码</div>
         <div className="field-block">
-          <label>当前密码</label>
+          <label>原密码</label>
           <input className="text-input" type="password" value={form.oldPassword}
-            onChange={e => setForm({ ...form, oldPassword: e.target.value })} placeholder="请输入当前密码" />
+            onChange={e => setForm({ ...form, oldPassword: e.target.value })} placeholder="请输入原密码" />
         </div>
         <div className="field-block">
           <label>新密码</label>

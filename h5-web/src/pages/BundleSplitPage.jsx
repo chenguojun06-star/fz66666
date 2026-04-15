@@ -144,7 +144,7 @@ export default function BundleSplitPage() {
         <>
           {needSearch ? (
             <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-              <input className="text-input" value={searchOrderNo} onChange={e => setSearchOrderNo(e.target.value)} placeholder="输入订单号" style={{ flex: 1 }} />
+              <input className="text-input" value={searchOrderNo} onChange={e => setSearchOrderNo(e.target.value)} placeholder="输入订单号或扫码查单" style={{ flex: 1 }} />
               <button className="primary-button" onClick={() => { setOrderNo(searchOrderNo.trim()); setNeedSearch(false); fetchBundles(searchOrderNo.trim()); }}>搜索</button>
             </div>
           ) : (
@@ -224,7 +224,7 @@ export default function BundleSplitPage() {
               </div>
               <div className="field-block">
                 <label>调整原因</label>
-                <textarea className="text-input" value={adjustReason} onChange={e => setAdjustReason(e.target.value)} rows={2} placeholder="必填" />
+                <textarea className="text-input" value={adjustReason} onChange={e => setAdjustReason(e.target.value)} rows={2} placeholder="请输入调整原因，如：面料加厚工艺变复杂" />
               </div>
               <button className="primary-button" onClick={submitAdjust} disabled={adjustSubmitting}>
                 {adjustSubmitting ? '提交中...' : '确认调整'}
@@ -238,7 +238,7 @@ export default function BundleSplitPage() {
               {adjustHistory.map((h, i) => (
                 <div key={i} className="hero-card compact" style={{ fontSize: 12 }}>
                   <div>{h.processName || '-'}: ¥{h.oldPrice || 0} → ¥{h.newPrice || 0}</div>
-                  <div style={{ color: 'var(--color-text-secondary)' }}>{h.reason || '-'} · {h.operatorName || '-'}</div>
+                  <div style={{ color: 'var(--color-text-secondary)' }}>原因：{h.reason || '-'} · {h.operatorName || '-'}</div>
                 </div>
               ))}
             </div>

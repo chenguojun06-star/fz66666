@@ -56,7 +56,11 @@ export default function WarehouseSampleScanActionPage() {
       {sample && (
         <div style={{ background: 'var(--color-bg-card)', borderRadius: 16, padding: 16, border: '1px solid var(--color-border-light)' }}>
           <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, marginBottom: 8 }}>{sample.styleName || sample.styleNo || '样衣详情'}</div>
-          <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginBottom: 4 }}>状态: {sample.status || '未知'}</div>
+          <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginBottom: 4 }}>
+            状态: <span className={`status-tag ${sample.status === 'IN_STOCK' ? 'status-tag-success' : sample.status === 'ALL_LOANED' ? 'status-tag-warning' : 'status-tag-info'}`}>
+              {sample.status === 'IN_STOCK' ? '在库' : sample.status === 'ALL_LOANED' ? '全部借出' : sample.status === 'NOT_IN_STOCK' ? '未入库' : sample.status || '未知'}
+            </span>
+          </div>
           {sample.color && <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginBottom: 4 }}>颜色: {sample.color}</div>}
           {sample.size && <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginBottom: 4 }}>尺码: {sample.size}</div>}
 

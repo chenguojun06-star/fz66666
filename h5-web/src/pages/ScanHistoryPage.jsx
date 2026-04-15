@@ -141,9 +141,13 @@ export default function ScanHistoryPage() {
         </div>
       )}
 
-      <input className="text-input" placeholder="搜索订单号/菲号" value={searchKeyword}
-        onChange={e => setSearchKeyword(e.target.value)}
-        onKeyDown={e => e.key === 'Enter' && loadData(true)} />
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <input className="text-input" placeholder="搜索订单号/菲号" value={searchKeyword}
+          onChange={e => setSearchKeyword(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && loadData(true)} style={{ flex: 1 }} />
+        <button className="secondary-button" onClick={() => loadData(true)} style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>搜索</button>
+        <button className="ghost-button" onClick={() => { setSearchKeyword(''); loadData(true); }} style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>重置</button>
+      </div>
 
       <div className="stats-grid stats-grid-2col">
         <div className="stat-card tone-blue" onClick={() => setShowOnlyPayable(!showOnlyPayable)} style={{ cursor: 'pointer' }}>

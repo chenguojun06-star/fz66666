@@ -69,7 +69,7 @@ export default function ScanRescanPage() {
       </div>
 
       <div className="alert-card alert-card-warning">
-        ⚠️ 退回后该记录将被标记为已退回，操作员可重新扫码提交。
+        ⚠️ 仅允许退回1小时内的扫码记录，退回后可重新扫码。
       </div>
 
       <button className="danger-button" onClick={confirmRescan} disabled={loading} style={{ marginTop: 16 }}>
