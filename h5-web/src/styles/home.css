@@ -22,7 +22,7 @@
 
 .home-page { padding: 16px 16px calc(80px + var(--safe-area-bottom)); }
 .home-menu-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.home-menu-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 14px 8px; background: var(--color-bg-card); border-radius: 12px; border: 1px solid var(--color-border-light); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background 0.15s ease; min-height: 130px; }
+.home-menu-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 14px 8px; background: var(--color-bg-card); border-radius: 12px; border: 1px solid var(--color-border-light); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background 0.15s ease; min-height: 100px; }
 .home-menu-tile:active { background: var(--color-bg-gray); }
-.home-menu-tile-icon { width: 52px; height: 100px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.home-menu-tile-icon { width: 52px; height: 52px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .home-menu-tile-text { font-size: 14px; font-weight: 600; color: var(--color-text-primary); text-align: center; line-height: 1.2; }
