@@ -20,7 +20,7 @@ import OrderInfoGrid from '@/components/common/OrderInfoGrid';
 import { createOrderColorSizeMatrixInfoItems } from '@/components/common/OrderColorSizeMatrix';
 
 type StageStatus = 'DONE' | 'ACTIVE' | 'PENDING';
-const PLATFORM_URL = import.meta.env.VITE_PLATFORM_URL || 'https://www.webyszl.cn';
+const PLATFORM_URL = import.meta.env.VITE_PLATFORM_URL || window.location.origin;
 
 interface ShareOrderData {
   orderNo: string;

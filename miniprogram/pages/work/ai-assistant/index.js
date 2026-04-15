@@ -236,6 +236,8 @@ Page({
     var self = this;
     var accumulatedText = '';
     var streamStarted = false;
+    var _streamPendingUpdate = false;
+    var _streamUpdateTimer = null;
     var chatContext = this.data.isManager ? 'manager_assistant' : 'worker_assistant';
 
     try {
@@ -259,11 +261,20 @@ Page({
             var content = String(event.data.content || '');
             if (content) {
               accumulatedText += content;
-              self.setData({ streamingText: accumulatedText, streamingTool: '' });
+              if (!_streamPendingUpdate) {
+                _streamPendingUpdate = true;
+                _streamUpdateTimer = setTimeout(function () {
+                  _streamPendingUpdate = false;
+                  _streamUpdateTimer = null;
+                  self.setData({ streamingText: accumulatedText, streamingTool: '' });
+                }, 100);
+              }
             }
           }
         },
         function () {
+          if (_streamUpdateTimer) { clearTimeout(_streamUpdateTimer); _streamUpdateTimer = null; }
+          _streamPendingUpdate = false;
           self._streamTask = null;
           var rawText = accumulatedText || '抱歉，我现在无法回答这个问题。';
           self._updateMsg(loadingId, rawText);

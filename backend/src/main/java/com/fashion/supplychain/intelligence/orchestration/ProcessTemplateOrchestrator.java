@@ -143,7 +143,9 @@ public class ProcessTemplateOrchestrator {
             if (!relatedParts.isEmpty()) {
                 partsContext = "\n同时提供提取到的该款式相关的部位标准单价（供参考，优先保持在此价格附近）：\n" + objectMapper.writeValueAsString(relatedParts);
             }
-        } catch (Exception e) {}
+        } catch (Exception e) {
+            log.warn("[工序模板] 提取部位单价上下文失败: {}", e.getMessage());
+        }
 
         String systemPrompt = "你是一个服装厂资深IE核价师与大企业生产工艺专家。你需要输出当前款式的推荐工序给工厂前端录入。" +
                 "\n要求回复必须是一个合格的 JSON 数组（不用输出任何 Markdown 格式符号和解释），内容格式如下：" +

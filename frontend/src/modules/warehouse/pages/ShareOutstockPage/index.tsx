@@ -12,7 +12,7 @@ import {
 } from '@ant-design/icons';
 import axios from 'axios';
 
-const PLATFORM_URL = import.meta.env.VITE_PLATFORM_URL || 'https://www.webyszl.cn';
+const PLATFORM_URL = import.meta.env.VITE_PLATFORM_URL || window.location.origin;
 
 interface OutstockItem {
   outstockNo: string;

@@ -350,4 +350,18 @@ public class ProductionProcessTrackingOrchestrator {
         log.info("[CuttingRollback] 删除工序跟踪记录 {} 条，订单号={}", count, productionOrderNo);
         return count;
     }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createWarehousingTrackingOnScan(
+            CuttingBundle bundle,
+            com.fashion.supplychain.production.entity.ProductionOrder order,
+            String operatorId, String operatorName, String scanRecordId) {
+        try {
+            List<CuttingBundle> bundles = java.util.Collections.singletonList(bundle);
+            appendProcessTracking(String.valueOf(order.getId()), bundles);
+            log.info("[入库跟踪] 自动创建入库工序跟踪: bundleId={}, orderId={}", bundle.getId(), order.getId());
+        } catch (Exception e) {
+            log.warn("[入库跟踪] 创建失败: bundleId={}, orderId={}, msg={}", bundle.getId(), order.getId(), e.getMessage());
+        }
+    }
 }
