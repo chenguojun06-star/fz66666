@@ -1,0 +1,39 @@
+<view class="page" style="padding-top: {{statusBarHeight + 12}}px;">
+  <!-- 顶部问候 -->
+    <view class="header">
+      <view class="greeting-name">{{userName}}，{{greeting}}</view>
+      <view class="greeting-sub">欢迎使用衣智链</view>
+    </view>
+
+  <!-- 日期卡片 -->
+  <view class="weather-card">
+    <view class="weather-top">
+      <view class="weather-left">
+        <text class="weather-emoji">{{dateInfo.icon}}</text>
+        <view class="weather-temp-wrap">
+          <text class="weather-temp">{{dateInfo.date}}</text>
+          <text class="weather-desc">{{dateInfo.day}}</text>
+        </view>
+      </view>
+      <text class="weather-season">{{dateInfo.season}}</text>
+    </view>
+    <view class="weather-tip">{{dateInfo.dailyTip}}</view>
+  </view>
+
+  <!-- 全部菜单 -->
+  <view class="menu-section">
+    <view class="section-header">
+      <text class="section-title">全部菜单</text>
+    </view>
+    <view class="menu-grid">
+      <view class="menu-item" wx:for="{{menuItems}}" wx:key="id" bindtap="onMenuTap" data-index="{{index}}">
+        <view class="menu-icon-circle {{item.circleClass}}">
+          <view class="line-icon line-icon--lg {{item.iconClass}}"></view>
+        </view>
+        <text class="menu-name">{{item.name}}</text>
+      </view>
+    </view>
+  </view>
+
+  <ai-assistant id="homeAiAssistant" notice-count="{{unreadNoticeCount}}" />
+</view>

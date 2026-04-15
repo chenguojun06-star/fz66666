@@ -1,0 +1,80 @@
+<view class="container">
+  <custom-nav title="裁剪任务" show-back="{{true}}" />
+
+  <!-- 状态筛选 Tab -->
+  <view class="filter-tabs">
+    <view
+      wx:for="{{statusTabs}}"
+      wx:key="key"
+      class="filter-tab {{activeStatus === item.key ? 'active' : ''}}"
+      bindtap="onTabChange"
+      data-key="{{item.key}}"
+    >
+      <text>{{item.label}}</text>
+      <text wx:if="{{item.count > 0}}" class="tab-badge">{{item.count}}</text>
+    </view>
+  </view>
+
+  <!-- 加载中 -->
+  <view wx:if="{{loading && !tasks.length}}" class="loading-state">
+    <text>加载裁剪任务中…</text>
+  </view>
+
+  <!-- 空状态 -->
+  <empty-state wx:elif="{{!tasks.length}}" iconEmoji="✂️" text="暂无裁剪任务" hint="当有新的订单分配时，任务将出现在这里" card="{{true}}"></empty-state>
+
+  <!-- 任务列表 -->
+  <block wx:else>
+    <view
+      wx:for="{{filteredTasks}}"
+      wx:key="id"
+      class="task-card"
+      bindtap="goDetail"
+      data-task="{{item}}"
+      hover-class="task-card-hover"
+    >
+      <!-- 头部：订单号 + 状态标签 -->
+      <view class="card-header">
+        <text class="order-no">{{item.productionOrderNo || item.orderNo}}</text>
+        <text class="status-tag tag tag-{{item.statusColor}}">{{item.statusText}}</text>
+      </view>
+
+      <!-- 信息行 -->
+      <view class="card-body">
+        <view class="info-row">
+          <text class="info-label">款号</text>
+          <text class="info-value">{{item.styleNo || '-'}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">颜色</text>
+          <text class="info-value">{{item.color || '全部颜色'}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">数量</text>
+          <text class="info-value bold">{{item.orderQuantity || 0}} 件</text>
+        </view>
+        <view wx:if="{{item.receiverName}}" class="info-row">
+          <text class="info-label">领取人</text>
+          <text class="info-value">{{item.receiverName}}</text>
+        </view>
+      </view>
+
+      <!-- 底部操作 -->
+      <view class="card-footer">
+        <view wx:if="{{item.canReceive}}" class="btn-action btn-primary" hover-class="btn-primary-hover" hover-stay-time="100" catchtap="onReceive" data-task="{{item}}">
+          领取任务
+        </view>
+        <view wx:elif="{{item.canOperate}}" class="btn-action btn-primary" hover-class="btn-primary-hover" hover-stay-time="100" catchtap="goDetail" data-task="{{item}}">
+          开始裁剪
+        </view>
+        <view wx:else class="btn-action btn-disabled">
+          {{item.statusText}}
+        </view>
+        <text class="card-arrow">›</text>
+      </view>
+    </view>
+
+    <!-- 底部提示 -->
+    <view class="no-more">已显示全部任务</view>
+  </block>
+</view>

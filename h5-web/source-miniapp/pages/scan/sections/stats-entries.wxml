@@ -1,0 +1,48 @@
+  <!-- ① 今日统计（顶部） -->
+  <wxs src="../../../utils/money.wxs" module="money" />
+  <view class="today-stats-card">
+    <view class="tsc-head">
+      <text class="tsc-title">今日统计</text>
+      <view class="refresh-btn {{my.loadingStats ? 'refresh-btn-loading' : ''}}" bindtap="refreshMy" hover-class="refresh-btn-hover">
+        <view class="line-icon line-icon--sm icon-refresh refresh-icon"></view>
+        <text class="refresh-text">刷新</text>
+      </view>
+    </view>
+    <view class="tsc-grid">
+      <view class="tsc-item">
+        <text class="tsc-num">{{my.stats.scanCount || 0}}</text>
+        <text class="tsc-label">扫码</text>
+      </view>
+      <view class="tsc-item">
+        <text class="tsc-num">{{my.stats.orderCount || 0}}</text>
+        <text class="tsc-label">订单</text>
+      </view>
+      <view class="tsc-item">
+        <text class="tsc-num">{{my.stats.totalQuantity || 0}}</text>
+        <text class="tsc-label">数量</text>
+      </view>
+      <view class="tsc-item tsc-hl">
+        <text class="tsc-num">¥{{money.toFixed2(my.stats.totalAmount || 0)}}</text>
+        <text class="tsc-label">收入</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- ② 快捷入口卡片（历史记录 | 当月记录） -->
+  <view class="quick-entry-row">
+    <view class="quick-entry-card" hover-class="quick-entry-card-hover" hover-stay-time="100" bindtap="onGoToHistory">
+      <view class="line-icon icon-clipboard qe-icon"></view>
+      <view class="qe-text">
+        <text class="qe-title">历史记录</text>
+        <text class="qe-desc">全部扫码记录</text>
+      </view>
+    </view>
+    <view class="quick-entry-card" hover-class="quick-entry-card-hover" hover-stay-time="100" bindtap="onGoToMonthly">
+      <view class="line-icon icon-calendar qe-icon"></view>
+      <view class="qe-text">
+        <text class="qe-title">当月记录</text>
+        <text class="qe-desc">本月汇总统计</text>
+      </view>
+    </view>
+  </view>
+

@@ -1,0 +1,147 @@
+/* ===== 扫码结果 ===== */
+.result {
+  border-radius: var(--radius-xl);
+  padding: 10px;
+  margin-bottom: 8px;
+}
+.result.ok {
+  background: var(--color-success-bg);
+}
+.result.err {
+  background: var(--color-error-bg);
+}
+.res-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.res-tag {
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+.res-tag.ok {
+  background: var(--color-success);
+  color: var(--color-text-white);
+}
+.res-tag.err {
+  background: var(--color-error);
+  color: var(--color-text-white);
+}
+.res-msg {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+.res-undo {
+  padding: 4px 10px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-error);
+  color: var(--color-error);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+}
+.res-undo-hover {
+  background: var(--color-bg-light);
+}
+.res-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+.scan-mode-tip {
+  margin-top: 8px;
+  padding: 0 4px;
+}
+.scan-mode-tip text {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-normal);
+}
+.res-order {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+.res-style {
+  color: var(--color-text-primary);
+}
+.res-proc {
+  padding: 2px 8px;
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--color-success); /* 加深绿色，确保小字件对比度≥4.5:1 */
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+}
+
+/* 单价警告样式 */
+.res-price-warn {
+  color: var(--color-warning);
+  font-weight: 500;
+}
+
+/* 单价提示信息 */
+.res-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: rgba(251, 191, 36, 0.12);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 10px;
+}
+.hint-icon {
+  flex-shrink: 0;
+  font-size: var(--font-size-base);
+}
+.hint-text {
+  flex: 1;
+  font-size: var(--font-size-xs);
+  color: var(--color-warning);
+  line-height: var(--line-height-normal);
+}
+
+/* 失败结果下一步操作按鈕 */
+.res-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.res-action-btn {
+  flex: 1;
+  text-align: center;
+  padding: 9px 0;
+  background: var(--color-error);
+  color: var(--color-text-white);
+  border-radius: var(--radius-lg);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+.res-action-btn-hover {
+  opacity: 0.75;
+}
+
+/* ===== 区块通用 ===== */
+.section {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl);
+  padding: 10px;
+  margin-bottom: 8px;
+  border: 1px solid var(--color-border);
+}
+.sec-head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.section-title {
+  flex: 1;
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+

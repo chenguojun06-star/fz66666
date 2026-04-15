@@ -1,0 +1,110 @@
+/**
+ * 内联滚动选择器 - 通用样式
+ * 替代原生 <picker mode="selector"> 底部弹窗
+ * 支持点击选中 + 上下滑动浏览
+ *
+ * 使用方式：在页面 wxss 中 @import './styles/inline-selector.wxss';
+ *
+ * @version 1.0
+ * @date 2026-02-21
+ */
+
+/* === 选择器容器 === */
+.inline-selector {
+  background: var(--color-bg-gray, var(--color-bg-light));
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+/* === 滚动列表 === */
+.inline-selector-list {
+  max-height: 160px;
+  padding: 0 6px 6px;
+}
+
+/* === 单个选项 === */
+.inline-selector-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  margin-bottom: 4px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-card, var(--color-bg-card));
+  border: 2px solid transparent;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+.inline-selector-item:last-child {
+  margin-bottom: 0;
+}
+
+/* hover反馈 */
+.inline-selector-item-hover {
+  background: rgba(var(--color-primary-rgb), 0.12);
+}
+
+.inline-selector-item.active {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+  border-color: var(--color-primary, var(--color-primary));
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+}
+
+/* === 禁用项（如"无二次工艺"信息提示） === */
+.inline-selector-item--disabled {
+  opacity: 0.45;
+  background: var(--color-bg-light);
+  border-color: var(--color-bg-gray);
+  cursor: not-allowed;
+}
+.inline-selector-item--disabled .inline-selector-label {
+  color: var(--color-text-secondary, var(--color-text-disabled));
+  font-weight: 400;
+}
+
+/* === 左侧：radio + 文字 === */
+.inline-selector-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.inline-selector-radio {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border, var(--color-bg-gray));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+
+.inline-selector-radio.checked {
+  border-color: var(--color-primary, var(--color-primary));
+  background: var(--color-primary, var(--color-primary));
+}
+
+.inline-selector-radio-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-bg-card);
+}
+
+.inline-selector-label {
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary, var(--color-text-primary));
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inline-selector-item.active .inline-selector-label {
+  color: var(--color-primary, var(--color-primary));
+}
+

@@ -1,0 +1,110 @@
+.modal-btn.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.undo-btn {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+  background: var(--color-error-bg);
+  margin-left: auto;
+}
+.undo-btn-hover {
+  background: var(--color-error-bg);
+}
+
+.rescan-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--color-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal);
+}
+
+.rescan-box {
+  width: 85%;
+  max-width: 350px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.rescan-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.rescan-head .modal-close {
+  font-size: var(--font-size-xl);
+  color: var(--color-text-tertiary);
+  padding: 4px;
+}
+
+.rescan-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  margin: 12px 20px;
+  background: var(--color-warning-bg);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-warning-border);
+}
+
+.rescan-warning .warning-icon {
+  font-size: var(--font-size-md);
+  flex-shrink: 0;
+  line-height: var(--line-height-medium);
+}
+
+.rescan-warning .warning-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-warning);
+  line-height: var(--line-height-medium);
+}
+
+.modal-foot {
+  display: flex;
+  border-top: 1px solid var(--color-border-light);
+}
+
+.rescan-cancel,
+.rescan-confirm {
+  flex: 1;
+  text-align: center;
+  padding: 12px 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-medium);
+}
+
+.rescan-cancel {
+  color: var(--color-text-secondary);
+  border-right: 1px solid var(--color-border-light);
+}
+
+.rescan-cancel-hover {
+  background: var(--color-bg-hover);
+}
+
+.rescan-confirm {
+  color: var(--color-primary);
+}
+
+.rescan-confirm-hover {
+  background: var(--color-bg-hover);
+}
+
+.rescan-confirm.disabled {
+  color: var(--color-text-tertiary);
+  pointer-events: none;
+}

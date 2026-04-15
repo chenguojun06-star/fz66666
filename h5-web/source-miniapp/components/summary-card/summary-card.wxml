@@ -1,0 +1,9 @@
+<view class="summary-card">
+  <view wx:if="{{title}}" class="summary-title">{{title}}</view>
+  <view wx:for="{{rows}}" wx:key="index" class="summary-row">
+    <view wx:for="{{item}}" wx:for-item="cell" wx:key="index" class="summary-item">
+      <view class="summary-label">{{cell.label}}</view>
+      <view class="summary-value {{cell.highlight ? 'primary' : ''}}">{{cell.value}}</view>
+    </view>
+  </view>
+</view>

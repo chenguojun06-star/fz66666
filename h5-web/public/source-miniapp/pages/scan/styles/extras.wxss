@@ -1,0 +1,140 @@
+/* ===== 交期标签颜色（独立使用） ===== */
+.days-safe {
+  color: var(--color-success);
+}
+
+.days-warn {
+  color: var(--color-warning);
+}
+
+.days-urgent {
+  color: var(--color-error);
+}
+
+.days-overdue {
+  color: var(--color-error);
+  font-weight: 700;
+}
+
+/* ===== 今日工序累计统计条 ===== */
+.res-session-bar {
+  margin-top: 4px;
+  padding: 3px 6px;
+  background: rgba(22, 119, 255, 0.06);
+  border-radius: var(--radius-sm);
+}
+.res-session-text {
+  font-size: var(--font-size-xxs);
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+/* ===== 离线待同步提示条 ===== */
+.offline-badge-bar {
+  display: flex;
+  align-items: center;
+  background: var(--color-warning);
+  border-radius: var(--radius-xs);
+  margin: 0 12px 8px;
+  padding: 8px 12px;
+  gap: 6px;
+}
+
+.offline-badge-icon {
+  font-size: var(--font-size-base);
+  line-height: 1;
+}
+
+.offline-badge-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-white);
+  flex: 1;
+  font-weight: 500;
+}
+
+/* ===== AI质检助手 ===== */
+.qm-ai-section {
+  background: var(--color-bg-light);
+  border: 1px solid var(--color-info-bg);
+  border-radius: var(--radius-xs);
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+.qm-ai-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+.qm-ai-title {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-primary);
+}
+.qm-ai-badge {
+  font-size: var(--font-size-2xs);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-weight: 500;
+}
+.qm-ai-badge-green { background: var(--color-success-bg); color: var(--color-success); border: 1px solid var(--color-success-border); }
+.qm-ai-badge-orange { background: var(--color-warning-bg); color: var(--color-warning); border: 1px solid var(--color-warning-border); }
+.qm-ai-badge-red { background: var(--color-error-bg); color: var(--color-danger); border: 1px solid var(--color-error-border); }
+.qm-ai-tip {
+  font-size: var(--font-size-xs);
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
+  border-radius: var(--radius-sm);
+  padding: 5px 8px;
+  margin-bottom: 6px;
+  line-height: var(--line-height-medium);
+}
+.qm-ai-checkpoints-label {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  display: block;
+  margin-bottom: 4px;
+}
+.qm-ai-points {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.qm-ai-point {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-primary);
+  line-height: var(--line-height-medium);
+  padding-left: 4px;
+}
+.qm-ai-adopt-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  border-radius: var(--radius-xs);
+  padding: 8px 10px;
+  margin-top: 6px;
+}
+.qm-ai-suggest-text {
+  flex: 1;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-normal);
+}
+.qm-adopt-btn {
+  background: var(--color-primary);
+  color: var(--color-text-white);
+  font-size: var(--font-size-xs);
+  border-radius: var(--radius-sm);
+  padding: 0 10px;
+  height: 30px;
+  line-height: 30px;
+  min-width: 60px;
+  flex-shrink: 0;
+}
+.qm-adopt-btn-hover {
+  background: var(--color-primary);
+}
+

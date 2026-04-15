@@ -1,0 +1,42 @@
+<view class="container">
+  <custom-nav title="我的" show-search="{{false}}" />
+
+  <!-- 用户信息卡 -->
+  <view wx:if="{{userInfo}}" class="user-profile-card">
+    <view class="profile-header">
+      <view class="profile-avatar">
+        <image wx:if="{{avatarImgUrl}}" src="{{avatarImgUrl}}" mode="aspectFill" style="width:100%;height:100%;border-radius:50%;display:block;" binderror="onAvatarError" />
+        <text wx:else>{{avatarLetter}}</text>
+      </view>
+      <view class="profile-info">
+        <view class="profile-name-row">
+          <text class="profile-name">{{userInfo.name || userInfo.username || '未知用户'}}</text>
+          <view class="logout-btn" hover-class="logout-btn-hover" hover-stay-time="100" bindtap="onLogout">
+            <text class="logout-text">退出</text>
+          </view>
+        </view>
+        <view class="profile-role">{{roleDisplayName || '普通用户'}}</view>
+        <view wx:if="{{showApprovalEntry}}" class="profile-online">
+          <view class="line-icon line-icon--sm icon-user-group online-icon"></view>
+          <text>{{onlineCount}}人</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 功能菜单 -->
+  <view class="menu-list">
+    <view class="menu-item" wx:for="{{menuItems}}" wx:key="id" hover-class="menu-item-hover" data-index="{{index}}" bindtap="onMenuTap">
+      <view class="menu-icon-wrap">
+        <view class="line-icon {{item.iconClass}}"></view>
+      </view>
+      <text class="menu-label">{{item.label}}</text>
+      <text wx:if="{{item.value}}" class="menu-value">{{item.value}}</text>
+      <text class="menu-arrow">›</text>
+    </view>
+  </view>
+
+</view>
+
+<!-- 小云 AI 助手（全页面悬浮） -->
+<ai-assistant />

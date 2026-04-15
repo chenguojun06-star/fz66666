@@ -1,66 +1,38 @@
 {
-  "envId": "{{ENV_ID}}",
-  "framework": {
-    "name": "fashion-supplychain",
-    "plugins": {
-      "backend": {
-        "use": "@cloudbase/framework-plugin-container",
-        "inputs": {
-          "serviceName": "backend",
-          "servicePath": "/backend",
-          "localPath": "./backend",
-          "containerPort": 8088,
-          "cpu": 2,
-          "mem": 4,
-          "minNum": 1,
-          "maxNum": 4,
-          "policyType": "cpu",
-          "policyThreshold": 60,
-          "envVariables": {
-            "PORT": "8088",
-            "SPRING_DATASOURCE_URL": "jdbc:mysql://{{MYSQL_HOST}}:3306/fashion_supplychain?useUnicode=true&characterEncoding=UTF-8&useSSL=true&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&connectTimeout=5000&socketTimeout=10000&tcpKeepAlive=true",
-            "SPRING_DATASOURCE_USERNAME": "{{MYSQL_USER}}",
-            "SPRING_DATASOURCE_PASSWORD": "{{MYSQL_PASSWORD}}",
-            "SPRING_REDIS_HOST": "dgfbkffb.my-redis.j6jq9qgw.o7t59w4f.com",
-            "SPRING_REDIS_PORT": "6379",
-            "APP_AUTH_JWT_SECRET": "{{JWT_SECRET}}",
-            "WECHAT_MP_APPID": "{{WECHAT_APPID}}",
-            "WECHAT_MP_SECRET": "{{WECHAT_SECRET}}",
-            "WECHAT_MINI_PROGRAM_MOCK_ENABLED": "false",
-            "FLYWAY_ENABLED": "true",
-            "SPRING_PROFILES_ACTIVE": "prod",
-            "FASHION_DB_INITIALIZER_ENABLED": "false",
-            "APP_CORS_ALLOWED_ORIGIN_PATTERNS": "https://*.tcloudbase.com,https://*.service.tcloudbase.com,https://*.ap-shanghai.service.tcloudbase.com",
-            "COS_SECRET_ID": "{{COS_SECRET_ID}}",
-            "COS_SECRET_KEY": "{{COS_SECRET_KEY}}",
-            "COS_REGION": "{{COS_REGION}}",
-            "COS_BUCKET": "{{COS_BUCKET}}",
-            "SERPAPI_ENABLED": "true",
-            "QWEN_VL_API_KEY": "{{QWEN_VL_API_KEY}}",
-            "DOUBAO_API_KEY": "{{DOUBAO_API_KEY}}",
-            "APP_QRCODE_HMAC_SECRET": "{{QRCODE_HMAC_SECRET}}",
-            "APP_QRCODE_REQUIRE_SIGNATURE": "true"
-          },
-          "customLogs": "stdout",
-          "healthPath": "/actuator/health/liveness"
-        }
+  "version": "2.0",
+  "envId": "{{TCB_ENV_ID}}",
+  "services": [
+    {
+      "name": "fashion-backend",
+      "dockerfile": "./backend/Dockerfile",
+      "containerPort": 8080,
+      "minNum": 1,
+      "maxNum": 5,
+      "cpu": 1,
+      "mem": 2,
+      "docker": {
+        "buildType": "Dockerfile",
+        "dockerfilePath": "./backend/Dockerfile"
       },
-      "frontend": {
-        "use": "@cloudbase/framework-plugin-container",
-        "inputs": {
-          "serviceName": "frontend",
-          "servicePath": "/",
-          "localPath": "./frontend",
-          "containerPort": 80,
-          "cpu": 0.5,
-          "mem": 1,
-          "minNum": 1,
-          "maxNum": 2,
-          "envVariables": {
-            "BACKEND_URL": "http://backend:8088"
-          }
-        }
+      "envVariables": {
+        "SPRING_PROFILES_ACTIVE": "prod",
+        "APP_AUTH_JWT_SECRET": "{{JWT_SECRET}}",
+        "APP_DB_HOST": "{{DB_HOST}}",
+        "APP_DB_NAME": "{{DB_NAME}}",
+        "APP_DB_USERNAME": "{{DB_USERNAME}}",
+        "APP_DB_PASSWORD": "{{DB_PASSWORD}}",
+        "APP_COS_SECRET_ID": "{{COS_SECRET_ID}}",
+        "APP_COS_SECRET_KEY": "{{COS_SECRET_KEY}}",
+        "APP_COS_BUCKET": "{{COS_BUCKET}}",
+        "APP_COS_REGION": "{{COS_REGION}}"
       }
     }
-  }
+  ],
+  "static": [
+    {
+      "name": "fashion-h5",
+      "localPath": "./h5-web/dist",
+      "cloudPath": "/h5"
+    }
+  ]
 }

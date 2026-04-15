@@ -23,6 +23,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import javax.annotation.PreDestroy;
+
 /**
  * 个人每日工作计划编排器
  * 根据当前用户跟进的订单、紧急度、进度和交期，
@@ -41,6 +43,19 @@ public class PersonalWorkPlanOrchestrator {
         t.setDaemon(true);
         return t;
     });
+
+    @PreDestroy
+    public void shutdown() {
+        AI_EXECUTOR.shutdown();
+        try {
+            if (!AI_EXECUTOR.awaitTermination(5, TimeUnit.SECONDS)) {
+                AI_EXECUTOR.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            AI_EXECUTOR.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+    }
 
     private final ProductionOrderService productionOrderService;
 

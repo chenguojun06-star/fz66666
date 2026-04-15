@@ -1,0 +1,7 @@
+<view class="image-preview" style="width:100%;height:100%" bindtap="onTap">
+  <image wx:if="{{hasSrc && !error}}" class="img" src="{{src}}" mode="{{mode}}" binderror="onError" bindload="onLoad" />
+  <view wx:else class="placeholder">
+    <text class="placeholder-icon">🔍</text>
+    <text wx:if="{{placeholder}}" class="placeholder-text">{{placeholder}}</text>
+  </view>
+</view>

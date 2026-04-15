@@ -1,0 +1,190 @@
+  <!-- 确认弹窗（通用 mp-modal 组件） -->
+  <!-- catchtouchmove 必须在宿主页面标签上才能阻止页面级滚动，组件内部的 catchtouchmove 无法拦截宿主页面 -->
+  <mp-modal
+    visible="{{scanConfirm.visible}}"
+    title="{{scanConfirm.detail.isPattern ? '样板生产' : '确认提交'}}"
+    size="large"
+    catchtouchmove="stopPropagation"
+    bind:close="onCancelScan">
+        <view wx:if="{{scanConfirm.detail}}" class="cf-list">
+          <view class="cf-grid">
+            <view wx:if="{{scanConfirm.detail.isPattern}}" class="cf-item cf-item-card"><text class="cf-k">款号</text><text class="cf-v hl">{{scanConfirm.detail.styleNo || '-'}}</text></view>
+            <view wx:if="{{scanConfirm.detail.isPattern}}" class="cf-item cf-item-card"><text class="cf-k">颜色</text><text class="cf-v">{{scanConfirm.detail.color || '-'}}</text></view>
+            <view wx:if="{{scanConfirm.detail.isPattern}}" class="cf-item cf-item-card"><text class="cf-k">设计师</text><text class="cf-v">{{scanConfirm.detail.designer || '-'}}</text></view>
+            <view wx:if="{{scanConfirm.detail.isPattern}}" class="cf-item cf-item-card"><text class="cf-k">纸样师</text><text class="cf-v">{{scanConfirm.detail.patternDeveloper || '-'}}</text></view>
+            <view wx:if="{{scanConfirm.detail.isPattern}}" class="cf-item cf-item-card cf-item-wide"><text class="cf-k">交板日期</text><text class="cf-v">{{scanConfirm.detail.deliveryTime || '-'}}</text></view>
+            <view wx:if="{{scanConfirm.detail.orderNo}}" class="cf-item cf-item-card"><text class="cf-k">订单</text><text class="cf-v hl">{{scanConfirm.detail.orderNo}}</text></view>
+            <view wx:if="{{scanConfirm.detail.styleNo}}" class="cf-item cf-item-card"><text class="cf-k">款号</text><text class="cf-v">{{scanConfirm.detail.styleNo}}</text></view>
+            <view wx:if="{{!scanConfirm.detail.isPattern}}" class="cf-item cf-item-card">
+              <text class="cf-k">数量</text>
+              <text class="cf-v">{{scanConfirm.detail.quantity}}</text>
+            </view>
+            <view wx:if="{{(scanConfirm.detail.processName || scanConfirm.detail.progressStage) && !scanConfirm.detail.isPattern}}" class="cf-item cf-item-card">
+              <text class="cf-k">工序</text>
+              <text class="cf-v">{{scanConfirm.detail.processName || scanConfirm.detail.progressStage}}</text>
+            </view>
+            <view wx:if="{{!scanConfirm.detail.isPattern}}" class="cf-item cf-item-card cf-item-wide">
+              <text class="cf-k">二维码</text>
+              <text class="cf-v mono wrap">{{scanConfirm.detail.scanCode}}</text>
+            </view>
+            <view wx:if="{{scanConfirm.detail.sizeDetails}}" class="cf-item cf-item-card cf-item-wide cf-item-stack compact"><text class="cf-k">码数明细</text><text class="cf-v wrap">{{scanConfirm.detail.sizeDetails}}</text></view>
+          </view>
+        </view>
+
+        <!-- AI 扫码工艺提醒 -->
+        <view wx:if="{{!scanConfirm.detail.isPattern && scanConfirm.aiTipData}}" class="ai-tip-card">
+          <view class="ai-tip-header">
+            <view class="line-icon line-icon--sm icon-bulb ai-tip-icon"></view>
+            <text class="ai-tip-title">工艺提醒</text>
+          </view>
+          <text class="ai-tip-content">{{scanConfirm.aiTipData.aiTip}}</text>
+          <view class="ai-tip-keywords" wx:if="{{scanConfirm.aiTipData.keywords && scanConfirm.aiTipData.keywords.length > 0}}">
+            <text class="ai-tip-kw" wx:for="{{scanConfirm.aiTipData.keywords}}" wx:key="*this">{{item}}</text>
+          </view>
+        </view>
+        <view wx:elif="{{!scanConfirm.detail.isPattern && scanConfirm.aiTipLoading}}" class="ai-tip-loading">
+          <view class="line-icon line-icon--sm icon-refresh ai-tip-icon rotating"></view>
+          <text class="ai-tip-loading-text">正在获取专家工艺提醒...</text>
+        </view>
+
+        <!-- 样衣操作区（复用 scanConfirm 通用弹窗） -->
+        <view wx:if="{{scanConfirm.detail.isPattern}}" class="purchase-modal-list purchase-modal-list--pattern">
+          <view class="scan-section-head">
+            <text class="scan-section-title">样衣操作</text>
+            <text class="scan-section-desc">保持原流程，只优化信息分区</text>
+          </view>
+          <view class="purchase-modal-item purchase-modal-item--emphasis">
+            <view class="pmi-row pmi-row-stack">
+              <text class="pmi-label pmi-label-stack">选择工序（可多选）</text>
+              <view class="inline-selector pattern-inline-selector">
+                <scroll-view class="inline-selector-list" scroll-y="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}">
+                  <view
+                    wx:for="{{scanConfirm.detail.operationOptions}}"
+                    wx:key="value"
+                    class="inline-selector-item {{scanConfirm.detail.operationType == item.value ? 'active' : ''}} {{item.disabled ? 'inline-selector-item--disabled' : ''}}"
+                    data-type="{{item.value}}"
+                    data-disabled="{{item.disabled}}"
+                    bindtap="onPatternOperationChange">
+                    <view class="inline-selector-left">
+                      <view class="inline-selector-radio {{!item.disabled && scanConfirm.detail.operationType == item.value ? 'checked' : ''}}">
+                        <view wx:if="{{!item.disabled && scanConfirm.detail.operationType == item.value}}" class="inline-selector-radio-dot"></view>
+                        <text wx:if="{{item.disabled}}" style="color:#bfbfbf;font-size:16rpx;">—</text>
+                      </view>
+                      <text class="inline-selector-label">{{item.icon || ''}} {{item.label || item.value}}</text>
+                    </view>
+                  </view>
+                </scroll-view>
+              </view>
+            </view>
+
+            <view wx:if="{{scanConfirm.detail.requiresReviewBeforeInbound}}" class="qc-receive-tip" style="margin-top: 8rpx; background: #fff7e6; border-color: #ffd591;">
+              <text class="qc-tip-text" style="color: #d46b08;">当前未完成样衣审核，本次会先提交审核再执行入库</text>
+            </view>
+
+            <view class="pmi-row pmi-row-inline pmi-row-inline-spacious">
+              <view class="pmi-col pmi-col-card">
+                <text class="pmi-label">当前操作</text>
+                <text class="pmi-value demand">{{scanConfirm.detail.operationLabel || '-'}}</text>
+              </view>
+              <view class="pmi-col pmi-col-card">
+                <text class="pmi-label">数量</text>
+                <input
+                  class="pmi-input"
+                  type="digit"
+                  placeholder="请输入数量"
+                  value="{{scanConfirm.detail.quantity}}"
+                  bindinput="onPatternQuantityInput"
+                />
+              </view>
+            </view>
+          </view>
+
+          <view wx:if="{{scanConfirm.detail.requiresWarehouseInput}}" class="purchase-modal-item purchase-modal-item--form">
+            <view class="pmi-row pmi-row-stack">
+              <text class="pmi-label pmi-label-stack">仓位编号</text>
+              <input
+                class="pmi-input pmi-input-block"
+                placeholder="仓库操作必填，例如 A-01-01"
+                value="{{scanConfirm.detail.warehouseCode}}"
+                bindinput="onPatternWarehouseInput"
+              />
+            </view>
+          </view>
+
+          <view class="purchase-modal-item purchase-modal-item--form">
+            <view class="pmi-row pmi-row-stack">
+              <text class="pmi-label pmi-label-stack">备注</text>
+              <textarea
+                class="pattern-remark-input"
+                placeholder="请输入备注信息..."
+                value="{{scanConfirm.detail.remark}}"
+                bindinput="onPatternRemarkInput"
+                maxlength="200"
+              />
+            </view>
+          </view>
+        </view>
+
+
+        <!-- 通用 SKU 列表 (通用) -->
+        <view wx:if="{{!scanConfirm.detail.isPattern && scanConfirm.skuList && scanConfirm.skuList.length}}" class="purchase-modal-list">
+          <!-- ✅ 新增: SKU统计摘要 -->
+          <view wx:if="{{scanConfirm.summary}}" class="sku-summary">
+            <view class="summary-stat">
+              <text class="summary-label">SKU总数:</text>
+              <text class="summary-value">{{scanConfirm.summary.totalSKUs}}</text>
+            </view>
+            <view class="summary-stat">
+              <text class="summary-label">已选:</text>
+              <text class="summary-value">{{scanConfirm.summary.completedSKUs}}</text>
+            </view>
+            <view class="summary-stat">
+              <text class="summary-label">进度:</text>
+              <text class="summary-value">{{scanConfirm.summary.overallProgress}}%</text>
+            </view>
+          </view>
+
+          <view wx:for="{{scanConfirm.skuList}}" wx:key="index" class="purchase-modal-item">
+            <view class="pmi-header">
+              <text class="pmi-name">{{item.color}} - {{item.size}}</text>
+            </view>
+            <view class="pmi-row pmi-row-inline">
+              <view class="pmi-col">
+                <text class="pmi-label">待完成</text>
+                <text class="pmi-value demand">{{item.quantity || item.num || 0}}</text>
+              </view>
+              <view class="pmi-col">
+                <text class="pmi-label">本次完成</text>
+                <input
+                  class="pmi-input"
+                  type="digit"
+                  placeholder="数量"
+                  value="{{item.inputQuantity}}"
+                  bindinput="onModalSkuInput"
+                  data-idx="{{index}}"
+                />
+              </view>
+            </view>
+          </view>
+        </view>
+
+        <!-- 质检领取提示 -->
+        <view wx:if="{{!scanConfirm.detail.isPattern && scanConfirm.detail.isQualityReceive}}" class="qc-receive-tip">
+          <text class="qc-tip-text">请点击"领取"后进行质检</text>
+        </view>
+
+      <view slot="footer" class="modal-btns">
+        <view class="mbtn cancel" hover-class="mbtn-hover" hover-stay-time="100" bindtap="onCancelScan">取消</view>
+        <!-- 样衣：一键领取全部生产工序（排除入库/出库/审核） -->
+        <view wx:if="{{scanConfirm.detail.isPattern && scanConfirm.detail.hasClaimAllOps}}" class="mbtn {{scanConfirm.loading ? 'off' : ''}}" hover-class="mbtn-hover" hover-stay-time="100" style="background: #52c41a;" bindtap="claimAllPatternOps">
+          {{scanConfirm.loading ? '领取中...' : '一键领取全部工序'}}
+        </view>
+        <!-- 样衣：提交当前选中的单个工序 -->
+        <view wx:if="{{scanConfirm.detail.isPattern}}" class="mbtn {{scanConfirm.loading ? 'off' : ''}}" hover-class="mbtn-hover" hover-stay-time="100" style="background: #10b981;" bindtap="submitPatternScanAll">
+          {{scanConfirm.loading ? '提交中...' : (scanConfirm.detail.operationLabel ? ('提交：' + scanConfirm.detail.operationLabel) : '确认提交')}}
+        </view>
+        <view wx:if="{{!scanConfirm.detail.isPattern}}" class="mbtn ok {{scanConfirm.loading ? 'off' : ''}}" hover-class="mbtn-hover" hover-stay-time="100" bindtap="onConfirmScan">
+          {{scanConfirm.loading ? '...' : (scanConfirm.detail.isQualityReceive ? '领取' : '确认')}}
+        </view>
+      </view>
+  </mp-modal>

@@ -1,0 +1,52 @@
+  <!-- ④ 扫码区（一行：扫码主键） -->
+  <view class="scan-area-big">
+    <view class="scan-row">
+      <view class="scan-btn-big {{loading ? 'off' : ''}}" hover-class="scan-btn-big-hover" hover-stay-time="100" bindtap="onScan">
+        <view class="scan-btn-icon-svg">
+          <image src="/assets/icons/scan-blue.svg" mode="aspectFit" style="width: 28px; height: 28px;" />
+        </view>
+        <view class="scan-btn-text-group">
+          <text class="scan-btn-main">{{loading ? '识别中...' : '扫码识别'}}</text>
+          <text class="scan-btn-sub">{{lastUsedProcessName ? '上次：' + lastUsedProcessName : '自动匹配工序'}}</text>
+        </view>
+      </view>
+    </view>
+    <!-- 入库扫码时显示仓库选择（独立一行，不占扫码主键位） -->
+    <view wx:if="{{scanType === 'warehouse'}}" class="warehouse-input-row">
+      <view class="warehouse-label">目标仓库（选填）：</view>
+      <!-- 预设仓库快速选择 -->
+      <view class="warehouse-option-row">
+        <view
+          wx:for="{{warehouseOptions}}"
+          wx:key="index"
+          class="warehouse-chip {{warehouse === item ? 'warehouse-chip--active' : ''}}"
+          bindtap="onWarehouseChipTap"
+          data-value="{{item}}"
+          hover-class="warehouse-chip-hover"
+          hover-stay-time="100"
+        >{{item}}</view>
+        <view
+          class="warehouse-chip warehouse-chip--clear {{warehouse ? '' : 'warehouse-chip--disabled'}}"
+          bindtap="onWarehouseClear"
+          hover-class="warehouse-chip-hover"
+          hover-stay-time="100"
+        >清除</view>
+      </view>
+      <!-- 自定义仓库代码输入 -->
+      <input
+        class="warehouse-input-field"
+        placeholder="或手动输入仓库编号"
+        value="{{warehouse}}"
+        bindinput="onWarehouseCodeInput"
+      />
+    </view>
+    <view wx:if="{{currentUser && currentUser.factoryId}}" class="warehouse-input-row">
+      <view style="color:#666;font-size:24rpx;">
+        当前归属：{{currentUser.factoryName || '-'}}{{currentUser.orgPath ? ' · ' + currentUser.orgPath : ''}}{{currentUser.factoryType === 'INTERNAL' ? ' · 内部' : (currentUser.factoryType === 'EXTERNAL' ? ' · 外部' : '')}}
+      </view>
+    </view>
+    <view class="scan-mode-tip">
+      <text>说明：系统会按订单工序模板与历史扫码自动识别当前应执行工序，仅允许流转到未完成工序。</text>
+    </view>
+  </view>
+

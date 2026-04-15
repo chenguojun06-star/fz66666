@@ -1,0 +1,7 @@
+/* ===== 历史记录 ===== */
+.empty {
+  text-align: center;
+  padding: 20px;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}

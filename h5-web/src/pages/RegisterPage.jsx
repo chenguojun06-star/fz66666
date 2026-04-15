@@ -1,0 +1,151 @@
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import api from '@/api';
+import { toast } from '@/utils/uiHelper';
+import { validateByRule } from '@/utils/validationRules';
+import wx from '@/adapters/wx';
+
+export default function RegisterPage() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [tenantCode, setTenantCode] = useState('');
+  const [tenantName, setTenantName] = useState('');
+  const [factoryId, setFactoryId] = useState('');
+  const [scannedCode, setScannedCode] = useState(false);
+  const [username, setUsername] = useState('');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [agreedPolicies, setAgreedPolicies] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const tc = searchParams.get('tenantCode');
+    const tn = searchParams.get('tenantName');
+    if (tc) {
+      setTenantCode(decodeURIComponent(tc));
+      setTenantName(tn ? decodeURIComponent(tn) : '');
+      setScannedCode(true);
+    }
+  }, []);
+
+  const onScanCode = () => {
+    if (wx.isWechat) {
+      wx.scanCode({ onlyFromCamera: false }).then(res => {
+        const result = res.result || '';
+        const parsed = parseTenantCode(result);
+        if (parsed.tenantCode) {
+          setTenantCode(parsed.tenantCode);
+          setTenantName(parsed.factoryName || parsed.tenantName || '');
+          setFactoryId(parsed.factoryId || '');
+          setScannedCode(true);
+          toast.success('扫码成功');
+        } else {
+          setTenantCode(result.trim());
+          setScannedCode(true);
+        }
+      }).catch(() => {});
+    } else {
+      toast.info('请在微信中使用扫码功能');
+    }
+  };
+
+  const parseTenantCode = (text) => {
+    const result = { tenantCode: '', tenantName: '', factoryId: '', factoryName: '' };
+    if (!text) return result;
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed && parsed.type === 'FACTORY_INVITE' && parsed.tenantCode) {
+        return { tenantCode: parsed.tenantCode, factoryId: parsed.factoryId || '', factoryName: parsed.factoryName || '', tenantName: '' };
+      }
+    } catch (_) {}
+    if (text.indexOf('tenantCode=') !== -1) {
+      const match = text.match(/[?&]tenantCode=([^&]+)/);
+      if (match) result.tenantCode = decodeURIComponent(match[1]);
+      const nameMatch = text.match(/[?&]tenantName=([^&]+)/);
+      if (nameMatch) result.tenantName = decodeURIComponent(nameMatch[1]);
+    }
+    return result;
+  };
+
+  const onSubmit = async () => {
+    if (loading) return;
+    if (!tenantCode.trim()) { toast.error('请输入工厂编码'); return; }
+    const usernameErr = validateByRule(username, { name: '用户名', required: true, minLength: 3, maxLength: 20, pattern: /^[a-zA-Z0-9_]+$/ });
+    if (usernameErr) { toast.error(usernameErr); return; }
+    if (!name.trim()) { toast.error('请输入真实姓名'); return; }
+    const phoneValue = String(phone || '').trim();
+    if (phoneValue) {
+      const phoneErr = validateByRule(phoneValue, { name: '手机号', required: false, pattern: /^1[3-9]\d{9}$/ });
+      if (phoneErr) { toast.error(phoneErr); return; }
+    }
+    const passwordErr = validateByRule(password, { name: '密码', required: true, minLength: 6, maxLength: 20 });
+    if (passwordErr) { toast.error(passwordErr); return; }
+    if (password !== confirmPassword) { toast.error('两次输入的密码不一致'); return; }
+    if (!agreedPolicies) { toast.error('请先阅读并同意用户服务协议和隐私政策'); return; }
+
+    setLoading(true);
+    try {
+      const resp = await api.tenant.workerRegister({
+        tenantCode: tenantCode.trim(), factoryId: factoryId || undefined,
+        factoryName: tenantName || undefined, username: username.trim(),
+        name: name.trim(), phone: phoneValue || undefined, password,
+      });
+      if (resp && resp.code === 200) {
+        toast.success('注册成功，请等待管理员审批');
+        navigate('/login', { replace: true });
+      } else {
+        toast.error(resp?.message || '注册失败，请稍后重试');
+      }
+    } catch (e) {
+      toast.error(e.message || '注册失败');
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="login-page">
+      <div className="login-card">
+        <h1 className="login-title">员工注册</h1>
+        <div className="form-stack">
+          <div className="field-block">
+            <label>工厂编码</label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input className="text-input" value={tenantCode} onChange={e => setTenantCode(e.target.value)} placeholder="输入或扫码获取" style={{ flex: 1 }} />
+              <button className="secondary-button" onClick={onScanCode}>📷</button>
+            </div>
+            {tenantName && <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 4 }}>{tenantName}</div>}
+          </div>
+          <div className="field-block">
+            <label>用户名</label>
+            <input className="text-input" value={username} onChange={e => setUsername(e.target.value)} placeholder="3-20位字母数字下划线" />
+          </div>
+          <div className="field-block">
+            <label>真实姓名</label>
+            <input className="text-input" value={name} onChange={e => setName(e.target.value)} placeholder="请输入真实姓名" />
+          </div>
+          <div className="field-block">
+            <label>手机号（选填）</label>
+            <input className="text-input" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="11位手机号" />
+          </div>
+          <div className="field-block">
+            <label>密码</label>
+            <input className="text-input" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="至少6位" />
+          </div>
+          <div className="field-block">
+            <label>确认密码</label>
+            <input className="text-input" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="再次输入密码" />
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+            <input type="checkbox" checked={agreedPolicies} onChange={e => setAgreedPolicies(e.target.checked)} />
+            我已阅读并同意<a href="/privacy/service" style={{ color: 'var(--color-primary)' }}>用户服务协议</a>和<a href="/privacy" style={{ color: 'var(--color-primary)' }}>隐私政策</a>
+          </label>
+          <button className="primary-button" onClick={onSubmit} disabled={loading}>
+            {loading ? '注册中...' : '注册'}
+          </button>
+          <button className="ghost-button" onClick={() => navigate('/login')}>返回登录</button>
+        </div>
+      </div>
+    </div>
+  );
+}

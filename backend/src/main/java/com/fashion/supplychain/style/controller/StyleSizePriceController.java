@@ -26,10 +26,16 @@ public class StyleSizePriceController {
      * 根据款号ID查询多码单价列表
      */
     @GetMapping("/list")
-    public Result<List<StyleSizePrice>> list(@RequestParam Long styleId) {
+    public Result<List<StyleSizePrice>> list(
+            @RequestParam(required = false) String styleId,
+            @RequestParam(required = false) String styleNo) {
+        Long resolvedStyleId = StyleIdResolver.resolve(styleId, styleNo);
+        if (resolvedStyleId == null) {
+            return Result.success(java.util.Collections.emptyList());
+        }
         Long tid = UserContext.tenantId();
         QueryWrapper<StyleSizePrice> qw = new QueryWrapper<>();
-        qw.eq("style_id", styleId);
+        qw.eq("style_id", resolvedStyleId);
         if (tid != null) qw.eq("tenant_id", tid);
         qw.orderByAsc("process_code", "size");
         List<StyleSizePrice> list = styleSizePriceService.list(qw);
@@ -45,15 +51,16 @@ public class StyleSizePriceController {
             return Result.fail("数据不能为空");
         }
 
-        // 先删除该款号的所有多码单价数据
         Long styleId = list.get(0).getStyleId();
+        if (styleId == null) {
+            return Result.fail("styleId不能为空");
+        }
         Long tid = UserContext.tenantId();
         QueryWrapper<StyleSizePrice> qw = new QueryWrapper<>();
         qw.eq("style_id", styleId);
         if (tid != null) qw.eq("tenant_id", tid);
         styleSizePriceService.remove(qw);
 
-        // 批量插入新数据
         boolean success = styleSizePriceService.saveBatch(list);
         return Result.success(success);
     }

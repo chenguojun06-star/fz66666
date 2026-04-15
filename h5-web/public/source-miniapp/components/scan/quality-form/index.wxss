@@ -1,0 +1,135 @@
+.quality-form {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-modal);
+}
+
+.form-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--color-overlay);
+}
+
+.form-container {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--color-bg-card);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+}
+
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--color-bg-light);
+}
+
+.form-title {
+  font-size: var(--font-size-lg-xl);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.close-btn {
+  font-size: var(--font-size-4xl);
+  color: var(--color-text-disabled);
+  line-height: 1;
+}
+
+.form-body {
+  padding: 20px;
+  max-height: 400px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.order-info {
+  background: var(--color-bg-light);
+  padding: 10px;
+  border-radius: 5px;
+  margin-bottom: 15px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.info-item:last-child {
+  margin-bottom: 0;
+}
+
+.info-item .label {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-md);
+}
+
+.info-item .value {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-md);
+  font-weight: 500;
+}
+
+.form-item {
+  margin-bottom: 15px;
+}
+
+.form-label {
+  font-size: var(--font-size-md);
+  color: var(--color-text-primary);
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.form-input,
+.form-textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--color-bg-gray);
+  border-radius: 5px;
+  font-size: var(--font-size-md);
+  box-sizing: border-box;
+}
+
+.form-textarea {
+  min-height: 60px;
+}
+
+.form-footer {
+  display: flex;
+  gap: 10px;
+  padding: 15px 20px;
+  border-top: 1px solid var(--color-bg-light);
+}
+
+.cancel-btn,
+.submit-btn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 5px;
+  font-size: var(--font-size-md-lg);
+  font-weight: 500;
+}
+
+.cancel-btn {
+  background: var(--color-bg-gray);
+  color: var(--color-text-secondary);
+}
+
+.submit-btn {
+  background: var(--color-primary);
+  color: var(--color-text-white);
+}

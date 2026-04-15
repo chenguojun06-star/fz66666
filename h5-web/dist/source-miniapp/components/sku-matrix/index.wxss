@@ -1,0 +1,19 @@
+.sku-matrix { margin-top: 10rpx; width: 100%; }
+.sku-matrix-row { display: flex; flex-direction: row; align-items: center; }
+.sku-matrix-header { margin-bottom: 4rpx; }
+.sku-cell { flex: 1; text-align: center; font-size: var(--font-size-sm); color: var(--color-text-secondary); min-width: 0; }
+.sku-col-label { text-align: left; color: var(--color-text-primary); font-size: var(--font-size-sm); font-weight: var(--font-weight-medium); flex: 1.2; }
+
+.matrix-scroll { width: 100%; }
+.matrix-table { display: flex; flex-direction: column; min-width: 100%; }
+.matrix-row { display: flex; border-bottom: 1rpx solid var(--color-border-light); }
+.matrix-header { background: var(--color-bg-gray); font-weight: var(--font-weight-semibold); }
+.matrix-cell {
+  min-width: 100rpx; padding: 14rpx 12rpx;
+  text-align: center; font-size: var(--font-size-sm); color: var(--color-text-primary);
+  flex-shrink: 0;
+}
+.cell-color {
+  min-width: 120rpx; text-align: left; font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary); background: var(--color-info-bg);
+}

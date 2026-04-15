@@ -1,0 +1,10 @@
+<view class="qr-scanner">
+  <view class="scan-button {{scanning ? 'scanning' : ''}}" bindtap="startScan">
+    <image
+      class="scan-icon"
+      src="/assets/icons/scan.svg"
+      mode="aspectFit">
+    </image>
+    <text class="scan-text">{{scanning ? '扫描中...' : '点击扫码'}}</text>
+  </view>
+</view>

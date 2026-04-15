@@ -1,0 +1,161 @@
+<view class="container">
+  <custom-nav title="拆菲号 / 单价调整" show-back="{{true}}" show-search="{{false}}" />
+
+  <!-- ======== Tab 切换栏 ======== -->
+  <view class="tab-bar">
+    <view class="tab-item {{activeTab === 0 ? 'tab-active' : ''}}" data-tab="0" bindtap="switchTab">拆菲号</view>
+    <view class="tab-item {{activeTab === 1 ? 'tab-active' : ''}}" data-tab="1" bindtap="switchTab">单价调整</view>
+  </view>
+
+  <!-- ======== Panel 0: 菲号单价 ======== -->
+  <view wx:if="{{activeTab === 0}}">
+
+    <!-- 搜索订单 -->
+    <view wx:if="{{needSearch}}" class="search-bar-wrap">
+      <view class="search-bar-row">
+        <input class="search-bar-input" placeholder="输入订单号或扫码查单" value="{{searchOrderNo}}" bindinput="onSearchInput" confirm-type="search" bindconfirm="doSearch" />
+        <view class="search-bar-btn" bindtap="doSearch" hover-class="search-bar-btn-hover">查询</view>
+      </view>
+    </view>
+
+    <!-- 已有订单号时的主内容 -->
+    <block wx:else>
+      <view class="order-bar">
+        <view class="order-bar-left">
+          <text class="order-label">订单号</text>
+          <text class="order-no">{{orderNo}}</text>
+        </view>
+        <view class="change-btn" bindtap="changeOrder" hover-class="change-btn-hover">换单</view>
+      </view>
+
+      <view wx:if="{{loading}}" class="loading-state"><text>加载菲号中...</text></view>
+
+      <view wx:elif="{{bundles.length}}" class="bundle-list">
+        <view wx:for="{{bundles}}" wx:key="id" class="bundle-card {{selectedIdx === index ? 'selected' : ''}}" bindtap="selectBundle" data-idx="{{index}}">
+          <view class="bundle-row">
+            <text class="bundle-no">{{item.bundleLabel || item.bundleNo}}</text>
+            <text class="bundle-qty">{{item.quantity}} 件</text>
+          </view>
+          <view class="bundle-meta">
+            <text>{{item.color || '-'}}</text>
+            <text class="meta-sep">/</text>
+            <text>{{item.size || '-'}}</text>
+          </view>
+
+          <view wx:if="{{selectedIdx === index}}" class="split-form" catchtap="">
+            <view class="form-row">
+              <text class="form-label">转出数量</text>
+              <input class="form-input" type="number" placeholder="输入件数" value="{{splitQty}}" bindinput="onQtyInput" />
+            </view>
+            <view class="form-row">
+              <text class="form-label">接手工人</text>
+              <picker mode="selector" range="{{workers}}" range-key="workerName" value="{{workerIdx}}" bindchange="onWorkerChange">
+                <view class="picker-box">
+                  <text class="{{workerIdx >= 0 ? '' : 'placeholder'}}">{{workerIdx >= 0 ? workers[workerIdx].workerName : '选择工人'}}</text>
+                  <text class="arrow">›</text>
+                </view>
+              </picker>
+            </view>
+            <view class="submit-btn {{submitting ? 'disabled' : ''}}" bindtap="submitSplit" hover-class="submit-hover">{{submitting ? '提交中...' : '确认拆分'}}</view>
+          </view>
+        </view>
+      </view>
+
+      <view wx:else class="empty-state empty-state-card">
+        <text class="empty-icon">📦</text>
+        <text class="empty-text">该订单暂无菲号</text>
+        <text class="empty-hint">请确认订单号是否正确</text>
+      </view>
+    </block>
+
+    <!-- 拆分记录 -->
+    <view wx:if="{{splitRecords.length}}" class="records-section">
+      <view class="records-header">
+        <text class="records-title">拆分记录</text>
+        <text class="records-clear" bindtap="clearRecords">清空</text>
+      </view>
+      <view class="record-item" wx:for="{{splitRecords}}" wx:key="time">
+        <view class="record-top">
+          <text class="record-order">{{item.orderNo}}</text>
+          <text class="record-time">{{item.timeLabel}}</text>
+        </view>
+        <view class="record-bottom">
+          <text class="record-bundle">{{item.bundleNo}}</text>
+          <text class="record-detail">{{item.qty}}件 → {{item.workerName}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- ======== Panel 1: 工序单价调整 ======== -->
+  <view wx:if="{{activeTab === 1}}">
+
+    <!-- 搜索订单 -->
+    <view class="search-bar-wrap">
+      <view class="search-bar-row">
+        <input class="search-bar-input" placeholder="输入订单号查询工序" value="{{priceSearchInput}}" bindinput="onPriceSearchInput" confirm-type="search" bindconfirm="doPriceSearch" />
+        <view class="search-bar-btn" bindtap="doPriceSearch" hover-class="search-bar-btn-hover">查询</view>
+      </view>
+    </view>
+
+    <!-- 工序列表 -->
+    <view wx:if="{{priceLoading}}" class="loading-state"><text>加载工序中...</text></view>
+
+    <view wx:elif="{{processes.length}}" class="process-list">
+      <view wx:for="{{processes}}" wx:key="processName" class="process-card {{selectedProcessIdx === index ? 'selected' : ''}}" bindtap="selectProcess" data-idx="{{index}}">
+        <view class="process-row">
+          <text class="process-name">{{item.processName}}</text>
+          <text class="process-price">¥{{item.unitPrice || '0.00'}}</text>
+        </view>
+        <view class="process-meta">
+          <text wx:if="{{item.progressStage}}">{{item.progressStage}}</text>
+          <text class="meta-sep" wx:if="{{item.progressStage}}">/</text>
+          <text>{{item.bundleCount || 0}} 个菲号</text>
+        </view>
+
+        <!-- 展开的调整表单 -->
+        <view wx:if="{{selectedProcessIdx === index}}" class="adjust-form" catchtap="">
+          <view wx:if="{{!isAdmin}}" class="admin-tip">⚠️ 仅管理员可调整单价</view>
+          <view class="form-row">
+            <text class="form-label">新单价（元）</text>
+            <input class="form-input" type="digit" placeholder="输入新单价" value="{{adjustPrice}}" bindinput="onAdjustPriceInput" />
+          </view>
+          <view class="form-row form-row-full">
+            <text class="form-label">调整原因（必填）</text>
+            <textarea class="reason-textarea" placeholder="请输入调整原因，如：面料加厚工艺变复杂" value="{{adjustReason}}" bindinput="onAdjustReasonInput" maxlength="200" />
+          </view>
+          <view class="submit-btn {{adjustSubmitting || !isAdmin ? 'disabled' : ''}}" bindtap="submitAdjust" hover-class="submit-hover">{{adjustSubmitting ? '提交中...' : '确认调整'}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:elif="{{priceOrderNo && !priceLoading}}" class="empty-state empty-state-card">
+      <text class="empty-icon">📋</text>
+      <text class="empty-text">该订单暂无工序数据</text>
+      <text class="empty-hint">请确认订单已分配工序</text>
+    </view>
+
+    <!-- 调整历史 -->
+    <view wx:if="{{adjustHistory.length}}" class="records-section">
+      <view class="records-header">
+        <text class="records-title">调整记录</text>
+      </view>
+      <view class="record-item" wx:for="{{adjustHistory}}" wx:key="id">
+        <view class="record-top">
+          <text class="record-order">{{item.processName}}</text>
+          <text class="record-time">{{item.adjustedAt}}</text>
+        </view>
+        <view class="record-bottom">
+          <text class="record-bundle">¥{{item.originalPrice}} → ¥{{item.adjustedPrice}}</text>
+          <text class="record-detail adjust-by">{{item.adjustedByName}}</text>
+        </view>
+        <view wx:if="{{item.reason}}" class="record-reason">
+          <text>原因：{{item.reason}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 小云 AI 助手浮动入口 -->
+  <ai-assistant id="bundleSplitAiAssistant" notice-count="{{unreadNoticeCount}}" />
+</view>

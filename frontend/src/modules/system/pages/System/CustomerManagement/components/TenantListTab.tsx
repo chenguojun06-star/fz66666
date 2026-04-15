@@ -200,18 +200,18 @@ const TenantListTab: React.FC = () => {
     setSelectedModules: React.Dispatch<React.SetStateAction<string[] | null>>,
   ) => (
     <div style={{ marginTop: 16, borderTop: '1px dashed #e8e8e8', paddingTop: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-        <span style={{ fontWeight: 600, fontSize: 14 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, gap: 12, flexWrap: 'wrap' }}>
+        <span style={{ fontWeight: 600, fontSize: 16, lineHeight: 1.5 }}>
           菜单模块配置
-          <span style={{ fontSize: 12, color: '#999', fontWeight: 400, marginLeft: 8 }}>
+          <span style={{ fontSize: 14, color: '#999', fontWeight: 400, marginLeft: 8 }}>
             （不勾选 = 全部开放；勾选后只显示已配置模块）
           </span>
         </span>
-        <Space size={4}>
-          <Button size="small" onClick={() => setSelectedModules(null)}>全部开放</Button>
-          <Button size="small" onClick={() => setSelectedModules([...BASIC_PRESET_MODULES])}>基础版预设</Button>
-          <Button size="small" onClick={() => setSelectedModules(ALL_MODULE_PATHS)}>全选</Button>
-          <Button size="small" onClick={() => setSelectedModules([])}>全不选</Button>
+        <Space size={8} wrap>
+          <Button onClick={() => setSelectedModules(null)}>全部开放</Button>
+          <Button onClick={() => setSelectedModules([...BASIC_PRESET_MODULES])}>基础版预设</Button>
+          <Button onClick={() => setSelectedModules(ALL_MODULE_PATHS)}>全选</Button>
+          <Button onClick={() => setSelectedModules([])}>全不选</Button>
         </Space>
       </div>
       {selectedModules === null ? (
@@ -221,18 +221,18 @@ const TenantListTab: React.FC = () => {
       ) : (
         <Alert title={`已配置 ${selectedModules.length} 个模块路径，仅显示勾选的菜单项。`} type="info" showIcon style={{ marginBottom: 10 }} />
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, maxHeight: 340, overflowY: 'auto', padding: 2 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 12, padding: 2, alignItems: 'start' }}>
         {MODULE_SECTIONS.map(section => {
           const sectionPaths = section.paths.map(item => item.path);
           const checkedCount = selectedModules === null ? 0 : sectionPaths.filter(path => selectedModules.includes(path)).length;
           const allChecked = selectedModules !== null && checkedCount === sectionPaths.length;
           const someChecked = checkedCount > 0 && !allChecked;
           return (
-            <div key={section.key} style={{ border: '1px solid #f0f0f0', borderRadius: 6, padding: '8px 10px', background: '#fafafa' }}>
+            <div key={section.key} style={{ border: '1px solid #f0f0f0', borderRadius: 8, padding: '12px 14px', background: '#fafafa' }}>
               <Checkbox
                 checked={allChecked}
                 indeterminate={someChecked}
-                style={{ fontWeight: 600, marginBottom: 4 }}
+                style={{ fontWeight: 600, marginBottom: 8, fontSize: 15, lineHeight: 1.5 }}
                 onChange={(e) => {
                   setSelectedModules(prev => {
                     const base = prev === null ? [] : [...prev];
@@ -245,12 +245,12 @@ const TenantListTab: React.FC = () => {
               >
                 {section.title}
               </Checkbox>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingLeft: 4 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingLeft: 4 }}>
                 {section.paths.map(item => (
                   <Checkbox
                     key={item.path}
                     checked={selectedModules !== null && selectedModules.includes(item.path)}
-                    style={{ fontSize: 12, marginLeft: 0 }}
+                    style={{ fontSize: 14, marginLeft: 0, lineHeight: 1.6 }}
                     onChange={(e) => {
                       setSelectedModules(prev => {
                         const base = prev === null ? [] : [...prev];

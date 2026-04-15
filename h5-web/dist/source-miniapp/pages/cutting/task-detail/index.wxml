@@ -1,0 +1,151 @@
+<view class="container">
+  <custom-nav title="裁剪分扎" show-back="{{true}}" />
+
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" class="loading-state">
+    <text>加载任务详情中…</text>
+  </view>
+
+  <block wx:else>
+    <!-- 订单信息头 -->
+    <view class="info-card">
+      <view class="info-card-title">📋 订单信息</view>
+      <view class="info-card-body">
+        <view class="cover-wrap" bindtap="previewImage">
+          <image-preview wx:if="{{coverImage}}" class="cover-img" src="{{coverImage}}" mode="aspectFill" />
+          <view wx:else class="cover-placeholder"><text class="placeholder-icon">👗</text></view>
+        </view>
+        <view class="info-grid">
+          <view class="grid-item">
+            <text class="grid-label">订单号</text>
+            <text class="grid-value">{{orderNo}}</text>
+          </view>
+          <view class="grid-item">
+            <text class="grid-label">款号</text>
+            <text class="grid-value">{{taskInfo.styleNo || '-'}}</text>
+          </view>
+          <view class="grid-item">
+            <text class="grid-label">颜色</text>
+            <text class="grid-value">{{taskInfo.color || '全部'}}</text>
+          </view>
+          <view class="grid-item">
+            <text class="grid-label">订单数量</text>
+            <text class="grid-value bold">{{taskInfo.orderQuantity || 0}} 件</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 裁剪分扎面板 -->
+    <view class="section-card">
+      <view class="section-title">✂️ 裁剪分扎</view>
+
+      <!-- 每扎件数 + 损耗加放 -->
+      <view class="common-inputs">
+        <view class="input-row">
+          <text class="input-label">每扎件数</text>
+          <input
+            class="input-field"
+            type="number"
+            value="{{bundleSize}}"
+            placeholder="默认20"
+            bindinput="onBundleSizeInput"
+          />
+          <text class="input-suffix">件/扎</text>
+        </view>
+        <view class="input-row">
+          <text class="input-label">损耗加放</text>
+          <input
+            class="input-field"
+            type="digit"
+            value="{{excessRate}}"
+            placeholder="0"
+            bindinput="onExcessRateInput"
+          />
+          <text class="input-suffix">%</text>
+        </view>
+      </view>
+
+      <!-- 无数据提示 -->
+      <view wx:if="{{!hasData}}" class="empty-hint-box">
+        <text class="empty-hint-text">暂无尺码数据，请检查订单明细</text>
+      </view>
+
+      <!-- 裁剪明细表 -->
+      <block wx:if="{{hasData}}">
+        <view class="cutting-table">
+          <!-- 表头 -->
+          <view class="table-header">
+            <text class="th th-color">颜色</text>
+            <text class="th th-size">尺码</text>
+            <text class="th th-order">下单</text>
+            <text class="th th-cut">裁剪</text>
+            <text class="th th-bundles">扎数</text>
+            <text class="th th-last">末扎</text>
+          </view>
+
+          <!-- 数据行 -->
+          <view
+            wx:for="{{orderLines}}"
+            wx:key="key"
+            class="table-row"
+          >
+            <text class="td td-color">{{item.color}}</text>
+            <text class="td td-size">{{item.size}}</text>
+            <text class="td td-order">{{item.orderedQty}}</text>
+            <text class="td td-cut highlight">{{item.cuttingQty}}</text>
+            <text class="td td-bundles">{{item.bundleCount}}</text>
+            <view class="td td-last">
+              <input
+                class="td-last-input"
+                type="number"
+                value="{{item.lastBundleQty}}"
+                data-idx="{{index}}"
+                bindinput="onLastBundleQtyInput"
+              />
+            </view>
+          </view>
+        </view>
+
+        <!-- 分扎描述行 -->
+        <view class="bundle-desc-area">
+          <view
+            wx:for="{{orderLines}}"
+            wx:key="key"
+            wx:if="{{item.bundleDisplay && item.bundleDisplay !== '-'}}"
+            class="bundle-desc-row"
+          >
+            <text class="bundle-desc-label">{{item.color}} {{item.size}}</text>
+            <text class="bundle-desc-value">{{item.bundleDisplay}}</text>
+          </view>
+        </view>
+      </block>
+
+      <!-- 汇总 -->
+      <view class="summary-bar" wx:if="{{hasData}}">
+        <view class="summary-item">
+          <text class="summary-label">总下单</text>
+          <text class="summary-value green">{{summary.totalOrdered}}</text>
+        </view>
+        <view class="summary-item">
+          <text class="summary-label">总裁剪</text>
+          <text class="summary-value orange">{{summary.totalCutting}}</text>
+        </view>
+        <view class="summary-item">
+          <text class="summary-label">总扎数</text>
+          <text class="summary-value purple">{{summary.totalBundles}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="footer-bar">
+      <view
+        class="btn-submit {{submitting || !hasData ? 'btn-disabled' : ''}}"
+        hover-class="footer-bar-hover"
+        bindtap="onSubmit"
+      >
+        {{submitting ? '提交中…' : '确认生成菲号'}}
+      </view>
+    </view>
+  </block>
+</view>

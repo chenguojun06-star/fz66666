@@ -239,18 +239,15 @@ const PayrollOperatorSummary: React.FC = () => {
         const urlOrderNo = searchParams.get('orderNo');
         const urlProcessName = searchParams.get('processName');
         const urlScanType = searchParams.get('scanType');
+        let timer: ReturnType<typeof setTimeout> | null = null;
 
         if (urlOrderNo && !hasAutoFetched.current) {
             hasAutoFetched.current = true;
             setKeyword(urlOrderNo);
-            if (urlProcessName) {
-                // URL参数直接通过自定义payload传给服务端，keyword仅显示订单号提示
-            }
             if (urlScanType) {
                 setScanType(urlScanType);
             }
-            // 延迟执行查询，确保状态已更新
-            setTimeout(() => {
+            timer = setTimeout(() => {
                 const payload: any = {
                     orderNo: urlOrderNo,
                     styleNo: '',
@@ -262,14 +259,12 @@ const PayrollOperatorSummary: React.FC = () => {
                 doFetchData(payload);
             }, 100);
         } else if (!hasAutoFetched.current) {
-            // 首次加载：自动查询全部数据
             hasAutoFetched.current = true;
-
-            // 延迟执行查询
-            setTimeout(() => {
+            timer = setTimeout(() => {
                 doFetchData();
             }, 100);
         }
+        return () => { if (timer) clearTimeout(timer); };
     }, [searchParams]);
 
     const buildPayload = () => {

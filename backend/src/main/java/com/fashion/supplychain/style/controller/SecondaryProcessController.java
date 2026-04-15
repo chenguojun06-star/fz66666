@@ -34,8 +34,14 @@ public class SecondaryProcessController {
 
     @Operation(summary = "根据款号ID查询二次工艺列表")
     @GetMapping("/list")
-    public Result<List<SecondaryProcess>> listByStyleId(@RequestParam Long styleId) {
-        List<SecondaryProcess> list = secondaryProcessService.listByStyleId(styleId);
+    public Result<List<SecondaryProcess>> listByStyleId(
+            @RequestParam(required = false) String styleId,
+            @RequestParam(required = false) String styleNo) {
+        Long resolvedStyleId = StyleIdResolver.resolve(styleId, styleNo);
+        if (resolvedStyleId == null) {
+            return Result.success(java.util.Collections.emptyList());
+        }
+        List<SecondaryProcess> list = secondaryProcessService.listByStyleId(resolvedStyleId);
         return Result.success(list);
     }
 

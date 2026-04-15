@@ -1,0 +1,45 @@
+<scroll-view class="page" scroll-y="{{true}}" enhanced="{{true}}">
+  <view class="section">
+    <text class="title">云裳智链 用户服务协议</text>
+    <text class="update-date">更新日期：2026年4月15日</text>
+  </view>
+
+  <view class="section">
+    <text class="heading">一、服务说明</text>
+    <text class="body">本小程序用于企业内部生产管理，提供订单查询、工序扫码、质检与入库等服务。您在本小程序中的操作记录仅用于企业生产管理与流程追踪。</text>
+  </view>
+
+  <view class="section">
+    <text class="heading">二、账号与使用规范</text>
+    <text class="body">您应使用真实、合法的信息注册并妥善保管账号密码。不得冒用他人身份、传播违法违规信息、破坏系统安全或干扰系统正常运行。</text>
+  </view>
+
+  <view class="section">
+    <text class="heading">三、信息收集与使用</text>
+    <text class="body">为实现登录认证、生产记录、问题排查与消息通知，我们会在必要范围内收集并使用您的账号信息、操作日志与业务数据。具体规则详见《隐私政策》。</text>
+  </view>
+
+  <view class="section">
+    <text class="heading">四、服务可用性</text>
+    <text class="body">我们将持续保障服务稳定性，但因网络波动、设备异常、系统维护等不可抗力导致的服务中断，不构成违约。我们会尽快恢复服务。</text>
+  </view>
+
+  <view class="section">
+    <text class="heading">五、责任与限制</text>
+    <text class="body">您应在授权范围内使用本系统。因违规操作、账号泄露或不当使用造成的数据风险和业务影响，由使用方承担相应责任。</text>
+  </view>
+
+  <view class="section">
+    <text class="heading">六、协议更新</text>
+    <text class="body">我们可能根据业务与合规要求更新本协议。更新后将在小程序内展示最新版本，请您定期查看。</text>
+  </view>
+
+  <view class="section">
+    <text class="heading">七、联系我们</text>
+    <text class="body">如您对本协议有疑问，请通过小程序内「我的 → 问题反馈」联系我们。</text>
+  </view>
+
+  <view class="footer">
+    <text>© 2026 云裳智链. 保留所有权利.</text>
+  </view>
+</scroll-view>

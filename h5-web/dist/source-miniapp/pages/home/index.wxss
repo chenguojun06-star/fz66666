@@ -1,0 +1,145 @@
+/* ============ 首页 ============ */
+page {
+  background: var(--color-bg-page);
+}
+
+.page {
+  padding-bottom: calc(60px + env(safe-area-inset-bottom));
+}
+
+/* -- 顶部问候 -- */
+.header {
+  padding: var(--spacing-xl) var(--spacing-xl) var(--spacing-lg);
+}
+
+.greeting-name {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.greeting-sub {
+  margin-top: var(--spacing-xs);
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+}
+
+/* -- 日期卡片 -- */
+.weather-card {
+  display: flex;
+  flex-direction: column;
+  margin: 0 var(--spacing-xl) var(--spacing-lg);
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: var(--color-bg-card);
+}
+
+.weather-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.weather-left {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.weather-emoji {
+  font-size: var(--font-size-4xl);
+  line-height: 1;
+}
+
+.weather-temp-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.weather-temp {
+  font-size: var(--font-size-2xl);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: var(--line-height-tight);
+}
+
+.weather-desc {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-top: 2px;
+}
+
+.weather-season {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.weather-tip {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-divider);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-medium);
+}
+
+/* -- 全部菜单 -- */
+.menu-section {
+  padding: var(--spacing-lg) var(--spacing-xl);
+  border-top: 1px solid var(--color-divider);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-md);
+}
+
+.section-title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  row-gap: var(--spacing-xl);
+}
+
+.menu-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.menu-icon-circle {
+  width: 80px;
+  height: 80px;
+  border-radius: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.08);
+}
+
+/* 菜单图标放大 */
+.menu-icon-circle .line-icon--lg {
+  width: 46px;
+  height: 46px;
+  background-size: 46px 46px;
+}
+
+.menu-name {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  text-align: center;
+}
+
+
+
+

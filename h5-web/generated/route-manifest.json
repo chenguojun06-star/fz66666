@@ -1,0 +1,248 @@
+{
+  "generatedAt": "2026-04-15T12:42:00.911Z",
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#3b82f6",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/home/index",
+        "text": "首页",
+        "iconPath": "/assets/tabbar/home.png",
+        "selectedIconPath": "/assets/tabbar/home-active.png"
+      },
+      {
+        "pagePath": "pages/work/index",
+        "text": "生产",
+        "iconPath": "/assets/tabbar/work.png",
+        "selectedIconPath": "/assets/tabbar/work-active.png"
+      },
+      {
+        "pagePath": "pages/scan/index",
+        "text": "扫码",
+        "iconPath": "/assets/tabbar/scan.png",
+        "selectedIconPath": "/assets/tabbar/scan-active.png"
+      },
+      {
+        "pagePath": "pages/admin/index",
+        "text": "我的",
+        "iconPath": "/assets/tabbar/admin.png",
+        "selectedIconPath": "/assets/tabbar/admin-active.png"
+      }
+    ]
+  },
+  "window": {
+    "navigationBarTitleText": "生产管理",
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTextStyle": "black",
+    "backgroundTextStyle": "light"
+  },
+  "preloadRule": {
+    "pages/home/index": {
+      "network": "wifi",
+      "packages": [
+        "pkg-warehouse",
+        "pkg-register",
+        "pkg-bundle-split",
+        "pkg-dashboard"
+      ]
+    },
+    "pages/work/index": {
+      "network": "wifi",
+      "packages": [
+        "pkg-work-inbox",
+        "pkg-bundle-split",
+        "pkg-cutting",
+        "pkg-procurement"
+      ]
+    },
+    "pages/scan/index": {
+      "network": "wifi",
+      "packages": [
+        "pkg-scan-history",
+        "pkg-scan-pattern",
+        "pkg-scan-rescan",
+        "pkg-scan-result",
+        "pkg-scan-confirm",
+        "pkg-scan-quality"
+      ]
+    },
+    "pages/admin/index": {
+      "network": "wifi",
+      "packages": [
+        "pkg-admin-approval",
+        "pkg-payroll",
+        "pkg-privacy",
+        "pkg-admin-changepwd",
+        "pkg-admin-feedback",
+        "pkg-admin-invite"
+      ]
+    }
+  },
+  "routes": [
+    {
+      "source": "pages/login/index",
+      "h5Path": "/login",
+      "type": "page"
+    },
+    {
+      "source": "pages/home/index",
+      "h5Path": "/home",
+      "type": "tab"
+    },
+    {
+      "source": "pages/work/index",
+      "h5Path": "/work",
+      "type": "tab"
+    },
+    {
+      "source": "pages/scan/index",
+      "h5Path": "/scan",
+      "type": "tab"
+    },
+    {
+      "source": "pages/admin/index",
+      "h5Path": "/admin",
+      "type": "tab"
+    },
+    {
+      "source": "pages/register/index",
+      "h5Path": "/register",
+      "type": "subpackage",
+      "packageName": "pkg-register"
+    },
+    {
+      "source": "pages/work/inbox/index",
+      "h5Path": "/work/inbox",
+      "type": "subpackage",
+      "packageName": "pkg-work-inbox"
+    },
+    {
+      "source": "pages/work/ai-assistant/index",
+      "h5Path": "/work/ai-assistant",
+      "type": "subpackage",
+      "packageName": "pkg-work-ai"
+    },
+    {
+      "source": "pages/scan/history/index",
+      "h5Path": "/scan/history",
+      "type": "subpackage",
+      "packageName": "pkg-scan-history"
+    },
+    {
+      "source": "pages/payroll/payroll",
+      "h5Path": "/payroll/payroll",
+      "type": "subpackage",
+      "packageName": "pkg-payroll"
+    },
+    {
+      "source": "pages/admin/user-approval/index",
+      "h5Path": "/admin/user-approval",
+      "type": "subpackage",
+      "packageName": "pkg-admin-approval"
+    },
+    {
+      "source": "pages/warehouse/material/scan/index",
+      "h5Path": "/warehouse/material/scan",
+      "type": "subpackage",
+      "packageName": "pkg-warehouse"
+    },
+    {
+      "source": "pages/warehouse/sample/scan-action/index",
+      "h5Path": "/warehouse/sample/scan-action",
+      "type": "subpackage",
+      "packageName": "pkg-warehouse"
+    },
+    {
+      "source": "pages/privacy/index",
+      "h5Path": "/privacy",
+      "type": "subpackage",
+      "packageName": "pkg-privacy"
+    },
+    {
+      "source": "pages/privacy/service/index",
+      "h5Path": "/privacy/service",
+      "type": "subpackage",
+      "packageName": "pkg-privacy"
+    },
+    {
+      "source": "pages/admin/change-password/index",
+      "h5Path": "/admin/change-password",
+      "type": "subpackage",
+      "packageName": "pkg-admin-changepwd"
+    },
+    {
+      "source": "pages/admin/feedback/index",
+      "h5Path": "/admin/feedback",
+      "type": "subpackage",
+      "packageName": "pkg-admin-feedback"
+    },
+    {
+      "source": "pages/admin/invite/index",
+      "h5Path": "/admin/invite",
+      "type": "subpackage",
+      "packageName": "pkg-admin-invite"
+    },
+    {
+      "source": "pages/work/bundle-split/index",
+      "h5Path": "/work/bundle-split",
+      "type": "subpackage",
+      "packageName": "pkg-bundle-split"
+    },
+    {
+      "source": "pages/cutting/task-list/index",
+      "h5Path": "/cutting/task-list",
+      "type": "subpackage",
+      "packageName": "pkg-cutting"
+    },
+    {
+      "source": "pages/cutting/task-detail/index",
+      "h5Path": "/cutting/task-detail",
+      "type": "subpackage",
+      "packageName": "pkg-cutting"
+    },
+    {
+      "source": "pages/procurement/task-detail/index",
+      "h5Path": "/procurement/task-detail",
+      "type": "subpackage",
+      "packageName": "pkg-procurement"
+    },
+    {
+      "source": "pages/scan/pattern/index",
+      "h5Path": "/scan/pattern",
+      "type": "subpackage",
+      "packageName": "pkg-scan-pattern"
+    },
+    {
+      "source": "pages/scan/rescan/index",
+      "h5Path": "/scan/rescan",
+      "type": "subpackage",
+      "packageName": "pkg-scan-rescan"
+    },
+    {
+      "source": "pages/scan/scan-result/index",
+      "h5Path": "/scan/scan-result",
+      "type": "subpackage",
+      "packageName": "pkg-scan-result"
+    },
+    {
+      "source": "pages/scan/confirm/index",
+      "h5Path": "/scan/confirm",
+      "type": "subpackage",
+      "packageName": "pkg-scan-confirm"
+    },
+    {
+      "source": "pages/scan/quality/index",
+      "h5Path": "/scan/quality",
+      "type": "subpackage",
+      "packageName": "pkg-scan-quality"
+    },
+    {
+      "source": "pages/dashboard/index",
+      "h5Path": "/dashboard",
+      "type": "subpackage",
+      "packageName": "pkg-dashboard"
+    }
+  ]
+}

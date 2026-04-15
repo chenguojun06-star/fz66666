@@ -21,8 +21,14 @@ public class StyleQuotationController {
     private StyleQuotationAuditOrchestrator styleQuotationAuditOrchestrator;
 
     @GetMapping
-    public Result<StyleQuotation> getByStyleId(@RequestParam Long styleId) {
-        StyleQuotation quotation = styleQuotationOrchestrator.getByStyleId(styleId);
+    public Result<StyleQuotation> getByStyleId(
+            @RequestParam(required = false) String styleId,
+            @RequestParam(required = false) String styleNo) {
+        Long resolvedStyleId = StyleIdResolver.resolve(styleId, styleNo);
+        if (resolvedStyleId == null) {
+            return Result.fail("缺少参数 styleId 或 styleNo");
+        }
+        StyleQuotation quotation = styleQuotationOrchestrator.getByStyleId(resolvedStyleId);
         return Result.success(quotation);
     }
 

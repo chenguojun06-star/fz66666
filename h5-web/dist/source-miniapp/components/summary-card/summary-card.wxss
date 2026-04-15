@@ -1,0 +1,51 @@
+.summary-card {
+  margin: 12px;
+  padding: 16px;
+  /* 降低饱和度：从 #3b82f6→#2563eb(刺眼蓝) 改为更柔和的商务蓝 */
+  background: var(--color-primary);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+.summary-title {
+  font-size: var(--font-size-lg-xl);
+  font-weight: 700;
+  color: var(--color-text-white);
+  margin-bottom: 12px;
+}
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.summary-row:last-child {
+  margin-bottom: 0;
+}
+.summary-item {
+  flex: 1;
+  text-align: center;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-md);
+  margin: 0 4px;
+}
+.summary-item:first-child {
+  margin-left: 0;
+}
+.summary-item:last-child {
+  margin-right: 0;
+}
+.summary-label {
+  font-size: var(--font-size-xs);
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 4px;
+}
+.summary-value {
+  font-size: var(--font-size-md-lg);
+  font-weight: 700;
+  color: var(--color-text-white);
+}
+.summary-value.primary {
+  /* 大金额：橙色在蓝底上刺眼，改为纯白更清晰 */
+  font-size: var(--font-size-xl);
+  color: rgba(255, 255, 255, 0.98);
+}

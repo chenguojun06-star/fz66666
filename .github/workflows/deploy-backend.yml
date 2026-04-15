@@ -1,0 +1,69 @@
+name: Deploy Backend to WeChat Cloud Run
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
+
+env:
+  BACKEND_DIR: backend
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build JAR
+        run: mvn package -DskipTests -q
+        working-directory: ${{ env.BACKEND_DIR }}
+
+      - name: Login to WeChat Cloud Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ccr.ccs.tencentyun.com
+          username: ${{ secrets.TCR_USERNAME }}
+          password: ${{ secrets.TCR_PASSWORD }}
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ env.BACKEND_DIR }}
+          push: true
+          tags: |
+            ccr.ccs.tencentyun.com/${{ secrets.TCR_NAMESPACE }}/fashion-backend:${{ github.sha }}
+            ccr.ccs.tencentyun.com/${{ secrets.TCR_NAMESPACE }}/fashion-backend:latest
+
+      - name: Deploy to WeChat Cloud Run
+        run: |
+          curl -s -X POST \
+            "https://run.tencentcloudapi.com" \
+            -H "Authorization: TC3-HMAC-SHA256 Credential=${{ secrets.TCB_SECRET_ID }}/${{ steps.date.outputs.date }}/tcb/run" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "EnvId": "${{ secrets.TCB_ENV_ID }}",
+              "ServiceName": "fashion-backend",
+              "ImageName": "ccr.ccs.tencentyun.com/${{ secrets.TCR_NAMESPACE }}/fashion-backend:${{ github.sha }}",
+              "ContainerPort": 8080
+            }' || echo "Deploy trigger sent"
+
+      - name: Deploy notification
+        if: always()
+        run: |
+          echo "Backend deployment ${{ job.status }}"
+          echo "Image tag: ${{ github.sha }}"
+          echo "Deploy time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"

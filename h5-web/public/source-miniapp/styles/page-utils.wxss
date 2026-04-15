@@ -1,0 +1,113 @@
+/* =====================================================
+ * page-utils.wxss — 页面通用样式工具集
+ * 📦 空状态 / 翻页加载 / 标签 chip
+ *
+ * 使用方式：
+ *   @import '/styles/page-utils.wxss';
+ *
+ * 类名前缀约定：无前缀（语义即名称）
+ * ===================================================== */
+
+/* =====================================================
+ * 一、空状态 Empty State → 已移至 app.wxss（全局加载，无需再 @import）
+ * .empty-state / .empty-icon / .empty-img / .empty-text / .empty-hint
+ * 均在 app.wxss “空状态”区块定义。
+ * ===================================================== */
+
+
+
+/* =====================================================
+ * 二、翻页 / 加载态 Pagination & Load-more
+ * ===================================================== */
+
+/* 可点击的"加载更多"行 */
+.load-more {
+  text-align: center;
+  padding: 12px 10px;
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
+}
+
+/* 禁用态："没有更多了" */
+.load-more.disabled {
+  color: var(--color-text-disabled);
+  pointer-events: none;
+}
+
+/* 点击反馈（hover-class="load-more-hover"） */
+.load-more-hover {
+  opacity: 0.7;
+}
+
+/* 已全部加载 */
+.no-more {
+  text-align: center;
+  padding: 10px 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-disabled);
+}
+
+/* 加载中动画行 */
+.loading-more {
+  text-align: center;
+  padding: 10px 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-disabled);
+}
+
+
+/* =====================================================
+ * 三、标签 Chip / Tag
+ * 用于颜色、尺码、状态等小标记
+ *
+ * 基础用法：class="tag tag-blue"
+ * ===================================================== */
+
+/* 基础形态 */
+.tag {
+  display: inline-block;
+  font-size: var(--font-size-2xs);
+  padding: 1px 6px;
+  border-radius: var(--radius-md);
+}
+
+/* 蓝色 — 颜色标签（同 tag-color） */
+.tag-blue,
+.tag-color {
+  background-color: var(--color-info-bg);
+  color: var(--color-primary);
+}
+
+/* 灰色 — 尺码标签（同 tag-size） */
+.tag-gray,
+.tag-size {
+  background-color: var(--color-bg-light);
+  color: var(--color-text-secondary);
+}
+
+/* 绿色 — 成功 / 进行中（同 tag-success） */
+.tag-green,
+.tag-success {
+  background-color: rgba(16, 185, 129, 0.12);
+  color: var(--color-success);
+}
+
+/* 橙色 — 警告（同 tag-warn） */
+.tag-orange,
+.tag-warn {
+  background-color: rgba(245, 158, 11, 0.12);
+  color: var(--color-warning);
+}
+
+/* 红色 — 危险（同 tag-danger） */
+.tag-red,
+.tag-danger {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--color-error);
+}
+
+/* 哑光灰 — 已完成 / 次要状态 */
+.tag-muted {
+  background-color: rgba(156, 163, 175, 0.15);
+  color: var(--color-text-secondary);
+}

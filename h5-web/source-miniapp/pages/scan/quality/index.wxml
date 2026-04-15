@@ -1,0 +1,115 @@
+<view class="container">
+
+  <!-- 订单信息 -->
+  <view class="info-card">
+    <view class="card-header">
+      <image-preview class="cover-wrap" src="{{coverImage || ''}}" mode="aspectFill" />
+      <view class="header-info">
+        <text class="style-no">{{detail.styleNo || detail.orderNo}}</text>
+        <text class="sub-info">订单 {{detail.orderNo}}</text>
+        <text wx:if="{{detail.bundleNo}}" class="sub-info">菲号 {{detail.bundleNo}}</text>
+        <text wx:if="{{detail.color}}" class="sub-info">颜色 {{detail.color}}</text>
+        <text wx:if="{{detail.size}}" class="sub-info">码数 {{detail.size}}</text>
+        <text class="sub-info">数量 {{detail.quantity}} 件</text>
+        <text wx:if="{{detail.processName}}" class="sub-info tag-process">{{detail.processName}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- AI 建议 -->
+  <view wx:if="{{aiSuggestion}}" class="insight-card">
+    <text class="insight-icon">🤖</text>
+    <view class="insight-body">
+      <text wx:if="{{historicalDefectRate}}" class="insight-text">历史不良率 {{historicalDefectRate}}</text>
+      <text wx:if="{{aiSuggestion.urgentTip}}" class="insight-text insight-urgent">⚠️ {{aiSuggestion.urgentTip}}</text>
+      <block wx:if="{{aiSuggestion.checkpoints && aiSuggestion.checkpoints.length > 0}}">
+        <text class="insight-label">质检要点：</text>
+        <text wx:for="{{aiSuggestion.checkpoints}}" wx:key="*this" class="insight-checkpoint">• {{item}}</text>
+      </block>
+      <block wx:if="{{aiSuggestionList.length > 0}}">
+        <text class="insight-label">缺陷提示：</text>
+        <text wx:for="{{aiSuggestionList}}" wx:key="category" class="insight-checkpoint">【{{item.label}}】{{item.text}}</text>
+      </block>
+      <view wx:if="{{aiSuggestionList.length > 0}}" class="insight-action" bindtap="onAdoptAiSuggestion">采纳建议</view>
+    </view>
+  </view>
+
+  <!-- 质检结果选择 -->
+  <view class="section-card">
+    <text class="section-title">质检结果</text>
+    <view class="result-group">
+      <view class="result-btn {{result === 'qualified' ? 'active-pass' : ''}}"
+            bindtap="onSelectResult" data-value="qualified">
+        <text class="result-icon">✅</text>
+        <text>合格</text>
+      </view>
+      <view class="result-btn {{result === 'unqualified' ? 'active-fail' : ''}}"
+            bindtap="onSelectResult" data-value="unqualified">
+        <text class="result-icon">❌</text>
+        <text>不合格</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 不合格详情 -->
+  <view wx:if="{{result === 'unqualified'}}" class="section-card">
+    <text class="section-title">不良品详情</text>
+
+    <view class="form-row">
+      <text class="form-label">不良数量</text>
+      <input class="form-input" type="number" value="{{defectQuantity}}"
+             bindinput="onDefectQuantityInput" placeholder="请输入不良数量" />
+    </view>
+
+    <view class="form-row">
+      <text class="form-label">缺陷类别</text>
+      <picker range="{{defectCategories}}" value="{{defectCategoryIndex}}" bindchange="onDefectCategoryChange">
+        <view class="form-picker">
+          {{defectCategoryIndex >= 0 ? defectCategories[defectCategoryIndex] : '请选择'}}
+          <text class="picker-arrow">▾</text>
+        </view>
+      </picker>
+    </view>
+
+    <view class="form-row">
+      <text class="form-label">处理方式</text>
+      <picker range="{{handleMethods}}" value="{{handleMethodIndex}}" bindchange="onHandleMethodChange">
+        <view class="form-picker">
+          {{handleMethodIndex >= 0 ? handleMethods[handleMethodIndex] : '请选择'}}
+          <text class="picker-arrow">▾</text>
+        </view>
+      </picker>
+    </view>
+
+    <!-- 图片上传 -->
+    <view class="form-row-col">
+      <text class="form-label">不良品照片（最多5张）</text>
+      <view class="photo-grid">
+        <view wx:for="{{images}}" wx:key="*this" class="photo-item">
+          <image-preview class="photo-img" src="{{item}}" mode="aspectFill" />
+          <view class="photo-del" data-index="{{index}}" catchtap="onDeleteImage">×</view>
+        </view>
+        <view wx:if="{{images.length < 5}}" class="photo-add" bindtap="onUploadImage">
+          <text class="add-icon">📷</text>
+          <text class="add-text">拍照/选图</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 备注 -->
+  <view class="section-card">
+    <text class="section-title">备注</text>
+    <textarea class="remark-area" value="{{remark}}" bindinput="onRemarkInput"
+              placeholder="可填写质检备注" maxlength="500" auto-height />
+  </view>
+
+  <view class="footer-bar">
+    <view class="btn-cancel" hover-class="footer-bar-hover" bindtap="goBack">取消</view>
+    <view class="btn-submit {{loading ? 'btn-disabled' : ''}}" hover-class="footer-bar-hover" bindtap="submitQuality">
+      {{loading ? '提交中...' : '提交质检'}}
+    </view>
+  </view>
+
+  <privacy-dialog id="privacyDialog" />
+</view>

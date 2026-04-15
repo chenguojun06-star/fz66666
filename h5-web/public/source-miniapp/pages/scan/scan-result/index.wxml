@@ -1,0 +1,92 @@
+<wxs src="../../../utils/money.wxs" module="money" />
+<view class="container">
+  <view class="info-card">
+    <view class="card-header">
+      <image-preview class="cover-wrap" src="{{detail.coverImage || ''}}" mode="aspectFill" />
+      <view class="header-info">
+        <text class="style-no">{{detail.styleNo || detail.orderNo}}</text>
+        <text class="sub-info">{{detail.orderNo}}</text>
+        <text wx:if="{{detail.bundleNo}}" class="sub-info">菲号 {{detail.bundleNo}}</text>
+        <view wx:if="{{detail.color || detail.size || detail.displayQuantity}}" class="bundle-meta">
+          <text wx:if="{{detail.color}}" class="meta-text">{{detail.color}}</text>
+          <text wx:if="{{detail.size}}" class="meta-text">{{detail.size}}</text>
+          <text wx:if="{{detail.displayQuantity}}" class="meta-text">{{detail.displayQuantity}}件</text>
+        </view>
+      </view>
+    </view>
+    <view class="field-list">
+      <view wx:if="{{detail.processName}}" class="field-row">
+        <text class="field-label">当前工序</text>
+        <text class="field-value highlight">{{detail.processName}}</text>
+      </view>
+      <view wx:if="{{detail.bedNo}}" class="field-row">
+        <text class="field-label">床号</text>
+        <text class="field-value">{{detail.bedNo}}</text>
+      </view>
+      <view wx:if="{{detail.cuttingDateDisplay}}" class="field-row">
+        <text class="field-label">裁床日期</text>
+        <text class="field-value">{{detail.cuttingDateDisplay}}</text>
+      </view>
+      <view wx:if="{{detail.deliveryDateDisplay}}" class="field-row">
+        <text class="field-label">交货日期</text>
+        <text class="field-value">{{detail.deliveryDateDisplay}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{imageInsight}}" class="insight-card">
+    <text class="insight-icon">🤖</text>
+    <text class="insight-text">{{imageInsight}}</text>
+  </view>
+
+  <view class="section-card">
+    <text class="section-title">选择工序（可多选）</text>
+    <scroll-view class="process-scroll" scroll-y style="max-height:600rpx">
+      <view wx:for="{{processOptions}}" wx:key="value"
+            class="process-chip {{item.checked ? 'active' : ''}}"
+            data-value="{{item.value}}"
+            bindtap="onProcessTap">
+        <text class="chip-label">{{item.label}}</text>
+        <text wx:if="{{!item.hidePrice}}" class="chip-price">¥{{money.toFixed2(item.unitPrice)}}</text>
+      </view>
+    </scroll-view>
+    <view class="summary-bar" wx:if="{{selectedCount > 0}}">
+      <text class="summary-text">已选 {{selectedCount}} 个工序</text>
+      <text wx:if="{{selectedAmount > 0}}" class="summary-amount">合计 ¥{{money.toFixed2(selectedAmount)}}</text>
+    </view>
+  </view>
+
+  <view wx:if="{{showWarehouse}}" class="section-card">
+    <text class="section-title">目标仓库</text>
+    <view class="warehouse-option-row" wx:if="{{warehouseOptions.length > 0}}">
+      <view
+        wx:for="{{warehouseOptions}}"
+        wx:key="index"
+        class="warehouse-chip {{warehouseCode === item ? 'warehouse-chip--active' : ''}}"
+        bindtap="onWarehouseChipTap"
+        data-value="{{item}}"
+        hover-class="warehouse-chip-hover"
+        hover-stay-time="100"
+      >{{item}}</view>
+      <view
+        class="warehouse-chip warehouse-chip--clear {{warehouseCode ? '' : 'warehouse-chip--disabled'}}"
+        bindtap="onWarehouseClear"
+        hover-class="warehouse-chip-hover"
+        hover-stay-time="100"
+      >清除</view>
+    </view>
+    <input
+      class="input-box"
+      placeholder="{{warehouseOptions.length > 0 ? '或手动输入仓库编号' : '请输入仓库编号'}}"
+      value="{{warehouseCode}}"
+      bindinput="onWarehouseInput"
+    />
+  </view>
+
+  <view class="footer-bar">
+    <view class="btn-cancel" hover-class="footer-bar-hover" bindtap="goBack">取消</view>
+    <view class="btn-submit {{loading || selectedCount === 0 ? 'btn-disabled' : ''}}" hover-class="footer-bar-hover" bindtap="submitScanResult">
+      {{loading ? '提交中...' : (isQualityReceive ? '领取质检' : '确认提交')}}
+    </view>
+  </view>
+</view>

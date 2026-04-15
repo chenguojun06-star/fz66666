@@ -1,0 +1,77 @@
+<wxs src="../../utils/money.wxs" module="money" />
+<wxs module="utils">
+  // 格式化相对时间
+  function formatRelativeTime(timeStr) {
+    if (!timeStr) return '-';
+
+    var now = getDate().getTime();
+    var time = getDate(timeStr).getTime();
+    var diff = now - time;
+
+    var minute = 60 * 1000;
+    var hour = 60 * minute;
+    var day = 24 * hour;
+
+    if (diff < minute) {
+      return '刚刚';
+    } else if (diff < hour) {
+      return Math.floor(diff / minute) + '分钟前';
+    } else if (diff < day) {
+      return Math.floor(diff / hour) + '小时前';
+    } else if (diff < 7 * day) {
+      return Math.floor(diff / day) + '天前';
+    } else {
+      var date = getDate(timeStr);
+      var month = '' + (date.getMonth() + 1);
+      var dayNum = '' + date.getDate();
+      var hours = '' + date.getHours();
+      var minutes = '' + date.getMinutes();
+
+      if (month.length < 2) month = '0' + month;
+      if (dayNum.length < 2) dayNum = '0' + dayNum;
+      if (hours.length < 2) hours = '0' + hours;
+      if (minutes.length < 2) minutes = '0' + minutes;
+
+      return month + '-' + dayNum + ' ' + hours + ':' + minutes;
+    }
+  }
+
+  module.exports = {
+    formatRelativeTime: formatRelativeTime
+  };
+</wxs>
+
+<view class="page">
+  <custom-nav
+    title="扫码"
+    show-search="{{false}}"
+  />
+
+  <view wx:if="{{offlinePendingCount > 0}}" class="offline-badge-bar" bindtap="onManualSync">
+    <text class="offline-badge-icon">{{offlineSyncing ? '...' : '↑'}}</text>
+    <text class="offline-badge-text">{{offlineSyncing ? '同步中...' : offlinePendingCount + ' 条待上传，点击立即同步'}}</text>
+  </view>
+
+  <!-- ① 今日统计 + ② 快捷入口 -->
+  <include src="./sections/stats-entries.wxml" />
+
+  <!-- ③ 扫码结果 -->
+  <include src="./sections/scan-result.wxml" />
+
+  <!-- ④ 扫码区 -->
+  <include src="./sections/scan-area.wxml" />
+
+  <!-- 任务入口（裁剪/采购已迁移到独立页面） -->
+  <include src="./sections/my-tasks.wxml" />
+
+  <!-- ⑦ 今日扫码记录 -->
+  <include src="./sections/scan-history.wxml" />
+
+  <!-- 弹窗已转为独立页面：rescan / scan-result / confirm / quality -->
+</view>
+
+<!-- 小云 AI 助手（全页面悬浮） -->
+<ai-assistant />
+
+<!-- 隐私保护授权弹窗（微信 2023-09-15 强制要求） -->
+<privacy-dialog id="privacyDialog" />

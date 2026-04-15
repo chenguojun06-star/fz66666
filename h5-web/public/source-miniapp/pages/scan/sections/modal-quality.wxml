@@ -1,0 +1,169 @@
+<!-- 质检结果弹窗 -->
+<view class="modal-backdrop" wx:if="{{qualityModal.show}}" catchtap="closeQualityModal"></view>
+<view wx:if="{{qualityModal.show}}" class="modal-wrap quality-modal show">
+  <view class="modal-container" catchtap="stopPropagation">
+    <view class="modal-header">
+      <text class="modal-title">质检结果录入</text>
+      <view class="modal-close" hover-class="modal-close-hover" hover-stay-time="100" catchtap="closeQualityModal">×</view>
+    </view>
+
+    <view class="modal-body">
+      <view class="scan-result-info quality-modal-info">
+        <view class="result-item">
+          <text class="item-label">订单号</text>
+          <text class="item-value highlight">{{qualityModal.detail.orderNo}}</text>
+        </view>
+        <view class="result-item-row">
+          <view wx:if="{{qualityModal.detail.bundleNo}}" class="result-item result-item-half">
+            <text class="item-label">菲号</text>
+            <text class="item-value">{{qualityModal.detail.bundleNo}}</text>
+          </view>
+          <view class="result-item result-item-half">
+            <text class="item-label">款号/颜色</text>
+            <text class="item-value">{{qualityModal.detail.styleNo}} · {{qualityModal.detail.color || '-'}}</text>
+          </view>
+        </view>
+        <view class="result-item">
+          <text class="item-label">数量</text>
+          <text class="item-value">{{qualityModal.detail.quantity || 1}}</text>
+        </view>
+      </view>
+
+      <!-- AI质检助手：质检要点 -->
+      <view wx:if="{{qualityModal.aiSuggestion}}" class="qm-ai-section">
+        <view class="qm-ai-header">
+          <text class="qm-ai-title">AI质检助手</text>
+          <view wx:if="{{qualityModal.aiSuggestion.historicalVerdict === 'critical'}}" class="qm-ai-badge qm-ai-badge-red">历史严重 {{qualityModal.aiSuggestion.historicalDefectRateText}}</view>
+          <view wx:elif="{{qualityModal.aiSuggestion.historicalVerdict === 'warn'}}" class="qm-ai-badge qm-ai-badge-orange">历史偏高 {{qualityModal.aiSuggestion.historicalDefectRateText}}</view>
+          <view wx:elif="{{qualityModal.aiSuggestion.historicalVerdict === 'good'}}" class="qm-ai-badge qm-ai-badge-green">历史良好</view>
+          <view wx:if="{{qualityModal.aiSuggestion.urgent}}" class="qm-ai-badge qm-ai-badge-orange">加急</view>
+        </view>
+        <view wx:if="{{qualityModal.aiSuggestion.urgentTip}}" class="qm-ai-tip">{{qualityModal.aiSuggestion.urgentTip}}</view>
+        <view wx:if="{{qualityModal.aiSuggestion.checkpoints && qualityModal.aiSuggestion.checkpoints.length > 0}}" class="qm-ai-checkpoints">
+          <text class="qm-ai-checkpoints-label">质检要点：</text>
+          <view class="qm-ai-points">
+            <view wx:for="{{qualityModal.aiSuggestion.checkpoints}}" wx:key="index" class="qm-ai-point">· {{item}}</view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 质检结果选择（合格/不合格） -->
+      <view class="qm-section">
+        <text class="qm-section-title">质检结果 <text style="color: #ef4444;">*</text></text>
+        <view class="qm-radio-group">
+          <view class="qm-radio {{qualityModal.result === 'qualified' ? 'active' : ''}}" bindtap="onSelectQualityResult" data-value="qualified" hover-class="qm-radio-hover" hover-stay-time="100">
+            <view class="qm-radio-icon">{{qualityModal.result === 'qualified' ? '✓' : ''}}</view>
+            <text>合格</text>
+          </view>
+          <view class="qm-radio {{qualityModal.result === 'unqualified' ? 'active' : ''}}" bindtap="onSelectQualityResult" data-value="unqualified" hover-class="qm-radio-hover" hover-stay-time="100">
+            <view class="qm-radio-icon">{{qualityModal.result === 'unqualified' ? '✓' : ''}}</view>
+            <text>不合格</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 不合格详情（仅不合格时显示） -->
+      <view wx:if="{{qualityModal.result === 'unqualified'}}" class="qm-defective">
+        <!-- 不合格数量 -->
+        <view class="qm-field">
+          <text class="qm-field-label">不合格数量</text>
+          <input class="qm-input" type="number" placeholder="请输入不合格数量" value="{{qualityModal.unqualifiedQuantity}}" bindinput="onDefectiveQuantityInput" />
+        </view>
+
+        <!-- 缺陷分类 -->
+        <view class="qm-field">
+          <text class="qm-field-label">缺陷分类 <text style="color: #ef4444;">*</text></text>
+          <view class="inline-selector">
+            <scroll-view class="inline-selector-list" scroll-y="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}">
+              <view
+                wx:for="{{defectCategories}}"
+                wx:key="index"
+                class="inline-selector-item {{qualityModal.defectCategory == index ? 'active' : ''}}"
+                data-index="{{index}}"
+                data-field="defectCategory"
+                bindtap="onQmSelectorTap"
+                hover-class="inline-selector-item-hover"
+                hover-stay-time="80">
+                <view class="inline-selector-left">
+                  <view class="inline-selector-radio {{qualityModal.defectCategory == index ? 'checked' : ''}}">
+                    <view wx:if="{{qualityModal.defectCategory == index}}" class="inline-selector-radio-dot"></view>
+                  </view>
+                  <text class="inline-selector-label">{{item}}</text>
+                </view>
+              </view>
+            </scroll-view>
+          </view>
+        </view>
+
+        <!-- 处理方式 -->
+        <view class="qm-field">
+          <text class="qm-field-label">处理方式 <text style="color: #ef4444;">*</text></text>
+          <view class="inline-selector">
+            <scroll-view class="inline-selector-list" scroll-y="{{true}}" enhanced="{{true}}" show-scrollbar="{{false}}">
+              <view
+                wx:for="{{handleMethods}}"
+                wx:key="index"
+                class="inline-selector-item {{qualityModal.handleMethod == index ? 'active' : ''}}"
+                data-index="{{index}}"
+                data-field="handleMethod"
+                bindtap="onQmSelectorTap"
+                hover-class="inline-selector-item-hover"
+                hover-stay-time="80">
+                <view class="inline-selector-left">
+                  <view class="inline-selector-radio {{qualityModal.handleMethod == index ? 'checked' : ''}}">
+                    <view wx:if="{{qualityModal.handleMethod == index}}" class="inline-selector-radio-dot"></view>
+                  </view>
+                  <text class="inline-selector-label">{{item}}</text>
+                </view>
+              </view>
+            </scroll-view>
+          </view>
+        </view>
+
+        <!-- 备注 -->
+        <view class="qm-field">
+          <text class="qm-field-label">备注</text>
+          <textarea class="qm-textarea" placeholder="请输入备注信息（选填）" value="{{qualityModal.remark}}" bindinput="onRemarkInput" maxlength="200" />
+        </view>
+
+        <!-- AI异常建议（不合格时显示） -->
+        <view wx:if="{{qualityModal.aiSuggestion}}" class="qm-ai-adopt-row">
+          <view class="qm-ai-suggest-text">点击「采纳」可将AI处理建议填入备注</view>
+          <button class="qm-adopt-btn" bindtap="onAdoptAiSuggestion" hover-class="qm-adopt-btn-hover" hover-stay-time="80">采纳AI建议</button>
+        </view>
+
+        <!-- 照片上传 -->
+        <view class="qm-field">
+          <text class="qm-field-label">质检照片（选填，最多5张）</text>
+          <view class="qm-images">
+            <view wx:for="{{qualityModal.images}}" wx:key="index" class="qm-image-item">
+              <image-preview class="qm-image" src="{{item}}" mode="aspectFill" />
+              <view class="qm-image-del" catchtap="onDeleteQualityImage" data-index="{{index}}">×</view>
+            </view>
+            <view wx:if="{{qualityModal.images.length < 5}}" class="qm-image-upload" bindtap="onUploadQualityImage" hover-class="qm-image-upload-hover" hover-stay-time="100">
+              <text class="qm-upload-icon">+</text>
+              <text style="font-size: 12px; color: #999;">上传</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 提示：质检结果提交后请进行包装工序，包装完成后方可入库 -->
+      <view class="qm-section">
+        <view style="background:#f0f9eb;border-radius:8rpx;padding:16rpx 20rpx;color:#67c23a;font-size:24rpx;line-height:1.6;">
+          <text wx:if="{{qualityModal.result === 'qualified'}}">合格后请完成包装工序，再由仓库人员扫码入库</text>
+          <text wx:if="{{qualityModal.result === 'unqualified'}}">不合格品将记录在案，请安排返修处理</text>
+          <text wx:if="{{!qualityModal.result}}">请先选择质检结果</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="modal-footer">
+      <button class="modal-btn cancel" hover-class="modal-btn-cancel-hover" bindtap="closeQualityModal">取消</button>
+      <button class="modal-btn confirm" hover-class="modal-btn-confirm-hover" bindtap="submitQualityResult" disabled="{{!qualityModal.result}}">
+        {{qualityModal.result === 'qualified' ? '提交质检合格' : (qualityModal.result === 'unqualified' ? '提交不合格' : '请先选择结果')}}
+      </button>
+    </view>
+  </view>
+</view>
+

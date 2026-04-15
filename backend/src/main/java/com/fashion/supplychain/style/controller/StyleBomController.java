@@ -12,6 +12,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -31,29 +32,9 @@ public class StyleBomController {
     public Result<List<StyleBom>> listByStyleId(
             @RequestParam(required = false) String styleId,
             @RequestParam(required = false) String styleNo) {
-        Long resolvedStyleId = null;
-        if (StringUtils.hasText(styleId)) {
-            try {
-                resolvedStyleId = Long.parseLong(styleId.trim());
-            } catch (NumberFormatException e) {
-                styleNo = styleId.trim();
-            }
-        }
-        if (resolvedStyleId == null && StringUtils.hasText(styleNo)) {
-            Long currentTenantId = UserContext.tenantId();
-            StyleInfo style = styleInfoService.lambdaQuery()
-                    .eq(StyleInfo::getStyleNo, styleNo.trim())
-                    .eq(currentTenantId != null, StyleInfo::getTenantId, currentTenantId)
-                    .orderByDesc(StyleInfo::getId)
-                    .last("limit 1")
-                    .one();
-            if (style == null || style.getId() == null) {
-                return Result.success(java.util.Collections.emptyList());
-            }
-            resolvedStyleId = style.getId();
-        }
+        Long resolvedStyleId = StyleIdResolver.resolve(styleId, styleNo);
         if (resolvedStyleId == null) {
-            return Result.fail("缺少参数 styleId 或 styleNo");
+            return Result.success(Collections.emptyList());
         }
         return Result.success(styleBomOrchestrator.listByStyleId(resolvedStyleId));
     }
@@ -73,14 +54,6 @@ public class StyleBomController {
         return Result.success(styleBomOrchestrator.delete(id));
     }
 
-    /**
-     * 统一的物料数据库同步端点（替代2个分散端点）
-     *
-     * @param styleId 款式ID
-     * @param force 是否强制更新已完成状态（0/1/true/false/yes/no）
-     * @param async 是否异步执行（true=异步，false=同步，默认false）
-     * @return 同步结果或任务ID
-     */
     @PostMapping("/{styleId}/sync-material-database")
     public Result<Map<String, Object>> syncMaterialDatabase(
             @PathVariable Long styleId,
@@ -90,7 +63,6 @@ public class StyleBomController {
         boolean forceUpdateCompleted = force != null
                 && ("1".equals(force.trim()) || "true".equalsIgnoreCase(force.trim()) || "yes".equalsIgnoreCase(force.trim()));
 
-        // 智能路由：根据async参数选择同步或异步执行
         if (async) {
             return Result.success(styleBomOrchestrator.startSyncToMaterialDatabaseJob(styleId, forceUpdateCompleted));
         } else {
@@ -103,11 +75,6 @@ public class StyleBomController {
         return Result.success(styleBomOrchestrator.getSyncJob(jobId));
     }
 
-    /**
-     * 根据BOM配置手动生成物料采购记录
-     * 用于样衣开发阶段的物料采购
-     * @param force 是否强制重新生成（先软删除已有记录）
-     */
     @PostMapping("/generate-purchase")
     public Result<Integer> generatePurchase(@RequestBody Map<String, Object> params) {
         try {
@@ -139,58 +106,42 @@ public class StyleBomController {
         }
     }
 
-    // ==================== 库存检查相关API ====================
-
-    /**
-     * 检查款号BOM库存状态
-     */
     @PostMapping("/check-stock/{styleId}")
     public Result<List<StyleBom>> checkBomStock(
             @PathVariable Long styleId,
             @RequestParam(required = false, defaultValue = "1") Integer productionQty) {
         try {
-            // 1. 查询BOM列表
             List<StyleBom> bomList = styleBomOrchestrator.listByStyleId(styleId);
 
             if (bomList == null || bomList.isEmpty()) {
                 return Result.success(bomList);
             }
 
-            // 2. 检查库存并更新状态（通过Orchestrator编排跨模块逻辑）
             List<StyleBom> checkedBomList = styleBomOrchestrator.saveBomWithStockCheck(bomList, productionQty);
 
-            log.info("✅ BOM库存检查完成: styleId={}, productionQty={}, bomCount={}",
+            log.info("BOM库存检查完成: styleId={}, productionQty={}, bomCount={}",
                     styleId, productionQty, checkedBomList.size());
 
             return Result.success(checkedBomList);
         } catch (Exception e) {
-            log.error("❌ BOM库存检查失败: styleId={}, productionQty={}", styleId, productionQty, e);
+            log.error("BOM库存检查失败: styleId={}, productionQty={}", styleId, productionQty, e);
             return Result.fail("库存检查失败: " + e.getMessage());
         }
     }
 
-    /**
-     * 获取BOM库存汇总信息
-     */
     @GetMapping("/stock-summary/{styleId}")
     public Result<Map<String, Object>> getBomStockSummary(
             @PathVariable Long styleId,
             @RequestParam(required = false, defaultValue = "1") Integer productionQty) {
         try {
             Map<String, Object> summary = styleBomOrchestrator.getBomStockSummary(styleId, productionQty);
-
-            log.debug("✅ BOM库存汇总查询成功: styleId={}, productionQty={}", styleId, productionQty);
-
             return Result.success(summary);
         } catch (Exception e) {
-            log.error("❌ BOM库存汇总查询失败: styleId={}, productionQty={}", styleId, productionQty, e);
+            log.error("BOM库存汇总查询失败: styleId={}, productionQty={}", styleId, productionQty, e);
             return Result.fail("库存汇总查询失败: " + e.getMessage());
         }
     }
 
-    /**
-     * 批量检查多个款号的BOM库存
-     */
     @PostMapping("/batch-check-stock")
     public Result<Map<Long, List<StyleBom>>> batchCheckBomStock(
             @RequestBody List<Long> styleIds,
@@ -206,12 +157,12 @@ public class StyleBomController {
                 }
             }
 
-            log.info("✅ 批量BOM库存检查完成: styleCount={}, productionQty={}",
+            log.info("批量BOM库存检查完成: styleCount={}, productionQty={}",
                     styleIds.size(), productionQty);
 
             return Result.success(resultMap);
         } catch (Exception e) {
-            log.error("❌ 批量BOM库存检查失败: styleIds={}, productionQty={}", styleIds, productionQty, e);
+            log.error("批量BOM库存检查失败: styleIds={}, productionQty={}", styleIds, productionQty, e);
             return Result.fail("批量库存检查失败: " + e.getMessage());
         }
     }

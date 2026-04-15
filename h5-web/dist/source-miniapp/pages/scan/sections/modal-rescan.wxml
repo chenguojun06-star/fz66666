@@ -1,0 +1,42 @@
+  <!-- 退回重扫确认弹窗 -->
+  <view wx:if="{{rescanConfirm.visible}}" class="modal rescan-modal">
+    <view class="modal-box rescan-box">
+      <view class="modal-head rescan-head">
+        <text>退回重扫</text>
+        <view class="modal-close" hover-class="modal-close-hover" hover-stay-time="100" catchtap="onCancelRescan">✕</view>
+      </view>
+      <view class="modal-body">
+        <view class="scan-result-info">
+          <view class="result-item">
+            <text class="item-label">订单号</text>
+            <text class="item-value highlight">{{rescanConfirm.orderNo || '-'}}</text>
+          </view>
+          <view class="result-item-row">
+            <view class="result-item result-item-half">
+              <text class="item-label">菲号</text>
+              <text class="item-value">{{rescanConfirm.bundleNo || '-'}}</text>
+            </view>
+            <view class="result-item result-item-half">
+              <text class="item-label">数量</text>
+              <text class="item-value">{{rescanConfirm.quantity || 0}}件</text>
+            </view>
+          </view>
+          <view class="result-item">
+            <text class="item-label">扫码时间</text>
+            <text class="item-value">{{rescanConfirm.scanTime || '-'}}</text>
+          </view>
+        </view>
+        <view class="rescan-warning">
+          <view class="line-icon line-icon--sm icon-alert warning-icon"></view>
+          <text class="warning-text">仅允许退回1小时内的扫码记录，退回后可重新扫码</text>
+        </view>
+      </view>
+      <view class="modal-foot">
+        <view class="rescan-cancel" hover-class="rescan-cancel-hover" hover-stay-time="100" catchtap="onCancelRescan">取消</view>
+        <view class="rescan-confirm {{rescanConfirm.loading ? 'disabled' : ''}}" hover-class="rescan-confirm-hover" hover-stay-time="100" catchtap="onConfirmRescan">
+          {{rescanConfirm.loading ? '处理中...' : '确认退回'}}
+        </view>
+      </view>
+    </view>
+  </view>
+

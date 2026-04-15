@@ -1,0 +1,77 @@
+name: Deploy H5 to WeChat Cloud Run
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'h5-web/**'
+      - '.github/workflows/deploy-h5.yml'
+  workflow_dispatch:
+
+env:
+  H5_DIR: h5-web
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ${{ env.H5_DIR }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ${{ env.H5_DIR }}
+
+      - name: Build H5
+        run: npm run build
+        working-directory: ${{ env.H5_DIR }}
+        env:
+          VITE_API_BASE_URL: ${{ secrets.H5_API_BASE_URL || 'https://api.webyszl.cn' }}
+          VITE_WX_H5_APP_ID: ${{ secrets.WX_H5_APP_ID || '' }}
+
+      - name: Verify build output
+        run: |
+          if [ ! -d "${{ env.H5_DIR }}/dist" ]; then
+            echo "ERROR: Build output directory not found"
+            exit 1
+          fi
+          FILE_COUNT=$(find ${{ env.H5_DIR }}/dist -type f | wc -l)
+          echo "Build output contains $FILE_COUNT files"
+          if [ "$FILE_COUNT" -lt 5 ]; then
+            echo "WARNING: Build output seems incomplete (only $FILE_COUNT files)"
+          fi
+          ls -la ${{ env.H5_DIR }}/dist/
+
+      - name: Upload to WeChat Cloud Run
+        uses: TencentCloudBase/cloudbase-action@v2
+        with:
+          secretId: ${{ secrets.TCB_SECRET_ID }}
+          secretKey: ${{ secrets.TCB_SECRET_KEY }}
+          envId: ${{ secrets.TCB_ENV_ID }}
+          staticSrcPath: ${{ env.H5_DIR }}/dist
+          staticDestPath: /h5
+
+      - name: Deploy notification
+        if: always()
+        run: |
+          echo "========================================="
+          echo "H5 Deployment Status: ${{ job.status }}"
+          echo "Deploy Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+          echo "API Base URL: ${{ secrets.H5_API_BASE_URL || 'https://api.webyszl.cn' }}"
+          echo "========================================="
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ H5已成功部署到微信云托管"
+            echo "访问地址: https://${{ secrets.TCB_ENV_ID }}.tcloudbase.com/h5/"
+          else
+            echo "❌ H5部署失败，请检查日志"
+          fi

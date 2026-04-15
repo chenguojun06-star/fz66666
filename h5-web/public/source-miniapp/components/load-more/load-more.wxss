@@ -1,0 +1,21 @@
+.load-more {
+  text-align: center;
+  padding: 12px 10px;
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
+}
+.load-more-hover {
+  opacity: 0.7;
+}
+.no-more {
+  text-align: center;
+  padding: 10px 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-disabled);
+}
+.loading-more {
+  text-align: center;
+  padding: 10px 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-disabled);
+}

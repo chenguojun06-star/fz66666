@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "退回重扫",
+  "usingComponents": {
+    "image-preview": "/components/common/image-preview/index"
+  }
+}

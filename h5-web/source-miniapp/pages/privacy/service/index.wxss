@@ -1,0 +1,45 @@
+.page {
+  padding: 16px;
+  background: var(--color-bg-page);
+}
+
+.section {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.title {
+  font-size: var(--font-size-lg-xl);
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 6px;
+}
+
+.update-date {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-disabled);
+}
+
+.heading {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 8px;
+}
+
+.body {
+  font-size: var(--font-size-md);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-relaxed);
+}
+
+.footer {
+  text-align: center;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-disabled);
+  padding: 16px 0 24px;
+}

@@ -1,3 +1,41 @@
+# 2026-05-07
+
+## 📱 微信 H5 运行层首版落地（独立 h5-web 工作区）
+
+### 新增 — 独立 H5 运行工程壳
+- 新增 h5-web 真正可启动的运行层，不再只是源码镜像和导出脚本。
+- 补齐 `vite` + `react` + `zustand` + `axios` + `html5-qrcode` 依赖与 `dev/build/preview` 脚本。
+- 新增浏览器入口、路由壳、底部 Tab、鉴权状态存储和全局样式，独立于现有小程序目录运行。
+- 对系统的帮助：微信环境专用 H5 终于进入“可启动、可登录、可导航”的真实运行阶段，而不是玩具壳子。
+
+### 新增 — 登录页 / 首页 / 扫码页三大核心页面
+- 登录页接入 `/api/system/user/login`，写入本地鉴权态。
+- 首页接入 `/api/system/user/me`、`/api/production/notice/unread-count`、`/api/production/scan/personal-stats`，显示用户与统计卡片。
+- 扫码页接入浏览器摄像头扫码和手动输入，并串上订单码识别、菲号码识别、工序配置拉取、扫码历史判断和 `/api/production/scan/execute` 提交。
+- 对系统的帮助：H5 版本已经具备第一批真实业务能力，能直接连现有后端，不再停留在静态页面阶段。
+
+### 修正 — H5 登录入口回归供应链真实租户模型
+- H5 登录页不再裸用账号密码直登，已按现有小程序入口补齐“先选公司 tenant，再登录”的模型。
+- 接入 `/api/system/tenant/public-list`，支持公司搜索、选择、记忆上次租户，并在登录时显式提交 `tenantId`。
+- 登录失败提示改成租户维度可理解信息，不再直接把浏览器原始 403 报错甩给用户。
+- 对系统的帮助：H5 登录行为与现有小程序、多租户架构重新对齐，避免因入口模型错误导致的 403 和误判。
+
+### 增强 — 小程序源码同步同时镜像到 H5 静态资源目录
+- `h5-web/scripts/sync-miniprogram.mjs` 现在会同步生成 `h5-web/public/source-miniapp/`。
+- 对系统的帮助：后续 H5 页面继续复用小程序图标、样式资产和页面资源时不必重复拷贝，保持“以小程序源码为唯一功能源”的路线。
+
+**涉及文件（核心）**：
+- `h5-web/package.json`
+- `h5-web/scripts/sync-miniprogram.mjs`
+- `h5-web/index.html`
+- `h5-web/vite.config.js`
+- `h5-web/src/App.jsx`
+- `h5-web/src/pages/LoginPage.jsx`
+- `h5-web/src/pages/HomePage.jsx`
+- `h5-web/src/pages/ScanPage.jsx`
+
+**DB 影响**：无新增表/列
+
 # 2026-05-06
 
 ## 🎯 管理层 AI 智能决策支持（小云战略顾问模式）

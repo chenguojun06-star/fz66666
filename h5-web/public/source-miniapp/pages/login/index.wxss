@@ -1,0 +1,726 @@
+page {
+  --login-primary: var(--color-primary);
+  --login-primary-alt: var(--color-primary-dark);
+  --login-bg-deep: var(--color-bg-gray);
+  --login-bg-light: var(--color-bg-page);
+  --login-panel-bg: rgba(255, 255, 255, 0.92);
+  --login-panel-border: rgba(0, 0, 0, 0.06);
+  --login-text-main: var(--color-text-primary);
+  --login-text-body: var(--color-text-secondary);
+  --login-text-soft: var(--color-text-disabled);
+  --login-input-bg: rgba(255, 255, 255, 0.88);
+  --login-input-border: rgba(0, 0, 0, 0.08);
+  --login-wechat: #07c160;
+  background:
+    radial-gradient(circle at 12% 10%, rgba(var(--color-primary-rgb), 0.12), transparent 24%),
+    radial-gradient(circle at 84% 18%, rgba(var(--color-primary-rgb), 0.08), transparent 22%),
+    linear-gradient(135deg, var(--login-bg-deep) 0%, var(--login-bg-light) 42%, var(--color-bg-gray) 100%);
+}
+
+.login-page {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: calc(24px + env(safe-area-inset-top)) 14px calc(18px + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.login-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.tech-grid {
+  position: absolute;
+  inset: -10%;
+  background-image:
+    linear-gradient(rgba(var(--color-primary-rgb), 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--color-primary-rgb), 0.08) 1px, transparent 1px);
+  background-size: 27px 27px;
+  opacity: 0.56;
+  animation:
+    gridFloat 22s linear infinite,
+    gridBreath 6s ease-in-out infinite;
+}
+
+.tech-map {
+  position: absolute;
+  top: 45px;
+  left: 22px;
+  right: 22px;
+  height: 150px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 520'%3E%3Cg fill='none' stroke='%239ca3af' stroke-width='2' opacity='0.28'%3E%3Cpath d='M85 185c40-36 96-57 158-59 34-1 62 7 94 19 18 7 40 8 58 2l21 19 18-5 20 15 34 0 20 18 10 31 38 2 16 28 22 8 13 34-20 24-44-7-31 13-25-9-42 20-10 24-31 18-48-1-34-18-43 10-36-20-28-42-57-9-31-44 6-45z'/%3E%3Cpath d='M487 151l40-27 40 3 28-20 34 13 26-3 26 20 37 1 25 27 0 31-28 8-15 20-40 5-37 17-57 4-24 16-48-11-13-21 14-30-20-26 12-27z'/%3E%3Cpath d='M706 145l53-18 44 10 17 18 48 8 46 25 32 30 58 14 27 38-25 28-51-5-41 18-57-8-36 6-31-26-39-9-29-31-14-39-25-18-9-30z'/%3E%3Cpath d='M905 324l39 16 28 34-14 37-44 3-22-23-10-40z'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  opacity: 0.48;
+  animation: mapBreath 7s ease-in-out infinite;
+}
+
+.tech-glow {
+  position: absolute;
+  border-radius: 50%;
+}
+
+.tech-glow-left {
+  width: 210px;
+  height: 210px;
+  top: -40px;
+  left: -45px;
+  background: radial-gradient(circle, rgba(var(--color-primary-rgb), 0.18), transparent 70%);
+  animation: glowBreath 8s ease-in-out infinite;
+}
+
+.tech-glow-right {
+  width: 220px;
+  height: 220px;
+  right: -60px;
+  bottom: 110px;
+  background: radial-gradient(circle, rgba(var(--color-primary-rgb), 0.16), transparent 72%);
+  animation: glowBreath 9s ease-in-out infinite reverse;
+}
+
+.tech-arc {
+  position: absolute;
+  border-top: 1px solid rgba(var(--color-primary-rgb), 0.42);
+  border-radius: 500px 500px 0 0;
+  opacity: 0.72;
+}
+
+.tech-arc-1 {
+  width: 150px;
+  height: 70px;
+  left: 30px;
+  top: 125px;
+  transform: rotate(-8deg);
+  animation: arcPulse 5.6s ease-in-out infinite;
+}
+
+.tech-arc-2 {
+  width: 130px;
+  height: 80px;
+  right: 60px;
+  top: 95px;
+  transform: rotate(9deg);
+  animation: arcPulse 7s ease-in-out infinite 1.2s;
+}
+
+.tech-arc-3 {
+  width: 170px;
+  height: 85px;
+  right: 15px;
+  top: 140px;
+  transform: rotate(-5deg);
+  animation: arcPulse 6.4s ease-in-out infinite 2s;
+}
+
+.tech-node,
+.signal-node {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--color-primary);
+}
+
+.tech-node {
+  width: 6px;
+  height: 6px;
+  box-shadow: 0 0 0 5px rgba(var(--color-primary-rgb), 0.16);
+  animation:
+    nodePulse 4.8s ease-in-out infinite,
+    nodeFloat 8s ease-in-out infinite;
+}
+
+.tech-node-1 {
+  left: 48px;
+  top: 159px;
+}
+.tech-node-2 {
+  left: 95px;
+  top: 128px;
+  animation-delay: 0.8s;
+}
+.tech-node-3 {
+  right: 106px;
+  top: 118px;
+  animation-delay: 1.6s;
+}
+.tech-node-4 {
+  right: 52px;
+  top: 158px;
+  animation-delay: 0.4s;
+}
+.tech-node-5 {
+  right: 35px;
+  top: 210px;
+  animation-delay: 2s;
+}
+
+.login-shell {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 347px;
+  margin: 0 auto;
+}
+
+.login-panel {
+  position: relative;
+  padding: 20px 17px 14px;
+  border-radius: 16px;
+  background: var(--login-panel-bg);
+  border: 1px solid var(--login-panel-border);
+  box-shadow: 0 9px 17px rgba(var(--color-primary-rgb), 0.08);
+}
+
+.tech-cloud-glow {
+  position: absolute;
+  inset: 5px 4px;
+  border-radius: 500px;
+  background: radial-gradient(circle, rgba(var(--color-primary-rgb), 0.22), rgba(var(--color-primary-rgb), 0.04) 66%, transparent 78%);
+  animation: glowPulse 5.2s ease-in-out infinite;
+}
+
+.tech-cloud {
+  position: relative;
+  width: 60px;
+  height: 43px;
+  margin: 8px auto 0;
+  animation: floatSoft 4.8s ease-in-out infinite;
+}
+
+.tech-cloud-part,
+.tech-cloud-base {
+  position: absolute;
+  background: linear-gradient(180deg, var(--color-bg-light) 0%, var(--color-info-bg) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 4px 9px rgba(var(--color-primary-rgb), 0.14);
+}
+
+.tech-cloud-part {
+  border-radius: 50%;
+}
+
+.tech-cloud-part-left {
+  width: 20px;
+  height: 20px;
+  left: 6px;
+  top: 14px;
+}
+
+.tech-cloud-part-center {
+  width: 26px;
+  height: 26px;
+  left: 17px;
+  top: 6px;
+}
+
+.tech-cloud-part-right {
+  width: 18px;
+  height: 18px;
+  right: 6px;
+  top: 15px;
+}
+
+.tech-cloud-base {
+  left: 7px;
+  right: 7px;
+  bottom: 5px;
+  height: 16px;
+  border-radius: 500px;
+}
+
+.tech-cloud-eye {
+  position: absolute;
+  top: 20px;
+  width: 7px;
+  height: 9px;
+  border-radius: 500px;
+  background: var(--color-primary);
+  z-index: 2;
+  overflow: hidden;
+  animation: cloudBlink 6.6s ease-in-out infinite;
+}
+
+.tech-cloud-eye-left {
+  left: 16px;
+}
+
+.tech-cloud-eye-right {
+  right: 16px;
+}
+
+.tech-cloud-eye-highlight {
+  width: 3px;
+  height: 3px;
+  margin: 1px 0 0 1px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.96);
+  animation: eyeHighlightTwinkle 4.2s ease-in-out infinite;
+}
+
+.tech-cloud-smile {
+  position: absolute;
+  left: 50%;
+  bottom: 7px;
+  width: 16px;
+  height: 8px;
+  margin-left: -8px;
+  border-bottom: 2px solid var(--color-primary);
+  border-radius: 0 0 16px 16px;
+  z-index: 2;
+  animation: cloudSmileTalk 3.8s ease-in-out infinite;
+}
+
+.tech-cloud-spark {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  background: var(--color-warning);
+  transform: rotate(45deg);
+  animation: sparkleBlink 2s ease-in-out infinite;
+}
+
+.tech-cloud-spark-left {
+  left: 3px;
+  top: 6px;
+}
+
+.tech-cloud-spark-right {
+  right: 2px;
+  top: 5px;
+  animation-delay: 0.6s;
+}
+
+.small-ai-badge {
+  position: absolute;
+  top: 9px;
+  right: 5px;
+  min-width: 29px;
+  height: 21px;
+  line-height: 21px;
+  text-align: center;
+  border-radius: 500px;
+  background: var(--color-primary);
+  color: var(--color-text-white);
+  font-size: var(--font-size-2xs);
+  font-weight: 800;
+  letter-spacing: 1px;
+  box-shadow: 0 5px 13px rgba(var(--color-primary-rgb), 0.2);
+}
+
+.login-card-accent {
+  position: absolute;
+  height: 1px;
+  border-radius: 500px;
+  background: linear-gradient(90deg, transparent, rgba(var(--color-primary-rgb), 0.82), transparent);
+}
+
+.login-card-accent-top {
+  top: 9px;
+  left: 16px;
+  right: 16px;
+}
+
+.login-card-accent-bottom {
+  bottom: 9px;
+  left: 30px;
+  right: 30px;
+  opacity: 0.6;
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.login-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.login-title {
+  color: var(--login-text-main);
+  font-weight: 700;
+  font-size: var(--font-size-2xl);
+  letter-spacing: 1px;
+}
+
+.login-title-cloud {
+  position: relative;
+  width: 33px;
+  height: 25px;
+  flex-shrink: 0;
+}
+
+.login-title-cloud-scale {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 60px;
+  height: 43px;
+  transform: scale(0.5);
+  transform-origin: left top;
+}
+
+.login-title-cloud-scale .tech-cloud {
+  margin: 0;
+}
+
+.login-subtitle {
+  margin-top: 5px;
+  color: var(--color-text-disabled);
+  font-size: var(--font-size-xxs);
+  line-height: var(--line-height-relaxed);
+}
+
+.wechat-checking {
+  padding: 32px 0 24px;
+  text-align: center;
+}
+
+.wechat-checking-badge {
+  width: 54px;
+  height: 54px;
+  line-height: 54px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  background: var(--login-wechat);
+  color: var(--color-text-white);
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  box-shadow: 0 8px 15px rgba(7, 193, 96, 0.22);
+}
+
+.wechat-checking-title {
+  color: var(--login-text-main);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+}
+
+.invite-banner {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  border: 1px solid rgba(var(--color-primary-rgb), 0.18);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.9));
+}
+
+.invite-banner-icon {
+  font-size: var(--font-size-base);
+  color: var(--login-primary);
+  margin-right: 7px;
+}
+
+.invite-banner-text {
+  flex: 1;
+  color: var(--login-primary);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-relaxed);
+}
+
+.login-field {
+  position: relative;
+  margin-bottom: 11px;
+}
+
+.login-field-dev {
+  margin-top: 7px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(var(--color-primary-rgb), 0.16);
+}
+
+.login-label {
+  margin-bottom: 6px;
+  color: var(--login-text-body);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.login-label-required {
+  color: var(--color-danger);
+  margin-right: 2px;
+}
+
+.login-input-wrap {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: var(--login-input-bg);
+  border: 1px solid var(--login-input-border);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    0 5px 10px rgba(0, 0, 0, 0.03);
+}
+
+.login-input-icon,
+.login-input-clear,
+.login-input-eye {
+  flex-shrink: 0;
+}
+
+.login-input-icon {
+  width: 17px;
+  color: var(--color-text-disabled);
+  font-size: var(--font-size-md);
+  text-align: center;
+}
+
+.login-input {
+  flex: 1;
+  height: 44px;
+  margin-left: 8px;
+  color: var(--login-text-main);
+  font-size: var(--font-size-sm);
+}
+
+.login-input-clear,
+.login-input-eye {
+  color: var(--color-text-disabled);
+  font-size: var(--font-size-xs);
+  padding: 5px;
+}
+
+.tenant-selected-tag {
+  margin-top: 5px;
+  color: var(--login-text-body);
+  font-size: var(--font-size-2xs);
+}
+
+.tenant-results {
+  margin-top: 6px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+  max-height: 160px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tenant-result-item {
+  padding: 11px 13px;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.tenant-result-item:last-child {
+  border-bottom: none;
+}
+
+.tenant-result-item-hover {
+  background: rgba(var(--color-primary-rgb), 0.08);
+}
+
+.tenant-result-empty {
+  padding: 12px 14px;
+  color: var(--color-text-disabled);
+  font-size: var(--font-size-xs);
+  text-align: center;
+}
+
+.login-btn-wrap {
+  margin-top: 11px;
+}
+
+.login-btn {
+  width: 100%;
+  height: 44px;
+  line-height: 44px;
+  text-align: center;
+  border-radius: var(--radius-xs);
+  font-weight: 600;
+}
+
+.login-btn {
+  color: var(--color-text-white);
+  font-size: var(--font-size-base);
+  letter-spacing: 4px;
+  background: linear-gradient(90deg, var(--login-primary), var(--login-primary-alt));
+  box-shadow: 0 7px 15px rgba(var(--color-primary-rgb), 0.22);
+}
+
+.login-btn-hover {
+  opacity: 0.88;
+  transform: scale(0.98);
+}
+
+.login-btn-disabled {
+  opacity: 0.66;
+}
+
+.login-register-section {
+  margin-top: 14px;
+  text-align: center;
+}
+
+.login-register-link {
+  display: inline-block;
+  padding: 5px 10px;
+  color: var(--login-text-body);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+}
+
+.login-register-link-hover {
+  color: var(--login-text-body);
+}
+
+@keyframes floatSoft {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes gridFloat {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(0, 13px, 0);
+  }
+}
+
+@keyframes gridBreath {
+  0%,
+  100% {
+    opacity: 0.42;
+  }
+  50% {
+    opacity: 0.74;
+  }
+}
+
+@keyframes nodePulse {
+  0%,
+  100% {
+    transform: scale(0.96);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+@keyframes nodeFloat {
+  0%,
+  100% {
+    margin-top: 0;
+  }
+  50% {
+    margin-top: -3px;
+  }
+}
+
+@keyframes arcPulse {
+  0%,
+  100% {
+    opacity: 0.28;
+  }
+  50% {
+    opacity: 0.72;
+  }
+}
+
+@keyframes mapBreath {
+  0%,
+  100% {
+    opacity: 0.38;
+    transform: scale(0.995);
+  }
+  50% {
+    opacity: 0.62;
+    transform: scale(1.01);
+  }
+}
+
+@keyframes glowBreath {
+  0%,
+  100% {
+    transform: scale(0.94);
+    opacity: 0.64;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+@keyframes glowPulse {
+  0%,
+  100% {
+    transform: scale(0.96);
+    opacity: 0.62;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+}
+
+@keyframes cloudBlink {
+  0%,
+  44%,
+  48%,
+  92%,
+  96%,
+  100% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+  46%,
+  94% {
+    transform: scaleY(0.18);
+    opacity: 0.85;
+  }
+}
+
+@keyframes cloudSmileTalk {
+  0%,
+  100% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(1.12);
+  }
+}
+
+@keyframes sparkleBlink {
+  0%,
+  100% {
+    opacity: 0.32;
+    transform: rotate(45deg) scale(0.86);
+  }
+  50% {
+    opacity: 1;
+    transform: rotate(45deg) scale(1.08);
+  }
+}
+
+@keyframes eyeHighlightTwinkle {
+  0%,
+  100% {
+    opacity: 0.74;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}

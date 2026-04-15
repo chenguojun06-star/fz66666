@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "扫码结果确认",
+  "usingComponents": {
+    "image-preview": "/components/common/image-preview/index"
+  }
+}

@@ -1,0 +1,72 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import api from '@/api';
+import { useGlobalStore } from '@/stores/globalStore';
+import { toast } from '@/utils/uiHelper';
+import { getAuthedImageUrl } from '@/utils/fileUrl';
+import { eventBus } from '@/utils/eventBus';
+
+export default function ScanRescanPage() {
+  const navigate = useNavigate();
+  const rescanData = useGlobalStore(s => s.rescanData);
+  const [detail, setDetail] = useState({});
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!rescanData) { toast.error('数据异常'); navigate(-1); return; }
+    setDetail({
+      recordId: rescanData.recordId || '', orderNo: rescanData.orderNo || '-',
+      bundleNo: rescanData.bundleNo || '-', quantity: rescanData.quantity || 0,
+      scanTime: rescanData.scanTime || '-', coverImage: getAuthedImageUrl(rescanData.coverImage || ''),
+      styleNo: rescanData.styleNo || '', styleName: rescanData.styleName || '',
+      processName: rescanData.processName || '', progressStage: rescanData.progressStage || '',
+    });
+  }, [rescanData]);
+
+  const confirmRescan = async () => {
+    if (loading || !detail.recordId) return;
+    setLoading(true);
+    try {
+      await api.production.rescan({ recordId: detail.recordId });
+      toast.success('退回成功，可重新扫码');
+      eventBus.emit('DATA_REFRESH');
+      navigate(-1);
+    } catch (e) {
+      toast.error(e.message || '退回失败，请稍后重试');
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="scan-rescan-stack">
+      {detail.coverImage && (
+        <div style={{ textAlign: 'center' }}>
+          <img src={detail.coverImage} alt="" style={{ maxWidth: '100%', maxHeight: 160, borderRadius: 8, objectFit: 'cover' }} />
+        </div>
+      )}
+
+      <div className="hero-card compact">
+        <div style={{ fontWeight: 600, fontSize: 15 }}>退回重扫</div>
+        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 8 }}>
+          订单: {detail.orderNo}
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+          菲号: {detail.bundleNo} · 数量: {detail.quantity}
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+          工序: {detail.processName} · 阶段: {detail.progressStage}
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+          扫码时间: {detail.scanTime}
+        </div>
+      </div>
+
+      <div className="hero-card compact" style={{ background: '#fef3c7', fontSize: 13 }}>
+        ⚠️ 退回后该记录将被标记为已退回，操作员可重新扫码提交。
+      </div>
+
+      <button className="primary-button" onClick={confirmRescan} disabled={loading} style={{ marginTop: 16, background: '#ef4444' }}>
+        {loading ? '处理中...' : '确认退回'}
+      </button>
+    </div>
+  );
+}

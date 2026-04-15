@@ -1,0 +1,120 @@
+
+.container {
+  min-height: 100vh;
+  background: radial-gradient(ellipse at 50% 0%, rgba(var(--color-primary-rgb,37,99,235),0.06) 0%, transparent 70%);
+  padding: 24rpx 24rpx calc(env(safe-area-inset-bottom) + 160rpx);
+}
+
+/* 信息卡片 */
+.info-card {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-xl, 24rpx);
+  padding: 28rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04);
+  margin-bottom: 24rpx;
+}
+.card-header {
+  display: flex;
+  align-items: flex-start;
+}
+.cover-wrap {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 16rpx;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--color-bg-gray);
+}
+.cover-img {
+  width: 100%;
+  height: 100%;
+}
+.cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-gray);
+}
+.placeholder-icon {
+  font-size: var(--font-size-3xl);
+}
+.header-info {
+  flex: 1;
+  margin-left: 24rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+.style-no {
+  font-size: var(--font-size-md-lg);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+.style-name {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+/* 字段列表 */
+.field-list {
+  border-bottom: 1rpx solid var(--color-border-light));
+  padding-top: 16rpx;
+  margin-top: 16rpx;
+}
+.field-row {
+  display: flex;
+  align-items: baseline;
+  padding: 10rpx 0;
+}
+.field-label {
+  width: 140rpx;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+.field-value {
+  flex: 1;
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+.field-value.highlight {
+  font-weight: 700;
+  color: rgba(var(--color-primary-rgb,37,99,235),1);
+}
+
+/* 警告卡片 */
+.warning-card {
+  display: flex;
+  align-items: flex-start;
+  background: var(--color-warning-bg);
+  border: 1rpx solid var(--color-warning-border);
+  border-radius: var(--radius-xl, 24rpx);
+  padding: 28rpx;
+  margin-bottom: 24rpx;
+}
+.warning-icon {
+  font-size: var(--font-size-xl);
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+.warning-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+.warning-title {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-warning);
+}
+.warning-desc {
+  font-size: var(--font-size-xs);
+  color: var(--color-warning);
+  line-height: var(--line-height-relaxed);
+}
+
+

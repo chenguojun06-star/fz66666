@@ -1,0 +1,31 @@
+var money = {
+  toFixed2: function(v) {
+    if (v === undefined || v === null) return '0.00';
+    var n = parseFloat(v);
+    if (n !== n) return '0.00';
+    return n.toFixed(2);
+  },
+  addCommas: function(s) {
+    var parts = s.split('.');
+    var intPart = parts[0];
+    var decPart = parts.length > 1 ? '.' + parts[1] : '';
+    var result = '';
+    var count = 0;
+    for (var i = intPart.length - 1; i >= 0; i--) {
+      if (count > 0 && count % 3 === 0) {
+        result = ',' + result;
+      }
+      result = intPart[i] + result;
+      count++;
+    }
+    return result + decPart;
+  },
+  format: function(v) {
+    return money.addCommas(money.toFixed2(v));
+  },
+  formatWithSymbol: function(v) {
+    return '\u00A5' + money.addCommas(money.toFixed2(v));
+  }
+};
+
+module.exports = money;

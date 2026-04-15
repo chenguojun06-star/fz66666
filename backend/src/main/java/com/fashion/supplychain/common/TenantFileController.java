@@ -107,22 +107,15 @@ public class TenantFileController {
                         else if (lowerName.endsWith(".pdf")) cosContentType = "application/pdf";
                         else cosContentType = "application/octet-stream";
                     }
+                    InputStream cosStream = cosObject.getObjectContent();
                     final String contentType = cosContentType;
                     long contentLength = cosObject.getObjectMetadata().getContentLength();
-                    InputStream cosStream = cosObject.getObjectContent();
                     InputStreamResource resource = new InputStreamResource(cosStream);
-                    try {
-                        return ResponseEntity.ok()
-                                .header(HttpHeaders.CONTENT_TYPE, contentType)
-                                .header(HttpHeaders.CACHE_CONTROL, "max-age=3600")
-                                .contentLength(contentLength)
-                                .body(resource);
-                    } catch (Exception e) {
-                        try { cosStream.close(); } catch (Exception closeEx) {
-                            log.warn("[COS] 关闭COS流失败: {}", closeEx.getMessage());
-                        }
-                        throw e;
-                    }
+                    return ResponseEntity.ok()
+                            .header(HttpHeaders.CONTENT_TYPE, contentType)
+                            .header(HttpHeaders.CACHE_CONTROL, "max-age=3600")
+                            .contentLength(contentLength)
+                            .body(resource);
                 } catch (Exception e) {
                     // NoSuchKey / 404：文件在 COS 中确实不存在（如历史本地上传数据）
                     // 直接返回占位图，跳过预签名URL二次请求，节省一次无效网络往返

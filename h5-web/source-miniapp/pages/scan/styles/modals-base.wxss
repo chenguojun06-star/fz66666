@@ -1,0 +1,162 @@
+/* ===== 弹窗 ===== */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--color-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-overlay);
+  padding: 10px;
+}
+.modal-box {
+  width: 100%;
+  max-width: 300px;
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transform: scale(1);
+  animation: modalFadeIn 0.2s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.modal-box.wide {
+  max-width: 90vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-head {
+  padding: 16px 20px 12px;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  flex-shrink: 0;
+}
+
+.modal-body {
+  padding: 8px 20px 16px;
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  min-height: 0;
+}
+.cf-list {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  margin-bottom: 8px;
+  border: 1px solid rgba(229, 231, 235, 0.9);
+}
+.cf-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* AI 扫码工艺提醒 */
+.ai-tip-card {
+  background: var(--color-bg-light);
+  border: 1px solid var(--color-info-bg);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-bottom: 12px;
+  position: relative;
+}
+
+.ai-tip-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.ai-tip-icon {
+  font-size: var(--font-size-md-lg);
+  margin-right: 4px;
+}
+
+.ai-tip-title {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--color-primary);
+}
+
+.ai-tip-content {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  line-height: var(--line-height-medium);
+  display: block;
+}
+
+.ai-tip-keywords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 5px;
+}
+
+.ai-tip-kw {
+  background: var(--color-info-bg);
+  color: var(--color-primary);
+  font-size: var(--font-size-xxs);
+  padding: 1px 5px;
+  border-radius: 2px;
+}
+
+.ai-tip-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-gray);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.ai-tip-loading-text {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-disabled);
+  margin-left: 4px;
+}
+
+.rotating {
+  display: inline-block;
+  animation: rotate 2s linear infinite;
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 质检接收提示 */
+.qc-receive-tip {
+  margin-top: 6px;
+  padding: 6px 10px;
+  background: var(--color-bg-light);
+  border-left: 3px solid var(--color-primary);
+  border-radius: var(--radius-xs);
+}
+
+.qc-tip-text {
+  font-size: var(--font-size-sm);
+  color: var(--color-primary);
+  line-height: var(--line-height-medium);
+}
+
+/* 次品详情 - 弹窗内 */

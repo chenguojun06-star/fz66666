@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "样衣扫码",
+  "usingComponents": {
+    "privacy-dialog": "/components/privacy-dialog/index"
+  }
+}

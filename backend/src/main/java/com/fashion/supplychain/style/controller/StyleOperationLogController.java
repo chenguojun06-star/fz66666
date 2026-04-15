@@ -18,9 +18,15 @@ public class StyleOperationLogController {
     private StyleOperationLogService styleOperationLogService;
 
     @GetMapping("/list")
-    public Result<List<StyleOperationLog>> list(@RequestParam Long styleId,
+    public Result<List<StyleOperationLog>> list(
+            @RequestParam(required = false) String styleId,
+            @RequestParam(required = false) String styleNo,
             @RequestParam(required = false) String bizType,
             @RequestParam(required = false) String action) {
-        return Result.success(styleOperationLogService.listByStyleId(styleId, bizType, action));
+        Long resolvedStyleId = StyleIdResolver.resolve(styleId, styleNo);
+        if (resolvedStyleId == null) {
+            return Result.success(java.util.Collections.emptyList());
+        }
+        return Result.success(styleOperationLogService.listByStyleId(resolvedStyleId, bizType, action));
     }
 }
