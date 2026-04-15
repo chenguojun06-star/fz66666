@@ -31,19 +31,18 @@ export default function DateCard() {
   if (!dateInfo) return null;
 
   return (
-    <div style={{
-      background: 'linear-gradient(135deg, rgba(var(--color-primary-rgb),0.08) 0%, rgba(var(--color-primary-rgb),0.02) 100%)',
-      borderRadius: 16, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16,
-    }}>
-      <div style={{ fontSize: 40, lineHeight: 1 }}>{dateInfo.seasonIcon}</div>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-          {dateInfo.month}月{dateInfo.day}日 周{dateInfo.weekDay}
+    <div className="weather-card">
+      <div className="weather-top">
+        <div className="weather-left">
+          <span className="weather-emoji">{dateInfo.seasonIcon}</span>
+          <div className="weather-temp-wrap">
+            <span className="weather-temp">{dateInfo.month}月{dateInfo.day}日</span>
+            <span className="weather-desc">周{dateInfo.weekDay}</span>
+          </div>
         </div>
-        <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginTop: 4 }}>
-          {dateInfo.seasonName}季 · {dateInfo.flower}
-        </div>
+        <span className="weather-season">{dateInfo.seasonName}季</span>
       </div>
+      <div className="weather-tip">{dateInfo.flower}</div>
     </div>
   );
 }

@@ -5,68 +5,52 @@ import api from '@/api';
 import { useGlobalStore } from '@/stores/globalStore';
 import { toast } from '@/utils/uiHelper';
 import CameraScanner from '@/components/CameraScanner';
-import useVoiceInput from '@/hooks/useVoiceInput';
-
-const SCAN_TYPES = [
-  { key: 'production', label: '生产', icon: '🏭' },
-  { key: 'cutting', label: '裁剪', icon: '✂️' },
-  { key: 'quality', label: '质检', icon: '🔍' },
-  { key: 'warehouse', label: '入库', icon: '📦' },
-  { key: 'procurement', label: '采购', icon: '🛒' },
-  { key: 'packaging', label: '包装', icon: '🎁' },
-];
+import Icon from '@/components/Icon';
 
 export default function ScanPage() {
   const navigate = useNavigate();
   const [scanType, setScanType] = useState('production');
-  const [manualCode, setManualCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
+  const [stats, setStats] = useState({ scanCount: 0, orderCount: 0, totalQuantity: 0, totalAmount: 0 });
+  const [lastResult, setLastResult] = useState(null);
   const setScanResultData = useGlobalStore((s) => s.setScanResultData);
 
-  const voice = useVoiceInput({
-    lang: 'zh-CN',
-    continuous: false,
-    onResult: (transcript) => {
-      setManualCode(transcript.replace(/\s+/g, ''));
-    },
-  });
-
   useEffect(() => {
-    if (voice.error === 'NOT_SUPPORTED') {
-      toast.info('当前浏览器不支持语音识别');
-    } else if (voice.error === 'PERMISSION_DENIED') {
-      toast.error('请允许麦克风权限');
-    } else if (voice.error && voice.error !== 'NO_SPEECH' && voice.error !== 'aborted') {
-      toast.error('语音识别出错：' + voice.error);
-    }
-  }, [voice.error]);
+    api.production.personalScanStats().then((res) => {
+      const p = res?.data || res;
+      setStats({
+        scanCount: Number(p?.scanCount || 0),
+        orderCount: Number(p?.orderCount || 0),
+        totalQuantity: Number(p?.totalQuantity || 0),
+        totalAmount: Number(p?.totalAmount || 0),
+      });
+    }).catch(() => {});
+  }, []);
 
   const handleScanResult = useCallback(async (code) => {
     if (!code || loading) return;
     setLoading(true);
     try {
-      const res = await api.production.executeScan({
-        scanCode: code,
-        scanType,
-      });
+      const res = await api.production.executeScan({ scanCode: code, scanType });
       const data = res?.data || res;
       if (data) {
+        setLastResult({ ...data, scanCode: code, scanType, success: true });
         setScanResultData({ ...data, scanCode: code, scanType });
-        navigate('/scan/scan-result');
+        setStats((prev) => ({
+          ...prev,
+          scanCount: prev.scanCount + 1,
+          totalQuantity: prev.totalQuantity + (Number(data.quantity) || 1),
+        }));
+        wx.vibrateShort();
       }
     } catch (err) {
+      setLastResult({ scanCode: code, scanType, success: false, message: err.message || '扫码失败' });
       toast.error(err.message || '扫码失败');
     } finally {
       setLoading(false);
     }
-  }, [scanType, loading, navigate, setScanResultData]);
-
-  const handleManualSubmit = () => {
-    const code = manualCode.trim();
-    if (!code) { toast.error('请输入菲号'); return; }
-    handleScanResult(code);
-  };
+  }, [scanType, loading, setScanResultData]);
 
   const handleCameraScan = () => {
     if (wx.isWechat) {
@@ -79,92 +63,72 @@ export default function ScanPage() {
   };
 
   return (
-    <div className="scan-stack">
-      <div className="scan-type-bar" style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '4px 0' }}>
-        {SCAN_TYPES.map((t) => (
-          <button
-            key={t.key}
-            className={`scan-type-chip${scanType === t.key ? ' active' : ''}`}
-            onClick={() => setScanType(t.key)}
-            style={{
-              flexShrink: 0, padding: '8px 14px', borderRadius: 20, border: '1px solid var(--color-border)',
-              background: scanType === t.key ? 'var(--color-primary)' : 'var(--color-bg-light)',
-              color: scanType === t.key ? '#fff' : 'var(--color-text-primary)',
-              fontWeight: scanType === t.key ? 700 : 400, cursor: 'pointer', fontSize: 13,
-            }}
-          >
-            {t.icon} {t.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="hero-card compact">
-        <h3 className="hero-title small">扫码操作</h3>
-        <p className="hero-subtitle">选择扫码类型后，点击扫码或手动输入菲号</p>
-      </div>
-
-      <div style={{ display: 'flex', gap: 12 }}>
-        <button className="primary-button" style={{ flex: 1 }} onClick={handleCameraScan}>
-          📷 扫码
-        </button>
-        <button className="secondary-button" style={{ flex: 1 }} onClick={() => navigate('/scan/history')}>
-          📋 历史
-        </button>
-      </div>
-
-      {cameraActive && (
-        <CameraScanner
-          active={cameraActive}
-          onScan={handleScanResult}
-          onError={(msg) => { toast.error(msg); setCameraActive(false); }}
-        />
-      )}
-
-      <div className="manual-panel" style={{ padding: 18 }}>
-        <div className="field-block">
-          <label>手动输入菲号</label>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <input
-              className="text-input"
-              placeholder={voice.listening ? '正在聆听菲号...' : '输入菲号/二维码内容'}
-              value={manualCode}
-              onChange={(e) => setManualCode(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleManualSubmit()}
-              style={{ flex: 1 }}
-            />
-            <button
-              onClick={voice.toggle}
-              style={{
-                width: 40, height: 40, borderRadius: 20, flexShrink: 0,
-                border: voice.listening ? '2px solid #ef4444' : '1px solid var(--color-border)',
-                background: voice.listening ? '#fef2f2' : 'var(--color-bg-light)',
-                fontSize: 18, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                animation: voice.listening ? 'pulse 1.5s ease-in-out infinite' : 'none',
-              }}
-              title="语音输入菲号"
-            >
-              🎤
-            </button>
-            <button className="primary-button" onClick={handleManualSubmit} disabled={loading}>
-              提交
-            </button>
-          </div>
-          {voice.listening && (
-            <div style={{ fontSize: 12, color: '#ef4444', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ animation: 'pulse 1s ease-in-out infinite', display: 'inline-block' }}>🔴</span>
-              正在聆听，请说出菲号...
-            </div>
-          )}
+    <div className="scan-container">
+      <div className="today-stats-card">
+        <div className="today-stat-item">
+          <div className="today-stat-value">{stats.scanCount}</div>
+          <div className="today-stat-label">扫码</div>
+        </div>
+        <div className="today-stat-item">
+          <div className="today-stat-value">{stats.orderCount}</div>
+          <div className="today-stat-label">订单</div>
+        </div>
+        <div className="today-stat-item">
+          <div className="today-stat-value">{stats.totalQuantity}</div>
+          <div className="today-stat-label">数量</div>
+        </div>
+        <div className="today-stat-item">
+          <div className="today-stat-value">¥{(stats.totalAmount || 0).toFixed(0)}</div>
+          <div className="today-stat-label">收入</div>
         </div>
       </div>
 
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.1); opacity: 0.7; }
-        }
-      `}</style>
+      <div className="quick-entry-row">
+        <div className="quick-entry-card" onClick={() => navigate('/scan/history')}>
+          <Icon name="clipboard" size={18} />
+          <span className="quick-entry-text">历史记录</span>
+        </div>
+        <div className="quick-entry-card" onClick={() => navigate('/scan/history?mode=monthly')}>
+          <Icon name="calendar" size={18} />
+          <span className="quick-entry-text">当月记录</span>
+        </div>
+      </div>
+
+      {lastResult && (
+        <div className={`scan-result-card${lastResult.success ? '' : ' scan-fail'}`}>
+          <div className="scan-result-header">
+            <span className={`scan-result-tag ${lastResult.success ? 'success' : 'fail'}`}>
+              {lastResult.success ? '扫码成功' : '扫码失败'}
+            </span>
+            {lastResult.success && lastResult.orderNo && (
+              <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>{lastResult.orderNo}</span>
+            )}
+          </div>
+          {lastResult.success ? (
+            <div className="scan-result-info">
+              <span className="scan-result-info-item">款号: <span>{lastResult.styleNo || '-'}</span></span>
+              <span className="scan-result-info-item">工序: <span>{lastResult.processName || '-'}</span></span>
+              <span className="scan-result-info-item">数量: <span>{lastResult.quantity || 1}</span></span>
+              {lastResult.factoryName && <span className="scan-result-info-item">工厂: <span>{lastResult.factoryName}</span></span>}
+            </div>
+          ) : (
+            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>{lastResult.message}</div>
+          )}
+        </div>
+      )}
+
+      <div className="scan-area-card">
+        <button className="scan-big-btn" onClick={handleCameraScan} disabled={loading}>
+          {loading ? '...' : <Icon name="scan" size={36} color="#fff" />}
+        </button>
+        <div className="scan-btn-label">{loading ? '识别中...' : '扫码识别'}</div>
+        <div className="scan-btn-hint">系统自动识别工序</div>
+      </div>
+
+      {cameraActive && (
+        <CameraScanner active={cameraActive} onScan={handleScanResult}
+          onError={(msg) => { toast.error(msg); setCameraActive(false); }} />
+      )}
     </div>
   );
 }

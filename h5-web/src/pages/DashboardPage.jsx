@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '@/api';
 import { isAdminOrSupervisor } from '@/utils/permission';
 import { isTenantOwner } from '@/utils/storage';
 import { toast } from '@/utils/uiHelper';
+import Icon from '@/components/Icon';
 
 const STATUS_FILTERS = [
   { key: 'all', label: '全部' },
@@ -39,26 +40,26 @@ export default function DashboardPage() {
   const refreshCards = async () => {
     setLoading(true);
     try {
-      const [dashRes, topStatsRes, prodRes, compRes] = await Promise.allSettled([
+      const [dashRes, topStatsRes, prodRes] = await Promise.allSettled([
         api.dashboard.get(),
         api.dashboard.getTopStats(),
         api.production.orderList({ deleteFlag: 0, status: 'production', page: 1, pageSize: 50 }),
-        api.production.orderList({ deleteFlag: 0, status: 'completed', page: 1, pageSize: 1 }),
       ]);
-      const dash = dashRes.status === 'fulfilled' ? dashRes.value : {};
-      const topStats = topStatsRes.status === 'fulfilled' ? topStatsRes.value : {};
-      const prodData = prodRes.status === 'fulfilled' ? prodRes.value : {};
-      const compData = compRes.status === 'fulfilled' ? compRes.value : {};
+      const dash = dashRes.status === 'fulfilled' ? (dashRes.value?.data || dashRes.value || {}) : {};
+      const topStats = topStatsRes.status === 'fulfilled' ? (topStatsRes.value?.data || topStatsRes.value || {}) : {};
+      const prodData = prodRes.status === 'fulfilled' ? (prodRes.value?.data || prodRes.value || {}) : {};
+      const prodRecords = prodData?.records || prodData?.list || [];
       let totalPieces = 0;
-      const prodRecords = prodData?.records || [];
-      prodRecords.forEach(o => { totalPieces += Number(o.orderQuantity) || 0; });
+      if (Array.isArray(prodRecords)) {
+        prodRecords.forEach(o => { totalPieces += Number(o.orderQuantity || o.totalQuantity || 0); });
+      }
       setCards({
-        sample: { developing: Number(dash.sampleDevelopmentCount) || 0, completed: compData?.total || 0 },
-        production: { total: prodData?.total || 0, overdue: Number(dash.overdueOrderCount) || 0, pieces: totalPieces },
-        inbound: { today: topStats?.warehousingInbound?.day || 0, week: topStats?.warehousingInbound?.week || 0 },
-        outbound: { today: topStats?.warehousingOutbound?.day || 0, week: topStats?.warehousingOutbound?.week || 0 },
+        sample: { developing: Number(dash.sampleDevelopmentCount || dash.sampleCount || 0), completed: Number(dash.completedOrderCount || 0) },
+        production: { total: Number(prodData?.total || prodRecords.length || 0), overdue: Number(dash.overdueOrderCount || dash.overdueCount || 0), pieces: totalPieces },
+        inbound: { today: Number(topStats.warehousingInbound?.day || topStats.inboundToday || 0), week: Number(topStats.warehousingInbound?.week || topStats.inboundWeek || 0) },
+        outbound: { today: Number(topStats.warehousingOutbound?.day || topStats.outboundToday || 0), week: Number(topStats.warehousingOutbound?.week || topStats.outboundWeek || 0) },
       });
-      setTodayScanCount(Number(dash.todayScanCount) || 0);
+      setTodayScanCount(Number(dash.todayScanCount || dash.scanCount || 0));
     } catch (e) {
       toast.error('数据加载失败');
     } finally {
@@ -74,7 +75,8 @@ export default function DashboardPage() {
       else if (activeFilter === 'overdue') params.status = 'production';
       if (searchKey) params.orderNo = searchKey;
       const res = await api.production.orderList(params);
-      let list = res?.records || [];
+      const data = res?.data || res || {};
+      let list = data?.records || data?.list || [];
       if (activeFilter === 'overdue') {
         list = list.filter(o => {
           const delivery = new Date(String(o.deliveryDate || o.expectedShipDate || '').replace(' ', 'T'));

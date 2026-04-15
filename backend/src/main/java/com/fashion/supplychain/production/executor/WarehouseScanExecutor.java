@@ -307,12 +307,20 @@ public class WarehouseScanExecutor {
                 if (trackingUpdated) {
                     log.info("入库工序跟踪记录更新成功: bundleId={}, orderId={}", bundle.getId(), order.getId());
                 } else {
-                    log.info("入库工序跟踪记录未找到，自动创建: bundleId={}, orderId={}", bundle.getId(), order.getId());
+                    log.info("入库工序跟踪记录未找到，尝试追加初始化并重试更新: bundleId={}, orderId={}", bundle.getId(), order.getId());
                     try {
-                        processTrackingOrchestrator.createWarehousingTrackingOnScan(
-                                bundle, order, operatorId, operatorName, sr.getId());
+                        processTrackingOrchestrator.appendProcessTracking(order.getId(), List.of(bundle));
+                        boolean retryUpdated = processTrackingOrchestrator.updateScanRecord(
+                                bundle.getId(),
+                                "入库",
+                                operatorId,
+                                operatorName,
+                                sr.getId());
+                        if (retryUpdated) {
+                            log.info("入库工序跟踪记录重试更新成功: bundleId={}, orderId={}", bundle.getId(), order.getId());
+                        }
                     } catch (Exception createEx) {
-                        log.warn("自动创建入库工序跟踪记录失败（不阻断入库）: bundleId={}, orderId={}, msg={}",
+                        log.warn("追加并更新入库工序跟踪记录失败（不阻断入库）: bundleId={}, orderId={}, msg={}",
                                 bundle.getId(), order.getId(), createEx.getMessage());
                     }
                 }
@@ -437,29 +445,6 @@ public class WarehouseScanExecutor {
         log.warn("[OverQty] 超额审批已提交: orderId={}, qty={}, limit={}",
             order.getId(), qty, qr.getLimitQuantity());
         return result;
-    }
-
-    /**
-     * 查找入库生成的扫码记录（仅查找入库类型，避免匹配到质检记录）
-     *
-     * 注意：upsertWarehousingStageScanRecord 使用前缀 "WAREHOUSING:" 创建质检记录，
-     * upsertWarehouseScanRecord 使用前缀 "WAREHOUSE:" 创建入库记录。
-     * 此处查询必须用 "WAREHOUSE:" 前缀，否则会误匹配质检记录，
-     * 导致 buildWarehouseRecord 永远不被调用、入库扫码记录缺失。
-     */
-    private ScanRecord findWarehousingGeneratedRecord(String warehousingId) {
-        if (!hasText(warehousingId)) {
-            return null;
-        }
-        String requestId = "WAREHOUSE:" + warehousingId.trim();
-        try {
-            return scanRecordService.lambdaQuery()
-                    .eq(ScanRecord::getRequestId, requestId)
-                    .last("limit 1")
-                    .one();
-        } catch (Exception e) {
-            return null;
-        }
     }
 
     /**

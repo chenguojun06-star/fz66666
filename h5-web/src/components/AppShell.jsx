@@ -1,35 +1,32 @@
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import AiAssistantFloat from './AiAssistantFloat';
+import Icon from '@/components/Icon';
 
 const TABS = [
-  { path: '/home', icon: '⌂', label: '首页' },
-  { path: '/work', icon: '◫', label: '生产' },
-  { path: '/scan', icon: '◉', label: '扫码' },
-  { path: '/admin', icon: '☻', label: '我的' },
+  { path: '/home', icon: 'chart', activeIcon: 'chart', label: '首页' },
+  { path: '/work', icon: 'factory', activeIcon: 'factory', label: '生产' },
+  { path: '/scan', icon: 'scan', activeIcon: 'scan', label: '扫码' },
+  { path: '/admin', icon: 'users', activeIcon: 'users', label: '我的' },
 ];
 
-export default function AppShell({ children, isTab }) {
+const TAB_PATHS = ['/home', '/work', '/scan', '/admin'];
+
+export default function AppShell({ children }) {
   const location = useLocation();
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const tenantName = useAuthStore((state) => state.tenantName);
-  const clearAuth = useAuthStore((state) => state.clearAuth);
 
-  const isSubpage = !isTab;
+  const isTab = TAB_PATHS.includes(location.pathname);
   const pageTitle = getPageTitle(location.pathname);
-
-  const onLogout = () => {
-    clearAuth();
-    navigate('/login', { replace: true });
-  };
 
   return (
     <div className="app-shell">
       <header className="topbar">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {isSubpage && (
-            <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: 'var(--color-text-primary)', padding: 0 }}>
+          {!isTab && (
+            <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--color-text-primary)', padding: 0, lineHeight: 1 }}>
               ‹
             </button>
           )}
@@ -37,17 +34,11 @@ export default function AppShell({ children, isTab }) {
             <div className="topbar-title">{pageTitle}</div>
             {isTab && (
               <div className="topbar-subtitle">
-                {tenantName ? `${tenantName} · ` : ''}
-                {user?.name || user?.realName || user?.username || '未登录'}
+                {tenantName ? `${tenantName} · ` : ''}{user?.name || user?.realName || user?.username || ''}
               </div>
             )}
           </div>
         </div>
-        {isTab && (
-          <button className="ghost-button" onClick={onLogout} style={{ fontSize: 12 }}>
-            退出
-          </button>
-        )}
       </header>
 
       <main className="page-container">{children}</main>
@@ -58,7 +49,9 @@ export default function AppShell({ children, isTab }) {
             const matched = location.pathname === tab.path;
             return (
               <NavLink key={tab.path} to={tab.path} className={`tabbar-item${matched ? ' active' : ''}`}>
-                <span className="tabbar-icon">{tab.icon}</span>
+                <span className="tabbar-icon">
+                  <Icon name={matched ? tab.activeIcon : tab.icon} size={22} />
+                </span>
                 <span>{tab.label}</span>
               </NavLink>
             );

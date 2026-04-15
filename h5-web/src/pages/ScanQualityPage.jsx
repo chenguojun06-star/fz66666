@@ -7,6 +7,7 @@ import { getAuthedImageUrl } from '@/utils/fileUrl';
 import { getUserInfo } from '@/utils/storage';
 import { eventBus } from '@/utils/eventBus';
 import useVoiceInput from '@/hooks/useVoiceInput';
+import Icon from '@/components/Icon';
 
 const HANDLE_METHODS = ['返修', '报废'];
 const DEFECT_CATEGORIES = ['外观完整性问题', '尺寸精度问题', '工艺规范性问题', '功能有效性问题', '其他问题'];
@@ -33,26 +34,19 @@ export default function ScanQualityPage() {
   const voice = useVoiceInput({
     lang: 'zh-CN',
     continuous: true,
-    onResult: (transcript) => {
-      setRemark(transcript);
-    },
+    onResult: (transcript) => setRemark(transcript),
   });
 
   useEffect(() => {
-    if (voice.error === 'NOT_SUPPORTED') {
-      toast.info('当前浏览器不支持语音识别');
-    } else if (voice.error === 'PERMISSION_DENIED') {
-      toast.error('请允许麦克风权限');
-    } else if (voice.error && voice.error !== 'NO_SPEECH' && voice.error !== 'aborted') {
-      toast.error('语音识别出错：' + voice.error);
-    }
+    if (voice.error === 'NOT_SUPPORTED') toast.info('当前浏览器不支持语音识别');
+    else if (voice.error === 'PERMISSION_DENIED') toast.error('请允许麦克风权限');
+    else if (voice.error && voice.error !== 'NO_SPEECH' && voice.error !== 'aborted') toast.error('语音识别出错：' + voice.error);
   }, [voice.error]);
 
   useEffect(() => {
     if (!qualityData) { toast.error('数据异常'); navigate(-1); return; }
     setRawDetail(qualityData);
-    const ci = getAuthedImageUrl(qualityData.coverImage || qualityData.styleImage || '');
-    setCoverImage(ci);
+    setCoverImage(getAuthedImageUrl(qualityData.coverImage || qualityData.styleImage || ''));
     setDetail({
       orderNo: qualityData.orderNo || '', bundleNo: qualityData.bundleNo || '',
       styleNo: qualityData.styleNo || '', color: qualityData.color || '',
@@ -93,24 +87,16 @@ export default function ScanQualityPage() {
     toast.success('已采纳建议');
   };
 
-  const onUploadImage = () => {
-    if (images.length >= 5) { toast.error('最多上传5张'); return; }
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = '';
+    if (images.length >= 5) { toast.error('最多上传5张'); return; }
     try {
       const url = await api.common.uploadImage(file);
       if (url) setImages(prev => [...prev, url]);
     } catch (err) { toast.error('图片上传失败'); }
   };
-
-  const onDeleteImage = (idx) => setImages(images.filter((_, i) => i !== idx));
 
   const submitQuality = async () => {
     if (loading) return;
@@ -163,52 +149,53 @@ export default function ScanQualityPage() {
     <div className="scan-quality-stack">
       <input ref={fileInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleFileChange} />
 
-      {coverImage && <img src={coverImage} alt="" style={{ width: '100%', maxHeight: 160, objectFit: 'cover', borderRadius: 8 }} />}
-
-      <div className="hero-card compact">
-        <div style={{ fontWeight: 600 }}>{detail.orderNo}</div>
-        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 4 }}>
-          款号: {detail.styleNo} · 菲号: {detail.bundleNo} · 数量: {detail.quantity}
-        </div>
-        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
-          颜色: {detail.color} · 码数: {detail.size} · 工序: {detail.processName}
+      <div className="hero-card" style={{ display: 'flex', gap: 12 }}>
+        {coverImage && (
+          <img src={coverImage} alt="" style={{ width: 70, height: 70, borderRadius: 'var(--radius-md)', objectFit: 'cover', flexShrink: 0 }} />
+        )}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 'var(--font-size-md-lg)', fontWeight: 600 }}>{detail.styleNo}</div>
+          <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginTop: 4 }}>
+            订单: {detail.orderNo}
+          </div>
+          <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>
+            菲号: {detail.bundleNo} · 颜色: {detail.color} · 码数: {detail.size}
+          </div>
+          <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>
+            数量: {detail.quantity} · 工序: <span style={{ background: 'rgba(var(--color-primary-rgb), 0.08)', color: 'var(--color-primary)', padding: '1px 6px', borderRadius: 'var(--radius-xs)', fontSize: 'var(--font-size-xxs)' }}>{detail.processName}</span>
+          </div>
         </div>
       </div>
 
       {historicalDefectRate && (
-        <div className="hero-card compact" style={{ background: '#fef3c7' }}>
-          <div style={{ fontSize: 12 }}>AI建议 · 历史不良率: {historicalDefectRate}</div>
-          {aiSuggestionList.map((s, i) => (
-            <div key={i} style={{ fontSize: 12, marginTop: 4 }}>
-              <strong>{s.label}:</strong> {s.text}
-            </div>
-          ))}
-          <button className="secondary-button" style={{ fontSize: 12, marginTop: 8 }} onClick={onAdoptAiSuggestion}>采纳建议</button>
+        <div className="insight-card">
+          <div className="insight-icon"><Icon name="cloud" size={14} /></div>
+          <div className="insight-body">
+            <div style={{ fontWeight: 600, marginBottom: 4 }}>AI建议 · 历史不良率: {historicalDefectRate}</div>
+            {aiSuggestionList.map((s, i) => (
+              <div key={i} style={{ marginTop: 2 }}><strong>{s.label}:</strong> {s.text}</div>
+            ))}
+            <button className="insight-action-btn" onClick={onAdoptAiSuggestion}>采纳建议</button>
+          </div>
         </div>
       )}
 
-      <div className="field-block">
-        <label>质检结果</label>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className={`scan-type-chip${result === 'qualified' ? ' active' : ''}`}
-            onClick={() => setResult('qualified')}
-            style={{ flex: 1, padding: 10, borderRadius: 8, border: '1px solid var(--color-border)',
-              background: result === 'qualified' ? '#dcfce7' : 'var(--color-bg-light)',
-              color: result === 'qualified' ? '#166534' : 'var(--color-text-primary)', cursor: 'pointer' }}>
-            ✅ 合格
-          </button>
-          <button className={`scan-type-chip${result === 'unqualified' ? ' active' : ''}`}
-            onClick={() => setResult('unqualified')}
-            style={{ flex: 1, padding: 10, borderRadius: 8, border: '1px solid var(--color-border)',
-              background: result === 'unqualified' ? '#fef2f2' : 'var(--color-bg-light)',
-              color: result === 'unqualified' ? '#991b1b' : 'var(--color-text-primary)', cursor: 'pointer' }}>
-            ❌ 不合格
-          </button>
+      <div className="hero-card compact">
+        <div className="field-block">
+          <label>质检结果</label>
+          <div className="quality-result-group">
+            <button className={`quality-result-btn${result === 'qualified' ? ' qualified' : ''}`} onClick={() => setResult('qualified')}>
+              <Icon name="check" size={18} /> 合格
+            </button>
+            <button className={`quality-result-btn${result === 'unqualified' ? ' unqualified' : ''}`} onClick={() => setResult('unqualified')}>
+              <Icon name="x" size={18} /> 不合格
+            </button>
+          </div>
         </div>
       </div>
 
       {result === 'unqualified' && (
-        <>
+        <div className="hero-card compact">
           <div className="field-block">
             <label>不良数量</label>
             <input className="text-input" type="number" value={defectQuantity} min={1}
@@ -230,59 +217,54 @@ export default function ScanQualityPage() {
               {HANDLE_METHODS.map((m, i) => <option key={i} value={i}>{m}</option>)}
             </select>
           </div>
-        </>
+          <div className="field-block">
+            <label>拍照上传（最多5张）</label>
+            <div className="photo-grid">
+              {images.map((url, idx) => (
+                <div key={idx} className="photo-item">
+                  <img src={url} alt="" />
+                  <button className="photo-delete-btn" onClick={() => setImages(images.filter((_, i) => i !== idx))}>
+                    <Icon name="x" size={10} />
+                  </button>
+                </div>
+              ))}
+              {images.length < 5 && (
+                <button className="photo-add-btn" onClick={() => fileInputRef.current?.click()}>
+                  <Icon name="plus" size={20} />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
-      <div className="field-block">
-        <label>备注</label>
-        <div style={{ position: 'relative' }}>
-          <textarea className="text-input" value={remark} onChange={e => setRemark(e.target.value)} rows={2}
-            placeholder={voice.listening ? '正在聆听备注...' : '备注信息（可语音输入）'} />
-          <button onClick={voice.toggle}
-            style={{ position: 'absolute', right: 8, bottom: 8, width: 32, height: 32, borderRadius: 16,
-              border: voice.listening ? '2px solid #ef4444' : '1px solid var(--color-border)',
-              background: voice.listening ? '#fef2f2' : 'var(--color-bg-light)',
-              fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              animation: voice.listening ? 'pulse 1.5s ease-in-out infinite' : 'none' }}
-            title="语音输入备注">
-            🎤
-          </button>
-        </div>
-        {voice.listening && (
-          <div style={{ fontSize: 12, color: '#ef4444', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ animation: 'pulse 1s ease-in-out infinite', display: 'inline-block' }}>🔴</span>
-            正在聆听，请说出备注内容...
+      <div className="hero-card compact">
+        <div className="field-block" style={{ marginBottom: 0 }}>
+          <label>备注</label>
+          <div style={{ position: 'relative' }}>
+            <textarea className="text-input" value={remark} onChange={e => setRemark(e.target.value)} rows={2}
+              placeholder={voice.listening ? '正在聆听备注...' : '备注信息（可语音输入）'} />
+            <button className={`voice-btn${voice.listening ? ' listening' : ''}`}
+              onClick={voice.toggle}
+              style={{ position: 'absolute', right: 8, bottom: 8 }}
+              title="语音输入备注">
+              <Icon name={voice.listening ? 'micOff' : 'mic'} size={14} />
+            </button>
           </div>
-        )}
-      </div>
-
-      <div className="field-block">
-        <label>拍照上传（最多5张）</label>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {images.map((url, idx) => (
-            <div key={idx} style={{ position: 'relative', width: 60, height: 60 }}>
-              <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 4 }} />
-              <button onClick={() => onDeleteImage(idx)} style={{ position: 'absolute', top: -4, right: -4, width: 18, height: 18, borderRadius: '50%',
-                background: '#ef4444', color: '#fff', border: 'none', fontSize: 10, cursor: 'pointer' }}>×</button>
+          {voice.listening && (
+            <div className="voice-hint">
+              <span className="voice-hint-dot" /> 正在聆听，请说出备注内容...
             </div>
-          ))}
-          {images.length < 5 && (
-            <button onClick={onUploadImage} style={{ width: 60, height: 60, borderRadius: 4, border: '1px dashed var(--color-border)',
-              background: 'var(--color-bg-light)', cursor: 'pointer', fontSize: 24, color: 'var(--color-text-secondary)' }}>+</button>
           )}
         </div>
       </div>
 
-      <button className="primary-button" onClick={submitQuality} disabled={loading} style={{ marginTop: 16 }}>
-        {loading ? '提交中...' : '提交质检结果'}
-      </button>
-
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.1); opacity: 0.7; }
-        }
-      `}</style>
+      <div className="footer-bar">
+        <button className="secondary-button" style={{ flex: 1, height: 44 }} onClick={() => navigate(-1)}>取消</button>
+        <button className="primary-button" style={{ flex: 1, height: 44 }} onClick={submitQuality} disabled={loading}>
+          {loading ? '提交中...' : '提交质检'}
+        </button>
+      </div>
     </div>
   );
 }

@@ -8,12 +8,12 @@ import { isTenantOwner } from '@/utils/storage';
 import DateCard from '@/components/DateCard';
 
 const menuItems = [
-  { path: '/dashboard', label: '进度看板', tone: 'blue', icon: '📊', admin: true },
-  { path: '/work', label: '生产', tone: 'green', icon: '🏭' },
-  { path: '/scan', label: '扫码质检', tone: 'blue', icon: '◉' },
-  { path: '/work/bundle-split', label: '菲号单价', tone: 'indigo', icon: '🏷️' },
-  { path: '/scan/history', label: '历史记录', tone: 'indigo', icon: '📋' },
-  { path: '/payroll/payroll', label: '当月工资', tone: 'orange', icon: '💰' },
+  { path: '/dashboard', label: '进度看板', icon: '📊', admin: true },
+  { path: '/work', label: '生产', icon: '🏭' },
+  { path: '/scan', label: '扫码质检', icon: '🔍' },
+  { path: '/work/bundle-split', label: '菲号单价', icon: '🏷️' },
+  { path: '/scan/history', label: '历史记录', icon: '📋' },
+  { path: '/payroll/payroll', label: '当月工资', icon: '💰' },
 ];
 
 export default function HomePage() {
@@ -58,55 +58,28 @@ export default function HomePage() {
 
   const visibleMenu = menuItems.filter((m) => !m.admin || admin);
 
-  const handleMenuClick = (item) => {
-    navigate(item.path);
-  };
-
   return (
-    <div className="home-stack">
-      <section className="hero-card">
-        <div>
-          <div className="eyebrow">{getGreeting()}</div>
-          <h2 className="hero-title">{storeUser?.name || storeUser?.realName || storeUser?.username || '用户'}</h2>
-          <p className="hero-subtitle">
-            {tenantName ? `${tenantName} · ` : ''}未读通知 {unreadCount} 条
-          </p>
-        </div>
-      </section>
+    <div className="page-home">
+      <div className="home-header">
+        <div className="greeting-name">{storeUser?.name || storeUser?.realName || storeUser?.username || '用户'}，{getGreeting()}</div>
+        <div className="greeting-sub">欢迎使用衣智链</div>
+      </div>
 
       <DateCard />
 
-      <section className="stats-grid">
-        <div className="stat-card tone-blue">
-          <div className="stat-number">{stats.scanCount}</div>
-          <div className="stat-label">今日扫码</div>
+      <div className="menu-section">
+        <div className="section-header">
+          <span className="section-title">全部菜单</span>
         </div>
-        <div className="stat-card tone-green">
-          <div className="stat-number">{stats.orderCount}</div>
-          <div className="stat-label">参与订单</div>
+        <div className="menu-grid">
+          {visibleMenu.map((item) => (
+            <div key={item.path + item.label} className="menu-item" onClick={() => navigate(item.path)}>
+              <div className="menu-icon-circle">{item.icon}</div>
+              <span className="menu-name">{item.label}</span>
+            </div>
+          ))}
         </div>
-        <div className="stat-card tone-orange">
-          <div className="stat-number">{stats.totalQuantity}</div>
-          <div className="stat-label">累计件数</div>
-        </div>
-        <div className="stat-card tone-indigo">
-          <div className="stat-number">¥{stats.totalAmount.toFixed(2)}</div>
-          <div className="stat-label">累计金额</div>
-        </div>
-      </section>
-
-      <section className="menu-grid">
-        {visibleMenu.map((item) => (
-          <button
-            key={item.path + item.label}
-            className={`menu-card tone-${item.tone}`}
-            onClick={() => handleMenuClick(item)}
-          >
-            <div style={{ fontSize: 24, marginBottom: 6 }}>{item.icon}</div>
-            <div className="menu-card-label">{item.label}</div>
-          </button>
-        ))}
-      </section>
+      </div>
     </div>
   );
 }

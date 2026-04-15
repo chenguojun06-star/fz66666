@@ -23,7 +23,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (isAdminOrSupervisor()) {
-      api.system.onlineCount().then((res) => {
+      api.system.getOnlineCount().then((res) => {
         setOnlineCount(Number((res?.data ?? res) || 0));
       }).catch(() => {});
     }
@@ -59,73 +59,45 @@ export default function AdminPage() {
   const initial = displayName.charAt(0).toUpperCase();
 
   return (
-    <div style={{ padding: '16px', paddingBottom: 'calc(80px + var(--safe-area-bottom, 0px))' }}>
-      <div style={{
-        background: 'linear-gradient(135deg, rgba(var(--color-primary-rgb),0.08) 0%, rgba(var(--color-primary-rgb),0.02) 100%)',
-        borderRadius: 16, padding: '20px', display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20,
-      }}>
-        {avatarUrl ? (
-          <img src={avatarUrl} alt="" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--color-border-light)' }}
-            onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
-        ) : null}
-        <div style={{
-          width: 56, height: 56, borderRadius: '50%', background: 'var(--color-primary)', color: '#fff',
-          display: avatarUrl ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 22, fontWeight: 700, flexShrink: 0,
-        }}>{initial}</div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700 }}>{displayName}</div>
-          <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)', marginTop: 2 }}>
-            {getRoleDisplayName(user?.role)} {tenantName ? `· ${tenantName}` : ''}
+    <div className="admin-container">
+      <div className="user-profile-card">
+        <div className="profile-header">
+          <div className="profile-avatar">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="" onError={(e) => { e.target.style.display = 'none'; e.target.parentNode.textContent = initial; }} />
+            ) : (
+              initial
+            )}
           </div>
-          {onlineCount > 0 && (
-            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginTop: 2 }}>
-              在线 {onlineCount} 人
+          <div className="profile-info">
+            <div className="profile-name-row">
+              <span className="profile-name">{displayName}</span>
+              <button className="logout-btn" onClick={handleLogout}>
+                <span className="logout-text">退出</span>
+              </button>
             </div>
-          )}
+            <div className="profile-role">{getRoleDisplayName(user?.role)}</div>
+            {onlineCount > 0 && (
+              <div className="profile-online">
+                <span>👥</span>
+                <span>{onlineCount}人</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {user?.tenantCode && (
-        <div style={{
-          background: 'var(--color-bg-card)', borderRadius: 12, padding: '14px 16px',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16,
-          border: '1px solid var(--color-border-light)',
-        }}>
-          <div>
-            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>工厂码</div>
-            <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700, letterSpacing: 2, marginTop: 2 }}>{user.tenantCode}</div>
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="ghost-button" onClick={copyFactoryCode} style={{ padding: '6px 12px', fontSize: 'var(--font-size-xs)' }}>复制</button>
-            <button className="ghost-button" onClick={copyRegisterLink} style={{ padding: '6px 12px', fontSize: 'var(--font-size-xs)' }}>注册链接</button>
-          </div>
-        </div>
-      )}
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 1, borderRadius: 12, overflow: 'hidden', background: 'var(--color-border-light)' }}>
+      <div className="admin-menu-list">
         {visibleMenu.map((item) => (
-          <button key={item.path} onClick={() => navigate(item.path)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px',
-              background: 'var(--color-bg-card)', border: 'none', cursor: 'pointer', textAlign: 'left',
-              fontSize: 'var(--font-size-base)', color: 'var(--color-text-primary)',
-            }}>
-            <span style={{ fontSize: 18 }}>{item.icon}</span>
-            <span style={{ flex: 1 }}>{item.label}</span>
-            <span style={{ color: 'var(--color-text-disabled)' }}>›</span>
+          <button key={item.path} className="admin-menu-item" onClick={() => navigate(item.path)}>
+            <div className="admin-menu-icon-wrap">{item.icon}</div>
+            <span className="admin-menu-label">{item.label}</span>
+            <span className="admin-menu-arrow">›</span>
           </button>
         ))}
       </div>
 
-      <button onClick={handleLogout}
-        style={{
-          width: '100%', marginTop: 24, padding: '14px', borderRadius: 12,
-          border: '1px solid var(--color-danger)', background: 'transparent',
-          color: 'var(--color-danger)', fontSize: 'var(--font-size-base)', fontWeight: 600, cursor: 'pointer',
-        }}>
-        退出登录
-      </button>
+      <button className="admin-logout-btn" onClick={handleLogout}>退出登录</button>
     </div>
   );
 }

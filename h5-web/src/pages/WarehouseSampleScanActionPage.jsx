@@ -15,7 +15,7 @@ export default function WarehouseSampleScanActionPage() {
     if (!sampleCode.trim()) { toast.info('请输入样衣编码'); return; }
     setLoading(true);
     try {
-      const res = await api.styleWarehouse.sampleScanQuery({ qrCode: sampleCode.trim() });
+      const res = await api.sampleStock.scanQuery({ qrCode: sampleCode.trim() });
       const data = res?.data || res;
       setSample(data);
       setAction('');
@@ -32,9 +32,9 @@ export default function WarehouseSampleScanActionPage() {
     try {
       const payload = { sampleId: sample.id || sample.sampleId, qrCode: sampleCode };
       let res;
-      if (actionType === 'inbound') res = await api.styleWarehouse.sampleInbound(payload);
-      else if (actionType === 'loan') res = await api.styleWarehouse.sampleLoan(payload);
-      else if (actionType === 'return') res = await api.styleWarehouse.sampleReturn(payload);
+      if (actionType === 'inbound') res = await api.sampleStock.inbound(payload);
+      else if (actionType === 'loan') res = await api.sampleStock.loan(payload);
+      else if (actionType === 'return') res = await api.sampleStock.returnSample(payload);
       toast.success('操作成功');
       handleQuery();
     } catch (e) {

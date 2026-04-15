@@ -6,6 +6,7 @@ import { setToken, setUserInfo, setTenantInfo, clearBusinessCaches } from '@/uti
 import { toast } from '@/utils/uiHelper';
 import { handleWxOAuthCallback, initiateWxOAuth, bindWxAccountAndLogin, getOAuthRedirectPath } from '@/services/wxOAuth';
 import wxAdapter from '@/adapters/wx';
+import { MiniCloud } from '@/components/AiAssistantFloat';
 
 const isWechat = wxAdapter.isWechat;
 const DEFAULT_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.webyszl.cn';
@@ -79,8 +80,7 @@ export default function LoginPage() {
     try {
       const result = await handleWxOAuthCallback(code, state);
       if (result && result.success) {
-        const redirectPath = getOAuthRedirectPath();
-        navigate(redirectPath, { replace: true });
+        navigate(getOAuthRedirectPath(), { replace: true });
         return;
       }
       if (result && result.needBind) {
@@ -152,102 +152,123 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
-      <div className="login-card">
-        <h1 className="login-title">小云供应链</h1>
-        <p className="login-subtitle">有问题找小云｜多端协同更轻松</p>
+      <div className="login-bg" aria-hidden="true">
+        <div className="tech-grid"></div>
+        <div className="tech-map"></div>
+        <div className="tech-glow tech-glow-left"></div>
+        <div className="tech-glow tech-glow-right"></div>
+        <div className="tech-arc tech-arc-1"></div>
+        <div className="tech-arc tech-arc-2"></div>
+        <div className="tech-arc tech-arc-3"></div>
+        <div className="tech-node tech-node-1"></div>
+        <div className="tech-node tech-node-2"></div>
+        <div className="tech-node tech-node-3"></div>
+        <div className="tech-node tech-node-4"></div>
+        <div className="tech-node tech-node-5"></div>
+      </div>
 
-        <div className="form-stack">
-          {isWechat && !wxBindMode && (
-            <button className="wx-login-button" onClick={handleWxLogin} disabled={loading}>
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
-                <path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 01.213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 00.167-.054l1.903-1.114a.864.864 0 01.717-.098 10.16 10.16 0 002.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 01-1.162 1.178A1.17 1.17 0 014.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 01-1.162 1.178 1.17 1.17 0 01-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 01.598.082l1.584.926a.272.272 0 00.14.045c.134 0 .24-.11.24-.245 0-.06-.024-.12-.04-.178l-.325-1.233a.492.492 0 01.177-.554C23.028 18.135 24 16.413 24 14.508c0-3.367-3.226-5.65-7.062-5.65zm-2.095 2.926c.535 0 .969.44.969.982a.976.976 0 01-.969.983.976.976 0 01-.969-.983c0-.542.434-.982.97-.982zm4.19 0c.535 0 .969.44.969.982a.976.976 0 01-.97.983.976.976 0 01-.968-.983c0-.542.434-.982.969-.982z"/>
-              </svg>
-              微信一键登录
-            </button>
-          )}
+      <div className="login-shell">
+        <div className="login-card">
+          <div className="login-card-accent login-card-accent-top"></div>
+          <div className="login-card-accent login-card-accent-bottom"></div>
 
-          {wxBindMode && (
-            <div className="info-banner">检测到微信账号未绑定系统用户，请输入账号密码完成绑定</div>
-          )}
-
-          <div className="field-block">
-            <label><span className="required-star">*</span>公司</label>
-            <div className="tenant-select-wrap">
-              <input className="text-input tenant-select-input" type="text" placeholder="请输入公司名称搜索（如：云裳智链）" value={tenantSearch}
-              onChange={(e) => {
-                setTenantSearch(e.target.value);
-                if (selectedTenant && (selectedTenant.tenantName || selectedTenant.name) !== e.target.value) {
-                  setSelectedTenant(null);
-                }
-              }} />
-              {tenantSearch && (
-                <button
-                  type="button"
-                  className="tenant-clear-btn"
-                  onClick={handleClearTenant}
-                  aria-label="清空公司"
-                >
-                  ×
-                </button>
-              )}
-            </div>
-            {selectedTenant && (
-              <div className="tenant-picked-tip">
-                ✓ 已选择：{selectedTenant.tenantName || selectedTenant.name}
+          <div className="login-header">
+            <div className="login-title-row">
+              <span className="login-title">小云供应链</span>
+              <div className="login-title-cloud">
+                <MiniCloud size={33} />
               </div>
+            </div>
+            <div className="login-subtitle">有问题找小云｜多端协同更轻松</div>
+          </div>
+
+          <div className="form-stack">
+            {isWechat && !wxBindMode && (
+              <button className="wx-login-button" onClick={handleWxLogin} disabled={loading}>
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                  <path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 01.213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 00.167-.054l1.903-1.114a.864.864 0 01.717-.098 10.16 10.16 0 002.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 01-1.162 1.178A1.17 1.17 0 014.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 01-1.162 1.178 1.17 1.17 0 01-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 01.598.082l1.584.926a.272.272 0 00.14.045c.134 0 .24-.11.24-.245 0-.06-.024-.12-.04-.178l-.325-1.233a.492.492 0 01.177-.554C23.028 18.135 24 16.413 24 14.508c0-3.367-3.226-5.65-7.062-5.65zm-2.095 2.926c.535 0 .969.44.969.982a.976.976 0 01-.969.983.976.976 0 01-.969-.983c0-.542.434-.982.97-.982zm4.19 0c.535 0 .969.44.969.982a.976.976 0 01-.97.983.976.976 0 01-.968-.983c0-.542.434-.982.969-.982z"/>
+                </svg>
+                微信一键登录
+              </button>
             )}
-            {hasTenantKeyword && (
-              <div className="tenant-dropdown-list">
-                {filteredTenants.slice(0, 20).map((t) => (
-                  <button
-                    key={t.tenantId || t.id}
-                    className={`tenant-dropdown-option${(selectedTenant?.tenantId === t.tenantId || selectedTenant?.id === t.id) ? ' active' : ''}`}
-                    onClick={() => handlePickTenant(t)}
-                  >
-                    {t.tenantName || t.name}
-                  </button>
-                ))}
-                {filteredTenants.length === 0 && (
-                  <div style={{ color: 'var(--color-text-secondary)', fontSize: 12, padding: '8px 2px' }}>
-                    未搜索到对应公司，请检查名称是否正确
-                  </div>
+
+            {wxBindMode && (
+              <div className="info-banner">检测到微信账号未绑定系统用户，请输入账号密码完成绑定</div>
+            )}
+
+            <div className="login-field">
+              <div className="login-label"><span className="login-label-required">*</span>公司</div>
+              <div className="login-input-wrap">
+                <span className="login-input-icon">⌕</span>
+                <input className="login-input" type="text" placeholder="请输入公司名称搜索（如：云裳智链）" value={tenantSearch}
+                  onChange={(e) => {
+                    setTenantSearch(e.target.value);
+                    if (selectedTenant && (selectedTenant.tenantName || selectedTenant.name) !== e.target.value) {
+                      setSelectedTenant(null);
+                    }
+                  }} />
+                {tenantSearch && (
+                  <span className="login-input-clear" onClick={handleClearTenant}>✕</span>
                 )}
               </div>
-            )}
-          </div>
+              {selectedTenant && (
+                <div className="tenant-selected-tag">✓ 已选择：{selectedTenant.tenantName || selectedTenant.name}</div>
+              )}
+              {hasTenantKeyword && (
+                <div className="tenant-results">
+                  {filteredTenants.slice(0, 20).map((t) => (
+                    <button key={t.tenantId || t.id}
+                      className={`tenant-result-item${(selectedTenant?.tenantId === t.tenantId || selectedTenant?.id === t.id) ? ' active' : ''}`}
+                      onClick={() => handlePickTenant(t)}>
+                      {t.tenantName || t.name}
+                    </button>
+                  ))}
+                  {filteredTenants.length === 0 && (
+                    <div className="tenant-result-empty">未搜索到对应公司，请检查名称是否正确</div>
+                  )}
+                </div>
+              )}
+            </div>
 
-          <div className="field-block">
-            <label><span className="required-star">*</span>用户名</label>
-            <input className="text-input" type="text" placeholder="请输入用户名(3-20位)" value={username}
-              onChange={(e) => setUsername(e.target.value)} autoComplete="username" />
-          </div>
+            <div className="login-field">
+              <div className="login-label"><span className="login-label-required">*</span>用户名</div>
+              <div className="login-input-wrap">
+                <span className="login-input-icon">◌</span>
+                <input className="login-input" type="text" placeholder="请输入用户名(3-20位)" value={username}
+                  onChange={(e) => setUsername(e.target.value)} autoComplete="username" />
+              </div>
+            </div>
 
-          <div className="field-block">
-            <label><span className="required-star">*</span>密码</label>
-            <div style={{ position: 'relative' }}>
-              <input className="text-input" type={showPassword ? 'text' : 'password'} placeholder="请输入密码(6-20位)" value={password}
-                onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-                autoComplete="current-password" style={{ paddingRight: 48 }} />
-              <button onClick={() => setShowPassword(!showPassword)}
-                style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-secondary)', fontSize: 12 }}>
-                {showPassword ? '隐藏' : '显示'}
+            <div className="login-field">
+              <div className="login-label"><span className="login-label-required">*</span>密码</div>
+              <div className="login-input-wrap">
+                <span className="login-input-icon">◐</span>
+                <input className="login-input" type={showPassword ? 'text' : 'password'} placeholder="请输入密码(6-20位)" value={password}
+                  onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                  autoComplete="current-password" />
+                <span className="login-input-eye" onClick={() => setShowPassword(!showPassword)}>{showPassword ? '隐' : '显'}</span>
+              </div>
+            </div>
+
+            {error && <div className="error-banner">{error}</div>}
+
+            <div className="login-btn-wrap">
+              <button className={`login-btn${(loading || !selectedTenant) ? ' login-btn-disabled' : ''}`} onClick={handleLogin} disabled={loading}>
+                {loading ? '处理中...' : wxBindMode ? '绑定并登录' : '登 录'}
               </button>
             </div>
-          </div>
 
-          {error && <div className="error-banner">{error}</div>}
+            <div className="login-field login-field-dev">
+              <div className="login-label">服务器地址</div>
+              <div className="login-input-wrap">
+                <span className="login-input-icon">◎</span>
+                <input className="login-input" type="text" value={DEFAULT_API_BASE_URL} readOnly />
+              </div>
+            </div>
 
-          <button className="primary-button" onClick={handleLogin} disabled={loading}>
-            {loading ? '处理中...' : wxBindMode ? '绑定并登录' : '登录'}
-          </button>
-
-          {!wxBindMode && (
-            <button className="ghost-button" onClick={() => navigate('/register')}>新员工注册</button>
-          )}
-
-          <div className="field-block">
-            <label>服务器地址</label>
-            <input className="text-input" type="text" value={DEFAULT_API_BASE_URL} readOnly />
+            <div className="login-register-section">
+              <span className="login-register-link" onClick={() => navigate('/register')}>没有账号？立即注册</span>
+            </div>
           </div>
         </div>
       </div>
