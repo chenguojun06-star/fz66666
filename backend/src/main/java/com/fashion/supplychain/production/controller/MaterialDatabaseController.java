@@ -22,6 +22,11 @@ public class MaterialDatabaseController {
         return Result.success(materialDatabaseOrchestrator.list(params));
     }
 
+    @GetMapping("/generate-code")
+    public Result<String> generateCode(@RequestParam(required = false, defaultValue = "accessory") String materialType) {
+        return Result.success(materialDatabaseOrchestrator.generateMaterialCode(materialType));
+    }
+
     @GetMapping("/{id}")
     public Result<MaterialDatabase> getById(@PathVariable String id) {
         return Result.success(materialDatabaseOrchestrator.getById(id));
@@ -51,11 +56,6 @@ public class MaterialDatabaseController {
     @DeleteMapping("/{id}")
     public Result<Boolean> delete(@PathVariable String id) {
         return Result.success(materialDatabaseOrchestrator.delete(id));
-    }
-
-    @GetMapping("/generate-code")
-    public Result<String> generateCode(@RequestParam(required = false, defaultValue = "accessory") String materialType) {
-        return Result.success(materialDatabaseOrchestrator.generateMaterialCode(materialType));
     }
 
     @PutMapping("/{id}/disable")

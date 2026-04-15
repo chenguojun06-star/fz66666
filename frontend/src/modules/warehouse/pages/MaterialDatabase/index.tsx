@@ -65,7 +65,6 @@ const MaterialDatabasePage: React.FC = () => {
   const [imageFiles, setImageFiles] = useState<UploadFile[]>([]);
   const [returnTarget, setReturnTarget] = useState<MaterialDatabase | null>(null);
   const [returnLoading, setReturnLoading] = useState(false);
-  const [isCreateMode, setIsCreateMode] = useState(false);
   const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
@@ -78,17 +77,49 @@ const MaterialDatabasePage: React.FC = () => {
     });
   };
 
+  const generateLocalMaterialCode = (materialType: string): string => {
+    const prefixMap: Record<string, string> = { fabric: 'M', lining: 'L', accessory: 'F' };
+    const baseType = (materialType || 'accessory').toLowerCase().startsWith('lining') ? 'lining'
+      : (materialType || 'accessory').toLowerCase().startsWith('fabric') ? 'fabric' : 'accessory';
+    const prefix = prefixMap[baseType] || 'F';
+    const now = new Date();
+    const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+    const existingCodes = dataList
+      .filter(item => {
+        const mt = String(item.materialType || '').toLowerCase();
+        if (baseType === 'fabric') return mt.startsWith('fabric');
+        if (baseType === 'lining') return mt.startsWith('lining');
+        return mt.startsWith('accessory') || (!mt.startsWith('fabric') && !mt.startsWith('lining'));
+      })
+      .map(item => String(item.materialCode || ''))
+      .filter(code => code.startsWith(prefix + dateStr));
+    let maxSeq = 0;
+    existingCodes.forEach(code => {
+      try {
+        const seqPart = code.substring((prefix + dateStr).length);
+        const seq = parseInt(seqPart, 10);
+        if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
+      } catch { /* ignore */ }
+    });
+    const nextSeq = maxSeq + 1;
+    return `${prefix}${dateStr}${String(nextSeq).padStart(3, '0')}`;
+  };
+
   const fetchMaterialCode = async (materialType: string) => {
     if (!materialType) return;
     try {
       const res = await api.get<{ code: number; data: string }>('/material/database/generate-code', {
         params: { materialType },
       });
-      if (res?.data) {
-        form.setFieldsValue({ materialCode: res.data });
+      const code = unwrapApiData<string>(res as any, '获取物料编号失败');
+      if (code) {
+        form.setFieldsValue({ materialCode: code });
+        return;
       }
-    } catch {
-      // ignore
+    } catch { /* fallback to local */ }
+    const localCode = generateLocalMaterialCode(materialType);
+    if (localCode) {
+      form.setFieldsValue({ materialCode: localCode });
     }
   };
 
@@ -151,7 +182,7 @@ const MaterialDatabasePage: React.FC = () => {
             uid: '-1',
             name: file.name,
             status: 'done',
-            url: res.data,
+            url: getFullAuthedFileUrl(res.data),
           },
         ]);
       } else {
@@ -166,7 +197,6 @@ const MaterialDatabasePage: React.FC = () => {
   // 打开新建/编辑弹窗
   const openDialog = (dialogMode: 'create' | 'edit' | 'copy', record?: MaterialDatabase) => {
     if ((dialogMode === 'edit' || dialogMode === 'copy') && record) {
-      setIsCreateMode(dialogMode === 'copy');
       open(dialogMode === 'copy' ? undefined as any : record);
       const formValues: Record<string, unknown> = {
         ...record,
@@ -190,14 +220,13 @@ const MaterialDatabasePage: React.FC = () => {
             uid: '-1',
             name: 'image',
             status: 'done',
-            url: record.image,
+            url: getFullAuthedFileUrl(record.image),
           },
         ]);
       } else {
         setImageFiles([]);
       }
     } else {
-      setIsCreateMode(true);
       open();
       form.resetFields();
       setImageFiles([]);
@@ -731,7 +760,7 @@ const MaterialDatabasePage: React.FC = () => {
                   label="物料编号"
                   rules={[{ required: true, message: '请输入物料编号' }]}
                 >
-                  <Input placeholder="自动生成" disabled={isCreateMode} />
+                  <Input placeholder="选择物料类型后自动生成，也可手动输入" />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={8} md={6} lg={5} xl={4}>
@@ -755,7 +784,7 @@ const MaterialDatabasePage: React.FC = () => {
                   rules={[{ required: true, message: '请选择物料类型' }]}
                 >
                   <Select placeholder="请选择物料类型" onChange={(value) => {
-                    if (isCreateMode) {
+                    if (!currentMaterial?.id) {
                       fetchMaterialCode(value);
                     }
                   }}>

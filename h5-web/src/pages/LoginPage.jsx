@@ -258,13 +258,15 @@ export default function LoginPage() {
               </button>
             </div>
 
-            <div className="login-field login-field-dev">
-              <div className="login-label">服务器地址</div>
-              <div className="login-input-wrap">
-                <span className="login-input-icon">◎</span>
-                <input className="login-input" type="text" value={DEFAULT_API_BASE_URL} readOnly />
+            {import.meta.env.DEV && (
+              <div className="login-field login-field-dev">
+                <div className="login-label">服务器地址</div>
+                <div className="login-input-wrap">
+                  <span className="login-input-icon">◎</span>
+                  <input className="login-input" type="text" value={DEFAULT_API_BASE_URL} readOnly />
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="login-register-section">
               <span className="login-register-link" onClick={() => navigate('/register')}>没有账号？立即注册</span>

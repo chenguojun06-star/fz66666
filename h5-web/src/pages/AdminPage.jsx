@@ -4,14 +4,18 @@ import api from '@/api';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from '@/utils/uiHelper';
 import { isAdminOrSupervisor, getRoleDisplayName } from '@/utils/permission';
+import Icon from '@/components/Icon';
 
-const menuConfig = [
-  { path: '/admin/change-password', label: '修改密码', icon: '🔑', roles: null },
-  { path: '/payroll/payroll', label: '工资查询', icon: '💰', roles: null },
-  { path: '/admin/feedback', label: '问题反馈', icon: '💬', roles: null },
-  { path: '/admin/invite', label: '邀请员工', icon: '👥', roles: ['admin', 'supervisor', 'tenant_owner'] },
-  { path: '/admin/user-approval', label: '用户审批', icon: '✅', roles: ['admin', 'supervisor', 'tenant_owner'] },
-  { path: '/dashboard', label: '进度看板', icon: '📊', roles: ['admin', 'supervisor', 'tenant_owner'] },
+const primaryMenu = [
+  { path: '/admin/change-password', label: '修改密码', icon: 'lock', color: 'var(--color-primary)', bg: 'rgba(59,130,246,0.1)' },
+  { path: '/payroll/payroll', label: '工资查询', icon: 'dollarSign', color: 'var(--color-warning)', bg: 'rgba(245,158,11,0.1)' },
+  { path: '/admin/feedback', label: '问题反馈', icon: 'messageCircle', color: 'var(--color-purple)', bg: 'rgba(124,92,252,0.1)' },
+];
+
+const secondaryMenu = [
+  { path: '/admin/invite', label: '员工邀请', icon: 'userPlus', color: 'var(--color-success)', bg: 'rgba(34,197,94,0.1)' },
+  { path: '/admin/user-approval', label: '用户审批', icon: 'userCheck', color: 'var(--color-info)', bg: 'rgba(16,174,255,0.1)', roles: ['admin', 'supervisor', 'tenant_owner'] },
+  { path: '/dashboard', label: '进度看板', icon: 'chart', color: 'var(--color-primary)', bg: 'rgba(59,130,246,0.1)', roles: ['admin', 'supervisor', 'tenant_owner'] },
 ];
 
 export default function AdminPage() {
@@ -35,32 +39,7 @@ export default function AdminPage() {
     navigate('/login', { replace: true });
   };
 
-  const fallbackCopy = (text) => {
-    const ta = document.createElement('textarea');
-    ta.value = text;
-    ta.style.cssText = 'position:fixed;left:-9999px';
-    document.body.appendChild(ta);
-    ta.select();
-    try { document.execCommand('copy'); toast.success('已复制'); }
-    catch (_) { toast.error('复制失败，请手动复制'); }
-    document.body.removeChild(ta);
-  };
-
-  const copyFactoryCode = () => {
-    const code = user?.tenantCode || user?.factoryCode || '';
-    if (!code) { toast.info('暂无工厂码'); return; }
-    navigator.clipboard.writeText(code).then(() => toast.success('工厂码已复制')).catch(() => fallbackCopy(code));
-  };
-
-  const copyRegisterLink = () => {
-    const code = user?.tenantCode || user?.factoryCode || '';
-    const name = tenantName || user?.tenantName || '';
-    const baseUrl = window.location.origin;
-    const link = `${baseUrl}/register?tenantCode=${encodeURIComponent(code)}&tenantName=${encodeURIComponent(name)}`;
-    navigator.clipboard.writeText(link).then(() => toast.success('注册链接已复制')).catch(() => fallbackCopy(link));
-  };
-
-  const visibleMenu = menuConfig.filter((m) => {
+  const visibleSecondary = secondaryMenu.filter((m) => {
     if (!m.roles) return true;
     const role = user?.role || '';
     return m.roles.includes(role) || (role === 'tenant_owner' && m.roles.includes('admin'));
@@ -92,7 +71,7 @@ export default function AdminPage() {
             <div className="profile-role">{displayRole}</div>
             {onlineCount > 0 && (
               <div className="profile-online">
-                <span>👥</span>
+                <Icon name="users" size={14} color="var(--color-text-secondary)" />
                 <span>{onlineCount}人</span>
               </div>
             )}
@@ -100,32 +79,30 @@ export default function AdminPage() {
         </div>
       </div>
 
-      <div className="admin-menu-list">
-        {visibleMenu.map((item) => (
-          <button key={item.path} className="admin-menu-item" onClick={() => navigate(item.path)}>
-            <div className="admin-menu-icon-wrap">{item.icon}</div>
-            <span className="admin-menu-label">{item.label}</span>
-            <span className="admin-menu-arrow">›</span>
+      <div className="admin-menu-grid">
+        {primaryMenu.map((item) => (
+          <button key={item.path} className="admin-menu-card" onClick={() => navigate(item.path)}>
+            <div className="admin-menu-icon-wrap" style={{ background: item.bg }}>
+              <Icon name={item.icon} size={22} color={item.color} />
+            </div>
+            <span className="admin-menu-card-label">{item.label}</span>
           </button>
         ))}
       </div>
 
-      {(isAdminOrSupervisor() || user?.role === 'tenant_owner') && (
-        <div className="admin-menu-list" style={{ marginTop: 12 }}>
-          <div className="admin-menu-item" style={{ cursor: 'default' }}>
-            <div className="admin-menu-icon-wrap">🏭</div>
-            <span className="admin-menu-label" style={{ flex: 1 }}>工厂码</span>
-            <button className="ghost-button" style={{ fontSize: 'var(--font-size-xs)', padding: '2px 10px' }} onClick={copyFactoryCode}>复制</button>
-          </div>
-          <div className="admin-menu-item" style={{ cursor: 'default' }}>
-            <div className="admin-menu-icon-wrap">🔗</div>
-            <span className="admin-menu-label" style={{ flex: 1 }}>注册链接</span>
-            <button className="ghost-button" style={{ fontSize: 'var(--font-size-xs)', padding: '2px 10px' }} onClick={copyRegisterLink}>复制</button>
-          </div>
+      {visibleSecondary.length > 0 && (
+        <div className="admin-menu-list">
+          {visibleSecondary.map((item) => (
+            <button key={item.path} className="admin-menu-item" onClick={() => navigate(item.path)}>
+              <div className="admin-menu-icon-wrap" style={{ background: item.bg }}>
+                <Icon name={item.icon} size={18} color={item.color} />
+              </div>
+              <span className="admin-menu-label">{item.label}</span>
+              <span className="admin-menu-arrow">›</span>
+            </button>
+          ))}
         </div>
       )}
-
-      <button className="admin-logout-btn" onClick={handleLogout}>退出登录</button>
     </div>
   );
 }

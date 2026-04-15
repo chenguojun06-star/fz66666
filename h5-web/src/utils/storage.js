@@ -57,15 +57,15 @@ function isTokenExpired() {
   if (!token) return true;
   try {
     const parts = token.split('.');
-    if (parts.length < 2) return false;
+    if (parts.length < 2) return true;
     let payload = parts[1];
     payload = payload.replace(/-/g, '+').replace(/_/g, '/');
     while (payload.length % 4) payload += '=';
     const decoded = JSON.parse(atob(payload));
-    if (!decoded.exp) return false;
+    if (!decoded.exp) return true;
     return Date.now() / 1000 > decoded.exp - 300;
   } catch (e) {
-    return false;
+    return true;
   }
 }
 

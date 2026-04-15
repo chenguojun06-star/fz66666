@@ -112,10 +112,17 @@ function showLoading({ title = '加载中...' } = {}) {
     background:rgba(0,0,0,.3);z-index:99997;display:flex;
     align-items:center;justify-content:center;
   `;
-  el.innerHTML = `<div style="background:rgba(0,0,0,.75);color:#fff;padding:16px 24px;border-radius:12px;font-size:14px;">
-    <span style="display:inline-block;animation:wxspin 1s linear infinite;margin-right:8px;">⟳</span>${title}
-  </div>
-  <style>@keyframes wxspin{to{transform:rotate(360deg)}}</style>`;
+  const inner = document.createElement('div');
+  inner.style.cssText = 'background:rgba(0,0,0,.75);color:#fff;padding:16px 24px;border-radius:12px;font-size:14px;';
+  const spinner = document.createElement('span');
+  spinner.style.cssText = 'display:inline-block;animation:wxspin 1s linear infinite;margin-right:8px;';
+  spinner.textContent = '⟳';
+  inner.appendChild(spinner);
+  inner.appendChild(document.createTextNode(String(title || '')));
+  el.appendChild(inner);
+  const style = document.createElement('style');
+  style.textContent = '@keyframes wxspin{to{transform:rotate(360deg)}}';
+  el.appendChild(style);
   document.body.appendChild(el);
 }
 

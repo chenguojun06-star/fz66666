@@ -2,8 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '@/api';
 import { useAuthStore } from '@/stores/authStore';
-import { toast } from '@/utils/uiHelper';
 import { transformOrderData } from '@/utils/orderTransform';
+import { getAuthedImageUrl } from '@/utils/fileUrl';
+import { toast } from '@/utils/uiHelper';
 import Icon from '@/components/Icon';
 
 const TABS = [
@@ -15,9 +16,9 @@ const TABS = [
 ];
 
 const FACTORY_TYPES = [
-  { label: '全部', value: '' },
-  { label: '内部', value: 'internal' },
-  { label: '外部', value: 'external' },
+  { key: '', label: '全部' },
+  { key: 'INTERNAL', label: '内部' },
+  { key: 'EXTERNAL', label: '外部' },
 ];
 
 export default function WorkPage() {
@@ -32,257 +33,190 @@ export default function WorkPage() {
   const [delayedOnly, setDelayedOnly] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [factoryType, setFactoryType] = useState('');
-  const [orderStats, setOrderStats] = useState({ orderCount: 0, totalQuantity: 0, completedQuantity: 0, overdueCount: 0 });
+  const [orderStats, setOrderStats] = useState({ orderCount: 0, totalQuantity: 0 });
 
-  const loadOrders = useCallback(async (pageNum = 1, append = false) => {
+  const loadOrders = useCallback(async (reset = false) => {
+    if (loading) return;
+    const nextPage = reset ? 1 : page;
     setLoading(true);
     try {
-      const params = { page: pageNum, pageSize: 20, excludeTerminal: 'true' };
-      if (activeTab) {
-        const processMap = { procurement: '采购', cutting: '裁剪', sewing: '车缝', warehousing: '入库' };
-        if (processMap[activeTab]) params.currentProcessName = processMap[activeTab];
-      }
-      if (search.trim()) {
-        if (/^[A-Za-z0-9-]+$/.test(search.trim())) params.orderNo = search.trim();
-        else params.styleNo = search.trim();
-      }
-      if (delayedOnly) params.delayedOnly = 'true';
+      const params = { page: nextPage, pageSize: 20 };
+      if (activeTab) params.currentStage = activeTab;
+      if (search) params.keyword = search;
+      if (delayedOnly) params.delayedOnly = true;
       if (factoryType) params.factoryType = factoryType;
       const res = await api.production.orderList(params);
-      const data = res?.data || res;
-      const rawList = data?.list || data?.records || [];
-      const total = data?.total || 0;
-      const list = rawList.map(r => transformOrderData(r));
-      setOrders(append ? (prev) => [...prev, ...list] : list);
-      setHasMore(rawList.length >= 20 && (append ? orders.length + rawList.length : rawList.length) < total);
-      setPage(pageNum);
-      const overdueCount = list.filter(o => o.remainDays !== null && o.remainDays < 0).length;
-      setOrderStats({
-        orderCount: total || list.length,
-        totalQuantity: list.reduce((sum, o) => sum + (o.totalQuantity || o.orderQuantity || 0), 0),
-        completedQuantity: list.reduce((sum, o) => sum + (o.completedQuantity || 0), 0),
-        overdueCount,
-      });
+      const data = res?.data || res || {};
+      const list = (data?.list || data?.records || data || []).map(transformOrderData);
+      const total = data?.total || list.length;
+      let filtered = list;
+      if (delayedOnly && !params.delayedOnly) {
+        filtered = list.filter(o => o.remainDays !== null && o.remainDays < 0);
+      }
+      const newOrders = reset ? filtered : [...orders, ...filtered];
+      setOrders(newOrders);
+      setPage(nextPage + 1);
+      setHasMore(newOrders.length < total);
+      let qty = 0;
+      newOrders.forEach(o => { qty += (o.totalQuantity || o.orderQuantity || 0); });
+      setOrderStats({ orderCount: total, totalQuantity: qty });
     } catch (e) {
-      toast.error('加载订单失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [activeTab, search, delayedOnly, factoryType]);
+      toast.error('加载失败');
+    } finally { setLoading(false); }
+  }, [activeTab, search, delayedOnly, factoryType, loading, orders, page]);
 
-  useEffect(() => { loadOrders(1); }, [activeTab, delayedOnly, factoryType]);
+  useEffect(() => { loadOrders(true); }, [activeTab, delayedOnly, factoryType]);
 
-  const handleSearch = () => { loadOrders(1); };
+  const toggleExpand = (id) => {
+    setExpandedId(expandedId === id ? null : id);
+  };
+
+  const goBundleSplit = (orderNo, mode) => {
+    navigate(`/work/bundle-split?orderNo=${encodeURIComponent(orderNo)}${mode ? `&mode=${mode}` : ''}`);
+  };
 
   return (
-    <div className="work-container">
-      <div style={{ padding: '8px 16px' }}>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <input className="text-input" placeholder="搜索订单号/款号" value={search}
-            onChange={(e) => setSearch(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-            style={{ flex: 1, padding: '10px 14px' }} />
-          <button className="secondary-button" onClick={handleSearch} style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>搜索</button>
-        </div>
+    <div className="sub-page" style={{ paddingBottom: 'calc(80px + var(--safe-area-bottom, 0px))' }}>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {TABS.map(t => (
+          <button key={t.key} className={`filter-btn${activeTab === t.key ? ' active' : ''}`}
+            onClick={() => { setActiveTab(t.key); setPage(1); }}>{t.label}</button>
+        ))}
       </div>
 
-      <div className="work-card">
-        <div className="work-tabbar">
-          {TABS.map((tab) => (
-            <div key={tab.key} className={`work-tab${activeTab === tab.key ? ' work-tab-active' : ''}`}
-              onClick={() => setActiveTab(tab.key)}>
-              {tab.label}
-            </div>
-          ))}
-        </div>
-
-        <div className="order-stats-bar">
-          <span className="stats-bar-label">订单</span>
-          <span className="stats-bar-value stats-primary">{orderStats.orderCount}</span>
-          <span className="stats-bar-sep">｜</span>
-          <span className="stats-bar-label">总量</span>
-          <span className="stats-bar-value stats-accent">{orderStats.totalQuantity}</span>
-          <span className="stats-bar-sep">｜</span>
-          <span className="stats-bar-label">完成</span>
-          <span className="stats-bar-value" style={{ color: 'var(--color-success)' }}>{orderStats.completedQuantity}</span>
-          {orderStats.overdueCount > 0 && (
-            <>
-              <span className="stats-bar-sep">｜</span>
-              <span className="stats-bar-label">延期</span>
-              <span className="stats-bar-value" style={{ color: 'var(--color-danger)' }}>{orderStats.overdueCount}</span>
-            </>
-          )}
-        </div>
-
-        <div className="org-filter-row">
-          {FACTORY_TYPES.map((ft) => (
-            <div key={ft.value} className={`org-filter-pill${factoryType === ft.value ? ' org-filter-pill-active' : ''}`}
-              onClick={() => setFactoryType(ft.value)}>
-              <span className="org-filter-value">{ft.label}</span>
-            </div>
-          ))}
-          <div className={`org-filter-pill${delayedOnly ? ' org-filter-pill-active' : ''}`}
-            onClick={() => setDelayedOnly(!delayedOnly)}>
-            <span className="org-filter-value">{delayedOnly ? '全部' : '延期'}</span>
-          </div>
-          <div className="refresh-btn" onClick={() => loadOrders(1)}>
-            <span>刷新</span>
-          </div>
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        {FACTORY_TYPES.map(f => (
+          <button key={f.key} className={`filter-btn${factoryType === f.key ? ' active' : ''}`}
+            onClick={() => setFactoryType(f.key)}>{f.label}</button>
+        ))}
+        <button className={`filter-btn${delayedOnly ? ' active' : ''}`}
+          onClick={() => setDelayedOnly(!delayedOnly)} style={{ marginLeft: 'auto' }}>延期</button>
+        <button className="filter-btn" onClick={() => loadOrders(true)}>
+          <Icon name="refresh" size={12} />
+        </button>
       </div>
 
-      {!loading && !orders.length ? (
-        <div style={{ padding: '40px 16px', textAlign: 'center', color: 'var(--color-text-disabled)', fontSize: 'var(--font-size-sm)' }}>
-          暂无数据
-        </div>
-      ) : (
-        orders.map((order) => {
-          const isOverdue = order.remainDays !== null && order.remainDays < 0;
-          const isExpanded = expandedId === (order.id || order.orderNo);
-          const progress = order.productionProgress || 0;
-          const isClosed = order.isClosed;
-          return (
-            <div key={order.id || order.orderNo} className="list-item"
-              style={isOverdue ? { borderLeft: '3px solid var(--color-danger)' } : {}}>
-              <div className="item-header" onClick={() => setExpandedId(isExpanded ? null : (order.id || order.orderNo))}>
-                <div className="item-cover-box">
-                  {order.styleCoverUrl ? (
-                    <img className="item-cover" src={order.styleCoverUrl} alt="" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
-                  ) : null}
-                  <div className="item-cover-empty" style={order.styleCoverUrl ? { display: 'none' } : {}}>暂无<br/>图片</div>
-                </div>
-                <div className="item-header-info">
-                  <div className="item-head">
-                    <div className="item-title">
-                      {order.orderNo || order.orderNumber || '-'}
-                      {order.plateTypeTagText && <span className="order-tag order-tag-plate">{order.plateTypeTagText}</span>}
-                      {order.urgencyTagText && <span className={`order-tag ${order.urgencyTagText === '急' ? 'order-tag-urgent' : 'order-tag-normal'}`}>{order.urgencyTagText}</span>}
-                    </div>
-                    <div>
-                      {isClosed && <span className="tag tag-completed">已完成</span>}
-                      {!isClosed && order.currentProcessName && <span className="tag tag-process">{order.currentProcessName}</span>}
-                    </div>
-                  </div>
-                  <div className="item-header-sub">
-                    <span>{order.styleNo || '-'}</span>
-                    <span>·</span>
-                    <span>{order.deliveryDateStr || '交期待定'}</span>
-                    {order.remainDaysText && (
-                      <span className={`header-remain-days ${order.remainDaysClass || ''}`}>
-                        {order.remainDaysText}
-                      </span>
-                    )}
-                  </div>
-                  <div className="header-progress-row">
-                    <div className={`header-progress-bar${isClosed ? ' progress-completed' : ''}`}>
-                      <div className="progress-fill" style={{ width: `${progress}%` }}></div>
-                    </div>
-                    <span className="header-progress-pct">{progress}%</span>
-                  </div>
-                </div>
-                <span className={`collapse-arrow${isExpanded ? ' collapse-up' : ''}`}>▾</span>
-              </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
+        <span>订单 <strong style={{ color: 'var(--color-text-primary)' }}>{orderStats.orderCount}</strong></span>
+        <span style={{ color: 'var(--color-border)' }}>|</span>
+        <span>总量 <strong style={{ color: 'var(--color-text-primary)' }}>{orderStats.totalQuantity}</strong></span>
+      </div>
 
-              {isExpanded && (
-                <div className="item-collapse-body">
-                  <div className="item-meta">
-                    <span className="meta-label">订单数</span>
-                    <span className="meta-value meta-value-bold">{order.totalQuantity || order.orderQuantity || 0}</span>
-                    <span className="meta-sep">|</span>
-                    <span className="meta-label">已完成</span>
-                    <span className="meta-value meta-value-bold" style={{ color: 'var(--color-success)' }}>{order.completedQuantity || 0}</span>
-                    <span className="meta-sep">|</span>
-                    <span className="meta-label">裁床</span>
-                    <span className="meta-value">{order.cuttingQty || 0}</span>
-                  </div>
-                  <div className="item-meta">
-                    <span className="meta-label">工厂</span>
-                    <span className="meta-value">{order.factoryName || '-'}</span>
-                    {order.factoryTypeText && (
-                      <>
-                        <span className="meta-sep">|</span>
-                        <span className={`meta-value ${order.factoryTypeText === '内部' ? '' : ''}`} style={{
-                          padding: '1px 6px', borderRadius: 4, fontSize: 'var(--font-size-xs)',
-                          background: order.factoryTypeText === '内部' ? 'rgba(59,130,246,0.1)' : 'rgba(245,158,11,0.1)',
-                          color: order.factoryTypeText === '内部' ? 'var(--color-primary)' : 'var(--color-warning)',
-                        }}>{order.factoryTypeText}</span>
-                      </>
-                    )}
-                  </div>
-                  {order.deliveryDateStr && (
-                    <div className="item-meta">
-                      <span className="meta-label">交期</span>
-                      <span className="meta-value">{order.deliveryDateStr}</span>
-                      {order.remainDaysText && (
-                        <span className={`header-remain-days ${order.remainDaysClass || ''}`} style={{ marginLeft: 6 }}>
-                          {order.remainDaysText}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  {order.orgDisplay && (
-                    <div className="item-meta">
-                      <span className="meta-label">组织</span>
-                      <span className="meta-value">{order.orgDisplay}</span>
-                    </div>
-                  )}
-                  {order.statusText && (
-                    <div className="item-meta">
-                      <span className="meta-label">状态</span>
-                      <span className="meta-value">{order.statusText}</span>
-                    </div>
-                  )}
-                  {order.colorGroups && order.colorGroups.length > 0 && (
-                    <div style={{ marginTop: 8 }}>
-                      <div className="meta-label" style={{ marginBottom: 4 }}>尺码明细</div>
-                      <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--font-size-xs)' }}>
-                          <thead>
-                            <tr>
-                              <th style={{ padding: '4px 8px', textAlign: 'left', borderBottom: '1px solid var(--color-border-light)', color: 'var(--color-text-secondary)', fontWeight: 400 }}>颜色</th>
-                              {order.allSizes.map(s => (
-                                <th key={s} style={{ padding: '4px 6px', textAlign: 'center', borderBottom: '1px solid var(--color-border-light)', color: 'var(--color-text-secondary)', fontWeight: 400 }}>{s}</th>
-                              ))}
-                              <th style={{ padding: '4px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border-light)', color: 'var(--color-text-secondary)', fontWeight: 400 }}>小计</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {order.colorGroups.map(g => (
-                              <tr key={g.color}>
-                                <td style={{ padding: '4px 8px', borderBottom: '1px solid var(--color-border-light)' }}>{g.color}</td>
-                                {g.sizeQtyList.map((qty, i) => (
-                                  <td key={i} style={{ padding: '4px 6px', textAlign: 'center', borderBottom: '1px solid var(--color-border-light)' }}>{qty || '-'}</td>
-                                ))}
-                                <td style={{ padding: '4px 8px', textAlign: 'center', fontWeight: 600, borderBottom: '1px solid var(--color-border-light)' }}>{g.total}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-                  {order.sizeList && order.sizeList.length > 0 && (!order.colorGroups || !order.colorGroups.length) && (
-                    <div className="item-meta">
-                      <span className="meta-label">尺码</span>
-                      <span className="meta-value">{order.sizeList.map((s, i) => `${s}:${order.sizeQtyList[i]}`).join(' ')}</span>
-                    </div>
-                  )}
-                  {activeTab === 'cutting' && (
-                    <div className="item-actions">
-                      <button className="action-btn action-btn-primary" onClick={() => navigate(`/work/bundle-split?orderNo=${order.orderNo || order.orderNumber}`)}>生成菲号</button>
-                      <button className="action-btn action-btn-primary" onClick={() => { const no = order.orderNo || order.orderNumber; navigate(`/work/bundle-split?orderNo=${no}&mode=split`); }}>拆菲号</button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })
+      <div className="search-box">
+        <input className="text-input" placeholder="搜索订单号/款号" value={search}
+          onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && loadOrders(true)} style={{ flex: 1 }} />
+        <button className="secondary-button" onClick={() => loadOrders(true)}>搜索</button>
+      </div>
+
+      {orders.length === 0 && !loading && (
+        <div className="empty-state">
+          <div className="empty-icon">📋</div>
+          <div className="empty-text">暂无数据</div>
+        </div>
       )}
 
-      <button className="load-more-btn" disabled={loading || !hasMore}
-        onClick={() => loadOrders(page + 1, true)}>
-        {loading ? '加载中...' : hasMore ? '加载更多' : '没有更多了'}
-      </button>
+      {orders.map((order) => {
+        const isExpanded = expandedId === order.id;
+        const imgUrl = order.styleCoverUrl ? getAuthedImageUrl(order.styleCoverUrl) : '';
+        const isOverdue = order.remainDays !== null && order.remainDays < 0;
+        return (
+          <div key={order.id} className="card-item">
+            <div style={{ display: 'flex', gap: 12 }} onClick={() => toggleExpand(order.id)}>
+              <div style={{ width: 88, height: 88, borderRadius: 8, overflow: 'hidden', background: 'var(--color-bg-gray)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {imgUrl ? (
+                  <img src={imgUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling && (e.target.nextSibling.style.display = 'flex'); }} />
+                ) : null}
+                <span style={{ fontSize: 10, color: 'var(--color-text-tertiary)', textAlign: 'center', lineHeight: 1.3, display: imgUrl ? 'none' : 'flex' }}>暂无<br/>图片</span>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: 700, fontSize: 'var(--font-size-base)' }}>{order.orderNo}</span>
+                  {order.plateTypeTagText && (
+                    <span className="tag tag-blue">{order.plateTypeTagText === '首' ? '首单' : '翻单'}</span>
+                  )}
+                </div>
+                <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginTop: 3 }}>
+                  {order.styleNo || '-'}
+                  {order.factoryName && <span style={{ marginLeft: 8 }}>{order.factoryName}</span>}
+                </div>
+                <div style={{ fontSize: 'var(--font-size-xs)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ color: 'var(--color-text-secondary)' }}>数量 <strong style={{ color: 'var(--color-text-primary)' }}>{order.totalQuantity || order.orderQuantity || 0}</strong></span>
+                  <span style={{ color: 'var(--color-border)' }}>|</span>
+                  <span style={{ color: 'var(--color-text-secondary)' }}>完成 <strong style={{ color: 'var(--color-success)' }}>{order.completedQuantity || 0}</strong></span>
+                </div>
+                <div style={{ fontSize: 'var(--font-size-xs)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {order.deliveryDateStr ? (
+                    <span style={{ color: 'var(--color-text-secondary)' }}>交期 {order.deliveryDateStr}</span>
+                  ) : (
+                    <span style={{ color: 'var(--color-text-tertiary)' }}>交期待定</span>
+                  )}
+                  {isOverdue && <span className="days-tag days-overdue">逾{Math.abs(order.remainDays)}天</span>}
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', color: 'var(--color-text-tertiary)', paddingLeft: 4 }}>
+                <Icon name={isExpanded ? 'chevronDown' : 'chevronRight'} size={16} />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8 }}>
+              <div style={{ flex: 1, height: 4, background: 'var(--color-bg-gray)', borderRadius: 2, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${order.productionProgress || 0}%`, background: order.isClosed ? 'var(--color-text-tertiary)' : 'var(--color-success)', borderRadius: 2, transition: 'width 0.3s' }} />
+              </div>
+              <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, color: order.isClosed ? 'var(--color-text-tertiary)' : 'var(--color-success)' }}>{order.productionProgress || 0}%</span>
+            </div>
+
+            {isExpanded && (
+              <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--color-border-light)' }}>
+                {order.colorGroups && order.colorGroups.length > 0 && (
+                  <div style={{ marginBottom: 8 }}>
+                    {order.colorGroups.map((g, gi) => (
+                      <div key={gi} style={{ marginBottom: 6 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--font-size-xs)', marginBottom: 2 }}>
+                          <span className="tag tag-muted">{g.color}</span>
+                          <span style={{ color: 'var(--color-text-secondary)' }}>{g.total}件</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                          {order.allSizes.map((s, si) => {
+                            const qty = g.sizeMap[s] || 0;
+                            return qty > 0 ? (
+                              <span key={si} className="tag tag-muted">{s}: {qty}</span>
+                            ) : null;
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {(!order.colorGroups || order.colorGroups.length === 0) && order.sizeList && order.sizeList.length > 0 && (
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 }}>
+                    {order.sizeList.map((s, i) => (
+                      <span key={i} className="tag tag-muted">{s}: {order.sizeQtyList[i]}</span>
+                    ))}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {activeTab === 'cutting' && (
+                    <>
+                      <button className="mf-mini-btn" onClick={() => goBundleSplit(order.orderNo, 'generate')}>生成菲号</button>
+                      <button className="mf-mini-btn" onClick={() => goBundleSplit(order.orderNo, 'split')}>拆菲号</button>
+                    </>
+                  )}
+                  <button className="mf-mini-btn" onClick={() => { navigator.clipboard.writeText(order.orderNo).then(() => toast.success('已复制订单号')).catch(() => {}); }}>复制订单号</button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {loading && <div className="loading-state">加载中...</div>}
+      {!loading && hasMore && orders.length > 0 && (
+        <button className="ghost-button" style={{ width: '100%', marginTop: 8 }} onClick={() => loadOrders()}>加载更多</button>
+      )}
+      {!loading && !hasMore && orders.length > 0 && (
+        <div style={{ textAlign: 'center', padding: '12px 0', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)' }}>没有更多了</div>
+      )}
     </div>
   );
 }

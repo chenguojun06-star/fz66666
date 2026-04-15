@@ -12,6 +12,23 @@ export const http = axios.create({
   timeout: 30000,
 });
 
+let isHandling401 = false;
+
+export function handleUnauthorized() {
+  if (isHandling401) return;
+  isHandling401 = true;
+  useAuthStore.getState().clearAuth();
+  clearToken();
+  if (isWechat) {
+    const currentPath = window.location.pathname + window.location.search;
+    if (!currentPath.includes('/login')) {
+      sessionStorage.setItem('wx_oauth_redirect', currentPath);
+    }
+  }
+  window.location.href = '/login';
+  setTimeout(() => { isHandling401 = false; }, 3000);
+}
+
 http.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token;
   if (token) {
@@ -51,15 +68,7 @@ http.interceptors.response.use(
         : message;
 
     if (status === 401) {
-      useAuthStore.getState().clearAuth();
-      clearToken();
-      if (isWechat) {
-        const currentPath = window.location.pathname + window.location.search;
-        if (!currentPath.includes('/login')) {
-          sessionStorage.setItem('wx_oauth_redirect', currentPath);
-        }
-      }
-      window.location.href = '/login';
+      handleUnauthorized();
     }
 
     if (status === 0 && isWechat) {

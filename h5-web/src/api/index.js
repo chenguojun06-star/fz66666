@@ -1,4 +1,4 @@
-import { http } from '@/services/http';
+import { http, handleUnauthorized } from '@/services/http';
 import { useAuthStore } from '@/stores/authStore';
 
 const production = {
@@ -137,6 +137,10 @@ const intelligence = {
       signal: controller.signal,
     })
       .then(async (response) => {
+        if (response.status === 401) {
+          handleUnauthorized();
+          throw new Error('登录已过期');
+        }
         if (!response.ok) {
           const err = new Error(`HTTP ${response.status}`);
           err.status = response.status;
@@ -219,7 +223,13 @@ const common = {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` },
       body: formData,
-    }).then((r) => r.json()).then((res) => {
+    }).then((r) => {
+      if (r.status === 401) {
+        handleUnauthorized();
+        throw new Error('登录已过期');
+      }
+      return r.json();
+    }).then((res) => {
       if (res.code === 200 && res.data) return res.data;
       return res.msg || res.data || '';
     });

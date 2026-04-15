@@ -6,7 +6,9 @@ const WX_OAUTH_STATE_KEY = 'wx_oauth_state';
 const WX_OAUTH_REDIRECT_KEY = 'wx_oauth_redirect';
 
 function generateState() {
-  const state = 'h5_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+  const arr = new Uint8Array(16);
+  crypto.getRandomValues(arr);
+  const state = 'h5_' + Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
   sessionStorage.setItem(WX_OAUTH_STATE_KEY, state);
   return state;
 }

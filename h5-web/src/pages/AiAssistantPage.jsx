@@ -76,6 +76,9 @@ export default function AiAssistantPage() {
       if (data.materialShortageCount > 0) suggestions.push({ label: '面料缺口', text: '当前有哪些面料缺口预警？', alert: true });
       if (suggestions.length > 0) setDynamicSuggestions(suggestions);
     }).catch(() => {});
+    return () => {
+      if (streamTaskRef.current) streamTaskRef.current.abort();
+    };
   }, []);
 
   useEffect(() => {

@@ -9,31 +9,86 @@ import Icon from '@/components/Icon';
 
 const RECENT_SCAN_TTL = 2000;
 
+function formatRelativeTime(timeStr) {
+  if (!timeStr) return '';
+  const now = Date.now();
+  const t = new Date(timeStr).getTime();
+  const diff = now - t;
+  if (diff < 60000) return '刚刚';
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`;
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`;
+  return timeStr.length >= 16 ? timeStr.substring(5, 16) : timeStr;
+}
+
+function canUndo(record) {
+  if (!record.scanTime && !record.createTime) return false;
+  const t = new Date(record.scanTime || record.createTime).getTime();
+  return Date.now() - t < 3600000 && (record.scanResult || '').toLowerCase() === 'success';
+}
+
 export default function ScanPage() {
   const navigate = useNavigate();
   const [scanType] = useState('production');
   const [loading, setLoading] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
-  const [manualCode, setManualCode] = useState('');
-  const [stats, setStats] = useState({ scanCount: 0, orderCount: 0, totalQuantity: 0, totalAmount: 0 });
+  const [stats, setStats] = useState(null);
   const [lastResult, setLastResult] = useState(null);
   const [confirmData, setConfirmData] = useState(null);
+  const [todayRecords, setTodayRecords] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [undoingId, setUndoingId] = useState(null);
   const setScanResultData = useGlobalStore((s) => s.setScanResultData);
   const setQualityData = useGlobalStore((s) => s.setQualityData);
   const setPatternScanData = useGlobalStore((s) => s.setPatternScanData);
   const recentScansRef = useRef(new Map());
 
-  useEffect(() => {
-    api.production.personalScanStats().then((res) => {
-      const p = res?.data || res;
-      setStats({
-        scanCount: Number(p?.scanCount || 0),
-        orderCount: Number(p?.orderCount || 0),
-        totalQuantity: Number(p?.totalQuantity || 0),
-        totalAmount: Number(p?.totalAmount || 0),
-      });
-    }).catch(() => {});
+  const loadStats = useCallback(async () => {
+    try {
+      const res = await api.production.personalScanStats();
+      const p = res?.data ?? res;
+      if (p) {
+        setStats({
+          scanCount: Number(p.scanCount ?? p.todayScanCount ?? 0),
+          orderCount: Number(p.orderCount ?? 0),
+          totalQuantity: Number(p.totalQuantity ?? p.quantity ?? 0),
+          totalAmount: Number(p.totalAmount ?? p.amount ?? 0),
+        });
+      }
+    } catch (e) {
+      setStats({ scanCount: 0, orderCount: 0, totalQuantity: 0, totalAmount: 0 });
+    }
   }, []);
+
+  const loadTodayHistory = useCallback(async () => {
+    setLoadingHistory(true);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const res = await api.production.myScanHistory({
+        currentUser: 'true', page: 1, pageSize: 20,
+        startTime: today + ' 00:00:00', endTime: today + ' 23:59:59',
+      });
+      const data = res?.data || res || {};
+      const list = (data?.records || data?.list || []).filter(item => (item.scanResult || '').toLowerCase() !== 'failure');
+      setTodayRecords(list.map(item => ({
+        ...item,
+        displayTime: formatRelativeTime(item.scanTime || item.createTime),
+        displayProcess: item.processName || item.progressStage || '-',
+        displayOrderNo: item.orderNo || '-',
+        displayStyleNo: item.styleNo || '-',
+        displayBundleNo: item.bundleNo || item.cuttingBundleQrCode || '-',
+        displayColor: item.color || '-',
+        displayQuantity: item.quantity || 0,
+        displayWorker: item.workerName || item.operatorName || '-',
+        canUndo: canUndo(item),
+      })));
+    } catch (e) {
+      setTodayRecords([]);
+    } finally {
+      setLoadingHistory(false);
+    }
+  }, []);
+
+  useEffect(() => { loadStats(); loadTodayHistory(); }, [loadStats, loadTodayHistory]);
 
   const isRecentDuplicate = useCallback((code) => {
     const now = Date.now();
@@ -48,10 +103,7 @@ export default function ScanPage() {
 
   const handleScanResult = useCallback(async (code) => {
     if (!code || loading) return;
-    if (isRecentDuplicate(code)) {
-      toast.error('请勿重复扫码');
-      return;
-    }
+    if (isRecentDuplicate(code)) { toast.error('请勿重复扫码'); return; }
     setLoading(true);
     setCameraActive(false);
     setConfirmData(null);
@@ -73,167 +125,148 @@ export default function ScanPage() {
         } else {
           setScanResultData({ ...data, scanCode: code, scanType });
           setLastResult({ ...data, scanCode: code, scanType, success: true });
-          setStats((prev) => ({
-            ...prev,
-            scanCount: prev.scanCount + 1,
-            totalQuantity: prev.totalQuantity + (Number(data.quantity) || 1),
-          }));
+          setStats((prev) => prev ? { ...prev, scanCount: prev.scanCount + 1, totalQuantity: prev.totalQuantity + (Number(data.quantity) || 1) } : { scanCount: 1, orderCount: 0, totalQuantity: Number(data.quantity) || 1, totalAmount: 0 });
         }
         wx.vibrateShort();
+        loadTodayHistory();
       }
     } catch (err) {
       setLastResult({ scanCode: code, scanType, success: false, message: err.message || '扫码失败' });
       toast.error(err.message || '扫码失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [scanType, loading, isRecentDuplicate, setScanResultData, setQualityData, setPatternScanData, navigate]);
+    } finally { setLoading(false); }
+  }, [scanType, loading, isRecentDuplicate, setScanResultData, setQualityData, setPatternScanData, navigate, loadTodayHistory]);
 
   const handleCameraScan = () => {
     if (wx.isWechat) {
-      wx.scanCode({ onlyFromCamera: true }).then((res) => {
-        handleScanResult(res.result);
-      }).catch(() => {});
+      wx.scanCode({ onlyFromCamera: true }).then((res) => { handleScanResult(res.result); }).catch(() => {});
     } else {
       setCameraActive(true);
     }
   };
 
-  const handleManualSubmit = () => {
-    const code = manualCode.trim();
-    if (!code) {
-      toast.error('请输入菲号或条码');
-      return;
-    }
-    handleScanResult(code);
-    setManualCode('');
+  const handleUndoRecord = async (record) => {
+    if (!record.id) { toast.error('无法撤回'); return; }
+    if (!window.confirm('确定撤回此条扫码记录？')) return;
+    setUndoingId(record.id);
+    try {
+      await api.production.undoScan(record.id);
+      toast.success('撤回成功');
+      setTodayRecords(prev => prev.filter(r => r.id !== record.id));
+      setStats(prev => prev ? { ...prev, scanCount: Math.max(0, prev.scanCount - 1), totalQuantity: Math.max(0, prev.totalQuantity - (record.displayQuantity || 0)) } : prev);
+    } catch (e) { toast.error(e.message || '撤回失败'); }
+    finally { setUndoingId(null); }
   };
 
-  const goResultPage = () => {
-    if (confirmData) {
-      navigate('/scan/result');
-    }
-  };
+  const goResultPage = () => { if (confirmData) navigate('/scan/scan-result'); };
 
   return (
     <div className="scan-container">
-      <div className="sub-page-row" style={{ justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-        <span style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>今日统计</span>
-        <button className="ghost-button" style={{ fontSize: 'var(--font-size-xs)', padding: '2px 10px' }} onClick={() => {
-          api.production.personalScanStats().then((res) => {
-            const p = res?.data || res;
-            setStats({
-              scanCount: Number(p?.scanCount || 0),
-              orderCount: Number(p?.orderCount || 0),
-              totalQuantity: Number(p?.totalQuantity || 0),
-              totalAmount: Number(p?.totalAmount || 0),
-            });
-          }).catch(() => {});
-        }}>刷新</button>
-      </div>
-
-      <div className="today-stats-card">
-        <div className="today-stat-item">
-          <div className="today-stat-value">{stats.scanCount}</div>
-          <div className="today-stat-label">扫码</div>
+      {/* === 上区：今日统计 === */}
+      <div className="card-item">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--color-text-primary)' }}>今日统计</span>
+          <button className="filter-btn" style={{ fontSize: 12, padding: '4px 12px' }} onClick={loadStats}>
+            <Icon name="refresh" size={12} /> 刷新
+          </button>
         </div>
-        <div className="today-stat-item">
-          <div className="today-stat-value">{stats.orderCount}</div>
-          <div className="today-stat-label">订单</div>
-        </div>
-        <div className="today-stat-item">
-          <div className="today-stat-value">{stats.totalQuantity}</div>
-          <div className="today-stat-label">数量</div>
-        </div>
-        <div className="today-stat-item">
-          <div className="today-stat-value">¥{(stats.totalAmount || 0).toFixed(0)}</div>
-          <div className="today-stat-label">收入</div>
+        <div style={{ display: 'flex', textAlign: 'center' }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-primary)' }}>{stats?.scanCount ?? '-'}</div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 4 }}>扫码</div>
+          </div>
+          <div style={{ width: 1, background: 'var(--color-border-light)' }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-primary)' }}>{stats?.orderCount ?? '-'}</div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 4 }}>订单</div>
+          </div>
+          <div style={{ width: 1, background: 'var(--color-border-light)' }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-success)' }}>{stats?.totalQuantity ?? '-'}</div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 4 }}>数量</div>
+          </div>
+          <div style={{ width: 1, background: 'var(--color-border-light)' }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-warning)' }}>{stats ? `¥${stats.totalAmount.toFixed(0)}` : '-'}</div>
+            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 4 }}>收入</div>
+          </div>
         </div>
       </div>
 
-      <div className="quick-entry-row">
-        <div className="quick-entry-card" onClick={() => navigate('/scan/history')}>
-          <Icon name="clipboard" size={18} />
-          <span className="quick-entry-text">历史记录</span>
-          <span className="quick-entry-desc">全部扫码记录</span>
-        </div>
-        <div className="quick-entry-card" onClick={() => navigate('/scan/history?mode=monthly')}>
-          <Icon name="calendar" size={18} />
-          <span className="quick-entry-text">当月记录</span>
-          <span className="quick-entry-desc">本月汇总统计</span>
-        </div>
-      </div>
-
+      {/* === 中区：扫码结果 === */}
       {confirmData && (
-        <div className="scan-result-card" onClick={goResultPage} style={{ cursor: 'pointer' }}>
-          <div className="scan-result-header">
-            <span className="scan-result-tag success">扫码识别结果</span>
-            <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-primary)' }}>点击确认 ›</span>
+        <div className="card-item" onClick={goResultPage} style={{ cursor: 'pointer', borderLeft: '3px solid var(--color-success)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--color-success)' }}>扫码识别结果</span>
+            <span style={{ fontSize: 12, color: 'var(--color-primary)' }}>点击确认 ›</span>
           </div>
-          <div className="scan-result-info">
-            <span className="scan-result-info-item">款号: <span>{confirmData.styleNo || '-'}</span></span>
-            <span className="scan-result-info-item">菲号: <span>{confirmData.bundleNo || '-'}</span></span>
-            {confirmData.orderNo && <span className="scan-result-info-item">订单: <span>{confirmData.orderNo}</span></span>}
-            {confirmData.quantity && <span className="scan-result-info-item">数量: <span>{confirmData.quantity}</span></span>}
-          </div>
-          <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginTop: 4 }}>
-            可一次勾选多个工序，确认后统一领取
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', fontSize: 13 }}>
+            <span style={{ color: 'var(--color-text-secondary)' }}>款号: <strong style={{ color: 'var(--color-text-primary)' }}>{confirmData.styleNo || '-'}</strong></span>
+            <span style={{ color: 'var(--color-text-secondary)' }}>菲号: <strong style={{ color: 'var(--color-text-primary)' }}>{confirmData.bundleNo || '-'}</strong></span>
+            {confirmData.orderNo && <span style={{ color: 'var(--color-text-secondary)' }}>订单: <strong style={{ color: 'var(--color-text-primary)' }}>{confirmData.orderNo}</strong></span>}
+            {confirmData.quantity && <span style={{ color: 'var(--color-text-secondary)' }}>数量: <strong style={{ color: 'var(--color-text-primary)' }}>{confirmData.quantity}</strong></span>}
           </div>
         </div>
       )}
 
       {lastResult && !confirmData && (
-        <div className={`scan-result-card${lastResult.success ? '' : ' scan-fail'}`}>
-          <div className="scan-result-header">
-            <span className={`scan-result-tag ${lastResult.success ? 'success' : 'fail'}`}>
-              {lastResult.success ? '扫码成功' : '扫码失败'}
-            </span>
-            {lastResult.success && lastResult.orderNo && (
-              <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>{lastResult.orderNo}</span>
-            )}
+        <div className="card-item" style={{ borderLeft: `3px solid ${lastResult.success ? 'var(--color-success)' : 'var(--color-danger)'}` }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: lastResult.success ? 'var(--color-success)' : 'var(--color-danger)', marginBottom: 6 }}>
+            {lastResult.success ? '扫码成功' : '扫码失败'}
           </div>
           {lastResult.success ? (
-            <div className="scan-result-info">
-              <span className="scan-result-info-item">款号: <span>{lastResult.styleNo || '-'}</span></span>
-              <span className="scan-result-info-item">工序: <span>{lastResult.processName || '-'}</span></span>
-              <span className="scan-result-info-item">数量: <span>{lastResult.quantity || 1}</span></span>
-              {lastResult.factoryName && <span className="scan-result-info-item">工厂: <span>{lastResult.factoryName}</span></span>}
-              <span className="scan-result-info-item">
-                归属: <span>{lastResult.delegateTargetType === 'external' ? '外部' : '内部'}</span>
-              </span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', fontSize: 13 }}>
+              <span style={{ color: 'var(--color-text-secondary)' }}>款号: <strong style={{ color: 'var(--color-text-primary)' }}>{lastResult.styleNo || '-'}</strong></span>
+              <span style={{ color: 'var(--color-text-secondary)' }}>工序: <strong style={{ color: 'var(--color-text-primary)' }}>{lastResult.processName || '-'}</strong></span>
+              <span style={{ color: 'var(--color-text-secondary)' }}>数量: <strong style={{ color: 'var(--color-text-primary)' }}>{lastResult.quantity || 1}</strong></span>
             </div>
           ) : (
-            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>{lastResult.message}</div>
-          )}
-          {lastResult.success && lastResult.delegateTargetType && (
-            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-primary)', marginTop: 4 }}>
-              本工序今日累计 {lastResult.todayProcessCount || 0} 件
-            </div>
-          )}
-          {!lastResult.success && (
-            <div className="sub-page-row" style={{ marginTop: 8 }}>
-              <button className="ghost-button" style={{ fontSize: 'var(--font-size-xs)', padding: '4px 12px' }} onClick={() => window.location.reload()}>检查网络</button>
-              <button className="primary-button" style={{ fontSize: 'var(--font-size-xs)', padding: '4px 12px' }} onClick={handleCameraScan}>重新扫码</button>
-            </div>
+            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>{lastResult.message}</div>
           )}
         </div>
       )}
 
-      <div className="scan-area-card">
+      {/* === 中区：扫码按钮 === */}
+      <div className="card-item" style={{ textAlign: 'center', padding: '28px 16px' }}>
         <button className="scan-big-btn" onClick={handleCameraScan} disabled={loading}>
           {loading ? '...' : <Icon name="scan" size={36} color="#fff" />}
         </button>
-        <div className="scan-btn-label">{loading ? '识别中...' : '扫码识别'}</div>
-        <div className="scan-btn-hint">自动匹配工序</div>
+        <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--color-text-primary)', marginTop: 12 }}>{loading ? '识别中...' : '扫码识别'}</div>
+        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 4 }}>自动匹配工序</div>
+      </div>
 
-        <div style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
-          <input className="text-input" placeholder="手动输入菲号/条码" value={manualCode}
-            onChange={(e) => setManualCode(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleManualSubmit()}
-            style={{ flex: 1, padding: '8px 12px', fontSize: 'var(--font-size-sm)' }} />
-          <button className="secondary-button" onClick={handleManualSubmit} disabled={loading || !manualCode.trim()}
-            style={{ padding: '8px 14px', whiteSpace: 'nowrap', fontSize: 'var(--font-size-sm)' }}>提交</button>
+      {/* === 下区：今日记录 === */}
+      <div className="card-item">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+          <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--color-text-primary)' }}>今日记录</span>
+          <button className="filter-btn" style={{ fontSize: 12, padding: '4px 12px' }} onClick={() => navigate('/scan/history')}>查看全部 ›</button>
         </div>
+        {loadingHistory ? (
+          <div className="loading-state" style={{ padding: 16 }}>加载中...</div>
+        ) : todayRecords.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: 24, fontSize: 13, color: 'var(--color-text-secondary)' }}>暂无今日记录</div>
+        ) : (
+          <div className="today-records-list">
+            {todayRecords.map((r, idx) => (
+              <div key={r.id || idx} className="today-record-item">
+                <div className="today-record-row">
+                  <span className="today-record-order">{r.displayOrderNo}</span>
+                  <span className="today-record-process">{r.displayProcess}</span>
+                  <span className="today-record-time">{r.displayTime}</span>
+                </div>
+                <div className="today-record-detail">
+                  <span>菲号: {r.displayBundleNo}</span>
+                  <span>颜色: {r.displayColor}</span>
+                  <span>{r.displayQuantity}件</span>
+                  {r.canUndo && (
+                    <button className="filter-btn" style={{ fontSize: 11, padding: '2px 8px', marginLeft: 'auto' }} disabled={undoingId === r.id} onClick={() => handleUndoRecord(r)}>
+                      {undoingId === r.id ? '...' : '撤回'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <CameraScanner active={cameraActive} onScan={handleScanResult}

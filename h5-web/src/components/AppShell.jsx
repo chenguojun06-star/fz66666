@@ -10,7 +10,7 @@ const TABS = [
   { path: '/admin', icon: 'users', activeIcon: 'users', label: '我的' },
 ];
 
-const TAB_PATHS = ['/home', '/work', '/scan', '/admin'];
+import { TAB_PATHS } from '@/App';
 
 export default function AppShell({ children }) {
   const location = useLocation();
@@ -48,7 +48,7 @@ export default function AppShell({ children }) {
             return (
               <NavLink key={tab.path} to={tab.path} className={`tabbar-item${matched ? ' active' : ''}`}>
                 <span className="tabbar-icon">
-                  <Icon name={matched ? tab.activeIcon : tab.icon} size={28} />
+                  <Icon name={matched ? tab.activeIcon : tab.icon} size={32} />
                 </span>
                 <span>{tab.label}</span>
               </NavLink>

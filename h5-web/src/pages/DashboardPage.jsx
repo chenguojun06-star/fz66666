@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import api from '@/api';
-import { isAdminOrSupervisor } from '@/utils/permission';
-import { isTenantOwner } from '@/utils/storage';
 import { toast } from '@/utils/uiHelper';
 import { transformOrderData } from '@/utils/orderTransform';
+import { getAuthedImageUrl } from '@/utils/fileUrl';
 import Icon from '@/components/Icon';
 
 const STATUS_FILTERS = [
@@ -22,7 +20,6 @@ const SUMMARY_CARDS = [
 ];
 
 export default function DashboardPage() {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('all');
   const [cards, setCards] = useState({
@@ -37,11 +34,6 @@ export default function DashboardPage() {
   const [expandedId, setExpandedId] = useState(null);
 
   useEffect(() => {
-    if (!isTenantOwner() && !isAdminOrSupervisor()) {
-      toast.error('无权限访问');
-      navigate(-1);
-      return;
-    }
     refreshCards();
     loadOrders(true);
   }, []);
@@ -137,7 +129,7 @@ export default function DashboardPage() {
       <div className="sub-page-header" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
         <span className="sub-page-title">今日概览</span>
         {todayScanCount > 0 && (
-          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-primary)', background: 'rgba(59,130,246,0.08)', padding: '2px 10px', borderRadius: 12 }}>
+          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-primary)', background: 'rgba(59,130,246,0.08)', padding: '2px 10px', borderRadius: 8 }}>
             今日扫码 {todayScanCount} 次
           </span>
         )}
@@ -159,7 +151,7 @@ export default function DashboardPage() {
 
       <div className="scan-type-bar">
         {STATUS_FILTERS.map(f => (
-          <button key={f.key} className={`scan-type-chip${activeFilter === f.key ? ' active' : ''}`}
+          <button key={f.key} className={`filter-btn${activeFilter === f.key ? ' active' : ''}`}
             onClick={() => setActiveFilter(f.key)}>
             {f.label}
           </button>
@@ -183,125 +175,72 @@ export default function DashboardPage() {
           const isClosed = order.isClosed;
           const progress = order.productionProgress || 0;
           const isExpanded = expandedId === (order.id || order.orderNo);
+          const imgUrl = order.styleCoverUrl ? getAuthedImageUrl(order.styleCoverUrl) : '';
           return (
-            <div key={order.id || idx} className="hero-card compact list-item"
-              style={isOverdue ? { borderLeft: '3px solid var(--color-danger)' } : {}}>
-              <div style={{ display: 'flex', gap: 10, cursor: 'pointer' }} onClick={() => setExpandedId(isExpanded ? null : (order.id || order.orderNo))}>
-                {order.styleCoverUrl ? (
-                  <img src={order.styleCoverUrl} alt="" style={{ width: 64, height: 64, borderRadius: 'var(--radius-md)', objectFit: 'cover', flexShrink: 0 }} onError={(e) => { e.target.style.display = 'none'; }} />
-                ) : (
-                  <div style={{ width: 64, height: 64, borderRadius: 'var(--radius-md)', background: 'var(--color-bg-gray)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-disabled)', textAlign: 'center', lineHeight: 1.3 }}>
-                    暂无<br/>图片
-                  </div>
-                )}
+            <div key={order.id || idx} className="card-item">
+              <div style={{ display: 'flex', gap: 12, cursor: 'pointer' }} onClick={() => setExpandedId(isExpanded ? null : (order.id || order.orderNo))}>
+                <div style={{ width: 88, height: 88, borderRadius: 8, overflow: 'hidden', background: 'var(--color-bg-gray)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {imgUrl ? (
+                    <img src={imgUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={(e) => { e.target.style.display = 'none'; }} />
+                  ) : (
+                    <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-disabled)', textAlign: 'center', lineHeight: 1.3 }}>暂无<br/>图片</span>
+                  )}
+                </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                    <div style={{ fontWeight: 700, fontSize: 'var(--font-size-base)', display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                      {order.orderNo || '-'}
-                      {order.plateTypeTagText && <span className="order-tag order-tag-plate">{order.plateTypeTagText}</span>}
-                      {order.urgencyTagText && order.urgencyTagText === '急' && <span className="order-tag order-tag-urgent">急</span>}
-                      {order.urgencyTagText && order.urgencyTagText === '普' && <span className="order-tag order-tag-normal">普</span>}
-                    </div>
-                    {isClosed ? (
-                      <span className="tag tag-completed">已完成</span>
-                    ) : order.currentProcessName ? (
-                      <span className="tag tag-process">{order.currentProcessName}</span>
-                    ) : null}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <span style={{ fontWeight: 700, fontSize: 'var(--font-size-base)' }}>{order.orderNo || '-'}</span>
+                    {order.plateTypeTagText && <span className="tag tag-blue">{order.plateTypeTagText === '首' ? '首单' : '翻单'}</span>}
                   </div>
-                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginTop: 2 }}>
+                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginTop: 3 }}>
                     {order.styleNo || '-'}
-                    {order.factoryTypeText && (
-                      <span style={{
-                        marginLeft: 6, padding: '1px 5px', borderRadius: 4, fontSize: 'var(--font-size-xxs)',
-                        background: order.factoryTypeText === '内部' ? 'rgba(59,130,246,0.1)' : 'rgba(245,158,11,0.1)',
-                        color: order.factoryTypeText === '内部' ? 'var(--color-primary)' : 'var(--color-warning)',
-                      }}>{order.factoryTypeText}</span>
-                    )}
+                    {order.factoryName && <span style={{ marginLeft: 8 }}>{order.factoryName}</span>}
                   </div>
-                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginTop: 2 }}>
-                    {order.deliveryDateStr || '交期待定'}
-                    {order.remainDaysText && (
-                      <span className={order.remainDaysClass || ''} style={{ marginLeft: 6, fontWeight: 600 }}>
-                        {order.remainDaysText}
-                      </span>
+                  <div style={{ fontSize: 'var(--font-size-xs)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ color: 'var(--color-text-secondary)' }}>数量 <strong style={{ color: 'var(--color-text-primary)' }}>{order.totalQuantity || order.orderQuantity || 0}</strong></span>
+                    <span style={{ color: 'var(--color-border)' }}>|</span>
+                    <span style={{ color: 'var(--color-text-secondary)' }}>完成 <strong style={{ color: 'var(--color-success)' }}>{order.completedQuantity || 0}</strong></span>
+                  </div>
+                  <div style={{ fontSize: 'var(--font-size-xs)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
+                    {order.deliveryDateStr ? (
+                      <span style={{ color: 'var(--color-text-secondary)' }}>交期 {order.deliveryDateStr}</span>
+                    ) : (
+                      <span style={{ color: 'var(--color-text-tertiary)' }}>交期待定</span>
                     )}
+                    {isOverdue && <span className="days-tag days-overdue">逾{Math.abs(order.remainDays)}天</span>}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                    <div style={{ flex: 1, height: 3, background: 'var(--color-border-light)', borderRadius: 2, overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${progress}%`, background: isClosed ? 'var(--color-success)' : 'var(--color-primary)', borderRadius: 2, transition: 'width 0.3s' }} />
+                    <div style={{ flex: 1, height: 4, background: 'var(--color-bg-gray)', borderRadius: 2, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${progress}%`, background: isClosed ? 'var(--color-text-tertiary)' : 'var(--color-success)', borderRadius: 2, transition: 'width 0.3s' }} />
                     </div>
-                    <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, color: isClosed ? 'var(--color-success)' : 'var(--color-primary)' }}>{progress}%</span>
+                    <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, color: isClosed ? 'var(--color-text-tertiary)' : 'var(--color-success)' }}>{progress}%</span>
                   </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', color: 'var(--color-text-tertiary)', paddingLeft: 4 }}>
+                  <Icon name={isExpanded ? 'chevronDown' : 'chevronRight'} size={16} />
                 </div>
               </div>
 
               {isExpanded && (
-                <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--color-border-light)' }}>
-                  <div className="item-meta">
-                    <span className="meta-label">订单数</span>
-                    <span className="meta-value meta-value-bold">{order.totalQuantity || order.orderQuantity || 0}</span>
-                    <span className="meta-sep">|</span>
-                    <span className="meta-label">已完成</span>
-                    <span className="meta-value meta-value-bold" style={{ color: 'var(--color-success)' }}>{order.completedQuantity || 0}</span>
-                  </div>
-                  <div className="item-meta">
-                    <span className="meta-label">工厂</span>
-                    <span className="meta-value">{order.factoryName || '-'}</span>
-                    {order.factoryTypeText && (
-                      <>
-                        <span className="meta-sep">|</span>
-                        <span className="meta-value" style={{
-                          padding: '1px 6px', borderRadius: 4, fontSize: 'var(--font-size-xs)',
-                          background: order.factoryTypeText === '内部' ? 'rgba(59,130,246,0.1)' : 'rgba(245,158,11,0.1)',
-                          color: order.factoryTypeText === '内部' ? 'var(--color-primary)' : 'var(--color-warning)',
-                        }}>{order.factoryTypeText}</span>
-                      </>
-                    )}
-                  </div>
-                  {order.deliveryDateStr && (
-                    <div className="item-meta">
-                      <span className="meta-label">交期</span>
-                      <span className="meta-value">{order.deliveryDateStr}</span>
-                      {order.remainDaysText && (
-                        <span className={`header-remain-days ${order.remainDaysClass || ''}`} style={{ marginLeft: 6 }}>
-                          {order.remainDaysText}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  {order.statusText && (
-                    <div className="item-meta">
-                      <span className="meta-label">状态</span>
-                      <span className="meta-value">{order.statusText}</span>
-                    </div>
-                  )}
+                <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--color-border-light)' }}>
                   {order.colorGroups && order.colorGroups.length > 0 && (
-                    <div style={{ marginTop: 8 }}>
-                      <div className="meta-label" style={{ marginBottom: 4 }}>尺码明细</div>
-                      <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--font-size-xs)' }}>
-                          <thead>
-                            <tr>
-                              <th style={{ padding: '4px 8px', textAlign: 'left', borderBottom: '1px solid var(--color-border-light)', color: 'var(--color-text-secondary)', fontWeight: 400 }}>颜色</th>
-                              {order.allSizes.map(s => (
-                                <th key={s} style={{ padding: '4px 6px', textAlign: 'center', borderBottom: '1px solid var(--color-border-light)', color: 'var(--color-text-secondary)', fontWeight: 400 }}>{s}</th>
-                              ))}
-                              <th style={{ padding: '4px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border-light)', color: 'var(--color-text-secondary)', fontWeight: 400 }}>小计</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {order.colorGroups.map(g => (
-                              <tr key={g.color}>
-                                <td style={{ padding: '4px 8px', borderBottom: '1px solid var(--color-border-light)' }}>{g.color}</td>
-                                {g.sizeQtyList.map((qty, i) => (
-                                  <td key={i} style={{ padding: '4px 6px', textAlign: 'center', borderBottom: '1px solid var(--color-border-light)' }}>{qty || '-'}</td>
-                                ))}
-                                <td style={{ padding: '4px 8px', textAlign: 'center', fontWeight: 600, borderBottom: '1px solid var(--color-border-light)' }}>{g.total}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                    <div style={{ marginBottom: 8 }}>
+                      {order.colorGroups.map((g, gi) => (
+                        <div key={gi} style={{ marginBottom: 6 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 'var(--font-size-xs)', marginBottom: 2 }}>
+                            <span className="tag tag-muted">{g.color}</span>
+                            <span style={{ color: 'var(--color-text-secondary)' }}>{g.total}件</span>
+                          </div>
+                          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                            {order.allSizes.map((s, si) => {
+                              const qty = g.sizeMap[s] || 0;
+                              return qty > 0 ? (
+                                <span key={si} className="tag tag-muted">{s}: {qty}</span>
+                              ) : null;
+                            })}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>

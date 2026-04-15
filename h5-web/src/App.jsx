@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import AppShell from '@/components/AppShell';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 const LoginPage = lazy(() => import('@/pages/LoginPage'));
 const HomePage = lazy(() => import('@/pages/HomePage'));
@@ -44,53 +45,57 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
-const TAB_PATHS = ['/home', '/work', '/scan', '/admin'];
+export const TAB_PATHS = ['/home', '/work', '/scan', '/admin'];
 
 export default function App() {
   return (
-    <Suspense fallback={<Loading />}>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/" element={<Navigate to="/home" replace />} />
-        <Route path="*" element={
-          <ProtectedRoute>
-            <AppShell>
-              <Suspense fallback={<Loading />}>
-                <Routes>
-                  <Route path="/home" element={<HomePage />} />
-                  <Route path="/work" element={<WorkPage />} />
-                  <Route path="/scan" element={<ScanPage />} />
-                  <Route path="/admin" element={<AdminPage />} />
-                  <Route path="/register" element={<RegisterPage />} />
-                  <Route path="/work/inbox" element={<InboxPage />} />
-                  <Route path="/work/ai-assistant" element={<AiAssistantPage />} />
-                  <Route path="/work/bundle-split" element={<BundleSplitPage />} />
-                  <Route path="/scan/history" element={<ScanHistoryPage />} />
-                  <Route path="/scan/pattern" element={<ScanPatternPage />} />
-                  <Route path="/scan/rescan" element={<ScanRescanPage />} />
-                  <Route path="/scan/scan-result" element={<ScanResultPage />} />
-                  <Route path="/scan/confirm" element={<ScanConfirmPage />} />
-                  <Route path="/scan/quality" element={<ScanQualityPage />} />
-                  <Route path="/payroll/payroll" element={<PayrollPage />} />
-                  <Route path="/admin/user-approval" element={<UserApprovalPage />} />
-                  <Route path="/admin/change-password" element={<ChangePasswordPage />} />
-                  <Route path="/admin/feedback" element={<FeedbackPage />} />
-                  <Route path="/admin/invite" element={<InvitePage />} />
-                  <Route path="/warehouse/material/scan" element={<WarehouseMaterialScanPage />} />
-                  <Route path="/warehouse/sample/scan-action" element={<WarehouseSampleScanActionPage />} />
-                  <Route path="/privacy" element={<PrivacyPage />} />
-                  <Route path="/privacy/service" element={<PrivacyServicePage />} />
-                  <Route path="/cutting/task-list" element={<CuttingTaskListPage />} />
-                  <Route path="/cutting/task-detail" element={<CuttingTaskDetailPage />} />
-                  <Route path="/procurement/task-detail" element={<ProcurementTaskDetailPage />} />
-                  <Route path="/dashboard" element={<DashboardPage />} />
-                  <Route path="*" element={<Navigate to="/home" replace />} />
-                </Routes>
-              </Suspense>
-            </AppShell>
-          </ProtectedRoute>
-        } />
-      </Routes>
-    </Suspense>
+    <ErrorBoundary>
+      <Suspense fallback={<Loading />}>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/privacy/service" element={<PrivacyServicePage />} />
+          <Route path="/" element={<Navigate to="/home" replace />} />
+          <Route path="*" element={
+            <ProtectedRoute>
+              <AppShell>
+                <ErrorBoundary>
+                  <Suspense fallback={<Loading />}>
+                    <Routes>
+                      <Route path="/home" element={<HomePage />} />
+                      <Route path="/work" element={<WorkPage />} />
+                      <Route path="/scan" element={<ScanPage />} />
+                      <Route path="/admin" element={<AdminPage />} />
+                      <Route path="/work/inbox" element={<InboxPage />} />
+                      <Route path="/work/ai-assistant" element={<AiAssistantPage />} />
+                      <Route path="/work/bundle-split" element={<BundleSplitPage />} />
+                      <Route path="/scan/history" element={<ScanHistoryPage />} />
+                      <Route path="/scan/pattern" element={<ScanPatternPage />} />
+                      <Route path="/scan/rescan" element={<ScanRescanPage />} />
+                      <Route path="/scan/scan-result" element={<ScanResultPage />} />
+                      <Route path="/scan/confirm" element={<ScanConfirmPage />} />
+                      <Route path="/scan/quality" element={<ScanQualityPage />} />
+                      <Route path="/payroll/payroll" element={<PayrollPage />} />
+                      <Route path="/admin/user-approval" element={<UserApprovalPage />} />
+                      <Route path="/admin/change-password" element={<ChangePasswordPage />} />
+                      <Route path="/admin/feedback" element={<FeedbackPage />} />
+                      <Route path="/admin/invite" element={<InvitePage />} />
+                      <Route path="/warehouse/material/scan" element={<WarehouseMaterialScanPage />} />
+                      <Route path="/warehouse/sample/scan-action" element={<WarehouseSampleScanActionPage />} />
+                      <Route path="/cutting/task-list" element={<CuttingTaskListPage />} />
+                      <Route path="/cutting/task-detail" element={<CuttingTaskDetailPage />} />
+                      <Route path="/procurement/task-detail" element={<ProcurementTaskDetailPage />} />
+                      <Route path="/dashboard" element={<DashboardPage />} />
+                      <Route path="*" element={<Navigate to="/home" replace />} />
+                    </Routes>
+                  </Suspense>
+                </ErrorBoundary>
+              </AppShell>
+            </ProtectedRoute>
+          } />
+        </Routes>
+      </Suspense>
+    </ErrorBoundary>
   );
 }

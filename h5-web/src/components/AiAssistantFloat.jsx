@@ -3,6 +3,9 @@ import { createPortal } from 'react-dom';
 import api from '@/api';
 import { useAuthStore } from '@/stores/authStore';
 import { isAdminOrSupervisor } from '@/utils/permission';
+import { toast } from '@/utils/uiHelper';
+import useVoiceInput from '@/hooks/useVoiceInput';
+import Icon from '@/components/Icon';
 
 const QUICK_PROMPTS_WORKER = ['内部资料: 扫码规范', '内部资料: 质检流程', '内部资料: 入库流程', '内部资料: 常见问题'];
 const QUICK_PROMPTS_ADMIN = ['内部资料: 日报口径', '内部资料: 逾期定义', '内部资料: 采购流程', '内部资料: 返修流程'];
@@ -42,8 +45,11 @@ export default function AiAssistantFloat() {
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
   const [streamingText, setStreamingText] = useState('');
+  const [pendingImage, setPendingImage] = useState(null);
+  const [uploading, setUploading] = useState(false);
   const abortRef = useRef(null);
   const scrollRef = useRef(null);
+  const fileInputRef = useRef(null);
   const user = useAuthStore((s) => s.user);
 
   const [pos, setPos] = useState({ x: -1, y: -1 });
@@ -52,6 +58,18 @@ export default function AiAssistantFloat() {
   const startPos = useRef({ x: 0, y: 0 });
   const moved = useRef(false);
 
+  const voice = useVoiceInput({
+    lang: 'zh-CN',
+    continuous: false,
+    onResult: (transcript) => setInputText(prev => prev + transcript),
+  });
+
+  useEffect(() => {
+    if (voice.error === 'NOT_SUPPORTED') toast.info('当前浏览器不支持语音识别，请使用Chrome浏览器');
+    else if (voice.error === 'PERMISSION_DENIED') toast.error('请允许麦克风权限');
+    else if (voice.error && voice.error !== 'NO_SPEECH' && voice.error !== 'aborted') toast.error('语音识别出错：' + voice.error);
+  }, [voice.error]);
+
   useEffect(() => {
     if (pos.x === -1) {
       setPos({ x: window.innerWidth - 66, y: window.innerHeight * 0.55 });
@@ -59,9 +77,15 @@ export default function AiAssistantFloat() {
   }, []);
 
   useEffect(() => {
+    return () => {
+      if (abortRef.current) abortRef.current.abort();
+    };
+  }, []);
+
+  useEffect(() => {
     if (open && !messages.length) {
       const name = user?.name || user?.realName || user?.username || '用户';
-      setMessages([{ role: 'ai', text: `Hi ${name}，这里是小云帮助中心。` }]);
+      setMessages([{ role: 'ai', text: `Hi ${name}，这里是小云帮助中心。\n\n你可以：\n· 打字提问\n· 拍照识别\n· 语音输入` }]);
     }
   }, [open]);
 
@@ -108,19 +132,54 @@ export default function AiAssistantFloat() {
     if (!moved.current) setOpen(true);
   };
 
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    setPendingImage({ url: URL.createObjectURL(file), file });
+  };
+
+  const removePendingImage = () => {
+    if (pendingImage?.url?.startsWith('blob:')) URL.revokeObjectURL(pendingImage.url);
+    setPendingImage(null);
+  };
+
+  const uploadPendingImage = async () => {
+    if (!pendingImage) return null;
+    if (pendingImage.file) {
+      setUploading(true);
+      try { return await api.common.uploadImage(pendingImage.file); }
+      catch (e) { toast.error('图片上传失败'); return null; }
+      finally { setUploading(false); }
+    }
+    return pendingImage.url;
+  };
+
   const handleSend = useCallback(async (text) => {
     const msg = (text || inputText).trim();
-    if (!msg || sending) return;
+    if ((!msg && !pendingImage) || sending) return;
     setInputText('');
+    voice.stop();
     setSending(true);
     setStreamingText('');
-    setMessages((prev) => [...prev, { role: 'user', text: msg }]);
+
+    let imageUrl = null;
+    if (pendingImage) {
+      imageUrl = await uploadPendingImage();
+      if (pendingImage && !imageUrl) { setSending(false); return; }
+    }
+
+    const displayText = imageUrl ? (msg || '请看这张图片') : msg;
+    setMessages((prev) => [...prev, { role: 'user', text: displayText, image: imageUrl || (pendingImage?.url || null) }]);
 
     let fullText = '';
     try {
       await new Promise((resolve, reject) => {
+        const streamPayload = { question: msg || (imageUrl ? '请看这张图片' : ''), pageContext: window.location.pathname };
+        if (imageUrl) streamPayload.imageUrl = imageUrl;
+
         const handle = api.intelligence.aiAdvisorChatStream(
-          { question: msg, pageContext: window.location.pathname },
+          streamPayload,
           (data) => {
             if (data.type === 'answer' && data.content) { fullText += data.content; setStreamingText(fullText); }
             else if (data.type === 'tool_call') { fullText += `\n🔧 调用工具: ${data.toolName || data.tool || ''}\n`; setStreamingText(fullText); }
@@ -143,7 +202,8 @@ export default function AiAssistantFloat() {
       });
     } catch (e) { /* handled */ }
     setSending(false);
-  }, [inputText, sending]);
+    setPendingImage(null);
+  }, [inputText, sending, pendingImage]);
 
   const prompts = isAdminOrSupervisor() ? QUICK_PROMPTS_ADMIN : QUICK_PROMPTS_WORKER;
 
@@ -165,6 +225,7 @@ export default function AiAssistantFloat() {
         boxShadow: '0 4px 20px rgba(59,130,246,0.3)',
         cursor: 'pointer', touchAction: 'none',
         border: '2px solid rgba(59,130,246,0.15)',
+        transition: 'left 0.3s ease',
       }}
     >
       <MiniCloud size={50} />
@@ -172,7 +233,7 @@ export default function AiAssistantFloat() {
   ) : (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--color-bg-page)', zIndex: 99999, display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', background: 'var(--color-bg-card)', borderBottom: '1px solid var(--color-border)', paddingTop: 'calc(12px + var(--safe-area-top, 0px))' }}>
-        <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--color-text-primary)', padding: '4px 8px' }}>✕</button>
+        <button onClick={() => { setOpen(false); voice.stop(); }} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--color-text-primary)', padding: '4px 8px' }}>✕</button>
         <MiniCloud size={28} />
         <span style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700 }}>小云帮助中心</span>
       </div>
@@ -186,7 +247,10 @@ export default function AiAssistantFloat() {
               color: msg.role === 'user' ? '#fff' : 'var(--color-text-primary)',
               fontSize: 14, lineHeight: 1.6, boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
               whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-            }}>{msg.text}</div>
+            }}>
+              {msg.image && <img src={msg.image} alt="" style={{ maxWidth: '100%', borderRadius: 8, marginBottom: 6, display: 'block' }} />}
+              {msg.text}
+            </div>
           </div>
         ))}
         {streamingText && (
@@ -211,13 +275,35 @@ export default function AiAssistantFloat() {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 8, padding: '8px 16px', paddingBottom: 'calc(8px + var(--safe-area-bottom, 0px))', background: 'var(--color-bg-card)', borderTop: '1px solid var(--color-border)' }}>
+      {pendingImage && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 16px', background: 'var(--color-bg-light)' }}>
+          <img src={pendingImage.url} alt="" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--color-border)' }} />
+          <span style={{ flex: 1, fontSize: 12, color: 'var(--color-text-secondary)' }}>已选图片，发送时将上传识别</span>
+          <button onClick={removePendingImage} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-tertiary)', fontSize: 18 }}>✕</button>
+        </div>
+      )}
+
+      <input ref={fileInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleFileChange} />
+
+      <div style={{ display: 'flex', gap: 8, padding: '8px 16px', paddingBottom: 'calc(8px + var(--safe-area-bottom, 0px))', background: 'var(--color-bg-card)', borderTop: '1px solid var(--color-border)', alignItems: 'center' }}>
+        <button onClick={() => fileInputRef.current?.click()} disabled={sending || uploading}
+          style={{ width: 36, height: 36, borderRadius: 10, border: '1px solid var(--color-border)', background: 'var(--color-bg-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, opacity: (sending || uploading) ? 0.5 : 1 }}
+          title="拍照/选图">
+          <Icon name="camera" size={18} color="var(--color-text-secondary)" />
+        </button>
+        <button onClick={voice.toggle} disabled={sending}
+          className={`chat-tool-btn${voice.listening ? ' active' : ''}`}
+          style={{ width: 36, height: 36, borderRadius: 10, border: voice.listening ? '1px solid var(--color-error)' : '1px solid var(--color-border)', background: voice.listening ? 'rgba(239,68,68,0.1)' : 'var(--color-bg-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, opacity: sending ? 0.5 : 1 }}
+          title="语音输入">
+          <Icon name={voice.listening ? 'micOff' : 'mic'} size={18} color={voice.listening ? 'var(--color-error)' : 'var(--color-text-secondary)'} />
+        </button>
         <input value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-          placeholder="输入关键字查询内部资料，如：扫码规范、质检流程" disabled={sending}
-          style={{ flex: 1, border: '1px solid var(--color-border)', borderRadius: 12, padding: '10px 14px', fontSize: 14, background: 'var(--color-bg-light)' }} />
-        <button onClick={() => handleSend()} disabled={!inputText.trim() || sending}
-          style={{ padding: '10px 16px', borderRadius: 12, border: 'none', background: (!inputText.trim() || sending) ? 'var(--color-bg-gray)' : 'var(--color-primary)', color: (!inputText.trim() || sending) ? 'var(--color-text-disabled)' : '#fff', fontWeight: 700, cursor: (!inputText.trim() || sending) ? 'not-allowed' : 'pointer' }}>
-          发送
+          placeholder={voice.listening ? '正在聆听...' : '输入关键字查询内部资料'}
+          disabled={sending}
+          style={{ flex: 1, border: '1px solid var(--color-border)', borderRadius: 12, padding: '10px 14px', fontSize: 14, background: 'var(--color-bg-light)', minWidth: 0 }} />
+        <button onClick={() => handleSend()} disabled={(!inputText.trim() && !pendingImage) || sending || uploading}
+          style={{ padding: '10px 16px', borderRadius: 12, border: 'none', background: ((!inputText.trim() && !pendingImage) || sending || uploading) ? 'var(--color-bg-gray)' : 'var(--color-primary)', color: ((!inputText.trim() && !pendingImage) || sending || uploading) ? 'var(--color-text-disabled)' : '#fff', fontWeight: 700, cursor: ((!inputText.trim() && !pendingImage) || sending || uploading) ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>
+          {uploading ? '上传中' : '发送'}
         </button>
       </div>
     </div>

@@ -6,11 +6,6 @@ import { http } from '@/services/http';
 
 const _now = new Date();
 
-function getDateBefore(days) {
-  const d = new Date(); d.setDate(d.getDate() - days);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
 function getMonthRange(year, month) {
   const m = String(month).padStart(2, '0');
   const lastDay = new Date(year, month, 0).getDate();
@@ -28,21 +23,28 @@ function _normalizeQualityName(processName) {
   return processName;
 }
 
+function canUndo(record) {
+  if (!record.scanTime && !record.createTime) return false;
+  const t = new Date(record.scanTime || record.createTime).getTime();
+  return Date.now() - t < 3600000 && (record.scanResult || '').toLowerCase() === 'success';
+}
+
 export default function ScanHistoryPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [dateMode, setDateMode] = useState(() => searchParams.get('mode') === 'monthly' ? 'month' : 'month');
   const [year, setYear] = useState(_now.getFullYear());
   const [month, setMonth] = useState(_now.getMonth() + 1);
-  const [startDate, setStartDate] = useState(getDateBefore(30));
-  const [endDate, setEndDate] = useState(getDateBefore(0));
+  const [startDate, setStartDate] = useState(() => { const d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString().split('T')[0]; });
+  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [records, setRecords] = useState([]);
   const [showOnlyPayable, setShowOnlyPayable] = useState(false);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(1);
-  const [summary, setSummary] = useState({ totalQuantity: 0, orderCount: 0, recordCount: 0, totalWage: '0.00' });
+  const [undoingId, setUndoingId] = useState(null);
+  const [summary, setSummary] = useState({ totalQuantity: 0, orderCount: 0, recordCount: 0, patternRecordCount: 0, payableRecordCount: 0, totalWage: '0.00' });
 
   const displayMonth = getMonthRange(year, month).display;
 
@@ -88,10 +90,16 @@ export default function ScanHistoryPage() {
         displayProcess: _normalizeQualityName(item.processName) || item.progressStage || item.scanType || '-',
         displayWorker: item.workerName || item.operatorName || '-',
         displayOrderNo: item.orderNo || '-',
+        displayStyleNo: item.styleNo || '-',
         displayBundleNo: item.bundleNo || item.cuttingBundleQrCode || '-',
+        displayColor: item.color || '-',
+        displayUnitPrice: item.unitPrice ? `¥${Number(item.unitPrice).toFixed(2)}` : '-',
         displayQuantity: item.quantity || 0,
+        displayBedNo: item.bedNo || item.cuttingBedNo || '-',
+        displayLineAmount: (Number(item.totalAmount) || Number(item.scanCost) || ((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0))).toFixed(2),
         lineAmount: Number(item.totalAmount) || Number(item.scanCost) || ((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0)),
         isPayable: (Number(item.totalAmount) > 0) || (Number(item.scanCost) > 0) || ((Number(item.unitPrice) || 0) > 0 && (Number(item.quantity) || 0) > 0),
+        canUndo: canUndo(item),
       }));
 
       const patternFormatted = patternRecords.map(item => ({
@@ -100,10 +108,16 @@ export default function ScanHistoryPage() {
         displayProcess: '样板',
         displayWorker: item.workerName || item.operatorName || '-',
         displayOrderNo: item.orderNo || item.styleNo || '-',
+        displayStyleNo: item.styleNo || '-',
         displayBundleNo: item.patternNo || '-',
+        displayColor: item.color || '-',
+        displayUnitPrice: '-',
         displayQuantity: item.quantity || 0,
+        displayBedNo: '-',
+        displayLineAmount: '0.00',
         lineAmount: 0,
         isPayable: false,
+        canUndo: false,
       }));
 
       const allFormatted = [...formatted, ...patternFormatted].sort((a, b) => {
@@ -121,17 +135,23 @@ export default function ScanHistoryPage() {
         const payrollData = payrollRes.value?.data || payrollRes.value;
         if (Array.isArray(payrollData)) payrollData.forEach(item => { totalWage += Number(item.totalAmount) || 0; });
       }
-      if (totalWage === 0) merged.forEach(r => { const amt = Number(r.totalAmount) || Number(r.scanCost) || ((Number(r.unitPrice) || 0) * (Number(r.quantity) || 0)); if (amt > 0) totalWage += amt; });
+      if (totalWage === 0) merged.forEach(r => { const amt = r.lineAmount; if (amt > 0) totalWage += amt; });
 
       let totalQuantity = 0;
       const orderSet = new Set();
-      merged.forEach(r => { totalQuantity += r.quantity || 0; if (r.orderNo && r.orderNo !== '-') orderSet.add(r.orderNo); });
+      let payableCount = 0;
+      let patternCount = 0;
+      merged.forEach(r => {
+        totalQuantity += r.displayQuantity || 0;
+        if (r.orderNo && r.orderNo !== '-') orderSet.add(r.orderNo);
+        if (r.isPayable) payableCount++;
+        if (r.displayProcess === '样板') patternCount++;
+      });
 
-      const displayRecords = showOnlyPayable ? merged.filter(r => r.isPayable) : merged;
       setRecords(merged);
       setPage(nextPage);
       setHasMore(merged.length < total);
-      setSummary({ totalQuantity, orderCount: orderSet.size, recordCount: merged.length, totalWage: totalWage.toFixed(2) });
+      setSummary({ totalQuantity, orderCount: orderSet.size, recordCount: merged.length, patternRecordCount: patternCount, payableRecordCount: payableCount, totalWage: totalWage.toFixed(2) });
     } catch (e) {
       toast.error('加载失败');
     } finally {
@@ -149,52 +169,86 @@ export default function ScanHistoryPage() {
     if (m > 12) { m = 1; y++; } setYear(y); setMonth(m);
   };
 
+  const handleUndo = async (record) => {
+    if (!record.id) { toast.error('无法撤回'); return; }
+    if (!window.confirm('确定撤回此条扫码记录？')) return;
+    setUndoingId(record.id);
+    try {
+      await api.production.undoScan(record.id);
+      toast.success('撤回成功');
+      setRecords(prev => prev.filter(r => r.id !== record.id));
+      setSummary(prev => ({
+        ...prev,
+        totalQuantity: prev.totalQuantity - (record.displayQuantity || 0),
+        recordCount: prev.recordCount - 1,
+        payableRecordCount: prev.payableRecordCount - (record.isPayable ? 1 : 0),
+      }));
+    } catch (e) {
+      toast.error(e.message || '撤回失败');
+    } finally {
+      setUndoingId(null);
+    }
+  };
+
   const displayRecords = showOnlyPayable ? records.filter(r => r.isPayable) : records;
 
   return (
     <div className="scan-history-stack">
-      <div className="tab-bar">
-        <button className={`scan-type-chip${dateMode === 'month' ? ' active' : ''}`} onClick={() => setDateMode('month')}>按月</button>
-        <button className={`scan-type-chip${dateMode === 'custom' ? ' active' : ''}`} onClick={() => setDateMode('custom')}>自定义</button>
+      <div className="mode-tabs">
+        <button className={`mode-tab${dateMode === 'month' ? ' mode-tab-active' : ''}`} onClick={() => setDateMode('month')}>按月</button>
+        <button className={`mode-tab${dateMode === 'custom' ? ' mode-tab-active' : ''}`} onClick={() => setDateMode('custom')}>自定义</button>
       </div>
 
       {dateMode === 'month' ? (
-        <div className="sub-page-row" style={{ justifyContent: 'space-between' }}>
-          <button className="ghost-button" onClick={onPrevMonth}>‹</button>
-          <span style={{ fontWeight: 600 }}>{displayMonth}</span>
-          <button className="ghost-button" onClick={onNextMonth}>›</button>
+        <div className="month-selector">
+          <button className="month-arrow" onClick={onPrevMonth}>‹</button>
+          <span className="month-text">{displayMonth}</span>
+          <button className="month-arrow" onClick={onNextMonth}>›</button>
         </div>
       ) : (
-        <div className="sub-page-row-stretch">
-          <input className="text-input" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
-          <input className="text-input" type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+        <div className="filter-section">
+          <div className="date-row">
+            <div className="date-col">
+              <span className="date-label">开始</span>
+              <input className="text-input" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+            </div>
+            <span className="date-separator">—</span>
+            <div className="date-col">
+              <span className="date-label">结束</span>
+              <input className="text-input" type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+            </div>
+          </div>
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-        <input className="text-input" placeholder="搜索订单号/菲号" value={searchKeyword}
-          onChange={e => setSearchKeyword(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && loadData(true)} style={{ flex: 1 }} />
-        <button className="secondary-button" onClick={() => loadData(true)} style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>搜索</button>
-        <button className="ghost-button" onClick={() => { setSearchKeyword(''); loadData(true); }} style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>重置</button>
+      <div className="filter-section">
+        <div className="search-row">
+          <input className="text-input" placeholder="订单号 / 菲号 / 工序" value={searchKeyword}
+            onChange={e => setSearchKeyword(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && loadData(true)} style={{ flex: 1 }} />
+          <button className="secondary-button" onClick={() => loadData(true)} style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>搜索</button>
+          {searchKeyword && (
+            <button className="ghost-button" onClick={() => { setSearchKeyword(''); loadData(true); }} style={{ padding: '8px 12px', whiteSpace: 'nowrap' }}>重置</button>
+          )}
+        </div>
       </div>
 
-      <div className="stats-grid stats-grid-2col">
-        <div className="stat-card tone-blue" onClick={() => setShowOnlyPayable(!showOnlyPayable)} style={{ cursor: 'pointer' }}>
-          <div className="stat-number">¥{summary.totalWage}</div>
-          <div className="stat-label">{showOnlyPayable ? '计薪总额' : '工资总额'}</div>
+      <div className="summary-grid-2col">
+        <div className="summary-grid-item">
+          <span className="summary-num">{summary.totalQuantity}</span>
+          <span className="summary-label">总数量</span>
         </div>
-        <div className="stat-card tone-green">
-          <div className="stat-number">{summary.totalQuantity}</div>
-          <div className="stat-label">累计件数</div>
+        <div className="summary-grid-item">
+          <span className="summary-num">{summary.orderCount}</span>
+          <span className="summary-label">订单数</span>
         </div>
-        <div className="stat-card tone-purple">
-          <div className="stat-number">{summary.orderCount}</div>
-          <div className="stat-label">订单数</div>
+        <div className="summary-grid-item">
+          <span className="summary-num">{summary.recordCount}</span>
+          <span className="summary-label">记录数(样衣{summary.patternRecordCount})</span>
         </div>
-        <div className="stat-card tone-orange">
-          <div className="stat-number">{summary.recordCount}</div>
-          <div className="stat-label">记录数</div>
+        <div className={`summary-grid-item summary-hl${showOnlyPayable ? ' summary-payable-active' : ''}`} onClick={() => setShowOnlyPayable(!showOnlyPayable)} style={{ cursor: 'pointer' }}>
+          <span className="summary-num">¥{summary.totalWage}</span>
+          <span className="summary-label">工资({summary.payableRecordCount}条)</span>
         </div>
       </div>
 
@@ -207,19 +261,45 @@ export default function ScanHistoryPage() {
           <div className="empty-state-desc">扫码后记录会在这里显示</div>
         </div>
       ) : (
-        <div className="list-stack">
-          {displayRecords.map((r, idx) => (
-            <div key={r.id || idx} className="card-item" style={{ padding: 10, fontSize: 'var(--font-size-sm)' }}>
-              <div className="sub-page-row" style={{ justifyContent: 'space-between' }}>
-                <span style={{ fontWeight: 600 }}>{r.displayOrderNo}</span>
-                <span className="card-item-meta">{r.displayTime}</span>
-              </div>
-              <div className="card-item-meta" style={{ marginTop: 2 }}>
-                {r.displayProcess} · {r.displayBundleNo} · {r.displayQuantity}件
-                {r.isPayable && <span style={{ color: 'var(--color-primary)', marginLeft: 8 }}>¥{r.lineAmount.toFixed(2)}</span>}
-              </div>
+        <div className="table-wrap">
+          <div className="srt-table-inner">
+            <div className="srt-table-header">
+              <span className="srt-th srt-th-worker">领取人</span>
+              <span className="srt-th srt-th-order">订单号</span>
+              <span className="srt-th srt-th-style">款号</span>
+              <span className="srt-th srt-th-bundle">菲号</span>
+              <span className="srt-th srt-th-process">工序</span>
+              <span className="srt-th srt-th-color">颜色</span>
+              <span className="srt-th srt-th-price">单价</span>
+              <span className="srt-th srt-th-qty">数量</span>
+              <span className="srt-th srt-th-amount">金额</span>
+              <span className="srt-th srt-th-bed">床号</span>
+              <span className="srt-th srt-th-time">日期</span>
+              <span className="srt-th srt-th-action">操作</span>
             </div>
-          ))}
+            {displayRecords.map((r, idx) => (
+              <div key={r.id || idx} className="srt-table-row">
+                <span className="srt-td srt-td-worker">{r.displayWorker}</span>
+                <span className="srt-td srt-td-order">{r.displayOrderNo}</span>
+                <span className="srt-td srt-td-style">{r.displayStyleNo}</span>
+                <span className="srt-td srt-td-bundle">{r.displayBundleNo}</span>
+                <span className="srt-td srt-td-process">{r.displayProcess}</span>
+                <span className="srt-td srt-td-color">{r.displayColor}</span>
+                <span className="srt-td srt-td-price">{r.displayUnitPrice}</span>
+                <span className="srt-td srt-td-qty">{r.displayQuantity}</span>
+                <span className="srt-td srt-td-amount">{r.displayLineAmount}</span>
+                <span className="srt-td srt-td-bed">{r.displayBedNo}</span>
+                <span className="srt-td srt-td-time">{r.displayTime}</span>
+                <span className="srt-td srt-td-action">
+                  {r.canUndo ? (
+                    <button className="undo-btn" disabled={undoingId === r.id} onClick={() => handleUndo(r)}>
+                      {undoingId === r.id ? '...' : '撤回'}
+                    </button>
+                  ) : null}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
