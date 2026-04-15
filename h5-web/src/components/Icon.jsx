@@ -309,7 +309,7 @@ export default function Icon({ name, size, color, style, className }) {
   const renderFn = icons[name];
   if (!renderFn) return null;
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: color || 'currentColor', lineHeight: 1, ...style }} className={className}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: color || 'currentColor', lineHeight: 1, flexShrink: 0, width: size, height: size, ...style }} className={className}>
       {renderFn(size)}
     </span>
   );
