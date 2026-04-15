@@ -53,9 +53,13 @@ http.interceptors.request.use((config) => {
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
     return Promise.reject(new Error('网络已断开，请检查网络连接'));
   }
-  const token = useAuthStore.getState().token;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  if (!config.headers.skipAuth) {
+    const token = useAuthStore.getState().token;
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  } else {
+    delete config.headers.skipAuth;
   }
   if (isWechat) {
     config.headers['X-Client-Type'] = 'wechat-h5';

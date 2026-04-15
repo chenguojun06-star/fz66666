@@ -11,15 +11,11 @@ import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.production.orchestration.SysNoticeOrchestrator;
 import com.fashion.supplychain.system.orchestration.TenantOrchestrator;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpServletRequest;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
@@ -38,9 +34,6 @@ public class TenantController {
 
     @Autowired
     private TenantOrchestrator tenantOrchestrator;
-
-    @Autowired(required = false)
-    private StringRedisTemplate stringRedisTemplate;
 
     @Autowired
     private SysNoticeOrchestrator sysNoticeOrchestrator;

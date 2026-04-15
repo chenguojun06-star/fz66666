@@ -76,7 +76,7 @@ const production = {
 };
 
 const system = {
-  login: (payload) => http.post('/api/system/user/login', payload),
+  login: (payload) => http.post('/api/system/user/login', payload, { headers: { skipAuth: true } }),
   getMe: () => http.get('/api/system/user/me'),
   listPendingUsers: () => http.get('/api/system/user/pending'),
   updateUser: (userId, data) => http.put(`/api/system/user/${userId}`, data),
@@ -106,9 +106,9 @@ const factoryWorker = {
 };
 
 const tenant = {
-  publicList: () => http.get('/api/system/tenant/public-list'),
+  publicList: () => http.get('/api/system/tenant/public-list', { headers: { skipAuth: true } }),
   myTenant: () => http.get('/api/system/tenant/my'),
-  workerRegister: (data) => http.post('/api/system/tenant/registration/register', data || {}),
+  workerRegister: (data) => http.post('/api/system/tenant/registration/register', data || {}, { headers: { skipAuth: true } }),
   listPendingRegistrations: () => http.post('/api/system/tenant/registrations/pending', {}),
   approveRegistration: (id, data) => http.post(`/api/system/tenant/registrations/${id}/approve`, data || {}),
   rejectRegistration: (id, data) => http.post(`/api/system/tenant/registrations/${id}/reject`, data || {}),
