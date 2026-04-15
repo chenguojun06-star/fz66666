@@ -63,10 +63,14 @@ public class SchedulingSuggestionOrchestrator {
         SchedulingSuggestionResponse resp = new SchedulingSuggestionResponse();
         try {
             Long tenantId = UserContext.tenantId();
+            if (tenantId == null) {
+                resp.setPlans(Collections.emptyList());
+                return resp;
+            }
 
             // ① 获取所有工厂
             QueryWrapper<Factory> fqw = new QueryWrapper<>();
-            fqw.eq(tenantId != null, "tenant_id", tenantId);
+            fqw.eq("tenant_id", tenantId);
             List<Factory> factories = factoryService.list(fqw);
             if (factories.isEmpty()) {
                 resp.setPlans(Collections.emptyList());
@@ -75,14 +79,14 @@ public class SchedulingSuggestionOrchestrator {
 
             // ② 当前在制订单 → 工厂负载
             QueryWrapper<ProductionOrder> inProgressQw = new QueryWrapper<>();
-            inProgressQw.eq(tenantId != null, "tenant_id", tenantId)
+            inProgressQw.eq("tenant_id", tenantId)
                         .eq("delete_flag", 0)
                         .in("status", "pending", "production", "delayed");
             List<ProductionOrder> inProgress = productionOrderService.list(inProgressQw);
 
             // ③ 历史已完成订单（有计划/实际结束时间）→ 真实交期达成率 + 品类匹配 + 完成质量
             QueryWrapper<ProductionOrder> doneQw = new QueryWrapper<>();
-            doneQw.eq(tenantId != null, "tenant_id", tenantId)
+            doneQw.eq("tenant_id", tenantId)
                   .eq("delete_flag", 0)
                   .eq("status", "completed")
                   .isNotNull("factory_name")
@@ -104,7 +108,7 @@ public class SchedulingSuggestionOrchestrator {
             // ⑤ 近30天生产扫码记录 → 各工厂实测日产能 ─────────────────────────────
             // 所有订单 orderId(String) → factoryName 映射（扫码记录无直接工厂名字段）
             QueryWrapper<ProductionOrder> allOrdersQw = new QueryWrapper<>();
-            allOrdersQw.eq(tenantId != null, "tenant_id", tenantId)
+            allOrdersQw.eq("tenant_id", tenantId)
                        .eq("delete_flag", 0)
                        .isNotNull("factory_name")
                        .select("id", "factory_name");
@@ -117,7 +121,7 @@ public class SchedulingSuggestionOrchestrator {
 
             // 近30天成功的「生产工序」扫码记录
             QueryWrapper<ScanRecord> scanQw = new QueryWrapper<>();
-            scanQw.eq(tenantId != null, "tenant_id", tenantId)
+            scanQw.eq("tenant_id", tenantId)
                   .eq("scan_result", "success")
                   .eq("scan_type", "production")
                   .ge("scan_time", LocalDateTime.now().minusDays(30))

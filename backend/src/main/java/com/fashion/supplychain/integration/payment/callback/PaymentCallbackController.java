@@ -4,8 +4,10 @@ import com.fashion.supplychain.integration.payment.PaymentGateway;
 import com.fashion.supplychain.integration.payment.PaymentManager;
 import com.fashion.supplychain.integration.record.entity.IntegrationCallbackLog;
 import com.fashion.supplychain.integration.record.service.IntegrationRecordService;
-import lombok.RequiredArgsConstructor;
+import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -28,11 +30,19 @@ import java.util.Map;
 @Slf4j
 @RestController
 @RequestMapping("/api/webhook/payment")
-@RequiredArgsConstructor
 public class PaymentCallbackController {
 
     private final PaymentManager paymentManager;
     private final IntegrationRecordService recordService;
+    private final ProductionOrderService productionOrderService;
+
+    public PaymentCallbackController(PaymentManager paymentManager,
+                                      IntegrationRecordService recordService,
+                                      @Autowired(required = false) ProductionOrderService productionOrderService) {
+        this.paymentManager = paymentManager;
+        this.recordService = recordService;
+        this.productionOrderService = productionOrderService;
+    }
 
     // =====================================================
     // 支付宝回调（POST）
@@ -168,12 +178,36 @@ public class PaymentCallbackController {
         log.info("[支付成功] orderId={} channel={} thirdPartyNo={}",
                 orderId, paymentType.getDisplayName(), thirdPartyNo);
 
-        // 更新支付流水状态为成功
         recordService.updatePaymentStatus(thirdPartyNo, "SUCCESS", null);
 
-        // 注入业务服务后实现
-        // @Autowired private ProductionOrderService orderService;
-        // orderService.markAsPaid(orderId, thirdPartyNo, paymentType.name());
+        if (productionOrderService != null) {
+            try {
+                ProductionOrder order = productionOrderService.getByOrderNo(orderId);
+                if (order != null) {
+                    String currentStatus = order.getStatus();
+                    if ("pending".equals(currentStatus) || "not_started".equals(currentStatus)) {
+                        order.setStatus("pending");
+                        order.setUpdateTime(java.time.LocalDateTime.now());
+                        String payRemark = "支付成功[" + paymentType.getDisplayName() + "] 流水号:" + thirdPartyNo;
+                        String existingRemark = order.getRemarks();
+                        order.setRemarks(existingRemark != null && !existingRemark.isEmpty()
+                                ? existingRemark + "\n" + payRemark : payRemark);
+                        productionOrderService.updateById(order);
+                        log.info("[支付成功] 订单状态已更新: orderNo={}, status=pending, channel={}",
+                                orderId, paymentType.getDisplayName());
+                    } else {
+                        log.warn("[支付成功] 订单不在可支付状态，跳过状态更新: orderNo={}, currentStatus={}",
+                                orderId, currentStatus);
+                    }
+                } else {
+                    log.warn("[支付成功] 未找到对应生产订单: orderNo={}", orderId);
+                }
+            } catch (Exception e) {
+                log.error("[支付成功] 更新订单状态失败: orderNo={}", orderId, e);
+            }
+        } else {
+            log.warn("[支付成功] ProductionOrderService 不可用，跳过订单状态更新: orderNo={}", orderId);
+        }
     }
 
     /**
@@ -181,7 +215,19 @@ public class PaymentCallbackController {
      */
     private void handlePaymentClosed(String orderId, PaymentGateway.PaymentType paymentType) {
         log.info("[支付关闭] orderId={} channel={}", orderId, paymentType.getDisplayName());
-        // 接入后实现：更新订单状态为已关闭
+        if (productionOrderService != null) {
+            try {
+                ProductionOrder order = productionOrderService.getByOrderNo(orderId);
+                if (order != null && "pending".equals(order.getStatus())) {
+                    order.setStatus("cancelled");
+                    order.setUpdateTime(java.time.LocalDateTime.now());
+                    productionOrderService.updateById(order);
+                    log.info("[支付关闭] 订单已取消: orderNo={}", orderId);
+                }
+            } catch (Exception e) {
+                log.error("[支付关闭] 更新订单状态失败: orderNo={}", orderId, e);
+            }
+        }
     }
 
     // =====================================================

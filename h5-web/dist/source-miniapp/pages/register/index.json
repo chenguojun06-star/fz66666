@@ -1,8 +1,0 @@
-{
-  "navigationBarTitleText": "员工注册",
-  "navigationBarBackgroundColor": "#f3f5f9",
-  "navigationBarTextStyle": "black",
-  "usingComponents": {
-    "privacy-dialog": "/components/privacy-dialog/index"
-  }
-}

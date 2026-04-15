@@ -45,6 +45,17 @@ export default function HomePage() {
   const navigate = useNavigate();
   const { user, tenantName, setAuth, token } = useAuthStore();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [currentTime, setCurrentTime] = useState('');
+
+  useEffect(() => {
+    const tick = () => {
+      const now = new Date();
+      setCurrentTime(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
+    };
+    tick();
+    const timer = setInterval(tick, 30000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     api.system.getMe().then(res => {
@@ -94,6 +105,11 @@ export default function HomePage() {
             </div>
           )}
         </div>
+      </div>
+
+      <div className="home-time-bar">
+        <span className="home-time-text">{dateInfo.date} {dateInfo.day}</span>
+        <span className="home-time-clock">{currentTime}</span>
       </div>
 
       <div className="weather-card">

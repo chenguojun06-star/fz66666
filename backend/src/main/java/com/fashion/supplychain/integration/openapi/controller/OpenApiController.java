@@ -1,9 +1,11 @@
 package com.fashion.supplychain.integration.openapi.controller;
 
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.integration.openapi.entity.TenantApp;
 import com.fashion.supplychain.integration.openapi.orchestration.OpenApiOrchestrator;
 import com.fashion.supplychain.integration.openapi.orchestration.TenantAppOrchestrator;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +24,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/openapi/v1")
+@Slf4j
 public class OpenApiController {
 
     @Autowired
@@ -46,6 +49,7 @@ public class OpenApiController {
         TenantApp app = null;
         try {
             app = tenantAppOrchestrator.authenticateByAppKey(appKey, signature, timestamp, body);
+            setUserContextFromApp(app);
             validateAppType(app, "ORDER_SYNC");
             Map<String, Object> result = openApiOrchestrator.createExternalOrder(app, body);
             logSuccess(app, "POST", "/openapi/v1/order/create", body, result, start, request);
@@ -53,6 +57,8 @@ public class OpenApiController {
         } catch (Exception e) {
             logError(app, "POST", "/openapi/v1/order/create", body, e, start, request);
             return Result.fail(e.getMessage());
+        } finally {
+            clearUserContext();
         }
     }
 
@@ -70,6 +76,7 @@ public class OpenApiController {
         TenantApp app = null;
         try {
             app = tenantAppOrchestrator.authenticateByAppKey(appKey, signature, timestamp, "");
+            setUserContextFromApp(app);
             validateAppType(app, "ORDER_SYNC");
             Map<String, Object> result = openApiOrchestrator.getOrderStatus(app, orderNo);
             logSuccess(app, "GET", "/openapi/v1/order/status/" + orderNo, null, result, start, request);
@@ -77,6 +84,8 @@ public class OpenApiController {
         } catch (Exception e) {
             logError(app, "GET", "/openapi/v1/order/status/" + orderNo, null, e, start, request);
             return Result.fail(e.getMessage());
+        } finally {
+            clearUserContext();
         }
     }
 
@@ -94,6 +103,7 @@ public class OpenApiController {
         TenantApp app = null;
         try {
             app = tenantAppOrchestrator.authenticateByAppKey(appKey, signature, timestamp, body);
+            setUserContextFromApp(app);
             validateAppType(app, "ORDER_SYNC");
             Map<String, Object> result = openApiOrchestrator.listExternalOrders(app, body);
             logSuccess(app, "POST", "/openapi/v1/order/list", body, result, start, request);
@@ -101,6 +111,8 @@ public class OpenApiController {
         } catch (Exception e) {
             logError(app, "POST", "/openapi/v1/order/list", body, e, start, request);
             return Result.fail(e.getMessage());
+        } finally {
+            clearUserContext();
         }
     }
 
@@ -118,6 +130,7 @@ public class OpenApiController {
         TenantApp app = null;
         try {
             app = tenantAppOrchestrator.authenticateByAppKey(appKey, signature, timestamp, body);
+            setUserContextFromApp(app);
             validateAppType(app, "ORDER_SYNC");
             Map<String, Object> result = openApiOrchestrator.batchCreateExternalOrders(app, body);
             logSuccess(app, "POST", "/openapi/v1/order/upload", body, result, start, request);
@@ -125,6 +138,8 @@ public class OpenApiController {
         } catch (Exception e) {
             logError(app, "POST", "/openapi/v1/order/upload", body, e, start, request);
             return Result.fail(e.getMessage());
+        } finally {
+            clearUserContext();
         }
     }
 
@@ -144,6 +159,7 @@ public class OpenApiController {
         TenantApp app = null;
         try {
             app = tenantAppOrchestrator.authenticateByAppKey(appKey, signature, timestamp, "");
+            setUserContextFromApp(app);
             validateAppType(app, "QUALITY_FEEDBACK");
             Map<String, Object> result = openApiOrchestrator.getQualityReport(app, orderNo);
             logSuccess(app, "GET", "/openapi/v1/quality/report/" + orderNo, null, result, start, request);
@@ -151,6 +167,8 @@ public class OpenApiController {
         } catch (Exception e) {
             logError(app, "GET", "/openapi/v1/quality/report/" + orderNo, null, e, start, request);
             return Result.fail(e.getMessage());
+        } finally {
+            clearUserContext();
         }
     }
 
@@ -168,6 +186,7 @@ public class OpenApiController {
         TenantApp app = null;
         try {
             app = tenantAppOrchestrator.authenticateByAppKey(appKey, signature, timestamp, body);
+            setUserContextFromApp(app);
             validateAppType(app, "QUALITY_FEEDBACK");
             Map<String, Object> result = openApiOrchestrator.listQualityRecords(app, body);
             logSuccess(app, "POST", "/openapi/v1/quality/list", body, result, start, request);
@@ -175,6 +194,8 @@ public class OpenApiController {
         } catch (Exception e) {
             logError(app, "POST", "/openapi/v1/quality/list", body, e, start, request);
             return Result.fail(e.getMessage());
+        } finally {
+            clearUserContext();
         }
     }
 
@@ -194,6 +215,7 @@ public class OpenApiController {
         TenantApp app = null;
         try {
             app = tenantAppOrchestrator.authenticateByAppKey(appKey, signature, timestamp, "");
+            setUserContextFromApp(app);
             validateAppType(app, "LOGISTICS_SYNC");
             Map<String, Object> result = openApiOrchestrator.getLogisticsStatus(app, orderNo);
             logSuccess(app, "GET", "/openapi/v1/logistics/status/" + orderNo, null, result, start, request);
@@ -201,6 +223,8 @@ public class OpenApiController {
         } catch (Exception e) {
             logError(app, "GET", "/openapi/v1/logistics/status/" + orderNo, null, e, start, request);
             return Result.fail(e.getMessage());
+        } finally {
+            clearUserContext();
         }
     }
 
@@ -218,6 +242,7 @@ public class OpenApiController {
         TenantApp app = null;
         try {
             app = tenantAppOrchestrator.authenticateByAppKey(appKey, signature, timestamp, body);
+            setUserContextFromApp(app);
             validateAppType(app, "LOGISTICS_SYNC");
             Map<String, Object> result = openApiOrchestrator.listLogisticsRecords(app, body);
             logSuccess(app, "POST", "/openapi/v1/logistics/list", body, result, start, request);
@@ -225,6 +250,8 @@ public class OpenApiController {
         } catch (Exception e) {
             logError(app, "POST", "/openapi/v1/logistics/list", body, e, start, request);
             return Result.fail(e.getMessage());
+        } finally {
+            clearUserContext();
         }
     }
 
@@ -243,6 +270,7 @@ public class OpenApiController {
         TenantApp app = null;
         try {
             app = tenantAppOrchestrator.authenticateByAppKey(appKey, signature, timestamp, "");
+            setUserContextFromApp(app);
             validateAppType(app, "PAYMENT_SYNC");
             Map<String, Object> result = openApiOrchestrator.getPendingPayments(app);
             logSuccess(app, "GET", "/openapi/v1/payment/pending", null, result, start, request);
@@ -250,6 +278,8 @@ public class OpenApiController {
         } catch (Exception e) {
             logError(app, "GET", "/openapi/v1/payment/pending", null, e, start, request);
             return Result.fail(e.getMessage());
+        } finally {
+            clearUserContext();
         }
     }
 
@@ -267,6 +297,7 @@ public class OpenApiController {
         TenantApp app = null;
         try {
             app = tenantAppOrchestrator.authenticateByAppKey(appKey, signature, timestamp, body);
+            setUserContextFromApp(app);
             validateAppType(app, "PAYMENT_SYNC");
             Map<String, Object> result = openApiOrchestrator.confirmPayment(app, body);
             logSuccess(app, "POST", "/openapi/v1/payment/confirm", body, result, start, request);
@@ -274,6 +305,8 @@ public class OpenApiController {
         } catch (Exception e) {
             logError(app, "POST", "/openapi/v1/payment/confirm", body, e, start, request);
             return Result.fail(e.getMessage());
+        } finally {
+            clearUserContext();
         }
     }
 
@@ -291,6 +324,7 @@ public class OpenApiController {
         TenantApp app = null;
         try {
             app = tenantAppOrchestrator.authenticateByAppKey(appKey, signature, timestamp, body);
+            setUserContextFromApp(app);
             validateAppType(app, "PAYMENT_SYNC");
             Map<String, Object> result = openApiOrchestrator.listPaymentRecords(app, body);
             logSuccess(app, "POST", "/openapi/v1/payment/list", body, result, start, request);
@@ -298,6 +332,8 @@ public class OpenApiController {
         } catch (Exception e) {
             logError(app, "POST", "/openapi/v1/payment/list", body, e, start, request);
             return Result.fail(e.getMessage());
+        } finally {
+            clearUserContext();
         }
     }
 
@@ -318,6 +354,7 @@ public class OpenApiController {
         TenantApp app = null;
         try {
             app = tenantAppOrchestrator.authenticateByAppKey(appKey, signature, timestamp, body);
+            setUserContextFromApp(app);
             validateAppType(app, "MATERIAL_SUPPLY");
             Map<String, Object> result = openApiOrchestrator.pushPurchaseOrder(app, body);
             logSuccess(app, "POST", "/openapi/v1/material/purchase-order", body, result, start, request);
@@ -325,6 +362,8 @@ public class OpenApiController {
         } catch (Exception e) {
             logError(app, "POST", "/openapi/v1/material/purchase-order", body, e, start, request);
             return Result.fail(e.getMessage());
+        } finally {
+            clearUserContext();
         }
     }
 
@@ -342,6 +381,7 @@ public class OpenApiController {
         TenantApp app = null;
         try {
             app = tenantAppOrchestrator.authenticateByAppKey(appKey, signature, timestamp, body);
+            setUserContextFromApp(app);
             validateAppType(app, "MATERIAL_SUPPLY");
             Map<String, Object> result = openApiOrchestrator.batchCreateMaterialPurchases(app, body);
             logSuccess(app, "POST", "/openapi/v1/material/purchase/upload", body, result, start, request);
@@ -349,6 +389,8 @@ public class OpenApiController {
         } catch (Exception e) {
             logError(app, "POST", "/openapi/v1/material/purchase/upload", body, e, start, request);
             return Result.fail(e.getMessage());
+        } finally {
+            clearUserContext();
         }
     }
 
@@ -367,6 +409,7 @@ public class OpenApiController {
         TenantApp app = null;
         try {
             app = tenantAppOrchestrator.authenticateByAppKey(appKey, signature, timestamp, body);
+            setUserContextFromApp(app);
             validateAppType(app, "MATERIAL_SUPPLY");
             Map<String, Object> result = openApiOrchestrator.querySupplierInventory(app, body);
             logSuccess(app, "POST", "/openapi/v1/material/inventory/query", body, result, start, request);
@@ -374,6 +417,8 @@ public class OpenApiController {
         } catch (Exception e) {
             logError(app, "POST", "/openapi/v1/material/inventory/query", body, e, start, request);
             return Result.fail(e.getMessage());
+        } finally {
+            clearUserContext();
         }
     }
 
@@ -392,6 +437,7 @@ public class OpenApiController {
         TenantApp app = null;
         try {
             app = tenantAppOrchestrator.authenticateByAppKey(appKey, signature, timestamp, body);
+            setUserContextFromApp(app);
             validateAppType(app, "MATERIAL_SUPPLY");
             Map<String, Object> result = openApiOrchestrator.receivePurchaseOrderConfirm(app, body);
             logSuccess(app, "POST", "/openapi/v1/webhook/material/order-confirm", body, result, start, request);
@@ -399,6 +445,8 @@ public class OpenApiController {
         } catch (Exception e) {
             logError(app, "POST", "/openapi/v1/webhook/material/order-confirm", body, e, start, request);
             return Result.fail(e.getMessage());
+        } finally {
+            clearUserContext();
         }
     }
 
@@ -417,6 +465,7 @@ public class OpenApiController {
         TenantApp app = null;
         try {
             app = tenantAppOrchestrator.authenticateByAppKey(appKey, signature, timestamp, body);
+            setUserContextFromApp(app);
             validateAppType(app, "MATERIAL_SUPPLY");
             Map<String, Object> result = openApiOrchestrator.receiveMaterialPriceUpdate(app, body);
             logSuccess(app, "POST", "/openapi/v1/webhook/material/price-update", body, result, start, request);
@@ -424,6 +473,8 @@ public class OpenApiController {
         } catch (Exception e) {
             logError(app, "POST", "/openapi/v1/webhook/material/price-update", body, e, start, request);
             return Result.fail(e.getMessage());
+        } finally {
+            clearUserContext();
         }
     }
 
@@ -442,6 +493,7 @@ public class OpenApiController {
         TenantApp app = null;
         try {
             app = tenantAppOrchestrator.authenticateByAppKey(appKey, signature, timestamp, body);
+            setUserContextFromApp(app);
             validateAppType(app, "MATERIAL_SUPPLY");
             Map<String, Object> result = openApiOrchestrator.receiveMaterialShippingUpdate(app, body);
             logSuccess(app, "POST", "/openapi/v1/webhook/material/shipping-update", body, result, start, request);
@@ -449,6 +501,8 @@ public class OpenApiController {
         } catch (Exception e) {
             logError(app, "POST", "/openapi/v1/webhook/material/shipping-update", body, e, start, request);
             return Result.fail(e.getMessage());
+        } finally {
+            clearUserContext();
         }
     }
 
@@ -469,6 +523,7 @@ public class OpenApiController {
         TenantApp app = null;
         try {
             app = tenantAppOrchestrator.authenticateByAppKey(appKey, signature, timestamp, body);
+            setUserContextFromApp(app);
             validateAppTypeMulti(app, "DATA_IMPORT", "ORDER_SYNC");
             Map<String, Object> result = openApiOrchestrator.batchCreateStyles(app, body);
             logSuccess(app, "POST", "/openapi/v1/style/upload", body, result, start, request);
@@ -476,6 +531,8 @@ public class OpenApiController {
         } catch (Exception e) {
             logError(app, "POST", "/openapi/v1/style/upload", body, e, start, request);
             return Result.fail(e.getMessage());
+        } finally {
+            clearUserContext();
         }
     }
 
@@ -494,6 +551,7 @@ public class OpenApiController {
         TenantApp app = null;
         try {
             app = tenantAppOrchestrator.authenticateByAppKey(appKey, signature, timestamp, body);
+            setUserContextFromApp(app);
             validateAppTypeMulti(app, "DATA_IMPORT", "ORDER_SYNC");
             Map<String, Object> result = openApiOrchestrator.batchCreateFactories(app, body);
             logSuccess(app, "POST", "/openapi/v1/factory/upload", body, result, start, request);
@@ -501,6 +559,8 @@ public class OpenApiController {
         } catch (Exception e) {
             logError(app, "POST", "/openapi/v1/factory/upload", body, e, start, request);
             return Result.fail(e.getMessage());
+        } finally {
+            clearUserContext();
         }
     }
 
@@ -520,6 +580,7 @@ public class OpenApiController {
         TenantApp app = null;
         try {
             app = tenantAppOrchestrator.authenticateByAppKey(appKey, signature, timestamp, body);
+            setUserContextFromApp(app);
             validateAppTypeMulti(app, "DATA_IMPORT");
             Map<String, Object> result = openApiOrchestrator.batchCreateEmployees(app, body);
             logSuccess(app, "POST", "/openapi/v1/employee/upload", body, result, start, request);
@@ -527,6 +588,8 @@ public class OpenApiController {
         } catch (Exception e) {
             logError(app, "POST", "/openapi/v1/employee/upload", body, e, start, request);
             return Result.fail(e.getMessage());
+        } finally {
+            clearUserContext();
         }
     }
 
@@ -545,6 +608,7 @@ public class OpenApiController {
         TenantApp app = null;
         try {
             app = tenantAppOrchestrator.authenticateByAppKey(appKey, signature, timestamp, body);
+            setUserContextFromApp(app);
             validateAppTypeMulti(app, "DATA_IMPORT", "ORDER_SYNC");
             Map<String, Object> result = openApiOrchestrator.batchCreateStyleProcesses(app, body);
             logSuccess(app, "POST", "/openapi/v1/process/upload", body, result, start, request);
@@ -552,6 +616,8 @@ public class OpenApiController {
         } catch (Exception e) {
             logError(app, "POST", "/openapi/v1/process/upload", body, e, start, request);
             return Result.fail(e.getMessage());
+        } finally {
+            clearUserContext();
         }
     }
 
@@ -574,6 +640,7 @@ public class OpenApiController {
         TenantApp app = null;
         try {
             app = tenantAppOrchestrator.authenticateByAppKey(appKey, signature, timestamp, body);
+            setUserContextFromApp(app);
             validateAppType(app, "ORDER_SYNC");
             Map<String, Object> result = openApiOrchestrator.pullExternalData(app, body);
             logSuccess(app, "POST", "/openapi/v1/pull/pattern-order", body, result, start, request);
@@ -581,6 +648,8 @@ public class OpenApiController {
         } catch (Exception e) {
             logError(app, "POST", "/openapi/v1/pull/pattern-order", body, e, start, request);
             return Result.fail(e.getMessage());
+        } finally {
+            clearUserContext();
         }
     }
 
@@ -588,6 +657,20 @@ public class OpenApiController {
         if (!expectedType.equals(app.getAppType()) && !"DATA_IMPORT".equals(app.getAppType())) {
             throw new IllegalArgumentException("当前应用类型(" + app.getAppType() + ")无权调用此接口");
         }
+    }
+
+    private void setUserContextFromApp(TenantApp app) {
+        if (app == null) return;
+        UserContext ctx = new UserContext();
+        ctx.setTenantId(app.getTenantId());
+        ctx.setUserId("OPENAPI_" + app.getAppKey());
+        ctx.setUsername(app.getAppName() != null ? app.getAppName() : "OpenAPI");
+        ctx.setRole("openapi");
+        UserContext.set(ctx);
+    }
+
+    private void clearUserContext() {
+        UserContext.clear();
     }
 
     /**

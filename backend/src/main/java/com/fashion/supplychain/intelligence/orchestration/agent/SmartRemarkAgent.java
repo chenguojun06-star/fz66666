@@ -1,5 +1,6 @@
 package com.fashion.supplychain.intelligence.orchestration.agent;
 
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.lock.DistributedLockService;
 import com.fashion.supplychain.intelligence.service.WxAlertNotifyService;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -77,6 +78,10 @@ public class SmartRemarkAgent {
 
         for (Tenant t : tenants) {
             if (isDisabled(t)) continue;
+            UserContext ctx = new UserContext();
+            ctx.setTenantId(t.getId());
+            ctx.setUserId("SYSTEM");
+            UserContext.set(ctx);
             long start = System.currentTimeMillis();
             String commandId = null;
             try {
@@ -128,6 +133,8 @@ public class SmartRemarkAgent {
                     traceOrchestrator.finishPatrolRequest(t.getId(), commandId,
                             null, "巡检异常: " + e.getMessage(), System.currentTimeMillis() - start);
                 }
+            } finally {
+                UserContext.clear();
             }
         }
         log.info("[SmartRemark] 完成，新增备注{}条，新增通知{}条", totalRemarks, totalNotices);

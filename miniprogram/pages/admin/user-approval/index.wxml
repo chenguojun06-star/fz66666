@@ -94,7 +94,7 @@
     show-close="{{true}}"
     bind:close="cancelApprove"
   >
-    <view class="mf-body" slot="body">
+    <view class="mf-body">
       <view class="modal-text">
         批准用户 <text class="highlight">{{currentUser.name || currentUser.username}}</text>
       </view>
@@ -121,7 +121,7 @@
         </view>
       </view>
     </view>
-    <view class="mf-actions" slot="actions">
+    <view class="mf-actions" slot="footer">
       <view class="mf-btn cancel" bindtap="cancelApprove">取消</view>
       <view class="mf-btn ok" bindtap="confirmApprove">批准并分配角色</view>
     </view>
@@ -134,7 +134,7 @@
     show-close="{{true}}"
     bind:close="cancelReject"
   >
-    <view class="mf-body" slot="body">
+    <view class="mf-body">
       <view class="modal-text">
         确定拒绝用户 <text class="highlight">{{currentUser.name || currentUser.username}}</text> 吗？
       </view>
@@ -151,7 +151,7 @@
         />
       </view>
     </view>
-    <view class="mf-actions" slot="actions">
+    <view class="mf-actions" slot="footer">
       <view class="mf-btn cancel" bindtap="cancelReject">取消</view>
       <view class="mf-btn danger" bindtap="confirmReject">确定拒绝</view>
     </view>

@@ -1,5 +1,6 @@
 package com.fashion.supplychain.intelligence.orchestration.agent;
 
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.dto.SmartNotification;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -75,6 +76,10 @@ public class ProactivePatrolAgent {
         for (java.util.Map.Entry<Long, List<ProductionOrder>> entry : byTenant.entrySet()) {
             Long tenantId = entry.getKey();
             List<ProductionOrder> tenantOrders = entry.getValue();
+            UserContext ctx = new UserContext();
+            ctx.setTenantId(tenantId);
+            ctx.setUserId("SYSTEM");
+            UserContext.set(ctx);
             long start = System.currentTimeMillis();
             String commandId = null;
             try {
@@ -106,6 +111,8 @@ public class ProactivePatrolAgent {
                     traceOrchestrator.finishPatrolRequest(tenantId, commandId,
                             null, "巡检异常: " + e.getMessage(), System.currentTimeMillis() - start);
                 }
+            } finally {
+                UserContext.clear();
             }
         }
         log.info("[ProactivePatrol] 巡检完成，共 {} 个活跃订单，{} 个高危已推送建议", activeOrders.size(), totalDiagnosed);

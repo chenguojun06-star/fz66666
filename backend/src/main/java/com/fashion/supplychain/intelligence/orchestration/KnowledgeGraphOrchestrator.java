@@ -82,6 +82,10 @@ public class KnowledgeGraphOrchestrator {
 
     @Async
     public void buildGraphFromBusinessData(Long tenantId) {
+        UserContext ctx = new UserContext();
+        ctx.setTenantId(tenantId);
+        ctx.setUserId("SYSTEM");
+        UserContext.set(ctx);
         log.info("[KnowledgeGraph] Building graph for tenant {}", tenantId);
         try {
             upsertEntity(tenantId, "supplier", "供应商", null, null);
@@ -92,6 +96,8 @@ public class KnowledgeGraphOrchestrator {
             log.info("[KnowledgeGraph] Graph building completed for tenant {}", tenantId);
         } catch (Exception e) {
             log.warn("[KnowledgeGraph] buildGraphFromBusinessData failed: {}", e.getMessage());
+        } finally {
+            UserContext.clear();
         }
     }
 

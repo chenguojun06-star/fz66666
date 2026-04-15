@@ -103,12 +103,12 @@ public class CommonController {
      * 新文件（有租户前缀）：重定向到新端点
      */
     @GetMapping("/download/{fileName:.+}")
+    @PreAuthorize("isAuthenticated() and (T(com.fashion.supplychain.common.UserContext).isTopAdmin() or hasAuthority('ROLE_SUPER_ADMIN'))")
     @SuppressWarnings("null")
     public ResponseEntity<Resource> downloadFile(@PathVariable String fileName,
             @RequestParam(value = "download", required = false, defaultValue = "0") String download) {
         try {
             Path baseDir = Path.of(uploadPath).toAbsolutePath().normalize();
-            // 优先从旧的平级目录查找（兼容已有数据）
             Path filePath = baseDir.resolve(fileName).normalize();
             if (!filePath.startsWith(baseDir)) {
                 return ResponseEntity.notFound().build();
@@ -117,21 +117,35 @@ public class CommonController {
             Resource resource = new UrlResource(filePath.toUri());
 
             if (!resource.exists()) {
-                // 旧文件不存在，尝试从当前租户目录查找（可能已迁移）
                 Long tenantId = UserContext.tenantId();
                 if (tenantId != null) {
                     Path tenantPath = baseDir.resolve("tenants").resolve(String.valueOf(tenantId)).resolve(fileName).normalize();
                     if (tenantPath.startsWith(baseDir)) {
                         resource = new UrlResource(tenantPath.toUri());
+                        filePath = tenantPath;
                     }
                 }
             }
 
-            if (resource.exists()) {
-                return buildFileResponse(resource, filePath, download);
-            } else {
+            if (!resource.exists()) {
                 return ResponseEntity.notFound().build();
             }
+
+            Long fileTenantId = TenantFilePathResolver.extractTenantIdFromDiskPath(uploadPath, filePath.toString());
+            if (fileTenantId != null) {
+                try {
+                    TenantFilePathResolver.validateTenantAccess(fileTenantId);
+                } catch (Exception e) {
+                    log.warn("[旧下载端点-租户隔离] 跨租户文件访问被拒绝: currentUser={}, fileTenant={}, fileName={}",
+                            UserContext.tenantId(), fileTenantId, fileName);
+                    return ResponseEntity.status(403).build();
+                }
+            } else {
+                log.info("[旧下载端点-租户隔离] 管理员访问旧格式文件: user={}, tenantId={}, fileName={}",
+                        UserContext.username(), UserContext.tenantId(), fileName);
+            }
+
+            return buildFileResponse(resource, filePath, download);
         } catch (MalformedURLException e) {
             return ResponseEntity.notFound().build();
         }

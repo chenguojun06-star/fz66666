@@ -9,6 +9,12 @@ frontend/dist/
 frontend/.vite/
 frontend/.eslintcache
 
+# H5 Web (Vite)
+h5-web/node_modules/
+h5-web/dist/
+h5-web/.vite/
+h5-web/generated/
+
 # Miniprogram (WeChat)
 miniprogram/node_modules/
 

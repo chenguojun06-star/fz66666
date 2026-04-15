@@ -10,6 +10,10 @@
 .weather-temp { font-size: var(--font-size-2xl); font-weight: 700; line-height: 1.2; }
 .weather-desc { font-size: var(--font-size-xs); color: var(--color-text-secondary); margin-top: 2px; }
 .weather-season { font-size: var(--font-size-lg); font-weight: 600; color: var(--color-text-primary); }
+.weather-factory { font-size: var(--font-size-xs); color: var(--color-text-secondary); }
+.home-time-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 0 2px; }
+.home-time-text { font-size: var(--font-size-xs); color: var(--color-text-secondary); }
+.home-time-clock { font-size: var(--font-size-lg); font-weight: 700; color: var(--color-text-primary); font-variant-numeric: tabular-nums; }
 .weather-tip { padding-top: 10px; border-top: 1px solid var(--color-divider); font-size: var(--font-size-sm); color: var(--color-text-secondary); line-height: 1.5; }
 .menu-section { margin: 0 16px; padding-top: 12px; border-top: 1px solid var(--color-divider); }
 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }

@@ -162,105 +162,9 @@ page {
   background: var(--color-text-tertiary);
 }
 
-/* ============ 全局搜索结果 ============ */
-.global-results {
-  margin-bottom: 12px;
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-border-light);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-}
-
-.results-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: var(--color-bg-light);
-  border-bottom: 1px solid var(--color-border-light);
-}
-
-.results-title {
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-}
-
-.close-results {
-  font-size: var(--font-size-xl);
-  color: var(--color-text-tertiary);
-  padding: 0 4px;
-}
-
-.results-list {
-  max-height: 400px;
-}
-
 .result-item {
   padding: 12px 16px;
   border-bottom: 1px solid var(--color-border-light);
-}
-
-/* ============ 搜索行 ============ */
-.search-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.search-box {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: var(--color-bg-gray);
-  border-radius: var(--radius-sm);
-}
-.search-icon {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-tertiary);
-  flex-shrink: 0;
-}
-.search-input {
-  font-size: var(--font-size-base);
-  color: var(--color-text-primary);
-  width: 100%;
-}
-.search-btn {
-  padding: 8px 16px;
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-primary);
-  background: var(--color-bg-card);
-  border: 1px solid var(--color-primary);
-  border-radius: var(--radius-sm);
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-.search-btn-hover {
-  background: var(--color-primary);
-  color: var(--color-text-white);
-}
-.clear-btn {
-  padding: 8px 16px;
-  font-size: var(--font-size-base);
-  color: var(--color-text-secondary);
-  background: var(--color-bg-gray);
-  border: none;
-  border-radius: var(--radius-sm);
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-.clear-btn-hover {
-  background: var(--color-bg-hover);
-}
-
-/* ============ 筛选区域 ============ */
-.filter-section {
-  padding: 12px 16px;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border-light);
 }
 
 /* ============ 空状态 ============ */
@@ -332,54 +236,7 @@ page {
   color: var(--color-text-secondary);
 }
 
-/* ============ 弹窗（对齐 WeUI Dialog） ============ */
-.modal-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: var(--z-notification);
-}
-
-.modal-wrap {
-  width: auto;
-  max-width: 85vw;
-  min-width: 280px;
-  background: var(--color-bg-card);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  box-shadow: var(--shadow-modal);
-  animation: modalFadeIn 0.2s ease-out;
-}
-
-@keyframes modalFadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px 24px 12px;
-}
-
-.modal-title {
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-primary);
-}
+/* ============ 弹窗保留项（关闭按钮 + 内容区 + 操作按钮） ============ */
 
 .modal-close {
   width: 28px;
@@ -403,12 +260,6 @@ page {
   font-size: var(--font-size-base);
   color: var(--color-text-secondary);
   line-height: var(--line-height-relaxed);
-}
-
-.modal-footer {
-  display: flex;
-  gap: 12px;
-  padding: 0 24px 24px;
 }
 
 .modal-btn {

@@ -20,6 +20,7 @@ Page({
     showRejectModal: false,
     currentUser: null,
     selectedRoleId: '',
+    factorySelectedRole: '',
     rejectReason: '',
     roleOptions: [],
     roleLoading: false,

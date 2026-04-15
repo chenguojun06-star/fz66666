@@ -1,6 +1,0 @@
-{
-  "navigationBarTitleText": "面辅料料卷扫码",
-  "usingComponents": {
-    "privacy-dialog": "/components/privacy-dialog/index"
-  }
-}

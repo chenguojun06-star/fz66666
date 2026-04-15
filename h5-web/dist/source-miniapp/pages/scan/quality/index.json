@@ -1,7 +1,0 @@
-{
-  "navigationBarTitleText": "质检录入",
-  "usingComponents": {
-    "image-preview": "/components/common/image-preview/index",
-    "privacy-dialog": "/components/privacy-dialog/index"
-  }
-}

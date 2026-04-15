@@ -1,15 +1,26 @@
 import axios from 'axios';
 import { useAuthStore } from '@/stores/authStore';
-import { clearToken } from '@/utils/storage';
+import { clearToken, isTokenExpired } from '@/utils/storage';
 import wxAdapter from '@/adapters/wx';
 
 const isWechat = wxAdapter.isWechat;
 
 const DEFAULT_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.webyszl.cn';
 
+const MAX_RETRY_COUNT = 2;
+const RETRY_DELAY_BASE = 1000;
+
+function isNetworkError(error) {
+  return !error.response && Boolean(error.code);
+}
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export const http = axios.create({
   baseURL: DEFAULT_BASE_URL,
-  timeout: 30000,
+  timeout: 15000,
 });
 
 let isHandling401 = false;
@@ -29,7 +40,19 @@ export function handleUnauthorized() {
   setTimeout(() => { isHandling401 = false; }, 3000);
 }
 
+function isTokenExpiredMessage(msg) {
+  if (!msg) return false;
+  return msg.includes('过期') || msg.includes('expired') || msg.includes('invalid token');
+}
+
+function isOnLoginPage() {
+  return window.location.pathname.includes('/login');
+}
+
 http.interceptors.request.use((config) => {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return Promise.reject(new Error('网络已断开，请检查网络连接'));
+  }
   const token = useAuthStore.getState().token;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -37,6 +60,7 @@ http.interceptors.request.use((config) => {
   if (isWechat) {
     config.headers['X-Client-Type'] = 'wechat-h5';
   }
+  config.__retryCount = config.__retryCount || 0;
   return config;
 });
 
@@ -52,9 +76,10 @@ http.interceptors.response.use(
     }
     return data;
   },
-  (error) => {
+  async (error) => {
+    const config = error?.config;
     const status = error?.response?.status;
-    const requestUrl = error?.config?.url || '';
+    const requestUrl = config?.url || '';
     const message =
       error?.response?.data?.message ||
       error?.response?.data?.msg ||
@@ -62,19 +87,42 @@ http.interceptors.response.use(
       '请求失败';
 
     const isLoginRequest = requestUrl.includes('/api/system/user/login');
-    const normalizedMessage =
-      isLoginRequest && status === 403
-        ? '登录被拒绝，请确认公司选择正确、账号属于该租户且账号已通过审核'
-        : message;
 
     if (status === 401) {
-      handleUnauthorized();
+      if (!isOnLoginPage()) {
+        handleUnauthorized();
+      }
+    }
+
+    if (status === 403) {
+      if (isLoginRequest) {
+        return Promise.reject(new Error('登录被拒绝，请确认公司选择正确、账号属于该租户且账号已通过审核'));
+      }
+      if (isOnLoginPage()) {
+        return Promise.reject(new Error(message || '请求失败'));
+      }
+      const token = useAuthStore.getState().token;
+      if (!token || isTokenExpiredMessage(message) || isTokenExpired()) {
+        handleUnauthorized();
+        return Promise.reject(new Error('登录已过期，请重新登录'));
+      }
+      return Promise.reject(new Error(message || '无权限执行此操作'));
     }
 
     if (status === 0 && isWechat) {
       return Promise.reject(new Error('网络连接失败，请检查网络设置'));
     }
 
-    return Promise.reject(new Error(normalizedMessage));
+    if (isNetworkError(error) && config && config.__retryCount < MAX_RETRY_COUNT) {
+      const method = (config.method || 'get').toLowerCase();
+      if (method === 'get' || method === 'head' || method === 'options') {
+        config.__retryCount += 1;
+        const retryDelay = RETRY_DELAY_BASE * Math.pow(2, config.__retryCount - 1);
+        await delay(retryDelay);
+        return http(config);
+      }
+    }
+
+    return Promise.reject(new Error(message));
   }
 );

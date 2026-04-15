@@ -1,1 +1,0 @@
-const o="http://127.0.0.1:8088";function i(t){if(!t)return"";if(t.startsWith("data:")||t.startsWith("blob:"))return t;let e=t;!t.startsWith("http://")&&!t.startsWith("https://")&&(e=o+(t.startsWith("/")?"":"/")+t);const n=localStorage.getItem("fashion_token")||"";if(!n)return e;const s=e.includes("?")?"&":"?";return e+s+"token="+encodeURIComponent(n)}export{i as g};

@@ -2,6 +2,8 @@ package com.fashion.supplychain.wechat.controller;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.wechat.orchestration.WeChatH5AuthOrchestrator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -10,6 +12,8 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/wechat/h5")
 public class WeChatH5AuthController {
+
+    private static final Logger log = LoggerFactory.getLogger(WeChatH5AuthController.class);
 
     @Autowired
     private WeChatH5AuthOrchestrator h5AuthOrchestrator;
@@ -53,7 +57,7 @@ public class WeChatH5AuthController {
         String password = body == null ? null : (String) body.get("password");
         Long tenantId = null;
         if (body != null && body.get("tenantId") != null) {
-            try { tenantId = Long.valueOf(body.get("tenantId").toString()); } catch (NumberFormatException ignored) {}
+            try { tenantId = Long.valueOf(body.get("tenantId").toString()); } catch (NumberFormatException e) { log.warn("Invalid tenantId format in bind-login: {}", body.get("tenantId")); }
         }
         if (openid == null || openid.isBlank()) {
             return Result.fail("缺少openid");

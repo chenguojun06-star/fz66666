@@ -1,5 +1,6 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.dto.ExecutableCommand;
 import com.fashion.supplychain.intelligence.dto.ExecutionResult;
 import com.fashion.supplychain.intelligence.dto.IntelligenceInferenceResult;
@@ -228,6 +229,11 @@ public class ProductionAgenticCrewOrchestrator {
     public void postProcessAsync(String sessionId, Long tenantId, String userId,
                                     String orderNo, String content, int score,
                                     IntelligenceInferenceResult result) {
+        UserContext ctx = new UserContext();
+        ctx.setTenantId(tenantId);
+        ctx.setUserId(userId != null ? userId : "SYSTEM");
+        UserContext.set(ctx);
+        try {
         // 写 Qdrant，供历史记忆召回
         try {
             Map<String, Object> payload = new LinkedHashMap<>();
@@ -258,6 +264,9 @@ public class ProductionAgenticCrewOrchestrator {
             } catch (Exception e) {
                 log.debug("[ProdCrew] 危险预警通知降级: {}", e.getMessage());
             }
+        }
+        } finally {
+            UserContext.clear();
         }
     }
 

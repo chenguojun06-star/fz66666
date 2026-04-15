@@ -532,3 +532,37 @@ page {
   flex-direction: column;
   gap: 4px;
 }
+
+/* ===== 全局搜索结果（从 app.wxss 按需引入） ===== */
+.global-results {
+  margin-bottom: 12px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--color-bg-light);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.results-title {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.close-results {
+  font-size: var(--font-size-xl);
+  color: var(--color-text-tertiary);
+  padding: 0 4px;
+}
+
+.results-list {
+  max-height: 400px;
+}

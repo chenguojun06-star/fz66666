@@ -11,7 +11,8 @@ export default function ChangePasswordPage() {
   const onSubmit = async () => {
     const { oldPassword, newPassword, confirmPassword } = form;
     if (!oldPassword || !newPassword || !confirmPassword) { toast.error('请填写所有密码字段'); return; }
-    if (newPassword.length < 6) { toast.error('新密码至少6位'); return; }
+    if (newPassword.length < 6 || newPassword.length > 20) { toast.error('新密码需6-20位'); return; }
+    if (oldPassword === newPassword) { toast.error('新密码不能与旧密码相同'); return; }
     if (newPassword !== confirmPassword) { toast.error('两次输入的密码不一致'); return; }
     setSaving(true);
     try {

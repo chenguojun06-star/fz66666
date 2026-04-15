@@ -97,7 +97,7 @@ public class KnowledgeSearchTool extends AbstractAgentTool {
                     .and(wrapper -> wrapper
                             .isNull("tenant_id")
                             .or()
-                            .eq(tenantId != null, "tenant_id", tenantId)
+                            .eq("tenant_id", tenantId != null ? tenantId : -1)
                     )
                     .and(wrapper -> wrapper
                             .like("title", query)
@@ -114,7 +114,7 @@ public class KnowledgeSearchTool extends AbstractAgentTool {
                 QueryWrapper<KnowledgeBase> semanticQw = new QueryWrapper<KnowledgeBase>()
                         .eq("delete_flag", 0)
                             .in("id", semanticScoreMap.keySet())
-                        .and(w -> w.isNull("tenant_id").or().eq(tenantId != null, "tenant_id", tenantId));
+                        .and(w -> w.isNull("tenant_id").or().eq("tenant_id", tenantId != null ? tenantId : -1));
                         if (!category.isEmpty()) semanticQw.eq("category", category);
                 semanticKbList = knowledgeBaseService.list(semanticQw);
             }
@@ -131,7 +131,7 @@ public class KnowledgeSearchTool extends AbstractAgentTool {
                             for (String entityName : path.getEntityNames()) {
                                 QueryWrapper<KnowledgeBase> graphQw = new QueryWrapper<KnowledgeBase>()
                                         .eq("delete_flag", 0)
-                                        .and(w -> w.isNull("tenant_id").or().eq(tenantId != null, "tenant_id", tenantId))
+                                        .and(w -> w.isNull("tenant_id").or().eq("tenant_id", tenantId != null ? tenantId : -1))
                                         .and(w -> w.like("title", entityName).or().like("keywords", entityName));
                                 if (!category.isEmpty()) graphQw.eq("category", category);
                                 graphQw.last("LIMIT 3");

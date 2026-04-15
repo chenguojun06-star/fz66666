@@ -1,6 +1,0 @@
-{
-  "navigationBarTitleText": "样板生产",
-  "usingComponents": {
-    "image-preview": "/components/common/image-preview/index"
-  }
-}

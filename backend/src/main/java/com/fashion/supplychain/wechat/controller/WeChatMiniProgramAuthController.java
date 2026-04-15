@@ -3,6 +3,8 @@ package com.fashion.supplychain.wechat.controller;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.wechat.orchestration.WeChatMiniProgramAuthOrchestrator;
 import javax.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,6 +20,8 @@ import java.util.Map;
 @RequestMapping("/api/wechat/mini-program")
 public class WeChatMiniProgramAuthController {
 
+    private static final Logger log = LoggerFactory.getLogger(WeChatMiniProgramAuthController.class);
+
     @Autowired
     private WeChatMiniProgramAuthOrchestrator weChatMiniProgramAuthOrchestrator;
 
@@ -28,7 +32,7 @@ public class WeChatMiniProgramAuthController {
         String password = body == null ? null : (String) body.get("password");
         Long tenantId = null;
         if (body != null && body.get("tenantId") != null) {
-            try { tenantId = Long.valueOf(body.get("tenantId").toString()); } catch (NumberFormatException ignored) {}
+            try { tenantId = Long.valueOf(body.get("tenantId").toString()); } catch (NumberFormatException e) { log.warn("Invalid tenantId format: {}", body.get("tenantId")); }
         }
 
         Map<String, Object> result = weChatMiniProgramAuthOrchestrator.login(code, username, password, tenantId);
@@ -72,7 +76,7 @@ public class WeChatMiniProgramAuthController {
         String tenantName = null;
         if (body != null) {
             if (body.get("tenantId") != null) {
-                try { tenantId = Long.valueOf(body.get("tenantId").toString()); } catch (NumberFormatException ignored) {}
+                try { tenantId = Long.valueOf(body.get("tenantId").toString()); } catch (NumberFormatException e) { log.warn("Invalid tenantId format in bind-login: {}", body.get("tenantId")); }
             }
             if (body.get("tenantName") != null) {
                 tenantName = body.get("tenantName").toString();

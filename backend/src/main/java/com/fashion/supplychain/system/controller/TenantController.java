@@ -36,9 +36,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 @PreAuthorize("isAuthenticated()")
 public class TenantController {
 
-    private static final String REDIS_WORKER_REG_PREFIX = "fashion:ratelimit:worker-reg:";
-    private static final int WORKER_REG_MAX_PER_HOUR = 10;
-
     @Autowired
     private TenantOrchestrator tenantOrchestrator;
 
@@ -50,26 +47,6 @@ public class TenantController {
 
     @Autowired(required = false)
     private RedisService redisService;
-
-    // ========== 公开接口（无需登录） ==========
-
-    /**
-     * 公开接口：获取活跃租户列表（登录页选择公司用）
-     * 返回 {id, tenantName, tenantCode}，供员工注册时按名称搜索工厂
-     */
-    @GetMapping("/public-list")
-    @PreAuthorize("permitAll()")
-    public Result<List<Map<String, Object>>> publicTenantList() {
-        List<Tenant> tenants = tenantOrchestrator.listActiveTenants();
-        List<Map<String, Object>> result = tenants.stream().map(t -> {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("id", t.getId());
-            m.put("tenantName", t.getTenantName());
-            m.put("tenantCode", t.getTenantCode());
-            return m;
-        }).collect(Collectors.toList());
-        return Result.success(result);
-    }
 
     // ========== 超级管理员：租户管理 ==========
 
@@ -327,23 +304,6 @@ public class TenantController {
         return Result.success(true);
     }
 
-    // ========== 工厂自助申请入驻 ==========
-
-    /**
-     * 工厂申请入驻（无需登录，开放接口）
-     * 提交后等待超级管理员在「客户管理」中审批
-     */
-    @PostMapping("/apply")
-    @org.springframework.security.access.prepost.PreAuthorize("permitAll()")
-    public Result<Map<String, Object>> applyForTenant(@RequestBody Map<String, Object> params) {
-        String tenantName = (String) params.get("tenantName");
-        String contactName = (String) params.get("contactName");
-        String contactPhone = (String) params.get("contactPhone");
-        String applyUsername = (String) params.get("applyUsername");
-        String applyPassword = (String) params.get("applyPassword");
-        return Result.success(tenantOrchestrator.applyForTenant(tenantName, contactName, contactPhone, applyUsername, applyPassword));
-    }
-
     /**
      * 删除租户（超级管理员）
      * 待审核/已拒绝的租户直接删除；已激活的租户会级联清理用户、角色、账单
@@ -493,39 +453,6 @@ public class TenantController {
     }
 
     // ========== 工人注册与审批 ==========
-
-    /**
-     * 工人自注册（无需登录）
-     */
-    @PostMapping("/registration/register")
-    @org.springframework.security.access.prepost.PreAuthorize("permitAll()")
-    public Result<Map<String, Object>> workerRegister(@RequestBody Map<String, String> params,
-                                                      HttpServletRequest request) {
-        // Redis IP 限流：每 IP 每小时最多 10 次工人注册
-        if (stringRedisTemplate != null) {
-            try {
-                String ip = request.getRemoteAddr();
-                String key = REDIS_WORKER_REG_PREFIX + ip;
-                Long count = stringRedisTemplate.opsForValue().increment(key);
-                if (count != null && count == 1) {
-                    stringRedisTemplate.expire(key, 1, TimeUnit.HOURS);
-                }
-                if (count != null && count > WORKER_REG_MAX_PER_HOUR) {
-                    return Result.fail("注册请求过于频繁，请稍后再试");
-                }
-            } catch (Exception ignored) {
-                // Redis 不可用时降级放行
-            }
-        }
-        String username = params.get("username");
-        String password = params.get("password");
-        String name = params.get("name");
-        String phone = params.get("phone");
-        String tenantCode = params.get("tenantCode");
-        String factoryId = params.get("factoryId");
-        String orgUnitId = params.get("orgUnitId");
-        return Result.success(tenantOrchestrator.workerRegister(username, password, name, phone, tenantCode, factoryId, orgUnitId));
-    }
 
     /**
      * 获取待审批注册列表

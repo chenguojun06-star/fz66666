@@ -1,7 +1,0 @@
-{
-  "navigationBarTitleText": "扫码确认",
-  "usingComponents": {
-    "sku-matrix": "/components/sku-matrix/index",
-    "image-preview": "/components/common/image-preview/index"
-  }
-}

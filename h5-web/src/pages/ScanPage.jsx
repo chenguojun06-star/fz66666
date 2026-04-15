@@ -5,6 +5,7 @@ import api from '@/api';
 import { useAuthStore } from '@/stores/authStore';
 import { useGlobalStore } from '@/stores/globalStore';
 import { toast } from '@/utils/uiHelper';
+import { eventBus } from '@/utils/eventBus';
 import CameraScanner from '@/components/CameraScanner';
 import Icon from '@/components/Icon';
 
@@ -96,6 +97,27 @@ export default function ScanPage() {
   }, []);
 
   useEffect(() => { loadStats(); loadTodayHistory(); }, [loadStats, loadTodayHistory]);
+
+  useEffect(() => {
+    const onRefresh = () => { loadStats(); loadTodayHistory(); };
+    eventBus.on('DATA_REFRESH', onRefresh);
+    return () => eventBus.off('DATA_REFRESH', onRefresh);
+  }, [loadStats, loadTodayHistory]);
+
+  useEffect(() => {
+    const checkDayChange = () => {
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      if (checkDayChange._lastDay && checkDayChange._lastDay !== todayStr) {
+        loadStats();
+        loadTodayHistory();
+      }
+      checkDayChange._lastDay = todayStr;
+    };
+    const timer = setInterval(checkDayChange, 60000);
+    checkDayChange();
+    return () => clearInterval(timer);
+  }, [loadStats, loadTodayHistory]);
 
   const isRecentDuplicate = useCallback((code) => {
     const now = Date.now();

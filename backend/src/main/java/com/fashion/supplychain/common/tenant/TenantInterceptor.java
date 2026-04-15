@@ -202,11 +202,12 @@ public class TenantInterceptor implements InnerInterceptor {
             log.error("[TenantInterceptor] tenantId contains unexpected characters, rejecting request: {}", tenantId);
             throw new SQLException("租户标识异常，拒绝执行查询");
         }
+        long tenantIdLong = Long.parseLong(tenantIdStr);
         String condition;
         if (isSharedTable) {
-            condition = " AND (tenant_id = " + tenantIdStr + " OR tenant_id IS NULL)";
+            condition = " AND (tenant_id = " + tenantIdLong + " OR tenant_id IS NULL)";
         } else {
-            condition = " AND tenant_id = " + tenantIdStr;
+            condition = " AND tenant_id = " + tenantIdLong;
         }
 
         // 使用深度感知查找，只匹配最外层关键字（忽略子查询内部的）

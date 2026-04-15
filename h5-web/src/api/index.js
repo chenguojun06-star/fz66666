@@ -79,10 +79,10 @@ const system = {
   login: (payload) => http.post('/api/system/user/login', payload),
   getMe: () => http.get('/api/system/user/me'),
   listPendingUsers: () => http.get('/api/system/user/pending'),
-  updateUser: (data) => http.put('/api/system/user', data),
+  updateUser: (userId, data) => http.put(`/api/system/user/${userId}`, data),
   approveUser: (userId, data) => http.post(`/api/system/user/${userId}/approval-action?action=approve`, data || {}),
   rejectUser: (userId, data) => http.post(`/api/system/user/${userId}/approval-action?action=reject`, data || {}),
-  listRoles: () => http.get('/api/system/roles/list'),
+  listRoles: () => http.get('/api/system/role/list'),
   getOnlineCount: () => http.get('/api/system/user/online-count'),
   listOrganizationDepartments: () => http.get('/api/system/organization/departments'),
   changePassword: (data) => http.post('/api/system/user/me/change-password', data || {}),
@@ -92,7 +92,7 @@ const system = {
 };
 
 const serial = {
-  generate: (type) => http.get('/api/serial/generate', { params: { type } }),
+  generate: (type) => http.get('/api/system/serial/generate', { params: { type } }),
 };
 
 const factory = {
@@ -100,9 +100,9 @@ const factory = {
 };
 
 const factoryWorker = {
-  list: (factoryId) => http.get('/api/system/factory-workers/list', { params: { factoryId } }),
-  save: (data) => http.post('/api/system/factory-workers', data || {}),
-  remove: (id) => http.delete(`/api/system/factory-workers/${id}`),
+  list: (factoryId) => http.get('/api/factory-worker/list', { params: { factoryId } }),
+  save: (data) => http.post('/api/factory-worker/save', data || {}),
+  remove: (id) => http.delete(`/api/factory-worker/${id}`),
 };
 
 const tenant = {
@@ -245,24 +245,24 @@ const common = {
 const style = {
   listStyles: (params) => http.get('/api/style/info/list', { params: params || {} }),
   getBomList: (styleId) => http.get('/api/style/bom/list', { params: { styleId } }),
-  getInventory: (styleId) => http.get('/api/warehouse/finished/inventory/list', { params: { styleId } }),
-  updateInventory: (styleId, data) => http.post('/api/warehouse/finished/inventory/outbound', data || {}),
+  getInventory: (styleId) => http.get('/api/warehouse/finished-inventory/list', { params: { styleId } }),
+  updateInventory: (styleId, data) => http.post('/api/warehouse/finished-inventory/outbound', data || {}),
 };
 
 const warehouse = {
-  listFinishedInventory: (params) => http.get('/api/warehouse/finished/inventory/list', { params: params || {} }),
-  outboundFinishedInventory: (data) => http.post('/api/warehouse/finished/inventory/outbound', data || {}),
+  listFinishedInventory: (params) => http.get('/api/warehouse/finished-inventory/list', { params: params || {} }),
+  outboundFinishedInventory: (data) => http.post('/api/warehouse/finished-inventory/outbound', data || {}),
 };
 
 const material = {
-  listStockAlerts: (params) => http.get('/api/material/stock/alerts', { params: params || {} }),
-  listBatchDetails: (params) => http.get('/api/material/stock/batch-details', { params: params || {} }),
-  listPurchaseRecords: (params) => http.get('/api/material/purchase/records', { params: params || {} }),
+  listStockAlerts: (params) => http.get('/api/production/material/stock/alerts', { params: params || {} }),
+  listBatchDetails: (params) => http.get('/api/production/material/stock/batch-details', { params: params || {} }),
+  listPurchaseRecords: (params) => http.get('/api/production/purchase/list', { params: params || {} }),
 };
 
 const materialRoll = {
-  scan: (data) => http.post('/api/material/roll/scan', data),
-  listByInbound: (params) => http.get('/api/material/roll/list-by-inbound', { params: params || {} }),
+  scan: (data) => http.post('/api/production/material/roll/scan', data),
+  listByInbound: (params) => http.get('/api/production/material/roll/list-by-inbound', { params: params || {} }),
 };
 
 const orderManagement = {

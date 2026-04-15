@@ -293,35 +293,32 @@ export default function ScanResultPage() {
         </div>
       )}
 
-      {(description || secondaryProcesses.length > 0) && (
+      {description && (
         <div className="section-card">
-          {description && (
-            <>
-              <div className="section-title">工艺要点</div>
-              <div className="craft-points">
-                {splitTipPoints(description).map((pt, i) => (
-                  <div key={i} className="craft-point">· {pt}</div>
-                ))}
+          <div className="section-title">生产工艺要点</div>
+          <div className="craft-points">
+            {splitTipPoints(description).map((pt, i) => (
+              <div key={i} className="craft-point">· {pt}</div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {secondaryProcesses.length > 0 && (
+        <div className="section-card process-highlight-card">
+          <div className="section-title process-highlight-title">二次工艺（{secondaryProcesses.length}）</div>
+          <div className="process-list">
+            {secondaryProcesses.map((item, idx) => (
+              <div key={item.id || idx} className="process-item">
+                <div className="process-item-row">
+                  {item.processTypeCN && <span className="process-type-tag">{item.processTypeCN}</span>}
+                  <span className="process-name">{item.processName || item.processTypeCN || '-'}</span>
+                  <span className={`process-status${item.status === 'completed' ? ' status-done' : ' status-active'}`}>{item.statusCN}</span>
+                </div>
+                {item.description && <div className="process-item-desc">· {item.description}</div>}
               </div>
-            </>
-          )}
-          {secondaryProcesses.length > 0 && (
-            <>
-              <div className="section-title" style={{ marginTop: description ? 10 : 0 }}>难度工序（{secondaryProcesses.length}）</div>
-              <div className="process-list">
-                {secondaryProcesses.map((item, idx) => (
-                  <div key={item.id || idx} className="process-item">
-                    <div className="process-item-row">
-                      {item.processTypeCN && <span className="process-type-tag">{item.processTypeCN}</span>}
-                      <span className="process-name">{item.processName || item.processTypeCN || '-'}</span>
-                      <span className={`process-status${item.status === 'completed' ? ' status-done' : ' status-active'}`}>{item.statusCN}</span>
-                    </div>
-                    {item.description && <div className="process-item-desc">· {item.description}</div>}
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
+            ))}
+          </div>
         </div>
       )}
 

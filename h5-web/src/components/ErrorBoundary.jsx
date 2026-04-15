@@ -41,7 +41,7 @@ export default class ErrorBoundary extends Component {
             页面出现异常
           </div>
           <div style={{ fontSize: 14, color: 'var(--color-text-secondary)', marginBottom: 20, maxWidth: 280 }}>
-            {this.state.error?.message || '发生了未知错误'}
+            页面加载出现问题，请尝试刷新或返回首页
           </div>
           <div style={{ display: 'flex', gap: 12 }}>
             <button onClick={this.handleReset} style={{

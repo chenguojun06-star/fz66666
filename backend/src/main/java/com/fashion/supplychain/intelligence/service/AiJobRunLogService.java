@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.service;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.entity.AiJobRunLog;
 import com.fashion.supplychain.intelligence.mapper.AiJobRunLogMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -49,7 +50,13 @@ public class AiJobRunLogService extends ServiceImpl<AiJobRunLogMapper, AiJobRunL
     @Async
     public void logSuccess(String jobName, String methodName, LocalDateTime startTime,
                            long durationMs, String resultSummary, Long tenantId) {
-        if (!isWritable()) return;
+        if (tenantId != null) {
+            UserContext ctx = new UserContext();
+            ctx.setTenantId(tenantId);
+            ctx.setUserId("SYSTEM");
+            UserContext.set(ctx);
+        }
+        if (!isWritable()) { UserContext.clear(); return; }
         try {
             AiJobRunLog logEntry = new AiJobRunLog()
                     .setTenantId(tenantId)
@@ -63,13 +70,21 @@ public class AiJobRunLogService extends ServiceImpl<AiJobRunLogMapper, AiJobRunL
             onWriteSuccess();
         } catch (Exception e) {
             onWriteFailure(e, "写入成功日志失败");
+        } finally {
+            UserContext.clear();
         }
     }
 
     @Async
     public void logFailed(String jobName, String methodName, LocalDateTime startTime,
                           long durationMs, String errorMessage, Long tenantId) {
-        if (!isWritable()) return;
+        if (tenantId != null) {
+            UserContext ctx = new UserContext();
+            ctx.setTenantId(tenantId);
+            ctx.setUserId("SYSTEM");
+            UserContext.set(ctx);
+        }
+        if (!isWritable()) { UserContext.clear(); return; }
         try {
             AiJobRunLog record = new AiJobRunLog()
                     .setTenantId(tenantId)
@@ -83,6 +98,8 @@ public class AiJobRunLogService extends ServiceImpl<AiJobRunLogMapper, AiJobRunL
             onWriteSuccess();
         } catch (Exception e) {
             onWriteFailure(e, "写入失败日志失败");
+        } finally {
+            UserContext.clear();
         }
     }
 

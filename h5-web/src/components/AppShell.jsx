@@ -64,7 +64,7 @@ export default function AppShell({ children }) {
 
 function getPageTitle(pathname) {
   const titleMap = {
-    '/home': '服装供应链',
+    '/home': '云智链',
     '/work': '生产管理',
     '/scan': '扫码操作',
     '/admin': '个人中心',
@@ -91,5 +91,5 @@ function getPageTitle(pathname) {
     '/warehouse/material/scan': '面辅料扫码',
     '/warehouse/sample/scan-action': '样衣扫码',
   };
-  return titleMap[pathname] || '服装供应链';
+  return titleMap[pathname] || '云智链';
 }

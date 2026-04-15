@@ -63,7 +63,7 @@ const factoryWorker = {
     return ok('/api/factory-worker/list', 'GET', { factoryId });
   },
   save(data) {
-    return ok('/api/factory-worker', 'POST', data || {});
+    return ok('/api/factory-worker/save', 'POST', data || {});
   },
   remove(id) {
     return ok(`/api/factory-worker/${id}`, 'DELETE', {});

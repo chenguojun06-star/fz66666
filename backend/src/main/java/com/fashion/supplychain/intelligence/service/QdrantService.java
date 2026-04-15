@@ -184,21 +184,23 @@ public class QdrantService {
             // F26: 过滤低质量匹配，余弦相似度 < 0.3 的结果直接丢弃
             body.put("score_threshold", 0.3);
 
-            // 租户隔离过滤
-            if (tenantId != null) {
-                ObjectNode filter = body.putObject("filter");
-                ArrayNode should = filter.putArray("should");
-
-                ObjectNode tenantCond = should.addObject();
-                tenantCond.put("key", "tenant_id");
-                ObjectNode tenantMatchVal = tenantCond.putObject("match");
-                tenantMatchVal.put("integer", tenantId);
-
-                ObjectNode publicCond = should.addObject();
-                publicCond.put("key", "tenant_id");
-                ObjectNode publicMatchVal = publicCond.putObject("match");
-                publicMatchVal.put("integer", 0);
+            // 租户隔离过滤（tenantId 为 null 时拒绝搜索，防止跨租户数据泄漏）
+            if (tenantId == null) {
+                log.warn("[Qdrant] search拒绝: tenantId为null，跳过搜索以防止跨租户数据泄漏");
+                return results;
             }
+            ObjectNode filter = body.putObject("filter");
+            ArrayNode should = filter.putArray("should");
+
+            ObjectNode tenantCond = should.addObject();
+            tenantCond.put("key", "tenant_id");
+            ObjectNode tenantMatchVal = tenantCond.putObject("match");
+            tenantMatchVal.put("integer", tenantId);
+
+            ObjectNode publicCond = should.addObject();
+            publicCond.put("key", "tenant_id");
+            ObjectNode publicMatchVal = publicCond.putObject("match");
+            publicMatchVal.put("integer", 0);
 
             String url = qdrantUrl + "/collections/" + collectionName + "/points/search";
             HttpEntity<String> entity = jsonEntity(body.toString());
@@ -232,8 +234,12 @@ public class QdrantService {
         return payload;
     }
 
-    /** 删除指定向量点（需提供 tenantId 校验归属） */
+    /** 删除指定向量点（需提供 tenantId 校验归属，tenantId 为 null 时拒绝删除） */
     public void deleteVector(String pointId, Long tenantId) {
+        if (tenantId == null) {
+            log.warn("[Qdrant] delete拒绝: tenantId为null，拒绝删除以防止跨租户数据操作 pointId={}", pointId);
+            return;
+        }
         try {
             ObjectNode body = objectMapper.createObjectNode();
             ObjectNode filter = body.putObject("filter");
@@ -241,11 +247,9 @@ public class QdrantService {
             ObjectNode idCond = must.addObject();
             idCond.put("key", "id");
             idCond.putObject("match").put("value", pointId);
-            if (tenantId != null) {
-                ObjectNode tenantCond = must.addObject();
-                tenantCond.put("key", "tenant_id");
-                tenantCond.putObject("match").put("integer", tenantId);
-            }
+            ObjectNode tenantCond = must.addObject();
+            tenantCond.put("key", "tenant_id");
+            tenantCond.putObject("match").put("integer", tenantId);
 
             String url = qdrantUrl + "/collections/" + collectionName + "/points/delete";
             restTemplate.exchange(url, HttpMethod.POST, jsonEntity(body.toString()), String.class);
@@ -571,16 +575,19 @@ public class QdrantService {
             for (float v : embedding) vec.add(v);
             body.put("limit", topK);
             body.put("with_payload", true);
-            if (tenantId != null) {
-                ObjectNode filter = body.putObject("filter");
-                ArrayNode should = filter.putArray("should");
-                ObjectNode tenantCond = should.addObject();
-                tenantCond.put("key", "tenant_id");
-                tenantCond.putObject("match").put("integer", tenantId);
-                ObjectNode publicCond = should.addObject();
-                publicCond.put("key", "tenant_id");
-                publicCond.putObject("match").put("integer", 0);
+            // 租户隔离过滤（tenantId 为 null 时拒绝搜索，防止跨租户数据泄漏）
+            if (tenantId == null) {
+                log.warn("[Qdrant] style_images search拒绝: tenantId为null，跳过搜索以防止跨租户数据泄漏");
+                return results;
             }
+            ObjectNode filter = body.putObject("filter");
+            ArrayNode should = filter.putArray("should");
+            ObjectNode tenantCond = should.addObject();
+            tenantCond.put("key", "tenant_id");
+            tenantCond.putObject("match").put("integer", tenantId);
+            ObjectNode publicCond = should.addObject();
+            publicCond.put("key", "tenant_id");
+            publicCond.putObject("match").put("integer", 0);
             String url = qdrantUrl + "/collections/" + STYLE_IMAGE_COLLECTION + "/points/search";
             ResponseEntity<String> resp = restTemplate.postForEntity(url, jsonEntity(body.toString()), String.class);
             if (resp.getStatusCode().is2xxSuccessful() && resp.getBody() != null) {

@@ -820,6 +820,7 @@ public class IntelligenceController {
     /** Stage5 — 成本/需求/用量预测（POST body: forecastType/subjectId/horizon） */
     @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
     @PostMapping("/forecast")
+    @DataTruth(source = DataTruth.Source.AI_DERIVED, description = "预测由AI模型生成")
     public Result<ForecastEngineResponse> forecast(@RequestBody ForecastEngineRequest req) {
         return Result.success(forecastEngineOrchestrator.forecast(req));
     }
@@ -827,12 +828,14 @@ public class IntelligenceController {
     /** Stage6 — What-If 推演沙盘（多场景对比） */
     @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
     @PostMapping("/whatif/simulate")
+    @DataTruth(source = DataTruth.Source.SIMULATED, description = "What-If推演为模拟数据")
     public Result<WhatIfResponse> whatIfSimulate(@RequestBody WhatIfRequest req) {
         return Result.success(whatIfSimulationOrchestrator.simulate(req));
     }
 
     /** Stage7 — 视觉AI图像分析（瑕疵检测/款式识别/色差检验） */
     @PostMapping("/visual/analyze")
+    @DataTruth(source = DataTruth.Source.AI_DERIVED, description = "视觉AI分析由LLM生成")
     public Result<VisualAIResponse> visualAnalyze(@RequestBody VisualAIRequest req) {
         return Result.success(visualAIOrchestrator.analyze(req));
     }
@@ -962,6 +965,7 @@ public class IntelligenceController {
 
     /** 知识图谱推理 — 从查询出发多跳遍历图谱，返回推理路径 */
     @PostMapping("/knowledge-graph/reason")
+    @DataTruth(source = DataTruth.Source.AI_DERIVED, description = "知识图谱推理基于图遍历+实体匹配")
     public Result<List<com.fashion.supplychain.intelligence.orchestration.KnowledgeGraphOrchestrator.ReasoningPath>> knowledgeGraphReason(
             @RequestBody java.util.Map<String, Object> body) {
         String query = (String) body.getOrDefault("query", "");
@@ -997,6 +1001,7 @@ public class IntelligenceController {
     /** 采购优化求解 — LLM提取约束 + 启发式求解 */
     @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
     @PostMapping("/optimization/procurement")
+    @DataTruth(source = DataTruth.Source.AI_DERIVED, description = "采购优化由LLM+启发式求解生成")
     public Result<com.fashion.supplychain.intelligence.orchestration.OptimizationSolverOrchestrator.ProcurementSolution> optimizeProcurement(
             @RequestBody java.util.Map<String, String> body) {
         String userRequest = body.getOrDefault("request", "");

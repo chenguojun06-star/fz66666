@@ -2,6 +2,7 @@ package com.fashion.supplychain.system.controller;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -12,6 +13,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/debug")
 @PreAuthorize("hasAnyAuthority('ROLE_1', 'ROLE_ADMIN')")
+@Profile("dev")
 public class DebugController {
     @GetMapping("/context")
     public Result<?> getContext() {

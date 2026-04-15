@@ -133,6 +133,7 @@ export default function ScanQualityPage() {
     if (result === 'unqualified') {
       const qty = parseInt(defectQuantity, 10);
       if (!qty || qty <= 0) { setLoading(false); toast.error('请输入不合格数量'); return; }
+      if (detail && detail.quantity && qty > detail.quantity) { setLoading(false); toast.error('不合格数量不能超过总数量'); return; }
       payload.defectQuantity = qty;
       if (defectCategoryIndex >= 0) payload.defectCategory = CATEGORY_VALUE_MAP[defectCategoryIndex];
       if (handleMethodIndex >= 0) payload.defectRemark = HANDLE_METHODS[handleMethodIndex];

@@ -1,9 +1,13 @@
 package com.fashion.supplychain.integration.logistics.callback;
 
+import com.fashion.supplychain.integration.config.SFExpressProperties;
+import com.fashion.supplychain.integration.config.STOProperties;
 import com.fashion.supplychain.integration.record.entity.IntegrationCallbackLog;
 import com.fashion.supplychain.integration.record.service.IntegrationRecordService;
+import com.fashion.supplychain.integration.util.SignatureUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -31,6 +35,12 @@ import java.util.Map;
 public class LogisticsCallbackController {
 
     private final IntegrationRecordService recordService;
+
+    @Autowired(required = false)
+    private SFExpressProperties sfExpressProperties;
+
+    @Autowired(required = false)
+    private STOProperties stoProperties;
 
     // =====================================================
     // 顺丰路由事件推送
@@ -71,14 +81,19 @@ public class LogisticsCallbackController {
         IntegrationCallbackLog cbLog = recordService.saveCallbackLog("LOGISTICS", "SF", msgData, null);
 
         try {
-            // Step 1: 验证签名（接入后取消注释）
-            // String appKey = sfExpressProperties.getAppKey();
-            // String appSecret = sfExpressProperties.getAppSecret();
-            // String expectedDigest = SignatureUtils.buildSFSignature(msgData, timestamp, appKey, appSecret);
-            // if (!expectedDigest.equals(msgDigest)) {
-            //     log.warn("[顺丰回调] 签名验证失败");
-            //     return "error";
-            // }
+            // Step 1: 验证签名
+            String appKey = sfExpressProperties != null ? sfExpressProperties.getAppKey() : null;
+            String appSecret = sfExpressProperties != null ? sfExpressProperties.getAppSecret() : null;
+            if (appKey != null && appSecret != null && !appKey.isEmpty() && !appSecret.isEmpty()) {
+                String expectedDigest = SignatureUtils.buildSFSignature(msgData, timestamp, appKey, appSecret);
+                if (!expectedDigest.equals(msgDigest)) {
+                    log.warn("[顺丰回调] 签名验证失败");
+                    recordService.updateCallbackResult(cbLog.getId(), false, false, null, "签名验证失败");
+                    return "error";
+                }
+            } else {
+                log.warn("[顺丰回调] 密钥未配置，跳过签名验证（仅限开发环境）");
+            }
 
             // Step 2: 解析推送类型
             if ("EXP_RECE_PUSH_ROUTE_EVNET".equals(msgType)) {
@@ -120,13 +135,20 @@ public class LogisticsCallbackController {
         IntegrationCallbackLog cbLog = recordService.saveCallbackLog("LOGISTICS", "STO", body.toString(), null);
 
         try {
-            // Step 1: 验证签名（接入后取消注释）
-            // String content = JSON.toJSONString(body.get("data"));
-            // String expectedSign = SignatureUtils.buildSTOSignature(content, stoProperties.getAppKey(), stoProperties.getAppSecret());
-            // if (!expectedSign.equals(sign)) {
-            //     log.warn("[申通回调] 签名验证失败");
-            //     return Map.of("code", "FAIL", "message", "签名错误");
-            // }
+            // Step 1: 验证签名
+            String stoAppKey = stoProperties != null ? stoProperties.getAppKey() : null;
+            String stoAppSecret = stoProperties != null ? stoProperties.getAppSecret() : null;
+            if (stoAppKey != null && stoAppSecret != null && !stoAppKey.isEmpty() && !stoAppSecret.isEmpty()) {
+                String content = body.get("data") != null ? body.get("data").toString() : "";
+                String expectedSign = SignatureUtils.buildSTOSignature(content, stoAppKey, stoAppSecret);
+                if (!expectedSign.equals(sign)) {
+                    log.warn("[申通回调] 签名验证失败");
+                    recordService.updateCallbackResult(cbLog.getId(), false, false, null, "签名验证失败");
+                    return Map.of("code", "FAIL", "message", "签名错误");
+                }
+            } else {
+                log.warn("[申通回调] 密钥未配置，跳过签名验证（仅限开发环境）");
+            }
 
             // Step 2: 处理状态更新
             handleSTOStatusUpdate(trackingNumber, status, body);
