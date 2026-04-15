@@ -1,5 +1,6 @@
 import { http } from './http';
 import { useAuthStore } from '@/stores/authStore';
+import { setToken, setUserInfo, setTenantInfo } from '@/utils/storage';
 
 const WX_OAUTH_STATE_KEY = 'wx_oauth_state';
 const WX_OAUTH_REDIRECT_KEY = 'wx_oauth_redirect';
@@ -18,6 +19,18 @@ function validateState(state) {
   }
   sessionStorage.removeItem(WX_OAUTH_STATE_KEY);
   return true;
+}
+
+function storeAuth(token, user) {
+  setToken(token);
+  setUserInfo(user);
+  if (user?.tenantId) {
+    setTenantInfo({ tenantId: user.tenantId, tenantName: user.tenantName || '' });
+  }
+  useAuthStore.getState().setAuth(token, user, {
+    tenantId: user?.tenantId || '',
+    tenantName: user?.tenantName || '',
+  });
 }
 
 export function initiateWxOAuth(redirectPath) {
@@ -65,12 +78,7 @@ export async function handleWxOAuthCallback(code, state) {
       const { token, user, needBind, openid } = res.data;
 
       if (token && user) {
-        const authStore = useAuthStore.getState();
-        authStore.setToken(token);
-        authStore.setUser(user);
-        if (user.tenantId) {
-          authStore.setTenant(user.tenantId, user.tenantName || '');
-        }
+        storeAuth(token, user);
         return { success: true };
       }
 
@@ -98,12 +106,7 @@ export async function bindWxAccountAndLogin({ openid, username, password, tenant
     if (res && res.data) {
       const { token, user } = res.data;
       if (token && user) {
-        const authStore = useAuthStore.getState();
-        authStore.setToken(token);
-        authStore.setUser(user);
-        if (user.tenantId) {
-          authStore.setTenant(user.tenantId, user.tenantName || '');
-        }
+        storeAuth(token, user);
         return { success: true };
       }
     }

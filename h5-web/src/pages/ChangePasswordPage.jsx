@@ -24,9 +24,9 @@ export default function ChangePasswordPage() {
   };
 
   return (
-    <div style={{ padding: 16 }}>
-      <div className="hero-card compact">
-        <h3 style={{ margin: '0 0 16px' }}>修改密码</h3>
+    <div className="sub-page">
+      <div className="card-item">
+        <div className="card-item-title" style={{ marginBottom: 16 }}>修改密码</div>
         <div className="field-block">
           <label>当前密码</label>
           <input className="text-input" type="password" value={form.oldPassword}

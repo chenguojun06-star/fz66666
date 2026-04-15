@@ -31,9 +31,7 @@ export default function PayrollPage() {
   const [sortField, setSortField] = useState('time');
   const [sortOrder, setSortOrder] = useState('desc');
 
-  useEffect(() => {
-    initDates();
-  }, []);
+  useEffect(() => { initDates(); }, []);
 
   const initDates = () => {
     const now = new Date();
@@ -55,8 +53,7 @@ export default function PayrollPage() {
       const y = now.getFullYear(), m = String(now.getMonth() + 1).padStart(2, '0');
       sd = `${y}-${m}-01`;
     } else {
-      sd = startDate;
-      ed = endDate;
+      sd = startDate; ed = endDate;
     }
     setTimeFilter(filter);
     if (filter !== 'custom') { setStartDate(sd); setEndDate(ed); loadData(sd, ed); }
@@ -127,58 +124,59 @@ export default function PayrollPage() {
   };
 
   return (
-    <div style={{ padding: 16 }}>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+    <div className="sub-page">
+      <div className="tab-bar" style={{ marginBottom: 12 }}>
         {['week', 'month', 'custom'].map(f => (
           <button key={f} className={`scan-type-chip${timeFilter === f ? ' active' : ''}`}
-            onClick={() => onFilterChange(f)}
-            style={{ flex: 1, padding: 8, borderRadius: 8, border: '1px solid var(--color-border)',
-              background: timeFilter === f ? 'var(--color-primary)' : 'var(--color-bg-light)',
-              color: timeFilter === f ? '#fff' : 'var(--color-text-primary)', cursor: 'pointer', fontSize: 12 }}>
+            onClick={() => onFilterChange(f)} style={{ flex: 1 }}>
             {f === 'week' ? '本周' : f === 'month' ? '本月' : '自定义'}
           </button>
         ))}
       </div>
 
       {timeFilter === 'custom' && (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-          <input className="text-input" type="date" value={startDate} onChange={e => { setStartDate(e.target.value); loadData(e.target.value, endDate); }} style={{ flex: 1 }} />
-          <input className="text-input" type="date" value={endDate} onChange={e => { setEndDate(e.target.value); loadData(startDate, e.target.value); }} style={{ flex: 1 }} />
+        <div className="sub-page-row-stretch" style={{ marginBottom: 12 }}>
+          <input className="text-input" type="date" value={startDate} onChange={e => { setStartDate(e.target.value); loadData(e.target.value, endDate); }} />
+          <input className="text-input" type="date" value={endDate} onChange={e => { setEndDate(e.target.value); loadData(startDate, e.target.value); }} />
         </div>
       )}
 
-      <div className="stats-grid" style={{ gridTemplateColumns: '1fr 1fr', marginBottom: 12 }}>
+      <div className="stats-grid stats-grid-2col" style={{ marginBottom: 12 }}>
         {summaryItems.map((item, i) => (
           <div key={i} className={`stat-card${item.highlight ? ' tone-blue' : ''}`}>
-            <div className="stat-number" style={{ fontSize: item.highlight ? 18 : 14 }}>{item.value}</div>
+            <div className="stat-number" style={{ fontSize: item.highlight ? 'var(--font-size-lg)' : 'var(--font-size-base)' }}>{item.value}</div>
             <div className="stat-label">{item.label}</div>
           </div>
         ))}
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <span style={{ fontSize: 13, fontWeight: 600 }}>工资明细</span>
-        <button className="ghost-button" style={{ fontSize: 11 }} onClick={toggleSort}>
+      <div className="sub-page-row" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
+        <span style={{ fontWeight: 600 }}>工资明细</span>
+        <button className="ghost-button" style={{ fontSize: 'var(--font-size-xs)' }} onClick={toggleSort}>
           按{sortField === 'time' ? '时间' : '金额'}排序 {sortOrder === 'desc' ? '↓' : '↑'}
         </button>
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-secondary)' }}>加载中...</div>
+        <div className="loading-state">加载中...</div>
       ) : records.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-secondary)' }}>暂无记录</div>
+        <div className="empty-state">
+          <div className="empty-state-icon">💰</div>
+          <div className="empty-state-title">暂无记录</div>
+          <div className="empty-state-desc">扫码后工资记录会在这里显示</div>
+        </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div className="list-stack">
           {records.map((r, idx) => (
-            <div key={idx} className="hero-card compact" style={{ fontSize: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div key={idx} className="card-item" style={{ padding: 10, fontSize: 'var(--font-size-sm)' }}>
+              <div className="sub-page-row" style={{ justifyContent: 'space-between' }}>
                 <span style={{ fontWeight: 600 }}>{r.orderNo}</span>
                 <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>¥{r.totalAmount}</span>
               </div>
-              <div style={{ color: 'var(--color-text-secondary)', marginTop: 2 }}>
+              <div className="card-item-meta" style={{ marginTop: 2 }}>
                 {r.processName} · {r.scanTypeText} · {r.quantity}件 · ¥{r.unitPrice}/件
               </div>
-              <div style={{ color: 'var(--color-text-tertiary)', marginTop: 2, fontSize: 11 }}>{r.scanTime}</div>
+              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginTop: 2 }}>{r.scanTime}</div>
             </div>
           ))}
         </div>

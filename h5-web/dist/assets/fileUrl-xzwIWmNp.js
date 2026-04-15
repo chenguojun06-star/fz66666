@@ -1,1 +1,0 @@
-function o(t){if(!t)return"";if(t.startsWith("data:")||t.startsWith("blob:"))return t;const e=localStorage.getItem("fashion_token")||"";if(!e)return t;const n=t.includes("?")?"&":"?";return t+n+"token="+encodeURIComponent(e)}export{o as g};

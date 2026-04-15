@@ -112,15 +112,18 @@ export default function CuttingTaskDetailPage() {
   };
 
   return (
-    <div style={{ padding: 16 }}>
-      {coverImage && <img src={coverImage} alt="" style={{ width: '100%', maxHeight: 160, objectFit: 'cover', borderRadius: 8, marginBottom: 12 }} />}
+    <div className="sub-page">
+      {coverImage && <img src={coverImage} alt="" className="card-item-cover" />}
 
-      <div className="hero-card compact">
-        <div style={{ fontWeight: 600 }}>{orderNo}</div>
-        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>款号: {taskInfo.styleNo || '-'}</div>
+      <div className="card-item">
+        <div className="card-item-title">{orderNo}</div>
+        <div className="info-row">
+          <span className="info-label">款号:</span>
+          <span className="info-value">{taskInfo.styleNo || '-'}</span>
+        </div>
       </div>
 
-      <div className="stats-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr', marginBottom: 12 }}>
+      <div className="stats-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr' }}>
         <div className="stat-card tone-blue"><div className="stat-number">{summary.totalOrdered}</div><div className="stat-label">订单数</div></div>
         <div className="stat-card tone-green"><div className="stat-number">{summary.totalCutting}</div><div className="stat-label">裁剪数</div></div>
         <div className="stat-card tone-orange"><div className="stat-number">{summary.totalBundles}</div><div className="stat-label">扎数</div></div>
@@ -137,17 +140,24 @@ export default function CuttingTaskDetailPage() {
           onChange={e => { setExcessRate(e.target.value); recalculate(orderLines.map(l => ({ ...l, lastBundleOverride: null })), bundleSize, e.target.value); }} />
       </div>
 
-      {hasData && orderLines.map((line, idx) => (
-        <div key={line.key} className="hero-card compact" style={{ fontSize: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+      {hasData && orderLines.map((line) => (
+        <div key={line.key} className="card-item" style={{ fontSize: 'var(--font-size-sm)' }}>
+          <div className="sub-page-row" style={{ justifyContent: 'space-between' }}>
             <span style={{ fontWeight: 600 }}>{line.color} / {line.size}</span>
-            <span>订单: {line.orderedQty}件</span>
+            <span className="card-item-meta">订单: {line.orderedQty}件</span>
           </div>
-          <div style={{ color: 'var(--color-text-secondary)' }}>
+          <div className="card-item-meta">
             裁剪: {line.cuttingQty}件 · {line.bundleDisplay}
           </div>
         </div>
       ))}
+
+      {!hasData && !loading && (
+        <div className="empty-state">
+          <div className="empty-state-icon">✂️</div>
+          <div className="empty-state-title">暂无尺码数据</div>
+        </div>
+      )}
 
       <button className="primary-button" onClick={onSubmit} disabled={submitting} style={{ marginTop: 16 }}>
         {submitting ? '生成中...' : '生成菲号'}

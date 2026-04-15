@@ -36,9 +36,6 @@ export default function ProcurementTaskDetailPage() {
     try {
       const res = await api.production.getMaterialPurchases({ orderNo: no });
       const list = normalizeToArray(res);
-      const userInfo = getUserInfo() || {};
-      const receiverId = String(userInfo.id || userInfo.userId || '').trim();
-      const receiverName = String(userInfo.name || userInfo.username || '').trim();
       let totalPurchased = 0, totalArrived = 0;
       const mps = list.map(item => {
         const status = normalizeStatus(item.status);
@@ -46,9 +43,12 @@ export default function ProcurementTaskDetailPage() {
         const arrivedQty = Number(item.arrivedQuantity || 0);
         totalPurchased += purchaseQty;
         totalArrived += arrivedQty;
+        let statusTagClass = 'status-tag-warning';
+        if (status === 'completed') statusTagClass = 'status-tag-success';
+        else if (status === 'received' || status === 'partial') statusTagClass = 'status-tag-info';
         return {
           ...item, materialTypeCN: MATERIAL_TYPE_MAP[item.materialType] || item.materialType || '',
-          statusText: getStatusText(status), statusColor: getStatusColor(status),
+          statusText: getStatusText(status), statusTagClass,
           isActionable: status !== 'completed' && status !== 'cancelled',
           needsReceive: !status || status === 'pending',
           inputQuantity: '', arrivalRate: purchaseQty > 0 ? Math.round(arrivedQty / purchaseQty * 100) : 0,
@@ -64,7 +64,6 @@ export default function ProcurementTaskDetailPage() {
   const normalizeToArray = (res) => { if (Array.isArray(res)) return res; if (res?.records) return res.records; if (res?.data) return res.data; return []; };
   const normalizeStatus = (s) => String(s || '').trim().toLowerCase();
   const getStatusText = (s) => ({ pending: '待采购', received: '已领取', partial: '部分到货', completed: '全部到货', cancelled: '已取消' }[s] || '待采购');
-  const getStatusColor = (s) => ({ pending: 'orange', received: 'blue', partial: 'blue', completed: 'green', cancelled: 'gray' }[s] || 'orange');
 
   const onReceiveAll = async () => {
     const userInfo = getUserInfo() || {};
@@ -97,17 +96,21 @@ export default function ProcurementTaskDetailPage() {
   };
 
   return (
-    <div style={{ padding: 16 }}>
-      <div className="hero-card compact">
-        <div style={{ fontWeight: 600 }}>{orderNo}</div>
-        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>款号: {styleNo} · 到货率: {overallArrivalRate}%</div>
+    <div className="sub-page">
+      <div className="card-item">
+        <div className="card-item-title">{orderNo}</div>
+        <div className="info-row">
+          <span className="info-label">款号:</span>
+          <span className="info-value">{styleNo}</span>
+          <span className="info-label">到货率:</span>
+          <span className="info-value-bold">{overallArrivalRate}%</span>
+        </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-        <button className="primary-button" style={{ flex: 1 }} onClick={onReceiveAll}>一键领取</button>
+      <div className="sub-page-row-stretch" style={{ marginBottom: 12 }}>
+        <button className="primary-button" onClick={onReceiveAll}>一键领取</button>
         {canConfirmProcurement && (
-          <button className="secondary-button" style={{ flex: 1 }} onClick={async () => {
-            if (!window.confirm('确认回料完成？采购阶段将流转到裁剪环节。')) return;
+          <button className="secondary-button" onClick={async () => {
             try {
               await api.production.confirmProcurementComplete({ id: orderId, orderNo, remark });
               toast.success('采购阶段已完成');
@@ -118,33 +121,36 @@ export default function ProcurementTaskDetailPage() {
         )}
       </div>
 
-      {loading ? <div style={{ textAlign: 'center', padding: 20 }}>加载中...</div> : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {loading ? (
+        <div className="loading-state">加载中...</div>
+      ) : materialPurchases.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-state-icon">📦</div>
+          <div className="empty-state-title">暂无物料数据</div>
+        </div>
+      ) : (
+        <div className="list-stack">
           {materialPurchases.map((item, idx) => (
-            <div key={item.id || idx} className="hero-card compact">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div key={item.id || idx} className="card-item">
+              <div className="card-item-header">
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: 13 }}>{item.materialTypeCN} · {item.materialName || '-'}</div>
-                  <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+                  <div className="card-item-title" style={{ fontSize: 'var(--font-size-sm)' }}>{item.materialTypeCN} · {item.materialName || '-'}</div>
+                  <div className="card-item-meta">
                     需求: {item.purchaseQuantity || 0} · 已到: {item.arrivedQuantity || 0} · 到货率: {item.arrivalRate}%
                   </div>
                 </div>
-                <span style={{ fontSize: 11, padding: '2px 6px', borderRadius: 4,
-                  background: item.statusColor === 'green' ? '#dcfce7' : item.statusColor === 'blue' ? '#dbeafe' : '#fef3c7',
-                  color: item.statusColor === 'green' ? '#166534' : item.statusColor === 'blue' ? '#1e40af' : '#92400e' }}>
-                  {item.statusText}
-                </span>
+                <span className={`status-tag ${item.statusTagClass}`}>{item.statusText}</span>
               </div>
               {item.isActionable && (
-                <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center' }}>
-                  <span style={{ fontSize: 12 }}>到货:</span>
-                  <input className="text-input" type="number" value={item.inputQuantity} min={0}
+                <div className="sub-page-row" style={{ marginTop: 8 }}>
+                  <span className="info-label">到货:</span>
+                  <input className="sku-input" type="number" value={item.inputQuantity} min={0}
                     onChange={e => {
                       const newMps = [...materialPurchases];
                       newMps[idx] = { ...newMps[idx], inputQuantity: e.target.value };
                       setMaterialPurchases(newMps);
                       setHasInput(newMps.some(m => m.inputQuantity && Number(m.inputQuantity) > 0));
-                    }} style={{ width: 60, padding: '4px', textAlign: 'center' }} />
+                    }} />
                 </div>
               )}
             </div>

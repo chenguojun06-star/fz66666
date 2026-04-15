@@ -106,44 +106,66 @@ export default function RegisterPage() {
   return (
     <div className="login-page">
       <div className="login-card">
-        <h1 className="login-title">员工注册</h1>
+        <div className="login-header">
+          <div className="login-title-row">
+            <span className="login-title">员工注册</span>
+          </div>
+        </div>
         <div className="form-stack">
-          <div className="field-block">
-            <label>工厂编码</label>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <input className="text-input" value={tenantCode} onChange={e => setTenantCode(e.target.value)} placeholder="输入或扫码获取" style={{ flex: 1 }} />
-              <button className="secondary-button" onClick={onScanCode}>📷</button>
+          <div className="login-field">
+            <div className="login-label"><span className="login-label-required">*</span>工厂编码</div>
+            <div className="login-input-wrap">
+              <span className="login-input-icon">⌕</span>
+              <input className="login-input" value={tenantCode} onChange={e => setTenantCode(e.target.value)} placeholder="输入或扫码获取" />
+              <button className="login-input-eye" onClick={onScanCode}>📷</button>
             </div>
-            {tenantName && <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 4 }}>{tenantName}</div>}
+            {tenantName && <div className="tenant-selected-tag">✓ {tenantName}</div>}
           </div>
-          <div className="field-block">
-            <label>用户名</label>
-            <input className="text-input" value={username} onChange={e => setUsername(e.target.value)} placeholder="3-20位字母数字下划线" />
+          <div className="login-field">
+            <div className="login-label"><span className="login-label-required">*</span>用户名</div>
+            <div className="login-input-wrap">
+              <span className="login-input-icon">◌</span>
+              <input className="login-input" value={username} onChange={e => setUsername(e.target.value)} placeholder="3-20位字母数字下划线" />
+            </div>
           </div>
-          <div className="field-block">
-            <label>真实姓名</label>
-            <input className="text-input" value={name} onChange={e => setName(e.target.value)} placeholder="请输入真实姓名" />
+          <div className="login-field">
+            <div className="login-label"><span className="login-label-required">*</span>真实姓名</div>
+            <div className="login-input-wrap">
+              <span className="login-input-icon">◐</span>
+              <input className="login-input" value={name} onChange={e => setName(e.target.value)} placeholder="请输入真实姓名" />
+            </div>
           </div>
-          <div className="field-block">
-            <label>手机号（选填）</label>
-            <input className="text-input" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="11位手机号" />
+          <div className="login-field">
+            <div className="login-label">手机号（选填）</div>
+            <div className="login-input-wrap">
+              <span className="login-input-icon">◎</span>
+              <input className="login-input" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="11位手机号" />
+            </div>
           </div>
-          <div className="field-block">
-            <label>密码</label>
-            <input className="text-input" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="至少6位" />
+          <div className="login-field">
+            <div className="login-label"><span className="login-label-required">*</span>密码</div>
+            <div className="login-input-wrap">
+              <span className="login-input-icon">◐</span>
+              <input className="login-input" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="至少6位" />
+            </div>
           </div>
-          <div className="field-block">
-            <label>确认密码</label>
-            <input className="text-input" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="再次输入密码" />
+          <div className="login-field">
+            <div className="login-label"><span className="login-label-required">*</span>确认密码</div>
+            <div className="login-input-wrap">
+              <span className="login-input-icon">◐</span>
+              <input className="login-input" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="再次输入密码" />
+            </div>
           </div>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+          <label className="sub-page-row" style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)' }}>
             <input type="checkbox" checked={agreedPolicies} onChange={e => setAgreedPolicies(e.target.checked)} />
             我已阅读并同意<a href="/privacy/service" style={{ color: 'var(--color-primary)' }}>用户服务协议</a>和<a href="/privacy" style={{ color: 'var(--color-primary)' }}>隐私政策</a>
           </label>
-          <button className="primary-button" onClick={onSubmit} disabled={loading}>
-            {loading ? '注册中...' : '注册'}
-          </button>
-          <button className="ghost-button" onClick={() => navigate('/login')}>返回登录</button>
+          <div className="login-btn-wrap">
+            <button className={`login-btn${loading ? ' login-btn-disabled' : ''}`} onClick={onSubmit} disabled={loading}>
+              {loading ? '注册中...' : '注 册'}
+            </button>
+          </div>
+          <button className="ghost-button" onClick={() => navigate('/login')} style={{ marginTop: 8 }}>返回登录</button>
         </div>
       </div>
     </div>

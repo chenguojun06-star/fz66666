@@ -40,31 +40,39 @@ export default function ScanRescanPage() {
     <div className="scan-rescan-stack">
       {detail.coverImage && (
         <div style={{ textAlign: 'center' }}>
-          <img src={detail.coverImage} alt="" style={{ maxWidth: '100%', maxHeight: 160, borderRadius: 8, objectFit: 'cover' }} />
+          <img src={detail.coverImage} alt="" className="card-item-cover" style={{ maxHeight: 160 }} />
         </div>
       )}
 
-      <div className="hero-card compact">
-        <div style={{ fontWeight: 600, fontSize: 15 }}>退回重扫</div>
-        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 8 }}>
-          订单: {detail.orderNo}
+      <div className="card-item">
+        <div className="card-item-title">退回重扫</div>
+        <div className="info-row" style={{ marginTop: 8 }}>
+          <span className="info-label">订单:</span>
+          <span className="info-value">{detail.orderNo}</span>
         </div>
-        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
-          菲号: {detail.bundleNo} · 数量: {detail.quantity}
+        <div className="info-row">
+          <span className="info-label">菲号:</span>
+          <span className="info-value">{detail.bundleNo}</span>
+          <span className="info-label">数量:</span>
+          <span className="info-value">{detail.quantity}</span>
         </div>
-        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
-          工序: {detail.processName} · 阶段: {detail.progressStage}
+        <div className="info-row">
+          <span className="info-label">工序:</span>
+          <span className="info-value">{detail.processName}</span>
+          <span className="info-label">阶段:</span>
+          <span className="info-value">{detail.progressStage}</span>
         </div>
-        <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
-          扫码时间: {detail.scanTime}
+        <div className="info-row">
+          <span className="info-label">扫码时间:</span>
+          <span className="info-value">{detail.scanTime}</span>
         </div>
       </div>
 
-      <div className="hero-card compact" style={{ background: '#fef3c7', fontSize: 13 }}>
+      <div className="alert-card alert-card-warning">
         ⚠️ 退回后该记录将被标记为已退回，操作员可重新扫码提交。
       </div>
 
-      <button className="primary-button" onClick={confirmRescan} disabled={loading} style={{ marginTop: 16, background: '#ef4444' }}>
+      <button className="danger-button" onClick={confirmRescan} disabled={loading} style={{ marginTop: 16 }}>
         {loading ? '处理中...' : '确认退回'}
       </button>
     </div>

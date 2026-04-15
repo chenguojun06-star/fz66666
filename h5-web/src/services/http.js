@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { useAuthStore } from '@/stores/authStore';
+import { clearToken } from '@/utils/storage';
 import wxAdapter from '@/adapters/wx';
 
 const isWechat = wxAdapter.isWechat;
@@ -51,6 +52,7 @@ http.interceptors.response.use(
 
     if (status === 401) {
       useAuthStore.getState().clearAuth();
+      clearToken();
       if (isWechat) {
         const currentPath = window.location.pathname + window.location.search;
         if (!currentPath.includes('/login')) {

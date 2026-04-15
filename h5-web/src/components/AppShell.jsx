@@ -24,11 +24,9 @@ export default function AppShell({ children }) {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="sub-page-row">
           {!isTab && (
-            <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--color-text-primary)', padding: 0, lineHeight: 1 }}>
-              ‹
-            </button>
+            <button className="topbar-back-btn" onClick={() => navigate(-1)}>‹</button>
           )}
           <div>
             <div className="topbar-title">{pageTitle}</div>
@@ -50,7 +48,7 @@ export default function AppShell({ children }) {
             return (
               <NavLink key={tab.path} to={tab.path} className={`tabbar-item${matched ? ' active' : ''}`}>
                 <span className="tabbar-icon">
-                  <Icon name={matched ? tab.activeIcon : tab.icon} size={22} />
+                  <Icon name={matched ? tab.activeIcon : tab.icon} size={24} />
                 </span>
                 <span>{tab.label}</span>
               </NavLink>

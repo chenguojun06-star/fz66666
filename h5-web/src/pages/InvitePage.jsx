@@ -6,7 +6,6 @@ export default function InvitePage() {
   const [tenantCode, setTenantCode] = useState('');
   const [tenantName, setTenantName] = useState('');
   const [qrUrl, setQrUrl] = useState('');
-  const [inviteToken, setInviteToken] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => { loadTenantInfo(); }, []);
@@ -23,7 +22,6 @@ export default function InvitePage() {
       setTenantCode(tenant?.tenantCode || '');
       setTenantName(tenant?.tenantName || '');
       setQrUrl(qrData?.qrCodeBase64 || '');
-      setInviteToken(qrData?.inviteToken || '');
     } catch (err) {
       toast.error('加载失败，请重试');
     } finally { setLoading(false); }
@@ -41,25 +39,25 @@ export default function InvitePage() {
   };
 
   return (
-    <div style={{ padding: 16 }}>
-      <div className="hero-card" style={{ textAlign: 'center' }}>
-        <h3 style={{ margin: '0 0 16px' }}>邀请员工</h3>
+    <div className="sub-page">
+      <div className="card-item" style={{ textAlign: 'center' }}>
+        <div className="card-item-title" style={{ marginBottom: 16 }}>邀请员工</div>
         {loading ? (
-          <div style={{ padding: 20, color: 'var(--color-text-secondary)' }}>加载中...</div>
+          <div className="loading-state">加载中...</div>
         ) : (
           <>
             {qrUrl && (
               <div style={{ marginBottom: 16 }}>
                 <img src={qrUrl.startsWith('data:') ? qrUrl : `data:image/png;base64,${qrUrl}`} alt="邀请二维码"
-                  style={{ width: 200, height: 200, borderRadius: 8 }} />
+                  className="qr-code-img" />
               </div>
             )}
-            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 4 }}>{tenantName || '工厂'}</div>
-            <div style={{ fontSize: 24, fontWeight: 700, margin: '8px 0', letterSpacing: 2 }}>{tenantCode || '-'}</div>
-            <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginBottom: 16 }}>工厂码</div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button className="primary-button" style={{ flex: 1 }} onClick={onCopyTenantCode}>复制工厂码</button>
-              <button className="secondary-button" style={{ flex: 1 }} onClick={onCopyInviteUrl}>复制链接</button>
+            <div className="card-item-meta">{tenantName || '工厂'}</div>
+            <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, margin: '8px 0', letterSpacing: 2 }}>{tenantCode || '-'}</div>
+            <div className="card-item-meta" style={{ marginBottom: 16 }}>工厂码</div>
+            <div className="sub-page-row-stretch">
+              <button className="primary-button" onClick={onCopyTenantCode}>复制工厂码</button>
+              <button className="secondary-button" onClick={onCopyInviteUrl}>复制链接</button>
             </div>
           </>
         )}

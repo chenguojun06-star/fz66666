@@ -4,13 +4,21 @@ import api from '@/api';
 import { isAdminOrSupervisor } from '@/utils/permission';
 import { isTenantOwner } from '@/utils/storage';
 import { toast } from '@/utils/uiHelper';
+import { getAuthedImageUrl } from '@/utils/fileUrl';
 import Icon from '@/components/Icon';
 
 const STATUS_FILTERS = [
   { key: 'all', label: '全部' },
   { key: 'in_production', label: '生产中' },
-  { key: 'completed', label: '已完成' },
   { key: 'overdue', label: '延期' },
+  { key: 'completed', label: '已完成' },
+];
+
+const SUMMARY_CARDS = [
+  { key: 'sample', title: '样衣开发', icon: 'scissors', color: 'var(--color-purple)', bg: 'rgba(124,92,252,0.1)', tone: 'purple' },
+  { key: 'production', title: '生产订单', icon: 'package', color: 'var(--color-primary)', bg: 'rgba(59,130,246,0.1)', tone: 'blue' },
+  { key: 'inbound', title: '今日入库', icon: 'package', color: 'var(--color-success)', bg: 'rgba(34,197,94,0.1)', tone: 'green' },
+  { key: 'outbound', title: '今日出库', icon: 'package', color: 'var(--color-warning)', bg: 'rgba(245,158,11,0.1)', tone: 'orange' },
 ];
 
 export default function DashboardPage() {
@@ -23,7 +31,6 @@ export default function DashboardPage() {
     inbound: { today: 0, week: 0 },
     outbound: { today: 0, week: 0 },
   });
-  const [todayScanCount, setTodayScanCount] = useState(0);
   const [orders, setOrders] = useState([]);
   const [searchKey, setSearchKey] = useState('');
 
@@ -40,26 +47,27 @@ export default function DashboardPage() {
   const refreshCards = async () => {
     setLoading(true);
     try {
-      const [dashRes, topStatsRes, prodRes] = await Promise.allSettled([
+      const [dashRes, topStatsRes, prodRes, compRes] = await Promise.allSettled([
         api.dashboard.get(),
         api.dashboard.getTopStats(),
         api.production.orderList({ deleteFlag: 0, status: 'production', page: 1, pageSize: 50 }),
+        api.production.orderList({ deleteFlag: 0, status: 'completed', page: 1, pageSize: 1 }),
       ]);
       const dash = dashRes.status === 'fulfilled' ? (dashRes.value?.data || dashRes.value || {}) : {};
       const topStats = topStatsRes.status === 'fulfilled' ? (topStatsRes.value?.data || topStatsRes.value || {}) : {};
       const prodData = prodRes.status === 'fulfilled' ? (prodRes.value?.data || prodRes.value || {}) : {};
+      const compData = compRes.status === 'fulfilled' ? (compRes.value?.data || compRes.value || {}) : {};
       const prodRecords = prodData?.records || prodData?.list || [];
       let totalPieces = 0;
       if (Array.isArray(prodRecords)) {
         prodRecords.forEach(o => { totalPieces += Number(o.orderQuantity || o.totalQuantity || 0); });
       }
       setCards({
-        sample: { developing: Number(dash.sampleDevelopmentCount || dash.sampleCount || 0), completed: Number(dash.completedOrderCount || 0) },
+        sample: { developing: Number(dash.sampleDevelopmentCount || dash.sampleCount || 0), completed: Number(compData?.total || 0) },
         production: { total: Number(prodData?.total || prodRecords.length || 0), overdue: Number(dash.overdueOrderCount || dash.overdueCount || 0), pieces: totalPieces },
         inbound: { today: Number(topStats.warehousingInbound?.day || topStats.inboundToday || 0), week: Number(topStats.warehousingInbound?.week || topStats.inboundWeek || 0) },
         outbound: { today: Number(topStats.warehousingOutbound?.day || topStats.outboundToday || 0), week: Number(topStats.warehousingOutbound?.week || topStats.outboundWeek || 0) },
       });
-      setTodayScanCount(Number(dash.todayScanCount || dash.scanCount || 0));
     } catch (e) {
       toast.error('数据加载失败');
     } finally {
@@ -89,70 +97,149 @@ export default function DashboardPage() {
 
   useEffect(() => { loadOrders(true); }, [activeFilter]);
 
+  const getRemainDays = (order) => {
+    if (!order.deliveryDate) return null;
+    const delivery = new Date(order.deliveryDate.replace(' ', 'T'));
+    return Math.ceil((delivery - Date.now()) / 86400000);
+  };
+
+  const getRemainDaysClass = (days) => {
+    if (days === null) return '';
+    if (days < 0) return 'days-overdue';
+    if (days <= 3) return 'days-urgent';
+    if (days <= 7) return 'days-warn';
+    return 'days-safe';
+  };
+
+  const renderCardMetrics = (key) => {
+    const c = cards[key];
+    switch (key) {
+      case 'sample':
+        return (
+          <div className="card-bd">
+            <div className="metric"><div className="metric-val">{c.developing}</div><div className="metric-lbl">款式总数</div></div>
+            <div className="metric-divider" />
+            <div className="metric"><div className="metric-val val--muted">{c.completed}</div><div className="metric-lbl">已完成</div></div>
+          </div>
+        );
+      case 'production':
+        return (
+          <div className="card-bd">
+            <div className="metric"><div className="metric-val">{c.total}</div><div className="metric-lbl">生产中</div></div>
+            <div className="metric-divider" />
+            <div className="metric"><div className="metric-val val--muted">{c.pieces}</div><div className="metric-lbl">件数</div></div>
+            <div className="metric-divider" />
+            <div className="metric"><div className={`metric-val${c.overdue > 0 ? ' val--danger' : ' val--muted'}`}>{c.overdue}</div><div className="metric-lbl">已延期</div></div>
+          </div>
+        );
+      case 'inbound':
+        return (
+          <div className="card-bd">
+            <div className="metric"><div className="metric-val">{c.today}</div><div className="metric-lbl">今日</div></div>
+            <div className="metric-divider" />
+            <div className="metric"><div className="metric-val val--muted">{c.week}</div><div className="metric-lbl">本周</div></div>
+          </div>
+        );
+      case 'outbound':
+        return (
+          <div className="card-bd">
+            <div className="metric"><div className="metric-val">{c.today}</div><div className="metric-lbl">今日</div></div>
+            <div className="metric-divider" />
+            <div className="metric"><div className="metric-val val--muted">{c.week}</div><div className="metric-lbl">本周</div></div>
+          </div>
+        );
+    }
+  };
+
   return (
     <div className="dashboard-stack">
-      <div className="stats-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
-        <div className="stat-card tone-blue">
-          <div className="stat-number">{cards.sample.developing}</div>
-          <div className="stat-label">样衣开发</div>
-        </div>
-        <div className="stat-card tone-green">
-          <div className="stat-number">{cards.production.total}</div>
-          <div className="stat-label">生产中</div>
-        </div>
-        <div className="stat-card tone-orange">
-          <div className="stat-number">{cards.production.overdue}</div>
-          <div className="stat-label">逾期</div>
-        </div>
-        <div className="stat-card tone-indigo">
-          <div className="stat-number">{todayScanCount}</div>
-          <div className="stat-label">今日扫码</div>
-        </div>
+      <div className="card-grid">
+        {SUMMARY_CARDS.map(card => (
+          <div key={card.key} className={`summary-card card--${card.tone}`}>
+            <div className="card-hd">
+              <div className="card-icon" style={{ background: card.bg }}>
+                <Icon name={card.icon} size={20} color={card.color} />
+              </div>
+              <div className="card-title">{card.title}</div>
+            </div>
+            {renderCardMetrics(card.key)}
+          </div>
+        ))}
       </div>
 
-      <div style={{ display: 'flex', gap: 8, overflowX: 'auto' }}>
+      <div className="scan-type-bar">
         {STATUS_FILTERS.map(f => (
-          <button key={f.key}
-            className={`scan-type-chip${activeFilter === f.key ? ' active' : ''}`}
-            onClick={() => setActiveFilter(f.key)}
-            style={{ flexShrink: 0, padding: '6px 12px', borderRadius: 16, border: '1px solid var(--color-border)',
-              background: activeFilter === f.key ? 'var(--color-primary)' : 'var(--color-bg-light)',
-              color: activeFilter === f.key ? '#fff' : 'var(--color-text-primary)',
-              fontWeight: activeFilter === f.key ? 700 : 400, cursor: 'pointer', fontSize: 12 }}>
+          <button key={f.key} className={`scan-type-chip${activeFilter === f.key ? ' active' : ''}`}
+            onClick={() => setActiveFilter(f.key)}>
             {f.label}
           </button>
         ))}
       </div>
 
-      <input className="text-input" placeholder="搜索订单号" value={searchKey}
-        onChange={e => setSearchKey(e.target.value)}
-        onKeyDown={e => e.key === 'Enter' && loadOrders(true)} />
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <input className="text-input" placeholder="搜索订单号/款号" value={searchKey}
+          onChange={e => setSearchKey(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && loadOrders(true)} style={{ flex: 1 }} />
+        <button className="secondary-button" onClick={() => loadOrders(true)}>搜索</button>
+      </div>
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-secondary)' }}>加载中...</div>
       ) : orders.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-secondary)' }}>暂无订单</div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {orders.map((order, idx) => (
-            <div key={order.id || idx} className="hero-card compact">
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 13 }}>{order.orderNo || '-'}</div>
-                  <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>{order.styleNo || '-'}</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 12 }}>{order.orderQuantity || 0}件</div>
-                  <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4,
-                    background: order.status === 'completed' ? '#dcfce7' : '#fef3c7',
-                    color: order.status === 'completed' ? '#166534' : '#92400e' }}>
-                    {order.status === 'completed' ? '已完成' : '生产中'}
-                  </span>
+        orders.map((order, idx) => {
+          const remainDays = getRemainDays(order);
+          const isOverdue = remainDays !== null && remainDays < 0;
+          const isClosed = order.status === 'completed' || order.status === 'closed';
+          const progress = order.productionProgress || 0;
+          const imgUrl = getAuthedImageUrl(order.styleCoverUrl || order.coverImage || order.styleImage || '');
+          return (
+            <div key={order.id || idx} className="hero-card compact list-item"
+              style={isOverdue ? { borderLeft: '3px solid var(--color-danger)' } : {}}>
+              <div style={{ display: 'flex', gap: 10 }}>
+                {imgUrl ? (
+                  <img src={imgUrl} alt="" style={{ width: 64, height: 64, borderRadius: 'var(--radius-md)', objectFit: 'cover', flexShrink: 0 }} />
+                ) : (
+                  <div style={{ width: 64, height: 64, borderRadius: 'var(--radius-md)', background: 'var(--color-bg-gray)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-disabled)', textAlign: 'center', lineHeight: 1.3 }}>
+                    暂无<br/>图片
+                  </div>
+                )}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ fontWeight: 700, fontSize: 'var(--font-size-base)', display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                      {order.orderNo || '-'}
+                      {order.plateTypeTagText && <span className="order-tag order-tag-plate">{order.plateTypeTagText}</span>}
+                      {order.urgencyTagText && order.urgencyTagText === '急' && <span className="order-tag order-tag-urgent">急</span>}
+                    </div>
+                    {isClosed ? (
+                      <span className="tag tag-completed">已完成</span>
+                    ) : order.currentProcessName ? (
+                      <span className="tag tag-process">{order.currentProcessName}</span>
+                    ) : null}
+                  </div>
+                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginTop: 2 }}>
+                    {order.styleNo || '-'}
+                    {order.deliveryDate && (
+                      <>
+                        <span style={{ margin: '0 4px' }}>·</span>
+                        <span className={getRemainDaysClass(remainDays)}>
+                          {isOverdue ? `逾${Math.abs(remainDays)}天` : remainDays !== null ? `${remainDays}天` : ''}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                    <div style={{ flex: 1, height: 3, background: 'var(--color-border-light)', borderRadius: 2, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${progress}%`, background: isClosed ? 'var(--color-success)' : 'var(--color-primary)', borderRadius: 2, transition: 'width 0.3s' }} />
+                    </div>
+                    <span style={{ fontSize: 'var(--font-size-xs)', fontWeight: 700, color: isClosed ? 'var(--color-success)' : 'var(--color-primary)' }}>{progress}%</span>
+                  </div>
                 </div>
               </div>
             </div>
-          ))}
-        </div>
+          );
+        })
       )}
     </div>
   );

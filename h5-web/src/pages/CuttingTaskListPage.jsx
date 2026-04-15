@@ -50,11 +50,11 @@ export default function CuttingTaskListPage() {
     const status = normalizeStatus(task.status);
     const userInfo = getUserInfo() || {};
     const isMine = String(task.receiverId) === String(userInfo.id) || task.receiverName === (userInfo.name || userInfo.nickName);
-    let statusText = '待领取', statusColor = 'orange', canReceive = false, canOperate = false;
-    if (status === 'pending') { statusText = '待领取'; statusColor = 'orange'; canReceive = true; }
-    else if (status === 'received') { statusText = '已领取'; statusColor = 'blue'; canOperate = isMine; }
-    else if (status === 'bundled') { statusText = '已完成'; statusColor = 'green'; }
-    return { ...task, statusText, statusColor, canReceive, canOperate, orderNo: task.productionOrderNo || task.orderNo };
+    let statusText = '待领取', statusTagClass = 'status-tag-warning', canReceive = false, canOperate = false;
+    if (status === 'pending') { statusText = '待领取'; statusTagClass = 'status-tag-warning'; canReceive = true; }
+    else if (status === 'received') { statusText = '已领取'; statusTagClass = 'status-tag-info'; canOperate = isMine; }
+    else if (status === 'bundled') { statusText = '已完成'; statusTagClass = 'status-tag-success'; }
+    return { ...task, statusText, statusTagClass, canReceive, canOperate, orderNo: task.productionOrderNo || task.orderNo };
   };
 
   const onTabChange = (key) => {
@@ -77,45 +77,40 @@ export default function CuttingTaskListPage() {
   };
 
   return (
-    <div style={{ padding: 16 }}>
-      <div style={{ display: 'flex', gap: 6, marginBottom: 12, overflowX: 'auto' }}>
+    <div className="sub-page">
+      <div className="tab-bar" style={{ marginBottom: 12 }}>
         {statusTabs.map(tab => (
           <button key={tab.key} className={`scan-type-chip${activeStatus === tab.key ? ' active' : ''}`}
-            onClick={() => onTabChange(tab.key)}
-            style={{ flexShrink: 0, padding: '6px 12px', borderRadius: 16, border: '1px solid var(--color-border)',
-              background: activeStatus === tab.key ? 'var(--color-primary)' : 'var(--color-bg-light)',
-              color: activeStatus === tab.key ? '#fff' : 'var(--color-text-primary)', cursor: 'pointer', fontSize: 12 }}>
+            onClick={() => onTabChange(tab.key)}>
             {tab.label}({tab.count})
           </button>
         ))}
       </div>
 
-      {loading ? <div style={{ textAlign: 'center', padding: 40 }}>加载中...</div> : filteredTasks.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-secondary)' }}>暂无裁剪任务</div>
+      {loading ? (
+        <div className="loading-state">加载中...</div>
+      ) : filteredTasks.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-state-icon">✂️</div>
+          <div className="empty-state-title">暂无裁剪任务</div>
+          <div className="empty-state-desc">有新任务时会显示在这里</div>
+        </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className="list-stack">
           {filteredTasks.map((task, idx) => (
-            <div key={task.id || idx} className="hero-card compact">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div key={task.id || idx} className="card-item">
+              <div className="card-item-header">
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: 13 }}>{task.orderNo || '-'}</div>
-                  <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
-                    {task.styleNo || '-'} · {task.orderQuantity || 0}件
-                  </div>
+                  <div className="card-item-title">{task.orderNo || '-'}</div>
+                  <div className="card-item-meta">{task.styleNo || '-'} · {task.orderQuantity || 0}件</div>
                 </div>
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 4,
-                    background: task.statusColor === 'green' ? '#dcfce7' : task.statusColor === 'blue' ? '#dbeafe' : '#fef3c7',
-                    color: task.statusColor === 'green' ? '#166534' : task.statusColor === 'blue' ? '#1e40af' : '#92400e' }}>
-                    {task.statusText}
-                  </span>
-                </div>
+                <span className={`status-tag ${task.statusTagClass}`}>{task.statusText}</span>
               </div>
-              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              <div className="sub-page-row" style={{ marginTop: 8 }}>
                 {task.canReceive && (
-                  <button className="primary-button" style={{ fontSize: 12, padding: '4px 12px' }} onClick={() => onReceive(task)}>领取</button>
+                  <button className="primary-button" style={{ fontSize: 'var(--font-size-xs)', padding: '4px 12px' }} onClick={() => onReceive(task)}>领取</button>
                 )}
-                <button className="secondary-button" style={{ fontSize: 12, padding: '4px 12px' }} onClick={() => goDetail(task)}>详情</button>
+                <button className="secondary-button" style={{ fontSize: 'var(--font-size-xs)', padding: '4px 12px' }} onClick={() => goDetail(task)}>详情</button>
               </div>
             </div>
           ))}

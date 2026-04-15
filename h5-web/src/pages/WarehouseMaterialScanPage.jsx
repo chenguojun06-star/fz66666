@@ -43,7 +43,6 @@ export default function WarehouseMaterialScanPage() {
   const onIssueTap = async () => {
     if (submitting || !rollCode || !rollInfo) return;
     if (rollInfo.currentStatus !== 'IN_STOCK') { toast.error('该料卷不在库，无法发料'); return; }
-    if (!window.confirm(`确认将「${rollInfo.materialName}」× ${rollInfo.quantity}${rollInfo.unit} 发出？`)) return;
     setSubmitting(true); setErrorMsg(''); setSuccessMsg('');
     try {
       const result = await api.production.executeScan({ scanCode: rollCode, scanType: 'material_roll', action: 'issue', cuttingOrderNo });
@@ -55,7 +54,6 @@ export default function WarehouseMaterialScanPage() {
   const onReturnTap = async () => {
     if (submitting || !rollCode || !rollInfo) return;
     if (rollInfo.currentStatus !== 'ISSUED') { toast.error('该料卷尚未发料，无需退回'); return; }
-    if (!window.confirm(`将「${rollInfo.materialName}」退回仓库？`)) return;
     setSubmitting(true); setErrorMsg(''); setSuccessMsg('');
     try {
       const result = await api.production.executeScan({ scanCode: rollCode, scanType: 'material_roll', action: 'return' });
@@ -65,26 +63,38 @@ export default function WarehouseMaterialScanPage() {
   };
 
   return (
-    <div style={{ padding: 16 }}>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-        <input className="text-input" value={rollCode} onChange={e => setRollCode(e.target.value)} placeholder="料卷码(MR开头)" style={{ flex: 1 }} />
+    <div className="sub-page">
+      <div className="search-row" style={{ marginBottom: 12 }}>
+        <input className="text-input" value={rollCode} onChange={e => setRollCode(e.target.value)} placeholder="料卷码(MR开头)" />
         <button className="secondary-button" onClick={onScanTap}>📷</button>
         <button className="primary-button" onClick={() => queryRoll(rollCode)} disabled={loading}>查询</button>
       </div>
 
-      {loading && <div style={{ textAlign: 'center', padding: 20 }}>查询中...</div>}
+      {loading && <div className="loading-state">查询中...</div>}
 
-      {errorMsg && <div className="hero-card compact" style={{ background: '#fef2f2', color: '#991b1b', fontSize: 13 }}>{errorMsg}</div>}
-      {successMsg && <div className="hero-card compact" style={{ background: '#dcfce7', color: '#166534', fontSize: 13 }}>{successMsg}</div>}
+      {errorMsg && <div className="alert-card alert-card-danger">{errorMsg}</div>}
+      {successMsg && <div className="alert-card alert-card-success">{successMsg}</div>}
+
+      {!loading && !rollInfo && !errorMsg && (
+        <div className="empty-state">
+          <div className="empty-state-icon">📦</div>
+          <div className="empty-state-title">请输入料卷码</div>
+          <div className="empty-state-desc">输入或扫码料卷码查询库存信息</div>
+        </div>
+      )}
 
       {rollInfo && (
-        <div className="hero-card compact">
-          <div style={{ fontWeight: 600, fontSize: 15 }}>{rollInfo.materialName || '-'}</div>
-          <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 4 }}>
-            数量: {rollInfo.quantity || 0}{rollInfo.unit || ''} · 仓位: {rollInfo.warehouseLocation || '-'}
+        <div className="card-item">
+          <div className="card-item-title">{rollInfo.materialName || '-'}</div>
+          <div className="info-row">
+            <span className="info-label">数量:</span>
+            <span className="info-value-bold">{rollInfo.quantity || 0}{rollInfo.unit || ''}</span>
+            <span className="info-label">仓位:</span>
+            <span className="info-value">{rollInfo.warehouseLocation || '-'}</span>
           </div>
-          <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
-            状态: <span style={{ color: rollInfo.currentStatus === 'IN_STOCK' ? '#16a34a' : '#d97706' }}>
+          <div className="info-row">
+            <span className="info-label">状态:</span>
+            <span className={`status-tag ${rollInfo.currentStatus === 'IN_STOCK' ? 'status-tag-success' : 'status-tag-warning'}`}>
               {rollInfo.currentStatus === 'IN_STOCK' ? '在库' : '已发料'}
             </span>
           </div>
@@ -92,12 +102,12 @@ export default function WarehouseMaterialScanPage() {
             <label>关联裁剪单号（选填）</label>
             <input className="text-input" value={cuttingOrderNo} onChange={e => setCuttingOrderNo(e.target.value)} placeholder="输入裁剪单号" />
           </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <div className="sub-page-row-stretch" style={{ marginTop: 8 }}>
             {rollInfo.currentStatus === 'IN_STOCK' && (
-              <button className="primary-button" style={{ flex: 1 }} onClick={onIssueTap} disabled={submitting}>发料</button>
+              <button className="primary-button" onClick={onIssueTap} disabled={submitting}>发料</button>
             )}
             {rollInfo.currentStatus === 'ISSUED' && (
-              <button className="secondary-button" style={{ flex: 1 }} onClick={onReturnTap} disabled={submitting}>退回</button>
+              <button className="secondary-button" onClick={onReturnTap} disabled={submitting}>退回</button>
             )}
           </div>
         </div>

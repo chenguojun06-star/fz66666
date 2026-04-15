@@ -123,33 +123,21 @@ export default function ScanHistoryPage() {
 
   return (
     <div className="scan-history-stack">
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button className={`scan-type-chip${dateMode === 'month' ? ' active' : ''}`}
-          onClick={() => setDateMode('month')}
-          style={{ flexShrink: 0, padding: '6px 12px', borderRadius: 16, border: '1px solid var(--color-border)',
-            background: dateMode === 'month' ? 'var(--color-primary)' : 'var(--color-bg-light)',
-            color: dateMode === 'month' ? '#fff' : 'var(--color-text-primary)', cursor: 'pointer', fontSize: 12 }}>
-          按月
-        </button>
-        <button className={`scan-type-chip${dateMode === 'custom' ? ' active' : ''}`}
-          onClick={() => setDateMode('custom')}
-          style={{ flexShrink: 0, padding: '6px 12px', borderRadius: 16, border: '1px solid var(--color-border)',
-            background: dateMode === 'custom' ? 'var(--color-primary)' : 'var(--color-bg-light)',
-            color: dateMode === 'custom' ? '#fff' : 'var(--color-text-primary)', cursor: 'pointer', fontSize: 12 }}>
-          自定义
-        </button>
+      <div className="tab-bar">
+        <button className={`scan-type-chip${dateMode === 'month' ? ' active' : ''}`} onClick={() => setDateMode('month')}>按月</button>
+        <button className={`scan-type-chip${dateMode === 'custom' ? ' active' : ''}`} onClick={() => setDateMode('custom')}>自定义</button>
       </div>
 
       {dateMode === 'month' ? (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="sub-page-row" style={{ justifyContent: 'space-between' }}>
           <button className="ghost-button" onClick={onPrevMonth}>‹</button>
           <span style={{ fontWeight: 600 }}>{displayMonth}</span>
           <button className="ghost-button" onClick={onNextMonth}>›</button>
         </div>
       ) : (
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input className="text-input" type="date" value={startDate} onChange={e => { setStartDate(e.target.value); }} style={{ flex: 1 }} />
-          <input className="text-input" type="date" value={endDate} onChange={e => { setEndDate(e.target.value); }} style={{ flex: 1 }} />
+        <div className="sub-page-row-stretch">
+          <input className="text-input" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+          <input className="text-input" type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
         </div>
       )}
 
@@ -157,7 +145,7 @@ export default function ScanHistoryPage() {
         onChange={e => setSearchKeyword(e.target.value)}
         onKeyDown={e => e.key === 'Enter' && loadData(true)} />
 
-      <div className="stats-grid" style={{ gridTemplateColumns: '1fr 1fr' }}>
+      <div className="stats-grid stats-grid-2col">
         <div className="stat-card tone-blue" onClick={() => setShowOnlyPayable(!showOnlyPayable)} style={{ cursor: 'pointer' }}>
           <div className="stat-number">¥{summary.totalWage}</div>
           <div className="stat-label">{showOnlyPayable ? '计薪总额' : '工资总额'}</div>
@@ -169,18 +157,22 @@ export default function ScanHistoryPage() {
       </div>
 
       {loading && records.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-secondary)' }}>加载中...</div>
+        <div className="loading-state">加载中...</div>
       ) : displayRecords.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-secondary)' }}>暂无记录</div>
+        <div className="empty-state">
+          <div className="empty-state-icon">📋</div>
+          <div className="empty-state-title">暂无记录</div>
+          <div className="empty-state-desc">扫码后记录会在这里显示</div>
+        </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div className="list-stack">
           {displayRecords.map((r, idx) => (
-            <div key={r.id || idx} className="hero-card compact" style={{ fontSize: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div key={r.id || idx} className="card-item" style={{ padding: 10, fontSize: 'var(--font-size-sm)' }}>
+              <div className="sub-page-row" style={{ justifyContent: 'space-between' }}>
                 <span style={{ fontWeight: 600 }}>{r.displayOrderNo}</span>
-                <span style={{ color: 'var(--color-text-secondary)' }}>{r.displayTime}</span>
+                <span className="card-item-meta">{r.displayTime}</span>
               </div>
-              <div style={{ color: 'var(--color-text-secondary)', marginTop: 2 }}>
+              <div className="card-item-meta" style={{ marginTop: 2 }}>
                 {r.displayProcess} · {r.displayBundleNo} · {r.displayQuantity}件
                 {r.isPayable && <span style={{ color: 'var(--color-primary)', marginLeft: 8 }}>¥{r.lineAmount.toFixed(2)}</span>}
               </div>

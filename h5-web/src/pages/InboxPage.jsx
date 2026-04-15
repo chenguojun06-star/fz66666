@@ -78,18 +78,18 @@ export default function InboxPage() {
 
   return (
     <div className="inbox-stack">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontWeight: 600 }}>通知列表</span>
+      <div className="sub-page-header">
+        <span className="sub-page-title">通知列表</span>
         {unreadCount > 0 && (
-          <button className="ghost-button" style={{ fontSize: 12 }} onClick={markAllRead}>
+          <button className="ghost-button" onClick={markAllRead} style={{ fontSize: 'var(--font-size-xs)', padding: '4px 10px' }}>
             全部已读 ({unreadCount})
           </button>
         )}
       </div>
 
       {editForm && (
-        <div className="hero-card compact" style={{ border: '1px solid var(--color-primary)' }}>
-          <div style={{ fontWeight: 600, marginBottom: 8 }}>回复催单: {editForm.orderNo}</div>
+        <div className="card-item" style={{ border: '1px solid var(--color-primary)' }}>
+          <div className="card-item-title" style={{ marginBottom: 8 }}>回复催单: {editForm.orderNo}</div>
           <div className="field-block">
             <label>预计出货日期</label>
             <input className="text-input" type="date" value={editForm.expectedShipDate}
@@ -100,7 +100,7 @@ export default function InboxPage() {
             <input className="text-input" value={editForm.remarks}
               onChange={e => setEditForm({ ...editForm, remarks: e.target.value })} />
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="sub-page-row-stretch">
             <button className="primary-button" onClick={submitEditForm} disabled={editForm.submitting}>
               {editForm.submitting ? '提交中...' : '确认回复'}
             </button>
@@ -110,21 +110,25 @@ export default function InboxPage() {
       )}
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-secondary)' }}>加载中...</div>
+        <div className="loading-state">加载中...</div>
       ) : notices.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-secondary)' }}>暂无通知</div>
+        <div className="empty-state">
+          <div className="empty-state-icon">🔔</div>
+          <div className="empty-state-title">暂无通知</div>
+          <div className="empty-state-desc">有新消息时会在这里提醒您</div>
+        </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className="list-stack">
           {notices.map((n, idx) => (
-            <div key={n.id || idx} className="hero-card compact"
+            <div key={n.id || idx} className="card-item"
               style={{ opacity: n.isRead ? 0.7 : 1, cursor: 'pointer' }}
               onClick={() => onTap(n, idx)}>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                <span style={{ fontSize: 20 }}>{n.typeIcon}</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: n.isRead ? 400 : 600, fontSize: 13 }}>{n.title || n.content || '-'}</div>
-                  {n.content && n.title && <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>{n.content}</div>}
-                  <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 4 }}>{n.timeAgoText}</div>
+              <div className="sub-page-row" style={{ alignItems: 'flex-start', gap: 10 }}>
+                <span style={{ fontSize: 20, flexShrink: 0 }}>{n.typeIcon}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: n.isRead ? 400 : 600, fontSize: 'var(--font-size-sm)' }}>{n.title || n.content || '-'}</div>
+                  {n.content && n.title && <div className="card-item-meta" style={{ marginTop: 2 }}>{n.content}</div>}
+                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginTop: 4 }}>{n.timeAgoText}</div>
                 </div>
                 {!n.isRead && <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--color-primary)', flexShrink: 0, marginTop: 6 }}></span>}
               </div>

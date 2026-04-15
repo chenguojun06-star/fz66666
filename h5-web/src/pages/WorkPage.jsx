@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import api from '@/api';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from '@/utils/uiHelper';
+import { getAuthedImageUrl } from '@/utils/fileUrl';
+import Icon from '@/components/Icon';
 
 const TABS = [
   { key: '', label: '全部' },
@@ -139,10 +141,10 @@ export default function WorkPage() {
               style={isOverdue ? { borderLeft: '3px solid var(--color-danger)' } : {}}>
               <div className="item-header" onClick={() => setExpandedId(isExpanded ? null : (order.id || order.orderNo))}>
                 <div className="item-cover-box">
-                  {order.styleCoverUrl ? (
-                    <img className="item-cover" src={order.styleCoverUrl} alt="" />
+                  {getAuthedImageUrl(order.styleCoverUrl || order.coverImage || order.styleImage || '') ? (
+                    <img className="item-cover" src={getAuthedImageUrl(order.styleCoverUrl || order.coverImage || order.styleImage || '')} alt="" />
                   ) : (
-                    '暂无\n图片'
+                    <div className="item-cover-empty">暂无<br/>图片</div>
                   )}
                 </div>
                 <div className="item-header-info">

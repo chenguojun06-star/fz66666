@@ -82,8 +82,8 @@ export default function FeedbackPage() {
   };
 
   return (
-    <div style={{ padding: 16 }}>
-      <div className="scan-type-bar" style={{ marginBottom: 12 }}>
+    <div className="sub-page">
+      <div className="tab-bar" style={{ marginBottom: 12 }}>
         <button className={`scan-type-chip${activeTab === 'submit' ? ' active' : ''}`}
           onClick={() => setActiveTab('submit')} style={{ flex: 1 }}>提交反馈</button>
         <button className={`scan-type-chip${activeTab === 'list' ? ' active' : ''}`}
@@ -91,7 +91,7 @@ export default function FeedbackPage() {
       </div>
 
       {activeTab === 'submit' ? (
-        <div className="hero-card compact">
+        <div className="card-item">
           <div className="field-block">
             <label>类别</label>
             <select className="text-input" value={categoryIndex}
@@ -101,10 +101,10 @@ export default function FeedbackPage() {
           </div>
           <div className="field-block">
             <label>标题</label>
-            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <div className="search-row">
               <input className="text-input" value={form.title}
                 onChange={e => setForm({ ...form, title: e.target.value })}
-                placeholder={voiceTitle.listening ? '正在聆听...' : '简要描述问题'} style={{ flex: 1 }} />
+                placeholder={voiceTitle.listening ? '正在聆听...' : '简要描述问题'} />
               <button className={`voice-btn${voiceTitle.listening ? ' listening' : ''}`} onClick={voiceTitle.toggle} title="语音输入标题">
                 <Icon name={voiceTitle.listening ? 'micOff' : 'mic'} size={14} />
               </button>
@@ -152,23 +152,27 @@ export default function FeedbackPage() {
           </button>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {myFeedbacks.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-secondary)' }}>暂无反馈记录</div>
-          ) : myFeedbacks.map((item, idx) => (
-            <div key={item.id || idx} className="hero-card compact">
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)' }}>{item.title || '-'}</span>
-                <span style={{ fontSize: 'var(--font-size-xs)', padding: '2px 6px', borderRadius: 'var(--radius-sm)',
-                  background: item.status === 'RESOLVED' ? 'var(--color-success-bg)' : 'var(--color-warning-bg)',
-                  color: item.status === 'RESOLVED' ? 'var(--color-success)' : 'var(--color-warning)' }}>
-                  {item.statusText}
-                </span>
+        myFeedbacks.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-state-icon">💬</div>
+            <div className="empty-state-title">暂无反馈记录</div>
+            <div className="empty-state-desc">提交反馈后可在此查看处理进度</div>
+          </div>
+        ) : (
+          <div className="list-stack">
+            {myFeedbacks.map((item, idx) => (
+              <div key={item.id || idx} className="card-item">
+                <div className="card-item-header">
+                  <span className="card-item-title" style={{ fontSize: 'var(--font-size-sm)' }}>{item.title || '-'}</span>
+                  <span className={`status-tag ${item.status === 'RESOLVED' ? 'status-tag-success' : 'status-tag-warning'}`}>
+                    {item.statusText}
+                  </span>
+                </div>
+                <div className="card-item-meta">{item.content}</div>
               </div>
-              <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginTop: 4 }}>{item.content}</div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )
       )}
     </div>
   );

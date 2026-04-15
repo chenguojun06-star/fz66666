@@ -9,7 +9,6 @@ export default function UserApprovalPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [pendingUsers, setPendingUsers] = useState([]);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [activeTab, setActiveTab] = useState('system');
@@ -41,7 +40,6 @@ export default function UserApprovalPage() {
       const records = response?.records || (Array.isArray(response) ? response : []);
       const newList = reset ? records : [...pendingUsers, ...records];
       setPendingUsers(newList);
-      setTotal(response?.total || records.length);
       setPage(nextPage);
       setHasMore(newList.length < (response?.total || records.length));
     } catch (e) {
@@ -103,45 +101,43 @@ export default function UserApprovalPage() {
   const displayList = activeTab === 'system' ? pendingUsers : tenantRegistrations;
 
   return (
-    <div style={{ padding: 16 }}>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+    <div className="sub-page">
+      <div className="tab-bar" style={{ marginBottom: 16 }}>
         <button className={`scan-type-chip${activeTab === 'system' ? ' active' : ''}`}
-          onClick={() => setActiveTab('system')}
-          style={{ flex: 1, padding: 8, borderRadius: 8, border: '1px solid var(--color-border)',
-            background: activeTab === 'system' ? 'var(--color-primary)' : 'var(--color-bg-light)',
-            color: activeTab === 'system' ? '#fff' : 'var(--color-text-primary)', cursor: 'pointer', fontSize: 13 }}>
+          onClick={() => setActiveTab('system')} style={{ flex: 1 }}>
           系统用户 ({pendingUsers.length})
         </button>
         {(isTenantOwner() || isFactoryOwner()) && (
           <button className={`scan-type-chip${activeTab === 'tenant' ? ' active' : ''}`}
-            onClick={() => setActiveTab('tenant')}
-            style={{ flex: 1, padding: 8, borderRadius: 8, border: '1px solid var(--color-border)',
-              background: activeTab === 'tenant' ? 'var(--color-primary)' : 'var(--color-bg-light)',
-              color: activeTab === 'tenant' ? '#fff' : 'var(--color-text-primary)', cursor: 'pointer', fontSize: 13 }}>
+            onClick={() => setActiveTab('tenant')} style={{ flex: 1 }}>
             工人注册 ({tenantRegistrations.length})
           </button>
         )}
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-secondary)' }}>加载中...</div>
+        <div className="loading-state">加载中...</div>
       ) : displayList.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-secondary)' }}>暂无待审批用户</div>
+        <div className="empty-state">
+          <div className="empty-state-icon">👥</div>
+          <div className="empty-state-title">暂无待审批用户</div>
+          <div className="empty-state-desc">有新用户注册时会显示在这里</div>
+        </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className="list-stack">
           {displayList.map((user, idx) => (
-            <div key={user.id || idx} className="hero-card compact">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div key={user.id || idx} className="card-item">
+              <div className="card-item-header">
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: 13 }}>{user.name || user.username || '-'}</div>
-                  <div style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>
+                  <div className="card-item-title">{user.name || user.username || '-'}</div>
+                  <div className="card-item-meta">
                     {user.phone || user.mobile || '-'} · {user.roleName || user.role || '-'}
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 6 }}>
+                <div className="sub-page-row">
                   <button className="primary-button" style={{ fontSize: 11, padding: '4px 10px' }}
                     onClick={() => onApproveUser(user)}>批准</button>
-                  <button className="ghost-button" style={{ fontSize: 11, padding: '4px 10px', color: '#ef4444' }}
+                  <button className="ghost-button" style={{ fontSize: 11, padding: '4px 10px', color: 'var(--color-danger)' }}
                     onClick={() => onReject(user)}>拒绝</button>
                 </div>
               </div>
@@ -151,9 +147,9 @@ export default function UserApprovalPage() {
       )}
 
       {showApprovalModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: '#fff', borderRadius: 12, padding: 20, width: '90%', maxWidth: 360 }}>
-            <h3 style={{ margin: '0 0 16px' }}>批准用户</h3>
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-title">批准用户</div>
             <div className="field-block">
               <label>选择角色</label>
               <select className="text-input" value={selectedRoleId} onChange={e => setSelectedRoleId(e.target.value)}>
@@ -161,25 +157,25 @@ export default function UserApprovalPage() {
                 {roleOptions.map(r => <option key={r.id} value={String(r.id)}>{r.roleName || r.name}</option>)}
               </select>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button className="primary-button" style={{ flex: 1 }} onClick={confirmApprove}>确认批准</button>
-              <button className="ghost-button" style={{ flex: 1 }} onClick={() => setShowApprovalModal(false)}>取消</button>
+            <div className="modal-actions">
+              <button className="primary-button" onClick={confirmApprove}>确认批准</button>
+              <button className="ghost-button" onClick={() => setShowApprovalModal(false)}>取消</button>
             </div>
           </div>
         </div>
       )}
 
       {showRejectModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: '#fff', borderRadius: 12, padding: 20, width: '90%', maxWidth: 360 }}>
-            <h3 style={{ margin: '0 0 16px' }}>拒绝用户</h3>
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-title">拒绝用户</div>
             <div className="field-block">
               <label>拒绝原因</label>
               <textarea className="text-input" value={rejectReason} onChange={e => setRejectReason(e.target.value)} rows={3} placeholder="请输入拒绝原因" />
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button className="primary-button" style={{ flex: 1, background: '#ef4444' }} onClick={confirmReject}>确认拒绝</button>
-              <button className="ghost-button" style={{ flex: 1 }} onClick={() => setShowRejectModal(false)}>取消</button>
+            <div className="modal-actions">
+              <button className="danger-button" onClick={confirmReject}>确认拒绝</button>
+              <button className="ghost-button" onClick={() => setShowRejectModal(false)}>取消</button>
             </div>
           </div>
         </div>
