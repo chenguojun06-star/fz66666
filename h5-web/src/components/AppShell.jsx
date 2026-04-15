@@ -48,7 +48,7 @@ export default function AppShell({ children }) {
             return (
               <NavLink key={tab.path} to={tab.path} className={`tabbar-item${matched ? ' active' : ''}`}>
                 <span className="tabbar-icon">
-                  <Icon name={matched ? tab.activeIcon : tab.icon} size={24} />
+                  <Icon name={matched ? tab.activeIcon : tab.icon} size={28} />
                 </span>
                 <span>{tab.label}</span>
               </NavLink>

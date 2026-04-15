@@ -35,17 +35,29 @@ export default function AdminPage() {
     navigate('/login', { replace: true });
   };
 
+  const fallbackCopy = (text) => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;left:-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); toast.success('已复制'); }
+    catch (_) { toast.error('复制失败，请手动复制'); }
+    document.body.removeChild(ta);
+  };
+
   const copyFactoryCode = () => {
     const code = user?.tenantCode || user?.factoryCode || '';
     if (!code) { toast.info('暂无工厂码'); return; }
-    navigator.clipboard.writeText(code).then(() => toast.success('工厂码已复制')).catch(() => toast.error('复制失败'));
+    navigator.clipboard.writeText(code).then(() => toast.success('工厂码已复制')).catch(() => fallbackCopy(code));
   };
 
   const copyRegisterLink = () => {
     const code = user?.tenantCode || user?.factoryCode || '';
+    const name = tenantName || user?.tenantName || '';
     const baseUrl = window.location.origin;
-    const link = `${baseUrl}/register?inviteToken=${code}`;
-    navigator.clipboard.writeText(link).then(() => toast.success('注册链接已复制')).catch(() => toast.error('复制失败'));
+    const link = `${baseUrl}/register?tenantCode=${encodeURIComponent(code)}&tenantName=${encodeURIComponent(name)}`;
+    navigator.clipboard.writeText(link).then(() => toast.success('注册链接已复制')).catch(() => fallbackCopy(link));
   };
 
   const visibleMenu = menuConfig.filter((m) => {

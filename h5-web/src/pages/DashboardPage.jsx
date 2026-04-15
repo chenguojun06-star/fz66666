@@ -4,7 +4,7 @@ import api from '@/api';
 import { isAdminOrSupervisor } from '@/utils/permission';
 import { isTenantOwner } from '@/utils/storage';
 import { toast } from '@/utils/uiHelper';
-import { getAuthedImageUrl } from '@/utils/fileUrl';
+import { transformOrderData } from '@/utils/orderTransform';
 import Icon from '@/components/Icon';
 
 const STATUS_FILTERS = [
@@ -17,8 +17,8 @@ const STATUS_FILTERS = [
 const SUMMARY_CARDS = [
   { key: 'sample', title: '样衣开发', icon: 'scissors', color: 'var(--color-purple)', bg: 'rgba(124,92,252,0.1)', tone: 'purple' },
   { key: 'production', title: '生产订单', icon: 'package', color: 'var(--color-primary)', bg: 'rgba(59,130,246,0.1)', tone: 'blue' },
-  { key: 'inbound', title: '入库', icon: 'package', color: 'var(--color-success)', bg: 'rgba(34,197,94,0.1)', tone: 'green' },
-  { key: 'outbound', title: '出库', icon: 'package', color: 'var(--color-warning)', bg: 'rgba(245,158,11,0.1)', tone: 'orange' },
+  { key: 'inbound', title: '入库', icon: 'inbox', color: 'var(--color-success)', bg: 'rgba(34,197,94,0.1)', tone: 'green' },
+  { key: 'outbound', title: '出库', icon: 'download', color: 'var(--color-warning)', bg: 'rgba(245,158,11,0.1)', tone: 'orange' },
 ];
 
 export default function DashboardPage() {
@@ -34,6 +34,7 @@ export default function DashboardPage() {
   const [orders, setOrders] = useState([]);
   const [searchKey, setSearchKey] = useState('');
   const [todayScanCount, setTodayScanCount] = useState(0);
+  const [expandedId, setExpandedId] = useState(null);
 
   useEffect(() => {
     if (!isTenantOwner() && !isAdminOrSupervisor()) {
@@ -70,39 +71,26 @@ export default function DashboardPage() {
 
   const loadOrders = async (reset) => {
     try {
-      const params = { deleteFlag: 0, page: 1, pageSize: 30 };
+      const params = { deleteFlag: 0, page: 1, pageSize: 30, excludeTerminal: 'true' };
       if (activeFilter === 'in_production') params.status = 'production';
       else if (activeFilter === 'completed') params.status = 'completed';
       else if (activeFilter === 'overdue') params.status = 'production';
       if (searchKey) params.orderNo = searchKey;
       const res = await api.production.orderList(params);
       const data = res?.data || res || {};
-      let list = data?.records || data?.list || [];
+      let rawList = data?.records || data?.list || [];
       if (activeFilter === 'overdue') {
-        list = list.filter(o => {
-          const delivery = new Date(String(o.deliveryDate || o.expectedShipDate || '').replace(' ', 'T'));
+        rawList = rawList.filter(o => {
+          const delivery = new Date(String(o.plannedEndDate || o.expectedShipDate || o.deliveryDate || '').replace(' ', 'T'));
           return !isNaN(delivery.getTime()) && delivery < new Date();
         });
       }
+      const list = rawList.map(r => transformOrderData(r));
       setOrders(reset ? list : [...orders, ...list]);
     } catch (e) { /* ignore */ }
   };
 
   useEffect(() => { loadOrders(true); }, [activeFilter]);
-
-  const getRemainDays = (order) => {
-    if (!order.deliveryDate) return null;
-    const delivery = new Date(order.deliveryDate.replace(' ', 'T'));
-    return Math.ceil((delivery - Date.now()) / 86400000);
-  };
-
-  const getRemainDaysClass = (days) => {
-    if (days === null) return '';
-    if (days < 0) return 'days-overdue';
-    if (days <= 3) return 'days-urgent';
-    if (days <= 7) return 'days-warn';
-    return 'days-safe';
-  };
 
   const renderCardMetrics = (key) => {
     const c = cards[key];
@@ -191,17 +179,16 @@ export default function DashboardPage() {
         <div style={{ textAlign: 'center', padding: 40, color: 'var(--color-text-secondary)' }}>暂无订单数据</div>
       ) : (
         orders.map((order, idx) => {
-          const remainDays = getRemainDays(order);
-          const isOverdue = remainDays !== null && remainDays < 0;
-          const isClosed = order.status === 'completed' || order.status === 'closed';
+          const isOverdue = order.remainDays !== null && order.remainDays < 0;
+          const isClosed = order.isClosed;
           const progress = order.productionProgress || 0;
-          const imgUrl = getAuthedImageUrl(order.styleCoverUrl || order.coverImage || order.styleImage || '');
+          const isExpanded = expandedId === (order.id || order.orderNo);
           return (
             <div key={order.id || idx} className="hero-card compact list-item"
               style={isOverdue ? { borderLeft: '3px solid var(--color-danger)' } : {}}>
-              <div style={{ display: 'flex', gap: 10 }}>
-                {imgUrl ? (
-                  <img src={imgUrl} alt="" style={{ width: 64, height: 64, borderRadius: 'var(--radius-md)', objectFit: 'cover', flexShrink: 0 }} />
+              <div style={{ display: 'flex', gap: 10, cursor: 'pointer' }} onClick={() => setExpandedId(isExpanded ? null : (order.id || order.orderNo))}>
+                {order.styleCoverUrl ? (
+                  <img src={order.styleCoverUrl} alt="" style={{ width: 64, height: 64, borderRadius: 'var(--radius-md)', objectFit: 'cover', flexShrink: 0 }} onError={(e) => { e.target.style.display = 'none'; }} />
                 ) : (
                   <div style={{ width: 64, height: 64, borderRadius: 'var(--radius-md)', background: 'var(--color-bg-gray)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--font-size-xs)', color: 'var(--color-text-disabled)', textAlign: 'center', lineHeight: 1.3 }}>
                     暂无<br/>图片
@@ -213,6 +200,7 @@ export default function DashboardPage() {
                       {order.orderNo || '-'}
                       {order.plateTypeTagText && <span className="order-tag order-tag-plate">{order.plateTypeTagText}</span>}
                       {order.urgencyTagText && order.urgencyTagText === '急' && <span className="order-tag order-tag-urgent">急</span>}
+                      {order.urgencyTagText && order.urgencyTagText === '普' && <span className="order-tag order-tag-normal">普</span>}
                     </div>
                     {isClosed ? (
                       <span className="tag tag-completed">已完成</span>
@@ -222,13 +210,20 @@ export default function DashboardPage() {
                   </div>
                   <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginTop: 2 }}>
                     {order.styleNo || '-'}
-                    {order.deliveryDate && (
-                      <>
-                        <span style={{ margin: '0 4px' }}>·</span>
-                        <span className={getRemainDaysClass(remainDays)}>
-                          {isOverdue ? `逾${Math.abs(remainDays)}天` : remainDays !== null ? `${remainDays}天` : ''}
-                        </span>
-                      </>
+                    {order.factoryTypeText && (
+                      <span style={{
+                        marginLeft: 6, padding: '1px 5px', borderRadius: 4, fontSize: 'var(--font-size-xxs)',
+                        background: order.factoryTypeText === '内部' ? 'rgba(59,130,246,0.1)' : 'rgba(245,158,11,0.1)',
+                        color: order.factoryTypeText === '内部' ? 'var(--color-primary)' : 'var(--color-warning)',
+                      }}>{order.factoryTypeText}</span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-secondary)', marginTop: 2 }}>
+                    {order.deliveryDateStr || '交期待定'}
+                    {order.remainDaysText && (
+                      <span className={order.remainDaysClass || ''} style={{ marginLeft: 6, fontWeight: 600 }}>
+                        {order.remainDaysText}
+                      </span>
                     )}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
@@ -239,6 +234,78 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </div>
+
+              {isExpanded && (
+                <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--color-border-light)' }}>
+                  <div className="item-meta">
+                    <span className="meta-label">订单数</span>
+                    <span className="meta-value meta-value-bold">{order.totalQuantity || order.orderQuantity || 0}</span>
+                    <span className="meta-sep">|</span>
+                    <span className="meta-label">已完成</span>
+                    <span className="meta-value meta-value-bold" style={{ color: 'var(--color-success)' }}>{order.completedQuantity || 0}</span>
+                  </div>
+                  <div className="item-meta">
+                    <span className="meta-label">工厂</span>
+                    <span className="meta-value">{order.factoryName || '-'}</span>
+                    {order.factoryTypeText && (
+                      <>
+                        <span className="meta-sep">|</span>
+                        <span className="meta-value" style={{
+                          padding: '1px 6px', borderRadius: 4, fontSize: 'var(--font-size-xs)',
+                          background: order.factoryTypeText === '内部' ? 'rgba(59,130,246,0.1)' : 'rgba(245,158,11,0.1)',
+                          color: order.factoryTypeText === '内部' ? 'var(--color-primary)' : 'var(--color-warning)',
+                        }}>{order.factoryTypeText}</span>
+                      </>
+                    )}
+                  </div>
+                  {order.deliveryDateStr && (
+                    <div className="item-meta">
+                      <span className="meta-label">交期</span>
+                      <span className="meta-value">{order.deliveryDateStr}</span>
+                      {order.remainDaysText && (
+                        <span className={`header-remain-days ${order.remainDaysClass || ''}`} style={{ marginLeft: 6 }}>
+                          {order.remainDaysText}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {order.statusText && (
+                    <div className="item-meta">
+                      <span className="meta-label">状态</span>
+                      <span className="meta-value">{order.statusText}</span>
+                    </div>
+                  )}
+                  {order.colorGroups && order.colorGroups.length > 0 && (
+                    <div style={{ marginTop: 8 }}>
+                      <div className="meta-label" style={{ marginBottom: 4 }}>尺码明细</div>
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--font-size-xs)' }}>
+                          <thead>
+                            <tr>
+                              <th style={{ padding: '4px 8px', textAlign: 'left', borderBottom: '1px solid var(--color-border-light)', color: 'var(--color-text-secondary)', fontWeight: 400 }}>颜色</th>
+                              {order.allSizes.map(s => (
+                                <th key={s} style={{ padding: '4px 6px', textAlign: 'center', borderBottom: '1px solid var(--color-border-light)', color: 'var(--color-text-secondary)', fontWeight: 400 }}>{s}</th>
+                              ))}
+                              <th style={{ padding: '4px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border-light)', color: 'var(--color-text-secondary)', fontWeight: 400 }}>小计</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {order.colorGroups.map(g => (
+                              <tr key={g.color}>
+                                <td style={{ padding: '4px 8px', borderBottom: '1px solid var(--color-border-light)' }}>{g.color}</td>
+                                {g.sizeQtyList.map((qty, i) => (
+                                  <td key={i} style={{ padding: '4px 6px', textAlign: 'center', borderBottom: '1px solid var(--color-border-light)' }}>{qty || '-'}</td>
+                                ))}
+                                <td style={{ padding: '4px 8px', textAlign: 'center', fontWeight: 600, borderBottom: '1px solid var(--color-border-light)' }}>{g.total}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           );
         })

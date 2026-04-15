@@ -178,4 +178,34 @@ public class MaterialDatabaseOrchestrator {
             next.setCompletedTime(null);
         }
     }
+
+    public String generateMaterialCode(String materialType) {
+        return materialDatabaseService.generateMaterialCode(materialType);
+    }
+
+    public boolean disable(String id) {
+        MaterialDatabase current = getById(id);
+        MaterialDatabase patch = new MaterialDatabase();
+        patch.setId(current.getId());
+        patch.setDisabled(1);
+        patch.setUpdateTime(LocalDateTime.now());
+        boolean ok = materialDatabaseService.updateById(patch);
+        if (!ok) {
+            throw new IllegalStateException("操作失败");
+        }
+        return true;
+    }
+
+    public boolean enable(String id) {
+        MaterialDatabase current = getById(id);
+        MaterialDatabase patch = new MaterialDatabase();
+        patch.setId(current.getId());
+        patch.setDisabled(0);
+        patch.setUpdateTime(LocalDateTime.now());
+        boolean ok = materialDatabaseService.updateById(patch);
+        if (!ok) {
+            throw new IllegalStateException("操作失败");
+        }
+        return true;
+    }
 }

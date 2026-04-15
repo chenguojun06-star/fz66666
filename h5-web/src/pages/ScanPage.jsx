@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import wx from '@/adapters/wx';
 import api from '@/api';
@@ -7,14 +7,21 @@ import { toast } from '@/utils/uiHelper';
 import CameraScanner from '@/components/CameraScanner';
 import Icon from '@/components/Icon';
 
+const RECENT_SCAN_TTL = 2000;
+
 export default function ScanPage() {
   const navigate = useNavigate();
-  const [scanType, setScanType] = useState('production');
+  const [scanType] = useState('production');
   const [loading, setLoading] = useState(false);
   const [cameraActive, setCameraActive] = useState(false);
+  const [manualCode, setManualCode] = useState('');
   const [stats, setStats] = useState({ scanCount: 0, orderCount: 0, totalQuantity: 0, totalAmount: 0 });
   const [lastResult, setLastResult] = useState(null);
+  const [confirmData, setConfirmData] = useState(null);
   const setScanResultData = useGlobalStore((s) => s.setScanResultData);
+  const setQualityData = useGlobalStore((s) => s.setQualityData);
+  const setPatternScanData = useGlobalStore((s) => s.setPatternScanData);
+  const recentScansRef = useRef(new Map());
 
   useEffect(() => {
     api.production.personalScanStats().then((res) => {
@@ -28,20 +35,50 @@ export default function ScanPage() {
     }).catch(() => {});
   }, []);
 
+  const isRecentDuplicate = useCallback((code) => {
+    const now = Date.now();
+    const lastTime = recentScansRef.current.get(code);
+    if (lastTime && now - lastTime < RECENT_SCAN_TTL) return true;
+    recentScansRef.current.set(code, now);
+    for (const [k, t] of recentScansRef.current) {
+      if (now - t > RECENT_SCAN_TTL * 2) recentScansRef.current.delete(k);
+    }
+    return false;
+  }, []);
+
   const handleScanResult = useCallback(async (code) => {
     if (!code || loading) return;
+    if (isRecentDuplicate(code)) {
+      toast.error('请勿重复扫码');
+      return;
+    }
     setLoading(true);
+    setCameraActive(false);
+    setConfirmData(null);
     try {
       const res = await api.production.executeScan({ scanCode: code, scanType });
       const data = res?.data || res;
       if (data) {
-        setLastResult({ ...data, scanCode: code, scanType, success: true });
-        setScanResultData({ ...data, scanCode: code, scanType });
-        setStats((prev) => ({
-          ...prev,
-          scanCount: prev.scanCount + 1,
-          totalQuantity: prev.totalQuantity + (Number(data.quantity) || 1),
-        }));
+        const stage = data.progressStage || data.stage || '';
+        const lowerStage = String(stage).toLowerCase();
+        if (lowerStage === 'quality' || lowerStage === '质检') {
+          setQualityData({ ...data, scanCode: code, scanType });
+          navigate('/scan/quality');
+        } else if (lowerStage === 'pattern' || lowerStage === '样板') {
+          setPatternScanData({ ...data, scanCode: code, scanType });
+          navigate('/scan/pattern');
+        } else if (data.needConfirmProcess || (data.stageResult && data.stageResult.allBundleProcesses)) {
+          setScanResultData({ ...data, scanCode: code, scanType });
+          setConfirmData({ ...data, scanCode: code, scanType });
+        } else {
+          setScanResultData({ ...data, scanCode: code, scanType });
+          setLastResult({ ...data, scanCode: code, scanType, success: true });
+          setStats((prev) => ({
+            ...prev,
+            scanCount: prev.scanCount + 1,
+            totalQuantity: prev.totalQuantity + (Number(data.quantity) || 1),
+          }));
+        }
         wx.vibrateShort();
       }
     } catch (err) {
@@ -50,7 +87,7 @@ export default function ScanPage() {
     } finally {
       setLoading(false);
     }
-  }, [scanType, loading, setScanResultData]);
+  }, [scanType, loading, isRecentDuplicate, setScanResultData, setQualityData, setPatternScanData, navigate]);
 
   const handleCameraScan = () => {
     if (wx.isWechat) {
@@ -59,6 +96,22 @@ export default function ScanPage() {
       }).catch(() => {});
     } else {
       setCameraActive(true);
+    }
+  };
+
+  const handleManualSubmit = () => {
+    const code = manualCode.trim();
+    if (!code) {
+      toast.error('请输入菲号或条码');
+      return;
+    }
+    handleScanResult(code);
+    setManualCode('');
+  };
+
+  const goResultPage = () => {
+    if (confirmData) {
+      navigate('/scan/result');
     }
   };
 
@@ -111,7 +164,25 @@ export default function ScanPage() {
         </div>
       </div>
 
-      {lastResult && (
+      {confirmData && (
+        <div className="scan-result-card" onClick={goResultPage} style={{ cursor: 'pointer' }}>
+          <div className="scan-result-header">
+            <span className="scan-result-tag success">扫码识别结果</span>
+            <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-primary)' }}>点击确认 ›</span>
+          </div>
+          <div className="scan-result-info">
+            <span className="scan-result-info-item">款号: <span>{confirmData.styleNo || '-'}</span></span>
+            <span className="scan-result-info-item">菲号: <span>{confirmData.bundleNo || '-'}</span></span>
+            {confirmData.orderNo && <span className="scan-result-info-item">订单: <span>{confirmData.orderNo}</span></span>}
+            {confirmData.quantity && <span className="scan-result-info-item">数量: <span>{confirmData.quantity}</span></span>}
+          </div>
+          <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-tertiary)', marginTop: 4 }}>
+            可一次勾选多个工序，确认后统一领取
+          </div>
+        </div>
+      )}
+
+      {lastResult && !confirmData && (
         <div className={`scan-result-card${lastResult.success ? '' : ' scan-fail'}`}>
           <div className="scan-result-header">
             <span className={`scan-result-tag ${lastResult.success ? 'success' : 'fail'}`}>
@@ -127,9 +198,23 @@ export default function ScanPage() {
               <span className="scan-result-info-item">工序: <span>{lastResult.processName || '-'}</span></span>
               <span className="scan-result-info-item">数量: <span>{lastResult.quantity || 1}</span></span>
               {lastResult.factoryName && <span className="scan-result-info-item">工厂: <span>{lastResult.factoryName}</span></span>}
+              <span className="scan-result-info-item">
+                归属: <span>{lastResult.delegateTargetType === 'external' ? '外部' : '内部'}</span>
+              </span>
             </div>
           ) : (
             <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-secondary)' }}>{lastResult.message}</div>
+          )}
+          {lastResult.success && lastResult.delegateTargetType && (
+            <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-primary)', marginTop: 4 }}>
+              本工序今日累计 {lastResult.todayProcessCount || 0} 件
+            </div>
+          )}
+          {!lastResult.success && (
+            <div className="sub-page-row" style={{ marginTop: 8 }}>
+              <button className="ghost-button" style={{ fontSize: 'var(--font-size-xs)', padding: '4px 12px' }} onClick={() => window.location.reload()}>检查网络</button>
+              <button className="primary-button" style={{ fontSize: 'var(--font-size-xs)', padding: '4px 12px' }} onClick={handleCameraScan}>重新扫码</button>
+            </div>
           )}
         </div>
       )}
@@ -140,15 +225,19 @@ export default function ScanPage() {
         </button>
         <div className="scan-btn-label">{loading ? '识别中...' : '扫码识别'}</div>
         <div className="scan-btn-hint">自动匹配工序</div>
-        <div style={{ fontSize: 'var(--font-size-xxs)', color: 'var(--color-text-disabled)', marginTop: 6, textAlign: 'center', lineHeight: 1.4 }}>
-          说明：系统会按订单工序模板与历史扫码自动识别当前应执行工序，仅允许流转到未完成工序。
+
+        <div style={{ marginTop: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input className="text-input" placeholder="手动输入菲号/条码" value={manualCode}
+            onChange={(e) => setManualCode(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleManualSubmit()}
+            style={{ flex: 1, padding: '8px 12px', fontSize: 'var(--font-size-sm)' }} />
+          <button className="secondary-button" onClick={handleManualSubmit} disabled={loading || !manualCode.trim()}
+            style={{ padding: '8px 14px', whiteSpace: 'nowrap', fontSize: 'var(--font-size-sm)' }}>提交</button>
         </div>
       </div>
 
-      {cameraActive && (
-        <CameraScanner active={cameraActive} onScan={handleScanResult}
-          onError={(msg) => { toast.error(msg); setCameraActive(false); }} />
-      )}
+      <CameraScanner active={cameraActive} onScan={handleScanResult}
+        onError={(msg) => { if (msg) toast.error(msg); setCameraActive(false); }} />
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import api from '@/api';
 import { useAuthStore } from '@/stores/authStore';
 import { isAdminOrSupervisor } from '@/utils/permission';
@@ -45,11 +46,17 @@ export default function AiAssistantFloat() {
   const scrollRef = useRef(null);
   const user = useAuthStore((s) => s.user);
 
-  const [pos, setPos] = useState({ x: window.innerWidth - 66, y: window.innerHeight * 0.55 });
+  const [pos, setPos] = useState({ x: -1, y: -1 });
   const dragging = useRef(false);
   const startTouch = useRef({ x: 0, y: 0 });
   const startPos = useRef({ x: 0, y: 0 });
   const moved = useRef(false);
+
+  useEffect(() => {
+    if (pos.x === -1) {
+      setPos({ x: window.innerWidth - 66, y: window.innerHeight * 0.55 });
+    }
+  }, []);
 
   useEffect(() => {
     if (open && !messages.length) {
@@ -63,6 +70,7 @@ export default function AiAssistantFloat() {
   }, [messages, streamingText]);
 
   const handleTouchStart = (e) => {
+    e.stopPropagation();
     dragging.current = true;
     moved.current = false;
     const t = e.touches ? e.touches[0] : e;
@@ -73,22 +81,30 @@ export default function AiAssistantFloat() {
   const handleTouchMove = (e) => {
     if (!dragging.current) return;
     e.preventDefault();
+    e.stopPropagation();
     const t = e.touches ? e.touches[0] : e;
     const dx = t.clientX - startTouch.current.x;
     const dy = t.clientY - startTouch.current.y;
     if (Math.abs(dx) > 5 || Math.abs(dy) > 5) moved.current = true;
-    const maxX = window.innerWidth - 50;
-    const maxY = window.innerHeight - 50;
+    const maxX = window.innerWidth - 56;
+    const maxY = window.innerHeight - 56;
     setPos({
       x: Math.max(0, Math.min(maxX, startPos.current.x + dx)),
       y: Math.max(0, Math.min(maxY, startPos.current.y + dy)),
     });
   };
 
-  const handleTouchEnd = () => {
+  const handleTouchEnd = (e) => {
+    e.stopPropagation();
     dragging.current = false;
     const edgeX = pos.x > window.innerWidth / 2 ? window.innerWidth - 66 : 8;
     setPos((prev) => ({ ...prev, x: edgeX }));
+    if (!moved.current) setOpen(true);
+  };
+
+  const handleClick = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
     if (!moved.current) setOpen(true);
   };
 
@@ -131,32 +147,32 @@ export default function AiAssistantFloat() {
 
   const prompts = isAdminOrSupervisor() ? QUICK_PROMPTS_ADMIN : QUICK_PROMPTS_WORKER;
 
-  if (!open) {
-    return (
-      <div
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onMouseDown={(e) => { handleTouchStart(e); const mm = (ev) => handleTouchMove(ev); const mu = () => { handleTouchEnd(); window.removeEventListener('mousemove', mm); window.removeEventListener('mouseup', mu); }; window.addEventListener('mousemove', mm); window.addEventListener('mouseup', mu); }}
-        style={{
-          position: 'fixed', left: pos.x, top: pos.y,
-          width: 50, height: 50, borderRadius: '50%',
-          background: 'var(--color-bg-card)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          pointerEvents: 'auto', zIndex: 9000,
-          boxShadow: '0 4px 16px rgba(var(--color-primary-rgb),0.2)',
-          cursor: 'grab', touchAction: 'none',
-        }}
-      >
-        <MiniCloud size={46} />
-      </div>
-    );
-  }
+  if (pos.x === -1) return null;
 
-  return (
-    <div style={{ position: 'fixed', inset: 0, background: 'var(--color-bg-page)', zIndex: 9001, display: 'flex', flexDirection: 'column' }}>
+  const floatBtn = !open ? (
+    <div
+      className="ai-float-btn"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onClick={handleClick}
+      style={{
+        position: 'fixed', left: pos.x, top: pos.y,
+        width: 56, height: 56, borderRadius: '50%',
+        background: 'var(--color-bg-card)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 99999,
+        boxShadow: '0 4px 20px rgba(59,130,246,0.3)',
+        cursor: 'pointer', touchAction: 'none',
+        border: '2px solid rgba(59,130,246,0.15)',
+      }}
+    >
+      <MiniCloud size={50} />
+    </div>
+  ) : (
+    <div style={{ position: 'fixed', inset: 0, background: 'var(--color-bg-page)', zIndex: 99999, display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', background: 'var(--color-bg-card)', borderBottom: '1px solid var(--color-border)', paddingTop: 'calc(12px + var(--safe-area-top, 0px))' }}>
-        <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--color-text-primary)' }}>✕</button>
+        <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--color-text-primary)', padding: '4px 8px' }}>✕</button>
         <MiniCloud size={28} />
         <span style={{ fontSize: 'var(--font-size-lg)', fontWeight: 700 }}>小云帮助中心</span>
       </div>
@@ -206,4 +222,6 @@ export default function AiAssistantFloat() {
       </div>
     </div>
   );
+
+  return createPortal(floatBtn, document.body);
 }

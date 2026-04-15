@@ -16,6 +16,7 @@ const CATEGORY_VALUE_MAP = ['appearance_integrity', 'size_accuracy', 'process_co
 export default function ScanQualityPage() {
   const navigate = useNavigate();
   const qualityData = useGlobalStore(s => s.qualityData);
+  const clearQualityData = useGlobalStore(s => s.clearQualityData);
   const [detail, setDetail] = useState({});
   const [result, setResult] = useState('');
   const [defectQuantity, setDefectQuantity] = useState('');
@@ -42,6 +43,10 @@ export default function ScanQualityPage() {
     else if (voice.error === 'PERMISSION_DENIED') toast.error('请允许麦克风权限');
     else if (voice.error && voice.error !== 'NO_SPEECH' && voice.error !== 'aborted') toast.error('语音识别出错：' + voice.error);
   }, [voice.error]);
+
+  useEffect(() => {
+    return () => { clearQualityData(); };
+  }, [clearQualityData]);
 
   useEffect(() => {
     if (!qualityData) { toast.error('数据异常'); navigate(-1); return; }

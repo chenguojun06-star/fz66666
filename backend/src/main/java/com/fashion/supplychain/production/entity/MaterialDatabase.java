@@ -78,6 +78,8 @@ public class MaterialDatabase {
 
     private Integer deleteFlag;
 
+    private Integer disabled;
+
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 }

@@ -24,6 +24,7 @@ import { useViewport } from '@/utils/useViewport';
 import { useModal, useRequest, useTablePagination } from '@/hooks';
 import type { Dayjs } from 'dayjs';
 import SupplierSelect from '@/components/common/SupplierSelect';
+import DictAutoComplete from '@/components/common/DictAutoComplete';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
@@ -64,6 +65,7 @@ const MaterialDatabasePage: React.FC = () => {
   const [imageFiles, setImageFiles] = useState<UploadFile[]>([]);
   const [returnTarget, setReturnTarget] = useState<MaterialDatabase | null>(null);
   const [returnLoading, setReturnLoading] = useState(false);
+  const [isCreateMode, setIsCreateMode] = useState(false);
   const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
 
   const reportSmartError = (title: string, reason?: string, code?: string) => {
@@ -76,6 +78,20 @@ const MaterialDatabasePage: React.FC = () => {
     });
   };
 
+  const fetchMaterialCode = async (materialType: string) => {
+    if (!materialType) return;
+    try {
+      const res = await api.get<{ code: number; data: string }>('/material/database/generate-code', {
+        params: { materialType },
+      });
+      if (res?.data) {
+        form.setFieldsValue({ materialCode: res.data });
+      }
+    } catch {
+      // ignore
+    }
+  };
+
   // ===== 获取列表函数 =====
   const fetchList = async () => {
     setLoading(true);
@@ -84,7 +100,8 @@ const MaterialDatabasePage: React.FC = () => {
         page: pagination.current,
         pageSize: pagination.pageSize,
         keyword: searchKeyword || undefined,
-        materialType: statusValue || undefined,
+        materialType: statusValue === 'disabled' ? undefined : (statusValue || undefined),
+        disabled: statusValue === 'disabled' ? 1 : undefined,
       };
 
       const res = await api.get<{ code: number; data: { records: MaterialDatabase[]; total: number } }>(
@@ -149,6 +166,7 @@ const MaterialDatabasePage: React.FC = () => {
   // 打开新建/编辑弹窗
   const openDialog = (dialogMode: 'create' | 'edit' | 'copy', record?: MaterialDatabase) => {
     if ((dialogMode === 'edit' || dialogMode === 'copy') && record) {
+      setIsCreateMode(dialogMode === 'copy');
       open(dialogMode === 'copy' ? undefined as any : record);
       const formValues: Record<string, unknown> = {
         ...record,
@@ -160,10 +178,12 @@ const MaterialDatabasePage: React.FC = () => {
         delete formValues.createTime;
         delete formValues.completedTime;
         delete formValues.updateTime;
-        formValues.materialCode = '';
         formValues.status = 'pending';
       }
       form.setFieldsValue(formValues);
+      if (dialogMode === 'copy') {
+        fetchMaterialCode(getBaseMaterialType(record.materialType || 'accessory'));
+      }
       if (record.image) {
         setImageFiles([
           {
@@ -177,6 +197,7 @@ const MaterialDatabasePage: React.FC = () => {
         setImageFiles([]);
       }
     } else {
+      setIsCreateMode(true);
       open();
       form.resetFields();
       setImageFiles([]);
@@ -312,6 +333,42 @@ const MaterialDatabasePage: React.FC = () => {
     }
   };
 
+  const handleDisable = async (record: MaterialDatabase) => {
+    const id = String(record?.id || '').trim();
+    if (!id) return;
+    modal.confirm({
+      width: '30vw',
+      title: '确认停用',
+      content: '停用后该物料将不可被选择使用，是否继续？',
+      okText: '停用',
+      cancelText: '取消',
+      okButtonProps: { danger: true, type: 'default' },
+      onOk: async () => {
+        unwrapApiData<boolean>(
+          await api.put<{ code: number; message: string; data: boolean }>(
+            `/material/database/${encodeURIComponent(id)}/disable`
+          ),
+          '停用失败'
+        );
+        message.success('停用成功');
+        fetchList();
+      },
+    });
+  };
+
+  const handleEnable = async (record: MaterialDatabase) => {
+    const id = String(record?.id || '').trim();
+    if (!id) return;
+    unwrapApiData<boolean>(
+      await api.put<{ code: number; message: string; data: boolean }>(
+        `/material/database/${encodeURIComponent(id)}/enable`
+      ),
+      '启用失败'
+    );
+    message.success('启用成功');
+    fetchList();
+  };
+
   // 表格列定义
   const columns: ColumnsType<MaterialDatabase> = [
     {
@@ -339,6 +396,10 @@ const MaterialDatabasePage: React.FC = () => {
       dataIndex: 'materialCode',
       key: 'materialCode',
       width: 120,
+      render: (text: string, record: MaterialDatabase) => {
+        const isDisabled = record.disabled === 1;
+        return <span style={isDisabled ? { color: '#999', textDecoration: 'line-through' } : undefined}>{text}</span>;
+      },
     },
     {
       title: '物料名称',
@@ -439,7 +500,9 @@ const MaterialDatabasePage: React.FC = () => {
       dataIndex: 'status',
       key: 'status',
       width: 100,
-      render: (v: unknown) => {
+      render: (v: unknown, record: MaterialDatabase) => {
+        const isDisabled = record.disabled === 1;
+        if (isDisabled) return <Tag color="error">已停用</Tag>;
         const st = String(v || 'pending').trim().toLowerCase();
         if (st === 'completed') return <Tag color="default">已完成</Tag>;
         return <Tag color="warning">待完成</Tag>;
@@ -474,6 +537,7 @@ const MaterialDatabasePage: React.FC = () => {
       fixed: 'right',
       render: (_: unknown, record: MaterialDatabase) => {
         const isCompleted = record.status === 'completed';
+        const isDisabled = record.disabled === 1;
         const moreItems = (() => {
           const items: MenuProps['items'] = [];
           items.push({
@@ -502,6 +566,20 @@ const MaterialDatabasePage: React.FC = () => {
               onClick: () => void handleDelete(record),
             });
           }
+          if (isDisabled) {
+            items.push({
+              key: 'enable',
+              label: '启用',
+              onClick: () => void handleEnable(record),
+            });
+          } else {
+            items.push({
+              key: 'disable',
+              label: '停用',
+              danger: true,
+              onClick: () => void handleDisable(record),
+            });
+          }
           return items;
         })();
 
@@ -512,7 +590,7 @@ const MaterialDatabasePage: React.FC = () => {
                 key: 'edit',
                 label: '编辑',
                 title: isCompleted ? '已完成，需先退回后编辑' : '编辑',
-                disabled: isCompleted,
+                disabled: isCompleted || isDisabled,
                 onClick: () => openDialog('edit', record),
                 primary: true,
               },
@@ -568,6 +646,7 @@ const MaterialDatabasePage: React.FC = () => {
                     { label: '面料', value: 'fabric' },
                     { label: '里料', value: 'lining' },
                     { label: '辅料', value: 'accessory' },
+                    { label: '已停用', value: 'disabled' },
                   ]}
                 />
               )}
@@ -652,7 +731,7 @@ const MaterialDatabasePage: React.FC = () => {
                   label="物料编号"
                   rules={[{ required: true, message: '请输入物料编号' }]}
                 >
-                  <Input placeholder="请输入物料编号" />
+                  <Input placeholder="自动生成" disabled={isCreateMode} />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={8} md={6} lg={5} xl={4}>
@@ -675,7 +754,11 @@ const MaterialDatabasePage: React.FC = () => {
                   label="物料类型"
                   rules={[{ required: true, message: '请选择物料类型' }]}
                 >
-                  <Select placeholder="请选择物料类型">
+                  <Select placeholder="请选择物料类型" onChange={(value) => {
+                    if (isCreateMode) {
+                      fetchMaterialCode(value);
+                    }
+                  }}>
                     <Option value="fabric">面料</Option>
                     <Option value="lining">里料</Option>
                     <Option value="accessory">辅料</Option>
@@ -699,9 +782,9 @@ const MaterialDatabasePage: React.FC = () => {
                 <Form.Item
                   name="unit"
                   label="单位"
-                  rules={[{ required: true, message: '请输入单位' }]}
+                  rules={[{ required: true, message: '请选择单位' }]}
                 >
-                  <Input placeholder="请输入单位" />
+                  <DictAutoComplete dictType="material_unit" placeholder="请选择或输入单位" />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={8} md={6} lg={5} xl={4}>

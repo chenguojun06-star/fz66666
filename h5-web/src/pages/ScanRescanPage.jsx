@@ -9,8 +9,13 @@ import { eventBus } from '@/utils/eventBus';
 export default function ScanRescanPage() {
   const navigate = useNavigate();
   const rescanData = useGlobalStore(s => s.rescanData);
+  const clearRescanData = useGlobalStore(s => s.clearRescanData);
   const [detail, setDetail] = useState({});
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    return () => { clearRescanData(); };
+  }, [clearRescanData]);
 
   useEffect(() => {
     if (!rescanData) { toast.error('数据异常'); navigate(-1); return; }

@@ -52,4 +52,19 @@ public class MaterialDatabaseController {
     public Result<Boolean> delete(@PathVariable String id) {
         return Result.success(materialDatabaseOrchestrator.delete(id));
     }
+
+    @GetMapping("/generate-code")
+    public Result<String> generateCode(@RequestParam(required = false, defaultValue = "accessory") String materialType) {
+        return Result.success(materialDatabaseOrchestrator.generateMaterialCode(materialType));
+    }
+
+    @PutMapping("/{id}/disable")
+    public Result<Boolean> disable(@PathVariable String id) {
+        return Result.success(materialDatabaseOrchestrator.disable(id));
+    }
+
+    @PutMapping("/{id}/enable")
+    public Result<Boolean> enable(@PathVariable String id) {
+        return Result.success(materialDatabaseOrchestrator.enable(id));
+    }
 }

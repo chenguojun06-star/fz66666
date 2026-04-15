@@ -13,6 +13,14 @@ function normalizePositiveInt(value, fallback = 1) {
   return !isFinite(n) || n <= 0 ? fallback : n;
 }
 
+const HTTP_ERROR_MAP = {
+  401: '登录已过期，请重新登录',
+  403: '无权限执行此操作',
+  404: '未找到对应订单数据',
+  409: '重复操作，请勿重复提交',
+  500: '服务器异常，请稍后重试',
+};
+
 function normalizeScanType(progressStage, scanType) {
   const stage = String(progressStage || '').trim();
   if (stage === 'quality' || stage === '质检') return 'quality';
@@ -26,6 +34,7 @@ function normalizeScanType(progressStage, scanType) {
 export default function ScanResultPage() {
   const navigate = useNavigate();
   const scanResultData = useGlobalStore(s => s.scanResultData);
+  const clearScanResultData = useGlobalStore(s => s.clearScanResultData);
   const [detail, setDetail] = useState({});
   const [processOptions, setProcessOptions] = useState([]);
   const [selectedNames, setSelectedNames] = useState([]);
@@ -37,6 +46,10 @@ export default function ScanResultPage() {
   const [showWarehouse, setShowWarehouse] = useState(false);
   const [isQualityReceive, setIsQualityReceive] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    return () => { clearScanResultData(); };
+  }, [clearScanResultData]);
 
   useEffect(() => {
     if (!scanResultData) {

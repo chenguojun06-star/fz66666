@@ -8,4 +8,6 @@ import java.util.Map;
 public interface MaterialDatabaseService extends IService<MaterialDatabase> {
 
     IPage<MaterialDatabase> queryPage(Map<String, Object> params);
+
+    String generateMaterialCode(String materialType);
 }

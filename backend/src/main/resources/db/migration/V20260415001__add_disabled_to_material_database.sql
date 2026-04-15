@@ -1,0 +1,1 @@
+ALTER TABLE t_material_database ADD COLUMN IF NOT EXISTS disabled INT DEFAULT 0;

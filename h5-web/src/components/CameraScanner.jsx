@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 
 export default function CameraScanner({ active, onScan, onError }) {
-  const elementId = useRef(`scanner-${Math.random().toString(36).slice(2)}`);
+  const elementId = useRef(`scanner-${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const scannerRef = useRef(null);
   const [running, setRunning] = useState(false);
   const mountedRef = useRef(true);
@@ -37,15 +37,21 @@ export default function CameraScanner({ active, onScan, onError }) {
     }
     if (running) return;
 
+    const el = document.getElementById(elementId.current);
+    if (!el) return;
+
     const scanner = new Html5Qrcode(elementId.current);
     scannerRef.current = scanner;
 
     scanner
       .start(
         { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 220, height: 220 } },
+        { fps: 10, qrbox: { width: 220, height: 220 }, aspectRatio: 1.0 },
         (decodedText) => {
-          if (mountedRef.current) onScan(decodedText);
+          if (mountedRef.current) {
+            stopScanner();
+            onScan(decodedText);
+          }
         },
         () => {}
       )
@@ -54,7 +60,14 @@ export default function CameraScanner({ active, onScan, onError }) {
       })
       .catch((error) => {
         if (mountedRef.current) {
-          onError(error instanceof Error ? error.message : String(error));
+          const msg = error instanceof Error ? error.message : String(error);
+          if (msg.includes('Permission') || msg.includes('denied')) {
+            onError('相机权限被拒绝，请在浏览器设置中允许相机访问');
+          } else if (msg.includes('NotFound') || msg.includes('Requested device not found')) {
+            onError('未检测到相机设备');
+          } else {
+            onError('相机启动失败，请检查权限设置');
+          }
         }
       });
 
@@ -63,5 +76,34 @@ export default function CameraScanner({ active, onScan, onError }) {
     };
   }, [active]);
 
-  return <div id={elementId.current} className="scanner-frame" />;
+  if (!active) return null;
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 99998,
+      background: '#000', display: 'flex', flexDirection: 'column',
+    }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '12px 16px', background: 'rgba(0,0,0,0.7)',
+        paddingTop: 'calc(12px + var(--safe-area-top, 0px))',
+      }}>
+        <span style={{ color: '#fff', fontSize: 16, fontWeight: 600 }}>扫码识别</span>
+        <button onClick={() => { stopScanner(); onError(''); }}
+          style={{ background: 'none', border: 'none', color: '#fff', fontSize: 20, cursor: 'pointer', padding: '4px 8px' }}>
+          ✕
+        </button>
+      </div>
+      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+        <div id={elementId.current} style={{ width: '100%', height: '100%' }} />
+      </div>
+      <div style={{
+        padding: '20px 16px', textAlign: 'center', color: 'rgba(255,255,255,0.7)',
+        fontSize: 14, background: 'rgba(0,0,0,0.7)',
+        paddingBottom: 'calc(20px + var(--safe-area-bottom, 0px))',
+      }}>
+        将二维码/条码放入框内，自动识别
+      </div>
+    </div>
+  );
 }

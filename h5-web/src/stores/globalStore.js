@@ -19,6 +19,12 @@ const useGlobalStore = create((set, get) => ({
   setRole: (role) => set({ role }),
   setIsTenantOwner: (v) => set({ isTenantOwner: v }),
 
+  clearScanResultData: () => set({ scanResultData: null }),
+  clearQualityData: () => set({ qualityData: null }),
+  clearRescanData: () => set({ rescanData: null }),
+  clearPatternScanData: () => set({ patternScanData: null }),
+  clearAllScanData: () => set({ scanResultData: null, qualityData: null, rescanData: null, patternScanData: null }),
+
   emitRefresh: () => eventBus.emit('DATA_REFRESH'),
 }));
 

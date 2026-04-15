@@ -8,6 +8,8 @@ import com.fashion.supplychain.common.ParamUtils;
 import com.fashion.supplychain.production.entity.MaterialDatabase;
 import com.fashion.supplychain.production.mapper.MaterialDatabaseMapper;
 import com.fashion.supplychain.production.service.MaterialDatabaseService;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
 import org.springframework.stereotype.Service;
@@ -32,6 +34,7 @@ public class MaterialDatabaseServiceImpl extends ServiceImpl<MaterialDatabaseMap
         String materialType = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "materialType"));
         String supplierName = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "supplierName"));
         String status = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "status"));
+        String disabledStr = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "disabled"));
 
         LambdaQueryWrapper<MaterialDatabase> wrapper = new LambdaQueryWrapper<MaterialDatabase>()
                 .eq(MaterialDatabase::getDeleteFlag, 0)
@@ -47,6 +50,10 @@ public class MaterialDatabaseServiceImpl extends ServiceImpl<MaterialDatabaseMap
                 .orderByDesc(MaterialDatabase::getUpdateTime)
                 .orderByDesc(MaterialDatabase::getCreateTime);
 
+        if ("1".equals(disabledStr)) {
+            wrapper.eq(MaterialDatabase::getDisabled, 1);
+        }
+
         if (StringUtils.hasText(materialType)) {
             String mt = materialType.trim();
             if ("fabric".equalsIgnoreCase(mt) || "lining".equalsIgnoreCase(mt) || "accessory".equalsIgnoreCase(mt)) {
@@ -57,5 +64,44 @@ public class MaterialDatabaseServiceImpl extends ServiceImpl<MaterialDatabaseMap
         }
 
         return baseMapper.selectPage(pageInfo, wrapper);
+    }
+
+    @Override
+    public String generateMaterialCode(String materialType) {
+        String prefix;
+        String baseType;
+        if (materialType != null && materialType.toLowerCase().startsWith("lining")) {
+            prefix = "L";
+            baseType = "lining";
+        } else if (materialType != null && materialType.toLowerCase().startsWith("fabric")) {
+            prefix = "M";
+            baseType = "fabric";
+        } else {
+            prefix = "F";
+            baseType = "accessory";
+        }
+
+        String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String codePrefix = prefix + dateStr;
+
+        LambdaQueryWrapper<MaterialDatabase> wrapper = new LambdaQueryWrapper<MaterialDatabase>()
+                .eq(MaterialDatabase::getDeleteFlag, 0)
+                .likeRight(MaterialDatabase::getMaterialCode, codePrefix)
+                .orderByDesc(MaterialDatabase::getMaterialCode)
+                .last("LIMIT 1");
+
+        MaterialDatabase lastRecord = baseMapper.selectOne(wrapper);
+        int seq = 1;
+        if (lastRecord != null && lastRecord.getMaterialCode() != null) {
+            try {
+                String lastCode = lastRecord.getMaterialCode();
+                String seqPart = lastCode.substring(codePrefix.length());
+                seq = Integer.parseInt(seqPart) + 1;
+            } catch (Exception e) {
+                seq = 1;
+            }
+        }
+
+        return codePrefix + String.format("%03d", seq);
     }
 }

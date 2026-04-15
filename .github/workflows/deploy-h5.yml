@@ -36,8 +36,8 @@ jobs:
         run: npm run build
         working-directory: ${{ env.H5_DIR }}
         env:
-          VITE_API_BASE_URL: ${{ secrets.H5_API_BASE_URL || 'https://api.webyszl.cn' }}
-          VITE_WX_H5_APP_ID: ${{ secrets.WX_H5_APP_ID || '' }}
+          VITE_API_BASE_URL: ${{ vars.H5_API_BASE_URL || 'https://api.webyszl.cn' }}
+          VITE_WX_H5_APP_ID: ${{ vars.WX_H5_APP_ID || '' }}
 
       - name: Verify build output
         run: |
@@ -52,14 +52,15 @@ jobs:
           fi
           ls -la ${{ env.H5_DIR }}/dist/
 
-      - name: Upload to WeChat Cloud Run
-        uses: TencentCloudBase/cloudbase-action@v2
-        with:
-          secretId: ${{ secrets.TCB_SECRET_ID }}
-          secretKey: ${{ secrets.TCB_SECRET_KEY }}
-          envId: ${{ secrets.TCB_ENV_ID }}
-          staticSrcPath: ${{ env.H5_DIR }}/dist
-          staticDestPath: /h5
+      - name: Install CloudBase CLI
+        run: npm install -g @cloudbase/cli
+
+      - name: Deploy to CloudBase Hosting
+        run: |
+          tcb hosting deploy ${{ env.H5_DIR }}/dist -e ${{ secrets.TCB_ENV_ID }} -d /h5
+        env:
+          TCB_SECRET_ID: ${{ secrets.TCB_SECRET_ID }}
+          TCB_SECRET_KEY: ${{ secrets.TCB_SECRET_KEY }}
 
       - name: Deploy notification
         if: always()
@@ -67,11 +68,11 @@ jobs:
           echo "========================================="
           echo "H5 Deployment Status: ${{ job.status }}"
           echo "Deploy Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-          echo "API Base URL: ${{ secrets.H5_API_BASE_URL || 'https://api.webyszl.cn' }}"
+          echo "API Base URL: ${{ vars.H5_API_BASE_URL || 'https://api.webyszl.cn' }}"
           echo "========================================="
           if [ "${{ job.status }}" = "success" ]; then
-            echo "✅ H5已成功部署到微信云托管"
-            echo "访问地址: https://${{ secrets.TCB_ENV_ID }}.tcloudbase.com/h5/"
+            echo "H5 deployed to CloudBase Hosting"
+            echo "URL: https://${{ secrets.TCB_ENV_ID }}.tcloudbase.com/h5/"
           else
-            echo "❌ H5部署失败，请检查日志"
+            echo "H5 deployment failed, check logs"
           fi

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '@/api';
-import { toast, formatDate } from '@/utils/uiHelper';
+import { toast } from '@/utils/uiHelper';
 import { http } from '@/services/http';
 
 const _now = new Date();
@@ -30,7 +30,8 @@ function _normalizeQualityName(processName) {
 
 export default function ScanHistoryPage() {
   const navigate = useNavigate();
-  const [dateMode, setDateMode] = useState('month');
+  const [searchParams] = useSearchParams();
+  const [dateMode, setDateMode] = useState(() => searchParams.get('mode') === 'monthly' ? 'month' : 'month');
   const [year, setYear] = useState(_now.getFullYear());
   const [month, setMonth] = useState(_now.getMonth() + 1);
   const [startDate, setStartDate] = useState(getDateBefore(30));
@@ -60,19 +61,30 @@ export default function ScanHistoryPage() {
       const params = { currentUser: 'true', page: nextPage, pageSize: 30 };
       if (start) params.startTime = start + ' 00:00:00';
       if (end) params.endTime = end + ' 23:59:59';
-      if (searchKeyword) { if (/^\d+$/.test(searchKeyword)) params.bundleNo = searchKeyword; else params.orderNo = searchKeyword; }
+      if (searchKeyword) {
+        if (/^\d+$/.test(searchKeyword)) params.bundleNo = searchKeyword;
+        else params.orderNo = searchKeyword;
+      }
 
       const [scanRes, patternRes, payrollRes] = await Promise.allSettled([
         api.production.myScanHistory(params),
-        reset ? api.production.myPatternScanHistory({ startTime: start + ' 00:00:00', endTime: end + ' 23:59:59' }) : Promise.resolve([]),
+        reset ? api.production.myPatternScanHistory({ startTime: start + ' 00:00:00', endTime: end + ' 23:59:59' }) : Promise.resolve(null),
         reset ? http.post('/api/finance/payroll-settlement/operator-summary', { startTime: start + ' 00:00:00', endTime: end + ' 23:59:59', includeSettled: true }) : Promise.resolve(null),
       ]);
 
-      const result = scanRes.status === 'fulfilled' ? scanRes.value : null;
-      const newRecords = (result?.records || []).filter(item => (item.scanResult || '').toLowerCase() !== 'failure');
+      const scanData = scanRes.status === 'fulfilled' ? scanRes.value : null;
+      const scanResult = scanData?.data || scanData || {};
+      const newRecords = (scanResult?.records || scanResult?.list || []).filter(item => (item.scanResult || '').toLowerCase() !== 'failure');
+
+      let patternRecords = [];
+      if (reset && patternRes.status === 'fulfilled' && patternRes.value) {
+        const pData = patternRes.value?.data || patternRes.value || {};
+        patternRecords = pData?.records || pData?.list || [];
+      }
+
       const formatted = newRecords.map(item => ({
         ...item,
-        displayTime: formatTime(item.scanTime),
+        displayTime: formatTime(item.scanTime || item.createTime),
         displayProcess: _normalizeQualityName(item.processName) || item.progressStage || item.scanType || '-',
         displayWorker: item.workerName || item.operatorName || '-',
         displayOrderNo: item.orderNo || '-',
@@ -82,9 +94,27 @@ export default function ScanHistoryPage() {
         isPayable: (Number(item.totalAmount) > 0) || (Number(item.scanCost) > 0) || ((Number(item.unitPrice) || 0) > 0 && (Number(item.quantity) || 0) > 0),
       }));
 
+      const patternFormatted = patternRecords.map(item => ({
+        ...item,
+        displayTime: formatTime(item.scanTime || item.createTime),
+        displayProcess: '样板',
+        displayWorker: item.workerName || item.operatorName || '-',
+        displayOrderNo: item.orderNo || item.styleNo || '-',
+        displayBundleNo: item.patternNo || '-',
+        displayQuantity: item.quantity || 0,
+        lineAmount: 0,
+        isPayable: false,
+      }));
+
+      const allFormatted = [...formatted, ...patternFormatted].sort((a, b) => {
+        const ta = a.scanTime || a.createTime || '';
+        const tb = b.scanTime || b.createTime || '';
+        return tb.localeCompare(ta);
+      });
+
       const prevList = reset ? [] : records;
-      const merged = prevList.concat(formatted);
-      const total = result?.total || 0;
+      const merged = prevList.concat(allFormatted);
+      const total = scanResult?.total || 0;
 
       let totalWage = 0;
       if (reset && payrollRes.status === 'fulfilled' && payrollRes.value) {
@@ -158,6 +188,14 @@ export default function ScanHistoryPage() {
           <div className="stat-number">{summary.totalQuantity}</div>
           <div className="stat-label">累计件数</div>
         </div>
+        <div className="stat-card tone-purple">
+          <div className="stat-number">{summary.orderCount}</div>
+          <div className="stat-label">订单数</div>
+        </div>
+        <div className="stat-card tone-orange">
+          <div className="stat-number">{summary.recordCount}</div>
+          <div className="stat-label">记录数</div>
+        </div>
       </div>
 
       {loading && records.length === 0 ? (
@@ -183,6 +221,13 @@ export default function ScanHistoryPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {displayRecords.length > 0 && (
+        <button className="load-more-btn" disabled={loading || !hasMore}
+          onClick={() => loadData(false)}>
+          {loading ? '加载中...' : hasMore ? '加载更多' : '没有更多了'}
+        </button>
       )}
     </div>
   );

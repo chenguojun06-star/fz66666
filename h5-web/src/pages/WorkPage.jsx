@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '@/api';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from '@/utils/uiHelper';
-import { getAuthedImageUrl } from '@/utils/fileUrl';
+import { transformOrderData } from '@/utils/orderTransform';
 import Icon from '@/components/Icon';
 
 const TABS = [
@@ -32,26 +32,36 @@ export default function WorkPage() {
   const [delayedOnly, setDelayedOnly] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [factoryType, setFactoryType] = useState('');
-  const [orderStats, setOrderStats] = useState({ orderCount: 0, totalQuantity: 0 });
+  const [orderStats, setOrderStats] = useState({ orderCount: 0, totalQuantity: 0, completedQuantity: 0, overdueCount: 0 });
 
   const loadOrders = useCallback(async (pageNum = 1, append = false) => {
     setLoading(true);
     try {
-      const params = { page: pageNum, pageSize: 20 };
-      if (activeTab) params.currentStage = activeTab;
-      if (search.trim()) params.keyword = search.trim();
-      if (delayedOnly) params.delayedOnly = true;
+      const params = { page: pageNum, pageSize: 20, excludeTerminal: 'true' };
+      if (activeTab) {
+        const processMap = { procurement: '采购', cutting: '裁剪', sewing: '车缝', warehousing: '入库' };
+        if (processMap[activeTab]) params.currentProcessName = processMap[activeTab];
+      }
+      if (search.trim()) {
+        if (/^[A-Za-z0-9-]+$/.test(search.trim())) params.orderNo = search.trim();
+        else params.styleNo = search.trim();
+      }
+      if (delayedOnly) params.delayedOnly = 'true';
       if (factoryType) params.factoryType = factoryType;
       const res = await api.production.orderList(params);
       const data = res?.data || res;
-      const list = data?.list || data?.records || data || [];
+      const rawList = data?.list || data?.records || [];
       const total = data?.total || 0;
+      const list = rawList.map(r => transformOrderData(r));
       setOrders(append ? (prev) => [...prev, ...list] : list);
-      setHasMore(list.length >= 20 && (append ? orders.length + list.length : list.length) < total);
+      setHasMore(rawList.length >= 20 && (append ? orders.length + rawList.length : rawList.length) < total);
       setPage(pageNum);
+      const overdueCount = list.filter(o => o.remainDays !== null && o.remainDays < 0).length;
       setOrderStats({
         orderCount: total || list.length,
-        totalQuantity: list.reduce((sum, o) => sum + (Number(o.totalQuantity) || Number(o.orderQuantity) || 0), 0),
+        totalQuantity: list.reduce((sum, o) => sum + (o.totalQuantity || o.orderQuantity || 0), 0),
+        completedQuantity: list.reduce((sum, o) => sum + (o.completedQuantity || 0), 0),
+        overdueCount,
       });
     } catch (e) {
       toast.error('加载订单失败');
@@ -63,20 +73,6 @@ export default function WorkPage() {
   useEffect(() => { loadOrders(1); }, [activeTab, delayedOnly, factoryType]);
 
   const handleSearch = () => { loadOrders(1); };
-
-  const getRemainDays = (order) => {
-    if (!order.deliveryDate) return null;
-    const delivery = new Date(order.deliveryDate.replace(' ', 'T'));
-    const diff = Math.ceil((delivery - Date.now()) / 86400000);
-    return diff;
-  };
-
-  const getRemainDaysClass = (days) => {
-    if (days === null) return '';
-    if (days < 0) return 'days-overdue';
-    if (days <= 3) return 'days-urgent';
-    return 'days-normal';
-  };
 
   return (
     <div className="work-container">
@@ -105,13 +101,22 @@ export default function WorkPage() {
           <span className="stats-bar-sep">｜</span>
           <span className="stats-bar-label">总量</span>
           <span className="stats-bar-value stats-accent">{orderStats.totalQuantity}</span>
+          <span className="stats-bar-sep">｜</span>
+          <span className="stats-bar-label">完成</span>
+          <span className="stats-bar-value" style={{ color: 'var(--color-success)' }}>{orderStats.completedQuantity}</span>
+          {orderStats.overdueCount > 0 && (
+            <>
+              <span className="stats-bar-sep">｜</span>
+              <span className="stats-bar-label">延期</span>
+              <span className="stats-bar-value" style={{ color: 'var(--color-danger)' }}>{orderStats.overdueCount}</span>
+            </>
+          )}
         </div>
 
         <div className="org-filter-row">
           {FACTORY_TYPES.map((ft) => (
             <div key={ft.value} className={`org-filter-pill${factoryType === ft.value ? ' org-filter-pill-active' : ''}`}
               onClick={() => setFactoryType(ft.value)}>
-              <span className="org-filter-label">工厂</span>
               <span className="org-filter-value">{ft.label}</span>
             </div>
           ))}
@@ -131,21 +136,19 @@ export default function WorkPage() {
         </div>
       ) : (
         orders.map((order) => {
-          const remainDays = getRemainDays(order);
-          const isOverdue = remainDays !== null && remainDays < 0;
+          const isOverdue = order.remainDays !== null && order.remainDays < 0;
           const isExpanded = expandedId === (order.id || order.orderNo);
           const progress = order.productionProgress || 0;
-          const isClosed = order.status === 'closed' || order.isClosed;
+          const isClosed = order.isClosed;
           return (
             <div key={order.id || order.orderNo} className="list-item"
               style={isOverdue ? { borderLeft: '3px solid var(--color-danger)' } : {}}>
               <div className="item-header" onClick={() => setExpandedId(isExpanded ? null : (order.id || order.orderNo))}>
                 <div className="item-cover-box">
-                  {getAuthedImageUrl(order.styleCoverUrl || order.coverImage || order.styleImage || '') ? (
-                    <img className="item-cover" src={getAuthedImageUrl(order.styleCoverUrl || order.coverImage || order.styleImage || '')} alt="" />
-                  ) : (
-                    <div className="item-cover-empty">暂无<br/>图片</div>
-                  )}
+                  {order.styleCoverUrl ? (
+                    <img className="item-cover" src={order.styleCoverUrl} alt="" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
+                  ) : null}
+                  <div className="item-cover-empty" style={order.styleCoverUrl ? { display: 'none' } : {}}>暂无<br/>图片</div>
                 </div>
                 <div className="item-header-info">
                   <div className="item-head">
@@ -162,10 +165,10 @@ export default function WorkPage() {
                   <div className="item-header-sub">
                     <span>{order.styleNo || '-'}</span>
                     <span>·</span>
-                    <span>{order.deliveryDateStr || order.deliveryDate || '交期待定'}</span>
-                    {remainDays !== null && (
-                      <span className={`header-remain-days ${getRemainDaysClass(remainDays)}`}>
-                        {isOverdue ? `已延期${Math.abs(remainDays)}天` : `剩余${remainDays}天`}
+                    <span>{order.deliveryDateStr || '交期待定'}</span>
+                    {order.remainDaysText && (
+                      <span className={`header-remain-days ${order.remainDaysClass || ''}`}>
+                        {order.remainDaysText}
                       </span>
                     )}
                   </div>
@@ -182,11 +185,14 @@ export default function WorkPage() {
               {isExpanded && (
                 <div className="item-collapse-body">
                   <div className="item-meta">
-                    <span className="meta-label">数量</span>
-                    <span className="meta-value meta-value-bold">{order.sizeTotal || order.orderQuantity || 0}</span>
+                    <span className="meta-label">订单数</span>
+                    <span className="meta-value meta-value-bold">{order.totalQuantity || order.orderQuantity || 0}</span>
                     <span className="meta-sep">|</span>
-                    <span className="meta-label">完成</span>
-                    <span className="meta-value meta-value-bold">{order.completedQuantity || 0}</span>
+                    <span className="meta-label">已完成</span>
+                    <span className="meta-value meta-value-bold" style={{ color: 'var(--color-success)' }}>{order.completedQuantity || 0}</span>
+                    <span className="meta-sep">|</span>
+                    <span className="meta-label">裁床</span>
+                    <span className="meta-value">{order.cuttingQty || 0}</span>
                   </div>
                   <div className="item-meta">
                     <span className="meta-label">工厂</span>
@@ -194,20 +200,70 @@ export default function WorkPage() {
                     {order.factoryTypeText && (
                       <>
                         <span className="meta-sep">|</span>
-                        <span className="meta-value">{order.factoryTypeText}</span>
+                        <span className={`meta-value ${order.factoryTypeText === '内部' ? '' : ''}`} style={{
+                          padding: '1px 6px', borderRadius: 4, fontSize: 'var(--font-size-xs)',
+                          background: order.factoryTypeText === '内部' ? 'rgba(59,130,246,0.1)' : 'rgba(245,158,11,0.1)',
+                          color: order.factoryTypeText === '内部' ? 'var(--color-primary)' : 'var(--color-warning)',
+                        }}>{order.factoryTypeText}</span>
                       </>
                     )}
                   </div>
-                  {order.color && (
+                  {order.deliveryDateStr && (
                     <div className="item-meta">
-                      <span className="meta-label">颜色</span>
-                      <span className="meta-value">{order.color}</span>
+                      <span className="meta-label">交期</span>
+                      <span className="meta-value">{order.deliveryDateStr}</span>
+                      {order.remainDaysText && (
+                        <span className={`header-remain-days ${order.remainDaysClass || ''}`} style={{ marginLeft: 6 }}>
+                          {order.remainDaysText}
+                        </span>
+                      )}
                     </div>
                   )}
-                  {order.size && (
+                  {order.orgDisplay && (
                     <div className="item-meta">
-                      <span className="meta-label">码数</span>
-                      <span className="meta-value">{order.size}</span>
+                      <span className="meta-label">组织</span>
+                      <span className="meta-value">{order.orgDisplay}</span>
+                    </div>
+                  )}
+                  {order.statusText && (
+                    <div className="item-meta">
+                      <span className="meta-label">状态</span>
+                      <span className="meta-value">{order.statusText}</span>
+                    </div>
+                  )}
+                  {order.colorGroups && order.colorGroups.length > 0 && (
+                    <div style={{ marginTop: 8 }}>
+                      <div className="meta-label" style={{ marginBottom: 4 }}>尺码明细</div>
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--font-size-xs)' }}>
+                          <thead>
+                            <tr>
+                              <th style={{ padding: '4px 8px', textAlign: 'left', borderBottom: '1px solid var(--color-border-light)', color: 'var(--color-text-secondary)', fontWeight: 400 }}>颜色</th>
+                              {order.allSizes.map(s => (
+                                <th key={s} style={{ padding: '4px 6px', textAlign: 'center', borderBottom: '1px solid var(--color-border-light)', color: 'var(--color-text-secondary)', fontWeight: 400 }}>{s}</th>
+                              ))}
+                              <th style={{ padding: '4px 8px', textAlign: 'center', borderBottom: '1px solid var(--color-border-light)', color: 'var(--color-text-secondary)', fontWeight: 400 }}>小计</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {order.colorGroups.map(g => (
+                              <tr key={g.color}>
+                                <td style={{ padding: '4px 8px', borderBottom: '1px solid var(--color-border-light)' }}>{g.color}</td>
+                                {g.sizeQtyList.map((qty, i) => (
+                                  <td key={i} style={{ padding: '4px 6px', textAlign: 'center', borderBottom: '1px solid var(--color-border-light)' }}>{qty || '-'}</td>
+                                ))}
+                                <td style={{ padding: '4px 8px', textAlign: 'center', fontWeight: 600, borderBottom: '1px solid var(--color-border-light)' }}>{g.total}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                  {order.sizeList && order.sizeList.length > 0 && (!order.colorGroups || !order.colorGroups.length) && (
+                    <div className="item-meta">
+                      <span className="meta-label">尺码</span>
+                      <span className="meta-value">{order.sizeList.map((s, i) => `${s}:${order.sizeQtyList[i]}`).join(' ')}</span>
                     </div>
                   )}
                   {activeTab === 'cutting' && (

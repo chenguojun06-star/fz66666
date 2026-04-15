@@ -23,8 +23,13 @@ function normalizePositiveInt(value, fallback = 1) {
 export default function ScanPatternPage() {
   const navigate = useNavigate();
   const patternScanData = useGlobalStore(s => s.patternScanData);
+  const clearPatternScanData = useGlobalStore(s => s.clearPatternScanData);
   const [detail, setDetail] = useState({});
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    return () => { clearPatternScanData(); };
+  }, [clearPatternScanData]);
 
   useEffect(() => {
     if (!patternScanData) { toast.error('缺少样板数据'); navigate(-1); return; }

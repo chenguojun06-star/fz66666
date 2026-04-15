@@ -518,6 +518,7 @@ export interface MaterialDatabase extends Record<string, unknown> {
   image?: string;
   remark?: string;
   status?: 'pending' | 'completed';
+  disabled?: number;
   completedTime?: string;
   createTime?: string;
   updateTime?: string;
@@ -531,6 +532,7 @@ export interface MaterialDatabaseQueryParams {
   materialType?: string;
   supplierName?: string;
   styleNo?: string;
+  disabled?: number;
   page: number;
   pageSize: number;
 }
