@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import api from '@/api';
-import { isAdminOrSupervisor } from '@/utils/permission';
+import { isManagerLevel } from '@/utils/permission';
 import { toast } from '@/utils/uiHelper';
 import useVoiceInput from '@/hooks/useVoiceInput';
 import useAiChatStream from '@/hooks/useAiChatStream';
@@ -64,7 +64,7 @@ export default function AiAssistantPage() {
   }, [voice.error]);
 
   useEffect(() => {
-    const mgr = isAdminOrSupervisor();
+    const mgr = isManagerLevel();
     setIsManager(mgr);
     setQuickPrompts(mgr ? MANAGER_PROMPTS : WORKER_PROMPTS);
     setMessages([{ id: 'welcome', role: 'ai', text: '你好！这里是小云帮助中心。有什么可以帮你的？\n\n你可以：\n· 打字提问\n· 拍照识别\n· 语音输入' }]);

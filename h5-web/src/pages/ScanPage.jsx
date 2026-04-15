@@ -36,7 +36,6 @@ export default function ScanPage() {
   const [cameraActive, setCameraActive] = useState(false);
   const [stats, setStats] = useState(null);
   const [lastResult, setLastResult] = useState(null);
-  const [confirmData, setConfirmData] = useState(null);
   const [todayRecords, setTodayRecords] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [undoingId, setUndoingId] = useState(null);
@@ -114,7 +113,6 @@ export default function ScanPage() {
     if (isRecentDuplicate(code)) { toast.error('请勿重复扫码'); return; }
     setLoading(true);
     setCameraActive(false);
-    setConfirmData(null);
     try {
       const res = await api.production.executeScan({ scanCode: code, scanType });
       const data = res?.data || res;
@@ -129,7 +127,7 @@ export default function ScanPage() {
           navigate('/scan/pattern');
         } else if (data.needConfirmProcess || (data.stageResult && data.stageResult.allBundleProcesses)) {
           setScanResultData({ ...data, scanCode: code, scanType });
-          setConfirmData({ ...data, scanCode: code, scanType });
+          navigate('/scan/confirm');
         } else {
           setScanResultData({ ...data, scanCode: code, scanType });
           setLastResult({ ...data, scanCode: code, scanType, success: true });
@@ -165,8 +163,6 @@ export default function ScanPage() {
     finally { setUndoingId(null); }
   };
 
-  const goResultPage = () => { if (confirmData) navigate('/scan/scan-result'); };
-
   return (
     <div className="scan-container">
       {/* === 上区：今日统计 === */}
@@ -201,22 +197,7 @@ export default function ScanPage() {
       </div>
 
       {/* === 中区：扫码结果 === */}
-      {confirmData && (
-        <div className="card-item" onClick={goResultPage} style={{ cursor: 'pointer', borderLeft: '3px solid var(--color-success)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-            <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--color-success)' }}>扫码识别结果</span>
-            <span style={{ fontSize: 12, color: 'var(--color-primary)' }}>点击确认 ›</span>
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', fontSize: 13 }}>
-            <span style={{ color: 'var(--color-text-secondary)' }}>款号: <strong style={{ color: 'var(--color-text-primary)' }}>{confirmData.styleNo || '-'}</strong></span>
-            <span style={{ color: 'var(--color-text-secondary)' }}>菲号: <strong style={{ color: 'var(--color-text-primary)' }}>{confirmData.bundleNo || '-'}</strong></span>
-            {confirmData.orderNo && <span style={{ color: 'var(--color-text-secondary)' }}>订单: <strong style={{ color: 'var(--color-text-primary)' }}>{confirmData.orderNo}</strong></span>}
-            {confirmData.quantity && <span style={{ color: 'var(--color-text-secondary)' }}>数量: <strong style={{ color: 'var(--color-text-primary)' }}>{confirmData.quantity}</strong></span>}
-          </div>
-        </div>
-      )}
-
-      {lastResult && !confirmData && (
+      {lastResult && (
         <div className="card-item" style={{ borderLeft: `3px solid ${lastResult.success ? 'var(--color-success)' : 'var(--color-danger)'}` }}>
           <div style={{ fontWeight: 700, fontSize: 13, color: lastResult.success ? 'var(--color-success)' : 'var(--color-danger)', marginBottom: 6 }}>
             {lastResult.success ? '扫码成功' : '扫码失败'}

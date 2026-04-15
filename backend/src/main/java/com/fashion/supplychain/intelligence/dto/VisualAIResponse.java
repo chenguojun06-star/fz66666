@@ -27,6 +27,9 @@ public class VisualAIResponse {
     /** 日志ID（可用于跟踪） */
     private Long logId;
 
+    /** 数据来源：ai_vision=AI视觉分析, ai_no_image=AI无图推理 */
+    private String dataSource;
+
     @Data
     public static class DetectedItem {
         /** 缺陷/特征类型（破洞/色差/起球/尺寸偏大 等） */

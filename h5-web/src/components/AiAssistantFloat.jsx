@@ -3,14 +3,22 @@ import { createPortal } from 'react-dom';
 import api from '@/api';
 import { useAuthStore } from '@/stores/authStore';
 import { useGlobalStore } from '@/stores/globalStore';
-import { isAdminOrSupervisor } from '@/utils/permission';
+import { isManagerLevel } from '@/utils/permission';
 import { toast } from '@/utils/uiHelper';
 import useVoiceInput from '@/hooks/useVoiceInput';
 import useAiChatStream from '@/hooks/useAiChatStream';
 import Icon from '@/components/Icon';
 
-const QUICK_PROMPTS_WORKER = ['内部资料: 扫码规范', '内部资料: 质检流程', '内部资料: 入库流程', '内部资料: 常见问题'];
-const QUICK_PROMPTS_ADMIN = ['内部资料: 日报口径', '内部资料: 逾期定义', '内部资料: 采购流程', '内部资料: 返修流程'];
+const QUICK_PROMPTS_WORKER = [
+  { label: '我的任务', text: '我今天负责的生产任务是什么？' },
+  { label: '扫码记录', text: '帮我查一下我最近的扫码记录' },
+  { label: '订单进度', text: '我负责的订单当前进度怎么样？' },
+];
+const QUICK_PROMPTS_ADMIN = [
+  { label: '生成日报', text: '帮我汇总今日日报' },
+  { label: '风险订单', text: '当前有哪些逾期或高风险订单？' },
+  { label: '今日扫码', text: '今天工厂扫码情况如何？' },
+];
 
 function MiniCloud({ size = 50 }) {
   const s = size / 50;
@@ -156,6 +164,12 @@ export default function AiAssistantFloat() {
     return pendingImage.url;
   };
 
+  const [isMgr, setIsMgr] = useState(false);
+
+  useEffect(() => {
+    setIsMgr(isManagerLevel());
+  }, []);
+
   const handleSend = useCallback(async (text) => {
     const msg = (text || inputText).trim();
     if ((!msg && !pendingImage) || sending) return;
@@ -173,9 +187,10 @@ export default function AiAssistantFloat() {
     const displayText = imageUrl ? (msg || '请看这张图片') : msg;
     setMessages((prev) => [...prev, { role: 'user', text: displayText, image: imageUrl || (pendingImage?.url || null) }]);
 
+    const chatContext = isMgr ? 'manager_assistant' : 'worker_assistant';
     let fullText = '';
     try {
-      const streamParams = { question: msg, pageContext: window.location.pathname, imageUrl };
+      const streamParams = { question: msg, pageContext: chatContext, imageUrl };
       if (scanResultData) {
         if (scanResultData.orderNo) streamParams.orderNo = scanResultData.orderNo;
         if (scanResultData.processName) streamParams.processName = scanResultData.processName;
@@ -199,9 +214,19 @@ export default function AiAssistantFloat() {
             setPendingImage(null);
           },
           onFallback: async (q) => {
-            const res = await api.intelligence.naturalLanguageExecute({ query: q });
-            const r = res?.data || res;
-            return r?.result || r?.message || '暂无回复';
+            if (isMgr) {
+              try {
+                const res = await api.intelligence.naturalLanguageExecute({ text: q });
+                const r = res?.data || res;
+                return r?.result || r?.message || r?.reply || '操作完成';
+              } catch (_) {
+                const res = await api.intelligence.aiAdvisorChat({ message: q, context: 'manager_assistant' });
+                return res?.reply || res?.content || res?.message || '（无回应）';
+              }
+            } else {
+              const res = await api.intelligence.aiAdvisorChat({ message: q, context: 'worker_assistant' });
+              return res?.reply || res?.content || res?.message || '（无回应）';
+            }
           },
         }
       );
@@ -210,9 +235,9 @@ export default function AiAssistantFloat() {
       setSending(false);
       setPendingImage(null);
     }
-  }, [inputText, sending, pendingImage]);
+  }, [inputText, sending, pendingImage, isMgr]);
 
-  const prompts = isAdminOrSupervisor() ? QUICK_PROMPTS_ADMIN : QUICK_PROMPTS_WORKER;
+  const prompts = isMgr ? QUICK_PROMPTS_ADMIN : QUICK_PROMPTS_WORKER;
 
   if (pos.x === -1) return null;
 
@@ -269,7 +294,7 @@ export default function AiAssistantFloat() {
       {!sending && messages.length <= 1 && (
         <div className="chat-quick-chips">
           {prompts.map((p) => (
-            <button key={p} onClick={() => handleSend(p)} className="chat-chip">{p}</button>
+            <button key={p.label} onClick={() => handleSend(p.text)} className="chat-chip">{p.label}</button>
           ))}
         </div>
       )}

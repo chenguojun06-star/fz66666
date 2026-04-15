@@ -17,6 +17,8 @@ public class ProcessTemplateResponse {
     private int sampleStyleCount;
     /** 推荐工序列表（按频率降序） */
     private List<ProcessTemplateItem> processes;
+    /** 数据来源：ie_standard=IE标准库+AI, ai_derived=纯AI推演, historical=历史真实数据 */
+    private String dataSource;
 
     @Data
     @NoArgsConstructor

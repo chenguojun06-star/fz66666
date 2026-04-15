@@ -17,6 +17,7 @@ import com.fashion.supplychain.intelligence.dto.FollowUpAction;
 import com.fashion.supplychain.intelligence.routing.AiAgentDomainRouter;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.intelligence.service.AgentStateStore;
+import com.fashion.supplychain.intelligence.service.DataTruthGuard;
 import com.fashion.supplychain.intelligence.agent.tool.ToolDomain;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,6 +51,7 @@ public class AiAgentOrchestrator {
     @Autowired private AiAgentDomainRouter domainRouter;
     @Autowired private FollowUpSuggestionEngine followUpSuggestionEngine;
     @Autowired private AgentStateStore agentStateStore;
+    @Autowired private DataTruthGuard dataTruthGuard;
 
     private static final int STUCK_MAX_REPEAT = 3;
     private static final int CRICIC_SKIP_MAX_ITERATIONS = 2;
@@ -182,6 +184,16 @@ public class AiAgentOrchestrator {
                 revisedContent = evidenceHelper.appendTeamDispatchCards(revisedContent, teamDispatchCards);
                 revisedContent = evidenceHelper.appendBundleSplitCards(revisedContent, bundleSplitCards);
                 revisedContent = xiaoyunInsightCardOrchestrator.appendToContent(revisedContent, xiaoyunInsightCards);
+
+                // ── 数据真实性守卫：校验AI输出是否有工具数据支撑 ──
+                String toolEvidence = allExecRecords.isEmpty() ? "" : allExecRecords.stream()
+                        .map(r -> r.evidence).reduce((a, b) -> a + " " + b).orElse("");
+                DataTruthGuard.TruthCheckResult truthCheck = dataTruthGuard.checkAiOutputTruth(revisedContent, toolEvidence);
+                if (!truthCheck.isPassed()) {
+                    log.warn("[AiAgent] 数据真实性校验未通过: {}", truthCheck.getReason());
+                    revisedContent = "⚠️ " + truthCheck.getReason() + "\n\n" + revisedContent;
+                }
+                revisedContent = dataTruthGuard.tagDataSource(revisedContent, truthCheck.getDataSource());
 
                 log.info("[AiAgent] 返回最终结果给用户");
                 memoryHelper.saveConversationTurn(userId, tenantId, userMessage, revisedContent);
@@ -338,6 +350,16 @@ public class AiAgentOrchestrator {
                     revisedContent = evidenceHelper.appendTeamDispatchCards(revisedContent, teamDispatchCards);
                     revisedContent = evidenceHelper.appendBundleSplitCards(revisedContent, bundleSplitCards);
                     revisedContent = xiaoyunInsightCardOrchestrator.appendToContent(revisedContent, xiaoyunInsightCards);
+
+                    // ── 数据真实性守卫：校验AI输出是否有工具数据支撑 ──
+                    String streamToolEvidence = allExecRecords.isEmpty() ? "" : allExecRecords.stream()
+                            .map(r -> r.evidence).reduce((a, b) -> a + " " + b).orElse("");
+                    DataTruthGuard.TruthCheckResult streamTruthCheck = dataTruthGuard.checkAiOutputTruth(revisedContent, streamToolEvidence);
+                    if (!streamTruthCheck.isPassed()) {
+                        log.warn("[AiAgent-Stream] 数据真实性校验未通过: {}", streamTruthCheck.getReason());
+                        revisedContent = "⚠️ " + streamTruthCheck.getReason() + "\n\n" + revisedContent;
+                    }
+                    revisedContent = dataTruthGuard.tagDataSource(revisedContent, streamTruthCheck.getDataSource());
 
                     // 最终回答
                     memoryHelper.saveConversationTurn(userId, tenantId, userMessage, revisedContent);

@@ -87,11 +87,13 @@ public class ProcessTemplateOrchestrator {
 
         // 1. 如果 AI 服务可用，并且传入了品类，优先尝试使用 AI 大模型 + IE知识库进行智能限价推断
         if (StringUtils.hasText(category) && aiAdvisorService != null && aiAdvisorService.isEnabled()) {
-            List<ProcessTemplateItem> aiGenerated = tryGenerateViaLLM(category);
+            boolean[] ieMatched = {false};
+            List<ProcessTemplateItem> aiGenerated = tryGenerateViaLLM(category, ieMatched);
             if (aiGenerated != null && !aiGenerated.isEmpty()) {
                 resp.setProcesses(aiGenerated);
-                // 这里假装数据来自大盘全网（100多款样本），增强用户对指导价的信任度
-                resp.setSampleStyleCount(100);
+                int realSampleCount = countRealSamplesForCategory(category);
+                resp.setSampleStyleCount(realSampleCount);
+                resp.setDataSource(ieMatched[0] ? "ie_standard" : "ai_derived");
                 return resp;
             }
         }
@@ -100,7 +102,7 @@ public class ProcessTemplateOrchestrator {
         return buildFromHistoricalData(category, resp);
     }
 
-    private List<ProcessTemplateItem> tryGenerateViaLLM(String category) {
+    private List<ProcessTemplateItem> tryGenerateViaLLM(String category, boolean[] ieMatchedOut) {
         // 在 IE 库中寻找匹配的子记录
         Map<String, Object> matchedKnowledge = null;
         for (Map<String, Object> k : ieKnowledgeBase) {
@@ -117,6 +119,7 @@ public class ProcessTemplateOrchestrator {
         String searchContext = category;
 
         if (matchedKnowledge != null) {
+            if (ieMatchedOut != null) ieMatchedOut[0] = true;
             details = (String) matchedKnowledge.get("details");
             Map<String, Object> pricing = (Map<String, Object>) matchedKnowledge.get("pricing_standard");
             pricingStr = pricing.toString() + "\n【绝对约束】：你拆分出的所有「车缝」工序累加的总单价，必须高度接近上述指导的“车间单价”。所有「尾部」工序单价之和必须接近指导的“尾部单价”。";
@@ -278,7 +281,22 @@ public class ProcessTemplateOrchestrator {
                 .collect(Collectors.toList());
 
         resp.setProcesses(items);
+        resp.setDataSource("historical");
         return resp;
+    }
+
+    private int countRealSamplesForCategory(String category) {
+        Long tenantId = UserContext.tenantId();
+        if (tenantId == null || !StringUtils.hasText(category)) return 0;
+        try {
+            QueryWrapper<StyleInfo> qw = new QueryWrapper<StyleInfo>()
+                    .eq("tenant_id", tenantId)
+                    .eq("category", category)
+                    .select("id");
+            return (int) styleInfoService.count(qw);
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     /** 聚合辅助类 */

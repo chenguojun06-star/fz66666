@@ -8,6 +8,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import com.fashion.supplychain.intelligence.dto.*;
+import com.fashion.supplychain.intelligence.annotation.DataTruth;
 import com.fashion.supplychain.intelligence.orchestration.*;
 import com.fashion.supplychain.intelligence.service.AiAdvisorService;
 import com.fashion.supplychain.intelligence.service.AiContextBuilderService;
@@ -407,6 +408,7 @@ public class IntelligenceController {
     }
 
     @PostMapping("/nl-query")
+    @DataTruth(source = DataTruth.Source.AI_DERIVED, description = "自然语言查询结果由AI生成")
     public Result<NlQueryResponse> nlQuery(@RequestBody NlQueryRequest request) {
         return Result.success(nlQueryOrchestrator.query(request));
     }
@@ -417,6 +419,7 @@ public class IntelligenceController {
     }
 
     @PostMapping("/scheduling-suggestion")
+    @DataTruth(source = DataTruth.Source.REAL_DATA, description = "排产建议基于真实扫码+历史订单数据")
     public Result<SchedulingSuggestionResponse> schedulingSuggestion(@RequestBody SchedulingSuggestionRequest request) {
         return Result.success(schedulingSuggestionOrchestrator.suggest(request));
     }
@@ -980,6 +983,7 @@ public class IntelligenceController {
     /** 排产优化求解 — LLM提取约束 + 启发式求解 */
     @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
     @PostMapping("/optimization/scheduling")
+    @DataTruth(source = DataTruth.Source.AI_DERIVED, description = "排产优化由LLM+启发式求解生成")
     public Result<com.fashion.supplychain.intelligence.orchestration.OptimizationSolverOrchestrator.SchedulingSolution> optimizeScheduling(
             @RequestBody java.util.Map<String, String> body) {
         String userRequest = body.getOrDefault("request", "");

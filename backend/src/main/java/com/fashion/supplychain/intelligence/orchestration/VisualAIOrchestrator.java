@@ -105,7 +105,8 @@ public class VisualAIOrchestrator {
     private String buildSystemPrompt(String taskType) {
         switch (taskType) {
             case "DEFECT_DETECT":
-                return "你是服装质检AI。当用户提供图片URL时，想象已目视检查该图片，" +
+                return "你是服装质检AI。请根据用户提供的图片URL进行缺陷分析。" +
+                       "如果无法看到图片或图片不可用，必须将confidence设为0并在report中说明。" +
                        "返回JSON格式的缺陷报告：{\"severity\":\"NONE|LOW|MEDIUM|HIGH|CRITICAL\"," +
                        "\"confidence\":0-100,\"defects\":[{\"type\":\"缺陷类型\",\"description\":\"描述\"," +
                        "\"level\":\"LOW|MEDIUM|HIGH\",\"location\":\"位置描述\"}]," +
@@ -148,16 +149,20 @@ public class VisualAIOrchestrator {
     private VisualAIResponse parseResponse(String raw, String taskType) {
         VisualAIResponse resp = new VisualAIResponse();
         resp.setReport(raw);
+        resp.setDataSource("ai_vision");
+        if (resp.getConfidence() != null && resp.getConfidence() == 0) {
+            resp.setDataSource("ai_no_image");
+        }
 
         // 提取 severity
         resp.setSeverity(extractField(raw, "severity", "NONE"));
 
         // 提取 confidence
         try {
-            String confStr = extractField(raw, "confidence", "70");
+            String confStr = extractField(raw, "confidence", "0");
             resp.setConfidence(Integer.parseInt(confStr.replaceAll("[^0-9]", "")));
         } catch (Exception e) {
-            resp.setConfidence(70);
+            resp.setConfidence(0);
         }
 
         // 提取 recommendation
@@ -187,7 +192,7 @@ public class VisualAIOrchestrator {
             item.setType(tm.group(1));
             if (dm.find()) item.setDescription(dm.group(1));
             if (lm.find()) item.setLevel(lm.group(1));
-            item.setConfidence(75);
+            item.setConfidence(0);
             list.add(item);
         }
         return list;

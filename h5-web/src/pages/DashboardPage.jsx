@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '@/api';
+import { canSeeDashboard } from '@/utils/permission';
 import { toast } from '@/utils/uiHelper';
 import { transformOrderData } from '@/utils/orderTransform';
 import Icon from '@/components/Icon';
@@ -27,6 +29,15 @@ const SUMMARY_CARDS = [
 ];
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!canSeeDashboard()) {
+      toast.info('无权限访问进度看板');
+      navigate('/', { replace: true });
+    }
+  }, []);
+
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('all');
   const [factoryType, setFactoryType] = useState('');

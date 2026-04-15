@@ -14,8 +14,8 @@ const system = {
   listPendingUsers() {
     return ok('/api/system/user/pending', 'GET', {});
   },
-  updateUser(data) {
-    return ok('/api/system/user', 'PUT', data);
+  updateUser(userId, data) {
+    return ok(`/api/system/user/${userId}`, 'PUT', data);
   },
   approveUser(userId, data) {
     return ok(`/api/system/user/${userId}/approval-action?action=approve`, 'POST', data || {});
@@ -24,7 +24,7 @@ const system = {
     return ok(`/api/system/user/${userId}/approval-action?action=reject`, 'POST', data || {});
   },
   listRoles() {
-    return ok('/api/system/roles/list', 'GET', {});
+    return ok('/api/system/role/list', 'GET', {});
   },
   getOnlineCount() {
     return ok('/api/system/user/online-count', 'GET', {});
@@ -48,7 +48,7 @@ const system = {
 
 const serial = {
   generate(type) {
-    return ok('/api/serial/generate', 'GET', { type });
+    return ok('/api/system/serial/generate', 'GET', { type });
   },
 };
 
@@ -60,13 +60,13 @@ const factory = {
 
 const factoryWorker = {
   list(factoryId) {
-    return ok('/api/system/factory-workers/list', 'GET', { factoryId });
+    return ok('/api/factory-worker/list', 'GET', { factoryId });
   },
   save(data) {
-    return ok('/api/system/factory-workers', 'POST', data || {});
+    return ok('/api/factory-worker', 'POST', data || {});
   },
   remove(id) {
-    return ok(`/api/system/factory-workers/${id}`, 'DELETE', {});
+    return ok(`/api/factory-worker/${id}`, 'DELETE', {});
   },
 };
 
