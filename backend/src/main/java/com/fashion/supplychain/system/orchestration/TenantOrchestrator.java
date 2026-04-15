@@ -313,8 +313,24 @@ public class TenantOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> approveApplication(Long tenantId, String planType, Integer trialDays, String enabledModules) {
         assertSuperAdmin();
+        Tenant current = tenantService.getById(tenantId);
+        if (current == null) {
+            throw new IllegalArgumentException("租户申请不存在");
+        }
+
         // TenantInterceptor 已通过 SUPERADMIN_MANAGED_TABLES 精确放行 t_user/t_role
-        Map<String, Object> result = doApproveApplication(tenantId);
+        Map<String, Object> result;
+        if ("pending_review".equals(current.getStatus())) {
+            result = doApproveApplication(tenantId);
+        } else if ("active".equals(current.getStatus()) || "inactive".equals(current.getStatus()) || "disabled".equals(current.getStatus())) {
+            // 兼容场景：超管通过“审批配置”入口给已激活租户调整套餐，不重复执行开户流程
+            result = new HashMap<>();
+            result.put("tenant", current);
+            result.put("ownerUsername", current.getOwnerUsername());
+            log.info("[审批入口兼容] tenantId={} 状态={}，跳过开户流程，仅更新套餐/试用期/模块", tenantId, current.getStatus());
+        } else {
+            throw new IllegalStateException("该申请不是待审核状态");
+        }
 
         // 审批通过后设置套餐和试用期
         Tenant tenant = tenantService.getById(tenantId);

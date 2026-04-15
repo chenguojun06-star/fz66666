@@ -363,10 +363,24 @@ public class TenantController {
     public Result<Map<String, Object>> approveApplication(@PathVariable Long id,
                                                            @RequestBody(required = false) Map<String, Object> params) {
         String planType = params != null ? (String) params.get("planType") : null;
-        Integer trialDays = params != null && params.get("trialDays") != null
-                ? Integer.valueOf(params.get("trialDays").toString()) : null;
+        Integer trialDays = parseNullableInteger(params != null ? params.get("trialDays") : null, "trialDays");
         String enabledModules = params != null ? (String) params.get("enabledModules") : null;
         return Result.success(tenantOrchestrator.approveApplication(id, planType, trialDays, enabledModules));
+    }
+
+    private Integer parseNullableInteger(Object raw, String fieldName) {
+        if (raw == null) {
+            return null;
+        }
+        String value = raw.toString();
+        if (value == null || value.trim().isEmpty()) {
+            return null;
+        }
+        try {
+            return Integer.valueOf(value.trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(fieldName + " 格式错误");
+        }
     }
 
     /**
