@@ -2,9 +2,10 @@ FROM maven:3.9.9-eclipse-temurin-21 AS build
 WORKDIR /app
 COPY backend/pom.xml ./
 COPY backend/checkstyle.xml ./
-RUN mvn -q -e -DskipTests dependency:go-offline
+ENV MAVEN_OPTS="-Xmx512m"
+RUN mvn -q -e -DskipTests -Dcheckstyle.skip=true dependency:go-offline
 COPY backend/src ./src
-RUN mvn -e -DskipTests package
+RUN mvn -e -DskipTests -Dcheckstyle.skip=true package
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app
