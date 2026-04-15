@@ -72,7 +72,7 @@
 .action-btn-primary { background: var(--color-primary); color: var(--color-text-white); }
 
 .days-tag { font-weight: 600; font-size: var(--font-size-xs); }
-.days-tag.days-overdue { color: var(--color-warning); }
+.days-tag.days-overdue { color: var(--color-danger); }
 .days-tag.days-urgent { color: var(--color-warning); }
 .days-tag.days-warn { color: var(--color-warning); }
 .days-tag.days-safe { color: var(--color-success); }
@@ -81,7 +81,7 @@
 .days-safe { color: var(--color-success); }
 .days-warn { color: var(--color-warning); }
 .days-urgent { color: var(--color-warning); }
-.days-overdue { color: var(--color-warning); font-weight: 600; }
+.days-overdue { color: var(--color-danger); font-weight: 600; }
 .days-done { color: var(--color-success); }
 
 .item-cover-empty { width: 80px; height: 80px; border-radius: var(--radius-md); background: var(--color-bg-gray); display: flex; align-items: center; justify-content: center; font-size: var(--font-size-xs); color: var(--color-text-disabled); text-align: center; line-height: 1.3; }
@@ -109,7 +109,7 @@
 .card-item-cover { width: 100%; max-height: 160px; object-fit: cover; border-radius: var(--radius-md); margin-bottom: 12px; }
 
 .order-card-item { padding: 12px; }
-.order-card-item--overdue { border-left: 2px solid var(--color-warning); }
+.order-card-item--overdue { border-left: 2px solid var(--color-danger); }
 
 .order-card-header { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
 .order-card-thumb { width: 64px; height: 64px; border-radius: var(--radius-md); overflow: hidden; flex-shrink: 0; background: var(--color-bg-gray); position: relative; }

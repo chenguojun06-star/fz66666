@@ -2,6 +2,30 @@ import { memo } from 'react';
 import { getAuthedImageUrl } from '@/utils/fileUrl';
 import Icon from '@/components/Icon';
 
+function getUrgencyTagClass(text, isClosed) {
+  if (isClosed) return 'tag-muted';
+  if (text === '急') return 'tag-red';
+  return 'tag-blue';
+}
+
+function getStatusTagClass(order) {
+  if (order.isClosed) return 'tag-muted';
+  const isOverdue = order.remainDays !== null && order.remainDays < 0;
+  if (isOverdue) return 'tag-red';
+  const cls = order.remainDaysClass || '';
+  if (cls === 'days-urgent' || cls === 'days-warn') return 'tag-orange';
+  return 'tag-blue';
+}
+
+function getProgressColor(order) {
+  if (order.isClosed) return 'var(--color-text-tertiary)';
+  const isOverdue = order.remainDays !== null && order.remainDays < 0;
+  if (isOverdue) return 'var(--color-danger)';
+  const cls = order.remainDaysClass || '';
+  if (cls === 'days-urgent' || cls === 'days-warn') return 'var(--color-warning)';
+  return 'var(--color-primary)';
+}
+
 const OrderCard = memo(function OrderCard({ order, isExpanded, onToggle, activeTab, onBundleSplit, onCopyOrderNo }) {
   const imgUrl = order.styleCoverUrl ? getAuthedImageUrl(order.styleCoverUrl) : '';
   const isOverdue = order.remainDays !== null && order.remainDays < 0;
@@ -11,12 +35,7 @@ const OrderCard = memo(function OrderCard({ order, isExpanded, onToggle, activeT
   const totalQty = order.totalQuantity || order.orderQuantity || 0;
   const remainQty = order.remainQuantity || Math.max(0, totalQty - completedQty);
   const processNodes = order.processNodes || [];
-
-  const progressColor = isClosed
-    ? 'var(--color-text-tertiary)'
-    : isOverdue
-      ? 'var(--color-warning)'
-      : 'var(--color-primary)';
+  const progressColor = getProgressColor(order);
 
   return (
     <div className={`card-item order-card-item${isOverdue ? ' order-card-item--overdue' : ''}`}>
@@ -35,7 +54,12 @@ const OrderCard = memo(function OrderCard({ order, isExpanded, onToggle, activeT
               <span className="tag tag-blue">{order.plateTypeTagText === '首' ? '首单' : '翻单'}</span>
             )}
             {order.urgencyTagText && (
-              <span className="tag tag-orange">{order.urgencyTagText === '急' ? '急单' : order.urgencyTagText}</span>
+              <span className={`tag ${getUrgencyTagClass(order.urgencyTagText, isClosed)}`}>
+                {order.urgencyTagText === '急' ? '急单' : order.urgencyTagText}
+              </span>
+            )}
+            {isClosed && (
+              <span className="tag tag-muted">已关单</span>
             )}
           </div>
           <div className="order-card-sub">
@@ -49,7 +73,7 @@ const OrderCard = memo(function OrderCard({ order, isExpanded, onToggle, activeT
               <span className="text-tertiary">交期待定</span>
             )}
             {order.remainDaysText && (
-              <span className={`days-tag ${order.remainDaysClass || ''}`}>{order.remainDaysText}</span>
+              <span className={`days-tag ${getStatusTagClass(order)}`}>{order.remainDaysText}</span>
             )}
           </div>
           <div className="order-card-progress-row">
@@ -79,7 +103,7 @@ const OrderCard = memo(function OrderCard({ order, isExpanded, onToggle, activeT
         </div>
         <div className="order-card-qty-divider" />
         <div className="order-card-qty-item">
-          <span className="order-card-qty-val" style={{ color: isOverdue ? 'var(--color-warning)' : 'var(--color-text-primary)' }}>{remainQty}</span>
+          <span className="order-card-qty-val" style={{ color: isOverdue ? 'var(--color-danger)' : 'var(--color-text-primary)' }}>{remainQty}</span>
           <span className="order-card-qty-lbl">剩余</span>
         </div>
       </div>
