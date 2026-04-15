@@ -1,0 +1,1 @@
+import{r as m,j as t}from"./index-CQxaFNdD.js";const c=m.memo(function({icon:s="📋",title:a="暂无数据",desc:e}){return t.jsxs("div",{className:"empty-state",children:[t.jsx("div",{className:"empty-state-icon",children:s}),t.jsx("div",{className:"empty-state-title",children:a}),e&&t.jsx("div",{className:"empty-state-desc",children:e})]})});export{c as E};

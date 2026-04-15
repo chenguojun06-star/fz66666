@@ -35,7 +35,7 @@ const OrderCard = memo(function OrderCard({ order, isExpanded, onToggle, activeT
               <span className="tag tag-blue">{order.plateTypeTagText === '首' ? '首单' : '翻单'}</span>
             )}
             {order.urgencyTagText && (
-              <span className="tag tag-red">{order.urgencyTagText === '急' ? '急单' : order.urgencyTagText}</span>
+              <span className="tag tag-orange">{order.urgencyTagText === '急' ? '急单' : order.urgencyTagText}</span>
             )}
           </div>
           <div className="order-card-sub">

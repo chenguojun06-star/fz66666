@@ -62,6 +62,13 @@ export default function ScanResultPage() {
   const [materialPurchases, setMaterialPurchases] = useState([]);
   const [materialSummary, setMaterialSummary] = useState({ totalDemand: 0, totalArrived: 0, totalPending: 0 });
 
+  const splitTipPoints = (text) => {
+    if (!text) return [];
+    return text.split(/\n|。/)
+      .map(s => s.replace(/^[·•\-\s]+/, '').trim())
+      .filter(Boolean);
+  };
+
   useEffect(() => {
     return () => { clearScanResultData(); };
   }, [clearScanResultData]);
@@ -271,7 +278,11 @@ export default function ScanResultPage() {
             {aiTipData.stage && <span className={`ai-bubble-stage${isHigh ? ' high' : ''}`}>{aiTipData.stage}</span>}
             <span className="ai-bubble-close" onClick={dismissAiTip}>✕</span>
           </div>
-          <div className="ai-bubble-text">{aiTipData.aiTip}</div>
+          <div className="ai-bubble-points">
+            {splitTipPoints(aiTipData.aiTip).map((pt, i) => (
+              <div key={i} className="ai-bubble-point">· {pt}</div>
+            ))}
+          </div>
           {aiTipData.keywords && aiTipData.keywords.length > 0 && (
             <div className="ai-bubble-tags">
               {aiTipData.keywords.map((kw, i) => (
@@ -282,90 +293,62 @@ export default function ScanResultPage() {
         </div>
       )}
 
-      {description && (
+      {(description || secondaryProcesses.length > 0) && (
         <div className="section-card">
-          <div className="section-title">工艺制单</div>
-          <div className="description-content">{description}</div>
-        </div>
-      )}
-
-      {secondaryProcesses.length > 0 && (
-        <div className="section-card process-highlight-card">
-          <div className="section-title process-highlight-title">二次工艺（{secondaryProcesses.length}项）</div>
-          <div className="process-list">
-            {secondaryProcesses.map((item, idx) => (
-              <div key={item.id || idx} className="process-item">
-                <div className="process-item-header">
-                  {item.processTypeCN && <span className="process-type-tag">{item.processTypeCN}</span>}
-                  <span className="process-name">{item.processName || item.processTypeCN || '-'}</span>
-                  <span className={`process-status${item.status === 'completed' ? ' status-done' : ' status-active'}`}>{item.statusCN}</span>
-                </div>
-                {item.description && <div className="process-item-desc">{item.description}</div>}
-                <div className="process-item-detail">
-                  {item.quantity && <span className="process-detail-text">数量 {item.quantity}</span>}
-                  {item.unitPrice && <span className="process-detail-text">单价 ¥{item.unitPrice}</span>}
-                  {item.factoryName && <span className="process-detail-text">工厂 {item.factoryName}</span>}
-                </div>
-                {item.remark && <div className="process-item-remark">备注：{item.remark}</div>}
+          {description && (
+            <>
+              <div className="section-title">工艺要点</div>
+              <div className="craft-points">
+                {splitTipPoints(description).map((pt, i) => (
+                  <div key={i} className="craft-point">· {pt}</div>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          )}
+          {secondaryProcesses.length > 0 && (
+            <>
+              <div className="section-title" style={{ marginTop: description ? 10 : 0 }}>难度工序（{secondaryProcesses.length}）</div>
+              <div className="process-list">
+                {secondaryProcesses.map((item, idx) => (
+                  <div key={item.id || idx} className="process-item">
+                    <div className="process-item-row">
+                      {item.processTypeCN && <span className="process-type-tag">{item.processTypeCN}</span>}
+                      <span className="process-name">{item.processName || item.processTypeCN || '-'}</span>
+                      <span className={`process-status${item.status === 'completed' ? ' status-done' : ' status-active'}`}>{item.statusCN}</span>
+                    </div>
+                    {item.description && <div className="process-item-desc">· {item.description}</div>}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       )}
 
       {materialPurchases.length > 0 && (
-        <>
-          <div className="section-card">
-            <div className="section-title">面辅料采购明细（{materialPurchases.length}项）</div>
-            <div className="material-list">
-              {materialPurchases.map((item, idx) => (
-                <div key={item.id || idx} className="material-item">
-                  <div className="mat-row">
-                    {item.materialTypeCN && <span className="mat-tag">{item.materialTypeCN}</span>}
-                    {item.materialCode && <span className="mat-text">编号 {item.materialCode}</span>}
-                    {item.specifications && <span className="mat-text">规格 {item.specifications}</span>}
-                    <span className="mat-text">单位 {item.unit || '米'}</span>
-                  </div>
-                  {(item.fabricComposition || item.fabricWeight || item.fabricWidth) && (
-                    <div className="mat-row">
-                      {item.fabricComposition && <span className="mat-text">成分 {item.fabricComposition}</span>}
-                      {item.fabricWeight && <span className="mat-text">克重 {item.fabricWeight}</span>}
-                      {item.fabricWidth && <span className="mat-text">幅宽 {item.fabricWidth}</span>}
-                    </div>
-                  )}
-                  <div className="mat-row mat-row-qty">
-                    <div className="qty-item">
-                      <span className="qty-lbl">需求</span>
-                      <span className="qty-val">{item.purchaseQuantity || 0}</span>
-                    </div>
-                    <div className="qty-item">
-                      <span className="qty-lbl">已到</span>
-                      <span className="qty-val arrived">{item.arrivedQuantity || 0}</span>
-                    </div>
-                    <div className="qty-item">
-                      <span className="qty-lbl">待到</span>
-                      <span className="qty-val pending">{item.pendingQuantity || 0}</span>
-                    </div>
-                  </div>
+        <div className="section-card">
+          <div className="section-title">面辅料（{materialPurchases.length}项）</div>
+          <div className="material-list">
+            {materialPurchases.map((item, idx) => (
+              <div key={item.id || idx} className="material-item">
+                <div className="mat-row">
+                  {item.materialTypeCN && <span className="mat-tag">{item.materialTypeCN}</span>}
+                  <span className="mat-name">{item.materialCode || item.specifications || '-'}</span>
                 </div>
-              ))}
-            </div>
+                <div className="mat-row">
+                  {item.fabricComposition && <span className="mat-text">成分 {item.fabricComposition}</span>}
+                  {item.fabricWeight && <span className="mat-text">克重 {item.fabricWeight}</span>}
+                  {item.fabricWidth && <span className="mat-text">幅宽 {item.fabricWidth}</span>}
+                </div>
+                <div className="mat-row mat-row-qty">
+                  <span className="mat-text">需求 {item.purchaseQuantity || 0}</span>
+                  <span className="mat-text arrived">已到 {item.arrivedQuantity || 0}</span>
+                  <span className="mat-text pending">待到 {item.pendingQuantity || 0}</span>
+                </div>
+              </div>
+            ))}
           </div>
-          <div className="material-summary-card">
-            <div className="material-summary-row">
-              <span className="material-summary-label">总需求</span>
-              <span className="material-summary-value">{materialSummary.totalDemand}</span>
-            </div>
-            <div className="material-summary-row">
-              <span className="material-summary-label">已到货</span>
-              <span className="material-summary-value arrived">{materialSummary.totalArrived}</span>
-            </div>
-            <div className="material-summary-row">
-              <span className="material-summary-label">待到货</span>
-              <span className="material-summary-value pending">{materialSummary.totalPending}</span>
-            </div>
-          </div>
-        </>
+        </div>
       )}
 
       <div className="field-block">
