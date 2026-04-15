@@ -152,7 +152,7 @@ export default function DashboardPage() {
           {todayScanCount > 0 && (
             <span className="today-scan-badge">今日扫码 {todayScanCount} 次</span>
           )}
-          <button className="refresh-btn" onClick={handleRefresh} style={{ margin: 0 }}>
+          <button className="refresh-btn" onClick={handleRefresh}>
             <Icon name="refresh" size={12} /> 刷新
           </button>
         </div>

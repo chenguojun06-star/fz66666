@@ -173,7 +173,7 @@ export default function ScanPage() {
       <div className="card-item">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--color-text-primary)' }}>今日统计</span>
-          <button className="filter-btn" style={{ fontSize: 12, padding: '4px 12px' }} onClick={loadStats}>
+          <button className="refresh-btn" onClick={loadStats}>
             <Icon name="refresh" size={12} /> 刷新
           </button>
         </div>

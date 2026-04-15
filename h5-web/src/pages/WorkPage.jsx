@@ -104,8 +104,8 @@ export default function WorkPage() {
         ))}
         <button className={`filter-btn${delayedOnly ? ' active' : ''}`}
           onClick={() => setDelayedOnly(!delayedOnly)} style={{ marginLeft: 'auto' }}>延期</button>
-        <button className="filter-btn" onClick={() => loadOrders(true)}>
-          <Icon name="refresh" size={12} />
+        <button className="refresh-btn" onClick={() => loadOrders(true)}>
+          <Icon name="refresh" size={12} /> 刷新
         </button>
       </div>
 

@@ -16,7 +16,8 @@
 .org-filter-pill-active { border-color: var(--color-primary); background: rgba(var(--color-primary-rgb), 0.06); }
 .org-filter-label { font-size: var(--font-size-xs); color: var(--color-text-secondary); }
 .org-filter-value { font-size: var(--font-size-sm); color: var(--color-text-primary); font-weight: 600; }
-.refresh-btn { display: flex; align-items: center; gap: 4px; padding: 6px 12px; background: var(--color-bg-card); border-radius: var(--radius-full); border: 1px solid var(--color-border); flex-shrink: 0; font-size: var(--font-size-xs); color: var(--color-text-secondary); cursor: pointer; margin-left: auto; }
+.refresh-btn { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; background: var(--color-bg-card); border-radius: var(--radius-full); border: 1px solid var(--color-border); flex-shrink: 0; font-size: var(--font-size-xs); color: var(--color-text-secondary); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.refresh-btn:active { opacity: 0.7; }
 
 .filter-btn { padding: 6px 14px; border-radius: 8px; border: none; background: var(--color-bg-gray); color: var(--color-text-primary); font-size: var(--font-size-sm); font-weight: 500; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 4px; }
 .filter-btn:active { opacity: 0.7; }
