@@ -103,23 +103,13 @@ function showScanResultConfirm(ctx, data) {
   const { options: processOptions } =
     buildProcessOptions(processName, progressStage, stageResult);
 
-  const isWarehouseStage = progressStage === 'warehouse' || progressStage === '入库'
-    || data.scanType === 'warehouse';
-
-  if (processOptions.length === 0 && !isWarehouseStage) {
-    console.warn('[ScanResultHandler] 非入库阶段且无可用工序，跳转确认页让用户手动处理');
-  }
-
-  if (isWarehouseStage) {
-    data.showWarehouse = true;
-    data.hasWarehouseSelected = true;
-  }
-
-  getApp().globalData.scanResultData = data;
-  wx.navigateTo({ url: '/pages/scan/scan-result/index' });
-}
+  if (processOptions.length === 0) {
+    console.error('[ScanResultHandler] 所有工序已扫完，不应弹出确认页');
+    toast.error('该菲号所有工序已完成');
+    return;
 
 /**
+  // 跳转独立页面（原弹窗已转为页面）
  * 数量输入框变更
  * @param {Object} ctx - Page 上下文
  * @param {Object} e - 输入事件

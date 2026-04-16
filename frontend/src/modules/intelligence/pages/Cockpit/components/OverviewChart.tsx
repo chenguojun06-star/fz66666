@@ -1,278 +1,472 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Spin } from 'antd';
-import { ArrowUpOutlined, ArrowDownOutlined, MinusOutlined } from '@ant-design/icons';
-import { useTimeDimension } from '../contexts/TimeDimensionContext';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import { useTimeDimension, TimeDimension } from '../contexts/TimeDimensionContext';
+import { useStyleLink } from '../contexts/StyleLinkContext';
 import api from '@/utils/api';
+import type { ProductionOrder } from '@/types/production';
 import './OverviewChart.css';
 
-interface TrendDataPoint {
-  value: number;
-  label: string;
+interface TrendData {
+  date: string;
+  orderCount: number;
+  productionCount: number;
+  inboundCount: number;
 }
 
-const COLORS = ['#2563eb', '#059669', '#d97706', '#dc2626', '#7c3aed'];
-const CHART_COLOR = '#2563eb';
+interface OverviewChartProps {
+  mode?: 'sidebar' | 'stage';
+  moduleKey?: string;
+  position?: { x: number; y: number; width: number; height: number };
+}
 
-const OverviewChart: React.FC = () => {
-  const { getDateRange } = useTimeDimension();
+const COLORS = {
+  order: { ring: '#a78bfa', text: '#94a3b8' },
+  production: { ring: '#60a5fa', text: '#94a3b8' },
+  inbound: { ring: '#34d399', text: '#94a3b8' },
+};
+
+const OverviewChart: React.FC<OverviewChartProps> = ({ mode = 'sidebar', moduleKey, position }) => {
+  const { dimension, getDateRange } = useTimeDimension();
+  const styleLink = useStyleLink();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  const [orders, setOrders] = useState<ProductionOrder[]>([]);
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [svgWidth, setSvgWidth] = useState(500);
-
-  const [metrics, setMetrics] = useState({
-    todayOrder: 0,
-    todaySample: 0,
-    todayProduction: 0,
-    todayInbound: 0,
-    todayOutbound: 0,
-  });
-
-  const [chartData, setChartData] = useState([
-    { label: '订单', value: 0, color: COLORS[0] },
-    { label: '样衣', value: 0, color: COLORS[1] },
-    { label: '生产', value: 0, color: COLORS[2] },
-    { label: '采购', value: 0, color: COLORS[3] },
-    { label: '仓库', value: 0, color: COLORS[4] },
-  ]);
-
-  const [trendData, setTrendData] = useState<TrendDataPoint[]>([]);
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { start, end } = getDateRange();
-      const [ordersRes, stylesRes, purchasesRes, warehouseRes] = await Promise.all([
-        api.get<{ code: number; data: { records?: any[]; total?: number } }>('/production/order/list', {
-          params: { page: 1, pageSize: 1, startDate: start.toISOString(), endDate: end.toISOString() },
-        }),
-        api.get<{ code: number; data: { records?: any[]; total?: number } }>('/style/info/list', {
-          params: { page: 1, pageSize: 1, startDate: start.toISOString(), endDate: end.toISOString() },
-        }),
-        api.get<{ code: number; data: { records?: any[]; total?: number } }>('/production/purchase/list', {
-          params: { page: 1, pageSize: 1, startDate: start.toISOString(), endDate: end.toISOString() },
-        }),
-        api.post<{ code: number; data: { records?: any[]; total?: number } }>('/warehouse/finished-inventory/list', {
-          page: 1, pageSize: 1, startDate: start.toISOString(), endDate: end.toISOString(),
-        }),
-      ]);
-
-      const orderCount = ordersRes?.data?.total || 0;
-      const sampleCount = stylesRes?.data?.total || 0;
-      const procurementCount = purchasesRes?.data?.total || 0;
-      const warehouseCount = warehouseRes?.data?.total || 0;
-
-      setChartData([
-        { label: '订单', value: orderCount, color: COLORS[0] },
-        { label: '样衣', value: sampleCount, color: COLORS[1] },
-        { label: '生产', value: orderCount, color: COLORS[2] },
-        { label: '采购', value: procurementCount, color: COLORS[3] },
-        { label: '仓库', value: warehouseCount, color: COLORS[4] },
-      ]);
-
-      // Generate mock trend data
-      const days: TrendDataPoint[] = [];
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        days.push({ value: Math.floor(Math.random() * 50) + 10, label: d.toISOString().split('T')[0] });
-      }
-      setTrendData(days);
-
-      // Mock metrics
-      setMetrics({
-        todayOrder: Math.floor(Math.random() * 20) + 5,
-        todaySample: Math.floor(Math.random() * 15) + 3,
-        todayProduction: Math.floor(Math.random() * 30) + 10,
-        todayInbound: Math.floor(Math.random() * 10) + 2,
-        todayOutbound: Math.floor(Math.random() * 15) + 5,
-      });
-    } catch (err) {
-      setError('加载失败');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  }, [getDateRange]);
+  const [scale, setScale] = useState(1);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  useEffect(() => {
+    if (mode !== 'stage' || !containerRef.current) return;
     const el = containerRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(entries => {
-      for (const e of entries) {
-        if (e.contentRect.width > 0) setSvgWidth(e.contentRect.width);
-      }
-    });
-    ro.observe(el);
+    const parentEl = el.parentElement;
+    const targetEl = parentEl || el;
+
+    const update = () => {
+      const w = targetEl.getBoundingClientRect().width;
+      const h = targetEl.getBoundingClientRect().height;
+      const minDim = Math.min(w, h);
+      setScale(Math.max(0.5, Math.min(2, minDim / 500)));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(targetEl);
     return () => ro.disconnect();
+  }, [mode]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        const { start, end } = getDateRange();
+        const res = await api.get<{ code: number; data: { records?: ProductionOrder[] } }>('/production/order/list', {
+          params: {
+            page: 1,
+            pageSize: 1000,
+            startDate: start.toISOString(),
+            endDate: end.toISOString(),
+            excludeTerminal: true,
+          },
+        });
+        setOrders(res?.data?.records || []);
+      } catch (e) {
+        console.error('Load overview data failed:', e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    void loadData();
+  }, [dimension, getDateRange]);
+
+  const styleList = useMemo(() => {
+    return orders
+      .filter(o => o.styleNo)
+      .map(o => ({ styleNo: o.styleNo, styleName: o.styleName }));
+  }, [orders]);
+
+  const prevStyleListRef = useRef<string>('');
+  const prevPositionRef = useRef<string>('');
+
+  useEffect(() => {
+    if (mode !== 'stage' || !styleLink || !moduleKey || !position || styleList.length === 0) return;
+
+    const styleListKey = styleList.map(s => s.styleNo).sort().join(',');
+    const positionKey = `${position.x},${position.y},${position.width},${position.height}`;
+
+    if (prevStyleListRef.current === styleListKey && prevPositionRef.current === positionKey) {
+      return;
+    }
+
+    prevStyleListRef.current = styleListKey;
+    prevPositionRef.current = positionKey;
+
+    styleLink.registerStyle(moduleKey, styleList, position);
+  }, [mode, styleLink, moduleKey, position, styleList]);
+
+  useEffect(() => {
+    return () => {
+      if (styleLink && moduleKey) {
+        styleLink.unregisterModule(moduleKey);
+      }
+    };
+  }, [styleLink, moduleKey]);
+
+  const trendData = useMemo(() => {
+    const { start, end } = getDateRange();
+    const data: TrendData[] = [];
+    let points = 7;
+
+    switch (dimension) {
+      case 'day': points = 24; break;
+      case 'week': points = 7; break;
+      case 'month': points = 30; break;
+      case 'year': points = 12; break;
+    }
+
+    const msPerPoint = (end.getTime() - start.getTime()) / points;
+
+    for (let i = 0; i < points; i++) {
+      const pointStart = new Date(start.getTime() + i * msPerPoint);
+      const pointEnd = new Date(start.getTime() + (i + 1) * msPerPoint);
+      let label = '';
+
+      if (dimension === 'day') {
+        label = `${pointStart.getHours().toString().padStart(2, '0')}:00`;
+      } else if (dimension === 'week' || dimension === 'month') {
+        label = `${(pointStart.getMonth() + 1).toString().padStart(2, '0')}-${pointStart.getDate().toString().padStart(2, '0')}`;
+      } else {
+        label = `${pointStart.getFullYear()}-${(pointStart.getMonth() + 1).toString().padStart(2, '0')}`;
+      }
+
+      const periodOrders = orders.filter(o => {
+        const dateStr = String(o.createTime || o.createdAt || o.orderDate || '');
+        if (!dateStr || dateStr === 'undefined') return false;
+        const orderDate = new Date(dateStr);
+        if (isNaN(orderDate.getTime())) return false;
+        return orderDate >= pointStart && orderDate < pointEnd;
+      });
+
+      const orderCount = periodOrders.reduce((sum, o) => sum + (o.orderQuantity || 0), 0);
+      const productionCount = periodOrders.filter(o => String(o.status||'').toUpperCase() === 'PRODUCTION').reduce((sum, o) => sum + (o.orderQuantity || 0), 0);
+      const inboundCount = periodOrders.filter(o => String(o.status||'').toUpperCase() === 'COMPLETED').reduce((sum, o) => sum + (o.inStockQuantity || o.orderQuantity || 0), 0);
+
+      data.push({ date: label, orderCount, productionCount, inboundCount });
+    }
+
+    return data;
+  }, [orders, dimension, getDateRange]);
+
+  const filteredStats = useMemo(() => {
+    const { start, end } = getDateRange();
+
+    const filteredOrders = orders.filter(o => {
+      const dateStr = String(o.createTime || o.createdAt || o.orderDate || '');
+      if (!dateStr || dateStr === 'undefined') return false;
+      const orderDate = new Date(dateStr);
+      if (isNaN(orderDate.getTime())) return false;
+      return orderDate >= start && orderDate <= end;
+    });
+
+    const totalOrders = filteredOrders.length;
+    const totalOrderQty = filteredOrders.reduce((sum, o) => sum + (o.orderQuantity || 0), 0);
+    const productionOrders = filteredOrders.filter(o => String(o.status||'').toUpperCase() === 'PRODUCTION');
+    const productionQty = productionOrders.reduce((sum, o) => sum + (o.orderQuantity || 0), 0);
+    const completedOrders = filteredOrders.filter(o => String(o.status||'').toUpperCase() === 'COMPLETED');
+    const inboundQty = completedOrders.reduce((sum, o) => sum + (o.inStockQuantity || o.orderQuantity || 0), 0);
+
+    const days = dimension === 'day' ? 1 : dimension === 'week' ? 7 : dimension === 'month' ? 30 : 365;
+    const avgOrderCycle = totalOrders > 0 ? Math.round((days / totalOrders) * 10) / 10 : 0;
+    const avgOrderQty = totalOrders > 0 ? Math.round(totalOrderQty / totalOrders) : 0;
+    const avgProductionTime = productionQty > 0 ? Math.round((days * 24 / productionQty) * 10) / 10 : 0;
+    const avgInboundTime = inboundQty > 0 ? Math.round((days * 24 / inboundQty) * 10) / 10 : 0;
+
+    return {
+      order: { count: totalOrders, qty: totalOrderQty, avgCycle: avgOrderCycle, avgQty: avgOrderQty },
+      production: { count: productionOrders.length, qty: productionQty, avgTime: avgProductionTime },
+      inbound: { count: completedOrders.length, qty: inboundQty, avgTime: avgInboundTime },
+    };
+  }, [orders, dimension, getDateRange]);
+
+  const stats = filteredStats;
+
+  const buildSmoothPath = useCallback((values: number[], width: number, height: number, padding: number) => {
+    if (!values.length) return '';
+    const max = Math.max(...values, 1);
+    const n = values.length;
+    const xs = values.map((_, i) => (i / Math.max(n - 1, 1)) * width);
+    const ys = values.map(v => height - (v / max) * (height - padding * 2) - padding);
+
+    let path = `M ${xs[0]},${ys[0]}`;
+    for (let i = 1; i < n; i++) {
+      const dx = (xs[i] - xs[i - 1]) * 0.38;
+      path += ` C ${xs[i - 1] + dx},${ys[i - 1]} ${xs[i] - dx},${ys[i]} ${xs[i]},${ys[i]}`;
+    }
+    return path;
   }, []);
 
-  const chartSVG = useMemo(() => {
-    const total = chartData.reduce((s, d) => s + d.value, 0);
-    if (total === 0) return null;
-    const radius = 50;
-    let angle = -90;
-    const slices: string[] = [];
-    for (const d of chartData) {
-      const sliceAngle = (d.value / total) * 360;
-      const startAngle = angle;
-      const endAngle = angle + sliceAngle;
-      if (sliceAngle >= 360) {
-        slices.push(`<circle cx="70" cy="70" r="${radius}" fill="${d.color}" stroke="#fff" stroke-width="2"/>`);
-      } else {
-        const start = polarToCartesian(70, 70, radius, startAngle);
-        const end = polarToCartesian(70, 70, radius, endAngle);
-        const large = sliceAngle > 180 ? 1 : 0;
-        slices.push(`<path d="M 70 70 L ${start.x} ${start.y} A ${radius} ${radius} 0 ${large} 1 ${end.x} ${end.y} Z" fill="${d.color}" stroke="#fff" stroke-width="2"/>`);
-      }
-      angle = endAngle;
-    }
-    const innerR = 30;
-    return `
-      <svg viewBox="0 0 140 140" style="width:120px;height:120px;">
-        ${slices.join('')}
-        <circle cx="70" cy="70" r="${innerR}" fill="#fff"/>
-        <text x="70" y="66" text-anchor="middle" font-size="16" font-weight="700" fill="#0f172a">${total}</text>
-        <text x="70" y="80" text-anchor="middle" font-size="8" fill="#94a3b8">总计</text>
+  const getY = useCallback((value: number, max: number, height: number, padding: number) => {
+    return height - (value / max) * (height - padding * 2) - padding;
+  }, []);
+
+  const renderPie = useCallback((value: number, total: number, color: string) => {
+    const size = 100;
+    const radius = size / 2 - 14;
+    const circumference = 2 * Math.PI * radius;
+    const percent = total > 0 ? (value / total) * 100 : 0;
+    const strokeDasharray = `${(percent / 100) * circumference} ${circumference}`;
+    const center = size / 2;
+
+    return (
+      <svg viewBox={`0 0 ${size} ${size}`} className="overview-mini-pie" preserveAspectRatio="xMidYMid meet">
+        <circle
+          cx={center}
+          cy={center}
+          r={radius}
+          fill="none"
+          stroke="rgba(148, 163, 184, 0.15)"
+          strokeWidth={16}
+        />
+        <circle
+          cx={center}
+          cy={center}
+          r={radius}
+          fill="none"
+          stroke={color}
+          strokeWidth={16}
+          strokeDasharray={strokeDasharray}
+          strokeDashoffset={circumference / 4}
+          strokeLinecap="round"
+          transform={`rotate(-90 ${center} ${center})`}
+        />
+        <text x={center} y={center} textAnchor="middle" dominantBaseline="middle" className="pie-value" fill="#94a3b8">
+          {Math.round(percent)}%
+        </text>
       </svg>
-    `;
-  }, [chartData]);
+    );
+  }, []);
 
-  const trendSVG = useMemo(() => {
-    if (trendData.length < 2 || svgWidth < 200) return null;
-    const values = trendData.map(d => d.value);
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-    const range = max - min || 1;
-    const pad = { top: 10, right: 10, bottom: 20, left: 40 };
-    const w = svgWidth - pad.left - pad.right;
-    const h = 80;
-    const points = values.map((v, i) => ({
-      x: pad.left + (i / (values.length - 1)) * w,
-      y: pad.top + h - ((v - min) / range) * (h - pad.top),
-    }));
-    const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-    const areaPath = `${linePath} L ${points[points.length - 1].x} ${pad.top + h} L ${points[0].x} ${pad.top + h} Z`;
-    return { linePath, areaPath, points, w: svgWidth, h: pad.top + h, pad, trendData };
-  }, [trendData, svgWidth]);
+  const handleHover = useCallback((index: number | null) => {
+    setHoverIndex(index);
+  }, []);
 
-  const formatDate = (d: string) => {
-    const parts = d.split('-');
-    return `${parseInt(parts[1])}/${parseInt(parts[2])}`;
-  };
-
-  const metricItems = [
-    { label: '今日下单', value: metrics.todayOrder, trend: 'up' as const },
-    { label: '今日样衣', value: metrics.todaySample, trend: 'down' as const },
-    { label: '今日生产', value: metrics.todayProduction, trend: 'up' as const },
-    { label: '今日入库', value: metrics.todayInbound, trend: 'stable' as const },
-    { label: '今日出库', value: metrics.todayOutbound, trend: 'up' as const },
-  ];
-
-  if (loading) {
-    return <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><Spin /></div>;
-  }
-
-  if (error) {
-    return <div style={{ textAlign: 'center', padding: 40, color: '#94a3b8' }}>{error}</div>;
-  }
-
-  const total = chartData.reduce((s, d) => s + d.value, 0);
+  const total = stats.order.count + stats.production.count + stats.inbound.count;
+  const maxValue = Math.max(...trendData.map(d => Math.max(d.orderCount, d.productionCount, d.inboundCount)), 1);
 
   return (
-    <div className="overview-chart-wrapper">
-      {/* 核心指标 */}
-      <div className="overview-metrics">
-        {metricItems.map((m, i) => (
-          <div className="overview-metric" key={i}>
-            <div className="overview-metric-value">
-              {m.value}
-              {m.trend === 'up' && <ArrowUpOutlined style={{ color: '#059669', fontSize: 12, marginLeft: 4 }} />}
-              {m.trend === 'down' && <ArrowDownOutlined style={{ color: '#dc2626', fontSize: 12, marginLeft: 4 }} />}
-              {m.trend === 'stable' && <MinusOutlined style={{ color: '#94a3b8', fontSize: 12, marginLeft: 4 }} />}
-            </div>
-            <div className="overview-metric-label">{m.label}</div>
-          </div>
-        ))}
-      </div>
-
-      <div className="overview-divider" />
-
-      {/* 图表区域 */}
-      <div className="overview-charts">
-        <div className="overview-chart-left">
-          <div className="overview-subtitle">业务分布</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-            <div dangerouslySetInnerHTML={{ __html: chartSVG || '' }} />
-            <div className="overview-legend">
-              {chartData.map((d, i) => (
-                <div className="overview-legend-item" key={i}>
-                  <span className="overview-legend-dot" style={{ background: d.color }} />
-                  <span>{d.label}</span>
-                  <span style={{ fontWeight: 600, color: '#0f172a', marginLeft: 4 }}>
-                    {d.value}
-                  </span>
-                  <span style={{ color: '#94a3b8', fontSize: 11 }}>
-                    ({total > 0 ? ((d.value / total) * 100).toFixed(1) : 0}%)
-                  </span>
-                </div>
-              ))}
-            </div>
+    <div ref={containerRef} className="overview-chart-wrapper" style={{ '--ov-scale': scale } as React.CSSProperties}>
+      {mode === 'sidebar' ? (
+        <div className="overview-sidebar-mode">
+          <div className="overview-sidebar-title">业务概览</div>
+          <div className="overview-sidebar-stats">
+            <span>下单 {stats.order.count}单</span>
+            <span>生产 {stats.production.count}单</span>
+            <span>入库 {stats.inbound.qty}件</span>
           </div>
         </div>
+      ) : (
+        <>
+          <div className="overview-pies">
+            <div className="overview-pie-card">
+              <div className="pie-left">
+                {renderPie(stats.order.count, Math.max(total, 1), COLORS.order.ring)}
+              </div>
+              <div className="pie-right">
+                <div className="pie-title">下单</div>
+                <div className="pie-stats">
+                  <div className="pie-stat">
+                    <span className="stat-value">{stats.order.avgCycle}</span>
+                    <span className="stat-unit">天/单</span>
+                  </div>
+                  <div className="pie-stat">
+                    <span className="stat-value">{stats.order.avgQty}</span>
+                    <span className="stat-unit">件/单</span>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-        <div className="overview-chart-right">
-          <div className="overview-subtitle">7日趋势</div>
-          {trendSVG ? (
-            <div className="overview-trend-chart" ref={containerRef}>
-              <svg width={trendSVG.w} height={trendSVG.h} style={{ display: 'block' }}>
+            <div className="overview-pie-card">
+              <div className="pie-left">
+                {renderPie(stats.production.count, Math.max(total, 1), COLORS.production.ring)}
+              </div>
+              <div className="pie-right">
+                <div className="pie-title">生产</div>
+                <div className="pie-stats">
+                  <div className="pie-stat">
+                    <span className="stat-value">{stats.production.qty}</span>
+                    <span className="stat-unit">件</span>
+                  </div>
+                  <div className="pie-stat">
+                    <span className="stat-value">{stats.production.avgTime}</span>
+                    <span className="stat-unit">时/件</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="overview-pie-card">
+              <div className="pie-left">
+                {renderPie(stats.inbound.count, Math.max(total, 1), COLORS.inbound.ring)}
+              </div>
+              <div className="pie-right">
+                <div className="pie-title">入库</div>
+                <div className="pie-stats">
+                  <div className="pie-stat">
+                    <span className="stat-value">{stats.inbound.qty}</span>
+                    <span className="stat-unit">件</span>
+                  </div>
+                  <div className="pie-stat">
+                    <span className="stat-value">{stats.inbound.avgTime}</span>
+                    <span className="stat-unit">时/件</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="overview-trend">
+            <div className="overview-trend-header">趋势图</div>
+            <div className="overview-chart-container">
+              <svg viewBox="0 0 400 120" className="overview-chart-svg" preserveAspectRatio="none">
                 <defs>
-                  <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={CHART_COLOR} stopOpacity="0.15" />
-                    <stop offset="100%" stopColor={CHART_COLOR} stopOpacity="0.01" />
+                  <linearGradient id="orderGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={COLORS.order.ring} stopOpacity="0.25" />
+                    <stop offset="100%" stopColor={COLORS.order.ring} stopOpacity="0" />
+                  </linearGradient>
+                  <linearGradient id="productionGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={COLORS.production.ring} stopOpacity="0.25" />
+                    <stop offset="100%" stopColor={COLORS.production.ring} stopOpacity="0" />
+                  </linearGradient>
+                  <linearGradient id="inboundGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={COLORS.inbound.ring} stopOpacity="0.25" />
+                    <stop offset="100%" stopColor={COLORS.inbound.ring} stopOpacity="0" />
                   </linearGradient>
                 </defs>
-                <path d={trendSVG.areaPath} fill="url(#trendGrad)" />
-                <path d={trendSVG.linePath} fill="none" stroke={CHART_COLOR} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                {trendSVG.points.map((p, i) => (
-                  <g key={i}>
-                    {hoveredIdx === i && (
+
+                {trendData.length > 1 && (
+                  <>
+                    <path
+                      d={buildSmoothPath(trendData.map(d => d.orderCount), 400, 120, 10) + ` L 400,120 L 0,120 Z`}
+                      fill="url(#orderGrad)"
+                    />
+                    <path
+                      d={buildSmoothPath(trendData.map(d => d.productionCount), 400, 120, 10) + ` L 400,120 L 0,120 Z`}
+                      fill="url(#productionGrad)"
+                    />
+                    <path
+                      d={buildSmoothPath(trendData.map(d => d.inboundCount), 400, 120, 10) + ` L 400,120 L 0,120 Z`}
+                      fill="url(#inboundGrad)"
+                    />
+
+                    <path
+                      d={buildSmoothPath(trendData.map(d => d.orderCount), 400, 120, 10)}
+                      fill="none"
+                      stroke={COLORS.order.ring}
+                      strokeWidth={0.75}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d={buildSmoothPath(trendData.map(d => d.productionCount), 400, 120, 10)}
+                      fill="none"
+                      stroke={COLORS.production.ring}
+                      strokeWidth={0.75}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    <path
+                      d={buildSmoothPath(trendData.map(d => d.inboundCount), 400, 120, 10)}
+                      fill="none"
+                      stroke={COLORS.inbound.ring}
+                      strokeWidth={0.75}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+
+                    {hoverIndex !== null && trendData[hoverIndex] && (
                       <>
-                        <line x1={p.x} y1={trendSVG.pad.top} x2={p.x} y2={trendSVG.pad.top + 80} stroke="#cbd5e1" strokeWidth={1} strokeDasharray="3,3" />
-                        <rect x={p.x - 30} y={p.y - 28} width={60} height={22} rx={4} fill="#0f172a" />
-                        <text x={p.x} y={p.y - 13} textAnchor="middle" fill="#fff" fontSize={10} fontWeight={600}>
-                          {trendData[i].value}
-                        </text>
+                        <line
+                          x1={(hoverIndex / (trendData.length - 1)) * 400}
+                          y1={0}
+                          x2={(hoverIndex / (trendData.length - 1)) * 400}
+                          y2={120}
+                          stroke="rgba(79, 209, 197, 0.4)"
+                          strokeWidth={1}
+                          strokeDasharray="4,4"
+                        />
+                        <circle
+                          cx={(hoverIndex / (trendData.length - 1)) * 400}
+                          cy={getY(trendData[hoverIndex].orderCount, maxValue, 120, 10)}
+                          r={3}
+                          fill={COLORS.order.ring}
+                          stroke="#fff"
+                          strokeWidth={1.5}
+                        />
+                        <circle
+                          cx={(hoverIndex / (trendData.length - 1)) * 400}
+                          cy={getY(trendData[hoverIndex].productionCount, maxValue, 120, 10)}
+                          r={3}
+                          fill={COLORS.production.ring}
+                          stroke="#fff"
+                          strokeWidth={1.5}
+                        />
+                        <circle
+                          cx={(hoverIndex / (trendData.length - 1)) * 400}
+                          cy={getY(trendData[hoverIndex].inboundCount, maxValue, 120, 10)}
+                          r={3}
+                          fill={COLORS.inbound.ring}
+                          stroke="#fff"
+                          strokeWidth={1.5}
+                        />
                       </>
                     )}
-                    <circle cx={p.x} cy={p.y} r={hoveredIdx === i ? 5 : 3} fill="#fff" stroke={CHART_COLOR} strokeWidth={2} style={{ cursor: 'pointer' }} onMouseEnter={() => setHoveredIdx(i)} onMouseLeave={() => setHoveredIdx(null)} />
-                  </g>
-                ))}
-                {trendSVG.trendData.map((d, i) => (
-                  <text key={i} x={trendSVG.points[i].x} y={trendSVG.h - 4} textAnchor="middle" fill="#94a3b8" fontSize={9}>
-                    {formatDate(d.label)}
-                  </text>
-                ))}
+                  </>
+                )}
               </svg>
+
+              <div className="overview-hover-areas">
+                {trendData.map((d, i) => (
+                  <div
+                    key={i}
+                    className="hover-area"
+                    onMouseEnter={() => handleHover(i)}
+                    onMouseLeave={() => handleHover(null)}
+                  >
+                    {hoverIndex === i && (
+                      <div className="hover-tooltip">
+                        <div className="tooltip-date">{d.date}</div>
+                        <div className="tooltip-row" style={{ color: COLORS.order.text }}>
+                          <span className="tooltip-label">下单</span>
+                          <span className="tooltip-value">{d.orderCount}</span>
+                        </div>
+                        <div className="tooltip-row" style={{ color: COLORS.production.text }}>
+                          <span className="tooltip-label">生产</span>
+                          <span className="tooltip-value">{d.productionCount}</span>
+                        </div>
+                        <div className="tooltip-row" style={{ color: COLORS.inbound.text }}>
+                          <span className="tooltip-label">入库</span>
+                          <span className="tooltip-value">{d.inboundCount}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="overview-chart-labels">
+                {trendData.filter((_, i) => i % Math.ceil(trendData.length / 6) === 0).map((d, i) => (
+                  <span key={i} className="chart-label">{d.date}</span>
+                ))}
+              </div>
             </div>
-          ) : (
-            <div style={{ textAlign: 'center', padding: 20, color: '#94a3b8', fontSize: 12 }}>暂无趋势数据</div>
-          )}
-        </div>
-      </div>
+
+            <div className="overview-legend">
+              <span className="legend-item"><span className="legend-dot" style={{ background: COLORS.order.ring }}></span>下单</span>
+              <span className="legend-item"><span className="legend-dot" style={{ background: COLORS.production.ring }}></span>生产</span>
+              <span className="legend-item"><span className="legend-dot" style={{ background: COLORS.inbound.ring }}></span>入库</span>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };
-
-function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
-  const rad = (angleDeg * Math.PI) / 180;
-  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
-}
 
 export default React.memo(OverviewChart);

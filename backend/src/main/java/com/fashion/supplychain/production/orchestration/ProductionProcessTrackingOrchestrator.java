@@ -80,7 +80,7 @@ public class ProductionProcessTrackingOrchestrator {
      * @param scanRecordId 扫码记录ID（关联 t_scan_record，String类型）
      * @return 更新成功返回true，记录不存在或已扫码返回false
      */
-    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class, noRollbackFor = com.fashion.supplychain.common.exception.BusinessException.class)
+    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public boolean updateScanRecord(String cuttingBundleId, String processCode,
                                    String operatorId, String operatorName, String scanRecordId) {
 
@@ -110,12 +110,12 @@ public class ProductionProcessTrackingOrchestrator {
         }
 
         // 2. 检查是否已扫码（防重复）
-        // 不抛异常：避免 REQUIRES_NEW 独立事务回滚后导致外层事务被标记为 rollback-only
-        // 改为返回 false + warn 日志，让调用方优雅处理
         if ("scanned".equals(tracking.getScanStatus())) {
-            log.warn("工序跟踪已扫码，跳过更新（不阻断主流程）: 菲号ID={}, 工序={}, 已扫码操作人={}",
-                    cuttingBundleId, processCode, tracking.getOperatorName());
-            return false;
+            throw new BusinessException(String.format(
+                "该菲号「%s」工序已被「%s」领取，不能重复扫码",
+                tracking.getProcessName(),
+                tracking.getOperatorName()
+            ));
         }
 
         // 3. 更新扫码状态

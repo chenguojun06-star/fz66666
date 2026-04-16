@@ -1,74 +1,76 @@
-.warehouse-card-wrapper {
+.warehouse-pie-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  height: 100%;
+  min-height: 0;
 }
 
-.warehouse-metrics {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
+.warehouse-pie-wrapper .pie-card {
+  flex-shrink: 0;
 }
 
-.warehouse-metric {
-  text-align: center;
-  padding: 10px 6px;
-  background: #f8fafc;
-  border-radius: 4px;
+.style-stats {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(79, 209, 197, 0.1);
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
 }
 
-.warehouse-metric-value {
-  font-size: 20px;
-  font-weight: 700;
-  color: #0f172a;
-  line-height: 1.2;
+.style-stats-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4fd1c5;
+  margin-bottom: 10px;
+  padding-left: 4px;
 }
 
-.warehouse-metric-value--primary {
-  color: #2563eb;
-}
-
-.warehouse-metric-value--success {
-  color: #059669;
-}
-
-.warehouse-metric-label {
-  font-size: 11px;
-  color: #64748b;
-  margin-top: 4px;
-}
-
-.warehouse-today-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.warehouse-today-stat {
+.style-stats-list {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.style-stats-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto auto;
   align-items: center;
+  gap: 8px;
+  background: rgba(7, 13, 27, 0.5);
+  border-radius: 8px;
   padding: 8px 12px;
-  background: #f8fafc;
-  border-radius: 4px;
+  border: 1px solid rgba(148, 163, 184, 0.1);
   font-size: 12px;
 }
 
-.warehouse-today-label {
-  color: #64748b;
-}
-
-.warehouse-today-value {
+.style-no {
   font-weight: 600;
-  color: #0f172a;
+  color: #94a3b8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.warehouse-today-value--success {
-  color: #059669;
+.style-percent {
+  font-weight: 700;
+  color: #4fd1c5;
+  min-width: 40px;
+  text-align: right;
 }
 
-@media (max-width: 600px) {
-  .warehouse-metrics {
-    grid-template-columns: repeat(2, 1fr);
-  }
+.style-detail {
+  color: rgba(148, 163, 184, 0.72);
+  min-width: 50px;
+  text-align: center;
+}
+
+.style-instock {
+  color: #34d399;
+  font-weight: 500;
+}
+
+.style-outstock {
+  color: #60a5fa;
+  font-weight: 500;
 }

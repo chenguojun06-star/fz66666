@@ -1,265 +1,205 @@
-/* 数据看板 - 简洁专业风格 */
 .cockpit-workbench {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
+  --cockpit-bg: linear-gradient(180deg, #09111f 0%, #0f172a 100%);
+  --cockpit-card-bg: rgba(7, 13, 27, 0.72);
+  --cockpit-border: rgba(148, 163, 184, 0.16);
+  --cockpit-text: #94a3b8;
+  --cockpit-text-muted: rgba(148, 163, 184, 0.72);
+  --cockpit-accent: #4fd1c5;
+
   min-height: calc(100vh - 60px);
-  background: #f1f5f9;
-  color: #0f172a;
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
+  background: var(--cockpit-bg);
+  color: var(--cockpit-text);
+  position: relative;
+  z-index: 1;
 }
 
-/* 工具栏 */
-.cockpit-toolbar {
+.cockpit-sidebar,
+.cockpit-main {
+  border-radius: 18px;
+  background: var(--cockpit-card-bg);
+  border: 1px solid var(--cockpit-border);
+  backdrop-filter: blur(16px);
+}
+
+.cockpit-sidebar {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+.cockpit-sidebar-header {
+  margin-bottom: 2px;
+}
+
+.cockpit-sidebar-subtitle,
+.cockpit-stage-desc {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--cockpit-text-muted);
+}
+
+.cockpit-sidebar-section {
+  flex-shrink: 0;
+  margin-bottom: 4px;
+}
+
+.cockpit-module-card {
+  padding: 10px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(14, 28, 55, 0.95), rgba(10, 21, 43, 0.92));
+  border: 1px solid rgba(56, 189, 248, 0.14);
+  box-shadow: 0 12px 32px rgba(2, 6, 23, 0.3);
+  cursor: grab;
+}
+
+.cockpit-module-card:active {
+  cursor: grabbing;
+}
+
+.cockpit-main {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 600px;
+}
+
+.cockpit-stage-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 20px;
-  background: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
-  flex-shrink: 0;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(79, 209, 197, 0.1);
 }
 
-.cockpit-toolbar-left {
+.cockpit-stage-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
-}
-
-.cockpit-toolbar-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #0f172a;
-}
-
-.cockpit-toolbar-hint {
-  font-size: 12px;
-  color: #94a3b8;
-}
-
-.cockpit-toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.cockpit-reset-btn {
-  background: #f1f5f9 !important;
-  border: 1px solid #e2e8f0 !important;
-  color: #475569 !important;
-  font-size: 12px !important;
-  border-radius: 4px !important;
-}
-
-.cockpit-reset-btn:hover {
-  background: #e2e8f0 !important;
-  border-color: #cbd5e1 !important;
-  color: #0f172a !important;
-}
-
-/* 主内容区 - 网格布局 */
-.cockpit-content {
-  flex: 1;
-  overflow: auto;
-  padding: 20px;
-}
-
-.cockpit-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
   gap: 16px;
 }
 
-/* 卡片 */
-.cockpit-card {
-  background: #ffffff;
-  border-radius: 6px;
-  border: 1px solid #e2e8f0;
+.cockpit-stage-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.cockpit-stage-canvas {
+  flex: 1;
+  position: relative;
+  border-radius: 16px;
+  background: rgba(7, 13, 27, 0.4);
+  border: 1px dashed rgba(148, 163, 184, 0.12);
+  overflow: hidden;
+}
+
+.cockpit-stage-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.cockpit-stage-empty-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.cockpit-stage-empty-desc {
+  font-size: 14px;
+  color: var(--cockpit-text-muted);
+}
+
+.cockpit-widget {
+  position: absolute;
+  z-index: 10;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(10, 20, 40, 0.96), rgba(8, 16, 32, 0.92));
+  border: 1px solid rgba(79, 209, 197, 0.14);
+  box-shadow: 0 16px 48px rgba(2, 6, 23, 0.36);
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-.cockpit-card-header {
+.cockpit-widget-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  border-bottom: 1px solid #f1f5f9;
+  padding: 10px 14px;
+  background: rgba(7, 13, 27, 0.6);
+  border-bottom: 1px solid rgba(79, 209, 197, 0.1);
+  cursor: move;
+  user-select: none;
 }
 
-.cockpit-card-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #0f172a;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.cockpit-card-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #2563eb;
-}
-
-.cockpit-card-dot--success {
-  background: #059669;
-}
-
-.cockpit-card-dot--warning {
-  background: #d97706;
-}
-
-.cockpit-card-dot--danger {
-  background: #dc2626;
-}
-
-.cockpit-card-body {
-  padding: 16px;
-  flex: 1;
-  overflow: auto;
-}
-
-/* 指标行 */
-.cockpit-metrics {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.cockpit-metric {
-  text-align: center;
-  padding: 10px 8px;
-  background: #f8fafc;
-  border-radius: 4px;
-}
-
-.cockpit-metric-value {
-  font-size: 20px;
-  font-weight: 700;
-  color: #0f172a;
-  line-height: 1.2;
-}
-
-.cockpit-metric-value--primary {
-  color: #2563eb;
-}
-
-.cockpit-metric-value--success {
-  color: #059669;
-}
-
-.cockpit-metric-value--warning {
-  color: #d97706;
-}
-
-.cockpit-metric-value--danger {
-  color: #dc2626;
-}
-
-.cockpit-metric-label {
-  font-size: 11px;
-  color: #64748b;
-  margin-top: 4px;
-}
-
-/* 分隔线 */
-.cockpit-divider {
-  height: 1px;
-  background: #f1f5f9;
-  margin: 16px 0;
-}
-
-/* 小标题 */
-.cockpit-subtitle {
-  font-size: 12px;
-  font-weight: 600;
-  color: #0f172a;
-  margin-bottom: 12px;
-}
-
-/* 统计列表 */
-.cockpit-stat-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.cockpit-stat-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 12px;
-  background: #f8fafc;
-  border-radius: 4px;
-  font-size: 12px;
-}
-
-.cockpit-stat-label {
-  color: #475569;
-}
-
-.cockpit-stat-value {
-  font-weight: 600;
-  color: #0f172a;
-}
-
-/* 图例 */
-.cockpit-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.cockpit-legend-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: #64748b;
-}
-
-.cockpit-legend-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-/* 空状态 */
-.cockpit-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 60px 20px;
-  color: #94a3b8;
-  gap: 8px;
-}
-
-.cockpit-empty-icon {
-  font-size: 32px;
-  margin-bottom: 8px;
-}
-
-.cockpit-empty-title {
+.cockpit-widget-title {
   font-size: 14px;
-  color: #475569;
+  font-weight: 600;
+  color: #4fd1c5;
 }
 
-.cockpit-empty-hint {
-  font-size: 12px;
+.cockpit-widget-close {
+  background: transparent !important;
+  border: none !important;
+  color: var(--cockpit-text-muted) !important;
+  font-size: 18px !important;
+  padding: 0 4px !important;
+  height: auto !important;
+  line-height: 1 !important;
 }
 
-/* 响应式 */
-@media (max-width: 768px) {
-  .cockpit-grid {
+.cockpit-widget-close:hover {
+  color: #ef4444 !important;
+}
+
+.cockpit-widget-body {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.cockpit-widget-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 20px;
+  height: 20px;
+  cursor: se-resize;
+  background: linear-gradient(135deg, transparent 50%, rgba(79, 209, 197, 0.3) 50%);
+  border-radius: 0 0 16px 0;
+}
+
+.cockpit-widget-resize:hover {
+  background: linear-gradient(135deg, transparent 50%, rgba(79, 209, 197, 0.5) 50%);
+}
+
+@media (max-width: 900px) {
+  .cockpit-workbench {
     grid-template-columns: 1fr;
   }
-  .cockpit-metrics {
-    grid-template-columns: repeat(2, 1fr);
-  }
+}
+
+.cockpit-reset-btn {
+  background: rgba(79, 209, 197, 0.1) !important;
+  border: 1px solid rgba(79, 209, 197, 0.3) !important;
+  color: #4fd1c5 !important;
+}
+
+.cockpit-reset-btn:hover {
+  background: rgba(79, 209, 197, 0.2) !important;
+  border-color: rgba(79, 209, 197, 0.5) !important;
+  color: #4fd1c5 !important;
 }

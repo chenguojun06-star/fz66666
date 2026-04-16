@@ -1,95 +1,71 @@
-.order-card-wrapper {
+.order-pie-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  height: 100%;
+  min-height: 0;
 }
 
-.order-metrics {
+.order-pie-wrapper .pie-card {
+  flex-shrink: 0;
+}
+
+.order-style-stats {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(79, 209, 197, 0.1);
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.order-style-stats-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4fd1c5;
+  margin-bottom: 10px;
+  padding-left: 4px;
+}
+
+.order-style-stats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.order-style-stats-item {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
+  grid-template-columns: 1fr auto auto auto;
+  align-items: center;
+  gap: 8px;
+  background: rgba(7, 13, 27, 0.5);
+  border-radius: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  font-size: 12px;
 }
 
-.order-metric {
-  text-align: center;
-  padding: 10px 6px;
-  background: #f8fafc;
-  border-radius: 4px;
+.order-style-no {
+  font-weight: 600;
+  color: #94a3b8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.order-metric-value {
-  font-size: 20px;
+.order-style-percent {
   font-weight: 700;
-  color: #0f172a;
-  line-height: 1.2;
+  color: #4fd1c5;
+  min-width: 40px;
+  text-align: right;
 }
 
-.order-metric-value--primary {
-  color: #2563eb;
+.order-style-detail {
+  color: rgba(148, 163, 184, 0.72);
+  min-width: 50px;
+  text-align: center;
 }
 
-.order-metric-value--success {
-  color: #059669;
-}
-
-.order-metric-value--warning {
-  color: #d97706;
-}
-
-.order-metric-label {
-  font-size: 11px;
-  color: #64748b;
-  margin-top: 4px;
-}
-
-.order-today-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.order-today-stat {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 12px;
-  background: #f8fafc;
-  border-radius: 4px;
-  font-size: 12px;
-}
-
-.order-today-label {
-  color: #64748b;
-}
-
-.order-today-value {
-  font-weight: 600;
-  color: #0f172a;
-}
-
-.order-warning-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 12px;
-  background: #fef2f2;
-  border-radius: 4px;
-  border: 1px solid #fecaca;
-  font-size: 12px;
-}
-
-.order-warning-label {
-  color: #dc2626;
+.order-style-qty {
+  color: #4fd1c5;
   font-weight: 500;
-}
-
-.order-warning-value {
-  color: #dc2626;
-  font-weight: 600;
-}
-
-@media (max-width: 600px) {
-  .order-metrics {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }
