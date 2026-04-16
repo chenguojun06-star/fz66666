@@ -250,14 +250,14 @@ function buildProcessNodes(order) {
   if (!nodes || !nodes.length) return [];
   const progress = Number(order.productionProgress) || 0;
   let hasAnyRate = false;
-  const result = nodes.map(n => {
+  const result = nodes.map((n, idx) => {
     const name = n.name || n;
     const rate = getNodeRateFromOrder(name, order);
-    if (rate >= 0) { hasAnyRate = true; return { name, percent: rate }; }
-    return { name, percent: -1 };
+    if (rate >= 0) { hasAnyRate = true; return { name, percent: rate, label: `${idx + 1}.${name}` }; }
+    return { name, percent: -1, label: `${idx + 1}.${name}` };
   });
   if (hasAnyRate) {
-    return result.map(r => ({ name: r.name, percent: r.percent >= 0 ? r.percent : 0 }));
+    return result.map(r => ({ name: r.name, percent: r.percent >= 0 ? r.percent : 0, label: r.label }));
   }
   const len = nodes.length;
   const perNode = 100 / len;
@@ -267,7 +267,7 @@ function buildProcessNodes(order) {
     let pct = 0;
     if (progress >= nodeEnd) pct = 100;
     else if (progress > nodeStart) pct = Math.round(((progress - nodeStart) / perNode) * 100);
-    return { name: n.name || n, percent: clampPercent(pct) };
+    return { name: n.name || n, percent: clampPercent(pct), label: `${i + 1}.${n.name || n}` };
   });
 }
 

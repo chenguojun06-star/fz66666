@@ -520,6 +520,7 @@ export const useProgressColumns = ({
             })()}
             {ns.map((node: ProgressNode, index: number) => {
               const nodeName = node.name || '-';
+              const nodeLabel = `${index + 1}.${nodeName}`;
               const completedQty = nodeDoneMap?.[nodeName] || 0;
               // ★ 采购/物料节点：到货即完成(100%)，显示 ✓；不按件数比率（避免裁剪>下单时卡死）
               const isProcureNode = /采购|物料|备料|辅料|面料/.test(nodeName);
@@ -641,7 +642,7 @@ export const useProgressColumns = ({
                       textAlign: 'center',
                       whiteSpace: 'nowrap',
                     }}>
-                      {nodeName}
+                      {nodeLabel}
                     </div>
                     {(nodeType === 'quality' || nodeType === 'warehousing') ? (
                       <DefectTracePopover

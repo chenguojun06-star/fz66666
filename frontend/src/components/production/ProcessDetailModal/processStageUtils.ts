@@ -5,9 +5,10 @@ import { stageAliasMap, carSewingKeywords, tailProcessKeywords } from '@/utils/p
  * 修改关键词请直接修改 frontend/src/utils/productionStage.ts
  */
 export const PROCESS_STAGE_DEFS: { key: string; name: string; keywords: string[] }[] = [
+  { key: 'procurement',      name: '采购',     keywords: stageAliasMap.procurement || [] },
   { key: 'cutting',          name: '裁剪',     keywords: stageAliasMap.cutting },
-  { key: 'carSewing',        name: '车缝',     keywords: carSewingKeywords },
   { key: 'secondaryProcess', name: '二次工艺', keywords: stageAliasMap.secondaryProcess },
+  { key: 'carSewing',        name: '车缝',     keywords: carSewingKeywords },
   { key: 'tailProcess',      name: '尾部',     keywords: tailProcessKeywords },
   { key: 'warehousing',      name: '入库',     keywords: stageAliasMap.warehousing },
 ];

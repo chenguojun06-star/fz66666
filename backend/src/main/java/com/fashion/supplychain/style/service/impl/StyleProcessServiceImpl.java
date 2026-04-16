@@ -12,6 +12,6 @@ import java.util.List;
 public class StyleProcessServiceImpl extends ServiceImpl<StyleProcessMapper, StyleProcess> implements StyleProcessService {
     @Override
     public List<StyleProcess> listByStyleId(Long styleId) {
-        return list(new LambdaQueryWrapper<StyleProcess>().eq(StyleProcess::getStyleId, styleId).orderByAsc(StyleProcess::getSortOrder));
+        return list(new LambdaQueryWrapper<StyleProcess>().eq(StyleProcess::getStyleId, styleId).orderByAsc(StyleProcess::getSortOrder).orderByAsc(StyleProcess::getId));
     }
 }

@@ -1,3 +1,14 @@
+## 2026-04-17
+
+- WebSocket 实时推送补齐：ScanRecordOrchestrator.undo() 新增 broadcastScanUndo / broadcastDataChanged / broadcastOrderProgressChanged；QualityScanExecutor 新增 broadcastQualityChecked / broadcastOrderProgressChanged / broadcastDataChanged；WarehouseScanExecutor 新增 broadcastScanSuccess / broadcastWarehouseIn / broadcastOrderProgressChanged / broadcastDataChanged / broadcastProcessStageCompleted；ProductionScanExecutor 新增 broadcastScanRealtime / broadcastOrderProgressChanged / broadcastProcessStageCompleted。
+- 所有 WebSocket 推送均包裹在 try-catch 中，推送失败不影响主业务流程（非阻断式设计）。
+
+## 2026-04-16
+
+- 修复 Docker Alpine 镜像导致微信 API TLS 连接失败（PKIX path building failed）：恢复 eclipse-temurin:21-jre（Debian）基础镜像 + 安装 ca-certificates + update-ca-certificates -f。
+- WeChatMiniProgramClient 新增 trust-all-certs 配置项（默认关闭），application.yml 新增 wechat.trust-all-certs: ${WECHAT_TRUST_ALL_CERTS:false}。
+- 修复 ProductSkuServiceImpl.updateStock() 事务传播级别：从默认 REQUIRED 改为 REQUIRES_NEW，防止 SKU 库存更新失败导致外层扫码事务被标记 rollback-only。
+
 ## 2026-04-11
 
 - 修复 `GET /api/search/global` 在命令面板中持续返回 500 的问题。

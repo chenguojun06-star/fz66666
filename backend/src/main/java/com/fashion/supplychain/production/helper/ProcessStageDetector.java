@@ -30,7 +30,7 @@ import java.util.Map;
 public class ProcessStageDetector {
 
     private static final List<String> FIXED_PRODUCTION_NODES = Arrays.asList(
-            "采购", "裁剪", "车缝", "大烫", "质检", "二次工艺", "包装", "入库");
+            "采购", "裁剪", "二次工艺", "车缝", "大烫", "质检", "包装", "入库");
 
     @Autowired
     private TemplateLibraryService templateLibraryService;

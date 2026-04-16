@@ -1,3 +1,65 @@
+# 2026-04-17
+
+## 🔌 全端 WebSocket 实时数据同步 + 轮询降级策略
+
+### 新增 — 小程序 6 个核心页面接入 WebSocket 事件监听
+- `work/index.js`：监听 DATA_CHANGED / ORDER_PROGRESS_CHANGED / ORDER_STATUS_CHANGED / WAREHOUSE_IN / SCAN_SUCCESS / SCAN_UNDO / REFRESH_ALL，实时刷新订单列表和未读通知数
+- `dashboard/index.js`：监听同上事件，实时刷新摘要卡片和订单列表
+- `work/inbox/index.js`：监听 DATA_CHANGED / REFRESH_ALL / ORDER_PROGRESS_CHANGED，实时刷新通知列表
+- `scan/history/index.js`：监听 SCAN_SUCCESS / SCAN_UNDO / DATA_CHANGED / REFRESH_ALL，实时刷新扫码历史
+- `cutting/task-list/index.js`：监听 TASK_RECEIVED / TASK_COMPLETED / TASK_BUNDLED / DATA_CHANGED / REFRESH_ALL，实时刷新裁剪任务
+- `admin/index.js`：增强 WebSocket 集成，新增 REFRESH_ALL 事件监听
+- 对系统的帮助：手机端任何一端操作后，其他端页面自动刷新，实现真正的多端数据同步
+
+### 新增 — H5 端 5 个核心页面接入 WebSocket 事件订阅
+- `WorkPage.jsx`：订阅 DATA_REFRESH，实时刷新订单列表
+- `DashboardPage.jsx`：订阅 DATA_REFRESH，实时刷新卡片和订单
+- `InboxPage.jsx`：订阅 DATA_REFRESH，实时刷新通知
+- `ScanHistoryPage.jsx`：订阅 DATA_REFRESH，实时刷新历史记录
+- `CuttingTaskListPage.jsx`：订阅 DATA_REFRESH，实时刷新任务
+- 对系统的帮助：PC 端和手机端操作后，H5 页面自动刷新，三端数据实时一致
+
+### 新增 — WebSocket 轮询降级策略
+- 小程序 `websocketManager.js`：WebSocket 重连 10 次失败后自动切换 30s 轮询，连接恢复后自动停止轮询
+- H5 `websocketService.js`：同上策略，页面不可见时暂停轮询，可见时自动重连 WebSocket
+- 对系统的帮助：即使 WebSocket 服务端异常，用户仍能通过轮询获取最新数据，不会出现数据停滞
+
+### 重构 — 统一 eventBus 引用方式
+- 12 个文件从 `getApp().globalData.eventBus` 迁移到 `require` 导入
+- 统一事件名：`'DATA_REFRESH'` 迁移到 `triggerDataRefresh()` 标准方法
+- 涉及文件：scan-result, pattern, confirm, quality, rescan, procurement/task-detail, cutting/task-detail, PatternHandler, UndoHandler, RescanHandler, scanLifecycleMixin, scan/index
+- 对系统的帮助：消除两套 eventBus 引用方式混用的问题，事件名统一，减少因事件名不一致导致的刷新失败
+
+---
+
+# 2026-04-16
+
+## 🔒 微信 API TLS 连接修复 + 小程序图标恢复 + 事务回滚修复
+
+### fix(backend): 修复 Docker Alpine 镜像导致微信 API TLS 连接失败
+- **问题**：切换到 `eclipse-temurin:21-jre-alpine` 镜像后，JVM 无法验证 `api.weixin.qq.com` 的 SSL 证书，小程序登录报"调用微信接口失败，请检查服务端网络、DNS、TLS或微信配置"
+- **根因**：Alpine 镜像缺少完整的 CA 证书链，且 JVM cacerts 未正确配置
+- **修复**：
+  - 恢复为 `eclipse-temurin:21-jre`（Debian）基础镜像
+  - Dockerfile 中添加 `ca-certificates` 安装和 `update-ca-certificates -f`
+  - `WeChatMiniProgramClient` 新增 `trust-all-certs` 配置项（默认关闭），用于微信云托管内网代理自签名证书场景
+  - `application.yml` 新增 `wechat.trust-all-certs: ${WECHAT_TRUST_ALL_CERTS:false}` 配置
+- 对系统的帮助：小程序登录恢复正常，微信 API 调用不再因 TLS 握手失败而超时
+
+### fix(miniprogram): 恢复小程序被误删的 14 个图标定义
+- **问题**：小程序菜单和"我的"页面图标全部消失
+- **根因**：`miniprogram/styles/line-icons.wxss` 中 14 个 icon 定义被误删
+- **修复**：从 git 历史恢复所有被删的图标定义，新增 `icon-bell`
+- 对系统的帮助：小程序底部菜单和"我的"页面图标恢复正常显示
+
+### fix(backend): 修复扫码入库事务 rollback-only 错误
+- **问题**：扫码入库时报"Transaction rolled back because it has been marked as rollback-only"
+- **根因**：`ProductSkuServiceImpl.updateStock()` 使用默认事务传播级别，SKU 库存更新失败时将外层扫码事务标记为 rollback-only
+- **修复**：将 `updateStock()` 的 `@Transactional` 传播级别改为 `REQUIRES_NEW`，使 SKU 库存更新在独立事务中执行，不影响外层扫码主事务
+- 对系统的帮助：扫码入库不再因 SKU 库存更新异常导致整个操作回滚，主流程可正常完成
+
+---
+
 # 2026-05-07
 
 ## 📱 微信 H5 运行层首版落地（独立 h5-web 工作区）

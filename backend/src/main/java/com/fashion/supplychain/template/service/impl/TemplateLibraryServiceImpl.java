@@ -428,6 +428,7 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
                     }
 
                     if (!out.isEmpty()) {
+                        sortByStageOrder(out);
                         log.info("resolveProgressNodeUnitPrices from process template: styleNo={}, count={}", sn, out.size());
                         return out;
                     }
@@ -439,6 +440,7 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
 
         List<Map<String, Object>> processPriceNodes = resolveProgressNodeUnitPricesFromProcessPriceTemplate(sn);
         if (!processPriceNodes.isEmpty()) {
+            sortByStageOrder(processPriceNodes);
             log.info("resolveProgressNodeUnitPrices from process_price template: styleNo={}, count={}", sn, processPriceNodes.size());
             return processPriceNodes;
         }
@@ -578,7 +580,24 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
             out.add(node);
         }
 
-        return out;
+        return sortByStageOrder(out);
+    }
+
+    private static final List<String> STAGE_ORDER = List.of("采购", "裁剪", "二次工艺", "车缝", "尾部", "入库");
+
+    private List<Map<String, Object>> sortByStageOrder(List<Map<String, Object>> nodes) {
+        if (nodes == null || nodes.size() <= 1) return nodes;
+        nodes.sort((a, b) -> {
+            String stageA = String.valueOf(a.getOrDefault("progressStage", "")).trim();
+            String stageB = String.valueOf(b.getOrDefault("progressStage", "")).trim();
+            int idxA = STAGE_ORDER.indexOf(stageA);
+            int idxB = STAGE_ORDER.indexOf(stageB);
+            if (idxA == -1) idxA = 999;
+            if (idxB == -1) idxB = 999;
+            if (idxA != idxB) return idxA - idxB;
+            return 0;
+        });
+        return nodes;
     }
 
     private BigDecimal matchProcessUnitPrice(Map<String, BigDecimal> processPrices, String name) {
