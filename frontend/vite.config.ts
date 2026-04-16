@@ -69,12 +69,7 @@ export default defineConfig({
       port: 5173,
       clientPort: 5173
     },
-    watch: {
-      // 【重要】项目在外部磁盘 /Volumes/macoo2/ 上，macOS FSEvents 无法正常触发
-      // 必须使用轮询模式才能检测文件变化，实现 HMR 热更新
-      usePolling: true,
-      interval: 1000,  // 每秒检测一次文件变化
-    },
+
     proxy: {
       '/api': {
         target: 'http://localhost:8088',  // 后端地址 (Docker 容器间通信请使用服务名)

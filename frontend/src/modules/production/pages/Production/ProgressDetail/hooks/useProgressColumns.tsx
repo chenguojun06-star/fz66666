@@ -650,7 +650,7 @@ export const useProgressColumns = ({
                       >
                         <LiquidProgressLottie
                           progress={percent}
-                          size={68}
+                          size={nodeType === 'quality' ? 80 : 68}
                           nodeName={nodeName}
                           text={isProcureNode ? (completedQty > 0 ? '✓' : '') : `${completedQty}/${totalQty}`}
                           subText={!isProcureNode && totalQty > 0 ? `${percent}%` : undefined}

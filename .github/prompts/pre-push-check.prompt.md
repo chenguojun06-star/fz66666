@@ -12,7 +12,7 @@ tools: ["run_in_terminal", "grep_search", "file_search", "read_file", "get_error
 
 ## 第一步：后端编译
 ```bash
-cd /Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend && \
+cd /Users/guojunmini4/Documents/服装66666/backend && \
 JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home \
 /opt/homebrew/bin/mvn clean compile -q
 ```
@@ -21,13 +21,13 @@ JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home \
 
 ## 第二步：前端类型检查
 ```bash
-cd /Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend && npx tsc --noEmit
+cd /Users/guojunmini4/Documents/服装66666/frontend && npx tsc --noEmit
 ```
 - 必须 0 errors。
 
 ## 第三步：Git 状态核查
 ```bash
-cd /Volumes/macoo2/Users/guojunmini4/Documents/服装66666 && \
+cd /Users/guojunmini4/Documents/服装66666 && \
 git status && git diff --stat HEAD
 ```
 - 确认所有需要提交的文件已暂存，无遗漏。

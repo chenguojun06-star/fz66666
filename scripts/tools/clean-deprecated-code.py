@@ -118,7 +118,7 @@ def clean_deprecated_methods(filepath):
     return removed_count, saved
 
 def main():
-    base_path = Path("/Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/java")
+    base_path = Path("/Users/guojunmini4/Documents/服装66666/backend/src/main/java")
 
     total_methods = 0
     total_bytes = 0

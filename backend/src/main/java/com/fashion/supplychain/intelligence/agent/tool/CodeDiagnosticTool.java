@@ -230,8 +230,7 @@ public class CodeDiagnosticTool extends AbstractAgentTool {
 
         // 检查关键目录
         result.put("migrationDirExists",
-                new File("backend/src/main/resources/db/migration").exists() ||
-                new File("/Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/resources/db/migration").exists());
+                new File("backend/src/main/resources/db/migration").exists());
 
         String status = Boolean.TRUE.equals(result.get("logHealthy")) ? "系统运行正常，无近期错误" : "发现异常，建议执行 scan_errors 详细分析";
         return successJson(status, result);
@@ -240,7 +239,7 @@ public class CodeDiagnosticTool extends AbstractAgentTool {
     // ——— 工具方法 ———
 
     private String findLogFile() {
-        String baseDir = "/Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/";
+        String baseDir = "backend/";
         for (String candidate : LOG_CANDIDATES) {
             String full = baseDir + candidate;
             if (new File(full).exists()) return full;

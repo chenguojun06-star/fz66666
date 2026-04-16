@@ -62,7 +62,7 @@ for sheet in target_sheets:
                         "pricing_standard": prices
                     })
 
-json_path = '/Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/resources/ai_ie_knowledge.json'
+json_path = '/Users/guojunmini4/Documents/服装66666/backend/src/main/resources/ai_ie_knowledge.json'
 with open(json_path, 'w', encoding='utf-8') as f:
     json.dump(results, f, ensure_ascii=False, indent=2)
 

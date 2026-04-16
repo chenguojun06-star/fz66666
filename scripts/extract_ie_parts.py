@@ -27,7 +27,7 @@ try:
         except Exception as inner_e:
             continue
 
-    json_path = '/Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend/src/main/resources/ai_ie_parts_knowledge.json'
+    json_path = '/Users/guojunmini4/Documents/服装66666/backend/src/main/resources/ai_ie_parts_knowledge.json'
     with open(json_path, 'w', encoding='utf-8') as f:
         json.dump(parts_data, f, ensure_ascii=False, indent=2)
 

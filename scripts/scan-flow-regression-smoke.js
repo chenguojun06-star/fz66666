@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 const path = require('path');
 
-const ROOT = '/Volumes/macoo2/Users/guojunmini4/Documents/服装66666';
+const ROOT = '/Users/guojunmini4/Documents/服装66666';
 const StageDetector = require(path.join(ROOT, 'miniprogram/pages/scan/services/StageDetector'));
 const api = require(path.join(ROOT, 'miniprogram/utils/api'));
 const ProcurementHandler = require(path.join(ROOT, 'miniprogram/pages/scan/handlers/ProcurementHandler'));

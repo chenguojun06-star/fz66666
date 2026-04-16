@@ -22,6 +22,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <!-- 依赖版本管理 -->
         <mybatis-plus.version>3.5.7</mybatis-plus.version>
+        <!-- 8.4.0 LTS 修复 CVE-2023-22102（高危：8.1.0 及以下受影响） -->
         <mysql-connector.version>8.4.0</mysql-connector.version>
         <springdoc-openapi.version>1.7.0</springdoc-openapi.version>
         <flyway.version>9.22.3</flyway.version>

@@ -5,7 +5,7 @@
 
 set -e
 
-BACKEND_DIR="/Volumes/macoo2/Users/guojunmini4/Documents/服装66666/backend"
+BACKEND_DIR="/Users/guojunmini4/Documents/服装66666/backend"
 REPORT_FILE="deprecated-endpoints-deletion-report.txt"
 
 echo "======================================"

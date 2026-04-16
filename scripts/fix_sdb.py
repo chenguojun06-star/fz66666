@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # 修复：补回脚本误删的 {data.topPriorityOrder && ( 行
 
-path = "/Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend/src/modules/dashboard/components/SmartDailyBrief/index.tsx"
+path = "/Users/guojunmini4/Documents/服装66666/frontend/src/modules/dashboard/components/SmartDailyBrief/index.tsx"
 
 with open(path, 'r', encoding='utf-8') as f:
     lines = f.readlines()

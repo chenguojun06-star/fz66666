@@ -4,7 +4,7 @@
 """
 import os, json
 
-BASE = '/Volumes/macoo2/Users/guojunmini4/Documents/服装66666/miniprogram'
+BASE = '/Users/guojunmini4/Documents/服装66666/miniprogram'
 path = os.path.join(BASE, 'pages/admin/notification')
 
 # ── 1. index.json ──

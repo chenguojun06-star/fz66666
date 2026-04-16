@@ -5,7 +5,7 @@ Keep lines 1-647, the correct RoleTemplateTab, and a new clean main component.""
 import os, sys
 
 filepath = os.path.join(
-    '/Volumes/macoo2/Users/guojunmini4/Documents/服装66666',
+    '/Users/guojunmini4/Documents/服装66666',
     'frontend/src/modules/system/pages/System/TenantManagement/index.tsx'
 )
 

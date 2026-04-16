@@ -130,7 +130,7 @@ test("创建款式", code == 200 and data.get("code") == 200)
 print("\nP2: 前端编译检查")
 r = subprocess.run(
     ["npx", "tsc", "--noEmit"],
-    cwd="/Volumes/macoo2/Users/guojunmini4/Documents/服装66666/frontend",
+    cwd="/Users/guojunmini4/Documents/服装66666/frontend",
     capture_output=True, text=True, timeout=120
 )
 test("TypeScript编译", r.returncode == 0)
