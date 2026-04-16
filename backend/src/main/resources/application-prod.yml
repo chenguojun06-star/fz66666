@@ -82,3 +82,8 @@ management:
   health:
     redis:
       enabled: false
+
+# 微信云托管环境：开放接口服务内网代理使用自签名证书，需信任
+wechat:
+  mini-program:
+    trust-all-certs: ${WECHAT_TRUST_ALL_CERTS:true}
