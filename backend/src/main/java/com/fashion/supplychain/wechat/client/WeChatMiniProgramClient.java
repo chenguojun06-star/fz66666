@@ -98,9 +98,10 @@ public class WeChatMiniProgramClient {
         try {
             resp = restTemplate.getForEntity(url, String.class);
         } catch (Exception e) {
+            String detail = buildExceptionMessage(e);
             log.warn("[WxCode2Session] request failed appId={} codePrefix={} reason={}",
-                    maskAppId(appid), maskCode(code), buildExceptionMessage(e));
-            return Code2SessionResult.fail("调用微信接口失败，请检查服务端网络、DNS、TLS 或微信配置");
+                    maskAppId(appid), maskCode(code), detail);
+            return Code2SessionResult.fail("调用微信接口失败: " + detail);
         }
         String body = resp == null ? null : resp.getBody();
         if (!StringUtils.hasText(body)) {
