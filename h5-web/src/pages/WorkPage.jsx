@@ -37,7 +37,9 @@ export default function WorkPage() {
   const [orderStats, setOrderStats] = useState({ orderCount: 0, totalQuantity: 0 });
 
   const loadOrders = useCallback(async (reset = false) => {
-    if (loading) return;
+    // reset=true 表示切换 Tab/筛选条件触发的重新加载，必须穿透 loading 守卫；
+    // reset=false 是「加载更多」分页，loading 时跳过避免重复翻页
+    if (loading && !reset) return;
     const nextPage = reset ? 1 : page;
     setLoading(true);
     try {

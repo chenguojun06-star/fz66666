@@ -166,7 +166,16 @@ export default function ScanPage() {
 
   const handleCameraScan = () => {
     if (wx.isWechat) {
-      wx.scanCode({ onlyFromCamera: true }).then((res) => { handleScanResult(res.result); }).catch((e) => { if (e?.errMsg && !e.errMsg.includes('cancel')) console.error('wx.scanCode error:', e); });
+      wx.scanCode({ onlyFromCamera: true })
+        .then((res) => { handleScanResult(res.result); })
+        .catch((e) => {
+          // 用户主动取消扫码，静默忽略
+          if (e?.errMsg?.includes('cancel')) return;
+          // wx.config 未调用或 SDK 调用失败 → 降级到 H5 摄像头扫码
+          console.warn('wx.scanCode 失败，降级到 H5 摄像头:', e);
+          toast.error('相机打开失败，请重试');
+          setCameraActive(true);
+        });
     } else {
       setCameraActive(true);
     }
