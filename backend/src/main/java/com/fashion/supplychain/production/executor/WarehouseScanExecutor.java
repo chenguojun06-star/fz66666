@@ -79,6 +79,9 @@ public class WarehouseScanExecutor {
     @Autowired(required = false)
     private com.fashion.supplychain.system.orchestration.ChangeApprovalOrchestrator changeApprovalOrchestrator;
 
+    @Autowired
+    private com.fashion.supplychain.websocket.service.WebSocketService webSocketService;
+
     /**
      * 执行仓库入库扫码
      */
@@ -336,6 +339,20 @@ public class WarehouseScanExecutor {
         result.put("scanRecord", sr);
         result.put("orderInfo", buildOrderInfo(order));
         result.put("cuttingBundle", bundle);
+
+        try {
+            String orderNo = order.getOrderNo() != null ? order.getOrderNo() : "";
+            String warehouse = w.getWarehouse() != null ? w.getWarehouse() : "";
+            int qty = w.getQualifiedQuantity() != null ? w.getQualifiedQuantity() : 0;
+            String styleNo = order.getStyleNo() != null ? order.getStyleNo() : "";
+            webSocketService.broadcastScanSuccess(orderNo, styleNo, "入库", qty);
+            webSocketService.broadcastWarehouseIn(orderNo, qty, warehouse);
+            webSocketService.broadcastOrderProgressChanged(orderNo, qty, "入库");
+            webSocketService.broadcastDataChanged("ScanRecord", sr.getId(), "create");
+        } catch (Exception wsEx) {
+            log.warn("[WarehouseScan] WebSocket broadcast failed (non-blocking): {}", wsEx.getMessage());
+        }
+
         return result;
     }
 
@@ -359,11 +376,15 @@ public class WarehouseScanExecutor {
         try {
             bundleWarehoused = productWarehousingService.list(
                     new LambdaQueryWrapper<ProductWarehousing>()
-                            .select(ProductWarehousing::getQualifiedQuantity)
+                            .select(ProductWarehousing::getQualifiedQuantity, ProductWarehousing::getWarehousingType)
                             .eq(ProductWarehousing::getDeleteFlag, 0)
                             .eq(ProductWarehousing::getCuttingBundleId, bundle.getId())
                             .eq(ProductWarehousing::getQualityStatus, "qualified"))
                     .stream()
+                    .filter(w -> {
+                        String wt = w.getWarehousingType() == null ? "" : w.getWarehousingType().trim();
+                        return !"quality_scan".equals(wt) && !"quality_scan_scrap".equals(wt);
+                    })
                     .mapToInt(w -> w.getQualifiedQuantity() != null ? w.getQualifiedQuantity() : 0)
                     .sum();
         } catch (Exception e) {
