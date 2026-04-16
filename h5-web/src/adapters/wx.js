@@ -204,7 +204,7 @@ function redirectTo({ url }) {
 }
 
 function setNavigationBarTitle({ title }) {
-  document.title = title || '云智链';
+  document.title = title || '云裳智链';
 }
 
 function setClipboardData({ data }) {
