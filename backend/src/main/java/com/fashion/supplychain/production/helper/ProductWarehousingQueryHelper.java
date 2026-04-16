@@ -56,6 +56,9 @@ public class ProductWarehousingQueryHelper {
     @Autowired
     private StyleBomService styleBomService;
 
+    @Autowired
+    private com.fashion.supplychain.production.service.impl.ProductWarehousingHelper warehousingHelper;
+
     public IPage<ProductWarehousing> list(Map<String, Object> params) {
         // 工厂账号隔离：只查询该工厂的入库记录
         String ctxFactoryId = UserContext.factoryId();
@@ -271,12 +274,16 @@ public class ProductWarehousingQueryHelper {
             throw new IllegalArgumentException("status参数不能为空");
         }
 
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
         List<ScanRecord> allBundleScans;
-        allBundleScans = scanRecordService.list(
-                    new LambdaQueryWrapper<ScanRecord>()
-                            .isNotNull(ScanRecord::getCuttingBundleId)
-                            .ne(ScanRecord::getCuttingBundleId, "")
-            );
+        LambdaQueryWrapper<ScanRecord> q = new LambdaQueryWrapper<ScanRecord>()
+                .isNotNull(ScanRecord::getCuttingBundleId)
+                .ne(ScanRecord::getCuttingBundleId, "")
+                .eq(ScanRecord::getScanResult, "success");
+        if (tenantId != null) {
+            q.eq(ScanRecord::getTenantId, tenantId);
+        }
+        allBundleScans = scanRecordService.list(q);
 
         Map<String, Set<String>> bundleScanTypes = new HashMap<>();
         Map<String, Integer> bundleQuantities = new HashMap<>();
@@ -559,6 +566,7 @@ public class ProductWarehousingQueryHelper {
 
         List<String> qcReadyQrs = new ArrayList<>();
         List<String> warehouseReadyQrs = new ArrayList<>();
+        Map<String, String> bundleIdToQrCode = new HashMap<>();
 
         if (!allIds.isEmpty()) {
             List<CuttingBundle> bundles = cuttingBundleService.listByIds(new ArrayList<>(allIds));
@@ -567,6 +575,7 @@ public class ProductWarehousingQueryHelper {
                     if (b == null || !StringUtils.hasText(b.getId()) || !StringUtils.hasText(b.getQrCode())) continue;
                     String bid = b.getId().trim();
                     String qr = b.getQrCode().trim();
+                    bundleIdToQrCode.put(bid, qr);
                     if (qcReadyBundleIds.contains(bid)) qcReadyQrs.add(qr);
                     if (warehouseReadyBundleIds.contains(bid)) warehouseReadyQrs.add(qr);
                 }
@@ -576,6 +585,50 @@ public class ProductWarehousingQueryHelper {
         Map<String, Object> result = new java.util.LinkedHashMap<>();
         result.put("qcReadyQrs", qcReadyQrs);
         result.put("warehouseReadyQrs", warehouseReadyQrs);
+
+        Map<String, List<String>> bundleStageHints = new HashMap<>();
+        Map<String, List<ScanRecord>> scansByBundle = new HashMap<>();
+        for (ScanRecord scan : scans) {
+            String scanResult = scan.getScanResult() == null ? "" : scan.getScanResult().trim().toLowerCase();
+            if (!"success".equals(scanResult)) continue;
+            String bid = scan.getCuttingBundleId() == null ? "" : scan.getCuttingBundleId().trim();
+            if (!StringUtils.hasText(bid)) continue;
+            scansByBundle.computeIfAbsent(bid, k -> new ArrayList<>()).add(scan);
+        }
+        if (!scansByBundle.isEmpty()) {
+            List<String> allBundleIds = new ArrayList<>(scansByBundle.keySet());
+            List<ProductWarehousing> allWhRecords = productWarehousingService.list(
+                    new LambdaQueryWrapper<ProductWarehousing>()
+                            .in(ProductWarehousing::getCuttingBundleId, allBundleIds)
+                            .eq(ProductWarehousing::getDeleteFlag, 0));
+            Map<String, List<ProductWarehousing>> whByBundle = new HashMap<>();
+            if (allWhRecords != null) {
+                for (ProductWarehousing w : allWhRecords) {
+                    String bid = w.getCuttingBundleId() == null ? "" : w.getCuttingBundleId().trim();
+                    if (StringUtils.hasText(bid)) {
+                        whByBundle.computeIfAbsent(bid, k -> new ArrayList<>()).add(w);
+                    }
+                }
+            }
+            for (Map.Entry<String, List<ScanRecord>> entry : scansByBundle.entrySet()) {
+                String bid = entry.getKey();
+                List<ProductWarehousing> whList = whByBundle.getOrDefault(bid, java.util.Collections.emptyList());
+                List<String> hints = warehousingHelper.buildBundleStageHints(entry.getValue(), whList);
+                if (!hints.isEmpty()) {
+                    bundleStageHints.put(bid, hints);
+                }
+            }
+        }
+        Map<String, List<String>> qrStageHints = new HashMap<>();
+        if (!bundleStageHints.isEmpty()) {
+            for (Map.Entry<String, List<String>> entry : bundleStageHints.entrySet()) {
+                String qrCode = bundleIdToQrCode.get(entry.getKey().trim());
+                if (StringUtils.hasText(qrCode) && entry.getValue() != null && !entry.getValue().isEmpty()) {
+                    qrStageHints.put(qrCode, entry.getValue());
+                }
+            }
+        }
+        result.put("qrStageHints", qrStageHints);
         return result;
     }
 

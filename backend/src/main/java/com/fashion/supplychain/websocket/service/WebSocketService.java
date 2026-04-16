@@ -126,6 +126,43 @@ public class WebSocketService {
         log.info("[WebSocket] 广播质检完成: orderNo={}, result={}", orderNo, checkResult);
     }
 
+    public void broadcastProcessStageReceived(String orderNo, String processName, String operatorName,
+                                               String bundleNo, String color, String size) {
+        WebSocketMessage<Map<String, Object>> message = WebSocketMessage.create(
+            WebSocketMessageType.PROCESS_STAGE_RECEIVED,
+            Map.of(
+                "orderNo", orderNo,
+                "processName", processName,
+                "operatorName", operatorName,
+                "bundleNo", bundleNo,
+                "color", color != null ? color : "",
+                "size", size != null ? size : "",
+                "timestamp", System.currentTimeMillis()
+            )
+        );
+        webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
+        log.info("[WebSocket] 广播工序领取: orderNo={}, process={}, operator={}", orderNo, processName, operatorName);
+    }
+
+    public void broadcastProcessStageCompleted(String orderNo, String processName, String operatorName,
+                                                String bundleNo, String color, String size, int quantity) {
+        WebSocketMessage<Map<String, Object>> message = WebSocketMessage.create(
+            WebSocketMessageType.PROCESS_STAGE_COMPLETED,
+            Map.of(
+                "orderNo", orderNo,
+                "processName", processName,
+                "operatorName", operatorName,
+                "bundleNo", bundleNo,
+                "color", color != null ? color : "",
+                "size", size != null ? size : "",
+                "quantity", quantity,
+                "timestamp", System.currentTimeMillis()
+            )
+        );
+        webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
+        log.info("[WebSocket] 广播工序完成: orderNo={}, process={}, operator={}, qty={}", orderNo, processName, operatorName, quantity);
+    }
+
     /**
      * 广播入库操作
      */

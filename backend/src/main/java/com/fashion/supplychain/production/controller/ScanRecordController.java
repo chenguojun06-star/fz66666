@@ -303,6 +303,7 @@ public class ScanRecordController {
     }
 
     @PostMapping("/delete-full-link/{orderId}")
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     public Result<?> deleteFullLinkByOrderId(@PathVariable String orderId) {
         return Result.success(scanRecordOrchestrator.deleteFullLinkByOrderId(orderId));
     }

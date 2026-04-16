@@ -19,9 +19,12 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -426,6 +429,12 @@ public class ProductWarehousingHelper {
             if (w == null) {
                 continue;
             }
+            // quality_scan / quality_scan_scrap 是手机端质检占位记录（warehousingQuantity=0），
+            // 不是真正的入库，不应阻止PC端创建正式入库记录
+            String wt = w.getWarehousingType() == null ? "" : w.getWarehousingType().trim();
+            if ("quality_scan".equals(wt) || "quality_scan_scrap".equals(wt)) {
+                continue;
+            }
             int q = w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity();
             if (q <= 0) {
                 continue;
@@ -729,5 +738,65 @@ public class ProductWarehousingHelper {
                         cuttingBundleId, progressStage, e.getMessage());
             }
         }
+    }
+
+    private static String escapeHtml(String s) {
+        if (s == null) return "";
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\"", "&quot;").replace("'", "&#39;");
+    }
+
+    public List<String> buildBundleStageHints(List<ScanRecord> scanRecords, List<ProductWarehousing> whRecords) {
+        List<String> hints = new ArrayList<>();
+        if (scanRecords != null) {
+            for (ScanRecord r : scanRecords) {
+                String st = r.getScanType() == null ? "" : r.getScanType().trim();
+                String op = escapeHtml(r.getOperatorName());
+                String stage = r.getProgressStage() == null ? "" : r.getProgressStage().trim();
+                String process = r.getProcessName() == null ? "" : r.getProcessName().trim();
+                String label = escapeHtml(org.springframework.util.StringUtils.hasText(stage) ? stage
+                        : (org.springframework.util.StringUtils.hasText(process) ? process : st));
+                if (!org.springframework.util.StringUtils.hasText(label)) continue;
+                boolean isReceived = r.getReceiveTime() != null && r.getConfirmTime() == null;
+                boolean isCompleted = r.getConfirmTime() != null;
+                String hint;
+                if ("quality_receive".equals(r.getProcessCode())) {
+                    hint = isReceived ? String.format("🔍 %s已领取质检", op) : null;
+                } else if ("quality_inspect".equals(r.getProcessCode())) {
+                    hint = isReceived ? String.format("🔍 %s已领取验收", op) : null;
+                } else if ("quality".equals(st) || "质检".equals(stage)) {
+                    hint = isCompleted ? String.format("✅ %s已完成质检", op)
+                            : isReceived ? String.format("🔍 %s已领取质检", op) : null;
+                } else if ("warehouse".equals(st) || "入库".equals(stage)) {
+                    hint = (isCompleted || isReceived) ? String.format("📦 %s已完成入库", op) : null;
+                } else if ("production".equals(st)) {
+                    hint = (isCompleted || isReceived) ? String.format("🏭 %s已完成%s", op, label) : null;
+                } else {
+                    hint = (isCompleted || isReceived) ? String.format("✔ %s已完成%s", op, label) : null;
+                }
+                if (hint != null) hints.add(hint);
+            }
+        }
+        if (whRecords != null) {
+            for (ProductWarehousing w : whRecords) {
+                String wt = w.getWarehousingType() == null ? "" : w.getWarehousingType().trim();
+                String qs = w.getQualityStatus() == null ? "" : w.getQualityStatus().trim();
+                String op = escapeHtml(w.getQualityOperatorName());
+                String whOp = escapeHtml(w.getWarehousingOperatorName());
+                String wh = escapeHtml(w.getWarehouse());
+                if ("quality_scan".equals(wt) && "qualified".equals(qs)) {
+                    hints.add(String.format("✅ %s已完成质检（手机端）", org.springframework.util.StringUtils.hasText(op) ? op : "手机端"));
+                } else if ("quality_scan_scrap".equals(wt)) {
+                    hints.add(String.format("🗑️ %s已标记报废", org.springframework.util.StringUtils.hasText(op) ? op : "手机端"));
+                } else if (("manual".equals(wt) || "scan".equals(wt)) && "qualified".equals(qs)) {
+                    String who = org.springframework.util.StringUtils.hasText(whOp) ? whOp : (org.springframework.util.StringUtils.hasText(op) ? op : "");
+                    String whInfo = org.springframework.util.StringUtils.hasText(wh) && !"待分配".equals(wh) ? "→" + wh : "";
+                    hints.add(String.format("📦 %s已完成入库%s", org.springframework.util.StringUtils.hasText(who) ? who : "PC端", whInfo));
+                } else if ("repair_return".equals(wt)) {
+                    hints.add("🔧 返修申报已提交");
+                }
+            }
+        }
+        return hints;
     }
 }

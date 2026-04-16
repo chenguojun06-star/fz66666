@@ -3,6 +3,7 @@ const { errorHandler } = require('../../utils/errorHandler');
 const { syncManager } = require('../../utils/syncManager');
 const { toast, safeNavigate } = require('../../utils/uiHelper');
 const { getCurrentFactoryId } = require('../../utils/permission');
+const { eventBus, Events } = require('../../utils/eventBus');
 
 
 // ==================== 提取的工具模块 ====================
@@ -106,6 +107,7 @@ Page({
     this.loadOrders(true);
 
     this.loadUnreadNoticeCount();
+    this._bindWsEvents();
 
     try {
       const pendingOrderHint = wx.getStorageSync('pending_order_hint');
@@ -325,13 +327,14 @@ Page({
   onHide() {
     syncManager.stopSync('work_orders');
     if (this._highlightTimer) { clearTimeout(this._highlightTimer); this._highlightTimer = null; }
+    this._unbindWsEvents();
   },
 
   onUnload() {
     syncManager.stopSync('work_orders');
     if (this._highlightTimer) { clearTimeout(this._highlightTimer); this._highlightTimer = null; }
+    this._unbindWsEvents();
 
-    // 清理数据刷新监听
     if (this._unsubscribeRefresh) {
       this._unsubscribeRefresh();
       this._unsubscribeRefresh = null;
@@ -354,6 +357,37 @@ Page({
     const index = e.currentTarget.dataset.index;
     const cur = this.data.orders.list[index]?.expanded;
     this.setData({ [`orders.list[${index}].expanded`]: !cur });
+  },
+
+  _bindWsEvents() {
+    if (this._wsBound) return;
+    this._wsBound = true;
+    this._onDataChanged = () => { this.loadOrders(true); this.loadUnreadNoticeCount(); };
+    this._onOrderProgress = () => { this.loadOrders(true); };
+    this._onOrderStatus = () => { this.loadOrders(true); };
+    this._onWarehouseIn = () => { this.loadOrders(true); };
+    this._onScanSuccess = () => { this.loadOrders(true); };
+    this._onScanUndo = () => { this.loadOrders(true); };
+    this._onRefreshAll = () => { this.loadOrders(true); this.loadUnreadNoticeCount(); };
+    eventBus.on(Events.DATA_CHANGED, this._onDataChanged);
+    eventBus.on(Events.ORDER_PROGRESS_CHANGED, this._onOrderProgress);
+    eventBus.on(Events.ORDER_STATUS_CHANGED, this._onOrderStatus);
+    eventBus.on(Events.WAREHOUSE_IN, this._onWarehouseIn);
+    eventBus.on(Events.SCAN_SUCCESS, this._onScanSuccess);
+    eventBus.on(Events.SCAN_UNDO, this._onScanUndo);
+    eventBus.on(Events.REFRESH_ALL, this._onRefreshAll);
+  },
+
+  _unbindWsEvents() {
+    if (!this._wsBound) return;
+    this._wsBound = false;
+    if (this._onDataChanged) eventBus.off(Events.DATA_CHANGED, this._onDataChanged);
+    if (this._onOrderProgress) eventBus.off(Events.ORDER_PROGRESS_CHANGED, this._onOrderProgress);
+    if (this._onOrderStatus) eventBus.off(Events.ORDER_STATUS_CHANGED, this._onOrderStatus);
+    if (this._onWarehouseIn) eventBus.off(Events.WAREHOUSE_IN, this._onWarehouseIn);
+    if (this._onScanSuccess) eventBus.off(Events.SCAN_SUCCESS, this._onScanSuccess);
+    if (this._onScanUndo) eventBus.off(Events.SCAN_UNDO, this._onScanUndo);
+    if (this._onRefreshAll) eventBus.off(Events.REFRESH_ALL, this._onRefreshAll);
   },
 
   /** 封面图加载失败（COS 404）→ 清空 URL，显示"暂无\n图片"占位 */

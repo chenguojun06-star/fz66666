@@ -215,11 +215,28 @@ public class ProductWarehousingOrchestrator {
 
         normalizeAndValidateDefectInfo(productWarehousing);
 
+        // ★ 菲号已质检拦截：手机端已做质检的菲号，PC端不能再做质检入库，只能做入库操作
+        validateBundleNotAlreadyQualityChecked(productWarehousing);
+
         // ★ 生产前置校验：菲号必须有生产扫码记录才能入库
         validateProductionPrerequisiteForWarehousing(
                 productWarehousing.getOrderId(), productWarehousing.getCuttingBundleId());
 
-        boolean ok = productWarehousingService.saveWarehousingAndUpdateOrder(productWarehousing);
+        boolean ok;
+        try {
+            ok = productWarehousingService.saveWarehousingAndUpdateOrder(productWarehousing);
+        } catch (org.springframework.transaction.UnexpectedRollbackException ure) {
+            log.error("save: UnexpectedRollbackException caught — inner REQUIRES_NEW transaction rolled back, " +
+                    "propagating as business error: orderId={}, bundleId={}",
+                    productWarehousing.getOrderId(), productWarehousing.getCuttingBundleId(), ure);
+            throw new IllegalStateException("入库操作失败，请稍后重试（事务冲突）");
+        } catch (IllegalArgumentException | IllegalStateException | NoSuchElementException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("save: unexpected exception from saveWarehousingAndUpdateOrder: orderId={}, bundleId={}",
+                    productWarehousing.getOrderId(), productWarehousing.getCuttingBundleId(), e);
+            throw new IllegalStateException("入库操作失败：" + e.getMessage());
+        }
         if (!ok) {
             throw new IllegalStateException("保存失败");
         }
@@ -242,8 +259,18 @@ public class ProductWarehousingOrchestrator {
             } catch (Exception ex) {
                 log.warn("save: recomputeProgress失败（不阻断入库）: orderId={}, error={}", orderId, ex.getMessage());
             }
+        }
 
-            // 已禁用系统自动完成
+        try {
+            String orderNo = productWarehousing.getOrderNo() != null ? productWarehousing.getOrderNo() : "";
+            String bNo = productWarehousing.getCuttingBundleNo() != null ? String.valueOf(productWarehousing.getCuttingBundleNo()) : "";
+            String opName = productWarehousing.getWarehousingOperatorName() != null ? productWarehousing.getWarehousingOperatorName() : "";
+            int qty = productWarehousing.getQualifiedQuantity() != null ? productWarehousing.getQualifiedQuantity() : 0;
+            String processLabel = qty > 0 && (productWarehousing.getUnqualifiedQuantity() == null || productWarehousing.getUnqualifiedQuantity() <= 0)
+                    ? "质检入库" : "质检记录";
+            webSocketService.broadcastProcessStageCompleted(orderNo, processLabel, opName, bNo, "", "", qty);
+        } catch (Exception e) {
+            log.debug("save: 工序通知推送失败(不阻断): orderId={}", orderId, e);
         }
 
         // 自动写入系统备注：质检入库节点
@@ -336,7 +363,18 @@ public class ProductWarehousingOrchestrator {
 
         list.forEach(this::fillOperatorFromContext);
 
-        boolean ok = productWarehousingService.saveBatchWarehousingAndUpdateOrder(list);
+        boolean ok;
+        try {
+            ok = productWarehousingService.saveBatchWarehousingAndUpdateOrder(list);
+        } catch (org.springframework.transaction.UnexpectedRollbackException ure) {
+            log.error("batchSave: UnexpectedRollbackException caught: orderId={}", oid, ure);
+            throw new IllegalStateException("批量入库操作失败，请稍后重试（事务冲突）");
+        } catch (IllegalArgumentException | IllegalStateException | NoSuchElementException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("batchSave: unexpected exception: orderId={}", oid, e);
+            throw new IllegalStateException("批量入库操作失败：" + e.getMessage());
+        }
         if (!ok) {
             throw new IllegalStateException("批量入库失败");
         }
@@ -379,7 +417,18 @@ public class ProductWarehousingOrchestrator {
             throw new NoSuchElementException("入库记录不存在");
         }
         normalizeAndValidateDefectInfo(productWarehousing);
-        boolean ok = productWarehousingService.updateWarehousingAndUpdateOrder(productWarehousing);
+        boolean ok;
+        try {
+            ok = productWarehousingService.updateWarehousingAndUpdateOrder(productWarehousing);
+        } catch (org.springframework.transaction.UnexpectedRollbackException ure) {
+            log.error("update: UnexpectedRollbackException caught: warehousingId={}", productWarehousing.getId(), ure);
+            throw new IllegalStateException("更新入库操作失败，请稍后重试（事务冲突）");
+        } catch (IllegalArgumentException | IllegalStateException | NoSuchElementException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("update: unexpected exception: warehousingId={}", productWarehousing.getId(), e);
+            throw new IllegalStateException("更新入库操作失败：" + e.getMessage());
+        }
         if (!ok) {
             throw new IllegalStateException("保存失败");
         }
@@ -559,7 +608,6 @@ public class ProductWarehousingOrchestrator {
             return;
         }
         try {
-            // 基础检查：至少有生产扫码记录（车缝等子工序完成即可做质检）
             long productionCount = scanRecordService.count(new LambdaQueryWrapper<ScanRecord>()
                     .eq(ScanRecord::getOrderId, orderId)
                     .eq(ScanRecord::getCuttingBundleId, bundleId)
@@ -568,12 +616,46 @@ public class ProductWarehousingOrchestrator {
             if (productionCount <= 0) {
                 throw new IllegalStateException("温馨提示：该菲号还未完成生产扫码哦～请先完成车缝等生产工序后再质检");
             }
-            // ✅ 不检查包装：质检操作在包装之前，车缝子工序扫码完成即可质检
-            // ✅ 包装检查仅在 WarehouseScanExecutor（小程序入库扫码）中执行
         } catch (IllegalStateException e) {
             throw e;
         } catch (Exception e) {
             log.warn("检查质检前置条件失败: orderId={}, bundleId={}", orderId, bundleId, e);
+        }
+    }
+
+    private void validateBundleNotAlreadyQualityChecked(ProductWarehousing productWarehousing) {
+        String bundleId = StringUtils.hasText(productWarehousing.getCuttingBundleId())
+                ? productWarehousing.getCuttingBundleId().trim() : null;
+        String orderId = StringUtils.hasText(productWarehousing.getOrderId())
+                ? productWarehousing.getOrderId().trim() : null;
+        if (!StringUtils.hasText(bundleId) || !StringUtils.hasText(orderId)) {
+            return;
+        }
+        try {
+            long qualityScanCount = productWarehousingService.count(
+                    new LambdaQueryWrapper<ProductWarehousing>()
+                            .eq(ProductWarehousing::getOrderId, orderId)
+                            .eq(ProductWarehousing::getCuttingBundleId, bundleId)
+                            .eq(ProductWarehousing::getDeleteFlag, 0)
+                            .eq(ProductWarehousing::getWarehousingType, "quality_scan")
+                            .eq(ProductWarehousing::getQualityStatus, "qualified"));
+            if (qualityScanCount > 0) {
+                throw new IllegalStateException("该菲号已在手机端完成质检，PC端不能再做质检入库。请直接在入库操作中分配仓库。");
+            }
+            long manualQualifiedCount = productWarehousingService.count(
+                    new LambdaQueryWrapper<ProductWarehousing>()
+                            .eq(ProductWarehousing::getOrderId, orderId)
+                            .eq(ProductWarehousing::getCuttingBundleId, bundleId)
+                            .eq(ProductWarehousing::getDeleteFlag, 0)
+                            .in(ProductWarehousing::getWarehousingType, "manual", "scan")
+                            .eq(ProductWarehousing::getQualityStatus, "qualified"));
+            if (manualQualifiedCount > 0) {
+                throw new IllegalStateException("该菲号已完成质检入库，不能重复操作");
+            }
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("检查菲号质检状态失败: orderId={}, bundleId={}", orderId, bundleId, e);
         }
     }
 

@@ -72,3 +72,18 @@ export const getScanTypeFromNodeKey = (nodeTypeKey?: string) => {
   const key = String(nodeTypeKey || '').trim();
   return map[key];
 };
+
+/**
+ * 格式化工序显示名称：工序编号 + 工序名称
+ * @param processCode 工序编号（如 "01", "02"）
+ * @param processName 工序名称（如 "裁剪", "绣花"）
+ * @returns 格式化后的显示名称（如 "01 裁剪", "02 绣花"）
+ */
+export const formatProcessDisplayName = (processCode?: string, processName?: string): string => {
+  const code = String(processCode || '').trim();
+  const name = String(processName || '').trim();
+  if (!code && !name) return '-';
+  if (!code) return name || '-';
+  if (!name) return code;
+  return `${code} ${name}`;
+};

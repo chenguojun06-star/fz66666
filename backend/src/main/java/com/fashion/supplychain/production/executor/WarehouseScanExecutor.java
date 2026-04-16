@@ -342,13 +342,18 @@ public class WarehouseScanExecutor {
 
         try {
             String orderNo = order.getOrderNo() != null ? order.getOrderNo() : "";
-            String warehouse = w.getWarehouse() != null ? w.getWarehouse() : "";
-            int qty = w.getQualifiedQuantity() != null ? w.getQualifiedQuantity() : 0;
+            String wh = w.getWarehouse() != null ? w.getWarehouse() : "";
+            int whQty = w.getQualifiedQuantity() != null ? w.getQualifiedQuantity() : 0;
             String styleNo = order.getStyleNo() != null ? order.getStyleNo() : "";
-            webSocketService.broadcastScanSuccess(orderNo, styleNo, "入库", qty);
-            webSocketService.broadcastWarehouseIn(orderNo, qty, warehouse);
-            webSocketService.broadcastOrderProgressChanged(orderNo, qty, "入库");
+            webSocketService.broadcastScanSuccess(orderNo, styleNo, "入库", whQty);
+            webSocketService.broadcastWarehouseIn(orderNo, whQty, wh);
+            webSocketService.broadcastOrderProgressChanged(orderNo, whQty, "入库");
             webSocketService.broadcastDataChanged("ScanRecord", sr.getId(), "create");
+            String bNo = bundle.getBundleNo() != null ? String.valueOf(bundle.getBundleNo()) : "";
+            String bColor = bundle.getColor() != null ? bundle.getColor() : "";
+            String bSize = bundle.getSize() != null ? bundle.getSize() : "";
+            String opName = operatorName != null ? operatorName : "";
+            webSocketService.broadcastProcessStageCompleted(orderNo, "入库", opName, bNo, bColor, bSize, whQty);
         } catch (Exception wsEx) {
             log.warn("[WarehouseScan] WebSocket broadcast failed (non-blocking): {}", wsEx.getMessage());
         }

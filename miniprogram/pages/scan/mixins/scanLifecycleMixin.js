@@ -12,7 +12,7 @@
 const ScanHandler = require('../handlers/ScanHandler');
 const api = require('../../../utils/api');
 // 修复: 解构导入 eventBus 实例（而非模块对象）
-const { eventBus } = require('../../../utils/eventBus');
+const { eventBus, Events } = require('../../../utils/eventBus');
 const ScanOfflineQueue = require('../services/ScanOfflineQueue');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 
@@ -42,8 +42,8 @@ const scanLifecycleMixin = Behavior({
     // 订阅全局事件
     // 修复: 使用 eventBus.on 且绑定 this
     if (eventBus && typeof eventBus.on === 'function') {
-      const unsubData = eventBus.on('DATA_REFRESH', this.handleDataRefresh.bind(this));
-      const unsubScan = eventBus.on('SCAN_SUCCESS', this.handleRemoteScanSuccess.bind(this));
+      const unsubData = eventBus.on(Events.DATA_CHANGED, this.handleDataRefresh.bind(this));
+      const unsubScan = eventBus.on(Events.SCAN_SUCCESS, this.handleRemoteScanSuccess.bind(this));
       // 隐私授权弹窗（微信审核必须）
       const unsubPrivacy = eventBus.on('showPrivacyDialog', resolve => {
         try {

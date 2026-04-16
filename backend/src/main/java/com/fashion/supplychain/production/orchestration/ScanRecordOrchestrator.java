@@ -114,6 +114,9 @@ public class ScanRecordOrchestrator {
     @Autowired
     private com.fashion.supplychain.websocket.service.WebSocketService webSocketService;
 
+    @Autowired
+    private com.fashion.supplychain.production.service.impl.ProductWarehousingHelper warehousingHelper;
+
     public Map<String, Object> execute(Map<String, Object> params) {
         TenantAssert.assertTenantContext();
         Map<String, Object> safeParams = params == null ? new HashMap<>() : new HashMap<>(params);
@@ -1006,6 +1009,52 @@ public class ScanRecordOrchestrator {
             );
         } catch (Exception e) {
             log.warn("[ScanNotify] 工序推进推送失败，不阻断业务: {}", e.getMessage());
+        }
+    }
+
+    private void appendBundleStatusHints(Map<String, Object> params, Map<String, Object> result) {
+        if (result == null) return;
+        try {
+            String bundleId = null;
+            String orderId = null;
+            Object bundleObj = result.get("cuttingBundle");
+            if (bundleObj instanceof CuttingBundle) {
+                CuttingBundle b = (CuttingBundle) bundleObj;
+                bundleId = b.getId();
+            }
+            if (!hasText(bundleId)) {
+                bundleId = TextUtils.safeText(params.get("cuttingBundleId"));
+            }
+            Object orderObj = result.get("orderInfo");
+            if (orderObj instanceof Map) {
+                orderId = TextUtils.safeText(((Map<?, ?>) orderObj).get("id"));
+            }
+            if (!hasText(orderId)) {
+                orderId = TextUtils.safeText(params.get("orderId"));
+            }
+            if (!hasText(bundleId) || !hasText(orderId)) return;
+
+            List<ScanRecord> records = scanRecordService.list(new LambdaQueryWrapper<ScanRecord>()
+                    .eq(ScanRecord::getOrderId, orderId)
+                    .eq(ScanRecord::getCuttingBundleId, bundleId)
+                    .eq(ScanRecord::getScanResult, "success")
+                    .orderByAsc(ScanRecord::getCreateTime));
+
+            List<ProductWarehousing> whRecords = productWarehousingService.list(
+                    new LambdaQueryWrapper<ProductWarehousing>()
+                            .eq(ProductWarehousing::getOrderId, orderId)
+                            .eq(ProductWarehousing::getCuttingBundleId, bundleId)
+                            .eq(ProductWarehousing::getDeleteFlag, 0)
+                            .orderByAsc(ProductWarehousing::getCreateTime));
+
+            List<String> hints = warehousingHelper.buildBundleStageHints(records, whRecords);
+
+            if (!hints.isEmpty()) {
+                result.put("bundleStatusHints", hints);
+                result.put("bundleStatusText", String.join(" → ", hints));
+            }
+        } catch (Exception e) {
+            log.debug("[ScanHints] 菲号状态提示生成失败（不阻断）: {}", e.getMessage());
         }
     }
 }

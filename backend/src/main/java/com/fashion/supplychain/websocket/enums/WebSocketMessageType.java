@@ -25,6 +25,10 @@ public enum WebSocketMessageType {
     // 质检相关
     QUALITY_CHECKED("quality:checked", "质检完成"),
 
+    // 工序流转通知
+    PROCESS_STAGE_RECEIVED("process:stage:received", "工序领取"),
+    PROCESS_STAGE_COMPLETED("process:stage:completed", "工序完成"),
+
     // 入库相关
     WAREHOUSE_IN("warehouse:in", "入库操作"),
     WAREHOUSE_OUT("warehouse:out", "出库操作"),

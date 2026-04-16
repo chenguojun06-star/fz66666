@@ -131,7 +131,46 @@ const WebSocketNotification: React.FC = () => {
     });
   }, [subscribe]);
 
-  //  通用数据变更通知
+  // 工序领取通知
+  useEffect(() => {
+    return subscribe('process:stage:received', (msg) => {
+      const p = msg.payload as { orderNo?: string; processName?: string; operatorName?: string; bundleNo?: string; color?: string; size?: string };
+      const bundleInfo = p.bundleNo ? `菲号${p.bundleNo}` : '';
+      const colorSize = [p.color, p.size].filter(Boolean).join('/');
+      const detail = [bundleInfo, colorSize].filter(Boolean).join(' · ');
+      notification.info({
+        message: `${p.operatorName || '有人'}领取了${p.processName || '工序'}`,
+        description: `订单 ${p.orderNo || '-'}${detail ? ' · ' + detail : ''}`,
+        placement: 'topRight',
+        duration: 5,
+      });
+      const event = new CustomEvent('order:progress:changed', { detail: p });
+      window.dispatchEvent(event);
+    });
+  }, [subscribe, notification]);
+
+  // 工序完成通知
+  useEffect(() => {
+    return subscribe('process:stage:completed', (msg) => {
+      const p = msg.payload as { orderNo?: string; processName?: string; operatorName?: string; bundleNo?: string; color?: string; size?: string; quantity?: number };
+      const bundleInfo = p.bundleNo ? `菲号${p.bundleNo}` : '';
+      const colorSize = [p.color, p.size].filter(Boolean).join('/');
+      const qtyInfo = p.quantity ? `${p.quantity}件` : '';
+      const detail = [bundleInfo, colorSize, qtyInfo].filter(Boolean).join(' · ');
+      const isWarehouse = p.processName === '入库' || p.processName === '质检入库';
+      notification.success({
+        message: `${p.operatorName || '有人'}完成了${p.processName || '工序'}`,
+        description: `订单 ${p.orderNo || '-'}${detail ? ' · ' + detail : ''}`,
+        placement: 'topRight',
+        duration: isWarehouse ? 8 : 5,
+        style: isWarehouse ? { borderLeft: '4px solid #10b981' } : undefined,
+      });
+      const event = new CustomEvent('order:progress:changed', { detail: p });
+      window.dispatchEvent(event);
+    });
+  }, [subscribe, notification]);
+
+  // 通用数据变更通知
   useEffect(() => {
     return subscribe('data:changed', (msg) => {
       const p = msg.payload as { entityType?: string; entityId?: string; action?: string };

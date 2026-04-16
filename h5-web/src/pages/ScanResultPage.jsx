@@ -5,7 +5,6 @@ import { useGlobalStore } from '@/stores/globalStore';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from '@/utils/uiHelper';
 import { getAuthedImageUrl } from '@/utils/fileUrl';
-import { getUserInfo } from '@/utils/storage';
 import { eventBus } from '@/utils/eventBus';
 
 function normalizePositiveInt(value, fallback = 1) {
@@ -97,6 +96,8 @@ export default function ScanResultPage() {
       coverImage, styleNo: raw.styleNo || orderDetail.styleNo || '', orderNo: raw.orderNo || '',
       bundleNo: raw.bundleNo || '', processName: raw.processName || '', progressStage: raw.progressStage || '',
       color: raw.color || '', size: raw.size || '', displayQuantity: raw.quantity || 0,
+      bundleStatusHints: raw.bundleStatusHints || [],
+      bundleStatusText: raw.bundleStatusText || '',
     });
     setProcessOptions(processOpts);
     setSelectedNames(selNames);
@@ -269,6 +270,19 @@ export default function ScanResultPage() {
         <div style={{ fontSize: 12, color: 'var(--color-primary)', marginTop: 4 }}>
           工序: {detail.processName} · 阶段: {detail.progressStage}
         </div>
+        {detail.bundleStatusHints && detail.bundleStatusHints.length > 0 && (
+          <div style={{
+            marginTop: 8, padding: '8px 10px', borderRadius: 8,
+            background: 'rgba(16,185,129,0.08)', borderLeft: '3px solid #10b981',
+          }}>
+            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginBottom: 4, fontWeight: 600 }}>
+              📋 菲号工序进度
+            </div>
+            {detail.bundleStatusHints.map((hint, i) => (
+              <div key={i} style={{ fontSize: 12, color: '#374151', lineHeight: '20px' }}>{hint}</div>
+            ))}
+          </div>
+        )}
       </div>
 
       {aiTipVisible && aiTipData && aiTipData.aiTip && (

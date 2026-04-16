@@ -62,10 +62,10 @@ export default function HomePage() {
       api.system.getMe().then(res => {
         const u = res?.data || res;
         if (u && token) setAuth(token, u);
-      }).catch((e) => console.error('getMe error:', e));
+      }).catch(() => { toast.error('用户信息加载失败，请刷新重试'); });
       api.notice.unreadCount().then(res => {
         setUnreadCount(Number(res?.data ?? (res || 0)));
-      }).catch((e) => console.error('unreadCount error:', e));
+      }).catch(() => {});
     };
     loadHomeData();
     const onFocus = () => loadHomeData();

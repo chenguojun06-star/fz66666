@@ -173,6 +173,7 @@ public class OrphanDataDetector {
         }
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public int deleteOrphanData(String tableName, List<String> ids) {
         if (ids == null || ids.isEmpty()) return 0;
         int deleted = 0;
@@ -541,33 +542,30 @@ public class OrphanDataDetector {
     // ── soft delete with deleteFlag ──
 
     private int softDeleteMaterialPurchases(List<String> ids) {
-        int c = 0;
-        for (String id : ids) {
-            try {
-                MaterialPurchase p = new MaterialPurchase(); p.setId(id); p.setDeleteFlag(1); p.setUpdateTime(LocalDateTime.now());
-                if (materialPurchaseService.updateById(p)) c++;
-            } catch (Exception e) { log.warn("删除失败 id={}: {}", id, e.getMessage()); }
-        }
-        return c;
+        try {
+            return materialPurchaseService.lambdaUpdate()
+                    .in(MaterialPurchase::getId, ids)
+                    .set(MaterialPurchase::getDeleteFlag, 1)
+                    .set(MaterialPurchase::getUpdateTime, LocalDateTime.now())
+                    .update() ? ids.size() : 0;
+        } catch (Exception e) { log.warn("批量删除MaterialPurchase失败: {}", e.getMessage()); return 0; }
     }
     private int softDeleteProductWarehousing(List<String> ids) {
-        int c = 0;
-        for (String id : ids) {
-            try {
-                ProductWarehousing w = new ProductWarehousing(); w.setId(id); w.setDeleteFlag(1); w.setUpdateTime(LocalDateTime.now());
-                if (productWarehousingService.updateById(w)) c++;
-            } catch (Exception e) { log.warn("删除失败 id={}: {}", id, e.getMessage()); }
-        }
-        return c;
+        try {
+            return productWarehousingService.lambdaUpdate()
+                    .in(ProductWarehousing::getId, ids)
+                    .set(ProductWarehousing::getDeleteFlag, 1)
+                    .set(ProductWarehousing::getUpdateTime, LocalDateTime.now())
+                    .update() ? ids.size() : 0;
+        } catch (Exception e) { log.warn("批量删除ProductWarehousing失败: {}", e.getMessage()); return 0; }
     }
     private int softDeleteMaterialQualityIssues(List<String> ids) {
-        int c = 0;
-        for (String id : ids) {
-            try {
-                MaterialQualityIssue i = new MaterialQualityIssue(); i.setId(id); i.setDeleteFlag(1); i.setUpdateTime(LocalDateTime.now());
-                if (materialQualityIssueService.updateById(i)) c++;
-            } catch (Exception e) { log.warn("删除失败 id={}: {}", id, e.getMessage()); }
-        }
-        return c;
+        try {
+            return materialQualityIssueService.lambdaUpdate()
+                    .in(MaterialQualityIssue::getId, ids)
+                    .set(MaterialQualityIssue::getDeleteFlag, 1)
+                    .set(MaterialQualityIssue::getUpdateTime, LocalDateTime.now())
+                    .update() ? ids.size() : 0;
+        } catch (Exception e) { log.warn("批量删除MaterialQualityIssue失败: {}", e.getMessage()); return 0; }
     }
 }

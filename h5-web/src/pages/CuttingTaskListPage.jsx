@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '@/api';
 import { getUserInfo } from '@/utils/storage';
 import { toast } from '@/utils/uiHelper';
+import { eventBus } from '@/utils/eventBus';
 
 export default function CuttingTaskListPage() {
   const navigate = useNavigate();
@@ -16,6 +17,12 @@ export default function CuttingTaskListPage() {
   ]);
 
   useEffect(() => { loadTasks(); }, []);
+
+  useEffect(() => {
+    const onRefresh = () => loadTasks();
+    eventBus.on('DATA_REFRESH', onRefresh);
+    return () => eventBus.off('DATA_REFRESH', onRefresh);
+  }, []);
 
   const loadTasks = async () => {
     setLoading(true);

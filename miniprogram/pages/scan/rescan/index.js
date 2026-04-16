@@ -1,6 +1,7 @@
 const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+const { triggerDataRefresh } = require('../../../utils/eventBus');
 
 Page({
   data: {
@@ -67,9 +68,6 @@ Page({
   },
 
   _emitRefresh() {
-    const eventBus = getApp().globalData && getApp().globalData.eventBus;
-    if (eventBus && typeof eventBus.emit === 'function') {
-      eventBus.emit('DATA_REFRESH');
-    }
+    triggerDataRefresh('scan');
   }
 });

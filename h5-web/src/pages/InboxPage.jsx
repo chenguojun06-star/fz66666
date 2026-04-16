@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '@/api';
 import { toast, timeAgo } from '@/utils/uiHelper';
+import { eventBus } from '@/utils/eventBus';
 
 function typeIcon(noticeType) {
   const map = { stagnant: '⏸', deadline: '⏰', quality: '🔍', worker_alert: '⚠️', manual: '📢', urge_order: '📦' };
@@ -14,6 +15,12 @@ export default function InboxPage() {
   const [editForm, setEditForm] = useState(null);
 
   useEffect(() => { loadNotices(); }, []);
+
+  useEffect(() => {
+    const onRefresh = () => loadNotices();
+    eventBus.on('DATA_REFRESH', onRefresh);
+    return () => eventBus.off('DATA_REFRESH', onRefresh);
+  }, []);
 
   const loadNotices = async () => {
     setLoading(true);

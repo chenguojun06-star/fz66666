@@ -12,10 +12,13 @@ RUN mvn -e -DskipTests -Dcheckstyle.skip=true --no-transfer-progress package
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 ENV PORT=8088
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates ca-certificates-java curl \
-  && update-ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
+RUN sed -i 's@archive.ubuntu.com@mirrors.aliyun.com@g' /etc/apt/sources.list \
+    && sed -i 's@security.ubuntu.com@mirrors.aliyun.com@g' /etc/apt/sources.list \
+    && apt-get clean \
+    && apt-get update -o Acquire::Check-Valid-Until=false \
+    && apt-get install -y --no-install-recommends ca-certificates ca-certificates-java curl \
+    && update-ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 ENV TZ=Asia/Shanghai
 RUN ln -snf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo "Asia/Shanghai" > /etc/timezone
 RUN mkdir -p /uploads/tenants

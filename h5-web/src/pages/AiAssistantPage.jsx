@@ -5,6 +5,7 @@ import { toast } from '@/utils/uiHelper';
 import useVoiceInput from '@/hooks/useVoiceInput';
 import useAiChatStream from '@/hooks/useAiChatStream';
 import Icon from '@/components/Icon';
+import { parseAiResponse } from '@/utils/chatParser';
 
 const WORKER_PROMPTS = [
   { label: '扫码规范', text: '请给我内部资料：扫码规范' },
@@ -118,6 +119,14 @@ export default function AiAssistantPage() {
     setPendingImage(null);
 
     const chatContext = isManager ? 'manager_assistant' : 'worker_assistant';
+    let aiMsgUpdated = false;
+
+    const updateLoadingMsg = (newText) => {
+      if (aiMsgUpdated) return;
+      aiMsgUpdated = true;
+      setMessages(prev => prev.map(m => m.id === loadingId ? { ...m, text: newText, loading: false } : m));
+      setSending(false); setStreamingText(''); setStreamingTool('');
+    };
 
     try {
       await aiStream.startStream(
@@ -130,17 +139,14 @@ export default function AiAssistantPage() {
             else if (event.type === 'text') { setStreamingText(event.text); setStreamingTool(''); }
           },
           onComplete: (finalText) => {
-            const rawText = finalText || '抱歉，我暂时无法回答这个问题。';
-            setMessages(prev => prev.map(m => m.id === loadingId ? { ...m, text: rawText, loading: false } : m));
-            setSending(false); setStreamingText(''); setStreamingTool('');
+            updateLoadingMsg(finalText || '抱歉，我暂时无法回答这个问题。');
           },
           onError: () => {
-            setMessages(prev => prev.map(m => m.id === loadingId ? { ...m, text: '服务暂时无法响应，请稍后再试。', loading: false } : m));
-            setSending(false); setStreamingText(''); setStreamingTool('');
+            updateLoadingMsg('服务暂时无法响应，请稍后再试。');
           },
           onFallback: async (q) => {
             let reply;
-            const chatPayload = { message: q, conversationId, context: chatContext };
+            const chatPayload = { question: q, conversationId, context: chatContext };
             if (imageUrl) chatPayload.imageUrl = imageUrl;
             if (isManager) {
               try { const res = await api.intelligence.naturalLanguageExecute({ text: q, conversationId }); reply = res?.message || res?.reply || res?.content || '操作完成'; }
@@ -153,8 +159,7 @@ export default function AiAssistantPage() {
         }
       );
     } catch (err) {
-      setMessages(prev => prev.map(m => m.id === loadingId ? { ...m, text: '服务暂时无法响应，请稍后再试。', loading: false } : m));
-      setSending(false); setStreamingText(''); setStreamingTool('');
+      updateLoadingMsg('服务暂时无法响应，请稍后再试。');
     }
   }, [conversationId, isManager, pendingImage]);
 
@@ -197,18 +202,63 @@ export default function AiAssistantPage() {
       )}
 
       <div className="chat-msg-list">
-        {messages.map(m => (
-          <div key={m.id} className={`chat-msg-row ${m.role === 'user' ? 'user' : ''}`}>
-            {m.role === 'ai' && <div className="chat-avatar ai"><Icon name="cloud" size={14} /></div>}
-            <div className={`chat-bubble ${m.role === 'user' ? 'user' : 'ai'}`}>
-              {m.image && <img src={m.image} alt="上传图片" />}
-              {m.loading ? (
-                <span className="typing-indicator"><span>⟳</span> 思考中...</span>
-              ) : m.text}
+        {messages.map(m => {
+          const parsed = m.role === 'ai' && m.text && !m.loading ? parseAiResponse(m.text) : null;
+          return (
+            <div key={m.id} className={`chat-msg-row ${m.role === 'user' ? 'user' : ''}`}>
+              {m.role === 'ai' && <div className="chat-avatar ai"><Icon name="cloud" size={14} /></div>}
+              <div className={`chat-bubble ${m.role === 'user' ? 'user' : 'ai'}`}>
+                {m.image && <img src={m.image} alt="上传图片" />}
+                {m.loading ? (
+                  <span className="typing-indicator"><span>⟳</span> 思考中...</span>
+                ) : parsed ? (
+                  <>
+                    <div className="ai-text-content" style={{ whiteSpace: 'pre-wrap' }}>{parsed.displayText}</div>
+                    {parsed.actionCards.length > 0 && (
+                      <div className="ai-action-cards">
+                        {parsed.actionCards.map((card, ci) => (
+                          <div key={ci} className="ai-action-card">
+                            <div className="ai-action-card-title">⚡ {card.title}</div>
+                            <div className="ai-action-card-btns">
+                              {card.actions.map((act, ai) => (
+                                <button key={ai} className="ai-action-btn"
+                                  onClick={() => { if (!sending) { setInputText(act.label || act.command || ''); } }}>
+                                  {act.label || act.command}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {parsed.followUpActions.length > 0 && (
+                      <div className="ai-followup-actions">
+                        {parsed.followUpActions.map((fa, fi) => (
+                          <button key={fi} className="ai-followup-btn"
+                            onClick={() => { if (!sending) setInputText(fa.label); }}>
+                            {fa.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {parsed.recommendPills.length > 0 && (
+                      <div className="ai-recommend-pills">
+                        <span className="ai-recommend-label">猜你想问</span>
+                        {parsed.recommendPills.map((pill, pi) => (
+                          <button key={pi} className="ai-recommend-pill"
+                            onClick={() => { if (!sending) setInputText(pill); }}>
+                            {pill}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : m.text}
+              </div>
+              {m.role === 'user' && <div className="chat-avatar user">我</div>}
             </div>
-            {m.role === 'user' && <div className="chat-avatar user">我</div>}
-          </div>
-        ))}
+          );
+        })}
         {streamingTool && <div className="chat-streaming-tool">{streamingTool}</div>}
         {streamingText && (
           <div className="chat-msg-row">

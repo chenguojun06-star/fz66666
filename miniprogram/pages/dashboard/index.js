@@ -15,6 +15,7 @@ var { transformOrderData } = require('../work/utils/orderTransform');
 var { buildProcessNodesWithRates } = require('../work/utils/progressNodes');
 var { isAdminOrSupervisor } = require('../../utils/permission');
 var { isTenantOwner } = require('../../utils/storage');
+var { eventBus, Events } = require('../../utils/eventBus');
 
 var app = getApp();
 
@@ -83,6 +84,7 @@ Page({
     }
     this._loaded = true;
     this._loadUnreadCount();
+    this._bindWsEvents();
   },
 
   onPullDownRefresh: function () {
@@ -98,11 +100,13 @@ Page({
   onHide: function () {
     clearTimeout(this._searchTimer);
     this._searchTimer = null;
+    this._unbindWsEvents();
   },
 
   onUnload: function () {
     clearTimeout(this._searchTimer);
     this._searchTimer = null;
+    this._unbindWsEvents();
   },
 
   /* ======== 刷新摘要卡片（4 个并发请求） ======== */
@@ -276,5 +280,37 @@ Page({
   _formatToday: function () {
     var d = new Date();
     return (d.getMonth() + 1) + '月' + d.getDate() + '日';
+  },
+
+  _bindWsEvents: function () {
+    if (this._wsBound) return;
+    this._wsBound = true;
+    var that = this;
+    this._onDataChanged = function () { that.refreshCards(); that.loadOrders(true); };
+    this._onOrderProgress = function () { that.refreshCards(); that.loadOrders(true); };
+    this._onOrderStatus = function () { that.refreshCards(); that.loadOrders(true); };
+    this._onWarehouseIn = function () { that.refreshCards(); that.loadOrders(true); };
+    this._onScanSuccess = function () { that.loadOrders(true); };
+    this._onScanUndo = function () { that.loadOrders(true); };
+    this._onRefreshAll = function () { that.refreshCards(); that.loadOrders(true); that._loadUnreadCount(); };
+    eventBus.on(Events.DATA_CHANGED, this._onDataChanged);
+    eventBus.on(Events.ORDER_PROGRESS_CHANGED, this._onOrderProgress);
+    eventBus.on(Events.ORDER_STATUS_CHANGED, this._onOrderStatus);
+    eventBus.on(Events.WAREHOUSE_IN, this._onWarehouseIn);
+    eventBus.on(Events.SCAN_SUCCESS, this._onScanSuccess);
+    eventBus.on(Events.SCAN_UNDO, this._onScanUndo);
+    eventBus.on(Events.REFRESH_ALL, this._onRefreshAll);
+  },
+
+  _unbindWsEvents: function () {
+    if (!this._wsBound) return;
+    this._wsBound = false;
+    if (this._onDataChanged) eventBus.off(Events.DATA_CHANGED, this._onDataChanged);
+    if (this._onOrderProgress) eventBus.off(Events.ORDER_PROGRESS_CHANGED, this._onOrderProgress);
+    if (this._onOrderStatus) eventBus.off(Events.ORDER_STATUS_CHANGED, this._onOrderStatus);
+    if (this._onWarehouseIn) eventBus.off(Events.WAREHOUSE_IN, this._onWarehouseIn);
+    if (this._onScanSuccess) eventBus.off(Events.SCAN_SUCCESS, this._onScanSuccess);
+    if (this._onScanUndo) eventBus.off(Events.SCAN_UNDO, this._onScanUndo);
+    if (this._onRefreshAll) eventBus.off(Events.REFRESH_ALL, this._onRefreshAll);
   },
 });

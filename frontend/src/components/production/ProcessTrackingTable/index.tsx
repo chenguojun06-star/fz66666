@@ -5,7 +5,7 @@ import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
 import { formatDateTime } from '@/utils/datetime';
 import { productionScanApi } from '@/services/production/productionApi';
-import { stageAliasMap, carSewingKeywords, tailProcessKeywords } from '@/utils/productionStage';
+import { stageAliasMap, carSewingKeywords, tailProcessKeywords, formatProcessDisplayName } from '@/utils/productionStage';
 import { useAuth, isAdminUser } from '@/utils/AuthContext';
 import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE_OPTIONS, readPageSize } from '@/utils/pageSizeStore';
 import { generateRequestId } from '@/utils/api';
@@ -435,12 +435,7 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
       key: 'processName',
       width: 100,
       render: (v: string, record: any) => (
-        <div>
-          <span style={{ fontSize: 12, fontWeight: 500 }}>{v || '-'}</span>
-          {record.processCode && (
-            <span style={{ fontSize: 10, color: 'var(--color-text-tertiary)', marginLeft: 4 }}>({record.processCode})</span>
-          )}
-        </div>
+        <span style={{ fontSize: 12, fontWeight: 500 }}>{formatProcessDisplayName(record.processCode, v)}</span>
       ),
     },
     {

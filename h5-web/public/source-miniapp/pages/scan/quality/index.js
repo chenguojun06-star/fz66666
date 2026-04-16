@@ -310,8 +310,15 @@ Page({
     if (d.remark) payload.remark = d.remark;
 
     try {
-      await api.production.executeScan(payload);
+      var res = await api.production.executeScan(payload);
       toast.success(d.result === 'qualified' ? '质检合格，已记录' : '已记录不良品');
+      var hints = (res && res.bundleStatusHints) || [];
+      var statusText = (res && res.bundleStatusText) || '';
+      if (hints.length > 0) {
+        setTimeout(function() {
+          wx.showToast({ title: statusText || hints.join(' → '), icon: 'none', duration: 3000 });
+        }, 800);
+      }
       this._emitRefresh();
       wx.navigateBack();
     } catch (e) {

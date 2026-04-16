@@ -1,10 +1,13 @@
 const { getBaseUrl } = require('../config');
 const { eventBus, Events } = require('./eventBus');
+const api = require('./api');
 
 const RECONNECT_BASE_DELAY = 3000;
 const RECONNECT_MAX_DELAY = 60000;
 const MAX_RECONNECT_ATTEMPTS = 10;
 const HEARTBEAT_INTERVAL = 18000;
+const POLL_INTERVAL = 30000;
+const POLL_START_DELAY = 5000;
 
 class WebSocketManager {
   constructor() {
@@ -14,6 +17,8 @@ class WebSocketManager {
     this.reconnectAttempts = 0;
     this.reconnectTimer = null;
     this.heartbeatTimer = null;
+    this.pollTimer = null;
+    this.polling = false;
     this.userId = null;
     this.tenantId = null;
     this.manualClose = false;
@@ -52,6 +57,7 @@ class WebSocketManager {
         this.reconnectAttempts = 0;
         console.info('[WS] connected');
         this._startHeartbeat();
+        this._stopPolling();
       });
 
       wx.onSocketMessage((res) => {
@@ -86,6 +92,7 @@ class WebSocketManager {
   disconnect() {
     this.manualClose = true;
     this._stopHeartbeat();
+    this._stopPolling();
     this._clearReconnect();
     if (this.socket) {
       try {
@@ -178,7 +185,8 @@ class WebSocketManager {
     if (this.manualClose) return;
     this._clearReconnect();
     if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-      console.warn('[WS] max reconnect attempts reached');
+      console.warn('[WS] max reconnect attempts reached, switching to polling');
+      this._startPolling();
       return;
     }
     let delay = Math.min(
@@ -206,6 +214,7 @@ class WebSocketManager {
     this.pageVisible = true;
     if (!this.connected && !this.connecting && this.userId && this.tenantId) {
       this.reconnectAttempts = 0;
+      this._stopPolling();
       this.connect(this.userId, this.tenantId);
     }
   }
@@ -216,6 +225,41 @@ class WebSocketManager {
 
   isConnected() {
     return this.connected;
+  }
+
+  isPolling() {
+    return this.polling;
+  }
+
+  _startPolling() {
+    if (this.polling) return;
+    this.polling = true;
+    console.info('[WS] polling fallback started (interval: ' + POLL_INTERVAL + 'ms)');
+    this._doPoll();
+    this.pollTimer = setInterval(() => {
+      if (this.pageVisible) {
+        this._doPoll();
+      }
+    }, POLL_INTERVAL);
+  }
+
+  _stopPolling() {
+    if (!this.polling) return;
+    this.polling = false;
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
+    console.info('[WS] polling fallback stopped');
+  }
+
+  async _doPoll() {
+    try {
+      eventBus.emit(Events.DATA_CHANGED, { type: 'all', source: 'poll' });
+      eventBus.emit(Events.REFRESH_ALL, { source: 'poll' });
+    } catch (e) {
+      console.warn('[WS] poll error:', e.message || e);
+    }
   }
 }
 

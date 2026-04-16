@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '@/api';
 import { useGlobalStore } from '@/stores/globalStore';
@@ -144,8 +144,13 @@ export default function ScanQualityPage() {
     if (remark) payload.remark = remark;
 
     try {
-      await api.production.executeScan(payload);
+      const res = await api.production.executeScan(payload);
+      const hints = res?.bundleStatusHints || [];
+      const statusText = res?.bundleStatusText || '';
       toast.success(result === 'qualified' ? '质检合格，已记录' : '已记录不良品');
+      if (hints.length > 0) {
+        setTimeout(() => { toast.info(statusText || hints.join(' → ')); }, 800);
+      }
       eventBus.emit('DATA_REFRESH');
       navigate(-1);
     } catch (e) {

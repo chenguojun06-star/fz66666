@@ -4,6 +4,7 @@ import api from '@/api';
 import { useAuthStore } from '@/stores/authStore';
 import { transformOrderData } from '@/utils/orderTransform';
 import { toast } from '@/utils/uiHelper';
+import { eventBus } from '@/utils/eventBus';
 import Icon from '@/components/Icon';
 import OrderCard from '@/components/OrderCard';
 import EmptyState from '@/components/EmptyState';
@@ -69,6 +70,12 @@ export default function WorkPage() {
   }, [activeTab, search, delayedOnly, factoryType, loading, orders, page]);
 
   useEffect(() => { loadOrders(true); }, [activeTab, delayedOnly, factoryType]);
+
+  useEffect(() => {
+    const onRefresh = () => loadOrders(true);
+    eventBus.on('DATA_REFRESH', onRefresh);
+    return () => eventBus.off('DATA_REFRESH', onRefresh);
+  }, [loadOrders]);
 
   const toggleExpand = useCallback((id) => {
     setExpandedId(prev => prev === id ? null : id);

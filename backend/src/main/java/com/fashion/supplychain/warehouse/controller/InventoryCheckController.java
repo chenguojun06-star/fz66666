@@ -13,6 +13,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/warehouse/inventory-check")
+@PreAuthorize("isAuthenticated()")
 public class InventoryCheckController {
 
     @Autowired

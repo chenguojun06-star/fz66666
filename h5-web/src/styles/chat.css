@@ -38,3 +38,17 @@
 .cursor-blink { animation: cursorBlink 1s step-end infinite; }
 .cursor-blink-page { animation: cursorBlink 1s step-end infinite; }
 .alert-header { display: flex; align-items: center; gap: 4px; font-size: var(--font-size-xs); font-weight: 600; color: var(--color-danger); margin-bottom: 6px; }
+.ai-text-content { line-height: 1.6; }
+.ai-action-cards { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.ai-action-card { background: var(--color-bg-light); border: 1px solid var(--color-border-light); border-radius: 8px; padding: 8px 10px; }
+.ai-action-card-title { font-size: var(--font-size-xs); font-weight: 600; color: var(--color-text-secondary); margin-bottom: 6px; }
+.ai-action-card-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.ai-action-btn { padding: 4px 10px; border-radius: var(--radius-full); border: 1px solid var(--color-primary); background: transparent; color: var(--color-primary); font-size: var(--font-size-xs); cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; }
+.ai-action-btn:active { background: var(--color-primary); color: var(--color-text-white); }
+.ai-followup-actions { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+.ai-followup-btn { padding: 4px 10px; border-radius: var(--radius-full); border: 1px solid var(--color-border); background: var(--color-bg-light); color: var(--color-text-secondary); font-size: var(--font-size-xs); cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; }
+.ai-followup-btn:active { border-color: var(--color-primary); color: var(--color-primary); }
+.ai-recommend-pills { margin-top: 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.ai-recommend-label { font-size: var(--font-size-xs); color: var(--color-text-tertiary); flex-shrink: 0; }
+.ai-recommend-pill { padding: 4px 10px; border-radius: var(--radius-full); border: 1px solid var(--color-primary); background: rgba(59,130,246,0.06); color: var(--color-primary); font-size: var(--font-size-xs); cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; }
+.ai-recommend-pill:active { background: var(--color-primary); color: var(--color-text-white); }

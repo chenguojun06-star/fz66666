@@ -64,8 +64,6 @@ Page({
     quickPrompts: WORKER_PROMPTS,
     conversationId: '',
     isManager: false,
-    pendingImage: '',
-    uploading: false,
     dynamicSuggestions: [],
   },
 
@@ -116,43 +114,6 @@ Page({
     if (!text || this.data.sending) return;
     this.setData({ inputText: '' });
     this._send(text);
-  },
-
-  /** 选择图片（拍照/相册） */
-  chooseImage() {
-    if (this.data.sending || this.data.uploading) {
-      console.warn('[AI-Assistant] chooseImage blocked: sending=', this.data.sending, 'uploading=', this.data.uploading);
-      return;
-    }
-    var self = this;
-    wx.chooseMedia({
-      count: 1,
-      mediaType: ['image'],
-      sourceType: ['camera', 'album'],
-      success: (res) => {
-        const path = (res.tempFiles && res.tempFiles[0] && res.tempFiles[0].tempFilePath) || '';
-        if (path) self.setData({ pendingImage: path });
-      },
-      fail: (err) => {
-        console.warn('[AI-Assistant] chooseImage fail:', err);
-        if (err && err.errMsg && err.errMsg.indexOf('cancel') === -1) {
-          wx.showModal({
-            title: '相机/相册权限',
-            content: '需要相机或相册权限才能上传图片，请在设置中允许',
-            confirmText: '去设置',
-            cancelText: '取消',
-            success: function (modalRes) {
-              if (modalRes.confirm) wx.openSetting({ success: function () {} });
-            }
-          });
-        }
-      },
-    });
-  },
-
-  /** 移除待发送图片 */
-  removePendingImage() {
-    this.setData({ pendingImage: '' });
   },
 
   /** 预览图片 */
@@ -230,11 +191,11 @@ Page({
                 var res = await api.intelligence.naturalLanguageExecute({ text: text, conversationId: self.data.conversationId });
                 reply = (res && (res.message || res.reply || res.content)) || '操作完成';
               } catch (nlErr) {
-                var fbRes = await api.intelligence.aiAdvisorChat({ message: text, conversationId: self.data.conversationId, context: 'manager_assistant' });
+                var fbRes = await api.intelligence.aiAdvisorChat({ question: text, conversationId: self.data.conversationId, context: 'manager_assistant' });
                 reply = (fbRes && (fbRes.reply || fbRes.content || fbRes.message)) || '（无回应）';
               }
             } else {
-              var res2 = await api.intelligence.aiAdvisorChat({ message: text, conversationId: self.data.conversationId, context: 'worker_assistant' });
+              var res2 = await api.intelligence.aiAdvisorChat({ question: text, conversationId: self.data.conversationId, context: 'worker_assistant' });
               reply = (res2 && (res2.reply || res2.content || res2.message)) || '（无回应）';
             }
             self._updateMsg(loadingId, reply);
@@ -341,7 +302,7 @@ Page({
       if (suggestions.length > 0) {
         self.setData({ dynamicSuggestions: suggestions });
       }
-    }).catch(function () {});
+    }).catch(function (e) { console.warn('[AI-Assistant] 待办任务加载失败:', e); });
   },
 
   _abortStream() {

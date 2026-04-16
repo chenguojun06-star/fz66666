@@ -25,7 +25,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/internal/maintenance")
-@PreAuthorize("isAuthenticated()")
+@PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
 public class InternalMaintenanceController {
 
     private static final Logger log = LoggerFactory.getLogger(InternalMaintenanceController.class);

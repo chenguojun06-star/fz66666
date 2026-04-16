@@ -2,6 +2,7 @@ const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { normalizeScanType } = require('../handlers/helpers/ScanModeResolver');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+const { triggerDataRefresh } = require('../../../utils/eventBus');
 
 function normalizePositiveInt(value, fallback) {
   fallback = (fallback === undefined) ? 1 : fallback;
@@ -100,7 +101,9 @@ Page({
         displayQuantity: displayQuantity,
         bedNo: bedNo ? String(bedNo) : '',
         cuttingDateDisplay: this._formatYMD(cuttingDate),
-        deliveryDateDisplay: this._formatYMD(deliveryDate)
+        deliveryDateDisplay: this._formatYMD(deliveryDate),
+        bundleStatusHints: raw.bundleStatusHints || [],
+        bundleStatusText: raw.bundleStatusText || ''
       },
       processOptions: processOptions,
       selectedNames: selectedNames,
@@ -420,9 +423,6 @@ Page({
   },
 
   _emitRefresh() {
-    var eventBus = getApp().globalData && getApp().globalData.eventBus;
-    if (eventBus && typeof eventBus.emit === 'function') {
-      eventBus.emit('DATA_REFRESH');
-    }
+    triggerDataRefresh('scan');
   }
 });

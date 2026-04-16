@@ -1,6 +1,6 @@
 import React from 'react';
-import { Button, Alert, Tag, Form, InputNumber, Input, Select, Space, Row, Col, Card, Spin, Popconfirm, Typography } from 'antd';
-import { ToolOutlined } from '@ant-design/icons';
+import { Button, Alert, Tag, Form, InputNumber, Input, Select, Space, Row, Col, Card, Spin, Popconfirm, Typography, Tooltip } from 'antd';
+import { ToolOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
 import { BatchSelectBundleRow } from '../../types';
 import { isBundleBlockedForWarehousing } from '../../utils';
@@ -88,11 +88,20 @@ const InspectFormPanel: React.FC<InspectFormPanelProps> = ({
                 render: (v: number, record: BatchSelectBundleRow) => record.disabled ? <Text type="secondary">-</Text> : v,
               },
               {
-                title: '状态', dataIndex: 'statusText', width: 80,
+                title: '状态', dataIndex: 'statusText', width: 120,
                 render: (v: any, record: BatchSelectBundleRow) => {
-                  if (record.disabled) return <Tag color="default">{v || '不可质检'}</Tag>;
-                  if (isBundleBlockedForWarehousing(record.rawStatus)) return <Tag color="warning">{v}</Tag>;
-                  return <Tag color="processing">{v || '可质检'}</Tag>;
+                  const hints: string[] = record.stageHints || [];
+                  const tagEl = record.disabled
+                    ? <Tag color="default">{v || '不可质检'}</Tag>
+                    : isBundleBlockedForWarehousing(record.rawStatus)
+                      ? <Tag color="warning">{v}</Tag>
+                      : <Tag color="processing">{v || '可质检'}</Tag>;
+                  if (hints.length === 0) return tagEl;
+                  return (
+                    <Tooltip title={<div style={{ lineHeight: '22px' }}>{hints.map((h, i) => <div key={i}>{h}</div>)}</div>}>
+                      <Space size={4}>{tagEl}<InfoCircleOutlined style={{ color: '#1890ff', fontSize: 12 }} /></Space>
+                    </Tooltip>
+                  );
                 },
               },
               {

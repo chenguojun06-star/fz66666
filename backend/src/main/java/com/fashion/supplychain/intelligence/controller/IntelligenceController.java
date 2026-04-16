@@ -15,6 +15,7 @@ import com.fashion.supplychain.intelligence.service.AiContextBuilderService;
 import com.fashion.supplychain.intelligence.service.AiJobRunLogService;
 import com.fashion.supplychain.intelligence.service.ProcessStatsEngine;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -33,6 +34,12 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/api/intelligence")
 @PreAuthorize("isAuthenticated()")
 public class IntelligenceController {
+
+    @Value("${app.sse.timeout:240000}")
+    private long sseTimeout;
+
+    @Value("${app.upload.max-size:5242880}")
+    private long uploadMaxSize;
 
     @Autowired
     private SmartPrecheckOrchestrator smartPrecheckOrchestrator;
@@ -567,8 +574,13 @@ public class IntelligenceController {
     /** AI 顾问流式问答 — SSE 实时推送思考/工具调用/回答事件 */
     @GetMapping(value = "/ai-advisor/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter aiAdvisorChatStream(@RequestParam String question,
-                                          @RequestParam(required = false) String pageContext) {
-        SseEmitter emitter = new SseEmitter(120_000L);
+                                          @RequestParam(required = false) String pageContext,
+                                          @RequestParam(required = false) String conversationId,
+                                          @RequestParam(required = false) String imageUrl,
+                                          @RequestParam(required = false) String orderNo,
+                                          @RequestParam(required = false) String processName,
+                                          @RequestParam(required = false) String stage) {
+        SseEmitter emitter = new SseEmitter(sseTimeout);
         if (question == null || question.isBlank()) {
             try {
                 emitter.send(SseEmitter.event().name("error").data("{\"message\":\"问题不能为空\"}"));
@@ -611,7 +623,7 @@ public class IntelligenceController {
         if (file == null || file.isEmpty()) {
             return Result.fail("请选择要上传的文件");
         }
-        if (file.getSize() > 5 * 1024 * 1024L) {
+        if (file.getSize() > uploadMaxSize) {
             return Result.fail("文件大小不能超过 5MB");
         }
         String parsedContent = fileAnalysisOrchestrator.analyzeFile(file);

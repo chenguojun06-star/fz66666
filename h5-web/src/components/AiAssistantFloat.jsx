@@ -9,6 +9,7 @@ import useVoiceInput from '@/hooks/useVoiceInput';
 import useAiChatStream from '@/hooks/useAiChatStream';
 import useCameraCapture from '@/hooks/useCameraCapture';
 import Icon from '@/components/Icon';
+import { parseAiResponse } from '@/utils/chatParser';
 
 const QUICK_PROMPTS_WORKER = [
   { label: '我的任务', text: '我今天负责的生产任务是什么？' },
@@ -232,6 +233,7 @@ export default function AiAssistantFloat() {
 
     const chatContext = isMgr ? 'manager_assistant' : 'worker_assistant';
     let fullText = '';
+    let aiMsgAdded = false;
     try {
       const streamParams = { question: msg, pageContext: `${chatContext}:${currentPageContext}`, imageUrl };
       if (scanResultData) {
@@ -246,6 +248,8 @@ export default function AiAssistantFloat() {
             if (event.type === 'text') { fullText = event.text; setStreamingText(fullText); }
           },
           onComplete: (finalText) => {
+            if (aiMsgAdded) return;
+            aiMsgAdded = true;
             setStreamingText('');
             setMessages((prev) => [...prev, { role: 'ai', text: finalText || fullText || '（无回复）' }]);
             setSending(false);
@@ -253,6 +257,8 @@ export default function AiAssistantFloat() {
             setPendingImage(null);
           },
           onError: () => {
+            if (aiMsgAdded) return;
+            aiMsgAdded = true;
             setMessages((prev) => [...prev, { role: 'ai', text: '抱歉，小云暂时无法回复，请稍后再试。' }]);
             setSending(false);
             sendingRef.current = false;
@@ -265,18 +271,21 @@ export default function AiAssistantFloat() {
                 const r = res?.data || res;
                 return r?.result || r?.message || r?.reply || '操作完成';
               } catch (_) {
-                const res = await api.intelligence.aiAdvisorChat({ message: q, context: 'manager_assistant' });
+                const res = await api.intelligence.aiAdvisorChat({ question: q, context: 'manager_assistant' });
                 return res?.reply || res?.content || res?.message || '（无回应）';
               }
             } else {
-              const res = await api.intelligence.aiAdvisorChat({ message: q, context: 'worker_assistant' });
+              const res = await api.intelligence.aiAdvisorChat({ question: q, context: 'worker_assistant' });
               return res?.reply || res?.content || res?.message || '（无回应）';
             }
           },
         }
       );
     } catch (e) {
-      setMessages((prev) => [...prev, { role: 'ai', text: '抱歉，小云暂时无法回复，请稍后再试。' }]);
+      if (!aiMsgAdded) {
+        aiMsgAdded = true;
+        setMessages((prev) => [...prev, { role: 'ai', text: '抱歉，小云暂时无法回复，请稍后再试。' }]);
+      }
       setSending(false);
       sendingRef.current = false;
       setPendingImage(null);
@@ -317,14 +326,59 @@ export default function AiAssistantFloat() {
       </div>
 
       <div ref={scrollRef} className="chat-msg-scroll">
-        {messages.map((msg, i) => (
-          <div key={i} className={`chat-msg-row ${msg.role === 'user' ? 'user' : ''}`}>
-            <div className={`chat-bubble ${msg.role === 'user' ? 'user' : 'ai'}`}>
-              {msg.image && <img src={msg.image} alt="" className="chat-bubble-img" />}
-              {msg.text}
+        {messages.map((msg, i) => {
+          const parsed = msg.role === 'ai' && msg.text ? parseAiResponse(msg.text) : null;
+          return (
+            <div key={i} className={`chat-msg-row ${msg.role === 'user' ? 'user' : ''}`}>
+              <div className={`chat-bubble ${msg.role === 'user' ? 'user' : 'ai'}`}>
+                {msg.image && <img src={msg.image} alt="" className="chat-bubble-img" />}
+                {parsed ? (
+                  <>
+                    <div className="ai-text-content" style={{ whiteSpace: 'pre-wrap' }}>{parsed.displayText}</div>
+                    {parsed.actionCards.length > 0 && (
+                      <div className="ai-action-cards">
+                        {parsed.actionCards.map((card, ci) => (
+                          <div key={ci} className="ai-action-card">
+                            <div className="ai-action-card-title">⚡ {card.title}</div>
+                            <div className="ai-action-card-btns">
+                              {card.actions.map((act, ai) => (
+                                <button key={ai} className="ai-action-btn"
+                                  onClick={() => handleSend(act.label || act.command || '')}>
+                                  {act.label || act.command}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {parsed.followUpActions.length > 0 && (
+                      <div className="ai-followup-actions">
+                        {parsed.followUpActions.map((fa, fi) => (
+                          <button key={fi} className="ai-followup-btn"
+                            onClick={() => handleSend(fa.label)}>
+                            {fa.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {parsed.recommendPills.length > 0 && (
+                      <div className="ai-recommend-pills">
+                        <span className="ai-recommend-label">猜你想问</span>
+                        {parsed.recommendPills.map((pill, pi) => (
+                          <button key={pi} className="ai-recommend-pill"
+                            onClick={() => handleSend(pill)}>
+                            {pill}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : msg.text}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         {streamingText && (
           <div className="chat-msg-row">
             <div className="chat-bubble ai">{streamingText}<span className="cursor-blink">▌</span></div>

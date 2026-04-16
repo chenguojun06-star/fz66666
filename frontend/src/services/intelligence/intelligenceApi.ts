@@ -378,7 +378,8 @@ export const intelligenceApi = {
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buf = '';
-        // eslint-disable-next-line no-constant-condition
+        let doneCalled = false;
+        const safeDone = () => { if (doneCalled) return; doneCalled = true; onDone(); };
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -393,7 +394,7 @@ export const intelligenceApi = {
               try {
                 const parsed = JSON.parse(line.slice(5).trim());
                 if (eventName === 'done') {
-                  onDone();
+                  safeDone();
                 } else {
                   onEvent({ type: eventName, data: parsed });
                 }
@@ -404,7 +405,7 @@ export const intelligenceApi = {
             }
           }
         }
-        onDone();
+        safeDone();
       })
       .catch((err) => {
         if (err.name !== 'AbortError') onError(err.message || '网络错误');

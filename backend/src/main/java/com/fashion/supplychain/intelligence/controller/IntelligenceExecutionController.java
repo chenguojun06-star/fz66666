@@ -95,6 +95,7 @@ public class IntelligenceExecutionController {
      *   3. 如果低风险 → 自动执行 & 立即返回结果
      */
     @PostMapping("/commands/execute")
+    @org.springframework.transaction.annotation.Transactional
     public Result<?> executeCommand(@RequestBody ExecutableCommand command) {
         try {
             String userIdStr = UserContext.userId();  // 获取当前用户
@@ -183,6 +184,7 @@ public class IntelligenceExecutionController {
      * ```
      */
     @PostMapping("/commands/{commandId}/approve")
+    @org.springframework.transaction.annotation.Transactional
     public Result<?> approveCommand(
         @PathVariable String commandId,
         @RequestBody(required = false) Map<String, String> body

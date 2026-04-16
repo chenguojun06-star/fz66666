@@ -115,12 +115,12 @@ const tenant = {
 };
 
 const intelligence = {
-  precheckScan: (payload) => http.post('/api/intelligence/scan-advisor/precheck', payload || {}),
+  precheckScan: (payload) => http.post('/api/intelligence/precheck/scan', payload || {}),
   getScanTips: (payload) => http.post('/api/intelligence/scan-advisor/tips', payload || {}),
   aiAdvisorChat: (params) => http.post('/api/intelligence/ai-advisor/chat', params),
   aiAdvisorChatStream: (params, onEvent, onComplete, onError) => {
     const token = useAuthStore.getState().token;
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://192.168.2.248:8088';
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
     const question = encodeURIComponent(params.question || '');
     const pageContext = params.pageContext ? encodeURIComponent(params.pageContext) : '';
     const conversationId = params.conversationId || '';
@@ -137,6 +137,17 @@ const intelligence = {
     if (stage) url += `&stage=${stage}`;
 
     const controller = new AbortController();
+    let streamCompleted = false;
+    const safeComplete = () => {
+      if (streamCompleted) return;
+      streamCompleted = true;
+      if (onComplete) onComplete();
+    };
+    const safeError = (err) => {
+      if (streamCompleted) return;
+      streamCompleted = true;
+      if (onError) onError(err);
+    };
     fetch(url, {
       method: 'GET',
       headers: { 'Authorization': token ? `Bearer ${token}` : '' },
@@ -156,7 +167,6 @@ const intelligence = {
         const decoder = new TextDecoder();
         let buffer = '';
         let eventName = '';
-        let completed = false;
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -170,7 +180,7 @@ const intelligence = {
               try {
                 const data = JSON.parse(line.slice(5).trim());
                 if (eventName === 'done') {
-                  if (onComplete && !completed) { completed = true; onComplete(); }
+                  safeComplete();
                 } else {
                   if (onEvent) onEvent({ type: eventName, data });
                 }
@@ -181,18 +191,18 @@ const intelligence = {
             }
           }
         }
-        if (onComplete && !completed) { completed = true; onComplete(); }
+        safeComplete();
       })
       .catch((err) => {
-        if (err.name !== 'AbortError' && onError) onError(err);
+        if (err.name !== 'AbortError') safeError(err);
       });
     return { abort: () => controller.abort() };
   },
   naturalLanguageExecute: (params) => http.post('/api/intelligence/crew/nl-execute', params),
-  executeCommand: (payload) => http.post('/api/intelligence/execution-engine/execute', payload),
-  getPendingCommands: () => http.get('/api/intelligence/execution-engine/pending'),
-  approveCommand: (commandId) => http.post(`/api/intelligence/execution-engine/${commandId}/approve`),
-  rejectCommand: (commandId) => http.post(`/api/intelligence/execution-engine/${commandId}/reject`),
+  executeCommand: (payload) => http.post('/api/intelligence/commands/execute', payload),
+  getPendingCommands: () => http.get('/api/intelligence/commands/pending'),
+  approveCommand: (commandId) => http.post(`/api/intelligence/commands/${commandId}/approve`),
+  rejectCommand: (commandId) => http.post(`/api/intelligence/commands/${commandId}/reject`),
   visualAnalyze: (payload) => http.post('/api/intelligence/visual/analyze', payload || {}),
   getAgentActivityList: () => http.get('/api/intelligence/agent-activity/agents'),
   getAgentAlerts: () => http.get('/api/intelligence/agent-activity/alerts'),
@@ -219,7 +229,8 @@ const wechat = {
 const common = {
   uploadImage: (filePath) => {
     const token = useAuthStore.getState().token;
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://192.168.2.248:8088';
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+    if (!baseUrl) return Promise.reject(new Error('VITE_API_BASE_URL 未配置'));
     const formData = new FormData();
     if (filePath instanceof File) {
       formData.append('file', filePath);

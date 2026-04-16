@@ -501,6 +501,52 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
             return false;
         }
 
+        // ★ quality_scan 类型合格记录：手机端已做质检但未入库，PC端分配仓库时创建新的 manual 入库记录
+        String oldType = oldWarehousing.getWarehousingType() == null ? "" : oldWarehousing.getWarehousingType().trim();
+        if ("quality_scan".equals(oldType) && STATUS_QUALIFIED.equalsIgnoreCase(
+                oldWarehousing.getQualityStatus() == null ? "" : oldWarehousing.getQualityStatus().trim())) {
+            String warehouse = productWarehousing.getWarehouse();
+            if (!StringUtils.hasText(warehouse)) {
+                throw new IllegalArgumentException("请指定仓库");
+            }
+            long existingManual = this.count(new LambdaQueryWrapper<ProductWarehousing>()
+                    .eq(ProductWarehousing::getOrderId, oldWarehousing.getOrderId())
+                    .eq(ProductWarehousing::getCuttingBundleId, oldWarehousing.getCuttingBundleId())
+                    .eq(ProductWarehousing::getDeleteFlag, 0)
+                    .in(ProductWarehousing::getWarehousingType, "manual", "scan")
+                    .eq(ProductWarehousing::getQualityStatus, STATUS_QUALIFIED));
+            if (existingManual > 0) {
+                throw new IllegalStateException("该菲号已完成入库，不能重复入库");
+            }
+            ProductWarehousing newRecord = new ProductWarehousing();
+            newRecord.setOrderId(oldWarehousing.getOrderId());
+            newRecord.setOrderNo(oldWarehousing.getOrderNo());
+            newRecord.setStyleId(oldWarehousing.getStyleId());
+            newRecord.setStyleNo(oldWarehousing.getStyleNo());
+            newRecord.setStyleName(oldWarehousing.getStyleName());
+            newRecord.setWarehousingType("manual");
+            newRecord.setWarehouse(warehouse);
+            int qualifiedQty = oldWarehousing.getQualifiedQuantity() == null ? 0 : oldWarehousing.getQualifiedQuantity();
+            newRecord.setWarehousingQuantity(qualifiedQty);
+            newRecord.setQualifiedQuantity(qualifiedQty);
+            newRecord.setUnqualifiedQuantity(0);
+            newRecord.setQualityStatus(STATUS_QUALIFIED);
+            newRecord.setCuttingBundleId(oldWarehousing.getCuttingBundleId());
+            newRecord.setCuttingBundleNo(oldWarehousing.getCuttingBundleNo());
+            newRecord.setCuttingBundleQrCode(oldWarehousing.getCuttingBundleQrCode());
+            newRecord.setWarehousingOperatorId(productWarehousing.getWarehousingOperatorId());
+            newRecord.setWarehousingOperatorName(productWarehousing.getWarehousingOperatorName());
+            newRecord.setQualityOperatorId(oldWarehousing.getQualityOperatorId());
+            newRecord.setQualityOperatorName(oldWarehousing.getQualityOperatorName());
+            newRecord.setReceiverId(productWarehousing.getReceiverId());
+            newRecord.setReceiverName(productWarehousing.getReceiverName());
+            return this.saveWarehousingAndUpdateOrder(newRecord);
+        }
+        if ("quality_scan_scrap".equals(oldType) || ("quality_scan".equals(oldType) && !STATUS_QUALIFIED.equalsIgnoreCase(
+                oldWarehousing.getQualityStatus() == null ? "" : oldWarehousing.getQualityStatus().trim()))) {
+            throw new IllegalStateException("该记录是手机端质检记录（" + oldType + "），不能直接转为入库。请通过手机端扫码入库。");
+        }
+
         if (StringUtils.hasText(oldWarehousing.getOrderId())) {
             ProductionOrder order = productionOrderService.getById(oldWarehousing.getOrderId());
             String st = order == null ? "" : (order.getStatus() == null ? "" : order.getStatus().trim());

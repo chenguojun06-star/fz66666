@@ -5,6 +5,7 @@ const RECONNECT_BASE_DELAY = 3000;
 const RECONNECT_MAX_DELAY = 60000;
 const MAX_RECONNECT_ATTEMPTS = 10;
 const HEARTBEAT_INTERVAL = 18000;
+const POLL_INTERVAL = 30000;
 
 function resolveWsUrl() {
   let base = window.location.origin;
@@ -22,6 +23,8 @@ class WebSocketService {
     this.reconnectAttempts = 0;
     this.reconnectTimer = null;
     this.heartbeatTimer = null;
+    this.pollTimer = null;
+    this.polling = false;
     this.manualClose = false;
   }
 
@@ -51,6 +54,7 @@ class WebSocketService {
       this.connecting = false;
       this.reconnectAttempts = 0;
       this._startHeartbeat();
+      this._stopPolling();
     };
 
     this.ws.onmessage = (event) => {
@@ -76,6 +80,7 @@ class WebSocketService {
   disconnect() {
     this.manualClose = true;
     this._stopHeartbeat();
+    this._stopPolling();
     this._clearReconnect();
     if (this.ws) {
       try { this.ws.close(); } catch (_e) {}
@@ -142,7 +147,10 @@ class WebSocketService {
   _scheduleReconnect() {
     if (this.manualClose) return;
     this._clearReconnect();
-    if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) return;
+    if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+      this._startPolling();
+      return;
+    }
     const delay = Math.min(
       RECONNECT_BASE_DELAY * Math.pow(2, this.reconnectAttempts),
       RECONNECT_MAX_DELAY
@@ -160,10 +168,35 @@ class WebSocketService {
     }
   }
 
+  _startPolling() {
+    if (this.polling) return;
+    this.polling = true;
+    this._doPoll();
+    this.pollTimer = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        this._doPoll();
+      }
+    }, POLL_INTERVAL);
+  }
+
+  _stopPolling() {
+    if (!this.polling) return;
+    this.polling = false;
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
+  }
+
+  _doPoll() {
+    eventBus.emit('DATA_REFRESH', { type: 'all', source: 'poll' });
+  }
+
   onVisibilityChange() {
     if (document.visibilityState === 'visible') {
       if (!this.connected && !this.connecting && !this.manualClose) {
         this.reconnectAttempts = 0;
+        this._stopPolling();
         this.connect();
       }
     }

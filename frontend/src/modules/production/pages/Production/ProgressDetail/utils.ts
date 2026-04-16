@@ -696,10 +696,6 @@ export const getProcessesByNodeFromOrder = (
   order: ProductionOrder | null,
   templateNodes?: ProgressNode[],
 ): Record<string, { name: string; unitPrice?: number; processCode?: string }[]> => {
-  const raw = String((order as any)?.progressWorkflowJson ?? '').trim();
-  if (!raw) return {};
-
-  // 构建模板单价映射，用于覆盖旧快照价格
   const templatePriceMap = new Map<string, number>();
   if (templateNodes?.length) {
     templateNodes.forEach(n => {
@@ -710,41 +706,64 @@ export const getProcessesByNodeFromOrder = (
     });
   }
 
-  try {
-    const obj = JSON.parse(raw);
-    const nodes = Array.isArray(obj?.nodes) ? obj.nodes : [];
-    const byNode: Record<string, { name: string; unitPrice?: number; processCode?: string }[]> = {};
-    if (nodes.length && nodes[0]?.name) {
-      for (const item of nodes) {
-        const n = String(item?.name || item?.processName || '').trim();
-        if (!n) continue;
-        const rawStage = String(item?.progressStage || '').trim();
-        const stage = (rawStage && rawStage !== n) ? rawStage : (resolveDynamicParent(n) || rawStage || n);
-        const storedPrice = Number(item?.unitPrice) || 0;
-        const price = templatePriceMap.get(n) ?? storedPrice;
-        const processCode = String(item?.id || item?.processCode || '').trim() || undefined;
-        if (!byNode[stage]) byNode[stage] = [];
-        byNode[stage].push({ name: n, unitPrice: price, processCode });
+  const raw = String((order as any)?.progressWorkflowJson ?? '').trim();
+  if (raw) {
+    try {
+      const obj = JSON.parse(raw);
+      const nodes = Array.isArray(obj?.nodes) ? obj.nodes : [];
+      const byNode: Record<string, { name: string; unitPrice?: number; processCode?: string }[]> = {};
+      if (nodes.length && nodes[0]?.name) {
+        for (const item of nodes) {
+          const n = String(item?.name || item?.processName || '').trim();
+          if (!n) continue;
+          const rawStage = String(item?.progressStage || '').trim();
+          const stage = (rawStage && rawStage !== n) ? rawStage : (resolveDynamicParent(n) || rawStage || n);
+          const storedPrice = Number(item?.unitPrice) || 0;
+          const price = templatePriceMap.get(n) ?? storedPrice;
+          const processCode = String(item?.id || item?.processCode || '').trim() || undefined;
+          if (!byNode[stage]) byNode[stage] = [];
+          byNode[stage].push({ name: n, unitPrice: price, processCode });
+        }
+        if (Object.keys(byNode).length > 0) return byNode;
       }
-      return byNode;
+      const processesByNode = obj?.processesByNode || {};
+      const result: Record<string, { name: string; unitPrice?: number; processCode?: string }[]> = {};
+      for (const k of Object.keys(processesByNode || {})) {
+        const arr = Array.isArray(processesByNode[k]) ? processesByNode[k] : [];
+        result[k] = arr
+          .map((p: any) => {
+            const name = String(p?.name || p?.processName || '').trim();
+            const storedPrice = Number(p?.unitPrice) || 0;
+            const processCode = String(p?.id || p?.processCode || '').trim() || undefined;
+            return { name, unitPrice: templatePriceMap.get(name) ?? storedPrice, processCode };
+          })
+          .filter((x) => x.name);
+      }
+      if (Object.keys(result).length > 0) return result;
+    } catch {
+      // fall through to progressNodeUnitPrices fallback
     }
-    const processesByNode = obj?.processesByNode || {};
-    const result: Record<string, { name: string; unitPrice?: number; processCode?: string }[]> = {};
-    for (const k of Object.keys(processesByNode || {})) {
-      const arr = Array.isArray(processesByNode[k]) ? processesByNode[k] : [];
-      result[k] = arr
-        .map((p: any) => {
-          const name = String(p?.name || p?.processName || '').trim();
-          const storedPrice = Number(p?.unitPrice) || 0;
-          const processCode = String(p?.id || p?.processCode || '').trim() || undefined;
-          return { name, unitPrice: templatePriceMap.get(name) ?? storedPrice, processCode };
-        })
-        .filter((x) => x.name);
-    }
-    return result;
-  } catch {
-    return {};
   }
+
+  const unitPrices = (order as any)?.progressNodeUnitPrices;
+  if (Array.isArray(unitPrices) && unitPrices.length > 0) {
+    const byNode: Record<string, { name: string; unitPrice?: number; processCode?: string }[]> = {};
+    for (let idx = 0; idx < unitPrices.length; idx++) {
+      const item = unitPrices[idx];
+      const n = String(item?.name || item?.processName || '').trim();
+      if (!n) continue;
+      const rawStage = String(item?.progressStage || '').trim();
+      const stage = (rawStage && rawStage !== n) ? rawStage : (resolveDynamicParent(n) || rawStage || n);
+      const storedPrice = Number(item?.unitPrice) || Number(item?.price) || 0;
+      const price = templatePriceMap.get(n) ?? storedPrice;
+      const processCode = String(item?.id || item?.processId || item?.processCode || '').trim() || undefined;
+      if (!byNode[stage]) byNode[stage] = [];
+      byNode[stage].push({ name: n, unitPrice: price, processCode });
+    }
+    if (Object.keys(byNode).length > 0) return byNode;
+  }
+
+  return {};
 };
 
 /**

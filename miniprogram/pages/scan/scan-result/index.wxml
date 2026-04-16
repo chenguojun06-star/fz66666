@@ -32,6 +32,13 @@
         <text class="field-value">{{detail.deliveryDateDisplay}}</text>
       </view>
     </view>
+
+    <view wx:if="{{detail.bundleStatusHints.length > 0}}" class="stage-hints-card">
+      <text class="stage-hints-title">📋 菲号工序进度</text>
+      <view wx:for="{{detail.bundleStatusHints}}" wx:key="index" class="stage-hint-item">
+        <text>{{item}}</text>
+      </view>
+    </view>
   </view>
 
   <view wx:if="{{imageInsight}}" class="insight-card">

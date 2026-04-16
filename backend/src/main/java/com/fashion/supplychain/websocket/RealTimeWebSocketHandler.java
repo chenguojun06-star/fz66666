@@ -184,6 +184,7 @@ public class RealTimeWebSocketHandler extends TextWebSocketHandler {
                 log.error("[WebSocket] 发送消息失败: sessionId={}", session.getId(), e);
             }
             sessionManager.removeSession(session.getId());
+            lastPingTime.remove(session.getId());
         }
     }
 

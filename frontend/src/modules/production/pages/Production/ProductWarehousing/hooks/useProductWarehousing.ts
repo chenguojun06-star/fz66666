@@ -302,6 +302,10 @@ export const useProductWarehousing = () => {
         const qs = String((r as any)?.qualityStatus || '').trim().toLowerCase();
         const qualified = !qs || qs === 'qualified';
         const q = Number((r as any)?.qualifiedQuantity || 0) || 0;
+        const wt = String((r as any)?.warehousingType || '').trim();
+        const wh = String((r as any)?.warehouse || '').trim();
+        if (wt === 'quality_scan_scrap' || wt === 'repair_return') return false;
+        if (wh && wh !== '待分配') return false;
         return qualified && q > 0;
       });
 

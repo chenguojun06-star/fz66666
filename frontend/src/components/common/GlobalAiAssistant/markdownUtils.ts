@@ -57,8 +57,8 @@ export function renderSimpleMarkdown(text: string): string {
 function inlineFmt(s: string): string {
   return escHtml(s)
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/`([^`]+)`/g, '<code style="background:#f0f0f0;padding:1px 4px;border-radius:3px;font-size:12px">$1</code>')
-    .replace(/\b(PO\d{8,15})\b/g, '<a class="order-link" data-orderno="$1" style="cursor:pointer">$1</a>');
+    .replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
+    .replace(/\b(PO\d{8,15})\b/g, '<a class="order-link" data-orderno="$1">$1</a>');
 }
 
 function escHtml(s: string): string {
@@ -67,8 +67,8 @@ function escHtml(s: string): string {
 
 const DOMPURIFY_CONFIG = {
   ALLOWED_TAGS: ['strong', 'em', 'code', 'pre', 'ul', 'li', 'ol', 'div', 'br', 'span', 'p', 'a', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'table', 'thead', 'tbody', 'tr', 'td', 'th'],
-  ALLOWED_ATTR: ['style', 'class', 'href', 'data-orderno', 'target'],
-  FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover'],
+  ALLOWED_ATTR: ['class', 'data-orderno', 'target'],
+  FORBID_ATTR: ['style', 'onerror', 'onload', 'onclick', 'onmouseover'],
   FORBID_TAGS: ['script', 'style', 'iframe', 'form', 'input', 'textarea', 'button'],
 };
 

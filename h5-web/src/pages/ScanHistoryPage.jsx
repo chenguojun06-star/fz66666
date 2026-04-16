@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '@/api';
 import { useAuthStore } from '@/stores/authStore';
 import { toast } from '@/utils/uiHelper';
 import { canUndo } from '@/utils/scanHelpers';
+import { eventBus } from '@/utils/eventBus';
 
 const _now = new Date();
 
@@ -157,6 +158,12 @@ export default function ScanHistoryPage() {
   }, [loading, page, hasMore, records, dateMode, year, month, startDate, endDate, searchKeyword, showOnlyPayable]);
 
   useEffect(() => { loadData(true); }, [dateMode, year, month]);
+
+  useEffect(() => {
+    const onRefresh = () => loadData(true);
+    eventBus.on('DATA_REFRESH', onRefresh);
+    return () => eventBus.off('DATA_REFRESH', onRefresh);
+  }, []);
 
   const onPrevMonth = () => { let y = year, m = month - 1; if (m < 1) { m = 12; y--; } setYear(y); setMonth(m); };
   const onNextMonth = () => {

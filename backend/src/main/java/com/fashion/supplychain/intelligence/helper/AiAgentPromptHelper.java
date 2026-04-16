@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
 @Component
 public class AiAgentPromptHelper {
 
-    @Value("${xiaoyun.agent.max-system-prompt-chars:12000}")
+    @Value("${xiaoyun.agent.max-system-prompt-chars:10000}")
     private int maxSystemPromptChars;
 
     @Value("${xiaoyun.agent.rag.recall-top-k:3}")

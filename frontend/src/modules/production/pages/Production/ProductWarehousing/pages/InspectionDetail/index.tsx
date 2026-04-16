@@ -288,23 +288,46 @@ const InspectionDetail: React.FC = () => {
     try {
       const targets = qcRecords.filter(r => {
         const qs = String(r.qualityStatus || '').trim().toLowerCase();
-        return (!qs || qs === 'qualified') && Number(r.qualifiedQuantity || 0) > 0 && !String(r.warehouse || '').trim();
+        const wt = String((r as any)?.warehousingType || '').trim();
+        const wh = String(r.warehouse || '').trim();
+        if (wt === 'quality_scan_scrap' || wt === 'repair_return') return false;
+        if (wh && wh !== '待分配') return false;
+        return (!qs || qs === 'qualified') && Number(r.qualifiedQuantity || 0) > 0;
       });
       if (!targets.length) { message.info('暂无可入库的合格质检记录'); setWarehousingLoading(false); return; }
 
       const concurrency = 5;
       const queue = targets.slice();
+      let failCount = 0;
+      const failMessages: string[] = [];
       const workers = Array.from({ length: Math.min(concurrency, queue.length) }).map(async () => {
         while (queue.length) {
           const r = queue.shift();
           if (!r) continue;
-          await api.put<{ code: number; message: string; data: boolean }>(
-            '/production/warehousing', { id: r.id, warehouse: warehouseValue },
-          );
+          try {
+            const res = await api.put<{ code: number; message: string; data: boolean }>(
+              '/production/warehousing', { id: r.id, warehouse: warehouseValue },
+            );
+            if (res.code !== 200) {
+              failCount++;
+              const msg = res.message || '入库失败';
+              if (!failMessages.includes(msg)) failMessages.push(msg);
+            }
+          } catch (e: unknown) {
+            failCount++;
+            const msg = e instanceof Error ? e.message : '入库失败';
+            if (!failMessages.includes(msg)) failMessages.push(msg);
+          }
         }
       });
       await Promise.all(workers);
-      message.success('入库完成');
+      if (failCount === 0) {
+        message.success('入库完成');
+      } else if (failCount < targets.length) {
+        message.warning(`部分入库成功（${targets.length - failCount}/${targets.length}），失败原因：${failMessages.join('；')}`);
+      } else {
+        message.error(`入库失败：${failMessages.join('；')}`);
+      }
       setWarehouseValue('');
       fetchQcRecords();
     } catch (e: unknown) {
@@ -880,13 +903,19 @@ const InspectionDetail: React.FC = () => {
               size="small"
               title={<><CheckCircleOutlined style={{ marginRight: 6 }} />质检操作</>}
             >
-              <InspectFormPanel
-                formHook={formHook}
-                handleMarkRepaired={handleMarkRepaired}
-                markingRepairBundleId={markingRepairBundleId}
-                onOpenBatchUnqualified={() => setBatchUnqualifiedModalOpen(true)}
-                autoInitDone={autoInitRef.current}
-              />
+              {formHook.batchSelectRows.length > 0 && formHook.batchSelectableQrs.length === 0 && qcStats.pendingWarehouse === 0 && qcStats.count > 0 ? (
+                <Alert type="success" showIcon
+                  title="该订单所有菲号已完成质检入库，无需再操作"
+                  description="如需返修重检，请在质检记录中标记返修后重新操作" />
+              ) : (
+                <InspectFormPanel
+                  formHook={formHook}
+                  handleMarkRepaired={handleMarkRepaired}
+                  markingRepairBundleId={markingRepairBundleId}
+                  onOpenBatchUnqualified={() => setBatchUnqualifiedModalOpen(true)}
+                  autoInitDone={autoInitRef.current}
+                />
+              )}
             </Card>
           </div>
         </div>

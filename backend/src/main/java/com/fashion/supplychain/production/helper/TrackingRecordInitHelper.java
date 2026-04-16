@@ -214,7 +214,8 @@ public class TrackingRecordInitHelper {
                 tracking.setQuantity(bundle.getQuantity());
 
                 String processName = getStringValue(node, "name", "工序" + (i + 1));
-                tracking.setProcessCode(processName);
+                String processId = getStringValue(node, "id", "");
+                tracking.setProcessCode(StringUtils.hasText(processId) ? processId : processName);
                 tracking.setProcessName(processName);
                 tracking.setProcessOrder(i + 1);
                 tracking.setUnitPrice(getBigDecimalValue(node, "unitPrice", BigDecimal.ZERO));

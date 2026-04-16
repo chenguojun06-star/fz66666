@@ -41,6 +41,7 @@ export const useWarehousingForm = (
   const [bundleRepairStatsByQr, setBundleRepairStatsByQr] = useState<Record<string, BundleRepairStats>>({});
   const [bundleRepairRemainingByQr, setBundleRepairRemainingByQr] = useState<Record<string, number>>({});
   const [productionReadyQrs, setProductionReadyQrs] = useState<string[]>([]);
+  const [qrStageHintsMap, setQrStageHintsMap] = useState<Record<string, string[]>>({});
   const [unqualifiedFileList, setUnqualifiedFileList] = useState<UploadFile[]>([]);
   const [batchSelectedBundleQrs, setBatchSelectedBundleQrs] = useState<string[]>([]);
   const [batchQtyByQr, setBatchQtyByQr] = useState<Record<string, number>>({});
@@ -147,16 +148,19 @@ export const useWarehousingForm = (
       return;
     }
     try {
-      const res = await api.get<{ code: number; data: { qcReadyQrs: string[]; warehouseReadyQrs: string[] } }>('/production/warehousing/bundle-readiness', {
+      const res = await api.get<{ code: number; data: { qcReadyQrs: string[]; warehouseReadyQrs: string[]; qrStageHints?: Record<string, string[]> } }>('/production/warehousing/bundle-readiness', {
         params: { orderId: oid },
       });
       if (res.code === 200) {
         setProductionReadyQrs((res.data?.qcReadyQrs || []).map((v: string) => String(v || '').trim()).filter(Boolean));
+        setQrStageHintsMap(res.data?.qrStageHints || {});
       } else {
         setProductionReadyQrs([]);
+        setQrStageHintsMap({});
       }
     } catch {
       setProductionReadyQrs([]);
+      setQrStageHintsMap({});
     }
   };
 
@@ -434,10 +438,11 @@ export const useWarehousingForm = (
           statusText,
           disabled,
           rawStatus,
+          stageHints: qrStageHintsMap[qr] || [],
         };
       })
       .filter(Boolean) as BatchSelectBundleRow[];
-  }, [bundleRepairRemainingByQr, bundles, productionReadyQrSet, qualifiedWarehousedBundleQrSet]);
+  }, [bundleRepairRemainingByQr, bundles, productionReadyQrSet, qualifiedWarehousedBundleQrSet, qrStageHintsMap]);
 
   const batchSelectableQrs = useMemo(() => {
     return batchSelectRows.filter((r) => !r.disabled).map((r) => r.qr);

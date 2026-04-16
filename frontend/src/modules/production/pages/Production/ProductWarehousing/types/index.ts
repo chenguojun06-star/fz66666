@@ -82,6 +82,7 @@ export type BatchSelectBundleRow = {
   statusText: string;
   disabled?: boolean;
   rawStatus?: string;
+  stageHints?: string[];
 };
 
 export type BundleRepairStats = {

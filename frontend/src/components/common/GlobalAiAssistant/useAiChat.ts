@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import type { ChangeEvent } from 'react';
 import { useLocation } from 'react-router-dom';
 import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
@@ -31,6 +31,10 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
   const streamAbortRef = useRef<AbortController | null>(null);
   const historyFetchedRef = useRef(false);
 
+  useEffect(() => {
+    return () => { streamAbortRef.current?.abort(); };
+  }, []);
+
   const speak = useCallback((text: string) => speakText(text, isMuted), [isMuted]);
 
   const restoreHistory = useCallback(() => {
@@ -46,7 +50,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
         }));
         setMessages(prev => prev.length <= 1 ? [INITIAL_MSG, ...restored] : prev);
       })
-      .catch(() => {});
+      .catch((e) => { console.warn('[AiChat] 历史记录加载失败:', e); });
   }, [advisorSessionId]);
 
   const handleAdvisorFeedback = useCallback((msg: Message, score: number) => {
@@ -58,7 +62,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
       advice: msg.text,
       score,
       feedbackText: score >= 4 ? '有帮助' : '待改进',
-    }).catch(() => {});
+    }).catch((e) => { console.warn('[AiChat] 反馈提交失败:', e); });
   }, [advisorSessionId]);
 
   const handleDownloadReport = useCallback(async (type: 'daily' | 'weekly' | 'monthly') => {
@@ -111,6 +115,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
       let streamStarted = false;
       let accumulatedText = '';
       let toolStatus = '';
+      let completed = false;
       const pageContext = location.pathname + location.search;
 
       const ctrl = intelligenceApi.aiAdvisorChatStream(
@@ -152,6 +157,8 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
           }
         },
         () => {
+          if (completed) return;
+          completed = true;
           setIsTyping(false);
           if (accumulatedText) speak(accumulatedText);
           intelligenceApi.hyperAdvisorAsk(advisorSessionId, contextualText).then(resp => {
@@ -163,9 +170,11 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
               needsClarification: ha.needsClarification, traceId: ha.traceId,
               advisorSessionId: ha.sessionId, userQuery: text,
             } : m));
-          }).catch(() => {});
+          }).catch((e) => { console.warn('[AiChat] 顾问请求失败:', e); });
         },
         async (err) => {
+          if (completed) return;
+          completed = true;
           console.warn('SSE stream failed, falling back to sync:', err);
           if (streamStarted) {
             setMessages(prev => prev.map(m => m.id === aiMsgId

@@ -106,7 +106,7 @@ public class CodeDiagnosticTool extends AbstractAgentTool {
                     "\n  1) MySQL容器是否运行：docker ps | grep fashion-mysql-simple" +
                     "\n  2) 端口是否为3308（非标准3306）" +
                     "\n  3) 启动：./deployment/db-manager.sh start" +
-                    "\n  4) 连接URL: jdbc:mysql://localhost:3308/fashion_supplychain"
+                    "\n  4) 检查application.yml中的spring.datasource.url配置"
             ),
             new ErrorPattern(
                     "Illegal mix of collations|collation.*utf8mb4",

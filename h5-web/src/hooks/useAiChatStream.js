@@ -16,6 +16,14 @@ export default function useAiChatStream() {
 
     let accumulatedText = '';
     let streamStarted = false;
+    let finished = false;
+
+    const finishOnce = (finalText) => {
+      if (finished) return;
+      finished = true;
+      abortRef.current = null;
+      onComplete?.(finalText);
+    };
 
     try {
       await new Promise((resolve, reject) => {
@@ -25,6 +33,7 @@ export default function useAiChatStream() {
             streamStarted = true;
             if (event.type === 'answer' && event.data?.content) {
               accumulatedText += String(event.data.content);
+              onEvent?.({ type: 'text', text: accumulatedText });
             } else if (event.type === 'thinking') {
               onEvent?.({ type: 'thinking' });
             } else if (event.type === 'tool_call') {
@@ -32,25 +41,26 @@ export default function useAiChatStream() {
             } else if (event.type === 'tool_result') {
               onEvent?.({ type: 'tool_result', success: event.data?.success });
             }
-            onEvent?.({ type: 'text', text: accumulatedText });
           },
           () => {
-            abortRef.current = null;
-            onComplete?.(accumulatedText);
+            finishOnce(accumulatedText);
             resolve();
           },
           async (err) => {
-            abortRef.current = null;
             if (streamStarted && accumulatedText) {
-              onComplete?.(accumulatedText);
+              finishOnce(accumulatedText);
               resolve();
               return;
             }
             try {
               const reply = await onFallback?.(question, imageUrl);
-              onComplete?.(reply || '抱歉，小云暂时无法回复，请稍后再试。');
+              finishOnce(reply || '抱歉，小云暂时无法回复，请稍后再试。');
             } catch (fallbackErr) {
-              onError?.(fallbackErr);
+              if (!finished) {
+                finished = true;
+                abortRef.current = null;
+                onError?.(fallbackErr);
+              }
             }
             resolve();
           }
@@ -58,7 +68,10 @@ export default function useAiChatStream() {
         abortRef.current = handle;
       });
     } catch (e) {
-      onError?.(e);
+      if (!finished) {
+        finished = true;
+        onError?.(e);
+      }
     }
   }, []);
 

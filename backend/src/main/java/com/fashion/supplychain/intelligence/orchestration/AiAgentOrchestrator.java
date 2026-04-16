@@ -32,6 +32,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -56,6 +58,16 @@ public class AiAgentOrchestrator {
     private static final int STUCK_MAX_REPEAT = 3;
     private static final int CRICIC_SKIP_MAX_ITERATIONS = 2;
     private static final int CRITIC_SKIP_MAX_TOOLS = 1;
+    private static final long CACHE_TTL_MS = TimeUnit.MINUTES.toMillis(5);
+    private static final int CACHE_MAX_SIZE = 200;
+    private final ConcurrentHashMap<String, CacheEntry> queryCache = new ConcurrentHashMap<>();
+
+    private static class CacheEntry {
+        final String result;
+        final long createdAt;
+        CacheEntry(String result) { this.result = result; this.createdAt = System.currentTimeMillis(); }
+        boolean isExpired() { return System.currentTimeMillis() - createdAt > CACHE_TTL_MS; }
+    }
     /** 单次请求 token 预算上限（prompt + completion 合计），超出后强制终止循环 */
     @Value("${xiaoyun.agent.token-budget:60000}")
     private int tokenBudget;
@@ -66,7 +78,10 @@ public class AiAgentOrchestrator {
             return true;
         }
         if (userMessage != null && userMessage.length() < 25
-                && userMessage.matches("(?s).*(你好|hi|hello|谢谢|再见|你是谁|在吗|怎么样|辛苦了|好的|收到).*")) {
+                && userMessage.matches("(?s).*(你好|hi|hello|谢谢|再见|你是谁|在吗|怎么样|辛苦了|好的|收到|明白|知道了|了解).*")) {
+            return true;
+        }
+        if (totalToolCalls == 0 && currentIteration <= 3) {
             return true;
         }
         return false;
@@ -240,6 +255,21 @@ public class AiAgentOrchestrator {
                 return;
             }
 
+            String cacheKey = UserContext.tenantId() + ":" + UserContext.userId() + ":" + userMessage;
+            CacheEntry cached = queryCache.get(cacheKey);
+            if (cached != null && !cached.isExpired()) {
+                log.info("[AiAgent-Stream] 命中查询缓存，直接返回 ({}字符)", cached.result.length());
+                commandId = aiAgentTraceOrchestrator.startRequest(userMessage);
+                emitSse(emitter, "answer", Map.of("content", cached.result, "commandId", commandId));
+                emitSse(emitter, "done", Map.of());
+                aiAgentTraceOrchestrator.finishRequest(commandId, cached.result, null, System.currentTimeMillis() - requestStartAt);
+                emitter.complete();
+                return;
+            }
+            if (queryCache.size() > CACHE_MAX_SIZE) {
+                queryCache.entrySet().removeIf(e -> e.getValue().isExpired());
+            }
+
             commandId = aiAgentTraceOrchestrator.startRequest(userMessage);
             String userId = UserContext.userId();
             Long tenantId = UserContext.tenantId();
@@ -367,7 +397,11 @@ public class AiAgentOrchestrator {
                     // ── 租户级 AI 记忆增强：异步提取对话洞察 ──
                     memoryHelper.enhanceMemoryAsync(userId, tenantId, userMessage, revisedContent);
                     if (stateSessionId != null) { try { agentStateStore.completeSession(stateSessionId, revisedContent, (int) totalTokens, i); } catch (Exception e) { log.debug("[AiAgent-Stream] 状态完成跳过: {}", e.getMessage()); } }
-                    emitSse(emitter, "answer", Map.of("content", revisedContent, "commandId", commandId));
+                    String dedupedContent = deduplicateAnswer(revisedContent);
+                    if (allExecRecords.size() <= 2) {
+                        queryCache.put(cacheKey, new CacheEntry(dedupedContent));
+                    }
+                    emitSse(emitter, "answer", Map.of("content", dedupedContent, "commandId", commandId));
                     // 生成上下文关联的后续建议动作
                     try {
                         List<FollowUpAction> followUps = followUpSuggestionEngine.generate(allExecRecords, userMessage);
@@ -418,6 +452,26 @@ public class AiAgentOrchestrator {
         } catch (Exception e) {
             log.warn("[AiAgent-Stream] 发送SSE事件失败: event={}, error={}", eventName, e.getMessage());
         }
+    }
+
+    private String deduplicateAnswer(String content) {
+        if (content == null || content.length() < 20) return content;
+        String[] paragraphs = content.split("\n\n+");
+        if (paragraphs.length < 2) return content;
+        StringBuilder sb = new StringBuilder();
+        Set<String> seen = new HashSet<>();
+        for (String p : paragraphs) {
+            String trimmed = p.trim();
+            if (trimmed.isEmpty()) continue;
+            String normalized = trimmed.replaceAll("[\\s\\p{Punct}]", "");
+            if (normalized.length() < 10 || seen.add(normalized)) {
+                if (sb.length() > 0) sb.append("\n\n");
+                sb.append(trimmed);
+            } else {
+                log.info("[AiAgent] 去重: 移除重复段落 ({}字符)", trimmed.length());
+            }
+        }
+        return sb.toString();
     }
 
 }
