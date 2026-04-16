@@ -15,6 +15,7 @@ import { isOrderFrozenByStatus, isOrderFrozenByStatusOrStock, withQuery } from '
 import type { ApiResult } from '@/utils/api';
 import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress';
 import { buildCommonOrderActions } from '../components/buildCommonOrderActions';
+import { getProcessesByNodeFromOrder } from '../ProgressDetail/utils';
 import '../../../../basic/pages/StyleInfo/styles.css';
 import './externalFactory.css';
 
@@ -360,7 +361,6 @@ const StageNode: React.FC<StageNodeProps> = ({ stage, record, totalQty, openNode
         style={{ cursor: openNodeDetail ? 'pointer' : 'default' }}
         onClick={() => {
           if (!openNodeDetail) return;
-          // 智能视图 stage.key 与列表视图 nodeType 不同，需要映射
           const SMART_KEY_TO_NODE_TYPE: Record<string, string> = {
             secondary: 'secondaryProcess',
             sewing: 'carSewing',
@@ -368,13 +368,20 @@ const StageNode: React.FC<StageNodeProps> = ({ stage, record, totalQty, openNode
           };
           const nodeType = SMART_KEY_TO_NODE_TYPE[stage.key] ?? stage.key;
           const completedQty = Math.round((stage.progress / 100) * totalQty);
+          const byParent = getProcessesByNodeFromOrder(record);
+          const children = byParent[stage.label] || [];
+          const processList = children.length > 0 ? children.map(c => ({
+            name: c.name,
+            unitPrice: c.unitPrice,
+            processCode: c.processCode,
+          })) : [];
           openNodeDetail(
             record,
             nodeType,
             stage.label,
             { done: completedQty, total: totalQty, percent: stage.progress, remaining: totalQty - completedQty },
             undefined,
-            []
+            processList,
           );
         }}
       >
