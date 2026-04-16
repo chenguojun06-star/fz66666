@@ -714,14 +714,13 @@ export const getProcessesByNodeFromOrder = (
     const obj = JSON.parse(raw);
     const nodes = Array.isArray(obj?.nodes) ? obj.nodes : [];
     const byNode: Record<string, { name: string; unitPrice?: number; processCode?: string }[]> = {};
-    const STD_STAGES = new Set(['采购', '裁剪', '车缝', '尾部', '入库', '质检', '包装', '二次工艺']);
     if (nodes.length && nodes[0]?.name) {
       for (const item of nodes) {
         const n = String(item?.name || item?.processName || '').trim();
         if (!n) continue;
         const rawStage = String(item?.progressStage || '').trim();
         const stage = (rawStage && rawStage !== n) ? rawStage : (resolveDynamicParent(n) || rawStage || n);
-        if (n === stage || STD_STAGES.has(n)) continue;
+        if (n === stage) continue;
         const storedPrice = Number(item?.unitPrice) || 0;
         const price = templatePriceMap.get(n) ?? storedPrice;
         const processCode = String(item?.id || item?.processCode || '').trim() || undefined;
