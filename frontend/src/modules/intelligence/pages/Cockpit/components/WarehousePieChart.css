@@ -12,7 +12,7 @@
 .warehouse-sidebar-today {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid rgba(79, 209, 197, 0.1);
+  border-top: 1px solid #e5e7eb;
 }
 
 .today-stat-item {
@@ -39,7 +39,7 @@
 .style-stats {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid rgba(79, 209, 197, 0.1);
+  border-top: 1px solid #e5e7eb;
   flex: 1;
   overflow-y: auto;
   min-height: 0;
@@ -93,11 +93,11 @@
 }
 
 .style-instock {
-  color: #34d399;
+  color: #059669;
   font-weight: 500;
 }
 
 .style-outstock {
-  color: #60a5fa;
+  color: #3b82f6;
   font-weight: 500;
 }

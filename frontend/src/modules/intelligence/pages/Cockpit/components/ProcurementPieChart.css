@@ -15,7 +15,7 @@
   gap: 4px;
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid rgba(79, 209, 197, 0.1);
+  border-top: 1px solid #e5e7eb;
 }
 
 .category-sidebar-item {
@@ -47,7 +47,7 @@
   gap: 8px;
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid rgba(79, 209, 197, 0.1);
+  border-top: 1px solid #e5e7eb;
 }
 
 .today-stat-item {
@@ -69,7 +69,7 @@
 .today-stat-value {
   font-size: 16px;
   font-weight: 700;
-  color: #e2e8f0;
+  color: #1f2937;
 }
 
 .today-stat-value--success {
@@ -79,7 +79,7 @@
 .category-stats {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid rgba(79, 209, 197, 0.1);
+  border-top: 1px solid #e5e7eb;
 }
 
 .category-stats-header {
@@ -187,7 +187,7 @@
 
 .category-label {
   font-weight: 600;
-  color: #e2e8f0;
+  color: #1f2937;
   min-width: 40px;
 }
 
@@ -206,7 +206,7 @@
 .supplier-stats {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid rgba(79, 209, 197, 0.1);
+  border-top: 1px solid #e5e7eb;
   flex: 1;
   overflow-y: auto;
   min-height: 0;
@@ -260,7 +260,7 @@
 }
 
 .supplier-completion {
-  color: #34d399;
+  color: #059669;
   font-weight: 500;
 }
 

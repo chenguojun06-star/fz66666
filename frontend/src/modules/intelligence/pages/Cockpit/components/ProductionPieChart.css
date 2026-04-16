@@ -63,7 +63,7 @@
   background: rgba(16, 185, 129, 0.15);
   border: 1px solid rgba(16, 185, 129, 0.3);
   border-radius: var(--radius-xs, 4px);
-  color: var(--color-success-light, #34d399);
+  color: var(--color-success-light, #059669);
   font-weight: 500;
 }
 
@@ -81,19 +81,19 @@
 .summary-num {
   font-size: var(--font-size-xl, 18px);
   font-weight: 700;
-  color: var(--text-primary, #e2e8f0);
+  color: var(--text-primary, #1f2937);
 }
 
 .summary-num--inprogress {
-  color: var(--color-info, #60a5fa);
+  color: var(--color-info, #3b82f6);
 }
 
 .summary-num--completed {
-  color: var(--color-success, #34d399);
+  color: var(--color-success, #059669);
 }
 
 .summary-num--today {
-  color: #a78bfa;
+  color: #7c3aed;
 }
 
 .summary-num--time {
@@ -141,13 +141,13 @@
 }
 
 .production-stage-center {
-  fill: var(--bg-glass-heavy, rgba(15, 23, 42, 0.9));
+  fill: var(--bg-glass-heavy, #ffffff);
 }
 
 .production-stage-total {
   font-size: var(--font-size-xl, 18px);
   font-weight: 700;
-  fill: var(--text-primary, #e2e8f0);
+  fill: var(--text-primary, #1f2937);
 }
 
 .production-stage-center-label {
@@ -187,7 +187,7 @@
 .legend-label {
   font-size: var(--font-size-sm, 13px);
   font-weight: 600;
-  color: var(--text-primary, #e2e8f0);
+  color: var(--text-primary, #1f2937);
 }
 
 .legend-stats {
@@ -200,7 +200,7 @@
   font-size: var(--font-size-xs, 11px);
   padding: 2px 6px;
   border-radius: var(--radius-xs, 4px);
-  background: var(--bg-glass-darker, rgba(0, 0, 0, 0.2));
+  background: var(--bg-glass-darker, #f3f4f6);
 }
 
 .legend-stat--notstarted {
@@ -218,7 +218,7 @@
 .factory-stats {
   margin-top: var(--spacing-md, 12px);
   padding-top: var(--spacing-md, 12px);
-  border-top: 1px solid var(--border-color-light, rgba(79, 209, 197, 0.1));
+  border-top: 1px solid var(--border-color-light, #e5e7eb);
   flex: 1;
   overflow-y: auto;
   min-height: 0;
@@ -273,7 +273,7 @@
 }
 
 .factory-completion {
-  color: var(--color-success-light, #34d399);
+  color: var(--color-success-light, #059669);
   font-weight: 500;
 }
 
@@ -308,7 +308,7 @@
 .pie-sidebar-total {
   font-size: var(--font-size-3xl, 24px);
   font-weight: 700;
-  color: var(--text-primary, #e2e8f0);
+  color: var(--text-primary, #1f2937);
   margin-bottom: var(--spacing-md, 12px);
 }
 
@@ -342,13 +342,13 @@
 .pie-sidebar-num {
   margin-left: auto;
   font-weight: 600;
-  color: var(--text-primary, #e2e8f0);
+  color: var(--text-primary, #1f2937);
 }
 
 .pie-sidebar-today {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid rgba(79, 209, 197, 0.1);
+  border-top: 1px solid #e5e7eb;
 }
 
 .today-stat-item {

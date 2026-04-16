@@ -13,7 +13,7 @@
   gap: 8px;
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid rgba(79, 209, 197, 0.1);
+  border-top: 1px solid #e5e7eb;
 }
 
 .sample-today-stat {
@@ -35,7 +35,7 @@
 .today-value {
   font-size: 16px;
   font-weight: 700;
-  color: #e2e8f0;
+  color: #1f2937;
 }
 
 .today-value--success {
@@ -45,7 +45,7 @@
 .sample-stage-stats {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid rgba(79, 209, 197, 0.1);
+  border-top: 1px solid #e5e7eb;
 }
 
 .sample-today-card {
@@ -67,7 +67,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 6px 0;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.05);
+  border-bottom: 1px solid #e5e7eb;
 }
 
 .today-row:last-child {
@@ -82,7 +82,7 @@
 .today-stat-value {
   font-size: 16px;
   font-weight: 700;
-  color: #e2e8f0;
+  color: #1f2937;
 }
 
 .today-stat-value--success {
