@@ -272,10 +272,13 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
                 String processName = step.hasNonNull("processName") ? step.get("processName").asText("").trim() : "";
                 String progressStage = step.hasNonNull("progressStage") ? step.get("progressStage").asText("").trim() : processName;
                 if (!StringUtils.hasText(processName)) continue;
-                // 排除入库（由质检入库模块处理）和二次工艺（由专属 tab 处理）
-                if ("入库".equals(progressStage) || "二次工艺".equals(progressStage)) {
+                // 排除入库（由质检入库模块处理）
+                if ("入库".equals(progressStage)) {
                     continue;
                 }
+                // ★ 二次工艺子工序：加入节点列表并保留 progressStage="二次工艺"
+                // 旧逻辑排除了所有二次工艺子工序，导致前端进度球无法显示二次工艺父节点
+                // 现在保留它们，前端通过 progressStage="二次工艺" 正确聚合到父进度球
                 if (!result.contains(processName)) {
                     result.add(processName);
                 }

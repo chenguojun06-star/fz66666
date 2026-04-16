@@ -1,275 +1,143 @@
-.procurement-pie-wrapper {
+.procurement-card-wrapper {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  min-height: 0;
+  gap: 12px;
 }
 
-.procurement-pie-wrapper .pie-card {
-  flex-shrink: 0;
+.procurement-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
 }
 
-.category-sidebar-stats {
+.procurement-metric {
+  text-align: center;
+  padding: 10px 6px;
+  background: #f8fafc;
+  border-radius: 4px;
+}
+
+.procurement-metric-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.procurement-metric-value--primary {
+  color: #2563eb;
+}
+
+.procurement-metric-value--success {
+  color: #059669;
+}
+
+.procurement-metric-value--warning {
+  color: #d97706;
+}
+
+.procurement-metric-label {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.procurement-categories {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #e5e7eb;
+  gap: 8px;
 }
 
-.category-sidebar-item {
+.procurement-category-item {
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-radius: 4px;
+}
+
+.procurement-category-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  color: #6b7280;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
 }
 
-.category-sidebar-dot {
-  width: 6px;
-  height: 6px;
+.procurement-category-dot {
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-.category-sidebar-label {
-  flex: 1;
-}
-
-.category-sidebar-qty {
+.procurement-category-label {
   font-weight: 600;
-  color: #3b82f6;
-}
-
-.today-stats-row {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #e5e7eb;
-}
-
-.today-stat-item {
+  color: #0f172a;
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 6px;
-  background: #f9fafb;
-  border-radius: 6px;
 }
 
-.today-stat-label {
-  font-size: 10px;
+.procurement-category-qty {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.procurement-category-count {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.procurement-category-bar {
+  display: flex;
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: #e2e8f0;
+  margin-bottom: 4px;
+}
+
+.procurement-category-seg {
+  transition: width 0.3s;
+}
+
+.procurement-category-info {
+  font-size: 11px;
+}
+
+.procurement-category-pct {
+  color: #059669;
+  font-weight: 600;
+}
+
+.procurement-today-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.procurement-today-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.procurement-today-label {
   color: #64748b;
 }
 
-.today-stat-value {
-  font-size: 16px;
-  font-weight: 700;
-  color: #1f2937;
-}
-
-.today-stat-value--success {
-  color: #10b981;
-}
-
-.category-stats {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #e5e7eb;
-}
-
-.category-stats-header {
-  font-size: 13px;
+.procurement-today-value {
   font-weight: 600;
-  color: #3b82f6;
-  margin-bottom: 10px;
-  padding-left: 4px;
+  color: #0f172a;
 }
 
-.category-stats-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.category-stats-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: #f9fafb;
-  border-radius: 8px;
-  padding: 8px 12px;
-  border: 1px solid #e5e7eb;
-  font-size: 12px;
-}
-
-.category-breakdown-card {
-  background: #f9fafb;
-  border-radius: 8px;
-  padding: 10px 12px;
-  border: 1px solid #e5e7eb;
-}
-
-.category-breakdown-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  margin-bottom: 8px;
-}
-
-.category-status-bar {
-  display: flex;
-  height: 6px;
-  border-radius: 3px;
-  overflow: hidden;
-  gap: 1px;
-  margin-bottom: 6px;
-}
-
-.category-status-segment {
-  min-width: 4px;
-  border-radius: 1px;
-  transition: flex 0.3s ease;
-}
-
-.category-status-labels {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 10px;
-}
-
-.category-status-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: #6b7280;
-}
-
-.status-dot-sm {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.category-sidebar-group {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.category-sidebar-bar {
-  display: flex;
-  height: 3px;
-  border-radius: 2px;
-  overflow: hidden;
-  gap: 1px;
-  margin-left: 12px;
-}
-
-.category-sidebar-bar-seg {
-  min-width: 2px;
-  border-radius: 1px;
-}
-
-.category-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.category-label {
-  font-weight: 600;
-  color: #1f2937;
-  min-width: 40px;
-}
-
-.category-quantity {
-  font-weight: 700;
-  color: #3b82f6;
-  flex: 1;
-  text-align: right;
-}
-
-.category-count {
-  color: #6b7280;
-  font-size: 11px;
-}
-
-.supplier-stats {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #e5e7eb;
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-}
-
-.supplier-stats-header {
-  font-size: 13px;
-  font-weight: 600;
-  color: #3b82f6;
-  margin-bottom: 10px;
-  padding-left: 4px;
-}
-
-.supplier-stats-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.supplier-stats-item {
-  display: grid;
-  grid-template-columns: 1fr auto auto auto auto auto;
-  align-items: center;
-  gap: 8px;
-  background: #f9fafb;
-  border-radius: 8px;
-  padding: 8px 12px;
-  border: 1px solid #e5e7eb;
-  font-size: 12px;
-}
-
-.supplier-name {
-  font-weight: 600;
-  color: #6b7280;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.supplier-percent {
-  font-weight: 700;
-  color: #3b82f6;
-  min-width: 40px;
-  text-align: right;
-}
-
-.supplier-detail {
-  color: #9ca3af;
-  min-width: 50px;
-  text-align: center;
-}
-
-.supplier-completion {
+.procurement-today-value--success {
   color: #059669;
-  font-weight: 500;
 }
 
-.supplier-overdue {
-  color: #f87171;
-  font-weight: 600;
-  background: rgba(248, 113, 113, 0.15);
-  padding: 2px 6px;
-  border-radius: 4px;
-  min-width: 60px;
-  text-align: center;
+@media (max-width: 600px) {
+  .procurement-metrics {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }

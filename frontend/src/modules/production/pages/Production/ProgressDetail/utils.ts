@@ -190,11 +190,25 @@ export const canonicalStageKey = (k: string) => {
     入库质检: '入库',
     成品入库: '入库',
     完工入库: '入库',
-    // 二次工艺别名
+    // 二次工艺别名（包含 t_process_parent_mapping 中所有映射到"二次工艺"的子工序关键词）
     绣花: '二次工艺',
     印花: '二次工艺',
     水洗: '二次工艺',
     压花: '二次工艺',
+    烫钻: '二次工艺',
+    烫画: '二次工艺',
+    贴标: '二次工艺',
+    钉珠: '二次工艺',
+    贴绣: '二次工艺',
+    烫金: '二次工艺',
+    数码印: '二次工艺',
+    打孔: '二次工艺',
+    激光: '二次工艺',
+    转印: '二次工艺',
+    植绒: '二次工艺',
+    涂层: '二次工艺',
+    磨毛: '二次工艺',
+    染色: '二次工艺',
   };
   return normalizeStageKey(map[n] || n);
 };
@@ -567,6 +581,70 @@ export const resolveNodesForOrder = (
   return applySubProcessRemapToNodes(fallbackNodes?.length ? fallbackNodes : defaultNodes, order);
 };
 
+/**
+ * 判断工序是否属于二次工艺（子工序名 → "二次工艺"父节点）
+ */
+export const isSecondaryProcessSubNode = (nodeName: string, progressStage?: string): boolean => {
+  const n = normalizeStageKey(nodeName);
+  if (!n) return false;
+  // progressStage 直接是"二次工艺" → 直接返回
+  if (progressStage && normalizeStageKey(progressStage) === '二次工艺') return true;
+  // 动态映射
+  const dynamic = resolveDynamicParent(n);
+  if (dynamic === '二次工艺') return true;
+  // canonicalStageKey 别名映射
+  const canonical = canonicalStageKey(n);
+  if (canonical === '二次工艺') return true;
+  // 硬编码兜底
+  return ['绣花', '印花', '水洗', '染色', '压花', '烫钻', '烫画', '贴标', '钉珠', '贴绣', '烫金', '数码印', '打孔', '激光', '转印', '植绒', '涂层', '磨毛'].includes(n);
+};
+
+/**
+ * 将节点列表中的二次工艺子工序聚合为一个"二次工艺"父节点
+ * 例如：[采购, 裁剪, 绣花, 印花, 车缝, 尾部] → [采购, 裁剪, 二次工艺, 车缝, 尾部]
+ */
+export const collapseSecondaryProcessNodes = (nodes: ProgressNode[]): ProgressNode[] => {
+  if (!Array.isArray(nodes) || nodes.length === 0) return nodes;
+
+  // 1. 找出所有二次工艺子工序
+  const secondarySubs: ProgressNode[] = [];
+  const nonSecondary: ProgressNode[] = [];
+  for (const n of nodes) {
+    const name = String(n.name || '').trim();
+    if (isSecondaryProcessSubNode(name, (n as any).progressStage)) {
+      secondarySubs.push(n);
+    } else {
+      nonSecondary.push(n);
+    }
+  }
+
+  // 2. 如果没有二次工艺子工序，原样返回
+  if (secondarySubs.length === 0) return nodes;
+
+  // 3. 插入"二次工艺"父节点到正确位置（在裁剪之后，车缝之前）
+  const parentNode: ProgressNode = {
+    id: 'secondaryProcess',
+    name: '二次工艺',
+    unitPrice: 0,
+    progressStage: '二次工艺',
+  };
+
+  // 找到插入位置：在"裁剪"之后
+  let insertAt = nonSecondary.findIndex(n => {
+    const nn = String(n.name || '').trim();
+    return isCuttingStageKey(nn);
+  });
+  if (insertAt >= 0) {
+    insertAt += 1; // 插入到裁剪之后
+  } else {
+    insertAt = 0; // 没有裁剪节点，插入到最前面
+  }
+
+  const result = [...nonSecondary];
+  result.splice(insertAt, 0, parentNode);
+  return result;
+};
+
 export const resolveNodesForListOrder = (
   order: ProductionOrder | null,
   progressNodesByStyleNo: Record<string, ProgressNode[]>,
@@ -600,15 +678,18 @@ export const resolveNodesForListOrder = (
         const ib = orderMap.has(b.name) ? orderMap.get(b.name)! : 999;
         return ia - ib;
       });
-      return applySubProcessRemapToNodes(merged, order);
+      // ★ 二次工艺子工序聚合：将绣花/印花等子工序合并为"二次工艺"父节点
+      return collapseSecondaryProcessNodes(applySubProcessRemapToNodes(merged, order));
     }
-    return applySubProcessRemapToNodes(orderNodes, order);
+    // ★ 二次工艺子工序聚合
+    return collapseSecondaryProcessNodes(applySubProcessRemapToNodes(orderNodes, order));
   }
   const sn = String((order as any)?.styleNo || '').trim();
   if (sn && progressNodesByStyleNo[sn]?.length) {
-    return applySubProcessRemapToNodes(progressNodesByStyleNo[sn], order);
+    // ★ 二次工艺子工序聚合
+    return collapseSecondaryProcessNodes(applySubProcessRemapToNodes(progressNodesByStyleNo[sn], order));
   }
-  return applySubProcessRemapToNodes(fallbackNodes?.length ? fallbackNodes : defaultNodes, order);
+  return collapseSecondaryProcessNodes(applySubProcessRemapToNodes(fallbackNodes?.length ? fallbackNodes : defaultNodes, order));
 };
 
 export const getProcessesByNodeFromOrder = (

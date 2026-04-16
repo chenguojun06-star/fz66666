@@ -1,103 +1,74 @@
-.warehouse-pie-wrapper {
+.warehouse-card-wrapper {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  min-height: 0;
+  gap: 12px;
 }
 
-.warehouse-pie-wrapper .pie-card {
-  flex-shrink: 0;
-}
-
-.warehouse-sidebar-today {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #e5e7eb;
-}
-
-.today-stat-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 6px;
-  background: #f9fafb;
-  border-radius: 6px;
-}
-
-.today-stat-label {
-  font-size: 10px;
-  color: #64748b;
-}
-
-.today-stat-value {
-  font-size: 16px;
-  font-weight: 700;
-  color: #3b82f6;
-}
-
-.style-stats {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #e5e7eb;
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-}
-
-.style-stats-header {
-  font-size: 13px;
-  font-weight: 600;
-  color: #3b82f6;
-  margin-bottom: 10px;
-  padding-left: 4px;
-}
-
-.style-stats-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.style-stats-item {
+.warehouse-metrics {
   display: grid;
-  grid-template-columns: 1fr auto auto auto auto;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.warehouse-metric {
+  text-align: center;
+  padding: 10px 6px;
+  background: #f8fafc;
+  border-radius: 4px;
+}
+
+.warehouse-metric-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.warehouse-metric-value--primary {
+  color: #2563eb;
+}
+
+.warehouse-metric-value--success {
+  color: #059669;
+}
+
+.warehouse-metric-label {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.warehouse-today-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.warehouse-today-stat {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 8px;
-  background: #f9fafb;
-  border-radius: 8px;
   padding: 8px 12px;
-  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  border-radius: 4px;
   font-size: 12px;
 }
 
-.style-no {
+.warehouse-today-label {
+  color: #64748b;
+}
+
+.warehouse-today-value {
   font-weight: 600;
-  color: #6b7280;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  color: #0f172a;
 }
 
-.style-percent {
-  font-weight: 700;
-  color: #3b82f6;
-  min-width: 40px;
-  text-align: right;
-}
-
-.style-detail {
-  color: #9ca3af;
-  min-width: 50px;
-  text-align: center;
-}
-
-.style-instock {
+.warehouse-today-value--success {
   color: #059669;
-  font-weight: 500;
 }
 
-.style-outstock {
-  color: #3b82f6;
-  font-weight: 500;
+@media (max-width: 600px) {
+  .warehouse-metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }

@@ -1,10 +1,9 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
-import PieChartCard, { PieSegment, TodayStat } from '@/components/PieChartCard';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Spin, Empty } from 'antd';
 import { useTimeDimension } from '../contexts/TimeDimensionContext';
-import { useStyleLink } from '../contexts/StyleLinkContext';
 import api from '@/utils/api';
-import type { StyleInfo } from '@/types/style';
 import type { ProductionOrder } from '@/types/production';
+import type { StyleInfo } from '@/types/style';
 import './OrderPieChart.css';
 
 const isToday = (dateStr?: string | null): boolean => {
@@ -16,106 +15,46 @@ const isToday = (dateStr?: string | null): boolean => {
     date.getDate() === today.getDate();
 };
 
-interface OrderPieChartProps {
-  mode?: 'sidebar' | 'stage';
-  moduleKey?: string;
-  position?: { x: number; y: number; width: number; height: number };
-}
-
-interface StyleStats {
-  styleNo: string;
-  styleName: string;
-  orderCount: number;
-  totalQty: number;
-}
-
-const OrderPieChart: React.FC<OrderPieChartProps> = ({ mode = 'sidebar', moduleKey, position }) => {
-  const { dimension, getDateRange } = useTimeDimension();
-  const styleLink = useStyleLink();
+const OrderPieChart: React.FC = () => {
+  const { getDateRange } = useTimeDimension();
   const [loading, setLoading] = useState(true);
   const [styles, setStyles] = useState<StyleInfo[]>([]);
   const [orders, setOrders] = useState<ProductionOrder[]>([]);
 
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        const { start, end } = getDateRange();
-        const [stylesRes, ordersRes, scrappedRes] = await Promise.all([
-          api.get<{ code: number; data: { records?: StyleInfo[] } }>('/style/info/list', {
-            params: { page: 1, pageSize: 500 },
-          }),
-          api.get<{ code: number; data: { records?: ProductionOrder[] } }>('/production/order/list', {
-            params: {
-              page: 1,
-              pageSize: 500,
-              startDate: start.toISOString(),
-              endDate: end.toISOString(),
-              excludeTerminal: true,
-            },
-          }),
-          api.get<{ code: number; data: { records?: ProductionOrder[] } }>('/production/order/list', {
-            params: {
-              page: 1,
-              pageSize: 500,
-              startDate: start.toISOString(),
-              endDate: end.toISOString(),
-              status: 'scrapped',
-            },
-          }),
-        ]);
-        setStyles(stylesRes?.data?.records || []);
-        const normalOrders = ordersRes?.data?.records || [];
-        const scrappedOrders = scrappedRes?.data?.records || [];
-        setOrders([...normalOrders, ...scrappedOrders]);
-      } catch (e) {
-        console.error('Load order data failed:', e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    void loadData();
-  }, [dimension, getDateRange]);
-
-  const styleList = useMemo(() => {
-    return orders
-      .filter(o => o.styleNo)
-      .map(o => ({ styleNo: o.styleNo, styleName: o.styleName }));
-  }, [orders]);
-
-  const prevStyleListRef = useRef<string>('');
-  const prevPositionRef = useRef<string>('');
-
-  useEffect(() => {
-    if (mode !== 'stage' || !styleLink || !moduleKey || !position || styleList.length === 0) return;
-
-    const styleListKey = styleList.map(s => s.styleNo).sort().join(',');
-    const positionKey = `${position.x},${position.y},${position.width},${position.height}`;
-
-    if (prevStyleListRef.current === styleListKey && prevPositionRef.current === positionKey) {
-      return;
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { start, end } = getDateRange();
+      const [stylesRes, ordersRes, scrappedRes] = await Promise.all([
+        api.get<{ code: number; data: { records?: StyleInfo[] } }>('/style/info/list', {
+          params: { page: 1, pageSize: 500 },
+        }),
+        api.get<{ code: number; data: { records?: ProductionOrder[] } }>('/production/order/list', {
+          params: { page: 1, pageSize: 500, startDate: start.toISOString(), endDate: end.toISOString(), excludeTerminal: true },
+        }),
+        api.get<{ code: number; data: { records?: ProductionOrder[] } }>('/production/order/list', {
+          params: { page: 1, pageSize: 500, startDate: start.toISOString(), endDate: end.toISOString(), status: 'scrapped' },
+        }),
+      ]);
+      setStyles(stylesRes?.data?.records || []);
+      setOrders([...(ordersRes?.data?.records || []), ...(scrappedRes?.data?.records || [])]);
+    } catch (e) {
+      console.error('Load order data failed:', e);
+    } finally {
+      setLoading(false);
     }
-
-    prevStyleListRef.current = styleListKey;
-    prevPositionRef.current = positionKey;
-
-    styleLink.registerStyle(moduleKey, styleList, position);
-  }, [mode, styleLink, moduleKey, position, styleList]);
+  }, [getDateRange]);
 
   useEffect(() => {
-    return () => {
-      if (styleLink && moduleKey) {
-        styleLink.unregisterModule(moduleKey);
-      }
-    };
-  }, [styleLink, moduleKey]);
+    fetchData();
+  }, [fetchData]);
 
   const stats = useMemo(() => {
     const orderedStyleNos = new Set(orders.map(o => o.styleNo));
     const pendingStyles = styles.filter(s => !orderedStyleNos.has(s.styleNo));
-    const productionOrders = orders.filter(o => String(o.status||'').toUpperCase() === 'PRODUCTION');
-    const completedOrders = orders.filter(o => String(o.status||'').toUpperCase() === 'COMPLETED');
-    const scrappedOrders = orders.filter(o => String(o.status||'').toUpperCase() === 'SCRAPPED');
+    const productionOrders = orders.filter(o => String(o.status || '').toUpperCase() === 'PRODUCTION');
+    const completedOrders = orders.filter(o => String(o.status || '').toUpperCase() === 'COMPLETED');
+    const scrappedOrders = orders.filter(o => String(o.status || '').toUpperCase() === 'SCRAPPED');
 
     const pendingCount = pendingStyles.length;
     const productionCount = productionOrders.length;
@@ -123,102 +62,61 @@ const OrderPieChart: React.FC<OrderPieChartProps> = ({ mode = 'sidebar', moduleK
     const scrappedCount = scrappedOrders.length;
     const scrappedQty = scrappedOrders.reduce((sum, o) => sum + (o.orderQuantity || 0), 0);
     const total = pendingCount + productionCount + completedCount;
-
-    const stageQuantities: PieSegment[] = [
-      { key: 'pending', label: '待下单', color: '#64748b', count: pendingCount },
-      { key: 'production', label: '生产中', color: '#3b82f6', count: productionCount },
-      { key: 'completed', label: '已完成', color: '#10b981', count: completedCount },
-    ];
-
-    const styleMap = new Map<string, StyleStats>();
-    orders.forEach(o => {
-      if (!o.styleNo) return;
-      const key = o.styleNo;
-      const existing = styleMap.get(key) || {
-        styleNo: o.styleNo,
-        styleName: o.styleName || o.styleNo,
-        orderCount: 0,
-        totalQty: 0,
-      };
-      existing.orderCount++;
-      existing.totalQty += o.orderQuantity || 0;
-      styleMap.set(key, existing);
-    });
-
-    const styleStats = Array.from(styleMap.values())
-      .sort((a, b) => b.totalQty - a.totalQty)
-      .slice(0, 8);
-
     const totalOrderQty = orders.reduce((sum, o) => sum + (o.orderQuantity || 0), 0);
 
     const todayOrders = orders.filter(o => isToday(String(o.createTime || o.createdAt || o.orderDate || '')));
     const todayOrderQty = todayOrders.reduce((sum, o) => sum + (o.orderQuantity || 0), 0);
 
-    return {
-      total,
-      pendingCount,
-      productionCount,
-      completedCount,
-      scrappedCount,
-      scrappedQty,
-      stageQuantities,
-      styleStats,
-      totalOrderQty,
-      todayOrderCount: todayOrders.length,
-      todayOrderQty,
-    };
+    return { total, pendingCount, productionCount, completedCount, scrappedCount, scrappedQty, totalOrderQty, todayOrderCount: todayOrders.length, todayOrderQty };
   }, [styles, orders]);
 
-  const segments: PieSegment[] = stats.stageQuantities;
+  if (loading) {
+    return <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><Spin /></div>;
+  }
 
-  const todayStats: TodayStat[] = [
-    { label: '今日下单', value: stats.todayOrderQty, unit: '件' },
-  ];
+  if (stats.total === 0 && stats.totalOrderQty === 0) {
+    return <div style={{ textAlign: 'center', padding: 40 }}><Empty description="暂无数据" image={Empty.PRESENTED_IMAGE_SIMPLE} /></div>;
+  }
 
   return (
-    <div className="order-pie-wrapper">
-      <PieChartCard
-        mode={mode}
-        title="下单管理"
-        total={stats.total}
-        inProgress={stats.productionCount}
-        completed={stats.completedCount}
-        todayCompleted={stats.todayOrderCount}
-        todayCompletedUnit="单"
-        todayLabel="今日下单"
-        avgTime={stats.totalOrderQty > 0 ? `${stats.totalOrderQty}件` : '-'}
-        avgLabel="订单总量"
-        inProgressLabel="生产中"
-        segments={segments}
-        loading={loading}
-        todayStats={todayStats}
-      />
-
-      {mode === 'stage' && stats.styleStats.length > 0 && (
-        <div className="order-style-stats">
-          <div className="order-style-stats-header">款号下单统计</div>
-          <div className="order-style-stats-list">
-            {stats.styleStats.map(style => (
-              <div key={style.styleNo} className="order-style-stats-item">
-                <span className="order-style-no">{style.styleNo}</span>
-                <span className="order-style-percent">
-                  {stats.totalOrderQty > 0 ? Math.round((style.totalQty / stats.totalOrderQty) * 100) : 0}%
-                </span>
-                <span className="order-style-detail">{style.orderCount}单</span>
-                <span className="order-style-detail order-style-qty">{style.totalQty}件</span>
-              </div>
-            ))}
-          </div>
+    <div className="order-card-wrapper">
+      {/* 核心指标 */}
+      <div className="order-metrics">
+        <div className="order-metric">
+          <div className="order-metric-value">{stats.pendingCount}</div>
+          <div className="order-metric-label">待下单</div>
         </div>
-      )}
+        <div className="order-metric">
+          <div className="order-metric-value order-metric-value--primary">{stats.productionCount}</div>
+          <div className="order-metric-label">生产中</div>
+        </div>
+        <div className="order-metric">
+          <div className="order-metric-value order-metric-value--success">{stats.completedCount}</div>
+          <div className="order-metric-label">已完成</div>
+        </div>
+        <div className="order-metric">
+          <div className="order-metric-value">{stats.totalOrderQty.toLocaleString()}</div>
+          <div className="order-metric-label">总件数</div>
+        </div>
+      </div>
 
-      {mode === 'stage' && stats.scrappedCount > 0 && (
-        <div className="order-scrapped-stats">
-          <div className="order-scrapped-stats-item">
-            <span className="order-scrapped-label">报废订单</span>
-            <span className="order-scrapped-count">{stats.scrappedCount}单</span>
-            <span className="order-scrapped-qty">{stats.scrappedQty}件</span>
-          </div>
+      {/* 今日数据 */}
+      <div className="order-today-row">
+        <div className="order-today-stat">
+          <span className="order-today-label">今日下单</span>
+          <span className="order-today-value">{stats.todayOrderCount}单</span>
+        </div>
+        <div className="order-today-stat">
+          <span className="order-today-label">今日件数</span>
+          <span className="order-today-value">{stats.todayOrderQty.toLocaleString()}件</span>
+        </div>
+      </div>
+
+      {/* 报废预警 */}
+      {stats.scrappedCount > 0 && (
+        <div className="order-warning-row">
+          <span className="order-warning-label">报废订单</span>
+          <span className="order-warning-value">{stats.scrappedCount}单 / {stats.scrappedQty}件</span>
         </div>
       )}
     </div>

@@ -1,118 +1,124 @@
-.sample-pie-wrapper {
+.sample-card-wrapper {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  gap: 12px;
 }
 
-.sample-pie-wrapper .pie-card {
-  flex-shrink: 0;
+.sample-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
 }
 
-.sample-sidebar-stats {
+.sample-metric {
+  text-align: center;
+  padding: 10px 6px;
+  background: #f8fafc;
+  border-radius: 4px;
+}
+
+.sample-metric-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.sample-metric-value--primary {
+  color: #2563eb;
+}
+
+.sample-metric-value--success {
+  color: #059669;
+}
+
+.sample-metric-label {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.sample-stages {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.sample-stage-item {
   display: flex;
-  gap: 8px;
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #e5e7eb;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  background: #f8fafc;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.sample-stage-label {
+  color: #475569;
+}
+
+.sample-stage-count {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.sample-today-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
 }
 
 .sample-today-stat {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 6px;
-  background: #f9fafb;
-  border-radius: 6px;
-}
-
-.today-label {
-  font-size: 10px;
-  color: #64748b;
-}
-
-.today-value {
-  font-size: 16px;
-  font-weight: 700;
-  color: #1f2937;
-}
-
-.today-value--success {
-  color: #10b981;
-}
-
-.sample-stage-stats {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #e5e7eb;
-}
-
-.sample-today-card {
-  background: #f9fafb;
-  border-radius: 8px;
-  padding: 12px;
-  border: 1px solid #e5e7eb;
-}
-
-.today-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: #3b82f6;
-  margin-bottom: 10px;
-}
-
-.today-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 0;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.today-row:last-child {
-  border-bottom: none;
-}
-
-.today-stat-label {
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-radius: 4px;
   font-size: 12px;
-  color: #6b7280;
 }
 
-.today-stat-value {
-  font-size: 16px;
-  font-weight: 700;
-  color: #1f2937;
+.sample-today-label {
+  color: #64748b;
 }
 
-.today-stat-value--success {
-  color: #10b981;
-}
-
-/* 状态指示点 — 样衣开发 stage 模式标题区 */
-.sample-stage-header {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  margin-bottom: 10px;
-}
-
-.sample-stage-title {
-  font-size: var(--font-size-lg, 16px);
+.sample-today-value {
   font-weight: 600;
-  color: var(--color-primary, #3b82f6);
+  color: #0f172a;
 }
 
-.status-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  margin-left: 6px;
-  cursor: pointer;
-  vertical-align: middle;
-  flex-shrink: 0;
+.sample-today-value--success {
+  color: #059669;
 }
 
-.status-dot--green { background: #10b981; }
-.status-dot--red   { background: #ef4444; }
+.sample-warning-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #fef2f2;
+  border-radius: 4px;
+  border: 1px solid #fecaca;
+  font-size: 12px;
+}
+
+.sample-warning-label {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.sample-warning-value {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+@media (max-width: 600px) {
+  .sample-metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .sample-stages {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

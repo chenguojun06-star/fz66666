@@ -1,47 +1,15 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
-import PieChartCard, { PieSegment, TodayStat } from '@/components/PieChartCard';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Spin, Empty } from 'antd';
 import { useTimeDimension } from '../contexts/TimeDimensionContext';
-import { useStyleLink } from '../contexts/StyleLinkContext';
 import api from '@/utils/api';
 import type { MaterialPurchase } from '@/types/production';
 import './ProcurementPieChart.css';
 
-const STATUS_STAGES = [
-  { key: 'pending', label: '待采购', color: '#64748b' },
-  { key: 'received', label: '已到货', color: '#3b82f6' },
-  { key: 'partial', label: '部分到货', color: '#f59e0b' },
-  { key: 'completed', label: '已完成', color: '#10b981' },
-];
-
 const CATEGORY_CONFIG = {
-  fabric: { label: '面料', color: '#8b5cf6', defaultUnit: '米' },
-  lining: { label: '里料', color: '#06b6d4', defaultUnit: '米' },
-  accessory: { label: '辅料', color: '#f59e0b', defaultUnit: '个' },
+  fabric: { label: '面料', color: '#7c3aed' },
+  lining: { label: '里料', color: '#0891b2' },
+  accessory: { label: '辅料', color: '#d97706' },
 };
-
-interface ProcurementPieChartProps {
-  mode?: 'sidebar' | 'stage';
-  moduleKey?: string;
-  position?: { x: number; y: number; width: number; height: number };
-}
-
-interface SupplierStats {
-  supplierName: string;
-  orderCount: number;
-  quantities: { unit: string; quantity: number }[];
-  completedQuantity: number;
-  completionRate: number;
-  overdueCount: number;
-}
-
-interface CategoryStats {
-  key: string;
-  label: string;
-  color: string;
-  quantity: number;
-  unit: string;
-  orderCount: number;
-}
 
 const getMaterialCategory = (materialType?: string): keyof typeof CATEGORY_CONFIG => {
   if (!materialType) return 'accessory';
@@ -49,12 +17,6 @@ const getMaterialCategory = (materialType?: string): keyof typeof CATEGORY_CONFI
   if (type.includes('fabric') || type.includes('面料')) return 'fabric';
   if (type.includes('lining') || type.includes('里料') || type.includes('里布')) return 'lining';
   return 'accessory';
-};
-
-const inferUnit = (materialType?: string, unit?: string): string => {
-  if (unit) return unit;
-  const category = getMaterialCategory(materialType);
-  return CATEGORY_CONFIG[category].defaultUnit;
 };
 
 const isToday = (dateStr?: string | null): boolean => {
@@ -66,335 +28,132 @@ const isToday = (dateStr?: string | null): boolean => {
     date.getDate() === today.getDate();
 };
 
-const ProcurementPieChart: React.FC<ProcurementPieChartProps> = ({ mode = 'sidebar', moduleKey, position }) => {
-  const { dimension, getDateRange } = useTimeDimension();
-  const styleLink = useStyleLink();
+const ProcurementPieChart: React.FC = () => {
+  const { getDateRange } = useTimeDimension();
   const [loading, setLoading] = useState(true);
   const [purchases, setPurchases] = useState<MaterialPurchase[]>([]);
 
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        const { start, end } = getDateRange();
-        const res = await api.get<{ code: number; data: { records?: MaterialPurchase[] } }>('/production/purchase/list', {
-          params: {
-            page: 1,
-            pageSize: 500,
-            startDate: start.toISOString(),
-            endDate: end.toISOString(),
-          },
-        });
-        setPurchases(res?.data?.records || []);
-      } catch (e) {
-        console.error('Load purchase data failed:', e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    void loadData();
-  }, [dimension, getDateRange]);
-
-  const styleList = useMemo(() => {
-    const styleNos = new Set<string>();
-    purchases.forEach(p => {
-      const styleNo = (p as any).styleNo || (p as any).styleNumber;
-      if (styleNo) styleNos.add(styleNo);
-    });
-    return Array.from(styleNos).map(styleNo => ({ styleNo, styleName: styleNo }));
-  }, [purchases]);
-
-  const prevStyleListRef = useRef<string>('');
-  const prevPositionRef = useRef<string>('');
-
-  useEffect(() => {
-    if (mode !== 'stage' || !styleLink || !moduleKey || !position || styleList.length === 0) return;
-
-    const styleListKey = styleList.map(s => s.styleNo).sort().join(',');
-    const positionKey = `${position.x},${position.y},${position.width},${position.height}`;
-
-    if (prevStyleListRef.current === styleListKey && prevPositionRef.current === positionKey) {
-      return;
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { start, end } = getDateRange();
+      const res = await api.get<{ code: number; data: { records?: MaterialPurchase[] } }>('/production/purchase/list', {
+        params: { page: 1, pageSize: 500, startDate: start.toISOString(), endDate: end.toISOString() },
+      });
+      setPurchases(res?.data?.records || []);
+    } catch (e) {
+      console.error('Load purchase data failed:', e);
+    } finally {
+      setLoading(false);
     }
-
-    prevStyleListRef.current = styleListKey;
-    prevPositionRef.current = positionKey;
-
-    styleLink.registerStyle(moduleKey, styleList, position);
-  }, [mode, styleLink, moduleKey, position, styleList]);
+  }, [getDateRange]);
 
   useEffect(() => {
-    return () => {
-      if (styleLink && moduleKey) {
-        styleLink.unregisterModule(moduleKey);
-      }
-    };
-  }, [styleLink, moduleKey]);
+    fetchData();
+  }, [fetchData]);
 
   const stats = useMemo(() => {
     const totalPurchases = purchases.length;
+    const totalQuantity = Math.round(purchases.reduce((sum, p) => sum + (p.purchaseQuantity || 0), 0));
 
-    const stageQuantities: PieSegment[] = STATUS_STAGES.map(stage => {
-      const matched = purchases.filter(p => p.status === stage.key);
-      const quantity = Math.round(matched.reduce((sum, p) => sum + (p.purchaseQuantity || 0), 0));
-      return {
-        key: stage.key,
-        label: stage.label,
-        color: stage.color,
-        count: quantity,
-      };
-    });
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const overduePurchases = purchases.filter(p => {
-      if (p.status === 'completed' || p.status === 'cancelled') return false;
-      const exp = p.expectedArrivalDate || p.expectedShipDate;
-      return exp ? new Date(exp) < today : false;
-    });
-
-    const categoryMap = new Map<string, CategoryStats>();
-    Object.entries(CATEGORY_CONFIG).forEach(([key, config]) => {
-      categoryMap.set(key, {
-        key,
-        label: config.label,
-        color: config.color,
-        quantity: 0,
-        unit: config.defaultUnit,
-        orderCount: 0,
-      });
-    });
-
-    const categoryStatusMap = new Map<string, Map<string, { quantity: number; count: number }>>();
+    const categoryMap = new Map<keyof typeof CATEGORY_CONFIG, { quantity: number; count: number; completedQty: number }>();
     Object.keys(CATEGORY_CONFIG).forEach(key => {
-      const statusMap = new Map<string, { quantity: number; count: number }>();
-      STATUS_STAGES.forEach(stage => {
-        statusMap.set(stage.key, { quantity: 0, count: 0 });
-      });
-      categoryStatusMap.set(key, statusMap);
+      categoryMap.set(key as keyof typeof CATEGORY_CONFIG, { quantity: 0, count: 0, completedQty: 0 });
     });
 
-    const supplierMap = new Map<string, SupplierStats>();
     purchases.forEach(p => {
       const category = getMaterialCategory(p.materialType);
-      const categoryStats = categoryMap.get(category)!;
+      const entry = categoryMap.get(category)!;
       const qty = Math.round(p.purchaseQuantity || 0);
-      const unit = inferUnit(p.materialType, p.unit);
+      entry.quantity += qty;
+      entry.count++;
+      if (p.status === 'completed') entry.completedQty += qty;
+    });
 
-      categoryStats.quantity += qty;
-      categoryStats.orderCount++;
+    const categoryStats = Array.from(categoryMap.entries())
+      .filter(([, v]) => v.quantity > 0)
+      .map(([key, val]) => ({
+        key,
+        ...CATEGORY_CONFIG[key],
+        quantity: val.quantity,
+        count: val.count,
+        completedQty: val.completedQty,
+      }));
 
-      const statusKey = p.status || 'pending';
-      const catStatusMap = categoryStatusMap.get(category)!;
-      const statusEntry = catStatusMap.get(statusKey);
-      if (statusEntry) {
-        statusEntry.quantity += qty;
-        statusEntry.count++;
-      }
-
-      const supplierName = p.supplierName || '未知供应商';
-      const existing = supplierMap.get(supplierName) || {
-        supplierName,
-        orderCount: 0,
-        quantities: [] as { unit: string; quantity: number }[],
-        completedQuantity: 0,
-        completionRate: 0,
-        overdueCount: 0,
-      };
-      existing.orderCount++;
-
-      const existingUnit = existing.quantities.find(q => q.unit === unit);
-      if (existingUnit) {
-        existingUnit.quantity += qty;
-      } else {
-        existing.quantities.push({ unit, quantity: qty });
-      }
-
-      if (p.status === 'completed') {
-        existing.completedQuantity += qty;
-      }
+    const overdueCount = purchases.filter(p => {
+      if (p.status === 'completed' || p.status === 'cancelled') return false;
       const exp = p.expectedArrivalDate || p.expectedShipDate;
-      if (p.status !== 'completed' && p.status !== 'cancelled' && exp && new Date(exp) < today) {
-        existing.overdueCount++;
-      }
-      supplierMap.set(supplierName, existing);
-    });
+      return exp ? new Date(exp) < new Date() : false;
+    }).length;
 
-    const totalQuantity = Array.from(supplierMap.values()).reduce(
-      (sum, s) => sum + s.quantities.reduce((qSum, q) => qSum + q.quantity, 0),
-      0
-    );
+    const todayNew = purchases.filter(p => isToday(String(p.createTime || p.createdAt))).length;
+    const todayCompleted = purchases.filter(p => isToday(String(p.completionTime || p.completedAt))).length;
 
-    const supplierStats = Array.from(supplierMap.values()).map(s => ({
-      ...s,
-      completionRate: totalQuantity > 0 ? Math.round((s.completedQuantity / totalQuantity) * 100) : 0,
-    })).sort((a, b) => {
-      const aTotal = a.quantities.reduce((sum, q) => sum + q.quantity, 0);
-      const bTotal = b.quantities.reduce((sum, q) => sum + q.quantity, 0);
-      return bTotal - aTotal;
-    });
-
-    const categoryStats = Array.from(categoryMap.values()).filter(c => c.quantity > 0);
-
-    const categorySegments: PieSegment[] = categoryStats.map(c => ({
-      key: c.key,
-      label: c.label,
-      color: c.color,
-      count: c.quantity,
-      unit: c.unit,
-    }));
-
-    const categoryStatusBreakdown = categoryStats.map(c => ({
-      categoryKey: c.key,
-      categoryLabel: c.label,
-      categoryColor: c.color,
-      totalQuantity: c.quantity,
-      unit: c.unit,
-      orderCount: c.orderCount,
-      statuses: STATUS_STAGES.map(stage => {
-        const entry = categoryStatusMap.get(c.key)!.get(stage.key)!;
-        return {
-          key: stage.key,
-          label: stage.label,
-          color: stage.color,
-          quantity: entry.quantity,
-          count: entry.count,
-        };
-      }).filter(s => s.quantity > 0),
-    }));
-
-    const todayNewPurchases = purchases.filter(p => isToday(String(p.createTime || p.createdAt)));
-    const todayCompletedPurchases = purchases.filter(p => isToday(String(p.completionTime || p.completedAt)));
-
-    return {
-      totalPurchases,
-      stageQuantities,
-      overdueCount: overduePurchases.length,
-      supplierStats,
-      totalQuantity,
-      categoryStats,
-      categorySegments,
-      categoryStatusBreakdown,
-      todayNewCount: todayNewPurchases.length,
-      todayCompletedCount: todayCompletedPurchases.length,
-    };
+    return { totalPurchases, totalQuantity, categoryStats, overdueCount, todayNew, todayCompleted };
   }, [purchases]);
 
-  const segments: PieSegment[] = stats.categorySegments.length > 0 ? stats.categorySegments : stats.stageQuantities;
+  if (loading) {
+    return <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><Spin /></div>;
+  }
 
-  const formatQuantities = (quantities: { unit: string; quantity: number }[]) => {
-    return quantities.map(q => `${q.quantity}${q.unit}`).join(' ');
-  };
-
-  const todayStats: TodayStat[] = [
-    { label: '今日新增', value: stats.todayNewCount, unit: '单' },
-    { label: '今日完成', value: stats.todayCompletedCount, unit: '单', type: 'success' },
-  ];
+  if (stats.totalPurchases === 0) {
+    return <div style={{ textAlign: 'center', padding: 40 }}><Empty description="暂无数据" image={Empty.PRESENTED_IMAGE_SIMPLE} /></div>;
+  }
 
   return (
-    <div className="procurement-pie-wrapper">
-      <PieChartCard
-        mode={mode}
-        title="物料采购"
-        total={stats.totalQuantity}
-        inProgress={stats.totalPurchases - purchases.filter(p => p.status === 'completed').length}
-        completed={purchases.filter(p => p.status === 'completed').length}
-        todayCompleted={stats.todayCompletedCount}
-        todayCompletedUnit="单"
-        avgTime={stats.overdueCount > 0 ? `${stats.overdueCount}单` : '无'}
-        avgLabel="逾期预警"
-        completedLabel="已到货"
-        segments={segments}
-        loading={loading}
-        todayStats={todayStats}
-      />
+    <div className="procurement-card-wrapper">
+      {/* 核心指标 */}
+      <div className="procurement-metrics">
+        <div className="procurement-metric">
+          <div className="procurement-metric-value">{stats.totalPurchases}</div>
+          <div className="procurement-metric-label">采购单</div>
+        </div>
+        <div className="procurement-metric">
+          <div className="procurement-metric-value procurement-metric-value--primary">{stats.totalQuantity.toLocaleString()}</div>
+          <div className="procurement-metric-label">总数量</div>
+        </div>
+        <div className="procurement-metric">
+          <div className="procurement-metric-value procurement-metric-value--warning">{stats.overdueCount}</div>
+          <div className="procurement-metric-label">逾期预警</div>
+        </div>
+      </div>
 
-      {mode === 'sidebar' && stats.categoryStatusBreakdown.length > 0 && (
-        <div className="category-sidebar-stats">
-          {stats.categoryStatusBreakdown.map(cat => (
-            <div key={cat.categoryKey} className="category-sidebar-group">
-              <div className="category-sidebar-item">
-                <span className="category-sidebar-dot" style={{ background: cat.categoryColor }} />
-                <span className="category-sidebar-label">{cat.categoryLabel}</span>
-                <span className="category-sidebar-qty">{cat.totalQuantity}{cat.unit}</span>
-              </div>
-              <div className="category-sidebar-bar">
-                {cat.statuses.map(s => (
-                  <div
-                    key={s.key}
-                    className="category-sidebar-bar-seg"
-                    style={{ background: s.color, flex: s.quantity }}
-                    title={`${s.label}: ${s.quantity}${cat.unit}`}
-                  />
-                ))}
-              </div>
+      {/* 分类统计 */}
+      <div className="procurement-categories">
+        {stats.categoryStats.map(cat => (
+          <div key={cat.key} className="procurement-category-item">
+            <div className="procurement-category-header">
+              <span className="procurement-category-dot" style={{ background: cat.color }} />
+              <span className="procurement-category-label">{cat.label}</span>
+              <span className="procurement-category-qty">{cat.quantity.toLocaleString()}</span>
+              <span className="procurement-category-count">{cat.count}单</span>
             </div>
-          ))}
-        </div>
-      )}
-
-      {mode === 'stage' && stats.categoryStatusBreakdown.length > 0 && (
-        <div className="category-stats">
-          <div className="category-stats-header">面辅料分类统计</div>
-          <div className="category-stats-list">
-            {stats.categoryStatusBreakdown.map(cat => (
-              <div key={cat.categoryKey} className="category-breakdown-card">
-                <div className="category-breakdown-header">
-                  <span className="category-dot" style={{ background: cat.categoryColor }} />
-                  <span className="category-label">{cat.categoryLabel}</span>
-                  <span className="category-quantity">{cat.totalQuantity}{cat.unit}</span>
-                  <span className="category-count">{cat.orderCount}单</span>
-                </div>
-                <div className="category-status-bar">
-                  {cat.statuses.map(s => (
-                    <div
-                      key={s.key}
-                      className="category-status-segment"
-                      style={{ background: s.color, flex: s.quantity }}
-                      title={`${s.label}: ${s.quantity}${cat.unit}`}
-                    />
-                  ))}
-                </div>
-                <div className="category-status-labels">
-                  {cat.statuses.map(s => (
-                    <span key={s.key} className="category-status-tag">
-                      <span className="status-dot-sm" style={{ background: s.color }} />
-                      {s.label} {s.quantity}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
+            <div className="procurement-category-bar">
+              {cat.quantity > 0 && (
+                <div className="procurement-category-seg" style={{
+                  width: `${(cat.completedQty / cat.quantity) * 100}%`,
+                  background: cat.color,
+                }} />
+              )}
+            </div>
+            <div className="procurement-category-info">
+              <span className="procurement-category-pct">完成 {cat.quantity > 0 ? Math.round((cat.completedQty / cat.quantity) * 100) : 0}%</span>
+            </div>
           </div>
-        </div>
-      )}
+        ))}
+      </div>
 
-      {mode === 'stage' && stats.supplierStats.length > 0 && (
-        <div className="supplier-stats">
-          <div className="supplier-stats-header">供应商采购统计</div>
-          <div className="supplier-stats-list">
-            {stats.supplierStats.map(supplier => {
-              const supplierTotal = supplier.quantities.reduce((sum, q) => sum + q.quantity, 0);
-              return (
-                <div key={supplier.supplierName} className="supplier-stats-item">
-                  <span className="supplier-name">{supplier.supplierName}</span>
-                  <span className="supplier-percent">
-                    {stats.totalQuantity > 0
-                      ? Math.round((supplierTotal / stats.totalQuantity) * 100)
-                      : 0}%
-                  </span>
-                  <span className="supplier-detail">{supplier.orderCount}单</span>
-                  <span className="supplier-detail supplier-qty">{formatQuantities(supplier.quantities)}</span>
-                  <span className="supplier-detail supplier-completion">完成{supplier.completionRate}%</span>
-                  {supplier.overdueCount > 0 && (
-                    <span className="supplier-overdue">{supplier.overdueCount}单逾期</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+      {/* 今日数据 */}
+      <div className="procurement-today-row">
+        <div className="procurement-today-stat">
+          <span className="procurement-today-label">今日新增</span>
+          <span className="procurement-today-value">{stats.todayNew}单</span>
         </div>
-      )}
+        <div className="procurement-today-stat">
+          <span className="procurement-today-label">今日完成</span>
+          <span className="procurement-today-value procurement-today-value--success">{stats.todayCompleted}单</span>
+        </div>
+      </div>
     </div>
   );
 };
