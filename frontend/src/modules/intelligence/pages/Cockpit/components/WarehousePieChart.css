@@ -21,7 +21,7 @@
   align-items: center;
   gap: 2px;
   padding: 6px;
-  background: rgba(7, 13, 27, 0.5);
+  background: #f9fafb;
   border-radius: 6px;
 }
 
@@ -48,7 +48,7 @@
 .style-stats-header {
   font-size: 13px;
   font-weight: 600;
-  color: #4fd1c5;
+  color: #3b82f6;
   margin-bottom: 10px;
   padding-left: 4px;
 }
@@ -64,16 +64,16 @@
   grid-template-columns: 1fr auto auto auto auto;
   align-items: center;
   gap: 8px;
-  background: rgba(7, 13, 27, 0.5);
+  background: #f9fafb;
   border-radius: 8px;
   padding: 8px 12px;
-  border: 1px solid rgba(148, 163, 184, 0.1);
+  border: 1px solid #e5e7eb;
   font-size: 12px;
 }
 
 .style-no {
   font-weight: 600;
-  color: #94a3b8;
+  color: #6b7280;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -81,13 +81,13 @@
 
 .style-percent {
   font-weight: 700;
-  color: #4fd1c5;
+  color: #3b82f6;
   min-width: 40px;
   text-align: right;
 }
 
 .style-detail {
-  color: rgba(148, 163, 184, 0.72);
+  color: #9ca3af;
   min-width: 50px;
   text-align: center;
 }

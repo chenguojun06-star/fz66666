@@ -23,7 +23,7 @@
   align-items: center;
   gap: 2px;
   padding: 6px;
-  background: rgba(7, 13, 27, 0.5);
+  background: #f9fafb;
   border-radius: 6px;
 }
 
@@ -49,16 +49,16 @@
 }
 
 .sample-today-card {
-  background: rgba(7, 13, 27, 0.5);
+  background: #f9fafb;
   border-radius: 8px;
   padding: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.1);
+  border: 1px solid #e5e7eb;
 }
 
 .today-title {
   font-size: 12px;
   font-weight: 600;
-  color: #4fd1c5;
+  color: #3b82f6;
   margin-bottom: 10px;
 }
 
@@ -76,7 +76,7 @@
 
 .today-stat-label {
   font-size: 12px;
-  color: #94a3b8;
+  color: #6b7280;
 }
 
 .today-stat-value {
@@ -100,7 +100,7 @@
 .sample-stage-title {
   font-size: var(--font-size-lg, 16px);
   font-weight: 600;
-  color: var(--color-primary, #4fd1c5);
+  color: var(--color-primary, #3b82f6);
 }
 
 .status-dot {

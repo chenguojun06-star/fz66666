@@ -62,10 +62,10 @@ interface InsightCardProps {
 
 const levelColor = (level: string): string => {
   switch (level?.toUpperCase()) {
-    case 'CRITICAL': return '#ff4136';
-    case 'WARNING': return '#f7a600';
-    case 'INFO': return '#00e5ff';
-    case 'SUCCESS': return '#39ff14';
+    case 'CRITICAL': return '#dc2626';
+    case 'WARNING': return '#d97706';
+    case 'INFO': return '#3b82f6';
+    case 'SUCCESS': return '#059669';
     default: return '#64748b';
   }
 };
@@ -146,13 +146,13 @@ const InsightCard: React.FC<InsightCardProps> = ({ mode = 'sidebar' }) => {
         <div className="insight-sidebar-title">AI 智能洞察</div>
         <div className="insight-sidebar-stats">
           <div className="insight-stat-item">
-            <span className="insight-stat-value" style={{ color: stats.healthGrade === 'A' ? '#39ff14' : '#f7a600' }}>
+            <span className="insight-stat-value" style={{ color: stats.healthGrade === 'A' ? '#059669' : '#d97706' }}>
               {stats.healthGrade}
             </span>
             <span className="insight-stat-label">健康等级</span>
           </div>
           <div className="insight-stat-item">
-            <span className="insight-stat-value" style={{ color: stats.criticalCount > 0 ? '#ff4136' : '#39ff14' }}>
+            <span className="insight-stat-value" style={{ color: stats.criticalCount > 0 ? '#dc2626' : '#059669' }}>
               {stats.criticalCount}
             </span>
             <span className="insight-stat-label">紧急任务</span>
@@ -179,7 +179,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ mode = 'sidebar' }) => {
         </div>
         <div className="insight-stage-summary">
           <span className="insight-summary-item">
-            <span className="insight-summary-value" style={{ color: stats.healthGrade === 'A' ? '#39ff14' : '#f7a600' }}>
+            <span className="insight-summary-value" style={{ color: stats.healthGrade === 'A' ? '#059669' : '#d97706' }}>
               {stats.healthGrade}
             </span>
             <span className="insight-summary-label">健康</span>
@@ -189,7 +189,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ mode = 'sidebar' }) => {
             <span className="insight-summary-label">分数</span>
           </span>
           <span className="insight-summary-item">
-            <span className="insight-summary-value" style={{ color: stats.criticalCount > 0 ? '#ff4136' : '#39ff14' }}>
+            <span className="insight-summary-value" style={{ color: stats.criticalCount > 0 ? '#dc2626' : '#059669' }}>
               {stats.criticalCount}
             </span>
             <span className="insight-summary-label">紧急</span>
@@ -206,7 +206,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ mode = 'sidebar' }) => {
           <div className="insight-brain-grid">
             <div className="insight-brain-item">
               <span className="brain-label">模型状态</span>
-              <span className="brain-value" style={{ color: brainData?.modelGateway?.status === 'CONNECTED' ? '#39ff14' : '#ff4136' }}>
+              <span className="brain-value" style={{ color: brainData?.modelGateway?.status === 'CONNECTED' ? '#059669' : '#dc2626' }}>
                 {brainData?.modelGateway?.status || '—'}
               </span>
             </div>
@@ -216,20 +216,20 @@ const InsightCard: React.FC<InsightCardProps> = ({ mode = 'sidebar' }) => {
             </div>
             <div className="insight-brain-item">
               <span className="brain-label">异常项</span>
-              <span className="brain-value" style={{ color: (brainData?.summary?.anomalyCount || 0) > 0 ? '#f7a600' : '#39ff14' }}>
+              <span className="brain-value" style={{ color: (brainData?.summary?.anomalyCount || 0) > 0 ? '#d97706' : '#059669' }}>
                 {brainData?.summary?.anomalyCount || 0}
               </span>
             </div>
             <div className="insight-brain-item">
               <span className="brain-label">高风险</span>
-              <span className="brain-value" style={{ color: (brainData?.summary?.highRiskOrders || 0) > 0 ? '#ff4136' : '#39ff14' }}>
+              <span className="brain-value" style={{ color: (brainData?.summary?.highRiskOrders || 0) > 0 ? '#dc2626' : '#059669' }}>
                 {brainData?.summary?.highRiskOrders || 0}
               </span>
             </div>
           </div>
           {brainData?.summary?.topRisk && (
             <div className="insight-top-risk">
-              <WarningOutlined style={{ color: '#f7a600', marginRight: 6 }} />
+              <WarningOutlined style={{ color: '#d97706', marginRight: 6 }} />
               {brainData.summary.topRisk}
             </div>
           )}
@@ -237,13 +237,13 @@ const InsightCard: React.FC<InsightCardProps> = ({ mode = 'sidebar' }) => {
 
         <div className="insight-cards-section">
           <div className="insight-section-title">
-            <BulbOutlined style={{ color: '#00e5ff', marginRight: 6 }} />
+            <BulbOutlined style={{ color: '#3b82f6', marginRight: 6 }} />
             智能洞察卡片
           </div>
           <div className="insight-cards-list">
             {insights.length === 0 ? (
               <div className="insight-empty">
-                <CheckCircleOutlined style={{ color: '#39ff14', marginRight: 6 }} />
+                <CheckCircleOutlined style={{ color: '#059669', marginRight: 6 }} />
                 暂无预警，系统运行正常
               </div>
             ) : (
@@ -291,7 +291,7 @@ const InsightCard: React.FC<InsightCardProps> = ({ mode = 'sidebar' }) => {
         {actionTasks.length > 0 && (
           <div className="insight-actions-section">
             <div className="insight-section-title">
-              <ThunderboltOutlined style={{ color: '#ff4136', marginRight: 6 }} />
+              <ThunderboltOutlined style={{ color: '#dc2626', marginRight: 6 }} />
               待处理任务
             </div>
             <div className="insight-actions-list">
@@ -300,8 +300,8 @@ const InsightCard: React.FC<InsightCardProps> = ({ mode = 'sidebar' }) => {
                   <span
                     className="action-priority"
                     style={{
-                      background: task.priority === 'CRITICAL' ? '#ff413622' : task.priority === 'HIGH' ? '#f7a60022' : '#00e5ff22',
-                      color: task.priority === 'CRITICAL' ? '#ff4136' : task.priority === 'HIGH' ? '#f7a600' : '#00e5ff',
+                      background: task.priority === 'CRITICAL' ? '#dc262622' : task.priority === 'HIGH' ? '#d9770622' : '#3b82f622',
+                      color: task.priority === 'CRITICAL' ? '#dc2626' : task.priority === 'HIGH' ? '#d97706' : '#3b82f6',
                     }}
                   >
                     L{task.escalationLevel}

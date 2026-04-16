@@ -20,10 +20,10 @@ interface OverviewChartProps {
 }
 
 const COLORS = {
-  order: { ring: '#a78bfa', text: '#94a3b8' },
-  production: { ring: '#60a5fa', text: '#94a3b8' },
-  inbound: { ring: '#34d399', text: '#94a3b8' },
-  outbound: { ring: '#f472b6', text: '#94a3b8' },
+  order: { ring: '#8b5cf6', text: '#6b7280' },
+  production: { ring: '#3b82f6', text: '#6b7280' },
+  inbound: { ring: '#10b981', text: '#6b7280' },
+  outbound: { ring: '#f43f5e', text: '#6b7280' },
 };
 
 const isToday = (dateStr?: string | null): boolean => {
@@ -256,7 +256,7 @@ const OverviewChart: React.FC<OverviewChartProps> = ({ mode = 'sidebar', moduleK
           cy={center}
           r={radius}
           fill="none"
-          stroke="rgba(148, 163, 184, 0.15)"
+          stroke="rgba(107, 114, 128, 0.15)"
           strokeWidth={16}
         />
         <circle
@@ -271,7 +271,7 @@ const OverviewChart: React.FC<OverviewChartProps> = ({ mode = 'sidebar', moduleK
           strokeLinecap="round"
           transform={`rotate(-90 ${center} ${center})`}
         />
-        <text x={center} y={center} textAnchor="middle" dominantBaseline="middle" className="pie-value" fill="#94a3b8">
+        <text x={center} y={center} textAnchor="middle" dominantBaseline="middle" className="pie-value" fill="#1f2937">
           {Math.round(percent)}%
         </text>
       </svg>
@@ -473,7 +473,7 @@ const OverviewChart: React.FC<OverviewChartProps> = ({ mode = 'sidebar', moduleK
                           y1={0}
                           x2={(hoverIndex / (trendData.length - 1)) * 400}
                           y2={120}
-                          stroke="rgba(79, 209, 197, 0.4)"
+                          stroke="rgba(59, 130, 246, 0.4)"
                           strokeWidth={1}
                           strokeDasharray="4,4"
                         />

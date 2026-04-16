@@ -30,7 +30,7 @@
 .production-stage-title {
   font-size: var(--font-size-lg, 16px);
   font-weight: 600;
-  color: var(--color-primary, #4fd1c5);
+  color: var(--color-primary, #3b82f6);
   margin-bottom: var(--spacing-sm, 8px);
   display: flex;
   align-items: center;
@@ -137,7 +137,7 @@
 
 .production-stage-pie-count {
   font-size: 9px;
-  fill: var(--text-secondary, #94a3b8);
+  fill: var(--text-secondary, #6b7280);
 }
 
 .production-stage-center {
@@ -164,10 +164,10 @@
 }
 
 .production-legend-item {
-  background: var(--bg-glass, rgba(7, 13, 27, 0.5));
+  background: var(--bg-glass, #f9fafb);
   border-radius: var(--radius-sm, 8px);
   padding: var(--spacing-sm, 8px) var(--spacing-md, 12px);
-  border: 1px solid var(--border-color, rgba(148, 163, 184, 0.1));
+  border: 1px solid var(--border-color, #e5e7eb);
 }
 
 .legend-header {
@@ -227,7 +227,7 @@
 .factory-stats-header {
   font-size: var(--font-size-sm, 13px);
   font-weight: 600;
-  color: var(--color-primary, #4fd1c5);
+  color: var(--color-primary, #3b82f6);
   margin-bottom: 10px;
   padding-left: 4px;
 }
@@ -242,16 +242,16 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-base, 16px);
-  background: var(--bg-glass, rgba(7, 13, 27, 0.5));
+  background: var(--bg-glass, #f9fafb);
   border-radius: var(--radius-sm, 8px);
   padding: 10px var(--spacing-base, 16px);
-  border: 1px solid var(--border-color, rgba(148, 163, 184, 0.1));
+  border: 1px solid var(--border-color, #e5e7eb);
   font-size: var(--font-size-sm, 12px);
 }
 
 .factory-name {
   font-weight: 600;
-  color: var(--color-primary, #4fd1c5);
+  color: var(--color-primary, #3b82f6);
   min-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -261,13 +261,13 @@
 .factory-percent {
   font-weight: 700;
   font-size: var(--font-size-base, 14px);
-  color: var(--text-secondary, #94a3b8);
+  color: var(--text-secondary, #6b7280);
   min-width: 45px;
   text-align: right;
 }
 
 .factory-detail {
-  color: var(--text-secondary-light, rgba(148, 163, 184, 0.72));
+  color: var(--text-secondary-light, #9ca3af);
   font-size: var(--font-size-sm, 12px);
   min-width: 60px;
 }
@@ -323,7 +323,7 @@
   align-items: center;
   gap: var(--spacing-sm, 8px);
   font-size: var(--font-size-xs, 11px);
-  color: var(--text-secondary, #94a3b8);
+  color: var(--text-secondary, #6b7280);
 }
 
 .pie-sidebar-dot {
@@ -357,7 +357,7 @@
   align-items: center;
   gap: 2px;
   padding: 6px;
-  background: rgba(7, 13, 27, 0.5);
+  background: #f9fafb;
   border-radius: 6px;
 }
 
