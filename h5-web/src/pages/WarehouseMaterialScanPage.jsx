@@ -46,9 +46,15 @@ export default function WarehouseMaterialScanPage() {
     setSubmitting(true); setErrorMsg(''); setSuccessMsg('');
     try {
       const result = await api.production.executeScan({ scanCode: rollCode, scanType: 'material_roll', action: 'issue', cuttingOrderNo });
-      setSuccessMsg(result?.message || '发料成功！');
+      const msg = result?.message || '发料成功！';
+      setSuccessMsg(msg);
+      toast.success(msg);
       setRollInfo({ ...rollInfo, currentStatus: 'ISSUED' });
-    } catch (e) { setErrorMsg(e.message || '发料失败'); } finally { setSubmitting(false); }
+    } catch (e) {
+      const msg = e.message || '发料失败';
+      setErrorMsg(msg);
+      toast.error(msg);
+    } finally { setSubmitting(false); }
   };
 
   const onReturnTap = async () => {
@@ -57,9 +63,15 @@ export default function WarehouseMaterialScanPage() {
     setSubmitting(true); setErrorMsg(''); setSuccessMsg('');
     try {
       const result = await api.production.executeScan({ scanCode: rollCode, scanType: 'material_roll', action: 'return' });
-      setSuccessMsg(result?.message || '退回成功！');
+      const msg = result?.message || '退回成功！';
+      setSuccessMsg(msg);
+      toast.success(msg);
       setRollInfo({ ...rollInfo, currentStatus: 'IN_STOCK' });
-    } catch (e) { setErrorMsg(e.message || '退回失败'); } finally { setSubmitting(false); }
+    } catch (e) {
+      const msg = e.message || '退回失败';
+      setErrorMsg(msg);
+      toast.error(msg);
+    } finally { setSubmitting(false); }
   };
 
   return (

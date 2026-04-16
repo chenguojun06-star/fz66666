@@ -5,7 +5,7 @@ import wxAdapter from '@/adapters/wx';
 
 const isWechat = wxAdapter.isWechat;
 
-const DEFAULT_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.webyszl.cn';
+const DEFAULT_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://192.168.2.248:8088';
 
 const MAX_RETRY_COUNT = 2;
 const RETRY_DELAY_BASE = 1000;

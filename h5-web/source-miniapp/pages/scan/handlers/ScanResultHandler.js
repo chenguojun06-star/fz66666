@@ -35,7 +35,7 @@ function buildProcessOptions(processName, progressStage, stageResult) {
   const scannedSet = new Set(stageResult?.scannedProcessNames || []);
   const allBundleProcesses = stageResult?.allBundleProcesses || [];
   const hidePrice = stageResult?.hidePrice || false;
-  const options = allBundleProcesses
+  let options = allBundleProcesses
     .filter(p => !scannedSet.has(p.processName))
     .map(p => ({
       label: hidePrice ? p.processName : `${p.processName}（¥${Number(p.unitPrice || p.price || 0).toFixed(2)}）`,
@@ -44,6 +44,19 @@ function buildProcessOptions(processName, progressStage, stageResult) {
       unitPrice: Number(p.unitPrice || p.price || 0),
       hidePrice: hidePrice,
     }));
+
+  // 兜底：若未携带 allBundleProcesses（如非菲号流程），退化为当前工序单选
+  if (options.length === 0 && (processName || progressStage)) {
+    const fallbackName = processName || progressStage;
+    options = [{
+      label: fallbackName,
+      value: fallbackName,
+      scanType: normalizeScanType(fallbackName, stageResult?.scanType),
+      unitPrice: Number(stageResult?.unitPrice || 0),
+      hidePrice: true,
+    }];
+  }
+
   let index = options.findIndex(opt => opt.value === processName || opt.value === progressStage);
   if (index < 0) index = 0;
   return { options, index };

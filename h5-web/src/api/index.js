@@ -120,7 +120,7 @@ const intelligence = {
   aiAdvisorChat: (params) => http.post('/api/intelligence/ai-advisor/chat', params),
   aiAdvisorChatStream: (params, onEvent, onComplete, onError) => {
     const token = useAuthStore.getState().token;
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.webyszl.cn';
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://192.168.2.248:8088';
     const question = encodeURIComponent(params.question || '');
     const pageContext = params.pageContext ? encodeURIComponent(params.pageContext) : '';
     const conversationId = params.conversationId || '';
@@ -156,6 +156,7 @@ const intelligence = {
         const decoder = new TextDecoder();
         let buffer = '';
         let eventName = '';
+        let completed = false;
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -169,7 +170,7 @@ const intelligence = {
               try {
                 const data = JSON.parse(line.slice(5).trim());
                 if (eventName === 'done') {
-                  if (onComplete) onComplete();
+                  if (onComplete && !completed) { completed = true; onComplete(); }
                 } else {
                   if (onEvent) onEvent({ type: eventName, data });
                 }
@@ -180,7 +181,7 @@ const intelligence = {
             }
           }
         }
-        if (onComplete) onComplete();
+        if (onComplete && !completed) { completed = true; onComplete(); }
       })
       .catch((err) => {
         if (err.name !== 'AbortError' && onError) onError(err);
@@ -218,7 +219,7 @@ const wechat = {
 const common = {
   uploadImage: (filePath) => {
     const token = useAuthStore.getState().token;
-    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://api.webyszl.cn';
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://192.168.2.248:8088';
     const formData = new FormData();
     if (filePath instanceof File) {
       formData.append('file', filePath);

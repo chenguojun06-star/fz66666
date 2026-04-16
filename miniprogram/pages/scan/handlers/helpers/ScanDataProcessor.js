@@ -131,7 +131,7 @@ class ScanDataProcessor {
 
       return {
         success: true,
-        needConfirmProcess: true,
+        needConfirm: true,
         scanMode: scanMode,
         data: {
           ...parsedData,

@@ -440,6 +440,15 @@ const scanCoreMixin = Behavior({
         } else {
           toast.success(msg);
         }
+        this.setData({
+          lastResult: {
+            success: true,
+            message: msg,
+            displayTime: new Date().toLocaleTimeString(),
+            statusText: '已完成',
+            statusClass: 'success',
+          },
+        });
         this.setData({ loading: false });
         return;
       }
@@ -462,7 +471,9 @@ const scanCoreMixin = Behavior({
         return;
       }
 
-      toast.error(e.errMsg || e.message || '系统异常');
+      const errorMsg = e.errMsg || e.message || '系统异常';
+      toast.error(errorMsg);
+      this.handleScanError({ message: errorMsg });
       errorHandler.logError(e, '_handleScanException');
     },
 

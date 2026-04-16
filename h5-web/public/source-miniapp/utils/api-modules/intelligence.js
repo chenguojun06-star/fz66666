@@ -13,6 +13,7 @@ const intelligence = {
     return ok('/api/intelligence/ai-advisor/chat', 'POST', payload || {}, { timeout: 90000 });
   },
   aiAdvisorChatStream(payload, onEvent, onDone, onError) {
+    var doneCalled = false;
     var token = getToken();
     var question = encodeURIComponent(payload.question || '');
     var pageContext = payload.pageContext ? encodeURIComponent(payload.pageContext) : '';
@@ -29,7 +30,7 @@ const intelligence = {
       responseType: 'text',
       timeout: 120000,
       success: function () {
-        if (onDone) onDone();
+        if (!doneCalled) { doneCalled = true; if (onDone) onDone(); }
       },
       fail: function (err) {
         if (onError) onError(err);
@@ -68,7 +69,7 @@ const intelligence = {
               try {
                 var parsed = JSON.parse(dataStr);
                 if (eventName === 'done') {
-                  if (onDone) onDone();
+                  if (!doneCalled) { doneCalled = true; if (onDone) onDone(); }
                 } else {
                   if (onEvent) onEvent({ type: eventName, data: parsed });
                 }

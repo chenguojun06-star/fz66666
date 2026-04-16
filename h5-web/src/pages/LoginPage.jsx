@@ -9,7 +9,7 @@ import wxAdapter from '@/adapters/wx';
 import { MiniCloud } from '@/components/AiAssistantFloat';
 
 const isWechat = wxAdapter.isWechat;
-const DEFAULT_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.webyszl.cn';
+const DEFAULT_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://192.168.2.248:8088';
 
 export default function LoginPage() {
   const navigate = useNavigate();

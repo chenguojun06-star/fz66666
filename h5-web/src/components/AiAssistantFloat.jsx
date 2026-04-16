@@ -59,6 +59,7 @@ export default function AiAssistantFloat() {
   const [pendingImage, setPendingImage] = useState(null);
   const [uploading, setUploading] = useState(false);
   const scrollRef = useRef(null);
+  const sendingRef = useRef(false);
   const user = useAuthStore((s) => s.user);
   const scanResultData = useGlobalStore(s => s.scanResultData);
   const aiStream = useAiChatStream();
@@ -181,7 +182,8 @@ export default function AiAssistantFloat() {
 
   const handleSend = useCallback(async (text) => {
     const msg = (text || inputText).trim();
-    if ((!msg && !pendingImage) || sending) return;
+    if ((!msg && !pendingImage) || sendingRef.current) return;
+    sendingRef.current = true;
     setInputText('');
     voice.stop();
     setSending(true);
@@ -190,7 +192,7 @@ export default function AiAssistantFloat() {
     let imageUrl = null;
     if (pendingImage) {
       imageUrl = await uploadPendingImage();
-      if (pendingImage && !imageUrl) { setSending(false); return; }
+      if (pendingImage && !imageUrl) { setSending(false); sendingRef.current = false; return; }
     }
 
     const displayText = imageUrl ? (msg || '请看这张图片') : msg;
@@ -215,11 +217,13 @@ export default function AiAssistantFloat() {
             setStreamingText('');
             setMessages((prev) => [...prev, { role: 'ai', text: finalText || fullText || '（无回复）' }]);
             setSending(false);
+            sendingRef.current = false;
             setPendingImage(null);
           },
           onError: () => {
             setMessages((prev) => [...prev, { role: 'ai', text: '抱歉，小云暂时无法回复，请稍后再试。' }]);
             setSending(false);
+            sendingRef.current = false;
             setPendingImage(null);
           },
           onFallback: async (q) => {
@@ -242,6 +246,7 @@ export default function AiAssistantFloat() {
     } catch (e) {
       setMessages((prev) => [...prev, { role: 'ai', text: '抱歉，小云暂时无法回复，请稍后再试。' }]);
       setSending(false);
+      sendingRef.current = false;
       setPendingImage(null);
     }
   }, [inputText, sending, pendingImage, isMgr]);

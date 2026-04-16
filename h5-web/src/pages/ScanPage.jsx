@@ -153,6 +153,7 @@ export default function ScanPage() {
         } else {
           setScanResultData({ ...data, scanCode: code, scanType });
           setLastResult({ ...data, scanCode: code, scanType, success: true });
+          toast.success(data.message || '扫码成功');
           setStats((prev) => prev ? { ...prev, scanCount: prev.scanCount + 1, totalQuantity: prev.totalQuantity + (Number(data.quantity) || 1) } : { scanCount: 1, orderCount: 0, totalQuantity: Number(data.quantity) || 1, totalAmount: 0 });
         }
         wx.vibrateShort();

@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://api.webyszl.cn';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://192.168.2.248:8088';
 
 function getAuthedImageUrl(url) {
   if (!url) return '';

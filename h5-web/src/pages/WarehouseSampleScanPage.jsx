@@ -41,9 +41,15 @@ export default function WarehouseSampleScanPage() {
     const labelMap = { inbound: '入库', loan: '借调', return: '归还' };
     try {
       const res = await apiFn();
-      setSuccessMsg(`${labelMap[actionName] || actionName}成功`);
+      const label = labelMap[actionName] || actionName;
+      setSuccessMsg(`${label}成功`);
+      toast.success(`${label}成功`);
       setTimeout(() => querySample(styleNo, color, size), 800);
-    } catch (err) { setErrorMsg('网络异常，请重试'); } finally { setSubmitting(false); }
+    } catch (err) {
+      const msg = err?.response?.data?.message || err.message || '操作失败';
+      setErrorMsg(msg);
+      toast.error(msg);
+    } finally { setSubmitting(false); }
   };
 
   const onInbound = () => {

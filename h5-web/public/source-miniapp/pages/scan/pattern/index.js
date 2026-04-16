@@ -288,7 +288,7 @@ Page({
 
       } else {
         // COMPLETE、PLATE、FOLLOW_UP 等走通用扫码接口
-        result = await api.production.submitPatternScan({
+        const scanRes = await api.production.submitPatternScan({
           patternId: d.patternId,
           operationType: operationType,
           operatorRole: 'PLATE_WORKER',
@@ -296,6 +296,11 @@ Page({
           warehouseCode: d.warehouseCode,
           remark: remark,
         });
+        result = {
+          success: true,
+          message: (scanRes && scanRes.message) || `${d.operationLabel || '操作'}成功`,
+          data: scanRes,
+        };
       }
 
       if (result && result.success) {

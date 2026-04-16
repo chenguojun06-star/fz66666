@@ -53,19 +53,15 @@ Page({
     this.setData({ loading: true, errorMsg: '', successMsg: '', stockInfo: null, actions: [] });
     try {
       const res = await api.sampleStock.scanQuery({ styleNo, color, size });
-      if (res && res.code === 200) {
-        const d = res.data || {};
-        this.setData({
-          stockInfo: d,
-          actions: d.actions || [],
-          loading: false,
-        });
-      } else {
-        this.setData({ errorMsg: (res && res.message) || '查询失败', loading: false });
-      }
+      const d = res || {};
+      this.setData({
+        stockInfo: d,
+        actions: d.actions || [],
+        loading: false,
+      });
     } catch (err) {
       console.error('[SampleScanAction] querySample error', err);
-      this.setData({ errorMsg: '网络异常，请重试', loading: false });
+      this.setData({ errorMsg: (err && (err.errMsg || err.message)) || '网络异常，请重试', loading: false });
     }
   },
 
@@ -149,26 +145,22 @@ Page({
     this.setData({ submitting: true, errorMsg: '', successMsg: '' });
     const labelMap = { inbound: '入库', loan: '借调', return: '归还' };
     try {
-      const res = await apiFn();
-      if (res && res.code === 200) {
-        wx.vibrateShort({ type: 'heavy' });
-        this.setData({
-          submitting: false,
-          successMsg: `${labelMap[actionName] || actionName}成功`,
-        });
-        // 刷新状态
-        setTimeout(() => {
-          this.querySample(this.data.styleNo, this.data.color, this.data.size);
-        }, 800);
-      } else {
-        this.setData({
-          submitting: false,
-          errorMsg: (res && res.message) || `${labelMap[actionName]}失败`,
-        });
-      }
+      await apiFn();
+      wx.vibrateShort({ type: 'heavy' });
+      this.setData({
+        submitting: false,
+        successMsg: `${labelMap[actionName] || actionName}成功`,
+      });
+      // 刷新状态
+      setTimeout(() => {
+        this.querySample(this.data.styleNo, this.data.color, this.data.size);
+      }, 800);
     } catch (err) {
       console.error(`[SampleScanAction] ${actionName} error`, err);
-      this.setData({ submitting: false, errorMsg: '网络异常，请重试' });
+      this.setData({
+        submitting: false,
+        errorMsg: (err && (err.errMsg || err.message)) || `${labelMap[actionName] || actionName}失败`,
+      });
     }
   },
 

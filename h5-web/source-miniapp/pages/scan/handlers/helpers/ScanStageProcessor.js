@@ -98,8 +98,9 @@ class ScanStageProcessor {
       throw new Error('无法识别当前工序,请联系管理员');
     }
 
-    // 获取 scanType（通过回调）
-    const scanType = this.scanTypeGetter ? this.scanTypeGetter() : null;
+    // 页面手选 scanType 仅用于 manual 覆盖，后续判定应优先使用检测出的工序 scanType
+    const pageScanType = this.scanTypeGetter ? this.scanTypeGetter() : null;
+    const scanType = (stageResult && stageResult.scanType) || pageScanType;
 
     // 质检类型特殊处理
     if (scanType === 'quality' && scanMode === 'ORDER') {
@@ -111,20 +112,6 @@ class ScanStageProcessor {
       const err = new Error(stageResult.hint || '进度节点已完成');
       err.isCompleted = true;
       throw err;
-    }
-
-    // 入库类型特殊处理 - 触发手动入库弹窗
-    if (scanType === 'warehouse') {
-      // 标记需要手动入库，返回给页面处理
-      return {
-        success: true,
-        needWarehousing: true,
-        orderNo: parsedData.orderNo,
-        bundleNo: parsedData.bundleNo,
-        quantity: stageResult.quantity || parsedData.quantity,
-        processName: stageResult.processName,
-        stageResult,
-      };
     }
 
     if (stageResult.isDuplicate) {

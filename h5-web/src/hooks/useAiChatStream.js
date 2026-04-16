@@ -51,7 +51,6 @@ export default function useAiChatStream() {
               onComplete?.(reply || '抱歉，小云暂时无法回复，请稍后再试。');
             } catch (fallbackErr) {
               onError?.(fallbackErr);
-              onComplete?.('服务暂时无法响应，请稍后再试。');
             }
             resolve();
           }
