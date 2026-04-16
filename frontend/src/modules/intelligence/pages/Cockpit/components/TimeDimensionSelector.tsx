@@ -10,19 +10,26 @@ const DIMENSION_OPTIONS: { key: TimeDimension; label: string }[] = [
 ];
 
 const TimeDimensionSelector: React.FC = () => {
-  const { dimension, setDimension } = useTimeDimension();
+  const { dimension, setDimension, getDateRange } = useTimeDimension();
+
+  const formatDate = (d: Date) => `${d.getMonth() + 1}/${d.getDate()}`;
+  const range = getDateRange();
+  const rangeLabel = dimension === 'day' ? '今日' : `${formatDate(range.start)} - ${formatDate(range.end)}`;
 
   return (
-    <div className="time-dimension-selector">
-      {DIMENSION_OPTIONS.map(opt => (
-        <button
-          key={opt.key}
-          className={`time-dimension-btn ${dimension === opt.key ? 'active' : ''}`}
-          onClick={() => setDimension(opt.key)}
-        >
-          {opt.label}
-        </button>
-      ))}
+    <div className="time-dimension-wrapper">
+      <div className="time-dimension-selector">
+        {DIMENSION_OPTIONS.map(opt => (
+          <button
+            key={opt.key}
+            className={`time-dimension-btn ${dimension === opt.key ? 'active' : ''}`}
+            onClick={() => setDimension(opt.key)}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+      <span className="time-dimension-range">{rangeLabel}</span>
     </div>
   );
 };

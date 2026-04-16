@@ -1,81 +1,12 @@
-.procurement-pie-wrapper {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-}
-
-.procurement-pie-wrapper .pie-card {
-  flex-shrink: 0;
-}
-
-.supplier-stats {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(79, 209, 197, 0.1);
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-}
-
-.supplier-stats-header {
-  font-size: 13px;
-  font-weight: 600;
-  color: #4fd1c5;
-  margin-bottom: 10px;
-  padding-left: 4px;
-}
-
-.supplier-stats-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.supplier-stats-item {
-  display: grid;
-  grid-template-columns: 1fr auto auto auto auto auto;
-  align-items: center;
-  gap: 8px;
-  background: rgba(7, 13, 27, 0.5);
-  border-radius: 8px;
-  padding: 8px 12px;
-  border: 1px solid rgba(148, 163, 184, 0.1);
-  font-size: 12px;
-}
-
-.supplier-name {
-  font-weight: 600;
-  color: #94a3b8;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.supplier-percent {
-  font-weight: 700;
-  color: #4fd1c5;
-  min-width: 40px;
-  text-align: right;
-}
-
-.supplier-detail {
-  color: rgba(148, 163, 184, 0.72);
-  min-width: 50px;
-  text-align: center;
-}
-
-.supplier-completion {
-  color: #34d399;
-  font-weight: 500;
-}
-
-.supplier-overdue {
-  color: #f87171;
-  font-weight: 600;
-  background: rgba(248, 113, 113, 0.15);
-  padding: 2px 6px;
-  border-radius: 4px;
-  min-width: 60px;
-  text-align: center;
-}
+.procurement-pie-wrapper { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.procurement-pie-wrapper .pie-card { flex-shrink: 0; }
+.supplier-stats { margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb; flex: 1; overflow-y: auto; min-height: 0; }
+.supplier-stats-header { font-size: 13px; font-weight: 600; color: #1f2937; margin-bottom: 10px; padding-left: 4px; }
+.supplier-stats-list { display: flex; flex-direction: column; gap: 6px; }
+.supplier-stats-item { display: grid; grid-template-columns: 1fr auto auto auto auto auto; align-items: center; gap: 8px; background: #f9fafb; border-radius: 8px; padding: 8px 12px; border: 1px solid #e5e7eb; font-size: 12px; transition: border-color 0.15s; }
+.supplier-stats-item:hover { border-color: #3b82f6; }
+.supplier-name { font-weight: 600; color: #1f2937; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.supplier-percent { font-weight: 700; color: #3b82f6; min-width: 40px; text-align: right; }
+.supplier-detail { color: #9ca3af; min-width: 50px; text-align: center; }
+.supplier-completion { color: #10b981; font-weight: 500; }
+.supplier-overdue { color: #ef4444; font-weight: 600; background: #fef2f2; padding: 2px 6px; border-radius: 4px; min-width: 60px; text-align: center; }

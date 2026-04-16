@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
-import { Button } from 'antd';
-import { ReloadOutlined } from '@ant-design/icons';
+import { Button, Tooltip } from 'antd';
+import { ReloadOutlined, SyncOutlined, FullscreenOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import { TimeDimensionProvider } from './contexts/TimeDimensionContext';
 import { StyleLinkProvider } from './contexts/StyleLinkContext';
@@ -62,6 +62,7 @@ const loadWidgetState = (): WidgetState => {
 const CockpitPage: React.FC = () => {
   const [widgets, setWidgets] = useState<WidgetState>(loadWidgetState);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{
     key: keyof WidgetState;
@@ -113,6 +114,12 @@ const CockpitPage: React.FC = () => {
   }, []);
 
   const handleRefresh = useCallback(() => {
+    setRefreshing(true);
+    setRefreshKey(k => k + 1);
+    setTimeout(() => setRefreshing(false), 1200);
+  }, []);
+
+  const handleResetLayout = useCallback(() => {
     setWidgets(DEFAULT_WIDGETS);
     setRefreshKey(k => k + 1);
   }, []);
@@ -281,11 +288,16 @@ const CockpitPage: React.FC = () => {
             <div className="cockpit-stage-header">
               <div>
                 <div className="cockpit-stage-title">数据看板</div>
-                <div className="cockpit-stage-desc">拖入模块后可自由拖动位置、调整大小</div>
+                <div className="cockpit-stage-desc">实时监控 · 拖入模块后可自由拖动位置、调整大小</div>
               </div>
               <div className="cockpit-stage-actions">
                 <TimeDimensionSelector />
-                <Button icon={<ReloadOutlined />} onClick={handleRefresh} className="cockpit-reset-btn">重置</Button>
+                <Tooltip title="刷新数据">
+                  <Button icon={<SyncOutlined spin={refreshing} />} onClick={handleRefresh} className="cockpit-reset-btn" />
+                </Tooltip>
+                <Tooltip title="重置布局">
+                  <Button icon={<ReloadOutlined />} onClick={handleResetLayout} className="cockpit-reset-btn" />
+                </Tooltip>
               </div>
             </div>
 

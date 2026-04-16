@@ -1,71 +1,11 @@
-.order-pie-wrapper {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-}
-
-.order-pie-wrapper .pie-card {
-  flex-shrink: 0;
-}
-
-.order-style-stats {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(79, 209, 197, 0.1);
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-}
-
-.order-style-stats-header {
-  font-size: 13px;
-  font-weight: 600;
-  color: #4fd1c5;
-  margin-bottom: 10px;
-  padding-left: 4px;
-}
-
-.order-style-stats-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.order-style-stats-item {
-  display: grid;
-  grid-template-columns: 1fr auto auto auto;
-  align-items: center;
-  gap: 8px;
-  background: rgba(7, 13, 27, 0.5);
-  border-radius: 8px;
-  padding: 8px 12px;
-  border: 1px solid rgba(148, 163, 184, 0.1);
-  font-size: 12px;
-}
-
-.order-style-no {
-  font-weight: 600;
-  color: #94a3b8;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.order-style-percent {
-  font-weight: 700;
-  color: #4fd1c5;
-  min-width: 40px;
-  text-align: right;
-}
-
-.order-style-detail {
-  color: rgba(148, 163, 184, 0.72);
-  min-width: 50px;
-  text-align: center;
-}
-
-.order-style-qty {
-  color: #4fd1c5;
-  font-weight: 500;
-}
+.order-pie-wrapper { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.order-pie-wrapper .pie-card { flex-shrink: 0; }
+.order-style-stats { margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb; flex: 1; overflow-y: auto; min-height: 0; }
+.order-style-stats-header { font-size: 13px; font-weight: 600; color: #1f2937; margin-bottom: 10px; padding-left: 4px; }
+.order-style-stats-list { display: flex; flex-direction: column; gap: 6px; }
+.order-style-stats-item { display: grid; grid-template-columns: 1fr auto auto auto; align-items: center; gap: 8px; background: #f9fafb; border-radius: 8px; padding: 8px 12px; border: 1px solid #e5e7eb; font-size: 12px; transition: border-color 0.15s; }
+.order-style-stats-item:hover { border-color: #3b82f6; }
+.order-style-no { font-weight: 600; color: #1f2937; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.order-style-percent { font-weight: 700; color: #3b82f6; min-width: 40px; text-align: right; }
+.order-style-detail { color: #9ca3af; min-width: 50px; text-align: center; }
+.order-style-qty { color: #10b981; font-weight: 500; }

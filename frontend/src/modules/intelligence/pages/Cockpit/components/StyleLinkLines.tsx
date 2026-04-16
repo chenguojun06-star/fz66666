@@ -5,14 +5,14 @@ import './StyleLinkLines.css';
 const MODULE_ORDER = ['sample', 'order', 'production', 'procurement', 'warehouse', 'overview'];
 
 const COLORS = [
-  '#a78bfa',
-  '#60a5fa',
-  '#34d399',
+  '#3b82f6',
+  '#10b981',
   '#f59e0b',
+  '#8b5cf6',
   '#ec4899',
   '#06b6d4',
-  '#8b5cf6',
-  '#10b981',
+  '#ef4444',
+  '#14b8a6',
 ];
 
 const getModuleCenter = (data: StyleLinkData): { x: number; y: number } => {
@@ -123,8 +123,8 @@ const StyleLinkLines: React.FC = () => {
                   cy={point.y}
                   r="4"
                   fill={link.color}
-                  stroke="rgba(255,255,255,0.8)"
-                  strokeWidth="1.5"
+                  stroke="#ffffff"
+                  strokeWidth="2"
                 />
                 {i === 0 && (
                   <text

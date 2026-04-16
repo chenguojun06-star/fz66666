@@ -16,7 +16,7 @@ const STAGES: StageConfig[] = [
   { key: 'sample', label: '样衣', color: '#10b981' },
   { key: 'bom', label: 'BOM', color: '#f59e0b' },
   { key: 'process', label: '工序', color: '#8b5cf6' },
-  { key: 'size', label: '码数', color: '#06b6d4' },
+  { key: 'size', label: '码数', color: '#ec4899' },
 ];
 
 const isCompleted = (stage: string, style: StyleInfo): boolean => {
