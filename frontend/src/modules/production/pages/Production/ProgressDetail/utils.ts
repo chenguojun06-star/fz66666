@@ -720,7 +720,6 @@ export const getProcessesByNodeFromOrder = (
         if (!n) continue;
         const rawStage = String(item?.progressStage || '').trim();
         const stage = (rawStage && rawStage !== n) ? rawStage : (resolveDynamicParent(n) || rawStage || n);
-        if (n === stage) continue;
         const storedPrice = Number(item?.unitPrice) || 0;
         const price = templatePriceMap.get(n) ?? storedPrice;
         const processCode = String(item?.id || item?.processCode || '').trim() || undefined;
