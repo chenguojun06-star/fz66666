@@ -435,10 +435,10 @@ public class TenantRoleInitHelper {
      */
     public Map<String, Object> workerRegister(String username, String password, String name,
                                                 String phone, String tenantCode, String factoryId, String orgUnitId) {
-        // 验证租户码（统一错误消息防止枚举）
-        Tenant tenant = tenantService.findByTenantCode(tenantCode);
+        // 支持按编码或名称查找租户（编码精确匹配优先，名称模糊匹配兜底）
+        Tenant tenant = tenantService.findByCodeOrName(tenantCode);
         if (tenant == null || !"active".equals(tenant.getStatus())) {
-            throw new IllegalArgumentException("注册失败，请检查租户编码是否正确");
+            throw new IllegalArgumentException("注册失败，未找到对应工厂，请检查编码或名称，请检查编码或名称是否正确");
         }
 
         // 验证用户名唯一
@@ -466,7 +466,9 @@ public class TenantRoleInitHelper {
         user.setIsTenantOwner(false);
         user.setStatus("inactive"); // 注册中，未激活
         user.setRegistrationStatus("PENDING");
-        user.setRegistrationTenantCode(tenantCode);
+        // 存储解析后的实际编码（名称模糊匹配时 tenantCode 可能是名称，此处统一存编码）
+        user.setRegistrationTenantCode(tenant.getTenantCode()统一存编码）
+        user.setRegistrationTenantCode(tenant.getTenantCode());
         if (workerRole != null) {
             user.setRoleId(workerRole.getId());
             user.setRoleName(workerRole.getRoleName());

@@ -3,13 +3,13 @@
     <view class="title">员工注册</view>
     <view class="subtitle">填写信息后请耐心等待管理员审批</view>
 
-    <!-- 工厂编码 -->
+    <!-- 工厂编码/名称 -->
     <view class="field">
-      <view class="label">工厂编码 <text class="required">*</text></view>
+      <view class="label">工厂编码/名称 <text class="required">*</text></view>
       <view class="input-row">
         <input
           class="input {{tenantCode ? '' : ''}}"
-          placeholder="请输入工厂编码"
+          placeholder="请输入工厂编码或名称"
           value="{{tenantCode}}"
           bindinput="onTenantCodeInput"
           disabled="{{!!scannedCode}}"
