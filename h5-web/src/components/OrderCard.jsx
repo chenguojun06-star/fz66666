@@ -115,7 +115,7 @@ const OrderCard = memo(function OrderCard({ order, isExpanded, onToggle, activeT
               {processNodes.map((node, i) => (
                 <div key={i} className="order-card-process-item">
                   <div className="order-card-process-header">
-                    <span className="order-card-process-name">{node.label || node.name}</span>
+                    <span className="order-card-process-name">{node.name}</span>
                     <span className="order-card-process-pct">{node.percent}%</span>
                   </div>
                   <div className="order-card-process-bar">

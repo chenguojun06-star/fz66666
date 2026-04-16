@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
+import { formatProcessDisplayName } from '@/utils/productionStage';
 import { formatDateTime } from '@/utils/datetime';
 import api, { type ApiResult } from '@/utils/api';
 import { templateLibraryApi } from '@/services/template/templateLibraryApi';
@@ -719,17 +720,11 @@ const ProcessDetailModal: React.FC<ProcessDetailModalProps> = ({
                       render: (_: any, __: any, index: number) => index + 1,
                     },
                     {
-                      title: '工序编号',
-                      dataIndex: 'id',
-                      key: 'id',
-                      width: 100,
-                      render: (v: string) => <span style={{ fontSize: '12px', color: 'var(--color-text-secondary)' }}>{v}</span>,
-                    },
-                    {
-                      title: '工序名称',
+                      title: '工序',
                       dataIndex: 'name',
                       key: 'name',
-                      render: (v: string) => <span style={{ fontWeight: 600 }}>{v}</span>,
+                      width: 180,
+                      render: (v: string, record: any) => <span style={{ fontWeight: 600 }}>{formatProcessDisplayName(record.id, v)}</span>,
                     },
                     {
                       title: descriptionTitle,

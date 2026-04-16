@@ -271,7 +271,7 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
     modal.confirm({
       width: '30vw',
       title: '确认撤回',
-      content: `确定撤回此扫码记录？\n菲号: ${record.bundleNo}\n工序: ${record.processName || '-'}\n数量: ${record.quantity || 0}件`,
+      content: `确定撤回此扫码记录？\n菲号: ${record.bundleNo}\n工序: ${formatProcessDisplayName(record.processCode, record.processName)}\n数量: ${record.quantity || 0}件`,
       okText: '确认撤回',
       cancelText: '取消',
       okButtonProps: { danger: true, type: 'default' },
@@ -293,7 +293,7 @@ const ProcessTrackingTable: React.FC<ProcessTrackingTableProps> = ({
     modal.confirm({
       width: '30vw',
       title: '确认手动完成',
-      content: `确定将此节点标记为完成？\n菲号: ${record.bundleNo}\n工序: ${record.processName || '-'}\n数量: ${record.quantity || 0}件\n操作账号: ${operatorLabel}`,
+      content: `确定将此节点标记为完成？\n菲号: ${record.bundleNo}\n工序: ${formatProcessDisplayName(record.processCode, record.processName)}\n数量: ${record.quantity || 0}件\n操作账号: ${operatorLabel}`,
       okText: '确认完成',
       cancelText: '取消',
       onOk: async () => {

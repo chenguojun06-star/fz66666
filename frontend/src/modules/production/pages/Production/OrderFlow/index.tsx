@@ -2,6 +2,7 @@ import React from 'react';
 import { Alert, Button, Card, Col, Row, Space, Tabs, Tag } from 'antd';
 import Layout from '@/components/Layout';
 import PageLayout from '@/components/common/PageLayout';
+import { formatProcessDisplayName } from '@/utils/productionStage';
 import ResizableTable from '@/components/common/ResizableTable';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import { toNumberSafe } from '@/utils/api';
@@ -313,7 +314,7 @@ const OrderFlow: React.FC = () => {
                                       dataIndex: 'name',
                                       key: 'name',
                                       width: 180,
-                                      render: (v: any) => v || '-'
+                                      render: (v: any, record: any) => formatProcessDisplayName(record.id, v)
                                     },
                                     {
                                       title: '阶段',

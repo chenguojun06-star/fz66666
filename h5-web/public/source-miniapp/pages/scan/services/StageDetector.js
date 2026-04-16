@@ -94,7 +94,15 @@ class StageDetector {
 
     // 按 sortOrder 排序，并为每个工序推断 scanType
     const sorted = config
-      .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+      .sort((a, b) => {
+        const sa = a.sortOrder || 0;
+        const sb = b.sortOrder || 0;
+        if (sa !== sb) return sa - sb;
+        const ia = parseInt(String(a.id || '').replace(/\D/g, ''), 10) || 0;
+        const ib = parseInt(String(b.id || '').replace(/\D/g, ''), 10) || 0;
+        if (ia && ib && ia !== ib) return ia - ib;
+        return 0;
+      })
       .map(p => ({
         ...p,
         // 优先使用后端已计算的 scanType，无则就地推断山底）

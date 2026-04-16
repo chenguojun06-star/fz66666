@@ -131,36 +131,36 @@ function getNodeRateFromOrder(nodeName, order) {
 }
 
 function buildProcessNodesWithRates(order) {
-  const nodes = resolveNodesFromOrder(order);
+  var nodes = resolveNodesFromOrder(order);
   if (!nodes || !nodes.length) return [];
-  const progress = Number(order.productionProgress) || 0;
-  let hasAnyRate = false;
-  const result = nodes.map(function (n, idx) {
-    const name = n.name || n;
-    const rate = getNodeRateFromOrder(name, order);
+  var progress = Number(order.productionProgress) || 0;
+  var hasAnyRate = false;
+  var result = nodes.map(function (n) {
+    var name = n.name || n;
+    var rate = getNodeRateFromOrder(name, order);
     if (rate >= 0) {
       hasAnyRate = true;
-      return { name, percent: rate, label: (idx + 1) + '.' + name };
+      return { name: name, percent: rate };
     }
-    return { name, percent: -1, label: (idx + 1) + '.' + name };
+    return { name: name, percent: -1 };
   });
   if (hasAnyRate) {
     return result.map(function (r) {
-      return { name: r.name, percent: r.percent >= 0 ? r.percent : 0, label: r.label };
+      return { name: r.name, percent: r.percent >= 0 ? r.percent : 0 };
     });
   }
-  const len = nodes.length;
-  const perNode = 100 / len;
+  var len = nodes.length;
+  var perNode = 100 / len;
   return nodes.map(function (n, i) {
-    const nodeStart = i * perNode;
-    const nodeEnd = (i + 1) * perNode;
-    let pct = 0;
+    var nodeStart = i * perNode;
+    var nodeEnd = (i + 1) * perNode;
+    var pct = 0;
     if (progress >= nodeEnd) {
       pct = 100;
     } else if (progress > nodeStart) {
       pct = Math.round(((progress - nodeStart) / perNode) * 100);
     }
-    return { name: n.name || n, percent: clampPercent(pct), label: (i + 1) + '.' + (n.name || n) };
+    return { name: n.name || n, percent: clampPercent(pct) };
   });
 }
 

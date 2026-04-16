@@ -7,6 +7,7 @@ import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
+import { formatProcessDisplayName } from '@/utils/productionStage';
 import type { RowAction } from '@/components/common/RowActions';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
@@ -416,8 +417,7 @@ const TemplateCenter: React.FC = () => {
             <div style={{ maxHeight: 480, overflow: 'auto' }}>
               {steps.map((s, idx) => (
                 <div key={idx} style={{ padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: "var(--font-size-sm)" }}>
-                  <div>{String(s?.processName || '-')}</div>
-                  {s?.processCode && <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)', marginTop: 2 }}>编码: {s.processCode}</div>}
+                  <div>{formatProcessDisplayName(s?.processCode, s?.processName)}</div>
                   {t === 'process' && s?.machineType && <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)', marginTop: 2 }}>机器: {s.machineType}</div>}
                   {t === 'process' && s?.standardTime && <div style={{ fontSize: "var(--font-size-xs)", color: 'var(--neutral-text-disabled)', marginTop: 2 }}>工时: {s.standardTime}秒</div>}
                 </div>
@@ -434,7 +434,7 @@ const TemplateCenter: React.FC = () => {
                 const price = getPriceValue(s);
                 return (
                   <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 8px', borderBottom: '1px solid #f0f0f0', fontSize: "var(--font-size-sm)" }}>
-                    <span>{String(s?.processName || '-')}</span>
+                    <span>{formatProcessDisplayName(s?.processCode, s?.processName)}</span>
                     <span style={{ fontWeight: 500 }}>¥{price.toFixed(2)}</span>
                   </div>
                 );

@@ -1,5 +1,6 @@
 import { Button, Tag, Tooltip } from 'antd';
 import dayjs from 'dayjs';
+import { formatProcessDisplayName } from '@/utils/productionStage';
 import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
@@ -265,10 +266,10 @@ export function getDetailColumns(deps: DetailColumnDeps): any[] {
             key: 'processName',
             width: 140,
             ellipsis: true,
-            render: (v: unknown) => {
-                const processName = String(v || '').trim();
-                return processName ? (
-                    <span style={{ fontWeight: 600, color: 'var(--neutral-text)' }}>{processName}</span>
+            render: (v: unknown, record: any) => {
+                const displayName = formatProcessDisplayName(record?.processCode, String(v || '').trim());
+                return displayName && displayName !== '-' ? (
+                    <span style={{ fontWeight: 600, color: 'var(--neutral-text)' }}>{displayName}</span>
                 ) : (
                     <span style={{ color: 'var(--neutral-text-disabled)' }}>未记录</span>
                 );

@@ -150,8 +150,11 @@ function parseWorkflowSubProcesses(
       result[parentKey].push({
         id: genId(),
         name: name || id,
-        sortOrder: result[parentKey].length,
+        sortOrder: typeof node.sortOrder === 'number' ? node.sortOrder : result[parentKey].length,
       });
+    }
+    for (const key of Object.keys(result)) {
+      result[key].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, 'zh-CN'));
     }
     return result;
   } catch {

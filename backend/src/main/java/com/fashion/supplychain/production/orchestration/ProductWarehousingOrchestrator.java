@@ -31,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import com.fashion.supplychain.system.entity.OrderRemark;
 import com.fashion.supplychain.system.service.OrderRemarkService;
+import com.fashion.supplychain.websocket.service.WebSocketService;
 
 @Service
 @Slf4j
@@ -68,6 +69,9 @@ public class ProductWarehousingOrchestrator {
 
     @Autowired
     private OrderRemarkService orderRemarkService;
+
+    @Autowired
+    private WebSocketService webSocketService;
 
     public IPage<ProductWarehousing> list(Map<String, Object> params) {
         return queryHelper.list(params);
@@ -262,13 +266,13 @@ public class ProductWarehousingOrchestrator {
         }
 
         try {
-            String orderNo = productWarehousing.getOrderNo() != null ? productWarehousing.getOrderNo() : "";
+            String whOrderNo = productWarehousing.getOrderNo() != null ? productWarehousing.getOrderNo() : "";
             String bNo = productWarehousing.getCuttingBundleNo() != null ? String.valueOf(productWarehousing.getCuttingBundleNo()) : "";
             String opName = productWarehousing.getWarehousingOperatorName() != null ? productWarehousing.getWarehousingOperatorName() : "";
             int qty = productWarehousing.getQualifiedQuantity() != null ? productWarehousing.getQualifiedQuantity() : 0;
             String processLabel = qty > 0 && (productWarehousing.getUnqualifiedQuantity() == null || productWarehousing.getUnqualifiedQuantity() <= 0)
                     ? "质检入库" : "质检记录";
-            webSocketService.broadcastProcessStageCompleted(orderNo, processLabel, opName, bNo, "", "", qty);
+            webSocketService.broadcastProcessStageCompleted(whOrderNo, processLabel, opName, bNo, "", "", qty);
         } catch (Exception e) {
             log.debug("save: 工序通知推送失败(不阻断): orderId={}", orderId, e);
         }

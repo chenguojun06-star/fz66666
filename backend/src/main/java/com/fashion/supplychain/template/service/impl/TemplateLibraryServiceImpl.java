@@ -595,9 +595,21 @@ public class TemplateLibraryServiceImpl extends ServiceImpl<TemplateLibraryMappe
             if (idxA == -1) idxA = 999;
             if (idxB == -1) idxB = 999;
             if (idxA != idxB) return idxA - idxB;
-            return 0;
+            String idA = String.valueOf(a.getOrDefault("id", "")).trim();
+            String idB = String.valueOf(b.getOrDefault("id", "")).trim();
+            int numA = parseSortNumber(idA);
+            int numB = parseSortNumber(idB);
+            if (numA != numB) return numA - numB;
+            return idA.compareTo(idB);
         });
         return nodes;
+    }
+
+    private static int parseSortNumber(String id) {
+        if (id == null || id.isEmpty()) return 9999;
+        String digits = id.replaceAll("\\D", "");
+        if (digits.isEmpty()) return 9999;
+        try { return Integer.parseInt(digits); } catch (NumberFormatException e) { return 9999; }
     }
 
     private BigDecimal matchProcessUnitPrice(Map<String, BigDecimal> processPrices, String name) {

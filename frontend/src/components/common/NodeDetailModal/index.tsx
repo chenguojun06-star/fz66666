@@ -11,6 +11,7 @@ import { productionOrderApi, productionScanApi } from '@/services/production/pro
 import { useAuth } from '@/utils/AuthContext';
 import ProcessTrackingTable from '@/components/production/ProcessTrackingTable';
 import { useNodeDetailData } from './useNodeDetailData';
+import { formatProcessDisplayName } from '@/utils/productionStage';
 import type { NodeType, HistoryItem, NodeOperationData, OperatorSummary, NodeDetailModalProps } from './types';
 
 const { Text } = Typography;
@@ -137,7 +138,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
       parts.push(`委派类型: 工厂`);
       if (data.delegateFactoryName) parts.push(`委派工厂: ${data.delegateFactoryName}`);
     }
-    if (data.delegateProcessName) parts.push(`外发工序: ${data.delegateProcessName}`);
+    if (data.delegateProcessName) parts.push(`外发工序: ${formatProcessDisplayName(delegateProcessCode || undefined, data.delegateProcessName)}`);
     if (data.delegatePrice) parts.push(`单价: ¥${data.delegatePrice}`);
     if (data.processType) parts.push(`工艺类型: ${data.processType}`);
     if (typeof data.assigneeQuantity === 'number') parts.push(`领取数量: ${data.assigneeQuantity}`);
@@ -414,7 +415,11 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
           <Select
             value={fixedProcessName || undefined}
             placeholder="选择工序"
-            options={processList.map((p) => ({ value: String((p as any)?.name || '').trim(), label: String((p as any)?.name || '').trim() })).filter((o) => o.value)}
+            options={processList.map((p) => {
+              const name = String((p as any)?.name || '').trim();
+              const code = String((p as any)?.processCode || (p as any)?.code || (p as any)?.id || '').trim();
+              return { value: name, label: formatProcessDisplayName(code, name) };
+            }).filter((o) => o.value)}
             disabled
             style={{ width: '100%', minWidth: 0 }}
           />

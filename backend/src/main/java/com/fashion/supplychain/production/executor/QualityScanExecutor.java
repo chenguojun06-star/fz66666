@@ -172,8 +172,7 @@ public class QualityScanExecutor {
         try {
             if (webSocketService != null) {
                 String orderNo = order.getOrderNo() != null ? order.getOrderNo() : "";
-                String styleNo = order.getStyleNo() != null ? order.getStyleNo() : "";
-                webSocketService.broadcastQualityChecked(orderNo, styleNo, qty);
+                webSocketService.broadcastQualityChecked(orderNo, "质检", qty != null ? qty : 0, 0);
                 webSocketService.broadcastOrderProgressChanged(orderNo, qty, "质检");
                 webSocketService.broadcastDataChanged("ScanRecord", null, "create");
             }
@@ -815,7 +814,6 @@ public class QualityScanExecutor {
     private void syncBundleStatusAfterQualityScan(String orderId, CuttingBundle bundle) {
         try {
             int repairPool = warehousingHelper.calcRepairBreakdown(orderId, bundle.getId(), null)[0];
-            boolean isCurrentlyBlocked = warehousingHelper.isBundleBlockedForWarehousing(bundle.getStatus());
             String currentStatus = bundle.getStatus() == null ? "" : bundle.getStatus().trim();
 
             if (repairPool > 0) {
@@ -845,6 +843,7 @@ public class QualityScanExecutor {
     /**
      * 验证不重复入库
      */
+    @SuppressWarnings("unused")
     private void validateNotDuplicateWarehousing(String orderId, String bundleId, boolean isUnqualified) {
         try {
             List<ProductWarehousing> existingList = productWarehousingService.list(
@@ -888,6 +887,7 @@ public class QualityScanExecutor {
     /**
      * 计算剩余返修数量
      */
+    @SuppressWarnings("unused")
     private int computeRemainingRepairQuantity(String orderId, String bundleId, String excludeId) {
         try {
             // 1. 获取菲号原始裁剪数量
@@ -961,6 +961,7 @@ public class QualityScanExecutor {
     /**
      * 查找入库生成的扫码记录
      */
+    @SuppressWarnings("unused")
     private ScanRecord findWarehousingGeneratedRecord(String warehousingId) {
         if (!hasText(warehousingId)) {
             return null;

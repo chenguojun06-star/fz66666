@@ -61,6 +61,15 @@ public class SKUServiceImpl implements SKUService {
             "procurement", "order", "warehousing", "receiving"
     ));
 
+    private static final List<String> STAGE_ORDER = List.of("采购", "裁剪", "二次工艺", "车缝", "尾部", "入库");
+
+    private static int parseSortNum(String id) {
+        if (id == null || id.isEmpty()) return 9999;
+        String digits = id.replaceAll("\\D", "");
+        if (digits.isEmpty()) return 9999;
+        try { return Integer.parseInt(digits); } catch (NumberFormatException e) { return 9999; }
+    }
+
     /**
      * 判断是否为无工资工序
      * @param processName 工序名称
@@ -616,6 +625,22 @@ public class SKUServiceImpl implements SKUService {
                 String ps = r.get("progressStage") != null ? r.get("progressStage").toString() : "";
                 r.put("scanType", inferScanTypeFromNames(pn, ps));
             }
+
+            result.sort((a, b) -> {
+                String stageA = String.valueOf(a.getOrDefault("progressStage", "")).trim();
+                String stageB = String.valueOf(b.getOrDefault("progressStage", "")).trim();
+                int idxA = STAGE_ORDER.indexOf(stageA);
+                int idxB = STAGE_ORDER.indexOf(stageB);
+                if (idxA == -1) idxA = 999;
+                if (idxB == -1) idxB = 999;
+                if (idxA != idxB) return idxA - idxB;
+                String idA = String.valueOf(a.getOrDefault("id", "")).trim();
+                String idB = String.valueOf(b.getOrDefault("id", "")).trim();
+                int numA = parseSortNum(idA);
+                int numB = parseSortNum(idB);
+                if (numA != numB) return numA - numB;
+                return idA.compareTo(idB);
+            });
 
             return result;
 

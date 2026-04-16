@@ -12,6 +12,7 @@ import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ProductionProcessTracking;
 import com.fashion.supplychain.production.entity.ScanRecord;
+import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.helper.DuplicateScanPreventer;
 import com.fashion.supplychain.production.helper.ScanRecordPermissionHelper;
 import com.fashion.supplychain.production.entity.CuttingTask;
@@ -20,6 +21,7 @@ import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductionProcessTrackingService;
 import com.fashion.supplychain.production.service.ScanRecordService;
+import com.fashion.supplychain.production.service.ProductWarehousingService;
 import org.springframework.util.StringUtils;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -74,6 +76,9 @@ public class ScanRecordOrchestrator {
 
     @Autowired
     private ProductWarehousingOrchestrator productWarehousingOrchestrator;
+
+    @Autowired
+    private ProductWarehousingService productWarehousingService;
 
     @Autowired
     private DuplicateScanPreventer duplicateScanPreventer;
