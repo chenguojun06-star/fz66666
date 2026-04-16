@@ -7,6 +7,7 @@ import { isManagerLevel } from '@/utils/permission';
 import { toast } from '@/utils/uiHelper';
 import useVoiceInput from '@/hooks/useVoiceInput';
 import useAiChatStream from '@/hooks/useAiChatStream';
+import useCameraCapture from '@/hooks/useCameraCapture';
 import Icon from '@/components/Icon';
 
 const QUICK_PROMPTS_WORKER = [
@@ -58,7 +59,6 @@ export default function AiAssistantFloat() {
   const [pendingImage, setPendingImage] = useState(null);
   const [uploading, setUploading] = useState(false);
   const scrollRef = useRef(null);
-  const fileInputRef = useRef(null);
   const user = useAuthStore((s) => s.user);
   const scanResultData = useGlobalStore(s => s.scanResultData);
   const aiStream = useAiChatStream();
@@ -74,6 +74,8 @@ export default function AiAssistantFloat() {
     continuous: false,
     onResult: (transcript) => setInputText(prev => prev + transcript),
   });
+
+  const camera = useCameraCapture({ maxCount: 1, autoUpload: false });
 
   useEffect(() => {
     if (voice.error === 'NOT_SUPPORTED') toast.info('当前浏览器不支持语音识别，请使用Chrome浏览器');
@@ -141,11 +143,18 @@ export default function AiAssistantFloat() {
     if (!moved.current) setOpen(true);
   };
 
-  const handleFileChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = '';
-    setPendingImage({ url: URL.createObjectURL(file), file });
+
+  const handleTakePhoto = async () => {
+    try {
+      const urls = await camera.captureFromCamera();
+      if (urls && urls.length > 0) {
+        setPendingImage({ url: urls[0], file: null });
+      }
+    } catch (e) {
+      if (e?.message !== 'cancel') {
+        toast.error('拍照失败，请重试');
+      }
+    }
   };
 
   const removePendingImage = () => {
@@ -307,11 +316,9 @@ export default function AiAssistantFloat() {
         </div>
       )}
 
-      <input ref={fileInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleFileChange} />
-
       <div className="chat-input-bar">
-        <button onClick={() => fileInputRef.current?.click()} disabled={sending || uploading}
-          className="chat-tool-btn" title="拍照/选图">
+        <button onClick={handleTakePhoto} disabled={sending || uploading}
+          className="chat-tool-btn" title="拍照">
           <Icon name="camera" size={18} color="var(--color-text-secondary)" />
         </button>
         <button onClick={voice.toggle} disabled={sending}
