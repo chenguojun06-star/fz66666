@@ -28,10 +28,85 @@ jobs:
     - name: 检查新增 @TableField 是否有 Flyway 迁移脚本
       run: python3 scripts/check-entity-flyway.py
 
+  # ──────────────────────────────────────────────────────────────────────────
+  # 门禁：生产配置安全扫描
+  # 检查：弱密钥、硬编码密码、不安全CORS、测试配置泄漏等
+  # ──────────────────────────────────────────────────────────────────────────
+  security-config-scan:
+    name: 生产配置安全扫描
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v6
+
+    - name: 扫描不安全配置
+      run: |
+        echo "🔍 开始生产配置安全扫描..."
+        ERRORS=0
+
+        # 1. 检查生产CORS是否包含localhost或http
+        if grep -q "localhost" backend/src/main/resources/application-prod.yml 2>/dev/null; then
+          echo "❌ 生产CORS配置包含localhost"
+          ERRORS=$((ERRORS + 1))
+        fi
+        if grep -q "http://" backend/src/main/resources/application-prod.yml 2>/dev/null | grep -v "#"; then
+          echo "⚠️  生产CORS配置包含HTTP协议源"
+          ERRORS=$((ERRORS + 1))
+        fi
+
+        # 2. 检查生产配置是否使用弱JWT密钥
+        if grep -q "ThisIsA_LocalJwtSecret" backend/src/main/resources/application-prod.yml 2>/dev/null; then
+          echo "❌ 生产环境使用开发JWT密钥"
+          ERRORS=$((ERRORS + 1))
+        fi
+
+        # 3. 检查生产配置是否使用弱数据库密码
+        if grep -q "changeme" backend/src/main/resources/application-prod.yml 2>/dev/null; then
+          echo "❌ 生产环境使用弱数据库密码"
+          ERRORS=$((ERRORS + 1))
+        fi
+
+        # 4. 检查生产环境是否开启微信Mock
+        if grep -q "mock-enabled: true" backend/src/main/resources/application-prod.yml 2>/dev/null; then
+          echo "❌ 生产环境开启了微信Mock模式"
+          ERRORS=$((ERRORS + 1))
+        fi
+
+        # 5. 检查前端是否有localhost硬编码（排除配置文件和构建脚本）
+        FOUND_LOCALHOST=$(grep -rn "localhost:5173\|localhost:8080\|localhost:8088" \
+          frontend/src/ --include="*.ts" --include="*.tsx" 2>/dev/null | grep -v "vite.config\|.env\|node_modules" || true)
+        if [ -n "$FOUND_LOCALHOST" ]; then
+          echo "⚠️  前端源码中发现localhost硬编码:"
+          echo "$FOUND_LOCALHOST"
+          ERRORS=$((ERRORS + 1))
+        fi
+
+        # 6. 检查回调URL占位符
+        if grep -q "你的域名" backend/src/main/resources/application-prod.yml 2>/dev/null; then
+          echo "⚠️  生产配置中存在'你的域名'占位符"
+        fi
+
+        # 7. 检查前端是否有生产环境不应有的console.log（非DEV守卫）
+        BARE_CONSOLE=$(grep -rn "console\.log" frontend/src/ --include="*.ts" --include="*.tsx" 2>/dev/null \
+          | grep -v "isDev\|import.meta.env.DEV\|logger\|errorHandling\|wrap(" || true)
+        if [ -n "$BARE_CONSOLE" ]; then
+          CONSOLE_COUNT=$(echo "$BARE_CONSOLE" | wc -l)
+          echo "⚠️  前端源码中发现 ${CONSOLE_COUNT} 处未守卫的console.log（生产构建会自动移除，但建议清理）"
+        fi
+
+        if [ $ERRORS -gt 0 ]; then
+          echo ""
+          echo "❌ 安全扫描发现 ${ERRORS} 个问题，请修复后重新提交"
+          exit 1
+        fi
+
+        echo "✅ 安全扫描通过"
+
   backend-test:
     name: 后端测试
     runs-on: ubuntu-latest
-    needs: [entity-flyway-check]
+    needs: [entity-flyway-check, security-config-scan]
 
     steps:
     - name: 检出代码
@@ -57,7 +132,7 @@ jobs:
   frontend-lint:
     name: 前端代码规范检查 (ESLint + TypeScript)
     runs-on: ubuntu-latest
-    needs: [entity-flyway-check]
+    needs: [entity-flyway-check, security-config-scan]
 
     steps:
     - name: 检出代码
