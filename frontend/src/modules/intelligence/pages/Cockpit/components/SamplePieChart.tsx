@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Spin, Empty, Popover } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useTimeDimension } from '../contexts/TimeDimensionContext';

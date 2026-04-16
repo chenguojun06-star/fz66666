@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Spin, Empty } from 'antd';
 import { useTimeDimension } from '../contexts/TimeDimensionContext';
 import api from '@/utils/api';

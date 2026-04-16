@@ -5,7 +5,7 @@
     {
       "name": "fashion-backend",
       "dockerfile": "./backend/Dockerfile",
-      "containerPort": 8080,
+      "containerPort": 8088,
       "minNum": 1,
       "maxNum": 5,
       "cpu": 1,

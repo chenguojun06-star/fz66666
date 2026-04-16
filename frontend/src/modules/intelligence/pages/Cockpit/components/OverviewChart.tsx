@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Spin, Empty } from 'antd';
+import { Spin } from 'antd';
 import { ArrowUpOutlined, ArrowDownOutlined, MinusOutlined } from '@ant-design/icons';
 import { useTimeDimension } from '../contexts/TimeDimensionContext';
 import api from '@/utils/api';

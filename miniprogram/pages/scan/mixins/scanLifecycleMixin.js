@@ -275,11 +275,11 @@ const scanLifecycleMixin = Behavior({
     async _loadWarehouseOptions() {
       try {
         const res = await api.system.getDictList('warehouse_location');
-        const records = res?.data?.records || res?.data || [];
+        const records = Array.isArray(res) ? res : ((res && res.records) ? res.records : (res?.data || []));
         if (Array.isArray(records) && records.length > 0) {
           const options = records
             .filter(item => item.dictLabel)
-            .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+            .sort((a, b) => (a.sortOrder || a.sort || 0) - (b.sortOrder || a.sort || 0))
             .map(item => item.dictLabel);
           if (options.length > 0) {
             this.setData({ warehouseOptions: options });

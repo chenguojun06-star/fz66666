@@ -9,13 +9,12 @@ RUN mvn -q -e -DskipTests -Dcheckstyle.skip=true dependency:go-offline
 COPY backend/src ./src
 RUN mvn -e -DskipTests -Dcheckstyle.skip=true --no-transfer-progress package
 
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 ENV PORT=8088
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates ca-certificates-java curl \
+RUN apk add --no-cache ca-certificates curl tzdata \
   && update-ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
+  && rm -rf /var/cache/apk/*
 ENV TZ=Asia/Shanghai
 RUN ln -snf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo "Asia/Shanghai" > /etc/timezone
 RUN mkdir -p /uploads/tenants
@@ -24,4 +23,4 @@ EXPOSE 8088
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD curl -f http://localhost:8088/actuator/health || exit 1
 ENV SPRING_PROFILES_ACTIVE=prod
-CMD ["java", "-XX:TieredStopAtLevel=1", "-Dspring.jmx.enabled=false", "-Duser.timezone=Asia/Shanghai", "-Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts", "-jar", "/app/app.jar"]
+CMD ["java", "-XX:TieredStopAtLevel=1", "-Dspring.jmx.enabled=false", "-Duser.timezone=Asia/Shanghai", "-jar", "/app/app.jar"]

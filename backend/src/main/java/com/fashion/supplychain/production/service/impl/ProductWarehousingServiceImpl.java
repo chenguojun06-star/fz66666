@@ -18,6 +18,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import org.springframework.util.StringUtils;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import java.util.List;
@@ -407,7 +408,7 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public boolean saveWarehousingAndUpdateOrder(ProductWarehousing productWarehousing) {
         return saveWarehousingAndUpdateOrderInternal(productWarehousing, false);
     }

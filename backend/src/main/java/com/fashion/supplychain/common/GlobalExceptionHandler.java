@@ -237,8 +237,8 @@ public class GlobalExceptionHandler {
                 String method = request == null ? "" : request.getMethod();
                 String uri = request == null ? "" : request.getRequestURI();
                 logger.error("事务意外回滚: {} {} - {}", method, uri, e.getMessage(), e);
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                .body(Result.fail(500, "操作失败，请稍后重试"));
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                                .body(Result.fail(409, "操作冲突，请稍后重试"));
         }
 
         /**
