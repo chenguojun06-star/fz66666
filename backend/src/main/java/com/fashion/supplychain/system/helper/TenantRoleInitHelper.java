@@ -467,7 +467,6 @@ public class TenantRoleInitHelper {
         user.setStatus("inactive"); // 注册中，未激活
         user.setRegistrationStatus("PENDING");
         // 存储解析后的实际编码（名称模糊匹配时 tenantCode 可能是名称，此处统一存编码）
-        user.setRegistrationTenantCode(tenant.getTenantCode()统一存编码）
         user.setRegistrationTenantCode(tenant.getTenantCode());
         if (workerRole != null) {
             user.setRoleId(workerRole.getId());
