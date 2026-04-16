@@ -61,7 +61,11 @@ export default function LoginPage() {
   useEffect(() => {
     if (!tenantSearch.trim()) { setFilteredTenants([]); return; }
     const kw = tenantSearch.trim().toLowerCase();
-    setFilteredTenants(tenants.filter((t) => (t.tenantName || t.name || '').toLowerCase().includes(kw)));
+    setFilteredTenants(tenants.filter((t) => {
+      const name = (t.tenantName || t.name || '').toLowerCase();
+      const code = (t.tenantCode || '').toLowerCase();
+      return name.includes(kw) || code.includes(kw);
+    }));
   }, [tenantSearch, tenants]);
 
   const handlePickTenant = (tenant) => {
@@ -174,12 +178,12 @@ export default function LoginPage() {
 
           <div className="login-header">
             <div className="login-title-row">
-              <span className="login-title">小云供应链</span>
+              <span className="login-title">云裳智链</span>
               <div className="login-title-cloud">
                 <MiniCloud size={33} />
               </div>
             </div>
-            <div className="login-subtitle">有问题找小云｜多端协同更轻松</div>
+            <div className="login-subtitle">云裳智链｜多端协同更轻松</div>
           </div>
 
           <div className="form-stack">
@@ -221,6 +225,7 @@ export default function LoginPage() {
                       className={`tenant-result-item${(selectedTenant?.tenantId === t.tenantId || selectedTenant?.id === t.id) ? ' active' : ''}`}
                       onClick={() => handlePickTenant(t)}>
                       {t.tenantName || t.name}
+                      {t.tenantCode && <span style={{ fontSize: 'var(--font-size-2xs)', color: 'var(--color-text-tertiary)', marginLeft: 6 }}>({t.tenantCode})</span>}
                     </button>
                   ))}
                   {filteredTenants.length === 0 && (

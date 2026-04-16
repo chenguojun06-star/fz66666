@@ -20,15 +20,54 @@ export default function RegisterPage() {
   const [agreedPolicies, setAgreedPolicies] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const [tenants, setTenants] = useState([]);
+  const [factorySearch, setFactorySearch] = useState('');
+  const [filteredTenants, setFilteredTenants] = useState([]);
+  const [selectedFactory, setSelectedFactory] = useState(null);
+  const hasFactoryKeyword = factorySearch.trim().length > 0;
+
   useEffect(() => {
     const tc = searchParams.get('tenantCode');
     const tn = searchParams.get('tenantName');
     if (tc) {
       setTenantCode(decodeURIComponent(tc));
       setTenantName(tn ? decodeURIComponent(tn) : '');
+      setFactorySearch(tn ? decodeURIComponent(tn) : decodeURIComponent(tc));
+      setSelectedFactory({ tenantCode: decodeURIComponent(tc), tenantName: tn ? decodeURIComponent(tn) : '' });
       setScannedCode(true);
     }
   }, []);
+
+  useEffect(() => {
+    api.tenant.publicList().then((res) => {
+      const list = res?.data || res || [];
+      setTenants(Array.isArray(list) ? list : []);
+    }).catch((e) => console.error('RegisterPage publicList error:', e));
+  }, []);
+
+  useEffect(() => {
+    if (!factorySearch.trim()) { setFilteredTenants([]); return; }
+    const kw = factorySearch.trim().toLowerCase();
+    setFilteredTenants(tenants.filter((t) => {
+      const tName = (t.tenantName || t.name || '').toLowerCase();
+      const tCode = (t.tenantCode || '').toLowerCase();
+      return tName.includes(kw) || tCode.includes(kw);
+    }));
+  }, [factorySearch, tenants]);
+
+  const handlePickFactory = (t) => {
+    setSelectedFactory(t);
+    setTenantCode(t.tenantCode || '');
+    setTenantName(t.tenantName || t.name || '');
+    setFactorySearch(t.tenantName || t.name || t.tenantCode || '');
+  };
+
+  const handleClearFactory = () => {
+    setSelectedFactory(null);
+    setTenantCode('');
+    setTenantName('');
+    setFactorySearch('');
+  };
 
   const onScanCode = () => {
     if (wx.isWechat) {
@@ -38,11 +77,14 @@ export default function RegisterPage() {
         if (parsed.tenantCode) {
           setTenantCode(parsed.tenantCode);
           setTenantName(parsed.factoryName || parsed.tenantName || '');
+          setFactorySearch(parsed.factoryName || parsed.tenantName || parsed.tenantCode);
           setFactoryId(parsed.factoryId || '');
+          setSelectedFactory({ tenantCode: parsed.tenantCode, tenantName: parsed.factoryName || parsed.tenantName || '' });
           setScannedCode(true);
           toast.success('扫码成功');
         } else {
           setTenantCode(result.trim());
+          setFactorySearch(result.trim());
           setScannedCode(true);
         }
       }).catch((e) => console.error('RegisterPage error:', e));
@@ -71,7 +113,7 @@ export default function RegisterPage() {
 
   const onSubmit = async () => {
     if (loading) return;
-    if (!tenantCode.trim()) { toast.error('请输入工厂编码'); return; }
+    if (!tenantCode.trim()) { toast.error('请选择或输入工厂编码'); return; }
     const usernameErr = validateByRule(username, { name: '用户名', required: true, minLength: 3, maxLength: 20, pattern: /^[a-zA-Z0-9_]+$/ });
     if (usernameErr) { toast.error(usernameErr); return; }
     if (!name.trim()) { toast.error('请输入真实姓名'); return; }
@@ -114,13 +156,40 @@ export default function RegisterPage() {
         </div>
         <div className="form-stack">
           <div className="login-field">
-            <div className="login-label"><span className="login-label-required">*</span>工厂编码</div>
+            <div className="login-label"><span className="login-label-required">*</span>工厂编码/名称</div>
             <div className="login-input-wrap">
               <span className="login-input-icon">⌕</span>
-              <input className="login-input" value={tenantCode} onChange={e => setTenantCode(e.target.value)} placeholder="输入或扫码获取" />
+              <input className="login-input" value={factorySearch} onChange={e => {
+                setFactorySearch(e.target.value);
+                if (selectedFactory && (selectedFactory.tenantName || selectedFactory.tenantCode) !== e.target.value) {
+                  setSelectedFactory(null);
+                  setTenantCode('');
+                  setTenantName('');
+                }
+              }} placeholder="输入工厂名称或编码搜索" />
+              {factorySearch && (
+                <span className="login-input-clear" onClick={handleClearFactory}>✕</span>
+              )}
               <button className="login-input-eye" onClick={onScanCode}>📷</button>
             </div>
-            {tenantName && <div className="tenant-selected-tag">✓ {tenantName}</div>}
+            {selectedFactory && (
+              <div className="tenant-selected-tag">✓ {selectedFactory.tenantName || selectedFactory.tenantCode}</div>
+            )}
+            {hasFactoryKeyword && !selectedFactory && (
+              <div className="tenant-results">
+                {filteredTenants.slice(0, 20).map((t) => (
+                  <button key={t.tenantId || t.id}
+                    className="tenant-result-item"
+                    onClick={() => handlePickFactory(t)}>
+                    <span>{t.tenantName || t.name}</span>
+                    <span style={{ fontSize: 'var(--font-size-2xs)', color: 'var(--color-text-tertiary)', marginLeft: 6 }}>({t.tenantCode})</span>
+                  </button>
+                ))}
+                {filteredTenants.length === 0 && (
+                  <div className="tenant-result-empty">未搜索到对应工厂，可直接输入编码</div>
+                )}
+              </div>
+            )}
           </div>
           <div className="login-field">
             <div className="login-label"><span className="login-label-required">*</span>用户名</div>
