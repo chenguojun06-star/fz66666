@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
-import { Button } from 'antd';
-import { ReloadOutlined } from '@ant-design/icons';
+import { Button, Tooltip } from 'antd';
+import { ReloadOutlined, AlertOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import { TimeDimensionProvider, useTimeDimension } from './contexts/TimeDimensionContext';
 import { StyleLinkProvider } from './contexts/StyleLinkContext';
@@ -20,6 +20,7 @@ import type { MaterialPurchase } from '@/types/production';
 import './styles.css';
 
 const STORAGE_KEY = 'cockpit-widgets';
+const LAYOUT_VERSION = 'v2';
 
 const isToday = (dateStr?: string | null): boolean => {
   if (!dateStr) return false;
@@ -56,21 +57,14 @@ interface WidgetState {
   insight: { placed: boolean } & WidgetPosition;
 }
 
-const DEFAULT_POSITION: WidgetPosition = {
-  x: 20,
-  y: 20,
-  width: 520,
-  height: 560,
-};
-
 const DEFAULT_WIDGETS: WidgetState = {
-  overview: { placed: false, ...DEFAULT_POSITION, x: 20 },
-  order: { placed: false, ...DEFAULT_POSITION, x: 540, y: 20 },
-  sample: { placed: false, ...DEFAULT_POSITION, x: 20, y: 600 },
-  production: { placed: false, ...DEFAULT_POSITION, x: 540, y: 600 },
-  procurement: { placed: false, ...DEFAULT_POSITION, x: 1060, y: 600 },
-  warehouse: { placed: false, ...DEFAULT_POSITION, x: 20, y: 1200 },
-  insight: { placed: false, ...DEFAULT_POSITION, x: 1060, y: 1200 },
+  overview: { placed: true, x: 0, y: 0, width: 520, height: 420 },
+  order: { placed: true, x: 530, y: 0, width: 380, height: 420 },
+  sample: { placed: true, x: 920, y: 0, width: 380, height: 420 },
+  production: { placed: true, x: 0, y: 430, width: 380, height: 420 },
+  procurement: { placed: true, x: 390, y: 430, width: 380, height: 420 },
+  warehouse: { placed: true, x: 780, y: 430, width: 380, height: 420 },
+  insight: { placed: true, x: 1170, y: 430, width: 380, height: 420 },
 };
 
 const loadWidgetState = (): WidgetState => {
@@ -78,7 +72,10 @@ const loadWidgetState = (): WidgetState => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      return { ...DEFAULT_WIDGETS, ...parsed };
+      if (parsed._version === LAYOUT_VERSION) {
+        const { _version, ...widgets } = parsed;
+        return { ...DEFAULT_WIDGETS, ...widgets };
+      }
     }
   } catch {}
   return DEFAULT_WIDGETS;
@@ -170,6 +167,16 @@ const TodayStatsProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
 };
 
+const WIDGET_META: Record<keyof WidgetState, { label: string; priority: 'critical' | 'high' | 'normal'; icon: string }> = {
+  overview: { label: '业务概览', priority: 'critical', icon: '📊' },
+  order: { label: '下单管理', priority: 'high', icon: '📋' },
+  production: { label: '大货生产', priority: 'critical', icon: '🏭' },
+  sample: { label: '样衣开发', priority: 'high', icon: '✂️' },
+  procurement: { label: '物料采购', priority: 'normal', icon: '📦' },
+  warehouse: { label: '成品仓库', priority: 'normal', icon: '🏪' },
+  insight: { label: 'AI 智能洞察', priority: 'critical', icon: '🧠' },
+};
+
 const CockpitPage: React.FC = () => {
   const [widgets, setWidgets] = useState<WidgetState>(loadWidgetState);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -187,7 +194,7 @@ const CockpitPage: React.FC = () => {
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(widgets));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ _version: LAYOUT_VERSION, ...widgets }));
     } catch {}
   }, [widgets]);
 
@@ -204,8 +211,8 @@ const CockpitPage: React.FC = () => {
           placed: true,
           x: Math.max(0, x),
           y: Math.max(0, y),
-          width: DEFAULT_POSITION.width,
-          height: DEFAULT_POSITION.height,
+          width: DEFAULT_WIDGETS[moduleKey]?.width || 380,
+          height: DEFAULT_WIDGETS[moduleKey]?.height || 420,
         },
       }));
     }
@@ -295,7 +302,12 @@ const CockpitPage: React.FC = () => {
   }, []);
 
   const hasPlacedWidgets = useMemo(() =>
-    widgets.overview.placed || widgets.order.placed || widgets.sample.placed || widgets.production.placed || widgets.procurement.placed || widgets.warehouse.placed || widgets.insight.placed,
+    (Object.keys(widgets) as (keyof WidgetState)[]).some(k => widgets[k].placed),
+    [widgets]
+  );
+
+  const unplacedWidgets = useMemo(() =>
+    (Object.keys(widgets) as (keyof WidgetState)[]).filter(k => !widgets[k].placed),
     [widgets]
   );
 
@@ -315,6 +327,7 @@ const CockpitPage: React.FC = () => {
               handleRemove={handleRemove}
               handleRefresh={handleRefresh}
               hasPlacedWidgets={hasPlacedWidgets}
+              unplacedWidgets={unplacedWidgets}
             />
           </StyleLinkProvider>
         </TodayStatsProvider>
@@ -334,6 +347,7 @@ interface CockpitContentProps {
   handleRemove: (key: keyof WidgetState) => void;
   handleRefresh: () => void;
   hasPlacedWidgets: boolean;
+  unplacedWidgets: (keyof WidgetState)[];
 }
 
 const CockpitContent: React.FC<CockpitContentProps> = ({
@@ -346,377 +360,180 @@ const CockpitContent: React.FC<CockpitContentProps> = ({
   handleRemove,
   handleRefresh,
   hasPlacedWidgets,
+  unplacedWidgets,
 }) => {
   const todayStats = useTodayStats();
 
+  const kpiItems = useMemo(() => [
+    { label: '今日下单', value: todayStats.overview.orderQty, unit: '件', color: '#a78bfa', trend: 'order' },
+    { label: '今日入库', value: todayStats.overview.inboundQty, unit: '件', color: '#34d399', trend: 'inbound' },
+    { label: '今日出库', value: todayStats.overview.outboundQty, unit: '件', color: '#f472b6', trend: 'outbound' },
+    { label: '今日完成', value: todayStats.production.completedQty, unit: '件', color: '#60a5fa', trend: 'production' },
+    { label: '样衣完成', value: todayStats.sample.completedCount, unit: '款', color: '#fbbf24', trend: 'sample' },
+    { label: '采购完成', value: todayStats.procurement.completedCount, unit: '单', color: '#fb923c', trend: 'procurement' },
+  ], [todayStats]);
+
+  const anomalyDetected = useMemo(() => {
+    const anomalies: string[] = [];
+    if (todayStats.overview.orderQty > 0 && todayStats.overview.inboundQty === 0) {
+      anomalies.push('有下单但无入库');
+    }
+    if (todayStats.sample.newCount > 0 && todayStats.sample.completedCount === 0) {
+      anomalies.push('样衣无完成');
+    }
+    if (todayStats.procurement.newCount > 3) {
+      anomalies.push('采购单激增');
+    }
+    return anomalies;
+  }, [todayStats]);
+
+  const renderWidget = (key: keyof WidgetState) => {
+    const w = widgets[key];
+    if (!w.placed) return null;
+    const meta = WIDGET_META[key];
+
+    const statTags: Record<keyof WidgetState, React.ReactNode> = {
+      overview: (
+        <>
+          <span className="cockpit-stat-tag">下单 {todayStats.overview.orderQty}件</span>
+          <span className="cockpit-stat-tag cockpit-stat-tag--success">入库 {todayStats.overview.inboundQty}件</span>
+          <span className="cockpit-stat-tag cockpit-stat-tag--outbound">出库 {todayStats.overview.outboundQty}件</span>
+        </>
+      ),
+      order: <span className="cockpit-stat-tag">今日下单 {todayStats.order.orderQty}件</span>,
+      sample: (
+        <>
+          <span className="cockpit-stat-tag">下样 {todayStats.sample.newCount}</span>
+          <span className="cockpit-stat-tag cockpit-stat-tag--success">完成 {todayStats.sample.completedCount}</span>
+        </>
+      ),
+      production: <span className="cockpit-stat-tag cockpit-stat-tag--success">完成 {todayStats.production.completedQty}件</span>,
+      procurement: (
+        <>
+          <span className="cockpit-stat-tag">新增 {todayStats.procurement.newCount}</span>
+          <span className="cockpit-stat-tag cockpit-stat-tag--success">完成 {todayStats.procurement.completedCount}</span>
+        </>
+      ),
+      warehouse: <span className="cockpit-stat-tag cockpit-stat-tag--outbound">出库 {todayStats.warehouse.outboundQty}件</span>,
+      insight: null,
+    };
+
+    const chartMap: Record<keyof WidgetState, React.ReactNode> = {
+      overview: <OverviewChart key={refreshKey} mode="stage" moduleKey="overview" position={{ x: w.x, y: w.y, width: w.width, height: w.height }} />,
+      order: <OrderPieChart key={refreshKey} mode="stage" moduleKey="order" position={{ x: w.x, y: w.y, width: w.width, height: w.height }} />,
+      sample: <SamplePieChart key={refreshKey} mode="stage" moduleKey="sample" position={{ x: w.x, y: w.y, width: w.width, height: w.height }} />,
+      production: <ProductionPieChart key={refreshKey} mode="stage" moduleKey="production" position={{ x: w.x, y: w.y, width: w.width, height: w.height }} />,
+      procurement: <ProcurementPieChart key={refreshKey} mode="stage" moduleKey="procurement" position={{ x: w.x, y: w.y, width: w.width, height: w.height }} />,
+      warehouse: <WarehousePieChart key={refreshKey} mode="stage" moduleKey="warehouse" position={{ x: w.x, y: w.y, width: w.width, height: w.height }} />,
+      insight: <InsightCard key={refreshKey} mode="stage" moduleKey="insight" position={{ x: w.x, y: w.y, width: w.width, height: w.height }} />,
+    };
+
+    return (
+      <div
+        key={key}
+        className={`cockpit-widget cockpit-widget--${meta.priority}`}
+        style={{ left: w.x, top: w.y, width: w.width, height: w.height }}
+      >
+        <div className="cockpit-widget-header" onMouseDown={(e) => handleMouseDown(key, e, 'move')}>
+          <span className="cockpit-widget-priority" data-priority={meta.priority} />
+          <span className="cockpit-widget-icon">{meta.icon}</span>
+          <span className="cockpit-widget-title">{meta.label}</span>
+          <span className="cockpit-widget-stats">{statTags[key]}</span>
+          <Button className="cockpit-widget-close" size="small" onClick={() => handleRemove(key)}>×</Button>
+        </div>
+        <div className="cockpit-widget-body">{chartMap[key]}</div>
+        <div className="cockpit-widget-resize" onMouseDown={(e) => handleMouseDown(key, e, 'resize')} />
+      </div>
+    );
+  };
+
   return (
     <div className="cockpit-workbench">
+      <div className="cockpit-kpi-bar">
+        <div className="cockpit-kpi-items">
+          {kpiItems.map((item) => (
+            <div key={item.label} className="cockpit-kpi-item">
+              <span className="cockpit-kpi-value" style={{ color: item.color }}>{item.value}</span>
+              <span className="cockpit-kpi-unit">{item.unit}</span>
+              <span className="cockpit-kpi-label">{item.label}</span>
+            </div>
+          ))}
+        </div>
+        {anomalyDetected.length > 0 && (
+          <Tooltip title={anomalyDetected.join('；')}>
+            <div className="cockpit-kpi-alert">
+              <AlertOutlined /> {anomalyDetected.length}项异常
+            </div>
+          </Tooltip>
+        )}
+      </div>
+
+      <div className="cockpit-body">
+        {unplacedWidgets.length > 0 && (
           <aside className="cockpit-sidebar">
             <div className="cockpit-sidebar-header">
-              <div className="cockpit-sidebar-subtitle">拖拽到右侧区域查看详情</div>
+              <div className="cockpit-sidebar-title">可用模块</div>
+              <div className="cockpit-sidebar-subtitle">拖拽到看板区域添加</div>
             </div>
-
-            <div className="cockpit-sidebar-section">
-              <div
-                className="cockpit-module-card"
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.setData('text/module-key', 'overview');
-                  e.dataTransfer.effectAllowed = 'move';
-                }}
-              >
-                <OverviewChart key={refreshKey} mode="sidebar" />
-              </div>
-            </div>
-
-            <div className="cockpit-sidebar-section">
-              <div
-                className="cockpit-module-card"
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.setData('text/module-key', 'order');
-                  e.dataTransfer.effectAllowed = 'move';
-                }}
-              >
-                <OrderPieChart key={refreshKey} mode="sidebar" />
-              </div>
-            </div>
-
-            <div className="cockpit-sidebar-section">
-              <div
-                className="cockpit-module-card"
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.setData('text/module-key', 'sample');
-                  e.dataTransfer.effectAllowed = 'move';
-                }}
-              >
-                <SamplePieChart key={refreshKey} mode="sidebar" />
-              </div>
-            </div>
-
-            <div className="cockpit-sidebar-section">
-              <div
-                className="cockpit-module-card"
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.setData('text/module-key', 'production');
-                  e.dataTransfer.effectAllowed = 'move';
-                }}
-              >
-                <ProductionPieChart key={refreshKey} mode="sidebar" />
-              </div>
-            </div>
-
-            <div className="cockpit-sidebar-section">
-              <div
-                className="cockpit-module-card"
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.setData('text/module-key', 'procurement');
-                  e.dataTransfer.effectAllowed = 'move';
-                }}
-              >
-                <ProcurementPieChart key={refreshKey} mode="sidebar" />
-              </div>
-            </div>
-
-            <div className="cockpit-sidebar-section">
-              <div
-                className="cockpit-module-card"
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.setData('text/module-key', 'warehouse');
-                  e.dataTransfer.effectAllowed = 'move';
-                }}
-              >
-                <WarehousePieChart key={refreshKey} mode="sidebar" />
-              </div>
-            </div>
-
-            <div className="cockpit-sidebar-section">
-              <div
-                className="cockpit-module-card"
-                draggable
-                onDragStart={(e) => {
-                  e.dataTransfer.setData('text/module-key', 'insight');
-                  e.dataTransfer.effectAllowed = 'move';
-                }}
-              >
-                <InsightCard key={refreshKey} mode="sidebar" />
-              </div>
-            </div>
+            {unplacedWidgets.map((key) => {
+              const meta = WIDGET_META[key];
+              return (
+                <div key={key} className="cockpit-sidebar-section">
+                  <div
+                    className={`cockpit-module-card cockpit-module-card--${meta.priority}`}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('text/module-key', key);
+                      e.dataTransfer.effectAllowed = 'move';
+                    }}
+                  >
+                    <div className="cockpit-module-card-header">
+                      <span className="cockpit-module-priority" data-priority={meta.priority} />
+                      <span className="cockpit-module-icon">{meta.icon}</span>
+                      <span className="cockpit-module-label">{meta.label}</span>
+                    </div>
+                    <div className="cockpit-module-card-body">
+                      {key === 'overview' && <OverviewChart key={refreshKey} mode="sidebar" />}
+                      {key === 'order' && <OrderPieChart key={refreshKey} mode="sidebar" />}
+                      {key === 'sample' && <SamplePieChart key={refreshKey} mode="sidebar" />}
+                      {key === 'production' && <ProductionPieChart key={refreshKey} mode="sidebar" />}
+                      {key === 'procurement' && <ProcurementPieChart key={refreshKey} mode="sidebar" />}
+                      {key === 'warehouse' && <WarehousePieChart key={refreshKey} mode="sidebar" />}
+                      {key === 'insight' && <InsightCard key={refreshKey} mode="sidebar" />}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </aside>
+        )}
 
-          <main className="cockpit-main" onDrop={handleDrop} onDragOver={handleDragOver}>
-            <div className="cockpit-stage-header">
-              <div>
-                <div className="cockpit-stage-title">数据看板</div>
-                <div className="cockpit-stage-desc">拖入模块后可自由拖动位置、调整大小</div>
-              </div>
-              <div className="cockpit-stage-actions">
-                <TimeDimensionSelector />
-                <Button icon={<ReloadOutlined />} onClick={handleRefresh} className="cockpit-reset-btn">重置</Button>
-              </div>
+        <main className="cockpit-main" onDrop={handleDrop} onDragOver={handleDragOver}>
+          <div className="cockpit-stage-header">
+            <div>
+              <div className="cockpit-stage-title">数据看板</div>
+              <div className="cockpit-stage-desc">拖动模块头部移动位置，右下角调整大小</div>
             </div>
-
-            <div ref={containerRef} className="cockpit-stage-canvas">
-              <StyleLinkLines />
-              {!hasPlacedWidgets && (
-                <div className="cockpit-stage-empty">
-                  <div className="cockpit-stage-empty-title">把左侧模块拖进来</div>
-                  <div className="cockpit-stage-empty-desc">支持业务概览、下单管理、样衣开发、大货生产、物料采购、成品仓库等多个模块，可自由摆放</div>
-                </div>
-              )}
-
-              {widgets.overview.placed && (
-                <div
-                  className="cockpit-widget"
-                  style={{
-                    left: widgets.overview.x,
-                    top: widgets.overview.y,
-                    width: widgets.overview.width,
-                    height: widgets.overview.height,
-                  }}
-                >
-                  <div
-                    className="cockpit-widget-header"
-                    onMouseDown={(e) => handleMouseDown('overview', e, 'move')}
-                  >
-                    <span className="cockpit-widget-title">业务概览</span>
-                    <span className="cockpit-widget-stats">
-                      <span className="cockpit-stat-tag">今日下单 {todayStats.overview.orderQty}件</span>
-                      <span className="cockpit-stat-tag cockpit-stat-tag--success">今日入库 {todayStats.overview.inboundQty}件</span>
-                      <span className="cockpit-stat-tag cockpit-stat-tag--outbound">今日出库 {todayStats.overview.outboundQty}件</span>
-                    </span>
-                    <Button className="cockpit-widget-close" size="small" onClick={() => handleRemove('overview')}>×</Button>
-                  </div>
-                  <div className="cockpit-widget-body">
-                    <OverviewChart
-                      key={refreshKey}
-                      mode="stage"
-                      moduleKey="overview"
-                      position={{ x: widgets.overview.x, y: widgets.overview.y, width: widgets.overview.width, height: widgets.overview.height }}
-                    />
-                  </div>
-                  <div
-                    className="cockpit-widget-resize"
-                    onMouseDown={(e) => handleMouseDown('overview', e, 'resize')}
-                  />
-                </div>
-              )}
-
-              {widgets.order.placed && (
-                <div
-                  className="cockpit-widget"
-                  style={{
-                    left: widgets.order.x,
-                    top: widgets.order.y,
-                    width: widgets.order.width,
-                    height: widgets.order.height,
-                  }}
-                >
-                  <div
-                    className="cockpit-widget-header"
-                    onMouseDown={(e) => handleMouseDown('order', e, 'move')}
-                  >
-                    <span className="cockpit-widget-title">下单管理</span>
-                    <span className="cockpit-widget-stats">
-                      <span className="cockpit-stat-tag">今日下单 {todayStats.order.orderQty}件</span>
-                    </span>
-                    <Button className="cockpit-widget-close" size="small" onClick={() => handleRemove('order')}>×</Button>
-                  </div>
-                  <div className="cockpit-widget-body">
-                    <OrderPieChart
-                      key={refreshKey}
-                      mode="stage"
-                      moduleKey="order"
-                      position={{ x: widgets.order.x, y: widgets.order.y, width: widgets.order.width, height: widgets.order.height }}
-                    />
-                  </div>
-                  <div
-                    className="cockpit-widget-resize"
-                    onMouseDown={(e) => handleMouseDown('order', e, 'resize')}
-                  />
-                </div>
-              )}
-
-              {widgets.sample.placed && (
-                <div
-                  className="cockpit-widget"
-                  style={{
-                    left: widgets.sample.x,
-                    top: widgets.sample.y,
-                    width: widgets.sample.width,
-                    height: widgets.sample.height,
-                  }}
-                >
-                  <div
-                    className="cockpit-widget-header"
-                    onMouseDown={(e) => handleMouseDown('sample', e, 'move')}
-                  >
-                    <span className="cockpit-widget-title">样衣开发</span>
-                    <span className="cockpit-widget-stats">
-                      <span className="cockpit-stat-tag">今日下样 {todayStats.sample.newCount}</span>
-                      <span className="cockpit-stat-tag cockpit-stat-tag--success">今日完成 {todayStats.sample.completedCount}</span>
-                    </span>
-                    <Button className="cockpit-widget-close" size="small" onClick={() => handleRemove('sample')}>×</Button>
-                  </div>
-                  <div className="cockpit-widget-body">
-                    <SamplePieChart
-                      key={refreshKey}
-                      mode="stage"
-                      moduleKey="sample"
-                      position={{ x: widgets.sample.x, y: widgets.sample.y, width: widgets.sample.width, height: widgets.sample.height }}
-                    />
-                  </div>
-                  <div
-                    className="cockpit-widget-resize"
-                    onMouseDown={(e) => handleMouseDown('sample', e, 'resize')}
-                  />
-                </div>
-              )}
-
-              {widgets.production.placed && (
-                <div
-                  className="cockpit-widget"
-                  style={{
-                    left: widgets.production.x,
-                    top: widgets.production.y,
-                    width: widgets.production.width,
-                    height: widgets.production.height,
-                  }}
-                >
-                  <div
-                    className="cockpit-widget-header"
-                    onMouseDown={(e) => handleMouseDown('production', e, 'move')}
-                  >
-                    <span className="cockpit-widget-title">大货生产</span>
-                    <span className="cockpit-widget-stats">
-                      <span className="cockpit-stat-tag cockpit-stat-tag--success">今日完成 {todayStats.production.completedQty}件</span>
-                    </span>
-                    <Button className="cockpit-widget-close" size="small" onClick={() => handleRemove('production')}>×</Button>
-                  </div>
-                  <div className="cockpit-widget-body">
-                    <ProductionPieChart
-                      key={refreshKey}
-                      mode="stage"
-                      moduleKey="production"
-                      position={{ x: widgets.production.x, y: widgets.production.y, width: widgets.production.width, height: widgets.production.height }}
-                    />
-                  </div>
-                  <div
-                    className="cockpit-widget-resize"
-                    onMouseDown={(e) => handleMouseDown('production', e, 'resize')}
-                  />
-                </div>
-              )}
-
-              {widgets.procurement.placed && (
-                <div
-                  className="cockpit-widget"
-                  style={{
-                    left: widgets.procurement.x,
-                    top: widgets.procurement.y,
-                    width: widgets.procurement.width,
-                    height: widgets.procurement.height,
-                  }}
-                >
-                  <div
-                    className="cockpit-widget-header"
-                    onMouseDown={(e) => handleMouseDown('procurement', e, 'move')}
-                  >
-                    <span className="cockpit-widget-title">物料采购</span>
-                    <span className="cockpit-widget-stats">
-                      <span className="cockpit-stat-tag">今日新增 {todayStats.procurement.newCount}</span>
-                      <span className="cockpit-stat-tag cockpit-stat-tag--success">今日完成 {todayStats.procurement.completedCount}</span>
-                    </span>
-                    <Button className="cockpit-widget-close" size="small" onClick={() => handleRemove('procurement')}>×</Button>
-                  </div>
-                  <div className="cockpit-widget-body">
-                    <ProcurementPieChart
-                      key={refreshKey}
-                      mode="stage"
-                      moduleKey="procurement"
-                      position={{ x: widgets.procurement.x, y: widgets.procurement.y, width: widgets.procurement.width, height: widgets.procurement.height }}
-                    />
-                  </div>
-                  <div
-                    className="cockpit-widget-resize"
-                    onMouseDown={(e) => handleMouseDown('procurement', e, 'resize')}
-                  />
-                </div>
-              )}
-
-              {widgets.warehouse.placed && (
-                <div
-                  className="cockpit-widget"
-                  style={{
-                    left: widgets.warehouse.x,
-                    top: widgets.warehouse.y,
-                    width: widgets.warehouse.width,
-                    height: widgets.warehouse.height,
-                  }}
-                >
-                  <div
-                    className="cockpit-widget-header"
-                    onMouseDown={(e) => handleMouseDown('warehouse', e, 'move')}
-                  >
-                    <span className="cockpit-widget-title">成品仓库</span>
-                    <span className="cockpit-widget-stats">
-                      <span className="cockpit-stat-tag cockpit-stat-tag--success">今日出库 {todayStats.warehouse.outboundQty}件</span>
-                    </span>
-                    <Button className="cockpit-widget-close" size="small" onClick={() => handleRemove('warehouse')}>×</Button>
-                  </div>
-                  <div className="cockpit-widget-body">
-                    <WarehousePieChart
-                      key={refreshKey}
-                      mode="stage"
-                      moduleKey="warehouse"
-                      position={{ x: widgets.warehouse.x, y: widgets.warehouse.y, width: widgets.warehouse.width, height: widgets.warehouse.height }}
-                    />
-                  </div>
-                  <div
-                    className="cockpit-widget-resize"
-                    onMouseDown={(e) => handleMouseDown('warehouse', e, 'resize')}
-                  />
-                </div>
-              )}
-
-              {widgets.insight.placed && (
-                <div
-                  className="cockpit-widget"
-                  style={{
-                    left: widgets.insight.x,
-                    top: widgets.insight.y,
-                    width: widgets.insight.width,
-                    height: widgets.insight.height,
-                  }}
-                >
-                  <div
-                    className="cockpit-widget-header"
-                    onMouseDown={(e) => handleMouseDown('insight', e, 'move')}
-                  >
-                    <span className="cockpit-widget-title">AI 智能洞察</span>
-                    <Button className="cockpit-widget-close" size="small" onClick={() => handleRemove('insight')}>×</Button>
-                  </div>
-                  <div className="cockpit-widget-body">
-                    <InsightCard
-                      key={refreshKey}
-                      mode="stage"
-                      moduleKey="insight"
-                      position={{ x: widgets.insight.x, y: widgets.insight.y, width: widgets.insight.width, height: widgets.insight.height }}
-                    />
-                  </div>
-                  <div
-                    className="cockpit-widget-resize"
-                    onMouseDown={(e) => handleMouseDown('insight', e, 'resize')}
-                  />
-                </div>
-              )}
+            <div className="cockpit-stage-actions">
+              <TimeDimensionSelector />
+              <Button icon={<ReloadOutlined />} onClick={handleRefresh} className="cockpit-reset-btn">重置布局</Button>
             </div>
-          </main>
-        </div>
+          </div>
+
+          <div ref={containerRef} className="cockpit-stage-canvas">
+            <StyleLinkLines />
+            {!hasPlacedWidgets && (
+              <div className="cockpit-stage-empty">
+                <div className="cockpit-stage-empty-icon">📊</div>
+                <div className="cockpit-stage-empty-title">从左侧拖入模块开始使用</div>
+                <div className="cockpit-stage-empty-desc">或点击「重置布局」恢复默认看板</div>
+              </div>
+            )}
+            {(Object.keys(widgets) as (keyof WidgetState)[]).map(key => renderWidget(key))}
+          </div>
+        </main>
+      </div>
+    </div>
   );
 };
 
