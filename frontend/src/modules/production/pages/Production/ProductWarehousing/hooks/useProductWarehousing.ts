@@ -389,6 +389,33 @@ export const useProductWarehousing = () => {
     }
   );
 
+  // WebSocket 实时刷新：入库操作 / 订单进度变更 / 数据变更
+  useEffect(() => {
+    const handleWarehouseIn = () => {
+      fetchWarehousingList();
+      fetchWarehousingStats();
+    };
+    const handleProgressChanged = () => {
+      fetchWarehousingList();
+      fetchWarehousingStats();
+    };
+    const handleDataChanged = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { entityType?: string };
+      if (detail?.entityType === 'ProductWarehousing' || detail?.entityType === 'ProductionOrder') {
+        fetchWarehousingList();
+        fetchWarehousingStats();
+      }
+    };
+    window.addEventListener('warehouse:in', handleWarehouseIn);
+    window.addEventListener('order:progress:changed', handleProgressChanged);
+    window.addEventListener('data:changed', handleDataChanged);
+    return () => {
+      window.removeEventListener('warehouse:in', handleWarehouseIn);
+      window.removeEventListener('order:progress:changed', handleProgressChanged);
+      window.removeEventListener('data:changed', handleDataChanged);
+    };
+  }, [fetchWarehousingList, fetchWarehousingStats]);
+
   // Effects
   useEffect(() => {
     fetchWarehousingList();

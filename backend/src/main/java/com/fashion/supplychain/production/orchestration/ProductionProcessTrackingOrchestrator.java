@@ -111,11 +111,9 @@ public class ProductionProcessTrackingOrchestrator {
 
         // 2. 检查是否已扫码（防重复）
         if ("scanned".equals(tracking.getScanStatus())) {
-            throw new BusinessException(String.format(
-                "该菲号「%s」工序已被「%s」领取，不能重复扫码",
-                tracking.getProcessName(),
-                tracking.getOperatorName()
-            ));
+            log.warn("菲号「{}」工序已被「{}」领取，跳过重复扫码: bundleId={}, processCode={}",
+                    tracking.getProcessName(), tracking.getOperatorName(), cuttingBundleId, processCode);
+            return false;
         }
 
         // 3. 更新扫码状态

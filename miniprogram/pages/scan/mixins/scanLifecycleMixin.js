@@ -275,7 +275,7 @@ const scanLifecycleMixin = Behavior({
     async _loadWarehouseOptions() {
       try {
         const res = await api.system.getDictList('warehouse_location');
-        const records = res?.data?.records || res?.data || [];
+        const records = Array.isArray(res) ? res : ((res && res.records) ? res.records : (res?.data || []));
         if (Array.isArray(records) && records.length > 0) {
           const options = records
             .filter(item => item.dictLabel)

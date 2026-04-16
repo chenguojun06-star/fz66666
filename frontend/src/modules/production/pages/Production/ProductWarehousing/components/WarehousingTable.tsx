@@ -77,7 +77,10 @@ const WarehousingTable: React.FC<WarehousingTableProps> = ({
   /** 跳转到统一质检入库内部页面 */
   const goToDetail = (record: WarehousingType, tab = 'records') => {
     const orderId = String((record as any)?.orderId || '').trim();
-    if (!orderId) return;
+    if (!orderId) {
+      message.warning('该记录缺少订单信息，无法跳转详情');
+      return;
+    }
     const warehousingNo = String(record.warehousingNo || '').trim();
     const params = new URLSearchParams({ tab });
     if (warehousingNo && tab === 'records') params.set('warehousingNo', warehousingNo);

@@ -122,6 +122,24 @@ const WebSocketNotification: React.FC = () => {
     });
   }, [subscribe]);
 
+  //  入库操作通知：入库完成后触发前端刷新
+  useEffect(() => {
+    return subscribe('warehouse:in', (msg) => {
+      const p = msg.payload as { orderNo?: string; quantity?: number; warehouseLocation?: string };
+      const event = new CustomEvent('warehouse:in', { detail: p });
+      window.dispatchEvent(event);
+    });
+  }, [subscribe]);
+
+  //  通用数据变更通知
+  useEffect(() => {
+    return subscribe('data:changed', (msg) => {
+      const p = msg.payload as { entityType?: string; entityId?: string; action?: string };
+      const event = new CustomEvent('data:changed', { detail: p });
+      window.dispatchEvent(event);
+    });
+  }, [subscribe]);
+
   // 不渲染任何 DOM
   return null;
 };

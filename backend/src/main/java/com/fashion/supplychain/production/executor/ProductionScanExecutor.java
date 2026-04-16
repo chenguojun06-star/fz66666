@@ -469,13 +469,11 @@ public class ProductionScanExecutor {
                         log.warn("工序跟踪记录未找到（不阻断扫码）: bundleId={}, processCode={}, progressStage={}", bundle.getId(), processCode, progressStage);
                     }
                 } catch (BusinessException be) {
-                    // ✅ com.fashion.supplychain.common.BusinessException：直接重抛，GlobalExceptionHandler 返回 400+消息
-                    log.warn("工序跟踪拒绝领取，回滚扫码: bundleId={}, processCode={}, msg={}", bundle.getId(), processCode, be.getMessage());
-                    throw be;
-                } catch (com.fashion.supplychain.common.exception.BusinessException | IllegalStateException be2) {
-                    // ✅ 工序跟踪 Orchestrator 业务异常 / 操作人冲突：重新包装为 common BusinessException
-                    log.warn("工序跟踪拒绝领取，回滚扫码: bundleId={}, processCode={}, msg={}", bundle.getId(), processCode, be2.getMessage());
-                    throw new BusinessException(be2.getMessage());
+                    log.warn("工序跟踪拒绝领取（不阻断扫码）: bundleId={}, processCode={}, msg={}", bundle.getId(), processCode, be.getMessage());
+                } catch (com.fashion.supplychain.common.exception.BusinessException be2) {
+                    log.warn("工序跟踪拒绝领取（不阻断扫码）: bundleId={}, processCode={}, msg={}", bundle.getId(), processCode, be2.getMessage());
+                } catch (IllegalStateException ise) {
+                    log.warn("工序跟踪状态冲突（不阻断扫码）: bundleId={}, processCode={}, msg={}", bundle.getId(), processCode, ise.getMessage());
                 } catch (Exception e) {
                     // 非业务异常（DB故障等）：记录为ERROR但不阻断扫码，避免因追踪系统故障导致用户无法扫码
                     log.error("工序跟踪记录更新失败（非业务异常）: bundleId={}, processCode={}", bundle.getId(), processCode, e);

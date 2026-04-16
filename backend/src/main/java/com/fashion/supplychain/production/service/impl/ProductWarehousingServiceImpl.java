@@ -19,8 +19,10 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import org.springframework.util.StringUtils;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 import lombok.extern.slf4j.Slf4j;
 import java.util.List;
+import com.fashion.supplychain.websocket.service.WebSocketService;
 
 import static com.fashion.supplychain.production.service.impl.ProductWarehousingHelper.*;
 
@@ -37,6 +39,9 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
 
     @Autowired
     private ProductWarehousingHelper helper;
+
+    @Autowired
+    private WebSocketService webSocketService;
 
     @Override
     public String warehousingQuantityRuleViolationMessage(String orderId, Integer requestWarehousingQuantity,
@@ -402,12 +407,23 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
                     log.warn("更新SKU库存失败（不阻断入库）: orderId={}", productWarehousing.getOrderId(), e);
                 }
             }
+
+            try {
+                String orderNo = productWarehousing.getOrderNo() != null ? productWarehousing.getOrderNo() : order.getOrderNo();
+                String warehouse = productWarehousing.getWarehouse() != null ? productWarehousing.getWarehouse() : "";
+                int qty = productWarehousing.getQualifiedQuantity() != null ? productWarehousing.getQualifiedQuantity() : 0;
+                webSocketService.broadcastWarehouseIn(orderNo, qty, warehouse);
+                webSocketService.broadcastOrderProgressChanged(orderNo, 0, "入库");
+                webSocketService.broadcastDataChanged("ProductWarehousing", productWarehousing.getId(), "create");
+            } catch (Exception e) {
+                log.warn("入库WebSocket广播失败（不阻断入库）: orderId={}", productWarehousing.getOrderId(), e);
+            }
         }
         return ok;
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public boolean saveWarehousingAndUpdateOrder(ProductWarehousing productWarehousing) {
         return saveWarehousingAndUpdateOrderInternal(productWarehousing, false);
     }
