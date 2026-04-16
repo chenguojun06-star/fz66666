@@ -6,28 +6,29 @@ RUN mvn -q -e -DskipTests dependency:go-offline
 COPY src ./src
 RUN mvn -e -DskipTests package
 
-FROM eclipse-temurin:21-jre
+FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 ENV PORT=8088
-RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates ca-certificates-java curl \
+RUN apk add --no-cache ca-certificates curl tzdata \
   && update-ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
-# ⚠️ 强制设置容器时区为北京时间（Asia/Shanghai）
-# eclipse-temurin 基础镜像默认 UTC，不设置会导致 LocalDateTime.now() 返回 UTC
-# 表现：扫码记录时间偏 8 小时（小程序显示"8小时前"）
+  && rm -rf /var/cache/apk/*
+RUN CACERTS="/opt/java/openjdk/lib/security/cacerts" \
+  && if [ -f /etc/ssl/certs/ca-certificates.crt ]; then \
+       for pem in /etc/ssl/certs/*.pem /etc/ssl/certs/ca-certificates.crt; do \
+         [ -f "$pem" ] || continue; \
+         alias="system-$(basename "$pem" .pem)"; \
+         /opt/java/openjdk/bin/keytool -importcert -noprompt \
+           -alias "$alias" -file "$pem" \
+           -keystore "$CACERTS" -storepass changeit 2>/dev/null || true; \
+       done; \
+     fi \
+  && /opt/java/openjdk/bin/keytool -list -keystore "$CACERTS" -storepass changeit 2>/dev/null | grep -c "trustedCertEntry" || true
 ENV TZ=Asia/Shanghai
 RUN ln -snf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo "Asia/Shanghai" > /etc/timezone
-# 创建上传目录（COS 未配置时的降级存储 + 避免启动报错）
 RUN mkdir -p /uploads/tenants
 COPY --from=build /app/target/*.jar ./app.jar
 EXPOSE 8088
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD curl -f http://localhost:8088/actuator/health || exit 1
-# 默认激活 prod 配置（cloudbaserc.json 或 docker run -e 可覆盖）
 ENV SPRING_PROFILES_ACTIVE=prod
-# JVM 启动优化（云端健康检查探针有时间限制，必须加速启动）
-# -XX:TieredStopAtLevel=1  仅使用 C1 编译器，加速启动 30~50%
-# -Duser.timezone          双保险：确保 JVM 使用正确时区（与容器系统 TZ 一致）
-# -Dspring.jmx.enabled=false  禁用 JMX，减少启动扫描时间
-CMD ["java", "-XX:TieredStopAtLevel=1", "-Dspring.jmx.enabled=false", "-Duser.timezone=Asia/Shanghai", "-Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts", "-jar", "/app/app.jar"]
+CMD ["java", "-XX:TieredStopAtLevel=1", "-Dspring.jmx.enabled=false", "-Duser.timezone=Asia/Shanghai", "-Djavax.net.ssl.trustStore=/opt/java/openjdk/lib/security/cacerts", "-Djavax.net.ssl.trustStorePassword=changeit", "-jar", "/app/app.jar"]

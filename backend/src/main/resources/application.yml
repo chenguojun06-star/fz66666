@@ -214,6 +214,7 @@ wechat:
     appid: ${WECHAT_MP_APPID:}
     secret: ${WECHAT_MP_SECRET:}
     mock-enabled: ${WECHAT_MINI_PROGRAM_MOCK_ENABLED:false}
+    trust-all-certs: ${WECHAT_TRUST_ALL_CERTS:false}
     alert-template-id: ${WECHAT_MP_ALERT_TEMPLATE_ID:}  # 微信订阅消息模板ID（thing1标题/thing2订单号/thing3内容）
 
 # 微信通知（Server酱，免费，直接推到个人微信"服务通知"）

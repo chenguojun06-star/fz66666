@@ -15,11 +15,16 @@ import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.PostConstruct;
 import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.File;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -32,6 +37,7 @@ public class WeChatMiniProgramClient {
     private final String appid;
     private final String secret;
     private final boolean mockEnabled;
+    private final boolean trustAllCerts;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
@@ -39,21 +45,47 @@ public class WeChatMiniProgramClient {
             @Value("${wechat.mini-program.appid:}") String appid,
             @Value("${wechat.mini-program.secret:}") String secret,
             @Value("${wechat.mini-program.mock-enabled:false}") boolean mockEnabled,
+            @Value("${wechat.mini-program.trust-all-certs:${WECHAT_TRUST_ALL_CERTS:false}}") boolean trustAllCerts,
             ObjectMapper objectMapper) {
         this.appid = appid == null ? "" : appid.trim();
         this.secret = secret == null ? "" : secret.trim();
         this.mockEnabled = mockEnabled;
+        this.trustAllCerts = trustAllCerts;
         this.restTemplate = new RestTemplate();
         this.objectMapper = objectMapper;
+        if (trustAllCerts) {
+            installTrustAllSSL();
+        }
+        log.info("[WxClient] init trustAllCerts={} mockEnabled={}", trustAllCerts, mockEnabled);
+    }
+
+    private void installTrustAllSSL() {
+        try {
+            TrustManager[] trustManagers = new TrustManager[]{
+                new X509TrustManager() {
+                    public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
+                    public void checkClientTrusted(X509Certificate[] certs, String authType) {}
+                    public void checkServerTrusted(X509Certificate[] certs, String authType) {}
+                }
+            };
+            SSLContext sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(null, trustManagers, new SecureRandom());
+            HttpsURLConnection.setDefaultSSLSocketFactory(sslContext.getSocketFactory());
+            HttpsURLConnection.setDefaultHostnameVerifier((hostname, session) -> true);
+            log.info("[WxClient] trust-all SSL installed (for WeChat Cloud Run open-api proxy)");
+        } catch (Exception e) {
+            log.warn("[WxClient] failed to install trust-all SSL: {}", e.getMessage());
+        }
     }
 
     @PostConstruct
     public void initDiagnostics() {
         String trustStore = resolveTrustStorePath();
         File trustStoreFile = StringUtils.hasText(trustStore) ? new File(trustStore) : null;
-        log.info("[WxRuntime] appId={} mockEnabled={} javaHome={} trustStore={} trustStoreExists={} trustStoreReadable={} trustStoreSize={}",
+        log.info("[WxRuntime] appId={} mockEnabled={} trustAllCerts={} javaHome={} trustStore={} trustStoreExists={} trustStoreReadable={} trustStoreSize={}",
                 maskAppId(appid),
                 mockEnabled,
+                trustAllCerts,
                 System.getProperty("java.home"),
                 StringUtils.hasText(trustStore) ? trustStore : "(default)",
                 trustStoreFile != null && trustStoreFile.exists(),
@@ -76,7 +108,6 @@ public class WeChatMiniProgramClient {
                 ok.setUnionid(null);
                 return ok;
             }
-            // 当未配置appid/secret但mockEnabled为false时，如果code是模拟数据（如mock_code），也允许通过
             if (code.startsWith("mock_")) {
                  String openid = code;
                  Code2SessionResult ok = Code2SessionResult.ok();
@@ -138,12 +169,6 @@ public class WeChatMiniProgramClient {
         }
     }
 
-    /**
-     * 获取微信接口调用凭证（access_token）
-     * 使用 stable_token 接口，有效期2小时，调用方负责缓存
-     *
-     * @return access_token 字符串，失败返回 null
-     */
     public String fetchAccessToken() {
         if (!StringUtils.hasText(appid) || !StringUtils.hasText(secret)) {
             return null;
@@ -170,15 +195,6 @@ public class WeChatMiniProgramClient {
         }
     }
 
-    /**
-     * 生成小程序码图片（getwxacodeunlimit，不限制扫描次数）
-     * scene 最长 32 字节，page 为小程序页面路径
-     *
-     * @param accessToken 有效的 access_token
-     * @param scene       附带参数（如 "inviteToken=abc123"，最长32字节）
-     * @param page        页面路径（如 "pages/login/index"）
-     * @return 图片字节数组（PNG），失败返回 null
-     */
     public byte[] fetchMiniProgramQrCode(String accessToken, String scene, String page) {
         if (!StringUtils.hasText(accessToken)) return null;
         String url = "https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token="
@@ -198,9 +214,7 @@ public class WeChatMiniProgramClient {
             ResponseEntity<byte[]> resp = restTemplate.postForEntity(url, request, byte[].class);
             byte[] bytes = resp == null ? null : resp.getBody();
             if (bytes == null || bytes.length < 100) return null;
-            // 微信返回 JSON 错误时 content-type 也是 image/jpeg，检查 PNG magic bytes
             if (bytes[0] == (byte) 0x89 && bytes[1] == 'P') return bytes;
-            // 非 PNG → 可能是 JSON 错误，忽略
             return null;
         } catch (Exception e) {
             log.warn("[WxQrCode] fetch failed appId={} reason={}", maskAppId(appid), buildExceptionMessage(e));
@@ -341,17 +355,6 @@ public class WeChatMiniProgramClient {
         }
     }
 
-    /**
-     * 发送小程序订阅消息（需用户在小程序内订阅该模板）
-     * 接口：POST /cgi-bin/message/subscribe/send
-     *
-     * @param accessToken 有效的 access_token（调用方负责缓存，2小时有效）
-     * @param openid      接收者的小程序 openid
-     * @param templateId  微信公众平台申请的订阅消息模板 ID
-     * @param page        点击消息后跳转的小程序页面路径（可为 null）
-     * @param data        模板数据：模板变量key → 显示文本（最长20字）
-     * @return true=发送成功，false=失败（失败时已记录 warn 日志）
-     */
     public boolean sendSubscribeMessage(String accessToken, String openid,
                                         String templateId, String page,
                                         Map<String, String> data) {
@@ -362,7 +365,6 @@ public class WeChatMiniProgramClient {
         String url = "https://api.weixin.qq.com/cgi-bin/message/subscribe/send?access_token="
                 + urlEncode(accessToken);
 
-        // 将 {key: value} 包装为微信要求的 {key: {value: xxx}} 格式
         Map<String, Map<String, String>> wrappedData = new LinkedHashMap<>();
         if (data != null) {
             data.forEach((k, v) -> {
@@ -390,7 +392,6 @@ public class WeChatMiniProgramClient {
             JsonNode root = objectMapper.readTree(respBody);
             int errcode = root.path("errcode").asInt(-1);
             if (errcode == 0) return true;
-            // errcode=43101: 用户未订阅该模板，属于正常情况，仅 debug 级
             if (errcode == 43101) {
                 return false;
             }

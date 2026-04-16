@@ -16,6 +16,7 @@
       },
       "envVariables": {
         "SPRING_PROFILES_ACTIVE": "prod",
+        "WECHAT_TRUST_ALL_CERTS": "true",
         "APP_AUTH_JWT_SECRET": "{{JWT_SECRET}}",
         "APP_DB_HOST": "{{DB_HOST}}",
         "APP_DB_NAME": "{{DB_NAME}}",

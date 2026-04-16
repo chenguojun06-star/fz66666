@@ -71,7 +71,7 @@ fashion:
 # 生产环境 CORS（允许微信云托管默认域名和自定义域名）
 app:
   cors:
-    allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:https://*.tcloudbase.com,https://*.ap-shanghai.service.tcloudbase.com,https://www.webyszl.cn,https://webyszl.cn}
+    allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:https://*.tcloudbase.com,https://*.ap-shanghai.service.tcloudbase.com,https://www.webyszl.cn,https://webyszl.cn,https://api.webyszl.cn,https://h5.webyszl.cn,http://h5.webyszl.cn}
     allow-credentials: true
 
 # 生产环境隐藏健康检查详情
