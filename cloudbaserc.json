@@ -33,6 +33,11 @@
       "name": "fashion-h5",
       "localPath": "./h5-web/dist",
       "cloudPath": "/h5"
+    },
+    {
+      "name": "fashion-admin",
+      "localPath": "./frontend/dist",
+      "cloudPath": "/"
     }
   ]
 }
