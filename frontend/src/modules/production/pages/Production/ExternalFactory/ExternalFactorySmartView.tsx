@@ -369,12 +369,26 @@ const StageNode: React.FC<StageNodeProps> = ({ stage, record, totalQty, openNode
           const nodeType = SMART_KEY_TO_NODE_TYPE[stage.key] ?? stage.key;
           const completedQty = Math.round((stage.progress / 100) * totalQty);
           const byParent = getProcessesByNodeFromOrder(record);
-          const children = byParent[stage.label] || [];
-          const processList = children.length > 0 ? children.map(c => ({
-            name: c.name,
-            unitPrice: c.unitPrice,
-            processCode: c.processCode,
-          })) : [];
+          let processList: { name: string; unitPrice?: number; processCode?: string }[] = [];
+          if (stage.label === '二次工艺') {
+            const exactChildren = byParent['二次工艺'] || [];
+            const STD_STAGES = new Set(['采购', '裁剪', '车缝', '尾部', '入库', '二次工艺']);
+            const orphanChildren = Object.entries(byParent)
+              .filter(([st]) => !STD_STAGES.has(st))
+              .flatMap(([, nodes]) => nodes || []);
+            processList = [...exactChildren, ...orphanChildren].map(c => ({
+              name: c.name,
+              unitPrice: c.unitPrice,
+              processCode: c.processCode,
+            }));
+          } else {
+            const children = byParent[stage.label] || [];
+            processList = children.map(c => ({
+              name: c.name,
+              unitPrice: c.unitPrice,
+              processCode: c.processCode,
+            }));
+          }
           openNodeDetail(
             record,
             nodeType,
