@@ -111,6 +111,9 @@ public class ScanRecordOrchestrator {
     @Autowired
     private org.springframework.transaction.support.TransactionTemplate transactionTemplate;
 
+    @Autowired
+    private com.fashion.supplychain.websocket.service.WebSocketService webSocketService;
+
     public Map<String, Object> execute(Map<String, Object> params) {
         TenantAssert.assertTenantContext();
         Map<String, Object> safeParams = params == null ? new HashMap<>() : new HashMap<>(params);
@@ -239,6 +242,7 @@ public class ScanRecordOrchestrator {
         if ("quality".equals(scanType)) {
             Map<String, Object> r = executeQualityScan(safeParams, requestId, operatorId, operatorName, ctx);
             tryNotifyNextStage(safeParams, r);
+            appendBundleStatusHints(safeParams, r);
             return r;
         }
 
@@ -246,25 +250,40 @@ public class ScanRecordOrchestrator {
         if ("warehouse".equals(scanType)) {
             Map<String, Object> r = executeWarehouseScan(safeParams, requestId, operatorId, operatorName);
             tryNotifyNextStage(safeParams, r);
+            appendBundleStatusHints(safeParams, r);
             return r;
         }
 
         Map<String, Object> r = executeProductionScan(safeParams, requestId, operatorId, operatorName, scanType, qty, autoProcess, ctx);
         tryNotifyNextStage(safeParams, r);
+        appendBundleStatusHints(safeParams, r);
         return r;
     }
 
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> undo(Map<String, Object> params) {
-        TenantAssert.assertTenantContext(); // 撤销扫码必须有租户上下文
+        TenantAssert.assertTenantContext();
         Map<String, Object> safeParams = params == null ? new HashMap<>() : new HashMap<>(params);
 
         String orderNo = TextUtils.safeText(safeParams.get("orderNo"));
         String orderId = TextUtils.safeText(safeParams.get("orderId"));
         String lockKey = "scan:" + (hasText(orderNo) ? orderNo : (hasText(orderId) ? orderId : "undo"));
-        return distributedLockService.executeWithLock(lockKey, 10, java.util.concurrent.TimeUnit.SECONDS, () -> {
+        Map<String, Object> result = distributedLockService.executeWithLock(lockKey, 10, java.util.concurrent.TimeUnit.SECONDS, () -> {
             return doUndo(safeParams);
         });
+
+        try {
+            String on = hasText(orderNo) ? orderNo : TextUtils.safeText(safeParams.get("_resolvedOrderNo"));
+            webSocketService.broadcastScanUndo(on, TextUtils.safeText(safeParams.get("scanType")));
+            webSocketService.broadcastDataChanged("ScanRecord", null, "delete");
+            if (hasText(on)) {
+                webSocketService.broadcastOrderProgressChanged(on, 0, "撤销");
+            }
+        } catch (Exception wsEx) {
+            log.warn("[Undo] WebSocket broadcast failed (non-blocking): {}", wsEx.getMessage());
+        }
+
+        return result;
     }
 
     private Map<String, Object> doUndo(Map<String, Object> safeParams) {

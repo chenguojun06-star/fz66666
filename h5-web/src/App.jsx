@@ -1,6 +1,7 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
+import { wsService } from '@/services/websocketService';
 import AppShell from '@/components/AppShell';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
@@ -54,6 +55,16 @@ function ProtectedRoute({ children }) {
 export const TAB_PATHS = ['/home', '/work', '/scan', '/admin'];
 
 export default function App() {
+  const token = useAuthStore((s) => s.token);
+
+  useEffect(() => {
+    if (token) {
+      wsService.connect();
+    } else {
+      wsService.disconnect();
+    }
+  }, [token]);
+
   return (
     <ErrorBoundary>
       <Suspense fallback={<Loading />}>

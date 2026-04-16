@@ -80,6 +80,9 @@ public class QualityScanExecutor {
     @Autowired
     private ProductionOrderService productionOrderService;
 
+    @Autowired(required = false)
+    private com.fashion.supplychain.websocket.service.WebSocketService webSocketService;
+
     /**
      * 执行质检扫码
      */
@@ -133,7 +136,8 @@ public class QualityScanExecutor {
             throw new IllegalStateException("进度节点已完成，该订单已结束质检");
         }
 
-        // ★ 先解析质检阶段，用于决定是否需要数量预检
+        validateNotAlreadyQualityCheckedByPc(order.getId(), bundle.getId());
+
         String qualityStage = parseQualityStageFromParams(params);
 
         // 质检确认阶段只更新已有领取记录（写 confirmTime + 质检结果），不新增扫码数量，
@@ -164,6 +168,19 @@ public class QualityScanExecutor {
         } catch (Exception e) {
             log.warn("质检后进度异步重新计算失败: orderId={}", order.getId(), e);
         }
+
+        try {
+            if (webSocketService != null) {
+                String orderNo = order.getOrderNo() != null ? order.getOrderNo() : "";
+                String styleNo = order.getStyleNo() != null ? order.getStyleNo() : "";
+                webSocketService.broadcastQualityChecked(orderNo, styleNo, qty);
+                webSocketService.broadcastOrderProgressChanged(orderNo, qty, "质检");
+                webSocketService.broadcastDataChanged("ScanRecord", null, "create");
+            }
+        } catch (Exception wsEx) {
+            log.warn("[QualityScan] WebSocket broadcast failed (non-blocking): {}", wsEx.getMessage());
+        }
+
         return result;
     }
 
@@ -222,6 +239,9 @@ public class QualityScanExecutor {
         result.put("scanRecord", sr);
         result.put("orderInfo", buildOrderInfo(order));
         result.put("cuttingBundle", bundle);
+
+        broadcastProcessStage("receive".equals(qualityStage) ? "质检领取" : "质检验收",
+                order, bundle, operatorName, qty, false);
         return result;
     }
 
@@ -322,6 +342,9 @@ public class QualityScanExecutor {
         result.put("scanRecord", existed);
         result.put("orderInfo", buildOrderInfo(order));
         result.put("cuttingBundle", bundle);
+
+        broadcastProcessStage(isUnqualified ? "质检不合格" : "质检合格",
+                order, bundle, operatorName, qty, true);
         return result;
     }
 
@@ -365,8 +388,30 @@ public class QualityScanExecutor {
         return "qualified";
     }
 
+    private void validateNotAlreadyQualityCheckedByPc(String orderId, String bundleId) {
+        if (!hasText(orderId) || !hasText(bundleId)) {
+            return;
+        }
+        try {
+            long pcQualifiedCount = productWarehousingService.count(
+                    new LambdaQueryWrapper<ProductWarehousing>()
+                            .eq(ProductWarehousing::getOrderId, orderId)
+                            .eq(ProductWarehousing::getCuttingBundleId, bundleId)
+                            .eq(ProductWarehousing::getDeleteFlag, 0)
+                            .in(ProductWarehousing::getWarehousingType, "manual", "scan")
+                            .eq(ProductWarehousing::getQualityStatus, "qualified"));
+            if (pcQualifiedCount > 0) {
+                throw new IllegalStateException("该菲号已在PC端完成质检入库，手机端不能再做质检，请直接扫码入库");
+            }
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("检查PC端质检状态失败: orderId={}, bundleId={}", orderId, bundleId, e);
+        }
+    }
+
     /**
-     * 质检前置校验：必须完成所有车缝子工序（归属人），且“尾部”父节点下所有子工序全部完成
+     * 质检前置校验：必须完成所有车缝子工序（归属人），且"尾部"父节点下所有子工序全部完成
      * 业务规则：质检前需车缝+尾部全部完成，PC端和小程序共用此校验
      */
     private void validateProductionPrerequisite(ProductionOrder order, CuttingBundle bundle) {
@@ -771,25 +816,27 @@ public class QualityScanExecutor {
         try {
             int repairPool = warehousingHelper.calcRepairBreakdown(orderId, bundle.getId(), null)[0];
             boolean isCurrentlyBlocked = warehousingHelper.isBundleBlockedForWarehousing(bundle.getStatus());
+            String currentStatus = bundle.getStatus() == null ? "" : bundle.getStatus().trim();
 
-            if (repairPool == 0 && isCurrentlyBlocked) {
-                // 无返修池（全部报废）→ 清除阻止，合格品可正常入库
-                cuttingBundleService.lambdaUpdate()
-                        .eq(CuttingBundle::getId, bundle.getId())
-                        .set(CuttingBundle::getStatus, "qualified")
-                        .set(CuttingBundle::getUpdateTime, LocalDateTime.now())
-                        .update();
-                log.info("[QualityScan] 无返修池，菲号状态→qualified: bundleId={}", bundle.getId());
-            } else if (repairPool > 0 && !isCurrentlyBlocked) {
-                // 有返修池但未阻止 → 设为 unqualified，阻止入库
-                cuttingBundleService.lambdaUpdate()
-                        .eq(CuttingBundle::getId, bundle.getId())
-                        .set(CuttingBundle::getStatus, "unqualified")
-                        .set(CuttingBundle::getUpdateTime, LocalDateTime.now())
-                        .update();
-                log.info("[QualityScan] 有返修池，菲号状态→unqualified: bundleId={}", bundle.getId());
+            if (repairPool > 0) {
+                if (!"unqualified".equals(currentStatus)) {
+                    cuttingBundleService.lambdaUpdate()
+                            .eq(CuttingBundle::getId, bundle.getId())
+                            .set(CuttingBundle::getStatus, "unqualified")
+                            .set(CuttingBundle::getUpdateTime, LocalDateTime.now())
+                            .update();
+                    log.info("[QualityScan] 有返修池，菲号状态→unqualified: bundleId={}", bundle.getId());
+                }
+            } else {
+                if (!"qualified".equals(currentStatus)) {
+                    cuttingBundleService.lambdaUpdate()
+                            .eq(CuttingBundle::getId, bundle.getId())
+                            .set(CuttingBundle::getStatus, "qualified")
+                            .set(CuttingBundle::getUpdateTime, LocalDateTime.now())
+                            .update();
+                    log.info("[QualityScan] 无返修池，菲号状态→qualified: bundleId={}", bundle.getId());
+                }
             }
-            // else: 状态已匹配，无需更新
         } catch (Exception e) {
             log.warn("[QualityScan] 同步菲号状态失败（不阻断流程）: bundleId={}", bundle.getId(), e);
         }
@@ -1016,6 +1063,26 @@ public class QualityScanExecutor {
         } catch (Exception e) {
             log.warn("[QC再检] 查询返修记录失败，默认不触发再检: orderId={}, bundleId={}", orderId, bundleId, e);
             return false;
+        }
+    }
+
+    private void broadcastProcessStage(String processName, ProductionOrder order,
+                                        CuttingBundle bundle, String operatorName,
+                                        int quantity, boolean isCompleted) {
+        if (webSocketService == null || order == null || bundle == null) return;
+        try {
+            String orderNo = order.getOrderNo() != null ? order.getOrderNo() : "";
+            String bNo = bundle.getBundleNo() != null ? String.valueOf(bundle.getBundleNo()) : "";
+            String color = bundle.getColor() != null ? bundle.getColor() : "";
+            String size = bundle.getSize() != null ? bundle.getSize() : "";
+            String opName = operatorName != null ? operatorName : "";
+            if (isCompleted) {
+                webSocketService.broadcastProcessStageCompleted(orderNo, processName, opName, bNo, color, size, quantity);
+            } else {
+                webSocketService.broadcastProcessStageReceived(orderNo, processName, opName, bNo, color, size);
+            }
+        } catch (Exception e) {
+            log.warn("[QualityScan] 工序通知推送失败（不阻断流程）: orderNo={}, process={}", order.getOrderNo(), processName, e);
         }
     }
 }

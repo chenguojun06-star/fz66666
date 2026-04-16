@@ -10,6 +10,7 @@ import com.fashion.supplychain.intelligence.mapper.IntelligenceSignalMapper;
 import com.fashion.supplychain.intelligence.service.AiJobRunLogService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/intelligence/agent-activity")
 @Slf4j
+@PreAuthorize("isAuthenticated()")
 public class AgentActivityController {
 
     @Autowired
@@ -112,6 +114,8 @@ public class AgentActivityController {
         Long tenantId = UserContext.tenantId();
         LocalDateTime since = LocalDateTime.now().minusHours(24);
 
+        Map<String, AgentActivityStats> statsMap = batchComputeAgentStats(tenantId, since);
+
         List<Map<String, Object>> agents = new ArrayList<>();
         for (AgentDefinition def : AGENT_DEFINITIONS) {
             Map<String, Object> agent = new LinkedHashMap<>();
@@ -121,7 +125,7 @@ public class AgentActivityController {
             agent.put("color", def.color);
             agent.put("description", def.description);
 
-            AgentActivityStats stats = computeAgentStats(def.id, tenantId, since);
+            AgentActivityStats stats = statsMap.getOrDefault(def.id, new AgentActivityStats());
             agent.put("status", stats.currentStatus);
             agent.put("lastActivity", stats.lastActivity);
             agent.put("tasksToday", stats.tasksToday);
@@ -191,6 +195,8 @@ public class AgentActivityController {
         Long tenantId = UserContext.tenantId();
         LocalDateTime since = LocalDateTime.now().minusHours(24);
 
+        Map<String, AgentActivityStats> statsMap = batchComputeAgentStats(tenantId, since);
+
         Map<String, String> deptNames = Map.of(
                 "production", "生产管理部",
                 "finance", "财务管理部",
@@ -215,7 +221,7 @@ public class AgentActivityController {
             int totalTasks = 0;
             int successTasks = 0;
             for (AgentDefinition agent : deptAgents) {
-                AgentActivityStats stats = computeAgentStats(agent.id, tenantId, since);
+                AgentActivityStats stats = statsMap.getOrDefault(agent.id, new AgentActivityStats());
                 totalTasks += stats.tasksToday;
                 successTasks += (int) Math.round(stats.tasksToday * stats.successRate / 100.0);
             }
@@ -256,6 +262,97 @@ public class AgentActivityController {
             log.warn("[AgentActivity] 查询告警失败: {}", e.getMessage());
         }
         return Result.success(alerts);
+    }
+
+    private Map<String, AgentActivityStats> batchComputeAgentStats(Long tenantId, LocalDateTime since) {
+        Map<String, AgentActivityStats> result = new LinkedHashMap<>();
+        try {
+            QueryWrapper<IntelligenceAuditLog> query = new QueryWrapper<>();
+            query.eq(tenantId != null, "tenant_id", tenantId)
+                 .ge("created_at", since)
+                 .orderByDesc("created_at")
+                 .last("LIMIT 500");
+            List<IntelligenceAuditLog> allLogs = auditLogMapper.selectList(query);
+
+            Map<String, List<IntelligenceAuditLog>> logsByAgent = new LinkedHashMap<>();
+            for (IntelligenceAuditLog logEntry : allLogs) {
+                String action = logEntry.getAction() != null ? logEntry.getAction() : "";
+                for (Map.Entry<String, List<String>> entry : DOMAIN_TOOLS.entrySet()) {
+                    boolean matches = entry.getValue().stream().anyMatch(action::contains) || "ai-agent:request".equals(action);
+                    if (matches) {
+                        logsByAgent.computeIfAbsent(entry.getKey(), k -> new ArrayList<>()).add(logEntry);
+                        break;
+                    }
+                }
+            }
+
+            for (AgentDefinition def : AGENT_DEFINITIONS) {
+                List<IntelligenceAuditLog> agentLogs = logsByAgent.getOrDefault(def.id, Collections.emptyList());
+                result.put(def.id, computeStatsFromLogs(def.id, agentLogs));
+            }
+        } catch (Exception e) {
+            log.warn("[AgentActivity] 批量计算智能体统计失败: {}", e.getMessage());
+            for (AgentDefinition def : AGENT_DEFINITIONS) {
+                AgentActivityStats stats = new AgentActivityStats();
+                stats.currentStatus = "unknown";
+                stats.position = computePosition("intelligence", 0);
+                result.put(def.id, stats);
+            }
+        }
+        return result;
+    }
+
+    private AgentActivityStats computeStatsFromLogs(String agentId, List<IntelligenceAuditLog> logs) {
+        AgentActivityStats stats = new AgentActivityStats();
+        int totalTasks = 0;
+        int successTasks = 0;
+        long totalDuration = 0;
+        int durationCount = 0;
+        LocalDateTime lastActivity = null;
+        String currentTask = null;
+        String currentStatus = "idle";
+
+        for (IntelligenceAuditLog logEntry : logs) {
+            totalTasks++;
+            if ("SUCCESS".equals(logEntry.getStatus())) successTasks++;
+            if (logEntry.getDurationMs() != null && logEntry.getDurationMs() > 0) {
+                totalDuration += logEntry.getDurationMs();
+                durationCount++;
+            }
+            if (lastActivity == null && logEntry.getCreatedAt() != null) {
+                lastActivity = logEntry.getCreatedAt();
+            }
+            if ("EXECUTING".equals(logEntry.getStatus()) && currentTask == null) {
+                currentTask = logEntry.getRemark() != null ? logEntry.getRemark() : logEntry.getAction();
+                currentStatus = "working";
+            }
+        }
+
+        if (currentStatus.equals("idle") && lastActivity != null) {
+            long minutesSinceLast = ChronoUnit.MINUTES.between(lastActivity, LocalDateTime.now());
+            if (minutesSinceLast < 5) currentStatus = "idle_recent";
+            else if (minutesSinceLast < 30) currentStatus = "idle";
+            else currentStatus = "sleeping";
+        }
+
+        stats.currentStatus = currentStatus;
+        stats.lastActivity = lastActivity != null ? lastActivity.toString() : null;
+        stats.tasksToday = totalTasks;
+        stats.successRate = totalTasks > 0 ? Math.round(successTasks * 100.0 / totalTasks) : 100;
+        stats.avgDurationMs = durationCount > 0 ? totalDuration / durationCount : 0;
+        stats.currentTask = currentTask;
+
+        long idleMinutes = lastActivity != null ? ChronoUnit.MINUTES.between(lastActivity, LocalDateTime.now()) : 999;
+        stats.lazinessScore = Math.min(100, (int) (idleMinutes / 6.0));
+        stats.intelligenceScore = Math.min(100, (int) (stats.successRate * 0.6 + Math.max(0, 100 - stats.lazinessScore) * 0.4));
+
+        String domain = AGENT_DEFINITIONS.stream()
+                .filter(a -> a.id.equals(agentId))
+                .map(a -> a.department)
+                .findFirst().orElse("intelligence");
+        stats.position = computePosition(domain, totalTasks);
+
+        return stats;
     }
 
     private AgentActivityStats computeAgentStats(String agentId, Long tenantId, LocalDateTime since) {

@@ -6,6 +6,7 @@ import com.fashion.supplychain.intelligence.orchestration.OrderLearningOutcomeOr
 import com.fashion.supplychain.intelligence.orchestration.OrderLearningRefreshOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.OrderLearningRecommendationOrchestrator;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/intelligence/order-learning")
 @RequiredArgsConstructor
+@PreAuthorize("isAuthenticated()")
 public class OrderLearningController {
 
     private final OrderLearningRecommendationOrchestrator orderLearningRecommendationOrchestrator;
