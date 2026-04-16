@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { Button, Tooltip } from 'antd';
-import { ReloadOutlined, SyncOutlined, FullscreenOutlined } from '@ant-design/icons';
+import { ReloadOutlined, SyncOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import { TimeDimensionProvider } from './contexts/TimeDimensionContext';
 import { StyleLinkProvider } from './contexts/StyleLinkContext';
