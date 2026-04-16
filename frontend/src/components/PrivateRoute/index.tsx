@@ -51,8 +51,16 @@ const PrivateRoute: React.FC = () => {
 
   const isAdminUser = isAdmin(user);
 
-  if (!required || isAdminUser) {
+  if (isAdminUser) {
     return <Outlet />;
+  }
+
+  if (!required) {
+    console.warn(`[PrivateRoute] 路由 ${currentPath} 未注册权限码，默认拒绝访问`);
+    if (user?.permissions?.includes('MENU_PRODUCTION_LIST')) {
+      return <Navigate to={paths.productionList} replace />;
+    }
+    return <Navigate to={paths.profile} replace />;
   }
 
   const hasAny = Array.isArray(user?.permissions) && (user!.permissions.includes('all') || user!.permissions.includes(required));

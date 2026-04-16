@@ -1,10 +1,13 @@
 .text-input, .text-area { width: 100%; border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 0 12px; height: 44px; background: var(--color-bg-card); color: var(--color-text-primary); font-size: 14px; }
 .text-area { min-height: 110px; resize: vertical; padding: 12px; }
-.primary-button, .secondary-button, .ghost-button { border: 0; cursor: pointer; border-radius: var(--radius-md); padding: 0 16px; height: 44px; font-size: var(--font-size-md-lg); font-weight: 600; }
+.primary-button, .secondary-button, .ghost-button { border: 0; cursor: pointer; border-radius: var(--radius-md); padding: 0 16px; height: 44px; font-size: var(--font-size-md-lg); font-weight: 600; -webkit-tap-highlight-color: transparent; transition: opacity 0.15s, transform 0.1s; }
 .primary-button { width: 100%; background: var(--color-primary); color: #fff; }
+.primary-button:active:not(:disabled) { opacity: 0.85; transform: scale(0.98); }
 .primary-button:disabled { opacity: 0.5; cursor: not-allowed; }
 .secondary-button { background: var(--color-bg-gray); color: var(--color-text-primary); border: none; }
+.secondary-button:active:not(:disabled) { opacity: 0.85; transform: scale(0.98); }
 .ghost-button { background: rgba(var(--color-primary-rgb), 0.08); color: var(--color-primary); }
+.ghost-button:active:not(:disabled) { opacity: 0.85; transform: scale(0.98); }
 .danger-button { width: 100%; border: 0; cursor: pointer; border-radius: var(--radius-md); padding: 0 16px; height: 44px; font-size: var(--font-size-md-lg); font-weight: 600; background: var(--color-danger); color: var(--color-text-white); }
 .danger-button:disabled { opacity: 0.5; cursor: not-allowed; }
 .field-block { margin-bottom: 12px; }

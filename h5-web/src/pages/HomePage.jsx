@@ -58,14 +58,20 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    api.system.getMe().then(res => {
-      const u = res?.data || res;
-      if (u && token) setAuth(token, u);
-    }).catch((e) => console.error('getMe error:', e));
-    api.notice.unreadCount().then(res => {
-      setUnreadCount(Number(res?.data ?? (res || 0)));
-    }).catch((e) => console.error('unreadCount error:', e));
-  }, []);
+    const loadHomeData = () => {
+      api.system.getMe().then(res => {
+        const u = res?.data || res;
+        if (u && token) setAuth(token, u);
+      }).catch((e) => console.error('getMe error:', e));
+      api.notice.unreadCount().then(res => {
+        setUnreadCount(Number(res?.data ?? (res || 0)));
+      }).catch((e) => console.error('unreadCount error:', e));
+    };
+    loadHomeData();
+    const onFocus = () => loadHomeData();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [token]);
 
   const getGreeting = () => {
     const h = new Date().getHours();

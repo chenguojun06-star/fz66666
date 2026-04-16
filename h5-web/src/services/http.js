@@ -5,7 +5,11 @@ import wxAdapter from '@/adapters/wx';
 
 const isWechat = wxAdapter.isWechat;
 
-const DEFAULT_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://192.168.2.248:8088';
+const DEFAULT_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+
+if (!DEFAULT_BASE_URL && import.meta.env.PROD) {
+  console.error('[http] VITE_API_BASE_URL 未配置，生产环境无法正常访问API');
+}
 
 const MAX_RETRY_COUNT = 2;
 const RETRY_DELAY_BASE = 1000;
@@ -25,19 +29,31 @@ export const http = axios.create({
 
 let isHandling401 = false;
 
+const REDIRECT_PATH_KEY = 'h5_auth_redirect';
+
 export function handleUnauthorized() {
   if (isHandling401) return;
   isHandling401 = true;
   useAuthStore.getState().clearAuth();
   clearToken();
+  const currentPath = window.location.pathname + window.location.search;
+  if (!currentPath.includes('/login')) {
+    sessionStorage.setItem(REDIRECT_PATH_KEY, currentPath);
+  }
   if (isWechat) {
-    const currentPath = window.location.pathname + window.location.search;
-    if (!currentPath.includes('/login')) {
-      sessionStorage.setItem('wx_oauth_redirect', currentPath);
-    }
+    sessionStorage.setItem('wx_oauth_redirect', currentPath);
   }
   window.location.href = '/login';
   setTimeout(() => { isHandling401 = false; }, 3000);
+}
+
+export function getAuthRedirectPath() {
+  try {
+    const saved = sessionStorage.getItem(REDIRECT_PATH_KEY);
+    sessionStorage.removeItem(REDIRECT_PATH_KEY);
+    if (saved && !saved.includes('/login')) return saved;
+  } catch (_) {}
+  return '/home';
 }
 
 function isTokenExpiredMessage(msg) {
@@ -68,6 +84,30 @@ http.interceptors.request.use((config) => {
   return config;
 });
 
+const FRIENDLY_ERROR_MAP = {
+  'JWT signature does not match': '登录凭证无效，请重新登录',
+  'JWT token expired': '登录已过期，请重新登录',
+  'Expired JWT token': '登录已过期，请重新登录',
+  'Invalid JWT token': '登录凭证无效，请重新登录',
+  'JWT strings must contain exactly 2 period characters': '登录凭证格式错误',
+  'Internal Server Error': '服务器繁忙，请稍后重试',
+  'Bad Request': '请求参数有误，请检查后重试',
+  'Request timeout': '请求超时，请检查网络后重试',
+  'Network Error': '网络连接异常，请检查网络设置',
+  'Duplicate entry': '数据已存在，请勿重复操作',
+};
+
+function friendlyMessage(raw) {
+  if (!raw) return '操作失败，请稍后重试';
+  for (const [key, value] of Object.entries(FRIENDLY_ERROR_MAP)) {
+    if (raw.includes(key)) return value;
+  }
+  if (/^[A-Z]/.test(raw) && !/[\u4e00-\u9fa5]/.test(raw)) {
+    return '操作失败，请稍后重试';
+  }
+  return raw;
+}
+
 http.interceptors.response.use(
   (response) => {
     const data = response.data;
@@ -76,7 +116,7 @@ http.interceptors.response.use(
     }
     if (data && data.code && data.code !== 200) {
       const msg = data.message || data.msg || '操作失败';
-      return Promise.reject(new Error(msg));
+      return Promise.reject(new Error(friendlyMessage(msg)));
     }
     return data;
   },
@@ -84,11 +124,12 @@ http.interceptors.response.use(
     const config = error?.config;
     const status = error?.response?.status;
     const requestUrl = config?.url || '';
-    const message =
+    const rawMessage =
       error?.response?.data?.message ||
       error?.response?.data?.msg ||
       error?.message ||
       '请求失败';
+    const message = friendlyMessage(rawMessage);
 
     const isLoginRequest = requestUrl.includes('/api/system/user/login');
 
@@ -103,14 +144,22 @@ http.interceptors.response.use(
         return Promise.reject(new Error('登录被拒绝，请确认公司选择正确、账号属于该租户且账号已通过审核'));
       }
       if (isOnLoginPage()) {
-        return Promise.reject(new Error(message || '请求失败'));
+        return Promise.reject(new Error(message));
       }
       const token = useAuthStore.getState().token;
-      if (!token || isTokenExpiredMessage(message) || isTokenExpired()) {
+      if (!token || isTokenExpiredMessage(rawMessage) || isTokenExpired()) {
         handleUnauthorized();
         return Promise.reject(new Error('登录已过期，请重新登录'));
       }
-      return Promise.reject(new Error(message || '无权限执行此操作'));
+      return Promise.reject(new Error('无权限执行此操作'));
+    }
+
+    if (status === 404) {
+      return Promise.reject(new Error('请求的资源不存在'));
+    }
+
+    if (status >= 500) {
+      return Promise.reject(new Error('服务器繁忙，请稍后重试'));
     }
 
     if (status === 0 && isWechat) {

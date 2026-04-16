@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '@/api';
 import { useGlobalStore } from '@/stores/globalStore';
@@ -25,6 +25,7 @@ export default function ScanConfirmPage() {
   const [secondaryProcesses, setSecondaryProcesses] = useState([]);
   const [buttonText, setButtonText] = useState('确认扫码');
   const [loading, setLoading] = useState(false);
+  const submitLockRef = useRef(false);
 
   useEffect(() => {
     if (!confirmScanData) { toast.error('数据异常'); navigate(-1); return; }
@@ -88,10 +89,15 @@ export default function ScanConfirmPage() {
   }, [confirmScanData]);
 
   const confirmScan = async () => {
-    if (loading) return;
-    if (isProcurement) return _confirmProcurement();
-    if (isCutting) return _confirmCutting();
-    return _confirmNormalScan();
+    if (loading || submitLockRef.current) return;
+    submitLockRef.current = true;
+    try {
+      if (isProcurement) return await _confirmProcurement();
+      if (isCutting) return await _confirmCutting();
+      return await _confirmNormalScan();
+    } finally {
+      submitLockRef.current = false;
+    }
   };
 
   const _confirmProcurement = async () => {

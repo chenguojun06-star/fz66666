@@ -8,6 +8,8 @@ import { toast } from '@/utils/uiHelper';
 import { eventBus } from '@/utils/eventBus';
 import CameraScanner from '@/components/CameraScanner';
 import Icon from '@/components/Icon';
+import { scanOfflineQueue, isOnline, setupOfflineQueueSync } from '@/services/scanOfflineQueue';
+import { parseBundleCode, validateBundleForStage, determineAutoFlow, STAGE_LABELS } from '@/utils/scanHelpers';
 
 function canUndoScan(record, isAdmin) {
   if (!record.scanTime && !record.createTime) return false;
@@ -15,7 +17,8 @@ function canUndoScan(record, isAdmin) {
   return Date.now() - t < 3600000 && (record.scanResult || '').toLowerCase() === 'success' && isAdmin;
 }
 
-const RECENT_SCAN_TTL = 2000;
+const RECENT_SCAN_TTL = 30000;
+const SUBMIT_LOCK_KEY = 'h5_scan_submit_lock';
 
 function formatRelativeTime(timeStr) {
   if (!timeStr) return '';
@@ -37,6 +40,7 @@ export default function ScanPage() {
   const [cameraActive, setCameraActive] = useState(false);
   const [stats, setStats] = useState(null);
   const [lastResult, setLastResult] = useState(null);
+  const [offlineCount, setOfflineCount] = useState(0);
   const [todayRecords, setTodayRecords] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [undoingId, setUndoingId] = useState(null);
@@ -45,6 +49,7 @@ export default function ScanPage() {
   const setQualityData = useGlobalStore((s) => s.setQualityData);
   const setPatternScanData = useGlobalStore((s) => s.setPatternScanData);
   const recentScansRef = useRef(new Map());
+  const submitLockRef = useRef(false);
 
   const loadStats = useCallback(async () => {
     try {
@@ -105,6 +110,19 @@ export default function ScanPage() {
   }, [loadStats, loadTodayHistory]);
 
   useEffect(() => {
+    const tryFlush = setupOfflineQueueSync(api, ({ type, result }) => {
+      if (type === 'success') {
+        loadStats();
+        loadTodayHistory();
+        setOfflineCount((prev) => Math.max(0, prev - 1));
+        toast.success('离线扫码已同步');
+      }
+    });
+    scanOfflineQueue.getPendingCount().then(setOfflineCount).catch(() => {});
+    return () => {};
+  }, []);
+
+  useEffect(() => {
     const checkDayChange = () => {
       const now = new Date();
       const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -131,16 +149,42 @@ export default function ScanPage() {
   }, []);
 
   const handleScanResult = useCallback(async (code) => {
-    if (!code || loading) return;
+    if (!code || loading || submitLockRef.current) return;
     if (isRecentDuplicate(code)) { toast.error('请勿重复扫码'); return; }
+    submitLockRef.current = true;
     setLoading(true);
     setCameraActive(false);
+    if (!isOnline()) {
+      try {
+        await scanOfflineQueue.enqueue({
+          scanCode: code,
+          scanType,
+          requestId: `h5_offline_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        });
+        setLastResult({ scanCode: code, scanType, success: true, message: '网络离线，扫码已缓存，联网后自动上传' });
+        toast.warn('网络离线，扫码已缓存');
+        setOfflineCount((prev) => prev + 1);
+      } catch (e) {
+        toast.error('离线缓存失败，请检查存储空间');
+      } finally { setLoading(false); submitLockRef.current = false; }
+      return;
+    }
     try {
+      const parsedCode = parseBundleCode(code);
+      if (parsedCode && parsedCode.type !== 'unknown') {
+        const validation = validateBundleForStage(parsedCode, scanType);
+        if (!validation.valid) {
+          toast.error(validation.reason);
+          setLastResult({ scanCode: code, scanType, success: false, message: validation.reason });
+          return;
+        }
+      }
       const res = await api.production.executeScan({ scanCode: code, scanType });
       const data = res?.data || res;
       if (data) {
         const stage = data.progressStage || data.stage || '';
         const lowerStage = String(stage).toLowerCase();
+        const flowInfo = determineAutoFlow(data);
         if (lowerStage === 'quality' || lowerStage === '质检') {
           setQualityData({ ...data, scanCode: code, scanType });
           navigate('/scan/quality');
@@ -148,12 +192,16 @@ export default function ScanPage() {
           setPatternScanData({ ...data, scanCode: code, scanType });
           navigate('/scan/pattern');
         } else if (data.needConfirmProcess || (data.stageResult && data.stageResult.allBundleProcesses)) {
-          setScanResultData({ ...data, scanCode: code, scanType });
+          setScanResultData({ ...data, scanCode: code, scanType, flowInfo });
           navigate('/scan/confirm');
         } else {
           setScanResultData({ ...data, scanCode: code, scanType });
           setLastResult({ ...data, scanCode: code, scanType, success: true });
-          toast.success(data.message || '扫码成功');
+          if (flowInfo) {
+            toast.success(flowInfo.message);
+          } else {
+            toast.success(data.message || '扫码成功');
+          }
           setStats((prev) => prev ? { ...prev, scanCount: prev.scanCount + 1, totalQuantity: prev.totalQuantity + (Number(data.quantity) || 1) } : { scanCount: 1, orderCount: 0, totalQuantity: Number(data.quantity) || 1, totalAmount: 0 });
         }
         wx.vibrateShort();
@@ -162,7 +210,7 @@ export default function ScanPage() {
     } catch (err) {
       setLastResult({ scanCode: code, scanType, success: false, message: err.message || '扫码失败' });
       toast.error(err.message || '扫码失败');
-    } finally { setLoading(false); }
+    } finally { setLoading(false); submitLockRef.current = false; }
   }, [scanType, loading, isRecentDuplicate, setScanResultData, setQualityData, setPatternScanData, navigate, loadTodayHistory]);
 
   const handleCameraScan = () => {
@@ -249,9 +297,11 @@ export default function ScanPage() {
       {/* === 中区：扫码按钮 === */}
       <div className="card-item" style={{ textAlign: 'center', padding: '14px 16px' }}>
         <button className="scan-big-btn" onClick={handleCameraScan} disabled={loading}>
-          {loading ? '...' : <Icon name="scan" size={36} color="#fff" />}
+          {loading ? <span className="scan-spinner" /> : <Icon name="scan" size={36} color="#fff" />}
         </button>
-        <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--color-text-primary)', marginTop: 8 }}>{loading ? '识别中...' : '扫码识别'}</div>
+        <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--color-text-primary)', marginTop: 8 }}>
+          {loading ? '识别中...' : '扫码识别'}
+        </div>
         <div style={{ fontSize: 12, color: 'var(--color-text-secondary)', marginTop: 2 }}>自动匹配工序</div>
       </div>
 

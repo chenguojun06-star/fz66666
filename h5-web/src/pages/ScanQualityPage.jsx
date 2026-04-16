@@ -28,6 +28,7 @@ export default function ScanQualityPage() {
   const [aiSuggestionList, setAiSuggestionList] = useState([]);
   const [historicalDefectRate, setHistoricalDefectRate] = useState('');
   const [loading, setLoading] = useState(false);
+  const submitLockRef = useRef(false);
   const [coverImage, setCoverImage] = useState('');
   const [rawDetail, setRawDetail] = useState(null);
   const fileInputRef = useRef(null);
@@ -104,8 +105,9 @@ export default function ScanQualityPage() {
   };
 
   const submitQuality = async () => {
-    if (loading) return;
+    if (loading || submitLockRef.current) return;
     if (!result) { toast.error('请选择质检结果'); return; }
+    submitLockRef.current = true;
     const userInfo = getUserInfo() || {};
     const payload = {
       orderNo: detail.orderNo, orderItemId: rawDetail?.orderItemId || '',
@@ -148,7 +150,7 @@ export default function ScanQualityPage() {
       navigate(-1);
     } catch (e) {
       toast.error(e.message || '提交失败');
-    } finally { setLoading(false); }
+    } finally { setLoading(false); submitLockRef.current = false; }
   };
 
   return (

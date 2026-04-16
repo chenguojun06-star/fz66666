@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.helper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fashion.supplychain.common.lock.DistributedLockService;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import lombok.extern.slf4j.Slf4j;
@@ -11,6 +12,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 防重复扫码检测器
@@ -27,6 +29,9 @@ public class DuplicateScanPreventer {
 
     @Autowired
     private ScanRecordService scanRecordService;
+
+    @Autowired
+    private DistributedLockService distributedLockService;
 
     /**
      * 根据requestId查找扫码记录
@@ -94,6 +99,7 @@ public class DuplicateScanPreventer {
 
     /**
      * 检查是否存在近期重复扫码（支持按工序和操作人缩小范围）
+     * 使用分布式锁防止TOCTOU竞态条件
      */
     public boolean hasRecentDuplicateScan(String scanCode, String scanType,
                                           Integer bundleQuantity, Integer processMinutes,
@@ -102,40 +108,44 @@ public class DuplicateScanPreventer {
             return false;
         }
 
-        try {
-            int minIntervalSeconds = calculateMinIntervalSeconds(bundleQuantity, processMinutes);
+        String lockKey = "scan:dedup:" + scanCode + ":" + (hasText(scanType) ? scanType : "")
+                + ":" + (hasText(processCode) ? processCode : "");
+        return distributedLockService.executeWithLock(lockKey, 5, TimeUnit.SECONDS, () -> {
+            try {
+                int minIntervalSeconds = calculateMinIntervalSeconds(bundleQuantity, processMinutes);
 
-            LocalDateTime cutoffTime = LocalDateTime.now().minus(minIntervalSeconds, ChronoUnit.SECONDS);
+                LocalDateTime cutoffTime = LocalDateTime.now().minus(minIntervalSeconds, ChronoUnit.SECONDS);
 
-            LambdaQueryWrapper<ScanRecord> wrapper = new LambdaQueryWrapper<ScanRecord>()
-                    .eq(ScanRecord::getScanCode, scanCode)
-                    .eq(ScanRecord::getScanResult, "success")
-                    .ge(ScanRecord::getScanTime, cutoffTime)
-                    .last("limit 1");
+                LambdaQueryWrapper<ScanRecord> wrapper = new LambdaQueryWrapper<ScanRecord>()
+                        .eq(ScanRecord::getScanCode, scanCode)
+                        .eq(ScanRecord::getScanResult, "success")
+                        .ge(ScanRecord::getScanTime, cutoffTime)
+                        .last("limit 1");
 
-            if (hasText(scanType)) {
-                wrapper.eq(ScanRecord::getScanType, scanType);
+                if (hasText(scanType)) {
+                    wrapper.eq(ScanRecord::getScanType, scanType);
+                }
+                if (hasText(processCode)) {
+                    wrapper.eq(ScanRecord::getProcessCode, processCode);
+                }
+                if (hasText(operatorId)) {
+                    wrapper.eq(ScanRecord::getOperatorId, operatorId);
+                }
+
+                ScanRecord recent = scanRecordService.getOne(wrapper);
+
+                if (recent != null) {
+                    log.warn("防重复拦截: scanCode={}, scanType={}, processCode={}, operatorId={}, 最近扫码时间={}, 最小间隔={}秒",
+                            scanCode, scanType, processCode, operatorId, recent.getScanTime(), minIntervalSeconds);
+                    return true;
+                }
+
+                return false;
+            } catch (Exception e) {
+                log.error("检查重复扫码失败: scanCode={}", scanCode, e);
+                return false;
             }
-            if (hasText(processCode)) {
-                wrapper.eq(ScanRecord::getProcessCode, processCode);
-            }
-            if (hasText(operatorId)) {
-                wrapper.eq(ScanRecord::getOperatorId, operatorId);
-            }
-
-            ScanRecord recent = scanRecordService.getOne(wrapper);
-
-            if (recent != null) {
-                log.warn("防重复拦截: scanCode={}, scanType={}, processCode={}, operatorId={}, 最近扫码时间={}, 最小间隔={}秒",
-                        scanCode, scanType, processCode, operatorId, recent.getScanTime(), minIntervalSeconds);
-                return true;
-            }
-
-            return false;
-        } catch (Exception e) {
-            log.error("检查重复扫码失败: scanCode={}", scanCode, e);
-            return false; // 检查失败时不拦截
-        }
+        });
     }
 
     public boolean isWithinDuplicateInterval(LocalDateTime scanTime,

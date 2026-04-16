@@ -77,7 +77,9 @@ public class CoreSchemaPreflightChecker implements ApplicationRunner, HealthIndi
             "factory_type"
         ));
         tableColumns.put("t_product_warehousing", List.of(
-            "repair_status", "repair_operator_name", "repair_completed_time", "unqualified_quantity"
+            "repair_status", "repair_operator_name", "repair_completed_time",
+            "unqualified_quantity", "scan_mode", "warehousing_start_time",
+            "warehousing_end_time", "quality_operator_id", "quality_operator_name"
         ));
         tableColumns.put("t_pattern_production", List.of(
                 "review_status", "receiver_id", "pattern_maker_id", "tenant_id", "has_secondary_process"

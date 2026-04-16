@@ -5,11 +5,12 @@ import { useAuthStore } from '@/stores/authStore';
 import { setToken, setUserInfo, setTenantInfo, clearBusinessCaches } from '@/utils/storage';
 import { toast } from '@/utils/uiHelper';
 import { handleWxOAuthCallback, initiateWxOAuth, bindWxAccountAndLogin, getOAuthRedirectPath } from '@/services/wxOAuth';
+import { getAuthRedirectPath } from '@/services/http';
 import wxAdapter from '@/adapters/wx';
 import { MiniCloud } from '@/components/AiAssistantFloat';
 
 const isWechat = wxAdapter.isWechat;
-const DEFAULT_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://192.168.2.248:8088';
+const DEFAULT_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '(未配置)';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -146,7 +147,7 @@ export default function LoginPage() {
       setTenantInfo(selectedTenant);
       clearBusinessCaches();
       setAuth(tk, user, selectedTenant);
-      navigate('/home', { replace: true });
+      navigate(getAuthRedirectPath(), { replace: true });
     } catch (err) {
       setError(err.message || '登录失败');
     } finally {

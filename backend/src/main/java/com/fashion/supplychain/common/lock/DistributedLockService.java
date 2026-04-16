@@ -125,24 +125,33 @@ public class DistributedLockService {
     }
 
     /**
-     * 尝试带锁执行，获取不到锁时降级为不加锁执行
-     * 适用于 Redis 不可用时的降级场景
+     * 尝试带锁执行，获取不到锁时等待重试而非降级为无锁执行
+     * 适用于并发场景下需要保证数据一致性的关键操作（扫码、入库等）
      */
     public <T> T executeWithLockOrFallback(String key, long timeout, TimeUnit unit, Supplier<T> supplier) {
         try {
             String lockValue = tryLock(key, timeout, unit);
             if (lockValue == null) {
-                log.warn("Lock fallback (contention): {}, executing without lock", key);
-                return supplier.get();
+                log.warn("Lock contention detected: {}, retrying after short wait", key);
+                Thread.sleep(200);
+                lockValue = tryLock(key, timeout, unit);
+                if (lockValue == null) {
+                    throw new IllegalStateException("系统繁忙，请稍后重试 [lock:" + key + "]");
+                }
             }
             try {
                 return supplier.get();
             } finally {
                 unlock(key, lockValue);
             }
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("操作被中断，请重试 [lock:" + key + "]");
+        } catch (IllegalStateException e) {
+            throw e;
         } catch (Exception e) {
-            log.warn("Lock fallback (redis error): {}, executing without lock", key, e);
-            return supplier.get();
+            log.error("Lock error for key: {}, failing safely instead of executing without lock", key, e);
+            throw new IllegalStateException("系统暂时不可用，请稍后重试 [lock:" + key + "]");
         }
     }
 

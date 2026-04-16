@@ -1,4 +1,4 @@
-const { getToken, setToken, setUserInfo } = require('../../utils/storage');
+const { getToken, setToken, setUserInfo, isTokenExpired } = require('../../utils/storage');
 const { getBaseUrl, setBaseUrl } = require('../../config');
 const api = require('../../utils/api');
 const i18n = require('../../utils/i18n/index');
@@ -360,9 +360,12 @@ Page({
     this.applyLanguage(i18n.getLanguage());
 
     const token = getToken();
-    if (token) {
+    if (token && !isTokenExpired()) {
       safeNavigate({ url: '/pages/home/index' }, 'switchTab').catch(() => {});
       return;
+    }
+    if (token && isTokenExpired()) {
+      try { wx.removeStorageSync('auth_token'); } catch (_) {}
     }
 
     const envVersion = resolveEnvVersion();

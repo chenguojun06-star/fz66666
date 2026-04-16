@@ -52,6 +52,10 @@ public class CacheAspect {
         // 尝试从缓存获取
         Object cachedValue = redisService.get(cacheKey);
         if (cachedValue != null) {
+            if ("__NULL__".equals(cachedValue)) {
+                log.debug("[CacheAspect] 缓存命中(null占位): {}", cacheKey);
+                return null;
+            }
             log.debug("[CacheAspect] 缓存命中: {}", cacheKey);
             return cachedValue;
         }
@@ -60,15 +64,24 @@ public class CacheAspect {
         Object result = point.proceed();
 
         // 检查是否缓存null值
-        if (result == null && !cacheable.cacheNull()) {
-            log.debug("[CacheAspect] 结果为null且不缓存null: {}", cacheKey);
+        if (result == null) {
+            if (cacheable.cacheNull()) {
+                long nullTtlSeconds = Math.min(60, cacheable.unit().toSeconds(cacheable.expire()));
+                redisService.set(cacheKey, "__NULL__", (int) nullTtlSeconds, java.util.concurrent.TimeUnit.SECONDS);
+                log.debug("[CacheAspect] 缓存null占位: {}, TTL={}秒", cacheKey, nullTtlSeconds);
+            } else {
+                log.debug("[CacheAspect] 结果为null且不缓存null: {}", cacheKey);
+            }
             return result;
         }
 
-        // 存入缓存
-        redisService.set(cacheKey, result, cacheable.expire(), cacheable.unit());
-        log.debug("[CacheAspect] 缓存已设置: {}, 过期时间: {} {}",
-                cacheKey, cacheable.expire(), cacheable.unit());
+        // 存入缓存（添加随机抖动防止雪崩）
+        long expireSeconds = cacheable.unit().toSeconds(cacheable.expire());
+        long jitter = (long) (expireSeconds * 0.1 * Math.random());
+        long finalExpireSeconds = expireSeconds + jitter;
+        redisService.set(cacheKey, result, (int) finalExpireSeconds, java.util.concurrent.TimeUnit.SECONDS);
+        log.debug("[CacheAspect] 缓存已设置: {}, 过期时间: {}秒 (含抖动{}秒)",
+                cacheKey, finalExpireSeconds, jitter);
 
         return result;
     }

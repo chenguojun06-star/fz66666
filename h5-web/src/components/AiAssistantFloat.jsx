@@ -50,9 +50,27 @@ function MiniCloud({ size = 50 }) {
 
 export { MiniCloud };
 
+const CHAT_STORAGE_KEY = 'h5_ai_chat_messages';
+const MAX_STORED_MESSAGES = 20;
+
+function loadStoredMessages() {
+  try {
+    const stored = sessionStorage.getItem(CHAT_STORAGE_KEY);
+    if (stored) return JSON.parse(stored);
+  } catch (_) {}
+  return [];
+}
+
+function storeMessages(messages) {
+  try {
+    const toStore = messages.slice(-MAX_STORED_MESSAGES);
+    sessionStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(toStore));
+  } catch (_) {}
+}
+
 export default function AiAssistantFloat() {
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(() => loadStoredMessages());
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
   const [streamingText, setStreamingText] = useState('');
@@ -63,6 +81,20 @@ export default function AiAssistantFloat() {
   const user = useAuthStore((s) => s.user);
   const scanResultData = useGlobalStore(s => s.scanResultData);
   const aiStream = useAiChatStream();
+
+  useEffect(() => { storeMessages(messages); }, [messages]);
+
+  const currentPageContext = (() => {
+    const path = window.location.pathname;
+    if (path.includes('/scan')) return 'scan_page';
+    if (path.includes('/work')) return 'work_page';
+    if (path.includes('/warehouse')) return 'warehouse_page';
+    if (path.includes('/dashboard')) return 'dashboard_page';
+    if (path.includes('/admin')) return 'admin_page';
+    if (path.includes('/cutting')) return 'cutting_page';
+    if (path.includes('/procurement')) return 'procurement_page';
+    return 'home_page';
+  })();
 
   const [pos, setPos] = useState({ x: -1, y: -1 });
   const dragging = useRef(false);
@@ -201,7 +233,7 @@ export default function AiAssistantFloat() {
     const chatContext = isMgr ? 'manager_assistant' : 'worker_assistant';
     let fullText = '';
     try {
-      const streamParams = { question: msg, pageContext: chatContext, imageUrl };
+      const streamParams = { question: msg, pageContext: `${chatContext}:${currentPageContext}`, imageUrl };
       if (scanResultData) {
         if (scanResultData.orderNo) streamParams.orderNo = scanResultData.orderNo;
         if (scanResultData.processName) streamParams.processName = scanResultData.processName;

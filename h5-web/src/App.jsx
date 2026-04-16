@@ -41,7 +41,13 @@ const Loading = () => (
 
 function ProtectedRoute({ children }) {
   const token = useAuthStore((s) => s.token);
-  if (!token) return <Navigate to="/login" replace />;
+  if (!token) {
+    const currentPath = window.location.pathname + window.location.search;
+    if (!currentPath.includes('/login')) {
+      sessionStorage.setItem('h5_auth_redirect', currentPath);
+    }
+    return <Navigate to="/login" replace />;
+  }
   return children;
 }
 
