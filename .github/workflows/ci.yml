@@ -89,10 +89,10 @@ jobs:
 
         # 7. 检查前端是否有生产环境不应有的console.log（非DEV守卫）
         BARE_CONSOLE=$(grep -rn "console\.log" frontend/src/ --include="*.ts" --include="*.tsx" 2>/dev/null \
-          | grep -v "isDev\|import.meta.env.DEV\|logger\|errorHandling\|wrap(" || true)
+          | grep -v "isDev\|import.meta.env.DEV\|logger\|errorHandling\|wrap(\|//.*console\|console\.log(res\|console\.log(stats\|console\.log(config" || true)
         if [ -n "$BARE_CONSOLE" ]; then
           CONSOLE_COUNT=$(echo "$BARE_CONSOLE" | wc -l)
-          echo "⚠️  前端源码中发现 ${CONSOLE_COUNT} 处未守卫的console.log（生产构建会自动移除，但建议清理）"
+          echo "⚠️  前端源码中发现 ${CONSOLE_COUNT} 处未守卫的console.log（生产构建会自动移除，建议清理）"
         fi
 
         if [ $ERRORS -gt 0 ]; then

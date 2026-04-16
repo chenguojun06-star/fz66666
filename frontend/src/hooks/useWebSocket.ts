@@ -62,8 +62,8 @@ export function useWebSocket(options: UseWebSocketOptions) {
   /** 构建 WebSocket URL */
   const buildUrl = useCallback(() => {
     const loc = window.location;
-    // 开发环境: ws://localhost:5173/ws/realtime (Vite proxy)
-    // 生产环境: wss://xxx.com/ws/realtime (nginx proxy)
+    // 开发环境: ws://{host}/ws/realtime (Vite proxy)
+    // 生产环境: wss://{host}/ws/realtime (nginx proxy)
     const protocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
     return `${protocol}//${loc.host}/ws/realtime?userId=${userId}&clientType=${clientType}&tenantId=${tenantId ?? ''}`;
   }, [userId, clientType, tenantId]);
@@ -110,7 +110,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
       wsRef.current = ws;
 
       ws.onopen = () => {
-        console.log('[WebSocket] 连接成功');
+        if (import.meta.env.DEV) console.log('[WebSocket] 连接成功');
         setConnected(true);
         reconnectCountRef.current = 0;
         startHeartbeat(ws);
@@ -141,7 +141,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
       };
 
       ws.onclose = (event) => {
-        console.log('[WebSocket] 连接关闭:', event.code, event.reason);
+        if (import.meta.env.DEV) console.log('[WebSocket] 连接关闭:', event.code, event.reason);
         setConnected(false);
         stopHeartbeat();
         wsRef.current = null;
@@ -151,7 +151,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
         if (enabled && reconnectCountRef.current < maxReconnectAttempts) {
           reconnectCountRef.current++;
           const delay = Math.min(reconnectInterval * Math.pow(2, reconnectCountRef.current - 1), 60000);
-          console.log(`[WebSocket] ${delay / 1000}s 后重连 (第${reconnectCountRef.current}次/${maxReconnectAttempts}次)`);
+          if (import.meta.env.DEV) console.log(`[WebSocket] ${delay / 1000}s 后重连 (第${reconnectCountRef.current}次/${maxReconnectAttempts}次)`);
           reconnectTimerRef.current = setTimeout(connect, delay);
         } else if (reconnectCountRef.current >= maxReconnectAttempts) {
           console.warn('[WebSocket] 已达重连上限，停止重连。实时推送暂不可用，不影响正常业务。');

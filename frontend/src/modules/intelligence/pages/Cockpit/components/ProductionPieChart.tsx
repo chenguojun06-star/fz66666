@@ -93,8 +93,6 @@ const ProductionPieChart: React.FC<ProductionPieChartProps> = ({ mode = 'sidebar
           }),
           api.get<{ code: number; data: FactoryCapacityItem[] }>('/production/order/factory-capacity'),
         ]);
-        console.log('Orders:', ordersRes?.data?.records?.length);
-        console.log('Factory capacity:', factoryRes?.data);
         setOrders(ordersRes?.data?.records || []);
         setFactoryCapacity(factoryRes?.data || []);
       } catch (e) {
@@ -208,8 +206,6 @@ const ProductionPieChart: React.FC<ProductionPieChartProps> = ({ mode = 'sidebar
       overdueCount: f.overdueCount || 0,
       atRiskCount: f.atRiskCount || 0,
     })).sort((a, b) => b.totalQuantity - a.totalQuantity);
-
-    console.log('Factory stats:', factoryStats);
 
     return { totalOrders, totalQuantity, inProgress, completed, stageStats, avgDays, factoryStats };
   }, [orders, factoryCapacity]);
