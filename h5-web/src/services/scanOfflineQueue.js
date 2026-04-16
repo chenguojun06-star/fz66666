@@ -170,7 +170,9 @@ export function setupOfflineQueueSync(api, onSync) {
     if (count > 0) {
       const result = await scanOfflineQueue.flush(api, onSync);
       if (result.submitted > 0 || result.failed > 0) {
-        console.log(`[OfflineQueue] 同步完成: 成功=${result.submitted}, 失败=${result.failed}`);
+        if (import.meta.env.DEV) {
+          console.log(`[OfflineQueue] 同步完成: 成功=${result.submitted}, 失败=${result.failed}`);
+        }
       }
     }
   };

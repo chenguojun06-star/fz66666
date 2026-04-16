@@ -241,6 +241,16 @@ public class QualityScanExecutor {
 
         broadcastProcessStage("receive".equals(qualityStage) ? "质检领取" : "质检验收",
                 order, bundle, operatorName, qty, false);
+
+        try {
+            if (processTrackingOrchestrator != null && bundle != null && hasText(bundle.getId())) {
+                processTrackingOrchestrator.updateScanRecord(
+                    bundle.getId(), "质检", operatorId, operatorName, sr.getId());
+            }
+        } catch (Exception e) {
+            log.debug("质检领取/验收工序跟踪更新失败(不阻断): bundleId={}", bundle != null ? bundle.getId() : null, e);
+        }
+
         return result;
     }
 

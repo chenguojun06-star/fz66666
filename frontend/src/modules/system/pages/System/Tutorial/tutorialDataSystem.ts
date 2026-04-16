@@ -12,7 +12,7 @@ export const tutorialsSystem: Tutorial[] = [
       steps: [
         {
           title: '打开系统登录页',
-          description: '在浏览器地址栏输入系统地址（如 http://localhost:5173），进入登录页面。',
+          description: '在浏览器地址栏输入系统地址，进入登录页面。',
           tips: [
             '推荐使用 Chrome / Edge 浏览器，兼容性最佳',
             '受控网络访问请使用管理员提供的系统入口地址',

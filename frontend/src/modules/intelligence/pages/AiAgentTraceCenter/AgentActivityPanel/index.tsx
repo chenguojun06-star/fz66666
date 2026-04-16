@@ -76,22 +76,6 @@ const IDLE_HUB_SEATS: Record<string, { sx: number; sy: number }> = {
   'system-doctor': { sx: 255, sy: 170 },
 };
 
-const MOCK_AGENTS: AgentInfo[] = [
-  { id: 'order-manager', name: '订单管家', department: 'production', color: '#4488ff', description: '管理生产订单全生命周期', status: 'working', lastActivity: new Date().toISOString(), tasksToday: 12, successRate: 95, avgDurationMs: 2300, intelligenceScore: 88, lazinessScore: 5, currentTask: '处理订单 #003 转厂', position: { x: 25, y: 42 } },
-  { id: 'material-buyer', name: '物料采购员', department: 'production', color: '#66cc44', description: '面辅料采购与到货跟踪', status: 'working', lastActivity: new Date(Date.now() - 60000).toISOString(), tasksToday: 8, successRate: 100, avgDurationMs: 1800, intelligenceScore: 92, lazinessScore: 8, currentTask: '面料缺口预测', position: { x: 55, y: 42 } },
-  { id: 'quality-inspector', name: '质检巡检员', department: 'production', color: '#ffcc00', description: '成品质检入库、次品返修', status: 'idle_recent', lastActivity: new Date(Date.now() - 180000).toISOString(), tasksToday: 5, successRate: 80, avgDurationMs: 3500, intelligenceScore: 72, lazinessScore: 18, currentTask: null, position: { x: 195, y: 130 } },
-  { id: 'production-scheduler', name: '生产调度员', department: 'production', color: '#ff7a45', description: '生产进度查询、裁剪单创建', status: 'working', lastActivity: new Date(Date.now() - 20000).toISOString(), tasksToday: 10, successRate: 92, avgDurationMs: 1600, intelligenceScore: 86, lazinessScore: 2, currentTask: '拆菲转派：订单#007', position: { x: 110, y: 42 } },
-  { id: 'finance-settler', name: '财务结算员', department: 'finance', color: '#ff66aa', description: '财务审批付款、出货对账', status: 'working', lastActivity: new Date(Date.now() - 30000).toISOString(), tasksToday: 6, successRate: 100, avgDurationMs: 4200, intelligenceScore: 85, lazinessScore: 3, currentTask: '物料对账：3月采购单', position: { x: 310, y: 42 } },
-  { id: 'warehouse-keeper', name: '仓库管理员', department: 'warehouse', color: '#aa77ff', description: '库存管理、样衣借还', status: 'idle', lastActivity: new Date(Date.now() - 600000).toISOString(), tasksToday: 3, successRate: 100, avgDurationMs: 1500, intelligenceScore: 78, lazinessScore: 35, currentTask: null, position: { x: 255, y: 130 } },
-  { id: 'inventory-manager', name: '出入库专员', department: 'warehouse', color: '#fa8c16', description: '面辅料收货入库、成品出库、领料管理', status: 'working', lastActivity: new Date(Date.now() - 45000).toISOString(), tasksToday: 7, successRate: 93, avgDurationMs: 2100, intelligenceScore: 84, lazinessScore: 6, currentTask: '面料到货入库：3月采购单', position: { x: 55, y: 222 } },
-  { id: 'style-designer', name: '样衣开发员', department: 'basic', color: '#44dddd', description: '样衣开发与纸样管理', status: 'working', lastActivity: new Date(Date.now() - 120000).toISOString(), tasksToday: 4, successRate: 75, avgDurationMs: 5600, intelligenceScore: 65, lazinessScore: 12, currentTask: '款式难度AI分析', position: { x: 310, y: 222 } },
-  { id: 'data-analyst', name: '数据分析师', department: 'intelligence', color: '#ff8844', description: '深度分析、智能报表', status: 'working', lastActivity: new Date(Date.now() - 45000).toISOString(), tasksToday: 9, successRate: 90, avgDurationMs: 2800, intelligenceScore: 90, lazinessScore: 2, currentTask: '交付预测：4月完成率', position: { x: 160, y: 115 } },
-  { id: 'risk-sentinel', name: '风险哨兵', department: 'intelligence', color: '#ff4444', description: '根因分析、风险预警', status: 'working', lastActivity: new Date(Date.now() - 15000).toISOString(), tasksToday: 15, successRate: 88, avgDurationMs: 900, intelligenceScore: 82, lazinessScore: 0, currentTask: '停滞订单预警', position: { x: 190, y: 115 } },
-  { id: 'smart-advisor', name: '智能顾问', department: 'intelligence', color: '#6688ff', description: 'AI对话、多代理协同', status: 'idle_recent', lastActivity: new Date(Date.now() - 300000).toISOString(), tasksToday: 7, successRate: 85, avgDurationMs: 6200, intelligenceScore: 75, lazinessScore: 25, currentTask: null, position: { x: 215, y: 170 } },
-  { id: 'learning-engine', name: '学习引擎', department: 'intelligence', color: '#88cc44', description: '自主学习、规律发现', status: 'sleeping', lastActivity: new Date(Date.now() - 3600000).toISOString(), tasksToday: 1, successRate: 100, avgDurationMs: 15000, intelligenceScore: 60, lazinessScore: 80, currentTask: null, position: { x: 235, y: 170 } },
-  { id: 'system-doctor', name: '系统医生', department: 'intelligence', color: '#9254de', description: '系统诊断与自愈', status: 'idle_recent', lastActivity: new Date(Date.now() - 240000).toISOString(), tasksToday: 2, successRate: 100, avgDurationMs: 800, intelligenceScore: 95, lazinessScore: 40, currentTask: null, position: { x: 255, y: 170 } },
-];
-
 interface AgentSprite {
   info: AgentInfo;
   x: number; y: number;
@@ -650,7 +634,7 @@ const PixelWorld: React.FC<{
 };
 
 const AgentActivityPanel: React.FC = () => {
-  const [agents, setAgents] = useState<AgentInfo[]>(MOCK_AGENTS);
+  const [agents, setAgents] = useState<AgentInfo[]>([]);
   const [alerts, setAlerts] = useState<AlertInfo[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [deptFilter, setDeptFilter] = useState<string | null>(null);
@@ -664,24 +648,7 @@ const AgentActivityPanel: React.FC = () => {
 
       if (agentsData.length > 0) {
         setIsLive(true);
-        const merged = MOCK_AGENTS.map(mock => {
-          const live = agentsData.find((a: any) => a.id === mock.id);
-          if (live) {
-            return {
-              ...mock,
-              status: live.status || mock.status,
-              lastActivity: live.lastActivity || mock.lastActivity,
-              tasksToday: live.tasksToday ?? mock.tasksToday,
-              successRate: live.successRate ?? mock.successRate,
-              avgDurationMs: live.avgDurationMs ?? mock.avgDurationMs,
-              intelligenceScore: live.intelligenceScore ?? mock.intelligenceScore,
-              lazinessScore: live.lazinessScore ?? mock.lazinessScore,
-              currentTask: live.currentTask || mock.currentTask,
-            };
-          }
-          return mock;
-        });
-        setAgents(merged);
+        setAgents(agentsData);
       }
       setAlerts(alertsData);
     } catch (e) { console.warn('AgentActivity fetch error:', e); }

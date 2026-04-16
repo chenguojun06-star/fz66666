@@ -164,6 +164,11 @@ public class WarehouseScanExecutor {
                         order.getId(), bundle.getBundleNo(), e.getMessage(), e);
             }
             // 返修申报成功后直接返回，等待质检重检
+            try {
+                productionOrderService.recomputeProgressFromRecords(order.getId());
+            } catch (Exception e) {
+                log.debug("返修申报后进度重算失败(不阻断): orderNo={}", order.getOrderNo(), e);
+            }
             Map<String, Object> repairResult = new HashMap<>();
             repairResult.put("success", true);
             repairResult.put("message", "返修完成申报成功，请通知质检员进行重新验收");

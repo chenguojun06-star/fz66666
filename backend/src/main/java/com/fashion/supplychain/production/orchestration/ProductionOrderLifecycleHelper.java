@@ -10,6 +10,7 @@ import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
+import com.fashion.supplychain.production.service.ProductionProcessTrackingService;
 import com.fashion.supplychain.system.entity.OperationLog;
 import com.fashion.supplychain.system.service.OperationLogService;
 import java.time.LocalDateTime;
@@ -66,6 +67,9 @@ public class ProductionOrderLifecycleHelper {
     @Autowired(required = false)
     private OrderLearningOutcomeOrchestrator orderLearningOutcomeOrchestrator;
 
+    @Autowired
+    private ProductionProcessTrackingService processTrackingService;
+
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteById(String id) {
         String oid = StringUtils.hasText(id) ? id.trim() : null;
@@ -81,7 +85,7 @@ public class ProductionOrderLifecycleHelper {
         if (!ok) {
             throw new IllegalStateException("删除失败");
         }
-        cascadeCleanupChildTables(oid);
+        cascadeCleanupChildTables(oid, existed.getOrderNo());
         return true;
     }
 
@@ -112,7 +116,7 @@ public class ProductionOrderLifecycleHelper {
         return result;
     }
 
-    private void cascadeCleanupChildTables(String orderId) {
+    private void cascadeCleanupChildTables(String orderId, String orderNo) {
         try { materialPurchaseService.deleteByOrderId(orderId); }
         catch (Exception e) { log.warn("Failed to cascade delete material purchases: orderId={}", orderId, e); }
         try { cuttingTaskService.deleteByOrderId(orderId); }
@@ -129,6 +133,8 @@ public class ProductionOrderLifecycleHelper {
         catch (Exception e) { log.warn("Failed to cascade delete payroll settlement items: orderId={}", orderId, e); }
         try { payrollSettlementService.deleteByOrderId(orderId); }
         catch (Exception e) { log.warn("Failed to cascade delete payroll settlements: orderId={}", orderId, e); }
+        try { processTrackingService.deleteByOrderNo(orderNo); }
+        catch (Exception e) { log.warn("Failed to cascade delete process tracking records: orderNo={}", orderNo, e); }
     }
 
     @Transactional(rollbackFor = Exception.class)

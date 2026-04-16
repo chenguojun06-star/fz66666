@@ -156,13 +156,15 @@ const Login: React.FC = () => {
       const result = await sendLoginSmsCode(phone, selectedTenant.id);
       const cooldown = Number(result.cooldownSeconds || 60);
       setSmsCountdown(Number.isFinite(cooldown) && cooldown > 0 ? cooldown : 60);
-      if (typeof result.debugCode === 'string' && result.debugCode) {
+      if (import.meta.env.DEV && typeof result.debugCode === 'string' && result.debugCode) {
         form.setFieldValue('smsCode', result.debugCode);
       }
-      if (result.gatewayConfigured === false) {
+      if (import.meta.env.DEV && result.gatewayConfigured === false) {
         message.warning(typeof result.debugCode === 'string' && result.debugCode
           ? `当前环境未配置短信网关，调试验证码：${result.debugCode}`
           : '当前环境未配置短信网关，验证码已写入服务日志');
+      } else if (result.gatewayConfigured === false) {
+        message.warning('验证码已发送至管理员手机，请联系管理员获取');
       } else {
         message.success('验证码已发送，请注意查收');
       }
