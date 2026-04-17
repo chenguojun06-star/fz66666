@@ -34,24 +34,6 @@ class AppColors {
   static const Color overlay = Color(0x80000000);
 }
 
-class AppRadius {
-  static const double sm = 4;
-  static const double xs = 6;
-  static const double md = 8;
-  static const double lg = 12;
-  static const double xl = 12;
-  static const double full = 999;
-}
-
-class AppSpacing {
-  static const double xs = 4;
-  static const double sm = 8;
-  static const double md = 12;
-  static const double lg = 16;
-  static const double xl = 20;
-  static const double xxl = 24;
-}
-
 class AppFontSize {
   static const double xxs = 11;
   static const double xs = 12;
@@ -66,14 +48,14 @@ class AppFontSize {
 
 class AppShadow {
   static List<BoxShadow> get sm => [
-        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 1),
+        BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 1),
       ];
   static List<BoxShadow> get md => [
-        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 1),
-        BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 4, offset: const Offset(0, 2)),
+        BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 1),
+        BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 4, offset: const Offset(0, 2)),
       ];
   static List<BoxShadow> get lg => [
-        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 1),
-        BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 8, offset: const Offset(0, 4)),
+        BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 1),
+        BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 8, offset: const Offset(0, 4)),
       ];
 }

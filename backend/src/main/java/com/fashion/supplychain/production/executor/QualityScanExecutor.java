@@ -671,6 +671,9 @@ public class QualityScanExecutor {
             w.setCuttingBundleId(bundle.getId());
             w.setCuttingBundleNo(bundle.getBundleNo());
             w.setCuttingBundleQrCode(bundle.getQrCode());
+            w.setTenantId(order.getTenantId());
+            String existingWhNo = productWarehousingService.findExistingWarehousingNoByOrderId(order.getId());
+            w.setWarehousingNo(hasText(existingWhNo) ? existingWhNo : productWarehousingService.buildWarehousingNo(now));
             if (hasText(operatorId)) {
                 w.setQualityOperatorId(operatorId);
             }
@@ -682,8 +685,8 @@ public class QualityScanExecutor {
             w.setDeleteFlag(0);
 
             productWarehousingService.save(w);
-            log.info("[QualityScan] 已创建 quality_scan 次品池记录: orderId={}, bundleId={}, defectQty={}",
-                    order.getId(), bundle.getId(), defectQty);
+            log.info("[QualityScan] 已创建 quality_scan 次品池记录: orderId={}, bundleId={}, defectQty={}, warehousingNo={}",
+                    order.getId(), bundle.getId(), defectQty, w.getWarehousingNo());
 
             // ★ 更新菲号状态为 unqualified，阻止后续入库（必须返修后才能入库）
             syncBundleStatusAfterQualityScan(order.getId(), bundle);
@@ -726,13 +729,16 @@ public class QualityScanExecutor {
             w.setStyleName(order.getStyleName());
             w.setWarehousingType("quality_scan");
             w.setWarehouse("待分配");
-            w.setWarehousingQuantity(0);            // 不产生库存变动（质检≠入库）
-            w.setQualifiedQuantity(qualifiedQty);   // 合格数量
+            w.setWarehousingQuantity(0);
+            w.setQualifiedQuantity(qualifiedQty);
             w.setUnqualifiedQuantity(0);
             w.setQualityStatus("qualified");
             w.setCuttingBundleId(bundle.getId());
             w.setCuttingBundleNo(bundle.getBundleNo());
             w.setCuttingBundleQrCode(bundle.getQrCode());
+            w.setTenantId(order.getTenantId());
+            String existingWhNo = productWarehousingService.findExistingWarehousingNoByOrderId(order.getId());
+            w.setWarehousingNo(hasText(existingWhNo) ? existingWhNo : productWarehousingService.buildWarehousingNo(now));
             if (hasText(operatorId)) {
                 w.setQualityOperatorId(operatorId);
             }
@@ -744,8 +750,8 @@ public class QualityScanExecutor {
             w.setDeleteFlag(0);
 
             productWarehousingService.save(w);
-            log.info("[QualityScan] 已创建 quality_scan 合格记录: orderId={}, bundleId={}, qualifiedQty={}",
-                    order.getId(), bundle.getId(), qualifiedQty);
+            log.info("[QualityScan] 已创建 quality_scan 合格记录: orderId={}, bundleId={}, qualifiedQty={}, warehousingNo={}",
+                    order.getId(), bundle.getId(), qualifiedQty, w.getWarehousingNo());
 
             // 更新菲号状态
             syncBundleStatusAfterQualityScan(order.getId(), bundle);
@@ -820,6 +826,9 @@ public class QualityScanExecutor {
                 w.setCuttingBundleId(bundle.getId());
                 w.setCuttingBundleNo(bundle.getBundleNo());
                 w.setCuttingBundleQrCode(bundle.getQrCode());
+                w.setTenantId(order.getTenantId());
+                String existingWhNo = productWarehousingService.findExistingWarehousingNoByOrderId(order.getId());
+                w.setWarehousingNo(hasText(existingWhNo) ? existingWhNo : productWarehousingService.buildWarehousingNo(now));
                 if (hasText(operatorId)) {
                     w.setQualityOperatorId(operatorId);
                 }
@@ -831,8 +840,8 @@ public class QualityScanExecutor {
                 w.setDeleteFlag(0);
 
                 productWarehousingService.save(w);
-                log.info("[QualityScan] 已创建报废记录: orderId={}, bundleId={}, scrapQty={}",
-                        order.getId(), bundle.getId(), defectQty);
+                log.info("[QualityScan] 已创建报废记录: orderId={}, bundleId={}, scrapQty={}, warehousingNo={}",
+                        order.getId(), bundle.getId(), defectQty, w.getWarehousingNo());
             }
 
             // ★ 第三步：更新菲号状态（解除/保持入库阻止）

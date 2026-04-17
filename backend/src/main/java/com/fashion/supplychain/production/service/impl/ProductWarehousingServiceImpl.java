@@ -743,6 +743,16 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
     }
 
     @Override
+    public String findExistingWarehousingNoByOrderId(String orderId) {
+        return helper.findExistingWarehousingNoByOrderId(orderId);
+    }
+
+    @Override
+    public String buildWarehousingNo(LocalDateTime now) {
+        return helper.buildWarehousingNo(now);
+    }
+
+    @Override
     public Map<String, Object> getWarehousingStats() {
         return baseMapper.selectWarehousingStats(com.fashion.supplychain.common.UserContext.tenantId());
     }

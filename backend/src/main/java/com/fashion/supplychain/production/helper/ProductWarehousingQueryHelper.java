@@ -462,6 +462,7 @@ public class ProductWarehousingQueryHelper {
         }
 
         String oid = orderId.trim();
+        try {
         ProductionOrder order = productionOrderService.getById(oid);
         if (order != null) {
             String orderStatus = order.getStatus() == null ? "" : order.getStatus().trim().toLowerCase();
@@ -472,11 +473,11 @@ public class ProductWarehousingQueryHelper {
                 Map<String, Object> empty = new java.util.LinkedHashMap<>();
                 empty.put("qcReadyQrs", new ArrayList<>());
                 empty.put("warehouseReadyQrs", new ArrayList<>());
+                empty.put("qrStageHints", new HashMap<>());
                 return empty;
             }
         }
 
-        // 查询该订单所有关联菲号的扫码记录
         List<ScanRecord> scans;
         scans = scanRecordService.list(
                     new LambdaQueryWrapper<ScanRecord>()
@@ -485,16 +486,17 @@ public class ProductWarehousingQueryHelper {
                             .ne(ScanRecord::getCuttingBundleId, "")
             );
 
-        // 按 cuttingBundleId 分组，收集每个菲号就绪状态（只看成功记录）
         Map<String, Set<String>> bundleScanTypes = new HashMap<>();
         Map<String, Set<String>> bundleProcessCodes = new HashMap<>();
         Map<String, Boolean> bundleQualityConfirmed = new HashMap<>();
         Map<String, Boolean> bundleDefectiveConfirmed = new HashMap<>();
         Map<String, Boolean> bundleWarehouseDone = new HashMap<>();
         for (ScanRecord scan : scans) {
+            if (scan == null) continue;
             String scanResult = scan.getScanResult() == null ? "" : scan.getScanResult().trim().toLowerCase();
             if (!"success".equals(scanResult)) continue;
-            String bundleId = scan.getCuttingBundleId().trim();
+            String bundleId = scan.getCuttingBundleId() != null ? scan.getCuttingBundleId().trim() : "";
+            if (!StringUtils.hasText(bundleId)) continue;
             String scanType = scan.getScanType();
             if (!StringUtils.hasText(scanType)) continue;
             bundleScanTypes.computeIfAbsent(bundleId, k -> new HashSet<>()).add(scanType);
@@ -540,18 +542,15 @@ public class ProductWarehousingQueryHelper {
             }
         }
 
-        // 分类：质检就绪 vs 入库就绪
         Set<String> qcReadyBundleIds = new HashSet<>();
         Set<String> warehouseReadyBundleIds = new HashSet<>();
 
         for (Map.Entry<String, Set<String>> entry : bundleScanTypes.entrySet()) {
             Set<String> types = entry.getValue();
             String bundleId = entry.getKey();
-            // 质检就绪：完成车缝(production) 但还没质检(quality)
             if (types.contains("production") && !types.contains("quality")) {
                 qcReadyBundleIds.add(bundleId);
             }
-            // 入库就绪：已质检确认 + (已包装 或 次品返修) + 尚未成功入库
             if (Boolean.TRUE.equals(bundleQualityConfirmed.get(bundleId))
                     && !Boolean.TRUE.equals(bundleWarehouseDone.get(bundleId))
                     && (packagingDoneBundleIds.contains(bundleId)
@@ -560,7 +559,6 @@ public class ProductWarehousingQueryHelper {
             }
         }
 
-        // 将 bundleId 转换为 QR code
         Set<String> allIds = new HashSet<>();
         allIds.addAll(qcReadyBundleIds);
         allIds.addAll(warehouseReadyBundleIds);
@@ -590,6 +588,7 @@ public class ProductWarehousingQueryHelper {
         Map<String, List<String>> bundleStageHints = new HashMap<>();
         Map<String, List<ScanRecord>> scansByBundle = new HashMap<>();
         for (ScanRecord scan : scans) {
+            if (scan == null) continue;
             String scanResult = scan.getScanResult() == null ? "" : scan.getScanResult().trim().toLowerCase();
             if (!"success".equals(scanResult)) continue;
             String bid = scan.getCuttingBundleId() == null ? "" : scan.getCuttingBundleId().trim();
@@ -598,7 +597,6 @@ public class ProductWarehousingQueryHelper {
         }
         if (!scansByBundle.isEmpty()) {
             List<String> allBundleIds = new ArrayList<>(scansByBundle.keySet());
-            // Flyway已通过V20260424001+V202607192800+V202610010000补齐t_product_warehousing所有缺列，可安全全列查询
             List<ProductWarehousing> allWhRecords = productWarehousingService.list(
                     new QueryWrapper<ProductWarehousing>()
                             .in("cutting_bundle_id", allBundleIds)
@@ -606,6 +604,7 @@ public class ProductWarehousingQueryHelper {
             Map<String, List<ProductWarehousing>> whByBundle = new HashMap<>();
             if (allWhRecords != null) {
                 for (ProductWarehousing w : allWhRecords) {
+                    if (w == null) continue;
                     String bid = w.getCuttingBundleId() == null ? "" : w.getCuttingBundleId().trim();
                     if (StringUtils.hasText(bid)) {
                         whByBundle.computeIfAbsent(bid, k -> new ArrayList<>()).add(w);
@@ -615,9 +614,13 @@ public class ProductWarehousingQueryHelper {
             for (Map.Entry<String, List<ScanRecord>> entry : scansByBundle.entrySet()) {
                 String bid = entry.getKey();
                 List<ProductWarehousing> whList = whByBundle.getOrDefault(bid, java.util.Collections.emptyList());
-                List<String> hints = warehousingHelper.buildBundleStageHints(entry.getValue(), whList);
-                if (!hints.isEmpty()) {
-                    bundleStageHints.put(bid, hints);
+                try {
+                    List<String> hints = warehousingHelper.buildBundleStageHints(entry.getValue(), whList);
+                    if (hints != null && !hints.isEmpty()) {
+                        bundleStageHints.put(bid, hints);
+                    }
+                } catch (Exception e) {
+                    log.warn("buildBundleStageHints failed for bundleId={}: {}", bid, e.getMessage());
                 }
             }
         }
@@ -632,6 +635,14 @@ public class ProductWarehousingQueryHelper {
         }
         result.put("qrStageHints", qrStageHints);
         return result;
+        } catch (Exception e) {
+            log.error("getBundleReadiness failed: orderId={}, error={}", oid, e.getMessage(), e);
+            Map<String, Object> fallback = new java.util.LinkedHashMap<>();
+            fallback.put("qcReadyQrs", new ArrayList<>());
+            fallback.put("warehouseReadyQrs", new ArrayList<>());
+            fallback.put("qrStageHints", new HashMap<>());
+            return fallback;
+        }
     }
 
     /**

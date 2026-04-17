@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
-import '../utils/http_service.dart';
+import 'package:get/get.dart' hide Response, FormData, MultipartFile;
+import 'http_service.dart';
 
 class ApiService extends GetxService {
   final HttpService _http = Get.find<HttpService>();

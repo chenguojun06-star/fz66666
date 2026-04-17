@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../theme/app_colors.dart';
-import '../../theme/app_radius.dart';
 import '../../theme/app_spacing.dart';
 import 'admin_controller.dart';
 
@@ -34,7 +33,7 @@ class AdminPage extends GetView<AdminController> {
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
+        borderRadius: BorderRadius.circular(AppSpacing.lg),
         border: Border.all(color: AppColors.borderLight),
       ),
       child: Row(
@@ -43,7 +42,7 @@ class AdminPage extends GetView<AdminController> {
             width: 52,
             height: 52,
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(26),
             ),
             alignment: Alignment.center,
@@ -65,7 +64,7 @@ class AdminPage extends GetView<AdminController> {
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                         decoration: BoxDecoration(
                           color: AppColors.bgGray,
-                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                          borderRadius: BorderRadius.circular(AppSpacing.sm),
                         ),
                         child: const Text('退出', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
                       ),
@@ -97,7 +96,7 @@ class AdminPage extends GetView<AdminController> {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
+        borderRadius: BorderRadius.circular(AppSpacing.lg),
         border: Border.all(color: AppColors.borderLight),
       ),
       child: Column(
@@ -107,7 +106,7 @@ class AdminPage extends GetView<AdminController> {
             children: [
               InkWell(
                 onTap: () => controller.onMenuTap(item['route'] as String),
-                borderRadius: BorderRadius.circular(AppRadius.md),
+                borderRadius: BorderRadius.circular(AppSpacing.md),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
                   child: Row(

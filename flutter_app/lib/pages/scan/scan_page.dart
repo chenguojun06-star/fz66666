@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../theme/app_colors.dart';
-import '../../theme/app_radius.dart';
 import '../../theme/app_spacing.dart';
-import '../../routes/app_routes.dart';
 import 'scan_controller.dart';
 
 class ScanPage extends GetView<ScanController> {
@@ -56,7 +54,7 @@ class ScanPage extends GetView<ScanController> {
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
+        borderRadius: BorderRadius.circular(AppSpacing.lg),
         border: Border.all(color: AppColors.borderLight),
       ),
       child: Column(
@@ -75,11 +73,11 @@ class ScanPage extends GetView<ScanController> {
       height: 220,
       decoration: BoxDecoration(
         color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
+        borderRadius: BorderRadius.circular(AppSpacing.lg),
         border: Border.all(color: AppColors.borderLight),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppRadius.lg),
+        borderRadius: BorderRadius.circular(AppSpacing.lg),
         child: MobileScanner(
           onDetect: (capture) {
             final barcode = capture.barcodes.firstOrNull;
@@ -102,7 +100,7 @@ class ScanPage extends GetView<ScanController> {
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
               decoration: BoxDecoration(
                 color: AppColors.bgCard,
-                borderRadius: BorderRadius.circular(AppRadius.md),
+                borderRadius: BorderRadius.circular(AppSpacing.md),
                 border: Border.all(color: AppColors.borderLight),
               ),
               child: const Column(
@@ -123,7 +121,7 @@ class ScanPage extends GetView<ScanController> {
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
               decoration: BoxDecoration(
                 color: AppColors.bgCard,
-                borderRadius: BorderRadius.circular(AppRadius.md),
+                borderRadius: BorderRadius.circular(AppSpacing.md),
                 border: Border.all(color: AppColors.borderLight),
               ),
               child: const Column(
@@ -154,7 +152,7 @@ class ScanPage extends GetView<ScanController> {
           padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
             color: AppColors.bgCard,
-            borderRadius: BorderRadius.circular(AppRadius.md),
+            borderRadius: BorderRadius.circular(AppSpacing.md),
             border: Border.all(color: AppColors.borderLight),
           ),
           child: Row(

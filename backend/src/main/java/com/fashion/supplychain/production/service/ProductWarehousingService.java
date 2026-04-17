@@ -5,6 +5,7 @@ import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 public interface ProductWarehousingService extends IService<ProductWarehousing> {
@@ -63,4 +64,8 @@ public interface ProductWarehousingService extends IService<ProductWarehousing> 
          */
         boolean saveRepairReturnDeclaration(CuttingBundle bundle, ProductionOrder order,
                 int qty, String repairRemark, String operatorId, String operatorName, String warehouse);
+
+        String findExistingWarehousingNoByOrderId(String orderId);
+
+        String buildWarehousingNo(LocalDateTime now);
 }
