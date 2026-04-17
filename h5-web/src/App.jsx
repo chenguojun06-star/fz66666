@@ -35,6 +35,7 @@ const CuttingTaskListPage = lazy(() => import('@/pages/CuttingTaskListPage'));
 const CuttingTaskDetailPage = lazy(() => import('@/pages/CuttingTaskDetailPage'));
 const ProcurementTaskDetailPage = lazy(() => import('@/pages/ProcurementTaskDetailPage'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
+const IntelligencePage = lazy(() => import('@/pages/IntelligencePage'));
 
 const Loading = () => (
   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', color: 'var(--color-text-secondary)' }}>
@@ -110,6 +111,7 @@ export default function App() {
                       <Route path="/cutting/task-detail" element={<CuttingTaskDetailPage />} />
                       <Route path="/procurement/task-detail" element={<ProcurementTaskDetailPage />} />
                       <Route path="/dashboard" element={<DashboardPage />} />
+                      <Route path="/intelligence" element={<IntelligencePage />} />
                       <Route path="*" element={<Navigate to="/home" replace />} />
                     </Routes>
                   </Suspense>

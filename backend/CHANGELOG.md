@@ -1,3 +1,45 @@
+## 2026-04-18
+
+### WebSocket 全局广播移除 + 代码清理
+
+#### 核心变更：移除 WebSocket 全局广播方法
+- **WebSocketService** 移除 5 个全局广播方法：
+  - `broadcastPaymentNotification` → 改为 `sendToUser` 定向推送
+  - `notifyWorkerRegistrationPending` → 直接移除调用
+  - `notifyTenantApplicationPending` → 直接移除调用
+  - `notifyAppOrderPending` → 直接移除调用
+  - `broadcastTraceableAdvice` → 改为 `sendToUser` 定向推送
+
+#### 受影响文件及修改明细
+| 文件 | 修改内容 | 风险点 |
+|------|---------|--------|
+| `AppStoreOrchestrator.java` | 移除 `notifyAppOrderPending` 调用（2处） | 应用商店下单后不再全局广播，需确认前端不依赖该推送 |
+| `TenantBillingHelper.java` | 移除 `notifyTenantApplicationPending` 调用 | 租户申请计费不再广播，改为业务内处理 |
+| `TenantRoleInitHelper.java` | 移除 `notifyWorkerRegistrationPending` 调用 | 工人注册不再广播，需确认管理端是否有替代通知 |
+| `TenantOrchestrator.java` | 移除 `notifyTenantApplicationPending` 调用 | 同 TenantBillingHelper |
+| `ProactivePatrolAgent.java` | `broadcastTraceableAdvice` → `sendToUser` | 推送目标从全局改为当前用户，确保用户ID非空 |
+| `WagePaymentOrchestrator.java` | `broadcastPaymentNotification` → `sendToUser` | 工资付款通知改为定向推送，确保用户ID非空 |
+| `ProductionScanExecutor.java` | `broadcastTraceableAdvice` → `sendToUser` + 移除 `materialPurchaseStatusHelper` 未使用字段 | 扫码溯源建议改为当前用户推送 |
+
+#### 全量未使用 import 清理（47处 / 33个文件）
+- **intelligence 模块**（7处）：IntelligenceExecutionController、AgentActivityController、DataConsistencyPatrolJob、DecisionChainOrchestrator、AiSandboxOrchestrator、SmartWorkflowOrchestrator、DataTruthGuard
+- **template 模块**（7处）：TemplateLibraryServiceImpl、TemplateMutationHelper（3处）、TemplatePriceSyncHelper、TemplateQueryHelper（2处）
+- **style 模块**（5处）：StyleBomController（3处）、StyleInfoOrchestrator、ProductSkuServiceImpl、StyleStageHelper（2处）
+- **wechat 模块**（1处）：WeChatH5AuthOrchestrator
+- **system 模块**（2处）：UserOrchestrator、SerialOrchestrator
+- **production 模块**（16处）：ProductionOrderController（2处）、SmartNotifyJob、ProductionOrderOrchestrator、CuttingTaskOrchestrator、ProductionOrderCreationHelper、ScanRecordOrchestrator（3处）、MaterialPurchaseOrchestrator、ProductionScanExecutor（2处）、MaterialStockServiceImpl（2处）、CuttingTaskServiceImpl、ProductWarehousingHelper（2处）、ProductionOrderCommandService、MaterialPurchaseStatusHelper（2处）
+- **finance 模块**（2处）：OrderProfitOrchestrator（2处）
+- **warehouse 模块**（1处）：FinishedInventoryOrchestrator
+
+#### 小程序修复
+- `miniprogram/pages/login/index.js`：空 catch 块补充 `/* ignore */` 注释
+
+#### 验证结果
+- `mvn clean compile` → BUILD SUCCESS ✅
+- `mvn checkstyle:check` → 0 violations ✅
+- 已删除广播方法无残留引用 ✅
+- WebSocketService 所有字段均在使用中 ✅
+
 ## 2026-04-17
 
 - WebSocket 实时推送补齐：ScanRecordOrchestrator.undo() 新增 broadcastScanUndo / broadcastDataChanged / broadcastOrderProgressChanged；QualityScanExecutor 新增 broadcastQualityChecked / broadcastOrderProgressChanged / broadcastDataChanged；WarehouseScanExecutor 新增 broadcastScanSuccess / broadcastWarehouseIn / broadcastOrderProgressChanged / broadcastDataChanged / broadcastProcessStageCompleted；ProductionScanExecutor 新增 broadcastScanRealtime / broadcastOrderProgressChanged / broadcastProcessStageCompleted。

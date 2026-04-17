@@ -18,6 +18,7 @@ import com.fashion.supplychain.production.orchestration.SysNoticeOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleInfoService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
@@ -39,28 +40,29 @@ import java.util.Map;
 @RestController
 @RequestMapping({"/api/production/order", "/api/production/orders"})
 @PreAuthorize("isAuthenticated()")
+@RequiredArgsConstructor
 public class ProductionOrderController {
 
-    private ProductionOrderOrchestrator productionOrderOrchestrator;
+    private final ProductionOrderOrchestrator productionOrderOrchestrator;
 
-    private ProductionOrderService productionOrderService;
+    private final ProductionOrderService productionOrderService;
 
 
-    private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
+    private final ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
 
-    private FactoryCapacityOrchestrator factoryCapacityOrchestrator;
+    private final FactoryCapacityOrchestrator factoryCapacityOrchestrator;
 
-    private ProductionOrderExportOrchestrator exportOrchestrator;
+    private final ProductionOrderExportOrchestrator exportOrchestrator;
 
-    private OrderHealthScoreOrchestrator orderHealthScoreOrchestrator;
+    private final OrderHealthScoreOrchestrator orderHealthScoreOrchestrator;
 
-    private SysNoticeOrchestrator sysNoticeOrchestrator;
+    private final SysNoticeOrchestrator sysNoticeOrchestrator;
 
-    private StyleInfoService styleInfoService;
+    private final StyleInfoService styleInfoService;
 
-    private com.fashion.supplychain.style.service.SecondaryProcessService secondaryProcessService;
+    private final com.fashion.supplychain.style.service.SecondaryProcessService secondaryProcessService;
 
-    private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     /**
      * 导出生产订单列表为Excel
@@ -106,9 +108,6 @@ public class ProductionOrderController {
                 try {
                     ProductionOrder detail = productionOrderOrchestrator.getDetailByOrderNo(orderNo);
                     if (detail != null) {
-                        // 返回分页格式以保持前端兼容
-                        // 创建伪分页对象，包装单个订单为records数组
-                        // 注入 coverImage/styleImage，修复小程序扫码确认页款式图不显示问题
                         java.util.Map<String, Object> enriched = objectMapper
                                 .convertValue(detail, new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {});
                         if (StringUtils.hasText(detail.getStyleId())) {
@@ -141,7 +140,10 @@ public class ProductionOrderController {
                         return Result.success(pageResult);
                     }
                 } catch (java.util.NoSuchElementException e) {
-                    // 订单不存在，继续走分页查询（可能是模糊匹配或其他查询方式）
+                    // 订单不存在，继续走分页查询
+                } catch (Exception e) {
+                    log.error("精确查询订单异常: orderNo={}", orderNo, e);
+                    throw e;
                 }
             }
         }

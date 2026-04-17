@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import api from '@/api';
 import { useAuthStore } from '@/stores/authStore';
 import { canSeeDashboard, hasFeaturePermission } from '@/utils/permission';
+import { isTenantOwner } from '@/utils/storage';
 import { toast } from '@/utils/uiHelper';
 import Icon from '@/components/Icon';
 
 const ALL_MENU_ITEMS = [
+  { label: '智能运营', desc: '实时运营驾驶舱', icon: 'activity', path: '/intelligence', color: '#ef4444', bg: 'rgba(239,68,68,0.1)', permission: 'intelligence' },
   { label: '进度看板', desc: '订单进度与生产概览', icon: 'chart', path: '/dashboard', color: 'var(--color-primary)', bg: 'rgba(59,130,246,0.1)', permission: 'dashboard' },
   { label: '生产', desc: '生产订单与工序管理', icon: 'factory', path: '/work', color: 'var(--color-purple)', bg: 'rgba(124,92,252,0.1)', permission: 'view_orders' },
   { label: '扫码质检', desc: '扫码记录与今日统计', icon: 'scan', path: '/scan', color: 'var(--color-success)', bg: 'rgba(34,197,94,0.1)', permission: 'scan' },
@@ -90,10 +92,12 @@ export default function HomePage() {
 
   const menuItems = useMemo(() => {
     return ALL_MENU_ITEMS.filter(item => {
+      if (item.permission === 'intelligence') return isTenantOwner();
       if (item.permission === 'dashboard') return canSeeDashboard();
       return hasFeaturePermission(item.permission);
     });
   }, []);
+
 
   return (
     <div className="home-page">

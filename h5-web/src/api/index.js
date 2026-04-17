@@ -293,6 +293,12 @@ const finance = {
   payrollSummary: (payload) => http.post('/api/finance/payroll-settlement/operator-summary', payload),
 };
 
+const intelligence = {
+  getLivePulse: () => http.post('/api/intelligence/live-pulse'),
+  getWorkerEfficiency: () => http.post('/api/intelligence/worker-efficiency'),
+  getFactoryBottleneck: () => http.get('/api/intelligence/factory-bottleneck'),
+};
+
 const api = {
   production,
   system,
@@ -312,11 +318,12 @@ const api = {
   orderManagement,
   sampleStock,
   finance,
+  intelligence,
 };
 
 export default api;
 export {
   production, system, serial, factory, factoryWorker, tenant,
   intelligence, notice, dashboard, wechat, common,
-  style, warehouse, material, materialRoll, orderManagement, sampleStock, finance,
+  style, warehouse, material, materialRoll, orderManagement, sampleStock, finance, intelligence,
 };
