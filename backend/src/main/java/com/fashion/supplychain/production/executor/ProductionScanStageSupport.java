@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.executor;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
@@ -108,17 +109,36 @@ public class ProductionScanStageSupport {
         }
 
         List<String> missing = new ArrayList<>();
-        List<ScanRecord> existingRecords = scanRecordService.list(new LambdaQueryWrapper<ScanRecord>()
-                .select(ScanRecord::getProcessCode, ScanRecord::getProcessName)
-                .eq(ScanRecord::getOrderId, order.getId())
-                .and(bw -> bw.isNull(ScanRecord::getCuttingBundleId)
-                        .or().eq(ScanRecord::getCuttingBundleId, bundle.getId()))
-                .in(ScanRecord::getScanType, java.util.Arrays.asList("production", "cutting", "quality"))
-                .eq(ScanRecord::getScanResult, "success"));
+        QueryWrapper<ScanRecord> qw = new QueryWrapper<ScanRecord>()
+                .select("DISTINCT process_code")
+                .eq("order_id", order.getId())
+                .and(bw -> bw.isNull("cutting_bundle_id")
+                        .or().eq("cutting_bundle_id", bundle.getId()))
+                .in("scan_type", java.util.Arrays.asList("production", "cutting", "quality"))
+                .eq("scan_result", "success")
+                .isNotNull("process_code");
+        List<Map<String, Object>> codeResult = scanRecordService.listMaps(qw);
         java.util.Set<String> completedProcesses = new java.util.HashSet<>();
-        for (ScanRecord r : existingRecords) {
-            if (r.getProcessCode() != null) completedProcesses.add(r.getProcessCode());
-            if (r.getProcessName() != null) completedProcesses.add(r.getProcessName());
+        if (codeResult != null) {
+            for (Map<String, Object> row : codeResult) {
+                Object val = row.get("process_code");
+                if (val != null) completedProcesses.add(val.toString().trim());
+            }
+        }
+        QueryWrapper<ScanRecord> qw2 = new QueryWrapper<ScanRecord>()
+                .select("DISTINCT process_name")
+                .eq("order_id", order.getId())
+                .and(bw -> bw.isNull("cutting_bundle_id")
+                        .or().eq("cutting_bundle_id", bundle.getId()))
+                .in("scan_type", java.util.Arrays.asList("production", "cutting", "quality"))
+                .eq("scan_result", "success")
+                .isNotNull("process_name");
+        List<Map<String, Object>> nameResult = scanRecordService.listMaps(qw2);
+        if (nameResult != null) {
+            for (Map<String, Object> row : nameResult) {
+                Object val = row.get("process_name");
+                if (val != null) completedProcesses.add(val.toString().trim());
+            }
         }
         for (String process : required) {
             if (!completedProcesses.contains(process)) {

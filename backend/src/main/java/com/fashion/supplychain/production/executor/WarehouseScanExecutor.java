@@ -23,7 +23,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -625,23 +624,20 @@ public class WarehouseScanExecutor {
     private int getDefectQtyFromScanRecord(String orderId, String bundleId) {
         if (!hasText(orderId) || !hasText(bundleId)) return 0;
         try {
-            // 查最新的质检确认记录（processCode=quality_receive, confirmTime 不为空, remark 以 unqualified 开头）
-            List<ScanRecord> qualityRecs = scanRecordService.lambdaQuery()
+            ScanRecord latest = scanRecordService.getOne(new LambdaQueryWrapper<ScanRecord>()
+                    .select(ScanRecord::getId, ScanRecord::getRemark, ScanRecord::getQuantity, ScanRecord::getConfirmTime)
                     .eq(ScanRecord::getOrderId, orderId)
                     .eq(ScanRecord::getCuttingBundleId, bundleId)
                     .eq(ScanRecord::getProcessCode, "quality_receive")
                     .isNotNull(ScanRecord::getConfirmTime)
                     .eq(ScanRecord::getScanResult, "success")
-                    .list();
-            if (qualityRecs == null || qualityRecs.isEmpty()) return 0;
+                    .orderByDesc(ScanRecord::getConfirmTime)
+                    .last("limit 1"));
+            if (latest == null) return 0;
 
-            // 取 confirmTime 最新的记录
-            qualityRecs.sort(Comparator.comparing(ScanRecord::getConfirmTime).reversed());
-            ScanRecord latest = qualityRecs.get(0);
             String remark = latest.getRemark() == null ? "" : latest.getRemark();
             if (!remark.startsWith("unqualified")) return 0;
 
-            // 报废不走次品入库流程（与 StageDetector.isScrap 逻辑保持一致）
             if (remark.contains("|报废|") || remark.endsWith("|报废")) return 0;
 
             return parseDefectQtyFromRemark(remark,

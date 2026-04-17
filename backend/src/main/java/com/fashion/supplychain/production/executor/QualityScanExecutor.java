@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.executor;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fashion.supplychain.common.util.NumberUtils;
 import com.fashion.supplychain.common.util.TextUtils;
@@ -449,18 +450,48 @@ public class QualityScanExecutor {
 
             // 2. 检查每个车缝子工序是否都有扫码记录归属人
             List<String> missingProcesses = new ArrayList<>();
-            List<ScanRecord> sewingRecords = scanRecordService.list(new LambdaQueryWrapper<ScanRecord>()
-                    .select(ScanRecord::getProcessCode, ScanRecord::getProcessName, ScanRecord::getProgressStage)
-                    .eq(ScanRecord::getOrderId, orderId)
-                    .eq(ScanRecord::getCuttingBundleId, bundleId)
-                    .eq(ScanRecord::getScanType, "production")
-                    .eq(ScanRecord::getScanResult, "success")
-                    .isNotNull(ScanRecord::getOperatorId));
+            QueryWrapper<ScanRecord> qwCode = new QueryWrapper<ScanRecord>()
+                    .select("DISTINCT process_code")
+                    .eq("order_id", orderId)
+                    .eq("cutting_bundle_id", bundleId)
+                    .eq("scan_type", "production")
+                    .eq("scan_result", "success")
+                    .isNotNull("process_code");
             java.util.Set<String> completedSet = new java.util.HashSet<>();
-            for (ScanRecord r : sewingRecords) {
-                if (r.getProcessCode() != null) completedSet.add(r.getProcessCode());
-                if (r.getProcessName() != null) completedSet.add(r.getProcessName());
-                if (r.getProgressStage() != null) completedSet.add(r.getProgressStage());
+            List<Map<String, Object>> codeRows = scanRecordService.listMaps(qwCode);
+            if (codeRows != null) {
+                for (Map<String, Object> row : codeRows) {
+                    Object val = row.get("process_code");
+                    if (val != null) completedSet.add(val.toString().trim());
+                }
+            }
+            QueryWrapper<ScanRecord> qwName = new QueryWrapper<ScanRecord>()
+                    .select("DISTINCT process_name")
+                    .eq("order_id", orderId)
+                    .eq("cutting_bundle_id", bundleId)
+                    .eq("scan_type", "production")
+                    .eq("scan_result", "success")
+                    .isNotNull("process_name");
+            List<Map<String, Object>> nameRows = scanRecordService.listMaps(qwName);
+            if (nameRows != null) {
+                for (Map<String, Object> row : nameRows) {
+                    Object val = row.get("process_name");
+                    if (val != null) completedSet.add(val.toString().trim());
+                }
+            }
+            QueryWrapper<ScanRecord> qwStage = new QueryWrapper<ScanRecord>()
+                    .select("DISTINCT progress_stage")
+                    .eq("order_id", orderId)
+                    .eq("cutting_bundle_id", bundleId)
+                    .eq("scan_type", "production")
+                    .eq("scan_result", "success")
+                    .isNotNull("progress_stage");
+            List<Map<String, Object>> stageRows = scanRecordService.listMaps(qwStage);
+            if (stageRows != null) {
+                for (Map<String, Object> row : stageRows) {
+                    Object val = row.get("progress_stage");
+                    if (val != null) completedSet.add(val.toString().trim());
+                }
             }
             for (String processName : sewingSubProcesses) {
                 if (!completedSet.contains(processName)) {
@@ -853,40 +884,30 @@ public class QualityScanExecutor {
     @SuppressWarnings("unused")
     private void validateNotDuplicateWarehousing(String orderId, String bundleId, boolean isUnqualified) {
         try {
-            List<ProductWarehousing> existingList = productWarehousingService.list(
+            long qualifiedCount = productWarehousingService.count(
                     new LambdaQueryWrapper<ProductWarehousing>()
-                            .select(ProductWarehousing::getId, ProductWarehousing::getQualityStatus,
-                                    ProductWarehousing::getWarehousingQuantity,
-                                    ProductWarehousing::getQualifiedQuantity,
-                                    ProductWarehousing::getUnqualifiedQuantity)
                             .eq(ProductWarehousing::getDeleteFlag, 0)
                             .eq(ProductWarehousing::getOrderId, orderId)
                             .eq(ProductWarehousing::getCuttingBundleId, bundleId)
-                            .orderByDesc(ProductWarehousing::getCreateTime));
-
-            if (existingList != null) {
-                for (ProductWarehousing w : existingList) {
-                    if (w == null) continue;
-
-                    int totalQty = w.getWarehousingQuantity() == null
-                            ? (w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity())
-                              + (w.getUnqualifiedQuantity() == null ? 0 : w.getUnqualifiedQuantity())
-                            : w.getWarehousingQuantity();
-                    if (totalQty <= 0) continue;
-
-                    String qs = TextUtils.safeText(w.getQualityStatus());
-                    if (!hasText(qs) || "qualified".equalsIgnoreCase(qs)) {
-                        throw new IllegalStateException("该菲号已质检合格，不能重复扫码");
-                    }
-                    if (isUnqualified && "unqualified".equalsIgnoreCase(qs)) {
-                        throw new IllegalStateException("该菲号已质检记录，不能重复扫码");
-                    }
+                            .eq(ProductWarehousing::getQualityStatus, "qualified")
+                            .gt(ProductWarehousing::getWarehousingQuantity, 0));
+            if (qualifiedCount > 0) {
+                throw new IllegalStateException("该菲号已质检合格，不能重复扫码");
+            }
+            if (isUnqualified) {
+                long unqualifiedCount = productWarehousingService.count(
+                        new LambdaQueryWrapper<ProductWarehousing>()
+                                .eq(ProductWarehousing::getDeleteFlag, 0)
+                                .eq(ProductWarehousing::getOrderId, orderId)
+                                .eq(ProductWarehousing::getCuttingBundleId, bundleId)
+                                .eq(ProductWarehousing::getQualityStatus, "unqualified"));
+                if (unqualifiedCount > 0) {
+                    throw new IllegalStateException("该菲号已质检记录，不能重复扫码");
                 }
             }
         } catch (IllegalStateException e) {
             throw e;
         } catch (Exception e) {
-            // 检查失败不阻止流程
             log.warn("检查重复入库失败: orderId={}, bundleId={}", orderId, bundleId, e);
         }
     }
@@ -897,7 +918,6 @@ public class QualityScanExecutor {
     @SuppressWarnings("unused")
     private int computeRemainingRepairQuantity(String orderId, String bundleId, String excludeId) {
         try {
-            // 1. 获取菲号原始裁剪数量
             CuttingBundle bundle = cuttingBundleService.getById(bundleId);
             if (bundle == null) {
                 return 0;
@@ -906,17 +926,20 @@ public class QualityScanExecutor {
             if (totalQty <= 0) {
                 return 0;
             }
-            // 2. 统计该菲号已入库数量（排除指定记录，避免重复计算当前操作）
-            LambdaQueryWrapper<ProductWarehousing> query = new LambdaQueryWrapper<ProductWarehousing>()
-                    .eq(ProductWarehousing::getOrderId, orderId)
-                    .eq(ProductWarehousing::getCuttingBundleId, bundleId);
+            QueryWrapper<ProductWarehousing> qw = new QueryWrapper<ProductWarehousing>()
+                    .select("COALESCE(SUM(qualified_quantity), 0) as totalQualified")
+                    .eq("order_id", orderId)
+                    .eq("cutting_bundle_id", bundleId)
+                    .eq("delete_flag", 0);
             if (hasText(excludeId)) {
-                query.ne(ProductWarehousing::getId, excludeId);
+                qw.ne("id", excludeId);
             }
-            List<ProductWarehousing> warehousingList = productWarehousingService.list(query);
-            int warehoused = warehousingList.stream()
-                    .mapToInt(w -> w.getQualifiedQuantity() != null ? w.getQualifiedQuantity() : 0)
-                    .sum();
+            List<Map<String, Object>> result = productWarehousingService.listMaps(qw);
+            int warehoused = 0;
+            if (result != null && !result.isEmpty()) {
+                Object val = result.get(0).get("totalQualified");
+                if (val instanceof Number) warehoused = ((Number) val).intValue();
+            }
             return Math.max(0, totalQty - warehoused);
         } catch (Exception e) {
             log.warn("计算剩余返修数量失败: orderId={}, bundleId={}", orderId, bundleId, e);

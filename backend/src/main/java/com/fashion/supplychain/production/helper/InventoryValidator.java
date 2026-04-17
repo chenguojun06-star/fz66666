@@ -1,6 +1,5 @@
 package com.fashion.supplychain.production.helper;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductionOrder;
@@ -152,23 +151,20 @@ public class InventoryValidator {
      */
     private int calculateTotalCuttingQuantity(String orderId) {
         try {
-            List<CuttingBundle> bundles = cuttingBundleService.lambdaQuery()
-                    .select(CuttingBundle::getQuantity)
-                    .eq(CuttingBundle::getProductionOrderId, orderId)
-                    .list();
-
-            if (bundles == null || bundles.isEmpty()) {
-                log.debug("订单没有裁剪菲号: orderId={}", orderId);
-                return 0;
+            QueryWrapper<CuttingBundle> qw = new QueryWrapper<CuttingBundle>()
+                    .select("COALESCE(SUM(quantity), 0) as totalQty")
+                    .eq("production_order_id", orderId);
+            List<Map<String, Object>> result = cuttingBundleService.listMaps(qw);
+            if (result != null && !result.isEmpty()) {
+                Object val = result.get(0).get("totalQty");
+                if (val instanceof Number) {
+                    int total = ((Number) val).intValue();
+                    log.debug("计算裁剪总量(SQL聚合): orderId={}, totalQty={}", orderId, total);
+                    return total;
+                }
             }
-
-            int total = bundles.stream()
-                    .mapToInt(b -> b.getQuantity() != null ? b.getQuantity() : 0)
-                    .sum();
-
-            log.debug("计算裁剪总量: orderId={}, bundleCount={}, totalQty={}",
-                    orderId, bundles.size(), total);
-            return total;
+            log.debug("订单没有裁剪菲号: orderId={}", orderId);
+            return 0;
         } catch (Exception e) {
             log.error("计算裁剪总量失败: orderId={}", orderId, e);
             return 0;
