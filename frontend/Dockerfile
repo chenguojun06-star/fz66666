@@ -11,7 +11,8 @@ WORKDIR /app
 # 先复制 package 文件（利用 Docker 层缓存）
 COPY package.json package-lock.json* ./
 
-RUN npm ci --legacy-peer-deps
+RUN npm config set registry https://registry.npmmirror.com \
+    && npm ci --legacy-peer-deps
 
 # 复制源码并构建
 COPY . .
