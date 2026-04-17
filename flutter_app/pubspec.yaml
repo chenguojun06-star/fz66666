@@ -1,0 +1,41 @@
+name: fashion_supplychain
+description: "服装供应链生产管理系统 - Flutter独立App"
+publish_to: 'none'
+version: 1.1.0+2
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  get: ^4.6.6
+  dio: ^5.4.0
+  shared_preferences: ^2.2.2
+  mobile_scanner: ^5.1.1
+  path_provider: ^2.1.2
+  sqflite: ^2.3.2
+  cached_network_image: ^3.3.1
+  image_picker: ^1.0.7
+  permission_handler: ^11.3.0
+  connectivity_plus: ^6.0.3
+  pull_to_refresh_flutter3: ^2.0.2
+  flutter_svg: ^2.0.10
+  intl: ^0.19.0
+  json_annotation: ^4.9.0
+  logger: ^2.5.0
+  web_socket_channel: ^3.0.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  build_runner: ^2.4.8
+  json_serializable: ^6.7.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icons/
+    - assets/tabbar/

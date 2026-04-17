@@ -285,6 +285,20 @@ public class ProductionOrderFinanceOrchestrationService {
         }
 
         int warehousingQualified = productWarehousingService.sumQualifiedByOrderId(oid);
+        if (warehousingQualified <= 0) {
+            Integer orderWareQty = order.getWarehousingQualifiedQuantity();
+            if (orderWareQty != null && orderWareQty > 0) {
+                warehousingQualified = orderWareQty;
+                log.info("关单入库数回退：orderId={}, ProductWarehousing聚合为0, 使用order.warehousingQualifiedQuantity={}", oid, orderWareQty);
+            }
+        }
+        if (warehousingQualified <= 0) {
+            Integer completedQty = order.getCompletedQuantity();
+            if (completedQty != null && completedQty > 0) {
+                warehousingQualified = completedQty;
+                log.info("关单入库数回退：orderId={}, 使用completedQuantity={}", oid, completedQty);
+            }
+        }
 
         if (!specialClose) {
             if (cuttingQty <= 0) {
