@@ -59,46 +59,31 @@ public class CuttingTaskOrchestrator {
         return StringUtils.hasText(orderNo) && orderNo.toUpperCase().startsWith("CUT");
     }
 
-    @Autowired
     private CuttingTaskService cuttingTaskService;
 
-    @Autowired
     private StyleInfoService styleInfoService;
 
-    @Autowired
     private CuttingBundleService cuttingBundleService;
 
-    @Autowired
     private ProductionOrderService productionOrderService;
 
-    @Autowired
     private ProductionOrderScanRecordDomainService scanRecordDomainService;
 
-    @Autowired
     private com.fashion.supplychain.production.service.SysNoticeService sysNoticeService;
 
-    @Autowired
     private TemplateLibraryService templateLibraryService;
 
-    @Autowired
     private FactoryService factoryService;
 
-    @Autowired
     private OrganizationUnitService organizationUnitService;
 
-    @Autowired
     private OrganizationUnitBindingHelper organizationUnitBindingHelper;
 
-    @Autowired
     private ObjectMapper objectMapper;
 
-    @Autowired
-    private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
 
-    @Autowired
     private MaterialPurchaseService materialPurchaseService;
 
-    @Autowired
     private OrderRemarkService orderRemarkService;
 
     private boolean hasCuttingMaterialReady(ProductionOrder order, CuttingTask task) {

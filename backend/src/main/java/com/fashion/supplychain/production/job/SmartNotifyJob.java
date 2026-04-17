@@ -23,22 +23,15 @@ import com.fashion.supplychain.intelligence.service.WxAlertNotifyService;
 @Component
 public class SmartNotifyJob {
 
-    @Autowired
-    private SysNoticeOrchestrator sysNoticeOrchestrator;
 
-    @Autowired
     private SysNoticeService sysNoticeService;
 
-    @Autowired
     private ProcessStatsEngine processStatsEngine;
 
-    @Autowired
     private MindPushOrchestrator mindPushOrchestrator;
 
-    @Autowired
     private AnomalyDetectionOrchestrator anomalyDetectionOrchestrator;
 
-    @Autowired
     private WxAlertNotifyService wxAlertNotifyService;
 
     @Autowired(required = false)

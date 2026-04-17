@@ -367,7 +367,7 @@ Page({
       return;
     }
     if (token && isTokenExpired()) {
-      try { wx.removeStorageSync('auth_token'); } catch (_) {}
+      try { wx.removeStorageSync('auth_token'); } catch (_) { /* ignore */ }
     }
 
     const envVersion = resolveEnvVersion();

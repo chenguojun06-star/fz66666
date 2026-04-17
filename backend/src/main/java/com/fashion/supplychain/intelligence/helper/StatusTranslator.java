@@ -105,7 +105,6 @@ public final class StatusTranslator {
             Pattern.compile("\\bjava\\.[a-zA-Z.]+\\b");
 
     /** 清除连续的英文 camelCase 词（≥2个单词组合） */
-            Pattern.compile("\\b[a-z]+(?:[A-Z][a-z]+){1,}\\b");
 
     /**
      * 翻译状态码，未匹配返回原文。

@@ -35,40 +35,27 @@ import org.springframework.util.StringUtils;
 @Slf4j
 public class MaterialPurchaseStatusHelper {
 
-    @Autowired
     private MaterialPurchaseService materialPurchaseService;
 
-    @Autowired
     private ProductionOrderService productionOrderService;
 
-    @Autowired
     private ProductionOrderOrchestrator productionOrderOrchestrator;
 
-    @Autowired
     private ProductionOrderScanRecordDomainService scanRecordDomainService;
 
-    @Autowired
     private MaterialReconciliationOrchestrator materialReconciliationOrchestrator;
 
-    @Autowired
     private MaterialPurchaseOrchestratorHelper helper;
 
-    @Autowired
     private MaterialQualityIssueOrchestrator materialQualityIssueOrchestrator;
 
-    @Autowired
     private MaterialPickingService materialPickingService;
 
-    @Autowired
-    private com.fashion.supplychain.production.orchestration.SysNoticeOrchestrator sysNoticeOrchestrator;
 
-    @Autowired
     private com.fashion.supplychain.production.service.SysNoticeService sysNoticeService;
 
-    @Autowired
     private com.fashion.supplychain.production.service.MaterialStockService materialStockService;
 
-    @Autowired
     private com.fashion.supplychain.websocket.service.WebSocketService webSocketService;
 
     public MaterialPurchase receive(Map<String, Object> body) {
@@ -151,6 +138,7 @@ public class MaterialPurchaseStatusHelper {
         try {
             Long tenantId = UserContext.tenantId();
             String orderNo = updated.getOrderNo() != null ? updated.getOrderNo() : "";
+            String materialName = updated.getMaterialName() != null ? updated.getMaterialName() : "物料";
             String receiver = rname != null && !rname.isEmpty() ? rname : rid;
             com.fashion.supplychain.production.entity.SysNotice notice = new com.fashion.supplychain.production.entity.SysNotice();
             notice.setTenantId(tenantId);

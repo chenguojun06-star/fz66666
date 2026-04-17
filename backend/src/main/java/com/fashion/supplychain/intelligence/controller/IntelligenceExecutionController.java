@@ -49,28 +49,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @PreAuthorize("isAuthenticated()")
 public class IntelligenceExecutionController {
 
-    @Autowired
-    private CommandGeneratorOrchestrator commandGenerator;
 
-    @Autowired
     private PermissionDecisionOrchestrator permissionDecision;
 
-    @Autowired
     private ExecutionEngineOrchestrator executionEngine;
 
-    @Autowired
     private AuditTrailOrchestrator auditTrail;
 
-    @Autowired
     private SmartWorkflowOrchestrator smartWorkflow;
 
-    @Autowired
     private IntelligenceAuditLogMapper auditLogMapper;
 
-    @Autowired
     private ObjectMapper objectMapper;
 
-    @Autowired
     private ProductionAgenticCrewOrchestrator crewOrchestrator;
 
     /**

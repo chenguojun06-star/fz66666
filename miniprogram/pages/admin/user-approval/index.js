@@ -1,6 +1,6 @@
 const api = require('../../../utils/api');
 const { isAdminOrSupervisor } = require('../../../utils/permission');
-const { isTenantOwner, isFactoryOwner } = require('../../../utils/storage');
+const { isTenantOwner, isFactoryOwner, isSuperAdmin } = require('../../../utils/storage');
 const { toast } = require('../../../utils/uiHelper');
 
 Page({
@@ -15,7 +15,7 @@ Page({
     tenantTotal: 0,
     isTenantOwner: false,
     isFactoryOwner: false,
-    isAdminOrSupervisor: false,
+    isPlatformAdmin: false,
     activeTab: 'tenant',
     showApprovalModal: false,
     showRejectModal: false,
@@ -36,7 +36,8 @@ Page({
     const ownerFlag = isTenantOwner();
     const factoryOwnerFlag = isFactoryOwner();
     const adminFlag = isAdminOrSupervisor();
-    this.setData({ isTenantOwner: ownerFlag, isFactoryOwner: factoryOwnerFlag, isAdminOrSupervisor: adminFlag });
+    const platformAdminFlag = isSuperAdmin();
+    this.setData({ isTenantOwner: ownerFlag, isFactoryOwner: factoryOwnerFlag, isPlatformAdmin: platformAdminFlag });
 
     if (!adminFlag && !ownerFlag && !factoryOwnerFlag) {
       toast.error('仅管理员可访问', 2000);
@@ -44,13 +45,13 @@ Page({
       return;
     }
 
-    if (adminFlag) {
+    if (platformAdminFlag) {
       this.setData({ activeTab: 'system' });
     } else {
       this.setData({ activeTab: 'tenant' });
     }
 
-    if (adminFlag) {
+    if (platformAdminFlag) {
       this.loadPendingUsers(true);
       this.loadRoleOptions();
     }
@@ -60,7 +61,7 @@ Page({
   },
 
   onPullDownRefresh() {
-    if (this.data.activeTab === 'system' && this.data.isAdminOrSupervisor) {
+    if (this.data.activeTab === 'system' && this.data.isPlatformAdmin) {
       this.loadPendingUsers(true);
     } else {
       this.loadTenantRegistrations();
@@ -68,7 +69,7 @@ Page({
   },
 
   onReachBottom() {
-    if (this.data.activeTab === 'system' && this.data.isAdminOrSupervisor && this.data.hasMore && !this.data.loading) {
+    if (this.data.activeTab === 'system' && this.data.isPlatformAdmin && this.data.hasMore && !this.data.loading) {
       this.setData({ page: this.data.page + 1 }, () => {
         this.loadPendingUsers(false);
       });
@@ -116,7 +117,7 @@ Page({
 
   onTabChange(e) {
     var tab = e.currentTarget.dataset.tab;
-    if (tab === 'system' && !this.data.isAdminOrSupervisor) return;
+    if (tab === 'system' && !this.data.isPlatformAdmin) return;
     this.setData({ activeTab: tab });
   },
 

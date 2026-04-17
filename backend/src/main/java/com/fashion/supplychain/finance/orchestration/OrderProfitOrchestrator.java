@@ -47,34 +47,23 @@ import java.util.TreeMap;
 @Service
 public class OrderProfitOrchestrator {
 
-    @Autowired
     private ProductionOrderService productionOrderService;
 
-    @Autowired
     private MaterialPurchaseService materialPurchaseService;
 
-    @Autowired
     private ProductWarehousingService productWarehousingService;
 
-    @Autowired
     private ShipmentReconciliationService shipmentReconciliationService;
 
-    @Autowired
     private StyleInfoService styleInfoService;
 
-    @Autowired
     private StyleQuotationService styleQuotationService;
 
-    @Autowired
-    private TemplateLibraryService templateLibraryService;
 
-    @Autowired
     private StyleBomService styleBomService;
 
-    @Autowired
     private StyleProcessService styleProcessService;
 
-    @Autowired
     private SecondaryProcessService secondaryProcessService;
 
     /**

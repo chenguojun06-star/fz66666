@@ -43,37 +43,25 @@ import java.util.Map;
 @PreAuthorize("isAuthenticated()")
 public class ProductionOrderController {
 
-    @Autowired
     private ProductionOrderOrchestrator productionOrderOrchestrator;
 
-    @Autowired
     private ProductionOrderService productionOrderService;
 
-    @Autowired
-    private ProductionOrderDtoConverter productionOrderDtoConverter;
 
-    @Autowired
     private ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
 
-    @Autowired
     private FactoryCapacityOrchestrator factoryCapacityOrchestrator;
 
-    @Autowired
     private ProductionOrderExportOrchestrator exportOrchestrator;
 
-    @Autowired
     private OrderHealthScoreOrchestrator orderHealthScoreOrchestrator;
 
-    @Autowired
     private SysNoticeOrchestrator sysNoticeOrchestrator;
 
-    @Autowired
     private StyleInfoService styleInfoService;
 
-    @Autowired
     private com.fashion.supplychain.style.service.SecondaryProcessService secondaryProcessService;
 
-    @Autowired
     private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     /**

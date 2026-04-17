@@ -24,14 +24,11 @@ import java.util.stream.Collectors;
 @PreAuthorize("isAuthenticated()")
 public class AgentActivityController {
 
-    @Autowired
     private IntelligenceAuditLogMapper auditLogMapper;
 
-    @Autowired
     private IntelligenceSignalMapper signalMapper;
 
     @Autowired(required = false)
-    private AiJobRunLogService jobRunLogService;
 
     private static final List<AgentDefinition> AGENT_DEFINITIONS = List.of(
             new AgentDefinition("order-manager", "订单管家", "production", "#1677ff",

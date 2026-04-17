@@ -53,7 +53,6 @@ import java.util.stream.Collectors;
 public class OrphanDataDetector {
 
     private static final Set<String> ORPHAN_ORDER_STATUSES = Set.of("cancelled", "scrapped", "closed", "archived");
-    private static final Set<String> ORPHAN_STYLE_STATUSES = Set.of("SCRAPPED");
 
     private static final Map<String, String> ORPHAN_STATUS_LABEL = Map.of(
             "cancelled", "已取消",

@@ -48,19 +48,13 @@ import java.util.UUID;
 @Service
 public class SmartWorkflowOrchestrator {
 
-    @Autowired
-    private SmartNotificationOrchestrator notificationOrchestrator;
 
-    @Autowired
     private AuditTrailOrchestrator auditTrail;
 
-    @Autowired
     private FollowupTaskOrchestrator followupTaskOrchestrator;
 
-    @Autowired
     private IntelligenceWorkflowLogMapper workflowLogMapper;
 
-    @Autowired
     private ObjectMapper objectMapper;
 
     /**

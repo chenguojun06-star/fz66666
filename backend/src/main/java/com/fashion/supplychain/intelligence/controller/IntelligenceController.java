@@ -39,202 +39,137 @@ public class IntelligenceController {
     @Value("${app.sse.timeout:240000}")
     private long sseTimeout;
 
-    @Autowired
     private org.springframework.data.redis.core.StringRedisTemplate stringRedisTemplate;
 
     @Value("${app.upload.max-size:5242880}")
     private long uploadMaxSize;
 
-    @Autowired
     private SmartPrecheckOrchestrator smartPrecheckOrchestrator;
 
-    @Autowired
     private com.fashion.supplychain.intelligence.orchestration.AiAgentOrchestrator aiAgentOrchestrator;
 
-    @Autowired
     private AiAdvisorChatResponseOrchestrator aiAdvisorChatResponseOrchestrator;
 
-    @Autowired
-    private AiMemoryOrchestrator aiMemoryOrchestrator;
 
-    @Autowired
     private ProgressPredictOrchestrator progressPredictOrchestrator;
 
-    @Autowired
     private InoutDecisionOrchestrator inoutDecisionOrchestrator;
 
-    @Autowired
     private FeedbackLearningOrchestrator feedbackLearningOrchestrator;
 
-    @Autowired
     private AiPatrolOrchestrator aiPatrolOrchestrator;
 
-    @Autowired
     private WorkerProfileOrchestrator workerProfileOrchestrator;
 
-    @Autowired
     private BottleneckDetectionOrchestrator bottleneckDetectionOrchestrator;
 
-    @Autowired
     private OrderDeliveryRiskOrchestrator orderDeliveryRiskOrchestrator;
 
-    @Autowired
     private AnomalyDetectionOrchestrator anomalyDetectionOrchestrator;
 
-    @Autowired
     private SmartAssignmentOrchestrator smartAssignmentOrchestrator;
 
-    @Autowired
     private LearningReportOrchestrator learningReportOrchestrator;
 
     // ── 第三批（12大黑科技）──
 
-    @Autowired
     private LivePulseOrchestrator livePulseOrchestrator;
 
-    @Autowired
     private WorkerEfficiencyOrchestrator workerEfficiencyOrchestrator;
 
-    @Autowired
     private DeliveryPredictionOrchestrator deliveryPredictionOrchestrator;
 
-    @Autowired
     private ProfitEstimationOrchestrator profitEstimationOrchestrator;
 
-    @Autowired
     private FactoryLeaderboardOrchestrator factoryLeaderboardOrchestrator;
 
-    @Autowired
     private RhythmDnaOrchestrator rhythmDnaOrchestrator;
 
-    @Autowired
     private SelfHealingOrchestrator selfHealingOrchestrator;
 
-    @Autowired
     private SmartNotificationOrchestrator smartNotificationOrchestrator;
 
-    @Autowired
     private NlQueryOrchestrator nlQueryOrchestrator;
 
-    @Autowired
     private HealthIndexOrchestrator healthIndexOrchestrator;
 
-    @Autowired
     private SchedulingSuggestionOrchestrator schedulingSuggestionOrchestrator;
 
-    @Autowired
     private DefectHeatmapOrchestrator defectHeatmapOrchestrator;
 
-    @Autowired
     private FinanceAuditOrchestrator financeAuditOrchestrator;
 
-    @Autowired
     private DefectTraceOrchestrator defectTraceOrchestrator;
 
-    @Autowired
     private StyleQuoteSuggestionOrchestrator styleQuoteSuggestionOrchestrator;
 
-    @Autowired
     private StyleIntelligenceProfileOrchestrator styleIntelligenceProfileOrchestrator;
 
-    @Autowired
     private MaterialShortageOrchestrator materialShortageOrchestrator;
 
-    @Autowired
     private FactoryBottleneckOrchestrator factoryBottleneckOrchestrator;
 
-    @Autowired
     private ProcessPriceHintOrchestrator processPriceHintOrchestrator;
 
-    @Autowired
     private ProcessKnowledgeOrchestrator processKnowledgeOrchestrator;
 
-    @Autowired
     private DeliveryDateSuggestionOrchestrator deliveryDateSuggestionOrchestrator;
 
-    @Autowired
     private ProcessTemplateOrchestrator processTemplateOrchestrator;
 
     // ── 第四批（智能信号/记忆/学习闭环/统一大脑）──
-    @Autowired
     private IntelligenceSignalOrchestrator intelligenceSignalOrchestrator;
 
-    @Autowired
     private IntelligenceMemoryOrchestrator intelligenceMemoryOrchestrator;
 
-    @Autowired
     private LearningLoopOrchestrator learningLoopOrchestrator;
 
-    @Autowired
     private TenantIntelligenceBrainOrchestrator tenantIntelligenceBrainOrchestrator;
 
-    @Autowired
     private AiAdvisorService aiAdvisorService;
 
-    @Autowired
     private AiContextBuilderService aiContextBuilderService;
 
-    @Autowired
     private ProcessStatsEngine processStatsEngine;
 
-    @Autowired
     private SupplierScorecardOrchestrator supplierScorecardOrchestrator;
 
-    @Autowired
     private ProfessionalReportOrchestrator professionalReportOrchestrator;
 
-    @Autowired
     private com.fashion.supplychain.intelligence.orchestration.FileAnalysisOrchestrator fileAnalysisOrchestrator;
 
-    @Autowired
     private com.fashion.supplychain.intelligence.mapper.IntelligenceMetricsMapper intelligenceMetricsMapper;
 
-    @Autowired
     private AgentMeetingOrchestrator agentMeetingOrchestrator;
 
-    @Autowired
     private LiveCostTrackerOrchestrator liveCostTrackerOrchestrator;
 
-    @Autowired
     private IntelligenceBrainOrchestrator intelligenceBrainOrchestrator;
 
-    @Autowired
     private ActionCenterOrchestrator actionCenterOrchestrator;
 
-    @Autowired
     private ActionTaskFeedbackOrchestrator actionTaskFeedbackOrchestrator;
 
-    @Autowired
     private ScanTipsOrchestrator scanTipsOrchestrator;
 
-    @Autowired
     private IntelligenceObservabilityOrchestrator observabilityOrchestrator;
 
-    @Autowired
     private CapacityGapOrchestrator capacityGapOrchestrator;
 
-    @Autowired
     private StagnantAlertOrchestrator stagnantAlertOrchestrator;
 
-    @Autowired
     private ReconciliationAnomalyOrchestrator reconciliationAnomalyOrchestrator;
 
-    @Autowired
     private ApprovalAdvisorOrchestrator approvalAdvisorOrchestrator;
 
-    @Autowired
     private ReplenishmentAdvisorOrchestrator replenishmentAdvisorOrchestrator;
 
-    @Autowired
     private MonthlyBizSummaryOrchestrator monthlyBizSummaryOrchestrator;
 
-    @Autowired
     private StyleDifficultyOrchestrator styleDifficultyOrchestrator;
 
-    @Autowired
     private SafeAdvisorOrchestrator safeAdvisorOrchestrator;
 
-    @Autowired
     private PendingTaskOrchestrator pendingTaskOrchestrator;
 
     // ── 小云待办任务聚合 ──
@@ -248,7 +183,6 @@ public class IntelligenceController {
         return Result.success(pendingTaskOrchestrator.getMyPendingTaskSummary());
     }
 
-    @Autowired
     private com.fashion.supplychain.intelligence.orchestration.OrphanDataDetector orphanDataDetector;
 
     @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
@@ -1006,7 +940,6 @@ public class IntelligenceController {
 
     // ── 任务可观测性（JobRunObservabilityAspect 自动写入） ──
 
-    @Autowired
     private AiJobRunLogService jobRunLogService;
 
     /**
@@ -1020,10 +953,8 @@ public class IntelligenceController {
         return Result.success(jobRunLogService.queryRecent(limit));
     }
 
-    @Autowired
     private com.fashion.supplychain.intelligence.service.QdrantService qdrantService;
 
-    @Autowired
     private com.fashion.supplychain.style.service.StyleInfoService styleInfoService;
 
     @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
@@ -1050,16 +981,12 @@ public class IntelligenceController {
     //   AI基础设施升级 — 知识图谱 / 优化求解 / 工作流 / Agent状态
     // ══════════════════════════════════════════════════════════════════
 
-    @Autowired
     private com.fashion.supplychain.intelligence.orchestration.KnowledgeGraphOrchestrator knowledgeGraphOrchestrator;
 
-    @Autowired
     private com.fashion.supplychain.intelligence.orchestration.OptimizationSolverOrchestrator optimizationSolverOrchestrator;
 
-    @Autowired
     private com.fashion.supplychain.intelligence.orchestration.WorkflowExecutionOrchestrator workflowExecutionOrchestrator;
 
-    @Autowired
     private com.fashion.supplychain.intelligence.service.AgentStateStore agentStateStore;
 
     /** 知识图谱推理 — 从查询出发多跳遍历图谱，返回推理路径 */

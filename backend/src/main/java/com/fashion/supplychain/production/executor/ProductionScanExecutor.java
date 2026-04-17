@@ -51,59 +51,40 @@ public class ProductionScanExecutor {
             "采购", "裁剪", "二次工艺", "车缝", "尾部", "入库"
     };
 
-    @Autowired
     private ProductionScanStageSupport stageSupport;
 
-    @Autowired
     private ScanRecordService scanRecordService;
 
-    @Autowired
     private CuttingBundleService cuttingBundleService;
 
-    @Autowired
     private ProductionOrderService productionOrderService;
 
-    @Autowired
     private ProcessStageDetector processStageDetector;
 
-    @Autowired
     private InventoryValidator inventoryValidator;
 
-    @Autowired
     private DuplicateScanPreventer duplicateScanPreventer;
 
-    @Autowired
     private SKUService skuService;
 
-    @Autowired
     private TemplateLibraryService templateLibraryService;
 
-    @Autowired
     private MaterialPurchaseService materialPurchaseService;
 
-    @Autowired
     private StyleAttachmentService styleAttachmentService;
 
-    @Autowired
     private com.fashion.supplychain.style.service.StyleInfoService styleInfoService;
 
-    @Autowired
     private com.fashion.supplychain.style.service.SecondaryProcessService secondaryProcessService;
 
-    @Autowired
     private ProcessParentMappingService processParentMappingService;
 
-    @Autowired
     private com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
 
-    @Autowired
     private com.fashion.supplychain.production.service.ProductionProcessTrackingService trackingService;
 
-    @Autowired
     private WebSocketService webSocketService;
 
-    @Autowired
-    private MaterialPurchaseStatusHelper materialPurchaseStatusHelper;
 
     /**
      * 执行生产扫码（裁剪或生产工序）

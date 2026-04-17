@@ -22,7 +22,7 @@ public class WorkflowExecutionOrchestrator {
 
     private final WorkflowDefinitionMapper definitionMapper;
     private final WorkflowExecutionMapper executionMapper;
-    private final AgentStateStore agentStateStore;
+    private AgentStateStore agentStateStore;
     private final IntelligenceInferenceOrchestrator inferenceOrchestrator;
     private final ObjectMapper objectMapper;
 
