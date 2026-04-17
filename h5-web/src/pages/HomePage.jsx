@@ -102,7 +102,7 @@ export default function HomePage() {
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 700, fontSize: 18, lineHeight: 1.3 }}>{displayName}，{getGreeting()}</div>
-            <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginTop: 3 }}>{tenantName || '欢迎使用衣智链'}</div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>衣智链｜多端协同智能提醒平台</div>
           </div>
           {unreadCount > 0 && (
             <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => navigate('/work/inbox')}>
@@ -111,11 +111,6 @@ export default function HomePage() {
             </div>
           )}
         </div>
-      </div>
-
-      <div className="home-time-bar">
-        <span className="home-time-text">{dateInfo.date} {dateInfo.day}</span>
-        <span className="home-time-clock">{currentTime}</span>
       </div>
 
       <div className="weather-card">
@@ -127,8 +122,11 @@ export default function HomePage() {
               <span className="weather-desc">{dateInfo.day}</span>
             </div>
           </div>
-          <span className="weather-season">{dateInfo.season}</span>
+          <div className="weather-right">
+            <span className="weather-season">{dateInfo.season}</span>
+          </div>
         </div>
+        <div style={{ textAlign: 'center', fontSize: 22, fontWeight: 700, color: 'var(--color-text-primary)', fontVariantNumeric: 'tabular-nums', lineHeight: 1.2, padding: '4px 0 2px' }}>{currentTime}</div>
         <div className="weather-tip">{dateInfo.dailyTip}</div>
       </div>
 
