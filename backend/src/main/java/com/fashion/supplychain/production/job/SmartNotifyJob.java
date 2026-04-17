@@ -4,7 +4,6 @@ import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.orchestration.MindPushOrchestrator;
 import com.fashion.supplychain.intelligence.service.ProcessStatsEngine;
 import com.fashion.supplychain.production.entity.SysNotice;
-import com.fashion.supplychain.production.orchestration.SysNoticeOrchestrator;
 import com.fashion.supplychain.production.service.SysNoticeService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

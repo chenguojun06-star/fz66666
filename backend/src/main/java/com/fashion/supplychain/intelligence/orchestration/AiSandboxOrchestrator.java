@@ -1,6 +1,5 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.production.orchestration.FactoryCapacityOrchestrator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

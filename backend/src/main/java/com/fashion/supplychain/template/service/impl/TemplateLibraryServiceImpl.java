@@ -28,7 +28,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
-import com.fashion.supplychain.common.ProcessSynonymMapping;
 import com.fashion.supplychain.template.helper.TemplateStageNameHelper;
 import com.fashion.supplychain.template.helper.TemplateParseUtils;
 

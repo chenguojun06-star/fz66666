@@ -85,7 +85,7 @@ export default function DashboardPage() {
 
   const loadOrders = useCallback(async (reset) => {
     try {
-      const params = { deleteFlag: 0, page: 1, pageSize: 30, excludeTerminal: 'true' };
+      const params = { page: 1, pageSize: 30, excludeTerminal: 'true' };
       if (activeFilter === 'in_production') params.status = 'production';
       else if (activeFilter === 'completed') params.status = 'completed';
       else if (activeFilter === 'overdue') params.status = 'production';
