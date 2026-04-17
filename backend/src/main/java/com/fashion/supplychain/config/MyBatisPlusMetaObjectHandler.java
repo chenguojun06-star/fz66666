@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class MyBatisPlusMetaObjectHandler implements MetaObjectHandler {
 
-    private AuthTokenService authTokenService;
+    private final AuthTokenService authTokenService;
 
     @Override
     public void insertFill(MetaObject metaObject) {

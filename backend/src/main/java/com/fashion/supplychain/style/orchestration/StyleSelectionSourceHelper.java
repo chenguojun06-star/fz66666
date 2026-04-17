@@ -27,7 +27,7 @@ public class StyleSelectionSourceHelper {
     static final String SOURCE_TYPE_SELECTION = "SELECTION_CENTER";
     static final Set<String> SELECTION_SOURCE_DETAILS = Set.of("外部市场", "供应商", "客户定制", "内部选品", "选品中心");
 
-    private SelectionCandidateService selectionCandidateService;
+    private final SelectionCandidateService selectionCandidateService;
 
     /**
      * 批量填充选品来源 + 封面兜底

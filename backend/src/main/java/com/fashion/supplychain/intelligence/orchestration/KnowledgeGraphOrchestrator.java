@@ -22,8 +22,8 @@ public class KnowledgeGraphOrchestrator {
 
     private final KgEntityMapper entityMapper;
     private final KgRelationMapper relationMapper;
-    private IntelligenceInferenceOrchestrator inferenceOrchestrator;
-    private ObjectMapper objectMapper;
+    private final IntelligenceInferenceOrchestrator inferenceOrchestrator;
+    private final ObjectMapper objectMapper;
 
     @Data
     public static class ReasoningPath {

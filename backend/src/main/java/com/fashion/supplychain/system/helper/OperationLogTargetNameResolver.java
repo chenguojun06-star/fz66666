@@ -28,21 +28,21 @@ public class OperationLogTargetNameResolver {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    private StyleInfoService styleInfoService;
+    private final StyleInfoService styleInfoService;
 
-    private ProductionOrderService productionOrderService;
+    private final ProductionOrderService productionOrderService;
 
-    private MaterialPurchaseService materialPurchaseService;
+    private final MaterialPurchaseService materialPurchaseService;
 
-    private MaterialPickingService materialPickingService;
+    private final MaterialPickingService materialPickingService;
 
-    private CuttingTaskService cuttingTaskService;
+    private final CuttingTaskService cuttingTaskService;
 
-    private CuttingBundleService cuttingBundleService;
+    private final CuttingBundleService cuttingBundleService;
 
-    private ProductWarehousingService productWarehousingService;
+    private final ProductWarehousingService productWarehousingService;
 
-    private ProductOutstockService productOutstockService;
+    private final ProductOutstockService productOutstockService;
 
     public String resolveForStoredLog(OperationLog log) {
         if (log == null) {

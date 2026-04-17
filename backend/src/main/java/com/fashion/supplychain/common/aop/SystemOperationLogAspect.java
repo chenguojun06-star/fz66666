@@ -38,19 +38,19 @@ public class SystemOperationLogAspect {
     @Resource
     private final OperationLogService operationLogService;
 
-    private StyleInfoService styleInfoService;
+    private final StyleInfoService styleInfoService;
 
-    private ProductionOrderService productionOrderService;
+    private final ProductionOrderService productionOrderService;
 
-    private MaterialPurchaseService materialPurchaseService;
+    private final MaterialPurchaseService materialPurchaseService;
 
-    private MaterialPickingService materialPickingService;
+    private final MaterialPickingService materialPickingService;
 
-    private CuttingTaskService cuttingTaskService;
+    private final CuttingTaskService cuttingTaskService;
 
-    private CuttingBundleService cuttingBundleService;
+    private final CuttingBundleService cuttingBundleService;
 
-    private OperationLogTargetNameResolver operationLogTargetNameResolver;
+    private final OperationLogTargetNameResolver operationLogTargetNameResolver;
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 

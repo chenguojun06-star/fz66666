@@ -25,7 +25,7 @@ import java.time.LocalTime;
 @RequiredArgsConstructor
 public class OperationLogServiceImpl extends ServiceImpl<OperationLogMapper, OperationLog> implements OperationLogService {
 
-    private OperationLogTargetNameResolver operationLogTargetNameResolver;
+    private final OperationLogTargetNameResolver operationLogTargetNameResolver;
 
     @Override
     public Page<OperationLog> getOperationLogPage(

@@ -29,7 +29,7 @@ import java.util.concurrent.TimeUnit;
 public class MaterialInboundServiceImpl extends ServiceImpl<MaterialInboundMapper, MaterialInbound>
         implements MaterialInboundService {
 
-    private DistributedLockService distributedLockService;
+    private final DistributedLockService distributedLockService;
 
     @Override
     public IPage<MaterialInbound> queryPage(Page<MaterialInbound> page, String materialCode, String purchaseId) {

@@ -54,10 +54,10 @@ public class FinishedInventoryOrchestrator {
     /** 电商订单回写（出库后自动更新平台物流状态） */
     @Lazy
     @Autowired
-    private EcommerceOrderOrchestrator ecommerceOrderOrchestrator;
+    private final EcommerceOrderOrchestrator ecommerceOrderOrchestrator;
 
     @Autowired
-    private BillAggregationOrchestrator billAggregationOrchestrator;
+    private final BillAggregationOrchestrator billAggregationOrchestrator;
 
     /**
      * 分页查询成品库存

@@ -54,7 +54,7 @@ public class DailyBriefOrchestrator {
 
     /** 可选注入：Key 未配置时为 null，业务逻辑降级为规则建议 */
     @Autowired(required = false)
-    private AiAdvisorService aiAdvisorService;
+    private final AiAdvisorService aiAdvisorService;
 
     /**
      * 获取智能运营日报
