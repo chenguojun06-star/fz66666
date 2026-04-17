@@ -598,11 +598,9 @@ public class ProductWarehousingQueryHelper {
         }
         if (!scansByBundle.isEmpty()) {
             List<String> allBundleIds = new ArrayList<>(scansByBundle.keySet());
-            // 防御性查询：仅取 buildBundleStageHints 实际需要的 6 列，避免云端缺列（repair_status/scan_mode 等）导致 SELECT * 报 Unknown column → 500
+            // Flyway已通过V20260424001+V202607192800+V202610010000补齐t_product_warehousing所有缺列，可安全全列查询
             List<ProductWarehousing> allWhRecords = productWarehousingService.list(
                     new QueryWrapper<ProductWarehousing>()
-                            .select("cutting_bundle_id", "warehousing_type", "quality_status",
-                                    "quality_operator_name", "warehousing_operator_name", "warehouse")
                             .in("cutting_bundle_id", allBundleIds)
                             .eq("delete_flag", 0));
             Map<String, List<ProductWarehousing>> whByBundle = new HashMap<>();
