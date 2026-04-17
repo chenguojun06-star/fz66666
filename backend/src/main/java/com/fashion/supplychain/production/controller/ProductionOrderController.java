@@ -50,8 +50,8 @@ public class ProductionOrderController {
     private final OrderHealthScoreOrchestrator orderHealthScoreOrchestrator;
     private final SysNoticeOrchestrator sysNoticeOrchestrator;
     private final StyleInfoService styleInfoService;
-    private com.fashion.supplychain.style.service.SecondaryProcessService secondaryProcessService;
-    private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    private final com.fashion.supplychain.style.service.SecondaryProcessService secondaryProcessService;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     /**
      * 导出生产订单列表为Excel
