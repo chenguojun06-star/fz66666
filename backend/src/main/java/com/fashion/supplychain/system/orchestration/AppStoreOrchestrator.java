@@ -11,13 +11,10 @@ import com.fashion.supplychain.system.entity.AppStore;
 import com.fashion.supplychain.system.entity.Tenant;
 import com.fashion.supplychain.system.service.AppOrderService;
 import com.fashion.supplychain.system.service.AppStoreService;
-import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.system.service.TenantService;
 import com.fashion.supplychain.system.service.TenantSubscriptionService;
-import com.fashion.supplychain.system.service.UserService;
 import com.fashion.supplychain.system.entity.TenantSubscription;
-import com.fashion.supplychain.websocket.service.WebSocketService;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -57,12 +54,6 @@ public class AppStoreOrchestrator {
 
     @Autowired
     private TenantService tenantService;
-
-    @Autowired(required = false)
-    private WebSocketService webSocketService;
-
-    @Autowired
-    private UserService userService;
 
     @Autowired(required = false)
     private JdbcTemplate jdbcTemplate;
@@ -184,24 +175,7 @@ public class AppStoreOrchestrator {
         appOrderService.save(order);
         log.info("创建应用订单成功：{}", order.getOrderNo());
 
-        // 系统内 WebSocket 通知超管（非阻塞，失败不影响主流程）
-        try {
-            if (webSocketService != null) {
-                LambdaQueryWrapper<User> adminQuery = new LambdaQueryWrapper<>();
-                adminQuery.eq(User::getIsSuperAdmin, true)
-                          .eq(User::getStatus, "active")
-                          .isNull(User::getTenantId);
-                List<User> superAdmins = userService.list(adminQuery);
-                for (User sa : superAdmins) {
-                    webSocketService.notifyAppOrderPending(
-                        String.valueOf(sa.getId()), order.getTenantName(),
-                        app.getAppName(), order.getOrderNo());
-                }
-                log.info("[应用订单通知] 已推送给 {} 位超管", superAdmins.size());
-            }
-        } catch (Exception e) {
-            log.warn("[应用订单通知] WebSocket推送失败（不影响主流程）: {}", e.getMessage());
-        }
+        log.info("[应用订单通知] 租户={} 应用={} 订单号={}（全局广播已移除）", order.getTenantName(), app.getAppName(), order.getOrderNo());
 
         // 微信通知（Server酱，非阻塞，失败不影响主流程）
         try {
@@ -306,24 +280,7 @@ public class AppStoreOrchestrator {
         appOrderService.save(trialOrder);
         log.info("[试用订单] 已创建 AppOrder(TRIAL): orderNo={}", trialOrder.getOrderNo());
 
-        // 超管 WebSocket 推送（非阻塞，失败不影响主流程）
-        try {
-            if (webSocketService != null) {
-                LambdaQueryWrapper<User> adminQuery = new LambdaQueryWrapper<>();
-                adminQuery.eq(User::getIsSuperAdmin, true)
-                          .eq(User::getStatus, "active")
-                          .isNull(User::getTenantId);
-                List<User> superAdmins = userService.list(adminQuery);
-                for (User sa : superAdmins) {
-                    webSocketService.notifyAppOrderPending(
-                        String.valueOf(sa.getId()), trialOrder.getTenantName(),
-                        app.getAppName() + "（免费试用）", trialOrder.getOrderNo());
-                }
-                log.info("[试用通知] 已推送给 {} 位超管", superAdmins.size());
-            }
-        } catch (Exception e) {
-            log.warn("[试用通知] WebSocket推送失败（不影响主流程）: {}", e.getMessage());
-        }
+        log.info("[试用通知] 租户={} 应用={}（全局广播已移除）", trialOrder.getTenantName(), app.getAppName());
 
         // Server酱微信通知（非阻塞）
         try {

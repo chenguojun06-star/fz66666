@@ -3,12 +3,10 @@ package com.fashion.supplychain.websocket.service;
 import com.fashion.supplychain.websocket.RealTimeWebSocketHandler;
 import com.fashion.supplychain.websocket.dto.WebSocketMessage;
 import com.fashion.supplychain.websocket.enums.WebSocketMessageType;
-import com.fashion.supplychain.common.UserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.util.Map;
 
 @Slf4j
@@ -195,66 +193,7 @@ public class WebSocketService {
         webSocketHandler.sendToUserByType(userId, clientType, message);
     }
 
-    public void broadcastPaymentNotification(String event, String payeeId, String payeeName,
-                                              BigDecimal amount, String paymentMethod, String paymentNo) {
-        WebSocketMessageType type = "payment:created".equals(event)
-            ? WebSocketMessageType.PAYMENT_CREATED
-            : WebSocketMessageType.PAYMENT_SUCCESS;
 
-        Map<String, Object> payload = Map.of(
-            "payeeId", payeeId,
-            "payeeName", payeeName,
-            "amount", amount,
-            "paymentMethod", paymentMethod,
-            "paymentNo", paymentNo,
-            "timestamp", System.currentTimeMillis()
-        );
-
-        WebSocketMessage<Map<String, Object>> message = WebSocketMessage.create(type, payload);
-        webSocketHandler.sendToUser(payeeId, message);
-        log.debug("[WebSocket] broadcastPaymentNotification: event={}, payee={}", event, payeeName);
-    }
-
-    public void notifyWorkerRegistrationPending(String tenantOwnerId, String workerName) {
-        WebSocketMessage<Map<String, Object>> message = WebSocketMessage.create(
-            WebSocketMessageType.WORKER_REGISTRATION_PENDING,
-            Map.of(
-                "workerName", workerName,
-                "message", "新工人注册申请待审批：" + workerName,
-                "timestamp", System.currentTimeMillis()
-            )
-        );
-        webSocketHandler.sendToUser(tenantOwnerId, message);
-        log.debug("[WebSocket] notifyWorkerRegistrationPending: ownerId={}, workerName={}", tenantOwnerId, workerName);
-    }
-
-    public void notifyTenantApplicationPending(String superAdminId, String tenantName) {
-        WebSocketMessage<Map<String, Object>> message = WebSocketMessage.create(
-            WebSocketMessageType.TENANT_APPLICATION_PENDING,
-            Map.of(
-                "tenantName", tenantName,
-                "message", "新工厂入驻申请待审批：" + tenantName,
-                "timestamp", System.currentTimeMillis()
-            )
-        );
-        webSocketHandler.sendToUser(superAdminId, message);
-        log.debug("[WebSocket] notifyTenantApplicationPending: adminId={}, tenantName={}", superAdminId, tenantName);
-    }
-
-    public void notifyAppOrderPending(String superAdminId, String tenantName, String appName, String orderNo) {
-        WebSocketMessage<Map<String, Object>> message = WebSocketMessage.create(
-            WebSocketMessageType.APP_ORDER_PENDING,
-            Map.of(
-                "tenantName", tenantName,
-                "appName", appName,
-                "orderNo", orderNo,
-                "message", "新购买订单：" + tenantName + " 购买 " + appName,
-                "timestamp", System.currentTimeMillis()
-            )
-        );
-        webSocketHandler.sendToUser(superAdminId, message);
-        log.debug("[WebSocket] notifyAppOrderPending: adminId={}, tenant={}, app={}", superAdminId, tenantName, appName);
-    }
 
     public void notifyApprovalPending(String approverId, String approverName,
                                        String applicantName, String operationType,
@@ -314,12 +253,4 @@ public class WebSocketService {
         log.warn("[WebSocket] broadcastQualityAnomaly: orderNo={}, stage={}, defectRate={}%", orderNo, processStageName, defectRate);
     }
 
-    public void broadcastTraceableAdvice(Long tenantId, Object adviceCard) {
-        WebSocketMessage<Object> message = WebSocketMessage.create(
-            WebSocketMessageType.TRACEABLE_ADVICE,
-            adviceCard
-        );
-        webSocketHandler.sendToUser(UserContext.userId(), message);
-        log.debug("[WebSocket] broadcastTraceableAdvice: tenantId={}", tenantId);
-    }
 }

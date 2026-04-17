@@ -401,7 +401,12 @@ public class ProductionScanExecutor {
                                 .build()
                         ))
                         .build();
-                webSocketService.broadcastTraceableAdvice(order.getTenantId(), advice);
+                String userId = com.fashion.supplychain.common.UserContext.userId();
+                if (userId != null) {
+                    webSocketService.sendToUser(userId,
+                        com.fashion.supplychain.websocket.enums.WebSocketMessageType.TRACEABLE_ADVICE,
+                        advice);
+                }
 
                 throw new IllegalStateException("AI 财务风控拦截：单次扫码金额/数量过大，请拆分批次或联系厂长核实。");
             }

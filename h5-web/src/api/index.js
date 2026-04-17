@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/authStore';
 
 const production = {
   orderList: (params) => http.get('/api/production/order/list', { params }),
+  orderStats: (params) => http.get('/api/production/order/stats', { params }),
   createOrder: (payload) => http.post('/api/production/order', payload),
   createOutstock: (payload) => http.post('/api/production/outstock', payload),
   orderDetail: (idOrOrderNo) => {

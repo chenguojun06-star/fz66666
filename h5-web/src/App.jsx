@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { wsService } from '@/services/websocketService';
+import { isTokenExpired } from '@/utils/storage';
 import AppShell from '@/components/AppShell';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
@@ -43,10 +44,13 @@ const Loading = () => (
 
 function ProtectedRoute({ children }) {
   const token = useAuthStore((s) => s.token);
-  if (!token) {
+  if (!token || isTokenExpired()) {
     const currentPath = window.location.pathname + window.location.search;
     if (!currentPath.includes('/login')) {
       sessionStorage.setItem('h5_auth_redirect', currentPath);
+    }
+    if (token && isTokenExpired()) {
+      useAuthStore.getState().clearAuth();
     }
     return <Navigate to="/login" replace />;
   }

@@ -1,17 +1,14 @@
 package com.fashion.supplychain.system.helper;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.CosService;
 import com.fashion.supplychain.system.entity.Tenant;
 import com.fashion.supplychain.system.entity.TenantBillingRecord;
-import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.system.orchestration.TenantOrchestrator;
 import com.fashion.supplychain.system.service.TenantBillingRecordService;
 import com.fashion.supplychain.system.service.TenantService;
-import com.fashion.supplychain.system.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
@@ -36,13 +33,7 @@ public class TenantBillingHelper {
     private TenantService tenantService;
 
     @Autowired
-    private UserService userService;
-
-    @Autowired
     private TenantBillingRecordService billingRecordService;
-
-    @Autowired(required = false)
-    private com.fashion.supplychain.websocket.service.WebSocketService webSocketService;
 
     @Autowired(required = false)
     private CosService cosService;
@@ -385,21 +376,7 @@ public class TenantBillingHelper {
 
         log.info("[发票申请] tenantId={} billId={} 抬头={} 金额={}", tenantId, billId, title, bill.getTotalAmount());
 
-        // 通知超管有新的开票申请（复用入驻申请通知通道）
-        try {
-            if (webSocketService != null) {
-                LambdaQueryWrapper<User> adminQuery = new LambdaQueryWrapper<>();
-                adminQuery.eq(User::getIsSuperAdmin, true).eq(User::getStatus, "active").isNull(User::getTenantId);
-                List<User> superAdmins = userService.list(adminQuery);
-                for (User sa : superAdmins) {
-                    webSocketService.notifyTenantApplicationPending(
-                            String.valueOf(sa.getId()),
-                            tenant.getTenantName() + " 申请开票 ¥" + bill.getTotalAmount());
-                }
-            }
-        } catch (Exception e) {
-            log.warn("通知超管发票申请WebSocket失败: {}", e.getMessage());
-        }
+        log.info("[发票申请通知] 租户={} 金额={}（全局广播已移除）", tenant.getTenantName(), bill.getTotalAmount());
 
         return true;
     }

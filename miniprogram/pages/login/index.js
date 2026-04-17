@@ -4,7 +4,6 @@ const api = require('../../utils/api');
 const i18n = require('../../utils/i18n/index');
 const { validateByRule } = require('../../utils/validationRules');
 const { toast, safeNavigate } = require('../../utils/uiHelper');
-const { wsManager } = require('../../utils/websocketManager');
 
 let autoWechatTried = false;
 
@@ -28,11 +27,6 @@ async function tryAutoWechatLogin() {
       setToken(resp.data.token);
       if (resp.data.user) {
         setUserInfo(resp.data.user);
-        try {
-          if (resp.data.user.id && resp.data.user.tenantId) {
-            wsManager.connect(String(resp.data.user.id), String(resp.data.user.tenantId));
-          }
-        } catch (_e) {}
       }
       safeNavigate({ url: '/pages/home/index' }, 'switchTab').catch(() => {});
       return true;
@@ -71,11 +65,6 @@ function finishLogin(user, token) {
   setToken(token);
   if (user) {
     setUserInfo(user);
-    try {
-      if (user.id && user.tenantId) {
-        wsManager.connect(String(user.id), String(user.tenantId));
-      }
-    } catch (_e) {}
   }
   safeNavigate({ url: '/pages/home/index' }, 'switchTab').catch(() => {});
 }

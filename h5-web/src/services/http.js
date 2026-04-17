@@ -71,6 +71,13 @@ http.interceptors.request.use((config) => {
   }
   if (!config.headers.skipAuth) {
     const token = useAuthStore.getState().token;
+    if (token && isTokenExpired()) {
+      clearToken();
+      if (!isOnLoginPage()) {
+        handleUnauthorized();
+      }
+      return Promise.reject(new Error('登录已过期，请重新登录'));
+    }
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

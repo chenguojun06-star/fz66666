@@ -61,16 +61,18 @@ export default function DashboardPage() {
   const refreshCards = async () => {
     setLoading(true);
     try {
-      const [dashRes, topStatsRes] = await Promise.allSettled([
+      const [dashRes, topStatsRes, statsRes] = await Promise.allSettled([
         api.dashboard.get(),
         api.dashboard.getTopStats(),
+        api.production.orderStats({}),
       ]);
       const dash = dashRes.status === 'fulfilled' ? (dashRes.value?.data || dashRes.value || {}) : {};
       const topStats = topStatsRes.status === 'fulfilled' ? (topStatsRes.value?.data || topStatsRes.value || {}) : {};
+      const stats = statsRes.status === 'fulfilled' ? (statsRes.value?.data || statsRes.value || {}) : {};
       setTodayScanCount(Number(dash.todayScanCount || 0));
       setCards({
-        sample: { developing: Number(dash.sampleDevelopmentCount || 0), completed: Number(topStats.sampleDevelopment?.total || 0) },
-        production: { total: Number(dash.productionOrderCount || 0), overdue: Number(dash.overdueOrderCount || 0), pieces: Number(dash.orderQuantityTotal || 0) },
+        sample: { developing: Number(dash.sampleDevelopmentCount || 0), completed: Number(stats.completedOrders || topStats.sampleDevelopment?.total || 0) },
+        production: { total: Number(stats.activeOrders || dash.productionOrderCount || 0), overdue: Number(stats.delayedOrders || dash.overdueOrderCount || 0), pieces: Number(stats.activeQuantity || dash.orderQuantityTotal || 0) },
         inbound: { today: Number(topStats.warehousingInbound?.day || 0), week: Number(topStats.warehousingInbound?.week || 0) },
         outbound: { today: Number(topStats.warehousingOutbound?.day || 0), week: Number(topStats.warehousingOutbound?.week || 0) },
       });

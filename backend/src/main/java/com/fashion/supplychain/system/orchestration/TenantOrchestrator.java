@@ -1,6 +1,5 @@
 package com.fashion.supplychain.system.orchestration;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -63,9 +62,6 @@ public class TenantOrchestrator {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
-
-    @Autowired(required = false)
-    private com.fashion.supplychain.websocket.service.WebSocketService webSocketService;
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
@@ -233,23 +229,7 @@ public class TenantOrchestrator {
 
         log.info("[申请入驻] 工厂={} 申请账号={} 已提交，等待超管审批", tenantName, applyUsername);
 
-        // 通知平台超级管理员（tenantId 为空）有新的工厂入驻申请
-        try {
-            if (webSocketService != null) {
-                LambdaQueryWrapper<User> adminQuery = new LambdaQueryWrapper<>();
-                adminQuery.eq(User::getIsSuperAdmin, true)
-                          .eq(User::getStatus, "active")
-                          .isNull(User::getTenantId);
-                List<User> superAdmins = userService.list(adminQuery);
-                for (User sa : superAdmins) {
-                    webSocketService.notifyTenantApplicationPending(
-                        String.valueOf(sa.getId()), tenantName);
-                }
-                log.info("[入驻通知] 已推送给 {} 位超管, 工厂={}", superAdmins.size(), tenantName);
-            }
-        } catch (Exception e) {
-            log.warn("通知超管WebSocket失败，不影响申请流程: {}", e.getMessage());
-        }
+        log.info("[入驻通知] 工厂={}（全局广播已移除）", tenantName);
 
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);

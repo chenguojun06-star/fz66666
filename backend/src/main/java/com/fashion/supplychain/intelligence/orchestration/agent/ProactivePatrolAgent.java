@@ -176,7 +176,12 @@ public class ProactivePatrolAgent {
                 .confidenceScore(notification.getPriority() != null && notification.getPriority().equals("high") ? 5 : 3)
                 .build();
 
-        webSocketService.broadcastTraceableAdvice(notification.getTenantId(), advice);
+        String userId = UserContext.userId();
+        if (userId != null) {
+            webSocketService.sendToUser(userId,
+                com.fashion.supplychain.websocket.enums.WebSocketMessageType.TRACEABLE_ADVICE,
+                advice);
+        }
         log.info("[ProactivePatrol] 已推送智能预警至小云聊天窗口：{}", notification.getTitle());
 
         if ("high".equals(notification.getPriority())) {

@@ -136,6 +136,22 @@ const resolveApiBaseUrl = (): string => {
   }
 };
 
+const isJwtExpired = (token: string): boolean => {
+  if (!token) return true;
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) return true;
+    let payload = parts[1];
+    payload = payload.replace(/-/g, '+').replace(/_/g, '/');
+    while (payload.length % 4) payload += '=';
+    const decoded = JSON.parse(atob(payload));
+    if (!decoded.exp) return true;
+    return Date.now() / 1000 > decoded.exp - 300;
+  } catch {
+    return true;
+  }
+};
+
 export const createApiClient = (): ApiClient => {
   const client = axios.create({
     baseURL: resolveApiBaseUrl(),
@@ -189,6 +205,14 @@ export const createApiClient = (): ApiClient => {
       try {
         const token = String(localStorage.getItem('authToken') || '').trim();
         if (token) {
+          if (isJwtExpired(token)) {
+            try {
+              localStorage.removeItem('authToken');
+              localStorage.removeItem('userId');
+            } catch { /* ignore */ }
+            navigateToLogin();
+            return Promise.reject(new Error('登录已过期，请重新登录'));
+          }
           setHeader('Authorization', `Bearer ${token}`);
         }
       } catch {

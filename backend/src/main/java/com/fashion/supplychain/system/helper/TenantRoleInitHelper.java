@@ -49,9 +49,6 @@ public class TenantRoleInitHelper {
     @Autowired
     private TenantService tenantService;
 
-    @Autowired(required = false)
-    private com.fashion.supplychain.websocket.service.WebSocketService webSocketService;
-
     @Autowired
     private FactoryWorkerService factoryWorkerService;
 
@@ -503,41 +500,10 @@ public class TenantRoleInitHelper {
 
         // 通知租户内管理主管以上用户（主账号 + admin/manager/supervisor角色），不含超管
         try {
-            if (webSocketService != null) {
-                // 查找租户内的管理类角色 ID
-                LambdaQueryWrapper<Role> mgmtRolesQuery = new LambdaQueryWrapper<>();
-                mgmtRolesQuery.eq(Role::getTenantId, tenant.getId())
-                              .in(Role::getRoleCode, Arrays.asList(
-                                  "admin", "manager", "supervisor",
-                                  "tenant_admin", "tenant_manager"))
-                              .eq(Role::getStatus, "active");
-                List<Role> mgmtRoles = roleService.list(mgmtRolesQuery);
-                List<Long> mgmtRoleIds = mgmtRoles.stream()
-                        .map(Role::getId).collect(Collectors.toList());
-
-                // 查找需要通知的用户：主账号 或 管理角色，状态active
-                LambdaQueryWrapper<User> notifyQuery = new LambdaQueryWrapper<>();
-                notifyQuery.eq(User::getTenantId, tenant.getId())
-                           .eq(User::getStatus, "active")
-                           .and(w -> {
-                               w.eq(User::getIsTenantOwner, true);
-                               if (!mgmtRoleIds.isEmpty()) {
-                                   w.or().in(User::getRoleId, mgmtRoleIds);
-                               }
-                           });
-                List<User> managers = userService.list(notifyQuery);
-
-                String workerDisplay = name != null ? name : username;
-                for (User mgr : managers) {
-                    webSocketService.notifyWorkerRegistrationPending(
-                        String.valueOf(mgr.getId()),
-                        workerDisplay
-                    );
-                }
-                log.info("[注册通知] 已推送给 {} 位租户管理人员, tenantId={}", managers.size(), tenant.getId());
-            }
+            String workerDisplay = name != null ? name : username;
+            log.info("[注册通知] 工人={} tenantId={}（全局广播已移除）", workerDisplay, tenant.getId());
         } catch (Exception e) {
-            log.warn("通知租户管理人员WebSocket失败，不影响注册流程: {}", e.getMessage());
+            log.warn("注册通知记录失败，不影响注册流程: {}", e.getMessage());
         }
 
         Map<String, Object> result = new HashMap<>();

@@ -2,7 +2,9 @@
  * 进度节点计算与解析工具
  * 从 work/index.js 提取的纯函数
  */
-const { normalizeText } = require('./orderTransform');
+function _normalizeText(v) {
+  return (v || '').toString().trim();
+}
 
 /**
  * 过滤掉出货/发货节点
@@ -12,8 +14,8 @@ const { normalizeText } = require('./orderTransform');
 function stripWarehousingNode(list) {
   const items = Array.isArray(list) ? list : [];
   return items.filter(n => {
-    const id = normalizeText(n && n.id).toLowerCase();
-    const name = normalizeText(n && n.name);
+    const id = _normalizeText(n && n.id).toLowerCase();
+    const name = _normalizeText(n && n.name);
     return !(id === 'shipment' || name === '出货' || name === '发货' || name === '发运');
   });
 }
@@ -89,8 +91,8 @@ function parseProgressNodes(raw) {
   return stripWarehousingNode(
     nodesRaw
       .map(n => {
-        var name = normalizeText(n && n.name);
-        var id = normalizeText(n && n.id) || name;
+        var name = _normalizeText(n && n.name);
+        var id = _normalizeText(n && n.id) || name;
         return name ? { id: id, name: name } : null;
       })
       .filter(n => n && n.name),
@@ -111,15 +113,15 @@ function resolveNodesFromOrder(order) {
     const parsed = stripWarehousingNode(
       nodesRaw
         .map(n => {
-          const name = normalizeText(n && n.name);
-          const id = normalizeText(n && n.id) || name;
+          const name = _normalizeText(n && n.name);
+          const id = _normalizeText(n && n.id) || name;
           return name ? { id, name } : null;
         })
         .filter(n => n && n.name),
     );
     return parsed.length ? parsed : defaultNodes;
   }
-  const parsed = parseProgressNodes(normalizeText(raw));
+  const parsed = parseProgressNodes(_normalizeText(raw));
   return parsed.length ? parsed : defaultNodes;
 }
 

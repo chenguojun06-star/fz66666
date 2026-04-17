@@ -66,7 +66,8 @@ Page({
   },
 
   onLoad: function () {
-    // 进度看板仅限租户老板/管理员/主管/跟单，普通工厂工人无权访问
+    var app = getApp();
+    if (app.requireAuth && !app.requireAuth()) return;
     if (!isTenantOwner() && !isAdminOrSupervisor()) {
       wx.showToast({ title: '无权限访问', icon: 'none', duration: 1500 });
       wx.navigateBack({ delta: 1, fail: function () { wx.switchTab({ url: '/pages/home/index' }); } });
@@ -117,10 +118,16 @@ Page({
     that.setData({ loading: true });
 
     var apiFailCount = 0;
+    var orderStatsFn = api.production && typeof api.production.orderStats === 'function'
+      ? api.production.orderStats : null;
+    if (!orderStatsFn) {
+      var prodKeys = api.production ? Object.keys(api.production).join(',') : 'undefined';
+      console.warn('[Dashboard] api.production.orderStats 不可用，跳过订单统计。production keys:', prodKeys);
+    }
     return Promise.all([
       api.dashboard.get().catch(function (e) { console.warn('[Dashboard] dash API失败:', e.message || e); apiFailCount++; return {}; }),
       api.dashboard.getTopStats().catch(function (e) { console.warn('[Dashboard] topStats API失败:', e.message || e); apiFailCount++; return {}; }),
-      api.production.orderStats({}).catch(function (e) { console.warn('[Dashboard] orderStats API失败:', e.message || e); apiFailCount++; return {}; }),
+      orderStatsFn ? orderStatsFn({}).catch(function (e) { console.warn('[Dashboard] orderStats API失败:', e.message || e); apiFailCount++; return {}; }) : Promise.resolve({}),
     ]).then(function (res) {
       var dash     = res[0] || {};
       var topStats = res[1] || {};
@@ -176,8 +183,7 @@ Page({
     }
 
     return app.loadPagedList(this, 'orders', reset, function (p) {
-      // 延期订单加大 pageSize 弥补客户端过滤损失
-      var params = { deleteFlag: 0, page: p.page, pageSize: isOverdue ? 50 : p.pageSize };
+      var params = { page: p.page, pageSize: isOverdue ? 50 : p.pageSize, excludeTerminal: 'true' };
       if (isOverdue) {
         params.status = 'production';
       } else if (filterVal) {
@@ -202,8 +208,10 @@ Page({
   /* ======== 刷新状态计数 ======== */
   _refreshStatCounts: function () {
     var that = this;
+    var orderStatsFn2 = api.production && typeof api.production.orderStats === 'function'
+      ? api.production.orderStats : null;
     Promise.all([
-      api.production.orderStats({}).catch(function () { return {}; }),
+      orderStatsFn2 ? orderStatsFn2({}).catch(function () { return {}; }) : Promise.resolve({}),
       api.dashboard.get().catch(function () { return {}; }),
     ]).then(function (res) {
       var stats = res[0] || {};

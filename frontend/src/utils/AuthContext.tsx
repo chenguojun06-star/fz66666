@@ -164,6 +164,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           return;
         }
 
+        const isJwtExpired = (t: string): boolean => {
+          if (!t) return true;
+          try {
+            const parts = t.split('.');
+            if (parts.length < 2) return true;
+            let payload = parts[1];
+            payload = payload.replace(/-/g, '+').replace(/_/g, '/');
+            while (payload.length % 4) payload += '=';
+            const decoded = JSON.parse(atob(payload));
+            if (!decoded.exp) return true;
+            return Date.now() / 1000 > decoded.exp - 300;
+          } catch {
+            return true;
+          }
+        };
+
+        if (isJwtExpired(token)) {
+          localStorage.removeItem(tokenStorageKey);
+          localStorage.removeItem('userId');
+          resetSmartFeatureFlags();
+          setUser(null);
+          setIsAuthenticated(false);
+          setLoading(false);
+          return;
+        }
+
         // 恢复用户主题设置
         // 注意：此处只写 localStorage，不再调用 applyThemeValue()。
         // 原因：之后会立即 dispatch 'user-login' 事件，AppWrapper.handleUserLogin

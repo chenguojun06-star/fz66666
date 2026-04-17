@@ -368,14 +368,17 @@ public class WagePaymentOrchestrator {
 
     private void notifyPaymentCreated(WagePayment payment) {
         try {
-            webSocketService.broadcastPaymentNotification(
-                "payment:created",
-                payment.getPayeeId(),
-                payment.getPayeeName(),
-                payment.getAmount(),
-                payment.getPaymentMethod(),
-                payment.getPaymentNo()
+            java.util.Map<String, Object> payload = java.util.Map.of(
+                "payeeId", payment.getPayeeId(),
+                "payeeName", payment.getPayeeName(),
+                "amount", payment.getAmount(),
+                "paymentMethod", payment.getPaymentMethod(),
+                "paymentNo", payment.getPaymentNo(),
+                "timestamp", System.currentTimeMillis()
             );
+            webSocketService.sendToUser(payment.getPayeeId(),
+                com.fashion.supplychain.websocket.enums.WebSocketMessageType.PAYMENT_CREATED,
+                payload);
             payment.setNotifyStatus("sent");
             payment.setNotifyTime(LocalDateTime.now());
             wagePaymentService.updateById(payment);
@@ -388,14 +391,17 @@ public class WagePaymentOrchestrator {
 
     private void notifyPaymentSuccess(WagePayment payment) {
         try {
-            webSocketService.broadcastPaymentNotification(
-                "payment:success",
-                payment.getPayeeId(),
-                payment.getPayeeName(),
-                payment.getAmount(),
-                payment.getPaymentMethod(),
-                payment.getPaymentNo()
+            java.util.Map<String, Object> payload = java.util.Map.of(
+                "payeeId", payment.getPayeeId(),
+                "payeeName", payment.getPayeeName(),
+                "amount", payment.getAmount(),
+                "paymentMethod", payment.getPaymentMethod(),
+                "paymentNo", payment.getPaymentNo(),
+                "timestamp", System.currentTimeMillis()
             );
+            webSocketService.sendToUser(payment.getPayeeId(),
+                com.fashion.supplychain.websocket.enums.WebSocketMessageType.PAYMENT_SUCCESS,
+                payload);
         } catch (Exception e) {
             log.error("[工资支付] 支付成功通知失败: paymentNo={}", payment.getPaymentNo(), e);
         }
