@@ -46,8 +46,13 @@ function getOrCreateInstance(options: UseWebSocketOptions): WsInstance {
   const state = { connected: false } as { connected: boolean };
   const setConnected = (v: boolean) => {
     state.connected = v;
-    globalInstance!.connected = v;
-    globalInstance!.setConnected = setConnected;
+    // 使用 null 守卫：cleanup 会把 globalInstance 置为 null，
+    // 而 WebSocket onopen/onclose 可能在 cleanup 之后触发（竞态），
+    // 此时 globalInstance! 非空断言会抛出 TypeError: Cannot set properties of null (setting 'connected')
+    if (globalInstance) {
+      globalInstance.connected = v;
+      globalInstance.setConnected = setConnected;
+    }
     connectedListeners.forEach(fn => fn(v));
   };
 
