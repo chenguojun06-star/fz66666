@@ -11,6 +11,29 @@ import Icon from '@/components/Icon';
 import { scanOfflineQueue, isOnline, setupOfflineQueueSync } from '@/services/scanOfflineQueue';
 import { parseBundleCode, validateBundleForStage, determineAutoFlow, STAGE_LABELS } from '@/utils/scanHelpers';
 
+const STAGE_STATUS_TIPS = {
+  procurement: '物料领取成功',
+  cutting: '裁剪领取成功',
+  secondaryProcess: '二次工艺领取成功',
+  carSewing: '车缝工序领取成功',
+  tailProcess: '尾部工序领取成功',
+  warehousing: '入库成功',
+  quality: '质检领取成功',
+  pattern: '样板操作成功',
+};
+
+function getStageStatusTip(progressStage, flowInfo) {
+  if (flowInfo) return flowInfo.message;
+  const stage = String(progressStage || '').trim();
+  const lower = stage.toLowerCase();
+  for (const [key, tip] of Object.entries(STAGE_STATUS_TIPS)) {
+    if (lower === key || lower === STAGE_LABELS[key] || stage === STAGE_LABELS[key]) {
+      return tip;
+    }
+  }
+  return '扫码成功';
+}
+
 function canUndoScan(record, isAdmin) {
   if (!record.scanTime && !record.createTime) return false;
   const t = new Date(record.scanTime || record.createTime).getTime();
@@ -204,7 +227,15 @@ export default function ScanPage() {
           navigate('/scan/confirm');
         } else {
           setScanResultData({ ...data, scanCode: code, scanType, flowInfo });
-          navigate('/scan/scan-result');
+          setLastResult({ ...data, scanCode: code, scanType, success: true,
+            message: flowInfo ? flowInfo.message : (data.message || '扫码成功'),
+            orderNo: data.orderNo, styleNo: data.styleNo,
+            processName: data.processName, quantity: data.quantity,
+            unitPrice: data.unitPrice, color: data.color, size: data.size,
+          });
+          const stageTip = getStageStatusTip(data.progressStage, flowInfo);
+          toast.success(stageTip);
+          setStats((prev) => prev ? { ...prev, scanCount: prev.scanCount + 1, totalQuantity: prev.totalQuantity + (Number(data.quantity) || 1) } : { scanCount: 1, orderCount: 0, totalQuantity: Number(data.quantity) || 1, totalAmount: 0 });
         }
         wx.vibrateShort();
         loadTodayHistory();

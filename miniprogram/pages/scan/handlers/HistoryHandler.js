@@ -578,6 +578,70 @@ function addToLocalHistory(page, record) {
   const history = [record, ...(page._scanHistory || [])].slice(0, 20);
   page._scanHistory = history;
   setStorageValue('scan_history_v2', history);
+
+  addOptimisticRecordToGroupedHistory(page, record);
+}
+
+function addOptimisticRecordToGroupedHistory(page, record) {
+  const groupedHistory = page.data.my && page.data.my.groupedHistory;
+  if (!groupedHistory) return;
+
+  const orderNo = record.orderNo || '';
+  const processName = _normalizeQualityName(record.processName || '');
+  const groupKey = _createGroupKey(orderNo, processName);
+
+  const newItem = {
+    id: record.recordId || ('local_' + Date.now()),
+    orderNo: orderNo,
+    bundleNo: record.bundleNo || '',
+    color: record.color || '',
+    size: record.size || '',
+    sizeArr: record.size ? [record.size] : [],
+    qtyArr: record.quantity ? [record.quantity] : [],
+    quantity: record.quantity || 1,
+    unitPrice: record.unitPrice || 0,
+    createdAt: new Date().toISOString(),
+    scanTime: new Date().toISOString(),
+    scanType: record.scanType || '',
+    scanResult: 'success',
+    scanCode: record.scanCode || '',
+    operatorName: record.operatorName || '',
+    operatorId: record.operatorId || '',
+    displayOperator: record.operatorName || record.operatorId || '',
+    canRescan: false,
+    canUndo: true,
+    payrollSettled: false,
+    cuttingBundleId: record.cuttingBundleId || '',
+    coverImage: record.coverImage || record.styleImage || '',
+    styleImage: record.styleImage || record.coverImage || '',
+  };
+
+  const existingGroupIdx = groupedHistory.findIndex(function(g) { return g.id === groupKey; });
+
+  if (existingGroupIdx >= 0) {
+    const group = Object.assign({}, groupedHistory[existingGroupIdx]);
+    group.items = [newItem].concat(group.items);
+    group.totalQuantity = (group.totalQuantity || 0) + (newItem.quantity || 0);
+    group.latestTime = newItem.scanTime;
+    const updated = groupedHistory.slice();
+    updated[existingGroupIdx] = group;
+    page.setData({ 'my.groupedHistory': updated });
+  } else {
+    const newGroup = {
+      id: groupKey,
+      orderNo: orderNo,
+      styleNo: record.styleNo || '',
+      stage: processName,
+      totalQuantity: newItem.quantity,
+      latestTime: newItem.scanTime,
+      expanded: true,
+      items: [newItem],
+      deliveryDateStr: '',
+      remainDaysText: '',
+      remainDaysClass: '',
+    };
+    page.setData({ 'my.groupedHistory': [newGroup].concat(groupedHistory) });
+  }
 }
 
 /**
