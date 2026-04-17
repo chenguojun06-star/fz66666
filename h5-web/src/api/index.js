@@ -315,7 +315,6 @@ const api = {
   orderManagement,
   sampleStock,
   finance,
-  intelligence,
 };
 
 export default api;
