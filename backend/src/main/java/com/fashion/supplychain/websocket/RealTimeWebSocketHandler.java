@@ -1,6 +1,8 @@
 package com.fashion.supplychain.websocket;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fashion.supplychain.auth.AuthTokenService;
+import com.fashion.supplychain.auth.TokenSubject;
 import com.fashion.supplychain.websocket.dto.WebSocketMessage;
 import com.fashion.supplychain.websocket.enums.WebSocketMessageType;
 import com.fashion.supplychain.websocket.manager.WebSocketSessionManager;
@@ -27,6 +29,7 @@ public class RealTimeWebSocketHandler extends TextWebSocketHandler {
 
     private final WebSocketSessionManager sessionManager;
     private final ObjectMapper objectMapper;
+    private final AuthTokenService authTokenService;
 
     // 心跳检测：sessionId -> lastPingTime
     private final Map<String, Long> lastPingTime = new ConcurrentHashMap<>();
@@ -37,9 +40,26 @@ public class RealTimeWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         String query = session.getUri().getQuery();
+        String token = extractParam(query, "token");
         String userId = extractParam(query, "userId");
         String clientType = extractParam(query, "clientType");
         String tenantIdStr = extractParam(query, "tenantId");
+
+        if (token != null && !token.isBlank()) {
+            TokenSubject subject = authTokenService.verifyAndParse(token);
+            if (subject == null) {
+                log.warn("[WebSocket] JWT验证失败，关闭连接: sessionId={}", session.getId());
+                session.close(CloseStatus.NOT_ACCEPTABLE);
+                return;
+            }
+            if (userId == null) userId = subject.getUserId();
+            if (tenantIdStr == null && subject.getTenantId() != null) tenantIdStr = String.valueOf(subject.getTenantId());
+        } else {
+            log.warn("[WebSocket] 无Token，关闭连接: sessionId={}, userId={}", session.getId(), userId);
+            session.close(CloseStatus.NOT_ACCEPTABLE);
+            return;
+        }
+
         Long tenantId = null;
         if (tenantIdStr != null && !tenantIdStr.isBlank()) {
             try { tenantId = Long.parseLong(tenantIdStr); } catch (NumberFormatException ignored) {}

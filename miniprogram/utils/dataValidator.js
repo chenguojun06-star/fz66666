@@ -21,7 +21,7 @@ const ProductionOrderShape = {
   status: { required: true, type: 'string' },
 
   // 关键: 进度流程定义 (JSON 字符串)
-  progressWorkflowJson: { type: 'string', default: '{}' },
+  progressWorkflowJson: { required: false, default: {} },
   progressWorkflowLocked: { type: 'number', default: 0 },
   progressWorkflowLockedAt: { type: 'string' },
   progressWorkflowLockedBy: { type: 'string' },

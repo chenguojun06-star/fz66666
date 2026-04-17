@@ -6,6 +6,7 @@ import com.fashion.supplychain.intelligence.orchestration.OrderDecisionCaptureOr
 import com.fashion.supplychain.intelligence.orchestration.OrderLearningOutcomeOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderQueryService;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.lock.DistributedLockService;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.system.entity.OperationLog;
 import com.fashion.supplychain.system.service.OperationLogService;
@@ -83,6 +84,9 @@ public class ProductionOrderOrchestrator {
 
     @Autowired
     private ProductionOrderCreationHelper creationHelper;
+
+    @Autowired
+    private DistributedLockService distributedLockService;
 
     // ======================= 查询类方法 =======================
 
@@ -253,7 +257,9 @@ public class ProductionOrderOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean scrapOrder(String id, String remark) {
-        return lifecycleHelper.scrapOrder(id, remark);
+        assertOrderBelongsToCurrentTenant(id, "报废订单");
+        return distributedLockService.executeWithLock("order:scrap:" + id, 10, java.util.concurrent.TimeUnit.SECONDS,
+                () -> lifecycleHelper.scrapOrder(id, remark));
     }
 
     // ======================= 工序/工作流 → WorkflowHelper =======================
@@ -275,6 +281,7 @@ public class ProductionOrderOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public void delegateProcess(String orderId, String processNode, String factoryId, Double unitPrice) {
+        assertOrderBelongsToCurrentTenant(orderId, "工序委派");
         workflowHelper.delegateProcess(orderId, processNode, factoryId, unitPrice);
     }
 
@@ -298,6 +305,7 @@ public class ProductionOrderOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean completeProduction(String id, BigDecimal tolerancePercent) {
+        assertOrderBelongsToCurrentTenant(id, "完成生产");
         return financeOrchestrationService.completeProduction(id, tolerancePercent);
     }
 
@@ -313,7 +321,8 @@ public class ProductionOrderOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public ProductionOrder closeOrder(String id, String sourceModule, String remark, boolean specialClose) {
-        TenantAssert.assertTenantContext(); // 关闭订单必须有租户上下文
+        TenantAssert.assertTenantContext();
+        assertOrderBelongsToCurrentTenant(id, "关闭订单");
         String src = StringUtils.hasText(sourceModule) ? sourceModule.trim() : null;
         if (!StringUtils.hasText(src)) {
             throw new AccessDeniedException("仅允许在指定模块完成");
@@ -321,7 +330,8 @@ public class ProductionOrderOrchestrator {
         if (!CLOSE_SOURCE_MY_ORDERS.equals(src) && !CLOSE_SOURCE_PRODUCTION_PROGRESS.equals(src)) {
             throw new AccessDeniedException("仅允许在我的订单或工序跟进完成");
         }
-        ProductionOrder result = financeOrchestrationService.closeOrder(id, specialClose);
+        return distributedLockService.executeWithLock("order:close:" + id, 15, java.util.concurrent.TimeUnit.SECONDS,
+                () -> financeOrchestrationService.closeOrder(id, specialClose));
         // 记录关闭操作日志
         try {
             if (operationLogService != null && result != null) {

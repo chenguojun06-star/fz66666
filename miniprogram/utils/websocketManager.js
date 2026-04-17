@@ -23,9 +23,11 @@ class WebSocketManager {
     this.tenantId = null;
     this.manualClose = false;
     this.pageVisible = true;
+    this._destroyed = false;
   }
 
   connect(userId, tenantId) {
+    if (this._destroyed) return;
     if (this.connected || this.connecting) return;
     if (!userId || !tenantId) return;
 
@@ -33,8 +35,9 @@ class WebSocketManager {
     this.tenantId = tenantId;
     this.manualClose = false;
 
-    let baseUrl = getBaseUrl();
-    let wsUrl = baseUrl.replace(/^https?/, 'wss') + '/ws/realtime';
+    var self = this;
+    var baseUrl = getBaseUrl();
+    var wsUrl = baseUrl.replace(/^https?/, 'wss') + '/ws/realtime';
     wsUrl += '?userId=' + encodeURIComponent(userId);
     wsUrl += '&clientType=miniprogram';
     wsUrl += '&tenantId=' + encodeURIComponent(tenantId);
@@ -43,53 +46,53 @@ class WebSocketManager {
     try {
       this.socket = wx.connectSocket({
         url: wsUrl,
-        success: () => {},
-        fail: (err) => {
+        success: function() {},
+        fail: function(err) {
           console.warn('[WS] connectSocket fail:', err.errMsg || err);
-          this.connecting = false;
-          if (this._isDomainError(err)) {
+          self.connecting = false;
+          if (self._isDomainError(err)) {
             console.warn('[WS] domain not in whitelist, switching to polling immediately');
-            this._startPolling();
+            self._startPolling();
           } else {
-            this._scheduleReconnect();
+            self._scheduleReconnect();
           }
         }
       });
 
-      wx.onSocketOpen((res) => {
-        this.connected = true;
-        this.connecting = false;
-        this.reconnectAttempts = 0;
+      wx.onSocketOpen(function(res) {
+        self.connected = true;
+        self.connecting = false;
+        self.reconnectAttempts = 0;
         console.info('[WS] connected');
-        this._startHeartbeat();
-        this._stopPolling();
+        self._startHeartbeat();
+        self._stopPolling();
       });
 
-      wx.onSocketMessage((res) => {
-        this._handleMessage(res.data);
+      wx.onSocketMessage(function(res) {
+        self._handleMessage(res.data);
       });
 
-      wx.onSocketError((err) => {
+      wx.onSocketError(function(err) {
         console.warn('[WS] error:', err);
-        this.connected = false;
-        this.connecting = false;
-        this._stopHeartbeat();
-        if (!this.manualClose) {
-          if (this._isDomainError(err)) {
+        self.connected = false;
+        self.connecting = false;
+        self._stopHeartbeat();
+        if (!self.manualClose && !self._destroyed) {
+          if (self._isDomainError(err)) {
             console.warn('[WS] domain error, switching to polling');
-            this._startPolling();
+            self._startPolling();
           } else {
-            this._scheduleReconnect();
+            self._scheduleReconnect();
           }
         }
       });
 
-      wx.onSocketClose((res) => {
-        this.connected = false;
-        this.connecting = false;
-        this._stopHeartbeat();
-        if (!this.manualClose) {
-          this._scheduleReconnect();
+      wx.onSocketClose(function(res) {
+        self.connected = false;
+        self.connecting = false;
+        self._stopHeartbeat();
+        if (!self.manualClose && !self._destroyed) {
+          self._scheduleReconnect();
         }
       });
     } catch (e) {
@@ -106,13 +109,12 @@ class WebSocketManager {
 
   disconnect() {
     this.manualClose = true;
+    this._destroyed = true;
     this._stopHeartbeat();
     this._stopPolling();
     this._clearReconnect();
     if (this.socket) {
-      try {
-        wx.closeSocket();
-      } catch (e) {}
+      try { wx.closeSocket(); } catch (e) {}
       this.socket = null;
     }
     this.connected = false;
@@ -120,8 +122,10 @@ class WebSocketManager {
   }
 
   reconnect() {
+    if (this._destroyed) return;
     if (this.connected || this.connecting) return;
     this.disconnect();
+    this._destroyed = false;
     this.manualClose = false;
     if (this.userId && this.tenantId) {
       this.connect(this.userId, this.tenantId);
@@ -130,7 +134,7 @@ class WebSocketManager {
 
   _handleMessage(data) {
     try {
-      let msg = typeof data === 'string' ? JSON.parse(data) : data;
+      var msg = typeof data === 'string' ? JSON.parse(data) : data;
       if (!msg || !msg.type) return;
 
       if (msg.type === 'ping') {
@@ -139,8 +143,8 @@ class WebSocketManager {
       }
       if (msg.type === 'pong') return;
 
-      let eventType = msg.type;
-      let eventData = msg.data || msg.payload || {};
+      var eventType = msg.type;
+      var eventData = msg.data || msg.payload || {};
 
       if (Events[eventType] || eventType.includes(':')) {
         eventBus.emit(eventType, eventData);
@@ -148,16 +152,16 @@ class WebSocketManager {
 
       if (eventType === 'order:progress:changed' || eventType === 'warehouse:in'
           || eventType === 'process:stage:received' || eventType === 'process:stage:completed') {
-        eventBus.emit(Events.DATA_CHANGED, { type: 'orders', source: 'ws', ...eventData });
+        eventBus.emit(Events.DATA_CHANGED, Object.assign({ type: 'orders', source: 'ws' }, eventData));
       }
       if (eventType === 'scan:success' || eventType === 'scan:undo') {
-        eventBus.emit(Events.DATA_CHANGED, { type: 'scans', source: 'ws', ...eventData });
+        eventBus.emit(Events.DATA_CHANGED, Object.assign({ type: 'scans', source: 'ws' }, eventData));
       }
       if (eventType === 'quality:checked') {
-        eventBus.emit(Events.DATA_CHANGED, { type: 'quality', source: 'ws', ...eventData });
+        eventBus.emit(Events.DATA_CHANGED, Object.assign({ type: 'quality', source: 'ws' }, eventData));
       }
       if (eventType === 'order:status:changed') {
-        eventBus.emit(Events.DATA_CHANGED, { type: 'orders', source: 'ws', ...eventData });
+        eventBus.emit(Events.DATA_CHANGED, Object.assign({ type: 'orders', source: 'ws' }, eventData));
         eventBus.emit(Events.ORDER_STATUS_CHANGED, eventData);
       }
       if (eventType === 'data:changed') {
@@ -176,58 +180,67 @@ class WebSocketManager {
     try {
       wx.sendSocketMessage({
         data: JSON.stringify(data),
-        fail: () => {}
+        fail: function() {}
       });
     } catch (e) {}
   }
 
   _startHeartbeat() {
     this._stopHeartbeat();
-    this.heartbeatTimer = setInterval(() => {
-      if (this.connected) {
-        this._send({ type: 'ping' });
-      }
+    var self = this;
+    this.heartbeatTimer = setInterval(function() {
+      try {
+        if (self._destroyed) { self._stopHeartbeat(); return; }
+        if (self.connected && self.pageVisible) {
+          self._send({ type: 'ping' });
+        }
+      } catch (e) {}
     }, HEARTBEAT_INTERVAL);
   }
 
   _stopHeartbeat() {
     if (this.heartbeatTimer) {
-      clearInterval(this.heartbeatTimer);
+      try { clearInterval(this.heartbeatTimer); } catch (e) {}
       this.heartbeatTimer = null;
     }
   }
 
   _scheduleReconnect() {
-    if (this.manualClose) return;
+    if (this.manualClose || this._destroyed) return;
     this._clearReconnect();
     if (this.reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
       console.warn('[WS] max reconnect attempts reached, switching to polling');
       this._startPolling();
       return;
     }
-    let delay = Math.min(
+    var delay = Math.min(
       RECONNECT_BASE_DELAY * Math.pow(2, this.reconnectAttempts),
       RECONNECT_MAX_DELAY
     );
     delay = delay + Math.random() * 1000;
     this.reconnectAttempts++;
     console.info('[WS] reconnect in ' + Math.round(delay) + 'ms, attempt ' + this.reconnectAttempts);
-    this.reconnectTimer = setTimeout(() => {
-      if (this.userId && this.tenantId && !this.manualClose) {
-        this.connect(this.userId, this.tenantId);
-      }
+    var self = this;
+    this.reconnectTimer = setTimeout(function() {
+      try {
+        if (self._destroyed) return;
+        if (self.userId && self.tenantId && !self.manualClose) {
+          self.connect(self.userId, self.tenantId);
+        }
+      } catch (e) {}
     }, delay);
   }
 
   _clearReconnect() {
     if (this.reconnectTimer) {
-      clearTimeout(this.reconnectTimer);
+      try { clearTimeout(this.reconnectTimer); } catch (e) {}
       this.reconnectTimer = null;
     }
   }
 
   onAppShow() {
     this.pageVisible = true;
+    if (this._destroyed) return;
     if (!this.connected && !this.connecting && this.userId && this.tenantId) {
       this.reconnectAttempts = 0;
       this._stopPolling();
@@ -237,6 +250,7 @@ class WebSocketManager {
 
   onAppHide() {
     this.pageVisible = false;
+    this._stopHeartbeat();
   }
 
   isConnected() {
@@ -248,14 +262,18 @@ class WebSocketManager {
   }
 
   _startPolling() {
-    if (this.polling) return;
+    if (this.polling || this._destroyed) return;
     this.polling = true;
     console.info('[WS] polling fallback started (interval: ' + POLL_INTERVAL + 'ms)');
     this._doPoll();
-    this.pollTimer = setInterval(() => {
-      if (this.pageVisible) {
-        this._doPoll();
-      }
+    var self = this;
+    this.pollTimer = setInterval(function() {
+      try {
+        if (self._destroyed) { self._stopPolling(); return; }
+        if (self.pageVisible) {
+          self._doPoll();
+        }
+      } catch (e) {}
     }, POLL_INTERVAL);
   }
 
@@ -263,13 +281,13 @@ class WebSocketManager {
     if (!this.polling) return;
     this.polling = false;
     if (this.pollTimer) {
-      clearInterval(this.pollTimer);
+      try { clearInterval(this.pollTimer); } catch (e) {}
       this.pollTimer = null;
     }
     console.info('[WS] polling fallback stopped');
   }
 
-  async _doPoll() {
+  _doPoll() {
     try {
       eventBus.emit(Events.DATA_CHANGED, { type: 'all', source: 'poll' });
       eventBus.emit(Events.REFRESH_ALL, { source: 'poll' });
@@ -279,6 +297,6 @@ class WebSocketManager {
   }
 }
 
-const wsManager = new WebSocketManager();
+var wsManager = new WebSocketManager();
 
 module.exports = { wsManager };
