@@ -1,6 +1,5 @@
 package com.fashion.supplychain.wechat.client;
 
-import lombok.RequiredArgsConstructor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -31,17 +30,16 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Component
-@RequiredArgsConstructor
 public class WeChatMiniProgramClient {
 
     private static final Logger log = LoggerFactory.getLogger(WeChatMiniProgramClient.class);
 
-    private final String appid;
-    private final String secret;
-    private final boolean mockEnabled;
-    private final boolean trustAllCerts;
-    private final RestTemplate restTemplate;
-    private final ObjectMapper objectMapper;
+    private String appid;
+    private String secret;
+    private boolean mockEnabled;
+    private boolean trustAllCerts;
+    private RestTemplate restTemplate;
+    private ObjectMapper objectMapper;
 
     public WeChatMiniProgramClient(
             @Value("${wechat.mini-program.appid:}") String appid,
