@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.executor;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.util.NumberUtils;
 import com.fashion.supplychain.common.util.TextUtils;
 import com.fashion.supplychain.production.entity.CuttingBundle;
@@ -384,19 +385,18 @@ public class WarehouseScanExecutor {
 
         int bundleWarehoused;
         try {
-            bundleWarehoused = productWarehousingService.list(
-                    new LambdaQueryWrapper<ProductWarehousing>()
-                            .select(ProductWarehousing::getQualifiedQuantity, ProductWarehousing::getWarehousingType)
-                            .eq(ProductWarehousing::getDeleteFlag, 0)
-                            .eq(ProductWarehousing::getCuttingBundleId, bundle.getId())
-                            .eq(ProductWarehousing::getQualityStatus, "qualified"))
-                    .stream()
-                    .filter(w -> {
-                        String wt = w.getWarehousingType() == null ? "" : w.getWarehousingType().trim();
-                        return !"quality_scan".equals(wt) && !"quality_scan_scrap".equals(wt);
-                    })
-                    .mapToInt(w -> w.getQualifiedQuantity() != null ? w.getQualifiedQuantity() : 0)
-                    .sum();
+            QueryWrapper<ProductWarehousing> qw = new QueryWrapper<ProductWarehousing>()
+                    .select("COALESCE(SUM(qualified_quantity), 0) as totalQty")
+                    .eq("delete_flag", 0)
+                    .eq("cutting_bundle_id", bundle.getId())
+                    .eq("quality_status", "qualified")
+                    .notIn("warehousing_type", "quality_scan", "quality_scan_scrap");
+            List<Map<String, Object>> result = productWarehousingService.listMaps(qw);
+            bundleWarehoused = 0;
+            if (result != null && !result.isEmpty()) {
+                Object val = result.get(0).get("totalQty");
+                if (val instanceof Number) bundleWarehoused = ((Number) val).intValue();
+            }
         } catch (Exception e) {
             log.warn("查询菲号已入库数量失败: bundleId={}", bundle.getId(), e);
             return; // 查询失败时跳过验证，不阻塞业务

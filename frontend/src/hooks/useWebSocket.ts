@@ -27,6 +27,7 @@ interface WsInstance {
   listeners: Map<string, Set<MessageHandler>>;
   connected: boolean;
   setConnected: (v: boolean) => void;
+  addConnectedListener: (fn: (v: boolean) => void) => () => void;
   connect: () => void;
   reconnectCount: number;
   heartbeatTimer: ReturnType<typeof setInterval> | undefined;
@@ -43,26 +44,26 @@ function getOrCreateInstance(options: UseWebSocketOptions): WsInstance {
     return globalInstance;
   }
 
-  const state = { connected: false } as { connected: boolean };
+  const connectedListeners = new Set<(v: boolean) => void>();
   const setConnected = (v: boolean) => {
-    state.connected = v;
-    // 使用 null 守卫：cleanup 会把 globalInstance 置为 null，
+    // null 守卫：cleanup 会把 globalInstance 置为 null，
     // 而 WebSocket onopen/onclose 可能在 cleanup 之后触发（竞态），
-    // 此时 globalInstance! 非空断言会抛出 TypeError: Cannot set properties of null (setting 'connected')
+    // 不加 null 守卫会抛出 TypeError: Cannot set properties of null (setting 'connected')
     if (globalInstance) {
       globalInstance.connected = v;
-      globalInstance.setConnected = setConnected;
     }
-    connectedListeners.forEach(fn => fn(v));
+    connectedListeners.forEach(fn => { try { fn(v); } catch { /* ignore */ } });
   };
-
-  const connectedListeners = new Set<(v: boolean) => void>();
 
   const inst: WsInstance = {
     ws: null,
     listeners: new Map(),
     connected: false,
     setConnected,
+    addConnectedListener: (fn: (v: boolean) => void) => {
+      connectedListeners.add(fn);
+      return () => connectedListeners.delete(fn);
+    },
     connect: () => {},
     reconnectCount: 0,
     heartbeatTimer: undefined,
@@ -162,10 +163,11 @@ export function useWebSocket(options: UseWebSocketOptions) {
   const [connected, setMyConnected] = useState(inst.connected);
 
   useEffect(() => {
+    // 同步初始连接状态，并订阅后续变化
     setMyConnected(inst.connected);
-    const _handler = (v: boolean) => setMyConnected(v);
-    const _connectedListeners = (globalInstance?.setConnected as any)?._listeners as Set<(v: boolean) => void> | undefined;
-    return () => { /* cleanup handled by subscriber count */ };
+    const unsubscribe = inst.addConnectedListener((v) => setMyConnected(v));
+    return () => { unsubscribe(); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

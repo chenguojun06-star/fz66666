@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.helper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
@@ -13,6 +14,7 @@ import org.springframework.util.StringUtils;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 库存数量验证器
@@ -179,45 +181,33 @@ public class InventoryValidator {
     private int calculateCompletedQuantity(String orderId, String scanType,
                                           String progressStage, CuttingBundle bundle) {
         try {
-            LambdaQueryWrapper<ScanRecord> wrapper = new LambdaQueryWrapper<ScanRecord>()
-                    .select(ScanRecord::getQuantity)
-                    .eq(ScanRecord::getOrderId, orderId)
-                    .eq(ScanRecord::getScanResult, "success");
+            QueryWrapper<ScanRecord> qw = new QueryWrapper<ScanRecord>()
+                    .select("COALESCE(SUM(quantity), 0) as totalQuantity")
+                    .eq("scan_result", "success");
 
-            // 扫码类型过滤
             if (hasText(scanType)) {
-                wrapper.eq(ScanRecord::getScanType, scanType);
+                qw.eq("scan_type", scanType);
             } else {
-                // 默认统计生产相关扫码
-                wrapper.in(ScanRecord::getScanType, Arrays.asList("production", "cutting", "quality", "warehouse"));
+                qw.in("scan_type", Arrays.asList("production", "cutting", "quality", "warehouse"));
             }
 
-            // 工序阶段过滤
             if (hasText(progressStage)) {
-                wrapper.and(w -> w.eq(ScanRecord::getProgressStage, progressStage)
-                        .or().eq(ScanRecord::getProcessName, progressStage));
+                qw.and(w -> w.eq("progress_stage", progressStage)
+                        .or().eq("process_name", progressStage));
             }
 
-            // 裁剪菲号过滤（如果指定）
             if (bundle != null && hasText(bundle.getId())) {
-                wrapper.eq(ScanRecord::getCuttingBundleId, bundle.getId());
+                qw.eq("cutting_bundle_id", bundle.getId());
             }
 
-            List<ScanRecord> records = scanRecordService.list(wrapper);
+            qw.eq("order_id", orderId);
 
-            if (records == null || records.isEmpty()) {
-                return 0;
+            List<Map<String, Object>> result = scanRecordService.listMaps(qw);
+            if (result != null && !result.isEmpty()) {
+                Object val = result.get(0).get("totalQuantity");
+                if (val instanceof Number) return ((Number) val).intValue();
             }
-
-            // 累加数量
-            int total = 0;
-            for (ScanRecord record : records) {
-                if (record != null && record.getQuantity() != null && record.getQuantity() > 0) {
-                    total += record.getQuantity();
-                }
-            }
-
-            return total;
+            return 0;
         } catch (Exception e) {
             log.error("计算已完成数量失败: orderId={}, scanType={}, stage={}",
                     orderId, scanType, progressStage, e);

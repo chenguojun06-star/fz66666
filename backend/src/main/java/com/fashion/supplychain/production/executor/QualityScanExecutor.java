@@ -449,20 +449,21 @@ public class QualityScanExecutor {
 
             // 2. 检查每个车缝子工序是否都有扫码记录归属人
             List<String> missingProcesses = new ArrayList<>();
+            List<ScanRecord> sewingRecords = scanRecordService.list(new LambdaQueryWrapper<ScanRecord>()
+                    .select(ScanRecord::getProcessCode, ScanRecord::getProcessName, ScanRecord::getProgressStage)
+                    .eq(ScanRecord::getOrderId, orderId)
+                    .eq(ScanRecord::getCuttingBundleId, bundleId)
+                    .eq(ScanRecord::getScanType, "production")
+                    .eq(ScanRecord::getScanResult, "success")
+                    .isNotNull(ScanRecord::getOperatorId));
+            java.util.Set<String> completedSet = new java.util.HashSet<>();
+            for (ScanRecord r : sewingRecords) {
+                if (r.getProcessCode() != null) completedSet.add(r.getProcessCode());
+                if (r.getProcessName() != null) completedSet.add(r.getProcessName());
+                if (r.getProgressStage() != null) completedSet.add(r.getProgressStage());
+            }
             for (String processName : sewingSubProcesses) {
-                long count = scanRecordService.count(new LambdaQueryWrapper<ScanRecord>()
-                        .eq(ScanRecord::getOrderId, orderId)
-                        .eq(ScanRecord::getCuttingBundleId, bundleId)
-                        .eq(ScanRecord::getScanType, "production")
-                        .eq(ScanRecord::getScanResult, "success")
-                        .isNotNull(ScanRecord::getOperatorId)
-                        .and(w -> w
-                                .eq(ScanRecord::getProcessCode, processName)
-                                .or()
-                                .eq(ScanRecord::getProcessName, processName)
-                                .or()
-                                .eq(ScanRecord::getProgressStage, processName)));
-                if (count <= 0) {
+                if (!completedSet.contains(processName)) {
                     missingProcesses.add(processName);
                 }
             }
@@ -607,13 +608,13 @@ public class QualityScanExecutor {
                                          int defectQty, String operatorId, String operatorName) {
         try {
             // 幂等：同一菲号只创建一条 quality_scan 记录
-            List<ProductWarehousing> existing = productWarehousingService.list(
+            long existingCount = productWarehousingService.count(
                     new LambdaQueryWrapper<ProductWarehousing>()
                             .eq(ProductWarehousing::getOrderId, order.getId())
                             .eq(ProductWarehousing::getCuttingBundleId, bundle.getId())
                             .eq(ProductWarehousing::getWarehousingType, "quality_scan")
                             .eq(ProductWarehousing::getDeleteFlag, 0));
-            if (existing != null && !existing.isEmpty()) {
+            if (existingCount > 0) {
                 log.info("[QualityScan] quality_scan 记录已存在，跳过: orderId={}, bundleId={}",
                         order.getId(), bundle.getId());
                 return;
@@ -669,13 +670,13 @@ public class QualityScanExecutor {
                                            int qualifiedQty, String operatorId, String operatorName) {
         try {
             // 幂等：同一菲号已有 quality_scan 记录则跳过（可能先前不合格已创建）
-            List<ProductWarehousing> existing = productWarehousingService.list(
+            long existingCount = productWarehousingService.count(
                     new LambdaQueryWrapper<ProductWarehousing>()
                             .eq(ProductWarehousing::getOrderId, order.getId())
                             .eq(ProductWarehousing::getCuttingBundleId, bundle.getId())
                             .eq(ProductWarehousing::getWarehousingType, "quality_scan")
                             .eq(ProductWarehousing::getDeleteFlag, 0));
-            if (existing != null && !existing.isEmpty()) {
+            if (existingCount > 0) {
                 log.info("[QualityScan] quality_scan 记录已存在，跳过合格记录创建: orderId={}, bundleId={}",
                         order.getId(), bundle.getId());
                 return;
@@ -758,13 +759,13 @@ public class QualityScanExecutor {
             }
 
             // ★ 第二步：幂等创建 scrap 记录
-            List<ProductWarehousing> existing = productWarehousingService.list(
+            long scrapCount = productWarehousingService.count(
                     new LambdaQueryWrapper<ProductWarehousing>()
                             .eq(ProductWarehousing::getOrderId, order.getId())
                             .eq(ProductWarehousing::getCuttingBundleId, bundle.getId())
                             .eq(ProductWarehousing::getWarehousingType, "quality_scan_scrap")
                             .eq(ProductWarehousing::getDeleteFlag, 0));
-            if (existing != null && !existing.isEmpty()) {
+            if (scrapCount > 0) {
                 log.info("[QualityScan] quality_scan_scrap 记录已存在（含转换），跳过新建: orderId={}, bundleId={}",
                         order.getId(), bundle.getId());
             } else {

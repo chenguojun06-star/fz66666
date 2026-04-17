@@ -108,17 +108,20 @@ public class ProductionScanStageSupport {
         }
 
         List<String> missing = new ArrayList<>();
+        List<ScanRecord> existingRecords = scanRecordService.list(new LambdaQueryWrapper<ScanRecord>()
+                .select(ScanRecord::getProcessCode, ScanRecord::getProcessName)
+                .eq(ScanRecord::getOrderId, order.getId())
+                .and(bw -> bw.isNull(ScanRecord::getCuttingBundleId)
+                        .or().eq(ScanRecord::getCuttingBundleId, bundle.getId()))
+                .in(ScanRecord::getScanType, java.util.Arrays.asList("production", "cutting", "quality"))
+                .eq(ScanRecord::getScanResult, "success"));
+        java.util.Set<String> completedProcesses = new java.util.HashSet<>();
+        for (ScanRecord r : existingRecords) {
+            if (r.getProcessCode() != null) completedProcesses.add(r.getProcessCode());
+            if (r.getProcessName() != null) completedProcesses.add(r.getProcessName());
+        }
         for (String process : required) {
-            // 接受两种模式：ORDER模式（cutting_bundle_id=NULL）和BUNDLE模式（matching bundle id）
-            long count = scanRecordService.count(new LambdaQueryWrapper<ScanRecord>()
-                    .eq(ScanRecord::getOrderId, order.getId())
-                    .and(bw -> bw.isNull(ScanRecord::getCuttingBundleId)
-                            .or().eq(ScanRecord::getCuttingBundleId, bundle.getId()))
-                    .in(ScanRecord::getScanType, java.util.Arrays.asList("production", "cutting", "quality"))
-                    .eq(ScanRecord::getScanResult, "success")
-                    .and(w -> w.eq(ScanRecord::getProcessCode, process)
-                            .or().eq(ScanRecord::getProcessName, process)));
-            if (count <= 0) {
+            if (!completedProcesses.contains(process)) {
                 missing.add(process);
             }
         }

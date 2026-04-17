@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import type { ProductionOrder } from '@/types/production';
+import { useSync } from '@/utils/syncManager';
 
 type UseOrderSyncParams = {
   fetchOrders: (options?: { silent?: boolean }) => Promise<void>;
@@ -18,58 +19,42 @@ export const useOrderSync = ({
   setActiveOrder,
   orderSyncingRef,
 }: UseOrderSyncParams) => {
+  const syncingRef = useRef(false);
   const fetchOrdersRef = useRef(fetchOrders);
   const fetchOrderDetailRef = useRef(fetchOrderDetail);
   const fetchScanHistoryRef = useRef(fetchScanHistory);
-  const syncingRef = useRef(false);
 
-  useEffect(() => {
-    fetchOrdersRef.current = fetchOrders;
-  }, [fetchOrders]);
+  useEffect(() => { fetchOrdersRef.current = fetchOrders; }, [fetchOrders]);
+  useEffect(() => { fetchOrderDetailRef.current = fetchOrderDetail; }, [fetchOrderDetail]);
+  useEffect(() => { fetchScanHistoryRef.current = fetchScanHistory; }, [fetchScanHistory]);
 
-  useEffect(() => {
-    fetchOrderDetailRef.current = fetchOrderDetail;
-  }, [fetchOrderDetail]);
-
-  useEffect(() => {
-    fetchScanHistoryRef.current = fetchScanHistory;
-  }, [fetchScanHistory]);
-
-  useEffect(() => {
-    const run = async (detail?: string) => {
-      if (syncingRef.current || orderSyncingRef.current) return;
-      syncingRef.current = true;
-      try {
-        await fetchOrdersRef.current({ silent: true });
-        if (detail && activeOrderRef.current?.id) {
-          const updated = await fetchOrderDetailRef.current(activeOrderRef.current.id);
-          if (updated) {
-            setActiveOrder(updated);
-            await fetchScanHistoryRef.current(updated, { silent: true });
-          }
+  const fetchFn = async () => {
+    if (syncingRef.current || orderSyncingRef.current) return null;
+    syncingRef.current = true;
+    try {
+      await fetchOrdersRef.current({ silent: true });
+      if (activeOrderRef.current?.id) {
+        const updated = await fetchOrderDetailRef.current(activeOrderRef.current.id);
+        if (updated) {
+          setActiveOrder(updated);
+          await fetchScanHistoryRef.current(updated, { silent: true });
         }
-      } catch {
-      } finally {
-        syncingRef.current = false;
       }
-    };
+    } catch {
+    } finally {
+      syncingRef.current = false;
+    }
+    return null;
+  };
 
-    const timer = window.setInterval(() => run(), 30000);
+  useSync('progress-detail-order', fetchFn, () => {}, { interval: 30000, pauseOnHidden: true });
 
-    const handleProgressChanged = (e: Event) => {
-      const detail = (e as CustomEvent).detail;
-      const orderNo = detail?.orderNo;
-      if (orderNo && activeOrderRef.current?.orderNo === orderNo) {
-        run(orderNo);
-      } else {
-        run();
-      }
+  useEffect(() => {
+    const handleProgressChanged = () => {
+      if (syncingRef.current || orderSyncingRef.current) return;
+      fetchFn();
     };
     window.addEventListener('order:progress:changed', handleProgressChanged);
-
-    return () => {
-      window.clearInterval(timer);
-      window.removeEventListener('order:progress:changed', handleProgressChanged);
-    };
-  }, [orderSyncingRef, activeOrderRef, setActiveOrder]);
+    return () => window.removeEventListener('order:progress:changed', handleProgressChanged);
+  }, [orderSyncingRef]);
 };
