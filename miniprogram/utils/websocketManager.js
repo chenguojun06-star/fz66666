@@ -47,7 +47,12 @@ class WebSocketManager {
         fail: (err) => {
           console.warn('[WS] connectSocket fail:', err.errMsg || err);
           this.connecting = false;
-          this._scheduleReconnect();
+          if (this._isDomainError(err)) {
+            console.warn('[WS] domain not in whitelist, switching to polling immediately');
+            this._startPolling();
+          } else {
+            this._scheduleReconnect();
+          }
         }
       });
 
@@ -70,7 +75,12 @@ class WebSocketManager {
         this.connecting = false;
         this._stopHeartbeat();
         if (!this.manualClose) {
-          this._scheduleReconnect();
+          if (this._isDomainError(err)) {
+            console.warn('[WS] domain error, switching to polling');
+            this._startPolling();
+          } else {
+            this._scheduleReconnect();
+          }
         }
       });
 
@@ -87,6 +97,11 @@ class WebSocketManager {
       console.warn('[WS] connect exception:', e.message || e);
       this._scheduleReconnect();
     }
+  }
+
+  _isDomainError(err) {
+    var msg = (err && (err.errMsg || err.message || String(err))) || '';
+    return msg.indexOf('url not in domain list') >= 0 || msg.indexOf('合法域名') >= 0;
   }
 
   disconnect() {
