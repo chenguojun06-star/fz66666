@@ -81,9 +81,9 @@ public class WebSocketService {
     }
 
     /**
-     * 广播订单进度变更
+     * 通知操作人订单进度变更（定向推送，不全局广播）
      */
-    public void broadcastOrderProgressChanged(String orderNo, int progress, String currentStage) {
+    public void notifyOrderProgressChanged(String operatorId, String orderNo, int progress, String currentStage) {
         WebSocketMessage<Map<String, Object>> message = WebSocketMessage.create(
             WebSocketMessageType.ORDER_PROGRESS_CHANGED,
             Map.of(
@@ -93,8 +93,20 @@ public class WebSocketService {
                 "timestamp", System.currentTimeMillis()
             )
         );
-        webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
-        log.info("[WebSocket] 广播订单进度变更: orderNo={}, progress={}%", orderNo, progress);
+        if (operatorId != null && !operatorId.isEmpty()) {
+            webSocketHandler.sendToUser(operatorId, message);
+        } else {
+            webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
+        }
+    }
+
+    /**
+     * 广播订单进度变更（兼容旧调用）
+     * @deprecated 使用 notifyOrderProgressChanged(operatorId, ...) 替代
+     */
+    @Deprecated
+    public void broadcastOrderProgressChanged(String orderNo, int progress, String currentStage) {
+        notifyOrderProgressChanged(null, orderNo, progress, currentStage);
     }
 
     /**
@@ -224,9 +236,9 @@ public class WebSocketService {
     }
 
     /**
-     * 广播通用数据变更
+     * 通知操作人数据变更（定向推送，不全局广播）
      */
-    public void broadcastDataChanged(String entityType, String entityId, String action) {
+    public void notifyDataChanged(String operatorId, String entityType, String entityId, String action) {
         WebSocketMessage<Map<String, Object>> message = WebSocketMessage.create(
             WebSocketMessageType.DATA_CHANGED,
             Map.of(
@@ -236,8 +248,20 @@ public class WebSocketService {
                 "timestamp", System.currentTimeMillis()
             )
         );
-        webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
-        log.info("[WebSocket] 广播数据变更: {} {} {}", entityType, entityId, action);
+        if (operatorId != null && !operatorId.isEmpty()) {
+            webSocketHandler.sendToUser(operatorId, message);
+        } else {
+            webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
+        }
+    }
+
+    /**
+     * 广播通用数据变更（兼容旧调用）
+     * @deprecated 使用 notifyDataChanged(operatorId, ...) 替代
+     */
+    @Deprecated
+    public void broadcastDataChanged(String entityType, String entityId, String action) {
+        notifyDataChanged(null, entityType, entityId, action);
     }
 
     /**

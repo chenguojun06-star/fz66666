@@ -127,7 +127,18 @@ public class ScanRecordOrchestrator {
         Map<String, Object> safeParams = params == null ? new HashMap<>() : new HashMap<>(params);
 
         String orderNo = safeParams.get("orderNo") == null ? null : String.valueOf(safeParams.get("orderNo"));
-        String lockKey = "scan:" + (orderNo != null ? orderNo : "unknown");
+        String scanCode = safeParams.get("scanCode") == null ? null : String.valueOf(safeParams.get("scanCode"));
+        String requestId = safeParams.get("requestId") == null ? null : String.valueOf(safeParams.get("requestId"));
+        String lockKey;
+        if (orderNo != null) {
+            lockKey = "scan:" + orderNo;
+        } else if (scanCode != null) {
+            lockKey = "scan:code:" + scanCode;
+        } else if (requestId != null) {
+            lockKey = "scan:req:" + requestId;
+        } else {
+            lockKey = "scan:anon:" + java.util.UUID.randomUUID();
+        }
         return distributedLockService.executeWithLock(lockKey, 10, java.util.concurrent.TimeUnit.SECONDS, () -> {
             return transactionTemplate.execute(status -> {
                 try {
@@ -290,7 +301,7 @@ public class ScanRecordOrchestrator {
                 webSocketService.notifyScanUndo(undoOperatorId, on, TextUtils.safeText(safeParams.get("scanType")),
                         undoOperatorName, undoProcessName, undoBundleNo);
             }
-            webSocketService.broadcastDataChanged("ScanRecord", null, "delete");
+            webSocketService.notifyDataChanged(undoOperatorId, "ScanRecord", null, "delete");
             if (hasText(on)) {
                 try {
                     String oid = TextUtils.safeText(safeParams.get("orderId"));
@@ -300,12 +311,12 @@ public class ScanRecordOrchestrator {
                     if (hasText(oid)) {
                         com.fashion.supplychain.production.entity.ProductionOrder po = productionOrderService.getById(oid);
                         int curProgress = po != null && po.getProductionProgress() != null ? po.getProductionProgress() : 0;
-                        webSocketService.broadcastOrderProgressChanged(on, curProgress, "撤销");
+                        webSocketService.notifyOrderProgressChanged(undoOperatorId, on, curProgress, "撤销");
                     } else {
-                        webSocketService.broadcastOrderProgressChanged(on, 0, "撤销");
+                        webSocketService.notifyOrderProgressChanged(undoOperatorId, on, 0, "撤销");
                     }
                 } catch (Exception e) {
-                    webSocketService.broadcastOrderProgressChanged(on, 0, "撤销");
+                    webSocketService.notifyOrderProgressChanged(undoOperatorId, on, 0, "撤销");
                 }
             }
         } catch (Exception wsEx) {

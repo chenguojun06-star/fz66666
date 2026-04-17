@@ -16,8 +16,11 @@ class GlobalAiAssistant extends StatefulWidget {
 class _GlobalAiAssistantState extends State<GlobalAiAssistant> with TickerProviderStateMixin {
   Offset position = const Offset(320, 500);
   bool isDragging = false;
-  late AnimationController _pulseController;
-  late AnimationController _breathController;
+  late AnimationController _floatController;
+  late AnimationController _glowController;
+  late AnimationController _blinkController;
+  late AnimationController _smileController;
+  late AnimationController _sparkController;
 
   @override
   void initState() {
@@ -25,21 +28,20 @@ class _GlobalAiAssistantState extends State<GlobalAiAssistant> with TickerProvid
     if (!Get.isRegistered<WorkAiController>()) {
       Get.put(WorkAiController());
     }
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-
-    _breathController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
+    _floatController = AnimationController(vsync: this, duration: const Duration(milliseconds: 4800))..repeat(reverse: true);
+    _glowController = AnimationController(vsync: this, duration: const Duration(milliseconds: 5200))..repeat(reverse: true);
+    _blinkController = AnimationController(vsync: this, duration: const Duration(milliseconds: 6600))..repeat();
+    _smileController = AnimationController(vsync: this, duration: const Duration(milliseconds: 3800))..repeat(reverse: true);
+    _sparkController = AnimationController(vsync: this, duration: const Duration(milliseconds: 2000))..repeat(reverse: true);
   }
 
   @override
   void dispose() {
-    _pulseController.dispose();
-    _breathController.dispose();
+    _floatController.dispose();
+    _glowController.dispose();
+    _blinkController.dispose();
+    _smileController.dispose();
+    _sparkController.dispose();
     super.dispose();
   }
 
@@ -67,7 +69,7 @@ class _GlobalAiAssistantState extends State<GlobalAiAssistant> with TickerProvid
       left: position.dx,
       top: position.dy,
       child: Draggable(
-        feedback: _buildCloudAvatar(isDragging: true),
+        feedback: _buildTrigger(isDragging: true),
         childWhenDragging: Container(),
         onDragStarted: () => setState(() => isDragging = true),
         onDragEnd: (details) {
@@ -76,7 +78,7 @@ class _GlobalAiAssistantState extends State<GlobalAiAssistant> with TickerProvid
             double x = details.offset.dx;
             double y = details.offset.dy;
             if (x < 0) x = 0;
-            if (x > Get.width - 68) x = Get.width - 68;
+            if (x > Get.width - 56) x = Get.width - 56;
             if (y < 80) y = 80;
             if (y > Get.height - 100) y = Get.height - 100;
             position = Offset(x, y);
@@ -84,57 +86,51 @@ class _GlobalAiAssistantState extends State<GlobalAiAssistant> with TickerProvid
         },
         child: GestureDetector(
           onTap: _showAiDialog,
-          child: _buildCloudAvatar(),
+          child: _buildTrigger(),
         ),
       ),
     );
   }
 
-  Widget _buildCloudAvatar({bool isDragging = false}) {
+  Widget _buildTrigger({bool isDragging = false}) {
     return AnimatedBuilder(
-      animation: Listenable.merge([_pulseController, _breathController]),
+      animation: Listenable.merge([_floatController, _glowController, _blinkController, _smileController, _sparkController]),
       builder: (context, child) {
-        final pulseScale = 1.0 + _pulseController.value * 0.03;
-        final breathOffset = _breathController.value * 1.5;
-
         return Transform.translate(
-          offset: Offset(0, breathOffset),
-          child: Transform.scale(
-            scale: isDragging ? 1.1 : pulseScale,
-            child: SizedBox(
-              width: 68,
-              height: 68,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  _buildPulseRing(),
-                  Container(
-                    width: 60,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF4F8EFF), AppColors.primary, Color(0xFF6366F1)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withValues(alpha: isDragging ? 0.5 : 0.25),
-                          blurRadius: isDragging ? 16 : 10,
-                          spreadRadius: isDragging ? 2 : 0,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+          offset: Offset(0, _floatController.value * -2),
+          child: SizedBox(
+            width: 56,
+            height: 56,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                _buildGlow(),
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.horizontal(
+                      left: isDragging ? const Radius.circular(16) : const Radius.circular(16),
+                      right: isDragging ? const Radius.circular(16) : const Radius.circular(16),
                     ),
-                    child: CustomPaint(
-                      painter: CloudFacePainter(
-                        breathProgress: _breathController.value,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: isDragging ? 0.2 : 0.14),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
                       ),
+                    ],
+                  ),
+                  child: CustomPaint(
+                    painter: MiniCloudPainter(
+                      blinkValue: _blinkController.value,
+                      smileValue: _smileController.value,
+                      sparkValue: _sparkController.value,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         );
@@ -142,16 +138,20 @@ class _GlobalAiAssistantState extends State<GlobalAiAssistant> with TickerProvid
     );
   }
 
-  Widget _buildPulseRing() {
-    final progress = _pulseController.value;
+  Widget _buildGlow() {
+    final progress = _glowController.value;
     return Container(
-      width: 60 + progress * 12,
-      height: 60 + progress * 12,
+      width: 50 + progress * 4,
+      height: 50 + progress * 4,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(
-          color: AppColors.primary.withValues(alpha: 0.15 * (1 - progress)),
-          width: 2,
+        gradient: RadialGradient(
+          colors: [
+            AppColors.primary.withValues(alpha: 0.22 * (0.6 + progress * 0.4)),
+            AppColors.primary.withValues(alpha: 0.04 * (0.6 + progress * 0.4)),
+            Colors.transparent,
+          ],
+          stops: const [0.0, 0.66, 0.78],
         ),
       ),
     );
@@ -162,42 +162,51 @@ class _GlobalAiAssistantState extends State<GlobalAiAssistant> with TickerProvid
       Container(
         decoration: const BoxDecoration(
           color: AppColors.bgCard,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+              decoration: const BoxDecoration(
+                color: AppColors.bgLight,
+                border: Border(bottom: BorderSide(color: AppColors.borderLight)),
+              ),
               child: Row(
                 children: [
-                  const SizedBox(width: 16),
                   SizedBox(
-                    width: 36,
-                    height: 36,
+                    width: 32,
+                    height: 32,
                     child: CustomPaint(
-                      painter: CloudFacePainter(breathProgress: 0.5),
+                      painter: MiniCloudPainter(blinkValue: 0.0, smileValue: 0.5, sparkValue: 0.5),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
                   const Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('小云 AI 助手', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                        Text('随时为你解答生产管理问题', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
+                        Text('☁️ 小云帮助中心', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                        Text('随时为你解答生产管理问题', style: TextStyle(fontSize: 11, color: AppColors.textTertiary)),
                       ],
                     ),
                   ),
-                  IconButton(
-                    onPressed: () => Get.back(),
-                    icon: const Icon(Icons.close, size: 22, color: AppColors.textTertiary),
+                  GestureDetector(
+                    onTap: () => Get.back(),
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: AppColors.bgGray,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Icon(Icons.close, size: 18, color: AppColors.textTertiary),
+                    ),
                   ),
-                  const SizedBox(width: 8),
                 ],
               ),
             ),
-            const Divider(height: 1),
             const SizedBox(
               height: 520,
               child: WorkAiPage(),
@@ -211,108 +220,156 @@ class _GlobalAiAssistantState extends State<GlobalAiAssistant> with TickerProvid
   }
 }
 
-class CloudFacePainter extends CustomPainter {
-  final double breathProgress;
+class MiniCloudPainter extends CustomPainter {
+  final double blinkValue;
+  final double smileValue;
+  final double sparkValue;
 
-  CloudFacePainter({required this.breathProgress});
+  MiniCloudPainter({
+    required this.blinkValue,
+    required this.smileValue,
+    required this.sparkValue,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2;
+    final w = size.width;
+    final h = size.height;
+    final cx = w / 2;
+    final cy = h / 2 + 2;
 
-    _drawCloudShape(canvas, center, radius);
-    _drawFace(canvas, center, radius);
+    _drawCloudBody(canvas, cx, cy, w);
+    _drawEyes(canvas, cx, cy, w);
+    _drawSmile(canvas, cx, cy, w);
+    _drawSparks(canvas, cx, cy, w);
   }
 
-  void _drawCloudShape(Canvas canvas, Offset center, double radius) {
+  void _drawCloudBody(Canvas canvas, double cx, double cy, double w) {
     final paint = Paint()
       ..shader = const LinearGradient(
-        colors: [Color(0xFFE8F0FE), Color(0xFFD4E4FC)],
+        colors: [Color(0xFFFAFBFC), Color(0xFFE8F0FE)],
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-      ).createShader(Rect.fromCircle(center: center, radius: radius * 0.72));
+      ).createShader(Rect.fromCenter(center: Offset(cx, cy), width: w * 0.8, height: w * 0.6));
 
-    final r = radius * 0.55;
-    final cx = center.dx;
-    final cy = center.dy + r * 0.1;
+    final shadowPaint = Paint()
+      ..color = AppColors.primary.withValues(alpha: 0.14)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
 
-    final path = Path();
-    path.addOval(Rect.fromCenter(center: Offset(cx, cy), width: r * 1.6, height: r * 1.3));
-    path.addOval(Rect.fromCenter(center: Offset(cx - r * 0.55, cy - r * 0.25), width: r * 0.9, height: r * 0.85));
-    path.addOval(Rect.fromCenter(center: Offset(cx + r * 0.55, cy - r * 0.25), width: r * 0.9, height: r * 0.85));
-    path.addOval(Rect.fromCenter(center: Offset(cx - r * 0.25, cy - r * 0.55), width: r * 0.75, height: r * 0.7));
-    path.addOval(Rect.fromCenter(center: Offset(cx + r * 0.25, cy - r * 0.55), width: r * 0.75, height: r * 0.7));
+    final r = w * 0.16;
 
-    canvas.drawPath(path, paint);
+    final bodyRect = Rect.fromCenter(center: Offset(cx, cy + r * 0.3), width: r * 3.2, height: r * 2.2);
+    canvas.drawRRect(RRect.fromRectAndRadius(bodyRect, Radius.circular(r * 1.1)), shadowPaint);
+
+    final leftCircle = Rect.fromCenter(center: Offset(cx - r * 1.1, cy - r * 0.5), width: r * 1.6, height: r * 1.6);
+    canvas.drawOval(leftCircle, paint);
+
+    final centerCircle = Rect.fromCenter(center: Offset(cx, cy - r * 1.1), width: r * 2.1, height: r * 2.1);
+    canvas.drawOval(centerCircle, paint);
+
+    final rightCircle = Rect.fromCenter(center: Offset(cx + r * 1.1, cy - r * 0.5), width: r * 1.5, height: r * 1.5);
+    canvas.drawOval(rightCircle, paint);
+
+    final baseRect = Rect.fromCenter(center: Offset(cx, cy + r * 0.3), width: r * 3.2, height: r * 2.2);
+    canvas.drawRRect(RRect.fromRectAndRadius(baseRect, Radius.circular(r * 1.1)), paint);
 
     final highlightPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.4)
-      ..style = PaintingStyle.fill;
-
-    canvas.drawOval(
-      Rect.fromCenter(
-        center: Offset(cx - r * 0.15, cy - r * 0.45),
-        width: r * 0.5,
-        height: r * 0.3,
-      ),
+      ..color = Colors.white.withValues(alpha: 0.9)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    canvas.drawArc(
+      Rect.fromCenter(center: Offset(cx - r * 0.3, cy - r * 1.4), width: r * 1.2, height: r * 0.8),
+      -0.8,
+      1.6,
+      false,
       highlightPaint,
     );
   }
 
-  void _drawFace(Canvas canvas, Offset center, double radius) {
-    final r = radius * 0.55;
-    final cx = center.dx;
-    final cy = center.dy + r * 0.1;
+  void _drawEyes(Canvas canvas, double cx, double cy, double w) {
+    final r = w * 0.16;
+    final eyeY = cy - r * 0.2;
+    final leftEyeX = cx - r * 0.65;
+    final rightEyeX = cx + r * 0.65;
+    final eyeW = r * 0.32;
+    final eyeH = r * 0.38;
 
-    final eyeY = cy - r * 0.1;
-    final leftEyeX = cx - r * 0.25;
-    final rightEyeX = cx + r * 0.25;
-    final eyeRadius = r * 0.08;
+    double scaleY = 1.0;
+    if (blinkValue > 0.90 && blinkValue < 0.96) {
+      scaleY = 0.1;
+    }
 
-    final eyePaint = Paint()..color = const Color(0xFF2D3748);
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(leftEyeX, eyeY), width: eyeRadius * 2.2, height: eyeRadius * 2.6),
+    final eyePaint = Paint()..color = AppColors.primary;
+
+    canvas.save();
+    canvas.translate(leftEyeX, eyeY);
+    canvas.scale(1.0, scaleY);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset.zero, width: eyeW, height: eyeH),
+        Radius.circular(eyeW / 2),
+      ),
       eyePaint,
     );
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(rightEyeX, eyeY), width: eyeRadius * 2.2, height: eyeRadius * 2.6),
+    canvas.restore();
+
+    canvas.save();
+    canvas.translate(rightEyeX, eyeY);
+    canvas.scale(1.0, scaleY);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCenter(center: Offset.zero, width: eyeW, height: eyeH),
+        Radius.circular(eyeW / 2),
+      ),
       eyePaint,
     );
+    canvas.restore();
 
-    final glintPaint = Paint()..color = Colors.white;
-    canvas.drawCircle(Offset(leftEyeX + eyeRadius * 0.4, eyeY - eyeRadius * 0.4), eyeRadius * 0.6, glintPaint);
-    canvas.drawCircle(Offset(rightEyeX + eyeRadius * 0.4, eyeY - eyeRadius * 0.4), eyeRadius * 0.6, glintPaint);
+    if (scaleY > 0.5) {
+      final glintPaint = Paint()..color = Colors.white.withValues(alpha: 0.96);
+      final glintR = eyeW * 0.2;
+      canvas.drawCircle(Offset(leftEyeX + eyeW * 0.15, eyeY - eyeH * 0.15), glintR, glintPaint);
+      canvas.drawCircle(Offset(rightEyeX + eyeW * 0.15, eyeY - eyeH * 0.15), glintR, glintPaint);
+    }
+  }
 
-    final cheekY = eyeY + r * 0.25;
-    final cheekPaint = Paint()..color = const Color(0xFFFFB5B5).withValues(alpha: 0.35);
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(leftEyeX - r * 0.08, cheekY), width: r * 0.2, height: r * 0.12),
-      cheekPaint,
-    );
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(rightEyeX + r * 0.08, cheekY), width: r * 0.2, height: r * 0.12),
-      cheekPaint,
-    );
+  void _drawSmile(Canvas canvas, double cx, double cy, double w) {
+    final r = w * 0.16;
+    final smileY = cy + r * 0.45;
+    final smileW = r * 0.65;
+    final smileH = r * 0.32 * (0.8 + smileValue * 0.5);
 
-    final mouthY = cheekY + r * 0.08;
-    final mouthPaint = Paint()
-      ..color = const Color(0xFF5B7FFF)
+    final smilePaint = Paint()
+      ..color = AppColors.primary
       ..style = PaintingStyle.stroke
-      ..strokeWidth = r * 0.04
+      ..strokeWidth = r * 0.1
       ..strokeCap = StrokeCap.round;
 
-    final smileWidth = r * 0.22;
     final smileRect = Rect.fromCenter(
-      center: Offset(cx, mouthY),
-      width: smileWidth * 2,
-      height: smileWidth,
+      center: Offset(cx, smileY),
+      width: smileW,
+      height: smileH,
     );
-    canvas.drawArc(smileRect, 0.15 * math.pi, 0.7 * math.pi, false, mouthPaint);
+    canvas.drawArc(smileRect, 0.15 * math.pi, 0.7 * math.pi, false, smilePaint);
+  }
+
+  void _drawSparks(Canvas canvas, double cx, double cy, double w) {
+    final r = w * 0.16;
+    final sparkR = r * 0.12;
+    final alpha = sparkValue;
+
+    final sparkPaint = Paint()
+      ..color = AppColors.warning.withValues(alpha: alpha)
+      ..style = PaintingStyle.fill;
+
+    canvas.drawCircle(Offset(cx - r * 1.6, cy - r * 0.8), sparkR, sparkPaint);
+    canvas.drawCircle(Offset(cx + r * 1.5, cy - r * 0.6), sparkR, sparkPaint);
   }
 
   @override
-  bool shouldRepaint(covariant CloudFacePainter oldDelegate) {
-    return oldDelegate.breathProgress != breathProgress;
+  bool shouldRepaint(covariant MiniCloudPainter oldDelegate) {
+    return oldDelegate.blinkValue != blinkValue ||
+        oldDelegate.smileValue != smileValue ||
+        oldDelegate.sparkValue != sparkValue;
   }
 }

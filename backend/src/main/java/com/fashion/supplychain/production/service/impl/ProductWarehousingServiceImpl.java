@@ -414,8 +414,8 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
                 int qty = productWarehousing.getQualifiedQuantity() != null ? productWarehousing.getQualifiedQuantity() : 0;
                 String operatorId = productWarehousing.getQualityOperatorId() != null ? productWarehousing.getQualityOperatorId() : "";
                 webSocketService.notifyWarehouseIn(operatorId, orderNo, qty, warehouse);
-                webSocketService.broadcastOrderProgressChanged(orderNo, 0, "入库");
-                webSocketService.broadcastDataChanged("ProductWarehousing", productWarehousing.getId(), "create");
+                webSocketService.notifyOrderProgressChanged(operatorId, orderNo, 0, "入库");
+                webSocketService.notifyDataChanged(operatorId, "ProductWarehousing", productWarehousing.getId(), "create");
             } catch (Exception e) {
                 log.warn("入库WebSocket广播失败（不阻断入库）: orderId={}", productWarehousing.getOrderId(), e);
             }

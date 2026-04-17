@@ -178,8 +178,8 @@ public class QualityScanExecutor {
                 String bSize = bundle != null && bundle.getSize() != null ? bundle.getSize() : "";
                 String opName = operatorName != null ? operatorName : "";
                 webSocketService.notifyQualityChecked(operatorId, orderNo, "质检", qty != null ? qty : 0, 0, opName, bNo, bColor, bSize);
-                webSocketService.broadcastOrderProgressChanged(orderNo, qty, "质检");
-                webSocketService.broadcastDataChanged("ScanRecord", null, "create");
+                webSocketService.notifyOrderProgressChanged(operatorId, orderNo, qty, "质检");
+                webSocketService.notifyDataChanged(operatorId, "ScanRecord", null, "create");
             }
         } catch (Exception wsEx) {
             log.warn("[QualityScan] WebSocket broadcast failed (non-blocking): {}", wsEx.getMessage());

@@ -172,8 +172,8 @@ public class MaterialPurchaseStatusHelper {
             String materialName = updated.getMaterialName() != null ? updated.getMaterialName() : "物料";
             String receiver = rname != null && !rname.isEmpty() ? rname : rid;
             String receiverId = rid != null && !rid.isEmpty() ? rid : "";
-            webSocketService.broadcastOrderProgressChanged(orderNo, 0, "采购领取");
-            webSocketService.broadcastDataChanged("MaterialPurchase", purchaseId, "update");
+            webSocketService.notifyOrderProgressChanged(receiverId, orderNo, 0, "采购领取");
+            webSocketService.notifyDataChanged(receiverId, "MaterialPurchase", purchaseId, "update");
             webSocketService.notifyProcessStageCompleted(receiverId, orderNo, "采购领取", receiver, "", "", "", 0);
         } catch (Exception e) {
             log.debug("[采购领取] WebSocket广播失败(不阻断): {}", e.getMessage());

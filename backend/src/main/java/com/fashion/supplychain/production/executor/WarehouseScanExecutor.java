@@ -357,8 +357,8 @@ public class WarehouseScanExecutor {
             String opName = operatorName != null ? operatorName : "";
             webSocketService.notifyScanSuccess(operatorId, orderNo, styleNo, "入库", whQty, opName, bNo);
             webSocketService.notifyWarehouseIn(operatorId, orderNo, whQty, wh);
-            webSocketService.broadcastOrderProgressChanged(orderNo, whQty, "入库");
-            webSocketService.broadcastDataChanged("ScanRecord", sr.getId(), "create");
+            webSocketService.notifyOrderProgressChanged(operatorId, orderNo, whQty, "入库");
+            webSocketService.notifyDataChanged(operatorId, "ScanRecord", sr.getId(), "create");
             webSocketService.notifyProcessStageCompleted(operatorId, orderNo, "入库", opName, bNo, bColor, bSize, whQty);
         } catch (Exception wsEx) {
             log.warn("[WarehouseScan] WebSocket broadcast failed (non-blocking): {}", wsEx.getMessage());
@@ -832,8 +832,8 @@ public class WarehouseScanExecutor {
             String opName = operatorName != null ? operatorName : "";
             webSocketService.notifyScanSuccess(operatorId, orderNo, styleNo, "U编码入库", quantity, opName, "");
             webSocketService.notifyWarehouseIn(operatorId, orderNo, quantity, hasText(warehouse) ? warehouse : "默认仓库");
-            webSocketService.broadcastOrderProgressChanged(orderNo, quantity, "入库");
-            webSocketService.broadcastDataChanged("ScanRecord", sr.getId(), "create");
+            webSocketService.notifyOrderProgressChanged(operatorId, orderNo, quantity, "入库");
+            webSocketService.notifyDataChanged(operatorId, "ScanRecord", sr.getId(), "create");
             webSocketService.notifyProcessStageCompleted(operatorId, orderNo, "入库", opName, "", color, size, quantity);
         } catch (Exception wsEx) {
             log.warn("[U编码入库] WebSocket broadcast failed (non-blocking): {}", wsEx.getMessage());
