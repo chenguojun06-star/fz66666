@@ -27,6 +27,7 @@ const FeedbackPage = lazy(() => import('@/pages/FeedbackPage'));
 const InvitePage = lazy(() => import('@/pages/InvitePage'));
 const WarehouseMaterialScanPage = lazy(() => import('@/pages/WarehouseMaterialScanPage'));
 const WarehouseSampleScanActionPage = lazy(() => import('@/pages/WarehouseSampleScanActionPage'));
+const SampleScanPage = lazy(() => import('@/pages/SampleScanPage'));
 const PrivacyPage = lazy(() => import('@/pages/PrivacyPage'));
 const PrivacyServicePage = lazy(() => import('@/pages/PrivacyServicePage'));
 const CuttingTaskListPage = lazy(() => import('@/pages/CuttingTaskListPage'));
@@ -100,6 +101,7 @@ export default function App() {
                       <Route path="/admin/invite" element={<InvitePage />} />
                       <Route path="/warehouse/material/scan" element={<WarehouseMaterialScanPage />} />
                       <Route path="/warehouse/sample/scan-action" element={<WarehouseSampleScanActionPage />} />
+                      <Route path="/sample/scan" element={<SampleScanPage />} />
                       <Route path="/cutting/task-list" element={<CuttingTaskListPage />} />
                       <Route path="/cutting/task-detail" element={<CuttingTaskDetailPage />} />
                       <Route path="/procurement/task-detail" element={<ProcurementTaskDetailPage />} />

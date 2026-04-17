@@ -153,3 +153,15 @@
 .mat-text.arrived { color: var(--color-success); }
 .mat-text.pending { color: var(--color-danger); }
 .mat-row-qty { gap: 10px; }
+
+.sample-scan-record-item { padding: 10px 0; border-bottom: 1px solid var(--color-border-light); }
+.sample-scan-record-item:last-child { border-bottom: none; }
+.sample-op-tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
+.sample-op-warehouse_in { background: rgba(7,193,96,0.1); color: var(--color-success); }
+.sample-op-warehouse_out { background: rgba(245,158,11,0.1); color: var(--color-warning); }
+.sample-op-warehouse_return { background: rgba(59,130,246,0.1); color: var(--color-info, #3b82f6); }
+.sample-op-receive { background: rgba(139,92,246,0.1); color: #8b5cf6; }
+.sample-op-complete { background: rgba(7,193,96,0.1); color: var(--color-success); }
+.sample-op-review { background: rgba(59,130,246,0.1); color: var(--color-info, #3b82f6); }
+.sample-op-plate { background: rgba(245,158,11,0.1); color: var(--color-warning); }
+.sample-op-follow_up { background: rgba(139,92,246,0.1); color: #8b5cf6; }

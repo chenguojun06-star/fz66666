@@ -34,6 +34,7 @@ public class AiAgentToolAccessService {
         register("tool_scan_undo", "扫码撤回：撤销错误扫码，受时效和业务规则限制", false, ToolDomain.PRODUCTION);
         register("tool_cutting_task_create", "裁剪单创建：按款号和颜色尺码数量直接开裁剪单", false, ToolDomain.PRODUCTION);
         register("tool_order_edit", "订单编辑：修改备注、紧急程度、工厂、客户、交期等", false, ToolDomain.PRODUCTION);
+        register("tool_order_batch_close", "批量关单：关闭一个或多个生产订单，支持正常关单和特需关单", false, ToolDomain.PRODUCTION);
         register("tool_bundle_split_transfer", "拆菲转派：拆分菲号、转派执行人、查询拆分族谱、撤回拆分", false, ToolDomain.PRODUCTION);
         register("tool_order_learning", "下单学习：分析历史同款、推荐工厂与单价策略、解释成本偏高原因", false, ToolDomain.PRODUCTION);
         register("tool_query_order_remarks", "订单备注历史：查询指定订单的所有人工与系统自动备注（采购入库/裁剪领取/质检入库），适合'这单有什么问题''备注里写了什么'", false, ToolDomain.PRODUCTION);
@@ -105,6 +106,7 @@ public class AiAgentToolAccessService {
 
     private static final Set<String> HIGH_RISK_TOOLS = Set.of(
             "tool_scan_undo", "tool_cutting_task_create", "tool_order_edit",
+            "tool_order_batch_close",
             "tool_payroll_approve", "tool_action_executor", "tool_bundle_split_transfer",
             "tool_code_diagnostic", "tool_create_production_order",
             "tool_change_approval", "tool_order_factory_transfer", "tool_order_factory_transfer_undo",

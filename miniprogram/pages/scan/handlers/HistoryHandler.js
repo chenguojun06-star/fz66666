@@ -407,24 +407,45 @@ async function loadMyHistory(page, refresh = false) {
   page.setData({ 'my.loadingHistory': true });
 
   try {
-    // 只查询当天记录
     const today = _getToday();
-    const res = await api.production.myScanHistory({
+    const startTime = today + ' 00:00:00';
+    const endTime = today + ' 23:59:59';
+
+    const scanRes = await api.production.myScanHistory({
       page: pageNum,
       pageSize,
-      startTime: today + ' 00:00:00',
-      endTime: today + ' 23:59:59',
+      startTime: startTime,
+      endTime: endTime,
     });
 
-    const records = res.records || res || [];
-    const total = res.total || 0;
+    let records = scanRes.records || scanRes || [];
+    const total = scanRes.total || 0;
     const hasMore = pageNum * pageSize < total;
 
-    // 修复：移除旧的"API返回空时保留旧缓存"的逻辑。
-    // 该逻辑原本为了防止重新进入后今日记录闪消，但副作用是：
-    // 跨天后（新的一天无扫码记录），会持续显示昨天的旧数据，
-    // 用户不得不手动下拉刷新才能看到正确的"暂无今日记录"状态。
-    // 现在改为完全信任 API 返回值：API 说今日无记录即显示空。
+    if (refresh) {
+      try {
+        const patternRes = await api.production.myPatternScanHistory({
+          startTime: startTime,
+          endTime: endTime,
+        });
+        const patternRecords = patternRes && (patternRes.records || patternRes.list || patternRes || []);
+        if (Array.isArray(patternRecords) && patternRecords.length > 0) {
+          const formatted = patternRecords.map(function(item) {
+            return Object.assign({}, item, {
+              scanType: item.scanType || 'pattern',
+              processName: item.processName || '样衣-' + (item.progressStage || item.operationType || ''),
+              progressStage: item.progressStage || 'pattern',
+              scanResult: item.scanResult || 'success',
+              operatorName: item.operatorName || item.operator_name || '',
+              operatorId: item.operatorId || item.operator_id || '',
+            });
+          });
+          records = records.concat(formatted);
+        }
+      } catch (pe) {
+        // 样衣记录加载失败不影响主记录
+      }
+    }
 
     let groupedHistory = groupScanRecords(records);
 

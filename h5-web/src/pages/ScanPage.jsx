@@ -95,12 +95,29 @@ export default function ScanPage() {
     setLoadingHistory(true);
     try {
       const today = new Date().toISOString().split('T')[0];
+      const startTime = today + ' 00:00:00';
+      const endTime = today + ' 23:59:59';
       const res = await api.production.myScanHistory({
         currentUser: 'true', page: 1, pageSize: 50,
-        startTime: today + ' 00:00:00', endTime: today + ' 23:59:59',
+        startTime, endTime,
       });
       const data = res?.data || res || {};
-      const list = (data?.records || data?.list || []).filter(item => (item.scanResult || '').toLowerCase() !== 'failure');
+      let list = (data?.records || data?.list || []).filter(item => (item.scanResult || '').toLowerCase() !== 'failure');
+
+      try {
+        const patternRes = await api.production.myPatternScanHistory?.({ startTime, endTime });
+        const patternData = patternRes?.data || patternRes || [];
+        const patternList = (Array.isArray(patternData) ? patternData : (patternData?.records || patternData?.list || []))
+          .filter(item => (item.scanResult || '').toLowerCase() !== 'failure')
+          .map(item => ({
+            ...item,
+            scanType: item.scanType || 'pattern',
+            processName: item.processName || '样衣-' + (item.progressStage || item.operationType || ''),
+            progressStage: item.progressStage || 'pattern',
+          }));
+        list = list.concat(patternList);
+      } catch (_) {}
+
       const formatted = list.map(item => ({
         ...item,
         displayTime: formatRelativeTime(item.scanTime || item.createTime),

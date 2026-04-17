@@ -9,6 +9,7 @@ const ALL_MENU_ITEMS = [
   { label: '进度看板', desc: '订单进度与生产概览', icon: 'chart', path: '/dashboard', color: 'var(--color-primary)', bg: 'rgba(59,130,246,0.1)', permission: 'dashboard' },
   { label: '生产', desc: '生产订单与工序管理', icon: 'factory', path: '/work', color: 'var(--color-purple)', bg: 'rgba(124,92,252,0.1)', permission: 'view_orders' },
   { label: '扫码质检', desc: '扫码记录与今日统计', icon: 'scan', path: '/scan', color: 'var(--color-success)', bg: 'rgba(34,197,94,0.1)', permission: 'scan' },
+  { label: '样衣扫码', desc: '样衣扫码入库借调归还', icon: 'shirt', path: '/sample/scan', color: 'var(--color-purple)', bg: 'rgba(124,92,252,0.1)', permission: 'scan' },
   { label: '菲号单价', desc: '菲号拆分与单价调整', icon: 'tag', path: '/work/bundle-split', color: 'var(--color-warning)', bg: 'rgba(245,158,11,0.1)', permission: 'dashboard' },
   { label: '历史记录', desc: '扫码历史与月度汇总', icon: 'clipboard', path: '/scan/history', color: 'var(--color-info)', bg: 'rgba(16,174,255,0.1)', permission: 'scan' },
   { label: '当月工资', desc: '工资明细与收入统计', icon: 'dollarSign', path: '/payroll/payroll', color: 'var(--color-error)', bg: 'rgba(250,81,81,0.1)', permission: 'view_own_payroll' },
