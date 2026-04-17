@@ -45,6 +45,8 @@ public class WebSocketSessionManager {
 
     private final Map<Long, Set<String>> tenantSessions = new ConcurrentHashMap<>();
 
+    private final Map<String, Long> lastActivityTimes = new ConcurrentHashMap<>();
+
     public void addSession(WebSocketSession session, String userId, String clientType) {
         addSession(session, userId, clientType, null);
     }
@@ -61,6 +63,7 @@ public class WebSocketSessionManager {
         }
         
         userSessions.computeIfAbsent(userId, k -> new CopyOnWriteArraySet<>()).add(sessionId);
+        lastActivityTimes.put(sessionId, System.currentTimeMillis());
         
         log.info("[WebSocket] 会话连接成功: sessionId={}, userId={}, clientType={}, tenantId={}", 
                 sessionId, userId, clientType, tenantId);
@@ -74,6 +77,7 @@ public class WebSocketSessionManager {
         String userId = sessionUserMap.remove(sessionId);
         String clientType = sessionClientTypeMap.remove(sessionId);
         Long tenantId = sessionTenantMap.remove(sessionId);
+        lastActivityTimes.remove(sessionId);
         
         if (userId != null) {
             Set<String> userSessionIds = userSessions.get(userId);
@@ -223,6 +227,14 @@ public class WebSocketSessionManager {
 
     public Long getTenantIdBySession(String sessionId) {
         return sessionTenantMap.get(sessionId);
+    }
+
+    public Map<String, Long> getLastActivityTimes() {
+        return lastActivityTimes;
+    }
+
+    public void updateActivity(String sessionId) {
+        lastActivityTimes.put(sessionId, System.currentTimeMillis());
     }
 
     @Scheduled(fixedDelay = 60000, initialDelay = 30000)

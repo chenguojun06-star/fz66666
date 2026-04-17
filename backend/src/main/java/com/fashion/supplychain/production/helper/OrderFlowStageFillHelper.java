@@ -300,8 +300,10 @@ public class OrderFlowStageFillHelper {
                 o.setCuttingOperatorName(cuttingOperator);
                 int cuttingQtyForRate = o.getCuttingQuantity() == null ? cuttingQty : o.getCuttingQuantity();
                 int orderQtyForRate = o.getOrderQuantity() == null ? 0 : o.getOrderQuantity();
-                int baseQtyForRate = cuttingQtyForRate > 0 ? cuttingQtyForRate : orderQtyForRate;
-                Integer cuttingRate = computeRate(cuttingQtyForRate, baseQtyForRate);
+                int baseQtyForRate = orderQtyForRate > 0 ? orderQtyForRate : cuttingQtyForRate;
+                int cuttingActualQty = o.getCuttingBundleCount() != null && o.getCuttingBundleCount() > 0
+                        ? cuttingQtyForRate : 0;
+                Integer cuttingRate = computeRate(cuttingActualQty, baseQtyForRate);
                 o.setCuttingCompletionRate(cuttingRate);
 
                 o.setSewingStartTime(sewingStart);
@@ -643,7 +645,9 @@ public class OrderFlowStageFillHelper {
             o.setCuttingOperatorName(cuttingOperator);
             int cuttingQtyForRate = o.getCuttingQuantity() == null ? cuttingQty : o.getCuttingQuantity();
             int orderQtyForRate = o.getOrderQuantity() == null ? 0 : o.getOrderQuantity();
-            Integer cuttingRate = computeRate(cuttingQtyForRate, orderQtyForRate);
+            int cuttingActualQty = o.getCuttingBundleCount() != null && o.getCuttingBundleCount() > 0
+                    ? cuttingQtyForRate : 0;
+            Integer cuttingRate = computeRate(cuttingActualQty, orderQtyForRate);
             o.setCuttingCompletionRate(cuttingRate);
 
             o.setSewingStartTime(sewingStart);
@@ -921,7 +925,9 @@ public class OrderFlowStageFillHelper {
             int completedQty = o.getCompletedQuantity() == null ? 0 : o.getCompletedQuantity();
             int baseQty = cuttingQty > 0 ? cuttingQty : orderQty;
 
-            int cuttingRate = computeRate(cuttingQty, orderQty);
+            int cuttingActualQty = o.getCuttingBundleCount() != null && o.getCuttingBundleCount() > 0
+                    ? cuttingQty : 0;
+            int cuttingRate = computeRate(cuttingActualQty, orderQty);
             o.setCuttingCompletionRate(cuttingRate);
 
             int sewBase = baseQty > 0 ? baseQty : 1;

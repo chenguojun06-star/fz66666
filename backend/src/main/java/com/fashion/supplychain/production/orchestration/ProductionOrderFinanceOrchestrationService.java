@@ -273,13 +273,14 @@ public class ProductionOrderFinanceOrchestrationService {
         int warehousingQualified = productWarehousingService.sumQualifiedByOrderId(oid);
 
         if (!specialClose) {
-            // 正常关单：严格校验90%入库率
             if (cuttingQty <= 0) {
-                throw new IllegalStateException("裁剪数量不足，无法完成");
+                throw new IllegalStateException("裁剪数量不足，无法正常关单。如需强制关单，请使用特需关单并填写原因");
             }
             int minRequired = (int) Math.ceil(cuttingQty * 0.9);
             if (warehousingQualified < minRequired) {
-                throw new IllegalStateException("成品合格入库数量不足，无法完成");
+                throw new IllegalStateException(
+                    String.format("成品合格入库数量不足（当前%d/%d），无法正常关单。如需强制关单，请使用特需关单",
+                        warehousingQualified, minRequired));
             }
         } else {
             log.info("特需关单：orderId={}, specialClose=true, cuttingQty={}, warehousingQualified={}", oid, cuttingQty, warehousingQualified);

@@ -91,6 +91,7 @@ export default function ScanHistoryPage() {
         displayStyleNo: item.styleNo || '-',
         displayBundleNo: item.bundleNo || item.cuttingBundleQrCode || '-',
         displayColor: item.color || '-',
+        displaySize: item.size || '-',
         displayUnitPrice: item.unitPrice ? `¥${Number(item.unitPrice).toFixed(2)}` : '-',
         displayQuantity: item.quantity || 0,
         displayBedNo: item.bedNo || item.cuttingBedNo || '-',
@@ -277,6 +278,7 @@ export default function ScanHistoryPage() {
               <span className="srt-th srt-th-bundle">菲号</span>
               <span className="srt-th srt-th-process">工序</span>
               <span className="srt-th srt-th-color">颜色</span>
+              <span className="srt-th srt-th-size">码数</span>
               <span className="srt-th srt-th-price">单价</span>
               <span className="srt-th srt-th-qty">数量</span>
               <span className="srt-th srt-th-amount">金额</span>
@@ -291,6 +293,7 @@ export default function ScanHistoryPage() {
                 <span className="srt-td srt-td-bundle">{r.displayBundleNo}</span>
                 <span className="srt-td srt-td-process">{r.displayProcess}</span>
                 <span className="srt-td srt-td-color">{r.displayColor}</span>
+                <span className="srt-td srt-td-size">{r.displaySize}</span>
                 <span className="srt-td srt-td-price">{r.displayUnitPrice}</span>
                 <span className="srt-td srt-td-qty">{r.displayQuantity}</span>
                 <span className="srt-td srt-td-amount">{r.displayLineAmount}</span>

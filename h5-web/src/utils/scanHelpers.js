@@ -56,7 +56,7 @@ function canUndo(record, isAdmin) {
 function parseBundleCode(code) {
   if (!code || typeof code !== 'string') return null;
   const trimmed = code.trim();
-  const bundlePattern = /^(PO\d{8}\d*)-(ST\d+)-(.+?)-([A-Z0-9]+?)-(\d+)-(\d{2})$/;
+  const bundlePattern = /^(PO\d{8}\d*)-(ST\d+)-(.+?)-([^-]+?)-(\d+)-(\d{2})$/;
   const match = trimmed.match(bundlePattern);
   if (match) {
     return {

@@ -282,7 +282,14 @@ public class ScanRecordOrchestrator {
 
         try {
             String on = hasText(orderNo) ? orderNo : TextUtils.safeText(safeParams.get("_resolvedOrderNo"));
-            webSocketService.broadcastScanUndo(on, TextUtils.safeText(safeParams.get("scanType")));
+            String undoOperatorId = com.fashion.supplychain.common.UserContext.userId();
+            String undoOperatorName = com.fashion.supplychain.common.UserContext.username();
+            String undoProcessName = TextUtils.safeText(safeParams.get("processName"));
+            String undoBundleNo = TextUtils.safeText(safeParams.get("bundleNo"));
+            if (hasText(undoOperatorId)) {
+                webSocketService.notifyScanUndo(undoOperatorId, on, TextUtils.safeText(safeParams.get("scanType")),
+                        undoOperatorName, undoProcessName, undoBundleNo);
+            }
             webSocketService.broadcastDataChanged("ScanRecord", null, "delete");
             if (hasText(on)) {
                 try {

@@ -210,9 +210,15 @@ function calcOrderProgress(order) {
   const status = (order.status || '').trim().toLowerCase();
   if (status === 'completed') return 100;
 
-  const hasProcurement = (Number(order.materialArrivalRate) || 0) > 0
+  const orderNo = (order.orderNo || '').trim().toUpperCase();
+  const orderBizType = (order.orderBizType || '').trim().toUpperCase();
+  const isDirectCutting = orderBizType === 'CUTTING_DIRECT' || orderNo.startsWith('CUT');
+
+  const hasProcurement = !isDirectCutting && (
+    (Number(order.materialArrivalRate) || 0) > 0
     || Boolean(order.procurementManuallyCompleted)
-    || Boolean(order.procurementConfirmedAt);
+    || Boolean(order.procurementConfirmedAt)
+  );
   const pipeline = hasProcurement
     ? CORE_STAGES_FOR_PROGRESS
     : CORE_STAGES_FOR_PROGRESS.filter(s => s !== '采购');
@@ -229,7 +235,7 @@ function calcOrderProgress(order) {
   const rateProgress = rateCount > 0 ? Math.round(rateSum / rateCount) : 0;
 
   const hasCuttingAction = (Number(order.cuttingCompletionRate) || 0) > 0
-    || (Number(order.cuttingQuantity) || 0) > 0;
+    && (Number(order.cuttingBundleCount) || 0) > 0;
   const hasRateAction = rateProgress > 0;
   const hasRealAction = hasProcurement || hasCuttingAction || hasRateAction;
   if (!hasRealAction) return 0;

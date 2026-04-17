@@ -173,7 +173,11 @@ public class QualityScanExecutor {
         try {
             if (webSocketService != null) {
                 String orderNo = order.getOrderNo() != null ? order.getOrderNo() : "";
-                webSocketService.broadcastQualityChecked(orderNo, "质检", qty != null ? qty : 0, 0);
+                String bNo = bundle != null && bundle.getBundleNo() != null ? String.valueOf(bundle.getBundleNo()) : "";
+                String bColor = bundle != null && bundle.getColor() != null ? bundle.getColor() : "";
+                String bSize = bundle != null && bundle.getSize() != null ? bundle.getSize() : "";
+                String opName = operatorName != null ? operatorName : "";
+                webSocketService.notifyQualityChecked(operatorId, orderNo, "质检", qty != null ? qty : 0, 0, opName, bNo, bColor, bSize);
                 webSocketService.broadcastOrderProgressChanged(orderNo, qty, "质检");
                 webSocketService.broadcastDataChanged("ScanRecord", null, "create");
             }
@@ -239,7 +243,7 @@ public class QualityScanExecutor {
         result.put("cuttingBundle", bundle);
 
         broadcastProcessStage("receive".equals(qualityStage) ? "质检领取" : "质检验收",
-                order, bundle, operatorName, qty, false);
+                order, bundle, operatorId, operatorName, qty, false);
 
         try {
             if (processTrackingOrchestrator != null && bundle != null && hasText(bundle.getId())) {
@@ -350,7 +354,7 @@ public class QualityScanExecutor {
         result.put("cuttingBundle", bundle);
 
         broadcastProcessStage(isUnqualified ? "质检不合格" : "质检合格",
-                order, bundle, operatorName, qty, true);
+                order, bundle, operatorId, operatorName, qty, true);
         return result;
     }
 
@@ -1098,7 +1102,7 @@ public class QualityScanExecutor {
     }
 
     private void broadcastProcessStage(String processName, ProductionOrder order,
-                                        CuttingBundle bundle, String operatorName,
+                                        CuttingBundle bundle, String operatorId, String operatorName,
                                         int quantity, boolean isCompleted) {
         if (webSocketService == null || order == null || bundle == null) return;
         try {
@@ -1108,9 +1112,9 @@ public class QualityScanExecutor {
             String size = bundle.getSize() != null ? bundle.getSize() : "";
             String opName = operatorName != null ? operatorName : "";
             if (isCompleted) {
-                webSocketService.broadcastProcessStageCompleted(orderNo, processName, opName, bNo, color, size, quantity);
+                webSocketService.notifyProcessStageCompleted(operatorId, orderNo, processName, opName, bNo, color, size, quantity);
             } else {
-                webSocketService.broadcastProcessStageReceived(orderNo, processName, opName, bNo, color, size);
+                webSocketService.notifyProcessStageReceived(operatorId, orderNo, processName, opName, bNo, color, size);
             }
         } catch (Exception e) {
             log.warn("[QualityScan] 工序通知推送失败（不阻断流程）: orderNo={}, process={}", order.getOrderNo(), processName, e);

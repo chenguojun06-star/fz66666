@@ -272,7 +272,10 @@ public class ProductWarehousingOrchestrator {
             int qty = productWarehousing.getQualifiedQuantity() != null ? productWarehousing.getQualifiedQuantity() : 0;
             String processLabel = qty > 0 && (productWarehousing.getUnqualifiedQuantity() == null || productWarehousing.getUnqualifiedQuantity() <= 0)
                     ? "质检入库" : "质检记录";
-            webSocketService.broadcastProcessStageCompleted(whOrderNo, processLabel, opName, bNo, "", "", qty);
+            String whOperatorId = productWarehousing.getWarehousingOperatorId() != null ? productWarehousing.getWarehousingOperatorId() : "";
+            if (StringUtils.hasText(whOperatorId)) {
+                webSocketService.notifyProcessStageCompleted(whOperatorId, whOrderNo, processLabel, opName, bNo, "", "", qty);
+            }
         } catch (Exception e) {
             log.debug("save: 工序通知推送失败(不阻断): orderId={}", orderId, e);
         }

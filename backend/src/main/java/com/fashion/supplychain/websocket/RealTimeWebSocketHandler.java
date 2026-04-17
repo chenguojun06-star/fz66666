@@ -64,6 +64,7 @@ public class RealTimeWebSocketHandler extends TextWebSocketHandler {
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         String payload = message.getPayload();
         String sessionId = session.getId();
+        sessionManager.updateActivity(sessionId);
 
         try {
             WebSocketMessage<?> wsMessage = objectMapper.readValue(payload, WebSocketMessage.class);
@@ -133,37 +134,40 @@ public class RealTimeWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-     * 广播消息给其他客户端（不包括发送者）
+     * 广播消息给同一租户内其他客户端（不包括发送者）
+     * 修复：仅向发送者所在租户的会话广播，防止跨租户数据泄露
      */
     private void broadcastToOthers(WebSocketSession senderSession, WebSocketMessage<?> message) {
         String senderUserId = sessionManager.getUserIdBySession(senderSession.getId());
         String senderType = sessionManager.getClientTypeBySession(senderSession.getId());
+        Long senderTenantId = sessionManager.getTenantIdBySession(senderSession.getId());
 
-        // 获取所有在线用户
-        Set<String> onlineUsers = sessionManager.getAllOnlineUsers();
-
-        for (String userId : onlineUsers) {
-            // 获取用户的所有会话
-            Set<WebSocketSession> userSessions = sessionManager.getUserSessions(userId);
-
-            for (WebSocketSession session : userSessions) {
-                // 跳过发送者自己
-                if (session.getId().equals(senderSession.getId())) {
+        if (senderTenantId != null) {
+            Set<WebSocketSession> tenantSessions = sessionManager.getTenantSessions(senderTenantId);
+            int count = 0;
+            for (WebSocketSession session : tenantSessions) {
+                if (session.getId().equals(senderSession.getId()) || !session.isOpen()) {
                     continue;
                 }
-
-                // 检查会话是否打开
-                if (!session.isOpen()) {
-                    continue;
-                }
-
-                // 发送消息
                 sendMessage(session, message);
+                count++;
             }
+            log.info("[WebSocket] 租户内广播: type={}, from={}({}), tenantId={}, to {} sessions",
+                    message.getType(), senderUserId, senderType, senderTenantId, count);
+        } else {
+            Set<String> onlineUsers = sessionManager.getAllOnlineUsers();
+            for (String userId : onlineUsers) {
+                Set<WebSocketSession> userSessions = sessionManager.getUserSessions(userId);
+                for (WebSocketSession session : userSessions) {
+                    if (session.getId().equals(senderSession.getId()) || !session.isOpen()) {
+                        continue;
+                    }
+                    sendMessage(session, message);
+                }
+            }
+            log.info("[WebSocket] 全局广播(无租户ID): type={}, from={}({}), to {} users",
+                    message.getType(), senderUserId, senderType, onlineUsers.size() - 1);
         }
-
-        log.info("[WebSocket] 广播消息: type={}, from={}({}), to {} users",
-                message.getType(), senderUserId, senderType, onlineUsers.size() - 1);
     }
 
     /**

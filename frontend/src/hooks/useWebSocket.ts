@@ -130,6 +130,7 @@ function getOrCreateInstance(options: UseWebSocketOptions): WsInstance {
             setConnected(false);
             stopHeartbeat();
             inst.ws = null;
+            if (document.hidden) return;
             const maxAttempts = opts.maxReconnectAttempts || 10;
             if (opts.enabled && inst.reconnectCount < maxAttempts) {
               inst.reconnectCount++;

@@ -23,9 +23,10 @@ public class WebSocketService {
     private final RealTimeWebSocketHandler webSocketHandler;
 
     /**
-     * 广播扫码成功消息
+     * 通知扫码操作人扫码成功（定向推送，不全局广播）
      */
-    public void broadcastScanSuccess(String orderNo, String styleNo, String processName, int quantity) {
+    public void notifyScanSuccess(String operatorId, String orderNo, String styleNo,
+                                   String processName, int quantity, String operatorName, String bundleNo) {
         WebSocketMessage<Map<String, Object>> message = WebSocketMessage.create(
             WebSocketMessageType.SCAN_SUCCESS,
             Map.of(
@@ -33,27 +34,33 @@ public class WebSocketService {
                 "styleNo", styleNo,
                 "processName", processName,
                 "quantity", quantity,
+                "operatorName", operatorName != null ? operatorName : "",
+                "bundleNo", bundleNo != null ? bundleNo : "",
                 "timestamp", System.currentTimeMillis()
             )
         );
-        webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
-        log.info("[WebSocket] 广播扫码成功: orderNo={}, quantity={}", orderNo, quantity);
+        webSocketHandler.sendToUser(operatorId, message);
+        log.info("[WebSocket] 通知扫码成功: operatorId={}, orderNo={}, quantity={}", operatorId, orderNo, quantity);
     }
 
     /**
-     * 广播扫码撤销消息
+     * 通知扫码操作人撤销结果（定向推送，不全局广播）
      */
-    public void broadcastScanUndo(String orderNo, String recordId) {
+    public void notifyScanUndo(String operatorId, String orderNo, String recordId,
+                                String operatorName, String processName, String bundleNo) {
         WebSocketMessage<Map<String, Object>> message = WebSocketMessage.create(
             WebSocketMessageType.SCAN_UNDO,
             Map.of(
                 "orderNo", orderNo,
                 "recordId", recordId,
+                "operatorName", operatorName != null ? operatorName : "",
+                "processName", processName != null ? processName : "",
+                "bundleNo", bundleNo != null ? bundleNo : "",
                 "timestamp", System.currentTimeMillis()
             )
         );
-        webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
-        log.info("[WebSocket] 广播扫码撤销: orderNo={}, recordId={}", orderNo, recordId);
+        webSocketHandler.sendToUser(operatorId, message);
+        log.info("[WebSocket] 通知扫码撤销: operatorId={}, orderNo={}, recordId={}", operatorId, orderNo, recordId);
     }
 
     /**
@@ -109,9 +116,11 @@ public class WebSocketService {
     }
 
     /**
-     * 广播质检完成
+     * 通知操作人质检完成（定向推送，不全局广播）
      */
-    public void broadcastQualityChecked(String orderNo, String checkResult, int qualifiedQty, int unqualifiedQty) {
+    public void notifyQualityChecked(String operatorId, String orderNo, String checkResult,
+                                      int qualifiedQty, int unqualifiedQty, String operatorName,
+                                      String bundleNo, String color, String size) {
         WebSocketMessage<Map<String, Object>> message = WebSocketMessage.create(
             WebSocketMessageType.QUALITY_CHECKED,
             Map.of(
@@ -119,14 +128,21 @@ public class WebSocketService {
                 "checkResult", checkResult,
                 "qualifiedQty", qualifiedQty,
                 "unqualifiedQty", unqualifiedQty,
+                "operatorName", operatorName != null ? operatorName : "",
+                "bundleNo", bundleNo != null ? bundleNo : "",
+                "color", color != null ? color : "",
+                "size", size != null ? size : "",
                 "timestamp", System.currentTimeMillis()
             )
         );
-        webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
-        log.info("[WebSocket] 广播质检完成: orderNo={}, result={}", orderNo, checkResult);
+        webSocketHandler.sendToUser(operatorId, message);
+        log.info("[WebSocket] 通知质检完成: operatorId={}, orderNo={}, result={}", operatorId, orderNo, checkResult);
     }
 
-    public void broadcastProcessStageReceived(String orderNo, String processName, String operatorName,
+    /**
+     * 通知操作人工序领取（定向推送，不全局广播）
+     */
+    public void notifyProcessStageReceived(String operatorId, String orderNo, String processName, String operatorName,
                                                String bundleNo, String color, String size) {
         WebSocketMessage<Map<String, Object>> message = WebSocketMessage.create(
             WebSocketMessageType.PROCESS_STAGE_RECEIVED,
@@ -140,11 +156,14 @@ public class WebSocketService {
                 "timestamp", System.currentTimeMillis()
             )
         );
-        webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
-        log.info("[WebSocket] 广播工序领取: orderNo={}, process={}, operator={}", orderNo, processName, operatorName);
+        webSocketHandler.sendToUser(operatorId, message);
+        log.info("[WebSocket] 通知工序领取: operatorId={}, orderNo={}, process={}, operator={}", operatorId, orderNo, processName, operatorName);
     }
 
-    public void broadcastProcessStageCompleted(String orderNo, String processName, String operatorName,
+    /**
+     * 通知操作人工序完成（定向推送，不全局广播）
+     */
+    public void notifyProcessStageCompleted(String operatorId, String orderNo, String processName, String operatorName,
                                                 String bundleNo, String color, String size, int quantity) {
         WebSocketMessage<Map<String, Object>> message = WebSocketMessage.create(
             WebSocketMessageType.PROCESS_STAGE_COMPLETED,
@@ -159,8 +178,8 @@ public class WebSocketService {
                 "timestamp", System.currentTimeMillis()
             )
         );
-        webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
-        log.info("[WebSocket] 广播工序完成: orderNo={}, process={}, operator={}, qty={}", orderNo, processName, operatorName, quantity);
+        webSocketHandler.sendToUser(operatorId, message);
+        log.info("[WebSocket] 通知工序完成: operatorId={}, orderNo={}, process={}, operator={}, qty={}", operatorId, orderNo, processName, operatorName, quantity);
     }
 
     /**

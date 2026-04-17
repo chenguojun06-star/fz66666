@@ -36,9 +36,12 @@ public class WebSocketHeartbeatScheduler {
             return;
         }
 
+        long now = System.currentTimeMillis();
+        long heartbeatTimeoutMs = 120000;
+
         WebSocketMessage<?> pingMsg = WebSocketMessage.create(
                 WebSocketMessageType.PING,
-                Map.of("serverTime", System.currentTimeMillis())
+                Map.of("serverTime", now)
         );
 
         int sent = 0;
@@ -57,6 +60,15 @@ public class WebSocketHeartbeatScheduler {
             } else {
                 // 顺便清理已失效的 session
                 sessionManager.removeSession(session.getId());
+                removed++;
+            }
+        }
+
+        // 清理心跳超时的会话
+        Map<String, Long> lastActivityTimes = sessionManager.getLastActivityTimes();
+        for (Map.Entry<String, Long> entry : lastActivityTimes.entrySet()) {
+            if (now - entry.getValue() > heartbeatTimeoutMs) {
+                sessionManager.removeSession(entry.getKey());
                 removed++;
             }
         }

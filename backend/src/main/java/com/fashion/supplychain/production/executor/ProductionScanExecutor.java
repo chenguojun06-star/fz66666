@@ -445,8 +445,7 @@ public class ProductionScanExecutor {
                 String bSize = bundle != null && bundle.getSize() != null ? bundle.getSize() : "";
                 String pName = progressStage != null ? progressStage : "生产";
                 String opName = operatorName != null ? operatorName : "";
-                webSocketService.broadcastProcessStageReceived(order.getOrderNo(), pName, opName, bNo, bColor, bSize);
-                webSocketService.broadcastProcessStageCompleted(order.getOrderNo(), pName, opName, bNo, bColor, bSize, quantity);
+                webSocketService.notifyProcessStageCompleted(operatorId, order.getOrderNo(), pName, opName, bNo, bColor, bSize, quantity);
             } catch (Exception e) {
                 log.debug("WebSocket工序通知推送失败(不阻断): orderNo={}", order.getOrderNo(), e);
             }

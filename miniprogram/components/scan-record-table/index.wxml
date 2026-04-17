@@ -5,6 +5,8 @@
       <text class="srt-th srt-th-order">订单号</text>
       <text class="srt-th srt-th-bundle">菲号</text>
       <text class="srt-th srt-th-process">工序</text>
+      <text class="srt-th srt-th-color">颜色</text>
+      <text class="srt-th srt-th-size">码数</text>
       <text class="srt-th srt-th-price">单价</text>
       <text class="srt-th srt-th-qty">数量</text>
       <text wx:if="{{showAmount}}" class="srt-th srt-th-amount">金额</text>
@@ -17,6 +19,8 @@
       <text class="srt-td srt-td-order" user-select>{{item.displayOrderNo}}</text>
       <text class="srt-td srt-td-bundle" user-select>{{item.displayBundleNo}}</text>
       <text class="srt-td srt-td-process" user-select>{{item.displayProcess}}</text>
+      <text class="srt-td srt-td-color" user-select>{{item.displayColor || '-'}}</text>
+      <text class="srt-td srt-td-size" user-select>{{item.displaySize || '-'}}</text>
       <text class="srt-td srt-td-price" user-select>{{item.displayUnitPrice}}</text>
       <text class="srt-td srt-td-qty" user-select>{{item.displayQuantity}}</text>
       <text wx:if="{{showAmount}}" class="srt-td srt-td-amount" user-select>{{item.displayLineAmount}}</text>

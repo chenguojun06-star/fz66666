@@ -201,11 +201,18 @@ const WebSocketNotification: React.FC = () => {
   // 撤销扫码通知
   useEffect(() => {
     return subscribe('scan:undo', (msg) => {
-      const p = msg.payload as { orderNo?: string; processName?: string; operatorName?: string };
+      const p = msg.payload as { orderNo?: string; processName?: string; operatorName?: string; bundleNo?: string };
+      const bundleInfo = p.bundleNo ? `菲号${p.bundleNo}` : '';
+      notification.warning({
+        message: `${p.operatorName || '有人'}撤销了${p.processName || '工序'}`,
+        description: `订单 ${p.orderNo || '-'}${bundleInfo ? ' · ' + bundleInfo : ''}`,
+        placement: 'topRight',
+        duration: 6,
+      });
       const event = new CustomEvent('order:progress:changed', { detail: p });
       window.dispatchEvent(event);
     });
-  }, [subscribe]);
+  }, [subscribe, notification]);
 
   // 不渲染任何 DOM
   return null;

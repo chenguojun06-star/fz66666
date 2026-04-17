@@ -106,6 +106,7 @@
 .srt-th-time,   .srt-td-time   { width: 80px; }
 .srt-th-style,  .srt-td-style  { width: 60px; }
 .srt-th-color,  .srt-td-color  { width: 44px; }
+.srt-th-size,   .srt-td-size   { width: 40px; }
 .srt-th-action, .srt-td-action { width: 44px; }
 
 .undo-btn { font-size: var(--font-size-xs); color: var(--color-error, #ef4444); padding: 3px 10px; border: 1px solid var(--color-error, #ef4444); border-radius: var(--radius-sm, 4px); background: var(--color-error-bg, rgba(239,68,68,0.06)); font-weight: 500; cursor: pointer; white-space: nowrap; }
