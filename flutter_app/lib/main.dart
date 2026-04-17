@@ -5,6 +5,7 @@ import 'utils/http_service.dart';
 import 'utils/api_service.dart';
 import 'theme/app_theme.dart';
 import 'routes/app_routes.dart';
+import 'widgets/global_ai_assistant.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,6 +33,10 @@ class MyApp extends StatelessWidget {
       getPages: AppPages.pages,
       defaultTransition: Transition.rightToLeft,
       transitionDuration: const Duration(milliseconds: 250),
+      // 将全局 AI 助手包裹在所有路由之上
+      builder: (context, child) {
+        return GlobalAiAssistant(child: child!);
+      },
     );
   }
 }

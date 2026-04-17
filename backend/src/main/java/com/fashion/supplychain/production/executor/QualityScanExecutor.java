@@ -753,7 +753,19 @@ public class QualityScanExecutor {
             log.info("[QualityScan] 已创建 quality_scan 合格记录: orderId={}, bundleId={}, qualifiedQty={}, warehousingNo={}",
                     order.getId(), bundle.getId(), qualifiedQty, w.getWarehousingNo());
 
-            // 更新菲号状态
+            try {
+                int qualifiedSum = productWarehousingService.sumQualifiedByOrderId(order.getId());
+                ProductionOrder patch = new ProductionOrder();
+                patch.setId(order.getId());
+                patch.setCompletedQuantity(qualifiedSum);
+                patch.setWarehousingQualifiedQuantity(qualifiedSum);
+                patch.setUpdateTime(LocalDateTime.now());
+                productionOrderService.updateById(patch);
+                log.info("[QualityScan] 已更新订单合格入库数量: orderId={}, completedQuantity={}", order.getId(), qualifiedSum);
+            } catch (Exception ex) {
+                log.warn("[QualityScan] 更新订单合格入库数量失败（不阻断主流程）: orderId={}", order.getId(), ex);
+            }
+
             syncBundleStatusAfterQualityScan(order.getId(), bundle);
 
         } catch (org.springframework.dao.DuplicateKeyException dke) {

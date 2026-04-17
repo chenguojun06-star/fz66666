@@ -29,13 +29,14 @@ class HomePage extends GetView<HomeController> {
               )),
               const SizedBox(height: AppSpacing.lg),
 
-              Obx(() => _buildDateCard()),
+              Obx(() => _buildDateCard(controller.dateInfo)),
               const SizedBox(height: AppSpacing.xxl),
 
               const Text('全部菜单', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
               const SizedBox(height: AppSpacing.md),
 
-              Obx(() => _buildMenuGrid()),
+              // 这里去掉了 Obx，因为 getMenuItems 内部不是响应式的，这是解决红框报错的关键
+              _buildMenuGrid(controller.getMenuItems()),
             ],
           ),
         ),
@@ -43,8 +44,7 @@ class HomePage extends GetView<HomeController> {
     );
   }
 
-  Widget _buildDateCard() {
-    final info = controller.dateInfo;
+  Widget _buildDateCard(Map<String, String> info) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -78,8 +78,7 @@ class HomePage extends GetView<HomeController> {
     );
   }
 
-  Widget _buildMenuGrid() {
-    final items = controller.getMenuItems();
+  Widget _buildMenuGrid(List<Map<String, dynamic>> items) {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),

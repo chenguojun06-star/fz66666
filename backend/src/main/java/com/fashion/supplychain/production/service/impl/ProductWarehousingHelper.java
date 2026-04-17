@@ -335,11 +335,9 @@ public class ProductWarehousingHelper {
         }
 
         try {
-            Long tid = com.fashion.supplychain.common.UserContext.tenantId();
             LambdaQueryWrapper<ProductWarehousing> qw = new LambdaQueryWrapper<ProductWarehousing>()
                     .eq(ProductWarehousing::getOrderId, oid)
                     .eq(ProductWarehousing::getDeleteFlag, 0);
-            if (tid != null) qw.eq(ProductWarehousing::getTenantId, tid);
             List<ProductWarehousing> list = productWarehousingMapper.selectList(qw);
             long sum = 0;
             if (list != null) {
@@ -355,6 +353,7 @@ public class ProductWarehousingHelper {
             }
             return (int) Math.min(Integer.MAX_VALUE, Math.max(0, sum));
         } catch (Exception e) {
+            log.warn("sumQualifiedByOrderId failed: orderId={}, error={}", oid, e.getMessage());
             return 0;
         }
     }
