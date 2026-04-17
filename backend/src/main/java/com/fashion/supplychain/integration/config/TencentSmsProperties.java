@@ -1,6 +1,5 @@
 package com.fashion.supplychain.integration.config;
 
-import lombok.RequiredArgsConstructor;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
@@ -8,20 +7,19 @@ import org.springframework.stereotype.Component;
 @Data
 @Component
 @ConfigurationProperties(prefix = "app.auth.sms-login.tencent")
-@RequiredArgsConstructor
 public class TencentSmsProperties {
 
     private boolean enabled = false;
 
-    private final String secretId;
+    private String secretId;
 
-    private final String secretKey;
+    private String secretKey;
 
-    private final String sdkAppId;
+    private String sdkAppId;
 
-    private final String signName;
+    private String signName;
 
-    private final String templateId;
+    private String templateId;
 
     private String region = "ap-guangzhou";
 

@@ -1,6 +1,5 @@
 package com.fashion.supplychain.integration.config;
 
-import lombok.RequiredArgsConstructor;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
@@ -28,20 +27,19 @@ import org.springframework.stereotype.Component;
 @Data
 @Component
 @ConfigurationProperties(prefix = "sto-express")
-@RequiredArgsConstructor
 public class STOProperties {
 
     /** 是否启用（false=使用Mock模式） */
     private boolean enabled = false;
 
     /** 开放平台分配的 AppKey */
-    private final String appKey;
+    private String appKey;
 
     /** 开放平台分配的 AppSecret */
-    private final String appSecret;
+    private String appSecret;
 
     /** 合作伙伴ID（部分接口需要） */
-    private final String partnerId;
+    private String partnerId;
 
     /** 正式环境接口地址 */
     private String apiUrl = "https://ecapi.sto.cn/api/";
@@ -56,7 +54,7 @@ public class STOProperties {
      * 物流状态推送地址（申通推送到此地址）
      * 格式：https://你的域名/api/webhook/logistics/sto
      */
-    private final String notifyUrl;
+    private String notifyUrl;
 
     /** HTTP 请求超时（毫秒） */
     private int connectTimeout = 5000;
