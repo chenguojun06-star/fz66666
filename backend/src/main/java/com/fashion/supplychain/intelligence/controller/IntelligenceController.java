@@ -647,8 +647,8 @@ public class IntelligenceController {
      * score=+1 赞 / -1 踩 / 0 清空；comment 可选文本。
      * 对应 t_intelligence_metrics 的 feedback_score / user_feedback / command_id 列（V202611020000 添加）。
      */
-    @PostMapping("/feedback")
-    public Result<Void> submitFeedback(@RequestBody java.util.Map<String, Object> body) {
+    @PostMapping("/ai-feedback")
+    public Result<Void> submitAiFeedback(@RequestBody java.util.Map<String, Object> body) {
         String commandId = body.get("commandId") == null ? null : body.get("commandId").toString();
         if (commandId == null || commandId.isBlank()) {
             return Result.fail("commandId 不能为空");

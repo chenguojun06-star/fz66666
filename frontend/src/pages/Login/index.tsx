@@ -315,24 +315,8 @@ const Login: React.FC = () => {
                 云裳智链
               </Title>
               <div className="login-subtitle">
-                有问题找小云｜多端协同更轻松
+                衣智链｜多端协同智能提醒平台
               </div>
-            </div>
-            <div className="login-mode-switch" role="tablist" aria-label="登录方式">
-              <button
-                type="button"
-                className={`login-mode-switch__item${loginMode === 'password' ? ' is-active' : ''}`}
-                onClick={() => setLoginMode('password')}
-              >
-                账号密码登录
-              </button>
-              <button
-                type="button"
-                className={`login-mode-switch__item${loginMode === 'sms' ? ' is-active' : ''}`}
-                onClick={() => setLoginMode('sms')}
-              >
-                手机验证码登录
-              </button>
             </div>
             <Form
               form={form}
