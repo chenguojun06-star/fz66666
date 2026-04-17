@@ -37,7 +37,30 @@ const MATERIAL_TYPE_MAP = {
   accessoryA: '拉链', accessoryB: '纽扣', accessoryC: '配件'
 };
 
-import { normalizeScanType } from '@/utils/scanHelpers';
+import { normalizeScanType, STAGE_LABELS } from '@/utils/scanHelpers';
+
+const STAGE_STATUS_TIPS = {
+  procurement: '物料领取成功',
+  cutting: '裁剪领取成功',
+  secondaryProcess: '二次工艺领取成功',
+  carSewing: '车缝工序领取成功',
+  tailProcess: '尾部工序领取成功',
+  warehousing: '入库成功',
+  quality: '质检领取成功',
+  pattern: '样板操作成功',
+};
+
+function getStageStatusTip(progressStage, flowInfo) {
+  if (flowInfo) return flowInfo.message;
+  const stage = String(progressStage || '').trim();
+  const lower = stage.toLowerCase();
+  for (const [key, tip] of Object.entries(STAGE_STATUS_TIPS)) {
+    if (lower === key || lower === STAGE_LABELS[key] || stage === STAGE_LABELS[key]) {
+      return tip;
+    }
+  }
+  return '扫码成功';
+}
 
 export default function ScanResultPage() {
   const navigate = useNavigate();
@@ -46,6 +69,8 @@ export default function ScanResultPage() {
   const [detail, setDetail] = useState({});
   const [processOptions, setProcessOptions] = useState([]);
   const [selectedNames, setSelectedNames] = useState([]);
+  const [scanRecords, setScanRecords] = useState([]);
+  const [loadingRecords, setLoadingRecords] = useState(false);
   const [selectedCount, setSelectedCount] = useState(0);
   const [selectedAmount, setSelectedAmount] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -134,7 +159,38 @@ export default function ScanResultPage() {
     if (raw.orderNo) {
       fetchAiTip(raw.orderNo, raw.processName || raw.progressStage || '');
     }
+
+    const statusTip = getStageStatusTip(raw.progressStage, raw.flowInfo);
+    if (raw.scanResult === 'success' || raw.success !== false) {
+      toast.success(statusTip);
+      try { wx.vibrateShort({ type: 'light' }); } catch (_) {}
+    }
+
+    if (raw.orderNo) {
+      loadScanRecords(raw.orderNo, raw.bundleNo);
+    }
   }, [scanResultData]);
+
+  const loadScanRecords = async (orderNo, bundleNo) => {
+    if (!orderNo) return;
+    setLoadingRecords(true);
+    try {
+      const res = await api.production.myScanHistory({
+        orderNo, page: 1, pageSize: 20,
+      });
+      const data = res?.data || res || {};
+      let list = data?.records || data?.list || [];
+      if (bundleNo) {
+        list = list.filter(r => (r.bundleNo || r.cuttingBundleNo || '').toString() === String(bundleNo));
+      }
+      list = list.filter(r => (r.scanResult || '').toLowerCase() !== 'failure');
+      setScanRecords(list.slice(0, 10));
+    } catch (e) {
+      setScanRecords([]);
+    } finally {
+      setLoadingRecords(false);
+    }
+  };
 
   const fetchAiTip = async (orderNo, processName) => {
     try {
@@ -233,7 +289,8 @@ export default function ScanResultPage() {
         if (isQualityReceive) {
           toast.success('已领取质检任务，请录入质检结果');
         } else {
-          toast.success('已完成 ' + successCount + ' 个工序扫码');
+          const stageLabel = STAGE_LABELS[normalizeScanType(scanResultData.progressStage)] || scanResultData.progressStage || '';
+          toast.success(stageLabel ? `${stageLabel}已完成，共${successCount}个工序` : `已完成 ${successCount} 个工序扫码`);
         }
         navigate(-1);
       } else if (successCount > 0) {
@@ -284,6 +341,32 @@ export default function ScanResultPage() {
           </div>
         )}
       </div>
+
+      {scanRecords.length > 0 && (
+        <div className="section-card">
+          <div className="section-title">扫码记录（{scanRecords.length}）</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {scanRecords.map((r, i) => (
+              <div key={r.id || i} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '6px 8px', borderRadius: 6, background: 'var(--color-bg-light)',
+                fontSize: 12,
+              }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{r.processName || r.progressStage || '-'}</span>
+                  <span style={{ color: 'var(--color-text-secondary)' }}>{r.color || '-'} / {r.size || '-'}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <span style={{ fontWeight: 600 }}>{r.quantity || 0}件</span>
+                  <span style={{ color: 'var(--color-text-tertiary)', fontSize: 11 }}>
+                    {r.operatorName || r.workerName || '-'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {aiTipVisible && aiTipData && aiTipData.aiTip && (
         <div className={`ai-bubble${isHigh ? ' ai-bubble-high' : ' ai-bubble-normal'}`}>

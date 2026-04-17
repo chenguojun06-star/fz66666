@@ -123,9 +123,11 @@ export const useWarehousingForm = (
             const q = Number(r?.qualifiedQuantity || 0) || 0;
             if (q <= 0) return false;
             const qs = String(r?.qualityStatus || '').trim().toLowerCase();
-            // 排除「返修申报」记录（qualityStatus='repair_return'）
-            // 这类记录不代表已完成质检入库，返修物品还需质检重检
             if (qs === 'repair_return') return false;
+            const wt = String(r?.warehousingType || '').trim();
+            if (wt === 'quality_scan' || wt === 'quality_scan_scrap') return false;
+            const wh = String(r?.warehouse || '').trim();
+            if (!wh || wh === '待分配') return false;
             return !qs || qs === 'qualified';
           })
           .map((r) => String(r?.cuttingBundleQrCode || '').trim())
@@ -410,7 +412,7 @@ export const useWarehousingForm = (
 
         let statusText = '';
         if (isUsed) {
-          statusText = '已合格质检';
+          statusText = '已入库';
         } else if (!isProductionReady) {
           statusText = '生产未完成';
         } else if (isRepairedWaitingQc) {

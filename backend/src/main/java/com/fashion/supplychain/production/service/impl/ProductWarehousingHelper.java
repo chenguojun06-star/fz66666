@@ -335,10 +335,12 @@ public class ProductWarehousingHelper {
         }
 
         try {
-            List<ProductWarehousing> list = productWarehousingMapper.selectList(
-                    new LambdaQueryWrapper<ProductWarehousing>()
-                            .eq(ProductWarehousing::getOrderId, oid)
-                            .eq(ProductWarehousing::getDeleteFlag, 0));
+            Long tid = com.fashion.supplychain.common.UserContext.tenantId();
+            LambdaQueryWrapper<ProductWarehousing> qw = new LambdaQueryWrapper<ProductWarehousing>()
+                    .eq(ProductWarehousing::getOrderId, oid)
+                    .eq(ProductWarehousing::getDeleteFlag, 0);
+            if (tid != null) qw.eq(ProductWarehousing::getTenantId, tid);
+            List<ProductWarehousing> list = productWarehousingMapper.selectList(qw);
             long sum = 0;
             if (list != null) {
                 for (ProductWarehousing w : list) {

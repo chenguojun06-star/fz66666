@@ -373,12 +373,11 @@ public class WarehouseScanExecutor {
      */
     private void validateBundleWarehousingQuantity(CuttingBundle bundle, int incomingQty) {
         if (bundle == null || bundle.getQuantity() == null || bundle.getQuantity() <= 0) {
-            return; // 菲号数量未设置，不做限制
+            return;
         }
 
         int bundleQty = bundle.getQuantity();
 
-        // ★ 减去报废数量：报废的件数不可入库，从有效容量中扣除
         int scrapQty = warehousingHelper.getScrapQtyByBundle(
                 bundle.getProductionOrderId(), bundle.getId());
         int effectiveBundleQty = bundleQty - scrapQty;
@@ -399,7 +398,15 @@ public class WarehouseScanExecutor {
             }
         } catch (Exception e) {
             log.warn("查询菲号已入库数量失败: bundleId={}", bundle.getId(), e);
-            return; // 查询失败时跳过验证，不阻塞业务
+            return;
+        }
+
+        if (bundleWarehoused >= effectiveBundleQty) {
+            throw new IllegalStateException(String.format(
+                    "该菲号已全部入库！裁剪数=%d%s，已入库=%d，无需重复入库",
+                    bundleQty,
+                    scrapQty > 0 ? "（报废" + scrapQty + "件，可入库" + effectiveBundleQty + "件）" : "",
+                    bundleWarehoused));
         }
 
         int totalAfterScan = bundleWarehoused + incomingQty;

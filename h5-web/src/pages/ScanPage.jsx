@@ -203,14 +203,8 @@ export default function ScanPage() {
           setScanResultData({ ...data, scanCode: code, scanType, flowInfo });
           navigate('/scan/confirm');
         } else {
-          setScanResultData({ ...data, scanCode: code, scanType });
-          setLastResult({ ...data, scanCode: code, scanType, success: true });
-          if (flowInfo) {
-            toast.success(flowInfo.message);
-          } else {
-            toast.success(data.message || '扫码成功');
-          }
-          setStats((prev) => prev ? { ...prev, scanCount: prev.scanCount + 1, totalQuantity: prev.totalQuantity + (Number(data.quantity) || 1) } : { scanCount: 1, orderCount: 0, totalQuantity: Number(data.quantity) || 1, totalAmount: 0 });
+          setScanResultData({ ...data, scanCode: code, scanType, flowInfo });
+          navigate('/scan/scan-result');
         }
         wx.vibrateShort();
         loadTodayHistory();

@@ -151,7 +151,10 @@ export default function useStagePanel({
         });
       }
 
-      if (String(selectedStage.record.sampleReviewStatus || '').trim().toUpperCase() === 'PASS' && selectedStage.stage.status !== 'done') {
+      if (String(selectedStage.record.sampleReviewStatus || '').trim().toUpperCase() === 'PASS'
+          && selectedStage.stage.status !== 'done'
+          && !(selectedStage.record as StyleRecord).completedTime) {
+        // completedTime 有值说明已完成入库，避免重复入库
         actions.push({
           key: 'inventory', label: '样衣入库', type: 'primary',
           onClick: () => {

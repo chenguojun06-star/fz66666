@@ -247,9 +247,11 @@ public class ProductionOrderFinanceOrchestrationService {
 
         int cuttingQty = 0;
         try {
+            Long tid = com.fashion.supplychain.common.UserContext.tenantId();
             QueryWrapper<CuttingBundle> qw = new QueryWrapper<CuttingBundle>()
                     .select("COALESCE(SUM(quantity), 0) as totalQuantity")
                     .eq("production_order_id", oid);
+            if (tid != null) qw.eq("tenant_id", tid);
             List<Map<String, Object>> rows = cuttingBundleMapper.selectMaps(qw);
             if (rows != null && !rows.isEmpty()) {
                 Object v = ParamUtils.getIgnoreCase(rows.get(0), "totalQuantity");
@@ -259,6 +261,14 @@ public class ProductionOrderFinanceOrchestrationService {
             log.warn("Failed to aggregate cutting quantity when closing order: orderId={}", oid, e);
         }
         cuttingQty = Math.max(0, cuttingQty);
+
+        if (cuttingQty <= 0) {
+            int completedQty = order.getCompletedQuantity() == null ? 0 : order.getCompletedQuantity();
+            if (completedQty > 0) {
+                cuttingQty = completedQty;
+                log.info("关单裁剪数回退：orderId={}, cuttingBundle无记录, 使用completedQuantity={}", oid, completedQty);
+            }
+        }
 
         int warehousingQualified = productWarehousingService.sumQualifiedByOrderId(oid);
 
@@ -338,9 +348,11 @@ public class ProductionOrderFinanceOrchestrationService {
 
         int cuttingQty = 0;
         try {
+            Long tid2 = com.fashion.supplychain.common.UserContext.tenantId();
             QueryWrapper<CuttingBundle> qw = new QueryWrapper<CuttingBundle>()
                     .select("COALESCE(SUM(quantity), 0) as totalQuantity")
                     .eq("production_order_id", oid);
+            if (tid2 != null) qw.eq("tenant_id", tid2);
             List<Map<String, Object>> rows = cuttingBundleMapper.selectMaps(qw);
             if (rows != null && !rows.isEmpty()) {
                 Object v = ParamUtils.getIgnoreCase(rows.get(0), "totalQuantity");
@@ -350,6 +362,12 @@ public class ProductionOrderFinanceOrchestrationService {
             log.warn("Failed to aggregate cutting quantity when auto closing order: orderId={}", oid, e);
         }
         cuttingQty = Math.max(0, cuttingQty);
+        if (cuttingQty <= 0) {
+            int completedQty2 = order.getCompletedQuantity() == null ? 0 : order.getCompletedQuantity();
+            if (completedQty2 > 0) {
+                cuttingQty = completedQty2;
+            }
+        }
         if (cuttingQty <= 0) {
             return false;
         }

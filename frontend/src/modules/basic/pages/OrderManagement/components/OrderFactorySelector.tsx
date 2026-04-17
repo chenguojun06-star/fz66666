@@ -88,7 +88,14 @@ const OrderFactorySelector: React.FC<OrderFactorySelectorProps> = ({
         <Form.Item name="orgUnitId" noStyle rules={[{ required: true, message: '请选择生产车间/部门' }]}>
           <Select
             placeholder="请选择内部生产车间/部门"
-            options={departments.map((department) => ({ value: department.id, label: department.pathNames || department.nodeName }))}
+            options={departments
+              .filter((dept) => {
+                const name = (dept.nodeName || '');
+                const path = (dept.pathNames || '');
+                const content = `${name} ${path}`;
+                return ['生产', '车间', '裁剪', '缝制', '后整', '工序', '车缝', '尾部', '整烫', '包装', '质检', '工艺', '班组', '产线', '绣花', '印花', '洗水', '组'].some((kw) => content.includes(kw));
+              })
+              .map((department) => ({ value: department.id, label: department.pathNames || department.nodeName }))}
             showSearch
             optionFilterProp="label"
             allowClear

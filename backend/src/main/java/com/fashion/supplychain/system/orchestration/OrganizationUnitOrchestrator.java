@@ -105,6 +105,22 @@ public class OrganizationUnitOrchestrator {
         return organizationUnitService.list(wrapper);
     }
 
+    private static final java.util.Set<String> PRODUCTION_KEYWORDS = java.util.Set.of(
+            "生产", "车间", "裁剪", "缝制", "后整", "工序", "车缝", "尾部",
+            "整烫", "包装", "质检", "工艺", "班组", "产线", "绣花", "印花", "洗水"
+    );
+
+    private boolean isProductionRelated(OrganizationUnit unit) {
+        if ("FACTORY".equals(unit.getNodeType())) return true;
+        String nodeName = unit.getNodeName() != null ? unit.getNodeName() : "";
+        String path = unit.getPathNames() != null ? unit.getPathNames() : "";
+        String content = (nodeName + " " + path).trim();
+        for (String kw : PRODUCTION_KEYWORDS) {
+            if (content.contains(kw)) return true;
+        }
+        return false;
+    }
+
     public List<OrganizationUnit> productionGroupOptions() {
         LambdaQueryWrapper<OrganizationUnit> wrapper = new LambdaQueryWrapper<OrganizationUnit>()
                 .eq(OrganizationUnit::getDeleteFlag, 0)
@@ -116,7 +132,8 @@ public class OrganizationUnitOrchestrator {
         if (tenantId != null) {
             wrapper.eq(OrganizationUnit::getTenantId, tenantId);
         }
-        return organizationUnitService.list(wrapper);
+        List<OrganizationUnit> all = organizationUnitService.list(wrapper);
+        return all.stream().filter(this::isProductionRelated).collect(java.util.stream.Collectors.toList());
     }
 
     @Transactional(rollbackFor = Exception.class)

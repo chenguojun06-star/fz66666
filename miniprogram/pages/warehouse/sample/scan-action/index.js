@@ -147,6 +147,12 @@ Page({
     try {
       await apiFn();
       wx.vibrateShort({ type: 'heavy' });
+      // 显示明显的成功提示（原来只有底部小文字，用户无感知）
+      wx.showToast({
+        title: `${labelMap[actionName] || actionName}成功`,
+        icon: 'success',
+        duration: 2000,
+      });
       this.setData({
         submitting: false,
         successMsg: `${labelMap[actionName] || actionName}成功`,
