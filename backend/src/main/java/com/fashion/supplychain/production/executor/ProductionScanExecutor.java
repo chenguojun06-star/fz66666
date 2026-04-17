@@ -417,6 +417,7 @@ public class ProductionScanExecutor {
             // 🔔 WebSocket实时播报：忽略失败，不阻断扫码流程
             try {
                 webSocketService.broadcastScanRealtime(
+                    operatorId,
                     order.getOrderNo(),
                     order.getStyleNo() != null ? order.getStyleNo() : "",
                     progressStage != null ? progressStage : "",

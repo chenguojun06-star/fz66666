@@ -6,6 +6,7 @@ import com.fashion.supplychain.intelligence.dto.SelfHealingResponse;
 import com.fashion.supplychain.intelligence.dto.SelfHealingResponse.DiagnosisItem;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
+import com.fashion.supplychain.production.orchestration.ProductionOrderOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import java.time.LocalDateTime;
@@ -37,6 +38,9 @@ public class SelfHealingOrchestrator {
 
     @Autowired
     private ScanRecordService scanRecordService;
+
+    @Autowired
+    private ProductionOrderOrchestrator productionOrderOrchestrator;
 
     private static final java.util.Set<String> TERMINAL_STATUSES = java.util.Set.of("completed", "cancelled", "scrapped", "archived", "closed");
 
@@ -307,7 +311,7 @@ public class SelfHealingOrchestrator {
 
     private DiagnosisItem repairStatusConsistency(Long tenantId) {
         DiagnosisItem item = new DiagnosisItem();
-        item.setCheckName("完工状态自动标记");
+        item.setCheckName("完工状态标记");
         item.setCheckType("progress");
 
         QueryWrapper<ProductionOrder> qw = new QueryWrapper<>();
@@ -317,24 +321,30 @@ public class SelfHealingOrchestrator {
         List<ProductionOrder> orders = productionOrderService.list(qw);
 
         int fixed = 0;
+        int skipped = 0;
         for (ProductionOrder o : orders) {
             int total = o.getOrderQuantity() != null ? o.getOrderQuantity() : 0;
             int completed = o.getCompletedQuantity() != null ? o.getCompletedQuantity() : 0;
             if (total > 0 && completed >= total) {
-                o.setStatus("completed");
-                o.setProductionProgress(100);
-                productionOrderService.updateById(o);
-                fixed++;
-                log.info("[自愈修复] 订单 {} 完工件数 {}/{} 状态→COMPLETED", o.getOrderNo(), completed, total);
+                try {
+                    productionOrderOrchestrator.closeOrder(o.getId(), "self_healing", "自愈修复-完工自动关单", false);
+                    fixed++;
+                    log.info("[自愈修复] 订单 {} 完工件数 {}/{} 通过closeOrder关单", o.getOrderNo(), completed, total);
+                } catch (Exception e) {
+                    skipped++;
+                    log.warn("[自愈修复] 订单 {} closeOrder失败(可能不满足90%阈值): {}", o.getOrderNo(), e.getMessage());
+                }
             }
         }
 
-        if (fixed == 0) {
+        if (fixed == 0 && skipped == 0) {
             item.setResult("ok");
             item.setDescription("无异常状态订单");
         } else {
             item.setResult("fixed");
-            item.setDescription(String.format("已将 %d 个已完工订单标记为 COMPLETED", fixed));
+            String desc = String.format("已通过closeOrder关闭 %d 个已完工订单", fixed);
+            if (skipped > 0) desc += String.format("，%d 个因不满足关单条件跳过", skipped);
+            item.setDescription(desc);
             item.setFixedAt(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
         }
         item.setAffectedOrders(fixed);

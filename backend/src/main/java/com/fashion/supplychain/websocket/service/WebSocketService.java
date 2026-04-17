@@ -98,9 +98,9 @@ public class WebSocketService {
     }
 
     /**
-     * 广播任务领取
+     * 通知操作人任务领取（定向推送，不全局广播）
      */
-    public void broadcastTaskReceived(String orderNo, String taskId, String workerId, String workerName) {
+    public void notifyTaskReceived(String operatorId, String orderNo, String taskId, String workerId, String workerName) {
         WebSocketMessage<Map<String, Object>> message = WebSocketMessage.create(
             WebSocketMessageType.TASK_RECEIVED,
             Map.of(
@@ -111,8 +111,20 @@ public class WebSocketService {
                 "timestamp", System.currentTimeMillis()
             )
         );
-        webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
-        log.info("[WebSocket] 广播任务领取: orderNo={}, worker={}", orderNo, workerName);
+        if (operatorId != null && !operatorId.isEmpty()) {
+            webSocketHandler.sendToUser(operatorId, message);
+        } else {
+            webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
+        }
+    }
+
+    /**
+     * 广播任务领取（兼容旧调用，全局广播）
+     * @deprecated 使用 notifyTaskReceived(operatorId, ...) 替代
+     */
+    @Deprecated
+    public void broadcastTaskReceived(String orderNo, String taskId, String workerId, String workerName) {
+        notifyTaskReceived(null, orderNo, taskId, workerId, workerName);
     }
 
     /**
@@ -183,9 +195,9 @@ public class WebSocketService {
     }
 
     /**
-     * 广播入库操作
+     * 通知操作人入库操作（定向推送，不全局广播）
      */
-    public void broadcastWarehouseIn(String orderNo, int quantity, String warehouseLocation) {
+    public void notifyWarehouseIn(String operatorId, String orderNo, int quantity, String warehouseLocation) {
         WebSocketMessage<Map<String, Object>> message = WebSocketMessage.create(
             WebSocketMessageType.WAREHOUSE_IN,
             Map.of(
@@ -195,8 +207,20 @@ public class WebSocketService {
                 "timestamp", System.currentTimeMillis()
             )
         );
-        webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
-        log.info("[WebSocket] 广播入库: orderNo={}, quantity={}", orderNo, quantity);
+        if (operatorId != null && !operatorId.isEmpty()) {
+            webSocketHandler.sendToUser(operatorId, message);
+        } else {
+            webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
+        }
+    }
+
+    /**
+     * 广播入库操作（兼容旧调用，全局广播）
+     * @deprecated 使用 notifyWarehouseIn(operatorId, ...) 替代
+     */
+    @Deprecated
+    public void broadcastWarehouseIn(String orderNo, int quantity, String warehouseLocation) {
+        notifyWarehouseIn(null, orderNo, quantity, warehouseLocation);
     }
 
     /**
@@ -407,9 +431,9 @@ public class WebSocketService {
     }
 
     /**
-     * 广播实时扫码播报（轻量级，用于 PC 端实时大屏）
+     * 通知操作人实时扫码播报（定向推送，不全局广播）
      */
-    public void broadcastScanRealtime(String orderNo, String styleNo,
+    public void broadcastScanRealtime(String operatorId, String orderNo, String styleNo,
                                        String stageName, int quantity, String operatorName) {
         WebSocketMessage<Map<String, Object>> message = WebSocketMessage.create(
             WebSocketMessageType.SCAN_REALTIME,
@@ -422,7 +446,21 @@ public class WebSocketService {
                 "timestamp",    System.currentTimeMillis()
             )
         );
-        webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
+        if (operatorId != null && !operatorId.isEmpty()) {
+            webSocketHandler.sendToUser(operatorId, message);
+        } else {
+            webSocketHandler.broadcastToTenant(UserContext.tenantId(), message);
+        }
+    }
+
+    /**
+     * 广播实时扫码播报（兼容旧调用，全局广播）
+     * @deprecated 使用 broadcastScanRealtime(operatorId, ...) 替代
+     */
+    @Deprecated
+    public void broadcastScanRealtime(String orderNo, String styleNo,
+                                       String stageName, int quantity, String operatorName) {
+        broadcastScanRealtime(null, orderNo, styleNo, stageName, quantity, operatorName);
     }
 
     /**

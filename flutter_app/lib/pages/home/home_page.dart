@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
+import '../../routes/app_routes.dart';
 import 'home_controller.dart';
 
 class HomePage extends GetView<HomeController> {
@@ -13,34 +14,45 @@ class HomePage extends GetView<HomeController> {
     return Scaffold(
       backgroundColor: AppColors.bgPage,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Obx(() => Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('${controller.userName.value}，${controller.greeting.value}',
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-                  const SizedBox(height: 4),
-                  const Text('欢迎使用衣智链', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
-                ],
-              )),
-              const SizedBox(height: AppSpacing.lg),
-
-              Obx(() => _buildDateCard(controller.dateInfo)),
-              const SizedBox(height: AppSpacing.xxl),
-
-              const Text('全部菜单', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-              const SizedBox(height: AppSpacing.md),
-
-              // 这里去掉了 Obx，因为 getMenuItems 内部不是响应式的，这是解决红框报错的关键
-              _buildMenuGrid(controller.getMenuItems()),
-            ],
+        child: RefreshIndicator(
+          onRefresh: controller.refreshData,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Obx(() => _buildGreeting()),
+                const SizedBox(height: AppSpacing.lg),
+                Obx(() => _buildDateCard(controller.dateInfo)),
+                const SizedBox(height: AppSpacing.md),
+                Obx(() => _buildDailyTip()),
+                const SizedBox(height: AppSpacing.xxl),
+                Row(
+                  children: [
+                    const Expanded(child: Text('全部菜单', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: AppColors.textPrimary))),
+                    Obx(() => _buildNotificationBadge()),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                _buildMenuGrid(controller.getMenuItems()),
+              ],
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildGreeting() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('${controller.userName.value}，${controller.greeting.value}',
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+        const SizedBox(height: 4),
+        const Text('欢迎使用衣智链', style: TextStyle(fontSize: 14, color: AppColors.textSecondary)),
+      ],
     );
   }
 
@@ -78,6 +90,52 @@ class HomePage extends GetView<HomeController> {
     );
   }
 
+  Widget _buildDailyTip() {
+    final tip = controller.dailyTip.value;
+    if (tip.isEmpty) return const SizedBox.shrink();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(AppSpacing.md),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.lightbulb_outline, size: 18, color: AppColors.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(tip, style: const TextStyle(fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.w400)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotificationBadge() {
+    final count = controller.unreadNoticeCount.value;
+    if (count == 0) return const SizedBox.shrink();
+    return GestureDetector(
+      onTap: () => Get.toNamed(AppRoutes.workInbox),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: AppColors.tagBgRed,
+          borderRadius: BorderRadius.circular(AppSpacing.lg),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.notifications_active, size: 14, color: AppColors.error),
+            const SizedBox(width: 4),
+            Text('$count条未读', style: const TextStyle(fontSize: 12, color: AppColors.error, fontWeight: FontWeight.w500)),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildMenuGrid(List<Map<String, dynamic>> items) {
     return GridView.builder(
       shrinkWrap: true,
@@ -92,7 +150,10 @@ class HomePage extends GetView<HomeController> {
       itemBuilder: (_, i) {
         final item = items[i];
         return GestureDetector(
-          onTap: () => controller.onMenuTap(item['route'] as String),
+          onTap: () => controller.onMenuTap(
+            item['route'] as String,
+            prefTab: item['prefTab'] as String?,
+          ),
           child: Container(
             decoration: BoxDecoration(
               color: AppColors.bgCard,

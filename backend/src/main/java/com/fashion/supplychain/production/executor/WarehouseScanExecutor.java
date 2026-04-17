@@ -356,7 +356,7 @@ public class WarehouseScanExecutor {
             String bSize = bundle.getSize() != null ? bundle.getSize() : "";
             String opName = operatorName != null ? operatorName : "";
             webSocketService.notifyScanSuccess(operatorId, orderNo, styleNo, "入库", whQty, opName, bNo);
-            webSocketService.broadcastWarehouseIn(orderNo, whQty, wh);
+            webSocketService.notifyWarehouseIn(operatorId, orderNo, whQty, wh);
             webSocketService.broadcastOrderProgressChanged(orderNo, whQty, "入库");
             webSocketService.broadcastDataChanged("ScanRecord", sr.getId(), "create");
             webSocketService.notifyProcessStageCompleted(operatorId, orderNo, "入库", opName, bNo, bColor, bSize, whQty);
@@ -831,7 +831,7 @@ public class WarehouseScanExecutor {
             String orderNo = order.getOrderNo() != null ? order.getOrderNo() : "";
             String opName = operatorName != null ? operatorName : "";
             webSocketService.notifyScanSuccess(operatorId, orderNo, styleNo, "U编码入库", quantity, opName, "");
-            webSocketService.broadcastWarehouseIn(orderNo, quantity, hasText(warehouse) ? warehouse : "默认仓库");
+            webSocketService.notifyWarehouseIn(operatorId, orderNo, quantity, hasText(warehouse) ? warehouse : "默认仓库");
             webSocketService.broadcastOrderProgressChanged(orderNo, quantity, "入库");
             webSocketService.broadcastDataChanged("ScanRecord", sr.getId(), "create");
             webSocketService.notifyProcessStageCompleted(operatorId, orderNo, "入库", opName, "", color, size, quantity);

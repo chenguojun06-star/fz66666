@@ -15,7 +15,6 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
 /**
  * 工序阶段检测器
  * 职责：
@@ -30,7 +29,17 @@ import java.util.Map;
 public class ProcessStageDetector {
 
     private static final List<String> FIXED_PRODUCTION_NODES = Arrays.asList(
-            "采购", "裁剪", "二次工艺", "车缝", "大烫", "质检", "包装", "入库");
+            "采购", "裁剪", "二次工艺", "车缝", "尾部", "入库");
+
+    private static final Map<String, String> CHILD_TO_PARENT = new LinkedHashMap<>();
+    static {
+        CHILD_TO_PARENT.put("大烫", "尾部");
+        CHILD_TO_PARENT.put("质检", "尾部");
+        CHILD_TO_PARENT.put("包装", "尾部");
+        CHILD_TO_PARENT.put("剪线", "尾部");
+        CHILD_TO_PARENT.put("整烫", "尾部");
+        CHILD_TO_PARENT.put("尾部", "尾部");
+    }
 
     @Autowired
     private TemplateLibraryService templateLibraryService;
@@ -82,7 +91,11 @@ public class ProcessStageDetector {
                 return n;
             }
         }
-        return null;
+        String parent = CHILD_TO_PARENT.get(v);
+        if (hasText(parent)) {
+            return parent;
+        }
+        return v;
     }
 
     /**

@@ -32,6 +32,11 @@ function normalizeScanType(progressStage, scanType) {
   if (stage === 'cutting' || stage === '裁剪') return 'cutting';
   if (stage === 'procurement' || stage === '采购') return 'procurement';
   if (stage === 'packaging' || stage === '包装') return 'packaging';
+  if (stage === 'sewing' || stage === '车缝') return 'sewing';
+  if (stage === 'carSewing') return 'carSewing';
+  if (stage === 'pressing' || stage === '大烫') return 'pressing';
+  if (stage === 'pattern' || stage === '样板') return 'pattern';
+  if (stage === 'secondaryProcess' || stage === '二次工艺') return 'cutting';
   return scanType || 'production';
 }
 

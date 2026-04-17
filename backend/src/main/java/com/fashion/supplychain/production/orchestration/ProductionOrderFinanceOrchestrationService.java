@@ -43,6 +43,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
 
 @Service
@@ -100,6 +101,9 @@ public class ProductionOrderFinanceOrchestrationService {
     @Autowired
     @Lazy
     private ProductionOrderFinanceOrchestrationService self;
+
+    @Autowired
+    private TransactionTemplate transactionTemplate;
 
     @Transactional(rollbackFor = Exception.class)
     public boolean completeProduction(String id, BigDecimal tolerancePercent) {
@@ -354,21 +358,29 @@ public class ProductionOrderFinanceOrchestrationService {
 
     /**
      * 批量关单 — 支持小云AI指令批量关闭订单
+     * 每个订单独立事务，单个失败不影响其他订单
      */
-    @Transactional(rollbackFor = Exception.class)
     public List<Map<String, Object>> batchCloseOrders(List<String> orderIds, String sourceModule, String remark, boolean specialClose) {
         List<Map<String, Object>> results = new ArrayList<>();
         for (String oid : orderIds) {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("orderId", oid);
             try {
-                ProductionOrder result = closeOrder(oid, specialClose);
+                ProductionOrder result = transactionTemplate.execute(status -> {
+                    try {
+                        return self.closeOrder(oid, specialClose);
+                    } catch (Exception e) {
+                        status.setRollbackOnly();
+                        throw new RuntimeException(e.getMessage(), e);
+                    }
+                });
                 item.put("success", true);
                 item.put("orderNo", result != null ? result.getOrderNo() : oid);
             } catch (Exception e) {
                 item.put("success", false);
-                item.put("reason", e.getMessage());
-                log.warn("批量关单失败: orderId={}, reason={}", oid, e.getMessage());
+                String reason = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
+                item.put("reason", reason);
+                log.warn("批量关单失败: orderId={}, reason={}", oid, reason);
             }
             results.add(item);
         }

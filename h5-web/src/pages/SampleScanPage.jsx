@@ -250,13 +250,16 @@ export default function SampleScanPage() {
   const onInbound = () => {
     if (!window.confirm(`确认将 ${lastResult?.styleNo || ''} ${lastResult?.color || ''} ${lastResult?.size || ''} 入库？`)) return;
     doAction('inbound', () => api.sampleStock.inbound({
-      styleNo: lastResult?.styleNo, color: lastResult?.color, size: lastResult?.size, quantity: 1,
+      styleId: stockInfo?.stock?.styleId, styleNo: lastResult?.styleNo, styleName: stockInfo?.stock?.styleName,
+      color: lastResult?.color, size: lastResult?.size, quantity: 1, sampleType: stockInfo?.stock?.sampleType || 'development',
+      location: stockInfo?.stock?.location || '',
     }));
   };
 
   const onLoan = () => {
     if (!window.confirm(`确认借调 ${lastResult?.styleNo || ''} ${lastResult?.color || ''} ${lastResult?.size || ''}？`)) return;
     doAction('loan', () => api.sampleStock.loan({
+      sampleStockId: stockInfo?.stock?.id,
       styleNo: lastResult?.styleNo, color: lastResult?.color, size: lastResult?.size,
       borrower: user?.name || user?.username || '', borrowerId: String(user?.id || ''), quantity: 1,
     }));
@@ -267,7 +270,7 @@ export default function SampleScanPage() {
     if (!loans.length) { toast.error('无借调记录'); return; }
     if (!window.confirm(`确认归还 ${lastResult?.styleNo || ''} ${lastResult?.color || ''} ${lastResult?.size || ''}？`)) return;
     doAction('return', () => api.sampleStock.returnSample({
-      loanId: loans[0].id, quantity: loans[0].quantity || 1,
+      loanId: loans[0].id, returnQuantity: loans[0].quantity || 1,
     }));
   };
 

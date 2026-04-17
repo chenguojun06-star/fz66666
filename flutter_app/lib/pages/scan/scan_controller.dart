@@ -3,12 +3,16 @@ import 'package:get/get.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/api_service.dart';
+import '../../utils/storage_service.dart';
+import '../../utils/permission_service.dart';
 import '../../utils/scan/qr_code_parser.dart';
 import '../../utils/scan/scan_offline_queue.dart';
+import '../../utils/event_bus.dart';
 import '../../routes/app_routes.dart';
 
 class ScanController extends GetxController {
   final ApiService _api = Get.find<ApiService>();
+  final StorageService _storage = Get.find<StorageService>();
   final ScanOfflineQueue _offlineQueue = ScanOfflineQueue();
 
   final todayCount = 0.obs;
@@ -20,14 +24,60 @@ class ScanController extends GetxController {
   final scannerInitialized = false.obs;
   Widget scannerWidget = const SizedBox.shrink();
 
+  final selectedScanType = ScanType.sewing.obs;
+  final offlineCount = 0.obs;
+  final lastScanResult = <String, dynamic>{}.obs;
+  final pendingQualityTasks = 0.obs;
+  final pendingRepairTasks = 0.obs;
+
   final MobileScannerController _scannerController = MobileScannerController();
+
+  List<ScanType> get allowedScanTypes {
+    final permission = PermissionService();
+    return permission.getAllowedScanTypes();
+  }
 
   @override
   void onInit() {
     super.onInit();
+    _restoreScanType();
     _initScanner();
     _loadStats();
     _loadRecentScans();
+    _loadOfflineCount();
+    _loadPendingTasks();
+    _bindWsEvents();
+  }
+
+  void _restoreScanType() {
+    final saved = _storage.getValue('mp_scan_type_index', 0);
+    final types = allowedScanTypes;
+    if (saved < types.length) {
+      selectedScanType.value = types[saved];
+    }
+  }
+
+  void _bindWsEvents() {
+    EventBus.instance.on(EventBus.scanSuccess, (data) {
+      _loadStats();
+      _loadRecentScans();
+    }, tag: 'ScanController');
+    EventBus.instance.on(EventBus.dataChanged, (data) {
+      _loadStats();
+      _loadOfflineCount();
+    }, tag: 'ScanController');
+    EventBus.instance.on(EventBus.taskReminder, (data) {
+      _loadPendingTasks();
+    }, tag: 'ScanController');
+  }
+
+  @override
+  void onClose() {
+    _scannerController.dispose();
+    EventBus.instance.off(EventBus.scanSuccess, tag: 'ScanController');
+    EventBus.instance.off(EventBus.dataChanged, tag: 'ScanController');
+    EventBus.instance.off(EventBus.taskReminder, tag: 'ScanController');
+    super.onClose();
   }
 
   Future<void> _initScanner() async {
@@ -72,6 +122,44 @@ class ScanController extends GetxController {
     } catch (_) {}
   }
 
+  Future<void> _loadOfflineCount() async {
+    try {
+      offlineCount.value = await _offlineQueue.getPendingCount();
+    } catch (_) {}
+  }
+
+  Future<void> _loadPendingTasks() async {
+    try {
+      final qualityRes = await _api.myQualityTasks();
+      final qualityData = qualityRes.data;
+      if (qualityData is Map && qualityData['code'] == 200 && qualityData['data'] != null) {
+        final list = qualityData['data'];
+        if (list is List) {
+          pendingQualityTasks.value = list.length;
+        }
+      }
+    } catch (_) {}
+
+    try {
+      final repairRes = await _api.myRepairTasks();
+      final repairData = repairRes.data;
+      if (repairData is Map && repairData['code'] == 200 && repairData['data'] != null) {
+        final list = repairData['data'];
+        if (list is List) {
+          pendingRepairTasks.value = list.length;
+        }
+      }
+    } catch (_) {}
+  }
+
+  void onScanTypeChanged(ScanType type) {
+    selectedScanType.value = type;
+    final idx = allowedScanTypes.indexOf(type);
+    if (idx >= 0) {
+      _storage.setValue('mp_scan_type_index', idx);
+    }
+  }
+
   Future<void> onScanResult(String code) async {
     if (scanning.value) return;
     scanCode.value = code;
@@ -85,15 +173,25 @@ class ScanController extends GetxController {
         'orderNo': parsed.orderNo,
         'bundleNo': parsed.bundleNo,
         'type': parsed.type.name,
+        'scanType': selectedScanType.value.name,
       });
       final data = res.data;
       if (data is Map && data['code'] == 200) {
-        Get.snackbar('扫码成功', '${parsed.displayName} 已记录', snackPosition: SnackPosition.TOP, backgroundColor: AppColors.primary, colorText: Colors.white);
+        lastScanResult.value = data['data'] is Map ? data['data'] as Map<String, dynamic> : {'qrCode': code};
+        Get.snackbar('扫码成功', '${parsed.displayName} 已记录',
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: AppColors.success,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 2));
         _loadStats();
         _loadRecentScans();
+        _tryUploadOffline();
       } else {
         final msg = data is Map ? (data['message'] ?? '扫码失败') : '扫码失败';
-        Get.snackbar('扫码失败', msg.toString(), snackPosition: SnackPosition.TOP);
+        Get.snackbar('扫码失败', msg.toString(),
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: AppColors.error,
+          colorText: Colors.white);
       }
     } catch (e) {
       await _offlineQueue.enqueue(code, {
@@ -101,10 +199,54 @@ class ScanController extends GetxController {
         'orderNo': parsed.orderNo,
         'bundleNo': parsed.bundleNo,
         'type': parsed.type.name,
+        'scanType': selectedScanType.value.name,
       });
-      Get.snackbar('离线保存', '网络异常，扫码已保存到本地', snackPosition: SnackPosition.TOP, backgroundColor: AppColors.warning, colorText: Colors.white);
+      _loadOfflineCount();
+      Get.snackbar('离线保存', '网络异常，扫码已保存到本地（${offlineCount.value + 1}条待上传）',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: AppColors.warning,
+        colorText: Colors.white,
+        duration: const Duration(seconds: 3));
     } finally {
       scanning.value = false;
+    }
+  }
+
+  Future<void> _tryUploadOffline() async {
+    try {
+      await _offlineQueue.uploadAll();
+      _loadOfflineCount();
+    } catch (_) {}
+  }
+
+  Future<void> undoLastScan() async {
+    if (recentScans.isEmpty) return;
+    final lastScan = recentScans.first;
+    final scanId = lastScan['id']?.toString();
+    if (scanId == null) return;
+
+    try {
+      final res = await _api.undoScan({'scanId': scanId});
+      final data = res.data;
+      if (data is Map && data['code'] == 200) {
+        Get.snackbar('撤销成功', '已撤销上次扫码',
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: AppColors.success,
+          colorText: Colors.white);
+        _loadStats();
+        _loadRecentScans();
+      } else {
+        final msg = data is Map ? (data['message'] ?? '撤销失败') : '撤销失败';
+        Get.snackbar('撤销失败', msg.toString(),
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: AppColors.error,
+          colorText: Colors.white);
+      }
+    } catch (_) {
+      Get.snackbar('撤销失败', '网络异常',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: AppColors.error,
+        colorText: Colors.white);
     }
   }
 
@@ -137,10 +279,5 @@ class ScanController extends GetxController {
 
   void goToHistory() => Get.toNamed(AppRoutes.scanHistory);
   void goToPattern() => Get.toNamed(AppRoutes.scanPattern);
-
-  @override
-  void onClose() {
-    _scannerController.dispose();
-    super.onClose();
-  }
+  void goToQuality() => Get.toNamed(AppRoutes.scanQuality);
 }

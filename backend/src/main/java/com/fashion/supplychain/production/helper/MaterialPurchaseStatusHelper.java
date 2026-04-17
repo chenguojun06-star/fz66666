@@ -68,6 +68,9 @@ public class MaterialPurchaseStatusHelper {
     @Autowired
     private com.fashion.supplychain.production.service.MaterialStockService materialStockService;
 
+    @Autowired
+    private com.fashion.supplychain.websocket.service.WebSocketService webSocketService;
+
     public MaterialPurchase receive(Map<String, Object> body) {
         String purchaseId = body == null ? null
                 : (body.get("purchaseId") == null ? null : String.valueOf(body.get("purchaseId")));
@@ -163,6 +166,17 @@ public class MaterialPurchaseStatusHelper {
             sysNoticeService.save(notice);
         } catch (Exception e) {
             log.warn("[采购领取] 发送通知失败: {}", e.getMessage());
+        }
+        try {
+            String orderNo = updated.getOrderNo() != null ? updated.getOrderNo() : "";
+            String materialName = updated.getMaterialName() != null ? updated.getMaterialName() : "物料";
+            String receiver = rname != null && !rname.isEmpty() ? rname : rid;
+            String receiverId = rid != null && !rid.isEmpty() ? rid : "";
+            webSocketService.broadcastOrderProgressChanged(orderNo, 0, "采购领取");
+            webSocketService.broadcastDataChanged("MaterialPurchase", purchaseId, "update");
+            webSocketService.notifyProcessStageCompleted(receiverId, orderNo, "采购领取", receiver, "", "", "", 0);
+        } catch (Exception e) {
+            log.debug("[采购领取] WebSocket广播失败(不阻断): {}", e.getMessage());
         }
         return updated;
     }
