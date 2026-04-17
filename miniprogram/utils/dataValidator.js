@@ -129,7 +129,7 @@ function validateProductionOrder(order) {
       }
       if (typeof parsed !== 'object' || parsed === null) {
         additionalErrors.push('progressWorkflowJson 必须是对象或JSON字符串');
-      } else if (!Array.isArray(parsed.nodes)) {
+      } else if (parsed.nodes !== undefined && !Array.isArray(parsed.nodes)) {
         additionalErrors.push('progressWorkflowJson.nodes 必须是数组');
       }
     } catch (e) {

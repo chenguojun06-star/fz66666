@@ -330,9 +330,8 @@ public class ProductionOrderOrchestrator {
         if (!CLOSE_SOURCE_MY_ORDERS.equals(src) && !CLOSE_SOURCE_PRODUCTION_PROGRESS.equals(src)) {
             throw new AccessDeniedException("仅允许在我的订单或工序跟进完成");
         }
-        return distributedLockService.executeWithLock("order:close:" + id, 15, java.util.concurrent.TimeUnit.SECONDS,
+        ProductionOrder result = distributedLockService.executeWithLock("order:close:" + id, 15, java.util.concurrent.TimeUnit.SECONDS,
                 () -> financeOrchestrationService.closeOrder(id, specialClose));
-        // 记录关闭操作日志
         try {
             if (operationLogService != null && result != null) {
                 OperationLog opLog = new OperationLog();
@@ -420,5 +419,17 @@ public class ProductionOrderOrchestrator {
      */
     public Map<String, Map<String, Object>> getAllProcessStatus(String orderId) {
         return helper.getAllProcessStatus(orderId);
+    }
+
+    private void assertOrderBelongsToCurrentTenant(String orderId, String operation) {
+        Long currentTenantId = UserContext.tenantId();
+        if (currentTenantId == null) return;
+        ProductionOrder order = productionOrderService.getById(orderId);
+        if (order == null) return;
+        if (order.getTenantId() != null && !order.getTenantId().equals(currentTenantId)) {
+            log.warn("[租户校验] {} 操作被拒绝: orderId={}, 当前租户={}, 订单租户={}",
+                    operation, orderId, currentTenantId, order.getTenantId());
+            throw new AccessDeniedException(operation + "操作失败：订单不属于当前租户");
+        }
     }
 }
