@@ -12,7 +12,7 @@
  */
 var api = require('../../utils/api');
 var { transformOrderData } = require('../work/utils/orderTransform');
-var { buildProcessNodesWithRates } = require('../work/utils/progressNodes');
+var { buildProcessNodesWithRates, calcOrderProgress } = require('../work/utils/progressNodes');
 var { isAdminOrSupervisor } = require('../../utils/permission');
 var { isTenantOwner } = require('../../utils/storage');
 var { eventBus, Events } = require('../../utils/eventBus');
@@ -37,6 +37,7 @@ function enrichForDashboard(order) {
   var total = Number(order.cuttingQuantity) || Number(order.cuttingQty) || Number(order.orderQuantity) || Number(order.sizeTotal) || 0;
   order.processNodes = buildProcessNodes(order);
   order.remainQuantity = Math.max(0, total - completed);
+  order.calculatedProgress = calcOrderProgress(order);
   order.expanded = false;
   return order;
 }

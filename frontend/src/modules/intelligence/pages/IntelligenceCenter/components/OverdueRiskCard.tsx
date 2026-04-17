@@ -3,6 +3,7 @@ import { CheckCircleOutlined } from '@ant-design/icons';
 import { LiveDot } from './IntelligenceWidgets';
 import { AutoScrollBox } from './OrderScrollPanel';
 import CollapseChevron from '../CollapseChevron';
+import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress';
 
 const OverdueRiskCard: React.FC<any> = ({
   overdueRisk, collapsedPanels, toggleCollapse,
@@ -33,7 +34,7 @@ const OverdueRiskCard: React.FC<any> = ({
                 <span className="c-risk-badge" style={{ background: '#ff4136' }}>逾{-d}天</span>
                 <span className="c-risk-order">{o.orderNo}</span>
                 <span className="c-risk-factory">{o.factoryName ?? '—'}</span>
-                <span className="c-risk-prog">{o.productionProgress ?? 0}%</span>
+                <span className="c-risk-prog">{calcOrderProgress(o)}%</span>
                 <span className="c-risk-action" style={{ color: '#ff4136' }}>立即联系</span>
               </div>
             );
@@ -45,7 +46,7 @@ const OverdueRiskCard: React.FC<any> = ({
                 <span className="c-risk-badge" style={{ background: '#f7a600' }}>剩{d}天</span>
                 <span className="c-risk-order">{o.orderNo}</span>
                 <span className="c-risk-factory">{o.factoryName ?? '—'}</span>
-                <span className="c-risk-prog">{o.productionProgress ?? 0}%</span>
+                <span className="c-risk-prog">{calcOrderProgress(o)}%</span>
                 <span className="c-risk-action" style={{ color: '#f7a600' }}>加急协调</span>
               </div>
             );
@@ -57,7 +58,7 @@ const OverdueRiskCard: React.FC<any> = ({
                 <span className="c-risk-badge" style={{ background: '#00b4ff' }}>关注{d}d</span>
                 <span className="c-risk-order">{o.orderNo}</span>
                 <span className="c-risk-factory">{o.factoryName ?? '—'}</span>
-                <span className="c-risk-prog">{o.productionProgress ?? 0}%</span>
+                <span className="c-risk-prog">{calcOrderProgress(o)}%</span>
                 <span className="c-risk-action" style={{ color: '#00b4ff' }}>持续关注</span>
               </div>
             );

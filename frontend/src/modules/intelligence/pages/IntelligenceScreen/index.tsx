@@ -6,6 +6,7 @@ import {
   AlertOutlined, TeamOutlined, SafetyOutlined,
 } from '@ant-design/icons';
 import { useCockpit } from '../IntelligenceCenter/hooks/useCockpit';
+import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress';
 import './styles.css';
 
 /* ─── 小工具 ─────────────────────────────────────────── */
@@ -148,24 +149,26 @@ export default function IntelligenceScreen() {
             {/* 中列：进行中订单 */}
             <div className="screen-col">
               <div className="screen-panel-title"> 进行中订单</div>
-              {orders.slice(0, 10).map((o: any) => (
-                <div key={o.id} className="screen-order-row">
-                  <span className="screen-order-no">{o.orderNo}</span>
-                  <span className="screen-order-name"
+              {orders.slice(0, 10).map((o: any) => {
+                const prog = calcOrderProgress(o);
+                return (
+                <div key={o.id || o.orderNo} className="screen-order-row" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span
                     style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {o.styleName}
                   </span>
                   <div className="screen-progress-bar-wrap">
                     <div className="screen-progress-bar"
                       style={{
-                        width: `${o.productionProgress || 0}%`,
-                        background: o.productionProgress >= 80 ? '#52c41a'
-                          : o.productionProgress >= 40 ? '#fadb14' : '#ff4d4f',
+                        width: `${prog}%`,
+                        background: prog >= 80 ? '#52c41a'
+                          : prog >= 40 ? '#fadb14' : '#ff4d4f',
                       }} />
                   </div>
-                  <span className="screen-progress-pct">{o.productionProgress ?? 0}%</span>
+                  <span className="screen-progress-pct">{prog}%</span>
                 </div>
-              ))}
+                );
+              })}
               {!orders.length && <div className="screen-empty">无进行中订单</div>}
             </div>
 

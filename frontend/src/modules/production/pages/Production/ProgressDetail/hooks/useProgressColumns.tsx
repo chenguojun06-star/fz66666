@@ -520,7 +520,17 @@ export const useProgressColumns = ({
             })()}
             {ns.map((node: ProgressNode, index: number) => {
               const nodeName = node.name || '-';
-              const completedQty = nodeDoneMap?.[nodeName] || 0;
+              // ★ nodeType 优先用模板返回的 progressStage（父分类），避免硬编码 NODE_TYPE_MAP 漏掉自定义工序名
+              const nodeType = (node.progressStage && node.progressStage.trim())
+                || NODE_TYPE_MAP[nodeName]
+                || nodeName.toLowerCase();
+              // ★ 入库节点：进度球必须对齐 t_product_warehousing 真实合格件数（与关单校验同源），
+              //   避免扫码流水（boardStats）显示 100% 但 DB 中尚无入库记录导致无法关单的"虚高"误导。
+              const isWarehousingNode = nodeType === 'warehousing'
+                || /入库|仓库|成品仓/.test(nodeName);
+              const completedQty = isWarehousingNode
+                ? (Number((record as any)?.warehousingQualifiedQuantity) || 0)
+                : (nodeDoneMap?.[nodeName] || 0);
               // ★ 采购/物料节点：到货即完成(100%)，显示 ✓；不按件数比率（避免裁剪>下单时卡死）
               const isProcureNode = /采购|物料|备料|辅料|面料/.test(nodeName);
               const percent = isProcureNode
@@ -530,10 +540,6 @@ export const useProgressColumns = ({
                   : 0;
               const remaining = totalQty - completedQty;
               const completionTime = nodeTimeMap?.[nodeName] || '';
-              // ★ nodeType 优先用模板返回的 progressStage（父分类），避免硬编码 NODE_TYPE_MAP 漏掉自定义工序名
-              const nodeType = (node.progressStage && node.progressStage.trim())
-                || NODE_TYPE_MAP[nodeName]
-                || nodeName.toLowerCase();
               const predictHint = getPredictHint(String(record.id || ''), nodeName, percent);
               const segmentProgress = Math.min(1, percent / 100);
               const nodePrimaryColor = isClosed ? '#9ca3af' : getNodeColor(record.expectedShipDate || record.plannedEndDate);

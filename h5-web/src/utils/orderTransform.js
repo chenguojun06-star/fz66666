@@ -202,6 +202,41 @@ function clampPercent(value) {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
 
+const CORE_STAGES_FOR_PROGRESS = ['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库'];
+
+function calcOrderProgress(order) {
+  if (!order) return 0;
+  const dbProgress = clampPercent(Number(order.productionProgress) || 0);
+  const status = (order.status || '').trim().toLowerCase();
+  if (status === 'completed') return 100;
+
+  const hasProcurement = (Number(order.materialArrivalRate) || 0) > 0
+    || Boolean(order.procurementManuallyCompleted)
+    || Boolean(order.procurementConfirmedAt);
+  const pipeline = hasProcurement
+    ? CORE_STAGES_FOR_PROGRESS
+    : CORE_STAGES_FOR_PROGRESS.filter(s => s !== '采购');
+
+  let rateSum = 0;
+  let rateCount = 0;
+  for (const stage of pipeline) {
+    const rate = getNodeRateFromOrder(stage, order);
+    if (rate >= 0) {
+      rateSum += rate;
+      rateCount++;
+    }
+  }
+  const rateProgress = rateCount > 0 ? Math.round(rateSum / rateCount) : 0;
+
+  const hasCuttingAction = (Number(order.cuttingCompletionRate) || 0) > 0
+    || (Number(order.cuttingQuantity) || 0) > 0;
+  const hasRateAction = rateProgress > 0;
+  const hasRealAction = hasProcurement || hasCuttingAction || hasRateAction;
+  if (!hasRealAction) return 0;
+
+  return clampProgress(Math.max(dbProgress, rateProgress));
+}
+
 function stripShipmentNode(list) {
   return (Array.isArray(list) ? list : []).filter(n => {
     const id = normalizeText(n && n.id).toLowerCase();
@@ -297,6 +332,7 @@ export function transformOrderData(r) {
   const completedQuantity = Number(source.completedQuantity) || 0;
   const remainQuantity = Math.max(0, totalQuantity - completedQuantity);
   const processNodes = buildProcessNodes(source);
+  const calculatedProgress = calcOrderProgress(source);
   return {
     ...source,
     cuttingQty: source.cuttingQuantity != null ? source.cuttingQuantity : (source.cuttingQty || 0),
@@ -313,6 +349,7 @@ export function transformOrderData(r) {
     completedQuantity,
     remainQuantity,
     processNodes,
+    calculatedProgress,
     deliveryDateStr: delivery.deliveryDateStr,
     remainDays: delivery.remainDays,
     remainDaysText: delivery.remainDaysText,

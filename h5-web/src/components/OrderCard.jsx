@@ -30,7 +30,7 @@ const OrderCard = memo(function OrderCard({ order, isExpanded, onToggle, activeT
   const imgUrl = order.styleCoverUrl ? getAuthedImageUrl(order.styleCoverUrl) : '';
   const isOverdue = order.remainDays !== null && order.remainDays < 0;
   const isClosed = order.isClosed;
-  const progress = order.productionProgress || 0;
+  const progress = order.calculatedProgress || order.productionProgress || 0;
   const completedQty = order.completedQuantity || 0;
   const totalQty = order.totalQuantity || order.orderQuantity || 0;
   const remainQty = order.remainQuantity || Math.max(0, totalQty - completedQty);

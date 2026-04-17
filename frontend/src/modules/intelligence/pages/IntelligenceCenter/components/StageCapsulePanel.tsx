@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 
 import type { ProductionOrder } from '@/types/production';
+import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress';
 import { stageAliasMap, tailProcessKeywords } from '@/utils/productionStage';
 import { STAGE_ACCENT, STAGE_GLOW } from '@/utils/stageStyles';
 import { useProductionBoardStore } from '@/stores/productionBoardStore';
@@ -303,7 +304,7 @@ const StageCapsulePanel: React.FC<StageCapsulePanelProps> = ({ orders }) => {
                   {item.leadOrder ? (
                     <>
                       <span className="c-stage-lead">{item.leadOrder.orderNo}</span>
-                      <span className="c-stage-lead-progress">{toNumber(item.leadOrder.productionProgress)}%</span>
+                      <span className="c-stage-lead-progress">{calcOrderProgress(item.leadOrder)}%</span>
                     </>
                   ) : (
                     <span className="c-stage-empty">暂无订单</span>
@@ -350,7 +351,7 @@ const StageCapsulePanel: React.FC<StageCapsulePanelProps> = ({ orders }) => {
                   <span className="c-stage-order-qty">{order.orderQuantity ?? order.cuttingQuantity ?? '--'}件</span>
                   <span className="c-stage-order-date">下单 {fmtDate(order.createTime)}</span>
                   <span className="c-stage-order-date">交期 {fmtDate(order.plannedEndDate)}</span>
-                  <span className="c-stage-order-progress">{toNumber(order.productionProgress)}%</span>
+                  <span className="c-stage-order-progress">{calcOrderProgress(order)}%</span>
                   {orderStagnantMap.has(String(order.id ?? '')) && (
                     <span className="c-stagnant-badge">⏸{fmtStagnant(orderStagnantMap.get(String(order.id ?? ''))!)}</span>
                   )}

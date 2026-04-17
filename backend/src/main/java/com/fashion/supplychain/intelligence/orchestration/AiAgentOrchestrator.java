@@ -91,6 +91,14 @@ public class AiAgentOrchestrator {
     private final ThreadLocal<List<AiAgentToolExecHelper.ToolExecRecord>> lastToolRecordsHolder = new ThreadLocal<>();
 
     public Result<String> executeAgent(String userMessage) {
+        return executeAgent(userMessage, null);
+    }
+
+    /**
+     * Feature C (PageContext) + F (ConversationId)：支持前端传递当前页面上下文，
+     * 让 AI 在回答时感知用户所处位置。conversationId 暂由 memoryHelper 管理，预留扩展位。
+     */
+    public Result<String> executeAgent(String userMessage, String pageContext) {
         if (!inferenceOrchestrator.isAnyModelEnabled()) {
             return Result.fail("智能服务暂未配置或不可用");
         }
@@ -116,7 +124,7 @@ public class AiAgentOrchestrator {
         List<JsonNode> teamDispatchCards = new ArrayList<>();
         List<JsonNode> bundleSplitCards = new ArrayList<>();
         List<JsonNode> xiaoyunInsightCards = new ArrayList<>();
-        messages.add(AiMessage.system(promptHelper.buildSystemPrompt(userMessage, null, visibleTools)));
+        messages.add(AiMessage.system(promptHelper.buildSystemPrompt(userMessage, pageContext, visibleTools)));
         // 加载对话记忆（最近 N 轮），超过阈值时自动 LLM 压缩
         List<AiMessage> history = memoryHelper.getConversationHistory(userId, tenantId);
         messages.addAll(memoryHelper.compactConversationHistory(history));

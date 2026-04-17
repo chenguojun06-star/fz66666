@@ -108,9 +108,9 @@
               <!-- 进度条 -->
               <view class="header-progress-row">
                 <view class="header-progress-bar {{item.isClosed ? 'progress-completed' : ''}}">
-                  <view class="progress-fill" style="width: {{item.productionProgress || 0}}%"></view>
+                  <view class="progress-fill" style="width: {{item.calculatedProgress || item.productionProgress || 0}}%"></view>
                 </view>
-                <text class="header-progress-pct">{{item.productionProgress || 0}}%</text>
+                <text class="header-progress-pct">{{item.calculatedProgress || item.productionProgress || 0}}%</text>
               </view>
             </view>
             <!-- 右侧：折叠箭头 -->

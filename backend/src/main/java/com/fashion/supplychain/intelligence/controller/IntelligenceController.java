@@ -183,6 +183,9 @@ public class IntelligenceController {
     private com.fashion.supplychain.intelligence.orchestration.FileAnalysisOrchestrator fileAnalysisOrchestrator;
 
     @Autowired
+    private com.fashion.supplychain.intelligence.mapper.IntelligenceMetricsMapper intelligenceMetricsMapper;
+
+    @Autowired
     private AgentMeetingOrchestrator agentMeetingOrchestrator;
 
     @Autowired
@@ -565,10 +568,14 @@ public class IntelligenceController {
         if (question == null || question.isBlank()) {
             return Result.fail("问题不能为空");
         }
-        Result<String> agentResult = aiAgentOrchestrator.executeAgent(question);
+        String pageContext = body.get("pageContext");
+        String conversationId = body.get("conversationId");
+        Result<String> agentResult = aiAgentOrchestrator.executeAgent(question, pageContext);
         String commandId = aiAgentOrchestrator.consumeLastCommandId();
         var toolRecords = aiAgentOrchestrator.consumeLastToolRecords();
-        return Result.success(aiAdvisorChatResponseOrchestrator.build(question, commandId, agentResult, toolRecords));
+        AiAdvisorChatResponse resp = aiAdvisorChatResponseOrchestrator.build(question, commandId, agentResult, toolRecords);
+        if (conversationId != null) { resp.setConversationId(conversationId); }
+        return Result.success(resp);
     }
 
     /** AI 顾问流式问答 — SSE 实时推送思考/工具调用/回答事件 */
@@ -632,6 +639,73 @@ public class IntelligenceController {
                 "filename", safeFilename,
                 "parsedContent", parsedContent
         ));
+    }
+
+    /**
+     * Feature D：AI 回答用户反馈（RLHF 数据采集）。
+     * 请求体：{ commandId, score: +1/-1/0, comment? }
+     * score=+1 赞 / -1 踩 / 0 清空；comment 可选文本。
+     * 对应 t_intelligence_metrics 的 feedback_score / user_feedback / command_id 列（V202611020000 添加）。
+     */
+    @PostMapping("/feedback")
+    public Result<Void> submitFeedback(@RequestBody java.util.Map<String, Object> body) {
+        String commandId = body.get("commandId") == null ? null : body.get("commandId").toString();
+        if (commandId == null || commandId.isBlank()) {
+            return Result.fail("commandId 不能为空");
+        }
+        int score = 0;
+        try { score = Integer.parseInt(String.valueOf(body.getOrDefault("score", 0))); } catch (Exception ignore) {}
+        String comment = body.get("comment") == null ? null : body.get("comment").toString();
+        com.fashion.supplychain.intelligence.entity.IntelligenceMetrics m =
+                new com.fashion.supplychain.intelligence.entity.IntelligenceMetrics();
+        m.setCommandId(commandId);
+        m.setFeedbackScore(score);
+        m.setUserFeedback(comment);
+        // 追加写入：同 commandId 可能有多条度量，按 trace_id/request_id 关联
+        intelligenceMetricsMapper.update(m,
+                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.fashion.supplychain.intelligence.entity.IntelligenceMetrics>()
+                        .eq("command_id", commandId));
+        log.info("[AiFeedback] commandId={} score={} comment={}", commandId, score, comment);
+        return Result.success(null);
+    }
+
+    /**
+     * Feature I：场景化工作流。根据 key 返回预置提示词触发 AI 对话，
+     * 与 t_knowledge_base 中 kb-scn-* 知识对应（V202611020000 附带）。
+     */
+    @PostMapping("/ai-advisor/scenario/{key}")
+    public Result<AiAdvisorChatResponse> scenarioWorkflow(
+            @org.springframework.web.bind.annotation.PathVariable String key,
+            @RequestBody(required = false) java.util.Map<String, String> body) {
+        String prompt;
+        switch (key) {
+            case "morning_brief":
+                prompt = "请用今日运营晨报的结构回答：昨日入库/扫码/工资数据，今日待关注订单与高风险订单，并给出3条经营建议。";
+                break;
+            case "month_close":
+                prompt = "请按月末结算检查：本月工资结算是否完整、对账单待审批项、异常工资记录，并列出今日优先处理动作。";
+                break;
+            case "quality_review":
+                prompt = "请汇总本周质检不良率 Top5 订单、主要不良类型、涉及工厂，并给出改进建议。";
+                break;
+            case "delay_scan":
+                prompt = "请列出最高风险的5个订单（进度<50% 且距离出货≤7天），给出每单补救建议。";
+                break;
+            case "order_compare":
+                String orderNo = body == null ? null : body.get("orderNo");
+                prompt = orderNo == null ? "请调用 tool_order_comparison 做异常订单对比分析。" :
+                        "请调用 tool_order_comparison 对比订单 " + orderNo + " 与同款正常订单，分析偏差。";
+                break;
+            case "capacity_radar":
+                prompt = "请汇总各工厂产能雷达：订单数/件数/高风险/逾期，按风险等级排序。";
+                break;
+            default:
+                return Result.fail("未知场景：" + key);
+        }
+        Result<String> agentResult = aiAgentOrchestrator.executeAgent(prompt);
+        String commandId = aiAgentOrchestrator.consumeLastCommandId();
+        var toolRecords = aiAgentOrchestrator.consumeLastToolRecords();
+        return Result.success(aiAdvisorChatResponseOrchestrator.build(prompt, commandId, agentResult, toolRecords));
     }
 
     /**

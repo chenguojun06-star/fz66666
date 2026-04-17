@@ -164,6 +164,39 @@ function buildProcessNodesWithRates(order) {
   });
 }
 
+function calcOrderProgress(order) {
+  if (!order) return 0;
+  var dbProgress = clampPercent(Number(order.productionProgress) || 0);
+  var status = (order.status || '').trim().toLowerCase();
+  if (status === 'completed') return 100;
+
+  var hasProcurement = (Number(order.materialArrivalRate) || 0) > 0
+    || Boolean(order.procurementManuallyCompleted)
+    || Boolean(order.procurementConfirmedAt);
+  var pipeline = hasProcurement
+    ? ['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库']
+    : ['裁剪', '二次工艺', '车缝', '尾部', '入库'];
+
+  var rateSum = 0;
+  var rateCount = 0;
+  for (var i = 0; i < pipeline.length; i++) {
+    var rate = getNodeRateFromOrder(pipeline[i], order);
+    if (rate >= 0) {
+      rateSum += rate;
+      rateCount++;
+    }
+  }
+  var rateProgress = rateCount > 0 ? Math.round(rateSum / rateCount) : 0;
+
+  var hasCuttingAction = (Number(order.cuttingCompletionRate) || 0) > 0
+    || (Number(order.cuttingQuantity) || 0) > 0;
+  var hasRateAction = rateProgress > 0;
+  var hasRealAction = hasProcurement || hasCuttingAction || hasRateAction;
+  if (!hasRealAction) return 0;
+
+  return clampPercent(Math.max(dbProgress, rateProgress));
+}
+
 module.exports = {
   stripWarehousingNode,
   defaultNodes,
@@ -174,5 +207,6 @@ module.exports = {
   resolveNodesFromOrder,
   getNodeRateFromOrder,
   buildProcessNodesWithRates,
+  calcOrderProgress,
   STAGE_RATE_MAP,
 };

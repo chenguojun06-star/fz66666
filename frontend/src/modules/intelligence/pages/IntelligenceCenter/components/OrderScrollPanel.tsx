@@ -8,6 +8,7 @@ import type {
   AnomalyItem, DefectTraceResponse, FactoryBottleneckItem,
 } from '@/services/intelligence/intelligenceApi';
 import type { ProductionOrder } from '@/types/production';
+import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress';
 import {
   LiveDot, sev2c, risk2badge,
   STAGE_FIELDS, getAiTip, fmtD,
@@ -18,7 +19,7 @@ import {
 ═══════════════════════════════════════════════════ */
 
 const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
-  const prog = Number(order.productionProgress) || 0;
+  const prog = calcOrderProgress(order);
   const daysLeft = order.plannedEndDate
     ? Math.ceil((new Date(order.plannedEndDate).getTime() - Date.now()) / 86400000)
     : null;
@@ -230,7 +231,7 @@ const OrderPop: React.FC<{ order: ProductionOrder }> = ({ order }) => {
 ═══════════════════════════════════════════════════ */
 
 const OrderRow: React.FC<{ order: ProductionOrder }> = ({ order }) => {
-  const prog = Number(order.productionProgress) || 0;
+  const prog = calcOrderProgress(order);
   const daysLeft = order.plannedEndDate
     ? Math.ceil((new Date(order.plannedEndDate).getTime() - Date.now()) / 86400000)
     : null;

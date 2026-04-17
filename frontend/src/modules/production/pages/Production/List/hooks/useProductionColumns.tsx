@@ -18,6 +18,7 @@ import { toCategoryCn } from '@/utils/styleCategory';
 import { getRemainingDaysDisplay } from '@/utils/progressColor';
 import { getStatusConfig, safeString } from '../utils';
 import { buildCommonOrderActions } from '../../components/buildCommonOrderActions';
+import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress';
 import dayjs from 'dayjs';
 
 export interface UseProductionColumnsProps {
@@ -564,7 +565,7 @@ export function useProductionColumns({
       render: (status: ProductionOrder['status'], record: ProductionOrder) => {
         const { text, color } = getStatusConfig(status);
         const stagnantDays = stagnantOrderIds?.get(String(record.id));
-        const progress = record.productionProgress ?? 0;
+        const progress = calcOrderProgress(record);
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

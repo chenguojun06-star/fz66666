@@ -4,12 +4,17 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.intelligence.dto.AiAdvisorChatResponse;
+import com.fashion.supplychain.intelligence.dto.AiChartInfo;
 import com.fashion.supplychain.intelligence.dto.FollowUpAction;
+import com.fashion.supplychain.intelligence.dto.HighRiskActionInfo;
 import com.fashion.supplychain.intelligence.dto.XiaoyunInsightCard;
 import com.fashion.supplychain.intelligence.helper.AiAgentToolExecHelper;
+import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +30,7 @@ public class AiAdvisorChatResponseOrchestrator {
 
     private static final ObjectMapper JSON = new ObjectMapper();
     private static final Pattern INSIGHT_CARD_PATTERN = Pattern.compile("【INSIGHT_CARDS】([\\s\\S]*?)【/INSIGHT_CARDS】");
+    private static final Pattern CHART_PATTERN = Pattern.compile("【CHART】([\\s\\S]*?)【/CHART】");
     private static final Pattern AI_META_BLOCK_PATTERN = Pattern.compile("【(?:CHART|ACTIONS|TEAM_STATUS|BUNDLE_SPLIT|INSIGHT_CARDS)】[\\s\\S]*?【/(?:CHART|ACTIONS|TEAM_STATUS|BUNDLE_SPLIT|INSIGHT_CARDS)】|```ACTIONS_JSON\\s*\\n[\\s\\S]*?\\n```");
 
     public AiAdvisorChatResponse build(String question, String commandId, Result<String> agentResult) {
@@ -45,9 +51,57 @@ public class AiAdvisorChatResponseOrchestrator {
         response.setDisplayAnswer(stripAiMeta(agentResult.getData()));
         response.setSource("ai");
         response.setCards(extractInsightCards(agentResult.getData()));
+        response.setCharts(extractCharts(agentResult.getData()));
+        response.setHighRiskActions(extractHighRiskActions(toolRecords));
         response.setSuggestions(buildSuggestions(question, response.getCards()));
         response.setFollowUpActions(followUpSuggestionEngine.generate(toolRecords, question));
         return response;
+    }
+
+    /** 功能 H：解析【CHART】JSON 块为结构化图表对象 */
+    private List<AiChartInfo> extractCharts(String rawAnswer) {
+        List<AiChartInfo> charts = new ArrayList<>();
+        if (rawAnswer == null || rawAnswer.isBlank()) return charts;
+        Matcher matcher = CHART_PATTERN.matcher(rawAnswer);
+        while (matcher.find()) {
+            String json = matcher.group(1);
+            try {
+                Map<String, Object> parsed = JSON.readValue(json, new TypeReference<Map<String, Object>>() {});
+                AiChartInfo chart = new AiChartInfo();
+                chart.setType(String.valueOf(parsed.getOrDefault("type", "bar")));
+                chart.setTitle(String.valueOf(parsed.getOrDefault("title", "")));
+                @SuppressWarnings("unchecked")
+                Map<String, Object> cfg = (Map<String, Object>) parsed.get("config");
+                chart.setConfig(cfg != null ? cfg : parsed);
+                charts.add(chart);
+            } catch (Exception e) {
+                log.debug("[ChartExtract] 解析失败: {}", e.getMessage());
+            }
+        }
+        return charts;
+    }
+
+    /** 功能 G：从 toolRecords 中筛出高风险工具，生成二次确认条目 */
+    private List<HighRiskActionInfo> extractHighRiskActions(List<AiAgentToolExecHelper.ToolExecRecord> toolRecords) {
+        List<HighRiskActionInfo> actions = new ArrayList<>();
+        if (toolRecords == null || toolRecords.isEmpty()) return actions;
+        for (AiAgentToolExecHelper.ToolExecRecord rec : toolRecords) {
+            if (rec == null || rec.toolName == null) continue;
+            if (AiAgentToolAccessService.isHighRisk(rec.toolName)) {
+                HighRiskActionInfo info = new HighRiskActionInfo();
+                info.setToolName(rec.toolName);
+                info.setDescription("工具 " + rec.toolName + " 为高风险操作，执行前请再次确认");
+                info.setSeverity("warn");
+                Map<String, Object> payload = new LinkedHashMap<>();
+                payload.put("arguments", rec.args);
+                payload.put("resultPreview", rec.rawResult != null
+                        ? (rec.rawResult.length() > 200 ? rec.rawResult.substring(0, 200) + "..." : rec.rawResult)
+                        : null);
+                info.setPayload(payload);
+                actions.add(info);
+            }
+        }
+        return actions;
     }
 
     private List<XiaoyunInsightCard> extractInsightCards(String rawAnswer) {

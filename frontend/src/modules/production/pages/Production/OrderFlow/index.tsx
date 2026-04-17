@@ -7,6 +7,7 @@ import ResizableTable from '@/components/common/ResizableTable';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
 import { toNumberSafe } from '@/utils/api';
 import { formatDateTime } from '@/utils/datetime';
+import { calcOrderProgress } from '@/modules/production/utils/calcOrderProgress';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 import { StyleCoverThumb } from '@/components/StyleAssets';
 import StylePatternSimpleTab from './components/StylePatternSimpleTab';
@@ -103,7 +104,7 @@ const OrderFlow: React.FC = () => {
                   <span style={{ color: '#999', fontSize: 12, lineHeight: '22px' }}>已完成</span>
                   <span style={{ fontSize: 13, lineHeight: '22px' }}>{toNumberSafe((order as any)?.completedQuantity)}</span>
                   <span style={{ color: '#999', fontSize: 12, lineHeight: '22px' }}>生产进度</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, lineHeight: '22px' }}>{`${toNumberSafe((order as any)?.productionProgress)}%`}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, lineHeight: '22px' }}>{`${calcOrderProgress(order as any)}%`}</span>
                   <span style={{ color: '#999', fontSize: 12, lineHeight: '22px' }}>扎数</span>
                   <span style={{ fontSize: 13, lineHeight: '22px' }}>{toNumberSafe((order as any)?.cuttingBundleCount)}</span>
                   <span style={{ color: '#999', fontSize: 12, lineHeight: '22px' }}>入库数</span>

@@ -59,4 +59,13 @@ public class IntelligenceMetrics {
     private LocalDateTime createTime;
 
     private Integer deleteFlag;
+
+    /** 用户反馈文本（feature D：RLHF 数据采集） */
+    private String userFeedback;
+
+    /** 反馈分数：+1 赞 / -1 踩 / 0 未评 */
+    private Integer feedbackScore;
+
+    /** 关联命令ID，用于反馈追溯 */
+    private String commandId;
 }

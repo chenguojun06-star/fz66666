@@ -839,6 +839,32 @@ public class OrderFlowStageFillHelper {
             }
         }
 
+        // ── 从 process_tracking 加载各工序实际已扫数量 ──────────────────────
+        Map<String, Map<String, Integer>> trackingQtyMap = new HashMap<>();
+        if (!orderIds.isEmpty()) {
+            try {
+                List<Map<String, Object>> trackingRows = processTrackingMapper.selectScannedQtySummaryByOrderIds(orderIds, com.fashion.supplychain.common.UserContext.tenantId());
+                if (trackingRows != null) {
+                    for (Map<String, Object> row : trackingRows) {
+                        String toid = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(row, "productionOrderId"));
+                        String pname = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(row, "processName"));
+                        String pcode = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(row, "processCode"));
+                        int qty = ParamUtils.toIntSafe(ParamUtils.getIgnoreCase(row, "scannedQty"));
+                        if (StringUtils.hasText(toid) && qty > 0) {
+                            if (StringUtils.hasText(pname)) {
+                                trackingQtyMap.computeIfAbsent(toid, k -> new HashMap<>()).merge(pname, qty, Integer::sum);
+                            }
+                            if (StringUtils.hasText(pcode) && !pcode.equals(pname)) {
+                                trackingQtyMap.computeIfAbsent(toid, k -> new HashMap<>()).merge(pcode, qty, Integer::sum);
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[fillCompletionRatesLight] process tracking summary query failed: {}", e.getMessage());
+            }
+        }
+
         for (ProductionOrder o : records) {
             if (o == null) {
                 continue;
@@ -902,14 +928,26 @@ public class OrderFlowStageFillHelper {
             int wareRate = computeRate(wareQty, sewBase);
             int completedRate = computeRate(completedQty, sewBase);
 
-            o.setSewingCompletionRate(completedRate > 0 ? completedRate : wareRate);
-            o.setCarSewingCompletionRate(completedRate > 0 ? completedRate : wareRate);
-            o.setIroningCompletionRate(wareRate);
-            o.setSecondaryProcessCompletionRate(completedRate > 0 ? completedRate : wareRate);
-            o.setSecondaryProcessRate(completedRate > 0 ? completedRate : wareRate);
-            o.setTailProcessRate(wareRate);
-            o.setPackagingCompletionRate(wareRate);
-            o.setQualityCompletionRate(wareRate);
+            Map<String, Integer> trackingByProcess = trackingQtyMap.getOrDefault(oid, java.util.Collections.emptyMap());
+
+            int carSewingQty = resolveTrackingQty(trackingByProcess, 0, "车缝", "缝制", "缝纫", "上领", "上袖", "埋夹", "做领", "拼缝", "合缝", "缝合", "整件", "车工");
+            int secondaryProcessQty = resolveTrackingQty(trackingByProcess, 0, "绣花", "印花", "水洗", "压花", "二次", "特殊工艺");
+            int tailQty = resolveTrackingQty(trackingByProcess, 0, "大烫", "整烫", "剪线", "蒸烫", "尾工", "包装", "打包", "后整", "质检", "品检", "验货", "检验");
+            int qualityQty = resolveTrackingQty(trackingByProcess, 0, "质检", "品检", "验货", "检验");
+
+            int carSewingRate = carSewingQty > 0 ? computeRate(carSewingQty, sewBase) : (completedRate > 0 ? completedRate : wareRate);
+            int secondaryProcessRate = secondaryProcessQty > 0 ? computeRate(secondaryProcessQty, sewBase) : (completedRate > 0 ? completedRate : wareRate);
+            int tailRate = tailQty > 0 ? computeRate(tailQty, sewBase) : (completedRate > 0 ? completedRate : wareRate);
+            int qualityRate = qualityQty > 0 ? computeRate(qualityQty, sewBase) : wareRate;
+
+            o.setSewingCompletionRate(carSewingRate);
+            o.setCarSewingCompletionRate(carSewingRate);
+            o.setIroningCompletionRate(tailRate);
+            o.setSecondaryProcessCompletionRate(secondaryProcessRate);
+            o.setSecondaryProcessRate(secondaryProcessRate);
+            o.setTailProcessRate(tailRate);
+            o.setPackagingCompletionRate(tailRate);
+            o.setQualityCompletionRate(qualityRate);
             o.setWarehousingCompletionRate(wareRate);
         }
     }

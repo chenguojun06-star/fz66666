@@ -8,6 +8,8 @@ import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.common.lock.DistributedLockService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -73,7 +75,7 @@ public class ProductionDataConsistencyJob {
                 List<ProductionOrder> activeOrders = productionOrderService.list(
                         new LambdaQueryWrapper<ProductionOrder>()
                                 .select(ProductionOrder::getId, ProductionOrder::getOrderNo)
-                                .eq(ProductionOrder::getStatus, "production")
+                                .in(ProductionOrder::getStatus, "production", "completed")
                                 .eq(ProductionOrder::getDeleteFlag, 0));
 
                 if (activeOrders == null || activeOrders.isEmpty()) {
@@ -105,5 +107,22 @@ public class ProductionDataConsistencyJob {
             log.info("[ConsistencyJob] 检查完成: 成功={}, 租户数={}, 耗时{}ms",
                     totalSuccess, tenantIds.size(), duration);
         }
+    }
+
+    @EventListener(ApplicationReadyEvent.class)
+    public void fixProgressOnStartup() {
+        new Thread(() -> {
+            try {
+                Thread.sleep(30000);
+            } catch (InterruptedException ignored) {
+                return;
+            }
+            log.info("[ConsistencyJob] 启动后一次性修复：重算所有订单进度...");
+            try {
+                doRecompute();
+            } catch (Exception e) {
+                log.error("[ConsistencyJob] 启动修复失败", e);
+            }
+        }, "progress-fix-on-startup").start();
     }
 }

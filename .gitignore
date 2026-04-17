@@ -142,3 +142,11 @@ rag/tokens.json
 # .backup-* 目录不入库
 deployment/backend.jar
 node_modules/
+
+# 根目录调试/补丁脚本（禁止提交，本地运行即可）
+/patch-*.js
+/patch_*.js
+/test-*.js
+/test_*.js
+/query_db.js
+/patch_*.diff

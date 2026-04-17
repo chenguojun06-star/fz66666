@@ -409,6 +409,13 @@ public class ProductionOrderProgressRecomputeService {
         int newProgress = scanRecordDomainService
                 .clampPercent(progressAcc.setScale(0, RoundingMode.HALF_UP).intValue());
 
+        int coreStageProgress = computeCoreStageProgress(orderQty, actualCuttingQty,
+                prodDoneByProcess, qualityDoneByProcess, procurementStarted);
+        if (coreStageProgress > newProgress) {
+            log.info("核心阶段进度({})覆盖加权进度({}): orderId={}", coreStageProgress, newProgress, oid);
+            newProgress = coreStageProgress;
+        }
+
         try {
             ScanRecord manual = scanRecordMapper.selectOne(new LambdaQueryWrapper<ScanRecord>()
                     .select(ScanRecord::getRequestId, ScanRecord::getProgressStage, ScanRecord::getProcessName)
@@ -574,5 +581,133 @@ public class ProductionOrderProgressRecomputeService {
                     null,
                     "system");
         }
+    }
+
+    private static final String[] CORE_PRODUCTION_STAGES = {"采购", "裁剪", "二次工艺", "车缝", "尾部", "入库"};
+
+    private String resolveToCoreStage(String processName) {
+        if (!StringUtils.hasText(processName)) {
+            return null;
+        }
+        String pn = processName.trim();
+        for (String core : CORE_PRODUCTION_STAGES) {
+            if (templateLibraryService.progressStageNameMatches(core, pn)) {
+                return core;
+            }
+        }
+        if (pn.contains("车缝") || pn.contains("缝制") || pn.contains("缝纫") || pn.contains("车工")
+                || pn.contains("上领") || pn.contains("上袖") || pn.contains("埋夹") || pn.contains("做领")
+                || pn.contains("拼缝") || pn.contains("合缝") || pn.contains("缝合") || pn.contains("整件")) {
+            return "车缝";
+        }
+        if (pn.contains("大烫") || pn.contains("整烫") || pn.contains("剪线") || pn.contains("蒸烫")
+                || pn.contains("尾工") || pn.contains("包装") || pn.contains("打包") || pn.contains("后整")) {
+            return "尾部";
+        }
+        if (pn.contains("绣花") || pn.contains("印花") || pn.contains("水洗") || pn.contains("压花")
+                || pn.contains("二次") || pn.contains("特殊工艺")) {
+            return "二次工艺";
+        }
+        if (pn.contains("裁剪") || pn.contains("裁床") || pn.contains("剪裁") || pn.contains("开裁")) {
+            return "裁剪";
+        }
+        if (pn.contains("入库") || pn.contains("入仓") || pn.contains("进仓")) {
+            return "入库";
+        }
+        if (pn.contains("质检") || pn.contains("品检") || pn.contains("验货") || pn.contains("检验")) {
+            return "尾部";
+        }
+        return null;
+    }
+
+    private int computeCoreStageProgress(int orderQty, int actualCuttingQty,
+            LinkedHashMap<String, Long> prodDoneByProcess,
+            LinkedHashMap<String, Long> qualityDoneByProcess,
+            boolean procurementStarted) {
+        if (orderQty <= 0) {
+            return 0;
+        }
+
+        LinkedHashMap<String, Long> coreDone = new LinkedHashMap<>();
+        for (Map.Entry<String, Long> e : prodDoneByProcess.entrySet()) {
+            if (e == null || !StringUtils.hasText(e.getKey())) {
+                continue;
+            }
+            String core = resolveToCoreStage(e.getKey());
+            if (core != null) {
+                long v = e.getValue() == null ? 0L : e.getValue();
+                coreDone.merge(core, v, Math::max);
+            }
+        }
+        for (Map.Entry<String, Long> e : qualityDoneByProcess.entrySet()) {
+            if (e == null || !StringUtils.hasText(e.getKey())) {
+                continue;
+            }
+            String core = resolveToCoreStage(e.getKey());
+            if (core != null) {
+                long v = e.getValue() == null ? 0L : e.getValue();
+                coreDone.merge(core, v, Math::max);
+            }
+        }
+
+        int baseQty = actualCuttingQty > 0 ? actualCuttingQty : orderQty;
+
+        LinkedHashMap<String, Double> stageRates = new LinkedHashMap<>();
+        for (String stage : CORE_PRODUCTION_STAGES) {
+            double rate = 0.0;
+            if ("采购".equals(stage)) {
+                rate = procurementStarted ? 1.0 : 0.0;
+            } else {
+                long done = coreDone.getOrDefault(stage, 0L);
+                int stageBase = "裁剪".equals(stage) ? orderQty : baseQty;
+                rate = stageBase > 0 ? Math.min(1.0, (double) done / stageBase) : 0.0;
+            }
+            stageRates.put(stage, rate);
+        }
+
+        boolean hasSecondaryProcess = stageRates.getOrDefault("二次工艺", 0.0) > 0;
+
+        java.util.List<String> activeStages = new ArrayList<>();
+        for (String stage : CORE_PRODUCTION_STAGES) {
+            if ("采购".equals(stage)) {
+                continue;
+            }
+            if ("二次工艺".equals(stage) && !hasSecondaryProcess) {
+                continue;
+            }
+            activeStages.add(stage);
+        }
+
+        int productionCount = activeStages.size();
+        if (productionCount <= 0) {
+            return procurementStarted ? 20 : 5;
+        }
+
+        double perWeight = 80.0 / productionCount;
+        double progress = 5.0;
+        progress += 15.0 * stageRates.getOrDefault("采购", 0.0);
+
+        for (String stage : activeStages) {
+            progress += perWeight * stageRates.getOrDefault(stage, 0.0);
+        }
+
+        boolean allComplete = procurementStarted;
+        for (String stage : CORE_PRODUCTION_STAGES) {
+            if ("采购".equals(stage)) {
+                continue;
+            }
+            if ("二次工艺".equals(stage) && !hasSecondaryProcess) {
+                continue;
+            }
+            if (stageRates.getOrDefault(stage, 0.0) < 0.999) {
+                allComplete = false;
+                break;
+            }
+        }
+        if (allComplete) {
+            progress = 100.0;
+        }
+
+        return scanRecordDomainService.clampPercent((int) Math.round(progress));
     }
 }
