@@ -482,12 +482,15 @@ public class ProductionOrderProgressRecomputeService {
 
         String curStatus = order.getStatus() == null ? "" : order.getStatus().trim();
         String newStatus;
-        if ("completed".equals(curStatus)) {
-            newStatus = "completed";
-            newProgress = 100;
-            int currentCompletedQty = order.getCompletedQuantity() == null ? 0 : order.getCompletedQuantity();
-            if (currentCompletedQty > 0) {
-                lastDoneQty = currentCompletedQty;
+        if ("completed".equals(curStatus) || "scrapped".equals(curStatus)
+                || "cancelled".equals(curStatus) || "archived".equals(curStatus) || "closed".equals(curStatus)) {
+            newStatus = curStatus;
+            if ("completed".equals(curStatus)) {
+                newProgress = 100;
+                int currentCompletedQty = order.getCompletedQuantity() == null ? 0 : order.getCompletedQuantity();
+                if (currentCompletedQty > 0) {
+                    lastDoneQty = currentCompletedQty;
+                }
             }
         } else if (procurementStarted || realProductionStarted || stageStarted) {
             newStatus = "production";

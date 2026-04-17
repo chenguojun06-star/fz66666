@@ -1,5 +1,5 @@
 const { getBaseUrl } = require('../config');
-const { getToken, clearToken } = require('./storage');
+const { getToken, clearToken, isTokenExpired } = require('./storage');
 const { REQUEST_TIMEOUT, REQUEST_RETRY_COUNT, UPLOAD_TIMEOUT } = require('../config/debug');
 
 let redirectingToLogin = false;
@@ -307,6 +307,15 @@ function request(options) {
     const baseUrl = getBaseUrl();
     const envVersion = resolveEnvVersion();
     const isDevEnv = !envVersion || envVersion === 'develop';
+
+    if (token && isTokenExpired()) {
+      clearToken();
+      if (!skipAuthRedirect) {
+        triggerLoginRedirect();
+      }
+      reject(createError('登录已过期，请重新登录', { type: 'auth' }));
+      return;
+    }
     // 开发调试时允许HTTP，生产/体验环境强制HTTPS
     const requireHttps = !isDevEnv;
 

@@ -238,7 +238,7 @@ function validateAndNormalizeOrder(order) {
     orderQuantity: { required: true, type: 'number', default: 0 },
     completedQuantity: { required: true, type: 'number', default: 0 },
     productionProgress: { required: true, type: 'number', default: 0 },
-    progressWorkflowJson: { required: true, type: 'string', default: '{}' },
+    progressWorkflowJson: { required: false, default: {} },
     status: { required: true, type: 'string' },
   });
 

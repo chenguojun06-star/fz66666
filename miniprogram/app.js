@@ -1,4 +1,4 @@
-const { getToken, clearToken } = require('./utils/storage');
+const { getToken, clearToken, isTokenExpired } = require('./utils/storage');
 const reminderManager = require('./utils/reminderManager');
 const { DEBUG_MODE } = require('./config');
 const { eventBus } = require('./utils/eventBus');
@@ -136,8 +136,11 @@ App({
 
   requireAuth() {
     const token = getToken();
-    if (token) {
+    if (token && !isTokenExpired()) {
       return true;
+    }
+    if (token && isTokenExpired()) {
+      clearToken();
     }
     this.redirectToLogin();
     return false;

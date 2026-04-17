@@ -115,8 +115,10 @@ public class ProductionOrderProgressOrchestrationService {
 
         String curStatus = existed.getStatus() == null ? "" : existed.getStatus().trim();
         String nextStatus;
-        if ("completed".equalsIgnoreCase(curStatus)) {
-            nextStatus = "completed";
+        if ("completed".equalsIgnoreCase(curStatus) || "scrapped".equalsIgnoreCase(curStatus)
+                || "cancelled".equalsIgnoreCase(curStatus) || "archived".equalsIgnoreCase(curStatus)
+                || "closed".equalsIgnoreCase(curStatus)) {
+            nextStatus = curStatus.toLowerCase();
         } else if (procurementStarted || realProductionStarted) {
             nextStatus = "production";
         } else {

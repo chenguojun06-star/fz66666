@@ -32,7 +32,7 @@ async function tryAutoWechatLogin() {
           if (resp.data.user.id && resp.data.user.tenantId) {
             wsManager.connect(String(resp.data.user.id), String(resp.data.user.tenantId));
           }
-        } catch (_e) { /* ws connect ignore */ }
+        } catch (_e) {}
       }
       safeNavigate({ url: '/pages/home/index' }, 'switchTab').catch(() => {});
       return true;
@@ -75,7 +75,7 @@ function finishLogin(user, token) {
       if (user.id && user.tenantId) {
         wsManager.connect(String(user.id), String(user.tenantId));
       }
-    } catch (_e) { /* ws connect ignore */ }
+    } catch (_e) {}
   }
   safeNavigate({ url: '/pages/home/index' }, 'switchTab').catch(() => {});
 }
@@ -158,21 +158,12 @@ async function resolveLoginCode() {
       wx.login({
         success: resolve,
         fail: reject,
-        timeout: 15000,
+        timeout: 5000, // 5秒超时
       });
     });
     return loginRes && loginRes.code ? String(loginRes.code) : '';
   } catch (err) {
     console.error('[Login] wx.login() 失败:', err);
-    if (envVersion === 'develop') {
-      console.warn('[Login] 开发环境wx.login失败，尝试使用缓存token');
-      const { getToken } = require('../../utils/storage');
-      const cachedToken = getToken();
-      if (cachedToken) {
-        console.warn('[Login] 发现缓存token，跳过微信登录直接使用');
-        return '__skip_wx_login__';
-      }
-    }
     return envVersion === 'develop' ? 'mock_dev' : '';
   }
 }
@@ -387,12 +378,7 @@ Page({
       return;
     }
     if (token && isTokenExpired()) {
-      const ev = resolveEnvVersion();
-      if (ev === 'develop') {
-        console.warn('[Login] 开发环境token过期，保留token尝试复用');
-      } else {
-        try { wx.removeStorageSync('auth_token'); } catch (e) { /* ignore */ }
-      }
+      try { wx.removeStorageSync('auth_token'); } catch (_) {}
     }
 
     const envVersion = resolveEnvVersion();
@@ -650,16 +636,7 @@ Page({
       // 尝试获取微信 code（用于自动绑定 openid，下次可一键登录）
       const code = await resolveLoginCode();
 
-      if (code === '__skip_wx_login__') {
-        const resp = await api.system.login({ username, password, tenantId });
-        if (resp && resp.code === 200 && resp.data && resp.data.token) {
-          finishLogin(resp.data.user || null, resp.data.token);
-          return;
-        }
-        toast.error((resp && resp.message) || i18n.t('login.loginFailed'));
-        return;
-      }
-
+      // 有有效 code → 走微信端点（验证账号密码 + 自动绑定 openid 一步完成）
       if (code && !code.startsWith('mock_')) {
         const result = await executeLogin(
           { code, username, password, tenantId },

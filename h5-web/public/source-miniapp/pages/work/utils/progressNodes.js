@@ -73,25 +73,28 @@ function getProgressFromNodeIndex(nodes, index) {
  * @returns {Array} 解析后的节点列表
  */
 function parseProgressNodes(raw) {
-  const text = normalizeText(raw);
-  if (!text) {
-    return [];
+  if (!raw) return [];
+  var obj = raw;
+  if (typeof raw === 'string') {
+    var text = raw.trim();
+    if (!text) return [];
+    try {
+      obj = JSON.parse(text);
+    } catch (e) {
+      return [];
+    }
   }
-  try {
-    const obj = JSON.parse(text);
-    const nodesRaw = obj && Array.isArray(obj.nodes) ? obj.nodes : [];
-    return stripWarehousingNode(
-      nodesRaw
-        .map(n => {
-          const name = normalizeText(n && n.name);
-          const id = normalizeText(n && n.id) || name;
-          return name ? { id, name } : null;
-        })
-        .filter(n => n && n.name),
-    );
-  } catch (e) {
-    return [];
-  }
+  if (typeof obj !== 'object' || obj === null) return [];
+  var nodesRaw = Array.isArray(obj.nodes) ? obj.nodes : [];
+  return stripWarehousingNode(
+    nodesRaw
+      .map(n => {
+        var name = normalizeText(n && n.name);
+        var id = normalizeText(n && n.id) || name;
+        return name ? { id: id, name: name } : null;
+      })
+      .filter(n => n && n.name),
+  );
 }
 
 /**
@@ -100,8 +103,23 @@ function parseProgressNodes(raw) {
  * @returns {Array} 进度节点列表
  */
 function resolveNodesFromOrder(order) {
-  const raw = normalizeText(order && order.progressWorkflowJson);
-  const parsed = parseProgressNodes(raw);
+  if (!order) return defaultNodes;
+  const raw = order.progressWorkflowJson;
+  if (!raw) return defaultNodes;
+  if (typeof raw === 'object') {
+    const nodesRaw = raw && Array.isArray(raw.nodes) ? raw.nodes : [];
+    const parsed = stripWarehousingNode(
+      nodesRaw
+        .map(n => {
+          const name = normalizeText(n && n.name);
+          const id = normalizeText(n && n.id) || name;
+          return name ? { id, name } : null;
+        })
+        .filter(n => n && n.name),
+    );
+    return parsed.length ? parsed : defaultNodes;
+  }
+  const parsed = parseProgressNodes(normalizeText(raw));
   return parsed.length ? parsed : defaultNodes;
 }
 
@@ -170,9 +188,15 @@ function calcOrderProgress(order) {
   var status = (order.status || '').trim().toLowerCase();
   if (status === 'completed') return 100;
 
-  var hasProcurement = (Number(order.materialArrivalRate) || 0) > 0
+  var orderNo = (order.orderNo || '').trim().toUpperCase();
+  var orderBizType = (order.orderBizType || '').trim().toUpperCase();
+  var isDirectCutting = orderBizType === 'CUTTING_DIRECT' || orderNo.indexOf('CUT') === 0;
+
+  var hasProcurement = !isDirectCutting && (
+    (Number(order.materialArrivalRate) || 0) > 0
     || Boolean(order.procurementManuallyCompleted)
-    || Boolean(order.procurementConfirmedAt);
+    || Boolean(order.procurementConfirmedAt)
+  );
   var pipeline = hasProcurement
     ? ['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库']
     : ['裁剪', '二次工艺', '车缝', '尾部', '入库'];
@@ -189,7 +213,7 @@ function calcOrderProgress(order) {
   var rateProgress = rateCount > 0 ? Math.round(rateSum / rateCount) : 0;
 
   var hasCuttingAction = (Number(order.cuttingCompletionRate) || 0) > 0
-    || (Number(order.cuttingQuantity) || 0) > 0;
+    && (Number(order.cuttingBundleCount) || 0) > 0;
   var hasRateAction = rateProgress > 0;
   var hasRealAction = hasProcurement || hasCuttingAction || hasRateAction;
   if (!hasRealAction) return 0;

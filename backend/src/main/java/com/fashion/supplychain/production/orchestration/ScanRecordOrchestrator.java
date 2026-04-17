@@ -127,18 +127,7 @@ public class ScanRecordOrchestrator {
         Map<String, Object> safeParams = params == null ? new HashMap<>() : new HashMap<>(params);
 
         String orderNo = safeParams.get("orderNo") == null ? null : String.valueOf(safeParams.get("orderNo"));
-        String scanCode = safeParams.get("scanCode") == null ? null : String.valueOf(safeParams.get("scanCode"));
-        String requestId = safeParams.get("requestId") == null ? null : String.valueOf(safeParams.get("requestId"));
-        String lockKey;
-        if (orderNo != null) {
-            lockKey = "scan:" + orderNo;
-        } else if (scanCode != null) {
-            lockKey = "scan:code:" + scanCode;
-        } else if (requestId != null) {
-            lockKey = "scan:req:" + requestId;
-        } else {
-            lockKey = "scan:anon:" + java.util.UUID.randomUUID();
-        }
+        String lockKey = "scan:" + (orderNo != null ? orderNo : "unknown");
         return distributedLockService.executeWithLock(lockKey, 10, java.util.concurrent.TimeUnit.SECONDS, () -> {
             return transactionTemplate.execute(status -> {
                 try {

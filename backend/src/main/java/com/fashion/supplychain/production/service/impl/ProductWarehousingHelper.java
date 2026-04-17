@@ -276,7 +276,8 @@ public class ProductWarehousingHelper {
                     new LambdaQueryWrapper<ProductWarehousing>()
                             .select(ProductWarehousing::getWarehousingQuantity)
                             .eq(ProductWarehousing::getOrderId, oid)
-                            .eq(ProductWarehousing::getDeleteFlag, 0));
+                            .eq(ProductWarehousing::getDeleteFlag, 0)
+                            .ne(ProductWarehousing::getWarehousingType, "quality_scan_scrap"));
             long sum = 0;
             if (list != null) {
                 for (ProductWarehousing w : list) {
@@ -343,6 +344,10 @@ public class ProductWarehousingHelper {
             if (list != null) {
                 for (ProductWarehousing w : list) {
                     if (w == null) {
+                        continue;
+                    }
+                    String wt = w.getWarehousingType() == null ? "" : w.getWarehousingType().trim();
+                    if ("quality_scan_scrap".equals(wt)) {
                         continue;
                     }
                     int q = w.getQualifiedQuantity() == null ? 0 : w.getQualifiedQuantity();

@@ -17,4 +17,6 @@ public interface CuttingBundleService extends IService<CuttingBundle> {
     CuttingBundle getByBundleNo(String orderNo, Integer bundleNo);
 
     Map<String, Object> summarize(String orderNo, String orderId);
+
+    void deleteByOrderId(String orderId);
 }

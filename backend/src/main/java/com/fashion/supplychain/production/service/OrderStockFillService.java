@@ -83,12 +83,16 @@ public class OrderStockFillService {
         try {
             List<ProductWarehousing> list = productWarehousingMapper
                     .selectList(new LambdaQueryWrapper<ProductWarehousing>()
-                            .select(ProductWarehousing::getOrderId, ProductWarehousing::getQualifiedQuantity)
+                            .select(ProductWarehousing::getOrderId, ProductWarehousing::getQualifiedQuantity, ProductWarehousing::getWarehousingType)
                             .in(ProductWarehousing::getOrderId, orderIds)
                             .eq(ProductWarehousing::getDeleteFlag, 0));
             if (list != null) {
                 for (ProductWarehousing w : list) {
                     if (w == null || !StringUtils.hasText(w.getOrderId())) {
+                        continue;
+                    }
+                    String wt = w.getWarehousingType() == null ? "" : w.getWarehousingType().trim();
+                    if ("quality_scan_scrap".equals(wt)) {
                         continue;
                     }
                     String oid = w.getOrderId().trim();

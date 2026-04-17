@@ -469,4 +469,16 @@ public class CuttingBundleServiceImpl extends ServiceImpl<CuttingBundleMapper, C
         // 追加 HMAC 签名防伪
         return qrCodeSigner.sign(content);
     }
+
+    @Override
+    public void deleteByOrderId(String orderId) {
+        String oid = StringUtils.hasText(orderId) ? orderId.trim() : null;
+        if (!StringUtils.hasText(oid)) {
+            return;
+        }
+        LambdaQueryWrapper<CuttingBundle> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(CuttingBundle::getProductionOrderId, oid);
+        baseMapper.delete(wrapper);
+        log.info("Deleted cutting bundles for order: {}", oid);
+    }
 }

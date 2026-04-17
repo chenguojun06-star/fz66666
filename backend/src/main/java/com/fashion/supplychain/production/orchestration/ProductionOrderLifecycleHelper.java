@@ -40,6 +40,8 @@ public class ProductionOrderLifecycleHelper {
     @Autowired
     private CuttingTaskService cuttingTaskService;
     @Autowired
+    private com.fashion.supplychain.production.service.CuttingBundleService cuttingBundleService;
+    @Autowired
     private com.fashion.supplychain.production.service.ScanRecordService scanRecordService;
     @Autowired
     private com.fashion.supplychain.production.service.ProductWarehousingService productWarehousingService;
@@ -118,23 +120,25 @@ public class ProductionOrderLifecycleHelper {
 
     private void cascadeCleanupChildTables(String orderId, String orderNo) {
         try { materialPurchaseService.deleteByOrderId(orderId); }
-        catch (Exception e) { log.warn("Failed to cascade delete material purchases: orderId={}", orderId, e); }
+        catch (Exception e) { throw new IllegalStateException("级联删除物料采购记录失败，订单删除已回滚: orderId=" + orderId, e); }
         try { cuttingTaskService.deleteByOrderId(orderId); }
-        catch (Exception e) { log.warn("Failed to cascade delete cutting tasks: orderId={}", orderId, e); }
+        catch (Exception e) { throw new IllegalStateException("级联删除裁剪任务失败，订单删除已回滚: orderId=" + orderId, e); }
+        try { cuttingBundleService.deleteByOrderId(orderId); }
+        catch (Exception e) { throw new IllegalStateException("级联删除裁剪菲号失败，订单删除已回滚: orderId=" + orderId, e); }
         try { scanRecordService.deleteByOrderId(orderId); }
-        catch (Exception e) { log.warn("Failed to cascade delete scan records: orderId={}", orderId, e); }
+        catch (Exception e) { throw new IllegalStateException("级联删除扫码记录失败，订单删除已回滚: orderId=" + orderId, e); }
         try { productWarehousingService.softDeleteByOrderId(orderId); }
-        catch (Exception e) { log.warn("Failed to cascade delete warehousing records: orderId={}", orderId, e); }
+        catch (Exception e) { throw new IllegalStateException("级联删除入库记录失败，订单删除已回滚: orderId=" + orderId, e); }
         try { productOutstockService.softDeleteByOrderId(orderId); }
-        catch (Exception e) { log.warn("Failed to cascade delete outstock records: orderId={}", orderId, e); }
+        catch (Exception e) { log.warn("级联删除出库记录失败（非关键，不回滚）: orderId={}", orderId, e); }
         try { shipmentReconciliationService.removeByOrderId(orderId); }
-        catch (Exception e) { log.warn("Failed to cascade delete shipment reconciliation: orderId={}", orderId, e); }
+        catch (Exception e) { log.warn("级联删除发货对账记录失败（非关键，不回滚）: orderId={}", orderId, e); }
         try { payrollSettlementItemService.deleteByOrderId(orderId); }
-        catch (Exception e) { log.warn("Failed to cascade delete payroll settlement items: orderId={}", orderId, e); }
+        catch (Exception e) { throw new IllegalStateException("级联删除工资结算明细失败，订单删除已回滚: orderId=" + orderId, e); }
         try { payrollSettlementService.deleteByOrderId(orderId); }
-        catch (Exception e) { log.warn("Failed to cascade delete payroll settlements: orderId={}", orderId, e); }
+        catch (Exception e) { throw new IllegalStateException("级联删除工资结算失败，订单删除已回滚: orderId=" + orderId, e); }
         try { processTrackingService.deleteByOrderNo(orderNo); }
-        catch (Exception e) { log.warn("Failed to cascade delete process tracking records: orderNo={}", orderNo, e); }
+        catch (Exception e) { log.warn("级联删除工序跟踪记录失败（非关键，不回滚）: orderNo={}", orderNo, e); }
     }
 
     @Transactional(rollbackFor = Exception.class)

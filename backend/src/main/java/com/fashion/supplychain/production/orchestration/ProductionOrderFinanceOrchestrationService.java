@@ -15,6 +15,7 @@ import com.fashion.supplychain.integration.openapi.service.WebhookPushService;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.intelligence.mapper.IntelligencePredictionLogMapper;
 import com.fashion.supplychain.production.helper.OrderReconciliationHelper;
 import com.fashion.supplychain.production.mapper.CuttingBundleMapper;
@@ -61,6 +62,9 @@ public class ProductionOrderFinanceOrchestrationService {
 
     @Autowired
     private ProductWarehousingService productWarehousingService;
+
+    @Autowired
+    private com.fashion.supplychain.production.service.ScanRecordService scanRecordService;
 
     @Autowired
     private ProductOutstockService productOutstockService;
@@ -294,6 +298,29 @@ public class ProductionOrderFinanceOrchestrationService {
             if (completedQty != null && completedQty > 0) {
                 warehousingQualified = completedQty;
                 log.info("关单入库数回退：orderId={}, ProductWarehousing聚合为0, 使用order.completedQuantity={}", oid, completedQty);
+            }
+        }
+        if (warehousingQualified <= 0) {
+            try {
+                QueryWrapper<ScanRecord> srQw =
+                        new QueryWrapper<ScanRecord>()
+                                .select("COALESCE(SUM(quantity), 0) as totalQty")
+                                .eq("order_id", oid)
+                                .eq("scan_type", "warehouse")
+                                .eq("scan_result", "success");
+                java.util.List<java.util.Map<String, Object>> srRows = scanRecordService.listMaps(srQw);
+                if (srRows != null && !srRows.isEmpty()) {
+                    Object v = srRows.get(0).get("totalQty");
+                    if (v instanceof Number) {
+                        int fromScan = ((Number) v).intValue();
+                        if (fromScan > 0) {
+                            warehousingQualified = fromScan;
+                            log.info("关单入库数最终回退：orderId={}, 从ScanRecord获取warehouse扫码数量={}", oid, fromScan);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("关单入库数最终回退失败（ScanRecord查询）: orderId={}", oid, e);
             }
         }
 

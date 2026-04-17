@@ -91,6 +91,9 @@ public class ProductionScanExecutor {
     private com.fashion.supplychain.style.service.SecondaryProcessService secondaryProcessService;
 
     @Autowired
+    private ProcessParentMappingService processParentMappingService;
+
+    @Autowired
     private com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
 
     @Autowired
@@ -230,7 +233,7 @@ public class ProductionScanExecutor {
         // ★ 子工序→父进度节点映射（关键：确保子工序数据聚合到正确的父节点）
         // 例如："上领"→"车缝", "上袖"→"车缝", "绣花"→"二次工艺"
         String childProcessName = progressStage; // 保留原始子工序名
-        String parentStage = stageSupport.resolveParentProgressStage(order.getStyleNo(), childProcessName);
+        String parentStage = resolveParentProgressStage(order.getStyleNo(), childProcessName);
         if (parentStage != null) {
             log.info("子工序 '{}' 映射到父进度节点 '{}' (styleNo={})", childProcessName, parentStage, order.getStyleNo());
             progressStage = parentStage; // progressStage 存储父节点名（用于聚合）
@@ -361,10 +364,10 @@ public class ProductionScanExecutor {
                                              color, size, TextUtils.safeText(params.get("remark")), clientScanTime);
 
         // AI 财务风控拦截：检查是否存在恶意的刷单/异常高产（根据工价和金额等判断）
+        // 简化实现：如果单次扫码导致计件工资极高（例如单次超 1000 元）进行拦截
         if (sr.getTotalAmount() != null && sr.getTotalAmount().doubleValue() > 1000.0) {
             try {
-                int standardMinutes = resolveStandardMinutes(order.getStyleNo(), processCode);
-                duplicateScanPreventer.validateReasonableOutput(operatorId, quantity, standardMinutes);
+                duplicateScanPreventer.validateReasonableOutput(operatorId, quantity, 10); // 假定一个极小的容忍度触发异常
             } catch (IllegalStateException e) {
                 // 如果被风控拦截，记录失败扫码，并直接抛出异常阻止
                 sr.setScanResult("failure");
@@ -411,50 +414,6 @@ public class ProductionScanExecutor {
                     sr.getQuantity(), sr.getOperatorId());
             scanRecordService.saveScanRecord(sr);
             log.info("[ScanSave] 扫码记录写入成功: recordId={}", sr.getId());
-            // 🔔 WebSocket实时播报：忽略失败，不阻断扫码流程
-            try {
-                webSocketService.notifyScanRealtime(
-                    operatorId,
-                    order.getOrderNo(),
-                    order.getStyleNo() != null ? order.getStyleNo() : "",
-                    progressStage != null ? progressStage : "",
-                    quantity,
-                    operatorName
-                );
-            } catch (Exception e) {
-                log.debug("WebSocket广播失败(不阻断): orderNo={}", order.getOrderNo(), e);
-            }
-
-            // 🔔 WebSocket进度变更推送：扫码成功后通知前端刷新进度数据
-            try {
-                int curProgress = order.getProductionProgress() != null ? order.getProductionProgress() : 0;
-                webSocketService.notifyOrderProgressChanged(
-                    operatorId,
-                    order.getOrderNo(),
-                    curProgress,
-                    progressStage != null ? progressStage : ""
-                );
-            } catch (Exception e) {
-                log.debug("WebSocket进度推送失败(不阻断): orderNo={}", order.getOrderNo(), e);
-            }
-
-            try {
-                String bNo = bundle != null && bundle.getBundleNo() != null ? String.valueOf(bundle.getBundleNo()) : "";
-                String bColor = bundle != null && bundle.getColor() != null ? bundle.getColor() : "";
-                String bSize = bundle != null && bundle.getSize() != null ? bundle.getSize() : "";
-                String pName = progressStage != null ? progressStage : "生产";
-                String opName = operatorName != null ? operatorName : "";
-                webSocketService.notifyProcessStageCompleted(operatorId, order.getOrderNo(), pName, opName, bNo, bColor, bSize, quantity);
-            } catch (Exception e) {
-                log.debug("WebSocket工序通知推送失败(不阻断): orderNo={}", order.getOrderNo(), e);
-            }
-
-            try {
-                webSocketService.notifyDataChanged(operatorId, "ScanRecord", sr.getId(), "create");
-            } catch (Exception e) {
-                log.debug("WebSocket数据变更通知失败(不阻断): orderNo={}", order.getOrderNo(), e);
-            }
-
             // ✅ 扫码成功后，更新工序跟踪记录（用于工资结算）—— 仅在有菲号时才更新
             // tracking 表用 node["name"]（即progressStage父节点名，如"尾部"）作为 process_code 初始化
             // 兼容策略：先用 processCode（子工序名，如"剪线"）匹配，找不到再用 progressStage（父节点名）回退
@@ -713,6 +672,73 @@ public class ProductionScanExecutor {
             if (node.equals(n)) return true;
         }
         return false;
+    }
+
+    /**
+     * 从模板解析子工序对应的父进度节点
+     * 例如：上领 → 车缝, 上袖 → 车缝, 大烫 → 尾部, 质检 → 尾部, 绣花 → 二次工艺
+     * 模板 JSON 中通过 steps[].progressStage 字段定义父子关系
+     *
+     * 6个父进度节点：采购, 裁剪, 二次工艺, 车缝, 尾部, 入库
+     *
+     * 解析优先级：
+     * 1. 模板 progressStage 直接指向6个固定父节点 → 直接使用
+     * 2. 模板 progressStage 为别名 → normalizeFixedProductionNodeName 归一化
+     * 3. 模板 progressStage 为别名但无法归一化 → 动态映射表查找
+     * 4. 模板中找不到 / progressStage 与 name 相同 → 动态映射表按 processName 查找
+     * 5. 以上均无结果 → 返回 null（调用方决定是否使用 processName 本身）
+     */
+    private String resolveParentProgressStage(String styleNo, String processName) {
+        if (!hasText(styleNo) || !hasText(processName)) {
+            return null;
+        }
+        // 已经是固定父节点，无需映射
+        if (isFixedNode(processName)) {
+            return null;
+        }
+        try {
+            List<Map<String, Object>> nodes = templateLibraryService.resolveProgressNodeUnitPrices(styleNo.trim());
+            if (nodes != null && !nodes.isEmpty()) {
+                for (Map<String, Object> item : nodes) {
+                    String name = item.get("name") != null ? item.get("name").toString().trim() : "";
+                    String pStage = item.get("progressStage") != null ? item.get("progressStage").toString().trim() : "";
+
+                    if (!hasText(name) || !name.equals(processName.trim())) {
+                        continue;
+                    }
+                    // ── 找到匹配的工序 ──
+
+                    // Case 1: progressStage 直接是 6 个固定父节点之一
+                    if (hasText(pStage) && isFixedNode(pStage)) {
+                        return pStage;
+                    }
+                    // Case 2: progressStage 是别名（如 "sewing"），尝试归一化
+                    if (hasText(pStage) && !pStage.equals(name)) {
+                        String normalizedParent = normalizeFixedProductionNodeName(pStage);
+                        if (normalizedParent != null && isFixedNode(normalizedParent)) {
+                            return normalizedParent;
+                        }
+                        // 别名无法归一化 → 尝试动态映射表
+                        String mapped = processParentMappingService.resolveParentNode(pStage);
+                        if (mapped != null) {
+                            return mapped;
+                        }
+                    }
+                    // Case 3: progressStage 与 name 相同或为空
+                    //   → 模板未正确配置父节点，跳出循环走动态映射兜底
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("解析父进度节点失败: styleNo={}, processName={}", styleNo, processName, e);
+        }
+        // ── 动态映射兜底：从 t_process_parent_mapping 表按工序名查找 ──
+        String dynamicParent = processParentMappingService.resolveParentNode(processName);
+        if (dynamicParent != null) {
+            log.info("工序 '{}' 通过动态映射表 → 父节点 '{}' (styleNo={})", processName, dynamicParent, styleNo);
+            return dynamicParent;
+        }
+        return null;
     }
 
     /**
@@ -1008,43 +1034,5 @@ public class ProductionScanExecutor {
 
     private boolean hasText(String str) {
         return StringUtils.hasText(str);
-    }
-
-    private int resolveStandardMinutes(String styleNo, String processCode) {
-        if (hasText(styleNo)) {
-            try {
-                List<Map<String, Object>> nodes = templateLibraryService.resolveProgressNodeUnitPrices(styleNo.trim());
-                if (nodes != null) {
-                    String target = hasText(processCode) ? processCode.trim() : null;
-                    for (Map<String, Object> node : nodes) {
-                        if (node == null) continue;
-                        if (target != null) {
-                            Object name = node.get("processName");
-                            if (name != null && target.equals(String.valueOf(name).trim())) {
-                                return extractStandardMinutes(node);
-                            }
-                            Object stage = node.get("progressStage");
-                            if (stage != null && target.equals(String.valueOf(stage).trim())) {
-                                return extractStandardMinutes(node);
-                            }
-                        }
-                    }
-                    if (!nodes.isEmpty()) {
-                        return extractStandardMinutes(nodes.get(0));
-                    }
-                }
-            } catch (Exception e) {
-                log.debug("从模板获取标准工时失败: styleNo={}, 使用默认值", styleNo, e);
-            }
-        }
-        return 10;
-    }
-
-    private int extractStandardMinutes(Map<String, Object> node) {
-        Object st = node.get("standardTime");
-        if (st instanceof Number n && n.intValue() > 0) {
-            return Math.max(1, n.intValue() / 60);
-        }
-        return 10;
     }
 }
