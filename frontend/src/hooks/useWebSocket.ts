@@ -158,8 +158,8 @@ export function useWebSocket(options: UseWebSocketOptions) {
 
   useEffect(() => {
     setMyConnected(inst.connected);
-    const handler = (v: boolean) => setMyConnected(v);
-    const connectedListeners = (globalInstance?.setConnected as any)?._listeners as Set<(v: boolean) => void> | undefined;
+    const _handler = (v: boolean) => setMyConnected(v);
+    const _connectedListeners = (globalInstance?.setConnected as any)?._listeners as Set<(v: boolean) => void> | undefined;
     return () => { /* cleanup handled by subscriber count */ };
   }, []);
 
