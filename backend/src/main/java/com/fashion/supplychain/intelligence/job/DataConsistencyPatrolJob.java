@@ -13,6 +13,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Component
@@ -56,7 +57,7 @@ public class DataConsistencyPatrolJob {
     public void systemIssuePatrol() {
         log.info("[DataConsistencyPatrol] 系统问题巡检开始");
         try {
-            systemIssueCollectorOrchestrator.collect();
+            var result = systemIssueCollectorOrchestrator.collect();
             log.info("[DataConsistencyPatrol] 系统问题巡检完成");
         } catch (Exception e) {
             log.warn("[DataConsistencyPatrol] 系统问题巡检失败: {}", e.getMessage());

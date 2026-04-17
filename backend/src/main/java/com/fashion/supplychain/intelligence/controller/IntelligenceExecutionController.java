@@ -6,6 +6,7 @@ import com.fashion.supplychain.intelligence.dto.ExecutionDecision;
 import com.fashion.supplychain.intelligence.dto.ExecutionResult;
 import com.fashion.supplychain.intelligence.orchestration.*;
 import com.fashion.supplychain.common.UserContext;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -46,22 +47,23 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @RestController
 @RequestMapping("/api/intelligence")
 @PreAuthorize("isAuthenticated()")
+@RequiredArgsConstructor
 public class IntelligenceExecutionController {
 
 
-    private PermissionDecisionOrchestrator permissionDecision;
+    private final PermissionDecisionOrchestrator permissionDecision;
 
-    private ExecutionEngineOrchestrator executionEngine;
+    private final ExecutionEngineOrchestrator executionEngine;
 
-    private AuditTrailOrchestrator auditTrail;
+    private final AuditTrailOrchestrator auditTrail;
 
-    private SmartWorkflowOrchestrator smartWorkflow;
+    private final SmartWorkflowOrchestrator smartWorkflow;
 
-    private IntelligenceAuditLogMapper auditLogMapper;
+    private final IntelligenceAuditLogMapper auditLogMapper;
 
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
 
-    private ProductionAgenticCrewOrchestrator crewOrchestrator;
+    private final ProductionAgenticCrewOrchestrator crewOrchestrator;
 
     /**
      * 执行命令

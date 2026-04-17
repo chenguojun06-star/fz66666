@@ -7,6 +7,7 @@ import com.fashion.supplychain.intelligence.entity.IntelligenceAuditLog;
 import com.fashion.supplychain.intelligence.entity.IntelligenceSignal;
 import com.fashion.supplychain.intelligence.mapper.IntelligenceAuditLogMapper;
 import com.fashion.supplychain.intelligence.mapper.IntelligenceSignalMapper;
+import com.fashion.supplychain.intelligence.service.AiJobRunLogService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,11 +24,14 @@ import java.util.stream.Collectors;
 @PreAuthorize("isAuthenticated()")
 public class AgentActivityController {
 
+    @Autowired
     private IntelligenceAuditLogMapper auditLogMapper;
 
+    @Autowired
     private IntelligenceSignalMapper signalMapper;
 
     @Autowired(required = false)
+    private AiJobRunLogService jobRunLogService;
 
     private static final List<AgentDefinition> AGENT_DEFINITIONS = List.of(
             new AgentDefinition("order-manager", "订单管家", "production", "#1677ff",

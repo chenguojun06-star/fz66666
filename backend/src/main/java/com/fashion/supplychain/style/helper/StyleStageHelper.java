@@ -1,10 +1,12 @@
 package com.fashion.supplychain.style.helper;
 
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.style.entity.StyleAttachment;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.service.StyleAttachmentService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import lombok.extern.slf4j.Slf4j;

@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,6 +45,7 @@ import com.fashion.supplychain.system.service.OrderRemarkService;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class CuttingTaskOrchestrator {
 
     private static final String FACTORY_TYPE_INTERNAL = "INTERNAL";
@@ -58,32 +60,32 @@ public class CuttingTaskOrchestrator {
         return StringUtils.hasText(orderNo) && orderNo.toUpperCase().startsWith("CUT");
     }
 
-    private CuttingTaskService cuttingTaskService;
+    private final CuttingTaskService cuttingTaskService;
 
-    private StyleInfoService styleInfoService;
+    private final StyleInfoService styleInfoService;
 
-    private CuttingBundleService cuttingBundleService;
+    private final CuttingBundleService cuttingBundleService;
 
-    private ProductionOrderService productionOrderService;
+    private final ProductionOrderService productionOrderService;
 
-    private ProductionOrderScanRecordDomainService scanRecordDomainService;
+    private final ProductionOrderScanRecordDomainService scanRecordDomainService;
 
     private com.fashion.supplychain.production.service.SysNoticeService sysNoticeService;
 
-    private TemplateLibraryService templateLibraryService;
+    private final TemplateLibraryService templateLibraryService;
 
-    private FactoryService factoryService;
+    private final FactoryService factoryService;
 
-    private OrganizationUnitService organizationUnitService;
+    private final OrganizationUnitService organizationUnitService;
 
-    private OrganizationUnitBindingHelper organizationUnitBindingHelper;
+    private final OrganizationUnitBindingHelper organizationUnitBindingHelper;
 
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
 
 
-    private MaterialPurchaseService materialPurchaseService;
+    private final MaterialPurchaseService materialPurchaseService;
 
-    private OrderRemarkService orderRemarkService;
+    private final OrderRemarkService orderRemarkService;
 
     private boolean hasCuttingMaterialReady(ProductionOrder order, CuttingTask task) {
         if (isDirectCuttingOrder(order, task)) {

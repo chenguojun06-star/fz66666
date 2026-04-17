@@ -209,6 +209,9 @@ const intelligence = {
   getAgentAlerts: () => http.get('/api/intelligence/agent-activity/alerts'),
   getMyPendingTaskSummary: () => http.get('/api/intelligence/pending-tasks/summary'),
   voiceCommand: (payload) => http.post('/api/intelligence/voice/command', payload),
+  getLivePulse: () => http.post('/api/intelligence/live-pulse'),
+  getWorkerEfficiency: () => http.post('/api/intelligence/worker-efficiency'),
+  getFactoryBottleneck: () => http.get('/api/intelligence/factory-bottleneck'),
 };
 
 const notice = {
@@ -293,12 +296,6 @@ const finance = {
   payrollSummary: (payload) => http.post('/api/finance/payroll-settlement/operator-summary', payload),
 };
 
-const intelligence = {
-  getLivePulse: () => http.post('/api/intelligence/live-pulse'),
-  getWorkerEfficiency: () => http.post('/api/intelligence/worker-efficiency'),
-  getFactoryBottleneck: () => http.get('/api/intelligence/factory-bottleneck'),
-};
-
 const api = {
   production,
   system,
@@ -325,5 +322,5 @@ export default api;
 export {
   production, system, serial, factory, factoryWorker, tenant,
   intelligence, notice, dashboard, wechat, common,
-  style, warehouse, material, materialRoll, orderManagement, sampleStock, finance, intelligence,
+  style, warehouse, material, materialRoll, orderManagement, sampleStock, finance,
 };

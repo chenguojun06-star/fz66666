@@ -5,11 +5,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Service
 public class DataTruthGuard {
 
+    private static final Pattern NUMBER_PATTERN = Pattern.compile("\\d+(\\.\\d+)?%?");
     private static final Set<String> FABRICATED_INDICATORS = Set.of(
             "大约", "约", "估计", "估算", "可能", "推测", "假设", "假设性",
             "模拟", "虚拟", "演示", "示例", "参考值", "默认值"

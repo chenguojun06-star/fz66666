@@ -6,6 +6,7 @@ import com.fashion.supplychain.intelligence.entity.IntelligenceWorkflowLog;
 import com.fashion.supplychain.intelligence.mapper.IntelligenceWorkflowLogMapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,16 +46,17 @@ import java.util.UUID;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class SmartWorkflowOrchestrator {
 
 
-    private AuditTrailOrchestrator auditTrail;
+    private final AuditTrailOrchestrator auditTrail;
 
-    private FollowupTaskOrchestrator followupTaskOrchestrator;
+    private final FollowupTaskOrchestrator followupTaskOrchestrator;
 
-    private IntelligenceWorkflowLogMapper workflowLogMapper;
+    private final IntelligenceWorkflowLogMapper workflowLogMapper;
 
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper;
 
     /**
      * 生成执行后的级联工作流

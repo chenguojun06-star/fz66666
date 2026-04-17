@@ -1,9 +1,11 @@
 package com.fashion.supplychain.production.job;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.orchestration.MindPushOrchestrator;
 import com.fashion.supplychain.intelligence.service.ProcessStatsEngine;
 import com.fashion.supplychain.production.entity.SysNotice;
+import com.fashion.supplychain.production.orchestration.SysNoticeOrchestrator;
 import com.fashion.supplychain.production.service.SysNoticeService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,15 +24,22 @@ import com.fashion.supplychain.intelligence.service.WxAlertNotifyService;
 @Component
 public class SmartNotifyJob {
 
+    @Autowired
+    private SysNoticeOrchestrator sysNoticeOrchestrator;
 
+    @Autowired
     private SysNoticeService sysNoticeService;
 
+    @Autowired
     private ProcessStatsEngine processStatsEngine;
 
+    @Autowired
     private MindPushOrchestrator mindPushOrchestrator;
 
+    @Autowired
     private AnomalyDetectionOrchestrator anomalyDetectionOrchestrator;
 
+    @Autowired
     private WxAlertNotifyService wxAlertNotifyService;
 
     @Autowired(required = false)

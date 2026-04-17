@@ -20,6 +20,7 @@ import com.fashion.supplychain.style.service.StyleBomService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.style.service.StyleProcessService;
 import com.fashion.supplychain.style.service.StyleQuotationService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -43,26 +44,27 @@ import java.util.TreeMap;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class OrderProfitOrchestrator {
 
-    private ProductionOrderService productionOrderService;
+    private final ProductionOrderService productionOrderService;
 
-    private MaterialPurchaseService materialPurchaseService;
+    private final MaterialPurchaseService materialPurchaseService;
 
-    private ProductWarehousingService productWarehousingService;
+    private final ProductWarehousingService productWarehousingService;
 
-    private ShipmentReconciliationService shipmentReconciliationService;
+    private final ShipmentReconciliationService shipmentReconciliationService;
 
-    private StyleInfoService styleInfoService;
+    private final StyleInfoService styleInfoService;
 
-    private StyleQuotationService styleQuotationService;
+    private final StyleQuotationService styleQuotationService;
 
 
-    private StyleBomService styleBomService;
+    private final StyleBomService styleBomService;
 
-    private StyleProcessService styleProcessService;
+    private final StyleProcessService styleProcessService;
 
-    private SecondaryProcessService secondaryProcessService;
+    private final SecondaryProcessService secondaryProcessService;
 
     /**
      * 计算订单利润分析数据

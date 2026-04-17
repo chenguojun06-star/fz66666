@@ -13,6 +13,7 @@ import com.fashion.supplychain.style.entity.StyleAttachment;
 import com.fashion.supplychain.style.service.StyleAttachmentService;
 import com.fashion.supplychain.template.service.TemplateLibraryService;
 import com.fashion.supplychain.websocket.service.WebSocketService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Component;
@@ -39,6 +40,7 @@ import java.util.Map;
  */
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class ProductionScanExecutor {
 
     /**
@@ -49,39 +51,39 @@ public class ProductionScanExecutor {
             "采购", "裁剪", "二次工艺", "车缝", "尾部", "入库"
     };
 
-    private ProductionScanStageSupport stageSupport;
+    private final ProductionScanStageSupport stageSupport;
 
-    private ScanRecordService scanRecordService;
+    private final ScanRecordService scanRecordService;
 
-    private CuttingBundleService cuttingBundleService;
+    private final CuttingBundleService cuttingBundleService;
 
-    private ProductionOrderService productionOrderService;
+    private final ProductionOrderService productionOrderService;
 
-    private ProcessStageDetector processStageDetector;
+    private final ProcessStageDetector processStageDetector;
 
-    private InventoryValidator inventoryValidator;
+    private final InventoryValidator inventoryValidator;
 
-    private DuplicateScanPreventer duplicateScanPreventer;
+    private final DuplicateScanPreventer duplicateScanPreventer;
 
-    private SKUService skuService;
+    private final SKUService skuService;
 
-    private TemplateLibraryService templateLibraryService;
+    private final TemplateLibraryService templateLibraryService;
 
-    private MaterialPurchaseService materialPurchaseService;
+    private final MaterialPurchaseService materialPurchaseService;
 
-    private StyleAttachmentService styleAttachmentService;
+    private final StyleAttachmentService styleAttachmentService;
 
     private com.fashion.supplychain.style.service.StyleInfoService styleInfoService;
 
     private com.fashion.supplychain.style.service.SecondaryProcessService secondaryProcessService;
 
-    private ProcessParentMappingService processParentMappingService;
+    private final ProcessParentMappingService processParentMappingService;
 
     private com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
 
     private com.fashion.supplychain.production.service.ProductionProcessTrackingService trackingService;
 
-    private WebSocketService webSocketService;
+    private final WebSocketService webSocketService;
 
 
     /**

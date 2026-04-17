@@ -23,6 +23,7 @@ import com.fashion.supplychain.production.service.MaterialPickingService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
@@ -31,23 +32,24 @@ import org.springframework.util.StringUtils;
 
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class MaterialPurchaseStatusHelper {
 
-    private MaterialPurchaseService materialPurchaseService;
+    private final MaterialPurchaseService materialPurchaseService;
 
-    private ProductionOrderService productionOrderService;
+    private final ProductionOrderService productionOrderService;
 
-    private ProductionOrderOrchestrator productionOrderOrchestrator;
+    private final ProductionOrderOrchestrator productionOrderOrchestrator;
 
-    private ProductionOrderScanRecordDomainService scanRecordDomainService;
+    private final ProductionOrderScanRecordDomainService scanRecordDomainService;
 
-    private MaterialReconciliationOrchestrator materialReconciliationOrchestrator;
+    private final MaterialReconciliationOrchestrator materialReconciliationOrchestrator;
 
-    private MaterialPurchaseOrchestratorHelper helper;
+    private final MaterialPurchaseOrchestratorHelper helper;
 
-    private MaterialQualityIssueOrchestrator materialQualityIssueOrchestrator;
+    private final MaterialQualityIssueOrchestrator materialQualityIssueOrchestrator;
 
-    private MaterialPickingService materialPickingService;
+    private final MaterialPickingService materialPickingService;
 
 
     private com.fashion.supplychain.production.service.SysNoticeService sysNoticeService;

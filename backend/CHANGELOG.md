@@ -1,5 +1,23 @@
 ## 2026-04-18
 
+### 🔴 紧急修复：依赖注入丢失导致接口500错误
+
+**根因**：清理未使用 `@Autowired` import 时，7个使用字段注入的类被误删了 `@Autowired` 注解，导致所有依赖字段为 `null`，运行时 `NullPointerException` → 500。
+
+**影响范围**：生产订单列表/统计接口、生产扫码、物料采购状态、裁剪任务、智能执行、工作流、订单利润分析等核心功能全部不可用。
+
+**修复方案**：将字段注入改为构造器注入（`@RequiredArgsConstructor` + `private final`），更安全且符合Spring最佳实践。
+
+| 文件 | 修复内容 | 受影响接口 |
+|------|---------|-----------|
+| `ProductionOrderController.java` | `@Autowired` → `@RequiredArgsConstructor` + `private final` | `/api/production/order/*` 全部接口 |
+| `ProductionScanExecutor.java` | 同上 | 生产扫码全部功能 |
+| `MaterialPurchaseStatusHelper.java` | 同上 | 物料采购状态变更 |
+| `CuttingTaskOrchestrator.java` | 同上 | 裁剪任务管理 |
+| `IntelligenceExecutionController.java` | 同上 | `/api/intelligence/commands/*` |
+| `SmartWorkflowOrchestrator.java` | 同上 | 智能工作流 |
+| `OrderProfitOrchestrator.java` | 同上 | 订单利润分析 |
+
 ### WebSocket 全局广播移除 + 代码清理
 
 #### 核心变更：移除 WebSocket 全局广播方法

@@ -7,6 +7,7 @@ import com.fashion.supplychain.intelligence.orchestration.OrderDecisionCaptureOr
 import com.fashion.supplychain.intelligence.orchestration.OrderLearningOutcomeOrchestrator;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.MaterialPurchaseService;
+import com.fashion.supplychain.production.service.ProductionOrderQueryService;
 import com.fashion.supplychain.production.service.ProductionOrderScanRecordDomainService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleInfo;

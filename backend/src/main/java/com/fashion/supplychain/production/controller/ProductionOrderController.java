@@ -42,27 +42,16 @@ import java.util.Map;
 @PreAuthorize("isAuthenticated()")
 @RequiredArgsConstructor
 public class ProductionOrderController {
-
     private final ProductionOrderOrchestrator productionOrderOrchestrator;
-
     private final ProductionOrderService productionOrderService;
-
-
     private final ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
-
     private final FactoryCapacityOrchestrator factoryCapacityOrchestrator;
-
     private final ProductionOrderExportOrchestrator exportOrchestrator;
-
     private final OrderHealthScoreOrchestrator orderHealthScoreOrchestrator;
-
     private final SysNoticeOrchestrator sysNoticeOrchestrator;
-
     private final StyleInfoService styleInfoService;
-
-    private final com.fashion.supplychain.style.service.SecondaryProcessService secondaryProcessService;
-
-    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    private com.fashion.supplychain.style.service.SecondaryProcessService secondaryProcessService;
+    private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     /**
      * 导出生产订单列表为Excel
@@ -108,6 +97,9 @@ public class ProductionOrderController {
                 try {
                     ProductionOrder detail = productionOrderOrchestrator.getDetailByOrderNo(orderNo);
                     if (detail != null) {
+                        // 返回分页格式以保持前端兼容
+                        // 创建伪分页对象，包装单个订单为records数组
+                        // 注入 coverImage/styleImage，修复小程序扫码确认页款式图不显示问题
                         java.util.Map<String, Object> enriched = objectMapper
                                 .convertValue(detail, new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {});
                         if (StringUtils.hasText(detail.getStyleId())) {
