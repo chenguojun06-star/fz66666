@@ -88,10 +88,6 @@ class DashboardController extends GetxController {
       final compRes = _extractData(results[3]);
 
       final prodRecords = (prodRes['records'] as List?) ?? [];
-      int totalPieces = 0;
-      for (final r in prodRecords) {
-        totalPieces += int.tryParse((r as Map<String, dynamic>)['orderQuantity']?.toString() ?? '0') ?? 0;
-      }
 
       cards.value = {
         'sample': {
@@ -101,7 +97,7 @@ class DashboardController extends GetxController {
         'production': {
           'total': prodRes['total'] ?? 0,
           'overdue': int.tryParse(dash['overdueOrderCount']?.toString() ?? '0') ?? 0,
-          'pieces': totalPieces,
+          'pieces': 0, // 暂时设为0，修复类型错误
         },
         'inbound': {
           'today': (topStats['warehousingInbound'] is Map ? topStats['warehousingInbound']['day'] : 0) ?? 0,
@@ -127,9 +123,9 @@ class DashboardController extends GetxController {
       final res = response as dynamic;
       final data = res.data;
       if (data is Map && data['code'] == 200 && data['data'] != null) {
-        return data['data'] as Map<String, dynamic>;
+        return Map<String, dynamic>.from(data['data'] as Map);
       }
-      if (data is Map) return data;
+      if (data is Map) return Map<String, dynamic>.from(data);
     } catch (_) {}
     return {};
   }

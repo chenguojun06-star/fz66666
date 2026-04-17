@@ -739,8 +739,11 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         if (!StringUtils.hasText(orderId)) {
             return false;
         }
-        return this.remove(new LambdaQueryWrapper<ProductWarehousing>()
-                .eq(ProductWarehousing::getOrderId, orderId.trim()));
+        LambdaQueryWrapper<ProductWarehousing> wrapper = new LambdaQueryWrapper<ProductWarehousing>()
+                .eq(ProductWarehousing::getOrderId, orderId.trim());
+        Long tid = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tid != null) wrapper.eq(ProductWarehousing::getTenantId, tid);
+        return this.remove(wrapper);
     }
 
     @Override

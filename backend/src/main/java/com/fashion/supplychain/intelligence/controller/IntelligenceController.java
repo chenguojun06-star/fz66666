@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.controller;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.util.RateLimitUtil;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
@@ -37,6 +38,9 @@ public class IntelligenceController {
 
     @Value("${app.sse.timeout:240000}")
     private long sseTimeout;
+
+    @Autowired
+    private org.springframework.data.redis.core.StringRedisTemplate stringRedisTemplate;
 
     @Value("${app.upload.max-size:5242880}")
     private long uploadMaxSize;
@@ -563,7 +567,11 @@ public class IntelligenceController {
 
     /** AI 顾问问答 — 优先本地规则引擎，无法回答时调用 DeepSeek */
     @PostMapping("/ai-advisor/chat")
-    public Result<AiAdvisorChatResponse> aiAdvisorChat(@RequestBody java.util.Map<String, String> body) {
+    public Result<AiAdvisorChatResponse> aiAdvisorChat(@RequestBody java.util.Map<String, String> body, javax.servlet.http.HttpServletRequest request) {
+        String userId = UserContext.userId();
+        if (!RateLimitUtil.checkRateLimit(stringRedisTemplate, "rl:ai:chat:" + userId, 30, 1)) {
+            return Result.fail("AI对话请求过于频繁，请稍后再试");
+        }
         String question = body.getOrDefault("question", "");
         if (question == null || question.isBlank()) {
             return Result.fail("问题不能为空");
@@ -587,6 +595,12 @@ public class IntelligenceController {
                                           @RequestParam(required = false) String orderNo,
                                           @RequestParam(required = false) String processName,
                                           @RequestParam(required = false) String stage) {
+        String userId = UserContext.userId();
+        if (!RateLimitUtil.checkRateLimit(stringRedisTemplate, "rl:ai:sse:" + userId, 30, 1)) {
+            SseEmitter emitter = new SseEmitter(3000L);
+            try { emitter.send(SseEmitter.event().name("error").data("AI对话请求过于频繁")); emitter.complete(); } catch (Exception ignored) {}
+            return emitter;
+        }
         SseEmitter emitter = new SseEmitter(sseTimeout);
         if (question == null || question.isBlank()) {
             try {

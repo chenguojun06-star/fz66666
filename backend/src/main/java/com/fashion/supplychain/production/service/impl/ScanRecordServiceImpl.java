@@ -249,8 +249,11 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
                 if (orderId == null || orderId.trim().isEmpty()) {
                         return 0;
                 }
-                return baseMapper.delete(new LambdaQueryWrapper<ScanRecord>()
-                                .eq(ScanRecord::getOrderId, orderId.trim()));
+                LambdaQueryWrapper<ScanRecord> wrapper = new LambdaQueryWrapper<ScanRecord>()
+                                .eq(ScanRecord::getOrderId, orderId.trim());
+                Long tid = com.fashion.supplychain.common.UserContext.tenantId();
+                if (tid != null) wrapper.eq(ScanRecord::getTenantId, tid);
+                return baseMapper.delete(wrapper);
         }
 
         @Override
@@ -258,8 +261,11 @@ public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRec
                 if (orderNo == null || orderNo.trim().isEmpty()) {
                         return 0;
                 }
-                return baseMapper.delete(new LambdaQueryWrapper<ScanRecord>()
-                                .eq(ScanRecord::getOrderNo, orderNo.trim()));
+                LambdaQueryWrapper<ScanRecord> wrapper = new LambdaQueryWrapper<ScanRecord>()
+                                .eq(ScanRecord::getOrderNo, orderNo.trim());
+                Long tid = com.fashion.supplychain.common.UserContext.tenantId();
+                if (tid != null) wrapper.eq(ScanRecord::getTenantId, tid);
+                return baseMapper.delete(wrapper);
         }
 
         @Override

@@ -424,7 +424,7 @@ public class ProductionOrderOrchestrator {
     private void assertOrderBelongsToCurrentTenant(String orderId, String operation) {
         Long currentTenantId = UserContext.tenantId();
         if (currentTenantId == null) return;
-        ProductionOrder order = productionOrderService.getById(orderId);
+        ProductionOrder order = productionOrderQueryService.getDetailById(orderId);
         if (order == null) return;
         if (order.getTenantId() != null && !order.getTenantId().equals(currentTenantId)) {
             log.warn("[租户校验] {} 操作被拒绝: orderId={}, 当前租户={}, 订单租户={}",

@@ -20,18 +20,25 @@ Page({
     confirmPassword: '',
     agreedPolicies: false,
     loading: false,
+    factorySearch: '',
+    tenants: [],
+    filteredTenants: [],
+    selectedFactory: null,
+    showFactoryDropdown: false,
   },
 
   onLoad(options) {
-    // 从页面参数中获取工厂编码（扫码跳转时传入）
     if (options && options.tenantCode) {
       this.setData({
         tenantCode: decodeURIComponent(options.tenantCode),
         tenantName: options.tenantName ? decodeURIComponent(options.tenantName) : '',
         scannedCode: true,
+        selectedFactory: {
+          tenantCode: decodeURIComponent(options.tenantCode),
+          tenantName: options.tenantName ? decodeURIComponent(options.tenantName) : '',
+        },
       });
     }
-    // 订阅隐私授权弹窗事件（微信审核必须：扫码前须获得授权）
     if (eventBus && typeof eventBus.on === 'function') {
       this._unsubPrivacy = eventBus.on('showPrivacyDialog', resolve => {
         try {
@@ -42,6 +49,19 @@ Page({
         } catch (_) { /* 静默忽略 */ }
       });
     }
+    this._loadTenants();
+  },
+
+  _loadTenants() {
+    api.tenant.publicList().then((res) => {
+      var list = [];
+      if (res && res.data && Array.isArray(res.data)) {
+        list = res.data;
+      } else if (Array.isArray(res)) {
+        list = res;
+      }
+      this.setData({ tenants: list });
+    }).catch(function() {});
   },
 
   onUnload() {
