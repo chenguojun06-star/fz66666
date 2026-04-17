@@ -1,6 +1,3 @@
 import 'package:get/get.dart';
-
-class ScanResultBinding extends Bindings {
-  @override
-  void dependencies() {}
-}
+import 'scan_result_controller.dart';
+class ScanResultBinding extends Bindings { @override void dependencies() { Get.lazyPut(() => ScanResultController()); } }

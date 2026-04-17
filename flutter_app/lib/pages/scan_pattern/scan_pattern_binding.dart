@@ -1,6 +1,3 @@
 import 'package:get/get.dart';
-
-class ScanPatternBinding extends Bindings {
-  @override
-  void dependencies() {}
-}
+import 'scan_pattern_controller.dart';
+class ScanPatternBinding extends Bindings { @override void dependencies() { Get.lazyPut(() => ScanPatternController()); } }

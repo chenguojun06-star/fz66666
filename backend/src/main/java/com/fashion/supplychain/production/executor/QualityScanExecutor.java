@@ -758,7 +758,6 @@ public class QualityScanExecutor {
                 ProductionOrder patch = new ProductionOrder();
                 patch.setId(order.getId());
                 patch.setCompletedQuantity(qualifiedSum);
-                patch.setWarehousingQualifiedQuantity(qualifiedSum);
                 patch.setUpdateTime(LocalDateTime.now());
                 productionOrderService.updateById(patch);
                 log.info("[QualityScan] 已更新订单合格入库数量: orderId={}, completedQuantity={}", order.getId(), qualifiedSum);

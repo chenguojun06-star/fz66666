@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
+import '../../components/empty_state.dart';
 import 'admin_approval_controller.dart';
 
 class AdminApprovalPage extends GetView<AdminApprovalController> {
@@ -8,125 +11,82 @@ class AdminApprovalPage extends GetView<AdminApprovalController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('管理员审批', style: TextStyle(fontWeight: FontWeight.bold)),
-        centerTitle: true,
-        elevation: 0,
-        backgroundColor: Theme.of(context).primaryColor,
-        foregroundColor: Colors.white,
-      ),
+      appBar: AppBar(title: const Text('用户审批')),
+      backgroundColor: AppColors.bgPage,
       body: Obx(() {
-        if (controller.isLoading.value && controller.pendingUsers.isEmpty) {
+        if (controller.loading.value) {
           return const Center(child: CircularProgressIndicator());
         }
-
         if (controller.pendingUsers.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.person_search, size: 80, color: Colors.grey[300]),
-                const SizedBox(height: 16),
-                Text('暂无待审批申请', style: TextStyle(color: Colors.grey[600], fontSize: 16)),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: controller.fetchPendingUsers,
-                  child: const Text('点击刷新'),
-                ),
-              ],
-            ),
-          );
+          return const EmptyState(iconData: Icons.check_circle_outline, title: '暂无待审批用户', subtitle: '所有用户都已处理');
         }
-
         return RefreshIndicator(
-          onRefresh: controller.fetchPendingUsers,
+          onRefresh: controller.loadPendingUsers,
           child: ListView.builder(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             itemCount: controller.pendingUsers.length,
-            itemBuilder: (context, index) {
-              final user = controller.pendingUsers[index];
-              final String username = user['username'] ?? '未知用户';
-              final String realName = user['realName'] ?? '未填写姓名';
-              final String userId = user['id']?.toString() ?? '';
-
-              return Card(
-                elevation: 2,
-                margin: const EdgeInsets.only(bottom: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: Theme.of(context).primaryColor.withOpacity(0.1),
-                            child: Text(realName.characters.first,
-                              style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold)),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(realName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                                Text('账号: $username', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Divider(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          OutlinedButton(
-                            onPressed: () => _confirmReject(context, userId),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.red,
-                              side: const BorderSide(color: Colors.red),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                            child: const Text('拒绝'),
-                          ),
-                          const SizedBox(width: 12),
-                          ElevatedButton(
-                            onPressed: () => controller.approve(userId),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                              elevation: 0,
-                            ),
-                            child: const Text('通过'),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
+            itemBuilder: (_, i) => _buildUserCard(controller.pendingUsers[i]),
           ),
         );
       }),
     );
   }
 
-  void _confirmReject(BuildContext context, String userId) {
-    Get.dialog(
-      AlertDialog(
-        title: const Text('确认拒绝'),
-        content: const Text('确定要拒绝该用户的入驻申请吗？'),
-        actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('取消')),
-          TextButton(
-            onPressed: () {
-              Get.back();
-              controller.reject(userId);
-            },
-            child: const Text('确定拒绝', style: TextStyle(color: Colors.red)),
+  Widget _buildUserCard(Map<String, dynamic> user) {
+    final name = user['realName']?.toString() ?? user['name']?.toString() ?? '未知';
+    final phone = user['phone']?.toString() ?? user['username']?.toString() ?? '-';
+    final role = user['roleName']?.toString() ?? user['roleCode']?.toString() ?? '-';
+    final userId = user['id']?.toString() ?? '';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.bgCard,
+        borderRadius: BorderRadius.circular(AppSpacing.lg),
+        border: Border.all(color: AppColors.borderLight),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 4, offset: const Offset(0, 2))],
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+            child: Text(name.isNotEmpty ? name[0] : '?', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.primary)),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                const SizedBox(height: 2),
+                Text('$phone · $role', style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+              ],
+            ),
+          ),
+          Column(
+            children: [
+              SizedBox(
+                width: 72,
+                height: 32,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.success, padding: EdgeInsets.zero),
+                  onPressed: () => controller.approveUser(userId),
+                  child: const Text('通过', style: TextStyle(fontSize: 13)),
+                ),
+              ),
+              const SizedBox(height: 6),
+              SizedBox(
+                width: 72,
+                height: 32,
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(foregroundColor: AppColors.error, side: const BorderSide(color: AppColors.error), padding: EdgeInsets.zero),
+                  onPressed: () => controller.confirmReject(userId),
+                  child: const Text('拒绝', style: TextStyle(fontSize: 13)),
+                ),
+              ),
+            ],
           ),
         ],
       ),

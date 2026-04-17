@@ -1,45 +1,38 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../theme/app_colors.dart';
 import '../../utils/api_service.dart';
+import '../../utils/error_handler.dart';
 
 class WarehouseController extends GetxController {
   final ApiService _api = Get.find<ApiService>();
-
-  // 状态管理
-  final RxList inventoryList = [].obs; // 成品库存列表
-  final RxBool isLoading = false.obs;
-  final RxString searchQuery = ''.obs;
+  final inventory = <Map<String, dynamic>>[].obs;
+  final loading = false.obs;
 
   @override
-  void onInit() {
-    super.onInit();
-    fetchInventory();
-  }
+  void onInit() { super.onInit(); loadInventory(); }
 
-  // 获取成品库存
-  Future<void> fetchInventory() async {
+  Future<void> loadInventory() async {
+    loading.value = true;
     try {
-      isLoading.value = true;
-      // 这里的接口对应 ApiService 中的 listFinishedInventory
-      final response = await _api.listFinishedInventory();
-      if (response.statusCode == 200) {
-        inventoryList.assignAll(response.data['data'] ?? []);
+      final res = await _api.listFinishedInventory();
+      final data = res.data;
+      if (data is Map && data['code'] == 200) {
+        final list = data['data'] as List? ?? [];
+        inventory.value = list.map((e) => e as Map<String, dynamic>).toList();
       }
-    } catch (e) {
-      Get.snackbar('获取失败', '无法连接到仓库服务器: $e',
-        snackPosition: SnackPosition.BOTTOM);
-    } finally {
-      isLoading.value = false;
-    }
+    } catch (e) { ErrorHandler.handle(e); }
+    finally { loading.value = false; }
   }
 
-  // 搜索过滤逻辑
-  List get filteredInventory {
-    if (searchQuery.isEmpty) return inventoryList;
-    return inventoryList.where((item) {
-      final String name = (item['styleName'] ?? '').toString().toLowerCase();
-      final String code = (item['styleNo'] ?? '').toString().toLowerCase();
-      return name.contains(searchQuery.value.toLowerCase()) ||
-             code.contains(searchQuery.value.toLowerCase());
-    }).toList();
+  Future<void> outbound(String id, int quantity) async {
+    try {
+      final res = await _api.outboundFinishedInventory({'id': id, 'quantity': quantity});
+      final data = res.data;
+      if (data is Map && data['code'] == 200) {
+        Get.snackbar('成功', '出库成功', snackPosition: SnackPosition.TOP, backgroundColor: AppColors.success, colorText: Colors.white);
+        loadInventory();
+      }
+    } catch (e) { ErrorHandler.handle(e); }
   }
 }

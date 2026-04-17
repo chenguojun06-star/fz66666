@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
+import '../../components/empty_state.dart';
 import 'scan_controller.dart';
 
 class ScanPage extends GetView<ScanController> {
@@ -21,16 +21,12 @@ class ScanPage extends GetView<ScanController> {
             children: [
               Obx(() => _buildStatsRow()),
               const SizedBox(height: AppSpacing.lg),
-
               _buildScanArea(),
               const SizedBox(height: AppSpacing.lg),
-
               _buildQuickEntries(),
               const SizedBox(height: AppSpacing.xxl),
-
               const Text('今日扫码记录', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
               const SizedBox(height: AppSpacing.md),
-
               Obx(() => _buildRecentList()),
             ],
           ),
@@ -40,11 +36,13 @@ class ScanPage extends GetView<ScanController> {
   }
 
   Widget _buildStatsRow() {
+    final tc = controller.todayCount.value;
+    final tcc = controller.todayCompleted.value;
     return Row(
       children: [
-        Expanded(child: _buildStatCard('今日扫码', '${controller.todayCount.value}', AppColors.primary)),
+        Expanded(child: _buildStatCard('今日扫码', '$tc', AppColors.primary)),
         const SizedBox(width: AppSpacing.md),
-        Expanded(child: _buildStatCard('今日完成', '${controller.todayCompleted.value}', AppColors.success)),
+        Expanded(child: _buildStatCard('今日完成', '$tcc', AppColors.success)),
       ],
     );
   }
@@ -69,25 +67,43 @@ class ScanPage extends GetView<ScanController> {
   }
 
   Widget _buildScanArea() {
-    return Container(
-      height: 220,
-      decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        borderRadius: BorderRadius.circular(AppSpacing.lg),
-        border: Border.all(color: AppColors.borderLight),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppSpacing.lg),
-        child: MobileScanner(
-          onDetect: (capture) {
-            final barcode = capture.barcodes.firstOrNull;
-            if (barcode != null && barcode.rawValue != null) {
-              controller.onScanResult(barcode.rawValue!);
-            }
-          },
+    return Obx(() {
+      if (!controller.scannerAvailable.value) {
+        return GestureDetector(
+          onTap: controller.onManualInput,
+          child: Container(
+            height: 220,
+            decoration: BoxDecoration(
+              color: AppColors.bgCard,
+              borderRadius: BorderRadius.circular(AppSpacing.lg),
+              border: Border.all(color: AppColors.borderLight),
+            ),
+            child: const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.qr_code_scanner, size: 64, color: AppColors.primary),
+                SizedBox(height: 12),
+                Text('点击手动输入编码', style: TextStyle(fontSize: 16, color: AppColors.primary, fontWeight: FontWeight.w500)),
+                SizedBox(height: 4),
+                Text('当前设备不支持摄像头扫码', style: TextStyle(fontSize: 12, color: AppColors.textTertiary)),
+              ],
+            ),
+          ),
+        );
+      }
+      return Container(
+        height: 220,
+        decoration: BoxDecoration(
+          color: AppColors.bgCard,
+          borderRadius: BorderRadius.circular(AppSpacing.lg),
+          border: Border.all(color: AppColors.borderLight),
         ),
-      ),
-    );
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppSpacing.lg),
+          child: controller.scannerWidget,
+        ),
+      );
+    });
   }
 
   Widget _buildQuickEntries() {
@@ -139,14 +155,12 @@ class ScanPage extends GetView<ScanController> {
   }
 
   Widget _buildRecentList() {
-    if (controller.recentScans.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 32),
-        child: Center(child: Text('暂无扫码记录', style: TextStyle(color: AppColors.textTertiary))),
-      );
+    final scans = controller.recentScans;
+    if (scans.isEmpty) {
+      return const EmptyState(iconData: Icons.qr_code, title: '暂无扫码记录', subtitle: '扫码后记录将显示在这里');
     }
     return Column(
-      children: controller.recentScans.take(10).map((scan) {
+      children: scans.take(10).map((scan) {
         return Container(
           margin: const EdgeInsets.only(bottom: AppSpacing.sm),
           padding: const EdgeInsets.all(AppSpacing.md),

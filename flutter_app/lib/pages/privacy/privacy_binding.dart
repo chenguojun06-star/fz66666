@@ -1,6 +1,3 @@
 import 'package:get/get.dart';
-
-class PrivacyBinding extends Bindings {
-  @override
-  void dependencies() {}
-}
+import 'privacy_controller.dart';
+class PrivacyBinding extends Bindings { @override void dependencies() { Get.lazyPut(() => PrivacyController()); } }

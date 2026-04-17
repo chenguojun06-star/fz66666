@@ -1,6 +1,3 @@
 import 'package:get/get.dart';
-
-class CuttingBinding extends Bindings {
-  @override
-  void dependencies() {}
-}
+import 'cutting_controller.dart';
+class CuttingBinding extends Bindings { @override void dependencies() { Get.lazyPut(() => CuttingController()); } }

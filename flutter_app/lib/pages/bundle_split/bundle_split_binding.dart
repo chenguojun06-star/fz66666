@@ -1,6 +1,3 @@
 import 'package:get/get.dart';
-
-class BundleSplitBinding extends Bindings {
-  @override
-  void dependencies() {}
-}
+import 'bundle_split_controller.dart';
+class BundleSplitBinding extends Bindings { @override void dependencies() { Get.lazyPut(() => BundleSplitController()); } }

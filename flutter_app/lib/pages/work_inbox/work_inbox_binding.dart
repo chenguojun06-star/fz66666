@@ -1,6 +1,3 @@
 import 'package:get/get.dart';
-
-class WorkInboxBinding extends Bindings {
-  @override
-  void dependencies() {}
-}
+import 'work_inbox_controller.dart';
+class WorkInboxBinding extends Bindings { @override void dependencies() { Get.lazyPut(() => WorkInboxController()); } }
