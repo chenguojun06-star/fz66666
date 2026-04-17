@@ -30,6 +30,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -255,7 +257,11 @@ public class ProductionOrderFinanceOrchestrationService {
             List<Map<String, Object>> rows = cuttingBundleMapper.selectMaps(qw);
             if (rows != null && !rows.isEmpty()) {
                 Object v = ParamUtils.getIgnoreCase(rows.get(0), "totalQuantity");
-                cuttingQty = ParamUtils.toIntSafe(v);
+                if (v instanceof Number) {
+                    cuttingQty = ((Number) v).intValue();
+                } else if (v != null) {
+                    cuttingQty = Integer.parseInt(String.valueOf(v).replaceAll("[^0-9-]", ""));
+                }
             }
         } catch (Exception e) {
             log.warn("Failed to aggregate cutting quantity when closing order: orderId={}", oid, e);
@@ -263,10 +269,18 @@ public class ProductionOrderFinanceOrchestrationService {
         cuttingQty = Math.max(0, cuttingQty);
 
         if (cuttingQty <= 0) {
+            Integer orderCuttingQty = order.getCuttingQuantity();
+            if (orderCuttingQty != null && orderCuttingQty > 0) {
+                cuttingQty = orderCuttingQty;
+                log.info("关单裁剪数回退：orderId={}, cuttingBundle聚合为0, 使用order.cuttingQuantity={}", oid, orderCuttingQty);
+            }
+        }
+
+        if (cuttingQty <= 0) {
             int completedQty = order.getCompletedQuantity() == null ? 0 : order.getCompletedQuantity();
             if (completedQty > 0) {
                 cuttingQty = completedQty;
-                log.info("关单裁剪数回退：orderId={}, cuttingBundle无记录, 使用completedQuantity={}", oid, completedQty);
+                log.info("关单裁剪数回退：orderId={}, 使用completedQuantity={}", oid, completedQty);
             }
         }
 
@@ -331,93 +345,27 @@ public class ProductionOrderFinanceOrchestrationService {
         return detail;
     }
 
+    /**
+     * 批量关单 — 支持小云AI指令批量关闭订单
+     */
     @Transactional(rollbackFor = Exception.class)
-    public boolean autoCloseOrderIfEligible(String id) {
-        String oid = StringUtils.hasText(id) ? id.trim() : null;
-        if (!StringUtils.hasText(oid)) {
-            throw new IllegalArgumentException("订单ID不能为空");
-        }
-
-        ProductionOrder order = productionOrderService.getById(oid);
-        if (order == null || order.getDeleteFlag() == null || order.getDeleteFlag() != 0) {
-            throw new NoSuchElementException("订单不存在");
-        }
-        String st = order.getStatus() == null ? "" : order.getStatus().trim();
-        if ("completed".equals(st)) {
-            return true;
-        }
-
-        int cuttingQty = 0;
-        try {
-            Long tid2 = com.fashion.supplychain.common.UserContext.tenantId();
-            QueryWrapper<CuttingBundle> qw = new QueryWrapper<CuttingBundle>()
-                    .select("COALESCE(SUM(quantity), 0) as totalQuantity")
-                    .eq("production_order_id", oid);
-            if (tid2 != null) qw.eq("tenant_id", tid2);
-            List<Map<String, Object>> rows = cuttingBundleMapper.selectMaps(qw);
-            if (rows != null && !rows.isEmpty()) {
-                Object v = ParamUtils.getIgnoreCase(rows.get(0), "totalQuantity");
-                cuttingQty = ParamUtils.toIntSafe(v);
-            }
-        } catch (Exception e) {
-            log.warn("Failed to aggregate cutting quantity when auto closing order: orderId={}", oid, e);
-        }
-        cuttingQty = Math.max(0, cuttingQty);
-        if (cuttingQty <= 0) {
-            int completedQty2 = order.getCompletedQuantity() == null ? 0 : order.getCompletedQuantity();
-            if (completedQty2 > 0) {
-                cuttingQty = completedQty2;
-            }
-        }
-        if (cuttingQty <= 0) {
-            return false;
-        }
-
-        int warehousingQualified = productWarehousingService.sumQualifiedByOrderId(oid);
-        int minRequired = (int) Math.ceil(cuttingQty * 0.9);
-        if (warehousingQualified < minRequired) {
-            return false;
-        }
-
-        LocalDateTime now = LocalDateTime.now();
-        boolean ok = productionOrderService.lambdaUpdate()
-                .eq(ProductionOrder::getId, oid)
-                .set(ProductionOrder::getCompletedQuantity, warehousingQualified)
-                .set(ProductionOrder::getProductionProgress, 100)
-                .set(ProductionOrder::getStatus, "completed")
-                .set(ProductionOrder::getActualEndDate, now)
-                .set(ProductionOrder::getUpdateTime, now)
-                .update();
-        if (!ok) {
-            throw new IllegalStateException("完成失败");
-        }
-
-        // 自动关单时创建对账单（与手动关单保持一致）
-        try {
-            ProductionOrder updatedOrder = productionOrderService.getById(oid);
-            if (updatedOrder != null) {
-                orderReconciliationHelper.createShipmentReconciliationOnClose(updatedOrder);
-            }
-        } catch (Exception e) {
-            log.error("自动关单创建对账单失败: orderId={}", oid, e);
-            // 不阻断关单流程
-        }
-
-        // 【智能学习】自动关单时同步回填预测记录，自动闭合数据飞轮
-        if (intelligencePredictionLogMapper != null) {
+    public List<Map<String, Object>> batchCloseOrders(List<String> orderIds, String sourceModule, String remark, boolean specialClose) {
+        List<Map<String, Object>> results = new ArrayList<>();
+        for (String oid : orderIds) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("orderId", oid);
             try {
-                int backfilled = intelligencePredictionLogMapper.backfillByOrderId(oid, now, com.fashion.supplychain.common.UserContext.tenantId());
-                if (backfilled > 0) {
-                    log.info("[智能回填] 订单 {} 自动关单，回填 {} 条预测记录", oid, backfilled);
-                }
-            } catch (Exception ex) {
-                log.warn("[智能回填] 自动关单回填失败，不影响流程: orderId={}", oid, ex);
+                ProductionOrder result = closeOrder(oid, specialClose);
+                item.put("success", true);
+                item.put("orderNo", result != null ? result.getOrderNo() : oid);
+            } catch (Exception e) {
+                item.put("success", false);
+                item.put("reason", e.getMessage());
+                log.warn("批量关单失败: orderId={}, reason={}", oid, e.getMessage());
             }
+            results.add(item);
         }
-
-        triggerPayrollSettlementGeneration(oid);
-
-        return true;
+        return results;
     }
 
     /**

@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 import javax.validation.constraints.NotBlank;
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 生产订单操作Controller
@@ -53,6 +55,21 @@ public class ProductionOrderOperationController {
             Boolean.TRUE.equals(body.getSpecialClose())
         );
         return Result.success(updated);
+    }
+
+    @PostMapping("/batch-close")
+    public Result<?> batchClose(@RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<String> orderIds = (List<String>) body.get("orderIds");
+        String sourceModule = (String) body.getOrDefault("sourceModule", "myOrders");
+        String remark = (String) body.get("remark");
+        boolean specialClose = Boolean.TRUE.equals(body.get("specialClose"));
+        if (orderIds == null || orderIds.isEmpty()) {
+            return Result.fail("订单ID列表不能为空");
+        }
+        List<Map<String, Object>> results = productionOrderOrchestrator.batchCloseOrders(orderIds, sourceModule, remark, specialClose);
+        long successCount = results.stream().filter(r -> Boolean.TRUE.equals(r.get("success"))).count();
+        return Result.success(Map.of("results", results, "total", orderIds.size(), "success", successCount, "failed", orderIds.size() - successCount));
     }
 
     /**

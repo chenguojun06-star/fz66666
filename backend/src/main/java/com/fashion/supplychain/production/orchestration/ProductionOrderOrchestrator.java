@@ -364,13 +364,9 @@ public class ProductionOrderOrchestrator {
         return result;
     }
 
-    // ⚠️ REQUIRES_NEW：这三个方法经常被 try-catch 包围调用。
-    // 若使用默认 REQUIRED，内部失败会把外层事务标记为 rollback-only，
-    // 导致外层提交时抛 UnexpectedRollbackException（HTTP 500）。
-    // 改为 REQUIRES_NEW 后，内部事务独立提交/回滚，不影响外层事务。
-    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
-    public boolean autoCloseOrderIfEligible(String id) {
-        return financeOrchestrationService.autoCloseOrderIfEligible(id);
+    @Transactional(rollbackFor = Exception.class)
+    public List<Map<String, Object>> batchCloseOrders(List<String> orderIds, String sourceModule, String remark, boolean specialClose) {
+        return financeOrchestrationService.batchCloseOrders(orderIds, sourceModule, remark, specialClose);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
