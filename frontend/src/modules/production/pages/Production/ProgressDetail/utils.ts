@@ -602,6 +602,12 @@ export const isSecondaryProcessSubNode = (nodeName: string, progressStage?: stri
 /**
  * 将节点列表中的二次工艺子工序聚合为一个"二次工艺"父节点
  * 例如：[采购, 裁剪, 绣花, 印花, 车缝, 尾部] → [采购, 裁剪, 二次工艺, 车缝, 尾部]
+ *
+ * ⚠️ 聚合策略（2026-04-21 修订）：
+ * - 仅当订单有「≥2 个二次工艺子工序」时才聚合为父节点「二次工艺」；
+ * - 只有「1 个二次工艺子工序」时，直接保留子工序原名（例如「绣花」），与页面上其他
+ *   子工序名（如「整件」「整烫剪线包装」）显示风格保持一致；
+ * - 工序跟进页的约定是「显示子工序名」，不应把具体子工序模糊为父节点名。
  */
 export const collapseSecondaryProcessNodes = (nodes: ProgressNode[]): ProgressNode[] => {
   if (!Array.isArray(nodes) || nodes.length === 0) return nodes;
@@ -618,10 +624,11 @@ export const collapseSecondaryProcessNodes = (nodes: ProgressNode[]): ProgressNo
     }
   }
 
-  // 2. 如果没有二次工艺子工序，原样返回
-  if (secondarySubs.length === 0) return nodes;
+  // 2. 没有二次工艺子工序 → 原样返回
+  // 3. 只有 1 个二次工艺子工序 → 保留子工序原名，不聚合（显示「绣花」而非「二次工艺」）
+  if (secondarySubs.length <= 1) return nodes;
 
-  // 3. 插入"二次工艺"父节点到正确位置（在裁剪之后，车缝之前）
+  // 4. ≥2 个二次工艺子工序 → 聚合为「二次工艺」父节点（在裁剪之后，车缝之前）
   const parentNode: ProgressNode = {
     id: 'secondaryProcess',
     name: '二次工艺',

@@ -524,6 +524,11 @@ export const useProgressColumns = ({
               const nodeType = (node.progressStage && node.progressStage.trim())
                 || NODE_TYPE_MAP[nodeName]
                 || nodeName.toLowerCase();
+              // ★ 工序编号 + 工序名称（如 "02 绣花"）。
+              //   订单 progress_workflow_json.nodes[*].id 为工序单价维护模板里的数字编号（"01"/"02"/"03"/"04"）。
+              //   仅当 id 为纯数字时拼接；默认节点(id=cutting/quality 等)或聚合后的父节点(id=secondaryProcess)保持原名。
+              const processCode = /^\d+$/.test(String(node.id || '').trim()) ? String(node.id).trim() : '';
+              const nodeLabel = processCode ? `${processCode} ${nodeName}` : nodeName;
               // ★ 入库节点：进度球必须对齐 t_product_warehousing 真实合格件数（与关单校验同源），
               //   避免扫码流水（boardStats）显示 100% 但 DB 中尚无入库记录导致无法关单的"虚高"误导。
               const isWarehousingNode = nodeType === 'warehousing'
@@ -614,8 +619,8 @@ export const useProgressColumns = ({
                       });
                     }}
                     title={completionTime
-                      ? `${nodeName} 完成时间：${completionTime}${predictHint ? `\n预计完成：${predictHint}` : ''}\n点击查看详情`
-                      : `${predictHint ? `预计完成：${predictHint}\n` : ''}点击查看 ${nodeName} 详情`}
+                      ? `${nodeLabel} 完成时间：${completionTime}${predictHint ? `\n预计完成：${predictHint}` : ''}\n点击查看详情`
+                      : `${predictHint ? `预计完成：${predictHint}\n` : ''}点击查看 ${nodeLabel} 详情`}
                   >
                     {completionTime ? (
                       <div style={{
@@ -647,7 +652,7 @@ export const useProgressColumns = ({
                       textAlign: 'center',
                       whiteSpace: 'nowrap',
                     }}>
-                      {nodeName}
+                      {nodeLabel}
                     </div>
                     {(nodeType === 'quality' || nodeType === 'warehousing') ? (
                       <DefectTracePopover
