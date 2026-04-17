@@ -29,7 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class ScanRecordServiceImpl extends ServiceImpl<ScanRecordMapper, ScanRecord> implements ScanRecordService {
 
-        private ProductionOrderService productionOrderService;
+        private final ProductionOrderService productionOrderService;
 
         @Override
         public IPage<ScanRecord> queryPage(Map<String, Object> params) {

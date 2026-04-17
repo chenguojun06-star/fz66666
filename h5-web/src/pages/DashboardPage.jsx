@@ -77,6 +77,7 @@ export default function DashboardPage() {
         outbound: { today: Number(topStats.warehousingOutbound?.day || 0), week: Number(topStats.warehousingOutbound?.week || 0) },
       });
     } catch (e) {
+      console.error('[Dashboard] refreshCards error:', e?.response?.status, e?.message, e?.response?.data);
       toast.error('数据加载失败');
     } finally {
       setLoading(false);
@@ -103,6 +104,7 @@ export default function DashboardPage() {
       const list = rawList.map(r => transformOrderData(r));
       setOrders(reset ? list : prev => [...prev, ...list]);
     } catch (e) {
+      console.error('[Dashboard] loadOrders error:', e?.response?.status, e?.message, e?.response?.data);
       toast.error('订单数据加载失败，请下拉刷新');
     }
   }, [activeFilter, searchKey, factoryType]);

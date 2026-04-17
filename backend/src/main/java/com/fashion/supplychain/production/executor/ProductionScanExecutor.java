@@ -73,15 +73,15 @@ public class ProductionScanExecutor {
 
     private final StyleAttachmentService styleAttachmentService;
 
-    private com.fashion.supplychain.style.service.StyleInfoService styleInfoService;
+    private final com.fashion.supplychain.style.service.StyleInfoService styleInfoService;
 
-    private com.fashion.supplychain.style.service.SecondaryProcessService secondaryProcessService;
+    private final com.fashion.supplychain.style.service.SecondaryProcessService secondaryProcessService;
 
     private final ProcessParentMappingService processParentMappingService;
 
-    private com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
+    private final com.fashion.supplychain.production.orchestration.ProductionProcessTrackingOrchestrator processTrackingOrchestrator;
 
-    private com.fashion.supplychain.production.service.ProductionProcessTrackingService trackingService;
+    private final com.fashion.supplychain.production.service.ProductionProcessTrackingService trackingService;
 
     private final WebSocketService webSocketService;
 

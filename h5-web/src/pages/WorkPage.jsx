@@ -45,7 +45,7 @@ export default function WorkPage() {
     setLoading(true);
     try {
       const params = { page: nextPage, pageSize: 20 };
-      if (activeTab) params.currentStage = activeTab;
+      if (activeTab) params.currentProcessName = activeTab;
       if (search) params.keyword = search;
       if (delayedOnly) params.delayedOnly = true;
       if (factoryType) params.factoryType = factoryType;
@@ -65,6 +65,7 @@ export default function WorkPage() {
       newOrders.forEach(o => { qty += (o.totalQuantity || o.orderQuantity || 0); });
       setOrderStats({ orderCount: total, totalQuantity: qty });
     } catch (e) {
+      console.error('[WorkPage] loadOrders error:', e?.response?.status, e?.message, e?.response?.data);
       toast.error('加载失败');
     } finally { setLoading(false); }
   }, [activeTab, search, delayedOnly, factoryType, loading, orders, page]);
