@@ -1,5 +1,6 @@
 package com.fashion.supplychain.integration.config;
 
+import lombok.RequiredArgsConstructor;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
@@ -29,24 +30,25 @@ import org.springframework.stereotype.Component;
 @Data
 @Component
 @ConfigurationProperties(prefix = "sf-express")
+@RequiredArgsConstructor
 public class SFExpressProperties {
 
     /** 是否启用（false=使用Mock模式） */
     private boolean enabled = false;
 
     /** 开放平台分配的 AppKey */
-    private String appKey;
+    private final String appKey;
 
     /**
      * AppSecret（每月需要更新）
      * 在开放平台后台查看，每30天自动轮换
      */
-    private String appSecret;
+    private final String appSecret;
 
     /**
      * 月结客户编码（选填，对应客户月结账单）
      */
-    private String customerCode;
+    private final String customerCode;
 
     /**
      * 正式环境接口地址
@@ -65,7 +67,7 @@ public class SFExpressProperties {
      * 路由事件推送地址（需公网可达）
      * 顺丰侧主动推送物流状态变更
      */
-    private String notifyUrl;
+    private final String notifyUrl;
 
     /**
      * 快件默认来源（1=收寄，2=客户送货，3=丰巢预约）

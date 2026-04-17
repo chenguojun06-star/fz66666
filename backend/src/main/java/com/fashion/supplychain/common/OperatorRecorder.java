@@ -2,6 +2,7 @@ package com.fashion.supplychain.common;
 
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**

@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import lombok.Data;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -20,7 +21,7 @@ public class ModelRoutingConfig {
 
     @Data
     public static class RouteProfile {
-        private String modelOverride;   // null = 使用默认模型
+        private String modelOverride;
         private double temperature;
         private int maxTokens;
         private String systemPromptPrefix;

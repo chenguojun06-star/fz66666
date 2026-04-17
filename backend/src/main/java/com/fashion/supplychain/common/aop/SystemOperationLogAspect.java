@@ -26,35 +26,30 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.servlet.HandlerMapping;
 import javax.servlet.http.HttpServletRequest;
 import javax.annotation.Resource;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Aspect
 @Component
+@RequiredArgsConstructor
 public class SystemOperationLogAspect {
 
     @Resource
-    private OperationLogService operationLogService;
+    private final OperationLogService operationLogService;
 
-    @Autowired(required = false)
     private StyleInfoService styleInfoService;
 
-    @Autowired(required = false)
     private ProductionOrderService productionOrderService;
 
-    @Autowired(required = false)
     private MaterialPurchaseService materialPurchaseService;
 
-    @Autowired(required = false)
     private MaterialPickingService materialPickingService;
 
-    @Autowired(required = false)
     private CuttingTaskService cuttingTaskService;
 
-    @Autowired(required = false)
     private CuttingBundleService cuttingBundleService;
 
-    @Autowired(required = false)
     private OperationLogTargetNameResolver operationLogTargetNameResolver;
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();

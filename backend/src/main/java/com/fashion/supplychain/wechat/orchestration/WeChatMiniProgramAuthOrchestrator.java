@@ -7,6 +7,7 @@ import com.fashion.supplychain.system.entity.User;
 import com.fashion.supplychain.system.service.LoginLogService;
 import com.fashion.supplychain.system.service.UserService;
 import com.fashion.supplychain.wechat.client.WeChatMiniProgramClient;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -37,7 +38,6 @@ public class WeChatMiniProgramAuthOrchestrator {
     /** Redis key 前缀：wx:invite:{token} = tenantId:tenantName */
     private static final String INVITE_TOKEN_PREFIX = "wx:invite:";
 
-    @Autowired(required = false)
     private StringRedisTemplate stringRedisTemplate;
 
     public WeChatMiniProgramAuthOrchestrator(

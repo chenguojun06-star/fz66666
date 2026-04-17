@@ -1,5 +1,6 @@
 package com.fashion.supplychain.system.service.impl;
 
+import lombok.RequiredArgsConstructor;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -21,9 +22,9 @@ import java.time.LocalTime;
  * 操作日志Service实现
  */
 @Service
+@RequiredArgsConstructor
 public class OperationLogServiceImpl extends ServiceImpl<OperationLogMapper, OperationLog> implements OperationLogService {
 
-    @Autowired(required = false)
     private OperationLogTargetNameResolver operationLogTargetNameResolver;
 
     @Override

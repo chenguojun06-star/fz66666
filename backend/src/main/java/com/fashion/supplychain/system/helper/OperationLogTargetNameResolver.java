@@ -1,5 +1,6 @@
 package com.fashion.supplychain.system.helper;
 
+import lombok.RequiredArgsConstructor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.entity.MaterialPicking;
@@ -22,32 +23,25 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 @Component
+@RequiredArgsConstructor
 public class OperationLogTargetNameResolver {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    @Autowired(required = false)
     private StyleInfoService styleInfoService;
 
-    @Autowired(required = false)
     private ProductionOrderService productionOrderService;
 
-    @Autowired(required = false)
     private MaterialPurchaseService materialPurchaseService;
 
-    @Autowired(required = false)
     private MaterialPickingService materialPickingService;
 
-    @Autowired(required = false)
     private CuttingTaskService cuttingTaskService;
 
-    @Autowired(required = false)
     private CuttingBundleService cuttingBundleService;
 
-    @Autowired(required = false)
     private ProductWarehousingService productWarehousingService;
 
-    @Autowired(required = false)
     private ProductOutstockService productOutstockService;
 
     public String resolveForStoredLog(OperationLog log) {

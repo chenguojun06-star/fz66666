@@ -6,6 +6,7 @@ import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.entity.StyleQuotation;
 import com.fashion.supplychain.style.entity.StyleProcess;
 import com.fashion.supplychain.style.mapper.StyleQuotationMapper;
+import lombok.RequiredArgsConstructor;
 import com.fashion.supplychain.style.service.StyleBomService;
 import com.fashion.supplychain.style.service.StyleQuotationService;
 import com.fashion.supplychain.style.service.StyleProcessService;
@@ -26,23 +27,21 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Service
+@RequiredArgsConstructor
 public class StyleQuotationServiceImpl extends ServiceImpl<StyleQuotationMapper, StyleQuotation> implements StyleQuotationService {
 
     private static final Logger LOG = LoggerFactory.getLogger(StyleQuotationServiceImpl.class);
 
-    @Autowired
     @Lazy
-    private StyleBomService styleBomService;
+    private final StyleBomService styleBomService;
 
-    @Autowired
     @Lazy
-    private StyleProcessService styleProcessService;
+    private final StyleProcessService styleProcessService;
 
     // NOTE [架构债务] TemplateLibraryService 是跨模块依赖（template→style）
     // resolveFinalUnitPriceByStyleIds()中的模板库回退查询应迁移到StyleQuotationOrchestrator
-    @Autowired
     @Lazy
-    private TemplateLibraryService templateLibraryService;
+    private final TemplateLibraryService templateLibraryService;
 
     @Override
     public StyleQuotation getByStyleId(Long styleId) {

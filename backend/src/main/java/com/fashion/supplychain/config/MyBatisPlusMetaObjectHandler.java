@@ -3,6 +3,7 @@ package com.fashion.supplychain.config;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import com.fashion.supplychain.auth.AuthTokenService;
 import com.fashion.supplychain.common.UserContext;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.reflection.MetaObject;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,9 +17,9 @@ import java.time.LocalDateTime;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class MyBatisPlusMetaObjectHandler implements MetaObjectHandler {
 
-    @Autowired(required = false)
     private AuthTokenService authTokenService;
 
     @Override

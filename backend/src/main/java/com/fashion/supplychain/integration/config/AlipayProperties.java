@@ -1,5 +1,6 @@
 package com.fashion.supplychain.integration.config;
 
+import lombok.RequiredArgsConstructor;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
@@ -33,24 +34,25 @@ import org.springframework.stereotype.Component;
 @Data
 @Component
 @ConfigurationProperties(prefix = "alipay")
+@RequiredArgsConstructor
 public class AlipayProperties {
 
     /** 是否启用（false=使用Mock模式） */
     private boolean enabled = false;
 
     /** 支付宝分配的 AppID */
-    private String appId;
+    private final String appId;
 
     /**
      * 应用私钥（RSA2，PKCS8格式，不含 -----BEGIN/END----- 头尾）
      * 本地生成工具：https://miniu.alipay.com/keytool/create
      */
-    private String privateKey;
+    private final String privateKey;
 
     /**
      * 支付宝公钥（从开放平台"查看支付宝公钥"复制，不含头尾）
      */
-    private String publicKey;
+    private final String publicKey;
 
     /** 签名类型，固定：RSA2 */
     private String signType = "RSA2";
@@ -74,12 +76,12 @@ public class AlipayProperties {
      * 异步回调通知地址（需公网可达）
      * 格式：https://你的域名/api/webhook/payment/alipay
      */
-    private String notifyUrl;
+    private final String notifyUrl;
 
     /**
      * 同步跳转地址（支付完成后跳转页面）
      */
-    private String returnUrl;
+    private final String returnUrl;
 
     /** 支付超时时间 */
     private String timeoutExpress = "30m";

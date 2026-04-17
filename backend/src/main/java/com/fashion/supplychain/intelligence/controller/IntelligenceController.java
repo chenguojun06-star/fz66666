@@ -28,12 +28,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RestController
 @RequestMapping("/api/intelligence")
 @PreAuthorize("isAuthenticated()")
+@RequiredArgsConstructor
 public class IntelligenceController {
 
     @Value("${app.sse.timeout:240000}")
@@ -44,133 +46,133 @@ public class IntelligenceController {
     @Value("${app.upload.max-size:5242880}")
     private long uploadMaxSize;
 
-    private SmartPrecheckOrchestrator smartPrecheckOrchestrator;
+    private final SmartPrecheckOrchestrator smartPrecheckOrchestrator;
 
     private com.fashion.supplychain.intelligence.orchestration.AiAgentOrchestrator aiAgentOrchestrator;
 
-    private AiAdvisorChatResponseOrchestrator aiAdvisorChatResponseOrchestrator;
+    private final AiAdvisorChatResponseOrchestrator aiAdvisorChatResponseOrchestrator;
 
 
-    private ProgressPredictOrchestrator progressPredictOrchestrator;
+    private final ProgressPredictOrchestrator progressPredictOrchestrator;
 
-    private InoutDecisionOrchestrator inoutDecisionOrchestrator;
+    private final InoutDecisionOrchestrator inoutDecisionOrchestrator;
 
-    private FeedbackLearningOrchestrator feedbackLearningOrchestrator;
+    private final FeedbackLearningOrchestrator feedbackLearningOrchestrator;
 
-    private AiPatrolOrchestrator aiPatrolOrchestrator;
+    private final AiPatrolOrchestrator aiPatrolOrchestrator;
 
-    private WorkerProfileOrchestrator workerProfileOrchestrator;
+    private final WorkerProfileOrchestrator workerProfileOrchestrator;
 
-    private BottleneckDetectionOrchestrator bottleneckDetectionOrchestrator;
+    private final BottleneckDetectionOrchestrator bottleneckDetectionOrchestrator;
 
-    private OrderDeliveryRiskOrchestrator orderDeliveryRiskOrchestrator;
+    private final OrderDeliveryRiskOrchestrator orderDeliveryRiskOrchestrator;
 
-    private AnomalyDetectionOrchestrator anomalyDetectionOrchestrator;
+    private final AnomalyDetectionOrchestrator anomalyDetectionOrchestrator;
 
-    private SmartAssignmentOrchestrator smartAssignmentOrchestrator;
+    private final SmartAssignmentOrchestrator smartAssignmentOrchestrator;
 
-    private LearningReportOrchestrator learningReportOrchestrator;
+    private final LearningReportOrchestrator learningReportOrchestrator;
 
     // ── 第三批（12大黑科技）──
 
-    private LivePulseOrchestrator livePulseOrchestrator;
+    private final LivePulseOrchestrator livePulseOrchestrator;
 
-    private WorkerEfficiencyOrchestrator workerEfficiencyOrchestrator;
+    private final WorkerEfficiencyOrchestrator workerEfficiencyOrchestrator;
 
-    private DeliveryPredictionOrchestrator deliveryPredictionOrchestrator;
+    private final DeliveryPredictionOrchestrator deliveryPredictionOrchestrator;
 
-    private ProfitEstimationOrchestrator profitEstimationOrchestrator;
+    private final ProfitEstimationOrchestrator profitEstimationOrchestrator;
 
-    private FactoryLeaderboardOrchestrator factoryLeaderboardOrchestrator;
+    private final FactoryLeaderboardOrchestrator factoryLeaderboardOrchestrator;
 
-    private RhythmDnaOrchestrator rhythmDnaOrchestrator;
+    private final RhythmDnaOrchestrator rhythmDnaOrchestrator;
 
-    private SelfHealingOrchestrator selfHealingOrchestrator;
+    private final SelfHealingOrchestrator selfHealingOrchestrator;
 
-    private SmartNotificationOrchestrator smartNotificationOrchestrator;
+    private final SmartNotificationOrchestrator smartNotificationOrchestrator;
 
-    private NlQueryOrchestrator nlQueryOrchestrator;
+    private final NlQueryOrchestrator nlQueryOrchestrator;
 
-    private HealthIndexOrchestrator healthIndexOrchestrator;
+    private final HealthIndexOrchestrator healthIndexOrchestrator;
 
-    private SchedulingSuggestionOrchestrator schedulingSuggestionOrchestrator;
+    private final SchedulingSuggestionOrchestrator schedulingSuggestionOrchestrator;
 
-    private DefectHeatmapOrchestrator defectHeatmapOrchestrator;
+    private final DefectHeatmapOrchestrator defectHeatmapOrchestrator;
 
-    private FinanceAuditOrchestrator financeAuditOrchestrator;
+    private final FinanceAuditOrchestrator financeAuditOrchestrator;
 
-    private DefectTraceOrchestrator defectTraceOrchestrator;
+    private final DefectTraceOrchestrator defectTraceOrchestrator;
 
-    private StyleQuoteSuggestionOrchestrator styleQuoteSuggestionOrchestrator;
+    private final StyleQuoteSuggestionOrchestrator styleQuoteSuggestionOrchestrator;
 
-    private StyleIntelligenceProfileOrchestrator styleIntelligenceProfileOrchestrator;
+    private final StyleIntelligenceProfileOrchestrator styleIntelligenceProfileOrchestrator;
 
-    private MaterialShortageOrchestrator materialShortageOrchestrator;
+    private final MaterialShortageOrchestrator materialShortageOrchestrator;
 
-    private FactoryBottleneckOrchestrator factoryBottleneckOrchestrator;
+    private final FactoryBottleneckOrchestrator factoryBottleneckOrchestrator;
 
-    private ProcessPriceHintOrchestrator processPriceHintOrchestrator;
+    private final ProcessPriceHintOrchestrator processPriceHintOrchestrator;
 
-    private ProcessKnowledgeOrchestrator processKnowledgeOrchestrator;
+    private final ProcessKnowledgeOrchestrator processKnowledgeOrchestrator;
 
-    private DeliveryDateSuggestionOrchestrator deliveryDateSuggestionOrchestrator;
+    private final DeliveryDateSuggestionOrchestrator deliveryDateSuggestionOrchestrator;
 
-    private ProcessTemplateOrchestrator processTemplateOrchestrator;
+    private final ProcessTemplateOrchestrator processTemplateOrchestrator;
 
     // ── 第四批（智能信号/记忆/学习闭环/统一大脑）──
-    private IntelligenceSignalOrchestrator intelligenceSignalOrchestrator;
+    private final IntelligenceSignalOrchestrator intelligenceSignalOrchestrator;
 
-    private IntelligenceMemoryOrchestrator intelligenceMemoryOrchestrator;
+    private final IntelligenceMemoryOrchestrator intelligenceMemoryOrchestrator;
 
-    private LearningLoopOrchestrator learningLoopOrchestrator;
+    private final LearningLoopOrchestrator learningLoopOrchestrator;
 
-    private TenantIntelligenceBrainOrchestrator tenantIntelligenceBrainOrchestrator;
+    private final TenantIntelligenceBrainOrchestrator tenantIntelligenceBrainOrchestrator;
 
-    private AiAdvisorService aiAdvisorService;
+    private final AiAdvisorService aiAdvisorService;
 
-    private AiContextBuilderService aiContextBuilderService;
+    private final AiContextBuilderService aiContextBuilderService;
 
-    private ProcessStatsEngine processStatsEngine;
+    private final ProcessStatsEngine processStatsEngine;
 
-    private SupplierScorecardOrchestrator supplierScorecardOrchestrator;
+    private final SupplierScorecardOrchestrator supplierScorecardOrchestrator;
 
-    private ProfessionalReportOrchestrator professionalReportOrchestrator;
+    private final ProfessionalReportOrchestrator professionalReportOrchestrator;
 
     private com.fashion.supplychain.intelligence.orchestration.FileAnalysisOrchestrator fileAnalysisOrchestrator;
 
     private com.fashion.supplychain.intelligence.mapper.IntelligenceMetricsMapper intelligenceMetricsMapper;
 
-    private AgentMeetingOrchestrator agentMeetingOrchestrator;
+    private final AgentMeetingOrchestrator agentMeetingOrchestrator;
 
-    private LiveCostTrackerOrchestrator liveCostTrackerOrchestrator;
+    private final LiveCostTrackerOrchestrator liveCostTrackerOrchestrator;
 
-    private IntelligenceBrainOrchestrator intelligenceBrainOrchestrator;
+    private final IntelligenceBrainOrchestrator intelligenceBrainOrchestrator;
 
-    private ActionCenterOrchestrator actionCenterOrchestrator;
+    private final ActionCenterOrchestrator actionCenterOrchestrator;
 
-    private ActionTaskFeedbackOrchestrator actionTaskFeedbackOrchestrator;
+    private final ActionTaskFeedbackOrchestrator actionTaskFeedbackOrchestrator;
 
-    private ScanTipsOrchestrator scanTipsOrchestrator;
+    private final ScanTipsOrchestrator scanTipsOrchestrator;
 
-    private IntelligenceObservabilityOrchestrator observabilityOrchestrator;
+    private final IntelligenceObservabilityOrchestrator observabilityOrchestrator;
 
-    private CapacityGapOrchestrator capacityGapOrchestrator;
+    private final CapacityGapOrchestrator capacityGapOrchestrator;
 
-    private StagnantAlertOrchestrator stagnantAlertOrchestrator;
+    private final StagnantAlertOrchestrator stagnantAlertOrchestrator;
 
-    private ReconciliationAnomalyOrchestrator reconciliationAnomalyOrchestrator;
+    private final ReconciliationAnomalyOrchestrator reconciliationAnomalyOrchestrator;
 
-    private ApprovalAdvisorOrchestrator approvalAdvisorOrchestrator;
+    private final ApprovalAdvisorOrchestrator approvalAdvisorOrchestrator;
 
-    private ReplenishmentAdvisorOrchestrator replenishmentAdvisorOrchestrator;
+    private final ReplenishmentAdvisorOrchestrator replenishmentAdvisorOrchestrator;
 
-    private MonthlyBizSummaryOrchestrator monthlyBizSummaryOrchestrator;
+    private final MonthlyBizSummaryOrchestrator monthlyBizSummaryOrchestrator;
 
-    private StyleDifficultyOrchestrator styleDifficultyOrchestrator;
+    private final StyleDifficultyOrchestrator styleDifficultyOrchestrator;
 
-    private SafeAdvisorOrchestrator safeAdvisorOrchestrator;
+    private final SafeAdvisorOrchestrator safeAdvisorOrchestrator;
 
-    private PendingTaskOrchestrator pendingTaskOrchestrator;
+    private final PendingTaskOrchestrator pendingTaskOrchestrator;
 
     // ── 小云待办任务聚合 ──
     @GetMapping("/pending-tasks/my")
@@ -844,12 +846,11 @@ public class IntelligenceController {
     }
 
     // ── 第八批：10阶段AI路线图新能力 ──
-
-    @Autowired private ForecastEngineOrchestrator forecastEngineOrchestrator;
-    @Autowired private WhatIfSimulationOrchestrator whatIfSimulationOrchestrator;
-    @Autowired private VisualAIOrchestrator visualAIOrchestrator;
-    @Autowired private CrossTenantBenchmarkOrchestrator crossTenantBenchmarkOrchestrator;
-    @Autowired private VoiceCommandOrchestrator voiceCommandOrchestrator;
+    private final ForecastEngineOrchestrator forecastEngineOrchestrator;
+    private final WhatIfSimulationOrchestrator whatIfSimulationOrchestrator;
+    private final VisualAIOrchestrator visualAIOrchestrator;
+    private final CrossTenantBenchmarkOrchestrator crossTenantBenchmarkOrchestrator;
+    private final VoiceCommandOrchestrator voiceCommandOrchestrator;
 
     /** Stage5 — 成本/需求/用量预测（POST body: forecastType/subjectId/horizon） */
     @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_tenant_owner')")
@@ -940,7 +941,7 @@ public class IntelligenceController {
 
     // ── 任务可观测性（JobRunObservabilityAspect 自动写入） ──
 
-    private AiJobRunLogService jobRunLogService;
+    private final AiJobRunLogService jobRunLogService;
 
     /**
      * 查询最近 N 条定时任务执行日志。

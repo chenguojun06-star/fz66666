@@ -7,6 +7,7 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
+import lombok.RequiredArgsConstructor;
 import lombok.Data;
 import org.springframework.stereotype.Component;
 
@@ -257,26 +258,25 @@ public class PayrollAggregationOrchestrator {
     public static class PayrollOperatorProcessSummaryDTO implements Serializable {
         private static final long serialVersionUID = 1L;
 
-        private String orderId;      // 订单ID
-        private String orderNo;      // 订单号
-        private String orderStatus;  // 订单状态（completed=已关单，可审核）
-        private String styleNo;      // 款号
-        private String color;        // 颜色
-        private String size;         // 尺码
+        private String orderId;
+        private String orderNo;
+        private String orderStatus;
+        private String styleNo;
+        private String color;
+        private String size;
         private String operatorId;
         private String operatorName;
         private String processName;
         private Long quantity;
         private BigDecimal unitPrice;
         private BigDecimal totalAmount;
-        private String scanType; // production / cutting
-        private Long recordCount; // 扫码次数
-        private LocalDateTime startTime;  // 开始时间（最早扫码时间）
-        private LocalDateTime endTime;    // 完成时间（最晚扫码时间）
+        private String scanType;
+        private Long recordCount;
+        private LocalDateTime startTime;
+        private LocalDateTime endTime;
 
-        // Phase 6新增：指派相关字段
-        private String delegateTargetType;   // 指派类型: internal/external/none
-        private String delegateTargetName;   // 被指派人/工厂名称
-        private String actualOperatorName;   // 实际操作员（谁扫的码）
+        private String delegateTargetType;
+        private String delegateTargetName;
+        private String actualOperatorName;
     }
 }

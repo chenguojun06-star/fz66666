@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -19,13 +20,13 @@ import org.springframework.util.StringUtils;
  */
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class StyleSelectionSourceHelper {
 
     static final String SOURCE_TYPE_SELF = "SELF_DEVELOPED";
     static final String SOURCE_TYPE_SELECTION = "SELECTION_CENTER";
     static final Set<String> SELECTION_SOURCE_DETAILS = Set.of("外部市场", "供应商", "客户定制", "内部选品", "选品中心");
 
-    @Autowired(required = false)
     private SelectionCandidateService selectionCandidateService;
 
     /**

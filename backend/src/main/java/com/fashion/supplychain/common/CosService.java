@@ -14,6 +14,7 @@ import com.qcloud.cos.model.ObjectMetadata;
 import com.qcloud.cos.region.Region;
 import com.fashion.supplychain.system.entity.Tenant;
 import com.fashion.supplychain.system.service.TenantService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,7 +49,7 @@ import java.util.Date;
 @Slf4j
 public class CosService {
 
-    @Autowired(required = false)
+    @Autowired
     private TenantService tenantService;
 
     @Value("${fashion.cos.secret-id:}")

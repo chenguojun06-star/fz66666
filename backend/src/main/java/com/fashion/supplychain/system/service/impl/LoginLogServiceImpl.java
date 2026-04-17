@@ -1,5 +1,6 @@
 package com.fashion.supplychain.system.service.impl;
 
+import lombok.RequiredArgsConstructor;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -21,12 +22,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Service
+@RequiredArgsConstructor
 public class LoginLogServiceImpl extends ServiceImpl<LoginLogMapper, LoginLog> implements LoginLogService {
 
     private static final Logger LOG = LoggerFactory.getLogger(LoginLogServiceImpl.class);
 
     @javax.annotation.Resource
-    private OperationLogService operationLogService;
+    private final OperationLogService operationLogService;
 
     @Override
     public Page<LoginLog> getLoginLogPage(Long page, Long pageSize, String username, String loginStatus, String startDate, String endDate) {

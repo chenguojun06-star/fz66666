@@ -1,5 +1,6 @@
 package com.fashion.supplychain.integration.config;
 
+import lombok.RequiredArgsConstructor;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
@@ -36,41 +37,42 @@ import org.springframework.stereotype.Component;
 @Data
 @Component
 @ConfigurationProperties(prefix = "wechat-pay")
+@RequiredArgsConstructor
 public class WechatPayProperties {
 
     /** 是否启用（false=使用Mock模式） */
     private boolean enabled = false;
 
     /** 公众号/小程序/APP 的 AppID */
-    private String appId;
+    private final String appId;
 
     /** 微信支付商户号 */
-    private String mchId;
+    private final String mchId;
 
     /**
      * API V3 密钥（32位字符串）
      * 商户平台 → 账户中心 → API安全 → 设置APIv3密钥
      */
-    private String apiV3Key;
+    private final String apiV3Key;
 
     /**
      * 商户证书序列号
      * 商户平台 → 账户中心 → API安全 → 申请API证书 → 查看证书
      */
-    private String serialNo;
+    private final String serialNo;
 
     /**
      * 商户私钥文件路径（PEM格式）
      * 例：classpath:cert/apiclient_key.pem
      * 或绝对路径：file:/path/to/apiclient_key.pem
      */
-    private String privateKeyPath;
+    private final String privateKeyPath;
 
     /**
      * 异步回调通知地址（需公网可达，微信服务器主动推送）
      * 格式：https://你的域名/api/webhook/payment/wechat
      */
-    private String notifyUrl;
+    private final String notifyUrl;
 
     /** 支付场景：NATIVE（扫码）、JSAPI（公众号/小程序）、APP */
     private String tradeType = "NATIVE";
