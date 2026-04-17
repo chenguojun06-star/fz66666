@@ -73,7 +73,47 @@ Page({
 
   // ========== 输入事件 ==========
   onTenantCodeInput(e) {
-    this.setData({ tenantCode: (e && e.detail && e.detail.value) || '' });
+    var val = (e && e.detail && e.detail.value) || '';
+    this.setData({ tenantCode: val, selectedFactory: null, factorySearch: val });
+    this._filterTenants(val);
+  },
+
+  _filterTenants(keyword) {
+    if (!keyword || !keyword.trim()) {
+      this.setData({ filteredTenants: [], showFactoryDropdown: false });
+      return;
+    }
+    var kw = keyword.trim().toLowerCase();
+    var tenants = this.data.tenants;
+    var filtered = tenants.filter(function(t) {
+      var tName = (t.tenantName || t.name || '').toLowerCase();
+      var tCode = (t.tenantCode || '').toLowerCase();
+      return tName.indexOf(kw) !== -1 || tCode.indexOf(kw) !== -1;
+    });
+    this.setData({
+      filteredTenants: filtered.slice(0, 20),
+      showFactoryDropdown: filtered.length > 0,
+    });
+  },
+
+  onPickFactory(e) {
+    var idx = e.currentTarget.dataset.index;
+    var factory = this.data.filteredTenants[idx];
+    if (!factory) return;
+    this.setData({
+      tenantCode: factory.tenantCode || '',
+      tenantName: factory.tenantName || factory.name || '',
+      factoryId: factory.id || '',
+      factorySearch: factory.tenantCode || '',
+      selectedFactory: factory,
+      filteredTenants: [],
+      showFactoryDropdown: false,
+      scannedCode: false,
+    });
+  },
+
+  onHideFactoryDropdown() {
+    this.setData({ showFactoryDropdown: false });
   },
   onUsernameInput(e) {
     this.setData({ username: (e && e.detail && e.detail.value) || '' });
@@ -116,13 +156,22 @@ Page({
             tenantName: parsed.factoryName || parsed.tenantName || '',
             factoryId: parsed.factoryId || '',
             scannedCode: true,
+            selectedFactory: {
+              tenantCode: parsed.tenantCode,
+              tenantName: parsed.factoryName || parsed.tenantName || '',
+              id: parsed.factoryId || '',
+            },
+            filteredTenants: [],
+            showFactoryDropdown: false,
           });
           toast.success('扫码成功：' + (parsed.factoryName || parsed.tenantName || parsed.tenantCode));
         } else {
-          // 直接把扫到的内容作为工厂编码
           this.setData({
             tenantCode: result.trim(),
             scannedCode: true,
+            selectedFactory: null,
+            filteredTenants: [],
+            showFactoryDropdown: false,
           });
           toast.success('已获取编码');
         }

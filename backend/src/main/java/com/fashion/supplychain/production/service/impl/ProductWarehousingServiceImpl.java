@@ -848,4 +848,28 @@ public class ProductWarehousingServiceImpl extends ServiceImpl<ProductWarehousin
         return ok;
     }
 
+    @Override
+    public int countUCodeWarehousedQuantity(String orderId, String scanCode) {
+        if (!StringUtils.hasText(orderId) || !StringUtils.hasText(scanCode)) {
+            return 0;
+        }
+        com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<ProductWarehousing> qw =
+                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<ProductWarehousing>()
+                        .select("COALESCE(SUM(qualified_quantity), 0) as totalQty")
+                        .eq("delete_flag", 0)
+                        .eq("order_id", orderId)
+                        .eq("scan_mode", "ucode")
+                        .eq("cutting_bundle_qr_code", scanCode)
+                        .eq("quality_status", "qualified")
+                        .notIn("warehousing_type", "quality_scan", "quality_scan_scrap");
+        java.util.List<Map<String, Object>> result = this.listMaps(qw);
+        if (result != null && !result.isEmpty()) {
+            Object val = result.get(0).get("totalQty");
+            if (val instanceof Number) {
+                return ((Number) val).intValue();
+            }
+        }
+        return 0;
+    }
+
 }

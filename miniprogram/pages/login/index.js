@@ -32,7 +32,7 @@ async function tryAutoWechatLogin() {
           if (resp.data.user.id && resp.data.user.tenantId) {
             wsManager.connect(String(resp.data.user.id), String(resp.data.user.tenantId));
           }
-        } catch (_e) {}
+        } catch (_e) { /* ws connect ignore */ }
       }
       safeNavigate({ url: '/pages/home/index' }, 'switchTab').catch(() => {});
       return true;
@@ -75,7 +75,7 @@ function finishLogin(user, token) {
       if (user.id && user.tenantId) {
         wsManager.connect(String(user.id), String(user.tenantId));
       }
-    } catch (_e) {}
+    } catch (_e) { /* ws connect ignore */ }
   }
   safeNavigate({ url: '/pages/home/index' }, 'switchTab').catch(() => {});
 }
@@ -387,7 +387,12 @@ Page({
       return;
     }
     if (token && isTokenExpired()) {
-      try { wx.removeStorageSync('auth_token'); } catch (_) {}
+      const ev = resolveEnvVersion();
+      if (ev === 'develop') {
+        console.warn('[Login] 开发环境token过期，保留token尝试复用');
+      } else {
+        try { wx.removeStorageSync('auth_token'); } catch (e) { /* ignore */ }
+      }
     }
 
     const envVersion = resolveEnvVersion();

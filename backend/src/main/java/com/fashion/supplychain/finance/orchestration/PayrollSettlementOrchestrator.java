@@ -460,7 +460,7 @@ public class PayrollSettlementOrchestrator {
             return decimal;
         }
         if (raw instanceof Number number) {
-            return BigDecimal.valueOf(number.doubleValue());
+            return new BigDecimal(number.toString());
         }
         String v = TextUtils.safeText(String.valueOf(raw));
         if (!StringUtils.hasText(v)) {

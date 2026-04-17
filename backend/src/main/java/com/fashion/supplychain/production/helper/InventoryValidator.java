@@ -111,27 +111,29 @@ public class InventoryValidator {
                                                  String progressStage, int incomingQty,
                                                  CuttingBundle bundle) {
         if (order == null || !hasText(order.getId())) {
-            return new QuantityCheckResult(false, 0, 0, Math.max(incomingQty, 0), Math.max(incomingQty, 0), null);
+            throw new IllegalArgumentException("库存校验失败：订单信息缺失，拒绝扫码");
         }
         if (incomingQty <= 0) {
             return new QuantityCheckResult(false, 0, 0, 0, 0, null);
         }
 
-        // ★ 使用裁剪数量作为验证基准（所有菲号的裁剪数量总和）
         int cuttingQty = calculateTotalCuttingQuantity(order.getId());
-        if (cuttingQty <= 0) {
-            // 如果没有裁剪数量，回退到订单数量
+        if (cuttingQty < 0) {
+            throw new IllegalArgumentException("库存校验失败：裁剪数量计算异常，拒绝扫码，请联系管理员");
+        }
+        if (cuttingQty == 0) {
             Integer orderQty = order.getOrderQuantity();
             if (orderQty == null || orderQty <= 0) {
-                return new QuantityCheckResult(false, 0, 0, incomingQty, incomingQty, null);
+                throw new IllegalArgumentException("库存校验失败：订单数量和裁剪数量均为0，拒绝扫码，请先录入裁剪数据");
             }
             cuttingQty = orderQty;
         }
 
-        // 计算该工序已完成数量
         int completedQty = calculateCompletedQuantity(order.getId(), scanType, progressStage, bundle);
+        if (completedQty < 0) {
+            throw new IllegalArgumentException("库存校验失败：已完成数量计算异常，拒绝扫码，请联系管理员");
+        }
 
-        // 计算总数量
         int totalQty = completedQty + incomingQty;
 
         if (totalQty > cuttingQty) {
@@ -167,7 +169,7 @@ public class InventoryValidator {
             return 0;
         } catch (Exception e) {
             log.error("计算裁剪总量失败: orderId={}", orderId, e);
-            return 0;
+            return -1;
         }
     }
 
@@ -207,7 +209,7 @@ public class InventoryValidator {
         } catch (Exception e) {
             log.error("计算已完成数量失败: orderId={}, scanType={}, stage={}",
                     orderId, scanType, progressStage, e);
-            return 0; // 计算失败时返回0，不拦截扫码
+            return -1;
         }
     }
 
@@ -229,10 +231,18 @@ public class InventoryValidator {
             ProductionOrder order = productionOrderService.getById(orderId);
             if (order == null) return 0;
             int totalQty = calculateTotalCuttingQuantity(order.getId());
-            if (totalQty <= 0) {
+            if (totalQty < 0) {
+                log.error("获取剩余数量失败：裁剪数量计算异常, orderId={}", orderId);
+                return 0;
+            }
+            if (totalQty == 0) {
                 totalQty = order.getOrderQuantity() != null ? order.getOrderQuantity() : 0;
             }
             int completedQty = calculateCompletedQuantity(order.getId(), scanType, progressStage, null);
+            if (completedQty < 0) {
+                log.error("获取剩余数量失败：已完成数量计算异常, orderId={}", orderId);
+                return 0;
+            }
             return Math.max(0, totalQty - completedQty);
         } catch (Exception e) {
             log.error("获取剩余数量失败: orderId={}", orderId, e);

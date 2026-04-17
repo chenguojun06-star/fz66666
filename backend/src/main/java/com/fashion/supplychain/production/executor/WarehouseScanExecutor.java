@@ -398,7 +398,7 @@ public class WarehouseScanExecutor {
             }
         } catch (Exception e) {
             log.warn("查询菲号已入库数量失败: bundleId={}", bundle.getId(), e);
-            return;
+            throw new IllegalStateException("查询菲号已入库数量失败，为防止超额入库，请重试或联系管理员");
         }
 
         if (bundleWarehoused >= effectiveBundleQty) {
@@ -734,6 +734,26 @@ public class WarehouseScanExecutor {
             sku.setTenantId(order.getTenantId());
             productSkuService.save(sku);
             log.info("[U编码入库] 自动创建SKU: {}", skuCode);
+        }
+
+        // ★ U编码防重复入库校验：同一订单+同一U编码的累计入库数量不能超过订单数量
+        int orderQty = order.getOrderQuantity() == null ? 0 : order.getOrderQuantity();
+        if (orderQty > 0) {
+            try {
+                int alreadyWarehoused = productWarehousingService.countUCodeWarehousedQuantity(order.getId(), scanCode);
+                if (alreadyWarehoused >= orderQty) {
+                    return Map.of("success", false, "message",
+                            String.format("该U编码已全部入库！订单数量=%d，已入库=%d，无需重复入库", orderQty, alreadyWarehoused));
+                }
+                if (alreadyWarehoused + quantity > orderQty) {
+                    return Map.of("success", false, "message",
+                            String.format("U编码入库数量超出限制！订单数量=%d，已入库=%d，本次=%d，超出%d件",
+                                    orderQty, alreadyWarehoused, quantity, alreadyWarehoused + quantity - orderQty));
+                }
+            } catch (Exception e) {
+                log.warn("[U编码入库] 查询已入库数量失败，为防止重复入库，拒绝本次操作: orderId={}, scanCode={}", order.getId(), scanCode, e);
+                return Map.of("success", false, "message", "查询已入库数量失败，请重试或联系管理员");
+            }
         }
 
         // 更新SKU库存

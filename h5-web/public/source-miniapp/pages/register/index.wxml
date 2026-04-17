@@ -4,13 +4,13 @@
     <view class="subtitle">填写信息后请耐心等待管理员审批</view>
 
     <!-- 工厂编码/名称 -->
-    <view class="field">
+    <view class="field factory-field">
       <view class="label">工厂编码/名称 <text class="required">*</text></view>
       <view class="input-row">
         <input
-          class="input {{tenantCode ? '' : ''}}"
-          placeholder="请输入工厂编码或名称"
-          value="{{tenantCode}}"
+          class="input"
+          placeholder="输入工厂编码或名称搜索"
+          value="{{selectedFactory ? selectedFactory.tenantCode : tenantCode}}"
           bindinput="onTenantCodeInput"
           disabled="{{!!scannedCode}}"
         />
@@ -20,9 +20,26 @@
           </view>
         </view>
       </view>
-      <view wx:if="{{tenantName}}" class="tenant-info">
-        <text class="tenant-tag">{{tenantName}}</text>
-        <text wx:if="{{factoryName}}" class="tenant-tag" style="margin-left: 8px;">{{factoryName}}</text>
+      <!-- 已选中工厂标签 -->
+      <view wx:if="{{selectedFactory}}" class="tenant-info">
+        <text class="tenant-tag">{{selectedFactory.tenantName || tenantName}}</text>
+      </view>
+      <!-- 搜索下拉列表 -->
+      <view wx:if="{{showFactoryDropdown && !selectedFactory}}" class="factory-dropdown">
+        <view
+          wx:for="{{filteredTenants}}"
+          wx:key="id"
+          class="factory-dropdown-item"
+          hover-class="factory-dropdown-item-hover"
+          data-index="{{index}}"
+          bindtap="onPickFactory"
+        >
+          <text class="factory-dropdown-name">{{item.tenantName || item.name}}</text>
+          <text class="factory-dropdown-code">({{item.tenantCode}})</text>
+        </view>
+        <view wx:if="{{filteredTenants.length === 0}}" class="factory-dropdown-empty">
+          未搜索到对应工厂，可直接输入编码
+        </view>
       </view>
     </view>
 

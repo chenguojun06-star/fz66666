@@ -95,7 +95,7 @@ public class NumberUtils {
             return (BigDecimal) obj;
         }
         if (obj instanceof Number) {
-            return BigDecimal.valueOf(((Number) obj).doubleValue());
+            return new BigDecimal(obj.toString());
         }
         try {
             String str = obj.toString().trim();
@@ -160,7 +160,9 @@ public class NumberUtils {
      * @return true为正数
      */
     public static boolean isPositive(Number num) {
-        return num != null && num.doubleValue() > 0;
+        if (num == null) return false;
+        if (num instanceof BigDecimal bd) return bd.compareTo(BigDecimal.ZERO) > 0;
+        return num.doubleValue() > 0;
     }
 
     /**
@@ -170,7 +172,9 @@ public class NumberUtils {
      * @return true为非负数
      */
     public static boolean isNonNegative(Number num) {
-        return num != null && num.doubleValue() >= 0;
+        if (num == null) return false;
+        if (num instanceof BigDecimal bd) return bd.compareTo(BigDecimal.ZERO) >= 0;
+        return num.doubleValue() >= 0;
     }
 
     /**

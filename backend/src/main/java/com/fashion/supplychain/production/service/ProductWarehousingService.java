@@ -68,4 +68,6 @@ public interface ProductWarehousingService extends IService<ProductWarehousing> 
         String findExistingWarehousingNoByOrderId(String orderId);
 
         String buildWarehousingNo(LocalDateTime now);
+
+        int countUCodeWarehousedQuantity(String orderId, String scanCode);
 }
