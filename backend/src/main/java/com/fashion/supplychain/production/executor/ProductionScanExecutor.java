@@ -413,7 +413,7 @@ public class ProductionScanExecutor {
             log.info("[ScanSave] 扫码记录写入成功: recordId={}", sr.getId());
             // 🔔 WebSocket实时播报：忽略失败，不阻断扫码流程
             try {
-                webSocketService.broadcastScanRealtime(
+                webSocketService.notifyScanRealtime(
                     operatorId,
                     order.getOrderNo(),
                     order.getStyleNo() != null ? order.getStyleNo() : "",

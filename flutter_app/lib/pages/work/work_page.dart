@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_spacing.dart';
@@ -220,14 +221,11 @@ class WorkPage extends GetView<WorkController> {
   }
 
   Widget _buildOrderCard(Map<String, dynamic> order) {
-    final progress = (order['productionProgress'] ?? 0) as num;
-    final orderNo = order['orderNo']?.toString() ?? '-';
-    final styleNo = order['styleNo']?.toString() ?? '-';
-    final processName = order['currentProcessName']?.toString() ?? '';
-    final factoryName = order['factoryName']?.toString() ?? '-';
     final orderId = order['id']?.toString() ?? '';
-    final isOverdue = order['overdue'] == true;
     final isExpanded = controller.expandedOrderId.value == orderId;
+    final isOverdue = order['remainDaysClass'] == 'days-overdue';
+    final progress = order['calculatedProgress'] ?? 0;
+    final coverUrl = order['styleCoverUrl']?.toString() ?? '';
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -242,165 +240,270 @@ class WorkPage extends GetView<WorkController> {
             onTap: () => controller.toggleOrderExpand(orderId),
             borderRadius: BorderRadius.circular(AppSpacing.lg),
             child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
+              padding: const EdgeInsets.all(AppSpacing.md),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Row(
-                          children: [
-                            Text(orderNo, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                            if (isOverdue) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: AppColors.tagBgRed,
-                                  borderRadius: BorderRadius.circular(AppSpacing.xs),
-                                ),
-                                child: const Text('延期', style: TextStyle(fontSize: 10, color: AppColors.error)),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      if (processName.isNotEmpty)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: _getProcessTagBg(processName),
-                            borderRadius: BorderRadius.circular(AppSpacing.sm),
-                          ),
-                          child: Text(processName, style: TextStyle(fontSize: 11, color: _getProcessTagColor(processName))),
-                        ),
-                      const SizedBox(width: 4),
-                      Icon(isExpanded ? Icons.expand_less : Icons.expand_more, size: 20, color: AppColors.textTertiary),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text('$styleNo · $factoryName', style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(AppSpacing.lg),
-                          child: LinearProgressIndicator(
-                            value: progress.toDouble() / 100,
-                            backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              progress >= 100 ? AppColors.success : AppColors.primary,
-                            ),
-                            minHeight: 6,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text('${progress.toInt()}%', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                    ],
-                  ),
+                  _buildOrderHeader(order, coverUrl, isOverdue),
+                  const SizedBox(height: AppSpacing.sm),
+                  _buildQtyRow(order),
+                  const SizedBox(height: AppSpacing.sm),
+                  _buildProgressRow(order, progress, isExpanded),
                 ],
               ),
             ),
           ),
-          if (isExpanded) _buildBundleList(orderId),
+          if (isExpanded) _buildExpandedBody(order, orderId),
         ],
       ),
     );
   }
 
-  Widget _buildBundleList(String orderId) {
-    final bundles = controller.orderBundles[orderId] ?? [];
-    return Container(
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: AppColors.borderLight)),
-      ),
-      child: controller.loadingBundles.value
-          ? const Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
-            )
-          : bundles.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Center(child: Text('暂无菲号数据', style: TextStyle(fontSize: 13, color: AppColors.textTertiary))),
+  Widget _buildOrderHeader(Map<String, dynamic> order, String coverUrl, bool isOverdue) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            color: AppColors.bgGray,
+            borderRadius: BorderRadius.circular(AppSpacing.md),
+          ),
+          child: coverUrl.isNotEmpty
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(AppSpacing.md),
+                  child: Image.network(coverUrl, fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const Center(child: Text('👔', style: TextStyle(fontSize: 22))),
+                  ),
                 )
-              : Column(
-                  children: bundles.map((bundle) {
-                    final bundleNo = bundle['bundleNo']?.toString() ?? '-';
-                    final status = bundle['status']?.toString() ?? '';
-                    final processName = bundle['currentProcessName']?.toString() ?? '';
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
-                      decoration: const BoxDecoration(
-                        border: Border(bottom: BorderSide(color: AppColors.borderLight)),
+              : const Center(child: Text('👔', style: TextStyle(fontSize: 22))),
+        ),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(child: Text(order['orderNo']?.toString() ?? '-', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary))),
+                  if (isOverdue || order['remainDaysClass'] == 'days-soon') ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: isOverdue ? AppColors.tagBgRed : AppColors.tagBgOrange,
+                        borderRadius: BorderRadius.circular(AppSpacing.xs),
                       ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.content_cut, size: 16, color: AppColors.textTertiary),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('菲号 $bundleNo', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
-                                if (processName.isNotEmpty)
-                                  Text(processName, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-                              ],
-                            ),
-                          ),
-                          if (status.isNotEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                              decoration: BoxDecoration(
-                                color: _getStatusBg(status),
-                                borderRadius: BorderRadius.circular(AppSpacing.xs),
-                              ),
-                              child: Text(status, style: TextStyle(fontSize: 10, color: _getStatusColor(status))),
-                            ),
-                          PopupMenuButton<String>(
-                            icon: const Icon(Icons.more_vert, size: 18, color: AppColors.textTertiary),
-                            onSelected: (action) => controller.onBundleAction(action, bundle),
-                            itemBuilder: (_) => [
-                              const PopupMenuItem(value: 'split', child: Text('分扎转移')),
-                              const PopupMenuItem(value: 'rollback', child: Text('回退')),
-                            ],
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ),
+                      child: Text(order['remainDaysText']?.toString() ?? '延期',
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: isOverdue ? AppColors.error : AppColors.warning)),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  Text(order['styleNo']?.toString() ?? '--', style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                  if (order['factoryName'] != null) ...[
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(order['factoryName'].toString(), style: const TextStyle(fontSize: 12, color: AppColors.textTertiary), overflow: TextOverflow.ellipsis)),
+                  ],
+                ],
+              ),
+              if (order['currentProcessName'] != null) ...[
+                const SizedBox(height: 2),
+                Text(order['currentProcessName'].toString(), style: const TextStyle(fontSize: 11, color: AppColors.primary)),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 
-  Color _getProcessTagBg(String name) {
-    if (name.contains('裁剪')) return AppColors.tagBgOrange;
-    if (name.contains('车缝') || name.contains('缝制')) return AppColors.tagBgBlue;
-    if (name.contains('质检') || name.contains('检验')) return AppColors.tagBgGreen;
-    if (name.contains('入库') || name.contains('包装')) return AppColors.tagBgGreen;
-    return AppColors.tagBgBlue;
+  Widget _buildQtyRow(Map<String, dynamic> order) {
+    final total = order['cuttingQty'] ?? order['totalQuantity'] ?? order['orderQuantity'] ?? 0;
+    final completed = order['completedQuantity'] ?? 0;
+    final remain = order['remainQuantity'] ?? 0;
+    return Row(
+      children: [
+        _qtyItem('$total', '总数量'),
+        Container(width: 1, height: 18, color: AppColors.borderLight, margin: const EdgeInsets.symmetric(horizontal: 10)),
+        _qtyItem('$completed', '已完成'),
+        Container(width: 1, height: 18, color: AppColors.borderLight, margin: const EdgeInsets.symmetric(horizontal: 10)),
+        _qtyItem('$remain', '剩余'),
+      ],
+    );
   }
 
-  Color _getProcessTagColor(String name) {
-    if (name.contains('裁剪')) return AppColors.warning;
-    if (name.contains('车缝') || name.contains('缝制')) return AppColors.info;
-    if (name.contains('质检') || name.contains('检验')) return AppColors.success;
-    if (name.contains('入库') || name.contains('包装')) return AppColors.success;
-    return AppColors.info;
+  Widget _qtyItem(String val, String label) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(val, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+        Text(label, style: const TextStyle(fontSize: 10, color: AppColors.textTertiary)),
+      ],
+    );
   }
 
-  Color _getStatusBg(String status) {
-    if (status.contains('完成') || status.contains('入库')) return AppColors.tagBgGreen;
-    if (status.contains('延期') || status.contains('异常')) return AppColors.tagBgRed;
-    return AppColors.tagBgBlue;
+  Widget _buildProgressRow(Map<String, dynamic> order, int progress, bool isExpanded) {
+    return Row(
+      children: [
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppSpacing.lg),
+            child: LinearProgressIndicator(
+              value: (progress / 100).clamp(0.0, 1.0),
+              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                order['remainDaysClass'] == 'days-overdue' ? AppColors.error : (progress >= 100 ? AppColors.success : AppColors.primary),
+              ),
+              minHeight: 5,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text('$progress%', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+        const SizedBox(width: 4),
+        Icon(isExpanded ? Icons.expand_less : Icons.expand_more, size: 18, color: AppColors.textTertiary),
+      ],
+    );
   }
 
-  Color _getStatusColor(String status) {
-    if (status.contains('完成') || status.contains('入库')) return AppColors.success;
-    if (status.contains('延期') || status.contains('异常')) return AppColors.error;
-    return AppColors.info;
+  Widget _buildExpandedBody(Map<String, dynamic> order, String orderId) {
+    final processNodes = (order['processNodes'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+    return Container(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.md),
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: AppColors.borderLight)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (processNodes.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            const Text('工序进度', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+            const SizedBox(height: AppSpacing.sm),
+            ...processNodes.map((node) => _buildProcessItem(node)),
+          ],
+          const SizedBox(height: AppSpacing.md),
+          _buildBundleSection(orderId),
+          const SizedBox(height: AppSpacing.sm),
+          GestureDetector(
+            onTap: () {
+              final orderNo = order['orderNo']?.toString() ?? '';
+              if (orderNo.isNotEmpty) {
+                Clipboard.setData(ClipboardData(text: orderNo));
+                Get.snackbar('已复制', '订单号 $orderNo 已复制到剪贴板',
+                  snackPosition: SnackPosition.TOP, duration: const Duration(seconds: 2));
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: AppColors.bgGray,
+                borderRadius: BorderRadius.circular(AppSpacing.md),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('📋', style: TextStyle(fontSize: 13)),
+                  SizedBox(width: 4),
+                  Text('复制订单号', style: TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProcessItem(Map<String, dynamic> node) {
+    final pct = node['percent'] ?? 0;
+    final isDone = pct >= 100;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(child: Text(node['name']?.toString() ?? '', style: const TextStyle(fontSize: 12, color: AppColors.textSecondary))),
+              Text('$pct%', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: isDone ? AppColors.success : AppColors.primary)),
+            ],
+          ),
+          const SizedBox(height: 3),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(3),
+            child: LinearProgressIndicator(
+              value: (pct / 100).clamp(0.0, 1.0),
+              backgroundColor: AppColors.bgGray,
+              valueColor: AlwaysStoppedAnimation<Color>(isDone ? AppColors.success : AppColors.primary),
+              minHeight: 3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBundleSection(String orderId) {
+    final bundles = controller.orderBundles[orderId] ?? [];
+    if (controller.loadingBundles.value) {
+      return const Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)));
+    }
+    if (bundles.isEmpty) {
+      return const Text('暂无菲号数据', style: TextStyle(fontSize: 12, color: AppColors.textTertiary));
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('菲号列表', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+        const SizedBox(height: AppSpacing.sm),
+        ...bundles.map((bundle) {
+          final bundleNo = bundle['bundleNo']?.toString() ?? '-';
+          final processName = bundle['currentProcessName']?.toString() ?? '';
+          final status = bundle['status']?.toString() ?? '';
+          return Container(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: AppColors.borderLight)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.content_cut, size: 14, color: AppColors.textTertiary),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('菲号 $bundleNo', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.textPrimary)),
+                      if (processName.isNotEmpty)
+                        Text(processName, style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                    ],
+                  ),
+                ),
+                if (status.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: status.contains('完成') ? AppColors.tagBgGreen : AppColors.tagBgBlue,
+                      borderRadius: BorderRadius.circular(AppSpacing.xs),
+                    ),
+                    child: Text(status, style: TextStyle(fontSize: 9, color: status.contains('完成') ? AppColors.success : AppColors.info)),
+                  ),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, size: 16, color: AppColors.textTertiary),
+                  onSelected: (action) => controller.onBundleAction(action, bundle),
+                  itemBuilder: (_) => [
+                    const PopupMenuItem(value: 'split', child: Text('分扎转移')),
+                    const PopupMenuItem(value: 'rollback', child: Text('回退')),
+                  ],
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
   }
 }

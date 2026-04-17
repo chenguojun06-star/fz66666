@@ -131,6 +131,81 @@ class WorkController extends GetxController {
     loadingBundles.value = false;
   }
 
+  Map<String, dynamic> _enrichOrder(Map<String, dynamic> order) {
+    final completed = int.tryParse(order['completedQuantity']?.toString() ?? '0') ?? 0;
+    final total = int.tryParse(
+          order['cuttingQuantity']?.toString() ??
+          order['cuttingQty']?.toString() ??
+          order['orderQuantity']?.toString() ??
+          order['sizeTotal']?.toString() ?? '0',
+        ) ?? 0;
+    final remain = total - completed;
+    final progress = total > 0 ? ((completed / total) * 100).round().clamp(0, 100) : 0;
+
+    final deliveryDate = order['deliveryDate']?.toString() ?? '';
+    String remainDaysText = '';
+    String remainDaysClass = '';
+    if (deliveryDate.isNotEmpty) {
+      try {
+        final delivery = DateTime.parse(deliveryDate);
+        final diff = delivery.difference(DateTime.now()).inDays;
+        if (diff < 0) {
+          remainDaysText = '已延期${-diff}天';
+          remainDaysClass = 'days-overdue';
+        } else if (diff == 0) {
+          remainDaysText = '今日交期';
+          remainDaysClass = 'days-today';
+        } else if (diff <= 3) {
+          remainDaysText = '剩余${diff}天';
+          remainDaysClass = 'days-soon';
+        } else {
+          remainDaysText = '剩余${diff}天';
+          remainDaysClass = 'days-normal';
+        }
+      } catch (_) {}
+    }
+
+    final processNodes = _buildProcessNodes(order);
+
+    return {
+      ...order,
+      'remainQuantity': remain.clamp(0, remain),
+      'calculatedProgress': progress,
+      'remainDaysText': remainDaysText,
+      'remainDaysClass': remainDaysClass,
+      'processNodes': processNodes,
+    };
+  }
+
+  List<Map<String, dynamic>> _buildProcessNodes(Map<String, dynamic> order) {
+    final nodes = <Map<String, dynamic>>[];
+    final stages = [
+      {'name': '采购', 'field': 'procurementQuantity', 'completedField': 'procurementCompleted'},
+      {'name': '裁剪', 'field': 'cuttingQuantity', 'completedField': 'cuttingCompleted'},
+      {'name': '车缝', 'field': 'sewingQuantity', 'completedField': 'sewingCompleted'},
+      {'name': '质检', 'field': 'qualityQuantity', 'completedField': 'qualityCompleted'},
+      {'name': '入库', 'field': 'warehousingQuantity', 'completedField': 'warehousedQuantity'},
+    ];
+
+    for (final stage in stages) {
+      final total = int.tryParse(order[stage['field']]?.toString() ?? '0') ?? 0;
+      if (total > 0) {
+        final completed = int.tryParse(order[stage['completedField']]?.toString() ?? '0') ?? 0;
+        final pct = ((completed / total) * 100).round().clamp(0, 100);
+        nodes.add({'name': stage['name'], 'percent': pct, 'completed': completed, 'total': total});
+      }
+    }
+
+    if (nodes.isEmpty) {
+      final total = int.tryParse(order['orderQuantity']?.toString() ?? '0') ?? 0;
+      final completed = int.tryParse(order['completedQuantity']?.toString() ?? '0') ?? 0;
+      final pct = total > 0 ? ((completed / total) * 100).round().clamp(0, 100) : 0;
+      nodes.add({'name': '总进度', 'percent': pct, 'completed': completed, 'total': total});
+    }
+
+    return nodes;
+  }
+
   Future<void> loadOrders({bool reset = false}) async {
     if (loading.value) return;
     if (!reset && !hasMore.value) return;
@@ -161,7 +236,7 @@ class WorkController extends GetxController {
       if (data is Map && data['code'] == 200) {
         final pageData = data['data'];
         final records = (pageData is Map ? pageData['records'] as List? : null) ?? [];
-        final newOrders = records.map((e) => e as Map<String, dynamic>).toList();
+        final newOrders = records.map((e) => _enrichOrder(e as Map<String, dynamic>)).toList();
 
         if (reset) {
           orders.value = newOrders;
@@ -203,7 +278,7 @@ class WorkController extends GetxController {
       if (data is Map && data['code'] == 200) {
         final pageData = data['data'];
         final records = (pageData is Map ? pageData['records'] as List? : null) ?? [];
-        searchResults.value = records.map((e) => e as Map<String, dynamic>).toList();
+        searchResults.value = records.map((e) => _enrichOrder(e as Map<String, dynamic>)).toList();
       }
     } catch (_) {}
   }
