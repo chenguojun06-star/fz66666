@@ -77,7 +77,7 @@ public class AgentActivityController {
                     "tool_query_financial_payroll")),
             Map.entry("production-scheduler", List.of("tool_query_production_progress", "tool_production_exception",
                     "tool_cutting_task_create", "tool_bundle_split_transfer",
-                    "tool_team_dispatch", "tool_action_executor")),
+                    "tool_team_dispatch", "tool_action_executor", "tool_order_batch_close")),
             Map.entry("finance-settler", List.of("tool_finance_workflow", "tool_shipment_reconciliation",
                     "tool_payroll_approve", "tool_query_financial_payroll",
                     "tool_payroll_anomaly_detect")),

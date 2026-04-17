@@ -2,7 +2,9 @@ package com.fashion.supplychain.intelligence.agent.tool;
 
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
+import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.orchestration.ProductionOrderOrchestrator;
+import com.fashion.supplychain.production.service.ProductionOrderService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -16,7 +18,11 @@ public class OrderBatchCloseTool extends AbstractAgentTool {
     @Autowired
     private ProductionOrderOrchestrator productionOrderOrchestrator;
     @Autowired
+    private ProductionOrderService productionOrderService;
+    @Autowired
     private AiAgentToolAccessService aiAgentToolAccessService;
+
+    private static final String PO_PREFIX = "PO";
 
     @Override
     public String getName() {
@@ -87,7 +93,24 @@ public class OrderBatchCloseTool extends AbstractAgentTool {
         if (orderNosStr != null) {
             for (String no : orderNosStr.split("[,，]")) {
                 String trimmed = no.trim();
-                if (!trimmed.isEmpty()) ids.add(trimmed);
+                if (!trimmed.isEmpty()) {
+                    if (trimmed.toUpperCase().startsWith(PO_PREFIX)) {
+                        try {
+                            ProductionOrder order = productionOrderService.getByOrderNo(trimmed);
+                            if (order != null) {
+                                ids.add(order.getId());
+                            } else {
+                                log.warn("[tool_order_batch_close] 订单号未找到: {}", trimmed);
+                                ids.add(trimmed);
+                            }
+                        } catch (Exception e) {
+                            log.warn("[tool_order_batch_close] 订单号解析失败: {}", trimmed, e);
+                            ids.add(trimmed);
+                        }
+                    } else {
+                        ids.add(trimmed);
+                    }
+                }
             }
         }
         return ids;

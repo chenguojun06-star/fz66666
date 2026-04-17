@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '@/api';
 import { useAuthStore } from '@/stores/authStore';
 import { canSeeDashboard, hasFeaturePermission } from '@/utils/permission';
+import { toast } from '@/utils/uiHelper';
 import Icon from '@/components/Icon';
 
 const ALL_MENU_ITEMS = [
