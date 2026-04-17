@@ -1,22 +1,32 @@
 ## 2026-04-18
 
-### 🔴 紧急修复：依赖注入丢失导致接口500错误
+### 🔴🔴🔴 重大事故：依赖注入丢失导致全线500错误
 
-**根因**：清理未使用 `@Autowired` import 时，7个使用字段注入的类被误删了 `@Autowired` 注解，导致所有依赖字段为 `null`，运行时 `NullPointerException` → 500。
+#### 事故时间线
+1. **起因**：清理未使用 `@Autowired` import 时，误删了使用字段注入的类中的 `@Autowired` 注解
+2. **第一轮修复**：7个文件改为 `@RequiredArgsConstructor` + `private final`，但遗漏了 IntelligenceController 等大量文件
+3. **第二轮修复**：发现 IntelligenceController(50+字段) 和另外20个文件也有同样问题，批量修复
+4. **第三轮修复**：发现14个文件虽然加了 `@RequiredArgsConstructor`，但字段缺少 `final` 关键字，Lombok不会为非final字段生成构造器参数，字段仍为null
 
-**影响范围**：生产订单列表/统计接口、生产扫码、物料采购状态、裁剪任务、智能执行、工作流、订单利润分析等核心功能全部不可用。
+#### ⚠️ 血的教训（必读）
+1. **删除 `@Autowired` import 前，必须检查该文件是否有其他注入机制**（`@RequiredArgsConstructor`、显式构造器）
+2. **`@RequiredArgsConstructor` 只对 `final` 字段生成构造器参数**，非final字段不会被注入！
+3. **批量修改后必须做全量扫描验证**，不能只看编译通过就认为没问题
+4. **内部DTO类（`@Data`）的字段不能加 `final`**，否则setter无法生成
+5. **有 `@PostConstruct` 赋值的字段不能加 `final`**（如 CosService.cosClient）
+6. **有显式构造器的类不能加 `@RequiredArgsConstructor`**（会冲突）
 
-**修复方案**：将字段注入改为构造器注入（`@RequiredArgsConstructor` + `private final`），更安全且符合Spring最佳实践。
+#### 影响范围（3轮修复共41个文件）
+**第一轮**（7个文件）：ProductionOrderController、ProductionScanExecutor、MaterialPurchaseStatusHelper、CuttingTaskOrchestrator、IntelligenceExecutionController、SmartWorkflowOrchestrator、OrderProfitOrchestrator
 
-| 文件 | 修复内容 | 受影响接口 |
-|------|---------|-----------|
-| `ProductionOrderController.java` | `@Autowired` → `@RequiredArgsConstructor` + `private final` | `/api/production/order/*` 全部接口 |
-| `ProductionScanExecutor.java` | 同上 | 生产扫码全部功能 |
-| `MaterialPurchaseStatusHelper.java` | 同上 | 物料采购状态变更 |
-| `CuttingTaskOrchestrator.java` | 同上 | 裁剪任务管理 |
-| `IntelligenceExecutionController.java` | 同上 | `/api/intelligence/commands/*` |
-| `SmartWorkflowOrchestrator.java` | 同上 | 智能工作流 |
-| `OrderProfitOrchestrator.java` | 同上 | 订单利润分析 |
+**第二轮**（20个文件）：IntelligenceController(50+字段)、WechatPayProperties、AlipayProperties、SFExpressProperties、TencentSmsProperties、STOProperties、StyleSelectionSourceHelper、StyleQuotationServiceImpl、WeChatMiniProgramAuthOrchestrator、WeChatMiniProgramClient、OperationLogServiceImpl、LoginLogServiceImpl、OperationLogTargetNameResolver、CosService、OperatorRecorder、SystemOperationLogAspect、ScanRecordServiceImpl、MaterialInboundServiceImpl、PayrollAggregationOrchestrator、ModelRoutingConfig
+
+**第三轮**（14个文件）：OperationLogTargetNameResolver(8字段)、SystemOperationLogAspect(7字段)、KnowledgeGraphOrchestrator、WorkflowExecutionOrchestrator、PersonalWorkPlanOrchestrator、DailyBriefOrchestrator、OperationLogServiceImpl、MaterialInboundServiceImpl、StyleSelectionSourceHelper、LogisticsCallbackController、FinishedInventoryOrchestrator、MyBatisPlusMetaObjectHandler、ScanRecordServiceImpl、IntelligenceInferenceOrchestrator
+
+#### 验证结果
+- `mvn clean compile` → BUILD SUCCESS ✅
+- 全量扫描 `@RequiredArgsConstructor` + 非 `final` 字段 → 0 issues ✅
+- 全量扫描 bare fields 无注入机制 → 0 issues ✅
 
 ### WebSocket 全局广播移除 + 代码清理
 
