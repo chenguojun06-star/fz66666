@@ -37,10 +37,10 @@ public class LogisticsCallbackController {
     private final IntegrationRecordService recordService;
 
     @Autowired(required = false)
-    private final SFExpressProperties sfExpressProperties;
+    private SFExpressProperties sfExpressProperties;
 
     @Autowired(required = false)
-    private final STOProperties stoProperties;
+    private STOProperties stoProperties;
 
     // =====================================================
     // 顺丰路由事件推送

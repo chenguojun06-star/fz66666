@@ -57,7 +57,7 @@ public class PersonalWorkPlanOrchestrator {
     private final ProductionOrderService productionOrderService;
 
     @Autowired(required = false)
-    private final AiAdvisorService aiAdvisorService;
+    private AiAdvisorService aiAdvisorService;
 
     /**
      * 生成当前用户的每日工作计划

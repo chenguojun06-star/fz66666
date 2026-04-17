@@ -51,13 +51,12 @@ public class FinishedInventoryOrchestrator {
     private final StyleInfoService styleInfoService;
     private final StyleAttachmentService styleAttachmentService;
 
-    /** 电商订单回写（出库后自动更新平台物流状态） */
     @Lazy
     @Autowired
-    private final EcommerceOrderOrchestrator ecommerceOrderOrchestrator;
+    private EcommerceOrderOrchestrator ecommerceOrderOrchestrator;
 
     @Autowired
-    private final BillAggregationOrchestrator billAggregationOrchestrator;
+    private BillAggregationOrchestrator billAggregationOrchestrator;
 
     /**
      * 分页查询成品库存
