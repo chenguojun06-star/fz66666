@@ -755,12 +755,13 @@ public class ScanRecordOrchestrator {
             order = resolveOrder(null, scanCode);
         }
         validateOrderBelonging(order, ctx);
+        final ProductionOrder resolvedOrder = order;
         return productionScanExecutor.execute(
                 params, requestId, operatorId, operatorName, scanType,
                 quantity != null ? quantity : NumberUtils.toInt(params.get("quantity")),
                 autoProcess,
-                (unused) -> resolveColor(params, null, null),
-                (unused) -> resolveSize(params, null, null)
+                (unused) -> resolveColor(params, null, resolvedOrder),
+                (unused) -> resolveSize(params, null, resolvedOrder)
         );
     }
 
