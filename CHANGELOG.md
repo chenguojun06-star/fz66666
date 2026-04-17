@@ -1,3 +1,31 @@
+# 2026-04-18
+
+## 🧹 WebSocket 全局广播移除 + 后端代码全面清理
+
+### 重构 — 移除 WebSocket 全局广播模式，改为定向推送
+- **背景**：原 WebSocket 通知采用"遍历超管/经理列表逐个推送"的全局广播模式，存在性能隐患和架构不合理
+- **变更**：
+  - `AppStoreOrchestrator`：删除2处超管循环通知（应用订单/试用通知），改为 log 记录
+  - `TenantBillingHelper`：删除超管循环通知（开票申请），改为 log 记录
+  - `TenantRoleInitHelper`：删除经理循环通知（工人注册），改为 log 记录
+  - `TenantOrchestrator`：删除超管循环通知（工厂入驻），改为 log 记录
+  - `ProactivePatrolAgent`：`broadcastTraceableAdvice` → `sendToUser(userId, TRACEABLE_ADVICE, advice)`
+  - `ProductionScanExecutor`：同上
+  - `WagePaymentOrchestrator`：`broadcastPaymentNotification` → `sendToUser(payeeId, PAYMENT_CREATED/SUCCESS, payload)`
+- **WebSocketService 删除的方法**（5个）：
+  - `broadcastPaymentNotification` / `notifyWorkerRegistrationPending` / `notifyTenantApplicationPending` / `notifyAppOrderPending` / `broadcastTraceableAdvice`
+- **清理连带死代码**：6个文件中因砍广播而不再使用的 `webSocketService`、`userService` 字段及 import
+- 对系统的帮助：消除全局广播循环，减少不必要的 DB 查询（每次广播都要查用户列表），通知改为精准定向推送
+
+### 清理 — 后端 Java 代码全面扫除垃圾
+- **未使用 import 清理**（22处）：涉及 ConstraintFormalizationOrchestrator、OpenApiTrackingHelper、PersonnelDelayAnalysisOrchestrator、ManagementInsightOrchestrator、OpenApiOrderHelper、OrphanDataDetector、AiAdvisorChatResponseOrchestrator、OptimizationSolverOrchestrator、SchedulingSuggestionOrchestrator、KnowledgeGraphOrchestrator、OpenApiDataImportHelper、DelayTrendOrchestrator、AiAgentPromptHelper、TenantFileController、WorkflowExecutionOrchestrator、PendingTaskOrchestrator、PersonalWorkPlanOrchestrator、CodeDiagnosticTool、ScanUndoTool、SmartNotificationOrchestrator、DataConsistencyPatrolJob、SmartNotifyJob
+- **未使用字段清理**（26处）：涉及 MultiAgentGraphOrchestrator、OpenApiOrderHelper、CrewGraphOrchestrator、AlipayAdapter、OrphanDataDetector、DataTruthGuard、ProductionScanExecutor、MaterialPurchaseStatusHelper、ProductionOrderController、IntelligenceController、NlQuerySmartHandlers、CuttingTaskOrchestrator、AgentActivityController、IntelligenceExecutionController、STOAdapter、SmartWorkflowOrchestrator、DecisionChainOrchestrator、AiSandboxOrchestrator、SFExpressAdapter、WechatPayAdapter、WorkflowExecutionOrchestrator、OrderProfitOrchestrator、ScanUndoTool、KnowledgeGraphOrchestrator、SmartNotifyJob、StatusTranslator
+- **未使用局部变量清理**（17处）：涉及 SmartRemarkAgent、StyleDifficultyOrchestrator、ExecutionEngineOrchestrator、AdvisorSimulationOrchestrator、IntelligenceController、SmartAssignmentOrchestrator、LogisticsCallbackController、FinanceTaxExportOrchestrator、PersonalWorkPlanOrchestrator、DataConsistencyPatrolJob、MaxKBService、FollowUpSuggestionEngine、SystemUserTool、MaterialPurchaseStatusHelper、ProductWarehousingQueryHelper、OrderFlowStageFillHelper、CuttingTaskOrchestrator
+- **Unnecessary @SuppressWarnings 清理**（4处）：StyleDifficultyOrchestrator、QualityInboundTool、OrderFactoryTransferTool、OrphanDataDetector
+- 对系统的帮助：消除编译警告，减少代码噪音，避免误判和混淆
+
+---
+
 # 2026-04-17
 
 ## 🔌 全端 WebSocket 实时数据同步 + 轮询降级策略

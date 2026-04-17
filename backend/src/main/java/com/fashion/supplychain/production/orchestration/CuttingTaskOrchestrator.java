@@ -719,7 +719,6 @@ public class CuttingTaskOrchestrator {
             throw new IllegalStateException("该裁剪任务已存在生产扫码记录，无法退回");
         }
 
-        String taskStatus = task.getStatus() == null ? "" : task.getStatus().trim().toLowerCase();
         // bundled 状态（已生成菲号）允许退回，rollbackTask 会同步清理菲号、扫码记录、工序跟踪
 
         boolean ok = cuttingTaskService.rollbackTask(taskId);

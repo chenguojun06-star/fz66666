@@ -1,7 +1,6 @@
 package com.fashion.supplychain.intelligence.helper;
 
 import com.fashion.supplychain.common.UserContext;
-import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.agent.tool.AgentTool;
 import com.fashion.supplychain.intelligence.dto.IntelligenceMemoryResponse;
 import com.fashion.supplychain.intelligence.dto.WorkerProfileRequest;

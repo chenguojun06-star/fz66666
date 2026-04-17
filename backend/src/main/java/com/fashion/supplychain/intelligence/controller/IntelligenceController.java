@@ -1030,7 +1030,6 @@ public class IntelligenceController {
     @PostMapping("/qdrant/backfill-style-images-tenant-id")
     public Result<?> backfillStyleImagesTenantId() {
         java.util.Map<Long, Long> styleIdToTenantId = new java.util.LinkedHashMap<>();
-        com.fashion.supplychain.style.entity.StyleInfo query = new com.fashion.supplychain.style.entity.StyleInfo();
         styleInfoService.lambdaQuery()
                 .select(com.fashion.supplychain.style.entity.StyleInfo::getId,
                         com.fashion.supplychain.style.entity.StyleInfo::getTenantId)

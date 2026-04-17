@@ -12,8 +12,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -21,7 +19,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 import javax.annotation.PreDestroy;
 
@@ -274,7 +271,6 @@ public class PersonalWorkPlanOrchestrator {
         int count = 0;
         for (Map<String, Object> t : tasks) {
             if (count >= 8) break;
-            String priority = (String) t.get("priority");
             sb.append("- ").append(t.get("orderNo"));
             if (StringUtils.hasText((String) t.get("styleNo"))) {
                 sb.append("（款号:").append(t.get("styleNo")).append("）");

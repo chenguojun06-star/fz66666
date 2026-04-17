@@ -1,7 +1,6 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.finance.entity.FinishedProductSettlement;
 import com.fashion.supplychain.finance.service.FinishedProductSettlementService;
 import com.fashion.supplychain.production.entity.ProductionOrder;

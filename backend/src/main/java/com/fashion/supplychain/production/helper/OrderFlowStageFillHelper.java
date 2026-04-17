@@ -343,7 +343,6 @@ public class OrderFlowStageFillHelper {
                 Integer packagingRate = computeRate(packagingQty, baseQtyForRate);
                 o.setPackagingCompletionRate(packagingRate);
 
-                int tailQty = ironingQty;
                 if (!trackingByProcess.isEmpty()) {
                     Integer tailMinRate = resolveTrackingMinRate(trackingByProcess, baseQtyForRate,
                             new String[]{"尾部", "大烫", "整烫", "剪线", "尾工", "ironing", "tailprocess", "tail_process"},

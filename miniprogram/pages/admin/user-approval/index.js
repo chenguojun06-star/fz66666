@@ -15,7 +15,8 @@ Page({
     tenantTotal: 0,
     isTenantOwner: false,
     isFactoryOwner: false,
-    activeTab: 'system',
+    isAdminOrSupervisor: false,
+    activeTab: 'tenant',
     showApprovalModal: false,
     showRejectModal: false,
     currentUser: null,
@@ -34,33 +35,40 @@ Page({
 
     const ownerFlag = isTenantOwner();
     const factoryOwnerFlag = isFactoryOwner();
-    this.setData({ isTenantOwner: ownerFlag, isFactoryOwner: factoryOwnerFlag });
+    const adminFlag = isAdminOrSupervisor();
+    this.setData({ isTenantOwner: ownerFlag, isFactoryOwner: factoryOwnerFlag, isAdminOrSupervisor: adminFlag });
 
-    if (!isAdminOrSupervisor() && !ownerFlag && !factoryOwnerFlag) {
+    if (!adminFlag && !ownerFlag && !factoryOwnerFlag) {
       toast.error('仅管理员可访问', 2000);
       setTimeout(() => wx.navigateBack(), 2000);
       return;
     }
 
-    if (ownerFlag && !isAdminOrSupervisor()) {
-      this.setData({ activeTab: 'tenant' });
-    } else if (factoryOwnerFlag && !isAdminOrSupervisor()) {
+    if (adminFlag) {
+      this.setData({ activeTab: 'system' });
+    } else {
       this.setData({ activeTab: 'tenant' });
     }
 
-    this.loadPendingUsers(true);
-    this.loadRoleOptions();
+    if (adminFlag) {
+      this.loadPendingUsers(true);
+      this.loadRoleOptions();
+    }
     if (ownerFlag || factoryOwnerFlag) {
       this.loadTenantRegistrations();
     }
   },
 
   onPullDownRefresh() {
-    this.loadPendingUsers(true);
+    if (this.data.activeTab === 'system' && this.data.isAdminOrSupervisor) {
+      this.loadPendingUsers(true);
+    } else {
+      this.loadTenantRegistrations();
+    }
   },
 
   onReachBottom() {
-    if (this.data.hasMore && !this.data.loading) {
+    if (this.data.activeTab === 'system' && this.data.isAdminOrSupervisor && this.data.hasMore && !this.data.loading) {
       this.setData({ page: this.data.page + 1 }, () => {
         this.loadPendingUsers(false);
       });
@@ -107,7 +115,9 @@ Page({
   },
 
   onTabChange(e) {
-    this.setData({ activeTab: e.currentTarget.dataset.tab });
+    var tab = e.currentTarget.dataset.tab;
+    if (tab === 'system' && !this.data.isAdminOrSupervisor) return;
+    this.setData({ activeTab: tab });
   },
 
   onApproveUser(e) {

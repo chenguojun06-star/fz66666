@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.intelligence.dto.AiAdvisorChatResponse;
 import com.fashion.supplychain.intelligence.dto.AiChartInfo;
-import com.fashion.supplychain.intelligence.dto.FollowUpAction;
 import com.fashion.supplychain.intelligence.dto.HighRiskActionInfo;
 import com.fashion.supplychain.intelligence.dto.XiaoyunInsightCard;
 import com.fashion.supplychain.intelligence.helper.AiAgentToolExecHelper;

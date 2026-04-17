@@ -107,7 +107,6 @@ public class AdvisorSimulationOrchestrator {
             int progress = order.getProductionProgress() != null ? order.getProductionProgress() : 0;
             if (progress >= 90 || progress <= 0) continue;
 
-            int remaining = 100 - progress;
             double speedup = 1.0 + capacityBoostPercent / 100.0;
             int daysToFinishNow = estimateDaysToFinish(order, today);
             int daysToFinishBoosted = (int) Math.ceil(daysToFinishNow / speedup);

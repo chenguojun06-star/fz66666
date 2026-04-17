@@ -1,10 +1,7 @@
 package com.fashion.supplychain.intelligence.agent.tool;
 
-import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
-import com.fashion.supplychain.production.entity.ProductionOrder;
-import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.orchestration.ScanRecordOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;

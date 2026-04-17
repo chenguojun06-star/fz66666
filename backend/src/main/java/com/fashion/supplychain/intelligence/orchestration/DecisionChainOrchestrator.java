@@ -25,7 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class DecisionChainOrchestrator {
 
-    private static final ObjectMapper JSON = new ObjectMapper();
 
     @Autowired private DecisionMemoryMapper decisionMemoryMapper;
     @Autowired private IntelligenceInferenceOrchestrator inferenceOrchestrator;

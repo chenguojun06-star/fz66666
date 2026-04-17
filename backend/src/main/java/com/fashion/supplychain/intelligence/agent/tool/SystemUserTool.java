@@ -76,7 +76,6 @@ public class SystemUserTool implements AgentTool {
 
             String username = (String) args.get("username");
             String roleName = (String) args.get("roleName");
-            String processCode = (String) args.get("processCode");
 
             QueryWrapper<User> query = new QueryWrapper<>();
             if (username != null && !username.isBlank()) {

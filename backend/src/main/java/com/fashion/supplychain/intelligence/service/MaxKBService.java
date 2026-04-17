@@ -110,7 +110,6 @@ public class MaxKBService {
             HttpHeaders headers = new HttpHeaders();
             headers.set("Authorization", "Bearer " + apiKey);
             headers.setContentType(MediaType.APPLICATION_JSON);
-            HttpEntity<Void> entity = new HttpEntity<>(headers);
 
             String resp = restTemplate.getForObject(url, String.class);
             if (resp != null) {

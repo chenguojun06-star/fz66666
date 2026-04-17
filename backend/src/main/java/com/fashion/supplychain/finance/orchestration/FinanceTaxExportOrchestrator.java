@@ -83,7 +83,6 @@ public class FinanceTaxExportOrchestrator {
             Sheet sheet = wb.createSheet("工资结算汇总");
             CellStyle headerStyle = createHeaderStyle(wb);
             CellStyle moneyStyle = createMoneyStyle(wb);
-            CellStyle dateStyle = createDateStyle(wb);
 
             String[] headers = {"结算单号", "订单编号", "款式编号", "款式名称",
                     "结算开始日期", "结算截止日期", "总件数", "总金额(元)", "状态", "备注"};

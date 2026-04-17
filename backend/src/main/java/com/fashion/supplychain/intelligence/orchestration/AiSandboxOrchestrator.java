@@ -16,7 +16,6 @@ public class AiSandboxOrchestrator {
     @Autowired
     private FactoryCapacityOrchestrator factoryCapacityOrchestrator;
 
-    private static final ObjectMapper JSON = new ObjectMapper();
 
     /**
      * 沙盘推演：给定一个假设的新增数量，预估最合适的接单工厂以及完成所需天数。

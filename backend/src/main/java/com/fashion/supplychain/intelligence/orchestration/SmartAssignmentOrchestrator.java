@@ -163,7 +163,6 @@ public class SmartAssignmentOrchestrator {
 
     private String buildReason(double avgPerDay, int activeDays,
             double stability, int vsAvgPct) {
-        String prod = vsAvgPct >= 20 ? "高产" : vsAvgPct >= -10 ? "稳定" : "待提升";
         String stab = stability >= 0.7 ? "产出稳定" : stability >= 0.4 ? "波动较小" : "波动较大";
         return String.format("日均 %.0f 件（%s工厂均值 %d%%），%d 天活跃，%s",
                 avgPerDay, vsAvgPct >= 0 ? "高于" : "低于", Math.abs(vsAvgPct),

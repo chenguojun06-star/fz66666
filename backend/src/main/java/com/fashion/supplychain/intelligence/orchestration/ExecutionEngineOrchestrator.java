@@ -48,7 +48,6 @@ public class ExecutionEngineOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public <T> ExecutionResult<T> execute(ExecutableCommand command, Long executorId) {
         long startTime = System.currentTimeMillis();
-        String auditId = command.getCommandId();
 
         try {
             log.info("[ExecutionEngine] 开始执行命令: action={}, commandId={}, executor={}",

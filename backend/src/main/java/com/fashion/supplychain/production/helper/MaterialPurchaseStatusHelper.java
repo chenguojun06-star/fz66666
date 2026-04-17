@@ -151,7 +151,6 @@ public class MaterialPurchaseStatusHelper {
         try {
             Long tenantId = UserContext.tenantId();
             String orderNo = updated.getOrderNo() != null ? updated.getOrderNo() : "";
-            String materialName = updated.getMaterialName() != null ? updated.getMaterialName() : "物料";
             String receiver = rname != null && !rname.isEmpty() ? rname : rid;
             com.fashion.supplychain.production.entity.SysNotice notice = new com.fashion.supplychain.production.entity.SysNotice();
             notice.setTenantId(tenantId);

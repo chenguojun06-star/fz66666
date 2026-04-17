@@ -6,7 +6,6 @@ import com.fashion.supplychain.intelligence.entity.KgEntity;
 import com.fashion.supplychain.intelligence.entity.KgRelation;
 import com.fashion.supplychain.intelligence.mapper.KgEntityMapper;
 import com.fashion.supplychain.intelligence.mapper.KgRelationMapper;
-import com.fashion.supplychain.intelligence.orchestration.IntelligenceInferenceOrchestrator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +14,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service

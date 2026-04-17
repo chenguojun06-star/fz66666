@@ -304,7 +304,6 @@ public class FollowUpSuggestionEngine {
         JsonNode result = parseJson(rec.rawResult);
 
         String orderNo = extractString(result, "orderNo", "order_no");
-        String orderId = extractString(result, "orderId", "id");
         String styleNo = extractString(result, "styleNo", "style_no");
         int totalQty = extractInt(result, "totalQuantity", "orderQuantity", "quantity");
         String factoryName = extractString(result, "factoryName");

@@ -305,7 +305,6 @@ public class ProductWarehousingQueryHelper {
 
             String processCode = scan.getProcessCode() == null ? "" : scan.getProcessCode().trim();
             String processCodeLower = processCode.toLowerCase();
-            String processName = scan.getProcessName() == null ? "" : scan.getProcessName().trim();
 
             bundleScanTypes.computeIfAbsent(bundleId, k -> new HashSet<>()).add(scanType);
             if (scan.getQuantity() != null && scan.getQuantity() > 0) {

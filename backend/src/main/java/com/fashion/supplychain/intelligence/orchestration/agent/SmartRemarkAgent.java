@@ -194,7 +194,6 @@ public class SmartRemarkAgent {
         String remarks = order.getRemarks();
         if (remarks == null || remarks.isBlank()) return true;
 
-        LocalDateTime cutoff = LocalDateTime.now().minusHours(24);
         String today = LocalDateTime.now().format(DateTimeFormatter.ofPattern("MM-dd"));
 
         if (remarks.contains(AI_REMARK_PREFIX) && remarks.contains(today)) {
@@ -293,14 +292,11 @@ public class SmartRemarkAgent {
 
         String title;
         String content;
-        String priority;
 
         if (score >= 80) {
             title = "🚨 紧急：" + order.getOrderNo();
-            priority = "critical";
         } else {
             title = "⚠️ 需关注：" + order.getOrderNo();
-            priority = "warning";
         }
 
         StringBuilder body = new StringBuilder();

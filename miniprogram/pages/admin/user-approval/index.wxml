@@ -4,12 +4,12 @@
     <view class="count">待审批：{{activeTab === 'tenant' ? tenantTotal : total}}人</view>
   </view>
 
-  <!-- Tab切换（租户主账号或工厂老板显示） -->
+  <!-- Tab切换（仅超级管理员/系统管理员显示，普通租户只看工人注册） -->
   <view wx:if="{{isTenantOwner || isFactoryOwner}}" class="tab-bar">
     <view class="tab-item {{activeTab === 'tenant' ? 'tab-active' : ''}}" bindtap="onTabChange" data-tab="tenant">
       工人注册 ({{tenantTotal}})
     </view>
-    <view class="tab-item {{activeTab === 'system' ? 'tab-active' : ''}}" bindtap="onTabChange" data-tab="system">
+    <view wx:if="{{isAdminOrSupervisor}}" class="tab-item {{activeTab === 'system' ? 'tab-active' : ''}}" bindtap="onTabChange" data-tab="system">
       系统注册 ({{total}})
     </view>
   </view>

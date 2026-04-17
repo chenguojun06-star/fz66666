@@ -2,8 +2,6 @@ package com.fashion.supplychain.integration.openapi.helper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.integration.openapi.entity.TenantApp;
-import com.fashion.supplychain.production.entity.ProductionOrder;
-import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleInfo;
 import com.fashion.supplychain.style.entity.StyleProcess;
 import com.fashion.supplychain.style.service.StyleInfoService;

@@ -126,7 +126,6 @@ public class LogisticsCallbackController {
     public Map<String, Object> stoCallback(@RequestBody Map<String, Object> body) {
         String trackingNumber = String.valueOf(body.getOrDefault("billCode", ""));
         String status = String.valueOf(body.getOrDefault("lastStatus", ""));
-        String appKey = String.valueOf(body.getOrDefault("appKey", ""));
         String sign = String.valueOf(body.getOrDefault("sign", ""));
 
         log.info("[申通回调] 收到推送 | trackingNo={} status={}", trackingNumber, status);

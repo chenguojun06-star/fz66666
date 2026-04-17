@@ -388,10 +388,6 @@ public class StyleDifficultyOrchestrator {
                 imageUrl == null ? "null" : (
                         imageUrl.startsWith("data:") ? "base64(" + imageUrl.length() + "字符)" :
                         imageUrl.startsWith("http") ? "http-url" : "other"));
-        String imageInsightInstruction = visionFailed
-                ? "必须填写：'" + imageInsightFallback + "'"
-                : "用80字以内写三点：①款式大类+颜色/面料 ②最难的1-2个工艺特征 ③制版/缝制注意点。直接给结论，不要介绍性语言。";
-
         String userMessage = String.format(
                 "款式信息：\n" +
                 "- 款号：%s\n" +
