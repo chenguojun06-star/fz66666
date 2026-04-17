@@ -285,7 +285,21 @@ public class ScanRecordOrchestrator {
             webSocketService.broadcastScanUndo(on, TextUtils.safeText(safeParams.get("scanType")));
             webSocketService.broadcastDataChanged("ScanRecord", null, "delete");
             if (hasText(on)) {
-                webSocketService.broadcastOrderProgressChanged(on, 0, "撤销");
+                try {
+                    String oid = TextUtils.safeText(safeParams.get("orderId"));
+                    if (!hasText(oid)) {
+                        oid = TextUtils.safeText(safeParams.get("_resolvedOrderId"));
+                    }
+                    if (hasText(oid)) {
+                        com.fashion.supplychain.production.entity.ProductionOrder po = productionOrderService.getById(oid);
+                        int curProgress = po != null && po.getProductionProgress() != null ? po.getProductionProgress() : 0;
+                        webSocketService.broadcastOrderProgressChanged(on, curProgress, "撤销");
+                    } else {
+                        webSocketService.broadcastOrderProgressChanged(on, 0, "撤销");
+                    }
+                } catch (Exception e) {
+                    webSocketService.broadcastOrderProgressChanged(on, 0, "撤销");
+                }
             }
         } catch (Exception wsEx) {
             log.warn("[Undo] WebSocket broadcast failed (non-blocking): {}", wsEx.getMessage());

@@ -4,6 +4,7 @@
  */
 const api = require('../../../utils/api');
 const { request } = require('../../../utils/request');
+const { eventBus, Events } = require('../../../utils/eventBus');
 
 function _normalizeQualityName(processName) {
   if (!processName) return processName;
@@ -102,6 +103,7 @@ Page({
     }
     this.setData({ loading: false });
     this.loadData(true);
+    this._bindWsEvents();
   },
 
   onPullDownRefresh() {
@@ -362,5 +364,35 @@ Page({
 
   onLoadMore() {
     this.loadData(false);
+  },
+
+  _bindWsEvents() {
+    if (this._wsBound) return;
+    this._wsBound = true;
+    this._onScanSuccess = () => { this.loadData(true); };
+    this._onScanUndo = () => { this.loadData(true); };
+    this._onDataChanged = () => { this.loadData(true); };
+    this._onRefreshAll = () => { this.loadData(true); };
+    eventBus.on(Events.SCAN_SUCCESS, this._onScanSuccess);
+    eventBus.on(Events.SCAN_UNDO, this._onScanUndo);
+    eventBus.on(Events.DATA_CHANGED, this._onDataChanged);
+    eventBus.on(Events.REFRESH_ALL, this._onRefreshAll);
+  },
+
+  _unbindWsEvents() {
+    if (!this._wsBound) return;
+    this._wsBound = false;
+    if (this._onScanSuccess) eventBus.off(Events.SCAN_SUCCESS, this._onScanSuccess);
+    if (this._onScanUndo) eventBus.off(Events.SCAN_UNDO, this._onScanUndo);
+    if (this._onDataChanged) eventBus.off(Events.DATA_CHANGED, this._onDataChanged);
+    if (this._onRefreshAll) eventBus.off(Events.REFRESH_ALL, this._onRefreshAll);
+  },
+
+  onHide() {
+    this._unbindWsEvents();
+  },
+
+  onUnload() {
+    this._unbindWsEvents();
   },
 });

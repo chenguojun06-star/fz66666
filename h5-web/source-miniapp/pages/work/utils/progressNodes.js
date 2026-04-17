@@ -131,30 +131,30 @@ function getNodeRateFromOrder(nodeName, order) {
 }
 
 function buildProcessNodesWithRates(order) {
-  const nodes = resolveNodesFromOrder(order);
+  var nodes = resolveNodesFromOrder(order);
   if (!nodes || !nodes.length) return [];
-  const progress = Number(order.productionProgress) || 0;
-  let hasAnyRate = false;
-  const result = nodes.map(function (n) {
-    const name = n.name || n;
-    const rate = getNodeRateFromOrder(name, order);
+  var progress = Number(order.productionProgress) || 0;
+  var hasAnyRate = false;
+  var result = nodes.map(function (n) {
+    var name = n.name || n;
+    var rate = getNodeRateFromOrder(name, order);
     if (rate >= 0) {
       hasAnyRate = true;
-      return { name, percent: rate };
+      return { name: name, percent: rate };
     }
-    return { name, percent: -1 };
+    return { name: name, percent: -1 };
   });
   if (hasAnyRate) {
     return result.map(function (r) {
       return { name: r.name, percent: r.percent >= 0 ? r.percent : 0 };
     });
   }
-  const len = nodes.length;
-  const perNode = 100 / len;
+  var len = nodes.length;
+  var perNode = 100 / len;
   return nodes.map(function (n, i) {
-    const nodeStart = i * perNode;
-    const nodeEnd = (i + 1) * perNode;
-    let pct = 0;
+    var nodeStart = i * perNode;
+    var nodeEnd = (i + 1) * perNode;
+    var pct = 0;
     if (progress >= nodeEnd) {
       pct = 100;
     } else if (progress > nodeStart) {
@@ -162,6 +162,39 @@ function buildProcessNodesWithRates(order) {
     }
     return { name: n.name || n, percent: clampPercent(pct) };
   });
+}
+
+function calcOrderProgress(order) {
+  if (!order) return 0;
+  var dbProgress = clampPercent(Number(order.productionProgress) || 0);
+  var status = (order.status || '').trim().toLowerCase();
+  if (status === 'completed') return 100;
+
+  var hasProcurement = (Number(order.materialArrivalRate) || 0) > 0
+    || Boolean(order.procurementManuallyCompleted)
+    || Boolean(order.procurementConfirmedAt);
+  var pipeline = hasProcurement
+    ? ['采购', '裁剪', '二次工艺', '车缝', '尾部', '入库']
+    : ['裁剪', '二次工艺', '车缝', '尾部', '入库'];
+
+  var rateSum = 0;
+  var rateCount = 0;
+  for (var i = 0; i < pipeline.length; i++) {
+    var rate = getNodeRateFromOrder(pipeline[i], order);
+    if (rate >= 0) {
+      rateSum += rate;
+      rateCount++;
+    }
+  }
+  var rateProgress = rateCount > 0 ? Math.round(rateSum / rateCount) : 0;
+
+  var hasCuttingAction = (Number(order.cuttingCompletionRate) || 0) > 0
+    || (Number(order.cuttingQuantity) || 0) > 0;
+  var hasRateAction = rateProgress > 0;
+  var hasRealAction = hasProcurement || hasCuttingAction || hasRateAction;
+  if (!hasRealAction) return 0;
+
+  return clampPercent(Math.max(dbProgress, rateProgress));
 }
 
 module.exports = {
@@ -174,5 +207,6 @@ module.exports = {
   resolveNodesFromOrder,
   getNodeRateFromOrder,
   buildProcessNodesWithRates,
+  calcOrderProgress,
   STAGE_RATE_MAP,
 };

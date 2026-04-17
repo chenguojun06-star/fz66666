@@ -4,7 +4,7 @@ const config = require('../../config');
 
 const intelligence = {
   precheckScan(payload) {
-    return ok('/api/intelligence/scan-advisor/precheck', 'POST', payload || {});
+    return ok('/api/intelligence/precheck/scan', 'POST', payload || {});
   },
   getScanTips(payload) {
     return ok('/api/intelligence/scan-advisor/tips', 'POST', payload || {});
@@ -22,18 +22,29 @@ const intelligence = {
     if (pageContext) url += '&pageContext=' + pageContext;
     if (conversationId) url += '&conversationId=' + encodeURIComponent(conversationId);
 
+    var safeDone = function () {
+      if (doneCalled) return;
+      doneCalled = true;
+      if (onDone) onDone();
+    };
+    var safeError = function (err) {
+      if (doneCalled) return;
+      doneCalled = true;
+      if (onError) onError(err);
+    };
+
     var requestTask = wx.request({
       url: config.getBaseUrl() + url,
       method: 'GET',
       header: { 'Authorization': token ? 'Bearer ' + token : '' },
       enableChunked: true,
       responseType: 'text',
-      timeout: 120000,
+      timeout: 180000,
       success: function () {
-        if (!doneCalled) { doneCalled = true; if (onDone) onDone(); }
+        safeDone();
       },
       fail: function (err) {
-        if (onError) onError(err);
+        safeError(err);
       },
     });
 
@@ -69,9 +80,9 @@ const intelligence = {
               try {
                 var parsed = JSON.parse(dataStr);
                 if (eventName === 'done') {
-                  if (!doneCalled) { doneCalled = true; if (onDone) onDone(); }
+                  safeDone();
                 } else {
-                  if (onEvent) onEvent({ type: eventName, data: parsed });
+                    if (onEvent) onEvent({ type: eventName, data: parsed });
                 }
               } catch (_pe) {
                 if (onEvent) onEvent({ type: eventName, data: { content: dataStr } });
@@ -90,19 +101,16 @@ const intelligence = {
     return ok('/api/intelligence/crew/nl-execute', 'POST', payload || {}, { timeout: 90000 });
   },
   executeCommand(payload) {
-    return ok('/api/intelligence/execution-engine/execute', 'POST', payload || {});
+    return ok('/api/intelligence/commands/execute', 'POST', payload || {});
   },
   getPendingCommands() {
-    return ok('/api/intelligence/execution-engine/pending', 'GET', {});
+    return ok('/api/intelligence/commands/pending', 'GET', {});
   },
   approveCommand(commandId) {
-    return ok('/api/intelligence/execution-engine/' + commandId + '/approve', 'POST', {});
+    return ok('/api/intelligence/commands/' + commandId + '/approve', 'POST', {});
   },
   rejectCommand(commandId) {
-    return ok('/api/intelligence/execution-engine/' + commandId + '/reject', 'POST', {});
-  },
-  visualAnalyze(payload) {
-    return ok('/api/intelligence/visual/analyze', 'POST', payload || {}, { timeout: 60000 });
+    return ok('/api/intelligence/commands/' + commandId + '/reject', 'POST', {});
   },
   getAgentActivityList() {
     return ok('/api/intelligence/agent-activity/agents', 'GET', {});

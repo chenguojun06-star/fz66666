@@ -5,6 +5,10 @@
 .weather-card { margin: 0 0 12px; padding: 14px 16px; background: var(--color-bg-card); border-radius: var(--radius-md); border: 1px solid var(--color-border-light); display: flex; flex-direction: column; gap: 10px; }
 .weather-top { display: flex; justify-content: space-between; align-items: center; }
 .weather-left { display: flex; align-items: center; gap: 10px; }
+.weather-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.weather-clock { font-size: var(--font-size-xl); font-weight: 700; color: var(--color-text-primary); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.weather-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.weather-clock { font-size: var(--font-size-xl); font-weight: 700; color: var(--color-text-primary); font-variant-numeric: tabular-nums; line-height: 1.1; }
 .weather-emoji { font-size: var(--font-size-4xl); line-height: 1; }
 .weather-temp-wrap { display: flex; flex-direction: column; }
 .weather-temp { font-size: var(--font-size-2xl); font-weight: 700; line-height: 1.2; }

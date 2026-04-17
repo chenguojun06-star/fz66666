@@ -340,7 +340,8 @@ public class WarehouseScanExecutor {
 
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
-        result.put("message", "入库成功");
+        String whBundleNo = bundle != null && bundle.getBundleNo() != null ? String.valueOf(bundle.getBundleNo()) : "";
+        result.put("message", "入库成功" + (whBundleNo.isEmpty() ? "" : " · 菲号" + whBundleNo));
         result.put("scanRecord", sr);
         result.put("orderInfo", buildOrderInfo(order));
         result.put("cuttingBundle", bundle);

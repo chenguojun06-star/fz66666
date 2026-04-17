@@ -69,7 +69,7 @@ export async function configureWxJsSdk() {
   return configPromise;
 }
 
-export function setupWxShare({ title = '云裳智链', desc = '云智链智能管理平台', link, imgUrl } = {}) {
+export function setupWxShare({ title = '衣智链｜多端协同智能提醒平台', desc = '多端协同智能提醒平台', link, imgUrl } = {}) {
   if (typeof wx === 'undefined') return;
 
   const shareData = {

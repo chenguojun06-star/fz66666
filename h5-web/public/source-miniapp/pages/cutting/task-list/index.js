@@ -1,6 +1,7 @@
 const api = require('../../../utils/api');
 const { getUserInfo } = require('../../../utils/storage');
 const { toast } = require('../../../utils/uiHelper');
+const { eventBus, Events } = require('../../../utils/eventBus');
 
 Page({
   data: {
@@ -22,6 +23,7 @@ Page({
 
   onShow() {
     this.loadTasks();
+    this._bindWsEvents();
   },
 
   onPullDownRefresh() {
@@ -154,5 +156,38 @@ Page({
       canOperate,
       orderNo: task.productionOrderNo || task.orderNo,
     };
+  },
+
+  _bindWsEvents() {
+    if (this._wsBound) return;
+    this._wsBound = true;
+    this._onTaskReceived = () => { this.loadTasks(); };
+    this._onTaskCompleted = () => { this.loadTasks(); };
+    this._onTaskBundled = () => { this.loadTasks(); };
+    this._onDataChanged = () => { this.loadTasks(); };
+    this._onRefreshAll = () => { this.loadTasks(); };
+    eventBus.on(Events.TASK_RECEIVED, this._onTaskReceived);
+    eventBus.on(Events.TASK_COMPLETED, this._onTaskCompleted);
+    eventBus.on(Events.TASK_BUNDLED, this._onTaskBundled);
+    eventBus.on(Events.DATA_CHANGED, this._onDataChanged);
+    eventBus.on(Events.REFRESH_ALL, this._onRefreshAll);
+  },
+
+  _unbindWsEvents() {
+    if (!this._wsBound) return;
+    this._wsBound = false;
+    if (this._onTaskReceived) eventBus.off(Events.TASK_RECEIVED, this._onTaskReceived);
+    if (this._onTaskCompleted) eventBus.off(Events.TASK_COMPLETED, this._onTaskCompleted);
+    if (this._onTaskBundled) eventBus.off(Events.TASK_BUNDLED, this._onTaskBundled);
+    if (this._onDataChanged) eventBus.off(Events.DATA_CHANGED, this._onDataChanged);
+    if (this._onRefreshAll) eventBus.off(Events.REFRESH_ALL, this._onRefreshAll);
+  },
+
+  onHide() {
+    this._unbindWsEvents();
+  },
+
+  onUnload() {
+    this._unbindWsEvents();
   },
 });

@@ -11,8 +11,8 @@ const isWechat = wxAdapter.isWechat;
 if (isWechat) {
   configureWxJsSdk().then(() => {
     setupWxShare({
-      title: '云裳智链 - 智能生产管理',
-      desc: '云智链智能管理平台，扫码生产、进度追踪、AI助手',
+      title: '衣智链｜多端协同智能提醒平台',
+      desc: '扫码生产、进度追踪、AI助手 · 多端协同',
     });
   }).catch((e) => console.error('WxJsSdk init error:', e));
 

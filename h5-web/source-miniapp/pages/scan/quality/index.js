@@ -5,7 +5,7 @@ const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { getUserInfo } = require('../../../utils/storage');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
-const { eventBus } = require('../../../utils/eventBus');
+const { eventBus, triggerDataRefresh } = require('../../../utils/eventBus');
 
 const HANDLE_METHODS = ['返修', '报废'];
 
@@ -310,8 +310,15 @@ Page({
     if (d.remark) payload.remark = d.remark;
 
     try {
-      await api.production.executeScan(payload);
+      var res = await api.production.executeScan(payload);
       toast.success(d.result === 'qualified' ? '质检合格，已记录' : '已记录不良品');
+      var hints = (res && res.bundleStatusHints) || [];
+      var statusText = (res && res.bundleStatusText) || '';
+      if (hints.length > 0) {
+        setTimeout(function() {
+          wx.showToast({ title: statusText || hints.join(' → '), icon: 'none', duration: 3000 });
+        }, 800);
+      }
       this._emitRefresh();
       wx.navigateBack();
     } catch (e) {
@@ -326,9 +333,6 @@ Page({
   },
 
   _emitRefresh() {
-    var eb = getApp().globalData && getApp().globalData.eventBus;
-    if (eb && typeof eb.emit === 'function') {
-      eb.emit('DATA_REFRESH');
-    }
+    triggerDataRefresh('quality');
   }
 });

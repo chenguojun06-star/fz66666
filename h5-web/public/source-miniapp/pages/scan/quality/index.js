@@ -5,7 +5,7 @@ const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { getUserInfo } = require('../../../utils/storage');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
-const { eventBus } = require('../../../utils/eventBus');
+const { eventBus, triggerDataRefresh } = require('../../../utils/eventBus');
 
 const HANDLE_METHODS = ['返修', '报废'];
 
@@ -333,9 +333,6 @@ Page({
   },
 
   _emitRefresh() {
-    var eb = getApp().globalData && getApp().globalData.eventBus;
-    if (eb && typeof eb.emit === 'function') {
-      eb.emit('DATA_REFRESH');
-    }
+    triggerDataRefresh('quality');
   }
 });

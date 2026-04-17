@@ -179,6 +179,34 @@ const WebSocketNotification: React.FC = () => {
     });
   }, [subscribe]);
 
+  // 扫码成功通知：手机端扫码后PC端感知
+  useEffect(() => {
+    return subscribe('scan:success', (msg) => {
+      const p = msg.payload as { orderNo?: string; processName?: string; operatorName?: string; bundleNo?: string; quantity?: number };
+      if (!p.operatorName && !p.processName) return;
+      const qtyInfo = p.quantity ? `${p.quantity}件` : '';
+      const bundleInfo = p.bundleNo ? `菲号${p.bundleNo}` : '';
+      const detail = [bundleInfo, qtyInfo].filter(Boolean).join(' · ');
+      notification.info({
+        message: `${p.operatorName || '有人'}扫码了${p.processName || '工序'}`,
+        description: `订单 ${p.orderNo || '-'}${detail ? ' · ' + detail : ''}`,
+        placement: 'topRight',
+        duration: 4,
+      });
+      const event = new CustomEvent('order:progress:changed', { detail: p });
+      window.dispatchEvent(event);
+    });
+  }, [subscribe, notification]);
+
+  // 撤销扫码通知
+  useEffect(() => {
+    return subscribe('scan:undo', (msg) => {
+      const p = msg.payload as { orderNo?: string; processName?: string; operatorName?: string };
+      const event = new CustomEvent('order:progress:changed', { detail: p });
+      window.dispatchEvent(event);
+    });
+  }, [subscribe]);
+
   // 不渲染任何 DOM
   return null;
 };

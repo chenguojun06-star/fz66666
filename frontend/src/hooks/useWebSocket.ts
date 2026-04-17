@@ -34,6 +34,7 @@ interface WsInstance {
   reconnectTimer: ReturnType<typeof setTimeout> | undefined;
   currentOptions: UseWebSocketOptions;
   subscriberCount: number;
+  stopFallbackPolling: () => void;
 }
 
 let globalInstance: WsInstance | null = null;
@@ -70,6 +71,7 @@ function getOrCreateInstance(options: UseWebSocketOptions): WsInstance {
     reconnectTimer: undefined,
     currentOptions: options,
     subscriberCount: 0,
+    stopFallbackPolling: () => {},
   };
   globalInstance = inst;
 
@@ -95,6 +97,62 @@ function getOrCreateInstance(options: UseWebSocketOptions): WsInstance {
       inst.heartbeatTimer = undefined;
     }
   };
+
+  let fallbackPollingTimer: ReturnType<typeof setInterval> | undefined;
+  const startFallbackPolling = () => {
+    if (fallbackPollingTimer) return;
+    if (import.meta.env.DEV) console.log('[WebSocket] 重连次数耗尽，启动降级轮询(30s)');
+    fallbackPollingTimer = setInterval(() => {
+      const opts = inst.currentOptions;
+      if (!opts.enabled || !opts.userId) { stopFallbackPolling(); return; }
+      if (inst.ws && inst.ws.readyState === WebSocket.OPEN) { stopFallbackPolling(); return; }
+      try {
+        const url = buildUrl();
+        const ws = new WebSocket(url);
+        ws.onopen = () => {
+          if (import.meta.env.DEV) console.log('[WebSocket] 降级轮询重连成功');
+          inst.ws = ws;
+          setConnected(true);
+          inst.reconnectCount = 0;
+          startHeartbeat(ws);
+          stopFallbackPolling();
+          ws.onmessage = (event) => {
+            try {
+              const msg: WsMessage = JSON.parse(event.data);
+              if (msg.type === 'ping') return;
+              const handlers = inst.listeners.get(msg.type);
+              if (handlers) handlers.forEach(fn => { try { fn(msg); } catch { /* */ } });
+              const wildcard = inst.listeners.get('*');
+              if (wildcard) wildcard.forEach(fn => { try { fn(msg); } catch { /* */ } });
+            } catch { /* non-JSON */ }
+          };
+          ws.onclose = () => {
+            setConnected(false);
+            stopHeartbeat();
+            inst.ws = null;
+            const maxAttempts = opts.maxReconnectAttempts || 10;
+            if (opts.enabled && inst.reconnectCount < maxAttempts) {
+              inst.reconnectCount++;
+              const interval = opts.reconnectInterval || 10000;
+              const delay = Math.min(interval * Math.pow(2, inst.reconnectCount - 1), 60000);
+              inst.reconnectTimer = setTimeout(doConnect, delay);
+            } else if (opts.enabled) {
+              startFallbackPolling();
+            }
+          };
+          ws.onerror = () => { /* onclose follows */ };
+        };
+        ws.onerror = () => { try { ws.close(); } catch { /* */ } };
+      } catch { /* */ }
+    }, 30000);
+  };
+  const stopFallbackPolling = () => {
+    if (fallbackPollingTimer) {
+      clearInterval(fallbackPollingTimer);
+      fallbackPollingTimer = undefined;
+    }
+  };
+  inst.stopFallbackPolling = stopFallbackPolling;
 
   const doConnect = () => {
     const opts = inst.currentOptions;
@@ -132,13 +190,15 @@ function getOrCreateInstance(options: UseWebSocketOptions): WsInstance {
         stopHeartbeat();
         inst.ws = null;
         if (document.hidden) return;
-        const maxAttempts = opts.maxReconnectAttempts || 5;
+        const maxAttempts = opts.maxReconnectAttempts || 10;
         if (opts.enabled && inst.reconnectCount < maxAttempts) {
           inst.reconnectCount++;
           const interval = opts.reconnectInterval || 10000;
           const delay = Math.min(interval * Math.pow(2, inst.reconnectCount - 1), 60000);
           if (import.meta.env.DEV) console.log(`[WebSocket] ${delay / 1000}s 后重连`);
           inst.reconnectTimer = setTimeout(doConnect, delay);
+        } else if (opts.enabled && inst.reconnectCount >= maxAttempts) {
+          startFallbackPolling();
         }
       };
       ws.onerror = () => { /* onclose follows */ };
@@ -179,9 +239,9 @@ export function useWebSocket(options: UseWebSocketOptions) {
       if (inst.subscriberCount <= 0) {
         if (inst.reconnectTimer) clearTimeout(inst.reconnectTimer);
         if (inst.heartbeatTimer) clearInterval(inst.heartbeatTimer);
+        inst.stopFallbackPolling();
         if (inst.ws) {
           const ws = inst.ws;
-          inst.ws = null;
           ws.onopen = null; ws.onclose = null; ws.onerror = null; ws.onmessage = null;
           if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) ws.close();
         }

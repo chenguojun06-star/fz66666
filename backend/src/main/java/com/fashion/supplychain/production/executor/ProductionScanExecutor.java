@@ -429,9 +429,10 @@ public class ProductionScanExecutor {
 
             // 🔔 WebSocket进度变更推送：扫码成功后通知前端刷新进度数据
             try {
+                int curProgress = order.getProductionProgress() != null ? order.getProductionProgress() : 0;
                 webSocketService.broadcastOrderProgressChanged(
                     order.getOrderNo(),
-                    0,
+                    curProgress,
                     progressStage != null ? progressStage : ""
                 );
             } catch (Exception e) {
@@ -444,6 +445,7 @@ public class ProductionScanExecutor {
                 String bSize = bundle != null && bundle.getSize() != null ? bundle.getSize() : "";
                 String pName = progressStage != null ? progressStage : "生产";
                 String opName = operatorName != null ? operatorName : "";
+                webSocketService.broadcastProcessStageReceived(order.getOrderNo(), pName, opName, bNo, bColor, bSize);
                 webSocketService.broadcastProcessStageCompleted(order.getOrderNo(), pName, opName, bNo, bColor, bSize, quantity);
             } catch (Exception e) {
                 log.debug("WebSocket工序通知推送失败(不阻断): orderNo={}", order.getOrderNo(), e);
@@ -528,7 +530,9 @@ public class ProductionScanExecutor {
 
         Map<String, Object> result = new HashMap<>();
         result.put("success", true);
-        result.put("message", "扫码成功");
+        String bundleNoStr = bundle != null && bundle.getBundleNo() != null ? String.valueOf(bundle.getBundleNo()) : "";
+        String stageLabel = progressStage != null ? progressStage : "";
+        result.put("message", "扫码成功" + (stageLabel.isEmpty() ? "" : " · " + stageLabel) + (bundleNoStr.isEmpty() ? "" : " · 菲号" + bundleNoStr));
         result.put("scanRecord", sr);
         result.put("orderInfo", buildOrderInfo(order));
 

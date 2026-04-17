@@ -3,7 +3,7 @@
  * 根据用户角色控制小程序页面和功能的访问权限
  */
 
-const { getUserRole, getUserRoleName } = require('./storage');
+const { getUserRole, getUserRoleName, isTenantOwner, isSuperAdmin, isFactoryOwner } = require('./storage');
 
 // 角色定义
 const ROLES = {
@@ -38,8 +38,23 @@ function getCurrentRole() {
  * 检查是否为管理员或主管
  */
 function isAdminOrSupervisor() {
+  if (isTenantOwner() || isSuperAdmin() || isFactoryOwner()) return true;
   const role = getCurrentRole();
-  return role === ROLES.ADMIN || role === ROLES.SUPERVISOR;
+  return role === ROLES.ADMIN || role === ROLES.SUPERVISOR || role === ROLES.SUPER_ADMIN;
+}
+
+function isManagerLevel() {
+  if (isTenantOwner() || isSuperAdmin() || isFactoryOwner()) return true;
+  const role = getCurrentRole();
+  const MANAGER_ROLES = [
+    ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.SUPERVISOR, ROLES.MANAGER,
+    ROLES.MERCHANDISER, ROLES.TENANT_ADMIN, ROLES.TENANT_MANAGER,
+  ];
+  const roleName = getUserRoleName() || '';
+  return MANAGER_ROLES.some(r => role.includes(r) || r.includes(role))
+    || roleName.includes('跟单') || roleName.includes('主管') || roleName.includes('管理')
+    || roleName.includes('组长') || roleName.includes('班长') || roleName.includes('厂长')
+    || roleName.includes('老板') || roleName.includes('director') || roleName.includes('head');
 }
 
 /**
@@ -246,8 +261,7 @@ function getRolePermissions() {
  * @returns {boolean}
  */
 function hasFeaturePermission(feature) {
-  // 管理员和主管拥有所有权限
-  if (isAdminOrSupervisor()) {
+  if (isManagerLevel()) {
     return true;
   }
 
@@ -303,19 +317,16 @@ function hasFeaturePermission(feature) {
  *   - own: 普通员工，仅查看自己的数据
  */
 function getDataScope() {
-  if (isAdminOrSupervisor()) {
+  if (isManagerLevel()) {
     return 'all';
   }
 
-  const role = getCurrentRole();
   const roleName = getUserRoleName() || '';
-
-  // 组长/班长级别可查看团队数据
   if (
     roleName.includes('组长') ||
     roleName.includes('班长') ||
     roleName.includes('leader') ||
-    role === 'team_leader'
+    getCurrentRole() === 'team_leader'
   ) {
     return 'team';
   }
@@ -426,6 +437,7 @@ module.exports = {
   WORK_NODES,
   getCurrentRole,
   isAdminOrSupervisor,
+  isManagerLevel,
   canAccessNode,
   filterWorkNodes,
   filterOrders,
@@ -434,7 +446,6 @@ module.exports = {
   getRoleDisplayName,
   getRolePermissions,
   hasFeaturePermission,
-  // 数据隔离
   getDataScope,
   getCurrentUserId,
   getCurrentFactoryId,

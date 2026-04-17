@@ -20,6 +20,7 @@ export default function AppShell({ children }) {
 
   const isTab = TAB_PATHS.includes(location.pathname);
   const pageTitle = getPageTitle(location.pathname);
+  const isHome = location.pathname === '/home';
 
   return (
     <div className="app-shell">
@@ -30,11 +31,13 @@ export default function AppShell({ children }) {
           )}
           <div>
             <div className="topbar-title">{pageTitle}</div>
-            {isTab && (
+            {isHome ? (
+              <div className="topbar-subtitle">衣智链｜多端协同智能提醒平台</div>
+            ) : isTab ? (
               <div className="topbar-subtitle">
                 {tenantName ? `${tenantName} · ` : ''}{user?.name || user?.realName || user?.username || ''}
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       </header>
@@ -64,7 +67,7 @@ export default function AppShell({ children }) {
 
 function getPageTitle(pathname) {
   const titleMap = {
-    '/home': '云智链',
+    '/home': '衣智链',
     '/work': '生产管理',
     '/scan': '扫码操作',
     '/admin': '个人中心',
@@ -91,5 +94,5 @@ function getPageTitle(pathname) {
     '/warehouse/material/scan': '面辅料扫码',
     '/warehouse/sample/scan-action': '样衣扫码',
   };
-  return titleMap[pathname] || '云智链';
+  return titleMap[pathname] || '衣智链';
 }

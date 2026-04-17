@@ -1,6 +1,7 @@
 const api = require('../../../utils/api');
 const { getUserInfo } = require('../../../utils/storage');
 const { toast } = require('../../../utils/uiHelper');
+const { triggerDataRefresh } = require('../../../utils/eventBus');
 
 const MATERIAL_TYPE_MAP = {
   fabricA: '主面料', fabricB: '辅面料',
@@ -170,8 +171,7 @@ Page({
           wx.hideLoading();
           toast.success('回料确认成功');
 
-          const eventBus = getApp()?.globalData?.eventBus;
-          if (eventBus) eventBus.emit('DATA_REFRESH', { type: 'procurement' });
+          triggerDataRefresh('procurement');
 
           this._loadDetail();
         } catch (err) {
@@ -207,8 +207,7 @@ Page({
           wx.hideLoading();
           toast.success('采购阶段已完成，已流转到裁剪');
 
-          const eventBus = getApp()?.globalData?.eventBus;
-          if (eventBus) eventBus.emit('DATA_REFRESH', { type: 'procurement' });
+          triggerDataRefresh('procurement');
 
           setTimeout(() => wx.navigateBack(), 1000);
         } catch (err) {
@@ -246,8 +245,7 @@ Page({
     try {
       await Promise.all(updates.map(u => api.production.updateArrivedQuantity(u)));
 
-      const eventBus = getApp()?.globalData?.eventBus;
-      if (eventBus) eventBus.emit('DATA_REFRESH', { type: 'procurement' });
+      triggerDataRefresh('procurement');
 
       wx.hideLoading();
       this.setData({ submitting: false });

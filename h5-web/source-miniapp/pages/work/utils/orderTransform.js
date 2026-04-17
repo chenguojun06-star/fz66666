@@ -6,6 +6,7 @@ const { validateProductionOrder, normalizeData } = require('../../../utils/dataV
 const { orderStatusText } = require('../../../utils/orderStatusHelper');
 const { parseProductionOrderLines, SIZE_ORDER } = require('../../../utils/orderParser');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+const { calcOrderProgress } = require('./progressNodes');
 
 /**
  * 安全转换为去空格字符串
@@ -291,6 +292,7 @@ function transformOrderData(r) {
     colorGroups,
     allSizes,
     totalQuantity,
+    calculatedProgress: calcOrderProgress(source),
     deliveryDateStr: delivery.deliveryDateStr,
     remainDays: delivery.remainDays,
     remainDaysText: delivery.remainDaysText,

@@ -2,6 +2,7 @@ const { getToken, clearToken } = require('./utils/storage');
 const reminderManager = require('./utils/reminderManager');
 const { DEBUG_MODE } = require('./config');
 const { eventBus } = require('./utils/eventBus');
+const { wsManager } = require('./utils/websocketManager');
 // smartGuide 为非核心模块，防御性加载（避免新文件缓存未更新时崩溃 app）
 let resolveSmartGuideByRoute = () => null;
 try {
@@ -98,6 +99,9 @@ App({
     } catch (e) {
       console.error('检查提醒失败', e);
     }
+    try {
+      wsManager.onAppShow();
+    } catch (_e) {}
   },
 
   onHide() {
@@ -105,6 +109,9 @@ App({
       clearTimeout(this._reminderTimerId);
       this._reminderTimerId = null;
     }
+    try {
+      wsManager.onAppHide();
+    } catch (_e) {}
   },
 
   onPageNotFound(res) {
@@ -157,6 +164,7 @@ App({
 
   logout() {
     clearToken();
+    try { wsManager.disconnect(); } catch (_e) {}
     const { clearUserInfo } = require('./utils/storage');
     clearUserInfo();
 

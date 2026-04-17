@@ -17,10 +17,31 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5174,
+    proxy: {
+      '/api': {
+        target: process.env.VITE_DEV_API_TARGET || 'http://localhost:8088',
+        changeOrigin: true,
+      },
+      '/ws': {
+        target: (process.env.VITE_DEV_API_TARGET || 'http://localhost:8088').replace(/^http/, 'ws'),
+        ws: true,
+        changeOrigin: true,
+      },
+    },
   },
   build: {
     target: 'esnext',
     cssMinify: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-axios': ['axios'],
+          'vendor-zustand': ['zustand'],
+          'vendor-scanner': ['html5-qrcode'],
+        },
+      },
+    },
   },
   css: {
     postcss: {

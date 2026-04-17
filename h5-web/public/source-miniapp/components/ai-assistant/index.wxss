@@ -511,53 +511,10 @@
   background: var(--color-info-bg);
 }
 
-/* ──── Photo / Image ──── */
-.photo-btn {
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: var(--color-info-bg);
-  flex-shrink: 0;
-  border: 1px solid var(--color-info-border);
-}
-.photo-btn-hover { background: var(--color-bg-light); }
-.photo-icon { width: 20px; height: 20px; }
-.chat-input-with-photo { flex: 1; }
-
 .msg-image {
   max-width: 180px;
   border-radius: var(--radius-md);
   margin-bottom: 6px;
-}
-
-.pending-image-wrap {
-  position: relative;
-  display: inline-block;
-  margin: 0 12px 6px 12px;
-}
-.pending-image-preview {
-  width: 80px;
-  height: 80px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border-light);
-}
-.pending-image-remove {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--color-danger);
-  color: var(--color-text-white);
-  font-size: var(--font-size-xs);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
 }
 .uploading-mask {
   display: flex;

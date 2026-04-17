@@ -4,6 +4,7 @@ const { normalizeScanType } = require('../handlers/helpers/ScanModeResolver');
 const SKUProcessor = require('../processors/SKUProcessor');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
 const { getUserInfo } = require('../../../utils/storage');
+const { triggerDataRefresh } = require('../../../utils/eventBus');
 
 Page({
   data: {
@@ -396,9 +397,6 @@ Page({
   },
 
   _emitRefresh() {
-    var eb = getApp().globalData && getApp().globalData.eventBus;
-    if (eb && typeof eb.emit === 'function') {
-      eb.emit('DATA_REFRESH');
-    }
+    triggerDataRefresh('scan');
   }
 });

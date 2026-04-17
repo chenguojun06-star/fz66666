@@ -2,6 +2,7 @@ const api = require('../../utils/api');
 const { safeNavigate } = require('../../utils/uiHelper');
 const { isAdminOrSupervisor } = require('../../utils/permission');
 const { isTenantOwner } = require('../../utils/storage');
+const { eventBus, Events } = require('../../utils/eventBus');
 
 /**
  * 根据当前小时返回问候语
@@ -60,6 +61,15 @@ Page({
     this.setData({ greeting: getGreeting() });
     this._loadUserName(true);
     this._refreshHomeData();
+    this._bindWsEvents();
+  },
+
+  onHide() {
+    this._unbindWsEvents();
+  },
+
+  onUnload() {
+    this._unbindWsEvents();
   },
 
   onPullDownRefresh() {
@@ -70,6 +80,25 @@ Page({
 
   _refreshHomeData() {
     return Promise.allSettled([this._loadUnreadCount()]);
+  },
+
+  _bindWsEvents() {
+    if (this._wsBound) return;
+    this._wsBound = true;
+    this._onDataChanged = () => { this._refreshHomeData(); };
+    this._onOrderProgress = () => { this._refreshHomeData(); };
+    this._onWarehouseIn = () => { this._refreshHomeData(); };
+    eventBus.on(Events.DATA_CHANGED, this._onDataChanged);
+    eventBus.on(Events.ORDER_PROGRESS_CHANGED, this._onOrderProgress);
+    eventBus.on(Events.WAREHOUSE_IN, this._onWarehouseIn);
+  },
+
+  _unbindWsEvents() {
+    if (!this._wsBound) return;
+    this._wsBound = false;
+    if (this._onDataChanged) eventBus.off(Events.DATA_CHANGED, this._onDataChanged);
+    if (this._onOrderProgress) eventBus.off(Events.ORDER_PROGRESS_CHANGED, this._onOrderProgress);
+    if (this._onWarehouseIn) eventBus.off(Events.WAREHOUSE_IN, this._onWarehouseIn);
   },
 
   _loadUserName(forceRemote = false) {

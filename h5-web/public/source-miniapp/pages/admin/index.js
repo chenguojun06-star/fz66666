@@ -2,7 +2,7 @@ const api = require('../../utils/api');
 const { getUserInfo, getToken, setUserInfo, isFactoryOwner } = require('../../utils/storage');
 const { getBaseUrl } = require('../../config');
 const { getRoleDisplayName, isAdminOrSupervisor } = require('../../utils/permission');
-const { onDataRefresh } = require('../../utils/eventBus');
+const { onDataRefresh, eventBus, Events } = require('../../utils/eventBus');
 const { safeNavigate } = require('../../utils/uiHelper');
 const { getAuthedImageUrl } = require('../../utils/fileUrl');
 const i18n = require('../../utils/i18n/index');
@@ -128,6 +128,21 @@ Page({
       this.loadUserInfo(isAdminOrSupervisor());
       this.loadSystemInfo();
     });
+
+    if (this._wsBound) return;
+    this._wsBound = true;
+    this._onApprovalPending = () => { this.loadUserInfo(isAdminOrSupervisor()); };
+    this._onApprovalResult = () => { this.loadUserInfo(isAdminOrSupervisor()); };
+    this._onRefreshAll = () => { this.loadSystemInfo(); };
+    eventBus.on(Events.REFRESH_ALL, this._onRefreshAll);
+  },
+
+  _unbindWsEvents() {
+    if (!this._wsBound) return;
+    this._wsBound = false;
+    if (this._onApprovalPending) eventBus.off('approval:pending', this._onApprovalPending);
+    if (this._onApprovalResult) eventBus.off('approval:result', this._onApprovalResult);
+    if (this._onRefreshAll) eventBus.off(Events.REFRESH_ALL, this._onRefreshAll);
   },
 
   onHide() {
@@ -135,6 +150,7 @@ Page({
       this._unsubscribeRefresh();
       this._unsubscribeRefresh = null;
     }
+    this._unbindWsEvents();
   },
 
   onUnload() {
@@ -142,6 +158,7 @@ Page({
       this._unsubscribeRefresh();
       this._unsubscribeRefresh = null;
     }
+    this._unbindWsEvents();
   },
 
   onPullDownRefresh() {

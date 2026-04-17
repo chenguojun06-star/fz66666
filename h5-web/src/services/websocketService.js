@@ -102,7 +102,8 @@ class WebSocketService {
 
       eventBus.emit(eventType, eventData);
 
-      if (eventType === 'order:progress:changed' || eventType === 'warehouse:in') {
+      if (eventType === 'order:progress:changed' || eventType === 'warehouse:in'
+          || eventType === 'process:stage:received' || eventType === 'process:stage:completed') {
         eventBus.emit('DATA_REFRESH', { type: 'orders', source: 'ws', ...eventData });
       }
       if (eventType === 'scan:success' || eventType === 'scan:undo') {

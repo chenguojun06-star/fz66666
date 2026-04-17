@@ -2,6 +2,7 @@ const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { normalizeScanType } = require('../handlers/helpers/ScanModeResolver');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+const { triggerDataRefresh } = require('../../../utils/eventBus');
 
 function normalizePositiveInt(value, fallback) {
   fallback = (fallback === undefined) ? 1 : fallback;
@@ -47,13 +48,26 @@ Page({
         checked: true
       }];
     }
+    var isWarehouseStage = raw.progressStage === 'warehouse' || raw.progressStage === '入库'
+      || raw.scanType === 'warehouse'
+      || (raw.stageResult && raw.stageResult.scanType === 'warehouse')
+      || raw.showWarehouse;
+    if (processOptions.length === 0 && isWarehouseStage) {
+      processOptions = [{
+        label: '入库',
+        value: raw.progressStage || 'warehouse',
+        scanType: 'warehouse',
+        unitPrice: 0,
+        hidePrice: true,
+        checked: true
+      }];
+    }
     var selectedNames = processOptions.filter(function(o) { return o.checked; }).map(function(o) { return o.value; });
     if (selectedNames.length === 0 && processOptions.length > 0) {
       selectedNames = [processOptions[0].value];
       processOptions[0].checked = true;
     }
     var summary = this._buildSummary(processOptions, selectedNames);
-    var isWarehouseStage = raw.progressStage === 'warehouse' || raw.progressStage === '入库';
     var isQualityReceive = raw.progressStage === 'quality' || raw.progressStage === '质检';
 
     var coverImage = '';
@@ -87,7 +101,9 @@ Page({
         displayQuantity: displayQuantity,
         bedNo: bedNo ? String(bedNo) : '',
         cuttingDateDisplay: this._formatYMD(cuttingDate),
-        deliveryDateDisplay: this._formatYMD(deliveryDate)
+        deliveryDateDisplay: this._formatYMD(deliveryDate),
+        bundleStatusHints: raw.bundleStatusHints || [],
+        bundleStatusText: raw.bundleStatusText || ''
       },
       processOptions: processOptions,
       selectedNames: selectedNames,
@@ -275,7 +291,7 @@ Page({
     try {
       // getDictList 使用 ok() 帮助函数，已自动解包 resp.data，res 直接是数组
       var res = await api.system.getDictList('warehouse_location');
-      var records = Array.isArray(res) ? res : ((res && res.records) ? res.records : []);
+      var records = Array.isArray(res) ? res : ((res && res.records) ? res.records : (res && res.data ? res.data : []));
       if (records.length > 0) {
         var options = records
           .filter(function(item) { return item.dictLabel; })
@@ -407,9 +423,6 @@ Page({
   },
 
   _emitRefresh() {
-    var eventBus = getApp().globalData && getApp().globalData.eventBus;
-    if (eventBus && typeof eventBus.emit === 'function') {
-      eventBus.emit('DATA_REFRESH');
-    }
+    triggerDataRefresh('scan');
   }
 });

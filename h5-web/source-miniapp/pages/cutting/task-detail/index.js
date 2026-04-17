@@ -2,6 +2,7 @@ const api = require('../../../utils/api');
 const { toast } = require('../../../utils/uiHelper');
 const { parseProductionOrderLines, SIZE_ORDER } = require('../../../utils/orderParser');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+const { triggerDataRefresh } = require('../../../utils/eventBus');
 
 /**
  * 裁剪分扎页 — 与 PC 端 CuttingRatioPanel 对齐
@@ -249,12 +250,7 @@ Page({
       await api.production.generateCuttingBundles(orderId, items);
       toast.success('菲号生成成功');
 
-      const eventBus = getApp()?.globalData?.eventBus;
-      if (eventBus) {
-        eventBus.emit('DATA_REFRESH', { type: 'cutting' });
-        eventBus.emit('taskStatusChanged');
-        eventBus.emit('refreshBellTasks');
-      }
+      triggerDataRefresh('cutting');
 
       setTimeout(() => wx.navigateBack(), 500);
     } catch (err) {

@@ -172,9 +172,9 @@
       <!-- 进度条 + 收起箭头 -->
       <view class="progress-row">
         <view class="progress-bar">
-          <view class="progress-fill {{item.remainDaysClass === 'days-overdue' ? 'progress-fill--overdue' : ''}}" style="width:{{item.productionProgress > 100 ? 100 : item.productionProgress}}%"></view>
+          <view class="progress-fill {{item.remainDaysClass === 'days-overdue' ? 'progress-fill--overdue' : ''}}" style="width:{{item.calculatedProgress > 100 ? 100 : item.calculatedProgress}}%"></view>
         </view>
-        <text class="progress-pct">{{item.productionProgress || 0}}%</text>
+        <text class="progress-pct">{{item.calculatedProgress || 0}}%</text>
         <text class="collapse-arrow {{item.expanded ? 'collapse-arrow--open' : ''}}">▾</text>
       </view>
 

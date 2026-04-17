@@ -18,7 +18,6 @@ function describeTool(name) {
 }
 
 function parseAiCards(text) {
-  var cards = [];
   var actions = [];
   var acMatch = text.match(/【ACTIONS】([\s\S]*?)【\/ACTIONS】/);
   if (acMatch) {
@@ -34,7 +33,7 @@ function parseAiCards(text) {
       });
     }
   }
-  return { text: text.trim(), cards: cards, actions: actions };
+  return { text: text.trim(), actions: actions };
 }
 
 Component({
@@ -51,11 +50,9 @@ Component({
     streamingText: '',
     streamingTool: '',
     scrollTo: '',
-    pendingImage: '',
-    uploading: false,
     currentTab: 'chat',
     totalTasks: 0,
-    qualityTasks: [], cuttingTasks: [], warehouseTasks: [],
+    qualityTasks: [], cuttingTasks: [],
     purchaseTasks: [], repairTasks: [], overdueOrders: [],
     overdueSummary: null, pendingUsers: [], pendingRegistrations: [],
     timeoutReminders: [], isAdmin: false, isTenantOwner: false,
@@ -131,7 +128,11 @@ Component({
   },
   pageLifetimes: {
     show() {
-      setTimeout(() => this.loadTasks(), 0);
+      var now = Date.now();
+      if (!this._lastLoadTime || now - this._lastLoadTime > 30000) {
+        this._lastLoadTime = now;
+        setTimeout(() => this.loadTasks(), 0);
+      }
       this._refreshPageSuggestions();
       this._loadDynamicSuggestions();
       // 修复：tabBar页面常驻不销毁，attached()只执行一次。
@@ -286,7 +287,7 @@ Component({
         if (suggestions.length > 0) {
           self.setData({ dynamicSuggestions: suggestions });
         }
-      }).catch(function () {});
+      }).catch(function (e) { console.warn('[XiaoYun] 待办任务加载失败:', e); });
     },
 
     _saveChatHistory() {
@@ -358,35 +359,24 @@ Component({
 
     async sendMessage() {
       var text = this.data.inputValue.trim();
-      var hasImage = !!this.data.pendingImage;
-      if ((!text && !hasImage) || this.data.isLoading) return;
+      if (!text || this.data.isLoading) return;
 
       this.setData({ inputValue: '' });
-      var tempPath = hasImage ? this.data.pendingImage : '';
 
       var userMsg = {
         id: Date.now(), role: 'user',
-        content: hasImage ? (text || '发送了一张图片') : text,
+        content: text,
       };
-      if (hasImage) userMsg.imageUrl = tempPath;
-      if (hasImage) this.setData({ pendingImage: '', uploading: true });
-      this._setMessages([].concat(this.data.messages, [userMsg]), { isLoading: !hasImage, streamingText: '', streamingTool: '' });
+      this._setMessages([].concat(this.data.messages, [userMsg]), { isLoading: true, streamingText: '', streamingTool: '' });
       this.scrollToBottom();
 
-      var imageUrl = '';
       try {
-        if (tempPath) {
-          imageUrl = await api.common.uploadImage(tempPath);
-          this.setData({ uploading: false, isLoading: true });
-        }
-
         var chatContext = this.data.isManager ? 'manager_assistant' : 'worker_assistant';
         var streamPayload = {
-          question: text || (imageUrl ? '请看这张图片' : text),
+          question: text,
           pageContext: chatContext,
           conversationId: this.data.conversationId,
         };
-        if (imageUrl) streamPayload.imageUrl = imageUrl;
 
         var self = this;
         var accumulatedText = '';
@@ -475,8 +465,7 @@ Component({
               return;
             }
             try {
-              var chatParams = { question: text || (imageUrl ? '请看这张图片' : text), context: chatContext };
-              if (imageUrl) chatParams.imageUrl = imageUrl;
+              var chatParams = { question: text, context: chatContext };
               var chatRes = await api.intelligence.aiAdvisorChat(chatParams);
               var aiResponse = '';
               var syncActions = null;
@@ -533,10 +522,6 @@ Component({
 
       } catch (err) {
         console.error('[XiaoYun] sendMessage error:', err);
-        if (tempPath && !imageUrl) {
-          wx.showToast({ title: '图片上传失败', icon: 'none' });
-          this.setData({ uploading: false });
-        }
         var errContent = (err && err.errMsg && err.errMsg !== 'undefined') ? err.errMsg : '服务暂时无法响应，请稍后再试。';
         var errMsg = { id: Date.now(), role: 'ai', content: errContent };
         this._setMessages([].concat(this.data.messages, [errMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
@@ -555,29 +540,6 @@ Component({
         this.setData({ inputValue: action.command }, () => { this.sendMessage(); });
       }
     },
-
-    chooseImage() {
-      if (this.data.isLoading || this.data.uploading) return;
-      var self = this;
-      wx.chooseMedia({
-        count: 1, mediaType: ['image'], sourceType: ['camera', 'album'],
-        success: (res) => {
-          var path = (res.tempFiles && res.tempFiles[0] && res.tempFiles[0].tempFilePath) || '';
-          if (path) self.setData({ pendingImage: path });
-        },
-        fail: (err) => {
-          if (err && err.errMsg && err.errMsg.indexOf('cancel') === -1) {
-            wx.showModal({
-              title: '相机/相册权限', content: '需要相机或相册权限才能上传图片，请在设置中允许',
-              confirmText: '去设置', cancelText: '取消',
-              success: function (modalRes) { if (modalRes.confirm) wx.openSetting({ success: function () {} }); },
-            });
-          }
-        },
-      });
-    },
-    removePendingImage() { this.setData({ pendingImage: '' }); },
-    previewImage(e) { var src = e.currentTarget.dataset.src; if (src) wx.previewImage({ current: src, urls: [src] }); },
 
     clearMessages() {
       let userName = '';

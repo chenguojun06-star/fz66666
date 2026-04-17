@@ -5,7 +5,7 @@
  * @module UndoHandler
  */
 
-const { eventBus } = require('../../../utils/eventBus');
+const { eventBus, triggerDataRefresh } = require('../../../utils/eventBus');
 const { toast } = require('../../../utils/uiHelper');
 const api = require('../../../utils/api');
 
@@ -110,9 +110,7 @@ async function handleUndo(page) {
     page.loadMyPanel(true);
 
     // 触发全局事件
-    if (eventBus && typeof eventBus.emit === 'function') {
-      eventBus.emit('DATA_REFRESH');
-    }
+    triggerDataRefresh('scan');
   } catch (e) {
     page.setData({ 'undo.loading': false });
     toast.error('撤销失败: ' + (e.errMsg || e.message || '未知错误'));

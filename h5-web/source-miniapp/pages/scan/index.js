@@ -491,10 +491,8 @@ Page({
           require('./../../utils/uiHelper').toast.success('已撤回');
           // 刷新面板
           this.loadMyPanel(true);
-          const { eventBus } = require('./../../utils/eventBus');
-          if (eventBus && typeof eventBus.emit === 'function') {
-            eventBus.emit('DATA_REFRESH');
-          }
+          const { triggerDataRefresh } = require('./../../utils/eventBus');
+          triggerDataRefresh('scan');
         } catch (err) {
           require('./../../utils/uiHelper').toast.error('撤回失败: ' + (err.errMsg || err.message || '未知错误'));
         } finally {

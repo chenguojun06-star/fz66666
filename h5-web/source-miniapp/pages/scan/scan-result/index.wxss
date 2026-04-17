@@ -106,6 +106,26 @@
   padding: 24rpx;
   margin-bottom: 24rpx;
 }
+
+.stage-hints-card {
+  margin-top: 16rpx;
+  padding: 16rpx 20rpx;
+  border-radius: 12rpx;
+  background: rgba(16,185,129,0.08);
+  border-left: 6rpx solid #10b981;
+}
+.stage-hints-title {
+  font-size: 22rpx;
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  margin-bottom: 8rpx;
+  display: block;
+}
+.stage-hint-item {
+  font-size: 24rpx;
+  color: #374151;
+  line-height: 40rpx;
+}
 .insight-icon {
   font-size: var(--font-size-lg-xl);
   margin-right: 12rpx;

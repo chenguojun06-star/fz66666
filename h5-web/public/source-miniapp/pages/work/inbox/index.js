@@ -1,4 +1,5 @@
 const api = require('../../../utils/api');
+const { eventBus, Events } = require('../../../utils/eventBus');
 
 // 通知类型 → 图标映射
 function typeIcon(noticeType) {
@@ -40,6 +41,7 @@ Page({
     var app = getApp();
     if (app.requireAuth && !app.requireAuth()) return;
     this.loadNotices();
+    this._bindWsEvents();
   },
 
   async loadNotices() {
@@ -146,5 +148,32 @@ Page({
     } finally {
       wx.hideLoading();
     }
+  },
+
+  _bindWsEvents() {
+    if (this._wsBound) return;
+    this._wsBound = true;
+    this._onDataChanged = () => { this.loadNotices(); };
+    this._onRefreshAll = () => { this.loadNotices(); };
+    this._onOrderProgress = () => { this.loadNotices(); };
+    eventBus.on(Events.DATA_CHANGED, this._onDataChanged);
+    eventBus.on(Events.REFRESH_ALL, this._onRefreshAll);
+    eventBus.on(Events.ORDER_PROGRESS_CHANGED, this._onOrderProgress);
+  },
+
+  _unbindWsEvents() {
+    if (!this._wsBound) return;
+    this._wsBound = false;
+    if (this._onDataChanged) eventBus.off(Events.DATA_CHANGED, this._onDataChanged);
+    if (this._onRefreshAll) eventBus.off(Events.REFRESH_ALL, this._onRefreshAll);
+    if (this._onOrderProgress) eventBus.off(Events.ORDER_PROGRESS_CHANGED, this._onOrderProgress);
+  },
+
+  onHide() {
+    this._unbindWsEvents();
+  },
+
+  onUnload() {
+    this._unbindWsEvents();
   },
 });

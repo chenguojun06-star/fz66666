@@ -3,6 +3,7 @@
  * 从 scan/index.js 抽取，处理样板确认弹窗及提交逻辑
  */
 const toast = require('../../../utils/uiHelper').toast;
+const { triggerDataRefresh } = require('../../../utils/eventBus');
 
 const OPERATION_LABELS = {
   RECEIVE: '领取样板',
@@ -272,10 +273,7 @@ async function submitPatternScan(page) {
         },
       });
 
-      const eventBus = getApp().globalData?.eventBus;
-      if (eventBus && typeof eventBus.emit === 'function') {
-        eventBus.emit('DATA_REFRESH');
-      }
+      triggerDataRefresh('pattern');
     } else {
       toast.error(result.message || '操作失败');
     }
@@ -358,10 +356,7 @@ async function submitPatternScanAll(page) {
       },
     });
 
-    const eventBus = getApp().globalData?.eventBus;
-    if (eventBus && typeof eventBus.emit === 'function') {
-      eventBus.emit('DATA_REFRESH');
-    }
+    triggerDataRefresh('pattern');
   } catch (e) {
     console.error('[扫码页] 样板一键提交失败:', e);
     toast.error(e.errMsg || e.message || '一键提交失败');
@@ -426,10 +421,7 @@ async function claimAllPatternOps(page) {
           operationType: 'CLAIM_ALL',
         },
       });
-      const eventBus = getApp().globalData && getApp().globalData.eventBus;
-      if (eventBus && typeof eventBus.emit === 'function') {
-        eventBus.emit('DATA_REFRESH');
-      }
+      triggerDataRefresh('pattern');
     }
   } catch (e) {
     console.error('[扫码页] 样板一键领取失败:', e);

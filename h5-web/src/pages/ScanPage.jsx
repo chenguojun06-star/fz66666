@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import wx from '@/adapters/wx';
 import api from '@/api';
@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useGlobalStore } from '@/stores/globalStore';
 import { toast } from '@/utils/uiHelper';
 import { eventBus } from '@/utils/eventBus';
-import CameraScanner from '@/components/CameraScanner';
+const CameraScanner = lazy(() => import('@/components/CameraScanner'));
 import Icon from '@/components/Icon';
 import { scanOfflineQueue, isOnline, setupOfflineQueueSync } from '@/services/scanOfflineQueue';
 import { parseBundleCode, validateBundleForStage, determineAutoFlow, STAGE_LABELS } from '@/utils/scanHelpers';
@@ -384,8 +384,11 @@ export default function ScanPage() {
         )}
       </div>
 
-      <CameraScanner active={cameraActive} onScan={handleScanResult}
-        onError={(msg) => { if (msg) toast.error(msg); setCameraActive(false); }} />
-    </div>
+      <Suspense fallback={null}>
+        {cameraActive && (
+          <CameraScanner active={cameraActive} onScan={handleScanResult}
+            onError={(msg) => { if (msg) toast.error(msg); setCameraActive(false); }} />
+        )}
+      </Suspense>    </div>
   );
 }

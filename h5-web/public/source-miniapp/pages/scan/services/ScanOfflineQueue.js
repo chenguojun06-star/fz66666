@@ -221,6 +221,17 @@ const ScanOfflineQueue = {
             if (DEBUG) console.log('[ScanOfflineQueue] 网络仍断开，停止上传');
             break;
           }
+          if (errMsg.includes('DuplicateKey') || errMsg.includes('重复') || errMsg.includes('duplicate')) {
+            this.dequeue(item.queueId);
+            if (DEBUG) console.log('[ScanOfflineQueue] 服务端重复记录，直接丢弃:', item.queueId);
+            failed--;
+            continue;
+          }
+          item._retryCount = (item._retryCount || 0) + 1;
+          if (item._retryCount >= 5) {
+            this.dequeue(item.queueId);
+            if (DEBUG) console.warn('[ScanOfflineQueue] 重试次数超限，丢弃:', item.queueId);
+          }
         }
 
         if (onProgress) {

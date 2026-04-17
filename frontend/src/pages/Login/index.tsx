@@ -27,7 +27,9 @@ const Login: React.FC = () => {
   const { login, loginWithSms, sendLoginSmsCode } = useAuth();
   const { language } = useAppLanguage();
   const [submitting, setSubmitting] = useState(false);
-  const [loginMode, setLoginMode] = useState<LoginMode>('password');
+  // 当前固定使用账号密码登录；短信登录分支保留在代码中但 UI 切换按钮已移除，
+  // 因此 setter 暂时用不到，使用 _ 前缀规避 eslint no-unused-vars（保留类型以便日后恢复）。
+  const [loginMode, _setLoginMode] = useState<LoginMode>('password');
   const [smsSending, setSmsSending] = useState(false);
   const [smsCountdown, setSmsCountdown] = useState(0);
   const { message } = App.useApp();

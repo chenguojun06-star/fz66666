@@ -5,6 +5,7 @@
 const toast = require('../../../utils/uiHelper').toast;
 const api = require('../../../utils/api');
 const { getAuthedImageUrl } = require('../../../utils/fileUrl');
+const { triggerDataRefresh } = require('../../../utils/eventBus');
 
 // ---- 常量（与 PatternHandler.js 保持一致） ----
 const OPERATION_LABELS = {
@@ -321,9 +322,6 @@ Page({
   // ---- 内部工具 ----
 
   _emitRefresh() {
-    const eventBus = getApp().globalData && getApp().globalData.eventBus;
-    if (eventBus && typeof eventBus.emit === 'function') {
-      eventBus.emit('DATA_REFRESH');
-    }
+    triggerDataRefresh('pattern');
   },
 });
