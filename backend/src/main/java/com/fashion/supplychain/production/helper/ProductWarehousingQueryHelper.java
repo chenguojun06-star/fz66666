@@ -1,6 +1,7 @@
 package com.fashion.supplychain.production.helper;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.util.TextUtils;
@@ -597,10 +598,13 @@ public class ProductWarehousingQueryHelper {
         }
         if (!scansByBundle.isEmpty()) {
             List<String> allBundleIds = new ArrayList<>(scansByBundle.keySet());
+            // 防御性查询：仅取 buildBundleStageHints 实际需要的 6 列，避免云端缺列（repair_status/scan_mode 等）导致 SELECT * 报 Unknown column → 500
             List<ProductWarehousing> allWhRecords = productWarehousingService.list(
-                    new LambdaQueryWrapper<ProductWarehousing>()
-                            .in(ProductWarehousing::getCuttingBundleId, allBundleIds)
-                            .eq(ProductWarehousing::getDeleteFlag, 0));
+                    new QueryWrapper<ProductWarehousing>()
+                            .select("cutting_bundle_id", "warehousing_type", "quality_status",
+                                    "quality_operator_name", "warehousing_operator_name", "warehouse")
+                            .in("cutting_bundle_id", allBundleIds)
+                            .eq("delete_flag", 0));
             Map<String, List<ProductWarehousing>> whByBundle = new HashMap<>();
             if (allWhRecords != null) {
                 for (ProductWarehousing w : allWhRecords) {
