@@ -1,8 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 
-/**
- * WebSocket 消息结构（与后端 WebSocketMessage<T> 对应）
- */
 export interface WsMessage<T = Record<string, unknown>> {
   type: string;
   payload: T;
@@ -16,204 +13,194 @@ export interface WsMessage<T = Record<string, unknown>> {
 type MessageHandler = (msg: WsMessage) => void;
 
 interface UseWebSocketOptions {
-  /** 用户 ID（登录后才连接） */
   userId: string | undefined;
-  /** 客户端类型，默认 'pc' */
   clientType?: string;
-  /** 是否启用（未登录时设为 false） */
   enabled?: boolean;
-  /** 重连间隔 ms，默认 5000 */
   reconnectInterval?: number;
-  /** 心跳间隔 ms，默认 30000 */
   heartbeatInterval?: number;
-  /** 最大重连次数，默认 10 */
   maxReconnectAttempts?: number;
-  /** 租户ID，用于隔离WebSocket广播 */
   tenantId?: string | number;
 }
 
-/**
- * WebSocket Hook — 连接后端 /ws/realtime 端点
- *
- * 使用方式：
- * ```ts
- * const { subscribe, connected } = useWebSocket({ userId: user.id, enabled: !!user });
- * useEffect(() => subscribe('tenant:application:pending', (msg) => { ... }), [subscribe]);
- * ```
- */
-export function useWebSocket(options: UseWebSocketOptions) {
-  const {
-    userId,
-    clientType = 'pc',
-    enabled = true,
-    tenantId,
-    reconnectInterval = 10000,  // 初始10s，减少噪音（微信云托管偶发断连属正常）
-    heartbeatInterval = 18000, // 微信云托管负载均衡器60s超时，18s心跳确保不被切断
-    maxReconnectAttempts = 5,  // 最多5次，避免控制台刷满错误
-  } = options;
+interface WsInstance {
+  ws: WebSocket | null;
+  listeners: Map<string, Set<MessageHandler>>;
+  connected: boolean;
+  setConnected: (v: boolean) => void;
+  connect: () => void;
+  reconnectCount: number;
+  heartbeatTimer: ReturnType<typeof setInterval> | undefined;
+  reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+  currentOptions: UseWebSocketOptions;
+  subscriberCount: number;
+}
 
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout>>();
-  const heartbeatTimerRef = useRef<ReturnType<typeof setInterval>>();
-  const reconnectCountRef = useRef(0);
-  const listenersRef = useRef<Map<string, Set<MessageHandler>>>(new Map());
-  const [connected, setConnected] = useState(false);
+let globalInstance: WsInstance | null = null;
 
-  /** 构建 WebSocket URL */
-  const buildUrl = useCallback(() => {
+function getOrCreateInstance(options: UseWebSocketOptions): WsInstance {
+  if (globalInstance) {
+    globalInstance.currentOptions = options;
+    return globalInstance;
+  }
+
+  const state = { connected: false } as { connected: boolean };
+  const setConnected = (v: boolean) => {
+    state.connected = v;
+    globalInstance!.connected = v;
+    globalInstance!.setConnected = setConnected;
+    connectedListeners.forEach(fn => fn(v));
+  };
+
+  const connectedListeners = new Set<(v: boolean) => void>();
+
+  const inst: WsInstance = {
+    ws: null,
+    listeners: new Map(),
+    connected: false,
+    setConnected,
+    connect: () => {},
+    reconnectCount: 0,
+    heartbeatTimer: undefined,
+    reconnectTimer: undefined,
+    currentOptions: options,
+    subscriberCount: 0,
+  };
+  globalInstance = inst;
+
+  const buildUrl = () => {
+    const opts = inst.currentOptions;
     const loc = window.location;
-    // 开发环境: ws://{host}/ws/realtime (Vite proxy)
-    // 生产环境: wss://{host}/ws/realtime (nginx proxy)
     const protocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
-    return `${protocol}//${loc.host}/ws/realtime?userId=${userId}&clientType=${clientType}&tenantId=${tenantId ?? ''}`;
-  }, [userId, clientType, tenantId]);
+    return `${protocol}//${loc.host}/ws/realtime?userId=${opts.userId}&clientType=${opts.clientType || 'pc'}&tenantId=${opts.tenantId ?? ''}`;
+  };
 
-  /** 发送心跳 */
-  const startHeartbeat = useCallback((ws: WebSocket) => {
-    if (heartbeatTimerRef.current) clearInterval(heartbeatTimerRef.current);
-    heartbeatTimerRef.current = setInterval(() => {
+  const startHeartbeat = (ws: WebSocket) => {
+    if (inst.heartbeatTimer) clearInterval(inst.heartbeatTimer);
+    inst.heartbeatTimer = setInterval(() => {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'ping' }));
       }
-    }, heartbeatInterval);
-  }, [heartbeatInterval]);
+    }, options.heartbeatInterval || 18000);
+  };
 
-  /** 停止心跳 */
-  const stopHeartbeat = useCallback(() => {
-    if (heartbeatTimerRef.current) {
-      clearInterval(heartbeatTimerRef.current);
-      heartbeatTimerRef.current = undefined;
+  const stopHeartbeat = () => {
+    if (inst.heartbeatTimer) {
+      clearInterval(inst.heartbeatTimer);
+      inst.heartbeatTimer = undefined;
     }
-  }, []);
+  };
 
-  /** 建立连接 */
-  const connect = useCallback(() => {
-    if (!userId || !enabled) return;
-    // 清理已有连接（safeClose：对 CONNECTING socket 不直接 close，避免浏览器原生警告）
-    if (wsRef.current) {
-      const old = wsRef.current;
-      wsRef.current = null;
-      old.onopen = null;
-      old.onclose = null;
-      old.onerror = null;
-      old.onmessage = null;
-      if (old.readyState !== WebSocket.CONNECTING) {
-        old.close();
-      } else {
-        old.addEventListener('open', () => { try { old.close(); } catch { /* ignore */ } });
-      }
+  const doConnect = () => {
+    const opts = inst.currentOptions;
+    if (!opts.userId || !opts.enabled) return;
+    if (inst.ws) {
+      const old = inst.ws;
+      inst.ws = null;
+      old.onopen = null; old.onclose = null; old.onerror = null; old.onmessage = null;
+      if (old.readyState !== WebSocket.CONNECTING) { old.close(); }
+      else { old.addEventListener('open', () => { try { old.close(); } catch { /* */ } }); }
     }
-
     try {
       const url = buildUrl();
       const ws = new WebSocket(url);
-      wsRef.current = ws;
-
+      inst.ws = ws;
       ws.onopen = () => {
         if (import.meta.env.DEV) console.log('[WebSocket] 连接成功');
         setConnected(true);
-        reconnectCountRef.current = 0;
+        inst.reconnectCount = 0;
         startHeartbeat(ws);
       };
-
       ws.onmessage = (event) => {
         try {
           const msg: WsMessage = JSON.parse(event.data);
-          // 服务端主动推的 ping 直接忽略（心跳保活，无需业务处理）
           if (msg.type === 'ping') return;
-          // 分发给对应 type 的监听器
-          const handlers = listenersRef.current.get(msg.type);
-          if (handlers) {
-            handlers.forEach((fn) => {
-              try { fn(msg); } catch (e) { console.error('[WebSocket] handler error:', e); }
-            });
-          }
-          // 同时分发给 '*' 通配监听器
-          const wildcard = listenersRef.current.get('*');
-          if (wildcard) {
-            wildcard.forEach((fn) => {
-              try { fn(msg); } catch (e) { console.error('[WebSocket] wildcard handler error:', e); }
-            });
-          }
-        } catch {
-          // 非 JSON 消息，忽略
-        }
+          const handlers = inst.listeners.get(msg.type);
+          if (handlers) handlers.forEach(fn => { try { fn(msg); } catch { /* */ } });
+          const wildcard = inst.listeners.get('*');
+          if (wildcard) wildcard.forEach(fn => { try { fn(msg); } catch { /* */ } });
+        } catch { /* non-JSON */ }
       };
-
-      ws.onclose = (event) => {
-        if (import.meta.env.DEV) console.log('[WebSocket] 连接关闭:', event.code, event.reason);
+      ws.onclose = () => {
+        if (import.meta.env.DEV) console.log('[WebSocket] 连接关闭');
         setConnected(false);
         stopHeartbeat();
-        wsRef.current = null;
-        // 页面隐藏时不重连（避免后台刷 failed 错误）
+        inst.ws = null;
         if (document.hidden) return;
-        // 自动重连（指数退避，封顶 60s）
-        if (enabled && reconnectCountRef.current < maxReconnectAttempts) {
-          reconnectCountRef.current++;
-          const delay = Math.min(reconnectInterval * Math.pow(2, reconnectCountRef.current - 1), 60000);
-          if (import.meta.env.DEV) console.log(`[WebSocket] ${delay / 1000}s 后重连 (第${reconnectCountRef.current}次/${maxReconnectAttempts}次)`);
-          reconnectTimerRef.current = setTimeout(connect, delay);
-        } else if (reconnectCountRef.current >= maxReconnectAttempts) {
-          console.warn('[WebSocket] 已达重连上限，停止重连。实时推送暂不可用，不影响正常业务。');
+        const maxAttempts = opts.maxReconnectAttempts || 5;
+        if (opts.enabled && inst.reconnectCount < maxAttempts) {
+          inst.reconnectCount++;
+          const interval = opts.reconnectInterval || 10000;
+          const delay = Math.min(interval * Math.pow(2, inst.reconnectCount - 1), 60000);
+          if (import.meta.env.DEV) console.log(`[WebSocket] ${delay / 1000}s 后重连`);
+          inst.reconnectTimer = setTimeout(doConnect, delay);
         }
       };
-
-      ws.onerror = () => {
-        // onclose 会紧随 onerror 触发，无需额外处理
-      };
+      ws.onerror = () => { /* onclose follows */ };
     } catch (e) {
-      console.warn('[WebSocket] 创建连接失败:', e);
+      if (import.meta.env.DEV) console.warn('[WebSocket] 创建连接失败:', e);
     }
-  }, [userId, enabled, buildUrl, startHeartbeat, stopHeartbeat, reconnectInterval, maxReconnectAttempts]);
+  };
 
-  /** 订阅某类消息，返回取消订阅函数 */
-  const subscribe = useCallback((type: string, handler: MessageHandler): (() => void) => {
-    if (!listenersRef.current.has(type)) {
-      listenersRef.current.set(type, new Set());
-    }
-    listenersRef.current.get(type)!.add(handler);
-    return () => {
-      listenersRef.current.get(type)?.delete(handler);
-    };
+  inst.connect = doConnect;
+  return inst;
+}
+
+export function useWebSocket(options: UseWebSocketOptions) {
+  const instRef = useRef<WsInstance | null>(null);
+  if (!instRef.current) {
+    instRef.current = getOrCreateInstance(options);
+  } else {
+    instRef.current.currentOptions = options;
+  }
+  const inst = instRef.current;
+
+  const [connected, setMyConnected] = useState(inst.connected);
+
+  useEffect(() => {
+    setMyConnected(inst.connected);
+    const handler = (v: boolean) => setMyConnected(v);
+    const connectedListeners = (globalInstance?.setConnected as any)?._listeners as Set<(v: boolean) => void> | undefined;
+    return () => { /* cleanup handled by subscriber count */ };
   }, []);
 
-  // 连接/断开
   useEffect(() => {
-    if (enabled && userId) {
-      connect();
+    inst.subscriberCount++;
+    if (inst.subscriberCount === 1 && options.enabled && options.userId) {
+      inst.connect();
     }
     return () => {
-      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
-      stopHeartbeat();
-      if (wsRef.current) {
-        const ws = wsRef.current;
-        wsRef.current = null;
-        ws.onopen = null;
-        ws.onclose = null;
-        ws.onerror = null;
-        ws.onmessage = null;
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.close();
-        } else if (ws.readyState === WebSocket.CONNECTING) {
-          ws.addEventListener('open', () => { try { ws.close(); } catch { /* ignore */ } });
+      inst.subscriberCount--;
+      if (inst.subscriberCount <= 0) {
+        if (inst.reconnectTimer) clearTimeout(inst.reconnectTimer);
+        if (inst.heartbeatTimer) clearInterval(inst.heartbeatTimer);
+        if (inst.ws) {
+          const ws = inst.ws;
+          inst.ws = null;
+          ws.onopen = null; ws.onclose = null; ws.onerror = null; ws.onmessage = null;
+          if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) ws.close();
         }
+        inst.connected = false;
+        globalInstance = null;
       }
-      setConnected(false);
     };
+  }, [options.enabled, options.userId]);
 
-  }, [userId, enabled]);
-
-  // 页面可见性变化时恢复连接
   useEffect(() => {
     const handleVisibility = () => {
-      if (!document.hidden && enabled && userId && !wsRef.current) {
-        reconnectCountRef.current = 0;
-        connect();
+      if (!document.hidden && options.enabled && options.userId && !inst.ws) {
+        inst.reconnectCount = 0;
+        inst.connect();
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [enabled, userId, connect]);
+  }, [options.enabled, options.userId]);
+
+  const subscribe = useCallback((type: string, handler: MessageHandler): (() => void) => {
+    if (!inst.listeners.has(type)) inst.listeners.set(type, new Set());
+    inst.listeners.get(type)!.add(handler);
+    return () => { inst.listeners.get(type)?.delete(handler); };
+  }, []);
 
   return { connected, subscribe };
 }

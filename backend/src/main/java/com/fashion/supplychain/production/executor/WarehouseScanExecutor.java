@@ -271,9 +271,9 @@ public class WarehouseScanExecutor {
                 log.warn("查找已有入库扫码记录失败: requestId={}", requestId, ex);
             }
         } catch (Exception dbEx) {
-            log.error("[ScanSave-Warehouse] t_scan_record保存失败，回滚入库: requestId={}, exType={}, error={}",
+            log.error("[ScanSave-Warehouse] t_scan_record保存失败: requestId={}, exType={}, error={}",
                     requestId, dbEx.getClass().getSimpleName(), dbEx.getMessage(), dbEx);
-            throw new IllegalStateException("入库扫码记录保存失败，入库已回滚，请重试: " + dbEx.getMessage());
+            throw new IllegalStateException("入库扫码记录保存失败，请重试: " + dbEx.getMessage());
         }
 
         // ★ SKU库存同步：菲号模式入库后更新SKU库存

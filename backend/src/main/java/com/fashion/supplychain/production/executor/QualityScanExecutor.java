@@ -226,10 +226,8 @@ public class QualityScanExecutor {
         } catch (org.springframework.dao.DuplicateKeyException dke) {
             log.info("[QualityScan] 质检扫码记录重复（幂等）: bundleId={}, stageCode={}",
                     bundle.getId(), stageCode);
-            // 幂等：记录已存在，视为此次扫码已成功完成
         } catch (Exception e) {
-            log.warn("[QualityScan] 扫码记录保存失败（不阻断质检）: bundleId={}, stageCode={}, error={}",
-                    bundle.getId(), stageCode, e.getMessage(), e);
+            throw new IllegalStateException("质检扫码记录保存失败，请重试: bundleId=" + bundle.getId(), e);
         }
 
         Map<String, Object> result = new HashMap<>();
@@ -307,10 +305,8 @@ public class QualityScanExecutor {
         } catch (org.springframework.dao.DuplicateKeyException dke) {
             log.info("[QualityScan] 质检确认记录重复（幂等）: bundleId={}, recordId={}",
                     bundle.getId(), existed.getId());
-            // 幂等处理：记录已存在，继续返回成功
         } catch (Exception e) {
-            log.warn("[QualityScan] 质检确认记录更新失败（不阻断流程）: bundleId={}, recordId={}, error={}",
-                    bundle.getId(), existed.getId(), e.getMessage(), e);
+            throw new IllegalStateException("质检确认记录更新失败，请重试: bundleId=" + bundle.getId(), e);
         }
 
         // ★ 次品处理：根据处理方式（返修/报废）创建不同类型的记录
@@ -923,7 +919,7 @@ public class QualityScanExecutor {
             return Math.max(0, totalQty - warehoused);
         } catch (Exception e) {
             log.warn("计算剩余返修数量失败: orderId={}, bundleId={}", orderId, bundleId, e);
-            return Integer.MAX_VALUE;
+            return 0;
         }
     }
 

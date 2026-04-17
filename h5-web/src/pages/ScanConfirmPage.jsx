@@ -148,6 +148,8 @@ export default function ScanConfirmPage() {
           scanCode: confirmScanData.scanCode || detail.orderNo || '',
           scanType: normalizeScanType(detail.progressStage, 'production'),
           color: item.color || '', size: item.size || '',
+          requestId: `h5_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          source: 'h5',
         };
         return api.production.executeScan(payload);
       });

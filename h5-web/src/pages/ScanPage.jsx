@@ -160,6 +160,10 @@ export default function ScanPage() {
           scanCode: code,
           scanType,
           requestId: `h5_offline_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          quantity: 1,
+          processCode: '',
+          orderId: '',
+          bundleNo: '',
         });
         setLastResult({ scanCode: code, scanType, success: true, message: '网络离线，扫码已缓存，联网后自动上传' });
         toast.warn('网络离线，扫码已缓存');
@@ -179,7 +183,11 @@ export default function ScanPage() {
           return;
         }
       }
-      const res = await api.production.executeScan({ scanCode: code, scanType });
+      const res = await api.production.executeScan({
+        scanCode: code, scanType,
+        requestId: `h5_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        source: 'h5',
+      });
       const data = res?.data || res;
       if (data) {
         const stage = data.progressStage || data.stage || '';

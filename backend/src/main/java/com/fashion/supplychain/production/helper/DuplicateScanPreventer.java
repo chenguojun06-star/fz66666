@@ -109,7 +109,8 @@ public class DuplicateScanPreventer {
         }
 
         String lockKey = "scan:dedup:" + scanCode + ":" + (hasText(scanType) ? scanType : "")
-                + ":" + (hasText(processCode) ? processCode : "");
+                + ":" + (hasText(processCode) ? processCode : "")
+                + ":" + (hasText(operatorId) ? operatorId : "anon");
         return distributedLockService.executeWithLock(lockKey, 5, TimeUnit.SECONDS, () -> {
             try {
                 int minIntervalSeconds = calculateMinIntervalSeconds(bundleQuantity, processMinutes);
