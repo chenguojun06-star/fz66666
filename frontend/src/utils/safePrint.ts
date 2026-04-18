@@ -20,7 +20,7 @@ export function safePrint(htmlContent: string, _title: string = '打印'): boole
   try {
     const iframe = document.createElement('iframe');
     iframe.style.cssText =
-      'position:fixed;left:-9999px;top:-9999px;width:210mm;height:297mm;border:none;';
+      'position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:none;opacity:0;pointer-events:none;';
     document.body.appendChild(iframe);
 
     const doc = iframe.contentDocument!;

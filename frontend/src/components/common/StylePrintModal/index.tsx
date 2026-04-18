@@ -87,29 +87,28 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
 
   useEffect(() => {
     if (!visible || !styleId) return;
-    let cancelled = false;
     setLabelPrintMode(false);
     setAutoPatternId(null);
+    // 样衣模式下自动查询样衣生产记录ID（用于二维码）
     if (mode === 'sample' && !propPatternId && styleNo) {
       api.get('/production/pattern/list', { params: { page: 1, pageSize: 20, keyword: styleNo } })
         .then(res => {
-          if (cancelled) return;
           const records = Array.isArray(res?.data?.records) ? res.data.records : [];
           const matched = records.find((item: any) => String(item.styleId || '') === String(styleId || ''))
             || records.find((item: any) => String(item.styleNo || '') === String(styleNo || ''));
           if (matched?.id) setAutoPatternId(String(matched.id));
         })
-        .catch((err) => { if (!cancelled) console.warn('[打印] 查询样衣生产记录失败:', err?.message); });
+        .catch(() => {});
     }
     const loadData = async () => {
       setLoading(true);
       try {
         const newData: PrintData = { sizes: [], bom: [], process: [], attachments: [], productionSheet: null };
         const promises: Promise<any>[] = [];
-        promises.push(getStyleInfoByRef(styleId, styleNo).then((styleInfo) => { if (!cancelled && styleInfo) newData.productionSheet = styleInfo; }).catch((err) => { if (!cancelled) console.warn('[打印] 获取款式信息失败:', err?.message); }));
-        promises.push(api.get('/style/size/list', { params: { styleId } }).then(res => { if (!cancelled && res.code === 200) newData.sizes = res.data || []; }).catch((err) => { if (!cancelled) console.warn('[打印] 获取尺码表失败:', err?.message); }));
-        promises.push(api.get('/style/bom/list', { params: { styleId } }).then(res => { if (!cancelled && res.code === 200) newData.bom = res.data || []; }).catch((err) => { if (!cancelled) console.warn('[打印] 获取BOM失败:', err?.message); }));
-        promises.push(api.get('/style/process/list', { params: { styleId } }).then(res => { if (!cancelled && res.code === 200) newData.process = res.data || []; }).catch((err) => { if (!cancelled) console.warn('[打印] 获取工序表失败:', err?.message); }));
+        promises.push(getStyleInfoByRef(styleId, styleNo).then((styleInfo) => { if (styleInfo) newData.productionSheet = styleInfo; }).catch(() => {}));
+        promises.push(api.get('/style/size/list', { params: { styleId } }).then(res => { if (res.code === 200) newData.sizes = res.data || []; }).catch(() => {}));
+        promises.push(api.get('/style/bom/list', { params: { styleId } }).then(res => { if (res.code === 200) newData.bom = res.data || []; }).catch(() => {}));
+        promises.push(api.get('/style/process/list', { params: { styleId } }).then(res => { if (res.code === 200) newData.process = res.data || []; }).catch(() => {}));
         promises.push(api.get('/style/attachment/list', { params: { styleId } }).then(res => {
           if (res.code === 200) {
             newData.attachments = (res.data || []).filter((item: any) => {
@@ -117,9 +116,8 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
               return bizType.startsWith('pattern') || bizType === 'size_table' || bizType === 'production_sheet';
             });
           }
-        }).catch((err) => { if (!cancelled) console.warn('[打印] 获取附件失败:', err?.message); }));
+        }).catch(() => {}));
         await Promise.all(promises);
-        if (cancelled) return;
         setData(newData);
         if (!cover) {
           const styleData = newData.productionSheet as any;
@@ -138,7 +136,6 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
       finally { setLoading(false); }
     };
     loadData();
-    return () => { cancelled = true; };
   }, [visible, styleId, mode, propPatternId, styleNo]);
 
   const handlePrint = () => {
@@ -191,8 +188,6 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
       const qrMm = 26;
       const qrPx = 480;
       const fs = h >= 48 ? 6.2 : h >= 38 ? 5.4 : 4.9;
-
-      console.log('[StylePrintModal] labelPrint props:', { styleNo: sNo, styleName: sName, color, quantity, mode, orderId, orderNo, labelItemsCount: labelItems.length, labelItems });
 
       // 如果 labelItems 为空则兜底单条
       const items = labelItems.length > 0
@@ -263,13 +258,7 @@ body{font-family:'PingFang SC','Heiti SC',Arial,sans-serif}
         doc.open(); doc.write(html); doc.close();
         const imgs = doc.querySelectorAll('img');
         await new Promise<void>(resolve => {
-          const doPrint = () => {
-            console.log('[StylePrintModal] label print HTML preview:', html.substring(0, 800));
-            fr.contentWindow?.focus();
-            fr.contentWindow?.print();
-            setTimeout(() => { try { document.body.removeChild(fr); } catch { /**/ } }, 1000);
-            resolve();
-          };
+          const doPrint = () => { fr.contentWindow?.focus(); fr.contentWindow?.print(); setTimeout(() => { try { document.body.removeChild(fr); } catch { /**/ } }, 1000); resolve(); };
           if (imgs.length === 0) { setTimeout(doPrint, 100); return; }
           let loaded = 0;
           const onDone = () => { loaded++; if (loaded >= imgs.length) doPrint(); };

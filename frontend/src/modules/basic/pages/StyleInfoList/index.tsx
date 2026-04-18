@@ -1,16 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { App, Button, Input } from 'antd';
-import { AppstoreOutlined, ArrowUpOutlined, ArrowDownOutlined, RadarChartOutlined, DownloadOutlined } from '@ant-design/icons';
+import { AppstoreOutlined, ArrowUpOutlined, ArrowDownOutlined, RadarChartOutlined } from '@ant-design/icons';
 import Layout from '@/components/Layout';
 import PageLayout from '@/components/common/PageLayout';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import SmallModal from '@/components/common/SmallModal';
 import StylePrintModal from '@/components/common/StylePrintModal';
-import SampleLabelPrintModal from './components/SampleLabelPrintModal';
 import PageStatCards from '@/components/common/PageStatCards';
-import api from '@/utils/api';
-import { remarkApi } from '@/services/system/remarkApi';
+import api, { type ApiResult } from '@/utils/api';
 import { StyleInfo } from '@/types/style';
 import dayjs from 'dayjs';
 
@@ -68,8 +66,6 @@ const StyleInfoListPage: React.FC = () => {
   // 打印功能状态
   const [printModalVisible, setPrintModalVisible] = useState(false);
   const [printingRecord, setPrintingRecord] = useState<StyleInfo | null>(null);
-  const [sampleLabelModalOpen, setSampleLabelModalOpen] = useState(false);
-  const [sampleLabelRecord, setSampleLabelRecord] = useState<StyleInfo | null>(null);
 
   // 维护功能状态
   const [maintenanceOpen, setMaintenanceOpen] = useState(false);
@@ -84,8 +80,6 @@ const StyleInfoListPage: React.FC = () => {
   const [pendingFocusStyleId, setPendingFocusStyleId] = useState<string | null>(null);
   const [focusedStyleId, setFocusedStyleId] = useState<string | null>(null);
   const [dateSortAsc, setDateSortAsc] = useState(false);
-  // 开发费用统计卡片折叠状态（默认关闭）
-  const [statsCollapsed, setStatsCollapsed] = useState(true);
   const focusClearTimerRef = useRef<number | null>(null);
 
   // ESC 键清除智能筛选（逾期/临近交期标记）
@@ -212,11 +206,6 @@ const StyleInfoListPage: React.FC = () => {
   const handlePrintClick = (record: StyleInfo) => {
     setPrintingRecord(record);
     setPrintModalVisible(true);
-  };
-
-  const handleLabelPrint = (record: StyleInfo) => {
-    setSampleLabelRecord(record);
-    setSampleLabelModalOpen(true);
   };
 
   // 维护功能
@@ -386,91 +375,18 @@ const StyleInfoListPage: React.FC = () => {
     }));
   };
 
-  // 导出当前列表为 CSV（包含全部主要阶段时间）
-  const handleExport = async () => {
-    const DEV_SOURCE_MAP: Record<string, string> = {
-      SELF_DEVELOPED: '自主开发',
-      SELECTION_CENTER: '选款中心',
-    };
-    const fmtTime = (v: string | undefined) =>
-      v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '';
-    const fmtDate = (v: string | undefined) =>
-      v ? dayjs(v).format('YYYY-MM-DD') : '';
-
-    // 批量拉取各款号最新备注
-    const styleNos = displayData
-      .map((item) => item.styleNo)
-      .filter((v): v is string => !!v);
-    let remarkMap: Record<string, string> = {};
-    if (styleNos.length > 0) {
-      try {
-        const res = await remarkApi.batchLatest('style', styleNos);
-        remarkMap = (res as any) ?? {};
-      } catch {
-        // 备注获取失败不影响导出，留空
-      }
-    }
-
-    const headers = [
-      '款号', '款名', '品类', '颜色', '尺码', '样衣数量',
-      '单价',
-      '开发方式', '当前进度',
-      '交货日期',
-      '打版开始时间', '打版完成时间',
-      '样衣完成时间', '全部完成时间',
-      '创建时间',
-      '备注',
-    ];
-
-    const rows = displayData.map((item) => [
-      item.styleNo ?? '',
-      item.styleName ?? '',
-      item.category ?? '',
-      item.color ?? '',
-      item.size ?? '',
-      item.sampleQuantity ?? '',
-      item.price ?? '',
-      (DEV_SOURCE_MAP[item.developmentSourceType ?? ''] || item.developmentSourceType) ?? '',
-      item.progressNode ?? '',
-      fmtDate(item.deliveryDate),
-      fmtTime(item.patternStartTime),
-      fmtTime(item.patternCompletedTime),
-      fmtTime(item.sampleCompletedTime),
-      fmtTime(item.completedTime),
-      fmtTime(item.createTime),
-      remarkMap[item.styleNo ?? ''] ?? '',
-    ]);
-
-    const csvContent = [headers, ...rows]
-      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-      .join('\n');
-
-    const BOM = '\uFEFF'; // Excel 识别 UTF-8 的 BOM
-    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `样衣开发列表_${dayjs().format('YYYY-MM-DD_HHmm')}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
   return (
     <Layout>
       <PageLayout
         title="样衣开发与生产"
         headerContent={
           <>
-            {/* 开发费用统计看板（默认折叠，点击标题展开） */}
+            {/* 开发费用统计看板 */}
             <StyleStatsCard
               stats={developmentStats}
               loading={statsLoading}
               rangeType={statsRangeType}
               onRangeChange={handleStatsRangeChange}
-              collapsed={statsCollapsed}
-              onToggle={() => setStatsCollapsed((v) => !v)}
             />
 
             <PageStatCards
@@ -534,13 +450,6 @@ const StyleInfoListPage: React.FC = () => {
                   {viewMode === 'smart' ? '卡片视图' : '智能视图'}
                 </Button>
                 <Button
-                  icon={<DownloadOutlined />}
-                  onClick={handleExport}
-                  title="导出当前列表 CSV"
-                >
-                  导出
-                </Button>
-                <Button
                   type="primary"
                   onClick={() => navigate('/style-info/new')}
                 >
@@ -563,7 +472,6 @@ const StyleInfoListPage: React.FC = () => {
             onPageChange={handlePageChange}
             onScrap={handleScrap}
             onPrint={handlePrintClick}
-            onLabelPrint={handleLabelPrint}
             onMaintenance={openMaintenance}
             categoryOptions={categoryOptions}
             onRefresh={fetchList}
@@ -581,7 +489,6 @@ const StyleInfoListPage: React.FC = () => {
             onPageChange={handlePageChange}
             onScrap={handleScrap}
             onPrint={handlePrintClick}
-            onLabelPrint={handleLabelPrint}
             onMaintenance={openMaintenance}
             focusedStyleId={focusedStyleId}
           />
@@ -600,16 +507,6 @@ const StyleInfoListPage: React.FC = () => {
         styleName={printingRecord?.styleName}
         cover={printingRecord?.cover}
         color={printingRecord?.color}
-      />
-
-      {/* 样衣标签打印弹窗 */}
-      <SampleLabelPrintModal
-        open={sampleLabelModalOpen}
-        onClose={() => {
-          setSampleLabelModalOpen(false);
-          setSampleLabelRecord(null);
-        }}
-        record={sampleLabelRecord}
       />
 
       {/* 维护原因弹窗 */}
