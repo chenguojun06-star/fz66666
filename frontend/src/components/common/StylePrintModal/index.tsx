@@ -192,6 +192,8 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
       const qrPx = 480;
       const fs = h >= 48 ? 6.2 : h >= 38 ? 5.4 : 4.9;
 
+      console.log('[StylePrintModal] labelPrint props:', { styleNo: sNo, styleName: sName, color, quantity, mode, orderId, orderNo, labelItemsCount: labelItems.length, labelItems });
+
       // 如果 labelItems 为空则兜底单条
       const items = labelItems.length > 0
         ? labelItems
@@ -261,7 +263,13 @@ body{font-family:'PingFang SC','Heiti SC',Arial,sans-serif}
         doc.open(); doc.write(html); doc.close();
         const imgs = doc.querySelectorAll('img');
         await new Promise<void>(resolve => {
-          const doPrint = () => { fr.contentWindow?.focus(); fr.contentWindow?.print(); setTimeout(() => { try { document.body.removeChild(fr); } catch { /**/ } }, 1000); resolve(); };
+          const doPrint = () => {
+            console.log('[StylePrintModal] label print HTML preview:', html.substring(0, 800));
+            fr.contentWindow?.focus();
+            fr.contentWindow?.print();
+            setTimeout(() => { try { document.body.removeChild(fr); } catch { /**/ } }, 1000);
+            resolve();
+          };
           if (imgs.length === 0) { setTimeout(doPrint, 100); return; }
           let loaded = 0;
           const onDone = () => { loaded++; if (loaded >= imgs.length) doPrint(); };
