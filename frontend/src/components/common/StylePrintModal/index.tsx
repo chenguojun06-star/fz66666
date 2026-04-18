@@ -189,7 +189,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
       const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
       const sNo = styleNo || '';
       const sName = styleName || '';
-      const qrMm = 26;
+      const qrMm = h >= 48 ? 30 : h >= 38 ? 22 : 18;
       const qrPx = 480;
       const fs = h >= 48 ? 6.2 : h >= 38 ? 5.4 : 4.9;
 
@@ -223,18 +223,19 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
         Array.from({ length: copies }, (_, copyIdx) => {
           const qrIdx = itemIdx * copies + copyIdx;
           const displayText = [sNo, item.color, item.size].filter(Boolean).join(' - ');
+          const infoLines: string[] = [];
+          if (displayText) infoLines.push(`<b>${displayText}</b>`);
+          infoLines.push(`款号: ${sNo || '-'}`);
+          if (sName) infoLines.push(`款名: ${sName}`);
+          if (item.color) infoLines.push(`颜色: ${item.color}`);
+          if (item.size) infoLines.push(`码数: ${item.size}`);
+          if (item.quantity) infoLines.push(`数量: ${item.quantity}`);
+          infoLines.push(`类型: ${mode === 'production' ? '生产' : '样衣'}`);
+          infoLines.push(`<span style="color:#777;font-size:${fs - 0.4}pt">${dateStr}</span>`);
+          const infoHtml = infoLines.map(line => `<div style="font-size:${fs}pt;line-height:1.35;margin-bottom:0.3mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${line}</div>`).join('');
           return `<div class="page"><div class="label">
             <div class="qr-col"><img src="${qrUrls[qrIdx]}" style="width:${qrMm}mm;height:${qrMm}mm;display:block;"/></div>
-            <div class="info-col">
-              <div class="ucode-row">${displayText}</div>
-              <div class="info-row"><span class="lbl">款号</span><span class="val">${sNo}</span></div>
-              ${sName ? `<div class="info-row"><span class="lbl">款名</span><span class="val">${sName}</span></div>` : ''}
-              ${item.color ? `<div class="info-row"><span class="lbl">颜色</span><span class="val">${item.color}</span></div>` : ''}
-              ${item.size ? `<div class="info-row"><span class="lbl">码数</span><span class="val">${item.size}</span></div>` : ''}
-              ${item.quantity ? `<div class="info-row"><span class="lbl">数量</span><span class="val">${item.quantity}</span></div>` : ''}
-              <div class="info-row"><span class="lbl">类型</span><span class="val">${mode === 'production' ? '生产' : '样衣'}</span></div>
-              <div class="info-row date-row">${dateStr}</div>
-            </div>
+            <div class="info-col">${infoHtml}</div>
           </div></div>`;
         }),
       ).join('\n');
@@ -242,16 +243,12 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
       const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
 @page{size:${w}mm ${h}mm;margin:0}*{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'PingFang SC','Heiti SC',Arial,sans-serif}
-.page{width:${w}mm;height:${h}mm;display:flex;align-items:center;justify-content:center;page-break-after:always}
+.page{width:${w}mm;height:${h}mm;page-break-after:always}
 .page:last-child{page-break-after:auto}
-.label{width:calc(${w}mm - 3mm);height:calc(${h}mm - 3mm);border:0.8pt solid #333;display:flex;flex-direction:row;align-items:stretch;padding:1.5mm 2.5mm;gap:1.5mm}
-.qr-col{flex:0 0 ${qrMm + 1}mm;display:flex;align-items:center;justify-content:center}
-.qr-col img{display:block;object-fit:contain}
-.info-col{flex:1;display:flex;flex-direction:column;justify-content:center;min-width:0;overflow:hidden;padding:0 0 0 0.5mm}
-.ucode-row{font-size:${fs + 0.9}pt;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-bottom:1mm;border-bottom:0.8pt dashed #9a9a9a;margin-bottom:1.1mm}
-.info-row{font-size:${fs}pt;display:flex;align-items:baseline;flex-wrap:nowrap;min-width:0;margin-bottom:0.65mm}
-.lbl{color:#555;white-space:nowrap}.val{font-weight:600;margin-left:0.8mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.date-row{color:#777;font-size:${fs - 0.4}pt;margin-top:2mm;padding-top:0.4mm}
+.label{width:calc(${w}mm - 3mm);height:calc(${h}mm - 3mm);border:0.8pt solid #333;display:table;table-layout:fixed;padding:1.5mm 2.5mm}
+.qr-col{display:table-cell;width:${qrMm + 1}mm;vertical-align:middle;text-align:center}
+.qr-col img{display:block;object-fit:contain;margin:0 auto}
+.info-col{display:table-cell;vertical-align:middle;padding-left:1.5mm;overflow:hidden}
 </style></head><body>${labelsHtml}</body></html>`;
 
       const fr = document.createElement('iframe');
