@@ -14,7 +14,6 @@ import ResizableTable from '@/components/common/ResizableTable';
 import { formatDateTime } from '@/utils/datetime';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 import { toCategoryCn } from '@/utils/styleCategory';
-import { formatProcessDisplayName } from '@/utils/productionStage';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
 import StandardModal from '@/components/common/StandardModal';
 import { getStyleInfoByRef } from '@/services/style/styleApi';
@@ -632,7 +631,7 @@ body{font-family:'PingFang SC','Heiti SC',Arial,sans-serif}
                 bordered
                 columns={[
                   { title: '序号', dataIndex: 'sortOrder', key: 'sortOrder', width: 60 },
-                  { title: '工序名称', dataIndex: 'processName', key: 'processName', width: 150, render: (v: any, record: any) => formatProcessDisplayName(record.processCode, v) },
+                  { title: '工序名称', dataIndex: 'processName', key: 'processName', width: 150 },
                   { title: '工序编码', dataIndex: 'processCode', key: 'processCode', width: 100 },
                   { title: '工时(秒)', dataIndex: 'standardTime', key: 'standardTime', width: 80, align: 'right' as const },
                   ...(showPrice ? [{ title: '单价', dataIndex: 'price', key: 'price', width: 80, align: 'right' as const,
