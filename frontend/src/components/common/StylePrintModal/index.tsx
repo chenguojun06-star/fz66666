@@ -189,11 +189,9 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
       const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
       const sNo = styleNo || '';
       const sName = styleName || '';
-      const qrMm = h >= 48 ? 28 : h >= 38 ? 20 : 16;
+      const qrMm = 26;
       const qrPx = 480;
-      const fs = h >= 48 ? 6.5 : h >= 38 ? 5.5 : 4.5;
-
-      console.log('[LabelPrint] debug:', { mode, styleId, styleNo: sNo, styleName: sName, color, quantity, orderNo, orderId, labelSize: `${w}x${h}`, labelItemsCount: labelItems.length });
+      const fs = h >= 48 ? 6.2 : h >= 38 ? 5.4 : 4.9;
 
       // 如果 labelItems 为空则兜底单条
       const items = labelItems.length > 0
@@ -220,69 +218,60 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
         urls.forEach((u, j) => { qrUrls[i + j] = u; });
       }
 
-      // 生成标签 HTML — 使用纯内联样式，零CSS class依赖，确保打印兼容性
+      // 生成标签 HTML — 每个 item × copies 份
       const labelsHtml = items.flatMap((item, itemIdx) =>
         Array.from({ length: copies }, (_, copyIdx) => {
           const qrIdx = itemIdx * copies + copyIdx;
-          const infoW = w - qrMm - 8;
-          return `<div style="width:${w}mm;height:${h}mm;overflow:hidden;page-break-after:always;page-break-inside:avoid">
-<table style="width:100%;height:100%;border:1px solid #333;border-collapse:collapse;">
-<tr>
-<td style="width:${qrMm + 3}mm;vertical-align:middle;text-align:center;padding:2mm;background:#fff;">
-<img src="${qrUrls[qrIdx]}" style="width:${qrMm}mm;height:${qrMm}mm;display:block;" onerror="this.style.display='none'"/>
-</td>
-<td style="width:${infoW}mm;vertical-align:top;padding:2mm 3mm;font-family:'PingFang SC','Microsoft YaHei',Arial,sans-serif;font-size:${fs}pt;line-height:1.4;color:#000;">
-<div style="font-weight:bold;font-size:${fs + 0.5}pt;margin-bottom:1mm;white-space:nowrap;overflow:hidden;">${[sNo, item.color, item.size].filter(Boolean).join(' / ') || (sNo || '样衣')}</div>
-<div style="margin-bottom:0.5mm;"><b>款号:</b>${sNo || '-'}</div>
-${sName ? `<div style="margin-bottom:0.5mm;"><b>款名:</b>${sName}</div>` : ''}
-${item.color ? `<div style="margin-bottom:0.5mm;"><b>颜色:</b>${item.color}</div>` : ''}
-${item.size ? `<div style="margin-bottom:0.5mm;"><b>码数:</b>${item.size}</div>` : ''}
-${item.quantity ? `<div style="margin-bottom:0.5mm;"><b>数量:</b>${item.quantity}</div>` : ''}
-<div style="margin-bottom:0.5mm;"><b>类型:</b>${mode === 'production' ? '生产' : '样衣'}</div>
-<div style="color:#888;font-size:${fs - 0.5}pt;margin-top:1mm;">${dateStr}</div>
-</td>
-</tr>
-</table>
-</div>`;
+          const displayText = [sNo, item.color, item.size].filter(Boolean).join(' - ');
+          return `<div class="page"><div class="label">
+            <div class="qr-col"><img src="${qrUrls[qrIdx]}" style="width:${qrMm}mm;height:${qrMm}mm;display:block;"/></div>
+            <div class="info-col">
+              <div class="ucode-row">${displayText}</div>
+              <div class="info-row"><span class="lbl">款号</span><span class="val">${sNo}</span></div>
+              ${sName ? `<div class="info-row"><span class="lbl">款名</span><span class="val">${sName}</span></div>` : ''}
+              ${item.color ? `<div class="info-row"><span class="lbl">颜色</span><span class="val">${item.color}</span></div>` : ''}
+              ${item.size ? `<div class="info-row"><span class="lbl">码数</span><span class="val">${item.size}</span></div>` : ''}
+              ${item.quantity ? `<div class="info-row"><span class="lbl">数量</span><span class="val">${item.quantity}</span></div>` : ''}
+              <div class="info-row"><span class="lbl">类型</span><span class="val">${mode === 'production' ? '生产' : '样衣'}</span></div>
+              <div class="info-row date-row">${dateStr}</div>
+            </div>
+          </div></div>`;
         }),
       ).join('\n');
 
-      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>标签打印</title><style>
-*{margin:0;padding:0}
-@page{size:${w}mm ${h}mm;margin:0}
-body{background:#fff}
+      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+@page{size:${w}mm ${h}mm;margin:0}*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'PingFang SC','Heiti SC',Arial,sans-serif}
+.page{width:${w}mm;height:${h}mm;display:flex;align-items:center;justify-content:center;page-break-after:always}
+.page:last-child{page-break-after:auto}
+.label{width:calc(${w}mm - 3mm);height:calc(${h}mm - 3mm);border:0.8pt solid #333;display:flex;flex-direction:row;align-items:stretch;padding:1.5mm 2.5mm;gap:1.5mm}
+.qr-col{flex:0 0 ${qrMm + 1}mm;display:flex;align-items:center;justify-content:center}
+.qr-col img{display:block;object-fit:contain}
+.info-col{flex:1;display:flex;flex-direction:column;justify-content:center;min-width:0;overflow:hidden;padding:0 0 0 0.5mm}
+.ucode-row{font-size:${fs + 0.9}pt;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-bottom:1mm;border-bottom:0.8pt dashed #9a9a9a;margin-bottom:1.1mm}
+.info-row{font-size:${fs}pt;display:flex;align-items:baseline;flex-wrap:nowrap;min-width:0;margin-bottom:0.65mm}
+.lbl{color:#555;white-space:nowrap}.val{font-weight:600;margin-left:0.8mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.date-row{color:#777;font-size:${fs - 0.4}pt;margin-top:2mm;padding-top:0.4mm}
 </style></head><body>${labelsHtml}</body></html>`;
 
-      console.log('[LabelPrint] generated HTML length:', html.length);
-      console.log('[LabelPrint] first 500 chars:', html.substring(0, 500));
-
       const fr = document.createElement('iframe');
-      fr.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:${w}mm;height:${h}mm;border:1px solid red;';
+      fr.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:none;';
       document.body.appendChild(fr);
       const doc = fr.contentWindow?.document;
       if (doc) {
         doc.open(); doc.write(html); doc.close();
         const imgs = doc.querySelectorAll('img');
         await new Promise<void>(resolve => {
-          const doPrint = () => {
-            console.log('[LabelPrint] triggering print...');
-            fr.contentWindow?.focus();
-            fr.contentWindow?.print();
-            setTimeout(() => { try { document.body.removeChild(fr); } catch { /**/ } }, 1000);
-            resolve();
-          };
-          if (imgs.length === 0) { setTimeout(doPrint, 200); return; }
+          const doPrint = () => { fr.contentWindow?.focus(); fr.contentWindow?.print(); setTimeout(() => { try { document.body.removeChild(fr); } catch { /**/ } }, 1000); resolve(); };
+          if (imgs.length === 0) { setTimeout(doPrint, 100); return; }
           let loaded = 0;
           const onDone = () => { loaded++; if (loaded >= imgs.length) doPrint(); };
           imgs.forEach(img => { if ((img as HTMLImageElement).complete) onDone(); else { img.onload = onDone; img.onerror = onDone; } });
-          setTimeout(() => { if (loaded < imgs.length) doPrint(); }, 8000);
+          setTimeout(() => { if (loaded < imgs.length) doPrint(); }, 5000);
         });
       }
       message.success(`已发送 ${totalLabels} 张标签到打印机`);
-    } catch (e) {
-      console.error('[LabelPrint] error:', e);
-      message.error('标签打印失败，请重试');
-    }
+    } catch { message.error('标签打印失败，请重试'); }
     finally { setLabelPrinting(false); }
   }, [labelItems, isPatternPrint, resolvedPatternId, orderId, styleId, styleNo, styleName, orderNo, color, quantity, mode, labelSize, labelCount]);
 

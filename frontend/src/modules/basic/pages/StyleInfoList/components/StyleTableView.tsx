@@ -34,6 +34,7 @@ interface StyleTableViewProps {
   onPageChange: (page: number, pageSize: number) => void;
   onScrap: (id: string) => void;
   onPrint: (record: StyleInfo) => void;
+  onLabelPrint?: (record: StyleInfo) => void;
   onMaintenance: (record: StyleInfo) => void;
   categoryOptions: { label: string; value: string }[];
   onRefresh: () => void;
@@ -52,6 +53,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
   onPageChange,
   onScrap,
   onPrint,
+  onLabelPrint,
   onMaintenance,
   categoryOptions,
   onRefresh,
@@ -194,6 +196,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
               return [
                 { key: 'detail', label: '详情', type: 'primary' as const, onClick: () => navigate(`/style-info/${record.id}`) },
                 { key: 'print', label: '打印', type: 'default' as const, onClick: () => onPrint(record) },
+                ...(onLabelPrint ? [{ key: 'label-print', label: '标签打印', type: 'default' as const, onClick: () => onLabelPrint(record) }] : []),
                 { key: 'remark', label: '备注', type: 'default' as const, onClick: () => setRemarkTarget({ open: true, styleNo: (record as any).styleNo || '' }) },
               ];
             }
@@ -205,6 +208,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
                   ? { key: 'order-view', label: '生产订单', type: 'default' as const, onClick: () => navigate(`/production?keyword=${encodeURIComponent((record as any).orderNo || (record as any).styleNo || '')}`) }
                   : { key: 'order-push', label: '资料推送', type: 'default' as const, onClick: () => navigate(`/style-info/${record.id}`) },
                 { key: 'print', label: '打印', type: 'default' as const, onClick: () => onPrint(record) },
+                ...(onLabelPrint ? [{ key: 'label-print', label: '标签打印', type: 'default' as const, onClick: () => onLabelPrint(record) }] : []),
               ];
 
               if (isSupervisorOrAbove) {
@@ -219,6 +223,7 @@ const StyleTableView: React.FC<StyleTableViewProps> = ({
             return [
               { key: 'detail', label: '详情', type: 'primary' as const, onClick: () => navigate(`/style-info/${record.id}`) },
               { key: 'print', label: '打印', type: 'default' as const, onClick: () => onPrint(record) },
+              ...(onLabelPrint ? [{ key: 'label-print', label: '标签打印', type: 'default' as const, onClick: () => onLabelPrint(record) }] : []),
               { key: 'scrap', label: '报废', type: 'default' as const, danger: true, onClick: () => onScrap(String(record.id!)) },
               { key: 'copy', label: '复制', type: 'default' as const, onClick: () => { setCopySource(record); setCopyModalOpen(true); } },
               { key: 'remark', label: '备注', type: 'default' as const, onClick: () => setRemarkTarget({ open: true, styleNo: (record as any).styleNo || '' }) },

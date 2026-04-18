@@ -7,6 +7,7 @@ import PageLayout from '@/components/common/PageLayout';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import SmallModal from '@/components/common/SmallModal';
 import StylePrintModal from '@/components/common/StylePrintModal';
+import SampleLabelPrintModal from './components/SampleLabelPrintModal';
 import PageStatCards from '@/components/common/PageStatCards';
 import api from '@/utils/api';
 import { remarkApi } from '@/services/system/remarkApi';
@@ -67,6 +68,8 @@ const StyleInfoListPage: React.FC = () => {
   // 打印功能状态
   const [printModalVisible, setPrintModalVisible] = useState(false);
   const [printingRecord, setPrintingRecord] = useState<StyleInfo | null>(null);
+  const [sampleLabelModalOpen, setSampleLabelModalOpen] = useState(false);
+  const [sampleLabelRecord, setSampleLabelRecord] = useState<StyleInfo | null>(null);
 
   // 维护功能状态
   const [maintenanceOpen, setMaintenanceOpen] = useState(false);
@@ -209,6 +212,11 @@ const StyleInfoListPage: React.FC = () => {
   const handlePrintClick = (record: StyleInfo) => {
     setPrintingRecord(record);
     setPrintModalVisible(true);
+  };
+
+  const handleLabelPrint = (record: StyleInfo) => {
+    setSampleLabelRecord(record);
+    setSampleLabelModalOpen(true);
   };
 
   // 维护功能
@@ -555,6 +563,7 @@ const StyleInfoListPage: React.FC = () => {
             onPageChange={handlePageChange}
             onScrap={handleScrap}
             onPrint={handlePrintClick}
+            onLabelPrint={handleLabelPrint}
             onMaintenance={openMaintenance}
             categoryOptions={categoryOptions}
             onRefresh={fetchList}
@@ -572,6 +581,7 @@ const StyleInfoListPage: React.FC = () => {
             onPageChange={handlePageChange}
             onScrap={handleScrap}
             onPrint={handlePrintClick}
+            onLabelPrint={handleLabelPrint}
             onMaintenance={openMaintenance}
             focusedStyleId={focusedStyleId}
           />
@@ -590,6 +600,16 @@ const StyleInfoListPage: React.FC = () => {
         styleName={printingRecord?.styleName}
         cover={printingRecord?.cover}
         color={printingRecord?.color}
+      />
+
+      {/* 样衣标签打印弹窗 */}
+      <SampleLabelPrintModal
+        open={sampleLabelModalOpen}
+        onClose={() => {
+          setSampleLabelModalOpen(false);
+          setSampleLabelRecord(null);
+        }}
+        record={sampleLabelRecord}
       />
 
       {/* 维护原因弹窗 */}

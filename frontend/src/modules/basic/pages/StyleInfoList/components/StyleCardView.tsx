@@ -24,6 +24,7 @@ interface StyleCardViewProps {
   onPageChange: (page: number, pageSize: number) => void;
   onScrap: (id: string) => void;
   onPrint: (record: StyleInfo) => void;
+  onLabelPrint?: (record: StyleInfo) => void;
   onMaintenance: (record: StyleInfo) => void;
   focusedStyleId?: string | null;
 }
@@ -44,6 +45,7 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
   onPageChange,
   onScrap,
   onPrint,
+  onLabelPrint,
   onMaintenance,
   focusedStyleId,
 }) => {
@@ -192,6 +194,11 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
               label: '打印',
               onClick: () => onPrint(r),
             },
+            ...(onLabelPrint ? [{
+              key: 'label-print',
+              label: '标签打印',
+              onClick: () => onLabelPrint(r),
+            }] : []),
           ];
         }
         if (isStageDoneRow(r)) {
@@ -212,7 +219,7 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
           }
           return items;
         }
-        // 开发中：纸样开发 + 样衣生产 + 打印 + 报废
+        // 开发中：纸样开发 + 样衣生产 + 打印 + 标签打印 + 报废
         return [
           {
             key: 'pattern',
@@ -229,6 +236,11 @@ const StyleCardView: React.FC<StyleCardViewProps> = ({
             label: '打印',
             onClick: () => onPrint(r),
           },
+          ...(onLabelPrint ? [{
+            key: 'label-print',
+            label: '标签打印',
+            onClick: () => onLabelPrint(r),
+          }] : []),
           {
             key: 'delete',
             label: '报废',
