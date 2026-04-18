@@ -254,7 +254,7 @@ export default function WashLabelPrintModal({ open, onCancel, order }: Props) {
 
       /* 4. iframe 打印（与菲号打印完全相同方式） */
       const iframe = document.createElement('iframe');
-      iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:none;';
+      iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:120mm;height:80mm;border:none;';
       document.body.appendChild(iframe);
 
       const iframeDoc = iframe.contentWindow?.document;

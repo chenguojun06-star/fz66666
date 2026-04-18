@@ -256,7 +256,7 @@ body{font-family:'PingFang SC','Heiti SC',Arial,sans-serif}
 </style></head><body>${labelsHtml}</body></html>`;
 
       const fr = document.createElement('iframe');
-      fr.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:none;';
+      fr.style.cssText = `position:fixed;left:-9999px;top:-9999px;width:${w + 20}mm;height:${h + 20}mm;border:none;`;
       document.body.appendChild(fr);
       const doc = fr.contentWindow?.document;
       if (doc) {

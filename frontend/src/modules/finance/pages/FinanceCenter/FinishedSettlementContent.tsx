@@ -82,7 +82,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
   const [logModalVisible, setLogModalVisible] = useState(false);
   const [orderLogs, setOrderLogs] = useState<any[]>([]);
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
-  const [selectedFactoryType, setSelectedFactoryType] = useState('');
+  const [selectedFactoryType, setSelectedFactoryType] = useState<'INTERNAL' | 'EXTERNAL' | ''>('EXTERNAL');
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
   const { factoryTypeOptions } = useOrganizationFilterOptions();
   const [pageParams, setPageParams] = useState<PageParams>({
@@ -415,7 +415,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
     setSearchOrderNo('');
     setSearchStyleNo('');
     setSearchStatus('');
-    setSelectedFactoryType('');
+    setSelectedFactoryType('EXTERNAL');
     setDateRange(null);
     const params: PageParams = { page: 1, pageSize: 20 };
     setPageParams(params);

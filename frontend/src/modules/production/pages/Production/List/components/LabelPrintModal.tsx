@@ -407,7 +407,7 @@ body { font-family: 'PingFang SC','Heiti SC',Arial,sans-serif; }
 </style></head><body>${pages}</body></html>`;
 
   const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:none;';
+  iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:120mm;height:80mm;border:none;';
   document.body.appendChild(iframe);
   const doc = iframe.contentWindow?.document;
   if (doc) {
@@ -508,7 +508,7 @@ body { font-family: 'PingFang SC','Heiti SC',Arial,sans-serif; }
 </style></head><body>${labelsHtml}</body></html>`;
 
   const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:none;';
+  iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:120mm;height:80mm;border:none;';
   document.body.appendChild(iframe);
   const doc = iframe.contentWindow?.document;
   if (doc) {

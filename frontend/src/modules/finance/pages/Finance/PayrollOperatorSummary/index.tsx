@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Card, Input, Progress, Select, Space, Switch, Tabs, Tag } from 'antd';
+import { App, Button, Card, Input, Progress, Select, Space, Switch, Table, Tabs, Tag } from 'antd';
 import { UnifiedRangePicker } from '@/components/common/UnifiedDatePicker';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -44,6 +44,144 @@ const PayrollOperatorSummary: React.FC = () => {
     const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
     const [printModalVisible, setPrintModalVisible] = useState(false);
     const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
+
+    // ── 内部工厂订单汇总 Tab 数据 ──────────────────────────────────────────
+    const [internalOrders, setInternalOrders] = useState<any[]>([]);
+    const [internalOrdersLoading, setInternalOrdersLoading] = useState(false);
+    const [internalOrderAuditedKeys, setInternalOrderAuditedKeys] = useState<Set<string>>(new Set());
+    const [internalOrderSelectedKeys, setInternalOrderSelectedKeys] = useState<string[]>([]);
+    const internalOrderFetched = useRef(false);
+
+    const fetchInternalOrders = useCallback(async () => {
+        setInternalOrdersLoading(true);
+        try {
+            const res = await api.get('/finance/finished-settlement/list', {
+                params: { factoryType: 'INTERNAL', page: 1, size: 200 },
+            });
+            const data = unwrapApiData<any>(res, '获取内部工厂订单失败');
+            const records = data?.records ?? data ?? [];
+            setInternalOrders(Array.isArray(records) ? records : []);
+        } catch {
+            message.error('获取内部工厂订单失败');
+            setInternalOrders([]);
+        } finally {
+            setInternalOrdersLoading(false);
+        }
+    }, [message]);
+
+    useEffect(() => {
+        if (activeTab === 'internalOrders' && !internalOrderFetched.current) {
+            internalOrderFetched.current = true;
+            void fetchInternalOrders();
+        }
+    }, [activeTab, fetchInternalOrders]);
+
+    const handleAuditInternalOrder = (record: any) => {
+        const key = String(record.orderNo || record.orderId || '');
+        setInternalOrderAuditedKeys(prev => new Set([...prev, key]));
+        message.success(`已审核：${record.orderNo || ''}`);
+    };
+
+    const handleBatchAuditInternalOrders = () => {
+        const keys = internalOrderSelectedKeys.filter(k => !internalOrderAuditedKeys.has(k));
+        if (keys.length === 0) {
+            message.warning('请选择未审核的订单');
+            return;
+        }
+        setInternalOrderAuditedKeys(prev => new Set([...prev, ...keys]));
+        setInternalOrderSelectedKeys([]);
+        message.success(`已批量审核 ${keys.length} 个订单`);
+    };
+
+    const handleFinalPushInternalOrder = async (record: any) => {
+        try {
+            await api.post('/finance/wage-payment/create-payable', {
+                bizType: 'PAYROLL_SETTLEMENT',
+                bizId: record.orderId || record.orderNo,
+                payeeName: record.factoryName || '内部工厂',
+                amount: Number(record.totalAmount || 0),
+                description: `内部工厂订单结算：${record.orderNo || ''}`,
+            });
+            message.success(`已终审并推送 ${record.orderNo || ''} 到收付款中心`);
+        } catch (error: unknown) {
+            message.error(error instanceof Error ? error.message : '终审失败');
+        }
+    };
+
+    const handleBatchFinalPushInternalOrders = async () => {
+        if (internalOrderSelectedKeys.length === 0) {
+            message.warning('请选择要终审的订单');
+            return;
+        }
+        try {
+            for (const key of internalOrderSelectedKeys) {
+                const record = internalOrders.find((r: any) => String(r.orderNo || r.orderId || '') === key);
+                if (!record || !internalOrderAuditedKeys.has(key)) continue;
+                await api.post('/finance/wage-payment/create-payable', {
+                    bizType: 'PAYROLL_SETTLEMENT',
+                    bizId: record.orderId || record.orderNo,
+                    payeeName: record.factoryName || '内部工厂',
+                    amount: Number(record.totalAmount || 0),
+                    description: `内部工厂订单结算：${record.orderNo || ''}`,
+                });
+            }
+            message.success(`已批量终审并推送 ${internalOrderSelectedKeys.length} 个订单到收付款中心`);
+            setInternalOrderSelectedKeys([]);
+        } catch (error: unknown) {
+            message.error(error instanceof Error ? error.message : '批量终审失败');
+        }
+    };
+
+    const internalOrderColumns = [
+        { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 150, ellipsis: true },
+        { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 100, ellipsis: true },
+        { title: '订单数量', dataIndex: 'orderQuantity', key: 'orderQuantity', width: 90, align: 'right' as const,
+            render: (v: unknown) => Number(v || 0) },
+        { title: '入库数量', dataIndex: 'warehousedQuantity', key: 'warehousedQuantity', width: 90, align: 'right' as const,
+            render: (v: unknown) => Number(v || 0) },
+        { title: '次品数', dataIndex: 'defectQuantity', key: 'defectQuantity', width: 70, align: 'right' as const,
+            render: (v: unknown) => Number(v || 0) },
+        { title: '面辅料成本', dataIndex: 'materialCost', key: 'materialCost', width: 110, align: 'right' as const,
+            render: (v: unknown) => Number(v || 0).toFixed(2) },
+        { title: '生产成本', dataIndex: 'productionCost', key: 'productionCost', width: 100, align: 'right' as const,
+            render: (v: unknown) => Number(v || 0).toFixed(2) },
+        { title: '总金额', dataIndex: 'totalAmount', key: 'totalAmount', width: 110, align: 'right' as const,
+            render: (v: unknown) => Number(v || 0).toFixed(2) },
+        { title: '利润', dataIndex: 'profit', key: 'profit', width: 100, align: 'right' as const,
+            render: (v: unknown) => Number(v || 0).toFixed(2) },
+        { title: '利润率', dataIndex: 'profitMargin', key: 'profitMargin', width: 80, align: 'right' as const,
+            render: (v: unknown) => {
+                const n = Number(v || 0);
+                return <span style={{ color: n >= 0 ? '#52c41a' : '#ff4d4f' }}>{n.toFixed(1)}%</span>;
+            }
+        },
+        { title: '状态', dataIndex: 'status', key: 'status', width: 80, align: 'center' as const,
+            render: (v: unknown) => {
+                const s = String(v || '');
+                if (s === 'completed' || s === 'closed') return <Tag color="green">已关单</Tag>;
+                return <Tag color="blue">{s}</Tag>;
+            }
+        },
+        {
+            title: '操作', key: 'actions', width: 160, fixed: 'right' as const,
+            render: (_: unknown, record: any) => {
+                const key = String(record.orderNo || record.orderId || '');
+                const audited = internalOrderAuditedKeys.has(key);
+                return (
+                    <Space size={4}>
+                        {audited ? (
+                            <Tag color="green">已审核</Tag>
+                        ) : (
+                            <Button size="small" type="link" onClick={() => handleAuditInternalOrder(record)}>审核</Button>
+                        )}
+                        {audited && (
+                            <Button size="small" type="link" onClick={() => handleFinalPushInternalOrder(record)}>终审推送</Button>
+                        )}
+                    </Space>
+                );
+            },
+        },
+    ];
 
     // ── 效率排名 Tab 数据 ────────────────────────────────────────────────────
     const [workerEffList, setWorkerEffList] = useState<WorkerEfficiencyItem[]>([]);
@@ -677,6 +815,42 @@ const PayrollOperatorSummary: React.FC = () => {
                                         }}
                                         stickyHeader
                                         scroll={{ x: 1300 }}
+                                    />
+                                </>
+                            ),
+                        },
+                        {
+                            key: 'internalOrders',
+                            label: '订单汇总',
+                            children: (
+                                <>
+                                    <Card size="small" className="mb-sm">
+                                        <Space wrap>
+                                            <span style={{ color: 'var(--neutral-text-secondary)' }}>内部工厂订单 {internalOrders.length}</span>
+                                            <span style={{ color: 'var(--neutral-text-secondary)' }}>已审核 {internalOrderAuditedKeys.size}</span>
+                                            <Button size="small" onClick={fetchInternalOrders} loading={internalOrdersLoading}>刷新</Button>
+                                            <Button size="small" type="primary" onClick={handleBatchAuditInternalOrders}
+                                                disabled={internalOrderSelectedKeys.length === 0}>批量审核</Button>
+                                            <Button size="small" onClick={handleBatchFinalPushInternalOrders}
+                                                disabled={internalOrderSelectedKeys.length === 0}>批量终审推送</Button>
+                                        </Space>
+                                    </Card>
+                                    <Table
+                                        rowKey={(r: any) => String(r.orderNo || r.orderId || '')}
+                                        dataSource={internalOrders}
+                                        columns={internalOrderColumns}
+                                        loading={internalOrdersLoading}
+                                        size="small"
+                                        pagination={{ pageSize: 50, showSizeChanger: true, showTotal: (t: number) => `共 ${t} 条` }}
+                                        rowSelection={{
+                                            selectedRowKeys: internalOrderSelectedKeys,
+                                            onChange: (keys: React.Key[]) => setInternalOrderSelectedKeys(keys as string[]),
+                                            getCheckboxProps: (record: any) => ({
+                                                disabled: internalOrderAuditedKeys.has(String(record.orderNo || record.orderId || '')),
+                                            }),
+                                        }}
+                                        stickyHeader
+                                        scroll={{ x: 1400 }}
                                     />
                                 </>
                             ),
