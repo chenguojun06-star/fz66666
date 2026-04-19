@@ -146,13 +146,6 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
     const printerInfo = printerAccount ? `打印人: ${printerName} (${printerAccount})` : `打印人: ${printerName}`;
     const headerInfo = [styleNo ? `款号: ${styleNo}` : '', styleName ? `款名: ${styleName}` : '', color ? `颜色: ${color}` : '', (orderNo || orderId) ? `订单号: ${orderNo || orderId}` : ''].filter(Boolean).join('  |  ');
 
-    let qrSrc = '';
-    try {
-      const isPatternPrint = extraInfo?.isPattern === true;
-      const val = JSON.stringify(isPatternPrint ? { type: 'pattern', id: String(orderId || styleId || '').trim(), styleNo, styleName, color } : { type: mode === 'production' ? 'order' : 'style', styleNo, styleName, orderId, orderNo: orderNo || '' });
-      qrSrc = await QRCodeLib.toDataURL(val, { width: 160, margin: 1, type: 'image/png' });
-    } catch { qrSrc = ''; }
-
     const bodyHtml = printContent.innerHTML;
     const htmlContent = buildPrintHtml({ headerInfo, printerInfo, printDate, styleNo, bodyHtml });
     const iframe = document.createElement('iframe');
@@ -167,11 +160,6 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
   };
 
   const isPatternPrint = extraInfo?.isPattern === true;
-  const qrValue = JSON.stringify(
-    isPatternPrint
-      ? { type: 'pattern', id: String(orderId || styleId || '').trim(), styleNo, styleName, color }
-      : { type: mode === 'production' ? 'order' : 'style', styleNo, styleName, orderId, orderNo: orderNo || '' }
-  );
 
   /* ---- 标签打印（自动识别全部颜色×码数） ---- */
   const handleLabelPrint = useCallback(async () => {
