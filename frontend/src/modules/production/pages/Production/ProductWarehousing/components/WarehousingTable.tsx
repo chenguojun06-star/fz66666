@@ -15,7 +15,7 @@ async function printWarehousingQr(warehousingNo: string, orderNo?: string) {
     message.error('生成二维码失败');
     return;
   }
-  const html = `<!DOCTYPE html><html><head><title>入库二维码</title>
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>入库二维码</title>
     <style>
       body { margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: sans-serif; }
       .qr-wrap { text-align: center; border: 1px solid #ddd; padding: 16px; border-radius: 8px; width: 240px; }

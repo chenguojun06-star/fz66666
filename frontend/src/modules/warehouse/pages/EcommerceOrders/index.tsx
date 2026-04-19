@@ -302,13 +302,13 @@ const OrdersTab: React.FC = () => {
 
       <Card size="small" style={{ marginBottom: 10 }}>
         <Space wrap>
-          <Select placeholder="全部平台" allowClear value={filterPlatform || undefined}
+          <Select id="ecomPlatformFilter" placeholder="全部平台" allowClear value={filterPlatform || undefined}
             onChange={v => { setFilterPlatform(v ?? ''); setPage(1); }} style={{ width: 120 }}>
             {Object.entries(PLATFORM_MAP).map(([c, p]) => (
               <Option key={c} value={c}>{p.emoji} {p.name}</Option>
             ))}
           </Select>
-          <Select placeholder="全部状态" allowClear value={filterStatus}
+          <Select id="ecomStatusFilter" placeholder="全部状态" allowClear value={filterStatus}
             onChange={v => { setFilterStatus(v); setPage(1); }} style={{ width: 100 }}>
             {Object.entries(STATUS_MAP).map(([k, v]) => (
               <Option key={k} value={Number(k)}>{v.label}</Option>

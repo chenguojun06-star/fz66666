@@ -191,6 +191,7 @@ const LoanHistoryDrawer: React.FC<LoanHistoryDrawerProps> = ({ visible, stock, o
       >
         <p>确认归还样衣吗？</p>
         <Input.TextArea
+          id="returnRemarkDrawer"
           placeholder="归还备注（选填）"
           value={returnRemark}
           onChange={e => setReturnRemark(e.target.value)}

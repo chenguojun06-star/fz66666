@@ -205,9 +205,9 @@ const BillSummaryTab: React.FC = () => {
 
       {/* 筛选栏 */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-        <Select style={{ width: 100 }} options={BILL_TYPE_OPTIONS} value={query.billType || ''} onChange={v => updateQuery({ billType: v || undefined })} />
-        <Select style={{ width: 100 }} options={BILL_CATEGORY_OPTIONS} value={query.billCategory || ''} onChange={v => updateQuery({ billCategory: v || undefined })} />
-        <Select style={{ width: 100 }} options={BILL_STATUS_OPTIONS} value={query.status || ''} onChange={v => updateQuery({ status: v || undefined })} />
+        <Select id="billTypeFilter" style={{ width: 100 }} options={BILL_TYPE_OPTIONS} value={query.billType || ''} onChange={v => updateQuery({ billType: v || undefined })} />
+        <Select id="billCategoryFilter" style={{ width: 100 }} options={BILL_CATEGORY_OPTIONS} value={query.billCategory || ''} onChange={v => updateQuery({ billCategory: v || undefined })} />
+        <Select id="billStatusFilter" style={{ width: 100 }} options={BILL_STATUS_OPTIONS} value={query.status || ''} onChange={v => updateQuery({ status: v || undefined })} />
         {/* 日期范围选择：取代之前的月份选择器，用创建时间范围过滤 */}
         <DatePicker.RangePicker
           placeholder={['开始日期', '结束日期']}
@@ -227,9 +227,9 @@ const BillSummaryTab: React.FC = () => {
             }
           }}
         />
-        <Input style={{ width: 160 }} placeholder="对方名称" allowClear prefix={<SearchOutlined />}
+        <Input id="counterpartyNameSearch" style={{ width: 160 }} placeholder="对方名称" allowClear prefix={<SearchOutlined />}
           onPressEnter={e => updateQuery({ counterpartyName: (e.target as HTMLInputElement).value || undefined })} />
-        <Input style={{ width: 160 }} placeholder="订单号" allowClear prefix={<FileTextOutlined />}
+        <Input id="orderNoSearch" style={{ width: 160 }} placeholder="订单号" allowClear prefix={<FileTextOutlined />}
           onPressEnter={e => updateQuery({ orderNo: (e.target as HTMLInputElement).value || undefined })} />
         {selectedKeys.length > 0 && (
           <Button type="primary" icon={<CheckCircleOutlined />} onClick={handleBatchConfirm}>

@@ -255,10 +255,10 @@ function SkuTable({ open, order, styleInfo, printColLabel, onPrint, onClose }: S
 
   const columns: ColumnsType<SkuRow> = [
     {
-      title: <Checkbox checked={allSelected} indeterminate={partialSelected} onChange={toggleAll} />,
+      title: <Checkbox id="labelSelectAll" checked={allSelected} indeterminate={partialSelected} onChange={toggleAll} />,
       width: 36, key: 'chk',
       render: (_: unknown, r: SkuRow) =>
-        <Checkbox checked={selectedKeys.includes(r.key)} onChange={e => toggleRow(r.key, e.target.checked)} />,
+        <Checkbox id={`labelRow-${r.key}`} checked={selectedKeys.includes(r.key)} onChange={e => toggleRow(r.key, e.target.checked)} />,
     },
     {
       title: '款式图片', key: 'styleImage', width: 68,
@@ -384,10 +384,10 @@ async function printWashLabels(
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
 @page { size: ${w}mm ${h}mm; margin: 0; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'PingFang SC','Heiti SC',Arial,sans-serif; }
+body { font-family: 'PingFang SC','Heiti SC',Arial,sans-serif; color: #000; background: #fff; }
 .page { width: ${w}mm; min-height: ${h}mm; page-break-after: always; }
 .page:last-child { page-break-after: auto; }
-.label { position: relative; width: ${w}mm; height: ${h}mm; padding: 0 2.2mm; }
+.label { position: relative; width: ${w}mm; height: ${h}mm; padding: 0 2.2mm; color: #000; }
 .dash-sep { border: none; border-top: 0.8pt dashed #555; width: calc(100% + 6mm); margin-left: -3mm; }
 .top-block { position: absolute; left: 2.2mm; right: 2.2mm; top: 15mm; text-align: center; }
 .style-no { font-size: ${w <= 30 ? fs - 0.1 : fs + 0.2}pt; font-weight: bold; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -407,20 +407,19 @@ body { font-family: 'PingFang SC','Heiti SC',Arial,sans-serif; }
 </style></head><body>${pages}</body></html>`;
 
   const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:none;';
+  iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:210mm;height:297mm;border:none;';
+  iframe.srcdoc = html;
   document.body.appendChild(iframe);
-  const doc = iframe.contentWindow?.document;
-  if (doc) {
-    doc.open(); doc.write(html); doc.close();
-    await new Promise<void>(resolve => {
+  await new Promise<void>(resolve => {
+    iframe.onload = () => {
       setTimeout(() => {
         iframe.contentWindow?.focus();
         iframe.contentWindow?.print();
         setTimeout(() => { try { document.body.removeChild(iframe); } catch { /**/ } }, 1000);
         resolve();
       }, 200);
-    });
-  }
+    };
+  });
 }
 
 // ─── U编码打印函数（横版：左QR右文字，实线边框，均匀行距）────────────────────────
@@ -491,10 +490,10 @@ async function printUCodeLabels(
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
 @page { size: ${w}mm ${h}mm; margin: 0; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'PingFang SC','Heiti SC',Arial,sans-serif; }
+body { font-family: 'PingFang SC','Heiti SC',Arial,sans-serif; color: #000; background: #fff; }
 .page { width: ${w}mm; height: ${h}mm; display: flex; align-items: center; justify-content: center; page-break-after: always; }
 .page:last-child { page-break-after: auto; }
-.label { width: calc(${w}mm - 3mm); height: calc(${h}mm - 3mm); border: 0.8pt solid #333; display: flex; flex-direction: row; align-items: stretch; padding: 1.5mm 2.5mm 1.5mm 2.5mm; gap: 1.5mm; }
+.label { width: calc(${w}mm - 3mm); height: calc(${h}mm - 3mm); border: 0.8pt solid #333; display: flex; flex-direction: row; align-items: stretch; padding: 1.5mm 2.5mm 1.5mm 2.5mm; gap: 1.5mm; color: #000; }
 .qr-col { flex: 0 0 ${qrMm + 1}mm; display: flex; align-items: center; justify-content: center; }
 .qr-col img { display: block; object-fit: contain; }
 .info-col { flex: 1; display: flex; flex-direction: column; justify-content: center; min-width: 0; overflow: hidden; padding: 0 0 0 0.5mm; }
@@ -508,30 +507,30 @@ body { font-family: 'PingFang SC','Heiti SC',Arial,sans-serif; }
 </style></head><body>${labelsHtml}</body></html>`;
 
   const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:none;';
+  iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:210mm;height:297mm;border:none;';
+  iframe.srcdoc = html;
   document.body.appendChild(iframe);
-  const doc = iframe.contentWindow?.document;
-  if (doc) {
-    doc.open(); doc.write(html); doc.close();
-    const imgs = doc.querySelectorAll('img');
-    await new Promise<void>(resolve => {
-      const total = imgs.length;
+  await new Promise<void>(resolve => {
+    iframe.onload = () => {
+      const doc = iframe.contentDocument;
+      if (!doc) { resolve(); return; }
+      const imgs = doc.querySelectorAll('img');
       const doPrint = () => {
         iframe.contentWindow?.focus();
         iframe.contentWindow?.print();
         setTimeout(() => { try { document.body.removeChild(iframe); } catch { /**/ } }, 1000);
         resolve();
       };
-      if (total === 0) { setTimeout(doPrint, 100); return; }
+      if (imgs.length === 0) { setTimeout(doPrint, 100); return; }
       let loaded = 0;
-      const onDone = () => { loaded++; if (loaded >= total) doPrint(); };
+      const onDone = () => { loaded++; if (loaded >= imgs.length) doPrint(); };
       imgs.forEach(img => {
         if ((img as HTMLImageElement).complete) onDone();
         else { img.onload = onDone; img.onerror = onDone; }
       });
-      setTimeout(() => { if (loaded < total) doPrint(); }, 5000);
-    });
-  }
+      setTimeout(() => { if (loaded < imgs.length) doPrint(); }, 5000);
+    };
+  });
 }
 
 // ─── 主组件 ──────────────────────────────────────────────────────────────────

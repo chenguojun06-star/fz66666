@@ -143,7 +143,7 @@ const FeedbackTab: React.FC = () => {
       {/* 筛选 */}
       <Card size="small" style={{ marginBottom: 16 }}>
         <Space wrap>
-          <Select style={{ width: 120 }} placeholder="状态" allowClear value={queryParams.status || undefined}
+          <Select id="feedbackStatusFilter" style={{ width: 120 }} placeholder="状态" allowClear value={queryParams.status || undefined}
             onChange={v => setQueryParams(p => ({ ...p, page: 1, status: v || '' }))}
             options={[
               { value: 'PENDING', label: '待处理' },
@@ -152,7 +152,7 @@ const FeedbackTab: React.FC = () => {
               { value: 'CLOSED', label: '已关闭' },
             ]}
           />
-          <Select style={{ width: 120 }} placeholder="分类" allowClear value={queryParams.category || undefined}
+          <Select id="feedbackCategoryFilter" style={{ width: 120 }} placeholder="分类" allowClear value={queryParams.category || undefined}
             onChange={v => setQueryParams(p => ({ ...p, page: 1, category: v || '' }))}
             options={[
               { value: 'BUG', label: '缺陷' },

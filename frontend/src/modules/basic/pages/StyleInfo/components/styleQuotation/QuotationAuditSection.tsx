@@ -46,6 +46,7 @@ const QuotationAuditSection: React.FC<Props> = ({
       {auditStatus === 0 ? (
         <Space orientation="vertical" style={{ width: '100%' }}>
           <Input.TextArea
+            id="auditRemark"
             value={auditRemark}
             onChange={(e) => onRemarkChange(e.target.value)}
             rows={3}

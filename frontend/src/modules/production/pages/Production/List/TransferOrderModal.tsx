@@ -214,6 +214,7 @@ const TransferOrderModal: React.FC<TransferOrderModalProps> = (props) => {
             </span>
           </div>
           <Input.TextArea
+            id="transferRemark"
             placeholder="请输入转单备注"
             value={transferType === 'factory' ? transferFactoryMessage : transferMessage}
             onChange={(e) => transferType === 'factory'

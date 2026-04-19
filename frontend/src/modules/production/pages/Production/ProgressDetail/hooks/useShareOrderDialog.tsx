@@ -116,6 +116,7 @@ export const useShareOrderDialog = ({ message }: UseShareOrderDialogOptions) => 
             发送以下链接给客户，客户无需登录即可实时查看订单工序跟进（30天有效）：
           </p>
           <Input.TextArea
+            id="shareOrderUrl"
             value={shareModal.shareUrl}
             autoSize={{ minRows: 2 }}
             readOnly

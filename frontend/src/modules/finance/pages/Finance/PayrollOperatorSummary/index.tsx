@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Card, Input, Progress, Select, Space, Switch, Table, Tabs, Tag } from 'antd';
+import { App, Button, Card, Input, Progress, Select, Space, Switch, Tabs, Tag } from 'antd';
 import { UnifiedRangePicker } from '@/components/common/UnifiedDatePicker';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '@/components/Layout';
@@ -687,7 +687,7 @@ const PayrollOperatorSummary: React.FC = () => {
                         />
                         <Space>
                             <span style={{ color: 'var(--neutral-text-secondary)' }}>包含已结算</span>
-                            <Switch checked={includeSettled} onChange={setIncludeSettled} />
+                            <Switch id="includeSettledSwitch" checked={includeSettled} onChange={setIncludeSettled} />
                         </Space>
                         <Button type="primary" onClick={fetchData} loading={loading}>
                             查询
@@ -761,7 +761,7 @@ const PayrollOperatorSummary: React.FC = () => {
                                             pageSizeOptions: ['10', '20', '50', '100'],
                                             defaultPageSize: readPageSize(20),
                                         }}
-                                        stickyHeader
+                                        sticky
                                         scroll={{ x: 1600 }}
                                     />
                                 </>
@@ -813,7 +813,7 @@ const PayrollOperatorSummary: React.FC = () => {
                                             pageSizeOptions: ['10', '20', '50', '100'],
                                             defaultPageSize: readPageSize(20),
                                         }}
-                                        stickyHeader
+                                        sticky
                                         scroll={{ x: 1300 }}
                                     />
                                 </>
@@ -835,13 +835,14 @@ const PayrollOperatorSummary: React.FC = () => {
                                                 disabled={internalOrderSelectedKeys.length === 0}>批量终审推送</Button>
                                         </Space>
                                     </Card>
-                                    <Table
+                                    <ResizableTable
+                                        storageKey="finance-payroll-internal-orders"
                                         rowKey={(r: any) => String(r.orderNo || r.orderId || '')}
                                         dataSource={internalOrders}
                                         columns={internalOrderColumns}
                                         loading={internalOrdersLoading}
                                         size="small"
-                                        pagination={{ pageSize: 50, showSizeChanger: true, showTotal: (t: number) => `共 ${t} 条` }}
+                                        pagination={{ defaultPageSize: readPageSize(50), showSizeChanger: true, showTotal: (t: number) => `共 ${t} 条` }}
                                         rowSelection={{
                                             selectedRowKeys: internalOrderSelectedKeys,
                                             onChange: (keys: React.Key[]) => setInternalOrderSelectedKeys(keys as string[]),
@@ -849,7 +850,7 @@ const PayrollOperatorSummary: React.FC = () => {
                                                 disabled: internalOrderAuditedKeys.has(String(record.orderNo || record.orderId || '')),
                                             }),
                                         }}
-                                        stickyHeader
+                                        sticky
                                         scroll={{ x: 1400 }}
                                     />
                                 </>

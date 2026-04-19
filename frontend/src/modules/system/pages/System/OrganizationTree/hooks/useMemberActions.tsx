@@ -88,6 +88,7 @@ export function useMemberActions(
           <div style={{ marginTop: 16 }}>
             <span style={{ color: 'red' }}>*</span> 移出原因：
             <Input.TextArea
+              id="removeMemberReason"
               rows={3}
               placeholder="请输入移出原因（必填）"
               onChange={e => { remarkValue = e.target.value; }}

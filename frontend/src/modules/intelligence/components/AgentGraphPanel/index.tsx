@@ -194,14 +194,16 @@ const AgentGraphPanel: React.FC = () => {
             gap: 8,
             marginBottom: 12,
           }}>
-            <Select value={scene} onChange={setScene} options={SCENES} size="small" style={{ width: '100%' }} />
+            <Select id="agentScene" value={scene} onChange={setScene} options={SCENES} size="small" style={{ width: '100%' }} />
             <Input
+              id="agentOrderIds"
               placeholder="订单ID（逗号分隔，留空=全部）"
               value={orderIds}
               onChange={e => setOrderIds(e.target.value)}
               size="small"
             />
             <Input
+              id="agentQuestion"
               placeholder="自然语言问题（可选）"
               value={question}
               onChange={e => setQuestion(e.target.value)}

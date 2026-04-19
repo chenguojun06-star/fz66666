@@ -158,6 +158,7 @@ export default function CompositionPartsEditor({ value, onChange, disabled }: Pr
                 {/* 洗涤说明 */}
                 <div style={{ flex: '1 1 160px' }}>
                   <Input.TextArea
+                    id={`washNote-${partLabel}`}
                     rows={2}
                     size="small"
                     value={washNoteMap[partLabel] || ''}

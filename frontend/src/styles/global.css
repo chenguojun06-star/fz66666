@@ -1432,8 +1432,7 @@ body {
     padding: 0 !important;
   }
 
-  /* 隐藏body下的其他子元素（#root等），但保留打印区域 */
-  body > *:not(.cutting-qr-print-area) {
+  body:has(.cutting-qr-print-area) > *:not(.cutting-qr-print-area):not(iframe) {
     display: none !important;
   }
 

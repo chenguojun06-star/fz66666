@@ -59,7 +59,7 @@ export default defineConfig({
       // CSP: unsafe-eval 供 ECharts v6 / Three.js (new Function) 使用
       // unsafe-inline 供 Ant Design 内联样式使用
       'Content-Security-Policy':
-        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https:; connect-src 'self' ws: wss: http: https:; font-src 'self' data:; worker-src blob: 'self'; media-src 'self' blob: http: https:;",
+        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: http: https:; connect-src 'self' ws: wss: http: https:; font-src 'self' data: https://fonts.gstatic.com; worker-src blob: 'self'; media-src 'self' blob: http: https:;",
     },
     // HMR 配置：自动跟随客户端请求的 Host，同时支持 localhost 和内网 IP 访问
     // 注意：不要设置 host 字段，否则 Vite 会把 WebSocket 地址硬编码为固定 IP，
@@ -72,12 +72,12 @@ export default defineConfig({
 
     proxy: {
       '/api': {
-        target: 'http://localhost:8088',  // 后端地址 (Docker 容器间通信请使用服务名)
+        target: 'http://localhost:8088',
         changeOrigin: true,
         rewrite: (path) => path
       },
       '/ws': {
-        target: 'http://localhost:8088',  // WebSocket 代理
+        target: 'http://localhost:8088',
         changeOrigin: true,
         ws: true,
       }

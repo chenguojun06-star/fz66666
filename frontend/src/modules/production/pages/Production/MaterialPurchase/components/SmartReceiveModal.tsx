@@ -257,6 +257,7 @@ const SmartReceiveModal: React.FC<SmartReceiveModalProps> = ({
           <p>领料人：{record.pickerName}</p>
           <p style={{ marginBottom: 8 }}>撤销后将回退库存并恢复采购任务状态。</p>
           <Input.TextArea
+            id="revokeReason"
             placeholder="请填写撤销原因（必填）"
             rows={3}
             onChange={(e) => {

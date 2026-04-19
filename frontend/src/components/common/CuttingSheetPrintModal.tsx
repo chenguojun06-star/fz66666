@@ -360,59 +360,28 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
 
     // 使用iframe打印
     const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:none;';
+    iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:210mm;height:297mm;border:none;';
+    iframe.srcdoc = printHtml;
     document.body.appendChild(iframe);
 
-    const iframeDoc = iframe.contentWindow?.document;
-    if (iframeDoc) {
-      iframeDoc.open();
-      iframeDoc.write(printHtml);
-      iframeDoc.close();
-
-      // 等待图片加载后打印
-      const images = iframeDoc.querySelectorAll('img');
-      if (images.length > 0) {
-        let loadedCount = 0;
-        const doPrint = () => {
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-          setTimeout(() => {
-            try { document.body.removeChild(iframe); } catch {}
-          }, 1000);
-        };
-
-        images.forEach((img) => {
-          if (img.complete) {
-            loadedCount++;
-          } else {
-            img.onload = () => {
-              loadedCount++;
-              if (loadedCount >= images.length) {
-                setTimeout(doPrint, 100);
-              }
-            };
-            img.onerror = () => {
-              loadedCount++;
-              if (loadedCount >= images.length) {
-                setTimeout(doPrint, 100);
-              }
-            };
-          }
-        });
-
-        if (loadedCount >= images.length) {
-          setTimeout(doPrint, 100);
-        }
-      } else {
-        setTimeout(() => {
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-          setTimeout(() => {
-            try { document.body.removeChild(iframe); } catch {}
-          }, 1000);
-        }, 100);
-      }
-    }
+    iframe.onload = () => {
+      const doc = iframe.contentDocument;
+      if (!doc) return;
+      const images = doc.querySelectorAll('img');
+      const doPrint = () => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 1000);
+      };
+      if (images.length === 0) { setTimeout(doPrint, 100); return; }
+      let loaded = 0;
+      const onDone = () => { loaded++; if (loaded >= images.length) doPrint(); };
+      images.forEach((img) => {
+        if (img.complete) onDone();
+        else { img.onload = onDone; img.onerror = onDone; }
+      });
+      setTimeout(() => { if (loaded < images.length) doPrint(); }, 5000);
+    };
 
     onCancel();
   };
@@ -443,6 +412,7 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
         <div>
           <div style={{ fontWeight: 600, marginBottom: 8 }}>纸张方向</div>
           <Radio.Group
+            id="cuttingOrientation"
             value={orientation}
             onChange={(e) => setOrientation(e.target.value)}
           >

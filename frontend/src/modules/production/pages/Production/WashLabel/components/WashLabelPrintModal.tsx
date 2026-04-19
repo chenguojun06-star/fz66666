@@ -220,7 +220,7 @@ export default function WashLabelPrintModal({ open, onCancel, order }: Props) {
   <style>
     @page { size: ${labelW}mm ${labelH}mm; margin: 0; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: ${labelW}mm; height: ${labelH}mm; font-family: Arial, "Microsoft YaHei", sans-serif; }
+    html, body { width: ${labelW}mm; height: ${labelH}mm; font-family: Arial, "Microsoft YaHei", sans-serif; color: #000; background: #fff; }
     .print-page {
       width: ${labelW}mm; height: ${labelH}mm; padding: 2mm;
       page-break-after: always;
@@ -254,36 +254,28 @@ export default function WashLabelPrintModal({ open, onCancel, order }: Props) {
 
       /* 4. iframe 打印（与菲号打印完全相同方式） */
       const iframe = document.createElement('iframe');
-      iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:none;';
+      iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:210mm;height:297mm;border:none;';
+      iframe.srcdoc = printHtml;
       document.body.appendChild(iframe);
 
-      const iframeDoc = iframe.contentWindow?.document;
-      if (iframeDoc) {
-        iframeDoc.open();
-        iframeDoc.write(printHtml);
-        iframeDoc.close();
-
-        const imgs = iframeDoc.querySelectorAll('img');
-        const totalImgs = imgs.length;
-        let loadedCnt = 0;
-
+      iframe.onload = () => {
+        const doc = iframe.contentDocument;
+        if (!doc) return;
+        const imgs = doc.querySelectorAll('img');
         const doPrint = () => {
           iframe.contentWindow?.focus();
           iframe.contentWindow?.print();
           setTimeout(() => { try { document.body.removeChild(iframe); } catch { /* noop */ } }, 1000);
         };
-
-        if (totalImgs === 0) {
-          setTimeout(doPrint, 100);
-        } else {
-          const onDone = () => { loadedCnt++; if (loadedCnt >= totalImgs) setTimeout(doPrint, 100); };
-          imgs.forEach(img => {
-            if ((img as HTMLImageElement).complete) onDone();
-            else { img.onload = onDone; img.onerror = onDone; }
-          });
-          setTimeout(() => { if (loadedCnt < totalImgs) doPrint(); }, 5000);
-        }
-      }
+        if (imgs.length === 0) { setTimeout(doPrint, 100); return; }
+        let loadedCnt = 0;
+        const onDone = () => { loadedCnt++; if (loadedCnt >= imgs.length) setTimeout(doPrint, 100); };
+        imgs.forEach(img => {
+          if ((img as HTMLImageElement).complete) onDone();
+          else { img.onload = onDone; img.onerror = onDone; }
+        });
+        setTimeout(() => { if (loadedCnt < imgs.length) doPrint(); }, 5000);
+      };
     } finally {
       setPrinting(false);
     }

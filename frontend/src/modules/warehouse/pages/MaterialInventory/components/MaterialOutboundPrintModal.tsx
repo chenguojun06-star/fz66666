@@ -155,32 +155,24 @@ const buildPrintHtml = (data: MaterialOutboundPrintPayload) => {
 const printWithIframe = (html: string) => {
   const iframe = document.createElement('iframe');
   iframe.style.position = 'fixed';
-  iframe.style.right = '0';
-  iframe.style.bottom = '0';
-  iframe.style.width = '0';
-  iframe.style.height = '0';
+  iframe.style.left = '-9999px';
+  iframe.style.top = '-9999px';
+  iframe.style.width = '210mm';
+  iframe.style.height = '297mm';
   iframe.style.border = '0';
+  iframe.srcdoc = html;
   document.body.appendChild(iframe);
-  const frameWindow = iframe.contentWindow;
-  if (!frameWindow) {
-    document.body.removeChild(iframe);
-    return;
-  }
-  frameWindow.document.open();
-  frameWindow.document.write(html);
-  frameWindow.document.close();
-  const cleanup = () => {
+  iframe.onload = () => {
+    const frameWindow = iframe.contentWindow;
+    if (!frameWindow) return;
     window.setTimeout(() => {
-      if (iframe.parentNode) {
-        iframe.parentNode.removeChild(iframe);
-      }
-    }, 300);
+      frameWindow.focus();
+      frameWindow.print();
+      window.setTimeout(() => {
+        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+      }, 300);
+    }, 250);
   };
-  window.setTimeout(() => {
-    frameWindow.focus();
-    frameWindow.print();
-    cleanup();
-  }, 250);
 };
 
 const MaterialOutboundPrintModal: React.FC<MaterialOutboundPrintModalProps> = ({

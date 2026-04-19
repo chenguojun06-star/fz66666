@@ -871,7 +871,7 @@ const TenantListTab: React.FC = () => {
             style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
           >
             {MODULE_OPTIONS.map(opt => (
-              <Checkbox key={opt.value} value={opt.value} style={{ marginLeft: 0 }}>
+              <Checkbox key={opt.value} id={`appAuth-${opt.value}`} value={opt.value} style={{ marginLeft: 0 }}>
                 {opt.label}
               </Checkbox>
             ))}

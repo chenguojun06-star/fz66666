@@ -109,18 +109,18 @@ const LogisticsRecordsTab: React.FC<Props> = ({ active }) => {
     <div style={{ paddingTop: 16 }}>
       <Card size="small" style={{ marginBottom: 12, borderRadius: 8 }} variant="borderless">
         <Space wrap>
-          <Select placeholder="物流公司" allowClear style={{ width: 120 }}
+          <Select id="logisticsCompanyFilter" placeholder="物流公司" allowClear style={{ width: 120 }}
             value={filters.companyCode} onChange={v => setFilters(f => ({ ...f, companyCode: v }))}>
             <Select.Option value="SF">顺丰速运</Select.Option>
             <Select.Option value="STO">申通快递</Select.Option>
           </Select>
-          <Select placeholder="状态" allowClear style={{ width: 110 }}
+          <Select id="logisticsStatusFilter" placeholder="状态" allowClear style={{ width: 110 }}
             value={filters.status} onChange={v => setFilters(f => ({ ...f, status: v }))}>
             {Object.entries(STATUS_MAP).map(([k, v]) => (
               <Select.Option key={k} value={k}>{v.text}</Select.Option>
             ))}
           </Select>
-          <Input placeholder="系统订单号" allowClear style={{ width: 180 }}
+          <Input id="logisticsOrderIdSearch" placeholder="系统订单号" allowClear style={{ width: 180 }}
             value={filters.orderId} onChange={e => setFilters(f => ({ ...f, orderId: e.target.value }))} />
           <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>查询</Button>
           <Button icon={<ReloadOutlined />} onClick={handleReset}>重置</Button>

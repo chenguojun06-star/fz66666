@@ -191,6 +191,7 @@ const LoanHistoryModal: React.FC<LoanHistoryModalProps> = ({ visible, stock, onC
       >
         <p>确认归还样衣吗？</p>
         <Input.TextArea
+          id="returnRemarkModal"
           placeholder="归还备注（选填）"
           value={returnRemark}
           onChange={e => setReturnRemark(e.target.value)}

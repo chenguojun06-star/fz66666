@@ -198,8 +198,8 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, styleNo, bizType, upload
     iframe.style.position = 'fixed';
     iframe.style.right = '0';
     iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
+    iframe.style.width = '210mm';
+    iframe.style.height = '297mm';
     iframe.style.border = '0';
     iframe.src = src;
     const cleanup = () => {

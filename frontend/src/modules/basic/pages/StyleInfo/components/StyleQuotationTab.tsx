@@ -300,6 +300,7 @@ const StyleQuotationTab: React.FC<Props> = ({ styleId, styleNo, readOnly, onSave
       >
         <div style={{ marginBottom: 8 }}>解锁原因/备注（必填）：</div>
         <Input.TextArea
+          id="unlockRemark"
           value={unlockRemark}
           onChange={(e) => setUnlockRemark(e.target.value)}
           rows={3}

@@ -114,6 +114,7 @@ const FactoryWorkerList: React.FC = () => {
           <div style={{ marginTop: 16 }}>
             <span style={{ color: 'red' }}>*</span> 删除原因：
             <Input.TextArea
+              id="deleteWorkerReason"
               rows={3}
               placeholder="请输入删除原因（必填）"
               onChange={(e) => { remarkValue = e.target.value; }}

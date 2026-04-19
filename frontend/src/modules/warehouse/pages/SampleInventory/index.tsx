@@ -498,7 +498,7 @@ const SampleInventory: React.FC = () => {
         >
           <Form form={destroyForm} layout="vertical">
             <Form.Item label="库存编号">
-              <Input value={destroyModal.data?.id || '-'} readOnly />
+              <Input id="destroyInventoryId" value={destroyModal.data?.id || '-'} readOnly />
             </Form.Item>
             <Form.Item label="基础信息">
               <Input

@@ -890,6 +890,7 @@ const ExpenseReimbursementPage: React.FC = () => {
                     <div style={{ borderTop: '1px solid #f0f0f0', margin: '16px 0 8px', paddingTop: 12 }}>
                       <div style={{ fontWeight: 500, marginBottom: 8, color: 'var(--color-text-primary)' }}>审批与备注</div>
                       <TextArea
+                        id="approveRemark"
                         rows={3}
                         value={approveRemark}
                         onChange={(e) => setApproveRemark(e.target.value)}

@@ -184,20 +184,17 @@ html,body{width:${w}mm;min-height:${h}mm;font-family:Arial,"Microsoft YaHei",san
 </div></body></html>`;
 
     const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:none;';
+    iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:210mm;height:297mm;border:none;';
+    iframe.srcdoc = html;
     document.body.appendChild(iframe);
-    const doc = iframe.contentWindow?.document;
-    if (doc) {
-      doc.open(); doc.write(html); doc.close();
+    iframe.onload = () => {
       setTimeout(() => {
         iframe.contentWindow?.focus();
         iframe.contentWindow?.print();
         setTimeout(() => { try { document.body.removeChild(iframe); } catch { /**/ } }, 1000);
         setPrinting(false);
       }, 200);
-    } else {
-      setPrinting(false);
-    }
+    };
   };
 
   return (
@@ -229,7 +226,7 @@ html,body{width:${w}mm;min-height:${h}mm;font-family:Arial,"Microsoft YaHei",san
         )}
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 8 }}>纸张规格</div>
-          <Radio.Group value={paperSize} onChange={e => setPaperSize(e.target.value as PaperSize)}>
+          <Radio.Group id="washLabelPaperSize" value={paperSize} onChange={e => setPaperSize(e.target.value as PaperSize)}>
             {PAPER_OPTS.map(p => <Radio key={p.value} value={p.value}>{p.label}</Radio>)}
           </Radio.Group>
         </div>

@@ -321,6 +321,7 @@ const StyleProductionTab: React.FC<Props> = ({
         </Space>
       </div>
       <Input.TextArea
+        id="productionRequirements"
         value={allRequirements}
         onChange={handleTextChange}
         disabled={productionReqLocked}

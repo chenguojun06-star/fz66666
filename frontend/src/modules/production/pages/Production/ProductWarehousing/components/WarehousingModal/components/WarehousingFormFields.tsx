@@ -154,11 +154,11 @@ const WarehousingFormFields: React.FC<WarehousingFormFieldsProps> = ({ hook, ope
           <div className="wh-line">
             <div className="wh-label">颜色</div>
             <div className="wh-control" style={{ width: 160 }}>
-              <Input value={String(singleSelectedBundle?.color || '').trim() || '-'} disabled />
+              <Input id="whColor" value={String(singleSelectedBundle?.color || '').trim() || '-'} disabled />
             </div>
             <div className="wh-label" style={{ width: 56 }}>码数</div>
             <div className="wh-control" style={{ width: 160 }}>
-              <Input value={String(singleSelectedBundle?.size || '').trim() || '-'} disabled />
+              <Input id="whSize" value={String(singleSelectedBundle?.size || '').trim() || '-'} disabled />
             </div>
             <div className="wh-label" style={{ width: 72 }}>质检数量</div>
             <div className="wh-control" style={{ width: 160 }}>

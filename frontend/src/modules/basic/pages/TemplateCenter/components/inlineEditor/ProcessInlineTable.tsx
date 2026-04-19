@@ -359,7 +359,7 @@ const ProcessInlineTable: React.FC<ProcessInlineTableProps> = ({
           {readOnly ? (
             showSizePrices ? <Tag style={{ marginInlineEnd: 0 }}>多码单价</Tag> : null
           ) : (
-            <Checkbox checked={showSizePrices} onChange={(event) => onShowSizePricesChange(event.target.checked)}>
+            <Checkbox id="showSizePrices" checked={showSizePrices} onChange={(event) => onShowSizePricesChange(event.target.checked)}>
               显示多码单价
             </Checkbox>
           )}

@@ -171,7 +171,7 @@ const WashLabelBatchPrintModal: React.FC<Props> = ({ open, onClose, items, loadi
     const sharedCss = `
 @page { size: ${w}mm ${h}mm; margin: 0; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'PingFang SC','Heiti SC',Arial,sans-serif; }
+body { font-family: 'PingFang SC','Heiti SC',Arial,sans-serif; color: #000; background: #fff; }
 /* ── 标签外框 ── */
 .label-page {
   position: relative;
@@ -228,10 +228,10 @@ body { font-family: 'PingFang SC','Heiti SC',Arial,sans-serif; }
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${sharedCss}</style></head><body>${allPages.join('\n')}</body></html>`;
 
     if (!iframeRef.current) return;
-    const doc = iframeRef.current.contentDocument || iframeRef.current.contentWindow?.document;
-    if (!doc) return;
-    doc.open(); doc.write(html); doc.close();
-    setTimeout(() => iframeRef.current?.contentWindow?.print(), 400);
+    iframeRef.current.srcdoc = html;
+    iframeRef.current.onload = () => {
+      setTimeout(() => iframeRef.current?.contentWindow?.print(), 400);
+    };
   };
 
   const missingDataCount = labelType === 'wash'
@@ -344,7 +344,7 @@ body { font-family: 'PingFang SC','Heiti SC',Arial,sans-serif; }
           </div>
         </div>
       </Space>
-      <iframe ref={iframeRef} style={{ display: 'none' }} title="wash-label-print" />
+      <iframe ref={iframeRef} style={{ position: 'fixed', left: -9999, top: -9999, width: 210, height: 297, border: 'none' }} title="wash-label-print" />
     </ResizableModal>
   );
 };

@@ -11,6 +11,7 @@ export function buildPrintHtml({ headerInfo, printerInfo, printDate, styleNo, bo
       <!DOCTYPE html>
       <html>
       <head>
+        <meta charset="UTF-8">
         <title>打印预览 - ${styleNo}</title>
         <style>
           @page {

@@ -1097,6 +1097,7 @@ const StyleSizeTab: React.FC<Props> = ({
         scaleWithViewport
       >
         <Input.TextArea
+          id="newSizeName"
           value={newSizeName}
           placeholder="每行一个，或用逗号分隔：\nS\nM\n3-6M"
           rows={4}

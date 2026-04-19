@@ -45,7 +45,7 @@ const ABTestStatsPanel: React.FC = () => {
     <Spin spinning={loading}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <span style={{ fontSize: 12, color: '#888' }}>按场景对比近 {days} 天数据</span>
-        <Select size="small" value={days} onChange={setDays} style={{ width: 100 }}
+        <Select id="abTestDays" size="small" value={days} onChange={setDays} style={{ width: 100 }}
                 options={[{ value: 7, label: '7 天' }, { value: 14, label: '14 天' }, { value: 30, label: '30 天' }]} />
       </div>
 

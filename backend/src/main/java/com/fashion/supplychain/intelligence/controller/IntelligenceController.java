@@ -41,14 +41,14 @@ public class IntelligenceController {
     @Value("${app.sse.timeout:240000}")
     private long sseTimeout;
 
-    private org.springframework.data.redis.core.StringRedisTemplate stringRedisTemplate;
+    private final org.springframework.data.redis.core.StringRedisTemplate stringRedisTemplate;
 
     @Value("${app.upload.max-size:5242880}")
     private long uploadMaxSize;
 
     private final SmartPrecheckOrchestrator smartPrecheckOrchestrator;
 
-    private com.fashion.supplychain.intelligence.orchestration.AiAgentOrchestrator aiAgentOrchestrator;
+    private final com.fashion.supplychain.intelligence.orchestration.AiAgentOrchestrator aiAgentOrchestrator;
 
     private final AiAdvisorChatResponseOrchestrator aiAdvisorChatResponseOrchestrator;
 

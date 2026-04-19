@@ -55,6 +55,8 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
     const labelH = Math.round(printConfig.paperHeight * 10);
     const pageSize = `${labelW}mm ${labelH}mm`;
     const qrSize = printConfig.qrSize;
+    const minDim = Math.min(labelW, labelH);
+    const fontSize = minDim <= 35 ? 5.5 : minDim <= 50 ? 7 : minDim <= 80 ? 8.5 : 10;
 
     // 本地生成 QR 码 DataURL（替代外部 api.qrserver.com，防止业务数据泄露）
     const qrDataUrls: Record<string, string> = {};
@@ -105,7 +107,7 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           @page { size: ${pageSize}; margin: 0; }
-          html, body { width: ${labelW}mm; height: ${labelH}mm; }
+          html, body { width: ${labelW}mm; height: ${labelH}mm; color: #000; background: #fff; }
           .print-page {
             width: ${labelW}mm;
             height: ${labelH}mm;
@@ -118,20 +120,29 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
             width: 90%;
             height: 90%;
             border: 1px solid #000;
-            padding: 4mm;
+            padding: 3mm;
             display: flex;
-            gap: 4mm;
+            gap: 3mm;
             font-family: Arial, "Microsoft YaHei", sans-serif;
           }
           .qr { flex: 0 0 auto; display: flex; align-items: center; }
-          .qr img { display: block; }
+          .qr img { display: block; max-width: ${labelH * 0.6}mm; max-height: ${labelH * 0.7}mm; }
           .text {
             flex: 1 1 auto;
-            font-size: 10pt;
-            line-height: 1.6;
+            font-size: ${fontSize}pt;
+            line-height: 1.5;
+            color: #000;
             display: flex;
             flex-direction: column;
             justify-content: space-around;
+            overflow: hidden;
+            min-width: 0;
+          }
+          .text div {
+            color: #000;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
           }
         </style>
       </head>
@@ -142,38 +153,30 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
     `;
 
     const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:none;';
+    iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:210mm;height:297mm;border:none;';
+    iframe.srcdoc = printHtml;
     document.body.appendChild(iframe);
 
-    const iframeDoc = iframe.contentWindow?.document;
-    if (iframeDoc) {
-      iframeDoc.open();
-      iframeDoc.write(printHtml);
-      iframeDoc.close();
-
-      // 等待 QR 码图片加载完成后再调用 print()
-      const imgs = iframeDoc.querySelectorAll('img');
+    iframe.onload = () => {
+      const doc = iframe.contentDocument;
+      if (!doc) return;
+      const imgs = doc.querySelectorAll('img');
       const waitForImages = () => new Promise<void>((resolve) => {
+        if (imgs.length === 0) { resolve(); return; }
         let loaded = 0;
-        const total = imgs.length;
-        if (total === 0) { resolve(); return; }
-        const onLoad = () => { loaded++; if (loaded >= total) resolve(); };
+        const onLoad = () => { loaded++; if (loaded >= imgs.length) resolve(); };
         imgs.forEach((img) => {
           if ((img as HTMLImageElement).complete) { onLoad(); }
-          else {
-            img.addEventListener('load', onLoad);
-            img.addEventListener('error', onLoad);
-          }
+          else { img.addEventListener('load', onLoad); img.addEventListener('error', onLoad); }
         });
-        setTimeout(resolve, 5000); // 5s 超时兜底
+        setTimeout(resolve, 5000);
       });
-
       waitForImages().then(() => {
         iframe.contentWindow?.focus();
         iframe.contentWindow?.print();
         setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 1000);
       });
-    }
+    };
 
     setPrintPreviewOpen(false);
   };

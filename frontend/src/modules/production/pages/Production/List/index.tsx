@@ -791,6 +791,7 @@ const ProductionList: React.FC = () => {
           confirmLoading={remarkSaving}
         >
           <Input.TextArea
+            id="productionRemark"
             value={remarkText}
             onChange={(e) => setRemarkText(e.target.value)}
             rows={6}

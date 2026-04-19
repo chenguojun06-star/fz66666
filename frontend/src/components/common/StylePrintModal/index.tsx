@@ -4,13 +4,12 @@
  * 可在样衣开发、下单管理、大货生产等页面复用
  */
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { Checkbox, Button, Space, Spin, QRCode, Radio, InputNumber } from 'antd';
+import { Checkbox, Button, Space, Spin, Radio, InputNumber } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
 import QRCodeLib from 'qrcode';
 
 import api from '@/utils/api';
 import { sortSizeNames } from '@/utils/api/size';
-import ResizableTable from '@/components/common/ResizableTable';
 import { formatDateTime } from '@/utils/datetime';
 import { getMaterialTypeLabel } from '@/utils/materialType';
 import { toCategoryCn } from '@/utils/styleCategory';
@@ -32,7 +31,7 @@ const LABEL_SIZE_MAP: Record<LabelSize, [number, number]> = {
 const StylePrintModal: React.FC<StylePrintModalProps> = ({
   visible, onClose, styleId, orderId, orderNo,
   styleNo = '', styleName = '', cover, color, quantity,
-  category, season, mode = 'sample', patternProductionId: propPatternId, extraInfo = {}, sizeDetails = [],
+  category, season, mode = 'sample', extraInfo = {}, sizeDetails = [],
 }) => {
   const { user } = useAuth();
   const showPrice = canViewPrice(user);
@@ -44,8 +43,17 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
   const [labelSize, setLabelSize] = useState<LabelSize>('40x70');
   const [labelCount, setLabelCount] = useState(1);
   const [labelPrinting, setLabelPrinting] = useState(false);
-  const [autoPatternId, setAutoPatternId] = useState<string | null>(null);
-  const resolvedPatternId = propPatternId ? String(propPatternId) : autoPatternId;
+  const [qrDataUrl, setQrDataUrl] = useState<string>('');
+
+  useEffect(() => {
+    const isPatternPrint = extraInfo?.isPattern === true;
+    const val = JSON.stringify(
+      isPatternPrint
+        ? { type: 'pattern', id: String(orderId || styleId || '').trim(), styleNo, styleName, color }
+        : { type: mode === 'production' ? 'order' : 'style', styleNo, styleName, orderId, orderNo: orderNo || '' }
+    );
+    QRCodeLib.toDataURL(val, { width: 160, margin: 1, type: 'image/png' }).then(url => setQrDataUrl(url)).catch(() => setQrDataUrl(''));
+  }, [styleNo, styleName, color, orderId, orderNo, styleId, mode, extraInfo]);
 
   /* ---- 自动识别颜色×码数×数量 ---- */
   const labelItems = useMemo(() => {
@@ -88,18 +96,6 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
   useEffect(() => {
     if (!visible || !styleId) return;
     setLabelPrintMode(false);
-    setAutoPatternId(null);
-    // 样衣模式下自动查询样衣生产记录ID（用于二维码）
-    if (mode === 'sample' && !propPatternId && styleNo) {
-      api.get('/production/pattern/list', { params: { page: 1, pageSize: 20, keyword: styleNo } })
-        .then(res => {
-          const records = Array.isArray(res?.data?.records) ? res.data.records : [];
-          const matched = records.find((item: any) => String(item.styleId || '') === String(styleId || ''))
-            || records.find((item: any) => String(item.styleNo || '') === String(styleNo || ''));
-          if (matched?.id) setAutoPatternId(String(matched.id));
-        })
-        .catch(() => {});
-    }
     const loadData = async () => {
       setLoading(true);
       try {
@@ -136,9 +132,9 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
       finally { setLoading(false); }
     };
     loadData();
-  }, [visible, styleId, mode, propPatternId, styleNo]);
+  }, [visible, styleId]);
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     const hasSelection = Object.values(options).some(v => v);
     if (!hasSelection) { message.warning('请至少选择一项打印内容'); return; }
     const printContent = document.getElementById('style-print-content');
@@ -146,35 +142,36 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
     const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
     const printerName = userInfo.name || userInfo.username || '未知用户';
     const printerAccount = userInfo.username || '';
-    const headerInfo = [
-      styleNo ? `款号: ${styleNo}` : '',
-      styleName ? `款名: ${styleName}` : '',
-      color ? `颜色: ${color}` : '',
-      (orderNo || orderId) ? `订单号: ${orderNo || orderId}` : '',
-    ].filter(Boolean).join('  |  ');
     const printDate = new Date().toLocaleString('zh-CN');
     const printerInfo = printerAccount ? `打印人: ${printerName} (${printerAccount})` : `打印人: ${printerName}`;
-    const htmlContent = buildPrintHtml({ headerInfo, printerInfo, printDate, styleNo, bodyHtml: printContent.innerHTML });
+    const headerInfo = [styleNo ? `款号: ${styleNo}` : '', styleName ? `款名: ${styleName}` : '', color ? `颜色: ${color}` : '', (orderNo || orderId) ? `订单号: ${orderNo || orderId}` : ''].filter(Boolean).join('  |  ');
+
+    let qrSrc = '';
+    try {
+      const isPatternPrint = extraInfo?.isPattern === true;
+      const val = JSON.stringify(isPatternPrint ? { type: 'pattern', id: String(orderId || styleId || '').trim(), styleNo, styleName, color } : { type: mode === 'production' ? 'order' : 'style', styleNo, styleName, orderId, orderNo: orderNo || '' });
+      qrSrc = await QRCodeLib.toDataURL(val, { width: 160, margin: 1, type: 'image/png' });
+    } catch { qrSrc = ''; }
+
+    const bodyHtml = printContent.innerHTML;
+    const htmlContent = buildPrintHtml({ headerInfo, printerInfo, printDate, styleNo, bodyHtml });
     const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed'; iframe.style.right = '0'; iframe.style.bottom = '0';
-    iframe.style.width = '0'; iframe.style.height = '0'; iframe.style.border = '0';
-    iframe.style.opacity = '0'; iframe.setAttribute('aria-hidden', 'true');
+    iframe.style.position = 'fixed'; iframe.style.left = '-9999px'; iframe.style.top = '-9999px';
+    iframe.style.width = '210mm'; iframe.style.height = '297mm'; iframe.style.border = '0';
+    iframe.srcdoc = htmlContent;
     document.body.appendChild(iframe);
-    const printDoc = iframe.contentWindow?.document;
-    if (!printDoc) { iframe.remove(); message.error('打印失败，请检查浏览器设置'); return; }
-    printDoc.open(); printDoc.write(htmlContent); printDoc.close();
-    const triggerPrint = () => {
+    iframe.onload = () => {
       const win = iframe.contentWindow; if (!win) return;
       win.focus(); win.print(); setTimeout(() => iframe.remove(), 1000);
     };
-    if (iframe.contentWindow?.document?.readyState === 'complete') { triggerPrint(); }
-    else { iframe.onload = triggerPrint; }
   };
 
-  const isPatternPrint = extraInfo?.isPattern === true || (mode === 'sample' && !!resolvedPatternId);
-  const qrValue = isPatternPrint && resolvedPatternId
-    ? JSON.stringify({ type: 'pattern', id: resolvedPatternId })
-    : JSON.stringify({ type: mode === 'production' ? 'order' : 'style', styleNo, styleName, orderId, orderNo: orderNo || '' });
+  const isPatternPrint = extraInfo?.isPattern === true;
+  const qrValue = JSON.stringify(
+    isPatternPrint
+      ? { type: 'pattern', id: String(orderId || styleId || '').trim(), styleNo, styleName, color }
+      : { type: mode === 'production' ? 'order' : 'style', styleNo, styleName, orderId, orderNo: orderNo || '' }
+  );
 
   /* ---- 标签打印（自动识别全部颜色×码数） ---- */
   const handleLabelPrint = useCallback(async () => {
@@ -205,9 +202,11 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
           Array.from({ length: batch }, (_, j) => {
             const itemIdx = Math.floor((i + j) / copies);
             const item = items[itemIdx];
-            const itemQrValue = isPatternPrint && resolvedPatternId
-              ? JSON.stringify({ type: 'pattern', id: resolvedPatternId })
-              : JSON.stringify({ type: mode === 'production' ? 'order' : 'style', styleNo, styleName, orderId, orderNo: orderNo || '', color: item.color, size: item.size });
+            const itemQrValue = JSON.stringify(
+              isPatternPrint
+                ? { type: 'pattern', id: String(orderId || styleId || '').trim(), styleNo, styleName, color: item.color, size: item.size }
+                : { type: mode === 'production' ? 'order' : 'style', styleNo, styleName, orderId, orderNo: orderNo || '', color: item.color, size: item.size },
+            );
             return QRCodeLib.toDataURL(itemQrValue, { width: qrPx, margin: 0, errorCorrectionLevel: 'M' }).catch(() => '');
           }),
         );
@@ -252,24 +251,25 @@ body{font-family:'PingFang SC','Heiti SC',Arial,sans-serif}
 
       const fr = document.createElement('iframe');
       fr.style.cssText = `position:fixed;left:-9999px;top:-9999px;width:${w + 20}mm;height:${h + 20}mm;border:none;`;
+      fr.srcdoc = html;
       document.body.appendChild(fr);
-      const doc = fr.contentWindow?.document;
-      if (doc) {
-        doc.open(); doc.write(html); doc.close();
-        const imgs = doc.querySelectorAll('img');
-        await new Promise<void>(resolve => {
+      await new Promise<void>(resolve => {
+        fr.onload = () => {
+          const doc = fr.contentDocument;
+          if (!doc) { resolve(); return; }
+          const imgs = doc.querySelectorAll('img');
           const doPrint = () => { fr.contentWindow?.focus(); fr.contentWindow?.print(); setTimeout(() => { try { document.body.removeChild(fr); } catch { /**/ } }, 1000); resolve(); };
           if (imgs.length === 0) { setTimeout(doPrint, 100); return; }
           let loaded = 0;
           const onDone = () => { loaded++; if (loaded >= imgs.length) doPrint(); };
           imgs.forEach(img => { if ((img as HTMLImageElement).complete) onDone(); else { img.onload = onDone; img.onerror = onDone; } });
           setTimeout(() => { if (loaded < imgs.length) doPrint(); }, 5000);
-        });
-      }
+        };
+      });
       message.success(`已发送 ${totalLabels} 张标签到打印机`);
     } catch { message.error('标签打印失败，请重试'); }
     finally { setLabelPrinting(false); }
-  }, [labelItems, isPatternPrint, resolvedPatternId, orderId, styleId, styleNo, styleName, orderNo, color, quantity, mode, labelSize, labelCount]);
+  }, [labelItems, isPatternPrint, orderId, styleId, styleNo, styleName, orderNo, color, quantity, mode, labelSize, labelCount]);
 
   const getModeTitle = () => {
     switch (mode) {
@@ -295,7 +295,7 @@ body{font-family:'PingFang SC','Heiti SC',Arial,sans-serif}
           </Space>
         </div>
         {/* 打印选项 */}
-        <div style={{ marginBottom: 16, padding: '12px 16px', background: '#f0f2f5', borderRadius: 12, border: '1px solid var(--color-border)' }}>
+        <div style={{ marginBottom: 16, padding: '12px 16px', background: '#f0f2f5', borderRadius: 12, border: '1px solid #e5e7eb' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16 }}>
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
               <div style={{ fontWeight: 600, color: '#1f2937', whiteSpace: 'nowrap' }}> 选择打印内容：</div>
@@ -323,7 +323,7 @@ body{font-family:'PingFang SC','Heiti SC',Arial,sans-serif}
                 <Radio.Button value="50x100">5 × 10 cm</Radio.Button>
               </Radio.Group>
               <span style={{ whiteSpace: 'nowrap' }}>每组份数：</span>
-              <InputNumber min={1} max={200} value={labelCount} onChange={v => setLabelCount(v ?? 1)} size="small" style={{ width: 80 }} />
+              <InputNumber id="labelCount" min={1} max={200} value={labelCount} onChange={v => setLabelCount(v ?? 1)} size="small" style={{ width: 80 }} />
               <Button type="primary" size="small" icon={<PrinterOutlined />} loading={labelPrinting} onClick={handleLabelPrint}>
                 打印标签{labelItems.length > 0 ? ` (${labelItems.length * labelCount}张)` : ''}
               </Button>
@@ -340,7 +340,7 @@ body{font-family:'PingFang SC','Heiti SC',Arial,sans-serif}
           </div>
         )}
         {/* 打印内容预览区域 */}
-        <div className="style-print-content" id="style-print-content" style={{ background: 'var(--color-bg-base)', padding: 20, border: '1px solid var(--color-border)', borderRadius: 12 }}>
+        <div className="style-print-content" id="style-print-content" style={{ background: '#ffffff', padding: 20, border: '1px solid #d9d9d9', borderRadius: 12 }}>
           <style>{`
             .print-section { margin-bottom: 24px; }
             .print-section-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #1890ff; }
@@ -348,7 +348,7 @@ body{font-family:'PingFang SC','Heiti SC',Arial,sans-serif}
           {/* 基本信息 */}
           {options.basicInfo && (
             <div className="print-section">
-              <div style={{ display: 'flex', gap: 24, padding: 16, borderBottom: '2px solid #d9d9d9', background: 'var(--color-bg-container)', borderRadius: 8 }}>
+              <div style={{ display: 'flex', gap: 24, padding: 16, borderBottom: '2px solid #d9d9d9', background: '#fafafa', borderRadius: 8 }}>
                 {resolvedCover && (
                   <div style={{ flexShrink: 0, width: 120, height: 120 }}>
                     <img src={getFullAuthedFileUrl(resolvedCover)} alt={styleNo}
@@ -356,25 +356,25 @@ body{font-family:'PingFang SC','Heiti SC',Arial,sans-serif}
                   </div>
                 )}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: "var(--font-size-xxl)", fontWeight: 600, marginBottom: 8 }}>{styleNo} - {styleName}</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "var(--font-size-base)" }}>
-                    {color && <div><span style={{ color: 'var(--color-text-secondary)' }}>颜色：</span><strong>{color}</strong></div>}
-                    {quantity !== undefined && <div><span style={{ color: 'var(--color-text-secondary)' }}>{getModeTitle()}数量：</span><strong>{quantity}</strong></div>}
-                    {category && <div><span style={{ color: 'var(--color-text-secondary)' }}>分类：</span><strong>{toCategoryCn(category)}</strong></div>}
-                    {season && <div><span style={{ color: 'var(--color-text-secondary)' }}>季节：</span><strong>{toSeasonCn(season)}</strong></div>}
+                  <div style={{ fontSize: "20", fontWeight: 600, marginBottom: 8 }}>{styleNo} - {styleName}</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 24px', fontSize: "14" }}>
+                    {color && <div><span style={{ color: '#6b7280' }}>颜色：</span><strong>{color}</strong></div>}
+                    {quantity !== undefined && <div><span style={{ color: '#6b7280' }}>{getModeTitle()}数量：</span><strong>{quantity}</strong></div>}
+                    {category && <div><span style={{ color: '#6b7280' }}>分类：</span><strong>{toCategoryCn(category)}</strong></div>}
+                    {season && <div><span style={{ color: '#6b7280' }}>季节：</span><strong>{toSeasonCn(season)}</strong></div>}
                     {Object.entries(extraInfo).map(([key, value]) => {
                       if (!value) return null;
                       const display = typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(value)
                         ? formatDateTime(value) : String(value);
-                      return <div key={key}><span style={{ color: 'var(--color-text-secondary)' }}>{key}：</span><strong>{display}</strong></div>;
+                      return <div key={key}><span style={{ color: '#6b7280' }}>{key}：</span><strong>{display}</strong></div>;
                     })}
                   </div>
                 </div>
                 <div style={{ flexShrink: 0, textAlign: 'center' }}>
-                  <QRCode value={qrValue} size={160} type="svg" />
+                  {qrDataUrl && <img src={qrDataUrl} alt="QR" style={{ width: 160, height: 160 }} />}
                 </div>
               </div>
-              <div style={{ textAlign: 'right', marginTop: 8, color: 'var(--color-text-tertiary)', fontSize: "var(--font-size-xs)" }}>
+              <div style={{ textAlign: 'right', marginTop: 8, color: '#9ca3af', fontSize: "12" }}>
                 打印时间：{formatDateTime(new Date())}
               </div>
             </div>
@@ -396,7 +396,7 @@ body{font-family:'PingFang SC','Heiti SC',Arial,sans-serif}
               <div className="print-section">
                 <div className="print-section-title"> 生产要求</div>
                 {(reviewLabel || sampleReviewComment || sampleReviewer || sampleReviewTime) && (
-                  <div style={{ marginBottom: 10, border: '1px solid var(--color-border)', padding: '8px 10px', borderRadius: 6 }}>
+                  <div style={{ marginBottom: 10, border: '1px solid #d9d9d9', padding: '8px 10px', borderRadius: 6 }}>
                     <div style={{ marginBottom: 6, fontWeight: 600 }}>样衣审核</div>
                     <div style={{ fontSize: 12, lineHeight: '20px' }}>
                       <span>审核状态：{reviewLabel || '-'}</span>
@@ -408,8 +408,8 @@ body{font-family:'PingFang SC','Heiti SC',Arial,sans-serif}
                     )}
                   </div>
                 )}
-                <div style={{ border: '1px solid var(--color-border)', padding: '8px 10px', borderRadius: 4, fontSize: 'var(--font-size-xs)', whiteSpace: 'pre-wrap', lineHeight: 1.8, minHeight: 40 }}>
-                  {description || <span style={{ color: 'var(--color-text-quaternary)' }}>暂无生产要求</span>}
+                <div style={{ border: '1px solid #d9d9d9', padding: '8px 10px', borderRadius: 4, fontSize: '12', whiteSpace: 'pre-wrap', lineHeight: 1.8, minHeight: 40 }}>
+                  {description || <span style={{ color: '#bfbfbf' }}>暂无生产要求</span>}
                 </div>
               </div>
             );
@@ -427,29 +427,29 @@ body{font-family:'PingFang SC','Heiti SC',Arial,sans-serif}
             return (
               <div className="print-section">
                 <div className="print-section-title"> 码数明细</div>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: "var(--font-size-sm)" }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: "13" }}>
                   <thead>
-                    <tr style={{ background: 'var(--color-bg-container)' }}>
-                      <th style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'left', width: 60 }}>颜色</th>
-                      {colors.map(color => <th key={color} style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center' }}>{color}</th>)}
-                      <th style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center', width: 80, background: '#e6f7ff' }}>合计</th>
+                    <tr style={{ background: '#fafafa' }}>
+                      <th style={{ border: '1px solid #d9d9d9', padding: '6px 8px', textAlign: 'left', width: 60 }}>颜色</th>
+                      {colors.map(color => <th key={color} style={{ border: '1px solid #d9d9d9', padding: '6px 8px', textAlign: 'center' }}>{color}</th>)}
+                      <th style={{ border: '1px solid #d9d9d9', padding: '6px 8px', textAlign: 'center', width: 80, background: '#e6f7ff' }}>合计</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
-                      <td style={{ border: '1px solid var(--color-border)', padding: '6px 8px', fontWeight: 600 }}>尺码</td>
-                      {colors.map(color => <td key={color} style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center' }}>{sizes.join(' / ')}</td>)}
-                      <td style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center', background: '#e6f7ff' }}>-</td>
+                      <td style={{ border: '1px solid #d9d9d9', padding: '6px 8px', fontWeight: 600 }}>尺码</td>
+                      {colors.map(color => <td key={color} style={{ border: '1px solid #d9d9d9', padding: '6px 8px', textAlign: 'center' }}>{sizes.join(' / ')}</td>)}
+                      <td style={{ border: '1px solid #d9d9d9', padding: '6px 8px', textAlign: 'center', background: '#e6f7ff' }}>-</td>
                     </tr>
                     <tr>
-                      <td style={{ border: '1px solid var(--color-border)', padding: '6px 8px', fontWeight: 600 }}>数量</td>
-                      {colors.map(color => <td key={color} style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center' }}>{sizes.map(size => dataMap[size]?.[color] || 0).join(' / ')}</td>)}
-                      <td style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center', fontWeight: 600, background: '#e6f7ff' }}>{grandTotal}</td>
+                      <td style={{ border: '1px solid #d9d9d9', padding: '6px 8px', fontWeight: 600 }}>数量</td>
+                      {colors.map(color => <td key={color} style={{ border: '1px solid #d9d9d9', padding: '6px 8px', textAlign: 'center' }}>{sizes.map(size => dataMap[size]?.[color] || 0).join(' / ')}</td>)}
+                      <td style={{ border: '1px solid #d9d9d9', padding: '6px 8px', textAlign: 'center', fontWeight: 600, background: '#e6f7ff' }}>{grandTotal}</td>
                     </tr>
-                    <tr style={{ background: 'var(--color-bg-container)' }}>
-                      <td style={{ border: '1px solid var(--color-border)', padding: '6px 8px', fontWeight: 600 }}>小计</td>
-                      {colors.map(color => <td key={color} style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center', fontWeight: 600 }}>{colorTotals[color]}</td>)}
-                      <td style={{ border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center', fontWeight: 700, background: '#e6f7ff', color: 'var(--color-primary)' }}>{grandTotal}</td>
+                    <tr style={{ background: '#fafafa' }}>
+                      <td style={{ border: '1px solid #d9d9d9', padding: '6px 8px', fontWeight: 600 }}>小计</td>
+                      {colors.map(color => <td key={color} style={{ border: '1px solid #d9d9d9', padding: '6px 8px', textAlign: 'center', fontWeight: 600 }}>{colorTotals[color]}</td>)}
+                      <td style={{ border: '1px solid #d9d9d9', padding: '6px 8px', textAlign: 'center', fontWeight: 700, background: '#e6f7ff', color: '#2D7FF9' }}>{grandTotal}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -521,14 +521,14 @@ body{font-family:'PingFang SC','Heiti SC',Arial,sans-serif}
               });
             });
 
-            const thS: React.CSSProperties = { border: '1px solid var(--color-border)', padding: '6px 8px', textAlign: 'center', background: 'var(--color-bg-container)', whiteSpace: 'nowrap' as const };
-            const tdS: React.CSSProperties = { border: '1px solid var(--color-border)', padding: '6px 8px', verticalAlign: 'middle', fontSize: 'var(--font-size-xs)' };
+            const thS: React.CSSProperties = { border: '1px solid #d9d9d9', padding: '6px 8px', textAlign: 'center', background: '#fafafa', whiteSpace: 'nowrap' as const };
+            const tdS: React.CSSProperties = { border: '1px solid #d9d9d9', padding: '6px 8px', verticalAlign: 'middle', fontSize: '12' };
 
             return (
               <div className="print-section">
                 <div className="print-section-title"> 尺寸表</div>
                 {/* table-layout:fixed + 只固定图片/分组列宽，其余列自动均分剩余空间 */}
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--font-size-xs)', tableLayout: 'fixed' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12', tableLayout: 'fixed' }}>
                   <thead>
                     <tr>
                       <th style={{ ...thS, width: 160 }}>参考图</th>
@@ -564,7 +564,7 @@ body{font-family:'PingFang SC','Heiti SC',Arial,sans-serif}
                         {sortedSizeNames.map((sn: string) => (
                           <td key={sn} style={{ ...tdS, textAlign: 'center' }}>{row.cells[sn] != null ? row.cells[sn] : '-'}</td>
                         ))}
-                        <td style={{ ...tdS, textAlign: 'center' }}>{row.tolerance != null ? `±${row.tolerance}` : '-'}</td>
+                        <td style={{ ...tdS, textAlign: 'center' }}>{row.tolerance != null && isFinite(row.tolerance) ? `±${row.tolerance}` : '-'}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -574,75 +574,94 @@ body{font-family:'PingFang SC','Heiti SC',Arial,sans-serif}
           })()}
 
           {/* BOM表 */}
-          {options.bomTable && data.bom.length > 0 && (
+          {options.bomTable && data.bom.length > 0 && (() => {
+            const cs: React.CSSProperties = { border: '1px solid #d9d9d9', padding: '6px 8px', fontSize: 12 };
+            return (
             <div className="print-section">
               <div className="print-section-title"> BOM物料清单</div>
-              <ResizableTable
-                storageKey="print-bom"
-                className="print-table"
-                dataSource={data.bom}
-                rowKey="id"
-                size="small"
-                pagination={false}
-                bordered
-                columns={[
-                  { title: '物料类型', dataIndex: 'materialType', key: 'materialType', width: 100,
-                    render: (v: unknown) => getMaterialTypeLabel(v) },
-                  { title: '物料名称', dataIndex: 'materialName', key: 'materialName', width: 150 },
-                  { title: '物料编码', dataIndex: 'materialCode', key: 'materialCode', width: 120 },
-                  { title: '规格', dataIndex: 'specifications', key: 'specifications', width: 100 },
-                  { title: '单位', dataIndex: 'unit', key: 'unit', width: 60 },
-                  { title: '用量', dataIndex: 'quantity', key: 'quantity', width: 80, align: 'right' as const },
-                  ...(showPrice ? [{ title: '单价', dataIndex: 'unitPrice', key: 'unitPrice', width: 80, align: 'right' as const,
-                    render: (v: number) => v ? `¥${Number(v).toFixed(2)}` : '-' }] : []),
-                  { title: '备注', dataIndex: 'remark', key: 'remark', ellipsis: true },
-                  { title: '图片', dataIndex: 'imageUrls', key: 'image', width: 90,
-                    render: (v: string) => {
-                      const imgs: string[] = (() => { try { return JSON.parse(v || '[]'); } catch { return []; } })();
-                      if (!imgs.length) return null;
-                      return (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                          {imgs.map((url: string) => (
-                            <img key={url} src={getFullAuthedFileUrl(url)} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 3, border: '1px solid #eee' }} />
-                          ))}
-                        </div>
-                      );
-                    }
-                  },
-                ]}
-              />
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <thead>
+                  <tr style={{ background: '#fafafa' }}>
+                    <th style={cs}>物料类型</th>
+                    <th style={cs}>物料名称</th>
+                    <th style={cs}>物料编码</th>
+                    <th style={cs}>规格</th>
+                    <th style={cs}>单位</th>
+                    <th style={{ ...cs, textAlign: 'right' }}>用量</th>
+                    {showPrice && <th style={{ ...cs, textAlign: 'right' }}>单价</th>}
+                    <th style={cs}>备注</th>
+                    <th style={cs}>图片</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.bom.map((item: any, idx: number) => {
+                    const imgs: string[] = (() => { try { return JSON.parse(item.imageUrls || '[]'); } catch { return []; } })();
+                    return (
+                      <tr key={item.id || idx} style={idx % 2 === 1 ? { background: '#fafafa' } : {}}>
+                        <td style={cs}>{getMaterialTypeLabel(item.materialType)}</td>
+                        <td style={cs}>{item.materialName || '-'}</td>
+                        <td style={cs}>{item.materialCode || '-'}</td>
+                        <td style={cs}>{item.specifications || '-'}</td>
+                        <td style={cs}>{item.unit || '-'}</td>
+                        <td style={{ ...cs, textAlign: 'right' }}>{item.quantity ?? '-'}</td>
+                        {showPrice && <td style={{ ...cs, textAlign: 'right' }}>{item.unitPrice ? `¥${Number(item.unitPrice).toFixed(2)}` : '-'}</td>}
+                        <td style={cs}>{item.remark || ''}</td>
+                        <td style={cs}>
+                          {imgs.length > 0 ? (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                              {imgs.map((url: string) => (
+                                <img key={url} src={getFullAuthedFileUrl(url)} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 3, border: '1px solid #eee' }} />
+                              ))}
+                            </div>
+                          ) : '-'}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          )}
+            );
+          })()}
 
           {/* 工序表 */}
-          {options.processTable && data.process.length > 0 && (
+          {options.processTable && data.process.length > 0 && (() => {
+            const cs: React.CSSProperties = { border: '1px solid #d9d9d9', padding: '6px 8px', fontSize: 12 };
+            return (
             <div className="print-section">
               <div className="print-section-title"> 工序表</div>
-              <ResizableTable
-                storageKey="print-process"
-                className="print-table"
-                dataSource={data.process}
-                rowKey="id"
-                size="small"
-                pagination={false}
-                bordered
-                columns={[
-                  { title: '序号', dataIndex: 'sortOrder', key: 'sortOrder', width: 60 },
-                  { title: '工序名称', dataIndex: 'processName', key: 'processName', width: 150 },
-                  { title: '工序编码', dataIndex: 'processCode', key: 'processCode', width: 100 },
-                  { title: '工时(秒)', dataIndex: 'standardTime', key: 'standardTime', width: 80, align: 'right' as const },
-                  ...(showPrice ? [{ title: '单价', dataIndex: 'price', key: 'price', width: 80, align: 'right' as const,
-                    render: (v: number) => v ? `¥${Number(v).toFixed(2)}` : '-' }] : []),
-                  { title: '备注', dataIndex: 'remark', key: 'remark', ellipsis: true },
-                ]}
-              />
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <thead>
+                  <tr style={{ background: '#fafafa' }}>
+                    <th style={cs}>序号</th>
+                    <th style={cs}>工序名称</th>
+                    <th style={cs}>工序编码</th>
+                    <th style={{ ...cs, textAlign: 'right' }}>工时(秒)</th>
+                    {showPrice && <th style={{ ...cs, textAlign: 'right' }}>单价</th>}
+                    <th style={cs}>备注</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.process.map((item: any, idx: number) => (
+                    <tr key={item.id || idx} style={idx % 2 === 1 ? { background: '#fafafa' } : {}}>
+                      <td style={cs}>{item.sortOrder ?? '-'}</td>
+                      <td style={cs}>{item.processName || '-'}</td>
+                      <td style={cs}>{item.processCode || '-'}</td>
+                      <td style={{ ...cs, textAlign: 'right' }}>{item.standardTime ?? '-'}</td>
+                      {showPrice && <td style={{ ...cs, textAlign: 'right' }}>{item.price ? `¥${Number(item.price).toFixed(2)}` : '-'}</td>}
+                      <td style={cs}>{item.remark || ''}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          )}
+            );
+          })()}
 
           {/* 无数据提示 */}
           {!loading && !options.basicInfo && data.sizes.length === 0 && data.bom.length === 0 &&
            data.process.length === 0 && (
-            <div style={{ textAlign: 'center', padding: 48, color: 'var(--color-text-tertiary)' }}>
+            <div style={{ textAlign: 'center', padding: 48, color: '#9ca3af' }}>
               暂无打印数据，请选择要打印的内容
             </div>
           )}

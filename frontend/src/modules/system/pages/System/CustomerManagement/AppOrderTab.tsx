@@ -316,6 +316,7 @@ const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActiv
             <div style={{ marginTop: 16 }}>
               <Text>备注（可选）：</Text>
               <Input.TextArea
+                id="activateRemark"
                 rows={2}
                 placeholder="如：已收到转账 / 线下签约确认"
                 value={remark}

@@ -29,7 +29,7 @@ const ShareLinkModal: React.FC<ShareLinkModalProps> = ({ open, onClose, shareUrl
         <Typography.Paragraph type="secondary" style={{ marginBottom: 12 }}>
           将此链接发送给客户，客户可查看本次出货的款式、数量、物流等信息：
         </Typography.Paragraph>
-        <Input.TextArea value={shareUrl} readOnly autoSize={{ minRows: 2, maxRows: 4 }} />
+        <Input.TextArea id="shareUrl" value={shareUrl} readOnly autoSize={{ minRows: 2, maxRows: 4 }} />
       </>
     )}
   </Modal>

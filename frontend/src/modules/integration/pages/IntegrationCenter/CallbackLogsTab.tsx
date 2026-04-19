@@ -111,19 +111,19 @@ const CallbackLogsTab: React.FC<Props> = ({ active }) => {
     <div style={{ paddingTop: 16 }}>
       <Card size="small" style={{ marginBottom: 12, borderRadius: 8 }} variant="borderless">
         <Space wrap>
-          <Select placeholder="类型" allowClear style={{ width: 100 }}
+          <Select id="callbackTypeFilter" placeholder="类型" allowClear style={{ width: 100 }}
             value={filters.type} onChange={v => setFilters(f => ({ ...f, type: v }))}>
             <Select.Option value="PAYMENT">支付</Select.Option>
             <Select.Option value="LOGISTICS">物流</Select.Option>
           </Select>
-          <Select placeholder="渠道" allowClear style={{ width: 110 }}
+          <Select id="callbackChannelFilter" placeholder="渠道" allowClear style={{ width: 110 }}
             value={filters.channel} onChange={v => setFilters(f => ({ ...f, channel: v }))}>
             <Select.Option value="ALIPAY">支付宝</Select.Option>
             <Select.Option value="WECHAT_PAY">微信支付</Select.Option>
             <Select.Option value="SF">顺丰速运</Select.Option>
             <Select.Option value="STO">申通快递</Select.Option>
           </Select>
-          <Select placeholder="处理状态" allowClear style={{ width: 110 }}
+          <Select id="callbackProcessedFilter" placeholder="处理状态" allowClear style={{ width: 110 }}
             value={filters.processed} onChange={v => setFilters(f => ({ ...f, processed: v }))}>
             <Select.Option value="true">已处理</Select.Option>
             <Select.Option value="false">未处理</Select.Option>

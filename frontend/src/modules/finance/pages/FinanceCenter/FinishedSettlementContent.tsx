@@ -678,6 +678,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
           备注内容
         </div>
         <Input.TextArea
+          id="settlementRemark"
           rows={6}
           value={remarkText}
           onChange={(e) => setRemarkText(e.target.value)}

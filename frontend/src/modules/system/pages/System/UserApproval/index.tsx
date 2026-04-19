@@ -442,6 +442,7 @@ const UserApproval: React.FC = () => {
                 批准原因<span style={{ color: 'var(--color-danger)' }}>*</span>
               </div>
               <TextArea
+                id="approveReason"
                 rows={3}
                 maxLength={200}
                 showCount
@@ -473,6 +474,7 @@ const UserApproval: React.FC = () => {
             <p style={{ color: 'var(--neutral-text-disabled)', fontSize: "var(--font-size-xs)" }}>拒绝后该用户将无法登录系统</p>
           </div>
           <TextArea
+            id="rejectReason"
             placeholder="请输入拒绝原因"
             value={rejectReason}
             onChange={(e) => setRejectReason(e.target.value)}
@@ -548,6 +550,7 @@ const UserApproval: React.FC = () => {
             <p style={{ color: 'var(--neutral-text-disabled)', fontSize: "var(--font-size-xs)" }}>拒绝后该员工将无法登录系统</p>
           </div>
           <TextArea
+            id="factoryRejectReason"
             placeholder="请输入拒绝原因"
             value={factoryRejectReason}
             onChange={(e) => setFactoryRejectReason(e.target.value)}
