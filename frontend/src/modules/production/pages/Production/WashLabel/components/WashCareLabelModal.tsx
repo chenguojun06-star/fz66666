@@ -151,7 +151,7 @@ export default function WashCareLabelModal({ open, onCancel, order }: Props) {
 <html><head><meta charset="UTF-8"><title>洗水唛</title><style>
 @page{size:${w}mm ${h}mm;margin:0}
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{width:${w}mm;min-height:${h}mm;font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial,sans-serif}
+html,body{width:${w}mm;min-height:${h}mm;font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial,serif}
 .lbl{position:relative;width:${w}mm;height:${h}mm;padding:0 2.2mm}
 .top-block{position:absolute;left:2.2mm;right:2.2mm;top:15mm;text-align:center}
 .style-no{font-size:${w <= 30 ? 5.8 : 6.2}pt;font-weight:bold;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

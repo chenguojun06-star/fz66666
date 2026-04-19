@@ -233,6 +233,9 @@ public class StyleInfoOrchestrator {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean save(StyleInfo styleInfo) {
+        if (styleInfo == null) {
+            throw new IllegalArgumentException("参数错误");
+        }
         // [2026-07-20 修复] 防御性校验：非超管用户必须有 tenantId，否则拒绝保存
         Long currentTenantId = UserContext.tenantId();
         if (currentTenantId == null && !UserContext.isSuperAdmin()) {

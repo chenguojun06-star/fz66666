@@ -360,7 +360,6 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
     `;
 
     safePrint(printHtml);
-
     onCancel();
   };
 

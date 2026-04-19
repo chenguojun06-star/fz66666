@@ -3,6 +3,7 @@ package com.fashion.supplychain.intelligence.agent.tool;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.helper.StepWizardBuilder;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.production.entity.CuttingTask;
 import com.fashion.supplychain.production.orchestration.CuttingTaskOrchestrator;
@@ -109,12 +110,32 @@ public class CuttingTaskTool implements AgentTool {
 
         String styleNo = (String) args.get("styleNo");
         if (styleNo == null || styleNo.isBlank()) {
-            return MAPPER.writeValueAsString(Map.of("error", "请提供款号（styleNo）"));
+            Map<String, Object> wizard = StepWizardBuilder.build("cutting_task_create", "创建裁剪单", "按步骤填写信息，快速创建裁剪单", "✂️", "确认创建", "创建裁剪单",
+                StepWizardBuilder.steps(
+                    StepWizardBuilder.step("style", "选择款号", "输入要裁剪的款号",
+                        StepWizardBuilder.textField("styleNo", "款号", true, "输入款号，如 D2024001")),
+                    StepWizardBuilder.step("color_size", "颜色尺码数量", "选择颜色和尺码，填写数量",
+                        StepWizardBuilder.multiSelectField("colors", "颜色（可多选）", true,
+                            StepWizardBuilder.opt("黑色","黑色"), StepWizardBuilder.opt("白色","白色"), StepWizardBuilder.opt("红色","红色"), StepWizardBuilder.opt("蓝色","蓝色"), StepWizardBuilder.opt("灰色","灰色"), StepWizardBuilder.opt("绿色","绿色")),
+                        StepWizardBuilder.multiSelectField("sizes", "尺码（可多选）", true,
+                            StepWizardBuilder.opt("XS","XS"), StepWizardBuilder.opt("S","S"), StepWizardBuilder.opt("M","M"), StepWizardBuilder.opt("L","L"), StepWizardBuilder.opt("XL","XL"), StepWizardBuilder.opt("2XL","2XL"), StepWizardBuilder.opt("3XL","3XL")),
+                        StepWizardBuilder.numberField("quantity", "每色每码数量", true, "如100", 1))
+                ));
+            return MAPPER.writeValueAsString(StepWizardBuilder.wrapResult("请提供款号（styleNo）", true, List.of("styleNo", "orderLines"), "请补充款号和颜色尺码数量明细", wizard));
         }
 
         Object orderLinesObj = args.get("orderLines");
         if (orderLinesObj == null) {
-            return MAPPER.writeValueAsString(Map.of("error", "请提供至少一行颜色+尺码+数量（orderLines）"));
+            Map<String, Object> wizard = StepWizardBuilder.build("cutting_task_create", "创建裁剪单", "补充颜色尺码数量明细", "✂️", "确认创建", "创建裁剪单",
+                StepWizardBuilder.steps(
+                    StepWizardBuilder.step("color_size", "颜色尺码数量", "选择颜色和尺码，填写数量",
+                        StepWizardBuilder.multiSelectField("colors", "颜色（可多选）", true,
+                            StepWizardBuilder.opt("黑色","黑色"), StepWizardBuilder.opt("白色","白色"), StepWizardBuilder.opt("红色","红色"), StepWizardBuilder.opt("蓝色","蓝色"), StepWizardBuilder.opt("灰色","灰色"), StepWizardBuilder.opt("绿色","绿色")),
+                        StepWizardBuilder.multiSelectField("sizes", "尺码（可多选）", true,
+                            StepWizardBuilder.opt("XS","XS"), StepWizardBuilder.opt("S","S"), StepWizardBuilder.opt("M","M"), StepWizardBuilder.opt("L","L"), StepWizardBuilder.opt("XL","XL"), StepWizardBuilder.opt("2XL","2XL"), StepWizardBuilder.opt("3XL","3XL")),
+                        StepWizardBuilder.numberField("quantity", "每色每码数量", true, "如100", 1))
+                ));
+            return MAPPER.writeValueAsString(StepWizardBuilder.wrapResult("请提供至少一行颜色+尺码+数量", true, List.of("orderLines"), "请补充颜色尺码数量明细", wizard));
         }
 
         try {

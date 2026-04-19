@@ -183,12 +183,12 @@ export interface DetailColumnDeps {
     toNumberOrZero: (v: unknown) => number;
     toMoneyText: (v: unknown) => string;
     auditedDetailKeys: Set<string>;
-    getDetailRowKey: (record: any) => string;
+    isDetailAudited: (record: any) => boolean;
     handleAuditDetail: (record: any) => void;
 }
 
 export function getDetailColumns(deps: DetailColumnDeps): any[] {
-    const { detailSortField, detailSortOrder, handleDetailSort, toNumberOrZero, toMoneyText, auditedDetailKeys, getDetailRowKey, handleAuditDetail } = deps;
+    const { detailSortField, detailSortOrder, handleDetailSort, toNumberOrZero, toMoneyText, isDetailAudited, handleAuditDetail } = deps;
     return [
         { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 140, ellipsis: true },
         { title: '款号', dataIndex: 'styleNo', key: 'styleNo', width: 120, ellipsis: true },
@@ -354,9 +354,8 @@ export function getDetailColumns(deps: DetailColumnDeps): any[] {
             width: 90,
             fixed: 'right' as const,
             render: (_: unknown, record: any) => {
-                const rowKey = getDetailRowKey(record);
                 const canAudit = isOrderFrozenByStatus({ status: record.orderStatus });
-                const audited = auditedDetailKeys.has(rowKey);
+                const audited = isDetailAudited(record);
                 if (audited) return <Tag color="cyan">已审核</Tag>;
                 if (!canAudit) return <span style={{ color: 'var(--neutral-text-disabled)', fontSize: 12 }}>未关单</span>;
                 return (

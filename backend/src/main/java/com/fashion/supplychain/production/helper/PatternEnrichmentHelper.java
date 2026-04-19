@@ -130,7 +130,6 @@ public class PatternEnrichmentHelper {
                             Map<String, Object> configMap = objectMapper.readValue(sizeColorConfig,
                                     new TypeReference<Map<String, Object>>() {});
                             Object sizesObj = configMap.get("sizes");
-                            // Fallback: if no top-level "sizes", use "commonSizes"
                             if (!(sizesObj instanceof List) || ((List<?>) sizesObj).isEmpty()) {
                                 sizesObj = configMap.get("commonSizes");
                             }
@@ -144,14 +143,12 @@ public class PatternEnrichmentHelper {
                                     }
                                 }
                             }
-                            // Extract size/color matrix for miniprogram display
-                            Object commonSizesObj = configMap.get("commonSizes");
                             Object matrixRowsObj = configMap.get("matrixRows");
-                            if (commonSizesObj instanceof List && matrixRowsObj instanceof List
-                                    && !((List<?>) commonSizesObj).isEmpty()
+                            if (sizesObj instanceof List && matrixRowsObj instanceof List
+                                    && !((List<?>) sizesObj).isEmpty()
                                     && !((List<?>) matrixRowsObj).isEmpty()) {
                                 Map<String, Object> matrixData = new LinkedHashMap<>();
-                                matrixData.put("commonSizes", commonSizesObj);
+                                matrixData.put("sizes", sizesObj);
                                 matrixData.put("matrixRows", matrixRowsObj);
                                 map.put("sizeColorMatrix", matrixData);
                             }

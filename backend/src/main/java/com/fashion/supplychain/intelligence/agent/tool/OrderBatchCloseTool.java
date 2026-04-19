@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.agent.tool;
 
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.helper.StepWizardBuilder;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.orchestration.ProductionOrderOrchestrator;
@@ -52,7 +53,15 @@ public class OrderBatchCloseTool extends AbstractAgentTool {
 
         List<String> orderIds = resolveOrderIds(args);
         if (orderIds.isEmpty()) {
-            return errorJson("请提供要关闭的订单ID或订单号");
+            Map<String, Object> wizard = StepWizardBuilder.build("order_batch_close", "批量关单", "选择要关闭的订单", "📋", "确认关单", "批量关单",
+                StepWizardBuilder.steps(
+                    StepWizardBuilder.step("orders", "选择订单", "输入要关闭的订单号，多个用逗号分隔",
+                        StepWizardBuilder.textField("orderNos", "订单号", true, "如 PO001,PO002,PO003"),
+                        StepWizardBuilder.selectField("specialClose", "关单类型", false,
+                            StepWizardBuilder.opt("普通关单","false"), StepWizardBuilder.opt("特需关单","true")),
+                        StepWizardBuilder.textField("remark", "关单原因", false, "特需关单时必填"))
+                ));
+            try { return MAPPER.writeValueAsString(StepWizardBuilder.wrapResult("请提供要关闭的订单号", true, List.of("orderIds"), "请补充要关闭的订单信息", wizard)); } catch (Exception e) { return errorJson("请提供要关闭的订单ID或订单号"); }
         }
 
         String remark = optionalString(args, "remark");

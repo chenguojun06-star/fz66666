@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.helper.StepWizardBuilder;
 import com.fashion.supplychain.intelligence.entity.IntelligenceAuditLog;
 import com.fashion.supplychain.intelligence.mapper.IntelligenceAuditLogMapper;
 import com.fashion.supplychain.production.entity.ProductWarehousing;
@@ -187,13 +188,18 @@ public class QualityInboundTool implements AgentTool {
 
     private String handleSubmit(Map<String, Object> args, String role) throws Exception {
         String orderNo = str(args, "orderNo");
-        if (orderNo == null || orderNo.isBlank()) {
-            return error("缺少参数：orderNo（订单号）");
-        }
-
         Integer qualifiedQuantity = integer(args, "qualifiedQuantity");
-        if (qualifiedQuantity == null || qualifiedQuantity <= 0) {
-            return error("缺少参数：qualifiedQuantity（合格数量必须大于0）");
+
+        if (orderNo == null || orderNo.isBlank() || qualifiedQuantity == null || qualifiedQuantity <= 0) {
+            Map<String, Object> wizard = StepWizardBuilder.build("quality_inbound", "质检入库", "填写质检结果完成入库", "✅", "确认入库", "质检入库",
+                StepWizardBuilder.steps(
+                    StepWizardBuilder.step("order", "选择订单", "输入要入库的订单号",
+                        StepWizardBuilder.textField("orderNo", "订单号", true, "输入订单号")),
+                    StepWizardBuilder.step("quantity", "填写数量", "输入合格和不合格数量",
+                        StepWizardBuilder.numberField("qualifiedQuantity", "合格数量", true, "输入合格数量", 1),
+                        StepWizardBuilder.numberField("unqualifiedQuantity", "不合格数量", false, "默认0", 0))
+                ));
+            return MAPPER.writeValueAsString(StepWizardBuilder.wrapResult("请提供订单号和合格数量", true, List.of("orderNo", "qualifiedQuantity"), "请补充质检入库信息", wizard));
         }
 
         Integer unqualifiedQuantity = integer(args, "unqualifiedQuantity");

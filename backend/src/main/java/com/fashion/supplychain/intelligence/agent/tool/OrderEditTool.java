@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.helper.StepWizardBuilder;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -162,7 +163,18 @@ public class OrderEditTool implements AgentTool {
         }
 
         if (updatedFields.isEmpty()) {
-            return MAPPER.writeValueAsString(Map.of("error", "请至少提供一个要修改的字段"));
+            Map<String, Object> wizard = StepWizardBuilder.build("order_edit", "编辑订单", "选择要修改的字段并填写新值", "✏️", "确认修改", "编辑订单",
+                StepWizardBuilder.steps(
+                    StepWizardBuilder.step("fields", "选择修改项", "选择要修改的字段",
+                        StepWizardBuilder.textField("remarks", "备注", false, "输入新备注"),
+                        StepWizardBuilder.dateField("expectedShipDate", "预计出货日期", false),
+                        StepWizardBuilder.dateField("plannedEndDate", "计划完成日期", false),
+                        StepWizardBuilder.selectField("urgencyLevel", "紧急程度", false,
+                            StepWizardBuilder.opt("普通","normal"), StepWizardBuilder.opt("紧急","urgent"), StepWizardBuilder.opt("特急","critical")),
+                        StepWizardBuilder.textField("factoryName", "工厂名称", false, "输入新工厂名称"),
+                        StepWizardBuilder.textField("company", "客户名称", false, "输入新客户名称"))
+                ));
+            return MAPPER.writeValueAsString(StepWizardBuilder.wrapResult("请至少提供一个要修改的字段", true, List.of("修改字段"), "请选择要修改的字段并填写新值", wizard));
         }
 
         try {

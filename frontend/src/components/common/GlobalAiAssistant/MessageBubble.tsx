@@ -12,6 +12,7 @@ import { paths } from '@/routeConfig';
 import styles from './index.module.css';
 import MiniChartWidget from './MiniChartWidget';
 import { AiTraceCardWidget, BundleSplitCardWidget, PurchaseDocCardWidget, TeamStatusCardWidget } from './AgentCards';
+import StepWizardCard from './StepWizardCard';
 import type { Message } from './types';
 import { renderSimpleMarkdown, sanitizeHtml } from './markdownUtils';
 import ActionCardWidget from './ActionCardWidget';
@@ -31,13 +32,14 @@ export interface MessageBubbleProps {
   onSafeNavigate: (path: string) => void;
   onSpeak: (text: string) => void;
   onPurchaseDocAction: (msgId: string, mode: string, card: any) => void;
+  onWizardSubmit?: (msgId: string, command: string, params: Record<string, unknown>) => void;
 }
 
 const MessageBubble: React.FC<MessageBubbleProps> = ({
   msg, downloadingType,
   onSend, onDownloadReport, onShowAgentTrace, onShowRecentTraces,
   onOpenTraceCenter, onFeedback, onJumpToIntelligence, onSafeNavigate,
-  onSpeak, onPurchaseDocAction,
+  onSpeak, onPurchaseDocAction, onWizardSubmit,
 }) => (
   <div className={`${styles.messageRow} ${msg.role === 'ai' ? styles.rowAi : styles.rowUser}`}>
     {msg.role === 'ai' && (
@@ -173,6 +175,20 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
             card={msg.purchaseDocCard}
             onAutoAction={(mode, card) => void onPurchaseDocAction(msg.id, mode, card)}
           />
+        </div>
+      )}
+
+      {msg.role === 'ai' && !!msg.stepWizardCards?.length && (
+        <div className={styles.teamStatusWrapper}>
+          {msg.stepWizardCards.map((card, i) => (
+            <StepWizardCard
+              key={`${card.wizardType}-${i}`}
+              data={card}
+              onSubmit={(command, params) => {
+                if (onWizardSubmit) onWizardSubmit(msg.id, command, params);
+              }}
+            />
+          ))}
         </div>
       )}
 

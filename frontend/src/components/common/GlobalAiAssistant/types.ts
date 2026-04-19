@@ -3,6 +3,7 @@ import type { RiskIndicator, SimulationResultData } from '@/services/intelligenc
 import type { XiaoyunInsightCardData } from '@/components/common/XiaoyunInsightCard';
 import type { ChartSpec } from './MiniChartWidget';
 import type { AiTraceCardData, BundleSplitCardData, PurchaseDocCardData, TeamStatusCardData } from './AgentCards';
+import type { StepWizardCardData } from './StepWizardCard';
 
 export interface ActionCard {
   title: string;
@@ -61,6 +62,7 @@ export function parseAiResponse(rawText: string): {
   quickActions: QuickAction[];
   teamStatusCards: TeamStatusCardData[];
   bundleSplitCards: BundleSplitCardData[];
+  stepWizardCards: StepWizardCardData[];
 } {
   const parsed = parseXiaoyunLegacyMeta(rawText);
   return {
@@ -71,6 +73,7 @@ export function parseAiResponse(rawText: string): {
     quickActions: parsed.quickActions as QuickAction[],
     teamStatusCards: parsed.teamStatusCards as TeamStatusCardData[],
     bundleSplitCards: parsed.bundleSplitCards as BundleSplitCardData[],
+    stepWizardCards: (parsed as unknown as Record<string, unknown>).stepWizardCards as StepWizardCardData[] || [],
   };
 }
 
@@ -87,6 +90,7 @@ export interface Message {
   quickActions?: QuickAction[];
   teamStatusCards?: TeamStatusCardData[];
   bundleSplitCards?: BundleSplitCardData[];
+  stepWizardCards?: StepWizardCardData[];
   purchaseDocCard?: PurchaseDocCardData;
   agentCommandId?: string;
   agentTraceCard?: AiTraceCardData;

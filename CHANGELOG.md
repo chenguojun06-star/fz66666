@@ -1,3 +1,17 @@
+# 2026-04-19
+
+## 💰 工资结算明细审核持久化修复（刷新不再回退）
+
+### fix(finance): 工资结算“审核后刷新丢失”问题
+- **问题**：工资结算页面「工序明细」点击审核后，页面刷新会恢复成未审核。
+- **根因**：前端审核按钮只更新本地 `Set` 状态，没有调用后端持久化；列表重新加载后自然丢失。
+- **修复**：
+  - 后端 `PayrollAggregationOrchestrator` 为每条工序明细生成稳定 `approvalId`（租户+订单+工序等维度哈希）并回传 `approvalStatus`。
+  - 后端 `PayrollSettlementController` 新增接口：`POST /api/finance/payroll-settlement/detail-approval/{approvalId}/approve`。
+  - 前端 `PayrollOperatorSummary` 的单条审核/批量审核改为调用上述接口写库，并在查询后按 `approvalStatus=approved` 回填审核态。
+  - 前端类型 `PayrollOperatorProcessSummaryRow` 补充 `approvalId`、`approvalStatus` 字段。
+- **对系统的帮助**：工资结算审核状态从“页面临时态”升级为“可追溯持久态”，刷新、重新登录、跨人协作时状态一致，避免重复审核。
+
 # 2026-04-18
 
 ## 🧹 WebSocket 全局广播移除 + 后端代码全面清理

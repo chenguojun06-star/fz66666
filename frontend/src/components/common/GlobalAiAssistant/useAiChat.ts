@@ -205,7 +205,38 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
             speak(displayAnswer || displayText);
           } catch (syncErr) {
             console.error('Sync fallback also failed:', syncErr);
-            setMessages(prev => [...prev, { id: aiMsgId, role: 'ai' as const, text: '当前连不到数据服务，请稍后再试。' }]);
+            let retryCount = 0;
+            const maxRetries = 2;
+            const retryDelay = [2000, 4000];
+            const attemptRetry = async () => {
+              while (retryCount < maxRetries) {
+                try {
+                  await new Promise(r => setTimeout(r, retryDelay[retryCount]));
+                  retryCount++;
+                  const retryPayload = normalizeXiaoyunChatPayload(await intelligenceApi.aiAdvisorChat(contextualText));
+                  const retryAnswer = retryPayload?.answer || '';
+                  if (retryAnswer) {
+                    const retryDisplay = retryPayload?.displayAnswer || retryAnswer;
+                    const { displayText: dt, charts: ch, cards: pc, actionCards: ac, quickActions: qa, teamStatusCards: tsc, bundleSplitCards: bsc } = parseAiResponse(retryAnswer);
+                    const retryCards = retryPayload?.cards || [];
+                    const retryFollowUp = (retryPayload as Record<string, unknown>)?.followUpActions as FollowUpAction[] | undefined;
+                    setMessages(prev => prev.map(m => m.id === aiMsgId ? {
+                      ...m, text: retryDisplay || dt, intent: retryPayload?.source,
+                      charts: ch, cards: retryCards.length ? retryCards : pc,
+                      actionCards: ac, quickActions: qa, teamStatusCards: tsc, bundleSplitCards: bsc,
+                      agentCommandId: retryPayload?.commandId, followUpActions: retryFollowUp,
+                    } : m));
+                    speak(retryDisplay || dt);
+                    return;
+                  }
+                } catch (retryErr) {
+                  console.warn(`Retry attempt ${retryCount} failed:`, retryErr);
+                }
+              }
+              setMessages(prev => prev.map(m => m.id === aiMsgId
+                ? { ...m, text: '当前连不到数据服务，请稍后再试。' } : m));
+            };
+            attemptRetry();
           } finally {
             setIsTyping(false);
           }

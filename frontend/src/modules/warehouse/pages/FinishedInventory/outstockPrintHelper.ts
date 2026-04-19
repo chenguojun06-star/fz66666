@@ -22,7 +22,7 @@ export function printOutstockRecord(record: OutstockPrintData): void {
   const printContent = `
     <html><head><title>出库单 - ${record.outstockNo || ''}</title>
     <style>
-      body { font-family: 'Microsoft YaHei', '微软雅黑', 'PingFang SC', 'Heiti SC', Arial, sans-serif; padding: 20px; }
+      body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", Roboto, "'Helvetica Neue'", Arial, "'Noto Sans'", "'Microsoft YaHei'", "'PingFang SC'", serif; padding: 20px; }
       .header { text-align: center; margin-bottom: 20px; }
       .header h2 { margin: 0; }
       .info-row { display: flex; justify-content: space-between; margin: 8px 0; font-size: 14px; }

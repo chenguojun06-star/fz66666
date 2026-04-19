@@ -26,6 +26,7 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -346,7 +347,116 @@ public class ProductionOrderCreationTool implements AgentTool {
         result.put("needMoreInfo", true);
         result.put("missingFields", missingFields);
         result.put("question", "请继续补充「款号/款名、加工厂、颜色-尺码-数量明细、计划开始时间、计划完成时间」。示例：D2024001 红色M码100件、红色L码200件，外发给鑫达制衣厂，2026-03-20开工，2026-03-28交货。");
+        result.put("stepWizard", buildOrderCreationWizard());
         return OBJECT_MAPPER.writeValueAsString(result);
+    }
+
+    private Map<String, Object> buildOrderCreationWizard() {
+        Map<String, Object> wizard = new LinkedHashMap<>();
+        wizard.put("wizardType", "create_production_order");
+        wizard.put("title", "创建生产订单");
+        wizard.put("desc", "按步骤填写信息，快速完成下单");
+        wizard.put("icon", "📋");
+        wizard.put("submitLabel", "确认下单");
+        wizard.put("submitCommand", "下单");
+
+        List<Map<String, Object>> steps = new ArrayList<>();
+
+        Map<String, Object> step1 = new LinkedHashMap<>();
+        step1.put("stepKey", "factory");
+        step1.put("title", "选择工厂");
+        step1.put("desc", "选择内部生产组或外发加工厂");
+        List<Map<String, Object>> step1Fields = new ArrayList<>();
+        Map<String, Object> factoryTypeField = new LinkedHashMap<>();
+        factoryTypeField.put("key", "factoryType");
+        factoryTypeField.put("label", "工厂类型");
+        factoryTypeField.put("inputType", "select");
+        factoryTypeField.put("required", true);
+        List<Map<String, String>> factoryTypeOpts = new ArrayList<>();
+        factoryTypeOpts.add(Map.of("label", "内部工厂", "value", "INTERNAL", "desc", "自有生产组", "icon", "🏭"));
+        factoryTypeOpts.add(Map.of("label", "外发工厂", "value", "EXTERNAL", "desc", "外部加工厂", "icon", "🏭"));
+        factoryTypeField.put("options", factoryTypeOpts);
+        step1Fields.add(factoryTypeField);
+        Map<String, Object> factoryNameField = new LinkedHashMap<>();
+        factoryNameField.put("key", "factoryName");
+        factoryNameField.put("label", "工厂名称");
+        factoryNameField.put("inputType", "text");
+        factoryNameField.put("placeholder", "输入工厂名称搜索");
+        factoryNameField.put("required", true);
+        step1Fields.add(factoryNameField);
+        step1.put("fields", step1Fields);
+        steps.add(step1);
+
+        Map<String, Object> step2 = new LinkedHashMap<>();
+        step2.put("stepKey", "color_size");
+        step2.put("title", "颜色尺码");
+        step2.put("desc", "选择颜色和尺码，填写数量");
+        List<Map<String, Object>> step2Fields = new ArrayList<>();
+        Map<String, Object> colorField = new LinkedHashMap<>();
+        colorField.put("key", "colors");
+        colorField.put("label", "颜色（可多选）");
+        colorField.put("inputType", "multi_select");
+        colorField.put("required", true);
+        List<Map<String, String>> colorOpts = new ArrayList<>();
+        colorOpts.add(Map.of("label", "黑色", "value", "黑色"));
+        colorOpts.add(Map.of("label", "白色", "value", "白色"));
+        colorOpts.add(Map.of("label", "红色", "value", "红色"));
+        colorOpts.add(Map.of("label", "蓝色", "value", "蓝色"));
+        colorOpts.add(Map.of("label", "灰色", "value", "灰色"));
+        colorOpts.add(Map.of("label", "绿色", "value", "绿色"));
+        colorOpts.add(Map.of("label", "黄色", "value", "黄色"));
+        colorOpts.add(Map.of("label", "粉色", "value", "粉色"));
+        colorField.put("options", colorOpts);
+        step2Fields.add(colorField);
+        Map<String, Object> sizeField = new LinkedHashMap<>();
+        sizeField.put("key", "sizes");
+        sizeField.put("label", "尺码（可多选）");
+        sizeField.put("inputType", "multi_select");
+        sizeField.put("required", true);
+        List<Map<String, String>> sizeOpts = new ArrayList<>();
+        sizeOpts.add(Map.of("label", "XS", "value", "XS"));
+        sizeOpts.add(Map.of("label", "S", "value", "S"));
+        sizeOpts.add(Map.of("label", "M", "value", "M"));
+        sizeOpts.add(Map.of("label", "L", "value", "L"));
+        sizeOpts.add(Map.of("label", "XL", "value", "XL"));
+        sizeOpts.add(Map.of("label", "2XL", "value", "2XL"));
+        sizeOpts.add(Map.of("label", "3XL", "value", "3XL"));
+        sizeOpts.add(Map.of("label", "4XL", "value", "4XL"));
+        sizeField.put("options", sizeOpts);
+        step2Fields.add(sizeField);
+        Map<String, Object> qtyField = new LinkedHashMap<>();
+        qtyField.put("key", "quantity");
+        qtyField.put("label", "每色每码数量");
+        qtyField.put("inputType", "number");
+        qtyField.put("placeholder", "如每色每码100件");
+        qtyField.put("required", true);
+        qtyField.put("min", 1);
+        step2Fields.add(qtyField);
+        step2.put("fields", step2Fields);
+        steps.add(step2);
+
+        Map<String, Object> step3 = new LinkedHashMap<>();
+        step3.put("stepKey", "schedule");
+        step3.put("title", "计划日期");
+        step3.put("desc", "设置生产开始和完成时间");
+        List<Map<String, Object>> step3Fields = new ArrayList<>();
+        Map<String, Object> startDateField = new LinkedHashMap<>();
+        startDateField.put("key", "plannedStartDate");
+        startDateField.put("label", "计划开始时间");
+        startDateField.put("inputType", "date");
+        startDateField.put("required", true);
+        step3Fields.add(startDateField);
+        Map<String, Object> endDateField = new LinkedHashMap<>();
+        endDateField.put("key", "plannedEndDate");
+        endDateField.put("label", "计划完成时间");
+        endDateField.put("inputType", "date");
+        endDateField.put("required", true);
+        step3Fields.add(endDateField);
+        step3.put("fields", step3Fields);
+        steps.add(step3);
+
+        wizard.put("steps", steps);
+        return wizard;
     }
 
     private String buildError(String message) {

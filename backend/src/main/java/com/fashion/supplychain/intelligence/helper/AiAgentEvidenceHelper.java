@@ -139,6 +139,22 @@ public class AiAgentEvidenceHelper {
         }
     }
 
+    public void captureStepWizardCard(String toolName, String toolResult, List<JsonNode> stepWizardCards) {
+        if (toolResult == null || toolResult.isBlank()) {
+            return;
+        }
+        try {
+            JsonNode root = JSON.readTree(toolResult);
+            JsonNode wizard = root.path("stepWizard");
+            if (wizard.isMissingNode() || !wizard.isObject()) {
+                return;
+            }
+            stepWizardCards.add(wizard);
+        } catch (Exception e) {
+            log.debug("[AiAgent] 解析步骤引导卡失败: {}", e.getMessage());
+        }
+    }
+
     public String appendBundleSplitCards(String content, List<JsonNode> bundleSplitCards) {
         if (bundleSplitCards == null || bundleSplitCards.isEmpty()) {
             return content;
@@ -148,6 +164,19 @@ public class AiAgentEvidenceHelper {
             return (content == null ? "" : content) + "\n\n【BUNDLE_SPLIT】" + json + "【/BUNDLE_SPLIT】";
         } catch (Exception e) {
             log.debug("[AiAgent] 拼接拆菲转派卡失败: {}", e.getMessage());
+            return content;
+        }
+    }
+
+    public String appendStepWizardCards(String content, List<JsonNode> stepWizardCards) {
+        if (stepWizardCards == null || stepWizardCards.isEmpty()) {
+            return content;
+        }
+        try {
+            String json = JSON.writeValueAsString(stepWizardCards);
+            return (content == null ? "" : content) + "\n\n【STEP_WIZARD】" + json + "【/STEP_WIZARD】";
+        } catch (Exception e) {
+            log.debug("[AiAgent] 拼接步骤引导卡失败: {}", e.getMessage());
             return content;
         }
     }

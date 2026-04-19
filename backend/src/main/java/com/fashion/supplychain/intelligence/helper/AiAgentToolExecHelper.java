@@ -5,6 +5,7 @@ import com.fashion.supplychain.intelligence.agent.hook.ToolExecutionHook;
 import com.fashion.supplychain.intelligence.agent.tool.AgentTool;
 import com.fashion.supplychain.intelligence.orchestration.AiAgentTraceOrchestrator;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
+import com.fashion.supplychain.intelligence.service.AiAgentMetricsService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -33,6 +34,7 @@ public class AiAgentToolExecHelper {
     @Autowired private AiAgentTraceOrchestrator aiAgentTraceOrchestrator;
     @Autowired private AiAgentEvidenceHelper evidenceHelper;
     @Autowired private AiAgentToolAccessService aiAgentToolAccessService;
+    @Autowired private AiAgentMetricsService metricsService;
     @Autowired private List<AgentTool> registeredTools;
     @Autowired(required = false) private List<ToolExecutionHook> toolHooks;
 
@@ -232,6 +234,12 @@ public class AiAgentToolExecHelper {
             aiAgentTraceOrchestrator.logToolCall(commandId, toolName, arguments, rawResult, elapsed, success);
         } catch (Exception e) {
             log.debug("[AiAgent] trace logToolCall 失败: {}", e.getMessage());
+        }
+
+        try {
+            metricsService.recordToolCall(toolName, elapsed, success);
+        } catch (Exception e) {
+            log.debug("[AiAgent] metrics recordToolCall 失败: {}", e.getMessage());
         }
 
         String evidence = evidenceHelper.buildToolEvidenceMessage(toolName, rawResult);

@@ -171,7 +171,7 @@ const WashLabelBatchPrintModal: React.FC<Props> = ({ open, onClose, items, loadi
     const sharedCss = `
 @page { size: ${w}mm ${h}mm; margin: 0; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'Microsoft YaHei', '微软雅黑', 'PingFang SC', 'Heiti SC', Arial, sans-serif; color: #000; background: #fff; }
+body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", Roboto, "'Helvetica Neue'", Arial, "'Noto Sans'", "'Microsoft YaHei'", "'PingFang SC'", serif; color: #000; background: #fff; }
 /* ── 标签外框 ── */
 .label-page {
   position: relative;

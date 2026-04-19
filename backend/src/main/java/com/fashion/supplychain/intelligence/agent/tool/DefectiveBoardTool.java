@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.helper.StepWizardBuilder;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.orchestration.ProductWarehousingOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -78,7 +79,17 @@ public class DefectiveBoardTool implements AgentTool {
         Map<String, Object> args = MAPPER.readValue(argumentsJson, new TypeReference<>() {});
         String action = (String) args.get("action");
         if (action == null || action.isBlank()) {
-            return MAPPER.writeValueAsString(Map.of("error", "请指定操作类型（list/start_repair/complete_repair/scrap）"));
+            Map<String, Object> wizard = StepWizardBuilder.build("defective_handle", "次品处理", "选择处理方式并指定菲号", "🔧", "确认处理", "处理次品",
+                StepWizardBuilder.steps(
+                    StepWizardBuilder.step("action", "选择操作", "选择对次品的处理方式",
+                        StepWizardBuilder.selectField("action", "处理方式", true,
+                            StepWizardBuilder.opt("开始返修","start_repair","将次品标记为返修中","🔧"),
+                            StepWizardBuilder.opt("完成返修","complete_repair","返修完成重新入库","✅"),
+                            StepWizardBuilder.opt("报废处理","scrap","次品报废出库","🗑️"))),
+                    StepWizardBuilder.step("bundle", "指定菲号", "输入要处理的菲号ID",
+                        StepWizardBuilder.textField("bundleId", "菲号ID", true, "输入菲号ID"))
+                ));
+            return MAPPER.writeValueAsString(StepWizardBuilder.wrapResult("请指定操作类型和菲号", true, List.of("action", "bundleId"), "请选择处理方式并指定菲号", wizard));
         }
 
         return switch (action) {

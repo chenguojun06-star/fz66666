@@ -38,6 +38,7 @@ public class AiAgentToolAccessService {
         register("tool_bundle_split_transfer", "拆菲转派：拆分菲号、转派执行人、查询拆分族谱、撤回拆分", false, ToolDomain.PRODUCTION);
         register("tool_order_learning", "下单学习：分析历史同款、推荐工厂与单价策略、解释成本偏高原因", false, ToolDomain.PRODUCTION);
         register("tool_query_order_remarks", "订单备注历史：查询指定订单的所有人工与系统自动备注（采购入库/裁剪领取/质检入库），适合'这单有什么问题''备注里写了什么'", false, ToolDomain.PRODUCTION);
+        register("tool_order_comparison", "订单对比分析：对比异常订单与同款正常订单差异，定位异常根因，适合'为什么这单异常''跟正常单比'", false, ToolDomain.PRODUCTION);
         // ── FINANCE 领域 ──
         register("tool_query_financial_payroll", "本人计件工资查询：自己的扫码计件记录与已结算金额（工人仅限本人数据，管理员可查全员）", true, ToolDomain.FINANCE);
         register("tool_payroll_approve", "工资结算审批：通过或取消工资结算", false, ToolDomain.FINANCE);
@@ -67,7 +68,7 @@ public class AiAgentToolAccessService {
         register("tool_org_query", "组织架构查询：部门树、部门列表、成员分布", false, ToolDomain.SYSTEM);
         // ── ANALYSIS 补充 ──
         register("tool_management_dashboard", "管理层经营仪表盘：实时KPI快照、风险等级、利润排名", false, ToolDomain.ANALYSIS);
-        register("tool_rca_analysis", "根因分析：深入分析问题根因，适合\u201c为什么\u201d\u201c根因是什么\u201d", false, ToolDomain.ANALYSIS);
+        register("tool_root_cause_analysis", "根因分析：深入分析问题根因，适合\u201c为什么\u201d\u201c根因是什么\u201d", false, ToolDomain.ANALYSIS);
         register("tool_pattern_discovery", "模式发现：识别数据规律与异常模式", false, ToolDomain.ANALYSIS);
         register("tool_goal_decompose", "目标分解：将经营目标拆解为可执行子任务", false, ToolDomain.ANALYSIS);
         register("tool_agent_meeting", "智能体会议：多Agent讨论形成共识建议", false, ToolDomain.ANALYSIS);
@@ -77,7 +78,7 @@ public class AiAgentToolAccessService {
         register("tool_personnel_delay_analysis", "人员延期分析：跟单员/岗位延期分布", false, ToolDomain.ANALYSIS);
         register("tool_supplier_scorecard", "供应商评分卡：工厂综合评分与对比", false, ToolDomain.ANALYSIS);
         register("tool_scenario_simulator", "场景模拟：不同假设下的经营预测", false, ToolDomain.ANALYSIS);
-        register("tool_new_order_simulation", "新单模拟：模拟新订单对产能和交期的影响", false, ToolDomain.ANALYSIS);
+        register("tool_simulate_new_order", "新单模拟：模拟新订单对产能和交期的影响", false, ToolDomain.ANALYSIS);
         // ── PRODUCTION 补充 ──
         register("tool_defective_board", "次品看板：次品分布、返修/报废操作", false, ToolDomain.PRODUCTION);
         register("tool_production_exception", "生产异常：上报/查看生产异常事件", false, ToolDomain.PRODUCTION);
@@ -95,11 +96,11 @@ public class AiAgentToolAccessService {
         register("tool_material_calculation", "物料计算：根据BOM计算物料需求量", false, ToolDomain.WAREHOUSE);
         register("tool_material_picking", "领料单：创建面辅料领料记录", false, ToolDomain.WAREHOUSE);
         // ── STYLE 补充 ──
-        register("tool_style_difficulty_query", "款式难度查询：评估款式生产难度系数", false, ToolDomain.STYLE);
+        register("tool_query_style_difficulty", "款式难度查询：评估款式生产难度系数", false, ToolDomain.STYLE);
         // ── SYSTEM 补充 ──
         register("tool_change_approval", "变更审批：查看/通过/驳回变更申请", false, ToolDomain.SYSTEM);
-        register("tool_crm_customer", "CRM客户查询：客户信息与交易记录", false, ToolDomain.SYSTEM);
-        register("tool_system_user", "系统用户查询：用户账号与角色信息", false, ToolDomain.SYSTEM);
+        register("tool_query_crm_customer", "CRM客户查询：客户信息与交易记录", false, ToolDomain.SYSTEM);
+        register("tool_query_system_user", "系统用户查询：用户账号与角色信息", false, ToolDomain.SYSTEM);
         // ── GENERAL 补充 ──
         register("tool_think", "内部推理：复杂问题分步思考，无副作用", true, ToolDomain.GENERAL);
     }

@@ -10,6 +10,7 @@ import StylePrintModal from '@/components/common/StylePrintModal';
 import PageStatCards from '@/components/common/PageStatCards';
 import api from '@/utils/api';
 import { StyleInfo } from '@/types/style';
+import { getStyleCardSizeText, getStyleCardColorText, getStyleCardQuantityText } from '@/utils/cardSizeQuantity';
 import dayjs from 'dayjs';
 
 // Hooks
@@ -506,7 +507,12 @@ const StyleInfoListPage: React.FC = () => {
         styleNo={printingRecord?.styleNo}
         styleName={printingRecord?.styleName}
         cover={printingRecord?.cover}
-        color={printingRecord?.color}
+        color={printingRecord ? getStyleCardColorText(printingRecord) : undefined}
+        sizes={printingRecord ? getStyleCardSizeText(printingRecord) : undefined}
+        quantity={printingRecord ? Number(getStyleCardQuantityText(printingRecord) || '0') || undefined : undefined}
+        category={printingRecord?.category}
+        season={printingRecord?.season}
+        sizeColorConfig={(printingRecord as any)?.sizeColorConfig}
       />
 
       {/* 维护原因弹窗 */}

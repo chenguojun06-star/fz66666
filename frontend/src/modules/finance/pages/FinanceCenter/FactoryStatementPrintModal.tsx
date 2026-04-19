@@ -81,7 +81,7 @@ const FactoryStatementPrintModal: React.FC<FactoryStatementPrintModalProps> = ({
                 <head>
                     <title>加工费对账单打印</title>
                     <style>
-                        body { font-family: 'Microsoft YaHei', '微软雅黑', 'PingFang SC', 'Heiti SC', Arial, sans-serif; padding: 20px; }
+                        body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", Roboto, "'Helvetica Neue'", Arial, "'Noto Sans'", "'Microsoft YaHei'", "'PingFang SC'", serif; padding: 20px; }
                         .slip-container {
                             border: 1px solid #000;
                             margin-bottom: 40px;

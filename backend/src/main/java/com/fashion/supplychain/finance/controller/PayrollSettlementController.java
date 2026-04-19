@@ -3,7 +3,9 @@ package com.fashion.supplychain.finance.controller;
 import com.fashion.supplychain.finance.orchestration.PayrollAggregationOrchestrator;
 import com.fashion.supplychain.finance.orchestration.PayrollAggregationOrchestrator.PayrollOperatorProcessSummaryDTO;
 import com.fashion.supplychain.finance.orchestration.PayrollSettlementOrchestrator;
+import com.fashion.supplychain.finance.service.FinishedSettlementApprovalStatusService;
 import com.fashion.supplychain.common.Result;
+import com.fashion.supplychain.common.UserContext;
 import lombok.AllArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -25,6 +27,7 @@ public class PayrollSettlementController {
 
     private final PayrollAggregationOrchestrator payrollAggregationOrchestrator;
     private final PayrollSettlementOrchestrator payrollSettlementOrchestrator;
+    private final FinishedSettlementApprovalStatusService approvalStatusService;
 
     /**
      * 获取人员工序汇总数据
@@ -86,7 +89,35 @@ public class PayrollSettlementController {
                         includeSettled != null && includeSettled
                 );
 
+        Long tenantId = UserContext.tenantId();
+        if (result != null) {
+            result.forEach(row -> {
+                if (row != null && row.getApprovalId() != null) {
+                    row.setApprovalStatus(approvalStatusService.getApprovalStatus(row.getApprovalId(), tenantId));
+                }
+            });
+        }
+
         return Result.success(result);
+    }
+
+    /**
+     * 审核单条工资工序明细（持久化）
+     */
+    @PostMapping("/detail-approval/{approvalId}/approve")
+    public Result<Void> approveDetail(@PathVariable String approvalId) {
+        String normalized = approvalId == null ? null : approvalId.trim();
+        if (normalized == null || normalized.isEmpty()) {
+            return Result.fail("审批ID不能为空");
+        }
+
+        approvalStatusService.markApproved(
+                normalized,
+                UserContext.tenantId(),
+                UserContext.userId(),
+                UserContext.username()
+        );
+        return Result.success(null);
     }
 
     /**

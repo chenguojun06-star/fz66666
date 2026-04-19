@@ -153,7 +153,7 @@ export const buildProductionSheetHtml = (payload: any) => {
   <title>生产制单-${esc(style.styleNo || '')}</title>
   <style>
     @page { margin: 10mm; }
-    body { font-family: 'Microsoft YaHei', '微软雅黑', 'PingFang SC', 'Heiti SC', Arial, sans-serif; color: #111; }
+    body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", Roboto, "'Helvetica Neue'", Arial, "'Noto Sans'", "'Microsoft YaHei'", "'PingFang SC'", serif; color: #111; }
     .page { max-width: 980px; margin: 0 auto; padding: 0; }
     .header { display: grid; grid-template-columns: 220px 1fr; gap: 16px; align-items: start; }
     .cover { width: 220px; height: 220px; object-fit: cover; border-radius: 10px; border: 1px solid rgba(0,0,0,0.08); }

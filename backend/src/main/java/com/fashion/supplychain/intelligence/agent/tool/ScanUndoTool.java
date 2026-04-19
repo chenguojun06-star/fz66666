@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.agent.tool;
 
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.helper.StepWizardBuilder;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.production.orchestration.ScanRecordOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -56,7 +57,13 @@ public class ScanUndoTool extends AbstractAgentTool {
         String scanCode = optionalString(args, "scanCode");
 
         if (recordId == null && scanCode == null) {
-            return errorJson("请提供扫码记录ID或扫码码值（菲号），才能定位要撤回的记录");
+            Map<String, Object> wizard = StepWizardBuilder.build("scan_undo", "扫码撤回", "选择要撤回的扫码记录", "↩️", "确认撤回", "撤回扫码",
+                StepWizardBuilder.steps(
+                    StepWizardBuilder.step("locate", "定位记录", "输入扫码记录ID或菲号码值",
+                        StepWizardBuilder.textField("scanCode", "菲号/码值", false, "扫描的菲号或码值"),
+                        StepWizardBuilder.textField("recordId", "记录ID", false, "扫码记录ID（如有）"))
+                ));
+            try { return MAPPER.writeValueAsString(StepWizardBuilder.wrapResult("请提供扫码记录ID或菲号", true, List.of("recordId或scanCode"), "请补充要撤回的扫码记录信息", wizard)); } catch (Exception e) { return errorJson("请提供扫码记录ID或扫码码值"); }
         }
 
         Map<String, Object> params = new HashMap<>();

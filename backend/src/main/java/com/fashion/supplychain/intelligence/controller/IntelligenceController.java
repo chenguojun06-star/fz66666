@@ -156,6 +156,8 @@ public class IntelligenceController {
 
     private final IntelligenceObservabilityOrchestrator observabilityOrchestrator;
 
+    private final com.fashion.supplychain.intelligence.service.AiAgentMetricsService aiAgentMetricsService;
+
     private final CapacityGapOrchestrator capacityGapOrchestrator;
 
     private final StagnantAlertOrchestrator stagnantAlertOrchestrator;
@@ -499,6 +501,11 @@ public class IntelligenceController {
                 "modelGateway", intelligenceBrainOrchestrator.snapshot().getModelGateway(),
                 "observability", intelligenceBrainOrchestrator.snapshot().getObservability()
         ));
+    }
+
+    @GetMapping("/ai-agent/metrics")
+    public Result<?> aiAgentMetrics() {
+        return Result.success(aiAgentMetricsService.getSnapshot());
     }
 
     /** AI 顾问问答 — 优先本地规则引擎，无法回答时调用 DeepSeek */

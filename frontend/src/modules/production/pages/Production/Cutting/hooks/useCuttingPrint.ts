@@ -124,7 +124,7 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
             padding: 3mm;
             display: flex;
             gap: 3mm;
-            font-family: 'Microsoft YaHei', '微软雅黑', 'PingFang SC', 'Heiti SC', Arial, sans-serif;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", Roboto, "'Helvetica Neue'", Arial, "'Noto Sans'", "'Microsoft YaHei'", "'PingFang SC'", serif;
           }
           .qr { flex: 0 0 auto; display: flex; align-items: center; }
           .qr img { display: block; max-width: ${labelH * 0.6}mm; max-height: ${labelH * 0.7}mm; }

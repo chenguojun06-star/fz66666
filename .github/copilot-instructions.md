@@ -44,6 +44,20 @@
 > - 典型场景：扫码/工序流转/质检/入库/工序依赖/节点状态/多端同步等。
 > - 违反此铁律，视为P0级致命错误，严禁推送。
 
+### 打印字体铁律（P0，所有打印组件）
+
+> **P0 铁律：所有打印相关 HTML 的 `font-family` 必须以 `serif` 结尾，严禁使用 `sans-serif`。**
+>
+> - ❌ **错误**：`font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;`
+> - ✅ **正确**：`font-family: 'Heiti SC', 'Songti SC', 'Hiragino Sans GB', 'STSong', 'Arial Unicode MS', serif;`
+>
+> **根因**：macOS 上 `sans-serif` 回退到 Helvetica（无中文字符），`serif` 回退到 Songti SC（有中文字符）。当 font-family 列表中所有指定中文字体在系统上不存在时，浏览器使用最终回退字体，`sans-serif` 导致中文全部不显示。
+>
+> - 此规则适用于所有打印组件：LabelPrintModal、WashCareLabelModal、WashLabelPrintModal、WashLabelBatchPrintModal、useCuttingPrint、CuttingSheetPrintModal、StylePrintModal、MaterialOutboundPrintModal、WageSlipPrintModal、FactoryStatementPrintModal、outstockPrintHelper、buildProductionSheetHtml、MaterialPurchase/utils 等
+> - `safePrint.ts` 已注入 `* { font-family: ... serif !important }` 作为兜底，但每个打印组件自身也必须遵守
+> - 主应用 UI 的 font-family 仍用 sans-serif（Ant Design 有自己的字体回退机制，不受影响）
+> - Windows 同理：`sans-serif` → Arial（无中文），`serif` → 宋体（有中文）
+
 | 优先级   | 规律                   | 触发条件                                                              | 后果                                          | 详见                          |
 | ----- | -------------------- | ----------------------------------------------------------------- | ------------------------------------------- | --------------------------- |
 | 🔴 P0 | **测试代码提交到仓库**        | git add 或 push 时包含 backend/src/test、\*.test.ts、miniprogram/test 等 | 云端部署含测试代码、镜像肥大、启动慢、可能干扰生产逻辑                 | 见「测试代码隔离铁律」                 |
@@ -58,6 +72,7 @@
 | 🔴 P0 | **代码行数失控**           | 文件>目标值还乱加功能                                                       | 难维护、易 bug、拖累审查                              | 见「文件大小限制」                   |
 | 🔴 P0 | **业务流程上下游数据未校验**     | 涉及扫码、工序、质检、入库、PC端/小程序端等业务链路，未全链路校验上下游数据一致性与工序依赖                   | 业务断链、数据不一致、生产/质检/入库异常                       | 见「业务流程完整性校验铁律」              |
 | 🔴 P0 | **重复造轮子**            | 修改文件/组件时未先检查系统已有通用组件，直接手写新代码                                      | 代码冗余、维护困难、风格不一致                             | 见「强制使用标准组件库」                |
+| 🔴 P0 | **打印 font-family 用 sans-serif** | 打印组件的 font-family 以 sans-serif 结尾                               | **打印中文全部不显示**（macOS sans-serif→Helvetica无中文，serif→宋体有中文） | 见「打印字体铁律」                  |
 | 🟠 P1 | **Orchestrator 不建**  | 多表写操作无编排层                                                         | 事务分散，同 P0-2                                 | 见「快速判断：什么时候新建 Orchestrator」 |
 
 > **工作流**：每次开始前，先默念这 10 条。核心是 ✅ **本地测试验证通过** → ✅ **数据库/Schema 先确认** → ✅ **git add 完整** → ✅ **代码与DB一致** → ✅ **检查已有通用组件** → ✅ **执行推送前三步验证** → 推送云端。90% 的 bug 都能避免。

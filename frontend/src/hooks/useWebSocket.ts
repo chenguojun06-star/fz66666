@@ -101,7 +101,7 @@ function getOrCreateInstance(options: UseWebSocketOptions): WsInstance {
   let fallbackPollingTimer: ReturnType<typeof setInterval> | undefined;
   const startFallbackPolling = () => {
     if (fallbackPollingTimer) return;
-    if (import.meta.env.DEV) console.log('[WebSocket] 重连次数耗尽，启动降级轮询(30s)');
+    if (import.meta.env.DEV) console.debug('[WebSocket] 重连次数耗尽，启动降级轮询(30s)');
     fallbackPollingTimer = setInterval(() => {
       const opts = inst.currentOptions;
       if (!opts.enabled || !opts.userId) { stopFallbackPolling(); return; }
@@ -110,7 +110,7 @@ function getOrCreateInstance(options: UseWebSocketOptions): WsInstance {
         const url = buildUrl();
         const ws = new WebSocket(url);
         ws.onopen = () => {
-          if (import.meta.env.DEV) console.log('[WebSocket] 降级轮询重连成功');
+          if (import.meta.env.DEV) console.debug('[WebSocket] 降级轮询重连成功');
           inst.ws = ws;
           setConnected(true);
           inst.reconnectCount = 0;
@@ -170,7 +170,7 @@ function getOrCreateInstance(options: UseWebSocketOptions): WsInstance {
       const ws = new WebSocket(url);
       inst.ws = ws;
       ws.onopen = () => {
-        if (import.meta.env.DEV) console.log('[WebSocket] 连接成功');
+        if (import.meta.env.DEV) console.debug('[WebSocket] 连接成功');
         setConnected(true);
         inst.reconnectCount = 0;
         startHeartbeat(ws);
@@ -186,7 +186,7 @@ function getOrCreateInstance(options: UseWebSocketOptions): WsInstance {
         } catch { /* non-JSON */ }
       };
       ws.onclose = () => {
-        if (import.meta.env.DEV) console.log('[WebSocket] 连接关闭');
+        if (import.meta.env.DEV) console.debug('[WebSocket] 连接关闭');
         setConnected(false);
         stopHeartbeat();
         inst.ws = null;
@@ -196,7 +196,7 @@ function getOrCreateInstance(options: UseWebSocketOptions): WsInstance {
           inst.reconnectCount++;
           const interval = opts.reconnectInterval || 10000;
           const delay = Math.min(interval * Math.pow(2, inst.reconnectCount - 1), 60000);
-          if (import.meta.env.DEV) console.log(`[WebSocket] ${delay / 1000}s 后重连`);
+          if (import.meta.env.DEV) console.debug(`[WebSocket] ${delay / 1000}s 后重连`);
           inst.reconnectTimer = setTimeout(doConnect, delay);
         } else if (opts.enabled && inst.reconnectCount >= maxAttempts) {
           startFallbackPolling();

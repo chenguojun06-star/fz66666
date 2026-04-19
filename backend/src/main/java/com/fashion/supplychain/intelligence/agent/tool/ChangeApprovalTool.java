@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.helper.StepWizardBuilder;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.system.entity.ChangeApproval;
 import com.fashion.supplychain.system.orchestration.ChangeApprovalOrchestrator;
@@ -77,7 +78,18 @@ public class ChangeApprovalTool implements AgentTool {
         String action = (String) args.get("action");
 
         if (action == null) {
-            return "{\"error\": \"缺少 action 参数\"}";
+            Map<String, Object> wizard = StepWizardBuilder.build("change_approval", "变更审批", "选择审批操作", "📝", "确认操作", "审批",
+                StepWizardBuilder.steps(
+                    StepWizardBuilder.step("action", "选择操作", "选择审批操作类型",
+                        StepWizardBuilder.selectField("action", "操作类型", true,
+                            StepWizardBuilder.opt("查看待审批","list_pending","查看所有待审批列表","📋"),
+                            StepWizardBuilder.opt("通过审批","approve","批准变更申请","✅"),
+                            StepWizardBuilder.opt("驳回审批","reject","驳回变更申请","❌"))),
+                    StepWizardBuilder.step("detail", "审批详情", "输入审批ID",
+                        StepWizardBuilder.textField("approvalId", "审批ID", true, "输入审批记录ID"),
+                        StepWizardBuilder.textField("reason", "原因", false, "驳回时必填原因"))
+                ));
+            try { return MAPPER.writeValueAsString(StepWizardBuilder.wrapResult("缺少 action 参数", true, List.of("action"), "请选择审批操作类型", wizard)); } catch (Exception e) { return "{\"error\": \"缺少 action 参数\"}"; }
         }
 
         switch (action) {

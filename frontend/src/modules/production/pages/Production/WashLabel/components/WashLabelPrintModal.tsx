@@ -221,7 +221,7 @@ export default function WashLabelPrintModal({ open, onCancel, order }: Props) {
   <style>
     @page { size: ${labelW}mm ${labelH}mm; margin: 0; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: ${labelW}mm; height: ${labelH}mm; font-family: 'Microsoft YaHei', '微软雅黑', 'PingFang SC', 'Heiti SC', Arial, sans-serif; color: #000; background: #fff; }
+    html, body { width: ${labelW}mm; height: ${labelH}mm; font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", Roboto, "'Helvetica Neue'", Arial, "'Noto Sans'", "'Microsoft YaHei'", "'PingFang SC'", serif; color: #000; background: #fff; }
     .print-page {
       width: ${labelW}mm; height: ${labelH}mm; padding: 2mm;
       page-break-after: always;

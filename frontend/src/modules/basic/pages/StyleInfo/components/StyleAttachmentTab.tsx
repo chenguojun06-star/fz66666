@@ -10,7 +10,7 @@ import { StyleAttachment } from '@/types/style';
 import api from '@/utils/api';
 import RowActions from '@/components/common/RowActions';
 import { formatDateTime } from '@/utils/datetime';
-import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import { getFullAuthedFileUrl, getAuthedFileUrl } from '@/utils/fileUrl';
 
 interface Props {
   styleId: string | number;
@@ -191,49 +191,33 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, styleNo, bizType, upload
     return src + (src.includes('?') ? '&' : '?') + 'download=1';
   };
 
-  const printByIframe = (url: string) => {
-    const src = getFullAuthedFileUrl(url);
-    if (!src) return;
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '210mm';
-    iframe.style.height = '297mm';
-    iframe.style.border = '0';
-    iframe.src = src;
-    const cleanup = () => {
-      try {
-        document.body.removeChild(iframe);
-      } catch {
-    // Intentionally empty
-      // 忽略错误
-        return;
-      }
-    };
-    iframe.onload = () => {
-      try {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-      } catch {
-    // Intentionally empty
-      // 忽略错误
-        return;
-      } finally {
+  const printByIframe = async (url: string) => {
+    const relativeUrl = getAuthedFileUrl(url);
+    if (!relativeUrl) return;
+    try {
+      const resp = await fetch(relativeUrl);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const blob = await resp.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const iframe = document.createElement('iframe');
+      iframe.style.cssText = 'position:fixed;right:0;bottom:0;width:210mm;height:297mm;border:0;opacity:0;pointer-events:none';
+      iframe.src = blobUrl;
+      const cleanup = () => {
+        try { document.body.removeChild(iframe); } catch { /* ignore */ }
+        URL.revokeObjectURL(blobUrl);
+      };
+      iframe.onload = () => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch { /* ignore */ }
         setTimeout(cleanup, 1500);
-      }
-    };
-    document.body.appendChild(iframe);
-    setTimeout(() => {
-      try {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-      } catch {
-    // Intentionally empty
-      // 忽略错误
-        return;
-      }
-    }, 900);
+      };
+      document.body.appendChild(iframe);
+    } catch {
+      // fetch 失败时降级为新窗口打开
+      window.open(getFullAuthedFileUrl(url), '_blank');
+    }
   };
 
   const columns = [
@@ -242,7 +226,6 @@ const StyleAttachmentTab: React.FC<Props> = ({ styleId, styleNo, bizType, upload
       dataIndex: 'fileName',
       ellipsis: true,
       render: (text: string, record: StyleAttachment) => {
-        // 将相对路径转换为带认证的完整URL
         const fileUrl = getFullAuthedFileUrl(record.fileUrl);
 
         return (

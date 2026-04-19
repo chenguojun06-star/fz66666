@@ -41,7 +41,7 @@ const buildStyleTopLevelItems = (record: Partial<StyleInfo>) => {
 
 const buildStyleMatrixItems = (config: Record<string, unknown>) => {
   const matrixRows = Array.isArray(config.matrixRows) ? config.matrixRows : [];
-  const sizes = Array.isArray(config.commonSizes) ? config.commonSizes : [];
+  const sizes = Array.isArray(config.sizes) ? config.sizes : Array.isArray(config.commonSizes) ? config.commonSizes : [];
 
   return matrixRows.flatMap((row) => {
     const nextRow = typeof row === 'object' && row !== null ? row as Record<string, unknown> : {};

@@ -6,10 +6,11 @@ import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ScanRecordService;
-import lombok.RequiredArgsConstructor;
 import lombok.Data;
 import org.springframework.stereotype.Component;
+import org.springframework.util.DigestUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -240,6 +241,7 @@ public class PayrollAggregationOrchestrator {
         dto.setRecordCount((long) records.size());
         dto.setStartTime(startTime);
         dto.setEndTime(endTime);
+        dto.setApprovalId(buildDetailApprovalId(first));
 
         // Phase 6: 填充指派信息（从第一条记录获取）
         dto.setDelegateTargetType(first.getDelegateTargetType());
@@ -247,6 +249,24 @@ public class PayrollAggregationOrchestrator {
         dto.setActualOperatorName(first.getActualOperatorName());
 
         return dto;
+    }
+
+    private String buildDetailApprovalId(ScanRecord record) {
+        Long tenantId = UserContext.tenantId();
+        String rawKey = String.join("|",
+                tenantId == null ? "0" : String.valueOf(tenantId),
+                safePart(record.getOrderId()),
+                safePart(record.getOrderNo()),
+                safePart(record.getStyleNo()),
+                safePart(record.getColor()),
+                safePart(record.getSize()),
+                safePart(record.getOperatorId()),
+                safePart(record.getProcessName()));
+        return "PAY_" + DigestUtils.md5DigestAsHex(rawKey.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private String safePart(String value) {
+        return value == null ? "" : value.trim();
     }
 
     /**
@@ -272,6 +292,12 @@ public class PayrollAggregationOrchestrator {
         private Long recordCount;
         private LocalDateTime startTime;
         private LocalDateTime endTime;
+
+        /** 明细审核唯一键（稳定哈希，跨刷新一致） */
+        private String approvalId;
+
+        /** 审核状态：pending/approved */
+        private String approvalStatus;
 
         private String delegateTargetType;
         private String delegateTargetName;

@@ -106,6 +106,78 @@ public class CommandGeneratorOrchestrator {
             commands.add(createPurchaseCreateCommand(orderId, tenantId, notification));
         }
 
+        // 模式11：修改交期
+        if (action.contains("修改交期") || action.contains("改交期") || action.contains("调整交期")
+                || action.contains("改交货") || action.contains("ship date") || action.contains("change delivery")) {
+            commands.add(createOrderShipDateCommand(orderId, tenantId, notification));
+        }
+
+        // 模式12：添加备注
+        if (action.contains("添加备注") || action.contains("加备注") || action.contains("写备注")
+                || action.contains("备注一下") || action.contains("add note") || action.contains("add remark")) {
+            commands.add(createOrderAddNoteCommand(orderId, tenantId, notification));
+        }
+
+        // 模式13：采购下单
+        if (action.contains("采购下单") || action.contains("下单采购") || action.contains("采购货物")
+                || action.contains("procurement order") || action.contains("order goods")) {
+            commands.add(createProcurementOrderGoodsCommand(orderId, tenantId, notification));
+        }
+
+        // 模式14：扫码撤回
+        if (action.contains("撤回扫码") || action.contains("撤销扫码") || action.contains("扫码撤回")
+                || action.contains("撤销扫描") || action.contains("scan undo") || action.contains("undo scan")) {
+            commands.add(createScanUndoCommand(orderId, tenantId, notification));
+        }
+
+        // 模式15：创建裁剪单
+        if (action.contains("创建裁剪") || action.contains("开裁剪单") || action.contains("新建裁剪")
+                || action.contains("cutting create") || action.contains("create cutting")) {
+            commands.add(createCuttingCreateCommand(orderId, tenantId, notification));
+        }
+
+        // 模式16：订单编辑
+        if (action.contains("编辑订单") || action.contains("修改订单") || action.contains("改订单")
+                || action.contains("order edit") || action.contains("edit order")) {
+            commands.add(createOrderEditCommand(orderId, tenantId, notification));
+        }
+
+        // 模式17：工资审批
+        if (action.contains("工资审批") || action.contains("审批工资") || action.contains("结算审批")
+                || action.contains("payroll approve") || action.contains("approve payroll")) {
+            commands.add(createPayrollApproveCommand(orderId, tenantId, notification));
+        }
+
+        // 模式18：次品处理
+        if (action.contains("次品处理") || action.contains("处理次品") || action.contains("返修处理")
+                || action.contains("报废处理") || action.contains("defective handle") || action.contains("handle defective")) {
+            commands.add(createDefectiveHandleCommand(orderId, tenantId, notification));
+        }
+
+        // 模式19：工序重分配
+        if (action.contains("工序重分配") || action.contains("重新分配") || action.contains("转派工序")
+                || action.contains("process reassign") || action.contains("reassign process")) {
+            commands.add(createProcessReassignCommand(orderId, tenantId, notification));
+        }
+
+        // 模式20：工厂催单
+        if (action.contains("催单") || action.contains("催工厂") || action.contains("催一下")
+                || action.contains("factory urge") || action.contains("urge factory") || action.contains("催促")) {
+            commands.add(createFactoryUrgeCommand(orderId, tenantId, notification));
+        }
+
+        // 模式21：物料安全库存
+        if (action.contains("安全库存") || action.contains("库存预警") || action.contains("补货提醒")
+                || action.contains("safety stock") || action.contains("stock alert")) {
+            commands.add(createMaterialSafetyStockCommand(orderId, tenantId, notification));
+        }
+
+        // 模式22：通知推送
+        if (action.contains("推送通知") || action.contains("发通知") || action.contains("通知一下")
+                || action.contains("push notification") || action.contains("send notification")) {
+            commands.add(createNotificationPushCommand(orderId, tenantId, notification));
+        }
+
         log.info("[CommandGenerator] 生成了 {} 个命令", commands.size());
         return commands;
     }
@@ -305,6 +377,186 @@ public class CommandGeneratorOrchestrator {
                 "materialName", notification.getTitle(),
                 "quantity", 100
             ))
+            .createdAt(System.currentTimeMillis())
+            .expiresAt(System.currentTimeMillis() + 24 * 3600 * 1000)
+            .build();
+    }
+
+    private ExecutableCommand createOrderShipDateCommand(String orderId, Long tenantId, SmartNotification notification) {
+        return ExecutableCommand.builder()
+            .action("order:ship_date")
+            .targetId(orderId)
+            .tenantId(tenantId)
+            .reason("AI建议调整交期: " + notification.getTitle())
+            .riskLevel(3)
+            .requiresApproval(true)
+            .source("ai_notification")
+            .params(Map.of("shipDateReason", notification.getRecommendedAction()))
+            .createdAt(System.currentTimeMillis())
+            .expiresAt(System.currentTimeMillis() + 24 * 3600 * 1000)
+            .build();
+    }
+
+    private ExecutableCommand createOrderAddNoteCommand(String orderId, Long tenantId, SmartNotification notification) {
+        return ExecutableCommand.builder()
+            .action("order:add_note")
+            .targetId(orderId)
+            .tenantId(tenantId)
+            .reason("AI建议添加备注: " + notification.getTitle())
+            .riskLevel(1)
+            .requiresApproval(false)
+            .source("ai_notification")
+            .params(Map.of("noteContent", notification.getRecommendedAction()))
+            .createdAt(System.currentTimeMillis())
+            .expiresAt(System.currentTimeMillis() + 48 * 3600 * 1000)
+            .build();
+    }
+
+    private ExecutableCommand createProcurementOrderGoodsCommand(String orderId, Long tenantId, SmartNotification notification) {
+        return ExecutableCommand.builder()
+            .action("procurement:order_goods")
+            .targetId(orderId)
+            .tenantId(tenantId)
+            .reason("AI建议采购下单: " + notification.getTitle())
+            .riskLevel(4)
+            .requiresApproval(true)
+            .source("ai_notification")
+            .params(Map.of("procurementReason", notification.getRecommendedAction()))
+            .createdAt(System.currentTimeMillis())
+            .expiresAt(System.currentTimeMillis() + 24 * 3600 * 1000)
+            .build();
+    }
+
+    private ExecutableCommand createScanUndoCommand(String orderId, Long tenantId, SmartNotification notification) {
+        return ExecutableCommand.builder()
+            .action("scan:undo")
+            .targetId(orderId)
+            .tenantId(tenantId)
+            .reason("AI建议撤回扫码: " + notification.getTitle())
+            .riskLevel(3)
+            .requiresApproval(true)
+            .source("ai_notification")
+            .params(Map.of("undoReason", notification.getRecommendedAction()))
+            .createdAt(System.currentTimeMillis())
+            .expiresAt(System.currentTimeMillis() + 6 * 3600 * 1000)
+            .build();
+    }
+
+    private ExecutableCommand createCuttingCreateCommand(String orderId, Long tenantId, SmartNotification notification) {
+        return ExecutableCommand.builder()
+            .action("cutting:create")
+            .targetId(orderId)
+            .tenantId(tenantId)
+            .reason("AI建议创建裁剪单: " + notification.getTitle())
+            .riskLevel(3)
+            .requiresApproval(true)
+            .source("ai_notification")
+            .params(Map.of("cuttingReason", notification.getRecommendedAction()))
+            .createdAt(System.currentTimeMillis())
+            .expiresAt(System.currentTimeMillis() + 24 * 3600 * 1000)
+            .build();
+    }
+
+    private ExecutableCommand createOrderEditCommand(String orderId, Long tenantId, SmartNotification notification) {
+        return ExecutableCommand.builder()
+            .action("order:edit")
+            .targetId(orderId)
+            .tenantId(tenantId)
+            .reason("AI建议编辑订单: " + notification.getTitle())
+            .riskLevel(3)
+            .requiresApproval(true)
+            .source("ai_notification")
+            .params(Map.of("editReason", notification.getRecommendedAction()))
+            .createdAt(System.currentTimeMillis())
+            .expiresAt(System.currentTimeMillis() + 24 * 3600 * 1000)
+            .build();
+    }
+
+    private ExecutableCommand createPayrollApproveCommand(String orderId, Long tenantId, SmartNotification notification) {
+        return ExecutableCommand.builder()
+            .action("payroll:approve")
+            .targetId(orderId)
+            .tenantId(tenantId)
+            .reason("AI建议审批工资: " + notification.getTitle())
+            .riskLevel(3)
+            .requiresApproval(true)
+            .source("ai_notification")
+            .params(Map.of("approveNote", notification.getRecommendedAction()))
+            .createdAt(System.currentTimeMillis())
+            .expiresAt(System.currentTimeMillis() + 24 * 3600 * 1000)
+            .build();
+    }
+
+    private ExecutableCommand createDefectiveHandleCommand(String orderId, Long tenantId, SmartNotification notification) {
+        return ExecutableCommand.builder()
+            .action("defective:handle")
+            .targetId(orderId)
+            .tenantId(tenantId)
+            .reason("AI建议处理次品: " + notification.getTitle())
+            .riskLevel(3)
+            .requiresApproval(true)
+            .source("ai_notification")
+            .params(Map.of("defectiveAction", notification.getRecommendedAction()))
+            .createdAt(System.currentTimeMillis())
+            .expiresAt(System.currentTimeMillis() + 12 * 3600 * 1000)
+            .build();
+    }
+
+    private ExecutableCommand createProcessReassignCommand(String orderId, Long tenantId, SmartNotification notification) {
+        return ExecutableCommand.builder()
+            .action("process:reassign")
+            .targetId(orderId)
+            .tenantId(tenantId)
+            .reason("AI建议工序重分配: " + notification.getTitle())
+            .riskLevel(3)
+            .requiresApproval(true)
+            .source("ai_notification")
+            .params(Map.of("reassignReason", notification.getRecommendedAction()))
+            .createdAt(System.currentTimeMillis())
+            .expiresAt(System.currentTimeMillis() + 24 * 3600 * 1000)
+            .build();
+    }
+
+    private ExecutableCommand createFactoryUrgeCommand(String orderId, Long tenantId, SmartNotification notification) {
+        return ExecutableCommand.builder()
+            .action("factory:urge")
+            .targetId(orderId)
+            .tenantId(tenantId)
+            .reason("AI建议催单: " + notification.getTitle())
+            .riskLevel(2)
+            .requiresApproval(false)
+            .source("ai_notification")
+            .params(Map.of("urgeReason", notification.getRecommendedAction()))
+            .createdAt(System.currentTimeMillis())
+            .expiresAt(System.currentTimeMillis() + 12 * 3600 * 1000)
+            .build();
+    }
+
+    private ExecutableCommand createMaterialSafetyStockCommand(String orderId, Long tenantId, SmartNotification notification) {
+        return ExecutableCommand.builder()
+            .action("material:safety_stock")
+            .targetId(orderId)
+            .tenantId(tenantId)
+            .reason("AI检测到物料低于安全库存: " + notification.getTitle())
+            .riskLevel(2)
+            .requiresApproval(false)
+            .source("ai_notification")
+            .params(Map.of("stockAlert", notification.getRecommendedAction()))
+            .createdAt(System.currentTimeMillis())
+            .expiresAt(System.currentTimeMillis() + 48 * 3600 * 1000)
+            .build();
+    }
+
+    private ExecutableCommand createNotificationPushCommand(String orderId, Long tenantId, SmartNotification notification) {
+        return ExecutableCommand.builder()
+            .action("notification:push")
+            .targetId(orderId)
+            .tenantId(tenantId)
+            .reason("AI建议推送通知: " + notification.getTitle())
+            .riskLevel(1)
+            .requiresApproval(false)
+            .source("ai_notification")
+            .params(Map.of("notificationContent", notification.getRecommendedAction()))
             .createdAt(System.currentTimeMillis())
             .expiresAt(System.currentTimeMillis() + 24 * 3600 * 1000)
             .build();

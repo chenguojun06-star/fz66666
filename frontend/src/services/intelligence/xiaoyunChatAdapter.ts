@@ -17,6 +17,7 @@ export interface ParsedXiaoyunLegacyMeta {
   quickActions: unknown[];
   teamStatusCards: unknown[];
   bundleSplitCards: unknown[];
+  stepWizardCards: unknown[];
 }
 
 export const normalizeXiaoyunChatPayload = (raw: any): XiaoyunChatPayload | null => {
@@ -41,6 +42,7 @@ export const parseXiaoyunLegacyMeta = (rawText: string): ParsedXiaoyunLegacyMeta
   const quickActions: unknown[] = [];
   const teamStatusCards: unknown[] = [];
   const bundleSplitCards: unknown[] = [];
+  const stepWizardCards: unknown[] = [];
   let match: RegExpExecArray | null;
 
   const chartRe = /【CHART】([\s\S]*?)【\/CHART】/g;
@@ -88,6 +90,14 @@ export const parseXiaoyunLegacyMeta = (rawText: string): ParsedXiaoyunLegacyMeta
     } catch {}
   }
 
+  const stepWizardRe = /【STEP_WIZARD】([\s\S]*?)【\/STEP_WIZARD】/g;
+  while ((match = stepWizardRe.exec(rawText)) !== null) {
+    try {
+      const parsed = JSON.parse(match[1].trim()) as unknown;
+      if (Array.isArray(parsed)) stepWizardCards.push(...parsed);
+    } catch {}
+  }
+
   const displayText = rawText
     .replace(/```ACTIONS_JSON\s*\n[\s\S]*?\n```/g, '')
     .replace(/【CHART】[\s\S]*?【\/CHART】/g, '')
@@ -95,6 +105,7 @@ export const parseXiaoyunLegacyMeta = (rawText: string): ParsedXiaoyunLegacyMeta
     .replace(/【TEAM_STATUS】[\s\S]*?【\/TEAM_STATUS】/g, '')
     .replace(/【BUNDLE_SPLIT】[\s\S]*?【\/BUNDLE_SPLIT】/g, '')
     .replace(/【INSIGHT_CARDS】[\s\S]*?【\/INSIGHT_CARDS】/g, '')
+    .replace(/【STEP_WIZARD】[\s\S]*?【\/STEP_WIZARD】/g, '')
     .trim();
 
   return {
@@ -105,5 +116,6 @@ export const parseXiaoyunLegacyMeta = (rawText: string): ParsedXiaoyunLegacyMeta
     quickActions,
     teamStatusCards,
     bundleSplitCards,
+    stepWizardCards,
   };
 };

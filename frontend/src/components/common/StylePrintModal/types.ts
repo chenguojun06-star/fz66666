@@ -60,6 +60,10 @@ export interface StylePrintModalProps {
   extraInfo?: Record<string, any>;
   /** 码数明细（大货生产使用） */
   sizeDetails?: Array<{ color: string; size: string; quantity: number }>;
+  /** 码数（样衣使用，如 "S/M/L" 或 "M"） */
+  sizes?: string;
+  /** 颜色×码数×数量配置 JSON（来自开发详情，权威数据源） */
+  sizeColorConfig?: string;
 }
 
 // 打印数据类型

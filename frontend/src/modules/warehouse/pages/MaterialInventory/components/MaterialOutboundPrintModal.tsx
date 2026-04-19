@@ -82,7 +82,7 @@ const buildPrintHtml = (data: MaterialOutboundPrintPayload) => {
         <meta charset="UTF-8" />
         <title>面辅料出库单</title>
         <style>
-          body { font-family: 'Microsoft YaHei', '微软雅黑', 'PingFang SC', 'Heiti SC', Arial, sans-serif; color: #111; padding: 24px; }
+          body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", Roboto, "'Helvetica Neue'", Arial, "'Noto Sans'", "'Microsoft YaHei'", "'PingFang SC'", serif; color: #111; padding: 24px; }
           .page { border: 1px solid #d9d9d9; padding: 24px; }
           .title { text-align: center; font-size: 24px; font-weight: 700; margin-bottom: 20px; }
           .meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 20px; margin-bottom: 20px; }

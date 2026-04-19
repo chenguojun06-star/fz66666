@@ -37,7 +37,7 @@ const PayrollOperatorSummary: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
     const hasAutoFetched = useRef(false);
-    // Tab1 工序明细审核状态（已审核的行key集合）
+    // Tab1 工序明细审核状态（已审核的 approvalId 集合）
     const [auditedDetailKeys, setAuditedDetailKeys] = useState<Set<string>>(new Set());
     // Tab1 已选中行（用于批量审核）
     const [detailSelectedKeys, setDetailSelectedKeys] = useState<string[]>([]);
@@ -76,12 +76,6 @@ const PayrollOperatorSummary: React.FC = () => {
         }
     }, [activeTab, fetchInternalOrders]);
 
-    const handleAuditInternalOrder = (record: any) => {
-        const key = String(record.orderNo || record.orderId || '');
-        setInternalOrderAuditedKeys(prev => new Set([...prev, key]));
-        message.success(`已审核：${record.orderNo || ''}`);
-    };
-
     const handleBatchAuditInternalOrders = () => {
         const keys = internalOrderSelectedKeys.filter(k => !internalOrderAuditedKeys.has(k));
         if (keys.length === 0) {
@@ -93,39 +87,39 @@ const PayrollOperatorSummary: React.FC = () => {
         message.success(`已批量审核 ${keys.length} 个订单`);
     };
 
-    const handleFinalPushInternalOrder = async (record: any) => {
-        try {
-            await api.post('/finance/wage-payment/create-payable', {
-                bizType: 'PAYROLL_SETTLEMENT',
-                bizId: record.orderId || record.orderNo,
-                payeeName: record.factoryName || '内部工厂',
-                amount: Number(record.totalAmount || 0),
-                description: `内部工厂订单结算：${record.orderNo || ''}`,
-            });
-            message.success(`已终审并推送 ${record.orderNo || ''} 到收付款中心`);
-        } catch (error: unknown) {
-            message.error(error instanceof Error ? error.message : '终审失败');
-        }
-    };
-
     const handleBatchFinalPushInternalOrders = async () => {
         if (internalOrderSelectedKeys.length === 0) {
             message.warning('请选择要终审的订单');
             return;
         }
         try {
+            let pushedCount = 0;
             for (const key of internalOrderSelectedKeys) {
                 const record = internalOrders.find((r: any) => String(r.orderNo || r.orderId || '') === key);
                 if (!record || !internalOrderAuditedKeys.has(key)) continue;
-                await api.post('/finance/wage-payment/create-payable', {
-                    bizType: 'PAYROLL_SETTLEMENT',
-                    bizId: record.orderId || record.orderNo,
-                    payeeName: record.factoryName || '内部工厂',
-                    amount: Number(record.totalAmount || 0),
-                    description: `内部工厂订单结算：${record.orderNo || ''}`,
-                });
+                const orderStatus = String(record.status || '').toLowerCase();
+                if (orderStatus !== 'completed' && orderStatus !== 'closed') {
+                    continue;
+                }
+                try {
+                    await api.post('/finance/wage-payment/create-payable', {
+                        bizType: 'ORDER_SETTLEMENT',
+                        bizId: record.orderId || record.orderNo,
+                        payeeName: record.factoryName || '内部工厂',
+                        amount: Number(record.totalAmount || 0),
+                        description: `工厂订单结算：${record.orderNo || ''}`,
+                    });
+                    pushedCount++;
+                } catch (err: unknown) {
+                    const errMsg = err instanceof Error ? err.message : '推送失败';
+                    console.warn(`订单 ${record.orderNo} 终审推送失败:`, errMsg);
+                }
             }
-            message.success(`已批量终审并推送 ${internalOrderSelectedKeys.length} 个订单到收付款中心`);
+            if (pushedCount > 0) {
+                message.success(`已终审并推送 ${pushedCount} 个订单到收付款中心`);
+            } else {
+                message.warning('没有可推送的订单（可能订单未关单或属于内部工厂）');
+            }
             setInternalOrderSelectedKeys([]);
         } catch (error: unknown) {
             message.error(error instanceof Error ? error.message : '批量终审失败');
@@ -141,6 +135,21 @@ const PayrollOperatorSummary: React.FC = () => {
             render: (v: unknown) => Number(v || 0) },
         { title: '次品数', dataIndex: 'defectQuantity', key: 'defectQuantity', width: 70, align: 'right' as const,
             render: (v: unknown) => Number(v || 0) },
+        { title: '开发单价', dataIndex: 'devCostPrice', key: 'devCostPrice', width: 100, align: 'right' as const,
+            render: (v: unknown, record: any) => {
+                const price = Number(v || 0);
+                if (price <= 0) return '-';
+                return price.toFixed(2);
+            }
+        },
+        { title: '开发总成本', key: 'devTotalCost', width: 110, align: 'right' as const,
+            render: (_: unknown, record: any) => {
+                const price = Number(record.devCostPrice || 0);
+                const qty = Number(record.orderQuantity || 0);
+                if (price <= 0 || qty <= 0) return '-';
+                return (price * qty).toFixed(2);
+            }
+        },
         { title: '面辅料成本', dataIndex: 'materialCost', key: 'materialCost', width: 110, align: 'right' as const,
             render: (v: unknown) => Number(v || 0).toFixed(2) },
         { title: '生产成本', dataIndex: 'productionCost', key: 'productionCost', width: 100, align: 'right' as const,
@@ -148,7 +157,11 @@ const PayrollOperatorSummary: React.FC = () => {
         { title: '总金额', dataIndex: 'totalAmount', key: 'totalAmount', width: 110, align: 'right' as const,
             render: (v: unknown) => Number(v || 0).toFixed(2) },
         { title: '利润', dataIndex: 'profit', key: 'profit', width: 100, align: 'right' as const,
-            render: (v: unknown) => Number(v || 0).toFixed(2) },
+            render: (v: unknown) => {
+                const n = Number(v || 0);
+                return <span style={{ color: n >= 0 ? '#52c41a' : '#ff4d4f' }}>{n.toFixed(2)}</span>;
+            }
+        },
         { title: '利润率', dataIndex: 'profitMargin', key: 'profitMargin', width: 80, align: 'right' as const,
             render: (v: unknown) => {
                 const n = Number(v || 0);
@@ -238,7 +251,19 @@ const PayrollOperatorSummary: React.FC = () => {
             String(r?.operatorId || r?.operatorName || ''),
             String(r?.processName || ''),
             String(r?.scanType || ''),
+            String(r?.color || ''),
+            String(r?.size || ''),
         ].join('|');
+
+    const getDetailApprovalId = (r: any): string => String(r?.approvalId || '').trim();
+
+    const isDetailAudited = (r: any): boolean => {
+        const approvalId = getDetailApprovalId(r);
+        if (approvalId && auditedDetailKeys.has(approvalId)) {
+            return true;
+        }
+        return String(r?.approvalStatus || '').toLowerCase() === 'approved';
+    };
 
     const toMoneyText = (v: unknown) => {
         const n = typeof v === 'number' ? v : Number(v);
@@ -292,7 +317,7 @@ const PayrollOperatorSummary: React.FC = () => {
     // 工资汇总数据：仅聚合已审核的明细行
     const summaryRows = useMemo(() => {
         // 只已审核的明细行才进入汇总
-        const auditedRows = rows.filter(row => auditedDetailKeys.has(getDetailRowKey(row)));
+        const auditedRows = rows.filter(row => isDetailAudited(row));
         const grouped = auditedRows.reduce((acc, row) => {
             const name = String((row as Record<string, unknown>)?.operatorName || '').trim();
             if (!name) return acc;
@@ -432,7 +457,13 @@ const PayrollOperatorSummary: React.FC = () => {
         try {
             const res = await api.post<{ code: number; message: string; data: PayrollOperatorProcessSummaryRow[] }>('/finance/payroll-settlement/operator-summary', payload);
             const data = unwrapApiData<PayrollOperatorProcessSummaryRow[]>(res, '获取人员工序统计失败');
-            setRows(Array.isArray(data) ? data : []);
+            const nextRows = Array.isArray(data) ? data : [];
+            setRows(nextRows);
+            const persistedAuditedIds = nextRows
+                .filter(row => String(row?.approvalStatus || '').toLowerCase() === 'approved')
+                .map(row => getDetailApprovalId(row))
+                .filter(Boolean);
+            setAuditedDetailKeys(new Set(persistedAuditedIds));
             if (showSmartErrorNotice) setSmartError(null);
         } catch (e: unknown) {
             const errMsg = e instanceof Error ? e.message : '获取人员工序统计失败';
@@ -504,42 +535,119 @@ const PayrollOperatorSummary: React.FC = () => {
         }
     };
 
-    // Tab1: 审核单条明细行（加入已审核集合）
-    const handleAuditDetail = (row: any) => {
-        const key = getDetailRowKey(row);
-        setAuditedDetailKeys(prev => new Set([...prev, key]));
-        message.success(`已审核：${row.operatorName || ''} - ${row.processName || ''}`);
+    // Tab1: 审核单条明细行（写库持久化）
+    const handleAuditDetail = async (row: any) => {
+        if (!isOrderFrozenByStatus({ status: String(row?.orderStatus || '') })) {
+            message.warning('该订单尚未关单，只有已关单的订单才能审核');
+            return;
+        }
+        const approvalId = getDetailApprovalId(row);
+        if (!approvalId) {
+            message.error('审核失败：缺少审批标识');
+            return;
+        }
+
+        try {
+            await api.post(`/finance/payroll-settlement/detail-approval/${encodeURIComponent(approvalId)}/approve`, {});
+            setAuditedDetailKeys(prev => new Set([...prev, approvalId]));
+            setRows(prev => prev.map(item => {
+                if (getDetailApprovalId(item) === approvalId) {
+                    return { ...item, approvalStatus: 'approved' } as PayrollOperatorProcessSummaryRow;
+                }
+                return item;
+            }));
+            message.success(`已审核：${row.operatorName || ''} - ${row.processName || ''}`);
+        } catch (error: unknown) {
+            message.error(error instanceof Error ? error.message : '审核失败');
+        }
     };
 
     // Tab1: 批量审核已选明细行
     const handleBatchAuditDetails = () => {
-        // rowKey 含 @@N 后缀确保 React key 唯一，业务对比时需先剥离后缀
         const stripSuffix = (k: string) => k.replace(/\|@@\d+$/, '');
-        const eligibleKeys = detailSelectedKeys.filter(key => {
+        const selectedRows = detailSelectedKeys.map(key => {
             const businessKey = stripSuffix(key);
-            const row = rows.find(r => getDetailRowKey(r) === businessKey);
-            return row && isOrderFrozenByStatus({ status: row.orderStatus }) && !auditedDetailKeys.has(businessKey);
+            return rows.find(r => getDetailRowKey(r) === businessKey);
+        }).filter(Boolean);
+
+        const notFrozenRows = selectedRows.filter((row): row is PayrollOperatorProcessSummaryRow => {
+            return Boolean(row && !isOrderFrozenByStatus({ status: String((row as any)?.orderStatus || '') }));
         });
-        if (eligibleKeys.length === 0) {
-            message.warning('请选择状态为「已完成」且未审核的行');
+        const alreadyAuditedRows = selectedRows.filter((row): row is PayrollOperatorProcessSummaryRow => {
+            return Boolean(row && isDetailAudited(row));
+        });
+        const noApprovalIdRows = selectedRows.filter((row): row is PayrollOperatorProcessSummaryRow => {
+            return Boolean(row && !getDetailApprovalId(row));
+        });
+
+        const eligibleRows = selectedRows.filter((row): row is PayrollOperatorProcessSummaryRow => {
+            const approvalId = getDetailApprovalId(row);
+            return Boolean(
+                row &&
+                approvalId &&
+                isOrderFrozenByStatus({ status: String((row as any)?.orderStatus || '') }) &&
+                !isDetailAudited(row)
+            );
+        });
+
+        if (eligibleRows.length === 0) {
+            if (notFrozenRows.length > 0) {
+                message.warning(`所选 ${notFrozenRows.length} 行的订单尚未关单，只有已关单的订单才能审核`);
+            } else if (alreadyAuditedRows.length > 0) {
+                message.warning('所选行已全部审核过，无需重复审核');
+            } else if (noApprovalIdRows.length > 0) {
+                message.warning('所选行缺少审批标识，无法审核');
+            } else {
+                message.warning('请先勾选需要审核的行');
+            }
             return;
         }
-        const businessKeys = eligibleKeys.map(k => stripSuffix(k));
-        setAuditedDetailKeys(prev => new Set([...prev, ...businessKeys]));
-        setDetailSelectedKeys([]);
-        message.success(`已批量审核 ${eligibleKeys.length} 条记录`);
+
+        const doBatchApprove = async () => {
+            try {
+                for (const row of eligibleRows) {
+                    const approvalId = getDetailApprovalId(row);
+                    await api.post(`/finance/payroll-settlement/detail-approval/${encodeURIComponent(approvalId)}/approve`, {});
+                }
+
+                const approvedIds = eligibleRows
+                    .map(row => getDetailApprovalId(row))
+                    .filter(Boolean);
+
+                setAuditedDetailKeys(prev => new Set([...prev, ...approvedIds]));
+                setRows(prev => prev.map(item => {
+                    if (approvedIds.includes(getDetailApprovalId(item))) {
+                        return { ...item, approvalStatus: 'approved' } as PayrollOperatorProcessSummaryRow;
+                    }
+                    return item;
+                }));
+                setDetailSelectedKeys([]);
+                message.success(`已批量审核 ${eligibleRows.length} 条记录`);
+            } catch (error: unknown) {
+                message.error(error instanceof Error ? error.message : '批量审核失败');
+            }
+        };
+
+        void doBatchApprove();
     };
 
     // Tab2: 驳回——移除该人员所有明细的已审核标记，回流Tab1重新审核
     const handleRejectOperator = (operName: string) => {
-        const keysOfOperator = rows
+        const approvalIdsOfOperator = rows
             .filter(r => String((r as any)?.operatorName || '') === operName)
-            .map(r => getDetailRowKey(r));
+            .map(r => getDetailApprovalId(r))
+            .filter(Boolean);
         setAuditedDetailKeys(prev => {
             const next = new Set(prev);
-            keysOfOperator.forEach(k => next.delete(k));
+            approvalIdsOfOperator.forEach(k => next.delete(k));
             return next;
         });
+        setRows(prev => prev.map(row => {
+            if (String((row as any)?.operatorName || '') === operName) {
+                return { ...row, approvalStatus: 'pending' } as PayrollOperatorProcessSummaryRow;
+            }
+            return row;
+        }));
         message.success(`「${operName}」的明细已驳回，请回「工序明细」重新审核`);
     };
 
@@ -550,11 +658,15 @@ const PayrollOperatorSummary: React.FC = () => {
             message.error('未找到该人员汇总数据');
             return;
         }
+
+        const operatorRows = rows.filter(r => String((r as any)?.operatorName || '') === operatorName);
+        const allAudited = operatorRows.every(r => isDetailAudited(r));
+        if (!allAudited) {
+            message.warning('该人员还有未审核的工序明细，请先在「工序明细」中审核');
+            return;
+        }
+
         try {
-            // Step 1: 调用 approve 接口改变工资结算状态（pending → approved）
-            await api.post(`/finance/payroll-settlement/${summary.operatorId || operatorName}/approve`, {});
-            
-            // Step 2: 创建待付款单据
             await api.post('/finance/wage-payment/create-payable', {
                 bizType: 'PAYROLL_SETTLEMENT',
                 bizId: summary.operatorId || operatorName,
@@ -601,7 +713,20 @@ const PayrollOperatorSummary: React.FC = () => {
 
     const handleBatchFinalPush = async () => {
         if (selectedRowKeys.length === 0) {
-            message.warning('请选择要审核的人员');
+            message.warning('请选择要终审推送的人员');
+            return;
+        }
+
+        const unauditedOperators: string[] = [];
+        for (const key of selectedRowKeys) {
+            const operatorRows = rows.filter(r => String((r as any)?.operatorName || '') === key);
+            const allAudited = operatorRows.every(r => isDetailAudited(r));
+            if (!allAudited) {
+                unauditedOperators.push(key);
+            }
+        }
+        if (unauditedOperators.length > 0) {
+            message.warning(`${unauditedOperators.join('、')} 还有未审核的工序明细，请先在「工序明细」中审核`);
             return;
         }
 
@@ -609,10 +734,6 @@ const PayrollOperatorSummary: React.FC = () => {
             for (const key of selectedRowKeys) {
                 const summary = summaryRows.find((r: any) => r.operatorName === key);
                 if (!summary) continue;
-                // Step 1: 调用 approve 接口改变工资结算状态（pending → approved）
-                await api.post(`/finance/payroll-settlement/${summary.operatorId || String(key)}/approve`, {});
-                
-                // Step 2: 创建待付款单据
                 await api.post('/finance/wage-payment/create-payable', {
                     bizType: 'PAYROLL_SETTLEMENT',
                     bizId: summary.operatorId || String(key),
@@ -645,7 +766,7 @@ const PayrollOperatorSummary: React.FC = () => {
     // 员工工序表格列定义
     const columns = getDetailColumns({
         detailSortField, detailSortOrder, handleDetailSort,
-        toNumberOrZero, toMoneyText, auditedDetailKeys, getDetailRowKey, handleAuditDetail,
+        toNumberOrZero, toMoneyText, auditedDetailKeys, isDetailAudited, handleAuditDetail,
     });
 
     return (
@@ -755,6 +876,8 @@ const PayrollOperatorSummary: React.FC = () => {
                                                 String(r?.operatorId || r?.operatorName || ''),
                                                 String(r?.processName || ''),
                                                 String(r?.scanType || ''),
+                                                String(r?.color || ''),
+                                                String(r?.size || ''),
                                                 `@@${index ?? 0}`,
                                             ].join('|')
                                         }
@@ -762,7 +885,7 @@ const PayrollOperatorSummary: React.FC = () => {
                                             selectedRowKeys: detailSelectedKeys,
                                             onChange: (keys: React.Key[]) => setDetailSelectedKeys(keys as string[]),
                                             getCheckboxProps: (record: Record<string, unknown>) => ({
-                                                disabled: auditedDetailKeys.has(getDetailRowKey(record)) || !isOrderFrozenByStatus({ status: String(record.orderStatus || '') }),
+                                                disabled: isDetailAudited(record) || !isOrderFrozenByStatus({ status: String(record.orderStatus || '') }) || !getDetailApprovalId(record),
                                             }),
                                         }}
                                         columns={columns}
@@ -864,7 +987,7 @@ const PayrollOperatorSummary: React.FC = () => {
                                             }),
                                         }}
                                         sticky
-                                        scroll={{ x: 1400 }}
+                                        scroll={{ x: 1700 }}
                                     />
                                 </>
                             ),

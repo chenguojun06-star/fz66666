@@ -190,6 +190,8 @@ export interface OrderProfitResponse {
 }
 
 export interface PayrollOperatorProcessSummaryRow {
+  approvalId?: string;
+  approvalStatus?: 'pending' | 'approved';
   orderId?: string;
   orderNo?: string;
   orderStatus?: string;

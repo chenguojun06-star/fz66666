@@ -304,8 +304,10 @@ public class WagePaymentController {
             }
         }
 
+        String payeeType = "PAYROLL_SETTLEMENT".equals(request.getBizType()) ? "WORKER" : "FACTORY";
+
         WagePaymentRequest paymentRequest = WagePaymentRequest.builder()
-            .payeeType("FACTORY")
+            .payeeType(payeeType)
             .payeeId(request.getBizId())
             .payeeName(request.getPayeeName())
             .amount(request.getAmount())

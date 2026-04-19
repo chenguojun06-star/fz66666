@@ -15,6 +15,7 @@ import com.fashion.supplychain.intelligence.helper.AiAgentPromptHelper;
 import com.fashion.supplychain.intelligence.helper.AiAgentToolExecHelper;
 import com.fashion.supplychain.intelligence.dto.FollowUpAction;
 import com.fashion.supplychain.intelligence.routing.AiAgentDomainRouter;
+import com.fashion.supplychain.intelligence.routing.AiAgentToolAdvisor;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.intelligence.service.AgentStateStore;
 import com.fashion.supplychain.intelligence.service.DataTruthGuard;
@@ -51,6 +52,7 @@ public class AiAgentOrchestrator {
     @Autowired private AiAgentEvidenceHelper evidenceHelper;
     @Autowired private AiAgentMemoryHelper memoryHelper;
     @Autowired private AiAgentDomainRouter domainRouter;
+    @Autowired private AiAgentToolAdvisor toolAdvisor;
     @Autowired private FollowUpSuggestionEngine followUpSuggestionEngine;
     @Autowired private AgentStateStore agentStateStore;
     @Autowired private DataTruthGuard dataTruthGuard;
@@ -118,11 +120,13 @@ public class AiAgentOrchestrator {
             visibleTools = aiAgentToolAccessService.filterByDomains(visibleTools, domains);
             log.info("[AiAgent] 领域路由裁剪: {} → {} 个工具", domains, visibleTools.size());
         }
+        visibleTools = toolAdvisor.advise(visibleTools, userMessage);
         Map<String, AgentTool> visibleToolMap = toolExecHelper.toToolLookup(visibleTools);
         List<AiTool> visibleApiTools = aiAgentToolAccessService.toApiTools(visibleTools);
         List<AiMessage> messages = new ArrayList<>();
         List<JsonNode> teamDispatchCards = new ArrayList<>();
         List<JsonNode> bundleSplitCards = new ArrayList<>();
+        List<JsonNode> stepWizardCards = new ArrayList<>();
         List<JsonNode> xiaoyunInsightCards = new ArrayList<>();
         messages.add(AiMessage.system(promptHelper.buildSystemPrompt(userMessage, pageContext, visibleTools)));
         // 加载对话记忆（最近 N 轮），超过阈值时自动 LLM 压缩
@@ -191,6 +195,7 @@ public class AiAgentOrchestrator {
                 for (AiAgentToolExecHelper.ToolExecRecord rec : execRecords) {
                     evidenceHelper.captureTeamDispatchCard(rec.toolName, rec.rawResult, teamDispatchCards);
                     evidenceHelper.captureBundleSplitCard(rec.toolName, rec.rawResult, bundleSplitCards);
+                    evidenceHelper.captureStepWizardCard(rec.toolName, rec.rawResult, stepWizardCards);
                     xiaoyunInsightCardOrchestrator.collectFromToolResult(rec.toolName, rec.rawResult, xiaoyunInsightCards);
                     messages.add(AiMessage.tool(rec.evidence, rec.toolCallId, rec.toolName));
                 }
@@ -208,6 +213,7 @@ public class AiAgentOrchestrator {
                 }
                 revisedContent = evidenceHelper.appendTeamDispatchCards(revisedContent, teamDispatchCards);
                 revisedContent = evidenceHelper.appendBundleSplitCards(revisedContent, bundleSplitCards);
+                revisedContent = evidenceHelper.appendStepWizardCards(revisedContent, stepWizardCards);
                 revisedContent = xiaoyunInsightCardOrchestrator.appendToContent(revisedContent, xiaoyunInsightCards);
 
                 // ── 数据真实性守卫：校验AI输出是否有工具数据支撑 ──
@@ -292,11 +298,13 @@ public class AiAgentOrchestrator {
                 visibleTools = aiAgentToolAccessService.filterByDomains(visibleTools, domains);
                 log.info("[AiAgent-Stream] 领域路由裁剪: {} → {} 个工具", domains, visibleTools.size());
             }
+            visibleTools = toolAdvisor.advise(visibleTools, userMessage);
             Map<String, AgentTool> visibleToolMap = toolExecHelper.toToolLookup(visibleTools);
             List<AiTool> visibleApiTools = aiAgentToolAccessService.toApiTools(visibleTools);
             List<AiMessage> messages = new ArrayList<>();
             List<JsonNode> teamDispatchCards = new ArrayList<>();
             List<JsonNode> bundleSplitCards = new ArrayList<>();
+            List<JsonNode> stepWizardCards = new ArrayList<>();
             List<JsonNode> xiaoyunInsightCards = new ArrayList<>();
             messages.add(AiMessage.system(promptHelper.buildSystemPrompt(userMessage, pageContext, visibleTools)));
             List<AiMessage> history = memoryHelper.getConversationHistory(userId, tenantId);
@@ -370,6 +378,7 @@ public class AiAgentOrchestrator {
                     for (AiAgentToolExecHelper.ToolExecRecord rec : execRecords) {
                         evidenceHelper.captureTeamDispatchCard(rec.toolName, rec.rawResult, teamDispatchCards);
                         evidenceHelper.captureBundleSplitCard(rec.toolName, rec.rawResult, bundleSplitCards);
+                        evidenceHelper.captureStepWizardCard(rec.toolName, rec.rawResult, stepWizardCards);
                         xiaoyunInsightCardOrchestrator.collectFromToolResult(rec.toolName, rec.rawResult, xiaoyunInsightCards);
                         emitSse(emitter, "tool_result", Map.of(
                                 "tool", rec.toolName,
@@ -392,6 +401,7 @@ public class AiAgentOrchestrator {
                     }
                     revisedContent = evidenceHelper.appendTeamDispatchCards(revisedContent, teamDispatchCards);
                     revisedContent = evidenceHelper.appendBundleSplitCards(revisedContent, bundleSplitCards);
+                    revisedContent = evidenceHelper.appendStepWizardCards(revisedContent, stepWizardCards);
                     revisedContent = xiaoyunInsightCardOrchestrator.appendToContent(revisedContent, xiaoyunInsightCards);
 
                     // ── 数据真实性守卫：校验AI输出是否有工具数据支撑 ──

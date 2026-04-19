@@ -1,5 +1,5 @@
 export function parseAiResponse(rawText) {
-  if (!rawText) return { displayText: '', actionCards: [], charts: [], teamStatusCards: [], bundleSplitCards: [], insightCards: [], followUpActions: [], recommendPills: [] };
+  if (!rawText) return { displayText: '', actionCards: [], charts: [], teamStatusCards: [], bundleSplitCards: [], insightCards: [], followUpActions: [], recommendPills: [], stepWizardCards: [] };
 
   let text = rawText;
   const actionCards = [];
@@ -9,6 +9,7 @@ export function parseAiResponse(rawText) {
   const insightCards = [];
   const followUpActions = [];
   const recommendPills = [];
+  const stepWizardCards = [];
 
   const extractBlock = (tag) => {
     const re = new RegExp(`【${tag}】([\\s\\S]*?)【\\/${tag}】`, 'g');
@@ -63,6 +64,15 @@ export function parseAiResponse(rawText) {
       const parsed = JSON.parse(block);
       if (Array.isArray(parsed)) insightCards.push(...parsed);
       else insightCards.push(parsed);
+    } catch (_) {}
+  });
+
+  const wizardBlocks = extractBlock('STEP_WIZARD');
+  wizardBlocks.forEach((block) => {
+    try {
+      const parsed = JSON.parse(block);
+      if (Array.isArray(parsed)) stepWizardCards.push(...parsed);
+      else stepWizardCards.push(parsed);
     } catch (_) {}
   });
 

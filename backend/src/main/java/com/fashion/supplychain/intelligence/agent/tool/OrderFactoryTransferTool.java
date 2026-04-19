@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.agent.tool;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.helper.StepWizardBuilder;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.production.orchestration.OrderFactoryTransferOrchestrator;
 import lombok.extern.slf4j.Slf4j;
@@ -88,11 +89,16 @@ public class OrderFactoryTransferTool implements AgentTool {
             List<Map<String, Object>> orderLines = asList(args.get("orderLines"));
             String reason = asString(args.get("reason"));
 
-            if (orderNo == null || orderNo.isBlank()) {
-                return "{\"success\":false,\"error\":\"orderNo 不能为空\"}";
-            }
-            if (targetFactoryName == null || targetFactoryName.isBlank()) {
-                return "{\"success\":false,\"error\":\"targetFactoryName 不能为空\"}";
+            if (orderNo == null || orderNo.isBlank() || targetFactoryName == null || targetFactoryName.isBlank()) {
+                Map<String, Object> wizard = StepWizardBuilder.build("order_factory_transfer", "订单转厂", "将订单转到其他工厂生产", "🔄", "确认转厂", "转厂",
+                    StepWizardBuilder.steps(
+                        StepWizardBuilder.step("order", "选择订单", "输入要转厂的订单号",
+                            StepWizardBuilder.textField("orderNo", "订单号", true, "输入订单号")),
+                        StepWizardBuilder.step("factory", "选择目标工厂", "输入要转到的工厂名称",
+                            StepWizardBuilder.textField("targetFactoryName", "目标工厂", true, "输入工厂名称搜索"),
+                            StepWizardBuilder.textField("reason", "转厂原因", false, "可选，说明转厂原因"))
+                    ));
+                try { return MAPPER.writeValueAsString(StepWizardBuilder.wrapResult("请提供订单号和目标工厂", true, List.of("orderNo", "targetFactoryName"), "请补充订单号和目标工厂名称", wizard)); } catch (Exception e) { return "{\"success\":false,\"error\":\"参数不完整\"}"; }
             }
 
             Map<String, Object> result = transferOrchestrator.transfer(

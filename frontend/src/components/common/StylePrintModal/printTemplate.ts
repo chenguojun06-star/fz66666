@@ -14,10 +14,36 @@ export function buildPrintHtml({ headerInfo, printerInfo, printDate, styleNo, bo
         <meta charset="UTF-8">
         <title>打印预览 - ${styleNo}</title>
         <style>
+          /* 打印上下文 CSS 变量定义（iframe 不继承主页面变量，必须在此声明） */
+          :root {
+            --color-bg-base: #ffffff;
+            --color-bg-container: #fafafa;
+            --color-border: #d9d9d9;
+            --color-primary: #1890ff;
+            --color-text-secondary: #666666;
+            --color-text-tertiary: #999999;
+            --color-text-quaternary: #bbbbbb;
+            --font-size-xxl: 24px;
+            --font-size-xl: 20px;
+            --font-size-lg: 16px;
+            --font-size-base: 14px;
+            --font-size-sm: 13px;
+            --font-size-xs: 12px;
+          }
+
           @page {
             margin: 15mm 10mm 12mm 10mm;
             size: A4;
           }
+
+          /* 暗色主题修复：强制黑色文字 + 白色背景 */
+          html, body {
+            color: #000000 !important;
+            
+            background: #ffffff !important;
+          }
+          /* 注意：不要加 * { color: inherit !important }，否则会覆盖业务内联颜色，
+             同时和 -webkit-text-fill-color 互相干扰，导致中文文本被某些浏览器视为透明 */
 
           /* 页眉 - 每页顶部显示 */
           @media print {
@@ -66,7 +92,7 @@ export function buildPrintHtml({ headerInfo, printerInfo, printDate, styleNo, bo
 
           /* 基础样式 */
           body {
-            font-family: 'PingFang SC', 'Microsoft YaHei', '微软雅黑', 'Heiti SC', 'Hiragino Sans GB', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", Roboto, "'Helvetica Neue'", Arial, "'Noto Sans'", "'Microsoft YaHei'", "'PingFang SC'", serif;
             font-size: 12px;
             line-height: 1.6;
             color: #333;

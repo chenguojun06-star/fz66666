@@ -81,6 +81,11 @@ public class FinishedProductSettlement implements Serializable {
     private BigDecimal targetProfitRate;
 
     /**
+     * 开发审核单价（t_style_info.price，BOM+工序+二次工艺成本）
+     */
+    private BigDecimal devCostPrice;
+
+    /**
      * 入库数量（合格品）
      */
     private Integer warehousedQuantity;

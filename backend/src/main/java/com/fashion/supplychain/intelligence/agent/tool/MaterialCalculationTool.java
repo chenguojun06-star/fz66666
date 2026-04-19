@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiTool;
+import com.fashion.supplychain.intelligence.helper.StepWizardBuilder;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.style.entity.StyleBom;
@@ -84,11 +85,14 @@ public class MaterialCalculationTool implements AgentTool {
             String styleNo = args.path("styleNo").asText("").trim();
             int orderQuantity = args.path("orderQuantity").asInt(0);
 
-            if (styleNo.isEmpty()) {
-                return "{\"error\": \"请提供款号\"}";
-            }
-            if (orderQuantity <= 0) {
-                return "{\"error\": \"生产数量必须大于0\"}";
+            if (styleNo.isEmpty() || orderQuantity <= 0) {
+                Map<String, Object> wizard = StepWizardBuilder.build("material_calculation", "物料计算", "输入款号和生产数量计算物料需求", "🧮", "开始计算", "计算物料",
+                    StepWizardBuilder.steps(
+                        StepWizardBuilder.step("input", "输入参数", "输入款号和生产数量",
+                            StepWizardBuilder.textField("styleNo", "款号", true, "输入款号，如 D2024001"),
+                            StepWizardBuilder.numberField("orderQuantity", "生产数量", true, "输入生产数量", 1))
+                    ));
+                try { return OBJECT_MAPPER.writeValueAsString(StepWizardBuilder.wrapResult("请提供款号和生产数量", true, List.of("styleNo", "orderQuantity"), "请补充款号和生产数量", wizard)); } catch (Exception e) { return "{\"error\": \"请提供款号和生产数量\"}"; }
             }
 
             Long tenantId = UserContext.tenantId();

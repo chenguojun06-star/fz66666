@@ -94,10 +94,12 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
   };
 
   const getDateRange = (): [string, string] => {
-    const values = form.getFieldsValue();
-    if (values.dateRange && values.dateRange.length === 2) {
-      return [values.dateRange[0].format('YYYY-MM-DD'), values.dateRange[1].format('YYYY-MM-DD')];
-    }
+    try {
+      const values = form.getFieldsValue();
+      if (values.dateRange && values.dateRange.length === 2) {
+        return [values.dateRange[0].format('YYYY-MM-DD'), values.dateRange[1].format('YYYY-MM-DD')];
+      }
+    } catch { /* form not connected yet */ }
     return ['-', '-'];
   };
 

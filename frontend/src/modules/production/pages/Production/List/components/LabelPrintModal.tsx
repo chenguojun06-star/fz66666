@@ -385,7 +385,7 @@ async function printWashLabels(
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
 @page { size: ${w}mm ${h}mm; margin: 0; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'Microsoft YaHei', '微软雅黑', 'PingFang SC', 'Heiti SC', Arial, sans-serif; color: #000; background: #fff; -webkit-font-smoothing: antialiased; }
+body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", Roboto, "'Helvetica Neue'", Arial, "'Noto Sans'", "'Microsoft YaHei'", "'PingFang SC'", serif; color: #000; background: #fff; -webkit-font-smoothing: antialiased; }
 .page { width: ${w}mm; min-height: ${h}mm; page-break-after: always; }
 .page:last-child { page-break-after: auto; }
 .label { position: relative; width: ${w}mm; height: ${h}mm; padding: 0 2.2mm; color: #000; }
@@ -478,7 +478,7 @@ async function printUCodeLabels(
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
 @page { size: ${w}mm ${h}mm; margin: 0; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'Microsoft YaHei', '微软雅黑', 'PingFang SC', 'Heiti SC', Arial, sans-serif; color: #000; background: #fff; -webkit-font-smoothing: antialiased; }
+body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "'Segoe UI'", Roboto, "'Helvetica Neue'", Arial, "'Noto Sans'", "'Microsoft YaHei'", "'PingFang SC'", serif; color: #000; background: #fff; -webkit-font-smoothing: antialiased; }
 .page { width: ${w}mm; height: ${h}mm; display: flex; align-items: center; justify-content: center; page-break-after: always; }
 .page:last-child { page-break-after: auto; }
 .label { width: calc(${w}mm - 3mm); height: calc(${h}mm - 3mm); border: 0.8pt solid #333; display: flex; flex-direction: row; align-items: stretch; padding: 1.5mm 2.5mm 1.5mm 2.5mm; gap: 1.5mm; color: #000; }

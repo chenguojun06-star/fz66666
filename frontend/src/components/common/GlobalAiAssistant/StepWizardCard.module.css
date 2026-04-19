@@ -1,0 +1,258 @@
+.card {
+  background: #ffffff;
+  border: 1px solid #e8edf5;
+  border-radius: 14px;
+  padding: 16px;
+  margin: 8px 0;
+  box-shadow: 0 2px 8px rgba(0, 83, 204, 0.06);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.icon {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.headerText {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a2e;
+}
+
+.desc {
+  font-size: 12px;
+  color: #8c8c8c;
+  margin-top: 2px;
+}
+
+.stepBar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 16px;
+  padding: 0 4px;
+}
+
+.stepDot {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: #f5f5f5;
+  font-size: 12px;
+  color: #8c8c8c;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+
+.stepActive {
+  background: #e6f4ff;
+  color: #1677ff;
+  font-weight: 600;
+}
+
+.stepDone {
+  background: #f0faf0;
+  color: #52c41a;
+}
+
+.stepNum {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  background: #d9d9d9;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.stepActive .stepNum {
+  background: #1677ff;
+}
+
+.stepDone .stepNum {
+  background: #52c41a;
+}
+
+.stepLabel {
+  font-size: 12px;
+}
+
+.stepContent {
+  min-height: 80px;
+}
+
+.stepDesc {
+  font-size: 13px;
+  color: #595959;
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  background: #fafafa;
+  border-radius: 8px;
+  border-left: 3px solid #1677ff;
+}
+
+.fieldGroup {
+  margin-bottom: 14px;
+}
+
+.fieldLabel {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 6px;
+}
+
+.required {
+  color: #ff4d4f;
+  margin-left: 2px;
+}
+
+.optionGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.optionBtn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 14px;
+  border: 1.5px solid #e8e8e8;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 80px;
+  text-align: center;
+}
+
+.optionBtn:hover {
+  border-color: #91caff;
+  background: #f0f7ff;
+}
+
+.optionSelected {
+  border-color: #1677ff;
+  background: #e6f4ff;
+  box-shadow: 0 0 0 1px #1677ff;
+}
+
+.optIcon {
+  font-size: 18px;
+}
+
+.optLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+}
+
+.optDesc {
+  font-size: 11px;
+  color: #8c8c8c;
+}
+
+.checkMark {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  color: #1677ff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.textInput {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1.5px solid #e8e8e8;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #333;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.textInput:focus {
+  border-color: #1677ff;
+  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.1);
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.prevBtn {
+  padding: 7px 18px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  background: #fff;
+  color: #595959;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.prevBtn:hover {
+  border-color: #8c8c8c;
+  color: #333;
+}
+
+.nextBtn {
+  padding: 7px 22px;
+  border: none;
+  border-radius: 8px;
+  background: #1677ff;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.nextBtn:hover {
+  background: #4096ff;
+}
+
+.nextDisabled {
+  background: #d9d9d9;
+  cursor: not-allowed;
+}
+
+.successIcon {
+  text-align: center;
+  font-size: 32px;
+  margin: 12px 0 8px;
+}
+
+.successText {
+  text-align: center;
+  font-size: 14px;
+  color: #52c41a;
+  font-weight: 500;
+}
