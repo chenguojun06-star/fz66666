@@ -158,28 +158,16 @@ const PayrollOperatorSummary: React.FC = () => {
         { title: '状态', dataIndex: 'status', key: 'status', width: 80, align: 'center' as const,
             render: (v: unknown) => {
                 const s = String(v || '');
-                if (s === 'completed' || s === 'closed') return <Tag color="green">已关单</Tag>;
-                return <Tag color="blue">{s}</Tag>;
+                const statusMap: Record<string, { label: string; color: string }> = {
+                    'completed': { label: '已完成', color: 'green' },
+                    'closed': { label: '已关单', color: 'green' },
+                    'processing': { label: '处理中', color: 'blue' },
+                    'pending': { label: '待处理', color: 'orange' },
+                    'rejected': { label: '已驳回', color: 'red' },
+                };
+                const statusInfo = statusMap[s] || { label: s, color: 'default' };
+                return <Tag color={statusInfo.color}>{statusInfo.label}</Tag>;
             }
-        },
-        {
-            title: '操作', key: 'actions', width: 160, fixed: 'right' as const,
-            render: (_: unknown, record: any) => {
-                const key = String(record.orderNo || record.orderId || '');
-                const audited = internalOrderAuditedKeys.has(key);
-                return (
-                    <Space size={4}>
-                        {audited ? (
-                            <Tag color="green">已审核</Tag>
-                        ) : (
-                            <Button size="small" type="link" onClick={() => handleAuditInternalOrder(record)}>审核</Button>
-                        )}
-                        {audited && (
-                            <Button size="small" type="link" onClick={() => handleFinalPushInternalOrder(record)}>终审推送</Button>
-                        )}
-                    </Space>
-                );
-            },
         },
     ];
 
@@ -404,6 +392,13 @@ const PayrollOperatorSummary: React.FC = () => {
         }
         return () => { if (timer) clearTimeout(timer); };
     }, [searchParams]);
+
+    // 当切换到工序明细tab时，若无数据则自动加载
+    useEffect(() => {
+        if (activeTab === 'detail' && rows.length === 0 && !loading) {
+            doFetchData();
+        }
+    }, [activeTab]);
 
     const buildPayload = () => {
         const payload: Record<string, any> = {
