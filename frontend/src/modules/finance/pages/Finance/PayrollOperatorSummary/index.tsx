@@ -169,6 +169,9 @@ const PayrollOperatorSummary: React.FC = () => {
                 return <Tag color={statusInfo.color}>{statusInfo.label}</Tag>;
             }
         },
+        { title: '关单时间', dataIndex: 'closedTime', key: 'closedTime', width: 140, ellipsis: true,
+            render: (v: unknown) => v ? dayjs(v as string).format('YYYY-MM-DD HH:mm:ss') : '-',
+        },
     ];
 
     // ── 效率排名 Tab 数据 ────────────────────────────────────────────────────
@@ -400,6 +403,13 @@ const PayrollOperatorSummary: React.FC = () => {
         }
     }, [activeTab]);
 
+    // 当切换到工序明细tab时，若无数据则自动加载
+    useEffect(() => {
+        if (activeTab === 'detail' && rows.length === 0 && !loading) {
+            doFetchData();
+        }
+    }, [activeTab]);
+
     const buildPayload = () => {
         const payload: Record<string, any> = {
             scanType: scanType ? String(scanType || '').trim() : undefined,
@@ -541,6 +551,10 @@ const PayrollOperatorSummary: React.FC = () => {
             return;
         }
         try {
+            // Step 1: 调用 approve 接口改变工资结算状态（pending → approved）
+            await api.post(`/finance/payroll-settlement/${summary.operatorId || operatorName}/approve`, {});
+            
+            // Step 2: 创建待付款单据
             await api.post('/finance/wage-payment/create-payable', {
                 bizType: 'PAYROLL_SETTLEMENT',
                 bizId: summary.operatorId || operatorName,
@@ -595,6 +609,10 @@ const PayrollOperatorSummary: React.FC = () => {
             for (const key of selectedRowKeys) {
                 const summary = summaryRows.find((r: any) => r.operatorName === key);
                 if (!summary) continue;
+                // Step 1: 调用 approve 接口改变工资结算状态（pending → approved）
+                await api.post(`/finance/payroll-settlement/${summary.operatorId || String(key)}/approve`, {});
+                
+                // Step 2: 创建待付款单据
                 await api.post('/finance/wage-payment/create-payable', {
                     bizType: 'PAYROLL_SETTLEMENT',
                     bizId: summary.operatorId || String(key),
@@ -898,7 +916,6 @@ function ScoreCell({ value }: { value: number }) {
         </span>
     );
 }
-
 function WorkerEfficiencyTab({
     list,
     loading,

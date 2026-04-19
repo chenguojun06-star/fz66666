@@ -90,6 +90,21 @@ public class PayrollSettlementController {
     }
 
     /**
+     * 审核通过工资结算单
+     * 仅允许审核 pending 状态的结算单
+     * 审核通过后将状态改为 approved，并绑定确认人信息
+     *
+     * @param id     结算单ID（路径参数）
+     * @param params 请求体，包含 remark（审核备注）
+     */
+    @PostMapping("/{id}/approve")
+    public Result<Void> approve(@PathVariable String id, @RequestBody(required = false) Map<String, Object> params) {
+        String remark = params == null ? null : (String) params.get("remark");
+        payrollSettlementOrchestrator.approve(id, remark);
+        return Result.success(null);
+    }
+
+    /**
      * 取消工资结算单
      * 只允许取消 pending 状态的结算单，取消后释放已关联的扫码记录
      *
