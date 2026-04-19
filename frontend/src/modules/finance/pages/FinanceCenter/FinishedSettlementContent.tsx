@@ -384,11 +384,12 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
     },
   ];
 
-  // 加载数据
+  // 加载数据（强制 factoryType=EXTERNAL，外部结算页禁止显示内部生产订单）
   const loadData = async (params: PageParams = pageParams) => {
     setLoading(true);
     try {
-      const response = await api.get('/finance/finished-settlement/list', { params });
+      const finalParams = { ...params, factoryType: 'EXTERNAL' };
+      const response = await api.get('/finance/finished-settlement/list', { params: finalParams });
       setData(response.data?.records || []);
       setTotal(response.data?.total || 0);
       if (showSmartErrorNotice) setSmartError(null);

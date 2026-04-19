@@ -137,7 +137,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
 
       const res = await api.get<{ code: number; data: FactorySummaryRow[] }>(
         '/finance/finished-settlement/factory-summary',
-        { params }
+        { params: { ...params, factoryType: 'EXTERNAL' } }
       );
       const list = res?.data ?? res ?? [];
       setData(Array.isArray(list) ? list : []);
