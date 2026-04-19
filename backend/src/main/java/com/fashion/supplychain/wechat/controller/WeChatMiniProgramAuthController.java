@@ -2,7 +2,7 @@ package com.fashion.supplychain.wechat.controller;
 
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.wechat.orchestration.WeChatMiniProgramAuthOrchestrator;
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

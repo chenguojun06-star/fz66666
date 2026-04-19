@@ -66,12 +66,13 @@ export function buildPrintHtml({ headerInfo, printerInfo, printDate, styleNo, bo
 
           /* 基础样式 */
           body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            font-family: 'PingFang SC', 'Microsoft YaHei', '微软雅黑', 'Heiti SC', 'Hiragino Sans GB', 'Helvetica Neue', Helvetica, Arial, sans-serif;
             font-size: 12px;
             line-height: 1.6;
             color: #333;
             padding: 20px;
             background: #fff;
+            -webkit-font-smoothing: antialiased;
           }
 
           /* 打印内容样式 */

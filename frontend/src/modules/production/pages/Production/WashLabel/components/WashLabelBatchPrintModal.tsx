@@ -6,7 +6,7 @@
  *   洗水唛 — 宽/高自由输入（mm），上下各一条虚线分割，内容距虚线 1.5cm
  *   U码标签 — 固定两档 4×7cm / 5×10cm
  */
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { Alert, Button, Divider, InputNumber, Radio, Space, Tag } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -160,7 +160,6 @@ const WashLabelBatchPrintModal: React.FC<Props> = ({ open, onClose, items, loadi
   /** U码固定规格 */
   const [uCodeSize, setUCodeSize] = useState<UCodeSize>('40x70');
   const [labelType, setLabelType] = useState<LabelType>('wash');
-  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const handlePrint = async () => {
     if (!items.length) return;
@@ -171,7 +170,7 @@ const WashLabelBatchPrintModal: React.FC<Props> = ({ open, onClose, items, loadi
     const sharedCss = `
 @page { size: ${w}mm ${h}mm; margin: 0; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'PingFang SC','Heiti SC',Arial,sans-serif; color: #000; background: #fff; }
+body { font-family: 'Microsoft YaHei', '微软雅黑', 'PingFang SC', 'Heiti SC', Arial, sans-serif; color: #000; background: #fff; }
 /* ── 标签外框 ── */
 .label-page {
   position: relative;
@@ -227,11 +226,20 @@ body { font-family: 'PingFang SC','Heiti SC',Arial,sans-serif; color: #000; back
 
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${sharedCss}</style></head><body>${allPages.join('\n')}</body></html>`;
 
-    if (!iframeRef.current) return;
-    iframeRef.current.srcdoc = html;
-    iframeRef.current.onload = () => {
-      setTimeout(() => iframeRef.current?.contentWindow?.print(), 400);
-    };
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;width:0;height:0;border:none;left:-9999px;top:-9999px';
+    document.body.appendChild(iframe);
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (iframeDoc) {
+      iframeDoc.open('text/html', 'replace');
+      iframeDoc.write(html);
+      iframeDoc.close();
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 1000);
+      }, 500);
+    }
   };
 
   const missingDataCount = labelType === 'wash'
@@ -344,7 +352,6 @@ body { font-family: 'PingFang SC','Heiti SC',Arial,sans-serif; color: #000; back
           </div>
         </div>
       </Space>
-      <iframe ref={iframeRef} style={{ position: 'fixed', left: -9999, top: -9999, width: 210, height: 297, border: 'none' }} title="wash-label-print" />
     </ResizableModal>
   );
 };

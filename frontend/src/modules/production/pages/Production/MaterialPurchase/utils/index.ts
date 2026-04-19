@@ -303,7 +303,7 @@ export const buildPurchaseSheetHtml = (
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>${escapeHtml(purchaseNo || orderNo || '采购单')}</title>
         <style>
-          body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,'PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;margin:20px;color:#111}
+          body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial,sans-serif;margin:20px;color:#111}
           .top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
           .title{font-size:18px;font-weight:700}
           .meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 16px;margin-top:10px}

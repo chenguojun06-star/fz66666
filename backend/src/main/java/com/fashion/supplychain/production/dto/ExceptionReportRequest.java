@@ -1,7 +1,7 @@
 package com.fashion.supplychain.production.dto;
 
 import lombok.Data;
-import javax.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotBlank;
 
 @Data
 public class ExceptionReportRequest {

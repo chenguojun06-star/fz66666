@@ -384,7 +384,7 @@ async function printWashLabels(
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
 @page { size: ${w}mm ${h}mm; margin: 0; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'PingFang SC','Heiti SC',Arial,sans-serif; color: #000; background: #fff; }
+body { font-family: 'Microsoft YaHei', '微软雅黑', 'PingFang SC', 'Heiti SC', Arial, sans-serif; color: #000; background: #fff; -webkit-font-smoothing: antialiased; }
 .page { width: ${w}mm; min-height: ${h}mm; page-break-after: always; }
 .page:last-child { page-break-after: auto; }
 .label { position: relative; width: ${w}mm; height: ${h}mm; padding: 0 2.2mm; color: #000; }
@@ -407,19 +407,19 @@ body { font-family: 'PingFang SC','Heiti SC',Arial,sans-serif; color: #000; back
 </style></head><body>${pages}</body></html>`;
 
   const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:210mm;height:297mm;border:none;';
-  iframe.srcdoc = html;
+  iframe.style.cssText = 'position:fixed;width:0;height:0;border:none;left:-9999px;top:-9999px';
   document.body.appendChild(iframe);
-  await new Promise<void>(resolve => {
-    iframe.onload = () => {
-      setTimeout(() => {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-        setTimeout(() => { try { document.body.removeChild(iframe); } catch { /**/ } }, 1000);
-        resolve();
-      }, 200);
-    };
-  });
+  const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (iframeDoc) {
+    iframeDoc.open('text/html', 'replace');
+    iframeDoc.write(html);
+    iframeDoc.close();
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 1000);
+    }, 500);
+  }
 }
 
 // ─── U编码打印函数（横版：左QR右文字，实线边框，均匀行距）────────────────────────
@@ -490,7 +490,7 @@ async function printUCodeLabels(
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
 @page { size: ${w}mm ${h}mm; margin: 0; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'PingFang SC','Heiti SC',Arial,sans-serif; color: #000; background: #fff; }
+body { font-family: 'Microsoft YaHei', '微软雅黑', 'PingFang SC', 'Heiti SC', Arial, sans-serif; color: #000; background: #fff; -webkit-font-smoothing: antialiased; }
 .page { width: ${w}mm; height: ${h}mm; display: flex; align-items: center; justify-content: center; page-break-after: always; }
 .page:last-child { page-break-after: auto; }
 .label { width: calc(${w}mm - 3mm); height: calc(${h}mm - 3mm); border: 0.8pt solid #333; display: flex; flex-direction: row; align-items: stretch; padding: 1.5mm 2.5mm 1.5mm 2.5mm; gap: 1.5mm; color: #000; }
@@ -507,30 +507,19 @@ body { font-family: 'PingFang SC','Heiti SC',Arial,sans-serif; color: #000; back
 </style></head><body>${labelsHtml}</body></html>`;
 
   const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:210mm;height:297mm;border:none;';
-  iframe.srcdoc = html;
+  iframe.style.cssText = 'position:fixed;width:0;height:0;border:none;left:-9999px;top:-9999px';
   document.body.appendChild(iframe);
-  await new Promise<void>(resolve => {
-    iframe.onload = () => {
-      const doc = iframe.contentDocument;
-      if (!doc) { resolve(); return; }
-      const imgs = doc.querySelectorAll('img');
-      const doPrint = () => {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-        setTimeout(() => { try { document.body.removeChild(iframe); } catch { /**/ } }, 1000);
-        resolve();
-      };
-      if (imgs.length === 0) { setTimeout(doPrint, 100); return; }
-      let loaded = 0;
-      const onDone = () => { loaded++; if (loaded >= imgs.length) doPrint(); };
-      imgs.forEach(img => {
-        if ((img as HTMLImageElement).complete) onDone();
-        else { img.onload = onDone; img.onerror = onDone; }
-      });
-      setTimeout(() => { if (loaded < imgs.length) doPrint(); }, 5000);
-    };
-  });
+  const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (iframeDoc) {
+    iframeDoc.open('text/html', 'replace');
+    iframeDoc.write(html);
+    iframeDoc.close();
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 1000);
+    }, 500);
+  }
 }
 
 // ─── 主组件 ──────────────────────────────────────────────────────────────────

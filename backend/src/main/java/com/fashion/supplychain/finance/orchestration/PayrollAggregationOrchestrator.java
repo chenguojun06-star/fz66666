@@ -1,7 +1,6 @@
 package com.fashion.supplychain.finance.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.fashion.supplychain.common.DataPermissionHelper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
@@ -99,9 +98,6 @@ public class PayrollAggregationOrchestrator {
         // 根本修复在 ProductionOrderScanRecordDomainService.isSystemStage()，此处为双保险。
         qw.notIn("progress_stage", "下单", "采购", "物料采购", "面辅料采购",
                 "备料", "到料", "订单创建", "创建订单", "开单", "制单");
-
-        // 应用数据权限过滤（根据角色：all=全部, team=团队, own=仅自己）
-        DataPermissionHelper.applyOperatorFilter(qw, "operator_id", "operator_name");
 
         // 查询扫码记录（安全上限，防止无限制全表扫描）
         qw.last("LIMIT 50000");

@@ -1516,6 +1516,29 @@ body {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
+
+  /* ===== 款式打印容器（StylePrintModal） ===== */
+  body:has(#style-print-temp) > *:not(#style-print-temp) {
+    display: none !important;
+  }
+
+  #style-print-temp {
+    display: block !important;
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    background: #fff !important;
+    z-index: 99999 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  #style-print-temp * {
+    color: #000 !important;
+    background: transparent !important;
+  }
 }
 
 /* === 语义化颜色变量（2026-02-03 添加） === */

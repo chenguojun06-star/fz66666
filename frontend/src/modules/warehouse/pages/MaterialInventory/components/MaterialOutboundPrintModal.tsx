@@ -81,7 +81,7 @@ const buildPrintHtml = (data: MaterialOutboundPrintPayload) => {
         <meta charset="UTF-8" />
         <title>面辅料出库单</title>
         <style>
-          body { font-family: "PingFang SC", "Microsoft YaHei", sans-serif; color: #111; padding: 24px; }
+          body { font-family: 'Microsoft YaHei', '微软雅黑', 'PingFang SC', 'Heiti SC', Arial, sans-serif; color: #111; padding: 24px; }
           .page { border: 1px solid #d9d9d9; padding: 24px; }
           .title { text-align: center; font-size: 24px; font-weight: 700; margin-bottom: 20px; }
           .meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px 20px; margin-bottom: 20px; }
@@ -152,27 +152,20 @@ const buildPrintHtml = (data: MaterialOutboundPrintPayload) => {
   `;
 };
 
-const printWithIframe = (html: string) => {
+const printWithWindow = (html: string) => {
   const iframe = document.createElement('iframe');
-  iframe.style.position = 'fixed';
-  iframe.style.left = '-9999px';
-  iframe.style.top = '-9999px';
-  iframe.style.width = '210mm';
-  iframe.style.height = '297mm';
-  iframe.style.border = '0';
-  iframe.srcdoc = html;
+  iframe.style.cssText = 'position:fixed;width:0;height:0;border:none;left:-9999px;top:-9999px';
   document.body.appendChild(iframe);
-  iframe.onload = () => {
-    const frameWindow = iframe.contentWindow;
-    if (!frameWindow) return;
-    window.setTimeout(() => {
-      frameWindow.focus();
-      frameWindow.print();
-      window.setTimeout(() => {
-        if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
-      }, 300);
-    }, 250);
-  };
+  const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (!iframeDoc) return;
+  iframeDoc.open('text/html', 'replace');
+  iframeDoc.write(html);
+  iframeDoc.close();
+  setTimeout(() => {
+    iframe.contentWindow?.focus();
+    iframe.contentWindow?.print();
+    setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 1000);
+  }, 500);
 };
 
 const MaterialOutboundPrintModal: React.FC<MaterialOutboundPrintModalProps> = ({
@@ -199,7 +192,7 @@ const MaterialOutboundPrintModal: React.FC<MaterialOutboundPrintModalProps> = ({
           disabled={!data}
           onClick={() => {
             if (!data) return;
-            printWithIframe(buildPrintHtml(data));
+            printWithWindow(buildPrintHtml(data));
           }}
         >
           直接打印

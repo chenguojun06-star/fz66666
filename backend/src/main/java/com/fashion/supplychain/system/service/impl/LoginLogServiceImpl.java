@@ -27,7 +27,7 @@ public class LoginLogServiceImpl extends ServiceImpl<LoginLogMapper, LoginLog> i
 
     private static final Logger LOG = LoggerFactory.getLogger(LoginLogServiceImpl.class);
 
-    @javax.annotation.Resource
+    @jakarta.annotation.Resource
     private final OperationLogService operationLogService;
 
     @Override

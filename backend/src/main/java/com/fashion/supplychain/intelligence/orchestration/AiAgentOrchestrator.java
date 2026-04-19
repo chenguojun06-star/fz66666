@@ -134,15 +134,17 @@ public class AiAgentOrchestrator {
         int currentIter = 0;
         long totalTokens = 0; // Token 预算追踪
         List<String> stuckSignatures = new ArrayList<>(); // Stuck 检测：跨轮次工具调用签名
-        Map<String, AiAgentToolExecHelper.ToolExecRecord> toolResultCache = new HashMap<>(); // 对话内工具结果缓存
+        Map<String, AiAgentToolExecHelper.ToolExecRecord> toolResultCache = new ConcurrentHashMap<>(); // 对话内工具结果缓存（线程安全：并发工具调用）
         List<AiAgentToolExecHelper.ToolExecRecord> allExecRecords = new ArrayList<>(); // 全轮次工具执行记录（用于生成后续建议）
 
         while (currentIter < maxIterations) {
             currentIter++;
             log.info("[AiAgent] 开始第 {} 轮思考...", currentIter);
 
-            // 进度感知：让 LLM 知道当前轮次，避免无效循环
+            // 进度感知：让 LLM 知道当前轮次，避免无效循环（每次替换旧提示，不叠加）
             if (currentIter > 2) {
+                messages.removeIf(m -> "system".equals(m.getRole())
+                    && m.getContent() != null && m.getContent().startsWith("[进度提示]"));
                 messages.add(AiMessage.system(String.format(
                     "[进度提示] 当前第%d/%d轮。如已有足够信息请直接给出最终回答，避免重复调用工具。", currentIter, maxIterations)));
             }
@@ -233,7 +235,8 @@ public class AiAgentOrchestrator {
         if (stateSessionId != null) { try { agentStateStore.failSession(stateSessionId, "对话轮数超过限制"); } catch (Exception e) { log.debug("[AiAgent] 状态失败跳过: {}", e.getMessage()); } }
         return Result.fail("对话轮数超过限制 (" + maxIterations + ")，可能陷入了死循环。");
         } finally { // F31: 强制清理 ThreadLocal
-            lastCommandIdHolder.remove();
+            // commandId 由 consumeLastCommandId() 负责清理（调用者消费后清理）；
+            // 若异常路径未调用 consume，下次同线程请求 set 时自动覆盖，无内存泄漏。
             lastToolRecordsHolder.remove();
         }
     }
@@ -303,13 +306,15 @@ public class AiAgentOrchestrator {
             int maxIterations = promptHelper.estimateMaxIterations(userMessage);
             long totalTokens = 0; // Token 预算追踪
             List<String> stuckSignatures = new ArrayList<>(); // Stuck 检测
-            Map<String, AiAgentToolExecHelper.ToolExecRecord> toolResultCache = new HashMap<>(); // 对话内工具结果缓存
+            Map<String, AiAgentToolExecHelper.ToolExecRecord> toolResultCache = new ConcurrentHashMap<>(); // 对话内工具结果缓存（线程安全：并发工具调用）
             List<AiAgentToolExecHelper.ToolExecRecord> allExecRecords = new ArrayList<>(); // 全轮次工具执行记录
             for (int i = 1; i <= maxIterations; i++) {
                 emitSse(emitter, "thinking", Map.of("iteration", i, "message", "正在思考第 " + i + " 轮…"));
 
-                // 进度感知：让 LLM 知道当前轮次，避免无效循环
+                // 进度感知：让 LLM 知道当前轮次，避免无效循环（每次替换旧提示，不叠加）
                 if (i > 2) {
+                    messages.removeIf(m -> "system".equals(m.getRole())
+                        && m.getContent() != null && m.getContent().startsWith("[进度提示]"));
                     messages.add(AiMessage.system(String.format(
                         "[进度提示] 当前第%d/%d轮。如已有足够信息请直接给出最终回答，避免重复调用工具。", i, maxIterations)));
                 }
@@ -368,7 +373,7 @@ public class AiAgentOrchestrator {
                         xiaoyunInsightCardOrchestrator.collectFromToolResult(rec.toolName, rec.rawResult, xiaoyunInsightCards);
                         emitSse(emitter, "tool_result", Map.of(
                                 "tool", rec.toolName,
-                                "success", !rec.rawResult.contains("\"error\""),
+                                "success", !rec.rawResult.startsWith("{\"error\""),
                                 "summary", AiAgentEvidenceHelper.truncateOneLine(rec.evidence, 200)));
                         messages.add(AiMessage.tool(rec.evidence, rec.toolCallId, rec.toolName));
                     }

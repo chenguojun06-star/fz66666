@@ -197,7 +197,7 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
             box-sizing: border-box;
           }
           html, body {
-            font-family: "Microsoft YaHei", Arial, sans-serif;
+            font-family: 'Microsoft YaHei', '微软雅黑', 'PingFang SC', 'Heiti SC', Arial, sans-serif;
             font-size: 12px;
             color: #000;
             background: white;
@@ -358,30 +358,20 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
       </html>
     `;
 
-    // 使用iframe打印
     const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:210mm;height:297mm;border:none;';
-    iframe.srcdoc = printHtml;
+    iframe.style.cssText = 'position:fixed;width:0;height:0;border:none;left:-9999px;top:-9999px';
     document.body.appendChild(iframe);
-
-    iframe.onload = () => {
-      const doc = iframe.contentDocument;
-      if (!doc) return;
-      const images = doc.querySelectorAll('img');
-      const doPrint = () => {
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (iframeDoc) {
+      iframeDoc.open('text/html', 'replace');
+      iframeDoc.write(printHtml);
+      iframeDoc.close();
+      setTimeout(() => {
         iframe.contentWindow?.focus();
         iframe.contentWindow?.print();
         setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 1000);
-      };
-      if (images.length === 0) { setTimeout(doPrint, 100); return; }
-      let loaded = 0;
-      const onDone = () => { loaded++; if (loaded >= images.length) doPrint(); };
-      images.forEach((img) => {
-        if (img.complete) onDone();
-        else { img.onload = onDone; img.onerror = onDone; }
-      });
-      setTimeout(() => { if (loaded < images.length) doPrint(); }, 5000);
-    };
+      }, 500);
+    }
 
     onCancel();
   };

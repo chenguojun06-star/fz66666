@@ -150,7 +150,7 @@ export default function WashCareLabelModal({ open, onCancel, order }: Props) {
 <html><head><meta charset="UTF-8"><title>洗水唛</title><style>
 @page{size:${w}mm ${h}mm;margin:0}
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{width:${w}mm;min-height:${h}mm;font-family:Arial,"Microsoft YaHei",sans-serif}
+html,body{width:${w}mm;min-height:${h}mm;font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial,sans-serif}
 .lbl{position:relative;width:${w}mm;height:${h}mm;padding:0 2.2mm}
 .top-block{position:absolute;left:2.2mm;right:2.2mm;top:15mm;text-align:center}
 .style-no{font-size:${w <= 30 ? 5.8 : 6.2}pt;font-weight:bold;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -184,17 +184,20 @@ html,body{width:${w}mm;min-height:${h}mm;font-family:Arial,"Microsoft YaHei",san
 </div></body></html>`;
 
     const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:210mm;height:297mm;border:none;';
-    iframe.srcdoc = html;
+    iframe.style.cssText = 'position:fixed;width:0;height:0;border:none;left:-9999px;top:-9999px';
     document.body.appendChild(iframe);
-    iframe.onload = () => {
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (iframeDoc) {
+      iframeDoc.open('text/html', 'replace');
+      iframeDoc.write(html);
+      iframeDoc.close();
       setTimeout(() => {
         iframe.contentWindow?.focus();
         iframe.contentWindow?.print();
-        setTimeout(() => { try { document.body.removeChild(iframe); } catch { /**/ } }, 1000);
-        setPrinting(false);
-      }, 200);
-    };
+        setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 1000);
+      }, 500);
+    }
+    setPrinting(false);
   };
 
   return (

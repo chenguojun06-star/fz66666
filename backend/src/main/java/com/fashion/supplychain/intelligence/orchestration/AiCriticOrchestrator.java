@@ -35,7 +35,7 @@ public class AiCriticOrchestrator {
         try {
             log.info("[AiCritic] 进行多智能体反思审查...");
             // 使用临时 sessionId 发起反思请求，避免污染原对话上下文
-            IntelligenceInferenceResult result = inferenceOrchestrator.chat("critic_review_" + System.currentTimeMillis(), systemPrompt, userPrompt);
+            IntelligenceInferenceResult result = inferenceOrchestrator.chat("critic_review", systemPrompt, userPrompt);
             if (result != null && result.isSuccess() && result.getContent() != null && !result.getContent().isBlank()) {
                 String revised = result.getContent().trim();
                 // 简单清理可能产生的前缀

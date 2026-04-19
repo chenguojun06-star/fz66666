@@ -18,7 +18,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -40,10 +40,10 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
 
 import java.io.IOException;
 import java.net.URLDecoder;
@@ -56,7 +56,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Configuration
 @EnableWebSecurity
-@EnableGlobalMethodSecurity(prePostEnabled = true)
+@EnableMethodSecurity
 @Slf4j
 public class SecurityConfig implements WebMvcConfigurer {
 
@@ -90,123 +90,119 @@ public class SecurityConfig implements WebMvcConfigurer {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // 安全响应头
                 .headers(headers -> headers
-                        .frameOptions().deny()                              // 防止 Clickjacking
-                        .contentTypeOptions()                               // X-Content-Type-Options: nosniff
-                        .and()
-                        .xssProtection().block(true)                        // X-XSS-Protection: 1; mode=block
-                        .and()
-                        .httpStrictTransportSecurity()
+                        .frameOptions(frame -> frame.deny())                // 防止 Clickjacking
+                        .contentTypeOptions(org.springframework.security.config.Customizer.withDefaults()) // X-Content-Type-Options: nosniff
+                        .xssProtection(xss -> xss.headerValue(org.springframework.security.web.header.writers.XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK)) // X-XSS-Protection: 1; mode=block
+                        .httpStrictTransportSecurity(hsts -> hsts
                             .includeSubDomains(true)
-                            .maxAgeInSeconds(31536000)                      // HSTS: 1年
-                        .and()
-                        .referrerPolicy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN)
-                        .and()
+                            .maxAgeInSeconds(31536000))                     // HSTS: 1年
+                        .referrerPolicy(referrer -> referrer.policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
                         .permissionsPolicy(permissions -> permissions
                                 .policy("camera=(), microphone=(), geolocation=()"))  // 禁止不需要的浏览器API
                 )
                 .authorizeHttpRequests(authz -> authz
-                        .antMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .antMatchers("/ws/**").permitAll()  // WebSocket握手是HTTP升级请求，自行鉴权(userId query param)
-                        .antMatchers("/error").permitAll()  // Spring Boot 错误转发端点，需放行否则自身产生 403 噪音日志
-                        .antMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").authenticated()
-                        .antMatchers("/api/system/tenant/apply").permitAll()
-                        .antMatchers("/api/system/tenant/public-list").permitAll()
-                        .antMatchers("/api/system/user/login").permitAll()
-                        .antMatchers("/api/auth/login").permitAll()
-                        .antMatchers("/api/auth/register").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/ws/**").permitAll()  // WebSocket握手是HTTP升级请求，自行鉴权(userId query param)
+                        .requestMatchers("/error").permitAll()  // Spring Boot 错误转发端点，需放行否则自身产生 403 噪音日志
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").authenticated()
+                        .requestMatchers("/api/system/tenant/apply").permitAll()
+                        .requestMatchers("/api/system/tenant/public-list").permitAll()
+                        .requestMatchers("/api/system/user/login").permitAll()
+                        .requestMatchers("/api/auth/login").permitAll()
+                        .requestMatchers("/api/auth/register").permitAll()
                         // 文件下载：旧公共下载保持 permitAll（无租户信息），租户隔离文件要求认证
                         // 前端通过 getAuthedFileUrl() 在 URL 追加 ?token=xxx，TokenAuthFilter 会解析
-                        .antMatchers("/api/common/download/**").authenticated()
-                        .antMatchers("/api/file/tenant-download/**").authenticated()
-                        .antMatchers("/openapi/**").permitAll()  // 客户开放API（使用appKey+签名鉴权）
-                        .antMatchers("/api/webhook/**").permitAll()  // 第三方回调（支付宝/微信支付/顺丰/申通），通过签名验证防伪造，不需要JWT
-                        .antMatchers("/api/public/**").permitAll()   // 客户分享页等无需登录的公开查询接口
-                        .antMatchers(HttpMethod.GET, "/api/production/warehousing/list").authenticated()
-                        .antMatchers("/api/system/user/me*", "/api/system/user/me/**").authenticated()
-                        .antMatchers("/api/system/user/permissions*", "/api/system/user/permissions/**").authenticated()
-                        .antMatchers("/api/system/user/online-count").authenticated()
-                        .antMatchers("/api/system/user/pending").hasAnyAuthority("ROLE_ADMIN", "ROLE_admin", "ROLE_1", "ROLE_tenant_owner", "ROLE_主管", "ROLE_管理员")
-                        .antMatchers("/api/system/user/*/approve").hasAnyAuthority("ROLE_ADMIN", "ROLE_admin", "ROLE_1", "ROLE_tenant_owner", "ROLE_主管", "ROLE_管理员")
-                        .antMatchers("/api/system/user/*/reject").hasAnyAuthority("ROLE_ADMIN", "ROLE_admin", "ROLE_1", "ROLE_tenant_owner", "ROLE_主管", "ROLE_管理员")
-                        .antMatchers("/api/wechat/mini-program/login").permitAll()
-                        .antMatchers("/api/wechat/h5/jssdk-config").permitAll()
-                        .antMatchers("/api/wechat/h5/oauth-login").permitAll()
-                        .antMatchers("/api/wechat/h5/bind-login").permitAll()
-                        .antMatchers("/api/production/order/by-order-no/**").authenticated()
-                        .antMatchers("/api/production/order/detail/**").authenticated()
-                        .antMatchers("/api/production/cutting-bundle/by-no").authenticated()
-                        .antMatchers("/api/production/cutting/summary").authenticated()
-                        .antMatchers("/api/production/purchase/receive").authenticated()
-                        .antMatchers("/api/production/material/receive").authenticated()
-                        .antMatchers("/api/production/order/node-operations/**").authenticated()
-                        .antMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/actuator/info/**")
+                        .requestMatchers("/api/common/download/**").authenticated()
+                        .requestMatchers("/api/file/tenant-download/**").authenticated()
+                        .requestMatchers("/openapi/**").permitAll()  // 客户开放API（使用appKey+签名鉴权）
+                        .requestMatchers("/api/webhook/**").permitAll()  // 第三方回调（支付宝/微信支付/顺丰/申通），通过签名验证防伪造，不需要JWT
+                        .requestMatchers("/api/public/**").permitAll()   // 客户分享页等无需登录的公开查询接口
+                        .requestMatchers(HttpMethod.GET, "/api/production/warehousing/list").authenticated()
+                        .requestMatchers("/api/system/user/me*", "/api/system/user/me/**").authenticated()
+                        .requestMatchers("/api/system/user/permissions*", "/api/system/user/permissions/**").authenticated()
+                        .requestMatchers("/api/system/user/online-count").authenticated()
+                        .requestMatchers("/api/system/user/pending").hasAnyAuthority("ROLE_ADMIN", "ROLE_admin", "ROLE_1", "ROLE_tenant_owner", "ROLE_主管", "ROLE_管理员")
+                        .requestMatchers("/api/system/user/*/approve").hasAnyAuthority("ROLE_ADMIN", "ROLE_admin", "ROLE_1", "ROLE_tenant_owner", "ROLE_主管", "ROLE_管理员")
+                        .requestMatchers("/api/system/user/*/reject").hasAnyAuthority("ROLE_ADMIN", "ROLE_admin", "ROLE_1", "ROLE_tenant_owner", "ROLE_主管", "ROLE_管理员")
+                        .requestMatchers("/api/wechat/mini-program/login").permitAll()
+                        .requestMatchers("/api/wechat/h5/jssdk-config").permitAll()
+                        .requestMatchers("/api/wechat/h5/oauth-login").permitAll()
+                        .requestMatchers("/api/wechat/h5/bind-login").permitAll()
+                        .requestMatchers("/api/production/order/by-order-no/**").authenticated()
+                        .requestMatchers("/api/production/order/detail/**").authenticated()
+                        .requestMatchers("/api/production/cutting-bundle/by-no").authenticated()
+                        .requestMatchers("/api/production/cutting/summary").authenticated()
+                        .requestMatchers("/api/production/purchase/receive").authenticated()
+                        .requestMatchers("/api/production/material/receive").authenticated()
+                        .requestMatchers("/api/production/order/node-operations/**").authenticated()
+                        .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info", "/actuator/info/**")
                         .permitAll()
-                        .antMatchers("/api/warehouse/dashboard/**").authenticated()
-                        .antMatchers("/actuator/**").hasAnyAuthority(
+                        .requestMatchers("/api/warehouse/dashboard/**").authenticated()
+                        .requestMatchers("/actuator/**").hasAnyAuthority(
                                 "ROLE_ADMIN",
                                 "ROLE_admin",
                                 "ROLE_1",
                                 "ROLE_主管",
                                 "ROLE_管理员")
-                        .antMatchers("/api/system/diag/**").hasAnyAuthority(
+                        .requestMatchers("/api/system/diag/**").hasAnyAuthority(
                                 "ROLE_ADMIN",
                                 "ROLE_admin",
                                 "ROLE_1",
                                 "ROLE_主管",
                                 "ROLE_管理员")
-                        .antMatchers("/api/system/serial/**").authenticated()
-                        .antMatchers("/api/system/tenant/my").authenticated()
-                        .antMatchers("/api/system/tenant/sub/**").authenticated()
-                        .antMatchers("/api/system/tenant/role-templates").authenticated()
-                        .antMatchers("/api/system/tenant/roles/**").authenticated()
-                        .antMatchers("/api/system/tenant/registration/**").permitAll()
-                        .antMatchers("/api/system/tenant/registrations/**").authenticated()
+                        .requestMatchers("/api/system/serial/**").authenticated()
+                        .requestMatchers("/api/system/tenant/my").authenticated()
+                        .requestMatchers("/api/system/tenant/sub/**").authenticated()
+                        .requestMatchers("/api/system/tenant/role-templates").authenticated()
+                        .requestMatchers("/api/system/tenant/roles/**").authenticated()
+                        .requestMatchers("/api/system/tenant/registration/**").permitAll()
+                        .requestMatchers("/api/system/tenant/registrations/**").authenticated()
 
                         // ── 系统模块只读端点：所有登录用户可访问（必须放在 /api/system/** 兜底之前）──
                         // 用户列表：工厂账号可查自己工厂成员（Orchestrator 层自动按 factoryId 过滤，防越权）
-                        .antMatchers(HttpMethod.GET, "/api/system/user/list").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/system/user/list").authenticated()
                         // 成员状态切换：工厂账号可启停自己工厂成员（Orchestrator 层校验 factoryId 归属，防越权）
-                        .antMatchers(HttpMethod.PUT, "/api/system/user/status").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/system/user/status").authenticated()
                         // 组织架构：查看部门树/成员（创建/修改/删除由兜底规则限定为管理员）
-                        .antMatchers(HttpMethod.GET, "/api/system/organization/tree").authenticated()
-                        .antMatchers(HttpMethod.GET, "/api/system/organization/departments").authenticated()
-                        .antMatchers(HttpMethod.GET, "/api/system/organization/members").authenticated()
-                        .antMatchers(HttpMethod.GET, "/api/system/organization/assignable-users").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/system/organization/tree").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/system/organization/departments").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/system/organization/members").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/system/organization/assignable-users").authenticated()
                         // 工厂：查看列表/详情（创建/修改/删除由兜底规则限定为管理员）
-                        .antMatchers(HttpMethod.GET, "/api/system/factory/list").authenticated()
-                        .antMatchers(HttpMethod.GET, "/api/system/factory/*").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/system/factory/list").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/system/factory/*").authenticated()
                         // 应用商店：浏览、我的应用、试用（admin 端点有 method 级 @PreAuthorize 二次拦截）
-                        .antMatchers("/api/system/app-store/list").authenticated()
-                        .antMatchers("/api/system/app-store/my-apps").authenticated()
-                        .antMatchers("/api/system/app-store/my-subscriptions").authenticated()
-                        .antMatchers("/api/system/app-store/start-trial").authenticated()
-                        .antMatchers("/api/system/app-store/create-order").authenticated()
-                        .antMatchers("/api/system/app-store/quick-setup").authenticated()
-                        .antMatchers(HttpMethod.GET, "/api/system/app-store/trial-status/**").authenticated()
-                        .antMatchers(HttpMethod.GET, "/api/system/app-store/*").authenticated()
+                        .requestMatchers("/api/system/app-store/list").authenticated()
+                        .requestMatchers("/api/system/app-store/my-apps").authenticated()
+                        .requestMatchers("/api/system/app-store/my-subscriptions").authenticated()
+                        .requestMatchers("/api/system/app-store/start-trial").authenticated()
+                        .requestMatchers("/api/system/app-store/create-order").authenticated()
+                        .requestMatchers("/api/system/app-store/quick-setup").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/system/app-store/trial-status/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/system/app-store/*").authenticated()
                         // 租户智能配置/功能开关（查看当前租户配置；save/reset 由兜底规则限为管理员）
-                        .antMatchers(HttpMethod.GET, "/api/system/tenant-intelligence-profile/current").authenticated()
-                        .antMatchers(HttpMethod.GET, "/api/system/tenant-smart-feature/list").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/system/tenant-intelligence-profile/current").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/system/tenant-smart-feature/list").authenticated()
                         // 字典查询：工序名/机器类型等词典数据，前端下拉/自动完成组件需要，所有登录用户可读
                         // （写操作 POST/PUT/DELETE 由兜底规则限为管理员）
-                        .antMatchers(HttpMethod.GET, "/api/system/dict/list").authenticated()
-                        .antMatchers(HttpMethod.GET, "/api/system/dict/by-type").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/system/dict/list").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/system/dict/by-type").authenticated()
 
                         // 订单备注：所有登录用户可读写自己租户的订单备注（Orchestrator 层按 tenantId 隔离）
-                        .antMatchers("/api/system/order-remark/**").authenticated()
+                        .requestMatchers("/api/system/order-remark/**").authenticated()
 
                         // ── 管理员兜底：/api/system/tenant/** 和 /api/system/** 其余端点仅管理员可访问 ──
-                        .antMatchers("/api/system/tenant/**").hasAnyAuthority(
+                        .requestMatchers("/api/system/tenant/**").hasAnyAuthority(
                                 "ROLE_admin",
                                 "ROLE_ADMIN",
                                 "ROLE_1",
                                 "ROLE_tenant_owner")
-                        .antMatchers("/api/system/**").hasAnyAuthority(
+                        .requestMatchers("/api/system/**").hasAnyAuthority(
                                 "ROLE_admin",
                                 "ROLE_ADMIN",
                                 "ROLE_1",
                                 "ROLE_tenant_owner")
-                        .antMatchers("/api/**").authenticated()
+                        .requestMatchers("/api/**").authenticated()
                         .anyRequest().denyAll());
 
         // 未认证请求（token 缺失 / 过期）统一返回 401 JSON，前端拦截器据此跳转登录页

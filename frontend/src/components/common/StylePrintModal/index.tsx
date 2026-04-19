@@ -148,15 +148,20 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
 
     const bodyHtml = printContent.innerHTML;
     const htmlContent = buildPrintHtml({ headerInfo, printerInfo, printDate, styleNo, bodyHtml });
+
     const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed'; iframe.style.left = '-9999px'; iframe.style.top = '-9999px';
-    iframe.style.width = '210mm'; iframe.style.height = '297mm'; iframe.style.border = '0';
-    iframe.srcdoc = htmlContent;
+    iframe.style.cssText = 'position:fixed;width:0;height:0;border:none;left:-9999px;top:-9999px';
     document.body.appendChild(iframe);
-    iframe.onload = () => {
-      const win = iframe.contentWindow; if (!win) return;
-      win.focus(); win.print(); setTimeout(() => iframe.remove(), 1000);
-    };
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!iframeDoc) { message.error('无法创建打印容器'); document.body.removeChild(iframe); return; }
+    iframeDoc.open('text/html', 'replace');
+    iframeDoc.write(htmlContent);
+    iframeDoc.close();
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 1000);
+    }, 500);
   };
 
   const isPatternPrint = extraInfo?.isPattern === true;
@@ -224,7 +229,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
 
       const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
 @page{size:${w}mm ${h}mm;margin:0}*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'PingFang SC','Heiti SC',Arial,sans-serif}
+body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial,sans-serif}
 .page{width:${w}mm;height:${h}mm;display:flex;align-items:center;justify-content:center;page-break-after:always}
 .page:last-child{page-break-after:auto}
 .label{width:calc(${w}mm - 3mm);height:calc(${h}mm - 3mm);border:0.8pt solid #333;display:flex;flex-direction:row;align-items:stretch;padding:1.5mm 2.5mm;gap:1.5mm}
@@ -237,24 +242,23 @@ body{font-family:'PingFang SC','Heiti SC',Arial,sans-serif}
 .date-row{color:#777;font-size:${fs - 0.4}pt;margin-top:2mm;padding-top:0.4mm}
 </style></head><body>${labelsHtml}</body></html>`;
 
-      const fr = document.createElement('iframe');
-      fr.style.cssText = `position:fixed;left:-9999px;top:-9999px;width:${w + 20}mm;height:${h + 20}mm;border:none;`;
-      fr.srcdoc = html;
-      document.body.appendChild(fr);
-      await new Promise<void>(resolve => {
-        fr.onload = () => {
-          const doc = fr.contentDocument;
-          if (!doc) { resolve(); return; }
-          const imgs = doc.querySelectorAll('img');
-          const doPrint = () => { fr.contentWindow?.focus(); fr.contentWindow?.print(); setTimeout(() => { try { document.body.removeChild(fr); } catch { /**/ } }, 1000); resolve(); };
-          if (imgs.length === 0) { setTimeout(doPrint, 100); return; }
-          let loaded = 0;
-          const onDone = () => { loaded++; if (loaded >= imgs.length) doPrint(); };
-          imgs.forEach(img => { if ((img as HTMLImageElement).complete) onDone(); else { img.onload = onDone; img.onerror = onDone; } });
-          setTimeout(() => { if (loaded < imgs.length) doPrint(); }, 5000);
-        };
-      });
-      message.success(`已发送 ${totalLabels} 张标签到打印机`);
+      const iframe = document.createElement('iframe');
+      iframe.style.cssText = 'position:fixed;width:0;height:0;border:none;left:-9999px;top:-9999px';
+      document.body.appendChild(iframe);
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (iframeDoc) {
+        iframeDoc.open('text/html', 'replace');
+        iframeDoc.write(html);
+        iframeDoc.close();
+        setTimeout(() => {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+          setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 1000);
+        }, 500);
+        message.success(`已发送 ${totalLabels} 张标签到打印机`);
+      } else {
+        message.error('无法创建打印容器');
+      }
     } catch { message.error('标签打印失败，请重试'); }
     finally { setLabelPrinting(false); }
   }, [labelItems, isPatternPrint, orderId, styleId, styleNo, styleName, orderNo, color, quantity, mode, labelSize, labelCount]);

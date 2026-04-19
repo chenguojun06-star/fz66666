@@ -16,7 +16,6 @@ import type { Dayjs } from 'dayjs';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
-import { useOrganizationFilterOptions } from '@/hooks/useOrganizationFilterOptions';
 import { downloadFile } from '@/utils/fileUrl';
 import { readPageSize } from '@/utils/pageSizeStore';
 
@@ -82,9 +81,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
   const [logModalVisible, setLogModalVisible] = useState(false);
   const [orderLogs, setOrderLogs] = useState<any[]>([]);
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
-  const [selectedFactoryType, setSelectedFactoryType] = useState<'INTERNAL' | 'EXTERNAL' | ''>('EXTERNAL');
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
-  const { factoryTypeOptions } = useOrganizationFilterOptions();
   const [pageParams, setPageParams] = useState<PageParams>({
     page: 1,
     pageSize: readPageSize(20),
@@ -95,10 +92,11 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
     orderNo: (overrides?.orderNo ?? searchOrderNo) || undefined,
     styleNo: (overrides?.styleNo ?? searchStyleNo) || undefined,
     status: (overrides?.status ?? searchStatus) || undefined,
-    factoryType: ((overrides?.factoryType ?? selectedFactoryType) || undefined) as PageParams['factoryType'],
+    // 外部结算页强制只显示 EXTERNAL（外发工厂）订单，禁止用户切换或清空此过滤
+    factoryType: 'EXTERNAL' as PageParams['factoryType'],
     startDate: overrides?.startDate ?? (dateRange?.[0] ? dayjs(dateRange[0]).format('YYYY-MM-DD') : undefined),
     endDate: overrides?.endDate ?? (dateRange?.[1] ? dayjs(dateRange[1]).format('YYYY-MM-DD') : undefined),
-  }), [dateRange, pageParams.pageSize, searchOrderNo, searchStatus, searchStyleNo, selectedFactoryType]);
+  }), [dateRange, pageParams.pageSize, searchOrderNo, searchStatus, searchStyleNo]);
 
   const showSmartErrorNotice = React.useMemo(() => isSmartFeatureEnabled('smart.finance.explain.enabled'), []);
 
@@ -415,7 +413,6 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
     setSearchOrderNo('');
     setSearchStyleNo('');
     setSearchStatus('');
-    setSelectedFactoryType('EXTERNAL');
     setDateRange(null);
     const params: PageParams = { page: 1, pageSize: 20 };
     setPageParams(params);
@@ -596,18 +593,7 @@ const FinishedSettlementContent: React.FC<Props> = ({ auditedOrderNos, onAuditNo
                   { label: '已完成', value: 'completed' },
                 ]}
               />
-              <Select
-                value={selectedFactoryType}
-                onChange={(value) => {
-                  const nextValue = value || '';
-                  setSelectedFactoryType(nextValue);
-                  handleSearch({ factoryType: (nextValue || undefined) as PageParams['factoryType'] });
-                }}
-                placeholder="内外标签"
-                allowClear
-                style={{ minWidth: 110 }}
-                options={factoryTypeOptions}
-              />
+              {/* 外部结算页固定显示外发工厂订单，不提供内外切换入口 */}
           </>
         }
         filterRight={

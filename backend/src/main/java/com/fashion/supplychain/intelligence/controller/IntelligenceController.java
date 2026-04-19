@@ -503,7 +503,7 @@ public class IntelligenceController {
 
     /** AI 顾问问答 — 优先本地规则引擎，无法回答时调用 DeepSeek */
     @PostMapping("/ai-advisor/chat")
-    public Result<AiAdvisorChatResponse> aiAdvisorChat(@RequestBody java.util.Map<String, String> body, javax.servlet.http.HttpServletRequest request) {
+    public Result<AiAdvisorChatResponse> aiAdvisorChat(@RequestBody java.util.Map<String, String> body, jakarta.servlet.http.HttpServletRequest request) {
         String userId = UserContext.userId();
         if (!RateLimitUtil.checkRateLimit(stringRedisTemplate, "rl:ai:chat:" + userId, 30, 1)) {
             return Result.fail("AI对话请求过于频繁，请稍后再试");

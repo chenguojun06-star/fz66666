@@ -46,19 +46,20 @@ spring:
       transaction-isolation: TRANSACTION_READ_COMMITTED
 
   # Redis 缓存配置（分布式锁、缓存、会话）
-  redis:
-    host: ${SPRING_REDIS_HOST:127.0.0.1}
-    port: ${SPRING_REDIS_PORT:6379}
-    password: ${SPRING_REDIS_PASSWORD:}
-    database: ${SPRING_REDIS_DATABASE:0}
-    timeout: 5000ms # 优化：5秒超时（原3秒）
-    lettuce:
-      pool:
-        max-active: ${REDIS_POOL_MAX_ACTIVE:32} # 优化：增加最大连接数（原16）
-        max-idle: ${REDIS_POOL_MAX_IDLE:16} # 优化：增加空闲连接（原8）
-        min-idle: ${REDIS_POOL_MIN_IDLE:4}
-        max-wait: 5000ms # 优化：增加等待时间（原3000ms）
-      shutdown-timeout: 200ms
+  data:
+    redis:
+      host: ${SPRING_REDIS_HOST:127.0.0.1}
+      port: ${SPRING_REDIS_PORT:6379}
+      password: ${SPRING_REDIS_PASSWORD:}
+      database: ${SPRING_REDIS_DATABASE:0}
+      timeout: 5000ms # 优化：5秒超时（原3秒）
+      lettuce:
+        pool:
+          max-active: ${REDIS_POOL_MAX_ACTIVE:32} # 优化：增加最大连接数（原16）
+          max-idle: ${REDIS_POOL_MAX_IDLE:16} # 优化：增加空闲连接（原8）
+          min-idle: ${REDIS_POOL_MIN_IDLE:4}
+          max-wait: 5000ms # 优化：增加等待时间（原3000ms）
+        shutdown-timeout: 200ms
 
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
@@ -131,10 +132,11 @@ management:
       show-components: when-authorized
     metrics:
       enabled: true
-  metrics:
+  prometheus:
+    metrics:
       export:
-        prometheus:
-          enabled: true
+        enabled: true
+  metrics:
       distribution:
         percentiles-histogram:
           http.server.requests: true

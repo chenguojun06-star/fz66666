@@ -659,11 +659,19 @@ export function useMaterialInventoryData() {
         </div>`).join('')}
       </div>
     </body></html>`;
-    const w = window.open('', '_blank', 'width=900,height=700');
-    if (w) {
-      w.document.write(html);
-      w.document.close();
-      setTimeout(() => { w.focus(); w.print(); w.addEventListener('afterprint', () => w.close()); }, 600);
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:fixed;width:0;height:0;border:none;left:-9999px;top:-9999px';
+    document.body.appendChild(iframe);
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (iframeDoc) {
+      iframeDoc.open('text/html', 'replace');
+      iframeDoc.write(html);
+      iframeDoc.close();
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 1000);
+      }, 600);
     }
   };
 

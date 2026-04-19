@@ -123,7 +123,7 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
             padding: 3mm;
             display: flex;
             gap: 3mm;
-            font-family: Arial, "Microsoft YaHei", sans-serif;
+            font-family: 'Microsoft YaHei', '微软雅黑', 'PingFang SC', 'Heiti SC', Arial, sans-serif;
           }
           .qr { flex: 0 0 auto; display: flex; align-items: center; }
           .qr img { display: block; max-width: ${labelH * 0.6}mm; max-height: ${labelH * 0.7}mm; }
@@ -153,30 +153,19 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
     `;
 
     const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:210mm;height:297mm;border:none;';
-    iframe.srcdoc = printHtml;
+    iframe.style.cssText = 'position:fixed;width:0;height:0;border:none;left:-9999px;top:-9999px';
     document.body.appendChild(iframe);
-
-    iframe.onload = () => {
-      const doc = iframe.contentDocument;
-      if (!doc) return;
-      const imgs = doc.querySelectorAll('img');
-      const waitForImages = () => new Promise<void>((resolve) => {
-        if (imgs.length === 0) { resolve(); return; }
-        let loaded = 0;
-        const onLoad = () => { loaded++; if (loaded >= imgs.length) resolve(); };
-        imgs.forEach((img) => {
-          if ((img as HTMLImageElement).complete) { onLoad(); }
-          else { img.addEventListener('load', onLoad); img.addEventListener('error', onLoad); }
-        });
-        setTimeout(resolve, 5000);
-      });
-      waitForImages().then(() => {
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (iframeDoc) {
+      iframeDoc.open('text/html', 'replace');
+      iframeDoc.write(printHtml);
+      iframeDoc.close();
+      setTimeout(() => {
         iframe.contentWindow?.focus();
         iframe.contentWindow?.print();
         setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 1000);
-      });
-    };
+      }, 500);
+    }
 
     setPrintPreviewOpen(false);
   };

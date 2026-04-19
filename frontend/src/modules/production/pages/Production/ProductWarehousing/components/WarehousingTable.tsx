@@ -28,9 +28,21 @@ async function printWarehousingQr(warehousingNo: string, orderNo?: string) {
     <img src="${qrDataUrl}" width="200" height="200" />
     <div class="no">${warehousingNo}</div>
     ${orderNo ? `<div class="order">订单号：${orderNo}</div>` : ''}
-  </div><script>window.onload=()=>{ window.print(); window.close(); }</script></body></html>`;
-  const win = window.open('', '_blank', 'width=400,height=400');
-  if (win) { win.document.write(html); win.document.close(); }
+  </div></body></html>`;
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;width:0;height:0;border:none;left:-9999px;top:-9999px';
+  document.body.appendChild(iframe);
+  const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (iframeDoc) {
+    iframeDoc.open('text/html', 'replace');
+    iframeDoc.write(html);
+    iframeDoc.close();
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 1000);
+    }, 500);
+  }
 }
 import { StyleCoverThumb } from '@/components/StyleAssets';
 import { formatDateTime } from '@/utils/datetime';
