@@ -11,6 +11,7 @@ import { Alert, Button, Divider, InputNumber, Radio, Space, Tag } from 'antd';
 import { PrinterOutlined } from '@ant-design/icons';
 import ResizableModal from '@/components/common/ResizableModal';
 import { buildWashLabelSections, getDisplayWashCareCodes } from '@/utils/washLabel';
+import { safePrint } from '@/utils/safePrint';
 
 export interface WashLabelItem {
   orderNo: string;
@@ -226,20 +227,7 @@ body { font-family: 'Microsoft YaHei', '微软雅黑', 'PingFang SC', 'Heiti SC'
 
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${sharedCss}</style></head><body>${allPages.join('\n')}</body></html>`;
 
-    const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;width:0;height:0;border:none;left:-9999px;top:-9999px';
-    document.body.appendChild(iframe);
-    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (iframeDoc) {
-      iframeDoc.open('text/html', 'replace');
-      iframeDoc.write(html);
-      iframeDoc.close();
-      setTimeout(() => {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-        setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 1000);
-      }, 500);
-    }
+    safePrint(html);
   };
 
   const missingDataCount = labelType === 'wash'

@@ -18,6 +18,7 @@ import { parseProductionOrderLines } from '@/utils/api';
 import type { ProductionOrder } from '../../../../../../types/production';
 import { productionCuttingApi } from '../../../../../../services/production/productionApi';
 import { message } from '@/utils/antdStatic';
+import { safePrint } from '@/utils/safePrint';
 
 const { Text } = Typography;
 
@@ -253,20 +254,7 @@ export default function WashLabelPrintModal({ open, onCancel, order }: Props) {
 </html>`;
 
       /* 4. iframe 打印（与菲号打印完全相同方式） */
-      const iframe = document.createElement('iframe');
-      iframe.style.cssText = 'position:fixed;width:0;height:0;border:none;left:-9999px;top:-9999px';
-      document.body.appendChild(iframe);
-      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-      if (iframeDoc) {
-        iframeDoc.open('text/html', 'replace');
-        iframeDoc.write(printHtml);
-        iframeDoc.close();
-        setTimeout(() => {
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-          setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 1000);
-        }, 500);
-      }
+      safePrint(printHtml);
     } finally {
       setPrinting(false);
     }

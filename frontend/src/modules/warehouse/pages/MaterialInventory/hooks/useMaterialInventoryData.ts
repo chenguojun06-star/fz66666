@@ -14,6 +14,7 @@ import type { MaterialOutboundPrintPayload } from '../components/MaterialOutboun
 import QRCode from 'qrcode';
 import { message } from '@/utils/antdStatic';
 import { useInstructionManager } from './useInstructionManager';
+import { safePrint } from '@/utils/safePrint';
 
 // 物料批次明细接口
 export interface MaterialBatchDetail {
@@ -659,20 +660,7 @@ export function useMaterialInventoryData() {
         </div>`).join('')}
       </div>
     </body></html>`;
-    const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;width:0;height:0;border:none;left:-9999px;top:-9999px';
-    document.body.appendChild(iframe);
-    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (iframeDoc) {
-      iframeDoc.open('text/html', 'replace');
-      iframeDoc.write(html);
-      iframeDoc.close();
-      setTimeout(() => {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-        setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 1000);
-      }, 600);
-    }
+    safePrint(html);
   };
 
   const handleGenerateRollLabels = async () => {

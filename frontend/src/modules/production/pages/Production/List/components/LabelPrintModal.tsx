@@ -15,6 +15,7 @@ import type { ProductionOrder } from '@/types/production';
 import type { ColumnsType } from 'antd/es/table';
 import { StyleCoverThumb } from '@/components/StyleAssets';
 import { buildWashLabelSections, getDisplayWashCareCodes, parseWashNotePerPart } from '@/utils/washLabel';
+import { safePrint } from '@/utils/safePrint';
 
 // ─── 共用类型 ─────────────────────────────────────────────────────────────────
 
@@ -406,20 +407,7 @@ body { font-family: 'Microsoft YaHei', '微软雅黑', 'PingFang SC', 'Heiti SC'
 .date { margin-top: 2.2mm; font-size: ${fs - 0.5}pt; color: #777; text-align: center; }
 </style></head><body>${pages}</body></html>`;
 
-  const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'position:fixed;width:0;height:0;border:none;left:-9999px;top:-9999px';
-  document.body.appendChild(iframe);
-  const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-  if (iframeDoc) {
-    iframeDoc.open('text/html', 'replace');
-    iframeDoc.write(html);
-    iframeDoc.close();
-    setTimeout(() => {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-      setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 1000);
-    }, 500);
-  }
+  safePrint(html);
 }
 
 // ─── U编码打印函数（横版：左QR右文字，实线边框，均匀行距）────────────────────────
@@ -506,20 +494,7 @@ body { font-family: 'Microsoft YaHei', '微软雅黑', 'PingFang SC', 'Heiti SC'
 .date-row { color: #777; font-size: ${fs - 0.4}pt; margin-top: 2mm; padding-top: 0.4mm; }
 </style></head><body>${labelsHtml}</body></html>`;
 
-  const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'position:fixed;width:0;height:0;border:none;left:-9999px;top:-9999px';
-  document.body.appendChild(iframe);
-  const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-  if (iframeDoc) {
-    iframeDoc.open('text/html', 'replace');
-    iframeDoc.write(html);
-    iframeDoc.close();
-    setTimeout(() => {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-      setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 1000);
-    }, 500);
-  }
+  safePrint(html);
 }
 
 // ─── 主组件 ──────────────────────────────────────────────────────────────────

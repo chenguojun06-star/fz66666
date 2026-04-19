@@ -3,6 +3,7 @@ import { Modal, Button, Space, Radio } from 'antd';
 import { message } from '@/utils/antdStatic';
 import type { CuttingBundleRow } from '@/modules/production/pages/Production/Cutting/hooks';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
+import { safePrint } from '@/utils/safePrint';
 
 interface CuttingSheetPrintModalProps {
   open: boolean;
@@ -358,20 +359,7 @@ const CuttingSheetPrintModal: React.FC<CuttingSheetPrintModalProps> = ({
       </html>
     `;
 
-    const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;width:0;height:0;border:none;left:-9999px;top:-9999px';
-    document.body.appendChild(iframe);
-    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (iframeDoc) {
-      iframeDoc.open('text/html', 'replace');
-      iframeDoc.write(printHtml);
-      iframeDoc.close();
-      setTimeout(() => {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-        setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 1000);
-      }, 500);
-    }
+    safePrint(printHtml);
 
     onCancel();
   };

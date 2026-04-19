@@ -29,20 +29,7 @@ async function printWarehousingQr(warehousingNo: string, orderNo?: string) {
     <div class="no">${warehousingNo}</div>
     ${orderNo ? `<div class="order">订单号：${orderNo}</div>` : ''}
   </div></body></html>`;
-  const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'position:fixed;width:0;height:0;border:none;left:-9999px;top:-9999px';
-  document.body.appendChild(iframe);
-  const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-  if (iframeDoc) {
-    iframeDoc.open('text/html', 'replace');
-    iframeDoc.write(html);
-    iframeDoc.close();
-    setTimeout(() => {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-      setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 1000);
-    }, 500);
-  }
+  safePrint(html);
 }
 import { StyleCoverThumb } from '@/components/StyleAssets';
 import { formatDateTime } from '@/utils/datetime';
@@ -50,6 +37,7 @@ import { ProductWarehousing as WarehousingType, WarehousingQueryParams } from '@
 import { getQualityStatusConfig } from '../utils';
 import { analyzeQuality, renderQualityTooltip } from '../utils/qualityIntelligence';
 import { message } from '@/utils/antdStatic';
+import { safePrint } from '@/utils/safePrint';
 
 const getUrgencyTag = (value: unknown): { text: string; color: string } | null => {
   const key = String(value || '').trim().toLowerCase();

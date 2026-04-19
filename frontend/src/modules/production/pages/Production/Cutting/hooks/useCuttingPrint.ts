@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import QRCode from 'qrcode';
 import type { CuttingBundleRow } from './useCuttingBundles';
+import { safePrint } from '@/utils/safePrint';
 
 interface UseCuttingPrintOptions {
   message: any;
@@ -152,20 +153,7 @@ export function useCuttingPrint({ message }: UseCuttingPrintOptions) {
       </html>
     `;
 
-    const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;width:0;height:0;border:none;left:-9999px;top:-9999px';
-    document.body.appendChild(iframe);
-    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (iframeDoc) {
-      iframeDoc.open('text/html', 'replace');
-      iframeDoc.write(printHtml);
-      iframeDoc.close();
-      setTimeout(() => {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-        setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 1000);
-      }, 500);
-    }
+    safePrint(printHtml);
 
     setPrintPreviewOpen(false);
   };

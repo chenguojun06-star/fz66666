@@ -21,6 +21,7 @@ import { useAuth } from '@/utils/AuthContext';
 import { canViewPrice } from '@/utils/sensitiveDataMask';
 import { toSeasonCn, PrintOptions, DEFAULT_PRINT_OPTIONS, StylePrintModalProps, PrintData } from './types';
 import { buildPrintHtml } from './printTemplate';
+import { safePrint } from '@/utils/safePrint';
 
 type LabelSize = '40x70' | '50x100';
 const LABEL_SIZE_MAP: Record<LabelSize, [number, number]> = {
@@ -150,7 +151,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
     const htmlContent = buildPrintHtml({ headerInfo, printerInfo, printDate, styleNo, bodyHtml });
 
     const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:fixed;width:0;height:0;border:none;left:-9999px;top:-9999px';
+    iframe.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;border:none;opacity:0;overflow:hidden';
     document.body.appendChild(iframe);
     const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
     if (!iframeDoc) { message.error('无法创建打印容器'); document.body.removeChild(iframe); return; }
@@ -242,19 +243,7 @@ body{font-family:'Microsoft YaHei','微软雅黑','PingFang SC','Heiti SC',Arial
 .date-row{color:#777;font-size:${fs - 0.4}pt;margin-top:2mm;padding-top:0.4mm}
 </style></head><body>${labelsHtml}</body></html>`;
 
-      const iframe = document.createElement('iframe');
-      iframe.style.cssText = 'position:fixed;width:0;height:0;border:none;left:-9999px;top:-9999px';
-      document.body.appendChild(iframe);
-      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-      if (iframeDoc) {
-        iframeDoc.open('text/html', 'replace');
-        iframeDoc.write(html);
-        iframeDoc.close();
-        setTimeout(() => {
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-          setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 1000);
-        }, 500);
+      if (safePrint(html)) {
         message.success(`已发送 ${totalLabels} 张标签到打印机`);
       } else {
         message.error('无法创建打印容器');
