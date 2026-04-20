@@ -501,7 +501,8 @@ public class ProductionOrderFinanceOrchestrationService {
                     uid = normalizedUid;
                 }
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.warn("[Finance] 用户信息获取失败: {}", e.getMessage());
             uid = null;
         }
         ShipmentReconciliation sr;

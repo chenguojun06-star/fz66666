@@ -194,7 +194,7 @@ const ExternalScanContent: React.FC = () => {
   ];
 
   return (
-    <Card bodyStyle={{ padding: '16px 20px' }}>
+    <Card styles={{ body: { padding: '16px 20px' } }}>
       {/* 搜索栏 */}
       <Space wrap style={{ marginBottom: 16 }}>
         <RangePicker

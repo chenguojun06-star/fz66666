@@ -114,7 +114,8 @@ public class ProductionDataConsistencyJob {
         new Thread(() -> {
             try {
                 Thread.sleep(30000);
-            } catch (InterruptedException ignored) {
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 return;
             }
             log.info("[ConsistencyJob] 启动后一次性修复：重算所有订单进度...");

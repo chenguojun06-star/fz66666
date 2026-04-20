@@ -66,7 +66,8 @@ public class PublicTenantController {
                 if (count != null && count > WORKER_REG_MAX_PER_HOUR) {
                     return Result.fail("注册请求过于频繁，请稍后再试");
                 }
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.warn("[TenantRegister] 限流检查异常，为安全起见放行注册: {}", e.getMessage());
             }
         }
         String username = params.get("username");

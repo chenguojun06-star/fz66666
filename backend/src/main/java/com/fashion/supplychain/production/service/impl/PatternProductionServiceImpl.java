@@ -15,6 +15,8 @@ import com.fashion.supplychain.style.service.StyleProcessService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
@@ -26,6 +28,7 @@ import java.util.List;
  * 样板生产 Service 实现
  */
 @Service
+@Slf4j
 public class PatternProductionServiceImpl extends ServiceImpl<PatternProductionMapper, PatternProduction>
         implements PatternProductionService {
 
@@ -95,7 +98,8 @@ public class PatternProductionServiceImpl extends ServiceImpl<PatternProductionM
                         .map(sp -> sp.getPrice() != null ? sp.getPrice() : BigDecimal.ZERO)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
                 processCost = processCost.add(totalProcessPrice.multiply(BigDecimal.valueOf(pp.getQuantity())));
-            } catch (NumberFormatException ignored) {
+            } catch (NumberFormatException e) {
+                log.warn("[PatternProduction] 工序成本计算失败，styleId={}: {}", pp.getStyleId(), e.getMessage());
             }
         }
         stats.setProcessCost(processCost);
@@ -111,7 +115,8 @@ public class PatternProductionServiceImpl extends ServiceImpl<PatternProductionM
                         .map(sp -> sp.getUnitPrice() != null ? sp.getUnitPrice() : BigDecimal.ZERO)
                         .reduce(BigDecimal.ZERO, BigDecimal::add);
                 secondaryProcessCost = secondaryProcessCost.add(totalUnitPrice.multiply(BigDecimal.valueOf(pp.getQuantity())));
-            } catch (NumberFormatException ignored) {
+            } catch (NumberFormatException e) {
+                log.warn("[PatternProduction] 二次工艺成本计算失败，styleId={}: {}", pp.getStyleId(), e.getMessage());
             }
         }
         stats.setSecondaryProcessCost(secondaryProcessCost);

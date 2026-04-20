@@ -43,7 +43,9 @@ public class MaterialRollServiceImpl extends ServiceImpl<MaterialRollMapper, Mat
                 // MR20260219NNNNN -> last 5 chars
                 String suffix = last.getRollCode().substring(last.getRollCode().length() - 5);
                 seq = Integer.parseInt(suffix) + 1;
-            } catch (NumberFormatException ignored) {}
+            } catch (NumberFormatException e) {
+                log.warn("[MaterialRoll] 卷号序号解析失败，lastRollCode={}: {}", last.getRollCode(), e.getMessage());
+            }
         }
         return String.format("MR%s%05d", dateStr, seq);
     }

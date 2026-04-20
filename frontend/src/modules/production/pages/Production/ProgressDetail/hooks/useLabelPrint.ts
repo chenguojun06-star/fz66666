@@ -25,7 +25,7 @@ export const useLabelPrint = () => {
     setLabelPrintOpen(true);
     if (record.styleId || record.styleNo) {
       const styleInfo = await getStyleInfoByRef(record.styleId, record.styleNo);
-      const d = styleInfo ?? {};
+      const d: Partial<LabelPrintStyleInfo> = styleInfo ?? {};
       setLabelPrintStyle({
         fabricComposition: d.fabricComposition,
         fabricCompositionParts: d.fabricCompositionParts,

@@ -765,9 +765,7 @@ const ExpenseReimbursementPage: React.FC = () => {
                     <Image.PreviewGroup>
                       <Image
                         src={getFullAuthedFileUrl(detailDocList[selectedDocIndex]?.imageUrl)}
-                          wrapperStyle={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: 6, display: 'block' }}
-                        preview={{ mask: '点击查看原图' }}
+                          preview={{ mask: '点击查看原图' }}
                       />
                     </Image.PreviewGroup>
                   </div>

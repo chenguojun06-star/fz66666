@@ -165,6 +165,7 @@ public class BillAggregationOrchestrator {
 
         for (BillAggregation b : all) {
             BigDecimal amt = b.getAmount() != null ? b.getAmount() : BigDecimal.ZERO;
+            if (b.getStatus() == null) continue;
             switch (b.getStatus()) {
                 case "PENDING":
                     pendingAmount = pendingAmount.add(amt);

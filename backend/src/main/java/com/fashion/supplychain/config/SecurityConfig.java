@@ -14,7 +14,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.jdbc.core.JdbcTemplate;
+
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -52,7 +52,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Configuration
 @EnableWebSecurity
@@ -71,14 +70,10 @@ public class SecurityConfig implements WebMvcConfigurer {
 
     /** 修复：旧 JWT 不含 tenantId 时，从 DB 自动补全 《 userId → tenantId》的简单内存缓存 */
     @Autowired(required = false)
-    private JdbcTemplate jdbcTemplate;
-
-    @Autowired(required = false)
     private StringRedisTemplate stringRedisTemplate;
-    private final ConcurrentHashMap<String, String> tenantInfoCache = new ConcurrentHashMap<>();
-    private static final long TENANT_CACHE_TTL_MS = 5 * 60 * 1000L;
-    private volatile long tenantCacheLastSweep = System.currentTimeMillis();
-    private static final long TENANT_CACHE_SWEEP_INTERVAL_MS = 30 * 60 * 1000L;
+
+    @Autowired
+    private UserInfoEnrichmentService userInfoEnrichmentService;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, AuthTokenService authTokenService,
@@ -386,190 +381,57 @@ public class SecurityConfig implements WebMvcConfigurer {
             // 条件扩展：只要 userId 有效且非超管，始终经缓存确认 isTenantOwner（缓存 O(1)，无性能损耗）
             // 背景：旧 JWT 内嵌 tenantId/factoryId 非 null，原有 (tenantId==null||factoryId==null) 条件会短路跳过，
             //       导致 isTenantOwner 永远从 JWT 读到 false → isTopAdmin() 错误返回 false → 403
-            if (ctx.getUserId() != null && jdbcTemplate != null && !ctx.getSuperAdmin()) {
-                String cacheKey = "u:" + ctx.getUserId();
-                String cached = getTenantCache(cacheKey);
-                boolean isOldCache = cached != null && (cached.split("\\|", -1).length < 4 || "".equals(cached.split("\\|", -1)[3]));
-                boolean shouldRefreshFromDb = cached == null || isOldCache;
-                boolean wasCacheMiss = (cached == null);
-                if (shouldRefreshFromDb) {
-                    try {
-                        List<String> rows = jdbcTemplate.query(
-                            "SELECT tenant_id, is_tenant_owner, is_super_admin, factory_id FROM t_user WHERE id = ? LIMIT 1",
-                            (rs, i) -> {
-                                Long tid = rs.getObject(1, Long.class);
-                                Boolean owner = rs.getObject(2) != null && rs.getInt(2) == 1;
-                                Boolean superAdm = rs.getObject(3) != null && rs.getInt(3) == 1;
-                                String fid = rs.getString(4);
-                                return (tid == null ? "" : tid.toString()) + "|" + owner + "|" + superAdm + "|" + (fid == null ? "null" : fid);
-                            },
-                            Long.parseLong(ctx.getUserId())
-                        );
-                        if (!rows.isEmpty()) {
-                            cached = rows.get(0);
-                            putTenantCache(cacheKey, cached);
+            if (ctx.getUserId() != null && !ctx.getSuperAdmin()) {
+                try {
+                    UserInfoEnrichmentService.EnrichmentResult result = userInfoEnrichmentService.enrichFromUserId(ctx.getUserId());
+                    if (result != null) {
+                        if (ctx.getTenantId() == null && result.tenantId != null) {
+                            ctx.setTenantId(result.tenantId);
                         }
-                    } catch (Exception e) {
-                        log.warn("[UserContextInterceptor] 补全用户租户信息失败, userId={}", ctx.getUserId(), e);
-                    }
-                }
-                if (cached != null) {
-                    String[] parts = cached.split("\\|", -1);
-                    if (ctx.getTenantId() == null && !parts[0].isEmpty()) {
-                        ctx.setTenantId(Long.parseLong(parts[0]));
-                    }
-                    if (parts.length > 1 && !parts[1].isEmpty()) {
-                        ctx.setTenantOwner(Boolean.parseBoolean(parts[1]));
-                    }
-                    if (parts.length > 2 && !parts[2].isEmpty()) {
-                        ctx.setSuperAdmin(Boolean.parseBoolean(parts[2]));
-                    }
-                    if (parts.length > 3 && org.springframework.util.StringUtils.hasText(parts[3]) && !"null".equals(parts[3])) {
-                        ctx.setFactoryId(parts[3].trim());
-                    }
-                    if (wasCacheMiss) {
-                        log.info("[UserContextInterceptor] 用户信息从 DB 补全: userId={}, tenantId={}, isTenantOwner={}, isSuperAdmin={}, factoryId={}",
-                                ctx.getUserId(), ctx.getTenantId(), ctx.getTenantOwner(), ctx.getSuperAdmin(), ctx.getFactoryId());
-                    }
-
-                    // 自愈修复：租户主账号 t_user.tenant_id 为 NULL 时，从 t_tenant 表反查并回填
-                    // （V20260323 迁移脚本会批量修复存量数据，此处处理极端情况或迁移前的首次登录）
-                    if (ctx.getTenantId() == null && Boolean.TRUE.equals(ctx.getTenantOwner()) && !ctx.getSuperAdmin()) {
-                        try {
-                            List<Long> tids = jdbcTemplate.query(
-                                "SELECT id FROM t_tenant WHERE owner_user_id = ? LIMIT 1",
-                                (rs, i) -> rs.getLong(1),
-                                Long.parseLong(ctx.getUserId())
-                            );
-                            if (!tids.isEmpty()) {
-                                Long recoveredTenantId = tids.get(0);
-                                ctx.setTenantId(recoveredTenantId);
-                                // 顺手修复 t_user 数据，避免下次请求再次触发此逻辑
-                                jdbcTemplate.update(
-                                    "UPDATE t_user SET tenant_id = ? WHERE id = ? AND tenant_id IS NULL",
-                                    recoveredTenantId, Long.parseLong(ctx.getUserId())
-                                );
-                                invalidateTenantCache("u:" + ctx.getUserId());
-                                log.warn("[UserContextInterceptor] 自愈修复: 租户主 userId={} tenant_id 已回填为 {}（请检查 V20260323 迁移是否已执行）",
-                                        ctx.getUserId(), recoveredTenantId);
-                            } else {
-                                log.error("[UserContextInterceptor] 严重: 租户主 userId={} 在 t_tenant 中找不到对应记录，数据异常，用户将看不到业务数据!",
-                                        ctx.getUserId());
-                            }
-                        } catch (Exception e) {
-                            log.error("[UserContextInterceptor] 自愈查询失败 userId={}", ctx.getUserId(), e);
+                        if (result.isTenantOwner != null) {
+                            ctx.setTenantOwner(result.isTenantOwner);
+                        }
+                        if (result.isSuperAdmin != null) {
+                            ctx.setSuperAdmin(result.isSuperAdmin);
+                        }
+                        if (result.factoryId != null) {
+                            ctx.setFactoryId(result.factoryId);
+                        }
+                        if (result.wasCacheMiss) {
+                            log.info("[UserContextInterceptor] 用户信息从 DB 补全: userId={}, tenantId={}, isTenantOwner={}, isSuperAdmin={}, factoryId={}",
+                                    ctx.getUserId(), ctx.getTenantId(), ctx.getTenantOwner(), ctx.getSuperAdmin(), ctx.getFactoryId());
                         }
                     }
-
-                    // [2026-07-20 修复] 非owner普通用户 tenant_id 为 NULL 时，从同组织/同工厂的其他用户反查 tenant_id
-                    if (ctx.getTenantId() == null && !Boolean.TRUE.equals(ctx.getTenantOwner()) && !ctx.getSuperAdmin()) {
-                        try {
-                            Long recoveredTenantId = null;
-                            String userId = ctx.getUserId();
-                            // 策略1：从同 org_unit_id 的其他用户获取 tenant_id
-                            List<Long> tids = jdbcTemplate.query(
-                                "SELECT DISTINCT u2.tenant_id FROM t_user u1 JOIN t_user u2 ON u1.org_unit_id = u2.org_unit_id " +
-                                        "WHERE u1.id = ? AND u1.org_unit_id IS NOT NULL AND u2.tenant_id IS NOT NULL LIMIT 1",
-                                (rs, i) -> rs.getLong(1), Long.parseLong(userId)
-                            );
-                            if (!tids.isEmpty()) {
-                                recoveredTenantId = tids.get(0);
-                            }
-                            // 策略2：从同 factory_id 的其他用户获取 tenant_id
-                            if (recoveredTenantId == null && org.springframework.util.StringUtils.hasText(ctx.getFactoryId())) {
-                                tids = jdbcTemplate.query(
-                                    "SELECT DISTINCT tenant_id FROM t_user WHERE factory_id = ? AND tenant_id IS NOT NULL LIMIT 1",
-                                    (rs, i) -> rs.getLong(1), ctx.getFactoryId()
-                                );
-                                if (!tids.isEmpty()) {
-                                    recoveredTenantId = tids.get(0);
-                                }
-                            }
-                            // 策略3：从同 role_id 的其他用户获取 tenant_id（最后兜底）
-                            if (recoveredTenantId == null) {
-                                tids = jdbcTemplate.query(
-                                    "SELECT DISTINCT u2.tenant_id FROM t_user u1 JOIN t_user u2 ON u1.role_id = u2.role_id " +
-                                            "WHERE u1.id = ? AND u2.tenant_id IS NOT NULL AND u2.id != u1.id LIMIT 1",
-                                    (rs, i) -> rs.getLong(1), Long.parseLong(userId)
-                                );
-                                if (!tids.isEmpty()) {
-                                    recoveredTenantId = tids.get(0);
-                                }
-                            }
-                            if (recoveredTenantId != null) {
-                                ctx.setTenantId(recoveredTenantId);
-                                jdbcTemplate.update(
-                                    "UPDATE t_user SET tenant_id = ? WHERE id = ? AND tenant_id IS NULL",
-                                    recoveredTenantId, Long.parseLong(userId)
-                                );
-                                invalidateTenantCache("u:" + userId);
-                                log.warn("[UserContextInterceptor] 非owner用户自愈: userId={} tenant_id 已回填为 {}",
-                                        userId, recoveredTenantId);
-                            } else {
-                                log.error("[UserContextInterceptor] 严重: 非owner用户 userId={} 无法推断 tenant_id，该用户将看不到任何业务数据!",
-                                        userId);
-                            }
-                        } catch (Exception e) {
-                            log.error("[UserContextInterceptor] 非owner用户自愈查询失败 userId={}", ctx.getUserId(), e);
-                        }
-                    }
+                } catch (Exception e) {
+                    log.warn("[UserContextInterceptor] 补全用户租户信息失败, userId={}", ctx.getUserId(), e);
                 }
             }
 
-            // [2026-03-21 修复] 旧JWT无uid字段（userId=null）时，降级用 username 查询 DB 补全 isTenantOwner 等
-            // 根因：userId=null → 原有 DB fallback 条件 ctx.getUserId()!=null 短路跳过 → isTenantOwner 无法加载
-            // 症状：租户主账号在前端（从用户资料API正确读到isTenantOwner=true）能点击按钮，
-            //       但后端 UserContext.isTopAdmin() 返回 false → 403
-            if (ctx.getUserId() == null && jdbcTemplate != null && !ctx.getSuperAdmin()
+            if (ctx.getUserId() == null && !ctx.getSuperAdmin()
                     && org.springframework.util.StringUtils.hasText(ctx.getUsername())) {
-                String cacheKey = "u:" + ctx.getUsername();
-                String cached = getTenantCache(cacheKey);
-                boolean isOldCache = cached != null && (cached.split("\\|", -1).length < 5 || "".equals(cached.split("\\|", -1)[4]));
-                if (cached == null || isOldCache) {
-                    try {
-                        List<String> rows = jdbcTemplate.query(
-                            "SELECT id, tenant_id, is_tenant_owner, is_super_admin, factory_id FROM t_user " +
-                                    "WHERE username = ? OR name = ? ORDER BY CASE WHEN username = ? THEN 0 ELSE 1 END LIMIT 1",
-                            (rs, i) -> {
-                                long uid = rs.getLong(1);
-                                Long tid = rs.getObject(2, Long.class);
-                                Boolean owner = rs.getObject(3) != null && rs.getInt(3) == 1;
-                                Boolean superAdm = rs.getObject(4) != null && rs.getInt(4) == 1;
-                                String fid = rs.getString(5);
-                                return uid + "|" + (tid == null ? "" : tid) + "|" + owner + "|" + superAdm + "|" + (fid == null ? "null" : fid);
-                            },
-                            ctx.getUsername(),
-                            ctx.getUsername(),
-                            ctx.getUsername()
-                        );
-                        if (!rows.isEmpty()) {
-                            cached = rows.get(0);
-                            putTenantCache(cacheKey, cached);
+                try {
+                    UserInfoEnrichmentService.EnrichmentResult result = userInfoEnrichmentService.enrichFromUsername(ctx.getUsername());
+                    if (result != null) {
+                        if (result.userId != null) {
+                            ctx.setUserId(result.userId);
                         }
-                    } catch (Exception e) {
-                        log.warn("[UserContextInterceptor] username-fallback 补全失败, username={}", ctx.getUsername(), e);
+                        if (ctx.getTenantId() == null && result.tenantId != null) {
+                            ctx.setTenantId(result.tenantId);
+                        }
+                        if (result.isTenantOwner != null) {
+                            ctx.setTenantOwner(result.isTenantOwner);
+                        }
+                        if (result.isSuperAdmin != null) {
+                            ctx.setSuperAdmin(result.isSuperAdmin);
+                        }
+                        if (result.factoryId != null) {
+                            ctx.setFactoryId(result.factoryId);
+                        }
+                        log.info("[UserContextInterceptor] username-fallback 补全: userId={}, username={}, tenantId={}, isTenantOwner={}, isSuperAdmin={}, factoryId={}",
+                                ctx.getUserId(), ctx.getUsername(), ctx.getTenantId(), ctx.getTenantOwner(), ctx.getSuperAdmin(), ctx.getFactoryId());
                     }
-                }
-                if (cached != null) {
-                    String[] parts = cached.split("\\|", -1);
-                    // parts: [0]=id, [1]=tenantId, [2]=isTenantOwner, [3]=isSuperAdmin, [4]=factoryId
-                    if (parts.length > 0 && !parts[0].isEmpty()) {
-                        ctx.setUserId(parts[0]);  // 旧JWT缺失uid字段时从DB补齐
-                    }
-                    if (ctx.getTenantId() == null && parts.length > 1 && !parts[1].isEmpty()) {
-                        ctx.setTenantId(Long.parseLong(parts[1]));
-                    }
-                    if (parts.length > 2 && !parts[2].isEmpty()) {
-                        ctx.setTenantOwner(Boolean.parseBoolean(parts[2]));
-                    }
-                    if (parts.length > 3 && !parts[3].isEmpty()) {
-                        ctx.setSuperAdmin(Boolean.parseBoolean(parts[3]));
-                    }
-                    if (parts.length > 4 && org.springframework.util.StringUtils.hasText(parts[4]) && !"null".equals(parts[4])) {
-                        ctx.setFactoryId(parts[4].trim());
-                    }
-                    log.info("[UserContextInterceptor] username-fallback 补全: userId={}, username={}, tenantId={}, isTenantOwner={}, isSuperAdmin={}, factoryId={}",
-                            ctx.getUserId(), ctx.getUsername(), ctx.getTenantId(), ctx.getTenantOwner(), ctx.getSuperAdmin(), ctx.getFactoryId());
+                } catch (Exception e) {
+                    log.warn("[UserContextInterceptor] username-fallback 补全失败, username={}", ctx.getUsername(), e);
                 }
             }
 
@@ -687,64 +549,5 @@ public class SecurityConfig implements WebMvcConfigurer {
             return real.trim();
         }
         return request.getRemoteAddr();
-    }
-
-    private String getTenantCache(String key) {
-        String raw = tenantInfoCache.get(key);
-        if (raw == null) {
-            return null;
-        }
-        int sep = raw.indexOf('|');
-        if (sep <= 0) {
-            tenantInfoCache.remove(key);
-            return null;
-        }
-        try {
-            long ts = Long.parseLong(raw.substring(0, sep));
-            if (System.currentTimeMillis() - ts > TENANT_CACHE_TTL_MS) {
-                tenantInfoCache.remove(key);
-                return null;
-            }
-            return raw.substring(sep + 1);
-        } catch (NumberFormatException e) {
-            tenantInfoCache.remove(key);
-            return null;
-        }
-    }
-
-    private void putTenantCache(String key, String value) {
-        tenantInfoCache.put(key, System.currentTimeMillis() + "|" + value);
-        sweepTenantCacheIfNeeded();
-    }
-
-    private void invalidateTenantCache(String key) {
-        tenantInfoCache.remove(key);
-    }
-
-    private void sweepTenantCacheIfNeeded() {
-        long now = System.currentTimeMillis();
-        if (now - tenantCacheLastSweep < TENANT_CACHE_SWEEP_INTERVAL_MS) {
-            return;
-        }
-        tenantCacheLastSweep = now;
-        for (Map.Entry<String, String> entry : tenantInfoCache.entrySet()) {
-            String raw = entry.getValue();
-            if (raw == null) {
-                continue;
-            }
-            int sep = raw.indexOf('|');
-            if (sep <= 0) {
-                tenantInfoCache.remove(entry.getKey());
-                continue;
-            }
-            try {
-                long ts = Long.parseLong(raw.substring(0, sep));
-                if (now - ts > TENANT_CACHE_TTL_MS) {
-                    tenantInfoCache.remove(entry.getKey());
-                }
-            } catch (NumberFormatException e) {
-                tenantInfoCache.remove(entry.getKey());
-            }
-        }
     }
 }

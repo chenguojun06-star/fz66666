@@ -91,7 +91,9 @@ public class ExpenseDocOrchestrator {
         String amountStr = parsed.get("amount");
         if (amountStr != null) {
             try { doc.setRecognizedAmount(new BigDecimal(amountStr)); }
-            catch (NumberFormatException ignored) {}
+            catch (NumberFormatException e) {
+                log.warn("[ExpenseDoc] 金额解析失败，amountStr={}: {}", amountStr, e.getMessage());
+            }
         }
         doc.setRecognizedDate(parsed.get("date"));
         doc.setRecognizedTitle(parsed.get("title"));

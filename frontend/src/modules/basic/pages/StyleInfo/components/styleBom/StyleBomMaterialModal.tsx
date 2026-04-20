@@ -82,7 +82,7 @@ const StyleBomMaterialModal: React.FC<StyleBomMaterialModalProps> = ({
                 size="small"
                 loading={materialLoading}
                 dataSource={materialList}
-                rowKey={(record: Record<string, unknown>, index?: number) => String(record.id || record.materialCode || index || 0)}
+                rowKey={(record: Record<string, unknown>) => String(record.id || record.materialCode || '')}
                 pagination={{
                   current: materialPage,
                   pageSize: materialPageSize,

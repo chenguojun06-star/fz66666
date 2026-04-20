@@ -373,7 +373,8 @@ public class PermissionCalculationEngine {
     private String rawValue(String key) {
         try {
             return stringRedisTemplate == null ? null : stringRedisTemplate.opsForValue().get(key);
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.warn("[PermissionCache] Redis读取失败 key={}, 降级返回null: {}", key, e.getMessage());
             return null;
         }
     }
@@ -398,7 +399,8 @@ public class PermissionCalculationEngine {
                     return (List<T>) strings;
                 }
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.warn("[PermissionCache] 解析缓存失败 cacheName={}: {}", cacheName, e.getMessage());
             return null;
         }
         return null;

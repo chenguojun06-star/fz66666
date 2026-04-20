@@ -849,7 +849,7 @@ const PayrollOperatorSummary: React.FC = () => {
 
                                     <ResizableTable
                                         storageKey="finance-payroll-operator-detail"
-                                        rowKey={(r: Record<string, unknown>, index?: number) =>
+                                        rowKey={(r: Record<string, unknown>) =>
                                             [
                                                 String(r?.orderNo || ''),
                                                 String(r?.styleNo || ''),
@@ -858,7 +858,6 @@ const PayrollOperatorSummary: React.FC = () => {
                                                 String(r?.scanType || ''),
                                                 String(r?.color || ''),
                                                 String(r?.size || ''),
-                                                `@@${index ?? 0}`,
                                             ].join('|')
                                         }
                                         rowSelection={{

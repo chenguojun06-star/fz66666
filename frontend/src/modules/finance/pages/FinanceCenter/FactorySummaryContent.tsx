@@ -95,6 +95,7 @@ const FactorySummaryContent: React.FC<Props> = ({ auditedOrderNos, onAuditNosCha
 
   const getDateRange = (): [string, string] => {
     try {
+      if (!form.isFieldsTouched()) return ['-', '-'];
       const values = form.getFieldsValue();
       if (values.dateRange && values.dateRange.length === 2) {
         return [values.dateRange[0].format('YYYY-MM-DD'), values.dateRange[1].format('YYYY-MM-DD')];

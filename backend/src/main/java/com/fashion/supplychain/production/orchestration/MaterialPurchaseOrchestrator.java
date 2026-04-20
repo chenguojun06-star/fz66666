@@ -212,7 +212,8 @@ public class MaterialPurchaseOrchestrator {
         if (conversionRateRaw != null && StringUtils.hasText(String.valueOf(conversionRateRaw))) {
             try {
                 conversionRate = new java.math.BigDecimal(String.valueOf(conversionRateRaw).trim());
-            } catch (NumberFormatException ignored) {
+            } catch (NumberFormatException e) {
+                log.warn("[MaterialPurchase] 换算率解析失败，conversionRateRaw={}: {}", conversionRateRaw, e.getMessage());
                 conversionRate = null;
             }
         }
@@ -226,7 +227,9 @@ public class MaterialPurchaseOrchestrator {
         BigDecimal unitPrice = null;
         Object unitPriceRaw = safeParams.get("unitPrice");
         if (unitPriceRaw != null && StringUtils.hasText(String.valueOf(unitPriceRaw))) {
-            try { unitPrice = new BigDecimal(String.valueOf(unitPriceRaw).trim()); } catch (NumberFormatException ignored) {}
+            try { unitPrice = new BigDecimal(String.valueOf(unitPriceRaw).trim()); } catch (NumberFormatException e) {
+                log.warn("[MaterialPurchase] 单价解析失败，unitPriceRaw={}: {}", unitPriceRaw, e.getMessage());
+            }
         }
 
         if (!StringUtils.hasText(materialCode) && !StringUtils.hasText(materialName)) {
