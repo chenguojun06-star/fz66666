@@ -128,8 +128,11 @@ Page({
 
     // Process size/color matrix for table display + aggregated text (matching PC端 cardSizeQuantity.ts)
     const matrix = patternDetail.sizeColorMatrix;
-    if (matrix && Array.isArray(matrix.commonSizes) && Array.isArray(matrix.matrixRows)
-        && matrix.commonSizes.length > 0 && matrix.matrixRows.length > 0) {
+    var matrixSizes = (matrix && Array.isArray(matrix.sizes) && matrix.sizes.length > 0)
+      ? matrix.sizes
+      : (matrix && Array.isArray(matrix.commonSizes) ? matrix.commonSizes : []);
+    if (matrix && Array.isArray(matrix.matrixRows)
+        && matrixSizes.length > 0 && matrix.matrixRows.length > 0) {
       const matrixRows = matrix.matrixRows.map(row => {
         const quantities = Array.isArray(row.quantities) ? row.quantities : [];
         return {
@@ -145,7 +148,7 @@ Page({
       matrix.matrixRows.forEach(function(row) {
         var color = row.color || '';
         var qtys = Array.isArray(row.quantities) ? row.quantities : [];
-        matrix.commonSizes.forEach(function(size, idx) {
+        matrixSizes.forEach(function(size, idx) {
           var qty = Number(qtys[idx]) || 0;
           if (size && qty > 0) {
             items.push({ color: color, size: size, quantity: qty });
@@ -155,7 +158,7 @@ Page({
 
       var matrixUpdate = {
         'detail.hasMatrix': true,
-        'detail.matrixSizes': matrix.commonSizes,
+        'detail.matrixSizes': matrixSizes,
         'detail.matrixRows': matrixRows,
         'detail.matrixTotal': grandTotal,
       };

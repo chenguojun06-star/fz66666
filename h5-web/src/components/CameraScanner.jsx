@@ -40,36 +40,66 @@ export default function CameraScanner({ active, onScan, onError }) {
     const el = document.getElementById(elementId.current);
     if (!el) return;
 
-    const scanner = new Html5Qrcode(elementId.current);
-    scannerRef.current = scanner;
+    const startCamera = async () => {
+      // 1. 非安全上下文（HTTP）时 getUserMedia 直接被浏览器拒绝，无法弹出权限对话框
+      if (!window.isSecureContext && window.location.hostname !== 'localhost') {
+        if (mountedRef.current) onError('camera_https_required');
+        return;
+      }
 
-    scanner
-      .start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 220, height: 220 }, aspectRatio: 1.0 },
-        (decodedText) => {
-          if (mountedRef.current) {
-            stopScanner();
-            onScan(decodedText);
-          }
-        },
-        () => {}
-      )
-      .then(() => {
-        if (mountedRef.current) setRunning(true);
-      })
-      .catch((error) => {
-        if (mountedRef.current) {
-          const msg = error instanceof Error ? error.message : String(error);
-          if (msg.includes('Permission') || msg.includes('denied')) {
-            onError('相机权限被拒绝，请在浏览器设置中允许相机访问');
-          } else if (msg.includes('NotFound') || msg.includes('Requested device not found')) {
-            onError('未检测到相机设备');
-          } else {
-            onError('相机启动失败，请检查权限设置');
-          }
+      // 2. 浏览器不支持 mediaDevices（极旧或特殊内置浏览器）
+      if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+        if (mountedRef.current) onError('camera_unsupported');
+        return;
+      }
+
+      // 3. 用 Permissions API 预检状态（避免权限已被永久拒绝时用户无感知）
+      try {
+        const perm = await navigator.permissions.query({ name: 'camera' });
+        if (perm.state === 'denied') {
+          if (mountedRef.current) onError('camera_denied');
+          return;
         }
-      });
+      } catch (_) {
+        // Permissions API 不支持 camera query 时跳过预检，由 catch 兜底
+      }
+
+      const scanner = new Html5Qrcode(elementId.current);
+      scannerRef.current = scanner;
+
+      scanner
+        .start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: { width: 220, height: 220 }, aspectRatio: 1.0 },
+          (decodedText) => {
+            if (mountedRef.current) {
+              stopScanner();
+              onScan(decodedText);
+            }
+          },
+          () => {}
+        )
+        .then(() => {
+          if (mountedRef.current) setRunning(true);
+        })
+        .catch((error) => {
+          if (!mountedRef.current) return;
+          // 用 error.name 判断类型比字符串 includes 更可靠
+          const name = error?.name || '';
+          const msg = error instanceof Error ? error.message : String(error);
+          if (name === 'NotAllowedError' || name === 'PermissionDeniedError'
+              || msg.includes('Permission') || msg.includes('denied')) {
+            onError('camera_denied');
+          } else if (name === 'NotFoundError' || msg.includes('NotFound')
+              || msg.includes('Requested device not found')) {
+            onError('camera_notfound');
+          } else {
+            onError('camera_error');
+          }
+        });
+    };
+
+    startCamera();
 
     return () => {
       stopScanner();

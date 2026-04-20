@@ -1,6 +1,6 @@
 const api = require('../../../utils/api');
 const { isAdminOrSupervisor } = require('../../../utils/permission');
-const { isTenantOwner, isFactoryOwner } = require('../../../utils/storage');
+const { isTenantOwner, isFactoryOwner, isSuperAdmin } = require('../../../utils/storage');
 const { toast } = require('../../../utils/uiHelper');
 
 Page({
@@ -15,7 +15,8 @@ Page({
     tenantTotal: 0,
     isTenantOwner: false,
     isFactoryOwner: false,
-    activeTab: 'system',
+    isPlatformAdmin: false,
+    activeTab: 'tenant',
     showApprovalModal: false,
     showRejectModal: false,
     currentUser: null,
@@ -34,33 +35,41 @@ Page({
 
     const ownerFlag = isTenantOwner();
     const factoryOwnerFlag = isFactoryOwner();
-    this.setData({ isTenantOwner: ownerFlag, isFactoryOwner: factoryOwnerFlag });
+    const adminFlag = isAdminOrSupervisor();
+    const platformAdminFlag = isSuperAdmin();
+    this.setData({ isTenantOwner: ownerFlag, isFactoryOwner: factoryOwnerFlag, isPlatformAdmin: platformAdminFlag });
 
-    if (!isAdminOrSupervisor() && !ownerFlag && !factoryOwnerFlag) {
+    if (!adminFlag && !ownerFlag && !factoryOwnerFlag) {
       toast.error('仅管理员可访问', 2000);
       setTimeout(() => wx.navigateBack(), 2000);
       return;
     }
 
-    if (ownerFlag && !isAdminOrSupervisor()) {
-      this.setData({ activeTab: 'tenant' });
-    } else if (factoryOwnerFlag && !isAdminOrSupervisor()) {
+    if (platformAdminFlag) {
+      this.setData({ activeTab: 'system' });
+    } else {
       this.setData({ activeTab: 'tenant' });
     }
 
-    this.loadPendingUsers(true);
-    this.loadRoleOptions();
+    if (platformAdminFlag) {
+      this.loadPendingUsers(true);
+      this.loadRoleOptions();
+    }
     if (ownerFlag || factoryOwnerFlag) {
       this.loadTenantRegistrations();
     }
   },
 
   onPullDownRefresh() {
-    this.loadPendingUsers(true);
+    if (this.data.activeTab === 'system' && this.data.isPlatformAdmin) {
+      this.loadPendingUsers(true);
+    } else {
+      this.loadTenantRegistrations();
+    }
   },
 
   onReachBottom() {
-    if (this.data.hasMore && !this.data.loading) {
+    if (this.data.activeTab === 'system' && this.data.isPlatformAdmin && this.data.hasMore && !this.data.loading) {
       this.setData({ page: this.data.page + 1 }, () => {
         this.loadPendingUsers(false);
       });
@@ -107,7 +116,9 @@ Page({
   },
 
   onTabChange(e) {
-    this.setData({ activeTab: e.currentTarget.dataset.tab });
+    var tab = e.currentTarget.dataset.tab;
+    if (tab === 'system' && !this.data.isPlatformAdmin) return;
+    this.setData({ activeTab: tab });
   },
 
   onApproveUser(e) {

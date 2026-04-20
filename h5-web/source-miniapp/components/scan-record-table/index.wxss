@@ -74,6 +74,16 @@
   width: 50px;
 }
 
+.srt-th-color,
+.srt-td-color {
+  width: 40px;
+}
+
+.srt-th-size,
+.srt-td-size {
+  width: 36px;
+}
+
 .srt-th-price,
 .srt-td-price {
   width: 42px;

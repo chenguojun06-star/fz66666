@@ -48,6 +48,8 @@ function _formatPatternRecord(item) {
     displayWorker: item.operatorName || '-',
     displayOrderNo: item.styleNo || '-',
     displayBundleNo: item.color || '-',
+    displayColor: item.color || '-',
+    displaySize: item.size || '-',
     displayQuantity: 0,
     displayUnitPrice: '-',
     lineAmount: 0,
@@ -257,6 +259,8 @@ Page({
           (item.cuttingBundleNo != null ? String(item.cuttingBundleNo) : '') ||
           item.cuttingBundleQrCode ||
           '-',
+        displayColor: item.color || '-',
+        displaySize: item.size || '-',
         displayQuantity: item.quantity || 0,
         displayUnitPrice: item.unitPrice == null || item.unitPrice === '' ? '-' : Number(item.unitPrice).toFixed(2),
         // 金额优先级与后端 selectPayrollAggregation SQL 一致：totalAmount → scanCost → unitPrice×quantity

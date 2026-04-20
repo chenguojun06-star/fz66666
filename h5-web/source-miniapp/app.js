@@ -1,8 +1,7 @@
-const { getToken, clearToken } = require('./utils/storage');
+const { getToken, clearToken, isTokenExpired } = require('./utils/storage');
 const reminderManager = require('./utils/reminderManager');
 const { DEBUG_MODE } = require('./config');
 const { eventBus } = require('./utils/eventBus');
-const { wsManager } = require('./utils/websocketManager');
 // smartGuide 为非核心模块，防御性加载（避免新文件缓存未更新时崩溃 app）
 let resolveSmartGuideByRoute = () => null;
 try {
@@ -99,9 +98,6 @@ App({
     } catch (e) {
       console.error('检查提醒失败', e);
     }
-    try {
-      wsManager.onAppShow();
-    } catch (_e) {}
   },
 
   onHide() {
@@ -109,9 +105,6 @@ App({
       clearTimeout(this._reminderTimerId);
       this._reminderTimerId = null;
     }
-    try {
-      wsManager.onAppHide();
-    } catch (_e) {}
   },
 
   onPageNotFound(res) {
@@ -136,8 +129,11 @@ App({
 
   requireAuth() {
     const token = getToken();
-    if (token) {
+    if (token && !isTokenExpired()) {
       return true;
+    }
+    if (token && isTokenExpired()) {
+      clearToken();
     }
     this.redirectToLogin();
     return false;
@@ -164,7 +160,6 @@ App({
 
   logout() {
     clearToken();
-    try { wsManager.disconnect(); } catch (_e) {}
     const { clearUserInfo } = require('./utils/storage');
     clearUserInfo();
 
@@ -285,6 +280,7 @@ App({
       if (e && e.type === 'auth') {
         return;
       }
+      console.error('[loadPagedList] error:', e && e.message ? e.message : e, 'key:', key);
       this.toastError(e, '网络异常');
     } finally {
       if (pageCtx && typeof pageCtx.setData === 'function') {

@@ -1,13 +1,13 @@
 /**
  * 小云 AI 回复解析器
- * 从 AI 原始回复文本中提取结构化卡片数据（ActionCard / Chart / TeamStatus / BundleSplit / StepWizard）
+ * 从 AI 原始回复文本中提取结构化卡片数据（ActionCard / Chart / TeamStatus / BundleSplit）
  * 对标 PC 端 xiaoyunChatAdapter.ts → parseXiaoyunLegacyMeta()
  */
 
 /**
  * 解析 AI 回复中的标记块，返回纯文本 + 各类卡片数据
  * @param {string} rawText AI原始回复
- * @returns {{ displayText: string, actionCards: Array, charts: Array, teamStatusCards: Array, bundleSplitCards: Array, stepWizardCards: Array }}
+ * @returns {{ displayText: string, actionCards: Array, charts: Array, teamStatusCards: Array, bundleSplitCards: Array }}
  */
 function parseChatReply(rawText) {
   if (!rawText || typeof rawText !== 'string') {

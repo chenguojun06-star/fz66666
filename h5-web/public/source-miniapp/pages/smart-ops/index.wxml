@@ -1,0 +1,168 @@
+<view class="cockpit">
+
+  <view class="status-bar">
+    <view class="status-left">
+      <view class="live-dot"></view>
+      <text class="live-label">LIVE</text>
+      <text class="status-time">{{currentTime}}</text>
+    </view>
+    <text class="alert-tag {{totalWarn > 0 ? 'alert-warn' : 'alert-ok'}}">{{totalWarn > 0 ? totalWarn + '项预警' : '系统正常'}}</text>
+  </view>
+
+  <view class="menu-grid">
+    <view class="menu-card {{activeMenu === 'inProduction' ? 'menu-active' : ''}}" bindtap="onMenuTap" data-key="inProduction">
+      <text class="menu-label">生产中</text>
+      <view class="menu-num-row">
+        <text class="menu-val">{{menuData.inProduction}}</text>
+        <text class="menu-unit">单</text>
+      </view>
+      <text class="menu-qty">{{menuExtra.inProductionQty}}件</text>
+    </view>
+    <view class="menu-card {{activeMenu === 'todayOrders' ? 'menu-active' : ''}}" bindtap="onMenuTap" data-key="todayOrders">
+      <text class="menu-label">今日下单</text>
+      <view class="menu-num-row">
+        <text class="menu-val">{{menuData.todayOrders}}</text>
+        <text class="menu-unit">单</text>
+      </view>
+      <text class="menu-qty">{{menuExtra.todayOrdersQty}}件</text>
+    </view>
+    <view class="menu-card {{activeMenu === 'todayInbound' ? 'menu-active' : ''}}" bindtap="onMenuTap" data-key="todayInbound">
+      <text class="menu-label">今日入库</text>
+      <view class="menu-num-row">
+        <text class="menu-val">{{menuData.todayInbound}}</text>
+        <text class="menu-unit">单</text>
+      </view>
+      <text class="menu-qty">{{menuExtra.todayInboundQty}}件</text>
+    </view>
+    <view class="menu-card {{activeMenu === 'todayOutbound' ? 'menu-active' : ''}}" bindtap="onMenuTap" data-key="todayOutbound">
+      <text class="menu-label">今日出库</text>
+      <view class="menu-num-row">
+        <text class="menu-val">{{menuData.todayOutbound}}</text>
+        <text class="menu-unit">单</text>
+      </view>
+      <text class="menu-qty">{{menuExtra.todayOutboundQty}}件</text>
+    </view>
+    <view class="menu-card {{activeMenu === 'delayedOrders' ? 'menu-active' : ''}}" bindtap="onMenuTap" data-key="delayedOrders">
+      <text class="menu-label">延期订单</text>
+      <view class="menu-num-row">
+        <text class="menu-val warn">{{menuData.delayedOrders}}</text>
+        <text class="menu-unit">单</text>
+      </view>
+      <text class="menu-qty">{{menuExtra.delayedOrdersQty}}件</text>
+    </view>
+    <view class="menu-card {{activeMenu === 'riskOrders' ? 'menu-active' : ''}}" bindtap="onMenuTap" data-key="riskOrders">
+      <text class="menu-label">风险订单</text>
+      <view class="menu-num-row">
+        <text class="menu-val warn">{{menuData.riskOrders}}</text>
+        <text class="menu-unit">单</text>
+      </view>
+      <text class="menu-qty">{{menuExtra.riskOrdersQty}}件</text>
+    </view>
+  </view>
+
+  <view class="section" wx:if="{{activeMenu}}">
+    <view class="card">
+      <view class="card-header">
+        <view class="live-dot-sm"></view>
+        <text class="card-title">{{activeMenuTitle}}</text>
+        <text class="card-badge">{{activeOrders.length}} 单</text>
+        <text class="card-close" bindtap="closeMenu">✕</text>
+      </view>
+      <view class="card-body">
+        <view class="order-row" wx:for="{{activeOrders}}" wx:key="orderNo">
+          <view class="order-top">
+            <text class="order-no">{{item.orderNo}}</text>
+            <text class="order-progress">{{item.progress}}%</text>
+          </view>
+          <view class="order-info">
+            <text class="order-style">{{item.styleNo}}</text>
+            <text class="order-factory">{{item.factoryName || '--'}}</text>
+            <text class="order-qty">{{item.orderQuantity}}件</text>
+            <text class="order-date">交期{{item.plannedEndDate}}</text>
+          </view>
+        </view>
+        <view wx:if="{{activeOrders.length === 0}}" class="empty-hint">暂无订单</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="card">
+      <view class="card-header">
+        <view class="live-dot-sm"></view>
+        <text class="card-title">进度节点</text>
+        <text class="card-badge">点击展开订单</text>
+      </view>
+      <view class="card-body">
+        <view class="stage-grid">
+          <view class="stage-card {{activeStage === item.key ? 'stage-active' : ''}}" wx:for="{{stageBuckets}}" wx:key="key" bindtap="onStageTap" data-key="{{item.key}}">
+            <view class="stage-head">
+              <text class="stage-name">{{item.label}}</text>
+              <text class="stage-count">{{item.count}}单</text>
+            </view>
+            <text class="stage-qty">{{item.quantity}}件</text>
+            <view class="stage-foot" wx:if="{{item.leadOrderNo}}">
+              <text class="stage-lead">{{item.leadOrderNo}}</text>
+              <text class="stage-lead-prog">{{item.leadProgress}}%</text>
+            </view>
+            <text class="stage-empty" wx:else>暂无</text>
+          </view>
+        </view>
+
+        <view class="stage-detail" wx:if="{{activeStage}}">
+          <view class="stage-detail-head">
+            <text class="stage-detail-title">{{activeStageLabel}}舱订单</text>
+            <text class="card-close" bindtap="closeStage">✕</text>
+          </view>
+          <view class="order-row" wx:for="{{activeStageOrders}}" wx:key="orderNo">
+            <view class="order-top">
+              <text class="order-no">{{item.orderNo}}</text>
+              <text class="order-progress">{{item.progress}}%</text>
+            </view>
+            <view class="order-info">
+              <text class="order-style">{{item.styleNo}}</text>
+              <text class="order-factory">{{item.factoryName || '--'}}</text>
+              <text class="order-qty">{{item.orderQuantity}}件</text>
+              <text class="order-date">交期{{item.plannedEndDate}}</text>
+            </view>
+          </view>
+          <view wx:if="{{activeStageOrders.length === 0}}" class="empty-hint">当前阶段暂无在制订单</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="card">
+      <view class="card-header">
+        <view class="live-dot-sm green"></view>
+        <text class="card-title">工厂全景</text>
+        <text class="card-badge">{{factoryList.length}} 家</text>
+      </view>
+      <view class="card-body">
+        <view class="factory-summary">
+          <text class="factory-summary-item">{{factoryOnline}} 在线</text>
+          <text class="factory-summary-item warn" wx:if="{{factoryStagnant > 0}}">{{factoryStagnant}} 停滞</text>
+          <text class="factory-summary-item">{{factoryTotalOrders}}单 {{factoryTotalQty}}件</text>
+        </view>
+        <view class="factory-row" wx:for="{{factoryList}}" wx:key="factoryName">
+          <view class="factory-dot {{item.active ? 'dot-active' : 'dot-idle'}}"></view>
+          <text class="factory-name">{{item.factoryName}}</text>
+          <text class="factory-orders">{{item.activeOrders}}单</text>
+          <text class="factory-qty">{{item.totalQty}}件</text>
+          <text class="factory-risk" wx:if="{{item.atRiskCount > 0}}">{{item.atRiskCount}}风险</text>
+          <text class="factory-risk" wx:if="{{item.overdueCount > 0}}">{{item.overdueCount}}逾期</text>
+          <text class="factory-time" wx:if="{{item.timeText}}">{{item.timeText}}</text>
+        </view>
+        <view wx:if="{{factoryList.length === 0}}" class="empty-hint">暂无工厂数据</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="footer">
+    <text class="footer-text">30秒自动刷新 · 上次更新 {{lastRefreshTime}}</text>
+  </view>
+
+  <ai-assistant />
+
+</view>

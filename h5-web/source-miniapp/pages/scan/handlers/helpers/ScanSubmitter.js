@@ -172,24 +172,25 @@ class ScanSubmitter {
     const bundleNo = scanData.bundleNo;
     const skuItems = scanData.skuItems;
     const hintSuffix = precheckHint ? `（预检提示：${precheckHint}）` : '';
+    const bundleNoSuffix = bundleNo ? ` · 菲号${bundleNo}` : '';
 
     if (scanMode === 'bundle' && bundleNo) {
       // 菲号模式：显示工序和数量
       const hint = stageResult.hint ? ` ${stageResult.hint}` : '';
-      return `${processName} ${quantity}件${hint}${hintSuffix}`;
+      return `${processName} ${quantity}件${hint}${bundleNoSuffix}${hintSuffix}`;
     } else if (scanMode === 'ucode') {
       // U编码入库模式
-      return `U编码入库成功 - ${scanData.color}/${scanData.size} ${quantity}件${hintSuffix}`;
+      return `U编码入库成功 - ${scanData.color}/${scanData.size} ${quantity}件${bundleNoSuffix}${hintSuffix}`;
     } else if (scanMode === 'sku') {
       // SKU模式：显示工序、SKU信息和数量
-      return `${processName} 成功 - ${scanData.color}/${scanData.size} ${quantity}件${hintSuffix}`;
+      return `${processName} 成功 - ${scanData.color}/${scanData.size} ${quantity}件${bundleNoSuffix}${hintSuffix}`;
     } else {
       // 订单模式：显示工序
       if (skuItems && skuItems.length > 0) {
         // 如果有SKU明细，提示已处理明细
-        return `${processName} 成功 - 已处理 ${skuItems.length} 个规格${hintSuffix}`;
+        return `${processName} 成功 - 已处理 ${skuItems.length} 个规格${bundleNoSuffix}${hintSuffix}`;
       }
-      return `订单扫码成功 - ${processName}${hintSuffix}`;
+      return `订单扫码成功 - ${processName}${bundleNoSuffix}${hintSuffix}`;
     }
   }
 }

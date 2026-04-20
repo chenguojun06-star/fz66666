@@ -141,8 +141,9 @@ function scanCode({ onlyFromCamera = true, scanType = ['qrCode', 'barCode'] } = 
         fail: (err) => reject(err),
       });
     } else {
-      const event = new CustomEvent('wx:scanRequest', { detail: { resolve, reject } });
-      window.dispatchEvent(event);
+      // wx.scanQRCode 不可用（未配置 JSSDK 或非微信环境），立即 reject
+      // ScanPage 的 catch 分支会降级到 H5 CameraScanner
+      reject(new Error('wx.scanQRCode unavailable, fallback to H5 camera'));
     }
   });
 }

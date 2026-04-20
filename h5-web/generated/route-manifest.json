@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-17T08:57:11.594Z",
+  "generatedAt": "2026-04-20T12:08:50.070Z",
   "tabBar": {
     "color": "#999999",
     "selectedColor": "#3b82f6",
@@ -45,7 +45,8 @@
         "pkg-warehouse",
         "pkg-register",
         "pkg-bundle-split",
-        "pkg-dashboard"
+        "pkg-dashboard",
+        "pkg-smart-ops"
       ]
     },
     "pages/work/index": {
@@ -243,6 +244,12 @@
       "h5Path": "/dashboard",
       "type": "subpackage",
       "packageName": "pkg-dashboard"
+    },
+    {
+      "source": "pages/smart-ops/index",
+      "h5Path": "/smart-ops",
+      "type": "subpackage",
+      "packageName": "pkg-smart-ops"
     }
   ]
 }

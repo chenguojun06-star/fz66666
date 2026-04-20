@@ -293,6 +293,36 @@ export default function ScanPage() {
     finally { setUndoingId(null); }
   };
 
+  // 统一处理 CameraScanner 抛出的类型化错误码
+  const handleCameraError = useCallback((code) => {
+    setCameraActive(false);
+    if (!code) return; // 用户手动关闭，无需提示
+    if (code === 'camera_denied') {
+      wx.showModal({
+        title: '需要相机权限',
+        content: '请点击浏览器地址栏左侧的「锁形图标」，将摄像头权限设为「允许」，然后刷新页面重试。',
+        showCancel: false,
+        confirmText: '知道了',
+      });
+      return;
+    }
+    if (code === 'camera_https_required') {
+      wx.showModal({
+        title: '需要 HTTPS 访问',
+        content: '扫码功能仅支持通过安全地址（https://）访问，请联系管理员确认访问地址后重试。',
+        showCancel: false,
+        confirmText: '知道了',
+      });
+      return;
+    }
+    const msgs = {
+      camera_unsupported: '当前浏览器不支持扫码，请更换浏览器',
+      camera_notfound: '未检测到摄像头，请确认设备有可用摄像头',
+      camera_error: '相机启动失败，请重试',
+    };
+    toast.error(msgs[code] || '扫码失败，请重试');
+  }, []);
+
   return (
     <div className="scan-container">
       {/* === 上区：今日统计 === */}
@@ -429,7 +459,7 @@ export default function ScanPage() {
       <Suspense fallback={null}>
         {cameraActive && (
           <CameraScanner active={cameraActive} onScan={handleScanResult}
-            onError={(msg) => { if (msg) toast.error(msg); setCameraActive(false); }} />
+            onError={handleCameraError} />
         )}
       </Suspense>    </div>
   );

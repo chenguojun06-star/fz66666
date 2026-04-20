@@ -10,6 +10,9 @@ const dashboard = {
   getTopStats(params) {
     return ok('/api/dashboard/top-stats', 'GET', params || {});
   },
+  getDailyBrief() {
+    return ok('/api/dashboard/daily-brief', 'GET', {});
+  },
 };
 
 const wechat = {

@@ -8,6 +8,12 @@ const production = {
   listOrders(params) {
     return ok('/api/production/order/list', 'GET', params || {});
   },
+  orderStats(params) {
+    return ok('/api/production/order/stats', 'GET', params || {});
+  },
+  getFactoryCapacity() {
+    return ok('/api/production/order/factory-capacity', 'GET', {});
+  },
   createOrder(payload) {
     return ok('/api/production/order', 'POST', payload || {});
   },

@@ -407,24 +407,45 @@ async function loadMyHistory(page, refresh = false) {
   page.setData({ 'my.loadingHistory': true });
 
   try {
-    // 只查询当天记录
     const today = _getToday();
-    const res = await api.production.myScanHistory({
+    const startTime = today + ' 00:00:00';
+    const endTime = today + ' 23:59:59';
+
+    const scanRes = await api.production.myScanHistory({
       page: pageNum,
       pageSize,
-      startTime: today + ' 00:00:00',
-      endTime: today + ' 23:59:59',
+      startTime: startTime,
+      endTime: endTime,
     });
 
-    const records = res.records || res || [];
-    const total = res.total || 0;
+    let records = scanRes.records || scanRes || [];
+    const total = scanRes.total || 0;
     const hasMore = pageNum * pageSize < total;
 
-    // 修复：移除旧的"API返回空时保留旧缓存"的逻辑。
-    // 该逻辑原本为了防止重新进入后今日记录闪消，但副作用是：
-    // 跨天后（新的一天无扫码记录），会持续显示昨天的旧数据，
-    // 用户不得不手动下拉刷新才能看到正确的"暂无今日记录"状态。
-    // 现在改为完全信任 API 返回值：API 说今日无记录即显示空。
+    if (refresh) {
+      try {
+        const patternRes = await api.production.myPatternScanHistory({
+          startTime: startTime,
+          endTime: endTime,
+        });
+        const patternRecords = patternRes && (patternRes.records || patternRes.list || patternRes || []);
+        if (Array.isArray(patternRecords) && patternRecords.length > 0) {
+          const formatted = patternRecords.map(function(item) {
+            return Object.assign({}, item, {
+              scanType: item.scanType || 'pattern',
+              processName: item.processName || '样衣-' + (item.progressStage || item.operationType || ''),
+              progressStage: item.progressStage || 'pattern',
+              scanResult: item.scanResult || 'success',
+              operatorName: item.operatorName || item.operator_name || '',
+              operatorId: item.operatorId || item.operator_id || '',
+            });
+          });
+          records = records.concat(formatted);
+        }
+      } catch (pe) {
+        // 样衣记录加载失败不影响主记录
+      }
+    }
 
     let groupedHistory = groupScanRecords(records);
 
@@ -578,6 +599,70 @@ function addToLocalHistory(page, record) {
   const history = [record, ...(page._scanHistory || [])].slice(0, 20);
   page._scanHistory = history;
   setStorageValue('scan_history_v2', history);
+
+  addOptimisticRecordToGroupedHistory(page, record);
+}
+
+function addOptimisticRecordToGroupedHistory(page, record) {
+  const groupedHistory = page.data.my && page.data.my.groupedHistory;
+  if (!groupedHistory) return;
+
+  const orderNo = record.orderNo || '';
+  const processName = _normalizeQualityName(record.processName || '');
+  const groupKey = _createGroupKey(orderNo, processName);
+
+  const newItem = {
+    id: record.recordId || ('local_' + Date.now()),
+    orderNo: orderNo,
+    bundleNo: record.bundleNo || '',
+    color: record.color || '',
+    size: record.size || '',
+    sizeArr: record.size ? [record.size] : [],
+    qtyArr: record.quantity ? [record.quantity] : [],
+    quantity: record.quantity || 1,
+    unitPrice: record.unitPrice || 0,
+    createdAt: new Date().toISOString(),
+    scanTime: new Date().toISOString(),
+    scanType: record.scanType || '',
+    scanResult: 'success',
+    scanCode: record.scanCode || '',
+    operatorName: record.operatorName || '',
+    operatorId: record.operatorId || '',
+    displayOperator: record.operatorName || record.operatorId || '',
+    canRescan: false,
+    canUndo: true,
+    payrollSettled: false,
+    cuttingBundleId: record.cuttingBundleId || '',
+    coverImage: record.coverImage || record.styleImage || '',
+    styleImage: record.styleImage || record.coverImage || '',
+  };
+
+  const existingGroupIdx = groupedHistory.findIndex(function(g) { return g.id === groupKey; });
+
+  if (existingGroupIdx >= 0) {
+    const group = Object.assign({}, groupedHistory[existingGroupIdx]);
+    group.items = [newItem].concat(group.items);
+    group.totalQuantity = (group.totalQuantity || 0) + (newItem.quantity || 0);
+    group.latestTime = newItem.scanTime;
+    const updated = groupedHistory.slice();
+    updated[existingGroupIdx] = group;
+    page.setData({ 'my.groupedHistory': updated });
+  } else {
+    const newGroup = {
+      id: groupKey,
+      orderNo: orderNo,
+      styleNo: record.styleNo || '',
+      stage: processName,
+      totalQuantity: newItem.quantity,
+      latestTime: newItem.scanTime,
+      expanded: true,
+      items: [newItem],
+      deliveryDateStr: '',
+      remainDaysText: '',
+      remainDaysClass: '',
+    };
+    page.setData({ 'my.groupedHistory': [newGroup].concat(groupedHistory) });
+  }
 }
 
 /**

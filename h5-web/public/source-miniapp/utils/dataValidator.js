@@ -21,7 +21,7 @@ const ProductionOrderShape = {
   status: { required: true, type: 'string' },
 
   // 关键: 进度流程定义 (JSON 字符串)
-  progressWorkflowJson: { type: 'string', default: '{}' },
+  progressWorkflowJson: { required: false, default: {} },
   progressWorkflowLocked: { type: 'number', default: 0 },
   progressWorkflowLockedAt: { type: 'string' },
   progressWorkflowLockedBy: { type: 'string' },
@@ -123,12 +123,17 @@ function validateProductionOrder(order) {
   // 验证 progressWorkflowJson 格式
   if (order.progressWorkflowJson) {
     try {
-      const parsed = JSON.parse(order.progressWorkflowJson);
-      if (!Array.isArray(parsed.nodes)) {
+      var parsed = order.progressWorkflowJson;
+      if (typeof parsed === 'string') {
+        parsed = JSON.parse(parsed);
+      }
+      if (typeof parsed !== 'object' || parsed === null) {
+        additionalErrors.push('progressWorkflowJson 必须是对象或JSON字符串');
+      } else if (parsed.nodes !== undefined && !Array.isArray(parsed.nodes)) {
         additionalErrors.push('progressWorkflowJson.nodes 必须是数组');
       }
     } catch (e) {
-      additionalErrors.push(`progressWorkflowJson 格式不正确: ${e.message}`);
+      additionalErrors.push('progressWorkflowJson 格式不正确: ' + (e.message || e));
     }
   }
 

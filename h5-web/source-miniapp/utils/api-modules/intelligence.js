@@ -121,6 +121,60 @@ const intelligence = {
   getMyPendingTaskSummary() {
     return ok('/api/intelligence/pending-tasks/summary', 'GET', {});
   },
+  aiAdvisorScenario(key, payload) {
+    return ok('/api/intelligence/ai-advisor/scenario/' + key, 'POST', payload || {}, { timeout: 90000 });
+  },
+  getBrainSnapshot() {
+    return ok('/api/intelligence/brain/snapshot', 'GET', {});
+  },
+  getProfitEstimation(payload) {
+    return ok('/api/intelligence/profit-estimation', 'POST', payload || {});
+  },
+  getFactoryLeaderboard() {
+    return ok('/api/intelligence/factory-leaderboard', 'POST', {});
+  },
+  getFinanceAudit() {
+    return ok('/api/intelligence/finance-audit', 'POST', {});
+  },
+  getMonthlyBizSummary(payload) {
+    return ok('/api/intelligence/monthly-biz-summary', 'GET', payload || {});
+  },
+  runAiPatrol() {
+    return ok('/api/intelligence/ai-patrol/run', 'POST', {});
+  },
+  getSupplierScorecard() {
+    return ok('/api/intelligence/supplier-scorecard', 'GET', {});
+  },
+  getForecast(payload) {
+    return ok('/api/intelligence/forecast', 'POST', payload || {});
+  },
+  getLivePulse() {
+    return ok('/api/intelligence/live-pulse', 'POST', {});
+  },
+  getHealthIndex() {
+    return ok('/api/intelligence/health-index', 'POST', {});
+  },
+  getSmartNotifications() {
+    return ok('/api/intelligence/smart-notification', 'POST', {});
+  },
+  getWorkerEfficiency() {
+    return ok('/api/intelligence/worker-efficiency', 'POST', {});
+  },
+  getDefectHeatmap() {
+    return ok('/api/intelligence/defect-heatmap', 'POST', {});
+  },
+  getFactoryBottleneck() {
+    return ok('/api/intelligence/factory-bottleneck', 'GET', {});
+  },
+  getActionCenter() {
+    return ok('/api/intelligence/action-center', 'GET', {});
+  },
+  getMaterialShortage() {
+    return ok('/api/intelligence/material-shortage', 'GET', {});
+  },
+  runSelfHealing() {
+    return ok('/api/intelligence/self-healing', 'POST', {});
+  },
 };
 
 const notice = {

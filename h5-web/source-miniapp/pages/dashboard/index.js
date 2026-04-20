@@ -6,9 +6,10 @@
  * 底部：完整订单列表（带封面图、工序进度明细、颜色尺码矩阵，可展开收起）
  *
  * 数据来源：
- *   dashboard.get()         → overdueOrderCount / todayScanCount / sampleDevelopmentCount
- *   dashboard.getTopStats() → warehousingInbound/outbound .day/.week
- *   production.listOrders   → 订单列表 + 状态计数
+ *   dashboard.get()            → overdueOrderCount / todayScanCount / sampleDevelopmentCount
+ *   dashboard.getTopStats()    → warehousingInbound/outbound .day/.week
+ *   production.orderStats()    → 订单统计（与H5进度看板一致）
+ *   production.listOrders      → 订单列表 + 状态计数
  */
 var api = require('../../utils/api');
 var { transformOrderData } = require('../work/utils/orderTransform');
@@ -65,7 +66,8 @@ Page({
   },
 
   onLoad: function () {
-    // 进度看板仅限租户老板/管理员/主管/跟单，普通工厂工人无权访问
+    var app = getApp();
+    if (app.requireAuth && !app.requireAuth()) return;
     if (!isTenantOwner() && !isAdminOrSupervisor()) {
       wx.showToast({ title: '无权限访问', icon: 'none', duration: 1500 });
       wx.navigateBack({ delta: 1, fail: function () { wx.switchTab({ url: '/pages/home/index' }); } });
@@ -110,28 +112,26 @@ Page({
     this._unbindWsEvents();
   },
 
-  /* ======== 刷新摘要卡片（4 个并发请求） ======== */
+  /* ======== 刷新摘要卡片（3 个并发请求，与H5进度看板一致） ======== */
   refreshCards: function () {
     var that = this;
     that.setData({ loading: true });
 
     var apiFailCount = 0;
+    var orderStatsFn = api.production && typeof api.production.orderStats === 'function'
+      ? api.production.orderStats : null;
+    if (!orderStatsFn) {
+      var prodKeys = api.production ? Object.keys(api.production).join(',') : 'undefined';
+      console.warn('[Dashboard] api.production.orderStats 不可用，跳过订单统计。production keys:', prodKeys);
+    }
     return Promise.all([
       api.dashboard.get().catch(function (e) { console.warn('[Dashboard] dash API失败:', e.message || e); apiFailCount++; return {}; }),
       api.dashboard.getTopStats().catch(function (e) { console.warn('[Dashboard] topStats API失败:', e.message || e); apiFailCount++; return {}; }),
-      api.production.listOrders({ deleteFlag: 0, status: 'production', page: 1, pageSize: 50 }).catch(function (e) { console.warn('[Dashboard] prodOrders API失败:', e.message || e); apiFailCount++; return {}; }),
-      api.production.listOrders({ deleteFlag: 0, status: 'completed',  page: 1, pageSize: 1 }).catch(function (e) { console.warn('[Dashboard] compOrders API失败:', e.message || e); apiFailCount++; return {}; }),
+      orderStatsFn ? orderStatsFn({}).catch(function (e) { console.warn('[Dashboard] orderStats API失败:', e.message || e); apiFailCount++; return {}; }) : Promise.resolve({}),
     ]).then(function (res) {
       var dash     = res[0] || {};
       var topStats = res[1] || {};
-      var prodRes  = res[2] || {};
-      var compRes  = res[3] || {};
-
-      var prodRecords = (prodRes && prodRes.records) || [];
-      var totalPieces = 0;
-      for (var i = 0; i < prodRecords.length; i++) {
-        totalPieces += Number(prodRecords[i].orderQuantity) || 0;
-      }
+      var stats    = res[2] || {};
 
       that.setData({
         loading: false,
@@ -139,12 +139,12 @@ Page({
         cards: {
           sample: {
             developing: Number(dash.sampleDevelopmentCount) || 0,
-            completed:  compRes.total || 0,
+            completed:  Number(stats.completedOrders) || 0,
           },
           production: {
-            total:   prodRes.total || 0,
-            overdue: Number(dash.overdueOrderCount) || 0,
-            pieces:  totalPieces,
+            total:   Number(stats.activeOrders) || 0,
+            overdue: Number(dash.overdueOrderCount) || Number(stats.delayedOrders) || 0,
+            pieces:  Number(stats.activeQuantity) || 0,
           },
           inbound: {
             today: (topStats.warehousingInbound && topStats.warehousingInbound.day) || 0,
@@ -156,7 +156,7 @@ Page({
           },
         },
       });
-      if (apiFailCount >= 4) {
+      if (apiFailCount >= 3) {
         wx.showToast({ title: '数据加载失败，请下拉刷新', icon: 'none', duration: 2500 });
       } else if (apiFailCount > 0) {
         wx.showToast({ title: '部分数据加载失败', icon: 'none', duration: 2000 });
@@ -183,8 +183,7 @@ Page({
     }
 
     return app.loadPagedList(this, 'orders', reset, function (p) {
-      // 延期订单加大 pageSize 弥补客户端过滤损失
-      var params = { deleteFlag: 0, page: p.page, pageSize: isOverdue ? 50 : p.pageSize };
+      var params = { page: p.page, pageSize: isOverdue ? 50 : p.pageSize, excludeTerminal: 'true' };
       if (isOverdue) {
         params.status = 'production';
       } else if (filterVal) {
@@ -209,18 +208,20 @@ Page({
   /* ======== 刷新状态计数 ======== */
   _refreshStatCounts: function () {
     var that = this;
+    var orderStatsFn2 = api.production && typeof api.production.orderStats === 'function'
+      ? api.production.orderStats : null;
     Promise.all([
-      api.production.listOrders({ deleteFlag: 0, page: 1, pageSize: 1 }).catch(function () { return {}; }),
-      api.production.listOrders({ deleteFlag: 0, status: 'production', page: 1, pageSize: 1 }).catch(function () { return {}; }),
-      api.production.listOrders({ deleteFlag: 0, status: 'completed', page: 1, pageSize: 1 }).catch(function () { return {}; }),
+      orderStatsFn2 ? orderStatsFn2({}).catch(function () { return {}; }) : Promise.resolve({}),
       api.dashboard.get().catch(function () { return {}; }),
     ]).then(function (res) {
+      var stats = res[0] || {};
+      var dash  = res[1] || {};
       that.setData({
         statCounts: {
-          all:            (res[0] && res[0].total) || 0,
-          in_production:  (res[1] && res[1].total) || 0,
-          completed:      (res[2] && res[2].total) || 0,
-          overdue:        Number((res[3] && res[3].overdueOrderCount) || 0),
+          all:            Number(stats.totalOrders) || 0,
+          in_production:  Number(stats.activeOrders) || 0,
+          completed:      Number(stats.completedOrders) || 0,
+          overdue:        Number(dash.overdueOrderCount) || Number(stats.delayedOrders) || 0,
         },
       });
     }).catch(function () {});

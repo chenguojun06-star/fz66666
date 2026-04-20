@@ -108,7 +108,7 @@ export default function HomePage() {
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 700, fontSize: 18, lineHeight: 1.3 }}>{displayName}，{getGreeting()}</div>
-            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>衣智链｜多端协同智能提醒平台</div>
+            <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tenantName || '衣智链'}</div>
           </div>
           {unreadCount > 0 && (
             <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => navigate('/work/inbox')}>
