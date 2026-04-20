@@ -91,18 +91,20 @@ public class AiAgentPromptHelper {
         Long tenantId = UserContext.tenantId();
         String userId = UserContext.userId();
 
-        CompletableFuture<String> intelligenceContextFuture = CompletableFuture.supplyAsync(() -> {
+        CompletableFuture<String> intelligenceContextFuture = CompletableFuture.supplyAsync(
+                UserContext.wrapSupplier(() -> {
             try {
                 return aiContextBuilderService.buildSystemPrompt();
             } catch (Exception e) {
                 log.warn("[AiAgent] 构建实时智能上下文失败: {}", e.getMessage());
                 return "【实时经营上下文】暂时获取失败，请优先通过工具查询后再下结论。\n";
             }
-        }, promptBuildExecutor);
+        }), promptBuildExecutor);
 
         CompletableFuture<String> workerProfileFuture = CompletableFuture.completedFuture("");
         if (!isManager && userName != null && !userName.isBlank()) {
-            workerProfileFuture = CompletableFuture.supplyAsync(() -> {
+            workerProfileFuture = CompletableFuture.supplyAsync(
+                    UserContext.wrapSupplier(() -> {
                 try {
                     WorkerProfileRequest profileReq = new WorkerProfileRequest();
                     profileReq.setOperatorName(userName);
@@ -129,12 +131,13 @@ public class AiAgentPromptHelper {
                     log.debug("[AiAgent] 工人画像注入跳过: {}", e.getMessage());
                 }
                 return "";
-            }, promptBuildExecutor);
+            }), promptBuildExecutor);
         }
 
         CompletableFuture<String> mgmtInsightFuture = CompletableFuture.completedFuture("");
         if (isManager) {
-            mgmtInsightFuture = CompletableFuture.supplyAsync(() -> {
+            mgmtInsightFuture = CompletableFuture.supplyAsync(
+                    UserContext.wrapSupplier(() -> {
                 try {
                     if (tenantId != null) {
                         java.util.Map<String, Object> summary = managementInsightOrchestrator.getExecutiveSummary(tenantId);
@@ -155,19 +158,21 @@ public class AiAgentPromptHelper {
                     log.debug("[AiAgent] 管理层经营快照注入跳过: {}", e.getMessage());
                 }
                 return "";
-            }, promptBuildExecutor);
+            }), promptBuildExecutor);
         }
 
-        CompletableFuture<String> memoryContextFuture = CompletableFuture.supplyAsync(() -> {
+        CompletableFuture<String> memoryContextFuture = CompletableFuture.supplyAsync(
+                UserContext.wrapSupplier(() -> {
             try {
                 return aiMemoryOrchestrator.getMemoryContext(tenantId, userId);
             } catch (Exception e) {
                 log.debug("[AiAgent] 加载历史对话记忆失败，跳过: {}", e.getMessage());
                 return "";
             }
-        }, promptBuildExecutor);
+        }), promptBuildExecutor);
 
-        CompletableFuture<String> ragContextFuture = CompletableFuture.supplyAsync(() -> {
+        CompletableFuture<String> ragContextFuture = CompletableFuture.supplyAsync(
+                UserContext.wrapSupplier(() -> {
             try {
                 if (userMessage != null && !userMessage.isBlank()) {
                     IntelligenceMemoryResponse ragResult =
@@ -203,7 +208,7 @@ public class AiAgentPromptHelper {
                 log.debug("[AiAgent-RAG] 混合检索跳过（Qdrant 未启用或记忆链失败）: {}", e.getMessage());
             }
             return "";
-        }, promptBuildExecutor);
+        }), promptBuildExecutor);
 
         String intelligenceContext = intelligenceContextFuture.join();
         String workerProfileBlock = workerProfileFuture.join();

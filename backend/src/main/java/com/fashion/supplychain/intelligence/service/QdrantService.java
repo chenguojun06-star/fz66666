@@ -122,6 +122,10 @@ public class QdrantService {
      */
     public boolean upsertVector(String pointId, Long tenantId, String content,
             java.util.Map<String, Object> payload) {
+        if (tenantId == null) {
+            log.warn("[Qdrant] upsert拒绝：tenantId为null，禁止写入孤儿向量 pointId={}", pointId);
+            return false;
+        }
         try {
             ensureCollectionExists();
             float[] vector = computeEmbedding(content);

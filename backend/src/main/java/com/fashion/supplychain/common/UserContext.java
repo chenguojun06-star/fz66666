@@ -192,6 +192,77 @@ public class UserContext {
         HOLDER.remove();
     }
 
+    /**
+     * 创建当前 UserContext 的深拷贝，用于异步线程传递
+     */
+    public UserContext copy() {
+        UserContext copy = new UserContext();
+        copy.setUserId(this.userId);
+        copy.setUsername(this.username);
+        copy.setRole(this.role);
+        copy.setPermissionRange(this.permissionRange);
+        copy.setTeamId(this.teamId);
+        copy.setTenantId(this.tenantId);
+        copy.setTenantOwner(this.tenantOwner);
+        copy.setSuperAdmin(this.superAdmin);
+        copy.setFactoryId(this.factoryId);
+        return copy;
+    }
+
+    /**
+     * 在指定 Runnable 执行前设置 UserContext，执行后恢复原状态。
+     * 用于 CompletableFuture.supplyAsync / runAsync 等异步场景传递租户上下文。
+     *
+     * 用法：CompletableFuture.supplyAsync(UserContext.wrap(() -> doSomething()))
+     */
+    public static Runnable wrap(Runnable runnable) {
+        UserContext snapshot = get();
+        return () -> {
+            UserContext previous = get();
+            try {
+                if (snapshot != null) {
+                    set(snapshot.copy());
+                } else {
+                    clear();
+                }
+                runnable.run();
+            } finally {
+                if (previous != null) {
+                    set(previous);
+                } else {
+                    clear();
+                }
+            }
+        };
+    }
+
+    /**
+     * 在指定 Supplier 执行前设置 UserContext，执行后恢复原状态。
+     * 用于 CompletableFuture.supplyAsync 等异步场景传递租户上下文。
+     *
+     * 用法：CompletableFuture.supplyAsync(UserContext.wrapSupplier(() -> computeResult()))
+     */
+    public static <T> java.util.function.Supplier<T> wrapSupplier(java.util.function.Supplier<T> supplier) {
+        UserContext snapshot = get();
+        return () -> {
+            UserContext previous = get();
+            try {
+                if (snapshot != null) {
+                    set(snapshot.copy());
+                } else {
+                    clear();
+                }
+                return supplier.get();
+            } finally {
+                if (previous != null) {
+                    set(previous);
+                } else {
+                    clear();
+                }
+            }
+        };
+    }
+
     public String getUserId() {
         return userId;
     }

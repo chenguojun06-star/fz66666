@@ -518,7 +518,7 @@ export default function LabelPrintModal({ open, onClose, order, styleInfo }: Pro
         const d = res?.data ?? res ?? {};
         setOrderFactoryCode(String(d.factoryCode || ''));
       })
-      .catch(() => setOrderFactoryCode(''));
+      .catch((err) => { console.warn('[LabelPrint] 工厂编码查询失败:', err?.message || err); setOrderFactoryCode(''); });
   }, [open, order?.factoryId]);
 
   const handleWashPrint = useCallback(

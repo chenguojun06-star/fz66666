@@ -146,13 +146,17 @@ public class TokenAuthFilter extends OncePerRequestFilter {
             // 解析userId
             String userIdStr = subject.getUserId();
             if (StringUtils.hasText(userIdStr)) {
-                try { userId = Long.valueOf(userIdStr); } catch (NumberFormatException ignored) {}
+                try { userId = Long.valueOf(userIdStr); } catch (NumberFormatException e) {
+                    log.warn("[TokenAuth] userId格式异常，无法解析为Long: {}", userIdStr);
+                }
             }
 
             // 解析roleId
             String roleIdStr = subject.getRoleId();
             if (StringUtils.hasText(roleIdStr)) {
-                try { roleId = Long.valueOf(roleIdStr); } catch (NumberFormatException ignored) {}
+                try { roleId = Long.valueOf(roleIdStr); } catch (NumberFormatException e) {
+                    log.warn("[TokenAuth] roleId格式异常，无法解析为Long: {}", roleIdStr);
+                }
             }
 
             // 超级管理员：调用权限引擎获取全部权限（tenantId传null触发超管分支）

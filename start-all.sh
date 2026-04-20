@@ -28,8 +28,11 @@ cd backend
 export SPRING_DATASOURCE_URL='jdbc:mysql://127.0.0.1:3308/fashion_supplychain?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&createDatabaseIfNotExist=true'
 export SPRING_DATASOURCE_USERNAME='root'
 export SPRING_DATASOURCE_PASSWORD='changeme'
-export APP_AUTH_JWT_SECRET='ThisIsA_LocalJwtSecret_OnlyForDev_0123456789'
-export WECHAT_MINI_PROGRAM_MOCK_ENABLED='true'
+if [ -z "$APP_AUTH_JWT_SECRET" ]; then
+    echo "⚠️  警告：APP_AUTH_JWT_SECRET 未设置，使用开发默认值。生产环境必须设置强密钥！"
+    export APP_AUTH_JWT_SECRET='ThisIsA_LocalJwtSecret_OnlyForDev_0123456789'
+fi
+export WECHAT_MINI_PROGRAM_MOCK_ENABLED='false'
 
 # 固定 Java 21
 export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home

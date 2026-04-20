@@ -80,7 +80,7 @@ public class TenantIntelligenceBrainOrchestrator {
         // 2-4. 信号采集 + 记忆召回 + AI推理：异步执行，整体 22s 超时守护
         final IntelligenceBrainSnapshotResponse finalSnapshot = snapshot;
         try {
-            CompletableFuture.runAsync(() -> enrichAsync(finalSnapshot, tenantId))
+            CompletableFuture.runAsync(UserContext.wrap(() -> enrichAsync(finalSnapshot, tenantId)))
                     .orTimeout(UNIFIED_SNAPSHOT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                     .join(); // 阻塞等待，但有超时保护
         } catch (Exception e) {

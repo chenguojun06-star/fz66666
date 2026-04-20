@@ -71,6 +71,11 @@ public class KnowledgeSearchTool extends AbstractAgentTool {
 
             Long tenantId = UserContext.tenantId();
 
+            if (tenantId == null) {
+                log.warn("[KnowledgeSearch] tenantId为null，拒绝搜索以防止跨租户数据泄露");
+                return errorJson("租户上下文缺失，无法搜索知识库");
+            }
+
             // ── STEP 1: Qdrant语义召回（向量引擎可用时优先）──
             Map<String, Float> semanticScoreMap = new LinkedHashMap<>();
             boolean qdrantEnabled = qdrantService != null && qdrantService.isAvailable();
@@ -97,7 +102,7 @@ public class KnowledgeSearchTool extends AbstractAgentTool {
                     .and(wrapper -> wrapper
                             .isNull("tenant_id")
                             .or()
-                            .eq("tenant_id", tenantId != null ? tenantId : -1)
+                            .eq("tenant_id", tenantId)
                     )
                     .and(wrapper -> wrapper
                             .like("title", query)
@@ -114,7 +119,7 @@ public class KnowledgeSearchTool extends AbstractAgentTool {
                 QueryWrapper<KnowledgeBase> semanticQw = new QueryWrapper<KnowledgeBase>()
                         .eq("delete_flag", 0)
                             .in("id", semanticScoreMap.keySet())
-                        .and(w -> w.isNull("tenant_id").or().eq("tenant_id", tenantId != null ? tenantId : -1));
+                        .and(w -> w.isNull("tenant_id").or().eq("tenant_id", tenantId));
                         if (!category.isEmpty()) semanticQw.eq("category", category);
                 semanticKbList = knowledgeBaseService.list(semanticQw);
             }
@@ -131,7 +136,7 @@ public class KnowledgeSearchTool extends AbstractAgentTool {
                             for (String entityName : path.getEntityNames()) {
                                 QueryWrapper<KnowledgeBase> graphQw = new QueryWrapper<KnowledgeBase>()
                                         .eq("delete_flag", 0)
-                                        .and(w -> w.isNull("tenant_id").or().eq("tenant_id", tenantId != null ? tenantId : -1))
+                                        .and(w -> w.isNull("tenant_id").or().eq("tenant_id", tenantId))
                                         .and(w -> w.like("title", entityName).or().like("keywords", entityName));
                                 if (!category.isEmpty()) graphQw.eq("category", category);
                                 graphQw.last("LIMIT 3");

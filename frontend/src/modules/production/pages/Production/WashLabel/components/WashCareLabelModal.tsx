@@ -108,7 +108,7 @@ export default function WashCareLabelModal({ open, onCancel, order }: Props) {
           dryCleanCode:   d.dryCleanCode,
         });
       })
-      .catch(() => setStyleData({}))
+      .catch((err) => { console.warn('[WashCare] 款式数据加载失败:', err?.message || err); setStyleData({}); })
       .finally(() => setLoading(false));
   }, [open, order?.styleNo, styleId]);
 

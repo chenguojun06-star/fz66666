@@ -450,7 +450,7 @@ const SmartAlertBell: React.FC = () => {
                     }}
                     onClick={() => {
                       if (!n.isRead) {
-                        sysNoticeApi.markRead(n.id).then(() => fetchMyNotices()).catch(() => {});
+                        sysNoticeApi.markRead(n.id).then(() => fetchMyNotices()).catch((err) => { console.warn('[SmartAlert] 标记已读失败:', err?.message || err); });
                       }
                     }}
                   >
@@ -467,7 +467,7 @@ const SmartAlertBell: React.FC = () => {
                         className="sap-notice-read-btn"
                         onClick={(e) => {
                           e.stopPropagation();
-                          sysNoticeApi.markRead(n.id).then(() => fetchMyNotices()).catch(() => {});
+                          sysNoticeApi.markRead(n.id).then(() => fetchMyNotices()).catch((err) => { console.warn('[SmartAlert] 标记已读失败:', err?.message || err); });
                           setDismissedNoticeIds(prev => {
                             const next = new Set([...prev, n.id]);
                             saveDismissedNotices(next);

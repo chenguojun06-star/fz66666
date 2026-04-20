@@ -147,7 +147,7 @@ const ExpenseReimbursementPage: React.FC = () => {
     if (editingRecord?.id) {
       expenseReimbursementApi.getDocs(editingRecord.id)
         .then(res => { if (res.code === 200) setDocList(res.data || []); })
-        .catch(() => {});
+        .catch((err) => { console.warn('[ExpenseReim] 编辑凭证加载失败:', err?.message || err); });
     } else {
       setDocList([]);
     }
@@ -158,7 +158,7 @@ const ExpenseReimbursementPage: React.FC = () => {
     if (detailRecord?.id) {
       expenseReimbursementApi.getDocs(detailRecord.id)
         .then(res => { if (res.code === 200) setDetailDocList(res.data || []); })
-        .catch(() => {});
+        .catch((err) => { console.warn('[ExpenseReim] 详情凭证加载失败:', err?.message || err); });
     } else {
       setDetailDocList([]);
     }

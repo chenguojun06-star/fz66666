@@ -1,6 +1,7 @@
 package com.fashion.supplychain.crm.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -61,7 +62,8 @@ public class Receivable {
 
     private String sourceBizNo;
 
-    /** 关联账单汇总ID（confirmBill后自动回填） */
+    /** 关联账单汇总ID（confirmBill后自动回填）；数据库列可能尚未迁移，标记为非持久化防止500 */
+    @TableField(exist = false)
     private String billAggregationId;
 
     private LocalDateTime createTime;

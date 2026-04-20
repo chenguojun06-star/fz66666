@@ -5,12 +5,18 @@
 # 建议：配置 Mac 定时任务每天自动执行（见脚本末尾说明）
 # ============================================================
 
-# 云 MySQL 连接信息
-DB_HOST="sh-cynosdbmysql-grp-2bpr255g.sql.tencentcdb.com"
-DB_PORT="28800"
-DB_NAME="fashion_supplychain"
-DB_USER="root"
-DB_PASSWORD="cC1997112"
+# 云 MySQL 连接信息 — 从环境变量读取，禁止在版本控制中存储密钥
+# 首次使用前请设置以下环境变量（或写入 ~/.bashrc / ~/.zshrc）：
+#   export CLOUD_DB_HOST="你的数据库地址"
+#   export CLOUD_DB_PORT="你的数据库端口"
+#   export CLOUD_DB_NAME="fashion_supplychain"
+#   export CLOUD_DB_USER="你的用户名"
+#   export CLOUD_DB_PASSWORD="你的密码"
+DB_HOST="${CLOUD_DB_HOST:?错误：请设置 CLOUD_DB_HOST 环境变量}"
+DB_PORT="${CLOUD_DB_PORT:?错误：请设置 CLOUD_DB_PORT 环境变量}"
+DB_NAME="${CLOUD_DB_NAME:-fashion_supplychain}"
+DB_USER="${CLOUD_DB_USER:?错误：请设置 CLOUD_DB_USER 环境变量}"
+DB_PASSWORD="${CLOUD_DB_PASSWORD:?错误：请设置 CLOUD_DB_PASSWORD 环境变量}"
 
 # 备份存到当前 Mac 本地（可改成其他路径，如移动硬盘）
 BACKUP_DIR="$HOME/Documents/服装数据库备份"

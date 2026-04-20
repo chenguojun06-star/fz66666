@@ -119,17 +119,17 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
             || records.find((item: any) => String(item.styleNo || '') === String(styleNo || ''));
           if (matched?.id) setAutoPatternId(String(matched.id));
         })
-        .catch(() => {});
+        .catch((err) => { console.warn('[StylePrint] 款式花型匹配失败:', err?.message || err); });
     }
     const loadData = async () => {
       setLoading(true);
       try {
         const newData: PrintData = { sizes: [], bom: [], process: [], attachments: [], productionSheet: null };
         const promises: Promise<any>[] = [];
-        promises.push(getStyleInfoByRef(styleId, styleNo).then((styleInfo) => { if (styleInfo) newData.productionSheet = styleInfo; }).catch(() => {}));
-        promises.push(api.get('/style/size/list', { params: { styleId } }).then(res => { if (res.code === 200) newData.sizes = res.data || []; }).catch(() => {}));
-        promises.push(api.get('/style/bom/list', { params: { styleId } }).then(res => { if (res.code === 200) newData.bom = res.data || []; }).catch(() => {}));
-        promises.push(api.get('/style/process/list', { params: { styleId } }).then(res => { if (res.code === 200) newData.process = res.data || []; }).catch(() => {}));
+        promises.push(getStyleInfoByRef(styleId, styleNo).then((styleInfo) => { if (styleInfo) newData.productionSheet = styleInfo; }).catch((err) => { console.warn('[StylePrint] 款式信息加载失败:', err?.message || err); }));
+        promises.push(api.get('/style/size/list', { params: { styleId } }).then(res => { if (res.code === 200) newData.sizes = res.data || []; }).catch((err) => { console.warn('[StylePrint] 尺码数据加载失败:', err?.message || err); }));
+        promises.push(api.get('/style/bom/list', { params: { styleId } }).then(res => { if (res.code === 200) newData.bom = res.data || []; }).catch((err) => { console.warn('[StylePrint] BOM数据加载失败:', err?.message || err); }));
+        promises.push(api.get('/style/process/list', { params: { styleId } }).then(res => { if (res.code === 200) newData.process = res.data || []; }).catch((err) => { console.warn('[StylePrint] 工序数据加载失败:', err?.message || err); }));
         promises.push(api.get('/style/attachment/list', { params: { styleId } }).then(res => {
           if (res.code === 200) {
             newData.attachments = (res.data || []).filter((item: any) => {
@@ -137,7 +137,7 @@ const StylePrintModal: React.FC<StylePrintModalProps> = ({
               return bizType.startsWith('pattern') || bizType === 'size_table' || bizType === 'production_sheet';
             });
           }
-        }).catch(() => {}));
+        }).catch((err) => { console.warn('[StylePrint] 附件列表加载失败:', err?.message || err); }));
         await Promise.all(promises);
         setData(newData);
         if (!cover) {

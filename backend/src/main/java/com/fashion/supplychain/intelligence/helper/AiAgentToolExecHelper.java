@@ -1,5 +1,6 @@
 package com.fashion.supplychain.intelligence.helper;
 
+import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.agent.AiToolCall;
 import com.fashion.supplychain.intelligence.agent.hook.ToolExecutionHook;
 import com.fashion.supplychain.intelligence.agent.tool.AgentTool;
@@ -145,7 +146,7 @@ public class AiAgentToolExecHelper {
                 futures.add(CompletableFuture.completedFuture(cachedCopy));
             } else {
                 futures.add(CompletableFuture.supplyAsync(
-                        () -> executeSingleTool(toolCall, visibleToolMap, commandId),
+                        UserContext.wrapSupplier(() -> executeSingleTool(toolCall, visibleToolMap, commandId)),
                         toolExecutor));
             }
         }

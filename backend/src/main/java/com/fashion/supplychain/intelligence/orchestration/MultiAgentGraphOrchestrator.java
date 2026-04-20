@@ -162,12 +162,12 @@ public class MultiAgentGraphOrchestrator {
         }
         // 并行执行多个 Specialist
         List<CompletableFuture<Void>> futures = targets.stream()
-                .map(s -> CompletableFuture.runAsync(() -> {
+                .map(s -> CompletableFuture.runAsync(UserContext.wrap(() -> {
                     try { s.analyze(state); } catch (Exception e) {
                         log.warn("[Graph] Specialist {} 失败: {}", s.getRoute(), e.getMessage());
                         state.getSpecialistResults().put(s.getRoute(), "分析失败: " + e.getMessage());
                     }
-                })).toList();
+                }))).toList();
         CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
         targets.forEach(s -> state.getNodeTrace().add("specialist:" + s.getRoute()));
     }

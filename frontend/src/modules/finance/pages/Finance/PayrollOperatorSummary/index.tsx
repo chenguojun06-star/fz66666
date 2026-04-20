@@ -659,13 +659,6 @@ const PayrollOperatorSummary: React.FC = () => {
             return;
         }
 
-        const operatorRows = rows.filter(r => String((r as any)?.operatorName || '') === operatorName);
-        const allAudited = operatorRows.every(r => isDetailAudited(r));
-        if (!allAudited) {
-            message.warning('该人员还有未审核的工序明细，请先在「工序明细」中审核');
-            return;
-        }
-
         try {
             await api.post('/finance/wage-payment/create-payable', {
                 bizType: 'PAYROLL_SETTLEMENT',
@@ -714,19 +707,6 @@ const PayrollOperatorSummary: React.FC = () => {
     const handleBatchFinalPush = async () => {
         if (selectedRowKeys.length === 0) {
             message.warning('请选择要终审推送的人员');
-            return;
-        }
-
-        const unauditedOperators: string[] = [];
-        for (const key of selectedRowKeys) {
-            const operatorRows = rows.filter(r => String((r as any)?.operatorName || '') === key);
-            const allAudited = operatorRows.every(r => isDetailAudited(r));
-            if (!allAudited) {
-                unauditedOperators.push(key);
-            }
-        }
-        if (unauditedOperators.length > 0) {
-            message.warning(`${unauditedOperators.join('、')} 还有未审核的工序明细，请先在「工序明细」中审核`);
             return;
         }
 
