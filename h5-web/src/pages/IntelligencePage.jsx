@@ -76,21 +76,21 @@ export default function IntelligencePage() {
         api.dashboard.getTopStats(),
       ]);
 
-      const s = statsRes.status === 'fulfilled' ? (statsRes.value?.data || statsRes.value || {}) : {};
+      const s = statsRes.status === 'fulfilled' ? (statsRes.value?.data ?? statsRes.value ?? {}) : {};
       setStats(s);
 
-      const oData = ordersRes.status === 'fulfilled' ? (ordersRes.value?.data || ordersRes.value || {}) : {};
-      const oList = oData?.records || oData?.list || [];
+      const oData = ordersRes.status === 'fulfilled' ? (ordersRes.value?.data ?? ordersRes.value ?? {}) : {};
+      const oList = oData?.records ?? oData?.list ?? [];
       setOrders(oList);
 
-      if (pulseRes.status === 'fulfilled') setPulse(pulseRes.value?.data || pulseRes.value || null);
+      if (pulseRes.status === 'fulfilled') setPulse(pulseRes.value?.data ?? pulseRes.value ?? null);
       if (workersRes.status === 'fulfilled') {
-        const wd = workersRes.value?.data || workersRes.value || {};
-        setWorkers(wd?.workers || wd?.list || Array.isArray(wd) ? wd : []);
+        const wd = workersRes.value?.data ?? workersRes.value ?? {};
+        setWorkers(wd?.workers ?? wd?.list ?? Array.isArray(wd) ? wd : []);
       }
-      if (bnRes.status === 'fulfilled') setBottleneck(bnRes.value?.data || bnRes.value || []);
-      if (dashRes.status === 'fulfilled') setDashData(dashRes.value?.data || dashRes.value || {});
-      if (tsRes.status === 'fulfilled') setTopStats(tsRes.value?.data || tsRes.value || {});
+      if (bnRes.status === 'fulfilled') setBottleneck(bnRes.value?.data ?? bnRes.value ?? []);
+      if (dashRes.status === 'fulfilled') setDashData(dashRes.value?.data ?? dashRes.value ?? {});
+      if (tsRes.status === 'fulfilled') setTopStats(tsRes.value?.data ?? tsRes.value ?? {});
     } catch (e) {
       toast.error('数据加载失败');
     } finally {

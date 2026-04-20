@@ -60,15 +60,30 @@ export default function DashboardPage() {
 
   const refreshCards = async () => {
     setLoading(true);
+    let failCount = 0;
     try {
       const [dashRes, topStatsRes, statsRes] = await Promise.allSettled([
         api.dashboard.get(),
         api.dashboard.getTopStats(),
         api.production.orderStats({}),
       ]);
-      const dash = dashRes.status === 'fulfilled' ? (dashRes.value?.data || dashRes.value || {}) : {};
-      const topStats = topStatsRes.status === 'fulfilled' ? (topStatsRes.value?.data || topStatsRes.value || {}) : {};
-      const stats = statsRes.status === 'fulfilled' ? (statsRes.value?.data || statsRes.value || {}) : {};
+
+      if (dashRes.status === 'rejected') {
+        console.error('[Dashboard] dash API失败:', dashRes.reason?.message);
+        failCount++;
+      }
+      if (topStatsRes.status === 'rejected') {
+        console.error('[Dashboard] topStats API失败:', topStatsRes.reason?.message);
+        failCount++;
+      }
+      if (statsRes.status === 'rejected') {
+        console.error('[Dashboard] orderStats API失败:', statsRes.reason?.message);
+        failCount++;
+      }
+
+      const dash = dashRes.status === 'fulfilled' ? (dashRes.value?.data ?? dashRes.value ?? {}) : {};
+      const topStats = topStatsRes.status === 'fulfilled' ? (topStatsRes.value?.data ?? topStatsRes.value ?? {}) : {};
+      const stats = statsRes.status === 'fulfilled' ? (statsRes.value?.data ?? statsRes.value ?? {}) : {};
       setTodayScanCount(Number(dash.todayScanCount || 0));
       setCards({
         sample: { developing: Number(dash.sampleDevelopmentCount || 0), completed: Number(stats.completedOrders || topStats.sampleDevelopment?.total || 0) },
@@ -76,6 +91,12 @@ export default function DashboardPage() {
         inbound: { today: Number(topStats.warehousingInbound?.day || 0), week: Number(topStats.warehousingInbound?.week || 0) },
         outbound: { today: Number(topStats.warehousingOutbound?.day || 0), week: Number(topStats.warehousingOutbound?.week || 0) },
       });
+
+      if (failCount >= 3) {
+        toast.error('看板数据全部加载失败，请检查网络后刷新');
+      } else if (failCount > 0) {
+        toast.error('部分数据加载失败');
+      }
     } catch (e) {
       console.error('[Dashboard] refreshCards error:', e?.response?.status, e?.message, e?.response?.data);
       toast.error('数据加载失败');
@@ -93,8 +114,8 @@ export default function DashboardPage() {
       if (searchKey) params.orderNo = searchKey;
       if (factoryType) params.factoryType = factoryType;
       const res = await api.production.orderList(params);
-      const data = res?.data || res || {};
-      let rawList = data?.records || data?.list || [];
+      const data = res?.data ?? res ?? {};
+      let rawList = data?.records ?? data?.list ?? [];
       if (activeFilter === 'overdue') {
         rawList = rawList.filter(o => {
           const delivery = new Date(String(o.plannedEndDate || o.expectedShipDate || o.deliveryDate || '').replace(' ', 'T'));

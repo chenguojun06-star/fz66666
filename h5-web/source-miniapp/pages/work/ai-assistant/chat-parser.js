@@ -1,23 +1,24 @@
 /**
  * 小云 AI 回复解析器
- * 从 AI 原始回复文本中提取结构化卡片数据（ActionCard / Chart / TeamStatus / BundleSplit）
+ * 从 AI 原始回复文本中提取结构化卡片数据（ActionCard / Chart / TeamStatus / BundleSplit / StepWizard）
  * 对标 PC 端 xiaoyunChatAdapter.ts → parseXiaoyunLegacyMeta()
  */
 
 /**
  * 解析 AI 回复中的标记块，返回纯文本 + 各类卡片数据
  * @param {string} rawText AI原始回复
- * @returns {{ displayText: string, actionCards: Array, charts: Array, teamStatusCards: Array, bundleSplitCards: Array }}
+ * @returns {{ displayText: string, actionCards: Array, charts: Array, teamStatusCards: Array, bundleSplitCards: Array, stepWizardCards: Array }}
  */
 function parseChatReply(rawText) {
   if (!rawText || typeof rawText !== 'string') {
-    return { displayText: rawText || '', actionCards: [], charts: [], teamStatusCards: [], bundleSplitCards: [] };
+    return { displayText: rawText || '', actionCards: [], charts: [], teamStatusCards: [], bundleSplitCards: [], stepWizardCards: [] };
   }
 
   var actionCards = [];
   var charts = [];
   var teamStatusCards = [];
   var bundleSplitCards = [];
+  var stepWizardCards = [];
 
   // 【ACTIONS】[...]【/ACTIONS】
   var actionsRe = /【ACTIONS】([\s\S]*?)【\/ACTIONS】/g;
@@ -61,17 +62,31 @@ function parseChatReply(rawText) {
     } catch (e) { /* ignore */ }
   }
 
+  // 【STEP_WIZARD】[...]【/STEP_WIZARD】
+  var wizardRe = /【STEP_WIZARD】([\s\S]*?)【\/STEP_WIZARD】/g;
+  while ((m = wizardRe.exec(rawText)) !== null) {
+    try {
+      var wp = JSON.parse(m[1].trim());
+      if (Array.isArray(wp)) {
+        stepWizardCards = stepWizardCards.concat(wp);
+      } else {
+        stepWizardCards.push(wp);
+      }
+    } catch (e) { /* ignore */ }
+  }
+
   // 剥离所有标记块 → 纯文本
   var displayText = rawText
     .replace(/【CHART】[\s\S]*?【\/CHART】/g, '')
     .replace(/【ACTIONS】[\s\S]*?【\/ACTIONS】/g, '')
     .replace(/【TEAM_STATUS】[\s\S]*?【\/TEAM_STATUS】/g, '')
     .replace(/【BUNDLE_SPLIT】[\s\S]*?【\/BUNDLE_SPLIT】/g, '')
+    .replace(/【STEP_WIZARD】[\s\S]*?【\/STEP_WIZARD】/g, '')
     .replace(/【INSIGHT_CARDS】[\s\S]*?【\/INSIGHT_CARDS】/g, '')
     .replace(/```ACTIONS_JSON\s*\n[\s\S]*?\n```/g, '')
     .trim();
 
-  return { displayText: displayText, actionCards: actionCards, charts: charts, teamStatusCards: teamStatusCards, bundleSplitCards: bundleSplitCards };
+  return { displayText: displayText, actionCards: actionCards, charts: charts, teamStatusCards: teamStatusCards, bundleSplitCards: bundleSplitCards, stepWizardCards: stepWizardCards };
 }
 
 /**
@@ -83,7 +98,8 @@ function hasRichContent(msg) {
   return (msg.actionCards && msg.actionCards.length > 0)
     || (msg.charts && msg.charts.length > 0)
     || (msg.teamStatusCards && msg.teamStatusCards.length > 0)
-    || (msg.bundleSplitCards && msg.bundleSplitCards.length > 0);
+    || (msg.bundleSplitCards && msg.bundleSplitCards.length > 0)
+    || (msg.stepWizardCards && msg.stepWizardCards.length > 0);
 }
 
 module.exports = { parseChatReply: parseChatReply, hasRichContent: hasRichContent };

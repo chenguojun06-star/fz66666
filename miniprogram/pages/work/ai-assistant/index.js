@@ -243,6 +243,119 @@ Page({
     if (path) wx.navigateTo({ url: path, fail: () => wx.showToast({ title: '页面不存在', icon: 'none' }) });
   },
 
+  _findWizardCard(msgid, wi) {
+    var msg = this.data.messages.find(function (m) { return m.id === msgid; });
+    if (!msg || !msg.stepWizardCards || !msg.stepWizardCards[wi]) return null;
+    return { msg: msg, wiz: msg.stepWizardCards[wi] };
+  },
+
+  _updateWizardCard(msgid, wi, updater) {
+    var found = this._findWizardCard(msgid, wi);
+    if (!found) return;
+    var wiz = found.wiz;
+    updater(wiz);
+    var key = 'messages[' + this.data.messages.indexOf(found.msg) + '].stepWizardCards[' + wi + ']';
+    this.setData({
+      [key]: wiz,
+    });
+    var vIdx = this.data.visibleMessages.findIndex(function (m) { return m.id === msgid; });
+    if (vIdx >= 0) {
+      this.setData({ ['visibleMessages[' + vIdx + '].stepWizardCards[' + wi + ']']: wiz });
+    }
+  },
+
+  _recalcCanNext(wiz) {
+    var step = wiz.steps && wiz.steps[wiz._currentStep];
+    if (!step) { wiz._canNext = false; return; }
+    wiz._canNext = step.fields.every(function (f) {
+      if (!f.required) return true;
+      var val = wiz._formData[f.key];
+      if (f.inputType === 'multi_select') return Array.isArray(val) && val.length > 0;
+      return val !== undefined && val !== null && val !== '';
+    });
+  },
+
+  onWizardSelect(e) {
+    var ds = e.currentTarget.dataset;
+    var self = this;
+    this._updateWizardCard(ds.msgid, ds.wi, function (wiz) {
+      wiz._formData[ds.key] = ds.value;
+      self._recalcCanNext(wiz);
+    });
+  },
+
+  onWizardMultiSelect(e) {
+    var ds = e.currentTarget.dataset;
+    var self = this;
+    this._updateWizardCard(ds.msgid, ds.wi, function (wiz) {
+      var cur = wiz._formData[ds.key] || [];
+      var idx = cur.indexOf(ds.value);
+      if (idx >= 0) {
+        cur = cur.filter(function (v) { return v !== ds.value; });
+      } else {
+        cur = cur.concat([ds.value]);
+      }
+      wiz._formData[ds.key] = cur;
+      self._recalcCanNext(wiz);
+    });
+  },
+
+  onWizardInput(e) {
+    var ds = e.currentTarget.dataset;
+    var self = this;
+    this._updateWizardCard(ds.msgid, ds.wi, function (wiz) {
+      wiz._formData[ds.key] = e.detail.value;
+      self._recalcCanNext(wiz);
+    });
+  },
+
+  onWizardDate(e) {
+    var ds = e.currentTarget.dataset;
+    var self = this;
+    this._updateWizardCard(ds.msgid, ds.wi, function (wiz) {
+      wiz._formData[ds.key] = e.detail.value;
+      self._recalcCanNext(wiz);
+    });
+  },
+
+  onWizardPrev(e) {
+    var ds = e.currentTarget.dataset;
+    var self = this;
+    this._updateWizardCard(ds.msgid, ds.wi, function (wiz) {
+      if (wiz._currentStep > 0) wiz._currentStep--;
+      self._recalcCanNext(wiz);
+    });
+  },
+
+  onWizardNext(e) {
+    var ds = e.currentTarget.dataset;
+    var self = this;
+    this._updateWizardCard(ds.msgid, ds.wi, function (wiz) {
+      if (!wiz._canNext) return;
+      if (wiz._currentStep === wiz.steps.length - 1) {
+        wiz._submitted = true;
+        var cmd = wiz.submitCommand || '';
+        var formData = wiz._formData;
+        var text = cmd;
+        var paramParts = [];
+        Object.keys(formData).forEach(function (k) {
+          var v = formData[k];
+          if (Array.isArray(v)) {
+            paramParts.push(k + '=' + v.join(','));
+          } else {
+            paramParts.push(k + '=' + v);
+          }
+        });
+        if (paramParts.length > 0) text += ' ' + paramParts.join(' ');
+        self.setData({ inputText: '' });
+        self._send(text);
+      } else {
+        wiz._currentStep++;
+        self._recalcCanNext(wiz);
+      }
+    });
+  },
+
   onSegmentTap(e) {
     const { type, orderno } = e.currentTarget.dataset;
     if (type === 'order' && orderno) this._send('查询订单 ' + orderno);
@@ -263,6 +376,25 @@ Page({
 
   _updateMsg(id, rawText) {
     const parsed = parseChatReply(rawText);
+    var stepWizardCards = (parsed.stepWizardCards || []).map(function (w) {
+      return Object.assign({}, w, {
+        _currentStep: 0,
+        _formData: w.prefilledData ? Object.assign({}, w.prefilledData) : {},
+        _canNext: false,
+        _submitted: false,
+      });
+    });
+    if (stepWizardCards.length > 0) {
+      var firstStep = stepWizardCards[0].steps && stepWizardCards[0].steps[0];
+      if (firstStep) {
+        stepWizardCards[0]._canNext = firstStep.fields.every(function (f) {
+          if (!f.required) return true;
+          var val = stepWizardCards[0]._formData[f.key];
+          if (f.inputType === 'multi_select') return Array.isArray(val) && val.length > 0;
+          return val !== undefined && val !== null && val !== '';
+        });
+      }
+    }
     const messages = this.data.messages.map(m =>
       m.id === id ? {
         ...m,
@@ -272,6 +404,7 @@ Page({
         charts: parsed.charts,
         teamStatusCards: parsed.teamStatusCards,
         bundleSplitCards: parsed.bundleSplitCards,
+        stepWizardCards: stepWizardCards,
         loading: false,
       } : m
     );

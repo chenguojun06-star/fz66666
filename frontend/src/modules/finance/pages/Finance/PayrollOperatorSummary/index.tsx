@@ -136,7 +136,7 @@ const PayrollOperatorSummary: React.FC = () => {
         { title: '次品数', dataIndex: 'defectQuantity', key: 'defectQuantity', width: 70, align: 'right' as const,
             render: (v: unknown) => Number(v || 0) },
         { title: '开发单价', dataIndex: 'devCostPrice', key: 'devCostPrice', width: 100, align: 'right' as const,
-            render: (v: unknown, record: any) => {
+            render: (v: unknown, _record: any) => {
                 const price = Number(v || 0);
                 if (price <= 0) return '-';
                 return price.toFixed(2);

@@ -108,6 +108,7 @@ export function parseAiResponse(rawText) {
     insightCards,
     followUpActions,
     recommendPills,
+    stepWizardCards,
   };
 }
 

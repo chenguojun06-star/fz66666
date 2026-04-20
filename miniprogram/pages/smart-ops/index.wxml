@@ -1,0 +1,143 @@
+<view class="cockpit">
+
+  <view class="status-bar">
+    <view class="status-left">
+      <view class="live-dot"></view>
+      <text class="live-label">LIVE</text>
+      <text class="status-time">{{currentTime}}</text>
+    </view>
+    <text class="alert-tag {{totalWarn > 0 ? 'alert-warn' : 'alert-ok'}}">{{totalWarn > 0 ? totalWarn + '项预警' : '系统正常'}}</text>
+  </view>
+
+  <view class="menu-grid">
+    <view class="menu-card {{activeMenu === 'inProduction' ? 'menu-active' : ''}}" bindtap="onMenuTap" data-key="inProduction">
+      <text class="menu-val">{{menuData.inProduction || 0}}</text>
+      <text class="menu-label">生产中</text>
+    </view>
+    <view class="menu-card {{activeMenu === 'todayOrders' ? 'menu-active' : ''}}" bindtap="onMenuTap" data-key="todayOrders">
+      <text class="menu-val">{{menuData.todayOrders || 0}}</text>
+      <text class="menu-label">今日下单</text>
+    </view>
+    <view class="menu-card {{activeMenu === 'todayInbound' ? 'menu-active' : ''}}" bindtap="onMenuTap" data-key="todayInbound">
+      <text class="menu-val val-green">{{menuData.todayInbound || 0}}</text>
+      <text class="menu-label">今日入库</text>
+    </view>
+    <view class="menu-card {{activeMenu === 'todayOutbound' ? 'menu-active' : ''}}" bindtap="onMenuTap" data-key="todayOutbound">
+      <text class="menu-val val-blue">{{menuData.todayOutbound || 0}}</text>
+      <text class="menu-label">今日出库</text>
+    </view>
+    <view class="menu-card {{activeMenu === 'delayedOrders' ? 'menu-active' : ''}}" bindtap="onMenuTap" data-key="delayedOrders">
+      <text class="menu-val val-orange">{{menuData.delayedOrders || 0}}</text>
+      <text class="menu-label">延期订单</text>
+    </view>
+    <view class="menu-card {{activeMenu === 'riskOrders' ? 'menu-active' : ''}}" bindtap="onMenuTap" data-key="riskOrders">
+      <text class="menu-val val-red">{{menuData.riskOrders || 0}}</text>
+      <text class="menu-label">风险订单</text>
+    </view>
+  </view>
+
+  <view class="section" wx:if="{{activeMenu}}">
+    <view class="card">
+      <view class="card-header">
+        <view class="live-dot-sm"></view>
+        <text class="card-title">{{activeMenuTitle}}</text>
+        <text class="card-badge blue">{{activeOrders.length}} 单</text>
+        <text class="card-close" bindtap="closeMenu">✕</text>
+      </view>
+      <view class="card-body">
+        <view class="order-row" wx:for="{{activeOrders}}" wx:key="orderNo">
+          <view class="order-top">
+            <text class="order-no">{{item.orderNo}}</text>
+            <text class="order-progress">{{item.progress}}%</text>
+          </view>
+          <view class="order-info">
+            <text class="order-style">{{item.styleNo}}</text>
+            <text class="order-factory">{{item.factoryName || '--'}}</text>
+            <text class="order-qty">{{item.orderQuantity}}件</text>
+            <text class="order-date">交期{{item.plannedEndDate}}</text>
+          </view>
+        </view>
+        <view wx:if="{{activeOrders.length === 0}}" class="empty-hint">暂无订单</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="card">
+      <view class="card-header">
+        <view class="live-dot-sm green"></view>
+        <text class="card-title">工厂全景</text>
+        <text class="card-badge blue">{{factoryList.length}} 家</text>
+      </view>
+      <view class="card-body">
+        <view class="factory-row" wx:for="{{factoryList}}" wx:key="factoryName">
+          <view class="factory-dot {{item.active ? 'dot-active' : item.mins < 90 ? 'dot-idle' : 'dot-stopped'}}"></view>
+          <text class="factory-name">{{item.factoryName}}</text>
+          <text class="factory-time {{item.active ? 'val-green' : item.mins < 90 ? 'val-orange' : 'val-red'}}">{{item.timeText}}</text>
+          <text class="factory-qty">{{item.todayQty}}件</text>
+        </view>
+        <view wx:if="{{factoryList.length === 0}}" class="empty-hint">暂无工厂数据</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="card">
+      <view class="card-header">
+        <view class="live-dot-sm purple"></view>
+        <text class="card-title">工厂绩效排行</text>
+      </view>
+      <view class="card-body">
+        <view class="rank-row" wx:for="{{rankingList}}" wx:key="factoryId">
+          <text class="rank-medal" style="color: {{item.medalColor}}">{{item.medal}}</text>
+          <text class="rank-name">{{item.factoryName}}</text>
+          <view class="rank-bar-wrap">
+            <view class="rank-bar" style="width: {{item.totalScore}}%; background: {{index === 0 ? 'linear-gradient(90deg,#ffd700,#f7a600)' : 'linear-gradient(90deg,#3b82f6,#60a5fa)'}}"></view>
+          </view>
+          <text class="rank-score">{{item.totalScore}}</text>
+        </view>
+        <view wx:if="{{rankingList.length === 0}}" class="empty-hint">暂无排行数据</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="section">
+    <view class="card">
+      <view class="card-header">
+        <view class="live-dot-sm blue"></view>
+        <text class="card-title">小云 AI 助手</text>
+        <text class="card-badge purple">智能</text>
+      </view>
+      <view class="chat-area">
+        <view class="chat-messages">
+          <view wx:for="{{chatMessages}}" wx:key="id" class="chat-msg {{item.role === 'user' ? 'msg-user' : 'msg-ai'}}">
+            <view wx:if="{{item.role === 'ai'}}" class="msg-avatar-ai">☁️</view>
+            <view class="msg-bubble {{item.role === 'user' ? 'bubble-user' : 'bubble-ai'}}">
+              <view wx:if="{{item.loading}}" class="typing-dots"><view class="dot"></view><view class="dot"></view><view class="dot"></view></view>
+              <text wx:else user-select decode="{{true}}">{{item.text}}</text>
+            </view>
+            <view wx:if="{{item.role === 'user'}}" class="msg-avatar-user">我</view>
+          </view>
+          <view class="chat-msg msg-ai" wx:if="{{chatSending && chatStreamingText}}">
+            <view class="msg-avatar-ai">☁️</view>
+            <view class="msg-bubble bubble-ai">
+              <text class="streaming-text">{{chatStreamingText}}<text class="cursor">▍</text></text>
+            </view>
+          </view>
+          <view class="streaming-status" wx:if="{{chatSending && chatTool && !chatStreamingText}}">
+            <text class="streaming-status-text">{{chatTool}}</text>
+          </view>
+        </view>
+        <view class="chat-input-row">
+          <input class="chat-input" placeholder="问小云..." value="{{chatInput}}" bindinput="onChatInput" confirm-type="send" bindconfirm="onChatSend" disabled="{{chatSending}}" />
+          <view class="chat-send-btn {{(!chatInput || chatSending) ? 'send-disabled' : ''}}" bindtap="onChatSend">发送</view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="footer">
+    <text class="footer-text">30秒自动刷新 · 上次更新 {{lastRefreshTime}}</text>
+  </view>
+
+</view>

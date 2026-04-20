@@ -51,7 +51,6 @@ export default function StepWizardCard({ data, onSubmit }: StepWizardCardProps) 
 
   const step = data.steps[currentStep];
   const isLastStep = currentStep === data.steps.length - 1;
-  const totalSteps = data.steps.length;
 
   const updateField = useCallback((key: string, value: unknown) => {
     setFormData(prev => ({ ...prev, [key]: value }));

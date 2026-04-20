@@ -127,7 +127,7 @@ jobs:
         mvn clean test \
           -Dtest="ProductionOrderOrchestratorTest,MaterialReconciliationOrchestratorTest*,ProductWarehousingOrchestratorTest*" \
           -Dspring.profiles.active=test \
-          -DfailIfNoTests=false
+          -Dsurefire.failIfNoSpecifiedTests=false
 
   frontend-lint:
     name: 前端代码规范检查 (ESLint + TypeScript)

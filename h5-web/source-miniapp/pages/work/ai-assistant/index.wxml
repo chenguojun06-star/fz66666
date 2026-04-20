@@ -137,6 +137,67 @@
             </view>
           </view>
           </block>
+
+          <!-- 步骤向导卡片 -->
+          <block wx:for="{{item.stepWizardCards}}" wx:for-item="wiz" wx:for-index="wi" wx:key="wi">
+          <view class="sw-card" wx:if="{{!wiz._submitted}}">
+            <view class="sw-header">
+              <text class="sw-icon">{{wiz.icon || '📋'}}</text>
+              <text class="sw-title">{{wiz.title}}</text>
+            </view>
+            <view class="sw-steps">
+              <text wx:for="{{wiz.steps}}" wx:for-item="s" wx:for-index="si" wx:key="stepKey"
+                class="sw-step-dot {{si === wiz._currentStep ? 'active' : si < wiz._currentStep ? 'done' : ''}}">
+                {{si < wiz._currentStep ? '✓' : si + 1}}
+              </text>
+            </view>
+            <block wx:if="{{wiz.steps[wiz._currentStep]}}">
+              <view class="sw-content">
+                <view wx:if="{{wiz.steps[wiz._currentStep].desc}}" class="sw-step-desc">{{wiz.steps[wiz._currentStep].desc}}</view>
+                <block wx:for="{{wiz.steps[wiz._currentStep].fields}}" wx:for-item="field" wx:for-index="fi" wx:key="key">
+                  <view class="sw-field">
+                    <text class="sw-label">{{field.label}}<text wx:if="{{field.required}}" class="sw-required">*</text></text>
+                    <view wx:if="{{field.inputType === 'select'}}" class="sw-options">
+                      <view wx:for="{{field.options}}" wx:for-item="opt" wx:for-index="oi" wx:key="value"
+                        class="sw-opt-btn {{wiz._formData[field.key] === opt.value ? 'selected' : ''}}"
+                        bindtap="onWizardSelect" data-msgid="{{item.id}}" data-wi="{{wi}}" data-key="{{field.key}}" data-value="{{opt.value}}">
+                        <text wx:if="{{opt.icon}}">{{opt.icon}} </text>{{opt.label}}
+                      </view>
+                    </view>
+                    <view wx:if="{{field.inputType === 'multi_select'}}" class="sw-options">
+                      <view wx:for="{{field.options}}" wx:for-item="opt" wx:for-index="oi" wx:key="value"
+                        class="sw-opt-btn {{(wiz._formData[field.key] || []).indexOf(opt.value) >= 0 ? 'selected' : ''}}"
+                        bindtap="onWizardMultiSelect" data-msgid="{{item.id}}" data-wi="{{wi}}" data-key="{{field.key}}" data-value="{{opt.value}}">
+                        <text wx:if="{{opt.icon}}">{{opt.icon}} </text>{{opt.label}}
+                      </view>
+                    </view>
+                    <input wx:if="{{field.inputType === 'text'}}" class="sw-input" type="text"
+                      placeholder="{{field.placeholder || field.label}}"
+                      value="{{wiz._formData[field.key] || ''}}"
+                      bindinput="onWizardInput" data-msgid="{{item.id}}" data-wi="{{wi}}" data-key="{{field.key}}" />
+                    <input wx:if="{{field.inputType === 'number'}}" class="sw-input" type="digit"
+                      placeholder="{{field.placeholder || field.label}}"
+                      value="{{wiz._formData[field.key] || ''}}"
+                      bindinput="onWizardInput" data-msgid="{{item.id}}" data-wi="{{wi}}" data-key="{{field.key}}" />
+                    <picker wx:if="{{field.inputType === 'date'}}" mode="date" value="{{wiz._formData[field.key] || ''}}"
+                      bindchange="onWizardDate" data-msgid="{{item.id}}" data-wi="{{wi}}" data-key="{{field.key}}">
+                      <view class="sw-input sw-date-picker">{{wiz._formData[field.key] || '请选择日期'}}</view>
+                    </picker>
+                  </view>
+                </block>
+              </view>
+            </block>
+            <view class="sw-footer">
+              <view wx:if="{{wiz._currentStep > 0}}" class="sw-prev" hover-class="sw-prev-hover"
+                bindtap="onWizardPrev" data-msgid="{{item.id}}" data-wi="{{wi}}">上一步</view>
+              <view class="sw-next {{!wiz._canNext ? 'disabled' : ''}}" hover-class="{{wiz._canNext ? 'sw-next-hover' : ''}}"
+                bindtap="onWizardNext" data-msgid="{{item.id}}" data-wi="{{wi}}">{{wiz._currentStep === wiz.steps.length - 1 ? (wiz.submitLabel || '确认提交') : '下一步'}}</view>
+            </view>
+          </view>
+          <view class="sw-card" wx:else>
+            <view class="sw-success">✅ 指令已提交，小云正在处理…</view>
+          </view>
+          </block>
         </block>
       </view>
 

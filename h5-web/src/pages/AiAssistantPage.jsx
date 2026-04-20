@@ -6,6 +6,7 @@ import useVoiceInput from '@/hooks/useVoiceInput';
 import useAiChatStream from '@/hooks/useAiChatStream';
 import Icon from '@/components/Icon';
 import { parseAiResponse } from '@/utils/chatParser';
+import StepWizardCard from '@/components/StepWizardCard';
 
 const WORKER_PROMPTS = [
   { label: '扫码规范', text: '请给我内部资料：扫码规范' },
@@ -252,6 +253,9 @@ export default function AiAssistantPage() {
                         ))}
                       </div>
                     )}
+                    {parsed.stepWizardCards.length > 0 && parsed.stepWizardCards.map((wiz, wi) => (
+                      <StepWizardCard key={wi} data={wiz} onSubmit={(cmd, params) => { if (!sending) { let p = cmd; Object.entries(params).forEach(([k,v]) => { if (Array.isArray(v)) p += ' ' + v.join(','); else if (v) p += ' ' + v; }); handleSend(p); } }} />
+                    ))}
                   </>
                 ) : m.text}
               </div>
