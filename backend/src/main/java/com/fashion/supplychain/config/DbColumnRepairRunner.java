@@ -758,6 +758,15 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                     "BIGINT DEFAULT NULL");
 
             // --- t_style_quotation 补列 ---
+            // profit_rate：目标利润率，被视图 v_finished_product_settlement 引用（sq1.profit_rate）
+            // StyleTableMigrator 在云端禁用，此列从未通过 DataInitializer 创建
+            // → 视图查询 SELECT FROM v_finished_product_settlement 会 500（Unknown column 'profit_rate'）
+            repaired += ensureColumn(conn, schema, "t_style_quotation", "profit_rate",
+                    "DECIMAL(5,2) NOT NULL DEFAULT 0.00");
+            repaired += ensureColumn(conn, schema, "t_style_quotation", "total_price",
+                    "DECIMAL(12,2) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_style_quotation", "style_id",
+                    "VARCHAR(32) DEFAULT NULL");
             repaired += ensureColumn(conn, schema, "t_style_quotation", "tenant_id",
                     "BIGINT DEFAULT NULL");
             repaired += ensureColumn(conn, schema, "t_style_quotation", "creator_id",
