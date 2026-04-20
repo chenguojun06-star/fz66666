@@ -21,7 +21,7 @@ function buildMenuItems() {
   const canSeeDashboard = isTenantOwner() || isAdminOrSupervisor();
   const canSeeSmartOps = isTenantOwner();
   return [
-    canSeeSmartOps ? { id: 'smartOps', name: '智能运营', iconClass: 'icon-dashboard', circleClass: 'menu-icon-circle--indigo', route: '/pages/smart-ops/index', badge: 'AI' } : null,
+    canSeeSmartOps ? { id: 'smartOps', name: '运营看板', iconClass: 'icon-dashboard', circleClass: 'menu-icon-circle--indigo', route: '/pages/smart-ops/index', badge: 'AI' } : null,
     canSeeDashboard ? { id: 'dashboard', name: '进度看板', iconClass: 'icon-dashboard', circleClass: 'menu-icon-circle--indigo', route: '/pages/dashboard/index' } : null,
     { id: 'production', name: '生产', iconClass: 'icon-progress', circleClass: 'menu-icon-circle--blue', route: '/pages/work/index', tab: 'sewing' },
     { id: 'quality', name: '扫码质检', iconClass: 'icon-quality', circleClass: 'menu-icon-circle--green', route: '/pages/scan/index' },

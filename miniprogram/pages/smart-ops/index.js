@@ -3,30 +3,70 @@ var { isTenantOwner, isSuperAdmin } = require('../../utils/storage');
 
 var REFRESH_INTERVAL = 30;
 
+var STAGE_LIST = [
+  { key: 'procurement', label: '采购' },
+  { key: 'cutting', label: '裁剪' },
+  { key: 'secondaryProcess', label: '二次工艺' },
+  { key: 'sewing', label: '车缝' },
+  { key: 'tailProcess', label: '尾部' },
+  { key: 'warehousing', label: '入库' },
+];
+
 var MENU_TITLES = {
   inProduction: '生产中订单', todayOrders: '今日下单', todayInbound: '今日入库',
   todayOutbound: '今日出库', delayedOrders: '延期订单', riskOrders: '风险订单',
 };
 
+function safeDate(s) {
+  if (!s) return null;
+  var fixed = String(s).replace(/ /, 'T');
+  var d = new Date(fixed);
+  if (isNaN(d.getTime())) return null;
+  return d;
+}
+
 function fmtDate(d) { return d ? String(d).slice(5, 10) : '--'; }
 
+function toNum(v) { return Number(v) || 0; }
+
 function calcProgress(o) {
-  var w = Number(o.warehousingCompletionRate) || 0;
-  var t = Math.max(Number(o.tailProcessRate) || 0, Number(o.qualityCompletionRate) || 0);
-  var sew = Math.max(Number(o.carSewingCompletionRate) || 0, Number(o.sewingCompletionRate) || 0);
-  var c = Number(o.cuttingCompletionRate) || 0;
-  var p = Math.max(Number(o.procurementCompletionRate) || 0, Number(o.materialArrivalRate) || 0);
-  var s = Math.max(Number(o.secondaryProcessRate) || 0, Number(o.secondaryProcessCompletionRate) || 0);
+  var w = toNum(o.warehousingCompletionRate);
+  var t = Math.max(toNum(o.tailProcessRate), toNum(o.qualityCompletionRate));
+  var sew = Math.max(toNum(o.carSewingCompletionRate), toNum(o.sewingCompletionRate));
+  var c = toNum(o.cuttingCompletionRate);
+  var p = Math.max(toNum(o.procurementCompletionRate), toNum(o.materialArrivalRate));
+  var s = Math.max(toNum(o.secondaryProcessRate), toNum(o.secondaryProcessCompletionRate));
   var hasSec = !!(o.hasSecondaryProcess);
   var rates = hasSec ? [p, c, s, sew, t, w] : [p, c, sew, t, w];
   var sum = 0; for (var i = 0; i < rates.length; i++) sum += rates[i];
   return Math.round(sum / rates.length);
 }
 
+function detectStage(order) {
+  var hasSec = !!(order.hasSecondaryProcess || order.secondaryProcessStartTime || order.secondaryProcessEndTime);
+  var w = toNum(order.warehousingCompletionRate);
+  var t = Math.max(toNum(order.tailProcessRate), toNum(order.qualityCompletionRate));
+  var s = Math.max(toNum(order.secondaryProcessRate), toNum(order.secondaryProcessCompletionRate));
+  var sew = Math.max(toNum(order.carSewingCompletionRate), toNum(order.sewingCompletionRate));
+  var c = toNum(order.cuttingCompletionRate);
+  var p = Math.max(toNum(order.procurementCompletionRate), toNum(order.materialArrivalRate));
+  var chain = hasSec
+    ? ['procurement', 'cutting', 'secondaryProcess', 'sewing', 'tailProcess', 'warehousing']
+    : ['procurement', 'cutting', 'sewing', 'tailProcess', 'warehousing'];
+  var rateMap = {
+    procurement: p, cutting: c, secondaryProcess: hasSec ? s : 100,
+    sewing: sew, tailProcess: t, warehousing: w,
+  };
+  for (var i = 0; i < chain.length; i++) {
+    if (rateMap[chain[i]] < 100) return chain[i];
+  }
+  return chain[chain.length - 1] || 'warehousing';
+}
+
 function toOrderRow(o) {
   return {
     orderNo: o.orderNo || '', styleNo: o.styleNo || '', factoryName: o.factoryName || '',
-    orderQuantity: Number(o.orderQuantity) || 0, plannedEndDate: fmtDate(o.plannedEndDate),
+    orderQuantity: toNum(o.orderQuantity), plannedEndDate: fmtDate(o.plannedEndDate),
     progress: calcProgress(o), status: o.status || '',
   };
 }
@@ -34,40 +74,49 @@ function toOrderRow(o) {
 function isDelayed(o) {
   var end = o.plannedEndDate || o.expectedShipDate;
   if (!end) return false;
-  return new Date(end) < new Date() && String(o.status || '').toUpperCase() !== 'COMPLETED';
+  var d = safeDate(end);
+  if (!d) return false;
+  return d < new Date() && String(o.status || '').toUpperCase() !== 'COMPLETED';
 }
 
-function isRisk(o) {
-  var s = String(o.status || '').toUpperCase();
-  return s === 'DELAYED' || s === 'RISK' || (o.riskLevel && Number(o.riskLevel) >= 3);
+function isHighRisk(o) {
+  var end = o.plannedEndDate || o.expectedShipDate;
+  if (!end) return false;
+  var d = safeDate(end);
+  if (!d) return false;
+  var daysLeft = Math.ceil((d.getTime() - Date.now()) / 86400000);
+  var prog = calcProgress(o);
+  return daysLeft >= 0 && daysLeft <= 7 && prog < 50;
 }
+
+function isRisk(o) { return isDelayed(o) || isHighRisk(o); }
 
 Page({
   data: {
     currentTime: '', totalWarn: 0,
     menuData: { inProduction: 0, todayOrders: 0, todayInbound: 0, todayOutbound: 0, delayedOrders: 0, riskOrders: 0 },
+    menuExtra: { inProductionQty: 0, todayOrdersQty: 0, todayInboundQty: 0, todayOutboundQty: 0, delayedOrdersQty: 0, riskOrdersQty: 0 },
     activeMenu: '', activeMenuTitle: '', activeOrders: [],
-    factoryList: [], rankingList: [],
-    chatMessages: [], chatInput: '', chatSending: false, chatStreamingText: '', chatTool: '', conversationId: '',
+    stageBuckets: [], activeStage: '', activeStageLabel: '', activeStageOrders: [],
+    factoryList: [], factoryOnline: 0, factoryStagnant: 0, factoryTotalOrders: 0, factoryTotalQty: 0,
     lastRefreshTime: '', loading: false,
     _allOrders: [],
   },
 
-  _timer: null, _countdown: REFRESH_INTERVAL, _streamTask: null,
+  _timer: null, _countdown: REFRESH_INTERVAL,
 
   onLoad: function () {
     if (!isTenantOwner() && !isSuperAdmin()) {
-      wx.showModal({ title: '权限不足', content: '智能运营驾驶舱仅限租户主账号使用', showCancel: false, complete: function () { wx.navigateBack(); } });
+      wx.showModal({ title: '权限不足', content: '运营看板仅限租户主账号使用', showCancel: false, complete: function () { wx.navigateBack(); } });
       return;
     }
-    this.setData({ conversationId: 'smart_ops_' + Date.now(), chatMessages: [{ id: 'welcome', role: 'ai', text: '你好！我是小云，可以帮你分析数据、查询订单、发现风险。直接问我吧。' }] });
     this._refreshAll();
     this._startTimer();
   },
 
   onShow: function () { this._updateTime(); },
   onPullDownRefresh: function () { this._refreshAll(); wx.stopPullDownRefresh(); },
-  onUnload: function () { if (this._timer) clearInterval(this._timer); this._abortStream(); },
+  onUnload: function () { if (this._timer) clearInterval(this._timer); },
 
   onMenuTap: function (e) {
     var key = e.currentTarget.dataset.key;
@@ -85,66 +134,17 @@ Page({
 
   closeMenu: function () { this.setData({ activeMenu: '', activeOrders: [] }); },
 
-  onChatInput: function (e) { this.setData({ chatInput: e.detail.value }); },
-
-  onChatSend: function () {
-    var text = String(this.data.chatInput || '').trim();
-    if (!text || this.data.chatSending) return;
-    this.setData({ chatInput: '' });
-    this._sendChat(text);
+  onStageTap: function (e) {
+    var key = e.currentTarget.dataset.key;
+    if (this.data.activeStage === key) { this.setData({ activeStage: '', activeStageLabel: '', activeStageOrders: [] }); return; }
+    var buckets = this.data.stageBuckets || [];
+    var bucket = null;
+    for (var i = 0; i < buckets.length; i++) { if (buckets[i].key === key) { bucket = buckets[i]; break; } }
+    if (!bucket) return;
+    this.setData({ activeStage: key, activeStageLabel: bucket.label, activeStageOrders: bucket.orders });
   },
 
-  _sendChat: function (text) {
-    var msgs = this.data.chatMessages.concat([{ id: Date.now() + '_u', role: 'user', text: text }]);
-    var loadingId = Date.now() + '_a';
-    msgs.push({ id: loadingId, role: 'ai', text: '', loading: true });
-    if (msgs.length > 20) msgs = msgs.slice(msgs.length - 20);
-    this.setData({ chatMessages: msgs, chatSending: true, chatStreamingText: '', chatTool: '' });
-
-    var self = this;
-    var accumulated = '';
-    var streamStarted = false;
-
-    try {
-      var task = api.intelligence.aiAdvisorChatStream(
-        { question: text, pageContext: 'smart_ops_tenant', conversationId: this.data.conversationId },
-        function (evt) {
-          streamStarted = true;
-          if (evt.type === 'thinking') self.setData({ chatTool: '小云正在整理思路…' });
-          else if (evt.type === 'tool_call') self.setData({ chatTool: '正在处理：' + (evt.data.tool || '').replace(/^tool_/, '').replace(/_/g, '') + '…' });
-          else if (evt.type === 'tool_result') self.setData({ chatTool: '' });
-          else if (evt.type === 'answer') { accumulated += String(evt.data.content || ''); self.setData({ chatStreamingText: accumulated, chatTool: '' }); }
-        },
-        function () {
-          self._streamTask = null;
-          var reply = accumulated || '抱歉，暂时无法回答。';
-          self._updateChatMsg(loadingId, reply);
-          self.setData({ chatSending: false, chatStreamingText: '', chatTool: '' });
-        },
-        function (err) {
-          self._streamTask = null;
-          if (streamStarted && accumulated) { self._updateChatMsg(loadingId, accumulated); self.setData({ chatSending: false, chatStreamingText: '', chatTool: '' }); return; }
-          api.intelligence.aiAdvisorChat({ question: text, conversationId: self.data.conversationId, context: 'smart_ops_tenant' }).then(function (res) {
-            var r = (res && (res.reply || res.content || res.message || res.answer)) || '（无回应）';
-            self._updateChatMsg(loadingId, r);
-          }).catch(function () { self._updateChatMsg(loadingId, '服务暂时无法响应，请稍后再试。'); }).finally(function () {
-            self.setData({ chatSending: false, chatStreamingText: '', chatTool: '' });
-          });
-        }
-      );
-      this._streamTask = task;
-    } catch (err) {
-      this._updateChatMsg(loadingId, '发送失败，请重试。');
-      this.setData({ chatSending: false, chatStreamingText: '', chatTool: '' });
-    }
-  },
-
-  _updateChatMsg: function (id, text) {
-    var cleaned = String(text || '').replace(/【CHART】[\s\S]*?【\/CHART】/g, '').replace(/【ACTIONS】[\s\S]*?【\/ACTIONS】/g, '').replace(/【TEAM_STATUS】[\s\S]*?【\/TEAM_STATUS】/g, '').replace(/【BUNDLE_SPLIT】[\s\S]*?【\/BUNDLE_SPLIT】/g, '').replace(/【STEP_WIZARD】[\s\S]*?【\/STEP_WIZARD】/g, '').replace(/【INSIGHT_CARDS】[\s\S]*?【\/INSIGHT_CARDS】/g, '').replace(/```ACTIONS_JSON\s*\n[\s\S]*?\n```/g, '').trim();
-    this.setData({ chatMessages: this.data.chatMessages.map(function (m) { if (m.id !== id) return m; return Object.assign({}, m, { text: cleaned, loading: false }); }) });
-  },
-
-  _abortStream: function () { if (this._streamTask) { try { this._streamTask.abort(); } catch (e) {} this._streamTask = null; } },
+  closeStage: function () { this.setData({ activeStage: '', activeStageLabel: '', activeStageOrders: [] }); },
 
   _startTimer: function () {
     var self = this;
@@ -167,15 +167,15 @@ Page({
     Promise.allSettled([
       api.production.listOrders({ page: 1, pageSize: 500 }),
       api.production.orderStats({}),
-      api.dashboard.getTopStats({}),
+      api.dashboard.getDailyBrief(),
+      api.production.getFactoryCapacity(),
       api.intelligence.getLivePulse(),
-      api.intelligence.getFactoryLeaderboard(),
     ]).then(function (results) {
       var ordersData = self._unwrap(results[0]);
       var statsData = self._unwrap(results[1]);
-      var topStats = self._unwrap(results[2]);
-      var pulse = self._unwrap(results[3]);
-      var ranking = self._unwrap(results[4]);
+      var brief = self._unwrap(results[2]);
+      var factoryCap = self._unwrap(results[3]);
+      var pulse = self._unwrap(results[4]);
 
       var orders = [];
       if (ordersData) {
@@ -199,47 +199,104 @@ Page({
       var delayed = orders.filter(isDelayed);
       var risk = orders.filter(isRisk);
 
-      var todayInbound = 0;
-      var todayOutbound = 0;
-      if (topStats) {
-        todayInbound = (topStats.warehousingInbound && topStats.warehousingInbound.day) || 0;
-        todayOutbound = (topStats.warehousingOutbound && topStats.warehousingOutbound.day) || 0;
-      }
+      var inProdQty = inProd.reduce(function(s, o) { return s + toNum(o.orderQuantity); }, 0);
+      var delayedQty = delayed.reduce(function(s, o) { return s + toNum(o.orderQuantity); }, 0);
+      var riskQty = risk.reduce(function(s, o) { return s + toNum(o.orderQuantity); }, 0);
+
+      var todayOrderCount = toNum(brief && brief.todayOrderCount) || orders.filter(function(o) { return o._isTodayOrder; }).length;
+      var todayOrderQty = toNum(brief && brief.todayOrderQuantity) || orders.filter(function(o) { return o._isTodayOrder; }).reduce(function(s, o) { return s + toNum(o.orderQuantity); }, 0);
+      var todayInboundCount = toNum(brief && brief.todayInboundCount) || 0;
+      var todayInboundQty = toNum(brief && brief.todayInboundQuantity) || 0;
+      var todayOutboundCount = toNum(brief && brief.todayOutboundCount) || 0;
+      var todayOutboundQty = toNum(brief && brief.todayOutboundQuantity) || 0;
 
       var menuData = {
-        inProduction: Number(statsData && statsData.activeOrders) || inProd.length,
-        todayOrders: Number(statsData && statsData.todayOrders) || orders.filter(function(o) { return o._isTodayOrder; }).length,
-        todayInbound: todayInbound,
-        todayOutbound: todayOutbound,
-        delayedOrders: Number(statsData && statsData.delayedOrders) || delayed.length,
+        inProduction: toNum(statsData && statsData.activeOrders) || inProd.length,
+        todayOrders: todayOrderCount,
+        todayInbound: todayInboundCount,
+        todayOutbound: todayOutboundCount,
+        delayedOrders: toNum(statsData && statsData.delayedOrders) || delayed.length,
         riskOrders: risk.length,
       };
-
+      var menuExtra = {
+        inProductionQty: toNum(statsData && statsData.activeQuantity) || inProdQty,
+        todayOrdersQty: todayOrderQty,
+        todayInboundQty: todayInboundQty,
+        todayOutboundQty: todayOutboundQty,
+        delayedOrdersQty: toNum(statsData && statsData.delayedQuantity) || delayedQty,
+        riskOrdersQty: riskQty,
+      };
       var totalWarn = menuData.delayedOrders + menuData.riskOrders;
 
+      var stageBuckets = STAGE_LIST.map(function(stage) {
+        var bucketOrders = inProd.filter(function(o) { return detectStage(o) === stage.key; });
+        var qty = bucketOrders.reduce(function(s, o) { return s + toNum(o.orderQuantity); }, 0);
+        var leadOrder = bucketOrders.length > 0 ? bucketOrders[0] : null;
+        return {
+          key: stage.key, label: stage.label, count: bucketOrders.length, quantity: qty,
+          leadOrderNo: leadOrder ? leadOrder.orderNo : '',
+          leadProgress: leadOrder ? calcProgress(leadOrder) : 0,
+          orders: bucketOrders.map(toOrderRow),
+        };
+      });
+
       var factoryList = [];
-      if (pulse && pulse.factoryActivity) {
-        pulse.factoryActivity.forEach(function (f) {
-          var mins = f.minutesSinceLastScan || 999;
-          factoryList.push({ factoryName: f.factoryName, active: !!f.active, mins: mins, timeText: mins < 1 ? '刚刚' : mins < 60 ? mins + '分钟前' : Math.floor(mins / 60) + 'h前', todayQty: f.todayQty || 0 });
+      var factoryOnline = 0;
+      var factoryStagnant = 0;
+      var factoryTotalOrders = 0;
+      var factoryTotalQty = 0;
+
+      if (Array.isArray(factoryCap)) {
+        factoryCap.forEach(function (f) {
+          var orders = toNum(f.totalOrders);
+          factoryTotalOrders += orders;
+          factoryTotalQty += toNum(f.totalQuantity);
+          factoryList.push({
+            factoryName: f.factoryName || '', activeOrders: orders,
+            totalQty: toNum(f.totalQuantity), atRiskCount: toNum(f.atRiskCount), overdueCount: toNum(f.overdueCount),
+            deliveryOnTimeRate: f.deliveryOnTimeRate, activeWorkers: toNum(f.activeWorkers), avgDailyOutput: f.avgDailyOutput || 0,
+          });
         });
       }
 
-      var rankingList = [];
-      var medalColors = ['#ffd700', '#c0c0c0', '#cd7f32'];
-      if (ranking && ranking.rankings) {
-        ranking.rankings.slice(0, 5).forEach(function (r, i) {
-          rankingList.push({ factoryId: r.factoryId || '', factoryName: r.factoryName || '', totalScore: r.totalScore || 0, medal: i < 3 ? ['🥇', '🥈', '🥉'][i] : '#' + (i + 1), medalColor: medalColors[i] || '#7a8999' });
+      if (pulse && pulse.factoryActivity) {
+        var onlineFactories = pulse.factoryActivity.filter(function(f) { return !!f.active; });
+        factoryOnline = onlineFactories.length;
+        factoryStagnant = pulse.stagnantFactories ? pulse.stagnantFactories.length : 0;
+
+        pulse.factoryActivity.forEach(function (fa) {
+          var found = false;
+          for (var i = 0; i < factoryList.length; i++) {
+            if (factoryList[i].factoryName === fa.factoryName) {
+              factoryList[i].active = !!fa.active;
+              factoryList[i].mins = fa.minutesSinceLastScan || 999;
+              factoryList[i].timeText = fa.minutesSinceLastScan < 1 ? '刚刚' : fa.minutesSinceLastScan < 60 ? fa.minutesSinceLastScan + '分钟前' : Math.floor(fa.minutesSinceLastScan / 60) + 'h前';
+              factoryList[i].todayQty = fa.todayQty || 0;
+              found = true;
+              break;
+            }
+          }
+          if (!found) {
+            var mins = fa.minutesSinceLastScan || 999;
+            factoryList.push({
+              factoryName: fa.factoryName, active: !!fa.active, mins: mins,
+              timeText: mins < 1 ? '刚刚' : mins < 60 ? mins + '分钟前' : Math.floor(mins / 60) + 'h前',
+              todayQty: fa.todayQty || 0, activeOrders: 0, totalQty: 0, highRiskCount: 0, overdueCount: 0,
+            });
+          }
         });
       }
 
       self.setData({
-        menuData: menuData, totalWarn: totalWarn,
-        factoryList: factoryList, rankingList: rankingList,
+        menuData: menuData, menuExtra: menuExtra, totalWarn: totalWarn,
+        stageBuckets: stageBuckets,
+        factoryList: factoryList, factoryOnline: factoryOnline, factoryStagnant: factoryStagnant,
+        factoryTotalOrders: factoryTotalOrders, factoryTotalQty: factoryTotalQty,
         _allOrders: orders, loading: false,
       });
 
       if (self.data.activeMenu) { self.onMenuTap({ currentTarget: { dataset: { key: self.data.activeMenu } } }); }
+      if (self.data.activeStage) { self.onStageTap({ currentTarget: { dataset: { key: self.data.activeStage } } }); }
     }).catch(function (err) {
       console.warn('[SmartOps] refresh error:', err);
       self.setData({ loading: false });
