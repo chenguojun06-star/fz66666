@@ -1013,7 +1013,11 @@ public class DbColumnRepairRunner implements ApplicationRunner {
      */
     private int ensureSettlementViewHasCompleteTime(Connection conn, String schema) {
         try {
-            if (!columnExists(conn, schema, "v_finished_product_settlement", "complete_time")) {
+            // 同时检查 complete_time（V202609021000）和 dev_cost_price（V20260420002）
+            // 任一列缺失均重建为最新完整视图 DDL，防止本地 FLYWAY_ENABLED=false 场景缺列
+            boolean missingCompleteTime = !columnExists(conn, schema, "v_finished_product_settlement", "complete_time");
+            boolean missingDevCostPrice = !columnExists(conn, schema, "v_finished_product_settlement", "dev_cost_price");
+            if (missingCompleteTime || missingDevCostPrice) {
                 try (Statement stmt = conn.createStatement()) {
                     stmt.executeUpdate("DROP VIEW IF EXISTS `v_finished_product_settlement`");
                     String createView = "CREATE VIEW `v_finished_product_settlement` AS"
@@ -1026,6 +1030,7 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                         + " `po`.`order_quantity` AS `order_quantity`,"
                         + " COALESCE(`sq`.`total_price`,`si`.`price`,0) AS `style_final_price`,"
                         + " COALESCE(`sq`.`profit_rate`,0) AS `target_profit_rate`,"
+                        + " COALESCE(`si`.`price`,0) AS `dev_cost_price`,"
                         + " COALESCE(`wh`.`total_warehoused`,0) AS `warehoused_quantity`,"
                         + " COALESCE(`wh`.`total_defects`,0) AS `defect_quantity`,"
                         + " COALESCE(`wh`.`colors`,'') AS `colors`,"
@@ -1085,7 +1090,7 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                         + " ORDER BY `po`.`create_time` DESC";
                     stmt.executeUpdate(createView);
                 }
-                log.warn("[DbRepair] 已重建视图 v_finished_product_settlement（补齐 complete_time 字段）");
+                log.warn("[DbRepair] 已重建视图 v_finished_product_settlement（补齐 complete_time/dev_cost_price 字段，missing complete_time={}, missing dev_cost_price={}）", missingCompleteTime, missingDevCostPrice);
                 return 1;
             }
         } catch (Exception e) {

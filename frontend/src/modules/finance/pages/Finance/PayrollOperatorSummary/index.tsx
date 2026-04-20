@@ -56,7 +56,7 @@ const PayrollOperatorSummary: React.FC = () => {
         setInternalOrdersLoading(true);
         try {
             const res = await api.get('/finance/finished-settlement/list', {
-                params: { factoryType: 'INTERNAL', page: 1, size: 200 },
+                params: { factoryType: 'INTERNAL', page: 1, pageSize: 200 },
             });
             const data = unwrapApiData<any>(res, '获取内部工厂订单失败');
             const records = data?.records ?? data ?? [];

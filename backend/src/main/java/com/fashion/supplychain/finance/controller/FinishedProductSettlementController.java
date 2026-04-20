@@ -7,6 +7,7 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.FinishedProductSettlement;
 import com.fashion.supplychain.production.entity.ProductionOrder;
+import com.fashion.supplychain.production.mapper.ProductionOrderMapper;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.util.OrderPricingSnapshotUtils;
 import com.fashion.supplychain.finance.service.FinishedProductSettlementService;
@@ -57,6 +58,8 @@ public class FinishedProductSettlementController {
     private final FinishedProductSettlementExportService exportService;
     private final FinishedSettlementApprovalStatusService approvalStatusService;
     private final FactoryService factoryService;
+    /** 绕过租户拦截器查询订单，用于超管跨租户查看成品结算。 */
+    private final ProductionOrderMapper productionOrderMapper;
     private final ProductionOrderService productionOrderService;
 
     @Operation(summary = "分页查询成品结算列表")
@@ -428,12 +431,14 @@ public class FinishedProductSettlementController {
                 .eq(StringUtils.isNotBlank(factoryType), ProductionOrder::getFactoryType, factoryType)
                 .and(w -> w.isNull(ProductionOrder::getDeleteFlag).or().eq(ProductionOrder::getDeleteFlag, 0));
 
+        // 使用 @InterceptorIgnore 方法绕过 TenantInterceptor，避免超管（tenantId=null）被注入
+        // AND tenant_id IS NULL 而导致查不到任何业务订单。租户隔离由 orderWrapper 中
+        // 的 eq(TenantId, tenantId) 条件（普通用户分支）保证；超管有权看所有租户数据。
         Long tenantId = UserContext.tenantId();
         if (tenantId != null) {
             orderWrapper.eq(ProductionOrder::getTenantId, tenantId);
         }
-
-        List<String> orderIds = productionOrderService.list(orderWrapper).stream()
+        List<String> orderIds = productionOrderMapper.listForFinanceScope(orderWrapper).stream()
                 .map(ProductionOrder::getId)
                 .filter(StringUtils::isNotBlank)
                 .collect(Collectors.toList());
