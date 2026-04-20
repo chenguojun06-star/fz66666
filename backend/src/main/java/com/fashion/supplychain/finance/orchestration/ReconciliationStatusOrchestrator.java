@@ -5,8 +5,10 @@ import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.finance.entity.MaterialReconciliation;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
+import com.fashion.supplychain.finance.entity.BillAggregation;
 import com.fashion.supplychain.finance.service.MaterialReconciliationService;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
+import com.fashion.supplychain.finance.service.BillAggregationService;
 import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator.BillPushRequest;
 import com.fashion.supplychain.integration.openapi.service.WebhookPushService;
 import com.fashion.supplychain.crm.entity.Receivable;
@@ -23,6 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -94,6 +97,9 @@ public class ReconciliationStatusOrchestrator {
 
     @Autowired(required = false)
     private BillAggregationOrchestrator billAggregationOrchestrator;
+
+    @Autowired(required = false)
+    private BillAggregationService billAggregationService;
 
     @Transactional(rollbackFor = Exception.class)
     public String updateMaterialStatus(String id, String status) {
@@ -212,6 +218,10 @@ public class ReconciliationStatusOrchestrator {
                         log.warn("物料对账驳回联动取消账单失败（不影响主流程）: id={}", rid, e);
                     }
                 }
+                if ("paid".equals(to)) {
+                    syncBillAsSettledBySource("MATERIAL_RECONCILIATION", rid,
+                            mr.getFinalAmount() != null ? mr.getFinalAmount() : mr.getTotalAmount());
+                }
                 return "状态更新成功";
             }
             if (scope == Scope.MATERIAL) {
@@ -296,6 +306,10 @@ public class ReconciliationStatusOrchestrator {
                         log.warn("成品对账驳回联动取消账单失败（不影响主流程）: id={}", rid, e);
                     }
                 }
+                if ("paid".equals(to)) {
+                    syncBillAsSettledBySource("SHIPMENT_RECONCILIATION", rid,
+                            sr.getFinalAmount() != null ? sr.getFinalAmount() : sr.getTotalAmount());
+                }
 
                 // 订单结算审核通过后推送通知
                 if ("approved".equals(to)) {
@@ -350,6 +364,40 @@ public class ReconciliationStatusOrchestrator {
         }
 
         throw new NoSuchElementException("对账单不存在");
+    }
+
+    private void syncBillAsSettledBySource(String sourceType, String sourceId, BigDecimal amount) {
+        if (billAggregationService == null || !StringUtils.hasText(sourceType) || !StringUtils.hasText(sourceId)) {
+            return;
+        }
+        try {
+            Long tenantId = UserContext.tenantId();
+            BillAggregation bill = billAggregationService.lambdaQuery()
+                    .eq(BillAggregation::getSourceType, sourceType)
+                    .eq(BillAggregation::getSourceId, sourceId)
+                    .eq(tenantId != null, BillAggregation::getTenantId, tenantId)
+                    .eq(BillAggregation::getDeleteFlag, 0)
+                    .last("LIMIT 1")
+                    .one();
+            if (bill == null) {
+                return;
+            }
+            BigDecimal settled = amount != null ? amount : bill.getAmount();
+            if (settled == null) {
+                settled = BigDecimal.ZERO;
+            }
+            if (bill.getAmount() != null && settled.compareTo(bill.getAmount()) > 0) {
+                settled = bill.getAmount();
+            }
+            bill.setSettledAmount(settled);
+            bill.setStatus("SETTLED");
+            bill.setSettledAt(LocalDateTime.now());
+            bill.setSettledById(UserContext.userId());
+            bill.setSettledByName(UserContext.username());
+            billAggregationService.updateById(bill);
+        } catch (Exception e) {
+            log.warn("对账 paid 状态回写账单失败: sourceType={}, sourceId={}", sourceType, sourceId, e);
+        }
     }
 
     private String returnToPrevious(Scope scope, String id, String reason) {
