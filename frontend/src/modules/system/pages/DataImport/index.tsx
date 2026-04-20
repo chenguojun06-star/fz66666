@@ -151,12 +151,9 @@ const ZipImportPanel: React.FC = () => {
       <Space orientation="vertical" style={{ width: '100%' }} size="middle">
         {/* 下载模板 */}
         <Card size="small" title="第一步：下载款式 Excel 模板">
-          <Button icon={<DownloadOutlined />} onClick={() => {
-            const url = dataImportService.getTemplateUrl('style');
-            const a = document.createElement('a'); a.href = url; a.download = '';
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
-          }}>下载 Excel 模板</Button>
-          <Text type="secondary" style={{ marginLeft: 12 }}>填写款式数据后，与图片一起压缩成 ZIP</Text>
+          <Button icon={<DownloadOutlined />} onClick={() => { void dataImportService.downloadTemplate('style'); }}>
+            下载款式模板
+          </Button>
         </Card>
 
         {/* 上传 ZIP */}
@@ -249,13 +246,7 @@ const ImportPanel: React.FC<{ config: TabConfig }> = ({ config }) => {
   const [result, setResult] = useState<ImportResult | null>(null);
 
   const handleDownloadTemplate = useCallback(() => {
-    const url = dataImportService.getTemplateUrl(config.key);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = '';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    void dataImportService.downloadTemplate(config.key);
   }, [config.key]);
 
   const handleUpload = useCallback(async () => {
@@ -263,7 +254,6 @@ const ImportPanel: React.FC<{ config: TabConfig }> = ({ config }) => {
       message.warning('请先选择文件');
       return;
     }
-
     const file = fileList[0].originFileObj as RcFile;
     if (!file) {
       message.error('文件读取失败，请重新选择');

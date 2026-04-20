@@ -20,9 +20,27 @@ export interface ImportResult {
  */
 export const dataImportService = {
   /**
-   * 获取 Excel 模板下载 URL
+   * 下载 Excel 导入模板（通过 axios 携带 JWT，避免浏览器直接跳转 401）
+   * 修复：原 getTemplateUrl 返回裸 URL，<a>.click() 不携带 Authorization header → 401
    */
-  getTemplateUrl: (type: string) => `/api${BASE}/template/${type}`,
+  downloadTemplate: async (type: string): Promise<void> => {
+    const fileNameMap: Record<string, string> = {
+      style:    '款式资料导入模板.xlsx',
+      factory:  '供应商导入模板.xlsx',
+      employee: '员工导入模板.xlsx',
+      process:  '工序导入模板.xlsx',
+    };
+    const blob: Blob = await (request as unknown as { get: (url: string, cfg: object) => Promise<Blob> })
+      .get(`${BASE}/template/${type}`, { responseType: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileNameMap[type] ?? `${type}导入模板.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  },
 
   /**
    * 上传 Excel 导入数据

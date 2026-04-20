@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Tabs, DatePicker, Statistic, Tooltip, Spin, Space } from 'antd';
+import { Card, Row, Col, Tabs, DatePicker, Statistic, Tooltip, Spin, Space, Empty } from 'antd';
 import { InfoCircleOutlined, CaretUpOutlined, CaretDownOutlined } from '@ant-design/icons';
 import { Column } from '@ant-design/charts';
 import Layout from '@/components/Layout';
@@ -404,7 +404,9 @@ const FinanceDashboard: React.FC = () => {
                   {activeTab === 'amount' ? '金额趋势' : '数量趋势'}
                 </h4>
                 <div style={{ height: 300 }}>
-                  <Column {...chartConfig} />
+                  {trendData.length > 0
+                    ? <Column {...chartConfig} />
+                    : <Empty description="暂无数据" image={Empty.PRESENTED_IMAGE_SIMPLE} style={{ paddingTop: 80 }} />}
                 </div>
               </div>
             </Col>
