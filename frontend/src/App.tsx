@@ -10,7 +10,6 @@ import ErrorBoundary from './components/common/ErrorBoundary';
 import RouteErrorBoundary from './components/common/RouteErrorBoundary';
 import { paths } from './routeConfig';
 import { useViewport } from './utils/useViewport';
-import WebSocketNotification from './components/common/WebSocketNotification';
 import CommandPalette from './components/common/CommandPalette';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -185,7 +184,6 @@ const AppRoutes: React.FC = () => {
 
   return (
     <>
-      <WebSocketNotification />
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       <Routes location={backgroundLocation || location}>
         <Route path="/" element={<RootRedirect />} />

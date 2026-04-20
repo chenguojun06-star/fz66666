@@ -432,8 +432,6 @@ public class ProductionScanExecutor {
                     }
                 } catch (BusinessException be) {
                     log.warn("工序跟踪拒绝领取（不阻断扫码）: bundleId={}, processCode={}, msg={}", bundle.getId(), processCode, be.getMessage());
-                } catch (com.fashion.supplychain.common.exception.BusinessException be2) {
-                    log.warn("工序跟踪拒绝领取（不阻断扫码）: bundleId={}, processCode={}, msg={}", bundle.getId(), processCode, be2.getMessage());
                 } catch (IllegalStateException ise) {
                     log.warn("工序跟踪状态冲突（不阻断扫码）: bundleId={}, processCode={}, msg={}", bundle.getId(), processCode, ise.getMessage());
                 } catch (Exception e) {

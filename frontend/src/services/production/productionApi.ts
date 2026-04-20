@@ -1,6 +1,7 @@
 import api from '../../utils/api';
 import { downloadFile } from '../../utils/fileUrl';
-import type { ProductionQueryParams } from '../../types/production';
+import type { ProductionQueryParams, ProductionOrder } from '../../types/production';
+import type { ApiResponse, PaginatedData } from '../../types/api';
 
 export type ProductionOrderListParams = ProductionQueryParams & {
   startDate?: string;
@@ -47,14 +48,14 @@ export const productionOrderApi = {
     const queryString = new URLSearchParams(query as Record<string, string>).toString();
     downloadFile(`/api/production/order/export-excel?${queryString}`);
   },
-  list: (params: ProductionOrderListParams) => api.get<{ code: number; data: { records: unknown[]; total: number } }>('/production/order/list', { params }),
+  list: (params: ProductionOrderListParams) => api.get<ApiResponse<PaginatedData<ProductionOrder>>>('/production/order/list', { params }),
   // detail 已废弃，统一使用 list({ orderNo: 'xxx' }) 查询单个订单
   close: (id: string, sourceModule: string, remark?: string, specialClose?: boolean) => api.post<{ code: number; message: string; data: boolean }>('/production/order/close', { id, sourceModule, remark, specialClose }),
   copy: (id: string) => api.post<{ code: number; message: string; data: unknown }>(`/production/order/copy/${encodeURIComponent(id)}`),
   updateProgress: (payload: Record<string, unknown>) => api.post<{ code: number; message: string; data: boolean }>('/production/order/update-progress', payload),
   saveProgressWorkflow: (payload: Record<string, unknown>) => api.post<{ code: number; message: string; data: boolean }>('/production/order/progress-workflow/lock', payload),
   rollbackProgressWorkflow: (payload: Record<string, unknown>) => api.post<{ code: number; message: string; data: boolean }>('/production/order/progress-workflow/rollback', payload),
-  quickEdit: (payload: Record<string, unknown>) => api.put<{ code: number; message: string; data: unknown }>('/production/order/quick-edit', payload),
+  quickEdit: (payload: Partial<ProductionOrder> & { id: string }) => api.put<ApiResponse<ProductionOrder>>('/production/order/quick-edit', payload),
   // 节点操作记录 API
   getNodeOperations: (id: string) => api.get<{ code: number; data: string }>(`/production/order/node-operations/${encodeURIComponent(id)}`),
   saveNodeOperations: (id: string, nodeOperations: string) => api.post<{ code: number; message: string }>('/production/order/node-operations', { id, nodeOperations }),

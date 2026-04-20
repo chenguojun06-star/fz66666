@@ -9,9 +9,9 @@ interface QuickEditModalProps {
     remarks?: string;
     remark?: string;
     expectedShipDate?: string | null;
-    urgencyLevel?: string;
+    urgencyLevel?: 'normal' | 'urgent';
   };
-  onSave: (values: { remarks: string; expectedShipDate: string | null; urgencyLevel: string }) => Promise<void>;
+  onSave: (values: { remarks: string; expectedShipDate: string | null; urgencyLevel: 'normal' | 'urgent' }) => Promise<void>;
   onCancel: () => void;
   title?: string;
 }

@@ -15,6 +15,7 @@ import { intelligenceApi } from '@/services/intelligence/intelligenceApi';
 import { App } from 'antd';
 import api from '@/utils/api';
 import { useAuth } from '@/utils/AuthContext';
+import { useWebSocket, type WsMessage } from '@/hooks/useWebSocket';
 import XiaoyunCloudAvatar, { CuteCloudTrigger, type XiaoyunCloudMood } from '@/components/common/XiaoyunCloudAvatar';
 import styles from './index.module.css';
 import { loadDismissedPending, saveDismissedPending } from './sessionUtils';
@@ -26,10 +27,39 @@ import { usePendingTasks } from './usePendingTasks';
 import MessageBubble from './MessageBubble';
 import SmartBubble from './SmartBubble';
 import TaskAggregationPanel from './TaskAggregationPanel';
+import type { Message } from './types';
+
+function normalizeTraceableAdvice(payload: unknown): Message['traceableAdvice'] | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const raw = payload as Record<string, unknown>;
+  const title = String(raw.title || '').trim();
+  if (!title) return null;
+  return {
+    traceId: String(raw.traceId || ''),
+    title,
+    summary: String(raw.summary || '系统发来了一条智能建议。'),
+    reasoningChain: Array.isArray(raw.reasoningChain)
+      ? raw.reasoningChain.map(item => String(item || '')).filter(Boolean)
+      : [],
+    proposedActions: Array.isArray(raw.proposedActions)
+      ? raw.proposedActions
+        .filter((item): item is Record<string, unknown> => !!item && typeof item === 'object')
+        .map((item) => ({
+          label: String(item.label || '执行'),
+          actionCommand: String(item.actionCommand || ''),
+          actionParams: item.actionParams && typeof item.actionParams === 'object'
+            ? item.actionParams as Record<string, unknown>
+            : undefined,
+          riskWarning: item.riskWarning != null ? String(item.riskWarning) : undefined,
+        }))
+      : [],
+    confidenceScore: typeof raw.confidenceScore === 'number' ? raw.confidenceScore : undefined,
+  };
+}
 
 const GlobalAiAssistant: React.FC = () => {
   const { message } = App.useApp();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -87,12 +117,19 @@ const GlobalAiAssistant: React.FC = () => {
     clearChat,
   } = useAiChat(message);
 
+  const { subscribe } = useWebSocket({
+    userId: user?.id,
+    tenantId: user?.tenantId,
+    enabled: isAuthenticated && !!user?.id,
+    token: localStorage.getItem('authToken') ?? '',
+  });
+
   // ── 监听后端推送的 AI 智能决策卡片 ──
   useEffect(() => {
     const handleAdvicePush = (event: Event) => {
       const customEvent = event as CustomEvent;
-      const advice = customEvent.detail;
-      if (!advice || !advice.title) return;
+      const advice = normalizeTraceableAdvice(customEvent.detail);
+      if (!advice) return;
 
       setIsOpen(true);
       setMessages(prev => [
@@ -100,7 +137,7 @@ const GlobalAiAssistant: React.FC = () => {
         {
           id: `advice-${Date.now()}`,
           role: 'ai',
-          text: advice.summary || '系统发来了一条智能建议。',
+          text: advice.summary,
           traceableAdvice: advice,
         }
       ]);
@@ -109,6 +146,24 @@ const GlobalAiAssistant: React.FC = () => {
     window.addEventListener('ai:traceable_advice', handleAdvicePush);
     return () => window.removeEventListener('ai:traceable_advice', handleAdvicePush);
   }, []);
+
+  useEffect(() => {
+    return subscribe('ai:traceable_advice', (msg: WsMessage) => {
+      const advice = normalizeTraceableAdvice(msg.payload);
+      if (!advice) return;
+
+      setIsOpen(true);
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `advice-ws-${Date.now()}`,
+          role: 'ai',
+          text: advice.summary,
+          traceableAdvice: advice,
+        }
+      ]);
+    });
+  }, [subscribe, setMessages]);
 
   // ── 监听 ⌘K 搜索无结果 → 打开小云面板并预填问题 ──
   useEffect(() => {

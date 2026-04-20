@@ -82,16 +82,18 @@ export function useProductionActions({
 
   /** 快速编辑保存 */
   const handleQuickEditSave = async (
-    values: { remarks: string; expectedShipDate: string | null; urgencyLevel?: string },
+    values: { remarks: string; expectedShipDate: string | null; urgencyLevel?: 'normal' | 'urgent' },
     editData: ProductionOrder | null,
     closeModal: () => void,
   ) => {
     setQuickEditSaving(true);
     try {
+      const urgencyLevel: ProductionOrder['urgencyLevel'] =
+        values.urgencyLevel === 'urgent' ? 'urgent' : 'normal';
       await productionOrderApi.quickEdit({
         id: editData?.id,
         ...values,
-        urgencyLevel: values.urgencyLevel || 'normal',
+        urgencyLevel,
       });
       if (values.remarks?.trim() && editData) {
         try {
