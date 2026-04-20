@@ -10,6 +10,8 @@ import com.fashion.supplychain.crm.entity.Receivable;
 import com.fashion.supplychain.crm.entity.ReceivableReceiptLog;
 import com.fashion.supplychain.crm.service.CustomerService;
 import com.fashion.supplychain.crm.service.ReceivableService;
+import com.fashion.supplychain.finance.entity.BillAggregation;
+import com.fashion.supplychain.finance.service.BillAggregationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -40,6 +42,9 @@ public class ReceivableOrchestrator {
 
     @Autowired
     private ReceivableReceiptOrchestrator receivableReceiptOrchestrator;
+
+    @Autowired
+    private BillAggregationService billAggregationService;
 
     private static final DateTimeFormatter NO_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
@@ -75,6 +80,19 @@ public class ReceivableOrchestrator {
 
     public Receivable getById(String id) {
         return receivableService.getById(id);
+    }
+
+    public Receivable findByBillAggregationId(String billAggregationId) {
+        if (!StringUtils.hasText(billAggregationId)) {
+            return null;
+        }
+        Long tenantId = UserContext.tenantId();
+        return receivableService.lambdaQuery()
+                .eq(Receivable::getBillAggregationId, billAggregationId)
+                .eq(Receivable::getDeleteFlag, 0)
+                .eq(tenantId != null, Receivable::getTenantId, tenantId)
+                .last("LIMIT 1")
+                .one();
     }
 
     public Map<String, Object> getDetail(String id) {
@@ -179,6 +197,30 @@ public class ReceivableOrchestrator {
         return create(r);
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    public Receivable createFromBill(BillAggregation bill) {
+        if (bill == null || !StringUtils.hasText(bill.getId())) {
+            throw new RuntimeException("账单不存在，无法派生应收任务");
+        }
+        Receivable existing = findByBillAggregationId(bill.getId());
+        if (existing != null) {
+            return existing;
+        }
+        Receivable r = new Receivable();
+        r.setCustomerId(bill.getCounterpartyId());
+        r.setCustomerName(bill.getCounterpartyName());
+        r.setOrderId(bill.getOrderId());
+        r.setOrderNo(StringUtils.hasText(bill.getOrderNo()) ? bill.getOrderNo() : bill.getSourceNo());
+        r.setAmount(bill.getAmount() == null ? BigDecimal.ZERO : bill.getAmount());
+        r.setReceivedAmount(bill.getSettledAmount() == null ? BigDecimal.ZERO : bill.getSettledAmount());
+        r.setDescription("账单派生: " + bill.getBillNo() + " / " + bill.getBillCategory());
+        r.setSourceBizType(bill.getSourceType());
+        r.setSourceBizId(bill.getSourceId());
+        r.setSourceBizNo(bill.getSourceNo());
+        r.setBillAggregationId(bill.getId());
+        return create(r);
+    }
+
     /**
      * 登记到账：增加已收金额，自动更新状态
      */
@@ -206,8 +248,35 @@ public class ReceivableOrchestrator {
 
         receivableService.updateById(r);
         receivableReceiptOrchestrator.recordReceipt(r, paymentAmount, remark);
+        syncBillAggregationAfterReceipt(r, paymentAmount);
         log.info("[ReceivableOrchestrator] 应收单 {} 登记到账 {}，状态更新为 {}", id, paymentAmount, r.getStatus());
         return r;
+    }
+
+    private void syncBillAggregationAfterReceipt(Receivable receivable, BigDecimal paymentAmount) {
+        if (receivable == null || !StringUtils.hasText(receivable.getBillAggregationId())) {
+            return;
+        }
+        BillAggregation bill = billAggregationService.getById(receivable.getBillAggregationId());
+        if (bill == null || bill.getDeleteFlag() == null || bill.getDeleteFlag() != 0) {
+            return;
+        }
+        BigDecimal settled = bill.getSettledAmount() == null ? BigDecimal.ZERO : bill.getSettledAmount();
+        BigDecimal add = paymentAmount == null ? BigDecimal.ZERO : paymentAmount;
+        settled = settled.add(add);
+        if (bill.getAmount() != null && settled.compareTo(bill.getAmount()) > 0) {
+            settled = bill.getAmount();
+        }
+        bill.setSettledAmount(settled);
+        if (bill.getAmount() != null && settled.compareTo(bill.getAmount()) >= 0) {
+            bill.setStatus("SETTLED");
+            bill.setSettledAt(LocalDateTime.now());
+            bill.setSettledById(UserContext.userId());
+            bill.setSettledByName(UserContext.username());
+        } else {
+            bill.setStatus("SETTLING");
+        }
+        billAggregationService.updateById(bill);
     }
 
     @Transactional(rollbackFor = Exception.class)

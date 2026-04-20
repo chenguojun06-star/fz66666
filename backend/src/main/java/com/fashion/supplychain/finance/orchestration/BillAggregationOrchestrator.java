@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.common.tenant.TenantAssert;
+import com.fashion.supplychain.crm.orchestration.ReceivableOrchestrator;
 import com.fashion.supplychain.finance.entity.BillAggregation;
+import com.fashion.supplychain.finance.entity.Payable;
 import com.fashion.supplychain.finance.service.BillAggregationService;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +39,12 @@ public class BillAggregationOrchestrator {
 
     @Autowired
     private BillAggregationService billAggregationService;
+
+    @Autowired(required = false)
+    private PayableOrchestrator payableOrchestrator;
+
+    @Autowired(required = false)
+    private ReceivableOrchestrator receivableOrchestrator;
 
     // ==================== 1. 账单推送（各模块调用） ====================
 
@@ -203,6 +211,7 @@ public class BillAggregationOrchestrator {
         bill.setConfirmedByName(UserContext.username());
         bill.setConfirmedAt(LocalDateTime.now());
         billAggregationService.updateById(bill);
+        ensureSettlementTaskFromBill(bill);
         log.info("[BillAggregation] 确认账单: billNo={}", bill.getBillNo());
     }
 
@@ -292,6 +301,42 @@ public class BillAggregationOrchestrator {
 
     private String generateBillNo() {
         return "BA" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
+    }
+
+    /**
+     * 方案A：BillAggregation 作为唯一财务出口。
+     * 在 CONFIRM 阶段按账单类型派生待收付任务（幂等）。
+     */
+    private void ensureSettlementTaskFromBill(BillAggregation bill) {
+        if (bill == null) {
+            return;
+        }
+        try {
+            if ("PAYABLE".equalsIgnoreCase(bill.getBillType())) {
+                if (payableOrchestrator == null) {
+                    log.warn("[BillAggregation] PayableOrchestrator 不可用，跳过应付派生: billNo={}", bill.getBillNo());
+                    return;
+                }
+                Payable existingPayable = payableOrchestrator.findByBillAggregationId(bill.getId());
+                if (existingPayable == null) {
+                    payableOrchestrator.createFromBill(bill);
+                    log.info("[BillAggregation] 已派生应付任务: billNo={}", bill.getBillNo());
+                }
+                return;
+            }
+            if ("RECEIVABLE".equalsIgnoreCase(bill.getBillType())) {
+                if (receivableOrchestrator == null) {
+                    log.warn("[BillAggregation] ReceivableOrchestrator 不可用，跳过应收派生: billNo={}", bill.getBillNo());
+                    return;
+                }
+                if (receivableOrchestrator.findByBillAggregationId(bill.getId()) == null) {
+                    receivableOrchestrator.createFromBill(bill);
+                    log.info("[BillAggregation] 已派生应收任务: billNo={}", bill.getBillNo());
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("派生待收付任务失败: " + e.getMessage(), e);
+        }
     }
 
     // ==================== 内部 DTO ====================
