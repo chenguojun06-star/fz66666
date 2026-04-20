@@ -3,7 +3,7 @@ import { Tabs, Badge } from 'antd';
 import { CrownOutlined, TeamOutlined, DollarOutlined, MessageOutlined, DashboardOutlined, ShoppingCartOutlined, BugOutlined, NotificationOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
 import Layout from '@/components/Layout';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import { appStoreService } from '@/services/system/appStore';
 import feedbackService from '@/services/feedbackService';
 import AppOrderTab from './AppOrderTab';
@@ -18,7 +18,7 @@ import BroadcastTab from './components/BroadcastTab';
 const CustomerManagement: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'tenants';
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin } = useUser();
   const [pendingOrderCount, setPendingOrderCount] = useState(0);
   const [pendingFeedbackCount, setPendingFeedbackCount] = useState(0);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);

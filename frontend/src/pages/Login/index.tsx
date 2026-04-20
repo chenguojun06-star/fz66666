@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Form, Input, Button, Typography, App, AutoComplete } from 'antd';
 import { UserOutlined, LockOutlined, SearchOutlined, PhoneOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../utils/AuthContext';
+import { useAuthState } from '../../utils/AuthContext';
 import { getDefaultRouteForUser } from '../../routeConfig';
 import api from '../../utils/api';
 import { t } from '../../i18n';
@@ -24,7 +24,7 @@ type LoginMode = 'password' | 'sms';
 const Login: React.FC = () => {
   const navigate = useNavigate();
   const [form] = Form.useForm();
-  const { login, loginWithSms, sendLoginSmsCode } = useAuth();
+  const { login, loginWithSms, sendLoginSmsCode } = useAuthState();
   const { language } = useAppLanguage();
   const [submitting, setSubmitting] = useState(false);
   // 当前固定使用账号密码登录；短信登录分支保留在代码中但 UI 切换按钮已移除，

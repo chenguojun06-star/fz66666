@@ -6,14 +6,14 @@ import SmallModal from '@/components/common/SmallModal';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
 import { useModal } from '@/hooks';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import tenantService from '@/services/tenantService';
 import type { TenantInfo } from '@/services/tenantService';
 import type { ColumnsType } from 'antd/es/table';
 
 // ========== 注册审批 Tab ==========
 const RegistrationTab: React.FC = () => {
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin } = useUser();
   const [tenantApps, setTenantApps] = useState<TenantInfo[]>([]);
   const [tenantAppsLoading, setTenantAppsLoading] = useState(false);
   const editModal = useModal<TenantInfo>();

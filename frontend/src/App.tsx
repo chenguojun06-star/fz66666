@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from
 import { Button } from 'antd';
 import PrivateRoute from './components/PrivateRoute';
 import XiaoyunPageLoader from './components/common/XiaoyunPageLoader';
-import { useAuth } from './utils/AuthContext';
+import { useAuthState } from './utils/AuthContext';
 import ResizableModal from './components/common/ResizableModal';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import RouteErrorBoundary from './components/common/RouteErrorBoundary';
@@ -30,7 +30,7 @@ const ShareOrderPage = React.lazy(() => import('./modules/production/pages/Share
 const ShareOutstockPage = React.lazy(() => import('./modules/warehouse/pages/ShareOutstockPage/index'));
 
 const RootRedirect: React.FC = () => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading } = useAuthState();
   if (loading) {
     return <XiaoyunPageLoader message="小云正在确认要带你去哪里…" />;
   }
@@ -38,7 +38,7 @@ const RootRedirect: React.FC = () => {
 };
 
 const LoginGate: React.FC = () => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading } = useAuthState();
   if (loading) {
     return <XiaoyunPageLoader message="小云正在准备登录入口…" />;
   }

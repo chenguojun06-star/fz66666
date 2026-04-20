@@ -8,7 +8,7 @@ import { LockOutlined, TeamOutlined } from '@ant-design/icons';
 import ImageUploadBox from '@/components/common/ImageUploadBox';
 import api from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import tenantSmartFeatureService from '@/services/system/tenantSmartFeatureService';
 import tenantIntelligenceProfileService from '@/services/system/tenantIntelligenceProfileService';
 import type { TenantIntelligenceProfilePayload, TenantIntelligenceProfileResponse } from '@/services/system/tenantIntelligenceProfileService';
@@ -35,7 +35,7 @@ type ProfileMe = {
 };
 
 const ProfileInfoTab: React.FC = () => {
-    const { user, updateUser, isAdmin, isTenantOwner, isSuperAdmin } = useAuth();
+    const { user, updateUser, isAdmin, isTenantOwner, isSuperAdmin } = useUser();
     const { message } = App.useApp();
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);

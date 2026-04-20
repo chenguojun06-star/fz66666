@@ -5,7 +5,7 @@ import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
 import { useModal } from '@/hooks';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import { appStoreService } from '@/services/system/appStore';
 import type { AppOrder } from '@/services/system/appStore';
 import type { ColumnsType } from 'antd/es/table';
@@ -37,7 +37,7 @@ const SUB_TYPE: Record<string, { label: string; color: string }> = {
  * - 配置 Server酱微信通知（客户下单后推送到管理员微信）
  */
 const AppOrderTab: React.FC<{ onOrderActivated?: () => void }> = ({ onOrderActivated }) => {
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin } = useUser();
   const [data, setData] = useState<AppOrder[]>([]);
   const [loading, setLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('');

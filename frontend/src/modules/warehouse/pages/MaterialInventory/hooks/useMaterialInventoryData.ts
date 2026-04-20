@@ -3,11 +3,13 @@ import { Form } from 'antd';
 import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import { useModal, useTablePagination } from '@/hooks';
-import { useAuth } from '@/utils/AuthContext';
+import { useUser } from '@/utils/AuthContext';
 import api from '@/utils/api';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import factoryApi from '@/services/system/factoryApi';
+import { materialInventoryApi } from '@/services/warehouse/materialInventoryApi';
+import type { MaterialBatchDetail as MaterialBatchDetailType, PendingPicking as PendingPickingType, PendingPickingItem } from '@/types/warehouse';
 import type { MaterialInventory } from '../types';
 import type { MaterialStockAlertItem } from '../components/MaterialAlertRanking';
 import type { MaterialOutboundPrintPayload } from '../components/MaterialOutboundPrintModal';
@@ -84,7 +86,7 @@ export function useMaterialInventoryData() {
   const [loading, setLoading] = useState(false);
   const [dataSource, setDataSource] = useState<MaterialInventory[]>([]);
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
-  const { user } = useAuth();
+  const { user } = useUser();
   const showSmartErrorNotice = useMemo(() => isSmartFeatureEnabled('smart.production.precheck.enabled'), []);
   const showMaterialAI = useMemo(() => isSmartFeatureEnabled('smart.material.inventory.ai.enabled'), []);
 
@@ -133,27 +135,27 @@ export function useMaterialInventoryData() {
     setLoading(true);
     try {
       const { current, pageSize } = pagination.pagination;
-      const res = await api.get('/production/material/stock/list', {
-        params: {
-          page: current, pageSize,
-          materialCode: searchText,
-          materialType: selectedType || undefined,
-          startDate: dateRange?.[0]?.format('YYYY-MM-DD'),
-          endDate: dateRange?.[1]?.format('YYYY-MM-DD'),
-        }
+      const res = await materialInventoryApi.list({
+        page: current,
+        pageSize,
+        materialCode: searchText,
+        materialType: selectedType || undefined,
+        startDate: dateRange?.[0]?.format('YYYY-MM-DD'),
+        endDate: dateRange?.[1]?.format('YYYY-MM-DD'),
       });
       if (res?.data?.records) {
-        const list = res.data.records.map((item: any) => ({
+        const list = res.data.records.map((item) => ({
           ...item,
           availableQty: (item.quantity || 0) - (item.lockedQuantity || 0),
           lockedQty: item.lockedQuantity || 0,
-          specification: item.specifications,
+          specification: item.specifications || item.specification || '',
           safetyStock: item.safetyStock || 100,
           inTransitQty: 0,
+          unit: item.unit || '米',
           conversionRate: item.conversionRate != null ? Number(item.conversionRate) : undefined,
           unitPrice: Number(item.unitPrice) || 0,
           totalValue: Number(item.totalValue) || (item.quantity || 0) * (Number(item.unitPrice) || 0),
-          warehouseLocation: item.location || '默认仓',
+          warehouseLocation: item.location || item.warehouseLocation || '默认仓',
           lastInboundDate: item.lastInboundDate ? String(item.lastInboundDate).replace('T', ' ').substring(0, 16) : (item.updateTime ? String(item.updateTime).replace('T', ' ').substring(0, 16) : '-'),
           lastOutboundDate: item.lastOutboundDate ? String(item.lastOutboundDate).replace('T', ' ').substring(0, 16) : '-',
           supplierName: item.supplierName || '-',
@@ -161,9 +163,9 @@ export function useMaterialInventoryData() {
         setDataSource(list);
         pagination.setTotal(res.data.total);
         setStats({
-          totalValue: list.reduce((sum: number, i: any) => sum + (i.totalValue || 0), 0),
-          totalQty: list.reduce((sum: number, i: any) => sum + (i.quantity || 0), 0),
-          lowStockCount: list.filter((i: any) => (i.quantity || 0) < (i.safetyStock || 100)).length,
+          totalValue: list.reduce((sum: number, i) => sum + (i.totalValue || 0), 0),
+          totalQty: list.reduce((sum: number, i) => sum + (i.quantity || 0), 0),
+          lowStockCount: list.filter((i) => (i.quantity || 0) < (i.safetyStock || 100)).length,
           materialTypes: list.length,
           todayInCount: res.data?.todayInCount || 0,
           todayOutCount: res.data?.todayOutCount || 0,
@@ -195,9 +197,7 @@ export function useMaterialInventoryData() {
     }
     const code = detailModal.data.materialCode;
     setTxLoading(true);
-    api.get('/production/material/stock/transactions', {
-      params: { materialCode: code }
-    }).then((res: any) => {
+    materialInventoryApi.listTransactions(code).then((res) => {
       setTxList(Array.isArray(res) ? res : (res?.data ? res.data : []));
     }).catch(() => {
       message.error('加载出入库记录失败');
@@ -209,9 +209,7 @@ export function useMaterialInventoryData() {
   const fetchAlerts = async () => {
     setAlertLoading(true);
     try {
-      const res = await api.get('/production/material/stock/alerts', {
-        params: { days: 30, leadDays: 7, limit: 50, onlyNeed: true },
-      });
+      const res = await materialInventoryApi.listAlerts({ days: 30, leadDays: 7, limit: 50, onlyNeed: true });
       if (res?.code === 200 && Array.isArray(res.data)) {
         setAlertList(res.data as MaterialStockAlertItem[]);
       } else {
@@ -316,21 +314,20 @@ export function useMaterialInventoryData() {
   const fetchPendingPickings = useCallback(async () => {
     setPendingPickingsLoading(true);
     try {
-      const res = await api.get('/production/picking/list', {
-        params: { status: 'pending', pageSize: 100 },
-      });
-      const records = res?.data?.records || res?.records || [];
+      const res = await materialInventoryApi.listPendingPickings({ status: 'pending', pageSize: 100 });
+      const records = res?.data?.records || [];
       const withItems = await Promise.all(
-        (records as PendingPicking[]).map(async (p) => {
+        (records as PendingPickingType[]).map(async (p) => {
           try {
-            const itemRes = await api.get(`/production/picking/${p.id}/items`);
-            return { ...p, items: itemRes?.data || itemRes || [] };
+            const itemRes = await materialInventoryApi.getPickingItems(p.id);
+            const items: PendingPickingItem[] = Array.isArray(itemRes?.data) ? itemRes.data : [];
+            return { ...p, items };
           } catch {
             return { ...p, items: [] };
           }
         })
       );
-      setPendingPickings(withItems);
+      setPendingPickings(withItems as any);
     } catch {
       // silent
     } finally {
@@ -346,7 +343,7 @@ export function useMaterialInventoryData() {
     if (confirmingPickingId) return;
     setConfirmingPickingId(record.id);
     try {
-      await api.post(`/production/picking/${record.id}/confirm-outbound`);
+      await materialInventoryApi.confirmOutbound(record.id);
       message.success('出库确认成功！库存已扣减。');
       setPendingPickings(prev => prev.filter(p => p.id !== record.id));
       openPrintModal(buildPickingPrintPayload(record));
@@ -371,7 +368,7 @@ export function useMaterialInventoryData() {
     if (cancellingPickingId) return;
     setCancellingPickingId(record.id);
     try {
-      await api.post(`/production/picking/${record.id}/cancel-pending`);
+      await materialInventoryApi.cancelPending(record.id);
       message.success('已取消该出库单');
       setPendingPickings(prev => prev.filter(p => p.id !== record.id));
       void fetchPendingPickings();
@@ -503,16 +500,14 @@ export function useMaterialInventoryData() {
         await searchOutboundOrders(factoryName, factoryType);
       }
 
-      const res = await api.get('/production/material/list', {
-        params: {
-          page: 1,
-          pageSize: 20,
-          materialCode: record.materialCode,
-          receiverId: receiverId || undefined,
-          receiverName: receiverName || undefined,
-          factoryName: factoryName || undefined,
-          factoryType: factoryType || undefined,
-        },
+      const res = await materialInventoryApi.searchMaterialList({
+        page: 1,
+        pageSize: 20,
+        materialCode: record.materialCode,
+        receiverId: receiverId || undefined,
+        receiverName: receiverName || undefined,
+        factoryName: factoryName || undefined,
+        factoryType: factoryType || undefined,
       });
       const records = res?.data?.records || res?.records || [];
       const candidates = records.filter((item: any) => item?.orderNo || item?.styleNo);
@@ -561,7 +556,7 @@ export function useMaterialInventoryData() {
     if (!safetyStockTarget) return;
     setSafetyStockSubmitting(true);
     try {
-      const res = await api.post<{ code: number }>('/production/material/stock/update-safety-stock', {
+      const res = await materialInventoryApi.updateSafetyStock({
         stockId: safetyStockTarget.id,
         safetyStock: safetyStockValue,
       });
@@ -598,7 +593,7 @@ export function useMaterialInventoryData() {
   const handleInboundConfirm = async () => {
     try {
       const values = await inboundForm.validateFields();
-      const response = await api.post('/production/material/inbound/manual', {
+      const response = await materialInventoryApi.manualInbound({
         materialCode: values.materialCode,
         materialName: values.materialName || '',
         materialType: values.materialType || '面料',
@@ -614,8 +609,8 @@ export function useMaterialInventoryData() {
         operatorName: user?.name || user?.username || '系统',
         remark: values.remark || '',
       });
-      if (response.data.code === 200) {
-        const { inboundNo, inboundId } = response.data.data;
+      if (response?.code === 200 && response.data) {
+        const { inboundNo, inboundId } = response.data;
         inboundModal.close();
         inboundForm.resetFields();
         fetchData();
@@ -624,7 +619,7 @@ export function useMaterialInventoryData() {
         rollModal.open({ inboundId: inboundId || '', materialCode: mat?.materialCode || values.materialCode || '', materialName: mat?.materialName || values.materialName || '' });
         message.success(`入库成功！单号：${inboundNo}，请在弹窗中生成料卷标签`);
       } else {
-        message.error(response.data.message || '入库失败');
+        message.error((response as any)?.message || '入库失败');
       }
     } catch (error: unknown) {
       const errMsg = typeof error === 'object' && error !== null && 'response' in error ? String((error as Record<string, any>).response?.data?.message || '') : '';
@@ -668,7 +663,7 @@ export function useMaterialInventoryData() {
       setGeneratingRolls(true);
       const values = await rollForm.validateFields();
       const { inboundId } = rollModal.data!;
-      const res = await api.post('/production/material/roll/generate', {
+      const res = await materialInventoryApi.generateRolls({
         inboundId: inboundId || undefined,
         rollCount: values.rollCount,
         quantityPerRoll: values.quantityPerRoll,
@@ -715,15 +710,13 @@ export function useMaterialInventoryData() {
     setOutboundOrderOptions([]);
     void autoMatchOutboundContext(record);
     try {
-      const res = await api.get('/production/material/stock/batches', {
-        params: {
-          materialCode: record.materialCode,
-          color: record.color || undefined,
-          size: record.size || undefined,
-        },
+      const res = await materialInventoryApi.listBatches({
+        materialCode: record.materialCode,
+        color: record.color || undefined,
+        size: record.size || undefined,
       });
       if (res?.code === 200 && Array.isArray(res.data)) {
-        const batchList: MaterialBatchDetail[] = res.data.map((item: any) => ({
+        const batchList: MaterialBatchDetail[] = res.data.map((item) => ({
           batchNo: item.batchNo || '',
           warehouseLocation: item.warehouseLocation || '默认仓',
           color: item.color || '',
@@ -769,7 +762,7 @@ export function useMaterialInventoryData() {
         message.error('库存记录ID缺失，无法出库');
         return;
       }
-      const res = await api.post('/production/material/stock/manual-outbound', {
+      const res = await materialInventoryApi.manualOutbound({
         stockId,
         quantity: totalQty,
         reason: values.reason || '手动出库',
@@ -783,7 +776,7 @@ export function useMaterialInventoryData() {
         pickupType: values.pickupType,
         usageType: values.usageType,
       });
-      if (res?.code === 200 || res?.data?.code === 200) {
+      if (res?.code === 200 || (res as any)?.data?.code === 200) {
         const outboundNo = res?.data?.outboundNo || `MOB-${Date.now()}`;
         message.success(`成功出库 ${totalQty} ${outboundModal.data?.unit || '件'}`);
         if (outboundModal.data) {
@@ -794,7 +787,7 @@ export function useMaterialInventoryData() {
         outboundForm.resetFields();
         void fetchData();
       } else {
-        message.error(res?.message || res?.data?.message || '出库失败');
+        message.error((res as any)?.message || (res as any)?.data?.message || '出库失败');
       }
     } catch (error: unknown) {
       const errMsg = typeof error === 'object' && error !== null && 'response' in error ? String((error as Record<string, any>).response?.data?.message || '') : '';
