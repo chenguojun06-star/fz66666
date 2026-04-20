@@ -437,6 +437,42 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                         "VARCHAR(50) DEFAULT NULL COMMENT '克重'");
                     repaired += ensureColumn(conn, schema, "t_material_pickup_record", "fabric_composition",
                         "VARCHAR(200) DEFAULT NULL COMMENT '成分'");
+                                repaired += ensureColumn(conn, schema, "t_material_pickup_record", "movement_type",
+                                        "VARCHAR(20) DEFAULT NULL COMMENT '流向类型:OUTBOUND/INBOUND'");
+                                repaired += ensureColumn(conn, schema, "t_material_pickup_record", "source_type",
+                                        "VARCHAR(30) DEFAULT NULL COMMENT '来源类型'");
+                                repaired += ensureColumn(conn, schema, "t_material_pickup_record", "usage_type",
+                                        "VARCHAR(30) DEFAULT NULL COMMENT '用途类型'");
+                                repaired += ensureColumn(conn, schema, "t_material_pickup_record", "source_record_id",
+                                        "VARCHAR(64) DEFAULT NULL COMMENT '来源记录ID'");
+                                repaired += ensureColumn(conn, schema, "t_material_pickup_record", "source_document_no",
+                                        "VARCHAR(64) DEFAULT NULL COMMENT '来源单号'");
+                                repaired += ensureColumn(conn, schema, "t_material_pickup_record", "receiver_id",
+                                        "VARCHAR(64) DEFAULT NULL COMMENT '收料人ID'");
+                                repaired += ensureColumn(conn, schema, "t_material_pickup_record", "receiver_name",
+                                        "VARCHAR(100) DEFAULT NULL COMMENT '收料人姓名'");
+                                repaired += ensureColumn(conn, schema, "t_material_pickup_record", "issuer_id",
+                                        "VARCHAR(64) DEFAULT NULL COMMENT '发料人ID'");
+                                repaired += ensureColumn(conn, schema, "t_material_pickup_record", "issuer_name",
+                                        "VARCHAR(100) DEFAULT NULL COMMENT '发料人姓名'");
+                                repaired += ensureColumn(conn, schema, "t_material_pickup_record", "warehouse_location",
+                                        "VARCHAR(200) DEFAULT NULL COMMENT '仓库库位'");
+                                repaired += ensureColumn(conn, schema, "t_material_pickup_record", "receivable_id",
+                                        "VARCHAR(64) DEFAULT NULL COMMENT '关联应收ID'");
+                                repaired += ensureColumn(conn, schema, "t_material_pickup_record", "receivable_no",
+                                        "VARCHAR(64) DEFAULT NULL COMMENT '关联应收单号'");
+                                repaired += ensureColumn(conn, schema, "t_material_pickup_record", "receivable_status",
+                                        "VARCHAR(20) DEFAULT NULL COMMENT '应收状态'");
+                                repaired += ensureColumn(conn, schema, "t_material_pickup_record", "received_amount",
+                                        "DECIMAL(14,2) DEFAULT NULL COMMENT '累计收款金额'");
+                                repaired += ensureColumn(conn, schema, "t_material_pickup_record", "received_time",
+                                        "DATETIME DEFAULT NULL COMMENT '收款完成时间'");
+                                repaired += ensureColumn(conn, schema, "t_material_pickup_record", "factory_id",
+                                        "VARCHAR(64) DEFAULT NULL COMMENT '生产方ID'");
+                                repaired += ensureColumn(conn, schema, "t_material_pickup_record", "factory_name",
+                                        "VARCHAR(100) DEFAULT NULL COMMENT '生产方名称'");
+                                repaired += ensureColumn(conn, schema, "t_material_pickup_record", "factory_type",
+                                        "VARCHAR(20) DEFAULT NULL COMMENT '生产方类型:INTERNAL/EXTERNAL'");
                     repairedTables += ensureTable(conn, schema,
                     "t_hyper_advisor_session",
                     "CREATE TABLE IF NOT EXISTS `t_hyper_advisor_session` ("
@@ -926,6 +962,14 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                     "VARCHAR(100) DEFAULT NULL");
             repaired += ensureColumn(conn, schema, "t_shipment_reconciliation", "audit_time",
                     "DATETIME DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_shipment_reconciliation", "delete_flag",
+                    "TINYINT(1) NOT NULL DEFAULT 0");
+
+            // ── t_bill_aggregation / t_receivable 逻辑删除列（历史环境跳脚本时会缺失，导致 list/stats 500）──
+            repaired += ensureColumn(conn, schema, "t_bill_aggregation", "delete_flag",
+                    "INT NOT NULL DEFAULT 0");
+            repaired += ensureColumn(conn, schema, "t_receivable", "delete_flag",
+                    "TINYINT(1) NOT NULL DEFAULT 0");
 
             // ── t_sys_notice（V20260322b 可能因 Flyway 链断裂未创建，content 原 VARCHAR(512) 需扩容）──
             repairedTables += ensureTable(conn, schema,

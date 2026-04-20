@@ -1,3 +1,30 @@
+# 2026-04-20
+
+## 🛡️ 财务链路 Schema 漂移兜底修复（4个高频接口 500 防线）
+
+### fix(backend): 成品结算 / 账单汇总 / 应收统计 / 收款中心的缺列容错与补库三层加固
+- **问题现象**：线上历史环境出现字段漂移时，以下接口容易直接 500：
+  - `GET /api/finance/finished-settlement/list`
+  - `POST /api/finance/bill-aggregation/list` + `GET /api/finance/bill-aggregation/stats`
+  - `GET /api/crm/receivables/stats`
+  - `GET /api/warehouse/material-pickup/payment-center/list`
+- **根因**：
+  - `v_finished_product_settlement` 在部分环境缺 `dev_cost_price`；
+  - `t_bill_aggregation` / `t_receivable` / `t_shipment_reconciliation` 在部分环境缺 `delete_flag`；
+  - `t_material_pickup_record` 在旧建表路径中缺少收款中心整实体查询依赖列。
+- **修复动作**：
+  1. `FinishedProductSettlement.devCostPrice` 调整为可选扩展字段（`@TableField(exist = false)`），避免缺列直接打断查询；
+  2. `DbColumnRepairRunner` 增补启动自愈：
+     - `t_bill_aggregation.delete_flag`
+     - `t_receivable.delete_flag`
+     - `t_shipment_reconciliation.delete_flag`
+     - `t_material_pickup_record` 收款中心所需 18 列（movement/source/receiver/issuer/receivable/factory 等）；
+  3. `CoreSchemaPreflightChecker` 同步扩充预检白名单，启动即暴露同类缺列风险；
+  4. 新增 Flyway 补偿脚本：
+     - `V202611060000__repair_finance_receivable_material_pickup_schema_drift.sql`
+       用 INFORMATION_SCHEMA 幂等补列，覆盖云端自动迁移场景。
+- **对系统的帮助**：将“页面访问后才发现 500”前置为“启动期预警 + 启动自愈 + 云端补偿迁移”三重防线，显著降低财务链路因 schema 漂移导致的生产事故概率。
+
 # 2026-04-19
 
 ## 💰 工资结算明细审核持久化修复（刷新不再回退）

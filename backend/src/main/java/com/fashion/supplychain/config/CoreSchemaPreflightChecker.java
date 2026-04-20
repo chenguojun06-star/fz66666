@@ -52,9 +52,25 @@ public class CoreSchemaPreflightChecker implements ApplicationRunner, HealthIndi
             "material_code", "material_name", "material_type", "color", "specification",
             "fabric_width", "fabric_weight", "fabric_composition", "quantity", "unit",
             "unit_price", "amount", "picker_id", "picker_name", "pickup_time",
+            "movement_type", "source_type", "usage_type", "source_record_id", "source_document_no",
+            "receiver_id", "receiver_name", "issuer_id", "issuer_name", "warehouse_location",
+            "receivable_id", "receivable_no", "receivable_status", "received_amount", "received_time",
+            "factory_id", "factory_name", "factory_type",
             "audit_status", "auditor_id", "auditor_name", "audit_time", "audit_remark",
             "finance_status", "finance_remark", "remark", "create_time", "update_time",
             "delete_flag"
+        ));
+        tableColumns.put("t_bill_aggregation", List.of(
+            "tenant_id", "bill_no", "bill_type", "bill_category", "source_type",
+            "source_id", "source_no", "counterparty_type", "counterparty_id", "counterparty_name",
+            "order_id", "order_no", "style_no", "amount", "settled_amount", "status",
+            "settlement_month", "create_time", "update_time", "delete_flag"
+        ));
+        tableColumns.put("t_receivable", List.of(
+            "tenant_id", "receivable_no", "customer_id", "customer_name", "order_id", "order_no",
+            "amount", "received_amount", "due_date", "status", "description",
+            "source_biz_type", "source_biz_id", "source_biz_no", "bill_aggregation_id",
+            "create_time", "update_time", "delete_flag"
         ));
         tableColumns.put("t_agent_meeting", List.of(
             "tenant_id", "meeting_type", "topic", "participants", "agenda", "debate_rounds",
@@ -120,7 +136,7 @@ public class CoreSchemaPreflightChecker implements ApplicationRunner, HealthIndi
             "error_message", "created_at"
         ));
         tableColumns.put("t_shipment_reconciliation", List.of(
-            "tenant_id", "auditor_id", "auditor_name", "audit_time"
+            "tenant_id", "auditor_id", "auditor_name", "audit_time", "delete_flag"
         ));
         tableColumns.put("t_sys_notice", List.of(
             "id", "tenant_id", "to_name", "from_name", "order_no",
