@@ -50,6 +50,10 @@ public class Payable {
     private String status;
 
     private String description;
+
+    /** 关联账单汇总ID（confirmBill后自动回填） */
+    private String billAggregationId;
+
     private Integer deleteFlag;
     private String creatorId;
     private String creatorName;

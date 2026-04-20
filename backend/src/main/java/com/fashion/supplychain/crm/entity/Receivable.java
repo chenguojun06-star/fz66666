@@ -61,6 +61,9 @@ public class Receivable {
 
     private String sourceBizNo;
 
+    /** 关联账单汇总ID（confirmBill后自动回填） */
+    private String billAggregationId;
+
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 

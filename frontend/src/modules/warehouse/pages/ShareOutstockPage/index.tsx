@@ -301,7 +301,7 @@ const pageStyle: React.CSSProperties = {
   minHeight: '100vh',
   background: 'radial-gradient(circle at top left, rgba(59,130,246,0.12), transparent 26%), radial-gradient(circle at bottom right, rgba(16,185,129,0.10), transparent 24%), linear-gradient(180deg, #eef6ff 0%, #f8fbff 45%, #f3faf6 100%)',
   padding: '32px 16px 40px',
-  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Heiti SC", "Songti SC", serif',
 };
 
 const shellStyle: React.CSSProperties = {

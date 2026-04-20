@@ -67,7 +67,7 @@ function _circSvg(inner: string): string {
   return `<svg viewBox="0 0 20 20" width="22" height="22" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="8" fill="none" stroke="#000" stroke-width="1.5"/>${inner}</svg>`;
 }
 const _CARE_X = '<line x1="5" y1="5" x2="15" y2="15" stroke="#000" stroke-width="1.5"/><line x1="15" y1="5" x2="5" y2="15" stroke="#000" stroke-width="1.5"/>';
-const _numTxt = (n: string) => `<text x="10" y="17" text-anchor="middle" font-size="6" fill="#000" font-family="Arial,sans-serif" font-weight="bold">${n}</text>`;
+const _numTxt = (n: string) => `<text x="10" y="17" text-anchor="middle" font-size="6" fill="#000" font-family="Arial,serif" font-weight="bold">${n}</text>`;
 const CARE_SVGS: Record<string, string> = {
   wash_W30: _tubSvg(_numTxt('30°')), wash_W40: _tubSvg(_numTxt('40°')),
   wash_W60: _tubSvg(_numTxt('60°')), wash_W95: _tubSvg(_numTxt('95°')),
@@ -80,7 +80,7 @@ const CARE_SVGS: Record<string, string> = {
   dry_LOW: _sqSvg('<circle cx="10" cy="10" r="5" fill="none" stroke="#000" stroke-width="1.2"/><circle cx="10" cy="10" r="1.5" fill="#000"/>'),
   dry_NO: _sqSvg(_CARE_X),
   iron_LOW: _ironSvg(1), iron_MED: _ironSvg(2), iron_HIGH: _ironSvg(3), iron_NO: _ironSvg(0, true),
-  dryclean_YES: _circSvg('<text x="10" y="14.5" text-anchor="middle" font-size="9" fill="#000" font-family="Arial,sans-serif" font-style="italic">A</text>'),
+  dryclean_YES: _circSvg('<text x="10" y="14.5" text-anchor="middle" font-size="9" fill="#000" font-family="Arial,serif" font-style="italic">A</text>'),
   dryclean_NO: _circSvg(_CARE_X),
 };
 function buildCareIconsHtml(item: WashLabelItem): string {

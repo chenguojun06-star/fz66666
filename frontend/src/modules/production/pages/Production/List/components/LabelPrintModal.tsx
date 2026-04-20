@@ -73,7 +73,7 @@ function circSvg(inner: string): string {
 
 const X = '<line x1="5" y1="5" x2="15" y2="15" stroke="#000" stroke-width="1.5"/><line x1="15" y1="5" x2="5" y2="15" stroke="#000" stroke-width="1.5"/>';
 const numTxt = (n: string) =>
-  `<text x="10" y="17" text-anchor="middle" font-size="6" fill="#000" font-family="Arial,sans-serif" font-weight="bold">${n}</text>`;
+  `<text x="10" y="17" text-anchor="middle" font-size="6" fill="#000" font-family="Arial,serif" font-weight="bold">${n}</text>`;
 
 // 映射: 字段前缀_CODE → SVG 字符串
 const CARE_SVGS: Record<string, string> = {
@@ -93,7 +93,7 @@ const CARE_SVGS: Record<string, string> = {
   iron_MED:   ironSvg(2),
   iron_HIGH:  ironSvg(3),
   iron_NO:    ironSvg(0, true),
-  dryclean_YES: circSvg('<text x="10" y="14.5" text-anchor="middle" font-size="9" fill="#000" font-family="Arial,sans-serif" font-style="italic">A</text>'),
+  dryclean_YES: circSvg('<text x="10" y="14.5" text-anchor="middle" font-size="9" fill="#000" font-family="Arial,serif" font-style="italic">A</text>'),
   dryclean_NO:  circSvg(X),
 };
 
