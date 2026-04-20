@@ -18,7 +18,9 @@ import com.fashion.supplychain.style.service.StyleAttachmentService;
 import com.fashion.supplychain.style.service.StyleInfoService;
 import com.fashion.supplychain.warehouse.dto.FinishedInventoryDTO;
 import com.fashion.supplychain.integration.ecommerce.orchestration.EcommerceOrderOrchestrator;
+import com.fashion.supplychain.finance.entity.BillAggregation;
 import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator;
+import com.fashion.supplychain.finance.service.BillAggregationService;
 import com.fashion.supplychain.common.UserContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -57,6 +59,9 @@ public class FinishedInventoryOrchestrator {
 
     @Autowired
     private BillAggregationOrchestrator billAggregationOrchestrator;
+
+    @Autowired
+    private BillAggregationService billAggregationService;
 
     /**
      * 分页查询成品库存
@@ -755,6 +760,39 @@ public class FinishedInventoryOrchestrator {
         }
         outstock.setUpdateTime(LocalDateTime.now());
         productOutstockService.updateById(outstock);
+        syncOutstockBillAfterPayment(outstock);
+    }
+
+    private void syncOutstockBillAfterPayment(ProductOutstock outstock) {
+        if (outstock == null || !StringUtils.hasText(outstock.getId())) {
+            return;
+        }
+        Long tenantId = UserContext.tenantId();
+        BillAggregation bill = billAggregationService.lambdaQuery()
+                .eq(BillAggregation::getSourceType, "PRODUCT_OUTSTOCK")
+                .eq(BillAggregation::getSourceId, outstock.getId())
+                .eq(tenantId != null, BillAggregation::getTenantId, tenantId)
+                .eq(BillAggregation::getDeleteFlag, 0)
+                .last("LIMIT 1")
+                .one();
+        if (bill == null) {
+            return;
+        }
+
+        BigDecimal paid = outstock.getPaidAmount() != null ? outstock.getPaidAmount() : BigDecimal.ZERO;
+        if (bill.getAmount() != null && paid.compareTo(bill.getAmount()) > 0) {
+            paid = bill.getAmount();
+        }
+        bill.setSettledAmount(paid);
+        if (bill.getAmount() != null && paid.compareTo(bill.getAmount()) >= 0) {
+            bill.setStatus("SETTLED");
+            bill.setSettledAt(LocalDateTime.now());
+            bill.setSettledById(UserContext.userId());
+            bill.setSettledByName(UserContext.username());
+        } else if (paid.compareTo(BigDecimal.ZERO) > 0) {
+            bill.setStatus("SETTLING");
+        }
+        billAggregationService.updateById(bill);
     }
 
     // ==================== 审批流程 ====================
