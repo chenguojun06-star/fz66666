@@ -98,6 +98,7 @@ public class ProductionOrderQueryService {
         String orgUnitId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "orgUnitId"));
         String parentOrgUnitId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "parentOrgUnitId"));
         String factoryType = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "factoryType"));
+        String factoryId = ParamUtils.toTrimmedString(ParamUtils.getIgnoreCase(safeParams, "factoryId"));
 
         QueryWrapper<ProductionOrder> wrapper = new QueryWrapper<ProductionOrder>();
         wrapper.eq(StringUtils.hasText(orderNo), "order_no", orderNo)
@@ -140,12 +141,16 @@ public class ProductionOrderQueryService {
         }
 
         // 数据隔离策略：
-        // 1. 外发工厂账号：按 factory_id 隔离（只看本工厂订单）
-        // 2. 其他账号（租户主/管理员/跟单员/工人）：依赖 TenantInterceptor 租户级隔离
-        //    生产订单是租户共享资源，不按 created_by_id 过滤（否则工人看不到订单，与仪表盘数据不一致）
+        // 1. 外发工厂账号：按 factory_id 隔离（只看本工厂订单），优先级最高
+        // 2. 管理员/跟单员通过请求参数 factoryId 按工厂筛选（如外发工厂侧边栏选择特定工厂）
+        // 3. 其他账号（租户主）：依赖 TenantInterceptor 租户级隔离，显示全部订单
         String ctxFactoryId = com.fashion.supplychain.common.UserContext.factoryId();
         if (org.springframework.util.StringUtils.hasText(ctxFactoryId)) {
+            // 工厂账号：只能看自己工厂的订单（登录上下文隔离，不可绕过）
             wrapper.eq("factory_id", ctxFactoryId);
+        } else if (org.springframework.util.StringUtils.hasText(factoryId)) {
+            // 管理员通过前端参数筛选特定工厂（如外发工厂页面侧边栏选择工厂）
+            wrapper.eq("factory_id", factoryId);
         }
         if (log.isDebugEnabled()) {
             log.debug("[queryPage] userId={}, tenantOwner={}, permRange={}, factoryId={}, dataScope={}",

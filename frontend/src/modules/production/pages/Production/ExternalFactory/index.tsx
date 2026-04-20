@@ -54,15 +54,12 @@ const ExternalFactory: React.FC = () => {
         includeScrapped: queryParams.includeScrapped,
         excludeTerminal: queryParams.excludeTerminal,
         factoryType: 'EXTERNAL',
+        // 传给后端按工厂精确筛选，由后端 QueryWrapper 过滤，total 也是筛选后的正确值
+        factoryId: selectedFactoryId || undefined,
       };
       const res = await productionOrderApi.list(params);
       if (res && res.data) {
-        let records = res.data.records || [];
-        if (selectedFactoryId) {
-          records = records.filter((o: ProductionOrder) => o.factoryId === selectedFactoryId);
-        }
-        const orderList = records as ProductionOrder[];
-        setOrders(orderList);
+        setOrders((res.data.records || []) as ProductionOrder[]);
         setTotal(res.data.total || 0);
       }
     } catch (err: unknown) {

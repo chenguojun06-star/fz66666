@@ -412,6 +412,8 @@ export interface ProductionQueryParams {
   orgUnitId?: string;
   parentOrgUnitId?: string;
   factoryType?: 'INTERNAL' | 'EXTERNAL' | '';
+  /** 按工厂ID精确筛选（管理员在外发工厂页面选择侧边栏工厂时使用） */
+  factoryId?: string;
   status?: string;
   /** 紧急程度筛选: urgent=急单, normal=普通 */
   urgencyLevel?: string;
