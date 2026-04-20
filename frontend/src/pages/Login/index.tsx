@@ -332,6 +332,7 @@ const Login: React.FC = () => {
               <Form.Item name="tenantId" hidden><Input autoComplete="off" /></Form.Item>
               <Form.Item
                 name="companySearch"
+                htmlFor="login_companySearch"
                 rules={[
                   { required: true, message: t('login.companySelectRequired', language) },
                   {
@@ -357,6 +358,7 @@ const Login: React.FC = () => {
                   getPopupContainer={(triggerNode) => triggerNode.parentElement as HTMLElement}
                 >
                   <Input
+                    id="login_companySearch"
                     prefix={<SearchOutlined className="site-form-item-icon" />}
                     size="large"
                     allowClear
