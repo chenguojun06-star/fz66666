@@ -39,8 +39,8 @@
   <circle cx="23.9" cy="31.3" r="1.5" fill="white" opacity="0.96"/>
   <circle cx="38.5" cy="31.3" r="1.5" fill="white" opacity="0.96"/>
 
-  <!-- ⑥ 微笑（26%w bottom 24%，仅 border-bottom:4px #597ac0 + border-radius:0 0 999px 999px） -->
-  <!-- mouth arc: from (24.8, 38.1) → Q 32.2 44.0 → (39.5, 38.1) -->
-  <path d="M 24.8 38.1 Q 32.2 44 39.5 38.1"
+  <!-- ⑥ 微笑（26%w bottom 24%，border-radius:0 0 999px 999px → 三次贝塞尔 U 弧） -->
+  <!-- 三次贝塞尔：C 控制点同时下拉到 y=46，弧底中点约 y=43.9，实际下沉 ~6px，呈现明显月牙笑弧 -->
+  <path d="M 25.5 37.5 C 25.5 46.0 38.5 46.0 38.5 37.5"
         fill="none" stroke="#597ac0" stroke-width="3" stroke-linecap="round"/>
 </svg>
