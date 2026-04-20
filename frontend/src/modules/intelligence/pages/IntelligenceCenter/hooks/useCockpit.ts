@@ -109,6 +109,7 @@ export function useCockpit() {
     userId: user?.id,
     tenantId: user?.tenantId,
     enabled: isAuthenticated && !!user?.id,
+    token: localStorage.getItem('authToken') ?? '',
   });
   const wsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 

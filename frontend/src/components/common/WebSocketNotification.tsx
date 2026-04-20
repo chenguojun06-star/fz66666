@@ -25,6 +25,7 @@ const WebSocketNotification: React.FC = () => {
     userId: user?.id,
     tenantId: user?.tenantId,
     enabled: isAuthenticated && !!user?.id,
+    token: localStorage.getItem('authToken') ?? '',
   });
 
   // 工厂入驻申请通知（超管专属）

@@ -20,6 +20,7 @@ interface UseWebSocketOptions {
   heartbeatInterval?: number;
   maxReconnectAttempts?: number;
   tenantId?: string | number;
+  token?: string;
 }
 
 interface WsInstance {
@@ -79,7 +80,7 @@ function getOrCreateInstance(options: UseWebSocketOptions): WsInstance {
     const opts = inst.currentOptions;
     const loc = window.location;
     const protocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
-    return `${protocol}//${loc.host}/ws/realtime?userId=${opts.userId}&clientType=${opts.clientType || 'pc'}&tenantId=${opts.tenantId ?? ''}`;
+    return `${protocol}//${loc.host}/ws/realtime?userId=${opts.userId}&clientType=${opts.clientType || 'pc'}&tenantId=${opts.tenantId ?? ''}&token=${opts.token ?? ''}`;
   };
 
   const startHeartbeat = (ws: WebSocket) => {

@@ -57,6 +57,7 @@ const LiveScanFeed: React.FC<LiveScanFeedProps> = ({ minMinutesSinceLastScan, cu
     userId: user?.id,
     tenantId: user?.tenantId,
     enabled: isAuthenticated && !!user?.id,
+    token: localStorage.getItem('authToken') ?? '',
   });
 
   const handleScanRealtime = useCallback(

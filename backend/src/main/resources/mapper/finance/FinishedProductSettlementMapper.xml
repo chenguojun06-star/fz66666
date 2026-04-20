@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+  修复说明（2026-05-xx）：
+  FinishedProductSettlementMapper 在接口中以 @Override + @InterceptorIgnore(tenantLine="true")
+  重写了 selectPage，但没有提供任何 SQL。MyBatis-Plus 仅对 BaseMapper 中声明的方法自动注入 SQL；
+  一旦子接口重写同名方法，自动注入失效 → BindingException: Invalid bound statement (not found)。
+  此 XML 为该方法提供 SQL，同时保留 @InterceptorIgnore 的跨租户绕过效果。
+  v_finished_product_settlement 是视图，已在 SQL 层做好字段聚合，SELECT * 即可。
+-->
+<mapper namespace="com.fashion.supplychain.finance.mapper.FinishedProductSettlementMapper">
+
+    <select id="selectPage"
+            resultType="com.fashion.supplychain.finance.entity.FinishedProductSettlement">
+        SELECT * FROM v_finished_product_settlement
+        <if test="ew != null and ew.sqlSegment != null and ew.sqlSegment != ''">
+            ${ew.customSqlSegment}
+        </if>
+    </select>
+
+</mapper>
