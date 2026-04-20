@@ -2,11 +2,6 @@ import { getAuthedImageUrl } from '@/utils/fileUrl';
 
 const SIZE_ORDER = ['XXS', 'XS', 'S', 'M', 'L', 'XL', '2XL', 'XXL', '3XL', 'XXXL', '4XL', '5XL'];
 
-/** 将进度值钳位到 [0, 100] 整数范围，与 frontend calcOrderProgress.ts 保持一致 */
-function clampProgress(v) {
-  return Math.max(0, Math.min(100, Math.round(v)));
-}
-
 function normalizeText(v) {
   return (v || '').toString().trim();
 }
@@ -245,7 +240,7 @@ function calcOrderProgress(order) {
   const hasRealAction = hasProcurement || hasCuttingAction || hasRateAction;
   if (!hasRealAction) return 0;
 
-  return clampProgress(Math.max(dbProgress, rateProgress));
+  return clampPercent(Math.max(dbProgress, rateProgress));
 }
 
 function stripShipmentNode(list) {

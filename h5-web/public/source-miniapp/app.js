@@ -348,6 +348,8 @@ App({
 
   onUnhandledRejection(res) {
     const reason = res && res.reason ? String(res.reason) : 'unknown';
+    // 过滤正常的防抖导航忽略 — 不属于真实错误，不需要上报
+    if (reason.includes('导航进行中')) return;
     console.error('[App] 未处理的Promise拒绝:', reason);
     this._reportError('unhandledRejection', reason);
   },
@@ -366,8 +368,9 @@ App({
           timestamp: Date.now(),
         },
         success(res) {
-          if (res.statusCode === 404) {
-            console.warn('[App] error-report端点未部署，跳过上报');
+          if (res.statusCode === 404 || res.statusCode === 500) {
+            // 端点未部署或服务异常，静默跳过，避免报错套报错
+            console.warn('[App] error-report端点不可用 (' + res.statusCode + ')，跳过上报');
           }
         },
         fail() {},

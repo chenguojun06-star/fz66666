@@ -179,7 +179,7 @@ const TAB_BAR_PAGES = new Set([
 function safeNavigate(options, method = 'navigateTo') {
   if (navigating) {
     console.warn('[SafeNavigate] 导航进行中，忽略重复调用:', options.url);
-    return Promise.reject(new Error('导航进行中，请稍候'));
+    return Promise.resolve(); // 静默忽略，不抛 reject，避免触发 unhandledRejection
   }
 
   // 自动检测 tabBar 页面：如果目标是 tabBar 页面且当前不是 switchTab，自动纠正
