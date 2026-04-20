@@ -10,6 +10,7 @@ import com.fashion.supplychain.production.entity.MaterialStock;
 import com.fashion.supplychain.production.mapper.MaterialOutboundLogMapper;
 import com.fashion.supplychain.production.mapper.MaterialPickingItemMapper;
 import com.fashion.supplychain.production.service.MaterialStockService;
+import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator;
 import com.fashion.supplychain.style.entity.StyleBom;
 import com.fashion.supplychain.style.service.StyleBomService;
 import com.fashion.supplychain.warehouse.orchestration.MaterialPickupOrchestrator;
@@ -25,12 +26,14 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Service
+@Slf4j
 public class MaterialStockOrchestrator {
 
     @Autowired
@@ -47,6 +50,9 @@ public class MaterialStockOrchestrator {
 
     @Autowired
     private MaterialPickupOrchestrator materialPickupOrchestrator;
+
+    @Autowired(required = false)
+    private BillAggregationOrchestrator billAggregationOrchestrator;
 
     private final AtomicInteger outboundSequence = new AtomicInteger(0);
 
@@ -243,6 +249,7 @@ public class MaterialStockOrchestrator {
         log.setCreateTime(outboundTime);
         log.setDeleteFlag(0);
         materialOutboundLogMapper.insert(log);
+        pushManualOutboundBill(log, stock, quantity);
 
         MaterialStock patch = new MaterialStock();
         patch.setId(stockId);
@@ -283,6 +290,47 @@ public class MaterialStockOrchestrator {
         materialPickupOrchestrator.create(pickupBody);
 
         return outboundNo;
+    }
+
+    private void pushManualOutboundBill(MaterialOutboundLog outboundLog, MaterialStock stock, int quantity) {
+        if (billAggregationOrchestrator == null || outboundLog == null || stock == null || quantity <= 0) {
+            return;
+        }
+        try {
+            BigDecimal unitPrice = stock.getUnitPrice();
+            if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
+                return;
+            }
+            BigDecimal amount = unitPrice.multiply(BigDecimal.valueOf(quantity));
+            if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+                return;
+            }
+
+            BillAggregationOrchestrator.BillPushRequest req = new BillAggregationOrchestrator.BillPushRequest();
+            req.setBillType("PAYABLE");
+            req.setBillCategory("MATERIAL");
+            req.setSourceType("MATERIAL_OUTBOUND");
+            req.setSourceId(outboundLog.getId());
+            req.setSourceNo(outboundLog.getOutboundNo());
+            if (StringUtils.hasText(stock.getSupplierId()) || StringUtils.hasText(stock.getSupplierName())) {
+                req.setCounterpartyType("SUPPLIER");
+                req.setCounterpartyId(stock.getSupplierId());
+                req.setCounterpartyName(stock.getSupplierName());
+            } else {
+                req.setCounterpartyType("FACTORY");
+                req.setCounterpartyId(outboundLog.getFactoryId());
+                req.setCounterpartyName(outboundLog.getFactoryName());
+            }
+            req.setOrderNo(outboundLog.getOrderNo());
+            req.setStyleNo(outboundLog.getStyleNo());
+            req.setAmount(amount);
+            req.setRemark("手动出库自动入账|outboundNo=" + outboundLog.getOutboundNo()
+                    + "|material=" + outboundLog.getMaterialCode() + "|qty=" + quantity);
+            billAggregationOrchestrator.pushBill(req);
+        } catch (Exception e) {
+            String outboundNo = outboundLog.getOutboundNo();
+            log.warn("手动出库推送账单失败（不阻塞主流程）: outboundNo={}", outboundNo, e);
+        }
     }
 
     private static Integer shortage(MaterialStockAlertDto dto) {

@@ -30,6 +30,7 @@ import com.fashion.supplychain.production.service.MaterialStockService;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.finance.entity.DeductionItem;
 import com.fashion.supplychain.finance.entity.ShipmentReconciliation;
+import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator;
 import com.fashion.supplychain.finance.mapper.DeductionItemMapper;
 import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.warehouse.entity.MaterialPickupRecord;
@@ -82,6 +83,9 @@ public class MaterialPurchasePickingHelper {
 
     @Autowired
     private DeductionItemMapper deductionItemMapper;
+
+    @Autowired(required = false)
+    private BillAggregationOrchestrator billAggregationOrchestrator;
 
     // ──────────────────────────────────────────────────────────────
     // 智能一键领取
@@ -943,6 +947,7 @@ public class MaterialPurchasePickingHelper {
         outboundLog.setCreateTime(outboundTime);
         outboundLog.setDeleteFlag(0);
         materialOutboundLogMapper.insert(outboundLog);
+        pushMaterialOutboundBill(outboundLog, stock, item, picking);
 
         if (stock != null && StringUtils.hasText(stock.getId())) {
             MaterialStock patch = new MaterialStock();
@@ -950,6 +955,56 @@ public class MaterialPurchasePickingHelper {
             patch.setLastOutboundDate(outboundTime);
             patch.setUpdateTime(outboundTime);
             materialStockService.updateById(patch);
+        }
+    }
+
+    private void pushMaterialOutboundBill(
+            MaterialOutboundLog outboundLog,
+            MaterialStock stock,
+            MaterialPickingItem item,
+            MaterialPicking picking) {
+        if (billAggregationOrchestrator == null || outboundLog == null) {
+            return;
+        }
+        try {
+            BigDecimal unitPrice = stock != null ? stock.getUnitPrice() : item.getUnitPrice();
+            int qty = item.getQuantity() != null ? item.getQuantity() : 0;
+            if (unitPrice == null || qty <= 0) {
+                return;
+            }
+            BigDecimal amount = unitPrice.multiply(BigDecimal.valueOf(qty));
+            if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+                return;
+            }
+
+            BillAggregationOrchestrator.BillPushRequest req = new BillAggregationOrchestrator.BillPushRequest();
+            req.setBillType("PAYABLE");
+            req.setBillCategory("MATERIAL");
+            req.setSourceType("MATERIAL_OUTBOUND");
+            req.setSourceId(outboundLog.getId());
+            req.setSourceNo(outboundLog.getOutboundNo());
+
+            String supplierId = stock != null ? stock.getSupplierId() : null;
+            String supplierName = stock != null ? stock.getSupplierName() : null;
+            if (StringUtils.hasText(supplierId) || StringUtils.hasText(supplierName)) {
+                req.setCounterpartyType("SUPPLIER");
+                req.setCounterpartyId(supplierId);
+                req.setCounterpartyName(supplierName);
+            } else {
+                req.setCounterpartyType("FACTORY");
+                req.setCounterpartyId(outboundLog.getFactoryId());
+                req.setCounterpartyName(outboundLog.getFactoryName());
+            }
+
+            req.setOrderId(outboundLog.getOrderId());
+            req.setOrderNo(outboundLog.getOrderNo());
+            req.setStyleNo(outboundLog.getStyleNo());
+            req.setAmount(amount);
+            req.setRemark("物料出库自动入账|pickingNo=" + (picking != null ? picking.getPickingNo() : "")
+                    + "|material=" + outboundLog.getMaterialCode() + "|qty=" + qty);
+            billAggregationOrchestrator.pushBill(req);
+        } catch (Exception e) {
+            log.warn("物料出库推送账单失败（不阻塞主流程）: outboundNo={}", outboundLog.getOutboundNo(), e);
         }
     }
 
