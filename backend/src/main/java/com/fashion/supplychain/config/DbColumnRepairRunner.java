@@ -149,6 +149,15 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                     "DATETIME DEFAULT NULL COMMENT '纸样退回时间'");
             repaired += ensureColumn(conn, schema, "t_style_info", "pushed_by_name",
                     "VARCHAR(50) DEFAULT NULL COMMENT '推版人姓名'");
+            // sample_review_* 字段：V10 因 DELIMITER $$ 语法在 JDBC 环境不支持，云端实际未执行，需启动自愈补齐
+            repaired += ensureColumn(conn, schema, "t_style_info", "sample_review_status",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '样衣审核状态: PASS/REWORK/REJECT'");
+            repaired += ensureColumn(conn, schema, "t_style_info", "sample_review_comment",
+                    "TEXT DEFAULT NULL COMMENT '样衣审核评语（选填）'");
+            repaired += ensureColumn(conn, schema, "t_style_info", "sample_reviewer",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '审核人'");
+            repaired += ensureColumn(conn, schema, "t_style_info", "sample_review_time",
+                    "DATETIME DEFAULT NULL COMMENT '审核时间'");
             repaired += ensureColumn(conn, schema, "t_style_bom", "image_urls",
                     "TEXT DEFAULT NULL COMMENT '物料图片URLs(JSON数组)' ");
             repaired += ensureColumn(conn, schema, "t_style_bom", "fabric_composition",
