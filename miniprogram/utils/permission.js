@@ -8,7 +8,13 @@ const { getUserRole, getUserRoleName, isTenantOwner, isSuperAdmin, isFactoryOwne
 // 角色定义
 const ROLES = {
   ADMIN: 'admin', // 管理员 - 全部权限
+  SUPER_ADMIN: 'super_admin', // 超级管理员 - 全部权限
   SUPERVISOR: 'supervisor', // 主管 - 全部权限
+  MANAGER: 'manager', // 管理层 - 全部权限
+  MERCHANDISER: 'merchandiser', // 跟单 - 管理视角
+  TENANT_ADMIN: 'tenant_admin', // 租户管理员
+  TENANT_MANAGER: 'tenant_manager', // 租户经理
+  TEAM_LEADER: 'team_leader', // 组长/班长
   PURCHASER: 'purchaser', // 采购员 - 只看物料采购
   CUTTER: 'cutter', // 裁剪员 - 只看裁剪任务和裁剪单
   SEWING: 'sewing', // 车缝员 - 只看车缝/生产扫码
@@ -45,15 +51,15 @@ function isAdminOrSupervisor() {
 
 function isManagerLevel() {
   if (isTenantOwner() || isSuperAdmin() || isFactoryOwner()) return true;
-  const role = getCurrentRole();
+  const role = String(getCurrentRole() || '');
   const MANAGER_ROLES = [
     ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.SUPERVISOR, ROLES.MANAGER,
     ROLES.MERCHANDISER, ROLES.TENANT_ADMIN, ROLES.TENANT_MANAGER,
-  ];
-  const roleName = getUserRoleName() || '';
+  ].filter(Boolean);
+  const roleName = String(getUserRoleName() || '');
   return MANAGER_ROLES.some(r => role.includes(r) || r.includes(role))
     || roleName.includes('跟单') || roleName.includes('主管') || roleName.includes('管理')
-    || roleName.includes('组长') || roleName.includes('班长') || roleName.includes('厂长')
+    || roleName.includes('厂长')
     || roleName.includes('老板') || roleName.includes('director') || roleName.includes('head');
 }
 
@@ -326,7 +332,7 @@ function getDataScope() {
     roleName.includes('组长') ||
     roleName.includes('班长') ||
     roleName.includes('leader') ||
-    getCurrentRole() === 'team_leader'
+    getCurrentRole() === ROLES.TEAM_LEADER
   ) {
     return 'team';
   }

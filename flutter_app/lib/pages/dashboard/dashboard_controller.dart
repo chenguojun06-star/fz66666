@@ -1,12 +1,10 @@
 import 'package:get/get.dart';
 import '../../utils/api_service.dart';
-import '../../utils/storage_service.dart';
 import '../../utils/event_bus.dart';
 import '../../utils/error_handler.dart';
 
 class DashboardController extends GetxController {
   final ApiService _api = Get.find<ApiService>();
-  final StorageService _storage = Get.find<StorageService>();
 
   final loading = false.obs;
   final todayStr = ''.obs;
@@ -71,23 +69,28 @@ class DashboardController extends GetxController {
     return '${now.year}/${now.month.toString().padLeft(2, '0')}/${now.day.toString().padLeft(2, '0')}';
   }
 
+  Future<dynamic> _safeRequest(Future<dynamic> request) async {
+    try {
+      return await request;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> refreshCards() async {
     loading.value = true;
-    int failCount = 0;
     try {
       final results = await Future.wait([
-        _api.getDashboard().catchError((e) { failCount++; return Future.value(null); }),
-        _api.getTopStats().catchError((e) { failCount++; return Future.value(null); }),
-        _api.listOrders({'deleteFlag': 0, 'status': 'production', 'page': 1, 'pageSize': 50}).catchError((e) { failCount++; return Future.value(null); }),
-        _api.listOrders({'deleteFlag': 0, 'status': 'completed', 'page': 1, 'pageSize': 1}).catchError((e) { failCount++; return Future.value(null); }),
+        _safeRequest(_api.getDashboard()),
+        _safeRequest(_api.getTopStats()),
+        _safeRequest(_api.listOrders({'deleteFlag': 0, 'status': 'production', 'page': 1, 'pageSize': 50})),
+        _safeRequest(_api.listOrders({'deleteFlag': 0, 'status': 'completed', 'page': 1, 'pageSize': 1})),
       ]);
 
       final dash = _extractData(results[0]);
       final topStats = _extractData(results[1]);
       final prodRes = _extractData(results[2]);
       final compRes = _extractData(results[3]);
-
-      final prodRecords = (prodRes['records'] as List?) ?? [];
 
       cards.value = {
         'sample': {
@@ -133,10 +136,10 @@ class DashboardController extends GetxController {
   Future<void> _refreshStatCounts() async {
     try {
       final results = await Future.wait([
-        _api.listOrders({'deleteFlag': 0, 'page': 1, 'pageSize': 1}).catchError((_) => Future.value(null)),
-        _api.listOrders({'deleteFlag': 0, 'status': 'production', 'page': 1, 'pageSize': 1}).catchError((_) => Future.value(null)),
-        _api.listOrders({'deleteFlag': 0, 'status': 'completed', 'page': 1, 'pageSize': 1}).catchError((_) => Future.value(null)),
-        _api.getDashboard().catchError((_) => Future.value(null)),
+        _safeRequest(_api.listOrders({'deleteFlag': 0, 'page': 1, 'pageSize': 1})),
+        _safeRequest(_api.listOrders({'deleteFlag': 0, 'status': 'production', 'page': 1, 'pageSize': 1})),
+        _safeRequest(_api.listOrders({'deleteFlag': 0, 'status': 'completed', 'page': 1, 'pageSize': 1})),
+        _safeRequest(_api.getDashboard()),
       ]);
 
       statCounts.value = {
@@ -238,16 +241,16 @@ class DashboardController extends GetxController {
         final delivery = DateTime.parse(deliveryDate);
         final diff = delivery.difference(DateTime.now()).inDays;
         if (diff < 0) {
-          remainDaysText = '已延期${-diff}天';
+          remainDaysText = '已延期${diff.abs()}天';
           remainDaysClass = 'days-overdue';
         } else if (diff == 0) {
           remainDaysText = '今日交期';
           remainDaysClass = 'days-today';
         } else if (diff <= 3) {
-          remainDaysText = '剩余${diff}天';
+          remainDaysText = '剩余$diff天';
           remainDaysClass = 'days-soon';
         } else {
-          remainDaysText = '剩余${diff}天';
+          remainDaysText = '剩余$diff天';
           remainDaysClass = 'days-normal';
         }
       } catch (_) {}

@@ -3,7 +3,6 @@ import 'package:dio/dio.dart';
 import '../../utils/api_service.dart';
 import '../../utils/error_handler.dart';
 import '../../utils/scan/qr_code_parser.dart';
-import '../../routes/app_routes.dart';
 
 class ScanConfirmController extends GetxController {
   final ApiService _api = Get.find<ApiService>();

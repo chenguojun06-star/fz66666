@@ -5,7 +5,7 @@
  * @module UndoHandler
  */
 
-const { eventBus, triggerDataRefresh } = require('../../../utils/eventBus');
+const { triggerDataRefresh } = require('../../../utils/eventBus');
 const { toast } = require('../../../utils/uiHelper');
 const api = require('../../../utils/api');
 

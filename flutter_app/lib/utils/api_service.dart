@@ -132,7 +132,10 @@ class ApiService extends GetxService {
       _http.get('/api/production/cutting-task/list', params: {'myTasks': 'true'});
 
   Future<Response> getCuttingBundle(String orderNo, [String? bundleNo]) =>
-      _http.get('/api/production/cutting/list', params: {'orderNo': orderNo, if (bundleNo != null) 'bundleNo': bundleNo});
+            _http.get('/api/production/cutting/list', params: {
+                'orderNo': orderNo,
+                ...?(bundleNo == null ? null : {'bundleNo': bundleNo}),
+            });
 
   Future<Response> generateCuttingBundles(String orderId, List<dynamic> bundles) =>
       _http.post('/api/production/cutting/generate', data: {'orderId': orderId, 'bundles': bundles});

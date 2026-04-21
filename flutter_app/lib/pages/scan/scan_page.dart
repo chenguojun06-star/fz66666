@@ -111,7 +111,7 @@ class ScanPage extends GetView<ScanController> {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: types.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, separatorIndex) => const SizedBox(width: 8),
         itemBuilder: (_, i) {
           final type = types[i];
           final isActive = controller.selectedScanType.value == type;

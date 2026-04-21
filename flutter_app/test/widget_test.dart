@@ -1,30 +1,35 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:fashion_supplychain/main.dart';
+import 'package:fashion_supplychain/utils/api_service.dart';
+import 'package:fashion_supplychain/utils/http_service.dart';
+import 'package:fashion_supplychain/utils/storage_service.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    Get.reset();
+
+    final storage = await StorageService().init();
+    Get.put(storage);
+
+    final http = await HttpService().init();
+    Get.put(http);
+    Get.put(ApiService());
+  });
+
+  tearDown(Get.reset);
+
+  testWidgets('MyApp shows login page when no token exists', (WidgetTester tester) async {
     await tester.pumpWidget(const MyApp());
-
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('衣智链'), findsOneWidget);
+    expect(find.text('有问题找小云｜多端协同更轻松'), findsOneWidget);
   });
 }

@@ -47,7 +47,7 @@ const FactoryStatementPrintModal: React.FC<FactoryStatementPrintModalProps> = ({
                 }
                 // 这里可以通过 /api/finance/finished-settlement/list 查，为了简单我们可以传 orderNo 过滤
                 // 如果订单很多，这里最好后端给个接口。这里我们简单循环取前几个或用列表查
-                const res = await api.get('/api/finance/finished-settlement/list', {
+                const res = await api.get('/finance/finished-settlement/list', {
                     params: {
                         page: 1,
                         limit: 1000,

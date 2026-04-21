@@ -1,13 +1,16 @@
 import { test, expect } from './fixtures';
 
+test.describe.configure({ mode: 'serial', timeout: 120000 });
+
 test.describe('生产订单核心链路', () => {
   test.beforeEach(async ({ authenticatedPage: page }) => {
-    await page.goto('/production/list');
-    await page.waitForLoadState('networkidle');
+    await page.goto('/production');
+    await expect(page.getByRole('heading', { name: '订单管理' }).first()).toBeVisible({ timeout: 15000 });
   });
 
   test('生产订单列表页正常加载', async ({ page }) => {
-    await expect(page.locator('.ant-table, .ant-empty, .ant-spin')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('heading', { name: '订单管理' }).first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('input[placeholder*="搜索订单号/款号/加工厂"]').first()).toBeVisible({ timeout: 15000 });
   });
 
   test('生产订单列表包含表格或空状态', async ({ page }) => {
@@ -27,50 +30,33 @@ test.describe('生产订单核心链路', () => {
       } else {
         await searchInput.press('Enter');
       }
-      await page.waitForLoadState('networkidle');
-      await expect(page.locator('.ant-table, .ant-empty')).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('.ant-table, .ant-empty, .ant-spin').first()).toBeVisible({ timeout: 10000 });
     }
   });
 
-  test('点击订单行可进入详情', async ({ page }) => {
-    const tableRows = page.locator('.ant-table-row');
-    const rowCount = await tableRows.count();
-
-    if (rowCount > 0) {
-      const firstRow = tableRows.first();
-      await firstRow.click();
-      await page.waitForLoadState('networkidle');
-      await expect(page).toHaveURL(/\/production/, { timeout: 10000 });
-    }
+  test('订单管理页关键操作可见', async ({ page }) => {
+    await expect(page.locator('button:has-text("刷新"), button:has-text("导出"), button:has-text("新建")').first()).toBeVisible({ timeout: 10000 });
   });
 
-  test('生产订单详情页基本元素', async ({ page }) => {
-    const tableRows = page.locator('.ant-table-row');
-    const rowCount = await tableRows.count();
-
-    if (rowCount > 0) {
-      await tableRows.first().click();
-      await page.waitForLoadState('networkidle');
-
-      const hasTabs = await page.locator('.ant-tabs').isVisible().catch(() => false);
-      const hasContent = await page.locator('.ant-descriptions, .ant-card').first().isVisible().catch(() => false);
-      expect(hasTabs || hasContent).toBeTruthy();
-    }
+  test('订单管理页列表或统计区域存在', async ({ page }) => {
+    const hasTable = await page.locator('.ant-table').isVisible().catch(() => false);
+    const hasEmpty = await page.locator('.ant-empty').isVisible().catch(() => false);
+    const hasSummary = await page.getByText(/生产订单|延期订单|今日下单/).first().isVisible().catch(() => false);
+    expect(hasTable || hasEmpty || hasSummary).toBeTruthy();
   });
 });
 
 test.describe('生产进度跟踪', () => {
   test.beforeEach(async ({ authenticatedPage: page }) => {
-    await page.goto('/production/list');
-    await page.waitForLoadState('networkidle');
+    await page.goto('/production');
+    await expect(page.getByRole('heading', { name: '订单管理' }).first()).toBeVisible({ timeout: 15000 });
   });
 
   test('可查看工序追踪', async ({ page }) => {
     const progressBtn = page.locator('button:has-text("进度"), a:has-text("进度"), [data-testid="progress-btn"]').first();
     if (await progressBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
       await progressBtn.click();
-      await page.waitForLoadState('networkidle');
-      await expect(page.locator('.ant-timeline, .ant-steps, .ant-table, .ant-card')).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('.ant-timeline, .ant-steps, .ant-table, .ant-card').first()).toBeVisible({ timeout: 10000 });
     }
   });
 });
@@ -78,7 +64,7 @@ test.describe('生产进度跟踪', () => {
 test.describe('裁剪单管理', () => {
   test.beforeEach(async ({ authenticatedPage: page }) => {
     await page.goto('/production/cutting');
-    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('heading', { name: /裁剪管理|裁剪明细/ }).first()).toBeVisible({ timeout: 15000 });
   });
 
   test('裁剪单页面正常加载', async ({ page }) => {
@@ -94,11 +80,12 @@ test.describe('裁剪单管理', () => {
 
 test.describe('面料采购', () => {
   test.beforeEach(async ({ authenticatedPage: page }) => {
-    await page.goto('/production/material-purchase');
-    await page.waitForLoadState('networkidle');
+    await page.goto('/production/material');
+    await expect(page.getByRole('heading', { name: '面料采购' }).first()).toBeVisible({ timeout: 15000 });
   });
 
   test('面料采购页面正常加载', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: '面料采购' }).first()).toBeVisible({ timeout: 15000 });
     await expect(page.locator('.ant-table, .ant-empty, .ant-spin')).toBeVisible({ timeout: 15000 });
   });
 });

@@ -122,7 +122,7 @@ class AdminPage extends GetView<AdminController> {
           width: 52,
           height: 52,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _buildDefaultAvatar(),
+          errorBuilder: (_, error, stackTrace) => _buildDefaultAvatar(),
         ),
       );
     }

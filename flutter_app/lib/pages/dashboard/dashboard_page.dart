@@ -361,7 +361,7 @@ class DashboardPage extends GetView<DashboardController> {
               ? ClipRRect(
                   borderRadius: BorderRadius.circular(AppSpacing.md),
                   child: Image.network(coverUrl, fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const Center(child: Text('👔', style: TextStyle(fontSize: 24))),
+                    errorBuilder: (_, error, stackTrace) => const Center(child: Text('👔', style: TextStyle(fontSize: 24))),
                   ),
                 )
               : const Center(child: Text('👔', style: TextStyle(fontSize: 24))),

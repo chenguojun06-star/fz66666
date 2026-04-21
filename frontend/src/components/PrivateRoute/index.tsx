@@ -46,6 +46,10 @@ const PrivateRoute: React.FC = () => {
 
   const required = resolvePermissionCode(location.pathname);
 
+  if (required === 'PUBLIC') {
+    return <Layout><Outlet /></Layout>;
+  }
+
   const isAdminUser = isAdmin(user);
 
   if (isAdminUser) {

@@ -150,16 +150,16 @@ class WorkController extends GetxController {
         final delivery = DateTime.parse(deliveryDate);
         final diff = delivery.difference(DateTime.now()).inDays;
         if (diff < 0) {
-          remainDaysText = '已延期${-diff}天';
+          remainDaysText = '已延期${diff.abs()}天';
           remainDaysClass = 'days-overdue';
         } else if (diff == 0) {
           remainDaysText = '今日交期';
           remainDaysClass = 'days-today';
         } else if (diff <= 3) {
-          remainDaysText = '剩余${diff}天';
+          remainDaysText = '剩余$diff天';
           remainDaysClass = 'days-soon';
         } else {
-          remainDaysText = '剩余${diff}天';
+          remainDaysText = '剩余$diff天';
           remainDaysClass = 'days-normal';
         }
       } catch (_) {}

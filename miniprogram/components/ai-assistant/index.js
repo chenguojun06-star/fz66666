@@ -151,14 +151,14 @@ Component({
             tx = edge === 'left' ? -30 : sw - 20;
             ty = Math.max(40, Math.min(saved.y != null ? saved.y : ty, sh - 60));
           }
-        } catch (_e) {}
+        } catch (_e) { /* ignore invalid saved trigger position */ }
 
         var conversationId = 'mp_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
         var savedMessages = [];
         try {
           savedMessages = wx.getStorageSync('ai_chat_history') || [];
           if (!Array.isArray(savedMessages) || savedMessages.length === 0) savedMessages = [];
-        } catch (_e) {}
+        } catch (_e) { /* ignore unreadable chat history */ }
 
         var initMsgs = savedMessages.length > 0 ? savedMessages : [{
           id: Date.now(), role: 'ai', content: greeting,
@@ -204,7 +204,7 @@ Component({
             this.setData({ triggerX: tx, triggerY: ty, edgeSide: edge });
           }
         }
-      } catch (_e) {}
+      } catch (_e) { /* ignore invalid stored trigger position on show */ }
     },
   },
   detached() {
@@ -267,7 +267,7 @@ Component({
       const snapX = edge === 'left' ? -30 : sw - 20;
       this.setData({ triggerX: snapX, edgeSide: edge });
       this._isDragging = false;
-      try { wx.setStorageSync('ai_trigger_position', { x: snapX, y: this.data.triggerY, edge }); } catch (_e) {}
+      try { wx.setStorageSync('ai_trigger_position', { x: snapX, y: this.data.triggerY, edge }); } catch (_e) { /* ignore storage write failure */ }
       if (!this.data.isOpen) this._startIdleSnap();
     },
     _snapToVisible() {
@@ -348,12 +348,12 @@ Component({
       try {
         var msgs = this.data.messages.slice(-20);
         wx.setStorageSync('ai_chat_history', msgs);
-      } catch (_e) {}
+      } catch (_e) { /* ignore chat history save failure */ }
     },
 
     _abortStream() {
       if (this._streamTask) {
-        try { this._streamTask.abort(); } catch (_e) {}
+        try { this._streamTask.abort(); } catch (_e) { /* ignore abort failure */ }
         this._streamTask = null;
       }
     },
@@ -435,7 +435,6 @@ Component({
         var self = this;
         var accumulatedText = '';
         var streamStarted = false;
-        var streamFailed = false;
         var pendingFollowUpActions = null;
         var _streamPendingUpdate = false;
         var _streamUpdateTimer = null;
@@ -499,14 +498,14 @@ Component({
                 };
               });
             }
-            var aiMsg = {
+            var completedAiMsg = {
               id: aiMsgId, role: 'ai', content: parsed.text,
               recommendPills: recommendPills,
               actions: actions,
               insightCards: parsed.insightCards || [],
               clarificationHints: parsed.clarificationHints || [],
             };
-            self._setMessages([].concat(self.data.messages, [aiMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
+            self._setMessages([].concat(self.data.messages, [completedAiMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
             self.scrollToBottom();
             self._saveChatHistory();
           },
@@ -514,8 +513,8 @@ Component({
             console.warn('[XiaoYun] SSE failed, fallback to sync:', err);
             self._streamTask = null;
             if (streamStarted && accumulatedText) {
-              var aiMsg = { id: aiMsgId, role: 'ai', content: accumulatedText };
-              self._setMessages([].concat(self.data.messages, [aiMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
+              var streamFallbackMsg = { id: aiMsgId, role: 'ai', content: accumulatedText };
+              self._setMessages([].concat(self.data.messages, [streamFallbackMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
               self.scrollToBottom();
               self._saveChatHistory();
               return;
@@ -559,14 +558,14 @@ Component({
                 }
               }
               var actions = parsed.actions && parsed.actions.length > 0 ? parsed.actions : syncActions;
-              var aiMsg = {
+              var syncAiMsg = {
                 id: aiMsgId, role: 'ai', content: parsed.text,
                 recommendPills: recommendPills.length > 0 ? recommendPills : null,
                 actions: actions,
                 insightCards: parsed.insightCards || [],
                 clarificationHints: parsed.clarificationHints || [],
               };
-              self._setMessages([].concat(self.data.messages, [aiMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
+              self._setMessages([].concat(self.data.messages, [syncAiMsg]), { isLoading: false, streamingText: '', streamingTool: '' });
               self.scrollToBottom();
               self._saveChatHistory();
             } catch (syncErr) {
@@ -606,11 +605,13 @@ Component({
         if (userInfo.realName) userName = userInfo.realName;
         else if (userInfo.username) userName = userInfo.username;
         else if (userInfo.nickname) userName = userInfo.nickname;
-      } catch (err) {}
+      } catch (err) {
+        /* ignore greeting name read failure */
+      }
       const greeting = userName ? 'Hi ' + userName + '，这里是小云帮助中心。' : 'Hi，这里是小云帮助中心。';
       var newConvId = 'mp_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
       this._setMessages([{ id: Date.now(), role: 'ai', content: greeting }], { inputValue: '', conversationId: newConvId });
-      try { wx.removeStorageSync('ai_chat_history'); } catch (_e) {}
+      try { wx.removeStorageSync('ai_chat_history'); } catch (_e) { /* ignore storage cleanup failure */ }
     },
     scrollToBottom() {
       setTimeout(() => {

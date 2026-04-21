@@ -86,7 +86,6 @@ public class FinishedProductSettlement implements Serializable {
         * 注意：该字段在历史环境中可能因视图版本漂移缺失，
         * 这里作为可选扩展字段处理，避免 list/detail/getById 查询直接 500。
      */
-        @TableField(exist = false)
     private BigDecimal devCostPrice;
 
     /**

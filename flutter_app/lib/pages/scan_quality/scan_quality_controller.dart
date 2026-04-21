@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/api_service.dart';
 import '../../utils/error_handler.dart';
-import '../../components/empty_state.dart';
 
 class ScanQualityController extends GetxController {
   final ApiService _api = Get.find<ApiService>();

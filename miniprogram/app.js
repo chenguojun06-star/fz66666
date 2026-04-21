@@ -74,7 +74,7 @@ App({
         eventBus.emit('showPrivacyDialog', resolve);
         setTimeout(function () {
           if (getApp().globalData.privacyResolve === resolve) {
-            try { resolve({ buttonAction: 'disagree' }); } catch (_e) {}
+            try { resolve({ buttonAction: 'disagree' }); } catch (_e) { /* ignore resolve race */ }
             getApp().globalData.privacyResolve = null;
           }
         }, 10000);
@@ -343,6 +343,7 @@ App({
       console.error('[App] 全局错误:', msg);
       this._reportError('onError', typeof msg === 'string' ? msg : String(msg));
     } catch (_) {
+      /* ignore secondary onError failure */
     }
   },
 
@@ -373,8 +374,10 @@ App({
             console.warn('[App] error-report端点不可用 (' + res.statusCode + ')，跳过上报');
           }
         },
-        fail() {},
+        fail() { /* ignore report failure to avoid recursive noise */ },
       });
-    } catch (_) {}
+    } catch (_) {
+      /* ignore reporting bootstrap failure */
+    }
   },
 });

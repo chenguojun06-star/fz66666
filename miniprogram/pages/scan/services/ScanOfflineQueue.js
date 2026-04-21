@@ -61,14 +61,18 @@ function _load() {
           return recovered;
         }
       }
-    } catch (_) {}
+    } catch (_) {
+      /* ignore backup recovery failure */
+    }
     try {
       const raw = wx.getStorageSync(QUEUE_KEY);
       if (raw && typeof raw === 'string' && raw.length > 2) {
         wx.setStorageSync(QUEUE_KEY + '_backup', raw);
         if (DEBUG) console.warn('[ScanOfflineQueue] 已备份损坏数据到:', QUEUE_KEY + '_backup');
       }
-    } catch (_) {}
+    } catch (_) {
+      /* ignore corrupted queue backup write failure */
+    }
     _cache = [];
     _cacheTime = now;
     return [];
@@ -178,8 +182,12 @@ const ScanOfflineQueue = {
         if (DEBUG) console.log('[ScanOfflineQueue] flush 已被锁定，跳过');
         return { submitted: 0, failed: 0 };
       }
-    } catch (_) {}
-    try { wx.setStorageSync(FLUSH_LOCK_KEY, Date.now().toString()); } catch (_) {}
+    } catch (_) {
+      /* ignore stale flush lock read failure */
+    }
+    try { wx.setStorageSync(FLUSH_LOCK_KEY, Date.now().toString()); } catch (_) {
+      /* ignore lock write failure */
+    }
 
     try {
       const queue = _load();
@@ -242,7 +250,9 @@ const ScanOfflineQueue = {
       if (DEBUG) console.log('[ScanOfflineQueue] 批量上传完成 submitted=' + submitted + ' failed=' + failed + ' remaining=' + this.count());
       return { submitted, failed };
     } finally {
-      try { wx.removeStorageSync(FLUSH_LOCK_KEY); } catch (_) {}
+      try { wx.removeStorageSync(FLUSH_LOCK_KEY); } catch (_) {
+        /* ignore lock cleanup failure */
+      }
     }
   },
 };

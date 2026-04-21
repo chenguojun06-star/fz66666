@@ -30,7 +30,7 @@ class SummaryCard extends StatelessWidget {
           Row(
             children: [
               Expanded(child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary))),
-              if (trailing != null) trailing!,
+              ...?(trailing == null ? null : <Widget>[trailing!]),
             ],
           ),
           const SizedBox(height: AppSpacing.md),

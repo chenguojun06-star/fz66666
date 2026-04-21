@@ -59,7 +59,7 @@
 
 /* 字段列表 */
 .field-list {
-  border-bottom: 1rpx solid var(--color-border-light));
+  border-bottom: 1rpx solid var(--color-border-light);
   padding-top: 16rpx;
   margin-top: 16rpx;
 }

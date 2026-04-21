@@ -28,7 +28,7 @@ class MpModal extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => MpModal(title: title, child: child, showClose: showClose),
+      builder: (_) => MpModal(title: title, showClose: showClose, child: child),
     );
   }
 

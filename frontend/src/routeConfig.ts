@@ -64,7 +64,6 @@ export const paths = {
   ecSalesRevenue: '/finance/ec-revenue',
   financeTaxExport: '/finance/tax-export',
 
-  warehouseDashboard: '/warehouse/dashboard',
   materialInventory: '/warehouse/material',
   materialDatabase: '/warehouse/material-database',
   finishedInventory: '/warehouse/finished',
@@ -119,7 +118,6 @@ export const permissionCodes = {
   expenseReimbursement: 'MENU_EXPENSE_REIMBURSEMENT',
   wagePayment: 'MENU_PAYMENT_APPROVAL',
 
-  warehouseDashboard: 'MENU_WAREHOUSE_DASHBOARD',
   materialInventory: 'MENU_MATERIAL_INVENTORY',
   materialDatabase: 'MENU_MATERIAL_DATABASE',
   finishedInventory: 'MENU_FINISHED_INVENTORY',
@@ -310,7 +308,6 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.templateCenter]: permissionCodes.templateCenter,
   [paths.maintenanceCenter]: permissionCodes.dataCenter,
 
-  [paths.warehouseDashboard]: permissionCodes.warehouseDashboard,
   [paths.materialInventory]: permissionCodes.materialInventory,
   [paths.materialDatabase]: permissionCodes.materialDatabase,
   [paths.finishedInventory]: permissionCodes.finishedInventory,
@@ -361,6 +358,8 @@ export const routeToPermissionCode: Record<string, string> = {
   [paths.crm]: permissionCodes.crm,
   [paths.crmReceivables]: permissionCodes.crmReceivables,
   [paths.selectionBatch]: permissionCodes.selection,
+  [paths.profile]: 'PUBLIC',
+  [paths.orphanData]: permissionCodes.systemIssues,
 };
 
 /** 仅超级管理员可见/可访问的路径集合 */

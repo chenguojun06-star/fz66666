@@ -1,5 +1,4 @@
 const api = require('../../utils/api');
-const { errorHandler } = require('../../utils/errorHandler');
 const { syncManager } = require('../../utils/syncManager');
 const { toast, safeNavigate } = require('../../utils/uiHelper');
 const { getCurrentFactoryId } = require('../../utils/permission');
@@ -7,8 +6,6 @@ const { eventBus, Events } = require('../../utils/eventBus');
 
 
 // ==================== 提取的工具模块 ====================
-const { normalizeText, transformOrderData } = require('./utils/orderTransform');
-
 // ==================== 提取的 Handler ====================
 const BatchProgressHandler = require('./handlers/BatchProgressHandler');
 const RollbackHandler = require('./handlers/RollbackHandler');
