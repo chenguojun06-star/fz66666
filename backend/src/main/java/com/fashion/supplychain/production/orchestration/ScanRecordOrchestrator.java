@@ -426,8 +426,8 @@ public class ScanRecordOrchestrator {
         }
 
         // 裁剪完成后普通人员不能撤回，仅管理员可撤回
-        String scanType = hasText(target.getScanType()) ? target.getScanType().trim().toLowerCase() : "";
-        boolean isCuttingScan = "cutting".equals(scanType)
+        String undoScanType = hasText(target.getScanType()) ? target.getScanType().trim().toLowerCase() : "";
+        boolean isCuttingScan = "cutting".equals(undoScanType)
                 || "裁剪".equals(hasText(target.getProgressStage()) ? target.getProgressStage().trim() : "");
         if (isCuttingScan) {
             UserContext cutCtx = UserContext.get();
@@ -653,10 +653,9 @@ public class ScanRecordOrchestrator {
             String oid = TextUtils.safeText(target.getOrderId());
             if (hasText(oid)) {
                 try {
-                    // 删除该订单的所有裁剪菲号数据
                     cuttingBundleService.remove(new LambdaQueryWrapper<CuttingBundle>()
                             .eq(CuttingBundle::getProductionOrderId, oid));
-                    log.info("[rescan] 已删除裁剪菲号: orderId={}", oid);
+                    log.info("[rescan] 已删除裁剪菲号(整批): orderId={}", oid);
 
                     // 将裁剪任务状态从 bundled 退回到 received（保留领取人信息）
                     CuttingTask cuttingTask = cuttingTaskService.getOne(new LambdaQueryWrapper<CuttingTask>()
