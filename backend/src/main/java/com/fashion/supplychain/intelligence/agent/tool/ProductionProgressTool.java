@@ -64,7 +64,7 @@ public class ProductionProgressTool implements AgentTool {
 
         Map<String, Object> queryScanRecordsProp = new HashMap<>();
         queryScanRecordsProp.put("type", "boolean");
-        queryScanRecordsProp.put("description", "是否查询该订单最新的工序扫码记录");
+        queryScanRecordsProp.put("description", "是否查询该订单最新的工序扫码记录及工序汇总(默认true)");
         properties.put("queryScanRecords", queryScanRecordsProp);
 
         Map<String, Object> startDateProp = new HashMap<>();
@@ -79,7 +79,7 @@ public class ProductionProgressTool implements AgentTool {
 
         Map<String, Object> limitProp = new HashMap<>();
         limitProp.put("type", "integer");
-        limitProp.put("description", "返回最大条数(默认5，最大20)。生成报告时建议设为20以获取更多数据");
+        limitProp.put("description", "返回最大条数(默认10，最大50)。生成报告时建议设为30以获取更多数据");
         properties.put("limit", limitProp);
 
         Map<String, Object> parameters = new HashMap<>();
@@ -112,12 +112,12 @@ public class ProductionProgressTool implements AgentTool {
             String orderNo = (String) args.get("orderNo");
             String styleNo = (String) args.get("styleNo");
             String status = (String) args.get("status");
-            Boolean queryScanRecords = (Boolean) args.get("queryScanRecords");
+            Boolean queryScanRecords = args.get("queryScanRecords") instanceof Boolean ? (Boolean) args.get("queryScanRecords") : true;
             String startDate = (String) args.get("startDate");
             String endDate = (String) args.get("endDate");
-            Integer limit = args.get("limit") instanceof Number ? ((Number) args.get("limit")).intValue() : 5;
+            Integer limit = args.get("limit") instanceof Number ? ((Number) args.get("limit")).intValue() : 10;
             if (limit < 1) limit = 1;
-            if (limit > 20) limit = 20;
+            if (limit > 50) limit = 50;
 
             QueryWrapper<ProductionOrder> query = new QueryWrapper<>();
             if (orderNo != null && !orderNo.isBlank()) {
@@ -172,19 +172,47 @@ public class ProductionProgressTool implements AgentTool {
                 orderDto.put("completedQuantity", order.getCompletedQuantity());
                 orderDto.put("productionProgress", order.getProductionProgress());
                 orderDto.put("status", order.getStatus());
+                if (order.getPlannedStartDate() != null) {
+                    orderDto.put("plannedStartDate", order.getPlannedStartDate().format(dtf));
+                }
+                if (order.getPlannedEndDate() != null) {
+                    orderDto.put("plannedEndDate", order.getPlannedEndDate().format(dtf));
+                }
+                if (order.getActualStartDate() != null) {
+                    orderDto.put("actualStartDate", order.getActualStartDate().format(dtf));
+                }
+                if (order.getActualEndDate() != null) {
+                    orderDto.put("actualEndDate", order.getActualEndDate().format(dtf));
+                }
+                if (order.getMerchandiser() != null && !order.getMerchandiser().isBlank()) {
+                    orderDto.put("merchandiser", order.getMerchandiser());
+                }
+                if (order.getFactoryContactPerson() != null && !order.getFactoryContactPerson().isBlank()) {
+                    orderDto.put("factoryContactPerson", order.getFactoryContactPerson());
+                }
+                if (order.getFactoryContactPhone() != null && !order.getFactoryContactPhone().isBlank()) {
+                    orderDto.put("factoryContactPhone", order.getFactoryContactPhone());
+                }
+                if (order.getUrgencyLevel() != null) {
+                    orderDto.put("urgencyLevel", order.getUrgencyLevel());
+                }
+                if (order.getMaterialArrivalRate() != null) {
+                    orderDto.put("materialArrivalRate", order.getMaterialArrivalRate());
+                }
                 if (order.getCreateTime() != null) {
                     orderDto.put("createTime", order.getCreateTime().format(dtf));
                 }
 
                 if (Boolean.TRUE.equals(queryScanRecords)) {
-                    // 查询最近的扫码记录
                     QueryWrapper<ScanRecord> scanQuery = new QueryWrapper<>();
                     scanQuery.eq("order_id", order.getId());
                     scanQuery.eq("scan_result", "success");
                     scanQuery.orderByDesc("scan_time");
-                    scanQuery.last("LIMIT 10"); // 返回最新的10条
+                    scanQuery.last("LIMIT 30");
 
                     List<ScanRecord> scanRecords = scanRecordService.list(scanQuery);
+
+                    Map<String, Map<String, Object>> processSummaryMap = new java.util.LinkedHashMap<>();
                     List<Map<String, Object>> scansDto = new ArrayList<>();
 
                     for (ScanRecord scan : scanRecords) {
@@ -196,8 +224,36 @@ public class ProductionProgressTool implements AgentTool {
                             scanDto.put("scanTime", scan.getScanTime().format(dtf));
                         }
                         scansDto.add(scanDto);
+
+                        String pName = scan.getProcessName();
+                        if (pName != null && !pName.isBlank()) {
+                            Map<String, Object> agg = processSummaryMap.computeIfAbsent(pName, k -> {
+                                Map<String, Object> m = new HashMap<>();
+                                m.put("processName", pName);
+                                m.put("totalQty", 0);
+                                m.put("workerCount", new java.util.HashSet<String>());
+                                m.put("latestScanTime", "");
+                                return m;
+                            });
+                            agg.put("totalQty", (int) agg.get("totalQty") + scan.getQuantity());
+                            ((java.util.Set<String>) agg.get("workerCount")).add(scan.getOperatorName());
+                            if (scan.getScanTime() != null) {
+                                agg.put("latestScanTime", scan.getScanTime().format(dtf));
+                            }
+                        }
                     }
                     orderDto.put("latestScanRecords", scansDto);
+
+                    List<Map<String, Object>> processSummary = new ArrayList<>();
+                    for (Map<String, Object> agg : processSummaryMap.values()) {
+                        Map<String, Object> summaryItem = new HashMap<>();
+                        summaryItem.put("processName", agg.get("processName"));
+                        summaryItem.put("totalQty", agg.get("totalQty"));
+                        summaryItem.put("workerCount", ((java.util.Set<?>) agg.get("workerCount")).size());
+                        summaryItem.put("latestScanTime", agg.get("latestScanTime"));
+                        processSummary.add(summaryItem);
+                    }
+                    orderDto.put("processSummary", processSummary);
                 }
 
                 resultList.add(orderDto);

@@ -18,6 +18,32 @@ export interface ParsedXiaoyunLegacyMeta {
   teamStatusCards: unknown[];
   bundleSplitCards: unknown[];
   stepWizardCards: unknown[];
+  clarificationHints?: string[];
+}
+
+function safeParseJson(raw: string, label: string): unknown[] {
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed;
+    if (parsed && typeof parsed === 'object') return [parsed];
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+function validateInsightCard(item: unknown): XiaoyunInsightCardData | null {
+  if (!item || typeof item !== 'object') return null;
+  const card = item as Record<string, unknown>;
+  if (typeof card.title !== 'string' || !card.title) return null;
+  return item as XiaoyunInsightCardData;
+}
+
+function validateActionCard(item: unknown): unknown | null {
+  if (!item || typeof item !== 'object') return null;
+  const card = item as Record<string, unknown>;
+  if (typeof card.title !== 'string' || !card.title) return null;
+  return item;
 }
 
 export const normalizeXiaoyunChatPayload = (raw: any): XiaoyunChatPayload | null => {
@@ -43,59 +69,51 @@ export const parseXiaoyunLegacyMeta = (rawText: string): ParsedXiaoyunLegacyMeta
   const teamStatusCards: unknown[] = [];
   const bundleSplitCards: unknown[] = [];
   const stepWizardCards: unknown[] = [];
+  let clarificationHints: string[] | undefined;
   let match: RegExpExecArray | null;
 
   const chartRe = /【CHART】([\s\S]*?)【\/CHART】/g;
   while ((match = chartRe.exec(rawText)) !== null) {
-    try { charts.push(JSON.parse(match[1].trim())); } catch {}
+    charts.push(...safeParseJson(match[1].trim(), 'chart'));
   }
 
   const actionsRe = /【ACTIONS】([\s\S]*?)【\/ACTIONS】/g;
   while ((match = actionsRe.exec(rawText)) !== null) {
-    try {
-      const parsed = JSON.parse(match[1].trim()) as unknown;
-      if (Array.isArray(parsed)) actionCards.push(...parsed);
-    } catch {}
+    const parsed = safeParseJson(match[1].trim(), 'actions');
+    parsed.forEach(item => { const v = validateActionCard(item); if (v) actionCards.push(v); });
   }
 
   const actionsJsonRe = /```ACTIONS_JSON\s*\n([\s\S]*?)\n```/g;
   while ((match = actionsJsonRe.exec(rawText)) !== null) {
-    try {
-      const parsed = JSON.parse(match[1].trim()) as unknown;
-      if (Array.isArray(parsed)) quickActions.push(...parsed);
-    } catch {}
+    quickActions.push(...safeParseJson(match[1].trim(), 'actionsJson'));
   }
 
   const teamStatusRe = /【TEAM_STATUS】([\s\S]*?)【\/TEAM_STATUS】/g;
   while ((match = teamStatusRe.exec(rawText)) !== null) {
-    try {
-      const parsed = JSON.parse(match[1].trim()) as unknown;
-      if (Array.isArray(parsed)) teamStatusCards.push(...parsed);
-    } catch {}
+    teamStatusCards.push(...safeParseJson(match[1].trim(), 'teamStatus'));
   }
 
   const bundleSplitRe = /【BUNDLE_SPLIT】([\s\S]*?)【\/BUNDLE_SPLIT】/g;
   while ((match = bundleSplitRe.exec(rawText)) !== null) {
-    try {
-      const parsed = JSON.parse(match[1].trim()) as unknown;
-      if (Array.isArray(parsed)) bundleSplitCards.push(...parsed);
-    } catch {}
+    bundleSplitCards.push(...safeParseJson(match[1].trim(), 'bundleSplit'));
   }
 
   const insightCardsRe = /【INSIGHT_CARDS】([\s\S]*?)【\/INSIGHT_CARDS】/g;
   while ((match = insightCardsRe.exec(rawText)) !== null) {
-    try {
-      const parsed = JSON.parse(match[1].trim()) as unknown;
-      if (Array.isArray(parsed)) cards.push(...(parsed as XiaoyunInsightCardData[]));
-    } catch {}
+    const parsed = safeParseJson(match[1].trim(), 'insightCards');
+    parsed.forEach(item => { const v = validateInsightCard(item); if (v) cards.push(v); });
   }
 
   const stepWizardRe = /【STEP_WIZARD】([\s\S]*?)【\/STEP_WIZARD】/g;
   while ((match = stepWizardRe.exec(rawText)) !== null) {
+    stepWizardCards.push(...safeParseJson(match[1].trim(), 'stepWizard'));
+  }
+
+  const clarificationRe = /【CLARIFICATION】([\s\S]*?)【\/CLARIFICATION】/g;
+  while ((match = clarificationRe.exec(rawText)) !== null) {
     try {
-      const parsed = JSON.parse(match[1].trim()) as unknown;
-      if (Array.isArray(parsed)) stepWizardCards.push(...parsed);
-      else stepWizardCards.push(parsed);
+      const parsed = JSON.parse(match[1].trim());
+      if (Array.isArray(parsed)) clarificationHints = parsed.map(String);
     } catch {}
   }
 
@@ -107,6 +125,7 @@ export const parseXiaoyunLegacyMeta = (rawText: string): ParsedXiaoyunLegacyMeta
     .replace(/【BUNDLE_SPLIT】[\s\S]*?【\/BUNDLE_SPLIT】/g, '')
     .replace(/【INSIGHT_CARDS】[\s\S]*?【\/INSIGHT_CARDS】/g, '')
     .replace(/【STEP_WIZARD】[\s\S]*?【\/STEP_WIZARD】/g, '')
+    .replace(/【CLARIFICATION】[\s\S]*?【\/CLARIFICATION】/g, '')
     .trim();
 
   return {
@@ -118,5 +137,6 @@ export const parseXiaoyunLegacyMeta = (rawText: string): ParsedXiaoyunLegacyMeta
     teamStatusCards,
     bundleSplitCards,
     stepWizardCards,
+    clarificationHints,
   };
 };

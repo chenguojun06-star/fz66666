@@ -55,7 +55,7 @@ public class AiChatContextOrchestrator {
         appendSection(sb, "【当前高频痛点】",
                 "SELECT pain_name, pain_level, trigger_count, affected_order_count, root_reason_summary, current_status " +
                         "FROM t_intelligence_pain_point WHERE tenant_id = ? AND delete_flag = 0 " +
-                        "ORDER BY trigger_count DESC, update_time DESC LIMIT 3",
+                        "ORDER BY trigger_count DESC, update_time DESC LIMIT 6",
                 tenantId,
                 row -> String.format("- %s（级别:%s，触发:%s次，影响订单:%s，状态:%s，根因:%s）",
                         value(row.get("pain_name")),
@@ -112,12 +112,12 @@ public class AiChatContextOrchestrator {
     }
 
     private void appendFactorySkillMatrix(StringBuilder sb, Long tenantId) {
-        appendSection(sb, "【工厂能力画像】",
+        appendSection(sb, "【工厂能力画像-高绩效】",
                 "SELECT COALESCE(f.factory_name, m.factory_id) AS factory_name, m.category, m.style_type, m.process_code, " +
                         "m.delivery_score, m.quality_score, m.margin_score, m.efficiency_score, m.sample_count " +
                         "FROM t_factory_skill_matrix m LEFT JOIN t_factory f ON f.id = m.factory_id " +
                         "WHERE m.tenant_id = ? AND m.delete_flag = 0 " +
-                        "ORDER BY m.delivery_score DESC, m.quality_score DESC, m.efficiency_score DESC LIMIT 5",
+                        "ORDER BY m.delivery_score DESC, m.quality_score DESC, m.efficiency_score DESC LIMIT 3",
                 tenantId,
                 row -> String.format("- 工厂=%s，品类=%s，款式=%s，工序=%s，交期=%s，质量=%s，毛利=%s，效率=%s，样本=%s",
                         value(row.get("factory_name")),
@@ -129,6 +129,20 @@ public class AiChatContextOrchestrator {
                         value(row.get("margin_score")),
                         value(row.get("efficiency_score")),
                         value(row.get("sample_count"))));
+        appendSection(sb, "【工厂能力画像-待提升】",
+                "SELECT COALESCE(f.factory_name, m.factory_id) AS factory_name, m.category, m.style_type, m.process_code, " +
+                        "m.delivery_score, m.quality_score, m.margin_score, m.efficiency_score, m.sample_count " +
+                        "FROM t_factory_skill_matrix m LEFT JOIN t_factory f ON f.id = m.factory_id " +
+                        "WHERE m.tenant_id = ? AND m.delete_flag = 0 " +
+                        "ORDER BY m.efficiency_score ASC, m.quality_score ASC LIMIT 3",
+                tenantId,
+                row -> String.format("- 工厂=%s，品类=%s，工序=%s，交期=%s，质量=%s，效率=%s",
+                        value(row.get("factory_name")),
+                        value(row.get("category")),
+                        value(row.get("process_code")),
+                        value(row.get("delivery_score")),
+                        value(row.get("quality_score")),
+                        value(row.get("efficiency_score"))));
     }
 
     private void appendMindPushEffects(StringBuilder sb, Long tenantId) {
@@ -145,14 +159,29 @@ public class AiChatContextOrchestrator {
     }
 
     private void appendWorkerSkillGrowth(StringBuilder sb, Long tenantId) {
-        appendSection(sb, "【工人成长画像】",
+        appendSection(sb, "【工人成长画像-高绩效】",
                 "SELECT COALESCE(w.worker_name, g.worker_id) AS worker_name, g.process_code, g.current_level, g.speed_score, " +
                         "g.quality_score, g.stability_score, g.training_count, g.growth_trend " +
                         "FROM t_worker_skill_growth g LEFT JOIN t_factory_worker w ON w.id = g.worker_id " +
                         "WHERE g.tenant_id = ? AND g.delete_flag = 0 " +
-                        "ORDER BY g.stability_score DESC, g.quality_score DESC, g.speed_score DESC LIMIT 5",
+                        "ORDER BY g.stability_score DESC, g.quality_score DESC, g.speed_score DESC LIMIT 3",
                 tenantId,
-                row -> String.format("- 工人=%s，工序=%s，等级=%s，速度=%s，质量=%s，稳定=%s，训练=%s，趋势=%s",
+                row -> String.format("- 工人=%s，工序=%s，等级=%s，速度=%s，质量=%s，稳定=%s，趋势=%s",
+                        value(row.get("worker_name")),
+                        value(row.get("process_code")),
+                        value(row.get("current_level")),
+                        value(row.get("speed_score")),
+                        value(row.get("quality_score")),
+                        value(row.get("stability_score")),
+                        value(row.get("growth_trend"))));
+        appendSection(sb, "【工人成长画像-待提升】",
+                "SELECT COALESCE(w.worker_name, g.worker_id) AS worker_name, g.process_code, g.current_level, g.speed_score, " +
+                        "g.quality_score, g.stability_score, g.training_count, g.growth_trend " +
+                        "FROM t_worker_skill_growth g LEFT JOIN t_factory_worker w ON w.id = g.worker_id " +
+                        "WHERE g.tenant_id = ? AND g.delete_flag = 0 " +
+                        "ORDER BY g.stability_score ASC, g.quality_score ASC LIMIT 3",
+                tenantId,
+                row -> String.format("- 工人=%s，工序=%s，等级=%s，速度=%s，质量=%s，稳定=%s，训练=%s次，趋势=%s",
                         value(row.get("worker_name")),
                         value(row.get("process_code")),
                         value(row.get("current_level")),

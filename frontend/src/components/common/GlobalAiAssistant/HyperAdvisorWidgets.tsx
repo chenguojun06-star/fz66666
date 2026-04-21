@@ -46,9 +46,25 @@ export const SimulationWidget: React.FC<{ data: SimulationResultData }> = ({ dat
 };
 
 /** 澄清追问卡片 */
-export const ClarificationCard: React.FC = () => (
+export const ClarificationCard: React.FC<{ missingInfo?: string[]; onAsk?: (question: string) => void }> = ({ missingInfo, onAsk }) => (
   <div className={styles.clarificationCard}>
-    <span className={styles.clarificationLabel}>🤔 我需要更多信息才能给出准确分析，请补充上方问题～</span>
+    <span className={styles.clarificationLabel}>🤔 需要补充以下信息才能给出准确分析：</span>
+    {missingInfo && missingInfo.length > 0 ? (
+      <div style={{ marginTop: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {missingInfo.map((info, idx) => (
+          <button
+            key={idx}
+            className={styles.actionBtn}
+            style={{ fontSize: 12, padding: '2px 10px' }}
+            onClick={() => onAsk?.(info)}
+          >{info}</button>
+        ))}
+      </div>
+    ) : (
+      <div style={{ marginTop: 6, fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+        请提供：订单号 / 款号 / 工厂名 / 时间范围 等
+      </div>
+    )}
   </div>
 );
 

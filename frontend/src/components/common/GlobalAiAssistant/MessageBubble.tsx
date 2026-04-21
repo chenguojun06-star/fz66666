@@ -257,7 +257,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
         />
       )}
 
-      {msg.role === 'ai' && msg.needsClarification && <ClarificationCard />}
+      {msg.role === 'ai' && msg.needsClarification && <ClarificationCard missingInfo={msg.clarificationHints} onAsk={(q) => onSend(q)} />}
       {msg.role === 'ai' && !!msg.riskIndicators?.length && <RiskIndicatorWidget items={msg.riskIndicators} />}
       {msg.role === 'ai' && msg.simulation && <SimulationWidget data={msg.simulation} />}
       {msg.role === 'ai' && msg.traceId && <FeedbackWidget msg={msg} onFeedback={onFeedback} />}

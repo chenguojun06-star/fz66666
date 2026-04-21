@@ -63,6 +63,7 @@ export function parseAiResponse(rawText: string): {
   teamStatusCards: TeamStatusCardData[];
   bundleSplitCards: BundleSplitCardData[];
   stepWizardCards: StepWizardCardData[];
+  clarificationHints?: string[];
 } {
   const parsed = parseXiaoyunLegacyMeta(rawText);
   return {
@@ -74,6 +75,7 @@ export function parseAiResponse(rawText: string): {
     teamStatusCards: parsed.teamStatusCards as TeamStatusCardData[],
     bundleSplitCards: parsed.bundleSplitCards as BundleSplitCardData[],
     stepWizardCards: parsed.stepWizardCards as StepWizardCardData[],
+    clarificationHints: parsed.clarificationHints,
   };
 }
 
@@ -98,6 +100,7 @@ export interface Message {
   riskIndicators?: RiskIndicator[];
   simulation?: SimulationResultData;
   needsClarification?: boolean;
+  clarificationHints?: string[];
   traceId?: string;
   advisorSessionId?: string;
   userQuery?: string;             // 保存原始用户问题，用于反馈

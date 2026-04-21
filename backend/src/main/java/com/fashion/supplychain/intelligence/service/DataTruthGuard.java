@@ -5,16 +5,18 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Slf4j
 @Service
 public class DataTruthGuard {
 
-    private static final Pattern NUMBER_PATTERN = Pattern.compile("\\d+(\\.\\d+)?%?");
+    private static final Pattern NUMBER_PATTERN = Pattern.compile("(\\d+(?:\\.\\d+)?)\\s*%?");
     private static final Set<String> FABRICATED_INDICATORS = Set.of(
             "大约", "约", "估计", "估算", "可能", "推测", "假设", "假设性",
-            "模拟", "虚拟", "演示", "示例", "参考值", "默认值"
+            "模拟", "虚拟", "演示", "示例", "参考值", "默认值",
+            "大概", "差不多", "左右", "近似", "差不多", "貌似", "好像"
     );
 
     public static class TruthCheckResult {
@@ -31,6 +33,19 @@ public class DataTruthGuard {
         public boolean isPassed() { return passed; }
         public String getReason() { return reason; }
         public String getDataSource() { return dataSource; }
+    }
+
+    public static class NumericConsistencyResult {
+        private final boolean consistent;
+        private final List<String> mismatches;
+
+        public NumericConsistencyResult(boolean consistent, List<String> mismatches) {
+            this.consistent = consistent;
+            this.mismatches = mismatches;
+        }
+
+        public boolean isConsistent() { return consistent; }
+        public List<String> getMismatches() { return mismatches; }
     }
 
     public TruthCheckResult checkTenantIntegrity() {
@@ -61,6 +76,52 @@ public class DataTruthGuard {
 
         String dataSource = hasToolEvidence ? "ai_with_evidence" : "ai_no_evidence";
         return new TruthCheckResult(true, null, dataSource);
+    }
+
+    public NumericConsistencyResult checkNumericConsistency(String aiContent, String toolEvidence) {
+        if (aiContent == null || toolEvidence == null || toolEvidence.isBlank()) {
+            return new NumericConsistencyResult(true, Collections.emptyList());
+        }
+
+        Set<Double> toolNumbers = extractNumbers(toolEvidence);
+        if (toolNumbers.isEmpty()) {
+            return new NumericConsistencyResult(true, Collections.emptyList());
+        }
+
+        Set<Double> aiNumbers = extractNumbers(aiContent);
+        List<String> mismatches = new ArrayList<>();
+
+        for (Double aiNum : aiNumbers) {
+            if (aiNum < 1) continue;
+            boolean found = false;
+            for (Double toolNum : toolNumbers) {
+                double tolerance = Math.max(Math.abs(toolNum) * 0.05, 1.0);
+                if (Math.abs(aiNum - toolNum) <= tolerance) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found && aiNum > 10) {
+                boolean isPercentage = aiContent.contains(aiNum.intValue() + "%");
+                if (!isPercentage) {
+                    mismatches.add("AI输出数字 " + aiNum + " 在工具数据中无匹配");
+                }
+            }
+        }
+
+        return new NumericConsistencyResult(mismatches.isEmpty(), mismatches);
+    }
+
+    private Set<Double> extractNumbers(String text) {
+        Set<Double> numbers = new HashSet<>();
+        if (text == null) return numbers;
+        Matcher m = NUMBER_PATTERN.matcher(text);
+        while (m.find()) {
+            try {
+                numbers.add(Double.parseDouble(m.group(1)));
+            } catch (NumberFormatException ignored) {}
+        }
+        return numbers;
     }
 
     public String tagDataSource(String content, String source) {

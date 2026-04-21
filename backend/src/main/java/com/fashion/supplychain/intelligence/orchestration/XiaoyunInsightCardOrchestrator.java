@@ -15,6 +15,22 @@ public class XiaoyunInsightCardOrchestrator {
 
     private static final ObjectMapper JSON = new ObjectMapper();
 
+    private static final java.util.Set<String> PROGRESS_TOOLS = java.util.Set.of(
+            "tool_query_production_progress"
+    );
+
+    private static final java.util.Set<String> WAREHOUSE_TOOLS = java.util.Set.of(
+            "tool_warehouse_stock", "tool_material_calculation", "tool_finished_product_stock"
+    );
+
+    private static final java.util.Set<String> FINANCE_TOOLS = java.util.Set.of(
+            "tool_financial_payroll", "tool_finance_workflow", "tool_shipment_reconciliation"
+    );
+
+    private static final java.util.Set<String> AVG_TIME_TOOLS = java.util.Set.of(
+            "tool_avg_completion_time"
+    );
+
     public void collectFromToolResult(String toolName, String toolResult, List<JsonNode> insightCards) {
         if (toolResult == null || toolResult.isBlank()) {
             return;
@@ -36,6 +52,23 @@ public class XiaoyunInsightCardOrchestrator {
             }
             if ("tool_deep_analysis".equals(toolName)) {
                 addIfPresent(insightCards, buildRiskInsightCard(root));
+                return;
+            }
+            if (PROGRESS_TOOLS.contains(toolName) && root.isArray()) {
+                addIfPresent(insightCards, buildProductionProgressCard(root));
+                return;
+            }
+            if (WAREHOUSE_TOOLS.contains(toolName)) {
+                addIfPresent(insightCards, buildWarehouseInsightCard(root, toolName));
+                return;
+            }
+            if (FINANCE_TOOLS.contains(toolName)) {
+                addIfPresent(insightCards, buildFinanceInsightCard(root, toolName));
+                return;
+            }
+            if (AVG_TIME_TOOLS.contains(toolName)) {
+                addIfPresent(insightCards, buildAvgCompletionTimeCard(root));
+                return;
             }
         } catch (Exception e) {
             log.debug("[XiaoyunCard] 解析工具结果失败: tool={}, err={}", toolName, e.getMessage());
@@ -59,6 +92,152 @@ public class XiaoyunInsightCardOrchestrator {
         if (card != null) {
             insightCards.add(card);
         }
+    }
+
+    private JsonNode buildProductionProgressCard(JsonNode orders) {
+        if (orders.size() == 0) return null;
+
+        int totalOrders = orders.size();
+        int overdueCount = 0;
+        int highRiskCount = 0;
+        int inProgressCount = 0;
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+        for (JsonNode o : orders) {
+            String status = o.path("status").asText("");
+            if ("production".equals(status) || "IN_PROGRESS".equals(status)) inProgressCount++;
+            String plannedEnd = o.path("plannedEndDate").asText("");
+            if (!plannedEnd.isBlank()) {
+                try {
+                    java.time.LocalDateTime ped = java.time.LocalDateTime.parse(plannedEnd, dtf);
+                    int progress = o.path("productionProgress").asInt(0);
+                    if (ped.isBefore(now)) overdueCount++;
+                    else if (ped.minusDays(7).isBefore(now) && progress < 50) highRiskCount++;
+                } catch (Exception ignored) {}
+            }
+        }
+
+        ObjectNode card = JSON.createObjectNode();
+        card.put("level", overdueCount > 0 ? "danger" : highRiskCount > 0 ? "warning" : "success");
+        card.put("title", "生产进度总览");
+        card.put("summary", String.format("在制%d单 | 逾期%d | 高风险%d", inProgressCount, overdueCount, highRiskCount));
+
+        ArrayNode evidence = JSON.createArrayNode();
+        for (int i = 0; i < Math.min(orders.size(), 5); i++) {
+            JsonNode o = orders.get(i);
+            String line = String.format("%s %s | %s | 进度%d%% | 下单%d/完成%d",
+                    o.path("orderNo").asText("-"),
+                    o.path("styleNo").asText(""),
+                    o.path("factoryName").asText("-"),
+                    o.path("productionProgress").asInt(0),
+                    o.path("orderQuantity").asInt(0),
+                    o.path("completedQuantity").asInt(0));
+            String plannedEnd = o.path("plannedEndDate").asText("");
+            if (!plannedEnd.isBlank()) line += " | 交期" + plannedEnd.substring(0, 10);
+            String merchandiser = o.path("merchandiser").asText("");
+            if (!merchandiser.isBlank()) line += " | 跟单:" + merchandiser;
+            evidence.add(line);
+        }
+        card.set("evidence", evidence);
+
+        if (overdueCount > 0) {
+            card.put("painPoint", String.format("⚠️ %d单已逾期，需立即跟进", overdueCount));
+            card.put("execute", "说\"查看逾期订单详情\"获取完整列表");
+        } else if (highRiskCount > 0) {
+            card.put("execute", "说\"查看高风险订单\"获取详情");
+        }
+        card.put("source", "生产进度");
+        return card;
+    }
+
+    private JsonNode buildWarehouseInsightCard(JsonNode root, String toolName) {
+        ObjectNode card = JSON.createObjectNode();
+        if (root.isArray() && root.size() > 0) {
+            card.put("level", "info");
+            card.put("title", "仓储数据摘要");
+            card.put("summary", String.format("查询到%d条记录", root.size()));
+            ArrayNode evidence = JSON.createArrayNode();
+            for (int i = 0; i < Math.min(root.size(), 3); i++) {
+                JsonNode item = root.get(i);
+                java.util.Iterator<String> fields = item.fieldNames();
+                StringBuilder sb = new StringBuilder();
+                int cnt = 0;
+                while (fields.hasNext() && cnt < 5) {
+                    String f = fields.next();
+                    sb.append(f).append("=").append(item.path(f).asText("-")).append(" ");
+                    cnt++;
+                }
+                evidence.add(sb.toString().trim());
+            }
+            card.set("evidence", evidence);
+        } else if (root.isObject()) {
+            card.put("level", "info");
+            card.put("title", "仓储数据摘要");
+            card.put("summary", "已获取仓储查询结果");
+        } else {
+            return null;
+        }
+        card.put("source", "仓储管理");
+        return card;
+    }
+
+    private JsonNode buildFinanceInsightCard(JsonNode root, String toolName) {
+        ObjectNode card = JSON.createObjectNode();
+        if (root.isObject()) {
+            boolean hasError = root.path("error").isTextual();
+            if (hasError) return null;
+            card.put("level", "info");
+            card.put("title", "财务数据摘要");
+            if (root.has("totalAmount")) {
+                card.put("summary", String.format("金额：¥%s", root.path("totalAmount").asText("-")));
+            } else if (root.has("message")) {
+                card.put("summary", root.path("message").asText(""));
+            } else {
+                card.put("summary", "已获取财务查询结果");
+            }
+        } else if (root.isArray() && root.size() > 0) {
+            card.put("level", "info");
+            card.put("title", "财务数据摘要");
+            card.put("summary", String.format("查询到%d条记录", root.size()));
+        } else {
+            return null;
+        }
+        card.put("source", "财务结算");
+        return card;
+    }
+
+    private JsonNode buildAvgCompletionTimeCard(JsonNode root) {
+        JsonNode overall = root.path("overall");
+        if (overall.isMissingNode() || !overall.has("avgDays")) return null;
+
+        ObjectNode card = JSON.createObjectNode();
+        double avgDays = overall.path("avgDays").asDouble(0);
+        double onTimeRate = overall.path("onTimeRate").asDouble(0);
+        int sampleSize = overall.path("sampleSize").asInt(0);
+
+        card.put("level", onTimeRate >= 80 ? "success" : onTimeRate >= 60 ? "warning" : "danger");
+        card.put("title", "历史完成周期");
+        card.put("summary", String.format("平均%.1f天 | 中位%.1f天 | 准时率%.1f%% | 样本%d",
+                avgDays, overall.path("medianDays").asDouble(0), onTimeRate, sampleSize));
+
+        ArrayNode evidence = JSON.createArrayNode();
+        evidence.add(String.format("最快%d天 | 最慢%d天", overall.path("fastestDays").asInt(0), overall.path("slowestDays").asInt(0)));
+
+        JsonNode factoryBreakdown = root.path("factoryBreakdown");
+        if (factoryBreakdown.isArray()) {
+            for (int i = 0; i < Math.min(factoryBreakdown.size(), 3); i++) {
+                JsonNode f = factoryBreakdown.get(i);
+                evidence.add(String.format("%s：均%.1f天(n=%d)", f.path("factoryName").asText("-"), f.path("avgDays").asDouble(0), f.path("sampleSize").asInt(0)));
+            }
+        }
+        card.set("evidence", evidence);
+
+        if (onTimeRate < 60) {
+            card.put("painPoint", String.format("准时交货率仅%.1f%%，需重点关注", onTimeRate));
+        }
+        card.put("source", "完成周期统计");
+        return card;
     }
 
     private JsonNode buildOrderLearningRecommendationCard(JsonNode root) {
@@ -156,7 +335,7 @@ public class XiaoyunInsightCardOrchestrator {
             card.put("summary", total > 0 ? "当前有 " + total + " 条待审批申请" : root.path("message").asText("当前没有待审批申请"));
             if (first != null) {
                 card.put("painPoint", "优先关注：" + first.path("type").asText("变更申请") + " · " + first.path("targetNo").asText(""));
-                card.put("execute", "可以继续说“通过第一个审批”或“驳回某条申请并写原因”。");
+                card.put("execute", "可以继续说\"通过第一个审批\"或\"驳回某条申请并写原因\"。");
                 ArrayNode evidence = JSON.createArrayNode();
                 evidence.add("申请人：" + first.path("applicant").asText("-"));
                 evidence.add("原因：" + truncate(first.path("reason").asText(""), 50));

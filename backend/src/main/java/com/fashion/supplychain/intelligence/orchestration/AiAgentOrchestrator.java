@@ -224,6 +224,11 @@ public class AiAgentOrchestrator {
                     log.warn("[AiAgent] 数据真实性校验未通过: {}", truthCheck.getReason());
                     revisedContent = "⚠️ " + truthCheck.getReason() + "\n\n" + revisedContent;
                 }
+                DataTruthGuard.NumericConsistencyResult numCheck = dataTruthGuard.checkNumericConsistency(revisedContent, toolEvidence);
+                if (!numCheck.isConsistent()) {
+                    log.warn("[AiAgent] 数字一致性校验异常: {}", numCheck.getMismatches());
+                    revisedContent = "⚠️ 部分数据与查询结果不一致，请以工具返回数据为准\n\n" + revisedContent;
+                }
                 revisedContent = dataTruthGuard.tagDataSource(revisedContent, truthCheck.getDataSource());
 
                 log.info("[AiAgent] 返回最终结果给用户");

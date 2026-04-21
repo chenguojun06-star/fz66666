@@ -10,6 +10,7 @@ import {
   Select,
   Popconfirm,
   DatePicker,
+  Badge,
 } from 'antd';
 import type { Dayjs } from 'dayjs';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -301,7 +302,17 @@ const _MaterialInventory: React.FC = () => {
         items={[
           {
             key: 'overview',
-            label: '库存总览',
+            label: (
+              <div>
+                <Space size={4}>
+                  库存总览
+                  {Number(stats.lowStockCount || 0) > 0 && (
+                    <Badge count={Number(stats.lowStockCount || 0)} size="small" />
+                  )}
+                </Space>
+                <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>物料进销存与预警</div>
+              </div>
+            ),
             children: (
               <>
                 <div className="material-alerts-section">
@@ -369,13 +380,21 @@ const _MaterialInventory: React.FC = () => {
           },
           {
             key: 'pickup',
-            label: '领取记录',
+            label: (
+              <div>
+                <Space size={4}>
+                  领取记录
+                  <Badge count={pickupData.pagination.pagination.total || 0} size="small" />
+                </Space>
+                <div style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>领料确认与出库管理</div>
+              </div>
+            ),
             children: (
               <Card>
                 <div style={{ marginBottom: 16 }}>
-                  <h2 style={{ margin: 0 }}> 领料记录</h2>
+                  <h2 style={{ margin: 0 }}>领料记录</h2>
                   <div style={{ color: 'var(--color-text-secondary)', fontSize: 12, marginTop: 4 }}>
-                    采购侧领取后在此处确认出库、打印出库单
+                    流程：采购侧领取 → 仓库确认出库 → 审核通过（外发工厂自动扣款/内部工厂平账）→ 打印出库单
                   </div>
                 </div>
                 <StandardToolbar
