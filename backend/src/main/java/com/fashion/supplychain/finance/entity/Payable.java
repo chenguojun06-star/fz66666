@@ -52,8 +52,6 @@ public class Payable {
 
     private String description;
 
-    /** 关联账单汇总ID（confirmBill后自动回填）；数据库列可能尚未迁移，标记为非持久化防止500 */
-    @TableField(exist = false)
     private String billAggregationId;
 
     private Integer deleteFlag;

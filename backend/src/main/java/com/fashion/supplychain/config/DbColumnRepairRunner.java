@@ -330,6 +330,17 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         add("t_scan_record", "process_name", "VARCHAR(100) DEFAULT NULL COMMENT '工序名称'");
         add("t_scan_record", "settlement_status", "VARCHAR(20) DEFAULT NULL COMMENT '结算状态'");
         add("t_scan_record", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+        add("t_scan_record", "current_progress_stage", "VARCHAR(64) DEFAULT NULL COMMENT '当前工序阶段'");
+        add("t_scan_record", "progress_node_unit_prices", "TEXT DEFAULT NULL COMMENT '工序节点单价列表JSON'");
+        add("t_scan_record", "cumulative_scan_count", "INT DEFAULT NULL COMMENT '累计扫码次数'");
+        add("t_scan_record", "total_scan_count", "INT DEFAULT NULL COMMENT '总扫码次数'");
+        add("t_scan_record", "progress_percentage", "DECIMAL(5,2) DEFAULT NULL COMMENT '进度百分比'");
+        add("t_scan_record", "total_piece_cost", "DECIMAL(12,2) DEFAULT NULL COMMENT '总成本'");
+        add("t_scan_record", "average_piece_cost", "DECIMAL(12,2) DEFAULT NULL COMMENT '平均成本'");
+        add("t_scan_record", "assignment_id", "VARCHAR(64) DEFAULT NULL COMMENT '工序指派ID'");
+        add("t_scan_record", "assigned_operator_name", "VARCHAR(64) DEFAULT NULL COMMENT '指派操作员名称'");
+        add("t_scan_record", "receive_time", "DATETIME DEFAULT NULL COMMENT '领取/开始时间'");
+        add("t_scan_record", "confirm_time", "DATETIME DEFAULT NULL COMMENT '录入结果/完成时间'");
 
         add("t_production_order", "progress_workflow_json", "LONGTEXT DEFAULT NULL COMMENT '生产进度工作流JSON'");
         add("t_production_order", "progress_workflow_locked", "TINYINT(1) NOT NULL DEFAULT 0 COMMENT '进度流程是否锁定'");
@@ -430,9 +441,72 @@ public class DbColumnRepairRunner implements ApplicationRunner {
         add("t_shipment_reconciliation", "auditor_name", "VARCHAR(100) DEFAULT NULL");
         add("t_shipment_reconciliation", "audit_time", "DATETIME DEFAULT NULL");
         add("t_shipment_reconciliation", "delete_flag", "TINYINT(1) NOT NULL DEFAULT 0");
+        add("t_shipment_reconciliation", "scan_cost", "DECIMAL(15,2) DEFAULT NULL COMMENT '工序成本'");
+        add("t_shipment_reconciliation", "material_cost", "DECIMAL(15,2) DEFAULT NULL COMMENT '物料成本'");
+        add("t_shipment_reconciliation", "total_cost", "DECIMAL(15,2) DEFAULT NULL COMMENT '总成本'");
+        add("t_shipment_reconciliation", "profit_amount", "DECIMAL(15,2) DEFAULT NULL COMMENT '利润'");
+        add("t_shipment_reconciliation", "profit_margin", "DECIMAL(5,2) DEFAULT NULL COMMENT '利润率'");
+        add("t_shipment_reconciliation", "reconciliation_operator_id", "VARCHAR(64) DEFAULT NULL COMMENT '对账操作人ID'");
+        add("t_shipment_reconciliation", "reconciliation_operator_name", "VARCHAR(100) DEFAULT NULL COMMENT '对账操作人姓名'");
+        add("t_shipment_reconciliation", "reconciliation_time", "DATETIME DEFAULT NULL COMMENT '对账时间'");
+        add("t_shipment_reconciliation", "is_own_factory", "INT DEFAULT NULL COMMENT '是否本厂'");
+        add("t_shipment_reconciliation", "reconciliation_date", "DATETIME DEFAULT NULL COMMENT '对账日期'");
+        add("t_shipment_reconciliation", "verified_at", "DATETIME DEFAULT NULL COMMENT '验证时间'");
+        add("t_shipment_reconciliation", "approved_at", "DATETIME DEFAULT NULL COMMENT '批准时间'");
+        add("t_shipment_reconciliation", "paid_at", "DATETIME DEFAULT NULL COMMENT '收款时间'");
+        add("t_shipment_reconciliation", "re_review_at", "DATETIME DEFAULT NULL COMMENT '复审时间'");
+        add("t_shipment_reconciliation", "re_review_reason", "VARCHAR(500) DEFAULT NULL COMMENT '复审原因'");
+        add("t_shipment_reconciliation", "create_by", "VARCHAR(64) DEFAULT NULL COMMENT '创建人'");
+        add("t_shipment_reconciliation", "update_by", "VARCHAR(64) DEFAULT NULL COMMENT '更新人'");
+        add("t_shipment_reconciliation", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
 
         add("t_bill_aggregation", "delete_flag", "INT NOT NULL DEFAULT 0");
         add("t_receivable", "delete_flag", "TINYINT(1) NOT NULL DEFAULT 0");
+
+        add("t_deduction_item", "source_type", "VARCHAR(64) DEFAULT NULL COMMENT '来源类型'");
+        add("t_deduction_item", "source_id", "VARCHAR(64) DEFAULT NULL COMMENT '来源ID'");
+        add("t_deduction_item", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+
+        add("t_payable", "bill_aggregation_id", "VARCHAR(64) DEFAULT NULL COMMENT '关联账单汇总ID'");
+        add("t_receivable", "bill_aggregation_id", "VARCHAR(64) DEFAULT NULL COMMENT '关联账单汇总ID'");
+        add("t_receivable", "source_biz_type", "VARCHAR(30) DEFAULT NULL COMMENT '来源业务类型'");
+        add("t_receivable", "source_biz_id", "VARCHAR(64) DEFAULT NULL COMMENT '来源业务ID'");
+        add("t_receivable", "source_biz_no", "VARCHAR(64) DEFAULT NULL COMMENT '来源业务单号'");
+        add("t_receivable", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
+
+        add("t_material_purchase", "inbound_record_id", "VARCHAR(64) DEFAULT NULL COMMENT '入库记录ID'");
+        add("t_material_purchase", "color", "VARCHAR(50) DEFAULT NULL COMMENT '颜色'");
+        add("t_material_purchase", "size", "VARCHAR(50) DEFAULT NULL COMMENT '尺码'");
+        add("t_material_purchase", "expected_arrival_date", "DATETIME DEFAULT NULL COMMENT '预计到货日期'");
+        add("t_material_purchase", "actual_arrival_date", "DATETIME DEFAULT NULL COMMENT '实际到货日期'");
+        add("t_material_purchase", "creator_id", "VARCHAR(64) DEFAULT NULL COMMENT '创建人ID'");
+        add("t_material_purchase", "creator_name", "VARCHAR(100) DEFAULT NULL COMMENT '创建人姓名'");
+        add("t_material_purchase", "updater_id", "VARCHAR(64) DEFAULT NULL COMMENT '更新人ID'");
+        add("t_material_purchase", "updater_name", "VARCHAR(100) DEFAULT NULL COMMENT '更新人姓名'");
+
+        add("t_product_outstock", "operator_id", "VARCHAR(64) DEFAULT NULL COMMENT '操作人ID'");
+        add("t_product_outstock", "operator_name", "VARCHAR(100) DEFAULT NULL COMMENT '操作人姓名'");
+        add("t_product_outstock", "creator_id", "VARCHAR(64) DEFAULT NULL COMMENT '创建人ID'");
+        add("t_product_outstock", "creator_name", "VARCHAR(100) DEFAULT NULL COMMENT '创建人姓名'");
+        add("t_product_outstock", "sku_code", "VARCHAR(100) DEFAULT NULL COMMENT 'SKU编码'");
+        add("t_product_outstock", "color", "VARCHAR(50) DEFAULT NULL COMMENT '颜色'");
+        add("t_product_outstock", "size", "VARCHAR(50) DEFAULT NULL COMMENT '尺码'");
+        add("t_product_outstock", "cost_price", "DECIMAL(12,2) DEFAULT NULL COMMENT '成本价'");
+        add("t_product_outstock", "sales_price", "DECIMAL(12,2) DEFAULT NULL COMMENT '销售价'");
+        add("t_product_outstock", "tracking_no", "VARCHAR(100) DEFAULT NULL COMMENT '快递单号'");
+        add("t_product_outstock", "express_company", "VARCHAR(50) DEFAULT NULL COMMENT '快递公司'");
+        add("t_product_outstock", "receive_status", "VARCHAR(20) DEFAULT NULL COMMENT '收货状态'");
+        add("t_product_outstock", "receive_time", "DATETIME DEFAULT NULL COMMENT '收货时间'");
+        add("t_product_outstock", "received_by", "VARCHAR(36) DEFAULT NULL COMMENT '收货人ID'");
+        add("t_product_outstock", "received_by_name", "VARCHAR(100) DEFAULT NULL COMMENT '收货人姓名'");
+        add("t_product_outstock", "customer_name", "VARCHAR(100) DEFAULT NULL COMMENT '客户名称'");
+        add("t_product_outstock", "customer_phone", "VARCHAR(50) DEFAULT NULL COMMENT '客户电话'");
+        add("t_product_outstock", "shipping_address", "VARCHAR(500) DEFAULT NULL COMMENT '收货地址'");
+        add("t_product_outstock", "total_amount", "DECIMAL(12,2) DEFAULT NULL COMMENT '总金额'");
+        add("t_product_outstock", "paid_amount", "DECIMAL(12,2) DEFAULT 0.00 COMMENT '已付金额'");
+        add("t_product_outstock", "payment_status", "VARCHAR(20) DEFAULT NULL COMMENT '付款状态'");
+        add("t_product_outstock", "settlement_time", "DATETIME DEFAULT NULL COMMENT '结算时间'");
+        add("t_product_outstock", "tenant_id", "BIGINT DEFAULT NULL COMMENT '租户ID'");
 
         add("t_factory_shipment", "ship_method", "VARCHAR(32) DEFAULT 'EXPRESS'");
         add("t_factory_shipment", "delete_flag", "INT NOT NULL DEFAULT 0 COMMENT '删除标记'");

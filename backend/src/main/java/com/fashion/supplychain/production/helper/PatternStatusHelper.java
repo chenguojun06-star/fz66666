@@ -294,7 +294,7 @@ public class PatternStatusHelper {
             }
 
             String currentSampleStatus = String.valueOf(styleInfo.getSampleStatus() == null ? "" : styleInfo.getSampleStatus()).trim().toUpperCase();
-            boolean sampleFinished = "COMPLETED".equals(currentSampleStatus);
+            boolean sampleFinished = "COMPLETED".equals(currentSampleStatus) || "PRODUCTION_COMPLETED".equals(currentSampleStatus);
             int progress = calculatePatternProgressPercent(pattern);
             String status = String.valueOf(pattern.getStatus() == null ? "" : pattern.getStatus()).trim().toUpperCase();
             LocalDateTime now = LocalDateTime.now();

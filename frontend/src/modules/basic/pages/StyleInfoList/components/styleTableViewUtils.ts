@@ -519,8 +519,9 @@ export const buildConfirmStage: StageBuilder = (record) => {
   const progressNode = String(record.progressNode || '').trim();
   const reviewStatus = String(record.sampleReviewStatus || '').trim().toUpperCase();
   const latestPatternStatus = String(record.latestPatternStatus || '').trim().toUpperCase();
+  const sampleStatus = String(record.sampleStatus || '').trim().toUpperCase();
   const reviewPassed = isPassedReviewStatus(reviewStatus);
-  const inboundCompleted = latestPatternStatus === 'COMPLETED';
+  const inboundCompleted = latestPatternStatus === 'COMPLETED' || sampleStatus === 'COMPLETED';
   const done = reviewPassed && inboundCompleted;
   const risk = isRiskReviewStatus(reviewStatus) || progressNode === '开发样报废';
   const started = done || risk || reviewStatus === 'PENDING' || reviewPassed || latestPatternStatus === 'PRODUCTION_COMPLETED';

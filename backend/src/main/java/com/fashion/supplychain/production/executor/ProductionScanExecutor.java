@@ -477,6 +477,18 @@ public class ProductionScanExecutor {
         result.put("scanRecord", sr);
         result.put("orderInfo", buildOrderInfo(order));
 
+        String nextStage;
+        switch (sr.getScanType() != null ? sr.getScanType().trim().toLowerCase() : "") {
+            case "cutting":    nextStage = "production"; break;
+            case "production": nextStage = "quality"; break;
+            case "quality":    nextStage = "warehouse"; break;
+            default:           nextStage = null;
+        }
+        if (hasText(nextStage)) {
+            result.put("nextScanType", nextStage);
+            result.put("nextStageHint", "下一环节: " + nextStage);
+        }
+
         if (unitPriceZero) {
             result.put("unitPriceHint", "该工序未设置单价，扫码后工资为0，请联系管理员设置单价");
         }
@@ -632,18 +644,10 @@ public class ProductionScanExecutor {
 
     /**
      * 标准化固定生产节点名称
+     * 委托给 ProcessStageDetector 统一实现（含模糊匹配 + CHILD_TO_PARENT 映射）
      */
     public String normalizeFixedProductionNodeName(String name) {
-        if (!hasText(name)) {
-            return null;
-        }
-        String n = name.trim();
-        for (String node : FIXED_PRODUCTION_NODES) {
-            if (node.equals(n)) {
-                return node;
-            }
-        }
-        return n;
+        return processStageDetector.normalizeFixedProductionNodeName(name);
     }
 
     /**

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '@/api';
 import { useAuthStore } from '@/stores/authStore';
-import { isTenantOwner } from '@/utils/storage';
+import { isTenantOwner, getUserInfo } from '@/utils/storage';
 import { toast } from '@/utils/uiHelper';
 import Icon from '@/components/Icon';
 import './IntelligencePage.css';

@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.production.entity.CuttingBundle;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
+import com.fashion.supplychain.production.helper.ProcessStageDetector;
 import com.fashion.supplychain.production.service.ProcessParentMappingService;
 import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fashion.supplychain.style.entity.StyleAttachment;
@@ -56,19 +57,13 @@ public class ProductionScanStageSupport {
     @Autowired
     private StyleAttachmentService styleAttachmentService;
 
+    @Autowired
+    private ProcessStageDetector processStageDetector;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public String normalizeFixedProductionNodeName(String name) {
-        if (!StringUtils.hasText(name)) {
-            return null;
-        }
-        String n = name.trim();
-        for (String node : FIXED_PRODUCTION_NODES) {
-            if (node.equals(n)) {
-                return node;
-            }
-        }
-        return n;
+        return processStageDetector.normalizeFixedProductionNodeName(name);
     }
 
     private static final java.time.LocalDateTime GATE_EFFECTIVE_DATE = java.time.LocalDateTime.of(2026, 4, 1, 0, 0);
@@ -89,7 +84,7 @@ public class ProductionScanStageSupport {
         com.fashion.supplychain.common.UserContext ctx = com.fashion.supplychain.common.UserContext.get();
         if (ctx != null) {
             String role = ctx.getRole();
-            if (role != null && (role.contains("admin") || role.contains("ADMIN") || role.contains("manager") || role.contains("主管") || role.contains("管理员"))) {
+            if (role != null && (role.contains("admin") || role.contains("ADMIN") || role.contains("manager") || role.contains("supervisor") || role.contains("主管") || role.contains("管理员"))) {
                 log.debug("管理员跳过子工序门禁: orderNo={}, role={}", order.getOrderNo(), role);
                 return;
             }

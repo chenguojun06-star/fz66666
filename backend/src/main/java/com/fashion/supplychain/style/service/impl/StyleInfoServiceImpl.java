@@ -645,6 +645,14 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
             PatternProduction latestPattern = style.getId() != null
                     ? latestPatternByStyleKey.get(buildStyleColorKey(style.getId(), style.getColor()))
                     : null;
+            if (latestPattern == null && style.getId() != null) {
+                for (Map.Entry<String, PatternProduction> entry : latestPatternByStyleKey.entrySet()) {
+                    if (entry.getKey().startsWith(style.getId() + "|")) {
+                        latestPattern = entry.getValue();
+                        break;
+                    }
+                }
+            }
             style.setMaintenanceTime(m != null ? m.getCreateTime() : null);
             style.setMaintenanceMan(m != null ? m.getOperator() : null);
             style.setMaintenanceRemark(m != null ? m.getRemark() : null);
@@ -653,6 +661,21 @@ public class StyleInfoServiceImpl extends ServiceImpl<StyleInfoMapper, StyleInfo
                     && style.getId() != null
                     && stockedStyleKeys.contains(buildStyleColorKey(style.getId(), style.getColor()))) {
                 latestPatternStatus = "COMPLETED";
+            }
+            if (!"COMPLETED".equalsIgnoreCase(String.valueOf(latestPatternStatus))
+                    && style.getId() != null) {
+                for (String stockKey : stockedStyleKeys) {
+                    if (stockKey.startsWith(style.getId() + "|")) {
+                        latestPatternStatus = "COMPLETED";
+                        break;
+                    }
+                }
+            }
+            if (!"COMPLETED".equalsIgnoreCase(String.valueOf(latestPatternStatus))) {
+                String sampleStatus = StringUtils.hasText(style.getSampleStatus()) ? style.getSampleStatus().trim().toUpperCase() : "";
+                if ("COMPLETED".equals(sampleStatus)) {
+                    latestPatternStatus = "COMPLETED";
+                }
             }
             style.setLatestPatternStatus(latestPatternStatus);
 
