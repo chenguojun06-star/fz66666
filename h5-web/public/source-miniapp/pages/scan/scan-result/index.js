@@ -219,9 +219,12 @@ Page({
       })
       .map(function(p) {
         var name = p.processName || p.name || '';
+        var code = String(p.id || p.processCode || '').trim();
+        var displayName = code ? code + ' ' + name : name;
         return {
-          label: name,
+          label: displayName,
           value: name,
+          processCode: code,
           scanType: p.scanType || 'production',
           unitPrice: p.unitPrice || 0,
           hidePrice: !p.unitPrice,

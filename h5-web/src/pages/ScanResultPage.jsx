@@ -217,11 +217,16 @@ export default function ScanResultPage() {
     return allProcesses.filter(p => {
       const name = p.processName || p.name || '';
       return !scannedSet[name] || name === raw.processName;
-    }).map(p => ({
-      label: p.processName || p.name || '', value: p.processName || p.name || '',
-      scanType: p.scanType || 'production', unitPrice: p.unitPrice || 0, hidePrice: !p.unitPrice,
-      checked: (p.processName || p.name || '') === raw.processName,
-    }));
+    }).map(p => {
+      const name = p.processName || p.name || '';
+      const code = String(p.id || p.processCode || '').trim();
+      const displayName = code ? `${code} ${name}` : name;
+      return {
+        label: displayName, value: name, processCode: code,
+        scanType: p.scanType || 'production', unitPrice: p.unitPrice || 0, hidePrice: !p.unitPrice,
+        checked: name === raw.processName,
+      };
+    });
   };
 
   const buildSummary = (options, selNames) => {
@@ -325,7 +330,7 @@ export default function ScanResultPage() {
           颜色: {detail.color} · 码数: {detail.size} · 数量: {detail.displayQuantity}
         </div>
         <div style={{ fontSize: 12, color: 'var(--color-primary)', marginTop: 4 }}>
-          工序: {detail.processName} · 阶段: {detail.progressStage}
+          工序: {detail.processCode ? `${detail.processCode} ` : ''}{detail.processName} · 阶段: {detail.progressStage}
         </div>
         {detail.bundleStatusHints && detail.bundleStatusHints.length > 0 && (
           <div style={{

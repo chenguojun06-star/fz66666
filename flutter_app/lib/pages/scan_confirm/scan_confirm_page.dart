@@ -27,7 +27,9 @@ class ScanConfirmPage extends GetView<ScanConfirmController> {
                 items: [
                   SummaryItem(label: '订单号', value: controller.orderNo.value),
                   SummaryItem(label: '菲号', value: controller.bundleNo.value),
-                  SummaryItem(label: '工序', value: controller.processName.value),
+                  SummaryItem(label: '工序', value: controller.processCode.value.isNotEmpty
+                      ? '${controller.processCode.value} ${controller.processName.value}'
+                      : controller.processName.value),
                   SummaryItem(label: '数量', value: controller.quantity.value, color: AppColors.primary),
                 ],
               ),

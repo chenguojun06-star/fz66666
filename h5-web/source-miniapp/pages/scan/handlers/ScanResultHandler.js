@@ -37,13 +37,18 @@ function buildProcessOptions(processName, progressStage, stageResult) {
   const hidePrice = stageResult?.hidePrice || false;
   let options = allBundleProcesses
     .filter(p => !scannedSet.has(p.processName))
-    .map(p => ({
-      label: hidePrice ? p.processName : `${p.processName}（¥${Number(p.unitPrice || p.price || 0).toFixed(2)}）`,
-      value: p.processName,
-      scanType: normalizeScanType(p.processName, p.scanType),
-      unitPrice: Number(p.unitPrice || p.price || 0),
-      hidePrice: hidePrice,
-    }));
+    .map(p => {
+      const code = String(p.id || p.processCode || '').trim();
+      const displayName = code ? `${code} ${p.processName}` : p.processName;
+      return {
+        label: hidePrice ? displayName : `${displayName}（¥${Number(p.unitPrice || p.price || 0).toFixed(2)}）`,
+        value: p.processName,
+        processCode: code,
+        scanType: normalizeScanType(p.processName, p.scanType),
+        unitPrice: Number(p.unitPrice || p.price || 0),
+        hidePrice: hidePrice,
+      };
+    });
 
   // 兜底：若未携带 allBundleProcesses（如非菲号流程），退化为当前工序单选
   if (options.length === 0 && (processName || progressStage)) {

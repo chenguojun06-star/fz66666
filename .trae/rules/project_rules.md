@@ -606,3 +606,41 @@ result.put("nextStageHint", "下一环节: " + nextStage);
 ```
 
 扫码类型链路：`cutting → production → quality → warehouse`
+
+## 规则32：工序编号+工序名称必须同时显示
+
+### 核心规则
+所有显示工序信息的地方，必须同时显示**工序编号**和**工序名称**，格式为 `{编号} {名称}`（如 "01 裁剪"、"03 上领"）。
+
+### 工序编号来源
+工序编号来自模板 `progressWorkflowJson` 中的 `id` 字段，后端 `/process-config` API 返回的 `id` 字段。
+
+### PC端已实现的格式化函数
+```typescript
+// frontend/src/utils/productionStage.ts
+export const formatProcessDisplayName = (processCode?: string, processName?: string): string => {
+  const code = String(processCode || '').trim();
+  const name = String(processName || '').trim();
+  if (!code && !name) return '-';
+  if (!code) return name || '-';
+  if (!name) return code;
+  return `${code} ${name}`;  // 如 "01 裁剪"
+};
+```
+
+### 各端实现方式
+
+| 端 | 实现方式 | 示例 |
+|---|---------|------|
+| PC端 | `formatProcessDisplayName(record.id, v)` | "01 裁剪" |
+| 小程序 | `` `${p.id} ${p.processName}` `` | "01 裁剪" |
+| H5 | `` `${p.id} ${p.processName}` `` | "01 裁剪" |
+| Flutter | `` '${processCode} ${processName}' `` | "01 裁剪" |
+
+### 必须显示工序编号的位置
+1. 订单管理 - 父子工序聚合弹窗（ProcessDetailModal）
+2. 工序跟进弹窗（ProcessTrackingTable / NodeDetailModal）
+3. 扫码确认页 - 工序选择器选项
+4. 扫码结果页 - 工序信息栏
+5. 进度详情页 - 子工序列表
+6. 订单全流程页（OrderFlow）

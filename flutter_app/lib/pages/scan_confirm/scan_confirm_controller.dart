@@ -11,6 +11,7 @@ class ScanConfirmController extends GetxController {
   final orderNo = ''.obs;
   final bundleNo = ''.obs;
   final processName = ''.obs;
+  final processCode = ''.obs;
   final quantity = ''.obs;
   final details = <SummaryItemData>[].obs;
 
@@ -39,6 +40,7 @@ class ScanConfirmController extends GetxController {
         if (data is Map && data['code'] == 200 && data['data'] != null) {
           final order = data['data'] as Map<String, dynamic>;
           processName.value = order['currentProcessName']?.toString() ?? '';
+          processCode.value = order['currentProcessCode']?.toString() ?? '';
           quantity.value = order['quantity']?.toString() ?? order['totalQuantity']?.toString() ?? '0';
           details.value = [
             SummaryItemData(key: '款号', value: order['styleNo']?.toString() ?? '-'),
