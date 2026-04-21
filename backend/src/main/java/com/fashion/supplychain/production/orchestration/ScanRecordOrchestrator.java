@@ -425,6 +425,28 @@ public class ScanRecordOrchestrator {
             }
         }
 
+        // 裁剪完成后普通人员不能撤回，仅管理员可撤回
+        String scanType = hasText(target.getScanType()) ? target.getScanType().trim().toLowerCase() : "";
+        boolean isCuttingScan = "cutting".equals(scanType)
+                || "裁剪".equals(hasText(target.getProgressStage()) ? target.getProgressStage().trim() : "");
+        if (isCuttingScan) {
+            UserContext cutCtx = UserContext.get();
+            String cutRole = cutCtx == null ? null : cutCtx.getRole();
+            boolean cutIsAdmin = cutRole != null && (cutRole.contains("admin") || cutRole.contains("manager")
+                    || cutRole.contains("supervisor") || cutRole.contains("主管") || cutRole.contains("管理员"));
+            if (!cutIsAdmin) {
+                String cutOrderId = TextUtils.safeText(target.getOrderId());
+                if (hasText(cutOrderId)) {
+                    CuttingTask cuttingTask = cuttingTaskService.getOne(new LambdaQueryWrapper<CuttingTask>()
+                            .eq(CuttingTask::getProductionOrderId, cutOrderId)
+                            .last("limit 1"));
+                    if (cuttingTask != null && "bundled".equalsIgnoreCase(cuttingTask.getStatus())) {
+                        throw new IllegalStateException("裁剪已完成分扎，普通人员无法撤回，请联系管理员处理");
+                    }
+                }
+            }
+        }
+
         // 时间限制：管理员5小时，普通用户30分钟
         LocalDateTime scanTime = target.getScanTime() != null ? target.getScanTime() : target.getCreateTime();
         if (scanTime != null) {

@@ -68,7 +68,7 @@ test.describe('裁剪单管理', () => {
   });
 
   test('裁剪单页面正常加载', async ({ page }) => {
-    await expect(page.locator('.ant-table, .ant-empty, .ant-spin')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('.ant-table, .ant-empty, .ant-spin').first()).toBeVisible({ timeout: 15000 });
   });
 
   test('裁剪单列表包含数据或空状态', async ({ page }) => {
@@ -86,6 +86,6 @@ test.describe('面料采购', () => {
 
   test('面料采购页面正常加载', async ({ page }) => {
     await expect(page.getByRole('heading', { name: '面料采购' }).first()).toBeVisible({ timeout: 15000 });
-    await expect(page.locator('.ant-table, .ant-empty, .ant-spin')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('.ant-table, .ant-empty, .ant-spin').first()).toBeVisible({ timeout: 15000 });
   });
 });

@@ -220,6 +220,24 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             repaired += ensureColumn(conn, schema, "t_material_picking_item", "material_type",
                     "VARCHAR(50) DEFAULT NULL COMMENT '物料类型'");
 
+            // --- t_material_picking 主表补列（审核/财务字段） ---
+            repaired += ensureColumn(conn, schema, "t_material_picking", "purchase_id",
+                    "VARCHAR(64) DEFAULT NULL COMMENT '关联采购单ID'");
+            repaired += ensureColumn(conn, schema, "t_material_picking", "audit_status",
+                    "VARCHAR(32) DEFAULT NULL COMMENT '审核状态'");
+            repaired += ensureColumn(conn, schema, "t_material_picking", "auditor_id",
+                    "VARCHAR(64) DEFAULT NULL COMMENT '审核人ID'");
+            repaired += ensureColumn(conn, schema, "t_material_picking", "auditor_name",
+                    "VARCHAR(128) DEFAULT NULL COMMENT '审核人姓名'");
+            repaired += ensureColumn(conn, schema, "t_material_picking", "audit_time",
+                    "DATETIME DEFAULT NULL COMMENT '审核时间'");
+            repaired += ensureColumn(conn, schema, "t_material_picking", "audit_remark",
+                    "VARCHAR(500) DEFAULT NULL COMMENT '审核备注'");
+            repaired += ensureColumn(conn, schema, "t_material_picking", "finance_status",
+                    "VARCHAR(32) DEFAULT NULL COMMENT '财务状态'");
+            repaired += ensureColumn(conn, schema, "t_material_picking", "finance_remark",
+                    "VARCHAR(500) DEFAULT NULL COMMENT '财务备注'");
+
             // --- t_cutting_bundle 补列 ---
             repaired += ensureColumn(conn, schema, "t_cutting_bundle", "root_bundle_id",
                     "VARCHAR(64) DEFAULT NULL COMMENT '根菲号ID'");
@@ -760,6 +778,62 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             // t_production_order.material_arrival_rate — 从未写入任何 Flyway 脚本
             repaired += ensureColumn(conn, schema, "t_production_order", "material_arrival_rate",
                     "INT DEFAULT NULL");
+
+            // --- t_production_order 补列（V20260307/V20260311/V20260223b 等因 COMMENT'' 或 Flyway 链断裂未执行）---
+            repaired += ensureColumn(conn, schema, "t_production_order", "org_unit_id",
+                    "VARCHAR(64) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "parent_org_unit_id",
+                    "VARCHAR(64) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "parent_org_unit_name",
+                    "VARCHAR(100) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "org_path",
+                    "VARCHAR(500) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "factory_contact_person",
+                    "VARCHAR(50) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "factory_contact_phone",
+                    "VARCHAR(20) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "merchandiser",
+                    "VARCHAR(50) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "customer_id",
+                    "VARCHAR(64) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "company",
+                    "VARCHAR(100) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "product_category",
+                    "VARCHAR(50) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "pattern_maker",
+                    "VARCHAR(50) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "production_progress",
+                    "INT DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "expected_ship_date",
+                    "DATE DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "node_operations",
+                    "LONGTEXT DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "created_by_id",
+                    "VARCHAR(64) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "created_by_name",
+                    "VARCHAR(100) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "source_biz_type",
+                    "VARCHAR(30) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "pushed_to_order",
+                    "INT DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "version",
+                    "INT NOT NULL DEFAULT 0");
+            repaired += ensureColumn(conn, schema, "t_production_order", "remarks",
+                    "VARCHAR(500) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "progress_workflow_locked_at",
+                    "DATETIME DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "progress_workflow_locked_by",
+                    "VARCHAR(64) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "progress_workflow_locked_by_name",
+                    "VARCHAR(100) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "procurement_confirmed_by",
+                    "VARCHAR(64) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "procurement_confirmed_by_name",
+                    "VARCHAR(100) DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "procurement_confirmed_at",
+                    "DATETIME DEFAULT NULL");
+            repaired += ensureColumn(conn, schema, "t_production_order", "procurement_confirm_remark",
+                    "VARCHAR(500) DEFAULT NULL");
 
             // --- t_style_process 补列 ---
             repaired += ensureColumn(conn, schema, "t_style_process", "difficulty",

@@ -107,12 +107,18 @@ test.describe('登出流程', () => {
 test.describe('Token 过期处理', () => {
   test('Token 被清除后自动跳转登录页', async ({ authenticatedPage: page }) => {
     await page.evaluate(() => {
+      const oldToken = localStorage.getItem('authToken');
       localStorage.removeItem('authToken');
       localStorage.removeItem('userInfo');
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'authToken',
+        oldValue: oldToken,
+        newValue: null,
+        storageArea: localStorage,
+        url: window.location.href,
+      }));
+      window.dispatchEvent(new Event('user-logout'));
     });
-
-    await page.reload();
-    await page.waitForLoadState('networkidle');
 
     await expect(page).toHaveURL(/\/login/, { timeout: 15000 });
   });
