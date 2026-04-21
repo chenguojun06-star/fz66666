@@ -298,6 +298,9 @@ public class PatternProductionController {
             @RequestParam(required = false) String endTime) {
         try {
             String operatorId = UserContext.userId();
+            if (!StringUtils.hasText(operatorId)) {
+                return Result.success(java.util.List.of());
+            }
 
             LambdaQueryWrapper<PatternScanRecord> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(PatternScanRecord::getOperatorId, operatorId)
@@ -314,23 +317,44 @@ public class PatternProductionController {
 
             List<PatternScanRecord> records = patternScanRecordService.list(wrapper);
 
+            java.util.Set<String> patternProductionIds = records.stream()
+                    .map(PatternScanRecord::getPatternProductionId)
+                    .filter(StringUtils::hasText)
+                    .collect(java.util.stream.Collectors.toSet());
+
+            java.util.Map<String, PatternProduction> productionMap = new HashMap<>();
+            if (!patternProductionIds.isEmpty()) {
+                patternProductionService.listByIds(patternProductionIds).forEach(p ->
+                        productionMap.put(p.getId(), p));
+            }
+
             List<Map<String, Object>> result = records.stream().map(r -> {
                 Map<String, Object> item = new HashMap<>();
                 item.put("id", r.getId());
                 item.put("scanType", "pattern");
                 item.put("scanResult", "success");
                 item.put("operationType", r.getOperationType());
+
+                String processLabel = _patternOperationLabel(r.getOperationType());
+                item.put("processName", processLabel);
+                item.put("progressStage", processLabel);
+
                 item.put("operatorName", r.getOperatorName());
+                item.put("operatorId", r.getOperatorId());
                 item.put("styleNo", r.getStyleNo());
                 item.put("color", r.getColor());
                 item.put("warehouseCode", r.getWarehouseCode());
                 item.put("remark", r.getRemark());
                 item.put("scanTime", r.getScanTime() != null
                         ? r.getScanTime().format(fmt) : null);
-                item.put("progressStage", _patternOperationLabel(r.getOperationType()));
-                item.put("processName", null);
-                item.put("quantity", 0);
+
+                PatternProduction pp = r.getPatternProductionId() != null
+                        ? productionMap.get(r.getPatternProductionId()) : null;
+                int qty = (pp != null && pp.getQuantity() != null) ? pp.getQuantity() : 1;
+                item.put("quantity", qty);
                 item.put("unitPrice", null);
+                item.put("orderId", pp != null ? pp.getId() : null);
+                item.put("orderNo", r.getStyleNo());
                 return item;
             }).collect(Collectors.toList());
 

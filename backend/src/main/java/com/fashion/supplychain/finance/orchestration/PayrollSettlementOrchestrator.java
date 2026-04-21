@@ -284,7 +284,7 @@ public class PayrollSettlementOrchestrator {
         if (StringUtils.hasText(q.scanType)) {
             uw.eq(ScanRecord::getScanType, q.scanType);
         } else {
-            uw.in(ScanRecord::getScanType, java.util.Arrays.asList("production", "cutting"));
+            uw.in(ScanRecord::getScanType, java.util.Arrays.asList("production", "cutting", "pattern"));
         }
         if (q.startTime != null) {
             uw.ge(ScanRecord::getScanTime, q.startTime);

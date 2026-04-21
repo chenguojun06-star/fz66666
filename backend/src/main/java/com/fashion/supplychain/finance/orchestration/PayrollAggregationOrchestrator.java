@@ -85,11 +85,12 @@ public class PayrollAggregationOrchestrator {
         qw.eq("scan_result", "success");
         qw.gt("quantity", 0);
 
-        // 工资统计只包含生产类、裁剪类、编排推进类的扫码记录
+        // 工资统计包含生产类、裁剪类、编排推进类、样衣类的扫码记录
         // 排除：procurement(采购)、quality(质检领取/验收/入库)、warehouse(仓储)等系统流程记录
         // orchestration = 系统编排层手动推进工序时产生的记录，等同于生产记录，应计入工资
+        // pattern = 样衣扫码记录（领取样板/车板扫码/完成确认等），应计入工资
         // 注意：progress_stage 的防御性过滤（下单/采购等）已在下方处理，此处仅区分大类
-        qw.in("scan_type", "production", "cutting", "orchestration");
+        qw.in("scan_type", "production", "cutting", "orchestration", "pattern");
 
         // ★ 关键：工资结算(内)只统计本厂内部员工的扫码记录
         // factory_id IS NULL = 本厂内部账号扫码；factory_id 非空 = 外发工厂账号扫码（走订单结算）

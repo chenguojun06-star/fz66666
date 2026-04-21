@@ -443,7 +443,7 @@ async function loadMyHistory(page, refresh = false) {
           records = records.concat(formatted);
         }
       } catch (pe) {
-        // 样衣记录加载失败不影响主记录
+        console.warn('[loadMyHistory] 样衣记录加载失败:', pe.message || pe);
       }
     }
 

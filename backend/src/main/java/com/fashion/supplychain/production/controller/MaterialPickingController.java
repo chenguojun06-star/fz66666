@@ -32,6 +32,12 @@ public class MaterialPickingController {
     @Autowired
     private com.fashion.supplychain.production.orchestration.SysNoticeOrchestrator sysNoticeOrchestrator;
 
+    @Autowired
+    private com.fashion.supplychain.production.service.MaterialStockService materialStockService;
+
+    @Autowired
+    private com.fashion.supplychain.production.service.MaterialPurchaseService materialPurchaseService;
+
     @PostMapping
     public Result<String> create(@RequestBody PickingRequest request) {
         return Result.success(materialPickingService.createPicking(request.getPicking(), request.getItems()));
@@ -126,6 +132,22 @@ public class MaterialPickingController {
                 record.setFactoryType(order.getFactoryType());
             }
         }
+
+        java.util.Set<String> pickingIds = records.stream()
+                .map(MaterialPicking::getId)
+                .filter(StringUtils::hasText)
+                .collect(java.util.stream.Collectors.toSet());
+        if (!pickingIds.isEmpty()) {
+            List<MaterialPickingItem> allItems = materialPickingItemMapper.selectList(
+                    new LambdaQueryWrapper<MaterialPickingItem>()
+                            .in(MaterialPickingItem::getPickingId, pickingIds));
+            java.util.Map<String, List<MaterialPickingItem>> itemsByPickingId = allItems.stream()
+                    .collect(java.util.stream.Collectors.groupingBy(MaterialPickingItem::getPickingId));
+            for (MaterialPicking record : records) {
+                record.setItems(itemsByPickingId.getOrDefault(record.getId(), java.util.Collections.emptyList()));
+            }
+        }
+
         return Result.success(result);
     }
 
@@ -145,7 +167,8 @@ public class MaterialPickingController {
     }
 
     /**
-     * 取消待出库领料单（仅 pending 状态可操作，不涉及库存回退）
+     * 取消待出库领料单（仅 pending 状态可操作）
+     * 回退已锁定的库存 + 恢复关联采购单状态
      */
     @PostMapping("/{id}/cancel-pending")
     public Result<Void> cancelPending(@PathVariable String id) {
@@ -160,11 +183,49 @@ public class MaterialPickingController {
         if (!"pending".equals(picking.getStatus())) {
             throw new IllegalStateException("仅待出库状态的领料单可取消");
         }
-        // 删除领料明细
+
+        List<MaterialPickingItem> items = materialPickingItemMapper.selectList(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialPickingItem>()
+                        .eq(MaterialPickingItem::getPickingId, id));
+
+        for (MaterialPickingItem item : items) {
+            if (item.getMaterialStockId() != null && item.getQuantity() != null && item.getQuantity() > 0) {
+                try {
+                    materialStockService.unlockStock(item.getMaterialStockId(), item.getQuantity());
+                    log.info("[Picking] 取消待出库: 解锁库存 stockId={}, qty={}", item.getMaterialStockId(), item.getQuantity());
+                } catch (Exception e) {
+                    log.warn("[Picking] 取消待出库: 解锁库存失败 stockId={}, qty={}, error={}",
+                            item.getMaterialStockId(), item.getQuantity(), e.getMessage());
+                }
+            }
+        }
+
+        String cancelPurchaseId = picking.getPurchaseId();
+        if (cancelPurchaseId == null || cancelPurchaseId.isEmpty()) {
+            String remark = picking.getRemark();
+            if (remark != null && remark.contains("purchaseId=")) {
+                cancelPurchaseId = remark.substring(remark.indexOf("purchaseId=") + "purchaseId=".length()).trim();
+            }
+        }
+        if (cancelPurchaseId != null && !cancelPurchaseId.isEmpty()) {
+            try {
+                com.fashion.supplychain.production.entity.MaterialPurchase purchase = materialPurchaseService.getById(cancelPurchaseId);
+                if (purchase != null && "WAREHOUSE_PENDING".equals(purchase.getStatus())) {
+                    purchase.setStatus("pending");
+                    purchase.setReceiverId(null);
+                    purchase.setReceiverName(null);
+                    purchase.setUpdateTime(java.time.LocalDateTime.now());
+                    materialPurchaseService.updateById(purchase);
+                    log.info("[Picking] 取消待出库: 恢复采购单状态 purchaseId={}", cancelPurchaseId);
+                }
+            } catch (Exception e) {
+                log.warn("[Picking] 取消待出库: 恢复采购单状态失败 purchaseId={}, error={}", cancelPurchaseId, e.getMessage());
+            }
+        }
+
         materialPickingItemMapper.delete(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<MaterialPickingItem>()
                         .eq(MaterialPickingItem::getPickingId, id));
-        // 删除领料单
         materialPickingService.removeById(id);
         log.info("[Picking] 取消待出库领料单: pickingNo={}", picking.getPickingNo());
         return Result.success(null);

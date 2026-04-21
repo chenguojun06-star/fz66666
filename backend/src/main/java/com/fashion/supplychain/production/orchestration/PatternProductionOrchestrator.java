@@ -5,11 +5,13 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.production.entity.PatternProduction;
 import com.fashion.supplychain.production.entity.PatternScanRecord;
+import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.helper.PatternEnrichmentHelper;
 import com.fashion.supplychain.production.helper.PatternStatusHelper;
 import com.fashion.supplychain.production.helper.PatternStockHelper;
 import com.fashion.supplychain.production.service.PatternProductionService;
 import com.fashion.supplychain.production.service.PatternScanRecordService;
+import com.fashion.supplychain.production.service.ScanRecordService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +41,9 @@ public class PatternProductionOrchestrator {
 
     @Autowired
     private PatternScanRecordService patternScanRecordService;
+
+    @Autowired
+    private ScanRecordService scanRecordService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -211,6 +216,32 @@ public class PatternProductionOrchestrator {
 
         patternScanRecordService.save(scanRecord);
 
+        // 同步写入 t_scan_record，使工资统计能覆盖样衣扫码
+        try {
+            ScanRecord sr = new ScanRecord();
+            sr.setScanType("pattern");
+            sr.setScanResult("success");
+            sr.setOperatorId(operatorId);
+            sr.setOperatorName(operatorName);
+            sr.setScanTime(scanRecord.getScanTime());
+            sr.setStyleNo(pattern.getStyleNo());
+            sr.setOrderNo(pattern.getStyleNo());
+            sr.setColor(pattern.getColor());
+            String processLabel = patternOperationLabel(operationType);
+            sr.setProcessName(processLabel);
+            sr.setProgressStage(processLabel);
+            int qty = (quantity != null && quantity > 0) ? quantity : 1;
+            sr.setQuantity(qty);
+            sr.setTenantId(UserContext.tenantId());
+            sr.setFactoryId(null);
+            sr.setCuttingBundleNo(null);
+            sr.setRemark(remark);
+            sr.setCreateTime(LocalDateTime.now());
+            scanRecordService.saveScanRecord(sr);
+        } catch (Exception e) {
+            log.warn("样衣扫码同步写入ScanRecord失败，不影响主流程", e);
+        }
+
         // 更新样板状态
         statusHelper.updatePatternStatusByOperation(pattern, operationType, operatorName);
 
@@ -350,6 +381,20 @@ public class PatternProductionOrchestrator {
             } catch (Exception e) {
                 log.warn("Failed to parse {}: {}", key, params.get(key));
             }
+        }
+    }
+
+    private String patternOperationLabel(String operationType) {
+        if (operationType == null) return "样衣操作";
+        switch (operationType) {
+            case "RECEIVE":          return "领取样板";
+            case "PLATE":            return "车板扫码";
+            case "FOLLOW_UP":        return "跟单确认";
+            case "COMPLETE":         return "完成确认";
+            case "WAREHOUSE_IN":     return "样衣入库";
+            case "WAREHOUSE_OUT":    return "样衣出库";
+            case "WAREHOUSE_RETURN": return "样衣归还";
+            default:                 return "样衣操作";
         }
     }
 }

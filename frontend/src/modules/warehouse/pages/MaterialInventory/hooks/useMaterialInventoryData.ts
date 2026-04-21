@@ -300,7 +300,7 @@ export function useMaterialInventoryData() {
     fabricWeight: record.items?.[0]?.fabricWeight,
     fabricComposition: record.items?.[0]?.fabricComposition,
     items: (record.items || []).map((item) => ({
-      batchNo: '',
+      batchNo: item.warehouseLocation || '-',
       warehouseLocation: item.warehouseLocation || '',
       quantity: item.quantity,
       unit: item.unit,
@@ -316,17 +316,10 @@ export function useMaterialInventoryData() {
     try {
       const res = await materialInventoryApi.listPendingPickings({ status: 'pending', pageSize: 100 });
       const records = res?.data?.records || [];
-      const withItems = await Promise.all(
-        (records as PendingPickingType[]).map(async (p) => {
-          try {
-            const itemRes = await materialInventoryApi.getPickingItems(p.id);
-            const items: PendingPickingItem[] = Array.isArray(itemRes?.data) ? itemRes.data : [];
-            return { ...p, items };
-          } catch {
-            return { ...p, items: [] };
-          }
-        })
-      );
+      const withItems = (records as PendingPickingType[]).map((p) => {
+        const items: PendingPickingItem[] = Array.isArray((p as any).items) ? (p as any).items : [];
+        return { ...p, items };
+      });
       setPendingPickings(withItems as any);
     } catch {
       // silent

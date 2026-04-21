@@ -277,7 +277,7 @@ public class MaterialPurchasePickingHelper {
         picking.setUsageType(resolveUsageType(purchase));
         picking.setPickTime(LocalDateTime.now());
         picking.setStatus("pending");  // 仓库待确认出库
-        // 存储 purchaseId，仓库确认出库时用于回写采购单状态
+        picking.setPurchaseId(purchase.getId() != null ? purchase.getId() : "");
         picking.setRemark("WAREHOUSE_PICK|purchaseId=" + (purchase.getId() != null ? purchase.getId() : ""));
         picking.setCreateTime(LocalDateTime.now());
         picking.setUpdateTime(LocalDateTime.now());
@@ -530,8 +530,8 @@ public class MaterialPurchasePickingHelper {
         picking.setPickupType(resolvePickupType(purchase));
         picking.setUsageType(resolveUsageType(purchase));
         picking.setPickTime(LocalDateTime.now());
-        picking.setStatus("pending");  // 待仓库确认出库
-        // 存储 purchaseId，仓库确认出库时用于回写采购单状态
+        picking.setStatus("pending");  // 仓库待确认出库
+        picking.setPurchaseId(purchaseId);
         picking.setRemark("WAREHOUSE_PICK|purchaseId=" + purchaseId);
         picking.setCreateTime(LocalDateTime.now());
         picking.setUpdateTime(LocalDateTime.now());
@@ -645,25 +645,27 @@ public class MaterialPurchasePickingHelper {
         materialPickingService.updateById(picking);
 
         MaterialPurchase purchase = null;
-        String remark = picking.getRemark();
-        if (StringUtils.hasText(remark) && remark.contains("purchaseId=")) {
-            String associatedPurchaseId = remark.substring(remark.indexOf("purchaseId=") + "purchaseId=".length()).trim();
-            if (StringUtils.hasText(associatedPurchaseId)) {
-                purchase = materialPurchaseService.getById(associatedPurchaseId);
-                if (purchase != null) {
-                    purchase.setStatus(MaterialConstants.STATUS_AWAITING_CONFIRM);
-                    purchase.setReceivedTime(LocalDateTime.now());
-                    purchase.setUpdateTime(LocalDateTime.now());
-                    materialPurchaseService.updateById(purchase);
+        String associatedPurchaseId = picking.getPurchaseId();
+        if (!StringUtils.hasText(associatedPurchaseId)) {
+            String remark = picking.getRemark();
+            if (StringUtils.hasText(remark) && remark.contains("purchaseId=")) {
+                associatedPurchaseId = remark.substring(remark.indexOf("purchaseId=") + "purchaseId=".length()).trim();
+            }
+        }
+        if (StringUtils.hasText(associatedPurchaseId)) {
+            purchase = materialPurchaseService.getById(associatedPurchaseId);
+            if (purchase != null) {
+                purchase.setStatus(MaterialConstants.STATUS_AWAITING_CONFIRM);
+                purchase.setReceivedTime(LocalDateTime.now());
+                purchase.setUpdateTime(LocalDateTime.now());
+                materialPurchaseService.updateById(purchase);
 
-                    // 同步订单面料到货率
-                    try {
-                        if (StringUtils.hasText(purchase.getOrderId())) {
-                            helper.recomputeAndUpdateMaterialArrivalRate(purchase.getOrderId(), productionOrderOrchestrator);
-                        }
-                    } catch (Exception e) {
-                        log.warn("confirmPickingOutbound: 同步订单面料到货率失败, purchaseId={}", associatedPurchaseId, e);
+                try {
+                    if (StringUtils.hasText(purchase.getOrderId())) {
+                        helper.recomputeAndUpdateMaterialArrivalRate(purchase.getOrderId(), productionOrderOrchestrator);
                     }
+                } catch (Exception e) {
+                    log.warn("confirmPickingOutbound: 同步订单面料到货率失败, purchaseId={}", associatedPurchaseId, e);
                 }
             }
         }

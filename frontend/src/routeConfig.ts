@@ -205,7 +205,6 @@ export const menuConfig: MenuSection[] = [
     icon: React.createElement(BuildOutlined),
     items: [
       { label: '我的订单', path: paths.productionList, icon: React.createElement(BuildOutlined) },
-      { label: '领料出库', path: paths.materialPicking, icon: React.createElement(ShoppingCartOutlined) },
       { label: '裁剪管理', path: paths.cutting, icon: React.createElement(ScissorOutlined) },
       { label: '工序跟进', path: paths.progressDetail, icon: React.createElement(FileSearchOutlined) },
       { label: '外发工厂', path: paths.externalFactory, icon: React.createElement(ThunderboltOutlined) },

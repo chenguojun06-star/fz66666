@@ -24,6 +24,7 @@ public class MaterialPicking {
     private String usageType;
     private LocalDateTime pickTime;
     private String status;
+    private String purchaseId;
     private String remark;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
@@ -40,4 +41,7 @@ public class MaterialPicking {
 
     @TableField(exist = false)
     private String factoryType;
+
+    @TableField(exist = false)
+    private java.util.List<MaterialPickingItem> items;
 }

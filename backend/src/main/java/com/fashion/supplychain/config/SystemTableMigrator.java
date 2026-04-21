@@ -535,14 +535,22 @@ public class SystemTableMigrator {
     }
 
     private void ensureMissingColumns(JdbcTemplate jdbc) {
-        if (!dbHelper.tableExists("t_secondary_process")) return;
         try {
-            addColumnIfNotExists(jdbc, "t_secondary_process", "approval_status", "VARCHAR(32) DEFAULT NULL");
-            addColumnIfNotExists(jdbc, "t_secondary_process", "approved_by_id", "VARCHAR(64) DEFAULT NULL");
-            addColumnIfNotExists(jdbc, "t_secondary_process", "approved_by_name", "VARCHAR(128) DEFAULT NULL");
-            addColumnIfNotExists(jdbc, "t_secondary_process", "approved_time", "DATETIME DEFAULT NULL");
+            if (dbHelper.tableExists("t_secondary_process")) {
+                addColumnIfNotExists(jdbc, "t_secondary_process", "approval_status", "VARCHAR(32) DEFAULT NULL");
+                addColumnIfNotExists(jdbc, "t_secondary_process", "approved_by_id", "VARCHAR(64) DEFAULT NULL");
+                addColumnIfNotExists(jdbc, "t_secondary_process", "approved_by_name", "VARCHAR(128) DEFAULT NULL");
+                addColumnIfNotExists(jdbc, "t_secondary_process", "approved_time", "DATETIME DEFAULT NULL");
+            }
         } catch (Exception e) {
             log.warn("Failed to add missing columns to t_secondary_process: {}", e.getMessage());
+        }
+        try {
+            if (dbHelper.tableExists("t_material_picking")) {
+                addColumnIfNotExists(jdbc, "t_material_picking", "purchase_id", "VARCHAR(64) DEFAULT NULL");
+            }
+        } catch (Exception e) {
+            log.warn("Failed to add purchase_id column to t_material_picking: {}", e.getMessage());
         }
     }
 
