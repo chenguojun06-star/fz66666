@@ -49,11 +49,12 @@ public class InvoiceOrchestrator {
         String invoiceType = (String) params.get("invoiceType");
         String keyword     = (String) params.get("keyword");
 
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
 
         LambdaQueryWrapper<Invoice> qw = new LambdaQueryWrapper<Invoice>()
                 .eq(Invoice::getDeleteFlag, 0)
-                .eq(tenantId != null, Invoice::getTenantId, tenantId)
+                .eq(Invoice::getTenantId, tenantId)
                 .eq(StringUtils.hasText(status), Invoice::getStatus, status)
                 .eq(StringUtils.hasText(invoiceType), Invoice::getInvoiceType, invoiceType)
                 .and(StringUtils.hasText(keyword), w -> w
@@ -66,15 +67,22 @@ public class InvoiceOrchestrator {
     }
 
     public Invoice getById(String id) {
-        return invoiceService.getById(id);
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        return invoiceService.lambdaQuery()
+                .eq(Invoice::getId, id)
+                .eq(Invoice::getTenantId, tenantId)
+                .one();
     }
 
     public Map<String, Object> getStats() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         List<Invoice> all = invoiceService.list(
                 new LambdaQueryWrapper<Invoice>()
                         .eq(Invoice::getDeleteFlag, 0)
-                        .eq(tenantId != null, Invoice::getTenantId, tenantId));
+                        .eq(Invoice::getTenantId, tenantId)
+                        .last("LIMIT 5000"));
 
         BigDecimal totalIssued = BigDecimal.ZERO;
         long issuedCount = 0;
@@ -135,6 +143,7 @@ public class InvoiceOrchestrator {
         TenantAssert.assertTenantContext();
         Invoice existing = invoiceService.getById(invoice.getId());
         if (existing == null) throw new RuntimeException("发票不存在");
+        TenantAssert.assertBelongsToCurrentTenant(existing.getTenantId(), "发票");
         if (!"DRAFT".equals(existing.getStatus())) throw new RuntimeException("只有草稿状态的发票可以编辑");
 
         // 保护不可修改的字段
@@ -156,6 +165,7 @@ public class InvoiceOrchestrator {
         TenantAssert.assertTenantContext();
         Invoice inv = invoiceService.getById(id);
         if (inv == null) throw new RuntimeException("发票不存在");
+        TenantAssert.assertBelongsToCurrentTenant(inv.getTenantId(), "发票");
         if (!"DRAFT".equals(inv.getStatus())) throw new RuntimeException("只有草稿状态的发票可以开具");
 
         inv.setStatus("ISSUED");
@@ -170,6 +180,7 @@ public class InvoiceOrchestrator {
         TenantAssert.assertTenantContext();
         Invoice inv = invoiceService.getById(id);
         if (inv == null) throw new RuntimeException("发票不存在");
+        TenantAssert.assertBelongsToCurrentTenant(inv.getTenantId(), "发票");
         if ("CANCELLED".equals(inv.getStatus())) throw new RuntimeException("发票已作废");
 
         inv.setStatus("CANCELLED");

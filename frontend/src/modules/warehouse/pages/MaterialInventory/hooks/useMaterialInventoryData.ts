@@ -628,7 +628,7 @@ export function useMaterialInventoryData() {
       })
     );
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>料卷二维码标签</title><style>
-      body{font-family:sans-serif;padding:10px}
+      body{font-family:'Heiti SC','Songti SC','Hiragino Sans GB','STSong','Arial Unicode MS',serif;padding:10px}
       .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
       .card{border:1px solid #ddd;border-radius:6px;padding:8px;text-align:center;break-inside:avoid}
       .code{font-size:11px;color:#666;margin:2px 0}

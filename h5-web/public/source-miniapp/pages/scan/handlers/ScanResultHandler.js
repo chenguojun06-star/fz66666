@@ -37,13 +37,19 @@ function buildProcessOptions(processName, progressStage, stageResult) {
   const hidePrice = stageResult?.hidePrice || false;
   let options = allBundleProcesses
     .filter(p => !scannedSet.has(p.processName))
-    .map(p => ({
-      label: hidePrice ? p.processName : `${p.processName}（¥${Number(p.unitPrice || p.price || 0).toFixed(2)}）`,
-      value: p.processName,
-      scanType: normalizeScanType(p.processName, p.scanType),
-      unitPrice: Number(p.unitPrice || p.price || 0),
-      hidePrice: hidePrice,
-    }));
+    .map(p => {
+      const code = String(p.id || p.processCode || '').trim();
+      const displayName = code ? `${code} ${p.processName}` : p.processName;
+      return {
+        label: hidePrice ? displayName : `${displayName}（¥${Number(p.unitPrice || p.price || 0).toFixed(2)}）`,
+        value: p.processName,
+        processCode: code,
+        progressStage: p.progressStage || '',
+        scanType: normalizeScanType(p.processName, p.scanType),
+        unitPrice: Number(p.unitPrice || p.price || 0),
+        hidePrice: hidePrice,
+      };
+    });
 
   // 兜底：若未携带 allBundleProcesses（如非菲号流程），退化为当前工序单选
   if (options.length === 0 && (processName || progressStage)) {
@@ -51,6 +57,8 @@ function buildProcessOptions(processName, progressStage, stageResult) {
     options = [{
       label: fallbackName,
       value: fallbackName,
+      processCode: '',
+      progressStage: progressStage || '',
       scanType: normalizeScanType(fallbackName, stageResult?.scanType),
       unitPrice: Number(stageResult?.unitPrice || 0),
       hidePrice: true,
@@ -163,12 +171,12 @@ function buildScanData(confirm, option, confirmedQty) {
   return {
     ...existingScanData,
     processName: option.value,
-    progressStage: option.value,
+    processCode: option.processCode || '',
+    progressStage: option.progressStage || existingScanData.progressStage || '',
     scanType: normalizedScanType,
     unitPrice: option.unitPrice || 0,
     quantity: confirmedQty,
     qualityStage,
-    // 入库模式：携带仓库编号
     warehouse: warehouseCode,
     ...(confirm.isDefectiveReentry ? { isDefectiveReentry: 'true' } : {}),
   };
@@ -223,7 +231,7 @@ function handleSubmitSuccess({ ctx, confirm, result, confirmedQty, scanData, clo
     ...result,
     recordId,
     processName: confirm.processName,
-    progressStage: confirm.progressStage || confirm.processName,
+    progressStage: confirm.progressStage || existingScanData.progressStage || confirm.processName,
     bundleNo: confirm.bundleNo,
     orderNo: confirm.orderNo,
     quantity: confirmedQty,
@@ -268,7 +276,7 @@ function onProcessScrollSelect(ctx, e) {
     'scanResultConfirm.selectedProcessCount': selectionSummary.selectedProcessCount,
     'scanResultConfirm.selectedProcessAmount': selectionSummary.selectedProcessAmount,
     'scanResultConfirm.processName': primaryOption.value,
-    'scanResultConfirm.progressStage': primaryOption.value,
+    'scanResultConfirm.progressStage': primaryOption.progressStage || '',
     'scanResultConfirm.scanType': primaryOption.scanType,
     'scanResultConfirm.unitPrice': primaryOption.unitPrice || 0,
     'scanResultConfirm.hasWarehouseSelected': selectedOptions.some(item => item.scanType === 'warehouse'),
@@ -350,7 +358,7 @@ async function onConfirmScanResult(ctx) {
         confirm: {
           ...confirm,
           processName: option.value,
-          progressStage: option.value,
+          progressStage: option.progressStage || confirm.progressStage || '',
         },
         result,
         confirmedQty,

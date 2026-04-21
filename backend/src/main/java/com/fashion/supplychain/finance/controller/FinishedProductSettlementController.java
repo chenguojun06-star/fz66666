@@ -318,6 +318,7 @@ public class FinishedProductSettlementController {
         }
 
         wrapper.orderByDesc(FinishedProductSettlement::getCreateTime);
+        wrapper.last("LIMIT 5000");
         List<FinishedProductSettlement> allData = settlementService.list(wrapper);
 
         // 按工厂聚合

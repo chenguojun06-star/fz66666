@@ -391,6 +391,7 @@ class ScanDataProcessor {
       scanCode: parsedData.scanCode || '',
       skuItems: parsedData.skuItems || [],
       processName: stageResult.processName,
+      processCode: stageResult.processCode || '',
       progressStage: stageResult.progressStage,
       scanType: stageResult.scanType,
       unitPrice: Number(stageResult.unitPrice || 0),

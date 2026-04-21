@@ -17,7 +17,7 @@
     <view class="field-list">
       <view wx:if="{{detail.processName}}" class="field-row">
         <text class="field-label">当前工序</text>
-        <text class="field-value highlight">{{detail.processName}}</text>
+        <text class="field-value highlight">{{detail.processCode ? detail.processCode + ' ' + detail.processName : detail.processName}}</text>
       </view>
       <view wx:if="{{detail.bedNo}}" class="field-row">
         <text class="field-label">床号</text>

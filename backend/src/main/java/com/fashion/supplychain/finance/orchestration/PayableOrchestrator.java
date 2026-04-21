@@ -95,7 +95,8 @@ public class PayableOrchestrator {
         List<Payable> all = payableService.list(
                 new LambdaQueryWrapper<Payable>()
                         .eq(Payable::getDeleteFlag, 0)
-                        .eq(Payable::getTenantId, tenantId));
+                        .eq(Payable::getTenantId, tenantId)
+                        .last("LIMIT 5000"));
 
         BigDecimal pendingAmount = BigDecimal.ZERO;
         BigDecimal overdueAmount = BigDecimal.ZERO;
@@ -200,6 +201,7 @@ public class PayableOrchestrator {
         TenantAssert.assertTenantContext();
         Payable p = payableService.getById(id);
         if (p == null) throw new RuntimeException("应付单不存在");
+        TenantAssert.assertBelongsToCurrentTenant(p.getTenantId(), "应付单");
         if ("PAID".equals(p.getStatus())) throw new RuntimeException("该应付单已结清，无法重复付款");
 
         // amount为null时默认结清全部剩余款项

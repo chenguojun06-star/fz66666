@@ -42,6 +42,8 @@ Page({
       processOptions = [{
         label: raw.processName,
         value: raw.processName,
+        processCode: '',
+        progressStage: raw.progressStage || '',
         scanType: raw.scanType || 'production',
         unitPrice: 0,
         hidePrice: true,
@@ -56,6 +58,8 @@ Page({
       processOptions = [{
         label: '入库',
         value: raw.progressStage || 'warehouse',
+        processCode: '',
+        progressStage: raw.progressStage || 'warehouse',
         scanType: 'warehouse',
         unitPrice: 0,
         hidePrice: true,
@@ -94,6 +98,7 @@ Page({
         orderNo: raw.orderNo || '',
         bundleNo: bundleNo,
         processName: raw.processName || '',
+        processCode: raw.processCode || (raw.stageResult && raw.stageResult.processCode) || '',
         progressStage: raw.progressStage || '',
         timeDisplay: raw.timeDisplay || '',
         color: color,
@@ -219,9 +224,13 @@ Page({
       })
       .map(function(p) {
         var name = p.processName || p.name || '';
+        var code = String(p.id || p.processCode || '').trim();
+        var displayName = code ? code + ' ' + name : name;
         return {
-          label: name,
+          label: displayName,
           value: name,
+          processCode: code,
+          progressStage: p.progressStage || name,
           scanType: p.scanType || 'production',
           unitPrice: p.unitPrice || 0,
           hidePrice: !p.unitPrice,
@@ -350,6 +359,8 @@ Page({
         var scanPayload = Object.assign({}, raw.scanData || {}, {
           scanType: normalizeScanType(raw.progressStage, effectiveScanType),
           processName: option.value,
+          processCode: option.processCode || '',
+          progressStage: option.progressStage || raw.progressStage || '',
           quantity: quantity
         });
         if (raw.progressStage === 'quality' || raw.progressStage === '质检') {
