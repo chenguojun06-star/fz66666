@@ -31,9 +31,27 @@ class ScanQualityController extends GetxController {
     }
   }
 
-  Future<void> submitQuality(String orderId, int qualified, int defective, {String? remark}) async {
+  Future<void> submitQuality(String orderId, int qualified, int defective, {String? remark, String? scanCode, String? orderNo}) async {
     try {
+      final receiveRes = await _api.executeScan({
+        'scanCode': scanCode ?? orderId,
+        'orderNo': orderNo ?? '',
+        'orderId': orderId,
+        'scanType': 'quality',
+        'qualityStage': 'receive',
+        'quantity': qualified + defective,
+        'source': 'flutter',
+      });
+      final receiveData = receiveRes.data;
+      if (receiveData is! Map || receiveData['code'] != 200) {
+        final msg = receiveData is Map ? (receiveData['message'] ?? '领取失败') : '领取失败';
+        Get.snackbar('领取失败', msg.toString(), snackPosition: SnackPosition.TOP);
+        return;
+      }
+
       final res = await _api.executeScan({
+        'scanCode': scanCode ?? orderId,
+        'orderNo': orderNo ?? '',
         'orderId': orderId,
         'scanType': 'quality',
         'qualityStage': 'confirm',

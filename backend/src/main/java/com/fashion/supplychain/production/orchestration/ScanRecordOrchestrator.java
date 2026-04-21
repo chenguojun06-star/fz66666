@@ -246,6 +246,11 @@ public class ScanRecordOrchestrator {
             autoProcess = true;
         }
 
+        Set<String> ALLOWED_SCAN_TYPES = Set.of("cutting", "production", "quality", "warehouse", "pattern");
+        if (!ALLOWED_SCAN_TYPES.contains(scanType)) {
+            throw new IllegalArgumentException("不支持的扫码类型: " + scanType);
+        }
+
         // 质检扫码路由
         if ("quality".equals(scanType)) {
             Map<String, Object> r = executeQualityScan(safeParams, requestId, operatorId, operatorName, ctx);
@@ -332,7 +337,11 @@ public class ScanRecordOrchestrator {
         ScanRecord target = null;
         // 优先通过 recordId 直接查找（小程序即时撤销 / PC端撤回）
         if (hasText(recordId)) {
-            target = scanRecordService.getById(recordId);
+            Long tenantId = UserContext.tenantId();
+            target = scanRecordService.lambdaQuery()
+                    .eq(ScanRecord::getId, recordId)
+                    .eq(tenantId != null, ScanRecord::getTenantId, tenantId)
+                    .one();
         }
         if (target == null && hasText(requestId)) {
             target = duplicateScanPreventer.findByRequestId(requestId);
@@ -344,6 +353,7 @@ public class ScanRecordOrchestrator {
             LambdaQueryWrapper<ScanRecord> qw = new LambdaQueryWrapper<ScanRecord>()
                     .eq(ScanRecord::getScanResult, "success")
                     .eq(ScanRecord::getScanCode, scanCode)
+                    .ne(ScanRecord::getScanType, "orchestration")
                     .orderByDesc(ScanRecord::getScanTime)
                     .orderByDesc(ScanRecord::getCreateTime)
                     .last("limit 1");
@@ -432,7 +442,7 @@ public class ScanRecordOrchestrator {
         if (isCuttingScan) {
             UserContext cutCtx = UserContext.get();
             String cutRole = cutCtx == null ? null : cutCtx.getRole();
-            boolean cutIsAdmin = cutRole != null && (cutRole.contains("admin") || cutRole.contains("manager")
+            boolean cutIsAdmin = cutRole != null && (cutRole.contains("admin") || cutRole.contains("ADMIN") || cutRole.contains("manager")
                     || cutRole.contains("supervisor") || cutRole.contains("主管") || cutRole.contains("管理员"));
             if (!cutIsAdmin) {
                 String cutOrderId = TextUtils.safeText(target.getOrderId());
@@ -452,7 +462,7 @@ public class ScanRecordOrchestrator {
         if (scanTime != null) {
             UserContext timeCtx = UserContext.get();
             String timeRole = timeCtx == null ? null : timeCtx.getRole();
-            boolean isAdmin = timeRole != null && (timeRole.contains("admin") || timeRole.contains("manager")
+            boolean isAdmin = timeRole != null && (timeRole.contains("admin") || timeRole.contains("ADMIN") || timeRole.contains("manager")
                     || timeRole.contains("supervisor") || timeRole.contains("主管") || timeRole.contains("管理员"));
             boolean undoExpired = isAdmin
                     ? scanTime.plusHours(5).isBefore(LocalDateTime.now())
@@ -554,7 +564,11 @@ public class ScanRecordOrchestrator {
         }
 
         // 先查出记录获取orderId用于锁key
-        ScanRecord preCheck = scanRecordService.getById(recordId);
+        Long tenantId = UserContext.tenantId();
+        ScanRecord preCheck = scanRecordService.lambdaQuery()
+                .eq(ScanRecord::getId, recordId)
+                .eq(tenantId != null, ScanRecord::getTenantId, tenantId)
+                .one();
         if (preCheck == null) {
             throw new IllegalStateException("未找到扫码记录");
         }
@@ -568,7 +582,11 @@ public class ScanRecordOrchestrator {
     private Map<String, Object> doRescan(Map<String, Object> safeParams, String recordId) {
 
         // 查找扫码记录
-        ScanRecord target = scanRecordService.getById(recordId);
+        Long rescanTenantId = UserContext.tenantId();
+        ScanRecord target = scanRecordService.lambdaQuery()
+                .eq(ScanRecord::getId, recordId)
+                .eq(rescanTenantId != null, ScanRecord::getTenantId, rescanTenantId)
+                .one();
         if (target == null) {
             throw new IllegalStateException("未找到扫码记录");
         }
@@ -821,7 +839,7 @@ public class ScanRecordOrchestrator {
             return;
         }
         String role = ctx.getRole();
-        boolean isAdmin = role != null && (role.contains("admin") || role.contains("manager")
+        boolean isAdmin = role != null && (role.contains("admin") || role.contains("ADMIN") || role.contains("manager")
                 || role.contains("supervisor") || role.contains("主管") || role.contains("管理员"));
         if (isAdmin) {
             return;
@@ -1086,6 +1104,7 @@ public class ScanRecordOrchestrator {
                     .eq(ScanRecord::getOrderId, orderId)
                     .eq(ScanRecord::getCuttingBundleId, bundleId)
                     .eq(ScanRecord::getScanResult, "success")
+                    .ne(ScanRecord::getScanType, "orchestration")
                     .orderByAsc(ScanRecord::getCreateTime));
 
             List<ProductWarehousing> whRecords = productWarehousingService.list(

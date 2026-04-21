@@ -4,8 +4,7 @@ const MATERIAL_TYPE_MAP = {
 };
 
 const SCAN_TYPE_MAP = {
-  production: '生产', cutting: '裁剪', procurement: '采购', quality: '质检',
-  pressing: '大烫', packaging: '包装', warehousing: '入库', sewing: '车缝', carSewing: '车缝',
+  production: '生产', cutting: '裁剪', quality: '质检', warehouse: '入库', pattern: '样衣',
 };
 
 const ORDER_STATUS_MAP = {
@@ -15,28 +14,26 @@ const ORDER_STATUS_MAP = {
 };
 
 const PRODUCTION_STAGES = [
-  'procurement', 'cutting', 'sewing', 'carSewing', 'pressing',
-  'quality', 'packaging', 'warehousing',
+  'cutting', 'production', 'quality', 'warehouse',
 ];
 
 const STAGE_LABELS = {
-  procurement: '采购', cutting: '裁剪', sewing: '车缝', carSewing: '车缝',
-  pressing: '大烫', quality: '质检', packaging: '包装', warehousing: '入库',
-  pattern: '样板', material: '物料',
+  cutting: '裁剪', production: '生产', quality: '质检',
+  warehouse: '入库', pattern: '样衣',
 };
 
 function normalizeScanType(progressStage, scanType) {
   const stage = String(progressStage || '').trim();
   if (stage === 'quality' || stage === '质检') return 'quality';
-  if (stage === 'warehouse' || stage === '入库') return 'warehousing';
+  if (stage === 'warehouse' || stage === '入库') return 'warehouse';
   if (stage === 'cutting' || stage === '裁剪') return 'cutting';
-  if (stage === 'procurement' || stage === '采购') return 'procurement';
-  if (stage === 'packaging' || stage === '包装') return 'packaging';
-  if (stage === 'sewing' || stage === '车缝') return 'sewing';
-  if (stage === 'carSewing') return 'carSewing';
-  if (stage === 'pressing' || stage === '大烫') return 'pressing';
-  if (stage === 'pattern' || stage === '样板') return 'pattern';
-  if (stage === 'secondaryProcess' || stage === '二次工艺') return 'cutting';
+  if (stage === 'pattern' || stage === '样衣' || stage === '样板') return 'pattern';
+  if (stage === 'procurement' || stage === '采购') return 'production';
+  if (stage === 'packaging' || stage === '包装') return 'production';
+  if (stage === 'sewing' || stage === '车缝' || stage === 'carSewing') return 'production';
+  if (stage === 'pressing' || stage === '大烫') return 'production';
+  if (stage === 'secondaryProcess' || stage === '二次工艺') return 'production';
+  if (stage === 'warehousing') return 'warehouse';
   return scanType || 'production';
 }
 
@@ -107,14 +104,14 @@ function validateBundleForStage(parsedCode, expectedStage) {
     if (!parsedCode.quantity || parsedCode.quantity <= 0) {
       return { valid: false, reason: '菲号数量无效' };
     }
-    const productionStages = ['sewing', 'carSewing', 'pressing', 'quality', 'packaging', 'warehousing'];
+    const productionStages = ['production', 'quality', 'warehouse'];
     if (productionStages.includes(expectedStage)) {
       return { valid: true, reason: '' };
     }
     return { valid: false, reason: `菲号不适用于${STAGE_LABELS[expectedStage] || expectedStage}阶段，生产环节请使用菲号扫码` };
   }
   if (parsedCode.type === 'order') {
-    const orderStages = ['procurement', 'cutting'];
+    const orderStages = ['cutting'];
     if (orderStages.includes(expectedStage)) {
       return { valid: true, reason: '' };
     }

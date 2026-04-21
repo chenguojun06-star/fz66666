@@ -18,6 +18,7 @@ class ParsedQrCode {
   final String? bundleNo;
   final String? styleNo;
   final String? processCode;
+  final String? processName;
   final String? color;
   final String? size;
   final int? quantity;
@@ -31,6 +32,7 @@ class ParsedQrCode {
     this.bundleNo,
     this.styleNo,
     this.processCode,
+    this.processName,
     this.color,
     this.size,
     this.quantity,

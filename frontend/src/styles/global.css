@@ -1428,6 +1428,7 @@ body {
   body {
     margin: 0 !important;
     padding: 0 !important;
+    font-family: 'Heiti SC', 'Songti SC', 'Hiragino Sans GB', 'STSong', 'Arial Unicode MS', serif !important;
   }
 
   body:has(.cutting-qr-print-area) > *:not(.cutting-qr-print-area):not(iframe) {

@@ -24,7 +24,7 @@ class ScanController extends GetxController {
   final scannerInitialized = false.obs;
   Widget scannerWidget = const SizedBox.shrink();
 
-  final selectedScanType = ScanType.sewing.obs;
+  final selectedScanType = ScanType.production.obs;
   final offlineCount = 0.obs;
   final lastScanResult = <String, dynamic>{}.obs;
   final pendingQualityTasks = 0.obs;
@@ -35,6 +35,21 @@ class ScanController extends GetxController {
   List<ScanType> get allowedScanTypes {
     final permission = PermissionService();
     return permission.getAllowedScanTypes();
+  }
+
+  static String _normalizeScanType(ScanType type) {
+    switch (type) {
+      case ScanType.cutting:
+        return 'cutting';
+      case ScanType.production:
+        return 'production';
+      case ScanType.quality:
+        return 'quality';
+      case ScanType.warehouse:
+        return 'warehouse';
+      case ScanType.sample:
+        return 'pattern';
+    }
   }
 
   @override
@@ -172,8 +187,9 @@ class ScanController extends GetxController {
         'scanCode': code,
         'orderNo': parsed.orderNo,
         'bundleNo': parsed.bundleNo,
-        'scanType': selectedScanType.value.name,
-        'processName': parsed.processCode,
+        'scanType': _normalizeScanType(selectedScanType.value),
+        'processName': parsed.processName,
+        'processCode': parsed.processCode,
         'quantity': parsed.quantity,
         'styleNo': parsed.styleNo,
         'color': parsed.color,
@@ -204,8 +220,9 @@ class ScanController extends GetxController {
         'scanCode': code,
         'orderNo': parsed.orderNo,
         'bundleNo': parsed.bundleNo,
-        'scanType': selectedScanType.value.name,
-        'processName': parsed.processCode,
+        'scanType': _normalizeScanType(selectedScanType.value),
+        'processName': parsed.processName,
+        'processCode': parsed.processCode,
         'quantity': parsed.quantity,
         'styleNo': parsed.styleNo,
         'color': parsed.color,

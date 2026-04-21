@@ -15,13 +15,10 @@ enum UserRole {
 enum DataScope { all, team, own }
 
 enum ScanType {
-  procurement,
   cutting,
-  sewing,
-  qualityReceive,
-  qualityConfirm,
-  warehousing,
-  materialRoll,
+  production,
+  quality,
+  warehouse,
   sample,
 }
 
@@ -106,19 +103,19 @@ class PermissionService {
     }
 
     if (role == UserRole.purchaser) {
-      types.addAll([ScanType.procurement, ScanType.materialRoll]);
+      types.addAll([ScanType.production]);
     }
     if (role == UserRole.cutter) {
       types.addAll([ScanType.cutting]);
     }
     if (role == UserRole.sewing) {
-      types.addAll([ScanType.sewing]);
+      types.addAll([ScanType.production]);
     }
     if (role == UserRole.quality) {
-      types.addAll([ScanType.qualityReceive, ScanType.qualityConfirm]);
+      types.addAll([ScanType.quality]);
     }
     if (role == UserRole.warehouse || role == UserRole.packager) {
-      types.addAll([ScanType.warehousing, ScanType.sample]);
+      types.addAll([ScanType.warehouse, ScanType.sample]);
     }
 
     return types;
@@ -193,20 +190,14 @@ class PermissionService {
 
   static String scanTypeLabel(ScanType type) {
     switch (type) {
-      case ScanType.procurement:
-        return '采购收货';
       case ScanType.cutting:
         return '裁剪';
-      case ScanType.sewing:
-        return '车缝';
-      case ScanType.qualityReceive:
-        return '质检领取';
-      case ScanType.qualityConfirm:
-        return '质检确认';
-      case ScanType.warehousing:
+      case ScanType.production:
+        return '生产';
+      case ScanType.quality:
+        return '质检';
+      case ScanType.warehouse:
         return '入库';
-      case ScanType.materialRoll:
-        return '料卷扫码';
       case ScanType.sample:
         return '样衣扫码';
     }
