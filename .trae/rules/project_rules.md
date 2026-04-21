@@ -210,33 +210,34 @@ public Payable getById(String id) {
 
 ---
 
-# P0 - 财务权限规则
+# P0 - API权限规则（重要！不要乱加权限码）
 
-## 规则11：财务Controller必须使用细粒度权限码
+## 规则11：禁止给业务API加 hasAuthority 细粒度权限码
 
-### 原因
-仅 `@PreAuthorize("isAuthenticated()")` 允许任何登录用户执行财务操作，存在严重安全风险。
+### 根因
+系统已有完整的页面菜单 + 职位权限控制机制，用户分配职位时已决定能看哪些页面。在 API 层再加 `hasAuthority('MENU_FINANCE_XXX_VIEW')` 权限码，但数据库里没有给用户分配这些权限码，导致所有已登录用户访问接口返回 403 Forbidden。
 
-### 权限码命名规范
-- 查看权限：`MENU_FINANCE_{DOMAIN}_VIEW`
-- 管理权限：`FINANCE_{DOMAIN}_MANAGE`
+**页面菜单已经控制了权限，API 层不需要重复限制！**
 
 ```java
-// ✅ 正确
+// ❌ 错误 - 加了权限码但用户没有这个权限，全部403
 @PreAuthorize("hasAuthority('MENU_FINANCE_INVOICE_VIEW')")
 @GetMapping("/list")
 public Result<...> list(...) { ... }
 
-@PreAuthorize("hasAuthority('FINANCE_INVOICE_MANAGE')")
-@PostMapping("/create")
-public Result<...> create(...) { ... }
+// ✅ 正确 - 只要登录就能访问，页面菜单控制谁能看到
+@PreAuthorize("isAuthenticated()")
+@GetMapping("/list")
+public Result<...> list(...) { ... }
 ```
 
-### 已配置权限的Controller
-InvoiceController, PayableController, FinancialReportController, TaxConfigController,
-BillAggregationController, EcSalesRevenueController, FinanceTaxExportController,
-ExpenseReimbursementController, ShipmentReconciliationController, MaterialReconciliationController,
-ReconciliationCompatController, FinishedProductSettlementController, PayrollSettlementController
+### 唯一例外：ROLE_SUPER_ADMIN
+仅超级管理员专用接口（如租户管理、系统维护）可以保留 `hasAuthority('ROLE_SUPER_ADMIN')`，因为这类接口本来就不对普通用户开放。
+
+### 以后做任何改动前必须考虑
+1. **不要加没有用的东西** — 现有机制已经能控制的，不要重复加
+2. **考虑影响范围** — 加了权限码，用户有没有这个权限？没有就会403
+3. **先想清楚再动手** — 不要为了"安全"加一堆限制，结果把正常功能搞炸了
 
 ---
 
