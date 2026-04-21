@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Tabs, Input, Select, Space, Tag, Button, App } from 'antd';
-import Layout from '@/components/Layout';
 import PageLayout from '@/components/common/PageLayout';
 import ResizableTable from '@/components/common/ResizableTable';
 import { UnifiedDatePicker } from '@/components/common/UnifiedDatePicker';
@@ -257,7 +256,7 @@ const SystemLogs: React.FC = () => {
 
   // ==================== 渲染 ====================
   return (
-    <Layout>
+    <>
       <div className="system-logs-page">
         <PageLayout title="系统日志">
           <Tabs
@@ -468,7 +467,7 @@ const SystemLogs: React.FC = () => {
         />
       </PageLayout>
       </div>
-    </Layout>
+    </>
   );
 };
 

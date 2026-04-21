@@ -56,7 +56,7 @@
 
           <!-- 可执行命令卡片 -->
           <block wx:for="{{item.actionCards}}" wx:for-item="card" wx:for-index="ci" wx:key="ci">
-          <view class="action-card {{card.actions[0].type === 'mark_urgent' ? 'card-danger' : card.actions[0].type === 'send_notification' ? 'card-warning' : 'card-normal'}}">
+          <view class="action-card {{card._cardType}}">
             <view class="action-card-hd">⚡ {{card.title}}</view>
             <view wx:if="{{card.desc}}" class="action-card-desc">{{card.desc}}</view>
             <view class="action-card-btns">
@@ -166,7 +166,7 @@
                     </view>
                     <view wx:if="{{field.inputType === 'multi_select'}}" class="sw-options">
                       <view wx:for="{{field.options}}" wx:for-item="opt" wx:for-index="oi" wx:key="value"
-                        class="sw-opt-btn {{(wiz._formData[field.key] || []).indexOf(opt.value) >= 0 ? 'selected' : ''}}"
+                        class="sw-opt-btn {{wiz._formDataSelectedSet[field.key] && wiz._formDataSelectedSet[field.key][opt.value] ? 'selected' : ''}}" 
                         bindtap="onWizardMultiSelect" data-msgid="{{item.id}}" data-wi="{{wi}}" data-key="{{field.key}}" data-value="{{opt.value}}">
                         <text wx:if="{{opt.icon}}">{{opt.icon}} </text>{{opt.label}}
                       </view>

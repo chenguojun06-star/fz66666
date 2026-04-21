@@ -6,7 +6,6 @@
 import React from 'react';
 import { Tabs, Typography } from 'antd';
 import { UserOutlined, AppstoreOutlined } from '@ant-design/icons';
-import Layout from '@/components/Layout';
 import PageLayout from '@/components/common/PageLayout';
 import { useAuth } from '@/utils/AuthContext';
 import ProfileInfoTab from './components/ProfileInfoTab';
@@ -38,7 +37,7 @@ const Profile: React.FC = () => {
     ];
 
     return (
-        <Layout>
+        <>
             <PageLayout
                 title="个人中心"
                 headerContent={
@@ -52,7 +51,7 @@ const Profile: React.FC = () => {
                     items={tabItems}
                 />
             </PageLayout>
-        </Layout>
+        </>
     );
 };
 

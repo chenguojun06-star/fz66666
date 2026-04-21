@@ -738,6 +738,11 @@ public class MaterialPurchasePickingHelper {
         picking.setUpdateTime(LocalDateTime.now());
         materialPickingService.updateById(picking);
 
+        // 3.5 撤销外发工厂领料扣款记录
+        if (wasCompleted) {
+            rollbackMaterialDeductionForExternalFactory(pickingId);
+        }
+
         // 4. 恢复关联的采购任务状态为 pending
         String orderNo = picking.getOrderNo();
         if (StringUtils.hasText(orderNo)) {
@@ -1107,20 +1112,74 @@ public class MaterialPurchasePickingHelper {
             deduction.setReconciliationId(recon.getId());
             deduction.setDeductionType("MATERIAL_PICKUP");
             deduction.setDeductionAmount(totalMaterialCost);
+            deduction.setSourceType("MATERIAL_PICKING");
+            deduction.setSourceId(picking.getId());
             deduction.setDescription("外发工厂领料扣款|" + (factorySnapshot.factoryName != null ? factorySnapshot.factoryName : "")
                     + "|pickingNo=" + picking.getPickingNo()
                     + "|物料" + items.size() + "项|金额" + totalMaterialCost.setScale(2, java.math.RoundingMode.HALF_UP));
             deductionItemMapper.insert(deduction);
 
             BigDecimal existingDeduction = recon.getDeductionAmount() != null ? recon.getDeductionAmount() : BigDecimal.ZERO;
+            BigDecimal existingSupplement = BigDecimal.ZERO;
+            List<DeductionItem> existingItems = deductionItemMapper.selectByReconciliationId(recon.getId(), UserContext.tenantId());
+            if (existingItems != null) {
+                for (DeductionItem di : existingItems) {
+                    if ("SUPPLEMENT".equalsIgnoreCase(di.getDeductionType())) {
+                        existingSupplement = existingSupplement.add(di.getDeductionAmount() != null ? di.getDeductionAmount() : BigDecimal.ZERO);
+                    }
+                }
+            }
             recon.setDeductionAmount(existingDeduction.add(totalMaterialCost));
-            recon.setFinalAmount(recon.getTotalAmount() != null ? recon.getTotalAmount().subtract(recon.getDeductionAmount()) : BigDecimal.ZERO);
+            BigDecimal totalAmount = recon.getTotalAmount() != null ? recon.getTotalAmount() : BigDecimal.ZERO;
+            recon.setFinalAmount(totalAmount.subtract(recon.getDeductionAmount()).add(existingSupplement));
             shipmentReconciliationService.updateById(recon);
 
             log.info("外发工厂面料扣款已记录: orderNo={}, pickingNo={}, deductionAmount={}, totalDeduction={}",
                     orderNo, picking.getPickingNo(), totalMaterialCost, recon.getDeductionAmount());
         } catch (Exception e) {
             log.error("外发工厂面料扣款记录失败: pickingId={}", picking.getId(), e);
+        }
+    }
+
+    private void rollbackMaterialDeductionForExternalFactory(String pickingId) {
+        try {
+            List<DeductionItem> items = deductionItemMapper.selectList(
+                    new LambdaQueryWrapper<DeductionItem>()
+                            .eq(DeductionItem::getSourceType, "MATERIAL_PICKING")
+                            .eq(DeductionItem::getSourceId, pickingId));
+            if (items == null || items.isEmpty()) {
+                return;
+            }
+            for (DeductionItem item : items) {
+                String reconId = item.getReconciliationId();
+                BigDecimal amount = item.getDeductionAmount() != null ? item.getDeductionAmount() : BigDecimal.ZERO;
+                deductionItemMapper.deleteById(item.getId());
+
+                ShipmentReconciliation recon = shipmentReconciliationService.getById(reconId);
+                if (recon != null) {
+                    BigDecimal existingDeduction = recon.getDeductionAmount() != null ? recon.getDeductionAmount() : BigDecimal.ZERO;
+                    BigDecimal newDeduction = existingDeduction.subtract(amount);
+                    if (newDeduction.compareTo(BigDecimal.ZERO) < 0) {
+                        newDeduction = BigDecimal.ZERO;
+                    }
+                    recon.setDeductionAmount(newDeduction);
+                    BigDecimal totalAmount = recon.getTotalAmount() != null ? recon.getTotalAmount() : BigDecimal.ZERO;
+                    List<DeductionItem> remainingItems = deductionItemMapper.selectByReconciliationId(reconId, UserContext.tenantId());
+                    BigDecimal supplementAmount = BigDecimal.ZERO;
+                    if (remainingItems != null) {
+                        for (DeductionItem di : remainingItems) {
+                            if ("SUPPLEMENT".equalsIgnoreCase(di.getDeductionType())) {
+                                supplementAmount = supplementAmount.add(di.getDeductionAmount() != null ? di.getDeductionAmount() : BigDecimal.ZERO);
+                            }
+                        }
+                    }
+                    recon.setFinalAmount(totalAmount.subtract(newDeduction).add(supplementAmount));
+                    shipmentReconciliationService.updateById(recon);
+                    log.info("外发工厂领料扣款已回退: pickingId={}, reconId={}, rollbackAmount={}", pickingId, reconId, amount);
+                }
+            }
+        } catch (Exception e) {
+            log.error("撤销外发工厂领料扣款失败: pickingId={}", pickingId, e);
         }
     }
 

@@ -26,7 +26,6 @@ import {
   ThunderboltOutlined,
 } from '@ant-design/icons';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
-import Layout from '@/components/Layout';
 import './style.css';
 import type { Dayjs } from 'dayjs';
 import type { Tutorial } from './types';
@@ -157,7 +156,7 @@ const SystemTutorial: React.FC = () => {
   }, [activeCategory, searchText]);
 
   return (
-    <Layout>
+    <>
       <div className="system-tutorial-container">
         {/* 页面头部 */}
         <div className="tutorial-page-header">
@@ -361,7 +360,7 @@ const SystemTutorial: React.FC = () => {
         </Space>
       </Card>
       </div>
-    </Layout>
+    </>
   );
 };
 

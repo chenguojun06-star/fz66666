@@ -8,7 +8,6 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table';
 import { useNavigate } from 'react-router-dom';
-import Layout from '@/components/Layout';
 import { paths } from '@/routeConfig';
 import { appStoreService } from '@/services/system/appStore';
 import { useAuth } from '@/utils/AuthContext';
@@ -598,7 +597,7 @@ const CrmDashboard: React.FC = () => {
   }, [isSuperAdmin]);
 
   return (
-    <Layout>
+    <>
       <div style={{ padding: '24px' }}>
         {checking ? (
           <div style={{ textAlign: 'center', padding: '80px 0' }}><Spin size="large" /></div>
@@ -610,7 +609,7 @@ const CrmDashboard: React.FC = () => {
           </div>
         )}
       </div>
-    </Layout>
+    </>
   );
 };
 

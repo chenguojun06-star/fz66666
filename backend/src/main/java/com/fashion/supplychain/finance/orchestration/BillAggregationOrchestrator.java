@@ -61,6 +61,35 @@ public class BillAggregationOrchestrator {
                 .exists();
     }
 
+    public boolean billExistsByOrderId(String sourceType, String orderId) {
+        Long tenantId = TenantAssert.requireTenantId();
+        return billAggregationService.lambdaQuery()
+                .eq(BillAggregation::getSourceType, sourceType)
+                .eq(BillAggregation::getOrderId, orderId)
+                .eq(BillAggregation::getTenantId, tenantId)
+                .eq(BillAggregation::getDeleteFlag, 0)
+                .exists();
+    }
+
+    public void syncAmountBySource(String sourceType, String sourceId, BigDecimal newAmount) {
+        if (!StringUtils.hasText(sourceType) || !StringUtils.hasText(sourceId) || newAmount == null) {
+            return;
+        }
+        Long tenantId = UserContext.tenantId();
+        BillAggregation bill = billAggregationService.lambdaQuery()
+                .eq(BillAggregation::getSourceType, sourceType)
+                .eq(BillAggregation::getSourceId, sourceId)
+                .eq(tenantId != null, BillAggregation::getTenantId, tenantId)
+                .eq(BillAggregation::getDeleteFlag, 0)
+                .last("LIMIT 1")
+                .one();
+        if (bill != null && !"SETTLED".equals(bill.getStatus()) && !"CANCELLED".equals(bill.getStatus())) {
+            bill.setAmount(newAmount);
+            billAggregationService.updateById(bill);
+            log.info("[BillAggregation] 同步金额: sourceType={}, sourceId={}, newAmount={}, billStatus={}", sourceType, sourceId, newAmount, bill.getStatus());
+        }
+    }
+
     @Transactional(rollbackFor = Exception.class)
     public BillAggregation pushBill(BillPushRequest request) {
         Long tenantId = TenantAssert.requireTenantId();
@@ -300,8 +329,10 @@ public class BillAggregationOrchestrator {
         return bill;
     }
 
+    private static final java.util.concurrent.atomic.AtomicInteger BILL_NO_SEQ = new java.util.concurrent.atomic.AtomicInteger(0);
+
     private String generateBillNo() {
-        return "BA" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS"));
+        return "BA" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS")) + String.format("%03d", BILL_NO_SEQ.incrementAndGet() % 1000);
     }
 
     /**

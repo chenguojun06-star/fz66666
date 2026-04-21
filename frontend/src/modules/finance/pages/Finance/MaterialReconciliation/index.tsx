@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Card, Dropdown, Select, Tag, Form, message } from 'antd';
 
-import Layout from '@/components/Layout';
 import PageLayout from '@/components/common/PageLayout';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
@@ -692,7 +691,7 @@ const MaterialReconciliation: React.FC = () => {
   ];
 
   return (
-    <Layout>
+    <>
         <PageLayout
           title="物料对账"
           headerContent={
@@ -892,7 +891,7 @@ const MaterialReconciliation: React.FC = () => {
         onCancel={() => setPendingRejectIds(null)}
         loading={rejectIdsLoading}
       />
-    </Layout>
+    </>
   );
 };
 

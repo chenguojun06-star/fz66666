@@ -6,7 +6,6 @@ import { ShoppingCartOutlined, CheckCircleOutlined, FireOutlined, RocketOutlined
 import { useNavigate } from 'react-router-dom';
 import { appStoreService } from '@/services/system/appStore';
 import type { MyAppInfo } from '@/services/system/appStore';
-import Layout from '@/components/Layout';
 import './index.css';
 
 const { Text } = Typography;
@@ -60,8 +59,6 @@ const MODULE_CONFIG: Record<string, { icon: string; color: string; urlHint: stri
   FINANCE_TAX: { icon: '', color: 'var(--color-success)', urlHint: '' },
   PROCUREMENT: { icon: '', color: 'var(--color-warning)', urlHint: '' },
 };
-
-
 
 // 安全解析 features 字段（后端可能返回字符串、JSON字符串或数组）
 const parseFeatures = (features: any): string[] => {
@@ -339,7 +336,7 @@ const AppStore: React.FC = () => {
   };
 
   return (
-    <Layout>
+    <>
     <div className="app-store-container">
       <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
@@ -634,7 +631,7 @@ const AppStore: React.FC = () => {
       </ResizableModal>
 
     </div>
-    </Layout>
+    </>
   );
 };
 

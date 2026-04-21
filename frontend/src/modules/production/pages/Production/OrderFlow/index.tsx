@@ -1,6 +1,5 @@
 import React from 'react';
 import { Alert, Button, Card, Col, Row, Space, Tabs, Tag } from 'antd';
-import Layout from '@/components/Layout';
 import PageLayout from '@/components/common/PageLayout';
 import { formatProcessDisplayName } from '@/utils/productionStage';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -28,7 +27,7 @@ const OrderFlow: React.FC = () => {
   } = useOrderFlowData();
 
   return (
-    <Layout>
+    <>
         <PageLayout
           title="订单全流程记录"
           titleExtra={
@@ -626,7 +625,7 @@ const OrderFlow: React.FC = () => {
             />
           </Card>
         </PageLayout>
-    </Layout>
+    </>
   );
 };
 

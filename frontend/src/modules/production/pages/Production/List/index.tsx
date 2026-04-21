@@ -3,7 +3,6 @@ import { Button, Input, Select, Tag, App, Popover, Checkbox, Segmented } from 'a
 
 import { SettingOutlined, AppstoreOutlined, UnorderedListOutlined, ExclamationCircleOutlined, RadarChartOutlined } from '@ant-design/icons';
 import ExternalFactorySmartView from '../ExternalFactory/ExternalFactorySmartView';
-import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardPagination from '@/components/common/StandardPagination';
 import PageStatCards from '@/components/common/PageStatCards';
@@ -465,7 +464,7 @@ const ProductionList: React.FC = () => {
   };
 
   return (
-    <Layout>
+    <>
         <PageLayout
           title="订单管理"
           headerContent={<>
@@ -959,7 +958,7 @@ const ProductionList: React.FC = () => {
         onCancel={cancelScrapOrder}
       />
 
-    </Layout>
+    </>
   );
 };
 

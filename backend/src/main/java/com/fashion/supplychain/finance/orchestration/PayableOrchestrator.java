@@ -38,6 +38,7 @@ public class PayableOrchestrator {
     private BillAggregationService billAggregationService;
 
     private static final DateTimeFormatter NO_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+    private static final java.util.concurrent.atomic.AtomicInteger NO_SEQ = new java.util.concurrent.atomic.AtomicInteger(0);
 
     // ─── 查询 ────────────────────────────────────────────────────────────────
 
@@ -134,7 +135,7 @@ public class PayableOrchestrator {
         Long tenantId = UserContext.tenantId();
         UserContext ctx = UserContext.get();
 
-        payable.setPayableNo("AP" + LocalDateTime.now().format(NO_FMT));
+        payable.setPayableNo("AP" + LocalDateTime.now().format(NO_FMT) + String.format("%03d", NO_SEQ.incrementAndGet() % 1000));
         payable.setTenantId(tenantId);
         payable.setDeleteFlag(0);
         payable.setStatus("PENDING");

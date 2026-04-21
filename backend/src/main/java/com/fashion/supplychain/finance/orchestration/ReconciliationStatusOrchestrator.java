@@ -11,12 +11,8 @@ import com.fashion.supplychain.finance.service.ShipmentReconciliationService;
 import com.fashion.supplychain.finance.service.BillAggregationService;
 import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator.BillPushRequest;
 import com.fashion.supplychain.integration.openapi.service.WebhookPushService;
-import com.fashion.supplychain.crm.entity.Receivable;
-import com.fashion.supplychain.crm.orchestration.ReceivableOrchestrator;
-import com.fashion.supplychain.crm.service.ReceivableService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
@@ -88,12 +84,6 @@ public class ReconciliationStatusOrchestrator {
 
     @Autowired(required = false)
     private WebhookPushService webhookPushService;
-
-    @Autowired(required = false)
-    private ReceivableOrchestrator receivableOrchestrator;
-
-    @Autowired(required = false)
-    private ReceivableService receivableService;
 
     @Autowired(required = false)
     private BillAggregationOrchestrator billAggregationOrchestrator;
@@ -190,7 +180,6 @@ public class ReconciliationStatusOrchestrator {
                     throw new IllegalStateException("状态更新失败");
                 }
 
-                // 物料对账审批通过 → 推送到账单汇总
                 if ("approved".equals(to) && billAggregationOrchestrator != null) {
                     try {
                         BillPushRequest pushReq = new BillPushRequest();
@@ -208,7 +197,7 @@ public class ReconciliationStatusOrchestrator {
                         pushReq.setSettlementMonth(now.format(DateTimeFormatter.ofPattern("yyyy-MM")));
                         billAggregationOrchestrator.pushBill(pushReq);
                     } catch (Exception e) {
-                        log.warn("物料对账推送账单汇总失败（不影响主流程）: id={}", rid, e);
+                        throw new RuntimeException("物料对账推送账单汇总失败，审批未完成: " + e.getMessage(), e);
                     }
                 }
                 if ("rejected".equals(to) && billAggregationOrchestrator != null) {
@@ -278,7 +267,6 @@ public class ReconciliationStatusOrchestrator {
                     throw new IllegalStateException("状态更新失败");
                 }
 
-                // 成品对账审批通过 → 推送到账单汇总（应收）
                 if ("approved".equals(to) && billAggregationOrchestrator != null) {
                     try {
                         BillPushRequest pushReq = new BillPushRequest();
@@ -296,7 +284,7 @@ public class ReconciliationStatusOrchestrator {
                         pushReq.setSettlementMonth(now.format(DateTimeFormatter.ofPattern("yyyy-MM")));
                         billAggregationOrchestrator.pushBill(pushReq);
                     } catch (Exception e) {
-                        log.warn("成品对账推送账单汇总失败（不影响主流程）: id={}", rid, e);
+                        throw new RuntimeException("成品对账推送账单汇总失败，审批未完成: " + e.getMessage(), e);
                     }
                 }
                 if ("rejected".equals(to) && billAggregationOrchestrator != null) {
@@ -311,9 +299,7 @@ public class ReconciliationStatusOrchestrator {
                             sr.getFinalAmount() != null ? sr.getFinalAmount() : sr.getTotalAmount());
                 }
 
-                // 订单结算审核通过后推送通知
                 if ("approved".equals(to)) {
-                    // 异步推送对账审批通过给已对接客户
                     if (webhookPushService != null) {
                         try {
                             BigDecimal amount = sr.getFinalAmount() != null ? sr.getFinalAmount() : BigDecimal.ZERO;
@@ -324,34 +310,6 @@ public class ReconciliationStatusOrchestrator {
                             );
                         } catch (Exception e) {
                             log.warn("Webhook推送对账审批通过失败: reconciliationId={}", rid, e);
-                        }
-                    }
-
-                    // 成品对账审批通过 → 自动生成客户应收单（幂等，不影响主流程）
-                    if (receivableOrchestrator != null && receivableService != null) {
-                        try {
-                            long existing = receivableService.count(
-                                new LambdaQueryWrapper<Receivable>()
-                                    .eq(Receivable::getSourceBizType, "SHIPMENT_RECONCILIATION")
-                                    .eq(Receivable::getSourceBizId, rid)
-                                    .eq(Receivable::getDeleteFlag, 0));
-                            if (existing == 0 && sr.getFinalAmount() != null
-                                    && sr.getFinalAmount().compareTo(BigDecimal.ZERO) > 0) {
-                                Receivable receivable = new Receivable();
-                                receivable.setCustomerId(sr.getCustomerId());
-                                receivable.setOrderId(sr.getOrderId());
-                                receivable.setOrderNo(sr.getOrderNo() != null ? sr.getOrderNo() : "");
-                                receivable.setAmount(sr.getFinalAmount());
-                                receivable.setDueDate(LocalDate.now().plusDays(30));
-                                receivable.setDescription("成品对账单审批自动生成");
-                                receivable.setSourceBizType("SHIPMENT_RECONCILIATION");
-                                receivable.setSourceBizId(rid);
-                                receivable.setSourceBizNo(sr.getOrderNo() != null ? sr.getOrderNo() : rid);
-                                receivableOrchestrator.create(receivable);
-                                log.info("成品对账审批通过，自动生成应收单: reconciliationId={}, amount={}", rid, sr.getFinalAmount());
-                            }
-                        } catch (Exception e) {
-                            log.warn("自动生成应收单失败（不影响主流程）: reconciliationId={}", rid, e);
                         }
                     }
                 }
@@ -390,7 +348,19 @@ public class ReconciliationStatusOrchestrator {
                 settled = bill.getAmount();
             }
             bill.setSettledAmount(settled);
-            bill.setStatus("SETTLED");
+
+            String currentStatus = bill.getStatus();
+            if ("PENDING".equals(currentStatus)) {
+                bill.setStatus("CONFIRMED");
+            }
+            if ("CONFIRMED".equals(bill.getStatus()) || "SETTLING".equals(currentStatus)) {
+                if (settled.compareTo(bill.getAmount() != null ? bill.getAmount() : BigDecimal.ZERO) >= 0) {
+                    bill.setStatus("SETTLED");
+                } else {
+                    bill.setStatus("SETTLING");
+                }
+            }
+
             bill.setSettledAt(LocalDateTime.now());
             bill.setSettledById(UserContext.userId());
             bill.setSettledByName(UserContext.username());

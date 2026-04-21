@@ -2,7 +2,6 @@ import React, { useCallback, useMemo, useState, useEffect } from 'react';
 import { Alert, App, Button, Card, Checkbox, Form, Input, Select, Space, Tag } from 'antd';
 import type { ButtonProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import Layout from '@/components/Layout';
 import PageLayout from '@/components/common/PageLayout';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
@@ -163,8 +162,6 @@ const RoleList: React.FC = () => {
   useEffect(() => {
     fetchRoles();
   }, [fetchRoles]);
-
-
 
   const openDialog = (role?: Role) => {
     roleModal.open(role || null);
@@ -509,7 +506,7 @@ const RoleList: React.FC = () => {
   ];
 
   return (
-    <Layout>
+    <>
         <PageLayout
           title="岗位管理"
           titleExtra={
@@ -651,7 +648,6 @@ const RoleList: React.FC = () => {
               />
             </Form.Item>
           </div>
-
 
         </Form>
       </ResizableModal>
@@ -837,7 +833,7 @@ const RoleList: React.FC = () => {
         onOk={handleRemarkConfirm}
         onCancel={() => setRemarkModalState(null)}
       />
-    </Layout>
+    </>
   );
 };
 

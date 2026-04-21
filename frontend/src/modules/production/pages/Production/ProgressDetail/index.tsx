@@ -3,7 +3,6 @@ import { App, Button, Card, Form, Modal, Select, Space } from 'antd';
 import type { InputRef } from 'antd';
 import { AppstoreOutlined, UnorderedListOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import Layout from '@/components/Layout';
 import PageStatCards from '@/components/common/PageStatCards';
 
 import UniversalCardView from '@/components/common/UniversalCardView';
@@ -1053,7 +1052,7 @@ const ProgressDetail: React.FC<ProgressDetailProps> = ({ embedded }) => {
 
   if (embedded) return pageContent;
 
-  return <Layout>{pageContent}</Layout>;
+  return <>{pageContent}</>;
 };
 
 export default ProgressDetail;

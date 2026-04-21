@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { App, Button, Card, Input, Progress, Select, Space, Switch, Tabs, Tag } from 'antd';
 import { UnifiedRangePicker } from '@/components/common/UnifiedDatePicker';
 import { useSearchParams } from 'react-router-dom';
-import Layout from '@/components/Layout';
 import PageLayout from '@/components/common/PageLayout';
 import ResizableTable from '@/components/common/ResizableTable';
 
@@ -22,7 +21,6 @@ import type { WorkerEfficiencyItem } from '@/services/intelligence/intelligenceA
 import { readPageSize } from '@/utils/pageSizeStore';
 import { usePersistentSort } from '@/hooks/usePersistentSort';
 import { usePersistentState } from '@/hooks/usePersistentState';
-
 
 const PayrollOperatorSummary: React.FC = () => {
     const { message } = App.useApp();
@@ -750,7 +748,7 @@ const PayrollOperatorSummary: React.FC = () => {
     });
 
     return (
-        <Layout>
+        <>
             <PageLayout
                 title="工资结算"
                 headerContent={
@@ -988,7 +986,6 @@ const PayrollOperatorSummary: React.FC = () => {
                     ]}
                 />
 
-
             </PageLayout>
                     <WageSlipPrintModal
                 visible={printModalVisible}
@@ -996,7 +993,7 @@ const PayrollOperatorSummary: React.FC = () => {
                 workerData={getPrintData()}
                 dateRange={dateRange?.[0] && dateRange?.[1] ? [dayjs(dateRange[0]).format('YYYY-MM-DD'), dayjs(dateRange[1]).format('YYYY-MM-DD')] : ['-', '-']}
             />
-        </Layout>
+        </>
     );
 };
 

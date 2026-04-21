@@ -5,7 +5,6 @@ import { Button, Card, Tag, Space, Form, Input, Row, Col, Spin, Alert, Image } f
 import ResizableModal from '@/components/common/ResizableModal';
 
 import StylePrintModal from '@/components/common/StylePrintModal';
-import Layout from '@/components/Layout';
 import MaterialTypeTag from '@/components/common/MaterialTypeTag';
 import ResizableTable from '@/components/common/ResizableTable';
 import SupplierNameTooltip from '@/components/common/SupplierNameTooltip';
@@ -334,7 +333,7 @@ const MaterialPurchaseDetail: React.FC = () => {
   ];
 
   return (
-    <Layout>
+    <>
       <div style={{ padding: isMobile ? 12 : 24 }}>
         {showSmartErrorNotice && smartError ? (
           <Card size="small" style={{ marginBottom: 12 }}>
@@ -562,7 +561,7 @@ const MaterialPurchaseDetail: React.FC = () => {
           sizeDetails={order ? parseProductionOrderLines(order) : []}
         />
       </div>
-    </Layout>
+    </>
   );
 };
 

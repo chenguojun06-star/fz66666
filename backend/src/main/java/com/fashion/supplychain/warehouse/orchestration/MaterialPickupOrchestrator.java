@@ -30,6 +30,7 @@ public class MaterialPickupOrchestrator {
 
     private final MaterialPickupRecordMapper pickupMapper;
     private final MaterialPickupReceivableOrchestrator materialPickupReceivableOrchestrator;
+    private final com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator billAggregationOrchestrator;
 
     /** 简易序号（进程级，重启归零，仅用于单号生成去重） */
     private final AtomicInteger seqCounter = new AtomicInteger(0);
@@ -181,6 +182,15 @@ public class MaterialPickupOrchestrator {
 
         if ("APPROVED".equals(newStatus)) {
             materialPickupReceivableOrchestrator.syncAfterApproval(record, strOf(body.get("remark")));
+            pushPickupBill(record);
+        }
+
+        if ("REJECTED".equals(newStatus)) {
+            try {
+                billAggregationOrchestrator.cancelBySource("MATERIAL_PICKUP", record.getId());
+            } catch (Exception e) {
+                log.warn("[MaterialPickup] 驳回联动取消账单失败: id={}", record.getId(), e);
+            }
         }
 
         pickupMapper.updateById(record);
@@ -263,6 +273,32 @@ public class MaterialPickupOrchestrator {
     }
 
     // =================== 私有工具 ===================
+
+    private void pushPickupBill(MaterialPickupRecord record) {
+        if (record.getAmount() == null || record.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        try {
+            com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator.BillPushRequest req =
+                    new com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator.BillPushRequest();
+            req.setBillType("RECEIVABLE");
+            req.setBillCategory("MATERIAL");
+            req.setSourceType("MATERIAL_PICKUP");
+            req.setSourceId(record.getId());
+            req.setSourceNo(record.getPickupNo());
+            req.setCounterpartyType("FACTORY");
+            req.setCounterpartyId(record.getFactoryId());
+            req.setCounterpartyName(record.getFactoryName());
+            req.setOrderId(null);
+            req.setOrderNo(record.getOrderNo());
+            req.setStyleNo(record.getStyleNo());
+            req.setAmount(record.getAmount());
+            req.setSettlementMonth(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM")));
+            billAggregationOrchestrator.pushBill(req);
+        } catch (Exception e) {
+            throw new RuntimeException("物料领取推送账单汇总失败，审核未完成: " + e.getMessage(), e);
+        }
+    }
 
     private MaterialPickupRecord getByIdAndTenant(String id) {
         MaterialPickupRecord record = pickupMapper.selectById(id);

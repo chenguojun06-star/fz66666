@@ -288,7 +288,7 @@ public class WagePaymentOrchestrator {
         TenantAssert.assertBelongsToCurrentTenant(payment.getTenantId(), "支付记录");
 
         if ("success".equals(payment.getStatus())) {
-            throw new IllegalStateException("已支付成功的记录不能取消");
+            throw new IllegalStateException("已支付成功的记录不能取消，请使用退回功能");
         }
 
         payment.setStatus("cancelled");
@@ -299,6 +299,110 @@ public class WagePaymentOrchestrator {
         log.info("[工资支付] 取消支付: id={}, no={}, reason={}", paymentId, payment.getPaymentNo(), reason);
 
         return payment;
+    }
+
+    /**
+     * 退回已付款项（主管及以上权限）
+     * 将已支付成功的记录退回，并回写上游单据状态
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public WagePayment refundPayment(String paymentId, String reason) {
+        TenantAssert.assertTenantContext();
+        if (!UserContext.isSupervisorOrAbove()) {
+            throw new org.springframework.security.access.AccessDeniedException("仅主管级别及以上可执行退回操作");
+        }
+
+        WagePayment payment = wagePaymentService.getById(paymentId);
+        if (payment == null) {
+            throw new IllegalArgumentException("支付记录不存在");
+        }
+        TenantAssert.assertBelongsToCurrentTenant(payment.getTenantId(), "支付记录");
+
+        if (!"success".equals(payment.getStatus())) {
+            throw new IllegalStateException("只有已支付成功的记录可以退回，当前状态: " + payment.getStatus());
+        }
+
+        payment.setStatus("refunded");
+        payment.setPaymentRemark("【退回】" + (reason != null ? reason : ""));
+        payment.setUpdateTime(LocalDateTime.now());
+
+        wagePaymentService.updateById(payment);
+        log.info("[工资支付] 退回已付款项: id={}, no={}, reason={}, operator={}",
+                 paymentId, payment.getPaymentNo(), reason, UserContext.username());
+
+        callbackRefundUpstream(payment);
+
+        return payment;
+    }
+
+    /**
+     * 退回时回写上游单据状态
+     */
+    private void callbackRefundUpstream(WagePayment payment) {
+        if (payment == null || payment.getBizType() == null || payment.getBizId() == null) {
+            return;
+        }
+        try {
+            switch (payment.getBizType()) {
+                case "RECONCILIATION":
+                    MaterialReconciliation recon = materialReconciliationService.getById(payment.getBizId());
+                    if (recon != null && "paid".equals(recon.getStatus())) {
+                        recon.setStatus("approved");
+                        recon.setPaidAt(null);
+                        recon.setRemark((recon.getRemark() != null ? recon.getRemark() + "\n" : "")
+                                + "【付款退回】" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                        recon.setUpdateBy(UserContext.username());
+                        recon.setUpdateTime(LocalDateTime.now());
+                        materialReconciliationService.updateById(recon);
+                        log.info("[工资支付] 退回回写物料对账: id={}, status=paid->approved", payment.getBizId());
+                    }
+                    break;
+
+                case "REIMBURSEMENT":
+                    ExpenseReimbursement reimb = expenseReimbursementService.getById(payment.getBizId());
+                    if (reimb != null && "paid".equals(reimb.getStatus())) {
+                        reimb.setStatus("approved");
+                        reimb.setPaymentTime(null);
+                        reimb.setPaymentBy(null);
+                        reimb.setApprovalRemark("【付款退回】" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                        reimb.setUpdateBy(UserContext.username());
+                        reimb.setUpdateTime(LocalDateTime.now());
+                        expenseReimbursementService.updateById(reimb);
+                        log.info("[工资支付] 退回回写费用报销: id={}, status=paid->approved", payment.getBizId());
+                    }
+                    break;
+
+                case "PAYROLL_SETTLEMENT":
+                case "ORDER_SETTLEMENT":
+                    log.info("[工资支付] 退回: bizType={}, bizId={}, 通知相关人员重新处理", payment.getBizType(), payment.getBizId());
+                    break;
+
+                default:
+                    log.warn("[工资支付] 退回: 未知业务类型 {}", payment.getBizType());
+            }
+
+            if (billAggregationService != null) {
+                BillAggregation bill = billAggregationService.lambdaQuery()
+                        .eq(BillAggregation::getSourceType, payment.getBizType())
+                        .eq(BillAggregation::getSourceId, payment.getBizId())
+                        .eq(BillAggregation::getDeleteFlag, 0)
+                        .last("LIMIT 1")
+                        .one();
+                if (bill != null && "SETTLED".equals(bill.getStatus())) {
+                    bill.setStatus("CONFIRMED");
+                    bill.setSettledAmount(BigDecimal.ZERO);
+                    bill.setSettledAt(null);
+                    bill.setSettledById(null);
+                    bill.setSettledByName(null);
+                    bill.setRemark((bill.getRemark() != null ? bill.getRemark() + " | " : "")
+                            + "付款退回，状态回退至CONFIRMED");
+                    billAggregationService.updateById(bill);
+                    log.info("[工资支付] 退回回写账单汇总: billNo={}, SETTLED->CONFIRMED", bill.getBillNo());
+                }
+            }
+        } catch (Exception e) {
+            log.error("[工资支付] 退回回写上游失败: bizType={}, bizId={}", payment.getBizType(), payment.getBizId(), e);
+        }
     }
 
     // ============================================================

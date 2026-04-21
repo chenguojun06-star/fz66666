@@ -13,7 +13,6 @@ import {
   WarningOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import Layout from '@/components/Layout';
 import PageLayout from '@/components/common/PageLayout';
 import api from '@/utils/api';
 import TopStats from '../../components/TopStats';
@@ -221,7 +220,7 @@ const Dashboard: React.FC = () => {
   }, []);
 
   return (
-    <Layout>
+    <>
       <div className="dashboard-container">
         <PageLayout title="仪表盘">
 
@@ -422,7 +421,7 @@ const Dashboard: React.FC = () => {
         </div>
       </ResizableModal>
       </div>
-    </Layout>
+    </>
   );
 };
 

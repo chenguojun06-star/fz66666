@@ -22,7 +22,6 @@ export const resolveSmartGlobalGuide = (pathname: string): SmartGlobalGuide | nu
     path.startsWith('/style-info') ||
     path.startsWith('/basic/template-center') ||
     path.startsWith('/basic/pattern-revision') ||
-    path.startsWith('/pattern-production') ||
     path.startsWith('/data-center')
   ) {
     return {

@@ -6,21 +6,14 @@ import type { MenuProps } from 'antd';
  * 行操作项类型定义
  */
 export type RowAction = {
-  /** 操作唯一标识 */
   key: string;
-  /** 操作显示文本或React节点 */
   label: React.ReactNode;
-  /** 操作提示文本 */
   title?: string;
-  /** 是否禁用操作 */
   disabled?: boolean;
-  /** 是否为危险操作（显示红色） */
   danger?: boolean;
-  /** 是否为主要操作（优先显示） */
   primary?: boolean;
-  /** 点击事件处理函数 */
+  loading?: boolean;
   onClick?: () => void;
-  /** 子操作项（用于下拉菜单） */
   children?: MenuProps['items'];
 };
 
@@ -181,6 +174,7 @@ const RowActions: React.FC<{
             aria-label={text}
             disabled={a.disabled}
             danger={a.danger}
+            loading={a.loading}
             onClick={a.onClick}
           >
             {a.label}

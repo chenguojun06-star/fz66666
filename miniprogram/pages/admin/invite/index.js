@@ -37,8 +37,8 @@ Page({
     tenantCode: '',
     tenantName: '',
     qrUrl: '',       // base64 格式的小程序码图片，直接绑定到 <image src>
-    inviteToken: '',
-    expiresAt: '',
+    // inviteToken / expiresAt 已迁移到 this._inviteToken / this._expiresAt 实例属性
+    // 仅在 onShareAppMessage 中读取，不参与 WXML 渲染，避免 setData 未绑定告警。
     loading: false,
   },
 
@@ -60,10 +60,10 @@ Page({
 
       const qrData = (qrResp && qrResp.code === 200 && qrResp.data) || {};
       const qrCodeBase64 = qrData.qrCodeBase64 || '';
-      const inviteToken = qrData.inviteToken || '';
-      const expiresAt = qrData.expiresAt || '';
+      this._inviteToken = qrData.inviteToken || '';
+      this._expiresAt = qrData.expiresAt || '';
 
-      this.setData({ tenantCode, tenantName, qrUrl: qrCodeBase64, inviteToken, expiresAt });
+      this.setData({ tenantCode, tenantName, qrUrl: qrCodeBase64 });
     } catch (err) {
       console.error('[invite] loadTenantInfo failed', err);
       wx.showToast({ title: '加载失败，请重试', icon: 'none' });
@@ -104,7 +104,7 @@ Page({
     const name = this.data.tenantName || '工厂';
     return {
       title: name + ' · 邀请你加入',
-      path: '/pages/login/index?inviteToken=' + encodeURIComponent(this.data.inviteToken),
+      path: '/pages/login/index?inviteToken=' + encodeURIComponent(this._inviteToken || ''),
     };
   },
 });

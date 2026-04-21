@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSync } from '@/utils/syncManager';
 import api from '@/utils/api';
 import type { StyleInfo, StyleQueryParams } from '@/types/style';
@@ -14,6 +14,17 @@ interface UseOrderDataFetchParams {
   message: { error: (msg: string) => void };
 }
 
+function stableStringify(obj: unknown): string {
+  if (obj === null || obj === undefined) return '';
+  try {
+    const keys: string[] = [];
+    JSON.stringify(obj, (k, v) => { if (k) keys.push(k); return v; });
+    return JSON.stringify(obj, keys.sort());
+  } catch {
+    return String(obj);
+  }
+}
+
 export function useOrderDataFetch({ queryParams, visible, showSmartErrorNotice, message }: UseOrderDataFetchParams) {
   const [styles, setStyles] = useState<StyleInfo[]>([]);
   const [total, setTotal] = useState(0);
@@ -25,18 +36,25 @@ export function useOrderDataFetch({ queryParams, visible, showSmartErrorNotice, 
   const [users, setUsers] = useState<Array<{ id: number; name: string; username: string }>>([]);
   const [smartError, setSmartError] = useState<SmartErrorInfo | null>(null);
 
+  const prevParamsRef = useRef<string>('');
+
   const reportSmartError = (title: string, reason?: string, code?: string) => {
     if (!showSmartErrorNotice) return;
     setSmartError({ title, reason, code });
   };
 
-  const fetchStyles = async () => {
+  const fetchStyles = useCallback(async (params: StyleQueryParams) => {
     setLoading(true);
     try {
-      const response = await api.get<{ code: number; message: string; data: { records: StyleInfo[]; total: number } }>('/style/info/list', { params: queryParams });
+      const response = await api.get<{ code: number; message: string; data: { records: StyleInfo[]; total: number } }>('/style/info/list', { params });
       if (response.code === 200) {
-        setStyles(response.data.records || []);
-        setTotal(response.data.total || 0);
+        const newRecords = response.data.records || [];
+        const newTotal = response.data.total || 0;
+        setStyles(prev => {
+          if (prev.length === newRecords.length && prev === newRecords) return prev;
+          return newRecords;
+        });
+        setTotal(newTotal);
         if (showSmartErrorNotice) setSmartError(null);
       } else {
         reportSmartError('款号列表加载失败', response.message || '服务返回异常，请稍后重试', 'ORDER_STYLE_LIST_FAILED');
@@ -48,7 +66,7 @@ export function useOrderDataFetch({ queryParams, visible, showSmartErrorNotice, 
     } finally {
       setLoading(false);
     }
-  };
+  }, [showSmartErrorNotice, message]);
 
   const fetchFactories = async () => {
     try {
@@ -98,12 +116,13 @@ export function useOrderDataFetch({ queryParams, visible, showSmartErrorNotice, 
     }
   };
 
-  // 查询参数变化时重新获取款式列表
   useEffect(() => {
-    fetchStyles();
-  }, [queryParams]);
+    const key = stableStringify(queryParams);
+    if (key === prevParamsRef.current) return;
+    prevParamsRef.current = key;
+    fetchStyles(queryParams);
+  }, [queryParams, fetchStyles]);
 
-  // 实时同步：60秒自动轮询更新款式列表
   useSync(
     'order-management-styles',
     async () => {
@@ -135,18 +154,16 @@ export function useOrderDataFetch({ queryParams, visible, showSmartErrorNotice, 
     }
   );
 
-  // 初始化加载工厂、用户、部门及产能数据
   useEffect(() => {
-    fetchFactories();
-    fetchUsers();
-    void fetchDepartments();
-    productionOrderApi.getFactoryCapacity().then(res => {
-      if (res?.data) setFactoryCapacities(res.data);
-    }).catch(() => {/* 静默失败，不影响主流程 */});
+    Promise.all([fetchFactories(), fetchUsers(), fetchDepartments(), productionOrderApi.getFactoryCapacity()])
+      .then(([, , , capRes]) => {
+        if (capRes?.data) setFactoryCapacities(capRes.data);
+      })
+      .catch(() => {});
   }, []);
 
   return {
     styles, total, loading, factories, factoryCapacities, departments, users,
-    smartError, setSmartError, reportSmartError, fetchStyles,
+    smartError, setSmartError, reportSmartError, fetchStyles: () => fetchStyles(queryParams),
   };
 }

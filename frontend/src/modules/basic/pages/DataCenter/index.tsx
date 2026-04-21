@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { App, Button, Card, Col, Input, Row, Space, Form, Select, DatePicker, Upload } from 'antd';
 
 import PageStatCards from '@/components/common/PageStatCards';
-import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import SmallModal from '@/components/common/SmallModal';
@@ -475,7 +474,7 @@ const DataCenter: React.FC = () => {
   }, [styles]);
 
   return (
-    <Layout>
+    <>
         <div className="page-header" style={{ marginBottom: 16 }}>
           <h2 className="page-title">资料中心</h2>
         </div>
@@ -773,7 +772,7 @@ const DataCenter: React.FC = () => {
           </div>
         )}
       </ResizableModal>
-    </Layout>
+    </>
   );
 };
 

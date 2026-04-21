@@ -314,7 +314,7 @@ const GlobalAiAssistant: React.FC = () => {
   };
 
   const onSafeNavigate = useCallback((path: string) => {
-    const knownPrefixes = ['/production', '/finance', '/warehouse', '/intelligence', '/system', '/dashboard', '/style', '/crm', '/procurement', '/basic', '/cockpit', '/style-info', '/order-management', '/pattern-production'];
+    const knownPrefixes = ['/production', '/finance', '/warehouse', '/intelligence', '/system', '/dashboard', '/style', '/crm', '/procurement', '/basic', '/cockpit', '/style-info', '/order-management'];
     const safePath = path && knownPrefixes.some(p => path.startsWith(p)) ? path : '/production';
     setIsOpen(false);
     setIsTaskPanelOpen(false);

@@ -9,7 +9,6 @@ import StandardPagination from '@/components/common/StandardPagination';
 import { usePersistentState } from '@/hooks/usePersistentState';
 
 import dayjs from 'dayjs';
-import Layout from '@/components/Layout';
 import PageLayout from '@/components/common/PageLayout';
 import api from '@/utils/api';
 import { StyleInfo, StyleQueryParams } from '@/types/style';
@@ -58,7 +57,6 @@ import type { SizePriceRecord } from './utils/orderIntelligence';
 import { useOrderColumns } from './hooks/useOrderColumns';
 import { useOrderDataFetch } from './hooks/useOrderDataFetch';
 import { useOrderIntelligence } from './hooks/useOrderIntelligence';
-
 
 const OrderManagement: React.FC = () => {
   const { modal, message } = App.useApp();
@@ -123,7 +121,6 @@ const OrderManagement: React.FC = () => {
   const normalizeSizeKey = (v: unknown) => String(v || '').trim().toUpperCase().replace(/\s+/g, '');
   const displaySizeLabel = (v: unknown) => normalizeSizeKey(v) || '-';
   const orderQtyStats = useMemo(() => buildOrderQtyStats(orderLines), [orderLines]);
-
 
   const getMatchedQty = (colorRaw: any, sizeRaw: any) => {
     return getMatchedOrderQty(orderQtyStats, colorRaw, sizeRaw);
@@ -460,7 +457,6 @@ const OrderManagement: React.FC = () => {
         sortOrder: idx,
       }));
 
-
     // 新格式：直接在 nodes 里保存所有工序的完整信息
     // processesByNode 作为兼容字段也保存一份（按 progressStage 分组）
     const processesByNode: Record<string, typeof ensuredProcesses> = {};
@@ -747,7 +743,7 @@ const OrderManagement: React.FC = () => {
   const columns = useOrderColumns({ openCreate, setPrintModalVisible, setPrintingRecord, setRemarkStyleNo, setRemarkModalOpen });
 
   return (
-    <Layout>
+    <>
       <PageLayout
         title="下单管理"
         headerContent={showSmartErrorNotice && smartError ? (
@@ -1169,7 +1165,7 @@ const OrderManagement: React.FC = () => {
           '设计师': printingRecord?.designer,
         }}
       />
-    </Layout>
+    </>
   );
 };
 

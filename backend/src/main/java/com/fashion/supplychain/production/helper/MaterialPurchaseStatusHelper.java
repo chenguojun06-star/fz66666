@@ -365,6 +365,48 @@ public class MaterialPurchaseStatusHelper {
         return updated;
     }
 
+    public Map<String, Object> batchReturnConfirm(Map<String, Object> body) {
+        if (body == null) throw new IllegalArgumentException("参数错误");
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> items = (List<Map<String, Object>>) body.get("items");
+        String confirmerId = body.get("confirmerId") == null ? null : String.valueOf(body.get("confirmerId"));
+        String confirmerName = body.get("confirmerName") == null ? null : String.valueOf(body.get("confirmerName"));
+        String evidenceImageUrls = body.get("evidenceImageUrls") == null ? null : String.valueOf(body.get("evidenceImageUrls")).trim();
+
+        if (items == null || items.isEmpty()) throw new IllegalArgumentException("没有可回料确认的采购任务");
+        if (!StringUtils.hasText(confirmerName)) throw new IllegalArgumentException("缺少确认人信息");
+
+        int successCount = 0;
+        int failCount = 0;
+        List<String> errors = new ArrayList<>();
+
+        for (Map<String, Object> item : items) {
+            String purchaseId = item.get("purchaseId") == null ? null : String.valueOf(item.get("purchaseId"));
+            Integer returnQuantity = helper.coerceInt(item.get("returnQuantity"));
+            if (!StringUtils.hasText(purchaseId)) { failCount++; errors.add("缺少purchaseId"); continue; }
+
+            try {
+                Map<String, Object> singleBody = new java.util.HashMap<>();
+                singleBody.put("purchaseId", purchaseId);
+                singleBody.put("confirmerId", confirmerId);
+                singleBody.put("confirmerName", confirmerName);
+                singleBody.put("returnQuantity", returnQuantity);
+                if (StringUtils.hasText(evidenceImageUrls)) singleBody.put("evidenceImageUrls", evidenceImageUrls);
+                this.returnConfirm(singleBody);
+                successCount++;
+            } catch (Exception e) {
+                failCount++;
+                errors.add(purchaseId + ": " + e.getMessage());
+            }
+        }
+
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("successCount", successCount);
+        result.put("failCount", failCount);
+        result.put("errors", errors);
+        return result;
+    }
+
     public MaterialPurchase resetReturnConfirm(Map<String, Object> body) {
         String purchaseId = body == null ? null
                 : (body.get("purchaseId") == null ? null : String.valueOf(body.get("purchaseId")));

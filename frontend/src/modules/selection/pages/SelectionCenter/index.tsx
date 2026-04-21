@@ -4,7 +4,6 @@ import {
   Popover, Typography, Divider, Progress, Modal, Form, App,
   InputNumber, Tooltip, Tabs,
 } from 'antd';
-import Layout from '@/components/Layout';
 import StandardPagination from '@/components/common/StandardPagination';
 import { DEFAULT_PAGE_SIZE } from '@/utils/pageSizeStore';
 import {
@@ -500,7 +499,7 @@ export default function SelectionCenter() {
   }, [search, statusFilter, categoryFilter]);
 
   return (
-    <Layout>
+    <>
     <div style={{ padding: '16px 20px' }}>
       <Tabs
         activeKey={activeTab}
@@ -849,6 +848,6 @@ export default function SelectionCenter() {
       </Modal>
       </>)}
     </div>
-    </Layout>
+    </>
   );
 }

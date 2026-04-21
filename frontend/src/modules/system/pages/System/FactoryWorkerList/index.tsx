@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { App, Button, Form, Input, Select, Space, Tag } from 'antd';
 import { ArrowLeftOutlined, UserAddOutlined } from '@ant-design/icons';
-import Layout from '@/components/Layout';
 import PageLayout from '@/components/common/PageLayout';
 import { paths } from '@/routeConfig';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -222,7 +221,7 @@ const FactoryWorkerList: React.FC = () => {
     : '工人名册';
 
   return (
-    <Layout>
+    <>
       <PageLayout
         title={pageTitle}
         titleExtra={
@@ -366,7 +365,7 @@ const FactoryWorkerList: React.FC = () => {
           </Form.Item>
         </Form>
       </SmallModal>
-    </Layout>
+    </>
   );
 };
 

@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { App, Button, Card, Form, Select, Space, Tag } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 
-import Layout from '@/components/Layout';
 import PageLayout from '@/components/common/PageLayout';
 import PageStatCards from '@/components/common/PageStatCards';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -283,7 +282,7 @@ const CuttingManagement: React.FC = () => {
 
   // ─── JSX ─────────────────────────────────────────────────
   return (
-    <Layout>
+    <>
         <PageLayout
           title={isEntryPage ? '裁剪明细' : '裁剪管理'}
           titleExtra={isEntryPage ? (
@@ -827,7 +826,7 @@ const CuttingManagement: React.FC = () => {
           targetNo={remarkOrderNo}
           canAddRemark={true}
         />
-    </Layout>
+    </>
   );
 };
 

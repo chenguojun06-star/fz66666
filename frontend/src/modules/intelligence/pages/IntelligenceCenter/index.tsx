@@ -7,7 +7,6 @@ import {
   FullscreenOutlined, FullscreenExitOutlined, SearchOutlined,
 } from '@ant-design/icons';
 import XiaoyunCloudAvatar from '@/components/common/XiaoyunCloudAvatar';
-import Layout from '@/components/Layout';
 import { useAuth } from '@/utils/AuthContext';
 import ProfitDeliveryPanel from './ProfitDeliveryPanel';
 import LiveScanFeed from './LiveScanFeed';
@@ -40,8 +39,6 @@ import { usePanelCollapse } from './hooks/usePanelCollapse';
 import { useTaskExecution } from './hooks/useTaskExecution';
 import { paths } from '@/routeConfig';
 import './styles.css';
-
-
 
 const IntelligenceCenter: React.FC = () => {
   const navigate = useNavigate();
@@ -148,7 +145,7 @@ const IntelligenceCenter: React.FC = () => {
   }), [factoryCapacity]);
 
   return (
-    <Layout>
+    <>
       <div className={`cockpit-root${isFullscreen ? ' cockpit-fullscreen' : ''}`} ref={rootRef}>
 
         {/* ╔══════════════════════════════════════════════╗
@@ -687,7 +684,7 @@ const IntelligenceCenter: React.FC = () => {
       {/* ⌘K 全局搜索弹窗 */}
       <GlobalSearchModal open={showSearch} onClose={() => setShowSearch(false)} />
 
-    </Layout>
+    </>
   );
 };
 

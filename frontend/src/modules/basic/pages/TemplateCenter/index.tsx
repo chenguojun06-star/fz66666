@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { App, Button, Card, Form, Image, Input, Select, Space, Tabs, Tag, Tooltip, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import Layout from '@/components/Layout';
 import PageLayout from '@/components/common/PageLayout';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -766,7 +765,7 @@ const TemplateCenter: React.FC = () => {
   ];
 
   return (
-    <Layout>
+    <>
       <PageLayout
         title="单价维护"
         headerContent={
@@ -974,7 +973,7 @@ const TemplateCenter: React.FC = () => {
         open={syncPriceOpen}
         onCancel={() => setSyncPriceOpen(false)}
       />
-    </Layout>
+    </>
   );
 };
 

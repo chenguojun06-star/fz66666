@@ -36,6 +36,7 @@ public class MaterialQualityIssueOrchestrator {
     private final MaterialPurchaseService materialPurchaseService;
     private final MaterialReconciliationService materialReconciliationService;
     private final MaterialReconciliationOrchestrator materialReconciliationOrchestrator;
+    private final com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator billAggregationOrchestrator;
 
     public List<MaterialQualityIssue> listByPurchaseId(String purchaseId) {
         TenantAssert.assertTenantContext();
@@ -278,6 +279,15 @@ public class MaterialQualityIssueOrchestrator {
         patch.setRemark(joinRemark(reconciliation.getRemark(),
                 String.format("品质异常扣款[%s] %s", issue.getIssueNo(), resolutionRemark)));
         materialReconciliationService.updateById(patch);
+
+        if (billAggregationOrchestrator != null) {
+            try {
+                billAggregationOrchestrator.syncAmountBySource("MATERIAL_RECONCILIATION", reconciliation.getId(), patch.getFinalAmount());
+            } catch (Exception e) {
+                log.warn("[QualityIssue] 扣款后同步账单金额失败: reconciliationId={}", reconciliation.getId(), e);
+            }
+        }
+
         issue.setDeductionAmount(addition);
         appendPurchaseRemark(purchase, buildImpactRemark(issue, resolutionRemark, "已联动物料对账扣款"));
         materialPurchaseService.updateById(purchase);

@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { App, Button, Card, Space, Tabs, Tag } from 'antd';
 import { ArrowUpOutlined, ArrowDownOutlined, ShopOutlined, InboxOutlined } from '@ant-design/icons';
-import Layout from '@/components/Layout';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import StickyFilterBar from '@/components/common/StickyFilterBar';
@@ -195,7 +194,7 @@ const ExternalFactory: React.FC = () => {
 
   return (
     <>
-    <Layout>
+    <>
       <div style={{ display: 'flex', height: 'calc(100vh - 64px)' }}>
         <FactorySidebar
           stats={factoryStats}
@@ -273,7 +272,7 @@ const ExternalFactory: React.FC = () => {
           ]} />
         </div>
       </div>
-    </Layout>
+    </>
     </>
   );
 };

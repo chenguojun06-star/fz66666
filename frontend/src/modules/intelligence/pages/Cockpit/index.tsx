@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { Button, Tooltip } from 'antd';
 import { ReloadOutlined, SyncOutlined } from '@ant-design/icons';
-import Layout from '@/components/Layout';
 import { TimeDimensionProvider } from './contexts/TimeDimensionContext';
 import { StyleLinkProvider } from './contexts/StyleLinkContext';
 import TimeDimensionSelector from './components/TimeDimensionSelector';
@@ -196,7 +195,7 @@ const CockpitPage: React.FC = () => {
   );
 
   return (
-    <Layout>
+    <>
       <TimeDimensionProvider>
         <StyleLinkProvider>
           <div className="cockpit-workbench">
@@ -506,7 +505,7 @@ const CockpitPage: React.FC = () => {
         </div>
         </StyleLinkProvider>
       </TimeDimensionProvider>
-    </Layout>
+    </>
   );
 };
 

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import Layout from '@/components/Layout';
 import PageLayout from '@/components/common/PageLayout';
 import { LoginLog, LoginLogQueryParams } from '@/types/system';
 import api from '@/utils/api';
@@ -85,7 +84,7 @@ const LoginLogList: React.FC = () => {
   ];
 
   return (
-    <Layout>
+    <>
       <PageLayout
         title="登录日志"
         filterBar={
@@ -160,7 +159,7 @@ const LoginLogList: React.FC = () => {
           scroll={{ x: 'max-content' }}
         />
       </PageLayout>
-    </Layout>
+    </>
   );
 };
 

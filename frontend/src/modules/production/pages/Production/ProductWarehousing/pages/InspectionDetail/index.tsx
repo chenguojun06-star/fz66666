@@ -6,7 +6,6 @@ import {
   ArrowLeftOutlined, CheckCircleOutlined,
   InboxOutlined, OrderedListOutlined,
 } from '@ant-design/icons';
-import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import api, { type ApiResult, toNumberSafe, parseProductionOrderLines, fetchProductionOrderDetail } from '@/utils/api';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
@@ -15,7 +14,6 @@ import { getMaterialTypeLabel } from '@/utils/materialType';
 import { ProductWarehousing as WarehousingType, ProductionOrder } from '@/types/production';
 import { OrderLineWarehousingRow, WarehousingDetailRecord, CuttingBundleRow, OrderLine } from '../../types';
 import { getQualityStatusConfig, getDefectCategoryLabel, getDefectRemarkLabel } from '../../utils';
-
 
 import BatchUnqualifiedModal from '../../components/WarehousingModal/BatchUnqualifiedModal';
 import { useWarehousingForm } from '../../components/WarehousingModal/hooks/useWarehousingForm';
@@ -52,7 +50,6 @@ interface QualityBriefingData {
   }>;
   qualityTips: string[];
 }
-
 
 /* ======================================================================
    统一质检入库页面
@@ -584,22 +581,22 @@ const InspectionDetail: React.FC = () => {
   /* ==================== 主渲染 ==================== */
   if (loading) {
     return (
-      <Layout>
+      <>
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
           <Spin size="large" spinning tip="加载中..."><div /></Spin>
         </div>
-      </Layout>
+      </>
     );
   }
 
   if (!briefing) {
     return (
-      <Layout>
+      <>
         <Card>
           <Alert type="error" title="无法加载质检简报数据" showIcon />
           <Button type="link" onClick={() => navigate('/production/warehousing')}>返回质检入库列表</Button>
         </Card>
-      </Layout>
+      </>
     );
   }
 
@@ -609,7 +606,7 @@ const InspectionDetail: React.FC = () => {
   const urgencyKey = String((order as any)?.urgencyLevel || '').trim().toLowerCase();
 
   return (
-    <Layout>
+    <>
         {/* 顶部导航栏 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
           <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/production/warehousing')}>返回</Button>
@@ -945,7 +942,7 @@ const InspectionDetail: React.FC = () => {
           onRemoveImage={(file) => setUnqualifiedFileList((prev) => prev.filter((f) => f.uid !== file.uid))}
           onFileListChange={setUnqualifiedFileList}
         />
-    </Layout>
+    </>
   );
 };
 

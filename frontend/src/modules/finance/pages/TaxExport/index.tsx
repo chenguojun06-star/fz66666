@@ -8,7 +8,6 @@ import {
 } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
 import { useNavigate } from 'react-router-dom';
-import Layout from '@/components/Layout';
 import { paths } from '@/routeConfig';
 import { appStoreService } from '@/services/system/appStore';
 import { useAuth } from '@/utils/AuthContext';
@@ -837,7 +836,7 @@ const TaxExport: React.FC = () => {
   };
 
   if (checking) {
-    return <Layout><div style={{ textAlign: 'center', padding: '80px 0' }}><span>加载中…</span></div></Layout>;
+    return <><div style={{ textAlign: 'center', padding: '80px 0' }}><span>加载中…</span></div></>;
   }
 
   const selectedFormatInfo = FORMAT_OPTIONS.find(f => f.value === format);
@@ -945,7 +944,7 @@ const TaxExport: React.FC = () => {
   ];
 
   return (
-    <Layout>
+    <>
       <div style={pageShellStyle}>
         <Title level={4} style={{ marginBottom: 4 }}>
           <FileExcelOutlined style={{ marginRight: 8, color: '#52c41a' }} />
@@ -956,7 +955,7 @@ const TaxExport: React.FC = () => {
         </Text>
         <Tabs items={tabs} defaultActiveKey="export" />
       </div>
-    </Layout>
+    </>
   );
 };
 

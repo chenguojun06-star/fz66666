@@ -536,25 +536,20 @@ public class PayrollSettlementOrchestrator {
 
         log.info("[PayrollApprove] 工资结算单审核通过: id={}, confirmerId={}", settlementId, confirmerId);
 
-        // 审核通过后推送到账单汇总
         if (billAggregationOrchestrator != null) {
-            try {
-                BillPushRequest pushReq = new BillPushRequest();
-                pushReq.setBillType("PAYABLE");
-                pushReq.setBillCategory("PAYROLL");
-                pushReq.setSourceType("PAYROLL_SETTLEMENT");
-                pushReq.setSourceId(settlementId.trim());
-                pushReq.setSourceNo(settlement.getSettlementNo());
-                pushReq.setCounterpartyType("WORKER");
-                pushReq.setOrderId(settlement.getOrderId());
-                pushReq.setOrderNo(settlement.getOrderNo());
-                pushReq.setStyleNo(settlement.getStyleNo());
-                pushReq.setAmount(settlement.getTotalAmount());
-                pushReq.setSettlementMonth(now.format(DateTimeFormatter.ofPattern("yyyy-MM")));
-                billAggregationOrchestrator.pushBill(pushReq);
-            } catch (Exception e) {
-                log.warn("[PayrollApprove] 推送账单汇总失败（不影响主流程）: id={}", settlementId, e);
-            }
+            BillPushRequest pushReq = new BillPushRequest();
+            pushReq.setBillType("PAYABLE");
+            pushReq.setBillCategory("PAYROLL");
+            pushReq.setSourceType("PAYROLL_SETTLEMENT");
+            pushReq.setSourceId(settlementId.trim());
+            pushReq.setSourceNo(settlement.getSettlementNo());
+            pushReq.setCounterpartyType("WORKER");
+            pushReq.setOrderId(settlement.getOrderId());
+            pushReq.setOrderNo(settlement.getOrderNo());
+            pushReq.setStyleNo(settlement.getStyleNo());
+            pushReq.setAmount(settlement.getTotalAmount());
+            pushReq.setSettlementMonth(now.format(DateTimeFormatter.ofPattern("yyyy-MM")));
+            billAggregationOrchestrator.pushBill(pushReq);
         }
     }
 

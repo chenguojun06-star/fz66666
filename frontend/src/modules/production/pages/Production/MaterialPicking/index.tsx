@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button, Card, Tag } from 'antd';
 
-import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import api from '@/utils/api';
@@ -119,7 +118,7 @@ const MaterialPickingList: React.FC = () => {
   ];
 
   return (
-    <Layout>
+    <>
       <Card variant="borderless">
         {showSmartErrorNotice && smartError ? (
           <Card size="small" style={{ marginBottom: 12 }}>
@@ -168,7 +167,7 @@ const MaterialPickingList: React.FC = () => {
           setSelectedPickingId(null);
         }}
       />
-    </Layout>
+    </>
   );
 };
 

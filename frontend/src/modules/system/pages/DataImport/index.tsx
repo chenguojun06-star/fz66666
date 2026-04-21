@@ -14,7 +14,6 @@ import {
   PictureOutlined,
 } from '@ant-design/icons';
 import type { UploadFile, RcFile } from 'antd/es/upload/interface';
-import Layout from '@/components/Layout';
 import { dataImportService } from '@/services/system/dataImport';
 import type { ImportResult } from '@/services/system/dataImport';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -439,7 +438,7 @@ const ImportPanel: React.FC<{ config: TabConfig }> = ({ config }) => {
 
 const DataImport: React.FC = () => {
   return (
-    <Layout>
+    <>
       <div style={{ padding: '0 0 24px' }}>
         <Title level={4} style={{ marginBottom: 4 }}>
           <FileExcelOutlined style={{ marginRight: 8 }} />
@@ -478,7 +477,7 @@ const DataImport: React.FC = () => {
           ]}
         />
       </Card>
-    </Layout>
+    </>
   );
 };
 

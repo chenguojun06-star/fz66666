@@ -1,0 +1,2 @@
+ALTER TABLE t_deduction_item ADD COLUMN source_type VARCHAR(64) DEFAULT NULL;
+ALTER TABLE t_deduction_item ADD COLUMN source_id VARCHAR(64) DEFAULT NULL;

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Alert, Button, Card, Checkbox, Empty, Input, Select, Space, Spin, Tabs, Tag, Form, Row, Col } from 'antd';
 import { QrcodeOutlined, LinkOutlined } from '@ant-design/icons';
-import Layout from '@/components/Layout';
 import PageLayout from '@/components/common/PageLayout';
 import ResizableModal from '@/components/common/ResizableModal';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -66,7 +65,7 @@ const UserList: React.FC = () => {
   });
 
   return (
-    <Layout>
+    <>
         <PageLayout
           title="人员管理"
           headerContent={
@@ -502,7 +501,7 @@ const UserList: React.FC = () => {
         onOk={handleRemarkConfirm}
         onCancel={() => setRemarkModalState(null)}
       />
-    </Layout>
+    </>
   );
 };
 

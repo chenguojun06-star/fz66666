@@ -158,6 +158,11 @@ public class MaterialPurchaseController {
         return Result.success(materialPurchaseOrchestrator.returnConfirm(body));
     }
 
+    @PostMapping("/batch-return-confirm")
+    public Result<?> batchReturnConfirm(@RequestBody Map<String, Object> body) {
+        return Result.success(materialPurchaseOrchestrator.batchReturnConfirm(body));
+    }
+
     /**
      * 重置退货确认
      */

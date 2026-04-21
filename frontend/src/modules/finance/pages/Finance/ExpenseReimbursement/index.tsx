@@ -14,10 +14,9 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
-import Layout from '@/components/Layout';
 import ResizableModal from '@/components/common/ResizableModal';
 import { ModalField, ModalFieldRow } from '@/components/common/ModalContentLayout';
-import { useAuth } from '@/utils/AuthContext';
+import { useAuth, isAdmin, isSupervisorOrAbove } from '@/utils/AuthContext';
 import {
   expenseReimbursementApi,
   EXPENSE_TYPES,
@@ -406,7 +405,8 @@ const ExpenseReimbursementPage: React.FC = () => {
         const isAllView = viewMode === 'all';
         const isOwnRecord = record.applicantId === Number(user?.id);
         const isPendingRecord = record.status === 'pending';
-        const canApproveRecord = isAllView && isPendingRecord && !isOwnRecord;
+        const canApproveOwnRecord = isOwnRecord && isSupervisorOrAbove(user);
+        const canApproveRecord = isAllView && isPendingRecord && (!isOwnRecord || canApproveOwnRecord);
 
         // 自己的待审批/已驳回单据可以编辑、删除
         if (isOwnRecord && (record.status === 'pending' || record.status === 'rejected')) {
@@ -444,7 +444,7 @@ const ExpenseReimbursementPage: React.FC = () => {
   const expenseTypeValue = Form.useWatch('expenseType', form);
 
   return (
-    <Layout>
+    <>
       <div style={{ padding: '0 0 24px' }}>
         {showSmartErrorNotice && smartError ? (
           <Card size="small" style={{ marginBottom: 16 }}>
@@ -569,7 +569,7 @@ const ExpenseReimbursementPage: React.FC = () => {
                     : '请上传发票/收据图片，系统将自动识别金额和日期'
               }
             >
-              <Space orientation="vertical" style={{ width: '100%' }} size={8}>
+              <Space direction="vertical" style={{ width: '100%' }} size={8}>
                 <Upload
                   accept="image/*"
                   multiple
@@ -884,8 +884,8 @@ const ExpenseReimbursementPage: React.FC = () => {
               {/* 审批操作区 */}
               {detailRecord.status === 'pending' && (
                 <>
-                  {/* 审批人视角：全部标签 + 非本人 */}
-                  {viewMode === 'all' && detailRecord.applicantId !== Number(user?.id) && (
+                  {/* 审批人视角：全部标签 + (非本人 或 管理员/老板) */}
+                  {viewMode === 'all' && (detailRecord.applicantId !== Number(user?.id) || isSupervisorOrAbove(user)) && (
                     <div style={{ borderTop: '1px solid #f0f0f0', margin: '16px 0 8px', paddingTop: 12 }}>
                       <div style={{ fontWeight: 500, marginBottom: 8, color: 'var(--color-text-primary)' }}>审批与备注</div>
                       <TextArea
@@ -901,13 +901,13 @@ const ExpenseReimbursementPage: React.FC = () => {
                       </div>
                     </div>
                   )}
-                  {/* 本人提交的单子——提示而不是空白 */}
-                  {detailRecord.applicantId === Number(user?.id) && (
+                  {/* 本人提交的单子且非管理员——提示而不是空白 */}
+                  {detailRecord.applicantId === Number(user?.id) && !isSupervisorOrAbove(user) && (
                     <div style={{ margin: '16px 0 8px' }}>
                       <Alert
                         type="info"
                         showIcon
-                        title="等待审批"
+                        message="等待审批"
                         description={(
                           <>
                             您提交的报销单需由其他人审批。
@@ -927,8 +927,7 @@ const ExpenseReimbursementPage: React.FC = () => {
         )}
       </ResizableModal>
 
-
-    </Layout>
+    </>
   );
 };
 

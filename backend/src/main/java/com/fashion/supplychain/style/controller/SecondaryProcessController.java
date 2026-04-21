@@ -3,6 +3,7 @@ package com.fashion.supplychain.style.controller;
 import com.fashion.supplychain.common.Result;
 import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.finance.orchestration.BillAggregationOrchestrator;
 import com.fashion.supplychain.style.entity.SecondaryProcess;
 import com.fashion.supplychain.style.orchestration.StyleQuotationOrchestrator;
 import com.fashion.supplychain.style.service.SecondaryProcessService;
@@ -31,6 +32,7 @@ public class SecondaryProcessController {
 
     private final SecondaryProcessService secondaryProcessService;
     private final StyleQuotationOrchestrator styleQuotationOrchestrator;
+    private final BillAggregationOrchestrator billAggregationOrchestrator;
 
     @Operation(summary = "根据款号ID查询二次工艺列表")
     @GetMapping("/list")
@@ -108,6 +110,53 @@ public class SecondaryProcessController {
             }
         }
         return Result.success(null);
+    }
+
+    @Operation(summary = "审批二次工艺（主管权限）")
+    @PreAuthorize("hasAuthority('MENU_FINANCE_PAYROLL_APPROVAL_MANAGE')")
+    @PostMapping("/{id}/approve")
+    public Result<SecondaryProcess> approve(
+            @PathVariable Long id,
+            @RequestBody java.util.Map<String, Object> body) {
+        SecondaryProcess process = secondaryProcessService.getById(id);
+        if (process == null) {
+            return Result.fail("二次工艺不存在");
+        }
+        TenantAssert.assertBelongsToCurrentTenant(process.getTenantId(), "二次工艺");
+
+        if ("approved".equals(process.getApprovalStatus())) {
+            return Result.fail("已审批，不可重复操作");
+        }
+
+        String action = body.getOrDefault("action", "approve").toString();
+        if ("approve".equalsIgnoreCase(action)) {
+            process.setApprovalStatus("approved");
+            process.setApprovedById(UserContext.userId());
+            process.setApprovedByName(UserContext.username());
+            process.setApprovedTime(LocalDateTime.now());
+
+            if (process.getTotalPrice() != null && process.getTotalPrice().compareTo(java.math.BigDecimal.ZERO) > 0) {
+                BillAggregationOrchestrator.BillPushRequest req = new BillAggregationOrchestrator.BillPushRequest();
+                req.setBillType("PAYABLE");
+                req.setBillCategory("SECONDARY_PROCESS");
+                req.setSourceType("SECONDARY_PROCESS");
+                req.setSourceId(String.valueOf(id));
+                req.setSourceNo("SP-" + id);
+                req.setCounterpartyType("FACTORY");
+                req.setCounterpartyId(process.getFactoryId());
+                req.setCounterpartyName(process.getFactoryName());
+                req.setAmount(process.getTotalPrice());
+                req.setRemark("二次工艺审批: " + process.getProcessName());
+                req.setSettlementMonth(LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM")));
+                billAggregationOrchestrator.pushBill(req);
+            }
+        } else {
+            process.setApprovalStatus("rejected");
+        }
+
+        process.setUpdatedAt(LocalDateTime.now());
+        secondaryProcessService.updateById(process);
+        return Result.success(process);
     }
 
     private void normalizeProcess(SecondaryProcess process, SecondaryProcess existing) {

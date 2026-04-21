@@ -30,6 +30,7 @@ public class SystemTableMigrator {
         ensureDictTable();
         createAdminUser(jdbc);
         fixAppStorePrices(jdbc);
+        ensureMissingColumns(jdbc);
     }
 
     private void createUserTable(JdbcTemplate jdbc) {
@@ -358,9 +359,11 @@ public class SystemTableMigrator {
         if (productionId != null) {
             ensurePermission("我的订单", "MENU_PRODUCTION_LIST", productionId, "生产管理", "menu", "/production", null, 21);
             ensurePermission("物料采购", "MENU_MATERIAL_PURCHASE", productionId, "生产管理", "menu", "/production/material", null, 22);
-            ensurePermission("裁剪管理", "MENU_CUTTING", productionId, "生产管理", "menu", "/production/cutting", null, 23);
-            ensurePermission("工序跟进", "MENU_PROGRESS", productionId, "生产管理", "menu", "/production/progress-detail", null, 24);
-            ensurePermission("质检入库", "MENU_WAREHOUSING", productionId, "生产管理", "menu", "/production/warehousing", null, 25);
+            ensurePermission("裁剪管理", "MENU_CUTTING", productionId, "生产管理", "menu", "/production/cutting", null, 24);
+            ensurePermission("工序跟进", "MENU_PROGRESS", productionId, "生产管理", "menu", "/production/progress-detail", null, 25);
+            ensurePermission("物料领用", "MENU_MATERIAL_PICKING", productionId, "生产管理", "menu", "/production/picking", null, 26);
+            ensurePermission("质检入库", "MENU_WAREHOUSING", productionId, "生产管理", "menu", "/production/warehousing", null, 27);
+            ensurePermission("订单转移", "MENU_ORDER_TRANSFER", productionId, "生产管理", "menu", "/production/transfer", null, 28);
             dbHelper.ensurePermissionNameByCode("MENU_WAREHOUSING", "质检入库");
         }
         if (financeId != null) {
@@ -370,16 +373,38 @@ public class SystemTableMigrator {
             ensurePermission("人员工序统计", "MENU_PAYROLL_OPERATOR_SUMMARY", financeId, "财务管理", "menu", "/finance/payroll-operator-summary", null, 35);
             ensurePermission("费用报销", "MENU_EXPENSE_REIMBURSEMENT", financeId, "财务管理", "menu", "/finance/expense-reimbursement", null, 36);
             ensurePermission("财税导出", "MENU_FINANCE_EXPORT", financeId, "财务管理", "menu", "/finance/tax-export", null, 37);
+            ensurePermission("订单结算(外)", "MENU_FINISHED_SETTLEMENT", financeId, "财务管理", "menu", "/finance/center", null, 38);
         }
-        // 独立售卖模块菜单权限（CRM客户管理、供应商采购）
-        ensurePermission("CRM客户管理", "MENU_CRM", 0L, null, "menu", "/crm", null, 50);
-        ensurePermission("供应商采购", "MENU_PROCUREMENT", 0L, null, "menu", "/procurement", null, 60);
+        Long warehouseId = ensurePermission("仓库管理", "MENU_WAREHOUSE", 0L, null, "menu", null, null, 45);
+        if (warehouseId != null) {
+            ensurePermission("仓库仪表盘", "MENU_WAREHOUSE_DASHBOARD", warehouseId, "仓库管理", "menu", "/warehouse/dashboard", null, 46);
+            ensurePermission("物料进销存", "MENU_MATERIAL_INVENTORY", warehouseId, "仓库管理", "menu", "/warehouse/material", null, 47);
+            ensurePermission("物料新增", "MENU_MATERIAL_DATABASE", warehouseId, "仓库管理", "menu", "/warehouse/material-database", null, 48);
+            ensurePermission("成品进销存", "MENU_FINISHED_INVENTORY", warehouseId, "仓库管理", "menu", "/warehouse/finished", null, 49);
+            ensurePermission("样衣库存", "MENU_SAMPLE_INVENTORY", warehouseId, "仓库管理", "menu", "/warehouse/sample", null, 50);
+        }
+        ensurePermission("选品中心", "MENU_SELECTION", 0L, null, "menu", "/selection", null, 55);
+        ensurePermission("CRM客户管理", "MENU_CRM", 0L, null, "menu", "/crm", null, 60);
+        ensurePermission("客户管理", "MENU_CUSTOMER", 0L, null, "menu", "/system/customer", null, 65);
+        ensurePermission("供应商采购", "MENU_PROCUREMENT", 0L, null, "menu", "/procurement", null, 70);
+        ensurePermission("应用商店", "MENU_APP_STORE_VIEW", 0L, null, "menu", "/system/app-store", null, 75);
+        ensurePermission("API对接管理", "MENU_TENANT_APP", 0L, null, "menu", "/system/tenant", null, 80);
+        ensurePermission("集成对接中心", "MENU_INTEGRATION", 0L, null, "menu", "/integration/center", null, 85);
+        ensurePermission("智能运营中心", "MENU_INTELLIGENCE_CENTER", 0L, null, "menu", "/intelligence/center", null, 90);
         if (systemId != null) {
             ensurePermission("人员管理", "MENU_USER", systemId, "系统设置", "menu", "/system/user", null, 41);
             ensurePermission("岗位权限", "MENU_ROLE", systemId, "系统设置", "menu", "/system/role", null, 42);
             ensurePermission("供应商管理", "MENU_FACTORY", systemId, "系统设置", "menu", "/system/factory", null, 43);
             ensurePermission("权限管理", "MENU_PERMISSION", systemId, "系统设置", "menu", "/system/permission", null, 44);
             ensurePermission("登录日志", "MENU_LOGIN_LOG", systemId, "系统设置", "menu", "/system/login-log", null, 45);
+            ensurePermission("用户审批", "MENU_USER_APPROVAL", systemId, "系统设置", "menu", "/system/user-approval", null, 46);
+            ensurePermission("字典管理", "MENU_DICT", systemId, "系统设置", "menu", "/system/dict", null, 47);
+            ensurePermission("系统教学", "MENU_TUTORIAL", systemId, "系统设置", "menu", "/system/tutorial", null, 48);
+            ensurePermission("数据导入", "MENU_DATA_IMPORT", systemId, "系统设置", "menu", "/system/data-import", null, 49);
+        }
+        if (basicId != null) {
+            ensurePermission("样衣生产", "MENU_PATTERN_PRODUCTION", basicId, "样衣管理", "menu", "/pattern-production", null, 15);
+            ensurePermission("样衣修订", "MENU_PATTERN_REVISION", basicId, "样衣管理", "menu", "/basic/pattern-revision", null, 16);
         }
 
         // 功能按钮权限
@@ -491,7 +516,6 @@ public class SystemTableMigrator {
             return;
         }
         try {
-            // 检查是否有price_once=0的已发布应用（说明数据需要修复）
             Integer zeroCount = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM t_app_store WHERE status='PUBLISHED' AND (price_once IS NULL OR price_once = 0)",
                 Integer.class
@@ -507,6 +531,32 @@ public class SystemTableMigrator {
             }
         } catch (Exception e) {
             log.warn("Failed to fix app store prices: {}", e.getMessage());
+        }
+    }
+
+    private void ensureMissingColumns(JdbcTemplate jdbc) {
+        if (!dbHelper.tableExists("t_secondary_process")) return;
+        try {
+            addColumnIfNotExists(jdbc, "t_secondary_process", "approval_status", "VARCHAR(32) DEFAULT NULL");
+            addColumnIfNotExists(jdbc, "t_secondary_process", "approved_by_id", "VARCHAR(64) DEFAULT NULL");
+            addColumnIfNotExists(jdbc, "t_secondary_process", "approved_by_name", "VARCHAR(128) DEFAULT NULL");
+            addColumnIfNotExists(jdbc, "t_secondary_process", "approved_time", "DATETIME DEFAULT NULL");
+        } catch (Exception e) {
+            log.warn("Failed to add missing columns to t_secondary_process: {}", e.getMessage());
+        }
+    }
+
+    private void addColumnIfNotExists(JdbcTemplate jdbc, String table, String column, String definition) {
+        try {
+            Integer count = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND COLUMN_NAME=?",
+                Integer.class, table, column);
+            if (count != null && count == 0) {
+                jdbc.execute("ALTER TABLE " + table + " ADD COLUMN " + column + " " + definition);
+                log.info("Added column {}.{} to database", table, column);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to add column {}.{}: {}", table, column, e.getMessage());
         }
     }
 }

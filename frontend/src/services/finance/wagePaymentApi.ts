@@ -35,7 +35,7 @@ export interface WagePayment {
   bizType?: string;
   bizId?: string;
   bizNo?: string;
-  status: 'pending' | 'processing' | 'success' | 'failed' | 'cancelled' | 'rejected';
+  status: 'pending' | 'processing' | 'success' | 'failed' | 'cancelled' | 'rejected' | 'refunded';
   paymentTime?: string;
   paymentProof?: string;
   paymentRemark?: string;
@@ -151,6 +151,7 @@ export const PAYMENT_STATUS_MAP: Record<string, { text: string; color: string }>
   failed: { text: '支付失败', color: 'red' },
   cancelled: { text: '已取消', color: 'default' },
   rejected: { text: '已驳回', color: 'red' },
+  refunded: { text: '已退回', color: 'volcano' },
 };
 
 export const OWNER_TYPE_OPTIONS = [
@@ -208,4 +209,8 @@ export const wagePaymentApi = {
   /** 驳回待付款项（回写上游状态） */
   rejectPayable: (params: { paymentId?: string; bizType: string; bizId: string; reason: string }) =>
     api.post('/finance/wage-payments/reject', params),
+
+  /** 退回已付款项（主管权限，回写上游状态） */
+  refundPayment: (id: string, reason: string) =>
+    api.post(`/finance/wage-payments/${id}/refund`, { reason }),
 };

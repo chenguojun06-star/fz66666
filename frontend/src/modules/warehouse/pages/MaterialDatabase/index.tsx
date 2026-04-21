@@ -4,7 +4,6 @@ import type { MenuProps } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { UploadOutlined } from '@ant-design/icons';
 import type { UploadFile } from 'antd/es/upload/interface';
-import Layout from '@/components/Layout';
 import MaterialTypeTag from '@/components/common/MaterialTypeTag';
 import StandardModal from '@/components/common/StandardModal';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
@@ -640,7 +639,7 @@ const MaterialDatabasePage: React.FC = () => {
   ];
 
   return (
-    <Layout>
+    <>
       {showSmartErrorNotice && smartError ? (
         <Card size="small" style={{ marginBottom: 12 }}>
           <SmartErrorNotice
@@ -969,7 +968,7 @@ const MaterialDatabasePage: React.FC = () => {
           onOk={handleReturnConfirm}
           onCancel={() => setReturnTarget(null)}
         />
-    </Layout>
+    </>
   );
 };
 

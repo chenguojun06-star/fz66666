@@ -47,6 +47,7 @@ public class ReceivableOrchestrator {
     private BillAggregationService billAggregationService;
 
     private static final DateTimeFormatter NO_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+    private static final java.util.concurrent.atomic.AtomicInteger NO_SEQ = new java.util.concurrent.atomic.AtomicInteger(0);
 
     // ─── 查询 ────────────────────────────────────────────────────────────────
 
@@ -156,7 +157,22 @@ public class ReceivableOrchestrator {
         Long tenantId = UserContext.tenantId();
         UserContext ctx = UserContext.get();
 
-        receivable.setReceivableNo("AR" + LocalDateTime.now().format(NO_FMT));
+        if (receivable.getSourceBizType() != null && receivable.getSourceBizId() != null) {
+            Receivable existing = receivableService.lambdaQuery()
+                    .eq(Receivable::getSourceBizType, receivable.getSourceBizType())
+                    .eq(Receivable::getSourceBizId, receivable.getSourceBizId())
+                    .eq(Receivable::getDeleteFlag, 0)
+                    .eq(tenantId != null, Receivable::getTenantId, tenantId)
+                    .last("LIMIT 1")
+                    .one();
+            if (existing != null) {
+                log.info("[ReceivableOrchestrator] 应收单已存在: sourceBizType={}, sourceBizId={}, no={}",
+                         receivable.getSourceBizType(), receivable.getSourceBizId(), existing.getReceivableNo());
+                return existing;
+            }
+        }
+
+        receivable.setReceivableNo("AR" + LocalDateTime.now().format(NO_FMT) + String.format("%03d", NO_SEQ.incrementAndGet() % 1000));
         receivable.setTenantId(tenantId);
         receivable.setDeleteFlag(0);
         receivable.setStatus("PENDING");
@@ -168,7 +184,6 @@ public class ReceivableOrchestrator {
             receivable.setCreatorName(ctx.getUsername());
         }
 
-        // 回填客户名称
         if (receivable.getCustomerId() != null && !StringUtils.hasText(receivable.getCustomerName())) {
             Customer customer = customerService.getById(receivable.getCustomerId());
             if (customer != null) {

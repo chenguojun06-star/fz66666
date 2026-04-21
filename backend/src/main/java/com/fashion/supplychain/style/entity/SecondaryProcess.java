@@ -94,6 +94,15 @@ public class SecondaryProcess {
      */
     private String status;
 
+    private String approvalStatus;
+
+    private String approvedById;
+
+    private String approvedByName;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime approvedTime;
+
     /**
      * 备注
      */

@@ -103,6 +103,10 @@ public class ExpenseReimbursementOrchestrator {
         }
 
         String approverUid = UserContext.userId();
+        if (String.valueOf(entity.getApplicantId()).equals(approverUid) && !UserContext.isSupervisorOrAbove()) {
+            throw new RuntimeException("不能审批自己提交的报销单，请联系主管或管理员审批");
+        }
+
         entity.setApproverId(approverUid != null ? Long.parseLong(approverUid) : null);
         entity.setApproverName(UserContext.username());
         entity.setApprovalTime(LocalDateTime.now());
@@ -146,21 +150,17 @@ public class ExpenseReimbursementOrchestrator {
      * 审批通过后推送账单到汇总表
      */
     private void pushExpenseBill(ExpenseReimbursement entity) {
-        try {
-            BillAggregationOrchestrator.BillPushRequest req = new BillAggregationOrchestrator.BillPushRequest();
-            req.setBillType("PAYABLE");
-            req.setBillCategory("EXPENSE");
-            req.setSourceType("EXPENSE_REIMBURSEMENT");
-            req.setSourceId(entity.getId().toString());
-            req.setSourceNo(entity.getReimbursementNo());
-            req.setCounterpartyType("EMPLOYEE");
-            req.setCounterpartyName(entity.getApplicantName());
-            req.setAmount(entity.getAmount());
-            req.setRemark("费用报销审批通过: " + entity.getExpenseType());
-            billAggregationOrchestrator.pushBill(req);
-        } catch (Exception e) {
-            log.error("费用报销推送账单失败: no={}", entity.getReimbursementNo(), e);
-        }
+        BillAggregationOrchestrator.BillPushRequest req = new BillAggregationOrchestrator.BillPushRequest();
+        req.setBillType("PAYABLE");
+        req.setBillCategory("EXPENSE");
+        req.setSourceType("EXPENSE_REIMBURSEMENT");
+        req.setSourceId(entity.getId().toString());
+        req.setSourceNo(entity.getReimbursementNo());
+        req.setCounterpartyType("EMPLOYEE");
+        req.setCounterpartyName(entity.getApplicantName());
+        req.setAmount(entity.getAmount());
+        req.setRemark("费用报销审批通过: " + entity.getExpenseType());
+        billAggregationOrchestrator.pushBill(req);
     }
 
     /**

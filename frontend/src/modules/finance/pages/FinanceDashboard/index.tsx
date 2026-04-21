@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Tabs, DatePicker, Statistic, Tooltip, Spin, Space, Empty } from 'antd';
 import { InfoCircleOutlined, CaretUpOutlined, CaretDownOutlined } from '@ant-design/icons';
 import { Column } from '@ant-design/charts';
-import Layout from '@/components/Layout';
 import api from '@/utils/api';
 import dayjs from 'dayjs';
 import styles from './index.module.css';
@@ -263,7 +262,7 @@ const FinanceDashboard: React.FC = () => {
   };
 
   return (
-    <Layout>
+    <>
       {showSmartErrorNotice && smartError ? (
         <Card size="small" style={{ marginBottom: 12 }}>
           <SmartErrorNotice
@@ -435,7 +434,7 @@ const FinanceDashboard: React.FC = () => {
           </Row>
         </Card>
       </Spin>
-    </Layout>
+    </>
   );
 };
 

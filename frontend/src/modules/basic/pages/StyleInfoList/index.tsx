@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { App, Button, Input } from 'antd';
 import { AppstoreOutlined, ArrowUpOutlined, ArrowDownOutlined, RadarChartOutlined } from '@ant-design/icons';
-import Layout from '@/components/Layout';
 import PageLayout from '@/components/common/PageLayout';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
 import SmallModal from '@/components/common/SmallModal';
@@ -377,7 +376,7 @@ const StyleInfoListPage: React.FC = () => {
   };
 
   return (
-    <Layout>
+    <>
       <PageLayout
         title="样衣开发与生产"
         headerContent={
@@ -554,7 +553,7 @@ const StyleInfoListPage: React.FC = () => {
         onOk={confirmScrap}
         onCancel={cancelScrap}
       />
-    </Layout>
+    </>
   );
 };
 

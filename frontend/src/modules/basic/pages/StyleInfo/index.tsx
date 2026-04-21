@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { App, Card, Checkbox, Form, Input, Modal, Tabs } from 'antd';
 import dayjs from 'dayjs';
-import Layout from '@/components/Layout';
 import PageLayout from '@/components/common/PageLayout';
 import api, { type ApiResult, isApiSuccess, getApiMessage } from '@/utils/api';
 import { useStyleDetail } from './hooks/useStyleDetail';
@@ -551,7 +550,7 @@ const StyleInfoDetailPage: React.FC = () => {
   }
 
   return (
-    <Layout>
+    <>
       <PageLayout>
         {showSmartErrorNotice && smartError ? (
           <Card size="small" style={{ marginBottom: 12 }}>
@@ -804,8 +803,7 @@ const StyleInfoDetailPage: React.FC = () => {
         </Form>
       </Modal>
 
-
-    </Layout>
+    </>
   );
 };
 

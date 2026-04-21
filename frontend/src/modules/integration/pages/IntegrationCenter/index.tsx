@@ -1,7 +1,6 @@
 import React from 'react';
 import { Tabs } from 'antd';
 import { ApiOutlined, CreditCardOutlined, CarOutlined, BellOutlined } from '@ant-design/icons';
-import Layout from '@/components/Layout';
 import ChannelStatusTab from './ChannelStatusTab';
 import PaymentRecordsTab from './PaymentRecordsTab';
 import LogisticsRecordsTab from './LogisticsRecordsTab';
@@ -64,14 +63,14 @@ const IntegrationCenter: React.FC = () => {
   ];
 
   return (
-    <Layout>
+    <>
       <Tabs
         activeKey={activeTab}
         onChange={setActiveTab}
         items={tabs}
         style={{ background: '#fff', padding: '0 16px', borderRadius: 8 }}
       />
-    </Layout>
+    </>
   );
 };
 

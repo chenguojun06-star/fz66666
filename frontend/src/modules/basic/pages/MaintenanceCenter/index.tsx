@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { App, Empty, Input, Skeleton, Tabs } from 'antd';
 import { SearchOutlined, PrinterOutlined } from '@ant-design/icons';
-import Layout from '@/components/Layout';
 import StylePrintModal from '@/components/common/StylePrintModal';
 import AttachmentThumb from '@/components/common/AttachmentThumb';
 import StandardPagination from '@/components/common/StandardPagination';
@@ -197,7 +196,7 @@ const MaintenanceCenter: React.FC = () => {
   const handleSearch = (val: string) => { setKeyword(val); setTimeout(() => fetchStyles(1), 0); };
 
   return (
-    <Layout>
+    <>
       <div className="maintenance-center">
         <Tabs
           activeKey={pageTab}
@@ -363,7 +362,7 @@ const MaintenanceCenter: React.FC = () => {
         styleName={printingStyle?.styleName}
         cover={printingStyle?.cover}
       />
-    </Layout>
+    </>
   );
 };
 

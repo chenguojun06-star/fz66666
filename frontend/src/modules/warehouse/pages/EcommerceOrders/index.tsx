@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import Layout from '@/components/Layout';
 import { Tabs, Tag, Button, Input, Select, Card, Space, Form, Row, Col, Statistic, Drawer, Descriptions, Divider, InputNumber, Typography, Badge, Tooltip, Steps, Alert, Image } from 'antd';
 import ResizableModal from '@/components/common/ResizableModal';
 import { getFullAuthedFileUrl } from '@/utils/fileUrl';
@@ -578,7 +577,7 @@ const PricingTab: React.FC = () => {
 
 // ─── 主页面 ───────────────────────────────────────────────
 const EcommerceOrders: React.FC = () => (
-  <Layout>
+  <>
   <div style={{ padding: 20 }}>
     <Alert style={{ marginBottom: 14, fontSize: 12 }} type="info" showIcon
       title="电商对接全流程"
@@ -609,7 +608,7 @@ const EcommerceOrders: React.FC = () => (
       ]}
     />
   </div>
-  </Layout>
+  </>
 );
 
 export default EcommerceOrders;

@@ -3,7 +3,6 @@ import { Tabs } from 'antd';
 import { FileTextOutlined, ShopOutlined, ScanOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/utils/AuthContext';
-import Layout from '@/components/Layout';
 import FinishedSettlementContent from './FinishedSettlementContent';
 import FactorySummaryContent from './FactorySummaryContent';
 import ExternalScanContent from './ExternalScanContent';
@@ -100,7 +99,7 @@ const FinanceCenter: React.FC = () => {
     : tabItems;
 
   return (
-    <Layout>
+    <>
       <div className={styles.container}>
         <Tabs
           activeKey={activeTab}
@@ -110,7 +109,7 @@ const FinanceCenter: React.FC = () => {
           size="large"
         />
       </div>
-    </Layout>
+    </>
   );
 };
 

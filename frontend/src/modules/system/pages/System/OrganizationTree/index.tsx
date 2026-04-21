@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import Layout from '@/components/Layout';
 import PageLayout from '@/components/common/PageLayout';
 import ResizableModal from '@/components/common/ResizableModal';
 import SmallModal from '@/components/common/SmallModal';
@@ -311,7 +310,7 @@ const OrganizationTreePage: React.FC = () => {
   ];
 
   return (
-    <Layout>
+    <>
       <PageLayout
         title={
           <span style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
@@ -810,7 +809,7 @@ const OrganizationTreePage: React.FC = () => {
           </div>
         )}
       </SmallModal>
-    </Layout>
+    </>
   );
 };
 

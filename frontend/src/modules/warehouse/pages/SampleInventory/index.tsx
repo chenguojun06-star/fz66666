@@ -13,7 +13,6 @@ import {
 } from 'antd';
 import RowActions from '@/components/common/RowActions';
 import type { ColumnsType } from 'antd/es/table';
-import Layout from '@/components/Layout';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -379,7 +378,7 @@ const SampleInventory: React.FC = () => {
   ];
 
   return (
-    <Layout>
+    <>
         {showSmartErrorNotice && smartError ? (
           <Card size="small" style={{ marginBottom: 12 }}>
             <SmartErrorNotice
@@ -520,7 +519,7 @@ const SampleInventory: React.FC = () => {
             </Form.Item>
           </Form>
         </Modal>
-    </Layout>
+    </>
   );
 };
 

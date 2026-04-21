@@ -6,7 +6,6 @@ import {
   ClockCircleOutlined, DollarOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import Layout from '@/components/Layout';
 import { ecSalesRevenueApi, EcRevenueRecord, EcRevenueSummary } from '@/services/finance/ecSalesRevenueApi';
 import { message } from '@/utils/antdStatic';
 import { readPageSize } from '@/utils/pageSizeStore';
@@ -216,7 +215,7 @@ const EcSalesRevenue: React.FC = () => {
   const fmtAmt = (v: number = 0) => `¥${Number(v).toFixed(2)}`;
 
   return (
-    <Layout>
+    <>
       <Space orientation="vertical" size={16} style={{ width: '100%' }}>
         {/* 汇总卡片 */}
         <Row gutter={16}>
@@ -314,7 +313,7 @@ const EcSalesRevenue: React.FC = () => {
           />
         </Card>
       </Space>
-    </Layout>
+    </>
   );
 };
 

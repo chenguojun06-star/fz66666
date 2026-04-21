@@ -1,7 +1,7 @@
 const api = require('../../../utils/api');
 const { isAdminOrSupervisor } = require('../../../utils/permission');
 const { parseChatReply } = require('./chat-parser');
-const { toast } = require('../../../utils/uiHelper');
+const _uiHelper = require('../../../utils/uiHelper'); // toast reserved for future use
 const { eventBus } = require('../../../utils/eventBus');
 
 var TOOL_NAMES = {
@@ -17,6 +17,24 @@ var TOOL_NAMES = {
 
 function describeTool(name) {
   return TOOL_NAMES[name] || (name || '').replace(/^tool_/, '').replace(/_/g, '');
+}
+
+/**
+ * 将 formData 中的数组字段转为 {value: true} 查找表。
+ * 目的：避免在 WXML class 绑定里使用 (arr||[]).indexOf(v)（WeChat 编译器不支持括号后跟点）。
+ * @param {object} formData
+ * @returns {object} e.g. { colors: { red: true, blue: true } }
+ */
+function _buildSelectedSet(formData) {
+  const result = {};
+  Object.keys(formData || {}).forEach(function(k) {
+    if (Array.isArray(formData[k])) {
+      const lookup = {};
+      formData[k].forEach(function(v) { lookup[v] = true; });
+      result[k] = lookup;
+    }
+  });
+  return result;
 }
 
 // 工厂工人快捷提问
@@ -74,7 +92,7 @@ Page({
         try {
           var dialog = this.selectComponent('#privacyDialog');
           if (dialog && typeof dialog.showDialog === 'function') dialog.showDialog(resolve);
-        } catch (_) {}
+        } catch (_) { /* dialog may not exist on this page, intentional no-op */ }
       });
     }
     const isManager = isAdminOrSupervisor();
@@ -296,6 +314,9 @@ Page({
         cur = cur.concat([ds.value]);
       }
       wiz._formData[ds.key] = cur;
+      // 同步维护 _formDataSelectedSet，避免 WXML class 绑定里出现 indexOf（method call 编译报错）
+      wiz._formDataSelectedSet = wiz._formDataSelectedSet || {};
+      wiz._formDataSelectedSet[ds.key] = _buildSelectedSet({ [ds.key]: cur })[ds.key] || {};
       self._recalcCanNext(wiz);
     });
   },
@@ -377,9 +398,12 @@ Page({
   _updateMsg(id, rawText) {
     const parsed = parseChatReply(rawText);
     var stepWizardCards = (parsed.stepWizardCards || []).map(function (w) {
+      const formData = w.prefilledData ? Object.assign({}, w.prefilledData) : {};
       return Object.assign({}, w, {
         _currentStep: 0,
-        _formData: w.prefilledData ? Object.assign({}, w.prefilledData) : {},
+        _formData: formData,
+        // 预计算 _formDataSelectedSet，避免 WXML class 绑定里用 (arr || []).indexOf()（method call 编译报错）
+        _formDataSelectedSet: _buildSelectedSet(formData),
         _canNext: false,
         _submitted: false,
       });
@@ -400,7 +424,15 @@ Page({
         ...m,
         text: parsed.displayText,
         textSegments: buildTextSegments(parsed.displayText),
-        actionCards: parsed.actionCards,
+        // 预计算 _cardType，避免 WXML class 绑定里出现 actions[0].type（bracket-dot 编译报错）
+        actionCards: (parsed.actionCards || []).map(function(card) {
+          var t = card.actions && card.actions[0] && card.actions[0].type;
+          return Object.assign({}, card, {
+            _cardType: t === 'mark_urgent' ? 'card-danger'
+                     : t === 'send_notification' ? 'card-warning'
+                     : 'card-normal'
+          });
+        }),
         charts: parsed.charts,
         teamStatusCards: parsed.teamStatusCards,
         bundleSplitCards: parsed.bundleSplitCards,
@@ -440,7 +472,7 @@ Page({
 
   _abortStream() {
     if (this._streamTask) {
-      try { this._streamTask.abort(); } catch (_e) {}
+      try { this._streamTask.abort(); } catch (_e) { /* abort may throw if already done */ }
       this._streamTask = null;
     }
   },

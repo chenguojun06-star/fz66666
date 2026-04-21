@@ -56,10 +56,11 @@ public class MaterialReconciliationSyncOrchestrator {
         log.info("开始同步入库记录到物料对账: inboundNo={}, purchaseNo={}",
                 inbound.getInboundNo(), purchase.getPurchaseNo());
 
-        // 1. 检查是否已同步（避免重复）
+        // 1. 检查是否已同步（避免重复）— 按采购单+物料编码+入库单号三维度去重，支持部分入库场景
         LambdaQueryWrapper<MaterialReconciliation> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(MaterialReconciliation::getPurchaseId, purchase.getId())
-               .eq(MaterialReconciliation::getMaterialCode, inbound.getMaterialCode());
+               .eq(MaterialReconciliation::getMaterialCode, inbound.getMaterialCode())
+               .like(MaterialReconciliation::getRemark, inbound.getInboundNo());
 
         MaterialReconciliation existing = materialReconciliationService.getOne(wrapper);
 

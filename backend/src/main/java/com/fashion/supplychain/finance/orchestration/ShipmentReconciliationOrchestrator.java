@@ -370,7 +370,8 @@ public class ShipmentReconciliationOrchestrator {
         }
 
         deductionItemMapper.delete(new LambdaQueryWrapper<DeductionItem>()
-                .eq(DeductionItem::getReconciliationId, rid));
+                .eq(DeductionItem::getReconciliationId, rid)
+                .ne(DeductionItem::getDeductionType, "MATERIAL_PICKUP"));
 
         if (items != null) {
             for (DeductionItem it : items) {
@@ -378,6 +379,9 @@ public class ShipmentReconciliationOrchestrator {
                     continue;
                 }
                 String type = it.getDeductionType() == null ? "" : it.getDeductionType().trim();
+                if ("MATERIAL_PICKUP".equalsIgnoreCase(type)) {
+                    continue;
+                }
                 String desc = it.getDescription() == null ? "" : it.getDescription().trim();
                 BigDecimal amt = it.getDeductionAmount() == null ? BigDecimal.ZERO : it.getDeductionAmount();
                 if (!StringUtils.hasText(type) && !StringUtils.hasText(desc) && amt.compareTo(BigDecimal.ZERO) == 0) {
@@ -390,6 +394,31 @@ public class ShipmentReconciliationOrchestrator {
                 row.setDescription(desc);
                 deductionItemMapper.insert(row);
             }
+        }
+
+        List<DeductionItem> allItems = deductionItemMapper.selectByReconciliationId(rid, UserContext.tenantId());
+        BigDecimal autoDeduction = BigDecimal.ZERO;
+        BigDecimal manualDeduction = BigDecimal.ZERO;
+        BigDecimal supplementAmount = BigDecimal.ZERO;
+        if (allItems != null) {
+            for (DeductionItem di : allItems) {
+                BigDecimal amt = di.getDeductionAmount() != null ? di.getDeductionAmount() : BigDecimal.ZERO;
+                if ("SUPPLEMENT".equalsIgnoreCase(di.getDeductionType())) {
+                    supplementAmount = supplementAmount.add(amt);
+                } else if ("MATERIAL_PICKUP".equalsIgnoreCase(di.getDeductionType())) {
+                    autoDeduction = autoDeduction.add(amt);
+                } else {
+                    manualDeduction = manualDeduction.add(amt);
+                }
+            }
+        }
+        BigDecimal netDeduction = autoDeduction.add(manualDeduction).subtract(supplementAmount);
+        BigDecimal recalculatedFinal = totalAmount.subtract(autoDeduction).subtract(manualDeduction).add(supplementAmount);
+
+        if (deductionAmount.compareTo(netDeduction) != 0 || finalAmount.compareTo(recalculatedFinal) != 0) {
+            patch.setDeductionAmount(netDeduction);
+            patch.setFinalAmount(recalculatedFinal);
+            shipmentReconciliationService.updateById(patch);
         }
     }
 }

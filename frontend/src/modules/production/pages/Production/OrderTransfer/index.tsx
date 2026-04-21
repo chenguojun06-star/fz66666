@@ -5,7 +5,6 @@ import SortableColumnTitle from '@/components/common/SortableColumnTitle';
 import RowActions from '@/components/common/RowActions';
 import { readPageSize } from '@/utils/pageSizeStore';
 import ResizableTable from '@/components/common/ResizableTable';
-import Layout from '@/components/Layout';
 import api from '@/utils/api';
 import { errorHandler } from '@/utils/errorHandling';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
@@ -291,7 +290,7 @@ const OrderTransferPage: React.FC = () => {
   ];
 
   return (
-    <Layout>
+    <>
         <div className="page-header">
           <h2 className="page-title">订单转移管理</h2>
           <Button onClick={fetchTransfers}>刷新</Button>
@@ -348,7 +347,7 @@ const OrderTransferPage: React.FC = () => {
             />
           </div>
         </ResizableModal>
-    </Layout>
+    </>
   );
 };
 

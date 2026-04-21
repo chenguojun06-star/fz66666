@@ -13,7 +13,6 @@ import {
 } from 'antd';
 
 import type { ColumnsType } from 'antd/es/table';
-import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
@@ -470,7 +469,7 @@ const PatternRevisionManagement: React.FC = () => {
   ];
 
   return (
-    <Layout>
+    <>
       {/* contextHolder 已注释，不再需要 */}
       <Card>
         <Space orientation="vertical" style={{ width: '100%' }} size="large">
@@ -667,7 +666,7 @@ const PatternRevisionManagement: React.FC = () => {
           )}
         </Form>
       </ResizableModal>
-    </Layout>
+    </>
   );
 };
 

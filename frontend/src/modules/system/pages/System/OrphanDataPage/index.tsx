@@ -1,7 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { Button, Table, Tag, Modal, Card, Statistic, Row, Col, Empty, Spin, Popconfirm, App } from 'antd';
 import { SearchOutlined, DeleteOutlined, ReloadOutlined, WarningOutlined } from '@ant-design/icons';
-import Layout from '@/components/Layout';
 import { intelligenceApi, type OrphanDataScanResultDTO, type OrphanDataItemDTO, type OrphanDataCategoryStat } from '@/services/intelligence/intelligenceApi';
 import './OrphanDataPage.css';
 
@@ -119,7 +118,7 @@ const OrphanDataPage: React.FC = () => {
   ];
 
   return (
-    <Layout>
+    <>
       <div className="orphan-data-page">
       <div className="orphan-header">
         <h2>孤立数据管理</h2>
@@ -210,7 +209,7 @@ const OrphanDataPage: React.FC = () => {
         </div>
       )}
     </div>
-    </Layout>
+    </>
   );
 };
 

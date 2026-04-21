@@ -2,7 +2,6 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Card, Tag } from 'antd';
 
-import Layout from '@/components/Layout';
 import PageStatCards from '@/components/common/PageStatCards';
 import ResizableTable from '@/components/common/ResizableTable';
 import SearchForm from './SearchForm';
@@ -103,7 +102,7 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
   };
 
   return (
-    <Layout>
+    <>
         <Card className="page-card">
           <div className="page-header">
             <h2 className="page-title">质检入库</h2>
@@ -237,7 +236,7 @@ const WarehousingList: React.FC<WarehousingListProps> = ({ hook }) => {
           setPreviewTitle('');
         }}
       />
-    </Layout>
+    </>
   );
 };
 

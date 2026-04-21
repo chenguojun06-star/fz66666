@@ -33,9 +33,12 @@ interface WsInstance {
   reconnectCount: number;
   heartbeatTimer: ReturnType<typeof setInterval> | undefined;
   reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+  connectDebounceTimer: ReturnType<typeof setTimeout> | undefined;
   currentOptions: UseWebSocketOptions;
   subscriberCount: number;
   stopFallbackPolling: () => void;
+  pendingMessages: WsMessage[];
+  flushTimer: ReturnType<typeof setTimeout> | undefined;
 }
 
 let globalInstance: WsInstance | null = null;
@@ -70,9 +73,12 @@ function getOrCreateInstance(options: UseWebSocketOptions): WsInstance {
     reconnectCount: 0,
     heartbeatTimer: undefined,
     reconnectTimer: undefined,
+    connectDebounceTimer: undefined,
     currentOptions: options,
     subscriberCount: 0,
     stopFallbackPolling: () => {},
+    pendingMessages: [],
+    flushTimer: undefined,
   };
   globalInstance = inst;
 
@@ -81,6 +87,32 @@ function getOrCreateInstance(options: UseWebSocketOptions): WsInstance {
     const loc = window.location;
     const protocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
     return `${protocol}//${loc.host}/ws/realtime?userId=${opts.userId}&clientType=${opts.clientType || 'pc'}&tenantId=${opts.tenantId ?? ''}&token=${opts.token ?? ''}`;
+  };
+
+  const dispatchMessage = (msg: WsMessage) => {
+    const handlers = inst.listeners.get(msg.type);
+    if (handlers) handlers.forEach(fn => { try { fn(msg); } catch { /* */ } });
+    const wildcard = inst.listeners.get('*');
+    if (wildcard) wildcard.forEach(fn => { try { fn(msg); } catch { /* */ } });
+  };
+
+  const flushPendingMessages = () => {
+    if (inst.flushTimer) {
+      clearTimeout(inst.flushTimer);
+      inst.flushTimer = undefined;
+    }
+    const batch = inst.pendingMessages.splice(0);
+    if (batch.length === 0) return;
+    requestAnimationFrame(() => {
+      batch.forEach(msg => dispatchMessage(msg));
+    });
+  };
+
+  const enqueueMessage = (msg: WsMessage) => {
+    inst.pendingMessages.push(msg);
+    if (!inst.flushTimer) {
+      inst.flushTimer = setTimeout(flushPendingMessages, 0);
+    }
   };
 
   const startHeartbeat = (ws: WebSocket) => {
@@ -121,10 +153,7 @@ function getOrCreateInstance(options: UseWebSocketOptions): WsInstance {
             try {
               const msg: WsMessage = JSON.parse(event.data);
               if (msg.type === 'ping') return;
-              const handlers = inst.listeners.get(msg.type);
-              if (handlers) handlers.forEach(fn => { try { fn(msg); } catch { /* */ } });
-              const wildcard = inst.listeners.get('*');
-              if (wildcard) wildcard.forEach(fn => { try { fn(msg); } catch { /* */ } });
+              enqueueMessage(msg);
             } catch { /* non-JSON */ }
           };
           ws.onclose = () => {
@@ -180,10 +209,7 @@ function getOrCreateInstance(options: UseWebSocketOptions): WsInstance {
         try {
           const msg: WsMessage = JSON.parse(event.data);
           if (msg.type === 'ping') return;
-          const handlers = inst.listeners.get(msg.type);
-          if (handlers) handlers.forEach(fn => { try { fn(msg); } catch { /* */ } });
-          const wildcard = inst.listeners.get('*');
-          if (wildcard) wildcard.forEach(fn => { try { fn(msg); } catch { /* */ } });
+          enqueueMessage(msg);
         } catch { /* non-JSON */ }
       };
       ws.onclose = () => {
@@ -209,7 +235,15 @@ function getOrCreateInstance(options: UseWebSocketOptions): WsInstance {
     }
   };
 
-  inst.connect = doConnect;
+  const debouncedConnect = () => {
+    if (inst.connectDebounceTimer) clearTimeout(inst.connectDebounceTimer);
+    inst.connectDebounceTimer = setTimeout(() => {
+      inst.connectDebounceTimer = undefined;
+      doConnect();
+    }, 300);
+  };
+
+  inst.connect = debouncedConnect;
   return inst;
 }
 
@@ -241,6 +275,8 @@ export function useWebSocket(options: UseWebSocketOptions) {
       if (inst.subscriberCount <= 0) {
         if (inst.reconnectTimer) clearTimeout(inst.reconnectTimer);
         if (inst.heartbeatTimer) clearInterval(inst.heartbeatTimer);
+        if (inst.connectDebounceTimer) clearTimeout(inst.connectDebounceTimer);
+        if (inst.flushTimer) clearTimeout(inst.flushTimer);
         inst.stopFallbackPolling();
         if (inst.ws) {
           const ws = inst.ws;

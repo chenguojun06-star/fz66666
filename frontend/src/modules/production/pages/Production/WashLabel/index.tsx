@@ -10,7 +10,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { App, Button, Input, Select, Space, Tag, Tooltip } from 'antd';
 import { PrinterOutlined, ReloadOutlined, TagOutlined } from '@ant-design/icons';
-import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import { productionOrderApi } from '@/services/production/productionApi';
@@ -319,7 +318,7 @@ const WashLabelPage: React.FC = () => {
   ];
 
   return (
-    <Layout>
+    <>
       <div style={{ padding: 16 }}>
         <div style={{ marginBottom: 12 }}>
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
@@ -412,7 +411,7 @@ const WashLabelPage: React.FC = () => {
         items={batchPrintItems}
         loading={batchPrintLoading}
       />
-    </Layout>
+    </>
   );
 };
 

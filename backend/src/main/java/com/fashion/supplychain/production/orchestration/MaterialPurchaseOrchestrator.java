@@ -411,6 +411,11 @@ public class MaterialPurchaseOrchestrator {
         return statusHelper.returnConfirm(body);
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> batchReturnConfirm(Map<String, Object> body) {
+        return statusHelper.batchReturnConfirm(body);
+    }
+
     public MaterialPurchase resetReturnConfirm(Map<String, Object> body) {
         return statusHelper.resetReturnConfirm(body);
     }

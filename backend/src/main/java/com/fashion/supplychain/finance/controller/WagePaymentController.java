@@ -175,6 +175,19 @@ public class WagePaymentController {
     }
 
     /**
+     * 退回已付款项（主管及以上权限）
+     * POST /api/finance/wage-payments/{id}/refund
+     */
+    @PreAuthorize("hasAuthority('MENU_FINANCE_PAYROLL_APPROVAL_MANAGE')")
+    @PostMapping("/wage-payments/{id}/refund")
+    public Result<WagePayment> refundPayment(
+            @PathVariable String id,
+            @RequestBody CancelRequest request) {
+        WagePayment payment = wagePaymentOrchestrator.refundPayment(id, request.getReason());
+        return Result.success(payment);
+    }
+
+    /**
      * 查询支付记录列表
      * POST /api/finance/wage-payments/list
      */

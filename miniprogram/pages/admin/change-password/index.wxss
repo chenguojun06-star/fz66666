@@ -1,4 +1,5 @@
-@import '/styles/modal-form.wxss';
+/* 修改密码页：仅使用本地 .form-* / .btn-submit 样式，未引用 mf-* 弹窗样式，
+   故无需 @import '/styles/modal-form.wxss'（约 7KB 未使用样式）。 */
 
 .container {
   min-height: 100vh;

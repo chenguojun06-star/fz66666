@@ -297,6 +297,14 @@ public class MaterialStockOrchestrator {
             return;
         }
         try {
+            if (StringUtils.hasText(outboundLog.getOrderId())) {
+                boolean hasReconBill = billAggregationOrchestrator.billExistsByOrderId("MATERIAL_RECONCILIATION", outboundLog.getOrderId());
+                if (hasReconBill) {
+                    log.info("[MaterialStock] 手动出库跳过推送账单: 已有物料对账账单 orderId={}", outboundLog.getOrderId());
+                    return;
+                }
+            }
+
             BigDecimal unitPrice = stock.getUnitPrice();
             if (unitPrice == null || unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
                 return;

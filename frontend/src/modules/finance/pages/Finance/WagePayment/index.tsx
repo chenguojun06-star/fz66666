@@ -30,7 +30,6 @@ import {
   DownloadOutlined,
   LineChartOutlined,
 } from '@ant-design/icons';
-import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import RejectReasonModal from '@/components/common/RejectReasonModal';
@@ -101,7 +100,7 @@ const PaymentCenterPage: React.FC = () => {
   //  渲染
   // ============================================================
   return (
-    <Layout>
+    <>
         {data.showSmartErrorNotice && data.smartError ? (
           <Card size="small" style={{ marginBottom: 12 }}>
             <SmartErrorNotice
@@ -695,7 +694,7 @@ const PaymentCenterPage: React.FC = () => {
         onCancel={() => data.setPendingRejectPayable(null)}
         loading={data.rejectPayableLoading}
       />
-    </Layout>
+    </>
   );
 };
 

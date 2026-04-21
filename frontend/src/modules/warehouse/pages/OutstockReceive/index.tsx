@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Tag, App } from 'antd';
 import { CheckCircleOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardPagination from '@/components/common/StandardPagination';
 import StandardSearchBar from '@/components/common/StandardSearchBar';
@@ -99,7 +98,7 @@ const OutstockReceive: React.FC = () => {
   ];
 
   return (
-    <Layout>
+    <>
       <Card>
         <StandardSearchBar
           onSearchChange={(val) => { setKeyword(val); onChange(1, pagination.pageSize); }}
@@ -122,7 +121,7 @@ const OutstockReceive: React.FC = () => {
           onChange={onChange}
         />
       </Card>
-    </Layout>
+    </>
   );
 };
 

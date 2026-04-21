@@ -34,8 +34,6 @@ export const paths = {
   styleInfoList: '/style-info',
   styleInfoNew: '/style-info/new',
   styleInfoDetail: '/style-info/:id',
-  patternProduction: '/pattern-production',
-
   orderManagementList: '/order-management',
 
   dataCenter: '/data-center',
@@ -103,7 +101,6 @@ export const paths = {
 export const permissionCodes = {
   dashboard: 'MENU_DASHBOARD',
   styleInfo: 'MENU_STYLE_INFO',
-  patternProduction: 'MENU_PATTERN_PRODUCTION',
   orderManagement: 'MENU_ORDER_MANAGEMENT',
   dataCenter: 'MENU_DATA_CENTER',
   templateCenter: 'MENU_TEMPLATE_CENTER',
@@ -208,6 +205,7 @@ export const menuConfig: MenuSection[] = [
     icon: React.createElement(BuildOutlined),
     items: [
       { label: '我的订单', path: paths.productionList, icon: React.createElement(BuildOutlined) },
+      { label: '领料出库', path: paths.materialPicking, icon: React.createElement(ShoppingCartOutlined) },
       { label: '裁剪管理', path: paths.cutting, icon: React.createElement(ScissorOutlined) },
       { label: '工序跟进', path: paths.progressDetail, icon: React.createElement(FileSearchOutlined) },
       { label: '外发工厂', path: paths.externalFactory, icon: React.createElement(ThunderboltOutlined) },
@@ -308,7 +306,6 @@ export const menuConfig: MenuSection[] = [
 export const routeToPermissionCode: Record<string, string> = {
   [paths.dashboard]: permissionCodes.dashboard,
   [paths.styleInfoList]: permissionCodes.styleInfo,
-  [paths.patternProduction]: permissionCodes.patternProduction,
   [paths.orderManagementList]: permissionCodes.orderManagement,
   [paths.dataCenter]: permissionCodes.dataCenter,
   [paths.templateCenter]: permissionCodes.templateCenter,

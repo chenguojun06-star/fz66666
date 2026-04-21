@@ -355,11 +355,12 @@ public class ProductionOrderFinanceOrchestrationService {
         order.setCompletedQuantity(warehousingQualified);
 
         // 【关键】关单时自动创建订单结算（本厂+加工厂统一处理）
+        // 统一走 ensureShipmentReconciliationForOrder 入口，避免双重创建
         try {
-            orderReconciliationHelper.createShipmentReconciliationOnClose(order, specialClose);
+            self.ensureShipmentReconciliationForOrder(oid);
         } catch (Exception e) {
             log.error("创建订单结算失败: orderId={}", oid, e);
-            // 不阻断关单流程，只记录错误
+            throw new RuntimeException("创建订单结算失败，关单未完成: " + e.getMessage(), e);
         }
 
         // 【智能学习】关单时回填预测记录，自动闭合数据飞轮
@@ -661,41 +662,69 @@ public class ProductionOrderFinanceOrchestrationService {
 
         sr.setQuantity(Math.max(0, shippedQty));
 
-        // 优先使用从款号资料中获取的单价
-        BigDecimal up = sr.getUnitPrice();
-        if (up == null || up.compareTo(BigDecimal.ZERO) <= 0) {
-            // 如果没有从款号资料中获取到单价，尝试从其他途径获取
-            up = resolveLastUnitPrice(oid, "shipment");
+        boolean isOwnFactory = orderReconciliationHelper != null && orderReconciliationHelper.isOwnFactory(order);
+
+        if (isOwnFactory) {
+            BigDecimal scanCost = BigDecimal.ZERO;
+            try {
+                scanCost = calculateScanCostForOrder(oid);
+            } catch (Exception e) {
+                log.warn("计算扫码成本失败: orderId={}", oid, e);
+            }
+            sr.setUnitPrice(BigDecimal.ZERO);
+            sr.setTotalAmount(scanCost);
+            sr.setFinalAmount(scanCost);
+            if (sr.getDeductionAmount() == null) {
+                sr.setDeductionAmount(BigDecimal.ZERO);
+            }
+        } else {
+            BigDecimal up = sr.getUnitPrice();
             if (up == null || up.compareTo(BigDecimal.ZERO) <= 0) {
-                try {
-                    String sno = order.getStyleNo();
-                    if (StringUtils.hasText(sno)) {
-                        StyleInfo styleInfo = styleInfoService.getOne(new LambdaQueryWrapper<StyleInfo>()
-                                .eq(StyleInfo::getStyleNo, sno.trim())
-                                .last("limit 1"));
-                        if (styleInfo != null && styleInfo.getPrice() != null
-                                && styleInfo.getPrice().compareTo(BigDecimal.ZERO) > 0) {
-                            up = styleInfo.getPrice();
+                up = resolveLastUnitPrice(oid, "shipment");
+                if (up == null || up.compareTo(BigDecimal.ZERO) <= 0) {
+                    try {
+                        String sno = order.getStyleNo();
+                        if (StringUtils.hasText(sno)) {
+                            StyleInfo styleInfo = styleInfoService.getOne(new LambdaQueryWrapper<StyleInfo>()
+                                    .eq(StyleInfo::getStyleNo, sno.trim())
+                                    .last("limit 1"));
+                            if (styleInfo != null && styleInfo.getPrice() != null
+                                    && styleInfo.getPrice().compareTo(BigDecimal.ZERO) > 0) {
+                                up = styleInfo.getPrice();
+                            }
                         }
+                    } catch (Exception e) {
+                        log.warn("Failed to resolve style price for shipment reconciliation: orderId={}, styleNo={}", oid,
+                                order.getStyleNo(), e);
                     }
-                } catch (Exception e) {
-                    log.warn("Failed to resolve style price for shipment reconciliation: orderId={}, styleNo={}", oid,
-                            order.getStyleNo(), e);
                 }
             }
+
+            BigDecimal factoryUnitPrice = order.getFactoryUnitPrice() != null ? order.getFactoryUnitPrice() : BigDecimal.ZERO;
+            if (factoryUnitPrice.compareTo(BigDecimal.ZERO) > 0) {
+                up = factoryUnitPrice;
+            }
+
+            sr.setUnitPrice(up);
+            if (sr.getDeductionAmount() == null) {
+                sr.setDeductionAmount(BigDecimal.ZERO);
+            }
+            if (up == null) {
+                up = BigDecimal.ZERO;
+                sr.setUnitPrice(up);
+            }
+            BigDecimal total = up.multiply(BigDecimal.valueOf(Math.max(0, shippedQty))).setScale(2, RoundingMode.HALF_UP);
+            sr.setTotalAmount(total);
+            sr.setFinalAmount(total.subtract(sr.getDeductionAmount()).setScale(2, RoundingMode.HALF_UP));
         }
 
-        sr.setUnitPrice(up);
-        if (sr.getDeductionAmount() == null) {
-            sr.setDeductionAmount(BigDecimal.ZERO);
+        if (sr instanceof ShipmentReconciliation) {
+            try {
+                java.lang.reflect.Method setOwn = sr.getClass().getMethod("setIsOwnFactory", Integer.class);
+                setOwn.invoke(sr, isOwnFactory ? 1 : 0);
+            } catch (Exception ignore) {}
         }
-        if (up == null) {
-            up = BigDecimal.ZERO;
-            sr.setUnitPrice(up);
-        }
-        BigDecimal total = up.multiply(BigDecimal.valueOf(Math.max(0, shippedQty))).setScale(2, RoundingMode.HALF_UP);
-        sr.setTotalAmount(total);
-        sr.setFinalAmount(total.subtract(sr.getDeductionAmount()).setScale(2, RoundingMode.HALF_UP));
+
         sr.setReconciliationDate(now);
         sr.setUpdateTime(now);
         if (StringUtils.hasText(uid)) {
@@ -849,6 +878,21 @@ public class ProductionOrderFinanceOrchestrationService {
         String ts = t.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         String rand = String.valueOf((int) (ThreadLocalRandom.current().nextDouble() * 9000) + 1000);
         return p + ts + rand;
+    }
+
+    private BigDecimal calculateScanCostForOrder(String orderId) {
+        try {
+            List<ScanRecord> scans = scanRecordService.list(
+                new LambdaQueryWrapper<ScanRecord>()
+                    .eq(ScanRecord::getOrderId, orderId)
+            );
+            return scans.stream()
+                .map(s -> s.getScanCost() != null ? s.getScanCost() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        } catch (Exception e) {
+            log.warn("计算扫码成本失败: orderId={}", orderId, e);
+            return BigDecimal.ZERO;
+        }
     }
 
     private static boolean isAllDigits(String s) {

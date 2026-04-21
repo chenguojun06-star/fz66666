@@ -6,7 +6,6 @@ import {
   PlusOutlined, WarningOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import ResizableModal from '@/components/common/ResizableModal';
 import SmallModal from '@/components/common/SmallModal';
@@ -486,7 +485,7 @@ const ReceivableList: React.FC = () => {
   ];
 
   return (
-    <Layout>
+    <>
       <div style={{ padding: 24 }}>
         {/* 统计卡片 */}
         <Row gutter={16} style={{ marginBottom: 20 }}>
@@ -658,7 +657,7 @@ const ReceivableList: React.FC = () => {
           onClose={closeReceivableDetail}
         />
       </div>
-    </Layout>
+    </>
   );
 };
 

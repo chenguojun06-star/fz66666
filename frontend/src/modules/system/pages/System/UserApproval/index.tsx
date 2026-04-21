@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Alert, Button, Card, Empty, Input, Modal, Select, Space, Tabs, Tag } from 'antd';
-import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
 import SmallModal from '@/components/common/SmallModal';
@@ -385,7 +384,7 @@ const UserApproval: React.FC = () => {
   ];
 
   return (
-    <Layout>
+    <>
         <Card>
           <div className="page-header">
             <div>
@@ -559,7 +558,7 @@ const UserApproval: React.FC = () => {
             showCount
           />
         </SmallModal>
-    </Layout>
+    </>
   );
 };
 

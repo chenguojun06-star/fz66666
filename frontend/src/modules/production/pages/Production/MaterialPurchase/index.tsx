@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Card, Input, Form, InputNumber, Tooltip, Upload, Button, message } from 'antd';
 import { QuestionCircleOutlined, InboxOutlined, FileSearchOutlined } from '@ant-design/icons';
 import ResizableTable from '@/components/common/ResizableTable';
-import Layout from '@/components/Layout';
 import PageLayout from '@/components/common/PageLayout';
 import PageStatCards from '@/components/common/PageStatCards';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -65,7 +64,7 @@ const MaterialPurchase: React.FC = () => {
   const [remarkOrderNo, setRemarkOrderNo] = useState('');
 
   return (
-    <Layout>
+    <>
       {contextHolder}
       <Form form={form} component={false} />
       <Form form={materialDatabaseForm} component={false} />
@@ -452,7 +451,7 @@ const MaterialPurchase: React.FC = () => {
           targetNo={remarkOrderNo}
           canAddRemark={true}
         />
-    </Layout>
+    </>
   );
 };
 

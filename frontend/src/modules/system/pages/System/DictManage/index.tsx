@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Alert, App, Button, Card, Col, Form, Input, Row, Select, Space, Tag } from 'antd';
 
-import Layout from '@/components/Layout';
 import StandardModal from '@/components/common/StandardModal';
 import ResizableTable from '@/components/common/ResizableTable';
 import RowActions from '@/components/common/RowActions';
@@ -485,7 +484,7 @@ const DictManage: React.FC = () => {
   ];
 
   return (
-    <Layout>
+    <>
       <Card
         title="字典管理"
         extra={
@@ -613,7 +612,7 @@ const DictManage: React.FC = () => {
         </Form>
       </StandardModal>
     </Card>
-    </Layout>
+    </>
   );
 };
 

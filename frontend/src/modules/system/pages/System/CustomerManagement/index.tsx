@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Tabs, Badge } from 'antd';
 import { CrownOutlined, TeamOutlined, DollarOutlined, MessageOutlined, DashboardOutlined, ShoppingCartOutlined, BugOutlined, NotificationOutlined } from '@ant-design/icons';
 import { useSearchParams } from 'react-router-dom';
-import Layout from '@/components/Layout';
 import { useUser } from '@/utils/AuthContext';
 import { appStoreService } from '@/services/system/appStore';
 import feedbackService from '@/services/feedbackService';
@@ -58,7 +57,7 @@ const CustomerManagement: React.FC = () => {
   }, [setSearchParams]);
 
   return (
-    <Layout>
+    <>
       <Tabs
         activeKey={activeTab}
         onChange={handleTabChange}
@@ -115,7 +114,7 @@ const CustomerManagement: React.FC = () => {
           },
         ]}
       />
-    </Layout>
+    </>
   );
 };
 

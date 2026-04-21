@@ -5,7 +5,6 @@ import { ReloadOutlined, SearchOutlined, RobotOutlined, UnorderedListOutlined } 
 import dayjs from 'dayjs';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DEFAULT_PAGE_SIZE_OPTIONS, readPageSize, savePageSize } from '@/utils/pageSizeStore';
-import Layout from '../../../../components/Layout';
 import PageLayout from '@/components/common/PageLayout';
 import { intelligenceApi } from '../../../../services/intelligence/intelligenceApi';
 import { paths } from '../../../../routeConfig';
@@ -169,7 +168,7 @@ const AiAgentTraceCenter: React.FC = () => {
   }), [rows, keyword]);
 
   return (
-    <Layout>
+    <>
       <PageLayout
         title="AI 执行记录中心"
         headerContent={<div style={{ color: '#8c8c8c', fontSize: 13 }}>统一查看小云每次执行的 commandId、状态、耗时、工具轨迹与失败信息</div>}
@@ -357,7 +356,7 @@ const AiAgentTraceCenter: React.FC = () => {
           </Card>
         </Space>
       </Drawer>
-    </Layout>
+    </>
   );
 };
 

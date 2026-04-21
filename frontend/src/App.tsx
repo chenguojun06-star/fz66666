@@ -225,7 +225,6 @@ const AppRoutes: React.FC = () => {
               </RouteErrorBoundary>
             }
           />
-          <Route path={paths.materialPurchaseDetail} element={<RouteErrorBoundary pageName="采购详情"><Suspense fallback={routeFallback}><MaterialPurchaseDetail /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.orderFlow} element={<RouteErrorBoundary pageName="订单流程"><Suspense fallback={routeFallback}><OrderFlow /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.materialReconciliation} element={<RouteErrorBoundary pageName="物料对账"><Suspense fallback={routeFallback}><MaterialReconciliation /></Suspense></RouteErrorBoundary>} />
           <Route path={paths.payrollOperatorSummary} element={<RouteErrorBoundary pageName="工资汇总"><Suspense fallback={routeFallback}><PayrollOperatorSummary /></Suspense></RouteErrorBoundary>} />

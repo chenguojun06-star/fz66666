@@ -100,7 +100,8 @@ Page({
     stageBuckets: [], activeStage: '', activeStageLabel: '', activeStageOrders: [],
     factoryList: [], factoryOnline: 0, factoryStagnant: 0, factoryTotalOrders: 0, factoryTotalQty: 0,
     lastRefreshTime: '', loading: false,
-    _allOrders: [],
+    // _allOrders 已迁移到 this._allOrders 实例属性（在 onMenuTap 里过滤使用，不参与 WXML 渲染）
+    // 避免 setData 传入未绑定 WXML 变量的性能告警，同时减少大数组序列化开销。
   },
 
   _timer: null, _countdown: REFRESH_INTERVAL,
@@ -121,7 +122,7 @@ Page({
   onMenuTap: function (e) {
     var key = e.currentTarget.dataset.key;
     if (this.data.activeMenu === key) { this.setData({ activeMenu: '', activeOrders: [] }); return; }
-    var orders = this.data._allOrders || [];
+    var orders = this._allOrders || [];
     var filtered = [];
     if (key === 'inProduction') filtered = orders.filter(function(o) { var s = String(o.status || '').toUpperCase(); return s !== 'COMPLETED' && s !== 'CLOSED' && s !== 'CANCELLED' && s !== 'SCRAPPED'; });
     else if (key === 'todayOrders') filtered = orders.filter(function(o) { return o._isTodayOrder; });
@@ -292,8 +293,10 @@ Page({
         stageBuckets: stageBuckets,
         factoryList: factoryList, factoryOnline: factoryOnline, factoryStagnant: factoryStagnant,
         factoryTotalOrders: factoryTotalOrders, factoryTotalQty: factoryTotalQty,
-        _allOrders: orders, loading: false,
+        loading: false,
       });
+      // 存为实例属性，不走 setData（不参与 WXML）
+      self._allOrders = orders;
 
       if (self.data.activeMenu) { self.onMenuTap({ currentTarget: { dataset: { key: self.data.activeMenu } } }); }
       if (self.data.activeStage) { self.onStageTap({ currentTarget: { dataset: { key: self.data.activeStage } } }); }

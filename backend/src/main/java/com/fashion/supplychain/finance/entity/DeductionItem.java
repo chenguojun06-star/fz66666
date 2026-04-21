@@ -41,6 +41,10 @@ public class DeductionItem {
      */
     private String description;
 
+    private String sourceType;
+
+    private String sourceId;
+
     @TableField(fill = FieldFill.INSERT)
     private Long tenantId;
 }

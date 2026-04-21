@@ -5,7 +5,6 @@ import { useAuth } from '@/utils/AuthContext';
 import ResizableTable from '@/components/common/ResizableTable';
 import IntegrationGuideTab from './IntegrationGuideTab';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import Layout from '@/components/Layout';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
 import type { RowAction } from '@/components/common/RowActions';
@@ -286,8 +285,6 @@ const AppManagementTab: React.FC = () => {
   const { user } = useAuth();
   const isSuperAdmin = user?.isSuperAdmin === true;
 
-
-
   // 行内编辑URL状态（列表行）
   const [editingUrlId, setEditingUrlId] = useState<string | null>(null);
   const [editingUrlField, setEditingUrlField] = useState<'callbackUrl' | 'externalApiUrl' | null>(null);
@@ -486,8 +483,6 @@ const AppManagementTab: React.FC = () => {
     });
   };
 
-
-
   const columns: ColumnsType<TenantAppInfo> = [
     {
       title: '应用', dataIndex: 'appName', width: 180,
@@ -636,8 +631,6 @@ const AppManagementTab: React.FC = () => {
           </Button>
       </div>
 
-
-
       {/* 应用列表 */}
       <ResizableTable
         storageKey="tenant-apps"
@@ -769,7 +762,6 @@ const AppManagementTab: React.FC = () => {
   );
 };
 
-
 // ========== 角色模板 Tab ==========
 const RoleTemplateTab: React.FC = () => {
   const [templates, setTemplates] = useState<RoleTemplate[]>([]);
@@ -828,7 +820,7 @@ const TenantManagement: React.FC = () => {
   const activeTab = searchParams.get('tab') || 'overview';
 
   return (
-    <Layout>
+    <>
       <Tabs
         activeKey={activeTab}
         onChange={(key) => setSearchParams({ tab: key })}
@@ -855,7 +847,7 @@ const TenantManagement: React.FC = () => {
           },
         ]}
       />
-    </Layout>
+    </>
   );
 };
 

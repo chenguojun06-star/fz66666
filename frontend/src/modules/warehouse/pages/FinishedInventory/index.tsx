@@ -6,7 +6,6 @@ import OutstockRecordTab from './OutstockRecordTab';
 import CustomerInfoSection from './CustomerInfoSection';
 import { getMainColumns, getSkuColumns } from './finishedInventoryColumns';
 import type { SKUDetail, FinishedInventory } from './finishedInventoryColumns';
-import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import StandardModal from '@/components/common/StandardModal';
 import ResizableModal from '@/components/common/ResizableModal';
@@ -21,7 +20,6 @@ import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
 import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import { useOrganizationFilterOptions } from '@/hooks/useOrganizationFilterOptions';
-
 
 const _FinishedInventory: React.FC = () => {
   const { message } = App.useApp();
@@ -305,7 +303,7 @@ const _FinishedInventory: React.FC = () => {
   const skuColumns = getSkuColumns({ handleSKUQtyChange });
 
   return (
-    <Layout>
+    <>
         {showSmartErrorNotice && smartError ? (
           <Card size="small" style={{ marginBottom: 12 }}>
             <SmartErrorNotice
@@ -749,7 +747,7 @@ const _FinishedInventory: React.FC = () => {
             },
           ]}
         />
-    </Layout>
+    </>
   );
 };
 

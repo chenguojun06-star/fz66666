@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import Layout from '@/components/Layout';
 import PageLayout from '@/components/common/PageLayout';
 import ResizableModal from '@/components/common/ResizableModal';
 import RowActions from '@/components/common/RowActions';
@@ -529,7 +528,7 @@ const FactoryList: React.FC = () => {
   ];
 
   return (
-    <Layout>
+    <>
       <PageLayout
         title={managementTab === 'customer' ? '客户管理' : '供应商管理'}
         headerContent={showSmartErrorNotice && smartError ? (
@@ -883,7 +882,7 @@ const FactoryList: React.FC = () => {
         onOk={handleRemarkConfirm}
         onCancel={() => setRemarkModalState(null)}
       />
-    </Layout>
+    </>
   );
 };
 

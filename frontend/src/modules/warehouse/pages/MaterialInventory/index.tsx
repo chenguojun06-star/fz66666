@@ -18,7 +18,6 @@ import type { Dayjs } from 'dayjs';
 import {
   ClockCircleOutlined,
 } from '@ant-design/icons';
-import Layout from '@/components/Layout';
 import ResizableTable from '@/components/common/ResizableTable';
 import MaterialAlertRanking from './components/MaterialAlertRanking';
 import MaterialInventoryAISummary from './components/MaterialInventoryAISummary';
@@ -153,7 +152,7 @@ const _MaterialInventory: React.FC = () => {
   };
 
   return (
-    <Layout>
+    <>
         {showSmartErrorNotice && smartError ? (
           <Card size="small" style={{ marginBottom: 12 }}>
             <SmartErrorNotice
@@ -658,7 +657,7 @@ const _MaterialInventory: React.FC = () => {
         />
 
       <MaterialInventoryModals inventoryData={inventoryData} pickupData={pickupData} />
-    </Layout>
+    </>
   );
 };
 

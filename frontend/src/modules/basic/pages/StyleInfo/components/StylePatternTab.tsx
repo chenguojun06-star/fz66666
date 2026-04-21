@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
-import { App, Button, Card, InputNumber, Modal, Select, Space, Spin, Typography, Collapse } from 'antd';
+import { App, Button, Card, Input, InputNumber, Modal, Select, Space, Spin, Typography, Collapse } from 'antd';
 import { DeleteOutlined } from '@ant-design/icons';
 import api, { type ApiResult } from '@/utils/api';
 import ResizableTable from '@/components/common/ResizableTable';
@@ -518,6 +518,34 @@ const StylePatternTab: React.FC<Props> = ({
                 options={sizeOptions.filter(o => !allSizes.includes(o.value))}
                 value={[]}
                 onChange={(values: string[]) => handleAddSizes(values)}
+                filterOption={(input, option) =>
+                  String(option?.value || '').toLowerCase().includes(String(input || '').toLowerCase())
+                }
+                onSearch={(value) => {
+                  // 支持自由输入：输入的尺码不在字典中时，动态追加到选项列表
+                  if (value && value.trim() && !sizeOptions.some(opt => opt.value === value.trim()) && !allSizes.includes(value.trim())) {
+                    setSizeOptions(prev => [...prev, { value: value.trim(), label: value.trim() }]);
+                  }
+                }}
+                popupRender={(menu) => (
+                  <>
+                    {menu}
+                    <div style={{ padding: '8px', borderTop: '1px solid #f0f0f0' }}>
+                      <Input
+                        placeholder="输入新码数后回车添加"
+                        size="small"
+                        onPressEnter={(e) => {
+                          const input = e.target as HTMLInputElement;
+                          const val = input.value.trim();
+                          if (val && !allSizes.includes(val)) {
+                            handleAddSizes([val]);
+                            input.value = '';
+                          }
+                        }}
+                      />
+                    </div>
+                  </>
+                )}
               />
               <Button
                 type="primary"
