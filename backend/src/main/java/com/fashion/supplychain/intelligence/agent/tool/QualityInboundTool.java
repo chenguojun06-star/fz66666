@@ -296,7 +296,6 @@ public class QualityInboundTool implements AgentTool {
         return sb.toString();
     }
 
-    @SuppressWarnings("unchecked")
     private Map<String, Object> parse(String json) throws Exception {
         return MAPPER.readValue(json, new TypeReference<>() {});
     }

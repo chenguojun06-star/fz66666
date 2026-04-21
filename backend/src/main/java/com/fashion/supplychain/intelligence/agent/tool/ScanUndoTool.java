@@ -4,8 +4,6 @@ import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.helper.StepWizardBuilder;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.production.orchestration.ScanRecordOrchestrator;
-import com.fashion.supplychain.production.service.ProductionOrderService;
-import com.fashion.supplychain.production.service.ScanRecordService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -21,8 +19,6 @@ import java.util.*;
 public class ScanUndoTool extends AbstractAgentTool {
 
     @Autowired private ScanRecordOrchestrator scanRecordOrchestrator;
-    @Autowired private ScanRecordService scanRecordService;
-    @Autowired private ProductionOrderService productionOrderService;
     @Autowired private AiAgentToolAccessService aiAgentToolAccessService;
 
     @Override

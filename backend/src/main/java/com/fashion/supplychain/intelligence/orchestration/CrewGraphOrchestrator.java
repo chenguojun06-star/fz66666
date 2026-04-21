@@ -1,7 +1,6 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import com.fashion.supplychain.intelligence.entity.CrewSession;
-import com.fashion.supplychain.intelligence.mapper.AgentExecutionLogMapper;
 import com.fashion.supplychain.intelligence.mapper.CrewSessionMapper;
 import com.fashion.supplychain.intelligence.service.QdrantService;
 import com.fashion.supplychain.production.orchestration.SysNoticeOrchestrator;
@@ -42,12 +41,9 @@ public class CrewGraphOrchestrator {
 
     // ── 已有编排器（复用，禁止新建重复逻辑）────────────────────────────────
     @Autowired private IntelligenceInferenceOrchestrator inference;
-    @Autowired private ExecutionEngineOrchestrator executionEngine;
     @Autowired private AiCriticOrchestrator critic;
-    @Autowired private LangfuseTraceOrchestrator langfuse;
     @Autowired private QdrantService qdrant;
     @Autowired private SysNoticeOrchestrator noticeOrch;
-    @Autowired private AgentExecutionLogMapper executionLogMapper;
     @Autowired private CrewSessionMapper crewSessionMapper;
 
     // ── 健康分阈值：高于此值自动执行，低于则转人审 ───────────────────────

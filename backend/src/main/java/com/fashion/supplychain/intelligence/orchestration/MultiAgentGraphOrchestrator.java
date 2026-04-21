@@ -40,7 +40,6 @@ public class MultiAgentGraphOrchestrator {
     @Autowired private DigitalTwinBuilderOrchestrator digitalTwin;
     @Autowired private DecisionChainOrchestrator decisionChain;
     @Autowired private AgentExecutionLogMapper logMapper;
-    @Autowired private ModelRoutingConfig modelRoutingConfig;
     @Autowired private List<SpecialistAgent> specialistAgents;
 
     /**

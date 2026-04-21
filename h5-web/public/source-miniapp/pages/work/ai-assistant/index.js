@@ -1,7 +1,7 @@
 const api = require('../../../utils/api');
 const { isAdminOrSupervisor } = require('../../../utils/permission');
 const { parseChatReply } = require('./chat-parser');
-const { toast } = require('../../../utils/uiHelper');
+const _uiHelper = require('../../../utils/uiHelper'); // toast reserved for future use
 const { eventBus } = require('../../../utils/eventBus');
 
 var TOOL_NAMES = {
@@ -13,10 +13,40 @@ var TOOL_NAMES = {
   tool_smart_report: '智能报表', tool_delay_trend: '延期趋势',
   tool_root_cause_analysis: '根因分析', tool_whatif: '假设模拟',
   tool_action_executor: '执行操作', tool_procurement: '采购管理',
+  tool_create_production_order: 'AI建单', tool_sample_loan: '样衣借调',
+  tool_sample_stock: '样衣库存', tool_sample_workflow: '样衣流程',
+  tool_query_style_info: '款式查询', tool_order_contact_urge: '催单',
+  tool_scan_undo: '扫码撤回', tool_cutting_task_create: '创建裁剪',
+  tool_bundle_split_transfer: '拆菲转派', tool_team_dispatch: '协同派单',
+  tool_order_batch_close: '批量关单', tool_payroll_approve: '工资审批',
+  tool_material_audit: '面辅料审核', tool_material_reconciliation: '物料对账',
+  tool_shipment_reconciliation: '出货对账', tool_change_approval: '变更审批',
+  tool_material_picking: '领料单', tool_material_calculation: '物料计算',
+  tool_defective_board: '次品看板', tool_production_exception: '生产异常',
+  tool_order_factory_transfer: '订单转厂', tool_style_template: '模板库',
+  tool_warehouse_op_log: '仓库日志', tool_org_query: '组织架构',
 };
 
 function describeTool(name) {
   return TOOL_NAMES[name] || (name || '').replace(/^tool_/, '').replace(/_/g, '');
+}
+
+/**
+ * 将 formData 中的数组字段转为 {value: true} 查找表。
+ * 目的：避免在 WXML class 绑定里使用 (arr||[]).indexOf(v)（WeChat 编译器不支持括号后跟点）。
+ * @param {object} formData
+ * @returns {object} e.g. { colors: { red: true, blue: true } }
+ */
+function _buildSelectedSet(formData) {
+  const result = {};
+  Object.keys(formData || {}).forEach(function(k) {
+    if (Array.isArray(formData[k])) {
+      const lookup = {};
+      formData[k].forEach(function(v) { lookup[v] = true; });
+      result[k] = lookup;
+    }
+  });
+  return result;
 }
 
 // 工厂工人快捷提问
@@ -29,6 +59,8 @@ const WORKER_PROMPTS = [
 
 // 管理员/跟单员快捷指令（查询 + 操作两类）
 const MANAGER_PROMPTS = [
+  { label: '📋 下单', text: '帮我下单', cmd: true },
+  { label: '👕 借调样衣', text: '帮我借调样衣', cmd: true },
   { label: '内部资料: 日报口径', text: '请给我内部资料：日报统计口径', cmd: false },
   { label: '内部资料: 逾期定义', text: '请给我内部资料：逾期定义', cmd: false },
   { label: '内部资料: 采购流程', text: '请给我内部资料：采购流程', cmd: false },
@@ -74,7 +106,7 @@ Page({
         try {
           var dialog = this.selectComponent('#privacyDialog');
           if (dialog && typeof dialog.showDialog === 'function') dialog.showDialog(resolve);
-        } catch (_) {}
+        } catch (_) { /* dialog may not exist on this page, intentional no-op */ }
       });
     }
     const isManager = isAdminOrSupervisor();
@@ -296,6 +328,9 @@ Page({
         cur = cur.concat([ds.value]);
       }
       wiz._formData[ds.key] = cur;
+      // 同步维护 _formDataSelectedSet，避免 WXML class 绑定里出现 indexOf（method call 编译报错）
+      wiz._formDataSelectedSet = wiz._formDataSelectedSet || {};
+      wiz._formDataSelectedSet[ds.key] = _buildSelectedSet({ [ds.key]: cur })[ds.key] || {};
       self._recalcCanNext(wiz);
     });
   },
@@ -377,10 +412,12 @@ Page({
   _updateMsg(id, rawText) {
     const parsed = parseChatReply(rawText);
     var stepWizardCards = (parsed.stepWizardCards || []).map(function (w) {
+      const formData = w.prefilledData ? Object.assign({}, w.prefilledData) : {};
       return Object.assign({}, w, {
         _currentStep: 0,
-        _formData: w.prefilledData ? Object.assign({}, w.prefilledData) : {},
-        _formDataSelectedSet: {},
+        _formData: formData,
+        // 预计算 _formDataSelectedSet，避免 WXML class 绑定里用 (arr || []).indexOf()（method call 编译报错）
+        _formDataSelectedSet: _buildSelectedSet(formData),
         _canNext: false,
         _submitted: false,
       });
@@ -401,11 +438,21 @@ Page({
         ...m,
         text: parsed.displayText,
         textSegments: buildTextSegments(parsed.displayText),
-        actionCards: parsed.actionCards,
+        // 预计算 _cardType，避免 WXML class 绑定里出现 actions[0].type（bracket-dot 编译报错）
+        actionCards: (parsed.actionCards || []).map(function(card) {
+          var t = card.actions && card.actions[0] && card.actions[0].type;
+          return Object.assign({}, card, {
+            _cardType: t === 'mark_urgent' ? 'card-danger'
+                     : t === 'send_notification' ? 'card-warning'
+                     : 'card-normal'
+          });
+        }),
         charts: parsed.charts,
         teamStatusCards: parsed.teamStatusCards,
         bundleSplitCards: parsed.bundleSplitCards,
         stepWizardCards: stepWizardCards,
+        insightCards: parsed.insightCards || [],
+        clarificationHints: parsed.clarificationHints || [],
         loading: false,
       } : m
     );
@@ -441,7 +488,7 @@ Page({
 
   _abortStream() {
     if (this._streamTask) {
-      try { this._streamTask.abort(); } catch (_e) {}
+      try { this._streamTask.abort(); } catch (_e) { /* abort may throw if already done */ }
       this._streamTask = null;
     }
   },

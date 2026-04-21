@@ -252,6 +252,115 @@ public class MaterialPickingController {
         return Result.success(null);
     }
 
+    @Autowired
+    private com.fashion.supplychain.warehouse.orchestration.MaterialPickupOrchestrator materialPickupOrchestrator;
+
+    @Autowired
+    private com.fashion.supplychain.warehouse.mapper.MaterialPickupRecordMapper materialPickupRecordMapper;
+
+    @PostMapping("/{id}/audit")
+    public Result<Void> audit(@PathVariable String id, @RequestBody java.util.Map<String, Object> body) {
+        MaterialPicking picking = materialPickingService.getById(id);
+        if (picking == null) throw new java.util.NoSuchElementException("领料单不存在");
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        if (tenantId != null && !tenantId.equals(picking.getTenantId())) throw new IllegalStateException("无权操作此领料单");
+        if (!"completed".equals(picking.getStatus())) throw new IllegalStateException("仅已出库的领料单可审核");
+
+        String action = body.get("action") == null ? "approve" : String.valueOf(body.get("action")).trim();
+        String remark = body.get("remark") == null ? null : String.valueOf(body.get("remark")).trim();
+        String userId = com.fashion.supplychain.common.UserContext.userId();
+        String userName = com.fashion.supplychain.common.UserContext.username();
+
+        if ("approve".equalsIgnoreCase(action)) {
+            picking.setAuditStatus("APPROVED");
+            picking.setAuditorId(userId);
+            picking.setAuditorName(userName);
+            picking.setAuditTime(java.time.LocalDateTime.now());
+            picking.setAuditRemark(remark);
+            String factoryType = resolveFactoryType(picking);
+            if ("EXTERNAL".equalsIgnoreCase(factoryType)) {
+                picking.setFinanceStatus("PENDING");
+                picking.setFinanceRemark("外发工厂领料审核通过，待生成应收账单");
+            } else {
+                picking.setFinanceStatus("SETTLED");
+                picking.setFinanceRemark(remark != null ? "内部领料审核通过（内部平账）：" + remark : "内部领料审核通过，已做内部平账处理");
+            }
+            syncAuditToPickupRecords(id, remark);
+        } else {
+            picking.setAuditStatus("REJECTED");
+            picking.setAuditorId(userId);
+            picking.setAuditorName(userName);
+            picking.setAuditTime(java.time.LocalDateTime.now());
+            picking.setAuditRemark(remark);
+        }
+        picking.setUpdateTime(java.time.LocalDateTime.now());
+        materialPickingService.updateById(picking);
+        log.info("[Picking] 审核领料单: pickingNo={}, action={}", picking.getPickingNo(), action);
+        return Result.success(null);
+    }
+
+    @PostMapping("/batch-audit")
+    public Result<java.util.Map<String, Object>> batchAudit(@RequestBody java.util.Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        java.util.List<String> ids = (java.util.List<String>) body.get("ids");
+        String action = body.get("action") == null ? "approve" : String.valueOf(body.get("action")).trim();
+        String remark = body.get("remark") == null ? null : String.valueOf(body.get("remark")).trim();
+        if (ids == null || ids.isEmpty()) throw new IllegalArgumentException("请选择要审核的领料单");
+        int successCount = 0, failCount = 0;
+        java.util.List<String> errors = new java.util.ArrayList<>();
+        for (String id : ids) {
+            try {
+                java.util.Map<String, Object> singleBody = new java.util.LinkedHashMap<>();
+                singleBody.put("action", action);
+                singleBody.put("remark", remark);
+                audit(id, singleBody);
+                successCount++;
+            } catch (Exception e) { failCount++; errors.add(id + ": " + e.getMessage()); }
+        }
+        java.util.Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("successCount", successCount);
+        result.put("failCount", failCount);
+        result.put("errors", errors);
+        return Result.success(result);
+    }
+
+    private void syncAuditToPickupRecords(String pickingId, String remark) {
+        try {
+            java.util.List<com.fashion.supplychain.warehouse.entity.MaterialPickupRecord> pickupRecords =
+                    materialPickupRecordMapper.selectList(
+                            new LambdaQueryWrapper<com.fashion.supplychain.warehouse.entity.MaterialPickupRecord>()
+                                    .eq(com.fashion.supplychain.warehouse.entity.MaterialPickupRecord::getSourceRecordId, pickingId)
+                                    .eq(com.fashion.supplychain.warehouse.entity.MaterialPickupRecord::getDeleteFlag, 0));
+            for (com.fashion.supplychain.warehouse.entity.MaterialPickupRecord pr : pickupRecords) {
+                if ("PENDING".equals(pr.getAuditStatus())) {
+                    try {
+                        java.util.Map<String, Object> auditBody = new java.util.LinkedHashMap<>();
+                        auditBody.put("action", "approve");
+                        auditBody.put("remark", remark);
+                        materialPickupOrchestrator.audit(pr.getId(), auditBody);
+                    } catch (Exception e) {
+                        log.warn("[Picking] 审核关联领取记录失败: prId={}, error={}", pr.getId(), e.getMessage());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("[Picking] 审核时同步领取记录失败: pickingId={}, error={}", pickingId, e.getMessage());
+        }
+    }
+
+    private String resolveFactoryType(MaterialPicking picking) {
+        if (StringUtils.hasText(picking.getFactoryType())) return picking.getFactoryType();
+        if (StringUtils.hasText(picking.getOrderId())) {
+            try {
+                ProductionOrder order = productionOrderService.getById(picking.getOrderId().trim());
+                if (order != null && StringUtils.hasText(order.getFactoryType())) return order.getFactoryType();
+            } catch (Exception e) {
+                log.warn("[Picking] 解析工厂类型失败: orderId={}", picking.getOrderId(), e);
+            }
+        }
+        return "INTERNAL";
+    }
+
     @Data
     public static class PickingRequest {
         private MaterialPicking picking;

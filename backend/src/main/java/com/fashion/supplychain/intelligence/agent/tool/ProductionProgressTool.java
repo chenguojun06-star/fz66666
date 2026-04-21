@@ -231,12 +231,12 @@ public class ProductionProgressTool implements AgentTool {
                                 Map<String, Object> m = new HashMap<>();
                                 m.put("processName", pName);
                                 m.put("totalQty", 0);
-                                m.put("workerCount", new java.util.HashSet<String>());
+                                m.put("workerSet", new java.util.HashSet<String>());
                                 m.put("latestScanTime", "");
                                 return m;
                             });
                             agg.put("totalQty", (int) agg.get("totalQty") + scan.getQuantity());
-                            ((java.util.Set<String>) agg.get("workerCount")).add(scan.getOperatorName());
+                            getWorkerSet(agg).add(scan.getOperatorName());
                             if (scan.getScanTime() != null) {
                                 agg.put("latestScanTime", scan.getScanTime().format(dtf));
                             }
@@ -249,7 +249,7 @@ public class ProductionProgressTool implements AgentTool {
                         Map<String, Object> summaryItem = new HashMap<>();
                         summaryItem.put("processName", agg.get("processName"));
                         summaryItem.put("totalQty", agg.get("totalQty"));
-                        summaryItem.put("workerCount", ((java.util.Set<?>) agg.get("workerCount")).size());
+                        summaryItem.put("workerCount", ((java.util.Set<?>) agg.get("workerSet")).size());
                         summaryItem.put("latestScanTime", agg.get("latestScanTime"));
                         processSummary.add(summaryItem);
                     }
@@ -268,5 +268,22 @@ public class ProductionProgressTool implements AgentTool {
             log.error("Tool execution failed", e);
             return "{\"error\": \"查询失败: " + e.getMessage() + "\"}";
         }
+    }
+
+    private java.util.Set<String> getWorkerSet(Map<String, Object> aggregate) {
+        Object workerSet = aggregate.get("workerSet");
+        if (workerSet instanceof java.util.Set<?> rawSet) {
+            java.util.Set<String> normalized = new java.util.HashSet<>();
+            for (Object item : rawSet) {
+                if (item != null) {
+                    normalized.add(String.valueOf(item));
+                }
+            }
+            aggregate.put("workerSet", normalized);
+            return normalized;
+        }
+        java.util.Set<String> created = new java.util.HashSet<>();
+        aggregate.put("workerSet", created);
+        return created;
     }
 }

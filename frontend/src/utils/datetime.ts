@@ -88,7 +88,13 @@ export const formatDateTimeCompact = (input: DateInput): string => {
   }
   const m = pad2(d.getMonth() + 1);
   const day = pad2(d.getDate());
-  return `${m}-${day}`;
+  const raw = typeof input === 'string' ? String(input).trim() : '';
+  if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(raw)) {
+    return `${m}-${day}`;
+  }
+  const h = pad2(d.getHours());
+  const min = pad2(d.getMinutes());
+  return `${m}-${day} ${h}:${min}`;
 };
 
 export const formatDate = (input: DateInput): string => {

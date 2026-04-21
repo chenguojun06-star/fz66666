@@ -1,5 +1,6 @@
 package com.fashion.supplychain.intelligence.agent.tool;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
@@ -62,7 +63,7 @@ public class BundleSplitTransferTool implements AgentTool {
             if (!aiAgentToolAccessService.hasManagerAccess()) {
                 return "{\"success\":false,\"error\":\"当前角色无权执行该操作\"}";
             }
-            Map<String, Object> args = OBJECT_MAPPER.readValue(arguments, Map.class);
+            Map<String, Object> args = OBJECT_MAPPER.readValue(arguments, new TypeReference<Map<String, Object>>() {});
             String action = asString(args.get("action"));
             if ("query_family".equalsIgnoreCase(action)) {
                 return OBJECT_MAPPER.writeValueAsString(cuttingBundleSplitTransferOrchestrator.queryFamily(asString(args.get("bundleId"))));

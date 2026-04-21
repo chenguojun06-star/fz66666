@@ -47,21 +47,24 @@ public class MaterialPickupOrchestrator {
         int page     = Integer.parseInt(String.valueOf(params.getOrDefault("page",     "1")));
         int pageSize = Integer.parseInt(String.valueOf(params.getOrDefault("pageSize", "20")));
 
-        String keyword       = strOf(params.get("keyword"));
-        String pickupType    = strOf(params.get("pickupType"));
-        String movementType  = strOf(params.get("movementType"));
-        String auditStatus   = strOf(params.get("auditStatus"));
-        String financeStatus = strOf(params.get("financeStatus"));
-        String orderNo       = strOf(params.get("orderNo"));
-        String styleNo       = strOf(params.get("styleNo"));
-        String factoryName   = strOf(params.get("factoryName"));
-        String factoryType   = strOf(params.get("factoryType"));
+        String keyword        = strOf(params.get("keyword"));
+        String pickupType     = strOf(params.get("pickupType"));
+        String movementType   = strOf(params.get("movementType"));
+        String auditStatus    = strOf(params.get("auditStatus"));
+        String financeStatus  = strOf(params.get("financeStatus"));
+        String orderNo        = strOf(params.get("orderNo"));
+        String styleNo        = strOf(params.get("styleNo"));
+        String factoryName    = strOf(params.get("factoryName"));
+        String factoryType    = strOf(params.get("factoryType"));
+        // sourceRecordId: 用于面料入库详情页查询关联领取记录
+        String sourceRecordId = strOf(params.get("sourceRecordId"));
 
         Long tenantId = currentTenantId();
 
         LambdaQueryWrapper<MaterialPickupRecord> wrapper = new LambdaQueryWrapper<MaterialPickupRecord>()
                 .eq(MaterialPickupRecord::getDeleteFlag, 0)
                 .eq(tenantId != null, MaterialPickupRecord::getTenantId, tenantId != null ? String.valueOf(tenantId) : null)
+                .eq(StringUtils.hasText(sourceRecordId), MaterialPickupRecord::getSourceRecordId, sourceRecordId)
                 .eq(StringUtils.hasText(pickupType),    MaterialPickupRecord::getPickupType,    pickupType)
                 .eq(StringUtils.hasText(movementType),  MaterialPickupRecord::getMovementType,  movementType)
                 .eq(StringUtils.hasText(auditStatus),   MaterialPickupRecord::getAuditStatus,   auditStatus)

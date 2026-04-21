@@ -142,8 +142,11 @@ function getNodeRateFromOrder(nodeName, order) {
     const entry = STAGE_RATE_MAP[i];
     if (name === entry.match || name.indexOf(entry.match) >= 0 || entry.match.indexOf(name) >= 0) {
       for (let j = 0; j < entry.fields.length; j++) {
-        const val = Number(order[entry.fields[j]]) || 0;
-        if (val > 0) return clampPercent(val);
+        var raw = order[entry.fields[j]];
+        if (raw !== undefined && raw !== null && raw !== '') {
+          var val = Number(raw);
+          if (!isNaN(val)) return clampPercent(val);
+        }
       }
     }
   }
@@ -155,19 +158,29 @@ function buildProcessNodesWithRates(order) {
   if (!nodes || !nodes.length) return [];
   var progress = Number(order.productionProgress) || 0;
   var hasAnyRate = false;
+  var hasRealRate = false;
   var result = nodes.map(function (n) {
     var name = n.name || n;
     var rate = getNodeRateFromOrder(name, order);
     if (rate >= 0) {
       hasAnyRate = true;
+      if (rate > 0 && rate < 100) hasRealRate = true;
       return { name: name, percent: rate };
     }
     return { name: name, percent: -1 };
   });
-  if (hasAnyRate) {
+  if (hasAnyRate && hasRealRate) {
     return result.map(function (r) {
       return { name: r.name, percent: r.percent >= 0 ? r.percent : 0 };
     });
+  }
+  if (hasAnyRate && !hasRealRate) {
+    var allHundred = result.every(function (r) { return r.percent === 100 || r.percent < 0; });
+    if (allHundred) {
+      return result.map(function (r) {
+        return { name: r.name, percent: r.percent >= 0 ? r.percent : 0 };
+      });
+    }
   }
   var len = nodes.length;
   var perNode = 100 / len;
@@ -188,14 +201,22 @@ function calcOrderProgress(order) {
   if (!order) return 0;
   var dbProgress = clampPercent(Number(order.productionProgress) || 0);
   var status = (order.status || '').trim().toLowerCase();
-  if (status === 'completed') return 100;
+  if (status === 'completed') {
+    var completedQty = Number(order.completedQuantity) || 0;
+    var totalQty = Number(order.cuttingQuantity) || Number(order.cuttingQty)
+                   || Number(order.orderQuantity) || Number(order.sizeTotal) || 0;
+    // 有已完成数量（或无总数可参照）→ 真实完成，返回100%
+    if (completedQty > 0 || totalQty === 0) return 100;
+    // completedQty=0 且有 totalQty → 仓库数量尚未录入，继续按工序完成率计算
+    // 避免进度条100%但「已完成数量」显示0的视觉矛盾
+  }
 
   var orderNo = (order.orderNo || '').trim().toUpperCase();
   var orderBizType = (order.orderBizType || '').trim().toUpperCase();
   var isDirectCutting = orderBizType === 'CUTTING_DIRECT' || orderNo.indexOf('CUT') === 0;
 
   var hasProcurement = !isDirectCutting && (
-    (Number(order.materialArrivalRate) || 0) > 0
+    (Number(order.procurementCompletionRate) || 0) > 0
     || Boolean(order.procurementManuallyCompleted)
     || Boolean(order.procurementConfirmedAt)
   );

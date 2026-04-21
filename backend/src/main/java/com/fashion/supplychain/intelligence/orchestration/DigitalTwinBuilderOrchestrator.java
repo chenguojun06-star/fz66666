@@ -2,6 +2,7 @@ package com.fashion.supplychain.intelligence.orchestration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.intelligence.dto.AgentState;
+import com.fashion.supplychain.production.dto.response.OrderHealthScoreDTO;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.orchestration.OrderHealthScoreOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -73,9 +74,9 @@ public class DigitalTwinBuilderOrchestrator {
         // 健康分布
         try {
             List<String> ids = orders.stream().map(o -> String.valueOf(o.getId())).toList();
-            List<Map<String, Object>> scores = healthScoreOrchestrator.batchScores(ids);
-            long critical = scores.stream().filter(m -> (int) m.getOrDefault("score", 50) < 50).count();
-            long warning = scores.stream().filter(m -> { int s = (int) m.getOrDefault("score", 50); return s >= 50 && s < 75; }).count();
+            Collection<OrderHealthScoreDTO> scores = healthScoreOrchestrator.batchCalculateHealth(ids).values();
+            long critical = scores.stream().filter(dto -> dto.getScore() < 50).count();
+            long warning = scores.stream().filter(dto -> dto.getScore() >= 50 && dto.getScore() < 75).count();
             snapshot.put("healthCritical", critical);
             snapshot.put("healthWarning", warning);
             snapshot.put("healthGood", scores.size() - critical - warning);

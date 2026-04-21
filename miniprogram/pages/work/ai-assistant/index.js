@@ -451,6 +451,8 @@ Page({
         teamStatusCards: parsed.teamStatusCards,
         bundleSplitCards: parsed.bundleSplitCards,
         stepWizardCards: stepWizardCards,
+        insightCards: parsed.insightCards || [],
+        clarificationHints: parsed.clarificationHints || [],
         loading: false,
       } : m
     );

@@ -1,31 +1,36 @@
 <scroll-view scroll-x enhanced="{{true}}" class="srt-table-wrap" wx:if="{{records.length > 0}}">
   <view class="srt-table-inner">
+    <!-- 表头：颜色+码数合并为「颜色/码数」一列；单价+金额合并为「单价/金额」一列。
+         目的：把每行节点数从 12 降到 10，避免页面 WXML 节点总数超过 1000 的性能告警。 -->
     <view class="srt-table-header">
       <text class="srt-th srt-th-worker">领取人</text>
       <text class="srt-th srt-th-order">订单号</text>
       <text class="srt-th srt-th-bundle">菲号</text>
       <text class="srt-th srt-th-process">工序</text>
-      <text class="srt-th srt-th-color">颜色</text>
-      <text class="srt-th srt-th-size">码数</text>
-      <text class="srt-th srt-th-price">单价</text>
+      <text class="srt-th srt-th-colorsize">颜色/码数</text>
+      <text wx:if="{{showAmount}}" class="srt-th srt-th-priceamt">单价/金额</text>
+      <text wx:else class="srt-th srt-th-price">单价</text>
       <text class="srt-th srt-th-qty">数量</text>
-      <text wx:if="{{showAmount}}" class="srt-th srt-th-amount">金额</text>
       <text class="srt-th srt-th-bed">床号</text>
       <text class="srt-th srt-th-time">日期</text>
     </view>
 
-    <view wx:for="{{records}}" wx:key="id" class="srt-table-row" hover-class="srt-table-row-hover" hover-stay-time="50">
-      <text class="srt-td srt-td-worker" user-select>{{item.displayWorker}}</text>
-      <text class="srt-td srt-td-order" user-select>{{item.displayOrderNo}}</text>
-      <text class="srt-td srt-td-bundle" user-select>{{item.displayBundleNo}}</text>
-      <text class="srt-td srt-td-process" user-select>{{item.displayProcess}}</text>
-      <text class="srt-td srt-td-color" user-select>{{item.displayColor || '-'}}</text>
-      <text class="srt-td srt-td-size" user-select>{{item.displaySize || '-'}}</text>
-      <text class="srt-td srt-td-price" user-select>{{item.displayUnitPrice}}</text>
-      <text class="srt-td srt-td-qty" user-select>{{item.displayQuantity}}</text>
-      <text wx:if="{{showAmount}}" class="srt-td srt-td-amount" user-select>{{item.displayLineAmount}}</text>
-      <text class="srt-td srt-td-bed" user-select>{{item.displayBedNo}}</text>
-      <text class="srt-td srt-td-time" user-select>{{item.displayTime}}</text>
-    </view>
+    <!-- 分块包装：每 30 条一组，避免 srt-table-inner 直接子节点超过 60（WXML 性能告警） -->
+    <block wx:for="{{chunks}}" wx:for-item="chunk" wx:key="key">
+      <view class="srt-chunk">
+        <view wx:for="{{chunk.items}}" wx:for-item="item" wx:key="id" class="srt-table-row" hover-class="srt-table-row-hover" hover-stay-time="50">
+          <text class="srt-td srt-td-worker" user-select>{{item.displayWorker}}</text>
+          <text class="srt-td srt-td-order" user-select>{{item.displayOrderNo}}</text>
+          <text class="srt-td srt-td-bundle" user-select>{{item.displayBundleNo}}</text>
+          <text class="srt-td srt-td-process" user-select>{{item.displayProcess}}</text>
+          <text class="srt-td srt-td-colorsize" user-select>{{item.displayColorSize}}</text>
+          <text wx:if="{{showAmount}}" class="srt-td srt-td-priceamt" user-select>{{item.displayPriceAmount}}</text>
+          <text wx:else class="srt-td srt-td-price" user-select>{{item.displayUnitPrice}}</text>
+          <text class="srt-td srt-td-qty" user-select>{{item.displayQuantity}}</text>
+          <text class="srt-td srt-td-bed" user-select>{{item.displayBedNo}}</text>
+          <text class="srt-td srt-td-time" user-select>{{item.displayTime}}</text>
+        </view>
+      </view>
+    </block>
   </view>
 </scroll-view>

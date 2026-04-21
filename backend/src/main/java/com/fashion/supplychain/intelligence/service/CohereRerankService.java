@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
@@ -89,16 +90,18 @@ public class CohereRerankService {
             headers.setContentType(MediaType.APPLICATION_JSON);
             headers.setBearerAuth(apiKey);
 
-            ResponseEntity<Map> response = restTemplate.postForEntity(
-                    COHERE_RERANK_URL, new HttpEntity<>(body, headers), Map.class);
+                ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+                    COHERE_RERANK_URL,
+                    HttpMethod.POST,
+                    new HttpEntity<>(body, headers),
+                    new ParameterizedTypeReference<>() {});
 
             if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
                 log.warn("[CohereRerank] 响应异常 status={}", response.getStatusCode());
                 return candidates.subList(0, actualTopN);
             }
 
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> results = (List<Map<String, Object>>) response.getBody().get("results");
+            List<Map<String, Object>> results = toObjectMapList(response.getBody().get("results"));
             if (results == null || results.isEmpty()) {
                 return candidates.subList(0, actualTopN);
             }
@@ -118,5 +121,24 @@ public class CohereRerankService {
             log.warn("[CohereRerank] 精排失败，降级返回混合评分顺序: {}", e.getMessage());
             return candidates.subList(0, actualTopN);
         }
+    }
+
+    private List<Map<String, Object>> toObjectMapList(Object value) {
+        if (!(value instanceof List<?> rawList)) {
+            return null;
+        }
+        List<Map<String, Object>> results = new ArrayList<>();
+        for (Object item : rawList) {
+            if (item instanceof Map<?, ?> rawMap) {
+                Map<String, Object> converted = new LinkedHashMap<>();
+                for (Map.Entry<?, ?> entry : rawMap.entrySet()) {
+                    if (entry.getKey() instanceof String key) {
+                        converted.put(key, entry.getValue());
+                    }
+                }
+                results.add(converted);
+            }
+        }
+        return results;
     }
 }

@@ -240,7 +240,31 @@ export const isWarehouseStageKey = (k: string) => {
   return n.includes('入库') || n.includes('入仓') || n.includes('仓库') || n.includes('仓储');
 };
 
+const resolveDerivedParentStage = (rawName: string): string => {
+  const normalized = normalizeStageKey(rawName);
+  if (!normalized) return '';
+  const dynamicParent = resolveDynamicParent(normalized);
+  if (dynamicParent) return normalizeStageKey(dynamicParent);
+  const canonical = canonicalStageKey(normalized);
+  if (canonical === '二次工艺' && normalized !== '二次工艺') {
+    return canonical;
+  }
+  return '';
+};
+
 export const stageNameMatches = (a: any, b: any) => {
+  const xOrig = normalizeStageKey(a);
+  const yOrig = normalizeStageKey(b);
+  if (!xOrig || !yOrig) return false;
+  if (xOrig === yOrig) return true;
+
+  const xDerivedParent = resolveDerivedParentStage(xOrig);
+  const yDerivedParent = resolveDerivedParentStage(yOrig);
+  // 同一父节点下的两个不同子工序不应互相匹配，例如「绣花」≠「印花」
+  if (xDerivedParent && yDerivedParent && xDerivedParent === yDerivedParent) {
+    return false;
+  }
+
   const x = canonicalStageKey(a);
   const y = canonicalStageKey(b);
   if (!x || !y) return false;
@@ -276,8 +300,6 @@ export const stageNameMatches = (a: any, b: any) => {
       }
       return null;
     };
-    const xOrig = normalizeStageKey(a);
-    const yOrig = normalizeStageKey(b);
     const xParent = findParent(x) || findParent(xOrig);
     const yParent = findParent(y) || findParent(yOrig);
     // x 是父节点，y 的父节点 = x → 匹配（父子关系）

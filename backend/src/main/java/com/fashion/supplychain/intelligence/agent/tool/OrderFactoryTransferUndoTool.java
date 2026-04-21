@@ -1,5 +1,6 @@
 package com.fashion.supplychain.intelligence.agent.tool;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
@@ -68,7 +69,7 @@ public class OrderFactoryTransferUndoTool implements AgentTool {
                 return "{\"success\":false,\"error\":\"当前角色无权执行撤回转厂操作，需要跟单员或以上权限\"}";
             }
 
-            Map<String, Object> args = MAPPER.readValue(arguments, Map.class);
+            Map<String, Object> args = MAPPER.readValue(arguments, new TypeReference<Map<String, Object>>() {});
             String orderNo = asString(args.get("orderNo"));
             String reason  = asString(args.get("reason"));
 

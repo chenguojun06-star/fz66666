@@ -21,7 +21,6 @@ public class NlQuerySmartHandlers {
     @Autowired private BottleneckDetectionOrchestrator bottleneckDetectionOrchestrator;
     @Autowired private WorkerEfficiencyOrchestrator workerEfficiencyOrchestrator;
     @Autowired private FactoryLeaderboardOrchestrator factoryLeaderboardOrchestrator;
-    @Autowired private DeliveryPredictionOrchestrator deliveryPredictionOrchestrator;
     @Autowired private ProfitEstimationOrchestrator profitEstimationOrchestrator;
     @Autowired private LivePulseOrchestrator livePulseOrchestrator;
     @Autowired private AnomalyDetectionOrchestrator anomalyDetectionOrchestrator;

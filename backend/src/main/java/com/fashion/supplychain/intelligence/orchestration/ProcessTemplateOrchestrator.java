@@ -121,7 +121,7 @@ public class ProcessTemplateOrchestrator {
         if (matchedKnowledge != null) {
             if (ieMatchedOut != null) ieMatchedOut[0] = true;
             details = (String) matchedKnowledge.get("details");
-            Map<String, Object> pricing = (Map<String, Object>) matchedKnowledge.get("pricing_standard");
+            Map<String, Object> pricing = toStringObjectMap(matchedKnowledge.get("pricing_standard"));
             pricingStr = pricing.toString() + "\n【绝对约束】：你拆分出的所有「车缝」工序累加的总单价，必须高度接近上述指导的“车间单价”。所有「尾部」工序单价之和必须接近指导的“尾部单价”。";
             searchContext = category + details;
         } else {
@@ -297,6 +297,19 @@ public class ProcessTemplateOrchestrator {
         } catch (Exception e) {
             return 0;
         }
+    }
+
+    private Map<String, Object> toStringObjectMap(Object value) {
+        if (!(value instanceof Map<?, ?> rawMap)) {
+            return Map.of();
+        }
+        Map<String, Object> converted = new LinkedHashMap<>();
+        for (Map.Entry<?, ?> entry : rawMap.entrySet()) {
+            if (entry.getKey() instanceof String key) {
+                converted.put(key, entry.getValue());
+            }
+        }
+        return converted;
     }
 
     /** 聚合辅助类 */

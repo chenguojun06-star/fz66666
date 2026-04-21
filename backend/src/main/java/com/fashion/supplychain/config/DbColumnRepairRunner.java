@@ -210,6 +210,9 @@ public class DbColumnRepairRunner implements ApplicationRunner {
                     "VARCHAR(100) DEFAULT NULL COMMENT '面料门幅'");
             repaired += ensureColumn(conn, schema, "t_material_picking_item", "fabric_composition",
                     "VARCHAR(500) DEFAULT NULL COMMENT '面料成分'");
+            // fabric_weight 在 V202604211930 中补加，DbRepair 同步覆盖（FLYWAY_ENABLED=false 本地兜底）
+            repaired += ensureColumn(conn, schema, "t_material_picking_item", "fabric_weight",
+                    "VARCHAR(50) DEFAULT NULL COMMENT '克重'");
             repaired += ensureColumn(conn, schema, "t_material_picking_item", "supplier_name",
                     "VARCHAR(200) DEFAULT NULL COMMENT '供应商名称'");
             repaired += ensureColumn(conn, schema, "t_material_picking_item", "warehouse_location",

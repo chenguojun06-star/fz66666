@@ -842,8 +842,7 @@ public class MaterialPurchasePickingHelper {
                     : (purchase != null ? purchase.getFabricComposition() : null));
             body.put("fabricWidth", item.getFabricWidth() != null ? item.getFabricWidth()
                     : (purchase != null ? purchase.getFabricWidth() : null));
-            body.put("fabricWeight", item.getFabricWeight() != null ? item.getFabricWeight()
-                    : (purchase != null ? purchase.getFabricWeight() : null));
+                body.put("fabricWeight", purchase != null ? purchase.getFabricWeight() : null);
             body.put("unit", item.getUnit() != null ? item.getUnit()
                     : (purchase != null ? purchase.getUnit() : null));
             body.put("quantity", item.getQuantity() != null ? item.getQuantity() : 0);

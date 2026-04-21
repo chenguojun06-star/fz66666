@@ -49,9 +49,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SmartWorkflowOrchestrator {
 
-
-    private final AuditTrailOrchestrator auditTrail;
-
     private final FollowupTaskOrchestrator followupTaskOrchestrator;
 
     private final IntelligenceWorkflowLogMapper workflowLogMapper;

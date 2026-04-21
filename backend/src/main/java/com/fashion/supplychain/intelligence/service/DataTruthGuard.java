@@ -16,7 +16,7 @@ public class DataTruthGuard {
     private static final Set<String> FABRICATED_INDICATORS = Set.of(
             "大约", "约", "估计", "估算", "可能", "推测", "假设", "假设性",
             "模拟", "虚拟", "演示", "示例", "参考值", "默认值",
-            "大概", "差不多", "左右", "近似", "差不多", "貌似", "好像"
+            "大概", "差不多", "左右", "近似", "像"
     );
 
     public static class TruthCheckResult {

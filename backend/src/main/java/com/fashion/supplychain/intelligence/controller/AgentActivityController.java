@@ -7,7 +7,6 @@ import com.fashion.supplychain.intelligence.entity.IntelligenceAuditLog;
 import com.fashion.supplychain.intelligence.entity.IntelligenceSignal;
 import com.fashion.supplychain.intelligence.mapper.IntelligenceAuditLogMapper;
 import com.fashion.supplychain.intelligence.mapper.IntelligenceSignalMapper;
-import com.fashion.supplychain.intelligence.service.AiJobRunLogService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -29,9 +28,6 @@ public class AgentActivityController {
 
     @Autowired
     private IntelligenceSignalMapper signalMapper;
-
-    @Autowired(required = false)
-    private AiJobRunLogService jobRunLogService;
 
     private static final List<AgentDefinition> AGENT_DEFINITIONS = List.of(
             new AgentDefinition("order-manager", "订单管家", "production", "#1677ff",
@@ -352,78 +348,6 @@ public class AgentActivityController {
                 .findFirst().orElse("intelligence");
         stats.position = computePosition(domain, totalTasks);
 
-        return stats;
-    }
-
-    private AgentActivityStats computeAgentStats(String agentId, Long tenantId, LocalDateTime since) {
-        AgentActivityStats stats = new AgentActivityStats();
-        List<String> tools = DOMAIN_TOOLS.getOrDefault(agentId, List.of());
-
-        try {
-            QueryWrapper<IntelligenceAuditLog> query = new QueryWrapper<>();
-            query.eq(tenantId != null, "tenant_id", tenantId)
-                 .ge("created_at", since)
-                 .orderByDesc("created_at")
-                 .last("LIMIT 100");
-            List<IntelligenceAuditLog> logs = auditLogMapper.selectList(query);
-
-            int totalTasks = 0;
-            int successTasks = 0;
-            long totalDuration = 0;
-            int durationCount = 0;
-            LocalDateTime lastActivity = null;
-            String currentTask = null;
-            String currentStatus = "idle";
-
-            for (IntelligenceAuditLog logEntry : logs) {
-                String action = logEntry.getAction() != null ? logEntry.getAction() : "";
-                boolean matches = tools.stream().anyMatch(action::contains) || "ai-agent:request".equals(action);
-                if (!matches) continue;
-
-                totalTasks++;
-                if ("SUCCESS".equals(logEntry.getStatus())) successTasks++;
-                if (logEntry.getDurationMs() != null && logEntry.getDurationMs() > 0) {
-                    totalDuration += logEntry.getDurationMs();
-                    durationCount++;
-                }
-                if (lastActivity == null && logEntry.getCreatedAt() != null) {
-                    lastActivity = logEntry.getCreatedAt();
-                }
-                if ("EXECUTING".equals(logEntry.getStatus()) && currentTask == null) {
-                    currentTask = logEntry.getRemark() != null ? logEntry.getRemark() : action;
-                    currentStatus = "working";
-                }
-            }
-
-            if (currentStatus.equals("idle") && lastActivity != null) {
-                long minutesSinceLast = ChronoUnit.MINUTES.between(lastActivity, LocalDateTime.now());
-                if (minutesSinceLast < 5) currentStatus = "idle_recent";
-                else if (minutesSinceLast < 30) currentStatus = "idle";
-                else currentStatus = "sleeping";
-            }
-
-            stats.currentStatus = currentStatus;
-            stats.lastActivity = lastActivity != null ? lastActivity.toString() : null;
-            stats.tasksToday = totalTasks;
-            stats.successRate = totalTasks > 0 ? Math.round(successTasks * 100.0 / totalTasks) : 100;
-            stats.avgDurationMs = durationCount > 0 ? totalDuration / durationCount : 0;
-            stats.currentTask = currentTask;
-
-            long idleMinutes = lastActivity != null ? ChronoUnit.MINUTES.between(lastActivity, LocalDateTime.now()) : 999;
-            stats.lazinessScore = Math.min(100, (int) (idleMinutes / 6.0));
-            stats.intelligenceScore = Math.min(100, (int) (stats.successRate * 0.6 + Math.max(0, 100 - stats.lazinessScore) * 0.4));
-
-            String domain = AGENT_DEFINITIONS.stream()
-                    .filter(a -> a.id.equals(agentId))
-                    .map(a -> a.department)
-                    .findFirst().orElse("intelligence");
-            stats.position = computePosition(domain, totalTasks);
-
-        } catch (Exception e) {
-            log.warn("[AgentActivity] 计算智能体统计失败 agentId={}: {}", agentId, e.getMessage());
-            stats.currentStatus = "unknown";
-            stats.position = computePosition("intelligence", 0);
-        }
         return stats;
     }
 

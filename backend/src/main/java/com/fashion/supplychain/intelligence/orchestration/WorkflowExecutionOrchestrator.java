@@ -5,7 +5,6 @@ import com.fashion.supplychain.intelligence.entity.WorkflowDefinition;
 import com.fashion.supplychain.intelligence.entity.WorkflowExecution;
 import com.fashion.supplychain.intelligence.mapper.WorkflowDefinitionMapper;
 import com.fashion.supplychain.intelligence.mapper.WorkflowExecutionMapper;
-import com.fashion.supplychain.intelligence.service.AgentStateStore;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +21,6 @@ public class WorkflowExecutionOrchestrator {
 
     private final WorkflowDefinitionMapper definitionMapper;
     private final WorkflowExecutionMapper executionMapper;
-    private final AgentStateStore agentStateStore;
     private final IntelligenceInferenceOrchestrator inferenceOrchestrator;
     private final ObjectMapper objectMapper;
 

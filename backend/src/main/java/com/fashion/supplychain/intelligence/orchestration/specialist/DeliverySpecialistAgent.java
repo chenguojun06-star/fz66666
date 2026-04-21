@@ -1,6 +1,7 @@
 package com.fashion.supplychain.intelligence.orchestration.specialist;
 
 import com.fashion.supplychain.intelligence.dto.AgentState;
+import com.fashion.supplychain.production.dto.response.OrderHealthScoreDTO;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.orchestration.OrderHealthScoreOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -58,12 +59,12 @@ public class DeliverySpecialistAgent implements SpecialistAgent {
                 }).count();
 
         // 取健康分
-        List<Map<String, Object>> scores = healthScoreOrchestrator.batchScores(
+        Collection<OrderHealthScoreDTO> scores = healthScoreOrchestrator.batchCalculateHealth(
                 orderIds != null && !orderIds.isEmpty() ? orderIds :
-                orders.stream().map(o -> String.valueOf(o.getId())).toList());
+                orders.stream().map(o -> String.valueOf(o.getId())).toList()).values();
 
         double avgScore = scores.stream()
-                .mapToInt(m -> (int) m.getOrDefault("score", 50))
+                .mapToInt(OrderHealthScoreDTO::getScore)
                 .filter(s -> s >= 0)
                 .average().orElse(50);
 

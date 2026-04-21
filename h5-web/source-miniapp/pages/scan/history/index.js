@@ -50,8 +50,12 @@ function _formatPatternRecord(item) {
     displayBundleNo: item.color || '-',
     displayColor: item.color || '-',
     displaySize: item.size || '-',
+    // 合并字段：颜色/码数 与 单价/金额 — 降低 WXML 节点数（每行 12→10），
+    // 避免 pages/scan/history/index 节点总数 >1000 触发性能告警。
+    displayColorSize: ((item.color || '-') + ' / ' + (item.size || '-')),
     displayQuantity: 0,
     displayUnitPrice: '-',
+    displayPriceAmount: '-',
     lineAmount: 0,
     displayLineAmount: '-',
     isPayable: false,
@@ -70,7 +74,8 @@ Page({
     startDate: getDateBefore(30),
     endDate: getToday(),
     searchKeyword: '',
-    records: [],
+    // records 已迁移到 this._records 实例属性（不参与 WXML 渲染，无需走 setData，避免触发
+    // 「setData 中存在 WXML 中未绑定的变量」性能告警，并减少大数组序列化开销）
     displayRecords: [],
     showOnlyPayable: false,
     loading: false,
@@ -94,6 +99,8 @@ Page({
   onLoad() {
     this._reqGeneration = 0;
     this._showedOnce = false;
+    this._records = [];
+    this._patternRecords = [];
     this._updateMonthDisplay();
     this.loadData(true);
   },
@@ -261,6 +268,9 @@ Page({
           '-',
         displayColor: item.color || '-',
         displaySize: item.size || '-',
+        // 合并字段：颜色/码数 与 单价/金额 — 降低 WXML 节点数（每行 12→10），
+        // 避免 pages/scan/history/index 节点总数 >1000 触发性能告警。
+        displayColorSize: ((item.color || '-') + ' / ' + (item.size || '-')),
         displayQuantity: item.quantity || 0,
         displayUnitPrice: item.unitPrice == null || item.unitPrice === '' ? '-' : Number(item.unitPrice).toFixed(2),
         // 金额优先级与后端 selectPayrollAggregation SQL 一致：totalAmount → scanCost → unitPrice×quantity
@@ -269,11 +279,18 @@ Page({
           var amt = Number(item.totalAmount) || Number(item.scanCost) || ((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0));
           return amt > 0 ? amt.toFixed(2) : '-';
         })(),
+        displayPriceAmount: (function() {
+          var price = item.unitPrice == null || item.unitPrice === '' ? null : Number(item.unitPrice);
+          var amt = Number(item.totalAmount) || Number(item.scanCost) || ((Number(item.unitPrice) || 0) * (Number(item.quantity) || 0));
+          var priceText = price == null ? '-' : '¥' + price.toFixed(2);
+          var amtText = amt > 0 ? '¥' + amt.toFixed(2) : '-';
+          return priceText + ' / ' + amtText;
+        })(),
         isPayable: (Number(item.totalAmount) > 0) || (Number(item.scanCost) > 0) || ((Number(item.unitPrice) || 0) > 0 && (Number(item.quantity) || 0) > 0),
         displayBedNo: item.bedNo != null ? String(item.bedNo) : '-',
       }));
 
-      const prevList = reset ? [] : this.data.records;
+      const prevList = reset ? [] : (this._records || []);
       const merged = prevList.concat(formatted);
       const total = result?.total || 0;
       const hasMore = merged.length < total;
@@ -316,8 +333,8 @@ Page({
 
       if (gen !== this._reqGeneration) return;
       this._patternRecords = patternRecords;
+      this._records = merged;
       this.setData({
-        records: merged,
         displayRecords,
         page: nextPage,
         hasMore,
@@ -353,7 +370,7 @@ Page({
 
   onTogglePayableFilter() {
     const showOnlyPayable = !this.data.showOnlyPayable;
-    const allRecords = this._mergeAndSort(this.data.records, this._patternRecords || []);
+    const allRecords = this._mergeAndSort(this._records || [], this._patternRecords || []);
     const displayRecords = showOnlyPayable
       ? allRecords.filter((item) => item.isPayable)
       : allRecords;

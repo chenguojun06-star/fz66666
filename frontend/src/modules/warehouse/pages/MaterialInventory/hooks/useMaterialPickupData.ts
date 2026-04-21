@@ -203,11 +203,11 @@ export function useMaterialPickupData() {
     }
   };
 
-  const handleAudit = async (pickupRecordId: string, action: 'approve' | 'reject', remark?: string) => {
+  const handleAudit = async (pickingId: string, action: 'approve' | 'reject', remark?: string) => {
     if (auditingId) return;
-    setAuditingId(pickupRecordId);
+    setAuditingId(pickingId);
     try {
-      await materialInventoryApi.auditPickupRecord(pickupRecordId, { action, remark });
+      await materialInventoryApi.auditPicking(pickingId, { action, remark });
       message.success(action === 'approve' ? '审核通过' : '已拒绝');
       void fetchData();
     } catch (e: unknown) {
@@ -219,23 +219,21 @@ export function useMaterialPickupData() {
     }
   };
 
-  const handleBatchAudit = async (pickupRecordIds: string[], action: 'approve' | 'reject', remark?: string) => {
-    let successCount = 0;
-    let failCount = 0;
-    for (const id of pickupRecordIds) {
-      try {
-        await materialInventoryApi.auditPickupRecord(id, { action, remark });
-        successCount++;
-      } catch {
-        failCount++;
+  const handleBatchAudit = async (pickingIds: string[], action: 'approve' | 'reject', remark?: string) => {
+    try {
+      const res = await materialInventoryApi.batchAuditPicking({ ids: pickingIds, action, remark });
+      const { successCount = 0, failCount = 0 } = res?.data || {};
+      if (failCount > 0) {
+        message.warning(`审核完成：${successCount}条成功，${failCount}条失败`);
+      } else {
+        message.success(`审核成功（${successCount}条）`);
       }
+      void fetchData();
+    } catch (e: unknown) {
+      const respMsg = typeof e === 'object' && e !== null && 'response' in e
+        ? String((e as Record<string, any>).response?.data?.message || '') : '';
+      message.error(respMsg || '批量审核失败');
     }
-    if (failCount > 0) {
-      message.warning(`审核完成：${successCount}条成功，${failCount}条失败`);
-    } else {
-      message.success(`审核成功（${successCount}条）`);
-    }
-    void fetchData();
   };
 
   const handlePrint = (record: PickingRow) => {

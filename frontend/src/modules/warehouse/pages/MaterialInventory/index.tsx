@@ -144,25 +144,31 @@ const _MaterialInventory: React.FC = () => {
     },
     {
       title: '审核状态',
-      dataIndex: 'pickupRecords',
+      dataIndex: 'auditStatus',
       width: 100,
-      render: (_: unknown, record: PickingRow) => {
+      render: (status: string, record: PickingRow) => {
         if (record.status !== 'completed') return '-';
-        const prs = record.pickupRecords || [];
-        if (prs.length === 0) return <Tag color="default">待同步</Tag>;
-        const allApproved = prs.every((pr) => pr.auditStatus === 'APPROVED');
-        const hasRejected = prs.some((pr) => pr.auditStatus === 'REJECTED');
-        const allPending = prs.every((pr) => pr.auditStatus === 'PENDING');
-        if (allApproved) return <Tag color="green">已审核</Tag>;
-        if (hasRejected) return <Tag color="red">已拒绝</Tag>;
-        if (allPending) return <Tag color="orange">待审核</Tag>;
-        return <Tag color="orange">部分审核</Tag>;
+        if (status === 'APPROVED') return <Tag color="green">已审核</Tag>;
+        if (status === 'REJECTED') return <Tag color="red">已拒绝</Tag>;
+        return <Tag color="orange">待审核</Tag>;
+      },
+    },
+    {
+      title: '财务状态',
+      dataIndex: 'financeStatus',
+      width: 100,
+      render: (status: string, record: PickingRow) => {
+        if (record.status !== 'completed') return '-';
+        if (record.auditStatus !== 'APPROVED') return '-';
+        if (status === 'SETTLED') return <Tag color="green">已平账</Tag>;
+        if (status === 'PENDING') return <Tag color="orange">待结算</Tag>;
+        return <Tag color="default">{status || '-'}</Tag>;
       },
     },
     {
       title: '操作',
       key: 'actions',
-      width: 260,
+      width: 280,
       render: (_: unknown, record: PickingRow) => {
         const actions: React.ReactNode[] = [];
         actions.push(
@@ -201,28 +207,24 @@ const _MaterialInventory: React.FC = () => {
             </Popconfirm>
           );
         }
-        if (record.status === 'completed') {
-          const prs = record.pickupRecords || [];
-          const pendingPrs = prs.filter((pr) => pr.auditStatus === 'PENDING');
-          if (pendingPrs.length > 0) {
-            actions.push(
-              <Popconfirm
-                key="audit"
-                title="批量审核"
-                description={`确认审核通过 ${pendingPrs.length} 条领取记录？${record.factoryType === 'EXTERNAL' ? '外发工厂将生成应收账单。' : '内部工厂将做平账处理。'}`}
-                onConfirm={() => void pickupData.handleBatchAudit(
-                  pendingPrs.map((pr) => pr.id), 'approve',
-                  record.factoryType === 'EXTERNAL' ? '外发工厂领料审核通过' : '内部领料审核通过'
-                )}
-                okText="审核通过"
-                cancelText="取消"
-              >
-                <Button type="primary" size="small" loading={pickupData.auditingId != null}>
-                  审核({pendingPrs.length})
-                </Button>
-              </Popconfirm>
-            );
-          }
+        if (record.status === 'completed' && !record.auditStatus) {
+          actions.push(
+            <Popconfirm
+              key="audit"
+              title="审核确认"
+              description={record.factoryType === 'EXTERNAL'
+                ? '审核通过后将自动生成外发工厂应收账单。'
+                : '审核通过后将做内部平账处理。'}
+              onConfirm={() => void pickupData.handleAudit(record.id, 'approve',
+                record.factoryType === 'EXTERNAL' ? '外发工厂领料审核通过' : '内部领料审核通过')}
+              okText="审核通过"
+              cancelText="取消"
+            >
+              <Button type="primary" size="small" loading={pickupData.auditingId === record.id}>
+                审核
+              </Button>
+            </Popconfirm>
+          );
         }
         return <Space size={6}>{actions}</Space>;
       },

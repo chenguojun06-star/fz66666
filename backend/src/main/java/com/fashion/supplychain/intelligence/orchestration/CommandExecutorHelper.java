@@ -458,24 +458,12 @@ public class CommandExecutorHelper {
         return commandTargetResolver.requireOrder(orderId);
     }
 
-    private ProductionOrder findOrder(String orderId) {
-        return commandTargetResolver.findOrder(orderId);
-    }
-
     private StyleInfo requireStyle(String styleId) {
         return commandTargetResolver.requireStyle(styleId);
     }
 
-    private StyleInfo findStyle(String styleId) {
-        return commandTargetResolver.findStyle(styleId);
-    }
-
     private FinishedProductSettlement requireFinishedSettlement(String settlementId) {
         return commandTargetResolver.requireFinishedSettlement(settlementId);
-    }
-
-    private FinishedProductSettlement findFinishedSettlement(String settlementId) {
-        return commandTargetResolver.findFinishedSettlement(settlementId);
     }
 
     private PayrollSettlement requirePayrollSettlement(String settlementId) {
@@ -484,13 +472,5 @@ public class CommandExecutorHelper {
 
     private MaterialStock requireMaterialStock(String stockId) {
         return commandTargetResolver.requireMaterialStock(stockId);
-    }
-
-    private Long requireTenantId() {
-        Long tenantId = UserContext.tenantId();
-        if (tenantId == null) {
-            throw new ExecutionEngineOrchestrator.BusinessException("租户上下文丢失，请重新登录");
-        }
-        return tenantId;
     }
 }

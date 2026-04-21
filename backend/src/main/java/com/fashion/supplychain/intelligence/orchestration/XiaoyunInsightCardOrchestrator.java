@@ -97,16 +97,18 @@ public class XiaoyunInsightCardOrchestrator {
     private JsonNode buildProductionProgressCard(JsonNode orders) {
         if (orders.size() == 0) return null;
 
-        int totalOrders = orders.size();
         int overdueCount = 0;
         int highRiskCount = 0;
         int inProgressCount = 0;
+        int urgentCount = 0;
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
         java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
         for (JsonNode o : orders) {
             String status = o.path("status").asText("");
             if ("production".equals(status) || "IN_PROGRESS".equals(status)) inProgressCount++;
+            String urgency = o.path("urgencyLevel").asText("");
+            if ("urgent".equals(urgency)) urgentCount++;
             String plannedEnd = o.path("plannedEndDate").asText("");
             if (!plannedEnd.isBlank()) {
                 try {
@@ -119,9 +121,14 @@ public class XiaoyunInsightCardOrchestrator {
         }
 
         ObjectNode card = JSON.createObjectNode();
-        card.put("level", overdueCount > 0 ? "danger" : highRiskCount > 0 ? "warning" : "success");
+        card.put("level", overdueCount > 0 ? "danger" : urgentCount > 0 ? "warning" : highRiskCount > 0 ? "warning" : "success");
         card.put("title", "生产进度总览");
-        card.put("summary", String.format("在制%d单 | 逾期%d | 高风险%d", inProgressCount, overdueCount, highRiskCount));
+        StringBuilder summarySb = new StringBuilder();
+        summarySb.append("在制").append(inProgressCount).append("单");
+        if (overdueCount > 0) summarySb.append(" | 逾期").append(overdueCount);
+        if (highRiskCount > 0) summarySb.append(" | 高风险").append(highRiskCount);
+        if (urgentCount > 0) summarySb.append(" | 紧急").append(urgentCount);
+        card.put("summary", summarySb.toString());
 
         ArrayNode evidence = JSON.createArrayNode();
         for (int i = 0; i < Math.min(orders.size(), 5); i++) {
@@ -134,9 +141,15 @@ public class XiaoyunInsightCardOrchestrator {
                     o.path("orderQuantity").asInt(0),
                     o.path("completedQuantity").asInt(0));
             String plannedEnd = o.path("plannedEndDate").asText("");
-            if (!plannedEnd.isBlank()) line += " | 交期" + plannedEnd.substring(0, 10);
+            if (!plannedEnd.isBlank()) line += " | 交期" + plannedEnd.substring(0, Math.min(10, plannedEnd.length()));
             String merchandiser = o.path("merchandiser").asText("");
             if (!merchandiser.isBlank()) line += " | 跟单:" + merchandiser;
+            String urgency = o.path("urgencyLevel").asText("");
+            if ("urgent".equals(urgency)) line += " | 🚨紧急";
+            int matRate = o.path("materialArrivalRate").asInt(-1);
+            if (matRate >= 0 && matRate < 80) line += " | 物料" + matRate + "%";
+            String contact = o.path("factoryContactPerson").asText("");
+            if (!contact.isBlank()) line += " | 联系:" + contact;
             evidence.add(line);
         }
         card.set("evidence", evidence);
@@ -146,6 +159,8 @@ public class XiaoyunInsightCardOrchestrator {
             card.put("execute", "说\"查看逾期订单详情\"获取完整列表");
         } else if (highRiskCount > 0) {
             card.put("execute", "说\"查看高风险订单\"获取详情");
+        } else if (urgentCount > 0) {
+            card.put("execute", "说\"查看紧急订单\"获取详情");
         }
         card.put("source", "生产进度");
         return card;

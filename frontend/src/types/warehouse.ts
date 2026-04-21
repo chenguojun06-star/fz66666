@@ -156,6 +156,12 @@ export interface PendingPicking {
   usageType?: string;
   createTime: string;
   status: string;
+  auditStatus?: string;
+  auditorName?: string;
+  auditTime?: string;
+  auditRemark?: string;
+  financeStatus?: string;
+  financeRemark?: string;
   remark?: string;
   items?: PendingPickingItem[];
 }

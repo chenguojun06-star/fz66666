@@ -1,7 +1,6 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.dto.AgentState;
 import com.fashion.supplychain.intelligence.entity.DecisionMemory;
@@ -24,8 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Service
 public class DecisionChainOrchestrator {
-
-    private static final ObjectMapper JSON = new ObjectMapper();
 
     @Autowired private DecisionMemoryMapper decisionMemoryMapper;
     @Autowired private IntelligenceInferenceOrchestrator inferenceOrchestrator;

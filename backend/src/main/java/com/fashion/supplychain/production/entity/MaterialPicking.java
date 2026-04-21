@@ -25,6 +25,13 @@ public class MaterialPicking {
     private LocalDateTime pickTime;
     private String status;
     private String purchaseId;
+    private String auditStatus;
+    private String auditorId;
+    private String auditorName;
+    private LocalDateTime auditTime;
+    private String auditRemark;
+    private String financeStatus;
+    private String financeRemark;
     private String remark;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;

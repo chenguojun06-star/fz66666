@@ -76,15 +76,6 @@ public class StyleDifficultyOrchestrator {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    /** 返回视觉模型的简短名称，用于错误提示信息。 */
-    private String getShortModelName() {
-        if (doubaoVisionModel == null || doubaoVisionModel.isBlank()) {
-            return "doubao-vision";
-        }
-        String[] parts = doubaoVisionModel.split("-");
-        return parts.length > 2 ? parts[0] + "-" + parts[1] : doubaoVisionModel;
-    }
-
     // ─────────────────────────────────────────────────────────────────────────
     // 公开 API
     // ─────────────────────────────────────────────────────────────────────────
@@ -272,7 +263,6 @@ public class StyleDifficultyOrchestrator {
         return result;
     }
 
-    @SuppressWarnings("unchecked")
     private DifficultyAssessment enhanceWithAi(
             DifficultyAssessment base,
             StyleInfo style,
@@ -439,7 +429,7 @@ public class StyleDifficultyOrchestrator {
 
         Map<String, Object> parsed;
         try {
-            parsed = MAPPER.readValue(json, Map.class);
+            parsed = MAPPER.readValue(json, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
             log.warn("[StyleDifficulty] AI 返回 JSON 解析失败: {}", e.getMessage());
             return base;
@@ -461,8 +451,7 @@ public class StyleDifficultyOrchestrator {
         if (aiMultiplier.compareTo(BigDecimal.ONE) < 0) aiMultiplier = BigDecimal.ONE;
         if (aiMultiplier.compareTo(BigDecimal.valueOf(2.0)) > 0) aiMultiplier = BigDecimal.valueOf(2.0);
 
-        @SuppressWarnings("unchecked")
-        List<String> aiFactors = (List<String>) parsed.get("keyFactors");
+        List<String> aiFactors = asStringList(parsed.get("keyFactors"));
         List<String> mergedFactors = new ArrayList<>(base.getKeyFactors());
         if (aiFactors != null) {
             for (String f : aiFactors) {
@@ -543,6 +532,19 @@ public class StyleDifficultyOrchestrator {
             }
         }
         return factors.stream().limit(5).collect(Collectors.toList());
+    }
+
+    private List<String> asStringList(Object value) {
+        if (!(value instanceof List<?> rawList)) {
+            return null;
+        }
+        List<String> result = new ArrayList<>();
+        for (Object item : rawList) {
+            if (item != null) {
+                result.add(String.valueOf(item));
+            }
+        }
+        return result;
     }
 
     private String scoreToLevel(int score) {

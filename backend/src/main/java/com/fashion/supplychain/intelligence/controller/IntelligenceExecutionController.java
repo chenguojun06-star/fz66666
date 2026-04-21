@@ -57,8 +57,6 @@ public class IntelligenceExecutionController {
 
     private final AuditTrailOrchestrator auditTrail;
 
-    private final SmartWorkflowOrchestrator smartWorkflow;
-
     private final IntelligenceAuditLogMapper auditLogMapper;
 
     private final ObjectMapper objectMapper;

@@ -300,24 +300,6 @@ public class KnowledgeSearchTool extends AbstractAgentTool {
             return MAPPER.writeValueAsString(result);
     }
 
-    private KnowledgeHit buildKnowledgeHit(KnowledgeBase kb,
-                                           String query,
-                                           String category,
-                                           float semanticScore) {
-        double keywordScore = computeKeywordScore(kb, query);
-        double popularityScore = computePopularityScore(kb);
-        double categoryBonus = (!category.isEmpty() && category.equalsIgnoreCase(safe(kb.getCategory()))) ? 0.08d : 0d;
-        double semantic = Math.max(0d, semanticScore);
-        double hybridScore = semantic * 0.55d + keywordScore * 0.40d + popularityScore * 0.05d + categoryBonus;
-
-        KnowledgeHit hit = new KnowledgeHit();
-        hit.setKnowledgeBase(kb);
-        hit.setSemanticScore(semantic);
-        hit.setKeywordScore(keywordScore);
-        hit.setHybridScore(hybridScore);
-        return hit;
-    }
-
     private double computeKeywordScore(KnowledgeBase kb, String query) {
         String normalizedQuery = normalize(query);
         if (normalizedQuery.isEmpty()) {
@@ -353,13 +335,6 @@ public class KnowledgeSearchTool extends AbstractAgentTool {
                 .map(String::trim)
                 .filter(token -> !token.isEmpty())
                 .collect(Collectors.toList());
-    }
-
-    private double computePopularityScore(KnowledgeBase kb) {
-        int helpful = kb.getHelpfulCount() == null ? 0 : kb.getHelpfulCount();
-        int views = kb.getViewCount() == null ? 0 : kb.getViewCount();
-        double raw = Math.log1p(helpful * 2.0d + views * 0.25d) / 10.0d;
-        return Math.min(raw, 1.0d);
     }
 
     private double round(double value) {

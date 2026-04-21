@@ -12,10 +12,8 @@ import com.fashion.supplychain.intelligence.dto.*;
 import com.fashion.supplychain.intelligence.annotation.DataTruth;
 import com.fashion.supplychain.intelligence.orchestration.*;
 import com.fashion.supplychain.intelligence.service.AiAdvisorService;
-import com.fashion.supplychain.intelligence.service.AiContextBuilderService;
 import com.fashion.supplychain.intelligence.service.AiJobRunLogService;
 import com.fashion.supplychain.intelligence.service.ProcessStatsEngine;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -129,8 +127,6 @@ public class IntelligenceController {
     private final TenantIntelligenceBrainOrchestrator tenantIntelligenceBrainOrchestrator;
 
     private final AiAdvisorService aiAdvisorService;
-
-    private final AiContextBuilderService aiContextBuilderService;
 
     private final ProcessStatsEngine processStatsEngine;
 

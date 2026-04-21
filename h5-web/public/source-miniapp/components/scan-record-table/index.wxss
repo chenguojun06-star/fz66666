@@ -36,6 +36,11 @@
   border-bottom: 1px solid var(--color-border-light, rgba(226, 232, 240, 0.5));
 }
 
+/* 分块包装：display:contents 让节点对布局透明，仅用于减少 srt-table-inner 直接子节点数 */
+.srt-chunk {
+  display: contents;
+}
+
 .srt-table-row:last-child {
   border-bottom: none;
 }
@@ -84,9 +89,21 @@
   width: 36px;
 }
 
+/* 颜色/码数 合并列：原来颜色40 + 码数36 = 76，新合并列直接给 78 兼顾两端文字 */
+.srt-th-colorsize,
+.srt-td-colorsize {
+  width: 78px;
+}
+
 .srt-th-price,
 .srt-td-price {
   width: 42px;
+}
+
+/* 单价/金额 合并列：原来单价42 + 金额56 = 98，新合并列 100 */
+.srt-th-priceamt,
+.srt-td-priceamt {
+  width: 100px;
 }
 
 .srt-th-qty,

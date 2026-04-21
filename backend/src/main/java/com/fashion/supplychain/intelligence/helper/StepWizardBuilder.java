@@ -18,10 +18,12 @@ public final class StepWizardBuilder {
         return wizard;
     }
 
+    @SafeVarargs
     public static List<Map<String, Object>> steps(Map<String, Object>... steps) {
         return Arrays.asList(steps);
     }
 
+    @SafeVarargs
     public static Map<String, Object> step(String stepKey, String title, String desc, Map<String, Object>... fields) {
         Map<String, Object> s = new LinkedHashMap<>();
         s.put("stepKey", stepKey);
@@ -31,6 +33,7 @@ public final class StepWizardBuilder {
         return s;
     }
 
+    @SafeVarargs
     public static Map<String, Object> selectField(String key, String label, boolean required, Map<String, String>... options) {
         Map<String, Object> f = new LinkedHashMap<>();
         f.put("key", key);
@@ -43,6 +46,7 @@ public final class StepWizardBuilder {
         return f;
     }
 
+    @SafeVarargs
     public static Map<String, Object> multiSelectField(String key, String label, boolean required, Map<String, String>... options) {
         Map<String, Object> f = new LinkedHashMap<>();
         f.put("key", key);

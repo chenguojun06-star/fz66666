@@ -1,5 +1,6 @@
 package com.fashion.supplychain.intelligence.agent.tool;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.intelligence.agent.AiTool;
 import com.fashion.supplychain.intelligence.helper.StepWizardBuilder;
@@ -81,12 +82,11 @@ public class OrderFactoryTransferTool implements AgentTool {
                 return "{\"success\":false,\"error\":\"当前角色无权执行转厂操作，需要跟单员或以上权限\"}";
             }
 
-            Map<String, Object> args = MAPPER.readValue(arguments, Map.class);
+            Map<String, Object> args = MAPPER.readValue(arguments, new TypeReference<Map<String, Object>>() {});
             String orderNo = asString(args.get("orderNo"));
             String targetFactoryName = asString(args.get("targetFactoryName"));
             Integer transferQuantity = asInteger(args.get("transferQuantity"));
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> orderLines = asList(args.get("orderLines"));
+            List<Map<String, Object>> orderLines = asOrderLines(args.get("orderLines"));
             String reason = asString(args.get("reason"));
 
             if (orderNo == null || orderNo.isBlank() || targetFactoryName == null || targetFactoryName.isBlank()) {
@@ -149,9 +149,22 @@ public class OrderFactoryTransferTool implements AgentTool {
         return m;
     }
 
-    @SuppressWarnings("unchecked")
-    private List<Map<String, Object>> asList(Object val) {
-        if (val instanceof List) return (List<Map<String, Object>>) val;
-        return null;
+    private List<Map<String, Object>> asOrderLines(Object val) {
+        if (!(val instanceof List<?> rawList)) {
+            return null;
+        }
+        List<Map<String, Object>> orderLines = new java.util.ArrayList<>();
+        for (Object item : rawList) {
+            if (item instanceof Map<?, ?> rawMap) {
+                Map<String, Object> line = new LinkedHashMap<>();
+                for (Map.Entry<?, ?> entry : rawMap.entrySet()) {
+                    if (entry.getKey() instanceof String key) {
+                        line.put(key, entry.getValue());
+                    }
+                }
+                orderLines.add(line);
+            }
+        }
+        return orderLines.isEmpty() ? null : orderLines;
     }
 }

@@ -90,13 +90,10 @@ public class NlQueryLearningTracker {
     }
 
     private static class QueryRecord {
-        final String question;
-        final String intent;
         final int confidence;
-        final LocalDateTime time;
 
         QueryRecord(String q, String i, int c, LocalDateTime t) {
-            this.question = q; this.intent = i; this.confidence = c; this.time = t;
+            this.confidence = c;
         }
     }
 }

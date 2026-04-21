@@ -1,5 +1,5 @@
 export function parseAiResponse(rawText) {
-  if (!rawText) return { displayText: '', actionCards: [], charts: [], teamStatusCards: [], bundleSplitCards: [], insightCards: [], followUpActions: [], recommendPills: [], stepWizardCards: [] };
+  if (!rawText) return { displayText: '', actionCards: [], charts: [], teamStatusCards: [], bundleSplitCards: [], insightCards: [], followUpActions: [], recommendPills: [], stepWizardCards: [], clarificationHints: [] };
 
   let text = rawText;
   const actionCards = [];
@@ -10,6 +10,7 @@ export function parseAiResponse(rawText) {
   const followUpActions = [];
   const recommendPills = [];
   const stepWizardCards = [];
+  const clarificationHints = [];
 
   const extractBlock = (tag) => {
     const re = new RegExp(`【${tag}】([\\s\\S]*?)【\\/${tag}】`, 'g');
@@ -22,58 +23,61 @@ export function parseAiResponse(rawText) {
     return matches;
   };
 
+  const safeParse = (block) => {
+    try { return JSON.parse(block); } catch (_) { return null; }
+  };
+
   const actionBlocks = extractBlock('ACTIONS');
   actionBlocks.forEach((block) => {
-    try {
-      const parsed = JSON.parse(block);
-      if (Array.isArray(parsed)) {
-        actionCards.push({ title: '操作建议', actions: parsed });
-      } else if (parsed.actions) {
-        actionCards.push({ title: parsed.title || '操作建议', actions: parsed.actions });
-      }
-    } catch (_) {
-      block.split('\n').forEach((line) => {
-        const lm = line.match(/[-*]\s*(.+)/);
-        if (lm) followUpActions.push({ label: lm[1].trim(), type: 'navigate' });
-      });
+    const parsed = safeParse(block);
+    if (!parsed) return;
+    if (Array.isArray(parsed)) {
+      actionCards.push({ title: '操作建议', actions: parsed });
+    } else if (parsed.actions && parsed.title) {
+      actionCards.push({ title: parsed.title, actions: parsed.actions });
     }
   });
 
   const chartBlocks = extractBlock('CHART');
   chartBlocks.forEach((block) => {
-    try {
-      const parsed = JSON.parse(block);
-      if (Array.isArray(parsed)) charts.push(...parsed);
-      else charts.push(parsed);
-    } catch (_) {}
+    const parsed = safeParse(block);
+    if (!parsed) return;
+    if (Array.isArray(parsed)) charts.push(...parsed.filter(c => c && c.title));
+    else if (parsed.title) charts.push(parsed);
   });
 
   const teamBlocks = extractBlock('TEAM_STATUS');
   teamBlocks.forEach((block) => {
-    try { teamStatusCards.push(JSON.parse(block)); } catch (_) {}
+    const parsed = safeParse(block);
+    if (parsed) teamStatusCards.push(parsed);
   });
 
   const bundleBlocks = extractBlock('BUNDLE_SPLIT');
   bundleBlocks.forEach((block) => {
-    try { bundleSplitCards.push(JSON.parse(block)); } catch (_) {}
+    const parsed = safeParse(block);
+    if (parsed) bundleSplitCards.push(parsed);
   });
 
   const insightBlocks = extractBlock('INSIGHT_CARDS');
   insightBlocks.forEach((block) => {
-    try {
-      const parsed = JSON.parse(block);
-      if (Array.isArray(parsed)) insightCards.push(...parsed);
-      else insightCards.push(parsed);
-    } catch (_) {}
+    const parsed = safeParse(block);
+    if (!parsed) return;
+    if (Array.isArray(parsed)) insightCards.push(...parsed.filter(c => c && c.title));
+    else if (parsed.title) insightCards.push(parsed);
   });
 
   const wizardBlocks = extractBlock('STEP_WIZARD');
   wizardBlocks.forEach((block) => {
-    try {
-      const parsed = JSON.parse(block);
-      if (Array.isArray(parsed)) stepWizardCards.push(...parsed);
-      else stepWizardCards.push(parsed);
-    } catch (_) {}
+    const parsed = safeParse(block);
+    if (!parsed) return;
+    if (Array.isArray(parsed)) stepWizardCards.push(...parsed);
+    else stepWizardCards.push(parsed);
+  });
+
+  const clarificationBlocks = extractBlock('CLARIFICATION');
+  clarificationBlocks.forEach((block) => {
+    const parsed = safeParse(block);
+    if (Array.isArray(parsed)) clarificationHints.push(...parsed.map(String));
   });
 
   if (text.includes('【推荐追问】：')) {
@@ -90,12 +94,10 @@ export function parseAiResponse(rawText) {
   const codeActionRe = /```ACTIONS_JSON\s*([\s\S]*?)```/g;
   let codeMatch;
   while ((codeMatch = codeActionRe.exec(text)) !== null) {
-    try {
-      const parsed = JSON.parse(codeMatch[1]);
-      if (Array.isArray(parsed)) {
-        actionCards.push({ title: '快捷操作', actions: parsed });
-      }
-    } catch (_) {}
+    const parsed = safeParse(codeMatch[1]);
+    if (Array.isArray(parsed)) {
+      actionCards.push({ title: '快捷操作', actions: parsed });
+    }
   }
   text = text.replace(codeActionRe, '');
 
@@ -109,6 +111,7 @@ export function parseAiResponse(rawText) {
     followUpActions,
     recommendPills,
     stepWizardCards,
+    clarificationHints,
   };
 }
 

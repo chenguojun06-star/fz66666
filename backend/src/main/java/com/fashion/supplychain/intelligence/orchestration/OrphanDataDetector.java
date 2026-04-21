@@ -20,7 +20,6 @@ import com.fashion.supplychain.production.entity.ProductionExceptionReport;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ProductionProcessTracking;
 import com.fashion.supplychain.production.entity.ScanRecord;
-import com.fashion.supplychain.production.mapper.MaterialOutboundLogMapper;
 import com.fashion.supplychain.production.service.CuttingBundleService;
 import com.fashion.supplychain.production.service.CuttingTaskService;
 import com.fashion.supplychain.production.service.FactoryShipmentService;
@@ -34,7 +33,6 @@ import com.fashion.supplychain.production.service.ProductionExceptionReportServi
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import com.fashion.supplychain.production.service.ProductionProcessTrackingService;
 import com.fashion.supplychain.production.service.ScanRecordService;
-import com.fashion.supplychain.style.service.StyleInfoService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -94,8 +92,6 @@ public class OrphanDataDetector {
     @Autowired private ProductionExceptionReportService exceptionReportService;
     @Autowired private BillAggregationService billAggregationService;
     @Autowired private ReceivableService receivableService;
-    @Autowired private StyleInfoService styleInfoService;
-    @Autowired private MaterialOutboundLogMapper materialOutboundLogMapper;
 
     public OrphanDataScanResultDTO scan() {
         Long tenantId = UserContext.tenantId();
@@ -194,7 +190,6 @@ public class OrphanDataDetector {
         return deleted;
     }
 
-    @SuppressWarnings("unchecked")
     private <T> int softDeleteByIds(com.baomidou.mybatisplus.extension.service.IService<T> service, List<String> ids) {
         if (ids == null || ids.isEmpty()) return 0;
         try {

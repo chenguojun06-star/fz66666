@@ -1,6 +1,5 @@
 package com.fashion.supplychain.intelligence.orchestration;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.production.orchestration.FactoryCapacityOrchestrator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,8 +14,6 @@ public class AiSandboxOrchestrator {
 
     @Autowired
     private FactoryCapacityOrchestrator factoryCapacityOrchestrator;
-
-    private static final ObjectMapper JSON = new ObjectMapper();
 
     /**
      * 沙盘推演：给定一个假设的新增数量，预估最合适的接单工厂以及完成所需天数。

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fashion.supplychain.intelligence.dto.AgentState;
 import com.fashion.supplychain.intelligence.orchestration.specialist.SpecialistAgent;
 import com.fashion.supplychain.intelligence.service.QdrantService;
+import com.fashion.supplychain.production.dto.response.OrderHealthScoreDTO;
 import com.fashion.supplychain.production.orchestration.OrderHealthScoreOrchestrator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -128,9 +129,9 @@ public class SupervisorAgentOrchestrator {
         // 真实指标：通过 OrderHealthScoreOrchestrator 获取
         try {
             if (state.getOrderIds() != null && !state.getOrderIds().isEmpty()) {
-                List<Map<String, Object>> scores = healthScoreOrchestrator.batchScores(state.getOrderIds());
-                double avgScore = scores.stream()
-                        .mapToInt(m -> (int) m.getOrDefault("score", 50))
+                Map<String, OrderHealthScoreDTO> scoreMap = healthScoreOrchestrator.batchCalculateHealth(state.getOrderIds());
+                double avgScore = scoreMap.values().stream()
+                        .mapToInt(OrderHealthScoreDTO::getScore)
                         .average().orElse(50);
                 state.setRiskScore(100 - avgScore);
                 state.setProgressRate(avgScore);

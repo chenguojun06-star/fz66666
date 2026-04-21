@@ -31,21 +31,63 @@ function describeTool(name) {
 
 function parseAiCards(text) {
   var actions = [];
+  var insightCards = [];
+  var clarificationHints = [];
+  var charts = [];
+  var stepWizardCards = [];
+
+  function safeParse(str) {
+    try { return JSON.parse(str); } catch (e) { return null; }
+  }
+  function validateCard(item) {
+    return item && typeof item === 'object' && item.title;
+  }
+
   var acMatch = text.match(/【ACTIONS】([\s\S]*?)【\/ACTIONS】/);
   if (acMatch) {
     text = text.replace(acMatch[0], '');
-    try {
-      var acData = JSON.parse(acMatch[1]);
-      if (Array.isArray(acData)) actions = acData;
-      else if (acData && acData.actions) actions = acData.actions;
-    } catch (_e) {
-      acMatch[1].split('\n').forEach(function (line) {
-        var m = line.match(/[-*]\s*(.+)/);
-        if (m) actions.push({ label: m[1].trim(), type: 'navigate' });
-      });
-    }
+    var acData = safeParse(acMatch[1]);
+    if (Array.isArray(acData)) actions = acData.filter(validateCard);
+    else if (acData && acData.actions) actions = acData.actions;
   }
-  return { text: text.trim(), actions: actions };
+
+  var insightRe = /【INSIGHT_CARDS】([\s\S]*?)【\/INSIGHT_CARDS】/g;
+  var m;
+  while ((m = insightRe.exec(text)) !== null) {
+    var ip = safeParse(m[1]);
+    if (Array.isArray(ip)) insightCards = insightCards.concat(ip.filter(validateCard));
+    else if (validateCard(ip)) insightCards.push(ip);
+  }
+  text = text.replace(/【INSIGHT_CARDS】[\s\S]*?【\/INSIGHT_CARDS】/g, '');
+
+  var clarifRe = /【CLARIFICATION】([\s\S]*?)【\/CLARIFICATION】/g;
+  while ((m = clarifRe.exec(text)) !== null) {
+    var clp = safeParse(m[1]);
+    if (Array.isArray(clp)) clarificationHints = clarificationHints.concat(clp.filter(function(x) { return typeof x === 'string'; }));
+  }
+  text = text.replace(/【CLARIFICATION】[\s\S]*?【\/CLARIFICATION】/g, '');
+
+  var chartRe = /【CHART】([\s\S]*?)【\/CHART】/g;
+  while ((m = chartRe.exec(text)) !== null) {
+    var cp = safeParse(m[1]);
+    if (Array.isArray(cp)) charts = charts.concat(cp.filter(validateCard));
+    else if (validateCard(cp)) charts.push(cp);
+  }
+  text = text.replace(/【CHART】[\s\S]*?【\/CHART】/g, '');
+
+  var wizRe = /【STEP_WIZARD】([\s\S]*?)【\/STEP_WIZARD】/g;
+  while ((m = wizRe.exec(text)) !== null) {
+    var wp = safeParse(m[1]);
+    if (Array.isArray(wp)) stepWizardCards = stepWizardCards.concat(wp);
+    else if (wp) stepWizardCards.push(wp);
+  }
+  text = text.replace(/【STEP_WIZARD】[\s\S]*?【\/STEP_WIZARD】/g, '');
+
+  text = text.replace(/【TEAM_STATUS】[\s\S]*?【\/TEAM_STATUS】/g, '');
+  text = text.replace(/【BUNDLE_SPLIT】[\s\S]*?【\/BUNDLE_SPLIT】/g, '');
+  text = text.replace(/```ACTIONS_JSON\s*\n[\s\S]*?\n```/g, '');
+
+  return { text: text.trim(), actions: actions, insightCards: insightCards, clarificationHints: clarificationHints, charts: charts, stepWizardCards: stepWizardCards };
 }
 
 Component({

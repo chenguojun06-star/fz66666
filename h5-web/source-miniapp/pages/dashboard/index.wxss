@@ -24,7 +24,7 @@
   justify-content: space-between;
 }
 .date-text {
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-base);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
 }
@@ -48,7 +48,7 @@
   width: calc(50% - 6px);
   background: var(--color-bg-card);
   border-radius: var(--radius-lg);
-  padding: 16px;
+  padding: 12px;
   box-sizing: border-box;
   box-shadow: var(--shadow-sm);
   position: relative;
@@ -74,17 +74,17 @@
 .card-hd {
   display: flex;
   align-items: center;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 .card-icon {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--font-size-2xl);
-  margin-right: 10px;
+  font-size: var(--font-size-lg);
+  margin-right: 8px;
   flex-shrink: 0;
 }
 .icon--purple { background: rgba(124, 92, 252, 0.1); }
@@ -117,7 +117,7 @@
   flex-shrink: 0;
 }
 .metric-val {
-  font-size: var(--font-size-2xl);
+  font-size: var(--font-size-xl);
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
   line-height: var(--line-height-tight);
@@ -131,7 +131,7 @@
 /* 数值变体 */
 .val--muted {
   color: var(--color-text-secondary);
-  font-size: var(--font-size-md-lg);
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-semibold);
 }
 .val--danger {
@@ -205,18 +205,18 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 8px 16px;
+  padding: 6px 12px;
   border-radius: var(--radius-md);
   background: var(--color-bg-card);
   box-shadow: var(--shadow-sm);
-  min-width: 64px;
+  min-width: 56px;
 }
 .stat-pill--active {
   background: var(--color-primary);
   box-shadow: 0 2px 8px rgba(var(--color-primary-rgb), 0.25);
 }
 .stat-count {
-  font-size: var(--font-size-lg-xl);
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
   line-height: var(--line-height-tight);
@@ -306,7 +306,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--font-size-4xl);
+  font-size: var(--font-size-2xl);
   color: var(--color-text-tertiary);
   background: var(--color-bg-gray);
 }
@@ -435,7 +435,7 @@
   flex-direction: column;
 }
 .body-stat-val {
-  font-size: var(--font-size-lg-xl);
+  font-size: var(--font-size-md-lg);
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
 }

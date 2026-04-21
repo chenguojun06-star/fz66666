@@ -63,17 +63,5 @@
       <text wx:elif="{{my.history.hasMore}}">加载更多</text>
       <text wx:else class="no-more">— END —</text>
     </view>
-
-    <!-- 扫码结果醒目提示（历史记录下方） -->
-    <view wx:if="{{lastResult}}" class="scan-result-banner {{lastResult.success ? 'banner-success' : 'banner-fail'}}">
-      <view class="srb-icon">{{lastResult.success ? '✓' : '✗'}}</view>
-      <view class="srb-content">
-        <text class="srb-title">{{lastResult.success ? '扫码成功' : '扫码失败'}}</text>
-        <text class="srb-msg">{{lastResult.message}}</text>
-      </view>
-      <view wx:if="{{lastResult.success && lastResult.sessionQty > 0}}" class="srb-qty">
-        <text class="srb-qty-text">累计 {{lastResult.sessionQty}} 件</text>
-      </view>
-    </view>
   </view>
 

@@ -21,7 +21,7 @@ export interface ParsedXiaoyunLegacyMeta {
   clarificationHints?: string[];
 }
 
-function safeParseJson(raw: string, label: string): unknown[] {
+function safeParseJson(raw: string, _label: string): unknown[] {
   try {
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed)) return parsed;

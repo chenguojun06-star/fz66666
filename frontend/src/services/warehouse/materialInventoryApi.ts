@@ -62,6 +62,14 @@ export const materialInventoryApi = {
     return await api.post(`/production/picking/${pickingId}/confirm-outbound`);
   },
 
+  auditPicking: async (pickingId: string, data: { action: string; remark?: string }): Promise<ApiResponse<null>> => {
+    return await api.post(`/production/picking/${pickingId}/audit`, data);
+  },
+
+  batchAuditPicking: async (data: { ids: string[]; action: string; remark?: string }): Promise<ApiResponse<{ successCount: number; failCount: number }>> => {
+    return await api.post('/production/picking/batch-audit', data);
+  },
+
   cancelPending: async (pickingId: string): Promise<ApiResponse<null>> => {
     return await api.post(`/production/picking/${pickingId}/cancel-pending`);
   },
@@ -75,7 +83,7 @@ export const materialInventoryApi = {
   },
 
   listPickupRecordsBySource: async (sourceRecordId: string): Promise<ApiResponse<any[]>> => {
-    return await api.get('/warehouse/material-pickup/list', { params: { sourceRecordId, pageSize: 50 } });
+    return await api.post('/warehouse/material-pickup/list', { sourceRecordId, pageSize: 50 });
   },
 
   searchMaterialList: async (params: {

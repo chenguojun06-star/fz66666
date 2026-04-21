@@ -61,12 +61,12 @@ public class ExecutionEngineOrchestrator {
             if (decision.isDenied()) {
                 auditTrail.logCommandCancelled(command, "权限不足: " + decision.getReason(), executorId);
                 log.warn("[ExecutionEngine] 命令被拒绝: action={}, reason={}", command.getAction(), decision.getReason());
-                return (ExecutionResult<T>) ExecutionResult.failure("权限不足: " + decision.getReason());
+                return ExecutionResult.<T>failure("权限不足: " + decision.getReason());
             }
             if (decision.needsApproval()) {
                 auditTrail.logCommandCancelled(command, "需人工审批: " + decision.getReason(), executorId);
                 log.info("[ExecutionEngine] 命令需人工审批: action={}, reason={}", command.getAction(), decision.getReason());
-                return (ExecutionResult<T>) ExecutionResult.pending(decision.getReason());
+                return ExecutionResult.<T>pending(decision.getReason());
             }
 
             // 2. 根据命令类型分发执行
@@ -119,22 +119,27 @@ public class ExecutionEngineOrchestrator {
             log.info("[ExecutionEngine] 命令执行成功: action={}, commandId={}, duration={}ms, cascaded={}",
                 command.getAction(), command.getCommandId(), duration, cascadedCount);
 
-            return (ExecutionResult<T>) ExecutionResult.success(result, notificationMsg);
+            return successResult(result, notificationMsg);
 
         } catch (BusinessException e) {
             long duration = System.currentTimeMillis() - startTime;
             auditTrail.logCommandFailure(command, e, executorId, duration);
             log.error("[ExecutionEngine] 业务异常: action={}, commandId={}, error={}",
                 command.getAction(), command.getCommandId(), e.getMessage());
-            return (ExecutionResult<T>) ExecutionResult.failure(e.getMessage());
+            return ExecutionResult.<T>failure(e.getMessage());
 
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - startTime;
             auditTrail.logCommandFailure(command, e, executorId, duration);
             log.error("[ExecutionEngine] 系统异常: action={}, commandId={}",
                 command.getAction(), command.getCommandId(), e);
-            return (ExecutionResult<T>) ExecutionResult.failure("系统异常: " + e.getMessage());
+            return ExecutionResult.<T>failure("系统异常: " + e.getMessage());
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> ExecutionResult<T> successResult(Object result, String notificationMsg) {
+        return ExecutionResult.success((T) result, notificationMsg);
     }
 
     /**

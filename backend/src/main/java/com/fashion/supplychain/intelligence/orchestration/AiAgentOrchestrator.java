@@ -28,7 +28,6 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -416,6 +415,11 @@ public class AiAgentOrchestrator {
                     if (!streamTruthCheck.isPassed()) {
                         log.warn("[AiAgent-Stream] 数据真实性校验未通过: {}", streamTruthCheck.getReason());
                         revisedContent = "⚠️ " + streamTruthCheck.getReason() + "\n\n" + revisedContent;
+                    }
+                    DataTruthGuard.NumericConsistencyResult streamNumCheck = dataTruthGuard.checkNumericConsistency(revisedContent, streamToolEvidence);
+                    if (!streamNumCheck.isConsistent()) {
+                        log.warn("[AiAgent-Stream] 数字一致性校验异常: {}", streamNumCheck.getMismatches());
+                        revisedContent = "⚠️ 部分数据与查询结果不一致，请以工具返回数据为准\n\n" + revisedContent;
                     }
                     revisedContent = dataTruthGuard.tagDataSource(revisedContent, streamTruthCheck.getDataSource());
 

@@ -548,9 +548,16 @@ public class SystemTableMigrator {
         try {
             if (dbHelper.tableExists("t_material_picking")) {
                 addColumnIfNotExists(jdbc, "t_material_picking", "purchase_id", "VARCHAR(64) DEFAULT NULL");
+                addColumnIfNotExists(jdbc, "t_material_picking", "audit_status", "VARCHAR(32) DEFAULT NULL");
+                addColumnIfNotExists(jdbc, "t_material_picking", "auditor_id", "VARCHAR(64) DEFAULT NULL");
+                addColumnIfNotExists(jdbc, "t_material_picking", "auditor_name", "VARCHAR(128) DEFAULT NULL");
+                addColumnIfNotExists(jdbc, "t_material_picking", "audit_time", "DATETIME DEFAULT NULL");
+                addColumnIfNotExists(jdbc, "t_material_picking", "audit_remark", "VARCHAR(500) DEFAULT NULL");
+                addColumnIfNotExists(jdbc, "t_material_picking", "finance_status", "VARCHAR(32) DEFAULT NULL");
+                addColumnIfNotExists(jdbc, "t_material_picking", "finance_remark", "VARCHAR(500) DEFAULT NULL");
             }
         } catch (Exception e) {
-            log.warn("Failed to add purchase_id column to t_material_picking: {}", e.getMessage());
+            log.warn("Failed to add columns to t_material_picking: {}", e.getMessage());
         }
     }
 

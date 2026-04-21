@@ -246,6 +246,44 @@ export default function AiAssistantPage() {
                         ))}
                       </div>
                     )}
+                    {parsed.insightCards.length > 0 && (
+                      <div className="ai-insight-cards">
+                        {parsed.insightCards.filter(c => c && c.title).map((card, ci) => {
+                          const lvl = card.level || 'info';
+                          const colorMap = { danger: '#ff4d4f', warning: '#fa8c16', success: '#52c41a', info: '#1677ff' };
+                          const bgMap = { danger: '#fff1f0', warning: '#fff7e6', success: '#f6ffed', info: '#f0f5ff' };
+                          return (
+                            <div key={ci} className="ai-insight-card" style={{ borderLeft: `3px solid ${colorMap[lvl] || colorMap.info}`, background: bgMap[lvl] || bgMap.info, borderRadius: 6, padding: '8px 10px', marginBottom: 6 }}>
+                              <div style={{ fontWeight: 600, fontSize: 13, color: colorMap[lvl] || colorMap.info }}>{card.title}</div>
+                              {card.summary && <div style={{ fontSize: 12, color: '#333', marginTop: 2 }}>{card.summary}</div>}
+                              {card.painPoint && <div style={{ fontSize: 12, color: '#cf1322', marginTop: 2 }}>⚠ {card.painPoint}</div>}
+                              {card.execute && <div style={{ fontSize: 12, color: '#1677ff', marginTop: 2 }}>→ {card.execute}</div>}
+                              {card.evidence && card.evidence.length > 0 && (
+                                <div style={{ fontSize: 11, color: '#8c8c8c', marginTop: 4 }}>
+                                  {card.evidence.slice(0, 3).map((e, ei) => <div key={ei}>· {e}</div>)}
+                                </div>
+                              )}
+                              {(card.source || card.confidence) && (
+                                <div style={{ fontSize: 10, color: '#bfbfbf', marginTop: 4, display: 'flex', gap: 6 }}>
+                                  {card.source && <span>来源:{card.source}</span>}
+                                  {card.confidence && <span>{card.confidence}</span>}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {parsed.charts.length > 0 && (
+                      <div className="ai-chart-cards">
+                        {parsed.charts.filter(c => c && c.title).map((chart, ci) => (
+                          <div key={ci} className="ai-chart-card" style={{ background: '#f0f5ff', borderRadius: 6, padding: '8px 10px', marginBottom: 6 }}>
+                            <div style={{ fontWeight: 600, fontSize: 13 }}>📊 {chart.title}</div>
+                            <div style={{ fontSize: 11, color: '#8c8c8c' }}>类型：{chart.chartType || 'chart'}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     {parsed.followUpActions.length > 0 && (
                       <div className="ai-followup-actions">
                         {parsed.followUpActions.map((fa, fi) => (
@@ -254,6 +292,17 @@ export default function AiAssistantPage() {
                             {fa.label}
                           </button>
                         ))}
+                      </div>
+                    )}
+                    {parsed.clarificationHints.length > 0 && (
+                      <div className="ai-clarification" style={{ background: '#fff7e6', borderRadius: 6, padding: '8px 10px', marginTop: 6 }}>
+                        <div style={{ fontSize: 12, color: '#d46b08', marginBottom: 4 }}>🤔 需要补充信息：</div>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          {parsed.clarificationHints.map((hint, hi) => (
+                            <button key={hi} className="ai-followup-btn" style={{ fontSize: 12 }}
+                              onClick={() => { if (!sending) setInputText(hint); }}>{hint}</button>
+                          ))}
+                        </div>
                       </div>
                     )}
                     {parsed.recommendPills.length > 0 && (

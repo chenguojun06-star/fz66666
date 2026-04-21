@@ -241,10 +241,6 @@ public class WhatIfSimulationOrchestrator {
         return o.getFactoryUnitPrice().doubleValue() * o.getOrderQuantity();
     }
 
-    private double totalCostBase(List<ProductionOrder> orders) {
-        return orders.stream().mapToDouble(this::estimateCost).sum();
-    }
-
     private BatchStats buildBatchStats(List<ProductionOrder> orders) {
         BatchStats stats = new BatchStats();
         stats.setOrderCount(orders.size());

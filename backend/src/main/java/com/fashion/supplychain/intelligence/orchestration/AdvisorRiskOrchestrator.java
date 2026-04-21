@@ -3,13 +3,14 @@ package com.fashion.supplychain.intelligence.orchestration;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fashion.supplychain.common.UserContext;
 import com.fashion.supplychain.intelligence.dto.HyperAdvisorResponse.RiskIndicator;
+import com.fashion.supplychain.production.dto.response.OrderHealthScoreDTO;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.orchestration.OrderHealthScoreOrchestrator;
 import com.fashion.supplychain.production.service.ProductionOrderService;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
@@ -92,9 +93,9 @@ public class AdvisorRiskOrchestrator {
         if (active.isEmpty()) return new RiskIndicator("高危订单", 0, "low", "无活跃订单");
 
         List<String> ids = active.stream().map(o -> String.valueOf(o.getId())).collect(Collectors.toList());
-        List<Map<String, Object>> scores = healthScoreOrchestrator.batchScores(ids);
+        Collection<OrderHealthScoreDTO> scores = healthScoreOrchestrator.batchCalculateHealth(ids).values();
         long dangerCount = scores.stream()
-                .filter(m -> m.get("score") instanceof Number && ((Number) m.get("score")).intValue() < 50)
+                .filter(dto -> dto.getScore() < 50)
                 .count();
         double prob = Math.round(dangerCount * 100.0 / active.size()) / 100.0;
         return new RiskIndicator("高危订单",

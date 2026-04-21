@@ -37,8 +37,9 @@ Page({
     avatarImgUrl: '',
     onlineCount: 0,
     showApprovalEntry: false,
-    showInviteSection: false,
-    recruitInfo: { show: false, tenantCode: '', tenantName: '' },
+    // showInviteSection / recruitInfo 已迁移到 this._showInviteSection / this._recruitInfo 实例属性
+    // 这两个变量只作为 buildMenuItems / onCopyRecruitCode 的输入，不参与 WXML 渲染，
+    // 避免 setData 传入未绑定 WXML 变量的性能告警。
     currentLanguage: 'zh-CN',
     currentLanguageName: '中文',
     menuItems: [],
@@ -79,7 +80,7 @@ Page({
   refreshMenuItems() {
     this.setData({
       menuItems: buildMenuItems({
-        showInviteSection: this.data.showInviteSection,
+        showInviteSection: this._showInviteSection || false,
         showApprovalEntry: this.data.showApprovalEntry,
         currentLanguageName: this.data.currentLanguageName,
       }),
@@ -221,10 +222,11 @@ Page({
           const tenantCode = (tenantResp && tenantResp.tenantCode) || '';
           const tenantName = (tenantResp && tenantResp.tenantName) || '';
           if (tenantCode) {
-            this.setData({ recruitInfo: { show: true, tenantCode, tenantName } });
+            this._recruitInfo = { show: true, tenantCode, tenantName };
           }
           // 所有有租户的用户均显示「邀请员工」菜单项（工人/管理员均可扫码邀请同事）
-          this.setData({ showInviteSection: true }, () => this.refreshMenuItems());
+          this._showInviteSection = true;
+          this.refreshMenuItems();
         } catch (e) {
           console.error('加载租户信息失败', e);
         }
@@ -238,7 +240,7 @@ Page({
   },
 
   onCopyRecruitCode() {
-    const code = this.data.recruitInfo.tenantCode;
+    const code = (this._recruitInfo && this._recruitInfo.tenantCode) || '';
     if (!code) {
       wx.showToast({ title: '暂无工厂码', icon: 'none' });
       return;
@@ -250,7 +252,7 @@ Page({
   },
 
   onCopyRecruitUrl() {
-    const { tenantCode, tenantName } = this.data.recruitInfo;
+    const { tenantCode = '', tenantName = '' } = this._recruitInfo || {};
     if (!tenantCode) {
       wx.showToast({ title: '暂无工厂码', icon: 'none' });
       return;

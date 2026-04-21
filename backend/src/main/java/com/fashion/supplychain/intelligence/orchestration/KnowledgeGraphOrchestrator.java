@@ -6,7 +6,6 @@ import com.fashion.supplychain.intelligence.entity.KgEntity;
 import com.fashion.supplychain.intelligence.entity.KgRelation;
 import com.fashion.supplychain.intelligence.mapper.KgEntityMapper;
 import com.fashion.supplychain.intelligence.mapper.KgRelationMapper;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,8 +21,6 @@ public class KnowledgeGraphOrchestrator {
 
     private final KgEntityMapper entityMapper;
     private final KgRelationMapper relationMapper;
-    private final IntelligenceInferenceOrchestrator inferenceOrchestrator;
-    private final ObjectMapper objectMapper;
 
     @Data
     public static class ReasoningPath {
