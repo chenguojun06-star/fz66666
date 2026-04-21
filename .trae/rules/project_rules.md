@@ -526,3 +526,69 @@ currentProgressStage, progressNodeUnitPrices, cumulativeScanCount, totalScanCoun
 
 ### 非数据库字段（@TableField(exist = false)）
 cuttingDetails, bedNo, hasNextStageScan
+
+---
+
+# P0 - 样衣入库PC端同步规则
+
+## 规则28：样衣入库后PC端必须同步显示"已入库"
+
+### 根因
+`latestPatternStatus` 是虚拟字段，依赖 `PatternProduction.color` 与 `StyleInfo.color` 的精确匹配。颜色不匹配时查不到 PatternProduction，导致 PC 端一直显示"待入库"。
+
+### 三层兜底机制（已修复）
+1. **颜色精确匹配** → `buildStyleColorKey(styleId, color)` 精确查找
+2. **styleId前缀匹配** → 颜色不一致时按 `styleId|` 前缀兜底查找
+3. **sampleStatus 兜底** → 以上均失败时，直接读取 `StyleInfo.sampleStatus`，如果为 "COMPLETED" 则 `latestPatternStatus = "COMPLETED"`
+
+### 前端兜底（已修复）
+`buildConfirmStage` 中 `inboundCompleted` 判断增加 `sampleStatus === 'COMPLETED'` 兜底：
+```typescript
+const inboundCompleted = latestPatternStatus === 'COMPLETED' || sampleStatus === 'COMPLETED';
+```
+
+### 修改样衣入库逻辑时必须验证
+1. `PatternProduction.status` 是否更新为 "COMPLETED"
+2. `StyleInfo.sampleStatus` 是否同步更新为 "COMPLETED"
+3. `StyleInfo.sampleCompletedTime` 是否设置
+4. `SampleStock` 记录是否创建
+5. PC端 `GET /api/style/info/list` 返回的 `latestPatternStatus` 是否为 "COMPLETED"
+
+## 规则29：normalizeFixedProductionNodeName 必须统一实现
+
+### 根因
+三处各自实现导致子工序名归一化结果不一致，手动选择"大烫"可能存为"大烫"（progressStage），自动识别时存为"尾部"。
+
+### 修复方案
+`ProductionScanExecutor` 和 `ProductionScanStageSupport` 的 `normalizeFixedProductionNodeName` 统一委托给 `ProcessStageDetector.normalizeFixedProductionNodeName()`，该实现包含：
+- 6大固定节点精确匹配
+- `progressStageNameMatches` 模糊匹配
+- `CHILD_TO_PARENT` 完整映射表（含所有已知子工序）
+
+### CHILD_TO_PARENT 完整映射表（必须维护）
+所有已知子工序→父节点的映射必须在 `ProcessStageDetector.CHILD_TO_PARENT` 中维护，新增子工序时必须同步添加。
+
+## 规则30：阶段门控管理员豁免角色必须一致
+
+所有管理员判断必须包含以下角色：`admin`、`ADMIN`、`manager`、`supervisor`、`主管`、`管理员`
+
+```java
+// ✅ 正确 - 完整角色列表
+role.contains("admin") || role.contains("ADMIN") || role.contains("manager") 
+    || role.contains("supervisor") || role.contains("主管") || role.contains("管理员")
+```
+
+涉及位置：
+- `ProductionScanStageSupport.validateParentStagePrerequisite()` — 阶段门控
+- `ScanRecordOrchestrator` — 裁剪撤回、普通撤回
+
+## 规则31：扫码响应必须包含下一工序信息
+
+后端扫码成功响应必须包含 `nextScanType` 和 `nextStageHint` 字段，减少前端二次请求：
+
+```java
+result.put("nextScanType", nextStage);     // "production" / "quality" / "warehouse"
+result.put("nextStageHint", "下一环节: " + nextStage);
+```
+
+扫码类型链路：`cutting → production → quality → warehouse`
