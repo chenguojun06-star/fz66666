@@ -33,51 +33,12 @@ public class ProcessStageDetector {
 
     private static final Map<String, String> CHILD_TO_PARENT = new LinkedHashMap<>();
     static {
-        CHILD_TO_PARENT.put("大烫", "尾部");
-        CHILD_TO_PARENT.put("质检", "尾部");
-        CHILD_TO_PARENT.put("包装", "尾部");
-        CHILD_TO_PARENT.put("剪线", "尾部");
-        CHILD_TO_PARENT.put("整烫", "尾部");
-        CHILD_TO_PARENT.put("尾部", "尾部");
-        CHILD_TO_PARENT.put("后整", "尾部");
-        CHILD_TO_PARENT.put("打包", "尾部");
-        CHILD_TO_PARENT.put("蒸烫", "尾部");
-        CHILD_TO_PARENT.put("尾工", "尾部");
-        CHILD_TO_PARENT.put("绣花", "二次工艺");
-        CHILD_TO_PARENT.put("印花", "二次工艺");
-        CHILD_TO_PARENT.put("水洗", "二次工艺");
-        CHILD_TO_PARENT.put("压花", "二次工艺");
-        CHILD_TO_PARENT.put("烫钻", "二次工艺");
-        CHILD_TO_PARENT.put("烫画", "二次工艺");
-        CHILD_TO_PARENT.put("贴标", "二次工艺");
-        CHILD_TO_PARENT.put("钉珠", "二次工艺");
-        CHILD_TO_PARENT.put("数码印", "二次工艺");
-        CHILD_TO_PARENT.put("激光", "二次工艺");
-        CHILD_TO_PARENT.put("特殊工艺", "二次工艺");
+        CHILD_TO_PARENT.put("采购", "采购");
+        CHILD_TO_PARENT.put("裁剪", "裁剪");
         CHILD_TO_PARENT.put("二次工艺", "二次工艺");
         CHILD_TO_PARENT.put("车缝", "车缝");
-        CHILD_TO_PARENT.put("缝制", "车缝");
-        CHILD_TO_PARENT.put("缝纫", "车缝");
-        CHILD_TO_PARENT.put("车工", "车缝");
-        CHILD_TO_PARENT.put("整件", "车缝");
-        CHILD_TO_PARENT.put("车位", "车缝");
-        CHILD_TO_PARENT.put("上领", "车缝");
-        CHILD_TO_PARENT.put("上袖", "车缝");
-        CHILD_TO_PARENT.put("埋夹", "车缝");
-        CHILD_TO_PARENT.put("做领", "车缝");
-        CHILD_TO_PARENT.put("拼缝", "车缝");
-        CHILD_TO_PARENT.put("合缝", "车缝");
-        CHILD_TO_PARENT.put("缝合", "车缝");
-        CHILD_TO_PARENT.put("裁剪", "裁剪");
-        CHILD_TO_PARENT.put("裁床", "裁剪");
-        CHILD_TO_PARENT.put("剪裁", "裁剪");
-        CHILD_TO_PARENT.put("开裁", "裁剪");
+        CHILD_TO_PARENT.put("尾部", "尾部");
         CHILD_TO_PARENT.put("入库", "入库");
-        CHILD_TO_PARENT.put("入仓", "入库");
-        CHILD_TO_PARENT.put("进仓", "入库");
-        CHILD_TO_PARENT.put("采购", "采购");
-        CHILD_TO_PARENT.put("物料采购", "采购");
-        CHILD_TO_PARENT.put("备料", "采购");
     }
 
     @Autowired
@@ -129,10 +90,6 @@ public class ProcessStageDetector {
             if (n.equals(v) || templateLibraryService.progressStageNameMatches(n, v)) {
                 return n;
             }
-        }
-        String parent = CHILD_TO_PARENT.get(v);
-        if (hasText(parent)) {
-            return parent;
         }
         return v;
     }

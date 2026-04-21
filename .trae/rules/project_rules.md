@@ -334,24 +334,31 @@ public Result<...> list(...) { ... }
 
 定义位置：`ProductionScanExecutor.FIXED_PRODUCTION_NODES`、`ProcessStageDetector.FIXED_PRODUCTION_NODES`、`ProductionScanStageSupport.FIXED_PRODUCTION_NODES`
 
-### 父节点与子工序映射表
+### 子工序→父节点映射机制（动态，非硬编码）
 
-| 父节点 | 标准名 | 常见子工序/同义词 | scanType |
-|--------|--------|-----------------|----------|
-| 采购 | 采购 | 物料采购/面辅料采购/备料/到料/进料 | orchestration（系统编排） |
-| 裁剪 | 裁剪 | 裁床/剪裁/开裁/裁片/裁切 | cutting |
-| 二次工艺 | 二次工艺 | 绣花/印花/水洗/压花/烫钻/烫画/贴标/钉珠/数码印/激光/特殊工艺 | production |
-| 车缝 | 车缝 | 缝制/缝纫/车工/整件/车位/上领/上袖/埋夹/做领/拼缝/合缝 | production |
-| 尾部 | 尾部 | 大烫/整烫/剪线/包装/打包/后整/质检/品检/验货 | production/quality |
-| 入库 | 入库 | 仓储/上架/进仓/入仓/成品入库 | warehouse |
+**子工序是动态的，取决于模板配置和动态映射表，禁止硬编码子工序同义词。**
 
-### 子工序→父节点映射优先级（5级）
+映射优先级（5级，由 `resolveParentProgressStage` 执行）：
 
 1. 模板 `progressStage` 直接指向6个固定父节点 → 直接使用
 2. 模板 `progressStage` 为别名 → `normalizeFixedProductionNodeName` 归一化
 3. 别名无法归一化 → 动态映射表 `t_process_parent_mapping` 查找
 4. 模板中找不到 → 动态映射表按 `processName` 查找
 5. 以上均无结果 → 返回 null（调用方决定是否使用 processName 本身）
+
+### `normalizeFixedProductionNodeName` 的职责
+
+该方法**只做6大父节点自身的归一化**（精确匹配 + `progressStageNameMatches` 模糊匹配），**不做子工序→父节点的映射**。子工序→父节点的映射由 `resolveParentProgressStage` 通过模板和动态映射表完成。
+
+### 动态映射表 `t_process_parent_mapping`
+
+| 字段 | 说明 |
+|------|------|
+| processKeyword | 子工序关键词（用于 contains 匹配） |
+| parentNode | 父进度节点（6个之一） |
+| tenantId | 租户ID，NULL 表示全局通用 |
+
+新增子工序时，只需在 `t_process_parent_mapping` 表中添加映射记录即可，无需修改代码。
 
 ## 规则18：扫码类型链路
 
@@ -555,19 +562,25 @@ const inboundCompleted = latestPatternStatus === 'COMPLETED' || sampleStatus ===
 4. `SampleStock` 记录是否创建
 5. PC端 `GET /api/style/info/list` 返回的 `latestPatternStatus` 是否为 "COMPLETED"
 
-## 规则29：normalizeFixedProductionNodeName 必须统一实现
+## 规则29：normalizeFixedProductionNodeName 只做父节点归一化
 
-### 根因
-三处各自实现导致子工序名归一化结果不一致，手动选择"大烫"可能存为"大烫"（progressStage），自动识别时存为"尾部"。
+### 核心原则
+`normalizeFixedProductionNodeName` **只做6大父节点自身的归一化**，不做子工序→父节点的映射。子工序→父节点的映射由 `resolveParentProgressStage` 通过模板配置和 `t_process_parent_mapping` 动态映射表完成。
 
-### 修复方案
-`ProductionScanExecutor` 和 `ProductionScanStageSupport` 的 `normalizeFixedProductionNodeName` 统一委托给 `ProcessStageDetector.normalizeFixedProductionNodeName()`，该实现包含：
-- 6大固定节点精确匹配
-- `progressStageNameMatches` 模糊匹配
-- `CHILD_TO_PARENT` 完整映射表（含所有已知子工序）
+### 禁止事项
+- 禁止在 `CHILD_TO_PARENT` 中添加子工序同义词（如 "上领"→"车缝"）
+- 禁止在代码中硬编码子工序名到父节点的映射
+- 新增子工序只需在 `t_process_parent_mapping` 表中添加映射记录
 
-### CHILD_TO_PARENT 完整映射表（必须维护）
-所有已知子工序→父节点的映射必须在 `ProcessStageDetector.CHILD_TO_PARENT` 中维护，新增子工序时必须同步添加。
+### `CHILD_TO_PARENT` 只保留6大父节点自身映射
+```java
+CHILD_TO_PARENT.put("采购", "采购");
+CHILD_TO_PARENT.put("裁剪", "裁剪");
+CHILD_TO_PARENT.put("二次工艺", "二次工艺");
+CHILD_TO_PARENT.put("车缝", "车缝");
+CHILD_TO_PARENT.put("尾部", "尾部");
+CHILD_TO_PARENT.put("入库", "入库");
+```
 
 ## 规则30：阶段门控管理员豁免角色必须一致
 
