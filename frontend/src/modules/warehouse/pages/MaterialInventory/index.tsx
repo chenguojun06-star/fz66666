@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import {
   Card,
   Tabs,
@@ -11,7 +11,6 @@ import {
   Popconfirm,
   DatePicker,
 } from 'antd';
-import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
 import ResizableTable from '@/components/common/ResizableTable';
 import MaterialAlertRanking from './components/MaterialAlertRanking';
@@ -22,7 +21,7 @@ import StandardSearchBar from '@/components/common/StandardSearchBar';
 import StandardToolbar from '@/components/common/StandardToolbar';
 import PageStatCards from '@/components/common/PageStatCards';
 import SmartErrorNotice from '@/smart/components/SmartErrorNotice';
-import { paths } from '@/routeConfig';
+
 import { useMaterialInventoryColumns } from './hooks/useMaterialInventoryColumns';
 import { useMaterialInventoryData } from './hooks/useMaterialInventoryData';
 import { useMaterialPickupData } from './hooks/useMaterialPickupData';
@@ -46,12 +45,11 @@ const USAGE_TYPE_MAP: Record<string, { text: string; color: string }> = {
 };
 
 const _MaterialInventory: React.FC = () => {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const inventoryData = useMaterialInventoryData();
   const {
     loading, dataSource, smartError, showSmartErrorNotice, showMaterialAI,
-    stats, pagination, user,
+    stats, pagination: _pagination, user,
     searchText, setSearchText, selectedType, setSelectedType, dateRange, setDateRange,
     detailModal: _detailModal, inboundModal: _inboundModal, outboundModal: _outboundModal, rollModal, rollForm, printModal: _printModal,
     alertLoading, alertList, alertOptions: _alertOptions,

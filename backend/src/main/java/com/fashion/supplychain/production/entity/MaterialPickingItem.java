@@ -27,6 +27,7 @@ public class MaterialPickingItem {
     private BigDecimal unitPrice;
     private String fabricWidth;
     private String fabricComposition;
+    private String fabricWeight;
     private String supplierName;
     private String warehouseLocation;
     private String materialType;

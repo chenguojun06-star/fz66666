@@ -547,7 +547,7 @@ const GlobalAiAssistant: React.FC = () => {
                 onPurchaseDocAction={(msgId, mode, card) => onPurchaseDocAction(msgId, mode, card)}
                 onWizardSubmit={(_msgId, command, params) => {
                   let p = command;
-                  Object.entries(params).forEach(([k, v]) => {
+                  Object.entries(params).forEach(([_k, v]) => {
                     if (Array.isArray(v)) p += ' ' + v.join(',');
                     else if (v !== undefined && v !== null && v !== '') p += ' ' + v;
                   });
