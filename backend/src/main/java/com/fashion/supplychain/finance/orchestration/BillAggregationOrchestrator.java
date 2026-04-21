@@ -75,11 +75,12 @@ public class BillAggregationOrchestrator {
         if (!StringUtils.hasText(sourceType) || !StringUtils.hasText(sourceId) || newAmount == null) {
             return;
         }
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         BillAggregation bill = billAggregationService.lambdaQuery()
                 .eq(BillAggregation::getSourceType, sourceType)
                 .eq(BillAggregation::getSourceId, sourceId)
-                .eq(tenantId != null, BillAggregation::getTenantId, tenantId)
+                .eq(BillAggregation::getTenantId, tenantId)
                 .eq(BillAggregation::getDeleteFlag, 0)
                 .last("LIMIT 1")
                 .one();

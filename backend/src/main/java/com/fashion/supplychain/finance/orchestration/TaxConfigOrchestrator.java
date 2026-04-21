@@ -27,20 +27,22 @@ public class TaxConfigOrchestrator {
     private TaxConfigService taxConfigService;
 
     public List<TaxConfig> listAll() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         return taxConfigService.list(
                 new LambdaQueryWrapper<TaxConfig>()
-                        .eq(tenantId != null, TaxConfig::getTenantId, tenantId)
+                        .eq(TaxConfig::getTenantId, tenantId)
                         .orderByAsc(TaxConfig::getTaxCode));
     }
 
     public List<TaxConfig> listActive() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         LocalDate today = LocalDate.now();
         return taxConfigService.list(
                 new LambdaQueryWrapper<TaxConfig>()
                         .eq(TaxConfig::getStatus, "ACTIVE")
-                        .eq(tenantId != null, TaxConfig::getTenantId, tenantId)
+                        .eq(TaxConfig::getTenantId, tenantId)
                         .and(w -> w.isNull(TaxConfig::getExpiryDate).or().ge(TaxConfig::getExpiryDate, today))
                         .orderByAsc(TaxConfig::getTaxCode));
     }
@@ -96,13 +98,14 @@ public class TaxConfigOrchestrator {
      * 计算税额（被 InvoiceOrchestrator/FinancialReportOrchestrator 使用）
      */
     public BigDecimal calcTax(BigDecimal amount, String taxCode) {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         TaxConfig cfg = taxConfigService.getOne(
                 new LambdaQueryWrapper<TaxConfig>()
                         .eq(TaxConfig::getStatus, "ACTIVE")
                         .eq(TaxConfig::getTaxCode, taxCode)
                         .eq(TaxConfig::getIsDefault, 1)
-                        .eq(tenantId != null, TaxConfig::getTenantId, tenantId)
+                        .eq(TaxConfig::getTenantId, tenantId)
                         .last("LIMIT 1"));
         if (cfg == null) return BigDecimal.ZERO;
         return amount.multiply(cfg.getTaxRate()).setScale(2, java.math.RoundingMode.HALF_UP);
@@ -113,7 +116,7 @@ public class TaxConfigOrchestrator {
                 new LambdaQueryWrapper<TaxConfig>()
                         .eq(TaxConfig::getTaxCode, taxCode)
                         .eq(TaxConfig::getIsDefault, 1)
-                        .eq(tenantId != null, TaxConfig::getTenantId, tenantId));
+                        .eq(TaxConfig::getTenantId, tenantId));
         for (TaxConfig c : defaults) {
             c.setIsDefault(0);
             taxConfigService.updateById(c);

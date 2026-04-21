@@ -28,6 +28,7 @@ public class EcSalesRevenueController {
      * POST /api/finance/ec-revenue/list
      * 参数：page, pageSize, status(pending/confirmed/reconciled), platform, keyword
      */
+    @PreAuthorize("hasAuthority('MENU_FINANCE_EC_REVENUE_VIEW')")
     @PostMapping("/list")
     public Result<IPage<EcSalesRevenue>> list(@RequestBody Map<String, Object> params) {
         return Result.success(ecSalesRevenueOrchestrator.list(params));
@@ -38,6 +39,7 @@ public class EcSalesRevenueController {
      * POST /api/finance/ec-revenue/summary
      * 参数：platform, status
      */
+    @PreAuthorize("hasAuthority('MENU_FINANCE_EC_REVENUE_VIEW')")
     @PostMapping("/summary")
     public Result<Map<String, Object>> summary(@RequestBody Map<String, Object> params) {
         return Result.success(ecSalesRevenueOrchestrator.summary(params));
@@ -47,6 +49,7 @@ public class EcSalesRevenueController {
      * 财务核账：pending → confirmed
      * POST /api/finance/ec-revenue/{id}/stage-action?action=confirm
      */
+    @PreAuthorize("hasAuthority('FINANCE_EC_REVENUE_MANAGE')")
     @PostMapping("/{id}/stage-action")
     public Result<Void> stageAction(
             @PathVariable Long id,

@@ -21,10 +21,15 @@ public class ProductionOrderExportOrchestrator {
 
     public byte[] exportProductionOrders(Map<String, Object> params) {
         params.put("page", 1);
-        params.put("size", 10000); // 导出大量数据
+        int maxSize = 5000;
+        params.put("size", maxSize);
 
         IPage<ProductionOrder> page = productionOrderOrchestrator.queryPage(params);
         List<ProductionOrder> orders = page.getRecords();
+
+        if (page.getTotal() > maxSize) {
+            log.warn("[ProductionOrderExport] 导出数据量超限: total={}, export={}", page.getTotal(), maxSize);
+        }
 
         try (Workbook wb = new XSSFWorkbook()) {
             Sheet sheet = wb.createSheet("生产订单数据");

@@ -14,7 +14,7 @@ class PayrollController extends GetxController {
   Future<void> loadPayroll() async {
     loading.value = true;
     try {
-      final res = await _api.personalScanStats();
+      final res = await _api.payrollSummary({});
       final data = res.data;
       if (data is Map && data['code'] == 200 && data['data'] != null) {
         stats.value = data['data'] as Map<String, dynamic>;

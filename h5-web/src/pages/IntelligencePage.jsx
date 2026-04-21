@@ -57,8 +57,11 @@ export default function IntelligencePage() {
   const [expandedStage, setExpandedStage] = useState(null);
 
   useEffect(() => {
-    if (!isTenantOwner()) {
-      toast.info('仅租户老板可访问');
+    const userInfo = getUserInfo();
+    const role = userInfo?.role || '';
+    const hasAccess = isTenantOwner() || role.includes('admin') || role.includes('manager');
+    if (!hasAccess) {
+      toast.info('暂无权限访问智能运营中心');
       navigate('/', { replace: true });
     }
   }, []);

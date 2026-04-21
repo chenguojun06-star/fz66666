@@ -9,4 +9,6 @@ public interface PayrollSettlementItemService extends IService<PayrollSettlement
      * 按订单ID删除工资结算明细（用于订单级联清理）
      */
     void deleteByOrderId(String orderId);
+
+    void deleteBySettlementId(String settlementId);
 }

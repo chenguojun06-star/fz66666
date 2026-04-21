@@ -169,11 +169,17 @@ class ScanController extends GetxController {
 
     try {
       final res = await _api.executeScan({
-        'qrCode': code,
+        'scanCode': code,
         'orderNo': parsed.orderNo,
         'bundleNo': parsed.bundleNo,
-        'type': parsed.type.name,
         'scanType': selectedScanType.value.name,
+        'processName': parsed.processCode,
+        'quantity': parsed.quantity,
+        'styleNo': parsed.styleNo,
+        'color': parsed.color,
+        'size': parsed.size,
+        'source': 'flutter',
+        'requestId': 'flutter_${DateTime.now().millisecondsSinceEpoch}_${code.hashCode.abs()}',
       });
       final data = res.data;
       if (data is Map && data['code'] == 200) {
@@ -195,11 +201,16 @@ class ScanController extends GetxController {
       }
     } catch (e) {
       await _offlineQueue.enqueue(code, {
-        'qrCode': code,
+        'scanCode': code,
         'orderNo': parsed.orderNo,
         'bundleNo': parsed.bundleNo,
-        'type': parsed.type.name,
         'scanType': selectedScanType.value.name,
+        'processName': parsed.processCode,
+        'quantity': parsed.quantity,
+        'styleNo': parsed.styleNo,
+        'color': parsed.color,
+        'size': parsed.size,
+        'source': 'flutter',
       });
       _loadOfflineCount();
       Get.snackbar('离线保存', '网络异常，扫码已保存到本地（${offlineCount.value + 1}条待上传）',
@@ -226,7 +237,7 @@ class ScanController extends GetxController {
     if (scanId == null) return;
 
     try {
-      final res = await _api.undoScan({'scanId': scanId});
+      final res = await _api.undoScan({'recordId': scanId});
       final data = res.data;
       if (data is Map && data['code'] == 200) {
         Get.snackbar('撤销成功', '已撤销上次扫码',

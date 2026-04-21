@@ -45,6 +45,7 @@ public class PayrollSettlementController {
      *        - includeSettled: 是否包含已结算 (默认 true)
      * @return 聚合结果列表
      */
+    @PreAuthorize("hasAuthority('MENU_FINANCE_PAYROLL_SETTLEMENT_VIEW')")
     @PostMapping("/operator-summary")
     public Result<List<PayrollOperatorProcessSummaryDTO>> getOperatorSummary(
             @RequestBody Map<String, Object> params) {
@@ -104,6 +105,7 @@ public class PayrollSettlementController {
     /**
      * 审核单条工资工序明细（持久化）
      */
+    @PreAuthorize("hasAuthority('FINANCE_PAYROLL_SETTLEMENT_MANAGE')")
     @PostMapping("/detail-approval/{approvalId}/approve")
     public Result<Void> approveDetail(@PathVariable String approvalId) {
         String normalized = approvalId == null ? null : approvalId.trim();
@@ -128,6 +130,7 @@ public class PayrollSettlementController {
      * @param id     结算单ID（路径参数）
      * @param params 请求体，包含 remark（审核备注）
      */
+    @PreAuthorize("hasAuthority('FINANCE_PAYROLL_SETTLEMENT_MANAGE')")
     @PostMapping("/{id}/approve")
     public Result<Void> approve(@PathVariable String id, @RequestBody(required = false) Map<String, Object> params) {
         String remark = params == null ? null : (String) params.get("remark");
@@ -142,6 +145,7 @@ public class PayrollSettlementController {
      * @param id     结算单ID（路径参数）
      * @param params 请求体，包含 remark（取消原因）
      */
+    @PreAuthorize("hasAuthority('FINANCE_PAYROLL_SETTLEMENT_MANAGE')")
     @PostMapping("/{id}/cancel")
     public Result<Void> cancel(@PathVariable String id, @RequestBody(required = false) Map<String, Object> params) {
         String remark = params == null ? null : (String) params.get("remark");
@@ -155,6 +159,7 @@ public class PayrollSettlementController {
      *
      * @param id 结算单ID（路径参数）
      */
+    @PreAuthorize("hasAuthority('FINANCE_PAYROLL_SETTLEMENT_MANAGE')")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable String id) {
         payrollSettlementOrchestrator.delete(id);

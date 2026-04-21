@@ -43,7 +43,7 @@ class WebSocketService extends GetxService {
           ? _storage.getBaseUrl()
           : 'https://api.webyszl.cn';
       final wsUrl = baseUrl.replaceFirst('https://', 'wss://').replaceFirst('http://', 'ws://');
-      final uri = Uri.parse('$wsUrl/ws?token=$token');
+      final uri = Uri.parse('$wsUrl/ws/realtime?token=$token&clientType=flutter');
 
       _channel = WebSocketChannel.connect(uri);
       _channel!.stream.listen(
@@ -110,7 +110,7 @@ class WebSocketService extends GetxService {
     _heartbeatTimer = Timer.periodic(Duration(seconds: heartbeatInterval), (_) {
       if (connected.value && _channel != null) {
         try {
-          _channel!.sink.add(json.encode({'type': 'PING'}));
+          _channel!.sink.add(json.encode({'type': 'ping'}));
         } catch (_) {
           connected.value = false;
           _scheduleReconnect();

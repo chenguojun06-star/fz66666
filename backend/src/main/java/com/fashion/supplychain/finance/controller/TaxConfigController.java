@@ -18,32 +18,38 @@ public class TaxConfigController {
     @Autowired
     private TaxConfigOrchestrator taxConfigOrchestrator;
 
+    @PreAuthorize("hasAuthority('MENU_FINANCE_TAX_CONFIG_VIEW')")
     @GetMapping("/list")
     public Result<List<TaxConfig>> listAll() {
         return Result.success(taxConfigOrchestrator.listAll());
     }
 
+    @PreAuthorize("hasAuthority('MENU_FINANCE_TAX_CONFIG_VIEW')")
     @GetMapping("/active")
     public Result<List<TaxConfig>> listActive() {
         return Result.success(taxConfigOrchestrator.listActive());
     }
 
+    @PreAuthorize("hasAuthority('FINANCE_TAX_CONFIG_MANAGE')")
     @PostMapping("/create")
     public Result<TaxConfig> create(@RequestBody TaxConfig config) {
         return Result.success(taxConfigOrchestrator.create(config));
     }
 
+    @PreAuthorize("hasAuthority('FINANCE_TAX_CONFIG_MANAGE')")
     @PutMapping("/update")
     public Result<TaxConfig> update(@RequestBody TaxConfig config) {
         return Result.success(taxConfigOrchestrator.update(config));
     }
 
+    @PreAuthorize("hasAuthority('FINANCE_TAX_CONFIG_MANAGE')")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable String id) {
         taxConfigOrchestrator.delete(id);
         return Result.success(null);
     }
 
+    @PreAuthorize("hasAuthority('MENU_FINANCE_TAX_CONFIG_VIEW')")
     @GetMapping("/calc")
     public Result<BigDecimal> calcTax(@RequestParam BigDecimal amount, @RequestParam String taxCode) {
         return Result.success(taxConfigOrchestrator.calcTax(amount, taxCode));

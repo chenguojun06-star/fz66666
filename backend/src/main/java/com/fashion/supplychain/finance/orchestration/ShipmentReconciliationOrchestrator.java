@@ -126,7 +126,10 @@ public class ShipmentReconciliationOrchestrator {
         if (com.fashion.supplychain.common.DataPermissionHelper.isFactoryAccount()) {
             return java.util.Collections.emptyList();
         }
-        return shipmentReconciliationService.list();
+        Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
+        return shipmentReconciliationService.list(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<ShipmentReconciliation>()
+                        .eq(tenantId != null, ShipmentReconciliation::getTenantId, tenantId));
     }
 
     public ShipmentReconciliation getById(String id) {

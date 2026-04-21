@@ -139,6 +139,7 @@ public class RoleOrchestrator {
             String operator = (ctx != null ? ctx.getUsername() : null);
             loginLogService.recordOperation(bizType, bizId, action, operator, remark);
         } catch (Exception e) {
+            log.warn("[RoleOrch] 记录操作日志失败: {}", e.getMessage());
         }
     }
 }

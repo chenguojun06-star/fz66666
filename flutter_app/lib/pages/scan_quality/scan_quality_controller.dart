@@ -35,10 +35,12 @@ class ScanQualityController extends GetxController {
     try {
       final res = await _api.executeScan({
         'orderId': orderId,
-        'qualified': qualified,
-        'defective': defective,
+        'scanType': 'quality',
+        'qualityStage': 'confirm',
+        'qualityResult': defective > 0 ? 'unqualified' : 'qualified',
+        'defectQuantity': defective,
         'remark': remark,
-        'type': 'quality_confirm',
+        'source': 'flutter',
       });
       final data = res.data;
       if (data is Map && data['code'] == 200) {

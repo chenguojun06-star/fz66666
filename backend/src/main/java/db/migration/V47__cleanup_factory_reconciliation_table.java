@@ -6,8 +6,12 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import org.flywaydb.core.api.migration.BaseJavaMigration;
 import org.flywaydb.core.api.migration.Context;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class V47__cleanup_factory_reconciliation_table extends BaseJavaMigration {
+
+    private static final Logger log = LoggerFactory.getLogger(V47__cleanup_factory_reconciliation_table.class);
 
     @Override
     public void migrate(Context context) throws Exception {
@@ -47,6 +51,7 @@ public class V47__cleanup_factory_reconciliation_table extends BaseJavaMigration
             }
             return existsByMeta(meta, null, null, tableName);
         } catch (Exception e) {
+            log.warn("[V47] 表存在性检查异常: table={}, error={}", tableName, e.getMessage());
             return false;
         }
     }
@@ -55,6 +60,7 @@ public class V47__cleanup_factory_reconciliation_table extends BaseJavaMigration
         try (ResultSet rs = meta.getTables(catalog, schema, name, new String[] { "TABLE" })) {
             return rs != null && rs.next();
         } catch (Exception e) {
+            log.warn("[V47] 元数据查询异常: name={}, error={}", name, e.getMessage());
             return false;
         }
     }
@@ -64,6 +70,7 @@ public class V47__cleanup_factory_reconciliation_table extends BaseJavaMigration
                 ResultSet rs = st.executeQuery("SELECT 1 FROM " + tableName + " LIMIT 1")) {
             return rs != null && rs.next();
         } catch (Exception e) {
+            log.warn("[V47] 行数检查异常: table={}, error={}", tableName, e.getMessage());
             return null;
         }
     }

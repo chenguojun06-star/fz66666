@@ -28,18 +28,21 @@ public class ReconciliationCompatController {
     @Autowired
     private OrderProfitOrchestrator orderProfitOrchestrator;
 
+    @PreAuthorize("hasAuthority('FINANCE_RECON_MANAGE')")
     @PutMapping("/status")
     public Result<?> updateStatus(@RequestParam("id") String id, @RequestParam("status") String status) {
         String message = reconciliationStatusOrchestrator.updateStatusCompat(id, status);
         return Result.successMessage(message);
     }
 
+    @PreAuthorize("hasAuthority('FINANCE_RECON_MANAGE')")
     @PostMapping("/return")
     public Result<?> returnToPrevious(@Valid @RequestBody IdReasonRequest body) {
         String message = reconciliationStatusOrchestrator.returnCompat(body.getId(), body.getReason());
         return Result.successMessage(message);
     }
 
+    @PreAuthorize("hasAuthority('MENU_FINANCE_RECON_VIEW')")
     @GetMapping("/order-profit")
     public Result<?> orderProfit(
             @RequestParam(value = "orderId", required = false) String orderId,

@@ -93,6 +93,9 @@ class ApiService extends GetxService {
   Future<Response> personalScanStats([Map<String, dynamic>? params]) =>
       _http.get('/api/production/scan/personal-stats', params: params);
 
+  Future<Response> payrollSummary(Map<String, dynamic> data) =>
+      _http.post('/api/finance/payroll-settlement/operator-summary', data: data);
+
   Future<Response> executeScan(Map<String, dynamic> data) =>
       _http.post('/api/production/scan/execute', data: data);
 

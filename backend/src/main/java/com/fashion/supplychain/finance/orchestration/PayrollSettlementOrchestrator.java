@@ -623,7 +623,7 @@ public class PayrollSettlementOrchestrator {
         }
 
         // 先删明细，再删主记录
-        payrollSettlementItemService.deleteByOrderId(settlement.getOrderId());
+        payrollSettlementItemService.deleteBySettlementId(settlementId.trim());
         payrollSettlementService.removeById(settlementId.trim());
     }
 }

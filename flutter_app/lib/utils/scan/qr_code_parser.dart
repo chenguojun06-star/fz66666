@@ -18,6 +18,9 @@ class ParsedQrCode {
   final String? bundleNo;
   final String? styleNo;
   final String? processCode;
+  final String? color;
+  final String? size;
+  final int? quantity;
   final String? materialCode;
   final Map<String, dynamic>? extra;
 
@@ -28,6 +31,9 @@ class ParsedQrCode {
     this.bundleNo,
     this.styleNo,
     this.processCode,
+    this.color,
+    this.size,
+    this.quantity,
     this.materialCode,
     this.extra,
   });
@@ -55,11 +61,10 @@ class ParsedQrCode {
 }
 
 class QRCodeParser {
-  static final RegExp _bundlePattern = RegExp(r'^[A-Za-z]*\d{4,}-\d{1,5}$');
-  static final RegExp _orderPattern = RegExp(r'^ORD[-_]?\d{4,}', caseSensitive: false);
-  static final RegExp _uCodePattern = RegExp(r'^U\d{6,}$');
+  static final RegExp _poOrderPattern = RegExp(r'^PO\d{6,}', caseSensitive: false);
   static final RegExp _materialRollPattern = RegExp(r'^MR[-_]?\d+', caseSensitive: false);
   static final RegExp _samplePattern = RegExp(r'^SAMPLE[-_]?\d+', caseSensitive: false);
+  static final RegExp _uCodePattern = RegExp(r'^U[-]?', caseSensitive: false);
 
   static ParsedQrCode parse(String raw) {
     final trimmed = raw.trim();
@@ -117,27 +122,68 @@ class QRCodeParser {
   }
 
   static bool _tryBundle(String code) {
-    return _bundlePattern.hasMatch(code) || code.contains('-') && _hasDigits(code);
+    if (!code.contains('-')) return false;
+    final parts = code.split('-');
+    if (parts.length < 3) return false;
+    final first = parts[0];
+    return _poOrderPattern.hasMatch(first);
   }
 
   static ParsedQrCode _parseBundle(String code) {
-    String? orderNo;
+    final parts = code.split('-');
+    final orderNo = parts.isNotEmpty ? parts[0] : null;
+    String? processCode;
+    String? color;
+    String? size;
+    int? quantity;
     String? bundleNo;
-    final dashIdx = code.lastIndexOf('-');
-    if (dashIdx > 0) {
-      orderNo = code.substring(0, dashIdx);
-      bundleNo = code.substring(dashIdx + 1);
+
+    if (parts.length >= 2) {
+      processCode = parts[1];
     }
+
+    if (parts.length >= 5) {
+      final tail = parts.sublist(2);
+      if (tail.length >= 3) {
+        final lastTwo = tail.sublist(tail.length - 2);
+        final maybeQty = int.tryParse(lastTwo[1]);
+        final maybeBundleNo = int.tryParse(lastTwo[0]);
+        if (maybeQty != null && maybeBundleNo != null) {
+          bundleNo = lastTwo[0];
+          quantity = maybeQty;
+          size = tail[tail.length - 3];
+          color = tail.sublist(0, tail.length - 3).join('-');
+        } else if (maybeBundleNo != null) {
+          bundleNo = lastTwo[0];
+          size = lastTwo[1];
+          color = tail.sublist(0, tail.length - 2).join('-');
+        } else {
+          size = tail.last;
+          color = tail.sublist(0, tail.length - 1).join('-');
+        }
+      } else if (tail.length == 2) {
+        size = tail[1];
+        color = tail[0];
+      } else if (tail.length == 1) {
+        color = tail[0];
+      }
+    }
+
     return ParsedQrCode(
       type: QrCodeType.bundle,
       raw: code,
       orderNo: orderNo,
-      bundleNo: bundleNo ?? code,
+      bundleNo: bundleNo,
+      styleNo: processCode,
+      processCode: processCode,
+      color: color,
+      size: size,
+      quantity: quantity,
     );
   }
 
   static bool _tryOrder(String code) {
-    return _orderPattern.hasMatch(code);
+    return _poOrderPattern.hasMatch(code);
   }
 
   static ParsedQrCode _parseOrder(String code) {
@@ -177,14 +223,12 @@ class QRCodeParser {
   }
 
   static ParsedQrCode _parseUCode(String code) {
+    final parts = code.split('-');
     return ParsedQrCode(
       type: QrCodeType.uCode,
       raw: code,
-      extra: {'uCode': code},
+      orderNo: parts.length > 1 ? parts[1] : null,
+      extra: {'uCode': code, 'parts': parts},
     );
-  }
-
-  static bool _hasDigits(String s) {
-    return s.codeUnits.any((c) => c >= 48 && c <= 57);
   }
 }

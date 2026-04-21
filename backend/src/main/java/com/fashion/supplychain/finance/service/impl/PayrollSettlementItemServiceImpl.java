@@ -18,4 +18,11 @@ public class PayrollSettlementItemServiceImpl extends ServiceImpl<PayrollSettlem
         remove(new LambdaQueryWrapper<PayrollSettlementItem>()
                 .eq(PayrollSettlementItem::getOrderId, orderId));
     }
+
+    @Override
+    public void deleteBySettlementId(String settlementId) {
+        if (!StringUtils.hasText(settlementId)) return;
+        remove(new LambdaQueryWrapper<PayrollSettlementItem>()
+                .eq(PayrollSettlementItem::getSettlementId, settlementId));
+    }
 }

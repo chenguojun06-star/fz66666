@@ -2,6 +2,7 @@ package com.fashion.supplychain.finance.orchestration;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fashion.supplychain.common.UserContext;
+import com.fashion.supplychain.common.tenant.TenantAssert;
 import com.fashion.supplychain.production.entity.ProductionOrder;
 import com.fashion.supplychain.production.entity.ScanRecord;
 import com.fashion.supplychain.production.service.ProductionOrderService;
@@ -56,10 +57,8 @@ public class PayrollAggregationOrchestrator {
         // 构建查询条件
         QueryWrapper<ScanRecord> qw = new QueryWrapper<>();
 
-        Long tenantId = UserContext.tenantId();
-        if (tenantId != null) {
-            qw.eq("tenant_id", tenantId);
-        }
+        Long tenantId = TenantAssert.requireTenantId();
+        qw.eq("tenant_id", tenantId);
 
         if (orderNo != null && !orderNo.trim().isEmpty()) {
             qw.eq("order_no", orderNo.trim());
@@ -143,9 +142,7 @@ public class PayrollAggregationOrchestrator {
         if (!orderNos.isEmpty()) {
             QueryWrapper<ProductionOrder> orderQw = new QueryWrapper<>();
             orderQw.in("order_no", orderNos);
-            if (tenantId != null) {
-                orderQw.eq("tenant_id", tenantId);
-            }
+            orderQw.eq("tenant_id", tenantId);
             orderQw.last("LIMIT 10000");
             Map<String, String> orderNoToStatus = productionOrderService.list(orderQw).stream()
                     .collect(Collectors.toMap(

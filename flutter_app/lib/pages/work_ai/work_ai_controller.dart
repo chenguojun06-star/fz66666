@@ -100,7 +100,7 @@ class WorkAiController extends GetxController {
     sending.value = true;
 
     try {
-      final res = await _api.aiAdvisorChat({'message': text});
+      final res = await _api.aiAdvisorChat({'question': text});
       final data = res.data;
       if (data is Map && data['code'] == 200 && data['data'] != null) {
         final rawReply = data['data']['reply']?.toString() ?? data['data']['content']?.toString() ?? '收到';

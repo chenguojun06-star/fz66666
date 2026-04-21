@@ -233,7 +233,7 @@ public class WagePaymentOrchestrator {
         if (payment == null) {
             throw new IllegalArgumentException("支付记录不存在");
         }
-        TenantAssert.assertBelongsToCurrentTenant(payment.getTenantId(), "支付记录");
+        com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(payment.getTenantId(), "支付记录");
 
         payment.setStatus("success");
         payment.setPaymentTime(LocalDateTime.now());

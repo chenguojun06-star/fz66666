@@ -68,6 +68,7 @@ public class FinanceTaxExportOrchestrator {
             qw.le("create_time", endDate + " 23:59:59");
         }
         qw.orderByDesc("create_time");
+        qw.last("LIMIT 5000");
         List<PayrollSettlement> list = payrollSettlementService.list(qw);
 
         return "KINGDEE".equalsIgnoreCase(format)
@@ -244,6 +245,7 @@ public class FinanceTaxExportOrchestrator {
             qw.le("create_time", endDate + " 23:59:59");
         }
         qw.orderByDesc("create_time");
+        qw.last("LIMIT 5000");
         List<MaterialReconciliation> list = materialReconciliationService.list(qw);
 
         try (Workbook wb = new XSSFWorkbook()) {
@@ -298,6 +300,7 @@ public class FinanceTaxExportOrchestrator {
             qw.le("create_time", endDate + " 23:59:59");
         }
         qw.orderByDesc("due_date");
+        qw.last("LIMIT 5000");
         List<Payable> list = payableService.list(qw);
 
         try (Workbook wb = new XSSFWorkbook()) {
@@ -373,6 +376,7 @@ public class FinanceTaxExportOrchestrator {
             qw.le("create_time", endDate + " 23:59:59");
         }
         qw.orderByDesc("issue_date");
+        qw.last("LIMIT 5000");
         List<Invoice> list = invoiceService.list(qw);
 
         try (Workbook wb = new XSSFWorkbook()) {

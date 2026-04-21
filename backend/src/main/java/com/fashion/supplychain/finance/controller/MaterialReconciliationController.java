@@ -23,27 +23,32 @@ public class MaterialReconciliationController {
     @Autowired
     private ReconciliationStatusOrchestrator reconciliationStatusOrchestrator;
 
+    @PreAuthorize("hasAuthority('MENU_FINANCE_MATERIAL_RECON_VIEW')")
     @GetMapping("/list")
     public Result<?> list(@RequestParam Map<String, Object> params) {
         IPage<MaterialReconciliation> page = materialReconciliationOrchestrator.list(params);
         return Result.success(page);
     }
 
+    @PreAuthorize("hasAuthority('MENU_FINANCE_MATERIAL_RECON_VIEW')")
     @GetMapping("/{id}")
     public Result<MaterialReconciliation> getById(@PathVariable String id) {
         return Result.success(materialReconciliationOrchestrator.getById(id));
     }
 
+    @PreAuthorize("hasAuthority('FINANCE_MATERIAL_RECON_MANAGE')")
     @PostMapping
     public Result<Boolean> save(@RequestBody MaterialReconciliation materialReconciliation) {
         return Result.success(materialReconciliationOrchestrator.save(materialReconciliation));
     }
 
+    @PreAuthorize("hasAuthority('FINANCE_MATERIAL_RECON_MANAGE')")
     @PutMapping
     public Result<Boolean> update(@RequestBody MaterialReconciliation materialReconciliation) {
         return Result.success(materialReconciliationOrchestrator.update(materialReconciliation));
     }
 
+    @PreAuthorize("hasAuthority('FINANCE_MATERIAL_RECON_MANAGE')")
     @DeleteMapping("/{id}")
     public Result<Boolean> delete(@PathVariable String id) {
         return Result.success(materialReconciliationOrchestrator.delete(id));
@@ -58,6 +63,7 @@ public class MaterialReconciliationController {
      * @param reason 退回原因（用于return操作）
      * @return 操作结果
      */
+    @PreAuthorize("hasAuthority('FINANCE_MATERIAL_RECON_MANAGE')")
     @PostMapping("/{id}/status-action")
     public Result<?> statusAction(
             @PathVariable String id,
@@ -83,6 +89,7 @@ public class MaterialReconciliationController {
         }
     }
 
+    @PreAuthorize("hasAuthority('FINANCE_MATERIAL_RECON_MANAGE')")
     @PostMapping("/backfill")
     public Result<?> backfill() {
         return Result.success(materialReconciliationOrchestrator.backfill());

@@ -116,7 +116,8 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
     public long countEnabledStyles() {
         Number cached = getFromCache("enabledStyles");
         if (cached != null) return cached.longValue();
-        long result = styleInfoService.lambdaQuery().eq(StyleInfo::getStatus, "ENABLED").count();
+        long result = styleInfoService.lambdaQuery()
+                .eq(StyleInfo::getStatus, "ENABLED").count();
         putToCache("enabledStyles", result);
         return result;
     }
@@ -148,7 +149,9 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
 
     @Override
     public long countPendingShipmentReconciliations() {
-        return shipmentReconciliationService.lambdaQuery().eq(ShipmentReconciliation::getStatus, "pending").count();
+        return shipmentReconciliationService.lambdaQuery()
+                .eq(ShipmentReconciliation::getStatus, "pending")
+                .count();
     }
 
     @Override
@@ -286,6 +289,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         return scanRecordService.lambdaQuery()
                 .select(ScanRecord::getId, ScanRecord::getOrderNo, ScanRecord::getScanTime)
                 .ne(ScanRecord::getOperatorName, "system")
+                .ne(ScanRecord::getScanType, "orchestration")
                 .isNotNull(ScanRecord::getOperatorId)
                 .and(w -> w
                         .isNull(ScanRecord::getRequestId)
@@ -598,6 +602,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
                 .le("scan_time", end)
                 .eq("scan_result", "success")
                 .ne("operator_name", "system")
+                .ne("scan_type", "orchestration")
                 .isNotNull("operator_id")
                 .isNotNull("scan_time")
                 .groupBy("DATE(scan_time)");
@@ -625,6 +630,7 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
                 .le("scan_time", end)
                 .eq("scan_result", "success")
                 .ne("operator_name", "system")
+                .ne("scan_type", "orchestration")
                 .isNotNull("operator_id")
                 .isNotNull("scan_time")
                 .groupBy("DATE(scan_time)");
@@ -671,14 +677,16 @@ public class DashboardQueryServiceImpl implements DashboardQueryService {
         QueryWrapper<ScanRecord> qw = new QueryWrapper<ScanRecord>()
                 .select("COALESCE(SUM(COALESCE(quantity, 0)), 0) as total")
                 .ge("scan_time", startOfDay)
-                .le("scan_time", endOfDay);
+                .le("scan_time", endOfDay)
+                .ne("scan_type", "orchestration");
         return extractLongScalar(scanRecordService.getBaseMapper().selectMaps(qw), "total");
     }
 
     @Override
     public long sumTotalScanQuantity() {
         QueryWrapper<ScanRecord> qw = new QueryWrapper<ScanRecord>()
-                .select("COALESCE(SUM(COALESCE(quantity, 0)), 0) as total");
+                .select("COALESCE(SUM(COALESCE(quantity, 0)), 0) as total")
+                .ne("scan_type", "orchestration");
         return extractLongScalar(scanRecordService.getBaseMapper().selectMaps(qw), "total");
     }
 }

@@ -1066,6 +1066,263 @@ public class DbColumnRepairRunner implements ApplicationRunner {
             repaired += ensureColumn(conn, schema, "t_receivable", "delete_flag",
                     "TINYINT(1) NOT NULL DEFAULT 0");
 
+            // ════════════════════════════════════════════════════════════════
+            // 以下为 2026-04-22 补齐：Entity 有声明但 RepairRunner 遗漏的列
+            // 这些遗漏导致线上 SELECT 时 Unknown column → HTTP 500
+            // ════════════════════════════════════════════════════════════════
+
+            // ── t_style_info 遗漏列（pushedToOrder/pushedToOrderTime/customer/orderNo/sampleStatus/sampleProgress/sampleCompletedTime/skc）──
+            repaired += ensureColumn(conn, schema, "t_style_info", "skc",
+                    "VARCHAR(100) DEFAULT NULL COMMENT 'SKC统编号'");
+            repaired += ensureColumn(conn, schema, "t_style_info", "pushed_to_order",
+                    "INT DEFAULT NULL COMMENT '是否已推送到下单管理：0-未推送 1-已推送'");
+            repaired += ensureColumn(conn, schema, "t_style_info", "pushed_to_order_time",
+                    "DATETIME DEFAULT NULL COMMENT '推送到下单管理时间'");
+            repaired += ensureColumn(conn, schema, "t_style_info", "customer",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '客户'");
+            repaired += ensureColumn(conn, schema, "t_style_info", "order_no",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '关联订单号'");
+            repaired += ensureColumn(conn, schema, "t_style_info", "sample_status",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '样衣状态'");
+            repaired += ensureColumn(conn, schema, "t_style_info", "sample_progress",
+                    "INT DEFAULT NULL COMMENT '样衣进度(%)'");
+            repaired += ensureColumn(conn, schema, "t_style_info", "sample_completed_time",
+                    "DATETIME DEFAULT NULL COMMENT '样衣完成时间'");
+            repaired += ensureColumn(conn, schema, "t_style_info", "sample_no",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '设计师'");
+            repaired += ensureColumn(conn, schema, "t_style_info", "vehicle_supplier",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '设计号'");
+            repaired += ensureColumn(conn, schema, "t_style_info", "sample_supplier",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '纸样师'");
+            repaired += ensureColumn(conn, schema, "t_style_info", "pattern_no",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '纸样号'");
+            repaired += ensureColumn(conn, schema, "t_style_info", "plate_worker",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '车板师'");
+            repaired += ensureColumn(conn, schema, "t_style_info", "plate_type",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '板类'");
+            repaired += ensureColumn(conn, schema, "t_style_info", "order_type",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '跟单员'");
+
+            // ── t_product_outstock 审批列（approvalStatus/approveBy/approveByName/approveTime）──
+            repaired += ensureColumn(conn, schema, "t_product_outstock", "approval_status",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '审批状态'");
+            repaired += ensureColumn(conn, schema, "t_product_outstock", "approve_by",
+                    "VARCHAR(64) DEFAULT NULL COMMENT '审批人ID'");
+            repaired += ensureColumn(conn, schema, "t_product_outstock", "approve_by_name",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '审批人姓名'");
+            repaired += ensureColumn(conn, schema, "t_product_outstock", "approve_time",
+                    "DATETIME DEFAULT NULL COMMENT '审批时间'");
+
+            // ── t_secondary_process 审批列（approvalStatus/approvedById/approvedByName/approvedTime）──
+            repaired += ensureColumn(conn, schema, "t_secondary_process", "approval_status",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '审批状态'");
+            repaired += ensureColumn(conn, schema, "t_secondary_process", "approved_by_id",
+                    "VARCHAR(64) DEFAULT NULL COMMENT '审批人ID'");
+            repaired += ensureColumn(conn, schema, "t_secondary_process", "approved_by_name",
+                    "VARCHAR(128) DEFAULT NULL COMMENT '审批人姓名'");
+            repaired += ensureColumn(conn, schema, "t_secondary_process", "approved_time",
+                    "DATETIME DEFAULT NULL COMMENT '审批时间'");
+            repaired += ensureColumn(conn, schema, "t_secondary_process", "assignee_id",
+                    "VARCHAR(64) DEFAULT NULL COMMENT '领取人ID'");
+            repaired += ensureColumn(conn, schema, "t_secondary_process", "operator_id",
+                    "VARCHAR(64) DEFAULT NULL COMMENT '操作人ID'");
+            repaired += ensureColumn(conn, schema, "t_secondary_process", "operator_name",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '操作人姓名'");
+            repaired += ensureColumn(conn, schema, "t_secondary_process", "factory_id",
+                    "VARCHAR(64) DEFAULT NULL COMMENT '工厂ID'");
+            repaired += ensureColumn(conn, schema, "t_secondary_process", "factory_contact_person",
+                    "VARCHAR(50) DEFAULT NULL COMMENT '工厂联系人'");
+            repaired += ensureColumn(conn, schema, "t_secondary_process", "factory_contact_phone",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '工厂联系电话'");
+            repaired += ensureColumn(conn, schema, "t_secondary_process", "tenant_id",
+                    "BIGINT DEFAULT NULL COMMENT '租户ID'");
+
+            // ── t_pattern_production 审核列（reviewStatus/reviewResult/reviewRemark/reviewBy/reviewById/reviewTime + receiverId/patternMakerId/hasSecondaryProcess）──
+            repaired += ensureColumn(conn, schema, "t_pattern_production", "review_status",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '样衣审核状态: PENDING/APPROVED/REJECTED'");
+            repaired += ensureColumn(conn, schema, "t_pattern_production", "review_result",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '审核结论'");
+            repaired += ensureColumn(conn, schema, "t_pattern_production", "review_remark",
+                    "VARCHAR(500) DEFAULT NULL COMMENT '审核备注'");
+            repaired += ensureColumn(conn, schema, "t_pattern_production", "review_by",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '审核人姓名'");
+            repaired += ensureColumn(conn, schema, "t_pattern_production", "review_by_id",
+                    "VARCHAR(64) DEFAULT NULL COMMENT '审核人ID'");
+            repaired += ensureColumn(conn, schema, "t_pattern_production", "review_time",
+                    "DATETIME DEFAULT NULL COMMENT '审核时间'");
+            repaired += ensureColumn(conn, schema, "t_pattern_production", "receiver_id",
+                    "VARCHAR(64) DEFAULT NULL COMMENT '领取人ID'");
+            repaired += ensureColumn(conn, schema, "t_pattern_production", "pattern_maker_id",
+                    "VARCHAR(64) DEFAULT NULL COMMENT '纸样师ID'");
+            repaired += ensureColumn(conn, schema, "t_pattern_production", "has_secondary_process",
+                    "TINYINT(1) NOT NULL DEFAULT 1 COMMENT '是否有二次工艺: 1=是 0=否'");
+            repaired += ensureColumn(conn, schema, "t_pattern_production", "maintainer",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '维护人'");
+            repaired += ensureColumn(conn, schema, "t_pattern_production", "maintain_time",
+                    "DATETIME DEFAULT NULL COMMENT '维护时间'");
+            repaired += ensureColumn(conn, schema, "t_pattern_production", "tenant_id",
+                    "BIGINT DEFAULT NULL COMMENT '租户ID'");
+
+            // ── t_user 审批/注册列（approvalStatus/approvalTime/approvalRemark/registrationStatus/registrationTenantCode/rejectReason/phone/email/lastLoginTime/lastLoginIp/openid）──
+            repaired += ensureColumn(conn, schema, "t_user", "approval_status",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '审批状态: pending/approved/rejected'");
+            repaired += ensureColumn(conn, schema, "t_user", "approval_time",
+                    "DATETIME DEFAULT NULL COMMENT '审批时间'");
+            repaired += ensureColumn(conn, schema, "t_user", "approval_remark",
+                    "VARCHAR(500) DEFAULT NULL COMMENT '审批备注'");
+            repaired += ensureColumn(conn, schema, "t_user", "registration_status",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '注册状态: PENDING/ACTIVE/REJECTED'");
+            repaired += ensureColumn(conn, schema, "t_user", "registration_tenant_code",
+                    "VARCHAR(50) DEFAULT NULL COMMENT '注册时填写的租户码'");
+            repaired += ensureColumn(conn, schema, "t_user", "reject_reason",
+                    "VARCHAR(500) DEFAULT NULL COMMENT '拒绝原因'");
+            repaired += ensureColumn(conn, schema, "t_user", "phone",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '手机号'");
+            repaired += ensureColumn(conn, schema, "t_user", "email",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '邮箱'");
+            repaired += ensureColumn(conn, schema, "t_user", "last_login_time",
+                    "DATETIME DEFAULT NULL COMMENT '最后登录时间'");
+            repaired += ensureColumn(conn, schema, "t_user", "last_login_ip",
+                    "VARCHAR(50) DEFAULT NULL COMMENT '最后登录IP'");
+            repaired += ensureColumn(conn, schema, "t_user", "openid",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '微信小程序openid'");
+
+            // ── t_material_pickup_record 遗漏列（tenant_id类型可能为VARCHAR需兼容、amount/unitPrice等）──
+            repaired += ensureColumn(conn, schema, "t_material_pickup_record", "amount",
+                    "DECIMAL(14,2) DEFAULT NULL COMMENT '金额小计'");
+            repaired += ensureColumn(conn, schema, "t_material_pickup_record", "unit_price",
+                    "DECIMAL(14,4) DEFAULT NULL COMMENT '单价'");
+
+            // ── t_material_picking 遗漏列（pickupType/usageType/pickTime 等）──
+            repaired += ensureColumn(conn, schema, "t_material_picking", "pickup_type",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '领取类型: INTERNAL/EXTERNAL'");
+            repaired += ensureColumn(conn, schema, "t_material_picking", "usage_type",
+                    "VARCHAR(30) DEFAULT NULL COMMENT '用途类型'");
+            repaired += ensureColumn(conn, schema, "t_material_picking", "pick_time",
+                    "DATETIME DEFAULT NULL COMMENT '领取时间'");
+            repaired += ensureColumn(conn, schema, "t_material_picking", "delete_flag",
+                    "INT NOT NULL DEFAULT 0 COMMENT '删除标记'");
+
+            // ── t_production_order 遗漏列（deleteFlag/completedQuantity 可能缺失）──
+            repaired += ensureColumn(conn, schema, "t_production_order", "delete_flag",
+                    "INT NOT NULL DEFAULT 0 COMMENT '删除标志: 0正常 1删除'");
+            repaired += ensureColumn(conn, schema, "t_production_order", "completed_quantity",
+                    "INT DEFAULT NULL COMMENT '完成数量'");
+            repaired += ensureColumn(conn, schema, "t_production_order", "order_details",
+                    "LONGTEXT DEFAULT NULL COMMENT '订单明细JSON'");
+            repaired += ensureColumn(conn, schema, "t_production_order", "qr_code",
+                    "VARCHAR(200) DEFAULT NULL COMMENT '二维码'");
+            repaired += ensureColumn(conn, schema, "t_production_order", "color",
+                    "VARCHAR(50) DEFAULT NULL COMMENT '颜色'");
+            repaired += ensureColumn(conn, schema, "t_production_order", "size",
+                    "VARCHAR(50) DEFAULT NULL COMMENT '尺码'");
+            repaired += ensureColumn(conn, schema, "t_production_order", "tenant_id",
+                    "BIGINT DEFAULT NULL COMMENT '租户ID'");
+
+            // ── t_material_purchase 遗漏列（deleteFlag 可能缺失）──
+            repaired += ensureColumn(conn, schema, "t_material_purchase", "delete_flag",
+                    "INT NOT NULL DEFAULT 0 COMMENT '删除标志'");
+            repaired += ensureColumn(conn, schema, "t_material_purchase", "tenant_id",
+                    "BIGINT DEFAULT NULL COMMENT '租户ID'");
+
+            // ── t_product_warehousing 遗漏列（qualityStatus/inspectionStatus/scanMode/qualityOperatorId/qualityOperatorName）──
+            repaired += ensureColumn(conn, schema, "t_product_warehousing", "quality_status",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '质检状态'");
+            repaired += ensureColumn(conn, schema, "t_product_warehousing", "inspection_status",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '检验状态'");
+            repaired += ensureColumn(conn, schema, "t_product_warehousing", "scan_mode",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '扫码模式'");
+            repaired += ensureColumn(conn, schema, "t_product_warehousing", "quality_operator_id",
+                    "VARCHAR(64) DEFAULT NULL COMMENT '质检操作员ID'");
+            repaired += ensureColumn(conn, schema, "t_product_warehousing", "quality_operator_name",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '质检操作员姓名'");
+            repaired += ensureColumn(conn, schema, "t_product_warehousing", "defect_category",
+                    "VARCHAR(50) DEFAULT NULL COMMENT '缺陷类别'");
+            repaired += ensureColumn(conn, schema, "t_product_warehousing", "defect_remark",
+                    "VARCHAR(500) DEFAULT NULL COMMENT '缺陷备注'");
+            repaired += ensureColumn(conn, schema, "t_product_warehousing", "unqualified_image_urls",
+                    "TEXT DEFAULT NULL COMMENT '不合格图片URL列表(JSON)'");
+            repaired += ensureColumn(conn, schema, "t_product_warehousing", "receiver_id",
+                    "VARCHAR(64) DEFAULT NULL COMMENT '收货人ID'");
+            repaired += ensureColumn(conn, schema, "t_product_warehousing", "receiver_name",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '收货人姓名'");
+            repaired += ensureColumn(conn, schema, "t_product_warehousing", "received_time",
+                    "DATETIME DEFAULT NULL COMMENT '收货时间'");
+            repaired += ensureColumn(conn, schema, "t_product_warehousing", "tenant_id",
+                    "BIGINT DEFAULT NULL COMMENT '租户ID'");
+
+            // ── t_cutting_task 遗漏列（creatorId/creatorName/updaterId/updaterName/tenantId/receiverId/receiverName/receivedTime/bundledTime/remarks）──
+            repaired += ensureColumn(conn, schema, "t_cutting_task", "receiver_id",
+                    "VARCHAR(64) DEFAULT NULL COMMENT '领取人ID'");
+            repaired += ensureColumn(conn, schema, "t_cutting_task", "receiver_name",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '领取人姓名'");
+            repaired += ensureColumn(conn, schema, "t_cutting_task", "received_time",
+                    "DATETIME DEFAULT NULL COMMENT '领取时间'");
+            repaired += ensureColumn(conn, schema, "t_cutting_task", "bundled_time",
+                    "DATETIME DEFAULT NULL COMMENT '扎单时间'");
+            repaired += ensureColumn(conn, schema, "t_cutting_task", "remarks",
+                    "VARCHAR(500) DEFAULT NULL COMMENT '备注'");
+            repaired += ensureColumn(conn, schema, "t_cutting_task", "expected_ship_date",
+                    "DATE DEFAULT NULL COMMENT '预计出货日期'");
+            repaired += ensureColumn(conn, schema, "t_cutting_task", "creator_id",
+                    "VARCHAR(64) DEFAULT NULL COMMENT '创建人ID'");
+            repaired += ensureColumn(conn, schema, "t_cutting_task", "creator_name",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '创建人姓名'");
+            repaired += ensureColumn(conn, schema, "t_cutting_task", "updater_id",
+                    "VARCHAR(64) DEFAULT NULL COMMENT '更新人ID'");
+            repaired += ensureColumn(conn, schema, "t_cutting_task", "updater_name",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '更新人姓名'");
+            repaired += ensureColumn(conn, schema, "t_cutting_task", "tenant_id",
+                    "BIGINT DEFAULT NULL COMMENT '租户ID'");
+
+            // ── t_material_stock 遗漏列（safetyStock/lastInboundDate/lastOutboundDate/version/tenantId）──
+            repaired += ensureColumn(conn, schema, "t_material_stock", "safety_stock",
+                    "DECIMAL(14,3) DEFAULT NULL COMMENT '安全库存'");
+            repaired += ensureColumn(conn, schema, "t_material_stock", "last_inbound_date",
+                    "DATETIME DEFAULT NULL COMMENT '最后入库日期'");
+            repaired += ensureColumn(conn, schema, "t_material_stock", "last_outbound_date",
+                    "DATETIME DEFAULT NULL COMMENT '最后出库日期'");
+            repaired += ensureColumn(conn, schema, "t_material_stock", "version",
+                    "INT NOT NULL DEFAULT 0 COMMENT '乐观锁版本号'");
+            repaired += ensureColumn(conn, schema, "t_material_stock", "total_value",
+                    "DECIMAL(14,2) DEFAULT NULL COMMENT '库存总值'");
+            repaired += ensureColumn(conn, schema, "t_material_stock", "location",
+                    "VARCHAR(200) DEFAULT NULL COMMENT '仓库位置'");
+            repaired += ensureColumn(conn, schema, "t_material_stock", "locked_quantity",
+                    "DECIMAL(14,3) DEFAULT NULL COMMENT '锁定数量'");
+
+            // ── t_material_database 遗漏列（disabled/image/description）──
+            repaired += ensureColumn(conn, schema, "t_material_database", "disabled",
+                    "TINYINT(1) NOT NULL DEFAULT 0 COMMENT '是否禁用: 0正常 1禁用'");
+            repaired += ensureColumn(conn, schema, "t_material_database", "image",
+                    "VARCHAR(500) DEFAULT NULL COMMENT '物料图片URL'");
+            repaired += ensureColumn(conn, schema, "t_material_database", "description",
+                    "VARCHAR(255) DEFAULT NULL COMMENT '描述'");
+            repaired += ensureColumn(conn, schema, "t_material_database", "unit_price",
+                    "DECIMAL(10,2) DEFAULT 0.00 COMMENT '单价'");
+            repaired += ensureColumn(conn, schema, "t_material_database", "status",
+                    "VARCHAR(20) DEFAULT 'pending' COMMENT '状态'");
+            repaired += ensureColumn(conn, schema, "t_material_database", "completed_time",
+                    "DATETIME DEFAULT NULL COMMENT '完成时间'");
+            repaired += ensureColumn(conn, schema, "t_material_database", "return_reason",
+                    "VARCHAR(255) DEFAULT NULL COMMENT '退回原因'");
+            repaired += ensureColumn(conn, schema, "t_material_database", "delete_flag",
+                    "INT NOT NULL DEFAULT 0 COMMENT '删除标记'");
+
+            // ── t_scan_record 遗漏列（processCode/processName/processUnitPrice/settlementStatus）──
+            repaired += ensureColumn(conn, schema, "t_scan_record", "process_code",
+                    "VARCHAR(50) DEFAULT NULL COMMENT '工序代码'");
+            repaired += ensureColumn(conn, schema, "t_scan_record", "process_name",
+                    "VARCHAR(100) DEFAULT NULL COMMENT '工序名称'");
+            repaired += ensureColumn(conn, schema, "t_scan_record", "settlement_status",
+                    "VARCHAR(20) DEFAULT NULL COMMENT '结算状态'");
+            repaired += ensureColumn(conn, schema, "t_scan_record", "tenant_id",
+                    "BIGINT DEFAULT NULL COMMENT '租户ID'");
+
+            // ── t_factory_shipment 遗漏列（deleteFlag）──
+            repaired += ensureColumn(conn, schema, "t_factory_shipment", "delete_flag",
+                    "INT NOT NULL DEFAULT 0 COMMENT '删除标记'");
+
             // ── t_sys_notice（V20260322b 可能因 Flyway 链断裂未创建，content 原 VARCHAR(512) 需扩容）──
             repairedTables += ensureTable(conn, schema,
                     "t_sys_notice",

@@ -98,6 +98,7 @@ public class ExpenseReimbursementOrchestrator {
         if (entity == null) {
             throw new RuntimeException("报销单不存在");
         }
+        com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(entity.getTenantId(), "报销单");
         if (!"pending".equals(entity.getStatus())) {
             throw new RuntimeException("只有待审批的报销单可以审批，当前状态: " + entity.getStatus());
         }
@@ -172,6 +173,7 @@ public class ExpenseReimbursementOrchestrator {
         if (entity == null) {
             throw new RuntimeException("报销单不存在");
         }
+        com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(entity.getTenantId(), "报销单");
         if (!"approved".equals(entity.getStatus())) {
             throw new RuntimeException("只有已批准的报销单可以付款，当前状态: " + entity.getStatus());
         }
@@ -200,6 +202,7 @@ public class ExpenseReimbursementOrchestrator {
         if (entity == null) {
             throw new RuntimeException("报销单不存在");
         }
+        com.fashion.supplychain.common.tenant.TenantAssert.assertBelongsToCurrentTenant(entity.getTenantId(), "报销单");
         if (!"pending".equals(entity.getStatus()) && !"rejected".equals(entity.getStatus())) {
             throw new RuntimeException("只有待审批或被驳回的报销单可以删除");
         }

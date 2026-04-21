@@ -783,6 +783,7 @@ public class UserOrchestrator {
             String operator = (ctx != null ? ctx.getUsername() : null);
             loginLogService.recordOperation(bizType, bizId, targetName, action, operator, remark);
         } catch (Exception e) {
+            log.warn("[UserOrch] 记录操作日志失败: {}", e.getMessage());
         }
     }
 

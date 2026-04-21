@@ -9,11 +9,17 @@ class ScanRescanController extends GetxController {
   final qrCode = ''.obs;
   final loading = false.obs;
 
+  String? _recordId;
+
+  void setRecordId(String id) {
+    _recordId = id;
+  }
+
   Future<void> doRescan(String code) async {
     qrCode.value = code;
     loading.value = true;
     try {
-      final res = await _api.rescanApi({'qrCode': code});
+      final res = await _api.rescanApi({'recordId': _recordId ?? code});
       final data = res.data;
       if (data is Map && data['code'] == 200) {
         Get.snackbar('成功', '重扫已提交', snackPosition: SnackPosition.TOP, backgroundColor: AppColors.success, colorText: Colors.white);

@@ -329,11 +329,11 @@ public class ReconciliationStatusOrchestrator {
             return;
         }
         try {
-            Long tenantId = UserContext.tenantId();
+            Long tenantId = TenantAssert.requireTenantId();
             BillAggregation bill = billAggregationService.lambdaQuery()
                     .eq(BillAggregation::getSourceType, sourceType)
                     .eq(BillAggregation::getSourceId, sourceId)
-                    .eq(tenantId != null, BillAggregation::getTenantId, tenantId)
+                    .eq(BillAggregation::getTenantId, tenantId)
                     .eq(BillAggregation::getDeleteFlag, 0)
                     .last("LIMIT 1")
                     .one();

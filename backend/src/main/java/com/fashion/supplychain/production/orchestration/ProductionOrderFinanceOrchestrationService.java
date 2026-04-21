@@ -722,7 +722,9 @@ public class ProductionOrderFinanceOrchestrationService {
             try {
                 java.lang.reflect.Method setOwn = sr.getClass().getMethod("setIsOwnFactory", Integer.class);
                 setOwn.invoke(sr, isOwnFactory ? 1 : 0);
-            } catch (Exception ignore) {}
+            } catch (Exception e) {
+                log.warn("[FinanceOrch] 设置isOwnFactory失败: orderId={}, error={}", sr.getId(), e.getMessage());
+            }
         }
 
         sr.setReconciliationDate(now);

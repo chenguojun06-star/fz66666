@@ -49,11 +49,12 @@ public class PayableOrchestrator {
         String status     = (String) params.get("status");
         String keyword    = (String) params.get("keyword");
 
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
 
         LambdaQueryWrapper<Payable> qw = new LambdaQueryWrapper<Payable>()
                 .eq(Payable::getDeleteFlag, 0)
-                .eq(tenantId != null, Payable::getTenantId, tenantId)
+                .eq(Payable::getTenantId, tenantId)
                 .eq(StringUtils.hasText(supplierId), Payable::getSupplierId, supplierId)
                 .eq(StringUtils.hasText(status), Payable::getStatus, status)
                 .and(StringUtils.hasText(keyword), w -> w
@@ -66,28 +67,35 @@ public class PayableOrchestrator {
     }
 
     public Payable getById(String id) {
-        return payableService.getById(id);
+        TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
+        return payableService.lambdaQuery()
+                .eq(Payable::getId, id)
+                .eq(Payable::getTenantId, tenantId)
+                .one();
     }
 
     public Payable findByBillAggregationId(String billAggregationId) {
         if (!StringUtils.hasText(billAggregationId)) {
             return null;
         }
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         return payableService.lambdaQuery()
                 .eq(Payable::getBillAggregationId, billAggregationId)
                 .eq(Payable::getDeleteFlag, 0)
-                .eq(tenantId != null, Payable::getTenantId, tenantId)
+                .eq(Payable::getTenantId, tenantId)
                 .last("LIMIT 1")
                 .one();
     }
 
     public Map<String, Object> getStats() {
+        TenantAssert.assertTenantContext();
         Long tenantId = UserContext.tenantId();
         List<Payable> all = payableService.list(
                 new LambdaQueryWrapper<Payable>()
                         .eq(Payable::getDeleteFlag, 0)
-                        .eq(tenantId != null, Payable::getTenantId, tenantId));
+                        .eq(Payable::getTenantId, tenantId));
 
         BigDecimal pendingAmount = BigDecimal.ZERO;
         BigDecimal overdueAmount = BigDecimal.ZERO;
@@ -254,9 +262,11 @@ public class PayableOrchestrator {
     @Transactional(rollbackFor = Exception.class)
     public int markOverdue() {
         TenantAssert.assertTenantContext();
+        Long tenantId = UserContext.tenantId();
         List<Payable> list = payableService.list(
                 new LambdaQueryWrapper<Payable>()
                         .eq(Payable::getDeleteFlag, 0)
+                        .eq(Payable::getTenantId, tenantId)
                         .in(Payable::getStatus, "PENDING", "PARTIAL")
                         .lt(Payable::getDueDate, LocalDate.now()));
         int count = 0;

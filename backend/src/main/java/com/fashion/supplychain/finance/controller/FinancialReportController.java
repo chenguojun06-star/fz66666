@@ -18,6 +18,7 @@ public class FinancialReportController {
     @Autowired
     private FinancialReportOrchestrator financialReportOrchestrator;
 
+    @PreAuthorize("hasAuthority('MENU_FINANCE_REPORT_VIEW')")
     @GetMapping("/profit-loss")
     public Result<Map<String, Object>> profitLoss(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
@@ -25,12 +26,14 @@ public class FinancialReportController {
         return Result.success(financialReportOrchestrator.generateProfitLoss(startDate, endDate));
     }
 
+    @PreAuthorize("hasAuthority('MENU_FINANCE_REPORT_VIEW')")
     @GetMapping("/balance-sheet")
     public Result<Map<String, Object>> balanceSheet(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate asOfDate) {
         return Result.success(financialReportOrchestrator.generateBalanceSheet(asOfDate));
     }
 
+    @PreAuthorize("hasAuthority('MENU_FINANCE_REPORT_VIEW')")
     @GetMapping("/cash-flow")
     public Result<Map<String, Object>> cashFlow(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
