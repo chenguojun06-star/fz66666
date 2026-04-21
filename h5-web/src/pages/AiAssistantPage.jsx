@@ -268,7 +268,7 @@ export default function AiAssistantPage() {
                       </div>
                     )}
                     {parsed.stepWizardCards.length > 0 && parsed.stepWizardCards.map((wiz, wi) => (
-                      <StepWizardCard key={wi} data={wiz} onSubmit={(cmd, params) => { if (!sending) { let p = cmd; Object.entries(params).forEach(([k,v]) => { if (Array.isArray(v)) p += ' ' + v.join(','); else if (v) p += ' ' + v; }); _send(p); } }} />
+                      <StepWizardCard key={wi} data={wiz} onSubmit={(cmd, params) => { if (!sending) { let p = cmd; Object.entries(params).forEach(([k,v]) => { if (Array.isArray(v)) p += ' ' + v.join(','); else if (v !== undefined && v !== null && v !== '') p += ' ' + v; }); _send(p); } }} />
                     ))}
                   </>
                 ) : m.text}

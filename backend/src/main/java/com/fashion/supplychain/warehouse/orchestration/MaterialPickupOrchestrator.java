@@ -181,8 +181,15 @@ public class MaterialPickupOrchestrator {
         record.setUpdateTime(LocalDateTime.now());
 
         if ("APPROVED".equals(newStatus)) {
-            materialPickupReceivableOrchestrator.syncAfterApproval(record, strOf(body.get("remark")));
-            pushPickupBill(record);
+            if ("EXTERNAL".equalsIgnoreCase(record.getFactoryType())) {
+                materialPickupReceivableOrchestrator.syncAfterApproval(record, strOf(body.get("remark")));
+                pushPickupBill(record);
+            } else {
+                record.setFinanceRemark(StringUtils.hasText(strOf(body.get("remark")))
+                        ? "内部领料审核通过（内部平账）：" + strOf(body.get("remark")).trim()
+                        : "内部领料审核通过，已做内部平账处理");
+                record.setFinanceStatus("SETTLED");
+            }
         }
 
         if ("REJECTED".equals(newStatus)) {

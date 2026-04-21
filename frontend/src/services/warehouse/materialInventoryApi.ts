@@ -66,6 +66,18 @@ export const materialInventoryApi = {
     return await api.post(`/production/picking/${pickingId}/cancel-pending`);
   },
 
+  auditPickupRecord: async (recordId: string, data: { action: string; remark?: string }): Promise<ApiResponse<null>> => {
+    return await api.post(`/warehouse/material-pickup/${recordId}/audit`, data);
+  },
+
+  financeSettlePickupRecord: async (recordId: string, data: { unitPrice?: number; remark?: string }): Promise<ApiResponse<null>> => {
+    return await api.post(`/warehouse/material-pickup/${recordId}/finance-settle`, data);
+  },
+
+  listPickupRecordsBySource: async (sourceRecordId: string): Promise<ApiResponse<any[]>> => {
+    return await api.get('/warehouse/material-pickup/list', { params: { sourceRecordId, pageSize: 50 } });
+  },
+
   searchMaterialList: async (params: {
     page?: number;
     pageSize?: number;

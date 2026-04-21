@@ -377,7 +377,7 @@ export default function AiAssistantFloat() {
                       </div>
                     )}
                     {parsed.stepWizardCards.length > 0 && parsed.stepWizardCards.map((wiz, wi) => (
-                      <StepWizardCard key={wi} data={wiz} onSubmit={(cmd, params) => { if (!sendingRef.current) { let p = cmd; Object.entries(params).forEach(([k,v]) => { if (Array.isArray(v)) p += ' ' + v.join(','); else if (v) p += ' ' + v; }); handleSend(p); } }} />
+                      <StepWizardCard key={wi} data={wiz} onSubmit={(cmd, params) => { if (!sendingRef.current) { let p = cmd; Object.entries(params).forEach(([k,v]) => { if (Array.isArray(v)) p += ' ' + v.join(','); else if (v !== undefined && v !== null && v !== '') p += ' ' + v; }); handleSend(p); } }} />
                     ))}
                   </>
                 ) : msg.text}

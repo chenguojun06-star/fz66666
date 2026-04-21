@@ -73,7 +73,7 @@ export function parseAiResponse(rawText: string): {
     quickActions: parsed.quickActions as QuickAction[],
     teamStatusCards: parsed.teamStatusCards as TeamStatusCardData[],
     bundleSplitCards: parsed.bundleSplitCards as BundleSplitCardData[],
-    stepWizardCards: (parsed as unknown as Record<string, unknown>).stepWizardCards as StepWizardCardData[] || [],
+    stepWizardCards: parsed.stepWizardCards as StepWizardCardData[],
   };
 }
 

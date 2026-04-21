@@ -28,8 +28,26 @@ export interface PickingItem {
 
 export type PickingStatus = 'pending' | 'completed' | 'cancelled';
 
+export interface PickupRecordBrief {
+  id: string;
+  pickupNo: string;
+  auditStatus: string;
+  financeStatus: string;
+  financeRemark: string;
+  factoryType: string;
+  receivableNo: string;
+  receivableStatus: string;
+  receivedAmount: number;
+  amount: number;
+  unitPrice: number;
+  quantity: number;
+  materialCode: string;
+  materialName: string;
+}
+
 export interface PickingRow extends PickingRecord {
   items?: PickingItem[];
+  pickupRecords?: PickupRecordBrief[];
 }
 
 export function useMaterialPickupData() {
@@ -49,6 +67,7 @@ export function useMaterialPickupData() {
 
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [auditingId, setAuditingId] = useState<string | null>(null);
 
   const [printPayload, setPrintPayload] = useState<MaterialOutboundPrintPayload | null>(null);
   const [printVisible, setPrintVisible] = useState(false);
@@ -73,6 +92,32 @@ export function useMaterialPickupData() {
         const items: PickingItem[] = Array.isArray((p as any).items) ? (p as any).items : [];
         return { ...p, items };
       });
+
+      const completedPickings = withItems.filter((p) => p.status === 'completed');
+      if (completedPickings.length > 0) {
+        try {
+          const pickupRecordResults = await Promise.all(
+            completedPickings.map(async (p) => {
+              try {
+                const prRes: any = await materialInventoryApi.listPickupRecordsBySource(p.id);
+                const prRecords = Array.isArray(prRes?.data) ? prRes.data : (prRes?.data?.records || []);
+                return { pickingId: p.id, records: prRecords as PickupRecordBrief[] };
+              } catch {
+                return { pickingId: p.id, records: [] as PickupRecordBrief[] };
+              }
+            })
+          );
+          const prMap = new Map(pickupRecordResults.map((r) => [r.pickingId, r.records]));
+          for (const p of withItems) {
+            if (p.status === 'completed') {
+              p.pickupRecords = prMap.get(p.id) || [];
+            }
+          }
+        } catch {
+          // silent
+        }
+      }
+
       setDataSource(withItems);
       setTotal(Number(res?.data?.total ?? 0));
     } catch {
@@ -158,6 +203,41 @@ export function useMaterialPickupData() {
     }
   };
 
+  const handleAudit = async (pickupRecordId: string, action: 'approve' | 'reject', remark?: string) => {
+    if (auditingId) return;
+    setAuditingId(pickupRecordId);
+    try {
+      await materialInventoryApi.auditPickupRecord(pickupRecordId, { action, remark });
+      message.success(action === 'approve' ? '审核通过' : '已拒绝');
+      void fetchData();
+    } catch (e: unknown) {
+      const respMsg = typeof e === 'object' && e !== null && 'response' in e
+        ? String((e as Record<string, any>).response?.data?.message || '') : '';
+      message.error(respMsg || '审核失败');
+    } finally {
+      setAuditingId(null);
+    }
+  };
+
+  const handleBatchAudit = async (pickupRecordIds: string[], action: 'approve' | 'reject', remark?: string) => {
+    let successCount = 0;
+    let failCount = 0;
+    for (const id of pickupRecordIds) {
+      try {
+        await materialInventoryApi.auditPickupRecord(id, { action, remark });
+        successCount++;
+      } catch {
+        failCount++;
+      }
+    }
+    if (failCount > 0) {
+      message.warning(`审核完成：${successCount}条成功，${failCount}条失败`);
+    } else {
+      message.success(`审核成功（${successCount}条）`);
+    }
+    void fetchData();
+  };
+
   const handlePrint = (record: PickingRow) => {
     setPrintPayload(buildPrintPayload(record));
     setPrintVisible(true);
@@ -184,11 +264,14 @@ export function useMaterialPickupData() {
     pagination,
     confirmingId,
     cancellingId,
+    auditingId,
     printPayload,
     printVisible,
     fetchData,
     handleConfirmOutbound,
     handleCancelPending,
+    handleAudit,
+    handleBatchAudit,
     handlePrint,
     closePrint,
   };

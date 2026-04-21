@@ -422,17 +422,17 @@ Page({
         _submitted: false,
       });
     });
-    if (stepWizardCards.length > 0) {
-      var firstStep = stepWizardCards[0].steps && stepWizardCards[0].steps[0];
+    stepWizardCards.forEach(function (wiz) {
+      var firstStep = wiz.steps && wiz.steps[0];
       if (firstStep) {
-        stepWizardCards[0]._canNext = firstStep.fields.every(function (f) {
+        wiz._canNext = firstStep.fields.every(function (f) {
           if (!f.required) return true;
-          var val = stepWizardCards[0]._formData[f.key];
+          var val = wiz._formData[f.key];
           if (f.inputType === 'multi_select') return Array.isArray(val) && val.length > 0;
           return val !== undefined && val !== null && val !== '';
         });
       }
-    }
+    });
     const messages = this.data.messages.map(m =>
       m.id === id ? {
         ...m,

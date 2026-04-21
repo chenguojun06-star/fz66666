@@ -141,10 +141,10 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
           } else if (event.type === 'answer') {
             const rawContent = String(event.data.content || '');
             const commandId = event.data.commandId ? String(event.data.commandId) : undefined;
-            const { displayText, charts, cards, actionCards, quickActions, teamStatusCards, bundleSplitCards } = parseAiResponse(rawContent);
+            const { displayText, charts, cards, actionCards, quickActions, teamStatusCards, bundleSplitCards, stepWizardCards } = parseAiResponse(rawContent);
             accumulatedText = displayText;
             setMessages(prev => prev.map(m => m.id === aiMsgId
-              ? { ...m, text: accumulatedText, reportType: reportTypeToDownload, charts, cards, actionCards, quickActions, teamStatusCards, bundleSplitCards, agentCommandId: commandId }
+              ? { ...m, text: accumulatedText, reportType: reportTypeToDownload, charts, cards, actionCards, quickActions, teamStatusCards, bundleSplitCards, stepWizardCards, agentCommandId: commandId }
               : m));
           } else if (event.type === 'follow_up_actions') {
             const actions = ((event.data as Record<string, unknown>)?.actions as FollowUpAction[] | undefined) ?? [];
@@ -187,7 +187,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
             const rawAnswer = payload?.answer || '当前还没拿到有效分析结果，请换个问法或稍后重试。';
             const displayAnswer = payload?.displayAnswer || rawAnswer;
             const commandId = payload?.commandId;
-            const { displayText, charts, cards: parsedCards, actionCards, quickActions, teamStatusCards, bundleSplitCards } = parseAiResponse(rawAnswer);
+            const { displayText, charts, cards: parsedCards, actionCards, quickActions, teamStatusCards, bundleSplitCards, stepWizardCards: parsedStepWizardCards } = parseAiResponse(rawAnswer);
             const cards = payload?.cards || [];
             const followUpActions = (payload as Record<string, unknown>)?.followUpActions as FollowUpAction[] | undefined;
             setMessages(prev => {
@@ -197,6 +197,7 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
                 reportType: reportTypeToDownload, charts,
                 cards: cards.length ? cards : parsedCards,
                 actionCards, quickActions, teamStatusCards, bundleSplitCards,
+                stepWizardCards: parsedStepWizardCards,
                 agentCommandId: commandId, followUpActions,
               };
               if (existing) return prev.map(m => m.id === aiMsgId ? { ...m, ...msgData } : m);
@@ -217,13 +218,14 @@ export function useAiChat(antdMessage: ReturnType<typeof import('antd').App.useA
                   const retryAnswer = retryPayload?.answer || '';
                   if (retryAnswer) {
                     const retryDisplay = retryPayload?.displayAnswer || retryAnswer;
-                    const { displayText: dt, charts: ch, cards: pc, actionCards: ac, quickActions: qa, teamStatusCards: tsc, bundleSplitCards: bsc } = parseAiResponse(retryAnswer);
+                    const { displayText: dt, charts: ch, cards: pc, actionCards: ac, quickActions: qa, teamStatusCards: tsc, bundleSplitCards: bsc, stepWizardCards: swc } = parseAiResponse(retryAnswer);
                     const retryCards = retryPayload?.cards || [];
                     const retryFollowUp = (retryPayload as Record<string, unknown>)?.followUpActions as FollowUpAction[] | undefined;
                     setMessages(prev => prev.map(m => m.id === aiMsgId ? {
                       ...m, text: retryDisplay || dt, intent: retryPayload?.source,
                       charts: ch, cards: retryCards.length ? retryCards : pc,
                       actionCards: ac, quickActions: qa, teamStatusCards: tsc, bundleSplitCards: bsc,
+                      stepWizardCards: swc,
                       agentCommandId: retryPayload?.commandId, followUpActions: retryFollowUp,
                     } : m));
                     speak(retryDisplay || dt);

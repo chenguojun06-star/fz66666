@@ -307,6 +307,11 @@ public class MaterialPurchasePickingHelper {
             item.setSize(stock.getSize());
             item.setQuantity(pickFromThis);
             item.setUnit(stock.getUnit());
+            item.setUnitPrice(stock.getUnitPrice() != null ? stock.getUnitPrice() : purchase.getUnitPrice());
+            item.setSpecification(stock.getSpecifications() != null ? stock.getSpecifications() : purchase.getSpecifications());
+            item.setSupplierName(stock.getSupplierName());
+            item.setMaterialType(stock.getMaterialType() != null ? stock.getMaterialType() : purchase.getMaterialType());
+            item.setWarehouseLocation(stock.getLocation());
             item.setCreateTime(LocalDateTime.now());
             items.add(item);
 
@@ -796,47 +801,66 @@ public class MaterialPurchasePickingHelper {
             return;
         }
 
-        String syncRemark = buildPickupRemark(picking, purchase);
-        if (existsAutoSyncedPickupRecord(syncRemark)) {
-            log.info("syncPickupRecordAfterOutbound: 跳过重复同步, pickingId={}, purchaseId={}",
-                    picking.getId(), purchase != null ? purchase.getId() : null);
-            return;
-        }
-
-        MaterialPickingItem firstItem = items.get(0);
         FactorySnapshot factorySnapshot = resolveFactorySnapshot(purchase, picking);
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("pickupType", resolvePickupType(purchase, picking));
-        body.put("movementType", "OUTBOUND");
-        body.put("sourceType", "PICKING_OUTBOUND");
-        body.put("usageType", resolveUsageType(purchase, picking));
-        body.put("sourceRecordId", picking.getId());
-        body.put("sourceDocumentNo", picking.getPickingNo());
-        body.put("factoryId", factorySnapshot.factoryId);
-        body.put("factoryName", factorySnapshot.factoryName);
-        body.put("factoryType", factorySnapshot.factoryType);
-        body.put("orderNo", purchase != null ? purchase.getOrderNo() : picking.getOrderNo());
-        body.put("styleNo", purchase != null ? purchase.getStyleNo() : picking.getStyleNo());
-        body.put("materialId", purchase != null ? purchase.getMaterialId() : firstItem.getMaterialId());
-        body.put("materialCode", purchase != null ? purchase.getMaterialCode() : firstItem.getMaterialCode());
-        body.put("materialName", purchase != null ? purchase.getMaterialName() : firstItem.getMaterialName());
-        body.put("materialType", purchase != null ? purchase.getMaterialType() : firstItem.getMaterialType());
-        body.put("color", purchase != null ? purchase.getColor() : firstItem.getColor());
-        body.put("specification", purchase != null ? purchase.getSpecifications() : firstItem.getSpecification());
-        body.put("fabricComposition", purchase != null ? purchase.getFabricComposition() : firstItem.getFabricComposition());
-        body.put("fabricWidth", purchase != null ? purchase.getFabricWidth() : firstItem.getFabricWidth());
-        body.put("fabricWeight", purchase != null ? purchase.getFabricWeight() : null);
-        body.put("unit", purchase != null ? purchase.getUnit() : firstItem.getUnit());
-        body.put("quantity", pickedTotalQty);
-        body.put("unitPrice", purchase != null ? purchase.getUnitPrice() : firstItem.getUnitPrice());
-        body.put("receiverId", picking.getPickerId());
-        body.put("receiverName", picking.getPickerName());
-        body.put("issuerId", UserContext.userId());
-        body.put("issuerName", UserContext.username());
-        body.put("warehouseLocation", resolveWarehouseLocation(items) != null ? resolveWarehouseLocation(items) : firstItem.getWarehouseLocation());
-        body.put("remark", syncRemark);
 
-        materialPickupOrchestrator.create(body);
+        for (MaterialPickingItem item : items) {
+            String itemSyncRemark = buildPickupRemark(picking, purchase) + "|itemId=" + item.getId();
+            if (existsAutoSyncedPickupRecord(itemSyncRemark)) {
+                log.info("syncPickupRecordAfterOutbound: 跳过重复同步, pickingId={}, itemId={}",
+                        picking.getId(), item.getId());
+                continue;
+            }
+
+            BigDecimal unitPrice = item.getUnitPrice() != null ? item.getUnitPrice()
+                    : (purchase != null ? purchase.getUnitPrice() : null);
+
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("pickupType", resolvePickupType(purchase, picking));
+            body.put("movementType", "OUTBOUND");
+            body.put("sourceType", "PICKING_OUTBOUND");
+            body.put("usageType", resolveUsageType(purchase, picking));
+            body.put("sourceRecordId", picking.getId());
+            body.put("sourceDocumentNo", picking.getPickingNo());
+            body.put("factoryId", factorySnapshot.factoryId);
+            body.put("factoryName", factorySnapshot.factoryName);
+            body.put("factoryType", factorySnapshot.factoryType);
+            body.put("orderNo", purchase != null ? purchase.getOrderNo() : picking.getOrderNo());
+            body.put("styleNo", purchase != null ? purchase.getStyleNo() : picking.getStyleNo());
+            body.put("materialId", item.getMaterialId() != null ? item.getMaterialId()
+                    : (purchase != null ? purchase.getMaterialId() : null));
+            body.put("materialCode", item.getMaterialCode() != null ? item.getMaterialCode()
+                    : (purchase != null ? purchase.getMaterialCode() : null));
+            body.put("materialName", item.getMaterialName() != null ? item.getMaterialName()
+                    : (purchase != null ? purchase.getMaterialName() : null));
+            body.put("materialType", item.getMaterialType() != null ? item.getMaterialType()
+                    : (purchase != null ? purchase.getMaterialType() : null));
+            body.put("color", item.getColor() != null ? item.getColor()
+                    : (purchase != null ? purchase.getColor() : null));
+            body.put("specification", item.getSpecification() != null ? item.getSpecification()
+                    : (purchase != null ? purchase.getSpecifications() : null));
+            body.put("fabricComposition", item.getFabricComposition() != null ? item.getFabricComposition()
+                    : (purchase != null ? purchase.getFabricComposition() : null));
+            body.put("fabricWidth", item.getFabricWidth() != null ? item.getFabricWidth()
+                    : (purchase != null ? purchase.getFabricWidth() : null));
+            body.put("fabricWeight", item.getFabricWeight() != null ? item.getFabricWeight()
+                    : (purchase != null ? purchase.getFabricWeight() : null));
+            body.put("unit", item.getUnit() != null ? item.getUnit()
+                    : (purchase != null ? purchase.getUnit() : null));
+            body.put("quantity", item.getQuantity() != null ? item.getQuantity() : 0);
+            body.put("unitPrice", unitPrice);
+            body.put("receiverId", picking.getPickerId());
+            body.put("receiverName", picking.getPickerName());
+            body.put("issuerId", UserContext.userId());
+            body.put("issuerName", UserContext.username());
+            body.put("warehouseLocation", item.getWarehouseLocation());
+            body.put("remark", itemSyncRemark);
+
+            try {
+                materialPickupOrchestrator.create(body);
+            } catch (Exception e) {
+                log.warn("syncPickupRecordAfterOutbound: 同步item失败, itemId={}, error={}", item.getId(), e.getMessage());
+            }
+        }
     }
 
     private boolean existsAutoSyncedPickupRecord(String syncRemark) {

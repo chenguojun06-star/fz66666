@@ -95,6 +95,7 @@ export const parseXiaoyunLegacyMeta = (rawText: string): ParsedXiaoyunLegacyMeta
     try {
       const parsed = JSON.parse(match[1].trim()) as unknown;
       if (Array.isArray(parsed)) stepWizardCards.push(...parsed);
+      else stepWizardCards.push(parsed);
     } catch {}
   }
 
