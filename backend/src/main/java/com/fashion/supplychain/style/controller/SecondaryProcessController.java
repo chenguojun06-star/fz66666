@@ -113,7 +113,7 @@ public class SecondaryProcessController {
     }
 
     @Operation(summary = "审批二次工艺（主管权限）")
-    @PreAuthorize("hasAuthority('MENU_FINANCE_PAYROLL_APPROVAL_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/{id}/approve")
     public Result<SecondaryProcess> approve(
             @PathVariable Long id,

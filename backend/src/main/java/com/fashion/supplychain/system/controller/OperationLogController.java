@@ -23,7 +23,7 @@ public class OperationLogController {
      * 查询操作日志列表（分页）
      */
     @GetMapping("/list")
-    @PreAuthorize("hasAuthority('MENU_LOGIN_LOG')")
+    @PreAuthorize("isAuthenticated()")
     public Result<?> getOperationLogList(
             @RequestParam(defaultValue = "1") Long page,
             @RequestParam(defaultValue = "10") Long pageSize,
@@ -57,7 +57,7 @@ public class OperationLogController {
      * 根据ID查询操作日志详情
      */
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('MENU_LOGIN_LOG')")
+    @PreAuthorize("isAuthenticated()")
     public Result<?> getOperationLogById(@PathVariable Long id) {
         OperationLog log = operationLogService.getById(id);
         if (log != null) {

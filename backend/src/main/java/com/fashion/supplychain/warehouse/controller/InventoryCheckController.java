@@ -20,13 +20,13 @@ public class InventoryCheckController {
     private InventoryCheckOrchestrator orchestrator;
 
     @PostMapping("/create")
-    @PreAuthorize("hasAuthority('ROLE_TENANT_OWNER') or hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_SUPER_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public Result<InventoryCheck> createCheck(@RequestBody Map<String, Object> params) {
         return Result.success(orchestrator.createCheck(params));
     }
 
     @PostMapping("/fill-actual")
-    @PreAuthorize("hasAuthority('ROLE_TENANT_OWNER') or hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_SUPER_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public Result<InventoryCheck> fillActual(@RequestBody Map<String, Object> params) {
         String checkId = (String) params.get("checkId");
         @SuppressWarnings("unchecked")
@@ -35,13 +35,13 @@ public class InventoryCheckController {
     }
 
     @PostMapping("/confirm/{checkId}")
-    @PreAuthorize("hasAuthority('ROLE_TENANT_OWNER') or hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_SUPER_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public Result<InventoryCheck> confirm(@PathVariable("checkId") String checkId) {
         return Result.success(orchestrator.confirmCheck(checkId));
     }
 
     @PostMapping("/cancel/{checkId}")
-    @PreAuthorize("hasAuthority('ROLE_TENANT_OWNER') or hasAuthority('ROLE_ADMIN') or hasAuthority('ROLE_SUPER_ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public Result<Void> cancel(@PathVariable("checkId") String checkId) {
         orchestrator.cancelCheck(checkId);
         return Result.success(null);

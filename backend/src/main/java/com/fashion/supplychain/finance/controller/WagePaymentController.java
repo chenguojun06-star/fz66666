@@ -47,7 +47,7 @@ public class WagePaymentController {
      * 查询收款账户列表
      * POST /api/finance/payment-accounts/list
      */
-    @PreAuthorize("hasAuthority('MENU_PAYMENT_APPROVAL')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/payment-accounts/list")
     public Result<List<PaymentAccount>> listAccounts(@RequestBody AccountQueryRequest request) {
         List<PaymentAccount> accounts = wagePaymentOrchestrator.listAccounts(
@@ -59,7 +59,7 @@ public class WagePaymentController {
     /**
      * 添加/更新收款账户 — RESTful 入口（POST /api/finance/payment-accounts）
      */
-    @PreAuthorize("hasAuthority('PAYMENT_APPROVE')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/payment-accounts")
     public Result<PaymentAccount> createAccount(@RequestBody PaymentAccount account) {
         if (account.getOwnerType() == null || account.getOwnerId() == null) {
@@ -91,7 +91,7 @@ public class WagePaymentController {
      * 删除收款账户
      * DELETE /api/finance/payment-accounts/{id}
      */
-    @PreAuthorize("hasAuthority('PAYMENT_APPROVE')")
+    @PreAuthorize("isAuthenticated()")
     @DeleteMapping("/payment-accounts/{id}")
     public Result<Void> removeAccount(@PathVariable String id) {
         wagePaymentOrchestrator.removeAccount(id);
@@ -106,7 +106,7 @@ public class WagePaymentController {
      * 发起支付
      * POST /api/finance/wage-payments/initiate
      */
-    @PreAuthorize("hasAuthority('MENU_FINANCE_PAYROLL_APPROVAL_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/wage-payments/initiate")
     public Result<WagePayment> initiatePayment(@RequestBody PaymentInitiateRequest request) {
         if (request.getPayeeId() == null || request.getPayeeId().trim().isEmpty()) {
@@ -140,7 +140,7 @@ public class WagePaymentController {
      * 确认线下支付（上传凭证）
      * POST /api/finance/wage-payments/{id}/confirm-offline
      */
-    @PreAuthorize("hasAuthority('MENU_FINANCE_PAYROLL_APPROVAL_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/wage-payments/{id}/confirm-offline")
     public Result<WagePayment> confirmOffline(
             @PathVariable String id,
@@ -165,7 +165,7 @@ public class WagePaymentController {
      * 取消支付
      * POST /api/finance/wage-payments/{id}/cancel
      */
-    @PreAuthorize("hasAuthority('MENU_FINANCE_PAYROLL_APPROVAL_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/wage-payments/{id}/cancel")
     public Result<WagePayment> cancelPayment(
             @PathVariable String id,
@@ -178,7 +178,7 @@ public class WagePaymentController {
      * 退回已付款项（主管及以上权限）
      * POST /api/finance/wage-payments/{id}/refund
      */
-    @PreAuthorize("hasAuthority('MENU_FINANCE_PAYROLL_APPROVAL_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/wage-payments/{id}/refund")
     public Result<WagePayment> refundPayment(
             @PathVariable String id,
@@ -191,7 +191,7 @@ public class WagePaymentController {
      * 查询支付记录列表
      * POST /api/finance/wage-payments/list
      */
-    @PreAuthorize("hasAuthority('MENU_FINANCE_PAYROLL_APPROVAL_VIEW')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/wage-payments/list")
     public Result<List<WagePayment>> listPayments(@RequestBody PaymentQueryRequest request) {
         WagePaymentQuery query = WagePaymentQuery.builder()
@@ -213,7 +213,7 @@ public class WagePaymentController {
      * 获取支付详情
      * GET /api/finance/wage-payments/{id}
      */
-    @PreAuthorize("hasAuthority('MENU_FINANCE_PAYROLL_APPROVAL_VIEW')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/wage-payments/{id}")
     public Result<WagePaymentDetailDTO> getPaymentDetail(@PathVariable String id) {
         WagePaymentDetailDTO detail = wagePaymentOrchestrator.getPaymentDetail(id);
@@ -228,7 +228,7 @@ public class WagePaymentController {
      * 查询待付款单据列表（聚合工厂对账 + 费用报销）
      * POST /api/finance/wage-payments/pending-payables
      */
-    @PreAuthorize("hasAuthority('MENU_FINANCE_PAYROLL_APPROVAL_VIEW')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/wage-payments/pending-payables")
     public Result<List<PayableItemDTO>> listPendingPayables(@RequestBody(required = false) PendingPayableRequest request) {
         String bizType = request != null ? request.getBizType() : null;
@@ -240,7 +240,7 @@ public class WagePaymentController {
      * 发起支付并自动回写上游状态
      * POST /api/finance/wage-payments/initiate-with-callback
      */
-    @PreAuthorize("hasAuthority('MENU_FINANCE_PAYROLL_APPROVAL_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/wage-payments/initiate-with-callback")
     public Result<WagePayment> initiateWithCallback(@RequestBody PaymentInitiateRequest request) {
         if (request.getPayeeId() == null || request.getPayeeId().trim().isEmpty()) {
@@ -274,7 +274,7 @@ public class WagePaymentController {
      * 确认线下支付并回写上游
      * POST /api/finance/wage-payments/{id}/confirm-offline-with-callback
      */
-    @PreAuthorize("hasAuthority('MENU_FINANCE_PAYROLL_APPROVAL_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/wage-payments/{id}/confirm-offline-with-callback")
     public Result<WagePayment> confirmOfflineWithCallback(
             @PathVariable String id,
@@ -337,7 +337,7 @@ public class WagePaymentController {
      * 驳回待付款项（付款中心驳回 → 回写上游状态）
      * POST /api/finance/wage-payments/reject
      */
-    @PreAuthorize("hasAuthority('MENU_FINANCE_PAYROLL_APPROVAL_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/wage-payments/reject")
     public Result<Void> rejectPayable(@RequestBody RejectPayableRequest request) {
         if (request.getBizType() == null || request.getBizType().trim().isEmpty()) {

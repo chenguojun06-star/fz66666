@@ -18,49 +18,49 @@ public class InvoiceController {
     @Autowired
     private InvoiceOrchestrator invoiceOrchestrator;
 
-    @PreAuthorize("hasAuthority('MENU_FINANCE_INVOICE_VIEW')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/list")
     public Result<IPage<Invoice>> list(@RequestBody Map<String, Object> params) {
         return Result.success(invoiceOrchestrator.list(params));
     }
 
-    @PreAuthorize("hasAuthority('MENU_FINANCE_INVOICE_VIEW')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/{id}")
     public Result<Invoice> getById(@PathVariable String id) {
         return Result.success(invoiceOrchestrator.getById(id));
     }
 
-    @PreAuthorize("hasAuthority('MENU_FINANCE_INVOICE_VIEW')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/stats")
     public Result<Map<String, Object>> stats() {
         return Result.success(invoiceOrchestrator.getStats());
     }
 
-    @PreAuthorize("hasAuthority('FINANCE_INVOICE_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/create")
     public Result<Invoice> create(@RequestBody Invoice invoice) {
         return Result.success(invoiceOrchestrator.create(invoice));
     }
 
-    @PreAuthorize("hasAuthority('FINANCE_INVOICE_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @PutMapping("/update")
     public Result<Invoice> update(@RequestBody Invoice invoice) {
         return Result.success(invoiceOrchestrator.update(invoice));
     }
 
-    @PreAuthorize("hasAuthority('FINANCE_INVOICE_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/{id}/issue")
     public Result<Invoice> issue(@PathVariable String id) {
         return Result.success(invoiceOrchestrator.issue(id));
     }
 
-    @PreAuthorize("hasAuthority('FINANCE_INVOICE_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/{id}/cancel")
     public Result<Invoice> cancel(@PathVariable String id) {
         return Result.success(invoiceOrchestrator.cancel(id));
     }
 
-    @PreAuthorize("hasAuthority('FINANCE_INVOICE_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable String id) {
         invoiceOrchestrator.delete(id);

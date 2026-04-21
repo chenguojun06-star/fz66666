@@ -30,7 +30,7 @@ public class FinanceTaxExportController {
      * @param endDate   结束日期，格式 yyyy-MM-dd，默认今日
      * @param format    导出格式：STANDARD（默认）/ KINGDEE（金蝶KIS）/ UFIDA（用友T3）
      */
-    @PreAuthorize("hasAuthority('MENU_FINANCE_TAX_EXPORT_VIEW')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/payroll")
     public ResponseEntity<byte[]> exportPayroll(
             @RequestParam(required = false) String startDate,
@@ -55,7 +55,7 @@ public class FinanceTaxExportController {
     /**
      * 导出物料对账 Excel
      */
-    @PreAuthorize("hasAuthority('MENU_FINANCE_TAX_EXPORT_VIEW')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/material")
     public ResponseEntity<byte[]> exportMaterial(
             @RequestParam(required = false) String startDate,
@@ -81,7 +81,7 @@ public class FinanceTaxExportController {
      * 导出供应商付款汇总 Excel
      * 含应付账款、已付款、逾期应付明细，适用于对账审计及供应商信用评估
      */
-    @PreAuthorize("hasAuthority('MENU_FINANCE_TAX_EXPORT_VIEW')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/supplier-payment")
     public ResponseEntity<byte[]> exportSupplierPayment(
             @RequestParam(required = false) String startDate,
@@ -107,7 +107,7 @@ public class FinanceTaxExportController {
      * 导出月度税务汇总 Excel
      * 含开票金额、税种税率、税额合计，可直接用于月度税务申报
      */
-    @PreAuthorize("hasAuthority('MENU_FINANCE_TAX_EXPORT_VIEW')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/tax-summary")
     public ResponseEntity<byte[]> exportTaxSummary(
             @RequestParam(required = false) String startDate,

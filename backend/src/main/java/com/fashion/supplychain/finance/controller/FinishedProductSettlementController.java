@@ -63,7 +63,7 @@ public class FinishedProductSettlementController {
     private final ProductionOrderService productionOrderService;
 
     @Operation(summary = "分页查询成品结算列表")
-    @PreAuthorize("hasAuthority('MENU_FINANCE_FINISHED_SETTLEMENT_VIEW')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/list")
     public Result<Page<FinishedProductSettlement>> page(
             @RequestParam(defaultValue = "1") Integer page,
@@ -129,7 +129,7 @@ public class FinishedProductSettlementController {
     }
 
     @Operation(summary = "根据订单号获取结算详情")
-    @PreAuthorize("hasAuthority('MENU_FINANCE_FINISHED_SETTLEMENT_VIEW')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/detail/{orderNo}")
     public Result<FinishedProductSettlement> getByOrderNo(@PathVariable String orderNo) {
         LambdaQueryWrapper<FinishedProductSettlement> wrapper = new LambdaQueryWrapper<>();
@@ -149,7 +149,7 @@ public class FinishedProductSettlementController {
     }
 
     @Operation(summary = "导出成品结算数据")
-    @PreAuthorize("hasAuthority('MENU_FINANCE_FINISHED_SETTLEMENT_VIEW')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/export")
     public ResponseEntity<byte[]> export(
             @RequestParam(required = false) String orderNo,
@@ -217,7 +217,7 @@ public class FinishedProductSettlementController {
     }
 
     @Operation(summary = "审批核实成品结算")
-    @PreAuthorize("hasAuthority('FINANCE_FINISHED_SETTLEMENT_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/approve")
     public Result<?> approve(@RequestBody Map<String, String> params) {
         String id = params.get("id");
@@ -268,7 +268,7 @@ public class FinishedProductSettlementController {
     }
 
     @Operation(summary = "获取审批状态")
-    @PreAuthorize("hasAuthority('MENU_FINANCE_FINISHED_SETTLEMENT_VIEW')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/approval-status/{id}")
     public Result<Map<String, Object>> getApprovalStatus(@PathVariable String id) {
         Long tenantId = UserContext.tenantId();
@@ -284,7 +284,7 @@ public class FinishedProductSettlementController {
      * 返回每个工厂的订单数、总件数、总金额等汇总信息
      */
     @Operation(summary = "工厂订单汇总")
-    @PreAuthorize("hasAuthority('MENU_FINANCE_FINISHED_SETTLEMENT_VIEW')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/factory-summary")
     public Result<List<Map<String, Object>>> factorySummary(
             @RequestParam(required = false) String factoryName,
@@ -552,7 +552,7 @@ public class FinishedProductSettlementController {
     }
 
     @Operation(summary = "取消成品结算单")
-    @PreAuthorize("hasAuthority('FINANCE_FINISHED_SETTLEMENT_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/{id}/cancel")
     public Result<Void> cancel(@PathVariable String id) {
         TenantAssert.assertTenantContext();

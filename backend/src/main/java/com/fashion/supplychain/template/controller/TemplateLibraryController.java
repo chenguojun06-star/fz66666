@@ -99,7 +99,7 @@ public class TemplateLibraryController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('STYLE_DELETE')")
+    @PreAuthorize("isAuthenticated()")
     public Result<?> delete(@PathVariable String id) {
         return Result.success(templateLibraryOrchestrator.delete(id));
     }

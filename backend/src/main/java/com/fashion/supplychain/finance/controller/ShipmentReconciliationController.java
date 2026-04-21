@@ -28,64 +28,64 @@ public class ShipmentReconciliationController {
     @Autowired
     private ReconciliationStatusOrchestrator reconciliationStatusOrchestrator;
 
-    @PreAuthorize("hasAuthority('MENU_FINANCE_SHIPMENT_RECON_VIEW')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/list")
     public Result<?> list(@RequestParam Map<String, Object> params) {
         IPage<ShipmentReconciliation> page = shipmentReconciliationOrchestrator.list(params);
         return Result.success(page);
     }
 
-    @PreAuthorize("hasAuthority('MENU_FINANCE_SHIPMENT_RECON_VIEW')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/{id}")
     public Result<ShipmentReconciliation> getById(@PathVariable String id) {
         return Result.success(shipmentReconciliationOrchestrator.getById(id));
     }
 
-    @PreAuthorize("hasAuthority('FINANCE_SHIPMENT_RECON_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping
     public Result<Boolean> save(@RequestBody ShipmentReconciliation shipmentReconciliation) {
         return Result.success(shipmentReconciliationOrchestrator.save(shipmentReconciliation));
     }
 
-    @PreAuthorize("hasAuthority('FINANCE_SHIPMENT_RECON_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @PutMapping
     public Result<Boolean> update(@RequestBody ShipmentReconciliation shipmentReconciliation) {
         return Result.success(shipmentReconciliationOrchestrator.update(shipmentReconciliation));
     }
 
-    @PreAuthorize("hasAuthority('FINANCE_SHIPMENT_RECON_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @DeleteMapping("/{id}")
     public Result<Boolean> delete(@PathVariable String id) {
         return Result.success(shipmentReconciliationOrchestrator.delete(id));
     }
 
-    @PreAuthorize("hasAuthority('FINANCE_SHIPMENT_RECON_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/update-status")
     public Result<?> updateStatus(@Valid @RequestBody UpdateStatusRequest body) {
         String message = reconciliationStatusOrchestrator.updateShipmentStatus(body.getId(), body.getStatus());
         return Result.successMessage(message);
     }
 
-    @PreAuthorize("hasAuthority('FINANCE_SHIPMENT_RECON_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/return")
     public Result<?> returnToPrevious(@Valid @RequestBody IdReasonRequest body) {
         String message = reconciliationStatusOrchestrator.returnShipmentToPrevious(body.getId(), body.getReason());
         return Result.successMessage(message);
     }
 
-    @PreAuthorize("hasAuthority('FINANCE_SHIPMENT_RECON_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/backfill")
     public Result<?> backfill() {
         return Result.success(shipmentReconciliationOrchestrator.backfill());
     }
 
-    @PreAuthorize("hasAuthority('MENU_FINANCE_SHIPMENT_RECON_VIEW')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/deduction-items/{reconciliationId}")
     public Result<List<DeductionItem>> getDeductionItems(@PathVariable String reconciliationId) {
         return Result.success(shipmentReconciliationOrchestrator.getDeductionItems(reconciliationId));
     }
 
-    @PreAuthorize("hasAuthority('FINANCE_SHIPMENT_RECON_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/deduction-items/{reconciliationId}")
     public Result<?> saveDeductionItems(
             @PathVariable String reconciliationId,
@@ -98,7 +98,7 @@ public class ShipmentReconciliationController {
     /**
      * 更新订单备注
      */
-    @PreAuthorize("hasAuthority('FINANCE_SHIPMENT_RECON_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/{orderId}/remark")
     public Result<?> updateRemark(@PathVariable String orderId, @RequestBody Map<String, String> request) {
         String remark = request.get("remark");
@@ -119,7 +119,7 @@ public class ShipmentReconciliationController {
      * 2. 创建独立的 t_operation_log 表记录所有操作
      * 3. 使用AOP切面自动记录关键操作
      */
-    @PreAuthorize("hasAuthority('MENU_FINANCE_SHIPMENT_RECON_VIEW')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/{orderId}/logs")
     public Result<?> getOrderLogs(@PathVariable String orderId) {
         // 轻量级实现：返回空数组（系统当前不强依赖操作日志）

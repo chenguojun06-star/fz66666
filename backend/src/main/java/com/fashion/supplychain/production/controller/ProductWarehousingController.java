@@ -85,7 +85,7 @@ public class ProductWarehousingController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('WAREHOUSING_DELETE') or hasRole('TENANT_OWNER')")
+    @PreAuthorize("isAuthenticated()")
     public Result<Boolean> delete(@PathVariable String id) {
         return Result.success(productWarehousingOrchestrator.delete(id));
     }
@@ -117,7 +117,7 @@ public class ProductWarehousingController {
      * 用于质检员在PC端确认工厂已完成返修，跳过小程序扫码步骤
      */
     @PostMapping("/mark-bundle-repaired")
-    @PreAuthorize("hasAuthority('WAREHOUSING_EDIT') or hasRole('TENANT_OWNER')")
+    @PreAuthorize("isAuthenticated()")
     public Result<?> markBundleRepaired(@RequestBody java.util.Map<String, Object> body) {
         String bundleId = String.valueOf(body.getOrDefault("bundleId", "")).trim();
         return Result.success(productWarehousingOrchestrator.markBundleRepaired(bundleId));

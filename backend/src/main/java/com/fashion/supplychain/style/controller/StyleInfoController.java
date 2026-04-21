@@ -61,7 +61,7 @@ public class StyleInfoController {
      * 新增款号资料
      */
     @PostMapping
-    @PreAuthorize("hasAuthority('STYLE_CREATE')")
+    @PreAuthorize("isAuthenticated()")
     public Result<?> save(@RequestBody StyleInfo styleInfo) {
         styleInfoOrchestrator.save(styleInfo);
         return Result.success(styleInfo);
@@ -225,7 +225,7 @@ public class StyleInfoController {
          * 报废开发样，保留记录不删除
      */
     @PostMapping("/{id}/scrap")
-    @PreAuthorize("hasAuthority('STYLE_DELETE')")
+    @PreAuthorize("isAuthenticated()")
     public Result<?> scrap(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
         String reason = body != null && body.get("reason") != null ? String.valueOf(body.get("reason")) : null;
         return Result.success(styleInfoOrchestrator.scrap(id, reason));

@@ -47,7 +47,7 @@ public class ExpenseReimbursementController {
      * 分页查询报销单列表
      * 支持参数：page, size, applicantId, status, expenseType, reimbursementNo, keyword
      */
-    @PreAuthorize("hasAuthority('MENU_FINANCE_EXPENSE_VIEW')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/list")
     public Result<IPage<ExpenseReimbursement>> list(@RequestParam Map<String, Object> params) {
         IPage<ExpenseReimbursement> page = expenseReimbursementService.queryPage(params);
@@ -57,7 +57,7 @@ public class ExpenseReimbursementController {
     /**
      * 查询报销单详情
      */
-    @PreAuthorize("hasAuthority('MENU_FINANCE_EXPENSE_VIEW')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/{id}")
     public Result<ExpenseReimbursement> getById(@PathVariable String id) {
         ExpenseReimbursement entity = expenseReimbursementService.getById(id);
@@ -99,7 +99,7 @@ public class ExpenseReimbursementController {
     /**
      * 删除报销单（软删除）
      */
-    @PreAuthorize("hasAuthority('FINANCE_EXPENSE_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @DeleteMapping("/{id}")
     public Result<Boolean> delete(@PathVariable String id) {
         try {
@@ -115,7 +115,7 @@ public class ExpenseReimbursementController {
      * 审批操作（批准/驳回）
      * action: approve=批准, reject=驳回
      */
-    @PreAuthorize("hasAuthority('FINANCE_EXPENSE_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/{id}/approve")
     public Result<ExpenseReimbursement> approve(
             @PathVariable String id,
@@ -133,7 +133,7 @@ public class ExpenseReimbursementController {
     /**
      * 批量审批（全部批准）
      */
-    @PreAuthorize("hasAuthority('FINANCE_EXPENSE_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/batch-approve")
     public Result<List<ExpenseReimbursement>> batchApprove(@RequestBody Map<String, Object> body) {
         try {
@@ -154,7 +154,7 @@ public class ExpenseReimbursementController {
     /**
      * 确认付款
      */
-    @PreAuthorize("hasAuthority('FINANCE_EXPENSE_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/{id}/pay")
     public Result<ExpenseReimbursement> pay(
             @PathVariable String id,
@@ -172,7 +172,7 @@ public class ExpenseReimbursementController {
      * 上传报销凭证图片并调用AI识别
      * 返回：docId, imageUrl, recognizedAmount, recognizedDate, recognizedTitle, recognizedType
      */
-    @PreAuthorize("hasAuthority('FINANCE_EXPENSE_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping(value = "/recognize-doc", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Result<java.util.Map<String, Object>> recognizeDoc(
             @RequestPart("file") MultipartFile file) {
@@ -191,7 +191,7 @@ public class ExpenseReimbursementController {
     /**
      * 查询报销单下的所有凭证
      */
-    @PreAuthorize("hasAuthority('MENU_FINANCE_EXPENSE_VIEW')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/docs")
     public Result<List<ExpenseReimbursementDoc>> getDocs(
             @RequestParam String reimbursementId) {
@@ -204,7 +204,7 @@ public class ExpenseReimbursementController {
     /**
      * 将上传的凭证绑定到已创建的报销单（提交报销单后调用）
      */
-    @PreAuthorize("hasAuthority('FINANCE_EXPENSE_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/docs/link")
     public Result<Boolean> linkDocs(
             @RequestBody LinkDocsRequest req) {

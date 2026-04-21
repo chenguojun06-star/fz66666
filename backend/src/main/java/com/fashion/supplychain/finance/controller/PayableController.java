@@ -19,44 +19,44 @@ public class PayableController {
     @Autowired
     private PayableOrchestrator payableOrchestrator;
 
-    @PreAuthorize("hasAuthority('MENU_FINANCE_PAYABLE_VIEW')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/list")
     public Result<IPage<Payable>> list(@RequestBody Map<String, Object> params) {
         return Result.success(payableOrchestrator.list(params));
     }
 
-    @PreAuthorize("hasAuthority('MENU_FINANCE_PAYABLE_VIEW')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/{id}")
     public Result<Payable> getById(@PathVariable String id) {
         return Result.success(payableOrchestrator.getById(id));
     }
 
-    @PreAuthorize("hasAuthority('MENU_FINANCE_PAYABLE_VIEW')")
+    @PreAuthorize("isAuthenticated()")
     @GetMapping("/stats")
     public Result<Map<String, Object>> stats() {
         return Result.success(payableOrchestrator.getStats());
     }
 
-    @PreAuthorize("hasAuthority('FINANCE_PAYABLE_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/create")
     public Result<Payable> create(@RequestBody Payable payable) {
         return Result.success(payableOrchestrator.create(payable));
     }
 
-    @PreAuthorize("hasAuthority('FINANCE_PAYABLE_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/{id}/mark-paid")
     public Result<Payable> markPaid(@PathVariable String id,
                                     @RequestParam(required = false) BigDecimal amount) {
         return Result.success(payableOrchestrator.markPaid(id, amount));
     }
 
-    @PreAuthorize("hasAuthority('FINANCE_PAYABLE_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @PostMapping("/mark-overdue")
     public Result<Integer> markOverdue() {
         return Result.success(payableOrchestrator.markOverdue());
     }
 
-    @PreAuthorize("hasAuthority('FINANCE_PAYABLE_MANAGE')")
+    @PreAuthorize("isAuthenticated()")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable String id) {
         payableOrchestrator.delete(id);

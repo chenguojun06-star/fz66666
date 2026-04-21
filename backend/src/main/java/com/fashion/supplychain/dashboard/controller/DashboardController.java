@@ -94,7 +94,7 @@ public class DashboardController {
      * 获取延期订单列表
      */
     @GetMapping("/overdue-orders")
-    @PreAuthorize("hasAuthority('MENU_DASHBOARD')")
+    @PreAuthorize("isAuthenticated()")
     public Result<?> overdueOrders() {
         return Result.success(dashboardOrchestrator.getOverdueOrders());
     }
