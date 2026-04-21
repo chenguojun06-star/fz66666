@@ -53,6 +53,12 @@ public class AiAgentToolAdvisor {
                 "推演", "沙盘", "如果", "假设", "模拟"));
         INTENT_TOOL_MAP.put("analysis_overview", compileAll(
                 "总览", "概览", "今天怎么样", "系统状态", "经营状况"));
+        INTENT_TOOL_MAP.put("action_create_order", compileAll(
+                "下单", "建单", "创建订单", "新建订单", "新增订单", "帮我下单", "我要下单", "下给"));
+        INTENT_TOOL_MAP.put("action_sample_loan", compileAll(
+                "借调", "借样衣", "样衣借出", "借出样衣", "归还样衣", "样衣归还"));
+        INTENT_TOOL_MAP.put("action_sample_workflow", compileAll(
+                "样衣开发", "样衣流程", "打样", "推送到下单", "样板领取", "样板入库"));
         INTENT_TOOL_MAP.put("knowledge_search", compileAll(
                 "什么是", "怎么操作", "如何", "帮助", "教程", "规则"));
     }
@@ -76,7 +82,10 @@ public class AiAgentToolAdvisor {
             Map.entry("analysis_deep", List.of("tool_deep_analysis", "tool_root_cause_analysis", "tool_pattern_discovery", "tool_think")),
             Map.entry("analysis_whatif", List.of("tool_whatif", "tool_scenario_simulator", "tool_simulate_new_order", "tool_think")),
             Map.entry("analysis_overview", List.of("tool_system_overview", "tool_management_dashboard", "tool_think")),
-            Map.entry("knowledge_search", List.of("tool_knowledge_search", "tool_think"))
+            Map.entry("knowledge_search", List.of("tool_knowledge_search", "tool_think")),
+            Map.entry("action_create_order", List.of("tool_create_production_order", "tool_query_style_info", "tool_think")),
+            Map.entry("action_sample_loan", List.of("tool_sample_loan", "tool_sample_stock", "tool_think")),
+            Map.entry("action_sample_workflow", List.of("tool_sample_workflow", "tool_sample_stock", "tool_sample_loan", "tool_think"))
     );
 
     private static final Set<String> ALWAYS_INCLUDE = Set.of(

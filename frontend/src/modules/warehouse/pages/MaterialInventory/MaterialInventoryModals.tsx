@@ -27,18 +27,15 @@ import SmallModal from '@/components/common/SmallModal';
 
 import type { useMaterialInventoryData } from './hooks/useMaterialInventoryData';
 import type { MaterialBatchDetail } from './hooks/useMaterialInventoryData';
-import type { useMaterialPickupData } from './hooks/useMaterialPickupData';
 
 const { Option } = Select;
 
 interface MaterialInventoryModalsProps {
   inventoryData: ReturnType<typeof useMaterialInventoryData>;
-  pickupData: ReturnType<typeof useMaterialPickupData>;
 }
 
 const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
   inventoryData,
-  pickupData,
 }) => {
   const {
     instructionVisible,
@@ -805,76 +802,6 @@ const MaterialInventoryModals: React.FC<MaterialInventoryModalsProps> = ({
         data={printModal.data}
         onClose={() => printModal.close()}
       />
-
-      {/* ===== 领取记录：审核弹窗 ===== */}
-      <SmallModal
-        title={`审核领取单 ${pickupData.auditModal.data?.pickupNo ?? ''}`}
-        open={pickupData.auditModal.visible}
-        onCancel={pickupData.auditModal.close}
-        onOk={() => pickupData.handleAudit()}
-        confirmLoading={pickupData.auditing}
-        okText="提交审核"
-      >
-        <Form form={pickupData.auditForm} layout="vertical">
-          <Form.Item name="action" label="审核结果" rules={[{ required: true, message: '请选择审核结果' }]}>
-            <Select placeholder="请选择">
-              <Option value="approve">通过</Option>
-              <Option value="reject">拒绝</Option>
-            </Select>
-          </Form.Item>
-          <Form.Item name="remark" label="审核备注">
-            <Input.TextArea rows={3} placeholder="选填，拒绝时建议填写原因" />
-          </Form.Item>
-        </Form>
-      </SmallModal>
-
-      {/* ===== 领取记录：账单补录弹窗 ===== */}
-      <SmallModal
-        title={`账单补录 — ${pickupData.financeModal.data?.pickupNo ?? ''}`}
-        open={pickupData.financeModal.visible}
-        onCancel={pickupData.financeModal.close}
-        onOk={() => pickupData.handleFinanceSettle()}
-        confirmLoading={pickupData.settling}
-        okText="确认入账"
-      >
-        <Form form={pickupData.financeForm} layout="vertical">
-          <Form.Item
-            label="核实单价(元)"
-            name="unitPrice"
-            extra="一般审核通过后会自动生成应收账单；这里只用于补录或修正金额"
-          >
-            <InputNumber min={0} precision={2} style={{ width: '100%' }} placeholder="不填则保持原单价" />
-          </Form.Item>
-          <Form.Item name="remark" label="入账备注">
-            <Input.TextArea rows={3} placeholder="选填" />
-          </Form.Item>
-        </Form>
-      </SmallModal>
-
-      {/* ===== 领取记录：批量审核弹窗 ===== */}
-      <SmallModal
-        title={`批量审核（已选 ${pickupData.selectedRowKeys.length} 条）`}
-        open={pickupData.batchAuditModal.visible}
-        onCancel={() => {
-          pickupData.batchAuditModal.close();
-          pickupData.batchAuditForm.resetFields();
-        }}
-        onOk={() => pickupData.handleBatchAudit()}
-        confirmLoading={pickupData.batchAuditing}
-        okText="确认审核"
-      >
-        <Form form={pickupData.batchAuditForm} layout="vertical">
-          <Form.Item name="action" label="审核结果" rules={[{ required: true, message: '请选择审核结果' }]}>
-            <Select placeholder="请选择">
-              <Option value="approve"> 通过</Option>
-              <Option value="reject"> 拒绝</Option>
-            </Select>
-          </Form.Item>
-          <Form.Item name="remark" label="审核备注">
-            <Input.TextArea rows={3} placeholder="可选，拒绝时建议填写原因" />
-          </Form.Item>
-        </Form>
-      </SmallModal>
     </>
   );
 };

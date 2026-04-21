@@ -10,6 +10,7 @@ import useAiChatStream from '@/hooks/useAiChatStream';
 import useCameraCapture from '@/hooks/useCameraCapture';
 import Icon from '@/components/Icon';
 import { parseAiResponse } from '@/utils/chatParser';
+import StepWizardCard from '@/components/StepWizardCard';
 
 const QUICK_PROMPTS_WORKER = [
   { label: '我的任务', text: '我今天负责的生产任务是什么？' },
@@ -17,6 +18,8 @@ const QUICK_PROMPTS_WORKER = [
   { label: '订单进度', text: '我负责的订单当前进度怎么样？' },
 ];
 const QUICK_PROMPTS_ADMIN = [
+  { label: '📋 下单', text: '帮我下单' },
+  { label: '👕 借调样衣', text: '帮我借调样衣' },
   { label: '生成日报', text: '帮我汇总今日日报' },
   { label: '风险订单', text: '当前有哪些逾期或高风险订单？' },
   { label: '今日扫码', text: '今天工厂扫码情况如何？' },
@@ -373,6 +376,9 @@ export default function AiAssistantFloat() {
                         ))}
                       </div>
                     )}
+                    {parsed.stepWizardCards.length > 0 && parsed.stepWizardCards.map((wiz, wi) => (
+                      <StepWizardCard key={wi} data={wiz} onSubmit={(cmd, params) => { if (!sendingRef.current) { let p = cmd; Object.entries(params).forEach(([k,v]) => { if (Array.isArray(v)) p += ' ' + v.join(','); else if (v) p += ' ' + v; }); handleSend(p); } }} />
+                    ))}
                   </>
                 ) : msg.text}
               </div>

@@ -3,7 +3,6 @@
  * 从 scan/index.js 抽取，处理样板确认弹窗及提交逻辑
  */
 const toast = require('../../../utils/uiHelper').toast;
-const { triggerDataRefresh } = require('../../../utils/eventBus');
 
 const OPERATION_LABELS = {
   RECEIVE: '领取样板',
@@ -258,31 +257,67 @@ async function submitPatternScan(page) {
     });
 
     if (result.success) {
-      toast.success(result.message || '操作成功');
       closePatternConfirm(page);
 
-      page.addToLocalHistory({
-        time: new Date().toLocaleString(),
-        type: 'pattern',
-        data: {
-          patternId: patternConfirm.patternId,
-          styleNo: patternConfirm.styleNo,
-          color: patternConfirm.color,
-          quantity: confirmedQty,
-          operationType,
+      const operationLabel = OPERATION_LABELS[operationType] || operationType;
+      const formattedResult = {
+        success: true,
+        message: `${operationLabel} ${confirmedQty}件`,
+        displayTime: new Date().toLocaleTimeString(),
+        statusText: '扫码成功',
+        statusClass: 'success',
+        scanType: 'pattern',
+        processName: operationLabel,
+        progressStage: operationLabel,
+        orderNo: patternConfirm.styleNo,
+        styleNo: patternConfirm.styleNo,
+        color: patternConfirm.color,
+        quantity: confirmedQty,
+        patternId: patternConfirm.patternId,
+        operationType,
+        sessionQty: _incrementPatternSessionQty(page, operationType, confirmedQty),
+      };
+
+      page.handleScanSuccess(formattedResult);
+    } else {
+      wx.vibrateLong();
+      page.setData({
+        lastResult: {
+          success: false,
+          message: result.message || '操作失败',
+          displayTime: new Date().toLocaleTimeString(),
+          statusText: '失败',
+          statusClass: 'error',
+          errorAction: 'retry',
         },
       });
-
-      triggerDataRefresh('pattern');
-    } else {
       toast.error(result.message || '操作失败');
     }
   } catch (e) {
     console.error('[扫码页] 样板扫码提交失败:', e);
+    wx.vibrateLong();
+    page.setData({
+      lastResult: {
+        success: false,
+        message: e.errMsg || e.message || '提交失败',
+        displayTime: new Date().toLocaleTimeString(),
+        statusText: '失败',
+        statusClass: 'error',
+        errorAction: 'retry',
+      },
+    });
     toast.error(e.errMsg || e.message || '提交失败');
   } finally {
     _setPatternLoading(page, false);
   }
+}
+
+function _incrementPatternSessionQty(page, operationType, qty) {
+  if (!page._patternSessionStats) page._patternSessionStats = {};
+  const prev = page._patternSessionStats[operationType] || 0;
+  const next = prev + qty;
+  page._patternSessionStats[operationType] = next;
+  return next;
 }
 
 /**
@@ -341,24 +376,41 @@ async function submitPatternScanAll(page) {
       throw new Error(result.message || `${selectedOperation.label || selectedOperation.value} 提交失败`);
     }
 
-    toast.success(result.message || '提交成功');
     closePatternConfirm(page);
 
-    page.addToLocalHistory({
-      time: new Date().toLocaleString(),
-      type: 'pattern',
-      data: {
-        patternId: patternConfirm.patternId,
-        styleNo: patternConfirm.styleNo,
-        color: patternConfirm.color,
-        quantity: confirmedQty,
-        operationType: selectedOperation.value,
-      },
-    });
+    const operationLabel = selectedOperation.label || OPERATION_LABELS[selectedOperation.value] || selectedOperation.value;
+    const formattedResult = {
+      success: true,
+      message: `${operationLabel} ${confirmedQty}件`,
+      displayTime: new Date().toLocaleTimeString(),
+      statusText: '扫码成功',
+      statusClass: 'success',
+      scanType: 'pattern',
+      processName: operationLabel,
+      progressStage: operationLabel,
+      orderNo: patternConfirm.styleNo,
+      styleNo: patternConfirm.styleNo,
+      color: patternConfirm.color,
+      quantity: confirmedQty,
+      patternId: patternConfirm.patternId,
+      operationType: selectedOperation.value,
+      sessionQty: _incrementPatternSessionQty(page, selectedOperation.value, confirmedQty),
+    };
 
-    triggerDataRefresh('pattern');
+    page.handleScanSuccess(formattedResult);
   } catch (e) {
     console.error('[扫码页] 样板一键提交失败:', e);
+    wx.vibrateLong();
+    page.setData({
+      lastResult: {
+        success: false,
+        message: e.errMsg || e.message || '一键提交失败',
+        displayTime: new Date().toLocaleTimeString(),
+        statusText: '失败',
+        statusClass: 'error',
+        errorAction: 'retry',
+      },
+    });
     toast.error(e.errMsg || e.message || '一键提交失败');
   } finally {
     _setPatternLoading(page, false);
@@ -408,23 +460,42 @@ async function claimAllPatternOps(page) {
       }
     }
     if (successCount > 0) {
-      toast.success(`已领取 ${successCount} 个工序`);
       closePatternConfirm(page);
-      page.addToLocalHistory({
-        time: new Date().toLocaleString(),
-        type: 'pattern',
-        data: {
-          patternId: patternConfirm.patternId,
-          styleNo: patternConfirm.styleNo,
-          color: patternConfirm.color,
-          quantity: confirmedQty,
-          operationType: 'CLAIM_ALL',
-        },
-      });
-      triggerDataRefresh('pattern');
+
+      const operationLabel = `一键领取${successCount}个工序`;
+      const formattedResult = {
+        success: true,
+        message: `${operationLabel} ${confirmedQty}件`,
+        displayTime: new Date().toLocaleTimeString(),
+        statusText: '扫码成功',
+        statusClass: 'success',
+        scanType: 'pattern',
+        processName: operationLabel,
+        progressStage: operationLabel,
+        orderNo: patternConfirm.styleNo,
+        styleNo: patternConfirm.styleNo,
+        color: patternConfirm.color,
+        quantity: confirmedQty * successCount,
+        patternId: patternConfirm.patternId,
+        operationType: 'CLAIM_ALL',
+        sessionQty: _incrementPatternSessionQty(page, 'CLAIM_ALL', confirmedQty * successCount),
+      };
+
+      page.handleScanSuccess(formattedResult);
     }
   } catch (e) {
     console.error('[扫码页] 样板一键领取失败:', e);
+    wx.vibrateLong();
+    page.setData({
+      lastResult: {
+        success: false,
+        message: e.errMsg || e.message || '一键领取失败',
+        displayTime: new Date().toLocaleTimeString(),
+        statusText: '失败',
+        statusClass: 'error',
+        errorAction: 'retry',
+      },
+    });
     toast.error(e.errMsg || e.message || '一键领取失败');
   } finally {
     _setPatternLoading(page, false);

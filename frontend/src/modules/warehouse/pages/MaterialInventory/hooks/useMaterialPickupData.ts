@@ -1,298 +1,195 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Form } from 'antd';
+import { useTablePagination } from '@/hooks';
+import { useUser } from '@/utils/AuthContext';
+import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
-import { useModal, useTablePagination } from '@/hooks';
-import api from '@/utils/api';
+import { materialInventoryApi } from '@/services/warehouse/materialInventoryApi';
+import type { PendingPicking as PickingRecord } from '@/types/warehouse';
+import type { MaterialOutboundPrintPayload } from '../components/MaterialOutboundPrintModal';
 import { message } from '@/utils/antdStatic';
 
-export interface PaymentCenterItem {
-  factoryName: string;
-  factoryType?: string;
-  orderBizType?: string;
-  totalAmount: number;
-  pendingAmount: number;
-  settledAmount: number;
-  totalCount: number;
-  pendingCount: number;
-  settledCount: number;
-  records: MaterialPickupRecord[];
-}
-
-export interface MaterialPickupRecord {
+export interface PickingItem {
   id: string;
-  pickupNo: string;
-  pickupType: 'INTERNAL' | 'EXTERNAL';
-  movementType?: 'INBOUND' | 'OUTBOUND';
-  sourceType?: string;
-  usageType?: string;
-  sourceDocumentNo?: string;
-  orderNo?: string;
-  styleNo?: string;
-  factoryName?: string;
-  factoryType?: string;
-  orderBizType?: string;
-  materialId?: string;
-  materialCode?: string;
-  materialName?: string;
-  materialType?: string;
+  materialCode: string;
+  materialName: string;
   color?: string;
+  size?: string;
+  quantity: number;
+  unit?: string;
   specification?: string;
+  unitPrice?: number;
+  supplierName?: string;
+  warehouseLocation?: string;
+  materialType?: string;
   fabricWidth?: string;
   fabricWeight?: string;
   fabricComposition?: string;
-  quantity?: number;
-  unit?: string;
-  unitPrice?: number;
-  amount?: number;
-  pickerId?: string;
-  pickerName?: string;
-  receiverId?: string;
-  receiverName?: string;
-  issuerId?: string;
-  issuerName?: string;
-  warehouseLocation?: string;
-  pickupTime?: string;
-  auditStatus: 'PENDING' | 'APPROVED' | 'REJECTED';
-  auditorName?: string;
-  auditTime?: string;
-  auditRemark?: string;
-  financeStatus: 'PENDING' | 'SETTLED';
-  financeRemark?: string;
-  receivableId?: string;
-  receivableNo?: string;
-  receivableStatus?: 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE';
-  receivedAmount?: number;
-  receivedTime?: string;
-  remark?: string;
-  createTime?: string;
+}
+
+export type PickingStatus = 'pending' | 'completed' | 'cancelled';
+
+export interface PickingRow extends PickingRecord {
+  items?: PickingItem[];
 }
 
 export function useMaterialPickupData() {
+  const { user } = useUser();
   const [loading, setLoading] = useState(false);
-  const [dataSource, setDataSource] = useState<MaterialPickupRecord[]>([]);
+  const [dataSource, setDataSource] = useState<PickingRow[]>([]);
 
-  // 过滤条件
-  const [keyword, setKeyword]       = useState('');
-  const [factoryType, setFactoryType] = useState<string>('');
-  const [factoryName, setFactoryName] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [keyword, setKeyword] = useState('');
   const [pickupType, setPickupType] = useState<string | undefined>(undefined);
-  const [auditStatus, setAuditStatus] = useState<string | undefined>(undefined);
-  const [financeStatus, setFinanceStatus] = useState<string | undefined>(undefined);
-  const [orderNo, setOrderNo] = useState('');
-  const [styleNo, setStyleNo] = useState('');
-  const [pickupDateRange, setPickupDateRange] = useState<[Dayjs, Dayjs] | null>(null);
-  const [paymentDateRange, setPaymentDateRange] = useState<[Dayjs, Dayjs] | null>(null);
+  const [usageType, setUsageType] = useState<string | undefined>(undefined);
+  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>(null);
 
-  const pagination = useTablePagination(20, 'material-pickup-records');
+  const pagination = useTablePagination(20, 'material-picking-records');
   const { current, pageSize } = pagination.pagination;
-  const { setPageSize, setTotal } = pagination;
-  const paymentPagination = useTablePagination(20, 'material-payment-center');
-  const { pageSize: paymentPageSize } = paymentPagination.pagination;
-  const { setPageSize: setPaymentPageSize, setTotal: setPaymentTotal } = paymentPagination;
+  const { setTotal } = pagination;
 
-  useEffect(() => {
-    if (pageSize < 20) {
-      setPageSize(20);
-    }
-  }, [pageSize, setPageSize]);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (paymentPageSize < 20) {
-      setPaymentPageSize(20);
-    }
-  }, [paymentPageSize, setPaymentPageSize]);
+  const [printPayload, setPrintPayload] = useState<MaterialOutboundPrintPayload | null>(null);
+  const [printVisible, setPrintVisible] = useState(false);
 
-  // 弹窗
-  const auditModal   = useModal<MaterialPickupRecord>();
-  const financeModal = useModal<MaterialPickupRecord>();
-
-  // 表单
-  const [auditForm]  = Form.useForm();
-  const [financeForm] = Form.useForm();
-
-  // 操作状态
-  const [auditing, setAuditing]   = useState(false);
-  const [settling, setSettling]   = useState(false);
-
-  // ===== 批量审核 =====
-  const [selectedRowKeys, setSelectedRowKeys] = useState<string[]>([]);
-  const batchAuditModal = useModal<null>();
-  const [batchAuditForm] = Form.useForm();
-  const [batchAuditing, setBatchAuditing] = useState(false);
-
-  // ===== 收款中心 =====
-  const [paymentCenterData, setPaymentCenterData] = useState<PaymentCenterItem[]>([]);
-  const [paymentCenterLoading, setPaymentCenterLoading] = useState(false);
-  const [paymentSettling, setPaymentSettling] = useState(false);
-
-  // ===== 查询 =====
   const fetchData = useCallback(async (opt?: { silent?: boolean; page?: number }) => {
     if (!opt?.silent) setLoading(true);
     try {
-      const res = await api.post('/warehouse/material-pickup/list', {
+      const params: Record<string, any> = {
         page: opt?.page ?? current ?? 1,
         pageSize: pageSize ?? 20,
-        keyword:       keyword       || undefined,
-        factoryType:   factoryType   || undefined,
-        factoryName:   factoryName   || undefined,
-        pickupType:    pickupType    || undefined,
-        auditStatus:   auditStatus   || undefined,
-        financeStatus: financeStatus || undefined,
-        orderNo:       orderNo       || undefined,
-        styleNo:       styleNo       || undefined,
-        startDate: pickupDateRange?.[0]?.format('YYYY-MM-DD') || undefined,
-        endDate:   pickupDateRange?.[1]?.format('YYYY-MM-DD') || undefined,
+      };
+      if (statusFilter) params.status = statusFilter;
+      if (keyword) params.keyword = keyword;
+      if (pickupType) params.pickupType = pickupType;
+      if (usageType) params.usageType = usageType;
+      if (dateRange?.[0]) params.startDate = dateRange[0].format('YYYY-MM-DD');
+      if (dateRange?.[1]) params.endDate = dateRange[1].format('YYYY-MM-DD');
+
+      const res = await materialInventoryApi.listPendingPickings(params);
+      const records = res?.data?.records || [];
+      const withItems = (records as PickingRow[]).map((p) => {
+        const items: PickingItem[] = Array.isArray((p as any).items) ? (p as any).items : [];
+        return { ...p, items };
       });
-      const data = res?.data ?? res;
-      setDataSource(Array.isArray(data?.records) ? data.records : []);
-      setTotal(Number(data?.total ?? 0));
+      setDataSource(withItems);
+      setTotal(Number(res?.data?.total ?? 0));
     } catch {
-      message.error('加载领取记录失败');
+      message.error('加载领料记录失败');
     } finally {
       if (!opt?.silent) setLoading(false);
     }
-  }, [current, factoryName, factoryType, keyword, pageSize, pickupDateRange, pickupType, auditStatus, financeStatus, orderNo, styleNo, setTotal]);
+  }, [current, pageSize, statusFilter, keyword, pickupType, usageType, dateRange, setTotal]);
 
   useEffect(() => {
     void fetchData({ silent: true });
   }, [fetchData]);
 
-  // ===== 审核（单条）=====
-  const handleAudit = async () => {
-    const values = await auditForm.validateFields();
-    if (!auditModal.data) return;
-    setAuditing(true);
+  const buildPrintPayload = (record: PickingRow): MaterialOutboundPrintPayload => ({
+    outboundNo: record.pickingNo,
+    outboundTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+    materialCode: record.items?.[0]?.materialCode || '-',
+    materialName: record.items?.[0]?.materialName || '面辅料',
+    specification: record.items?.[0]?.specification || record.items?.[0]?.size,
+    color: record.items?.[0]?.color,
+    orderNo: record.orderNo,
+    styleNo: record.styleNo,
+    factoryName: record.factoryName,
+    factoryType: record.factoryType,
+    pickupType: record.pickupType,
+    usageType: record.usageType,
+    receiverName: record.pickerName,
+    issuerName: user?.name || user?.username || '系统',
+    remark: record.remark,
+    supplierName: record.items?.[0]?.supplierName,
+    fabricWidth: record.items?.[0]?.fabricWidth,
+    fabricWeight: record.items?.[0]?.fabricWeight,
+    fabricComposition: record.items?.[0]?.fabricComposition,
+    items: (record.items || []).map((item) => ({
+      batchNo: item.warehouseLocation || '-',
+      warehouseLocation: item.warehouseLocation || '',
+      quantity: item.quantity,
+      unit: item.unit,
+      materialName: item.materialName,
+      specification: item.specification || item.size,
+      color: item.color,
+      unitPrice: item.unitPrice,
+    })),
+  });
+
+  const handleConfirmOutbound = async (record: PickingRow) => {
+    if (confirmingId) return;
+    setConfirmingId(record.id);
     try {
-      await api.post(`/warehouse/material-pickup/${auditModal.data.id}/audit`, values);
-      message.success(values.action === 'approve' ? '已审核通过' : '已拒绝');
-      auditModal.close();
-      auditForm.resetFields();
+      await materialInventoryApi.confirmOutbound(record.id);
+      message.success('出库确认成功！库存已扣减。');
+      setPrintPayload(buildPrintPayload({ ...record, status: 'completed' }));
+      setPrintVisible(true);
       void fetchData();
-    } catch {
-      message.error('审核操作失败');
+    } catch (e: unknown) {
+      const respMsg = typeof e === 'object' && e !== null && 'response' in e
+        ? String((e as Record<string, any>).response?.data?.message || '') : '';
+      const msg = respMsg || (e instanceof Error ? e.message : '确认出库失败');
+      if (msg.includes('不是待出库')) {
+        message.warning('该出库单已确认过，正在刷新列表…');
+        void fetchData();
+      } else {
+        message.error(msg);
+      }
     } finally {
-      setAuditing(false);
+      setConfirmingId(null);
     }
   };
 
-  // ===== 批量审核 =====
-  const handleBatchAudit = async () => {
-    const values = await batchAuditForm.validateFields();
-    if (selectedRowKeys.length === 0) {
-      message.warning('请先勾选要审核的记录');
-      return;
-    }
-    setBatchAuditing(true);
+  const handleCancelPending = async (record: PickingRow) => {
+    if (cancellingId) return;
+    setCancellingId(record.id);
     try {
-      await api.post('/warehouse/material-pickup/batch-audit', {
-        ids: selectedRowKeys,
-        action: values.action,
-        remark: values.remark,
-      });
-      message.success(`已批量${values.action === 'approve' ? '通过' : '拒绝'} ${selectedRowKeys.length} 条记录`);
-      batchAuditModal.close();
-      batchAuditForm.resetFields();
-      setSelectedRowKeys([]);
+      await materialInventoryApi.cancelPending(record.id);
+      message.success('已取消该出库单');
       void fetchData();
-    } catch {
-      message.error('批量审核失败，请重试');
+    } catch (e: unknown) {
+      const respMsg = typeof e === 'object' && e !== null && 'response' in e
+        ? String((e as Record<string, any>).response?.data?.message || '') : '';
+      message.error(respMsg || '取消失败');
     } finally {
-      setBatchAuditing(false);
+      setCancellingId(null);
     }
   };
 
-  // ===== 账单补录/修正 =====
-  const handleFinanceSettle = async () => {
-    const values = await financeForm.validateFields();
-    if (!financeModal.data) return;
-    setSettling(true);
-    try {
-      await api.post(`/warehouse/material-pickup/${financeModal.data.id}/finance-settle`, values);
-      message.success('应收账单已同步');
-      financeModal.close();
-      financeForm.resetFields();
-      void fetchData();
-    } catch {
-      message.error('账单同步失败');
-    } finally {
-      setSettling(false);
-    }
+  const handlePrint = (record: PickingRow) => {
+    setPrintPayload(buildPrintPayload(record));
+    setPrintVisible(true);
   };
 
-  // ===== 作废 =====
-  const handleCancel = async (id: string) => {
-    try {
-      await api.post(`/warehouse/material-pickup/${id}/cancel`);
-      message.success('已作废');
-      void fetchData();
-    } catch {
-      message.error('作废失败');
-    }
-  };
-
-  // ===== 收款中心 =====
-  const fetchPaymentCenter = useCallback(async (params?: object) => {
-    setPaymentCenterLoading(true);
-    try {
-      const res = await api.post('/warehouse/material-pickup/payment-center/list', {
-        startDate: paymentDateRange?.[0]?.format('YYYY-MM-DD') || undefined,
-        endDate:   paymentDateRange?.[1]?.format('YYYY-MM-DD') || undefined,
-        ...(params ?? {}),
-      });
-      const data = res?.data ?? res;
-      const records = Array.isArray(data) ? data : [];
-      setPaymentCenterData(records);
-      setPaymentTotal(records.length);
-    } catch {
-      message.error('加载收款中心失败');
-    } finally {
-      setPaymentCenterLoading(false);
-    }
-  }, [paymentDateRange, setPaymentTotal]);
-
-  const handlePaymentSettle = async (ids: string[], remark?: string) => {
-    setPaymentSettling(true);
-    try {
-      await api.post('/warehouse/material-pickup/payment-center/settle', { ids, remark });
-      message.success(`已登记 ${ids.length} 条记录的收款`);
-      void fetchPaymentCenter();
-    } catch {
-      message.error('登记收款失败，请重试');
-    } finally {
-      setPaymentSettling(false);
-    }
+  const closePrint = () => {
+    setPrintVisible(false);
+    setPrintPayload(null);
   };
 
   return {
-    // 数据
-    loading, dataSource,
-    // 过滤
-    keyword, setKeyword,
-    factoryType, setFactoryType,
-    factoryName, setFactoryName,
-    pickupType, setPickupType,
-    auditStatus, setAuditStatus,
-    financeStatus, setFinanceStatus,
-    orderNo, setOrderNo,
-    styleNo, setStyleNo,
-    pickupDateRange, setPickupDateRange,
-    paymentDateRange, setPaymentDateRange,
-    // 分页
-    pagination, paymentPagination,
-    // 弹窗
-    auditModal, financeModal, batchAuditModal,
-    // 表单
-    auditForm, financeForm, batchAuditForm,
-    // 加载状态
-    auditing, settling, batchAuditing, paymentSettling,
-    // 批量选择
-    selectedRowKeys, setSelectedRowKeys,
-    // 操作
-    handleAudit, handleBatchAudit,
-    handleFinanceSettle, handleCancel,
+    loading,
+    dataSource,
+    keyword,
+    setKeyword,
+    statusFilter,
+    setStatusFilter,
+    pickupType,
+    setPickupType,
+    usageType,
+    setUsageType,
+    dateRange,
+    setDateRange,
+    pagination,
+    confirmingId,
+    cancellingId,
+    printPayload,
+    printVisible,
     fetchData,
-    // 收款中心
-    paymentCenterData, paymentCenterLoading,
-    fetchPaymentCenter, handlePaymentSettle,
+    handleConfirmOutbound,
+    handleCancelPending,
+    handlePrint,
+    closePrint,
   };
 }

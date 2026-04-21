@@ -1,13 +1,14 @@
 import { Button, Tag, Space, Popconfirm } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { formatMaterialSpecWidth } from '@/utils/materialType';
-import type { MaterialPickupRecord } from './useMaterialPickupData';
+
+type LegacyPickupRecord = Record<string, any>;
 
 interface UsedActions {
-  onAudit:   (record: MaterialPickupRecord) => void;
-  onFinance: (record: MaterialPickupRecord) => void;
+  onAudit:   (record: LegacyPickupRecord) => void;
+  onFinance: (record: LegacyPickupRecord) => void;
   onCancel:  (id: string) => void;
-  onOpenReceivable: (record: MaterialPickupRecord) => void;
+  onOpenReceivable: (record: LegacyPickupRecord) => void;
 }
 
 const PICKUP_TYPE_MAP: Record<string, { color: string; text: string }> = {
@@ -43,7 +44,7 @@ function fmtTime(t?: string) {
   return String(t).replace('T', ' ').substring(0, 16);
 }
 
-export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<MaterialPickupRecord> {
+export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<LegacyPickupRecord> {
   return [
     {
       title: '领取单号',
@@ -95,7 +96,7 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Mate
       key: 'factoryName',
       width: 150,
       ellipsis: true,
-      render: (_: unknown, record: MaterialPickupRecord) => {
+      render: (_: unknown, record: LegacyPickupRecord) => {
         const { factoryName, factoryType, orderBizType } = record;
         if (!factoryName) return '-';
         const bizColorMap: Record<string, string> = { FOB: 'cyan', ODM: 'purple', OEM: 'blue', CMT: 'orange' };
@@ -170,7 +171,7 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Mate
       dataIndex: 'quantity',
       width: 100,
       align: 'right' as const,
-      render: (v?: number, record?: MaterialPickupRecord) =>
+      render: (v?: number, record?: LegacyPickupRecord) =>
         v != null ? `${v} ${record?.unit ?? ''}` : '-',
     },
     {
@@ -196,7 +197,7 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Mate
       dataIndex: 'receiverName',
       width: 100,
       ellipsis: true,
-      render: (v?: string, record?: MaterialPickupRecord) => v || record?.pickerName || '-',
+      render: (v?: string, record?: LegacyPickupRecord) => v || record?.pickerName || '-',
     },
     {
       title: '出库/入库人',
@@ -241,7 +242,7 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Mate
       dataIndex: 'receivableNo',
       width: 150,
       ellipsis: true,
-      render: (v: string | undefined, record: MaterialPickupRecord) => (
+      render: (v: string | undefined, record: LegacyPickupRecord) => (
         v ? (
           <Button type="link" size="small" style={{ padding: 0 }} onClick={() => actions.onOpenReceivable(record)}>
             {v}
@@ -276,7 +277,7 @@ export function useMaterialPickupColumns(actions: UsedActions): ColumnsType<Mate
       key: 'actions',
       width: 240,
       fixed: 'right' as const,
-      render: (_: unknown, record: MaterialPickupRecord) => (
+      render: (_: unknown, record: LegacyPickupRecord) => (
         <Space size={4}>
           {record.receivableId && (
             <Button

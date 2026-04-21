@@ -82,9 +82,13 @@ public class MaterialPickingController {
             @RequestParam(defaultValue = "10") int pageSize,
             @RequestParam(required = false) String orderNo,
             @RequestParam(required = false) String styleNo,
-            @RequestParam(required = false) String status) {
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String pickupType,
+            @RequestParam(required = false) String usageType,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
 
-        // 工厂账号隔离：只能查看本工厂订单的领料记录
         java.util.List<String> factoryOrderIds = com.fashion.supplychain.common.DataPermissionHelper
                 .getFactoryOrderIds(productionOrderService);
         if (factoryOrderIds != null && factoryOrderIds.isEmpty()) {
@@ -93,7 +97,6 @@ public class MaterialPickingController {
 
         LambdaQueryWrapper<MaterialPicking> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(MaterialPicking::getDeleteFlag, 0);
-        // 租户隔离
         Long tenantId = com.fashion.supplychain.common.UserContext.tenantId();
         if (tenantId != null) {
             wrapper.eq(MaterialPicking::getTenantId, tenantId);
@@ -109,6 +112,24 @@ public class MaterialPickingController {
         }
         if (StringUtils.hasText(status)) {
             wrapper.eq(MaterialPicking::getStatus, status);
+        }
+        if (StringUtils.hasText(pickupType)) {
+            wrapper.eq(MaterialPicking::getPickupType, pickupType);
+        }
+        if (StringUtils.hasText(usageType)) {
+            wrapper.eq(MaterialPicking::getUsageType, usageType);
+        }
+        if (StringUtils.hasText(keyword)) {
+            wrapper.and(w -> w.like(MaterialPicking::getPickingNo, keyword)
+                    .or().like(MaterialPicking::getOrderNo, keyword)
+                    .or().like(MaterialPicking::getStyleNo, keyword)
+                    .or().like(MaterialPicking::getPickerName, keyword));
+        }
+        if (StringUtils.hasText(startDate)) {
+            wrapper.ge(MaterialPicking::getCreateTime, java.time.LocalDate.parse(startDate).atStartOfDay());
+        }
+        if (StringUtils.hasText(endDate)) {
+            wrapper.le(MaterialPicking::getCreateTime, java.time.LocalDate.parse(endDate).atTime(23, 59, 59));
         }
         wrapper.orderByDesc(MaterialPicking::getCreateTime);
 

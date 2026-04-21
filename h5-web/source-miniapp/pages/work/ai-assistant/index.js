@@ -13,6 +13,18 @@ var TOOL_NAMES = {
   tool_smart_report: '智能报表', tool_delay_trend: '延期趋势',
   tool_root_cause_analysis: '根因分析', tool_whatif: '假设模拟',
   tool_action_executor: '执行操作', tool_procurement: '采购管理',
+  tool_create_production_order: 'AI建单', tool_sample_loan: '样衣借调',
+  tool_sample_stock: '样衣库存', tool_sample_workflow: '样衣流程',
+  tool_query_style_info: '款式查询', tool_order_contact_urge: '催单',
+  tool_scan_undo: '扫码撤回', tool_cutting_task_create: '创建裁剪',
+  tool_bundle_split_transfer: '拆菲转派', tool_team_dispatch: '协同派单',
+  tool_order_batch_close: '批量关单', tool_payroll_approve: '工资审批',
+  tool_material_audit: '面辅料审核', tool_material_reconciliation: '物料对账',
+  tool_shipment_reconciliation: '出货对账', tool_change_approval: '变更审批',
+  tool_material_picking: '领料单', tool_material_calculation: '物料计算',
+  tool_defective_board: '次品看板', tool_production_exception: '生产异常',
+  tool_order_factory_transfer: '订单转厂', tool_style_template: '模板库',
+  tool_warehouse_op_log: '仓库日志', tool_org_query: '组织架构',
 };
 
 function describeTool(name) {
@@ -29,6 +41,8 @@ const WORKER_PROMPTS = [
 
 // 管理员/跟单员快捷指令（查询 + 操作两类）
 const MANAGER_PROMPTS = [
+  { label: '📋 下单', text: '帮我下单', cmd: true },
+  { label: '👕 借调样衣', text: '帮我借调样衣', cmd: true },
   { label: '内部资料: 日报口径', text: '请给我内部资料：日报统计口径', cmd: false },
   { label: '内部资料: 逾期定义', text: '请给我内部资料：逾期定义', cmd: false },
   { label: '内部资料: 采购流程', text: '请给我内部资料：采购流程', cmd: false },
@@ -296,6 +310,10 @@ Page({
         cur = cur.concat([ds.value]);
       }
       wiz._formData[ds.key] = cur;
+      wiz._formDataSelectedSet = wiz._formDataSelectedSet || {};
+      var lookup = {};
+      cur.forEach(function(v) { lookup[v] = true; });
+      wiz._formDataSelectedSet[ds.key] = lookup;
       self._recalcCanNext(wiz);
     });
   },
@@ -380,6 +398,7 @@ Page({
       return Object.assign({}, w, {
         _currentStep: 0,
         _formData: w.prefilledData ? Object.assign({}, w.prefilledData) : {},
+        _formDataSelectedSet: {},
         _canNext: false,
         _submitted: false,
       });
