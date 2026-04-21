@@ -108,6 +108,17 @@ class ApiService extends GetxService {
   Future<Response> getProcessConfig(String orderNo) =>
       _http.get('/api/production/scan/process-config/$orderNo');
 
+  Future<Response> getScanHistory(String orderNo, {String? bundleNo}) {
+    final params = <String, dynamic>{
+      'orderNo': orderNo,
+      'pageSize': 100,
+    };
+    if (bundleNo != null && bundleNo.isNotEmpty) {
+      params['bundleNo'] = bundleNo;
+    }
+    return _http.get('/api/production/scan/records', params: params);
+  }
+
   Future<Response> rollbackByBundle(Map<String, dynamic> data) =>
       _http.post('/api/production/warehousing/rollback-by-bundle', data: data);
 

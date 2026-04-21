@@ -11,41 +11,127 @@ enum ScanStage {
   unknown,
 }
 
+class StageDetectResult {
+  final String processName;
+  final String progressStage;
+  final String scanType;
+  final String hint;
+  final double unitPrice;
+  final List<String> scannedProcessNames;
+  final List<Map<String, dynamic>> allBundleProcesses;
+  final bool isCompleted;
+
+  StageDetectResult({
+    required this.processName,
+    this.progressStage = '',
+    this.scanType = 'production',
+    this.hint = '',
+    this.unitPrice = 0,
+    this.scannedProcessNames = const [],
+    this.allBundleProcesses = const [],
+    this.isCompleted = false,
+  });
+}
+
 class StageDetector {
   final ApiService _api = Get.find<ApiService>();
 
   final Map<String, List<Map<String, dynamic>>> _processConfigCache = {};
 
-  Future<ScanStage> detectStage(String orderNo, String qrCode, {int currentScanCount = 0}) async {
+  Future<StageDetectResult> detectByBundle(
+    String orderNo,
+    String bundleNo,
+    int quantity,
+  ) async {
     final config = await _loadProcessConfig(orderNo);
-
     if (config.isEmpty) {
-      return _inferFromScanCount(currentScanCount);
+      return StageDetectResult(processName: '', isCompleted: false);
     }
 
-    for (final process in config) {
-      final name = (process['processName'] ?? '').toString().toLowerCase();
-      final scanCount = process['expectedScanCount'] as int? ?? 0;
+    final bundleProcesses = config.where((p) {
+      final st = (p['scanType'] ?? '').toString().toLowerCase();
+      return st != 'procurement' && st != 'cutting';
+    }).toList();
 
-      if (currentScanCount <= scanCount) {
-        if (name.contains('采购') || name.contains('purchase')) {
-          return ScanStage.procurement;
-        } else if (name.contains('裁剪') || name.contains('cutting')) {
-          return ScanStage.cutting;
-        } else if (name.contains('车缝') || name.contains('sewing') || name.contains('缝制')) {
-          return ScanStage.sewing;
-        } else if (name.contains('质检') || name.contains('quality') || name.contains('检验')) {
-          if (currentScanCount < scanCount) {
-            return ScanStage.qualityReceive;
-          }
-          return ScanStage.qualityConfirm;
-        } else if (name.contains('入库') || name.contains('warehousing') || name.contains('包装')) {
-          return ScanStage.warehousing;
-        }
+    if (bundleProcesses.isEmpty) {
+      return StageDetectResult(processName: '', isCompleted: false);
+    }
+
+    List<Map<String, dynamic>> scanHistory = [];
+    try {
+      final res = await _api.getScanHistory(orderNo, bundleNo: bundleNo);
+      final data = res.data;
+      if (data is Map && data['code'] == 200 && data['data'] != null) {
+        final list = data['data'] as List;
+        scanHistory = list
+            .where((r) =>
+                r['scanResult'] == 'success' &&
+                r['scanType'] != 'orchestration')
+            .map((e) => e as Map<String, dynamic>)
+            .toList();
+      }
+    } catch (_) {}
+
+    final scannedProcessNames = <String>{};
+    for (final r in scanHistory) {
+      final pn = (r['processName'] ?? '').toString().trim();
+      if (pn.isNotEmpty) {
+        scannedProcessNames.add(pn);
       }
     }
 
-    return ScanStage.unknown;
+    final remainingProcesses = bundleProcesses
+        .where((p) => !scannedProcessNames
+            .contains((p['processName'] ?? '').toString().trim()))
+        .toList();
+
+    if (remainingProcesses.isEmpty) {
+      return StageDetectResult(
+        processName: '',
+        isCompleted: true,
+        hint: '该菲号所有工序已完成',
+        scannedProcessNames: scannedProcessNames.toList(),
+        allBundleProcesses: bundleProcesses,
+      );
+    }
+
+    final nextProcess = remainingProcesses.first;
+    final nextProcessName =
+        (nextProcess['processName'] ?? '').toString().trim();
+    final nextProgressStage =
+        (nextProcess['progressStage'] ?? '').toString().trim();
+    final nextScanType =
+        (nextProcess['scanType'] ?? 'production').toString().trim().toLowerCase();
+    final nextUnitPrice =
+        (nextProcess['unitPrice'] ?? nextProcess['price'] ?? 0);
+    final doneCount = bundleProcesses.length - remainingProcesses.length;
+
+    String scanType = 'production';
+    if (nextScanType == 'quality') {
+      scanType = 'quality';
+    } else if (nextScanType == 'warehouse') {
+      scanType = 'warehouse';
+    }
+
+    String hint;
+    if (bundleProcesses.length > 1) {
+      hint = '$nextProcessName (已完成$doneCount/${bundleProcesses.length}道工序)';
+    } else {
+      hint = nextProcessName;
+    }
+
+    return StageDetectResult(
+      processName: nextProcessName,
+      progressStage: nextProgressStage,
+      scanType: scanType,
+      hint: hint,
+      unitPrice: nextUnitPrice is double
+          ? nextUnitPrice
+          : double.tryParse(nextUnitPrice.toString()) ?? 0,
+      scannedProcessNames: scannedProcessNames.toList(),
+      allBundleProcesses: bundleProcesses,
+      isCompleted: false,
+    );
   }
 
   Future<List<Map<String, dynamic>>> _loadProcessConfig(String orderNo) async {
@@ -57,22 +143,13 @@ class StageDetector {
       final res = await _api.getProcessConfig(orderNo);
       final data = res.data;
       if (data is Map && data['code'] == 200 && data['data'] != null) {
-        final list = (data['data'] as List).map((e) => e as Map<String, dynamic>).toList();
+        final list =
+            (data['data'] as List).map((e) => e as Map<String, dynamic>).toList();
         _processConfigCache[orderNo] = list;
         return list;
       }
     } catch (_) {}
     return [];
-  }
-
-  ScanStage _inferFromScanCount(int count) {
-    if (count == 0) return ScanStage.procurement;
-    if (count == 1) return ScanStage.cutting;
-    if (count == 2) return ScanStage.sewing;
-    if (count == 3) return ScanStage.qualityReceive;
-    if (count == 4) return ScanStage.qualityConfirm;
-    if (count >= 5) return ScanStage.warehousing;
-    return ScanStage.unknown;
   }
 
   static String stageLabel(ScanStage stage) {
