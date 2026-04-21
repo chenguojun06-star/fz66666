@@ -248,6 +248,19 @@ ReconciliationCompatController, FinishedProductSettlementController, PayrollSett
 
 ## 规则13：Flutter 端 API 参数必须与后端一致
 
+### 扫码API参数映射（POST /api/production/scan/execute）
+
+| 后端期望字段 | 小程序 | H5 | Flutter | 说明 |
+|-------------|--------|-----|---------|------|
+| `scanCode` | ✅ scanCode | ✅ scanCode | **必须用scanCode** | 扫码内容（禁止用qrCode） |
+| `scanType` | ✅ scanType | ✅ scanType | ✅ scanType | 扫码类型（禁止用type） |
+| `processName` | ✅ processName | ✅ processName | ✅ processName | 工序名 |
+| `quantity` | ✅ quantity | ✅ quantity | ✅ quantity | 数量 |
+| `qualityStage` | ✅ receive/confirm | ✅ receive/confirm | ✅ receive/confirm | 质检阶段（禁止用quality_confirm） |
+| `qualityResult` | ✅ qualified/unqualified | ✅ qualified/unqualified | ✅ qualified/unqualified | 质检结果（禁止用qualified/defective） |
+| `source` | ✅ miniprogram | ✅ h5 | ✅ flutter | 来源标识 |
+| `requestId` | 后端生成 | h5_xxx | flutter_xxx | 幂等ID |
+
 ### 已知参数映射
 | Flutter 字段 | 后端期望字段 | 说明 |
 |-------------|------------|------|
@@ -255,6 +268,17 @@ ReconciliationCompatController, FinishedProductSettlementController, PayrollSett
 | `question` | `question` | AI对话（非message） |
 | `/ws/realtime` | `/ws/realtime` | WebSocket路径（非/ws） |
 | `ping`（小写） | `ping`（小写） | 心跳类型（非PING） |
+
+### 质检两步提交协议
+后端质检必须分两步提交（receive + confirm），禁止一步提交：
+```javascript
+// 第1步：receive（接收质检）
+{ scanType: 'quality', qualityStage: 'receive', scanCode, orderNo, quantity, ... }
+
+// 第2步：confirm（确认质检结果）
+{ scanType: 'quality', qualityStage: 'confirm', qualityResult: 'qualified'/'unqualified',
+  defectQuantity: 0, scanCode, orderNo, ... }
+```
 
 ## 规则14：小程序 SSE 必须支持全部参数
 
@@ -294,3 +318,211 @@ ReconciliationCompatController, FinishedProductSettlementController, PayrollSett
     return false;
 }
 ```
+
+---
+
+# P0 - 大货扫码流程规则
+
+## 规则17：6大固定父进度节点
+
+大货生产流程有6个固定父进度节点，所有子工序必须映射到这6个节点之一：
+
+```
+采购 → 裁剪 → 二次工艺 → 车缝 → 尾部 → 入库
+```
+
+定义位置：`ProductionScanExecutor.FIXED_PRODUCTION_NODES`、`ProcessStageDetector.FIXED_PRODUCTION_NODES`、`ProductionScanStageSupport.FIXED_PRODUCTION_NODES`
+
+### 父节点与子工序映射表
+
+| 父节点 | 标准名 | 常见子工序/同义词 | scanType |
+|--------|--------|-----------------|----------|
+| 采购 | 采购 | 物料采购/面辅料采购/备料/到料/进料 | orchestration（系统编排） |
+| 裁剪 | 裁剪 | 裁床/剪裁/开裁/裁片/裁切 | cutting |
+| 二次工艺 | 二次工艺 | 绣花/印花/水洗/压花/烫钻/烫画/贴标/钉珠/数码印/激光/特殊工艺 | production |
+| 车缝 | 车缝 | 缝制/缝纫/车工/整件/车位/上领/上袖/埋夹/做领/拼缝/合缝 | production |
+| 尾部 | 尾部 | 大烫/整烫/剪线/包装/打包/后整/质检/品检/验货 | production/quality |
+| 入库 | 入库 | 仓储/上架/进仓/入仓/成品入库 | warehouse |
+
+### 子工序→父节点映射优先级（5级）
+
+1. 模板 `progressStage` 直接指向6个固定父节点 → 直接使用
+2. 模板 `progressStage` 为别名 → `normalizeFixedProductionNodeName` 归一化
+3. 别名无法归一化 → 动态映射表 `t_process_parent_mapping` 查找
+4. 模板中找不到 → 动态映射表按 `processName` 查找
+5. 以上均无结果 → 返回 null（调用方决定是否使用 processName 本身）
+
+## 规则18：扫码类型链路
+
+扫码类型（scanType）有4大阶段，必须按顺序流转：
+
+```
+cutting → production → quality → warehouse
+```
+
+- `orchestration` — 系统自动编排记录（下单/采购），不参与工资统计，查询时必须排除
+- `sewing` — 前端传入时自动转为 `production`（ScanRecordOrchestrator 第244-247行）
+- `pattern` — 样衣扫码专用，同步写入 `t_scan_record` 参与工资统计
+
+### scanType 值域标准
+
+| scanType | 说明 | 允许的来源 |
+|----------|------|-----------|
+| `cutting` | 裁剪扫码 | 小程序/H5/Flutter |
+| `production` | 生产扫码（含车缝/二次工艺/尾部） | 小程序/H5/Flutter |
+| `quality` | 质检扫码 | 小程序/H5/Flutter |
+| `warehouse` | 入库扫码 | 小程序/H5/Flutter |
+| `pattern` | 样衣扫码 | 小程序/H5（PatternProductionOrchestrator写入） |
+| `orchestration` | 系统编排（禁止前端传入） | 后端自动生成 |
+
+**禁止前端传入的值**：`procurement`、`material_roll`、`quality_confirm`、`sewing`
+
+## 规则19：阶段门控校验
+
+进入当前父节点前，上一个父节点的全部子工序必须完成：
+
+```
+进入裁剪 → 采购子工序必须全部完成
+进入二次工艺 → 裁剪子工序必须全部完成
+进入车缝 → 二次工艺子工序必须全部完成（如有该阶段）
+进入尾部 → 车缝子工序必须全部完成
+进入入库 → 尾部子工序必须全部完成
+```
+
+### 豁免条件
+- 历史订单（创建时间早于2026-04-01）跳过门禁
+- 管理员（admin/manager/supervisor/主管/管理员）跳过门禁
+
+## 规则20：ScanRecord 字段赋值规则
+
+```java
+sr.setProgressStage(progressStage);    // 父进度节点（如"车缝"），用于进度聚合
+sr.setProcessName(processCode);        // 子工序名（如"上领"），用于显示和识别
+sr.setProcessCode(processCode);        // 子工序名或自定义编码，用于去重
+```
+
+**关键规则**：`progressStage` 存储的是**父节点名**（经过映射后的），`processName` 存储的是**子工序名**（原始的）。
+
+---
+
+# P0 - 样衣扫码同步PC规则
+
+## 规则21：样衣扫码双向同步机制
+
+样衣扫码系统采用双表写入 + 双向同步机制：
+
+### 小程序扫码 → PC同步
+```
+小程序扫码 → PatternProductionOrchestrator.submitScan()
+  → 写入 t_pattern_scan_record（样衣专用扫码记录）
+  → 同步写入 t_scan_record（scanType="pattern"，使工资统计能覆盖样衣扫码）
+  → 更新 t_pattern_production 状态
+  → 同步 t_style_info（sampleStatus/sampleProgress/sampleCompletedTime）
+  → 同步库存（t_sample_stock / t_sample_loan）
+```
+
+### PC端操作 → 小程序同步
+```
+PC端入库 → SampleStockServiceImpl.inbound()
+  → 创建 SampleStock + PatternScanRecord(WAREHOUSE_IN) + PatternProduction状态更新
+PC端借出 → SampleStockServiceImpl.loan()
+  → 创建 SampleLoan + PatternScanRecord(WAREHOUSE_OUT) + PatternProduction状态更新
+PC端归还 → SampleStockServiceImpl.returnSample()
+  → 更新 SampleLoan + PatternScanRecord(WAREHOUSE_RETURN) + PatternProduction状态更新
+```
+
+### 关键同步方法
+- `PatternStatusHelper.syncStyleInfoOnReceive/OnScan/OnComplete/SampleStage/ReviewFields` — StyleInfo同步
+- `PatternStockHelper.syncStockByOperation` — 库存同步
+- `SampleStockServiceImpl.findPatternForStock` — 根据 styleId/styleNo + color 匹配 PatternProduction
+
+## 规则22：样衣扫码状态流转
+
+```
+PENDING → IN_PROGRESS → PRODUCTION_COMPLETED → COMPLETED → WAREHOUSE_OUT → COMPLETED
+```
+
+| 操作类型 | 状态变更 | 进度节点 |
+|---------|---------|---------|
+| RECEIVE | → IN_PROGRESS | - |
+| PLATE | → IN_PROGRESS | 裁剪=100 |
+| FOLLOW_UP | → IN_PROGRESS | 车缝=100 |
+| COMPLETE | → PRODUCTION_COMPLETED | 所有节点=100 |
+| WAREHOUSE_IN | → COMPLETED | 入库=100 |
+| WAREHOUSE_OUT | → WAREHOUSE_OUT | 出库=100 |
+| WAREHOUSE_RETURN | → COMPLETED | 归还=100 |
+
+## 规则23：样衣扫码与大货扫码的区别
+
+| 维度 | 样衣扫码 | 大货扫码 |
+|------|---------|---------|
+| 主表 | t_pattern_scan_record | t_scan_record |
+| 关联生产表 | t_pattern_production | t_production_order |
+| scanType | pattern | production/cutting/quality/warehouse |
+| 操作类型 | RECEIVE/PLATE/FOLLOW_UP/COMPLETE/WAREHOUSE_IN/OUT/RETURN | 裁剪/车缝/尾部/质检/入库 |
+| 角色 | PLATE_WORKER/MERCHANDISER/WAREHOUSE | 操作工/质检员 |
+| 库存 | t_sample_stock + t_sample_loan（支持借还） | t_product_stock（无借还） |
+| 审核 | reviewStatus: PENDING/APPROVED/REJECTED | 无独立审核 |
+| 菲号体系 | 无菲号 | 有菲号（cuttingBundleNo） |
+| 工厂隔离 | 工厂账号不可见 | 工厂账号按factoryId过滤 |
+| 进度模型 | progressNodes JSON | 基于ScanRecord的工序进度 |
+
+## 规则24：样衣扫码工资统计
+
+样衣扫码通过同步写入 `t_scan_record`（scanType="pattern"）参与工资统计。**修改样衣扫码逻辑时，必须确保同步写入的 ScanRecord 字段完整**，特别是：
+- `operatorId` / `operatorName` — 操作员信息
+- `processName` — 工序名称
+- `quantity` — 数量
+- `processUnitPrice` / `scanCost` — 工序单价和成本
+
+---
+
+# P0 - 数据库与实体一致性规则
+
+## 规则25：新增字段必须三层同步
+
+新增字段时必须同步以下三层，缺一不可：
+
+1. **Java实体**（ScanRecord.java 等）— MyBatis-Plus 映射依赖
+2. **Flyway迁移脚本** — 生产环境建列
+3. **DbColumnRepairRunner** — 本地/异常环境的兜底补列
+4. **前端TS类型**（production.ts 等）— TypeScript 类型安全
+
+```java
+// ❌ 错误 - 只写了Flyway，Java实体没有对应字段
+// Flyway: ALTER TABLE t_scan_record ADD COLUMN current_progress_stage VARCHAR(100);
+// 结果: SELECT * 时MyBatis-Plus不映射该列，前端拿到null
+
+// ✅ 正确 - 三层全部同步
+// 1. ScanRecord.java: private String currentProgressStage;
+// 2. Flyway: ALTER TABLE t_scan_record ADD COLUMN current_progress_stage VARCHAR(100);
+// 3. DbColumnRepairRunner: ensureColumn(conn, schema, "t_scan_record", "current_progress_stage", "VARCHAR(100) DEFAULT NULL");
+// 4. production.ts: currentProgressStage?: string;
+```
+
+## 规则26：DbColumnRepairRunner 列定义必须与 Flyway 一致
+
+### 已知精度不一致修复
+
+| 列名 | Flyway定义 | DbColumnRepairRunner定义（已修复） |
+|------|-----------|-------------------------------|
+| process_unit_price | DECIMAL(15,2) | DECIMAL(15,2) ✅ |
+| scan_cost | DECIMAL(15,2) | DECIMAL(15,2) ✅ |
+| progress_stage | VARCHAR(100) | VARCHAR(100) ✅ |
+| factory_id | VARCHAR(36) | VARCHAR(64)（兼容更长ID） |
+
+## 规则27：ScanRecord 完整字段清单
+
+ScanRecord 实体必须包含以下所有数据库字段（含V26/V38/V20260424002新增）：
+
+### 基础字段
+id, scanCode, requestId, orderId, orderNo, styleId, styleNo, color, size, quantity, unitPrice, totalAmount, processCode, progressStage, processName, operatorId, operatorName, scanTime, scanType, scanResult, remark, scanIp, cuttingBundleId, cuttingBundleNo, cuttingBundleQrCode, settlementStatus, payrollSettlementId, createTime, updateTime, tenantId, factoryId
+
+### Phase 3/5/6 扩展字段
+receiveTime, confirmTime, scanMode, skuCompletedCount, skuTotalCount, processUnitPrice, scanCost, delegateTargetType, delegateTargetId, delegateTargetName, actualOperatorId, actualOperatorName
+
+### V26 进度追踪字段
+currentProgressStage, progressNodeUnitPrices, cumulativeScanCount, totalScanCount, progressPercentage, totalPieceCost, averagePieceCost, assignmentId, assignedOperatorName
+
+### 非数据库字段（@TableField(exist = false)）
+cuttingDetails, bedNo, hasNextStageScan

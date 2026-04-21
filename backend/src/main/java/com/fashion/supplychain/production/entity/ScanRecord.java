@@ -177,6 +177,51 @@ public class ScanRecord {
     private String actualOperatorName;
 
     /**
+     * 当前工序阶段（Phase 3新增，用于进度追踪）
+     */
+    private String currentProgressStage;
+
+    /**
+     * 工序节点单价列表（Phase 3新增，JSON格式）
+     */
+    private String progressNodeUnitPrices;
+
+    /**
+     * 累计扫码次数（Phase 3新增）
+     */
+    private Integer cumulativeScanCount;
+
+    /**
+     * 总扫码次数（Phase 3新增）
+     */
+    private Integer totalScanCount;
+
+    /**
+     * 进度百分比（Phase 3新增）
+     */
+    private BigDecimal progressPercentage;
+
+    /**
+     * 总成本（Phase 3新增）
+     */
+    private BigDecimal totalPieceCost;
+
+    /**
+     * 平均成本（Phase 3新增）
+     */
+    private BigDecimal averagePieceCost;
+
+    /**
+     * 工序指派ID（Phase 3新增）
+     */
+    private String assignmentId;
+
+    /**
+     * 指派操作员名称（Phase 3新增）
+     */
+    private String assignedOperatorName;
+
+    /**
      * 裁剪详情（非数据库字段，仅用于API返回）
      * 格式：[{"size": "S", "quantity": 10}, {"size": "M", "quantity": 10}, ...]
      */

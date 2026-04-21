@@ -58,9 +58,14 @@ class ScanConfirmController extends GetxController {
     loading.value = true;
     try {
       final res = await _api.executeScan({
-        'qrCode': _qrCode,
+        'scanCode': _qrCode,
         'orderNo': orderNo.value,
         'bundleNo': bundleNo.value,
+        'scanType': 'production',
+        'processName': processName.value,
+        'quantity': int.tryParse(quantity.value),
+        'source': 'flutter',
+        'requestId': 'flutter_${DateTime.now().millisecondsSinceEpoch}_${_qrCode.hashCode.abs()}',
       });
       final data = res.data;
       if (data is Map && data['code'] == 200) {

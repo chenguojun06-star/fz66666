@@ -171,6 +171,36 @@ export interface ScanRecord extends Record<string, unknown> {
   assignedOperatorName?: string;
   /** 工资结算ID（非空表示已结算，不可撤回） */
   payrollSettlementId?: string;
+
+  // Phase 5/6 新增字段（工序成本、指派、追溯）
+  /** 领取/开始时间 */
+  receiveTime?: string;
+  /** 录入结果/完成时间 */
+  confirmTime?: string;
+  /** 扫码模式:ORDER/BUNDLE/SKU */
+  scanMode?: string;
+  /** SKU已完成数 */
+  skuCompletedCount?: number;
+  /** SKU总数 */
+  skuTotalCount?: number;
+  /** 工序单价 */
+  processUnitPrice?: number;
+  /** 本次扫码工序成本 */
+  scanCost?: number;
+  /** 指派目标类型:internal/external/none */
+  delegateTargetType?: string;
+  /** 指派目标ID */
+  delegateTargetId?: string;
+  /** 指派目标名称 */
+  delegateTargetName?: string;
+  /** 实际操作员ID（追溯） */
+  actualOperatorId?: string;
+  /** 实际操作员名称 */
+  actualOperatorName?: string;
+  /** 租户ID */
+  tenantId?: number;
+  /** 扫码时归属外发工厂ID */
+  factoryId?: string;
 }
 
 export interface CuttingBundle extends Record<string, unknown> {
