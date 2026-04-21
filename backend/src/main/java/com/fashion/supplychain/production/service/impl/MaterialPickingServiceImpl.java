@@ -18,7 +18,9 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
 import java.util.List;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 public class MaterialPickingServiceImpl extends ServiceImpl<MaterialPickingMapper, MaterialPicking> implements MaterialPickingService {
 
@@ -99,31 +101,34 @@ public class MaterialPickingServiceImpl extends ServiceImpl<MaterialPickingMappe
             picking.setPickerId(UserContext.userId());
             picking.setPickerName(UserContext.username());
         }
-        // 不覆盖 status，由调用方决定（"pending" 表示待仓库确认）
         this.save(picking);
         if (items != null) {
             for (MaterialPickingItem item : items) {
                 item.setPickingId(picking.getId());
                 if (item.getCreateTime() == null) item.setCreateTime(LocalDateTime.now());
-                // 从库存记录富化物料详细信息（规格、单价、幅宽、成分、供应商、库位、类型）
-                MaterialStock stock = resolveStock(item);
-                if (stock != null) {
-                    // 关键：绑定库存记录ID，确认出库时走精确扣减路径
-                    if (!StringUtils.hasText(item.getMaterialStockId())) {
-                        item.setMaterialStockId(stock.getId());
+                try {
+                    MaterialStock stock = resolveStock(item);
+                    if (stock != null) {
+                        if (!StringUtils.hasText(item.getMaterialStockId())) {
+                            item.setMaterialStockId(stock.getId());
+                        }
+                        if (!StringUtils.hasText(item.getSpecification())) item.setSpecification(stock.getSpecifications());
+                        if (item.getUnitPrice() == null) item.setUnitPrice(stock.getUnitPrice());
+                        if (!StringUtils.hasText(item.getFabricWidth())) item.setFabricWidth(stock.getFabricWidth());
+                        if (!StringUtils.hasText(item.getFabricComposition())) item.setFabricComposition(stock.getFabricComposition());
+                        if (!StringUtils.hasText(item.getSupplierName())) item.setSupplierName(stock.getSupplierName());
+                        if (!StringUtils.hasText(item.getWarehouseLocation())) item.setWarehouseLocation(stock.getLocation());
+                        if (!StringUtils.hasText(item.getMaterialType())) item.setMaterialType(stock.getMaterialType());
+                        if (!StringUtils.hasText(item.getColor()) && StringUtils.hasText(stock.getColor())) item.setColor(stock.getColor());
+                        if (!StringUtils.hasText(item.getUnit()) && StringUtils.hasText(stock.getUnit())) item.setUnit(stock.getUnit());
+                    } else {
+                        log.warn("[Picking] 库存记录未找到: materialId={}, materialCode={}, color={}, size={}",
+                                item.getMaterialId(), item.getMaterialCode(), item.getColor(), item.getSize());
                     }
-                    if (!StringUtils.hasText(item.getSpecification())) item.setSpecification(stock.getSpecifications());
-                    if (item.getUnitPrice() == null) item.setUnitPrice(stock.getUnitPrice());
-                    if (!StringUtils.hasText(item.getFabricWidth())) item.setFabricWidth(stock.getFabricWidth());
-                    if (!StringUtils.hasText(item.getFabricComposition())) item.setFabricComposition(stock.getFabricComposition());
-                    if (!StringUtils.hasText(item.getSupplierName())) item.setSupplierName(stock.getSupplierName());
-                    if (!StringUtils.hasText(item.getWarehouseLocation())) item.setWarehouseLocation(stock.getLocation());
-                    if (!StringUtils.hasText(item.getMaterialType())) item.setMaterialType(stock.getMaterialType());
-                    if (!StringUtils.hasText(item.getColor()) && StringUtils.hasText(stock.getColor())) item.setColor(stock.getColor());
-                    if (!StringUtils.hasText(item.getUnit()) && StringUtils.hasText(stock.getUnit())) item.setUnit(stock.getUnit());
+                } catch (Exception e) {
+                    log.warn("[Picking] 查询库存记录异常: materialId={}, error={}", item.getMaterialId(), e.getMessage());
                 }
                 materialPickingItemMapper.insert(item);
-                // ⚠️ 不扣减库存，等仓库确认出库后再扣
             }
         }
         return picking.getId();

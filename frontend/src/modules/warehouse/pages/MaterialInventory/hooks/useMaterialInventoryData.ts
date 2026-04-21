@@ -9,7 +9,7 @@ import { isSmartFeatureEnabled } from '@/smart/core/featureFlags';
 import type { SmartErrorInfo } from '@/smart/core/types';
 import factoryApi from '@/services/system/factoryApi';
 import { materialInventoryApi } from '@/services/warehouse/materialInventoryApi';
-import type { MaterialBatchDetail as MaterialBatchDetailType, PendingPicking as PendingPickingType, PendingPickingItem } from '@/types/warehouse';
+import type { PendingPicking as PendingPickingType, PendingPickingItem } from '@/types/warehouse';
 import type { MaterialInventory } from '../types';
 import type { MaterialStockAlertItem } from '../components/MaterialAlertRanking';
 import type { MaterialOutboundPrintPayload } from '../components/MaterialOutboundPrintModal';

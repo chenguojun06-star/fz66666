@@ -16,7 +16,7 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import ResizableModal from '@/components/common/ResizableModal';
 import { ModalField, ModalFieldRow } from '@/components/common/ModalContentLayout';
-import { useAuth, isAdmin, isSupervisorOrAbove } from '@/utils/AuthContext';
+import { useAuth, isSupervisorOrAbove } from '@/utils/AuthContext';
 import {
   expenseReimbursementApi,
   EXPENSE_TYPES,
