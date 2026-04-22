@@ -6,6 +6,8 @@ import com.fashion.supplychain.intelligence.entity.AiLongMemory;
 import com.fashion.supplychain.intelligence.mapper.AiLongMemoryMapper;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
@@ -52,10 +54,14 @@ public class LongTermMemoryOrchestrator {
     }
 
     /**
-     * 检索：当前租户记忆 + 平台全局经验（合并返回）
+     * 检索：当前租户记忆 + 平台全局经验（合并返回）。
+     * P2: 时间衰减排序 — 新近记忆额外加权，防止陈旧高分记忆永久霸占列表。
+     * 衰减系数：< 7天 × 1.30 | 7-30天 × 1.00 | 30-90天 × 0.85 | > 90天 × 0.70
      */
     public List<AiLongMemory> retrieve(String subjectType, String subjectId, int limit) {
         Long tid = UserContext.tenantId();
+        // 多取一些候选，衰减后截断（最多 50 条候选）
+        int fetchLimit = Math.min(Math.max(limit, 1) * 2, 50);
         LambdaQueryWrapper<AiLongMemory> w = new LambdaQueryWrapper<>();
         w.eq(subjectType != null, AiLongMemory::getSubjectType, subjectType)
          .eq(subjectId != null, AiLongMemory::getSubjectId, subjectId)
@@ -64,8 +70,25 @@ public class LongTermMemoryOrchestrator {
                     .or(o -> o.eq(AiLongMemory::getScope, "TENANT")
                               .eq(AiLongMemory::getTenantId, tid)))
          .orderByDesc(AiLongMemory::getConfidence)
-         .last("LIMIT " + Math.min(Math.max(limit, 1), 50));
-        return memoryMapper.selectList(w);
+         .last("LIMIT " + fetchLimit);
+
+        List<AiLongMemory> mems = memoryMapper.selectList(w);
+
+        // 按衰减后得分重排，取 top limit
+        mems.sort(Comparator.comparingDouble(this::calcDecayedScore).reversed());
+        return mems.size() > limit ? mems.subList(0, limit) : mems;
+    }
+
+    /**
+     * 记忆有效得分 = confidence × 时间衰减系数
+     * 新近（< 7 天）记忆获得加权，鼓励 AI 优先使用新知识。
+     */
+    private double calcDecayedScore(AiLongMemory m) {
+        double base = m.getConfidence() != null ? m.getConfidence().doubleValue() : 60.0;
+        if (m.getCreateTime() == null) return base;
+        long daysOld = ChronoUnit.DAYS.between(m.getCreateTime(), LocalDateTime.now());
+        double factor = daysOld < 7 ? 1.30 : daysOld < 30 ? 1.00 : daysOld < 90 ? 0.85 : 0.70;
+        return base * factor;
     }
 
     public void incrementHit(Long id) {

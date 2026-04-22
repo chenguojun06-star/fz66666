@@ -1,7 +1,9 @@
 package com.fashion.supplychain.intelligence.routing;
 
 import com.fashion.supplychain.intelligence.agent.tool.AgentTool;
+import com.fashion.supplychain.intelligence.orchestration.ProcessRewardOrchestrator;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -11,6 +13,13 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class AiAgentToolAdvisor {
+
+    /**
+     * P1: PRM 反馈闭环 — 用户历史点赞的工具，在同意图下优先展示给 LLM。
+     * required=false 防止启动失败，PRM 不可用时静默降级为静态排序。
+     */
+    @Autowired(required = false)
+    private ProcessRewardOrchestrator processRewardOrchestrator;
 
     private static final Map<String, List<Pattern>> INTENT_TOOL_MAP = new LinkedHashMap<>();
 
@@ -127,8 +136,54 @@ public class AiAgentToolAdvisor {
             return domainFilteredTools;
         }
 
-        log.info("[ToolAdvisor] 工具预选: {} → {} 个工具 (原 {} 个)", advisedToolNames, advised.size(), domainFilteredTools.size());
+        // ── P1: PRM 反馈闭环 ──
+        // 用本租户过去 30 天的工具平均评分，将高分工具（avgScore > 0.5）提前到列表头部。
+        // 原理：用户点赞越多的工具，在相同意图下越早被 LLM 看到并优先选用。
+        advised = applyPrmBoost(advised);
+
+        log.info("[ToolAdvisor] 工具预选(+PRM): {} → {} 个工具 (原 {} 个)", advisedToolNames, advised.size(), domainFilteredTools.size());
         return advised;
+    }
+
+    /**
+     * 将本租户 PRM 高分工具（avgScore > 0.5）移到列表前半段。
+     * 低分工具（avgScore < -0.3）后置。其余保持原顺序。
+     * 失败时静默降级，不影响主流程。
+     */
+    private List<AgentTool> applyPrmBoost(List<AgentTool> tools) {
+        if (processRewardOrchestrator == null) return tools;
+        try {
+            Map<String, Double> prmScores = processRewardOrchestrator.getHighScoreToolsForCurrentTenant(30);
+            if (prmScores.isEmpty()) return tools;
+
+            List<AgentTool> boosted  = new ArrayList<>();
+            List<AgentTool> normal   = new ArrayList<>();
+            List<AgentTool> penalised = new ArrayList<>();
+
+            for (AgentTool t : tools) {
+                Double avg = prmScores.get(t.getName());
+                if (avg != null && avg > 0.5) {
+                    boosted.add(t);   // 用户历史点赞：前置
+                } else if (avg != null && avg < -0.3) {
+                    penalised.add(t); // 用户历史点踩：后置
+                } else {
+                    normal.add(t);
+                }
+            }
+
+            if (!boosted.isEmpty()) {
+                log.debug("[ToolAdvisor-PRM] 高分工具前置: {}", boosted.stream().map(AgentTool::getName).toList());
+            }
+
+            List<AgentTool> result = new ArrayList<>(boosted.size() + normal.size() + penalised.size());
+            result.addAll(boosted);
+            result.addAll(normal);
+            result.addAll(penalised);
+            return result;
+        } catch (Exception e) {
+            log.debug("[ToolAdvisor-PRM] PRM 提升跳过: {}", e.getMessage());
+            return tools;
+        }
     }
 
     private static List<Pattern> compileAll(String... keywords) {

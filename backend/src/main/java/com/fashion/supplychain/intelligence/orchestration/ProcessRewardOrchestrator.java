@@ -70,6 +70,30 @@ public class ProcessRewardOrchestrator {
     }
 
     /**
+     * 获取当前租户近 N 天高分工具映射 toolName → avgScore（avgScore > 0 才入表）。
+     * 用于 AiAgentToolAdvisor 做 PRM 引导的工具优先级提升：
+     * 用户历史点赞最多的工具，在同类意图中排在前面。
+     */
+    public Map<String, Double> getHighScoreToolsForCurrentTenant(int days) {
+        Long tid = UserContext.tenantId();
+        if (tid == null) return java.util.Collections.emptyMap();
+        LocalDateTime since = LocalDateTime.now().minusDays(Math.max(1, days));
+        List<Map<String, Object>> rows = rewardMapper.aggregateToolByTenant(tid, since);
+        Map<String, Double> result = new java.util.LinkedHashMap<>();
+        for (Map<String, Object> row : rows) {
+            Object toolName = row.get("tool_name");
+            Object avgScore = row.get("avg_score");
+            if (toolName != null && avgScore != null) {
+                double avg = ((Number) avgScore).doubleValue();
+                if (avg > 0) {
+                    result.put(toolName.toString(), avg);
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
      * 最近 N 条评分记录（仅当前租户）
      */
     public List<AiProcessReward> recentForCurrentTenant(int limit) {

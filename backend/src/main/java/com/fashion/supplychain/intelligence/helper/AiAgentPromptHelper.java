@@ -10,6 +10,7 @@ import com.fashion.supplychain.intelligence.orchestration.AiMemoryOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceMemoryOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.LongTermMemoryOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.ManagementInsightOrchestrator;
+import com.fashion.supplychain.intelligence.orchestration.ProcessRewardOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.WorkerProfileOrchestrator;
 import java.util.ArrayList;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
@@ -53,6 +54,12 @@ public class AiAgentPromptHelper {
     @Autowired private ManagementInsightOrchestrator managementInsightOrchestrator;
     /** P0：长期记忆三层架构（FACT/EPISODIC/REFLECTIVE），只写不读等于白搭 — 这里读出来注入提示词 */
     @Autowired private LongTermMemoryOrchestrator longTermMemoryOrchestrator;
+    /**
+     * P2: 用户行为画像 — 近期使用高频工具注入 Prompt，引导 LLM 优先联想本用户惯用功能。
+     * required=false 防止 PRM 未部署时启动失败。
+     */
+    @Autowired(required = false)
+    private ProcessRewardOrchestrator processRewardOrchestrator;
 
     private final ExecutorService promptBuildExecutor = new ThreadPoolExecutor(
             4, 8, 60L, TimeUnit.SECONDS,
@@ -248,12 +255,39 @@ public class AiAgentPromptHelper {
             return "";
         }), promptBuildExecutor);
 
+        // ── P2: 用户行为画像 — 近期高频工具注入提示词 ──
+        final ProcessRewardOrchestrator prm = this.processRewardOrchestrator;
+        CompletableFuture<String> userBehaviorFuture = CompletableFuture.supplyAsync(
+                UserContext.wrapSupplier(() -> {
+            try {
+                if (prm == null) return "";
+                java.util.Map<String, Double> topTools = prm.getHighScoreToolsForCurrentTenant(7);
+                if (topTools == null || topTools.isEmpty()) return "";
+                // 取分数最高的前3个工具，转成可读文案
+                java.util.List<String> labels = topTools.entrySet().stream()
+                        .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
+                        .limit(3)
+                        .map(e -> toolNameToLabel(e.getKey()))
+                        .filter(s -> !s.isBlank())
+                        .collect(java.util.stream.Collectors.toList());
+                if (labels.isEmpty()) return "";
+                String hint = "【你近期常用功能】: " + String.join("、", labels)
+                        + " — 若与本次问题相关，我会主动结合这些能力为你解答。\n\n";
+                log.debug("[AiAgent-Behavior] 行为画像注入: {}", labels);
+                return hint;
+            } catch (Exception e) {
+                log.debug("[AiAgent-Behavior] 用户行为画像注入跳过: {}", e.getMessage());
+                return "";
+            }
+        }), promptBuildExecutor);
+
         String intelligenceContext = intelligenceContextFuture.join();
         String workerProfileBlock = workerProfileFuture.join();
         String mgmtInsightBlock = mgmtInsightFuture.join();
         String longTermMemBlock = longTermMemFuture.join();
         String memoryContext = memoryContextFuture.join();
         String ragContext = ragContextFuture.join();
+        String userBehaviorBlock = userBehaviorFuture.join();
 
         String contextBlock = "【当前环境】\n" +
                 "- 当前时间：" + currentTime + "\n" +
@@ -350,6 +384,7 @@ public class AiAgentPromptHelper {
                 longTermMemBlock +
                 memoryContext +
                 ragContext +
+                userBehaviorBlock +
                 toolGuide +
                 domainHint +
                 "【协作原则 — 必须遵守】\n" +
@@ -411,8 +446,36 @@ public class AiAgentPromptHelper {
     }
 
 
+    /**
+     * 将 tool_xxx 代码转成易懂的中文功能名，用于用户行为画像注入提示词。
+     */
+    private String toolNameToLabel(String toolName) {
+        if (toolName == null) return "";
+        switch (toolName) {
+            case "tool_order_list":         return "订单查询";
+            case "tool_order_edit":         return "订单编辑";
+            case "tool_scan_undo":          return "扫码撤回";
+            case "tool_cutting_task_create": return "裁剪建单";
+            case "tool_payroll_approve":    return "工资审批";
+            case "tool_warehouse_list":     return "仓库查询";
+            case "tool_factory_list":       return "工厂查询";
+            case "tool_finance_list":       return "财务查询";
+            case "tool_management_dashboard": return "经营面板";
+            case "tool_knowledge_search":   return "知识查询";
+            case "tool_bom_cost_calc":      return "BOM成本计算";
+            case "tool_quick_build_order":  return "快速建单";
+            case "tool_nl_query":           return "智能查询";
+            case "tool_crm_list":           return "CRM客户";
+            case "tool_procurement_list":   return "采购查询";
+            default: {
+                // fallback: 去掉 tool_ 前缀，将下划线替换为空格
+                String label = toolName.startsWith("tool_") ? toolName.substring(5) : toolName;
+                return label.replace('_', ' ');
+            }
+        }
+    }
+
     public String describePageContext(String path) {
-        if (path == null) return "";
         if (path.contains("/material-purchase")) return "面料采购管理";
         if (path.contains("/orders") || path.contains("/order-management")) return "生产订单管理";
         if (path.contains("/cutting")) return "裁剪管理";
