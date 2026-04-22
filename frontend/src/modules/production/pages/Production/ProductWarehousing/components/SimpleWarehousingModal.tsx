@@ -1,5 +1,5 @@
 import React from 'react';
-import { Form, Input, Row, Col } from 'antd';
+import { Form, Input, Row, Col, Select } from 'antd';
 import SmallModal from '@/components/common/SmallModal';
 import DictAutoComplete from '@/components/common/DictAutoComplete';
 
@@ -84,7 +84,7 @@ const SimpleWarehousingModal: React.FC<SimpleWarehousingModalProps> = ({
                 onChange={() => {}}
                 style={{ width: '100%' }}
               >
-                <Option value="成品库">成品库</Option>
+                <Select.Option value="成品库">成品库</Select.Option>
               </Select>
             </Form.Item>
           </Col>

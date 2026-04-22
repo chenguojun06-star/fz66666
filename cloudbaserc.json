@@ -30,7 +30,9 @@
         "DOUBAO_API_KEY": "{{DOUBAO_API_KEY}}",
         "VOYAGE_API_KEY": "{{VOYAGE_API_KEY}}",
         "QDRANT_URL": "{{QDRANT_URL}}",
-        "QDRANT_API_KEY": "{{QDRANT_API_KEY}}"
+        "QDRANT_API_KEY": "{{QDRANT_API_KEY}}",
+        "WECHAT_MP_APPID": "{{WECHAT_MP_APPID}}",
+        "WECHAT_MP_SECRET": "{{WECHAT_MP_SECRET}}"
       }
     }
   ],

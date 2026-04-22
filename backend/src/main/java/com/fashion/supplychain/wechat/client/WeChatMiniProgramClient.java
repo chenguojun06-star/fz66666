@@ -215,6 +215,9 @@ public class WeChatMiniProgramClient {
             byte[] bytes = resp == null ? null : resp.getBody();
             if (bytes == null || bytes.length < 100) return null;
             if (bytes[0] == (byte) 0x89 && bytes[1] == 'P') return bytes;
+            // 微信返回了非 PNG 内容（JSON 错误响应），记录错误详情
+            String errBody = new String(bytes, 0, Math.min(bytes.length, 200), StandardCharsets.UTF_8);
+            log.warn("[WxQrCode] WeChat returned non-PNG response appId={} body={}", maskAppId(appid), errBody);
             return null;
         } catch (Exception e) {
             log.warn("[WxQrCode] fetch failed appId={} reason={}", maskAppId(appid), buildExceptionMessage(e));

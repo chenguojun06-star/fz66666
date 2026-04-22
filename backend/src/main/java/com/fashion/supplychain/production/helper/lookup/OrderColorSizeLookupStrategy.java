@@ -32,7 +32,10 @@ public class OrderColorSizeLookupStrategy implements BundleLookupStrategy {
 
         ProductionOrder order = context.getOrder();
         if (order == null) {
-            order = productionOrderService.getByOrderNo(context.getOrderNo());
+            order = productionOrderService.getOne(new LambdaQueryWrapper<ProductionOrder>()
+                    .eq(ProductionOrder::getOrderNo, context.getOrderNo().trim())
+                    .eq(ProductionOrder::getDeleteFlag, 0)
+                    .last("limit 1"));
         }
         if (order == null) {
             return null;

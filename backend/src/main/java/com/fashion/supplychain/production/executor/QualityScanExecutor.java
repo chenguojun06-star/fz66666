@@ -974,8 +974,22 @@ public class QualityScanExecutor {
         sr.setStyleId(order.getStyleId());
         sr.setStyleNo(order.getStyleNo());
         sr.setTenantId(order.getTenantId());
-        sr.setColor(colorResolver.apply(null));
-        sr.setSize(sizeResolver.apply(null));
+        String color = colorResolver.apply(null);
+        if (!hasText(color) && bundle != null) {
+            color = TextUtils.safeText(bundle.getColor());
+        }
+        if (!hasText(color) && order != null) {
+            color = TextUtils.safeText(order.getColor());
+        }
+        String size = sizeResolver.apply(null);
+        if (!hasText(size) && bundle != null) {
+            size = TextUtils.safeText(bundle.getSize());
+        }
+        if (!hasText(size) && order != null) {
+            size = TextUtils.safeText(order.getSize());
+        }
+        sr.setColor(color);
+        sr.setSize(size);
         sr.setQuantity(qty);
         sr.setProcessCode(stageCode);
         sr.setProgressStage("质检");  // 父工序名统一用"质检"，不用 stageName("质检领取"/"质检验收")
