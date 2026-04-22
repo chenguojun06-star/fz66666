@@ -129,6 +129,13 @@ public class ProcessStageDetector {
         if (idx < 0) idx = 0;
         if (idx >= nodes.size()) idx = nodes.size() - 1;
 
+        // ★ 修复(BUG-11): 节点扫码总量缓存（按需懒加载，同一次识别对同一节点只查一次DB）
+        // 解决：productionProgress 指向已完成节点（如裁剪已完成但%未更新）时，
+        // isAutoSkippableStageName 只处理采购，无法跳过已完成的裁剪/生产节点，
+        // 导致工人扫菲号反复被识别到已完成节点，提示"已完成该节点"
+        int orderQtyForNodeCheck = order.getOrderQuantity() == null ? 0 : order.getOrderQuantity();
+        Map<String, Long> nodeQtyCache = new java.util.HashMap<>();
+
         // 向后查找第一个未跳过的工序
         String autoResult = null;
         for (int i = idx; i < nodes.size(); i++) {
@@ -146,6 +153,13 @@ public class ProcessStageDetector {
             }
             if (isAutoSkippableStageName(order, pn)) {
                 continue;
+            }
+            // ★ 修复(BUG-11): 节点扫码量已达订单量则跳过（如裁剪已全部完成，不再识别到裁剪）
+            if (orderQtyForNodeCheck > 0) {
+                long sq = nodeQtyCache.computeIfAbsent(pn, k -> sumScanQtyForParent(order, k));
+                if (sq >= orderQtyForNodeCheck) {
+                    continue;
+                }
             }
             autoResult = pn;
             break;
@@ -199,6 +213,13 @@ public class ProcessStageDetector {
                 if (r >= 100
                         || (order.getProcurementManuallyCompleted() != null
                             && order.getProcurementManuallyCompleted() == 1)) {
+                    continue;
+                }
+            }
+            // ★ 修复(BUG-11): 向前兜底路径同样跳过已完成节点
+            if (orderQtyForNodeCheck > 0) {
+                long sq = nodeQtyCache.computeIfAbsent(pn, k -> sumScanQtyForParent(order, k));
+                if (sq >= orderQtyForNodeCheck) {
                     continue;
                 }
             }
@@ -346,6 +367,32 @@ public class ProcessStageDetector {
         } catch (Exception e) {
             log.warn("检查父节点扫码记录失败: orderNo={}, parent={}", order.getOrderNo(), parentName, e);
             return false;
+        }
+    }
+
+    /**
+     * 统计指定父节点在该订单的成功扫码总量（含子工序记录）
+     * BUG-11修复：totalQty >= orderQty 则视为该节点已全部完成，可跳过
+     */
+    private long sumScanQtyForParent(ProductionOrder order, String parentName) {
+        if (order == null || !hasText(order.getId())) return 0L;
+        try {
+            List<ScanRecord> records = scanRecordService.list(new LambdaQueryWrapper<ScanRecord>()
+                    .select(ScanRecord::getQuantity)
+                    .eq(ScanRecord::getOrderId, order.getId().trim())
+                    .in(ScanRecord::getScanType, Arrays.asList("production", "cutting"))
+                    .eq(ScanRecord::getScanResult, "success")
+                    .and(w -> w.eq(ScanRecord::getProgressStage, parentName)
+                            .or(o2 -> o2.isNull(ScanRecord::getProgressStage)
+                                    .eq(ScanRecord::getProcessName, parentName)))
+                    .gt(ScanRecord::getQuantity, 0));
+            if (records == null) return 0L;
+            return records.stream()
+                    .mapToLong(r -> r.getQuantity() == null ? 0L : r.getQuantity())
+                    .sum();
+        } catch (Exception e) {
+            log.warn("查询父节点扫码总量失败: orderNo={}, parent={}", order.getOrderNo(), parentName, e);
+            return 0L;
         }
     }
 

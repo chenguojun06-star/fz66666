@@ -281,7 +281,7 @@ public class ProductionScanExecutor {
 
         if (updateResult != null) {
             // 附加面料清单（采购阶段）
-            if ("采购".equals(progressStage.trim())) {
+            if ("采购".equals(progressStage != null ? progressStage.trim() : "")) {
                 attachMaterialPurchaseList(updateResult, order);
             }
             // 附加裁剪菲号信息
@@ -410,7 +410,7 @@ public class ProductionScanExecutor {
                     quantity, unitPrice, operatorId, operatorName, color, size,
                     TextUtils.safeText(params.get("remark")), isCutting);
             if (updateResult != null) {
-                if ("采购".equals(progressStage.trim())) {
+                if ("采购".equals(progressStage != null ? progressStage.trim() : "")) {
                     attachMaterialPurchaseList(updateResult, order);
                 }
                 if (isCutting) {
@@ -457,7 +457,7 @@ public class ProductionScanExecutor {
         }
 
         // 附加面料清单（采购阶段）
-        if ("采购".equals(progressStage.trim())) {
+        if ("采购".equals(progressStage != null ? progressStage.trim() : "")) {
             attachMaterialPurchaseList(result, order);
         }
 
