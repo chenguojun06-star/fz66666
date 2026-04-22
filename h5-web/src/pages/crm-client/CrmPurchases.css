@@ -1,0 +1,184 @@
+.crm-purchases {
+  padding-bottom: 80px;
+}
+
+.crm-page-header {
+  padding: 16px 20px;
+  background: white;
+  border-bottom: 1px solid var(--color-border-light);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.crm-page-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.crm-filter-bar {
+  background: white;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--color-border-light);
+  overflow-x: auto;
+}
+
+.crm-filter-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.crm-filter-tab {
+  flex: 0 0 auto;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-page);
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.crm-filter-tab:hover {
+  background: var(--color-border-light);
+}
+
+.crm-filter-tab.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.crm-purchase-list {
+  padding: 12px;
+}
+
+.crm-purchase-card {
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.crm-purchase-card:active {
+  transform: scale(0.98);
+  background: var(--color-bg-page);
+}
+
+.crm-purchase-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.crm-purchase-no {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.crm-purchase-status {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.crm-purchase-info {
+  margin-bottom: 12px;
+}
+
+.crm-purchase-material {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.crm-material-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.crm-material-code {
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  background: var(--color-bg-page);
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
+.crm-purchase-specs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.crm-purchase-details {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.crm-purchase-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.crm-purchase-supplier {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  margin-bottom: 10px;
+}
+
+.crm-purchase-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.crm-order-link {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-primary);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crm-purchase-date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}

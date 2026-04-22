@@ -1,0 +1,71 @@
+.crm-orders {
+  min-height: 100vh;
+  background: #f5f7fa;
+}
+
+.crm-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: white;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.crm-back-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.crm-page-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.crm-filter-bar {
+  background: white;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.crm-filter-scroll {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.crm-filter-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.crm-filter-item {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.crm-filter-item.active {
+  background: var(--color-primary);
+  color: white;
+}
+
+.crm-orders-content {
+  padding: 16px;
+  padding-bottom: 20px;
+}

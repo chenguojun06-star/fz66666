@@ -1,0 +1,176 @@
+.crm-detail-content {
+  padding: 16px;
+  padding-bottom: 30px;
+}
+
+.crm-detail-card {
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.crm-detail-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.crm-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.crm-detail-row:last-child {
+  border-bottom: none;
+}
+
+.crm-detail-label {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.crm-detail-value {
+  font-size: 14px;
+  color: var(--color-text-primary);
+  text-align: right;
+  max-width: 60%;
+  word-break: break-all;
+}
+
+.crm-amount {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.crm-amount-warning {
+  color: #f44336;
+}
+
+.crm-receipt-item {
+  padding: 12px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.crm-receipt-item:last-child {
+  border-bottom: none;
+}
+
+.crm-receipt-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.crm-receipt-amount {
+  font-size: 16px;
+  font-weight: 600;
+  color: #4caf50;
+}
+
+.crm-receipt-time {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.crm-receipt-remark {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.crm-receivable-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.crm-receivable-card {
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.crm-receivable-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.crm-receivable-no {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.crm-receivable-status {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  color: white;
+}
+
+.crm-receivable-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.crm-receivable-amount {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.crm-receivable-total {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.crm-receivable-received {
+  font-size: 13px;
+  color: #4caf50;
+}
+
+.crm-receivable-order,
+.crm-receivable-date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.crm-receivable-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.crm-receivable-item:last-child {
+  border-bottom: none;
+}
+
+.crm-level-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  color: white;
+}

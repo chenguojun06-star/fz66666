@@ -1,0 +1,11 @@
+.crm-client-app {
+  min-height: 100vh;
+  background: #f5f7fa;
+  display: flex;
+  flex-direction: column;
+}
+
+.crm-client-main {
+  flex: 1;
+  padding-bottom: 70px;
+}

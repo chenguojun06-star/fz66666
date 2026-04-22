@@ -37,6 +37,10 @@ const ProcurementTaskDetailPage = lazy(() => import('@/pages/ProcurementTaskDeta
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
 const IntelligencePage = lazy(() => import('@/pages/IntelligencePage'));
 
+// CRM Client
+const CrmLogin = lazy(() => import('@/pages/crm-client/CrmLogin'));
+const CrmClientApp = lazy(() => import('@/pages/crm-client/CrmClientApp'));
+
 const Loading = () => (
   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', color: 'var(--color-text-secondary)' }}>
     加载中...
@@ -79,6 +83,11 @@ export default function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/privacy/service" element={<PrivacyServicePage />} />
+          
+          {/* CRM Client Routes */}
+          <Route path="/crm-client/login" element={<CrmLogin />} />
+          <Route path="/crm-client/*" element={<CrmClientApp />} />
+          
           <Route path="/" element={<Navigate to="/home" replace />} />
           <Route path="*" element={
             <ProtectedRoute>
