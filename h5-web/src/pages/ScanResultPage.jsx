@@ -238,7 +238,7 @@ export default function ScanResultPage() {
 
   const loadWarehouseOptions = async () => {
     try {
-      const res = await api.system.getDictList('warehouse_location');
+      const res = await api.system.getDictList('finished_warehouse_location');
       const records = Array.isArray(res) ? res : (res?.records || []);
       if (records.length > 0) setWarehouseOptions(records.filter(i => i.dictLabel).map(i => i.dictLabel));
     } catch (e) { /* ignore */ }
@@ -475,6 +475,9 @@ export default function ScanResultPage() {
       {showWarehouse && (
         <div className="field-block">
           <label>目标仓库</label>
+          <div style={{ fontSize: 14, color: 'var(--color-text-primary)', marginBottom: 6 }}>
+            仓库：<strong>成品库</strong>
+          </div>
           {warehouseOptions.length > 0 ? (
             <div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
