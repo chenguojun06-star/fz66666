@@ -24,6 +24,9 @@ public class BundleLookupContext {
         context.setColor(TextUtils.safeText(params.get("color")));
         context.setSize(TextUtils.safeText(params.get("size")));
         Integer bn = NumberUtils.toInt(params.get("bundleNo"));
+        if (bn == null || bn <= 0) {
+            bn = NumberUtils.toInt(params.get("cuttingBundleNo"));
+        }
         context.setBundleNo(bn != null && bn > 0 ? bn : null);
         return context;
     }
