@@ -192,7 +192,7 @@ public class PatternProductionOrchestrator {
         String operatorName = UserContext.username();
 
         if (quantity != null && quantity > 0
-                && !Objects.equals(pattern.getQuantity(), quantity)) {
+                && (pattern.getQuantity() == null || pattern.getQuantity() <= 0)) {
             pattern.setQuantity(quantity);
             pattern.setUpdateBy(operatorName);
             pattern.setUpdateTime(LocalDateTime.now());
@@ -232,11 +232,11 @@ public class PatternProductionOrchestrator {
             sr.setProcessName(processLabel);
             sr.setProcessCode(processLabel);
             sr.setProgressStage(processLabel);
-            int qty = (quantity != null && quantity > 0) ? quantity : 1;
-            sr.setQuantity(qty);
+            sr.setQuantity(1);
+            int patternQty = (pattern.getQuantity() != null && pattern.getQuantity() > 0) ? pattern.getQuantity() : 1;
             if (unitPrice != null && unitPrice.compareTo(BigDecimal.ZERO) > 0) {
                 sr.setProcessUnitPrice(unitPrice);
-                sr.setScanCost(unitPrice.multiply(BigDecimal.valueOf(qty)));
+                sr.setScanCost(unitPrice.multiply(BigDecimal.valueOf(patternQty)));
             }
             sr.setTenantId(UserContext.tenantId());
             sr.setFactoryId(null);
@@ -293,7 +293,7 @@ public class PatternProductionOrchestrator {
             throw new IllegalStateException("样衣审核未通过，无法入库");
         }
 
-        Map<String, Object> result = submitScan(patternId, "WAREHOUSE_IN", "WAREHOUSE", remark, null, warehouseCode, null);
+        Map<String, Object> result = submitScan(patternId, "WAREHOUSE_IN", "WAREHOUSE", remark, pattern.getQuantity(), warehouseCode, null);
         result.put("message", "样衣入库成功");
         return result;
     }
