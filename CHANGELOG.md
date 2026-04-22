@@ -1,3 +1,47 @@
+# 2026-04-30（延续提交）
+
+## 🧠 AI 小云自我意识进化（业务异常自主巡查 + 巡查风险注入 System Prompt）
+
+### feat(intelligence): AiPatrolJob 升级为真实生产数据巡查 + AiAgentPromptHelper 注入巡查风险
+
+#### 背景
+此前 AI 小云的巡查模块（`AiPatrolJob`）仅监控 AI 自身调用指标（失败率/超时率），
+无法感知真实生产业务风险。`AiAgentPromptHelper` 拼装 System Prompt 时也未注入任何巡查
+结果，导致用户询问"哪个工厂有问题"时，AI 完全不知道系统刚刚标记的高危订单或沉默工厂。
+
+#### 本次改动
+
+**1. `AiPatrolJob.scanProductionAnomalies()`（新增方法，每4小时自动执行）**
+- 每4小时扫描 `t_production_order`，找出"预计发货日期 ≤ 5天且生产进度 < 40%" 的订单
+  - ≤ 2天 → `DEADLINE_RISK / HIGH / NEED_APPROVAL` 紧急风险
+  - 3-5天 → `DEADLINE_RISK / MEDIUM / AUTO_EXECUTE` 中等风险
+- 扫描 `t_scan_record`，找出"近3天没有任何扫码记录"的活跃工厂
+  - → `FACTORY_SILENCE / HIGH / NEED_APPROVAL` 工厂沉默告警
+- 所有风险写入 `t_ai_patrol_action`（现有巡查表），供后续处理和注入
+
+**2. `AiAgentPromptHelper.buildSystemPrompt()`（新增 `activePatrolBlock` 注入）**
+- 每次拼装 System Prompt 时，异步查询最近48小时内 HIGH/MEDIUM 级别的未解决巡查风险
+- 风险摘要插入在 `intelligenceContext` 之前，格式：
+  ```
+  【⚠️ 系统已自动标记的生产风险（请在回答中主动关注）】
+  - 🔴紧急 [DEADLINE_RISK] 订单PO20260425001距发货仅1天但进度仅35%
+  - 🟠高 [FACTORY_SILENCE] 工厂"外发工厂A"已3天无扫码记录
+  ```
+- 超时兜底（800ms 超时跳过，不影响主流程响应速度）
+- `@Autowired(required = false)` 确保巡查模块未部署时系统正常启动
+
+#### 对系统的帮助
+- **真实自我意识**：AI 小云现在能在每次对话中主动感知当前系统标记的生产风险，无需用户明确问起
+- **主动风险提示**：用户询问任何与生产、工厂、订单相关问题时，AI 会主动提示已知高危订单
+- **数据精准**：巡查数据来自真实 DB，而非模拟指标，AI 的预警与实际业务强绑定
+- **零额外延迟**：800ms 超时兜底，即使巡查查询慢也不拖慢 AI 回答
+
+**涉及文件：**
+- `backend/.../intelligence/job/AiPatrolJob.java`
+- `backend/.../intelligence/helper/AiAgentPromptHelper.java`
+
+---
+
 # 2026-04-20
 
 ## 🛡️ 财务链路 Schema 漂移兜底修复（4个高频接口 500 防线）

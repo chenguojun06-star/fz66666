@@ -10,8 +10,12 @@ import com.fashion.supplychain.intelligence.orchestration.AiMemoryOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.IntelligenceMemoryOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.LongTermMemoryOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.ManagementInsightOrchestrator;
+import com.fashion.supplychain.intelligence.orchestration.PatrolClosedLoopOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.ProcessRewardOrchestrator;
 import com.fashion.supplychain.intelligence.orchestration.WorkerProfileOrchestrator;
+import com.fashion.supplychain.intelligence.entity.AiPatrolAction;
+import com.fashion.supplychain.intelligence.orchestration.WorkerProfileOrchestrator;
+import com.fashion.supplychain.intelligence.entity.AiPatrolAction;
 import java.util.ArrayList;
 import com.fashion.supplychain.intelligence.service.AiAgentToolAccessService;
 import com.fashion.supplychain.intelligence.service.AiContextBuilderService;
@@ -60,6 +64,15 @@ public class AiAgentPromptHelper {
      */
     @Autowired(required = false)
     private ProcessRewardOrchestrator processRewardOrchestrator;
+
+    /**
+     * P1: 业务风险感知 — 将 AiPatrolJob 最新巡查到的生产风险注入 System Prompt，
+     * 使 AI 在每次对话时能主动感知当前生产风险（工厂沉默/高危截止订单等）。
+     * 这是 AI "自我意识"的核心——AI不只回答问题，还主动知晓当前系统已标记的风险。
+     * required=false 防止巡查模块未部署时启动失败。
+     */
+    @Autowired(required = false)
+    private PatrolClosedLoopOrchestrator patrolClosedLoopOrchestrator;
 
     private final ExecutorService promptBuildExecutor = new ThreadPoolExecutor(
             4, 8, 60L, TimeUnit.SECONDS,
@@ -289,6 +302,45 @@ public class AiAgentPromptHelper {
         String ragContext = ragContextFuture.join();
         String userBehaviorBlock = userBehaviorFuture.join();
 
+        // ── P0: 业务风险感知 — 将最新巡查风险异步注入（非阻塞，超时 800ms 兜底跳过）──
+        // 这是 AI 自我意识的核心：AI 在回答任何问题之前，已知晓当前系统标记的生产风险
+        final PatrolClosedLoopOrchestrator patrol = this.patrolClosedLoopOrchestrator;
+        CompletableFuture<String> activePatrolFuture = CompletableFuture.supplyAsync(
+                UserContext.wrapSupplier(() -> {
+            try {
+                if (patrol == null) return "";
+                List<AiPatrolAction> actions = patrol.recentForCurrentTenant(8);
+                if (actions == null || actions.isEmpty()) return "";
+                // 只注入最近48小时内、HIGH/MEDIUM严重级别的风险，最多3条，避免噪音
+                List<AiPatrolAction> urgent = actions.stream()
+                    .filter(a -> "HIGH".equals(a.getIssueSeverity()) || "MEDIUM".equals(a.getIssueSeverity()))
+                    .filter(a -> a.getCreateTime() != null
+                              && a.getCreateTime().isAfter(LocalDateTime.now().minusHours(48)))
+                    .limit(3)
+                    .toList();
+                if (urgent.isEmpty()) return "";
+                StringBuilder sb = new StringBuilder();
+                sb.append("【⚠️ 系统已自动标记的生产风险（请在回答中主动关注）】\n");
+                for (AiPatrolAction a : urgent) {
+                    String severity = "HIGH".equals(a.getIssueSeverity()) ? "🔴紧急" : "🟠高";
+                    sb.append("- ").append(severity).append(" [").append(a.getIssueType()).append("] ")
+                      .append(a.getDetectedIssue()).append("\n");
+                }
+                sb.append("（以上风险由系统自动巡查发现。如用户询问相关订单或工厂，请优先提示以上风险并建议采取行动。）\n\n");
+                log.debug("[AiAgent-Patrol] 注入 {} 条活跃生产风险到系统提示词", urgent.size());
+                return sb.toString();
+            } catch (Exception e) {
+                log.debug("[AiAgent-Patrol] 巡查风险注入跳过: {}", e.getMessage());
+                return "";
+            }
+        }), promptBuildExecutor);
+        String activePatrolBlock = "";
+        try {
+            activePatrolBlock = activePatrolFuture.get(800, TimeUnit.MILLISECONDS);
+        } catch (Exception e) {
+            log.debug("[AiAgent-Patrol] 巡查风险注入超时跳过");
+        }
+
         String contextBlock = "【当前环境】\n" +
                 "- 当前时间：" + currentTime + "\n" +
                 "- 今日日期：" + currentDate + "\n" +
@@ -380,6 +432,7 @@ public class AiAgentPromptHelper {
                 contextBlock + "\n" +
                 pageCtxBlock +
                 workerRestriction +
+                activePatrolBlock +
                 intelligenceContext + "\n" +
                 longTermMemBlock +
                 memoryContext +
