@@ -278,6 +278,59 @@ public class SysNoticeOrchestrator {
     // ──────────────────────────────────────────────────────────────────────
 
     // ──────────────────────────────────────────────────────────────────────
+    // 定时任务：异常检测通知（精准推给生产负责人）
+    // ──────────────────────────────────────────────────────────────────────
+
+    /**
+     * 将 AI 异常检测结果推送给生产相关负责人（不依赖 UserContext，供定时任务调用）
+     * 优先推给：角色名含"生产"或"跟单"的活跃用户；兜底：租户主账号
+     * 不做全局广播 — 只发给本租户有对应职责的人
+     */
+    public void sendAnomalyToManagers(Long tenantId, String orderNo, String title, String content) {
+        // 1. 查找生产/跟单相关角色用户
+        List<User> managers = userService.lambdaQuery()
+                .eq(User::getTenantId, tenantId)
+                .and(w -> w.like(User::getRoleName, "生产").or().like(User::getRoleName, "跟单"))
+                .eq(User::getStatus, "active")
+                .list();
+
+        // 兜底：无匹配角色时通知租户主账号
+        if (managers.isEmpty()) {
+            User owner = userService.lambdaQuery()
+                    .eq(User::getTenantId, tenantId)
+                    .eq(User::getIsTenantOwner, true)
+                    .last("LIMIT 1")
+                    .one();
+            if (owner != null) {
+                managers = List.of(owner);
+            }
+        }
+        if (managers.isEmpty()) {
+            log.warn("[SysNotice] sendAnomalyToManagers: 租户 {} 无生产管理用户，跳过通知", tenantId);
+            return;
+        }
+
+        // 2. 为每位负责人创建一条通知
+        List<SysNotice> notices = new ArrayList<>();
+        for (User u : managers) {
+            String toName = u.getName() != null ? u.getName() : u.getUsername();
+            SysNotice n = new SysNotice();
+            n.setTenantId(tenantId);
+            n.setToName(toName);
+            n.setFromName("AI检测");
+            n.setOrderNo(orderNo != null ? orderNo : "");
+            n.setTitle(title);
+            n.setContent(content);
+            n.setNoticeType("anomaly");
+            n.setIsRead(0);
+            n.setCreatedAt(LocalDateTime.now());
+            notices.add(n);
+        }
+        sysNoticeService.saveBatch(notices);
+        log.info("[SysNotice] 异常检测通知已发送 title={} toCount={}", title, notices.size());
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
     // 超级管理员：全租户广播
     // ──────────────────────────────────────────────────────────────────────
 

@@ -159,16 +159,9 @@ public class SmartNotifyJob {
             String dedupKey = "anomaly_" + item.getType()
                     + (item.getTargetName() != null ? "_" + item.getTargetName() : "");
             if (!noRecentNotice(tenantId, dedupKey, "anomaly")) continue;
-            SysNotice notice = new SysNotice();
-            notice.setTenantId(tenantId);
-            notice.setFromName("AI检测");
-            notice.setOrderNo(dedupKey);
-            notice.setTitle("⚠️ " + item.getTitle());
-            notice.setContent(item.getDescription());
-            notice.setNoticeType("anomaly");
-            notice.setIsRead(0);
-            notice.setCreatedAt(LocalDateTime.now());
-            sysNoticeService.save(notice);
+            // 精准推给生产/跟单负责人（不全局广播），由 SysNoticeOrchestrator 统一处理 toName
+            sysNoticeOrchestrator.sendAnomalyToManagers(tenantId, dedupKey,
+                    "⚠️ " + item.getTitle(), item.getDescription());
             wxAlertNotifyService.notifyAlert(tenantId, item.getTitle(),
                     item.getDescription(), null, "pages/index/index");
             log.info("[SmartNotify] 异常推送: tenant={}, type={}, target={}",
